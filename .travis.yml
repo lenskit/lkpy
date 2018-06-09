@@ -7,7 +7,7 @@ env:
   - PYTHON_TYPE=native
   - PYTHON_TYPE=conda
 install:
-  - if [[ $PYTHON_TYPE = conda ]]; bash build-tools/install-conda.sh
+  - if [[ $PYTHON_TYPE = conda ]]; then bash build-tools/install-conda.sh; fi
   - source build-tools/activate-conda.sh
   - pip install coverage
 script:
