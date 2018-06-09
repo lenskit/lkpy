@@ -14,7 +14,7 @@ setup(
         "Operating System :: OS Independent",
     ),
 
-    requires = ['pandas', 'numpy'],
+    install_requires = ['pandas', 'numpy'],
     setup_requires = ['pytest-runner'],
     tests_require = ['pytest', 'dask']
 )
