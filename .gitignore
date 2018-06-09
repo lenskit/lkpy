@@ -211,3 +211,4 @@ __pycache__/
 .*_cache/
 .vscode/
 *.egg-info/
+build/
