@@ -3,8 +3,12 @@ language: python
 python:
   - "3.6"
   - "3.5"
-  - "3.7-dev"
+env:
+  - PYTHON_TYPE=native
+  - PYTHON_TYPE=conda
 install:
+  - if [[ $PYTHON_TYPE = conda ]]; bash build-tools/install-conda.sh
+  - source build-tools/activate-conda.sh
   - pip install coverage
 script:
   - python setup.py coverage
