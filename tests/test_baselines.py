@@ -17,7 +17,7 @@ def test_bias_basic_build():
     
     assert model.users is not None
     assert set(model.users.index) == set([10, 12, 13])
-    assert model.users.loc[[10,12,13]].values == approx(np.array([0,0,0]))
+    assert model.users.loc[[10,12,13]].values == approx(np.array([0.25,-0.5,0]))
 
 def test_bias_global_only():
     df = pd.DataFrame({'item': [1,1,2,3], 'user': [10,12,10,13], 'rating': [4.0,3.0,5.0,2.0]})
