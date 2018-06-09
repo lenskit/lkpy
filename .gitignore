@@ -213,3 +213,4 @@ __pycache__/
 *.egg-info/
 build/
 .coverage
+coverage.xml
