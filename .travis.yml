@@ -1,7 +1,10 @@
+sudo: false
 language: python
 python:
-- "3.6"
-- "3.5"
-- "3.7-dev"
+  - "3.6"
+  - "3.5"
+  - "3.7-dev"
 script:
-- python setup.py test
+  - python setup.py coverage
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
