@@ -16,5 +16,5 @@ setup(
 
     install_requires = ['pandas', 'numpy'],
     setup_requires = ['pytest-runner', 'pytest-cov'],
-    tests_require = ['pytest', 'dask']
+    tests_require = ['pytest', 'pytest-arraydiff', 'dask']
 )
