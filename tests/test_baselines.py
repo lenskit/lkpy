@@ -5,7 +5,10 @@ import logging
 import pandas as pd
 import numpy as np
 
+import pytest
 from pytest import approx
+
+import lk_test_utils as lktu
 
 _log = logging.getLogger(__name__)
 
@@ -119,3 +122,26 @@ def test_bias_predict_unknown_user():
 
     assert len(p) == 2
     assert p.values == approx((model.items.loc[[1,3]] + model.mean).values)
+
+def test_bias_train_ml_ratings():
+    algo = bl.Bias()
+    ratings = lktu.ml_pandas.ratings.rename(columns={'userId': 'user', 'movieId': 'item'})
+    model = algo.train(ratings)
+
+    assert model.mean == approx(ratings.rating.mean())
+    imeans_data = ratings.groupby('item').rating.mean()
+    imeans_algo = model.items + model.mean
+    algo, data = imeans_algo.align(imeans_data)
+    assert algo.values == approx(data.values)
+
+@pytest.mark.xfail
+def test_bias_train_dask():
+    algo = bl.Bias()
+    ratings = lktu.ml_dask.ratings.rename(columns={'userId': 'user', 'movieId': 'item'})
+    model = algo.train(ratings)
+
+    assert model.mean == approx(ratings.rating.mean())
+    imeans_data = ratings.groupby('item').rating.mean()
+    imeans_algo = model.items + model.mean
+    algo, data = imeans_algo.align(imeans_data)
+    assert algo.values == approx(data.values)
