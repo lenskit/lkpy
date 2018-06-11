@@ -151,5 +151,13 @@ def test_bias_train_dask():
     assert model.mean == approx(ratings.rating.mean())
     imeans_data = ratings.groupby('item').rating.mean()
     imeans_algo = model.items + model.mean
-    algo, data = imeans_algo.align(imeans_data)
-    assert algo.values == approx(data.values)
+    ares, data = imeans_algo.align(imeans_data)
+    assert ares.values == approx(data.values)
+
+    urates = ratings.set_index('user').loc[2].set_index('item').rating
+    umean = (urates - imeans_data[urates.index]).mean()
+    p = algo.predict(model, 2, [10, 11, -1])
+    assert len(p) == 3
+    assert p.iloc[0] == approx(imeans_data.loc[10] + umean)
+    assert p.iloc[1] == approx(imeans_data.loc[11] + umean)
+    assert p.iloc[2] == approx(ratings.rating.mean() + umean)
