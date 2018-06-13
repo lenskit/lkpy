@@ -6,4 +6,5 @@ bash miniconda.sh -b -p "$HOME/miniconda"
 export PATH="$HOME/miniconda/bin:$PATH"
 conda config --set always_yes yes --set changeps1 no
 conda update -q conda
-conda create -q -n lkpy-test python="$TRAVIS_PYTHON_VERSION" pandas dask pytest coverage
+conda create -q -n lkpy-test python="$TRAVIS_PYTHON_VERSION" pandas dask pytest
+conda install -q -n lkpy-test coverage pylint
