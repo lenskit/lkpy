@@ -9,18 +9,18 @@ import lenskit.util as lku
 
 _logger = logging.getLogger(__package__)
 
+BiasModel = namedtuple('BiasModel', ['mean', 'items', 'users'])
+
 class Bias:
     """
     A rating-bias rating prediction algorithm.
     """
 
-    Model = namedtuple('BiasModel', ['mean', 'items', 'users'])
-
     def __init__(self, items=True, users=True):
         self._include_items = items
         self._include_users = users
 
-    def train(self, data: pd.DataFrame) -> Bias.Model:
+    def train(self, data: pd.DataFrame) -> BiasModel:
         """
         Train the bias model on some rating data.
         """
@@ -49,9 +49,9 @@ class Bias:
         else:
             user_offsets = None
 
-        return self.Model(mean, item_offsets, user_offsets)
+        return BiasModel(mean, item_offsets, user_offsets)
 
-    def predict(self, model: Model, user, items, ratings=None) -> pd.DataFrame:
+    def predict(self, model: BiasModel, user, items, ratings=None) -> pd.DataFrame:
         """
         Compute predictions for a user and items.
         """
