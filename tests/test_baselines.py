@@ -134,11 +134,10 @@ def test_bias_train_ml_ratings():
     algo, data = imeans_algo.align(imeans_data)
     assert algo.values == approx(data.values)
 
-@pytest.mark.xfail
 def test_bias_train_dask():
     algo = bl.Bias()
-    ratings = lktu.ml_dask.ratings.rename(columns={'userId': 'user', 'movieId': 'item'})
-    model = algo.train(ratings)
+    ratings = lktu.ml_pandas.ratings.rename(columns={'userId': 'user', 'movieId': 'item'})
+    model = algo.train(lktu.ml_dask.ratings.rename(columns={'userId': 'user', 'movieId': 'item'}))
 
     assert model.mean == approx(ratings.rating.mean())
     imeans_data = ratings.groupby('item').rating.mean()
