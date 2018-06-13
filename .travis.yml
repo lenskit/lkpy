@@ -14,3 +14,7 @@ script:
   - python setup.py coverage
 after_success:
   - bash <(curl -s https://codecov.io/bash)
+  - sonar-scanner
+addons:
+  sonarcloud:
+    organization: lenskit
