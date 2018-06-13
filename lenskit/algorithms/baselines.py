@@ -20,7 +20,7 @@ class Bias:
         self._include_items = items
         self._include_users = users
 
-    def train(self, data: pd.DataFrame) -> Model:
+    def train(self, data: pd.DataFrame) -> Bias.Model:
         """
         Train the bias model on some rating data.
         """
