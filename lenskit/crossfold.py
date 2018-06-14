@@ -64,19 +64,28 @@ def sample_rows(data, partitions, size, disjoint=True):
 
     if disjoint:
         _logger.info('creating %d disjoint samples of size %d', partitions, size)
-        # shuffle the indices & split into partitions
-        np.random.shuffle(rows)
-
-        # convert each partition into a split
-        for i in range(partitions):
-            start = i * size
-            test = rows[start:start+size]
-            train = np.concatenate((rows[:start], rows[start+size:]))
-            yield TTPair(data.iloc[train,:], data.iloc[test,:])
+        ips = _disjoint_sample(rows, partitions, size)        
 
     else:
         _logger.info('taking %d samples of size %d', partitions, size)
-        for i in range(partitions):
-            test = np.random.choice(rows, size, False)
-            train = np.setdiff1d(rows, test, assume_unique=True)
-            yield TTPair(data.iloc[train,:], data.iloc[test,:])
+        ips = _n_samples(rows, partitions, size)
+    
+    for ip in ips:
+        yield TTPair(data.iloc[ip.train,:], data.iloc[ip.test,:])
+
+def _disjoint_sample(idxes, n, size):
+    # shuffle the indices & split into partitions
+    np.random.shuffle(idxes)
+
+    # convert each partition into a split
+    for i in range(n):
+        start = i * size
+        test = idxes[start:start+size]
+        train = np.concatenate((idxes[:start], idxes[start+size:]))
+        yield TTPair(train, test)
+
+def _n_samples(idxes, n, size):
+    for i in range(n):
+        test = np.random.choice(idxes, size, False)
+        train = np.setdiff1d(idxes, test, assume_unique=True)
+        yield TTPair(train, test)
