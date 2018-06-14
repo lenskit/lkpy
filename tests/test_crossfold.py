@@ -11,7 +11,6 @@ def test_partition_rows():
     splits = xf.partition_rows(ratings, 5)
     splits = list(splits)
     assert len(splits) == 5
-    assert isinstance(splits, list)
 
     for s in splits:
         assert len(s.test) + len(s.train) == len(ratings)
@@ -37,7 +36,6 @@ def test_sample_rows():
     splits = xf.sample_rows(ratings, partitions=5, size=1000)
     splits = list(splits)
     assert len(splits) == 5
-    assert isinstance(splits, list)
 
     for s in splits:
         assert len(s.test) == 1000
@@ -59,7 +57,6 @@ def test_sample_rows_more_smaller_parts():
     splits = xf.sample_rows(ratings, partitions=10, size=500)
     splits = list(splits)
     assert len(splits) == 10
-    assert isinstance(splits, list)
 
     for s in splits:
         assert len(s.test) == 500
@@ -81,7 +78,6 @@ def test_sample_non_disjoint():
     splits = xf.sample_rows(ratings, partitions=10, size=1000, disjoint=False)
     splits = list(splits)
     assert len(splits) == 10
-    assert isinstance(splits, list)
 
     for s in splits:
         assert len(s.test) == 1000
@@ -101,7 +97,6 @@ def test_sample_oversize():
     splits = xf.sample_rows(ratings, 150, 1000)
     splits = list(splits)
     assert len(splits) == 150
-    assert isinstance(splits, list)
 
     for s in splits:
         assert len(s.test) + len(s.train) == len(ratings)
@@ -116,7 +111,6 @@ def test_sample_dask():
     splits = xf.sample_rows(ratings, partitions=5, size=1000)
     splits = list(splits)
     assert len(splits) == 5
-    assert isinstance(splits, list)
 
     for s in splits:
         assert len(s.test) == 1000
@@ -139,7 +133,6 @@ def test_partition_dask():
     splits = xf.partition_rows(ratings, 5)
     splits = list(splits)
     assert len(splits) == 5
-    assert isinstance(splits, list)
 
     for s in splits:
         assert len(s.test) + len(s.train) == len(ratings)
@@ -147,3 +140,21 @@ def test_partition_dask():
         test_idx = s.test.set_index(['user', 'item']).index
         train_idx = s.train.set_index(['user', 'item']).index
         assert len(test_idx.intersection(train_idx)) == 0
+
+def test_partition_users():
+    ratings = lktu.ml_pandas.renamed.ratings
+    splits = xf.partition_users(ratings, partitions=5, holdout=5)
+    splits = list(splits)
+    assert len(splits) == 5
+
+    for s in splits:
+        test_users = s.test.user.unique()
+        ucounts = s.test.groupby('user').agg('count')
+        assert all(ucounts == 5)
+        assert all(s.test.index.union(s.train.index) == ratings.index)
+        assert len(s.test) + len(s.train) == len(ratings)
+
+    users = ft.reduce(lambda us1, us2: us1 | us2,
+                      (set(s.test.user) for s in splits))
+    assert len(users) == ratings.user.nunique()
+    assert users == set(ratings.user)
