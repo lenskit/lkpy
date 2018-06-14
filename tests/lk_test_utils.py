@@ -9,6 +9,15 @@ import dask.dataframe as dd
 
 ml_dir = os.path.join(os.path.dirname(__file__), '../ml-latest-small')
 
+class Renamer:
+    def __init__(self, dl):
+        self._dl = dl
+    
+    def __getattribute__(self, name):
+        dl = object.__getattribute__(self, '_dl')
+        df = getattr(dl, name)
+        return df.rename(columns={'userId': 'user', 'movieId': 'item'})
+
 class MLDataLoader:
     _ratings = None
     _movies = None
@@ -34,6 +43,11 @@ class MLDataLoader:
         if self.tags is None:
             self.tags = self._read(os.path.join(ml_dir, 'tags.csv'))
         return self.tags
+    
+    @property
+    def renamed(self):
+        return Renamer(self)
+
 
 ml_pandas = MLDataLoader(pd.read_csv)
 ml_dask = MLDataLoader(dd.read_csv)
