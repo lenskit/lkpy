@@ -55,7 +55,9 @@ def sample_rows(data, partitions, size, disjoint=True):
     if disjoint and partitions * size >= len(data):
         _logger.warn('wanted %d disjoint splits of %d each, but only have %d rows; partitioning',
                      partitions, size, len(data))
-        return partition_rows(data, partitions)
+        for p in partition_rows(data, partitions):
+            yield p
+        return
 
     # create an array of indexes
     rows = np.arange(len(data))

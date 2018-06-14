@@ -84,3 +84,17 @@ def test_sample_non_disjoint():
               for (s1, s2) in it.product(splits, splits))
     isizes = [len(i1.intersection(i2)) for (i1, i2) in ipairs]
     assert any(n > 0 for n in isizes)
+
+def test_sample_oversize():
+    ratings = lktu.ml_pandas.renamed.ratings
+    splits = xf.sample_rows(ratings, 150, 1000)
+    splits = list(splits)
+    assert len(splits) == 150
+    assert isinstance(splits, list)
+
+    for s in splits:
+        assert len(s.test) + len(s.train) == len(ratings)
+        assert all(s.test.index.union(s.train.index) == ratings.index)
+        test_idx = s.test.set_index(['user', 'item']).index
+        train_idx = s.train.set_index(['user', 'item']).index
+        assert len(test_idx.intersection(train_idx)) == 0
