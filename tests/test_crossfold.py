@@ -1,4 +1,5 @@
 import itertools as it
+import functools as ft
 import pytest
 
 import lk_test_utils as lktu
@@ -20,6 +21,16 @@ def test_partition_rows():
         assert len(test_idx.intersection(train_idx)) == 0
     
     # we should partition!
+    for s1, s2 in it.product(splits, splits):
+        if s1 is s2: continue
+        
+        i1 = s1.test.set_index(['user', 'item']).index
+        i2 = s2.test.set_index(['user', 'item']).index
+        inter = i1.intersection(i2)
+        assert len(inter) == 0
+    
+    union = ft.reduce(lambda i1, i2: i1.union(i2), (s.test.index for s in splits))
+    assert len(union.unique()) == len(ratings)
 
 def test_sample_rows():
     ratings = lktu.ml_pandas.renamed.ratings
