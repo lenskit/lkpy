@@ -98,3 +98,41 @@ def test_sample_oversize():
         test_idx = s.test.set_index(['user', 'item']).index
         train_idx = s.train.set_index(['user', 'item']).index
         assert len(test_idx.intersection(train_idx)) == 0
+
+@pytest.mark.skip
+def test_sample_dask():
+    ratings = lktu.ml_dask.renamed.ratings
+    splits = xf.sample_rows(ratings, partitions=5, size=1000)
+    splits = list(splits)
+    assert len(splits) == 5
+    assert isinstance(splits, list)
+
+    for s in splits:
+        assert len(s.test) == 1000
+        assert len(s.test) + len(s.train) == len(ratings)
+        test_idx = s.test.set_index(['user', 'item']).index
+        train_idx = s.train.set_index(['user', 'item']).index
+        assert len(test_idx.intersection(train_idx)) == 0
+    
+    for s1, s2 in it.product(splits, splits):
+        if s1 is s2: continue
+        
+        i1 = s1.test.set_index(['user', 'item']).index
+        i2 = s2.test.set_index(['user', 'item']).index
+        inter = i1.intersection(i2)
+        assert len(inter) == 0
+
+@pytest.mark.skip
+def test_partition_dask():
+    ratings = lktu.ml_dask.renamed.ratings
+    splits = xf.partition_rows(ratings, 5)
+    splits = list(splits)
+    assert len(splits) == 5
+    assert isinstance(splits, list)
+
+    for s in splits:
+        assert len(s.test) + len(s.train) == len(ratings)
+        assert all(s.test.index.union(s.train.index) == ratings.index)
+        test_idx = s.test.set_index(['user', 'item']).index
+        train_idx = s.train.set_index(['user', 'item']).index
+        assert len(test_idx.intersection(train_idx)) == 0
