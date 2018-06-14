@@ -90,7 +90,7 @@ def _n_samples(idxes, n, size):
         train = np.setdiff1d(idxes, test, assume_unique=True)
         yield TTPair(train, test)
 
-def partition_users(data, partitions, holdout):
+def partition_users(data, partitions, holdout=None, holdout_fraction=None):
     """
     Partition a frame of ratings or other data into train-test partitions user-by-user.
     This function does not care what kind of data is in `data`, so long as it is a Pandas DataFrame
@@ -122,7 +122,8 @@ def partition_users(data, partitions, holdout):
         # get our users!
         test_us = users[ts]
         # sample the data frame
-        test = data[data.user.isin(test_us)].groupby('user').apply(lambda udf: udf.sample(holdout))
+        ugf = data[data.user.isin(test_us)].groupby('user')
+        test = ugf.apply(lambda udf: udf.sample(n=holdout, frac=holdout_fraction))
         # get rid of the group index
         test = test.reset_index(0, drop=True)
         # now test is indexed on the data frame! so we can get the rest

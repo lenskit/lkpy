@@ -158,3 +158,23 @@ def test_partition_users():
                       (set(s.test.user) for s in splits))
     assert len(users) == ratings.user.nunique()
     assert users == set(ratings.user)
+
+def test_partition_users_frac():
+    ratings = lktu.ml_pandas.renamed.ratings
+    splits = xf.partition_users(ratings, partitions=5, holdout_fraction=0.2)
+    splits = list(splits)
+    assert len(splits) == 5
+    ucounts = ratings.groupby('user').item.count()
+    uss = ucounts * 0.2
+
+    for s in splits:
+        tucs = s.test.groupby('user').item.count()
+        assert all(tucs >= uss.loc[tucs.index] - 1)
+        assert all(tucs <= uss.loc[tucs.index] + 1)
+        assert all(s.test.index.union(s.train.index) == ratings.index)
+        assert len(s.test) + len(s.train) == len(ratings)
+
+    users = ft.reduce(lambda us1, us2: us1 | us2,
+                      (set(s.test.user) for s in splits))
+    assert len(users) == ratings.user.nunique()
+    assert users == set(ratings.user)
