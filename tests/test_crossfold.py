@@ -2,6 +2,8 @@ import itertools as it
 import functools as ft
 import pytest
 
+import numpy as np
+
 import lk_test_utils as lktu
 
 import lenskit.crossfold as xf
@@ -22,7 +24,8 @@ def test_partition_rows():
 
     # we should partition!
     for s1, s2 in it.product(splits, splits):
-        if s1 is s2: continue
+        if s1 is s2: 
+            continue
 
         i1 = s1.test.set_index(['user', 'item']).index
         i2 = s2.test.set_index(['user', 'item']).index
@@ -47,7 +50,8 @@ def test_sample_rows():
         assert len(test_idx.intersection(train_idx)) == 0
 
     for s1, s2 in it.product(splits, splits):
-        if s1 is s2: continue
+        if s1 is s2:
+            continue
 
         i1 = s1.test.set_index(['user', 'item']).index
         i2 = s2.test.set_index(['user', 'item']).index
@@ -69,7 +73,8 @@ def test_sample_rows_more_smaller_parts():
         assert len(test_idx.intersection(train_idx)) == 0
 
     for s1, s2 in it.product(splits, splits):
-        if s1 is s2: continue
+        if s1 is s2:
+            continue
 
         i1 = s1.test.set_index(['user', 'item']).index
         i2 = s2.test.set_index(['user', 'item']).index
@@ -127,7 +132,8 @@ def test_sample_dask():
         assert len(test_idx.intersection(train_idx)) == 0
 
     for s1, s2 in it.product(splits, splits):
-        if s1 is s2: continue
+        if s1 is s2:
+            continue
 
         i1 = s1.test.set_index(['user', 'item']).index
         i2 = s2.test.set_index(['user', 'item']).index
@@ -183,7 +189,96 @@ def test_partition_users_frac():
         assert all(s.test.index.union(s.train.index) == ratings.index)
         assert len(s.test) + len(s.train) == len(ratings)
 
+    # we have all users
     users = ft.reduce(lambda us1, us2: us1 | us2,
                       (set(s.test.user) for s in splits))
     assert len(users) == ratings.user.nunique()
     assert users == set(ratings.user)
+
+
+def test_sample_users():
+    ratings = lktu.ml_pandas.renamed.ratings
+    splits = xf.sample_users(ratings, 5, 100, xf.SampleN(5))
+    splits = list(splits)
+    assert len(splits) == 5
+
+    for s in splits:
+        ucounts = s.test.groupby('user').agg('count')
+        assert len(s.test) == 5 * 100
+        assert len(ucounts) == 100
+        assert all(ucounts == 5)
+        assert all(s.test.index.union(s.train.index) == ratings.index)
+        assert len(s.test) + len(s.train) == len(ratings)
+
+    # no overlapping users
+    for s1, s2 in it.product(splits, splits):
+        if s1 is s2:
+            continue
+        us1 = s1.test.user.unique()
+        us2 = s2.test.user.unique()
+        assert len(np.intersect1d(us1, us2)) == 0
+
+
+def test_sample_users_frac():
+    ratings = lktu.ml_pandas.renamed.ratings
+    splits = xf.sample_users(ratings, 5, 100, xf.SampleFrac(0.2))
+    splits = list(splits)
+    assert len(splits) == 5
+    ucounts = ratings.groupby('user').item.count()
+    uss = ucounts * 0.2
+
+    for s in splits:
+        tucs = s.test.groupby('user').item.count()
+        assert len(tucs) == 100
+        assert all(tucs >= uss.loc[tucs.index] - 1)
+        assert all(tucs <= uss.loc[tucs.index] + 1)
+        assert all(s.test.index.union(s.train.index) == ratings.index)
+        assert len(s.test) + len(s.train) == len(ratings)
+
+    # no overlapping users
+    for s1, s2 in it.product(splits, splits):
+        if s1 is s2:
+            continue
+        us1 = s1.test.user.unique()
+        us2 = s2.test.user.unique()
+        assert len(np.intersect1d(us1, us2)) == 0
+
+def test_sample_users_frac_oversize():
+    ratings = lktu.ml_pandas.renamed.ratings
+    splits = xf.sample_users(ratings, 20, 100, xf.SampleN(5))
+    splits = list(splits)
+    assert len(splits) == 20
+
+    for s in splits:
+        ucounts = s.test.groupby('user').agg('count')
+        assert len(ucounts) < 100
+        assert all(ucounts == 5)
+        assert all(s.test.index.union(s.train.index) == ratings.index)
+        assert len(s.test) + len(s.train) == len(ratings)
+
+    users = ft.reduce(lambda us1, us2: us1 | us2,
+                      (set(s.test.user) for s in splits))
+    assert len(users) == ratings.user.nunique()
+    assert users == set(ratings.user)
+    for s1, s2 in it.product(splits, splits):
+        if s1 is s2:
+            continue
+
+        us1 = s1.test.user.unique()
+        us2 = s2.test.user.unique()
+        assert len(np.intersect1d(us1, us2)) == 0
+
+
+def test_sample_users_frac_oversize_ndj():
+    ratings = lktu.ml_pandas.renamed.ratings
+    splits = xf.sample_users(ratings, 20, 100, xf.SampleN(5), disjoint=False)
+    splits = list(splits)
+    assert len(splits) == 20
+
+    for s in splits:
+        ucounts = s.test.groupby('user').agg('count')
+        assert len(ucounts) == 100
+        assert len(s.test) == 5 * 100
+        assert all(ucounts == 5)
+        assert all(s.test.index.union(s.train.index) == ratings.index)
+        assert len(s.test) + len(s.train) == len(ratings)

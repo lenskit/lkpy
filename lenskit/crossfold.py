@@ -75,22 +75,22 @@ def sample_rows(data, partitions, size, disjoint=True):
     return (TTPair(data.iloc[ip.train, :], data.iloc[ip.test, :]) for ip in ips)
 
 
-def _disjoint_sample(idxes, n, size):
+def _disjoint_sample(xs, n, size):
     # shuffle the indices & split into partitions
-    np.random.shuffle(idxes)
+    np.random.shuffle(xs)
 
     # convert each partition into a split
     for i in range(n):
         start = i * size
-        test = idxes[start:start + size]
-        train = np.concatenate((idxes[:start], idxes[start + size:]))
+        test = xs[start:start + size]
+        train = np.concatenate((xs[:start], xs[start + size:]))
         yield TTPair(train, test)
 
 
-def _n_samples(idxes, n, size):
+def _n_samples(xs, n, size):
     for i in range(n):
-        test = np.random.choice(idxes, size, False)
-        train = np.setdiff1d(idxes, test, assume_unique=True)
+        test = np.random.choice(xs, size, False)
+        train = np.setdiff1d(xs, test, assume_unique=True)
         yield TTPair(train, test)
 
 
@@ -181,3 +181,50 @@ def partition_users(data, partitions: int, method: PartitionMethod):
         yield TTPair(train, test)
 
 
+def sample_users(data, partitions: int, size: int, method: PartitionMethod, disjoint=True):
+    """
+    Create train-test partitions by sampling users.
+    This function does not care what kind of data is in `data`, so long as it is 
+    a Pandas DataFrame (or equivalent) and has a `user` column.
+
+    :param data: a data frame containing ratings or other data you wish to partition.
+    :type data: `pd.DataFrame` or equivalent
+    :param partitions: the number of partitions to produce
+    :param size: the sample size
+    :param method: The method for selecting test rows for each user.
+    :param disjoint: whether user samples should be disjoint
+    :rtype: iterator
+    :returns: an iterator of train-test pairs
+    """
+
+    user_col = data['user']
+    users = user_col.unique()
+    if disjoint and partitions * size >= len(users):
+        _logger.warning('cannot take %d disjoint samples of size %d from %d users',
+                        partitions, size, len(users))
+        for p in partition_users(data, partitions, method):
+            yield p
+        return
+    
+    _logger.info('sampling %d users into %d partitions (n=%d)',
+                 len(users), partitions, size)
+
+    if disjoint:
+        np.random.shuffle(users)
+
+    # generate our samples
+    for i in range(partitions):
+        # get our test users!
+        if disjoint:
+            test_us = users[i*size:(i+1)*size]
+        else:
+            test_us = np.random.choice(users, size, False)
+        
+        # sample the data frame
+        test = data[data.user.isin(test_us)].groupby('user').apply(method)
+        # get rid of the group index
+        test = test.reset_index(0, drop=True)
+        # now test is indexed on the data frame! so we can get the rest
+        rest = data.index.difference(test.index)
+        train = data.loc[rest]
+        yield TTPair(train, test)
