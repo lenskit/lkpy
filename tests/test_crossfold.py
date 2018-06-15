@@ -24,7 +24,7 @@ def test_partition_rows():
 
     # we should partition!
     for s1, s2 in it.product(splits, splits):
-        if s1 is s2: 
+        if s1 is s2:
             continue
 
         i1 = s1.test.set_index(['user', 'item']).index

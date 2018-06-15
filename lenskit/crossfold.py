@@ -120,7 +120,7 @@ class SampleN(PartitionMethod):
         :param n: The number of test items to select.
         """
         self.n = n
-    
+
     def __call__(self, udf):
         return udf.sample(n=self.n)
 
@@ -135,7 +135,7 @@ class SampleFrac(PartitionMethod):
         :param n: The number of test items to select.
         """
         self.fraction = frac
-    
+
     def __call__(self, udf):
         return udf.sample(frac=self.fraction)
 
@@ -184,7 +184,7 @@ def partition_users(data, partitions: int, method: PartitionMethod):
 def sample_users(data, partitions: int, size: int, method: PartitionMethod, disjoint=True):
     """
     Create train-test partitions by sampling users.
-    This function does not care what kind of data is in `data`, so long as it is 
+    This function does not care what kind of data is in `data`, so long as it is
     a Pandas DataFrame (or equivalent) and has a `user` column.
 
     :param data: a data frame containing ratings or other data you wish to partition.
@@ -205,7 +205,7 @@ def sample_users(data, partitions: int, size: int, method: PartitionMethod, disj
         for p in partition_users(data, partitions, method):
             yield p
         return
-    
+
     _logger.info('sampling %d users into %d partitions (n=%d)',
                  len(users), partitions, size)
 
@@ -219,7 +219,7 @@ def sample_users(data, partitions: int, size: int, method: PartitionMethod, disj
             test_us = users[i*size:(i+1)*size]
         else:
             test_us = np.random.choice(users, size, False)
-        
+
         # sample the data frame
         test = data[data.user.isin(test_us)].groupby('user').apply(method)
         # get rid of the group index
