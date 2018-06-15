@@ -39,7 +39,8 @@ class Bias:
 
         if self._include_users:
             if item_offsets is not None:
-                nrates = nrates.join(pd.DataFrame(item_offsets), on='item', rsuffix='_im', how='inner')
+                nrates = nrates.join(pd.DataFrame(item_offsets), on='item', how='inner',
+                                     rsuffix='_im')
                 nrates = nrates.assign(rating=lambda df: df.rating - df.rating_im)
 
             user_offsets = nrates.groupby('user').rating.mean()

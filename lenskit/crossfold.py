@@ -43,8 +43,8 @@ def partition_rows(data, partitions):
 
 def sample_rows(data, partitions, size, disjoint=True):
     """
-    Sample train-test a frame of ratings into train-test partitions.  This function does not care what kind
-    of data is in `data`, so long as it is a Pandas DataFrame (or equivalent).
+    Sample train-test a frame of ratings into train-test partitions.  This function does not care
+    what kind of data is in `data`, so long as it is a Pandas DataFrame (or equivalent).
 
     :param data: a data frame containing ratings or other data you wish to partition.
     :type data: `pd.DataFrame` or equivalent
