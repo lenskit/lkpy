@@ -21,6 +21,7 @@ install:
   - if [[ $PYTHON_TYPE = conda ]]; then bash build-tools/install-conda.sh; fi
   - source build-tools/activate-conda.sh
   - pip install pytest-cov pylint invoke
+  - pip install pandas dask
 script:
   - invoke test --cover --verbose
 after_success:
