@@ -142,6 +142,7 @@ def test_bias_train_ml_ratings():
     assert p.iloc[1] == approx(imeans_data.loc[11] + umean)
     assert p.iloc[2] == approx(ratings.rating.mean() + umean)
 
+@lktu.dask_test
 def test_bias_train_dask():
     algo = bl.Bias()
     ratings = lktu.ml_pandas.ratings.rename(columns={'userId': 'user', 'movieId': 'item'})
