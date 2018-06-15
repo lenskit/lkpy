@@ -10,7 +10,7 @@ export PATH="$HOME/miniconda/bin:$PATH"
 conda config --set always_yes yes --set changeps1 no
 conda update -q conda
 if [ ! -d "$HOME/miniconda/envs/lkpy-test" ]; then
-    conda create -q -n lkpy-test python="$TRAVIS_PYTHON_VERSION" pandas dask pytest
+    conda create -q -n lkpy-test python="$TRAVIS_PYTHON_VERSION" pandas dask pytest pytest-arraydiff
 fi
 conda install -q -n lkpy-test coverage pylint
 conda update -q -n lkpy-test --all
