@@ -92,6 +92,7 @@ def test_sample_non_disjoint():
     isizes = [len(i1.intersection(i2)) for (i1, i2) in ipairs]
     assert any(n > 0 for n in isizes)
 
+@pytest.mark.slow
 def test_sample_oversize():
     ratings = lktu.ml_pandas.renamed.ratings
     splits = xf.sample_rows(ratings, 150, 1000)
@@ -105,7 +106,7 @@ def test_sample_oversize():
         train_idx = s.train.set_index(['user', 'item']).index
         assert len(test_idx.intersection(train_idx)) == 0
 
-@pytest.mark.skip
+@pytest.mark.skip(reason='Not yet working')
 def test_sample_dask():
     ratings = lktu.ml_dask.renamed.ratings
     splits = xf.sample_rows(ratings, partitions=5, size=1000)
@@ -127,7 +128,7 @@ def test_sample_dask():
         inter = i1.intersection(i2)
         assert len(inter) == 0
 
-@pytest.mark.skip
+@pytest.mark.skip(reason='Not yet working')
 def test_partition_dask():
     ratings = lktu.ml_dask.renamed.ratings
     splits = xf.partition_rows(ratings, 5)
