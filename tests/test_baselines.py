@@ -5,14 +5,15 @@ import logging
 import pandas as pd
 import numpy as np
 
-import pytest
 from pytest import approx
 
 import lk_test_utils as lktu
 
 _log = logging.getLogger(__name__)
 
-simple_df = pd.DataFrame({'item': [1, 1, 2, 3], 'user': [10, 12, 10, 13], 'rating': [4.0, 3.0, 5.0, 2.0]})
+simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
+                          'user': [10, 12, 10, 13],
+                          'rating': [4.0, 3.0, 5.0, 2.0]})
 
 
 def test_bias_full():

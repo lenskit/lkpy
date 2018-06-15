@@ -157,7 +157,6 @@ def test_partition_users():
     assert len(splits) == 5
 
     for s in splits:
-        test_users = s.test.user.unique()
         ucounts = s.test.groupby('user').agg('count')
         assert all(ucounts == 5)
         assert all(s.test.index.union(s.train.index) == ratings.index)
