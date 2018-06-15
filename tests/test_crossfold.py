@@ -152,7 +152,7 @@ def test_partition_dask():
 
 def test_partition_users():
     ratings = lktu.ml_pandas.renamed.ratings
-    splits = xf.partition_users(ratings, partitions=5, holdout=5)
+    splits = xf.partition_users(ratings, 5, xf.SampleN(5))
     splits = list(splits)
     assert len(splits) == 5
 
@@ -170,7 +170,7 @@ def test_partition_users():
 
 def test_partition_users_frac():
     ratings = lktu.ml_pandas.renamed.ratings
-    splits = xf.partition_users(ratings, partitions=5, holdout_fraction=0.2)
+    splits = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
     splits = list(splits)
     assert len(splits) == 5
     ucounts = ratings.groupby('user').item.count()

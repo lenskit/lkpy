@@ -4,7 +4,9 @@ Data set cross-folding.
 
 from collections import namedtuple
 import logging
+from abc import ABC, abstractmethod
 
+import pandas as pd
 import numpy as np
 
 TTPair = namedtuple('TTPair', ['train', 'test'])
@@ -92,7 +94,53 @@ def _n_samples(idxes, n, size):
         yield TTPair(train, test)
 
 
-def partition_users(data, partitions, holdout=None, holdout_fraction=None):
+class PartitionMethod(ABC):
+    """
+    Partition methods select test rows for a user or item.  Partition methods
+    are callable; when called with a data frame, they return the test rows.
+    """
+
+    @abstractmethod
+    def __call__(self, udf):
+        """
+        Subset a data frame.
+        :param udf: The input data frame of rows for a user or item.
+        :returns: The data frame of test rows, a subset of `udf`.
+        """
+        pass
+
+
+class SampleN(PartitionMethod):
+    """
+    Select a fixed number of test rows per user/item.
+    """
+    def __init__(self, n):
+        """
+        Create a new sampler.
+        :param n: The number of test items to select.
+        """
+        self.n = n
+    
+    def __call__(self, udf):
+        return udf.sample(n=self.n)
+
+
+class SampleFrac(PartitionMethod):
+    """
+    Select a fraction of test rows per user/item.
+    """
+    def __init__(self, frac):
+        """
+        Create a new sampler.
+        :param n: The number of test items to select.
+        """
+        self.fraction = frac
+    
+    def __call__(self, udf):
+        return udf.sample(frac=self.fraction)
+
+
+def partition_users(data, partitions: int, method: PartitionMethod):
     """
     Partition a frame of ratings or other data into train-test partitions user-by-user.
     This function does not care what kind of data is in `data`, so long as it is a Pandas DataFrame
@@ -102,8 +150,7 @@ def partition_users(data, partitions, holdout=None, holdout_fraction=None):
     :type data: `pd.DataFrame` or equivalent
     :param partitions: the number of partitions to produce
     :type partitions: integer
-    :param holdout: the number of test rows per user
-    :type hodlout: integer
+    :param method: The method for selecting test rows for each user.
     :rtype: iterator
     :returns: an iterator of train-test pairs
     """
@@ -125,10 +172,12 @@ def partition_users(data, partitions, holdout=None, holdout_fraction=None):
         test_us = users[ts]
         # sample the data frame
         ugf = data[data.user.isin(test_us)].groupby('user')
-        test = ugf.apply(lambda udf: udf.sample(n=holdout, frac=holdout_fraction))
+        test = ugf.apply(method)
         # get rid of the group index
         test = test.reset_index(0, drop=True)
         # now test is indexed on the data frame! so we can get the rest
         rest = data.index.difference(test.index)
         train = data.loc[rest]
         yield TTPair(train, test)
+
+
