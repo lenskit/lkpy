@@ -24,10 +24,21 @@ install:
   - pip install pandas dask
 script:
   - invoke test --cover --verbose
+  - invoke docs
 after_success:
   - coverage xml
   - bash <(curl -s https://codecov.io/bash)
   - sonar-scanner
+jobs:
+  include:
+    - stage: deploy
+      install:
+        - pip install invoke sphinx
+        - npm install -g netlify-cli
+      script:
+        - invoke docs
+        - netlify-cli deploy
+      if: branch = master AND type = push
 addons:
   sonarcloud:
     organization: lenskit
