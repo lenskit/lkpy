@@ -53,11 +53,9 @@ def sample_rows(data, partitions, size, disjoint=True):
     """
 
     if disjoint and partitions * size >= len(data):
-        _logger.warn('wanted %d disjoint splits of %d each, but only have %d rows; partitioning',
-                     partitions, size, len(data))
-        for p in partition_rows(data, partitions):
-            yield p
-        return
+        _logger.warning('wanted %d disjoint splits of %d each, but only have %d rows; partitioning',
+                        partitions, size, len(data))
+        return partition_rows(data, partitions)
 
     # create an array of indexes
     rows = np.arange(len(data))
@@ -69,9 +67,8 @@ def sample_rows(data, partitions, size, disjoint=True):
     else:
         _logger.info('taking %d samples of size %d', partitions, size)
         ips = _n_samples(rows, partitions, size)
-    
-    for ip in ips:
-        yield TTPair(data.iloc[ip.train,:], data.iloc[ip.test,:])
+
+    return (TTPair(data.iloc[ip.train,:], data.iloc[ip.test,:]) for ip in ips)
 
 def _disjoint_sample(idxes, n, size):
     # shuffle the indices & split into partitions
