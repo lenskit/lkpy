@@ -20,7 +20,7 @@ def partition_rows(data, partitions):
     care what kind of data is in `data`, so long as it is a Pandas DataFrame (or equivalent).
 
     :param data: a data frame containing ratings or other data you wish to partition.
-    :type data: `pd.DataFrame` or equivalent
+    :type data: :py:class:`pandas.DataFrame` or equivalent
     :param partitions: the number of partitions to produce
     :type partitions: integer
     :rtype: iterator
@@ -49,7 +49,7 @@ def sample_rows(data, partitions, size, disjoint=True):
     what kind of data is in `data`, so long as it is a Pandas DataFrame (or equivalent).
 
     :param data: a data frame containing ratings or other data you wish to partition.
-    :type data: `pd.DataFrame` or equivalent
+    :type data: :py:class:`pandas.DataFrame` or equivalent
     :param partitions: the number of partitions to produce
     :type partitions: integer
     :rtype: iterator
@@ -147,7 +147,7 @@ def partition_users(data, partitions: int, method: PartitionMethod):
     (or equivalent) and has a `user` column.
 
     :param data: a data frame containing ratings or other data you wish to partition.
-    :type data: `pd.DataFrame` or equivalent
+    :type data: :py:class:`pandas.DataFrame` or equivalent
     :param partitions: the number of partitions to produce
     :type partitions: integer
     :param method: The method for selecting test rows for each user.
@@ -188,7 +188,7 @@ def sample_users(data, partitions: int, size: int, method: PartitionMethod, disj
     a Pandas DataFrame (or equivalent) and has a `user` column.
 
     :param data: a data frame containing ratings or other data you wish to partition.
-    :type data: `pd.DataFrame` or equivalent
+    :type data: :py:class:`pandas.DataFrame` or equivalent
     :param partitions: the number of partitions to produce
     :param size: the sample size
     :param method: The method for selecting test rows for each user.
