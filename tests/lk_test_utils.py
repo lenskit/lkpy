@@ -45,7 +45,8 @@ class MLDataLoader:
         return self.tags
 
 ml_pandas = MLDataLoader(pd.read_csv)
-ml_dask = MLDataLoader(dd.read_csv)
+if have_dask:
+    ml_dask = MLDataLoader(dd.read_csv)
 
 def dask_test(f):
     """
