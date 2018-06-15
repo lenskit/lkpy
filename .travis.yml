@@ -27,7 +27,6 @@ script:
 after_success:
   - coverage xml
   - bash <(curl -s https://codecov.io/bash)
-  - sonar-scanner
 jobs:
   include:
     - stage: deploy
@@ -38,6 +37,3 @@ jobs:
         - python setup.py build_sphinx
         - netlify-cli deploy
       if: branch = master AND type = push
-addons:
-  sonarcloud:
-    organization: lenskit
