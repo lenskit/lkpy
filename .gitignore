@@ -215,3 +215,4 @@ build/
 dist/
 .coverage
 coverage.xml
+.doit.db*

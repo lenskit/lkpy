@@ -20,9 +20,9 @@ cache:
 install:
   - if [[ $PYTHON_TYPE = conda ]]; then bash build-tools/install-conda.sh; fi
   - source build-tools/activate-conda.sh
-  - pip install coverage pylint
+  - pip install pytest-cov pylint invoke
 script:
-  - python setup.py coverage
+  - invoke test --cover --verbose
 after_success:
   - coverage xml
   - bash <(curl -s https://codecov.io/bash)

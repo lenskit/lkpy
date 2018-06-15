@@ -19,8 +19,7 @@ setup(
         'numpy'
     ],
     setup_requires=[
-        'pytest-runner',
-        'pytest-cov'
+        'pytest-runner'
     ],
     tests_require=[
         'pytest >= 3.5.1',
