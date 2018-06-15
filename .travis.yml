@@ -11,8 +11,12 @@ matrix:
   exclude:
     - python: "3.7-dev"
       env: PYTHON_TYPE=conda
+  allow_failures:
+    - python: "3.7-dev"
 cache:
-  - pip
+  pip: true
+  directories:
+    - $HOME/miniconda
 install:
   - if [[ $PYTHON_TYPE = conda ]]; then bash build-tools/install-conda.sh; fi
   - source build-tools/activate-conda.sh
