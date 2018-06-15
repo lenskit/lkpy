@@ -243,6 +243,7 @@ def test_sample_users_frac():
         us2 = s2.test.user.unique()
         assert len(np.intersect1d(us1, us2)) == 0
 
+
 def test_sample_users_frac_oversize():
     ratings = lktu.ml_pandas.renamed.ratings
     splits = xf.sample_users(ratings, 20, 100, xf.SampleN(5))

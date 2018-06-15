@@ -14,7 +14,19 @@ setup(
         "Operating System :: OS Independent",
     ),
 
-    install_requires = ['pandas', 'numpy'],
-    setup_requires = ['pytest-runner', 'pytest-cov'],
-    tests_require = ['pytest >= 3.5.1', 'pytest-arraydiff', 'dask', 'toolz', 'cloudpickle']
+    install_requires=[
+        'pandas',
+        'numpy'
+    ],
+    setup_requires=[
+        'pytest-runner',
+        'pytest-cov'
+    ],
+    tests_require=[
+        'pytest >= 3.5.1',
+        'pytest-arraydiff',
+        'dask',
+        'toolz',
+        'cloudpickle'
+    ]
 )
