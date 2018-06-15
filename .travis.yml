@@ -20,11 +20,10 @@ cache:
 install:
   - if [[ $PYTHON_TYPE = conda ]]; then bash build-tools/install-conda.sh; fi
   - source build-tools/activate-conda.sh
-  - pip install pytest-cov pylint invoke
-  - pip install pandas dask
+  - pip install coverage pylint invoke
+  - pip install pandas
 script:
-  - invoke test --cover --verbose
-  - invoke docs
+  - python setup.py coverage
 after_success:
   - coverage xml
   - bash <(curl -s https://codecov.io/bash)
@@ -33,10 +32,10 @@ jobs:
   include:
     - stage: deploy
       install:
-        - pip install invoke sphinx
+        - pip install invoke sphinx pandas
         - npm install -g netlify-cli
       script:
-        - invoke docs
+        - python setup.py build_sphinx
         - netlify-cli deploy
       if: branch = master AND type = push
 addons:

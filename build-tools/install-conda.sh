@@ -13,5 +13,5 @@ if [ ! -d "$HOME/miniconda/envs/lkpy-test" ]; then
     conda create -q -n lkpy-test python="$TRAVIS_PYTHON_VERSION"
 fi
 conda install -q -n lkpy-test pandas dask
-conda install -q -n lkpy-test pytest pytest-arraydiff pytest-cov pylint invoke
+conda install -q -n lkpy-test pytest pytest-arraydiff coverage pylint invoke
 conda update -q -n lkpy-test --all
