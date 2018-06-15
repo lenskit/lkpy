@@ -1,9 +1,7 @@
-import sys
 from collections import namedtuple
 import logging
 
 import pandas as pd
-import numpy as np
 
 import lenskit.util as lku
 
