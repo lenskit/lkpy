@@ -2,10 +2,19 @@
 Test utilities for LKPY tests.
 """
 
+import os
 import os.path
 
 import pandas as pd
-import dask.dataframe as dd
+import pytest
+
+try:
+    import dask.dataframe as dd
+    have_dask = True
+except ImportError as e:
+    have_dask = False
+    if os.getenv('CI'):
+        raise e
 
 ml_dir = os.path.join(os.path.dirname(__file__), '../ml-latest-small')
 
@@ -50,4 +59,13 @@ class MLDataLoader:
 
 
 ml_pandas = MLDataLoader(pd.read_csv)
-ml_dask = MLDataLoader(dd.read_csv)
+if have_dask:
+    ml_dask = MLDataLoader(dd.read_csv)
+
+def dask_test(f):
+    """
+    Decorator for test cases that require Dask.
+    :param f: The test function
+    :return:
+    """
+    return pytest.mark.skipif(not have_dask, reason='dask is not available')(f)
