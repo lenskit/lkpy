@@ -14,9 +14,9 @@ matrix:
   allow_failures:
     - python: "3.7-dev"
 cache:
-  pip: true
   directories:
     - $HOME/miniconda
+    - .eggs
 install:
   - if [[ $PYTHON_TYPE = conda ]]; then bash build-tools/install-conda.sh; fi
   - source build-tools/activate-conda.sh
