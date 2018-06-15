@@ -11,6 +11,7 @@ _logger = logging.getLogger(__package__)
 
 BiasModel = namedtuple('BiasModel', ['mean', 'items', 'users'])
 
+
 class Bias:
     """
     A rating-bias rating prediction algorithm.
@@ -24,13 +25,13 @@ class Bias:
         """
         Train the bias model on some rating data.
         """
-        
+
         _logger.info('building bias model for %d ratings', len(data))
         mean = data.rating.mean()
         mean = lku.compute(mean)
         _logger.info('global mean: %.3f', mean)
         nrates = data.assign(rating=lambda df: df.rating - mean)
-        
+
         if self._include_items:
             item_offsets = nrates.groupby('item').rating.mean()
             item_offsets = lku.compute(item_offsets)
@@ -42,7 +43,7 @@ class Bias:
             if item_offsets is not None:
                 nrates = nrates.join(pd.DataFrame(item_offsets), on='item', rsuffix='_im', how='inner')
                 nrates = nrates.assign(rating=lambda df: df.rating - df.rating_im)
-            
+
             user_offsets = nrates.groupby('user').rating.mean()
             user_offsets = lku.compute(user_offsets)
             _logger.info('computed means for %d users', len(user_offsets))
@@ -72,5 +73,5 @@ class Bias:
             umean = model.users.get(user, 0.0)
             _logger.debug('using mean(user %s) = %.3f', user, umean)
             preds = preds + umean
-        
+
         return preds

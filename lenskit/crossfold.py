@@ -11,6 +11,7 @@ TTPair = namedtuple('TTPair', ['train', 'test'])
 
 _logger = logging.getLogger(__package__)
 
+
 def partition_rows(data, partitions):
     """
     Partition a frame of ratings or other datainto train-test partitions.  This function does not
@@ -33,11 +34,12 @@ def partition_rows(data, partitions):
 
     # convert each partition into a split
     for i, ts in enumerate(test_sets):
-        test = data.iloc[ts,:]
-        trains = test_sets[:i] + test_sets[(i+1):]
+        test = data.iloc[ts, :]
+        trains = test_sets[:i] + test_sets[(i + 1):]
         train_idx = np.concatenate(trains)
-        train = data.iloc[train_idx,:]
+        train = data.iloc[train_idx, :]
         yield TTPair(train, test)
+
 
 def sample_rows(data, partitions, size, disjoint=True):
     """
@@ -62,13 +64,14 @@ def sample_rows(data, partitions, size, disjoint=True):
 
     if disjoint:
         _logger.info('creating %d disjoint samples of size %d', partitions, size)
-        ips = _disjoint_sample(rows, partitions, size)        
+        ips = _disjoint_sample(rows, partitions, size)
 
     else:
         _logger.info('taking %d samples of size %d', partitions, size)
         ips = _n_samples(rows, partitions, size)
 
-    return (TTPair(data.iloc[ip.train,:], data.iloc[ip.test,:]) for ip in ips)
+    return (TTPair(data.iloc[ip.train, :], data.iloc[ip.test, :]) for ip in ips)
+
 
 def _disjoint_sample(idxes, n, size):
     # shuffle the indices & split into partitions
@@ -77,15 +80,17 @@ def _disjoint_sample(idxes, n, size):
     # convert each partition into a split
     for i in range(n):
         start = i * size
-        test = idxes[start:start+size]
-        train = np.concatenate((idxes[:start], idxes[start+size:]))
+        test = idxes[start:start + size]
+        train = np.concatenate((idxes[:start], idxes[start + size:]))
         yield TTPair(train, test)
+
 
 def _n_samples(idxes, n, size):
     for i in range(n):
         test = np.random.choice(idxes, size, False)
         train = np.setdiff1d(idxes, test, assume_unique=True)
         yield TTPair(train, test)
+
 
 def partition_users(data, partitions, holdout=None, holdout_fraction=None):
     """
