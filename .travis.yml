@@ -35,5 +35,5 @@ jobs:
         - npm install -g netlify-cli
       script:
         - python setup.py build_sphinx
-        - netlify-cli deploy
+        - netlify deploy -t $NETLIFY_TOKEN
       if: branch = master AND type = push
