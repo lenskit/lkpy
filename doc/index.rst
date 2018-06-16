@@ -3,8 +3,14 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-LKPY, a Python recommender toolkit
+LKPY
 ===================================
+
+LKPY is a set of Python tools for experimenting with and studying recommender
+systems.  It provides support for training, running, and evaluating recommender
+algorithms in a flexible fashion suitable for research and education.
+
+LKPY is the successor to the Java-based LensKit project.
 
 .. toctree::
    :maxdepth: 2
