@@ -107,7 +107,9 @@ class PartitionMethod(ABC):
     def __call__(self, udf):
         """
         Subset a data frame.
+
         :param udf: The input data frame of rows for a user or item.
+        :paramtype udf: :py:class:`pandas.DataFrame`
         :returns: The data frame of test rows, a subset of `udf`.
         """
         pass
@@ -116,12 +118,12 @@ class PartitionMethod(ABC):
 class SampleN(PartitionMethod):
     """
     Select a fixed number of test rows per user/item.
+
+    :param n: The number of test items to select.
+    :paramtype n: integer
     """
+
     def __init__(self, n):
-        """
-        Create a new sampler.
-        :param n: The number of test items to select.
-        """
         self.n = n
 
     def __call__(self, udf):
@@ -131,12 +133,11 @@ class SampleN(PartitionMethod):
 class SampleFrac(PartitionMethod):
     """
     Select a fraction of test rows per user/item.
+
+    :param frac: the fraction of items to select for testing.
+    :paramtype frac: double
     """
     def __init__(self, frac):
-        """
-        Create a new sampler.
-        :param n: The number of test items to select.
-        """
         self.fraction = frac
 
     def __call__(self, udf):

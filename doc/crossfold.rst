@@ -1,6 +1,8 @@
 Crossfold preparation
 =====================
 
+.. module:: lenskit.crossfold
+
 The LKPY `crossfold` module provides support for preparing data sets for
 cross-validation.  Crossfold methods are implemented as functions that operate
 on data frames and return generators of `(train, test)` pairs
@@ -30,13 +32,13 @@ Row-based splitting
 -------------------
 
 The simplest preparation methods sample or partition the rows in the input frame.
-A 5-fold :py:func:`lenskit.crossfold.partition_rows` split will result in 5
+A 5-fold :py:func:`partition_rows` split will result in 5
 splits, each of which extracts 20% of the rows for testing and leaves 80% for
 training.
 
-.. autofunction:: lenskit.crossfold.partition_rows
+.. autofunction:: partition_rows
 
-.. autofunction:: lenskit.crossfold.sample_rows
+.. autofunction:: sample_rows
 
 User-based splitting
 --------------------
@@ -53,9 +55,9 @@ The algorithm used by each is as follows:
 3. Create a training set for each test set consisting of the non-selected rows from each
     of that set's test users, along with all rows from each non-test user.
 
-.. autofunction:: lenskit.crossfold.partition_users
+.. autofunction:: partition_users
 
-.. autofunction:: lenskit.crossfold.sample_users
+.. autofunction:: sample_users
 
 Selecting user test rows
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -67,14 +69,15 @@ happens by default with common means of implementing samples).
 
 We provide several partition method factories:
 
-.. autofunction:: lenskit.crossfold.SampleN
-.. autofunction:: lenskit.crossfold.SampleFrac
+.. autofunction:: SampleN
+.. autofunction:: SampleFrac
 
 Utility Classes
 ---------------
 
-.. autoclass:: lenskit.crossfold.PartitionMethod
+.. autoclass:: PartitionMethod
    :members:
+   :special-members:
 
-.. autoclass:: lenskit.crossfold.TTPair
+.. autoclass:: TTPair
    :members:
