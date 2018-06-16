@@ -14,6 +14,20 @@ represents a single data point for the purpose of splitting and sampling.
 
 .. autoclass:: lenskit.crossfold.TTPair
 
+Experiment code should generally use these methods to prepare train-test files
+for training and evaluating algorithms.  For example, the following will perform
+a user-based 5-fold cross-validation as was the default in the old LensKit::
+
+    import pandas as pd
+    import lenskit.crossfold as xf
+    ratings = pd.read_csv('ml-20m/ratings.csv')
+    ratings = ratings.rename(columns={'userId': 'user', 'movieId': 'item'})
+    for i, tp in enumerate(xf.partition_users(ratings, 5, xf.SampleN(5))):
+        tp.train.to_csv('ml-20m.exp/train-%d.csv' % (i,))
+        tp.train.to_parquet('ml-20m.exp/train-%d.parquet % (i,))
+        tp.test.to_csv('ml-20m.exp/test-%d.csv' % (i,))
+        tp.test.to_parquet('ml-20m.exp/test-%d.parquet % (i,))
+
 Row-based splitting
 -------------------
 
