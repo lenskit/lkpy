@@ -10,6 +10,9 @@ import pandas as pd
 import numpy as np
 
 TTPair = namedtuple('TTPair', ['train', 'test'])
+TTPair.__doc__ = 'Train-test pair (named tuple).'
+TTPair.train.__doc__ = 'Train data for this pair.'
+TTPair.test.__doc__ = 'Test data for this pair.'
 
 _logger = logging.getLogger(__package__)
 

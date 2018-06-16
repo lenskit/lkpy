@@ -12,9 +12,7 @@ Crossfold methods make minimal assumptions about their input data frames, so the
 frames can be ratings, purchases, or whatever.  They do assume that each row
 represents a single data point for the purpose of splitting and sampling.
 
-.. autoclass:: lenskit.crossfold.TTPair
-
-Experiment code should generally use these methods to prepare train-test files
+Experiment code should generally use these functions to prepare train-test files
 for training and evaluating algorithms.  For example, the following will perform
 a user-based 5-fold cross-validation as was the default in the old LensKit::
 
@@ -71,3 +69,12 @@ We provide several partition method factories:
 
 .. autofunction:: lenskit.crossfold.SampleN
 .. autofunction:: lenskit.crossfold.SampleFrac
+
+Utility Classes
+---------------
+
+.. autoclass:: lenskit.crossfold.PartitionMethod
+   :members:
+
+.. autoclass:: lenskit.crossfold.TTPair
+   :members:
