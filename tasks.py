@@ -1,10 +1,11 @@
 from invoke import task
+from invoke.exceptions import Failure
+from invoke.runners import Result
 import shutil
-import os.path
 
 
 @task
-def test(c, cover=False, verbose=True):
+def test(c, cover=False, verbose=True, slow=True):
     "Run tests"
     import pytest
     args = ['tests']
@@ -12,9 +13,12 @@ def test(c, cover=False, verbose=True):
         args.append('--cov=lenskit')
     if verbose:
         args.append('--verbose')
+    if not slow:
+        args.append('-m')
+        args.append('not slow')
     rc = pytest.main(args)
     if rc:
-        raise RuntimeError('tests failed with code ' + rc)
+        raise Failure(Result(exited=rc), 'tests failed')
 
 
 @task

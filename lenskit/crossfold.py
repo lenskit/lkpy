@@ -117,7 +117,7 @@ class PartitionMethod(ABC):
 
 class SampleN(PartitionMethod):
     """
-    Select a fixed number of test rows per user/item.
+    Randomly select a fixed number of test rows per user/item.
 
     :param n: The number of test items to select.
     :paramtype n: integer
@@ -132,7 +132,7 @@ class SampleN(PartitionMethod):
 
 class SampleFrac(PartitionMethod):
     """
-    Select a fraction of test rows per user/item.
+    Randomly select a fraction of test rows per user/item.
 
     :param frac: the fraction of items to select for testing.
     :paramtype frac: double
@@ -142,6 +142,41 @@ class SampleFrac(PartitionMethod):
 
     def __call__(self, udf):
         return udf.sample(frac=self.fraction)
+
+
+class LastN(PartitionMethod):
+    """
+    Select a fixed number of test rows per user/item, based on ordering by a
+    column.
+
+    :param n: The number of test items to select.
+    :paramtype n: integer
+    :param col: The column to sort by.
+    """
+
+    def __init__(self, n, col='timestamp'):
+        self.n = n
+        self.column = col
+
+    def __call__(self, udf):
+        return udf.sort_values(self.column).iloc[-self.n:]
+
+
+class LastFrac(PartitionMethod):
+    """
+    Select a fraction of test rows per user/item.
+
+    :param frac: the fraction of items to select for testing.
+    :paramtype frac: double
+    :param col: The column to sort by.
+    """
+    def __init__(self, frac, col='timestamp'):
+        self.fraction = frac
+        self.column = col
+
+    def __call__(self, udf):
+        n = round(len(udf) * self.fraction)
+        return udf.sort_values(self.column).iloc[-n:]
 
 
 def partition_users(data, partitions: int, method: PartitionMethod):

@@ -71,6 +71,8 @@ We provide several partition method factories:
 
 .. autofunction:: SampleN
 .. autofunction:: SampleFrac
+.. autofunction:: LastN
+.. autofunction:: LastFrac
 
 Utility Classes
 ---------------
