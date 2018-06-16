@@ -1,4 +1,6 @@
 from invoke import task
+import shutil
+import os.path
 
 
 @task
@@ -19,6 +21,13 @@ def test(c, cover=False, verbose=True):
 def docs(c):
     "Build documentation"
     c.run('sphinx-build -M html doc build/doc')
+
+
+@task
+def clean(c):
+    shutil.rmtree('build', ignore_errors=True)
+    shutil.rmtree('.eggs', ignore_errors=True)
+    shutil.rmtree('lenskit.egg-info', ignore_errors=True)
 
 
 if __name__ == '__main__':
