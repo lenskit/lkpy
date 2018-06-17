@@ -3,7 +3,7 @@ import logging
 
 import pandas as pd
 
-import lenskit.util as lku
+from .. import util as lku
 
 _logger = logging.getLogger(__package__)
 
