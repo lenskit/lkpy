@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>02fdb0cc-b729-4a6d-b203-1a295d049db5</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>lkpy.py</StartupFile>
+    <StartupFile>tests\run_all.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -21,7 +21,35 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="lkpy.py" />
+    <Compile Include="lenskit\algorithms\baselines.py" />
+    <Compile Include="lenskit\algorithms\__init__.py" />
+    <Compile Include="lenskit\crossfold.py" />
+    <Compile Include="lenskit\util.py" />
+    <Compile Include="lenskit\__init__.py" />
+    <Compile Include="tests\lk_test_utils.py" />
+    <Compile Include="tests\run_all.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="tests\test_baselines.py" />
+    <Compile Include="tests\test_crossfold.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="lenskit\" />
+    <Folder Include="lenskit\algorithms\" />
+    <Folder Include="lenskit\algorithms\__pycache__\" />
+    <Folder Include="lenskit\__pycache__\" />
+    <Folder Include="tests\" />
+    <Folder Include="tests\__pycache__\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="lenskit\algorithms\__pycache__\baselines.cpython-36.pyc" />
+    <Content Include="lenskit\algorithms\__pycache__\__init__.cpython-36.pyc" />
+    <Content Include="lenskit\__pycache__\crossfold.cpython-36.pyc" />
+    <Content Include="lenskit\__pycache__\util.cpython-36.pyc" />
+    <Content Include="lenskit\__pycache__\__init__.cpython-36.pyc" />
+    <Content Include="tests\__pycache__\lk_test_utils.cpython-36.pyc" />
+    <Content Include="tests\__pycache__\test_baselines.cpython-36-PYTEST.pyc" />
+    <Content Include="tests\__pycache__\test_crossfold.cpython-36-PYTEST.pyc" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
