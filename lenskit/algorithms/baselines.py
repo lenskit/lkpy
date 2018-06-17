@@ -1,3 +1,8 @@
+"""
+Non-personalized or lightly-personalized baseline algorithms for recommendation
+and rating prediction.
+"""
+
 from collections import namedtuple
 import logging
 
@@ -8,20 +13,39 @@ from .. import util as lku
 _logger = logging.getLogger(__package__)
 
 BiasModel = namedtuple('BiasModel', ['mean', 'items', 'users'])
+BiasModel.__doc__ = "Trained model for the :py:class:`Bias` algorithm."
 
 
 class Bias:
     """
-    A rating-bias rating prediction algorithm.
+    A user-item bias rating prediction algorithm.  This implements the following
+    predictor algorithm:
+
+    .. math::
+       s(u,i) = \mu + b_i + b_u
+
+    where :math:`\mu` is the global mean rating, :math:`b_i` is item bias, and
+    :math:`b_u` is the user bias.
+
+    Args:
+        items: whether to compute item biases
+        users: whether to compute user biases
     """
 
     def __init__(self, items=True, users=True):
         self._include_items = items
         self._include_users = users
 
-    def train(self, data: pd.DataFrame) -> BiasModel:
+    def train(self, data):
         """
         Train the bias model on some rating data.
+
+        Args:
+            data (DataFrame): a data frame of ratings. Must have at least `user`,
+                              `item`, and `rating` columns.
+
+        Returns:
+            BiasModel: a trained model with the desired biases computed.
         """
 
         _logger.info('building bias model for %d ratings', len(data))
@@ -51,9 +75,21 @@ class Bias:
 
         return BiasModel(mean, item_offsets, user_offsets)
 
-    def predict(self, model: BiasModel, user, items, ratings=None) -> pd.DataFrame:
+    def predict(self, model, user, items, ratings=None):
         """
-        Compute predictions for a user and items.
+        Compute predictions for a user and items.  Unknown users and items
+        are assumed to have zero bias.
+
+        Args:
+            model (BiasModel): the trained model to use.
+            user: the user ID
+            items (array-like): the items to predict
+            ratings (pandas.Series): the user's ratings (indexed by item id); if
+                                 provided, will be used to recompute the user's
+                                 bias at prediction time.
+
+        Returns:
+            pandas.Series: scores for the items, indexed by item id.
         """
 
         idx = pd.Index(items)

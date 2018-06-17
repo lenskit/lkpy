@@ -16,7 +16,6 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
 
-
 # -- Project information -----------------------------------------------------
 
 project = 'LensKit'
@@ -39,9 +38,10 @@ release = '0.0.1'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx.ext.napoleon',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.mathjax',
+    'sphinx.ext.mathjax'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -83,7 +83,17 @@ html_theme = 'alabaster'
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    'github_user': 'lenskit',
+    'github_repo': 'lkpy',
+    'travis_button': True,
+    'canonical_url': 'https://lkpy.lenskit.org/',
+    # 'font_family': '"Source Sans Pro", "Georgia Pro", Georgia, serif',
+    # 'font_size': '15px',
+    # 'head_font_family': '"Merriweather Sans", "Arial", sans-serif',
+    # 'code_font_size': '1em',
+    # 'code_font_family': '"Source Code Pro", "Consolas", "Menlo", sans-serif'
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
