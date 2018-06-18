@@ -3,7 +3,6 @@ Batch-run predictors and recommenders for evaluation.
 """
 
 import logging
-import typing as typ
 
 import pandas as pd
 
