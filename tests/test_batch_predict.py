@@ -1,6 +1,7 @@
 import pytest
 
 from collections import namedtuple
+from functools import partial
 import pandas as pd
 import numpy as np
 
@@ -10,6 +11,7 @@ from lenskit.algorithms.baselines import Bias
 import lenskit.batch as lkb
 
 MLB = namedtuple('MLB', ['ratings', 'algo', 'model'])
+MLB.predictor = property(lambda mlb: partial(mlb.algo.predict, mlb.model))
 
 
 @pytest.fixture
@@ -22,7 +24,7 @@ def mlb():
 
 def test_predict_single(mlb):
     tf = pd.DataFrame({'user': [1], 'item': [31]})
-    res = lkb.predict(mlb.algo, mlb.model, tf)
+    res = lkb.predict(mlb.predictor, tf)
 
     assert len(res) == 1
     assert all(res.user == 1)
@@ -42,7 +44,7 @@ def test_predict_user(mlb):
     test_items = pd.concat([test_rated, pd.Series(test_unrated)])
 
     tf = pd.DataFrame({'user': uid, 'item': test_items})
-    res = lkb.predict(mlb.algo, mlb.model, tf)
+    res = lkb.predict(mlb.predictor, tf)
 
     assert len(res) == 15
     assert list(res.columns) == ['user', 'item', 'prediction']
@@ -64,7 +66,7 @@ def test_predict_two_users(mlb):
     while tf is None or len(set(tf.user)) < 2:
         tf = mlb.ratings[mlb.ratings.user.isin(uids)].loc[:, ('user', 'item')].sample(10)
 
-    res = lkb.predict(mlb.algo, mlb.model, tf)
+    res = lkb.predict(mlb.predictor, tf)
 
     assert len(res) == 10
     assert set(res.user) == set(uids)

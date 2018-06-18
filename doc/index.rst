@@ -17,6 +17,7 @@ LKPY is the successor to the Java-based LensKit project.
    :caption: Contents:
 
    crossfold
+   batch
    baselines
    util
 
