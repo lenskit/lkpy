@@ -11,8 +11,11 @@ matrix:
   exclude:
     - python: "3.7-dev"
       env: PYTHON_TYPE=conda
-  allow_failures:
-    - python: "3.7-dev"
+branches:
+  except:
+    - /^(fix|feature)\/.*$/
+
+    - gh-pages
 cache:
   pip: true
   directories:
