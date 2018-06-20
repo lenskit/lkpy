@@ -174,3 +174,29 @@ def test_bias_train_dask():
     assert p.iloc[0] == approx(imeans_data.loc[10] + umean)
     assert p.iloc[1] == approx(imeans_data.loc[11] + umean)
     assert p.iloc[2] == approx(ratings.rating.mean() + umean)
+
+
+def test_bias_item_damp():
+    algo = bl.Bias(users=False, damping=5)
+    model = algo.train(simple_df)
+    assert model.mean == approx(3.5)
+
+    assert model.items is not None
+    assert model.items.index.name == 'item'
+    assert set(model.items.index) == set([1, 2, 3])
+    assert model.items.loc[1:3].values == approx(np.array([0, 0.25, -0.25]))
+
+    assert model.users is None
+
+
+def test_bias_user_damp():
+    algo = bl.Bias(items=False, damping=5)
+    model = algo.train(simple_df)
+    assert model.mean == approx(3.5)
+    assert model.items is None
+
+    assert model.users is not None
+    assert model.users.index.name == 'user'
+    assert set(model.users.index) == set([10, 12, 13])
+    assert model.users.loc[[10, 12, 13]].values == \
+        approx(np.array([0.2857, -0.08333, -0.25]), abs=1.0e-4)

@@ -32,9 +32,19 @@ class Bias:
         users: whether to compute user biases
     """
 
-    def __init__(self, items=True, users=True):
+    def __init__(self, items=True, users=True, damping=None):
         self._include_items = items
         self._include_users = users
+        if isinstance(damping, tuple):
+            self.user_damping, self.item_damping = damping
+        else:
+            self.user_damping = damping
+            self.item_damping = damping
+
+        if self.user_damping is not None and self.user_damping < 0:
+            raise ValueError('negative user damping value')
+        if self.item_damping is not None and self.item_damping < 0:
+            raise ValueError('negative item damping value')
 
     def train(self, data):
         """
@@ -55,7 +65,8 @@ class Bias:
         nrates = data.assign(rating=lambda df: df.rating - mean)
 
         if self._include_items:
-            item_offsets = nrates.groupby('item').rating.mean()
+            group = nrates.groupby('item').rating
+            item_offsets = self._mean(group, self.item_damping)
             item_offsets = lku.compute(item_offsets)
             _logger.info('computed means for %d items', len(item_offsets))
         else:
@@ -67,7 +78,7 @@ class Bias:
                                      rsuffix='_im')
                 nrates = nrates.assign(rating=lambda df: df.rating - df.rating_im)
 
-            user_offsets = nrates.groupby('user').rating.mean()
+            user_offsets = self._mean(nrates.groupby('user').rating, self.user_damping)
             user_offsets = lku.compute(user_offsets)
             _logger.info('computed means for %d users', len(user_offsets))
         else:
@@ -110,3 +121,9 @@ class Bias:
             preds = preds + umean
 
         return preds
+
+    def _mean(self, series, damping):
+        if damping is not None and damping > 0:
+            return series.sum() / (series.count() + damping)
+        else:
+            return series.mean()
