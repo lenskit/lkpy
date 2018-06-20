@@ -26,7 +26,20 @@ class Bias:
        s(u,i) = \mu + b_i + b_u
 
     where :math:`\mu` is the global mean rating, :math:`b_i` is item bias, and
-    :math:`b_u` is the user bias.
+    :math:`b_u` is the user bias.  With the provided damping values
+    :math:`\\beta_{\\mathrm{u}}` and :math:`\\beta_{\\mathrm{i}}`, they are computed
+    as follows:
+
+    .. math::
+       \\begin{align*}
+       \\mu & = \\frac{\\sum_{r_{ui} \\in R} r_{ui}}{|R|} &
+       b_i & = \\frac{\\sum_{r_{ui} \\in R_i} (r_{ui} - \\mu)}{|R_i| + \\beta_{\\mathrm{i}}} &
+       b_u & = \\frac{\\sum_{r_{ui} \\in R_u} (r_{ui} - \\mu - b_i)}{|R_u| + \\beta_{\\mathrm{u}}}
+       \\end{align*}
+
+    The damping values can be interpreted as the number of default (mean) ratings to assume
+    *a priori* for each user or item, damping low-information users and items towards a mean instead
+    of permitting them to take on extreme values based on few ratings.
 
     Args:
         items: whether to compute item biases
