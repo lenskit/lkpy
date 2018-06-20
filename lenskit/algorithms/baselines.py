@@ -9,6 +9,7 @@ import logging
 import pandas as pd
 
 from .. import util as lku
+from .. import check
 
 _logger = logging.getLogger(__package__)
 
@@ -30,9 +31,13 @@ class Bias:
     Args:
         items: whether to compute item biases
         users: whether to compute user biases
+        damping(number or tuple):
+            Bayesian damping to apply to computed biases.  Either a number, to
+            damp both user and item biases the same amount, or a (user,item) tuple
+            providing separate damping values.
     """
 
-    def __init__(self, items=True, users=True, damping=None):
+    def __init__(self, items=True, users=True, damping=0.0):
         self._include_items = items
         self._include_users = users
         if isinstance(damping, tuple):
@@ -41,10 +46,10 @@ class Bias:
             self.user_damping = damping
             self.item_damping = damping
 
-        if self.user_damping is not None and self.user_damping < 0:
-            raise ValueError('negative user damping value')
-        if self.item_damping is not None and self.item_damping < 0:
-            raise ValueError('negative item damping value')
+        check.check_value(self.user_damping >= 0, "user damping value {} must be nonnegative",
+                          self.user_damping)
+        check.check_value(self.item_damping >= 0, "item damping value {} must be nonnegative",
+                          self.item_damping)
 
     def train(self, data):
         """
