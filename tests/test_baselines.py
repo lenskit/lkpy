@@ -200,3 +200,38 @@ def test_bias_user_damp():
     assert set(model.users.index) == set([10, 12, 13])
     assert model.users.loc[[10, 12, 13]].values == \
         approx(np.array([0.2857, -0.08333, -0.25]), abs=1.0e-4)
+
+
+def test_bias_damped():
+    algo = bl.Bias(damping=5)
+    model = algo.train(simple_df)
+    assert model.mean == approx(3.5)
+
+    assert model.items is not None
+    assert model.items.index.name == 'item'
+    assert set(model.items.index) == set([1, 2, 3])
+    assert model.items.loc[1:3].values == approx(np.array([0, 0.25, -0.25]))
+
+    assert model.users is not None
+    assert model.users.index.name == 'user'
+    assert set(model.users.index) == set([10, 12, 13])
+    assert model.users.loc[[10, 12, 13]].values == \
+        approx(np.array([0.25, -00.08333, -0.20833]), abs=1.0e-4)
+
+
+def test_bias_separate_damping():
+    algo = bl.Bias(damping=(5, 10))
+    model = algo.train(simple_df)
+    assert model.mean == approx(3.5)
+
+    assert model.items is not None
+    assert model.items.index.name == 'item'
+    assert set(model.items.index) == set([1, 2, 3])
+    assert model.items.loc[1:3].values == \
+        approx(np.array([0, 0.136364, -0.13636]), abs=1.0e-4)
+
+    assert model.users is not None
+    assert model.users.index.name == 'user'
+    assert set(model.users.index) == set([10, 12, 13])
+    assert model.users.loc[[10, 12, 13]].values == \
+        approx(np.array([0.266234, -0.08333, -0.22727]), abs=1.0e-4)
