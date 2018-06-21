@@ -1,4 +1,3 @@
-import math
 import numpy as np
 import pandas as pd
 
@@ -29,6 +28,9 @@ def test_rmse_two():
 
     rmse = pm.rmse([1, 3], [3, 1])
     assert rmse == approx(2)
+
+    rmse = pm.rmse([1, 3], [3, 2])
+    assert rmse == approx(np.sqrt(5 / 2))
 
 
 def test_rmse_array_two():
@@ -69,3 +71,42 @@ def test_rmse_series_missing_value_ignore():
     rmse = pm.rmse(pd.Series([1, 3], ['a', 'd']), pd.Series([3, 4, 1], ['a', 'b', 'c']),
                    missing='ignore')
     assert rmse == approx(2)
+
+
+def test_mae_two():
+    mae = pm.mae([1, 2], [1, 2])
+    assert isinstance(mae, float)
+    assert mae == approx(0)
+
+    mae = pm.mae([1, 1], [2, 2])
+    assert mae == approx(1)
+
+    mae = pm.mae([1, 3], [3, 1])
+    assert mae == approx(2)
+
+    mae = pm.mae([1, 3], [3, 2])
+    assert mae == approx(1.5)
+
+
+def test_mae_array_two():
+    mae = pm.mae(np.array([1, 2]), np.array([1, 2]))
+    assert isinstance(mae, float)
+    assert mae == approx(0)
+
+    mae = pm.mae(np.array([1, 1]), np.array([2, 2]))
+    assert mae == approx(1)
+
+    mae = pm.mae(np.array([1, 3]), np.array([3, 1]))
+    assert mae == approx(2)
+
+
+def test_mae_series_two():
+    mae = pm.mae(pd.Series([1, 2]), pd.Series([1, 2]))
+    assert isinstance(mae, float)
+    assert mae == approx(0)
+
+    mae = pm.mae(pd.Series([1, 1]), pd.Series([2, 2]))
+    assert mae == approx(1)
+
+    mae = pm.mae(pd.Series([1, 3]), pd.Series([3, 1]))
+    assert mae == approx(2)
