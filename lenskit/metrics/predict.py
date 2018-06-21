@@ -28,7 +28,7 @@ def rmse(predictions, truth, missing='error'):
     predictions, truth = predictions.align(truth, join='left')
     if missing == 'error' and truth.isna().any():
         nmissing = truth.isna().sum()
-        raise ValueError('missing truth for ${nmissing} predictions')
+        raise ValueError('missing truth for {} predictions'.format(nmissing))
 
     diff = predictions - truth
 
