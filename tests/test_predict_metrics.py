@@ -6,6 +6,49 @@ from pytest import approx, raises
 import lenskit.metrics.predict as pm
 
 
+def test_check_missing_empty():
+    pm._check_missing(pd.Series([]), 'error')
+    # should pass
+    assert True
+
+
+def test_check_missing_has_values():
+    pm._check_missing(pd.Series([1, 3, 2]), 'error')
+    # should pass
+    assert True
+
+
+def test_check_missing_nan_raises():
+    with raises(ValueError):
+        pm._check_missing(pd.Series([1, np.nan, 3]), 'error')
+
+
+def test_check_missing_raises():
+    data = pd.Series([1, 7, 3], ['a', 'b', 'd'])
+    ref = pd.Series([3, 2, 4], ['b', 'c', 'd'])
+    ref, data = ref.align(data, join='left')
+    with raises(ValueError):
+        pm._check_missing(data, 'error')
+
+
+def test_check_joined_ok():
+    data = pd.Series([1, 7, 3], ['a', 'b', 'd'])
+    ref = pd.Series([3, 2, 4], ['b', 'c', 'd'])
+    ref, data = ref.align(data, join='inner')
+    pm._check_missing(ref, 'error')
+    # should get here
+    assert True
+
+
+def test_check_missing_ignore():
+    data = pd.Series([1, 7, 3], ['a', 'b', 'd'])
+    ref = pd.Series([3, 2, 4], ['b', 'c', 'd'])
+    ref, data = ref.align(data, join='left')
+    pm._check_missing(data, 'ignore')
+    # should get here
+    assert True
+
+
 def test_rmse_one():
     rmse = pm.rmse([1], [1])
     assert isinstance(rmse, float)
