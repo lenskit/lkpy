@@ -167,9 +167,7 @@ def test_batch_rmse():
     def eval(train, test):
         model = algo.train(train)
         preds = batch.predict(lambda u, xs: algo.predict(model, u, xs), test)
-        preds = preds.set_index(['user', 'item'])
-        test = test.set_index(['user', 'item'])
-        return test.join(preds)
+        return preds.set_index(['user', 'item'])
 
     results = pd.concat((eval(train, test)
                          for (train, test)

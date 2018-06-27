@@ -18,17 +18,18 @@ def predict(predictor, pairs):
     Args:
         predictor(callable): a rating predictor function.
         model(any): a model for the algorithm.
-        pairs(pandas.DataFrame): a data frame of (``user``, ``item``) pairs to predict for.
+        pairs(pandas.DataFrame):
+            a data frame of (``user``, ``item``) pairs to predict for. If this frame also
+            contains a ``rating`` column, it will be included in the result.
 
     Returns:
         pandas.DataFrame: a frame with columns ``user``, ``item``, and ``prediction`` containing
                           the prediction results.
     """
 
-    _logger.debug('running with frame\n%s', pairs)
-
     ures = (predictor(user, udf.item).reset_index(name='prediction').assign(user=user)
             for (user, udf) in pairs.groupby('user'))
     res = pd.concat(ures).loc[:, ['user', 'item', 'prediction']]
-    _logger.debug('returning frame\n%s', res)
+    if 'rating' in pairs:
+        return pairs.join(res.set_index(['user', 'item']), on=('user', 'item'))
     return res

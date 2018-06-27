@@ -76,3 +76,25 @@ def test_predict_two_users(mlb):
     preds['rating'] += mlb.model.items
     preds['rating'] += mlb.model.users
     assert preds.prediction.values == pytest.approx(preds.rating.values)
+
+
+def test_predict_include_rating(mlb):
+    uids = [5, 10]
+    tf = None
+    # make sure we get both UIDs
+    while tf is None or len(set(tf.user)) < 2:
+        tf = mlb.ratings[mlb.ratings.user.isin(uids)].loc[:, ('user', 'item', 'rating')].sample(10)
+
+    res = lkb.predict(mlb.predictor, tf)
+
+    assert len(res) == 10
+    assert set(res.user) == set(uids)
+
+    preds = res.set_index(['user', 'item'])
+    preds['expected'] = mlb.model.mean
+    preds['expected'] += mlb.model.items
+    preds['expected'] += mlb.model.users
+    assert preds.prediction.values == pytest.approx(preds.expected.values)
+
+    urv = mlb.ratings.set_index(['user', 'item'])
+    assert all(preds.rating.values == urv.loc[preds.index, :].rating.values)
