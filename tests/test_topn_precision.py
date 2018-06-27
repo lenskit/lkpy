@@ -7,21 +7,21 @@ import lenskit.metrics.topn as lm
 
 
 def test_precision_empty_none():
-    prec = lm.precision([], set([1, 3]))
+    prec = lm.precision([], [1, 3])
     assert prec is None
 
 
 def test_precision_simple_cases():
-    prec = lm.precision([1, 3], set([1, 3]))
+    prec = lm.precision([1, 3], [1, 3])
     assert prec == approx(1.0)
 
-    prec = lm.precision([1], set([1, 3]))
+    prec = lm.precision([1], [1, 3])
     assert prec == approx(1.0)
 
-    prec = lm.precision([1, 2, 3, 4], set([1, 3]))
+    prec = lm.precision([1, 2, 3, 4], [1, 3])
     assert prec == approx(0.5)
 
-    prec = lm.precision([1, 2, 3, 4], set([1, 3, 5]))
+    prec = lm.precision([1, 2, 3, 4], [1, 3, 5])
     assert prec == approx(0.5)
 
     prec = lm.precision([1, 2, 3, 4], range(5, 10))
@@ -43,7 +43,7 @@ def test_precision_series():
 
 
 def test_precision_series_set():
-    prec = lm.precision(pd.Series([1, 2, 3, 4]), set([1, 3, 5]))
+    prec = lm.precision(pd.Series([1, 2, 3, 4]), [1, 3, 5])
     assert prec == approx(0.5)
 
     prec = lm.precision(pd.Series([1, 2, 3, 4]), range(4, 10))

@@ -19,6 +19,9 @@ def precision(recs, relevant):
     Returns:
         double: the fraction of recommended items that are relevant
     """
+    check.check_value(not isinstance(relevant, set),
+                      "set type not supported for relevant set",
+                      warn=True)
     if len(recs) == 0:
         return None
 
@@ -35,6 +38,9 @@ def recall(recs, relevant):
         recs(array-like): a sequence of recommended items
         relevant(set-like): the set of relevant items
     """
+    check.check_value(not isinstance(relevant, set),
+                      "set type not supported for relevant set",
+                      warn=True)
     if len(relevant) == 0:
         return np.nan
 
@@ -51,7 +57,9 @@ def recip_rank(recs, relevant):
         recs(array-like): a sequence of recommended items
         relevant(set-like): the set of relevant items
     """
-    check.check_value(not isinstance(relevant, set), "set type not supported for relevant set")
+    check.check_value(not isinstance(relevant, set),
+                      "set type not supported for relevant set",
+                      warn=True)
     good = np.isin(recs, relevant)
     # nonzero returns a tuple, we have one dimension
     (nzp,) = good.nonzero()
