@@ -67,14 +67,3 @@ def recip_rank(recs, relevant):
         return 0.0
     else:
         return 1.0 / (nzp[0] + 1)
-
-
-def avg_precision(recs, relevant):
-    """
-    Compute the average precision of a list of recommendations.
-
-    Args:
-        recs(array-like): a sequence of recommended items
-        relevant(set-like): the set of relevant items
-    """
-    pass
