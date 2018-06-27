@@ -34,7 +34,12 @@ def recall(recs, relevant):
         recs(array-like): a sequence of recommended items
         relevant(set-like): the set of relevant items
     """
-    pass
+    if len(relevant) == 0:
+        return np.nan
+
+    recs = pd.Series(recs)
+    ngood = recs.isin(relevant).sum()
+    return ngood / len(relevant)
 
 
 def recip_rank(recs, relevant):
