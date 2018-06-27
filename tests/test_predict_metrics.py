@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from pytest import approx, raises
+from pytest import approx, raises, mark
 
 import lenskit.metrics.predict as pm
 
@@ -153,3 +153,39 @@ def test_mae_series_two():
 
     mae = pm.mae(pd.Series([1, 3]), pd.Series([3, 1]))
     assert mae == approx(2)
+
+
+@mark.slow
+def test_batch_rmse():
+    import lk_test_utils as lktu
+    import lenskit.crossfold as xf
+    import lenskit.batch as batch
+    import lenskit.algorithms.baselines as bl
+
+    algo = bl.Bias()
+
+    def eval(train, test):
+        model = algo.train(train)
+        preds = batch.predict(lambda u, xs: algo.predict(model, u, xs), test)
+        preds = preds.set_index(['user', 'item'])
+        test = test.set_index(['user', 'item'])
+        return test.join(preds)
+
+    results = pd.concat((eval(train, test)
+                         for (train, test)
+                         in xf.partition_users(lktu.ml_pandas.renamed.ratings,
+                                               5, xf.SampleN(5))))
+
+    user_rmse = results.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
+
+    # we should have all users
+    users = lktu.ml_pandas.renamed.ratings.user.unique()
+    assert len(user_rmse) == len(users)
+    missing = np.setdiff1d(users, user_rmse.index)
+    assert len(missing) == 0
+
+    # we should not have any missing values
+    assert all(user_rmse.notna())
+
+    # we should have a reasonable mean
+    assert user_rmse.mean() == approx(0.85, 0.025)
