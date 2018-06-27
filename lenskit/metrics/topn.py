@@ -5,6 +5,8 @@ Top-N evaluation metrics.
 import pandas as pd
 import numpy as np
 
+from .. import check
+
 
 def precision(recs, relevant):
     """
@@ -49,7 +51,14 @@ def recip_rank(recs, relevant):
         recs(array-like): a sequence of recommended items
         relevant(set-like): the set of relevant items
     """
-    pass
+    check.check_value(not isinstance(relevant, set), "set type not supported for relevant set")
+    good = np.isin(recs, relevant)
+    # nonzero returns a tuple, we have one dimension
+    (nzp,) = good.nonzero()
+    if len(nzp) == 0:
+        return 0.0
+    else:
+        return 1.0 / (nzp[0] + 1)
 
 
 def avg_precision(recs, relevant):
