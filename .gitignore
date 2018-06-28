@@ -206,6 +206,9 @@ FakesAssemblies/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+*.prof
+*.lprof
+.ipynb_checkpoints/
 
 .eggs/
 .*_cache/
