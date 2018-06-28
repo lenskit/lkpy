@@ -1,7 +1,6 @@
 import lenskit.algorithms.knn as knn
 
 import logging
-import sys
 import os.path
 
 import pandas as pd
@@ -30,7 +29,8 @@ def test_uu_train():
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(['user', 'item']).rating
-    ui_rbdf = pd.DataFrame({'nrating': model.matrix}).join(model.user_stats)
+    ui_rbdf = model.matrix.rename(columns={'rating': 'nrating'}).set_index(['user', 'item'])
+    ui_rbdf = ui_rbdf.join(model.user_stats)
     ui_rbdf['rating'] = ui_rbdf['nrating'] * ui_rbdf['norm'] + ui_rbdf['mean']
     ui_rbdf['orig_rating'] = uir
     assert ui_rbdf.rating.values == approx(ui_rbdf.orig_rating.values)
@@ -77,7 +77,7 @@ def test_uu_batch_accuracy():
 
     ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
 
-    algo = knn.UserUser(30, min_nbrs=2)
+    algo = knn.UserUser(30)
 
     def eval(train, test):
         _log.info('running training')
@@ -85,9 +85,9 @@ def test_uu_batch_accuracy():
         _log.info('testing %d users', test.user.nunique())
         return batch.predict(lambda u, xs: algo.predict(model, u, xs), test)
 
-    preds = pd.concat((eval(train, test.head(20))
+    preds = pd.concat((eval(train, test)
                        for (train, test)
-                       in xf.partition_users(ratings, 5, xf.SampleN(5))))
+                       in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
     mae = pm.mae(preds.prediction, preds.rating)
     assert mae == approx(0.71, abs=0.025)
 

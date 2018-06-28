@@ -4,12 +4,9 @@ k-NN collaborative filtering.
 
 from collections import namedtuple
 import logging
-import time
-from line_profiler import LineProfiler
 
 import pandas as pd
 import numpy as np
-import scipy as sp
 
 from lenskit import util
 
@@ -46,7 +43,6 @@ class UserUser:
 
         return UUModel(uir.reset_index(name='rating'), ustats, iusers)
 
-    @profile
     def predict(self, model, user, items, ratings=None):
         """
         Compute predictions for a user and items.
@@ -100,12 +96,12 @@ class UserUser:
                       user, len(candidates), len(nbr_ratings))
 
         # we can dot-product to compute similarities
-        @profile
-        def sim(df):
-            nbr = df.set_index('item').rating
-            nbr, mine = nbr.align(ratings, join='inner')
-            return nbr.dot(mine)
-        nbr_sims = nbr_ratings.groupby('user', sort=False).apply(sim)
+        # set up neighbor ratings to join with our ratings
+        nr2 = nbr_ratings.set_index('item')
+        nr2 = nr2.join(pd.DataFrame({'my_rating': ratings}))
+        # compute product & sum by user (bulk dot product0)
+        nr2['rp'] = nr2.rating * nr2.my_rating
+        nbr_sims = nr2.groupby('user', sort=False).rp.sum()
         assert nbr_sims.index.name == 'user'
         # filter for similarity threshold
         nbr_sims = nbr_sims[nbr_sims > self.min_similarity]
@@ -120,18 +116,18 @@ class UserUser:
         # add in our user similarities
         pred_f = nbr_tgt_rates.join(nbr_sims)
 
-        @profile
         def score(idf):
             if len(idf) < self.min_neighbors:
                 return np.nan
+
+            if self.max_neighbors is not None:
+                idf = idf.nlargest(self.max_neighbors, 'similarity')
+
             sims = idf.similarity
             rates = idf.rating * model.user_stats['norm']
-            if self.max_neighbors is not None:
-                sims = sims.nlargest(self.max_neighbors)
-                sims, rates = sims.align(rates, join='inner')
             return sims.dot(rates) / sims.abs().sum() + umean
 
         results = pred_f.groupby('item').apply(score)
-        _logger.info('scored %d of %d items for %s in %s',
-                     results.notna().sum(), len(items), user, watch)
+        _logger.debug('scored %d of %d items for %s in %s',
+                      results.notna().sum(), len(items), user, watch)
         return results
