@@ -3,6 +3,9 @@ Batch-run predictors and recommenders for evaluation.
 """
 
 import logging
+import multiprocessing
+import typing
+from functools import partial
 
 import pandas as pd
 
@@ -35,3 +38,32 @@ def predict(predictor, pairs):
     if 'rating' in pairs:
         return pairs.join(res.set_index(['user', 'item']), on=('user', 'item'))
     return res
+
+
+class _MPState(typing.NamedTuple):
+    train: bytes
+    test: bytes
+    algo: typing.Any
+
+
+def _run_mpjob(job: _MPState) -> bytes:
+    train = pd.read_msgpack(job.train)
+    _logger.info('training %s on %d rows', job.algo, len(train))
+    model = job.algo.train(train)
+    test = pd.read_msgpack(job.test)
+    results = predict(partial(job.algo.predict, model), test)
+    return results.to_msgpack()
+
+
+def _mp_stateify(sets, algo):
+    for train, test in sets:
+        train_bytes = train.to_msgpack()
+        test_bytes = test.to_msgpack()
+        yield _MPState(train_bytes, test_bytes, algo)
+
+
+def multi_predict(sets, algo, processes=None):
+    with multiprocessing.Pool(processes) as p:
+        results = list(p.map(_run_mpjob, _mp_stateify(sets, algo)))
+
+    return pd.concat(pd.read_msgpack(rbs) for rbs in results)
