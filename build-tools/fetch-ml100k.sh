@@ -6,4 +6,4 @@ if [ -r ml-100k/u.data ]; then
 fi
 
 wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
-unzip ml-100k.sip
+unzip ml-100k.zip
