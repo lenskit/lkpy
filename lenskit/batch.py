@@ -6,6 +6,7 @@ import logging
 import multiprocessing
 import typing
 from functools import partial
+from collections import namedtuple
 
 import pandas as pd
 
@@ -40,10 +41,7 @@ def predict(predictor, pairs):
     return res
 
 
-class _MPState(typing.NamedTuple):
-    train: bytes
-    test: bytes
-    algo: typing.Any
+_MPState = namedtuple('_MPState', ['train', 'test', 'algo'])
 
 
 def _run_mpjob(job: _MPState) -> bytes:
