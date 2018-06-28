@@ -79,6 +79,15 @@ def test_uu_predict_live_ratings():
     assert preds.loc[1016] == approx(3.62221550680778)
 
 
+def test_uu_predict_unknown_empty():
+    algo = knn.UserUser(30, min_nbrs=2)
+    model = algo.train(ml_ratings)
+
+    preds = algo.predict(model, -28018, [1016, 2091])
+    assert len(preds) == 2
+    assert all(preds.isna())
+
+
 @mark.slow
 def test_uu_batch_accuracy():
     import lenskit.crossfold as xf

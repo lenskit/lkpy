@@ -65,7 +65,7 @@ class UserUser:
         if ratings is None:
             if user not in model.user_stats.index:
                 _logger.warn('user %d has no ratings and none provided', user)
-                return pd.Series()
+                return pd.Series(index=items)
             ratings = rmat[rmat.user == user].set_index('item').rating
             umean = model.user_stats.loc[user, 'mean']
             unorm = model.user_stats.loc[user, 'norm']
