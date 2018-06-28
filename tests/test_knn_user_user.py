@@ -66,6 +66,19 @@ def test_uu_predict_too_few_blended():
     assert preds.loc[1016] == approx(3.62221550680778)
 
 
+def test_uu_predict_live_ratings():
+    algo = knn.UserUser(30, min_nbrs=2)
+    no4 = ml_ratings[ml_ratings.user != 4]
+    model = algo.train(no4)
+
+    ratings = ml_ratings[ml_ratings.user == 4].set_index('item').rating
+
+    preds = algo.predict(model, 20381, [1016, 2091], ratings)
+    assert len(preds) == 2
+    assert np.isnan(preds.loc[2091])
+    assert preds.loc[1016] == approx(3.62221550680778)
+
+
 @mark.slow
 def test_uu_batch_accuracy():
     import lenskit.crossfold as xf
