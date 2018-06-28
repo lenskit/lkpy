@@ -23,8 +23,10 @@ def predict(predictor, pairs):
             contains a ``rating`` column, it will be included in the result.
 
     Returns:
-        pandas.DataFrame: a frame with columns ``user``, ``item``, and ``prediction`` containing
-                          the prediction results.
+        pandas.DataFrame:
+            a frame with columns ``user``, ``item``, and ``prediction`` containing
+            the prediction results. If ``pairs`` contains a `rating` column, this
+            result will also contain a `rating` column.
     """
 
     ures = (predictor(user, udf.item).reset_index(name='prediction').assign(user=user)
