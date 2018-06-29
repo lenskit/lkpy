@@ -29,3 +29,10 @@ def test_stopwatch_str():
     time.sleep(0.5)
     s = str(w)
     assert s.endswith('ms')
+
+
+def test_stopwatch_long_str():
+    w = lku.Stopwatch()
+    time.sleep(1.2)
+    s = str(w)
+    assert s.endswith('s')
