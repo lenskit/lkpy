@@ -5,7 +5,7 @@ import shutil
 
 
 @task
-def test(c, cover=False, verbose=True, slow=True):
+def test(c, cover=False, verbose=True, slow=True, match=None, mark=None):
     "Run tests"
     import pytest
     args = ['tests']
@@ -16,6 +16,12 @@ def test(c, cover=False, verbose=True, slow=True):
     if not slow:
         args.append('-m')
         args.append('not slow')
+    if match:
+        args.append('-k')
+        args.append(match)
+    if mark:
+        args.append('-m')
+        args.append(mark)
     rc = pytest.main(args)
     if rc:
         raise Failure(Result(exited=rc), 'tests failed')
