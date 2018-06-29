@@ -96,30 +96,10 @@ class UserUser:
 
         # now ratings is normalized to be a mean-centered unit vector
         # this means we can dot product to score neighbors
-        # let's find all users who have rated one of our items
-        kitems = pd.Series(items)
-        kitems = kitems[kitems.isin(model.item_users.index)]
-        candidates = model.item_users.loc[kitems].unique()
-        # don't use ourselves to predict
-        candidates = candidates[candidates != user]
-        candidates = pd.Index(candidates)
-        # and get all ratings by them candidates, and for one of the rated items
-        nbr_ratings = rmat[rmat.user.isin(candidates)]
-        nbr_ratings = nbr_ratings[nbr_ratings.item.isin(ratings.index)]
-        _logger.debug('predicting for user %d with %d candidate users and %d ratings',
-                      user, len(candidates), len(nbr_ratings))
+        # get the candidate neighbors with their ratings for user-rated items
+        nbr_ratings = self._get_nbr_ratings(model, user, items, ratings)
 
-        # we can dot-product to compute similarities
-        # set up neighbor ratings to join with our ratings
-        nr2 = nbr_ratings.set_index('item')
-        nr2 = nr2.join(pd.DataFrame({'my_rating': ratings}))
-        # compute product & sum by user (bulk dot product0)
-        nr2['rp'] = nr2.rating * nr2.my_rating
-        nbr_sims = nr2.groupby('user', sort=False).rp.sum()
-        assert nbr_sims.index.name == 'user'
-        # filter for similarity threshold
-        nbr_sims = nbr_sims[nbr_sims > self.min_similarity]
-        nbr_sims.name = 'similarity'
+        nbr_sims = self._compute_similarities(nbr_ratings, ratings)
         _logger.debug('have %d possible users after similarity filtering', len(nbr_sims))
 
         # now that we have the final similarities, we are ready to compute predictions
@@ -130,6 +110,7 @@ class UserUser:
         # add in our user similarities
         pred_f = nbr_tgt_rates.join(nbr_sims)
 
+        # inner function for computing scores
         def score(idf):
             if len(idf) < self.min_neighbors:
                 return np.nan
@@ -141,6 +122,7 @@ class UserUser:
             rates = idf.rating * model.user_stats['norm']
             return sims.dot(rates) / sims.abs().sum() + umean
 
+        # compute each item's score
         results = pred_f.groupby('item').apply(score)
         _logger.debug('scored %d of %d items for %s in %s',
                       results.notna().sum(), len(items), user, watch)
@@ -165,3 +147,35 @@ class UserUser:
             ratings = ratings / unorm
 
         return ratings, umean, unorm
+
+    def _get_nbr_ratings(self, model, user, items, ratings):
+        rmat = model.matrix
+        # let's find all users who have rated one of our target items
+        kitems = pd.Series(items)
+        kitems = kitems[kitems.isin(model.item_users.index)]
+        candidates = model.item_users.loc[kitems].unique()
+        # don't use ourselves to predict
+        candidates = candidates[candidates != user]
+        candidates = pd.Index(candidates)
+        # and get all ratings by them candidates, and for one of our rated items
+        # this is the basis for computing similarities
+        nbr_ratings = rmat[rmat.user.isin(candidates)]
+        nbr_ratings = nbr_ratings[nbr_ratings.item.isin(ratings.index)]
+        _logger.debug('predicting for user %d with %d candidate users and %d ratings',
+                      user, len(candidates), len(nbr_ratings))
+
+        return nbr_ratings
+
+    def _compute_similarities(self, nbr_ratings, ratings):
+        # we can dot-product to compute similarities
+        # set up neighbor ratings to join with our ratings
+        nr2 = nbr_ratings.set_index('item')
+        nr2 = nr2.join(pd.DataFrame({'my_rating': ratings}))
+        # compute product & sum by user (bulk dot product0)
+        nr2['rp'] = nr2.rating * nr2.my_rating
+        nbr_sims = nr2.groupby('user', sort=False).rp.sum()
+        assert nbr_sims.index.name == 'user'
+        # filter for similarity threshold
+        nbr_sims = nbr_sims[nbr_sims > self.min_similarity]
+        nbr_sims.name = 'similarity'
+        return nbr_sims
