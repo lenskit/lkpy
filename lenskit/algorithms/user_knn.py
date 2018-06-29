@@ -1,5 +1,5 @@
 """
-k-NN collaborative filtering.
+User-based k-NN collaborative filtering.
 """
 
 from collections import namedtuple
@@ -13,16 +13,36 @@ from lenskit import util
 _logger = logging.getLogger(__package__)
 
 UUModel = namedtuple('UUModel', ['matrix', 'user_stats', 'item_users'])
+UUModel.__doc__ = "Memorized data for user-user collaborative filtering."
+UUModel.matrix.__doc__ = \
+    "(user, item, rating) data, where user vectors are mean-centered and unit-normalized."
+UUModel.user_stats.__doc__ = \
+    """
+    (user, mean, norm) data, where mean is the user's raw mean rating and norm is the L2 norm
+    of their mean-centered rating vector.  Together with ``matrix``, this can reconstruct the
+    original rating matrix.
+    """
+UUModel.item_users.__doc__ = \
+    """
+    A series, indexed by item ID, of the user IDs who have rated each item.
+    """
 
 
 class UserUser:
     """
-    User-user nearest-neighbor collaborative filtering.  This user-user implementation is not
-    terribly configurable; it hard-codes design decisions found to work well in the previous
+    User-user nearest-neighbor collaborative filtering with ratings. This user-user implementation
+    is not terribly configurable; it hard-codes design decisions found to work well in the previous
     Java-based LensKit code.
     """
 
     def __init__(self, nnbrs, min_nbrs=1, min_sim=0):
+        """
+        Args:
+            nnbrs(int):
+                the maximum number of neighbors for scoring each item (``None`` for unlimited)
+            min_nbrs(int): the minimum number of neighbors for scoring each item
+            min_sim(double): minimum similarity threshold for considering a neighbor
+        """
         self.max_neighbors = nnbrs
         self.min_neighbors = min_nbrs
         self.min_similarity = min_sim
@@ -31,6 +51,12 @@ class UserUser:
         """
         "Train" a user-user CF model.  This memorizes the rating data in a format that is usable
         for future computations.
+
+        Args:
+            ratings(pandas.DataFrame): (user, item, rating) data for collaborative filtering.
+
+        Returns:
+            UUModel: a memorized model for efficient user-based CF computation.
         """
 
         user_means = ratings.groupby('user').rating.mean()
@@ -48,7 +74,7 @@ class UserUser:
         Compute predictions for a user and items.
 
         Args:
-            model (BiasModel): the trained model to use.
+            model (UUModel): the memorized data to use.
             user: the user ID
             items (array-like): the items to predict
             ratings (pandas.Series):
@@ -60,36 +86,24 @@ class UserUser:
         """
 
         watch = util.Stopwatch()
-        rmat = model.matrix
 
+        ratings, umean, unorm = self._get_user_data(model, user, ratings)
         if ratings is None:
-            if user not in model.user_stats.index:
-                _logger.warn('user %d has no ratings and none provided', user)
-                return pd.Series(index=items)
-            ratings = rmat[rmat.user == user].set_index('item').rating
-            umean = model.user_stats.loc[user, 'mean']
-            unorm = model.user_stats.loc[user, 'norm']
-        else:
-            _logger.debug('using provided ratings for user %d', user)
-            umean = ratings.mean()
-            ratings = ratings - umean
-            unorm = np.linalg.norm(ratings)
-            ratings = ratings / unorm
+            return pd.Series(index=items)
 
         assert ratings.index.names == ['item']
+        rmat = model.matrix
 
         # now ratings is normalized to be a mean-centered unit vector
         # this means we can dot product to score neighbors
         # let's find all users who have rated one of our items
-        # get rid of
         kitems = pd.Series(items)
         kitems = kitems[kitems.isin(model.item_users.index)]
         candidates = model.item_users.loc[kitems].unique()
         # don't use ourselves to predict
         candidates = candidates[candidates != user]
         candidates = pd.Index(candidates)
-        # and get all ratings by them, and for one of the rated items
-        # nbr_ratings = model.matrix.loc[(candidates, slice(None))].reset_index()
+        # and get all ratings by them candidates, and for one of the rated items
         nbr_ratings = rmat[rmat.user.isin(candidates)]
         nbr_ratings = nbr_ratings[nbr_ratings.item.isin(ratings.index)]
         _logger.debug('predicting for user %d with %d candidate users and %d ratings',
@@ -131,3 +145,23 @@ class UserUser:
         _logger.debug('scored %d of %d items for %s in %s',
                       results.notna().sum(), len(items), user, watch)
         return results
+
+    def _get_user_data(self, model, user, ratings):
+        "Get a user's data for user-user CF"
+        rmat = model.matrix
+
+        if ratings is None:
+            if user not in model.user_stats.index:
+                _logger.warn('user %d has no ratings and none provided', user)
+                return None, 0, 0
+            ratings = rmat[rmat.user == user].set_index('item').rating
+            umean = model.user_stats.loc[user, 'mean']
+            unorm = model.user_stats.loc[user, 'norm']
+        else:
+            _logger.debug('using provided ratings for user %d', user)
+            umean = ratings.mean()
+            ratings = ratings - umean
+            unorm = np.linalg.norm(ratings)
+            ratings = ratings / unorm
+
+        return ratings, umean, unorm

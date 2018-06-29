@@ -1,4 +1,4 @@
-import lenskit.algorithms.knn as knn
+import lenskit.algorithms.user_knn as knn
 
 import logging
 import os.path
