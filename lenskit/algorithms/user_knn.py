@@ -176,6 +176,6 @@ class UserUser:
         nbr_sims = nr2.groupby('user', sort=False).rp.sum()
         assert nbr_sims.index.name == 'user'
         # filter for similarity threshold
-        nbr_sims = nbr_sims[nbr_sims > self.min_similarity]
+        nbr_sims = nbr_sims[nbr_sims >= self.min_similarity]
         nbr_sims.name = 'similarity'
         return nbr_sims
