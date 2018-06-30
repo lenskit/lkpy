@@ -39,6 +39,12 @@ def test_ii_train():
     assert model is not None
     assert model.sim_matrix.index.name == 'item'
     assert list(model.sim_matrix.columns) == ['neighbor', 'similarity']
+    assert all(model.sim_matrix.similarity.notna())
+    assert all(model.sim_matrix.similarity > 0)
+
+    nbr1 = model.sim_matrix.loc[[6], :]
+    # 6 is a neighbor of 7
+    assert (nbr1.neighbor == 7).sum() == 1
 
 
 def test_ii_simple_predict():
