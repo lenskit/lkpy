@@ -92,6 +92,8 @@ class ItemItem:
             joined['rp'] = joined.tgt_rating * joined.rating
             # group by item and sum
             sims = joined.groupby('item').rp.sum()
+            # get rid of zeros
+            sims = sims[sims.abs() > 1.0e-10]
             if self.min_similarity is not None:
                 sims = sims[sims >= self.min_similarity]
             if self.save_neighbors is not None:
