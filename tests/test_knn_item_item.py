@@ -59,7 +59,7 @@ def test_ii_train_big():
 
     assert model is not None
     assert model.sim_matrix.index.name == 'item'
-    assert list(model.sim.matrix.columns) == ['neighbor', 'similarity']
+    assert list(model.sim_matrix.columns) == ['neighbor', 'similarity']
 
 
 @mark.slow
