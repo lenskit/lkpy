@@ -74,17 +74,18 @@ class ItemItem:
         _logger.info('[%s] computing item-item similarities for %d items with %d ratings',
                      watch, uir.item.nunique(), len(uir))
 
-        def sim_row(irv):
+        def sim_row(irdf):
             _logger.debug('[%s] computing similarities with %d ratings',
-                          watch, len(irv))
-            assert irv.index.name == 'user'
+                          watch, len(irdf))
+            assert irdf.index.name == 'user'
             # idf is all ratings for an item
             # join with other users' ratings
             # drop the item index, it's irrelevant
-            irdf = pd.DataFrame({'tgt_rating': irv})
+            irdf = irdf.rename(columns={'rating': 'tgt_rating', 'item': 'tgt_item'})
             # join with other ratings
             joined = irdf.join(uir, on='user', how='inner')
             assert joined.index.name == 'user'
+            joined = joined[joined.tgt_item != joined.item]
             _logger.debug('[%s] using %d neighboring ratings to compute similarity',
                           watch, len(joined))
             # multiply ratings - dot product part 1
@@ -99,7 +100,7 @@ class ItemItem:
                 .rename(columns={'item': 'neighbor'})\
                 .loc[:, ['neighbor', 'similarity']]
 
-        neighborhoods = uir.groupby('item', sort=False).rating.apply(sim_row)
+        neighborhoods = uir.groupby('item', sort=False).apply(sim_row)
         # get rid of extra groupby index
         neighborhoods = neighborhoods.reset_index(level=1, drop=True)
         _logger.info('[%s] computed %d neighbor pairs', watch, len(neighborhoods))
