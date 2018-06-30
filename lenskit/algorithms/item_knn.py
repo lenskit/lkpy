@@ -22,7 +22,7 @@ class ItemItem:
     Java-based LensKit code.
     """
 
-    def __init__(self, nnbrs, min_nbrs=1, min_sim=0, save_nbrs=None):
+    def __init__(self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None):
         """
         Args:
             nnbrs(int):
@@ -92,8 +92,6 @@ class ItemItem:
             joined['rp'] = joined.tgt_rating * joined.rating
             # group by item and sum
             sims = joined.groupby('item').rp.sum()
-            # get rid of zeros
-            sims = sims[sims.abs() > 1.0e-10]
             if self.min_similarity is not None:
                 sims = sims[sims >= self.min_similarity]
             if self.save_neighbors is not None:
