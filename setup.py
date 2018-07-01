@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+from Cython.Build import cythonize
 
 setup(
     name="lenskit",
@@ -8,6 +9,7 @@ setup(
     description="Run recommender algorithms and experiments",
     url="https://lenskit.github.io/lkpy",
     packages=find_packages(),
+    ext_modules=cythonize('lenskit/**/*.pyx'),
     classifiers=(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
@@ -21,7 +23,8 @@ setup(
     setup_requires=[
         'pytest-runner',
         'pytest-cov',
-        'sphinx'
+        'sphinx',
+        'Cython'
     ],
     tests_require=[
         'pytest >= 3.5.1',

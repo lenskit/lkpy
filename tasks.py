@@ -2,6 +2,13 @@ from invoke import task
 from invoke.exceptions import Failure
 from invoke.runners import Result
 import shutil
+from path import Path
+
+
+@task
+def build(c):
+    lk = Path('lenskit')
+    c.run('cythonize -b ' + ' '.join(lk.glob('**/*.pyx')))
 
 
 @task
