@@ -1,5 +1,6 @@
 from setuptools import setup, find_packages
 from Cython.Build import cythonize
+import numpy
 
 setup(
     name="lenskit",
@@ -10,6 +11,7 @@ setup(
     url="https://lenskit.github.io/lkpy",
     packages=find_packages(),
     ext_modules=cythonize('lenskit/**/*.pyx'),
+    include_dirs=[numpy.get_include()],
     classifiers=(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

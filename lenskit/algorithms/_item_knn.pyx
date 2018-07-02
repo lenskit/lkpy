@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 cimport numpy as np
 from cython.parallel cimport parallel, prange
+from libc.stdlib cimport abort, malloc, free
 
 cpdef double sparse_dot(int [:] ks1, double [:] vs1, int[:] ks2, double [:] vs2) nogil:
     cdef double sum = 0
@@ -33,16 +34,15 @@ cpdef sim_matrix(int[:] iu_items, int[:] iu_users,
     cdef int nitems = iu_items.shape[0] - 1
     # ui_users has the starting position of each user's items, plus the length
     cdef int nusers = ui_users.shape[0] - 1
-    cdef np.ndarray local_buf
-    cdef double[:] values
+    cdef np.float_t * values
     cdef int u, i, nbr, iidx, uidx
     cdef double ur
     neighborhoods = {}
 
     with nogil, parallel():
-        with gil:
-            local_buf = np.zeros([nitems], dtype=np.float_)
-            values = local_buf
+        values = <np.float_t*> malloc(sizeof(np.float_t) * nitems)
+        if values == NULL:
+            abort()
             
         for i in prange(nitems, schedule='dynamic', chunksize=10):
             for uidx in range(iu_items[i], iu_items[i+1]):
@@ -58,10 +58,12 @@ cpdef sim_matrix(int[:] iu_items, int[:] iu_users,
                     if nbr != i:
                         values[nbr] = values[nbr] + ur * ui_ratings[iidx]
             with gil:
-                series = pd.Series(local_buf)
+                series = pd.Series(np.asarray(<np.float_t[:nitems]> values))
                 series = series[series >= threshold]
-                if nnbrs >= 0:
+                if nnbrs > 0:
                     series = series.nlargest(nnbrs)
                 neighborhoods[i] = series
+        
+        free(values)
 
     return neighborhoods
