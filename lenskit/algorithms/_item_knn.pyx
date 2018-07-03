@@ -3,6 +3,10 @@ import numpy as np
 cimport numpy as np
 from cython.parallel cimport parallel, prange
 from libc.stdlib cimport abort, malloc, free
+import logging
+
+_logger = logging.getLogger('_item_knn.pyx')
+
 
 cpdef double sparse_dot(int [:] ks1, double [:] vs1, int[:] ks2, double [:] vs2) nogil:
     cdef double sum = 0
@@ -27,17 +31,37 @@ cpdef double sparse_dot(int [:] ks1, double [:] vs1, int[:] ks2, double [:] vs2)
     return sum
 
 
-cpdef sim_matrix(int[:] iu_items, int[:] iu_users,
-                 int[:] ui_users, int[:] ui_items, double[:] ui_ratings,
+cpdef sim_matrix(int nusers, int nitems,
+                 np.int64_t[:] iu_items, np.int64_t[:] iu_users,
+                 np.int64_t[:] ui_users, np.int64_t[:] ui_items, np.float_t[:] ui_ratings,
                  double threshold, int nnbrs):
-    # iu_items has the starting position of each item's users, plus the length
-    cdef int nitems = iu_items.shape[0] - 1
-    # ui_users has the starting position of each user's items, plus the length
-    cdef int nusers = ui_users.shape[0] - 1
-    cdef np.float_t * values
-    cdef int u, i, nbr, iidx, uidx
+    iu_istart_v = np.zeros(nitems + 1, dtype=np.int64)
+    cdef np.int64_t[:] iu_istart = iu_istart_v
+    ui_ustart_v = np.zeros(nusers + 1, dtype=np.int64)
+    cdef np.int64_t[:] ui_ustart = ui_ustart_v
+    cdef np.float_t * value 
+    cdef np.int64_t u, i, j, nbr, iidx, uidx
+    cdef np.int64_t a, b
     cdef double ur
     neighborhoods = {}
+
+    assert iu_istart.shape[0] == nitems + 1
+    assert ui_ustart.shape[0] == nusers + 1
+    assert iu_items.shape[0] == iu_users.shape[0]
+
+    # set up the item & user start records
+    for a in range(iu_items.shape[0]):
+        b = iu_items[a]
+        if iu_istart[b] == 0 and b > 0:
+            # update
+            iu_istart[b] = a
+    iu_istart[nitems] = iu_items.shape[0]
+    for a in range(ui_users.shape[0]):
+        b = ui_users[a]
+        if ui_ustart[b] == 0 and b > 0:
+            # update
+            ui_ustart[b] = a
+    ui_ustart[nitems] = ui_users.shape[0]
 
     with nogil, parallel():
         values = <np.float_t*> malloc(sizeof(np.float_t) * nitems)
@@ -45,15 +69,18 @@ cpdef sim_matrix(int[:] iu_items, int[:] iu_users,
             abort()
             
         for i in prange(nitems, schedule='dynamic', chunksize=10):
-            for uidx in range(iu_items[i], iu_items[i+1]):
+            for j in range(nitems):
+                values[j] = 0
+
+            for uidx in range(iu_istart[i], iu_istart[i+1]):
                 u = iu_users[uidx]
                 # find user's rating for this item
-                for iidx in range(ui_users[u], ui_users[i+1]):
+                for iidx in range(ui_ustart[u], ui_ustart[u+1]):
                     if ui_items[iidx] == i:
                         ur = ui_ratings[iidx]
                         break
                 # accumulate pieces of dot products
-                for iidx in range(ui_users[u], ui_users[i+1]):
+                for iidx in range(ui_ustart[u], ui_ustart[u+1]):
                     nbr = ui_items[iidx]
                     if nbr != i:
                         values[nbr] = values[nbr] + ur * ui_ratings[iidx]
@@ -62,6 +89,7 @@ cpdef sim_matrix(int[:] iu_items, int[:] iu_users,
                 series = series[series >= threshold]
                 if nnbrs > 0:
                     series = series.nlargest(nnbrs)
+                _logger.debug('found %d neighbors for item %d', len(series), i)
                 neighborhoods[i] = series
         
         free(values)

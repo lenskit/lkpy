@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 
 from lenskit import util
-import _item_knn as accel
+from . import _item_knn as accel
 
 _logger = logging.getLogger(__package__)
 
@@ -71,6 +71,8 @@ class ItemItem:
         uir = uir.reset_index()
         # now we have normalized vectors
 
+        neighborhoods = self._cy_matrix(ratings, uir, watch)
+
         _logger.info('[%s] computed %d neighbor pairs', watch, len(neighborhoods))
         return IIModel(item_means, neighborhoods, ratings.set_index(['user', 'item']).rating)
 
@@ -78,34 +80,43 @@ class ItemItem:
         # the Cython implementation requires contiguous numeric IDs.
         # so let's make those
         user_idx = pd.Index(ratings.user.unique())
-        user_pos = pd.Series(np.arange(len(user_idx), dtype=np.cint), user_idx)
         item_idx = pd.Index(ratings.item.unique())
-        item_pos = pd.Series(np.arange(len(item_idx), dtype=np.cint), item_idx)
 
         # convert input user/item cols to positions, & retain old indices for alignment
-        t_users = user_pos[ratings.user]
-        t_users.index = ratings.user.index
-        t_items = item_pos[ratings.item]
-        t_items.index = ratings.item.index
+        t_users = user_idx.get_indexer(ratings.user)
+        t_items = item_idx.get_indexer(ratings.item)
+        assert len(t_users) == len(ratings)
+        assert len(t_items) == len(ratings)
 
-        # now we need the user-item grid: for each user, what are its items?
-        uipairs = pd.DataFrame({'user': t_users, 'item': t_items}).sort_values(['user', 'item'])
-        ui_items = uipairs.item.values
+        # now we need the item-user grid: for each user, what are its items?
+        iupairs = pd.DataFrame({'user': t_users, 'item': t_items}).sort_values(['item', 'user'])
+        iu_items = iupairs.item.values
+        iu_users = iupairs.user.values
 
         # now we need the item-user grid: for each item, what are its users & ratings?
         # _must_ be sorted by user
-        iutriples = pd.DataFrame({'user': t_users, 'item': t_items, 'rating': ratings.rating})
-        iutriples = iutriples.sort_values(['item', 'user'])
-        iu_users = iutriples.user.values
-        iu_ratings = iutriples.rating.values
+        uitriples = pd.DataFrame({'user': t_users, 'item': t_items,
+                                  'rating': ratings.rating.values})
+        uitriples = uitriples.sort_values(['user', 'item'])
+        ui_users = uitriples.user.values
+        ui_items = uitriples.item.values
+        ui_ratings = uitriples.rating.values
+        if ui_ratings.dtype != np.float_:
+            ui_ratings = np.array(ui_ratings, dtype=np.float_)
 
         size = self.save_neighbors
         if size is None:
             size = -1
-        neighborhoods = accel.sim_matrix(ui_users, ui_items, iu_items, iu_users, iu_ratings,
+        neighborhoods = accel.sim_matrix(len(user_idx), len(item_idx),
+                                         iu_items, iu_users, ui_users, ui_items, ui_ratings,
                                          self.min_similarity, size)
+        _logger.info('[%s] got neighborhoods for %d items', watch, len(neighborhoods))
         # clean up neighborhoods
-
+        neighborhoods = pd.concat(pd.DataFrame({'item': item_idx[item],
+                                                'neighbor': item_idx[nds.index],
+                                                'similarity': nds.values})
+                                  for (item, nds) in neighborhoods.items())
+        return neighborhoods.set_index('item')
 
     def _py_matrix(self, ratings, uir, watch):
         _logger.info('[%s] computing item-item similarities for %d items with %d ratings',
@@ -141,7 +152,6 @@ class ItemItem:
         # get rid of extra groupby index
         neighborhoods = neighborhoods.reset_index(level=1, drop=True)
         return neighborhoods
-
 
     def predict(self, model, user, items, ratings=None):
         if ratings is None:

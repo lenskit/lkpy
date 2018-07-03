@@ -1,6 +1,12 @@
+import sys
 from setuptools import setup, find_packages
 from Cython.Build import cythonize
 import numpy
+
+extensions = cythonize('lenskit/**/*.pyx')
+for ext in extensions:
+    ext.extra_compile_flags = ['/openmp' if sys.platform == 'win32' else '-fopenmp']
+    ext.extra_link_flags = ['/openmp' if sys.platform == 'win32' else '-fopenmp']
 
 setup(
     name="lenskit",
@@ -10,7 +16,7 @@ setup(
     description="Run recommender algorithms and experiments",
     url="https://lenskit.github.io/lkpy",
     packages=find_packages(),
-    ext_modules=cythonize('lenskit/**/*.pyx'),
+    ext_modules=extensions,
     include_dirs=[numpy.get_include()],
     classifiers=(
         "Programming Language :: Python :: 3",
