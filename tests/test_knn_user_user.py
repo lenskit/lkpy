@@ -90,6 +90,7 @@ def test_uu_predict_unknown_empty():
 
 @mark.slow
 def test_uu_batch_accuracy():
+    from lenskit.algorithms import baselines, basic
     import lenskit.crossfold as xf
     from lenskit import batch
     import lenskit.metrics.predict as pm
@@ -99,7 +100,8 @@ def test_uu_batch_accuracy():
 
     ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
 
-    algo = knn.UserUser(30)
+    uu_algo = knn.UserUser(30)
+    algo = basic.Fallback(uu_algo, baselines.Bias())
 
     def eval(train, test):
         _log.info('running training')
