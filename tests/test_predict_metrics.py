@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
+import os.path
 
-from pytest import approx, raises, mark
+from pytest import approx, raises, mark, skip
 
 import lenskit.metrics.predict as pm
 
@@ -162,7 +163,11 @@ def test_batch_rmse():
     import lenskit.batch as batch
     import lenskit.algorithms.baselines as bl
 
-    algo = bl.Bias()
+    if not os.path.exists('ml-100k/u.data'):
+        raise skip()
+
+    ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
+    algo = bl.Bias(damping=5)
 
     def eval(train, test):
         model = algo.train(train)
@@ -171,8 +176,7 @@ def test_batch_rmse():
 
     results = pd.concat((eval(train, test)
                          for (train, test)
-                         in xf.partition_users(lktu.ml_pandas.renamed.ratings,
-                                               5, xf.SampleN(5))))
+                         in xf.partition_users(ratings, 5, xf.SampleN(5))))
 
     user_rmse = results.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
 
@@ -186,4 +190,4 @@ def test_batch_rmse():
     assert all(user_rmse.notna())
 
     # we should have a reasonable mean
-    assert user_rmse.mean() == approx(0.85, 0.025)
+    assert user_rmse.mean() == approx(0.93, 0.05)
