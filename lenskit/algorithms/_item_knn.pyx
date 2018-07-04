@@ -5,7 +5,7 @@ from cython.parallel cimport parallel, prange
 from libc.stdlib cimport abort, malloc, free
 import logging
 
-_logger = logging.getLogger('_item_knn.pyx')
+_logger = logging.getLogger('_item_knn')
 
 
 cpdef double sparse_dot(int [:] ks1, double [:] vs1, int[:] ks2, double [:] vs2) nogil:
@@ -61,7 +61,7 @@ cpdef sim_matrix(int nusers, int nitems,
         if ui_ustart[b] == 0 and b > 0:
             # update
             ui_ustart[b] = a
-    ui_ustart[nitems] = ui_users.shape[0]
+    ui_ustart[nusers] = ui_users.shape[0]
 
     with nogil, parallel():
         values = <np.float_t*> malloc(sizeof(np.float_t) * nitems)
@@ -92,6 +92,9 @@ cpdef sim_matrix(int nusers, int nitems,
                 _logger.debug('found %d neighbors for item %d', len(series), i)
                 neighborhoods[i] = series
         
+        with gil:
+            _logger.debug('finished parallel item-item build')
         free(values)
 
+    _logger.debug('built neighborhoods for %d items', len(neighborhoods))
     return neighborhoods
