@@ -221,4 +221,5 @@ coverage.xml
 .doit.db*
 ml-100k
 *.pyd
+*.so
 *.c
