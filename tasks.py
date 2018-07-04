@@ -1,14 +1,21 @@
+import sys
+import distutils.util as du
 from invoke import task
 from invoke.exceptions import Failure
 from invoke.runners import Result
 import shutil
-from path import Path
+from pathlib import Path
 
 
 @task
 def build(c):
-    lk = Path('lenskit')
-    c.run('cythonize -b ' + ' '.join(lk.glob('**/*.pyx')))
+    c.run('{} setup.py build'.format(sys.executable))
+    ldir = Path('build/lib.%s-%d.%d' % (du.get_platform(), *sys.version_info[:2]))
+    for pyd in ldir.glob('lenskit/*/*.pyd'):
+        path = pyd.relative_to(ldir)
+        if not path.exists() or pyd.stat().st_mtime > path.stat().st_mtime:
+            print('copying', pyd, '->', path)
+            shutil.copy2(pyd, path)
 
 
 @task
