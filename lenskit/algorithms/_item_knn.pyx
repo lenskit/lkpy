@@ -4,35 +4,59 @@ import pandas as pd
 import numpy as np
 cimport numpy as np
 from cython.parallel cimport parallel, prange, threadid
+from libc.stdlib cimport malloc, free, realloc, abort
 cimport openmp
 import logging
 
 _logger = logging.getLogger('_item_knn')
 
-cdef class TmpResults:
-    cdef size_t size
-    cdef size_t capacity
-    cdef array.array items, nbrs, sims
+cdef struct TmpResults:
+    size_t size
+    size_t capacity
+    np.int64_t *items
+    np.int64_t *nbrs
+    np.float_t *sims
 
-    def __cinit__(self, size_t cap):
-        _logger.debug('allocating temporary result holder for %d rows in thread %d',
-                      cap, openmp.omp_get_thread_num())
-        self.size = 0
-        self.capacity = cap
-        self.items = array.clone(array.array('q', []), cap, 0)
-        self.nbrs = array.clone(array.array('q', []), cap, 0)
-        self.sims = array.clone(array.array('d', []), cap, 0)
+cdef TmpResults* tr_new(size_t cap) nogil:
+    cdef TmpResults* tr = <TmpResults*> malloc(sizeof(TmpResults))
 
-    cdef void ensure_capacity(self, size_t n) nogil:
-        cdef size_t tgt
-        if n >= self.capacity:
-            tgt = self.capacity * 2
-            if n >= tgt:
-                tgt = n
-            with gil:
-                array.resize(self.items, tgt)
-                array.resize(self.nbrs, tgt)
-                array.resize(self.sims, tgt)
+    if tr == NULL:
+        abort()
+
+    tr.size = 0
+    tr.capacity = 0
+    tr.items = <np.int64_t*> malloc(sizeof(np.int64_t) * cap)
+    if tr.items == NULL:
+        abort()
+    tr.nbrs = <np.int64_t*> malloc(sizeof(np.int64_t) * cap)
+    if tr.nbrs == NULL:
+        abort()
+    tr.sims = <np.float_t*> malloc(sizeof(np.float_t) * cap)
+    if tr.sims == NULL:
+        abort()
+
+cdef void tr_free(TmpResults* self) nogil:
+    free(self.items)
+    free(self.nbrs)
+    free(self.sims)
+    free(self)
+
+cdef void tr_ensure_capacity(TmpResults* self, size_t n) nogil:
+    cdef size_t tgt
+    if n > self.capacity:
+        tgt = self.capacity * 2
+        if n >= tgt:
+            tgt = n
+        self.items = <np.int64_t*> realloc(self.items, sizeof(np.int64_t) * tgt)
+        if self.items == NULL:
+            abort()
+        self.nbrs = <np.int64_t*> realloc(self.nbrs, sizeof(np.int64_t) * tgt)
+        if self.nbrs == NULL:
+            abort()
+        self.sims = <np.float_t*> realloc(self.sims, sizeof(np.float_t) * tgt)
+        if self.sims == NULL:
+            abort()
+        self.capacity = tgt
 
 
 cpdef double sparse_dot(int [:] ks1, double [:] vs1, int[:] ks2, double [:] vs2) nogil:
@@ -71,7 +95,7 @@ cpdef sim_matrix(int nusers, int nitems,
     cdef double ur
     cdef double * work_vec
     cdef array.array work_arr
-    cdef TmpResults tres
+    cdef TmpResults* tres
     dbl_tmpl = array.array('d')
 
     neighborhoods = []
@@ -95,8 +119,9 @@ cpdef sim_matrix(int nusers, int nitems,
     ui_ustart[nusers] = ui_users.shape[0]
 
     with nogil, parallel():
-        with gil:
-            tres = TmpResults(nitems)
+        tres = tr_new(nitems)
+        
+        with gil:    
             work_arr = array.clone(dbl_tmpl, nitems, 1)
             work_vec = work_arr.data.as_doubles
             _logger.debug('thread %d: work space allocated, ready to go',
@@ -122,26 +147,24 @@ cpdef sim_matrix(int nusers, int nitems,
             # now copy the accepted values into the results
             for j in range(nitems):
                 if work_vec[j] < threshold: continue
-                tres.ensure_capacity(tres.size + 1)
+                tr_ensure_capacity(tres, tres.size + 1)
                 
-                tres.items.data.as_longlongs[tres.size] = i
-                tres.nbrs.data.as_longlongs[tres.size] = j
-                tres.sims.data.as_doubles[tres.size] = work_vec[j]
+                tres.items[tres.size] = i
+                tres.nbrs[tres.size] = j
+                tres.sims[tres.size] = work_vec[j]
                 tres.size = tres.size + 1
         
         with gil:
-            array.resize(tres.items, tres.size)
-            array.resize(tres.nbrs, tres.size)
-            array.resize(tres.sims, tres.size)
             _logger.debug('thread %d computed %d pairs', openmp.omp_get_thread_num(), tres.size)
-            rframe = pd.DataFrame({'item': tres.items,
-                                   'neighbor': tres.nbrs,
-                                   'similarity': tres.sims})
+            rframe = pd.DataFrame({'item': np.asarray(<np.int64_t[:tres.size]> tres.items).copy(),
+                                   'neighbor': np.asarray(<np.int64_t[:tres.size]> tres.nbrs).copy(),
+                                   'similarity': np.asarray(<np.float_t[:tres.size]> tres.sims).copy()})
             assert len(rframe) == tres.size
             if nnbrs > 0:
                 nranks = rframe.groupby('item').similarity.rank(ascending=False)
                 rframe = rframe[nranks <= nnbrs]
             neighborhoods.append(rframe)
+            tr_free(tres)
             _logger.debug('finished parallel item-item build')
 
     return pd.concat(neighborhoods)
