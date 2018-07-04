@@ -87,7 +87,7 @@ cpdef double sparse_dot(int [:] ks1, double [:] vs1, int[:] ks2, double [:] vs2)
 cpdef sim_matrix(int nusers, int nitems,
                  np.int64_t[:] iu_items, np.int64_t[:] iu_users,
                  np.int64_t[:] ui_users, np.int64_t[:] ui_items, np.float_t[:] ui_ratings,
-                 double threshold):
+                 double threshold, int nnbrs):
     iu_istart_v = np.zeros(nitems + 1, dtype=np.int64)
     cdef np.int64_t[:] iu_istart = iu_istart_v
     ui_ustart_v = np.zeros(nusers + 1, dtype=np.int64)
@@ -157,9 +157,15 @@ cpdef sim_matrix(int nusers, int nitems,
                                        'neighbor': np.asarray(<np.int64_t[:tres.size]> tres.nbrs).copy(),
                                        'similarity': np.asarray(<np.float_t[:tres.size]> tres.sims).copy()})
                 assert len(rframe) == tres.size
+                if nnbrs > 0:
+                    _logger.debug('thread %d: trimming neighborhoods',
+                                  openmp.omp_get_thread_num())
+                    nranks = rframe.groupby('item').similarity.rank(ascending=False, method='first')
+                    rframe = rframe[nranks <= nnbrs]
                 neighborhoods.append(rframe)
             tr_free(tres)
             free(work_vec)
             _logger.debug('finished parallel item-item build')
 
-    return pd.concat(neighborhoods).reset_index(drop=True)
+    _logger.debug('stacking %d neighborhood frames', len(neighborhoods))
+    return pd.concat(neighborhoods, ignore_index=True)
