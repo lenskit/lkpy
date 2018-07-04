@@ -25,7 +25,7 @@ def build(c):
 
 
 @task
-def test(c, cover=False, verbose=True, slow=True, match=None, mark=None):
+def test(c, cover=False, verbose=True, slow=True, match=None, mark=None, debug=False):
     "Run tests"
     import pytest
     args = ['tests']
@@ -42,6 +42,9 @@ def test(c, cover=False, verbose=True, slow=True, match=None, mark=None):
     if mark:
         args.append('-m')
         args.append(mark)
+    if debug:
+        args.append('--log-level=DEBUG')
+        args.append('--log-cli-level=DEBUG')
     rc = pytest.main(args)
     if rc:
         raise Failure(Result(exited=rc), 'tests failed')
