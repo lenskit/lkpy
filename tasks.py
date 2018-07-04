@@ -5,17 +5,23 @@ from invoke.exceptions import Failure
 from invoke.runners import Result
 import shutil
 from pathlib import Path
+import importlib.machinery
 
 
 @task
 def build(c):
     c.run('{} setup.py build'.format(sys.executable))
     ldir = Path('build/lib.%s-%d.%d' % (du.get_platform(), *sys.version_info[:2]))
-    for pyd in ldir.glob('lenskit/*/*.pyd'):
+    files = set()
+    for ext in importlib.machinery.EXTENSION_SUFFIXES:
+        files |= set(ldir.glob('lenskit/*/*' + ext))
+    for pyd in files:
         path = pyd.relative_to(ldir)
         if not path.exists() or pyd.stat().st_mtime > path.stat().st_mtime:
             print('copying', pyd, '->', path)
             shutil.copy2(pyd, path)
+        else:
+            print(path, 'is up to date')
 
 
 @task
