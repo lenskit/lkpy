@@ -35,6 +35,8 @@ cdef TmpResults* tr_new(size_t cap) nogil:
     if tr.sims == NULL:
         abort()
 
+    return tr
+
 cdef void tr_free(TmpResults* self) nogil:
     free(self.items)
     free(self.nbrs)
@@ -156,14 +158,15 @@ cpdef sim_matrix(int nusers, int nitems,
         
         with gil:
             _logger.debug('thread %d computed %d pairs', openmp.omp_get_thread_num(), tres.size)
-            rframe = pd.DataFrame({'item': np.asarray(<np.int64_t[:tres.size]> tres.items).copy(),
-                                   'neighbor': np.asarray(<np.int64_t[:tres.size]> tres.nbrs).copy(),
-                                   'similarity': np.asarray(<np.float_t[:tres.size]> tres.sims).copy()})
-            assert len(rframe) == tres.size
-            if nnbrs > 0:
-                nranks = rframe.groupby('item').similarity.rank(ascending=False)
-                rframe = rframe[nranks <= nnbrs]
-            neighborhoods.append(rframe)
+            if tres.size > 0:
+                rframe = pd.DataFrame({'item': np.asarray(<np.int64_t[:tres.size]> tres.items).copy(),
+                                    'neighbor': np.asarray(<np.int64_t[:tres.size]> tres.nbrs).copy(),
+                                    'similarity': np.asarray(<np.float_t[:tres.size]> tres.sims).copy()})
+                assert len(rframe) == tres.size
+                if nnbrs > 0:
+                    nranks = rframe.groupby('item').similarity.rank(ascending=False)
+                    rframe = rframe[nranks <= nnbrs]
+                neighborhoods.append(rframe)
             tr_free(tres)
             _logger.debug('finished parallel item-item build')
 
