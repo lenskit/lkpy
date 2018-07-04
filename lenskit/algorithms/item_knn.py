@@ -71,12 +71,14 @@ class ItemItem:
         uir = uir.reset_index()
         # now we have normalized vectors
 
+        _logger.info('[%s] computing simialrity matrix', watch)
         neighborhoods = self._cy_matrix(ratings, uir, watch)
 
         _logger.info('[%s] computed %d neighbor pairs', watch, len(neighborhoods))
         return IIModel(item_means, neighborhoods, ratings.set_index(['user', 'item']).rating)
 
     def _cy_matrix(self, ratings, uir, watch):
+        _logger.debug('[%s] preparing Cython data launch', watch)
         # the Cython implementation requires contiguous numeric IDs.
         # so let's make those
         user_idx = pd.Index(ratings.user.unique())
@@ -107,15 +109,14 @@ class ItemItem:
         size = self.save_neighbors
         if size is None:
             size = -1
+        _logger.debug('[%s] running accelerated matrix computations', watch)
         neighborhoods = accel.sim_matrix(len(user_idx), len(item_idx),
                                          iu_items, iu_users, ui_users, ui_items, ui_ratings,
                                          self.min_similarity, size)
-        _logger.info('[%s] got neighborhoods for %d items', watch, len(neighborhoods))
+        _logger.info('[%s] got neighborhoods for %d items', watch, neighborhoods.item.nunique())
+        neighborhoods['item'] = item_idx[neighborhoods.item]
+        neighborhoods['neighbor'] = item_idx[neighborhoods.neighbor]
         # clean up neighborhoods
-        neighborhoods = pd.concat(pd.DataFrame({'item': item_idx[item],
-                                                'neighbor': item_idx[nds.index],
-                                                'similarity': nds.values})
-                                  for (item, nds) in neighborhoods.items())
         return neighborhoods.set_index('item')
 
     def _py_matrix(self, ratings, uir, watch):

@@ -1,11 +1,38 @@
+from cpython cimport array
+import array
 import pandas as pd
 import numpy as np
 cimport numpy as np
-from cython.parallel cimport parallel, prange
-from libc.stdlib cimport abort, malloc, free
+from cython.parallel cimport parallel, prange, threadid
+cimport openmp
 import logging
 
 _logger = logging.getLogger('_item_knn')
+
+cdef class TmpResults:
+    cdef size_t size
+    cdef size_t capacity
+    cdef array.array items, nbrs, sims
+
+    def __cinit__(self, size_t cap):
+        _logger.debug('allocating temporary result holder for %d rows in thread %d',
+                      cap, openmp.omp_get_thread_num())
+        self.size = 0
+        self.capacity = cap
+        self.items = array.clone(array.array('q', []), cap, 0)
+        self.nbrs = array.clone(array.array('q', []), cap, 0)
+        self.sims = array.clone(array.array('d', []), cap, 0)
+
+    cdef void ensure_capacity(self, size_t n) nogil:
+        cdef size_t tgt
+        if n >= self.capacity:
+            tgt = self.capacity * 2
+            if n >= tgt:
+                tgt = n
+            with gil:
+                array.resize(self.items, tgt)
+                array.resize(self.nbrs, tgt)
+                array.resize(self.sims, tgt)
 
 
 cpdef double sparse_dot(int [:] ks1, double [:] vs1, int[:] ks2, double [:] vs2) nogil:
@@ -39,11 +66,15 @@ cpdef sim_matrix(int nusers, int nitems,
     cdef np.int64_t[:] iu_istart = iu_istart_v
     ui_ustart_v = np.zeros(nusers + 1, dtype=np.int64)
     cdef np.int64_t[:] ui_ustart = ui_ustart_v
-    cdef np.float_t * value 
     cdef np.int64_t u, i, j, nbr, iidx, uidx
     cdef np.int64_t a, b
     cdef double ur
-    neighborhoods = {}
+    cdef double * work_vec
+    cdef array.array work_arr
+    cdef TmpResults tres
+    dbl_tmpl = array.array('d')
+
+    neighborhoods = []
 
     assert iu_istart.shape[0] == nitems + 1
     assert ui_ustart.shape[0] == nusers + 1
@@ -64,13 +95,16 @@ cpdef sim_matrix(int nusers, int nitems,
     ui_ustart[nusers] = ui_users.shape[0]
 
     with nogil, parallel():
-        values = <np.float_t*> malloc(sizeof(np.float_t) * nitems)
-        if values == NULL:
-            abort()
+        with gil:
+            tres = TmpResults(nitems)
+            work_arr = array.clone(dbl_tmpl, nitems, 1)
+            work_vec = work_arr.data.as_doubles
+            _logger.debug('thread %d: work space allocated, ready to go',
+                          openmp.omp_get_thread_num())
             
         for i in prange(nitems, schedule='dynamic', chunksize=10):
             for j in range(nitems):
-                values[j] = 0
+                work_vec[j] = 0
 
             for uidx in range(iu_istart[i], iu_istart[i+1]):
                 u = iu_users[uidx]
@@ -83,18 +117,31 @@ cpdef sim_matrix(int nusers, int nitems,
                 for iidx in range(ui_ustart[u], ui_ustart[u+1]):
                     nbr = ui_items[iidx]
                     if nbr != i:
-                        values[nbr] = values[nbr] + ur * ui_ratings[iidx]
-            with gil:
-                series = pd.Series(np.asarray(<np.float_t[:nitems]> values))
-                series = series[series >= threshold]
-                if nnbrs > 0:
-                    series = series.nlargest(nnbrs)
-                _logger.debug('found %d neighbors for item %d', len(series), i)
-                neighborhoods[i] = series
+                        work_vec[nbr] = work_vec[nbr] + ur * ui_ratings[iidx]
+
+            # now copy the accepted values into the results
+            for j in range(nitems):
+                if work_vec[j] < threshold: continue
+                tres.ensure_capacity(tres.size + 1)
+                
+                tres.items.data.as_longlongs[tres.size] = i
+                tres.nbrs.data.as_longlongs[tres.size] = j
+                tres.sims.data.as_doubles[tres.size] = work_vec[j]
+                tres.size = tres.size + 1
         
         with gil:
+            array.resize(tres.items, tres.size)
+            array.resize(tres.nbrs, tres.size)
+            array.resize(tres.sims, tres.size)
+            _logger.debug('thread %d computed %d pairs', openmp.omp_get_thread_num(), tres.size)
+            rframe = pd.DataFrame({'item': tres.items,
+                                   'neighbor': tres.nbrs,
+                                   'similarity': tres.sims})
+            assert len(rframe) == tres.size
+            if nnbrs > 0:
+                nranks = rframe.groupby('item').similarity.rank(ascending=False)
+                rframe = rframe[nranks <= nnbrs]
+            neighborhoods.append(rframe)
             _logger.debug('finished parallel item-item build')
-        free(values)
 
-    _logger.debug('built neighborhoods for %d items', len(neighborhoods))
-    return neighborhoods
+    return pd.concat(neighborhoods)
