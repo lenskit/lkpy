@@ -87,7 +87,7 @@ cpdef double sparse_dot(int [:] ks1, double [:] vs1, int[:] ks2, double [:] vs2)
 cpdef sim_matrix(int nusers, int nitems,
                  np.int64_t[:] iu_items, np.int64_t[:] iu_users,
                  np.int64_t[:] ui_users, np.int64_t[:] ui_items, np.float_t[:] ui_ratings,
-                 double threshold, int nnbrs):
+                 double threshold):
     iu_istart_v = np.zeros(nitems + 1, dtype=np.int64)
     cdef np.int64_t[:] iu_istart = iu_istart_v
     ui_ustart_v = np.zeros(nusers + 1, dtype=np.int64)
@@ -96,7 +96,6 @@ cpdef sim_matrix(int nusers, int nitems,
     cdef np.int64_t a, b
     cdef double ur
     cdef double * work_vec
-    cdef array.array work_arr
     cdef TmpResults* tres
     dbl_tmpl = array.array('d')
 
@@ -122,13 +121,8 @@ cpdef sim_matrix(int nusers, int nitems,
 
     with nogil, parallel():
         tres = tr_new(nitems)
+        work_vec = <double*> malloc(sizeof(double) * nitems)
         
-        with gil:    
-            work_arr = array.clone(dbl_tmpl, nitems, 1)
-            work_vec = work_arr.data.as_doubles
-            _logger.debug('thread %d: work space allocated, ready to go',
-                          openmp.omp_get_thread_num())
-            
         for i in prange(nitems, schedule='dynamic', chunksize=10):
             for j in range(nitems):
                 work_vec[j] = 0
@@ -160,14 +154,12 @@ cpdef sim_matrix(int nusers, int nitems,
             _logger.debug('thread %d computed %d pairs', openmp.omp_get_thread_num(), tres.size)
             if tres.size > 0:
                 rframe = pd.DataFrame({'item': np.asarray(<np.int64_t[:tres.size]> tres.items).copy(),
-                                    'neighbor': np.asarray(<np.int64_t[:tres.size]> tres.nbrs).copy(),
-                                    'similarity': np.asarray(<np.float_t[:tres.size]> tres.sims).copy()})
+                                       'neighbor': np.asarray(<np.int64_t[:tres.size]> tres.nbrs).copy(),
+                                       'similarity': np.asarray(<np.float_t[:tres.size]> tres.sims).copy()})
                 assert len(rframe) == tres.size
-                if nnbrs > 0:
-                    nranks = rframe.groupby('item').similarity.rank(ascending=False)
-                    rframe = rframe[nranks <= nnbrs]
                 neighborhoods.append(rframe)
             tr_free(tres)
+            free(work_vec)
             _logger.debug('finished parallel item-item build')
 
-    return pd.concat(neighborhoods)
+    return pd.concat(neighborhoods).reset_index(drop=True)

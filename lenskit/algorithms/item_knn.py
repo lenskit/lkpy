@@ -106,16 +106,16 @@ class ItemItem:
         if ui_ratings.dtype != np.float_:
             ui_ratings = np.array(ui_ratings, dtype=np.float_)
 
-        size = self.save_neighbors
-        if size is None:
-            size = -1
         _logger.debug('[%s] running accelerated matrix computations', watch)
         neighborhoods = accel.sim_matrix(len(user_idx), len(item_idx),
                                          iu_items, iu_users, ui_users, ui_items, ui_ratings,
-                                         self.min_similarity, size)
+                                         self.min_similarity)
         _logger.info('[%s] got neighborhoods for %d items', watch, neighborhoods.item.nunique())
         neighborhoods['item'] = item_idx[neighborhoods.item]
         neighborhoods['neighbor'] = item_idx[neighborhoods.neighbor]
+        if self.save_neighbors is not None and self.save_neighbors > 0:
+            nranks = neighborhoods.groupby('item').similarity.rank(ascending=False, method='first')
+            neighborhoods = neighborhoods[nranks <= self.save_neighbors]
         # clean up neighborhoods
         return neighborhoods.set_index('item')
 
