@@ -61,29 +61,6 @@ cdef void tr_ensure_capacity(TmpResults* self, size_t n) nogil:
         self.capacity = tgt
 
 
-cpdef double sparse_dot(int [:] ks1, double [:] vs1, int[:] ks2, double [:] vs2) nogil:
-    cdef double sum = 0
-    cdef size_t n1 = ks1.shape[0]
-    cdef size_t n2 = ks2.shape[0]
-    cdef int i1 = 0
-    cdef int i2 = 0
-    cdef int k1, k2
-
-    while i1 < n1 and i2 < n2:
-        k1 = ks1[i1]
-        k2 = ks2[i2]
-        if k1 < k2:
-            i1 += 1
-        elif k2 < k1:
-            i2 += 1
-        else:
-            sum += vs1[i1] * vs2[i2]
-            i1 += 1
-            i2 += 1
-
-    return sum
-
-
 cpdef sim_matrix(int nusers, int nitems,
                  np.int64_t[:] iu_items, np.int64_t[:] iu_users,
                  np.int64_t[:] ui_users, np.int64_t[:] ui_items, np.float_t[:] ui_ratings,

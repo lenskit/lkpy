@@ -33,48 +33,6 @@ simple_ratings = pd.DataFrame.from_records([
 ], columns=['user', 'item', 'rating'])
 
 
-def test_sparse_dot_empty():
-    keys = np.arange(0, 0, dtype=np.int_)
-    values = np.array([], dtype=np.float_)
-    assert _knn.sparse_dot(keys, values, keys, values) == 0.0
-
-
-def test_sparse_dot_disjoint():
-    ks1 = np.arange(0, 2, dtype=np.int_)
-    assert len(ks1) == 2
-    ks2 = np.arange(2, 4, dtype=np.int_)
-    assert len(ks2) == 2
-    values = np.array([1.0, 2.0], dtype=np.float_)
-    assert _knn.sparse_dot(ks1, values, ks2, values) == 0.0
-
-
-def test_sparse_dot_two():
-    ks1 = np.arange(0, 2, dtype=np.int_)
-    assert len(ks1) == 2
-    ks2 = np.arange(0, 2, dtype=np.int_)
-    assert len(ks2) == 2
-    vs1 = np.array([1.0, 2.0], dtype=np.float_)
-    vs2 = np.array([0.5, -0.5], dtype=np.float_)
-    assert _knn.sparse_dot(ks1, vs1, ks2, vs2) == approx(-0.5)
-
-
-def test_sparse_dot_subset():
-    ks1 = np.arange(0, 4, dtype=np.int_)
-    ks2 = np.arange(1, 3, dtype=np.int_)
-    vs1 = np.array([100, 1.0, 2.0, 50], dtype=np.float_)
-    vs2 = np.array([0.5, -0.5], dtype=np.float_)
-    assert _knn.sparse_dot(ks1, vs1, ks2, vs2) == approx(-0.5)
-
-
-def test_sparse_dot_skip():
-    ks1 = np.arange(0, 4, dtype=np.int_)
-    ks2 = np.array([0, 2], dtype=np.int_)
-    vs1 = np.array([1.0, 100, 2.0, 50], dtype=np.float_)
-    vs2 = np.array([0.3, -0.5], dtype=np.float_)
-    assert _knn.sparse_dot(ks1, vs1, ks2, vs2) == approx(-0.7)
-    assert _knn.sparse_dot(ks2, vs2, ks1, vs1) == approx(-0.7)
-
-
 def test_ii_train():
     algo = knn.ItemItem(30, save_nbrs=500)
     model = algo.train(simple_ratings)
