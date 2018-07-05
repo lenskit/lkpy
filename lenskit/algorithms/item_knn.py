@@ -71,7 +71,7 @@ class ItemItem:
         uir = uir.reset_index()
         # now we have normalized vectors
 
-        _logger.info('[%s] computing simialrity matrix', watch)
+        _logger.info('[%s] computing similarity matrix', watch)
         neighborhoods = self._cy_matrix(ratings, uir, watch)
 
         _logger.info('[%s] computed %d neighbor pairs', watch, len(neighborhoods))
@@ -85,8 +85,8 @@ class ItemItem:
         item_idx = pd.Index(ratings.item.unique())
 
         # convert input user/item cols to positions, & retain old indices for alignment
-        t_users = user_idx.get_indexer(ratings.user)
-        t_items = item_idx.get_indexer(ratings.item)
+        t_users = user_idx.get_indexer(uir.user)
+        t_items = item_idx.get_indexer(uir.item)
         assert len(t_users) == len(ratings)
         assert len(t_items) == len(ratings)
 
@@ -98,7 +98,7 @@ class ItemItem:
         # now we need the item-user grid: for each item, what are its users & ratings?
         # _must_ be sorted by user
         uitriples = pd.DataFrame({'user': t_users, 'item': t_items,
-                                  'rating': ratings.rating.values})
+                                  'rating': uir.rating.values})
         uitriples = uitriples.sort_values(['user', 'item'])
         ui_users = uitriples.user.values
         ui_items = uitriples.item.values
@@ -158,8 +158,12 @@ class ItemItem:
         ratings -= model.item_means
 
         # get the usable neighborhoods
-        nbrhoods = model.sim_matrix.loc[items]
+        items = pd.Series(items)
+        usable_items = items[items.isin(model.sim_matrix.index)]
+        nbrhoods = model.sim_matrix.loc[usable_items]
         nbrhoods = nbrhoods[nbrhoods.neighbor.isin(ratings.index)]
+        _logger.debug('predicting %d usable (of %d) items for %s with %d sim pairs',
+                      len(usable_items), len(items), user, len(nbrhoods))
         if self.max_neighbors is not None:
             # rank neighbors & pick the best
             ranks = nbrhoods.groupby('item').similarity.rank(method='first', ascending=False)

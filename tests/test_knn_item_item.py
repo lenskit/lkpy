@@ -110,6 +110,12 @@ def test_ii_train_big():
     assert model is not None
     assert model.sim_matrix.index.name == 'item'
     assert list(model.sim_matrix.columns) == ['neighbor', 'similarity']
+    svec = model.sim_matrix.set_index('neighbor', append=True).similarity
+    assert all(svec.notna())
+    assert all(svec > 0)
+    # a little tolerance
+    oob = svec[svec > 1 + 1.0e-6]
+    assert len(oob) == 0
 
 
 @mark.slow

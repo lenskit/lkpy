@@ -49,6 +49,7 @@ def _run_mpjob(job: _MPState) -> bytes:
     _logger.info('training %s on %d rows', job.algo, len(train))
     model = job.algo.train(train)
     test = pd.read_msgpack(job.test)
+    _logger.info('generating predictions with %s for %d pairs', job.algo, len(test))
     results = predict(partial(job.algo.predict, model), test)
     return results.to_msgpack()
 
@@ -60,8 +61,19 @@ def _mp_stateify(sets, algo):
         yield _MPState(train_bytes, test_bytes, algo)
 
 
-def multi_predict(sets, algo, processes=None):
-    with multiprocessing.Pool(processes) as p:
-        results = list(p.map(_run_mpjob, _mp_stateify(sets, algo)))
+def _run_spjob(algo, train, test):
+    _logger.info('training %s on %d rows', algo, len(train))
+    model = algo.train(train)
+    _logger.info('generating predictions with %s for %d pairs', algo, len(test))
+    results = predict(partial(algo.predict, model), test)
+    return results
 
-    return pd.concat(pd.read_msgpack(rbs) for rbs in results)
+
+def multi_predict(sets, algo, processes=None):
+    if processes is not None and processes > 1:
+        with multiprocessing.Pool(processes) as p:
+            results = [pd.read_msgpack(rbs) for rbs in p.map(_run_mpjob, _mp_stateify(sets, algo))]
+    else:
+        results = [_run_spjob(algo, train, test) for train, test in sets]
+
+    return pd.concat(results)
