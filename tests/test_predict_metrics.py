@@ -181,7 +181,7 @@ def test_batch_rmse():
     user_rmse = results.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
 
     # we should have all users
-    users = lktu.ml_pandas.renamed.ratings.user.unique()
+    users = ratings.user.unique()
     assert len(user_rmse) == len(users)
     missing = np.setdiff1d(users, user_rmse.index)
     assert len(missing) == 0
