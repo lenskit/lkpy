@@ -4,7 +4,6 @@ Batch-run predictors and recommenders for evaluation.
 
 import logging
 import multiprocessing
-import typing
 from functools import partial
 from collections import namedtuple
 
@@ -70,7 +69,7 @@ def _run_spjob(algo, train, test):
 
 
 def multi_predict(sets, algo, processes=None):
-    if processes is not None and processes > 1:
+    if processes is None or processes > 1:
         with multiprocessing.Pool(processes) as p:
             results = [pd.read_msgpack(rbs) for rbs in p.map(_run_mpjob, _mp_stateify(sets, algo))]
     else:

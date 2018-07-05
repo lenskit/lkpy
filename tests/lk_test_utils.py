@@ -4,6 +4,7 @@ Test utilities for LKPY tests.
 
 import os
 import os.path
+from contextlib import contextmanager
 
 import pandas as pd
 import pytest
@@ -59,6 +60,25 @@ class MLDataLoader:
     @property
     def renamed(self):
         return Renamer(self)
+
+
+@contextmanager
+def envvars(**vars):
+    save = {}
+    for k in vars.keys():
+        if k in os.environ:
+            save[k] = os.environ[k]
+        else:
+            save[k] = None
+        os.environ[k] = vars[k]
+    try:
+        yield
+    finally:
+        for k, v in save.items():
+            if v is None:
+                del os.environ[k]
+            else:
+                os.environ[k] = v
 
 
 ml_pandas = MLDataLoader(pd.read_csv)
