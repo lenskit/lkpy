@@ -158,12 +158,13 @@ class ItemItem:
         ratings -= model.item_means
 
         # get the usable neighborhoods
-        items = pd.Series(items)
-        usable_items = items[items.isin(model.sim_matrix.index)]
-        nbrhoods = model.sim_matrix.loc[usable_items]
+        iidx = pd.Index(items)
+        merge = iidx.join(model.item_means.index, how='inner')
+        nbrhoods = model.sim_matrix.loc[merge, :]
+        _logger.debug('trimmed to usable items')
         nbrhoods = nbrhoods[nbrhoods.neighbor.isin(ratings.index)]
         _logger.debug('predicting %d usable (of %d) items for %s with %d sim pairs',
-                      len(usable_items), len(items), user, len(nbrhoods))
+                      len(merge), len(items), user, len(nbrhoods))
         if self.max_neighbors is not None:
             # rank neighbors & pick the best
             ranks = nbrhoods.groupby('item').similarity.rank(method='first', ascending=False)
@@ -174,5 +175,7 @@ class ItemItem:
             .apply(lambda idf: (idf.similarity * ratings).sum() / idf.similarity.sum())
         assert results.index.name == 'item'
         results += model.item_means
-        # FIXME this is broken
+        n = len(results)
+        results = results.reindex(iidx)
+        _logger.debug('user %s: predicted for %d of %d items', user, n, len(iidx))
         return results
