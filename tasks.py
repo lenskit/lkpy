@@ -15,6 +15,7 @@ def build(c):
     files = set()
     for ext in importlib.machinery.EXTENSION_SUFFIXES:
         files |= set(ldir.glob('lenskit/*/*' + ext))
+    files |= set(ldir.glob('lenskit/*/*.pdb'))
     for pyd in files:
         path = pyd.relative_to(ldir)
         if not path.exists() or pyd.stat().st_mtime > path.stat().st_mtime:
@@ -61,6 +62,14 @@ def clean(c):
     shutil.rmtree('build', ignore_errors=True)
     shutil.rmtree('.eggs', ignore_errors=True)
     shutil.rmtree('lenskit.egg-info', ignore_errors=True)
+    ldir = Path('.')
+    files = set()
+    for ext in importlib.machinery.EXTENSION_SUFFIXES:
+        files |= set(ldir.glob('lenskit/*/*' + ext))
+    files |= set(ldir.glob('lenskit/*/*.pdb'))
+    for f in files:
+        print('removing', f)
+        f.unlink()
 
 
 if __name__ == '__main__':
