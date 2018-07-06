@@ -10,29 +10,63 @@ import logging
 
 _logger = logging.getLogger('_item_knn')
 
+cdef class BuildContext:
+    cdef readonly int n_users
+    cdef readonly int n_items
+    cdef readonly matrix
+    cdef readonly cscmat
+
+    cdef np.int32_t [:] uptrs
+    cdef np.int32_t [:] items
+    cdef np.float_t [:] ratings
+
+    cdef np.int32_t [:] r_iptrs
+    cdef np.int32_t [:] r_users
+
+    def __cinit__(self, matrix):
+        self.n_users = matrix.shape[0]
+        self.n_items = matrix.shape[1]
+        _logger.debug('creating build context for %d users and %d items (%d ratings)',
+                      self.n_users, self.n_items, matrix.nnz)
+
+        self.matrix = matrix
+        self.cscmat = matrix.tocsc(copy=False)
+
+        self.uptrs = matrix.indptr
+        self.items = matrix.indices
+        self.ratings = matrix.data
+
+        self.r_iptrs = self.cscmat.indptr
+        self.r_users = self.cscmat.indices
+
+
 cdef struct ThreadState:
     size_t size
     size_t capacity
     np.int64_t *items
     np.int64_t *nbrs
     np.float_t *sims
+    np.float_t *work
 
-cdef ThreadState* tr_new(size_t cap) nogil:
+cdef ThreadState* tr_new(size_t nitems) nogil:
     cdef ThreadState* tr = <ThreadState*> malloc(sizeof(ThreadState))
 
     if tr == NULL:
         abort()
 
     tr.size = 0
-    tr.capacity = cap
-    tr.items = <np.int64_t*> malloc(sizeof(np.int64_t) * cap)
+    tr.capacity = nitems
+    tr.items = <np.int64_t*> malloc(sizeof(np.int64_t) * nitems)
     if tr.items == NULL:
         abort()
-    tr.nbrs = <np.int64_t*> malloc(sizeof(np.int64_t) * cap)
+    tr.nbrs = <np.int64_t*> malloc(sizeof(np.int64_t) * nitems)
     if tr.nbrs == NULL:
         abort()
-    tr.sims = <np.float_t*> malloc(sizeof(np.float_t) * cap)
+    tr.sims = <np.float_t*> malloc(sizeof(np.float_t) * nitems)
     if tr.sims == NULL:
+        abort()
+    tr.work = <np.float_t*> malloc(sizeof(np.float_t) * nitems)
+    if tr.work == NULL:
         abort()
 
     return tr
@@ -41,6 +75,7 @@ cdef void tr_free(ThreadState* self) nogil:
     free(self.items)
     free(self.nbrs)
     free(self.sims)
+    free(self.work)
     free(self)
 
 cdef void tr_ensure_capacity(ThreadState* self, size_t n) nogil:
@@ -61,49 +96,17 @@ cdef void tr_ensure_capacity(ThreadState* self, size_t n) nogil:
         self.capacity = tgt
 
 
-cpdef sim_matrix(int nusers, int nitems,
-                 np.int64_t[:] iu_items, np.int64_t[:] iu_users,
-                 np.int64_t[:] ui_users, np.int64_t[:] ui_items, np.float_t[:] ui_ratings,
-                 double threshold, int nnbrs):
-    iu_istart_v = np.zeros(nitems + 1, dtype=np.int64)
-    cdef np.int64_t[:] iu_istart = iu_istart_v
-    ui_ustart_v = np.zeros(nusers + 1, dtype=np.int64)
-    cdef np.int64_t[:] ui_ustart = ui_ustart_v
-    cdef np.int64_t u, i, j, nbr, iidx, uidx
-    cdef np.int64_t a, b
-    cdef double ur
-    cdef double * work_vec
+cpdef sim_matrix(BuildContext context, double threshold, int nnbrs):
+    cdef int i
     cdef ThreadState* tres
-    dbl_tmpl = array.array('d')
 
     neighborhoods = []
 
-    assert iu_istart.shape[0] == nitems + 1
-    assert ui_ustart.shape[0] == nusers + 1
-    assert iu_items.shape[0] == iu_users.shape[0]
-
-    # set up the item & user start records
-    for a in range(iu_items.shape[0]):
-        b = iu_items[a]
-        if iu_istart[b] == 0 and b > 0:
-            # update
-            iu_istart[b] = a
-    iu_istart[nitems] = iu_items.shape[0]
-    for a in range(ui_users.shape[0]):
-        b = ui_users[a]
-        if ui_ustart[b] == 0 and b > 0:
-            # update
-            ui_ustart[b] = a
-    ui_ustart[nusers] = ui_users.shape[0]
-
     with nogil, parallel():
-        tres = tr_new(nitems)
-        work_vec = <double*> malloc(sizeof(double) * nitems)
+        tres = tr_new(context.n_items)
         
-        for i in prange(nitems, schedule='dynamic', chunksize=10):
-            train_row(i, tres, work_vec, nusers, nitems,
-                      iu_istart, iu_users, ui_ustart, ui_items, ui_ratings,
-                      threshold, nnbrs)
+        for i in prange(context.n_items, schedule='dynamic', chunksize=10):
+            train_row(i, tres, context, threshold, nnbrs)
         
         with gil:
             _logger.debug('thread %d computed %d pairs', openmp.omp_get_thread_num(), tres.size)
@@ -119,42 +122,39 @@ cpdef sim_matrix(int nusers, int nitems,
                     rframe = rframe[nranks <= nnbrs]
                 neighborhoods.append(rframe)
             tr_free(tres)
-            free(work_vec)
             _logger.debug('finished parallel item-item build')
 
     _logger.debug('stacking %d neighborhood frames', len(neighborhoods))
     return pd.concat(neighborhoods, ignore_index=True)
 
-cdef void train_row(int item, ThreadState* tres, double* work_vec, int nusers, int nitems,
-                    np.int64_t[:] iu_istart, np.int64_t[:] iu_users,
-                    np.int64_t[:] ui_ustart, np.int64_t[:] ui_items, np.float_t[:] ui_ratings,
+cdef void train_row(int item, ThreadState* tres, BuildContext context,
                     double threshold, int nnbrs) nogil:
     cdef np.int64_t j, u, uidx, iidx, nbr
     cdef double ur = 0
 
-    for j in range(nitems):
-        work_vec[j] = 0
+    for j in range(context.n_items):
+        tres.work[j] = 0
 
-    for uidx in range(iu_istart[item], iu_istart[item+1]):
-        u = iu_users[uidx]
+    for uidx in range(context.r_iptrs[item], context.r_iptrs[item+1]):
+        u = context.r_users[uidx]
         # find user's rating for this item
-        for iidx in range(ui_ustart[u], ui_ustart[u+1]):
-            if ui_items[iidx] == item:
-                ur = ui_ratings[iidx]
+        for iidx in range(context.uptrs[u], context.uptrs[u+1]):
+            if context.items[iidx] == item:
+                ur = context.ratings[iidx]
                 break
 
         # accumulate pieces of dot products
-        for iidx in range(ui_ustart[u], ui_ustart[u+1]):
-            nbr = ui_items[iidx]
+        for iidx in range(context.uptrs[u], context.uptrs[u+1]):
+            nbr = context.items[iidx]
             if nbr != item:
-                work_vec[nbr] = work_vec[nbr] + ur * ui_ratings[iidx]
+                tres.work[nbr] = tres.work[nbr] + ur * context.ratings[iidx]
 
     # now copy the accepted values into the results
-    for j in range(nitems):
-        if work_vec[j] < threshold: continue
+    for j in range(context.n_items):
+        if tres.work[j] < threshold: continue
         tr_ensure_capacity(tres, tres.size + 1)
         
         tres.items[tres.size] = item
         tres.nbrs[tres.size] = j
-        tres.sims[tres.size] = work_vec[j]
+        tres.sims[tres.size] = tres.work[j]
         tres.size = tres.size + 1

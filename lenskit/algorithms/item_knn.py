@@ -8,7 +8,7 @@ import logging
 import pandas as pd
 import numpy as np
 
-from lenskit import util
+from lenskit import util, matrix
 from . import _item_knn as accel
 
 _logger = logging.getLogger(__package__)
@@ -81,35 +81,12 @@ class ItemItem:
         _logger.debug('[%s] preparing Cython data launch', watch)
         # the Cython implementation requires contiguous numeric IDs.
         # so let's make those
-        user_idx = pd.Index(ratings.user.unique())
-        item_idx = pd.Index(ratings.item.unique())
+        rmat, user_idx, item_idx = matrix.sparse_ratings(uir)
 
-        # convert input user/item cols to positions, & retain old indices for alignment
-        t_users = user_idx.get_indexer(uir.user)
-        t_items = item_idx.get_indexer(uir.item)
-        assert len(t_users) == len(ratings)
-        assert len(t_items) == len(ratings)
-
-        # now we need the item-user grid: for each user, what are its items?
-        iupairs = pd.DataFrame({'user': t_users, 'item': t_items}).sort_values(['item', 'user'])
-        iu_items = iupairs.item.values
-        iu_users = iupairs.user.values
-
-        # now we need the item-user grid: for each item, what are its users & ratings?
-        # _must_ be sorted by user
-        uitriples = pd.DataFrame({'user': t_users, 'item': t_items,
-                                  'rating': uir.rating.values})
-        uitriples = uitriples.sort_values(['user', 'item'])
-        ui_users = uitriples.user.values
-        ui_items = uitriples.item.values
-        ui_ratings = uitriples.rating.values
-        if ui_ratings.dtype != np.float_:
-            ui_ratings = np.array(ui_ratings, dtype=np.float_)
+        context = accel.BuildContext(rmat)
 
         _logger.debug('[%s] running accelerated matrix computations', watch)
-        neighborhoods = accel.sim_matrix(len(user_idx), len(item_idx),
-                                         iu_items, iu_users, ui_users, ui_items, ui_ratings,
-                                         self.min_similarity,
+        neighborhoods = accel.sim_matrix(context, self.min_similarity,
                                          self.save_neighbors if self.save_neighbors else -1)
         _logger.info('[%s] got neighborhoods for %d items', watch, neighborhoods.item.nunique())
         neighborhoods['item'] = item_idx[neighborhoods.item]
