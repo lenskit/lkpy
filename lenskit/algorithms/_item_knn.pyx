@@ -10,6 +10,11 @@ import logging
 
 _logger = logging.getLogger('_item_knn')
 
+cdef void check_range(long idx, size_t limit) nogil:
+    if idx < 0 or idx >= limit:
+        with gil:
+            raise IndexError('index {} is not in range [{},{})'.format(idx, 0, limit))
+
 cdef struct TmpResults:
     size_t size
     size_t capacity
@@ -24,7 +29,7 @@ cdef TmpResults* tr_new(size_t cap) nogil:
         abort()
 
     tr.size = 0
-    tr.capacity = 0
+    tr.capacity = cap
     tr.items = <np.int64_t*> malloc(sizeof(np.int64_t) * cap)
     if tr.items == NULL:
         abort()
@@ -106,6 +111,7 @@ cpdef sim_matrix(int nusers, int nitems,
 
             for uidx in range(iu_istart[i], iu_istart[i+1]):
                 u = iu_users[uidx]
+                # check_range(u, nusers)
                 # find user's rating for this item
                 for iidx in range(ui_ustart[u], ui_ustart[u+1]):
                     if ui_items[iidx] == i:
@@ -114,6 +120,7 @@ cpdef sim_matrix(int nusers, int nitems,
                 # accumulate pieces of dot products
                 for iidx in range(ui_ustart[u], ui_ustart[u+1]):
                     nbr = ui_items[iidx]
+                    # check_range(nbr, nitems)
                     if nbr != i:
                         work_vec[nbr] = work_vec[nbr] + ur * ui_ratings[iidx]
 
@@ -122,6 +129,7 @@ cpdef sim_matrix(int nusers, int nitems,
                 if work_vec[j] < threshold: continue
                 tr_ensure_capacity(tres, tres.size + 1)
                 
+                # check_range(tres.size, tres.capacity)
                 tres.items[tres.size] = i
                 tres.nbrs[tres.size] = j
                 tres.sims[tres.size] = work_vec[j]
