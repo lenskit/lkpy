@@ -106,34 +106,9 @@ cpdef sim_matrix(int nusers, int nitems,
         work_vec = <double*> malloc(sizeof(double) * nitems)
         
         for i in prange(nitems, schedule='dynamic', chunksize=10):
-            for j in range(nitems):
-                work_vec[j] = 0
-
-            for uidx in range(iu_istart[i], iu_istart[i+1]):
-                u = iu_users[uidx]
-                # check_range(u, nusers)
-                # find user's rating for this item
-                for iidx in range(ui_ustart[u], ui_ustart[u+1]):
-                    if ui_items[iidx] == i:
-                        ur = ui_ratings[iidx]
-                        break
-                # accumulate pieces of dot products
-                for iidx in range(ui_ustart[u], ui_ustart[u+1]):
-                    nbr = ui_items[iidx]
-                    # check_range(nbr, nitems)
-                    if nbr != i:
-                        work_vec[nbr] = work_vec[nbr] + ur * ui_ratings[iidx]
-
-            # now copy the accepted values into the results
-            for j in range(nitems):
-                if work_vec[j] < threshold: continue
-                tr_ensure_capacity(tres, tres.size + 1)
-                
-                # check_range(tres.size, tres.capacity)
-                tres.items[tres.size] = i
-                tres.nbrs[tres.size] = j
-                tres.sims[tres.size] = work_vec[j]
-                tres.size = tres.size + 1
+            train_row(i, tres, work_vec, nusers, nitems,
+                      iu_istart, iu_users, ui_ustart, ui_items, ui_ratings,
+                      threshold, nnbrs)
         
         with gil:
             _logger.debug('thread %d computed %d pairs', openmp.omp_get_thread_num(), tres.size)
@@ -154,3 +129,40 @@ cpdef sim_matrix(int nusers, int nitems,
 
     _logger.debug('stacking %d neighborhood frames', len(neighborhoods))
     return pd.concat(neighborhoods, ignore_index=True)
+
+cdef void train_row(int item, TmpResults* tres, double* work_vec, int nusers, int nitems,
+                    np.int64_t[:] iu_istart, np.int64_t[:] iu_users,
+                    np.int64_t[:] ui_ustart, np.int64_t[:] ui_items, np.float_t[:] ui_ratings,
+                    double threshold, int nnbrs) nogil:
+    cdef np.int64_t j, u, uidx, iidx, nbr
+    cdef double ur = 0
+
+    for j in range(nitems):
+        work_vec[j] = 0
+
+    for uidx in range(iu_istart[item], iu_istart[item+1]):
+        u = iu_users[uidx]
+        # check_range(u, nusers)
+        # find user's rating for this item
+        for iidx in range(ui_ustart[u], ui_ustart[u+1]):
+            if ui_items[iidx] == item:
+                ur = ui_ratings[iidx]
+                break
+
+        # accumulate pieces of dot products
+        for iidx in range(ui_ustart[u], ui_ustart[u+1]):
+            nbr = ui_items[iidx]
+            # check_range(nbr, nitems)
+            if nbr != item:
+                work_vec[nbr] = work_vec[nbr] + ur * ui_ratings[iidx]
+
+    # now copy the accepted values into the results
+    for j in range(nitems):
+        if work_vec[j] < threshold: continue
+        tr_ensure_capacity(tres, tres.size + 1)
+        
+        # check_range(tres.size, tres.capacity)
+        tres.items[tres.size] = item
+        tres.nbrs[tres.size] = j
+        tres.sims[tres.size] = work_vec[j]
+        tres.size = tres.size + 1
