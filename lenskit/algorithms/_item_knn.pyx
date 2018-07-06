@@ -10,20 +10,15 @@ import logging
 
 _logger = logging.getLogger('_item_knn')
 
-cdef void check_range(long idx, size_t limit) nogil:
-    if idx < 0 or idx >= limit:
-        with gil:
-            raise IndexError('index {} is not in range [{},{})'.format(idx, 0, limit))
-
-cdef struct TmpResults:
+cdef struct ThreadState:
     size_t size
     size_t capacity
     np.int64_t *items
     np.int64_t *nbrs
     np.float_t *sims
 
-cdef TmpResults* tr_new(size_t cap) nogil:
-    cdef TmpResults* tr = <TmpResults*> malloc(sizeof(TmpResults))
+cdef ThreadState* tr_new(size_t cap) nogil:
+    cdef ThreadState* tr = <ThreadState*> malloc(sizeof(ThreadState))
 
     if tr == NULL:
         abort()
@@ -42,13 +37,13 @@ cdef TmpResults* tr_new(size_t cap) nogil:
 
     return tr
 
-cdef void tr_free(TmpResults* self) nogil:
+cdef void tr_free(ThreadState* self) nogil:
     free(self.items)
     free(self.nbrs)
     free(self.sims)
     free(self)
 
-cdef void tr_ensure_capacity(TmpResults* self, size_t n) nogil:
+cdef void tr_ensure_capacity(ThreadState* self, size_t n) nogil:
     cdef size_t tgt
     if n > self.capacity:
         tgt = self.capacity * 2
@@ -78,7 +73,7 @@ cpdef sim_matrix(int nusers, int nitems,
     cdef np.int64_t a, b
     cdef double ur
     cdef double * work_vec
-    cdef TmpResults* tres
+    cdef ThreadState* tres
     dbl_tmpl = array.array('d')
 
     neighborhoods = []
@@ -130,7 +125,7 @@ cpdef sim_matrix(int nusers, int nitems,
     _logger.debug('stacking %d neighborhood frames', len(neighborhoods))
     return pd.concat(neighborhoods, ignore_index=True)
 
-cdef void train_row(int item, TmpResults* tres, double* work_vec, int nusers, int nitems,
+cdef void train_row(int item, ThreadState* tres, double* work_vec, int nusers, int nitems,
                     np.int64_t[:] iu_istart, np.int64_t[:] iu_users,
                     np.int64_t[:] ui_ustart, np.int64_t[:] ui_items, np.float_t[:] ui_ratings,
                     double threshold, int nnbrs) nogil:
@@ -142,7 +137,6 @@ cdef void train_row(int item, TmpResults* tres, double* work_vec, int nusers, in
 
     for uidx in range(iu_istart[item], iu_istart[item+1]):
         u = iu_users[uidx]
-        # check_range(u, nusers)
         # find user's rating for this item
         for iidx in range(ui_ustart[u], ui_ustart[u+1]):
             if ui_items[iidx] == item:
@@ -152,7 +146,6 @@ cdef void train_row(int item, TmpResults* tres, double* work_vec, int nusers, in
         # accumulate pieces of dot products
         for iidx in range(ui_ustart[u], ui_ustart[u+1]):
             nbr = ui_items[iidx]
-            # check_range(nbr, nitems)
             if nbr != item:
                 work_vec[nbr] = work_vec[nbr] + ur * ui_ratings[iidx]
 
@@ -161,7 +154,6 @@ cdef void train_row(int item, TmpResults* tres, double* work_vec, int nusers, in
         if work_vec[j] < threshold: continue
         tr_ensure_capacity(tres, tres.size + 1)
         
-        # check_range(tres.size, tres.capacity)
         tres.items[tres.size] = item
         tres.nbrs[tres.size] = j
         tres.sims[tres.size] = work_vec[j]
