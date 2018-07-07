@@ -20,7 +20,7 @@ def build(c):
         path = pyd.relative_to(ldir)
         if not path.exists() or pyd.stat().st_mtime > path.stat().st_mtime:
             print('copying', pyd, '->', path)
-            shutil.copy2(pyd, path)
+            shutil.copy2(str(pyd), str(path))
         else:
             print(path, 'is up to date')
 

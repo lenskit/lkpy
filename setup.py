@@ -21,7 +21,12 @@ setup(
     description="Run recommender algorithms and experiments",
     url="https://lenskit.github.io/lkpy",
     packages=find_packages(),
-    ext_modules=cythonize(extensions),
+    ext_modules=cythonize(extensions, compiler_directives={
+        'language_level': 3,
+        'warn.undeclared': True,
+        'warn.unused': True,
+        'warn.maybe_uninitialized': True
+    }),
     classifiers=(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
