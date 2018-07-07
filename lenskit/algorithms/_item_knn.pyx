@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 cimport numpy as np
 from cython.parallel cimport parallel, prange, threadid
-from libc.stdlib cimport malloc, free, realloc, abort
+from libc.stdlib cimport malloc, free, realloc, abort, calloc
 cimport openmp
 import logging
 
@@ -95,6 +95,83 @@ cdef void tr_ensure_capacity(ThreadState* self, size_t n) nogil:
             abort()
         self.capacity = tgt
 
+cdef void tr_add_all(ThreadState* self, np.int64_t item, size_t nitems,
+                     double threshold) nogil:
+    cdef int j
+    for j in range(nitems):
+        if self.work[j] < threshold: continue
+        tr_ensure_capacity(self, self.size + 1)
+        
+        self.items[self.size] = item
+        self.nbrs[self.size] = j
+        self.sims[self.size] = self.work[j]
+        self.size = self.size + 1
+
+cdef void ind_upheap(int pos, int len, int* keys, double* values) nogil:
+    cdef int current, parent
+    current = pos
+    parent = (current - 1) // 2
+    while current > 0 and values[keys[parent]] < values[keys[current]]:
+        # swap up
+        kt = keys[parent]
+        keys[parent] = keys[current]
+        keys[current] = kt
+        current = parent
+        parent = (current - 1) // 2
+
+cdef void ind_downheap(int pos, int len, int* keys, double* values) nogil:
+    cdef int left, right, min, kt
+    min = pos
+    left = 2*pos
+    right = 2*pos + 1
+    if left < len and values[keys[left]] < values[keys[min]]:
+        min = left
+    if right < len and values[keys[right]] < values[keys[min]]:
+        min = right
+    if min != pos:
+        kt = keys[min]
+        keys[min] = keys[pos]
+        keys[pos] = kt
+        ind_downheap(min, len, keys, values)
+
+cdef void tr_add_nitems(ThreadState* self, np.int64_t item, size_t nitems,
+                        double threshold, int nmax) nogil:
+    cdef int* keys
+    cdef int j, kn, ki, kc, kp, kt
+    cdef np.int64_t nbr
+    keys = <int*> calloc(nmax + 1, sizeof(int))
+    
+    tr_ensure_capacity(self, self.size + nmax)
+
+    kn = 0
+    for j in range(nitems):
+        if self.work[j] < threshold: continue
+        
+        ki = kn
+        keys[ki] = j
+        ind_upheap(ki, kn, keys, self.work)
+
+        if kn < nmax:
+            kn = kn + 1
+        else:
+            # we just added the (nmax+1)th thing
+            # drop the smallest of our nmax largest
+            keys[0] = keys[kn]
+            ind_downheap(0, kn, keys, self.work)
+
+    # now that we have the heap built, let us unheap!
+    while kn > 0:
+        nbr = keys[0]
+        self.items[self.size] = item
+        self.nbrs[self.size] = nbr
+        self.sims[self.size] = self.work[nbr]
+        self.size = self.size + 1
+        keys[0] = keys[kn - 1]
+        kn = kn - 1
+        if kn > 0:
+            ind_downheap(0, kn, keys, self.work)
+
+    free(keys)
 
 cpdef sim_matrix(BuildContext context, double threshold, int nnbrs):
     cdef int i
@@ -115,11 +192,7 @@ cpdef sim_matrix(BuildContext context, double threshold, int nnbrs):
                                        'neighbor': np.asarray(<np.int64_t[:tres.size]> tres.nbrs).copy(),
                                        'similarity': np.asarray(<np.float_t[:tres.size]> tres.sims).copy()})
                 assert len(rframe) == tres.size
-                if nnbrs > 0:
-                    _logger.debug('thread %d: trimming neighborhoods',
-                                  openmp.omp_get_thread_num())
-                    nranks = rframe.groupby('item').similarity.rank(ascending=False, method='first')
-                    rframe = rframe[nranks <= nnbrs]
+                assert isinstance(rframe, pd.DataFrame)
                 neighborhoods.append(rframe)
             tr_free(tres)
             _logger.debug('finished parallel item-item build')
@@ -150,11 +223,7 @@ cdef void train_row(int item, ThreadState* tres, BuildContext context,
                 tres.work[nbr] = tres.work[nbr] + ur * context.ratings[iidx]
 
     # now copy the accepted values into the results
-    for j in range(context.n_items):
-        if tres.work[j] < threshold: continue
-        tr_ensure_capacity(tres, tres.size + 1)
-        
-        tres.items[tres.size] = item
-        tres.nbrs[tres.size] = j
-        tres.sims[tres.size] = tres.work[j]
-        tres.size = tres.size + 1
+    if nnbrs > 0:
+        tr_add_nitems(tres, item, context.n_items, threshold, nnbrs)
+    else:
+        tr_add_all(tres, item, context.n_items, threshold)

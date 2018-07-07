@@ -48,6 +48,35 @@ def test_ii_train():
     # 6 is a neighbor of 7
     assert (nbr1.neighbor == 7).sum() == 1
 
+    svec = model.sim_matrix.set_index('neighbor', append=True).similarity
+    assert all(svec.notna())
+    assert all(svec > 0)
+    # a little tolerance
+    oob = svec[svec > 1 + 1.0e-6]
+    assert len(oob) == 0
+
+def test_ii_train_unbounded():
+    algo = knn.ItemItem(30)
+    model = algo.train(simple_ratings)
+
+    assert model is not None
+    assert model.sim_matrix.index.name == 'item'
+    assert list(model.sim_matrix.columns) == ['neighbor', 'similarity']
+    assert all(model.sim_matrix.similarity.notna())
+    assert all(model.sim_matrix.similarity > 0)
+
+    assert 6 in model.sim_matrix.index
+    nbr1 = model.sim_matrix.loc[[6], :]
+    # 6 is a neighbor of 7
+    assert (nbr1.neighbor == 7).sum() == 1
+
+    svec = model.sim_matrix.set_index('neighbor', append=True).similarity
+    assert all(svec.notna())
+    assert all(svec > 0)
+    # a little tolerance
+    oob = svec[svec > 1 + 1.0e-6]
+    assert len(oob) == 0
+
 
 def test_ii_simple_predict():
     algo = knn.ItemItem(30, save_nbrs=500)
@@ -63,6 +92,22 @@ def test_ii_simple_predict():
 @mark.slow
 def test_ii_train_big():
     algo = knn.ItemItem(30, save_nbrs=500)
+    model = algo.train(ml_ratings)
+
+    assert model is not None
+    assert model.sim_matrix.index.name == 'item'
+    assert list(model.sim_matrix.columns) == ['neighbor', 'similarity']
+    svec = model.sim_matrix.set_index('neighbor', append=True).similarity
+    assert all(svec.notna())
+    assert all(svec > 0)
+    # a little tolerance
+    oob = svec[svec > 1 + 1.0e-6]
+    assert len(oob) == 0
+
+
+@mark.slow
+def test_ii_train_big_unbounded():
+    algo = knn.ItemItem(30)
     model = algo.train(ml_ratings)
 
     assert model is not None
