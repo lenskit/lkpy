@@ -5,6 +5,7 @@ import numpy as np
 cimport numpy as np
 from cython.parallel cimport parallel, prange, threadid
 from libc.stdlib cimport malloc, free, realloc, abort, calloc
+from libc.math cimport isnan
 cimport openmp
 import logging
 

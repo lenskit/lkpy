@@ -87,7 +87,10 @@ class ItemItem:
 
         _logger.debug('[%s] running accelerated matrix computations', watch)
         neighborhoods = accel.sim_matrix(context, self.min_similarity,
-                                         self.save_neighbors if self.save_neighbors else -1)
+                                         self.save_neighbors
+                                         if self.save_neighbors
+                                         and self.save_neighbors > 0
+                                         else -1)
         _logger.info('[%s] got neighborhoods for %d items', watch, neighborhoods.item.nunique())
         neighborhoods['item'] = item_idx[neighborhoods.item]
         neighborhoods['neighbor'] = item_idx[neighborhoods.neighbor]
