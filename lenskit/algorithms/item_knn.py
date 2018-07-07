@@ -64,11 +64,15 @@ class ItemItem:
 
         def normalize(x):
             xmc = x - x.mean()
-            return xmc / np.linalg.norm(xmc)
+            if xmc.abs().sum() > 1.0e-10:
+                return xmc / np.linalg.norm(xmc)
+            else:
+                return xmc
 
         uir = ratings.set_index(['item', 'user']).rating
         uir = uir.groupby('item').transform(normalize)
         uir = uir.reset_index()
+        assert uir.rating.notna().all()
         # now we have normalized vectors
 
         _logger.info('[%s] computing similarity matrix', watch)

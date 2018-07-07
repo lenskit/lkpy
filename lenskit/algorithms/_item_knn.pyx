@@ -6,10 +6,10 @@ cimport numpy as np
 from cython.parallel cimport parallel, prange, threadid
 from libc.stdlib cimport malloc, free, realloc, abort, calloc
 from libc.math cimport isnan
-cimport openmp
+from openmp cimport omp_get_thread_num
 import logging
 
-_logger = logging.getLogger('_item_knn')
+cdef _logger = logging.getLogger('_item_knn')
 
 cdef class BuildContext:
     cdef readonly int n_users
@@ -25,6 +25,7 @@ cdef class BuildContext:
     cdef np.int32_t [:] r_users
 
     def __cinit__(self, matrix):
+        assert np.logical_not(np.isnan(matrix.data)).all()
         self.n_users = matrix.shape[0]
         self.n_items = matrix.shape[1]
         _logger.debug('creating build context for %d users and %d items (%d ratings)',
@@ -44,8 +45,8 @@ cdef class BuildContext:
 cdef struct ThreadState:
     size_t size
     size_t capacity
-    np.int64_t *items
-    np.int64_t *nbrs
+    np.int32_t *items
+    np.int32_t *nbrs
     np.float_t *sims
     np.float_t *work
 
@@ -57,10 +58,10 @@ cdef ThreadState* tr_new(size_t nitems) nogil:
 
     tr.size = 0
     tr.capacity = nitems
-    tr.items = <np.int64_t*> malloc(sizeof(np.int64_t) * nitems)
+    tr.items = <np.int32_t*> malloc(sizeof(np.int32_t) * nitems)
     if tr.items == NULL:
         abort()
-    tr.nbrs = <np.int64_t*> malloc(sizeof(np.int64_t) * nitems)
+    tr.nbrs = <np.int32_t*> malloc(sizeof(np.int32_t) * nitems)
     if tr.nbrs == NULL:
         abort()
     tr.sims = <np.float_t*> malloc(sizeof(np.float_t) * nitems)
@@ -85,10 +86,13 @@ cdef void tr_ensure_capacity(ThreadState* self, size_t n) nogil:
         tgt = self.capacity * 2
         if n >= tgt:
             tgt = n
-        self.items = <np.int64_t*> realloc(self.items, sizeof(np.int64_t) * tgt)
+        with gil:
+            _logger.debug('thread %d: resizing storage from %d to %d',
+                          omp_get_thread_num(), self.capacity, tgt)
+        self.items = <np.int32_t*> realloc(self.items, sizeof(np.int32_t) * tgt)
         if self.items == NULL:
             abort()
-        self.nbrs = <np.int64_t*> realloc(self.nbrs, sizeof(np.int64_t) * tgt)
+        self.nbrs = <np.int32_t*> realloc(self.nbrs, sizeof(np.int32_t) * tgt)
         if self.nbrs == NULL:
             abort()
         self.sims = <np.float_t*> realloc(self.sims, sizeof(np.float_t) * tgt)
@@ -96,7 +100,7 @@ cdef void tr_ensure_capacity(ThreadState* self, size_t n) nogil:
             abort()
         self.capacity = tgt
 
-cdef void tr_add_all(ThreadState* self, np.int64_t item, size_t nitems,
+cdef void tr_add_all(ThreadState* self, int item, size_t nitems,
                      double threshold) nogil:
     cdef int j
     for j in range(nitems):
@@ -106,10 +110,11 @@ cdef void tr_add_all(ThreadState* self, np.int64_t item, size_t nitems,
         self.items[self.size] = item
         self.nbrs[self.size] = j
         self.sims[self.size] = self.work[j]
+
         self.size = self.size + 1
 
 cdef void ind_upheap(int pos, int len, int* keys, double* values) nogil:
-    cdef int current, parent
+    cdef int current, parent, kt
     current = pos
     parent = (current - 1) // 2
     while current > 0 and values[keys[parent]] < values[keys[current]]:
@@ -135,10 +140,10 @@ cdef void ind_downheap(int pos, int len, int* keys, double* values) nogil:
         keys[pos] = kt
         ind_downheap(min, len, keys, values)
 
-cdef void tr_add_nitems(ThreadState* self, np.int64_t item, size_t nitems,
+cdef void tr_add_nitems(ThreadState* self, int item, size_t nitems,
                         double threshold, int nmax) nogil:
     cdef int* keys
-    cdef int j, kn, ki, kc, kp, kt
+    cdef int j, kn, ki
     cdef np.int64_t nbr
     keys = <int*> calloc(nmax + 1, sizeof(int))
     
@@ -174,36 +179,47 @@ cdef void tr_add_nitems(ThreadState* self, np.int64_t item, size_t nitems,
 
     free(keys)
 
+
+cdef dict tr_results(ThreadState* self):
+    cdef np.npy_intp size = self.size
+    cdef np.ndarray items, nbrs, sims
+    items = np.asarray(<np.int32_t[:self.size]> self.items)
+    nbrs = np.asarray(<np.int32_t[:self.size]> self.nbrs)
+    sims = np.asarray(<np.float_t[:self.size]> self.sims)
+    # items = np.PyArray_SimpleNewFromData(1, &size, np.NPY_INT32, self.items)
+    # nbrs = np.PyArray_SimpleNewFromData(1, &size, np.NPY_INT32, self.nbrs)
+    # sims = np.PyArray_SimpleNewFromData(1, &size, np.NPY_DOUBLE, self.sims)
+    return {'item': items.copy(), 'neighbor': nbrs.copy(), 'similarity': sims.copy()}
+
+
 cpdef sim_matrix(BuildContext context, double threshold, int nnbrs):
     cdef int i
     cdef ThreadState* tres
-
-    neighborhoods = []
+    cdef list neighborhoods = []
 
     with nogil, parallel():
         tres = tr_new(context.n_items)
+        with gil:
+            _logger.debug('thread %d: starting with context 0x%x',
+                          omp_get_thread_num(), <unsigned long> tres)
         
         for i in prange(context.n_items, schedule='dynamic', chunksize=10):
             train_row(i, tres, context, threshold, nnbrs)
         
         with gil:
-            _logger.debug('thread %d computed %d pairs', openmp.omp_get_thread_num(), tres.size)
+            _logger.debug('thread %d computed %d pairs', omp_get_thread_num(), tres.size)
             if tres.size > 0:
-                rframe = pd.DataFrame({'item': np.asarray(<np.int64_t[:tres.size]> tres.items).copy(),
-                                       'neighbor': np.asarray(<np.int64_t[:tres.size]> tres.nbrs).copy(),
-                                       'similarity': np.asarray(<np.float_t[:tres.size]> tres.sims).copy()})
-                assert len(rframe) == tres.size
-                assert isinstance(rframe, pd.DataFrame)
-                neighborhoods.append(rframe)
+                neighborhoods.append(tr_results(tres))
             tr_free(tres)
             _logger.debug('finished parallel item-item build')
 
     _logger.debug('stacking %d neighborhood frames', len(neighborhoods))
-    return pd.concat(neighborhoods, ignore_index=True)
+    return pd.concat([pd.DataFrame(d) for d in neighborhoods],
+                     ignore_index=True)
 
 cdef void train_row(int item, ThreadState* tres, BuildContext context,
                     double threshold, int nnbrs) nogil:
-    cdef np.int64_t j, u, uidx, iidx, nbr
+    cdef int j, u, uidx, iidx, nbr, urp
     cdef double ur = 0
 
     for j in range(context.n_items):
@@ -212,10 +228,16 @@ cdef void train_row(int item, ThreadState* tres, BuildContext context,
     for uidx in range(context.r_iptrs[item], context.r_iptrs[item+1]):
         u = context.r_users[uidx]
         # find user's rating for this item
+        urp = -1
         for iidx in range(context.uptrs[u], context.uptrs[u+1]):
             if context.items[iidx] == item:
-                ur = context.ratings[iidx]
+                urp = iidx
+                ur = context.ratings[urp]
                 break
+        if urp < 0:
+            # should never ever get here
+            with gil:
+                raise AssertionError('failed to find rating (%d,%d)', uidx, item)
 
         # accumulate pieces of dot products
         for iidx in range(context.uptrs[u], context.uptrs[u+1]):
