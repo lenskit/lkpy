@@ -45,9 +45,6 @@ setup(
     ],
     tests_require=[
         'pytest >= 3.5.1',
-        'pytest-arraydiff',
-        'dask',
-        'toolz',
-        'cloudpickle'
+        'pytest-arraydiff'
     ]
 )
