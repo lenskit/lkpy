@@ -9,7 +9,7 @@ env:
   - PYTHON_TYPE=conda
 matrix:
   exclude:
-    - python: 3.7
+    - python: "3.7"
       env: PYTHON_TYPE=native
 branches:
   except:
