@@ -122,6 +122,42 @@ def test_ii_train_big_unbounded():
 
 
 @mark.slow
+def test_ii_limited_model_is_subset():
+    _log.info('training limited model')
+    algo_lim = knn.ItemItem(30, save_nbrs=500)
+    model_lim = algo_lim.train(ml_ratings)
+
+    _log.info('training unbounded model')
+    algo_ub = knn.ItemItem(30)
+    model_ub = algo_ub.train(ml_ratings)
+
+    _log.info('checking overall item set')
+    items = model_ub.sim_matrix.index.unique()
+    nitems = len(items)
+    assert nitems == model_lim.sim_matrix.index.nunique()
+    assert len(model_ub.sim_matrix.index.difference(model_lim.sim_matrix.index)) == 0
+
+    _log.info('checking a sample of neighborhoods')
+    for i in pd.Series(items).sample(20):
+        ub_nbrs = model_ub.sim_matrix.loc[i]
+        ub_nbrs = ub_nbrs.set_index('neighbor').similarity
+        b_nbrs = model_lim.sim_matrix.loc[i]
+        b_nbrs = b_nbrs.set_index('neighbor').similarity
+        assert len(ub_nbrs) >= len(b_nbrs)
+        assert len(b_nbrs) <= 500
+        assert all(b_nbrs.index.isin(ub_nbrs.index))
+        b_match, ub_match = b_nbrs.align(ub_nbrs, join='inner')
+        assert all(b_match == b_nbrs)
+        assert b_match.values == approx(ub_match.values)
+        assert b_nbrs.max() == approx(ub_nbrs.max())
+        if len(ub_nbrs) > 500:
+            assert len(b_nbrs) == 500
+            ub_shrink = ub_nbrs.nlargest(500)
+            assert ub_shrink.min() == approx(b_nbrs.min())
+            assert all(ub_shrink.index.isin(b_nbrs.index))
+
+
+@mark.slow
 def test_ii_batch_accuracy():
     from lenskit.algorithms import baselines, basic
     import lenskit.crossfold as xf
