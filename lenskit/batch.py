@@ -69,10 +69,13 @@ def _run_spjob(algo, train, test):
 
 
 def multi_predict(sets, algo, processes=None):
+    _logger.info('launching multi-predict with %s processes', processes)
     if processes is None or processes > 1:
         with multiprocessing.Pool(processes) as p:
             results = [pd.read_msgpack(rbs) for rbs in p.map(_run_mpjob, _mp_stateify(sets, algo))]
     else:
         results = [_run_spjob(algo, train, test) for train, test in sets]
+
+    _logger.info('finished %d predict jobs', len(results))
 
     return pd.concat(results)
