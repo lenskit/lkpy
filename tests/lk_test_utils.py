@@ -15,8 +15,6 @@ try:
     have_dask = True
 except ImportError as e:
     have_dask = False
-    if os.getenv('CI'):
-        raise e
 
 ml_dir = os.path.join(os.path.dirname(__file__), '../ml-latest-small')
 
