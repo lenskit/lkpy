@@ -3,6 +3,7 @@ import lenskit.algorithms._item_knn as _knn
 
 import logging
 import os.path
+from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
 import numpy as np
@@ -123,13 +124,19 @@ def test_ii_train_big_unbounded():
 
 @mark.slow
 def test_ii_limited_model_is_subset():
-    _log.info('training limited model')
+    exec = ThreadPoolExecutor()
+    _log.info('kicking off limited model train')
     algo_lim = knn.ItemItem(30, save_nbrs=500)
-    model_lim = algo_lim.train(ml_ratings)
+    model_lim = exec.submit(algo_lim.train, ml_ratings)
 
-    _log.info('training unbounded model')
+    _log.info('kicking off unbounded model')
     algo_ub = knn.ItemItem(30)
-    model_ub = algo_ub.train(ml_ratings)
+    model_ub = exec.submit(algo_ub.train, ml_ratings)
+
+    model_lim = model_lim.result()
+    _log.info('completed limited train')
+    model_ub = model_ub.result()
+    _log.info('completed unbounded train')
 
     _log.info('checking overall item set')
     items = model_ub.sim_matrix.index.unique()
