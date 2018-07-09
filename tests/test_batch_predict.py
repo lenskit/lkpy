@@ -7,7 +7,7 @@ import numpy as np
 
 import lk_test_utils as lktu
 
-from lenskit.algorithms.baselines import Bias
+from lenskit.algorithms.basic import Bias
 import lenskit.batch as lkb
 
 MLB = namedtuple('MLB', ['ratings', 'algo', 'model'])

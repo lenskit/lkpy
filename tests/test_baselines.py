@@ -1,4 +1,4 @@
-import lenskit.algorithms.baselines as bl
+import lenskit.algorithms.basic as bl
 
 import logging
 

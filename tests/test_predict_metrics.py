@@ -161,7 +161,7 @@ def test_batch_rmse():
     import lk_test_utils as lktu
     import lenskit.crossfold as xf
     import lenskit.batch as batch
-    import lenskit.algorithms.baselines as bl
+    import lenskit.algorithms.basic as bl
 
     if not os.path.exists('ml-100k/u.data'):
         raise skip()

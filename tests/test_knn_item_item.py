@@ -215,7 +215,7 @@ def test_ii_large_models():
 @mark.slow
 @mark.eval
 def test_ii_batch_accuracy():
-    from lenskit.algorithms import baselines, basic
+    from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch
     import lenskit.metrics.predict as pm
@@ -226,7 +226,7 @@ def test_ii_batch_accuracy():
     ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
 
     uu_algo = knn.ItemItem(30)
-    algo = basic.Fallback(uu_algo, baselines.Bias())
+    algo = basic.Fallback(uu_algo, basic.Bias())
 
     def eval(train, test):
         _log.info('running training')

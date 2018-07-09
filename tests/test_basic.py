@@ -1,4 +1,4 @@
-from lenskit.algorithms import basic, baselines
+from lenskit.algorithms import basic, basic
 
 import pandas as pd
 import numpy as np
@@ -26,10 +26,10 @@ def test_precomputed():
 
 
 def test_fallback_train_one():
-    algo = basic.Fallback(baselines.Bias())
+    algo = basic.Fallback(basic.Bias())
     model = algo.train(lktu.ml_pandas.renamed.ratings)
     assert len(model) == 1
-    assert isinstance(model[0], baselines.BiasModel)
+    assert isinstance(model[0], basic.BiasModel)
     assert model[0].mean == approx(lktu.ml_pandas.ratings.rating.mean())
 
 
@@ -49,10 +49,10 @@ def test_fallback_train_one_pred_impossible():
 
 
 def test_fallback_predict():
-    algo = basic.Fallback(basic.Memorized(simple_df), baselines.Bias())
+    algo = basic.Fallback(basic.Memorized(simple_df), basic.Bias())
     model = algo.train(lktu.ml_pandas.renamed.ratings)
     assert len(model) == 2
-    assert isinstance(model[1], baselines.BiasModel)
+    assert isinstance(model[1], basic.BiasModel)
     assert model[1].mean == approx(lktu.ml_pandas.ratings.rating.mean())
 
     # first user + item

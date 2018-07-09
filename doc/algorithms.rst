@@ -6,5 +6,5 @@ Algorithms
    :maxdepth: 1
    :caption: Algorithm Families:
 
-   baselines
+   basic
    knn
