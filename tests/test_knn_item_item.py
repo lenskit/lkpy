@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 import pytest
-from pytest import approx, mark, skip
+from pytest import approx, mark
 
 import lk_test_utils as lktu
 
@@ -77,7 +77,7 @@ def test_ii_simple_predict():
 
 
 @mark.slow
-@skip("redundant with large_models")
+@mark.skip("redundant with large_models")
 def test_ii_train_big():
     "Simple tests for bounded models"
     algo = knn.ItemItem(30, save_nbrs=500)
@@ -97,7 +97,7 @@ def test_ii_train_big():
 
 
 @mark.slow
-@skip("redundant with large_models")
+@mark.skip("redundant with large_models")
 def test_ii_train_big_unbounded():
     "Simple tests for unbounded models"
     algo = knn.ItemItem(30)

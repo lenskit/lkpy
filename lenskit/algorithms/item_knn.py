@@ -200,7 +200,7 @@ class ItemItem:
             n_rates = m_ratev[nbr_is]
             assert len(n_rates) == len(nbr_vs)
             weights = nbr_vs
-            if self.threshold is None or self.threshold < 0:
+            if self.min_similarity is None or self.min_similarity < 0:
                 # might need to make weights absolute
                 weights = np.abs(weights)
 
