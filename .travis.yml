@@ -34,7 +34,7 @@ jobs:
     - stage: test
       script:
         - invoke build --cover
-        - invoke test --cover --no-eval --verbose
+        - invoke test --cover --no-ml100k --verbose
       after_success:
         - coverage xml
         - bash <(curl -s https://codecov.io/bash)
