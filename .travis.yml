@@ -33,7 +33,7 @@ jobs:
   include:
     - stage: test
       install:
-        - bash build-tools/install-conda.sh coverage python-cov
+        - bash build-tools/install-conda.sh coverage pytest-cov
         - source build-tools/activate-conda.sh
       script:
         - invoke build --cover
