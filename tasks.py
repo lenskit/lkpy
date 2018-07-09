@@ -38,7 +38,8 @@ def build(c, cover=False):
 
 
 @task
-def test(c, cover=False, verbose=True, slow=True, eval=True, match=None, mark=None, debug=False):
+def test(c, cover=False, verbose=True, slow=True, eval=True, match=None, mark=None, debug=False,
+         forked=False):
     "Run tests"
     import pytest
     args = ['tests']
@@ -61,6 +62,8 @@ def test(c, cover=False, verbose=True, slow=True, eval=True, match=None, mark=No
     if debug:
         args.append('--log-level=DEBUG')
         args.append('--log-cli-level=DEBUG')
+    if forked:
+        args.append('--forked')
     rc = pytest.main(args)
     if rc:
         raise Failure(Result(exited=rc), 'tests failed')
