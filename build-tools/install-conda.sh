@@ -8,10 +8,20 @@ if [ ! -x "$HOME/miniconda/bin/conda" ]; then
 fi
 export PATH="$HOME/miniconda/bin:$PATH"
 conda config --set always_yes yes --set changeps1 no
+echo "updating conda"
 conda update -q conda
 if [ ! -d "$HOME/miniconda/envs/lkpy-test" ]; then
+    echo "creating environment"
     conda create -q -n lkpy-test python="$TRAVIS_PYTHON_VERSION"
+else
+    echo "updating LKPY test environment"
+    conda update -q -n lkpy-test --all
 fi
+echo 'installing scientific python'
 conda install -q -n lkpy-test pandas scipy cython
-conda install -q -n lkpy-test pytest pytest-arraydiff coverage pylint invoke
-conda update -q -n lkpy-test --all
+echo "installing test utilities"
+conda install -q -n lkpy-test pytest pytest-arraydiff flake8 pylint invoke
+if [ -n "$1" ]; then
+    echo "installing extra utilities"
+    conda install -q -n "$@"
+fi

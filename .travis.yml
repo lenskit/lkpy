@@ -32,6 +32,9 @@ script:
 jobs:
   include:
     - stage: test
+      install:
+        - bash build-tools/install-conda.sh coverage python-cov
+        - source build-tools/activate-conda.sh
       script:
         - invoke build --cover
         - invoke test --cover --no-eval --verbose
