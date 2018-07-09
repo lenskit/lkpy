@@ -150,16 +150,38 @@ def test_ii_large_models():
     means = ml_ratings.groupby('item').rating.mean()
     assert means[model_ub.items].values == approx(model_ub.means)
 
+    mc_rates = ml_ratings.set_index('item')\
+                         .join(pd.DataFrame({'item_mean': means}))\
+                         .assign(rating=lambda df: df.rating - df.item_mean)
+
     _log.info('checking a sample of neighborhoods')
-    for i in pd.Series(model_ub.items).sample(50):
+    items = pd.Series(model_ub.items)
+    items = items[model_ub.counts > 0]
+    for i in items.sample(50):
         ipos = model_ub.items.get_loc(i)
         _log.debug('checking item %d at position %d', i, ipos)
         assert ipos == model_lim.items.get_loc(i)
+        irates = mc_rates.loc[[i], :].set_index('user').rating
 
         ub_row = model_ub.sim_matrix.getrow(ipos)
         b_row = model_lim.sim_matrix.getrow(ipos)
         assert b_row.nnz <= 500
         assert all(pd.Series(b_row.indices).isin(ub_row.indices))
+
+        # it should be sorted !
+        # check this by diffing the row values, and make sure they're negative
+        assert all(np.diff(b_row.data) < 1.0e-6)
+        assert all(np.diff(ub_row.data) < 1.0e-6)
+
+        # spot-check some similarities
+        for n in pd.Series(ub_row.indices).sample(min(10, len(ub_row.indices))):
+            n_id = model_ub.items[n]
+            n_rates = mc_rates.loc[n_id, :].set_index('user').rating
+            ir, nr = irates.align(n_rates, fill_value=0)
+            cor = ir.corr(nr)
+            assert model_ub.sim_matrix[ipos, n] == approx(cor)
+
+        # short rows are equal
         if b_row.nnz < 500:
             _log.debug('short row of length %d', b_row.nnz)
             assert b_row.nnz == ub_row.nnz
@@ -168,11 +190,7 @@ def test_ii_large_models():
             assert b_row.data == approx(ub_row.data)
             continue
 
-        # it should be sorted !
-        # check this by diffing the row values, and make sure they're negative
-        assert all(np.diff(b_row.data) < 1.0e-6)
-        assert all(np.diff(ub_row.data) < 1.0e-6)
-
+        # row is truncated - check that truncation is correct
         ub_nbrs = pd.Series(ub_row.data, model_ub.items[ub_row.indices])
         b_nbrs = pd.Series(b_row.data, model_lim.items[b_row.indices])
 
