@@ -14,7 +14,7 @@ from . import _item_knn as accel
 
 _logger = logging.getLogger(__package__)
 
-IIModel = namedtuple('IIModel', ['items', 'means', 'sim_matrix', 'rating_matrix'])
+IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rating_matrix'])
 
 
 class ItemItem:
@@ -81,7 +81,8 @@ class ItemItem:
         item_means = item_means.reindex(items)
 
         _logger.info('[%s] computed %d neighbor pairs', watch, sim_matrix.nnz)
-        return IIModel(items, item_means, sim_matrix, ratings.set_index(['user', 'item']).rating)
+        return IIModel(items, item_means, np.diff(sim_matrix.indptr),
+                       sim_matrix, ratings.set_index(['user', 'item']).rating)
 
     def _cy_matrix(self, ratings, uir, watch):
         _logger.debug('[%s] preparing Cython data launch', watch)
@@ -140,30 +141,46 @@ class ItemItem:
         neighborhoods = neighborhoods.reset_index(level=1, drop=True)
         return neighborhoods
 
+    @profile
     def predict(self, model, user, items, ratings=None):
         if ratings is None:
             ratings = model.rating_matrix.loc[user]
-        ratings -= model.item_means
 
-        # get the usable neighborhoods
-        iidx = pd.Index(items)
-        merge = iidx.join(model.item_means.index, how='inner')
-        nbrhoods = model.sim_matrix.loc[merge, :]
-        _logger.debug('trimmed to usable items')
-        nbrhoods = nbrhoods[nbrhoods.neighbor.isin(ratings.index)]
-        _logger.debug('predicting %d usable (of %d) items for %s with %d sim pairs',
-                      len(merge), len(items), user, len(nbrhoods))
-        if self.max_neighbors is not None:
-            # rank neighbors & pick the best
-            ranks = nbrhoods.groupby('item').similarity.rank(method='first', ascending=False)
-            nbrhoods = nbrhoods[ranks <= self.max_neighbors]
+        # set up item series & results
+        items = pd.Series(items)
+        results = pd.Series(np.nan, index=items, dtype='f8')
+        # get item positions
+        positions = model.items.get_indexer(items)
+        # reduce to items (and positions) in the model
+        m_items = items.values[positions >= 0]
+        m_pos = positions[positions >= 0]
+        # reduce to items (and positions) with neighborhoods
+        have_nbrs = model.counts[m_pos] > 0
+        m_items = m_items[have_nbrs]
+        m_pos = m_pos[have_nbrs]
 
-        nbr_flip = nbrhoods.reset_index().set_index('neighbor')
-        results = nbr_flip.groupby('item')\
-            .apply(lambda idf: (idf.similarity * ratings).sum() / idf.similarity.sum())
-        assert results.index.name == 'item'
-        results += model.item_means
-        n = len(results)
-        results = results.reindex(iidx)
-        _logger.debug('user %s: predicted for %d of %d items', user, n, len(iidx))
+        # same for ratings
+        r_idx = model.items.get_indexer(ratings.index)
+        m_rates = ratings[r_idx >= 0]
+        m_rates -= model.means
+        _logger.debug('user %s: %d of %d ratings in index', user, len(m_rates), len(ratings))
+
+        # now compute each prediction
+        for i in range(len(m_items)):
+            item = m_items[i]
+            ipos = m_pos[i]
+            row = model.sim_matrix.getrow(ipos)
+            nbrs = pd.Series(row.data, index=model.items[row.indices])
+            nbrs, rates = nbrs.align(ratings, join='inner')
+            if self.min_neighbors and len(nbrs) < self.min_neighbors:
+                continue
+            if self.max_neighbors is not None and self.max_neighbors > 0:
+                nbrs = nbrs.nlargest(self.max_neighbors)
+                rates = rates.loc[nbrs.index]
+            results.loc[item] = nbrs.dot(rates) / nbrs.abs().sum()
+
+        ratings += model.means
+
+        _logger.debug('user %s: predicted for %d of %d items',
+                      user, ratings.notna().sum(), len(items))
         return results
