@@ -25,6 +25,8 @@ def sparse_ratings(ratings, layout='csr'):
         scipy.sparse.spmatrix:
             a sparse matrix with users on the rows and items on the columns.
     """
+    if layout not in ('csr', 'csc', 'coo'):
+        raise ValueError('invalid matrix layout ' + layout)
 
     uidx = pd.Index(ratings.user.unique())
     iidx = pd.Index(ratings.item.unique())
@@ -34,14 +36,8 @@ def sparse_ratings(ratings, layout='csr'):
     row_ind = uidx.get_indexer(ratings.user)
     col_ind = iidx.get_indexer(ratings.item)
 
-    if layout == 'csr':
-        matrix = sps.csr_matrix((ratings.rating.values, (row_ind, col_ind)),
-                                shape=(len(uidx), len(iidx)))
-    elif layout == 'csc':
-        matrix = sps.csc_matrix((ratings.rating.values, (row_ind, col_ind)),
-                                shape=(len(uidx), len(iidx)))
-    elif layout == 'coo':
-        matrix = sps.coo_matrix((ratings.rating.values, (row_ind, col_ind)),
-                                shape=(len(uidx), len(iidx)))
+    mkmat = getattr(sps, layout + '_matrix')
+    matrix = mkmat((ratings.rating.values, (row_ind, col_ind)),
+                   shape=(len(uidx), len(iidx)))
 
     return RatingMatrix(matrix, uidx, iidx)
