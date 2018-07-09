@@ -1,5 +1,4 @@
 import lenskit.algorithms.item_knn as knn
-import lenskit.algorithms._item_knn as _knn
 
 import logging
 import os.path
@@ -9,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 import pytest
-from pytest import approx, mark
+from pytest import approx, mark, skip
 
 import lk_test_utils as lktu
 
@@ -78,7 +77,9 @@ def test_ii_simple_predict():
 
 
 @mark.slow
+@skip("redundant with large_models")
 def test_ii_train_big():
+    "Simple tests for bounded models"
     algo = knn.ItemItem(30, save_nbrs=500)
     model = algo.train(ml_ratings)
 
@@ -89,12 +90,16 @@ def test_ii_train_big():
     # a little tolerance
     assert all(model.sim_matrix.data < 1 + 1.0e-6)
 
+    assert model.counts.sum() == model.sim_matrix.nnz
+
     means = ml_ratings.groupby('item').rating.mean()
     assert means[model.items].values == approx(model.means)
 
 
 @mark.slow
+@skip("redundant with large_models")
 def test_ii_train_big_unbounded():
+    "Simple tests for unbounded models"
     algo = knn.ItemItem(30)
     model = algo.train(ml_ratings)
 
@@ -105,12 +110,15 @@ def test_ii_train_big_unbounded():
     # a little tolerance
     assert all(model.sim_matrix.data < 1 + 1.0e-6)
 
+    assert model.counts.sum() == model.sim_matrix.nnz
+
     means = ml_ratings.groupby('item').rating.mean()
     assert means[model.items].values == approx(model.means)
 
 
 @mark.slow
-def test_ii_limited_model_is_subset():
+def test_ii_large_models():
+    "Several tests of large trained I-I models"
     exec = ThreadPoolExecutor()
     _log.info('kicking off limited model train')
     algo_lim = knn.ItemItem(30, save_nbrs=500)
@@ -122,8 +130,25 @@ def test_ii_limited_model_is_subset():
 
     model_lim = model_lim.result()
     _log.info('completed limited train')
+
+    assert all(np.logical_not(np.isnan(model_lim.sim_matrix.data)))
+    assert all(model_lim.sim_matrix.data > 0)
+    # a little tolerance
+    assert all(model_lim.sim_matrix.data < 1 + 1.0e-6)
+
+    means = ml_ratings.groupby('item').rating.mean()
+    assert means[model_lim.items].values == approx(model_lim.means)
+
     model_ub = model_ub.result()
     _log.info('completed unbounded train')
+
+    assert all(np.logical_not(np.isnan(model_ub.sim_matrix.data)))
+    assert all(model_ub.sim_matrix.data > 0)
+    # a little tolerance
+    assert all(model_ub.sim_matrix.data < 1 + 1.0e-6)
+
+    means = ml_ratings.groupby('item').rating.mean()
+    assert means[model_ub.items].values == approx(model_ub.means)
 
     _log.info('checking a sample of neighborhoods')
     for i in pd.Series(model_ub.items).sample(50):
@@ -142,6 +167,11 @@ def test_ii_limited_model_is_subset():
             b_row.sort_indices()
             assert b_row.data == approx(ub_row.data)
             continue
+
+        # it should be sorted !
+        # check this by diffing the row values, and make sure they're negative
+        assert all(np.diff(b_row) < 1.0e-6)
+        assert all(np.diff(ub_row) < 1.0e-6)
 
         ub_nbrs = pd.Series(ub_row.data, model_ub.items[ub_row.indices])
         b_nbrs = pd.Series(b_row.data, model_lim.items[b_row.indices])
