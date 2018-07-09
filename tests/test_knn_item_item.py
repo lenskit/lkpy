@@ -195,6 +195,7 @@ def test_ii_large_models():
 
 
 @mark.slow
+@mark.eval
 def test_ii_batch_accuracy():
     from lenskit.algorithms import baselines, basic
     import lenskit.crossfold as xf

@@ -2,8 +2,13 @@ import sys
 import os
 from setuptools import setup, find_packages
 from distutils.extension import Extension
-from Cython.Build import cythonize
 import numpy
+
+try:
+    from Cython.Build import cythonize
+except ImportError:
+    print('Please install Cython before building', file=sys.stderr)
+    sys.exit(1)
 
 if sys.platform == 'win32':
     # MSVC - we do not yet support mingw or clang
@@ -14,16 +19,16 @@ else:
     openmp_cflags = ['-fopenmp']
     openmp_lflags = ['-fopenmp']
 
-debug_flags = []
+debug_cflags = []
 cython_opts = {}
 if 'COVERAGE' in os.environ:
-    debug_flags += ['-DCYTHON_TRACE=1', '-DCYTHON_TRACE_NOGIL=1']
+    debug_cflags += ['-DCYTHON_TRACE=1', '-DCYTHON_TRACE_NOGIL=1']
     cython_opts['linetrace'] = True
 
 extensions = [
     Extension('*', ['lenskit/**/*.pyx'],
               include_dirs=[numpy.get_include()],
-              extra_compile_args=[] + debug_flags + openmp_cflags,
+              extra_compile_args=[] + debug_cflags + openmp_cflags,
               extra_link_args=[] + openmp_lflags)
 ]
 
@@ -54,7 +59,6 @@ setup(
     ],
     setup_requires=[
         'pytest-runner',
-        'pytest-cov',
         'sphinx',
         'Cython'
     ],

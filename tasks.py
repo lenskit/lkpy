@@ -38,7 +38,7 @@ def build(c, cover=False):
 
 
 @task
-def test(c, cover=False, verbose=True, slow=True, match=None, mark=None, debug=False):
+def test(c, cover=False, verbose=True, slow=True, eval=False, match=None, mark=None, debug=False):
     "Run tests"
     import pytest
     args = ['tests']
@@ -49,6 +49,10 @@ def test(c, cover=False, verbose=True, slow=True, match=None, mark=None, debug=F
     if not slow:
         args.append('-m')
         args.append('not slow')
+    elif not eval:
+        # all eval tests should be marked slow
+        args.append('-m')
+        args.append('not eval')
     if match:
         args.append('-k')
         args.append(match)
