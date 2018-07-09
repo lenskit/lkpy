@@ -23,5 +23,5 @@ echo "installing test utilities"
 conda install -q -n lkpy-test pytest pytest-arraydiff flake8 pylint invoke
 if [ -n "$1" ]; then
     echo "installing extra utilities"
-    conda install -q -n "$@"
+    conda install -q -n lkpy-test "$@"
 fi
