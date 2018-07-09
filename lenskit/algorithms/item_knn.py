@@ -7,13 +7,14 @@ import logging
 
 import pandas as pd
 import numpy as np
+import scipy.sparse as sps
 
 from lenskit import util, matrix
 from . import _item_knn as accel
 
 _logger = logging.getLogger(__package__)
 
-IIModel = namedtuple('IIModel', ['item_means', 'sim_matrix', 'rating_matrix'])
+IIModel = namedtuple('IIModel', ['items', 'means', 'sim_matrix', 'rating_matrix'])
 
 
 class ItemItem:
@@ -76,30 +77,33 @@ class ItemItem:
         # now we have normalized vectors
 
         _logger.info('[%s] computing similarity matrix', watch)
-        neighborhoods = self._cy_matrix(ratings, uir, watch)
+        sim_matrix, items = self._cy_matrix(ratings, uir, watch)
+        item_means = item_means.reindex(items)
 
-        _logger.info('[%s] computed %d neighbor pairs', watch, len(neighborhoods))
-        return IIModel(item_means, neighborhoods, ratings.set_index(['user', 'item']).rating)
+        _logger.info('[%s] computed %d neighbor pairs', watch, sim_matrix.nnz)
+        return IIModel(items, item_means, sim_matrix, ratings.set_index(['user', 'item']).rating)
 
     def _cy_matrix(self, ratings, uir, watch):
         _logger.debug('[%s] preparing Cython data launch', watch)
         # the Cython implementation requires contiguous numeric IDs.
         # so let's make those
         rmat, user_idx, item_idx = matrix.sparse_ratings(uir)
+        n_items = len(item_idx)
 
         context = accel.BuildContext(rmat)
 
         _logger.debug('[%s] running accelerated matrix computations', watch)
-        neighborhoods = accel.sim_matrix(context, self.min_similarity,
-                                         self.save_neighbors
-                                         if self.save_neighbors
-                                         and self.save_neighbors > 0
-                                         else -1)
-        _logger.info('[%s] got neighborhoods for %d items', watch, neighborhoods.item.nunique())
-        neighborhoods['item'] = item_idx[neighborhoods.item]
-        neighborhoods['neighbor'] = item_idx[neighborhoods.neighbor]
+        ndf = accel.sim_matrix(context, self.min_similarity,
+                               self.save_neighbors
+                               if self.save_neighbors
+                               and self.save_neighbors > 0
+                               else -1)
+        _logger.info('[%s] got neighborhoods for %d of %d items',
+                     watch, ndf.item.nunique(), n_items)
+        smat = sps.csr_matrix((ndf.similarity.values, (ndf.item.values, ndf.neighbor.values)),
+                              shape=(n_items, n_items))
         # clean up neighborhoods
-        return neighborhoods.set_index('item')
+        return smat, item_idx
 
     def _py_matrix(self, ratings, uir, watch):
         _logger.info('[%s] computing item-item similarities for %d items with %d ratings',

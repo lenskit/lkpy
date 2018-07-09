@@ -39,44 +39,31 @@ def test_ii_train():
     model = algo.train(simple_ratings)
 
     assert model is not None
-    assert model.sim_matrix.index.name == 'item'
-    assert list(model.sim_matrix.columns) == ['neighbor', 'similarity']
-    assert all(model.sim_matrix.similarity.notna())
-    assert all(model.sim_matrix.similarity > 0)
 
-    assert 6 in model.sim_matrix.index
-    nbr1 = model.sim_matrix.loc[[6], :]
     # 6 is a neighbor of 7
-    assert (nbr1.neighbor == 7).sum() == 1
+    six, seven = model.items.get_indexer([6, 7])
+    assert model.sim_matrix[six, seven] > 0
 
-    svec = model.sim_matrix.set_index('neighbor', append=True).similarity
-    assert all(svec.notna())
-    assert all(svec > 0)
+    assert all(np.logical_not(np.isnan(model.sim_matrix.data)))
+    assert all(model.sim_matrix.data > 0)
     # a little tolerance
-    oob = svec[svec > 1 + 1.0e-6]
-    assert len(oob) == 0
+    assert all(model.sim_matrix.data < 1 + 1.0e-6)
+
 
 def test_ii_train_unbounded():
     algo = knn.ItemItem(30)
     model = algo.train(simple_ratings)
 
     assert model is not None
-    assert model.sim_matrix.index.name == 'item'
-    assert list(model.sim_matrix.columns) == ['neighbor', 'similarity']
-    assert all(model.sim_matrix.similarity.notna())
-    assert all(model.sim_matrix.similarity > 0)
 
-    assert 6 in model.sim_matrix.index
-    nbr1 = model.sim_matrix.loc[[6], :]
-    # 6 is a neighbor of 7
-    assert (nbr1.neighbor == 7).sum() == 1
-
-    svec = model.sim_matrix.set_index('neighbor', append=True).similarity
-    assert all(svec.notna())
-    assert all(svec > 0)
+    assert all(np.logical_not(np.isnan(model.sim_matrix.data)))
+    assert all(model.sim_matrix.data > 0)
     # a little tolerance
-    oob = svec[svec > 1 + 1.0e-6]
-    assert len(oob) == 0
+    assert all(model.sim_matrix.data < 1 + 1.0e-6)
+
+    # 6 is a neighbor of 7
+    six, seven = model.items.get_indexer([6, 7])
+    assert model.sim_matrix[six, seven] > 0
 
 
 def test_ii_simple_predict():
@@ -96,14 +83,14 @@ def test_ii_train_big():
     model = algo.train(ml_ratings)
 
     assert model is not None
-    assert model.sim_matrix.index.name == 'item'
-    assert list(model.sim_matrix.columns) == ['neighbor', 'similarity']
-    svec = model.sim_matrix.set_index('neighbor', append=True).similarity
-    assert all(svec.notna())
-    assert all(svec > 0)
+
+    assert all(np.logical_not(np.isnan(model.sim_matrix.data)))
+    assert all(model.sim_matrix.data > 0)
     # a little tolerance
-    oob = svec[svec > 1 + 1.0e-6]
-    assert len(oob) == 0
+    assert all(model.sim_matrix.data < 1 + 1.0e-6)
+
+    means = ml_ratings.groupby('item').rating.mean()
+    assert means[model.items].values == approx(model.means)
 
 
 @mark.slow
@@ -112,14 +99,14 @@ def test_ii_train_big_unbounded():
     model = algo.train(ml_ratings)
 
     assert model is not None
-    assert model.sim_matrix.index.name == 'item'
-    assert list(model.sim_matrix.columns) == ['neighbor', 'similarity']
-    svec = model.sim_matrix.set_index('neighbor', append=True).similarity
-    assert all(svec.notna())
-    assert all(svec > 0)
+
+    assert all(np.logical_not(np.isnan(model.sim_matrix.data)))
+    assert all(model.sim_matrix.data > 0)
     # a little tolerance
-    oob = svec[svec > 1 + 1.0e-6]
-    assert len(oob) == 0
+    assert all(model.sim_matrix.data < 1 + 1.0e-6)
+
+    means = ml_ratings.groupby('item').rating.mean()
+    assert means[model.items].values == approx(model.means)
 
 
 @mark.slow
@@ -138,18 +125,27 @@ def test_ii_limited_model_is_subset():
     model_ub = model_ub.result()
     _log.info('completed unbounded train')
 
-    _log.info('checking overall item set')
-    items = model_ub.sim_matrix.index.unique()
-    nitems = len(items)
-    assert nitems == model_lim.sim_matrix.index.nunique()
-    assert len(model_ub.sim_matrix.index.difference(model_lim.sim_matrix.index)) == 0
-
     _log.info('checking a sample of neighborhoods')
-    for i in pd.Series(items).sample(20):
-        ub_nbrs = model_ub.sim_matrix.loc[i]
-        ub_nbrs = ub_nbrs.set_index('neighbor').similarity
-        b_nbrs = model_lim.sim_matrix.loc[i]
-        b_nbrs = b_nbrs.set_index('neighbor').similarity
+    for i in pd.Series(model_ub.items).sample(50):
+        ipos = model_ub.items.get_loc(i)
+        _log.debug('checking item %d at position %d', i, ipos)
+        assert ipos == model_lim.items.get_loc(i)
+
+        ub_row = model_ub.sim_matrix.getrow(ipos)
+        b_row = model_lim.sim_matrix.getrow(ipos)
+        assert b_row.nnz <= 500
+        assert all(pd.Series(b_row.indices).isin(ub_row.indices))
+        if b_row.nnz < 500:
+            _log.debug('short row of length %d', b_row.nnz)
+            assert b_row.nnz == ub_row.nnz
+            ub_row.sort_indices()
+            b_row.sort_indices()
+            assert b_row.data == approx(ub_row.data)
+            continue
+
+        ub_nbrs = pd.Series(ub_row.data, model_ub.items[ub_row.indices])
+        b_nbrs = pd.Series(b_row.data, model_lim.items[b_row.indices])
+
         assert len(ub_nbrs) >= len(b_nbrs)
         assert len(b_nbrs) <= 500
         assert all(b_nbrs.index.isin(ub_nbrs.index))
