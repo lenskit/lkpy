@@ -1,4 +1,5 @@
 import sys
+import os
 import distutils.util as du
 from invoke import task
 from invoke.exceptions import Failure
@@ -9,8 +10,19 @@ import importlib.machinery
 
 
 @task
-def build(c):
-    c.run('{} setup.py build'.format(sys.executable))
+def build(c, cover=False):
+    try:
+        if cover:
+            print('enabling coverage & profiling in Cython build')
+            os.environ['COVERAGE'] = '1'
+
+        print('running Python build')
+
+        c.run('{} setup.py build'.format(sys.executable))
+    finally:
+        if 'COVERAGE' in os.environ:
+            del os.environ['COVERAGE']
+
     ldir = Path('build/lib.%s-%d.%d' % (du.get_platform(), *sys.version_info[:2]))
     files = set()
     for ext in importlib.machinery.EXTENSION_SUFFIXES:
@@ -59,14 +71,18 @@ def docs(c):
 
 @task
 def clean(c):
+    print('remving build')
     shutil.rmtree('build', ignore_errors=True)
+    print('remving .eggs')
     shutil.rmtree('.eggs', ignore_errors=True)
+    print('remving lenskit.egg-info')
     shutil.rmtree('lenskit.egg-info', ignore_errors=True)
     ldir = Path('.')
     files = set()
     for ext in importlib.machinery.EXTENSION_SUFFIXES:
         files |= set(ldir.glob('lenskit/*/*' + ext))
     files |= set(ldir.glob('lenskit/*/*.pdb'))
+    files |= set(ldir.glob('lenskit/*/*.c'))
     for f in files:
         print('removing', f)
         f.unlink()
