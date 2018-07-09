@@ -36,6 +36,8 @@ class ItemItem:
                 (``None`` for unlimited)
         """
         self.max_neighbors = nnbrs
+        if self.max_neighbors is not None and self.max_neighbors < 0:
+            self.max_neighbors = 0
         self.min_neighbors = min_nbrs
         self.min_similarity = min_sim
         self.save_neighbors = save_nbrs
@@ -103,6 +105,17 @@ class ItemItem:
                      watch, ndf.item.nunique(), n_items)
         smat = sps.csr_matrix((ndf.similarity.values, (ndf.item.values, ndf.neighbor.values)),
                               shape=(n_items, n_items))
+
+        # sort each matrix row by value
+        for i in range(n_items):
+            start = smat.indptr[i]
+            end = smat.indptr[i+1]
+            sorti = np.argsort(smat.data[start:end])
+            tmp = smat.indices[sorti + start]
+            smat.indices[start:end] = tmp
+            tmp = smat.data[sorti + start]
+            smat.data[start:end] = tmp
+
         # clean up neighborhoods
         return smat, item_idx
 
@@ -163,6 +176,10 @@ class ItemItem:
         r_idx = model.items.get_indexer(ratings.index)
         m_rates = ratings[r_idx >= 0]
         m_rates -= model.means
+        r_idx = r_idx[r_idx >= 0]
+        # update index to be position-based, not id-based
+        m_ratev = np.full(len(model.items), 0, dtype='f8')
+        m_ratev[r_idx] = m_rates.values
         _logger.debug('user %s: %d of %d ratings in index', user, len(m_rates), len(ratings))
 
         # now compute each prediction
@@ -170,17 +187,28 @@ class ItemItem:
             item = m_items[i]
             ipos = m_pos[i]
             row = model.sim_matrix.getrow(ipos)
-            nbrs = pd.Series(row.data, index=model.items[row.indices])
-            nbrs, rates = nbrs.align(ratings, join='inner')
-            if self.min_neighbors and len(nbrs) < self.min_neighbors:
+            nbr_mask = np.isin(row.indices, r_idx)
+            nbr_is = row.indices[nbr_mask]
+            nbr_vs = row.data[nbr_mask]
+            if self.min_neighbors and len(nbr_is) < self.min_neighbors:
                 continue
-            if self.max_neighbors is not None and self.max_neighbors > 0:
-                nbrs = nbrs.nlargest(self.max_neighbors)
-                rates = rates.loc[nbrs.index]
-            results.loc[item] = nbrs.dot(rates) / nbrs.abs().sum()
+            if self.max_neighbors and len(nbr_is) > self.max_neighbors:
+                # slice, since we sorted the row by value in training
+                nbr_is = nbr_is[:self.max_neighbors]
+                nbr_vs = nbr_vs[:self.max_neighbors]
 
-        ratings += model.means
+            # look up ratings by position!
+            n_rates = m_ratev[nbr_is]
+            assert len(n_rates) == len(nbr_vs)
+            weights = nbr_vs
+            if self.threshold is None or self.threshold < 0:
+                # might need to make weights absolute
+                weights = np.abs(weights)
+
+            results.loc[item] = np.dot(nbr_vs, n_rates) / np.sum(nbr_vs)
+
+        results += model.means
 
         _logger.debug('user %s: predicted for %d of %d items',
-                      user, ratings.notna().sum(), len(items))
+                      user, results.notna().sum(), len(items))
         return results
