@@ -26,15 +26,11 @@ install:
   - source build-tools/activate-conda.sh
   - pip install coverage pylint invoke
   - pip install pandas scipy cython
+  - bash build-tools/fetch-ml100k.sh
 script:
   - python setup.py test
 jobs:
   include:
-    - stage: test
-      script:
-        - bash build-tools/fetch-ml100k.sh
-        - invoke build
-        - python3 -m pytest -m eval
     - stage: test
       script:
         - invoke build --cover
