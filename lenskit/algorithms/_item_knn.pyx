@@ -117,7 +117,7 @@ cdef void ind_upheap(int pos, int len, int* keys, double* values) nogil:
     cdef int current, parent, kt
     current = pos
     parent = (current - 1) // 2
-    while current > 0 and values[keys[parent]] < values[keys[current]]:
+    while current > 0 and values[keys[parent]] > values[keys[current]]:
         # swap up
         kt = keys[parent]
         keys[parent] = keys[current]
@@ -128,8 +128,8 @@ cdef void ind_upheap(int pos, int len, int* keys, double* values) nogil:
 cdef void ind_downheap(int pos, int len, int* keys, double* values) nogil:
     cdef int left, right, min, kt
     min = pos
-    left = 2*pos
-    right = 2*pos + 1
+    left = 2*pos + 1
+    right = 2*pos + 2
     if left < len and values[keys[left]] < values[keys[min]]:
         min = left
     if right < len and values[keys[right]] < values[keys[min]]:

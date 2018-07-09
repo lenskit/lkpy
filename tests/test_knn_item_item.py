@@ -146,6 +146,7 @@ def test_ii_limited_model_is_subset():
         assert len(ub_nbrs) >= len(b_nbrs)
         assert len(b_nbrs) <= 500
         assert all(b_nbrs.index.isin(ub_nbrs.index))
+        # the similarities should be equal!
         b_match, ub_match = b_nbrs.align(ub_nbrs, join='inner')
         assert all(b_match == b_nbrs)
         assert b_match.values == approx(ub_match.values)
@@ -153,8 +154,11 @@ def test_ii_limited_model_is_subset():
         if len(ub_nbrs) > 500:
             assert len(b_nbrs) == 500
             ub_shrink = ub_nbrs.nlargest(500)
+            # the minimums should be equal
             assert ub_shrink.min() == approx(b_nbrs.min())
-            assert all(ub_shrink.index.isin(b_nbrs.index))
+            # everything above minimum value should be the same set of items
+            ubs_except_min = ub_shrink[ub_shrink > b_nbrs.min()]
+            assert all(ubs_except_min.index.isin(b_nbrs.index))
 
 
 @mark.slow
