@@ -170,8 +170,8 @@ def test_ii_large_models():
 
         # it should be sorted !
         # check this by diffing the row values, and make sure they're negative
-        assert all(np.diff(b_row) < 1.0e-6)
-        assert all(np.diff(ub_row) < 1.0e-6)
+        assert all(np.diff(b_row.data) < 1.0e-6)
+        assert all(np.diff(ub_row.data) < 1.0e-6)
 
         ub_nbrs = pd.Series(ub_row.data, model_ub.items[ub_row.indices])
         b_nbrs = pd.Series(b_row.data, model_lim.items[b_row.indices])
