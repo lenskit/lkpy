@@ -190,4 +190,4 @@ def test_batch_rmse():
     assert all(user_rmse.notna())
 
     # we should have a reasonable mean
-    assert user_rmse.mean() == approx(0.93, 0.05)
+    assert user_rmse.mean() == approx(0.93, abs=0.05)
