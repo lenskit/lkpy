@@ -111,9 +111,9 @@ class ItemItem:
             start = smat.indptr[i]
             end = smat.indptr[i+1]
             sorti = np.argsort(smat.data[start:end])
-            tmp = smat.indices[sorti + start]
+            tmp = smat.indices[sorti[::-1] + start]
             smat.indices[start:end] = tmp
-            tmp = smat.data[sorti + start]
+            tmp = smat.data[sorti[::-1] + start]
             smat.data[start:end] = tmp
 
         # clean up neighborhoods
