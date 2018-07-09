@@ -154,7 +154,6 @@ class ItemItem:
         neighborhoods = neighborhoods.reset_index(level=1, drop=True)
         return neighborhoods
 
-    @profile
     def predict(self, model, user, items, ratings=None):
         if ratings is None:
             ratings = model.rating_matrix.loc[user]
