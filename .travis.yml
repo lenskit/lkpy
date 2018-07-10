@@ -43,7 +43,7 @@ jobs:
         - bash <(curl -s https://codecov.io/bash)
     - stage: deploy
       install:
-        - pip install invoke sphinx pandas
+        - pip install invoke sphinx pandas cython scipy
         - npm install -g netlify-cli
       script:
         - python setup.py build_sphinx
