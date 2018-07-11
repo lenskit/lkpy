@@ -9,6 +9,7 @@ import pandas as pd
 
 from .. import util as lku
 from .. import check
+from . import Predictor, Trainable
 
 _logger = logging.getLogger(__package__)
 
@@ -16,7 +17,7 @@ BiasModel = namedtuple('BiasModel', ['mean', 'items', 'users'])
 BiasModel.__doc__ = "Trained model for the :py:class:`Bias` algorithm."
 
 
-class Bias:
+class Bias(Predictor, Trainable):
     """
     A user-item bias rating prediction algorithm.  This implements the following
     predictor algorithm:

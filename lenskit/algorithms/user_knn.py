@@ -8,7 +8,8 @@ import logging
 import pandas as pd
 import numpy as np
 
-from lenskit import util
+from .. import util
+from . import Trainable, Predictor
 
 _logger = logging.getLogger(__package__)
 
@@ -28,7 +29,7 @@ UUModel.item_users.__doc__ = \
     """
 
 
-class UserUser:
+class UserUser(Trainable, Predictor):
     """
     User-user nearest-neighbor collaborative filtering with ratings. This user-user implementation
     is not terribly configurable; it hard-codes design decisions found to work well in the previous

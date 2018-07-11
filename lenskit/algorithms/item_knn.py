@@ -11,13 +11,14 @@ import scipy.sparse as sps
 
 from lenskit import util, matrix
 from . import _item_knn as accel
+from . import Trainable, Predictor
 
 _logger = logging.getLogger(__package__)
 
 IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rating_matrix'])
 
 
-class ItemItem:
+class ItemItem(Trainable, Predictor):
     """
     Item-item nearest-neighbor collaborative filtering with ratings. This item-item implementation
     is not terribly configurable; it hard-codes design decisions found to work well in the previous
