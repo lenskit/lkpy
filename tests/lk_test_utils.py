@@ -4,7 +4,9 @@ Test utilities for LKPY tests.
 
 import os
 import os.path
+import tempfile
 from contextlib import contextmanager
+
 
 import pandas as pd
 import pytest
@@ -91,3 +93,9 @@ def dask_test(f):
     :return:
     """
     return pytest.mark.skipif(not have_dask, reason='dask is not available')(f)
+
+
+@pytest.fixture
+def tmpdir():
+    with tempfile.TemporaryDirectory() as dir:
+        yield dir
