@@ -11,6 +11,7 @@ import pytest
 from pytest import approx, mark
 
 import lk_test_utils as lktu
+from lk_test_utils import tmpdir
 
 _log = logging.getLogger(__name__)
 
@@ -210,6 +211,38 @@ def test_ii_large_models():
             # everything above minimum value should be the same set of items
             ubs_except_min = ub_shrink[ub_shrink > b_nbrs.min()]
             assert all(ubs_except_min.index.isin(b_nbrs.index))
+
+
+@mark.slow
+def test_ii_save_load(tmpdir):
+    "Simple tests for bounded models"
+    algo = knn.ItemItem(30, save_nbrs=500)
+    _log.info('building model')
+    original = algo.train(ml_ratings)
+
+    _log.info('saving model to disk')
+    fn = os.path.join(tmpdir, 'ii.mod')
+    algo.save_model(original, fn)
+    _log.info('reloading model')
+    model = algo.load_model(fn)
+
+    assert model is not None
+    assert model is not original
+
+    assert all(np.logical_not(np.isnan(model.sim_matrix.data)))
+    assert all(model.sim_matrix.data > 0)
+    # a little tolerance
+    assert all(model.sim_matrix.data < 1 + 1.0e-6)
+
+    assert all(model.counts == original.counts)
+    assert model.counts.sum() == model.sim_matrix.nnz
+    assert model.sim_matrix.nnz == original.sim_matrix.nnz
+    assert all(model.sim_matrix.indptr == original.sim_matrix.indptr)
+    assert all(model.sim_matrix.indices == original.sim_matrix.indices)
+    assert model.sim_matrix.data == approx(original.sim_matrix.data)
+
+    means = ml_ratings.groupby('item').rating.mean()
+    assert means[model.items].values == approx(model.means)
 
 
 @mark.slow
