@@ -220,11 +220,12 @@ def test_ii_save_load(tmpdir):
     _log.info('building model')
     original = algo.train(ml_ratings)
 
-    _log.info('saving model to disk')
     fn = os.path.join(tmpdir, 'ii.mod')
+    _log.info('saving model to %s', fn)
     algo.save_model(original, fn)
     _log.info('reloading model')
     model = algo.load_model(fn)
+    _log.info('checking model')
 
     assert model is not None
     assert model is not original
@@ -242,7 +243,7 @@ def test_ii_save_load(tmpdir):
     assert model.sim_matrix.data == approx(original.sim_matrix.data)
 
     means = ml_ratings.groupby('item').rating.mean()
-    assert means[model.items].values == approx(model.means)
+    assert means[model.items].values == approx(original.means)
 
 
 @mark.slow

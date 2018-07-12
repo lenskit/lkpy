@@ -83,12 +83,16 @@ def test_uu_predict_live_ratings():
 @mark.slow
 def test_uu_save_load(tmpdir):
     algo = knn.UserUser(30)
+    _log.info('training model')
     original = algo.train(ml_ratings)
 
     fn = os.path.join(tmpdir, 'uu.model')
+    _log.info('saving to %s', fn)
     algo.save_model(original, fn)
 
+    _log.info('reloading model')
     model = algo.load_model(fn)
+    _log.info('checking model')
 
     # it should have computed correct means
     umeans = ml_ratings.groupby('user').rating.mean()

@@ -211,3 +211,34 @@ class ItemItem(Trainable, Predictor):
         _logger.debug('user %s: predicted for %d of %d items',
                       user, results.notna().sum(), len(items))
         return results
+
+
+    def save_model(self, model, file):
+        with pd.HDFStore(file, 'w') as hdf:
+            h5 = hdf._handle
+            group = h5.create_group('/', 'ii-model')
+            h5.create_array(group, 'items', model.items.values)
+            h5.create_array(group, 'means', model.means.values)
+            h5.create_array(group, 'col_ptrs', model.sim_matrix.indptr)
+            h5.create_array(group, 'row_nums', model.sim_matrix.indices)
+            h5.create_array(group, 'sim_values', model.sim_matrix.data)
+
+            hdf['ratings'] = model.rating_matrix
+
+    def load_model(self, file):
+        with pd.HDFStore(file, 'r') as hdf:
+            ratings = hdf['ratings']
+            h5 = hdf._handle
+
+            items = h5.get_node('/ii-model', 'items').read()
+            items = pd.Index(items)
+            means = h5.get_node('/ii-model', 'means').read()
+            means = pd.Series(means, index=items)
+
+            indptr = h5.get_node('/ii-model', 'col_ptrs').read()
+            indices = h5.get_node('/ii-model', 'row_nums').read()
+            values = h5.get_node('/ii-model', 'sim_values').read()
+
+            matrix = sps.csr_matrix((values, indices, indptr))
+
+            return IIModel(items, means, np.diff(indptr), matrix, ratings)
