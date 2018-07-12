@@ -9,7 +9,6 @@ classes (:py:mod:`abc`) representing different algorithm capabilities.
 
 from abc import ABCMeta, abstractmethod
 import pickle
-import gzip
 
 
 class Predictor(metaclass=ABCMeta):
@@ -65,13 +64,13 @@ class Trainable(metaclass=ABCMeta):
         """
         Save a trained model to a file.  The default implementation pickles the model.
 
+        Algorithms are allowed to use any format for saving their models, including
+        directories.
+
         Args:
             model: the trained model.
             file(string):
                 the file in which to save the model.
-            fast(bool):
-                if ``True``, the model may be saved in a format that optimizes for
-                speed at the expense of portability, compatibility, and disk space.
         """
 
         with open(file, 'wb') as f:

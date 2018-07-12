@@ -11,6 +11,7 @@ Personalized Mean Rating Prediction
 
 .. autoclass:: Bias
     :members:
+    :show-inheritance:
 
 .. autoclass:: BiasModel
 
@@ -25,6 +26,7 @@ A common case is to fill in with :py:class:`Bias` when a primary predictor canno
 
 .. autoclass:: Fallback
    :members:
+   :show-inheritance:
 
 Memorized Predictor
 -------------------
@@ -34,3 +36,4 @@ rating predictions and returns them.
 
 .. autoclass:: Memorized
    :members:
+   :show-inheritance:
