@@ -212,7 +212,6 @@ class ItemItem(Trainable, Predictor):
                       user, results.notna().sum(), len(items))
         return results
 
-
     def save_model(self, model, file):
         with pd.HDFStore(file, 'w') as hdf:
             h5 = hdf._handle
