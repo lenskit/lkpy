@@ -1,5 +1,6 @@
 import lenskit.algorithms.basic as bl
 
+import os.path
 import logging
 
 import pandas as pd
@@ -7,7 +8,7 @@ import numpy as np
 
 from pytest import approx
 
-import lk_test_utils as lktu
+from lk_test_utils import tmpdir, dask_test, ml_pandas, ml_dask
 
 _log = logging.getLogger(__name__)
 
@@ -137,7 +138,7 @@ def test_bias_predict_unknown_user():
 
 def test_bias_train_ml_ratings():
     algo = bl.Bias()
-    ratings = lktu.ml_pandas.ratings.rename(columns={'userId': 'user', 'movieId': 'item'})
+    ratings = ml_pandas.ratings.rename(columns={'userId': 'user', 'movieId': 'item'})
     model = algo.train(ratings)
 
     assert model.mean == approx(ratings.rating.mean())
@@ -155,11 +156,11 @@ def test_bias_train_ml_ratings():
     assert p.iloc[2] == approx(ratings.rating.mean() + umean)
 
 
-@lktu.dask_test
+@dask_test
 def test_bias_train_dask():
     algo = bl.Bias()
-    ratings = lktu.ml_pandas.ratings.rename(columns={'userId': 'user', 'movieId': 'item'})
-    model = algo.train(lktu.ml_dask.ratings.rename(columns={'userId': 'user', 'movieId': 'item'}))
+    ratings = ml_pandas.ratings.rename(columns={'userId': 'user', 'movieId': 'item'})
+    model = algo.train(ml_dask.ratings.rename(columns={'userId': 'user', 'movieId': 'item'}))
 
     assert model.mean == approx(ratings.rating.mean())
     imeans_data = ratings.groupby('item').rating.mean()
@@ -235,3 +236,28 @@ def test_bias_separate_damping():
     assert set(model.users.index) == set([10, 12, 13])
     assert model.users.loc[[10, 12, 13]].values == \
         approx(np.array([0.266234, -0.08333, -0.22727]), abs=1.0e-4)
+
+
+def test_bias_save(tmpdir):
+    algo = bl.Bias(damping=5)
+    original = algo.train(simple_df)
+    assert original.mean == approx(3.5)
+    fn = os.path.join(tmpdir, 'bias.dat')
+
+    _log.info('saving to %s', fn)
+    algo.save_model(original, fn)
+
+    model = algo.load_model(fn)
+    assert model is not original
+    assert model.mean == original.mean
+
+    assert model.items is not None
+    assert model.items.index.name == 'item'
+    assert set(model.items.index) == set([1, 2, 3])
+    assert model.items.loc[1:3].values == approx(np.array([0, 0.25, -0.25]))
+
+    assert model.users is not None
+    assert model.users.index.name == 'user'
+    assert set(model.users.index) == set([10, 12, 13])
+    assert model.users.loc[[10, 12, 13]].values == \
+        approx(np.array([0.25, -00.08333, -0.20833]), abs=1.0e-4)

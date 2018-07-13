@@ -180,3 +180,13 @@ class UserUser(Trainable, Predictor):
         nbr_sims = nbr_sims[nbr_sims >= self.min_similarity]
         nbr_sims.name = 'similarity'
         return nbr_sims
+
+    def save_model(self, model, file):
+        with pd.HDFStore(file, 'w') as store:
+            store['matrix'] = model.matrix
+            store['stats'] = model.user_stats
+            store['item_users'] = model.item_users
+
+    def load_model(self, file):
+        with pd.HDFStore(file, 'r') as store:
+            return UUModel(store['matrix'], store['stats'], store['item_users'])
