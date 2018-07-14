@@ -8,7 +8,8 @@ import numpy as np
 
 from pytest import approx
 
-from lk_test_utils import tmpdir, dask_test, ml_pandas, ml_dask
+import lk_test_utils as lktu
+from lk_test_utils import tmpdir, ml_pandas
 
 _log = logging.getLogger(__name__)
 
@@ -156,11 +157,11 @@ def test_bias_train_ml_ratings():
     assert p.iloc[2] == approx(ratings.rating.mean() + umean)
 
 
-@dask_test
+@lktu.dask_test
 def test_bias_train_dask():
     algo = bl.Bias()
     ratings = ml_pandas.ratings.rename(columns={'userId': 'user', 'movieId': 'item'})
-    model = algo.train(ml_dask.ratings.rename(columns={'userId': 'user', 'movieId': 'item'}))
+    model = algo.train(lktu.ml_dask.ratings.rename(columns={'userId': 'user', 'movieId': 'item'}))
 
     assert model.mean == approx(ratings.rating.mean())
     imeans_data = ratings.groupby('item').rating.mean()
