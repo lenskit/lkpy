@@ -18,7 +18,7 @@ else
     conda update -q -n lkpy-test --all
 fi
 echo 'installing scientific python'
-conda install -q -n lkpy-test pandas scipy cython
+conda install -q -n lkpy-test pandas scipy cython pytables
 echo "installing test utilities"
 conda install -q -n lkpy-test pytest pytest-arraydiff pytest-xdist flake8 pylint invoke
 if [ -n "$1" ]; then
