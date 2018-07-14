@@ -69,7 +69,7 @@ class Trainable(metaclass=ABCMeta):
 
         Args:
             model: the trained model.
-            file(string):
+            file(str):
                 the file in which to save the model.
         """
 
@@ -81,10 +81,10 @@ class Trainable(metaclass=ABCMeta):
         Save a trained model to a file.
 
         Args:
-            file(string): the path to file from which to load the model.
+            file(str): the path to file from which to load the model.
 
         Returns:
-            the trained model (of an implementation-defined type).
+            the re-loaded model (of an implementation-defined type).
         """
         with open(file, 'rb') as f:
             return pickle.load(f)

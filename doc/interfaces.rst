@@ -24,4 +24,7 @@ Most algorithms have some concept of a trained model.  The ``Trainable`` interfa
 ability of a model to be trained and saved to disk.
 
 .. autoclass:: Trainable
-   :members:
+   
+   .. automethod:: train
+   .. automethod:: save_model
+   .. automethod:: load_model
