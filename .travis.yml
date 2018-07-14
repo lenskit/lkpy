@@ -25,7 +25,7 @@ install:
   - if [[ $PYTHON_TYPE = conda ]]; then bash build-tools/install-conda.sh; fi
   - source build-tools/activate-conda.sh
   - pip install coverage pylint invoke
-  - pip install pandas scipy cython pytest-xdist
+  - pip install pandas scipy cython pytest-xdist tables
   - bash build-tools/fetch-ml100k.sh
 script:
   - python setup.py test --addopts=--verbose --addopts=--forked
