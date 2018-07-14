@@ -1,5 +1,6 @@
 import tempfile
 import logging
+import uuid
 
 import pandas as pd
 import numpy as np
@@ -132,6 +133,30 @@ def test_share_array(repo):
     assert all(v2 == v)
 
 
+def test_share_string_array(repo):
+    v = np.array([str(uuid.uuid4()) for i in range(20)])
+    key = repo.share(v)
+    assert key is not None
+    _log.info('saved to %s', key)
+
+    v2 = repo.resolve(key)
+    assert v2 is not v
+    assert len(v2) == len(v)
+    assert all(v2 == v)
+
+
+def test_share_string_series(repo):
+    v = pd.Series([str(uuid.uuid4()) for i in range(20)])
+    key = repo.share(v)
+    assert key is not None
+    _log.info('saved to %s', key)
+
+    v2 = repo.resolve(key)
+    assert v2 is not v
+    assert len(v2) == len(v)
+    assert all(v2 == v)
+
+
 @mark.xfail
 def test_share_matrix(repo):
     m = np.random.randn(25, 50)
@@ -175,37 +200,3 @@ def test_share_sparse_matrix(repo, layout):
         assert all(sm2.indptr == sm.indptr)
         assert all(sm2.indices == sm.indices)
         assert all(sm2.data == sm.data)
-
-
-@mark.xfail
-def test_share_index(repo):
-    from lenskit import matrix
-    rm = matrix.sparse_ratings(lktu.ml_pandas.renamed.ratings)
-    iidx = rm.items
-
-    key = repo.share(iidx)
-    assert key is not None
-    _log.info('saved to %s', key)
-
-    i2 = repo.resolve(key)
-    assert i2 is not iidx
-    assert len(i2) == iidx
-    assert all(i2.values == iidx.values)
-    assert i2 == iidx
-
-
-@mark.xfail
-def test_share_str_index(repo):
-    items = lktu.ml_pandas.ratings.movieId.unique()
-    items = pd.Series(items).astype('str')
-    iidx = pd.Index(items)
-
-    key = repo.share(iidx)
-    assert key is not None
-    _log.info('saved to %s', key)
-
-    i2 = repo.resolve(key)
-    assert i2 is not iidx
-    assert len(i2) == iidx
-    assert all(i2.values == iidx.values)
-    assert i2 == iidx
