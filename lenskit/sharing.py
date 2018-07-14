@@ -6,10 +6,12 @@ from abc import ABCMeta, abstractmethod
 from pathlib import Path
 import logging
 import uuid
+import json
 
 import pandas as pd
 import numpy as np
 import pyarrow as pa
+import pyarrow.parquet as parq
 
 _logger = logging.getLogger(__package__)
 
@@ -54,23 +56,25 @@ class FileRepo(ObjectRepo):
     Share objects by serializing them to Arrow files in a directory.  Keys are UUIDs.
     """
 
-    def __init__(self, dir, engine=None):
+    def __init__(self, dir):
         self.dir = Path(dir)
-        self._pq_args = {}
-        if engine is not None:
-            self._pq_args['engine'] = engine
 
         if not self.dir.exists():
             raise ValueError('directory {} does not exist', dir)
 
     def share(self, object):
         key = uuid.uuid4()
-        _logger.debug('sharing object %s to %s', repr(object), key)
+        _logger.debug('sharing object to %s', key)
 
         fn = self.dir / '{}.parquet'.format(key)
-        object.to_parquet(fn)
-        _logger.info('saved %s to %s (%d bytes)', repr(object), key,
-                     fn.stat().st_size)
+        tbl, schema = self._to_table(object)
+        pqf = parq.ParquetWriter(fn, schema)
+        try:
+            pqf.write_table(tbl)
+        finally:
+            pqf.close()
+
+        _logger.info('saved %s (%d bytes)', key, fn.stat().st_size)
 
         return key
 
@@ -82,4 +86,39 @@ class FileRepo(ObjectRepo):
         _logger.info('reading %s to %s (%d bytes)', repr(object), key,
                      fn.stat().st_size)
 
-        return pd.read_parquet(fn)
+        pqf = parq.ParquetFile(fn)
+
+        tbl = pqf.read()
+
+        return self._from_tbl(tbl)
+
+    def _to_table(self, obj):
+        if isinstance(obj, pd.DataFrame):
+            tbl = pa.Table.from_pandas(obj)
+            return tbl, tbl.schema
+        elif isinstance(obj, pd.Series):
+            name = obj.name
+            if name is None:
+                name = 'data'
+            df = pd.DataFrame({name: obj})
+            tbl = pa.Table.from_pandas(df)
+            meta = dict(tbl.schema.metadata)
+            meta[b'lkpy'] = json.dumps({'type': 'series', 'name': name}).encode()
+            schema = tbl.schema.add_metadata(meta)
+            return tbl, schema
+        else:
+            raise ValueError('unserializable type {}'.format(type(obj)))
+
+    def _from_tbl(self, tbl):
+        meta = tbl.schema.metadata
+        lk_meta = meta.get(b'lkpy')
+        if lk_meta is not None:
+            lk_meta = json.loads(lk_meta.decode())
+        else:
+            lk_meta = {}
+
+        if lk_meta.get('type') == 'series':
+            _logger.debug('decoding as Pandas series')
+            return tbl.to_pandas()[lk_meta['name']]
+        else:
+            return tbl.to_pandas()

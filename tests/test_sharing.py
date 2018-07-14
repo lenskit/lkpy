@@ -6,6 +6,7 @@ import numpy as np
 import scipy as sp
 
 import pytest
+from pytest import mark
 
 import lenskit.sharing as lks
 import lk_test_utils as lktu
@@ -13,10 +14,10 @@ import lk_test_utils as lktu
 _log = logging.getLogger(__name__)
 
 
-@pytest.fixture(params=['pyarrow', 'fastparquet'])
+@pytest.fixture
 def repo(request):
     with tempfile.TemporaryDirectory() as dir:
-        yield lks.FileRepo(dir, engine=request.param)
+        yield lks.FileRepo(dir)
 
 
 def test_share_data_frame(repo):
@@ -67,27 +68,38 @@ def test_share_indexed_frame(repo):
     assert all(dfs.rating == df.rating)
 
 
+def test_share_prep_series(repo):
+    s = pd.Series(np.random.randn(50), index=np.random.randint(0, 10000, 50), name='foo')
+
+    tbl, schema = repo._to_table(s)
+    assert b'lkpy' in schema.metadata
+    assert b'pandas' in schema.metadata
+    assert 'foo' in schema.names
+
+
 def test_share_series(repo):
-    s = pd.Series({'x': np.random.randn(50)})
+    s = pd.Series(np.random.randn(50))
     key = repo.share(s)
     assert key is not None
     _log.info('saved to %s', key)
 
     s2 = repo.resolve(key)
     assert s2 is not s
+    assert isinstance(s2, pd.Series)
     assert len(s2) == len(s)
     assert all(s2.index == s.index)
     assert all(s2 == s)
 
 
 def test_share_indexed_series(repo):
-    s = pd.Series({'x': np.random.randn(50)}, index=np.random.randint(0, 10000, 50))
+    s = pd.Series(np.random.randn(50), index=np.random.randint(0, 10000, 50))
     key = repo.share(s)
     assert key is not None
     _log.info('saved to %s', key)
 
     s2 = repo.resolve(key)
     assert s2 is not s
+    assert isinstance(s2, pd.Series)
     assert len(s2) == len(s)
     assert all(s2.index == s.index)
     assert all(s2 == s)
@@ -101,11 +113,14 @@ def test_share_multi_series(repo):
 
     s2 = repo.resolve(key)
     assert s2 is not s
+    assert isinstance(s2, pd.Series)
+    assert s2.name == 'rating'
     assert len(s2) == len(s)
     assert all(s2.index == s.index)
     assert all(s2 == s)
 
 
+@mark.xfail
 def test_share_array(repo):
     v = np.random.randn(50)
     key = repo.share(v)
@@ -118,6 +133,7 @@ def test_share_array(repo):
     assert all(v2 == v)
 
 
+@mark.xfail
 def test_share_matrix(repo):
     m = np.random.randn(25, 50)
     key = repo.share(m)
@@ -131,7 +147,8 @@ def test_share_matrix(repo):
     assert all(m2 == m)
 
 
-@pytest.mark.parametrize('layout', ['csr', 'csc', 'coo'])
+@mark.parametrize('layout', ['csr', 'csc', 'coo'])
+@mark.xfail
 def test_share_sparse_matrix(repo, layout):
     from lenskit import matrix
     rm = matrix.sparse_ratings(lktu.ml_pandas.renamed.ratings)
@@ -158,6 +175,7 @@ def test_share_sparse_matrix(repo, layout):
         assert all(sm2.data == sm.data)
 
 
+@mark.xfail
 def test_share_index(repo):
     from lenskit import matrix
     rm = matrix.sparse_ratings(lktu.ml_pandas.renamed.ratings)
@@ -174,6 +192,7 @@ def test_share_index(repo):
     assert i2 == iidx
 
 
+@mark.xfail
 def test_share_str_index(repo):
     items = lktu.ml_pandas.ratings.movieId.unique()
     items = pd.Series(items).astype('str')
