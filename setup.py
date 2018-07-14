@@ -55,7 +55,9 @@ setup(
 
     install_requires=[
         'pandas',
-        'numpy'
+        'numpy',
+        'scipy',
+        'pytables >= 3.2.0'
     ],
     setup_requires=[
         'pytest-runner',
