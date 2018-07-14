@@ -50,6 +50,13 @@ class ObjectRepo(metaclass=ABCMeta):
             a reference to or copy of the shared object.  Client code must not try to modify
             this object.
         """
+        raise NotImplemented()
+
+    def close(self):
+        """
+        Close down the repository.
+        """
+        pass
 
 
 class FileRepo(ObjectRepo):
@@ -152,3 +159,22 @@ class FileRepo(ObjectRepo):
             return sp.sparse.coo_matrix((data, (row, col)), shape=shape)
         else:
             return tbl.to_pandas()
+
+
+class PlasmaRepo(ObjectRepo):
+    """
+    Share objects by serializing them to Arrow files in a directory.  Keys are UUIDs.
+    """
+
+    def __init__(self, socket):
+        import pyarrow.plasma as plasma
+        self.client = plasma.PlasmaClient(socket)
+
+    def share(self, object):
+        raise NotImplemented()
+
+    def resolve(self, key):
+        raise NotImplemented()
+
+    def close(self):
+        self.client.disconnect()

@@ -1,6 +1,10 @@
+import sys
+import os.path
 import tempfile
 import logging
 import uuid
+import subprocess
+from contextlib import closing
 
 import pandas as pd
 import numpy as np
@@ -15,10 +19,27 @@ import lk_test_utils as lktu
 _log = logging.getLogger(__name__)
 
 
-@pytest.fixture
+@pytest.fixture(params=['file', 'plasma'])
 def repo(request):
     with tempfile.TemporaryDirectory() as dir:
-        yield lks.FileRepo(dir)
+        if request.param == 'file':
+            with closing(lks.FileRepo(dir)) as repo:
+                yield repo
+        elif request.param == 'plasma':
+            if sys.platform == 'win32':
+                raise pytest.skip('Plasma unsupported on Win32')
+            proc = None
+            repo = None
+            try:
+                proc = subprocess.Popen(['plasma_store', '-m', 256*1024*1024,
+                                         '-s', os.path.join(dir, 'plasma.sock')])
+                repo = lks.PlasmaRepo(os.path.join(dir, 'plasma.sock'))
+                yield repo
+            finally:
+                if repo is not None:
+                    repo.close()
+                if proc is not None:
+                    proc.terminate()
 
 
 def test_share_data_frame(repo):
