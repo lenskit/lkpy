@@ -120,7 +120,6 @@ def test_share_multi_series(repo):
     assert all(s2 == s)
 
 
-@mark.xfail
 def test_share_array(repo):
     v = np.random.randn(50)
     key = repo.share(v)
@@ -148,24 +147,27 @@ def test_share_matrix(repo):
 
 
 @mark.parametrize('layout', ['csr', 'csc', 'coo'])
-@mark.xfail
 def test_share_sparse_matrix(repo, layout):
     from lenskit import matrix
-    rm = matrix.sparse_ratings(lktu.ml_pandas.renamed.ratings)
+    rm = matrix.sparse_ratings(lktu.ml_pandas.renamed.ratings, layout=layout)
     sm = rm.matrix
 
-    key = repo.share(sm)
+    sm_coo = sm.tocoo()
+
+    key = repo.share(sm_coo)
     assert key is not None
     _log.info('saved to %s', key)
 
-    sm2 = repo.resolve(key)
-    assert sm2 is not sm
+    sm2_coo = repo.resolve(key)
+    assert sm2_coo is not sm_coo
+    sm2 = getattr(sm2_coo, 'to' + layout)()
     assert sm2.dtype == sm.dtype
     assert sm2.ndim == sm.ndim
     assert sm2.shape == sm.shape
     assert sm2.nnz == sm.nnz
 
     if layout == 'coo':
+        assert sp.sparse.isspmatrix_coo(sm)
         assert all(sm2.row == sm.row)
         assert all(sm2.col == sm.col)
         assert all(sm2.data == sm.data)

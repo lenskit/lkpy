@@ -10,6 +10,7 @@ import json
 
 import pandas as pd
 import numpy as np
+import scipy as sp
 import pyarrow as pa
 import pyarrow.parquet as parq
 
@@ -68,6 +69,7 @@ class FileRepo(ObjectRepo):
 
         fn = self.dir / '{}.parquet'.format(key)
         tbl, schema = self._to_table(object)
+        _logger.debug('using schema %s', schema)
         pqf = parq.ParquetWriter(fn, schema)
         try:
             pqf.write_table(tbl)
@@ -106,6 +108,21 @@ class FileRepo(ObjectRepo):
             meta[b'lkpy'] = json.dumps({'type': 'series', 'name': name}).encode()
             schema = tbl.schema.add_metadata(meta)
             return tbl, schema
+        elif isinstance(obj, np.ndarray):
+            arr = pa.Array.from_pandas(obj)
+            meta = {b'lkpy': json.dumps({'type': 'array'}).encode()}
+            tbl = pa.Table.from_arrays([arr], ['array'], metadata=meta)
+            return tbl, tbl.schema
+        elif sp.sparse.isspmatrix_coo(obj):
+            data = pa.Array.from_pandas(obj.data)
+            _logger.debug('obj type: %s', obj.row.dtype)
+            rows = pa.Array.from_pandas(obj.row.astype(np.int))
+            cols = pa.Array.from_pandas(obj.col.astype(np.int))
+            info = {'type': 'spmatrix', 'layout': 'coo'}
+            info['shape'] = {'rows': obj.shape[0], 'cols': obj.shape[1]}
+            meta = {b'lkpy': json.dumps(info).encode()}
+            tbl = pa.Table.from_arrays([rows, cols, data], ['row', 'col', 'data'], metadata=meta)
+            return tbl, tbl.schema
         else:
             raise ValueError('unserializable type {}'.format(type(obj)))
 
@@ -120,5 +137,18 @@ class FileRepo(ObjectRepo):
         if lk_meta.get('type') == 'series':
             _logger.debug('decoding as Pandas series')
             return tbl.to_pandas()[lk_meta['name']]
+        elif lk_meta.get('type') == 'array':
+            _logger.debug('decoding as NumPy array')
+            col = tbl.column(0)
+            s = col.to_pandas()
+            return s.values
+        elif lk_meta.get('type') == 'spmatrix':
+            if lk_meta['layout'] != 'coo':
+                raise ValueError('unknown sparse matrix layout {}'.format(lk_meta['layout']))
+            row = tbl.column(0).to_pandas().values.astype(np.int32)
+            col = tbl.column(1).to_pandas().values.astype(np.int32)
+            data = tbl.column(2).to_pandas().values
+            shape = (lk_meta['shape']['rows'], lk_meta['shape']['cols'])
+            return sp.sparse.coo_matrix((data, (row, col)), shape=shape)
         else:
             return tbl.to_pandas()
