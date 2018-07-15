@@ -21,23 +21,22 @@ _log = logging.getLogger(__name__)
 
 @pytest.fixture(params=['file', 'plasma'])
 def repo(request):
-    with tempfile.TemporaryDirectory() as dir:
-        if request.param == 'file':
-            with closing(lks.FileRepo(dir)) as repo:
-                yield repo
-        elif request.param == 'plasma':
-            if sys.platform == 'win32':
-                raise pytest.skip('Plasma unsupported on Win32')
+    if request.param == 'file':
+        with lks.FileRepo() as repo:
+            _log.info('using directory %s', repo.dir)
+            yield repo
+    elif request.param == 'plasma':
+        if sys.platform == 'win32':
+            raise pytest.skip('Plasma unsupported on Win32')
+
+        with tempfile.TemporaryDirectory() as dir:
             proc = None
-            repo = None
             try:
-                proc = subprocess.Popen(['plasma_store', '-m', 256*1024*1024,
+                proc = subprocess.Popen(['plasma_store', '-m', str(256*1024*1024),
                                          '-s', os.path.join(dir, 'plasma.sock')])
-                repo = lks.PlasmaRepo(os.path.join(dir, 'plasma.sock'))
-                yield repo
+                with lks.PlasmaRepo(os.path.join(dir, 'plasma.sock')) as repo:
+                    yield repo
             finally:
-                if repo is not None:
-                    repo.close()
                 if proc is not None:
                     proc.terminate()
 

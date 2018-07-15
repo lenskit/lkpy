@@ -7,6 +7,7 @@ from pathlib import Path
 import logging
 import uuid
 import json
+import tempfile
 
 import pandas as pd
 import numpy as np
@@ -36,7 +37,7 @@ class ObjectRepo(metaclass=ABCMeta):
         Returns:
             the object's key in the repository.
         """
-        raise NotImplemented()
+        raise NotImplemented
 
     @abstractmethod
     def resolve(self, key):
@@ -50,7 +51,7 @@ class ObjectRepo(metaclass=ABCMeta):
             a reference to or copy of the shared object.  Client code must not try to modify
             this object.
         """
-        raise NotImplemented()
+        raise NotImplemented
 
     def close(self):
         """
@@ -58,17 +59,32 @@ class ObjectRepo(metaclass=ABCMeta):
         """
         pass
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
 
 class FileRepo(ObjectRepo):
     """
     Share objects by serializing them to Arrow files in a directory.  Keys are UUIDs.
     """
 
-    def __init__(self, dir):
-        self.dir = Path(dir)
+    def __init__(self, dir=None):
+        if dir is None:
+            self._tmpdir = tempfile.TemporaryDirectory(prefix='lkpy-repo')
+            self.dir = Path(self._tmpdir.name)
+        else:
+            self.dir = Path(dir)
+            self._tmpdir = None
 
         if not self.dir.exists():
             raise ValueError('directory {} does not exist', dir)
+
+    def close(self):
+        if self._tmpdir is not None:
+            self._tmpdir.cleanup()
 
     def share(self, object):
         key = uuid.uuid4()
@@ -77,7 +93,7 @@ class FileRepo(ObjectRepo):
         fn = self.dir / '{}.parquet'.format(key)
         tbl, schema = self._to_table(object)
         _logger.debug('using schema %s', schema)
-        pqf = parq.ParquetWriter(fn, schema)
+        pqf = parq.ParquetWriter(str(fn), schema)
         try:
             pqf.write_table(tbl)
         finally:
@@ -95,7 +111,7 @@ class FileRepo(ObjectRepo):
         _logger.info('reading %s to %s (%d bytes)', repr(object), key,
                      fn.stat().st_size)
 
-        pqf = parq.ParquetFile(fn)
+        pqf = parq.ParquetFile(str(fn))
 
         tbl = pqf.read()
 
@@ -171,10 +187,10 @@ class PlasmaRepo(ObjectRepo):
         self.client = plasma.PlasmaClient(socket)
 
     def share(self, object):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def resolve(self, key):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def close(self):
         self.client.disconnect()
