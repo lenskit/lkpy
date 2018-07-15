@@ -17,6 +17,11 @@ import pyarrow.parquet as parq
 
 _logger = logging.getLogger(__package__)
 
+try:
+    from pyarrow import plasma
+except ImportError:
+    _logger.info('plasma not available')
+
 
 class ObjectRepo(metaclass=ABCMeta):
     """
@@ -183,17 +188,40 @@ class PlasmaRepo(ObjectRepo):
     """
 
     def __init__(self, socket, manager="", release_delay=0):
-        import pyarrow.plasma as plasma
         self.client = plasma.connect(socket, manager, release_delay)
 
     def share(self, object):
-        id = self.client.put(object)
+        if isinstance(object, pd.DataFrame):
+            id = self._share_frame(object)
+
         _logger.info('shared object to %s', id)
+        return id
+
+    def _share_frame(self, frame):
+        id = plasma.ObjectID.from_random()
+        batch = pa.RecordBatch.from_pandas(frame)
+        mock = pa.MockOutputStream()
+        sw = pa.RecordBatchStreamWriter(mock, batch.schema)
+        sw.write_batch(batch)
+        sw.close()
+        size = mock.size()
+        _logger.debug('writing %d bytes to %s', size, id)
+        buf = self.client.create(id, size)
+        stream = pa.FixedSizeBufferWriter(buf)
+        sw = pa.RecordBatchStreamWriter(stream, batch.schema)
+        sw.write_batch(batch)
+        sw.close()
+        self.client.seal(id)
         return id
 
     def resolve(self, key):
         _logger.info('resolving object %s', key)
-        return self.client.get([key])[0]
+        [data] = self.client.get_buffers([key])
+        buf = pa.BufferReader(data)
+        reader = pa.RecordBatchStreamReader(buf)
+        batch = reader.read_next_batch()
+
+        return batch.to_pandas()
 
     def close(self):
         self.client.disconnect()

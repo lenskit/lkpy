@@ -19,7 +19,7 @@ import lk_test_utils as lktu
 _log = logging.getLogger(__name__)
 
 
-@pytest.fixture(params=['file', 'plasma'])
+@pytest.fixture(params=['file', 'plasma'], scope='module')
 def repo(request):
     if request.param == 'file':
         with lks.FileRepo() as repo:
@@ -35,7 +35,7 @@ def repo(request):
             try:
                 proc = subprocess.Popen(['plasma_store', '-m', str(256*1024*1024),
                                          '-s', socket])
-                time.sleep(0.2)
+                time.sleep(0.5)
                 _log.info('started Plasma server %d with %s', proc.pid, dir)
                 with lks.PlasmaRepo(socket) as repo:
                     yield repo
