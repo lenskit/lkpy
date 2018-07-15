@@ -4,7 +4,7 @@ import tempfile
 import logging
 import uuid
 import subprocess
-from contextlib import closing
+import time
 
 import pandas as pd
 import numpy as np
@@ -30,11 +30,14 @@ def repo(request):
             raise pytest.skip('Plasma unsupported on Win32')
 
         with tempfile.TemporaryDirectory() as dir:
+            socket = os.path.join(dir, 'plasma.sock')
             proc = None
             try:
                 proc = subprocess.Popen(['plasma_store', '-m', str(256*1024*1024),
-                                         '-s', os.path.join(dir, 'plasma.sock')])
-                with lks.PlasmaRepo(os.path.join(dir, 'plasma.sock')) as repo:
+                                         '-s', socket])
+                time.sleep(0.2)
+                _log.info('started Plasma server %d with %s', proc.pid, dir)
+                with lks.PlasmaRepo(socket) as repo:
                     yield repo
             finally:
                 if proc is not None:
@@ -87,15 +90,6 @@ def test_share_indexed_frame(repo):
     assert all(dfs.userId == df.userId)
     assert all(dfs.timestamp == df.timestamp)
     assert all(dfs.rating == df.rating)
-
-
-def test_share_prep_series(repo):
-    s = pd.Series(np.random.randn(50), index=np.random.randint(0, 10000, 50), name='foo')
-
-    tbl, schema = repo._to_table(s)
-    assert b'lkpy' in schema.metadata
-    assert b'pandas' in schema.metadata
-    assert 'foo' in schema.names
 
 
 def test_share_series(repo):

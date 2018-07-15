@@ -182,15 +182,18 @@ class PlasmaRepo(ObjectRepo):
     Share objects by serializing them to Arrow files in a directory.  Keys are UUIDs.
     """
 
-    def __init__(self, socket):
+    def __init__(self, socket, manager="", release_delay=0):
         import pyarrow.plasma as plasma
-        self.client = plasma.PlasmaClient(socket)
+        self.client = plasma.connect(socket, manager, release_delay)
 
     def share(self, object):
-        raise NotImplementedError()
+        id = self.client.put(object)
+        _logger.info('shared object to %s', id)
+        return id
 
     def resolve(self, key):
-        raise NotImplementedError()
+        _logger.info('resolving object %s', key)
+        return self.client.get([key])[0]
 
     def close(self):
         self.client.disconnect()
