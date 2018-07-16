@@ -19,7 +19,7 @@ import lk_test_utils as lktu
 _log = logging.getLogger(__name__)
 
 
-@pytest.fixture(params=['file', 'plasma'], scope='module')
+@pytest.fixture(params=['file', 'plasma'])
 def repo(request):
     if request.param == 'file':
         with lks.FileRepo() as repo:

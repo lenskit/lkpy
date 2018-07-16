@@ -23,6 +23,72 @@ except ImportError:
     _logger.info('plasma not available')
 
 
+def _to_table(obj):
+    if isinstance(obj, pd.DataFrame):
+        tbl = pa.Table.from_pandas(obj)
+        return tbl, tbl.schema
+    elif isinstance(obj, pd.Series):
+        name = obj.name
+        if name is None:
+            name = 'data'
+        df = pd.DataFrame({name: obj})
+        tbl = pa.Table.from_pandas(df)
+        meta = dict(tbl.schema.metadata)
+        meta[b'lkpy'] = json.dumps({'type': 'series', 'name': name}).encode()
+        schema = tbl.schema.add_metadata(meta)
+        return tbl, schema
+    elif isinstance(obj, np.ndarray):
+        arr = pa.Array.from_pandas(obj)
+        meta = {b'lkpy': json.dumps({'type': 'array'}).encode()}
+        tbl = pa.Table.from_arrays([arr], ['array'], metadata=meta)
+        return tbl, tbl.schema
+    elif sp.sparse.isspmatrix_coo(obj):
+        data = pa.Array.from_pandas(obj.data)
+        _logger.debug('obj type: %s', obj.row.dtype)
+        rows = pa.Array.from_pandas(obj.row.astype(np.int))
+        cols = pa.Array.from_pandas(obj.col.astype(np.int))
+        info = {'type': 'spmatrix', 'layout': 'coo'}
+        info['shape'] = {'rows': obj.shape[0], 'cols': obj.shape[1]}
+        meta = {b'lkpy': json.dumps(info).encode()}
+        tbl = pa.Table.from_arrays([rows, cols, data], ['row', 'col', 'data'], metadata=meta)
+        return tbl, tbl.schema
+    else:
+        raise ValueError('unserializable type {}'.format(type(obj)))
+
+
+def _from_tbl(tbl):
+    meta = tbl.schema.metadata
+    lk_meta = meta.get(b'lkpy')
+    if lk_meta is not None:
+        lk_meta = json.loads(lk_meta.decode())
+    else:
+        lk_meta = {}
+
+    if lk_meta.get('type') == 'series':
+        _logger.debug('decoding as Pandas series')
+        return tbl.to_pandas()[lk_meta['name']]
+    elif lk_meta.get('type') == 'array':
+        _logger.debug('decoding as NumPy array')
+        col = tbl.column(0)
+        _logger.debug('column has %d rows in %d chunks', len(col), col.data.num_chunks)
+        arr = np.concatenate([chunk.to_pandas() for chunk in col.data.iterchunks()])
+        _logger.debug('decoded array of shape %s and type %s', arr.shape, arr.dtype)
+        return arr
+    elif lk_meta.get('type') == 'spmatrix':
+        shape = (lk_meta['shape']['rows'], lk_meta['shape']['cols'])
+        _logger.debug('decoding sparse matrix with shape %s', shape)
+        if lk_meta['layout'] != 'coo':
+            raise ValueError('unknown sparse matrix layout {}'.format(lk_meta['layout']))
+        row = np.concatenate([chunk.to_pandas().astype(np.int32)
+                              for chunk in tbl.column(0).data.iterchunks()])
+        col = np.concatenate([chunk.to_pandas().astype(np.int32)
+                              for chunk in tbl.column(1).data.iterchunks()])
+        data = np.concatenate([chunk.to_pandas() for chunk in tbl.column(2).data.iterchunks()])
+        return sp.sparse.coo_matrix((data, (row, col)), shape=shape)
+    else:
+        return tbl.to_pandas()
+
+
 class ObjectRepo(metaclass=ABCMeta):
     """
     Interface for shared data repositories.
@@ -96,7 +162,7 @@ class FileRepo(ObjectRepo):
         _logger.debug('sharing object to %s', key)
 
         fn = self.dir / '{}.parquet'.format(key)
-        tbl, schema = self._to_table(object)
+        tbl, schema = _to_table(object)
         _logger.debug('using schema %s', schema)
         pqf = parq.ParquetWriter(str(fn), schema)
         try:
@@ -113,73 +179,14 @@ class FileRepo(ObjectRepo):
         if not fn.exists():
             raise KeyError(key)
 
-        _logger.info('reading %s to %s (%d bytes)', repr(object), key,
+        _logger.info('reading %s from %s (%d bytes)', repr(object), key,
                      fn.stat().st_size)
 
         pqf = parq.ParquetFile(str(fn))
 
         tbl = pqf.read()
 
-        return self._from_tbl(tbl)
-
-    def _to_table(self, obj):
-        if isinstance(obj, pd.DataFrame):
-            tbl = pa.Table.from_pandas(obj)
-            return tbl, tbl.schema
-        elif isinstance(obj, pd.Series):
-            name = obj.name
-            if name is None:
-                name = 'data'
-            df = pd.DataFrame({name: obj})
-            tbl = pa.Table.from_pandas(df)
-            meta = dict(tbl.schema.metadata)
-            meta[b'lkpy'] = json.dumps({'type': 'series', 'name': name}).encode()
-            schema = tbl.schema.add_metadata(meta)
-            return tbl, schema
-        elif isinstance(obj, np.ndarray):
-            arr = pa.Array.from_pandas(obj)
-            meta = {b'lkpy': json.dumps({'type': 'array'}).encode()}
-            tbl = pa.Table.from_arrays([arr], ['array'], metadata=meta)
-            return tbl, tbl.schema
-        elif sp.sparse.isspmatrix_coo(obj):
-            data = pa.Array.from_pandas(obj.data)
-            _logger.debug('obj type: %s', obj.row.dtype)
-            rows = pa.Array.from_pandas(obj.row.astype(np.int))
-            cols = pa.Array.from_pandas(obj.col.astype(np.int))
-            info = {'type': 'spmatrix', 'layout': 'coo'}
-            info['shape'] = {'rows': obj.shape[0], 'cols': obj.shape[1]}
-            meta = {b'lkpy': json.dumps(info).encode()}
-            tbl = pa.Table.from_arrays([rows, cols, data], ['row', 'col', 'data'], metadata=meta)
-            return tbl, tbl.schema
-        else:
-            raise ValueError('unserializable type {}'.format(type(obj)))
-
-    def _from_tbl(self, tbl):
-        meta = tbl.schema.metadata
-        lk_meta = meta.get(b'lkpy')
-        if lk_meta is not None:
-            lk_meta = json.loads(lk_meta.decode())
-        else:
-            lk_meta = {}
-
-        if lk_meta.get('type') == 'series':
-            _logger.debug('decoding as Pandas series')
-            return tbl.to_pandas()[lk_meta['name']]
-        elif lk_meta.get('type') == 'array':
-            _logger.debug('decoding as NumPy array')
-            col = tbl.column(0)
-            s = col.to_pandas()
-            return s.values
-        elif lk_meta.get('type') == 'spmatrix':
-            if lk_meta['layout'] != 'coo':
-                raise ValueError('unknown sparse matrix layout {}'.format(lk_meta['layout']))
-            row = tbl.column(0).to_pandas().values.astype(np.int32)
-            col = tbl.column(1).to_pandas().values.astype(np.int32)
-            data = tbl.column(2).to_pandas().values
-            shape = (lk_meta['shape']['rows'], lk_meta['shape']['cols'])
-            return sp.sparse.coo_matrix((data, (row, col)), shape=shape)
-        else:
-            return tbl.to_pandas()
+        return _from_tbl(tbl)
 
 
 class PlasmaRepo(ObjectRepo):
@@ -191,37 +198,37 @@ class PlasmaRepo(ObjectRepo):
         self.client = plasma.connect(socket, manager, release_delay)
 
     def share(self, object):
-        if isinstance(object, pd.DataFrame):
-            id = self._share_frame(object)
-
-        _logger.info('shared object to %s', id)
-        return id
-
-    def _share_frame(self, frame):
         id = plasma.ObjectID.from_random()
-        batch = pa.RecordBatch.from_pandas(frame)
+        tbl, schema = _to_table(object)
+
+        _logger.debug('finding size to write to %s', id)
         mock = pa.MockOutputStream()
-        sw = pa.RecordBatchStreamWriter(mock, batch.schema)
-        sw.write_batch(batch)
+        sw = pa.RecordBatchStreamWriter(mock, schema)
+        sw.write_table(tbl)
         sw.close()
         size = mock.size()
         _logger.debug('writing %d bytes to %s', size, id)
+
         buf = self.client.create(id, size)
         stream = pa.FixedSizeBufferWriter(buf)
-        sw = pa.RecordBatchStreamWriter(stream, batch.schema)
-        sw.write_batch(batch)
+        sw = pa.RecordBatchStreamWriter(stream, schema)
+        sw.write_table(tbl)
         sw.close()
         self.client.seal(id)
+
+        _logger.info('shared object to %s', id)
         return id
 
     def resolve(self, key):
         _logger.info('resolving object %s', key)
         [data] = self.client.get_buffers([key])
         buf = pa.BufferReader(data)
+        _logger.debug('reading object of size %d', buf.size())
         reader = pa.RecordBatchStreamReader(buf)
-        batch = reader.read_next_batch()
+        tbl = reader.read_all()
+        _logger.debug('loaded table with schema %s', tbl.schema)
 
-        return batch.to_pandas()
+        return _from_tbl(tbl)
 
     def close(self):
         self.client.disconnect()
