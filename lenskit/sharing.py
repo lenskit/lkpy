@@ -2,6 +2,7 @@
 Support for sharing objects (e.g. trained models) between processes.
 """
 
+import sys
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 import logging
@@ -91,8 +92,12 @@ def _from_tbl(tbl):
 
 class ObjectRepo(metaclass=ABCMeta):
     """
-    Interface for shared data repositories.
+    Base class for shared object repositories.
     """
+
+    def __init__(self, cache_limit=32):
+        self._cache_limit = 32
+        self._cache = {}
 
     @abstractmethod
     def share(self, object):
@@ -108,9 +113,8 @@ class ObjectRepo(metaclass=ABCMeta):
         Returns:
             the object's key in the repository.
         """
-        raise NotImplemented
+        raise NotImplementedError()
 
-    @abstractmethod
     def resolve(self, key):
         """
         Resolve a key to an object from the repository.
@@ -122,13 +126,46 @@ class ObjectRepo(metaclass=ABCMeta):
             a reference to or copy of the shared object.  Client code must not try to modify
             this object.
         """
-        raise NotImplemented
+        result = self._cache.get(key)
+
+        if result is None:
+            result = self.read_object(key)
+            self._cache[key] = result
+            self._clean_cache()
+
+        return result
+
+    @abstractmethod
+    def read_object(self, key):
+        """
+        Resolve a key to an object from the repository.
+
+        Args:
+            key: the object key to resolve or retrieve.
+
+        Returns:
+            a reference to or copy of the shared object.  Client code must not try to modify
+            this object.
+        """
+        raise NotImplementedError()
 
     def close(self):
         """
         Close down the repository.
         """
-        pass
+        self._cache.clear()
+
+    def _clean_cache(self):
+        if len(self._cache) > self._cache_limit:
+            del_keys = []
+            for k in self._cache.keys():
+                # 2 references: one in the cache, one here
+                if sys.getrefcount(self._cache[k]) < 3:
+                    del_keys.append(k)
+
+            _logger.debug('evicting %d keys', del_keys)
+            for k in del_keys:
+                del self._cache[k]
 
     def __enter__(self):
         return self
@@ -143,6 +180,7 @@ class FileRepo(ObjectRepo):
     """
 
     def __init__(self, dir=None):
+        super().__init__()
         if dir is None:
             self._tmpdir = tempfile.TemporaryDirectory(prefix='lkpy-repo')
             self.dir = Path(self._tmpdir.name)
@@ -156,6 +194,7 @@ class FileRepo(ObjectRepo):
     def close(self):
         if self._tmpdir is not None:
             self._tmpdir.cleanup()
+        super().close()
 
     def share(self, object):
         key = uuid.uuid4()
@@ -174,7 +213,7 @@ class FileRepo(ObjectRepo):
 
         return key
 
-    def resolve(self, key):
+    def read_object(self, key):
         fn = self.dir / '{}.parquet'.format(key)
         if not fn.exists():
             raise KeyError(key)
@@ -195,6 +234,7 @@ class PlasmaRepo(ObjectRepo):
     """
 
     def __init__(self, socket, manager="", release_delay=0):
+        super().__init__()
         self.client = plasma.connect(socket, manager, release_delay)
 
     def share(self, object):
@@ -219,7 +259,7 @@ class PlasmaRepo(ObjectRepo):
         _logger.info('shared object to %s', id)
         return id
 
-    def resolve(self, key):
+    def read_object(self, key):
         _logger.info('resolving object %s', key)
         [data] = self.client.get_buffers([key])
         buf = pa.BufferReader(data)
@@ -231,4 +271,5 @@ class PlasmaRepo(ObjectRepo):
         return _from_tbl(tbl)
 
     def close(self):
+        super().close()
         self.client.disconnect()
