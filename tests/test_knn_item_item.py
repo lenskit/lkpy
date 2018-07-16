@@ -266,7 +266,7 @@ def test_ii_batch_accuracy():
         _log.info('running training')
         model = algo.train(train)
         _log.info('testing %d users', test.user.nunique())
-        return batch.predict(lambda u, xs: algo.predict(model, u, xs), test)
+        return batch.predict_pairs(lambda u, xs: algo.predict(model, u, xs), test)
 
     with lktu.envvars(OMP_NUM_THREADS='1'):
         preds = batch.multi_predict(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)),

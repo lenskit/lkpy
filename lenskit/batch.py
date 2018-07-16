@@ -12,7 +12,7 @@ import pandas as pd
 _logger = logging.getLogger(__package__)
 
 
-def predict(predictor, pairs):
+def predict_pairs(predictor, pairs):
     """
     Generate predictions for user-item pairs.  The provided predictor should be a
     function of two arguments: the user ID and a list of item IDs. It should return
@@ -20,7 +20,6 @@ def predict(predictor, pairs):
 
     Args:
         predictor(callable): a rating predictor function.
-        model(any): a model for the algorithm.
         pairs(pandas.DataFrame):
             a data frame of (``user``, ``item``) pairs to predict for. If this frame also
             contains a ``rating`` column, it will be included in the result.

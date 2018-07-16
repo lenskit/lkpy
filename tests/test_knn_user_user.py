@@ -137,7 +137,7 @@ def test_uu_batch_accuracy():
         _log.info('running training')
         model = algo.train(train)
         _log.info('testing %d users', test.user.nunique())
-        return batch.predict(lambda u, xs: algo.predict(model, u, xs), test)
+        return batch.predict_pairs(lambda u, xs: algo.predict(model, u, xs), test)
 
     preds = batch.multi_predict(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)),
                                 algo)
