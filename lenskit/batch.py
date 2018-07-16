@@ -6,8 +6,10 @@ import logging
 import multiprocessing
 from functools import partial
 from collections import namedtuple
+import pickle
 
 import pandas as pd
+import numpy as np
 
 _logger = logging.getLogger(__package__)
 
@@ -37,6 +39,39 @@ def predict_pairs(predictor, pairs):
     if 'rating' in pairs:
         return pairs.join(res.set_index(['user', 'item']), on=('user', 'item'))
     return res
+
+
+def _persist_generic_model(repo, model):
+    data = pickle.dumps(model)
+    data = np.frombuffer(data, np.uint8)
+    return repo.share(data)
+
+
+def _load_generic_model(repo, key):
+    data = repo.resolve(key)
+    data = data.tobytes()
+    return pickle.loads(data)
+
+
+def predict(algo, model, pairs):
+    """
+    Generate predictions for user-item pairs.
+
+    Args:
+        algo(algorithms.Predictor): an algorithm.
+        model(any): a model for the algorithm.
+        pairs(pandas.DataFrame):
+            a data frame of (``user``, ``item``) pairs to predict for. If this frame also
+            contains a ``rating`` column, it will be included in the result.
+
+    Returns:
+        pandas.DataFrame:
+            a frame with columns ``user``, ``item``, and ``prediction`` containing
+            the prediction results. If ``pairs`` contains a `rating` column, this
+            result will also contain a `rating` column.
+    """
+
+    raise NotImplementedError()
 
 
 _MPState = namedtuple('_MPState', ['train', 'test', 'algo'])
