@@ -1,10 +1,6 @@
 import sys
-import os.path
-import tempfile
 import logging
 import uuid
-import subprocess
-import time
 
 import pandas as pd
 import numpy as np
@@ -29,19 +25,8 @@ def repo(request):
         if sys.platform == 'win32':
             raise pytest.skip('Plasma unsupported on Win32')
 
-        with tempfile.TemporaryDirectory() as dir:
-            socket = os.path.join(dir, 'plasma.sock')
-            proc = None
-            try:
-                proc = subprocess.Popen(['plasma_store', '-m', str(256*1024*1024),
-                                         '-s', socket])
-                time.sleep(0.5)
-                _log.info('started Plasma server %d with %s', proc.pid, dir)
-                with lks.PlasmaRepo(socket) as repo:
-                    yield repo
-            finally:
-                if proc is not None:
-                    proc.terminate()
+        with lks.PlasmaRepo(size=256*1024*1024) as repo:
+            yield repo
 
 
 def test_share_data_frame(repo):
@@ -214,3 +199,21 @@ def test_share_sparse_matrix(repo, layout):
         assert all(sm2.indptr == sm.indptr)
         assert all(sm2.indices == sm.indices)
         assert all(sm2.data == sm.data)
+
+
+def test_share_auto_repo():
+    with lks.repo(256*1024*1024) as repo:
+        df = lktu.ml_pandas.ratings
+        key = repo.share(df)
+        assert key is not None
+        _log.info('saved to %s', key)
+
+        dfs = repo.resolve(key)
+
+        assert dfs is not df
+        assert len(dfs) == len(df)
+        assert all(dfs.index == df.index)
+        assert all(dfs.movieId == df.movieId)
+        assert all(dfs.userId == df.userId)
+        assert all(dfs.timestamp == df.timestamp)
+        assert all(dfs.rating == df.rating)

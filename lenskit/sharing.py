@@ -3,12 +3,14 @@ Support for sharing objects (e.g. trained models) between processes.
 """
 
 import sys
+import os.path
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 import logging
 import uuid
 import json
 import tempfile
+import subprocess
 
 import pandas as pd
 import numpy as np
@@ -233,8 +235,19 @@ class PlasmaRepo(ObjectRepo):
     Share objects by serializing them to Arrow files in a directory.  Keys are UUIDs.
     """
 
-    def __init__(self, socket, manager="", release_delay=0):
+    _proc = None
+    _dir = None
+
+    def __init__(self, socket=None, manager="", release_delay=0, size=None):
         super().__init__()
+        if socket is None and size is None:
+            raise ValueError("must specify one of size and socket")
+
+        if socket is None:
+            self._dir = tempfile.TemporaryDirectory(prefix='lk-repo')
+            socket = os.path.join(self._dir.name, 'plasma.sock')
+            self._proc = subprocess.Popen(['plasma_store', '-m', str(size), '-s', socket])
+
         self.client = plasma.connect(socket, manager, release_delay)
 
     def share(self, object):
@@ -273,3 +286,22 @@ class PlasmaRepo(ObjectRepo):
     def close(self):
         super().close()
         self.client.disconnect()
+        if self._proc is not None:
+            self._proc.terminate()
+
+
+def repo(capacity):
+    """
+    Create the best available sharing repository for this platform.
+
+    Args:
+        capacity: the required capacity in bytes.
+
+    Returns:
+        ObjectRepo: a repository.
+    """
+
+    if sys.platform == 'win32':
+        return FileRepo()
+    else:
+        return PlasmaRepo(size=capacity)
