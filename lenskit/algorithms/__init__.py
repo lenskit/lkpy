@@ -88,3 +88,41 @@ class Trainable(metaclass=ABCMeta):
         """
         with open(file, 'rb') as f:
             return pickle.load(f)
+
+
+class Persistable(metaclass=ABCMeta):
+    """
+    Base classes for algorithms that can persist their models to an
+    :py:class:`lenskit.sharing.ObjectRepo`.
+    """
+
+    @abstractmethod
+    def share_model(self, model, repo):
+        """
+        Share a model to a repository.
+
+        Args:
+            model: a trained model to share.
+            repo(lenskit.sharing.ObjectRepo):
+                object repository for sharing the model.
+
+        Returns:
+            a serialized model or key that, when passed to :py:meth:`resolve_model`, will
+            be able to rebuild the trained model.  This serialized model must be picklable.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def resolve_model(self, mkey, repo):
+        """
+        Resolve a shared model with a repository.
+
+        Args:
+            mkey: a model key as returned from :py:meth:`share_model`.
+            repo(lenskit.sharing.ObjectRepo):
+                object repository for resolving the model.
+
+        Returns:
+            the model that was shared to produce ``mkey``.
+        """
+        raise NotImplementedError()
