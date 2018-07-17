@@ -173,7 +173,7 @@ class Memorized:
         return urates.reindex(items)
 
 
-class Fallback(Predictor, Trainable):
+class Fallback(Predictor, Trainable, Persistable):
     """
     The Fallback algorithm predicts with its first component, uses the second to fill in
     missing values, and so forth.
@@ -236,6 +236,26 @@ class Fallback(Predictor, Trainable):
             if mp.exists():
                 _logger.debug('loading {} from {}', algo, mp)
                 model.append(algo.load_model(mp))
+            else:
+                model.append(None)
+
+        return model
+
+    def share_model(self, model, repo):
+        keys = []
+        for a, m in zip(self.algorithms, model):
+            if m is not None:
+                keys.append(a.share_model(m, repo))
+            else:
+                keys.append(None)
+
+        return keys
+
+    def resolve_model(self, mkey, repo):
+        model = []
+        for a, k in zip(self.algorithms, mkey):
+            if k is not None:
+                model.append(a.resolve_model(k, repo))
             else:
                 model.append(None)
 
