@@ -9,6 +9,7 @@ classes (:py:mod:`abc`) representing different algorithm capabilities.
 
 from abc import ABCMeta, abstractmethod
 import pickle
+import warnings
 
 
 class Predictor(metaclass=ABCMeta):
@@ -73,6 +74,7 @@ class Trainable(metaclass=ABCMeta):
                 the file in which to save the model.
         """
 
+        warnings.warn('{} does not implement save_model, pickling'.format(self.__class__))
         with open(file, 'wb') as f:
             pickle.dump(model, f)
 
