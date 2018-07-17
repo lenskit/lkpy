@@ -11,6 +11,8 @@ import pickle
 import pandas as pd
 import numpy as np
 
+from . import sharing
+
 _logger = logging.getLogger(__package__)
 
 
@@ -53,7 +55,20 @@ def _load_generic_model(repo, key):
     return pickle.loads(data)
 
 
-def predict(algo, model, pairs):
+def _init_predict(repo, algo, mkey):
+    global __predictor_repo, __predictor_algo, __predictor_mkey, __predictor_model
+    __predictor_repo = repo
+    __predictor_algo = algo
+    __predictor_mkey = mkey
+    __predictor_model = algo.resolve_model(mkey, repo)
+
+
+def _run_predict(user, items):
+    res = __predictor_algo.predict(__predictor_model, user, items)
+    return res.reset_index(name='prediction').assign(user=user)
+
+
+def predict(algo, model, pairs, processes=None, repo=None):
     """
     Generate predictions for user-item pairs.
 
@@ -71,7 +86,27 @@ def predict(algo, model, pairs):
             result will also contain a `rating` column.
     """
 
-    raise NotImplementedError()
+    if processes == 1:
+        return predict_pairs(partial(algo.predict, model), pairs)
+
+    close_repo = False
+    if repo is None:
+        repo = sharing.repo()
+        close_repo = True
+    try:
+        key = algo.share_model(model, repo)
+        with repo.client() as client, \
+                multiprocessing.Pool(processes, _init_predict, (client, algo, key)) as pool:
+            ures = ((user, udf.item) for (user, udf) in pairs.groupby('user'))
+            ures = pool.starmap(_run_predict, ures)
+            res = pd.concat(ures).loc[:, ['user', 'item', 'prediction']]
+            if 'rating' in pairs:
+                return pairs.join(res.set_index(['user', 'item']), on=('user', 'item'))
+            return res
+
+    finally:
+        if close_repo:
+            repo.close()
 
 
 _MPState = namedtuple('_MPState', ['train', 'test', 'algo'])

@@ -147,7 +147,7 @@ def test_uu_predict_unknown_empty():
 
 
 @mark.slow
-def test_uu_batch_accuracy():
+def test_uu_batch_accuracy(obj_repo):
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch
@@ -165,10 +165,10 @@ def test_uu_batch_accuracy():
         _log.info('running training')
         model = algo.train(train)
         _log.info('testing %d users', test.user.nunique())
-        return batch.predict_pairs(lambda u, xs: algo.predict(model, u, xs), test)
+        return batch.predict(algo, model, test, repo=obj_repo)
 
-    preds = batch.multi_predict(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)),
-                                algo)
+    folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
+    preds = pd.concat(eval(train, test) for (train, test) in folds)
     # preds = pd.concat((eval(train, test)
     #                    for (train, test)
     #                    in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
