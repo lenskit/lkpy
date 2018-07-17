@@ -1,6 +1,7 @@
 import sys
 import logging
 import uuid
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -202,7 +203,7 @@ def test_share_sparse_matrix(repo, layout):
 
 
 def test_share_auto_repo():
-    with lks.repo(256*1024*1024) as repo:
+    with lks.repo(48*1024*1024) as repo:
         df = lktu.ml_pandas.ratings
         key = repo.share(df)
         assert key is not None
@@ -217,3 +218,32 @@ def test_share_auto_repo():
         assert all(dfs.userId == df.userId)
         assert all(dfs.timestamp == df.timestamp)
         assert all(dfs.rating == df.rating)
+
+
+def test_share_client(repo):
+    "Test creating a client repository"
+
+    df = lktu.ml_pandas.ratings
+    key = repo.share(df)
+
+    with repo.client() as client:
+        # secret knowledge: the repositories we create in the fixture aren't clients
+        assert client is not repo
+
+        dfs = client.resolve(key)
+        assert dfs is not df
+
+        assert len(dfs) == len(df)
+        assert all(dfs.index == df.index)
+
+        # we can pickle clients
+        c2 = pickle.loads(pickle.dumps(client))
+
+    with c2:
+        dfs2 = c2.resolve(key)
+        assert dfs is not df
+        # pickled client doesn't share a cache
+        assert dfs2 is not dfs
+
+        assert len(dfs2) == len(df)
+        assert all(dfs2.index == df.index)

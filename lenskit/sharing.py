@@ -11,6 +11,7 @@ import uuid
 import json
 import tempfile
 import subprocess
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -138,6 +139,20 @@ class ObjectRepo(metaclass=ABCMeta):
         return result
 
     @abstractmethod
+    def client(self):
+        """
+        Return a client copy of this repository.  Client repository connections are intended
+        to be consumers of the objects shared in the original repository, and they can be
+        pickled and cloned across processes.  They are not guaranteed to have access to data
+        once the original repository object is closed.
+
+        Returns:
+            ObjectRepo: a client copy of this repository.  If this repository is already usable
+            as a client, this method may return ``self``.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     def read_object(self, key):
         """
         Resolve a key to an object from the repository.
@@ -174,6 +189,22 @@ class ObjectRepo(metaclass=ABCMeta):
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
+
+    def __getstate__(self):
+        """
+        Return picklable state.  This method removes the ``_cache``; subclasses should override,
+        call this, and do additional cleanup on its results.
+        """
+        state = self.__dict__.copy()
+        del state['_cache']
+        return state
+
+    def __setstate__(self, state):
+        """
+        Initialize from a picklable state. This implementation creates a fresh cache.
+        """
+        self.__dict__.update(state)
+        self._cache = {}
 
 
 class FileRepo(ObjectRepo):
@@ -229,6 +260,18 @@ class FileRepo(ObjectRepo):
 
         return _from_tbl(tbl)
 
+    def client(self):
+        if self._tmpdir is None:
+            # no resources, we are a client
+            return self
+        else:
+            return FileRepo(self.dir)
+
+    def __getstate__(self):
+        if self._tmpdir is not None:
+            raise pickle.PicklingError("non-client repos cannot be pickled")
+        return super().__getstate__()
+
 
 class PlasmaRepo(ObjectRepo):
     """
@@ -248,7 +291,10 @@ class PlasmaRepo(ObjectRepo):
             socket = os.path.join(self._dir.name, 'plasma.sock')
             self._proc = subprocess.Popen(['plasma_store', '-m', str(size), '-s', socket])
 
-        self.client = plasma.connect(socket, manager, release_delay)
+        self._socket = socket
+        self._manager = manager
+        self._release_delay = release_delay
+        self._plasma_client = plasma.connect(socket, manager, release_delay)
 
     def share(self, object):
         id = plasma.ObjectID.from_random()
@@ -262,19 +308,19 @@ class PlasmaRepo(ObjectRepo):
         size = mock.size()
         _logger.debug('writing %d bytes to %s', size, id)
 
-        buf = self.client.create(id, size)
+        buf = self._plasma_client.create(id, size)
         stream = pa.FixedSizeBufferWriter(buf)
         sw = pa.RecordBatchStreamWriter(stream, schema)
         sw.write_table(tbl)
         sw.close()
-        self.client.seal(id)
+        self._plasma_client.seal(id)
 
         _logger.info('shared object to %s', id)
         return id
 
     def read_object(self, key):
         _logger.info('resolving object %s', key)
-        [data] = self.client.get_buffers([key])
+        [data] = self._plasma_client.get_buffers([key])
         buf = pa.BufferReader(data)
         _logger.debug('reading object of size %d', buf.size())
         reader = pa.RecordBatchStreamReader(buf)
@@ -285,9 +331,23 @@ class PlasmaRepo(ObjectRepo):
 
     def close(self):
         super().close()
-        self.client.disconnect()
+        self._plasma_client.disconnect()
         if self._proc is not None:
             self._proc.terminate()
+
+    def client(self):
+        return PlasmaRepo(self._socket, self._manager, self._release_delay)
+
+    def __getstate__(self):
+        if self._proc is not None:
+            raise pickle.PicklingError('process-owning stores cannot be pickled')
+        state = super().__getstate__()
+        del state['_plasma_client']
+        return state
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        self._plasma_client = plasma.connect(self._socket, self._manager, self._release_delay)
 
 
 def repo(capacity):
