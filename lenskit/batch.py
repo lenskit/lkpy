@@ -83,7 +83,7 @@ def _run_mpjob(job: _MPState) -> bytes:
     model = job.algo.train(train)
     test = pd.read_msgpack(job.test)
     _logger.info('generating predictions with %s for %d pairs', job.algo, len(test))
-    results = predict(partial(job.algo.predict, model), test)
+    results = predict_pairs(partial(job.algo.predict, model), test)
     return results.to_msgpack()
 
 
@@ -98,7 +98,7 @@ def _run_spjob(algo, train, test):
     _logger.info('training %s on %d rows', algo, len(train))
     model = algo.train(train)
     _logger.info('generating predictions with %s for %d pairs', algo, len(test))
-    results = predict(partial(algo.predict, model), test)
+    results = predict_pairs(partial(algo.predict, model), test)
     return results
 
 
