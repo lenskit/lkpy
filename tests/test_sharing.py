@@ -25,7 +25,7 @@ def repo(request):
         if sys.platform == 'win32':
             raise pytest.skip('Plasma unsupported on Win32')
 
-        with lks.PlasmaRepo(size=256*1024*1024) as repo:
+        with lks.PlasmaRepo(size=48*1024*1024) as repo:
             yield repo
 
 
