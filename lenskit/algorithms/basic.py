@@ -9,7 +9,7 @@ import pandas as pd
 
 from .. import util as lku
 from .. import check
-from . import Predictor, Trainable
+from . import Predictor, Trainable, Persistable
 
 _logger = logging.getLogger(__package__)
 
@@ -17,7 +17,7 @@ BiasModel = namedtuple('BiasModel', ['mean', 'items', 'users'])
 BiasModel.__doc__ = "Trained model for the :py:class:`Bias` algorithm."
 
 
-class Bias(Predictor, Trainable):
+class Bias(Predictor, Trainable, Persistable):
     """
     A user-item bias rating prediction algorithm.  This implements the following
     predictor algorithm:
@@ -145,6 +145,12 @@ class Bias(Predictor, Trainable):
             return series.sum() / (series.count() + damping)
         else:
             return series.mean()
+
+    def share_model(self, model, repo):
+        return BiasModel(model.mean, repo.share(model.items), repo.share(model.users))
+
+    def resolve_model(self, model, repo):
+        return BiasModel(model.mean, repo.resolve(model.items), repo.resolve(model.users))
 
 
 class Memorized:
