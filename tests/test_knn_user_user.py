@@ -10,7 +10,7 @@ import pytest
 from pytest import approx, mark
 
 import lk_test_utils as lktu
-from lk_test_utils import tmpdir
+from lk_test_utils import tmpdir, obj_repo
 
 _log = logging.getLogger(__name__)
 
@@ -92,6 +92,34 @@ def test_uu_save_load(tmpdir):
 
     _log.info('reloading model')
     model = algo.load_model(fn)
+    _log.info('checking model')
+
+    # it should have computed correct means
+    umeans = ml_ratings.groupby('user').rating.mean()
+    mlmeans = model.user_stats['mean']
+    umeans, mlmeans = umeans.align(mlmeans)
+    assert mlmeans.values == approx(umeans.values)
+
+    # we should be able to reconstruct rating values
+    uir = ml_ratings.set_index(['user', 'item']).rating
+    ui_rbdf = model.matrix.rename(columns={'rating': 'nrating'}).set_index(['user', 'item'])
+    ui_rbdf = ui_rbdf.join(model.user_stats)
+    ui_rbdf['rating'] = ui_rbdf['nrating'] * ui_rbdf['norm'] + ui_rbdf['mean']
+    ui_rbdf['orig_rating'] = uir
+    assert ui_rbdf.rating.values == approx(ui_rbdf.orig_rating.values)
+
+
+@mark.slow
+def test_uu_share_resolve(obj_repo):
+    algo = knn.UserUser(30)
+    _log.info('training model')
+    original = algo.train(ml_ratings)
+
+    key = algo.share_model(original, obj_repo)
+    _log.info('shared to %s', key)
+
+    _log.info('reloading model')
+    model = algo.resolve_model(key, obj_repo)
     _log.info('checking model')
 
     # it should have computed correct means

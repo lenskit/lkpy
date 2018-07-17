@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 
 from .. import util
-from . import Trainable, Predictor
+from . import Trainable, Predictor, Persistable
 
 _logger = logging.getLogger(__package__)
 
@@ -29,7 +29,7 @@ UUModel.item_users.__doc__ = \
     """
 
 
-class UserUser(Trainable, Predictor):
+class UserUser(Trainable, Predictor, Persistable):
     """
     User-user nearest-neighbor collaborative filtering with ratings. This user-user implementation
     is not terribly configurable; it hard-codes design decisions found to work well in the previous
@@ -190,3 +190,13 @@ class UserUser(Trainable, Predictor):
     def load_model(self, file):
         with pd.HDFStore(file, 'r') as store:
             return UUModel(store['matrix'], store['stats'], store['item_users'])
+
+    def share_model(self, model, repo):
+        return UUModel(repo.share(model.matrix),
+                       repo.share(model.user_stats),
+                       repo.share(model.item_users))
+
+    def resolve_model(self, mkey, repo):
+        return UUModel(repo.resolve(mkey.matrix),
+                       repo.resolve(mkey.user_stats),
+                       repo.resolve(mkey.item_users))
