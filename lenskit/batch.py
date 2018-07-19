@@ -2,6 +2,7 @@
 Batch-run predictors and recommenders for evaluation.
 """
 
+import os
 import logging
 import multiprocessing
 from functools import partial
@@ -55,17 +56,34 @@ def _load_generic_model(repo, key):
     return pickle.loads(data)
 
 
-def _init_predict(repo, algo, mkey):
+def _init_predict_worker(repo, algo, mkey):
     global __predictor_repo, __predictor_algo, __predictor_mkey, __predictor_model
+    global __worker_profile
+    if 'PROFILE_WORKERS' in os.environ:
+        import cProfile
+        import atexit
+        __worker_profile = cProfile.Profile()
+        __worker_profile.enable()
+        atexit.register(_shutdown_worker)
+    else:
+        __worker_profile = None
+
     __predictor_repo = repo
     __predictor_algo = algo
     __predictor_mkey = mkey
     __predictor_model = algo.resolve_model(mkey, repo)
 
 
+def _shutdown_worker():
+    if __worker_profile is not None:
+        __worker_profile.create_stats()
+        __worker_profile.dump_stats('worker-{}.prof'.format(os.getpid()))
+
+
 def _run_predict(user, items):
+    items = pd.read_msgpack(items)
     res = __predictor_algo.predict(__predictor_model, user, items)
-    return res.reset_index(name='prediction').assign(user=user)
+    return res.reset_index(name='prediction').assign(user=user).to_msgpack()
 
 
 def predict(algo, model, pairs, processes=None, repo=None):
@@ -92,13 +110,18 @@ def predict(algo, model, pairs, processes=None, repo=None):
     close_repo = False
     if repo is None:
         repo = sharing.repo()
+        _logger.info('started new repository %s', repo)
         close_repo = True
     try:
         key = algo.share_model(model, repo)
         with repo.client() as client, \
-                multiprocessing.Pool(processes, _init_predict, (client, algo, key)) as pool:
-            ures = ((user, udf.item) for (user, udf) in pairs.groupby('user'))
+                multiprocessing.Pool(processes, _init_predict_worker, (client, algo, key)) as pool:
+            # make iterator that extracts group info
+            ures = ((user, udf.item.to_msgpack()) for (user, udf) in pairs.groupby('user'))
+            # and blast it across our process pool
             ures = pool.starmap(_run_predict, ures)
+            # decode responses
+            ures = (pd.read_msgpack(r) for r in ures)
             res = pd.concat(ures).loc[:, ['user', 'item', 'prediction']]
             if 'rating' in pairs:
                 return pairs.join(res.set_index(['user', 'item']), on=('user', 'item'))
@@ -106,6 +129,7 @@ def predict(algo, model, pairs, processes=None, repo=None):
 
     finally:
         if close_repo:
+            _logger.info('closing repository %s', repo)
             repo.close()
 
 
