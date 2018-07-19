@@ -2,7 +2,6 @@
 Batch-run predictors and recommenders for evaluation.
 """
 
-import os
 import logging
 import multiprocessing
 from functools import partial
@@ -15,6 +14,9 @@ import numpy as np
 from . import sharing
 
 _logger = logging.getLogger(__package__)
+
+WorkContext = namedtuple('WorkContext', ['repo', 'algo', 'mkey', 'model'])
+__predict_context = None
 
 
 def predict_pairs(predictor, pairs):
@@ -57,33 +59,16 @@ def _load_generic_model(repo, key):
 
 
 def _init_predict_worker(repo, algo, mkey):
-    global __predictor_repo, __predictor_algo, __predictor_mkey, __predictor_model
-    global __worker_profile
-    if 'PROFILE_WORKERS' in os.environ:
-        import cProfile
-        import atexit
-        __worker_profile = cProfile.Profile()
-        __worker_profile.enable()
-        atexit.register(_shutdown_worker)
-    else:
-        __worker_profile = None
+    global __predict_context
 
-    __predictor_repo = repo
-    __predictor_algo = algo
-    __predictor_mkey = mkey
-    __predictor_model = algo.resolve_model(mkey, repo)
-
-
-def _shutdown_worker():
-    if __worker_profile is not None:
-        __worker_profile.create_stats()
-        __worker_profile.dump_stats('worker-{}.prof'.format(os.getpid()))
+    model = algo.resolve_model(mkey, repo)
+    __predict_context = WorkContext(repo, algo, mkey, model)
 
 
 def _run_predict(user, items):
-    items = pd.read_msgpack(items)
-    res = __predictor_algo.predict(__predictor_model, user, items)
-    return res.reset_index(name='prediction').assign(user=user).to_msgpack()
+    ctx = __predict_context
+    res = ctx.algo.predict(ctx.model, user, items)
+    return res.reset_index(name='prediction').assign(user=user)
 
 
 def predict(algo, model, pairs, processes=None, repo=None):
@@ -117,14 +102,15 @@ def predict(algo, model, pairs, processes=None, repo=None):
         with repo.client() as client, \
                 multiprocessing.Pool(processes, _init_predict_worker, (client, algo, key)) as pool:
             # make iterator that extracts group info
-            ures = ((user, udf.item.to_msgpack()) for (user, udf) in pairs.groupby('user'))
+            ures = ((user, udf.item) for (user, udf) in pairs.groupby('user'))
             # and blast it across our process pool
-            ures = pool.starmap(_run_predict, ures)
+            ures = pool.starmap(_run_predict, ures, chunksize=10)
             # decode responses
-            ures = (pd.read_msgpack(r) for r in ures)
             res = pd.concat(ures).loc[:, ['user', 'item', 'prediction']]
             if 'rating' in pairs:
                 return pairs.join(res.set_index(['user', 'item']), on=('user', 'item'))
+            pool.close()
+            pool.join()
             return res
 
     finally:
