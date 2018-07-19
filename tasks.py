@@ -89,6 +89,7 @@ def clean(c):
         files |= set(ldir.glob('lenskit/*/*' + ext))
     files |= set(ldir.glob('lenskit/*/*.pdb'))
     files |= set(ldir.glob('lenskit/*/*.c'))
+    files |= set(ldir.glob('lenskit/**/*.pyc'))
     for f in files:
         print('removing', f)
         f.unlink()
