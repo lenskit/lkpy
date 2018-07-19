@@ -272,6 +272,10 @@ class FileRepo(ObjectRepo):
             raise pickle.PicklingError("non-client repos cannot be pickled")
         return super().__getstate__()
 
+    def __str__(self):
+        dstate = ' (self-deleting)' if self._tmpdir is not None else ''
+        return '<FileRepo {}{}>'.format(self.dir, dstate)
+
 
 class PlasmaRepo(ObjectRepo):
     """
@@ -348,6 +352,13 @@ class PlasmaRepo(ObjectRepo):
     def __setstate__(self, state):
         super().__setstate__(state)
         self._plasma_client = plasma.connect(self._socket, self._manager, self._release_delay)
+
+    def __str__(self):
+        if self._proc is None:
+            cxn = self._socket
+        else:
+            cxn = 'pid {}'.format(self._proc.pid)
+        return '<PlasmaRepo {}>'.format(cxn)
 
 
 def repo(capacity):
