@@ -147,6 +147,7 @@ def test_uu_predict_unknown_empty():
 
 
 @mark.slow
+@mark.eval
 def test_uu_batch_accuracy(obj_repo):
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
