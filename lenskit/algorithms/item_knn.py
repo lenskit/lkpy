@@ -11,14 +11,26 @@ import scipy.sparse as sps
 
 from lenskit import util, matrix
 from . import _item_knn as accel
-from . import Trainable, Predictor
+from . import Trainable, Predictor, Persistable
 
 _logger = logging.getLogger(__package__)
 
 IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rating_matrix'])
 
 
-class ItemItem(Trainable, Predictor):
+def _vsort_matrix(mat):
+    # sort each matrix row by value
+    for i in range(mat.shape[0]):
+        start = mat.indptr[i]
+        end = mat.indptr[i+1]
+        sorti = np.argsort(mat.data[start:end])
+        tmp = mat.indices[sorti[::-1] + start]
+        mat.indices[start:end] = tmp
+        tmp = mat.data[sorti[::-1] + start]
+        mat.data[start:end] = tmp
+
+
+class ItemItem(Trainable, Predictor, Persistable):
     """
     Item-item nearest-neighbor collaborative filtering with ratings. This item-item implementation
     is not terribly configurable; it hard-codes design decisions found to work well in the previous
@@ -106,15 +118,7 @@ class ItemItem(Trainable, Predictor):
         smat = sps.csr_matrix((ndf.similarity.values, (ndf.item.values, ndf.neighbor.values)),
                               shape=(n_items, n_items))
 
-        # sort each matrix row by value
-        for i in range(n_items):
-            start = smat.indptr[i]
-            end = smat.indptr[i+1]
-            sorti = np.argsort(smat.data[start:end])
-            tmp = smat.indices[sorti[::-1] + start]
-            smat.indices[start:end] = tmp
-            tmp = smat.data[sorti[::-1] + start]
-            smat.data[start:end] = tmp
+        _vsort_matrix(smat)
 
         # clean up neighborhoods
         return smat, item_idx
@@ -241,3 +245,20 @@ class ItemItem(Trainable, Predictor):
             matrix = sps.csr_matrix((values, indices, indptr))
 
             return IIModel(items, means, np.diff(indptr), matrix, ratings)
+
+    def share_model(self, model, repo):
+        ik = repo.share(model.items.values)
+        mk = repo.share(model.means.values)
+        smk = repo.share(model.sim_matrix.tocoo())
+        rk = repo.share(model.rating_matrix)
+        return IIModel(ik, mk, None, smk, rk)
+
+    def resolve_model(self, mkey, repo):
+        items = repo.resolve(mkey.items)
+        items = pd.Index(items)
+        means = repo.resolve(mkey.means)
+        means = pd.Series(means, index=items)
+        smat = repo.resolve(mkey.sim_matrix).tocsr()
+        _vsort_matrix(smat)
+        ratings = repo.resolve(mkey.rating_matrix)
+        return IIModel(items, means, np.diff(smat.indptr), smat, ratings)
