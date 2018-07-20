@@ -57,7 +57,7 @@ setup(
         'pandas',
         'numpy',
         'scipy',
-        'pytables >= 3.2.0'
+        'tables >= 3.2.0'
     ],
     setup_requires=[
         'pytest-runner',
