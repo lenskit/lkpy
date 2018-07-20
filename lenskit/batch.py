@@ -61,7 +61,12 @@ def _load_generic_model(repo, key):
 def _init_predict_worker(repo, algo, mkey):
     global __predict_context
 
-    model = algo.resolve_model(mkey, repo)
+    _logger.info('resolving model %s in worker', mkey)
+    try:
+        model = algo.resolve_model(mkey, repo)
+    except BaseException as e:
+        _logger.error('could not resolve model: %s', e)
+        raise e
     __predict_context = WorkContext(repo, algo, mkey, model)
 
 
@@ -99,6 +104,7 @@ def predict(algo, model, pairs, processes=None, repo=None):
         close_repo = True
     try:
         key = algo.share_model(model, repo)
+        _logger.info('shared model to %s', key)
         with repo.client() as client, \
                 multiprocessing.Pool(processes, _init_predict_worker, (client, algo, key)) as pool:
             # make iterator that extracts group info

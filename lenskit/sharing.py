@@ -166,6 +166,15 @@ class ObjectRepo(metaclass=ABCMeta):
         """
         raise NotImplementedError()
 
+    def clear(self):
+        """
+        Clear objects shared to this repo (since the last :py:meth:`clear` call).  Useful for
+        freeing up memory. This is an optional operation that may be a no-op.  It will only
+        clear objects saved in *this* repository object; deleted objects will also be deleted
+        for clients & clones, but objects shared via a client or clone will be unaffected.
+        """
+        pass
+
     def close(self):
         """
         Close down the repository.
@@ -242,7 +251,7 @@ class FileRepo(ObjectRepo):
         finally:
             pqf.close()
 
-        _logger.info('saved %s (%d bytes)', key, fn.stat().st_size)
+        _logger.debug('saved %s (%d bytes)', key, fn.stat().st_size)
 
         return key
 
@@ -251,8 +260,8 @@ class FileRepo(ObjectRepo):
         if not fn.exists():
             raise KeyError(key)
 
-        _logger.info('reading %s from %s (%d bytes)', repr(object), key,
-                     fn.stat().st_size)
+        _logger.debug('reading %s from %s (%d bytes)', repr(object), key,
+                      fn.stat().st_size)
 
         pqf = parq.ParquetFile(str(fn))
 
@@ -284,6 +293,7 @@ class PlasmaRepo(ObjectRepo):
 
     _proc = None
     _dir = None
+    _shared = None
 
     def __init__(self, socket=None, manager="", release_delay=0, size=None):
         super().__init__()
@@ -299,6 +309,7 @@ class PlasmaRepo(ObjectRepo):
         self._manager = manager
         self._release_delay = release_delay
         self._plasma_client = plasma.connect(socket, manager, release_delay)
+        self._shared = []
 
     def share(self, object):
         id = plasma.ObjectID.from_random()
@@ -319,11 +330,12 @@ class PlasmaRepo(ObjectRepo):
         sw.close()
         self._plasma_client.seal(id)
 
-        _logger.info('shared object to %s', id)
+        _logger.debug('shared object to %s', id)
+        self._shared.append(id)
         return id
 
     def read_object(self, key):
-        _logger.info('resolving object %s', key)
+        _logger.debug('resolving object %s', key)
         [data] = self._plasma_client.get_buffers([key])
         buf = pa.BufferReader(data)
         _logger.debug('reading object of size %d', buf.size())
@@ -349,6 +361,13 @@ class PlasmaRepo(ObjectRepo):
 
             self._proc = None
 
+    def clear(self):
+        _logger.info('clearing repository %s', self)
+        while self._shared:
+            key = self._shared.pop()
+            _logger.debug('releasing object %s', key)
+            self._plasma_client.release(key)
+
     def client(self):
         return PlasmaRepo(self._socket, self._manager, self._release_delay)
 
@@ -357,11 +376,13 @@ class PlasmaRepo(ObjectRepo):
             raise pickle.PicklingError('process-owning stores cannot be pickled')
         state = super().__getstate__()
         del state['_plasma_client']
+        del state['_shared']
         return state
 
     def __setstate__(self, state):
         super().__setstate__(state)
         self._plasma_client = plasma.connect(self._socket, self._manager, self._release_delay)
+        self._shared = []
 
     def __str__(self):
         if self._proc is None:

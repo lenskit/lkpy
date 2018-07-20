@@ -320,6 +320,7 @@ def test_ii_batch_accuracy(obj_repo):
     algo = basic.Fallback(uu_algo, basic.Bias())
 
     def eval(train, test):
+        obj_repo.clear()
         _log.info('running training')
         model = algo.train(train)
         _log.info('testing %d users', test.user.nunique())
