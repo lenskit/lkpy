@@ -245,17 +245,17 @@ def test_ii_save_load(tmpdir):
     means = ml_ratings.groupby('item').rating.mean()
     assert means[model.items].values == approx(original.means)
 
-     items = pd.Series(model.items)
-     items = items[model.counts > 0]
-     for i in items.sample(50):
-         ipos = model.items.get_loc(i)
-         _log.debug('checking item %d at position %d', i, ipos)
+    items = pd.Series(model.items)
+    items = items[model.counts > 0]
+    for i in items.sample(50):
+        ipos = model.items.get_loc(i)
+        _log.debug('checking item %d at position %d', i, ipos)
 
-         row = model.sim_matrix.getrow(ipos)
+        row = model.sim_matrix.getrow(ipos)
 
-         # it should be sorted !
-         # check this by diffing the row values, and make sure they're negative
-         assert all(np.diff(row.data) < 1.0e-6)
+        # it should be sorted !
+        # check this by diffing the row values, and make sure they're negative
+        assert all(np.diff(row.data) < 1.0e-6)
 
 
 @mark.slow

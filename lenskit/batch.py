@@ -9,21 +9,25 @@ from collections import namedtuple
 
 import pandas as pd
 
+from .algorithms import Predictor
+
 _logger = logging.getLogger(__package__)
 
 
-def predict(predictor, pairs):
+def predict(algo, pairs, model=None):
     """
-    Generate predictions for user-item pairs.  The provided predictor should be a
-    function of two arguments: the user ID and a list of item IDs. It should return
-    a dictionary or a :py:class:`pandas.Series` mapping item IDs to predictions.
+    Generate predictions for user-item pairs.  The provided algorithm should be a
+    :py:class:`algorithms.Predictor` or a function of two arguments: the user ID and
+    a list of item IDs. It should return a dictionary or a :py:class:`pandas.Series`
+    mapping item IDs to predictions.
 
     Args:
-        predictor(callable): a rating predictor function.
-        model(any): a model for the algorithm.
+        predictor(callable or :py:class:algorithms.Predictor):
+            a rating predictor function or algorithm.
         pairs(pandas.DataFrame):
             a data frame of (``user``, ``item``) pairs to predict for. If this frame also
             contains a ``rating`` column, it will be included in the result.
+        model(any): a model for the algorithm.
 
     Returns:
         pandas.DataFrame:
@@ -32,7 +36,12 @@ def predict(predictor, pairs):
             result will also contain a `rating` column.
     """
 
-    ures = (predictor(user, udf.item).reset_index(name='prediction').assign(user=user)
+    if isinstance(algo, Predictor):
+        pfun = partial(algo.predict, model)
+    else:
+        pfun = algo
+
+    ures = (pfun(user, udf.item).reset_index(name='prediction').assign(user=user)
             for (user, udf) in pairs.groupby('user'))
     res = pd.concat(ures).loc[:, ['user', 'item', 'prediction']]
     if 'rating' in pairs:
@@ -49,7 +58,7 @@ def _run_mpjob(job: _MPState) -> bytes:
     model = job.algo.train(train)
     test = pd.read_msgpack(job.test)
     _logger.info('generating predictions with %s for %d pairs', job.algo, len(test))
-    results = predict(partial(job.algo.predict, model), test)
+    results = predict(job.algo, test, model)
     return results.to_msgpack()
 
 
@@ -64,7 +73,7 @@ def _run_spjob(algo, train, test):
     _logger.info('training %s on %d rows', algo, len(train))
     model = algo.train(train)
     _logger.info('generating predictions with %s for %d pairs', algo, len(test))
-    results = predict(partial(algo.predict, model), test)
+    results = predict(algo, test, model)
     return results
 
 

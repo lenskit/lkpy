@@ -34,6 +34,18 @@ def test_predict_single(mlb):
     assert res.prediction.iloc[0] == pytest.approx(expected)
 
 
+def test_predict_single_model(mlb):
+    tf = pd.DataFrame({'user': [1], 'item': [31]})
+    res = lkb.predict(mlb.algo, tf, mlb.model)
+
+    assert len(res) == 1
+    assert all(res.user == 1)
+    assert list(res.columns) == ['user', 'item', 'prediction']
+
+    expected = mlb.model.mean + mlb.model.items.loc[31] + mlb.model.users.loc[1]
+    assert res.prediction.iloc[0] == pytest.approx(expected)
+
+
 def test_predict_user(mlb):
     uid = 5
     urates = mlb.ratings[mlb.ratings.user == uid]
