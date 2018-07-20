@@ -259,11 +259,12 @@ def test_ii_save_load(tmpdir):
 
 
 @mark.slow
-def test_ii_share_persist(obj_repo):
+def test_ii_share_resolve(obj_repo):
     "Share and load a model"
-    algo = knn.ItemItem(30, save_nbrs=500)
+    algo = knn.ItemItem(30, save_nbrs=200)
     _log.info('building model')
     original = algo.train(ml_ratings)
+    assert original.counts.max() <= 200
 
     key = algo.share_model(original, obj_repo)
     _log.info('saved model to %s', key)
