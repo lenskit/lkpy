@@ -335,9 +335,19 @@ class PlasmaRepo(ObjectRepo):
 
     def close(self):
         super().close()
-        self._plasma_client.disconnect()
+        if self._plasma_client is not None:
+            self._plasma_client.disconnect()
+            self._plasma_client = None
+
         if self._proc is not None:
             self._proc.terminate()
+            try:
+                self._proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                _logger.warn('plasma client %d did not respond to SIGTERM, killing', self._proc.pid)
+                self._proc.kill()
+
+            self._proc = None
 
     def client(self):
         return PlasmaRepo(self._socket, self._manager, self._release_delay)
@@ -359,6 +369,9 @@ class PlasmaRepo(ObjectRepo):
         else:
             cxn = 'pid {}'.format(self._proc.pid)
         return '<PlasmaRepo {}>'.format(cxn)
+
+    def __del__(self):
+        self.close()
 
 
 def repo(capacity):
