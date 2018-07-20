@@ -235,7 +235,7 @@ class Fallback(Predictor, Trainable, Persistable):
             mp = path / 'algo-{}.dat'.format(i+1)
             if mp.exists():
                 _logger.debug('loading {} from {}', algo, mp)
-                model.append(algo.load_model(mp))
+                model.append(algo.load_model(str(mp)))
             else:
                 model.append(None)
 
