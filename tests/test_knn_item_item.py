@@ -215,7 +215,7 @@ def test_ii_large_models():
 
 @mark.slow
 def test_ii_save_load(tmpdir):
-    "Simple tests for bounded models"
+    "Save and load a model"
     algo = knn.ItemItem(30, save_nbrs=500)
     _log.info('building model')
     original = algo.train(ml_ratings)
@@ -244,6 +244,18 @@ def test_ii_save_load(tmpdir):
 
     means = ml_ratings.groupby('item').rating.mean()
     assert means[model.items].values == approx(original.means)
+
+     items = pd.Series(model.items)
+     items = items[model.counts > 0]
+     for i in items.sample(50):
+         ipos = model.items.get_loc(i)
+         _log.debug('checking item %d at position %d', i, ipos)
+
+         row = model.sim_matrix.getrow(ipos)
+
+         # it should be sorted !
+         # check this by diffing the row values, and make sure they're negative
+         assert all(np.diff(row.data) < 1.0e-6)
 
 
 @mark.slow

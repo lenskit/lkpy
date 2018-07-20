@@ -4,6 +4,7 @@ Basic utility algorithms and combiners.
 
 from collections import namedtuple
 import logging
+import pathlib
 
 import pandas as pd
 
@@ -159,16 +160,13 @@ class Memorized:
         """
         self.scores = scores
 
-    def train(self, ratings):
-        return self.scores
-
     def predict(self, model, user, items, ratings=None):
-        uscores = model[model.user == user]
+        uscores = self.scores[self.scores.user == user]
         urates = uscores.set_index('item').rating
         return urates.reindex(items)
 
 
-class Fallback:
+class Fallback(Predictor, Trainable):
     """
     The Fallback algorithm predicts with its first component, uses the second to fill in
     missing values, and so forth.
@@ -182,7 +180,14 @@ class Fallback:
         self.algorithms = algorithms
 
     def train(self, ratings):
-        return [a.train(ratings) for a in self.algorithms]
+        models = []
+        for a in self.algorithms:
+            if isinstance(a, Trainable):
+                models.append(a.train(ratings))
+            else:
+                models.append(None)
+
+        return models
 
     def predict(self, model, user, items, ratings=None):
         remaining = pd.Index(items)
@@ -200,3 +205,28 @@ class Fallback:
                 break
 
         return preds.reindex(items)
+
+    def save_model(self, model, file):
+        path = pathlib.Path(file)
+        path.mkdir(parents=True, exist_ok=True)
+        for i, algo in enumerate(self.algorithms):
+            mp = path / 'algo-{}.dat'.format(i+1)
+            mod = model[i]
+            if mod is not None:
+                _logger.debug('saving {} to {}', mod, mp)
+                algo.save_model(mod, str(mp))
+
+    def load_model(self, file):
+        path = pathlib.Path(file)
+
+        model = []
+
+        for i, algo in enumerate(self.algorithms):
+            mp = path / 'algo-{}.dat'.format(i+1)
+            if mp.exists():
+                _logger.debug('loading {} from {}', algo, mp)
+                model.append(algo.load_model(str(mp)))
+            else:
+                model.append(None)
+
+        return model
