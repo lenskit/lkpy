@@ -10,7 +10,7 @@ import pytest
 from pytest import approx, mark
 
 import lk_test_utils as lktu
-from lk_test_utils import tmpdir
+from lk_test_utils import tmpdir, obj_repo
 
 _log = logging.getLogger(__name__)
 
@@ -109,6 +109,34 @@ def test_uu_save_load(tmpdir):
     assert ui_rbdf.rating.values == approx(ui_rbdf.orig_rating.values)
 
 
+@mark.slow
+def test_uu_share_resolve(obj_repo):
+    algo = knn.UserUser(30)
+    _log.info('training model')
+    original = algo.train(ml_ratings)
+
+    key = algo.share_model(original, obj_repo)
+    _log.info('shared to %s', key)
+
+    _log.info('reloading model')
+    model = algo.resolve_model(key, obj_repo)
+    _log.info('checking model')
+
+    # it should have computed correct means
+    umeans = ml_ratings.groupby('user').rating.mean()
+    mlmeans = model.user_stats['mean']
+    umeans, mlmeans = umeans.align(mlmeans)
+    assert mlmeans.values == approx(umeans.values)
+
+    # we should be able to reconstruct rating values
+    uir = ml_ratings.set_index(['user', 'item']).rating
+    ui_rbdf = model.matrix.rename(columns={'rating': 'nrating'}).set_index(['user', 'item'])
+    ui_rbdf = ui_rbdf.join(model.user_stats)
+    ui_rbdf['rating'] = ui_rbdf['nrating'] * ui_rbdf['norm'] + ui_rbdf['mean']
+    ui_rbdf['orig_rating'] = uir
+    assert ui_rbdf.rating.values == approx(ui_rbdf.orig_rating.values)
+
+
 def test_uu_predict_unknown_empty():
     algo = knn.UserUser(30, min_nbrs=2)
     model = algo.train(ml_ratings)
@@ -119,7 +147,8 @@ def test_uu_predict_unknown_empty():
 
 
 @mark.slow
-def test_uu_batch_accuracy():
+@mark.eval
+def test_uu_batch_accuracy(obj_repo):
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch
@@ -134,13 +163,14 @@ def test_uu_batch_accuracy():
     algo = basic.Fallback(uu_algo, basic.Bias())
 
     def eval(train, test):
+        obj_repo.clear()
         _log.info('running training')
         model = algo.train(train)
         _log.info('testing %d users', test.user.nunique())
-        return batch.predict(lambda u, xs: algo.predict(model, u, xs), test)
+        return batch.predict(algo, model, test, repo=obj_repo)
 
-    preds = batch.multi_predict(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)),
-                                algo)
+    folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
+    preds = pd.concat(eval(train, test) for (train, test) in folds)
     # preds = pd.concat((eval(train, test)
     #                    for (train, test)
     #                    in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))

@@ -99,3 +99,10 @@ def dask_test(f):
 def tmpdir():
     with tempfile.TemporaryDirectory() as dir:
         yield dir
+
+
+@pytest.fixture
+def obj_repo(size=48*1024*1024):
+    from lenskit import sharing
+    with sharing.repo(size) as repo:
+        yield repo

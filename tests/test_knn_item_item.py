@@ -11,7 +11,7 @@ import pytest
 from pytest import approx, mark
 
 import lk_test_utils as lktu
-from lk_test_utils import tmpdir
+from lk_test_utils import tmpdir, obj_repo
 
 _log = logging.getLogger(__name__)
 
@@ -215,7 +215,7 @@ def test_ii_large_models():
 
 @mark.slow
 def test_ii_save_load(tmpdir):
-    "Simple tests for bounded models"
+    "Save and re-load a model"
     algo = knn.ItemItem(30, save_nbrs=500)
     _log.info('building model')
     original = algo.train(ml_ratings)
@@ -245,10 +245,67 @@ def test_ii_save_load(tmpdir):
     means = ml_ratings.groupby('item').rating.mean()
     assert means[model.items].values == approx(original.means)
 
+    items = pd.Series(model.items)
+    items = items[model.counts > 0]
+    for i in items.sample(50):
+        ipos = model.items.get_loc(i)
+        _log.debug('checking item %d at position %d', i, ipos)
+
+        row = model.sim_matrix.getrow(ipos)
+
+        # it should be sorted !
+        # check this by diffing the row values, and make sure they're negative
+        assert all(np.diff(row.data) < 1.0e-6)
+
+
+@mark.slow
+def test_ii_share_resolve(obj_repo):
+    "Share and load a model"
+    algo = knn.ItemItem(30, save_nbrs=200)
+    _log.info('building model')
+    original = algo.train(ml_ratings)
+    assert original.counts.max() <= 200
+
+    key = algo.share_model(original, obj_repo)
+    _log.info('saved model to %s', key)
+    _log.info('reloading model')
+    model = algo.resolve_model(key, obj_repo)
+    _log.info('checking model')
+
+    assert model is not None
+    assert model is not original
+
+    assert all(np.logical_not(np.isnan(model.sim_matrix.data)))
+    assert all(model.sim_matrix.data > 0)
+    # a little tolerance
+    assert all(model.sim_matrix.data < 1 + 1.0e-6)
+
+    assert all(model.counts == original.counts)
+    assert model.counts.sum() == model.sim_matrix.nnz
+    assert model.sim_matrix.nnz == original.sim_matrix.nnz
+    assert all(model.sim_matrix.indptr == original.sim_matrix.indptr)
+    assert all(model.sim_matrix.indices == original.sim_matrix.indices)
+    assert model.sim_matrix.data == approx(original.sim_matrix.data)
+
+    means = ml_ratings.groupby('item').rating.mean()
+    assert means[model.items].values == approx(original.means)
+
+    items = pd.Series(model.items)
+    items = items[model.counts > 0]
+    for i in items.sample(50):
+        ipos = model.items.get_loc(i)
+        _log.debug('checking item %d at position %d', i, ipos)
+
+        row = model.sim_matrix.getrow(ipos)
+
+        # it should be sorted !
+        # check this by diffing the row values, and make sure they're negative
+        assert all(np.diff(row.data) < 1.0e-6)
+
 
 @mark.slow
 @mark.eval
-def test_ii_batch_accuracy():
+def test_ii_batch_accuracy(obj_repo):
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch
@@ -263,14 +320,14 @@ def test_ii_batch_accuracy():
     algo = basic.Fallback(uu_algo, basic.Bias())
 
     def eval(train, test):
+        obj_repo.clear()
         _log.info('running training')
         model = algo.train(train)
         _log.info('testing %d users', test.user.nunique())
-        return batch.predict(lambda u, xs: algo.predict(model, u, xs), test)
+        return batch.predict(algo, model, test, repo=obj_repo)
 
-    with lktu.envvars(OMP_NUM_THREADS='1'):
-        preds = batch.multi_predict(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)),
-                                    algo)
+    folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
+    preds = pd.concat(eval(train, test) for (train, test) in folds)
     # preds = pd.concat((eval(train, test)
     #                    for (train, test)
     #                    in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))

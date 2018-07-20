@@ -4,12 +4,14 @@ Basic utility algorithms and combiners.
 
 from collections import namedtuple
 import logging
+import warnings
+import pathlib
 
 import pandas as pd
 
 from .. import util as lku
 from .. import check
-from . import Predictor, Trainable
+from . import Predictor, Trainable, Persistable
 
 _logger = logging.getLogger(__package__)
 
@@ -17,7 +19,7 @@ BiasModel = namedtuple('BiasModel', ['mean', 'items', 'users'])
 BiasModel.__doc__ = "Trained model for the :py:class:`Bias` algorithm."
 
 
-class Bias(Predictor, Trainable):
+class Bias(Predictor, Trainable, Persistable):
     """
     A user-item bias rating prediction algorithm.  This implements the following
     predictor algorithm:
@@ -146,6 +148,12 @@ class Bias(Predictor, Trainable):
         else:
             return series.mean()
 
+    def share_model(self, model, repo):
+        return BiasModel(model.mean, repo.share(model.items), repo.share(model.users))
+
+    def resolve_model(self, model, repo):
+        return BiasModel(model.mean, repo.resolve(model.items), repo.resolve(model.users))
+
 
 class Memorized:
     """
@@ -159,16 +167,13 @@ class Memorized:
         """
         self.scores = scores
 
-    def train(self, ratings):
-        return self.scores
-
     def predict(self, model, user, items, ratings=None):
-        uscores = model[model.user == user]
+        uscores = self.scores[self.scores.user == user]
         urates = uscores.set_index('item').rating
         return urates.reindex(items)
 
 
-class Fallback:
+class Fallback(Predictor, Trainable, Persistable):
     """
     The Fallback algorithm predicts with its first component, uses the second to fill in
     missing values, and so forth.
@@ -180,9 +185,19 @@ class Fallback:
             algorithms: a list of component algorithms.  Each one will be trained.
         """
         self.algorithms = algorithms
+        for a in algorithms:
+            if isinstance(a, Trainable) and not isinstance(a, Persistable):
+                warnings.warn('algorithm {} is Trainable but not Persistable'.format(a))
 
     def train(self, ratings):
-        return [a.train(ratings) for a in self.algorithms]
+        models = []
+        for a in self.algorithms:
+            if isinstance(a, Trainable):
+                models.append(a.train(ratings))
+            else:
+                models.append(None)
+
+        return models
 
     def predict(self, model, user, items, ratings=None):
         remaining = pd.Index(items)
@@ -200,3 +215,48 @@ class Fallback:
                 break
 
         return preds.reindex(items)
+
+    def save_model(self, model, file):
+        path = pathlib.Path(file)
+        path.mkdir(parents=True, exist_ok=True)
+        for i, algo in enumerate(self.algorithms):
+            mp = path / 'algo-{}.dat'.format(i+1)
+            mod = model[i]
+            if mod is not None:
+                _logger.debug('saving {} to {}', mod, mp)
+                algo.save_model(mod, str(mp))
+
+    def load_model(self, file):
+        path = pathlib.Path(file)
+
+        model = []
+
+        for i, algo in enumerate(self.algorithms):
+            mp = path / 'algo-{}.dat'.format(i+1)
+            if mp.exists():
+                _logger.debug('loading {} from {}', algo, mp)
+                model.append(algo.load_model(str(mp)))
+            else:
+                model.append(None)
+
+        return model
+
+    def share_model(self, model, repo):
+        keys = []
+        for a, m in zip(self.algorithms, model):
+            if m is not None:
+                keys.append(a.share_model(m, repo))
+            else:
+                keys.append(None)
+
+        return keys
+
+    def resolve_model(self, mkey, repo):
+        model = []
+        for a, k in zip(self.algorithms, mkey):
+            if k is not None:
+                model.append(a.resolve_model(k, repo))
+            else:
+                model.append(None)
+
+        return model
