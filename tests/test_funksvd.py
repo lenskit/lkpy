@@ -22,3 +22,11 @@ def test_fsvd_basic_build():
 
     assert model is not None
     assert model.global_bias == approx(simple_df.rating.mean())
+
+
+def test_fsvd_clamp_build():
+    algo = svd.FunkSVD(20, iterations=20, range=(1, 5))
+    model = algo.train(simple_df)
+
+    assert model is not None
+    assert model.global_bias == approx(simple_df.rating.mean())

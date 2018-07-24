@@ -80,11 +80,15 @@ class FunkSVD:
         model = _fsvd.Model(self.features, len(uidx), len(iidx))
 
         _logger.info('training biased MF model with %d features', self.features)
+        _fsvd.train(context, params, model, self._kernel)
+
+        return BiasMFModel(uidx, iidx, gbias, ubias, ibias,
+                           model.user_features, model.item_features)
+
+    @property
+    def _kernel(self):
         if self.range is None:
-            _fsvd.train_unclamped(context, params, model)
+            return _fsvd.DotKernel()
         else:
             min, max = self.range
-            _fsvd.train_clamped(context, umat, imat,
-                                self.iterations, self.learning_rate, self.regularization, min, max)
-
-        return BiasMFModel(uidx, iidx, gbias, ubias, ibias, model.user_features, model.item_features)
+            return _fsvd.ClampKernel(min, max)

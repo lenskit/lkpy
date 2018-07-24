@@ -61,14 +61,38 @@ cdef class Model:
         self.imat = self.item_features
 
 
-cdef double score(Model model, int user, int item, double base) nogil:
-    cdef int nfeatures = model.feature_count
-    cdef int inc = 1
+cdef class Kernel:
+    cdef double score(self, Model model, int user, int item, double base) nogil:
+        pass
 
-    return base + blas.ddot(&nfeatures, &model.umat[user,0], &inc, &model.imat[item,0], &inc)
+cdef class DotKernel(Kernel):
+    cdef double score(self, Model model, int user, int item, double base) nogil:
+        cdef int nfeatures = model.feature_count
+        cdef int inc = 1
+
+        return base + blas.ddot(&nfeatures, &model.umat[user,0], &inc, &model.imat[item,0], &inc)
+
+cdef class ClampKernel(Kernel):
+    cdef double min
+    cdef double max
+
+    def __cinit__(self, min, max):
+        self.min = min
+        self.max = max
+
+    cdef double score(self, Model model, int user, int item, double base) nogil:
+        cdef double res = base
+        for i in range(model.feature_count):
+            res += model.umat[user,i] * model.imat[item,i]
+            if res < self.min:
+                res = self.min
+            elif res > self.max:
+                res = self.max
+
+        return res
 
 
-cpdef void train_unclamped(Context ctx, Params params, Model model) nogil:
+cpdef void train(Context ctx, Params params, Model model, Kernel kernel) nogil:
     cdef double pred, error, ufv, ifv, ufd, ifd, sse
     cdef np.int64_t user, item
     cdef int f, epoch, s
@@ -80,7 +104,7 @@ cpdef void train_unclamped(Context ctx, Params params, Model model) nogil:
             for s in range(ctx.n_samples):
                 user = ctx.u_v[s]
                 item = ctx.i_v[s]
-                pred = score(model, user, item, ctx.b_v[s])
+                pred = kernel.score(model, user, item, ctx.b_v[s])
                 error = ctx.r_v[s] - pred
                 sse += error * error
                 
