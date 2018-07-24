@@ -11,7 +11,8 @@ import numpy as np
 
 from .. import util as lku
 from .. import check
-from . import baselines
+from . import basic
+from . import _funksvd as _fsvd
 
 _logger = logging.getLogger(__package__)
 
@@ -35,9 +36,9 @@ class FunkSVD:
         """
         if bias is None:
             _logger.info('training bias model')
-            bias = baselines.Bias(damping=self.damping).train(ratings)
+            bias = basic.Bias(damping=self.damping).train(ratings)
         # unpack the bias
-        if isinstance(bias, baselines.BiasModel):
+        if isinstance(bias, basic.BiasModel):
             gbias = bias.mean
             ibias = bias.items
             ubias = bias.items
@@ -65,7 +66,7 @@ class FunkSVD:
         imat = np.full([len(iidx), self.features], 0.1, dtype=np.float_)
 
         if self.range is None:
-            _fsvd.train_unclamped(users, items, ratings, initial, umat, imat,
+            _fsvd.train_unclamped(users, items, ratings.rating.values, initial.values, umat, imat,
                                   self.iterations, self.learning_rate, self.regularization)
         else:
             min, max = self.range

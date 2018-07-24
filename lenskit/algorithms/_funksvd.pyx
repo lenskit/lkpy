@@ -8,8 +8,8 @@ import logging
 _logger = logging.getLogger('lenskit.algorithms.funksvd')
 
 cpdef void train_unclamped(np.int64_t[:] users, np.int64_t[:] items, np.float_t[:] ratings, np.float_t[:] bias,
-                      np.float_t[:,::1] umat, np.float_t[:,::1] imat,
-                      int niters, double lrate, double reg) nogil:
+                           np.float_t[:,::1] umat, np.float_t[:,::1] imat,
+                           int niters, double lrate, double reg) nogil:
     cdef int nfeatures = umat.shape[1]
     cdef size_t nsamples = users.shape[0]
     cdef double pred, error, ufv, ifv, ufd, ifd, sse
