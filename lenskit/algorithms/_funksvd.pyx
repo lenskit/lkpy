@@ -55,16 +55,16 @@ cdef class Model:
     cdef readonly int feature_count
 
     def __cinit__(self, np.ndarray umat, np.ndarray imat):
-        self.user_features = 
-        self.item_features = 
+        self.user_features = umat
+        self.item_features = imat
         self.umat = self.user_features
         self.imat = self.item_features
 
-    @classmethod
-    def fresh(cls, int feature_count, int nusers, int nitems, double init=0.1)
+    @staticmethod
+    def fresh(int feature_count, int nusers, int nitems, double init=0.1):
         umat = np.full([nusers, feature_count], init, dtype=np.float_)
         imat = np.full([nitems, feature_count], 0.1, dtype=np.float_)
-        return cls(umat, imat)
+        return Model(umat, imat)
 
 
 cdef class Kernel:
@@ -97,6 +97,8 @@ cdef class ClampKernel(Kernel):
 
         return res
 
+cpdef double score(Kernel kern, Model model, int user, int item, double base):
+    return kern.score(model, user, item, base)
 
 cpdef void train(Context ctx, Params params, Model model, Kernel kernel) nogil:
     cdef double pred, error, ufv, ifv, ufd, ifd, sse

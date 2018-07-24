@@ -104,8 +104,9 @@ class FunkSVD(Predictor, Trainable):
                 ibase = ubase
                 if model.item_bias is not None:
                     ibase += model.item_bias.loc[items[i]]
-                result.iloc[ii] = kern.score(m, uidx, ii, ibase)
+                result.iloc[i] = _fsvd.score(kern, m, uidx, ii, ibase)
 
+        return result
 
     @property
     def _kernel(self):
