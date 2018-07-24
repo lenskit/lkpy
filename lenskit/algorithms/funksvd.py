@@ -9,6 +9,7 @@ import warnings
 import pandas as pd
 import numpy as np
 
+from . import Trainable, Predictor
 from .. import util as lku
 from .. import check
 from . import basic
@@ -21,7 +22,7 @@ BiasMFModel = namedtuple('BiasMFModel', ['user_index', 'item_index',
                                          'user_features', 'item_features'])
 
 
-class FunkSVD:
+class FunkSVD(Predictor, Trainable):
     def __init__(self, features, iterations=100, lrate=0.001, reg=0.02, damping=5, range=None):
         self.features = features
         self.iterations = iterations
@@ -61,29 +62,50 @@ class FunkSVD:
             # realign ibias to make sure it matches
             ibias = ibias.reindex(iidx, fill_value=0)
             assert len(ibias) == len(iidx)
-            ibias = ibias.loc[ratings.item]
-            ibias.index = ratings.index
-            initial = initial + ibias
+            ibs = ibias.loc[ratings.item]
+            ibs.index = ratings.index
+            initial = initial + ibs
         if ubias is not None:
             ubias = ubias.reindex(uidx, fill_value=0)
             assert len(ubias) == len(uidx)
-            ubias = ubias.loc[ratings.user]
-            ubias.index = ratings.index
-            initial = initial + ubias
+            ubs = ubias.loc[ratings.user]
+            ubs.index = ratings.index
+            initial = initial + ubs
         _logger.debug('have %d estimates for %d ratings', len(initial), len(ratings))
         assert len(initial) == len(ratings)
 
         _logger.debug('initializing data structures')
-        context = _fsvd.Context(users, items, ratings.rating.values, initial.values)
+        context = _fsvd.Context(users, items, ratings.rating.astype(np.float_).values,
+                                initial.values)
         params = _fsvd.Params(self.iterations, self.learning_rate, self.regularization)
 
-        model = _fsvd.Model(self.features, len(uidx), len(iidx))
+        model = _fsvd.Model.fresh(self.features, len(uidx), len(iidx))
 
         _logger.info('training biased MF model with %d features', self.features)
         _fsvd.train(context, params, model, self._kernel)
 
         return BiasMFModel(uidx, iidx, gbias, ubias, ibias,
                            model.user_features, model.item_features)
+
+    def predict(self, model, user, items, ratings):
+        uidx = model.user_index.get_loc(user)
+        iidx = model.item_index.get_indexer(items)
+        kern = self._kernel
+        m = _fsvd.Model(model.user_features, model.item_features)
+
+        ubase = model.global_bias
+        if model.user_bias is not None:
+            ubase += model.user_bias.iloc[0]
+
+        result = pd.Series(ubase, index=items)
+        for i in range(len(iidx)):
+            ii = iidx[i]
+            if ii >= 0:
+                ibase = ubase
+                if model.item_bias is not None:
+                    ibase += model.item_bias.loc[items[i]]
+                result.iloc[ii] = kern.score(m, uidx, ii, ibase)
+
 
     @property
     def _kernel(self):
