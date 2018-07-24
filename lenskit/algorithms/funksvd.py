@@ -71,22 +71,20 @@ class FunkSVD:
             ubias.index = ratings.index
             initial = initial + ubias
         _logger.debug('have %d estimates for %d ratings', len(initial), len(ratings))
-        _logger.debug('%s', initial)
         assert len(initial) == len(ratings)
 
         _logger.debug('initializing data structures')
         context = _fsvd.Context(users, items, ratings.rating.values, initial.values)
+        params = _fsvd.Params(self.iterations, self.learning_rate, self.regularization)
 
-        umat = np.full([len(uidx), self.features], 0.1, dtype=np.float_)
-        imat = np.full([len(iidx), self.features], 0.1, dtype=np.float_)
+        model = _fsvd.Model(self.features, len(uidx), len(iidx))
 
         _logger.info('training biased MF model with %d features', self.features)
         if self.range is None:
-            _fsvd.train_unclamped(context, umat, imat,
-                                  self.iterations, self.learning_rate, self.regularization)
+            _fsvd.train_unclamped(context, params, model)
         else:
             min, max = self.range
             _fsvd.train_clamped(context, umat, imat,
                                 self.iterations, self.learning_rate, self.regularization, min, max)
 
-        return BiasMFModel(uidx, iidx, gbias, ubias, ibias, umat, imat)
+        return BiasMFModel(uidx, iidx, gbias, ubias, ibias, model.user_features, model.item_features)

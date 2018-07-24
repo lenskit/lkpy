@@ -36,35 +36,61 @@ cdef class Context:
         self.b_v = self.bias
 
 
-cpdef void train_unclamped(Context ctx, np.float_t[:,::1] umat, np.float_t[:,::1] imat,
-                           int niters, double lrate, double reg) nogil:
-    cdef int nfeatures = umat.shape[1]
+cdef class Params:
+    cdef readonly int iter_count
+    cdef readonly double learning_rate
+    cdef readonly double reg_term
+
+    def __cinit__(self, niters, lrate, reg):
+        self.iter_count = niters
+        self.learning_rate = lrate
+        self.reg_term = reg
+
+
+cdef class Model:
+    cdef readonly np.ndarray user_features
+    cdef np.float_t[:,::1] umat
+    cdef readonly np.ndarray item_features
+    cdef np.float_t[:,::1] imat
+    cdef readonly int feature_count
+
+    def __cinit__(self, feature_count, nusers, nitems, init=0.1):
+        self.user_features = np.full([nusers, feature_count], 0.1, dtype=np.float_)
+        self.item_features = np.full([nitems, feature_count], 0.1, dtype=np.float_)
+        self.umat = self.user_features
+        self.imat = self.item_features
+
+
+cdef double score(Model model, int user, int item, double base) nogil:
+    cdef int nfeatures = model.feature_count
+    cdef int inc = 1
+
+    return base + blas.ddot(&nfeatures, &model.umat[user,0], &inc, &model.imat[item,0], &inc)
+
+
+cpdef void train_unclamped(Context ctx, Params params, Model model) nogil:
     cdef double pred, error, ufv, ifv, ufd, ifd, sse
     cdef np.int64_t user, item
     cdef int f, epoch, s
     cdef int inc = 1
 
-    with gil:
-        assert umat.shape[1] == nfeatures
-        assert imat.shape[1] == nfeatures
-
-    for f in range(nfeatures):
-        for epoch in range(niters):
+    for f in range(model.feature_count):
+        for epoch in range(params.iter_count):
             sse = 0
             for s in range(ctx.n_samples):
                 user = ctx.u_v[s]
                 item = ctx.i_v[s]
-                pred = ctx.b_v[s] + blas.ddot(&nfeatures, &umat[user,0], &inc, &imat[item,0], &inc)
+                pred = score(model, user, item, ctx.b_v[s])
                 error = ctx.r_v[s] - pred
                 sse += error * error
                 
                 # compute deltas
-                ufv = umat[user, f]
-                ifv = umat[item, f]
-                ufd = error * ifv - reg * ufv
-                ifd = error * ufv - reg * ifv
-                umat[user, f] += ufd * lrate
-                imat[item, f] += ifd * lrate
+                ufv = model.umat[user, f]
+                ifv = model.umat[item, f]
+                ufd = error * ifv - params.reg_term * ufv
+                ifd = error * ufv - params.reg_term * ifv
+                model.umat[user, f] += ufd * params.learning_rate
+                model.imat[item, f] += ifd * params.learning_rate
 
             with gil:
                 _logger.debug('finished epoch %d for feature %d (RMSE=%f)',
