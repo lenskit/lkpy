@@ -48,29 +48,45 @@ class FunkSVD:
             ibias = None
             ubias = None
 
+        _logger.info('preparing rating data for %d samples', len(ratings))
         uidx = pd.Index(ratings.user.unique())
         iidx = pd.Index(ratings.item.unique())
 
         users = uidx.get_indexer(ratings.user)
         items = iidx.get_indexer(ratings.item)
+
+        _logger.debug('computing initial estimates')
         initial = pd.Series(gbias, index=ratings.index, dtype=np.float_)
         if ibias is not None:
             # realign ibias to make sure it matches
             ibias = ibias.reindex(iidx, fill_value=0)
-            initial = initial + ibias[ratings.item]
+            assert len(ibias) == len(iidx)
+            ibias = ibias.loc[ratings.item]
+            ibias.index = ratings.index
+            initial = initial + ibias
         if ubias is not None:
             ubias = ubias.reindex(uidx, fill_value=0)
-            initial = initial + ubias[ratings.user]
+            assert len(ubias) == len(uidx)
+            ubias = ubias.loc[ratings.user]
+            ubias.index = ratings.index
+            initial = initial + ubias
+        _logger.debug('have %d estimates for %d ratings', len(initial), len(ratings))
+        _logger.debug('%s', initial)
+        assert len(initial) == len(ratings)
+
+        _logger.debug('initializing data structures')
+        context = _fsvd.Context(users, items, ratings.rating.values, initial.values)
 
         umat = np.full([len(uidx), self.features], 0.1, dtype=np.float_)
         imat = np.full([len(iidx), self.features], 0.1, dtype=np.float_)
 
+        _logger.info('training biased MF model with %d features', self.features)
         if self.range is None:
-            _fsvd.train_unclamped(users, items, ratings.rating.values, initial.values, umat, imat,
+            _fsvd.train_unclamped(context, umat, imat,
                                   self.iterations, self.learning_rate, self.regularization)
         else:
             min, max = self.range
-            _fsvd.train_clamped(users, items, ratings, initial, umat, imat,
+            _fsvd.train_clamped(context, umat, imat,
                                 self.iterations, self.learning_rate, self.regularization, min, max)
 
         return BiasMFModel(uidx, iidx, gbias, ubias, ibias, umat, imat)
