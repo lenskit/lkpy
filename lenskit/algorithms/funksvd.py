@@ -50,6 +50,12 @@ class FunkSVD(Predictor, Trainable):
             ubias = None
 
         _logger.info('preparing rating data for %d samples', len(ratings))
+        _logger.debug('shuffling rating data')
+        shuf = np.arange(len(ratings), dtype=np.int_)
+        np.random.shuffle(shuf)
+        ratings = ratings.iloc[shuf, :]
+
+        _logger.debug('indexing users and items')
         uidx = pd.Index(ratings.user.unique())
         iidx = pd.Index(ratings.item.unique())
 
@@ -83,6 +89,7 @@ class FunkSVD(Predictor, Trainable):
 
         _logger.info('training biased MF model with %d features', self.features)
         _fsvd.train(context, params, model, self._kernel)
+        _logger.info('finished model training')
 
         return BiasMFModel(uidx, iidx, gbias, ubias, ibias,
                            model.user_features, model.item_features)
@@ -95,15 +102,18 @@ class FunkSVD(Predictor, Trainable):
 
         ubase = model.global_bias
         if model.user_bias is not None:
-            ubase += model.user_bias.iloc[0]
+            assert model.user_bias.index[uidx] == user
+            ubase += model.user_bias.iloc[uidx]
 
         result = pd.Series(ubase, index=items)
         for i in range(len(iidx)):
             ii = iidx[i]
             if ii >= 0:
+                item = items[i]
                 ibase = ubase
                 if model.item_bias is not None:
-                    ibase += model.item_bias.loc[items[i]]
+                    assert model.item_bias.index[ii] == item
+                    ibase += model.item_bias.iloc[ii]
                 result.iloc[i] = _fsvd.score(kern, m, uidx, ii, ibase)
 
         return result

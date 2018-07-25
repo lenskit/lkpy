@@ -10,13 +10,9 @@ _logger = logging.getLogger('lenskit.algorithms.funksvd')
 
 cdef class Context:
     cdef readonly np.ndarray users
-    cdef np.int64_t[:] u_v
     cdef readonly np.ndarray items
-    cdef np.int64_t[:] i_v
     cdef readonly np.ndarray ratings
-    cdef np.float_t[:] r_v
     cdef readonly np.ndarray bias
-    cdef np.float_t[:] b_v
     cdef readonly size_t n_samples
 
     def __cinit__(self, users, items, ratings, bias):
@@ -29,11 +25,6 @@ cdef class Context:
         assert items.shape[0] == self.n_samples
         assert ratings.shape[0] == self.n_samples
         assert bias.shape[0] == self.n_samples
-
-        self.u_v = self.users
-        self.i_v = self.items
-        self.r_v = self.ratings
-        self.b_v = self.bias
 
 
 cdef class Params:
@@ -53,18 +44,28 @@ cdef class Model:
     cdef readonly np.ndarray item_features
     cdef np.float_t[:,::1] imat
     cdef readonly int feature_count
+    cdef readonly int user_count
+    cdef readonly int item_count
 
     def __cinit__(self, np.ndarray umat, np.ndarray imat):
         self.user_features = umat
         self.item_features = imat
         self.umat = self.user_features
         self.imat = self.item_features
+        self.feature_count = umat.shape[1]
+        self.user_count = umat.shape[0]
+        self.item_count = imat.shape[0]
+        assert imat.shape[1] == self.feature_count
 
     @staticmethod
     def fresh(int feature_count, int nusers, int nitems, double init=0.1):
         umat = np.full([nusers, feature_count], init, dtype=np.float_)
-        imat = np.full([nitems, feature_count], 0.1, dtype=np.float_)
-        return Model(umat, imat)
+        imat = np.full([nitems, feature_count], init, dtype=np.float_)
+        model = Model(umat, imat)
+        assert model.feature_count == feature_count
+        assert model.user_count == nusers
+        assert model.item_count == nitems
+        return model
 
 
 cdef class Kernel:
@@ -100,30 +101,42 @@ cdef class ClampKernel(Kernel):
 cpdef double score(Kernel kern, Model model, int user, int item, double base):
     return kern.score(model, user, item, base)
 
-cpdef void train(Context ctx, Params params, Model model, Kernel kernel) nogil:
+cpdef void train(Context ctx, Params params, Model model, Kernel kernel):
     cdef double pred, error, ufv, ifv, ufd, ifd, sse
     cdef np.int64_t user, item
     cdef int f, epoch, s
-    cdef int inc = 1
+    cdef double reg = params.reg_term
+    cdef double lrate = params.learning_rate
+    cdef np.int64_t[:] u_v = ctx.users
+    cdef np.int64_t[:] i_v = ctx.items
+    cdef np.float_t[:] r_v = ctx.ratings
+    cdef np.float_t[:] b_v = ctx.bias
+    cdef np.float_t[:,::1] umat = model.user_features
+    cdef np.float_t[:,::1] imat = model.item_features
+
+    _logger.debug('feature count: %d', model.feature_count)
+    _logger.debug('iteration count: %d', params.iter_count)
+    _logger.debug('learning rate: %f', params.learning_rate)
+    _logger.debug('regularization: %f', params.reg_term)
+    _logger.debug('samples: %d', ctx.n_samples)
 
     for f in range(model.feature_count):
-        for epoch in range(params.iter_count):
-            sse = 0
-            for s in range(ctx.n_samples):
-                user = ctx.u_v[s]
-                item = ctx.i_v[s]
-                pred = kernel.score(model, user, item, ctx.b_v[s])
-                error = ctx.r_v[s] - pred
-                sse += error * error
-                
-                # compute deltas
-                ufv = model.umat[user, f]
-                ifv = model.umat[item, f]
-                ufd = error * ifv - params.reg_term * ufv
-                ifd = error * ufv - params.reg_term * ifv
-                model.umat[user, f] += ufd * params.learning_rate
-                model.imat[item, f] += ifd * params.learning_rate
+        with nogil:
+            for epoch in range(params.iter_count):
+                sse = 0
+                for s in range(ctx.n_samples):
+                    user = u_v[s]
+                    item = i_v[s]
+                    pred = kernel.score(model, user, item, b_v[s])
+                    error = r_v[s] - pred
+                    sse += error * error
+                    
+                    # compute deltas
+                    ufv = umat[user, f]
+                    ifv = imat[item, f]
+                    ufd = error * ifv - reg * ufv
+                    ifd = error * ufv - reg * ifv
+                    umat[user, f] += ufd * lrate
+                    imat[item, f] += ifd * lrate
 
-            with gil:
-                _logger.debug('finished epoch %d for feature %d (RMSE=%f)',
-                              epoch, f, np.sqrt(sse))
+        _logger.debug('finished feature %d (RMSE=%f)', f, np.sqrt(sse / ctx.n_samples))
