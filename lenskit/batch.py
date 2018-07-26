@@ -7,6 +7,12 @@ import multiprocessing
 from functools import partial
 from collections import namedtuple
 
+try:
+    from multiprocessing_logging import install_mp_handler
+    install_mp_handler()
+except ImportError:
+    pass
+
 import pandas as pd
 
 from .algorithms import Predictor
