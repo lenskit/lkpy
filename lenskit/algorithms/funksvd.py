@@ -20,6 +20,20 @@ BiasMFModel = namedtuple('BiasMFModel', ['user_index', 'item_index',
 
 
 class FunkSVD(Predictor, Trainable):
+    """
+    Algorithm class implementing FunkSVD matrix factorization.
+
+    Args:
+        features(int): the number of features to train
+        iterations(int): the number of iterations to train each feature
+        lrate(double): the learning rate
+        reg(double): the regularization factor
+        damping(double): damping factor for the underlying mean
+        range(tuple):
+            the ``(min, max)`` rating values to clamp ratings, or ``None`` to leave
+            predictions unclamped.
+    """
+
     def __init__(self, features, iterations=100, lrate=0.001, reg=0.02, damping=5, range=None):
         self.features = features
         self.iterations = iterations
@@ -31,6 +45,13 @@ class FunkSVD(Predictor, Trainable):
     def train(self, ratings, bias=None):
         """
         Train a FunkSVD model.
+
+        Args:
+            ratings: the ratings data frame.
+            bias(.bias.BiasModel): a pre-trained bias model to use.
+
+        Returns:
+            The trained biased MF model.
         """
         if bias is None:
             _logger.info('training bias model')
