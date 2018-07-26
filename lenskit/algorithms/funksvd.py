@@ -118,5 +118,9 @@ class FunkSVD(Predictor, Trainable):
                     assert model.item_bias.index[ii] == item
                     ibase += model.item_bias.iloc[ii]
                 result.iloc[i] = _fsvd.score(m, uidx, ii, ibase)
+        if self.range is not None:
+            rmin, rmax = self.range
+            result[result < rmin] = rmin
+            result[result > rmax] = rmax
 
         return result
