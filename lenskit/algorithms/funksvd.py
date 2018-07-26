@@ -19,6 +19,20 @@ BiasMFModel = namedtuple('BiasMFModel', ['user_index', 'item_index',
                                          'user_features', 'item_features'])
 
 
+def _align_add_bias(bias, index, keys, series):
+    "Realign a bias series with an index, and add to a series"
+    # realign bias to make sure it matches
+    bias = bias.reindex(index, fill_value=0)
+    assert len(bias) == len(index)
+    # look up bias for each key
+    ibs = bias.loc[keys]
+    # change index
+    ibs.index = keys.index
+    # and add
+    series = series + ibs
+    return bias, series
+
+
 class FunkSVD(Predictor, Trainable):
     """
     Algorithm class implementing FunkSVD matrix factorization.
@@ -82,19 +96,9 @@ class FunkSVD(Predictor, Trainable):
 
         _logger.debug('computing initial estimates')
         initial = pd.Series(gbias, index=ratings.index, dtype=np.float_)
-        if ibias is not None:
-            # realign ibias to make sure it matches
-            ibias = ibias.reindex(iidx, fill_value=0)
-            assert len(ibias) == len(iidx)
-            ibs = ibias.loc[ratings.item]
-            ibs.index = ratings.index
-            initial = initial + ibs
-        if ubias is not None:
-            ubias = ubias.reindex(uidx, fill_value=0)
-            assert len(ubias) == len(uidx)
-            ubs = ubias.loc[ratings.user]
-            ubs.index = ratings.index
-            initial = initial + ubs
+        ibias, initial = _align_add_bias(ibias, iidx, ratings.item, initial)
+        ubias, initial = _align_add_bias(ubias, uidx, ratings.user, initial)
+
         _logger.debug('have %d estimates for %d ratings', len(initial), len(ratings))
         assert len(initial) == len(ratings)
 
@@ -135,9 +139,9 @@ class FunkSVD(Predictor, Trainable):
         # multiply
         _logger.debug('scoring %d items for user %s', len(good_items), user)
         rv = np.matmul(im, uv)
+        # add bias back in
         rv = rv + model.global_bias
         if model.user_bias is not None:
-            assert model.user_bias.index[uidx] == user
             rv = rv + model.user_bias.iloc[uidx]
         if model.item_bias is not None:
             rv = rv + model.item_bias.iloc[good_iidx].values
