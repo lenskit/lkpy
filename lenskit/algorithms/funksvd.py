@@ -94,8 +94,12 @@ class FunkSVD(Predictor, Trainable):
         return BiasMFModel(uidx, iidx, gbias, ubias, ibias,
                            model.user_features, model.item_features)
 
-    def predict(self, model, user, items, ratings):
+    def predict(self, model, user, items, ratings=None):
+        if user not in model.user_index:
+            return pd.Series(np.nan, index=items)
         uidx = model.user_index.get_loc(user)
+        assert uidx >= 0
+
         iidx = model.item_index.get_indexer(items)
         kern = self._kernel
         m = _fsvd.Model(model.user_features, model.item_features)
@@ -105,7 +109,7 @@ class FunkSVD(Predictor, Trainable):
             assert model.user_bias.index[uidx] == user
             ubase += model.user_bias.iloc[uidx]
 
-        result = pd.Series(ubase, index=items)
+        result = pd.Series(np.nan, index=items)
         for i in range(len(iidx)):
             ii = iidx[i]
             if ii >= 0:

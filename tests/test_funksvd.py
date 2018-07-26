@@ -34,6 +34,45 @@ def test_fsvd_clamp_build():
     assert model.global_bias == approx(simple_df.rating.mean())
 
 
+def test_fsvd_predict_basic():
+    algo = svd.FunkSVD(20, iterations=20)
+    model = algo.train(simple_df)
+
+    assert model is not None
+    assert model.global_bias == approx(simple_df.rating.mean())
+
+    preds = algo.predict(model, 10, [3])
+    assert len(preds) == 1
+    assert preds.index[0] == 3
+    assert preds.loc[3] >= 0
+    assert preds.loc[3] <= 5
+
+
+def test_fsvd_predict_bad_item():
+    algo = svd.FunkSVD(20, iterations=20)
+    model = algo.train(simple_df)
+
+    assert model is not None
+    assert model.global_bias == approx(simple_df.rating.mean())
+
+    preds = algo.predict(model, 10, [4])
+    assert len(preds) == 1
+    assert preds.index[0] == 4
+    assert np.isnan(preds.loc[4])
+
+def test_fsvd_predict_bad_user():
+    algo = svd.FunkSVD(20, iterations=20)
+    model = algo.train(simple_df)
+
+    assert model is not None
+    assert model.global_bias == approx(simple_df.rating.mean())
+
+    preds = algo.predict(model, 50, [3])
+    assert len(preds) == 1
+    assert preds.index[0] == 3
+    assert np.isnan(preds.loc[3])
+
+
 @mark.slow
 @mark.eval
 def test_fsvd_batch_accuracy():
@@ -54,7 +93,7 @@ def test_fsvd_batch_accuracy():
         _log.info('running training')
         model = algo.train(train)
         _log.info('testing %d users', test.user.nunique())
-        return batch.predict(lambda u, xs: algo.predict(model, u, xs), test)
+        return batch.predict(algo, test, model=model)
 
     preds = batch.multi_predict(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)),
                                 algo, processes=1)
