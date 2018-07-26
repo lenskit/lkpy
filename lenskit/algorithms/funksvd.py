@@ -88,7 +88,7 @@ class FunkSVD(Predictor, Trainable):
         model = _fsvd.Model.fresh(self.features, len(uidx), len(iidx))
 
         _logger.info('training biased MF model with %d features', self.features)
-        _fsvd.train(context, params, model, self._kernel)
+        _fsvd.train(context, params, model, self.range)
         _logger.info('finished model training')
 
         return BiasMFModel(uidx, iidx, gbias, ubias, ibias,
@@ -101,7 +101,6 @@ class FunkSVD(Predictor, Trainable):
         assert uidx >= 0
 
         iidx = model.item_index.get_indexer(items)
-        kern = self._kernel
         m = _fsvd.Model(model.user_features, model.item_features)
 
         ubase = model.global_bias
@@ -118,14 +117,6 @@ class FunkSVD(Predictor, Trainable):
                 if model.item_bias is not None:
                     assert model.item_bias.index[ii] == item
                     ibase += model.item_bias.iloc[ii]
-                result.iloc[i] = _fsvd.score(kern, m, uidx, ii, ibase)
+                result.iloc[i] = _fsvd.score(m, uidx, ii, ibase)
 
         return result
-
-    @property
-    def _kernel(self):
-        if self.range is None:
-            return _fsvd.DotKernel()
-        else:
-            min, max = self.range
-            return _fsvd.ClampKernel(min, max)

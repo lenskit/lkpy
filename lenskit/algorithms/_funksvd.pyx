@@ -1,5 +1,6 @@
 import numpy as np
 cimport numpy as np
+from numpy cimport math as npm
 
 cimport scipy.linalg.cython_blas as blas
 
@@ -68,40 +69,14 @@ cdef class Model:
         return model
 
 
-cdef class Kernel:
-    cdef double score(self, Model model, int user, int item, double base) nogil:
-        pass
+cpdef double score(Model model, int user, int item, double base) nogil:
+    cdef int nfeatures = model.feature_count
+    cdef int inc = 1
 
-cdef class DotKernel(Kernel):
-    cdef double score(self, Model model, int user, int item, double base) nogil:
-        cdef int nfeatures = model.feature_count
-        cdef int inc = 1
+    return base + blas.ddot(&nfeatures, &model.umat[user,0], &inc, &model.imat[item,0], &inc)
 
-        return base + blas.ddot(&nfeatures, &model.umat[user,0], &inc, &model.imat[item,0], &inc)
 
-cdef class ClampKernel(Kernel):
-    cdef double min
-    cdef double max
-
-    def __cinit__(self, min, max):
-        self.min = min
-        self.max = max
-
-    cdef double score(self, Model model, int user, int item, double base) nogil:
-        cdef double res = base
-        for i in range(model.feature_count):
-            res += model.umat[user,i] * model.imat[item,i]
-            if res < self.min:
-                res = self.min
-            elif res > self.max:
-                res = self.max
-
-        return res
-
-cpdef double score(Kernel kern, Model model, int user, int item, double base):
-    return kern.score(model, user, item, base)
-
-cpdef void train(Context ctx, Params params, Model model, Kernel kernel):
+cpdef void train(Context ctx, Params params, Model model, domain):
     cdef double pred, error, ufv, ifv, ufd, ifd, sse
     cdef np.int64_t user, item
     cdef int f, epoch, s
@@ -113,6 +88,12 @@ cpdef void train(Context ctx, Params params, Model model, Kernel kernel):
     cdef np.float_t[:] b_v = ctx.bias
     cdef np.float_t[:,::1] umat = model.user_features
     cdef np.float_t[:,::1] imat = model.item_features
+    cdef double rmin, rmax
+    if domain is None:
+        rmin = -npm.INFINITY
+        rmax = npm.INFINITY
+    else:
+        rmin, rmax = domain
 
     _logger.debug('feature count: %d', model.feature_count)
     _logger.debug('iteration count: %d', params.iter_count)
@@ -127,7 +108,12 @@ cpdef void train(Context ctx, Params params, Model model, Kernel kernel):
                 for s in range(ctx.n_samples):
                     user = u_v[s]
                     item = i_v[s]
-                    pred = kernel.score(model, user, item, b_v[s])
+                    pred = score(model, user, item, b_v[s])
+                    if pred < rmin:
+                        pred = rmin
+                    elif pred > rmax:
+                        pred = rmax
+
                     error = r_v[s] - pred
                     sse += error * error
                     

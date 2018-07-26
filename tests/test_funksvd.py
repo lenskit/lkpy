@@ -96,7 +96,7 @@ def test_fsvd_batch_accuracy():
         return batch.predict(algo, test, model=model)
 
     preds = batch.multi_predict(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)),
-                                algo, processes=1)
+                                algo)
     mae = pm.mae(preds.prediction, preds.rating)
     assert mae == approx(0.74, abs=0.025)
 
