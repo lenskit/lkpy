@@ -97,30 +97,39 @@ class FunkSVD(Predictor, Trainable):
     def predict(self, model, user, items, ratings=None):
         if user not in model.user_index:
             return pd.Series(np.nan, index=items)
+
+        # get user index
         uidx = model.user_index.get_loc(user)
         assert uidx >= 0
 
+        # get item index & limit to valid ones
+        items = np.array(items)
         iidx = model.item_index.get_indexer(items)
-        m = _fsvd.Model(model.user_features, model.item_features)
+        good = iidx >= 0
+        good_items = items[good]
+        good_iidx = iidx[good]
 
-        ubase = model.global_bias
+        # get user vector
+        uv = model.user_features[uidx, :]
+        # get item matrix
+        im = model.item_features[good_iidx, :]
+
+        # multiply
+        _logger.debug('scoring %d items for user %s', len(good_items), user)
+        rv = np.matmul(im, uv)
+        rv = rv + model.global_bias
         if model.user_bias is not None:
             assert model.user_bias.index[uidx] == user
-            ubase += model.user_bias.iloc[uidx]
+            rv = rv + model.user_bias.iloc[uidx]
+        if model.item_bias is not None:
+            rv = rv + model.item_bias.iloc[good_iidx].values
 
-        result = pd.Series(np.nan, index=items)
-        for i in range(len(iidx)):
-            ii = iidx[i]
-            if ii >= 0:
-                item = items[i]
-                ibase = ubase
-                if model.item_bias is not None:
-                    assert model.item_bias.index[ii] == item
-                    ibase += model.item_bias.iloc[ii]
-                result.iloc[i] = _fsvd.score(m, uidx, ii, ibase)
+        # clamp if suitable
         if self.range is not None:
             rmin, rmax = self.range
-            result[result < rmin] = rmin
-            result[result > rmax] = rmax
+            rv = np.maximum(rv, rmin)
+            rv = np.minimum(rv, rmax)
 
-        return result
+        res = pd.Series(rv, index=good_items)
+        res = res.reindex(items)
+        return res
