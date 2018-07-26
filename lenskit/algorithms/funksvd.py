@@ -4,14 +4,11 @@ FunkSVD (biased MF).
 
 from collections import namedtuple
 import logging
-import warnings
 
 import pandas as pd
 import numpy as np
 
 from . import Trainable, Predictor
-from .. import util as lku
-from .. import check
 from . import basic
 from . import _funksvd as _fsvd
 
