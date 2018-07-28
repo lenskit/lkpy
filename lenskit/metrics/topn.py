@@ -67,3 +67,9 @@ def recip_rank(recs, relevant):
         return 0.0
     else:
         return 1.0 / (nzp[0] + 1)
+
+
+def _dcg(scores, discount=np.log2):
+    ranks = np.arange(1, len(scores) + 1)
+    disc = np.maximum(discount(ranks), 1)
+    return np.dot(scores, 1.0/disc)
