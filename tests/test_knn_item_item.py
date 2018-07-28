@@ -2,6 +2,7 @@ import lenskit.algorithms.item_knn as knn
 
 import logging
 import os.path
+from functools import partial
 from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
@@ -291,3 +292,40 @@ def test_ii_batch_accuracy():
 
     user_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
     assert user_rmse.mean() == approx(0.90, abs=0.05)
+
+
+@mark.slow
+@mark.eval
+def test_ii_batch_recommend():
+    from lenskit.algorithms import basic
+    import lenskit.crossfold as xf
+    from lenskit import batch, topn
+    import lenskit.metrics.topn as lm
+
+    if not os.path.exists('ml-100k/u.data'):
+        raise pytest.skip()
+
+    ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
+
+    algo = knn.ItemItem(30)
+
+    def eval(train, test):
+        _log.info('running training')
+        model = algo.train(train)
+        _log.info('testing %d users', test.user.nunique())
+        cand_fun = topn.UnratedCandidates(train)
+        recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun)
+        # combine with test ratings for relevance data
+        res = pd.merge(recs, test, how='left', on=('user', 'item'))
+        # fill in missing 0s
+        res.loc[res.rating.isna(), 'rating'] = 0
+        return res
+
+    recs = pd.concat((eval(train, test)
+                      for (train, test)
+                      in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
+
+    _log.info('analyzing recommendations')
+    ndcg = recs.groupby('user').rating.apply(lm.ndcg)
+    _log.info('NDCG for %d users is %f', len(ndcg), ndcg.mean())
+    assert ndcg.mean() > 0

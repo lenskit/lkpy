@@ -1,7 +1,10 @@
 import pytest
 
+import os
+import os.path
 from collections import namedtuple
 from functools import partial
+import logging
 import pandas as pd
 import numpy as np
 
@@ -12,6 +15,7 @@ import lenskit.batch as lkb
 
 MLB = namedtuple('MLB', ['ratings', 'algo', 'model'])
 MLB.predictor = property(lambda mlb: partial(mlb.algo.predict, mlb.model))
+_log = logging.getLogger(__package__)
 
 
 @pytest.fixture
@@ -69,3 +73,74 @@ def test_recommend_two_users(mlb):
     assert all(np.diff(res[res.user == 5]['rank']) == 1)
     assert all(np.diff(res[res.user == 10].score) <= 0)
     assert all(np.diff(res[res.user == 10]['rank']) == 1)
+
+
+def test_bias_batch_recommend():
+    from lenskit.algorithms import basic
+    import lenskit.crossfold as xf
+    from lenskit import batch, topn
+    import lenskit.metrics.topn as lm
+
+    if not os.path.exists('ml-100k/u.data'):
+        raise pytest.skip()
+
+    ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
+
+    algo = basic.Bias(damping=5)
+
+    def eval(train, test):
+        _log.info('running training')
+        model = algo.train(train)
+        _log.info('testing %d users', test.user.nunique())
+        cand_fun = topn.UnratedCandidates(train)
+        recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun)
+        # combine with test ratings for relevance data
+        res = pd.merge(recs, test, how='left', on=('user', 'item'))
+        # fill in missing 0s
+        res.loc[res.rating.isna(), 'rating'] = 0
+        return res
+
+    recs = pd.concat((eval(train, test)
+                      for (train, test)
+                      in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
+
+    _log.info('analyzing recommendations')
+    ndcg = recs.groupby('user').rating.apply(lm.ndcg)
+    _log.info('NDCG for %d users is %f (max=%f)', len(ndcg), ndcg.mean(), ndcg.max())
+    assert ndcg.mean() > 0
+
+
+def test_pop_batch_recommend():
+    from lenskit.algorithms import basic
+    import lenskit.crossfold as xf
+    from lenskit import batch, topn
+    import lenskit.metrics.topn as lm
+
+    if not os.path.exists('ml-100k/u.data'):
+        raise pytest.skip()
+
+    ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
+
+    algo = basic.Popular()
+
+    def eval(train, test):
+        _log.info('running training')
+        model = algo.train(train)
+        _log.info('testing %d users', test.user.nunique())
+        cand_fun = topn.UnratedCandidates(train)
+        recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun)
+        # combine with test ratings for relevance data
+        res = pd.merge(recs, test, how='left', on=('user', 'item'))
+        # fill in missing 0s
+        res.loc[res.rating.isna(), 'rating'] = 0
+        return res
+
+    recs = pd.concat((eval(train, test)
+                      for (train, test)
+                      in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
+
+    _log.info('analyzing recommendations')
+    _log.info('have %d recs for good items', (recs.rating > 0).sum())
+    ndcg = recs.groupby('user').rating.agg(lm.ndcg)
+    _log.info('NDCG for %d users is %f (max=%f)', len(ndcg), ndcg.mean(), ndcg.max())
+    assert ndcg.mean() > 0

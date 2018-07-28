@@ -148,6 +148,25 @@ class Bias(Predictor, Trainable):
             return series.mean()
 
 
+class Popular(Recommender, Trainable):
+    def train(self, ratings):
+        pop = ratings.groupby('item').user.count()
+        pop.name = 'score'
+        return pop
+
+    def recommend(self, model, user, n=None, candidates=None, ratings=None):
+        scores = model
+        if candidates is not None:
+            idx = scores.index.get_indexer(candidates)
+            idx = idx[idx >= 0]
+            scores = scores.iloc[idx]
+
+        if n is None:
+            return scores.sort_values(ascending=False).reset_index()
+        else:
+            return scores.nlargest(n).reset_index()
+
+
 class Memorized:
     """
     The memorized algorithm memorizes scores & repeats them.
