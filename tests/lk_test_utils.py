@@ -11,13 +11,6 @@ from contextlib import contextmanager
 import pandas as pd
 import pytest
 
-try:
-    import dask.dataframe as dd
-
-    have_dask = True
-except ImportError as e:
-    have_dask = False
-
 ml_dir = os.path.join(os.path.dirname(__file__), '../ml-latest-small')
 
 
@@ -103,17 +96,6 @@ def envvars(**vars):
 
 
 ml_pandas = MLDataLoader(pd.read_csv)
-if have_dask:
-    ml_dask = MLDataLoader(dd.read_csv)
-
-
-def dask_test(f):
-    """
-    Decorator for test cases that require Dask.
-    :param f: The test function
-    :return:
-    """
-    return pytest.mark.skipif(not have_dask, reason='dask is not available')(f)
 
 
 @pytest.fixture
