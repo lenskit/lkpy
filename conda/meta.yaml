@@ -1,0 +1,32 @@
+package:
+  name: lkpy
+  version: "{{GIT_DESCRIBE_TAG}}-{{GIT_BUILD_STR}}"
+
+source:
+  path: ..
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - cython
+  host:
+    - python
+    - setuptools
+    - cython
+    - numpy
+    - scipy
+  run:
+    - python
+    - pandas
+    - scipy
+    - pytables
+
+test:
+  files:
+    - tests
+    - ml-latest-small
+  requires:
+    - pytest
+    - pytest-arraydiff
+  commands:
+    - python3 -m pytest tests
