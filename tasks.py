@@ -78,6 +78,8 @@ def docs(c):
 def clean(c):
     print('remving build')
     shutil.rmtree('build', ignore_errors=True)
+    print('remving dist')
+    shutil.rmtree('dist', ignore_errors=True)
     print('remving .eggs')
     shutil.rmtree('.eggs', ignore_errors=True)
     print('remving lenskit.egg-info')
@@ -89,6 +91,7 @@ def clean(c):
     files |= set(ldir.glob('lenskit/*/*.pdb'))
     files |= set(ldir.glob('lenskit/*/*.c'))
     files |= set(ldir.glob('lenskit/**/*.pyc'))
+    files |= set(ldir.glob('lenskit/**/*.pyo'))
     for f in files:
         print('removing', f)
         f.unlink()
