@@ -69,12 +69,17 @@ def maybe_cythonize(mods):
     })
 
 
+with open('README.md', 'r') as fh:
+    readme = fh.read()
+
 setup(
     name="lenskit",
     version="0.0.1",
     author="Michael Ekstrand",
     author_email="michaelekstrand@boisestate.edu",
     description="Run recommender algorithms and experiments",
+    long_description=readme,
+    long_description_content_type='text/markdown',
     url="https://lenskit.github.io/lkpy",
     classifiers=[
         "Programming Language :: Python :: 3",
