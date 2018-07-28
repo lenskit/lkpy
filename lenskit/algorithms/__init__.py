@@ -39,6 +39,43 @@ class Predictor(metaclass=ABCMeta):
         raise NotImplemented()
 
 
+class Recommender(metaclass=ABCMeta):
+    """
+    Recommends items for a user.
+    """
+
+    @abstractmethod
+    def recommend(self, model, user, n=None, candidates=None, ratings=None):
+        """
+        Compute recommendations for a user.
+
+        Args:
+            model:
+                the trained model to use.  Either ``None`` or the ratings matrix if the
+                algorithm has no concept of training.
+            user: the user ID
+            n(int): the number of recommendations to produce (``None`` for unlimited)
+            candidates (array-like): the set of valid candidate items.
+            ratings (pandas.Series):
+                the user's ratings (indexed by item id); if provided, they may be used to
+                override or augment the model's notion of a user's preferences.
+
+        Returns:
+            pandas.DataFrame:
+                a frame with an ``item`` column; if the recommender also produces scores,
+                they will be in a ``score`` column.
+        """
+        raise NotImplemented()
+
+    @classmethod
+    def adapt(cls, algo):
+        if isinstance(algo, Recommender):
+            return algo
+        elif isinstance(algo, Predictor):
+            import basic
+            return basic.TopN(algo)
+
+
 class Trainable(metaclass=ABCMeta):
     """
     Models that can be trained and have their models saved.

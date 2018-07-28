@@ -116,3 +116,22 @@ def test_fallback_save_load(tmpdir):
     assert preds.loc[1] == 4.0
     assert preds.loc[5] == approx(model[1].mean + model[1].users.loc[10] + model[1].items.loc[5])
     assert preds.loc[-23081] == approx(model[1].mean + model[1].users.loc[10])
+
+
+def test_topn_recommend():
+    pred = basic.Memorized(simple_df)
+    rec = basic.TopN(pred)
+
+    rec10 = rec.recommend(None, 10, candidates=[1, 2])
+    assert all(rec10.item == [2, 1])
+    assert all(rec10.score == [5, 4])
+
+    rec2 = rec.recommend(None, 12, candidates=[1, 2])
+    assert len(rec2) == 1
+    assert all(rec2.item == [1])
+    assert all(rec2.score == [3])
+
+    rec10 = rec.recommend(None, 10, n=1, candidates=[1, 2])
+    assert len(rec10) == 1
+    assert all(rec10.item == [2])
+    assert all(rec10.score == [5])

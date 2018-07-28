@@ -10,7 +10,7 @@ import pandas as pd
 
 from .. import util as lku
 from .. import check
-from . import Predictor, Trainable
+from . import Predictor, Trainable, Recommender
 
 _logger = logging.getLogger(__package__)
 
@@ -230,3 +230,48 @@ class Fallback(Predictor, Trainable):
                 model.append(None)
 
         return model
+
+
+class TopN(Recommender):
+    """
+    Basic recommender that implements top-N recommendation using a predictor.
+
+    Args:
+        predictor(Predictor):
+            the underlying predictor.  If it is :py:class:`Trainable`, then the resulting
+            recommender class will also be :py:class:`Trainable`.
+    """
+
+    def __new__(cls, predictor):
+        if isinstance(predictor, Trainable):
+            return super().__new__(_TrainableTopN)
+        else:
+            return super().__new__(cls)
+
+    def __init__(self, predictor):
+        self.predictor = predictor
+
+    def recommend(self, model, user, n=None, candidates=None, ratings=None):
+        scores = self.predictor.predict(model, user, candidates, ratings)
+        scores = scores[scores.notna()]
+        scores = scores.sort_values(ascending=False)
+        if n is not None:
+            scores = scores.iloc[:n]
+        scores.name = 'score'
+        scores.index.name = 'item'
+        return scores.reset_index()
+
+
+class _TrainableTopN(TopN, Trainable):
+    """
+    Trainable subclass of :py:class:`TopN`.
+    """
+
+    def train(self, ratings):
+        return self.predictor.train(ratings)
+
+    def save_model(self, model, file):
+        self.predictor.save_model(model, file)
+
+    def load_model(self, file):
+        return self.predictor.load_model(file)
