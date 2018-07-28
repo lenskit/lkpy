@@ -157,27 +157,6 @@ def test_bias_train_ml_ratings():
     assert p.iloc[2] == approx(ratings.rating.mean() + umean)
 
 
-@lktu.dask_test
-def test_bias_train_dask():
-    algo = bl.Bias()
-    ratings = ml_pandas.ratings.rename(columns={'userId': 'user', 'movieId': 'item'})
-    model = algo.train(lktu.ml_dask.ratings.rename(columns={'userId': 'user', 'movieId': 'item'}))
-
-    assert model.mean == approx(ratings.rating.mean())
-    imeans_data = ratings.groupby('item').rating.mean()
-    imeans_algo = model.items + model.mean
-    ares, data = imeans_algo.align(imeans_data)
-    assert ares.values == approx(data.values)
-
-    urates = ratings.set_index('user').loc[2].set_index('item').rating
-    umean = (urates - imeans_data[urates.index]).mean()
-    p = algo.predict(model, 2, [10, 11, -1])
-    assert len(p) == 3
-    assert p.iloc[0] == approx(imeans_data.loc[10] + umean)
-    assert p.iloc[1] == approx(imeans_data.loc[11] + umean)
-    assert p.iloc[2] == approx(ratings.rating.mean() + umean)
-
-
 def test_bias_item_damp():
     algo = bl.Bias(users=False, damping=5)
     model = algo.train(simple_df)

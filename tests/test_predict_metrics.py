@@ -5,6 +5,7 @@ import os.path
 from pytest import approx, raises, mark, skip
 
 import lenskit.metrics.predict as pm
+import lk_test_utils as lktu
 
 
 def test_check_missing_empty():
@@ -157,16 +158,14 @@ def test_mae_series_two():
 
 
 @mark.slow
+@mark.eval
+@mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_batch_rmse():
-    import lk_test_utils as lktu
     import lenskit.crossfold as xf
     import lenskit.batch as batch
     import lenskit.algorithms.basic as bl
 
-    if not os.path.exists('ml-100k/u.data'):
-        raise skip()
-
-    ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
+    ratings = lktu.ml100k.load_ratings()
     algo = bl.Bias(damping=5)
 
     def eval(train, test):

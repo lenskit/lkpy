@@ -77,7 +77,7 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+# html_theme = 'alabaster'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -86,8 +86,9 @@ html_theme = 'alabaster'
 html_theme_options = {
     'github_user': 'lenskit',
     'github_repo': 'lkpy',
-    'travis_button': True,
+    'travis_button': False,
     'canonical_url': 'https://lkpy.lenskit.org/',
+    'font_family': 'Charter, serif'
     # 'font_family': '"Source Sans Pro", "Georgia Pro", Georgia, serif',
     # 'font_size': '15px',
     # 'head_font_family': '"Merriweather Sans", "Arial", sans-serif',

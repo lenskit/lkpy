@@ -11,13 +11,6 @@ from contextlib import contextmanager
 import pandas as pd
 import pytest
 
-try:
-    import dask.dataframe as dd
-
-    have_dask = True
-except ImportError as e:
-    have_dask = False
-
 ml_dir = os.path.join(os.path.dirname(__file__), '../ml-latest-small')
 
 
@@ -62,6 +55,27 @@ class MLDataLoader:
         return Renamer(self)
 
 
+class _ML100K:
+    @property
+    def location(self):
+        return os.path.expanduser(os.environ.get('ML100K_DIR', 'ml-100k'))
+
+    @property
+    def rating_file(self):
+        return os.path.join(self.location, 'u.data')
+
+    @property
+    def available(self):
+        return os.path.exists(self.rating_file)
+
+    def load_ratings(self):
+        return pd.read_csv(self.rating_file, sep='\t',
+                           names=['user', 'item', 'rating', 'timestamp'])
+
+
+ml100k = _ML100K()
+
+
 @contextmanager
 def envvars(**vars):
     save = {}
@@ -82,17 +96,6 @@ def envvars(**vars):
 
 
 ml_pandas = MLDataLoader(pd.read_csv)
-if have_dask:
-    ml_dask = MLDataLoader(dd.read_csv)
-
-
-def dask_test(f):
-    """
-    Decorator for test cases that require Dask.
-    :param f: The test function
-    :return:
-    """
-    return pytest.mark.skipif(not have_dask, reason='dask is not available')(f)
 
 
 @pytest.fixture

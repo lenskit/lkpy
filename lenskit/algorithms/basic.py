@@ -79,14 +79,12 @@ class Bias(Predictor, Trainable):
 
         _logger.info('building bias model for %d ratings', len(data))
         mean = data.rating.mean()
-        mean = lku.compute(mean)
         _logger.info('global mean: %.3f', mean)
         nrates = data.assign(rating=lambda df: df.rating - mean)
 
         if self._include_items:
             group = nrates.groupby('item').rating
             item_offsets = self._mean(group, self.item_damping)
-            item_offsets = lku.compute(item_offsets)
             _logger.info('computed means for %d items', len(item_offsets))
         else:
             item_offsets = None
@@ -98,7 +96,6 @@ class Bias(Predictor, Trainable):
                 nrates = nrates.assign(rating=lambda df: df.rating - df.rating_im)
 
             user_offsets = self._mean(nrates.groupby('user').rating, self.user_damping)
-            user_offsets = lku.compute(user_offsets)
             _logger.info('computed means for %d users', len(user_offsets))
         else:
             user_offsets = None
@@ -213,6 +210,7 @@ class Fallback(Predictor, Trainable):
         preds = None
 
         for algo, amod in zip(self.algorithms, model):
+            _logger.debug('predicting for %d items for user %s', len(remaining), user)
             aps = algo.predict(amod, user, remaining, ratings=ratings)
             aps = aps[aps.notna()]
             if preds is None:

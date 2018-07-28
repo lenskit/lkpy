@@ -261,16 +261,14 @@ def test_ii_save_load(tmpdir):
 
 @mark.slow
 @mark.eval
+@mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_ii_batch_accuracy():
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch
     import lenskit.metrics.predict as pm
 
-    if not os.path.exists('ml-100k/u.data'):
-        raise pytest.skip()
-
-    ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
+    ratings = lktu.ml100k.load_ratings()
 
     uu_algo = knn.ItemItem(30)
     algo = basic.Fallback(uu_algo, basic.Bias())
@@ -281,12 +279,9 @@ def test_ii_batch_accuracy():
         _log.info('testing %d users', test.user.nunique())
         return batch.predict(lambda u, xs: algo.predict(model, u, xs), test)
 
-    with lktu.envvars(OMP_NUM_THREADS='1'):
-        preds = batch.multi_predict(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)),
-                                    algo)
-    # preds = pd.concat((eval(train, test)
-    #                    for (train, test)
-    #                    in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
+    preds = pd.concat((eval(train, test)
+                       for (train, test)
+                       in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
     mae = pm.mae(preds.prediction, preds.rating)
     assert mae == approx(0.70, abs=0.025)
 

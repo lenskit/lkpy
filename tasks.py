@@ -60,7 +60,6 @@ def test(c, cover=False, verbose=True, slow=True, eval=True, match=None, mark=No
         args.append('-m')
         args.append(mark)
     if debug:
-        args.append('--log-level=DEBUG')
         args.append('--log-cli-level=DEBUG')
     if forked:
         args.append('--forked')

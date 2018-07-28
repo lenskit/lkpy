@@ -1,0 +1,261 @@
+# Python CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+dirs: &dirs
+  working_directory: ~/lkpy
+  environment:
+    ML100K_DIR: ~/ml-100k
+    OMP_NUM_THREADS: 2
+    LK_PROCESS_COUNT: 2
+
+build_steps: &build_steps
+  - attach_workspace:
+      at: ~/
+  - restore_cache:
+      keys:
+      - dep-eggs-py37-{{ checksum "setup.py" }}
+
+  - run:
+      name: initialize environment
+      command: |
+        python3 -m venv venv
+        . venv/bin/activate
+
+  - run:
+      name: build and test
+      command: |
+        . venv/bin/activate
+        python setup.py test
+
+  - save_cache:
+      paths:
+        - ./.eggs
+      key: dep-eggs-py37-{{ checksum "setup.py" }}  
+
+version: 2
+jobs:
+  checkout:
+    docker:
+      - image: circleci/python:3.6-stretch
+    <<: *dirs
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+          - ml-data
+      - run:
+          name: fetch data set
+          command: |
+            if [ ! -r ~/ml-100k/u.data ]; then
+              wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
+              unzip -d ~ ml-100k.zip
+            fi
+      - save_cache:
+          paths:
+            - ./ml-100k
+          key: ml-data
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - lkpy
+            - ml-100k
+    
+  build-py37:
+    docker:
+      - image: circleci/python:3.7-stretch
+    <<: *dirs
+
+    steps:
+      - attach_workspace:
+          at: ~/
+      - restore_cache:
+          keys:
+          - dep-eggs-py37-{{ checksum "setup.py" }}
+
+      - run:
+          name: initialize environment
+          command: |
+            python3 -m venv venv
+            . venv/bin/activate
+
+      - run:
+          name: compile code
+          command: |
+            . venv/bin/activate
+            python3 setup.py build
+
+      - run:
+          name: run tests
+          command: |
+            . venv/bin/activate
+            python3 setup.py test
+
+      - save_cache:
+          paths:
+            - ./.eggs
+          key: dep-eggs-py37-{{ checksum "setup.py" }}  
+
+  build-py36:
+    docker:
+      - image: circleci/python:3.6-stretch
+    <<: *dirs
+
+    steps:
+      - attach_workspace:
+          at: ~/
+      - restore_cache:
+          keys:
+          - dep-eggs-py36-{{ checksum "setup.py" }}
+
+      - run:
+          name: initialize environment
+          command: |
+            python3 -m venv venv
+
+      - run:
+          name: compile code
+          command: |
+            . venv/bin/activate
+            python3 setup.py build
+
+      - run:
+          name: run tests
+          command: |
+            . venv/bin/activate
+            python3 setup.py test
+
+      - save_cache:
+          paths:
+            - ./.eggs
+          key: dep-eggs-py36-{{ checksum "setup.py" }}  
+
+  build-py35:
+    docker:
+      - image: circleci/python:3.5-stretch
+    <<: *dirs
+
+    steps:
+      - attach_workspace:
+          at: ~/
+      - restore_cache:
+          keys:
+          - dep-eggs-py35-{{ checksum "setup.py" }}
+
+      - run:
+          name: initialize environment
+          command: |
+            python3 -m venv venv
+            . venv/bin/activate
+            pip install -U setuptools wheel
+            pip install numpy scipy cython
+
+      - run:
+          name: compile code
+          command: |
+            . venv/bin/activate
+            python3 setup.py build
+
+      - run:
+          name: run tests
+          command: |
+            . venv/bin/activate
+            python3 setup.py test
+
+      - save_cache:
+          paths:
+            - ./.eggs
+          key: dep-eggs-py35-{{ checksum "setup.py" }}
+
+  build-conda-py37:
+    docker:
+      - image: lenskit/lkpy-build:conda-py37
+    <<: *dirs
+
+    steps:
+      - attach_workspace:
+          at: ~/
+
+      - run:
+          name: compile code
+          command: |
+            source activate base
+            python3 setup.py build
+
+      - run:
+          name: run tests
+          command: |
+            source activate base
+            python3 setup.py test
+
+  build-conda-py36:
+    docker:
+      - image: lenskit/lkpy-build:conda-py36
+    <<: *dirs
+
+    steps:
+      - attach_workspace:
+          at: ~/
+
+      - run:
+          name: compile code
+          command: |
+            source activate base
+            python3 setup.py build
+
+      - run:
+          name: run tests
+          command: |
+            source activate base
+            python3 setup.py test
+  
+  coverage:
+    docker:
+      - image: lenskit/lkpy-build:conda-py37
+    <<: *dirs
+    steps:
+      - attach_workspace:
+          at: ~/
+
+      - restore_cache:
+          keys:
+          - coverage-tools
+  
+      - run:
+          name: build for coverage
+          command: |
+            source activate base
+            invoke build --cover
+      
+      - run:
+          name: run test coverage
+          command: |
+            source activate base
+            invoke test --cover --no-eval --verbose
+
+      - run:
+          name: process coverage data
+          command: |
+            source activate base
+            coverage xml
+            bash <(curl -s https://codecov.io/bash)
+
+workflows:
+  version: 2
+  reg_build:
+    jobs:
+      - checkout
+      - build-py36:
+          requires:
+            - checkout
+      - build-py35:
+          requires:
+            - checkout
+      - build-conda-py37:
+          requires:
+            - checkout
+      - build-conda-py36:
+          requires:
+            - checkout
+      - coverage:
+          requires:
+            - build-conda-py37

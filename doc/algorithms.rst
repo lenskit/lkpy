@@ -11,3 +11,4 @@ algorithms.
    interfaces
    basic
    knn
+   mf

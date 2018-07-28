@@ -1,3 +1,4 @@
+#cython: language_level=3
 from cpython cimport array
 import array
 import pandas as pd
