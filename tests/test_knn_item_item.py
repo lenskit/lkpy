@@ -296,6 +296,7 @@ def test_ii_batch_accuracy():
 
 @mark.slow
 @mark.eval
+@mark.skip(reason='too slow')
 def test_ii_batch_recommend():
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
