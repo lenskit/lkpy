@@ -65,7 +65,7 @@ jobs:
 
     steps:
       - attach_workspace:
-        at: ~/
+          at: ~/
       - restore_cache:
           keys:
           - dep-eggs-py37-{{ checksum "setup.py" }}
@@ -151,7 +151,7 @@ jobs:
     <<: *dirs
     steps:
       - attach_workspace:
-        at: ~/
+          at: ~/
 
       - restore_cache:
           keys:
