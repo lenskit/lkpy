@@ -194,6 +194,7 @@ class Fallback(Predictor, Trainable):
         preds = None
 
         for algo, amod in zip(self.algorithms, model):
+            _logger.debug('predicting for %d items for user %s', len(remaining), user)
             aps = algo.predict(amod, user, remaining, ratings=ratings)
             aps = aps[aps.notna()]
             if preds is None:

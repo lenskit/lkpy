@@ -88,6 +88,7 @@ html_theme_options = {
     'github_repo': 'lkpy',
     'travis_button': True,
     'canonical_url': 'https://lkpy.lenskit.org/',
+    'font_family': 'Charter, serif'
     # 'font_family': '"Source Sans Pro", "Georgia Pro", Georgia, serif',
     # 'font_size': '15px',
     # 'head_font_family': '"Merriweather Sans", "Arial", sans-serif',
