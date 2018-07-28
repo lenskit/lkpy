@@ -1,10 +1,12 @@
 import pytest
 
+import sys
 import os
 import os.path
 from collections import namedtuple
 from functools import partial
 import logging
+import warnings
 import pandas as pd
 import numpy as np
 
@@ -32,7 +34,10 @@ def test_recommend_single(mlb):
     assert len(res) == 1
     assert all(res['user'] == 1)
     assert all(res['rank'] == 1)
-    assert list(res.columns) == ['user', 'rank', 'item', 'score']
+    if sys.version_info >= (3, 6):
+        assert list(res.columns) == ['user', 'rank', 'item', 'score']
+    else:
+        warnings.warn('Python 3.5 loses column order')
 
     expected = mlb.model.mean + mlb.model.items.loc[31] + mlb.model.users.loc[1]
     assert res.score.iloc[0] == pytest.approx(expected)
@@ -49,7 +54,10 @@ def test_recommend_user(mlb):
     res = lkb.recommend(mlb.algo, mlb.model, [5], 10, candidates)
 
     assert len(res) == 10
-    assert list(res.columns) == ['user', 'rank', 'item', 'score']
+    if sys.version_info >= (3, 6):
+        assert list(res.columns) == ['user', 'rank', 'item', 'score']
+    else:
+        warnings.warn('Python 3.5 loses column order')
     assert all(res['user'] == uid)
     assert all(res['rank'] == np.arange(10) + 1)
     # they should be in decreasing order
