@@ -86,7 +86,7 @@ pygments_style = 'sphinx'
 html_theme_options = {
     'github_user': 'lenskit',
     'github_repo': 'lkpy',
-    'travis_button': True,
+    'travis_button': False,
     'canonical_url': 'https://lkpy.lenskit.org/',
     'font_family': 'Charter, serif'
     # 'font_family': '"Source Sans Pro", "Georgia Pro", Georgia, serif',
