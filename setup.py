@@ -4,14 +4,21 @@ from setuptools import setup, find_packages
 from distutils.extension import Extension
 
 
-class LazyNPPath(os.PathLike):
-    "NumPy include path, but evaluated lazily"
-    def __fspath__(self):
+# Set up to lazily resolve the NumPy include path
+# On supported systems (python >= 3.6), this will enable setup_requires to work well
+if hasattr(os, 'PathLike'):
+    class LazyNPPath(os.PathLike):
+        "NumPy include path, but evaluated lazily"
+        def __fspath__(self):
+            import numpy
+            return numpy.get_include()
+
+        def __str__(self):
+            return self.__fspath__()
+else:
+    def LazyNPPath():
         import numpy
         return numpy.get_include()
-
-    def __str__(self):
-        return self.__fspath__()
 
 
 if sys.platform == 'win32':
@@ -45,6 +52,23 @@ def extmod(name, openmp=False, cflags=[], ldflags=[]):
                      extra_link_args=link_args)
 
 
+def maybe_cythonize(mods):
+    "Pre-Cythonize modules if feasible"
+    try:
+        from Cython.Build import cythonize
+    except ImportError:
+        # use distutils' built-in Cythonization
+        return mods
+
+    # we have Cython! pre-cythonize so we can set options
+    return cythonize(mods, compiler_directives={
+        'warn.undeclared': True,
+        'warn.unused': True,
+        'warn.maybe_uninitialized': True,
+        **cython_opts
+    })
+
+
 setup(
     name="lenskit",
     version="0.0.1",
@@ -60,7 +84,6 @@ setup(
 
     setup_requires=[
         'pytest-runner',
-        'sphinx',
         'cython',
         'numpy',
         'scipy'
