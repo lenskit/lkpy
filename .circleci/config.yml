@@ -192,19 +192,19 @@ jobs:
       - run:
           name: build for coverage
           command: |
-            . venv/bin/activate
+            source activate base
             invoke build --cover
       
       - run:
           name: run test coverage
           command: |
-            . venv/bin/activate
+            source activate base
             invoke test --cover --no-eval --verbose
 
       - run:
           name: process coverage data
           command: |
-            . venv/bin/activate
+            source activate base
             coverage xml
             bash <(curl -s https://codecov.io/bash)
 
