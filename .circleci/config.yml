@@ -224,7 +224,7 @@ jobs:
           name: build for coverage
           command: |
             source activate base
-            pip install coverage pyteset-cov
+            pip install coverage pytest-cov
             invoke build --cover
       
       - run:
