@@ -155,7 +155,9 @@ jobs:
 
       - run:
           name: build and test
-          command: python3 setup.py test
+          command: |
+            source activate base
+            python3 setup.py test
 
   build-conda-py36:
     docker:
@@ -168,7 +170,9 @@ jobs:
 
       - run:
           name: build and test
-          command: python3 setup.py test
+          command: |
+            source activate base
+            python3 setup.py test
   
   coverage:
     docker:
