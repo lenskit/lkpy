@@ -2,6 +2,7 @@
 Batch-run predictors and recommenders for evaluation.
 """
 
+import os
 import logging
 import multiprocessing
 from functools import partial
@@ -86,6 +87,8 @@ def _run_spjob(algo, train, test):
 def multi_predict(sets, algo, processes=None):
     _logger.info('launching multi-predict with %s processes', processes)
     if processes is None or processes > 1:
+        if processes is None and 'LK_PROCESS_COUNT' in os.environ:
+            processes = int(os.environ['LK_PROCESS_COUNT'])
         with multiprocessing.Pool(processes) as p:
             results = [pd.read_msgpack(rbs) for rbs in p.map(_run_mpjob, _mp_stateify(sets, algo))]
     else:

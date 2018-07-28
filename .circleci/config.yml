@@ -5,6 +5,8 @@ dirs: &dirs
   working_directory: ~/lkpy
   environment:
     ML100K_DIR: ~/ml-100k
+    OMP_NUM_THREADS: 2
+    LK_PROCESS_COUNT: 2
 
 build_steps: &build_steps
   - attach_workspace:
