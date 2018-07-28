@@ -16,8 +16,10 @@ requirements:
     - setuptools
     - pytest-runner
     - cython
+    - pandas
     - numpy
     - scipy
+    - pytables
   run:
     - python
     - pandas
