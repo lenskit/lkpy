@@ -72,8 +72,10 @@ class Recommender(metaclass=ABCMeta):
         if isinstance(algo, Recommender):
             return algo
         elif isinstance(algo, Predictor):
-            import basic
+            from . import basic
             return basic.TopN(algo)
+        else:
+            raise ValueError('cannot adopt type ' + algo.__class__)
 
 
 class Trainable(metaclass=ABCMeta):

@@ -8,8 +8,9 @@ from functools import partial
 from collections import namedtuple
 
 import pandas as pd
+import numpy as np
 
-from .algorithms import Predictor
+from .algorithms import Predictor, Recommender
 
 _logger = logging.getLogger(__package__)
 
@@ -88,3 +89,38 @@ def multi_predict(sets, algo, processes=None):
     _logger.info('finished %d predict jobs', len(results))
 
     return pd.concat(results)
+
+
+def recommend(algo, model, users, n, candidates):
+    """
+    Batch-recommend for multiple users.  The provided algorithm should be a
+    :py:class:`algorithms.Recommender` or :py:class:`algorithms.Predictor` (which
+    will be converted to a top-N recommender).
+
+    Args:
+        algo: the algorithm
+        model: The algorithm model
+        users(array-like): the users to recommend for
+        n(int): the number of recommendations to generate (None for unlimited)
+        candidates:
+            the users' candidate sets. This can be a function, in which case it will
+            be passed each user ID; it can also be a dictionary, in which case user
+            IDs will be looked up in it.
+
+    Returns:
+        A frame with at least the columns ``user``, ``rank``, and ``item``; possibly also
+        ``score``, and any other columns returned by the recommender.
+    """
+
+    if isinstance(candidates, dict):
+        candidates = candidates.get
+    algo = Recommender.adapt(algo)
+
+    results = []
+    for user in users:
+        ucand = candidates(user)
+        res = algo.recommend(model, user, n, ucand)
+        iddf = pd.DataFrame({'user': user, 'rank': np.arange(1, len(res) + 1)})
+        results.append(pd.concat([iddf, res], axis='columns'))
+
+    return pd.concat(results, ignore_index=True)
