@@ -12,6 +12,12 @@ algorithms in a flexible fashion suitable for research and education.
 
 LKPY is the successor to the Java-based LensKit project.
 
+Resources
+---------
+
+- `Mailing list, etc. <https://lenskit.org/connect>`_
+- `Source and issues on GitHub <https://github.com/lenskit/lkpy>`_
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
