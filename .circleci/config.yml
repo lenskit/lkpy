@@ -6,6 +6,30 @@ dirs: &dirs
   environment:
     ML100K_DIR: ~/ml-100k
 
+build_steps: &build_steps
+  - attach_workspace:
+      at: ~/
+  - restore_cache:
+      keys:
+      - dep-eggs-py37-{{ checksum "setup.py" }}
+
+  - run:
+      name: initialize environment
+      command: |
+        python3 -m venv venv
+        . venv/bin/activate
+
+  - run:
+      name: build and test
+      command: |
+        . venv/bin/activate
+        python setup.py test
+
+  - save_cache:
+      paths:
+        - ./.eggs
+      key: dep-eggs-py37-{{ checksum "setup.py" }}  
+
 version: 2
 jobs:
   checkout:
@@ -34,7 +58,36 @@ jobs:
             - lkpy
             - ml-100k
     
-  build:
+  build-py37:
+    docker:
+      - image: circleci/python:3.7-stretch
+    <<: *dirs
+
+    steps:
+      - attach_workspace:
+        at: ~/
+      - restore_cache:
+          keys:
+          - dep-eggs-py37-{{ checksum "setup.py" }}
+
+      - run:
+          name: initialize environment
+          command: |
+            python3 -m venv venv
+            . venv/bin/activate
+
+      - run:
+          name: build and test
+          command: |
+            . venv/bin/activate
+            python setup.py test
+
+      - save_cache:
+          paths:
+            - ./.eggs
+          key: dep-eggs-py37-{{ checksum "setup.py" }}  
+
+  build-py36:
     docker:
       - image: circleci/python:3.6-stretch
     <<: *dirs
@@ -44,16 +97,16 @@ jobs:
           at: ~/
       - restore_cache:
           keys:
-          - dep-eggs-{{ checksum "setup.py" }}
+          - dep-eggs-py36-{{ checksum "setup.py" }}
 
       - run:
-          name: install dependencies
+          name: initialize environment
           command: |
             python3 -m venv venv
             . venv/bin/activate
 
       - run:
-          name: run tests
+          name: build and test
           command: |
             . venv/bin/activate
             python setup.py test
@@ -61,13 +114,89 @@ jobs:
       - save_cache:
           paths:
             - ./.eggs
-          key: dep-eggs-{{ checksum "setup.py" }}    
+          key: dep-eggs-py36-{{ checksum "setup.py" }}  
+
+  build-py35:
+    docker:
+      - image: circleci/python:3.5-stretch
+    <<: *dirs
+
+    steps:
+      - attach_workspace:
+          at: ~/
+      - restore_cache:
+          keys:
+          - dep-eggs-py35-{{ checksum "setup.py" }}
+
+      - run:
+          name: initialize environment
+          command: |
+            python3 -m venv venv
+            . venv/bin/activate
+
+      - run:
+          name: build and test
+          command: |
+            . venv/bin/activate
+            python setup.py test
+
+      - save_cache:
+          paths:
+            - ./.eggs
+          key: dep-eggs-py35-{{ checksum "setup.py" }}  
+  
+  coverage:
+    docker:
+      - image: circleci/python:3.7-stretch
+    <<: *dirs
+    steps:
+      - attach_workspace:
+        at: ~/
+
+      - restore_cache:
+          keys:
+          - coverage-tools
+
+      - restore_cache:
+          keys:
+          - dep-eggs-py37-{{ checksum "setup.py" }}
+        
+      - run:
+          name: install deps
+          command: |
+            . venv/bin/activate
+            pip install coverage pytest-cov invoke
+      
+      - run:
+          name: build for coverage
+          command: |
+            . venv/bin/activate
+            invoke build --cover
+      
+      - run:
+          name: run test coverage
+          command: |
+            . venv/bin/activate
+            invoke test --cover --no-eval --verbose
+
+      - run:
+          name: process coverage data
+          command: |
+            . venv/bin/activate
+            coverage xml
+            bash <(curl -s https://codecov.io/bash)
 
 workflows:
   version: 2
   reg_build:
     jobs:
       - checkout
-      - build:
+      - build-py37:
+          requires:
+            - checkout
+      - build-py36:
+          requires:
+            - checkout
+      - build-py35:
           requires:
             - checkout
