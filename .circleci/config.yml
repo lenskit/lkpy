@@ -131,6 +131,7 @@ jobs:
           command: |
             python3 -m venv venv
             . venv/bin/activate
+            pip install -U setuptools wheel
             pip install numpy scipy cython
 
       - run:
@@ -186,12 +187,6 @@ jobs:
           keys:
           - coverage-tools
   
-      - run:
-          name: install deps
-          command: |
-            . venv/bin/activate
-            pip install coverage pytest-cov invoke
-      
       - run:
           name: build for coverage
           command: |
