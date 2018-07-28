@@ -278,12 +278,9 @@ def test_ii_batch_accuracy():
         _log.info('testing %d users', test.user.nunique())
         return batch.predict(lambda u, xs: algo.predict(model, u, xs), test)
 
-    with lktu.envvars(OMP_NUM_THREADS='1'):
-        preds = batch.multi_predict(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)),
-                                    algo)
-    # preds = pd.concat((eval(train, test)
-    #                    for (train, test)
-    #                    in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
+    preds = pd.concat((eval(train, test)
+                       for (train, test)
+                       in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
     mae = pm.mae(preds.prediction, preds.rating)
     assert mae == approx(0.70, abs=0.025)
 
