@@ -79,8 +79,15 @@ jobs:
             . venv/bin/activate
 
       - run:
-          name: build and test
+          name: compile code
           command: |
+            . venv/bin/activate
+            python3 setup.py build
+
+      - run:
+          name: run tests
+          command: |
+            . venv/bin/activate
             python3 setup.py test
 
       - save_cache:
@@ -106,7 +113,13 @@ jobs:
             python3 -m venv venv
 
       - run:
-          name: build and test
+          name: compile code
+          command: |
+            . venv/bin/activate
+            python3 setup.py build
+
+      - run:
+          name: run tests
           command: |
             . venv/bin/activate
             python3 setup.py test
@@ -137,7 +150,13 @@ jobs:
             pip install numpy scipy cython
 
       - run:
-          name: build and test
+          name: compile code
+          command: |
+            . venv/bin/activate
+            python3 setup.py build
+
+      - run:
+          name: run tests
           command: |
             . venv/bin/activate
             python3 setup.py test
@@ -157,7 +176,13 @@ jobs:
           at: ~/
 
       - run:
-          name: build and test
+          name: compile code
+          command: |
+            source activate base
+            python3 setup.py build
+
+      - run:
+          name: run tests
           command: |
             source activate base
             python3 setup.py test
@@ -172,7 +197,13 @@ jobs:
           at: ~/
 
       - run:
-          name: build and test
+          name: compile code
+          command: |
+            source activate base
+            python3 setup.py build
+
+      - run:
+          name: run tests
           command: |
             source activate base
             python3 setup.py test
