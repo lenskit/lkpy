@@ -1,8 +1,6 @@
-{% set data = load_setup_py_data() %}
-
 package:
   name: lkpy
-  version: {{data.get('version')}}
+  version: "0.0.1"
 
 source:
   path: ../
