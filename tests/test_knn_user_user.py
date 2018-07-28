@@ -119,16 +119,15 @@ def test_uu_predict_unknown_empty():
 
 
 @mark.slow
+@mark.eval
+@mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_uu_batch_accuracy():
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch
     import lenskit.metrics.predict as pm
 
-    if not os.path.exists('ml-100k/u.data'):
-        raise pytest.skip()
-
-    ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
+    ratings = lktu.ml100k.load_ratings()
 
     uu_algo = knn.UserUser(30)
     algo = basic.Fallback(uu_algo, basic.Bias())

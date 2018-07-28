@@ -103,16 +103,14 @@ def test_fsvd_predict_bad_user():
 
 @mark.slow
 @mark.eval
+@mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_fsvd_batch_accuracy():
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch
     import lenskit.metrics.predict as pm
 
-    if not os.path.exists('ml-100k/u.data'):
-        raise pytest.skip()
-
-    ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
+    ratings = lktu.ml100k.load_ratings()
 
     svd_algo = svd.FunkSVD(25, 125, damping=10)
     algo = basic.Fallback(svd_algo, basic.Bias(damping=10))

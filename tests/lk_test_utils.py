@@ -62,6 +62,27 @@ class MLDataLoader:
         return Renamer(self)
 
 
+class _ML100K:
+    @property
+    def location(self):
+        return os.environ.get('ML100K_DIR', 'ml-100k')
+
+    @property
+    def rating_file(self):
+        return os.path.join(self.location, 'u.data')
+
+    @property
+    def available(self):
+        return os.path.exists(self.rating_file)
+
+    def load_ratings(self):
+        return pd.read_csv(self.rating_file, sep='\t',
+                           names=['user', 'item', 'rating', 'timestamp'])
+
+
+ml100k = _ML100K()
+
+
 @contextmanager
 def envvars(**vars):
     save = {}
