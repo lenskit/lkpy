@@ -58,7 +58,7 @@ class MLDataLoader:
 class _ML100K:
     @property
     def location(self):
-        return os.environ.get('ML100K_DIR', 'ml-100k')
+        return os.path.expanduser(os.environ.get('ML100K_DIR', 'ml-100k'))
 
     @property
     def rating_file(self):
