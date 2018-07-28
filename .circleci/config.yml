@@ -1,23 +1,50 @@
 # Python CircleCI 2.0 configuration file
 #
 # Check https://circleci.com/docs/2.0/language-python/ for more details
+dirs: &dirs
+  working_directory: ~/lkpy
+  environment:
+    ML100K_DIR: ~/ml-100k
+
 version: 2
 jobs:
-  build:
+  checkout:
     docker:
-      # specify the version you desire here
-      # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
       - image: circleci/python:3.6-stretch
-
-    working_directory: ~/repo
-
+    <<: *dirs
     steps:
       - checkout
-
-      # Download and cache dependencies
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "setup.py" }}
+          - ml-data
+      - run:
+          name: fetch data set
+          command: |
+            if [ ! -r ~/ml-100k/u.data ]; then
+              wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
+              unzip -d ~ ml-100k.zip
+            fi
+      - save_cache:
+          paths:
+            - ./ml-100k
+          key: ml-data
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - lkpy
+            - ml-100k
+    
+  build:
+    docker:
+      - image: circleci/python:3.6-stretch
+    <<: *dirs
+
+    steps:
+      - attach_workspace:
+          at: ~/
+      - restore_cache:
+          keys:
+          - dep-eggs-{{ checksum "setup.py" }}
 
       - run:
           name: install dependencies
@@ -34,9 +61,13 @@ jobs:
       - save_cache:
           paths:
             - ./.eggs
-          key: v1-dependencies-{{ checksum "setup.py" }}
+          key: dep-eggs-{{ checksum "setup.py" }}    
 
-      - store_artifacts:
-          path: test-reports
-          destination: test-reports
-          
+workflows:
+  version: 2
+  reg_build:
+    jobs:
+      - checkout
+      - build:
+          requires:
+            - checkout
