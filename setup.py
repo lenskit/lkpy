@@ -52,11 +52,11 @@ setup(
     author_email="michaelekstrand@boisestate.edu",
     description="Run recommender algorithms and experiments",
     url="https://lenskit.github.io/lkpy",
-    classifiers=(
+    classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
-    ),
+    ],
 
     setup_requires=[
         'pytest-runner',
