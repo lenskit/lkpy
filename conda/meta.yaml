@@ -1,16 +1,18 @@
+{% set data = load_setup_py_data() %}
+
 package:
   name: lkpy
-  version: "{{GIT_DESCRIBE_TAG}}-{{GIT_BUILD_STR}}"
+  version: {{data.get('version')}}
 
 source:
-  path: ..
+  path: ../
 
 requirements:
   build:
     - {{ compiler('c') }}
     - cython
   host:
-    - python
+    - python {{ python }}
     - setuptools
     - cython
     - numpy
