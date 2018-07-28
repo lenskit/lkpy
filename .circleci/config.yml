@@ -79,8 +79,7 @@ jobs:
       - run:
           name: build and test
           command: |
-            . venv/bin/activate
-            python setup.py test
+            python3 setup.py test
 
       - save_cache:
           paths:
@@ -103,13 +102,12 @@ jobs:
           name: initialize environment
           command: |
             python3 -m venv venv
-            . venv/bin/activate
 
       - run:
           name: build and test
           command: |
             . venv/bin/activate
-            python setup.py test
+            python3 setup.py test
 
       - save_cache:
           paths:
@@ -132,22 +130,47 @@ jobs:
           name: initialize environment
           command: |
             python3 -m venv venv
-            . venv/bin/activate
 
       - run:
           name: build and test
           command: |
             . venv/bin/activate
-            python setup.py test
+            python3 setup.py test
 
       - save_cache:
           paths:
             - ./.eggs
-          key: dep-eggs-py35-{{ checksum "setup.py" }}  
+          key: dep-eggs-py35-{{ checksum "setup.py" }}
+
+  build-conda-py37:
+    docker:
+      - image: lenskit/lkpy-build:conda-py37
+    <<: *dirs
+
+    steps:
+      - attach_workspace:
+          at: ~/
+
+      - run:
+          name: build and test
+          command: python3 setup.py test
+
+  build-conda-py36:
+    docker:
+      - image: lenskit/lkpy-build:conda-py36
+    <<: *dirs
+
+    steps:
+      - attach_workspace:
+          at: ~/
+
+      - run:
+          name: build and test
+          command: python3 setup.py test
   
   coverage:
     docker:
-      - image: circleci/python:3.7-stretch
+      - image: lenskit/lkpy-build:conda-py37
     <<: *dirs
     steps:
       - attach_workspace:
@@ -156,11 +179,7 @@ jobs:
       - restore_cache:
           keys:
           - coverage-tools
-
-      - restore_cache:
-          keys:
-          - dep-eggs-py37-{{ checksum "setup.py" }}
-        
+  
       - run:
           name: install deps
           command: |
@@ -191,15 +210,18 @@ workflows:
   reg_build:
     jobs:
       - checkout
-      - build-py37:
-          requires:
-            - checkout
       - build-py36:
           requires:
             - checkout
       - build-py35:
           requires:
             - checkout
+      - build-conda-py37:
+          requires:
+            - checkout
+      - build-conda-py36:
+          requires:
+            - checkout
       - coverage:
           requires:
-            - build-py37
+            - build-conda-py37
