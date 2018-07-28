@@ -131,7 +131,7 @@ jobs:
           command: |
             python3 -m venv venv
             . venv/bin/activate
-            pip install numpy cython
+            pip install numpy scipy cython
 
       - run:
           name: build and test
