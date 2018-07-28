@@ -200,3 +200,6 @@ workflows:
       - build-py35:
           requires:
             - checkout
+      - coverage:
+          requires:
+            - build-py37
