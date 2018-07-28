@@ -80,7 +80,7 @@ setup(
     description="Run recommender algorithms and experiments",
     long_description=readme,
     long_description_content_type='text/markdown',
-    url="https://lenskit.github.io/lkpy",
+    url="https://lkpy.lenskit.org",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
