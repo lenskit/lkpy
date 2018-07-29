@@ -4,11 +4,11 @@
 [![codecov](https://codecov.io/gh/lenskit/lkpy/branch/master/graph/badge.svg)](https://codecov.io/gh/lenskit/lkpy)
 [![Maintainability](https://api.codeclimate.com/v1/badges/c02098c161112e19c148/maintainability)](https://codeclimate.com/github/lenskit/lkpy/maintainability)
 
-LKPY is a set of Python tools for experimenting with and studying recommender
+LensKit is a set of Python tools for experimenting with and studying recommender
 systems.  It provides support for training, running, and evaluating recommender
 algorithms in a flexible fashion suitable for research and education.
 
-LKPY is the successor to the Java-based LensKit project.
+Python LensKit (LKPY) is the successor to the Java-based LensKit project.
 
 ## Resources
 

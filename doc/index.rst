@@ -3,14 +3,15 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-LKPY
+LensKit
 ===================================
 
-LKPY is a set of Python tools for experimenting with and studying recommender
+LensKit is a set of Python tools for experimenting with and studying recommender
 systems.  It provides support for training, running, and evaluating recommender
 algorithms in a flexible fashion suitable for research and education.
 
-LKPY is the successor to the Java-based LensKit project.
+LensKit for Python (also known as LKPY) is the successor to the Java-based LensKit
+project.
 
 Resources
 ---------
