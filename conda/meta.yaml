@@ -34,4 +34,4 @@ test:
     - pytest
     - pytest-arraydiff
   commands:
-    - python3 -m pytest tests
+    - pytest tests
