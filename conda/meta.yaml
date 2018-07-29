@@ -1,0 +1,37 @@
+package:
+  name: lenskit
+  version: "0.1.0a"
+
+source:
+  path: ../
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - cython
+  host:
+    - python {{ python }}
+    - setuptools
+    - pytest-runner
+    - cython
+    - pandas
+    - numpy
+    - scipy
+    - pytables
+  run:
+    - python
+    - pandas
+    - scipy
+    - pytables
+
+test:
+  source_files:
+    - tests
+    - tests/*.py
+    - ml-latest-small
+    - ml-latest-small/*.csv
+  requires:
+    - pytest
+    - pytest-arraydiff
+  commands:
+    - pytest tests
