@@ -27,7 +27,9 @@ requirements:
 test:
   files:
     - tests
+    - tests/*.py
     - ml-latest-small
+    - ml-latest-small/*.csv
   requires:
     - pytest
     - pytest-arraydiff
