@@ -21,14 +21,18 @@ else:
         return numpy.get_include()
 
 
-if sys.platform == 'win32':
-    # MSVC - we do not yet support mingw or clang
-    openmp_cflags = ['/openmp']
-    openmp_lflags = []
+if os.environ.get('USE_OPENMP', 'yes') == 'yes':
+    if sys.platform == 'win32':
+        # MSVC - we do not yet support mingw or clang
+        openmp_cflags = ['/openmp']
+        openmp_lflags = []
+    else:
+        # assume we are using GCC or compatible
+        openmp_cflags = ['-fopenmp']
+        openmp_lflags = ['-fopenmp']
 else:
-    # assume we are using GCC or compatible
-    openmp_cflags = ['-fopenmp']
-    openmp_lflags = ['-fopenmp']
+    openmp_cflags = []
+    openmp_lflags = []
 
 debug_cflags = []
 cython_opts = {}
