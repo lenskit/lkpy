@@ -28,6 +28,10 @@ To use the latest development version, install directly from GitHub::
 
     pip install git+https://github.com/lenskit/lkpy
 
+Then see `Getting Started`_.
+
+.. _`Getting Started`: quickstart.html
+
 Resources
 ---------
 
@@ -38,6 +42,7 @@ Resources
    :maxdepth: 2
    :caption: Contents:
 
+   quickstart
    crossfold
    batch
    algorithms
