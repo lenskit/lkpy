@@ -25,7 +25,7 @@ requirements:
     - pytables
 
 test:
-  files:
+  source_files:
     - tests
     - tests/*.py
     - ml-latest-small
