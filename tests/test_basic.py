@@ -155,6 +155,29 @@ def test_popular():
     assert all(counts.index[:10] == recs.item[:10])
 
 
+def test_pop_candidates():
+    algo = basic.Popular()
+    model = algo.train(lktu.ml_pandas.renamed.ratings)
+    counts = lktu.ml_pandas.renamed.ratings.groupby('item').user.count()
+    items = lktu.ml_pandas.renamed.ratings.item.unique()
+
+    assert model is not None
+    assert model.max() == counts.max()
+
+    candidates = np.random.choice(items, 500, replace=False)
+
+    recs = algo.recommend(model, 2038, 100, candidates)
+    assert len(recs) == 100
+    assert all(np.diff(recs.score) <= 0)
+
+    ccs = counts.loc[candidates]
+    ccs = ccs.sort_values(ascending=False)
+
+    assert recs.score.iloc[0] == ccs.max()
+    equiv = ccs[ccs == ccs.max()]
+    assert recs.item.iloc[0] in equiv.index
+
+
 def test_pop_save_load(tmpdir):
     algo = basic.Popular()
     original = algo.train(lktu.ml_pandas.renamed.ratings)
