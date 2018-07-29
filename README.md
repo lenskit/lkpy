@@ -10,6 +10,20 @@ algorithms in a flexible fashion suitable for research and education.
 
 Python LensKit (LKPY) is the successor to the Java-based LensKit project.
 
+## Installing
+
+To install the current release with Anaconda (recommended):
+
+    conda install -c lenskit lenskit
+
+Or you can use `pip`:
+
+    pip install lenskit
+
+To use the latest development version, install directly from GitHub:
+
+    pip install git+https://github.com/lenskit/lkpy
+
 ## Resources
 
 - [Documentation](https://lkpy.lenskit.org)
