@@ -1,0 +1,17 @@
+version: 0.1.0.{build}
+pull_requests:
+  do_not_increment_build_number: true
+init:
+- cmd: >-
+    C:\Miniconda36-x64\Scripts\activate.bat base
+
+    conda config --set always_yes yes
+install:
+- cmd: >-
+    conda install pandas scipy pytables cython
+
+    conda install pytest pytest-arraydiff pytest-xdist invoke
+build_script:
+- cmd: python setup.py build
+test_script:
+- cmd: python setup.py test
