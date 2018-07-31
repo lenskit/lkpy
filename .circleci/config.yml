@@ -8,30 +8,6 @@ dirs: &dirs
     OMP_NUM_THREADS: 2
     LK_PROCESS_COUNT: 2
 
-build_steps: &build_steps
-  - attach_workspace:
-      at: ~/
-  - restore_cache:
-      keys:
-      - dep-eggs-py37-{{ checksum "setup.py" }}
-
-  - run:
-      name: initialize environment
-      command: |
-        python3 -m venv venv
-        . venv/bin/activate
-
-  - run:
-      name: build and test
-      command: |
-        . venv/bin/activate
-        python setup.py test
-
-  - save_cache:
-      paths:
-        - ./.eggs
-      key: dep-eggs-py37-{{ checksum "setup.py" }}  
-
 version: 2
 jobs:
   checkout:
