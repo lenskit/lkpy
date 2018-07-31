@@ -235,8 +235,8 @@ jobs:
             fi
             source ~/miniconda/bin/activate base
             conda config --set always_yes yes --set changeps1 no
-            conda update --all
-            conda install pandas scipy cython pytables pytest pytest-arraydiff clang_osx-64
+            conda update -q --all
+            conda install -q pandas scipy cython pytables pytest pytest-arraydiff clang_osx-64
 
       - save_cache:
           paths: 
