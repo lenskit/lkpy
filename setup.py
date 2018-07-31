@@ -20,8 +20,12 @@ else:
         import numpy
         return numpy.get_include()
 
+# configure OpenMP
+use_openmp = os.environ.get('USE_OPENMP', 'yes').lower() == 'yes'
+if sys.platform == 'darwin' and 'USE_OPENMP' not in os.environ:
+    use_openmp = False
 
-if os.environ.get('USE_OPENMP', 'yes') == 'yes':
+if use_openmp:
     if sys.platform == 'win32':
         # MSVC - we do not yet support mingw or clang
         openmp_cflags = ['/openmp']
@@ -34,6 +38,7 @@ else:
     openmp_cflags = []
     openmp_lflags = []
 
+# Configure build flags
 debug_cflags = []
 cython_opts = {}
 if 'COVERAGE' in os.environ:
