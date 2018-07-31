@@ -2,23 +2,22 @@ import sys
 import os
 from setuptools import setup, find_packages
 from distutils.extension import Extension
+import warnings
 
+# get the numpy path
+try:
+    import numpy
+    numpy_path = [numpy.get_include()]
+except ImportError:
+    warnings.warn('NumPy not available, compilation may fail')
+    numpy_path = []
 
-# Set up to lazily resolve the NumPy include path
-# On supported systems (python >= 3.6), this will enable setup_requires to work well
-if hasattr(os, 'PathLike'):
-    class LazyNPPath(os.PathLike):
-        "NumPy include path, but evaluated lazily"
-        def __fspath__(self):
-            import numpy
-            return numpy.get_include()
-
-        def __str__(self):
-            return self.__fspath__()
-else:
-    def LazyNPPath():
-        import numpy
-        return numpy.get_include()
+try:
+    from Cython.Build import cythonize as _cythonize
+except ImportError:
+    warnings.warn('cython not available, cannot build until reload')
+    def _cythonize(mods):
+        return mods
 
 # configure OpenMP
 use_openmp = os.environ.get('USE_OPENMP', 'yes').lower() == 'yes'
@@ -56,26 +55,21 @@ def extmod(name, openmp=False, cflags=[], ldflags=[]):
     parts = name.split('.')
     parts[-1] += '.pyx'
     path = os.path.join(*parts)
-    return Extension(name, [path], include_dirs=[LazyNPPath()],
+    return Extension(name, [path], include_dirs=numpy_path,
                      extra_compile_args=comp_args,
                      extra_link_args=link_args)
 
 
-def maybe_cythonize(mods):
+def cythonize(mods):
     "Pre-Cythonize modules if feasible"
-    try:
-        from Cython.Build import cythonize
-    except ImportError:
-        # use distutils' built-in Cythonization
-        return mods
 
     # we have Cython! pre-cythonize so we can set options
-    return cythonize(mods, compiler_directives={
+    return _cythonize(mods, compiler_directives={
         'warn.undeclared': True,
         'warn.unused': True,
         'warn.maybe_uninitialized': True,
-        **cython_opts
-    })
+        **cython_opts,
+    }, compile_time_env={'OPENMP': use_openmp})
 
 
 with open('README.md', 'r') as fh:
@@ -116,8 +110,8 @@ setup(
     ],
 
     packages=find_packages(),
-    ext_modules=[
+    ext_modules=cythonize([
         extmod('lenskit.algorithms._item_knn', openmp=True),
         extmod('lenskit.algorithms._funksvd')
-    ]
+    ])
 )

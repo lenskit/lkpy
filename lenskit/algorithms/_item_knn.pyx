@@ -7,8 +7,15 @@ cimport numpy as np
 from cython.parallel cimport parallel, prange, threadid
 from libc.stdlib cimport malloc, free, realloc, abort, calloc
 from libc.math cimport isnan
-from openmp cimport omp_get_thread_num, omp_get_num_threads
 import logging
+
+IF OPENMP:
+    from openmp cimport omp_get_thread_num, omp_get_num_threads
+ELSE:
+    cdef int omp_get_thread_num():
+        return -1
+    cdef int omp_get_num_threads():
+        return 0
 
 cdef _logger = logging.getLogger('_item_knn')
 
@@ -200,10 +207,11 @@ cpdef sim_matrix(BuildContext context, double threshold, int nnbrs):
 
     with nogil, parallel():
         tres = tr_new(context.n_items)
-        with gil:
-            _logger.debug('thread %d/%d: starting with context 0x%x',
-                          omp_get_thread_num(), omp_get_num_threads(),
-                          <unsigned long> tres)
+        IF OPENMP:
+            with gil:
+                _logger.debug('thread %d/%d: starting with context 0x%x',
+                            omp_get_thread_num(), omp_get_num_threads(),
+                            <unsigned long> tres)
         
         for i in prange(context.n_items, schedule='dynamic', chunksize=10):
             train_row(i, tres, context, threshold, nnbrs)

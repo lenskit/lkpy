@@ -123,7 +123,7 @@ jobs:
             python3 -m venv venv
             . venv/bin/activate
             pip install -U setuptools wheel
-            pip install numpy scipy cython
+            # pip install numpy scipy cython
 
       - run:
           name: compile code
