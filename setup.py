@@ -16,7 +16,7 @@ try:
     from Cython.Build import cythonize as _cythonize
 except ImportError:
     warnings.warn('cython not available, cannot build until reload')
-    def _cythonize(mods):
+    def _cythonize(mods, *args, **kwargs):
         return mods
 
 # configure OpenMP
