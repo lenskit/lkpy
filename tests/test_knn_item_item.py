@@ -139,7 +139,7 @@ def test_ii_large_models():
     assert all(model_lim.sim_matrix.data < 1 + 1.0e-6)
 
     means = ml_ratings.groupby('item').rating.mean()
-    assert means[model_lim.items].values == approx(model_lim.means)
+    assert means[model_lim.items].values == approx(model_lim.means.values)
 
     model_ub = model_ub.result()
     _log.info('completed unbounded train')
@@ -150,7 +150,7 @@ def test_ii_large_models():
     assert all(model_ub.sim_matrix.data < 1 + 1.0e-6)
 
     means = ml_ratings.groupby('item').rating.mean()
-    assert means[model_ub.items].values == approx(model_ub.means)
+    assert means[model_ub.items].values == approx(model_ub.means.values)
 
     mc_rates = ml_ratings.set_index('item')\
                          .join(pd.DataFrame({'item_mean': means}))\
