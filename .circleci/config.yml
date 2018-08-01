@@ -224,8 +224,13 @@ jobs:
     
     steps:
       - checkout
+      - run:
+          name: lookup conda versions
+          command: /usr/bin/python .circleci/file-versions.py >.circleci/file-versions.txt
+
       - restore_cache:
-          key: miniconda-osx
+          key: v1-miniconda-osx-{{checksumk ".circleci/file-versions.txt"}}
+          
       - run:
           name: install miniconda
           command: |
@@ -242,7 +247,7 @@ jobs:
       - save_cache:
           paths: 
             - ~/miniconda
-          key: miniconda-osx
+          key: v1-miniconda-osx-{{checksumk ".circleci/file-versions.txt"}}
       
       - run:
           name: build modules
