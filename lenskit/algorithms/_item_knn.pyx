@@ -9,6 +9,8 @@ from libc.stdlib cimport malloc, free, realloc, abort, calloc
 from libc.math cimport isnan
 import logging
 
+from lenskit cimport _cy_util as lku
+
 IF OPENMP:
     from openmp cimport omp_get_thread_num, omp_get_num_threads
 ELSE:
@@ -121,71 +123,31 @@ cdef void tr_add_all(ThreadState* self, int item, size_t nitems,
 
         self.size = self.size + 1
 
-cdef void ind_upheap(int pos, int len, int* keys, double* values) nogil:
-    cdef int current, parent, kt
-    current = pos
-    parent = (current - 1) // 2
-    while current > 0 and values[keys[parent]] > values[keys[current]]:
-        # swap up
-        kt = keys[parent]
-        keys[parent] = keys[current]
-        keys[current] = kt
-        current = parent
-        parent = (current - 1) // 2
-
-cdef void ind_downheap(int pos, int len, int* keys, double* values) nogil:
-    cdef int left, right, min, kt
-    min = pos
-    left = 2*pos + 1
-    right = 2*pos + 2
-    if left < len and values[keys[left]] < values[keys[min]]:
-        min = left
-    if right < len and values[keys[right]] < values[keys[min]]:
-        min = right
-    if min != pos:
-        kt = keys[min]
-        keys[min] = keys[pos]
-        keys[pos] = kt
-        ind_downheap(min, len, keys, values)
 
 cdef void tr_add_nitems(ThreadState* self, int item, size_t nitems,
                         double threshold, int nmax) nogil:
     cdef int* keys
     cdef int j, kn, ki
     cdef np.int64_t nbr
-    keys = <int*> calloc(nmax + 1, sizeof(int))
+    cdef lku.AccHeap* acc = lku.ah_create(self.work, nmax)
     
     tr_ensure_capacity(self, self.size + nmax)
 
     kn = 0
     for j in range(nitems):
         if self.work[j] < threshold: continue
-        
-        ki = kn
-        keys[ki] = j
-        ind_upheap(ki, kn, keys, self.work)
 
-        if kn < nmax:
-            kn = kn + 1
-        else:
-            # we just added the (nmax+1)th thing
-            # drop the smallest of our nmax largest
-            keys[0] = keys[kn]
-            ind_downheap(0, kn, keys, self.work)
+        lku.ah_add(acc, j)
 
     # now that we have the heap built, let us unheap!
-    while kn > 0:
-        nbr = keys[0]
+    while acc.size > 0:
+        nbr = lku.ah_remove(acc)
         self.items[self.size] = item
         self.nbrs[self.size] = nbr
         self.sims[self.size] = self.work[nbr]
         self.size = self.size + 1
-        keys[0] = keys[kn - 1]
-        kn = kn - 1
-        if kn > 0:
-            ind_downheap(0, kn, keys, self.work)
 
-    free(keys)
+    lku.ah_free(acc)
 
 
 cdef dict tr_results(ThreadState* self):
@@ -226,6 +188,7 @@ cpdef sim_matrix(BuildContext context, double threshold, int nnbrs):
     _logger.debug('stacking %d neighborhood frames', len(neighborhoods))
     return pd.concat([pd.DataFrame(d) for d in neighborhoods],
                      ignore_index=True)
+
 
 cdef void train_row(int item, ThreadState* tres, BuildContext context,
                     double threshold, int nnbrs) nogil:
