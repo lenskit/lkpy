@@ -4,6 +4,8 @@ Miscellaneous utility functions.
 
 import time
 
+from ._cy_util import Accumulator
+
 
 class Stopwatch():
     start_time = None

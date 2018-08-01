@@ -26,8 +26,8 @@ def build(c, cover=False):
     ldir = Path('build/lib.%s-%d.%d' % (du.get_platform(), *sys.version_info[:2]))
     files = set()
     for ext in importlib.machinery.EXTENSION_SUFFIXES:
-        files |= set(ldir.glob('lenskit/*/*' + ext))
-    files |= set(ldir.glob('lenskit/*/*.pdb'))
+        files |= set(ldir.glob('lenskit/**/*' + ext))
+    files |= set(ldir.glob('lenskit/**/*.pdb'))
     for pyd in files:
         path = pyd.relative_to(ldir)
         if not path.exists() or pyd.stat().st_mtime > path.stat().st_mtime:

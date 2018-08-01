@@ -15,7 +15,6 @@ def _finalize_options(self):
 
     self.distribution.ext_modules[:] = cythonize(
         self.distribution.ext_modules,
-        nthreads=1,
         compile_time_env={'OPENMP': use_openmp},
         compiler_directives={
             'warn.undeclared': True,
@@ -107,6 +106,7 @@ setup(
 
     packages=find_packages(),
     ext_modules=[
+        extmod('lenskit._cy_util'),
         extmod('lenskit.algorithms._item_knn', openmp=True),
         extmod('lenskit.algorithms._funksvd')
     ]
