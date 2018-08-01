@@ -1,23 +1,31 @@
 import sys
 import os
 from setuptools import setup, find_packages
+from setuptools.command.build_ext import build_ext
 from distutils.extension import Extension
-import warnings
 
-# get the numpy path
-try:
+# monkey-patch build_ext
+__build_ext_finalize = build_ext.finalize_options
+def _finalize_options(self):
+    from Cython.Build import cythonize
     import numpy
-    numpy_path = [numpy.get_include()]
-except ImportError:
-    warnings.warn('NumPy not available, compilation may fail')
-    numpy_path = []
 
-try:
-    from Cython.Build import cythonize as _cythonize
-except ImportError:
-    warnings.warn('cython not available, cannot build until reload')
-    def _cythonize(mods, *args, **kwargs):
-        return mods
+    for mod in self.distribution.ext_modules:
+        mod.include_dirs.append(numpy.get_include())
+
+    self.distribution.ext_modules[:] = cythonize(
+        self.distribution.ext_modules,
+        nthreads=1,
+        compile_time_env={'OPENMP': use_openmp},
+        compiler_directives={
+            'warn.undeclared': True,
+            'warn.unused': True,
+            'warn.maybe_uninitialized': True,
+            **cython_opts,
+        }
+    )
+    __build_ext_finalize(self)
+build_ext.finalize_options = _finalize_options
 
 # configure OpenMP
 use_openmp = os.environ.get('USE_OPENMP', 'yes').lower() == 'yes'
@@ -55,21 +63,9 @@ def extmod(name, openmp=False, cflags=[], ldflags=[]):
     parts = name.split('.')
     parts[-1] += '.pyx'
     path = os.path.join(*parts)
-    return Extension(name, [path], include_dirs=numpy_path,
+    return Extension(name, [path],
                      extra_compile_args=comp_args,
                      extra_link_args=link_args)
-
-
-def cythonize(mods):
-    "Pre-Cythonize modules if feasible"
-
-    # we have Cython! pre-cythonize so we can set options
-    return _cythonize(mods, compiler_directives={
-        'warn.undeclared': True,
-        'warn.unused': True,
-        'warn.maybe_uninitialized': True,
-        **cython_opts,
-    }, compile_time_env={'OPENMP': use_openmp})
 
 
 with open('README.md', 'r') as fh:
@@ -110,8 +106,8 @@ setup(
     ],
 
     packages=find_packages(),
-    ext_modules=cythonize([
+    ext_modules=[
         extmod('lenskit.algorithms._item_knn', openmp=True),
         extmod('lenskit.algorithms._funksvd')
-    ])
+    ]
 )
