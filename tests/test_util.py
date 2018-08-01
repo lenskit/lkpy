@@ -13,7 +13,7 @@ def test_stopwatch_instant():
 def test_stopwatch_sleep():
     w = lku.Stopwatch()
     time.sleep(0.5)
-    assert w.elapsed() == approx(0.5, abs=0.05)
+    assert w.elapsed() == approx(0.5, abs=0.075)
 
 
 def test_stopwatch_stop():
@@ -21,7 +21,7 @@ def test_stopwatch_stop():
     time.sleep(0.5)
     w.stop()
     time.sleep(0.5)
-    assert w.elapsed() == approx(0.5, abs=0.05)
+    assert w.elapsed() == approx(0.5, abs=0.075)
 
 
 def test_stopwatch_str():
