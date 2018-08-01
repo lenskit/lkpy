@@ -244,7 +244,7 @@ def test_ii_save_load(tmpdir):
     assert model.sim_matrix.data == approx(original.sim_matrix.data)
 
     means = ml_ratings.groupby('item').rating.mean()
-    assert means[model.items].values == approx(original.means)
+    assert means[model.items].values == approx(original.means.values)
 
     items = pd.Series(model.items)
     items = items[model.counts > 0]
