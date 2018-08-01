@@ -237,6 +237,7 @@ jobs:
             conda config --set always_yes yes --set changeps1 no
             conda update -q --all
             conda install -q pandas scipy cython pytables pytest pytest-arraydiff clang_osx-64
+            conda clean -tp
 
       - save_cache:
           paths: 
