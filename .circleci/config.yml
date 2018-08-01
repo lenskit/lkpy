@@ -229,7 +229,7 @@ jobs:
       - run:
           name: install miniconda
           command: |
-            if [ ! -x $HOME/miniconda3/bin/conda ]; then
+            if [ ! -x $HOME/miniconda/bin/conda ]; then
               curl -o $HOME/miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
               /bin/bash "$HOME/miniconda.sh" -b -p "$HOME/miniconda"
             fi
