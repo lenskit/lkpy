@@ -177,30 +177,11 @@ class ItemItem(Trainable, Predictor):
         # scratch result array
         iscore = np.full(len(model.items), np.nan, dtype=np.float_)
 
-        # now compute each prediction
-        for i in range(len(i_pos)):
-            ipos = i_pos[i]
-
-            row = model.sim_matrix.getrow(ipos)
-            nbr_mask = np.isin(row.indices, ri_pos)
-            nbr_is = row.indices[nbr_mask]
-            nbr_vs = row.data[nbr_mask]
-            if self.min_neighbors and len(nbr_is) < self.min_neighbors:
-                continue
-            if self.max_neighbors and len(nbr_is) > self.max_neighbors:
-                # slice, since we sorted the row by value in training
-                nbr_is = nbr_is[:self.max_neighbors]
-                nbr_vs = nbr_vs[:self.max_neighbors]
-
-            # look up ratings by position!
-            n_rates = rate_v[nbr_is]
-            assert len(n_rates) == len(nbr_vs)
-            weights = nbr_vs
-            if self.min_similarity is None or self.min_similarity < 0:
-                # might need to make weights absolute
-                weights = np.abs(weights)
-
-            iscore[ipos] = np.dot(nbr_vs, n_rates) / np.sum(nbr_vs)
+        # now compute the predictions
+        accel.predict(model.sim_matrix, len(model.items),
+                      self.min_neighbors if self.min_neighbors else 0,
+                      self.max_neighbors if self.max_neighbors else -1,
+                      rate_v, i_pos, iscore)
 
         nscored = np.sum(np.logical_not(np.isnan(iscore)))
         iscore += model.means

@@ -4,8 +4,10 @@ import array
 import pandas as pd
 import numpy as np
 cimport numpy as np
+from numpy cimport math as npm
 from cython.parallel cimport parallel, prange, threadid
 from libc.stdlib cimport malloc, free, realloc, abort, calloc
+from libc.math cimport isnan, fabs
 import logging
 
 from lenskit cimport _cy_util as lku
@@ -221,3 +223,41 @@ cdef void train_row(int item, ThreadState* tres, BuildContext context,
         tr_add_nitems(tres, item, context.n_items, threshold, nnbrs)
     else:
         tr_add_all(tres, item, context.n_items, threshold)
+
+
+cpdef void predict(matrix, int nitems, int min_nbrs, int max_nbrs,
+                   np.float_t[:] ratings,
+                   np.int64_t[:] targets,
+                   np.float_t[:] scores):
+    cdef int[:] indptr = matrix.indptr
+    cdef int[:] indices = matrix.indices
+    cdef double[:] similarity = matrix.data
+    cdef int i, j, iidx, rptr, rend, nidx, nnbrs
+    cdef double num, denom
+
+    with nogil:
+        for i in range(targets.shape[0]):
+            iidx = targets[i]
+            rptr = indptr[iidx]
+            rend = indptr[iidx + 1]
+
+            num = 0
+            denom = 0
+            nnbrs = 0
+            
+            for j in range(rptr, rend):
+                nidx = indices[j]
+                if isnan(ratings[nidx]):
+                    continue
+                
+                nnbrs = nnbrs + 1
+                num = num + ratings[nidx] * similarity[j]
+                denom = denom + fabs(similarity[j])
+
+                if max_nbrs > 0 and nnbrs >= max_nbrs:
+                    break
+                
+            if nnbrs < min_nbrs:
+                break
+            
+            scores[iidx] = num / denom
