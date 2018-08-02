@@ -62,7 +62,7 @@ cdef class Accumulator:
         else:
             self.heap = ah_create(NULL, nmax)
     
-    def __del__(self):
+    def __dealloc__(self):
         ah_free(self.heap)
 
     def __len__(self):
