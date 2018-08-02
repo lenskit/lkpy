@@ -40,6 +40,9 @@ def test_ii_train():
     model = algo.train(simple_ratings)
 
     assert model is not None
+    assert isinstance(model.items, pd.Index)
+    assert isinstance(model.means, np.ndarray)
+    assert isinstance(model.counts, np.ndarray)
 
     # 6 is a neighbor of 7
     six, seven = model.items.get_indexer([6, 7])
@@ -139,7 +142,7 @@ def test_ii_large_models():
     assert all(model_lim.sim_matrix.data < 1 + 1.0e-6)
 
     means = ml_ratings.groupby('item').rating.mean()
-    assert means[model_lim.items].values == approx(model_lim.means.values)
+    assert means[model_lim.items].values == approx(model_lim.means)
 
     model_ub = model_ub.result()
     _log.info('completed unbounded train')
@@ -150,7 +153,7 @@ def test_ii_large_models():
     assert all(model_ub.sim_matrix.data < 1 + 1.0e-6)
 
     means = ml_ratings.groupby('item').rating.mean()
-    assert means[model_ub.items].values == approx(model_ub.means.values)
+    assert means[model_ub.items].values == approx(model_ub.means)
 
     mc_rates = ml_ratings.set_index('item')\
                          .join(pd.DataFrame({'item_mean': means}))\
@@ -244,7 +247,7 @@ def test_ii_save_load(tmpdir):
     assert model.sim_matrix.data == approx(original.sim_matrix.data)
 
     means = ml_ratings.groupby('item').rating.mean()
-    assert means[model.items].values == approx(original.means.values)
+    assert means[model.items].values == approx(original.means)
 
     items = pd.Series(model.items)
     items = items[model.counts > 0]
