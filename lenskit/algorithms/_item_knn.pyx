@@ -194,8 +194,7 @@ cdef void train_row(int item, ThreadState* tres, BuildContext context,
     cdef int j, u, uidx, iidx, nbr, urp
     cdef double ur = 0
 
-    for j in range(context.n_items):
-        tres.work[j] = 0
+    lku.zero(tres.work, context.n_items)
 
     for uidx in range(context.r_iptrs[item], context.r_iptrs[item+1]):
         u = context.r_users[uidx]

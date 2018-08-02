@@ -1,5 +1,6 @@
 import numpy as np
 cimport numpy as np
+cimport scipy.linalg.cython_blas as blas
 
 from libc.stdlib cimport malloc, free
 
@@ -109,3 +110,12 @@ cdef void ind_downheap(int pos, int len, int* keys, double* values) nogil:
         keys[min] = keys[pos]
         keys[pos] = kt
         ind_downheap(min, len, keys, values)
+
+
+cdef void zero(double* vals, int n) nogil:
+    for i in range(n):
+        vals[i] = 0
+
+cpdef zero_buf(double[::1] buf):
+    if buf.shape[0] > 0:
+        zero(&buf[0], buf.shape[0])
