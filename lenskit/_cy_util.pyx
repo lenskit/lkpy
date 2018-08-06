@@ -113,6 +113,7 @@ cdef void ind_downheap(int pos, int len, int* keys, double* values) nogil:
 
 
 cdef void zero(double* vals, int n) nogil:
+    cdef int i
     for i in range(n):
         vals[i] = 0
 
