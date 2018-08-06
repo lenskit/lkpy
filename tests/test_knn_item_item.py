@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
 import numpy as np
+from scipy import linalg as la
 
 import pytest
 from pytest import approx, mark
@@ -47,6 +48,15 @@ def test_ii_train():
     # 6 is a neighbor of 7
     six, seven = model.items.get_indexer([6, 7])
     assert model.sim_matrix[six, seven] > 0
+    # and has the correct score
+    six_v = simple_ratings[simple_ratings.item == 6].set_index('user').rating
+    six_v = six_v - six_v.mean()
+    seven_v = simple_ratings[simple_ratings.item == 7].set_index('user').rating
+    seven_v = seven_v - seven_v.mean()
+    denom = la.norm(six_v.values) * la.norm(seven_v.values)
+    six_v, seven_v = six_v.align(seven_v, join='inner')
+    num = six_v.dot(seven_v)
+    assert model.sim_matrix[six, seven] == approx(num / denom, 0.01)
 
     assert all(np.logical_not(np.isnan(model.sim_matrix.data)))
     assert all(model.sim_matrix.data > 0)
@@ -68,6 +78,16 @@ def test_ii_train_unbounded():
     # 6 is a neighbor of 7
     six, seven = model.items.get_indexer([6, 7])
     assert model.sim_matrix[six, seven] > 0
+
+    # and has the correct score
+    six_v = simple_ratings[simple_ratings.item == 6].set_index('user').rating
+    six_v = six_v - six_v.mean()
+    seven_v = simple_ratings[simple_ratings.item == 7].set_index('user').rating
+    seven_v = seven_v - seven_v.mean()
+    denom = la.norm(six_v.values) * la.norm(seven_v.values)
+    six_v, seven_v = six_v.align(seven_v, join='inner')
+    num = six_v.dot(seven_v)
+    assert model.sim_matrix[six, seven] == approx(num / denom, 0.01)
 
 
 def test_ii_simple_predict():
