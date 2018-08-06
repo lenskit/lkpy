@@ -154,13 +154,16 @@ cdef void tr_add_nitems(ThreadState* self, int item, size_t nitems,
 cdef dict tr_results(ThreadState* self):
     cdef np.npy_intp size = self.size
     cdef np.ndarray items, nbrs, sims
-    items = np.asarray(<np.int32_t[:self.size]> self.items)
-    nbrs = np.asarray(<np.int32_t[:self.size]> self.nbrs)
-    sims = np.asarray(<np.float_t[:self.size]> self.sims)
+    items = np.empty(size, dtype=np.int32)
+    nbrs = np.empty(size, dtype=np.int32)
+    sims = np.empty(size, dtype=np.float_)
+    items[:] = <np.int32_t[:self.size]> self.items
+    nbrs[:] = <np.int32_t[:self.size]> self.nbrs
+    sims[:] = <np.float_t[:self.size]> self.sims
     # items = np.PyArray_SimpleNewFromData(1, &size, np.NPY_INT32, self.items)
     # nbrs = np.PyArray_SimpleNewFromData(1, &size, np.NPY_INT32, self.nbrs)
     # sims = np.PyArray_SimpleNewFromData(1, &size, np.NPY_DOUBLE, self.sims)
-    return {'item': items.copy(), 'neighbor': nbrs.copy(), 'similarity': sims.copy()}
+    return {'item': items, 'neighbor': nbrs, 'similarity': sims}
 
 
 cpdef sim_matrix(BuildContext context, double threshold, int nnbrs):
