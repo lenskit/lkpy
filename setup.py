@@ -27,22 +27,29 @@ def _finalize_options(self):
 build_ext.finalize_options = _finalize_options
 
 # configure OpenMP
-use_openmp = os.environ.get('USE_OPENMP', 'yes').lower() == 'yes'
+use_openmp = os.environ.get('USE_OPENMP', 'yes').lower()
+if use_openmp == 'no':
+    use_openmp = False
+elif use_openmp == 'yes':
+    use_openmp = True
 if sys.platform == 'darwin' and 'USE_OPENMP' not in os.environ:
     use_openmp = False
 
+
+openmp_cflags = []
+openmp_lflags = []
+openmp_libs = []
 if use_openmp:
     if sys.platform == 'win32':
         # MSVC - we do not yet support mingw or clang
         openmp_cflags = ['/openmp']
-        openmp_lflags = []
+    elif use_openmp == 'intel':
+        openmp_cflags = ['-fopenmp']
+        openmp_libs = ['iomp5', 'pthread']
     else:
         # assume we are using GCC or compatible
         openmp_cflags = ['-fopenmp']
         openmp_lflags = ['-fopenmp']
-else:
-    openmp_cflags = []
-    openmp_lflags = []
 
 # Configure build flags
 debug_cflags = []
@@ -56,15 +63,18 @@ def extmod(name, openmp=False, cflags=[], ldflags=[]):
     "Create an extension object for one of our extension modules."
     comp_args = cflags + debug_cflags
     link_args = list(ldflags)
+    libs = []
     if openmp:
         comp_args += openmp_cflags
         link_args += openmp_lflags
+        libs += openmp_libs
     parts = name.split('.')
     parts[-1] += '.pyx'
     path = os.path.join(*parts)
     return Extension(name, [path],
                      extra_compile_args=comp_args,
-                     extra_link_args=link_args)
+                     extra_link_args=link_args,
+                     libraries=libs)
 
 
 with open('README.md', 'r') as fh:
