@@ -221,6 +221,7 @@ jobs:
     working_directory: ~/lkpy
     environment:
       LK_PROCESS_COUNT: 2
+      USE_OPENMP: intel
     
     steps:
       - checkout
