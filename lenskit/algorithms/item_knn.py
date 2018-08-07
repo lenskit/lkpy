@@ -84,7 +84,8 @@ class ItemItem(Trainable, Predictor):
         item_means = item_means.reindex(items)
 
         _logger.info('[%s] computed %d neighbor pairs', watch, sim_matrix.nnz)
-        return IIModel(items, item_means, np.diff(sim_matrix.indptr),
+
+        return IIModel(items, item_means.values, np.diff(sim_matrix.indptr),
                        sim_matrix, ratings.set_index(['user', 'item']).rating)
 
     def _cy_matrix(self, ratings, uir, watch):
@@ -158,58 +159,42 @@ class ItemItem(Trainable, Predictor):
         if ratings is None:
             ratings = model.rating_matrix.loc[user]
 
-        # set up item series & results
-        items = pd.Series(items)
-        results = pd.Series(np.nan, index=items, dtype='f8')
-        # get item positions
-        positions = model.items.get_indexer(items)
-        # reduce to items (and positions) in the model
-        m_items = items.values[positions >= 0]
-        m_pos = positions[positions >= 0]
-        # reduce to items (and positions) with neighborhoods
-        have_nbrs = model.counts[m_pos] > 0
-        m_items = m_items[have_nbrs]
-        m_pos = m_pos[have_nbrs]
+        # set up rating array
+        # get rated item positions & limit to in-model items
+        ri_pos = model.items.get_indexer(ratings.index)
+        m_rates = ratings[ri_pos >= 0]
+        ri_pos = ri_pos[ri_pos >= 0]
+        rate_v = np.full(len(model.items), np.nan, dtype=np.float_)
+        rate_v[ri_pos] = m_rates.values - model.means[ri_pos]
+        _logger.debug('user %s: %d of %d rated items in model', user, len(ri_pos), len(ratings))
 
-        # same for ratings
-        r_idx = model.items.get_indexer(ratings.index)
-        m_rates = ratings[r_idx >= 0]
-        m_rates -= model.means
-        r_idx = r_idx[r_idx >= 0]
-        # update index to be position-based, not id-based
-        m_ratev = np.full(len(model.items), 0, dtype='f8')
-        m_ratev[r_idx] = m_rates.values
-        _logger.debug('user %s: %d of %d ratings in index', user, len(m_rates), len(ratings))
+        # set up item result vector
+        # ipos will be an array of item indices
+        i_pos = model.items.get_indexer(items)
+        i_pos = i_pos[i_pos >= 0]
+        _logger.debug('user %s: %d of %d requested items in model', user, len(i_pos), len(items))
 
-        # now compute each prediction
-        for i in range(len(m_items)):
-            item = m_items[i]
-            ipos = m_pos[i]
-            row = model.sim_matrix.getrow(ipos)
-            nbr_mask = np.isin(row.indices, r_idx)
-            nbr_is = row.indices[nbr_mask]
-            nbr_vs = row.data[nbr_mask]
-            if self.min_neighbors and len(nbr_is) < self.min_neighbors:
-                continue
-            if self.max_neighbors and len(nbr_is) > self.max_neighbors:
-                # slice, since we sorted the row by value in training
-                nbr_is = nbr_is[:self.max_neighbors]
-                nbr_vs = nbr_vs[:self.max_neighbors]
+        # scratch result array
+        iscore = np.full(len(model.items), np.nan, dtype=np.float_)
 
-            # look up ratings by position!
-            n_rates = m_ratev[nbr_is]
-            assert len(n_rates) == len(nbr_vs)
-            weights = nbr_vs
-            if self.min_similarity is None or self.min_similarity < 0:
-                # might need to make weights absolute
-                weights = np.abs(weights)
+        # now compute the predictions
+        accel.predict(model.sim_matrix, len(model.items),
+                      self.min_neighbors if self.min_neighbors else 0,
+                      self.max_neighbors if self.max_neighbors else -1,
+                      rate_v, i_pos, iscore)
 
-            results.loc[item] = np.dot(nbr_vs, n_rates) / np.sum(nbr_vs)
+        nscored = np.sum(np.logical_not(np.isnan(iscore)))
+        iscore += model.means
+        assert np.sum(np.logical_not(np.isnan(iscore))) == nscored
 
-        results += model.means
+        results = pd.Series(iscore, index=model.items)
+        results = results[results.notna()]
+        results = results.reindex(items, fill_value=np.nan)
+        assert results.notna().sum() == nscored
 
         _logger.debug('user %s: predicted for %d of %d items',
                       user, results.notna().sum(), len(items))
+
         return results
 
     def save_model(self, model, file):
@@ -217,7 +202,7 @@ class ItemItem(Trainable, Predictor):
             h5 = hdf._handle
             group = h5.create_group('/', 'ii-model')
             h5.create_array(group, 'items', model.items.values)
-            h5.create_array(group, 'means', model.means.values)
+            h5.create_array(group, 'means', model.means)
             h5.create_array(group, 'col_ptrs', model.sim_matrix.indptr)
             h5.create_array(group, 'row_nums', model.sim_matrix.indices)
             h5.create_array(group, 'sim_values', model.sim_matrix.data)
@@ -232,7 +217,6 @@ class ItemItem(Trainable, Predictor):
             items = h5.get_node('/ii-model', 'items').read()
             items = pd.Index(items)
             means = h5.get_node('/ii-model', 'means').read()
-            means = pd.Series(means, index=items)
 
             indptr = h5.get_node('/ii-model', 'col_ptrs').read()
             indices = h5.get_node('/ii-model', 'row_nums').read()

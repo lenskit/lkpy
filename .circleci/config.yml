@@ -221,6 +221,7 @@ jobs:
     working_directory: ~/lkpy
     environment:
       LK_PROCESS_COUNT: 2
+      USE_OPENMP: intel
     
     steps:
       - checkout
@@ -241,7 +242,7 @@ jobs:
             source ~/miniconda/bin/activate base
             conda config --set always_yes yes --set changeps1 no
             conda update -q --all
-            conda install -q pandas scipy cython pytables pytest pytest-arraydiff clang_osx-64
+            conda install -q pandas scipy cython pytables pytest pytest-arraydiff clang_osx-64 llvm-openmp
             conda clean -tp
 
       - save_cache:

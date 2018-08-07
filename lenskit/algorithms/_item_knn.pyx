@@ -4,10 +4,13 @@ import array
 import pandas as pd
 import numpy as np
 cimport numpy as np
+from numpy cimport math as npm
 from cython.parallel cimport parallel, prange, threadid
 from libc.stdlib cimport malloc, free, realloc, abort, calloc
-from libc.math cimport isnan
+from libc.math cimport isnan, fabs
 import logging
+
+from lenskit cimport _cy_util as lku
 
 IF OPENMP:
     from openmp cimport omp_get_thread_num, omp_get_num_threads
@@ -121,83 +124,46 @@ cdef void tr_add_all(ThreadState* self, int item, size_t nitems,
 
         self.size = self.size + 1
 
-cdef void ind_upheap(int pos, int len, int* keys, double* values) nogil:
-    cdef int current, parent, kt
-    current = pos
-    parent = (current - 1) // 2
-    while current > 0 and values[keys[parent]] > values[keys[current]]:
-        # swap up
-        kt = keys[parent]
-        keys[parent] = keys[current]
-        keys[current] = kt
-        current = parent
-        parent = (current - 1) // 2
-
-cdef void ind_downheap(int pos, int len, int* keys, double* values) nogil:
-    cdef int left, right, min, kt
-    min = pos
-    left = 2*pos + 1
-    right = 2*pos + 2
-    if left < len and values[keys[left]] < values[keys[min]]:
-        min = left
-    if right < len and values[keys[right]] < values[keys[min]]:
-        min = right
-    if min != pos:
-        kt = keys[min]
-        keys[min] = keys[pos]
-        keys[pos] = kt
-        ind_downheap(min, len, keys, values)
 
 cdef void tr_add_nitems(ThreadState* self, int item, size_t nitems,
                         double threshold, int nmax) nogil:
     cdef int* keys
     cdef int j, kn, ki
     cdef np.int64_t nbr
-    keys = <int*> calloc(nmax + 1, sizeof(int))
+    cdef lku.AccHeap* acc = lku.ah_create(self.work, nmax)
     
     tr_ensure_capacity(self, self.size + nmax)
 
     kn = 0
     for j in range(nitems):
         if self.work[j] < threshold: continue
-        
-        ki = kn
-        keys[ki] = j
-        ind_upheap(ki, kn, keys, self.work)
 
-        if kn < nmax:
-            kn = kn + 1
-        else:
-            # we just added the (nmax+1)th thing
-            # drop the smallest of our nmax largest
-            keys[0] = keys[kn]
-            ind_downheap(0, kn, keys, self.work)
+        lku.ah_add(acc, j)
 
     # now that we have the heap built, let us unheap!
-    while kn > 0:
-        nbr = keys[0]
+    while acc.size > 0:
+        nbr = lku.ah_remove(acc)
         self.items[self.size] = item
         self.nbrs[self.size] = nbr
         self.sims[self.size] = self.work[nbr]
         self.size = self.size + 1
-        keys[0] = keys[kn - 1]
-        kn = kn - 1
-        if kn > 0:
-            ind_downheap(0, kn, keys, self.work)
 
-    free(keys)
+    lku.ah_free(acc)
 
 
 cdef dict tr_results(ThreadState* self):
     cdef np.npy_intp size = self.size
     cdef np.ndarray items, nbrs, sims
-    items = np.asarray(<np.int32_t[:self.size]> self.items)
-    nbrs = np.asarray(<np.int32_t[:self.size]> self.nbrs)
-    sims = np.asarray(<np.float_t[:self.size]> self.sims)
+    items = np.empty(size, dtype=np.int32)
+    nbrs = np.empty(size, dtype=np.int32)
+    sims = np.empty(size, dtype=np.float_)
+    items[:] = <np.int32_t[:self.size]> self.items
+    nbrs[:] = <np.int32_t[:self.size]> self.nbrs
+    sims[:] = <np.float_t[:self.size]> self.sims
     # items = np.PyArray_SimpleNewFromData(1, &size, np.NPY_INT32, self.items)
     # nbrs = np.PyArray_SimpleNewFromData(1, &size, np.NPY_INT32, self.nbrs)
     # sims = np.PyArray_SimpleNewFromData(1, &size, np.NPY_DOUBLE, self.sims)
-    return {'item': items.copy(), 'neighbor': nbrs.copy(), 'similarity': sims.copy()}
+    return {'item': items, 'neighbor': nbrs, 'similarity': sims}
 
 
 cpdef sim_matrix(BuildContext context, double threshold, int nnbrs):
@@ -227,13 +193,13 @@ cpdef sim_matrix(BuildContext context, double threshold, int nnbrs):
     return pd.concat([pd.DataFrame(d) for d in neighborhoods],
                      ignore_index=True)
 
+
 cdef void train_row(int item, ThreadState* tres, BuildContext context,
                     double threshold, int nnbrs) nogil:
     cdef int j, u, uidx, iidx, nbr, urp
     cdef double ur = 0
 
-    for j in range(context.n_items):
-        tres.work[j] = 0
+    lku.zero(tres.work, context.n_items)
 
     for uidx in range(context.r_iptrs[item], context.r_iptrs[item+1]):
         u = context.r_users[uidx]
@@ -260,3 +226,41 @@ cdef void train_row(int item, ThreadState* tres, BuildContext context,
         tr_add_nitems(tres, item, context.n_items, threshold, nnbrs)
     else:
         tr_add_all(tres, item, context.n_items, threshold)
+
+
+cpdef void predict(matrix, int nitems, int min_nbrs, int max_nbrs,
+                   np.float_t[:] ratings,
+                   np.int64_t[:] targets,
+                   np.float_t[:] scores):
+    cdef int[:] indptr = matrix.indptr
+    cdef int[:] indices = matrix.indices
+    cdef double[:] similarity = matrix.data
+    cdef int i, j, iidx, rptr, rend, nidx, nnbrs
+    cdef double num, denom
+
+    with nogil:
+        for i in range(targets.shape[0]):
+            iidx = targets[i]
+            rptr = indptr[iidx]
+            rend = indptr[iidx + 1]
+
+            num = 0
+            denom = 0
+            nnbrs = 0
+            
+            for j in range(rptr, rend):
+                nidx = indices[j]
+                if isnan(ratings[nidx]):
+                    continue
+                
+                nnbrs = nnbrs + 1
+                num = num + ratings[nidx] * similarity[j]
+                denom = denom + fabs(similarity[j])
+
+                if max_nbrs > 0 and nnbrs >= max_nbrs:
+                    break
+                
+            if nnbrs < min_nbrs:
+                break
+            
+            scores[iidx] = num / denom
