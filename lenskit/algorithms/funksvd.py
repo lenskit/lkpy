@@ -91,8 +91,8 @@ class FunkSVD(Predictor, Trainable):
         uidx = pd.Index(ratings.user.unique())
         iidx = pd.Index(ratings.item.unique())
 
-        users = uidx.get_indexer(ratings.user)
-        items = iidx.get_indexer(ratings.item)
+        users = uidx.get_indexer(ratings.user).astype(np.int_)
+        items = iidx.get_indexer(ratings.item).astype(np.int_)
 
         _logger.debug('computing initial estimates')
         initial = pd.Series(gbias, index=ratings.index, dtype=np.float_)
@@ -139,6 +139,8 @@ class FunkSVD(Predictor, Trainable):
         # multiply
         _logger.debug('scoring %d items for user %s', len(good_items), user)
         rv = np.matmul(im, uv)
+        assert rv.shape[0] == len(good_items)
+        assert len(rv.shape) == 1
         # add bias back in
         rv = rv + model.global_bias
         if model.user_bias is not None:
