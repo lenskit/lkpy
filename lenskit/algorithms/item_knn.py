@@ -156,7 +156,10 @@ class ItemItem(Trainable, Predictor):
         return neighborhoods
 
     def predict(self, model, user, items, ratings=None):
+        _logger.debug('predicting %d items for user %s', len(items), user)
         if ratings is None:
+            if user not in model.rating_matrix.index:
+                return pd.Series(np.nan, index=items)
             ratings = model.rating_matrix.loc[user]
 
         # set up rating array
