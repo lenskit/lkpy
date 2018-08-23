@@ -49,9 +49,12 @@ def predict(algo, pairs, model=None):
     else:
         pfun = algo
 
-    ures = (pfun(user, udf.item).reset_index(name='prediction').assign(user=user)
-            for (user, udf) in pairs.groupby('user'))
-    res = pd.concat(ures).loc[:, ['user', 'item', 'prediction']]
+    def run(user, udf):
+        res = pfun(user, udf.item)
+        return pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
+
+    ures = (run(user, udf) for (user, udf) in pairs.groupby('user'))
+    res = pd.concat(ures)
     if 'rating' in pairs:
         return pairs.join(res.set_index(['user', 'item']), on=('user', 'item'))
     return res
