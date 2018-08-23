@@ -48,7 +48,7 @@ class FunkSVD(Predictor, Trainable):
             predictions unclamped.
     """
 
-    def __init__(self, features, iterations=100, lrate=0.001, reg=0.02, damping=5, range=None):
+    def __init__(self, features, iterations=100, lrate=0.001, reg=0.015, damping=5, range=None):
         self.features = features
         self.iterations = iterations
         self.learning_rate = lrate
