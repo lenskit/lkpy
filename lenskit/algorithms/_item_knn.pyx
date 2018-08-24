@@ -228,10 +228,10 @@ cdef void train_row(int item, ThreadState* tres, BuildContext context,
         tr_add_all(tres, item, context.n_items, threshold)
 
 
-cpdef void predict(matrix, int nitems, int min_nbrs, int max_nbrs,
-                   np.float_t[:] ratings,
-                   np.int64_t[:] targets,
-                   np.float_t[:] scores):
+cpdef predict(matrix, int nitems, int min_nbrs, int max_nbrs,
+              np.float_t[:] ratings,
+              np.int64_t[:] targets,
+              np.float_t[:] scores):
     cdef int[:] indptr = matrix.indptr
     cdef int[:] indices = matrix.indices
     cdef double[:] similarity = matrix.data
@@ -264,3 +264,5 @@ cpdef void predict(matrix, int nitems, int min_nbrs, int max_nbrs,
                 break
             
             scores[iidx] = num / denom
+
+    return None

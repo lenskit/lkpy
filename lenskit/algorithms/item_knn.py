@@ -40,6 +40,8 @@ class ItemItem(Trainable, Predictor):
         if self.max_neighbors is not None and self.max_neighbors < 0:
             self.max_neighbors = 0
         self.min_neighbors = min_nbrs
+        if self.min_neighbors is not None and self.min_neighbors < 1:
+            self.min_neighbors = 1
         self.min_similarity = min_sim
         self.save_neighbors = save_nbrs
 
@@ -182,7 +184,7 @@ class ItemItem(Trainable, Predictor):
 
         # now compute the predictions
         accel.predict(model.sim_matrix, len(model.items),
-                      self.min_neighbors if self.min_neighbors else 0,
+                      self.min_neighbors,
                       self.max_neighbors if self.max_neighbors else -1,
                       rate_v, i_pos, iscore)
 
