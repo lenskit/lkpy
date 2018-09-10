@@ -32,7 +32,12 @@ def build(c, cover=False):
         path = pyd.relative_to(ldir)
         if not path.exists() or pyd.stat().st_mtime > path.stat().st_mtime:
             print('copying', pyd, '->', path)
-            shutil.copy2(str(pyd), str(path))
+            try:
+                shutil.copy2(str(pyd), str(path))
+            except PermissionError:
+                print(path, 'in use, renaming')
+                path.replace(str(path) + '.old.pyd')
+                shutil.copy2(str(pyd), str(path))
         else:
             print(path, 'is up to date')
 
