@@ -21,7 +21,7 @@ ELSE:
     cdef int omp_get_num_threads():
         return 0
 
-cdef _logger = logging.getLogger('_item_knn')
+cdef _logger = logging.getLogger('lenskit._item_knn')
 
 cdef class BuildContext:
     cdef readonly int n_users
@@ -243,6 +243,9 @@ cpdef predict(matrix, int nitems, int min_nbrs, int max_nbrs,
     cdef int i, j, iidx, rptr, rend, nidx, nnbrs
     cdef double num, denom
 
+    assert ratings.shape[0] == nitems
+    assert scores.shape[0] == nitems
+
     with nogil:
         for i in range(targets.shape[0]):
             iidx = targets[i]
@@ -266,7 +269,7 @@ cpdef predict(matrix, int nitems, int min_nbrs, int max_nbrs,
                     break
                 
             if nnbrs < min_nbrs:
-                break
+                continue
             
             scores[iidx] = num / denom
 

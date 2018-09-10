@@ -174,6 +174,7 @@ class ItemItem(Trainable, Predictor):
         rate_v = np.full(len(model.items), np.nan, dtype=np.float_)
         rate_v[ri_pos] = m_rates.values - model.means[ri_pos]
         _logger.debug('user %s: %d of %d rated items in model', user, len(ri_pos), len(ratings))
+        assert np.sum(np.logical_not(np.isnan(rate_v))) == len(ri_pos)
 
         # set up item result vector
         # ipos will be an array of item indices
