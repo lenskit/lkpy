@@ -70,8 +70,9 @@ class ItemItem(Trainable, Predictor):
 
         def normalize(x):
             xmc = x - x.mean()
-            if xmc.abs().sum() > 1.0e-10:
-                return xmc / np.linalg.norm(xmc)
+            norm = np.linalg.norm(xmc)
+            if norm > 1.0e-10:
+                return xmc / norm
             else:
                 return xmc
 
@@ -95,6 +96,7 @@ class ItemItem(Trainable, Predictor):
         # the Cython implementation requires contiguous numeric IDs.
         # so let's make those
         rmat, user_idx, item_idx = matrix.sparse_ratings(uir)
+        assert rmat.nnz == len(uir)
         n_items = len(item_idx)
 
         context = accel.BuildContext(rmat)
