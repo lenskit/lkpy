@@ -43,7 +43,7 @@ cdef class BuildContext:
                       self.n_users, self.n_items, matrix.nnz)
 
         self.matrix = matrix
-        self.cscmat = matrix.tocsc(copy=False)
+        self.cscmat = matrix.tocsc()
 
         self.uptrs = matrix.indptr
         self.items = matrix.indices

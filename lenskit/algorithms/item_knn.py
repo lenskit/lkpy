@@ -203,11 +203,14 @@ class ItemItem(Trainable, Predictor):
         return results
 
     def save_model(self, model, file):
+        _logger.info('saving I-I model to %s', file)
         with pd.HDFStore(file, 'w') as hdf:
             h5 = hdf._handle
-            group = h5.create_group('/', 'ii-model')
+            group = h5.create_group('/', 'ii_model')
             h5.create_array(group, 'items', model.items.values)
             h5.create_array(group, 'means', model.means)
+            _logger.debug('saving matrix with %d entries (%d nnz)',
+                          model.sim_matrix.nnz, np.sum(model.sim_matrix.data != 0))
             h5.create_array(group, 'col_ptrs', model.sim_matrix.indptr)
             h5.create_array(group, 'row_nums', model.sim_matrix.indices)
             h5.create_array(group, 'sim_values', model.sim_matrix.data)
@@ -215,17 +218,21 @@ class ItemItem(Trainable, Predictor):
             hdf['ratings'] = model.rating_matrix
 
     def load_model(self, file):
+        _logger.info('loading I-I model from %s', file)
         with pd.HDFStore(file, 'r') as hdf:
             ratings = hdf['ratings']
             h5 = hdf._handle
 
-            items = h5.get_node('/ii-model', 'items').read()
+            items = h5.get_node('/ii_model', 'items').read()
             items = pd.Index(items)
-            means = h5.get_node('/ii-model', 'means').read()
+            means = h5.get_node('/ii_model', 'means').read()
 
-            indptr = h5.get_node('/ii-model', 'col_ptrs').read()
-            indices = h5.get_node('/ii-model', 'row_nums').read()
-            values = h5.get_node('/ii-model', 'sim_values').read()
+            indptr = h5.get_node('/ii_model', 'col_ptrs').read()
+            indices = h5.get_node('/ii_model', 'row_nums').read()
+            values = h5.get_node('/ii_model', 'sim_values').read()
+            _logger.debug('loading matrix with %d entries (%d nnz)',
+                          len(values), np.sum(values != 0))
+            assert np.all(values > self.min_similarity)
 
             matrix = sps.csr_matrix((values, indices, indptr))
 
