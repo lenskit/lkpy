@@ -10,7 +10,7 @@ import importlib.machinery
 
 
 @task
-def build(c, cover=False):
+def build(c, cover=False, openmp=None):
     try:
         if cover:
             print('enabling coverage & profiling in Cython build')
@@ -22,6 +22,14 @@ def build(c, cover=False):
     finally:
         if 'COVERAGE' in os.environ:
             del os.environ['COVERAGE']
+
+    if openmp is not None:
+        if not openmp:
+            os.environ['USE_OPENMP'] = 'no'
+        elif openmp is True:
+            os.environ['USE_OPENMP'] = 'yes'
+        else:
+            os.environ['USE_OPENMP'] = openmp
 
     ldir = Path('build/lib.%s-%d.%d' % (du.get_platform(), *sys.version_info[:2]))
     files = set()
