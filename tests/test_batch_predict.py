@@ -28,7 +28,7 @@ def test_predict_single(mlb):
 
     assert len(res) == 1
     assert all(res.user == 1)
-    assert set(res.columns) == sorted(['user', 'item', 'prediction'])
+    assert set(res.columns) == set(['user', 'item', 'prediction'])
     assert all(res.item == 31)
 
     expected = mlb.model.mean + mlb.model.items.loc[31] + mlb.model.users.loc[1]
@@ -41,7 +41,7 @@ def test_predict_single_model(mlb):
 
     assert len(res) == 1
     assert all(res.user == 1)
-    assert set(res.columns) == sorted(['user', 'item', 'prediction'])
+    assert set(res.columns) == set(['user', 'item', 'prediction'])
     assert all(res.item == 31)
 
     expected = mlb.model.mean + mlb.model.items.loc[31] + mlb.model.users.loc[1]
