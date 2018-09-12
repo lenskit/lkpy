@@ -142,6 +142,42 @@ def test_ii_train_big_unbounded():
 
 
 @mark.slow
+@mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
+def test_ii_train_ml100k(tmpdir):
+    "Test an unbounded model on ML-100K"
+    ratings = lktu.ml100k.load_ratings()
+    algo = knn.ItemItem(30)
+    _log.info('training model')
+    model = algo.train(ratings)
+
+    _log.info('testing model')
+    assert model is not None
+
+    assert all(np.logical_not(np.isnan(model.sim_matrix.data)))
+    assert all(model.sim_matrix.data > 0)
+
+    # a little tolerance
+    assert all(model.sim_matrix.data < 1 + 1.0e-6)
+
+    assert model.counts.sum() == model.sim_matrix.nnz
+
+    means = ratings.groupby('item').rating.mean()
+    assert means[model.items].values == approx(model.means)
+
+    # save
+    fn = os.path.join(tmpdir, 'ii.mod')
+    _log.info('saving model to %s', fn)
+    algo.save_model(model, fn)
+    _log.info('reloading model')
+    restored = algo.load_model(fn)
+    assert restored is not None and restored is not model
+    assert all(restored.sim_matrix.data > 0)
+    assert all(restored.sim_matrix.indptr == model.sim_matrix.indptr)
+    assert all(restored.sim_matrix.indices == model.sim_matrix.indices)
+    assert all(restored.sim_matrix.data == model.sim_matrix.data)
+
+
+@mark.slow
 def test_ii_large_models():
     "Several tests of large trained I-I models"
     exec = ThreadPoolExecutor()

@@ -37,9 +37,11 @@ class ItemItem(Trainable, Predictor):
                 (``None`` for unlimited)
         """
         self.max_neighbors = nnbrs
-        if self.max_neighbors is not None and self.max_neighbors < 0:
-            self.max_neighbors = 0
+        if self.max_neighbors is not None and self.max_neighbors < 1:
+            self.max_neighbors = -1
         self.min_neighbors = min_nbrs
+        if self.min_neighbors is not None and self.min_neighbors < 1:
+            self.min_neighbors = 1
         self.min_similarity = min_sim
         self.save_neighbors = save_nbrs
 
@@ -68,8 +70,9 @@ class ItemItem(Trainable, Predictor):
 
         def normalize(x):
             xmc = x - x.mean()
-            if xmc.abs().sum() > 1.0e-10:
-                return xmc / np.linalg.norm(xmc)
+            norm = np.linalg.norm(xmc)
+            if norm > 1.0e-10:
+                return xmc / norm
             else:
                 return xmc
 
@@ -93,6 +96,7 @@ class ItemItem(Trainable, Predictor):
         # the Cython implementation requires contiguous numeric IDs.
         # so let's make those
         rmat, user_idx, item_idx = matrix.sparse_ratings(uir)
+        assert rmat.nnz == len(uir)
         n_items = len(item_idx)
 
         context = accel.BuildContext(rmat)
@@ -156,7 +160,10 @@ class ItemItem(Trainable, Predictor):
         return neighborhoods
 
     def predict(self, model, user, items, ratings=None):
+        _logger.debug('predicting %d items for user %s', len(items), user)
         if ratings is None:
+            if user not in model.rating_matrix.index:
+                return pd.Series(np.nan, index=items)
             ratings = model.rating_matrix.loc[user]
 
         # set up rating array
@@ -167,6 +174,7 @@ class ItemItem(Trainable, Predictor):
         rate_v = np.full(len(model.items), np.nan, dtype=np.float_)
         rate_v[ri_pos] = m_rates.values - model.means[ri_pos]
         _logger.debug('user %s: %d of %d rated items in model', user, len(ri_pos), len(ratings))
+        assert np.sum(np.logical_not(np.isnan(rate_v))) == len(ri_pos)
 
         # set up item result vector
         # ipos will be an array of item indices
@@ -179,8 +187,7 @@ class ItemItem(Trainable, Predictor):
 
         # now compute the predictions
         accel.predict(model.sim_matrix, len(model.items),
-                      self.min_neighbors if self.min_neighbors else 0,
-                      self.max_neighbors if self.max_neighbors else -1,
+                      self.min_neighbors, self.max_neighbors,
                       rate_v, i_pos, iscore)
 
         nscored = np.sum(np.logical_not(np.isnan(iscore)))
@@ -198,11 +205,14 @@ class ItemItem(Trainable, Predictor):
         return results
 
     def save_model(self, model, file):
+        _logger.info('saving I-I model to %s', file)
         with pd.HDFStore(file, 'w') as hdf:
             h5 = hdf._handle
-            group = h5.create_group('/', 'ii-model')
+            group = h5.create_group('/', 'ii_model')
             h5.create_array(group, 'items', model.items.values)
             h5.create_array(group, 'means', model.means)
+            _logger.debug('saving matrix with %d entries (%d nnz)',
+                          model.sim_matrix.nnz, np.sum(model.sim_matrix.data != 0))
             h5.create_array(group, 'col_ptrs', model.sim_matrix.indptr)
             h5.create_array(group, 'row_nums', model.sim_matrix.indices)
             h5.create_array(group, 'sim_values', model.sim_matrix.data)
@@ -210,17 +220,21 @@ class ItemItem(Trainable, Predictor):
             hdf['ratings'] = model.rating_matrix
 
     def load_model(self, file):
+        _logger.info('loading I-I model from %s', file)
         with pd.HDFStore(file, 'r') as hdf:
             ratings = hdf['ratings']
             h5 = hdf._handle
 
-            items = h5.get_node('/ii-model', 'items').read()
+            items = h5.get_node('/ii_model', 'items').read()
             items = pd.Index(items)
-            means = h5.get_node('/ii-model', 'means').read()
+            means = h5.get_node('/ii_model', 'means').read()
 
-            indptr = h5.get_node('/ii-model', 'col_ptrs').read()
-            indices = h5.get_node('/ii-model', 'row_nums').read()
-            values = h5.get_node('/ii-model', 'sim_values').read()
+            indptr = h5.get_node('/ii_model', 'col_ptrs').read()
+            indices = h5.get_node('/ii_model', 'row_nums').read()
+            values = h5.get_node('/ii_model', 'sim_values').read()
+            _logger.debug('loading matrix with %d entries (%d nnz)',
+                          len(values), np.sum(values != 0))
+            assert np.all(values > self.min_similarity)
 
             matrix = sps.csr_matrix((values, indices, indptr))
 

@@ -3,6 +3,7 @@ from cpython cimport array
 import array
 import pandas as pd
 import numpy as np
+from scipy import sparse as sps
 cimport numpy as np
 from numpy cimport math as npm
 from cython.parallel cimport parallel, prange, threadid
@@ -20,7 +21,7 @@ ELSE:
     cdef int omp_get_num_threads():
         return 0
 
-cdef _logger = logging.getLogger('_item_knn')
+cdef _logger = logging.getLogger('lenskit._item_knn')
 
 cdef class BuildContext:
     cdef readonly int n_users
@@ -43,7 +44,8 @@ cdef class BuildContext:
                       self.n_users, self.n_items, matrix.nnz)
 
         self.matrix = matrix
-        self.cscmat = matrix.tocsc(copy=False)
+        self.cscmat = matrix.tocsc()
+        assert sps.isspmatrix_csc(self.cscmat)
 
         self.uptrs = matrix.indptr
         self.items = matrix.indices
@@ -151,7 +153,7 @@ cdef void tr_add_nitems(ThreadState* self, int item, size_t nitems,
     lku.ah_free(acc)
 
 
-cdef dict tr_results(ThreadState* self):
+cdef object tr_results(ThreadState* self):
     cdef np.npy_intp size = self.size
     cdef np.ndarray items, nbrs, sims
     items = np.empty(size, dtype=np.int32)
@@ -163,7 +165,7 @@ cdef dict tr_results(ThreadState* self):
     # items = np.PyArray_SimpleNewFromData(1, &size, np.NPY_INT32, self.items)
     # nbrs = np.PyArray_SimpleNewFromData(1, &size, np.NPY_INT32, self.nbrs)
     # sims = np.PyArray_SimpleNewFromData(1, &size, np.NPY_DOUBLE, self.sims)
-    return {'item': items, 'neighbor': nbrs, 'similarity': sims}
+    return pd.DataFrame({'item': items, 'neighbor': nbrs, 'similarity': sims})
 
 
 cpdef sim_matrix(BuildContext context, double threshold, int nnbrs):
@@ -186,12 +188,15 @@ cpdef sim_matrix(BuildContext context, double threshold, int nnbrs):
             _logger.debug('thread %d computed %d pairs', omp_get_thread_num(), tres.size)
             if tres.size > 0:
                 neighborhoods.append(tr_results(tres))
+                _logger.debug('finished parallel item-item build, %d neighbors',
+                              len(neighborhoods[-1]))
+            else:
+                _logger.debug('canceling with no neighbors')
             tr_free(tres)
-            _logger.debug('finished parallel item-item build')
-
+            tres = NULL
+            
     _logger.debug('stacking %d neighborhood frames', len(neighborhoods))
-    return pd.concat([pd.DataFrame(d) for d in neighborhoods],
-                     ignore_index=True)
+    return pd.concat(neighborhoods, ignore_index=True)
 
 
 cdef void train_row(int item, ThreadState* tres, BuildContext context,
@@ -228,15 +233,18 @@ cdef void train_row(int item, ThreadState* tres, BuildContext context,
         tr_add_all(tres, item, context.n_items, threshold)
 
 
-cpdef void predict(matrix, int nitems, int min_nbrs, int max_nbrs,
-                   np.float_t[:] ratings,
-                   np.int64_t[:] targets,
-                   np.float_t[:] scores):
+cpdef predict(matrix, int nitems, int min_nbrs, int max_nbrs,
+              np.float_t[:] ratings,
+              np.int64_t[:] targets,
+              np.float_t[:] scores):
     cdef int[:] indptr = matrix.indptr
     cdef int[:] indices = matrix.indices
     cdef double[:] similarity = matrix.data
     cdef int i, j, iidx, rptr, rend, nidx, nnbrs
     cdef double num, denom
+
+    assert ratings.shape[0] == nitems
+    assert scores.shape[0] == nitems
 
     with nogil:
         for i in range(targets.shape[0]):
@@ -261,6 +269,8 @@ cpdef void predict(matrix, int nitems, int min_nbrs, int max_nbrs,
                     break
                 
             if nnbrs < min_nbrs:
-                break
+                continue
             
             scores[iidx] = num / denom
+
+    return None
