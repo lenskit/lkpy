@@ -190,3 +190,6 @@ class UserUser(Trainable, Predictor):
     def load_model(self, file):
         with pd.HDFStore(file, 'r') as store:
             return UUModel(store['matrix'], store['stats'], store['item_users'])
+
+    def __str__(self):
+        return 'UserUser(nnbrs={}, min_sim={})'.format(self.max_neighbors, self.min_similarity)
