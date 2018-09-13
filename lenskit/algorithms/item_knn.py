@@ -239,3 +239,6 @@ class ItemItem(Trainable, Predictor):
             matrix = sps.csr_matrix((values, indices, indptr))
 
             return IIModel(items, means, np.diff(indptr), matrix, ratings)
+
+    def __str__(self):
+        return 'ItemItem(nnbrs={}, msize={})'.format(self.max_neighbors, self.save_neighbors)
