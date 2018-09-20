@@ -9,6 +9,7 @@ from numpy cimport math as npm
 from cython.parallel cimport parallel, prange, threadid
 from libc.stdlib cimport malloc, free, realloc, abort, calloc
 from libc.math cimport isnan, fabs
+import time
 import logging
 
 from lenskit cimport _cy_util as lku
@@ -172,6 +173,8 @@ cpdef sim_matrix(BuildContext context, double threshold, int nnbrs):
     cdef int i
     cdef ThreadState* tres
     cdef list neighborhoods = []
+    cdef double start = time.perf_counter()
+    cdef double now
 
     with nogil, parallel():
         tres = tr_new(context.n_items)
@@ -181,8 +184,14 @@ cpdef sim_matrix(BuildContext context, double threshold, int nnbrs):
                             omp_get_thread_num(), omp_get_num_threads(),
                             <unsigned long> tres)
         
-        for i in prange(context.n_items, schedule='dynamic', chunksize=10):
+        for i in prange(context.n_items, schedule='dynamic', chunksize=100):
             train_row(i, tres, context, threshold, nnbrs)
+            if i % 1000 == 999:
+                with gil:
+                    now = time.perf_counter()
+                    _logger.info('finished %d of %d rows in %.2fs (eta: %.2fs)',
+                                 i+1, context.n_items, now-start,
+                                 (context.n_items - i) * (now - start) / i)
         
         with gil:
             _logger.debug('thread %d computed %d pairs', omp_get_thread_num(), tres.size)

@@ -8,6 +8,7 @@ import logging
 import pandas as pd
 import numpy as np
 import scipy.sparse as sps
+import scipy.sparse.linalg as spla
 
 from lenskit import util, matrix
 from . import _item_knn as accel
@@ -63,42 +64,42 @@ class ItemItem(Trainable, Predictor):
         # 1. Normalize item vectors to be mean-centered and unit-normalized
         # 2. Compute similarities with pairwise dot products
         watch = util.Stopwatch()
+        
         item_means = ratings.groupby('item').rating.mean()
         _logger.info('[%s] computed means for %d items', watch, len(item_means))
 
-        _logger.info('[%s] normalizing user-item ratings', watch)
+        rmat, users, items = matrix.sparse_ratings(ratings)
+        item_means = item_means.reindex(items).values
+        _logger.info('[%s] made sparse matrix for %d items (%d ratings)', 
+                     watch, len(items), rmat.nnz)
 
-        def normalize(x):
-            xmc = x - x.mean()
-            norm = np.linalg.norm(xmc)
-            if norm > 1.0e-10:
-                return xmc / norm
-            else:
-                return xmc
+        # stupid trick: indices are items, look up means, subtract!
+        rmat.data = rmat.data - item_means[rmat.indices]
+        m2 = rmat.mean(axis=0)
+        _logger.info('min mean: %f, max mean: %f', m2.A1.min(), m2.A1.max())
 
-        uir = ratings.set_index(['item', 'user']).rating
-        uir = uir.groupby('item').transform(normalize)
-        uir = uir.reset_index()
-        assert uir.rating.notna().all()
-        # now we have normalized vectors
+        # compute column norms
+        norms = spla.norm(rmat, 2, axis=0)
+        # and multiply by a diagonal to normalize columns
+        norm_mat = rmat @ sps.diags(np.reciprocal(norms))
+        # and reset NaN
+        norm_mat.data[np.isnan(norm_mat.data)] = 0
+        _logger.info('[%s] normalized user-item ratings', watch)
 
         _logger.info('[%s] computing similarity matrix', watch)
-        sim_matrix, items = self._cy_matrix(ratings, uir, watch)
-        item_means = item_means.reindex(items)
+        sim_matrix = self._cy_matrix(norm_mat, watch)
 
         _logger.info('[%s] computed %d neighbor pairs', watch, sim_matrix.nnz)
 
-        return IIModel(items, item_means.values, np.diff(sim_matrix.indptr),
+        return IIModel(items, item_means, np.diff(sim_matrix.indptr),
                        sim_matrix, ratings.set_index(['user', 'item']).rating)
 
-    def _cy_matrix(self, ratings, uir, watch):
+    def _cy_matrix(self, rmat, watch):
         _logger.debug('[%s] preparing Cython data launch', watch)
         # the Cython implementation requires contiguous numeric IDs.
         # so let's make those
-        rmat, user_idx, item_idx = matrix.sparse_ratings(uir)
-        assert rmat.nnz == len(uir)
-        n_items = len(item_idx)
 
+        n_items = rmat.shape[1]
         context = accel.BuildContext(rmat)
 
         _logger.debug('[%s] running accelerated matrix computations', watch)
@@ -120,9 +121,9 @@ class ItemItem(Trainable, Predictor):
             smat.indices[start:end] = tmp
             tmp = smat.data[sorti[::-1] + start]
             smat.data[start:end] = tmp
+        _logger.info('[%s] sorted neighborhoods', watch)
 
-        # clean up neighborhoods
-        return smat, item_idx
+        return smat
 
     def _py_matrix(self, ratings, uir, watch):
         _logger.info('[%s] computing item-item similarities for %d items with %d ratings',
