@@ -74,7 +74,7 @@ class FunkSVD(Predictor, Trainable):
         if isinstance(bias, basic.BiasModel):
             gbias = bias.mean
             ibias = bias.items
-            ubias = bias.items
+            ubias = bias.users
         else:
             # we have a single global bias (for e.g. implicit feedback data)
             gbias = bias
@@ -92,7 +92,9 @@ class FunkSVD(Predictor, Trainable):
         iidx = pd.Index(ratings.item.unique())
 
         users = uidx.get_indexer(ratings.user).astype(np.int_)
+        assert np.all(users >= 0)
         items = iidx.get_indexer(ratings.item).astype(np.int_)
+        assert np.all(items >= 0)
 
         _logger.debug('computing initial estimates')
         initial = pd.Series(gbias, index=ratings.index, dtype=np.float_)
