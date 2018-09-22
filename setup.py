@@ -107,6 +107,7 @@ setup(
         'pandas',
         'numpy',
         'scipy',
+        'numba',
         'tables >= 3.2.0'
     ],
     tests_require=[
