@@ -5,7 +5,7 @@
 
 jobs:
 
-- job: 'test-linux'
+- job: 'TestLinux'
   pool:
     vmImage: 'Ubuntu 16.04'
   strategy:
