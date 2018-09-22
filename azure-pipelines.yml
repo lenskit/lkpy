@@ -62,7 +62,7 @@ jobs:
       python3 setup.py test
     displayName: 'pytest'
 
-- job: 'TestWindows'
+- job: 'WindowsVanilla'
   pool:
     vmImage: 'VS2017'
   
@@ -73,3 +73,35 @@ jobs:
   - script: |
       python setup.py test
     displayName: 'pytest'
+
+- job: 'WindowsConda'
+  pool:
+    vmImage: 'VS2017'
+  strategy:
+    matrix:
+      Python35:
+        python.version: '3.5'
+      Python36:
+        python.version: '3.6'
+      Python37:
+        python.version: '3.7'
+    maxParallel: 4
+
+  steps:
+  - script: |
+      conda create -y -n lkpy python=$(python.version)
+      conda install -y -n lkpy pandas scipy pytables cython
+      conda install -y -n lkpy pytest pytest-arraydiff pytest-xdist invoke
+    displayName: 'Initialize Conda'
+
+  - script: |
+      activate lkpy
+      python -V
+      python setup.py build
+    displayName: 'Build LKPY'
+
+  - script: |
+      activate lkpy
+      python -V
+      python setup.py test
+    displayName: 'Test LKPY'
