@@ -5,7 +5,7 @@
 
 jobs:
 
-- job: 'TestLinux'
+- job: 'LinuxConda'
   pool:
     vmImage: 'Ubuntu 16.04'
   strategy:
@@ -16,6 +16,36 @@ jobs:
         python.version: '3.6'
       Python37:
         python.version: '3.7'
+    maxParallel: 4
+
+  steps:
+  - script: |
+      conda create -y -n lkpy python=$(python.version)
+      conda install -y -n lkpy pandas scipy pytables cython
+      conda install -y -n lkpy pytest pytest-arraydiff pytest-xdist invoke
+    displayName: 'Initialize Conda'
+
+  - script: |
+      source activate lkpy
+      python3 setup.py build
+    displayName: 'Build LKPY'
+
+  - script: |
+      source activate lkpy
+      python3 setup.py test
+    displayName: 'Test LKPY'
+
+- job: 'LinuxVanilla'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  strategy:
+    matrix:
+      Python35:
+        python.version: '3.5'
+      Python36:
+        python.version: '3.6'
+      # Python37:
+      #   python.version: '3.7'
     maxParallel: 4
 
   steps:
