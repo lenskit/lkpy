@@ -29,6 +29,7 @@ jobs:
       createCustomEnvironment: true
       environmentName: lkpy
       packageSpecs: $(conda.deps)
+      updateConda: false
 
   - script: |
       python3 setup.py build
@@ -38,25 +39,9 @@ jobs:
       python3 setup.py test
     displayName: 'Test LKPY'
 
-- job: 'LinCoverage'
-  dependsOn: 'LinuxConda'
-  pool:
-    vmImage: 'Ubuntu 16.04'
-
-  steps:
-  - task: CondaEnvironment@1
-    inputs:
-      createCustomEnvironment: true
-      environmentName: lkpy
-      packageSpecs: $(conda.deps) coverage pytest-cov
-
-  - script: |
-      invoke build --cover
-    displayName: 'Build LKPY'
-
   - script: |
       invoke test --cover --no-eval --verbose
-    displayName: 'Run Tests'
+    displayName: 'Test Coverage'
     
   - script: |
       coverage xml
@@ -154,6 +139,7 @@ jobs:
       createCustomEnvironment: true
       environmentName: lkpy
       packageSpecs: $(conda.deps)
+      updateConda: false
 
   - script: |
       python3 setup.py build
