@@ -26,12 +26,12 @@ jobs:
     displayName: 'Initialize Conda'
 
   - script: |
-      source activate lkpy
+      eval $(conda shell.posix activate lkpy)
       python3 setup.py build
     displayName: 'Build LKPY'
 
   - script: |
-      source activate lkpy
+      eval $(conda shell.posix activate lkpy)
       python3 setup.py test
     displayName: 'Test LKPY'
 
