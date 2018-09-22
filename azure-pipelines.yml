@@ -19,19 +19,18 @@ jobs:
     maxParallel: 4
 
   steps:
-  - script: |
-      conda create -y -n lkpy python=$(python.version)
-      conda install -y -n lkpy pandas scipy pytables cython
-      conda install -y -n lkpy pytest pytest-arraydiff pytest-xdist invoke
-    displayName: 'Initialize Conda'
+  - task: CondaEnvironment@1
+    environmentName: lkpy
+    packageSpecs: |
+      python=$(python.version)
+      pandas scipy pytables cython
+      pytest pytest-arraydiff pytest-xdist invoke
 
   - script: |
-      eval $(conda shell.posix activate lkpy)
       python3 setup.py build
     displayName: 'Build LKPY'
 
   - script: |
-      eval $(conda shell.posix activate lkpy)
       python3 setup.py test
     displayName: 'Test LKPY'
 
@@ -88,23 +87,19 @@ jobs:
     maxParallel: 4
 
   steps:
-  - script: |
-      path %CONDA%;%CONDA%\Scripts;%PATH%
-      conda create -y -n lkpy python=$(python.version)
-      conda install -y -n lkpy pandas scipy pytables cython
-      conda install -y -n lkpy pytest pytest-arraydiff pytest-xdist invoke
-    displayName: 'Initialize Conda'
+  - task: CondaEnvironment@1
+    environmentName: lkpy
+    packageSpecs: |
+      python=$(python.version)
+      pandas scipy pytables cython
+      pytest pytest-arraydiff pytest-xdist invoke
 
   - script: |
-      path %CONDA%;%CONDA%\Scripts;%PATH%
-      activate lkpy
       python -V
       python setup.py build
     displayName: 'Build LKPY'
 
   - script: |
-      path %CONDA%;%CONDA%\Scripts;%PATH%
-      activate lkpy
       python -V
       python setup.py test
     displayName: 'Test LKPY'
@@ -123,18 +118,17 @@ jobs:
     maxParallel: 4
 
   steps:
-  - script: |
-      conda create -y -n lkpy python=$(python.version)
-      conda install -y -n lkpy pandas scipy pytables cython
-      conda install -y -n lkpy pytest pytest-arraydiff pytest-xdist invoke
-    displayName: 'Initialize Conda'
+  - task: CondaEnvironment@1
+    environmentName: lkpy
+    packageSpecs: |
+      python=$(python.version)
+      pandas scipy pytables cython
+      pytest pytest-arraydiff pytest-xdist invoke
 
   - script: |
-      eval $(conda shell.posix activate lkpy)
       python3 setup.py build
     displayName: 'Build LKPY'
 
   - script: |
-      eval $(conda shell.posix activate lkpy)
       python3 setup.py test
     displayName: 'Test LKPY'
