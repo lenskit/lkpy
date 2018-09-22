@@ -21,7 +21,7 @@ jobs:
     maxParallel: 4
 
   steps:
-  - script: sudo chmod 0777 /usr/envs
+  - script: sudo install -d -m 0777 /usr/envs
     displayName: Fix Conda permissions
 
   - task: CondaEnvironment@1
