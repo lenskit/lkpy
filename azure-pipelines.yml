@@ -20,11 +20,12 @@ jobs:
 
   steps:
   - task: CondaEnvironment@1
-    environmentName: lkpy
-    packageSpecs: |
-      python=$(python.version)
-      pandas scipy pytables cython
-      pytest pytest-arraydiff pytest-xdist invoke
+    inputs:
+      environmentName: lkpy
+      packageSpecs: |
+        python=$(python.version)
+        pandas scipy pytables cython
+        pytest pytest-arraydiff pytest-xdist invoke
 
   - script: |
       python3 setup.py build
@@ -88,11 +89,12 @@ jobs:
 
   steps:
   - task: CondaEnvironment@1
-    environmentName: lkpy
-    packageSpecs: |
-      python=$(python.version)
-      pandas scipy pytables cython
-      pytest pytest-arraydiff pytest-xdist invoke
+    inputs:
+      environmentName: lkpy
+      packageSpecs: |
+        python=$(python.version)
+        pandas scipy pytables cython
+        pytest pytest-arraydiff pytest-xdist invoke
 
   - script: |
       python -V
@@ -119,11 +121,12 @@ jobs:
 
   steps:
   - task: CondaEnvironment@1
-    environmentName: lkpy
-    packageSpecs: |
-      python=$(python.version)
-      pandas scipy pytables cython
-      pytest pytest-arraydiff pytest-xdist invoke
+    inputs:
+      environmentName: lkpy
+      packageSpecs: |
+        python=$(python.version)
+        pandas scipy pytables cython
+        pytest pytest-arraydiff pytest-xdist invoke
 
   - script: |
       python3 setup.py build
