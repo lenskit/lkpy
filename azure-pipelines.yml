@@ -53,7 +53,21 @@ jobs:
 
   - script: |
       coverage xml
-      bash <(curl -s https://codecov.io/bash)
+      echo "Fetching Codecov script"
+      curl -o /tmp/codecov.sh https://codecov.io/bash
+      
+      echo "Building for $BUILD_REASON"
+      cc_args=
+      case "$BUILD_REASON" in
+        PullRequest)
+          ccargs="-P $SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
+          ;;
+        IndividualCI|BatchedCI|Manual)
+          ccargs="-B $BUILD_SOURCEBRANCH"
+          ;;
+      esac
+
+      bash /tmp/codecov.sh -C "$BUILD_SOURCEVERSION" $cc_args
     displayName: 'Upload Coverage'
 
 - job: 'LinuxVanilla'
