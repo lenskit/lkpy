@@ -3,7 +3,7 @@
 # Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
 # https://docs.microsoft.com/vsts/pipelines/languages/python
 variables:
-  conda.deps: python=$(python.version) pandas scipy pytables cython pytest pytest-arraydiff pytest-xdist invoke coverage pytest-cov
+  conda.deps: python=$(python.version) pandas scipy pytables cython pytest pytest-arraydiff pytest-xdist invoke coverage pytest-cov numba
 
 jobs:
 
