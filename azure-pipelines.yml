@@ -1,0 +1,150 @@
+# Python package
+# Create and test a Python package on multiple Python versions.
+# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
+# https://docs.microsoft.com/vsts/pipelines/languages/python
+variables:
+  conda.deps: python=$(python.version) pandas scipy pytables cython pytest pytest-arraydiff pytest-xdist invoke coverage pytest-cov
+
+jobs:
+
+- job: 'LinuxConda'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  strategy:
+    matrix:
+      Python35:
+        python.version: '3.5'
+      Python36:
+        python.version: '3.6'
+      Python37:
+        python.version: '3.7'
+    maxParallel: 4
+
+  steps:
+  - script: sudo install -d -m 0777 /usr/envs
+    displayName: Fix Conda permissions
+
+  - task: CondaEnvironment@1
+    inputs:
+      createCustomEnvironment: true
+      environmentName: lkpy
+      packageSpecs: $(conda.deps)
+      updateConda: false
+
+  - script: |
+      python3 setup.py build
+    displayName: 'Build LKPY'
+
+  - script: |
+      python3 setup.py test
+    displayName: 'Test LKPY'
+
+  - script: |
+      invoke test --cover --no-eval --verbose
+    displayName: 'Test Coverage'
+
+  - script: |
+      coverage xml
+      bash <(curl -s https://codecov.io/bash)
+    displayName: 'Upload Coverage'
+
+- job: 'LinuxVanilla'
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  strategy:
+    matrix:
+      Python35:
+        python.version: '3.5'
+      Python36:
+        python.version: '3.6'
+      # Python37:
+      #   python.version: '3.7'
+    maxParallel: 4
+
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+      architecture: 'x64'
+
+  - script: python -m pip install --upgrade pip && pip install invoke pandas scipy tables cython
+    displayName: 'Install dependencies'
+
+  - script: |
+      pip install pytest
+      python3 setup.py test
+    displayName: 'pytest'
+
+- job: 'WindowsVanilla'
+  pool:
+    vmImage: 'VS2017'
+  
+  steps:
+  - script: python -m pip install --upgrade pip && pip install invoke pandas scipy tables pytest cython
+    displayName: 'Install dependencies'
+
+  - script: |
+      python setup.py test
+    displayName: 'pytest'
+
+- job: 'WindowsConda'
+  pool:
+    vmImage: 'VS2017'
+  strategy:
+    matrix:
+      Python35:
+        python.version: '3.5'
+      Python36:
+        python.version: '3.6'
+      # Python37:
+      #   python.version: '3.7'
+    maxParallel: 4
+
+  steps:
+  - task: CondaEnvironment@1
+    inputs:
+      createCustomEnvironment: true
+      environmentName: lkpy
+      packageSpecs: $(conda.deps)
+
+  - script: |
+      python -V
+      python setup.py build
+    displayName: 'Build LKPY'
+
+  - script: |
+      python -V
+      python setup.py test
+    displayName: 'Test LKPY'
+
+- job: 'MacConda'
+  pool:
+    vmImage: 'macOS-10.13'
+  strategy:
+    matrix:
+      Python35:
+        python.version: '3.5'
+      Python36:
+        python.version: '3.6'
+      Python37:
+        python.version: '3.7'
+    maxParallel: 4
+
+  steps:
+  - script: sudo chmod 0777 /usr/local/miniconda/envs
+    displayName: Fix Conda permissions
+  
+  - task: CondaEnvironment@1
+    inputs:
+      createCustomEnvironment: true
+      environmentName: lkpy
+      packageSpecs: $(conda.deps)
+      updateConda: false
+
+  - script: |
+      python3 setup.py build
+    displayName: 'Build LKPY'
+
+  - script: |
+      python3 setup.py test
+    displayName: 'Test LKPY'
