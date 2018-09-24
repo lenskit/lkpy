@@ -4,6 +4,10 @@
 # https://docs.microsoft.com/vsts/pipelines/languages/python
 variables:
   conda.deps: python=$(python.version) pandas scipy pytables cython pytest pytest-arraydiff pytest-xdist invoke coverage pytest-cov numba
+  pip.deps: >
+    invoke pytest
+    pandas scipy tables
+    cython numba
 
 jobs:
 
@@ -67,11 +71,12 @@ jobs:
       versionSpec: '$(python.version)'
       architecture: 'x64'
 
-  - script: python -m pip install --upgrade pip && pip install invoke pandas scipy tables cython
+  - script: |
+      python -m pip install --upgrade pip
+      pip install $(pip.deps)
     displayName: 'Install dependencies'
 
   - script: |
-      pip install pytest
       python3 setup.py test
     displayName: 'pytest'
 
@@ -80,7 +85,9 @@ jobs:
     vmImage: 'VS2017'
   
   steps:
-  - script: python -m pip install --upgrade pip && pip install invoke pandas scipy tables pytest cython
+  - script: |
+      python -m pip install --upgrade pip
+      pip install $(pip.deps)
     displayName: 'Install dependencies'
 
   - script: |
