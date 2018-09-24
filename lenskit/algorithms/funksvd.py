@@ -220,9 +220,9 @@ class FunkSVD(Predictor, Trainable):
         uidx = pd.Index(ratings.user.unique())
         iidx = pd.Index(ratings.item.unique())
 
-        users = uidx.get_indexer(ratings.user).astype(np.int_)
+        users = uidx.get_indexer(ratings.user).astype(np.int32)
         assert np.all(users >= 0)
-        items = iidx.get_indexer(ratings.item).astype(np.int_)
+        items = iidx.get_indexer(ratings.item).astype(np.int32)
         assert np.all(items >= 0)
 
         _logger.debug('computing initial estimates')
