@@ -8,7 +8,7 @@ For now, this example computes nDCG for an item-based k-NN collaborative filter:
     import pandas as pd
     from lenskit import batch, topn
     from lenskit import crossfold as xf
-    from lenskit.algorithms import knn
+    from lenskit.algorithms import item_knn as knn
 
     ratings = pd.read_csv('ml-100k/u.data', sep='\t',
             names=['user', 'item', 'rating', 'timestamp'])
@@ -29,7 +29,7 @@ For now, this example computes nDCG for an item-based k-NN collaborative filter:
 
     # compute evaluation
     splits = xf.partition_users(ratings, 5,
-            xf.SampleFrac(0.2)
+            xf.SampleFrac(0.2))
     recs = pd.concat((eval(train, test)
                     for (train, test) in splits))
 
