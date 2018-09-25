@@ -20,52 +20,6 @@ BiasMFModel = namedtuple('BiasMFModel', ['user_index', 'item_index',
 
 
 @n.jitclass([
-    ('users', n.int32[:]),
-    ('items', n.int32[:]),
-    ('ratings', n.double[:]),
-    ('bias', n.double[:]),
-    ('n_samples', n.uint64)
-])
-class Context:
-    def __init__(self, users, items, ratings, bias):
-        self.users = users
-        self.items = items
-        self.ratings = ratings
-        self.bias = bias
-        self.n_samples = users.shape[0]
-
-        assert items.shape[0] == self.n_samples
-        assert ratings.shape[0] == self.n_samples
-        assert bias.shape[0] == self.n_samples
-
-
-@n.jitclass([
-    ('iter_count', n.int32),
-    ('learning_rate', n.double),
-    ('reg_term', n.double),
-    ('rmin', n.double),
-    ('rmax', n.double)
-])
-class _Params:
-    def __init__(self, niters, lrate, reg, rmin, rmax):
-        self.iter_count = niters
-        self.learning_rate = lrate
-        self.reg_term = reg
-        self.rmin = rmin
-        self.rmax = rmax
-
-
-def make_params(niters, lrate, reg, range):
-    if range is None:
-        rmin = -np.inf
-        rmax = np.inf
-    else:
-        rmin, rmax = range
-
-    return _Params(niters, lrate, reg, rmin, rmax)
-
-
-@n.jitclass([
     ('user_features', n.double[:, :]),
     ('item_features', n.double[:, :]),
     ('feature_count', n.int32),
@@ -95,44 +49,112 @@ def _fresh_model(nfeatures, nusers, nitems, init=0.1):
     return model
 
 
+@n.jitclass([
+    ('iter_count', n.int32),
+    ('learning_rate', n.double),
+    ('reg_term', n.double),
+    ('rmin', n.double),
+    ('rmax', n.double)
+])
+class _Params:
+    def __init__(self, niters, lrate, reg, rmin, rmax):
+        self.iter_count = niters
+        self.learning_rate = lrate
+        self.reg_term = reg
+        self.rmin = rmin
+        self.rmax = rmax
+
+
+def make_params(niters, lrate, reg, range):
+    if range is None:
+        rmin = -np.inf
+        rmax = np.inf
+    else:
+        rmin, rmax = range
+
+    return _Params(niters, lrate, reg, rmin, rmax)
+
+
+@n.jitclass([
+    ('est', n.double[:]),
+    ('feature', n.int32),
+    ('trail', n.double)
+])
+class _FeatContext:
+    def __init__(self, est, feature, trail):
+        self.est = est
+        self.feature = feature
+        self.trail = trail
+
+
+@n.jitclass([
+    ('users', n.int32[:]),
+    ('items', n.int32[:]),
+    ('ratings', n.double[:]),
+    ('bias', n.double[:]),
+    ('n_samples', n.uint64)
+])
+class Context:
+    def __init__(self, users, items, ratings, bias):
+        self.users = users
+        self.items = items
+        self.ratings = ratings
+        self.bias = bias
+        self.n_samples = users.shape[0]
+
+        assert items.shape[0] == self.n_samples
+        assert ratings.shape[0] == self.n_samples
+        assert bias.shape[0] == self.n_samples
+
+
 @n.njit
-def _train_feature(ctx, params, model, est, f, trail):
+def _feature_loop(ctx: Context, params: _Params, model: Model, fc: _FeatContext):
     users = ctx.users
     items = ctx.items
     ratings = ctx.ratings
     umat = model.user_features
     imat = model.item_features
+    est = fc.est
+    f = fc.feature
+    trail = fc.trail
 
-    for epoch in range(params.iter_count):
-        sse = 0.0
-        acc_ud = 0.0
-        acc_id = 0.0
-        for s in range(ctx.n_samples):
-            user = users[s]
-            item = items[s]
-            ufv = umat[user, f]
-            ifv = imat[item, f]
+    sse = 0.0
+    acc_ud = 0.0
+    acc_id = 0.0
+    for s in range(ctx.n_samples):
+        user = users[s]
+        item = items[s]
+        ufv = umat[user, f]
+        ifv = imat[item, f]
 
-            pred = est[s] + ufv * ifv + trail
-            if pred < params.rmin:
-                pred = params.rmin
-            elif pred > params.rmax:
-                pred = params.rmax
+        pred = est[s] + ufv * ifv + trail
+        if pred < params.rmin:
+            pred = params.rmin
+        elif pred > params.rmax:
+            pred = params.rmax
 
-            error = ratings[s] - pred
-            sse += error * error
+        error = ratings[s] - pred
+        sse += error * error
 
-            # compute deltas
-            ufd = error * ifv - params.reg_term * ufv
-            ufd = ufd * params.learning_rate
-            acc_ud += ufd * ufd
-            ifd = error * ufv - params.reg_term * ifv
-            ifd = ifd * params.learning_rate
-            acc_id += ifd * ifd
-            umat[user, f] += ufd
-            imat[item, f] += ifd
+        # compute deltas
+        ufd = error * ifv - params.reg_term * ufv
+        ufd = ufd * params.learning_rate
+        acc_ud += ufd * ufd
+        ifd = error * ufv - params.reg_term * ifv
+        ifd = ifd * params.learning_rate
+        acc_id += ifd * ifd
+        umat[user, f] += ufd
+        imat[item, f] += ifd
 
     return np.sqrt(sse / ctx.n_samples)
+
+
+@n.njit
+def _train_feature(ctx, params, model, fc):
+    for epoch in range(params.iter_count):
+        rmse = _feature_loop(ctx, params, model, fc)
+
+    return rmse
 
 
 def train(ctx: Context, params: _Params, model: Model):
@@ -140,7 +162,8 @@ def train(ctx: Context, params: _Params, model: Model):
 
     for f in range(model.feature_count):
         trail = model.initial_value * model.initial_value * (model.feature_count - f - 1)
-        rmse = _train_feature(ctx, params, model, est, f, trail)
+        fc = _FeatContext(est, f, trail)
+        rmse = _train_feature(ctx, params, model, fc)
         _logger.info('finished feature %d (RMSE=%f)', f, rmse)
 
         est = est + model.user_features[ctx.users, f] * model.item_features[ctx.items, f]
