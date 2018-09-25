@@ -58,16 +58,14 @@ jobs:
       
       echo "Building for $BUILD_REASON"
       cc_args=
-      case "$BUILD_REASON" in
-        PullRequest)
-          ccargs="-P $SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
-          ;;
-        IndividualCI|BatchedCI|Manual)
-          ccargs="-B $BUILD_SOURCEBRANCH"
-          ;;
-      esac
+      if [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER" ]; then
+        ccargs="-P $SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
+      fi
+      if [ -z "$CODECOV_TOKEN" ]; then
+        echo "no CODECOV_TOKEN :(" >&2
+      fi
 
-      bash /tmp/codecov.sh -C "$BUILD_SOURCEVERSION" $cc_args
+      bash /tmp/codecov.sh -C "$BUILD_SOURCEVERSION" -B $BUILD_SOURCEBRANCH $cc_args
     displayName: 'Upload Coverage'
 
 - job: 'LinuxVanilla'
