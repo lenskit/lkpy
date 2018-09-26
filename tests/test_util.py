@@ -44,7 +44,7 @@ def test_accum_init_empty():
     acc = lku.Accumulator(values, 10)
 
     assert acc is not None
-    assert len(acc) == 0
+    assert acc.size == 0
     assert acc.peek() < 0
     assert acc.remove() < 0
 
@@ -54,15 +54,15 @@ def test_accum_add_get():
     acc = lku.Accumulator(values, 10)
 
     assert acc is not None
-    assert len(acc) == 0
+    assert acc.size == 0
     assert acc.peek() < 0
     assert acc.remove() < 0
 
     acc.add(0)
-    assert len(acc) == 1
+    assert acc.size == 1
     assert acc.peek() == 0
     assert acc.remove() == 0
-    assert len(acc) == 0
+    assert acc.size == 0
     assert acc.peek() == -1
 
 
@@ -71,19 +71,19 @@ def test_accum_add_a_few():
     acc = lku.Accumulator(values, 10)
 
     assert acc is not None
-    assert len(acc) == 0
+    assert acc.size == 0
 
     acc.add(1)
     acc.add(0)
     acc.add(2)
 
-    assert len(acc) == 3
+    assert acc.size == 3
     assert acc.peek() == 2
     assert acc.remove() == 2
-    assert len(acc) == 2
+    assert acc.size == 2
     assert acc.remove() == 0
     assert acc.remove() == 1
-    assert len(acc) == 0
+    assert acc.size == 0
 
 
 def test_accum_add_a_few_lim():
@@ -91,17 +91,17 @@ def test_accum_add_a_few_lim():
     acc = lku.Accumulator(values, 2)
 
     assert acc is not None
-    assert len(acc) == 0
+    assert acc.size == 0
 
     acc.add(1)
     acc.add(0)
     acc.add(2)
 
-    assert len(acc) == 2
+    assert acc.size == 2
     assert acc.remove() == 0
-    assert len(acc) == 1
+    assert acc.size == 1
     assert acc.remove() == 1
-    assert len(acc) == 0
+    assert acc.size == 0
 
 
 def test_accum_add_more_lim():
@@ -113,11 +113,11 @@ def test_accum_add_more_lim():
         np.random.shuffle(order)
         for i in order:
             acc.add(i)
-            assert len(acc) <= 10
+            assert acc.size <= 10
 
         topn = []
         # start with the smallest remaining one, grab!
-        while len(acc) > 0:
+        while acc.size > 0:
             topn.append(acc.remove())
 
         topn = np.array(topn)
