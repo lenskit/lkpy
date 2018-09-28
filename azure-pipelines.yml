@@ -41,6 +41,13 @@ jobs:
       updateConda: false
 
   - script: |
+      if [ ! -r ~/ml-100k/u.data ]; then
+        wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
+        unzip -d ~ ml-100k.zip
+      fi
+    displayName: 'Download ML-100K'
+
+  - script: |
       python3 setup.py build
     displayName: 'Build LKPY'
 
@@ -93,6 +100,13 @@ jobs:
       pip install $(pip.deps)
     displayName: 'Install dependencies'
 
+  - script: |
+      if [ ! -r ~/ml-100k/u.data ]; then
+        wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
+        unzip -d ~ ml-100k.zip
+      fi
+    displayName: 'Download ML-100K'
+    
   - script: |
       python3 setup.py test
     displayName: 'pytest'
@@ -165,6 +179,13 @@ jobs:
       packageSpecs: $(conda.deps)
       updateConda: false
 
+  - script: |
+      if [ ! -r ~/ml-100k/u.data ]; then
+        wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
+        unzip -d ~ ml-100k.zip
+      fi
+    displayName: 'Download ML-100K'
+    
   - script: |
       python3 setup.py build
     displayName: 'Build LKPY'
