@@ -3,7 +3,16 @@
 # Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
 # https://docs.microsoft.com/vsts/pipelines/languages/python
 variables:
-  conda.deps: python=$(python.version) pandas scipy pytables cython pytest pytest-arraydiff pytest-xdist invoke coverage pytest-cov
+  conda.deps: >
+    python=$(python.version)
+    pandas scipy pytables
+    cython
+    pytest pytest-arraydiff pytest-xdist
+    invoke coverage pytest-cov
+  pip.deps: >
+    invoke pytest
+    pandas scipy tables
+    cython
 
 jobs:
 
@@ -45,7 +54,19 @@ jobs:
 
   - script: |
       coverage xml
-      bash <(curl -s https://codecov.io/bash)
+      echo "Fetching Codecov script"
+      curl -o /tmp/codecov.sh https://codecov.io/bash
+      
+      echo "Building for $BUILD_REASON"
+      cc_args=
+      if [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER" ]; then
+        ccargs="-P $SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
+      fi
+      if [ -z "$CODECOV_TOKEN" ]; then
+        echo "no CODECOV_TOKEN :(" >&2
+      fi
+
+      bash /tmp/codecov.sh -C "$BUILD_SOURCEVERSION" -B $BUILD_SOURCEBRANCH $cc_args
     displayName: 'Upload Coverage'
 
 - job: 'LinuxVanilla'
@@ -67,11 +88,12 @@ jobs:
       versionSpec: '$(python.version)'
       architecture: 'x64'
 
-  - script: python -m pip install --upgrade pip && pip install invoke pandas scipy tables cython
+  - script: |
+      python -m pip install --upgrade pip
+      pip install $(pip.deps)
     displayName: 'Install dependencies'
 
   - script: |
-      pip install pytest
       python3 setup.py test
     displayName: 'pytest'
 
@@ -80,7 +102,9 @@ jobs:
     vmImage: 'VS2017'
   
   steps:
-  - script: python -m pip install --upgrade pip && pip install invoke pandas scipy tables pytest cython
+  - script: |
+      python -m pip install --upgrade pip
+      pip install $(pip.deps)
     displayName: 'Install dependencies'
 
   - script: |
