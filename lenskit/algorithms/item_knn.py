@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
+from numba import njit
 
 from lenskit import util, matrix
 from . import _item_knn as accel
@@ -17,6 +18,38 @@ from . import Trainable, Predictor
 _logger = logging.getLogger(__package__)
 
 IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rating_matrix'])
+
+
+@njit
+def _predict(indptr, indices, similarity,
+             nitems, min_nbrs, max_nbrs,
+             ratings, targets, scores):
+
+    for i in range(targets.shape[0]):
+        iidx = targets[i]
+        rptr = indptr[iidx]
+        rend = indptr[iidx + 1]
+
+        num = 0
+        denom = 0
+        nnbrs = 0
+
+        for j in range(rptr, rend):
+            nidx = indices[j]
+            if np.isnan(ratings[nidx]):
+                continue
+
+            nnbrs = nnbrs + 1
+            num = num + ratings[nidx] * similarity[j]
+            denom = denom + np.abs(similarity[j])
+
+            if max_nbrs > 0 and nnbrs >= max_nbrs:
+                break
+
+        if nnbrs < min_nbrs:
+            continue
+
+        scores[iidx] = num / denom
 
 
 class ItemItem(Trainable, Predictor):
@@ -64,13 +97,13 @@ class ItemItem(Trainable, Predictor):
         # 1. Normalize item vectors to be mean-centered and unit-normalized
         # 2. Compute similarities with pairwise dot products
         watch = util.Stopwatch()
-        
+
         item_means = ratings.groupby('item').rating.mean()
         _logger.info('[%s] computed means for %d items', watch, len(item_means))
 
         rmat, users, items = matrix.sparse_ratings(ratings)
         item_means = item_means.reindex(items).values
-        _logger.info('[%s] made sparse matrix for %d items (%d ratings)', 
+        _logger.info('[%s] made sparse matrix for %d items (%d ratings)',
                      watch, len(items), rmat.nnz)
 
         # stupid trick: indices are items, look up means, subtract!
@@ -187,9 +220,12 @@ class ItemItem(Trainable, Predictor):
         iscore = np.full(len(model.items), np.nan, dtype=np.float_)
 
         # now compute the predictions
-        accel.predict(model.sim_matrix, len(model.items),
-                      self.min_neighbors, self.max_neighbors,
-                      rate_v, i_pos, iscore)
+        _predict(model.sim_matrix.indptr,
+                 model.sim_matrix.indices,
+                 model.sim_matrix.data,
+                 len(model.items),
+                 self.min_neighbors, self.max_neighbors,
+                 rate_v, i_pos, iscore)
 
         nscored = np.sum(np.logical_not(np.isnan(iscore)))
         iscore += model.means
