@@ -3,7 +3,6 @@ import time
 import numpy as np
 
 from lenskit import util as lku
-from lenskit import _cy_util as lkcu
 
 
 def test_stopwatch_instant():
@@ -142,22 +141,3 @@ def test_accum_top_indices():
         xs = np.argsort(values)
         # should be top N values in decreasing order
         assert all(topn == np.flip(xs[-10:]))
-
-
-def test_zero_empty():
-    buf = np.empty(0)
-    lkcu.zero_buf(buf)
-    assert len(buf) == 0
-
-
-def test_zero_one():
-    buf = np.full(1, 1, dtype=np.float_)
-    lkcu.zero_buf(buf)
-    assert buf[0] == 0
-
-
-def test_zero_many():
-    buf = np.random.randn(100)
-    lkcu.zero_buf(buf)
-    assert len(buf) == 100
-    assert all(buf == 0)
