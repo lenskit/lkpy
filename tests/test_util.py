@@ -47,6 +47,7 @@ def test_accum_init_empty():
     assert acc.size == 0
     assert acc.peek() < 0
     assert acc.remove() < 0
+    assert len(acc.top_keys()) == 0
 
 
 def test_accum_add_get():
@@ -123,6 +124,24 @@ def test_accum_add_more_lim():
         topn = np.array(topn)
         xs = np.argsort(values)
         assert all(topn == xs[-10:])
+
+
+def test_accum_top_indices():
+    for run in range(10):
+        values = np.random.randn(100)
+        acc = lku.Accumulator(values, 10)
+
+        order = np.arange(len(values), dtype=np.int_)
+        np.random.shuffle(order)
+        for i in order:
+            acc.add(i)
+            assert acc.size <= 10
+
+        topn = acc.top_keys()
+
+        xs = np.argsort(values)
+        # should be top N values in decreasing order
+        assert all(topn == np.flip(xs[-10:]))
 
 
 def test_zero_empty():

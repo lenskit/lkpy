@@ -51,6 +51,10 @@ class Accumulator:
             self.keys[0] = self.keys[self.size]
             _ind_downheap(0, self.size, self.keys, self.values)
 
+    def add_all(self, keys):
+        for i in range(len(keys)):
+            self.add(keys[i])
+
     def peek(self):
         if self.size > 0:
             return self.keys[0]
@@ -68,6 +72,14 @@ class Accumulator:
         if self.size > 0:
             _ind_downheap(0, self.size, self.keys, self.values)
         return top
+
+    def top_keys(self):
+        keys = np.empty(self.size, dtype=np.int32)
+        while self.size > 0:
+            i = self.size - 1
+            keys[i] = self.remove()
+        return keys
+
 
     def _upheap(self, pos):
         keys = self.keys
