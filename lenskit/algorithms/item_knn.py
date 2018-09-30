@@ -18,12 +18,14 @@ from . import Trainable, Predictor
 _logger = logging.getLogger(__package__)
 
 IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rating_matrix'])
+IIModel._matrix = property(lambda x: (x.sim_matrix.indptr, x.sim_matrix.indices, x.sim_matrix.data))
 
 
 @njit
-def _predict(indptr, indices, similarity,
-             nitems, min_nbrs, max_nbrs,
-             ratings, targets, scores):
+def _predict(model, nitems, nrange, ratings, targets):
+    indptr, indices, similarity = model
+    min_nbrs, max_nbrs = nrange
+    scores = np.full(nitems, np.nan, dtype=np.float_)
 
     for i in range(targets.shape[0]):
         iidx = targets[i]
@@ -50,6 +52,8 @@ def _predict(indptr, indices, similarity,
             continue
 
         scores[iidx] = num / denom
+
+    return scores
 
 
 class ItemItem(Trainable, Predictor):
@@ -220,12 +224,10 @@ class ItemItem(Trainable, Predictor):
         iscore = np.full(len(model.items), np.nan, dtype=np.float_)
 
         # now compute the predictions
-        _predict(model.sim_matrix.indptr,
-                 model.sim_matrix.indices,
-                 model.sim_matrix.data,
-                 len(model.items),
-                 self.min_neighbors, self.max_neighbors,
-                 rate_v, i_pos, iscore)
+        iscore = _predict(model._matrix,
+                          len(model.items),
+                          (self.min_neighbors, self.max_neighbors),
+                          rate_v, i_pos)
 
         nscored = np.sum(np.logical_not(np.isnan(iscore)))
         iscore += model.means
