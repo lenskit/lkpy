@@ -5,6 +5,7 @@ Item-based k-NN collaborative filtering.
 from collections import namedtuple
 import logging
 
+import ctypes
 import pandas as pd
 import numpy as np
 import scipy.sparse as sps
@@ -19,6 +20,58 @@ _logger = logging.getLogger(__package__)
 
 IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rating_matrix'])
 IIModel._matrix = property(lambda x: (x.sim_matrix.indptr, x.sim_matrix.indices, x.sim_matrix.data))
+
+_IIContext = namedtuple('_IIContext', [
+    'uptrs', 'items', 'ratings',
+    'r_iptrs', 'r_users',
+    'n_users', 'n_items'
+])
+
+
+def _make_context(matrix):
+    csc = matrix.tocsc(copy=False)
+    assert sps.isspmatrix_csc(csc)
+    return _IIContext(matrix.indptr, matrix.indices, matrix.data,
+                      csc.indptr, csc.indices,
+                      matrix.shape[0], matrix.shape[1])
+
+
+#@njit
+def _train(context, thresh, nnbrs):
+    neighborhoods = []
+    idx = np.arange(context.n_items)
+    work = np.zeros(context.n_items)
+
+    for item in range(context.n_items):
+        work.fill(0)
+        for uidx in range(context.r_iptrs[item], context.r_iptrs[item+1]):
+            u = context.r_users[uidx]
+            # find user's rating for this item
+            urp = -1
+            for iidx in range(context.uptrs[u], context.uptrs[u+1]):
+                if context.items[iidx] == item:
+                    urp = iidx
+                    ur = context.ratings[urp]
+                    break
+            assert urp >= 0
+
+            # accumulate pieces of dot products
+            for iidx in range(context.uptrs[u], context.uptrs[u+1]):
+                nbr = context.items[iidx]
+                if nbr != item:
+                    work[nbr] = work[nbr] + ur * context.ratings[iidx]
+
+        # now copy the accepted values into the results
+        mask = work >= thresh
+        if nnbrs > 0:
+            acc = util.Accumulator(work, nnbrs)
+            acc.add_all(idx[mask])
+            top = acc.top_keys()
+            neighborhoods.append((top, work[top]))
+        else:
+            neighborhoods.append((idx[mask], work[mask]))
+
+    return neighborhoods
 
 
 @njit
@@ -140,10 +193,14 @@ class ItemItem(Trainable, Predictor):
         context = accel.BuildContext(rmat)
 
         _logger.debug('[%s] running accelerated matrix computations', watch)
-        ndf = accel.sim_matrix(context, self.min_similarity,
-                               self.save_neighbors
-                               if self.save_neighbors and self.save_neighbors > 0
-                               else -1)
+        nbrhoods = _train(_make_context(rmat),
+                          self.min_similarity,
+                          self.save_neighbors
+                          if self.save_neighbors and self.save_neighbors > 0
+                          else -1)
+        ndf = pd.concat(pd.DataFrame({'item': i, 'neighbor': ns, 'similarity': ss})
+                        for (i, (ns, ss)) in enumerate(nbrhoods))
+
         _logger.info('[%s] got neighborhoods for %d of %d items',
                      watch, ndf.item.nunique(), n_items)
         smat = sps.csr_matrix((ndf.similarity.values, (ndf.item.values, ndf.neighbor.values)),
