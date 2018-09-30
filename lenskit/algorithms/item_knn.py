@@ -36,10 +36,10 @@ def _make_context(matrix):
                       matrix.shape[0], matrix.shape[1])
 
 
-#@njit
+@njit
 def _train(context, thresh, nnbrs):
     neighborhoods = []
-    idx = np.arange(context.n_items)
+    idx = np.arange(np.int32(context.n_items))
     work = np.zeros(context.n_items)
 
     for item in range(context.n_items):
