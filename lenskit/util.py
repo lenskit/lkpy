@@ -80,7 +80,6 @@ class Accumulator:
             keys[i] = self.remove()
         return keys
 
-
     def _upheap(self, pos):
         keys = self.keys
         values = self.values
