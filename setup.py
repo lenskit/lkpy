@@ -117,7 +117,6 @@ setup(
 
     packages=find_packages(),
     ext_modules=[
-        extmod('lenskit._cy_util'),
-        extmod('lenskit.algorithms._item_knn', openmp=True),
+        extmod('lenskit._cy_util')
     ]
 )
