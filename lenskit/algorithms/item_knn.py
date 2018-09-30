@@ -13,7 +13,6 @@ import scipy.sparse.linalg as spla
 from numba import njit
 
 from lenskit import util, matrix
-from . import _item_knn as accel
 from . import Trainable, Predictor
 
 _logger = logging.getLogger(__package__)
@@ -190,7 +189,6 @@ class ItemItem(Trainable, Predictor):
         # so let's make those
 
         n_items = rmat.shape[1]
-        context = accel.BuildContext(rmat)
 
         _logger.debug('[%s] running accelerated matrix computations', watch)
         nbrhoods = _train(_make_context(rmat),
