@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-from numba import njit
+from numba import njit, jitclass
 
 from lenskit import util, matrix
 from . import Trainable, Predictor
@@ -36,41 +36,66 @@ def _make_context(matrix):
 
 
 @njit
-def _train(context, thresh, nnbrs):
-    neighborhoods = []
-    idx = np.arange(np.int32(context.n_items))
+def __train_row(context, thresh, nnbrs, item):
     work = np.zeros(context.n_items)
+    for uidx in range(context.r_iptrs[item], context.r_iptrs[item+1]):
+        u = context.r_users[uidx]
+        # find user's rating for this item
+        urp = -1
+        for iidx in range(context.uptrs[u], context.uptrs[u+1]):
+            if context.items[iidx] == item:
+                urp = iidx
+                ur = context.ratings[urp]
+                break
+        assert urp >= 0
+
+        # accumulate pieces of dot products
+        for iidx in range(context.uptrs[u], context.uptrs[u+1]):
+            nbr = context.items[iidx]
+            if nbr != item:
+                work[nbr] = work[nbr] + ur * context.ratings[iidx]
+
+    # now copy the accepted values into the results
+    mask = work >= thresh
+    idx, = np.where(mask)
+    if nnbrs > 0:
+        acc = util.Accumulator(work, nnbrs)
+        acc.add_all(idx)
+        top = acc.top_keys()
+        return (top, work[top].copy())
+    else:
+        return (idx.astype(np.int32), work[idx].copy())
+
+
+@njit
+def _train(context, thresh, nnbrs):
+    ptrs = np.zeros(context.n_items + 1, dtype=np.int32)
+    cap = context.n_items * (nnbrs if nnbrs > 0 else 20)
+    size = 0
+    nbrs = np.empty(cap, dtype=np.int32)
+    sims = np.empty(cap, dtype=np.float_)
 
     for item in range(context.n_items):
-        work.fill(0)
-        for uidx in range(context.r_iptrs[item], context.r_iptrs[item+1]):
-            u = context.r_users[uidx]
-            # find user's rating for this item
-            urp = -1
-            for iidx in range(context.uptrs[u], context.uptrs[u+1]):
-                if context.items[iidx] == item:
-                    urp = iidx
-                    ur = context.ratings[urp]
-                    break
-            assert urp >= 0
+        nrow, srow = __train_row(context, thresh, nnbrs, item)
+        rlen = len(nrow)
+        assert rlen == len(srow)
+        nsize = size + rlen
+        while nsize > cap:
+            cap = cap + cap // 2
+        if cap > len(nbrs):
+            new_nbrs = np.empty(cap, dtype=np.int32)
+            new_sims = np.empty(cap, dtype=np.float_)
+            new_nbrs[:size] = nbrs[:size]
+            new_sims[:size] = sims[:size]
+            nbrs = new_nbrs
+            sims = new_sims
+        nbrs[size:nsize] = nrow
+        sims[size:nsize] = srow
+        ptrs[item] = size
+        size = nsize
 
-            # accumulate pieces of dot products
-            for iidx in range(context.uptrs[u], context.uptrs[u+1]):
-                nbr = context.items[iidx]
-                if nbr != item:
-                    work[nbr] = work[nbr] + ur * context.ratings[iidx]
-
-        # now copy the accepted values into the results
-        mask = work >= thresh
-        if nnbrs > 0:
-            acc = util.Accumulator(work, nnbrs)
-            acc.add_all(idx[mask])
-            top = acc.top_keys()
-            neighborhoods.append((top, work[top]))
-        else:
-            neighborhoods.append((idx[mask], work[mask]))
-
-    return neighborhoods
+    ptrs[context.n_items] = size
+    return (ptrs, nbrs[:size], sims[:size])
 
 
 @njit
@@ -191,18 +216,15 @@ class ItemItem(Trainable, Predictor):
         n_items = rmat.shape[1]
 
         _logger.debug('[%s] running accelerated matrix computations', watch)
-        nbrhoods = _train(_make_context(rmat),
-                          self.min_similarity,
-                          self.save_neighbors
-                          if self.save_neighbors and self.save_neighbors > 0
-                          else -1)
-        ndf = pd.concat(pd.DataFrame({'item': i, 'neighbor': ns, 'similarity': ss})
-                        for (i, (ns, ss)) in enumerate(nbrhoods))
+        ptr, nbr, sim = _train(_make_context(rmat),
+                               self.min_similarity,
+                               self.save_neighbors
+                               if self.save_neighbors and self.save_neighbors > 0
+                               else -1)
 
         _logger.info('[%s] got neighborhoods for %d of %d items',
-                     watch, ndf.item.nunique(), n_items)
-        smat = sps.csr_matrix((ndf.similarity.values, (ndf.item.values, ndf.neighbor.values)),
-                              shape=(n_items, n_items))
+                     watch, np.sum(np.diff(ptr) > 0), n_items)
+        smat = sps.csr_matrix((sim, nbr, ptr), shape=(n_items, n_items))
 
         # sort each matrix row by value
         for i in range(n_items):
