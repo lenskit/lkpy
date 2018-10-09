@@ -48,7 +48,7 @@ jobs:
     displayName: 'Test LKPY'
 
   - script: |
-      invoke test --cover --no-eval --verbose
+      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval --no-slow --verbose
     displayName: 'Test Coverage'
 
   - script: |
