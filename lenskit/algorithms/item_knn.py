@@ -198,7 +198,10 @@ class ItemItem(Trainable, Predictor):
         # compute column norms
         norms = spla.norm(rmat, 2, axis=0)
         # and multiply by a diagonal to normalize columns
-        norm_mat = rmat @ sps.diags(np.reciprocal(norms))
+        recip_norms = norms.copy()
+        is_nz = recip_norms > 0
+        recip_norms[is_nz] = np.reciprocal(recip_norms[is_nz])
+        norm_mat = rmat @ sps.diags(recip_norms)
         # and reset NaN
         norm_mat.data[np.isnan(norm_mat.data)] = 0
         _logger.info('[%s] normalized user-item ratings', watch)
