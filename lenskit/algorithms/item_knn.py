@@ -98,7 +98,6 @@ def _train(context, thresh, nnbrs):
         assert counts[i] == ep - sp
         indices[sp:ep] = nrows[i]
         sims[sp:ep] = srows[i]
-    _logger.info('total similarity: %s', np.sum(sims))
 
     return (ptrs, indices, sims)
 
@@ -195,8 +194,6 @@ class ItemItem(Trainable, Predictor):
 
         # stupid trick: indices are items, look up means, subtract!
         rmat.data = rmat.data - item_means[rmat.indices]
-        m2 = rmat.mean(axis=0)
-        _logger.info('min mean: %f, max mean: %f', m2.A1.min(), m2.A1.max())
 
         # compute column norms
         norms = spla.norm(rmat, 2, axis=0)
@@ -207,7 +204,7 @@ class ItemItem(Trainable, Predictor):
         _logger.info('[%s] normalized user-item ratings', watch)
 
         _logger.info('[%s] computing similarity matrix', watch)
-        ptr, nbr, sim = _train(_make_context(rmat),
+        ptr, nbr, sim = _train(_make_context(norm_mat),
                                self.min_similarity,
                                self.save_neighbors
                                if self.save_neighbors and self.save_neighbors > 0
