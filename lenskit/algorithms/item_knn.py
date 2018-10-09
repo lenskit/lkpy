@@ -201,21 +201,6 @@ class ItemItem(Trainable, Predictor):
         _logger.info('[%s] normalized user-item ratings', watch)
 
         _logger.info('[%s] computing similarity matrix', watch)
-        sim_matrix = self._cy_matrix(norm_mat, watch)
-
-        _logger.info('[%s] computed %d neighbor pairs', watch, sim_matrix.nnz)
-
-        return IIModel(items, item_means, np.diff(sim_matrix.indptr),
-                       sim_matrix, ratings.set_index(['user', 'item']).rating)
-
-    def _cy_matrix(self, rmat, watch):
-        _logger.debug('[%s] preparing Cython data launch', watch)
-        # the Cython implementation requires contiguous numeric IDs.
-        # so let's make those
-
-        n_items = rmat.shape[1]
-
-        _logger.debug('[%s] running accelerated matrix computations', watch)
         ptr, nbr, sim = _train(_make_context(rmat),
                                self.min_similarity,
                                self.save_neighbors
@@ -226,53 +211,10 @@ class ItemItem(Trainable, Predictor):
                      watch, np.sum(np.diff(ptr) > 0), n_items)
         smat = sps.csr_matrix((sim, nbr, ptr), shape=(n_items, n_items))
 
-        # sort each matrix row by value
-        for i in range(n_items):
-            start = smat.indptr[i]
-            end = smat.indptr[i+1]
-            sorti = np.argsort(smat.data[start:end])
-            tmp = smat.indices[sorti[::-1] + start]
-            smat.indices[start:end] = tmp
-            tmp = smat.data[sorti[::-1] + start]
-            smat.data[start:end] = tmp
-        _logger.info('[%s] sorted neighborhoods', watch)
+        _logger.info('[%s] computed %d neighbor pairs', watch, smat.nnz)
 
-        return smat
-
-    def _py_matrix(self, ratings, uir, watch):
-        _logger.info('[%s] computing item-item similarities for %d items with %d ratings',
-                     watch, uir.item.nunique(), len(uir))
-
-        def sim_row(irdf):
-            _logger.debug('[%s] computing similarities with %d ratings',
-                          watch, len(irdf))
-            assert irdf.index.name == 'user'
-            # idf is all ratings for an item
-            # join with other users' ratings
-            # drop the item index, it's irrelevant
-            irdf = irdf.rename(columns={'rating': 'tgt_rating', 'item': 'tgt_item'})
-            # join with other ratings
-            joined = irdf.join(uir, on='user', how='inner')
-            assert joined.index.name == 'user'
-            joined = joined[joined.tgt_item != joined.item]
-            _logger.debug('[%s] using %d neighboring ratings to compute similarity',
-                          watch, len(joined))
-            # multiply ratings - dot product part 1
-            joined['rp'] = joined.tgt_rating * joined.rating
-            # group by item and sum
-            sims = joined.groupby('item').rp.sum()
-            if self.min_similarity is not None:
-                sims = sims[sims >= self.min_similarity]
-            if self.save_neighbors is not None:
-                sims = sims.nlargest(self.save_neighbors)
-            return sims.reset_index(name='similarity')\
-                .rename(columns={'item': 'neighbor'})\
-                .loc[:, ['neighbor', 'similarity']]
-
-        neighborhoods = uir.groupby('item', sort=False).apply(sim_row)
-        # get rid of extra groupby index
-        neighborhoods = neighborhoods.reset_index(level=1, drop=True)
-        return neighborhoods
+        return IIModel(items, item_means, np.diff(smat.indptr),
+                       smat, ratings.set_index(['user', 'item']).rating)
 
     def predict(self, model, user, items, ratings=None):
         _logger.debug('predicting %d items for user %s', len(items), user)
