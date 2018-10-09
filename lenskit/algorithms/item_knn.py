@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
+import numba as n
 from numba import njit, jitclass
 
 from lenskit import util, matrix
@@ -64,38 +65,42 @@ def __train_row(context, thresh, nnbrs, item):
         top = acc.top_keys()
         return (top, work[top].copy())
     else:
-        return (idx.astype(np.int32), work[idx].copy())
+        sims = work[idx]
+        order = sims.argsort()
+        order = order[::-1]
+        return (idx[order].astype(np.int32), sims[order])
 
 
 @njit
 def _train(context, thresh, nnbrs):
-    ptrs = np.zeros(context.n_items + 1, dtype=np.int32)
-    cap = context.n_items * (nnbrs if nnbrs > 0 else 20)
-    size = 0
-    nbrs = np.empty(cap, dtype=np.int32)
-    sims = np.empty(cap, dtype=np.float_)
+    nrows = []
+    srows = []
 
     for item in range(context.n_items):
         nrow, srow = __train_row(context, thresh, nnbrs, item)
-        rlen = len(nrow)
-        assert rlen == len(srow)
-        nsize = size + rlen
-        while nsize > cap:
-            cap = cap + cap // 2
-        if cap > len(nbrs):
-            new_nbrs = np.empty(cap, dtype=np.int32)
-            new_sims = np.empty(cap, dtype=np.float_)
-            new_nbrs[:size] = nbrs[:size]
-            new_sims[:size] = sims[:size]
-            nbrs = new_nbrs
-            sims = new_sims
-        nbrs[size:nsize] = nrow
-        sims[size:nsize] = srow
-        ptrs[item] = size
-        size = nsize
 
-    ptrs[context.n_items] = size
-    return (ptrs, nbrs[:size], sims[:size])
+        nrows.append(nrow)
+        srows.append(srow)
+
+    counts = np.array([len(n) for n in nrows], dtype=np.int32)
+    cells = np.sum(counts)
+
+    # assemble our results in to a CSR
+    ptrs = np.zeros(len(nrows) + 1, dtype=np.int32)
+    ptrs[1:] = np.cumsum(counts)
+    assert ptrs[context.n_items] == cells
+
+    indices = np.empty(cells, dtype=np.int32)
+    sims = np.empty(cells)
+    for i in range(context.n_items):
+        sp = ptrs[i]
+        ep = ptrs[i+1]
+        assert counts[i] == ep - sp
+        indices[sp:ep] = nrows[i]
+        sims[sp:ep] = srows[i]
+    _logger.info('total similarity: %s', np.sum(sims))
+
+    return (ptrs, indices, sims)
 
 
 @njit
@@ -183,6 +188,7 @@ class ItemItem(Trainable, Predictor):
         _logger.info('[%s] computed means for %d items', watch, len(item_means))
 
         rmat, users, items = matrix.sparse_ratings(ratings)
+        n_items = len(items)
         item_means = item_means.reindex(items).values
         _logger.info('[%s] made sparse matrix for %d items (%d ratings)',
                      watch, len(items), rmat.nnz)
