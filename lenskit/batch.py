@@ -130,6 +130,7 @@ def recommend(algo, model, users, n, candidates):
 
     results = []
     for user in users:
+        _logger.debug('generating recommendations for %s', user)
         ucand = candidates(user)
         res = algo.recommend(model, user, n, ucand)
         iddf = pd.DataFrame({'user': user, 'rank': np.arange(1, len(res) + 1)})

@@ -7,16 +7,168 @@ import logging
 
 import pandas as pd
 import numpy as np
+import numba as n
 
 from . import Trainable, Predictor
 from . import basic
-from . import _funksvd as _fsvd
 
 _logger = logging.getLogger(__package__)
 
 BiasMFModel = namedtuple('BiasMFModel', ['user_index', 'item_index',
                                          'global_bias', 'user_bias', 'item_bias',
                                          'user_features', 'item_features'])
+
+
+@n.jitclass([
+    ('user_features', n.double[:, :]),
+    ('item_features', n.double[:, :]),
+    ('feature_count', n.int32),
+    ('user_count', n.int32),
+    ('item_count', n.int32),
+    ('initial_value', n.double)
+])
+class Model:
+    def __init__(self, umat, imat):
+        self.user_features = umat
+        self.item_features = imat
+        self.feature_count = umat.shape[1]
+        assert imat.shape[1] == self.feature_count
+        self.user_count = umat.shape[0]
+        self.item_count = imat.shape[0]
+        self.initial_value = np.nan
+
+
+def _fresh_model(nfeatures, nusers, nitems, init=0.1):
+    umat = np.full([nusers, nfeatures], init, dtype=np.float_)
+    imat = np.full([nitems, nfeatures], init, dtype=np.float_)
+    model = Model(umat, imat)
+    model.initial_value = init
+    assert model.feature_count == nfeatures
+    assert model.user_count == nusers
+    assert model.item_count == nitems
+    return model
+
+
+@n.jitclass([
+    ('iter_count', n.int32),
+    ('learning_rate', n.double),
+    ('reg_term', n.double),
+    ('rmin', n.double),
+    ('rmax', n.double)
+])
+class _Params:
+    def __init__(self, niters, lrate, reg, rmin, rmax):
+        self.iter_count = niters
+        self.learning_rate = lrate
+        self.reg_term = reg
+        self.rmin = rmin
+        self.rmax = rmax
+
+
+def make_params(niters, lrate, reg, range):
+    if range is None:
+        rmin = -np.inf
+        rmax = np.inf
+    else:
+        rmin, rmax = range
+
+    return _Params(niters, lrate, reg, rmin, rmax)
+
+
+@n.jitclass([
+    ('est', n.double[:]),
+    ('feature', n.int32),
+    ('trail', n.double)
+])
+class _FeatContext:
+    def __init__(self, est, feature, trail):
+        self.est = est
+        self.feature = feature
+        self.trail = trail
+
+
+@n.jitclass([
+    ('users', n.int32[:]),
+    ('items', n.int32[:]),
+    ('ratings', n.double[:]),
+    ('bias', n.double[:]),
+    ('n_samples', n.uint64)
+])
+class Context:
+    def __init__(self, users, items, ratings, bias):
+        self.users = users
+        self.items = items
+        self.ratings = ratings
+        self.bias = bias
+        self.n_samples = users.shape[0]
+
+        assert items.shape[0] == self.n_samples
+        assert ratings.shape[0] == self.n_samples
+        assert bias.shape[0] == self.n_samples
+
+
+@n.njit
+def _feature_loop(ctx: Context, params: _Params, model: Model, fc: _FeatContext):
+    users = ctx.users
+    items = ctx.items
+    ratings = ctx.ratings
+    umat = model.user_features
+    imat = model.item_features
+    est = fc.est
+    f = fc.feature
+    trail = fc.trail
+
+    sse = 0.0
+    acc_ud = 0.0
+    acc_id = 0.0
+    for s in range(ctx.n_samples):
+        user = users[s]
+        item = items[s]
+        ufv = umat[user, f]
+        ifv = imat[item, f]
+
+        pred = est[s] + ufv * ifv + trail
+        if pred < params.rmin:
+            pred = params.rmin
+        elif pred > params.rmax:
+            pred = params.rmax
+
+        error = ratings[s] - pred
+        sse += error * error
+
+        # compute deltas
+        ufd = error * ifv - params.reg_term * ufv
+        ufd = ufd * params.learning_rate
+        acc_ud += ufd * ufd
+        ifd = error * ufv - params.reg_term * ifv
+        ifd = ifd * params.learning_rate
+        acc_id += ifd * ifd
+        umat[user, f] += ufd
+        imat[item, f] += ifd
+
+    return np.sqrt(sse / ctx.n_samples)
+
+
+@n.njit
+def _train_feature(ctx, params, model, fc):
+    for epoch in range(params.iter_count):
+        rmse = _feature_loop(ctx, params, model, fc)
+
+    return rmse
+
+
+def train(ctx: Context, params: _Params, model: Model):
+    est = ctx.bias
+
+    for f in range(model.feature_count):
+        trail = model.initial_value * model.initial_value * (model.feature_count - f - 1)
+        fc = _FeatContext(est, f, trail)
+        rmse = _train_feature(ctx, params, model, fc)
+        _logger.info('finished feature %d (RMSE=%f)', f, rmse)
+
+        est = est + model.user_features[ctx.users, f] * model.item_features[ctx.items, f]
+        est = np.maximum(est, params.rmin)
+        est = np.minimum(est, params.rmax)
 
 
 def _align_add_bias(bias, index, keys, series):
@@ -91,9 +243,9 @@ class FunkSVD(Predictor, Trainable):
         uidx = pd.Index(ratings.user.unique())
         iidx = pd.Index(ratings.item.unique())
 
-        users = uidx.get_indexer(ratings.user).astype(np.int_)
+        users = uidx.get_indexer(ratings.user).astype(np.int32)
         assert np.all(users >= 0)
-        items = iidx.get_indexer(ratings.item).astype(np.int_)
+        items = iidx.get_indexer(ratings.item).astype(np.int32)
         assert np.all(items >= 0)
 
         _logger.debug('computing initial estimates')
@@ -105,14 +257,14 @@ class FunkSVD(Predictor, Trainable):
         assert len(initial) == len(ratings)
 
         _logger.debug('initializing data structures')
-        context = _fsvd.Context(users, items, ratings.rating.astype(np.float_).values,
-                                initial.values)
-        params = _fsvd.Params(self.iterations, self.learning_rate, self.regularization)
+        context = Context(users, items, ratings.rating.astype(np.float_).values,
+                          initial.values)
+        params = make_params(self.iterations, self.learning_rate, self.regularization, self.range)
 
-        model = _fsvd.Model.fresh(self.features, len(uidx), len(iidx))
+        model = _fresh_model(self.features, len(uidx), len(iidx))
 
         _logger.info('training biased MF model with %d features', self.features)
-        _fsvd.train(context, params, model, self.range)
+        train(context, params, model)
         _logger.info('finished model training')
 
         return BiasMFModel(uidx, iidx, gbias, ubias, ibias,
