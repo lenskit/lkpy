@@ -17,7 +17,7 @@ jobs:
 
 - job: 'LinuxConda'
   pool:
-    vmImage: 'Ubuntu 16.04'
+    vmImage: ubuntu-16.04
   strategy:
     matrix:
       Python35:
@@ -70,7 +70,7 @@ jobs:
 
 - job: 'LinuxVanilla'
   pool:
-    vmImage: 'Ubuntu 16.04'
+    vmImage: ubuntu-16.04
   strategy:
     matrix:
       Python35:
@@ -98,7 +98,7 @@ jobs:
 
 - job: 'WindowsVanilla'
   pool:
-    vmImage: 'VS2017'
+    vmImage: vs2017-win2016
   
   steps:
   - script: |
@@ -112,7 +112,7 @@ jobs:
 
 - job: 'WindowsConda'
   pool:
-    vmImage: 'VS2017'
+    vmImage: vs2017-win2016
   strategy:
     matrix:
       Python35:
