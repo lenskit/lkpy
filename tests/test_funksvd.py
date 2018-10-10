@@ -1,5 +1,6 @@
 import os
 import logging
+from pathlib import Path
 
 import lenskit.algorithms.funksvd as svd
 
@@ -99,6 +100,30 @@ def test_fsvd_predict_bad_user():
     assert len(preds) == 1
     assert preds.index[0] == 3
     assert np.isnan(preds.loc[3])
+
+
+@mark.slow
+def test_fsvd_known_preds():
+    from lenskit import batch
+
+    algo = svd.FunkSVD(15, iterations=125, lrate=0.001)
+    _log.info('training %s on ml data', algo)
+    model = algo.train(lktu.ml_pandas.renamed.ratings)
+
+    dir = Path(__file__).parent
+    pred_file = dir / 'funksvd-preds.csv'
+    _log.info('reading known predictions from %s', pred_file)
+    known_preds = pd.read_csv(str(pred_file))
+    pairs = known_preds.loc[:, ['user', 'item']]
+
+    preds = batch.predict(algo, pairs, model=model)
+    merged = pd.merge(known_preds.rename(columns={'prediction': 'expected'}), preds)
+    assert len(merged) == len(preds)
+    merged['error'] = merged.expected - merged.prediction
+    assert not any(merged.prediction.isna() & merged.expected.notna())
+    err = merged.error
+    err = err[err.notna()]
+    assert all(err.abs() < 0.01)
 
 
 @mark.slow
