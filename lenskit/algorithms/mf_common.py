@@ -16,13 +16,13 @@ class BiasMFModel:
     Common model for biased matrix factorization.
 
     Attributes:
-        user_index(pandas.Index): Users in the model (length=$m$).
-        item_index(pandas.Index): Items in the model (length=$n$).
+        user_index(pandas.Index): Users in the model (length=:math:`m`).
+        item_index(pandas.Index): Items in the model (length=:math:`n`).
         global_bias(double): The global bias term.
         user_bias(numpy.ndarray): The user bias terms.
         item_bias(numpy.ndarray): The item bias terms.
-        user_features(numpy.ndarray): The $m \\times k$ user-feature matrix.
-        item_features(numpy.ndarray): The $n \\times k$ item-feature matrix.
+        user_features(numpy.ndarray): The :math:`m \\times k` user-feature matrix.
+        item_features(numpy.ndarray): The :math:`n \\times k` item-feature matrix.
     """
 
     def __init__(self, users, items, gbias, ubias, ibias, umat, imat):
