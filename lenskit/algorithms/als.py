@@ -9,6 +9,7 @@ from . import basic
 from . import Predictor, Trainable
 from .mf_common import BiasMFModel
 from ..matrix import sparse_ratings
+from .. import util
 
 _logger = logging.getLogger(__package__)
 
@@ -96,9 +97,10 @@ class BiasedMF(Predictor, Trainable):
         Returns:
             BiasMFModel: The trained biased MF model.
         """
+        timer = util.Stopwatch()
 
         if bias is None:
-            _logger.info('training bias model')
+            _logger.info('[%s] training bias model', timer)
             bias = basic.Bias(damping=self.damping).train(ratings)
         # unpack the bias
         if isinstance(bias, basic.BiasModel):
@@ -114,7 +116,8 @@ class BiasedMF(Predictor, Trainable):
         rmat, users, items = sparse_ratings(ratings)
         n_users = len(users)
         n_items = len(items)
-        _logger.info('normalizing %dx%d matrix (%d nnz)', n_users, n_items, rmat.nnz)
+        _logger.info('[%s] normalizing %dx%d matrix (%d nnz)',
+                     timer, n_users, n_items, rmat.nnz)
         rmat.data = rmat.data - gbias
         if ibias is not None:
             ibias = ibias.reindex(items)
@@ -139,18 +142,19 @@ class BiasedMF(Predictor, Trainable):
         imat = np.random.randn(n_items, self.features) * 0.1
         umat = np.zeros((n_users, self.features))
 
-        _logger.info('training biased MF model with ALS for %d features', self.features)
+        _logger.info('[%s] training biased MF model with ALS for %d features',
+                     timer, self.features)
         for epoch in range(self.iterations):
             umat2 = _train_users(ctx, imat, self.regularization)
-            _logger.info('finished user epoch %d (|Δ|=%.5f)',
-                         epoch, np.linalg.norm(umat2 - umat, 'fro'))
+            _logger.info('[%s] finished user epoch %d (|Δ|=%.5f)',
+                         timer, epoch, np.linalg.norm(umat2 - umat, 'fro'))
             umat = umat2
             imat2 = _train_items(ctx, umat, self.regularization)
-            _logger.info('finished item epoch %d (|Δ|=%.5f)',
-                         epoch, np.linalg.norm(imat2 - imat, 'fro'))
+            _logger.info('[%s] finished item epoch %d (|Δ|=%.5f)',
+                         timer, epoch, np.linalg.norm(imat2 - imat, 'fro'))
             imat = imat2
 
-        _logger.info('finished model training')
+        _logger.info('trained model in %s', timer)
 
         return BiasMFModel(users, items, gbias, ubias, ibias, umat, imat)
 
