@@ -1,8 +1,8 @@
 import lenskit.algorithms.item_knn as knn
 
+from pathlib import Path
 import logging
 import os.path
-from functools import partial
 from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
@@ -346,6 +346,30 @@ def test_ii_batch_accuracy():
 
     user_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
     assert user_rmse.mean() == approx(0.90, abs=0.05)
+
+
+@mark.slow
+def test_ii_known_preds():
+    from lenskit import batch
+
+    algo = knn.ItemItem(20, min_sim=1.0e-6)
+    _log.info('training %s on ml data', algo)
+    model = algo.train(lktu.ml_pandas.renamed.ratings)
+
+    dir = Path(__file__).parent
+    pred_file = dir / 'item-item-preds.csv'
+    _log.info('reading known predictions from %s', pred_file)
+    known_preds = pd.read_csv(str(pred_file))
+    pairs = known_preds.loc[:, ['user', 'item']]
+
+    preds = batch.predict(algo, pairs, model=model)
+    merged = pd.merge(known_preds.rename(columns={'prediction': 'expected'}), preds)
+    assert len(merged) == len(preds)
+    merged['error'] = merged.expected - merged.prediction
+    assert not any(merged.prediction.isna() & merged.expected.notna())
+    err = merged.error
+    err = err[err.notna()]
+    assert all(err.abs() < 0.01)
 
 
 @mark.slow

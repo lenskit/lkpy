@@ -3,6 +3,20 @@ Classic Matrix Factorization
 
 LKPY provides classical matrix factorization implementations.
 
+.. contents::
+   :local:
+
+Common Support
+--------------
+
+.. module:: lenskit.algorithms.mf_common
+
+The :py:mod:`mf_common` module contains common support code for matrix factorization
+algorithms.
+
+.. autoclass:: BiasMFModel
+   :members:
+
 FunkSVD
 -------
 
