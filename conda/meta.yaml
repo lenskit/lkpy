@@ -1,19 +1,23 @@
+{% set data = load_setup_py_data() %}
+
 package:
   name: lenskit
-  version: "0.2.0"
+  {% if GIT_DESCRIBE_HASH > '0' %}
+  version: {{data.get('version')}}.dev{{GIT_DESCRIBE_NUMBER}}+{{GIT_DESCRIBE_HASH}}
+  {% else %}
+  version: {{data.get('version')}}
+  {% endif %}
 
 source:
   path: ../
 
 requirements:
   build:
-    - {{ compiler('c') }}
-    - cython
   host:
     - python {{ python }}
     - setuptools
     - pytest-runner
-    - cython
+    - numba
     - pandas
     - numpy
     - scipy
@@ -22,12 +26,14 @@ requirements:
     - python
     - pandas
     - scipy
+    - numba
     - pytables
 
 test:
   source_files:
     - tests
     - tests/*.py
+    - tests/*.csv
     - ml-latest-small
     - ml-latest-small/*.csv
   requires:
