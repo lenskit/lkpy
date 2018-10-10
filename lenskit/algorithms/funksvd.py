@@ -2,7 +2,6 @@
 FunkSVD (biased MF).
 """
 
-from collections import namedtuple
 import logging
 
 import pandas as pd
@@ -11,12 +10,9 @@ import numba as n
 
 from . import Trainable, Predictor
 from . import basic
+from .mf_common import BiasMFModel
 
 _logger = logging.getLogger(__package__)
-
-BiasMFModel = namedtuple('BiasMFModel', ['user_index', 'item_index',
-                                         'global_bias', 'user_bias', 'item_bias',
-                                         'user_features', 'item_features'])
 
 
 @n.jitclass([
@@ -271,36 +267,22 @@ class FunkSVD(Predictor, Trainable):
                            model.user_features, model.item_features)
 
     def predict(self, model, user, items, ratings=None):
-        if user not in model.user_index:
+        # look up user index
+        uidx = model.lookup_user(user)
+        if uidx < 0:
+            _logger.debug('user %s not in model', user)
             return pd.Series(np.nan, index=items)
-
-        # get user index
-        uidx = model.user_index.get_loc(user)
-        assert uidx >= 0
 
         # get item index & limit to valid ones
         items = np.array(items)
-        iidx = model.item_index.get_indexer(items)
+        iidx = model.lookup_items(items)
         good = iidx >= 0
         good_items = items[good]
         good_iidx = iidx[good]
 
-        # get user vector
-        uv = model.user_features[uidx, :]
-        # get item matrix
-        im = model.item_features[good_iidx, :]
-
         # multiply
         _logger.debug('scoring %d items for user %s', len(good_items), user)
-        rv = np.matmul(im, uv)
-        assert rv.shape[0] == len(good_items)
-        assert len(rv.shape) == 1
-        # add bias back in
-        rv = rv + model.global_bias
-        if model.user_bias is not None:
-            rv = rv + model.user_bias.iloc[uidx]
-        if model.item_bias is not None:
-            rv = rv + model.item_bias.iloc[good_iidx].values
+        rv = model.score(uidx, good_iidx)
 
         # clamp if suitable
         if self.range is not None:
