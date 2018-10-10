@@ -3,6 +3,7 @@ FunkSVD (biased MF).
 """
 
 import logging
+import time
 
 import pandas as pd
 import numpy as np
@@ -11,6 +12,7 @@ import numba as n
 from . import Trainable, Predictor
 from . import basic
 from .mf_common import BiasMFModel
+from .. import util
 
 _logger = logging.getLogger(__package__)
 
@@ -153,14 +155,17 @@ def _train_feature(ctx, params, model, fc):
     return rmse
 
 
-def train(ctx: Context, params: _Params, model: Model):
+def train(ctx: Context, params: _Params, model: Model, timer):
     est = ctx.bias
 
     for f in range(model.feature_count):
+        start = time.perf_counter()
         trail = model.initial_value * model.initial_value * (model.feature_count - f - 1)
         fc = _FeatContext(est, f, trail)
         rmse = _train_feature(ctx, params, model, fc)
-        _logger.info('finished feature %d (RMSE=%f)', f, rmse)
+        end = time.perf_counter()
+        _logger.info('[%s] finished feature %d (RMSE=%f) in %.2fs',
+                     timer, f, rmse, end - start)
 
         est = est + model.user_features[ctx.users, f] * model.item_features[ctx.items, f]
         est = np.maximum(est, params.rmin)
@@ -215,8 +220,9 @@ class FunkSVD(Predictor, Trainable):
         Returns:
             The trained biased MF model.
         """
+        timer = util.Stopwatch()
         if bias is None:
-            _logger.info('training bias model')
+            _logger.info('[%s] training bias model', timer)
             bias = basic.Bias(damping=self.damping).train(ratings)
         # unpack the bias
         if isinstance(bias, basic.BiasModel):
@@ -229,13 +235,13 @@ class FunkSVD(Predictor, Trainable):
             ibias = None
             ubias = None
 
-        _logger.info('preparing rating data for %d samples', len(ratings))
+        _logger.info('[%s] preparing rating data for %d samples', timer, len(ratings))
         _logger.debug('shuffling rating data')
         shuf = np.arange(len(ratings), dtype=np.int_)
         np.random.shuffle(shuf)
         ratings = ratings.iloc[shuf, :]
 
-        _logger.debug('indexing users and items')
+        _logger.debug('[%s] indexing users and items', timer)
         uidx = pd.Index(ratings.user.unique())
         iidx = pd.Index(ratings.item.unique())
 
@@ -244,7 +250,7 @@ class FunkSVD(Predictor, Trainable):
         items = iidx.get_indexer(ratings.item).astype(np.int32)
         assert np.all(items >= 0)
 
-        _logger.debug('computing initial estimates')
+        _logger.debug('[%s] computing initial estimates', timer)
         initial = pd.Series(gbias, index=ratings.index, dtype=np.float_)
         ibias, initial = _align_add_bias(ibias, iidx, ratings.item, initial)
         ubias, initial = _align_add_bias(ubias, uidx, ratings.user, initial)
@@ -252,16 +258,16 @@ class FunkSVD(Predictor, Trainable):
         _logger.debug('have %d estimates for %d ratings', len(initial), len(ratings))
         assert len(initial) == len(ratings)
 
-        _logger.debug('initializing data structures')
+        _logger.debug('[%s] initializing data structures', timer)
         context = Context(users, items, ratings.rating.astype(np.float_).values,
                           initial.values)
         params = make_params(self.iterations, self.learning_rate, self.regularization, self.range)
 
         model = _fresh_model(self.features, len(uidx), len(iidx))
 
-        _logger.info('training biased MF model with %d features', self.features)
-        train(context, params, model)
-        _logger.info('finished model training')
+        _logger.info('[%s] training biased MF model with %d features', timer, self.features)
+        train(context, params, model, timer)
+        _logger.info('finished model training in %s', timer)
 
         return BiasMFModel(uidx, iidx, gbias, ubias, ibias,
                            model.user_features, model.item_features)
