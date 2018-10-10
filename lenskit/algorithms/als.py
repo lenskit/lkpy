@@ -19,6 +19,7 @@ _Ctx = namedtuple('_Ctx', [
 ])
 
 
+@njit
 def _train_users(ctx: _Ctx, imat: np.ndarray, reg: float):
     umat = np.zeros((ctx.n_users, ctx.n_features))
     for u in range(ctx.n_users):
@@ -42,6 +43,7 @@ def _train_users(ctx: _Ctx, imat: np.ndarray, reg: float):
     return umat
 
 
+@njit
 def _train_items(ctx: _Ctx, umat: np.ndarray, reg: float):
     imat = np.zeros((ctx.n_items, ctx.n_features))
     for i in range(ctx.n_items):
