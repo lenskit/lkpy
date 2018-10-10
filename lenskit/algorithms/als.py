@@ -14,7 +14,7 @@ from .. import util
 _logger = logging.getLogger(__package__)
 
 _Ctx = namedtuple('_Ctx', [
-    'n_users', 'n_items', 'n_features',
+    'n_users', 'n_items', 'n_features', 'nnz',
     'uptrs', 'items', 'ui_ratings',
     'iptrs', 'users', 'iu_ratings'
 ])
@@ -134,7 +134,7 @@ class BiasedMF(Predictor, Trainable):
 
         _logger.debug('setting up context')
         trmat = rmat.tocsc()
-        ctx = _Ctx(n_users, n_items, self.features,
+        ctx = _Ctx(n_users, n_items, self.features, rmat.nnz,
                    rmat.indptr, rmat.indices, rmat.data,
                    trmat.indptr, trmat.indices, trmat.data)
 
