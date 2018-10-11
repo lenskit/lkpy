@@ -75,6 +75,7 @@ class BiasedMF(Predictor, Trainable):
         reg(double): the regularization factor
         damping(double): damping factor for the underlying mean
     """
+    timer = None
 
     def __init__(self, features, iterations=10, reg=0.1, damping=5):
         self.features = features
@@ -93,10 +94,44 @@ class BiasedMF(Predictor, Trainable):
         Returns:
             BiasMFModel: The trained biased MF model.
         """
-        timer = util.Stopwatch()
+        self.timer = util.Stopwatch()
 
+        current, uctx, ictx = self._initial_model(ratings, bias)
+
+        _logger.info('[%s] training biased MF model with ALS for %d features',
+                     self.timer, self.features)
+        for epoch, model in enumerate(self._train_iters(current, uctx, ictx)):
+
+            current = model
+
+        _logger.info('trained model in %s', self.timer)
+
+        return current
+
+    def _initial_model(self, ratings, bias=None):
+        gbias, ubias, ibias = self._get_bias(bias, ratings)
+        rmat, users, items = sparse_ratings(ratings)
+        n_users = len(users)
+        n_items = len(items)
+
+        rmat, ubias, ibias = self._normalize(rmat, users, items, gbias, ubias, ibias)
+        assert len(ubias) == n_users and len(ibias) == n_items
+
+        _logger.debug('setting up contexts')
+        uctx = _Ctx(n_users, self.features,
+                    rmat.indptr, rmat.indices, rmat.data)
+        trmat = rmat.tocsc()
+        ictx = _Ctx(n_items, self.features,
+                    trmat.indptr, trmat.indices, trmat.data)
+
+        _logger.debug('initializing item matrix')
+        imat = np.random.randn(n_items, self.features) * 0.01
+
+        return BiasMFModel(users, items, gbias, ubias, ibias, None, imat), uctx, ictx
+
+    def _get_bias(self, bias, ratings):
         if bias is None:
-            _logger.info('[%s] training bias model', timer)
+            _logger.info('[%s] training bias model', self.timer)
             bias = basic.Bias(damping=self.damping).train(ratings)
         # unpack the bias
         if isinstance(bias, basic.BiasModel):
@@ -109,51 +144,49 @@ class BiasedMF(Predictor, Trainable):
             ibias = None
             ubias = None
 
-        rmat, users, items = sparse_ratings(ratings)
+        return gbias, ubias, ibias
+
+    def _normalize(self, ratings, users, items, gbias, ubias, ibias):
         n_users = len(users)
         n_items = len(items)
+        _logger.info('shape %s, u %d, i %d', ratings.shape, n_users, n_items)
+        assert ratings.shape[0] == n_users
+        assert ratings.shape[1] == n_items
+
         _logger.info('[%s] normalizing %dx%d matrix (%d nnz)',
-                     timer, n_users, n_items, rmat.nnz)
-        rmat.data = rmat.data - gbias
+                     self.timer, n_users, n_items, ratings.nnz)
+        ratings.data = ratings.data - gbias
         if ibias is not None:
             ibias = ibias.reindex(items)
-            rmat.data = rmat.data - ibias.values[rmat.indices]
+            ratings.data = ratings.data - ibias.values[ratings.indices]
         if ubias is not None:
             ubias = ubias.reindex(users)
             # create a user index array the size of the data
             reps = np.repeat(np.arange(len(users), dtype=np.int32),
-                             np.diff(rmat.indptr))
-            assert len(reps) == rmat.nnz
+                             np.diff(ratings.indptr))
+            assert len(reps) == ratings.nnz
             # subtract user means
-            rmat.data = rmat.data - ubias.values[reps]
+            ratings.data = ratings.data - ubias.values[reps]
             del reps
 
-        _logger.debug('setting up context')
-        trmat = rmat.tocsc()
-        uctx = _Ctx(n_users, self.features,
-                    rmat.indptr, rmat.indices, rmat.data)
-        ictx = _Ctx(n_items, self.features,
-                    trmat.indptr, trmat.indices, trmat.data)
+        return ratings, ubias, ibias
 
-        _logger.debug('initializing item matrix')
-        imat = np.random.randn(n_items, self.features) * 0.1
-        umat = np.zeros((n_users, self.features))
-
-        _logger.info('[%s] training biased MF model with ALS for %d features',
-                     timer, self.features)
+    def _train_iters(self, current, uctx, ictx):
         for epoch in range(self.iterations):
-            umat2 = _train_matrix(uctx, imat, self.regularization)
-            _logger.info('[%s] finished user epoch %d (|Δ|=%.5f)',
-                         timer, epoch, np.linalg.norm(umat2 - umat, 'fro'))
-            umat = umat2
-            imat2 = _train_matrix(ictx, umat, self.regularization)
-            _logger.info('[%s] finished item epoch %d (|Δ|=%.5f)',
-                         timer, epoch, np.linalg.norm(imat2 - imat, 'fro'))
-            imat = imat2
-
-        _logger.info('trained model in %s', timer)
-
-        return BiasMFModel(users, items, gbias, ubias, ibias, umat, imat)
+            umat = _train_matrix(uctx, current.item_features, self.regularization)
+            _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
+            imat = _train_matrix(ictx, umat, self.regularization)
+            _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
+            di = np.linalg.norm(imat - current.item_features, 'fro')
+            if current.user_features is not None:
+                du = np.linalg.norm(umat -  current.user_features, 'fro')
+            else:
+                du = np.nan
+            _logger.info('[%s] finished epoch %d (|ΔI|=%.3f, |ΔU|=%.3f)', self.timer, epoch, di, du)
+            current = BiasMFModel(current.user_index, current.item_index,
+                                  current.global_bias, current.user_bias, current.item_bias,
+                                  umat, imat)
+            yield current
 
     def predict(self, model, user, items, ratings=None):
         # look up user index
