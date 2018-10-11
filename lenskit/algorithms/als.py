@@ -3,7 +3,7 @@ from collections import namedtuple
 
 import pandas as pd
 import numpy as np
-from numba import njit
+from numba import njit, prange
 
 from . import basic
 from . import Predictor, Trainable
@@ -20,10 +20,10 @@ _Ctx = namedtuple('_Ctx', [
 ])
 
 
-@njit
+@njit(parallel=True, nogil=True)
 def _train_users(ctx: _Ctx, imat: np.ndarray, reg: float):
     umat = np.zeros((ctx.n_users, ctx.n_features))
-    for u in range(ctx.n_users):
+    for u in prange(ctx.n_users):
         sp = ctx.uptrs[u]
         ep = ctx.uptrs[u+1]
         if sp == ep:
@@ -44,10 +44,10 @@ def _train_users(ctx: _Ctx, imat: np.ndarray, reg: float):
     return umat
 
 
-@njit
+@njit(parallel=True, nogil=True)
 def _train_items(ctx: _Ctx, umat: np.ndarray, reg: float):
     imat = np.zeros((ctx.n_items, ctx.n_features))
-    for i in range(ctx.n_items):
+    for i in prange(ctx.n_items):
         sp = ctx.iptrs[i]
         ep = ctx.iptrs[i+1]
         if sp == ep:
