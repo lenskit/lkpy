@@ -17,6 +17,18 @@ algorithms.
 .. autoclass:: BiasMFModel
    :members:
 
+Alternating Least Squares
+-------------------------
+
+.. module:: lenskit.algorithms.als
+
+LensKit provides alternating least squares implementations of matrix factorization suitable
+for explicit feedback data.  These implementations are parallelized with Numba, and perform
+best with the MKL from Conda.
+
+.. autoclass:: BiasedMF
+   :members:
+
 FunkSVD
 -------
 

@@ -66,8 +66,13 @@ def _train_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
 
 class BiasedMF(Predictor, Trainable):
     """
-    Algorithm class implementing biased matrix factorization with regularized alternating
-    least squares.
+    Biased matrix factorization trained with alternating least squares [ZWSP2008]_.  This is a
+    prediction-oriented algorithm suitable for explicit feedback data.
+
+    .. [ZWSP2008] Yunhong Zhou, Dennis Wilkinson, Robert Schreiber, and Rong Pan. 2008.
+        Large-Scale Parallel Collaborative Filtering for the Netflix Prize.
+        In +Algorithmic Aspects in Information and Management_, LNCS 5034, 337–348.
+        DOI `10.1007/978-3-540-68880-8_32 <http://dx.doi.org/10.1007/978-3-540-68880-8_32>`_.
 
     Args:
         features(int): the number of features to train
@@ -109,6 +114,7 @@ class BiasedMF(Predictor, Trainable):
         return current
 
     def _initial_model(self, ratings, bias=None):
+        "Initialize a model and build contexts."
         gbias, ubias, ibias = self._get_bias(bias, ratings)
         rmat, users, items = sparse_ratings(ratings)
         n_users = len(users)
@@ -130,6 +136,7 @@ class BiasedMF(Predictor, Trainable):
         return BiasMFModel(users, items, gbias, ubias, ibias, None, imat), uctx, ictx
 
     def _get_bias(self, bias, ratings):
+        "Extract or construct bias terms for the model."
         if bias is None:
             _logger.info('[%s] training bias model', self.timer)
             bias = basic.Bias(damping=self.damping).train(ratings)
@@ -147,6 +154,7 @@ class BiasedMF(Predictor, Trainable):
         return gbias, ubias, ibias
 
     def _normalize(self, ratings, users, items, gbias, ubias, ibias):
+        "Apply bias normalization to the data in preparation for training."
         n_users = len(users)
         n_items = len(items)
         _logger.info('shape %s, u %d, i %d', ratings.shape, n_users, n_items)
@@ -172,6 +180,7 @@ class BiasedMF(Predictor, Trainable):
         return ratings, ubias, ibias
 
     def _train_iters(self, current, uctx, ictx):
+        "Generator of training iterations."
         for epoch in range(self.iterations):
             umat = _train_matrix(uctx, current.item_features, self.regularization)
             _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
