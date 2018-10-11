@@ -16,7 +16,7 @@ from numba import njit, jitclass
 from lenskit import util, matrix
 from . import Trainable, Predictor
 
-_logger = logging.getLogger(__package__)
+_logger = logging.getLogger(__name__)
 
 IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rating_matrix'])
 IIModel._matrix = property(lambda x: (x.sim_matrix.indptr, x.sim_matrix.indices, x.sim_matrix.data))

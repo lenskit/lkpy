@@ -8,7 +8,7 @@ import logging
 import pandas as pd
 import numpy as np
 
-_logger = logging.getLogger(__package__)
+_logger = logging.getLogger(__name__)
 
 
 class BiasMFModel:

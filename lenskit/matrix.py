@@ -8,7 +8,7 @@ import logging
 import pandas as pd
 import scipy.sparse as sps
 
-_logger = logging.getLogger(__package__)
+_logger = logging.getLogger(__name__)
 
 RatingMatrix = namedtuple('RatingMatrix', ['matrix', 'users', 'items'])
 

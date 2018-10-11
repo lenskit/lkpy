@@ -12,7 +12,7 @@ from .. import util as lku
 from .. import check
 from . import Predictor, Trainable, Recommender
 
-_logger = logging.getLogger(__package__)
+_logger = logging.getLogger(__name__)
 
 BiasModel = namedtuple('BiasModel', ['mean', 'items', 'users'])
 BiasModel.__doc__ = "Trained model for the :py:class:`Bias` algorithm."

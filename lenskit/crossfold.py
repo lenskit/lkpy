@@ -14,7 +14,7 @@ TTPair.__doc__ = 'Train-test pair (named tuple).'
 TTPair.train.__doc__ = 'Train data for this pair.'
 TTPair.test.__doc__ = 'Test data for this pair.'
 
-_logger = logging.getLogger(__package__)
+_logger = logging.getLogger(__name__)
 
 
 def partition_rows(data, partitions):

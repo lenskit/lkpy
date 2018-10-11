@@ -19,7 +19,7 @@ import numpy as np
 
 from .algorithms import Predictor, Recommender
 
-_logger = logging.getLogger(__package__)
+_logger = logging.getLogger(__name__)
 
 
 def predict(algo, pairs, model=None):

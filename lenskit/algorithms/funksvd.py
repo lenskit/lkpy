@@ -14,7 +14,7 @@ from . import basic
 from .mf_common import BiasMFModel
 from .. import util
 
-_logger = logging.getLogger(__package__)
+_logger = logging.getLogger(__name__)
 
 
 @n.jitclass([

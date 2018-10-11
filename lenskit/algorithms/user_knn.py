@@ -11,7 +11,7 @@ import numpy as np
 from .. import util
 from . import Trainable, Predictor
 
-_logger = logging.getLogger(__package__)
+_logger = logging.getLogger(__name__)
 
 UUModel = namedtuple('UUModel', ['matrix', 'user_stats', 'item_users'])
 UUModel.__doc__ = "Memorized data for user-user collaborative filtering."

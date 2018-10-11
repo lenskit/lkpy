@@ -17,7 +17,7 @@ import lenskit.batch as lkb
 
 MLB = namedtuple('MLB', ['ratings', 'algo', 'model'])
 MLB.predictor = property(lambda mlb: partial(mlb.algo.predict, mlb.model))
-_log = logging.getLogger(__package__)
+_log = logging.getLogger(__name__)
 
 
 @pytest.fixture
