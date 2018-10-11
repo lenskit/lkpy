@@ -188,7 +188,7 @@ class BiasedMF(Predictor, Trainable):
             _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
             di = np.linalg.norm(imat - current.item_features, 'fro')
             if current.user_features is not None:
-                du = np.linalg.norm(umat -  current.user_features, 'fro')
+                du = np.linalg.norm(umat - current.user_features, 'fro')
             else:
                 du = np.nan
             _logger.info('[%s] finished epoch %d (|ΔI|=%.3f, |ΔU|=%.3f)', self.timer, epoch, di, du)
@@ -220,4 +220,5 @@ class BiasedMF(Predictor, Trainable):
         return res
 
     def __str__(self):
-        return 'als.BiasedMF(features={}, regularization={})'.format(self.features, self.regularization)
+        return 'als.BiasedMF(features={}, regularization={})'.\
+            format(self.features, self.regularization)
