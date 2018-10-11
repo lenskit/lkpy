@@ -3,7 +3,7 @@ from collections import namedtuple
 
 import pandas as pd
 import numpy as np
-from numba import njit, prange
+from numba import njit, jitclass, prange, float64, int32, int64
 
 from . import basic
 from . import Predictor, Trainable
@@ -13,11 +13,31 @@ from .. import util
 
 _logger = logging.getLogger(__package__)
 
-_Ctx = namedtuple('_Ctx', [
-    'n_users', 'n_items', 'n_features', 'nnz',
-    'uptrs', 'items', 'ui_ratings',
-    'iptrs', 'users', 'iu_ratings'
-])
+
+@jitclass({
+    'n_users': int64,
+    'n_items': int64,
+    'n_features': int64,
+    'nnz': int64,
+    'uptrs': int32[:],
+    'items': int32[:],
+    'ui_ratings': float64[:],
+    'iptrs': int32[:],
+    'users': int32[:],
+    'iu_ratings': float64[:]
+})
+class _Ctx:
+    def __init__(self, nu, ni, nf, nnz, ups, uis, urs, ips, ius, irs):
+        self.n_users = nu
+        self.n_items = ni
+        self.n_features = nf
+        self.nnz = nnz
+        self.uptrs = ups
+        self.items = uis
+        self.ui_ratings = urs
+        self.iptrs = ips
+        self.users = ius
+        self.iu_ratings = irs
 
 
 @njit(parallel=True, nogil=True)
@@ -32,13 +52,13 @@ def _train_users(ctx: _Ctx, imat: np.ndarray, reg: float):
         items = ctx.items[sp:ep]
         M = imat[items, :]
         MMT = M.T @ M
-        assert MMT.shape[0] == ctx.n_features
-        assert MMT.shape[1] == ctx.n_features
+        # assert MMT.shape[0] == ctx.n_features
+        # assert MMT.shape[1] == ctx.n_features
         A = MMT + np.identity(ctx.n_features) * reg * (ep - sp)
         Ainv = np.linalg.inv(A)
         V = M.T @ ctx.ui_ratings[sp:ep]
         uv = Ainv @ V
-        assert len(uv) == ctx.n_features
+        # assert len(uv) == ctx.n_features
         umat[u, :] = uv
 
     return umat
@@ -56,13 +76,13 @@ def _train_items(ctx: _Ctx, umat: np.ndarray, reg: float):
         users = ctx.users[sp:ep]
         M = umat[users, :]
         MMT = M.T @ M
-        assert MMT.shape[0] == ctx.n_features
-        assert MMT.shape[1] == ctx.n_features
+        # assert MMT.shape[0] == ctx.n_features
+        # assert MMT.shape[1] == ctx.n_features
         A = MMT + np.identity(ctx.n_features) * reg * (ep - sp)
         Ainv = np.linalg.inv(A)
         V = M.T @ ctx.iu_ratings[sp:ep]
         iv = Ainv @ V
-        assert len(iv) == ctx.n_features
+        # assert len(iv) == ctx.n_features
         imat[i, :] = iv
 
     return imat
