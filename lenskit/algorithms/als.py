@@ -77,7 +77,7 @@ class BiasedMF(Predictor, Trainable):
     """
     timer = None
 
-    def __init__(self, features, iterations=10, reg=0.1, damping=5):
+    def __init__(self, features, iterations=20, reg=0.1, damping=5):
         self.features = features
         self.iterations = iterations
         self.regularization = reg
