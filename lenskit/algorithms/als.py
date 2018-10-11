@@ -15,77 +15,53 @@ _logger = logging.getLogger(__name__)
 
 
 @jitclass({
-    'n_users': int64,
-    'n_items': int64,
+    'n_rows': int64,
     'n_features': int64,
-    'nnz': int64,
-    'uptrs': int32[:],
-    'items': int32[:],
-    'ui_ratings': float64[:],
-    'iptrs': int32[:],
-    'users': int32[:],
-    'iu_ratings': float64[:]
+    'ptrs': int32[:],
+    'cols': int32[:],
+    'vals': float64[:]
 })
 class _Ctx:
-    def __init__(self, nu, ni, nf, nnz, ups, uis, urs, ips, ius, irs):
-        self.n_users = nu
-        self.n_items = ni
+    """
+    An input matrix (CSR) for training users or items.
+
+    Attributes:
+        n_rows(int): the number of rows (users or items).
+        n_features(int): the number of features to train.
+        ptrs(array): the row pointers for the CSR matrix.
+        cols(array): the column indices for the CSR matrix.
+        vals(array): the data values for the CSR matrix.
+    """
+    def __init__(self, nr, nf, ps, cs, vs):
+        self.n_rows = nr
         self.n_features = nf
-        self.nnz = nnz
-        self.uptrs = ups
-        self.items = uis
-        self.ui_ratings = urs
-        self.iptrs = ips
-        self.users = ius
-        self.iu_ratings = irs
+        self.ptrs = ps
+        self.cols = cs
+        self.vals = vs
 
 
 @njit(parallel=True, nogil=True)
-def _train_users(ctx: _Ctx, imat: np.ndarray, reg: float):
-    umat = np.zeros((ctx.n_users, ctx.n_features))
-    for u in prange(ctx.n_users):
-        sp = ctx.uptrs[u]
-        ep = ctx.uptrs[u+1]
+def _train_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
+    result = np.zeros((ctx.n_rows, ctx.n_features))
+    for i in prange(ctx.n_rows):
+        sp = ctx.ptrs[i]
+        ep = ctx.ptrs[i+1]
         if sp == ep:
             continue
 
-        items = ctx.items[sp:ep]
-        M = imat[items, :]
+        cols = ctx.cols[sp:ep]
+        M = other[cols, :]
         MMT = M.T @ M
         # assert MMT.shape[0] == ctx.n_features
         # assert MMT.shape[1] == ctx.n_features
         A = MMT + np.identity(ctx.n_features) * reg * (ep - sp)
         Ainv = np.linalg.inv(A)
-        V = M.T @ ctx.ui_ratings[sp:ep]
+        V = M.T @ ctx.vals[sp:ep]
         uv = Ainv @ V
         # assert len(uv) == ctx.n_features
-        umat[u, :] = uv
+        result[i, :] = uv
 
-    return umat
-
-
-@njit(parallel=True, nogil=True)
-def _train_items(ctx: _Ctx, umat: np.ndarray, reg: float):
-    imat = np.zeros((ctx.n_items, ctx.n_features))
-    for i in prange(ctx.n_items):
-        sp = ctx.iptrs[i]
-        ep = ctx.iptrs[i+1]
-        if sp == ep:
-            continue
-
-        users = ctx.users[sp:ep]
-        M = umat[users, :]
-        MMT = M.T @ M
-        # assert MMT.shape[0] == ctx.n_features
-        # assert MMT.shape[1] == ctx.n_features
-        A = MMT + np.identity(ctx.n_features) * reg * (ep - sp)
-        Ainv = np.linalg.inv(A)
-        V = M.T @ ctx.iu_ratings[sp:ep]
-        iv = Ainv @ V
-        # assert len(iv) == ctx.n_features
-        imat[i, :] = iv
-
-    return imat
+    return result
 
 
 class BiasedMF(Predictor, Trainable):
@@ -100,7 +76,7 @@ class BiasedMF(Predictor, Trainable):
         damping(double): damping factor for the underlying mean
     """
 
-    def __init__(self, features, iterations=10, reg=0.015, damping=5):
+    def __init__(self, features, iterations=10, reg=0.1, damping=5):
         self.features = features
         self.iterations = iterations
         self.regularization = reg
@@ -154,9 +130,10 @@ class BiasedMF(Predictor, Trainable):
 
         _logger.debug('setting up context')
         trmat = rmat.tocsc()
-        ctx = _Ctx(n_users, n_items, self.features, rmat.nnz,
-                   rmat.indptr, rmat.indices, rmat.data,
-                   trmat.indptr, trmat.indices, trmat.data)
+        uctx = _Ctx(n_users, self.features,
+                    rmat.indptr, rmat.indices, rmat.data)
+        ictx = _Ctx(n_items, self.features,
+                    trmat.indptr, trmat.indices, trmat.data)
 
         _logger.debug('initializing item matrix')
         imat = np.random.randn(n_items, self.features) * 0.1
@@ -165,11 +142,11 @@ class BiasedMF(Predictor, Trainable):
         _logger.info('[%s] training biased MF model with ALS for %d features',
                      timer, self.features)
         for epoch in range(self.iterations):
-            umat2 = _train_users(ctx, imat, self.regularization)
+            umat2 = _train_matrix(uctx, imat, self.regularization)
             _logger.info('[%s] finished user epoch %d (|Δ|=%.5f)',
                          timer, epoch, np.linalg.norm(umat2 - umat, 'fro'))
             umat = umat2
-            imat2 = _train_items(ctx, umat, self.regularization)
+            imat2 = _train_matrix(ictx, umat, self.regularization)
             _logger.info('[%s] finished item epoch %d (|Δ|=%.5f)',
                          timer, epoch, np.linalg.norm(imat2 - imat, 'fro'))
             imat = imat2
@@ -199,3 +176,6 @@ class BiasedMF(Predictor, Trainable):
         res = pd.Series(rv, index=good_items)
         res = res.reindex(items)
         return res
+
+    def __str__(self):
+        return 'als.BiasedMF(features={}, regularization={})'.format(self.features, self.regularization)
