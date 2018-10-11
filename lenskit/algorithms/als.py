@@ -7,7 +7,7 @@ from numba import njit, jitclass, prange, float64, int32, int64
 
 from . import basic
 from . import Predictor, Trainable
-from .mf_common import BiasMFModel
+from .mf_common import BiasMFModel, MFModel
 from ..matrix import sparse_ratings
 from .. import util
 
@@ -106,7 +106,6 @@ class BiasedMF(Predictor, Trainable):
         _logger.info('[%s] training biased MF model with ALS for %d features',
                      self.timer, self.features)
         for epoch, model in enumerate(self._train_iters(current, uctx, ictx)):
-
             current = model
 
         _logger.info('trained model in %s', self.timer)
@@ -222,3 +221,53 @@ class BiasedMF(Predictor, Trainable):
     def __str__(self):
         return 'als.BiasedMF(features={}, regularization={})'.\
             format(self.features, self.regularization)
+
+
+class ImplicitMF(Predictor, Trainable):
+    """
+    Implicit matrix factorization trained with alternating least squares [HKV2008]_.  This
+    algorithm outputs 'predictions', but they are not on a meaningful scale.  If its input
+    data contains ``rating`` values, these will be used as the 'confidence' values; otherwise,
+    confidence will be 1 for every rated item.
+
+    .. [HKV2008] Y. Hu, Y. Koren, and C. Volinsky. 2008.
+       Collaborative Filtering for Implicit Feedback Datasets.
+       In _Proceedings of the 2008 Eighth IEEE International Conference on Data Mining_, 263–272.
+       DOI `10.1109/ICDM.2008.22 <http://dx.doi.org/10.1109/ICDM.2008.22>`_
+
+    Args:
+        features(int): the number of features to train
+        iterations(int): the number of iterations to train
+        reg(double): the regularization factor
+        weight(double): the scaling weight for positive samples (:math:`\\alpha` in [HKV2008]_).
+    """
+    timer = None
+
+    def __init__(self, features, iterations=20, reg=0.1, weight=40):
+        self.features = features
+        self.iterations = iterations
+        self.regularization = reg
+        self.weight = weight
+
+    def train(self, ratings):
+        self.timer = util.Stopwatch()
+        initial, uctx, ictx = self._initial_model(ratings)
+
+    def _initial_model(self, ratings):
+        "Initialize a model and build contexts."
+
+        rmat, users, items = sparse_ratings(ratings)
+        n_users = len(users)
+        n_items = len(items)
+
+        _logger.debug('setting up contexts')
+        uctx = _Ctx(n_users, self.features,
+                    rmat.indptr, rmat.indices, rmat.data)
+        trmat = rmat.tocsc()
+        ictx = _Ctx(n_items, self.features,
+                    trmat.indptr, trmat.indices, trmat.data)
+
+        imat = np.random.randn(n_items, self.features) * 0.01
+        imat = np.square(imat)
+
+        return MFModel(users, items, None, imat), uctx, ictx
