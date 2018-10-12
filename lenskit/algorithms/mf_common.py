@@ -6,6 +6,8 @@ import logging
 
 import numpy as np
 
+from .. import check
+
 _logger = logging.getLogger(__name__)
 
 
@@ -21,10 +23,33 @@ class MFModel:
     """
 
     def __init__(self, users, items, umat, imat):
+        check.check_value(len(users) == umat.shape[0],
+                          'user matrix rows (%d) not equal to index length (%d)',
+                          umat.shape[0], len(users))
+        check.check_value(len(items) == imat.shape[0],
+                          'item matrix rows (%d) not equal to index length (%d)',
+                          imat.shape[0], len(items))
+        check.check_value(umat.shape[1] == imat.shape[1],
+                          'user & item matrices have different feature counts')
         self.user_index = users
         self.item_index = items
         self.user_features = umat
         self.item_features = imat
+
+    @property
+    def n_features(self):
+        "The number of features."
+        return self.user_features.shape[1]
+
+    @property
+    def n_users(self):
+        "The number of users."
+        return len(self.users)
+
+    @property
+    def n_items(self):
+        "The number of items."
+        return len(self.items)
 
     def lookup_user(self, user):
         """

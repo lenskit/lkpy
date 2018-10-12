@@ -66,6 +66,7 @@ def _train_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
 
 @njit(parallel=True, nogil=True)
 def _train_implicit_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
+    n_items = other.shape[0]
     OTO = other.T @ other
     result = np.zeros((ctx.n_rows, ctx.n_features))
     for i in prange(ctx.n_rows):
@@ -75,19 +76,20 @@ def _train_implicit_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
             continue
 
         cols = ctx.cols[sp:ep]
-        M = other[cols, :]
         rates = ctx.vals[sp:ep]
-        MMT = M.T * rates
-        MMT = MMT @ M
+        M = other[cols, :]
+        MMT = (M.T.copy() * rates) @ M
         # assert MMT.shape[0] == ctx.n_features
         # assert MMT.shape[1] == ctx.n_features
-        A = MMT + np.identity(ctx.n_features) * reg
+        A = OTO + MMT + np.identity(ctx.n_features) * reg
         Ainv = np.linalg.inv(A)
         AiYt = Ainv @ other.T
-        cu = np.full(other.shape[0], 1)
-        cu[cols] += rates
+        cu = np.ones(n_items)
+        cu[cols] = rates + 1.0
         AiYtCu = AiYt * cu
-        uv = Ainv @ V
+        pu = np.zeros(n_items)
+        pu[cols] = 1.0
+        uv = AiYtCu @ pu
         # assert len(uv) == ctx.n_features
         result[i, :] = uv
 
@@ -161,8 +163,9 @@ class BiasedMF(Predictor, Trainable):
 
         _logger.debug('initializing item matrix')
         imat = np.random.randn(n_items, self.features) * 0.01
+        umat = np.full((n_users, self.features), np.nan)
 
-        return BiasMFModel(users, items, gbias, ubias, ibias, None, imat), uctx, ictx
+        return BiasMFModel(users, items, gbias, ubias, ibias, umat, imat), uctx, ictx
 
     def _get_bias(self, bias, ratings):
         "Extract or construct bias terms for the model."
@@ -216,10 +219,7 @@ class BiasedMF(Predictor, Trainable):
             imat = _train_matrix(ictx, umat, self.regularization)
             _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
             di = np.linalg.norm(imat - current.item_features, 'fro')
-            if current.user_features is not None:
-                du = np.linalg.norm(umat - current.user_features, 'fro')
-            else:
-                du = np.nan
+            du = np.linalg.norm(umat - current.user_features, 'fro')
             _logger.info('[%s] finished epoch %d (|ΔI|=%.3f, |ΔU|=%.3f)', self.timer, epoch, di, du)
             current = BiasMFModel(current.user_index, current.item_index,
                                   current.global_bias, current.user_bias, current.item_bias,
@@ -281,7 +281,28 @@ class ImplicitMF(Predictor, Trainable):
 
     def train(self, ratings):
         self.timer = util.Stopwatch()
-        initial, uctx, ictx = self._initial_model(ratings)
+        current, uctx, ictx = self._initial_model(ratings)
+
+        for model in self._train_iters(current, uctx, ictx):
+            current = model
+
+        _logger.info('[%s] finished training model with %d features',
+                     self.timer, current.n_features)
+
+        return current
+
+    def _train_iters(self, current, uctx, ictx):
+        "Generator of training iterations."
+        for epoch in range(self.iterations):
+            umat = _train_implicit_matrix(uctx, current.item_features, self.regularization)
+            _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
+            imat = _train_implicit_matrix(ictx, umat, self.regularization)
+            _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
+            di = np.linalg.norm(imat - current.item_features, 'fro')
+            du = np.linalg.norm(umat - current.user_features, 'fro')
+            _logger.info('[%s] finished epoch %d (|ΔI|=%.3f, |ΔU|=%.3f)', self.timer, epoch, di, du)
+            current = MFModel(current.user_index, current.item_index, umat, imat)
+            yield current
 
     def _initial_model(self, ratings):
         "Initialize a model and build contexts."
@@ -292,12 +313,35 @@ class ImplicitMF(Predictor, Trainable):
 
         _logger.debug('setting up contexts')
         uctx = _Ctx(n_users, self.features,
-                    rmat.indptr, rmat.indices, rmat.data)
+                    rmat.indptr, rmat.indices, rmat.data * self.weight)
         trmat = rmat.tocsc()
         ictx = _Ctx(n_items, self.features,
-                    trmat.indptr, trmat.indices, trmat.data)
+                    trmat.indptr, trmat.indices, trmat.data * self.weight)
 
         imat = np.random.randn(n_items, self.features) * 0.01
         imat = np.square(imat)
+        umat = np.full((n_users, self.features), np.nan)
 
-        return MFModel(users, items, None, imat), uctx, ictx
+        return MFModel(users, items, umat, imat), uctx, ictx
+
+    def predict(self, model, user, items, ratings=None):
+        # look up user index
+        uidx = model.lookup_user(user)
+        if uidx < 0:
+            _logger.debug('user %s not in model', user)
+            return pd.Series(np.nan, index=items)
+
+        # get item index & limit to valid ones
+        items = np.array(items)
+        iidx = model.lookup_items(items)
+        good = iidx >= 0
+        good_items = items[good]
+        good_iidx = iidx[good]
+
+        # multiply
+        _logger.debug('scoring %d items for user %s', len(good_items), user)
+        rv = model.score(uidx, good_iidx)
+
+        res = pd.Series(rv, index=good_items)
+        res = res.reindex(items)
+        return res
