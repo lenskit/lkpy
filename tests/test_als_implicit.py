@@ -98,6 +98,7 @@ def test_als_implicit_batch_accuracy():
 
     def eval(train, test):
         _log.info('running training')
+        train['rating'] = train.rating.astype(np.float_)
         model = algo.train(train)
         _log.info('testing %d users', test.user.nunique())
         candidates = topn.UnratedCandidates(train)
