@@ -64,6 +64,36 @@ def _train_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
     return result
 
 
+@njit(parallel=True, nogil=True)
+def _train_implicit_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
+    OTO = other.T @ other
+    result = np.zeros((ctx.n_rows, ctx.n_features))
+    for i in prange(ctx.n_rows):
+        sp = ctx.ptrs[i]
+        ep = ctx.ptrs[i+1]
+        if sp == ep:
+            continue
+
+        cols = ctx.cols[sp:ep]
+        M = other[cols, :]
+        rates = ctx.vals[sp:ep]
+        MMT = M.T * rates
+        MMT = MMT @ M
+        # assert MMT.shape[0] == ctx.n_features
+        # assert MMT.shape[1] == ctx.n_features
+        A = MMT + np.identity(ctx.n_features) * reg
+        Ainv = np.linalg.inv(A)
+        AiYt = Ainv @ other.T
+        cu = np.full(other.shape[0], 1)
+        cu[cols] += rates
+        AiYtCu = AiYt * cu
+        uv = Ainv @ V
+        # assert len(uv) == ctx.n_features
+        result[i, :] = uv
+
+    return result
+
+
 class BiasedMF(Predictor, Trainable):
     """
     Biased matrix factorization trained with alternating least squares [ZWSP2008]_.  This is a
