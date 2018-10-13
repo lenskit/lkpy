@@ -80,7 +80,8 @@ def test_als_train_large():
     isums = ratings.groupby('item').rating.sum()
     is2 = isums - icounts * ratings.rating.mean()
     imeans = is2 / (icounts + 5)
-    imeans, ibias = imeans.align(model.item_bias)
+    ibias = pd.Series(model.item_bias, index=model.item_index)
+    imeans, ibias = imeans.align(ibias)
     assert ibias.values == approx(imeans.values)
 
 

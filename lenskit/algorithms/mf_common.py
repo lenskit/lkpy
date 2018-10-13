@@ -135,11 +135,11 @@ class BiasMFModel(MFModel):
         item_features(numpy.ndarray): The :math:`n \\times k` item-feature matrix.
     """
 
-    def __init__(self, users, items, gbias, ubias, ibias, umat, imat):
+    def __init__(self, users, items, bias, umat, imat):
         super().__init__(users, items, umat, imat)
-        self.global_bias = gbias
-        self.user_bias = ubias
-        self.item_bias = ibias
+        self.global_bias = bias.mean
+        self.user_bias = bias.users.reindex(users, fill_value=0).values
+        self.item_bias = bias.items.reindex(items, fill_value=0).values
 
     def score(self, user, items, raw=False):
         """
@@ -161,8 +161,8 @@ class BiasMFModel(MFModel):
             # add bias back in
             rv = rv + self.global_bias
             if self.user_bias is not None:
-                rv = rv + self.user_bias.iloc[user]
+                rv = rv + self.user_bias[user]
             if self.item_bias is not None:
-                rv = rv + self.item_bias.iloc[items].values
+                rv = rv + self.item_bias[items]
 
         return rv
