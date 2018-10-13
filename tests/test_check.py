@@ -35,10 +35,12 @@ def test_check_dim_len():
 
 
 def test_check_dim_shape():
-    check_dimension(np.arange(5), np.arange(5), d1=1, d2=1)
+    check_dimension(np.arange(5), np.arange(5), d1=0, d2=0)
     with raises(ValueError):
-        check_dimension(np.arange(5), np.arange(6), d1=1, d2=1)
+        check_dimension(np.arange(5), np.arange(6), d1=0, d2=0)
     with raises(ValueError):
-        check_dimension(np.random.randn(8, 10), np.arange(8, 9), d1=2, d2=2)
+        check_dimension(np.random.randn(8, 10),
+                        np.random.randn(8, 9), d1=1, d2=1)
 
-    check_dimension(np.random.randn(8, 10), np.arange(23, 8), d1=1, d2=2)
+    check_dimension(np.random.randn(8, 10),
+                    np.random.randn(23, 8), d1=0, d2=1)
