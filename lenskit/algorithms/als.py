@@ -1,7 +1,5 @@
 import logging
-from collections import namedtuple
 
-import pandas as pd
 import numpy as np
 from numba import njit, jitclass, prange, float64, int32, int64
 
