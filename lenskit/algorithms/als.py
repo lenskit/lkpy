@@ -43,6 +43,7 @@ class _Ctx:
 @njit(parallel=True, nogil=True)
 def _train_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
     "One half of an explicit ALS training round."
+    assert other.shape[1] == ctx.n_features
     result = np.zeros((ctx.n_rows, ctx.n_features))
     for i in prange(ctx.n_rows):
         sp = ctx.ptrs[i]
@@ -69,7 +70,10 @@ def _train_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
 def _train_implicit_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
     "One half of an implicit ALS training round."
     n_items = other.shape[0]
-    OTO = other.T @ other
+    assert other.shape[1] == ctx.n_features
+    OtO = other.T @ other
+    assert OtO.shape[0] == OtO.shape[1]
+    assert OtO.shape[0] == ctx.n_features
     result = np.zeros((ctx.n_rows, ctx.n_features))
     for i in prange(ctx.n_rows):
         sp = ctx.ptrs[i]
@@ -79,12 +83,17 @@ def _train_implicit_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
 
         cols = ctx.cols[sp:ep]
         rates = ctx.vals[sp:ep]
+        # we can optimize by only considering the nonzero entries of Cu-I
+        # this means we only need the corresponding matrix columns
         M = other[cols, :]
+        # Compute M^T C_u M, restricted to these nonzero entries
         MMT = (M.T.copy() * rates) @ M
         # assert MMT.shape[0] == ctx.n_features
         # assert MMT.shape[1] == ctx.n_features
-        A = OTO + MMT + np.identity(ctx.n_features) * reg
+        # Build and invert the matrix
+        A = OtO + MMT + np.identity(ctx.n_features) * reg
         Ainv = np.linalg.inv(A)
+        # And now we can compute the final piece of the update rule
         AiYt = Ainv @ other.T
         cu = np.ones(n_items)
         cu[cols] = rates + 1.0
