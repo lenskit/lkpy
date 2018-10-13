@@ -42,6 +42,7 @@ class _Ctx:
 
 @njit(parallel=True, nogil=True)
 def _train_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
+    "One half of an explicit ALS training round."
     result = np.zeros((ctx.n_rows, ctx.n_features))
     for i in prange(ctx.n_rows):
         sp = ctx.ptrs[i]
@@ -66,6 +67,7 @@ def _train_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
 
 @njit(parallel=True, nogil=True)
 def _train_implicit_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
+    "One half of an implicit ALS training round."
     n_items = other.shape[0]
     OTO = other.T @ other
     result = np.zeros((ctx.n_rows, ctx.n_features))
@@ -226,27 +228,9 @@ class BiasedMF(Predictor, Trainable):
                                   umat, imat)
             yield current
 
-    def predict(self, model, user, items, ratings=None):
+    def predict(self, model: BiasMFModel, user, items, ratings=None):
         # look up user index
-        uidx = model.lookup_user(user)
-        if uidx < 0:
-            _logger.debug('user %s not in model', user)
-            return pd.Series(np.nan, index=items)
-
-        # get item index & limit to valid ones
-        items = np.array(items)
-        iidx = model.lookup_items(items)
-        good = iidx >= 0
-        good_items = items[good]
-        good_iidx = iidx[good]
-
-        # multiply
-        _logger.debug('scoring %d items for user %s', len(good_items), user)
-        rv = model.score(uidx, good_iidx)
-
-        res = pd.Series(rv, index=good_items)
-        res = res.reindex(items)
-        return res
+        return model.score_by_ids(user, items)
 
     def __str__(self):
         return 'als.BiasedMF(features={}, regularization={})'.\
@@ -324,24 +308,6 @@ class ImplicitMF(Predictor, Trainable):
 
         return MFModel(users, items, umat, imat), uctx, ictx
 
-    def predict(self, model, user, items, ratings=None):
+    def predict(self, model: MFModel, user, items, ratings=None):
         # look up user index
-        uidx = model.lookup_user(user)
-        if uidx < 0:
-            _logger.debug('user %s not in model', user)
-            return pd.Series(np.nan, index=items)
-
-        # get item index & limit to valid ones
-        items = np.array(items)
-        iidx = model.lookup_items(items)
-        good = iidx >= 0
-        good_items = items[good]
-        good_iidx = iidx[good]
-
-        # multiply
-        _logger.debug('scoring %d items for user %s', len(good_items), user)
-        rv = model.score(uidx, good_iidx)
-
-        res = pd.Series(rv, index=good_items)
-        res = res.reindex(items)
-        return res
+        return model.score_by_ids(user, items)

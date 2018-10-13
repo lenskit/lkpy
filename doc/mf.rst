@@ -32,6 +32,9 @@ best with the MKL from Conda.
 .. autoclass:: BiasedMF
    :members:
 
+.. autoclass:: ImplicitMF
+   :members:
+
 FunkSVD
 -------
 

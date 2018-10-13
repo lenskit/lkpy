@@ -5,6 +5,7 @@ Common utilities & implementations for matrix factorization.
 import logging
 
 import numpy as np
+import pandas as pd
 
 from .. import check
 
@@ -23,14 +24,10 @@ class MFModel:
     """
 
     def __init__(self, users, items, umat, imat):
-        check.check_value(len(users) == umat.shape[0],
-                          'user matrix rows (%d) not equal to index length (%d)',
-                          umat.shape[0], len(users))
-        check.check_value(len(items) == imat.shape[0],
-                          'item matrix rows (%d) not equal to index length (%d)',
-                          imat.shape[0], len(items))
-        check.check_value(umat.shape[1] == imat.shape[1],
-                          'user & item matrices have different feature counts')
+        check.check_dimension(users, umat, 'user matrix', d2=0)
+        check.check_dimension(items, imat, 'item matrix', d2=0)
+        check.check_dimension(umat, imat, 'user & item matrices', 1, 1)
+
         self.user_index = users
         self.item_index = items
         self.user_features = umat
@@ -101,6 +98,27 @@ class MFModel:
         assert len(rv.shape) == 1
 
         return rv
+
+    def score_by_ids(self, user, items):
+        uidx = self.lookup_user(user)
+        if uidx < 0:
+            _logger.debug('user %s not in model', user)
+            return pd.Series(np.nan, index=items)
+
+        # get item index & limit to valid ones
+        items = np.array(items)
+        iidx = self.lookup_items(items)
+        good = iidx >= 0
+        good_items = items[good]
+        good_iidx = iidx[good]
+
+        # multiply
+        _logger.debug('scoring %d items for user %s', len(good_items), user)
+        rv = self.score(uidx, good_iidx)
+
+        res = pd.Series(rv, index=good_items)
+        res = res.reindex(items)
+        return res
 
 
 class BiasMFModel(MFModel):
