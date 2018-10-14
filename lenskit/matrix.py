@@ -29,7 +29,7 @@ class CSR:
     Simple compressed sparse row matrix.  This is like :py:class:`scipy.sparse.csr_matrix`, with
     a couple of useful differences:
 
-    * It is a Numba jitclass, so it can be directly used from Numba optimized functions.
+    * It is a Numba jitclass, so it can be directly used from Numba-optimized functions.
     * The value array is optional, for cases in which only the matrix structure is required.
     * The value array, if present, is always double-precision.
 
@@ -41,7 +41,7 @@ class CSR:
         self.nnz = nnz
         assert len(ptrs) == self.nrows + 1
         assert len(inds) >= nnz
-        assert len(vals) >= nnz
+        assert vals is None or len(vals) >= nnz
         self.rowptrs = ptrs
         self.colinds = inds
         self.values = vals
