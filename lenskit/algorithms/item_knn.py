@@ -5,13 +5,11 @@ Item-based k-NN collaborative filtering.
 from collections import namedtuple
 import logging
 
-import ctypes
 import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-import numba as n
-from numba import njit, jitclass
+from numba import njit
 
 from lenskit import util, matrix
 from . import Trainable, Predictor

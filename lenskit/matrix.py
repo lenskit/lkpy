@@ -6,6 +6,7 @@ from collections import namedtuple
 import logging
 
 import pandas as pd
+import numpy as np
 import scipy.sparse as sps
 
 _logger = logging.getLogger(__name__)
@@ -37,7 +38,11 @@ def sparse_ratings(ratings, layout='csr'):
     col_ind = iidx.get_indexer(ratings.item)
 
     mkmat = getattr(sps, layout + '_matrix')
-    matrix = mkmat((ratings.rating.values, (row_ind, col_ind)),
+    if 'rating' in ratings.columns:
+        vals = ratings.rating.values
+    else:
+        vals = np.full(len(ratings), 1.0)
+    matrix = mkmat((vals, (row_ind, col_ind)),
                    shape=(len(uidx), len(iidx)))
 
     return RatingMatrix(matrix, uidx, iidx)

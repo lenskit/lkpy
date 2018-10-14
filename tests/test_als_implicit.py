@@ -1,7 +1,6 @@
-import os
 import logging
-from pathlib import Path
 
+from lenskit import topn
 from lenskit.algorithms import als
 
 import pandas as pd
@@ -20,19 +19,18 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
 
 
 def test_als_basic_build():
-    algo = als.BiasedMF(20, iterations=10)
+    algo = als.ImplicitMF(20, iterations=10)
     model = algo.train(simple_df)
 
     assert model is not None
-    assert model.global_bias == approx(simple_df.rating.mean())
+    assert isinstance(model, als.MFModel)
 
 
 def test_als_predict_basic():
-    algo = als.BiasedMF(20, iterations=10)
+    algo = als.ImplicitMF(20, iterations=10)
     model = algo.train(simple_df)
 
     assert model is not None
-    assert model.global_bias == approx(simple_df.rating.mean())
 
     preds = algo.predict(model, 10, [3])
     assert len(preds) == 1
@@ -42,11 +40,10 @@ def test_als_predict_basic():
 
 
 def test_als_predict_bad_item():
-    algo = als.BiasedMF(20, iterations=10)
+    algo = als.ImplicitMF(20, iterations=10)
     model = algo.train(simple_df)
 
     assert model is not None
-    assert model.global_bias == approx(simple_df.rating.mean())
 
     preds = algo.predict(model, 10, [4])
     assert len(preds) == 1
@@ -55,11 +52,10 @@ def test_als_predict_bad_item():
 
 
 def test_als_predict_bad_user():
-    algo = als.BiasedMF(20, iterations=10)
+    algo = als.ImplicitMF(20, iterations=10)
     model = algo.train(simple_df)
 
     assert model is not None
-    assert model.global_bias == approx(simple_df.rating.mean())
 
     preds = algo.predict(model, 50, [3])
     assert len(preds) == 1
@@ -69,46 +65,54 @@ def test_als_predict_bad_user():
 
 @mark.slow
 def test_als_train_large():
-    algo = als.BiasedMF(20, iterations=20)
+    algo = als.ImplicitMF(20, iterations=20)
     ratings = lktu.ml_pandas.renamed.ratings
     model = algo.train(ratings)
 
     assert model is not None
-    assert model.global_bias == approx(ratings.rating.mean())
+    # FIXME Write more test assertions
 
-    icounts = ratings.groupby('item').rating.count()
-    isums = ratings.groupby('item').rating.sum()
-    is2 = isums - icounts * ratings.rating.mean()
-    imeans = is2 / (icounts + 5)
-    ibias = pd.Series(model.item_bias, index=model.item_index)
-    imeans, ibias = imeans.align(ibias)
-    assert ibias.values == approx(imeans.values)
+
+@mark.slow
+def test_als_train_large_noratings():
+    algo = als.ImplicitMF(20, iterations=20)
+    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = ratings.loc[:, ['user', 'item']]
+    model = algo.train(ratings)
+
+    assert model is not None
+    # FIXME Write more test assertions
 
 
 @mark.slow
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
-def test_als_batch_accuracy():
-    from lenskit.algorithms import basic
+def test_als_implicit_batch_accuracy():
     import lenskit.crossfold as xf
     from lenskit import batch
-    import lenskit.metrics.predict as pm
+    import lenskit.metrics.topn as lm
 
     ratings = lktu.ml100k.load_ratings()
 
-    svd_algo = als.BiasedMF(25, iterations=20, damping=5)
-    algo = basic.Fallback(svd_algo, basic.Bias(damping=5))
+    algo = als.ImplicitMF(25, iterations=20)
 
     def eval(train, test):
         _log.info('running training')
+        train['rating'] = train.rating.astype(np.float_)
         model = algo.train(train)
         _log.info('testing %d users', test.user.nunique())
-        return batch.predict(algo, test, model=model)
+        candidates = topn.UnratedCandidates(train)
+        recs = batch.recommend(algo, model, test.user, 100, candidates)
+        # combine with test ratings for relevance data
+        recs = pd.merge(recs, test, how='left', on=('user', 'item'))
+        # fill in missing 0s
+        recs.loc[recs.rating.isna(), 'rating'] = 0
+        return recs
 
-    preds = batch.multi_predict(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)),
-                                algo)
-    mae = pm.mae(preds.prediction, preds.rating)
-    assert mae == approx(0.74, abs=0.025)
+    folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
+    recs = pd.concat(eval(train, test) for (train, test) in folds)
 
-    user_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
-    assert user_rmse.mean() == approx(0.92, abs=0.05)
+    _log.info('analyzing recommendations')
+    ndcg = recs.groupby('user').rating.apply(lm.ndcg)
+    _log.info('ndcg for users is %.4f', ndcg)
+    assert ndcg.mean() > 0

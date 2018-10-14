@@ -225,15 +225,8 @@ class FunkSVD(Predictor, Trainable):
             _logger.info('[%s] training bias model', timer)
             bias = basic.Bias(damping=self.damping).train(ratings)
         # unpack the bias
-        if isinstance(bias, basic.BiasModel):
-            gbias = bias.mean
-            ibias = bias.items
-            ubias = bias.users
-        else:
-            # we have a single global bias (for e.g. implicit feedback data)
-            gbias = bias
-            ibias = None
-            ubias = None
+        if not isinstance(bias, basic.BiasModel):
+            bias = basic.BiasModel(bias, None, None)
 
         _logger.info('[%s] preparing rating data for %d samples', timer, len(ratings))
         _logger.debug('shuffling rating data')
@@ -251,9 +244,9 @@ class FunkSVD(Predictor, Trainable):
         assert np.all(items >= 0)
 
         _logger.debug('[%s] computing initial estimates', timer)
-        initial = pd.Series(gbias, index=ratings.index, dtype=np.float_)
-        ibias, initial = _align_add_bias(ibias, iidx, ratings.item, initial)
-        ubias, initial = _align_add_bias(ubias, uidx, ratings.user, initial)
+        initial = pd.Series(bias.mean, index=ratings.index, dtype=np.float_)
+        ibias, initial = _align_add_bias(bias.items, iidx, ratings.item, initial)
+        ubias, initial = _align_add_bias(bias.users, uidx, ratings.user, initial)
 
         _logger.debug('have %d estimates for %d ratings', len(initial), len(ratings))
         assert len(initial) == len(ratings)
@@ -269,7 +262,7 @@ class FunkSVD(Predictor, Trainable):
         train(context, params, model, timer)
         _logger.info('finished model training in %s', timer)
 
-        return BiasMFModel(uidx, iidx, gbias, ubias, ibias,
+        return BiasMFModel(uidx, iidx, basic.BiasModel(bias.mean, ibias, ubias),
                            model.user_features, model.item_features)
 
     def predict(self, model, user, items, ratings=None):

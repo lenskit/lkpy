@@ -14,6 +14,9 @@ Common Support
 The :py:mod:`mf_common` module contains common support code for matrix factorization
 algorithms.
 
+.. autoclass:: MFModel
+   :members:
+
 .. autoclass:: BiasMFModel
    :members:
 
@@ -27,6 +30,9 @@ for explicit feedback data.  These implementations are parallelized with Numba, 
 best with the MKL from Conda.
 
 .. autoclass:: BiasedMF
+   :members:
+
+.. autoclass:: ImplicitMF
    :members:
 
 FunkSVD

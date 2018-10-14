@@ -140,4 +140,4 @@ def test_accum_top_indices():
 
         xs = np.argsort(values)
         # should be top N values in decreasing order
-        assert all(topn == np.flip(xs[-10:]))
+        assert all(topn == np.flip(xs[-10:], axis=0))
