@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import numba as n
-from numba import njit, jitclass
+from numba import njit, jitclass, objmode
 
 _logger = logging.getLogger(__name__)
 
@@ -35,6 +35,14 @@ class CSR:
 
     You generally don't want to create this class yourself.  Instead, use one of the related
     utility functions.
+
+    Attributes:
+        nrows(int): the number of rows.
+        ncols(int): the number of columns.
+        nnz(int): the number of entries.
+        rowptrs(array-like): the row pointers.
+        colinds(array-like): the column indices.
+        values(array-like): the values
     """
     def __init__(self, shape, nnz, ptrs, inds, vals):
         self.nrows, self.ncols = shape
@@ -45,6 +53,52 @@ class CSR:
         self.rowptrs = ptrs
         self.colinds = inds
         self.values = vals
+
+
+def csr_from_coo(rows, cols, vals, shape=None):
+    """
+    Create a CSR matrix from data in COO format.
+
+    Args:
+        rows(array-like): the row indices.
+        cols(array-like): the column indices.
+        vals(array-like): the data values
+        shape(tuple): the array shape, or ``None`` to infer from row & column indices.
+    """
+    if shape is not None:
+        nrows, ncols = shape
+    else:
+        nrows = np.max(rows) + 1
+        ncols = np.max(cols) + 1
+
+    nnz = len(rows)
+    rptrs = np.zeros(nrows + 1, dtype=np.int32)
+    cis = np.empty(nnz, dtype=np.int32)
+    vs = np.empty(nnz) if vals is not None else None
+
+    __csr_from_coo(rows, cols, vals, nrows, ncols, rptrs, cis, vs)
+
+    return CSR((nrows, ncols), nnz, rptrs, cis, vs)
+
+
+@njit('void(i4[:], i4[:], optional(double[:]), i4, i4, i4[:], i4[:], optional(double[:]))')
+def __csr_from_coo(rows, cols, vals, nrows, ncols, rptrs, cis, vs):
+    rcts = np.zeros(nrows, dtype=np.int32)
+    for r in rows:
+        rcts[r] += 1
+
+    rptrs[1:] = np.cumsum(rcts)
+    rpos = rptrs[:-1].copy()
+
+    for i in range(len(cis)):
+        row = rows[i]
+        col = cols[i]
+        pos = rpos[row]
+        cis[pos] = col
+        if vals is not None:
+            assert vs is not None
+            vs[pos] = vals[i]
+        rpos[row] += 1
 
 
 def csr_from_scipy(mat, copy=True):
