@@ -48,10 +48,6 @@ class CSR:
         self.nrows = nrows
         self.ncols = ncols
         self.nnz = nnz
-        assert len(ptrs) >= self.nrows + 1
-        assert len(inds) >= nnz
-        if vals is not None:
-            assert len(vals) >= nnz
         self.rowptrs = ptrs
         self.colinds = inds
         self.values = vals
@@ -69,6 +65,8 @@ def csr_from_coo(rows, cols, vals, shape=None):
     """
     if shape is not None:
         nrows, ncols = shape
+        assert np.max(rows) < nrows
+        assert np.max(cols) < ncols
     else:
         nrows = np.max(rows) + 1
         ncols = np.max(cols) + 1
@@ -76,7 +74,7 @@ def csr_from_coo(rows, cols, vals, shape=None):
     nnz = len(rows)
 
     rowptrs = np.zeros(nrows + 1, dtype=np.int32)
-    align = np.full(nrows, -1, dtype=np.int32)
+    align = np.full(nnz, -1, dtype=np.int32)
 
     __csr_align(rows, nrows, rowptrs, align)
 
