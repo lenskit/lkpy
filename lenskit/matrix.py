@@ -44,12 +44,14 @@ class CSR:
         colinds(array-like): the column indices.
         values(array-like): the values
     """
-    def __init__(self, shape, nnz, ptrs, inds, vals):
-        self.nrows, self.ncols = shape
+    def __init__(self, nrows, ncols, nnz, ptrs, inds, vals):
+        self.nrows = nrows
+        self.ncols = ncols
         self.nnz = nnz
-        assert len(ptrs) == self.nrows + 1
+        assert len(ptrs) >= self.nrows + 1
         assert len(inds) >= nnz
-        assert vals is None or len(vals) >= nnz
+        if vals is not None:
+            assert len(vals) >= nnz
         self.rowptrs = ptrs
         self.colinds = inds
         self.values = vals
@@ -72,32 +74,31 @@ def csr_from_coo(rows, cols, vals, shape=None):
         ncols = np.max(cols) + 1
 
     nnz = len(rows)
-    rptrs = np.zeros(nrows + 1, dtype=np.int32)
-    cis = np.empty(nnz, dtype=np.int32)
-    vs = np.empty(nnz) if vals is not None else None
 
-    __csr_from_coo(rows, cols, vals, nrows, ncols, rptrs, cis, vs)
+    rowptrs = np.zeros(nrows + 1, dtype=np.int32)
+    align = np.full(nrows, -1, dtype=np.int32)
 
-    return CSR((nrows, ncols), nnz, rptrs, cis, vs)
+    __csr_align(rows, nrows, rowptrs, align)
+
+    colinds = cols[align].copy()
+    values = vals[align].copy() if vals is not None else None
+
+    return CSR(nrows, ncols, nnz, rowptrs, colinds, values)
 
 
-@njit('void(i4[:], i4[:], optional(double[:]), i4, i4, i4[:], i4[:], optional(double[:]))')
-def __csr_from_coo(rows, cols, vals, nrows, ncols, rptrs, cis, vs):
+@njit
+def __csr_align(rowinds, nrows, rowptrs, align):
     rcts = np.zeros(nrows, dtype=np.int32)
-    for r in rows:
+    for r in rowinds:
         rcts[r] += 1
 
-    rptrs[1:] = np.cumsum(rcts)
-    rpos = rptrs[:-1].copy()
+    rowptrs[1:] = np.cumsum(rcts)
+    rpos = rowptrs[:-1].copy()
 
-    for i in range(len(cis)):
-        row = rows[i]
-        col = cols[i]
+    for i in range(len(rowinds)):
+        row = rowinds[i]
         pos = rpos[row]
-        cis[pos] = col
-        if vals is not None:
-            assert vs is not None
-            vs[pos] = vals[i]
+        align[pos] = i
         rpos[row] += 1
 
 
@@ -115,7 +116,7 @@ def csr_from_scipy(mat, copy=True):
     rp = mat.indptr.copy() if copy else mat.indptr
     cs = mat.indices.copy() if copy else mat.indices
     vs = mat.data.copy() if copy else mat.data
-    return CSR(mat.shape, mat.nnz, rp, cs, vs)
+    return CSR(mat.shape[0], mat.shape[1], mat.nnz, rp, cs, vs)
 
 
 def sparse_ratings(ratings, layout='csr'):

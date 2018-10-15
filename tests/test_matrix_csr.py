@@ -56,7 +56,7 @@ def test_csr_from_coo():
 
 
 def test_csr_from_coo_rand():
-    for i in range(100):
+    for i in range(1):
         rows = np.random.randint(0, 100, 1000)
         cols = np.random.randint(0, 50, 1000)
         vals = np.random.randn(1000)
