@@ -55,6 +55,35 @@ def test_csr_from_coo():
     assert csr.values == approx(vals)
 
 
+def test_csr_row():
+    rows = np.array([0, 0, 1, 3], dtype=np.int32)
+    cols = np.array([1, 2, 0, 1], dtype=np.int32)
+    vals = np.arange(4, dtype=np.float_) + 1
+
+    csr = lm.csr_from_coo(rows, cols, vals)
+    assert all(csr.row(0) == np.array([0, 1, 2], dtype=np.float_))
+    assert all(csr.row(1) == np.array([3, 0, 0], dtype=np.float_))
+    assert all(csr.row(2) == np.array([0, 0, 0], dtype=np.float_))
+    assert all(csr.row(3) == np.array([0, 4, 0], dtype=np.float_))
+
+
+def test_csr_sparse_row():
+    rows = np.array([0, 0, 1, 3], dtype=np.int32)
+    cols = np.array([1, 2, 0, 1], dtype=np.int32)
+    vals = np.arange(4, dtype=np.float_)
+
+    csr = lm.csr_from_coo(rows, cols, vals)
+    assert all(csr.row_cs(0) == np.array([1, 2], dtype=np.int32))
+    assert all(csr.row_cs(1) == np.array([0], dtype=np.int32))
+    assert all(csr.row_cs(2) == np.array([], dtype=np.int32))
+    assert all(csr.row_cs(3) == np.array([1], dtype=np.int32))
+
+    assert all(csr.row_vs(0) == np.array([0, 1], dtype=np.float_))
+    assert all(csr.row_vs(1) == np.array([2], dtype=np.float_))
+    assert all(csr.row_vs(2) == np.array([], dtype=np.float_))
+    assert all(csr.row_vs(3) == np.array([3], dtype=np.float_))
+
+
 def test_csr_from_coo_rand():
     for i in range(100):
         rows = np.random.randint(0, 100, 1000)
@@ -71,10 +100,16 @@ def test_csr_from_coo_rand():
             ep = csr.rowptrs[i+1]
             assert ep - sp == np.sum(rows == i)
             points, = np.nonzero(rows == i)
+            assert len(points) == ep - sp
             po = np.argsort(cols[points])
             points = points[po]
             assert all(np.sort(csr.colinds[sp:ep]) == cols[points])
+            assert all(np.sort(csr.row_cs(i)) == cols[points])
             assert all(csr.values[np.argsort(csr.colinds[sp:ep]) + sp] == vals[points])
+            row = np.zeros(50)
+            row[cols[points]] = vals[points]
+            assert np.sum(csr.row(i)) == approx(np.sum(vals[points]))
+            assert all(csr.row(i) == row)
 
 
 def test_csr_from_coo_novals():
@@ -95,3 +130,4 @@ def test_csr_from_coo_novals():
             po = np.argsort(cols[points])
             points = points[po]
             assert all(np.sort(csr.colinds[sp:ep]) == cols[points])
+            assert np.sum(csr.row(i)) == len(points)

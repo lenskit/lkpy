@@ -52,6 +52,34 @@ class CSR:
         self.colinds = inds
         self.values = vals
 
+    def row(self, row):
+        sp = self.rowptrs[row]
+        ep = self.rowptrs[row + 1]
+
+        v = np.zeros(self.ncols)
+        cols = self.colinds[sp:ep]
+        if self.values is None:
+            v[cols] = 1
+        else:
+            v[cols] = self.values[sp:ep]
+
+        return v
+
+    def row_cs(self, row):
+        sp = self.rowptrs[row]
+        ep = self.rowptrs[row + 1]
+
+        return self.colinds[sp:ep]
+
+    def row_vs(self, row):
+        sp = self.rowptrs[row]
+        ep = self.rowptrs[row + 1]
+
+        if self.values is None:
+            return np.full(ep - sp, 1.0)
+        else:
+            return self.values[sp:ep]
+
 
 def csr_from_coo(rows, cols, vals, shape=None):
     """
