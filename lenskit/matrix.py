@@ -80,6 +80,15 @@ class CSR:
         else:
             return self.values[sp:ep]
 
+    def to_scipy(self):
+        """
+        Convert this matrix to a SciPy :py:class:`scipy.sparse.csr_matrix`.
+        """
+        with objmode(out='pyobject'):
+            out = sps.csr_matrix((self.values, self.colinds, self.rowptrs))
+
+        return out
+
 
 def csr_from_coo(rows, cols, vals, shape=None):
     """

@@ -12,11 +12,11 @@ def test_csr_from_sps(copy):
     # initialize sparse matrix
     mat = np.random.randn(10, 5)
     mat[mat <= 0] = 0
-    smat = sps.csr_matrix(mat, copy=copy)
+    smat = sps.csr_matrix(mat)
     # make sure it's sparse
     assert smat.nnz == np.sum(mat > 0)
 
-    csr = lm.csr_from_scipy(smat)
+    csr = lm.csr_from_scipy(smat, copy=copy)
     assert csr.nnz == smat.nnz
     assert csr.nrows == smat.shape[0]
     assert csr.ncols == smat.shape[1]
@@ -133,3 +133,21 @@ def test_csr_from_coo_novals():
             points = points[po]
             assert all(np.sort(csr.colinds[sp:ep]) == cols[points])
             assert np.sum(csr.row(i)) == len(points)
+
+
+def test_csr_to_sps():
+    # initialize sparse matrix
+    mat = np.random.randn(10, 5)
+    mat[mat <= 0] = 0
+    # get COO
+    smat = sps.coo_matrix(mat)
+    # make sure it's sparse
+    assert smat.nnz == np.sum(mat > 0)
+
+    csr = lm.csr_from_coo(smat.row, smat.col, smat.data, shape=smat.shape)
+    assert csr.nnz == smat.nnz
+    assert csr.nrows == smat.shape[0]
+    assert csr.ncols == smat.shape[1]
+
+    for i in range(csr.nrows):
+        assert all(csr.row(i) == mat[i, :])
