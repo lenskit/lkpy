@@ -86,8 +86,9 @@ def test_csr_sparse_row():
 
 def test_csr_from_coo_rand():
     for i in range(100):
-        rows = np.random.randint(0, 100, 1000)
-        cols = np.random.randint(0, 50, 1000)
+        coords = np.random.choice(np.arange(50 * 100, dtype=np.int32), 1000, False)
+        rows = np.mod(coords, 100, dtype=np.int32)
+        cols = np.floor_divide(coords, 100, dtype=np.int32)
         vals = np.random.randn(1000)
 
         csr = lm.csr_from_coo(rows, cols, vals, (100, 50))
@@ -114,8 +115,9 @@ def test_csr_from_coo_rand():
 
 def test_csr_from_coo_novals():
     for i in range(50):
-        rows = np.random.randint(0, 100, 1000)
-        cols = np.random.randint(0, 50, 1000)
+        coords = np.random.choice(np.arange(50 * 100, dtype=np.int32), 1000, False)
+        rows = np.mod(coords, 100, dtype=np.int32)
+        cols = np.floor_divide(coords, 100, dtype=np.int32)
 
         csr = lm.csr_from_coo(rows, cols, None, (100, 50))
         assert csr.nrows == 100
