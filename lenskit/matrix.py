@@ -80,6 +80,48 @@ class CSR:
         else:
             return self.values[sp:ep]
 
+    def transpose(self):
+        """
+        Transpose a CSR matrix.
+
+        Returns:
+            CSR: the transpose of this matrix (or, equivalently, this matrix in CSC format).
+        """
+
+        return self._transpose(True)
+
+    def transpose_coords(self):
+        """
+        Transpose a CSR matrix without retaining values.
+
+        Returns:
+            CSR: the transpose of this matrix (or, equivalently, this matrix in CSC format),
+            without the value array.
+        """
+
+        return self._transpose(False)
+
+    def _transpose(self, values):
+        rowinds = np.empty(self.nnz, dtype=np.int32)
+        for r in range(self.nrows):
+            rsp = self.rowptrs[r]
+            rep = self.rowptrs[r+1]
+            rowinds[rsp:rep] = r
+
+        align = np.empty(self.nnz, dtype=np.int32)
+        colptrs = np.zeros(self.ncols + 1, dtype=np.int32)
+
+        _csr_align(self.colinds, self.ncols, colptrs, align)
+
+        n_rps = colptrs
+        n_cis = rowinds[align].copy()
+        if values and self.values is not None:
+            n_vs = self.values[align].copy()
+        else:
+            n_vs = None
+
+        return CSR(self.ncols, self.nrows, self.nnz, n_rps, n_cis, n_vs)
+
 
 def csr_from_coo(rows, cols, vals, shape=None):
     """
@@ -88,7 +130,7 @@ def csr_from_coo(rows, cols, vals, shape=None):
     Args:
         rows(array-like): the row indices.
         cols(array-like): the column indices.
-        vals(array-like): the data values
+        vals(array-like): the data values; can be ``None``.
         shape(tuple): the array shape, or ``None`` to infer from row & column indices.
     """
     if shape is not None:
@@ -104,7 +146,7 @@ def csr_from_coo(rows, cols, vals, shape=None):
     rowptrs = np.zeros(nrows + 1, dtype=np.int32)
     align = np.full(nnz, -1, dtype=np.int32)
 
-    __csr_align(rows, nrows, rowptrs, align)
+    _csr_align(rows, nrows, rowptrs, align)
 
     colinds = cols[align].copy()
     values = vals[align].copy() if vals is not None else None
@@ -113,7 +155,7 @@ def csr_from_coo(rows, cols, vals, shape=None):
 
 
 @njit
-def __csr_align(rowinds, nrows, rowptrs, align):
+def _csr_align(rowinds, nrows, rowptrs, align):
     rcts = np.zeros(nrows, dtype=np.int32)
     for r in rowinds:
         rcts[r] += 1

@@ -84,6 +84,44 @@ def test_csr_sparse_row():
     assert all(csr.row_vs(3) == np.array([3], dtype=np.float_))
 
 
+def test_csr_transpose():
+    rows = np.array([0, 0, 1, 3], dtype=np.int32)
+    cols = np.array([1, 2, 0, 1], dtype=np.int32)
+    vals = np.arange(4, dtype=np.float_)
+
+    csr = lm.csr_from_coo(rows, cols, vals)
+    csc = csr.transpose()
+    assert csc.nrows == csr.ncols
+    assert csc.ncols == csr.nrows
+
+    assert all(csc.rowptrs == [0, 1, 3, 4])
+    assert csc.colinds.max() == 3
+    assert csc.values.sum() == approx(vals.sum())
+
+    for r, c, v in zip(rows, cols, vals):
+        row = csc.row(c)
+        assert row[r] == v
+
+
+def test_csr_transpose_coords():
+    rows = np.array([0, 0, 1, 3], dtype=np.int32)
+    cols = np.array([1, 2, 0, 1], dtype=np.int32)
+    vals = np.arange(4, dtype=np.float_)
+
+    csr = lm.csr_from_coo(rows, cols, vals)
+    csc = csr.transpose_coords()
+    assert csc.nrows == csr.ncols
+    assert csc.ncols == csr.nrows
+
+    assert all(csc.rowptrs == [0, 1, 3, 4])
+    assert csc.colinds.max() == 3
+    assert csc.values is None
+
+    for r, c, v in zip(rows, cols, vals):
+        row = csc.row(c)
+        assert row[r] == 1
+
+
 def test_csr_from_coo_rand():
     for i in range(100):
         coords = np.random.choice(np.arange(50 * 100, dtype=np.int32), 1000, False)
