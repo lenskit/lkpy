@@ -80,6 +80,10 @@ class CSR:
         else:
             return self.values[sp:ep]
 
+    def row_nnzs(self):
+        "Get a vector of the number of nonzero entries in each row."
+        return np.diff(self.rowptrs)
+
     def transpose(self):
         """
         Transpose a CSR matrix.
