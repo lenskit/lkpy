@@ -80,15 +80,6 @@ class CSR:
         else:
             return self.values[sp:ep]
 
-    def to_scipy(self):
-        """
-        Convert this matrix to a SciPy :py:class:`scipy.sparse.csr_matrix`.
-        """
-        with objmode(out='pyobject'):
-            out = sps.csr_matrix((self.values, self.colinds, self.rowptrs))
-
-        return out
-
 
 def csr_from_coo(rows, cols, vals, shape=None):
     """
@@ -154,35 +145,52 @@ def csr_from_scipy(mat, copy=True):
     return CSR(mat.shape[0], mat.shape[1], mat.nnz, rp, cs, vs)
 
 
-def sparse_ratings(ratings, layout='csr'):
+def csr_to_scipy(mat):
+    """
+    Convert a CSR matrix to a SciPy :py:class:`scipy.sparse.csr_matrix`.
+
+    Args:
+        mat(CSR): A CSR matrix.
+
+    Returns:
+        scipy.sparse.csr_matrix:
+            A SciPy sparse matrix with the same data.  It shares
+            storage with ``matrix``.
+    """
+    values = mat.values
+    if values is None:
+        values = np.full(mat.nnz, 1.0)
+    return sps.csr_matrix((values, mat.colinds, mat.rowptrs), shape=(mat.nrows, mat.ncols))
+
+
+def sparse_ratings(ratings, scipy=False):
     """
     Convert a rating table to a sparse matrix of ratings.
 
     Args:
         ratings(pandas.DataFrame): a data table of (user, item, rating) triples.
-        layout: the sparse matrix layout to use
+        scipy: if ``True``, return a SciPy matrix instead of :py:class:`CSR`.
 
     Returns:
-        scipy.sparse.spmatrix:
-            a sparse matrix with users on the rows and items on the columns.
+        RatingMatrix:
+            a named tuple containing the sparse matrix, user index, and item index.
     """
-    if layout not in ('csr', 'csc', 'coo'):
-        raise ValueError('invalid matrix layout ' + layout)
-
     uidx = pd.Index(ratings.user.unique())
     iidx = pd.Index(ratings.item.unique())
     _logger.debug('creating matrix with %d ratings for %d items by %d users',
                   len(ratings), len(iidx), len(uidx))
 
-    row_ind = uidx.get_indexer(ratings.user)
-    col_ind = iidx.get_indexer(ratings.item)
+    row_ind = uidx.get_indexer(ratings.user).astype(np.int32)
+    col_ind = iidx.get_indexer(ratings.item).astype(np.int32)
 
-    mkmat = getattr(sps, layout + '_matrix')
     if 'rating' in ratings.columns:
         vals = ratings.rating.values
     else:
-        vals = np.full(len(ratings), 1.0)
-    matrix = mkmat((vals, (row_ind, col_ind)),
-                   shape=(len(uidx), len(iidx)))
+        vals = None
+
+    matrix = csr_from_coo(row_ind, col_ind, vals, (len(uidx), len(iidx)))
+
+    if scipy:
+        matrix = csr_to_scipy(matrix)
 
     return RatingMatrix(matrix, uidx, iidx)

@@ -149,5 +149,14 @@ def test_csr_to_sps():
     assert csr.nrows == smat.shape[0]
     assert csr.ncols == smat.shape[1]
 
+    smat2 = lm.csr_to_scipy(csr)
+    assert sps.isspmatrix(smat2)
+    assert sps.isspmatrix_csr(smat2)
+
     for i in range(csr.nrows):
-        assert all(csr.row(i) == mat[i, :])
+        assert smat2.indptr[i] == csr.rowptrs[i]
+        assert smat2.indptr[i+1] == csr.rowptrs[i+1]
+        sp = smat2.indptr[i]
+        ep = smat2.indptr[i+1]
+        assert all(smat2.indices[sp:ep] == csr.colinds[sp:ep])
+        assert all(smat2.data[sp:ep] == csr.values[sp:ep])
