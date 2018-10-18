@@ -185,6 +185,8 @@ def sparse_ratings(ratings, scipy=False):
 
     if 'rating' in ratings.columns:
         vals = ratings.rating.values
+        if vals.dtype != np.float_:
+            vals = vals.astype('f8')
     else:
         vals = None
 

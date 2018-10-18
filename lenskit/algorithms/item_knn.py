@@ -184,7 +184,7 @@ class ItemItem(Trainable, Predictor):
         item_means = ratings.groupby('item').rating.mean()
         _logger.info('[%s] computed means for %d items', watch, len(item_means))
 
-        rmat, users, items = matrix.sparse_ratings(ratings)
+        rmat, users, items = matrix.sparse_ratings(ratings, scipy=True)
         n_items = len(items)
         item_means = item_means.reindex(items).values
         _logger.info('[%s] made sparse matrix for %d items (%d ratings)',
