@@ -29,7 +29,7 @@ setup(
         'pandas',
         'numpy',
         'scipy',
-        'numba',
+        'numba >= 0.40',
         'tables >= 3.2.0'
     ],
     tests_require=[
