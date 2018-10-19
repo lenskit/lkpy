@@ -111,5 +111,5 @@ def test_als_implicit_batch_accuracy():
 
     _log.info('analyzing recommendations')
     ndcg = recs.groupby('user').rating.apply(lm.ndcg)
-    _log.info('ndcg for users is %.4f', ndcg)
+    _log.info('ndcg for users is %.4f', ndcg.mean())
     assert ndcg.mean() > 0
