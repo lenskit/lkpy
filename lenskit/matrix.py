@@ -40,9 +40,9 @@ class CSR:
         nrows(int): the number of rows.
         ncols(int): the number of columns.
         nnz(int): the number of entries.
-        rowptrs(array-like): the row pointers.
-        colinds(array-like): the column indices.
-        values(array-like): the values
+        rowptrs(numpy.ndarray): the row pointers.
+        colinds(numpy.ndarray): the column indices.
+        values(numpy.ndarray): the values
     """
     def __init__(self, nrows, ncols, nnz, ptrs, inds, vals):
         self.nrows = nrows
