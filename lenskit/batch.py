@@ -2,17 +2,8 @@
 Batch-run predictors and recommenders for evaluation.
 """
 
-import os
 import logging
-import multiprocessing
 from functools import partial
-from collections import namedtuple
-
-try:
-    from multiprocessing_logging import install_mp_handler
-    install_mp_handler()
-except ImportError:
-    pass
 
 import pandas as pd
 import numpy as np
@@ -58,49 +49,6 @@ def predict(algo, pairs, model=None):
     if 'rating' in pairs:
         return pairs.join(res.set_index(['user', 'item']), on=('user', 'item'))
     return res
-
-
-_MPState = namedtuple('_MPState', ['train', 'test', 'algo'])
-
-
-def _run_mpjob(job: _MPState) -> bytes:
-    train = pd.read_msgpack(job.train)
-    _logger.info('training %s on %d rows', job.algo, len(train))
-    model = job.algo.train(train)
-    test = pd.read_msgpack(job.test)
-    _logger.info('generating predictions with %s for %d pairs', job.algo, len(test))
-    results = predict(job.algo, test, model)
-    return results.to_msgpack()
-
-
-def _mp_stateify(sets, algo):
-    for train, test in sets:
-        train_bytes = train.to_msgpack()
-        test_bytes = test.to_msgpack()
-        yield _MPState(train_bytes, test_bytes, algo)
-
-
-def _run_spjob(algo, train, test):
-    _logger.info('training %s on %d rows', algo, len(train))
-    model = algo.train(train)
-    _logger.info('generating predictions with %s for %d pairs', algo, len(test))
-    results = predict(algo, test, model)
-    return results
-
-
-def multi_predict(sets, algo, processes=None):
-    _logger.info('launching multi-predict with %s processes', processes)
-    if processes is None or processes > 1:
-        if processes is None and 'LK_PROCESS_COUNT' in os.environ:
-            processes = int(os.environ['LK_PROCESS_COUNT'])
-        with multiprocessing.Pool(processes) as p:
-            results = [pd.read_msgpack(rbs) for rbs in p.map(_run_mpjob, _mp_stateify(sets, algo))]
-    else:
-        results = [_run_spjob(algo, train, test) for train, test in sets]
-
-    _logger.info('finished %d predict jobs', len(results))
-
-    return pd.concat(results)
 
 
 def recommend(algo, model, users, n, candidates, ratings=None):

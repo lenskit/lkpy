@@ -146,8 +146,8 @@ def test_fsvd_batch_accuracy():
         _log.info('testing %d users', test.user.nunique())
         return batch.predict(algo, test, model=model)
 
-    preds = batch.multi_predict(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)),
-                                algo)
+    folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
+    preds = pd.concat(eval(train, test) for (train, test) in folds)
     mae = pm.mae(preds.prediction, preds.rating)
     assert mae == approx(0.74, abs=0.025)
 
