@@ -181,9 +181,11 @@ def _csr_align(rowinds, nrows, rowptrs, align):
 def csr_from_scipy(mat, copy=True):
     """
     Convert a scipy sparse matrix to an internal CSR.
+
     Args:
         mat(scipy.sparse.spmatrix): a SciPy sparse matrix.
         copy(bool): if ``False``, reuse the SciPy storage if possible.
+
     Returns:
         CSR: a CSR matrix.
     """
