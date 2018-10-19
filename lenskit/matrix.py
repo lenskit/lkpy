@@ -82,7 +82,11 @@ class CSR:
 
     def row_nnzs(self):
         "Get a vector of the number of nonzero entries in each row."
-        return np.diff(self.rowptrs)
+        # we want to use np.diff, but numba doesn't like it with our rowptr
+        diff = np.zeros(self.nrows, dtype=np.int32)
+        for i in range(self.nrows):
+            diff[i] = self.rowptrs[i+1] - self.rowptrs[i]
+        return diff
 
     def transpose(self):
         """
@@ -185,8 +189,12 @@ def csr_from_scipy(mat, copy=True):
     """
     if not sps.isspmatrix_csr(mat):
         mat = mat.tocsr(copy=copy)
-    rp = mat.indptr.copy() if copy else mat.indptr
-    cs = mat.indices.copy() if copy else mat.indices
+    rp = np.require(mat.indptr, np.int32, 'C')
+    if copy and rp is mat.indptr:
+        rp = rp.copy()
+    cs = np.require(mat.indices, np.int32, 'C')
+    if copy and cs is mat.indices:
+        cs = cs.copy()
     vs = mat.data.copy() if copy else mat.data
     return CSR(mat.shape[0], mat.shape[1], mat.nnz, rp, cs, vs)
 

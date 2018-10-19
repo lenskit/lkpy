@@ -4,7 +4,6 @@ import scipy.sparse as sps
 import lenskit.matrix as lm
 
 from pytest import mark, approx
-import lk_test_utils as lktu
 
 
 @mark.parametrize('copy', [True, False])
@@ -120,6 +119,22 @@ def test_csr_transpose_coords():
     for r, c, v in zip(rows, cols, vals):
         row = csc.row(c)
         assert row[r] == 1
+
+
+def test_csr_row_nnzs():
+    # initialize sparse matrix
+    mat = np.random.randn(10, 5)
+    mat[mat <= 0] = 0
+    smat = sps.csr_matrix(mat)
+    # make sure it's sparse
+    assert smat.nnz == np.sum(mat > 0)
+    csr = lm.csr_from_scipy(smat)
+
+    nnzs = csr.row_nnzs()
+    assert nnzs.sum() == csr.nnz
+    for i in range(10):
+        row = mat[i, :]
+        assert nnzs[i] == np.sum(row > 0)
 
 
 def test_csr_from_coo_rand():
