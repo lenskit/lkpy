@@ -20,39 +20,38 @@ IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rati
 IIModel._matrix = property(lambda x: (x.sim_matrix.indptr, x.sim_matrix.indices, x.sim_matrix.data))
 
 _IIContext = namedtuple('_IIContext', [
-    'uptrs', 'items', 'ratings',
-    'r_iptrs', 'r_users',
+    'matrix', 'item_users',
     'n_users', 'n_items'
 ])
 
 
 def _make_context(matrix):
-    csc = matrix.tocsc(copy=False)
-    assert sps.isspmatrix_csc(csc)
-    return _IIContext(matrix.indptr, matrix.indices, matrix.data,
-                      csc.indptr, csc.indices,
-                      matrix.shape[0], matrix.shape[1])
+    csc = matrix.transpose_coords()
+    return _IIContext(matrix, csc, matrix.nrows, matrix.ncols)
 
 
-@njit
+@njit(nogil=True)
 def __train_row(context, thresh, nnbrs, item):
     work = np.zeros(context.n_items)
-    for uidx in range(context.r_iptrs[item], context.r_iptrs[item+1]):
-        u = context.r_users[uidx]
+    ui = context.matrix
+    iu = context.item_users
+    # iterate the users who have rated this item
+    for uidx in range(iu.rowptrs[item], iu.rowptrs[item+1]):
+        u = iu.colinds[uidx]
         # find user's rating for this item
         urp = -1
-        for iidx in range(context.uptrs[u], context.uptrs[u+1]):
-            if context.items[iidx] == item:
+        for iidx in range(ui.rowptrs[u], ui.rowptrs[u+1]):
+            if ui.colinds[iidx] == item:
                 urp = iidx
-                ur = context.ratings[urp]
+                ur = ui.values[urp]
                 break
         assert urp >= 0
 
         # accumulate pieces of dot products
-        for iidx in range(context.uptrs[u], context.uptrs[u+1]):
-            nbr = context.items[iidx]
+        for iidx in range(ui.rowptrs[u], ui.rowptrs[u+1]):
+            nbr = ui.colinds[iidx]
             if nbr != item:
-                work[nbr] = work[nbr] + ur * context.ratings[iidx]
+                work[nbr] = work[nbr] + ur * ui.values[iidx]
 
     # now copy the accepted values into the results
     mask = work >= thresh
@@ -69,7 +68,7 @@ def __train_row(context, thresh, nnbrs, item):
         return (idx[order].astype(np.int32), sims[order])
 
 
-@njit
+@njit(nogil=True)
 def _train(context, thresh, nnbrs):
     nrows = []
     srows = []
@@ -184,7 +183,7 @@ class ItemItem(Trainable, Predictor):
         item_means = ratings.groupby('item').rating.mean()
         _logger.info('[%s] computed means for %d items', watch, len(item_means))
 
-        rmat, users, items = matrix.sparse_ratings(ratings)
+        rmat, users, items = matrix.sparse_ratings(ratings, scipy=True)
         n_items = len(items)
         item_means = item_means.reindex(items).values
         _logger.info('[%s] made sparse matrix for %d items (%d ratings)',
@@ -205,7 +204,7 @@ class ItemItem(Trainable, Predictor):
         _logger.info('[%s] normalized user-item ratings', watch)
 
         _logger.info('[%s] computing similarity matrix', watch)
-        ptr, nbr, sim = _train(_make_context(norm_mat),
+        ptr, nbr, sim = _train(_make_context(matrix.csr_from_scipy(norm_mat)),
                                self.min_similarity,
                                self.save_neighbors
                                if self.save_neighbors and self.save_neighbors > 0

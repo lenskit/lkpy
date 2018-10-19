@@ -108,7 +108,7 @@ def test_als_batch_accuracy():
     preds = batch.multi_predict(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)),
                                 algo)
     mae = pm.mae(preds.prediction, preds.rating)
-    assert mae == approx(0.74, abs=0.025)
+    assert mae == approx(0.73, abs=0.025)
 
     user_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
-    assert user_rmse.mean() == approx(0.92, abs=0.05)
+    assert user_rmse.mean() == approx(0.91, abs=0.05)

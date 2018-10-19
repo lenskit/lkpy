@@ -2,62 +2,37 @@ import logging
 from copy import copy
 
 import numpy as np
-from numba import njit, jitclass, prange, float64, int32, int64
+from numba import njit, prange
 
 from . import basic
 from . import Predictor, Trainable
 from .mf_common import BiasMFModel, MFModel
-from ..matrix import sparse_ratings
+from ..matrix import sparse_ratings, CSR
 from .. import util
 
 _logger = logging.getLogger(__name__)
 
 
-@jitclass({
-    'n_rows': int64,
-    'n_features': int64,
-    'ptrs': int32[:],
-    'cols': int32[:],
-    'vals': float64[:]
-})
-class _Ctx:
-    """
-    An input matrix (CSR) for training users or items.
-
-    Attributes:
-        n_rows(int): the number of rows (users or items).
-        n_features(int): the number of features to train.
-        ptrs(array): the row pointers for the CSR matrix.
-        cols(array): the column indices for the CSR matrix.
-        vals(array): the data values for the CSR matrix.
-    """
-    def __init__(self, nr, nf, ps, cs, vs):
-        self.n_rows = nr
-        self.n_features = nf
-        self.ptrs = ps
-        self.cols = cs
-        self.vals = vs
-
-
 @njit(parallel=True, nogil=True)
-def _train_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
+def _train_matrix(mat: CSR, other: np.ndarray, reg: float):
     "One half of an explicit ALS training round."
-    assert other.shape[1] == ctx.n_features
-    result = np.zeros((ctx.n_rows, ctx.n_features))
-    for i in prange(ctx.n_rows):
-        sp = ctx.ptrs[i]
-        ep = ctx.ptrs[i+1]
-        if sp == ep:
+    nr = mat.nrows
+    nf = other.shape[1]
+    assert mat.ncols == other.shape[0]
+    result = np.zeros((nr, nf))
+    for i in prange(nr):
+        cols = mat.row_cs(i)
+        if len(cols) == 0:
             continue
 
-        cols = ctx.cols[sp:ep]
+        vals = mat.row_vs(i)
         M = other[cols, :]
         MMT = M.T @ M
         # assert MMT.shape[0] == ctx.n_features
         # assert MMT.shape[1] == ctx.n_features
-        A = MMT + np.identity(ctx.n_features) * reg * (ep - sp)
+        A = MMT + np.identity(nf) * reg * len(cols)
         Ainv = np.linalg.inv(A)
-        V = M.T @ ctx.vals[sp:ep]
+        V = M.T @ vals
         uv = Ainv @ V
         # assert len(uv) == ctx.n_features
         result[i, :] = uv
@@ -66,22 +41,23 @@ def _train_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
 
 
 @njit(parallel=True, nogil=True)
-def _train_implicit_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
+def _train_implicit_matrix(mat: CSR, other: np.ndarray, reg: float, weight: float):
     "One half of an implicit ALS training round."
-    n_items = other.shape[0]
-    assert other.shape[1] == ctx.n_features
+    nr = mat.nrows
+    nc = other.shape[0]
+    nf = other.shape[1]
+    assert mat.ncols == nc
     OtO = other.T @ other
     assert OtO.shape[0] == OtO.shape[1]
-    assert OtO.shape[0] == ctx.n_features
-    result = np.zeros((ctx.n_rows, ctx.n_features))
-    for i in prange(ctx.n_rows):
-        sp = ctx.ptrs[i]
-        ep = ctx.ptrs[i+1]
-        if sp == ep:
+    assert OtO.shape[0] == nf
+    result = np.zeros((nr, nf))
+    for i in prange(nr):
+        cols = mat.row_cs(i)
+        if len(cols) == 0:
             continue
 
-        cols = ctx.cols[sp:ep]
-        rates = ctx.vals[sp:ep]
+        rates = mat.row_vs(i) * weight
+
         # we can optimize by only considering the nonzero entries of Cu-I
         # this means we only need the corresponding matrix columns
         M = other[cols, :]
@@ -90,14 +66,14 @@ def _train_implicit_matrix(ctx: _Ctx, other: np.ndarray, reg: float):
         # assert MMT.shape[0] == ctx.n_features
         # assert MMT.shape[1] == ctx.n_features
         # Build and invert the matrix
-        A = OtO + MMT + np.identity(ctx.n_features) * reg
+        A = OtO + MMT + np.identity(nf) * reg
         Ainv = np.linalg.inv(A)
         # And now we can compute the final piece of the update rule
         AiYt = Ainv @ other.T
-        cu = np.ones(n_items)
+        cu = np.ones(nc)
         cu[cols] = rates + 1.0
         AiYtCu = AiYt * cu
-        pu = np.zeros(n_items)
+        pu = np.zeros(nc)
         pu[cols] = 1.0
         uv = AiYtCu @ pu
         # assert len(uv) == ctx.n_features
@@ -165,17 +141,13 @@ class BiasedMF(Predictor, Trainable):
         assert len(bias.users) == n_users and len(bias.items) == n_items
 
         _logger.debug('setting up contexts')
-        uctx = _Ctx(n_users, self.features,
-                    rmat.indptr, rmat.indices, rmat.data)
-        trmat = rmat.tocsc()
-        ictx = _Ctx(n_items, self.features,
-                    trmat.indptr, trmat.indices, trmat.data)
+        trmat = rmat.transpose()
 
         _logger.debug('initializing item matrix')
         imat = np.random.randn(n_items, self.features) * 0.01
         umat = np.full((n_users, self.features), np.nan)
 
-        return BiasMFModel(users, items, bias, umat, imat), uctx, ictx
+        return BiasMFModel(users, items, bias, umat, imat), rmat, trmat
 
     def _get_bias(self, bias, ratings):
         "Ensure we have a suitable set of bias terms for the model."
@@ -193,26 +165,26 @@ class BiasedMF(Predictor, Trainable):
         "Apply bias normalization to the data in preparation for training."
         n_users = len(users)
         n_items = len(items)
-        _logger.info('shape %s, u %d, i %d', ratings.shape, n_users, n_items)
-        assert ratings.shape[0] == n_users
-        assert ratings.shape[1] == n_items
+        _logger.info('shape %dx%d, u %d, i %d', ratings.nrows, ratings.ncols, n_users, n_items)
+        assert ratings.nrows == n_users
+        assert ratings.ncols == n_items
 
         _logger.info('[%s] normalizing %dx%d matrix (%d nnz)',
                      self.timer, n_users, n_items, ratings.nnz)
-        ratings.data = ratings.data - bias.mean
+        ratings.values = ratings.values - bias.mean
         ibias = bias.items
         if ibias is not None:
             ibias = ibias.reindex(items, fill_value=0)
-            ratings.data = ratings.data - ibias.values[ratings.indices]
+            ratings.values = ratings.values - ibias.values[ratings.colinds]
         ubias = bias.users
         if ubias is not None:
             ubias = ubias.reindex(users, fill_value=0)
             # create a user index array the size of the data
             reps = np.repeat(np.arange(len(users), dtype=np.int32),
-                             np.diff(ratings.indptr))
+                             ratings.row_nnzs())
             assert len(reps) == ratings.nnz
             # subtract user means
-            ratings.data = ratings.data - ubias.values[reps]
+            ratings.values = ratings.values - ubias.values[reps]
             del reps
 
         return ratings, basic.BiasModel(bias.mean, ibias, ubias)
@@ -282,9 +254,10 @@ class ImplicitMF(Predictor, Trainable):
     def _train_iters(self, current, uctx, ictx):
         "Generator of training iterations."
         for epoch in range(self.iterations):
-            umat = _train_implicit_matrix(uctx, current.item_features, self.regularization)
+            umat = _train_implicit_matrix(uctx, current.item_features,
+                                          self.regularization, self.weight)
             _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
-            imat = _train_implicit_matrix(ictx, umat, self.regularization)
+            imat = _train_implicit_matrix(ictx, umat, self.regularization, self.weight)
             _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
             di = np.linalg.norm(imat - current.item_features, 'fro')
             du = np.linalg.norm(umat - current.user_features, 'fro')
@@ -302,17 +275,13 @@ class ImplicitMF(Predictor, Trainable):
         n_items = len(items)
 
         _logger.debug('setting up contexts')
-        uctx = _Ctx(n_users, self.features,
-                    rmat.indptr, rmat.indices, rmat.data * self.weight)
-        trmat = rmat.tocsc()
-        ictx = _Ctx(n_items, self.features,
-                    trmat.indptr, trmat.indices, trmat.data * self.weight)
+        trmat = rmat.transpose()
 
         imat = np.random.randn(n_items, self.features) * 0.01
         imat = np.square(imat)
         umat = np.full((n_users, self.features), np.nan)
 
-        return MFModel(users, items, umat, imat), uctx, ictx
+        return MFModel(users, items, umat, imat), rmat, trmat
 
     def predict(self, model: MFModel, user, items, ratings=None):
         # look up user index
