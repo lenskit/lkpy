@@ -12,3 +12,4 @@ algorithms.
    basic
    knn
    mf
+   hpf

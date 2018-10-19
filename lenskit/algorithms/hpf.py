@@ -12,11 +12,11 @@ class HPF(Predictor, Trainable):
     """
     Hierarchical Poisson factorization, provided by hpfrec_.
 
-    .. _hpfrec:: https://hpfrec.readthedocs.io/en/latest/
+    .. _hpfrec: https://hpfrec.readthedocs.io/en/latest/
 
     Args:
         features(int): the number of features
-        **kwargs: arguments passed to hpfrec.HPF.
+        **kwargs: arguments passed to :py:class:`hpfrec.HPF`.
     """
 
     def __init__(self, features, **kwargs):
