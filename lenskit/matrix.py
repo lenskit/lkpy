@@ -238,9 +238,7 @@ def sparse_ratings(ratings, scipy=False):
     col_ind = iidx.get_indexer(ratings.item).astype(np.int32)
 
     if 'rating' in ratings.columns:
-        vals = ratings.rating.values
-        if vals.dtype != np.float_:
-            vals = vals.astype('f8')
+        vals = np.require(ratings.rating.values, np.float64)
     else:
         vals = None
 
