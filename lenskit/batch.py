@@ -103,7 +103,7 @@ def multi_predict(sets, algo, processes=None):
     return pd.concat(results)
 
 
-def recommend(algo, model, users, n, candidates):
+def recommend(algo, model, users, n, candidates, ratings=None):
     """
     Batch-recommend for multiple users.  The provided algorithm should be a
     :py:class:`algorithms.Recommender` or :py:class:`algorithms.Predictor` (which
@@ -118,6 +118,9 @@ def recommend(algo, model, users, n, candidates):
             the users' candidate sets. This can be a function, in which case it will
             be passed each user ID; it can also be a dictionary, in which case user
             IDs will be looked up in it.
+        ratings(pandas.DataFrame):
+            if not ``None``, a data frame of ratings to attach to recommendations when
+            available.
 
     Returns:
         A frame with at least the columns ``user``, ``rank``, and ``item``; possibly also
@@ -136,4 +139,11 @@ def recommend(algo, model, users, n, candidates):
         iddf = pd.DataFrame({'user': user, 'rank': np.arange(1, len(res) + 1)})
         results.append(pd.concat([iddf, res], axis='columns'))
 
-    return pd.concat(results, ignore_index=True)
+    results = pd.concat(results, ignore_index=True)
+    if ratings is not None:
+        # combine with test ratings for relevance data
+        results = pd.merge(results, ratings, how='left', on=('user', 'item'))
+        # fill in missing 0s
+        results.loc[results.rating.isna(), 'rating'] = 0
+
+    return results

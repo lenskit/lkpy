@@ -100,13 +100,10 @@ def test_als_implicit_batch_accuracy():
         _log.info('running training')
         train['rating'] = train.rating.astype(np.float_)
         model = algo.train(train)
-        _log.info('testing %d users', test.user.nunique())
+        users = test.user.unique()
+        _log.info('testing %d users', len(users))
         candidates = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, model, test.user, 100, candidates)
-        # combine with test ratings for relevance data
-        recs = pd.merge(recs, test, how='left', on=('user', 'item'))
-        # fill in missing 0s
-        recs.loc[recs.rating.isna(), 'rating'] = 0
+        recs = batch.recommend(algo, model, users, 100, candidates, test)
         return recs
 
     folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
