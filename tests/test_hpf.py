@@ -13,7 +13,7 @@ try:
     import hpfrec
     have_hpfrec = True
 except ImportError:
-    have_hpfrec = True
+    have_hpfrec = False
 
 _log = logging.getLogger(__name__)
 
