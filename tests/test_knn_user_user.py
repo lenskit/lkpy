@@ -82,12 +82,12 @@ def test_uu_predict_live_ratings():
 
 
 @mark.slow
-def test_uu_save_load(tmpdir):
+def test_uu_save_load(tmp_path):
     algo = knn.UserUser(30)
     _log.info('training model')
     original = algo.train(ml_ratings)
 
-    fn = os.path.join(tmpdir, 'uu.model')
+    fn = os.path.join(tmp_path, 'uu.model')
     _log.info('saving to %s', fn)
     algo.save_model(original, fn)
 

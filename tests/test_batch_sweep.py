@@ -9,9 +9,9 @@ from lenskit import batch, crossfold as xf
 from lenskit.algorithms.basic import Bias, Popular
 
 
-def test_sweep_bias(tmpdir):
-    work = pathlib.Path(tmpdir)
-    sweep = batch.MultiEval(tmpdir)
+def test_sweep_bias(tmp_path):
+    work = pathlib.Path(tmp_path)
+    sweep = batch.MultiEval(tmp_path)
 
     ratings = ml_pandas.renamed.ratings
     folds = xf.partition_users(ratings, 5, xf.SampleN(5))

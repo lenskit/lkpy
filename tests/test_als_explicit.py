@@ -84,8 +84,8 @@ def test_als_train_large():
 
 
 @mark.slow
-def test_als_save_load(tmpdir):
-    mod_file = tmpdir / 'als.npz'
+def test_als_save_load(tmp_path):
+    mod_file = tmp_path / 'als.npz'
     algo = als.BiasedMF(20, iterations=20)
     ratings = lktu.ml_pandas.renamed.ratings
     model = algo.train(ratings)

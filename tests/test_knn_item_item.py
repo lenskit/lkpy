@@ -143,7 +143,7 @@ def test_ii_train_big_unbounded():
 
 @mark.slow
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
-def test_ii_train_ml100k(tmpdir):
+def test_ii_train_ml100k(tmp_path):
     "Test an unbounded model on ML-100K"
     ratings = lktu.ml100k.load_ratings()
     algo = knn.ItemItem(30)
@@ -165,7 +165,7 @@ def test_ii_train_ml100k(tmpdir):
     assert means[model.items].values == approx(model.means)
 
     # save
-    fn = os.path.join(tmpdir, 'ii.mod')
+    fn = os.path.join(tmp_path, 'ii.mod')
     _log.info('saving model to %s', fn)
     algo.save_model(model, fn)
     _log.info('reloading model')
@@ -285,13 +285,13 @@ def test_ii_large_models():
 
 
 @mark.slow
-def test_ii_save_load(tmpdir):
+def test_ii_save_load(tmp_path):
     "Save and load a model"
     algo = knn.ItemItem(30, save_nbrs=500)
     _log.info('building model')
     original = algo.train(ml_ratings)
 
-    fn = os.path.join(tmpdir, 'ii.mod')
+    fn = os.path.join(tmp_path, 'ii.mod')
     _log.info('saving model to %s', fn)
     algo.save_model(original, fn)
     _log.info('reloading model')

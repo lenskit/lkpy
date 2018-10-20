@@ -103,8 +103,8 @@ def test_fsvd_predict_bad_user():
 
 
 @mark.slow
-def test_fsvd_save_load(tmpdir):
-    mod_file = tmpdir / 'funksvd.npz'
+def test_fsvd_save_load(tmp_path):
+    mod_file = tmp_path / 'funksvd.npz'
     algo = svd.FunkSVD(20, iterations=20)
     ratings = lktu.ml_pandas.renamed.ratings
     model = algo.train(ratings)
