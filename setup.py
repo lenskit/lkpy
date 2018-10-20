@@ -30,8 +30,7 @@ setup(
         'numpy',
         'scipy',
         'numba >= 0.40',
-        'fastparquet',
-        'python-snappy'
+        'fastparquet'
     ],
     tests_require=[
         'pytest >= 3.5.1',
