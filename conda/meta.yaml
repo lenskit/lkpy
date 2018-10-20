@@ -21,13 +21,11 @@ requirements:
     - pandas
     - numpy
     - scipy
-    - pytables
   run:
     - python
     - pandas
     - scipy
     - numba >= 0.40
-    - pytables
 
 test:
   source_files:

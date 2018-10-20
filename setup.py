@@ -31,8 +31,7 @@ setup(
         'scipy',
         'numba >= 0.40',
         'fastparquet',
-        'python-snappy',
-        'tables >= 3.2.0'
+        'python-snappy'
     ],
     tests_require=[
         'pytest >= 3.5.1',
