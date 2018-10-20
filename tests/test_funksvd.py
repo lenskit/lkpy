@@ -1,6 +1,5 @@
-import os
+import os.path
 import logging
-from pathlib import Path
 
 import lenskit.algorithms.funksvd as svd
 
@@ -104,7 +103,7 @@ def test_fsvd_predict_bad_user():
 
 @mark.slow
 def test_fsvd_save_load(tmpdir):
-    mod_file = Path(tmpdir) / 'funksvd.npz'
+    mod_file = os.path.join(tmpdir, 'funksvd.npz')
     algo = svd.FunkSVD(20, iterations=20)
     ratings = lktu.ml_pandas.renamed.ratings
     model = algo.train(ratings)
@@ -113,7 +112,7 @@ def test_fsvd_save_load(tmpdir):
     assert model.global_bias == approx(ratings.rating.mean())
 
     algo.save_model(model, mod_file)
-    assert mod_file.exists()
+    assert os.path.exists(mod_file)
 
     restored = algo.load_model(mod_file)
     assert restored.global_bias == model.global_bias
