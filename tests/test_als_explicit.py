@@ -94,7 +94,7 @@ def test_als_save_load(tmp_path):
     assert model.global_bias == approx(ratings.rating.mean())
 
     algo.save_model(model, mod_file)
-    assert os.path.exists(mod_file)
+    assert mod_file.exists()
 
     restored = algo.load_model(mod_file)
     assert restored.global_bias == model.global_bias

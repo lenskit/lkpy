@@ -87,7 +87,7 @@ def test_uu_save_load(tmp_path):
     _log.info('training model')
     original = algo.train(ml_ratings)
 
-    fn = os.path.join(tmp_path, 'uu.model')
+    fn = tmp_path / 'uu.model'
     _log.info('saving to %s', fn)
     algo.save_model(original, fn)
 
