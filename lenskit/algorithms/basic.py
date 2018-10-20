@@ -57,6 +57,7 @@ class Bias(Predictor, Trainable):
         if isinstance(damping, tuple):
             self.user_damping, self.item_damping = damping
         else:
+            self.damping = damping
             self.user_damping = damping
             self.item_damping = damping
 
@@ -144,6 +145,9 @@ class Bias(Predictor, Trainable):
         else:
             return series.mean()
 
+    def __str__(self):
+        return 'Bias(ud={}, id={})'.format(self.user_damping, self.item_damping)
+
 
 class Popular(Recommender, Trainable):
     def train(self, ratings):
@@ -162,6 +166,9 @@ class Popular(Recommender, Trainable):
             return scores.sort_values(ascending=False).reset_index()
         else:
             return scores.nlargest(n).reset_index()
+
+    def __str__(self):
+        return 'Popular'
 
 
 class Memorized:
@@ -247,6 +254,9 @@ class Fallback(Predictor, Trainable):
                 model.append(None)
 
         return model
+
+    def __str__(self):
+        return 'Fallback([{}])'.format(', '.join(self.algorithms))
 
 
 class TopN(Recommender):
