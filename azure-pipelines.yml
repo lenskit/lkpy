@@ -29,9 +29,6 @@ jobs:
     maxParallel: 4
 
   steps:
-  - script: sudo install -d -m 0777 /usr/envs
-    displayName: Fix Conda permissions
-
   - task: CondaEnvironment@1
     inputs:
       createCustomEnvironment: true
@@ -189,9 +186,6 @@ jobs:
     maxParallel: 4
 
   steps:
-  - script: sudo chmod 0777 /usr/local/miniconda/envs
-    displayName: Fix Conda permissions
-  
   - task: CondaEnvironment@1
     inputs:
       createCustomEnvironment: true
