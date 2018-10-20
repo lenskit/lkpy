@@ -22,6 +22,7 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence"
     ],
 
+    python_requires='>= 3.5',
     setup_requires=[
         'pytest-runner'
     ],
