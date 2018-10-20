@@ -14,7 +14,6 @@ import pytest
 from pytest import approx, mark
 
 import lk_test_utils as lktu
-from lk_test_utils import tmpdir
 
 _log = logging.getLogger(__name__)
 

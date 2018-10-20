@@ -6,7 +6,6 @@ import pandas as pd
 import numpy as np
 
 import lk_test_utils as lktu
-from lk_test_utils import tmpdir
 from pytest import approx
 
 simple_df = pd.DataFrame({'item': [1, 1, 2, 3],

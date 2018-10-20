@@ -9,7 +9,6 @@ import numpy as np
 from pytest import approx, mark
 
 import lk_test_utils as lktu
-from lk_test_utils import tmpdir
 
 _log = logging.getLogger(__name__)
 
@@ -86,7 +85,7 @@ def test_als_train_large():
 
 @mark.slow
 def test_als_save_load(tmpdir):
-    mod_file = os.path.join(tmpdir, 'als.npz')
+    mod_file = tmpdir / 'als.npz'
     algo = als.BiasedMF(20, iterations=20)
     ratings = lktu.ml_pandas.renamed.ratings
     model = algo.train(ratings)

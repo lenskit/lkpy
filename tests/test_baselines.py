@@ -9,7 +9,7 @@ import numpy as np
 from pytest import approx
 
 import lk_test_utils as lktu
-from lk_test_utils import tmpdir, ml_pandas
+from lk_test_utils import ml_pandas
 
 _log = logging.getLogger(__name__)
 
@@ -222,7 +222,7 @@ def test_bias_save(tmpdir):
     algo = bl.Bias(damping=5)
     original = algo.train(simple_df)
     assert original.mean == approx(3.5)
-    fn = os.path.join(tmpdir, 'bias.dat')
+    fn = tmpdir / 'bias.dat'
 
     _log.info('saving to %s', fn)
     algo.save_model(original, fn)
