@@ -3,6 +3,7 @@ User-based k-NN collaborative filtering.
 """
 
 from collections import namedtuple
+import pathlib
 import logging
 
 import pandas as pd
@@ -181,15 +182,25 @@ class UserUser(Trainable, Predictor):
         nbr_sims.name = 'similarity'
         return nbr_sims
 
-    def save_model(self, model, file):
-        with pd.HDFStore(file, 'w') as store:
-            store['matrix'] = model.matrix
-            store['stats'] = model.user_stats
-            store['item_users'] = model.item_users
+    def save_model(self, model, path):
+        path = pathlib.Path(path)
+        _logger.info('saving to %s', path)
 
-    def load_model(self, file):
-        with pd.HDFStore(file, 'r') as store:
-            return UUModel(store['matrix'], store['stats'], store['item_users'])
+        path.mkdir(parents=True, exist_ok=True)
+
+        model.matrix.to_parquet(str(path / 'matrix.parquet'))
+        model.user_stats.to_parquet(str(path / 'user-stats.parquet'))
+        model.item_users.reset_index().to_parquet(str(path / 'item-users.parquet'))
+
+    def load_model(self, path):
+        path = pathlib.Path(path)
+
+        matrix = pd.read_parquet(str(path / 'matrix.parquet'))
+        user_stats = pd.read_parquet(str(path / 'user-stats.parquet'))
+        item_users = pd.read_parquet(str(path / 'item-users.parquet'))
+        item_users = item_users.set_index('item').user
+
+        return UUModel(matrix, user_stats, item_users)
 
     def __str__(self):
         return 'UserUser(nnbrs={}, min_sim={})'.format(self.max_neighbors, self.min_similarity)
