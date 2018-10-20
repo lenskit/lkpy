@@ -292,3 +292,13 @@ class FunkSVD(Predictor, Trainable):
         res = pd.Series(rv, index=good_items)
         res = res.reindex(items)
         return res
+
+    def save_model(self, model, path):
+        model.save(path)
+
+    def load_model(self, path):
+        return BiasMFModel.load(path)
+
+    def __str__(self):
+        return 'FunkSVD(features={}, regularization={})'.\
+            format(self.features, self.regularization)

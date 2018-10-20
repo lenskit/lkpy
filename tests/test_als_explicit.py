@@ -1,4 +1,3 @@
-import os
 import logging
 from pathlib import Path
 
@@ -7,10 +6,10 @@ from lenskit.algorithms import als
 import pandas as pd
 import numpy as np
 
-import pytest
 from pytest import approx, mark
 
 import lk_test_utils as lktu
+from lk_test_utils import tmpdir
 
 _log = logging.getLogger(__name__)
 
@@ -83,6 +82,29 @@ def test_als_train_large():
     ibias = pd.Series(model.item_bias, index=model.item_index)
     imeans, ibias = imeans.align(ibias)
     assert ibias.values == approx(imeans.values)
+
+
+@mark.slow
+def test_als_save_load(tmpdir):
+    mod_file = Path(tmpdir) / 'als.npz'
+    algo = als.BiasedMF(20, iterations=20)
+    ratings = lktu.ml_pandas.renamed.ratings
+    model = algo.train(ratings)
+
+    assert model is not None
+    assert model.global_bias == approx(ratings.rating.mean())
+
+    algo.save_model(model, mod_file)
+    assert mod_file.exists()
+
+    restored = algo.load_model(mod_file)
+    assert restored.global_bias == model.global_bias
+    assert np.all(restored.user_bias == model.user_bias)
+    assert np.all(restored.item_bias == model.item_bias)
+    assert np.all(restored.user_features == model.user_features)
+    assert np.all(restored.item_features == model.item_features)
+    assert np.all(restored.item_index == model.item_index)
+    assert np.all(restored.user_index == model.user_index)
 
 
 @mark.slow

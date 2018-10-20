@@ -2,12 +2,14 @@
 Common utilities & implementations for matrix factorization.
 """
 
+import pathlib
 import logging
 
 import numpy as np
 import pandas as pd
 
 from .. import check
+from . import basic
 
 _logger = logging.getLogger(__name__)
 
@@ -120,6 +122,26 @@ class MFModel:
         res = res.reindex(items)
         return res
 
+    def save(self, path):
+        np.savez_compressed(path, users=self.user_index.values, items=self.item_index.values,
+                            umat=self.user_features, imat=self.item_features)
+
+    @classmethod
+    def load(cls, path: pathlib.Path):
+        if not path.exists():
+            npz_path = path.with_name(path.name + '.npz')
+            if npz_path.exists():
+                path = npz_path
+            else:
+                raise FileNotFoundError(path)
+
+        with np.load(path) as npz:
+            users = pd.Index(npz['users'])
+            items = pd.Index(npz['items'])
+            umat = npz['umat']
+            imat = npz['imat']
+            return cls(users, items, umat, imat)
+
 
 class BiasMFModel(MFModel):
     """
@@ -137,9 +159,12 @@ class BiasMFModel(MFModel):
 
     def __init__(self, users, items, bias, umat, imat):
         super().__init__(users, items, umat, imat)
-        self.global_bias = bias.mean
-        self.user_bias = bias.users.reindex(users, fill_value=0).values
-        self.item_bias = bias.items.reindex(items, fill_value=0).values
+        if isinstance(bias, basic.BiasModel):
+            self.global_bias = bias.mean
+            self.user_bias = bias.users.reindex(users, fill_value=0).values
+            self.item_bias = bias.items.reindex(items, fill_value=0).values
+        else:
+            self.global_bias, self.user_bias, self.item_bias = bias
 
     def score(self, user, items, raw=False):
         """
@@ -166,3 +191,28 @@ class BiasMFModel(MFModel):
                 rv = rv + self.item_bias[items]
 
         return rv
+
+    def save(self, path):
+        np.savez_compressed(path, users=self.user_index.values, items=self.item_index.values,
+                            umat=self.user_features, imat=self.item_features,
+                            gbias=np.array([self.global_bias]),
+                            ubias=self.user_bias, ibias=self.item_bias)
+
+    @classmethod
+    def load(cls, path: pathlib.Path):
+        if not path.exists():
+            npz_path = path.with_name(path.name + '.npz')
+            if npz_path.exists():
+                path = npz_path
+            else:
+                raise FileNotFoundError(path)
+
+        with np.load(path) as npz:
+            users = pd.Index(npz['users'])
+            items = pd.Index(npz['items'])
+            umat = npz['umat']
+            imat = npz['imat']
+            gbias = npz['gbias'][0]
+            ubias = npz['ubias']
+            ibias = npz['ibias']
+            return cls(users, items, (gbias, ubias, ibias), umat, imat)

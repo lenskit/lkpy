@@ -103,6 +103,29 @@ def test_fsvd_predict_bad_user():
 
 
 @mark.slow
+def test_fsvd_save_load(tmpdir):
+    mod_file = Path(tmpdir) / 'funksvd.npz'
+    algo = svd.FunkSVD(20, iterations=20)
+    ratings = lktu.ml_pandas.renamed.ratings
+    model = algo.train(ratings)
+
+    assert model is not None
+    assert model.global_bias == approx(ratings.rating.mean())
+
+    algo.save_model(model, mod_file)
+    assert mod_file.exists()
+
+    restored = algo.load_model(mod_file)
+    assert restored.global_bias == model.global_bias
+    assert np.all(restored.user_bias == model.user_bias)
+    assert np.all(restored.item_bias == model.item_bias)
+    assert np.all(restored.user_features == model.user_features)
+    assert np.all(restored.item_features == model.item_features)
+    assert np.all(restored.item_index == model.item_index)
+    assert np.all(restored.user_index == model.user_index)
+
+
+@mark.slow
 def test_fsvd_known_preds():
     from lenskit import batch
 

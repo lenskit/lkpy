@@ -208,6 +208,12 @@ class BiasedMF(Predictor, Trainable):
         # look up user index
         return model.score_by_ids(user, items)
 
+    def save_model(self, model, path):
+        model.save(path)
+
+    def load_model(self, path):
+        return BiasMFModel.load(path)
+
     def __str__(self):
         return 'als.BiasedMF(features={}, regularization={})'.\
             format(self.features, self.regularization)
@@ -286,3 +292,13 @@ class ImplicitMF(Predictor, Trainable):
     def predict(self, model: MFModel, user, items, ratings=None):
         # look up user index
         return model.score_by_ids(user, items)
+
+    def save_model(self, model, path):
+        model.save(path)
+
+    def load_model(self, path):
+        return MFModel.load(path)
+
+    def __str__(self):
+        return 'als.ImplicitMF(features={}, regularization={})'.\
+            format(self.features, self.regularization)
