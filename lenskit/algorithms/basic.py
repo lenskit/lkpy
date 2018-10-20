@@ -223,8 +223,8 @@ class Fallback(Predictor, Trainable):
 
         return preds.reindex(items)
 
-    def save_model(self, model, file):
-        path = pathlib.Path(file)
+    def save_model(self, model, path):
+        path = pathlib.Path(path)
         path.mkdir(parents=True, exist_ok=True)
         for i, algo in enumerate(self.algorithms):
             mp = path / 'algo-{}.dat'.format(i+1)
@@ -287,8 +287,8 @@ class _TrainableTopN(TopN, Trainable):
     def train(self, ratings):
         return self.predictor.train(ratings)
 
-    def save_model(self, model, file):
-        self.predictor.save_model(model, file)
+    def save_model(self, model, path):
+        self.predictor.save_model(model, path)
 
-    def load_model(self, file):
-        return self.predictor.load_model(file)
+    def load_model(self, path):
+        return self.predictor.load_model(path)
