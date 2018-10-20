@@ -1,5 +1,6 @@
 import os.path
 import logging
+from pathlib import Path
 
 import lenskit.algorithms.funksvd as svd
 
