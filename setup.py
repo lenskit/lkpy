@@ -34,7 +34,7 @@ setup(
         'pyarrow'
     ],
     tests_require=[
-        'pytest >= 3.5.1',
+        'pytest >= 3.9',
         'pytest-arraydiff'
     ],
 
