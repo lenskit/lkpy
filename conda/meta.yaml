@@ -21,11 +21,15 @@ requirements:
     - pandas
     - numpy
     - scipy
+    - fastparquet
+    - python-snappy
   run:
     - python
     - pandas
     - scipy
     - numba >= 0.40
+    - fastparquet
+    - python-snappy
 
 test:
   source_files:
