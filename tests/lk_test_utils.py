@@ -101,4 +101,4 @@ ml_pandas = MLDataLoader(pd.read_csv)
 @pytest.fixture
 def tmpdir():
     with tempfile.TemporaryDirectory() as dir:
-        yield dir
+        yield str(dir)
