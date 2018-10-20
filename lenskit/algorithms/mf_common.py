@@ -127,7 +127,8 @@ class MFModel:
                             umat=self.user_features, imat=self.item_features)
 
     @classmethod
-    def load(cls, path: pathlib.Path):
+    def load(cls, path):
+        path = pathlib.Path(path)
         if not path.exists():
             npz_path = path.with_name(path.name + '.npz')
             if npz_path.exists():
@@ -200,6 +201,7 @@ class BiasMFModel(MFModel):
 
     @classmethod
     def load(cls, path: pathlib.Path):
+        path = pathlib.Path(path)
         if not path.exists():
             npz_path = path.with_name(path.name + '.npz')
             if npz_path.exists():
