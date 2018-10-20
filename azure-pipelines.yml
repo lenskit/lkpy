@@ -6,7 +6,6 @@ variables:
   conda.deps: >
     python=$(python.version)
     pandas scipy pytables fastparquet python-snappy numba
-    pytest pytest-arraydiff pytest-xdist
     invoke coverage pytest-cov
   pip.deps: >
     invoke pytest coverage pytest-cov
@@ -35,6 +34,10 @@ jobs:
       environmentName: lkpy
       packageSpecs: $(conda.deps)
       updateConda: false
+    
+  - script: |
+      pip install pytest pytest-arraydiff
+    displayName: current pytest
 
   - script: |
       if [ ! -r ~/ml-100k/u.data ]; then
@@ -163,6 +166,10 @@ jobs:
       packageSpecs: $(conda.deps)
 
   - script: |
+      pip install pytest pytest-arraydiff
+    displayName: current pytest
+
+  - script: |
       python -V
       python setup.py build
     displayName: 'Build LKPY'
@@ -192,6 +199,10 @@ jobs:
       environmentName: lkpy
       packageSpecs: $(conda.deps)
       updateConda: false
+
+  - script: |
+      pip install pytest pytest-arraydiff
+    displayName: current pytest
 
   - script: |
       if [ ! -r ~/ml-100k/u.data ]; then
