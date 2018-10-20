@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 import numpy as np
 from scipy import linalg as la
+from scipy import sparse as sps
 
 import pytest
 from pytest import approx, mark
@@ -172,9 +173,20 @@ def test_ii_train_ml100k(tmpdir):
     restored = algo.load_model(fn)
     assert restored is not None and restored is not model
     assert all(restored.sim_matrix.data > 0)
-    assert all(restored.sim_matrix.indptr == model.sim_matrix.indptr)
-    assert all(restored.sim_matrix.indices == model.sim_matrix.indices)
-    assert all(restored.sim_matrix.data == model.sim_matrix.data)
+    assert sps.isspmatrix_csr(restored.sim_matrix)
+
+    r_mat = restored.sim_matrix
+    o_mat = model.sim_matrix
+
+    assert all(r_mat.indptr == o_mat.indptr)
+
+    for i in range(len(restored.items)):
+        sp = r_mat.indptr[i]
+        ep = r_mat.indptr[i + 1]
+
+        # everything is in decreasing order
+        assert all(np.diff(r_mat.data[sp:ep]) <= 0)
+        assert all(r_mat.data[sp:ep] == o_mat.data[sp:ep])
 
 
 @mark.slow
@@ -299,8 +311,19 @@ def test_ii_save_load(tmpdir):
     assert model.counts.sum() == model.sim_matrix.nnz
     assert model.sim_matrix.nnz == original.sim_matrix.nnz
     assert all(model.sim_matrix.indptr == original.sim_matrix.indptr)
-    assert all(model.sim_matrix.indices == original.sim_matrix.indices)
     assert model.sim_matrix.data == approx(original.sim_matrix.data)
+
+    r_mat = model.sim_matrix
+    o_mat = original.sim_matrix
+    assert all(r_mat.indptr == o_mat.indptr)
+
+    for i in range(len(model.items)):
+        sp = r_mat.indptr[i]
+        ep = r_mat.indptr[i + 1]
+
+        # everything is in decreasing order
+        assert all(np.diff(r_mat.data[sp:ep]) <= 0)
+        assert all(r_mat.data[sp:ep] == o_mat.data[sp:ep])
 
     means = ml_ratings.groupby('item').rating.mean()
     assert means[model.items].values == approx(original.means)

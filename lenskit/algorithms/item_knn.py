@@ -2,6 +2,7 @@
 Item-based k-NN collaborative filtering.
 """
 
+import pathlib
 from collections import namedtuple
 import logging
 
@@ -265,41 +266,50 @@ class ItemItem(Trainable, Predictor):
 
         return results
 
-    def save_model(self, model, file):
-        _logger.info('saving I-I model to %s', file)
-        with pd.HDFStore(file, 'w') as hdf:
-            h5 = hdf._handle
-            group = h5.create_group('/', 'ii_model')
-            h5.create_array(group, 'items', model.items.values)
-            h5.create_array(group, 'means', model.means)
-            _logger.debug('saving matrix with %d entries (%d nnz)',
-                          model.sim_matrix.nnz, np.sum(model.sim_matrix.data != 0))
-            h5.create_array(group, 'col_ptrs', model.sim_matrix.indptr)
-            h5.create_array(group, 'row_nums', model.sim_matrix.indices)
-            h5.create_array(group, 'sim_values', model.sim_matrix.data)
+    def save_model(self, model, path):
+        path = pathlib.Path(path)
+        _logger.info('saving I-I model to %s', path)
+        path.mkdir(parents=True, exist_ok=True)
 
-            hdf['ratings'] = model.rating_matrix
+        imeans = pd.DataFrame({'item': model.items.values, 'mean': model.means})
+        imeans.to_parquet(str(path / 'items.parquet'))
 
-    def load_model(self, file):
-        _logger.info('loading I-I model from %s', file)
-        with pd.HDFStore(file, 'r') as hdf:
-            ratings = hdf['ratings']
-            h5 = hdf._handle
+        coo = model.sim_matrix.tocoo()
+        coo_df = pd.DataFrame({'item': coo.row, 'neighbor': coo.col, 'similarity': coo.data})
+        coo_df.to_parquet(str(path / 'similarities.parquet'))
 
-            items = h5.get_node('/ii_model', 'items').read()
-            items = pd.Index(items)
-            means = h5.get_node('/ii_model', 'means').read()
+        model.rating_matrix.reset_index().to_parquet(str(path / 'ratings.parquet'))
 
-            indptr = h5.get_node('/ii_model', 'col_ptrs').read()
-            indices = h5.get_node('/ii_model', 'row_nums').read()
-            values = h5.get_node('/ii_model', 'sim_values').read()
-            _logger.debug('loading matrix with %d entries (%d nnz)',
-                          len(values), np.sum(values != 0))
-            assert np.all(values > self.min_similarity)
+    def load_model(self, path):
+        path = pathlib.Path(path)
+        _logger.info('loading I-I model from %s', path)
 
-            matrix = sps.csr_matrix((values, indices, indptr))
+        imeans = pd.read_parquet(str(path / 'items.parquet'))
+        items = pd.Index(imeans.item)
+        means = imeans['mean'].values
+        nitems = len(items)
 
-            return IIModel(items, means, np.diff(indptr), matrix, ratings)
+        coo_df = pd.read_parquet(str(path / 'similarities.parquet'))
+        _logger.info('read %d similarities for %d items', len(coo_df), nitems)
+        csr = sps.csr_matrix((coo_df['similarity'].values,
+                              (coo_df['item'].values, coo_df['neighbor'].values)),
+                             (nitems, nitems))
+
+        for i in range(nitems):
+            sp = csr.indptr[i]
+            ep = csr.indptr[i+1]
+            if ep == sp:
+                continue
+
+            ord = np.argsort(csr.data[sp:ep])
+            ord = ord[::-1]
+            csr.indices[sp:ep] = csr.indices[sp + ord]
+            csr.data[sp:ep] = csr.data[sp + ord]
+
+        rmat = pd.read_parquet(str(path / 'ratings.parquet'))
+        rmat = rmat.set_index(['user', 'item'])
+
+        return IIModel(items, means, np.diff(csr.indptr), csr, rmat)
 
     def __str__(self):
         return 'ItemItem(nnbrs={}, msize={})'.format(self.max_neighbors, self.save_neighbors)

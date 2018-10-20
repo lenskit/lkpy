@@ -30,6 +30,8 @@ setup(
         'numpy',
         'scipy',
         'numba >= 0.40',
+        'fastparquet',
+        'python-snappy',
         'tables >= 3.2.0'
     ],
     tests_require=[
