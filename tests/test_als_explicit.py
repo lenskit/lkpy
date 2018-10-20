@@ -1,5 +1,5 @@
+import os.path
 import logging
-from pathlib import Path
 
 from lenskit.algorithms import als
 
@@ -86,7 +86,7 @@ def test_als_train_large():
 
 @mark.slow
 def test_als_save_load(tmpdir):
-    mod_file = Path(tmpdir) / 'als.npz'
+    mod_file = os.path.join(tmpdir, 'als.npz')
     algo = als.BiasedMF(20, iterations=20)
     ratings = lktu.ml_pandas.renamed.ratings
     model = algo.train(ratings)
@@ -95,7 +95,7 @@ def test_als_save_load(tmpdir):
     assert model.global_bias == approx(ratings.rating.mean())
 
     algo.save_model(model, mod_file)
-    assert mod_file.exists()
+    assert os.path.exists(mod_file)
 
     restored = algo.load_model(mod_file)
     assert restored.global_bias == model.global_bias
