@@ -30,7 +30,7 @@ setup(
         'numpy',
         'scipy',
         'numba >= 0.40',
-        'fastparquet'
+        'pyarrow'
     ],
     tests_require=[
         'pytest >= 3.5.1',

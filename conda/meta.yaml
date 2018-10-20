@@ -21,14 +21,14 @@ requirements:
     - pandas
     - numpy
     - scipy
-    - fastparquet
+    - pyarrow
     - python-snappy
   run:
     - python
     - pandas
     - scipy
     - numba >= 0.40
-    - fastparquet
+    - pyarrow
     - python-snappy
 
 test:
