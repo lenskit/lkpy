@@ -259,13 +259,11 @@ class MultiEval:
 
         preds, pred_time = self._predict(run_id, arec.algorithm, model, test)
         run['PredTime'] = pred_time
-        if preds is not None:
-            self._write_results(self.preds_file, preds, append=run_id > 1)
+        self._write_results(self.preds_file, preds, append=run_id > 1)
 
         recs, rec_time = self._recommend(run_id, arec.algorithm, model, test, cand)
         run['recTime'] = rec_time
-        if recs is not None:
-            self._write_results(self.recs_file, recs, append=run_id > 1)
+        self._write_results(self.recs_file, recs, append=run_id > 1)
 
         return run
 
@@ -285,6 +283,7 @@ class MultiEval:
         _logger.info('generating %d predictions for %s', len(test), algo)
         preds = predict(algo, test, model)
         watch.stop()
+        _logger.info('generated predictions in %s', watch)
         preds['RunId'] = rid
         preds = preds[['RunId', 'user', 'item', 'rating', 'prediction']]
         return preds, watch.elapsed()
@@ -298,10 +297,14 @@ class MultiEval:
         _logger.info('generating recommendations for %d users for %s', len(users), algo)
         recs = recommend(algo, model, users, self.n_recs, candidates, test)
         watch.stop()
+        _logger.info('generated recommendations in %s', watch)
         recs['RunId'] = rid
         return recs, watch.elapsed()
 
     def _write_results(self, file, df, append=True):
+        if df is None:
+            return
+
         if fastparquet is not None:
             fastparquet.write(str(file), df, append=append, compression='snappy')
         elif append and file.exists():
