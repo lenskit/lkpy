@@ -36,8 +36,8 @@ def test_als_predict_basic():
     preds = algo.predict(model, 10, [3])
     assert len(preds) == 1
     assert preds.index[0] == 3
-    assert preds.loc[3] >= 0
-    assert preds.loc[3] <= 5
+    assert preds.loc[3] >= -0.1
+    assert preds.loc[3] <= 5.1
 
 
 def test_als_predict_bad_item():
