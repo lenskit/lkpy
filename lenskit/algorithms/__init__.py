@@ -9,6 +9,7 @@ classes (:py:mod:`abc`) representing different algorithm capabilities.
 
 from abc import ABCMeta, abstractmethod
 import pickle
+import pathlib
 
 
 class Predictor(metaclass=ABCMeta):
@@ -112,8 +113,8 @@ class Trainable(metaclass=ABCMeta):
             path(str):
                 the path at which to save the model.
         """
-
-        with open(path, 'wb') as f:
+        path = pathlib.Path(path)
+        with path.open('wb') as f:
             pickle.dump(model, f)
 
     def load_model(self, path):
@@ -126,5 +127,7 @@ class Trainable(metaclass=ABCMeta):
         Returns:
             the re-loaded model (of an implementation-defined type).
         """
-        with open(path, 'rb') as f:
+
+        path = pathlib.Path(path)
+        with path.open('rb') as f:
             return pickle.load(f)
