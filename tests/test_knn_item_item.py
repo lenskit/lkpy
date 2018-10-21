@@ -165,7 +165,7 @@ def test_ii_train_ml100k(tmp_path):
     assert means[model.items].values == approx(model.means)
 
     # save
-    fn = tmp_path / 'ii.mod')
+    fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
     algo.save_model(model, fn)
     _log.info('reloading model')

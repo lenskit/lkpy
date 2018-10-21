@@ -36,7 +36,7 @@ jobs:
       updateConda: false
     
   - script: |
-      pip install pytest pytest-arraydiff
+      sudo pip install pytest pytest-arraydiff
     displayName: current pytest
 
   - script: |
@@ -166,7 +166,7 @@ jobs:
       packageSpecs: $(conda.deps)
 
   - script: |
-      pip install pytest pytest-arraydiff
+      sudo pip install pytest pytest-arraydiff
     displayName: current pytest
 
   - script: |
@@ -201,7 +201,7 @@ jobs:
       updateConda: false
 
   - script: |
-      pip install pytest pytest-arraydiff
+      sudo pip install pytest pytest-arraydiff
     displayName: current pytest
 
   - script: |
