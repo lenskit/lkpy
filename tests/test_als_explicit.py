@@ -84,10 +84,9 @@ def test_als_train_large():
     assert ibias.values == approx(imeans.values)
 
 
-@mark.slow
 def test_als_save_load(tmp_path):
     mod_file = tmp_path / 'als.npz'
-    algo = als.BiasedMF(20, iterations=20)
+    algo = als.BiasedMF(20, iterations=5)
     ratings = lktu.ml_pandas.renamed.ratings
     model = algo.train(ratings)
 
