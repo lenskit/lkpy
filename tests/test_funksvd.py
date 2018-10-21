@@ -1,4 +1,4 @@
-import os
+import os.path
 import logging
 from pathlib import Path
 
@@ -11,6 +11,7 @@ import pytest
 from pytest import approx, mark
 
 import lk_test_utils as lktu
+from lk_test_utils import tmp_path
 
 _log = logging.getLogger(__name__)
 
@@ -103,6 +104,29 @@ def test_fsvd_predict_bad_user():
 
 
 @mark.slow
+def test_fsvd_save_load(tmp_path):
+    mod_file = tmp_path / 'funksvd.npz'
+    algo = svd.FunkSVD(20, iterations=20)
+    ratings = lktu.ml_pandas.renamed.ratings
+    model = algo.train(ratings)
+
+    assert model is not None
+    assert model.global_bias == approx(ratings.rating.mean())
+
+    algo.save_model(model, mod_file)
+    assert mod_file.exists()
+
+    restored = algo.load_model(mod_file)
+    assert restored.global_bias == model.global_bias
+    assert np.all(restored.user_bias == model.user_bias)
+    assert np.all(restored.item_bias == model.item_bias)
+    assert np.all(restored.user_features == model.user_features)
+    assert np.all(restored.item_features == model.item_features)
+    assert np.all(restored.item_index == model.item_index)
+    assert np.all(restored.user_index == model.user_index)
+
+
+@mark.slow
 def test_fsvd_known_preds():
     from lenskit import batch
 
@@ -146,8 +170,8 @@ def test_fsvd_batch_accuracy():
         _log.info('testing %d users', test.user.nunique())
         return batch.predict(algo, test, model=model)
 
-    preds = batch.multi_predict(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)),
-                                algo)
+    folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
+    preds = pd.concat(eval(train, test) for (train, test) in folds)
     mae = pm.mae(preds.prediction, preds.rating)
     assert mae == approx(0.74, abs=0.025)
 

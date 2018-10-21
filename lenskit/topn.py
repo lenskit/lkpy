@@ -17,6 +17,6 @@ class UnratedCandidates:
         self.training = training.set_index('user').item
         self.items = training.item.unique()
 
-    def __call__(self, user):
+    def __call__(self, user, *args, **kwargs):
         urates = self.training.loc[user]
         return np.setdiff1d(self.items, urates)

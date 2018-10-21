@@ -9,6 +9,7 @@ classes (:py:mod:`abc`) representing different algorithm capabilities.
 
 from abc import ABCMeta, abstractmethod
 import pickle
+import pathlib
 
 
 class Predictor(metaclass=ABCMeta):
@@ -99,31 +100,34 @@ class Trainable(metaclass=ABCMeta):
         """
         raise NotImplemented()
 
-    def save_model(self, model, file):
+    def save_model(self, model, path):
         """
-        Save a trained model to a file.  The default implementation pickles the model.
+        Save a trained model to a file or directory.  The default implementation pickles
+        the model.
 
         Algorithms are allowed to use any format for saving their models, including
         directories.
 
         Args:
             model: the trained model.
-            file(str):
-                the file in which to save the model.
+            path(str):
+                the path at which to save the model.
         """
-
-        with open(file, 'wb') as f:
+        path = pathlib.Path(path)
+        with path.open('wb') as f:
             pickle.dump(model, f)
 
-    def load_model(self, file):
+    def load_model(self, path):
         """
         Save a trained model to a file.
 
         Args:
-            file(str): the path to file from which to load the model.
+            path(str): the path to file from which to load the model.
 
         Returns:
             the re-loaded model (of an implementation-defined type).
         """
-        with open(file, 'rb') as f:
+
+        path = pathlib.Path(path)
+        with path.open('rb') as f:
             return pickle.load(f)

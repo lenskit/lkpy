@@ -21,13 +21,15 @@ requirements:
     - pandas
     - numpy
     - scipy
-    - pytables
+    - pyarrow
+    - python-snappy
   run:
     - python
     - pandas
     - scipy
     - numba >= 0.40
-    - pytables
+    - pyarrow
+    - python-snappy
 
 test:
   source_files:

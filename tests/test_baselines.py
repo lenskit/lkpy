@@ -9,7 +9,7 @@ import numpy as np
 from pytest import approx
 
 import lk_test_utils as lktu
-from lk_test_utils import tmpdir, ml_pandas
+from lk_test_utils import ml_pandas, tmp_path
 
 _log = logging.getLogger(__name__)
 
@@ -218,11 +218,11 @@ def test_bias_separate_damping():
         approx(np.array([0.266234, -0.08333, -0.22727]), abs=1.0e-4)
 
 
-def test_bias_save(tmpdir):
+def test_bias_save(tmp_path):
     algo = bl.Bias(damping=5)
     original = algo.train(simple_df)
     assert original.mean == approx(3.5)
-    fn = os.path.join(tmpdir, 'bias.dat')
+    fn = tmp_path / 'bias.dat'
 
     _log.info('saving to %s', fn)
     algo.save_model(original, fn)

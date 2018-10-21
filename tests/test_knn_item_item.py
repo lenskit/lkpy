@@ -8,12 +8,13 @@ from concurrent.futures import ThreadPoolExecutor
 import pandas as pd
 import numpy as np
 from scipy import linalg as la
+from scipy import sparse as sps
 
 import pytest
 from pytest import approx, mark
 
 import lk_test_utils as lktu
-from lk_test_utils import tmpdir
+from lk_test_utils import tmp_path
 
 _log = logging.getLogger(__name__)
 
@@ -143,7 +144,7 @@ def test_ii_train_big_unbounded():
 
 @mark.slow
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
-def test_ii_train_ml100k(tmpdir):
+def test_ii_train_ml100k(tmp_path):
     "Test an unbounded model on ML-100K"
     ratings = lktu.ml100k.load_ratings()
     algo = knn.ItemItem(30)
@@ -165,16 +166,27 @@ def test_ii_train_ml100k(tmpdir):
     assert means[model.items].values == approx(model.means)
 
     # save
-    fn = os.path.join(tmpdir, 'ii.mod')
+    fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
     algo.save_model(model, fn)
     _log.info('reloading model')
     restored = algo.load_model(fn)
     assert restored is not None and restored is not model
     assert all(restored.sim_matrix.data > 0)
-    assert all(restored.sim_matrix.indptr == model.sim_matrix.indptr)
-    assert all(restored.sim_matrix.indices == model.sim_matrix.indices)
-    assert all(restored.sim_matrix.data == model.sim_matrix.data)
+    assert sps.isspmatrix_csr(restored.sim_matrix)
+
+    r_mat = restored.sim_matrix
+    o_mat = model.sim_matrix
+
+    assert all(r_mat.indptr == o_mat.indptr)
+
+    for i in range(len(restored.items)):
+        sp = r_mat.indptr[i]
+        ep = r_mat.indptr[i + 1]
+
+        # everything is in decreasing order
+        assert all(np.diff(r_mat.data[sp:ep]) <= 0)
+        assert all(r_mat.data[sp:ep] == o_mat.data[sp:ep])
 
 
 @mark.slow
@@ -274,13 +286,13 @@ def test_ii_large_models():
 
 
 @mark.slow
-def test_ii_save_load(tmpdir):
+def test_ii_save_load(tmp_path):
     "Save and load a model"
     algo = knn.ItemItem(30, save_nbrs=500)
     _log.info('building model')
     original = algo.train(ml_ratings)
 
-    fn = os.path.join(tmpdir, 'ii.mod')
+    fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
     algo.save_model(original, fn)
     _log.info('reloading model')
@@ -299,8 +311,19 @@ def test_ii_save_load(tmpdir):
     assert model.counts.sum() == model.sim_matrix.nnz
     assert model.sim_matrix.nnz == original.sim_matrix.nnz
     assert all(model.sim_matrix.indptr == original.sim_matrix.indptr)
-    assert all(model.sim_matrix.indices == original.sim_matrix.indices)
     assert model.sim_matrix.data == approx(original.sim_matrix.data)
+
+    r_mat = model.sim_matrix
+    o_mat = original.sim_matrix
+    assert all(r_mat.indptr == o_mat.indptr)
+
+    for i in range(len(model.items)):
+        sp = r_mat.indptr[i]
+        ep = r_mat.indptr[i + 1]
+
+        # everything is in decreasing order
+        assert all(np.diff(r_mat.data[sp:ep]) <= 0)
+        assert all(r_mat.data[sp:ep] == o_mat.data[sp:ep])
 
     means = ml_ratings.groupby('item').rating.mean()
     assert means[model.items].values == approx(original.means)

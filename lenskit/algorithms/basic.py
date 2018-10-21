@@ -57,6 +57,7 @@ class Bias(Predictor, Trainable):
         if isinstance(damping, tuple):
             self.user_damping, self.item_damping = damping
         else:
+            self.damping = damping
             self.user_damping = damping
             self.item_damping = damping
 
@@ -144,6 +145,9 @@ class Bias(Predictor, Trainable):
         else:
             return series.mean()
 
+    def __str__(self):
+        return 'Bias(ud={}, id={})'.format(self.user_damping, self.item_damping)
+
 
 class Popular(Recommender, Trainable):
     def train(self, ratings):
@@ -162,6 +166,9 @@ class Popular(Recommender, Trainable):
             return scores.sort_values(ascending=False).reset_index()
         else:
             return scores.nlargest(n).reset_index()
+
+    def __str__(self):
+        return 'Popular'
 
 
 class Memorized:
@@ -223,8 +230,8 @@ class Fallback(Predictor, Trainable):
 
         return preds.reindex(items)
 
-    def save_model(self, model, file):
-        path = pathlib.Path(file)
+    def save_model(self, model, path):
+        path = pathlib.Path(path)
         path.mkdir(parents=True, exist_ok=True)
         for i, algo in enumerate(self.algorithms):
             mp = path / 'algo-{}.dat'.format(i+1)
@@ -247,6 +254,9 @@ class Fallback(Predictor, Trainable):
                 model.append(None)
 
         return model
+
+    def __str__(self):
+        return 'Fallback([{}])'.format(', '.join(self.algorithms))
 
 
 class TopN(Recommender):
@@ -287,8 +297,8 @@ class _TrainableTopN(TopN, Trainable):
     def train(self, ratings):
         return self.predictor.train(ratings)
 
-    def save_model(self, model, file):
-        self.predictor.save_model(model, file)
+    def save_model(self, model, path):
+        self.predictor.save_model(model, path)
 
-    def load_model(self, file):
-        return self.predictor.load_model(file)
+    def load_model(self, path):
+        return self.predictor.load_model(path)

@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 
 import lk_test_utils as lktu
-from lk_test_utils import tmpdir
+from lk_test_utils import tmp_path
 from pytest import approx
 
 simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
@@ -81,11 +81,11 @@ def test_fallback_predict():
     assert preds.loc[-23081] == approx(model[1].mean + model[1].users.loc[10])
 
 
-def test_fallback_save_load(tmpdir):
+def test_fallback_save_load(tmp_path):
     algo = basic.Fallback(basic.Memorized(simple_df), basic.Bias())
     original = algo.train(lktu.ml_pandas.renamed.ratings)
 
-    fn = os.path.join(tmpdir, 'fallback')
+    fn = tmp_path / 'fallback'
     algo.save_model(original, fn)
 
     model = algo.load_model(fn)
@@ -178,11 +178,11 @@ def test_pop_candidates():
     assert recs.item.iloc[0] in equiv.index
 
 
-def test_pop_save_load(tmpdir):
+def test_pop_save_load(tmp_path):
     algo = basic.Popular()
     original = algo.train(lktu.ml_pandas.renamed.ratings)
 
-    fn = os.path.join(tmpdir, 'pop.mod')
+    fn = tmp_path / 'pop.mod'
     algo.save_model(original, fn)
 
     model = algo.load_model(fn)

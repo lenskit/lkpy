@@ -1,7 +1,9 @@
+from lenskit import matrix
 import lenskit.algorithms.user_knn as knn
 
 import logging
 import os.path
+import multiprocessing
 
 import pandas as pd
 import numpy as np
@@ -10,7 +12,7 @@ import pytest
 from pytest import approx, mark
 
 import lk_test_utils as lktu
-from lk_test_utils import tmpdir
+from lk_test_utils import tmp_path
 
 _log = logging.getLogger(__name__)
 
@@ -81,12 +83,12 @@ def test_uu_predict_live_ratings():
 
 
 @mark.slow
-def test_uu_save_load(tmpdir):
+def test_uu_save_load(tmp_path):
     algo = knn.UserUser(30)
     _log.info('training model')
     original = algo.train(ml_ratings)
 
-    fn = os.path.join(tmpdir, 'uu.model')
+    fn = tmp_path / 'uu.model'
     _log.info('saving to %s', fn)
     algo.save_model(original, fn)
 
@@ -118,13 +120,20 @@ def test_uu_predict_unknown_empty():
     assert all(preds.isna())
 
 
+def __batch_eval(job):
+    from lenskit import batch
+    algo, train, test = job
+    _log.info('running training')
+    model = algo.train(train)
+    _log.info('testing %d users', test.user.nunique())
+    return batch.predict(lambda u, xs: algo.predict(model, u, xs), test)
+
 @mark.slow
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_uu_batch_accuracy():
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
-    from lenskit import batch
     import lenskit.metrics.predict as pm
 
     ratings = lktu.ml100k.load_ratings()
@@ -132,17 +141,9 @@ def test_uu_batch_accuracy():
     uu_algo = knn.UserUser(30)
     algo = basic.Fallback(uu_algo, basic.Bias())
 
-    def eval(train, test):
-        _log.info('running training')
-        model = algo.train(train)
-        _log.info('testing %d users', test.user.nunique())
-        return batch.predict(lambda u, xs: algo.predict(model, u, xs), test)
-
-    preds = batch.multi_predict(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)),
-                                algo)
-    # preds = pd.concat((eval(train, test)
-    #                    for (train, test)
-    #                    in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
+    folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
+    with multiprocessing.Pool() as pool:
+        preds = pd.concat(pool.map(__batch_eval, ((algo, train, test) for (train, test) in folds)))
     mae = pm.mae(preds.prediction, preds.rating)
     assert mae == approx(0.71, abs=0.025)
 

@@ -1,16 +1,15 @@
-import os
+import os.path
 import logging
-from pathlib import Path
 
 from lenskit.algorithms import als
 
 import pandas as pd
 import numpy as np
 
-import pytest
 from pytest import approx, mark
 
 import lk_test_utils as lktu
+from lk_test_utils import tmp_path
 
 _log = logging.getLogger(__name__)
 
@@ -37,8 +36,8 @@ def test_als_predict_basic():
     preds = algo.predict(model, 10, [3])
     assert len(preds) == 1
     assert preds.index[0] == 3
-    assert preds.loc[3] >= 0
-    assert preds.loc[3] <= 5
+    assert preds.loc[3] >= -0.1
+    assert preds.loc[3] <= 5.1
 
 
 def test_als_predict_bad_item():
@@ -85,6 +84,28 @@ def test_als_train_large():
     assert ibias.values == approx(imeans.values)
 
 
+def test_als_save_load(tmp_path):
+    mod_file = tmp_path / 'als.npz'
+    algo = als.BiasedMF(20, iterations=5)
+    ratings = lktu.ml_pandas.renamed.ratings
+    model = algo.train(ratings)
+
+    assert model is not None
+    assert model.global_bias == approx(ratings.rating.mean())
+
+    algo.save_model(model, mod_file)
+    assert mod_file.exists()
+
+    restored = algo.load_model(mod_file)
+    assert restored.global_bias == model.global_bias
+    assert np.all(restored.user_bias == model.user_bias)
+    assert np.all(restored.item_bias == model.item_bias)
+    assert np.all(restored.user_features == model.user_features)
+    assert np.all(restored.item_features == model.item_features)
+    assert np.all(restored.item_index == model.item_index)
+    assert np.all(restored.user_index == model.user_index)
+
+
 @mark.slow
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
@@ -105,8 +126,8 @@ def test_als_batch_accuracy():
         _log.info('testing %d users', test.user.nunique())
         return batch.predict(algo, test, model=model)
 
-    preds = batch.multi_predict(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)),
-                                algo)
+    folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
+    preds = pd.concat(eval(train, test) for (train, test) in folds)
     mae = pm.mae(preds.prediction, preds.rating)
     assert mae == approx(0.73, abs=0.025)
 

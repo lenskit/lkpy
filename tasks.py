@@ -11,7 +11,7 @@ import importlib.machinery
 
 @task
 def test(c, cover=False, verbose=True, slow=True, eval=True, match=None, mark=None, debug=False,
-         forked=False):
+         forked=False, fail_fast=False):
     "Run tests"
     import pytest
     args = ['tests']
@@ -19,6 +19,8 @@ def test(c, cover=False, verbose=True, slow=True, eval=True, match=None, mark=No
         args.append('--cov=lenskit')
     if verbose:
         args.append('--verbose')
+    if fail_fast:
+        args.append('-x')
     if not slow:
         args.append('-m')
         args.append('not slow')

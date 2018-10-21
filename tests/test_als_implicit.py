@@ -1,3 +1,4 @@
+import os.path
 import logging
 
 from lenskit import topn
@@ -6,10 +7,10 @@ from lenskit.algorithms import als
 import pandas as pd
 import numpy as np
 
-import pytest
 from pytest import approx, mark
 
 import lk_test_utils as lktu
+from lk_test_utils import tmp_path
 
 _log = logging.getLogger(__name__)
 
@@ -71,6 +72,25 @@ def test_als_train_large():
 
     assert model is not None
     # FIXME Write more test assertions
+
+
+def test_als_save_load(tmp_path):
+    mod_file = tmp_path / 'als.npz'
+    algo = als.BiasedMF(20, iterations=5)
+    ratings = lktu.ml_pandas.renamed.ratings
+    model = algo.train(ratings)
+
+    assert model is not None
+    assert model.global_bias == approx(ratings.rating.mean())
+
+    algo.save_model(model, mod_file)
+    assert mod_file.exists()
+
+    restored = algo.load_model(mod_file)
+    assert np.all(restored.user_features == model.user_features)
+    assert np.all(restored.item_features == model.item_features)
+    assert np.all(restored.item_index == model.item_index)
+    assert np.all(restored.user_index == model.user_index)
 
 
 @mark.slow

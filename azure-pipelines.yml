@@ -5,12 +5,11 @@
 variables:
   conda.deps: >
     python=$(python.version)
-    pandas scipy pytables numba
-    pytest pytest-arraydiff pytest-xdist
-    invoke coverage pytest-cov
+    pandas scipy pytables fastparquet python-snappy numba
+    invoke coverage pytest pytest-cov
   pip.deps: >
-    invoke pytest
-    pandas scipy tables
+    invoke pytest coverage pytest-cov
+    pandas scipy pyarrow
     numba
 
 jobs:
@@ -29,16 +28,13 @@ jobs:
     maxParallel: 4
 
   steps:
-  - script: sudo install -d -m 0777 /usr/envs
-    displayName: Fix Conda permissions
-
   - task: CondaEnvironment@1
     inputs:
       createCustomEnvironment: true
       environmentName: lkpy
       packageSpecs: $(conda.deps)
       updateConda: false
-
+    
   - script: |
       if [ ! -r ~/ml-100k/u.data ]; then
         wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
@@ -84,8 +80,8 @@ jobs:
         python.version: '3.5'
       Python36:
         python.version: '3.6'
-      # Python37:
-      #   python.version: '3.7'
+      Python37:
+        python.version: '3.7'
     maxParallel: 4
 
   steps:
@@ -109,6 +105,27 @@ jobs:
   - script: |
       python3 setup.py test
     displayName: 'pytest'
+  
+  - script: |
+      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval --no-slow --verbose
+    displayName: 'Test Coverage'
+
+  - script: |
+      coverage xml
+      echo "Fetching Codecov script"
+      curl -o /tmp/codecov.sh https://codecov.io/bash
+      
+      echo "Building for $BUILD_REASON"
+      cc_args=
+      if [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER" ]; then
+        ccargs="-P $SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
+      fi
+      if [ -z "$CODECOV_TOKEN" ]; then
+        echo "no CODECOV_TOKEN :(" >&2
+      fi
+
+      bash /tmp/codecov.sh -C "$BUILD_SOURCEVERSION" -B $BUILD_SOURCEBRANCH $cc_args
+    displayName: 'Upload Coverage'
 
 - job: 'WindowsVanilla'
   pool:
@@ -168,9 +185,6 @@ jobs:
     maxParallel: 4
 
   steps:
-  - script: sudo chmod 0777 /usr/local/miniconda/envs
-    displayName: Fix Conda permissions
-  
   - task: CondaEnvironment@1
     inputs:
       createCustomEnvironment: true
