@@ -9,7 +9,7 @@ import numpy as np
 from pytest import approx
 
 import lk_test_utils as lktu
-from lk_test_utils import ml_pandas
+from lk_test_utils import ml_pandas, tmp_path
 
 _log = logging.getLogger(__name__)
 

@@ -5,8 +5,8 @@ Test utilities for LKPY tests.
 import os
 import os.path
 import tempfile
+import pathlib
 from contextlib import contextmanager
-
 
 import pandas as pd
 import pytest
@@ -96,3 +96,9 @@ def envvars(**vars):
 
 
 ml_pandas = MLDataLoader(pd.read_csv)
+
+
+@pytest.fixture
+def tmp_path():
+    with tempfile.TemporaryDirectory(prefix='lkpy-test') as dir:
+        yield pathlib.Path(dir)

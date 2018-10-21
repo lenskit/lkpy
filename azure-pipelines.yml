@@ -6,7 +6,7 @@ variables:
   conda.deps: >
     python=$(python.version)
     pandas scipy pytables fastparquet python-snappy numba
-    invoke coverage pytest-cov
+    invoke coverage pytest pytest-cov
   pip.deps: >
     invoke pytest coverage pytest-cov
     pandas scipy pyarrow
@@ -35,10 +35,6 @@ jobs:
       packageSpecs: $(conda.deps)
       updateConda: false
     
-  - script: |
-      sudo pip install pytest pytest-arraydiff
-    displayName: current pytest
-
   - script: |
       if [ ! -r ~/ml-100k/u.data ]; then
         wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
@@ -166,10 +162,6 @@ jobs:
       packageSpecs: $(conda.deps)
 
   - script: |
-      sudo pip install pytest pytest-arraydiff
-    displayName: current pytest
-
-  - script: |
       python -V
       python setup.py build
     displayName: 'Build LKPY'
@@ -199,10 +191,6 @@ jobs:
       environmentName: lkpy
       packageSpecs: $(conda.deps)
       updateConda: false
-
-  - script: |
-      sudo pip install pytest pytest-arraydiff
-    displayName: current pytest
 
   - script: |
       if [ ! -r ~/ml-100k/u.data ]; then

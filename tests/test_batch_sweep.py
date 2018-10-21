@@ -3,7 +3,7 @@ import pathlib
 import pandas as pd
 import numpy as np
 
-from lk_test_utils import ml_pandas
+from lk_test_utils import ml_pandas, tmp_path
 
 from lenskit import batch, crossfold as xf
 from lenskit.algorithms.basic import Bias, Popular
