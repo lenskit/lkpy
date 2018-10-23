@@ -51,9 +51,9 @@ def __train_row(rmat: matrix.CSR, item_users: matrix.CSR, thresh, nnbrs, item):
         top = acc.top_keys()
         return (top, work[top].copy())
     else:
-        sims = work[idx] 
-        order = sims.argsort() 
-        order = order[::-1] 
+        sims = work[idx]
+        order = sims.argsort()
+        order = order[::-1]
         return (idx[order].astype(np.int32), sims[order])
 
 
@@ -65,7 +65,7 @@ def __build_matrix(rmat, thresh, nnbrs):
     nrows = [_n_ph for _ in range(nitems)]
     srows = [_s_ph for _ in range(nitems)]
     item_users = rmat.transpose_coords()
-    
+
     nbatches = nitems // 100
 
     for batch in prange(nbatches):
@@ -73,20 +73,20 @@ def __build_matrix(rmat, thresh, nnbrs):
         be = bs + 100
         if be > nitems:
             be = nitems
-            
+
         for item in range(bs, be):
             nrow, srow = __train_row(rmat, item_users, thresh, nnbrs, item)
 
             nrows[item] = nrow
             srows[item] = srow
-        
+
     return (nrows, srows)
 
 
 @njit
 def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
     nitems = rmat.ncols
-    
+
     with objmode():
         _logger.info('starting parallel similarity build')
 
