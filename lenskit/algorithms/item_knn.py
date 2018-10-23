@@ -57,8 +57,8 @@ def __train_row(rmat: matrix.CSR, item_users: matrix.CSR, thresh, nnbrs, item):
         return (idx[order].astype(np.int32), sims[order])
 
 
-@njit(nogil=True, parallel=False)
-def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
+@njit(nogil=True, parallel=True)
+def __build_matrix(rmat, thresh, nnbrs):
     nitems = rmat.ncols
     _n_ph = np.array([0], dtype=np.int32)
     _s_ph = np.array([1.0], dtype=np.float_)
@@ -74,6 +74,15 @@ def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
 
         nrows[item] = nrow
         srows[item] = srow
+        
+    return (nrows, srows)
+
+
+@njit
+def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
+    nitems = rmat.ncols
+    
+    nrows, srows = __build_matrix(rmat, thresh, nnbrs)
 
     with objmode():
         _logger.info('processing similarity results')
@@ -82,12 +91,13 @@ def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
     cells = np.sum(counts)
 
     # assemble our results in to a CSR
-    ptrs = np.zeros(len(nrows) + 1, dtype=np.int32)
+    ptrs = np.zeros(nitems + 1, dtype=np.int32)
     ptrs[1:] = np.cumsum(counts)
-    assert ptrs[nitems] == cells
 
     with objmode():
-        _logger.info('assembling sparse matrix')
+        _logger.info('assembling sparse matrix with %d entries for %d rows', cells, nitems)
+
+    assert ptrs[nitems] == cells
 
     indices = np.empty(cells, dtype=np.int32)
     sims = np.empty(cells)
