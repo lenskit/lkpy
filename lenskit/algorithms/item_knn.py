@@ -68,9 +68,6 @@ def __build_matrix(rmat, thresh, nnbrs):
     
     nbatches = nitems // 100
 
-    with objmode():
-        _logger.info('starting parallel similarity build')
-
     for batch in prange(nbatches):
         bs = batch * 100
         be = bs + 100
@@ -90,6 +87,9 @@ def __build_matrix(rmat, thresh, nnbrs):
 def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
     nitems = rmat.ncols
     
+    with objmode():
+        _logger.info('starting parallel similarity build')
+
     nrows, srows = __build_matrix(rmat, thresh, nnbrs)
 
     with objmode():
