@@ -23,13 +23,14 @@ IIModel._matrix = property(lambda x: (x.sim_matrix.indptr, x.sim_matrix.indices,
 
 @njit(nogil=True)
 def __train_row(rmat: matrix.CSR, item_users: matrix.CSR, thresh, nnbrs, item):
-    work = np.zeros(rmat.nrows)
+    work = np.zeros(rmat.ncols)
+    iu_rp = rmat.rowptrs
     # iterate the users who have rated this item
     for uidx in range(item_users.rowptrs[item], item_users.rowptrs[item+1]):
         u = item_users.colinds[uidx]
         # find user's rating for this item
         urp = -1
-        for iidx in range(rmat.rowptrs[u], rmat.rowptrs[u+1]):
+        for iidx in range(iu_rp[u], iu_rp[u+1]):
             if rmat.colinds[iidx] == item:
                 urp = iidx
                 ur = rmat.values[urp]
@@ -50,15 +51,15 @@ def __train_row(rmat: matrix.CSR, item_users: matrix.CSR, thresh, nnbrs, item):
         top = acc.top_keys()
         return (top, work[top].copy())
     else:
-        sims = work[idx]
-        order = sims.argsort()
-        order = order[::-1]
+        sims = work[idx] 
+        order = sims.argsort() 
+        order = order[::-1] 
         return (idx[order].astype(np.int32), sims[order])
 
 
-@njit(nogil=True, parallel=True)
+@njit(nogil=True, parallel=False)
 def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
-    nitems = rmat.nrows
+    nitems = rmat.ncols
     _n_ph = np.array([0], dtype=np.int32)
     _s_ph = np.array([1.0], dtype=np.float_)
     nrows = [_n_ph for _ in range(nitems)]
