@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-from numba import njit
+from numba import njit, prange
 
 from lenskit import util, matrix
 from . import Trainable, Predictor
@@ -20,39 +20,26 @@ _logger = logging.getLogger(__name__)
 IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rating_matrix'])
 IIModel._matrix = property(lambda x: (x.sim_matrix.indptr, x.sim_matrix.indices, x.sim_matrix.data))
 
-_IIContext = namedtuple('_IIContext', [
-    'matrix', 'item_users',
-    'n_users', 'n_items'
-])
-
-
-def _make_context(matrix):
-    csc = matrix.transpose_coords()
-    return _IIContext(matrix, csc, matrix.nrows, matrix.ncols)
-
 
 @njit(nogil=True)
-def __train_row(context, thresh, nnbrs, item):
-    work = np.zeros(context.n_items)
-    ui = context.matrix
-    iu = context.item_users
+def __train_row(rmat: matrix.CSR, item_users: matrix.CSR, thresh, nnbrs, item):
+    work = np.zeros(rmat.nrows)
     # iterate the users who have rated this item
-    for uidx in range(iu.rowptrs[item], iu.rowptrs[item+1]):
-        u = iu.colinds[uidx]
+    for uidx in range(item_users.rowptrs[item], item_users.rowptrs[item+1]):
+        u = item_users.colinds[uidx]
         # find user's rating for this item
         urp = -1
-        for iidx in range(ui.rowptrs[u], ui.rowptrs[u+1]):
-            if ui.colinds[iidx] == item:
+        for iidx in range(rmat.rowptrs[u], rmat.rowptrs[u+1]):
+            if rmat.colinds[iidx] == item:
                 urp = iidx
-                ur = ui.values[urp]
+                ur = rmat.values[urp]
                 break
-        assert urp >= 0
 
         # accumulate pieces of dot products
-        for iidx in range(ui.rowptrs[u], ui.rowptrs[u+1]):
-            nbr = ui.colinds[iidx]
+        for iidx in range(rmat.rowptrs[u], rmat.rowptrs[u+1]):
+            nbr = rmat.colinds[iidx]
             if nbr != item:
-                work[nbr] = work[nbr] + ur * ui.values[iidx]
+                work[nbr] = work[nbr] + ur * rmat.values[iidx]
 
     # now copy the accepted values into the results
     mask = work >= thresh
@@ -69,16 +56,20 @@ def __train_row(context, thresh, nnbrs, item):
         return (idx[order].astype(np.int32), sims[order])
 
 
-@njit(nogil=True)
-def _train(context, thresh, nnbrs):
-    nrows = []
-    srows = []
+@njit(nogil=True, parallel=True)
+def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
+    nitems = rmat.nrows
+    _n_ph = np.array([0], dtype=np.int32)
+    _s_ph = np.array([1.0], dtype=np.float_)
+    nrows = [_n_ph for _ in range(nitems)]
+    srows = [_s_ph for _ in range(nitems)]
+    item_users = rmat.transpose_coords()
 
-    for item in range(context.n_items):
-        nrow, srow = __train_row(context, thresh, nnbrs, item)
+    for item in prange(nitems):
+        nrow, srow = __train_row(rmat, item_users, thresh, nnbrs, item)
 
-        nrows.append(nrow)
-        srows.append(srow)
+        nrows[item] = nrow
+        srows[item] = srow
 
     counts = np.array([len(n) for n in nrows], dtype=np.int32)
     cells = np.sum(counts)
@@ -86,11 +77,11 @@ def _train(context, thresh, nnbrs):
     # assemble our results in to a CSR
     ptrs = np.zeros(len(nrows) + 1, dtype=np.int32)
     ptrs[1:] = np.cumsum(counts)
-    assert ptrs[context.n_items] == cells
+    assert ptrs[nitems] == cells
 
     indices = np.empty(cells, dtype=np.int32)
     sims = np.empty(cells)
-    for i in range(context.n_items):
+    for i in range(nitems):
         sp = ptrs[i]
         ep = ptrs[i+1]
         assert counts[i] == ep - sp
@@ -100,7 +91,7 @@ def _train(context, thresh, nnbrs):
     return (ptrs, indices, sims)
 
 
-@njit
+@njit(nogil=True)
 def _predict(model, nitems, nrange, ratings, targets):
     indptr, indices, similarity = model
     min_nbrs, max_nbrs = nrange
@@ -205,7 +196,7 @@ class ItemItem(Trainable, Predictor):
         _logger.info('[%s] normalized user-item ratings', watch)
 
         _logger.info('[%s] computing similarity matrix', watch)
-        ptr, nbr, sim = _train(_make_context(matrix.csr_from_scipy(norm_mat)),
+        ptr, nbr, sim = _train(matrix.csr_from_scipy(norm_mat),
                                self.min_similarity,
                                self.save_neighbors
                                if self.save_neighbors and self.save_neighbors > 0
