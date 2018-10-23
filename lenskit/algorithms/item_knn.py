@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-from numba import njit, prange
+from numba import njit, prange, objmode
 
 from lenskit import util, matrix
 from . import Trainable, Predictor
@@ -65,11 +65,17 @@ def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
     srows = [_s_ph for _ in range(nitems)]
     item_users = rmat.transpose_coords()
 
+    with objmode():
+        _logger.info('starting parallel similarity build')
+
     for item in prange(nitems):
         nrow, srow = __train_row(rmat, item_users, thresh, nnbrs, item)
 
         nrows[item] = nrow
         srows[item] = srow
+
+    with objmode():
+        _logger.info('processing similarity results')
 
     counts = np.array([len(n) for n in nrows], dtype=np.int32)
     cells = np.sum(counts)
@@ -78,6 +84,9 @@ def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
     ptrs = np.zeros(len(nrows) + 1, dtype=np.int32)
     ptrs[1:] = np.cumsum(counts)
     assert ptrs[nitems] == cells
+
+    with objmode():
+        _logger.info('assembling sparse matrix')
 
     indices = np.empty(cells, dtype=np.int32)
     sims = np.empty(cells)
@@ -194,10 +203,9 @@ class ItemItem(Trainable, Predictor):
         # and reset NaN
         norm_mat.data[np.isnan(norm_mat.data)] = 0
         _logger.info('[%s] normalized user-item ratings', watch)
-
+        rmat = matrix.csr_from_scipy(norm_mat)
         _logger.info('[%s] computing similarity matrix', watch)
-        ptr, nbr, sim = _train(matrix.csr_from_scipy(norm_mat),
-                               self.min_similarity,
+        ptr, nbr, sim = _train(rmat, self.min_similarity,
                                self.save_neighbors
                                if self.save_neighbors and self.save_neighbors > 0
                                else -1)
