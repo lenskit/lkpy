@@ -65,15 +65,23 @@ def __build_matrix(rmat, thresh, nnbrs):
     nrows = [_n_ph for _ in range(nitems)]
     srows = [_s_ph for _ in range(nitems)]
     item_users = rmat.transpose_coords()
+    
+    nbatches = nitems // 100
 
     with objmode():
         _logger.info('starting parallel similarity build')
 
-    for item in prange(nitems):
-        nrow, srow = __train_row(rmat, item_users, thresh, nnbrs, item)
+    for batch in prange(nbatches):
+        bs = batch * 100
+        be = bs + 100
+        if be > nitems:
+            be = nitems
+            
+        for item in range(bs, be):
+            nrow, srow = __train_row(rmat, item_users, thresh, nnbrs, item)
 
-        nrows[item] = nrow
-        srows[item] = srow
+            nrows[item] = nrow
+            srows[item] = srow
         
     return (nrows, srows)
 
