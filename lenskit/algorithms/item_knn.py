@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
+import numba as nb
 from numba import njit, prange, objmode
 
 from lenskit import util, matrix
@@ -21,7 +22,7 @@ IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rati
 IIModel._matrix = property(lambda x: (x.sim_matrix.indptr, x.sim_matrix.indices, x.sim_matrix.data))
 
 
-@njit(nogil=True)
+@njit(nb.types.Tuple([nb.int32[::1], nb.float64[::1]])(matrix.CSR_type, matrix.CSR_type, nb.float64, nb.int32, nb.int32), nogil=True)
 def __train_row(rmat: matrix.CSR, item_users: matrix.CSR, thresh, nnbrs, item):
     work = np.zeros(rmat.ncols)
     iu_rp = rmat.rowptrs
@@ -57,7 +58,7 @@ def __train_row(rmat: matrix.CSR, item_users: matrix.CSR, thresh, nnbrs, item):
         return (idx[order].astype(np.int32), sims[order])
 
 
-@njit(nogil=True, parallel=True)
+@njit(nb.types.Tuple([nb.types.List(nb.int32[::1]), nb.types.List(nb.float64[::1])])(matrix.CSR_type, nb.float64, nb.int32), nogil=True, parallel=True)
 def __build_matrix(rmat, thresh, nnbrs):
     nitems = rmat.ncols
     _n_ph = np.array([0], dtype=np.int32)
@@ -83,7 +84,7 @@ def __build_matrix(rmat, thresh, nnbrs):
     return (nrows, srows)
 
 
-@njit
+@njit(matrix.CSR_type(matrix.CSR_type, nb.float64, nb.int32))
 def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
     nitems = rmat.ncols
 
@@ -107,7 +108,7 @@ def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
         indices[sp:ep] = nrows[i]
         sims[sp:ep] = srows[i]
 
-    return (ptrs, indices, sims)
+    return matrix.CSR(nitems, nitems, cells, ptrs, indices, sims)
 
 
 @njit(nogil=True)
@@ -215,14 +216,14 @@ class ItemItem(Trainable, Predictor):
         _logger.info('[%s] normalized user-item ratings', watch)
         rmat = matrix.csr_from_scipy(norm_mat)
         _logger.info('[%s] computing similarity matrix', watch)
-        ptr, nbr, sim = _train(rmat, self.min_similarity,
-                               self.save_neighbors
-                               if self.save_neighbors and self.save_neighbors > 0
-                               else -1)
+        smat = _train(rmat, self.min_similarity,
+                      self.save_neighbors
+                      if self.save_neighbors and self.save_neighbors > 0
+                      else -1)
 
         _logger.info('[%s] got neighborhoods for %d of %d items',
-                     watch, np.sum(np.diff(ptr) > 0), n_items)
-        smat = sps.csr_matrix((sim, nbr, ptr), shape=(n_items, n_items))
+                     watch, np.sum(np.diff(smat.rowptrs) > 0), n_items)
+        smat = matrix.csr_to_scipy(smat)
 
         _logger.info('[%s] computed %d neighbor pairs', watch, smat.nnz)
 

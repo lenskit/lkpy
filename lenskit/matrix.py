@@ -162,6 +162,9 @@ def csr_from_coo(rows, cols, vals, shape=None):
     return CSR(nrows, ncols, nnz, rowptrs, colinds, values)
 
 
+CSR_type = CSR.class_type.instance_type
+
+
 @njit
 def _csr_align(rowinds, nrows, rowptrs, align):
     rcts = np.zeros(nrows, dtype=np.int32)
