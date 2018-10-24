@@ -87,13 +87,7 @@ def __build_matrix(rmat, thresh, nnbrs):
 def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
     nitems = rmat.ncols
 
-    with objmode():
-        _logger.info('starting parallel similarity build')
-
     nrows, srows = __build_matrix(rmat, thresh, nnbrs)
-
-    with objmode():
-        _logger.info('processing similarity results')
 
     counts = np.array([len(n) for n in nrows], dtype=np.int32)
     cells = np.sum(counts)
@@ -101,9 +95,6 @@ def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
     # assemble our results in to a CSR
     ptrs = np.zeros(nitems + 1, dtype=np.int32)
     ptrs[1:] = np.cumsum(counts)
-
-    with objmode():
-        _logger.info('assembling sparse matrix with %d entries for %d rows', cells, nitems)
 
     assert ptrs[nitems] == cells
 
