@@ -25,46 +25,40 @@ def _sort_and_truncate(nitems, smat, min_sim, nnbrs):
     assert smat.nrows == nitems
     assert smat.ncols == nitems
 
-    ip2 = np.zeros(nitems + 1, dtype=np.int32)
-    ind2 = smat.colinds
-    d2 = smat.values
-
     with objmode():
         _logger.debug('full matrix has %d entries', smat.nnz)
 
-    # compute a first pass at the NNZ based on threshold
-    if min_sim is not None:
-        nnz = np.sum(smat.values[:smat.nnz] >= min_sim)
-        ind2 = np.zeros(nnz, dtype=np.int32)
-        d2 = np.zeros(nnz)
+    picked = np.full(smat.nnz, -1, np.int32)
 
     for i in range(nitems):
         sp = smat.rowptrs[i]
         ep = smat.rowptrs[i+1]
-        cols = smat.colinds[sp:ep]
-        vals = smat.values[sp:ep]
-        used = np.argsort(-vals)
-        used = used[cols[used] != i]
 
-        # filter
-        if min_sim is not None:
-            used = used[vals[used] >= min_sim]
-
-        # truncate
         if nnbrs > 0:
-            used = used[:nnbrs]
+            acc = util.Accumulator(smat.values, nnbrs)
+        else:
+            acc = util.Accumulator(smat.values, ep - sp)
 
-        sp = ip2[i]
-        ep = sp + len(used)
-        ip2[i+1] = ep
-        ind2[sp:ep] = cols[used]
-        d2[sp:ep] = vals[used]
+        for j in range(sp, ep):
+            if smat.colinds[j] != i and smat.values[j] >= min_sim:
+                acc.add(j)
 
-    nnz = ip2[-1]
+        keep = acc.top_keys()
+        picked[sp:sp+len(keep)] = keep
+
+    nnz = np.sum(picked >= 0)
     with objmode():
         _logger.debug('truncating to %d entries', nnz)
-    ind2 = ind2[:nnz].copy()
-    d2 = d2[:nnz].copy()
+
+    ip2 = np.zeros(nitems + 1, np.int32)
+    pmask = picked >= 0
+    rlens = np.array([np.sum(pmask[smat.rowptrs[i]:smat.rowptrs[i+1]]) for i in range(nitems)],
+                     dtype=np.int32)
+    ip2[1:] = np.cumsum(rlens)
+
+    ind2 = smat.colinds[picked[pmask]]
+    d2 = smat.values[picked[pmask]]
+
     return matrix.CSR(nitems, nitems, nnz, ip2, ind2, d2)
 
 
