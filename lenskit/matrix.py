@@ -4,6 +4,7 @@ Utilities for working with rating matrices.
 
 from collections import namedtuple
 import logging
+import warnings
 
 import pandas as pd
 import numpy as np
@@ -181,24 +182,6 @@ def _csr_align(rowinds, nrows, rowptrs, align):
         rpos[row] += 1
 
 
-def csr_syrk(csr):
-    """
-    The sparse SYRK (multiply transpose by matrix) operation. This returns
-    :math:`M^T M` for an input matrix `M`.
-
-    Args:
-        csr(CSR): the input matrix :math:`M`.
-
-    Returns:
-        CSR: the matrix transpose multipled by the matrix.
-    """
-    if sps.isspmatrix(csr):
-        sp = csr
-    else:
-        sp = csr_to_scipy(csr)
-    return sp.T @ sp
-
-
 def csr_from_scipy(mat, copy=True):
     """
     Convert a scipy sparse matrix to an internal CSR.
@@ -234,10 +217,182 @@ def csr_to_scipy(mat):
             A SciPy sparse matrix with the same data.  It shares
             storage with ``matrix``.
     """
+    if sps.isspmatrix(mat):
+        warnings.warn('matrix already a SciPy matrix')
+        return mat.tocsr()
     values = mat.values
     if values is None:
         values = np.full(mat.nnz, 1.0)
     return sps.csr_matrix((values, mat.colinds, mat.rowptrs), shape=(mat.nrows, mat.ncols))
+
+
+def __scipy_csr_syrk(csr):
+    sp = csr_to_scipy(csr)
+    res = sp.T @ sp
+    return csr_from_scipy(res, copy=False)
+
+
+def __mkl_check_return(rv, call='<unknown>'):
+    if rv:
+        raise RuntimeError('MKL call {} failed with code {}'.format(call, rv))
+
+
+_mkl_lib = None
+__mkl_syrk_defs = '''
+typedef void* sparse_matrix_t;
+
+int mkl_sparse_d_create_csr(sparse_matrix_t *A, int indexing, int rows, int cols, int *rows_start, int *rows_end, int *col_indx, double *values);
+int mkl_sparse_d_export_csr(const sparse_matrix_t source, int *indexing, int *rows, int *cols, int **rows_start, int **rows_end, int **col_indx, double **values);
+int mkl_sparse_order(sparse_matrix_t A);
+int mkl_sparse_destroy(sparse_matrix_t A);
+int mkl_sparse_syrk (int operation, const sparse_matrix_t A, sparse_matrix_t *C);
+'''
+
+
+def __load__mkl():
+    global _mkl_lib, _mkl_ffi
+    if _mkl_lib is None:
+        try:
+            _logger.debug('trying to load MKL')
+            import cffi
+            _mkl_ffi = cffi.FFI()
+            _mkl_ffi.cdef(__mkl_syrk_defs)
+            _mkl_lib = _mkl_ffi.dlopen('mkl_rt')
+            _logger.info('loaded MKL matrix operations')
+        except (ImportError, OSError):
+            _logger.info('failed to load MKL, falling back to scipy')
+            _mkl_lib = False
+
+
+def __mkl_csr_syrk(csr: CSR):
+    sp = np.require(csr.rowptrs, np.intc, 'C')
+    ep = np.require(csr.rowptrs[1:], np.intc, 'C')
+    cols = np.require(csr.colinds, np.intc, 'C')
+    vals = np.require(csr.values, np.float_, 'C')
+
+    _logger.debug('syrk: processing %dx%d matrix (%d nnz)', csr.nrows, csr.ncols, csr.nnz)
+
+    hdl = _mkl_ffi.new('sparse_matrix_t*')
+    hdl2 = None
+    _sp = _mkl_ffi.cast('int*', sp.ctypes.data)
+    _ep = _mkl_ffi.cast('int*', ep.ctypes.data)
+    _cols = _mkl_ffi.cast('int*', cols.ctypes.data)
+    _vals = _mkl_ffi.cast('double*', vals.ctypes.data)
+    rv = _mkl_lib.mkl_sparse_d_create_csr(hdl, 0, csr.nrows, csr.ncols, _sp, _ep, _cols, _vals)
+    try:
+        __mkl_check_return(rv, 'mkl_sparse_d_create_csr')
+
+        _logger.debug('syrk: ordering matrix')
+        rv = _mkl_lib.mkl_sparse_order(hdl[0])
+        __mkl_check_return(rv, 'mkl_sparse_order')
+
+        _logger.debug('syrk: multiplying matrix')
+        hdl2 = _mkl_ffi.new('sparse_matrix_t*')
+        rv = _mkl_lib.mkl_sparse_syrk(11, hdl[0], hdl2)
+        __mkl_check_return(rv, 'mkl_sparse_syrk')
+        _logger.debug('syrk: exporting matrix')
+
+        indP = _mkl_ffi.new('int*')
+        nrP = _mkl_ffi.new('int*')
+        ncP = _mkl_ffi.new('int*')
+        rsP = _mkl_ffi.new('int**')
+        reP = _mkl_ffi.new('int**')
+        ciP = _mkl_ffi.new('int**')
+        vsP = _mkl_ffi.new('double**')
+        rv = _mkl_lib.mkl_sparse_d_export_csr(hdl2[0], indP, nrP, ncP, rsP, reP, ciP, vsP)
+        __mkl_check_return(rv, 'mkl_sparse_d_export_csr')
+        if indP[0] != 0:
+            raise ValueError('output index is not 0-indexed')
+        nr = nrP[0]
+        nc = ncP[0]
+        assert nr == csr.ncols
+        assert nc == csr.ncols
+        rsB = _mkl_ffi.buffer(rsP[0], nr * _mkl_ffi.sizeof('int'))
+        reB = _mkl_ffi.buffer(reP[0], nr * _mkl_ffi.sizeof('int'))
+        rs = np.frombuffer(rsB, np.intc)
+        re = np.frombuffer(reB, np.intc)
+        assert np.all(rs[1:] == re[:nr-1])
+        nnz = re[nr-1]
+        _logger.debug('syrk: received %dx%d matrix (%d nnz)', nr, nc, nnz)
+        _logger.debug('%s', rs)
+        _logger.debug('%s', re)
+        ciB = _mkl_ffi.buffer(ciP[0], nnz * _mkl_ffi.sizeof('int'))
+        vsB = _mkl_ffi.buffer(vsP[0], nnz * _mkl_ffi.sizeof('double'))
+
+        cols = np.frombuffer(ciB, np.intc)[:nnz].copy()
+        _logger.debug('%s', cols)
+        vals = np.frombuffer(vsB, np.float_)[:nnz].copy()
+        _logger.debug('%s', vals)
+        rowptrs = np.zeros(nr + 1, dtype=np.int32)
+        rowptrs[1:] = re
+
+        return CSR(nr, nc, nnz, rowptrs, cols, vals)
+
+    finally:
+        if hdl2 is not None:
+            _logger.debug('syrk: freeing output matrix')
+            _mkl_lib.mkl_sparse_destroy(hdl2[0])
+            del hdl2
+
+        _logger.debug('syrk: freeing input matrix')
+        _mkl_lib.mkl_sparse_destroy(hdl[0])
+        del hdl
+
+
+def __triangular_to_symmetric(csr):
+    # make sure it's square
+    assert csr.nrows == csr.ncols
+    # compute row indices
+    rowinds = np.repeat(np.arange(csr.nrows), np.diff(csr.rowptrs))
+    _logger.info('%s', rowinds)
+    _logger.info('%s', csr.rowptrs)
+    _logger.info('%s', np.diff(csr.rowptrs))
+    # how many extra values do we need?
+    mask = rowinds < csr.colinds
+    nvals = np.sum(mask)
+    # make sure it's triangular
+    assert nvals + np.sum(rowinds == csr.colinds) == csr.nnz
+    _logger.debug('converting %dx%d matrix (%d nnz) to symmetric (%d non-diag vals)',
+                  csr.nrows, csr.ncols, csr.nnz, nvals)
+
+    # allocate new matrix space
+    nnz2 = csr.nnz + nvals
+    ri2 = np.empty(nnz2, np.int32)
+    ri2[:csr.nnz] = rowinds
+    ci2 = np.empty(nnz2, np.int32)
+    ci2[:csr.nnz] = csr.colinds
+    v2 = np.empty(nnz2, np.float_)
+    v2[:csr.nnz] = csr.values
+
+    # copy to do some COO work
+    ri2[csr.nnz:] = csr.colinds[mask]
+    ci2[csr.nnz:] = rowinds[mask]
+    v2[csr.nnz:] = csr.values[mask]
+
+    # and convert to CSR
+    return csr_from_coo(ri2, ci2, v2, shape=(csr.nrows, csr.ncols))
+
+
+def csr_syrk(csr):
+    """
+    The sparse SYRK (multiply transpose by matrix) operation. This returns
+    :math:`M^T M` for an input matrix `M`.
+
+    Args:
+        csr(CSR): the input matrix :math:`M`.
+
+    Returns:
+        CSR: the matrix transpose multipled by the matrix.
+    """
+    __load__mkl()
+    if _mkl_lib:
+        if sps.isspmatrix(csr):
+            csr = csr_from_scipy(csr)
+        mat = __mkl_csr_syrk(csr)
+        mat = __triangular_to_symmetric(mat)
+        return mat
+    else:
+        return __scipy_csr_syrk(csr)
 
 
 def sparse_ratings(ratings, scipy=False):

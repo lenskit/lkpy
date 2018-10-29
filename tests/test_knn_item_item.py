@@ -48,6 +48,9 @@ def test_ii_train():
 
     # 6 is a neighbor of 7
     six, seven = model.items.get_indexer([6, 7])
+    _log.info('six: %d', six)
+    _log.info('seven: %d', seven)
+    _log.info('matrix: %s', model.sim_matrix)
     assert model.sim_matrix[six, seven] > 0
     # and has the correct score
     six_v = simple_ratings[simple_ratings.item == 6].set_index('user').rating

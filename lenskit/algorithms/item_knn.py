@@ -22,7 +22,7 @@ IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rati
 IIModel._matrix = property(lambda x: (x.sim_matrix.indptr, x.sim_matrix.indices, x.sim_matrix.data))
 
 
-@njit(nb.types.Tuple([nb.int32[::1], nb.float64[::1]])(matrix.CSR_type, matrix.CSR_type, nb.float64, nb.int32, nb.int32), nogil=True)
+@njit(nogil=True)
 def __train_row(rmat: matrix.CSR, item_users: matrix.CSR, thresh, nnbrs, item):
     work = np.zeros(rmat.ncols)
     iu_rp = rmat.rowptrs
@@ -58,7 +58,7 @@ def __train_row(rmat: matrix.CSR, item_users: matrix.CSR, thresh, nnbrs, item):
         return (idx[order].astype(np.int32), sims[order])
 
 
-@njit(nb.types.Tuple([nb.types.List(nb.int32[::1]), nb.types.List(nb.float64[::1])])(matrix.CSR_type, nb.float64, nb.int32), nogil=True, parallel=True)
+@njit(nogil=True, parallel=True)
 def __build_matrix(rmat, thresh, nnbrs):
     nitems = rmat.ncols
     _n_ph = np.array([0], dtype=np.int32)
@@ -84,7 +84,7 @@ def __build_matrix(rmat, thresh, nnbrs):
     return (nrows, srows)
 
 
-@njit(matrix.CSR_type(matrix.CSR_type, nb.float64, nb.int32))
+@njit
 def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
     nitems = rmat.ncols
 
@@ -263,6 +263,7 @@ class ItemItem(Trainable, Predictor):
         _logger.info('[%s] normalized user-item ratings', watch)
         _logger.info('[%s] computing similarity matrix', watch)
         smat = matrix.csr_syrk(norm_mat)
+        smat = matrix.csr_to_scipy(smat)
         _logger.info('[%s] truncating similarity matrix', watch)
         smat = _sort_and_truncate(n_items, smat, self.min_similarity, self.save_neighbors)
 
