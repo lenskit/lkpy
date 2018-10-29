@@ -10,8 +10,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-import numba as nb
-from numba import njit, prange, objmode
+from numba import njit
 
 from lenskit import util, matrix
 from . import Trainable, Predictor
@@ -19,95 +18,6 @@ from . import Trainable, Predictor
 _logger = logging.getLogger(__name__)
 
 IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rating_matrix'])
-
-
-@njit(nogil=True)
-def __train_row(rmat: matrix.CSR, item_users: matrix.CSR, thresh, nnbrs, item):
-    work = np.zeros(rmat.ncols)
-    iu_rp = rmat.rowptrs
-    # iterate the users who have rated this item
-    for uidx in range(item_users.rowptrs[item], item_users.rowptrs[item+1]):
-        u = item_users.colinds[uidx]
-        # find user's rating for this item
-        urp = -1
-        for iidx in range(iu_rp[u], iu_rp[u+1]):
-            if rmat.colinds[iidx] == item:
-                urp = iidx
-                ur = rmat.values[urp]
-                break
-
-        # accumulate pieces of dot products
-        for iidx in range(rmat.rowptrs[u], rmat.rowptrs[u+1]):
-            nbr = rmat.colinds[iidx]
-            if nbr != item:
-                work[nbr] = work[nbr] + ur * rmat.values[iidx]
-
-    # now copy the accepted values into the results
-    mask = work >= thresh
-    idx, = np.where(mask)
-    if nnbrs > 0:
-        acc = util.Accumulator(work, nnbrs)
-        acc.add_all(idx)
-        top = acc.top_keys()
-        return (top, work[top].copy())
-    else:
-        sims = work[idx]
-        order = sims.argsort()
-        order = order[::-1]
-        return (idx[order].astype(np.int32), sims[order])
-
-
-@njit(nogil=True, parallel=True)
-def __build_matrix(rmat, thresh, nnbrs):
-    nitems = rmat.ncols
-    _n_ph = np.array([0], dtype=np.int32)
-    _s_ph = np.array([1.0], dtype=np.float_)
-    nrows = [_n_ph for _ in range(nitems)]
-    srows = [_s_ph for _ in range(nitems)]
-    item_users = rmat.transpose_coords()
-
-    nbatches = nitems // 100
-
-    for batch in prange(nbatches):
-        bs = batch * 100
-        be = bs + 100
-        if be > nitems:
-            be = nitems
-
-        for item in range(bs, be):
-            nrow, srow = __train_row(rmat, item_users, thresh, nnbrs, item)
-
-            nrows[item] = nrow
-            srows[item] = srow
-
-    return (nrows, srows)
-
-
-@njit
-def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
-    nitems = rmat.ncols
-
-    nrows, srows = __build_matrix(rmat, thresh, nnbrs)
-
-    counts = np.array([len(n) for n in nrows], dtype=np.int32)
-    cells = np.sum(counts)
-
-    # assemble our results in to a CSR
-    ptrs = np.zeros(nitems + 1, dtype=np.int32)
-    ptrs[1:] = np.cumsum(counts)
-
-    assert ptrs[nitems] == cells
-
-    indices = np.empty(cells, dtype=np.int32)
-    sims = np.empty(cells)
-    for i in range(nitems):
-        sp = ptrs[i]
-        ep = ptrs[i+1]
-        assert counts[i] == ep - sp
-        indices[sp:ep] = nrows[i]
-        sims[sp:ep] = srows[i]
-
-    return matrix.CSR(nitems, nitems, cells, ptrs, indices, sims)
 
 
 def _sort_and_truncate(nitems, smat, min_sim, nnbrs):
