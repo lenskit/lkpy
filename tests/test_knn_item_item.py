@@ -1,4 +1,5 @@
 import lenskit.algorithms.item_knn as knn
+from lenskit import matrix as lm
 
 from pathlib import Path
 import logging
@@ -45,13 +46,14 @@ def test_ii_train():
     assert isinstance(model.items, pd.Index)
     assert isinstance(model.means, np.ndarray)
     assert isinstance(model.counts, np.ndarray)
+    matrix = lm.csr_to_scipy(model.sim_matrix)
 
     # 6 is a neighbor of 7
     six, seven = model.items.get_indexer([6, 7])
     _log.info('six: %d', six)
     _log.info('seven: %d', seven)
     _log.info('matrix: %s', model.sim_matrix)
-    assert model.sim_matrix[six, seven] > 0
+    assert matrix[six, seven] > 0
     # and has the correct score
     six_v = simple_ratings[simple_ratings.item == 6].set_index('user').rating
     six_v = six_v - six_v.mean()
@@ -60,12 +62,12 @@ def test_ii_train():
     denom = la.norm(six_v.values) * la.norm(seven_v.values)
     six_v, seven_v = six_v.align(seven_v, join='inner')
     num = six_v.dot(seven_v)
-    assert model.sim_matrix[six, seven] == approx(num / denom, 0.01)
+    assert matrix[six, seven] == approx(num / denom, 0.01)
 
-    assert all(np.logical_not(np.isnan(model.sim_matrix.data)))
-    assert all(model.sim_matrix.data > 0)
+    assert all(np.logical_not(np.isnan(model.sim_matrix.values)))
+    assert all(model.sim_matrix.values > 0)
     # a little tolerance
-    assert all(model.sim_matrix.data < 1 + 1.0e-6)
+    assert all(model.sim_matrix.values < 1 + 1.0e-6)
 
 
 def test_ii_train_unbounded():
@@ -74,14 +76,15 @@ def test_ii_train_unbounded():
 
     assert model is not None
 
-    assert all(np.logical_not(np.isnan(model.sim_matrix.data)))
-    assert all(model.sim_matrix.data > 0)
+    assert all(np.logical_not(np.isnan(model.sim_matrix.values)))
+    assert all(model.sim_matrix.values > 0)
     # a little tolerance
-    assert all(model.sim_matrix.data < 1 + 1.0e-6)
+    assert all(model.sim_matrix.values < 1 + 1.0e-6)
 
     # 6 is a neighbor of 7
+    matrix = lm.csr_to_scipy(model.sim_matrix)
     six, seven = model.items.get_indexer([6, 7])
-    assert model.sim_matrix[six, seven] > 0
+    assert matrix[six, seven] > 0
 
     # and has the correct score
     six_v = simple_ratings[simple_ratings.item == 6].set_index('user').rating
@@ -91,7 +94,7 @@ def test_ii_train_unbounded():
     denom = la.norm(six_v.values) * la.norm(seven_v.values)
     six_v, seven_v = six_v.align(seven_v, join='inner')
     num = six_v.dot(seven_v)
-    assert model.sim_matrix[six, seven] == approx(num / denom, 0.01)
+    assert matrix[six, seven] == approx(num / denom, 0.01)
 
 
 def test_ii_simple_predict():
@@ -114,10 +117,10 @@ def test_ii_train_big():
 
     assert model is not None
 
-    assert all(np.logical_not(np.isnan(model.sim_matrix.data)))
-    assert all(model.sim_matrix.data > 0)
+    assert all(np.logical_not(np.isnan(model.sim_matrix.values)))
+    assert all(model.sim_matrix.values > 0)
     # a little tolerance
-    assert all(model.sim_matrix.data < 1 + 1.0e-6)
+    assert all(model.sim_matrix.values < 1 + 1.0e-6)
 
     assert model.counts.sum() == model.sim_matrix.nnz
 
@@ -134,10 +137,10 @@ def test_ii_train_big_unbounded():
 
     assert model is not None
 
-    assert all(np.logical_not(np.isnan(model.sim_matrix.data)))
-    assert all(model.sim_matrix.data > 0)
+    assert all(np.logical_not(np.isnan(model.sim_matrix.values)))
+    assert all(model.sim_matrix.values > 0)
     # a little tolerance
-    assert all(model.sim_matrix.data < 1 + 1.0e-6)
+    assert all(model.sim_matrix.values < 1 + 1.0e-6)
 
     assert model.counts.sum() == model.sim_matrix.nnz
 
@@ -157,11 +160,11 @@ def test_ii_train_ml100k(tmp_path):
     _log.info('testing model')
     assert model is not None
 
-    assert all(np.logical_not(np.isnan(model.sim_matrix.data)))
-    assert all(model.sim_matrix.data > 0)
+    assert all(np.logical_not(np.isnan(model.sim_matrix.values)))
+    assert all(model.sim_matrix.values > 0)
 
     # a little tolerance
-    assert all(model.sim_matrix.data < 1 + 1.0e-6)
+    assert all(model.sim_matrix.values < 1 + 1.0e-6)
 
     assert model.counts.sum() == model.sim_matrix.nnz
 
@@ -175,21 +178,20 @@ def test_ii_train_ml100k(tmp_path):
     _log.info('reloading model')
     restored = algo.load_model(fn)
     assert restored is not None and restored is not model
-    assert all(restored.sim_matrix.data > 0)
-    assert sps.isspmatrix_csr(restored.sim_matrix)
+    assert all(restored.sim_matrix.values > 0)
 
     r_mat = restored.sim_matrix
     o_mat = model.sim_matrix
 
-    assert all(r_mat.indptr == o_mat.indptr)
+    assert all(r_mat.rowptrs == o_mat.rowptrs)
 
     for i in range(len(restored.items)):
-        sp = r_mat.indptr[i]
-        ep = r_mat.indptr[i + 1]
+        sp = r_mat.rowptrs[i]
+        ep = r_mat.rowptrs[i + 1]
 
         # everything is in decreasing order
-        assert all(np.diff(r_mat.data[sp:ep]) <= 0)
-        assert all(r_mat.data[sp:ep] == o_mat.data[sp:ep])
+        assert all(np.diff(r_mat.values[sp:ep]) <= 0)
+        assert all(r_mat.values[sp:ep] == o_mat.values[sp:ep])
 
 
 @mark.slow
@@ -207,10 +209,10 @@ def test_ii_large_models():
     model_lim = model_lim.result()
     _log.info('completed limited train')
 
-    assert all(np.logical_not(np.isnan(model_lim.sim_matrix.data)))
-    assert all(model_lim.sim_matrix.data > 0)
+    assert all(np.logical_not(np.isnan(model_lim.sim_matrix.values)))
+    assert all(model_lim.sim_matrix.values > 0)
     # a little tolerance
-    assert all(model_lim.sim_matrix.data < 1 + 1.0e-6)
+    assert all(model_lim.sim_matrix.values < 1 + 1.0e-6)
 
     means = ml_ratings.groupby('item').rating.mean()
     assert means[model_lim.items].values == approx(model_lim.means)
@@ -218,10 +220,10 @@ def test_ii_large_models():
     model_ub = model_ub.result()
     _log.info('completed unbounded train')
 
-    assert all(np.logical_not(np.isnan(model_ub.sim_matrix.data)))
-    assert all(model_ub.sim_matrix.data > 0)
+    assert all(np.logical_not(np.isnan(model_ub.sim_matrix.values)))
+    assert all(model_ub.sim_matrix.values > 0)
     # a little tolerance
-    assert all(model_ub.sim_matrix.data < 1 + 1.0e-6)
+    assert all(model_ub.sim_matrix.values < 1 + 1.0e-6)
 
     means = ml_ratings.groupby('item').rating.mean()
     assert means[model_ub.items].values == approx(model_ub.means)
@@ -229,6 +231,9 @@ def test_ii_large_models():
     mc_rates = ml_ratings.set_index('item')\
                          .join(pd.DataFrame({'item_mean': means}))\
                          .assign(rating=lambda df: df.rating - df.item_mean)
+
+    mat_lim = lm.csr_to_scipy(model_lim.sim_matrix)
+    mat_ub = lm.csr_to_scipy(model_ub.sim_matrix)
 
     _log.info('checking a sample of neighborhoods')
     items = pd.Series(model_ub.items)
@@ -239,8 +244,8 @@ def test_ii_large_models():
         assert ipos == model_lim.items.get_loc(i)
         irates = mc_rates.loc[[i], :].set_index('user').rating
 
-        ub_row = model_ub.sim_matrix.getrow(ipos)
-        b_row = model_lim.sim_matrix.getrow(ipos)
+        ub_row = mat_ub.getrow(ipos)
+        b_row = mat_lim.getrow(ipos)
         assert b_row.nnz <= 500
         assert all(pd.Series(b_row.indices).isin(ub_row.indices))
 
@@ -255,7 +260,7 @@ def test_ii_large_models():
             n_rates = mc_rates.loc[n_id, :].set_index('user').rating
             ir, nr = irates.align(n_rates, fill_value=0)
             cor = ir.corr(nr)
-            assert model_ub.sim_matrix[ipos, n] == approx(cor)
+            assert mat_ub[ipos, n] == approx(cor)
 
         # short rows are equal
         if b_row.nnz < 500:
@@ -305,31 +310,33 @@ def test_ii_save_load(tmp_path):
     assert model is not None
     assert model is not original
 
-    assert all(np.logical_not(np.isnan(model.sim_matrix.data)))
-    assert all(model.sim_matrix.data > 0)
+    assert all(np.logical_not(np.isnan(model.sim_matrix.values)))
+    assert all(model.sim_matrix.values > 0)
     # a little tolerance
-    assert all(model.sim_matrix.data < 1 + 1.0e-6)
+    assert all(model.sim_matrix.values < 1 + 1.0e-6)
 
     assert all(model.counts == original.counts)
     assert model.counts.sum() == model.sim_matrix.nnz
     assert model.sim_matrix.nnz == original.sim_matrix.nnz
-    assert all(model.sim_matrix.indptr == original.sim_matrix.indptr)
-    assert model.sim_matrix.data == approx(original.sim_matrix.data)
+    assert all(model.sim_matrix.rowptrs == original.sim_matrix.rowptrs)
+    assert model.sim_matrix.values == approx(original.sim_matrix.values)
 
     r_mat = model.sim_matrix
     o_mat = original.sim_matrix
-    assert all(r_mat.indptr == o_mat.indptr)
+    assert all(r_mat.rowptrs == o_mat.rowptrs)
 
     for i in range(len(model.items)):
-        sp = r_mat.indptr[i]
-        ep = r_mat.indptr[i + 1]
+        sp = r_mat.rowptrs[i]
+        ep = r_mat.rowptrs[i + 1]
 
         # everything is in decreasing order
-        assert all(np.diff(r_mat.data[sp:ep]) <= 0)
-        assert all(r_mat.data[sp:ep] == o_mat.data[sp:ep])
+        assert all(np.diff(r_mat.values[sp:ep]) <= 0)
+        assert all(r_mat.values[sp:ep] == o_mat.values[sp:ep])
 
     means = ml_ratings.groupby('item').rating.mean()
     assert means[model.items].values == approx(original.means)
+
+    matrix = lm.csr_to_scipy(model.sim_matrix)
 
     items = pd.Series(model.items)
     items = items[model.counts > 0]
@@ -337,7 +344,7 @@ def test_ii_save_load(tmp_path):
         ipos = model.items.get_loc(i)
         _log.debug('checking item %d at position %d', i, ipos)
 
-        row = model.sim_matrix.getrow(ipos)
+        row = matrix.getrow(ipos)
 
         # it should be sorted !
         # check this by diffing the row values, and make sure they're negative

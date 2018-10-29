@@ -19,7 +19,6 @@ from . import Trainable, Predictor
 _logger = logging.getLogger(__name__)
 
 IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rating_matrix'])
-IIModel._matrix = property(lambda x: (x.sim_matrix.indptr, x.sim_matrix.indices, x.sim_matrix.data))
 
 
 @njit(nogil=True)
@@ -112,25 +111,26 @@ def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
 
 
 def _sort_and_truncate(nitems, smat, min_sim, nnbrs):
-    assert smat.shape[0] == nitems
-    assert smat.shape[1] == nitems
+    assert smat.nrows == nitems
+    assert smat.ncols == nitems
 
     ip2 = np.zeros(nitems + 1, dtype=np.int32)
-    ind2 = smat.indices
-    d2 = smat.data
+    ind2 = smat.colinds
+    d2 = smat.values
 
     _logger.debug('full matrix has %d entries', smat.nnz)
 
+    # compute a first pass at the NNZ based on threshold
     if min_sim is not None:
-        nnz = np.sum(smat.data[:smat.nnz] >= min_sim)
+        nnz = np.sum(smat.values[:smat.nnz] >= min_sim)
         ind2 = np.zeros(nnz, dtype=np.int32)
         d2 = np.zeros(nnz)
 
     for i in range(nitems):
-        sp = smat.indptr[i]
-        ep = smat.indptr[i+1]
-        cols = smat.indices[sp:ep]
-        vals = smat.data[sp:ep]
+        sp = smat.rowptrs[i]
+        ep = smat.rowptrs[i+1]
+        cols = smat.colinds[sp:ep]
+        vals = smat.values[sp:ep]
         used = np.argsort(-vals)
         used = used[cols[used] != i]
 
@@ -152,32 +152,31 @@ def _sort_and_truncate(nitems, smat, min_sim, nnbrs):
     _logger.debug('truncating to %d entries', nnz)
     ind2.resize(nnz)
     d2.resize(nnz)
-    return sps.csr_matrix((d2, ind2, ip2), shape=smat.shape)
+    return matrix.CSR(nitems, nitems, nnz, ip2, ind2, d2)
 
 
 @njit(nogil=True)
 def _predict(model, nitems, nrange, ratings, targets):
-    indptr, indices, similarity = model
     min_nbrs, max_nbrs = nrange
     scores = np.full(nitems, np.nan, dtype=np.float_)
 
     for i in range(targets.shape[0]):
         iidx = targets[i]
-        rptr = indptr[iidx]
-        rend = indptr[iidx + 1]
+        rptr = model.rowptrs[iidx]
+        rend = model.rowptrs[iidx + 1]
 
         num = 0
         denom = 0
         nnbrs = 0
 
         for j in range(rptr, rend):
-            nidx = indices[j]
+            nidx = model.colinds[j]
             if np.isnan(ratings[nidx]):
                 continue
 
             nnbrs = nnbrs + 1
-            num = num + ratings[nidx] * similarity[j]
-            denom = denom + np.abs(similarity[j])
+            num = num + ratings[nidx] * model.values[j]
+            denom = denom + np.abs(model.values[j])
 
             if max_nbrs > 0 and nnbrs >= max_nbrs:
                 break
@@ -263,16 +262,15 @@ class ItemItem(Trainable, Predictor):
         _logger.info('[%s] normalized user-item ratings', watch)
         _logger.info('[%s] computing similarity matrix', watch)
         smat = matrix.csr_syrk(norm_mat)
-        smat = matrix.csr_to_scipy(smat)
         _logger.info('[%s] truncating similarity matrix', watch)
         smat = _sort_and_truncate(n_items, smat, self.min_similarity, self.save_neighbors)
 
         _logger.info('[%s] got neighborhoods for %d of %d items',
-                     watch, np.sum(np.diff(smat.indptr) > 0), n_items)
+                     watch, np.sum(np.diff(smat.rowptrs) > 0), n_items)
 
         _logger.info('[%s] computed %d neighbor pairs', watch, smat.nnz)
 
-        return IIModel(items, item_means, np.diff(smat.indptr),
+        return IIModel(items, item_means, np.diff(smat.rowptrs),
                        smat, ratings.set_index(['user', 'item']).rating)
 
     def predict(self, model, user, items, ratings=None):
@@ -302,7 +300,7 @@ class ItemItem(Trainable, Predictor):
         iscore = np.full(len(model.items), np.nan, dtype=np.float_)
 
         # now compute the predictions
-        iscore = _predict(model._matrix,
+        iscore = _predict(model.sim_matrix,
                           len(model.items),
                           (self.min_neighbors, self.max_neighbors),
                           rate_v, i_pos)
@@ -329,7 +327,7 @@ class ItemItem(Trainable, Predictor):
         imeans = pd.DataFrame({'item': model.items.values, 'mean': model.means})
         imeans.to_parquet(str(path / 'items.parquet'))
 
-        coo = model.sim_matrix.tocoo()
+        coo = matrix.csr_to_scipy(model.sim_matrix).tocoo()
         coo_df = pd.DataFrame({'item': coo.row, 'neighbor': coo.col, 'similarity': coo.data})
         coo_df.to_parquet(str(path / 'similarities.parquet'))
 
@@ -346,25 +344,24 @@ class ItemItem(Trainable, Predictor):
 
         coo_df = pd.read_parquet(str(path / 'similarities.parquet'))
         _logger.info('read %d similarities for %d items', len(coo_df), nitems)
-        csr = sps.csr_matrix((coo_df['similarity'].values,
-                              (coo_df['item'].values, coo_df['neighbor'].values)),
-                             (nitems, nitems))
+        csr = matrix.csr_from_coo(coo_df['item'].values, coo_df['neighbor'].values, coo_df['similarity'].values,
+                                  shape=(nitems, nitems))
 
         for i in range(nitems):
-            sp = csr.indptr[i]
-            ep = csr.indptr[i+1]
+            sp = csr.rowptrs[i]
+            ep = csr.rowptrs[i+1]
             if ep == sp:
                 continue
 
-            ord = np.argsort(csr.data[sp:ep])
+            ord = np.argsort(csr.values[sp:ep])
             ord = ord[::-1]
-            csr.indices[sp:ep] = csr.indices[sp + ord]
-            csr.data[sp:ep] = csr.data[sp + ord]
+            csr.colinds[sp:ep] = csr.colinds[sp + ord]
+            csr.values[sp:ep] = csr.values[sp + ord]
 
         rmat = pd.read_parquet(str(path / 'ratings.parquet'))
         rmat = rmat.set_index(['user', 'item'])
 
-        return IIModel(items, means, np.diff(csr.indptr), csr, rmat)
+        return IIModel(items, means, np.diff(csr.rowptrs), csr, rmat)
 
     def __str__(self):
         return 'ItemItem(nnbrs={}, msize={})'.format(self.max_neighbors, self.save_neighbors)
