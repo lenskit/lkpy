@@ -345,9 +345,6 @@ def __triangular_to_symmetric(csr):
     assert csr.nrows == csr.ncols
     # compute row indices
     rowinds = np.repeat(np.arange(csr.nrows), np.diff(csr.rowptrs))
-    _logger.info('%s', rowinds)
-    _logger.info('%s', csr.rowptrs)
-    _logger.info('%s', np.diff(csr.rowptrs))
     # how many extra values do we need?
     mask = rowinds < csr.colinds
     nvals = np.sum(mask)
