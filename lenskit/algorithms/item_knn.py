@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-from numba import njit
+from numba import njit, objmode
 
 from lenskit import util, matrix
 from . import Trainable, Predictor
@@ -20,6 +20,7 @@ _logger = logging.getLogger(__name__)
 IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rating_matrix'])
 
 
+@njit
 def _sort_and_truncate(nitems, smat, min_sim, nnbrs):
     assert smat.nrows == nitems
     assert smat.ncols == nitems
@@ -28,7 +29,8 @@ def _sort_and_truncate(nitems, smat, min_sim, nnbrs):
     ind2 = smat.colinds
     d2 = smat.values
 
-    _logger.debug('full matrix has %d entries', smat.nnz)
+    with objmode():
+        _logger.debug('full matrix has %d entries', smat.nnz)
 
     # compute a first pass at the NNZ based on threshold
     if min_sim is not None:
@@ -49,7 +51,7 @@ def _sort_and_truncate(nitems, smat, min_sim, nnbrs):
             used = used[vals[used] >= min_sim]
 
         # truncate
-        if nnbrs and nnbrs > 0:
+        if nnbrs > 0:
             used = used[:nnbrs]
 
         sp = ip2[i]
@@ -59,9 +61,10 @@ def _sort_and_truncate(nitems, smat, min_sim, nnbrs):
         d2[sp:ep] = vals[used]
 
     nnz = ip2[-1]
-    _logger.debug('truncating to %d entries', nnz)
-    ind2.resize(nnz)
-    d2.resize(nnz)
+    with objmode():
+        _logger.debug('truncating to %d entries', nnz)
+    ind2 = ind2[:nnz].copy()
+    d2 = d2[:nnz].copy()
     return matrix.CSR(nitems, nitems, nnz, ip2, ind2, d2)
 
 
@@ -125,6 +128,8 @@ class ItemItem(Trainable, Predictor):
             self.min_neighbors = 1
         self.min_similarity = min_sim
         self.save_neighbors = save_nbrs
+        if self.save_neighbors is None:
+            self.save_neighbors = -1
 
     def train(self, ratings):
         """
