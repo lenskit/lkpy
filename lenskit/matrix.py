@@ -249,18 +249,19 @@ int mkl_sparse_syrk (int operation, const sparse_matrix_t A, sparse_matrix_t *C)
 '''
 
 
-def __load__mkl():
+def __load_mkl():
     global _mkl_lib, _mkl_ffi
     if _mkl_lib is None:
         try:
             _logger.debug('trying to load MKL')
             import cffi
+            _logger.debug('defining MKL FFI')
             _mkl_ffi = cffi.FFI()
             _mkl_ffi.cdef(__mkl_syrk_defs)
             _mkl_lib = _mkl_ffi.dlopen('mkl_rt')
             _logger.info('loaded MKL matrix operations')
         except (ImportError, OSError):
-            _logger.info('failed to load MKL, falling back to scipy')
+            _logger.info('failed to load cffi or MKL, falling back to scipy')
             _mkl_lib = False
 
 
@@ -384,7 +385,7 @@ def csr_syrk(csr):
     Returns:
         CSR: the matrix transpose multipled by the matrix.
     """
-    __load__mkl()
+    __load_mkl()
     if _mkl_lib:
         if sps.isspmatrix(csr):
             csr = csr_from_scipy(csr)
