@@ -181,6 +181,24 @@ def _csr_align(rowinds, nrows, rowptrs, align):
         rpos[row] += 1
 
 
+def csr_syrk(csr):
+    """
+    The sparse SYRK (multiply transpose by matrix) operation. This returns
+    :math:`M^T M` for an input matrix `M`.
+
+    Args:
+        csr(CSR): the input matrix :math:`M`.
+
+    Returns:
+        CSR: the matrix transpose multipled by the matrix.
+    """
+    if sps.isspmatrix(csr):
+        sp = csr
+    else:
+        sp = csr_to_scipy(csr)
+    return sp.T @ sp
+
+
 def csr_from_scipy(mat, copy=True):
     """
     Convert a scipy sparse matrix to an internal CSR.

@@ -262,7 +262,7 @@ class ItemItem(Trainable, Predictor):
         norm_mat.data[np.isnan(norm_mat.data)] = 0
         _logger.info('[%s] normalized user-item ratings', watch)
         _logger.info('[%s] computing similarity matrix', watch)
-        smat = norm_mat.T @ norm_mat
+        smat = matrix.csr_syrk(norm_mat)
         _logger.info('[%s] truncating similarity matrix', watch)
         smat = _sort_and_truncate(n_items, smat, self.min_similarity, self.save_neighbors)
 
