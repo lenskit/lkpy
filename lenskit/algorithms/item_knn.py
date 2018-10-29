@@ -111,6 +111,50 @@ def _train(rmat: matrix.CSR, thresh: float, nnbrs: int):
     return matrix.CSR(nitems, nitems, cells, ptrs, indices, sims)
 
 
+def _sort_and_truncate(nitems, smat, min_sim, nnbrs):
+    assert smat.shape[0] == nitems
+    assert smat.shape[1] == nitems
+
+    ip2 = np.zeros(nitems + 1, dtype=np.int32)
+    ind2 = smat.indices
+    d2 = smat.data
+
+    _logger.debug('full matrix has %d entries', smat.nnz)
+
+    if min_sim is not None:
+        nnz = np.sum(smat.data[:smat.nnz] >= min_sim)
+        ind2 = np.zeros(nnz, dtype=np.int32)
+        d2 = np.zeros(nnz)
+
+    for i in range(nitems):
+        sp = smat.indptr[i]
+        ep = smat.indptr[i+1]
+        cols = smat.indices[sp:ep]
+        vals = smat.data[sp:ep]
+        used = np.argsort(-vals)
+        used = used[cols[used] != i]
+
+        # filter
+        if min_sim is not None:
+            used = used[vals[used] >= min_sim]
+
+        # truncate
+        if nnbrs and nnbrs > 0:
+            used = used[:nnbrs]
+
+        sp = ip2[i]
+        ep = sp + len(used)
+        ip2[i+1] = ep
+        ind2[sp:ep] = cols[used]
+        d2[sp:ep] = vals[used]
+
+    nnz = ip2[-1]
+    _logger.debug('truncating to %d entries', nnz)
+    ind2.resize(nnz)
+    d2.resize(nnz)
+    return sps.csr_matrix((d2, ind2, ip2), shape=smat.shape)
+
+
 @njit(nogil=True)
 def _predict(model, nitems, nrange, ratings, targets):
     indptr, indices, similarity = model
@@ -203,6 +247,8 @@ class ItemItem(Trainable, Predictor):
 
         # stupid trick: indices are items, look up means, subtract!
         rmat.data = rmat.data - item_means[rmat.indices]
+        assert rmat.shape[0] == len(users)
+        assert rmat.shape[1] == n_items
 
         # compute column norms
         norms = spla.norm(rmat, 2, axis=0)
@@ -211,19 +257,17 @@ class ItemItem(Trainable, Predictor):
         is_nz = recip_norms > 0
         recip_norms[is_nz] = np.reciprocal(recip_norms[is_nz])
         norm_mat = rmat @ sps.diags(recip_norms)
+        assert norm_mat.shape[1] == n_items
         # and reset NaN
         norm_mat.data[np.isnan(norm_mat.data)] = 0
         _logger.info('[%s] normalized user-item ratings', watch)
-        rmat = matrix.csr_from_scipy(norm_mat)
         _logger.info('[%s] computing similarity matrix', watch)
-        smat = _train(rmat, self.min_similarity,
-                      self.save_neighbors
-                      if self.save_neighbors and self.save_neighbors > 0
-                      else -1)
+        smat = norm_mat.T @ norm_mat
+        _logger.info('[%s] truncating similarity matrix', watch)
+        smat = _sort_and_truncate(n_items, smat, self.min_similarity, self.save_neighbors)
 
         _logger.info('[%s] got neighborhoods for %d of %d items',
-                     watch, np.sum(np.diff(smat.rowptrs) > 0), n_items)
-        smat = matrix.csr_to_scipy(smat)
+                     watch, np.sum(np.diff(smat.indptr) > 0), n_items)
 
         _logger.info('[%s] computed %d neighbor pairs', watch, smat.nnz)
 
