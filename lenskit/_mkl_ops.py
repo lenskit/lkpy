@@ -66,19 +66,14 @@ class _MKL_SparseH:
             raise ValueError('output index is not 0-indexed')
         nr = nrP[0]
         nc = ncP[0]
-        rsB = _mkl_ffi.buffer(rsP[0], nr * _mkl_ffi.sizeof('int'))
         reB = _mkl_ffi.buffer(reP[0], nr * _mkl_ffi.sizeof('int'))
-        rs = np.frombuffer(rsB, np.intc)
         re = np.frombuffer(reB, np.intc)
-        assert np.all(rs[1:] == re[:nr-1])
         nnz = re[nr-1]
         ciB = _mkl_ffi.buffer(ciP[0], nnz * _mkl_ffi.sizeof('int'))
         vsB = _mkl_ffi.buffer(vsP[0], nnz * _mkl_ffi.sizeof('double'))
 
         cols = np.frombuffer(ciB, np.intc)[:nnz].copy()
-        _logger.debug('%s', cols)
         vals = np.frombuffer(vsB, np.float_)[:nnz].copy()
-        _logger.debug('%s', vals)
         rowptrs = np.zeros(nr + 1, dtype=np.int32)
         rowptrs[1:] = re
 
