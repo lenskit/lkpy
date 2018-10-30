@@ -29,7 +29,9 @@ requirements:
     - scipy
     - numba >= 0.40
     - pyarrow
+    - fastparquet
     - python-snappy
+    - cffi
 
 test:
   source_files:

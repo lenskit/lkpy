@@ -5,7 +5,7 @@
 variables:
   conda.deps: >
     python=$(python.version)
-    pandas scipy pytables fastparquet python-snappy numba
+    pandas scipy pytables fastparquet python-snappy numba cffi
     invoke coverage pytest pytest-cov
   pip.deps: >
     invoke pytest coverage pytest-cov
