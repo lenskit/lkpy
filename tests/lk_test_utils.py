@@ -96,9 +96,3 @@ def envvars(**vars):
 
 
 ml_pandas = MLDataLoader(pd.read_csv)
-
-
-@pytest.fixture
-def tmp_path():
-    with tempfile.TemporaryDirectory(prefix='lkpy-test') as dir:
-        yield pathlib.Path(dir)
