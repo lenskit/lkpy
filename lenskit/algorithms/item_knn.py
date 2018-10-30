@@ -180,12 +180,9 @@ class ItemItem(Trainable, Predictor):
         nnz = len(rows)
 
         _logger.info('[%s] making matrix symmetric (%d nnz)', self._timer, nnz)
-        rows = np.require(rows, np.int32, 'O')
-        rows.resize(nnz * 2)
-        cols = np.require(cols, np.int32, 'O')
-        cols.resize(nnz * 2)
-        vals = np.require(vals, np.float64, 'O')
-        vals.resize(nnz * 2)
+        rows = np.resize(rows, nnz * 2)
+        cols = np.resize(cols, nnz * 2)
+        vals = np.resize(vals, nnz * 2)
         rows[nnz:] = cols[:nnz]
         cols[nnz:] = rows[:nnz]
         vals[nnz:] = vals[:nnz]
