@@ -36,7 +36,7 @@ def _mkl_check_return(rv, call='<unknown>'):
         raise RuntimeError('MKL call {} failed with code {}'.format(call, rv))
 
 
-class _MKL_SparseH:
+class SparseM:
     """
     Class encapsulating an MKL sparse matrix handle.
     """
@@ -46,12 +46,21 @@ class _MKL_SparseH:
 
     @classmethod
     def from_csr(cls, csr):
+        """
+        Create an MKL sparse matrix from a LensKit CSR matrix.
+
+        Args:
+            csr(CSR): the input matrix.
+
+        Returns:
+            SparseM: a sparse matrix handle for the CSR matrix.
+        """
         sp = np.require(csr.rowptrs, np.intc, 'C')
         ep = np.require(csr.rowptrs[1:], np.intc, 'C')
         cols = np.require(csr.colinds, np.intc, 'C')
         vals = np.require(csr.values, np.float_, 'C')
 
-        m = _MKL_SparseH()
+        m = SparseM()
         _sp = _mkl_ffi.cast('int*', sp.ctypes.data)
         _ep = _mkl_ffi.cast('int*', ep.ctypes.data)
         _cols = _mkl_ffi.cast('int*', cols.ctypes.data)
@@ -71,6 +80,12 @@ class _MKL_SparseH:
             _mkl_lib.mkl_sparse_destroy(self.handle)
 
     def export(self):
+        """
+        Export an MKL sparse matrix as a LensKit CSR.
+
+        Returns:
+            CSR: the LensKit matrix.
+        """
         indP = _mkl_ffi.new('int*')
         nrP = _mkl_ffi.new('int*')
         ncP = _mkl_ffi.new('int*')
@@ -105,14 +120,14 @@ def csr_syrk(csr: CSR):
 
     _logger.debug('syrk: processing %dx%d matrix (%d nnz)', csr.nrows, csr.ncols, csr.nnz)
 
-    src = _MKL_SparseH.from_csr(csr)
+    src = SparseM.from_csr(csr)
 
     _logger.debug('syrk: ordering matrix')
     rv = _mkl_lib.mkl_sparse_order(src.handle)
     _mkl_check_return(rv, 'mkl_sparse_order')
 
     _logger.debug('syrk: multiplying matrix')
-    mult = _MKL_SparseH()
+    mult = SparseM()
     rv = _mkl_lib.mkl_sparse_syrk(11, src.handle, mult.h_ptr)
     _mkl_check_return(rv, 'mkl_sparse_syrk')
     _logger.debug('syrk: exporting matrix')
