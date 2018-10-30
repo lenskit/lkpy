@@ -24,15 +24,22 @@ def test_uu_train():
 
     # it should have computed correct means
     umeans = ml_ratings.groupby('user').rating.mean()
-    mlmeans = model.user_stats['mean']
+    mlmeans = model.user_means
+    assert mlmeans.index.name == 'user'
+    assert mlmeans.name == 'mean'
     umeans, mlmeans = umeans.align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(['user', 'item']).rating
-    ui_rbdf = model.matrix.rename(columns={'rating': 'nrating'}).set_index(['user', 'item'])
-    ui_rbdf = ui_rbdf.join(model.user_stats)
-    ui_rbdf['rating'] = ui_rbdf['nrating'] * ui_rbdf['norm'] + ui_rbdf['mean']
+    r_items = matrix.csr_rowinds(model.transpose)
+    ui_rbdf = pd.DataFrame({
+        'user': model.user_means.index[model.transpose.colinds],
+        'item': model.items[r_items],
+        'nrating': model.transpose.values
+    }).set_index(['user', 'item'])
+    ui_rbdf = ui_rbdf.join(model.user_means)
+    ui_rbdf['rating'] = ui_rbdf['nrating'] + ui_rbdf['mean']
     ui_rbdf['orig_rating'] = uir
     assert ui_rbdf.rating.values == approx(ui_rbdf.orig_rating.values)
 
@@ -98,15 +105,20 @@ def test_uu_save_load(tmp_path):
 
     # it should have computed correct means
     umeans = ml_ratings.groupby('user').rating.mean()
-    mlmeans = model.user_stats['mean']
+    mlmeans = model.user_means
     umeans, mlmeans = umeans.align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(['user', 'item']).rating
-    ui_rbdf = model.matrix.rename(columns={'rating': 'nrating'}).set_index(['user', 'item'])
-    ui_rbdf = ui_rbdf.join(model.user_stats)
-    ui_rbdf['rating'] = ui_rbdf['nrating'] * ui_rbdf['norm'] + ui_rbdf['mean']
+    r_items = matrix.csr_rowinds(model.transpose)
+    ui_rbdf = pd.DataFrame({
+        'user': model.user_means.index[model.transpose.colinds],
+        'item': model.items[r_items],
+        'nrating': model.transpose.values
+    }).set_index(['user', 'item'])
+    ui_rbdf = ui_rbdf.join(model.user_means)
+    ui_rbdf['rating'] = ui_rbdf['nrating'] + ui_rbdf['mean']
     ui_rbdf['orig_rating'] = uir
     assert ui_rbdf.rating.values == approx(ui_rbdf.orig_rating.values)
 

@@ -8,26 +8,24 @@ import logging
 
 import pandas as pd
 import numpy as np
+from scipy import stats
 
-from .. import util
+from .. import util, matrix
 from . import Trainable, Predictor
 
 _logger = logging.getLogger(__name__)
 
-UUModel = namedtuple('UUModel', ['matrix', 'user_stats', 'item_users'])
-UUModel.__doc__ = "Memorized data for user-user collaborative filtering."
-UUModel.matrix.__doc__ = \
-    "(user, item, rating) data, where user vectors are mean-centered and unit-normalized."
-UUModel.user_stats.__doc__ = \
-    """
-    (user, mean, norm) data, where mean is the user's raw mean rating and norm is the L2 norm
-    of their mean-centered rating vector.  Together with ``matrix``, this can reconstruct the
-    original rating matrix.
-    """
-UUModel.item_users.__doc__ = \
-    """
-    A series, indexed by item ID, of the user IDs who have rated each item.
-    """
+UUModel = namedtuple('UUModel', ['matrix', 'user_means', 'items', 'transpose'])
+UUModel.__doc__ = """
+Memorized data for user-user collaborative filtering.
+
+Attributes:
+    matrix(matrix.CSR): normalized user-item rating matrix.
+    user_means: user mean ratings.
+    items: index of item IDs
+    transpose(matrix.CSR):
+        the transposed rating matrix (with data transformations but without L2 normalization).
+"""
 
 
 class UserUser(Trainable, Predictor):
@@ -61,15 +59,29 @@ class UserUser(Trainable, Predictor):
             UUModel: a memorized model for efficient user-based CF computation.
         """
 
-        user_means = ratings.groupby('user').rating.mean()
-        uir = ratings.set_index(['user', 'item']).rating
-        uir -= user_means
-        unorms = uir.groupby('user').agg(np.linalg.norm)
-        uir /= unorms
-        ustats = pd.DataFrame({'mean': user_means, 'norm': unorms})
-        iusers = ratings.set_index('item').user
+        uir, users, items = matrix.sparse_ratings(ratings)
 
-        return UUModel(uir.reset_index(name='rating'), ustats, iusers)
+        # mean-center ratings
+        umeans = np.zeros(len(users))
+        for u in range(uir.nrows):
+            sp, ep = uir.row_extent(u)
+            v = uir.values[sp:ep]
+            umeans[u] = m = v.mean()
+            uir.values[sp:ep] -= m
+
+        # compute centered transpose
+        iur = uir.transpose()
+
+        # L2-normalize ratings
+        for u in range(uir.nrows):
+            sp, ep = uir.row_extent(u)
+            v = uir.values[sp:ep]
+            n = np.linalg.norm(v)
+            uir.values[sp:ep] /= n
+
+        umeans = pd.Series(umeans, index=users, name='mean')
+
+        return UUModel(uir, umeans, items, iur)
 
     def predict(self, model, user, items, ratings=None):
         """
@@ -89,43 +101,59 @@ class UserUser(Trainable, Predictor):
 
         watch = util.Stopwatch()
 
-        ratings, umean, unorm = self._get_user_data(model, user, ratings)
+        ratings, umean = self._get_user_data(model, user, ratings)
         if ratings is None:
             return pd.Series(index=items)
+        assert len(ratings) == len(model.items)  # ratings is a dense vector
 
-        assert ratings.index.names == ['item']
         rmat = model.matrix
+        rmat = matrix.csr_to_scipy(rmat)
 
         # now ratings is normalized to be a mean-centered unit vector
         # this means we can dot product to score neighbors
-        # get the candidate neighbors with their ratings for user-rated items
-        nbr_ratings = self._get_nbr_ratings(model, user, items, ratings)
+        # score the neighbors!
+        nsims = rmat @ ratings
+        assert len(nsims) == len(model.user_means.index)
+        if user in model.user_means.index:
+            nsims[model.user_means.index.get_loc(user)] = 0
 
-        nbr_sims = self._compute_similarities(nbr_ratings, ratings)
-        _logger.debug('have %d possible users after similarity filtering', len(nbr_sims))
+        _logger.debug('computed user similarities')
 
-        # now that we have the final similarities, we are ready to compute predictions
-        # grab the neighbor ratings for all target items
-        nbr_tgt_rates = rmat[rmat.user.isin(nbr_sims.index) & rmat.item.isin(items)]
-        nbr_tgt_rates.set_index(['user', 'item'], inplace=True)
+        results = pd.Series(np.nan, index=items, name='prediction')
+        for i in range(len(results)):
+            item = results.index[i]
+            try:
+                ipos = model.items.get_loc(item)
+            except KeyError:
+                continue
 
-        # add in our user similarities
-        pred_f = nbr_tgt_rates.join(nbr_sims)
+            # now we have the item, let us find it!
+            iu_sp = model.transpose.rowptrs[ipos]
+            iu_ep = model.transpose.rowptrs[ipos+1]
 
-        # inner function for computing scores
-        def score(idf):
-            if len(idf) < self.min_neighbors:
-                return np.nan
+            # get its users & ratings
+            i_users = model.transpose.colinds[iu_sp:iu_ep]
+            i_rates = model.transpose.values[iu_sp:iu_ep]
 
-            if self.max_neighbors is not None:
-                idf = idf.nlargest(self.max_neighbors, 'similarity')
+            # find and limit the neighbors
+            i_sims = nsims[i_users]
+            mask = np.abs(i_sims >= 1.0e-10)
 
-            sims = idf.similarity
-            rates = idf.rating * model.user_stats['norm']
-            return sims.dot(rates) / sims.abs().sum() + umean
+            if self.max_neighbors is not None and self.max_neighbors > 0:
+                rank = stats.rankdata(-i_sims, 'ordinal')
+                mask = np.logical_and(mask, rank <= self.max_neighbors)
+            if self.min_similarity is not None:
+                mask = np.logical_and(mask, i_sims >= self.min_similarity)
 
-        # compute each item's score
-        results = pred_f.groupby('item').apply(score)
+            if np.sum(mask) < self.min_neighbors:
+                continue
+
+            # now we have picked weights, take a dot product
+            ism = i_sims[mask]
+            v = np.dot(i_rates[mask], ism)
+            v = v / np.sum(ism)
+            results.iloc[i] = v + umean
+
         _logger.debug('scored %d of %d items for %s in %s',
                       results.notna().sum(), len(items), user, watch)
         return results
@@ -135,72 +163,48 @@ class UserUser(Trainable, Predictor):
         rmat = model.matrix
 
         if ratings is None:
-            if user not in model.user_stats.index:
-                _logger.warn('user %d has no ratings and none provided', user)
-                return None, 0, 0
-            ratings = rmat[rmat.user == user].set_index('item').rating
-            umean = model.user_stats.loc[user, 'mean']
-            unorm = model.user_stats.loc[user, 'norm']
+            if user not in model.user_means.index:
+                _logger.warning('user %d has no ratings and none provided', user)
+                return None, 0
+
+            upos = model.user_means.index.get_loc(user)
+            ratings = rmat.row(upos)
+            umean = model.user_means.iloc[upos]
         else:
             _logger.debug('using provided ratings for user %d', user)
             umean = ratings.mean()
             ratings = ratings - umean
             unorm = np.linalg.norm(ratings)
             ratings = ratings / unorm
+            ratings = ratings.reindex(model.items, fill_value=0).values
 
-        return ratings, umean, unorm
-
-    def _get_nbr_ratings(self, model, user, items, ratings):
-        rmat = model.matrix
-        # let's find all users who have rated one of our target items
-        kitems = pd.Series(items)
-        kitems = kitems[kitems.isin(model.item_users.index)]
-        candidates = model.item_users.loc[kitems].unique()
-        # don't use ourselves to predict
-        candidates = candidates[candidates != user]
-        candidates = pd.Index(candidates)
-        # and get all ratings by them candidates, and for one of our rated items
-        # this is the basis for computing similarities
-        nbr_ratings = rmat[rmat.user.isin(candidates)]
-        nbr_ratings = nbr_ratings[nbr_ratings.item.isin(ratings.index)]
-        _logger.debug('predicting for user %d with %d candidate users and %d ratings',
-                      user, len(candidates), len(nbr_ratings))
-
-        return nbr_ratings
-
-    def _compute_similarities(self, nbr_ratings, ratings):
-        # we can dot-product to compute similarities
-        # set up neighbor ratings to join with our ratings
-        nr2 = nbr_ratings.set_index('item')
-        nr2 = nr2.join(pd.DataFrame({'my_rating': ratings}))
-        # compute product & sum by user (bulk dot product0)
-        nr2['rp'] = nr2.rating * nr2.my_rating
-        nbr_sims = nr2.groupby('user', sort=False).rp.sum()
-        assert nbr_sims.index.name == 'user'
-        # filter for similarity threshold
-        nbr_sims = nbr_sims[nbr_sims >= self.min_similarity]
-        nbr_sims.name = 'similarity'
-        return nbr_sims
+        return ratings, umean
 
     def save_model(self, model, path):
         path = pathlib.Path(path)
         _logger.info('saving to %s', path)
 
-        path.mkdir(parents=True, exist_ok=True)
+        m_rows = matrix.csr_rowinds(model.matrix)
+        t_rows = matrix.csr_rowinds(model.transpose)
 
-        model.matrix.to_parquet(str(path / 'matrix.parquet'))
-        model.user_stats.to_parquet(str(path / 'user-stats.parquet'))
-        model.item_users.reset_index().to_parquet(str(path / 'item-users.parquet'))
+        np.savez_compressed(path, users=model.user_means.index.values, items=model.items,
+                            user_means=model.user_means.values,
+                            m_rows=m_rows, m_cols=model.matrix.colinds, m_vals=model.matrix.values,
+                            t_rows=t_rows, t_cols=model.transpose.colinds,
+                            t_vals=model.transpose.values)
 
     def load_model(self, path):
-        path = pathlib.Path(path)
+        path = util.npz_path(path)
 
-        matrix = pd.read_parquet(str(path / 'matrix.parquet'))
-        user_stats = pd.read_parquet(str(path / 'user-stats.parquet'))
-        item_users = pd.read_parquet(str(path / 'item-users.parquet'))
-        item_users = item_users.set_index('item').user
+        with np.load(path) as npz:
+            users = npz['users']
+            users = pd.Index(users, name='user')
+            items = pd.Index(npz['items'], name='item')
+            user_means = pd.Series(npz['user_means'], index=users, name='mean')
+            mat = matrix.csr_from_coo(npz['m_rows'], npz['m_cols'], npz['m_vals'])
+            tx = matrix.csr_from_coo(npz['t_rows'], npz['t_cols'], npz['t_vals'])
 
-        return UUModel(matrix, user_stats, item_users)
+        return UUModel(mat, user_means, items, tx)
 
     def __str__(self):
         return 'UserUser(nnbrs={}, min_sim={})'.format(self.max_neighbors, self.min_similarity)
