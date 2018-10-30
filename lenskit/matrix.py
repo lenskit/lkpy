@@ -89,6 +89,18 @@ class CSR:
             diff[i] = self.rowptrs[i+1] - self.rowptrs[i]
         return diff
 
+    def sort_values(self):
+        for i in range(self.nrows):
+            sp = self.rowptrs[i]
+            ep = self.rowptrs[i+1]
+            if ep == sp:
+                continue
+
+            ord = np.argsort(self.values[sp:ep])
+            ord = ord[::-1]
+            self.colinds[sp:ep] = self.colinds[sp + ord]
+            self.values[sp:ep] = self.values[sp + ord]
+
     def transpose(self):
         """
         Transpose a CSR matrix.

@@ -10,8 +10,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-import numba as nb
-from numba import njit, objmode, prange
+from numba import njit
 
 from lenskit import util, matrix
 from . import Trainable, Predictor
@@ -19,50 +18,6 @@ from . import Trainable, Predictor
 _logger = logging.getLogger(__name__)
 
 IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rating_matrix'])
-
-
-@njit(parallel=False)
-def _sort_and_truncate(nitems, smat, min_sim, nnbrs):
-    with objmode():
-        _logger.debug('full matrix has %d entries', smat.nnz)
-
-    picked = np.full(smat.nnz, -1, np.int32)
-
-    for i in prange(nitems):
-        sp = smat.rowptrs[i]
-        ep = smat.rowptrs[i+1]
-        if ep == sp or (ep == sp + 1 and smat.colinds[sp] == i):
-            continue
-
-        if nnbrs > 0:
-            acc = util.Accumulator(smat.values, nnbrs)
-        else:
-            acc = util.Accumulator(smat.values, ep - sp)
-
-        for j in range(sp, ep):
-            if smat.colinds[j] != i and smat.values[j] >= min_sim:
-                acc.add(j)
-
-        keep = acc.top_keys()
-        n = len(keep)
-        ep2 = sp + n
-        picked[sp:ep2] = keep
-
-    pmask = picked >= 0
-    nnz = np.sum(pmask)
-    with objmode():
-        _logger.debug('truncating to %d entries', nnz)
-
-    ip2 = np.zeros(nitems + 1, np.int32)
-    for i in range(nitems):
-        sp = smat.rowptrs[i]
-        ep = smat.rowptrs[i+1]
-        ip2[i+1] = ip2[i] + np.sum(pmask[sp:ep])
-
-    ind2 = smat.colinds[picked[pmask]]
-    d2 = smat.values[picked[pmask]]
-
-    return matrix.CSR(nitems, nitems, nnz, ip2, ind2, d2)
 
 
 @njit(nogil=True)
@@ -145,22 +100,37 @@ class ItemItem(Trainable, Predictor):
         # Training proceeds in 2 steps:
         # 1. Normalize item vectors to be mean-centered and unit-normalized
         # 2. Compute similarities with pairwise dot products
-        watch = util.Stopwatch()
-
-        item_means = ratings.groupby('item').rating.mean()
-        _logger.info('[%s] computed means for %d items', watch, len(item_means))
+        self._timer = util.Stopwatch()
 
         rmat, users, items = matrix.sparse_ratings(ratings, scipy=True)
         n_items = len(items)
-        item_means = item_means.reindex(items).values
         _logger.info('[%s] made sparse matrix for %d items (%d ratings)',
-                     watch, len(items), rmat.nnz)
+                     self._timer, len(items), rmat.nnz)
 
-        # stupid trick: indices are items, look up means, subtract!
+        rmat, item_means = self._mean_center(ratings, rmat, items)
+
+        rmat = self._normalize(rmat)
+
+        _logger.info('[%s] computing similarity matrix', self._timer)
+        rmat = matrix.csr_from_scipy(rmat, copy=False)
+        smat = self._compute_similarities(rmat)
+
+        _logger.info('[%s] got neighborhoods for %d of %d items',
+                     self._timer, np.sum(np.diff(smat.rowptrs) > 0), n_items)
+
+        _logger.info('[%s] computed %d neighbor pairs', self._timer, smat.nnz)
+
+        return IIModel(items, item_means, np.diff(smat.rowptrs),
+                       smat, ratings.set_index(['user', 'item']).rating)
+
+    def _mean_center(self, ratings, rmat, items):
+        item_means = ratings.groupby('item').rating.mean()
+        item_means = item_means.reindex(items).values
         rmat.data = rmat.data - item_means[rmat.indices]
-        assert rmat.shape[0] == len(users)
-        assert rmat.shape[1] == n_items
+        _logger.info('[%s] computed means for %d items', self._timer, len(item_means))
+        return rmat, item_means
 
+    def _normalize(self, rmat):
         # compute column norms
         norms = spla.norm(rmat, 2, axis=0)
         # and multiply by a diagonal to normalize columns
@@ -168,22 +138,77 @@ class ItemItem(Trainable, Predictor):
         is_nz = recip_norms > 0
         recip_norms[is_nz] = np.reciprocal(recip_norms[is_nz])
         norm_mat = rmat @ sps.diags(recip_norms)
-        assert norm_mat.shape[1] == n_items
+        assert norm_mat.shape[1] == rmat.shape[1]
         # and reset NaN
         norm_mat.data[np.isnan(norm_mat.data)] = 0
-        _logger.info('[%s] normalized user-item ratings', watch)
-        _logger.info('[%s] computing similarity matrix', watch)
-        smat = matrix.csr_syrk(norm_mat)
-        _logger.info('[%s] truncating similarity matrix', watch)
-        smat = _sort_and_truncate(n_items, smat, self.min_similarity, self.save_neighbors)
+        _logger.info('[%s] normalized user-item ratings', self._timer)
+        return norm_mat
 
-        _logger.info('[%s] got neighborhoods for %d of %d items',
-                     watch, np.sum(np.diff(smat.rowptrs) > 0), n_items)
+    def _compute_similarities(self, rmat):
+        return self._scipy_similarities(rmat)
+        mkl = matrix.mkl_ops()
+        if mkl is None:
+            return self._scipy_similarities(rmat)
+        else:
+            return self._mkl_similarities(mkl, rmat)
 
-        _logger.info('[%s] computed %d neighbor pairs', watch, smat.nnz)
+    def _scipy_similarities(self, rmat):
+        nitems = rmat.ncols
+        sp_rmat = matrix.csr_to_scipy(rmat)
 
-        return IIModel(items, item_means, np.diff(smat.rowptrs),
-                       smat, ratings.set_index(['user', 'item']).rating)
+        _logger.info('[%s] multiplying matrix', self._timer)
+        smat = sp_rmat.T @ sp_rmat
+        smat = smat.tocoo()
+        rows, cols, vals = smat.row, smat.col, smat.data
+        rows = rows[:smat.nnz]
+        cols = cols[:smat.nnz]
+        vals = vals[:smat.nnz]
+
+        rows, cols, vals = self._filter_similarities(rows, cols, vals)
+        csr = self._select_similarities(nitems, rows, cols, vals)
+        return csr
+
+    def _filter_similarities(self, rows, cols, vals):
+        "Threshold similarites & remove self-similarities."
+        _logger.info('[%s] filtering similarities', self._timer)
+        # remove self-similarity
+        mask = rows != cols
+
+        # remove too-small similarities
+        if self.min_similarity is not None:
+            mask = mask & (vals >= self.min_similarity)
+
+        _logger.info('[%s] filter keeps %d of %d entries', self._timer, np.sum(mask), len(rows))
+
+        return rows[mask], cols[mask], vals[mask]
+
+    def _select_similarities(self, nitems, rows, cols, vals):
+        _logger.info('[%s] ordering similarities', self._timer)
+        csr = matrix.csr_from_coo(rows, cols, vals, shape=(nitems, nitems))
+        csr.sort_values()
+
+        if self.save_neighbors is None or self.save_neighbors <= 0:
+            return csr
+
+        _logger.info('[%s] picking top similarities', self._timer)
+        counts = csr.row_nnzs()
+        ncounts = np.fmin(counts, self.save_neighbors)
+        nnz = np.sum(ncounts)
+
+        rp2 = np.zeros_like(csr.rowptrs)
+        rp2[1:] = np.cumsum(ncounts)
+        ci2 = np.zeros(nnz, np.int32)
+        vs2 = np.zeros(nnz)
+        for i in range(nitems):
+            sp1 = csr.rowptrs[i]
+            sp2 = rp2[i]
+
+            ep1 = sp1 + counts[i]
+            ep2 = sp2 + counts[i]
+            ci2[sp2:ep2] = csr.colinds[sp1:ep1]
+            vs2[sp2:ep2] = csr.values[sp1:ep1]
+
+        return matrix.CSR(csr.nrows, csr.ncols, nnz, rp2, ci2, vs2)
 
     def predict(self, model, user, items, ratings=None):
         _logger.debug('predicting %d items for user %s', len(items), user)
@@ -239,8 +264,9 @@ class ItemItem(Trainable, Predictor):
         imeans = pd.DataFrame({'item': model.items.values, 'mean': model.means})
         imeans.to_parquet(str(path / 'items.parquet'))
 
-        coo = matrix.csr_to_scipy(model.sim_matrix).tocoo()
-        coo_df = pd.DataFrame({'item': coo.row, 'neighbor': coo.col, 'similarity': coo.data})
+        mat = model.sim_matrix
+        row = matrix.csr_rowinds(mat)
+        coo_df = pd.DataFrame({'item': row, 'neighbor': mat.colinds, 'similarity': mat.values})
         coo_df.to_parquet(str(path / 'similarities.parquet'))
 
         model.rating_matrix.reset_index().to_parquet(str(path / 'ratings.parquet'))
@@ -256,19 +282,10 @@ class ItemItem(Trainable, Predictor):
 
         coo_df = pd.read_parquet(str(path / 'similarities.parquet'))
         _logger.info('read %d similarities for %d items', len(coo_df), nitems)
-        csr = matrix.csr_from_coo(coo_df['item'].values, coo_df['neighbor'].values, coo_df['similarity'].values,
+        csr = matrix.csr_from_coo(coo_df['item'].values, coo_df['neighbor'].values,
+                                  coo_df['similarity'].values,
                                   shape=(nitems, nitems))
-
-        for i in range(nitems):
-            sp = csr.rowptrs[i]
-            ep = csr.rowptrs[i+1]
-            if ep == sp:
-                continue
-
-            ord = np.argsort(csr.values[sp:ep])
-            ord = ord[::-1]
-            csr.colinds[sp:ep] = csr.colinds[sp + ord]
-            csr.values[sp:ep] = csr.values[sp + ord]
+        csr.sort_values()
 
         rmat = pd.read_parquet(str(path / 'ratings.parquet'))
         rmat = rmat.set_index(['user', 'item'])
