@@ -24,7 +24,9 @@ int mkl_sparse_order(sparse_matrix_t A);
 int mkl_sparse_destroy(sparse_matrix_t A);
 
 int mkl_sparse_syrk (int operation, const sparse_matrix_t A, sparse_matrix_t *C);
-int mkl_sparse_d_mv (int operation, double alpha, const sparse_matrix_t A, struct matrix_descr descr, const double *x, double beta, double *y);
+int mkl_sparse_d_mv (int operation, double alpha,
+                     const sparse_matrix_t A, struct matrix_descr descr,
+                     const double *x, double beta, double *y);
 '''
 _logger.debug('initializing CFFI interface')
 _mkl_ffi = cffi.FFI()
