@@ -8,6 +8,31 @@ mkl_ops = lm.mkl_ops()
 
 
 @mark.skipif(mkl_ops is None, reason='MKL not available')
+def test_mkl_mult_vec():
+    for i in range(50):
+        m = np.random.randint(100)
+        n = np.random.randint(100)
+
+        M = np.random.randn(m, n)
+        M[M <= 0] = 0
+        s = sps.csr_matrix(M)
+        assert s.nnz == np.sum(M > 0)
+
+        csr = lm.csr_from_scipy(s)
+        mklM = mkl_ops.SparseM.from_csr(csr)
+
+        x = np.random.randn(n)
+
+        y = np.zeros(m)
+        y = mklM.mult_vec(1, x, 0, y)
+        assert len(y) == m
+
+        y2 = s @ x
+
+        assert y == approx(y2)
+
+
+@mark.skipif(mkl_ops is None, reason='MKL not available')
 def test_mkl_syrk():
     for i in range(50):
         M = np.random.randn(10, 5)

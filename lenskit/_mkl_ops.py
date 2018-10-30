@@ -10,6 +10,11 @@ _logger = logging.getLogger(__name__)
 
 __mkl_syrk_defs = '''
 typedef void* sparse_matrix_t;
+struct matrix_descr {
+    int  type;
+    int  mode;
+    int  diag;
+};
 
 int mkl_sparse_d_create_csr(sparse_matrix_t *A, int indexing, int rows, int cols,
                             int *rows_start, int *rows_end, int *col_indx, double *values);
@@ -17,7 +22,9 @@ int mkl_sparse_d_export_csr(const sparse_matrix_t source, int *indexing, int *ro
                             int **rows_start, int **rows_end, int **col_indx, double **values);
 int mkl_sparse_order(sparse_matrix_t A);
 int mkl_sparse_destroy(sparse_matrix_t A);
+
 int mkl_sparse_syrk (int operation, const sparse_matrix_t A, sparse_matrix_t *C);
+int mkl_sparse_d_mv (int operation, double alpha, const sparse_matrix_t A, struct matrix_descr descr, const double *x, double beta, double *y);
 '''
 _logger.debug('initializing CFFI interface')
 _mkl_ffi = cffi.FFI()
@@ -34,6 +41,14 @@ except OSError:
 def _mkl_check_return(rv, call='<unknown>'):
     if rv:
         raise RuntimeError('MKL call {} failed with code {}'.format(call, rv))
+
+
+def _mkl_basic_descr():
+    desc = _mkl_ffi.new('struct matrix_descr*')
+    desc.type = 20  # general matrix
+    # desc.mode = 42  # full matrix
+    # desc.diag = 50  # non-unit diagonal
+    return desc
 
 
 class SparseM:
@@ -111,6 +126,24 @@ class SparseM:
         rowptrs[1:] = re
 
         return CSR(nr, nc, nnz, rowptrs, cols, vals)
+
+    def mult_vec(self, alpha, x, beta, y):
+        """
+        Compute :math:`\\alpha A x + \\beta y`, where :math:`A` is this matrix.
+        """
+        desc = _mkl_basic_descr()
+        x = np.require(x, np.float64, 'C')
+        yout = np.require(y, np.float64, 'C')
+        if yout is y:
+            yout = yout.copy()
+
+        _x = _mkl_ffi.cast('double*', x.ctypes.data)
+        _y = _mkl_ffi.cast('double*', yout.ctypes.data)
+
+        rv = _mkl_lib.mkl_sparse_d_mv(10, alpha, self.handle, desc[0], _x, beta, _y)
+        _mkl_check_return(rv, 'mkl_sparse_d_mv')
+
+        return yout
 
 
 def csr_syrk(csr: CSR):
