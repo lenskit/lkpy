@@ -10,7 +10,8 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-from numba import njit, objmode
+import numba as nb
+from numba import njit, objmode, prange
 
 from lenskit import util, matrix
 from . import Trainable, Predictor
@@ -20,19 +21,18 @@ _logger = logging.getLogger(__name__)
 IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rating_matrix'])
 
 
-@njit
+@njit(parallel=False)
 def _sort_and_truncate(nitems, smat, min_sim, nnbrs):
-    assert smat.nrows == nitems
-    assert smat.ncols == nitems
-
     with objmode():
         _logger.debug('full matrix has %d entries', smat.nnz)
 
     picked = np.full(smat.nnz, -1, np.int32)
 
-    for i in range(nitems):
+    for i in prange(nitems):
         sp = smat.rowptrs[i]
         ep = smat.rowptrs[i+1]
+        if ep == sp or (ep == sp + 1 and smat.colinds[sp] == i):
+            continue
 
         if nnbrs > 0:
             acc = util.Accumulator(smat.values, nnbrs)
@@ -44,17 +44,20 @@ def _sort_and_truncate(nitems, smat, min_sim, nnbrs):
                 acc.add(j)
 
         keep = acc.top_keys()
-        picked[sp:sp+len(keep)] = keep
+        n = len(keep)
+        ep2 = sp + n
+        picked[sp:ep2] = keep
 
-    nnz = np.sum(picked >= 0)
+    pmask = picked >= 0
+    nnz = np.sum(pmask)
     with objmode():
         _logger.debug('truncating to %d entries', nnz)
 
     ip2 = np.zeros(nitems + 1, np.int32)
-    pmask = picked >= 0
-    rlens = np.array([np.sum(pmask[smat.rowptrs[i]:smat.rowptrs[i+1]]) for i in range(nitems)],
-                     dtype=np.int32)
-    ip2[1:] = np.cumsum(rlens)
+    for i in range(nitems):
+        sp = smat.rowptrs[i]
+        ep = smat.rowptrs[i+1]
+        ip2[i+1] = ip2[i] + np.sum(pmask[sp:ep])
 
     ind2 = smat.colinds[picked[pmask]]
     d2 = smat.values[picked[pmask]]
