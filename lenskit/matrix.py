@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import numba as n
-from numba import njit, jitclass
+from numba import njit, jitclass, prange
 
 _logger = logging.getLogger(__name__)
 
@@ -104,16 +104,7 @@ class CSR:
         return diff
 
     def sort_values(self):
-        for i in range(self.nrows):
-            sp = self.rowptrs[i]
-            ep = self.rowptrs[i+1]
-            if ep == sp:
-                continue
-
-            ord = np.argsort(self.values[sp:ep])
-            ord = ord[::-1]
-            self.colinds[sp:ep] = self.colinds[sp + ord]
-            self.values[sp:ep] = self.values[sp + ord]
+        _csr_sort(self.nrows, self.rowptrs, self.colinds, self.values)
 
     def transpose(self):
         """
@@ -156,6 +147,20 @@ class CSR:
             n_vs = None
 
         return CSR(self.ncols, self.nrows, self.nnz, n_rps, n_cis, n_vs)
+
+
+@njit(n.void(n.intc, n.int32[:], n.int32[:], n.double[:]),
+      parallel=True, nogil=True)
+def _csr_sort(nrows, rowptrs, colinds, values):
+    assert len(rowptrs) > nrows
+    for i in prange(nrows):
+        sp = rowptrs[i]
+        ep = rowptrs[i+1]
+        if ep > sp:
+            ord = np.argsort(values[sp:ep])
+            ord = ord[::-1]
+            colinds[sp:ep] = colinds[sp + ord]
+            values[sp:ep] = values[sp + ord]
 
 
 def csr_from_coo(rows, cols, vals, shape=None):

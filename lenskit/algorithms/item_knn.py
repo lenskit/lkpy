@@ -177,14 +177,17 @@ class ItemItem(Trainable, Predictor):
         vals = smat.values
 
         rows, cols, vals = self._filter_similarities(rows, cols, vals)
+        nnz = len(rows)
 
-        r2 = np.concatenate([rows, cols])
-        c2 = np.concatenate([cols, rows])
-        del rows, cols
-        v2 = np.concatenate([vals, vals])
-        del vals
+        _logger.info('[%s] making matrix symmetric (%d nnz)', self._timer, nnz)
+        rows.resize(nnz * 2)
+        cols.resize(nnz * 2)
+        vals.resize(nnz * 2)
+        rows[nnz:] = cols[:nnz]
+        cols[nnz:] = rows[:nnz]
+        vals[nnz:] = vals[:nnz]
 
-        csr = self._select_similarities(nitems, r2, c2, v2)
+        csr = self._select_similarities(nitems, rows, cols, vals)
         return csr
 
     def _filter_similarities(self, rows, cols, vals):
