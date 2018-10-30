@@ -103,6 +103,7 @@ class UserUser(Trainable, Predictor):
         """
 
         watch = util.Stopwatch()
+        items = pd.Index(items, name='item')
 
         ratings, umean = self._get_user_data(model, user, ratings)
         if ratings is None:
@@ -127,11 +128,10 @@ class UserUser(Trainable, Predictor):
         _logger.debug('computed user similarities')
 
         results = pd.Series(np.nan, index=items, name='prediction')
+        ri_pos = model.items.get_indexer(items.values)
         for i in range(len(results)):
-            item = results.index[i]
-            try:
-                ipos = model.items.get_loc(item)
-            except KeyError:
+            ipos = ri_pos[i]
+            if ipos < 0:
                 continue
 
             # now we have the item, let us find it!
