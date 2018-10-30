@@ -1,14 +1,13 @@
 from lenskit import matrix
 import lenskit.algorithms.user_knn as knn
 
+from pathlib import Path
 import logging
-import os.path
 import multiprocessing
 
 import pandas as pd
 import numpy as np
 
-import pytest
 from pytest import approx, mark
 
 import lk_test_utils as lktu
@@ -121,6 +120,30 @@ def test_uu_predict_unknown_empty():
     assert all(preds.isna())
 
 
+@mark.slow
+def test_uu_known_preds():
+    from lenskit import batch
+
+    algo = knn.UserUser(30, min_sim=1.0e-6)
+    _log.info('training %s on ml data', algo)
+    model = algo.train(lktu.ml_pandas.renamed.ratings)
+
+    dir = Path(__file__).parent
+    pred_file = dir / 'user-user-preds.csv'
+    _log.info('reading known predictions from %s', pred_file)
+    known_preds = pd.read_csv(str(pred_file))
+    pairs = known_preds.loc[:, ['user', 'item']]
+
+    preds = batch.predict(algo, pairs, model=model)
+    merged = pd.merge(known_preds.rename(columns={'prediction': 'expected'}), preds)
+    assert len(merged) == len(preds)
+    merged['error'] = merged.expected - merged.prediction
+    assert not any(merged.prediction.isna() & merged.expected.notna())
+    err = merged.error
+    err = err[err.notna()]
+    assert all(err.abs() < 0.01)
+
+
 def __batch_eval(job):
     from lenskit import batch
     algo, train, test = job
@@ -128,6 +151,7 @@ def __batch_eval(job):
     model = algo.train(train)
     _log.info('testing %d users', test.user.nunique())
     return batch.predict(lambda u, xs: algo.predict(model, u, xs), test)
+
 
 @mark.slow
 @mark.eval
