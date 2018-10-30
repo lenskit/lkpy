@@ -8,7 +8,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-from .. import check
+from .. import check, util
 from . import basic
 
 _logger = logging.getLogger(__name__)
@@ -128,13 +128,7 @@ class MFModel:
 
     @classmethod
     def load(cls, path):
-        path = pathlib.Path(path)
-        if not path.exists():
-            npz_path = path.with_name(path.name + '.npz')
-            if npz_path.exists():
-                path = npz_path
-            else:
-                raise FileNotFoundError(path)
+        path = util.npz_path(path)
 
         with np.load(path) as npz:
             users = pd.Index(npz['users'])
@@ -201,13 +195,7 @@ class BiasMFModel(MFModel):
 
     @classmethod
     def load(cls, path: pathlib.Path):
-        path = pathlib.Path(path)
-        if not path.exists():
-            npz_path = path.with_name(path.name + '.npz')
-            if npz_path.exists():
-                path = npz_path
-            else:
-                raise FileNotFoundError(path)
+        path = util.npz_path(path)
 
         with np.load(path) as npz:
             users = pd.Index(npz['users'])

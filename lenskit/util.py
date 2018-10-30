@@ -3,6 +3,8 @@ Miscellaneous utility functions.
 """
 
 import time
+import pathlib
+
 from numba import jitclass, njit, int32, double
 import numpy as np
 
@@ -121,3 +123,18 @@ class Stopwatch():
             return "{: 0.0f}ms".format(elapsed * 1000)
         else:
             return "{: 0.2f}s".format(elapsed)
+
+
+def npz_path(path):
+    path = pathlib.Path(path)
+    p = path
+    if not p.exists():
+        p = path.with_name(path.name + '.npz')
+
+    if not p.exists():
+        p = path.with_suffix('.npz')
+
+    if not p.exists():
+        raise FileNotFoundError(path)
+
+    return p
