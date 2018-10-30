@@ -3,7 +3,6 @@ import lenskit.algorithms.user_knn as knn
 
 from pathlib import Path
 import logging
-import multiprocessing
 
 import pandas as pd
 import numpy as np
@@ -184,8 +183,8 @@ def test_uu_batch_accuracy():
     algo = basic.Fallback(uu_algo, basic.Bias())
 
     folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
-    with multiprocessing.Pool() as pool:
-        preds = pd.concat(pool.map(__batch_eval, ((algo, train, test) for (train, test) in folds)))
+    preds = [__batch_eval((algo, train, test)) for (train, test) in folds]
+    preds = pd.concat(preds)
     mae = pm.mae(preds.prediction, preds.rating)
     assert mae == approx(0.71, abs=0.025)
 
