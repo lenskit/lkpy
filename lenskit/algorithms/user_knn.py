@@ -15,7 +15,7 @@ from . import Trainable, Predictor
 
 _logger = logging.getLogger(__name__)
 
-UUModel = namedtuple('UUModel', ['matrix', 'user_means', 'items', 'transpose'])
+UUModel = namedtuple('UUModel', ['matrix', 'user_means', 'items', 'transpose', 'mkl_m'])
 UUModel.__doc__ = """
 Memorized data for user-user collaborative filtering.
 
@@ -81,7 +81,10 @@ class UserUser(Trainable, Predictor):
 
         umeans = pd.Series(umeans, index=users, name='mean')
 
-        return UUModel(uir, umeans, items, iur)
+        mkl = matrix.mkl_ops()
+        mkl_m = mkl.SparseM.from_csr(uir) if mkl else None
+
+        return UUModel(uir, umeans, items, iur, mkl_m)
 
     def predict(self, model, user, items, ratings=None):
         """
@@ -112,7 +115,11 @@ class UserUser(Trainable, Predictor):
         # now ratings is normalized to be a mean-centered unit vector
         # this means we can dot product to score neighbors
         # score the neighbors!
-        nsims = rmat @ ratings
+        if model.mkl_m:
+            nsims = np.zeros(len(model.user_means))
+            nsims = model.mkl_m.mult_vec(1, ratings, 0, nsims)
+        else:
+            nsims = rmat @ ratings
         assert len(nsims) == len(model.user_means.index)
         if user in model.user_means.index:
             nsims[model.user_means.index.get_loc(user)] = 0
@@ -204,7 +211,9 @@ class UserUser(Trainable, Predictor):
             mat = matrix.csr_from_coo(npz['m_rows'], npz['m_cols'], npz['m_vals'])
             tx = matrix.csr_from_coo(npz['t_rows'], npz['t_cols'], npz['t_vals'])
 
-        return UUModel(mat, user_means, items, tx)
+        mkl = matrix.mkl_ops()
+        mkl_m = mkl.SparseM.from_csr(mat) if mkl else None
+        return UUModel(mat, user_means, items, tx, mkl_m)
 
     def __str__(self):
         return 'UserUser(nnbrs={}, min_sim={})'.format(self.max_neighbors, self.min_similarity)
