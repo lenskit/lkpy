@@ -145,7 +145,6 @@ class ItemItem(Trainable, Predictor):
         return norm_mat
 
     def _compute_similarities(self, rmat):
-        return self._scipy_similarities(rmat)
         mkl = matrix.mkl_ops()
         if mkl is None:
             return self._scipy_similarities(rmat)
@@ -166,6 +165,26 @@ class ItemItem(Trainable, Predictor):
 
         rows, cols, vals = self._filter_similarities(rows, cols, vals)
         csr = self._select_similarities(nitems, rows, cols, vals)
+        return csr
+
+    def _mkl_similarities(self, mkl, rmat):
+        nitems = rmat.ncols
+
+        _logger.info('[%s] multiplying matrix', self._timer)
+        smat = mkl.csr_syrk(rmat)
+        rows = matrix.csr_rowinds(smat)
+        cols = smat.colinds
+        vals = smat.values
+
+        rows, cols, vals = self._filter_similarities(rows, cols, vals)
+
+        r2 = np.concatenate([rows, cols])
+        c2 = np.concatenate([cols, rows])
+        del rows, cols
+        v2 = np.concatenate([vals, vals])
+        del vals
+
+        csr = self._select_similarities(nitems, r2, c2, v2)
         return csr
 
     def _filter_similarities(self, rows, cols, vals):
