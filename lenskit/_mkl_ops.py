@@ -44,6 +44,24 @@ class _MKL_SparseH:
     def __init__(self):
         self.h_ptr = _mkl_ffi.new('sparse_matrix_t*')
 
+    @classmethod
+    def from_csr(cls, csr):
+        sp = np.require(csr.rowptrs, np.intc, 'C')
+        ep = np.require(csr.rowptrs[1:], np.intc, 'C')
+        cols = np.require(csr.colinds, np.intc, 'C')
+        vals = np.require(csr.values, np.float_, 'C')
+
+        m = _MKL_SparseH()
+        _sp = _mkl_ffi.cast('int*', sp.ctypes.data)
+        _ep = _mkl_ffi.cast('int*', ep.ctypes.data)
+        _cols = _mkl_ffi.cast('int*', cols.ctypes.data)
+        _vals = _mkl_ffi.cast('double*', vals.ctypes.data)
+        rv = _mkl_lib.mkl_sparse_d_create_csr(m.h_ptr, 0, csr.nrows, csr.ncols,
+                                              _sp, _ep, _cols, _vals)
+        _mkl_check_return(rv, 'mkl_sparse_d_create_csr')
+
+        return m
+
     @property
     def handle(self):
         return self.h_ptr[0]
@@ -84,21 +102,10 @@ def csr_syrk(csr: CSR):
     """
     Interface to the ``mkl_sparse_syrk`` routine, with necessary setup and conversion.
     """
-    sp = np.require(csr.rowptrs, np.intc, 'C')
-    ep = np.require(csr.rowptrs[1:], np.intc, 'C')
-    cols = np.require(csr.colinds, np.intc, 'C')
-    vals = np.require(csr.values, np.float_, 'C')
 
     _logger.debug('syrk: processing %dx%d matrix (%d nnz)', csr.nrows, csr.ncols, csr.nnz)
 
-    src = _MKL_SparseH()
-    _sp = _mkl_ffi.cast('int*', sp.ctypes.data)
-    _ep = _mkl_ffi.cast('int*', ep.ctypes.data)
-    _cols = _mkl_ffi.cast('int*', cols.ctypes.data)
-    _vals = _mkl_ffi.cast('double*', vals.ctypes.data)
-    rv = _mkl_lib.mkl_sparse_d_create_csr(src.h_ptr, 0, csr.nrows, csr.ncols,
-                                          _sp, _ep, _cols, _vals)
-    _mkl_check_return(rv, 'mkl_sparse_d_create_csr')
+    src = _MKL_SparseH.from_csr(csr)
 
     _logger.debug('syrk: ordering matrix')
     rv = _mkl_lib.mkl_sparse_order(src.handle)
