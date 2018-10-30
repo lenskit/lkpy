@@ -80,6 +80,11 @@ class CSR:
 
         return v
 
+    def row_extent(self, row):
+        sp = self.rowptrs[row]
+        ep = self.rowptrs[row+1]
+        return (sp, ep)
+
     def row_cs(self, row):
         sp = self.rowptrs[row]
         ep = self.rowptrs[row + 1]
@@ -279,8 +284,8 @@ def sparse_ratings(ratings, scipy=False):
         RatingMatrix:
             a named tuple containing the sparse matrix, user index, and item index.
     """
-    uidx = pd.Index(ratings.user.unique())
-    iidx = pd.Index(ratings.item.unique())
+    uidx = pd.Index(ratings.user.unique(), name='user')
+    iidx = pd.Index(ratings.item.unique(), name='item')
     _logger.debug('creating matrix with %d ratings for %d items by %d users',
                   len(ratings), len(iidx), len(uidx))
 
