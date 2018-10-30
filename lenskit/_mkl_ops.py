@@ -31,6 +31,11 @@ except OSError:
     _mkl_lib = None
 
 
+def _mkl_check_return(rv, call='<unknown>'):
+    if rv:
+        raise RuntimeError('MKL call {} failed with code {}'.format(call, rv))
+
+
 class _MKL_SparseH:
     """
     Class encapsulating an MKL sparse matrix handle.
@@ -47,10 +52,37 @@ class _MKL_SparseH:
         if self.h_ptr[0]:
             _mkl_lib.mkl_sparse_destroy(self.handle)
 
+    def export(self):
+        indP = _mkl_ffi.new('int*')
+        nrP = _mkl_ffi.new('int*')
+        ncP = _mkl_ffi.new('int*')
+        rsP = _mkl_ffi.new('int**')
+        reP = _mkl_ffi.new('int**')
+        ciP = _mkl_ffi.new('int**')
+        vsP = _mkl_ffi.new('double**')
+        rv = _mkl_lib.mkl_sparse_d_export_csr(self.handle, indP, nrP, ncP, rsP, reP, ciP, vsP)
+        _mkl_check_return(rv, 'mkl_sparse_d_export_csr')
+        if indP[0] != 0:
+            raise ValueError('output index is not 0-indexed')
+        nr = nrP[0]
+        nc = ncP[0]
+        rsB = _mkl_ffi.buffer(rsP[0], nr * _mkl_ffi.sizeof('int'))
+        reB = _mkl_ffi.buffer(reP[0], nr * _mkl_ffi.sizeof('int'))
+        rs = np.frombuffer(rsB, np.intc)
+        re = np.frombuffer(reB, np.intc)
+        assert np.all(rs[1:] == re[:nr-1])
+        nnz = re[nr-1]
+        ciB = _mkl_ffi.buffer(ciP[0], nnz * _mkl_ffi.sizeof('int'))
+        vsB = _mkl_ffi.buffer(vsP[0], nnz * _mkl_ffi.sizeof('double'))
 
-def __mkl_check_return(rv, call='<unknown>'):
-    if rv:
-        raise RuntimeError('MKL call {} failed with code {}'.format(call, rv))
+        cols = np.frombuffer(ciB, np.intc)[:nnz].copy()
+        _logger.debug('%s', cols)
+        vals = np.frombuffer(vsB, np.float_)[:nnz].copy()
+        _logger.debug('%s', vals)
+        rowptrs = np.zeros(nr + 1, dtype=np.int32)
+        rowptrs[1:] = re
+
+        return CSR(nr, nc, nnz, rowptrs, cols, vals)
 
 
 def csr_syrk(csr: CSR):
@@ -71,50 +103,19 @@ def csr_syrk(csr: CSR):
     _vals = _mkl_ffi.cast('double*', vals.ctypes.data)
     rv = _mkl_lib.mkl_sparse_d_create_csr(src.h_ptr, 0, csr.nrows, csr.ncols,
                                           _sp, _ep, _cols, _vals)
-    __mkl_check_return(rv, 'mkl_sparse_d_create_csr')
+    _mkl_check_return(rv, 'mkl_sparse_d_create_csr')
 
     _logger.debug('syrk: ordering matrix')
     rv = _mkl_lib.mkl_sparse_order(src.handle)
-    __mkl_check_return(rv, 'mkl_sparse_order')
+    _mkl_check_return(rv, 'mkl_sparse_order')
 
     _logger.debug('syrk: multiplying matrix')
     mult = _MKL_SparseH()
     rv = _mkl_lib.mkl_sparse_syrk(11, src.handle, mult.h_ptr)
-    __mkl_check_return(rv, 'mkl_sparse_syrk')
+    _mkl_check_return(rv, 'mkl_sparse_syrk')
     _logger.debug('syrk: exporting matrix')
 
-    indP = _mkl_ffi.new('int*')
-    nrP = _mkl_ffi.new('int*')
-    ncP = _mkl_ffi.new('int*')
-    rsP = _mkl_ffi.new('int**')
-    reP = _mkl_ffi.new('int**')
-    ciP = _mkl_ffi.new('int**')
-    vsP = _mkl_ffi.new('double**')
-    rv = _mkl_lib.mkl_sparse_d_export_csr(mult.handle, indP, nrP, ncP, rsP, reP, ciP, vsP)
-    __mkl_check_return(rv, 'mkl_sparse_d_export_csr')
-    if indP[0] != 0:
-        raise ValueError('output index is not 0-indexed')
-    nr = nrP[0]
-    nc = ncP[0]
-    assert nr == csr.ncols
-    assert nc == csr.ncols
-    rsB = _mkl_ffi.buffer(rsP[0], nr * _mkl_ffi.sizeof('int'))
-    reB = _mkl_ffi.buffer(reP[0], nr * _mkl_ffi.sizeof('int'))
-    rs = np.frombuffer(rsB, np.intc)
-    re = np.frombuffer(reB, np.intc)
-    assert np.all(rs[1:] == re[:nr-1])
-    nnz = re[nr-1]
-    _logger.debug('syrk: received %dx%d matrix (%d nnz)', nr, nc, nnz)
-    _logger.debug('%s', rs)
-    _logger.debug('%s', re)
-    ciB = _mkl_ffi.buffer(ciP[0], nnz * _mkl_ffi.sizeof('int'))
-    vsB = _mkl_ffi.buffer(vsP[0], nnz * _mkl_ffi.sizeof('double'))
-
-    cols = np.frombuffer(ciB, np.intc)[:nnz].copy()
-    _logger.debug('%s', cols)
-    vals = np.frombuffer(vsB, np.float_)[:nnz].copy()
-    _logger.debug('%s', vals)
-    rowptrs = np.zeros(nr + 1, dtype=np.int32)
-    rowptrs[1:] = re
-
-    return CSR(nr, nc, nnz, rowptrs, cols, vals)
+    result = mult.export()
+    _logger.debug('syrk: received %dx%d matrix (%d nnz)',
+                  result.nrows, result.ncols, result.nnz)
+    return result
