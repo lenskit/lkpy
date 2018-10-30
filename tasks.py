@@ -11,8 +11,10 @@ import importlib.machinery
 
 @task
 def test(c, cover=False, verbose=True, slow=True, eval=True, match=None, mark=None, debug=False,
-         forked=False, fail_fast=False):
+         forked=False, fail_fast=False, jit=True):
     "Run tests"
+    if not jit:
+        os.environ['NUMBA_DISABLE_JIT'] = '1'
     import pytest
     args = ['tests']
     if cover:
