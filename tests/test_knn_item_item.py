@@ -4,7 +4,6 @@ from lenskit import matrix as lm
 from pathlib import Path
 import logging
 import os.path
-from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
 import numpy as np
@@ -197,18 +196,15 @@ def test_ii_train_ml100k(tmp_path):
 @mark.slow
 def test_ii_large_models():
     "Several tests of large trained I-I models"
-    exec = ThreadPoolExecutor()
-    _log.info('kicking off limited model train')
+    _log.info('training limited model')
     algo_lim = knn.ItemItem(30, save_nbrs=500)
-    model_lim = exec.submit(algo_lim.train, ml_ratings)
+    model_lim = algo_lim.train(ml_ratings)
 
-    _log.info('kicking off unbounded model')
+    _log.info('training unbounded model')
     algo_ub = knn.ItemItem(30)
-    model_ub = exec.submit(algo_ub.train, ml_ratings)
+    model_ub = algo_ub.train(ml_ratings)
 
-    model_lim = model_lim.result()
-    _log.info('completed limited train')
-
+    _log.info('testing models')
     assert all(np.logical_not(np.isnan(model_lim.sim_matrix.values)))
     assert all(model_lim.sim_matrix.values > 0)
     # a little tolerance
@@ -216,9 +212,6 @@ def test_ii_large_models():
 
     means = ml_ratings.groupby('item').rating.mean()
     assert means[model_lim.items].values == approx(model_lim.means)
-
-    model_ub = model_ub.result()
-    _log.info('completed unbounded train')
 
     assert all(np.logical_not(np.isnan(model_ub.sim_matrix.values)))
     assert all(model_ub.sim_matrix.values > 0)
