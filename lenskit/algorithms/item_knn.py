@@ -198,7 +198,7 @@ class ItemItem(Trainable, Predictor):
 
         # remove too-small similarities
         if self.min_similarity is not None:
-            mask = mask & (vals >= self.min_similarity)
+            mask = np.logical_and(mask, vals >= self.min_similarity)
 
         _logger.info('[%s] filter keeps %d of %d entries', self._timer, np.sum(mask), len(rows))
 
