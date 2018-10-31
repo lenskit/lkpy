@@ -458,6 +458,8 @@ def test_ii_known_preds():
     algo = knn.ItemItem(20, min_sim=1.0e-6)
     _log.info('training %s on ml data', algo)
     model = algo.train(lktu.ml_pandas.renamed.ratings)
+    assert algo.center
+    assert model.means is not None
 
     dir = Path(__file__).parent
     pred_file = dir / 'item-item-preds.csv'
