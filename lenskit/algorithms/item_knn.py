@@ -141,7 +141,7 @@ class ItemItem(Trainable, Predictor):
         assert norm_mat.shape[1] == rmat.shape[1]
         # and reset NaN
         norm_mat.data[np.isnan(norm_mat.data)] = 0
-        _logger.info('[%s] normalized user-item ratings', self._timer)
+        _logger.info('[%s] normalized rating matrix columns', self._timer)
         return norm_mat
 
     def _compute_similarities(self, rmat):
@@ -155,7 +155,7 @@ class ItemItem(Trainable, Predictor):
         nitems = rmat.ncols
         sp_rmat = matrix.csr_to_scipy(rmat)
 
-        _logger.info('[%s] multiplying matrix', self._timer)
+        _logger.info('[%s] multiplying matrix with scipy', self._timer)
         smat = sp_rmat.T @ sp_rmat
         smat = smat.tocoo()
         rows, cols, vals = smat.row, smat.col, smat.data
@@ -169,8 +169,9 @@ class ItemItem(Trainable, Predictor):
 
     def _mkl_similarities(self, mkl, rmat):
         nitems = rmat.ncols
+        assert rmat.values is not None
 
-        _logger.info('[%s] multiplying matrix', self._timer)
+        _logger.info('[%s] multiplying matrix with MKL', self._timer)
         smat = mkl.csr_syrk(rmat)
         rows = matrix.csr_rowinds(smat)
         cols = smat.colinds
@@ -192,7 +193,7 @@ class ItemItem(Trainable, Predictor):
 
     def _filter_similarities(self, rows, cols, vals):
         "Threshold similarites & remove self-similarities."
-        _logger.info('[%s] filtering similarities', self._timer)
+        _logger.info('[%s] filtering %d similarities', self._timer, len(rows))
         # remove self-similarity
         mask = rows != cols
 
@@ -212,9 +213,14 @@ class ItemItem(Trainable, Predictor):
         if self.save_neighbors is None or self.save_neighbors <= 0:
             return csr
 
-        _logger.info('[%s] picking top similarities', self._timer)
+        _logger.info('[%s] picking %d top similarities', self._timer, self.save_neighbors)
         counts = csr.row_nnzs()
+        _logger.debug('have %d rows in size range [%d,%d]',
+                      len(counts), np.min(counts), np.max(counts))
         ncounts = np.fmin(counts, self.save_neighbors)
+        _logger.debug('will have %d rows in size range [%d,%d]',
+                      len(ncounts), np.min(ncounts), np.max(ncounts))
+        assert np.all(ncounts <= self.save_neighbors)
         nnz = np.sum(ncounts)
 
         rp2 = np.zeros_like(csr.rowptrs)
@@ -225,8 +231,8 @@ class ItemItem(Trainable, Predictor):
             sp1 = csr.rowptrs[i]
             sp2 = rp2[i]
 
-            ep1 = sp1 + counts[i]
-            ep2 = sp2 + counts[i]
+            ep1 = sp1 + ncounts[i]
+            ep2 = sp2 + ncounts[i]
             ci2[sp2:ep2] = csr.colinds[sp1:ep1]
             vs2[sp2:ep2] = csr.values[sp1:ep1]
 

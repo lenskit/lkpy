@@ -198,7 +198,8 @@ def test_ii_train_ml100k(tmp_path):
 def test_ii_large_models():
     "Several tests of large trained I-I models"
     _log.info('training limited model')
-    algo_lim = knn.ItemItem(30, save_nbrs=500)
+    MODEL_SIZE = 100
+    algo_lim = knn.ItemItem(30, save_nbrs=MODEL_SIZE)
     model_lim = algo_lim.train(ml_ratings)
 
     _log.info('training unbounded model')
@@ -240,7 +241,7 @@ def test_ii_large_models():
 
         ub_row = mat_ub.getrow(ipos)
         b_row = mat_lim.getrow(ipos)
-        assert b_row.nnz <= 500
+        assert b_row.nnz <= MODEL_SIZE
         assert all(pd.Series(b_row.indices).isin(ub_row.indices))
 
         # it should be sorted !
@@ -257,7 +258,7 @@ def test_ii_large_models():
             assert mat_ub[ipos, n] == approx(cor)
 
         # short rows are equal
-        if b_row.nnz < 500:
+        if b_row.nnz < MODEL_SIZE:
             _log.debug('short row of length %d', b_row.nnz)
             assert b_row.nnz == ub_row.nnz
             ub_row.sort_indices()
@@ -270,16 +271,16 @@ def test_ii_large_models():
         b_nbrs = pd.Series(b_row.data, model_lim.items[b_row.indices])
 
         assert len(ub_nbrs) >= len(b_nbrs)
-        assert len(b_nbrs) <= 500
+        assert len(b_nbrs) <= MODEL_SIZE
         assert all(b_nbrs.index.isin(ub_nbrs.index))
         # the similarities should be equal!
         b_match, ub_match = b_nbrs.align(ub_nbrs, join='inner')
         assert all(b_match == b_nbrs)
         assert b_match.values == approx(ub_match.values)
         assert b_nbrs.max() == approx(ub_nbrs.max())
-        if len(ub_nbrs) > 500:
-            assert len(b_nbrs) == 500
-            ub_shrink = ub_nbrs.nlargest(500)
+        if len(ub_nbrs) > MODEL_SIZE:
+            assert len(b_nbrs) == MODEL_SIZE
+            ub_shrink = ub_nbrs.nlargest(MODEL_SIZE)
             # the minimums should be equal
             assert ub_shrink.min() == approx(b_nbrs.min())
             # everything above minimum value should be the same set of items
