@@ -16,7 +16,6 @@ _log = logging.getLogger(__name__)
 ml_ratings = lktu.ml_pandas.renamed.ratings
 
 
-@mark.slow
 def test_uu_train():
     algo = knn.UserUser(30)
     model = algo.train(ml_ratings)
@@ -86,7 +85,6 @@ def test_uu_predict_live_ratings():
     assert preds.loc[1016] == approx(3.62221550680778)
 
 
-@mark.slow
 def test_uu_save_load(tmp_path):
     tmp_path = lktu.norm_path(tmp_path)
 
