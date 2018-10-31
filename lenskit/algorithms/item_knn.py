@@ -17,11 +17,12 @@ from . import Trainable, Predictor
 
 _logger = logging.getLogger(__name__)
 
-IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix', 'rating_matrix'])
+IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix',
+                                 'users', 'rating_matrix'])
 
 
 @njit(nogil=True)
-def _predict(model, nitems, nrange, ratings, targets):
+def _predict_weighted_average(model, nitems, nrange, ratings, targets):
     min_nbrs, max_nbrs = nrange
     scores = np.full(nitems, np.nan, dtype=np.float_)
 
@@ -54,6 +55,44 @@ def _predict(model, nitems, nrange, ratings, targets):
     return scores
 
 
+@njit(nogil=True)
+def _predict_sum(model, nitems, nrange, ratings, targets):
+    min_nbrs, max_nbrs = nrange
+    scores = np.full(nitems, np.nan, dtype=np.float_)
+
+    for i in range(targets.shape[0]):
+        iidx = targets[i]
+        rptr = model.rowptrs[iidx]
+        rend = model.rowptrs[iidx + 1]
+
+        score = 0
+        nnbrs = 0
+
+        for j in range(rptr, rend):
+            nidx = model.colinds[j]
+            if np.isnan(ratings[nidx]):
+                continue
+
+            nnbrs = nnbrs + 1
+            score = score + model.values[j]
+
+            if max_nbrs > 0 and nnbrs >= max_nbrs:
+                break
+
+        if nnbrs < min_nbrs:
+            continue
+
+        scores[iidx] = score
+
+    return scores
+
+
+_predictors = {
+    'weighted-average': _predict_weighted_average,
+    'sum': _predict_sum
+}
+
+
 class ItemItem(Trainable, Predictor):
     """
     Item-item nearest-neighbor collaborative filtering with ratings. This item-item implementation
@@ -61,7 +100,8 @@ class ItemItem(Trainable, Predictor):
     Java-based LensKit code.
     """
 
-    def __init__(self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None):
+    def __init__(self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None,
+                 center=True, aggregate='weighted-average'):
         """
         Args:
             nnbrs(int):
@@ -71,6 +111,11 @@ class ItemItem(Trainable, Predictor):
             save_nbrs(double):
                 the number of neighbors to save per item in the trained model
                 (``None`` for unlimited)
+            center(bool):
+                whether to normalize (mean-center) rating vectors.  Turn this off when working
+                with unary data and other data types that don't respond well to centering.
+            aggregate:
+                the type of aggregation to do. Can be ``weighted-average`` or ``sum``.
         """
         self.max_neighbors = nnbrs
         if self.max_neighbors is not None and self.max_neighbors < 1:
@@ -80,8 +125,12 @@ class ItemItem(Trainable, Predictor):
             self.min_neighbors = 1
         self.min_similarity = min_sim
         self.save_neighbors = save_nbrs
-        if self.save_neighbors is None:
-            self.save_neighbors = -1
+        self.center = center
+        self.aggregate = aggregate
+        try:
+            self._predict_agg = _predictors[aggregate]
+        except KeyError:
+            raise ValueError('unknown aggregator {}'.format(aggregate))
 
     def train(self, ratings):
         """
@@ -102,17 +151,16 @@ class ItemItem(Trainable, Predictor):
         # 2. Compute similarities with pairwise dot products
         self._timer = util.Stopwatch()
 
-        rmat, users, items = matrix.sparse_ratings(ratings, scipy=True)
+        init_rmat, users, items = matrix.sparse_ratings(ratings)
         n_items = len(items)
         _logger.info('[%s] made sparse matrix for %d items (%d ratings)',
-                     self._timer, len(items), rmat.nnz)
+                     self._timer, len(items), init_rmat.nnz)
 
-        rmat, item_means = self._mean_center(ratings, rmat, items)
+        rmat, item_means = self._mean_center(ratings, init_rmat, items)
 
         rmat = self._normalize(rmat)
 
         _logger.info('[%s] computing similarity matrix', self._timer)
-        rmat = matrix.csr_from_scipy(rmat, copy=False)
         smat = self._compute_similarities(rmat)
 
         _logger.info('[%s] got neighborhoods for %d of %d items',
@@ -121,16 +169,20 @@ class ItemItem(Trainable, Predictor):
         _logger.info('[%s] computed %d neighbor pairs', self._timer, smat.nnz)
 
         return IIModel(items, item_means, np.diff(smat.rowptrs),
-                       smat, ratings.set_index(['user', 'item']).rating)
+                       smat, users, init_rmat)
 
     def _mean_center(self, ratings, rmat, items):
+        if not self.center:
+            return rmat, None
+
         item_means = ratings.groupby('item').rating.mean()
         item_means = item_means.reindex(items).values
-        rmat.data = rmat.data - item_means[rmat.indices]
+        rmat.values = rmat.values - item_means[rmat.colinds]
         _logger.info('[%s] computed means for %d items', self._timer, len(item_means))
         return rmat, item_means
 
     def _normalize(self, rmat):
+        rmat = matrix.csr_to_scipy(rmat)
         # compute column norms
         norms = spla.norm(rmat, 2, axis=0)
         # and multiply by a diagonal to normalize columns
@@ -142,7 +194,7 @@ class ItemItem(Trainable, Predictor):
         # and reset NaN
         norm_mat.data[np.isnan(norm_mat.data)] = 0
         _logger.info('[%s] normalized rating matrix columns', self._timer)
-        return norm_mat
+        return matrix.csr_from_scipy(norm_mat, False)
 
     def _compute_similarities(self, rmat):
         mkl = matrix.mkl_ops()
@@ -241,9 +293,11 @@ class ItemItem(Trainable, Predictor):
     def predict(self, model, user, items, ratings=None):
         _logger.debug('predicting %d items for user %s', len(items), user)
         if ratings is None:
-            if user not in model.rating_matrix.index:
+            if user not in model.users:
                 return pd.Series(np.nan, index=items)
-            ratings = model.rating_matrix.loc[user]
+            upos = model.users.get_loc(user)
+            ratings = pd.Series(model.rating_matrix.row_vs(upos),
+                                index=pd.Index(model.items[model.rating_matrix.row_cs(upos)]))
 
         # set up rating array
         # get rated item positions & limit to in-model items
@@ -251,7 +305,10 @@ class ItemItem(Trainable, Predictor):
         m_rates = ratings[ri_pos >= 0]
         ri_pos = ri_pos[ri_pos >= 0]
         rate_v = np.full(len(model.items), np.nan, dtype=np.float_)
-        rate_v[ri_pos] = m_rates.values - model.means[ri_pos]
+        if self.center:
+            rate_v[ri_pos] = m_rates.values - model.means[ri_pos]
+        else:
+            rate_v[ri_pos] = m_rates.values
         _logger.debug('user %s: %d of %d rated items in model', user, len(ri_pos), len(ratings))
         assert np.sum(np.logical_not(np.isnan(rate_v))) == len(ri_pos)
 
@@ -265,13 +322,14 @@ class ItemItem(Trainable, Predictor):
         iscore = np.full(len(model.items), np.nan, dtype=np.float_)
 
         # now compute the predictions
-        iscore = _predict(model.sim_matrix,
-                          len(model.items),
-                          (self.min_neighbors, self.max_neighbors),
-                          rate_v, i_pos)
+        iscore = self._predict_agg(model.sim_matrix,
+                                   len(model.items),
+                                   (self.min_neighbors, self.max_neighbors),
+                                   rate_v, i_pos)
 
         nscored = np.sum(np.logical_not(np.isnan(iscore)))
-        iscore += model.means
+        if self.center:
+            iscore += model.means
         assert np.sum(np.logical_not(np.isnan(iscore))) == nscored
 
         results = pd.Series(iscore, index=model.items)
