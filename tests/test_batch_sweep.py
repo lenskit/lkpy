@@ -3,13 +3,14 @@ import pathlib
 import pandas as pd
 import numpy as np
 
-from lk_test_utils import ml_pandas
+from lk_test_utils import ml_pandas, norm_path
 
 from lenskit import batch, crossfold as xf
 from lenskit.algorithms.basic import Bias, Popular
 
 
 def test_sweep_bias(tmp_path):
+    tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path)
 

@@ -83,6 +83,8 @@ def test_uu_predict_live_ratings():
 
 @mark.slow
 def test_uu_save_load(tmp_path):
+    tmp_path = lktu.norm_path(tmp_path)
+
     algo = knn.UserUser(30)
     _log.info('training model')
     original = algo.train(ml_ratings)

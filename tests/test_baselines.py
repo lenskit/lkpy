@@ -219,6 +219,8 @@ def test_bias_separate_damping():
 
 
 def test_bias_save(tmp_path):
+    tmp_path = lktu.norm_path(tmp_path)
+
     algo = bl.Bias(damping=5)
     original = algo.train(simple_df)
     assert original.mean == approx(3.5)

@@ -81,6 +81,8 @@ def test_fallback_predict():
 
 
 def test_fallback_save_load(tmp_path):
+    tmp_path = lktu.norm_path(tmp_path)
+
     algo = basic.Fallback(basic.Memorized(simple_df), basic.Bias())
     original = algo.train(lktu.ml_pandas.renamed.ratings)
 
@@ -178,6 +180,7 @@ def test_pop_candidates():
 
 
 def test_pop_save_load(tmp_path):
+    tmp_path = lktu.norm_path(tmp_path)
     algo = basic.Popular()
     original = algo.train(lktu.ml_pandas.renamed.ratings)
 

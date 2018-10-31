@@ -96,3 +96,14 @@ def envvars(**vars):
 
 
 ml_pandas = MLDataLoader(pd.read_csv)
+
+
+def norm_path(path):
+    if isinstance(path, pathlib.Path):
+        return path
+    elif hasattr(path, '__fspath__'):
+        return pathlib.Path(path.__fspath__())
+    elif isinstance(path, str):
+        return pathlib.Path(str)
+    else:
+        raise ValueError('invalid path: ' + repr(path))
