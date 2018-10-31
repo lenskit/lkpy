@@ -153,8 +153,8 @@ class ItemItem(Trainable, Predictor):
 
         init_rmat, users, items = matrix.sparse_ratings(ratings)
         n_items = len(items)
-        _logger.info('[%s] made sparse matrix for %d items (%d ratings)',
-                     self._timer, len(items), init_rmat.nnz)
+        _logger.info('[%s] made sparse matrix for %d items (%d ratings from %d users)',
+                     self._timer, len(items), init_rmat.nnz, len(users))
 
         rmat, item_means = self._mean_center(ratings, init_rmat, items)
 
@@ -294,6 +294,7 @@ class ItemItem(Trainable, Predictor):
         _logger.debug('predicting %d items for user %s', len(items), user)
         if ratings is None:
             if user not in model.users:
+                _logger.debug('user %s missing, returning empty predictions', user)
                 return pd.Series(np.nan, index=items)
             upos = model.users.get_loc(user)
             ratings = pd.Series(model.rating_matrix.row_vs(upos),
@@ -322,6 +323,7 @@ class ItemItem(Trainable, Predictor):
         iscore = np.full(len(model.items), np.nan, dtype=np.float_)
 
         # now compute the predictions
+        _logger.debug('aggregating with function %s', self._predict_agg)
         iscore = self._predict_agg(model.sim_matrix,
                                    len(model.items),
                                    (self.min_neighbors, self.max_neighbors),
@@ -345,38 +347,52 @@ class ItemItem(Trainable, Predictor):
     def save_model(self, model, path):
         path = pathlib.Path(path)
         _logger.info('saving I-I model to %s', path)
-        path.mkdir(parents=True, exist_ok=True)
 
-        imeans = pd.DataFrame({'item': model.items.values, 'mean': model.means})
-        imeans.to_parquet(str(path / 'items.parquet'))
-
-        mat = model.sim_matrix
-        row = matrix.csr_rowinds(mat)
-        coo_df = pd.DataFrame({'item': row, 'neighbor': mat.colinds, 'similarity': mat.values})
-        coo_df.to_parquet(str(path / 'similarities.parquet'))
-
-        model.rating_matrix.reset_index().to_parquet(str(path / 'ratings.parquet'))
+        np.savez_compressed(path, items=model.items.values, users=model.users.values,
+                            means=model.means,
+                            s_rows=matrix.csr_rowinds(model.sim_matrix),
+                            s_cols=model.sim_matrix.colinds,
+                            s_vals=model.sim_matrix.values,
+                            r_rows=matrix.csr_rowinds(model.rating_matrix),
+                            r_cols=model.rating_matrix.colinds,
+                            r_vals=model.rating_matrix.values)
 
     def load_model(self, path):
         path = pathlib.Path(path)
+        path = util.npz_path(path)
         _logger.info('loading I-I model from %s', path)
 
-        imeans = pd.read_parquet(str(path / 'items.parquet'))
-        items = pd.Index(imeans.item)
-        means = imeans['mean'].values
+        with np.load(path) as npz:
+            items = npz['items']
+            users = npz['users']
+            means = npz['means']
+            s_rows = npz['s_rows']
+            s_cols = npz['s_cols']
+            s_vals = npz['s_vals']
+            r_rows = npz['r_rows']
+            r_cols = npz['r_cols']
+            r_vals = npz['r_vals']
+
+        if means.dtype == np.object:
+            means = None
+        if r_vals.dtype == np.object:
+            r_vals = None
+
+        _logger.info('means: %r', means)
+        _logger.info('r_vals: %r', r_vals)
+
+        items = pd.Index(items, name='item')
+        users = pd.Index(users, name='user')
         nitems = len(items)
+        nusers = len(users)
 
-        coo_df = pd.read_parquet(str(path / 'similarities.parquet'))
-        _logger.info('read %d similarities for %d items', len(coo_df), nitems)
-        csr = matrix.csr_from_coo(coo_df['item'].values, coo_df['neighbor'].values,
-                                  coo_df['similarity'].values,
-                                  shape=(nitems, nitems))
-        csr.sort_values()
+        s_mat = matrix.csr_from_coo(s_rows, s_cols, s_vals, shape=(nitems, nitems))
+        r_mat = matrix.csr_from_coo(r_rows, r_cols, r_vals, shape=(nusers, nitems))
+        s_mat.sort_values()
 
-        rmat = pd.read_parquet(str(path / 'ratings.parquet'))
-        rmat = rmat.set_index(['user', 'item'])
+        _logger.info('read %d similarities for %d items', s_mat.nnz, nitems)
 
-        return IIModel(items, means, np.diff(csr.rowptrs), csr, rmat)
+        return IIModel(items, means, s_mat.row_nnzs(), s_mat, users, r_mat)
 
     def __str__(self):
         return 'ItemItem(nnbrs={}, msize={})'.format(self.max_neighbors, self.save_neighbors)

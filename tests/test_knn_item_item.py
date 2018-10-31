@@ -347,6 +347,7 @@ def test_ii_save_load(tmp_path):
         assert all(np.diff(row.data) < 1.0e-6)
 
 
+@mark.slow
 def test_ii_implicit_save_load(tmp_path):
     "Save and load a model"
     tmp_path = lktu.norm_path(tmp_path)
@@ -373,7 +374,8 @@ def test_ii_implicit_save_load(tmp_path):
     assert model.counts.sum() == model.sim_matrix.nnz
     assert model.sim_matrix.nnz == original.sim_matrix.nnz
     assert all(model.sim_matrix.rowptrs == original.sim_matrix.rowptrs)
-    assert model.sim_matrix.values is None
+    assert model.sim_matrix.values == approx(original.sim_matrix.values)
+    assert model.rating_matrix.values is None
 
     r_mat = model.sim_matrix
     o_mat = original.sim_matrix
