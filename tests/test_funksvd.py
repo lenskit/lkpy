@@ -147,7 +147,12 @@ def test_fsvd_known_preds():
     assert not any(merged.prediction.isna() & merged.expected.notna())
     err = merged.error
     err = err[err.notna()]
-    assert all(err.abs() < 0.01)
+    try:
+        assert all(err.abs() < 0.01)
+    except AssertionError as e:
+        bad = merged[merged.error.notna() & (merged.error.abs() >= 0.01)]
+        _log.error('erroneous predictions:\n%s', bad)
+        raise e
 
 
 @mark.slow
