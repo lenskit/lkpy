@@ -48,8 +48,8 @@ def _mkl_check_return(rv, call='<unknown>'):
 def _mkl_basic_descr():
     desc = _mkl_ffi.new('struct matrix_descr*')
     desc.type = 20  # general matrix
-    # desc.mode = 42  # full matrix
-    # desc.diag = 50  # non-unit diagonal
+    desc.mode = 0
+    desc.diag = 0
     return desc
 
 

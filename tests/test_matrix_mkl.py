@@ -10,8 +10,8 @@ mkl_ops = lm.mkl_ops()
 @mark.skipif(mkl_ops is None, reason='MKL not available')
 def test_mkl_mult_vec():
     for i in range(50):
-        m = np.random.randint(100)
-        n = np.random.randint(100)
+        m = np.random.randint(5, 100)
+        n = np.random.randint(5, 100)
 
         M = np.random.randn(m, n)
         M[M <= 0] = 0
