@@ -228,3 +228,31 @@ def test_uu_batch_accuracy():
 
     user_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
     assert user_rmse.mean() == approx(0.91, abs=0.05)
+
+
+@mark.slow
+@mark.eval
+@mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
+def test_uu_implicit_batch_accuracy():
+    from lenskit import batch, topn
+    import lenskit.crossfold as xf
+    import lenskit.metrics.topn as lm
+
+    ratings = lktu.ml100k.load_ratings()
+
+    algo = knn.UserUser(30, center=False, aggregate='sum')
+
+    folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
+    rec_lists = []
+    for train, test in folds:
+        _log.info('running training')
+        model = algo.train(train.loc[:, ['user', 'item']])
+        cands = topn.UnratedCandidates(train)
+        _log.info('testing %d users', test.user.nunique())
+        recs = batch.recommend(algo, model, test.user.unique(), 100, cands, test)
+        rec_lists.append(recs)
+    recs = pd.concat(rec_lists)
+
+    user_ndcg = recs.groupby('user').rating.apply(lm.ndcg)
+    ndcg = user_ndcg.mean()
+    assert ndcg >= 0.1

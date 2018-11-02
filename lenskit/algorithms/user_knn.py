@@ -140,7 +140,7 @@ class UserUser(Trainable, Predictor):
 
         _logger.debug('computed user similarities')
 
-        results = pd.Series(np.nan, index=items, name='prediction')
+        results = np.full(len(items), np.nan, dtype=np.float_)
         ri_pos = model.items.get_indexer(items.values)
         for i in range(len(results)):
             ipos = ri_pos[i]
@@ -168,7 +168,9 @@ class UserUser(Trainable, Predictor):
             ism = i_sims[mask]
             v = np.dot(i_rates[mask], ism)
             v = v / np.sum(ism)
-            results.iloc[i] = v + umean
+            results[i] = v + umean
+
+        results = pd.Series(results, index=items, name='prediction')
 
         _logger.debug('scored %d of %d items for %s in %s',
                       results.notna().sum(), len(items), user, watch)
