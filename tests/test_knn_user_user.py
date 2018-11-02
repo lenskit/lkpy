@@ -148,6 +148,7 @@ def test_uu_implicit():
 @mark.slow
 def test_uu_save_load_implicit(tmp_path):
     "Save and load user-user on an implicit data set."
+    tmp_path = lktu.norm_path(tmp_path)
     algo = knn.UserUser(20, center=False, aggregate='sum')
     data = ml_ratings.loc[:, ['user', 'item']]
 
