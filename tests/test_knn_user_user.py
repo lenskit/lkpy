@@ -6,6 +6,7 @@ import logging
 
 import pandas as pd
 import numpy as np
+from scipy import sparse as sps
 
 from pytest import approx, mark
 
@@ -22,9 +23,7 @@ def test_uu_train():
 
     # it should have computed correct means
     umeans = ml_ratings.groupby('user').rating.mean()
-    mlmeans = model.user_means
-    assert mlmeans.index.name == 'user'
-    assert mlmeans.name == 'mean'
+    mlmeans = pd.Series(model.user_means, index=model.users, name='mean')
     umeans, mlmeans = umeans.align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
@@ -32,11 +31,11 @@ def test_uu_train():
     uir = ml_ratings.set_index(['user', 'item']).rating
     r_items = matrix.csr_rowinds(model.transpose)
     ui_rbdf = pd.DataFrame({
-        'user': model.user_means.index[model.transpose.colinds],
+        'user': model.users[model.transpose.colinds],
         'item': model.items[r_items],
         'nrating': model.transpose.values
     }).set_index(['user', 'item'])
-    ui_rbdf = ui_rbdf.join(model.user_means)
+    ui_rbdf = ui_rbdf.join(mlmeans)
     ui_rbdf['rating'] = ui_rbdf['nrating'] + ui_rbdf['mean']
     ui_rbdf['orig_rating'] = uir
     assert ui_rbdf.rating.values == approx(ui_rbdf.orig_rating.values)
@@ -102,7 +101,7 @@ def test_uu_save_load(tmp_path):
 
     # it should have computed correct means
     umeans = ml_ratings.groupby('user').rating.mean()
-    mlmeans = model.user_means
+    mlmeans = pd.Series(model.user_means, index=model.users)
     umeans, mlmeans = umeans.align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
@@ -127,6 +126,47 @@ def test_uu_predict_unknown_empty():
     preds = algo.predict(model, -28018, [1016, 2091])
     assert len(preds) == 2
     assert all(preds.isna())
+
+
+def test_uu_implicit():
+    "Train and use user-user on an implicit data set."
+    algo = knn.UserUser(20, center=False, aggregate='sum')
+    data = ml_ratings.loc[:, ['user', 'item']]
+
+    model = algo.train(data)
+    assert model is not None
+    assert model.user_means is None
+
+    mat = matrix.csr_to_scipy(model.matrix)
+    norms = sps.linalg.norm(mat, 2, 1)
+    assert norms == approx(1.0)
+
+    preds = algo.predict(model, 50, [1, 2, 42])
+    assert all(preds[preds.notna()] > 0)
+
+
+@mark.slow
+def test_uu_save_load_implicit(tmp_path):
+    "Save and load user-user on an implicit data set."
+    algo = knn.UserUser(20, center=False, aggregate='sum')
+    data = ml_ratings.loc[:, ['user', 'item']]
+
+    original = algo.train(data)
+    algo.save_model(original, tmp_path / 'uu.mod')
+
+    model = algo.load_model(tmp_path / 'uu.mod')
+    assert model is not None
+    assert model.user_means is None
+    assert all(model.users == original.users)
+    assert all(model.items == original.items)
+
+    assert all(model.matrix.rowptrs == original.matrix.rowptrs)
+    assert all(model.matrix.colinds == original.matrix.colinds)
+    assert all(model.matrix.values == original.matrix.values)
+
+    assert all(model.transpose.rowptrs == original.transpose.rowptrs)
+    assert all(model.transpose.colinds == original.transpose.colinds)
+    assert model.transpose.values is None
 
 
 @mark.slow
