@@ -1,3 +1,4 @@
+from itertools import product
 import numpy as np
 import scipy.sparse as sps
 
@@ -213,3 +214,36 @@ def test_csr_to_sps():
         ep = smat2.indptr[i+1]
         assert all(smat2.indices[sp:ep] == csr.colinds[sp:ep])
         assert all(smat2.data[sp:ep] == csr.values[sp:ep])
+
+
+@mark.parametrize("prefix,values", product([None, 'p_'], [True, False]))
+def test_csr_save_load(tmp_path, prefix, values):
+    coords = np.random.choice(np.arange(50 * 100, dtype=np.int32), 1000, False)
+    rows = np.mod(coords, 100, dtype=np.int32)
+    cols = np.floor_divide(coords, 100, dtype=np.int32)
+    if values:
+        vals = np.random.randn(1000)
+    else:
+        vals = None
+
+    csr = lm.csr_from_coo(rows, cols, vals, (100, 50))
+    assert csr.nrows == 100
+    assert csr.ncols == 50
+    assert csr.nnz == 1000
+
+    data = lm.csr_save(csr, prefix=prefix)
+
+    np.savez_compressed(tmp_path / 'matrix.npz', **data)
+
+    with np.load(tmp_path / 'matrix.npz') as npz:
+        csr2 = lm.csr_load(npz, prefix=prefix)
+
+    assert csr2.nrows == csr.nrows
+    assert csr2.ncols == csr.ncols
+    assert csr2.nnz == csr.nnz
+    assert all(csr2.rowptrs == csr.rowptrs)
+    assert all(csr2.colinds == csr.colinds)
+    if values:
+        assert all(csr2.values == csr.values)
+    else:
+        assert csr2.values is None

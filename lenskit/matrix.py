@@ -187,6 +187,8 @@ def csr_from_coo(rows, cols, vals, shape=None):
         ncols = np.max(cols) + 1
 
     nnz = len(rows)
+    assert len(cols) == nnz
+    assert vals is None or len(vals) == nnz
 
     rowptrs = np.zeros(nrows + 1, dtype=np.int32)
     align = np.full(nnz, -1, dtype=np.int32)
@@ -270,6 +272,61 @@ def csr_rowinds(csr):
         np.ndarray: the row index array for the CSR matrix.
     """
     return np.repeat(np.arange(csr.nrows), np.diff(csr.rowptrs))
+
+
+def csr_save(csr: CSR, prefix=None):
+    """
+    Extract data needed to save a CSR matrix.  This is intended to be used with, for
+    example, :py:fun:`numpy.savez` to save a matrix::
+
+        np.savez_compressed('file.npz', **csr_save(csr))
+
+    The ``prefix`` allows multiple matrices to be saved in a single file::
+
+        data = {}
+        data.update(csr_save(m1, prefix='m1'))
+        data.update(csr_save(m2, prefix='m2'))
+        np.savez_compressed('file.npz', **data)
+
+    Args:
+        csr(CSR): the matrix to save.
+        prefix(str): the prefix for the data keys.
+
+    Returns:
+        dict: a dictionary of data to save the matrix.
+    """
+    if prefix is None:
+        prefix = ''
+    return {
+        prefix + 'ncols': csr.ncols,
+        prefix + 'nrows': csr.nrows,
+        prefix + 'rowptrs': csr.rowptrs,
+        prefix + 'colinds': csr.colinds,
+        prefix + 'values': csr.values
+    }
+
+
+def csr_load(data, prefix=None):
+    """
+    Rematerialize a CSR matrix from loaded data.  The inverse of :py:fun:`csr_save`.
+
+    Args:
+        data(dict-like): the input data.
+        prefix(str): the prefix for the data keys.
+
+    Returns:
+        CSR: the matrix described by ``data``.
+    """
+    if prefix is None:
+        prefix = ''
+    ncols = int(data[prefix + 'ncols'])
+    nrows = int(data[prefix + 'nrows'])
+    rowptrs = data[prefix + 'rowptrs']
+    colinds = data[prefix + 'colinds']
+    values = data[prefix + 'values']
+    if values.ndim == 0:
+        values = None
+    return CSR(nrows, ncols, len(colinds), rowptrs, colinds, values)
 
 
 def sparse_ratings(ratings, scipy=False):
