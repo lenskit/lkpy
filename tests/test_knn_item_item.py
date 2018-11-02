@@ -460,6 +460,7 @@ def test_ii_known_preds():
     model = algo.train(lktu.ml_pandas.renamed.ratings)
     assert algo.center
     assert model.means is not None
+    _log.info('model means: %s', model.means)
 
     dir = Path(__file__).parent
     pred_file = dir / 'item-item-preds.csv'

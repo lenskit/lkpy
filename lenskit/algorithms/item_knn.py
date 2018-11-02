@@ -19,6 +19,18 @@ _logger = logging.getLogger(__name__)
 
 IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix',
                                  'users', 'rating_matrix'])
+IIModel.__doc__ = """
+Item-item recommendation model.  This stores the necessary data to run the item-based k-NN
+recommender.
+
+Attributes:
+    items(pandas.Index): the index of item IDs.
+    means(numpy.ndarray): the mean rating for each known item.
+    counts(numpy.ndarray): the number of saved neighbors for each item.
+    sim_matrix(matrix.CSR): the similarity matrix.
+    users(pandas.Index): the index of known user IDs for the rating matrix.
+    rating_matrix(matrix.CSR): the user-item rating matrix for looking up users' ratings.
+"""
 
 
 @njit(nogil=True)
@@ -177,9 +189,11 @@ class ItemItem(Trainable, Predictor):
 
         item_means = ratings.groupby('item').rating.mean()
         item_means = item_means.reindex(items).values
-        rmat.values = rmat.values - item_means[rmat.colinds]
+        mcvals = rmat.values - item_means[rmat.colinds]
+        nmat = matrix.CSR(rmat.nrows, rmat.ncols, rmat.nnz,
+                          rmat.rowptrs.copy(), rmat.colinds.copy(), mcvals)
         _logger.info('[%s] computed means for %d items', self._timer, len(item_means))
-        return rmat, item_means
+        return nmat, item_means
 
     def _normalize(self, rmat):
         rmat = matrix.csr_to_scipy(rmat)
@@ -306,6 +320,7 @@ class ItemItem(Trainable, Predictor):
         m_rates = ratings[ri_pos >= 0]
         ri_pos = ri_pos[ri_pos >= 0]
         rate_v = np.full(len(model.items), np.nan, dtype=np.float_)
+        # mean-center the rating array
         if self.center:
             rate_v[ri_pos] = m_rates.values - model.means[ri_pos]
         else:
