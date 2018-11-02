@@ -3,6 +3,7 @@ import numpy as np
 import scipy.sparse as sps
 
 import lenskit.matrix as lm
+import lk_test_utils as lktu
 
 from pytest import mark, approx
 
@@ -218,6 +219,7 @@ def test_csr_to_sps():
 
 @mark.parametrize("prefix,values", product([None, 'p_'], [True, False]))
 def test_csr_save_load(tmp_path, prefix, values):
+    tmp_path = lktu.norm_path(tmp_path)
     coords = np.random.choice(np.arange(50 * 100, dtype=np.int32), 1000, False)
     rows = np.mod(coords, 100, dtype=np.int32)
     cols = np.floor_divide(coords, 100, dtype=np.int32)
