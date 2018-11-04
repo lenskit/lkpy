@@ -89,6 +89,12 @@ jobs:
       architecture: 'x64'
 
   - script: |
+      echo git hash $GIT_COMMIT_SHA
+      echo git branch $GIT_BRANCH
+      echo Python $(python.version)
+    displayName: 'Inspect environment'
+
+  - script: |
       python -m pip install --upgrade pip
       pip install $(pip.deps)
     displayName: 'Install dependencies'
