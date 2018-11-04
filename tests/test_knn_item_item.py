@@ -8,7 +8,6 @@ import os.path
 import pandas as pd
 import numpy as np
 from scipy import linalg as la
-from scipy import sparse as sps
 
 import pytest
 from pytest import approx, mark
@@ -104,6 +103,18 @@ def test_ii_simple_predict():
     assert len(res) == 1
     assert 6 in res.index
     assert not np.isnan(res.loc[6])
+
+
+def test_ii_simple_implicit_predict():
+    algo = knn.ItemItem(30, center=False, aggregate='sum')
+    model = algo.train(simple_ratings.loc[:, ['user', 'item']])
+
+    res = algo.predict(model, 3, [6])
+    assert res is not None
+    assert len(res) == 1
+    assert 6 in res.index
+    assert not np.isnan(res.loc[6])
+    assert res.loc[6] > 0
 
 
 @mark.slow
@@ -486,7 +497,6 @@ def test_ii_known_preds():
 @mark.slow
 @mark.eval
 def test_ii_batch_recommend():
-    from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch, topn
     import lenskit.metrics.topn as lm
