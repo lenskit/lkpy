@@ -6,10 +6,13 @@ import os
 import os.path
 import tempfile
 import pathlib
+import logging
 from contextlib import contextmanager
 
 import pandas as pd
 import pytest
+
+_log = logging.getLogger('lktu')
 
 ml_dir = os.path.join(os.path.dirname(__file__), '../ml-latest-small')
 
@@ -71,6 +74,16 @@ class _ML100K:
     def load_ratings(self):
         return pd.read_csv(self.rating_file, sep='\t',
                            names=['user', 'item', 'rating', 'timestamp'])
+
+
+def ml_sample():
+    ratings = ml_pandas.renamed.ratings
+    icounts = ratings.groupby('item').rating.count()
+    top = icounts.nlargest(500)
+    ratings = ratings.set_index('item')
+    top_rates = ratings.loc[top.index, :]
+    _log.info('top 500 items yield %d of %d ratings', len(top_rates), len(ratings))
+    return top_rates.reset_index()
 
 
 ml100k = _ML100K()

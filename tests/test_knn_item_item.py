@@ -299,13 +299,12 @@ def test_ii_large_models():
             assert all(ubs_except_min.index.isin(b_nbrs.index))
 
 
-@mark.slow
 def test_ii_save_load(tmp_path):
     "Save and load a model"
     tmp_path = lktu.norm_path(tmp_path)
     algo = knn.ItemItem(30, save_nbrs=500)
     _log.info('building model')
-    original = algo.train(ml_ratings)
+    original = algo.train(lktu.ml_sample())
 
     fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
@@ -358,13 +357,12 @@ def test_ii_save_load(tmp_path):
         assert all(np.diff(row.data) < 1.0e-6)
 
 
-@mark.slow
 def test_ii_implicit_save_load(tmp_path):
     "Save and load a model"
     tmp_path = lktu.norm_path(tmp_path)
     algo = knn.ItemItem(30, save_nbrs=500, center=False, aggregate='sum')
     _log.info('building model')
-    original = algo.train(ml_ratings.loc[:, ['user', 'item']])
+    original = algo.train(lktu.ml_sample().loc[:, ['user', 'item']])
 
     fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)

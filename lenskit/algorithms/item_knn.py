@@ -393,9 +393,6 @@ class ItemItem(Trainable, Predictor):
         if r_vals.dtype == np.object:
             r_vals = None
 
-        _logger.info('means: %r', means)
-        _logger.info('r_vals: %r', r_vals)
-
         items = pd.Index(items, name='item')
         users = pd.Index(users, name='user')
         nitems = len(items)
