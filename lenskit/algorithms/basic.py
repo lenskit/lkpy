@@ -24,9 +24,9 @@ class Bias(Predictor, Trainable):
     predictor algorithm:
 
     .. math::
-       s(u,i) = \mu + b_i + b_u
+       s(u,i) = \\mu + b_i + b_u
 
-    where :math:`\mu` is the global mean rating, :math:`b_i` is item bias, and
+    where :math:`\\mu` is the global mean rating, :math:`b_i` is item bias, and
     :math:`b_u` is the user bias.  With the provided damping values
     :math:`\\beta_{\\mathrm{u}}` and :math:`\\beta_{\\mathrm{i}}`, they are computed
     as follows:
