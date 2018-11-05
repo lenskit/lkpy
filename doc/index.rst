@@ -45,6 +45,7 @@ Resources
    quickstart
    crossfold
    batch
+   evaluation
    algorithms
    util
 
