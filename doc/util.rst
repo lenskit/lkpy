@@ -16,6 +16,7 @@ Building Ratings Matrices
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autofunction:: sparse_ratings
+.. autoclass:: RatingMatrix
 
 Compressed Sparse Row Matrices
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -27,6 +28,9 @@ be used from accelerated algorithm implementations.
 .. autofunction:: csr_from_coo
 .. autofunction:: csr_from_scipy
 .. autofunction:: csr_to_scipy
+.. autofunction:: csr_rowinds
+.. autofunction:: csr_save
+.. autofunction:: csr_load
 
 .. autoclass:: CSR
     :members:

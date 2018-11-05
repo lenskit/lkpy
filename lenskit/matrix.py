@@ -15,6 +15,15 @@ from numba import njit, jitclass, prange
 _logger = logging.getLogger(__name__)
 
 RatingMatrix = namedtuple('RatingMatrix', ['matrix', 'users', 'items'])
+RatingMatrix.__doc__ = """
+A rating matrix with associated indices.
+
+Attributes:
+    matrix(CSR or scipy.sparse.csr_matrix):
+        The rating matrix, with users on rows and items on columns.
+    users(pandas.Index): mapping from user IDs to row numbers.
+    items(pandas.Index): mapping from item IDs to column numbers.
+"""
 
 
 def mkl_ops():
