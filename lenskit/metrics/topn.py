@@ -37,6 +37,9 @@ def recall(recs, relevant):
     Args:
         recs(array-like): a sequence of recommended items
         relevant(set-like): the set of relevant items
+
+    Returns:
+        double: the fraction of relevant items that were recommended.
     """
     check.check_value(not isinstance(relevant, set),
                       "set type not supported for relevant set",
@@ -52,10 +55,14 @@ def recall(recs, relevant):
 def recip_rank(recs, relevant):
     """
     Compute the reciprocal rank of the first relevant item in a recommendation list.
+    This is used to compute MRR.
 
     Args:
         recs(array-like): a sequence of recommended items
         relevant(set-like): the set of relevant items
+
+    Return:
+        double: the reciprocal rank of the first relevant item.
     """
     check.check_value(not isinstance(relevant, set),
                       "set type not supported for relevant set",
@@ -80,6 +87,14 @@ def ndcg(scores, items=None, discount=np.log2):
     Compute the Normalized Discounted Cumulative Gain of a series of scores.  These should be
     relevance scores; they can be :math:`{0,1}` for binary relevance data.
 
+    Discounted cumultative gain is computed as:
+
+    .. math::
+        \\begin{align*}
+        \\mathrm{DCG}(L,u) & = \\sum_{i=1}^{|L|} \\frac{r_{ui}}{d(i)} & \\\\
+        \\mathrm{nDCG}(L, u) & = \\frac{\\mathrm{DCG}(L,u)}{\\mathrm{DCG}(L_{\\mathrm{ideal}}, u)}
+        \\end{align*}
+
     Args:
         scores(pd.Series or array-like):
             relevance scores for items. If ``items`` is ``None``, these should be in order
@@ -92,7 +107,7 @@ def ndcg(scores, items=None, discount=np.log2):
             if the discount is greater than 1.
 
     Returns:
-        The nDCG of the scored items.
+        double: the nDCG of the scored items.
     """
 
     if not isinstance(scores, pd.Series):
