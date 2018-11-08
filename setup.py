@@ -36,6 +36,13 @@ setup(
     tests_require=[
         'pytest >= 3.9'
     ],
+    extras_require={
+        'docs': [
+            'sphinx >= 1.8',
+            'sphinx_rtd_theme',
+            'nbsphinx'
+        ]
+    }
 
     packages=find_packages()
 )

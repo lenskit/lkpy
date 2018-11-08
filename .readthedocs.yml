@@ -4,3 +4,6 @@ build:
 python:
   version: 3.6
   setup_py_install: true
+  pip_install: true
+  extra_requirements:
+  - docs

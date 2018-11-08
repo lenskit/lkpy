@@ -42,7 +42,7 @@ Resources
    :maxdepth: 2
    :caption: Contents:
 
-   quickstart
+   GettingStarted
    crossfold
    batch
    evaluation
