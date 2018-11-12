@@ -42,7 +42,6 @@ setup(
             'sphinx_rtd_theme',
             'nbsphinx'
         ]
-    }
-
+    },
     packages=find_packages()
 )
