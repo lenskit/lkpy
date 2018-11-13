@@ -30,7 +30,7 @@ setup(
         'pandas',
         'numpy',
         'scipy',
-        'numba >= 0.40',
+        'numba >= 0.38',
         'pyarrow'
     ],
     tests_require=[
