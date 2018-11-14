@@ -34,13 +34,17 @@ setup(
         'pyarrow'
     ],
     tests_require=[
-        'pytest >= 3.9'
+        'pytest >= 3.9',
+        'hpfrec'
     ],
     extras_require={
         'docs': [
             'sphinx >= 1.8',
             'sphinx_rtd_theme',
             'nbsphinx'
+        ],
+        'hpf': [
+            'hpfrec'
         ]
     },
     packages=find_packages()
