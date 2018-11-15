@@ -44,6 +44,9 @@ setup(
         ],
         'hpf': [
             'hpfrec'
+        ],
+        'implicit': [
+            'implicit'
         ]
     },
     packages=find_packages()

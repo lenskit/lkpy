@@ -35,7 +35,7 @@ jobs:
       packageSpecs: $(conda.deps)
       updateConda: false
   
-  - script: pip install $(pip.extras)
+  - script: sudo pip install $(pip.extras)
     displayName: 'Extra PyPI deps'
     
   - script: |
@@ -226,7 +226,7 @@ jobs:
       createCustomEnvironment: true
       environmentName: lkpy
       packageSpecs: $(conda.deps)
-    
+
   - script: pip install $(pip.extras)
     displayName: 'Extra PyPI deps'
 
@@ -259,7 +259,10 @@ jobs:
       packageSpecs: $(conda.deps)
       updateConda: false
 
-  - script: pip install $(pip.extras)
+  - script: sudo conda install llvm-openmp
+    displayName: 'Install OpenMP'
+
+  - script: sudo pip install $(pip.extras)
     displayName: 'Extra PyPI deps'
 
   - script: |
