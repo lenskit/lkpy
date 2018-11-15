@@ -6,11 +6,13 @@ variables:
   conda.deps: >
     python=$(python.version)
     pandas scipy pytables fastparquet python-snappy numba cffi
-    invoke coverage pytest pytest-cov
+    invoke coverage pytest pytest-cov cython
   pip.deps: >
     invoke pytest coverage pytest-cov
     pandas scipy pyarrow
-    numba
+    numba cython
+  pip.extras: >
+    hpfrec
 
 jobs:
 
@@ -32,6 +34,9 @@ jobs:
       environmentName: lkpy
       packageSpecs: $(conda.deps)
       updateConda: false
+  
+  - script: pip install $(pip.extras)
+    displayName: 'Extra PyPI deps'
     
   - script: |
       if [ ! -r ~/ml-100k/u.data ]; then
@@ -98,6 +103,9 @@ jobs:
       python -m pip install --upgrade pip
       pip install $(pip.deps)
     displayName: 'Install dependencies'
+  
+  - script: pip install $(pip.extras)
+    displayName: 'Extra PyPI deps'
 
   - script: |
       if [ ! -r ~/ml-100k/u.data ]; then
@@ -218,6 +226,9 @@ jobs:
       createCustomEnvironment: true
       environmentName: lkpy
       packageSpecs: $(conda.deps)
+    
+  - script: pip install $(pip.extras)
+    displayName: 'Extra PyPI deps'
 
   - script: |
       python -V
@@ -247,6 +258,9 @@ jobs:
       environmentName: lkpy
       packageSpecs: $(conda.deps)
       updateConda: false
+
+  - script: pip install $(pip.extras)
+    displayName: 'Extra PyPI deps'
 
   - script: |
       if [ ! -r ~/ml-100k/u.data ]; then

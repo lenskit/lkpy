@@ -34,8 +34,7 @@ setup(
         'pyarrow'
     ],
     tests_require=[
-        'pytest >= 3.9',
-        'hpfrec'
+        'pytest >= 3.9'
     ],
     extras_require={
         'docs': [
