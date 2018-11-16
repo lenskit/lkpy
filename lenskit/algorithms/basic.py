@@ -9,16 +9,23 @@ import pathlib
 import pandas as pd
 
 from .. import util as lku
-from .. import check
-from . import Predictor, Trainable, Recommender
+from .. import check, sharing
+from . import Predictor, Trainable, Shareable, Recommender
 
 _logger = logging.getLogger(__name__)
 
 BiasModel = namedtuple('BiasModel', ['mean', 'items', 'users'])
-BiasModel.__doc__ = "Trained model for the :py:class:`Bias` algorithm."
+BiasModel.__doc__ = '''
+Trained model for the :py:class:`Bias` algorithm.
+
+Attributes:
+    mean(double): the global mean.
+    items(pandas.Series): the item means.
+    users(pandas.Series): the user means.
+'''
 
 
-class Bias(Predictor, Trainable):
+class Bias(Predictor, Trainable, Shareable):
     """
     A user-item bias rating prediction algorithm.  This implements the following
     predictor algorithm:
@@ -144,6 +151,28 @@ class Bias(Predictor, Trainable):
             return series.sum() / (series.count() + damping)
         else:
             return series.mean()
+
+    def share_publish(self, model: BiasModel, context):
+        i_k = None
+        u_k = None
+
+        if model.items is not None:
+            i_k = context.put_series(model.items)
+
+        if model.users is not None:
+            u_k = context.put_series(model.users)
+
+        return BiasModel(model.mean, i_k, u_k)
+
+    def share_resolve(self, key, context):
+        items = None
+        users = None
+        if key.items is not None:
+            items = context.get_series(key.items)
+        if key.users is not None:
+            users = context.get_series(key.users)
+
+        return BiasModel(key.mean, items, users)
 
     def __str__(self):
         return 'Bias(ud={}, id={})'.format(self.user_damping, self.item_damping)

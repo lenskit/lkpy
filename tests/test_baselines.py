@@ -1,3 +1,4 @@
+from lenskit import sharing
 import lenskit.algorithms.basic as bl
 
 import os.path
@@ -6,10 +7,12 @@ import logging
 import pandas as pd
 import numpy as np
 
-from pytest import approx
+from pytest import approx, mark
 
 import lk_test_utils as lktu
 from lk_test_utils import ml_pandas
+
+share_impls = [sharing.DiskShareContext]
 
 _log = logging.getLogger(__name__)
 
@@ -243,3 +246,31 @@ def test_bias_save(tmp_path):
     assert set(model.users.index) == set([10, 12, 13])
     assert model.users.loc[[10, 12, 13]].values == \
         approx(np.array([0.25, -00.08333, -0.20833]), abs=1.0e-4)
+
+
+@mark.parametrize('impl', share_impls)
+def test_bias_share(impl):
+    algo = bl.Bias(damping=5)
+    original = algo.train(simple_df)
+    assert original.mean == approx(3.5)
+
+    with impl() as ctx:
+        _log.info('sharing to %s', ctx)
+        key = algo.share_publish(original, ctx)
+
+        model = algo.share_resolve(key, ctx)
+        assert model is not original
+        assert model.mean == original.mean
+
+        assert model.items is not None
+        assert model.items.index.name == 'item'
+        assert set(model.items.index) == set([1, 2, 3])
+        assert model.items.loc[1:3].values == approx(np.array([0, 0.25, -0.25]))
+
+        assert model.users is not None
+        assert model.users.index.name == 'user'
+        assert set(model.users.index) == set([10, 12, 13])
+        assert model.users.loc[[10, 12, 13]].values == \
+            approx(np.array([0.25, -00.08333, -0.20833]), abs=1.0e-4)
+
+        del model

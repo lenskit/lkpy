@@ -131,3 +131,11 @@ class Trainable(metaclass=ABCMeta):
         path = pathlib.Path(path)
         with path.open('rb') as f:
             return pickle.load(f)
+
+
+class Shareable(metaclass=ABCMeta):
+    def share_publish(self, model, context):
+        raise NotImplemented()
+
+    def share_resolve(self, key, context):
+        raise NotImplemented()
