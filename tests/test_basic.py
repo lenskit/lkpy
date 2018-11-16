@@ -9,8 +9,6 @@ import numpy as np
 import lk_test_utils as lktu
 from pytest import approx, mark
 
-share_impls = [sharing.DiskShareContext]
-
 simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
                           'user': [10, 12, 10, 13],
                           'rating': [4.0, 3.0, 5.0, 2.0]})
@@ -208,7 +206,7 @@ def test_pop_save_load(tmp_path):
     assert all(counts.index[:10] == recs.item[:10])
 
 
-@mark.parametrize('impl', share_impls)
+@mark.parametrize('impl', sharing.share_impls)
 def test_pop_share(impl):
     algo = basic.Popular()
     original = algo.train(lktu.ml_pandas.renamed.ratings)

@@ -3,13 +3,22 @@ Support for sharing data between processes to enable multi-process
 evaluation operations more easily.
 """
 
+import os
 from abc import ABCMeta, abstractmethod, abstractclassmethod
-from tempfile import TemporaryDirectory
+import tempfile
+import subprocess
 from pathlib import Path
 import uuid
 
 import numpy as np
 import pandas as pd
+
+import pyarrow as pa
+try:
+    from pyarrow import plasma
+    have_plasma = True
+except ImportError:
+    have_plasma = False
 
 
 _context_stack = []
@@ -59,7 +68,7 @@ class ShareContext(metaclass=ABCMeta):
 class DiskShareContext(ShareContext):
     def __init__(self, path=None):
         if path is None:
-            self._tmp_dir = TemporaryDirectory(prefix='lkpy')
+            self._tmp_dir = tempfile.TemporaryDirectory(prefix='lkpy')
             self.path = Path(self._tmp_dir.name)
         else:
             self.path = Path(path)
@@ -96,6 +105,80 @@ class DiskShareContext(ShareContext):
             _pop_context()
 
 
+class PlasmaShareContext(ShareContext):
+    def __init__(self, path=None, size=None, _child=False):
+        if path is None:
+            path = os.environ.get('PLASMA_SOCKET', None)
+        if size is None:
+            size = os.environ.get('PLASMA_SIZE', 4*1024*1024*1024)
+
+        if path is None:
+            self._dir = tempfile.TemporaryDirectory(prefix='lkpy-plasma')
+            self.socket = Path(self._dir.name) / 'plasma-socket'
+            self.process = subprocess.Popen(['plasma_store', '-m', size, '-s', self.socket],
+                                            stdin=subprocess.DEVNULL)
+        else:
+            self.socket = path
+            self.process = None
+
+        self.client = plasma.connect(self.socket, "", 0)
+
+    def _rand_id(self):
+        return plasma.ObjectID(np.random.bytes(20))
+
+    def put_array(self, array):
+        key = self._rand_id()
+        tensor = pa.Tensor.from_numpy(array)
+        size = pa.get_tensor_size(tensor)
+        buf = self.client.create(key, size)
+
+        sink = pa.FixedSizeBufferWriter(buf)
+        pa.write_tensor(tensor, sink)
+
+        self.client.seal(key)
+
+        return key
+
+    def get_array(self, key):
+        [data] = self.client.get_buffers([key])
+        buffer = pa.BufferReader(data)
+        result = pa.read_tensor(buffer)
+
+        return result.to_numpy()
+
+    def __getstate__(self):
+        return self.path
+
+    def __setstate__(self, state):
+        self.path = state
+        self.process = None
+        self.client = plasma.connect(self.path, "", 0)
+
+    def __enter__(self):
+        _push_context(self)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        try:
+            self._cleanup()
+        finally:
+            _pop_context()
+
+    def __del__(self):
+        self._cleanup()
+
+    def _cleanup(self):
+        if self.client is not None:
+            self.client.disconnect()
+            self.client = None
+
+        if self.process is not None:
+            self.process.terminate()
+            self.process.wait()
+            self.process = None
+            self._dir.cleanup()
+
+
 class Shareable(metaclass=ABCMeta):
     @abstractmethod
     def share_publish(self, context):
@@ -107,3 +190,5 @@ class Shareable(metaclass=ABCMeta):
 
 
 share_impls = [DiskShareContext]
+if have_plasma:
+    share_impls.append(PlasmaShareContext)

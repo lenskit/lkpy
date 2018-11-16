@@ -16,7 +16,7 @@ from lenskit.algorithms.basic import Bias
 import lenskit.batch as lkb
 from lenskit import sharing
 
-share_impls = [None, sharing.DiskShareContext]
+share_impls = [None] + sharing.share_impls
 
 MLB = namedtuple('MLB', ['ratings', 'algo', 'model'])
 MLB.predictor = property(lambda mlb: partial(mlb.algo.predict, mlb.model))

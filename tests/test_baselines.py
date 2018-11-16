@@ -12,8 +12,6 @@ from pytest import approx, mark
 import lk_test_utils as lktu
 from lk_test_utils import ml_pandas
 
-share_impls = [sharing.DiskShareContext]
-
 _log = logging.getLogger(__name__)
 
 simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
@@ -248,7 +246,7 @@ def test_bias_save(tmp_path):
         approx(np.array([0.25, -00.08333, -0.20833]), abs=1.0e-4)
 
 
-@mark.parametrize('impl', share_impls)
+@mark.parametrize('impl', sharing.share_impls)
 def test_bias_share(impl):
     algo = bl.Bias(damping=5)
     original = algo.train(simple_df)
