@@ -178,7 +178,7 @@ class Bias(Predictor, Trainable, Shareable):
         return 'Bias(ud={}, id={})'.format(self.user_damping, self.item_damping)
 
 
-class Popular(Recommender, Trainable):
+class Popular(Recommender, Trainable, Shareable):
     def train(self, ratings):
         pop = ratings.groupby('item').user.count()
         pop.name = 'score'
@@ -195,6 +195,12 @@ class Popular(Recommender, Trainable):
             return scores.sort_values(ascending=False).reset_index()
         else:
             return scores.nlargest(n).reset_index()
+
+    def share_publish(self, model, context):
+        return context.put_series(model)
+
+    def share_resolve(self, key, context):
+        return context.get_series(key)
 
     def __str__(self):
         return 'Popular'
