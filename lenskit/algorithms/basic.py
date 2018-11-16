@@ -10,7 +10,7 @@ import pandas as pd
 
 from .. import util as lku
 from .. import check, sharing
-from . import Predictor, Trainable, Shareable, Recommender
+from . import Predictor, Trainable, Recommender, SharesModel
 
 _logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ Attributes:
 '''
 
 
-class Bias(Predictor, Trainable, Shareable):
+class Bias(Predictor, Trainable, SharesModel):
     """
     A user-item bias rating prediction algorithm.  This implements the following
     predictor algorithm:
@@ -178,7 +178,7 @@ class Bias(Predictor, Trainable, Shareable):
         return 'Bias(ud={}, id={})'.format(self.user_damping, self.item_damping)
 
 
-class Popular(Recommender, Trainable, Shareable):
+class Popular(Recommender, Trainable, SharesModel):
     def train(self, ratings):
         pop = ratings.groupby('item').user.count()
         pop.name = 'score'

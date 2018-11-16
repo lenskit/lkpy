@@ -133,9 +133,11 @@ class Trainable(metaclass=ABCMeta):
             return pickle.load(f)
 
 
-class Shareable(metaclass=ABCMeta):
+class SharesModel(metaclass=ABCMeta):
+    @abstractmethod
     def share_publish(self, model, context):
         raise NotImplemented()
 
+    @abstractmethod
     def share_resolve(self, key, context):
         raise NotImplemented()

@@ -3,13 +3,29 @@ Support for sharing data between processes to enable multi-process
 evaluation operations more easily.
 """
 
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta, abstractmethod, abstractclassmethod
 from tempfile import TemporaryDirectory
 from pathlib import Path
 import uuid
 
 import numpy as np
 import pandas as pd
+
+
+_context_stack = []
+
+
+def current_context():
+    if _context_stack:
+        return _context_stack[-1]
+
+
+def _push_context(ctx):
+    _context_stack.append(ctx)
+
+
+def _pop_context():
+    _context_stack.pop()
 
 
 class ShareContext(metaclass=ABCMeta):
@@ -61,9 +77,30 @@ class DiskShareContext(ShareContext):
         fn = fn.with_suffix('.npy')
         return np.load(fn)
 
+    def __getstate__(self):
+        return self.path
+
+    def __setstate__(self, state):
+        self.path = state
+        self._tmp_dir = None
+
     def __enter__(self):
+        _push_context(self)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self._tmp_dir is not None:
-            self._tmp_dir.cleanup()
+        try:
+            if self._tmp_dir is not None:
+                self._tmp_dir.cleanup()
+        finally:
+            _pop_context()
+
+
+class Shareable(metaclass=ABCMeta):
+    @abstractmethod
+    def share_publish(self, context):
+        raise NotImplemented()
+
+    @abstractclassmethod
+    def share_resolve(self, key, context):
+        raise NotImplemented()

@@ -8,12 +8,13 @@ import collections
 from time import perf_counter
 from functools import partial
 import warnings
+from multiprocessing.pool import Pool
 
 import pandas as pd
 import numpy as np
 
-from .algorithms import Predictor, Recommender
-from . import topn, util
+from .algorithms import Predictor, Recommender, SharesModel
+from . import topn, util, sharing
 
 try:
     import fastparquet
@@ -61,7 +62,41 @@ def predict(algo, pairs, model=None):
     return res
 
 
-def recommend(algo, model, users, n, candidates, ratings=None):
+def _recommend_user(algo, model, user, n, candidates):
+    _logger.debug('generating recommendations for %s', user)
+    res = algo.recommend(model, user, n, candidates)
+    iddf = pd.DataFrame({'user': user, 'rank': np.arange(1, len(res) + 1)})
+    return pd.concat([iddf, res], axis='columns')
+
+
+def _recommend_seq(algo, model, users, n, candidates):
+    if isinstance(candidates, dict):
+        candidates = candidates.get
+    algo = Recommender.adapt(algo)
+    results = [_recommend_user(algo, model, user, n, candidates(user))
+               for user in users]
+    return results
+
+
+def _recommend_init(context, algo, mkey, ckey, ccls, n):
+    global __rec_model, __rec_algo, __rec_candidates, __rec_size
+    sharing._push_context(context)
+
+    __rec_algo = algo
+    __rec_model = algo.share_resolve(mkey, context)
+    if ccls:
+        __rec_candidates = ccls.share_resolve(ckey)
+    else:
+        __rec_candidates = ckey
+    __rec_size = n
+
+
+def _recommend_worker(user):
+    candidates = __rec_candidates(user)
+    return _recommend_user(__rec_algo, __rec_model, user, __rec_size, candidates)
+
+
+def recommend(algo, model, users, n, candidates, ratings=None, context=None, nprocs=None):
     """
     Batch-recommend for multiple users.  The provided algorithm should be a
     :py:class:`algorithms.Recommender` or :py:class:`algorithms.Predictor` (which
@@ -85,19 +120,23 @@ def recommend(algo, model, users, n, candidates, ratings=None):
         ``score``, and any other columns returned by the recommender.
     """
 
-    if isinstance(candidates, dict):
-        candidates = candidates.get
-    algo = Recommender.adapt(algo)
+    if context and nprocs and isinstance(algo, SharesModel):
+        shared = algo.share_publish(model, context)
+        if isinstance(candidates, sharing.Shareable):
+            cand_key = candidates.share_publish(context)
+            cand_cls = candidates.__class__
+        else:
+            cand_key = candidates
+            cand_cls = None
 
-    results = []
-    for user in users:
-        _logger.debug('generating recommendations for %s', user)
-        ucand = candidates(user)
-        res = algo.recommend(model, user, n, ucand)
-        iddf = pd.DataFrame({'user': user, 'rank': np.arange(1, len(res) + 1)})
-        results.append(pd.concat([iddf, res], axis='columns'))
+        args = [context, algo, shared, cand_key, cand_cls, n]
+        with Pool(nprocs, _recommend_init, args) as pool:
+            results = pool.map(_recommend_worker, users)
+    else:
+        results = _recommend_seq(algo, model, users, n, candidates)
 
     results = pd.concat(results, ignore_index=True)
+
     if ratings is not None:
         # combine with test ratings for relevance data
         results = pd.merge(results, ratings, how='left', on=('user', 'item'))
