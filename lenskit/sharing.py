@@ -9,6 +9,7 @@ import tempfile
 import subprocess
 from pathlib import Path
 import uuid
+import logging
 
 import numpy as np
 import pandas as pd
@@ -20,6 +21,7 @@ try:
 except ImportError:
     have_plasma = False
 
+_logger = logging.getLogger(__name__)
 
 _context_stack = []
 
@@ -115,6 +117,7 @@ class PlasmaShareContext(ShareContext):
         if path is None:
             self._dir = tempfile.TemporaryDirectory(prefix='lkpy-plasma')
             self.socket = Path(self._dir.name) / 'plasma-socket'
+            _logger.info('launching Plasma store with %d bytes', size)
             self.process = subprocess.Popen(['plasma_store', '-m', size, '-s', self.socket],
                                             stdin=subprocess.DEVNULL)
         else:
@@ -169,10 +172,12 @@ class PlasmaShareContext(ShareContext):
 
     def _cleanup(self):
         if self.client is not None:
+            _logger.debug('disconnecting from Plasma')
             self.client.disconnect()
             self.client = None
 
         if self.process is not None:
+            _logger.info('shutting down Plasma')
             self.process.terminate()
             self.process.wait()
             self.process = None
