@@ -363,14 +363,12 @@ class ItemItem(Trainable, Predictor, SharesModel):
         path = pathlib.Path(path)
         _logger.info('saving I-I model to %s', path)
 
-        np.savez_compressed(path, items=model.items.values, users=model.users.values,
-                            means=model.means,
-                            s_rows=matrix.csr_rowinds(model.sim_matrix),
-                            s_cols=model.sim_matrix.colinds,
-                            s_vals=model.sim_matrix.values,
-                            r_rows=matrix.csr_rowinds(model.rating_matrix),
-                            r_cols=model.rating_matrix.colinds,
-                            r_vals=model.rating_matrix.values)
+        data = dict(items=model.items.values, users=model.users.values,
+                    means=model.means)
+        data.update(matrix.csr_save(model.sim_matrix, 's_'))
+        data.update(matrix.csr_save(model.rating_matrix, 'r_'))
+
+        np.savez_compressed(path, **data)
 
     def load_model(self, path):
         path = pathlib.Path(path)
@@ -381,25 +379,16 @@ class ItemItem(Trainable, Predictor, SharesModel):
             items = npz['items']
             users = npz['users']
             means = npz['means']
-            s_rows = npz['s_rows']
-            s_cols = npz['s_cols']
-            s_vals = npz['s_vals']
-            r_rows = npz['r_rows']
-            r_cols = npz['r_cols']
-            r_vals = npz['r_vals']
+            s_mat = matrix.csr_load(npz, 's_')
+            r_mat = matrix.csr_load(npz, 'r_')
 
         if means.dtype == np.object:
             means = None
-        if r_vals.dtype == np.object:
-            r_vals = None
 
         items = pd.Index(items, name='item')
         users = pd.Index(users, name='user')
         nitems = len(items)
-        nusers = len(users)
 
-        s_mat = matrix.csr_from_coo(s_rows, s_cols, s_vals, shape=(nitems, nitems))
-        r_mat = matrix.csr_from_coo(r_rows, r_cols, r_vals, shape=(nusers, nitems))
         s_mat.sort_values()
 
         _logger.info('read %d similarities for %d items', s_mat.nnz, nitems)
