@@ -13,7 +13,7 @@ import scipy.sparse.linalg as spla
 from numba import njit
 
 from lenskit import util, matrix
-from . import Trainable, Predictor
+from . import Trainable, Predictor, SharesModel
 
 _logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ _predictors = {
 }
 
 
-class ItemItem(Trainable, Predictor):
+class ItemItem(Trainable, Predictor, SharesModel):
     """
     Item-item nearest-neighbor collaborative filtering with ratings. This item-item implementation
     is not terribly configurable; it hard-codes design decisions found to work well in the previous
@@ -405,6 +405,30 @@ class ItemItem(Trainable, Predictor):
         _logger.info('read %d similarities for %d items', s_mat.nnz, nitems)
 
         return IIModel(items, means, s_mat.row_nnzs(), s_mat, users, r_mat)
+
+    def share_publish(self, model, context):
+        k_items = context.put_array(model.items.values)
+        k_users = context.put_array(model.users.values)
+        k_means = context.put_array(model.means)
+
+        k_sim = matrix.csr_share_publish(model.sim_matrix, context)
+        k_rm = matrix.csr_share_publish(model.rating_matrix, context)
+
+        return (k_items, k_users, k_means, k_sim, k_rm)
+
+    def share_resolve(self, key, context):
+        k_items, k_users, k_means, k_sim, k_rm = key
+
+        items = context.get_array(k_items)
+        items = pd.Index(items, name='item')
+        users = context.get_array(k_users)
+        users = pd.Index(users, name='user')
+
+        means = context.get_array(k_means)
+        sim = matrix.csr_share_resolve(k_sim, context)
+        ratings = matrix.csr_share_resolve(k_rm, context)
+
+        return IIModel(items, means, sim.row_nnzs(), sim, users, ratings)
 
     def __str__(self):
         return 'ItemItem(nnbrs={}, msize={})'.format(self.max_neighbors, self.save_neighbors)

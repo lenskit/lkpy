@@ -104,3 +104,6 @@ class Shareable(metaclass=ABCMeta):
     @abstractclassmethod
     def share_resolve(self, key, context):
         raise NotImplemented()
+
+
+share_impls = [DiskShareContext]

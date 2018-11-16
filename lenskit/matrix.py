@@ -338,6 +338,30 @@ def csr_load(data, prefix=None):
     return CSR(nrows, ncols, len(colinds), rowptrs, colinds, values)
 
 
+def csr_share_publish(csr, context):
+    rk = context.put_array(csr.rowptrs)
+    ck = context.put_array(csr.colinds)
+    if csr.values is not None:
+        vk = context.put_array(csr.values)
+    else:
+        vk = None
+
+    return ((csr.nrows, csr.ncols), rk, ck, vk)
+
+
+def csr_share_resolve(key, context):
+    shape, rk, ck, vk = key
+    nrows, ncols = shape
+    rowptrs = context.get_array(rk)
+    colinds = context.get_array(ck)
+    if vk is not None:
+        values = context.get_array(vk)
+    else:
+        values = None
+
+    return CSR(nrows, ncols, len(colinds), rowptrs, colinds, values)
+
+
 def sparse_ratings(ratings, scipy=False):
     """
     Convert a rating table to a sparse matrix of ratings.

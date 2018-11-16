@@ -82,7 +82,7 @@ def _recommend_init(context, algo, mkey, ckey, ccls, n):
     global __rec_model, __rec_algo, __rec_candidates, __rec_size
     sharing._push_context(context)
 
-    __rec_algo = algo
+    __rec_algo = Recommender.adapt(algo)
     __rec_model = algo.share_resolve(mkey, context)
     if ccls:
         __rec_candidates = ccls.share_resolve(ckey)
@@ -120,7 +120,7 @@ def recommend(algo, model, users, n, candidates, ratings=None, context=None, npr
         ``score``, and any other columns returned by the recommender.
     """
 
-    if context and nprocs and isinstance(algo, SharesModel):
+    if context and nprocs and nprocs > 1 and isinstance(algo, SharesModel):
         shared = algo.share_publish(model, context)
         if isinstance(candidates, sharing.Shareable):
             cand_key = candidates.share_publish(context)
