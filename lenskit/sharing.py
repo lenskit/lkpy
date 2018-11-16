@@ -10,6 +10,7 @@ import subprocess
 from pathlib import Path
 import uuid
 import logging
+import weakref
 
 import numpy as np
 import pandas as pd
@@ -113,26 +114,36 @@ class PlasmaShareContext(ShareContext):
             path = os.environ.get('PLASMA_SOCKET', None)
         if size is None:
             size = os.environ.get('PLASMA_SIZE', 4*1024*1024*1024)
+            size = str(size)
 
         if path is None:
             self._dir = tempfile.TemporaryDirectory(prefix='lkpy-plasma')
             self.socket = Path(self._dir.name) / 'plasma-socket'
-            _logger.info('launching Plasma store with %d bytes', size)
+            _logger.info('launching Plasma store with %s bytes', size)
             self.process = subprocess.Popen(['plasma_store', '-m', size, '-s', self.socket],
                                             stdin=subprocess.DEVNULL)
         else:
             self.socket = path
             self.process = None
 
-        self.client = plasma.connect(self.socket, "", 0)
+        self.client = plasma.connect(str(self.socket), "", 0)
+        self.__obj_map = {}
 
     def _rand_id(self):
         return plasma.ObjectID(np.random.bytes(20))
+    
+    def _clear_ref(self, id):
+        try:
+            del self.__obj_map[id]
+        except KeyError:
+            pass
 
     def put_array(self, array):
         key = self._rand_id()
+        _logger.debug('storing array of shape %s in %s', array.shape, key)
         tensor = pa.Tensor.from_numpy(array)
         size = pa.get_tensor_size(tensor)
+        _logger.debug('array data is %d bytes', size)
         buf = self.client.create(key, size)
 
         sink = pa.FixedSizeBufferWriter(buf)
@@ -144,10 +155,17 @@ class PlasmaShareContext(ShareContext):
 
     def get_array(self, key):
         [data] = self.client.get_buffers([key])
+        _logger.debug('loading data of size %d from %s', data.size, key)
         buffer = pa.BufferReader(data)
-        result = pa.read_tensor(buffer)
-
-        return result.to_numpy()
+        tensor = pa.read_tensor(buffer)
+        result = tensor.to_numpy()
+        rid = id(result)
+        
+        self.__obj_map[rid] = data
+        weakref.finalize(result, self._clear_ref, rid)
+        
+        _logger.debug('loaded array of shape %s', result.shape)
+        return result
 
     def __getstate__(self):
         return self.path

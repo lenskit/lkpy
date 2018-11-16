@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import pandas as pd
 
@@ -5,20 +7,24 @@ from lenskit import sharing
 
 from pytest import mark
 
-impls = [sharing.DiskShareContext]
+_log = logging.getLogger(__name__)
 
 
-@mark.parametrize('impl', impls)
+@mark.parametrize('impl', sharing.share_impls)
 def test_share_array_1d(impl):
     with impl() as ctx:
         arr = np.random.randn(5)
+        _log.info('saving')
         k = ctx.put_array(arr)
+        _log.info('loading')
         a2 = ctx.get_array(k)
+        _log.info('testing')
         assert all(a2 == arr)
+        _log.info('done')
         del a2
 
 
-@mark.parametrize('impl', impls)
+@mark.parametrize('impl', sharing.share_impls)
 def test_share_array_2d(impl):
     with impl() as ctx:
         arr = np.random.randn(10, 3)
@@ -28,7 +34,7 @@ def test_share_array_2d(impl):
         del a2
 
 
-@mark.parametrize('impl', impls)
+@mark.parametrize('impl', sharing.share_impls)
 def test_share_series(impl):
     with impl() as ctx:
         arr = np.random.randn(100)
