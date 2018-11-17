@@ -95,6 +95,8 @@ def _recommend_seq(algo, model, users, n, candidates):
 def _recommend_init(algo, mkey, ckey, ccls, n):
     global __rec_model, __rec_algo, __rec_candidates, __rec_size
 
+    _logger.info('setting up algorithm %s in child', algo)
+
     __rec_algo = Recommender.adapt(algo)
     __rec_model = sharing.resolve(mkey, algo)
 
