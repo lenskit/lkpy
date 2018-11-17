@@ -2,6 +2,7 @@ import os.path
 import logging
 
 from lenskit.algorithms import als
+from lenskit import sharing
 
 import pandas as pd
 import numpy as np
@@ -97,6 +98,26 @@ def test_als_save_load(tmp_path):
     assert mod_file.exists()
 
     restored = algo.load_model(mod_file)
+    assert restored.global_bias == model.global_bias
+    assert np.all(restored.user_bias == model.user_bias)
+    assert np.all(restored.item_bias == model.item_bias)
+    assert np.all(restored.user_features == model.user_features)
+    assert np.all(restored.item_features == model.item_features)
+    assert np.all(restored.item_index == model.item_index)
+    assert np.all(restored.user_index == model.user_index)
+
+
+def test_als_share():
+    algo = als.BiasedMF(20, iterations=5)
+    ratings = lktu.ml_pandas.renamed.ratings
+    model = algo.train(ratings)
+
+    assert model is not None
+    assert model.global_bias == approx(ratings.rating.mean())
+
+    key = model.share_publish(sharing.context())
+    restored = als.BiasMFModel.share_resolve(key, sharing.context())
+
     assert restored.global_bias == model.global_bias
     assert np.all(restored.user_bias == model.user_bias)
     assert np.all(restored.item_bias == model.item_bias)

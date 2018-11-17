@@ -44,3 +44,14 @@ def test_share_series(impl):
         a2 = ctx.get_series(k)
         assert all(a2 == arr)
         del a2
+
+@mark.parametrize('impl', sharing.share_impls)
+def test_share_index(impl):
+    with impl() as ctx:
+        idx = np.random.randint(0, 100000, 100)
+        index = pd.Index(idx, name='foo')
+        k = ctx.put_index(index)
+        a2 = ctx.get_index(k)
+        assert all(a2.values == idx)
+        assert a2.name == 'foo'
+        del a2

@@ -45,18 +45,25 @@ class ShareContext(metaclass=ABCMeta):
         pass
 
     def put_series(self, series):
-        i_k = self.put_array(series.index.values)
+        i_k = self.put_index(series.index)
         v_k = self.put_array(series.values)
-        return (series.index.name, i_k, series.name, v_k)
+        return (series.name, v_k, i_k)
 
     def get_series(self, key):
-        i_n, i_k, s_n, v_k = key
-        index = self.get_array(i_k)
+        name, v_k, i_k = key
+        index = self.get_index(i_k)
         values = self.get_array(v_k)
-        series = pd.Series(values, index=index)
-        series.name = s_n
-        series.index.name = i_n
+        series = pd.Series(values, index=index, name=name)
         return series
+
+    def put_index(self, index):
+        v_k = self.put_array(index.values)
+        return (index.name, v_k)
+
+    def get_index(self, key):
+        name, v_k = key
+        values = self.get_array(v_k)
+        return pd.Index(values, name=name)
 
 
 class DiskShareContext(ShareContext):

@@ -1,7 +1,7 @@
 import os.path
 import logging
 
-from lenskit import topn
+from lenskit import topn, sharing
 from lenskit.algorithms import als
 
 import pandas as pd
@@ -76,17 +76,32 @@ def test_als_train_large():
 def test_als_save_load(tmp_path):
     tmp_path = lktu.norm_path(tmp_path)
     mod_file = tmp_path / 'als.npz'
-    algo = als.BiasedMF(20, iterations=5)
+    algo = als.ImplicitMF(20, iterations=5)
     ratings = lktu.ml_pandas.renamed.ratings
     model = algo.train(ratings)
 
     assert model is not None
-    assert model.global_bias == approx(ratings.rating.mean())
 
     algo.save_model(model, mod_file)
     assert mod_file.exists()
 
     restored = algo.load_model(mod_file)
+    assert np.all(restored.user_features == model.user_features)
+    assert np.all(restored.item_features == model.item_features)
+    assert np.all(restored.item_index == model.item_index)
+    assert np.all(restored.user_index == model.user_index)
+
+
+def test_als_share():
+    algo = als.ImplicitMF(20, iterations=5)
+    ratings = lktu.ml_pandas.renamed.ratings
+    model = algo.train(ratings)
+
+    assert model is not None
+
+    key = model.share_publish(sharing.context())
+    restored = als.MFModel.share_resolve(key, sharing.context())
+
     assert np.all(restored.user_features == model.user_features)
     assert np.all(restored.item_features == model.item_features)
     assert np.all(restored.item_index == model.item_index)

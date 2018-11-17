@@ -8,13 +8,13 @@ import logging
 import numpy as np
 import pandas as pd
 
-from .. import check, util
+from .. import check, util, sharing
 from . import basic
 
 _logger = logging.getLogger(__name__)
 
 
-class MFModel:
+class MFModel(sharing.Shareable):
     """
     Common model for matrix factorization.
 
@@ -122,6 +122,19 @@ class MFModel:
         res = res.reindex(items)
         return res
 
+    def share_publish(self, context):
+        uik = context.put_index(self.user_index)
+        iik = context.put_index(self.item_index)
+        umk = context.put_array(self.user_features)
+        imk = context.put_array(self.item_features)
+        return uik, iik, umk, imk
+
+    @classmethod
+    def share_resolve(cls, key, context):
+        uik, iik, umk, imk = key
+        return cls(context.get_index(uik), context.get_index(iik),
+                   context.get_array(umk), context.get_array(imk))
+
     def save(self, path):
         np.savez_compressed(path, users=self.user_index.values, items=self.item_index.values,
                             umat=self.user_features, imat=self.item_features)
@@ -131,8 +144,8 @@ class MFModel:
         path = util.npz_path(path)
 
         with np.load(path) as npz:
-            users = pd.Index(npz['users'])
-            items = pd.Index(npz['items'])
+            users = pd.Index(npz['users'], name='user')
+            items = pd.Index(npz['items'], name='item')
             umat = npz['umat']
             imat = npz['imat']
             return cls(users, items, umat, imat)
@@ -186,6 +199,23 @@ class BiasMFModel(MFModel):
                 rv = rv + self.item_bias[items]
 
         return rv
+
+    def share_publish(self, context):
+        uik = context.put_index(self.user_index)
+        iik = context.put_index(self.item_index)
+        ubk = context.put_array(self.user_bias)
+        ibk = context.put_array(self.item_bias)
+        umk = context.put_array(self.user_features)
+        imk = context.put_array(self.item_features)
+        return uik, iik, (self.global_bias, ubk, ibk), umk, imk
+
+    @classmethod
+    def share_resolve(cls, key, context):
+        uik, iik, bias, umk, imk = key
+        gbias, ubk, ibk = bias
+        return cls(context.get_index(uik), context.get_index(iik),
+                   (gbias, context.get_array(ubk), context.get_array(ibk)),
+                   context.get_array(umk), context.get_array(imk))
 
     def save(self, path):
         np.savez_compressed(path, users=self.user_index.values, items=self.item_index.values,
