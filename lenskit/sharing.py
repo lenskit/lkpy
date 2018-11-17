@@ -146,10 +146,16 @@ class SHMShareContext(ShareContext):
 
 
 class PlasmaShareContext(ShareContext):
-    def __init__(self, path=None, size=None, _client=None):
-        self.__obj_map = {}
-        self.__added_ids = []
+    process = None
+    disconnect = False
 
+    def __new__(cls, *args, **kwargs):
+        obj = super().__new__(cls)
+        obj.__obj_map = {}
+        obj.__added_ids = []
+        return obj
+
+    def __init__(self, path=None, size=None, _client=None):
         if path is None:
             path = os.environ.get('PLASMA_SOCKET', None)
             self.socket = path
@@ -157,6 +163,7 @@ class PlasmaShareContext(ShareContext):
         if _client is not None:
             self.client = _client
             self.disconnect = False
+            self.process = None
             return
 
         if path is None:
@@ -222,11 +229,8 @@ class PlasmaShareContext(ShareContext):
 
     def __setstate__(self, state):
         self.socket = state
-        self.process = None
         self.client = plasma.connect(self.socket, "", 0)
         self.disconnect = True
-        self.__obj_map = {}
-        self.__added_ids = []
 
     def __enter__(self):
         _push_context(self)
