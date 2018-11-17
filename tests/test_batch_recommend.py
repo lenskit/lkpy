@@ -143,13 +143,9 @@ def test_pop_batch_recommend(share):
         if share:
             with share() as ctx:
                 recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun,
-                                       context=ctx, nprocs=2)
+                                       test, context=ctx, nprocs=2)
         else:
-            recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun)
-        # combine with test ratings for relevance data
-        res = pd.merge(recs, test, how='left', on=('user', 'item'))
-        # fill in missing 0s
-        res.loc[res.rating.isna(), 'rating'] = 0
+            recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun, test)
         return res
 
     recs = pd.concat((eval(train, test)

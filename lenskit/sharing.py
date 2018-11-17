@@ -89,6 +89,9 @@ class DiskShareContext(ShareContext):
         fn = fn.with_suffix('.npy')
         return np.load(fn)
 
+    def child(self):
+        return DiskShareContext(self.path)
+
     def __getstate__(self):
         return self.path
 
@@ -146,6 +149,9 @@ class PlasmaShareContext(ShareContext):
             del self.__obj_map[id]
         except KeyError:
             pass
+
+    def child(self):
+        return PlasmaShareContext(self.socket, _client=self.client)
 
     def put_array(self, array):
         key = self._rand_id()
