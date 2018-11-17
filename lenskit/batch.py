@@ -103,7 +103,8 @@ def _recommend_init(algo, model, candidates, n):
 
 def _recommend_worker(user):
     candidates = __rec_candidates(user)
-    return _recommend_user(__rec_algo, __rec_model, user, __rec_size, candidates)
+    res = _recommend_user(__rec_algo, __rec_model, user, __rec_size, candidates)
+    return res.to_msgpack()
 
 
 def recommend(algo, model, users, n, candidates, ratings=None, nprocs=None):
@@ -136,6 +137,7 @@ def recommend(algo, model, users, n, candidates, ratings=None, nprocs=None):
         _logger.info('starting recommend process with %d workers', nprocs)
         with Pool(nprocs) as pool:
             results = pool.map(_recommend_worker, users)
+        results = [pd.read_msgpack(r) for r in results]
     else:
         _logger.info('starting sequential recommend process')
         results = _recommend_seq(algo, model, users, n, candidates)
