@@ -21,6 +21,12 @@ try:
 except ImportError:
     fastparquet = None
 
+try:
+    import multiprocessing_logging
+    multiprocessing_logging.install_mp_handler(logging.getLogger())
+except ImportError:
+    pass
+
 _logger = logging.getLogger(__name__)
 
 
@@ -132,9 +138,11 @@ def recommend(algo, model, users, n, candidates, ratings=None, nprocs=None):
             cand_cls = None
 
         args = [algo, shared, cand_key, cand_cls, n]
+        _logger.info('starting recommend process with %d workers', nprocs)
         with Pool(nprocs, _recommend_init, args) as pool:
             results = pool.map(_recommend_worker, users)
     else:
+        _logger.info('starting sequential recommend process')
         results = _recommend_seq(algo, model, users, n, candidates)
 
     results = pd.concat(results, ignore_index=True)
