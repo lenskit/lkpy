@@ -2,7 +2,6 @@
 Batch-run predictors and recommenders for evaluation.
 """
 
-import os
 import logging
 import pathlib
 import collections
@@ -23,6 +22,10 @@ except ImportError:
     fastparquet = None
 
 _logger = logging.getLogger(__name__)
+
+
+def _is_sharable(algo, model):
+    return isinstance(algo, SharesModel) or isinstance(model, sharing.Shareable)
 
 
 def predict(algo, pairs, model=None):
@@ -79,12 +82,16 @@ def _recommend_seq(algo, model, users, n, candidates):
     return results
 
 
-def _recommend_init(context, algo, mkey, ckey, ccls, n):
+def _recommend_init(algo, mkey, mcls, ckey, ccls, n):
     global __rec_model, __rec_algo, __rec_candidates, __rec_size
-    sharing._push_context(context)
+    ctx = sharing.context()
+    sharing._push_context(ctx)
 
     __rec_algo = Recommender.adapt(algo)
-    __rec_model = algo.share_resolve(mkey, context)
+    if mcls:
+        __rec_model = mcls.share_resolve(mkey, ctx)
+    else:
+        __rec_model = algo.share_resolve(mkey, ctx)
     if ccls:
         __rec_candidates = ccls.share_resolve(ckey)
     else:
@@ -97,7 +104,7 @@ def _recommend_worker(user):
     return _recommend_user(__rec_algo, __rec_model, user, __rec_size, candidates)
 
 
-def recommend(algo, model, users, n, candidates, ratings=None, context=None, nprocs=None):
+def recommend(algo, model, users, n, candidates, ratings=None, nprocs=None):
     """
     Batch-recommend for multiple users.  The provided algorithm should be a
     :py:class:`algorithms.Recommender` or :py:class:`algorithms.Predictor` (which
@@ -121,16 +128,24 @@ def recommend(algo, model, users, n, candidates, ratings=None, context=None, npr
         ``score``, and any other columns returned by the recommender.
     """
 
-    if context and nprocs and nprocs > 1 and isinstance(algo, SharesModel):
-        shared = algo.share_publish(model, context)
+    if nprocs and nprocs > 1 and _is_sharable(algo, model):
+        ctx = sharing.context()
+        shared = algo.share_publish(model, ctx)
         if isinstance(candidates, sharing.Shareable):
-            cand_key = candidates.share_publish(context)
+            cand_key = candidates.share_publish(ctx)
             cand_cls = candidates.__class__
         else:
             cand_key = candidates
             cand_cls = None
 
-        args = [context, algo, shared, cand_key, cand_cls, n]
+        if isinstance(algo, SharesModel):
+            shared = algo.share_publish(model, ctx)
+            mod_cls = None
+        else:
+            shared = model.share_publish(ctx)
+            mod_cls = model.__class__
+
+        args = [algo, shared, mod_cls, cand_key, cand_cls, n]
         with Pool(nprocs, _recommend_init, args) as pool:
             results = pool.map(_recommend_worker, users)
     else:
@@ -174,15 +189,12 @@ class MultiEval:
     """
 
     def __init__(self, path, nrecs=100, candidates=topn.UnratedCandidates,
-                 share_context=None, nprocs=None):
+                 nprocs=None):
         self.workdir = pathlib.Path(path)
         self.n_recs = nrecs
         self.candidate_generator = candidates
         self.algorithms = []
         self.datasets = []
-        self.share_context = share_context
-        if share_context and nprocs is None:
-            nprocs = os.cpu_count() / 2
         self.nprocs = nprocs
 
     @property
@@ -340,12 +352,8 @@ class MultiEval:
         watch = util.Stopwatch()
         users = test.user.unique()
         _logger.info('generating recommendations for %d users for %s', len(users), algo)
-        if self.share_context:
-            with self.share_context.child() as kid:
-                recs = recommend(algo, model, users, self.n_recs, candidates, test,
-                                 context=kid, nprocs=self.nprocs)
-        else:
-            recs = recommend(algo, model, users, self.n_recs, candidates, test)
+        recs = recommend(algo, model, users, self.n_recs, candidates, test,
+                         nprocs=self.nprocs)
         watch.stop()
         _logger.info('generated recommendations in %s', watch)
         recs['RunId'] = rid

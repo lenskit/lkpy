@@ -10,15 +10,12 @@ from lenskit.algorithms.basic import Bias, Popular
 
 from pytest import mark
 
-share_impls = [None] + sharing.share_impls
 
-
-@mark.parametrize('share', share_impls)
-def test_sweep_bias(tmp_path, share):
+@mark.parametrize('ncpus', [None, 2])
+def test_sweep_bias(tmp_path, ncpus):
     tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
-    ctx = share() if share else None
-    sweep = batch.MultiEval(tmp_path, share_context=ctx, nprocs=2)
+    sweep = batch.MultiEval(tmp_path, nprocs=ncpus)
 
     ratings = ml_pandas.renamed.ratings
     folds = xf.partition_users(ratings, 5, xf.SampleN(5))

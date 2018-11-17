@@ -251,8 +251,9 @@ def test_csr_save_load(tmp_path, prefix, values):
     else:
         assert csr2.values is None
 
-@mark.parametrize("share,prefix,values", product(sharing.share_impls, [None, 'p_'], [True, False]))
-def test_csr_share(share, prefix, values):
+@mark.parametrize("prefix,values", product([None, 'p_'], [True, False]))
+def test_csr_share(prefix, values):
+    share = sharing.contxt()
     coords = np.random.choice(np.arange(50 * 100, dtype=np.int32), 1000, False)
     rows = np.mod(coords, 100, dtype=np.int32)
     cols = np.floor_divide(coords, 100, dtype=np.int32)

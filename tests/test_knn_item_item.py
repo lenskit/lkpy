@@ -358,62 +358,62 @@ def test_ii_save_load(tmp_path):
         assert all(np.diff(row.data) < 1.0e-6)
 
 
-@mark.parametrize('share', sharing.share_impls)
-def test_ii_share(share):
+def test_ii_share():
     "Share and resolve a model"
     algo = knn.ItemItem(30, save_nbrs=500)
     _log.info('building model')
     original = algo.train(lktu.ml_sample())
 
-    with share() as ctx:
-        _log.info('sharing model to %s', ctx)
-        key = algo.share_publish(original, ctx)
-        _log.info('reloading model')
-        model = algo.share_resolve(key, ctx)
-        _log.info('checking model')
+    ctx = sharing.context()
 
-        assert model is not None
-        assert model is not original
+    _log.info('sharing model to %s', ctx)
+    key = algo.share_publish(original, ctx)
+    _log.info('reloading model')
+    model = algo.share_resolve(key, ctx)
+    _log.info('checking model')
 
-        assert all(np.logical_not(np.isnan(model.sim_matrix.values)))
-        assert all(model.sim_matrix.values > 0)
-        # a little tolerance
-        assert all(model.sim_matrix.values < 1 + 1.0e-6)
+    assert model is not None
+    assert model is not original
 
-        assert all(model.counts == original.counts)
-        assert model.counts.sum() == model.sim_matrix.nnz
-        assert model.sim_matrix.nnz == original.sim_matrix.nnz
-        assert all(model.sim_matrix.rowptrs == original.sim_matrix.rowptrs)
-        assert model.sim_matrix.values == approx(original.sim_matrix.values)
+    assert all(np.logical_not(np.isnan(model.sim_matrix.values)))
+    assert all(model.sim_matrix.values > 0)
+    # a little tolerance
+    assert all(model.sim_matrix.values < 1 + 1.0e-6)
 
-        r_mat = model.sim_matrix
-        o_mat = original.sim_matrix
-        assert all(r_mat.rowptrs == o_mat.rowptrs)
+    assert all(model.counts == original.counts)
+    assert model.counts.sum() == model.sim_matrix.nnz
+    assert model.sim_matrix.nnz == original.sim_matrix.nnz
+    assert all(model.sim_matrix.rowptrs == original.sim_matrix.rowptrs)
+    assert model.sim_matrix.values == approx(original.sim_matrix.values)
 
-        for i in range(len(model.items)):
-            sp = r_mat.rowptrs[i]
-            ep = r_mat.rowptrs[i + 1]
+    r_mat = model.sim_matrix
+    o_mat = original.sim_matrix
+    assert all(r_mat.rowptrs == o_mat.rowptrs)
 
-            # everything is in decreasing order
-            assert all(np.diff(r_mat.values[sp:ep]) <= 0)
-            assert all(r_mat.values[sp:ep] == o_mat.values[sp:ep])
+    for i in range(len(model.items)):
+        sp = r_mat.rowptrs[i]
+        ep = r_mat.rowptrs[i + 1]
 
-        means = ml_ratings.groupby('item').rating.mean()
-        assert means.loc[model.items.values.copy()].values == approx(original.means)
+        # everything is in decreasing order
+        assert all(np.diff(r_mat.values[sp:ep]) <= 0)
+        assert all(r_mat.values[sp:ep] == o_mat.values[sp:ep])
 
-        matrix = lm.csr_to_scipy(model.sim_matrix)
+    means = ml_ratings.groupby('item').rating.mean()
+    assert means.loc[model.items.values.copy()].values == approx(original.means)
 
-        items = pd.Series(model.items)
-        items = items[model.counts > 0]
-        for i in items.sample(50):
-            ipos = model.items.get_loc(i)
-            _log.debug('checking item %d at position %d', i, ipos)
+    matrix = lm.csr_to_scipy(model.sim_matrix)
 
-            row = matrix.getrow(ipos)
+    items = pd.Series(model.items)
+    items = items[model.counts > 0]
+    for i in items.sample(50):
+        ipos = model.items.get_loc(i)
+        _log.debug('checking item %d at position %d', i, ipos)
 
-            # it should be sorted !
-            # check this by diffing the row values, and make sure they're negative
-            assert all(np.diff(row.data) < 1.0e-6)
+        row = matrix.getrow(ipos)
+
+        # it should be sorted !
+        # check this by diffing the row values, and make sure they're negative
+        assert all(np.diff(row.data) < 1.0e-6)
 
 
 def test_ii_implicit_save_load(tmp_path):
@@ -553,7 +553,7 @@ def test_ii_known_preds():
 
 @mark.slow
 @mark.eval
-@mark.parametrize('share', [None] + sharing.share_impls)
+@mark.parametrize('ncpus', [1, 2])
 def test_ii_batch_recommend(share):
     import lenskit.crossfold as xf
     from lenskit import batch, topn
@@ -571,12 +571,7 @@ def test_ii_batch_recommend(share):
         model = algo.train(train)
         _log.info('testing %d users', test.user.nunique())
         cand_fun = topn.UnratedCandidates(train)
-        if share:
-            with share() as ctx:
-                recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun,
-                                       context=ctx, nprocs=2)
-        else:
-            recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun)
+        recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun, nprocs=ncpus)
         # combine with test ratings for relevance data
         res = pd.merge(recs, test, how='left', on=('user', 'item'))
         # fill in missing 0s

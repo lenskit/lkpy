@@ -14,9 +14,6 @@ import lk_test_utils as lktu
 
 from lenskit.algorithms.basic import Bias
 import lenskit.batch as lkb
-from lenskit import sharing
-
-share_impls = [None] + sharing.share_impls
 
 MLB = namedtuple('MLB', ['ratings', 'algo', 'model'])
 MLB.predictor = property(lambda mlb: partial(mlb.algo.predict, mlb.model))
@@ -121,8 +118,8 @@ def test_bias_batch_recommend():
     assert ndcg.mean() > 0
 
 
-@pytest.mark.parametrize('share', share_impls)
-def test_pop_batch_recommend(share):
+@pytest.mark.parametrize('ncpus', [None, 2])
+def test_pop_batch_recommend(ncpus):
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch, topn
@@ -140,12 +137,8 @@ def test_pop_batch_recommend(share):
         model = algo.train(train)
         _log.info('testing %d users', test.user.nunique())
         cand_fun = topn.UnratedCandidates(train)
-        if share:
-            with share() as ctx:
-                recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun,
-                                       test, context=ctx, nprocs=2)
-        else:
-            recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun, test)
+        recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun,
+                               test, nprocs=ncpus)
         return recs
 
     recs = pd.concat((eval(train, test)
