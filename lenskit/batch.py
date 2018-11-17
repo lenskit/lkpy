@@ -92,18 +92,12 @@ def _recommend_seq(algo, model, users, n, candidates):
     return results
 
 
-def _recommend_init(algo, mkey, ckey, ccls, n):
+def _recommend_init(algo, model, candidates, n):
     global __rec_model, __rec_algo, __rec_candidates, __rec_size
 
-    _logger.info('setting up algorithm %s in child', algo)
-
     __rec_algo = Recommender.adapt(algo)
-    __rec_model = sharing.resolve(mkey, algo)
-
-    if ccls:
-        __rec_candidates = ccls.share_resolve(ckey)
-    else:
-        __rec_candidates = ckey
+    __rec_model = model
+    __rec_candidates = candidates
     __rec_size = n
 
 
@@ -138,17 +132,9 @@ def recommend(algo, model, users, n, candidates, ratings=None, nprocs=None):
 
     if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
         __install_mplog()
-        shared = sharing.publish(model, algo)
-        if isinstance(candidates, sharing.Shareable):
-            cand_key = candidates.share_publish()
-            cand_cls = candidates.__class__
-        else:
-            cand_key = candidates
-            cand_cls = None
-
-        args = [algo, shared, cand_key, cand_cls, n]
+        _recommend_init(algo, model, candidates, n)
         _logger.info('starting recommend process with %d workers', nprocs)
-        with Pool(nprocs, _recommend_init, args) as pool:
+        with Pool(nprocs) as pool:
             results = pool.map(_recommend_worker, users)
     else:
         _logger.info('starting sequential recommend process')
