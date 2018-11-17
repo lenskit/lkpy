@@ -109,29 +109,38 @@ class DiskShareContext(ShareContext):
 
 
 class PlasmaShareContext(ShareContext):
-    def __init__(self, path=None, size=None, _child=False):
-        if path is None:
-            path = os.environ.get('PLASMA_SOCKET', None)
-        if size is None:
-            size = os.environ.get('PLASMA_SIZE', 4*1024*1024*1024)
-            size = str(size)
+    def __init__(self, path=None, size=None, _client=None):
+        self.__obj_map = {}
+        self.__added_ids = []
 
         if path is None:
+            path = os.environ.get('PLASMA_SOCKET', None)
+            self.socket = path
+
+        if _client is not None:
+            self.client = _client
+            self.disconnect = False
+            return
+
+        if path is None:
+            if size is None:
+                size = os.environ.get('PLASMA_SIZE', 4*1024*1024*1024)
+                size = str(size)
+
             self._dir = tempfile.TemporaryDirectory(prefix='lkpy-plasma')
             self.socket = Path(self._dir.name) / 'plasma-socket'
             _logger.info('launching Plasma store with %s bytes', size)
             self.process = subprocess.Popen(['plasma_store', '-m', size, '-s', self.socket],
                                             stdin=subprocess.DEVNULL)
         else:
-            self.socket = path
             self.process = None
 
+        self.disconnect = True
         self.client = plasma.connect(str(self.socket), "", 0)
-        self.__obj_map = {}
 
     def _rand_id(self):
         return plasma.ObjectID(np.random.bytes(20))
-    
+
     def _clear_ref(self, id):
         try:
             del self.__obj_map[id]
@@ -150,6 +159,7 @@ class PlasmaShareContext(ShareContext):
         pa.write_tensor(tensor, sink)
 
         self.client.seal(key)
+        self.__added_ids.append(key)
 
         return key
 
@@ -160,20 +170,23 @@ class PlasmaShareContext(ShareContext):
         tensor = pa.read_tensor(buffer)
         result = tensor.to_numpy()
         rid = id(result)
-        
+
         self.__obj_map[rid] = data
         weakref.finalize(result, self._clear_ref, rid)
-        
+
         _logger.debug('loaded array of shape %s', result.shape)
         return result
 
     def __getstate__(self):
-        return self.path
+        return self.socket
 
     def __setstate__(self, state):
-        self.path = state
+        self.socket = state
         self.process = None
-        self.client = plasma.connect(self.path, "", 0)
+        self.client = plasma.connect(self.socket, "", 0)
+        self.disconnect = True
+        self.__obj_map = {}
+        self.__added_ids = []
 
     def __enter__(self):
         _push_context(self)
@@ -190,6 +203,8 @@ class PlasmaShareContext(ShareContext):
 
     def _cleanup(self):
         if self.client is not None:
+            _logger.debug('deleting %d objects', len(self.__added_ids))
+            self.client.delete(self.__added_ids)
             _logger.debug('disconnecting from Plasma')
             self.client.disconnect()
             self.client = None
