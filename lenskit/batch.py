@@ -22,12 +22,19 @@ except ImportError:
     fastparquet = None
 
 try:
-    import multiprocessing_logging
-    multiprocessing_logging.install_mp_handler(logging.getLogger())
+    import multiprocessing_logging as mplog
 except ImportError:
-    pass
+    mplog = None
 
 _logger = logging.getLogger(__name__)
+__mp_log_installed = False
+
+
+def __install_mplog():
+    global __mp_log_installed
+    if mplog and not __mp_log_installed:
+        mplog.install_mp_handler(logging.getLogger())
+        __mp_log_installed = True
 
 
 def predict(algo, pairs, model=None):
@@ -129,6 +136,7 @@ def recommend(algo, model, users, n, candidates, ratings=None, nprocs=None):
     """
 
     if nprocs and nprocs > 1 and sharing.is_sharable(model, algo):
+        __install_mplog()
         shared = sharing.publish(model, algo)
         if isinstance(candidates, sharing.Shareable):
             cand_key = candidates.share_publish()
