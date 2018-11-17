@@ -8,6 +8,7 @@ import collections
 from time import perf_counter
 from functools import partial
 import warnings
+import multiprocessing as mp
 from multiprocessing.pool import Pool
 
 import pandas as pd
@@ -93,8 +94,6 @@ def _recommend_seq(algo, model, users, n, candidates):
 
 def _recommend_init(algo, mkey, ckey, ccls, n):
     global __rec_model, __rec_algo, __rec_candidates, __rec_size
-    ctx = sharing.context()
-    sharing._push_context(ctx)
 
     __rec_algo = Recommender.adapt(algo)
     __rec_model = sharing.resolve(mkey, algo)
@@ -135,7 +134,7 @@ def recommend(algo, model, users, n, candidates, ratings=None, nprocs=None):
         ``score``, and any other columns returned by the recommender.
     """
 
-    if nprocs and nprocs > 1 and sharing.is_sharable(model, algo):
+    if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
         __install_mplog()
         shared = sharing.publish(model, algo)
         if isinstance(candidates, sharing.Shareable):
