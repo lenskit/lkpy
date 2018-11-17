@@ -2,6 +2,7 @@
 Batch-run predictors and recommenders for evaluation.
 """
 
+import os
 import logging
 import pathlib
 import collections
@@ -172,12 +173,17 @@ class MultiEval:
             the default candidate set generator.
     """
 
-    def __init__(self, path, nrecs=100, candidates=topn.UnratedCandidates):
+    def __init__(self, path, nrecs=100, candidates=topn.UnratedCandidates,
+                 share_context=None, nprocs=None):
         self.workdir = pathlib.Path(path)
         self.n_recs = nrecs
         self.candidate_generator = candidates
         self.algorithms = []
         self.datasets = []
+        self.share_context = share_context
+        if share_context and nprocs is None:
+            nprocs = os.cpu_count() / 2
+        self.nprocs = nprocs
 
     @property
     def run_csv(self):
@@ -334,7 +340,12 @@ class MultiEval:
         watch = util.Stopwatch()
         users = test.user.unique()
         _logger.info('generating recommendations for %d users for %s', len(users), algo)
-        recs = recommend(algo, model, users, self.n_recs, candidates, test)
+        if self.share_context:
+            with self.share_context.child() as kid:
+                recs = recommend(algo, model, users, self.n_recs, candidates, test,
+                                 context=kid, nprocs=self.nprocs)
+        else:
+            recs = recommend(algo, model, users, self.n_recs, candidates, test)
         watch.stop()
         _logger.info('generated recommendations in %s', watch)
         recs['RunId'] = rid

@@ -5,14 +5,20 @@ import numpy as np
 
 from lk_test_utils import ml_pandas, norm_path
 
-from lenskit import batch, crossfold as xf
+from lenskit import batch, sharing, crossfold as xf
 from lenskit.algorithms.basic import Bias, Popular
 
+from pytest import mark
 
-def test_sweep_bias(tmp_path):
+share_impls = [None] + sharing.share_impls
+
+
+@mark.parametrize('share', share_impls)
+def test_sweep_bias(tmp_path, share):
     tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
-    sweep = batch.MultiEval(tmp_path)
+    ctx = share() if share else None
+    sweep = batch.MultiEval(tmp_path, share_context=ctx, nprocs=2)
 
     ratings = ml_pandas.renamed.ratings
     folds = xf.partition_users(ratings, 5, xf.SampleN(5))
