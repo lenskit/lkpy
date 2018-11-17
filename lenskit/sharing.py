@@ -11,6 +11,8 @@ from pathlib import Path
 import uuid
 import logging
 import weakref
+from multiprocessing import sharedctypes as mpctypes
+import ctypes
 
 import numpy as np
 import pandas as pd
@@ -109,6 +111,38 @@ class DiskShareContext(ShareContext):
                 self._tmp_dir.cleanup()
         finally:
             _pop_context()
+
+
+class SHMShareContext(ShareContext):
+    def __init__(self):
+        pass
+
+    def put_array(self, array):
+        _logger.debug('sharing object of type %s and shape %s (size=%d)',
+                      array.dtype.str, array.shape, array.size)
+        code = np.ctypeslib._typecodes[array.dtype.str]
+        shared = mpctypes.Array(code, array.size, lock=False)
+        shape = array.shape
+        nda = np.ctypeslib.as_array(shared)
+        nda[:] = array.reshape(array.size)
+
+        return (shape, shared)
+
+    def get_array(self, key):
+        shape, shared = key
+        nda = np.ctypeslib.as_array(shared)
+        nda = nda.reshape(shape)
+        return nda
+
+    def child(self):
+        return self
+
+    def __enter__(self):
+        _push_context(self)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        _pop_context()
 
 
 class PlasmaShareContext(ShareContext):
@@ -233,6 +267,10 @@ class Shareable(metaclass=ABCMeta):
         raise NotImplemented()
 
 
-share_impls = [DiskShareContext]
+share_impls = [SHMShareContext, DiskShareContext]
 if have_plasma:
     share_impls.append(PlasmaShareContext)
+
+
+def context():
+    return SHMShareContext()
