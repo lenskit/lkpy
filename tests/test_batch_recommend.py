@@ -146,7 +146,7 @@ def test_pop_batch_recommend(share):
                                        test, context=ctx, nprocs=2)
         else:
             recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun, test)
-        return res
+        return recs
 
     recs = pd.concat((eval(train, test)
                       for (train, test)
