@@ -99,8 +99,8 @@ def test_als_share():
 
     assert model is not None
 
-    key = model.share_publish(sharing.context())
-    restored = als.MFModel.share_resolve(key, sharing.context())
+    key = sharing.publish(model, algo)
+    restored = sharing.resolve(key, algo)
 
     assert np.all(restored.user_features == model.user_features)
     assert np.all(restored.item_features == model.item_features)

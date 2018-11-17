@@ -13,7 +13,7 @@ from multiprocessing.pool import Pool
 import pandas as pd
 import numpy as np
 
-from .algorithms import Predictor, Recommender, SharesModel
+from .algorithms import Predictor, Recommender
 from . import topn, util, sharing
 
 try:
@@ -22,10 +22,6 @@ except ImportError:
     fastparquet = None
 
 _logger = logging.getLogger(__name__)
-
-
-def _is_sharable(algo, model):
-    return isinstance(algo, SharesModel) or isinstance(model, sharing.Shareable)
 
 
 def predict(algo, pairs, model=None):
@@ -82,16 +78,14 @@ def _recommend_seq(algo, model, users, n, candidates):
     return results
 
 
-def _recommend_init(algo, mkey, mcls, ckey, ccls, n):
+def _recommend_init(algo, mkey, ckey, ccls, n):
     global __rec_model, __rec_algo, __rec_candidates, __rec_size
     ctx = sharing.context()
     sharing._push_context(ctx)
 
     __rec_algo = Recommender.adapt(algo)
-    if mcls:
-        __rec_model = mcls.share_resolve(mkey, ctx)
-    else:
-        __rec_model = algo.share_resolve(mkey, ctx)
+    __rec_model = sharing.resolve(mkey, algo)
+
     if ccls:
         __rec_candidates = ccls.share_resolve(ckey)
     else:
@@ -128,24 +122,16 @@ def recommend(algo, model, users, n, candidates, ratings=None, nprocs=None):
         ``score``, and any other columns returned by the recommender.
     """
 
-    if nprocs and nprocs > 1 and _is_sharable(algo, model):
-        ctx = sharing.context()
-        shared = algo.share_publish(model, ctx)
+    if nprocs and nprocs > 1 and sharing.is_sharable(model, algo):
+        shared = sharing.publish(model, algo)
         if isinstance(candidates, sharing.Shareable):
-            cand_key = candidates.share_publish(ctx)
+            cand_key = candidates.share_publish()
             cand_cls = candidates.__class__
         else:
             cand_key = candidates
             cand_cls = None
 
-        if isinstance(algo, SharesModel):
-            shared = algo.share_publish(model, ctx)
-            mod_cls = None
-        else:
-            shared = model.share_publish(ctx)
-            mod_cls = model.__class__
-
-        args = [algo, shared, mod_cls, cand_key, cand_cls, n]
+        args = [algo, shared, cand_key, cand_cls, n]
         with Pool(nprocs, _recommend_init, args) as pool:
             results = pool.map(_recommend_worker, users)
     else:

@@ -206,28 +206,26 @@ def test_pop_save_load(tmp_path):
     assert all(counts.index[:10] == recs.item[:10])
 
 
-@mark.parametrize('impl', sharing.share_impls)
-def test_pop_share(impl):
+def test_pop_share():
     algo = basic.Popular()
     original = algo.train(lktu.ml_pandas.renamed.ratings)
 
-    with impl() as ctx:
-        key = algo.share_publish(original, ctx)
+    key = algo.share_publish(original)
 
-        model = algo.share_resolve(key, ctx)
+    model = algo.share_resolve(key)
 
-        assert model is not original
+    assert model is not original
 
-        counts = lktu.ml_pandas.renamed.ratings.groupby('item').user.count()
-        counts = counts.nlargest(100)
+    counts = lktu.ml_pandas.renamed.ratings.groupby('item').user.count()
+    counts = counts.nlargest(100)
 
-        assert model is not None
-        assert model.max() == counts.max()
+    assert model is not None
+    assert model.max() == counts.max()
 
-        recs = algo.recommend(model, 2038, 100)
-        assert len(recs) == 100
-        assert all(np.diff(recs.score) <= 0)
+    recs = algo.recommend(model, 2038, 100)
+    assert len(recs) == 100
+    assert all(np.diff(recs.score) <= 0)
 
-        assert recs.score.iloc[0] == counts.max()
-        # the 10 most popular should be the same
-        assert all(counts.index[:10] == recs.item[:10])
+    assert recs.score.iloc[0] == counts.max()
+    # the 10 most popular should be the same
+    assert all(counts.index[:10] == recs.item[:10])

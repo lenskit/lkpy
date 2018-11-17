@@ -98,7 +98,7 @@ class Trainable(metaclass=ABCMeta):
         Returns:
             the trained model (of an implementation-defined type).
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def save_model(self, model, path):
         """
@@ -131,13 +131,3 @@ class Trainable(metaclass=ABCMeta):
         path = pathlib.Path(path)
         with path.open('rb') as f:
             return pickle.load(f)
-
-
-class SharesModel(metaclass=ABCMeta):
-    @abstractmethod
-    def share_publish(self, model, context):
-        raise NotImplemented()
-
-    @abstractmethod
-    def share_resolve(self, key, context):
-        raise NotImplemented()

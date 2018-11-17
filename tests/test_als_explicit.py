@@ -115,8 +115,8 @@ def test_als_share():
     assert model is not None
     assert model.global_bias == approx(ratings.rating.mean())
 
-    key = model.share_publish(sharing.context())
-    restored = als.BiasMFModel.share_resolve(key, sharing.context())
+    key = sharing.publish(model, algo)
+    restored = sharing.resolve(key, algo)
 
     assert restored.global_bias == model.global_bias
     assert np.all(restored.user_bias == model.user_bias)

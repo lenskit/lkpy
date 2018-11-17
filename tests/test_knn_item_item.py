@@ -1,6 +1,5 @@
 import lenskit.algorithms.item_knn as knn
 from lenskit import matrix as lm
-from lenskit import sharing
 
 from pathlib import Path
 import logging
@@ -364,12 +363,10 @@ def test_ii_share():
     _log.info('building model')
     original = algo.train(lktu.ml_sample())
 
-    ctx = sharing.context()
-
-    _log.info('sharing model to %s', ctx)
-    key = algo.share_publish(original, ctx)
+    _log.info('sharing model')
+    key = algo.share_publish(original)
     _log.info('reloading model')
-    model = algo.share_resolve(key, ctx)
+    model = algo.share_resolve(key)
     _log.info('checking model')
 
     assert model is not None
@@ -554,7 +551,7 @@ def test_ii_known_preds():
 @mark.slow
 @mark.eval
 @mark.parametrize('ncpus', [1, 2])
-def test_ii_batch_recommend(share):
+def test_ii_batch_recommend(ncpus):
     import lenskit.crossfold as xf
     from lenskit import batch, topn
     import lenskit.metrics.topn as lm

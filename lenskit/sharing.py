@@ -4,9 +4,6 @@ evaluation operations more easily.
 """
 
 from abc import ABCMeta, abstractmethod, abstractclassmethod
-import tempfile
-from pathlib import Path
-import uuid
 import logging
 from multiprocessing import sharedctypes as mpctypes
 
@@ -15,144 +12,124 @@ import pandas as pd
 
 _logger = logging.getLogger(__name__)
 
-_context_stack = []
-
-
-def current_context():
-    if _context_stack:
-        return _context_stack[-1]
-
-
-def _push_context(ctx):
-    _context_stack.append(ctx)
-
-
-def _pop_context():
-    _context_stack.pop()
-
-
-class ShareContext(metaclass=ABCMeta):
-    """
-    Base class for sharing contexts.
-    """
-
-    @abstractmethod
-    def put_array(self, array):
-        pass
-
-    @abstractmethod
-    def get_array(self, key):
-        pass
-
-    def put_series(self, series):
-        i_k = self.put_index(series.index)
-        v_k = self.put_array(series.values)
-        return (series.name, v_k, i_k)
-
-    def get_series(self, key):
-        name, v_k, i_k = key
-        index = self.get_index(i_k)
-        values = self.get_array(v_k)
-        series = pd.Series(values, index=index, name=name)
-        return series
-
-    def put_index(self, index):
-        v_k = self.put_array(index.values)
-        return (index.name, v_k)
-
-    def get_index(self, key):
-        name, v_k = key
-        values = self.get_array(v_k)
-        return pd.Index(values, name=name)
-
-
-class DiskShareContext(ShareContext):
-    def __init__(self, path=None):
-        if path is None:
-            self._tmp_dir = tempfile.TemporaryDirectory(prefix='lkpy')
-            self.path = Path(self._tmp_dir.name)
-        else:
-            self.path = Path(path)
-            self._tmp_dir = None
-
-    def put_array(self, array):
-        key = uuid.uuid4()
-        fn = self.path / key.hex
-        fn = fn.with_suffix('.npy')
-        np.save(fn, array)
-        return key
-
-    def get_array(self, key):
-        fn = self.path / key.hex
-        fn = fn.with_suffix('.npy')
-        return np.load(fn)
-
-    def child(self):
-        return DiskShareContext(self.path)
-
-    def __getstate__(self):
-        return self.path
-
-    def __setstate__(self, state):
-        self.path = state
-        self._tmp_dir = None
-
-    def __enter__(self):
-        _push_context(self)
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        try:
-            if self._tmp_dir is not None:
-                self._tmp_dir.cleanup()
-        finally:
-            _pop_context()
-
-
-class SHMShareContext(ShareContext):
-    def __init__(self):
-        pass
-
-    def put_array(self, array):
-        _logger.debug('sharing object of type %s and shape %s (size=%d)',
-                      array.dtype.str, array.shape, array.size)
-        code = np.ctypeslib._typecodes[array.dtype.str]
-        shared = mpctypes.Array(code, array.size, lock=False)
-        shape = array.shape
-        nda = np.ctypeslib.as_array(shared)
-        nda[:] = array.reshape(array.size)
-
-        return (shape, shared)
-
-    def get_array(self, key):
-        shape, shared = key
-        nda = np.ctypeslib.as_array(shared)
-        nda = nda.reshape(shape)
-        return nda
-
-    def child(self):
-        return self
-
-    def __enter__(self):
-        _push_context(self)
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        _pop_context()
-
 
 class Shareable(metaclass=ABCMeta):
+    """
+    Interface for objects and classes that can share themselves.
+    """
+
     @abstractmethod
-    def share_publish(self, context):
+    def share_publish(self):
         raise NotImplementedError()
 
     @abstractclassmethod
-    def share_resolve(self, key, context):
+    def share_resolve(self, key):
         raise NotImplementedError()
 
 
-share_impls = [SHMShareContext, DiskShareContext]
+class ShareHelper(metaclass=ABCMeta):
+    """
+    Interfaces for classes that can help publish other objects.  This is useful for
+    algorithms to be able to publish their models.
+    """
+
+    @abstractmethod
+    def share_publish(self, model):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def share_resolve(self, key):
+        raise NotImplementedError()
 
 
-def context():
-    return SHMShareContext()
+def put_series(series):
+    i_k = put_index(series.index)
+    v_k = put_array(series.values)
+    return (series.name, v_k, i_k)
+
+
+def get_series(key):
+    name, v_k, i_k = key
+    index = get_index(i_k)
+    values = get_array(v_k)
+    series = pd.Series(values, index=index, name=name)
+    return series
+
+
+def put_index(index):
+    v_k = put_array(index.values)
+    return (index.name, v_k)
+
+
+def get_index(key):
+    name, v_k = key
+    values = get_array(v_k)
+    return pd.Index(values, name=name)
+
+
+def put_array(array):
+    _logger.debug('sharing object of type %s and shape %s (size=%d)',
+                  array.dtype.str, array.shape, array.size)
+    code = np.ctypeslib._typecodes[array.dtype.str]
+    shared = mpctypes.Array(code, array.size, lock=False)
+    shape = array.shape
+    nda = np.ctypeslib.as_array(shared)
+    nda[:] = array.reshape(array.size)
+
+    return (shape, shared)
+
+
+def get_array(key):
+    shape, shared = key
+    nda = np.ctypeslib.as_array(shared)
+    nda = nda.reshape(shape)
+    return nda
+
+
+def publish(obj, helper=None):
+    """
+    Publish an object for sharing.
+
+    Args:
+        obj: the object to share.
+        helper:
+            a helper to try to use.  If this is not an instance of :py:class:`ShareHelper`, it is
+            ignored.
+    """
+
+    if isinstance(helper, ShareHelper):
+        return helper.share_publish(obj)
+    elif isinstance(obj, Shareable):
+        return (obj.share_publish(), obj.__class__)
+    else:
+        raise TypeError('{} is not shareable and no suitable helper provided'.format(obj))
+
+
+def resolve(key, helper):
+    """
+    Resolve an object for sharing.
+
+    Args:
+        obj: the object to share.
+        helper(ShareHelper):
+            a helper to try to use.  If this is not an instance of :py:class:`ShareHelper`, it is
+            ignored.
+    """
+
+    if not isinstance(helper, ShareHelper):
+        key, helper = key
+    return helper.share_resolve(key)
+
+
+def is_sharable(obj, helper=None):
+    """
+    Test whether we have sufficient APIs to share an object.
+
+    Args:
+        obj: the object to share
+        helper(ShareHelper):
+            a helper to try to use.  If this is not an instance of :py:class:`ShareHelper`, it is
+            ignored.
+    """
+
+    return isinstance(obj, Shareable) or isinstance(helper, ShareHelper)

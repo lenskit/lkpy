@@ -12,6 +12,8 @@ import scipy.sparse as sps
 import numba as n
 from numba import njit, jitclass, prange
 
+from . import sharing
+
 _logger = logging.getLogger(__name__)
 
 RatingMatrix = namedtuple('RatingMatrix', ['matrix', 'users', 'items'])
@@ -338,24 +340,24 @@ def csr_load(data, prefix=None):
     return CSR(nrows, ncols, len(colinds), rowptrs, colinds, values)
 
 
-def csr_share_publish(csr, context):
-    rk = context.put_array(csr.rowptrs)
-    ck = context.put_array(csr.colinds)
+def csr_share_publish(csr):
+    rk = sharing.put_array(csr.rowptrs)
+    ck = sharing.put_array(csr.colinds)
     if csr.values is not None:
-        vk = context.put_array(csr.values)
+        vk = sharing.put_array(csr.values)
     else:
         vk = None
 
     return ((csr.nrows, csr.ncols), rk, ck, vk)
 
 
-def csr_share_resolve(key, context):
+def csr_share_resolve(key):
     shape, rk, ck, vk = key
     nrows, ncols = shape
-    rowptrs = context.get_array(rk)
-    colinds = context.get_array(ck)
+    rowptrs = sharing.get_array(rk)
+    colinds = sharing.get_array(ck)
     if vk is not None:
-        values = context.get_array(vk)
+        values = sharing.get_array(vk)
     else:
         values = None
 
