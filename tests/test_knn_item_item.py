@@ -399,7 +399,7 @@ def test_ii_share(share):
             assert all(r_mat.values[sp:ep] == o_mat.values[sp:ep])
 
         means = ml_ratings.groupby('item').rating.mean()
-        assert means[model.items].values == approx(original.means)
+        assert means.loc[model.items.values.copy()].values == approx(original.means)
 
         matrix = lm.csr_to_scipy(model.sim_matrix)
 
