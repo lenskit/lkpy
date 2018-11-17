@@ -45,6 +45,7 @@ jobs:
     displayName: 'Build LKPY'
 
   - script: |
+      export PLASMA_SIZE=512000000
       python3 setup.py test
     displayName: 'Test LKPY'
 
@@ -107,6 +108,7 @@ jobs:
     displayName: 'Download ML-100K'
     
   - script: |
+      export PLASMA_SIZE=512000000
       python3 setup.py test
     displayName: 'pytest'
   
@@ -151,6 +153,7 @@ jobs:
     displayName: 'Install partial extra deps'
     
   - script: |
+      export PLASMA_SIZE=512000000
       python3 setup.py test
     displayName: 'pytest'
   
@@ -260,5 +263,6 @@ jobs:
     displayName: 'Build LKPY'
 
   - script: |
+      export PLASMA_SIZE=512000000
       python3 setup.py test
     displayName: 'Test LKPY'
