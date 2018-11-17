@@ -83,6 +83,7 @@ def get_array(key):
     shape, shared = key
     nda = np.ctypeslib.as_array(shared)
     nda = nda.reshape(shape)
+    nda.setflags(write=False)
     return nda
 
 
