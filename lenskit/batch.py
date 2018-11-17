@@ -5,7 +5,6 @@ Batch-run predictors and recommenders for evaluation.
 import logging
 import pathlib
 import collections
-from time import perf_counter
 from functools import partial
 import warnings
 import multiprocessing as mp
@@ -15,7 +14,7 @@ import pandas as pd
 import numpy as np
 
 from .algorithms import Predictor, Recommender
-from . import topn, util, sharing
+from . import topn, util
 
 try:
     import fastparquet
@@ -38,7 +37,23 @@ def __install_mplog():
         __mp_log_installed = True
 
 
-def predict(algo, pairs, model=None):
+def __mp_init_data(algo, model, candidates, size):
+    global __rec_model, __rec_algo, __rec_candidates, __rec_size
+
+    __rec_algo = Recommender.adapt(algo)
+    __rec_model = model
+    __rec_candidates = candidates
+    __rec_size = size
+
+
+def _predict_worker(job):
+    user, udf = job
+    res = __rec_algo.predict(__rec_model, user, udf.item)
+    res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
+    return res.to_msgpack()
+
+
+def predict(algo, pairs, model=None, nprocs=None):
     """
     Generate predictions for user-item pairs.  The provided algorithm should be a
     :py:class:`algorithms.Predictor` or a function of two arguments: the user ID and
@@ -60,20 +75,33 @@ def predict(algo, pairs, model=None):
             result will also contain a `rating` column.
     """
 
-    if isinstance(algo, Predictor):
+    pfun = None
+    if not isinstance(algo, Predictor):
+        _logger.warn('non-Predictor deprecated')
+        nprocs = None
         pfun = partial(algo.predict, model)
+
+    if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
+        __install_mplog()
+        __mp_init_data(algo, model, None, None)
+        _logger.info('starting predict process with %d workers', nprocs)
+        with Pool(nprocs) as pool:
+            results = pool.map(_predict_worker, pairs.groupby('user'))
+        results = [pd.read_msgpack(r) for r in results]
     else:
-        pfun = algo
+        results = []
+        for user, udf in pairs.groupby('user'):
+            if pfun:
+                res = pfun(user, udf.item)
+            else:
+                res = algo.predict(model, user, udf.item)
+            res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
+            results.append(res)
 
-    def run(user, udf):
-        res = pfun(user, udf.item)
-        return pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
-
-    ures = (run(user, udf) for (user, udf) in pairs.groupby('user'))
-    res = pd.concat(ures)
+    results = pd.concat(results)
     if 'rating' in pairs:
-        return pairs.join(res.set_index(['user', 'item']), on=('user', 'item'))
-    return res
+        return pairs.join(results.set_index(['user', 'item']), on=('user', 'item'))
+    return results
 
 
 def _recommend_user(algo, model, user, n, candidates):
@@ -90,15 +118,6 @@ def _recommend_seq(algo, model, users, n, candidates):
     results = [_recommend_user(algo, model, user, n, candidates(user))
                for user in users]
     return results
-
-
-def _recommend_init(algo, model, candidates, n):
-    global __rec_model, __rec_algo, __rec_candidates, __rec_size
-
-    __rec_algo = Recommender.adapt(algo)
-    __rec_model = model
-    __rec_candidates = candidates
-    __rec_size = n
 
 
 def _recommend_worker(user):
@@ -133,7 +152,7 @@ def recommend(algo, model, users, n, candidates, ratings=None, nprocs=None):
 
     if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
         __install_mplog()
-        _recommend_init(algo, model, candidates, n)
+        __mp_init_data(algo, model, candidates, n)
         _logger.info('starting recommend process with %d workers', nprocs)
         with Pool(nprocs) as pool:
             results = pool.map(_recommend_worker, users)
@@ -329,7 +348,7 @@ class MultiEval:
 
         watch = util.Stopwatch()
         _logger.info('generating %d predictions for %s', len(test), algo)
-        preds = predict(algo, test, model)
+        preds = predict(algo, test, model, nprocs=self.nprocs)
         watch.stop()
         _logger.info('generated predictions in %s', watch)
         preds['RunId'] = rid
