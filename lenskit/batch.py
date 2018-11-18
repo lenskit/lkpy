@@ -40,7 +40,7 @@ def __install_mplog():
 def __mp_init_data(algo, model, candidates, size):
     global __rec_model, __rec_algo, __rec_candidates, __rec_size
 
-    __rec_algo = Recommender.adapt(algo)
+    __rec_algo = algo
     __rec_model = model
     __rec_candidates = candidates
     __rec_size = size
@@ -114,7 +114,7 @@ def _recommend_user(algo, model, user, n, candidates):
 def _recommend_seq(algo, model, users, n, candidates):
     if isinstance(candidates, dict):
         candidates = candidates.get
-    algo = Recommender.adapt(algo)
+    algo = Recommenderer.adapt(algo)
     results = [_recommend_user(algo, model, user, n, candidates(user))
                for user in users]
     return results
@@ -122,7 +122,8 @@ def _recommend_seq(algo, model, users, n, candidates):
 
 def _recommend_worker(user):
     candidates = __rec_candidates(user)
-    res = _recommend_user(__rec_algo, __rec_model, user, __rec_size, candidates)
+    algo = Recommend.adapt(__rec_algo)
+    res = _recommend_user(algo, __rec_model, user, __rec_size, candidates)
     return res.to_msgpack()
 
 
