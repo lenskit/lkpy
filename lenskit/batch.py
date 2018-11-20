@@ -79,7 +79,7 @@ def predict(algo, pairs, model=None, nprocs=None):
     if not isinstance(algo, Predictor):
         _logger.warn('non-Predictor deprecated')
         nprocs = None
-        pfun = partial(algo.predict, model)
+        pfun = algo
 
     if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
         __install_mplog()
