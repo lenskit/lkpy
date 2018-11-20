@@ -163,7 +163,7 @@ def recommend(algo, model, users, n, candidates, ratings=None, nprocs=None):
 
     results = pd.concat(results, ignore_index=True)
 
-    if ratings is not None:
+    if ratings is not None and 'rating' in ratings.columns:
         # combine with test ratings for relevance data
         results = pd.merge(results, ratings, how='left', on=('user', 'item'))
         # fill in missing 0s
