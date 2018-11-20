@@ -105,7 +105,9 @@ def predict(algo, pairs, model=None, nprocs=None):
 
 def _recommend_user(algo, model, user, n, candidates):
     _logger.debug('generating recommendations for %s', user)
+    watch = util.Stopwatch()
     res = algo.recommend(model, user, n, candidates)
+    _logger.debug('%s recommended %d/%d items for %s in %s', algo, len(res), n, user, watch)
     iddf = pd.DataFrame({'user': user, 'rank': np.arange(1, len(res) + 1)})
     return pd.concat([iddf, res], axis='columns')
 
