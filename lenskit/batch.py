@@ -114,7 +114,7 @@ def _recommend_user(algo, model, user, n, candidates):
 def _recommend_seq(algo, model, users, n, candidates):
     if isinstance(candidates, dict):
         candidates = candidates.get
-    algo = Recommenderer.adapt(algo)
+    algo = Recommender.adapt(algo)
     results = [_recommend_user(algo, model, user, n, candidates(user))
                for user in users]
     return results
@@ -122,7 +122,7 @@ def _recommend_seq(algo, model, users, n, candidates):
 
 def _recommend_worker(user):
     candidates = __rec_candidates(user)
-    algo = Recommend.adapt(__rec_algo)
+    algo = Recommender.adapt(__rec_algo)
     res = _recommend_user(algo, __rec_model, user, __rec_size, candidates)
     return res.to_msgpack()
 
