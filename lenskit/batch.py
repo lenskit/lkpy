@@ -77,7 +77,7 @@ def predict(algo, pairs, model=None, nprocs=None):
 
     pfun = None
     if not isinstance(algo, Predictor):
-        _logger.warn('non-Predictor deprecated')
+        _logger.warning('non-Predictor deprecated')
         nprocs = None
         pfun = algo
 
