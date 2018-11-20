@@ -294,6 +294,9 @@ class TopN(Recommender):
         scores.index.name = 'item'
         return scores.reset_index()
 
+    def __str__(self):
+        return f'TN/{self.predictor}/'
+
 
 class _TrainableTopN(TopN, Trainable):
     """
@@ -308,3 +311,6 @@ class _TrainableTopN(TopN, Trainable):
 
     def load_model(self, path):
         return self.predictor.load_model(path)
+
+    def __str__(self):
+        return f'TTN/{self.predictor}'
