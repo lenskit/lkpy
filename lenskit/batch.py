@@ -193,16 +193,21 @@ class MultiEval:
         path(str or :py:class:`pathlib.Path`):
             the working directory for this evaluation.
             It will be created if it does not exist.
-        nrecs(int):
+        predict(bool):
+            whether to generate rating predictions.
+        recommend(int):
             the number of recommendations to generate per user (None to disable top-N).
-        candidates:
-            the default candidate set generator.
+        candidates(function):
+            the default candidate set generator for recommendations.  It should take the
+            training data and return a candidate generator, itself a function mapping user
+            IDs to candidate sets.
     """
 
-    def __init__(self, path, nrecs=100, candidates=topn.UnratedCandidates,
-                 nprocs=None):
+    def __init__(self, path, predict=True,
+                 recommend=100, candidates=topn.UnratedCandidates, nprocs=None):
         self.workdir = pathlib.Path(path)
-        self.n_recs = nrecs
+        self.predict = predict
+        self.recommend = recommend
         self.candidate_generator = candidates
         self.algorithms = []
         self.datasets = []
@@ -344,6 +349,8 @@ class MultiEval:
         return model, watch.elapsed()
 
     def _predict(self, rid, algo, model, test):
+        if not self.predict:
+            return None, None
         if not isinstance(algo, Predictor):
             return None, None
 
@@ -357,13 +364,13 @@ class MultiEval:
         return preds, watch.elapsed()
 
     def _recommend(self, rid, algo, model, test, candidates):
-        if self.n_recs is None:
+        if self.recommend is None:
             return None, None
 
         watch = util.Stopwatch()
         users = test.user.unique()
         _logger.info('generating recommendations for %d users for %s', len(users), algo)
-        recs = recommend(algo, model, users, self.n_recs, candidates, test,
+        recs = recommend(algo, model, users, self.recommend, candidates, test,
                          nprocs=self.nprocs)
         watch.stop()
         _logger.info('generated recommendations in %s', watch)
