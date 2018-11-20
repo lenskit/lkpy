@@ -338,7 +338,6 @@ class ItemItem(Trainable, Predictor):
         iscore = np.full(len(model.items), np.nan, dtype=np.float_)
 
         # now compute the predictions
-        _logger.debug('aggregating with function %s', self._predict_agg)
         iscore = self._predict_agg(model.sim_matrix,
                                    len(model.items),
                                    (self.min_neighbors, self.max_neighbors),
