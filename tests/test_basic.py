@@ -1,6 +1,3 @@
-import os.path
-
-from lenskit import sharing
 from lenskit.algorithms import basic
 
 import pandas as pd
@@ -189,31 +186,6 @@ def test_pop_save_load(tmp_path):
     algo.save_model(original, fn)
 
     model = algo.load_model(fn)
-    assert model is not original
-
-    counts = lktu.ml_pandas.renamed.ratings.groupby('item').user.count()
-    counts = counts.nlargest(100)
-
-    assert model is not None
-    assert model.max() == counts.max()
-
-    recs = algo.recommend(model, 2038, 100)
-    assert len(recs) == 100
-    assert all(np.diff(recs.score) <= 0)
-
-    assert recs.score.iloc[0] == counts.max()
-    # the 10 most popular should be the same
-    assert all(counts.index[:10] == recs.item[:10])
-
-
-def test_pop_share():
-    algo = basic.Popular()
-    original = algo.train(lktu.ml_pandas.renamed.ratings)
-
-    key = algo.share_publish(original)
-
-    model = algo.share_resolve(key)
-
     assert model is not original
 
     counts = lktu.ml_pandas.renamed.ratings.groupby('item').user.count()

@@ -357,62 +357,6 @@ def test_ii_save_load(tmp_path):
         assert all(np.diff(row.data) < 1.0e-6)
 
 
-def test_ii_share():
-    "Share and resolve a model"
-    algo = knn.ItemItem(30, save_nbrs=500)
-    _log.info('building model')
-    original = algo.train(lktu.ml_sample())
-
-    _log.info('sharing model')
-    key = algo.share_publish(original)
-    _log.info('reloading model')
-    model = algo.share_resolve(key)
-    _log.info('checking model')
-
-    assert model is not None
-    assert model is not original
-
-    assert all(np.logical_not(np.isnan(model.sim_matrix.values)))
-    assert all(model.sim_matrix.values > 0)
-    # a little tolerance
-    assert all(model.sim_matrix.values < 1 + 1.0e-6)
-
-    assert all(model.counts == original.counts)
-    assert model.counts.sum() == model.sim_matrix.nnz
-    assert model.sim_matrix.nnz == original.sim_matrix.nnz
-    assert all(model.sim_matrix.rowptrs == original.sim_matrix.rowptrs)
-    assert model.sim_matrix.values == approx(original.sim_matrix.values)
-
-    r_mat = model.sim_matrix
-    o_mat = original.sim_matrix
-    assert all(r_mat.rowptrs == o_mat.rowptrs)
-
-    for i in range(len(model.items)):
-        sp = r_mat.rowptrs[i]
-        ep = r_mat.rowptrs[i + 1]
-
-        # everything is in decreasing order
-        assert all(np.diff(r_mat.values[sp:ep]) <= 0)
-        assert all(r_mat.values[sp:ep] == o_mat.values[sp:ep])
-
-    means = ml_ratings.groupby('item').rating.mean()
-    assert means.loc[model.items.values.copy()].values == approx(original.means)
-
-    matrix = lm.csr_to_scipy(model.sim_matrix)
-
-    items = pd.Series(model.items)
-    items = items[model.counts > 0]
-    for i in items.sample(50):
-        ipos = model.items.get_loc(i)
-        _log.debug('checking item %d at position %d', i, ipos)
-
-        row = matrix.getrow(ipos)
-
-        # it should be sorted !
-        # check this by diffing the row values, and make sure they're negative
-        assert all(np.diff(row.data) < 1.0e-6)
-
-
 def test_ii_implicit_save_load(tmp_path):
     "Save and load a model"
     tmp_path = lktu.norm_path(tmp_path)

@@ -5,7 +5,6 @@ Batch-run predictors and recommenders for evaluation.
 import logging
 import pathlib
 import collections
-from functools import partial
 import warnings
 import multiprocessing as mp
 from multiprocessing.pool import Pool

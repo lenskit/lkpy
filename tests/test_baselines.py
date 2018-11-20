@@ -1,7 +1,5 @@
-from lenskit import sharing
 import lenskit.algorithms.basic as bl
 
-import os.path
 import logging
 
 import pandas as pd
@@ -244,28 +242,3 @@ def test_bias_save(tmp_path):
     assert set(model.users.index) == set([10, 12, 13])
     assert model.users.loc[[10, 12, 13]].values == \
         approx(np.array([0.25, -00.08333, -0.20833]), abs=1.0e-4)
-
-
-def test_bias_share():
-    algo = bl.Bias(damping=5)
-    original = algo.train(simple_df)
-    assert original.mean == approx(3.5)
-
-    key = algo.share_publish(original)
-
-    model = algo.share_resolve(key)
-    assert model is not original
-    assert model.mean == original.mean
-
-    assert model.items is not None
-    assert model.items.index.name == 'item'
-    assert set(model.items.index) == set([1, 2, 3])
-    assert model.items.loc[1:3].values == approx(np.array([0, 0.25, -0.25]))
-
-    assert model.users is not None
-    assert model.users.index.name == 'user'
-    assert set(model.users.index) == set([10, 12, 13])
-    assert model.users.loc[[10, 12, 13]].values == \
-        approx(np.array([0.25, -00.08333, -0.20833]), abs=1.0e-4)
-
-    del model

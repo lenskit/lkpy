@@ -5,7 +5,7 @@ import numpy as np
 
 from lk_test_utils import ml_pandas, norm_path
 
-from lenskit import batch, sharing, crossfold as xf
+from lenskit import batch, crossfold as xf
 from lenskit.algorithms.basic import Bias, Popular
 
 from pytest import mark

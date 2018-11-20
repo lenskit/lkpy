@@ -8,8 +8,7 @@ import pathlib
 
 import pandas as pd
 
-from .. import util as lku
-from .. import check, sharing
+from .. import check
 from . import Predictor, Trainable, Recommender
 
 _logger = logging.getLogger(__name__)
@@ -25,7 +24,7 @@ Attributes:
 '''
 
 
-class Bias(Predictor, Trainable, sharing.ShareHelper):
+class Bias(Predictor, Trainable):
     """
     A user-item bias rating prediction algorithm.  This implements the following
     predictor algorithm:
@@ -152,33 +151,11 @@ class Bias(Predictor, Trainable, sharing.ShareHelper):
         else:
             return series.mean()
 
-    def share_publish(self, model: BiasModel):
-        i_k = None
-        u_k = None
-
-        if model.items is not None:
-            i_k = sharing.put_series(model.items)
-
-        if model.users is not None:
-            u_k = sharing.put_series(model.users)
-
-        return BiasModel(model.mean, i_k, u_k)
-
-    def share_resolve(self, key):
-        items = None
-        users = None
-        if key.items is not None:
-            items = sharing.get_series(key.items)
-        if key.users is not None:
-            users = sharing.get_series(key.users)
-
-        return BiasModel(key.mean, items, users)
-
     def __str__(self):
         return 'Bias(ud={}, id={})'.format(self.user_damping, self.item_damping)
 
 
-class Popular(Recommender, Trainable, sharing.ShareHelper):
+class Popular(Recommender, Trainable):
     def train(self, ratings):
         pop = ratings.groupby('item').user.count()
         pop.name = 'score'
@@ -195,12 +172,6 @@ class Popular(Recommender, Trainable, sharing.ShareHelper):
             return scores.sort_values(ascending=False).reset_index()
         else:
             return scores.nlargest(n).reset_index()
-
-    def share_publish(self, model):
-        return sharing.put_series(model)
-
-    def share_resolve(self, key):
-        return sharing.get_series(key)
 
     def __str__(self):
         return 'Popular'

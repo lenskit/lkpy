@@ -1,7 +1,6 @@
-import os.path
 import logging
 
-from lenskit import topn, sharing
+from lenskit import topn
 from lenskit.algorithms import als
 
 import pandas as pd
@@ -86,22 +85,6 @@ def test_als_save_load(tmp_path):
     assert mod_file.exists()
 
     restored = algo.load_model(mod_file)
-    assert np.all(restored.user_features == model.user_features)
-    assert np.all(restored.item_features == model.item_features)
-    assert np.all(restored.item_index == model.item_index)
-    assert np.all(restored.user_index == model.user_index)
-
-
-def test_als_share():
-    algo = als.ImplicitMF(20, iterations=5)
-    ratings = lktu.ml_pandas.renamed.ratings
-    model = algo.train(ratings)
-
-    assert model is not None
-
-    key = sharing.publish(model, algo)
-    restored = sharing.resolve(key, algo)
-
     assert np.all(restored.user_features == model.user_features)
     assert np.all(restored.item_features == model.item_features)
     assert np.all(restored.item_index == model.item_index)

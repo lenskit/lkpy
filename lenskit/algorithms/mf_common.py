@@ -8,13 +8,13 @@ import logging
 import numpy as np
 import pandas as pd
 
-from .. import check, util, sharing
+from .. import check, util
 from . import basic
 
 _logger = logging.getLogger(__name__)
 
 
-class MFModel(sharing.Shareable):
+class MFModel:
     """
     Common model for matrix factorization.
 
@@ -122,19 +122,6 @@ class MFModel(sharing.Shareable):
         res = res.reindex(items)
         return res
 
-    def share_publish(self):
-        uik = sharing.put_index(self.user_index)
-        iik = sharing.put_index(self.item_index)
-        umk = sharing.put_array(self.user_features)
-        imk = sharing.put_array(self.item_features)
-        return uik, iik, umk, imk
-
-    @classmethod
-    def share_resolve(cls, key):
-        uik, iik, umk, imk = key
-        return cls(sharing.get_index(uik), sharing.get_index(iik),
-                   sharing.get_array(umk), sharing.get_array(imk))
-
     def save(self, path):
         np.savez_compressed(path, users=self.user_index.values, items=self.item_index.values,
                             umat=self.user_features, imat=self.item_features)
@@ -199,23 +186,6 @@ class BiasMFModel(MFModel):
                 rv = rv + self.item_bias[items]
 
         return rv
-
-    def share_publish(self):
-        uik = sharing.put_index(self.user_index)
-        iik = sharing.put_index(self.item_index)
-        ubk = sharing.put_array(self.user_bias)
-        ibk = sharing.put_array(self.item_bias)
-        umk = sharing.put_array(self.user_features)
-        imk = sharing.put_array(self.item_features)
-        return uik, iik, (self.global_bias, ubk, ibk), umk, imk
-
-    @classmethod
-    def share_resolve(cls, key):
-        uik, iik, bias, umk, imk = key
-        gbias, ubk, ibk = bias
-        return cls(sharing.get_index(uik), sharing.get_index(iik),
-                   (gbias, sharing.get_array(ubk), sharing.get_array(ibk)),
-                   sharing.get_array(umk), sharing.get_array(imk))
 
     def save(self, path):
         np.savez_compressed(path, users=self.user_index.values, items=self.item_index.values,
