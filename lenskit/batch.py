@@ -45,10 +45,18 @@ def __mp_init_data(algo, model, candidates, size):
     __rec_size = size
 
 
+def _predict_user(algo, model, user, udf):
+    watch = util.Stopwatch()
+    res = algo.predict(model, user, udf.item)
+    res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
+    _logger.debug('%s produced %d/%d predictions for %s in %s',
+                  algo, res.notna().sum(), len(udf), user, watch)
+    return res
+
+
 def _predict_worker(job):
     user, udf = job
-    res = __rec_algo.predict(__rec_model, user, udf.item)
-    res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
+    res = _predict_user(__rec_algo, __rec_model, user, udf)
     return res.to_msgpack()
 
 
@@ -92,9 +100,9 @@ def predict(algo, pairs, model=None, nprocs=None):
         for user, udf in pairs.groupby('user'):
             if pfun:
                 res = pfun(user, udf.item)
+                res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
             else:
-                res = algo.predict(model, user, udf.item)
-            res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
+                res = _predict_user(algo, model, user, udf.item)
             results.append(res)
 
     results = pd.concat(results)
