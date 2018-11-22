@@ -5,9 +5,9 @@ Batch-run predictors and recommenders for evaluation.
 import logging
 import pathlib
 import collections
-from time import perf_counter
-from functools import partial
 import warnings
+import multiprocessing as mp
+from multiprocessing.pool import Pool
 
 import pandas as pd
 import numpy as np
@@ -23,7 +23,31 @@ except ImportError:
 _logger = logging.getLogger(__name__)
 
 
-def predict(algo, pairs, model=None):
+def __mp_init_data(algo, model, candidates, size):
+    global __rec_model, __rec_algo, __rec_candidates, __rec_size
+
+    __rec_algo = algo
+    __rec_model = model
+    __rec_candidates = candidates
+    __rec_size = size
+
+
+def _predict_user(algo, model, user, udf):
+    watch = util.Stopwatch()
+    res = algo.predict(model, user, udf['item'])
+    res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
+    _logger.debug('%s produced %d/%d predictions for %s in %s',
+                  algo, res.prediction.notna().sum(), len(udf), user, watch)
+    return res
+
+
+def _predict_worker(job):
+    user, udf = job
+    res = _predict_user(__rec_algo, __rec_model, user, udf)
+    return res.to_msgpack()
+
+
+def predict(algo, pairs, model=None, nprocs=None):
     """
     Generate predictions for user-item pairs.  The provided algorithm should be a
     :py:class:`algorithms.Predictor` or a function of two arguments: the user ID and
@@ -45,23 +69,60 @@ def predict(algo, pairs, model=None):
             result will also contain a `rating` column.
     """
 
-    if isinstance(algo, Predictor):
-        pfun = partial(algo.predict, model)
-    else:
+    pfun = None
+    if not isinstance(algo, Predictor):
+        _logger.warning('non-Predictor deprecated')
+        nprocs = None
         pfun = algo
 
-    def run(user, udf):
-        res = pfun(user, udf.item)
-        return pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
+    if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
+        __mp_init_data(algo, model, None, None)
+        _logger.info('starting predict process with %d workers', nprocs)
+        with Pool(nprocs) as pool:
+            results = pool.map(_predict_worker, pairs.groupby('user'))
+        results = [pd.read_msgpack(r) for r in results]
+    else:
+        results = []
+        for user, udf in pairs.groupby('user'):
+            if pfun:
+                res = pfun(user, udf['item'])
+                res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
+            else:
+                res = _predict_user(algo, model, user, udf)
+            results.append(res)
 
-    ures = (run(user, udf) for (user, udf) in pairs.groupby('user'))
-    res = pd.concat(ures)
+    results = pd.concat(results)
     if 'rating' in pairs:
-        return pairs.join(res.set_index(['user', 'item']), on=('user', 'item'))
-    return res
+        return pairs.join(results.set_index(['user', 'item']), on=('user', 'item'))
+    return results
 
 
-def recommend(algo, model, users, n, candidates, ratings=None):
+def _recommend_user(algo, model, user, n, candidates):
+    _logger.debug('generating recommendations for %s', user)
+    watch = util.Stopwatch()
+    res = algo.recommend(model, user, n, candidates)
+    _logger.debug('%s recommended %d/%d items for %s in %s', algo, len(res), n, user, watch)
+    iddf = pd.DataFrame({'user': user, 'rank': np.arange(1, len(res) + 1)})
+    return pd.concat([iddf, res], axis='columns')
+
+
+def _recommend_seq(algo, model, users, n, candidates):
+    if isinstance(candidates, dict):
+        candidates = candidates.get
+    algo = Recommender.adapt(algo)
+    results = [_recommend_user(algo, model, user, n, candidates(user))
+               for user in users]
+    return results
+
+
+def _recommend_worker(user):
+    candidates = __rec_candidates(user)
+    algo = Recommender.adapt(__rec_algo)
+    res = _recommend_user(algo, __rec_model, user, __rec_size, candidates)
+    return res.to_msgpack()
+
+
+def recommend(algo, model, users, n, candidates, ratings=None, nprocs=None):
     """
     Batch-recommend for multiple users.  The provided algorithm should be a
     :py:class:`algorithms.Recommender` or :py:class:`algorithms.Predictor` (which
@@ -85,20 +146,19 @@ def recommend(algo, model, users, n, candidates, ratings=None):
         ``score``, and any other columns returned by the recommender.
     """
 
-    if isinstance(candidates, dict):
-        candidates = candidates.get
-    algo = Recommender.adapt(algo)
-
-    results = []
-    for user in users:
-        _logger.debug('generating recommendations for %s', user)
-        ucand = candidates(user)
-        res = algo.recommend(model, user, n, ucand)
-        iddf = pd.DataFrame({'user': user, 'rank': np.arange(1, len(res) + 1)})
-        results.append(pd.concat([iddf, res], axis='columns'))
+    if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
+        __mp_init_data(algo, model, candidates, n)
+        _logger.info('starting recommend process with %d workers', nprocs)
+        with Pool(nprocs) as pool:
+            results = pool.map(_recommend_worker, users)
+        results = [pd.read_msgpack(r) for r in results]
+    else:
+        _logger.info('starting sequential recommend process')
+        results = _recommend_seq(algo, model, users, n, candidates)
 
     results = pd.concat(results, ignore_index=True)
-    if ratings is not None:
+
+    if ratings is not None and 'rating' in ratings.columns:
         # combine with test ratings for relevance data
         results = pd.merge(results, ratings, how='left', on=('user', 'item'))
         # fill in missing 0s
@@ -127,18 +187,25 @@ class MultiEval:
         path(str or :py:class:`pathlib.Path`):
             the working directory for this evaluation.
             It will be created if it does not exist.
-        nrecs(int):
+        predict(bool):
+            whether to generate rating predictions.
+        recommend(int):
             the number of recommendations to generate per user (None to disable top-N).
-        candidates:
-            the default candidate set generator.
+        candidates(function):
+            the default candidate set generator for recommendations.  It should take the
+            training data and return a candidate generator, itself a function mapping user
+            IDs to candidate sets.
     """
 
-    def __init__(self, path, nrecs=100, candidates=topn.UnratedCandidates):
+    def __init__(self, path, predict=True,
+                 recommend=100, candidates=topn.UnratedCandidates, nprocs=None):
         self.workdir = pathlib.Path(path)
-        self.n_recs = nrecs
+        self.predict = predict
+        self.recommend = recommend
         self.candidate_generator = candidates
         self.algorithms = []
         self.datasets = []
+        self.nprocs = nprocs
 
     @property
     def run_csv(self):
@@ -276,12 +343,14 @@ class MultiEval:
         return model, watch.elapsed()
 
     def _predict(self, rid, algo, model, test):
+        if not self.predict:
+            return None, None
         if not isinstance(algo, Predictor):
             return None, None
 
         watch = util.Stopwatch()
         _logger.info('generating %d predictions for %s', len(test), algo)
-        preds = predict(algo, test, model)
+        preds = predict(algo, test, model, nprocs=self.nprocs)
         watch.stop()
         _logger.info('generated predictions in %s', watch)
         preds['RunId'] = rid
@@ -289,13 +358,14 @@ class MultiEval:
         return preds, watch.elapsed()
 
     def _recommend(self, rid, algo, model, test, candidates):
-        if self.n_recs is None:
+        if self.recommend is None:
             return None, None
 
         watch = util.Stopwatch()
         users = test.user.unique()
         _logger.info('generating recommendations for %d users for %s', len(users), algo)
-        recs = recommend(algo, model, users, self.n_recs, candidates, test)
+        recs = recommend(algo, model, users, self.recommend, candidates, test,
+                         nprocs=self.nprocs)
         watch.stop()
         _logger.info('generated recommendations in %s', watch)
         recs['RunId'] = rid

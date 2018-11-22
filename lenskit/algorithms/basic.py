@@ -8,14 +8,20 @@ import pathlib
 
 import pandas as pd
 
-from .. import util as lku
 from .. import check
 from . import Predictor, Trainable, Recommender
 
 _logger = logging.getLogger(__name__)
 
 BiasModel = namedtuple('BiasModel', ['mean', 'items', 'users'])
-BiasModel.__doc__ = "Trained model for the :py:class:`Bias` algorithm."
+BiasModel.__doc__ = '''
+Trained model for the :py:class:`Bias` algorithm.
+
+Attributes:
+    mean(double): the global mean.
+    items(pandas.Series): the item means.
+    users(pandas.Series): the user means.
+'''
 
 
 class Bias(Predictor, Trainable):
@@ -288,6 +294,9 @@ class TopN(Recommender):
         scores.index.name = 'item'
         return scores.reset_index()
 
+    def __str__(self):
+        return 'TN/' + str(self.predidctor)
+
 
 class _TrainableTopN(TopN, Trainable):
     """
@@ -302,3 +311,6 @@ class _TrainableTopN(TopN, Trainable):
 
     def load_model(self, path):
         return self.predictor.load_model(path)
+
+    def __str__(self):
+        return 'TTN/' + str(self.predictor)

@@ -1,4 +1,3 @@
-import os.path
 import logging
 
 from lenskit.algorithms import als

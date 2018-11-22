@@ -45,7 +45,7 @@ jobs:
     displayName: 'Build LKPY'
 
   - script: |
-      python3 setup.py test
+      python3 -m pytest
     displayName: 'Test LKPY'
 
   - script: |
@@ -107,7 +107,7 @@ jobs:
     displayName: 'Download ML-100K'
     
   - script: |
-      python3 setup.py test
+      python3 -m pytest
     displayName: 'pytest'
   
   - script: |
@@ -151,7 +151,7 @@ jobs:
     displayName: 'Install partial extra deps'
     
   - script: |
-      python3 setup.py test
+      python3 -m pytest
     displayName: 'pytest'
   
   - script: |
@@ -198,7 +198,7 @@ jobs:
     displayName: 'Install dependencies'
 
   - script: |
-      python setup.py test
+      python -m pytest
     displayName: 'pytest'
 
 - job: 'WindowsConda'
@@ -225,8 +225,7 @@ jobs:
     displayName: 'Build LKPY'
 
   - script: |
-      python -V
-      python setup.py test
+      python -m pytest
     displayName: 'Test LKPY'
 
 - job: 'MacConda'
@@ -260,5 +259,5 @@ jobs:
     displayName: 'Build LKPY'
 
   - script: |
-      python3 setup.py test
+      python3 -m pytest
     displayName: 'Test LKPY'

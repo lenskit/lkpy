@@ -441,8 +441,8 @@ def test_ii_batch_accuracy():
 
     ratings = lktu.ml100k.load_ratings()
 
-    uu_algo = knn.ItemItem(30)
-    algo = basic.Fallback(uu_algo, basic.Bias())
+    ii_algo = knn.ItemItem(30)
+    algo = basic.Fallback(ii_algo, basic.Bias())
 
     def eval(train, test):
         _log.info('running training')
@@ -494,7 +494,8 @@ def test_ii_known_preds():
 
 @mark.slow
 @mark.eval
-def test_ii_batch_recommend():
+@mark.parametrize('ncpus', [1, 2])
+def test_ii_batch_recommend(ncpus):
     import lenskit.crossfold as xf
     from lenskit import batch, topn
     import lenskit.metrics.topn as lm
@@ -511,7 +512,7 @@ def test_ii_batch_recommend():
         model = algo.train(train)
         _log.info('testing %d users', test.user.nunique())
         cand_fun = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun)
+        recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun, nprocs=ncpus)
         # combine with test ratings for relevance data
         res = pd.merge(recs, test, how='left', on=('user', 'item'))
         # fill in missing 0s

@@ -1,4 +1,3 @@
-import os.path
 import logging
 
 from lenskit import topn
@@ -76,12 +75,11 @@ def test_als_train_large():
 def test_als_save_load(tmp_path):
     tmp_path = lktu.norm_path(tmp_path)
     mod_file = tmp_path / 'als.npz'
-    algo = als.BiasedMF(20, iterations=5)
+    algo = als.ImplicitMF(20, iterations=5)
     ratings = lktu.ml_pandas.renamed.ratings
     model = algo.train(ratings)
 
     assert model is not None
-    assert model.global_bias == approx(ratings.rating.mean())
 
     algo.save_model(model, mod_file)
     assert mod_file.exists()

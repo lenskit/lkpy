@@ -1,12 +1,10 @@
-import os.path
-
 from lenskit.algorithms import basic
 
 import pandas as pd
 import numpy as np
 
 import lk_test_utils as lktu
-from pytest import approx
+from pytest import approx, mark
 
 simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
                           'user': [10, 12, 10, 13],

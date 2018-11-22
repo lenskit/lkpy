@@ -118,7 +118,8 @@ def test_bias_batch_recommend():
     assert ndcg.mean() > 0
 
 
-def test_pop_batch_recommend():
+@pytest.mark.parametrize('ncpus', [None, 2])
+def test_pop_batch_recommend(ncpus):
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch, topn
@@ -136,12 +137,9 @@ def test_pop_batch_recommend():
         model = algo.train(train)
         _log.info('testing %d users', test.user.nunique())
         cand_fun = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun)
-        # combine with test ratings for relevance data
-        res = pd.merge(recs, test, how='left', on=('user', 'item'))
-        # fill in missing 0s
-        res.loc[res.rating.isna(), 'rating'] = 0
-        return res
+        recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun,
+                               test, nprocs=ncpus)
+        return recs
 
     recs = pd.concat((eval(train, test)
                       for (train, test)

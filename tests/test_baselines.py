@@ -1,12 +1,11 @@
 import lenskit.algorithms.basic as bl
 
-import os.path
 import logging
 
 import pandas as pd
 import numpy as np
 
-from pytest import approx
+from pytest import approx, mark
 
 import lk_test_utils as lktu
 from lk_test_utils import ml_pandas

@@ -98,7 +98,7 @@ class Trainable(metaclass=ABCMeta):
         Returns:
             the trained model (of an implementation-defined type).
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def save_model(self, model, path):
         """

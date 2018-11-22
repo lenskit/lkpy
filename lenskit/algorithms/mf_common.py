@@ -131,8 +131,8 @@ class MFModel:
         path = util.npz_path(path)
 
         with np.load(path) as npz:
-            users = pd.Index(npz['users'])
-            items = pd.Index(npz['items'])
+            users = pd.Index(npz['users'], name='user')
+            items = pd.Index(npz['items'], name='item')
             umat = npz['umat']
             imat = npz['imat']
             return cls(users, items, umat, imat)

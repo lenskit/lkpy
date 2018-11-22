@@ -1,5 +1,6 @@
 import pytest
 
+import logging
 from collections import namedtuple
 from functools import partial
 import pandas as pd
@@ -9,6 +10,8 @@ import lk_test_utils as lktu
 
 from lenskit.algorithms.basic import Bias
 import lenskit.batch as lkb
+
+_log = logging.getLogger(__name__)
 
 MLB = namedtuple('MLB', ['ratings', 'algo', 'model'])
 MLB.predictor = property(lambda mlb: partial(mlb.algo.predict, mlb.model))
@@ -112,3 +115,32 @@ def test_predict_include_rating(mlb):
 
     urv = mlb.ratings.set_index(['user', 'item'])
     assert all(preds.rating.values == urv.loc[preds.index, :].rating.values)
+
+
+@pytest.mark.skipif(not lktu.ml100k.available, reason='ML-100K required')
+@pytest.mark.parametrize('ncpus', [None, 2])
+def test_bias_batch_predict(ncpus):
+    from lenskit.algorithms import basic
+    import lenskit.crossfold as xf
+    from lenskit import batch
+    import lenskit.metrics.predict as pm
+
+    ratings = lktu.ml100k.load_ratings()
+
+    algo = basic.Bias(damping=5)
+
+    def eval(train, test):
+        _log.info('running training')
+        model = algo.train(train)
+        _log.info('testing %d users', test.user.nunique())
+        recs = batch.predict(algo, test, model=model, nprocs=ncpus)
+        return recs
+
+    preds = pd.concat((eval(train, test)
+                       for (train, test)
+                       in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
+
+    _log.info('analyzing predictions')
+    rmse = pm.rmse(preds.prediction, preds.rating)
+    _log.info('RMSE is %f', rmse)
+    assert rmse == pytest.approx(0.95, abs=0.1)
