@@ -3,7 +3,6 @@ Batch-run predictors and recommenders for evaluation.
 """
 
 import logging
-from logging.handlers import QueueHandler, QueueListener
 import pathlib
 import collections
 import warnings
@@ -22,18 +21,6 @@ except ImportError:
     fastparquet = None
 
 _logger = logging.getLogger(__name__)
-__mp_log_queue = mp.Queue()
-
-
-def __mp_init():
-    root = logging.getLogger()
-    for h in root.handlers:
-        root.removeHandler(h)
-    root.addHandler(QueueHandler(__mp_log_queue))
-
-
-def __mp_listener():
-    return QueueListener(__mp_log_queue, *list(logging.getLogger().handlers))
 
 
 def __mp_init_data(algo, model, candidates, size):
@@ -91,13 +78,8 @@ def predict(algo, pairs, model=None, nprocs=None):
     if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
         __mp_init_data(algo, model, None, None)
         _logger.info('starting predict process with %d workers', nprocs)
-        ql = __mp_listener()
-        ql.start()
-        try:
-            with Pool(nprocs, initializer=__mp_init) as pool:
-                results = pool.map(_predict_worker, pairs.groupby('user'))
-        finally:
-            ql.stop()
+        with Pool(nprocs) as pool:
+            results = pool.map(_predict_worker, pairs.groupby('user'))
         results = [pd.read_msgpack(r) for r in results]
     else:
         results = []
@@ -166,14 +148,9 @@ def recommend(algo, model, users, n, candidates, ratings=None, nprocs=None):
 
     if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
         __mp_init_data(algo, model, candidates, n)
-        ql = __mp_listener()
-        ql.start()
-        try:
-            _logger.info('starting recommend process with %d workers', nprocs)
-            with Pool(nprocs, initializer=__mp_init) as pool:
-                results = pool.map(_recommend_worker, users)
-        finally:
-            ql.stop()
+        _logger.info('starting recommend process with %d workers', nprocs)
+        with Pool(nprocs) as pool:
+            results = pool.map(_recommend_worker, users)
         results = [pd.read_msgpack(r) for r in results]
     else:
         _logger.info('starting sequential recommend process')
