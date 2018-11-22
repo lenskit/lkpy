@@ -97,6 +97,12 @@ class BiasedMF(Predictor, Trainable):
         iterations(int): the number of iterations to train
         reg(double): the regularization factor
         damping(double): damping factor for the underlying mean
+
+    Attributes:
+        features(int): the number of features.
+        iterations(int): the number of training iterations.
+        regularization(double): the regularization factor.
+        damping(double): the mean damping.
     """
     timer = None
 
