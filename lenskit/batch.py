@@ -47,7 +47,7 @@ def __mp_init_data(algo, model, candidates, size):
 
 def _predict_user(algo, model, user, udf):
     watch = util.Stopwatch()
-    res = algo.predict(model, user, udf.item)
+    res = algo.predict(model, user, udf['item'])
     res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
     _logger.debug('%s produced %d/%d predictions for %s in %s',
                   algo, res.notna().sum(), len(udf), user, watch)
@@ -99,10 +99,10 @@ def predict(algo, pairs, model=None, nprocs=None):
         results = []
         for user, udf in pairs.groupby('user'):
             if pfun:
-                res = pfun(user, udf.item)
+                res = pfun(user, udf['item'])
                 res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
             else:
-                res = _predict_user(algo, model, user, udf.item)
+                res = _predict_user(algo, model, user, udf)
             results.append(res)
 
     results = pd.concat(results)
