@@ -32,6 +32,7 @@ __mp_log_installed = False
 def __install_mplog():
     global __mp_log_installed
     if mplog and not __mp_log_installed:
+        _logger.info('installing MP log handler')
         mplog.install_mp_handler(logging.getLogger())
         __mp_log_installed = True
 
