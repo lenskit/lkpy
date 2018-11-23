@@ -45,7 +45,7 @@ Resources
    GettingStarted
    crossfold
    batch
-   evaluation
+   evaluation/index
    algorithms
    util
 
