@@ -18,7 +18,7 @@ LensKit rating predictors do not report predictions when their core model is una
 to predict.  For example, a nearest-neighbor recommender will not score an item if
 it cannot find any suitable neighbors.  Following the Pandas convention, these items
 are given a score of NaN (when Pandas implements better missing data handling, it will
-use that, so use :py:fun:`pandas.Series.isna`/:py:fun:`pandas.Series.notna`, not the
+use that, so use :py:meth:`pandas.Series.isna`/:py:meth:`pandas.Series.notna`, not the
 ``isnan`` versions.
 
 However, this causes problems when computing predictive accuracy: recommenders are not
