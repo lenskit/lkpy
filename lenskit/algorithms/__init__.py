@@ -70,6 +70,18 @@ class Recommender(metaclass=ABCMeta):
 
     @classmethod
     def adapt(cls, algo):
+        """
+        Adapt an algorithm to be a recommender.
+
+        Args:
+            algo: the algorithm to adapt.  If the algorithm implements :py:class:`Recommender`,
+                it is returned as-is; if it implements :py:class:`Predictor`, then a top-N
+                recommender using the predictor's scores is returned.
+
+        Returns:
+            Recommender: a recommendation interface to ``algo``.
+        """
+
         if isinstance(algo, Recommender):
             return algo
         elif isinstance(algo, Predictor):
