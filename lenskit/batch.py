@@ -21,15 +21,26 @@ except ImportError:
     fastparquet = None
 
 _logger = logging.getLogger(__name__)
+_rec_context = None
 
 
-def __mp_init_data(algo, model, candidates, size):
-    global __rec_model, __rec_algo, __rec_candidates, __rec_size
+class MPRecContext:
+    def __init__(self, algo, model, candidates=None, size=None):
+        self.algo = algo
+        self.model = model
+        self.candidates = candidates
+        self.size = size
 
-    __rec_algo = algo
-    __rec_model = model
-    __rec_candidates = candidates
-    __rec_size = size
+    def __enter__(self):
+        global _rec_context
+        _logger.debug('installing context for %s', self.algo)
+        _rec_context = self
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        global _rec_context
+        _logger.debug('uninstalling context for %s', self.algo)
+        _rec_context = None
 
 
 def _predict_user(algo, model, user, udf):
@@ -43,7 +54,7 @@ def _predict_user(algo, model, user, udf):
 
 def _predict_worker(job):
     user, udf = job
-    res = _predict_user(__rec_algo, __rec_model, user, udf)
+    res = _predict_user(_rec_context.algo, _rec_context.model, user, udf)
     return res.to_msgpack()
 
 
@@ -76,9 +87,8 @@ def predict(algo, pairs, model=None, nprocs=None):
         pfun = algo
 
     if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
-        __mp_init_data(algo, model, None, None)
         _logger.info('starting predict process with %d workers', nprocs)
-        with Pool(nprocs) as pool:
+        with MPRecContext(algo, model),  Pool(nprocs) as pool:
             results = pool.map(_predict_worker, pairs.groupby('user'))
         results = [pd.read_msgpack(r) for r in results]
     else:
@@ -147,9 +157,8 @@ def recommend(algo, model, users, n, candidates, ratings=None, nprocs=None):
     """
 
     if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
-        __mp_init_data(algo, model, candidates, n)
         _logger.info('starting recommend process with %d workers', nprocs)
-        with Pool(nprocs) as pool:
+        with MPRecContext(algo, model, candidates, n), Pool(nprocs) as pool:
             results = pool.map(_recommend_worker, users)
         results = [pd.read_msgpack(r) for r in results]
     else:
