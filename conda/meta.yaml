@@ -2,7 +2,7 @@
 
 package:
   name: lenskit
-  {% if GIT_DESCRIBE_HASH > '0' %}
+  {% if GIT_DESCRIBE_NUMBER > '0' %}
   version: {{data.get('version')}}.dev{{GIT_DESCRIBE_NUMBER}}+{{GIT_DESCRIBE_HASH}}
   {% else %}
   version: {{data.get('version')}}
@@ -17,7 +17,7 @@ requirements:
     - python {{ python }}
     - setuptools
     - pytest-runner
-    - numba >= 0.40
+    - numba >=0.40
     - pandas
     - numpy
     - scipy
@@ -27,7 +27,7 @@ requirements:
     - python
     - pandas
     - scipy
-    - numba >= 0.40
+    - numba >=0.40
     - pyarrow
     - fastparquet
     - python-snappy
