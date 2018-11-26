@@ -126,9 +126,9 @@ def _recommend_seq(algo, model, users, n, candidates):
 
 
 def _recommend_worker(user):
-    candidates = __rec_candidates(user)
-    algo = Recommender.adapt(__rec_algo)
-    res = _recommend_user(algo, __rec_model, user, __rec_size, candidates)
+    candidates = _rec_context.candidates(user)
+    algo = Recommender.adapt(_rec_context.algo)
+    res = _recommend_user(algo, _rec_context.model, user, _rec_context.size, candidates)
     return res.to_msgpack()
 
 
