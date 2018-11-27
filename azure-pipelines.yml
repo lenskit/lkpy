@@ -1,7 +1,3 @@
-# Python package
-# Create and test a Python package on multiple Python versions.
-# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
-# https://docs.microsoft.com/vsts/pipelines/languages/python
 variables:
   conda.deps: >
     python=$(python.version)
@@ -12,7 +8,7 @@ variables:
     pandas scipy pyarrow
     numba cython
   pip.extras: >
-    hpfrec
+    hpfrec==0.2.2.5
 
 jobs:
 

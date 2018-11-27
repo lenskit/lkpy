@@ -21,6 +21,16 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
 
 
 @mark.slow
+@mark.skipif(not have_implicit, reason='implicit not installed')
+def test_implicit_als_train():
+    algo = implicit.ALS(25)
+    ratings = lktu.ml_pandas.renamed.ratings
+
+    model = algo.train(ratings)
+    assert model is not None
+
+
+@mark.slow
 @mark.eval
 @mark.skipif(not have_implicit, reason='implicit not installed')
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
