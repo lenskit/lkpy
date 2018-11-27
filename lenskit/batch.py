@@ -266,13 +266,16 @@ class MultiEval:
 
         Args:
             data:
-                the input data set(s) to run. Can be one of the followin:
+                The input data set(s) to run. Can be one of the following:
 
                 * A tuple of (train, test) data.
                 * An iterable of (train, test) pairs, in which case the iterable
                   is not consumed until it is needed.
                 * A function yielding either of the above, to defer data load
                   until it is needed.
+
+                Data can be either data frames or paths; paths are loaded after
+                detection using :py:fun:`util.read_df_detect`.
 
             kwargs:
                 additional attributes pertaining to these data sets.
@@ -285,6 +288,26 @@ class MultiEval:
 
         self.datasets.append(_DSRec(data, candidates, attrs))
 
+    def _normalize_ds_entry(self, entry):
+        # normalize data set to be an iterable of tuples
+        ds, cand_f, attrs = entry
+        if callable(ds):
+            ds = ds()
+        if isinstance(ds, tuple):
+            return [(ds, cand_f, attrs)]
+        else:
+            return [(dse, cand_f, dict(Partition=part+1, **attrs)) for (part, dse) in enumerate(ds)]
+
+    def _flat_datasets(self):
+        for entry in self.datasets:
+            yield from self._normalize_ds_entry(entry)
+
+    def _read_data(self, df):
+        if isinstance(df, str) or isinstance(df, pathlib.Path):
+            return util.read_df_detect(df)
+        else:
+            return df
+
     def run(self):
         """
         Run the evaluation.
@@ -295,35 +318,29 @@ class MultiEval:
         run_id = 0
         run_data = []
 
-        for ds, cand_f, ds_attrs in self.datasets:
-            # normalize data set to be an iterable of tuples
-            if callable(ds):
-                ds = ds()
-            if isinstance(ds, tuple):
-                ds = [ds]
+        for ds, cand_f, ds_attrs in self._flat_datasets():
             if cand_f is None:
                 cand_f = self.candidate_generator
+            train, test = ds
 
             # loop the data
-            for part, (train, test) in enumerate(ds):
-                dsp_attrs = dict(ds_attrs)
-                dsp_attrs['Partition'] = part + 1
-                ds_name = ds_attrs.get('DataSet', None)
-                cand = cand_f(train)
+            ds_name = ds_attrs.get('DataSet', None)
+            ds_part = ds_attrs.get('Partition', None)
+            cand = cand_f(train)
 
-                for arec in self.algorithms:
-                    run_id += 1
+            for arec in self.algorithms:
+                run_id += 1
 
-                    _logger.info('starting run %d: %s on %s:%d', run_id, arec.algorithm,
-                                 ds_name, part + 1)
-                    run = self._run_algo(run_id, arec, (train, test, dsp_attrs, cand))
-                    _logger.info('finished run %d: %s on %s:%d', run_id, arec.algorithm,
-                                 ds_name, part + 1)
-                    run_data.append(run)
-                    run_df = pd.DataFrame(run_data)
-                    # overwrite files to show progress
-                    run_df.to_csv(self.run_csv)
-                    run_df.to_parquet(self.run_file, compression=None)
+                _logger.info('starting run %d: %s on %s:%d', run_id, arec.algorithm,
+                             ds_name, ds_part)
+                run = self._run_algo(run_id, arec, (train, test, ds_attrs, cand))
+                _logger.info('finished run %d: %s on %s:%d', run_id, arec.algorithm,
+                             ds_name, ds_part)
+                run_data.append(run)
+                run_df = pd.DataFrame(run_data)
+                # overwrite files to show progress
+                run_df.to_csv(self.run_csv)
+                run_df.to_parquet(self.run_file, compression=None)
 
     def _run_algo(self, run_id, arec, data):
         train, test, dsp_attrs, cand = data
