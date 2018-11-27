@@ -259,7 +259,7 @@ jobs:
       packageSpecs: $(conda.deps)
       updateConda: false
 
-  - script: sudo conda install llvm-openmp
+  - script: sudo conda install -y llvm-openmp
     displayName: 'Install OpenMP'
 
   - script: sudo pip install $(pip.extras)

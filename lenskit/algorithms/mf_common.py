@@ -43,12 +43,12 @@ class MFModel:
     @property
     def n_users(self):
         "The number of users."
-        return len(self.users)
+        return len(self.user_index)
 
     @property
     def n_items(self):
         "The number of items."
-        return len(self.items)
+        return len(self.item_index)
 
     def lookup_user(self, user):
         """
