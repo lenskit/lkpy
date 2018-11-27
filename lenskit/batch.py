@@ -288,15 +288,38 @@ class MultiEval:
 
         self.datasets.append(_DSRec(data, candidates, attrs))
 
+    def persist_data(self):
+        """
+        Persist the data for an experiment, replacing in-memory data sets with file names.
+        Once this has been called, the sweep can be pickled.
+        """
+        self.workdir.mkdir(parents=True, exist_ok=True)
+        ds2 = []
+        for i, (ds, cand_f, ds_attrs) in enumerate(self._flat_datasets()):
+            train, test = ds
+            if isinstance(train, pd.DataFrame):
+                fn = self.workdir / 'ds{}-train.parquet'.format(i+1)
+                _logger.info('serializing to %s', fn)
+                train.to_parquet(fn)
+                train = fn
+            if isinstance(test, pd.DataFrame):
+                fn = self.workdir / 'ds{}-test.parquet'.format(i+1)
+                _logger.info('serializing to %s', fn)
+                test.to_parquet(fn)
+                test = fn
+            ds2.append(((train, test), cand_f, ds_attrs))
+        self.datasets = ds2
+
     def _normalize_ds_entry(self, entry):
         # normalize data set to be an iterable of tuples
         ds, cand_f, attrs = entry
         if callable(ds):
             ds = ds()
         if isinstance(ds, tuple):
-            yield (ds, cand_f, attrs)
+            yield _DSRec(ds, cand_f, attrs)
         else:
-            yield from ((dse, cand_f, dict(Partition=part+1, **attrs)) for (part, dse) in enumerate(ds))
+            yield from (_DSRec(dse, cand_f, dict(Partition=part+1, **attrs)) 
+                        for (part, dse) in enumerate(ds))
 
     def _flat_datasets(self):
         for entry in self.datasets:
@@ -304,9 +327,15 @@ class MultiEval:
 
     def _read_data(self, df):
         if isinstance(df, str) or isinstance(df, pathlib.Path):
+            _logger.info('reading from %s', df)
             return util.read_df_detect(df)
         else:
             return df
+    
+    def _flat_runs(self):
+        for dse in self._flat_datasets():
+            for arec in self.algorithms:
+                yield (dse, arec)
 
     def run(self):
         """
@@ -317,32 +346,33 @@ class MultiEval:
 
         run_id = 0
         run_data = []
+        train_load = util.LastMemo(self._read_data)
+        test_load = util.LastMemo(self._read_data)
 
-        for ds, cand_f, ds_attrs in self._flat_datasets():
+        for i, (dsrec, arec) in enumerate(self._flat_runs()):
+            run_id = i + 1
+            
+            ds, cand_f, ds_attrs = dsrec
             if cand_f is None:
                 cand_f = self.candidate_generator
             train, test = ds
-            train = self._read_data(train)
-            test = self._read_data(test)
+            train = train_load(train)
+            test = test_load(train)
 
-            # loop the data
             ds_name = ds_attrs.get('DataSet', None)
             ds_part = ds_attrs.get('Partition', None)
             cand = cand_f(train)
 
-            for arec in self.algorithms:
-                run_id += 1
-
-                _logger.info('starting run %d: %s on %s:%d', run_id, arec.algorithm,
-                             ds_name, ds_part)
-                run = self._run_algo(run_id, arec, (train, test, ds_attrs, cand))
-                _logger.info('finished run %d: %s on %s:%d', run_id, arec.algorithm,
-                             ds_name, ds_part)
-                run_data.append(run)
-                run_df = pd.DataFrame(run_data)
-                # overwrite files to show progress
-                run_df.to_csv(self.run_csv)
-                run_df.to_parquet(self.run_file, compression=None)
+            _logger.info('starting run %d: %s on %s:%d', run_id, arec.algorithm,
+                            ds_name, ds_part)
+            run = self._run_algo(run_id, arec, (train, test, ds_attrs, cand))
+            _logger.info('finished run %d: %s on %s:%d', run_id, arec.algorithm,
+                            ds_name, ds_part)
+            run_data.append(run)
+            run_df = pd.DataFrame(run_data)
+            # overwrite files to show progress
+            run_df.to_csv(self.run_csv)
+            run_df.to_parquet(self.run_file, compression=None)
 
     def _run_algo(self, run_id, arec, data):
         train, test, dsp_attrs, cand = data

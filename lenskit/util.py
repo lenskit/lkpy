@@ -159,3 +159,17 @@ def read_df_detect(path):
         return pd.read_csv(path)
     elif path.suffix in ('.parquet', '.parq', '.pq'):
         return pd.read_parquet(path)
+
+
+class LastMemo:
+    def __init__(self, func):
+        self.function = func
+        self.memory = None
+        self.result = None
+    
+    def __call__(self, arg):
+        if arg is not self.memory:
+            self.result = self.function(arg)
+            self.memory = arg
+        
+        return self.result
