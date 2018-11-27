@@ -91,6 +91,7 @@ def predict(algo, pairs, model=None, nprocs=None):
         with MPRecContext(algo, model),  Pool(nprocs) as pool:
             results = pool.map(_predict_worker, pairs.groupby('user'))
         results = [pd.read_msgpack(r) for r in results]
+        _logger.info('finished predictions')
     else:
         results = []
         for user, udf in pairs.groupby('user'):
@@ -112,8 +113,9 @@ def _recommend_user(algo, model, user, n, candidates):
     watch = util.Stopwatch()
     res = algo.recommend(model, user, n, candidates)
     _logger.debug('%s recommended %d/%d items for %s in %s', algo, len(res), n, user, watch)
-    iddf = pd.DataFrame({'user': user, 'rank': np.arange(1, len(res) + 1)})
-    return pd.concat([iddf, res], axis='columns')
+    res['user'] = user
+    res['rank'] = np.arange(1, len(res) + 1)
+    return res
 
 
 def _recommend_seq(algo, model, users, n, candidates):
@@ -338,7 +340,7 @@ class MultiEval:
         self._write_results(self.preds_file, preds, append=run_id > 1)
 
         recs, rec_time = self._recommend(run_id, arec.algorithm, model, test, cand)
-        run['recTime'] = rec_time
+        run['RecTime'] = rec_time
         self._write_results(self.recs_file, recs, append=run_id > 1)
 
         return run
