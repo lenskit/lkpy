@@ -294,9 +294,9 @@ class MultiEval:
         if callable(ds):
             ds = ds()
         if isinstance(ds, tuple):
-            return [(ds, cand_f, attrs)]
+            yield (ds, cand_f, attrs)
         else:
-            return [(dse, cand_f, dict(Partition=part+1, **attrs)) for (part, dse) in enumerate(ds)]
+            yield from ((dse, cand_f, dict(Partition=part+1, **attrs)) for (part, dse) in enumerate(ds))
 
     def _flat_datasets(self):
         for entry in self.datasets:
