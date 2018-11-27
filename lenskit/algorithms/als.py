@@ -40,7 +40,7 @@ def _train_matrix(mat: CSR, other: np.ndarray, reg: float):
     return result
 
 
-0@njit(parallel=True, nogil=True)
+@njit(parallel=True, nogil=True)
 def _train_implicit_matrix(mat: CSR, other: np.ndarray, reg: float, weight: float):
     "One half of an implicit ALS training round."
     nr = mat.nrows
