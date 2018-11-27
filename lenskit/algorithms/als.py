@@ -40,7 +40,7 @@ def _train_matrix(mat: CSR, other: np.ndarray, reg: float):
     return result
 
 
-@njit(parallel=True, nogil=True)
+0@njit(parallel=True, nogil=True)
 def _train_implicit_matrix(mat: CSR, other: np.ndarray, reg: float, weight: float):
     "One half of an implicit ALS training round."
     nr = mat.nrows
@@ -306,5 +306,5 @@ class ImplicitMF(Predictor, Trainable):
         return MFModel.load(path)
 
     def __str__(self):
-        return 'als.ImplicitMF(features={}, regularization={})'.\
-            format(self.features, self.regularization)
+        return 'als.ImplicitMF(features={}, regularization={}, w={})'.\
+            format(self.features, self.regularization, self.weight)
