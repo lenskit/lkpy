@@ -47,7 +47,9 @@ def _train_implicit_matrix(mat: CSR, other: np.ndarray, reg: float, weight: floa
     nc = other.shape[0]
     nf = other.shape[1]
     assert mat.ncols == nc
+    regmat = np.identity(nf) * reg
     OtO = other.T @ other
+    OtOr = OtO + regmat
     assert OtO.shape[0] == OtO.shape[1]
     assert OtO.shape[0] == nf
     result = np.zeros((nr, nf))
@@ -66,7 +68,7 @@ def _train_implicit_matrix(mat: CSR, other: np.ndarray, reg: float, weight: floa
         # assert MMT.shape[0] == ctx.n_features
         # assert MMT.shape[1] == ctx.n_features
         # Build and invert the matrix
-        A = OtO + MMT + np.identity(nf) * reg
+        A = OtOr + MMT
         Ainv = np.linalg.inv(A)
         # And now we can compute the final piece of the update rule
         AiYt = Ainv @ other.T
