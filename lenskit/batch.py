@@ -322,6 +322,8 @@ class MultiEval:
             if cand_f is None:
                 cand_f = self.candidate_generator
             train, test = ds
+            train = self._read_data(train)
+            test = self._read_data(test)
 
             # loop the data
             ds_name = ds_attrs.get('DataSet', None)

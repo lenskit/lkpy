@@ -50,3 +50,40 @@ def test_sweep_bias(tmp_path, ncpus):
 
     recs = pd.read_parquet(work / 'recommendations.parquet')
     assert all(recs.RunId.isin(runs.RunId))
+
+
+def test_sweep_filenames(tmp_path):
+    tmp_path = norm_path(tmp_path)
+    work = pathlib.Path(tmp_path)
+    sweep = batch.MultiEval(tmp_path)
+
+    ratings = ml_pandas.renamed.ratings
+    folds = []
+    for part, (train, test) in enumerate(xf.partition_users(ratings, 2, xf.SampleN(5))):
+        trfn = work / 'p{}-train.csv'.format(part)
+        tefn = work / 'p{}-test.csv'.format(part)
+        train.to_csv(trfn)
+        test.to_csv(tefn)
+        folds.append((trfn, tefn))
+
+    sweep.add_datasets(folds, DataSet='ml-small')
+    sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
+                         attrs=['damping'])
+    sweep.add_algorithms(Popular())
+
+    try:
+        sweep.run()
+    finally:
+        if (work / 'runs.csv').exists():
+            runs = pd.read_csv(work / 'runs.csv')
+            print(runs)
+
+    assert (work / 'runs.csv').exists()
+    assert (work / 'runs.parquet').exists()
+    assert (work / 'predictions.parquet').exists()
+    assert (work / 'recommendations.parquet').exists()
+
+    runs = pd.read_parquet(work / 'runs.parquet')
+    # 4 algorithms by 2 partitions
+    assert len(runs) == 8
+
