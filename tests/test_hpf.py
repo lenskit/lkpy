@@ -27,6 +27,7 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
 def test_hpf_train_large():
     algo = hpf.HPF(20)
     ratings = lktu.ml_pandas.renamed.ratings
+    ratings = ratings.assign(rating=ratings.rating + 0.5)
     model = algo.train(ratings)
 
     assert model is not None
