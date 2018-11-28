@@ -13,3 +13,4 @@ algorithms.
    knn
    mf
    hpf
+   implicit
