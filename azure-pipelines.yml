@@ -31,7 +31,7 @@ jobs:
       packageSpecs: $(conda.deps)
   
   - script: |
-      pip install $(pip.extras)
+        sudo /usr/envs/lkpy/bin/pip install $(pip.extras)
     displayName: 'Extra PyPI deps'
     
   - script: |
@@ -100,9 +100,6 @@ jobs:
       pip install $(pip.deps)
     displayName: 'Install dependencies'
   
-  - script: pip install $(pip.extras)
-    displayName: 'Extra PyPI deps'
-
   - script: |
       if [ ! -r ~/ml-100k/u.data ]; then
         wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
@@ -222,9 +219,6 @@ jobs:
       createCustomEnvironment: true
       environmentName: lkpy
       packageSpecs: $(conda.deps)
-
-  - script: pip install $(pip.extras)
-    displayName: 'Extra PyPI deps'
 
   - script: |
       python -V
