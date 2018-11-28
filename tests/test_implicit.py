@@ -5,13 +5,14 @@ import numpy as np
 
 from pytest import mark
 
-import lk_test_utils as lktu
-
 try:
-    from lenskit.algorithms import implicit
+    import implicit
     have_implicit = True
 except ImportError:
     have_implicit = False
+
+import lk_test_utils as lktu
+from lenskit.algorithms.implicit import ALS, BPR
 
 _log = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
 @mark.slow
 @mark.skipif(not have_implicit, reason='implicit not installed')
 def test_implicit_als_train_rec():
-    algo = implicit.ALS(25)
+    algo = ALS(25)
     ratings = lktu.ml_pandas.renamed.ratings
 
     model = algo.train(ratings)
@@ -44,7 +45,7 @@ def test_implicit_als_batch_accuracy():
 
     ratings = lktu.ml100k.load_ratings()
 
-    algo = implicit.ALS(25)
+    algo = ALS(25)
 
     def eval(train, test):
         _log.info('running training')
@@ -68,7 +69,7 @@ def test_implicit_als_batch_accuracy():
 @mark.slow
 @mark.skipif(not have_implicit, reason='implicit not installed')
 def test_implicit_bpr_train_rec():
-    algo = implicit.BPR(25)
+    algo = BPR(25)
     ratings = lktu.ml_pandas.renamed.ratings
 
     model = algo.train(ratings)

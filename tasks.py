@@ -1,12 +1,8 @@
-import sys
 import os
-import distutils.util as du
 from invoke import task
 from invoke.exceptions import Failure
 from invoke.runners import Result
 import shutil
-from pathlib import Path
-import importlib.machinery
 
 
 @task

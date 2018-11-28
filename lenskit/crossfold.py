@@ -6,7 +6,6 @@ from collections import namedtuple
 import logging
 from abc import ABC, abstractmethod
 
-import pandas as pd
 import numpy as np
 
 TTPair = namedtuple('TTPair', ['train', 'test'])

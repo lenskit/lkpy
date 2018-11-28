@@ -35,9 +35,9 @@ jobs:
     displayName: 'Extra PyPI deps'
     
   - script: |
-      if [ ! -r ~/ml-100k/u.data ]; then
+      if [ ! -r ml-100k/u.data ]; then
         wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
-        unzip -d ~ ml-100k.zip
+        unzip ml-100k.zip
       fi
     displayName: 'Download ML-100K'
 
