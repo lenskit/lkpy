@@ -29,9 +29,9 @@ jobs:
       createCustomEnvironment: true
       environmentName: lkpy
       packageSpecs: $(conda.deps)
-      updateConda: false
   
-  - script: sudo pip install $(pip.extras)
+  - script: |
+      pip install $(pip.extras)
     displayName: 'Extra PyPI deps'
     
   - script: |
