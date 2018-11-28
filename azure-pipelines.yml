@@ -8,7 +8,7 @@ variables:
     pandas scipy pyarrow
     numba cython
   pip.extras: >
-    hpfrec==0.2.2.5
+    hpfrec==0.2.2.5 implicit
 
 jobs:
 
