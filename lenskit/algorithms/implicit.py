@@ -1,12 +1,13 @@
 from collections import namedtuple
+import warnings
+import logging
 import pandas as pd
 import numpy as np
 
-from implicit.als import AlternatingLeastSquares
-from implicit.bpr import BayesianPersonalizedRanking
-
 from ..matrix import sparse_ratings
 from . import Trainable, Recommender
+
+_logger = logging.getLogger(__name__)
 
 ImplicitModel = namedtuple('ImplicitModel', [
     'algo', 'matrix', 'users', 'items'
@@ -34,6 +35,8 @@ class BaseRec(Trainable, Recommender):
     def train(self, ratings):
         matrix, users, items = sparse_ratings(ratings, scipy=True)
         iur = matrix.T.tocsr()
+
+        _logger.info('training %s on %s matrix (%d nnz)', self.algo_class, iur.shape, iur.nnz)
 
         algo = self.algo_class(*self.algo_args, **self.algo_kwargs)
         algo.fit(iur)
@@ -65,6 +68,7 @@ class BaseRec(Trainable, Recommender):
     def __str__(self):
         return 'Implicit({}, {}, {})'.format(self.algo_class.__name__, self.algo_args, self.algo_kwargs)
 
+
 class ALS(BaseRec):
     """
     LensKit interface to :py:mod:`implicit.als`.
@@ -74,6 +78,7 @@ class ALS(BaseRec):
         Construct an ALS recommender.  The arguments are passed as-is to
         :py:class:`implicit.als.AlternatingLeastSquares`.
         """
+        from implicit.als import AlternatingLeastSquares
         super().__init__(AlternatingLeastSquares, *args, **kwargs)
 
 
@@ -86,4 +91,5 @@ class BPR(BaseRec):
         Construct an ALS recommender.  The arguments are passed as-is to
         :py:class:`implicit.als.BayesianPersonalizedRanking`.
         """
+        from implicit.bpr import BayesianPersonalizedRanking
         super().__init__(BayesianPersonalizedRanking, *args, **kwargs)
