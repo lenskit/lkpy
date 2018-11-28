@@ -41,7 +41,7 @@ def _train_matrix(mat: CSR, other: np.ndarray, reg: float):
 
 
 @njit(parallel=True, nogil=True)
-def _train_implicit_matrix(mat: CSR, other: np.ndarray, reg: float, weight: float):
+def _train_implicit_matrix(mat: CSR, other: np.ndarray, reg: float):
     "One half of an implicit ALS training round."
     nr = mat.nrows
     nc = other.shape[0]
@@ -58,7 +58,7 @@ def _train_implicit_matrix(mat: CSR, other: np.ndarray, reg: float, weight: floa
         if len(cols) == 0:
             continue
 
-        rates = mat.row_vs(i) * weight
+        rates = mat.row_vs(i)
 
         # we can optimize by only considering the nonzero entries of Cu-I
         # this means we only need the corresponding matrix columns
@@ -74,10 +74,10 @@ def _train_implicit_matrix(mat: CSR, other: np.ndarray, reg: float, weight: floa
         AiYt = Ainv @ other.T
         cu = np.ones(nc)
         cu[cols] = rates + 1.0
-        AiYtCu = AiYt * cu
+        AiYt *= cu
         pu = np.zeros(nc)
         pu[cols] = 1.0
-        uv = AiYtCu @ pu
+        uv = AiYt @ pu
         # assert len(uv) == ctx.n_features
         result[i, :] = uv
 
@@ -257,8 +257,10 @@ class ImplicitMF(Predictor, Trainable):
         self.timer = util.Stopwatch()
         current, uctx, ictx = self._initial_model(ratings)
 
-        _logger.info('[%s] training biased MF model with ALS for %d features',
+        _logger.info('[%s] training implicit MF model with ALS for %d features',
                      self.timer, self.features)
+        _logger.info('have %d observations for %d users and %d items',
+                     uctx.nnz, uctx.nrows, ictx.nrows)
         for model in self._train_iters(current, uctx, ictx):
             current = model
 
@@ -271,9 +273,9 @@ class ImplicitMF(Predictor, Trainable):
         "Generator of training iterations."
         for epoch in range(self.iterations):
             umat = _train_implicit_matrix(uctx, current.item_features,
-                                          self.regularization, self.weight)
+                                          self.regularization)
             _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
-            imat = _train_implicit_matrix(ictx, umat, self.regularization, self.weight)
+            imat = _train_implicit_matrix(ictx, umat, self.regularization)
             _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
             di = np.linalg.norm(imat - current.item_features, 'fro')
             du = np.linalg.norm(umat - current.user_features, 'fro')
@@ -291,6 +293,10 @@ class ImplicitMF(Predictor, Trainable):
         n_items = len(items)
 
         _logger.debug('setting up contexts')
+        # force values to exist
+        if rmat.values is None:
+            rmat.values = np.ones(rmat.nnz)
+        rmat.values *= self.weight
         trmat = rmat.transpose()
 
         imat = np.random.randn(n_items, self.features) * 0.01
