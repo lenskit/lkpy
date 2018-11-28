@@ -10,3 +10,6 @@ several implicit-feedback recommenders.
 
 .. autoclass:: ALS
     :members:
+
+.. autoclass:: BPR
+    :members:
