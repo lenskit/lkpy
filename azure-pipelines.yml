@@ -258,9 +258,6 @@ jobs:
   - script: sudo conda install -y llvm-openmp
     displayName: 'Install OpenMP'
 
-  - script: sudo pip install $(pip.extras)
-    displayName: 'Extra PyPI deps'
-
   - script: |
       if [ ! -r ~/ml-100k/u.data ]; then
         wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
