@@ -314,3 +314,45 @@ class _TrainableTopN(TopN, Trainable):
 
     def __str__(self):
         return 'TTN/' + str(self.predictor)
+
+
+class Random(Recommender, Trainable):
+    """
+    The Random algorithm recommends random items from all items or from candidate items(if provided.)
+    """
+
+    def __init__(self, random_state=None):
+        """
+        Args:
+             random_state: int or Series, optional
+                Seed/Seeds for the random sampling of items. If int, then recommending random items
+                for each user with the same seed. If Series, then it is the seeds for the users,
+                indexed by user id.
+        """
+        self.random_state = random_state
+
+    def train(self, ratings):
+        return pd.DataFrame(ratings['item'].unique(), columns=['item'])
+
+    def recommend(self, model, user, n=None, candidates=None, ratings=None):
+        seed = None
+        if isinstance(self.random_state, int):
+            seed = self.random_state
+        elif isinstance(self.random_state, pd.Series):
+            seed = self.random_state.get(user)
+        sample_size = None
+        frac = None
+        if n:
+            sample_size = n
+        else:
+            frac = 1
+
+        if candidates:
+            return (pd.DataFrame(candidates, columns=['item'])
+                    .sample(sample_size, frac, random_state=seed)
+                    .reset_index(drop=None))
+        else:
+            return (model.sample(sample_size, frac, random_state=seed)
+                    .reset_index(drop=None))
+
+
