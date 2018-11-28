@@ -257,6 +257,8 @@ class ImplicitMF(Predictor, Trainable):
         self.timer = util.Stopwatch()
         current, uctx, ictx = self._initial_model(ratings)
 
+        _logger.info('[%s] training biased MF model with ALS for %d features',
+                     self.timer, self.features)
         for model in self._train_iters(current, uctx, ictx):
             current = model
 
