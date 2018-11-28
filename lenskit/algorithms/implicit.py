@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 
 from implicit.als import AlternatingLeastSquares
+from implicit.bpr import BayesianPersonalizedRanking
 
 from ..matrix import sparse_ratings
 from . import Trainable, Recommender
@@ -69,3 +70,15 @@ class ALS(BaseRec):
         :py:class:`implicit.als.AlternatingLeastSquares`.
         """
         super().__init__(AlternatingLeastSquares, *args, **kwargs)
+
+
+class BPR(BaseRec):
+    """
+    LensKit interface to :py:mod:`implicit.bpr`.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Construct an ALS recommender.  The arguments are passed as-is to
+        :py:class:`implicit.als.BayesianPersonalizedRanking`.
+        """
+        super().__init__(BayesianPersonalizedRanking, *args, **kwargs)

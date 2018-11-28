@@ -22,12 +22,15 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
 
 @mark.slow
 @mark.skipif(not have_implicit, reason='implicit not installed')
-def test_implicit_als_train():
+def test_implicit_als_train_rec():
     algo = implicit.ALS(25)
     ratings = lktu.ml_pandas.renamed.ratings
 
     model = algo.train(ratings)
     assert model is not None
+
+    recs = algo.recommend(model, 100, n=20)
+    assert len(recs) == 20
 
 
 @mark.slow
@@ -60,3 +63,16 @@ def test_implicit_als_batch_accuracy():
     ndcg = recs.groupby('user').rating.apply(lm.ndcg)
     _log.info('ndcg for users is %.4f', ndcg.mean())
     assert ndcg.mean() > 0
+
+
+@mark.slow
+@mark.skipif(not have_implicit, reason='implicit not installed')
+def test_implicit_bpr_train_rec():
+    algo = implicit.BPR(25)
+    ratings = lktu.ml_pandas.renamed.ratings
+
+    model = algo.train(ratings)
+    assert model is not None
+
+    recs = algo.recommend(model, 100, n=20)
+    assert len(recs) == 20
