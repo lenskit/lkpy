@@ -1,19 +1,14 @@
-"""
-Batch-run predictors and recommenders for evaluation.
-"""
-
 import logging
 import pathlib
 import collections
 import warnings
-import multiprocessing as mp
-from multiprocessing.pool import Pool
 
 import pandas as pd
-import numpy as np
 
-from .algorithms import Predictor, Recommender
-from . import topn, util
+from ..algorithms import Predictor
+from .. import topn, util
+from .recommend import recommend
+from .predict import predict
 
 try:
     import fastparquet
@@ -21,162 +16,6 @@ except ImportError:
     fastparquet = None
 
 _logger = logging.getLogger(__name__)
-_rec_context = None
-
-
-class MPRecContext:
-    def __init__(self, algo, model, candidates=None, size=None):
-        self.algo = algo
-        self.model = model
-        self.candidates = candidates
-        self.size = size
-
-    def __enter__(self):
-        global _rec_context
-        _logger.debug('installing context for %s', self.algo)
-        _rec_context = self
-        return self
-
-    def __exit__(self, *args, **kwargs):
-        global _rec_context
-        _logger.debug('uninstalling context for %s', self.algo)
-        _rec_context = None
-
-
-def _predict_user(algo, model, user, udf):
-    watch = util.Stopwatch()
-    res = algo.predict(model, user, udf['item'])
-    res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
-    _logger.debug('%s produced %d/%d predictions for %s in %s',
-                  algo, res.prediction.notna().sum(), len(udf), user, watch)
-    return res
-
-
-def _predict_worker(job):
-    user, udf = job
-    res = _predict_user(_rec_context.algo, _rec_context.model, user, udf)
-    return res.to_msgpack()
-
-
-def predict(algo, pairs, model=None, nprocs=None):
-    """
-    Generate predictions for user-item pairs.  The provided algorithm should be a
-    :py:class:`algorithms.Predictor` or a function of two arguments: the user ID and
-    a list of item IDs. It should return a dictionary or a :py:class:`pandas.Series`
-    mapping item IDs to predictions.
-
-    Args:
-        predictor(callable or :py:class:algorithms.Predictor):
-            a rating predictor function or algorithm.
-        pairs(pandas.DataFrame):
-            a data frame of (``user``, ``item``) pairs to predict for. If this frame also
-            contains a ``rating`` column, it will be included in the result.
-        model(any): a model for the algorithm.
-
-    Returns:
-        pandas.DataFrame:
-            a frame with columns ``user``, ``item``, and ``prediction`` containing
-            the prediction results. If ``pairs`` contains a `rating` column, this
-            result will also contain a `rating` column.
-    """
-
-    pfun = None
-    if not isinstance(algo, Predictor):
-        _logger.warning('non-Predictor deprecated')
-        nprocs = None
-        pfun = algo
-
-    if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
-        _logger.info('starting predict process with %d workers', nprocs)
-        with MPRecContext(algo, model),  Pool(nprocs) as pool:
-            results = pool.map(_predict_worker, pairs.groupby('user'))
-        results = [pd.read_msgpack(r) for r in results]
-        _logger.info('finished predictions')
-    else:
-        results = []
-        for user, udf in pairs.groupby('user'):
-            if pfun:
-                res = pfun(user, udf['item'])
-                res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
-            else:
-                res = _predict_user(algo, model, user, udf)
-            results.append(res)
-
-    results = pd.concat(results)
-    if 'rating' in pairs:
-        return pairs.join(results.set_index(['user', 'item']), on=('user', 'item'))
-    return results
-
-
-def _recommend_user(algo, model, user, n, candidates):
-    _logger.debug('generating recommendations for %s', user)
-    watch = util.Stopwatch()
-    res = algo.recommend(model, user, n, candidates)
-    _logger.debug('%s recommended %d/%d items for %s in %s', algo, len(res), n, user, watch)
-    res['user'] = user
-    res['rank'] = np.arange(1, len(res) + 1)
-    return res
-
-
-def _recommend_seq(algo, model, users, n, candidates):
-    if isinstance(candidates, dict):
-        candidates = candidates.get
-    algo = Recommender.adapt(algo)
-    results = [_recommend_user(algo, model, user, n, candidates(user))
-               for user in users]
-    return results
-
-
-def _recommend_worker(user):
-    candidates = _rec_context.candidates(user)
-    algo = Recommender.adapt(_rec_context.algo)
-    res = _recommend_user(algo, _rec_context.model, user, _rec_context.size, candidates)
-    return res.to_msgpack()
-
-
-def recommend(algo, model, users, n, candidates, ratings=None, nprocs=None):
-    """
-    Batch-recommend for multiple users.  The provided algorithm should be a
-    :py:class:`algorithms.Recommender` or :py:class:`algorithms.Predictor` (which
-    will be converted to a top-N recommender).
-
-    Args:
-        algo: the algorithm
-        model: The algorithm model
-        users(array-like): the users to recommend for
-        n(int): the number of recommendations to generate (None for unlimited)
-        candidates:
-            the users' candidate sets. This can be a function, in which case it will
-            be passed each user ID; it can also be a dictionary, in which case user
-            IDs will be looked up in it.
-        ratings(pandas.DataFrame):
-            if not ``None``, a data frame of ratings to attach to recommendations when
-            available.
-
-    Returns:
-        A frame with at least the columns ``user``, ``rank``, and ``item``; possibly also
-        ``score``, and any other columns returned by the recommender.
-    """
-
-    if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
-        _logger.info('starting recommend process with %d workers', nprocs)
-        with MPRecContext(algo, model, candidates, n), Pool(nprocs) as pool:
-            results = pool.map(_recommend_worker, users)
-        results = [pd.read_msgpack(r) for r in results]
-    else:
-        _logger.info('starting sequential recommend process')
-        results = _recommend_seq(algo, model, users, n, candidates)
-
-    results = pd.concat(results, ignore_index=True)
-
-    if ratings is not None and 'rating' in ratings.columns:
-        # combine with test ratings for relevance data
-        results = pd.merge(results, ratings, how='left', on=('user', 'item'))
-        # fill in missing 0s
-        results.loc[results.rating.isna(), 'rating'] = 0
-
-    return results
-
 
 _AlgoRec = collections.namedtuple('_AlgoRec', [
     'algorithm',
