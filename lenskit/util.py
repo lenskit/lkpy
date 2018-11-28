@@ -166,10 +166,10 @@ class LastMemo:
         self.function = func
         self.memory = None
         self.result = None
-    
+
     def __call__(self, arg):
         if arg is not self.memory:
             self.result = self.function(arg)
             self.memory = arg
-        
+
         return self.result

@@ -318,7 +318,7 @@ class MultiEval:
         if isinstance(ds, tuple):
             yield _DSRec(ds, cand_f, attrs)
         else:
-            yield from (_DSRec(dse, cand_f, dict(Partition=part+1, **attrs)) 
+            yield from (_DSRec(dse, cand_f, dict(Partition=part+1, **attrs))
                         for (part, dse) in enumerate(ds))
 
     def _flat_datasets(self):
@@ -331,7 +331,7 @@ class MultiEval:
             return util.read_df_detect(df)
         else:
             return df
-    
+
     def _flat_runs(self):
         for dse in self._flat_datasets():
             for arec in self.algorithms:
@@ -351,7 +351,7 @@ class MultiEval:
 
         for i, (dsrec, arec) in enumerate(self._flat_runs()):
             run_id = i + 1
-            
+
             ds, cand_f, ds_attrs = dsrec
             if cand_f is None:
                 cand_f = self.candidate_generator
@@ -364,10 +364,10 @@ class MultiEval:
             cand = cand_f(train)
 
             _logger.info('starting run %d: %s on %s:%d', run_id, arec.algorithm,
-                            ds_name, ds_part)
+                         ds_name, ds_part)
             run = self._run_algo(run_id, arec, (train, test, ds_attrs, cand))
             _logger.info('finished run %d: %s on %s:%d', run_id, arec.algorithm,
-                            ds_name, ds_part)
+                         ds_name, ds_part)
             run_data.append(run)
             run_df = pd.DataFrame(run_data)
             # overwrite files to show progress
