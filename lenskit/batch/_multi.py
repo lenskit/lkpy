@@ -249,7 +249,7 @@ class MultiEval:
 
         watch = util.Stopwatch()
         _logger.info('generating %d predictions for %s', len(test), algo)
-        preds = predict(algo, test, model, nprocs=self.nprocs)
+        preds = predict(algo, model, test, nprocs=self.nprocs)
         watch.stop()
         _logger.info('generated predictions in %s', watch)
         preds['RunId'] = rid
