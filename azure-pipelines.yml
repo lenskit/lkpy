@@ -1,16 +1,14 @@
-# Python package
-# Create and test a Python package on multiple Python versions.
-# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
-# https://docs.microsoft.com/vsts/pipelines/languages/python
 variables:
   conda.deps: >
     python=$(python.version)
     pandas scipy pytables fastparquet python-snappy numba cffi
-    invoke coverage pytest pytest-cov
+    invoke coverage pytest pytest-cov cython
   pip.deps: >
     invoke pytest coverage pytest-cov
     pandas scipy pyarrow
-    numba
+    numba cython
+  pip.extras: >
+    hpfrec==0.2.2.5 implicit
 
 jobs:
 
@@ -31,7 +29,10 @@ jobs:
       createCustomEnvironment: true
       environmentName: lkpy
       packageSpecs: $(conda.deps)
-      updateConda: false
+  
+  - script: |
+        sudo /usr/envs/lkpy/bin/pip install $(pip.extras)
+    displayName: 'Extra PyPI deps'
     
   - script: |
       if [ ! -r ~/ml-100k/u.data ]; then
@@ -98,7 +99,7 @@ jobs:
       python -m pip install --upgrade pip
       pip install $(pip.deps)
     displayName: 'Install dependencies'
-
+  
   - script: |
       if [ ! -r ~/ml-100k/u.data ]; then
         wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
@@ -246,6 +247,9 @@ jobs:
       environmentName: lkpy
       packageSpecs: $(conda.deps)
       updateConda: false
+
+  - script: sudo conda install -y llvm-openmp
+    displayName: 'Install OpenMP'
 
   - script: |
       if [ ! -r ~/ml-100k/u.data ]; then

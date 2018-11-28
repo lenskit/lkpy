@@ -39,6 +39,12 @@ setup(
             'sphinx >= 1.8',
             'sphinx_rtd_theme',
             'nbsphinx'
+        ],
+        'hpf': [
+            'hpfrec'
+        ],
+        'implicit': [
+            'implicit'
         ]
     },
     packages=find_packages()
