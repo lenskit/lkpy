@@ -1,4 +1,5 @@
 import logging
+import warnings
 import multiprocessing as mp
 from multiprocessing.pool import Pool
 
@@ -43,7 +44,7 @@ def _predict_worker(job):
     return res.to_msgpack()
 
 
-def predict(algo, pairs, model=None, nprocs=None):
+def predict(algo, model, pairs, nprocs=None):
     """
     Generate predictions for user-item pairs.  The provided algorithm should be a
     :py:class:`algorithms.Predictor` or a function of two arguments: the user ID and
@@ -51,12 +52,14 @@ def predict(algo, pairs, model=None, nprocs=None):
     mapping item IDs to predictions.
 
     Args:
-        predictor(callable or :py:class:algorithms.Predictor):
-            a rating predictor function or algorithm.
+        algo(lenskit.algorithms.Predictor):
+            A rating predictor function or algorithm.
+        model(any): A model for the algorithm.
         pairs(pandas.DataFrame):
-            a data frame of (``user``, ``item``) pairs to predict for. If this frame also
+            A data frame of (``user``, ``item``) pairs to predict for. If this frame also
             contains a ``rating`` column, it will be included in the result.
-        model(any): a model for the algorithm.
+        nprocs(int):
+            The number of processes to use for parallel batch prediction.
 
     Returns:
         pandas.DataFrame:
@@ -67,7 +70,7 @@ def predict(algo, pairs, model=None, nprocs=None):
 
     pfun = None
     if not isinstance(algo, Predictor):
-        _logger.warning('non-Predictor deprecated')
+        warnings.warn('non-Perdictor argument to predict deprecated', DeprecationWarning)
         nprocs = None
         pfun = algo
 

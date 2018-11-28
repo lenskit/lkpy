@@ -43,7 +43,7 @@ def test(c, cover=False, verbose=True, slow=True, eval=True, match=None, mark=No
 @task
 def docs(c):
     "Build documentation"
-    c.run('sphinx-build -M html doc build/doc')
+    c.run('sphinx-build -a doc build/doc')
 
 
 @task

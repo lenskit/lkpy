@@ -7,8 +7,8 @@ import pandas as pd
 
 from ..algorithms import Predictor
 from .. import topn, util
-from .recommend import recommend
-from .predict import predict
+from ._recommend import recommend
+from ._predict import predict
 
 try:
     import fastparquet

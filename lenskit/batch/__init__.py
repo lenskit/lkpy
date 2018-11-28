@@ -2,6 +2,6 @@
 Batch-run predictors and recommenders for evaluation.
 """
 
-from .predict import predict
-from .recommend import recommend
-from .multi import MultiEval
+from ._predict import predict
+from ._recommend import recommend
+from ._multi import MultiEval
