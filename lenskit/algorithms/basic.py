@@ -338,20 +338,17 @@ class Random(Recommender, Trainable):
         seed = None
         if isinstance(self.random_state, int):
             seed = self.random_state
-        elif isinstance(self.random_state, pd.Series):
+        if isinstance(self.random_state, pd.Series):
             seed = self.random_state.get(user)
 
-        sample_size = None
         frac = None
-        if n is not None:
-            sample_size = n
-        else:
+        if n is None:
             frac = 1
 
         if candidates is not None:
             return (pd.DataFrame(candidates, columns=['item'])
-                    .sample(sample_size, frac, random_state=seed)
+                    .sample(n, frac, random_state=seed)
                     .reset_index(drop=True))
         else:
-            return (model.sample(sample_size, frac, random_state=seed)
+            return (model.sample(n, frac, random_state=seed)
                     .reset_index(drop=True))
