@@ -13,11 +13,12 @@ from .. import util
 _logger = logging.getLogger(__name__)
 
 
-#@njit(parallel=True, nogil=True)
+@njit(parallel=True, nogil=True)
 def _train_matrix(mat: CSR, other: np.ndarray, reg: float):
     "One half of an explicit ALS training round."
     nr = mat.nrows
     nf = other.shape[1]
+    regI = np.identity(nf) * reg
     assert mat.ncols == other.shape[0]
     result = np.zeros((nr, nf))
     for i in prange(nr):
@@ -30,7 +31,7 @@ def _train_matrix(mat: CSR, other: np.ndarray, reg: float):
         MMT = M.T @ M
         # assert MMT.shape[0] == ctx.n_features
         # assert MMT.shape[1] == ctx.n_features
-        A = MMT + np.identity(nf) * reg * len(cols)
+        A = MMT + regI * len(cols)
         V = M.T @ vals
         uv = np.linalg.solve(A, V)
         # assert len(uv) == ctx.n_features
