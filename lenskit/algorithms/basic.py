@@ -318,7 +318,7 @@ class _TrainableTopN(TopN, Trainable):
 
 class Random(Recommender, Trainable):
     """
-    The Random algorithm recommends random items from all items or from candidate items(if provided.)
+    The Random algorithm recommends random items from all the items or candidate items(if provided).
     """
 
     def __init__(self, random_state=None):
@@ -355,5 +355,3 @@ class Random(Recommender, Trainable):
         else:
             return (model.sample(sample_size, frac, random_state=seed)
                     .reset_index(drop=True))
-
-
