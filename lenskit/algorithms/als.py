@@ -68,17 +68,13 @@ def _train_implicit_matrix(mat: CSR, other: np.ndarray, reg: float):
         MMT = (M.T.copy() * rates) @ M
         # assert MMT.shape[0] == ctx.n_features
         # assert MMT.shape[1] == ctx.n_features
-        # Build and invert the matrix
+        # Build the matrix for solving
         A = OtOr + MMT
-        Ainv = np.linalg.inv(A)
-        # And now we can compute the final piece of the update rule
-        AiYt = Ainv @ Ot
-        cu = np.ones(nc)
-        cu[cols] = rates + 1.0
-        AiYt *= cu
-        pu = np.zeros(nc)
-        pu[cols] = 1.0
-        uv = AiYt @ pu
+        # Compute RHS - only used columns (p_ui != 0) values needed
+        # Cu is rates + 1 for the cols, so just trim Ot
+        y = Ot[:, cols] @ (rates + 1.0)
+        # and solve
+        uv = np.linalg.solve(A, y)
         # assert len(uv) == ctx.n_features
         result[i, :] = uv
 
