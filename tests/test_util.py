@@ -141,3 +141,18 @@ def test_accum_top_indices():
         xs = np.argsort(values)
         # should be top N values in decreasing order
         assert all(topn == np.flip(xs[-10:], axis=0))
+
+
+def test_last_memo():
+    history = []
+    def func(foo):
+        history.append(foo)
+    cache = lku.LastMemo(func)
+
+    cache("foo")
+    assert len(history) == 1
+    # string literals are interned
+    cache("foo")
+    assert len(history) == 1
+    cache("bar")
+    assert len(history) == 2

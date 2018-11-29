@@ -1,5 +1,3 @@
-import sys
-import os
 from setuptools import setup, find_packages
 
 with open('README.md', 'r') as fh:
@@ -41,6 +39,12 @@ setup(
             'sphinx >= 1.8',
             'sphinx_rtd_theme',
             'nbsphinx'
+        ],
+        'hpf': [
+            'hpfrec'
+        ],
+        'implicit': [
+            'implicit'
         ]
     },
     packages=find_packages()

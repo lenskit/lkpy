@@ -7,6 +7,7 @@ import pathlib
 
 from numba import jitclass, njit, int32, double
 import numpy as np
+import pandas as pd
 
 
 @njit
@@ -138,3 +139,37 @@ def npz_path(path):
         raise FileNotFoundError(path)
 
     return p
+
+
+def read_df_detect(path):
+    """
+    Read a Pandas data frame, auto-detecting the file format based on filename suffix.
+    The following file types are supported:
+
+    CSV
+        File has suffix ``.csv``, read with :py:fun:`pandas.read_csv`.
+    Parquet
+        File has suffix ``.parquet``, ``.parq``, or ``.pq``, read with
+        :py:fun:`pandas.read_parquet`.
+    """
+    if not isinstance(path, pathlib.Path):
+        path = pathlib.Path(path)
+
+    if path.suffix == '.csv':
+        return pd.read_csv(path)
+    elif path.suffix in ('.parquet', '.parq', '.pq'):
+        return pd.read_parquet(path)
+
+
+class LastMemo:
+    def __init__(self, func):
+        self.function = func
+        self.memory = None
+        self.result = None
+
+    def __call__(self, arg):
+        if arg is not self.memory:
+            self.result = self.function(arg)
+            self.memory = arg
+
+        return self.result
