@@ -14,7 +14,6 @@ import lenskit.batch as lkb
 _log = logging.getLogger(__name__)
 
 MLB = namedtuple('MLB', ['ratings', 'algo', 'model'])
-MLB.predictor = property(lambda mlb: partial(mlb.algo.predict, mlb.model))
 
 
 @pytest.fixture
@@ -27,20 +26,7 @@ def mlb():
 
 def test_predict_single(mlb):
     tf = pd.DataFrame({'user': [1], 'item': [31]})
-    res = lkb.predict(mlb.predictor, tf)
-
-    assert len(res) == 1
-    assert all(res.user == 1)
-    assert set(res.columns) == set(['user', 'item', 'prediction'])
-    assert all(res.item == 31)
-
-    expected = mlb.model.mean + mlb.model.items.loc[31] + mlb.model.users.loc[1]
-    assert res.prediction.iloc[0] == pytest.approx(expected)
-
-
-def test_predict_single_model(mlb):
-    tf = pd.DataFrame({'user': [1], 'item': [31]})
-    res = lkb.predict(mlb.algo, tf, mlb.model)
+    res = lkb.predict(mlb.algo, mlb.model, tf)
 
     assert len(res) == 1
     assert all(res.user == 1)
@@ -61,7 +47,7 @@ def test_predict_user(mlb):
     test_items = pd.concat([test_rated, pd.Series(test_unrated)])
 
     tf = pd.DataFrame({'user': uid, 'item': test_items})
-    res = lkb.predict(mlb.predictor, tf)
+    res = lkb.predict(mlb.algo, mlb.model, tf)
 
     assert len(res) == 15
     assert set(res.columns) == set(['user', 'item', 'prediction'])
@@ -83,7 +69,7 @@ def test_predict_two_users(mlb):
     while tf is None or len(set(tf.user)) < 2:
         tf = mlb.ratings[mlb.ratings.user.isin(uids)].loc[:, ('user', 'item')].sample(10)
 
-    res = lkb.predict(mlb.predictor, tf)
+    res = lkb.predict(mlb.algo, mlb.model, tf)
 
     assert len(res) == 10
     assert set(res.user) == set(uids)
@@ -102,7 +88,7 @@ def test_predict_include_rating(mlb):
     while tf is None or len(set(tf.user)) < 2:
         tf = mlb.ratings[mlb.ratings.user.isin(uids)].loc[:, ('user', 'item', 'rating')].sample(10)
 
-    res = lkb.predict(mlb.predictor, tf)
+    res = lkb.predict(mlb.algo, mlb.model, tf)
 
     assert len(res) == 10
     assert set(res.user) == set(uids)
@@ -133,7 +119,7 @@ def test_bias_batch_predict(ncpus):
         _log.info('running training')
         model = algo.train(train)
         _log.info('testing %d users', test.user.nunique())
-        recs = batch.predict(algo, test, model=model, nprocs=ncpus)
+        recs = batch.predict(algo, model, test, nprocs=ncpus)
         return recs
 
     preds = pd.concat((eval(train, test)

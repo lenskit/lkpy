@@ -123,7 +123,7 @@ def test_als_batch_accuracy():
         _log.info('running training')
         model = algo.train(train)
         _log.info('testing %d users', test.user.nunique())
-        return batch.predict(algo, test, model=model)
+        return batch.predict(algo, model, test)
 
     folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
     preds = pd.concat(eval(train, test) for (train, test) in folds)

@@ -184,7 +184,7 @@ def test_uu_known_preds():
     known_preds = pd.read_csv(str(pred_file))
     pairs = known_preds.loc[:, ['user', 'item']]
 
-    preds = batch.predict(algo, pairs, model=model)
+    preds = batch.predict(algo, model, pairs)
     merged = pd.merge(known_preds.rename(columns={'prediction': 'expected'}), preds)
     assert len(merged) == len(preds)
     merged['error'] = merged.expected - merged.prediction
@@ -205,7 +205,7 @@ def __batch_eval(job):
     _log.info('running training')
     model = algo.train(train)
     _log.info('testing %d users', test.user.nunique())
-    return batch.predict(lambda u, xs: algo.predict(model, u, xs), test)
+    return batch.predict(algo, model, test)
 
 
 @mark.slow

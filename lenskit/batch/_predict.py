@@ -68,12 +68,6 @@ def predict(algo, model, pairs, nprocs=None):
             result will also contain a `rating` column.
     """
 
-    pfun = None
-    if not isinstance(algo, Predictor):
-        warnings.warn('non-Perdictor argument to predict deprecated', DeprecationWarning)
-        nprocs = None
-        pfun = algo
-
     if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
         _logger.info('starting predict process with %d workers', nprocs)
         with MPRecContext(algo, model),  Pool(nprocs) as pool:
@@ -83,11 +77,7 @@ def predict(algo, model, pairs, nprocs=None):
     else:
         results = []
         for user, udf in pairs.groupby('user'):
-            if pfun:
-                res = pfun(user, udf['item'])
-                res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
-            else:
-                res = _predict_user(algo, model, user, udf)
+            res = _predict_user(algo, model, user, udf)
             results.append(res)
 
     results = pd.concat(results)
