@@ -201,3 +201,86 @@ def test_pop_save_load(tmp_path):
     assert recs.score.iloc[0] == counts.max()
     # the 10 most popular should be the same
     assert all(counts.index[:10] == recs.item[:10])
+
+
+def test_random():
+    # test case: no seed
+    algo = basic.Random()
+    model = algo.train(lktu.ml_pandas.renamed.ratings)
+    items = lktu.ml_pandas.renamed.ratings['item'].unique()
+    users = lktu.ml_pandas.renamed.ratings['user'].unique()
+    nitems = len(items)
+    nusers = len(users)
+
+    assert model is not None
+
+    recs1 = algo.recommend(model, 2038, 100)
+    recs2 = algo.recommend(model, 2028, 100)
+    assert len(recs1) == 100
+    assert len(recs2) == 100
+    # with very high probabilities
+    assert set(recs1['item']) != set(recs2['item'])
+
+    recs_all = algo.recommend(model, 2038)
+    assert len(recs_all) == nitems
+    assert set(items) == set(recs_all['item'])
+
+    # test case: one single seed
+    algo = basic.Random(10)
+    model = algo.train(lktu.ml_pandas.renamed.ratings)
+
+    assert model is not None
+
+    # when different users having the same random seed,
+    # then recommendations should be the same.
+    recs1 = algo.recommend(model, 2038, 100)
+    recs2 = algo.recommend(model, 2028, 100)
+    assert len(recs1) == 100
+    assert set(recs1['item']) == set(recs2['item'])
+
+    recs1 = algo.recommend(model, 2038)
+    recs2 = algo.recommend(model, 2028)
+    assert len(recs1) == nitems
+    assert np.array_equal(recs1['item'].values, recs2['item'].values)
+
+    # test case: seeds Series
+    seeds = pd.Series(range(nusers), index=users)
+    algo = basic.Random(seeds)
+    model1 = algo.train(lktu.ml_pandas.renamed.ratings)
+    # same seeds with a second run
+    model2 = algo.train(lktu.ml_pandas.renamed.ratings)
+
+    assert model1 is not None
+    assert model2 is not None
+
+    # get two different users from all users
+    user1, user2 = np.random.choice(users, size=2, replace=False)
+    recs1 = algo.recommend(model1, user1, 100)
+    recs2 = algo.recommend(model1, user2, 100)
+    assert len(recs1) == 100
+    assert len(recs2) == 100
+    assert set(recs1['item']) != set(recs2['item'])
+    recs3 = algo.recommend(model2, user1, 100)
+    recs4 = algo.recommend(model2, user2, 100)
+    assert len(recs3) == 100
+    assert len(recs4) == 100
+    assert set(recs3['item']) != set(recs4['item'])
+    # consistency between two runs
+    assert set(recs1['item']) == set(recs3['item'])
+    assert set(recs2['item']) == set(recs4['item'])
+
+    # recommend from candidates
+    candidates = np.random.choice(items, 500, replace=False)
+    recs1 = algo.recommend(model1, user1, 100, candidates=candidates)
+    recs2 = algo.recommend(model1, user2, 100, candidates=candidates)
+    assert len(recs1) == 100
+    assert len(recs2) == 100
+    assert set(recs1['item']) != set(recs2['item'])
+    recs3 = algo.recommend(model2, user1, 100, candidates=candidates)
+    recs4 = algo.recommend(model2, user2, 100, candidates=candidates)
+    assert len(recs3) == 100
+    assert len(recs4) == 100
+    assert set(recs3['item']) != set(recs4['item'])
+    # consistency between two runs
+    assert set(recs1['item']) == set(recs3['item'])
+    assert set(recs2['item']) == set(recs4['item'])
