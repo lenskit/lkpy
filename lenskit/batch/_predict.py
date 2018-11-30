@@ -1,11 +1,9 @@
 import logging
-import warnings
 import multiprocessing as mp
 from multiprocessing.pool import Pool
 
 import pandas as pd
 
-from ..algorithms import Predictor
 from .. import util
 
 _logger = logging.getLogger(__name__)
@@ -31,7 +29,7 @@ class MPRecContext:
 
 def _predict_user(algo, model, user, udf):
     watch = util.Stopwatch()
-    res = algo.predict(model, user, udf['item'])
+    res = algo.predict_for_user(model, user, udf['item'])
     res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
     _logger.debug('%s produced %d/%d predictions for %s in %s',
                   algo, res.prediction.notna().sum(), len(udf), user, watch)

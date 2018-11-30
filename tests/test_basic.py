@@ -11,14 +11,14 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
                           'rating': [4.0, 3.0, 5.0, 2.0]})
 
 
-def test_precomputed():
+def test_memorized():
     algo = basic.Memorized(simple_df)
 
-    preds = algo.predict(None, 10, [1, 2])
+    preds = algo.predict_for_user(10, [1, 2])
     assert set(preds.index) == set([1, 2])
     assert all(preds == pd.Series({1: 4.0, 2: 5.0}))
 
-    preds = algo.predict(None, 12, [1, 3])
+    preds = algo.predict_for_user(12, [1, 3])
     assert set(preds.index) == set([1, 3])
     assert preds.loc[1] == 3.0
     assert np.isnan(preds.loc[3])
@@ -26,22 +26,21 @@ def test_precomputed():
 
 def test_fallback_train_one():
     algo = basic.Fallback(basic.Bias())
-    model = algo.train(lktu.ml_pandas.renamed.ratings)
-    assert len(model) == 1
-    assert isinstance(model[0], basic.BiasModel)
-    assert model[0].mean == approx(lktu.ml_pandas.ratings.rating.mean())
+    algo.fit(lktu.ml_pandas.renamed.ratings)
+    assert len(algo.algorithms) == 1
+    assert isinstance(algo.algorithms[0], basic.Bias)
+    assert algo.algorithms[0].mean_ == approx(lktu.ml_pandas.ratings.rating.mean())
 
 
 def test_fallback_train_one_pred_impossible():
     algo = basic.Fallback(basic.Memorized(simple_df))
-    model = algo.train(lktu.ml_pandas.renamed.ratings)
-    assert len(model) == 1
+    algo.fit(lktu.ml_pandas.renamed.ratings)
 
-    preds = algo.predict(model, 10, [1, 2])
+    preds = algo.predict_for_user(10, [1, 2])
     assert set(preds.index) == set([1, 2])
     assert all(preds == pd.Series({1: 4.0, 2: 5.0}))
 
-    preds = algo.predict(model, 12, [1, 3])
+    preds = algo.predict_for_user(12, [1, 3])
     assert set(preds.index) == set([1, 3])
     assert preds.loc[1] == 3.0
     assert np.isnan(preds.loc[3])
@@ -49,72 +48,74 @@ def test_fallback_train_one_pred_impossible():
 
 def test_fallback_predict():
     algo = basic.Fallback(basic.Memorized(simple_df), basic.Bias())
-    model = algo.train(lktu.ml_pandas.renamed.ratings)
-    assert len(model) == 2
-    assert isinstance(model[1], basic.BiasModel)
-    assert model[1].mean == approx(lktu.ml_pandas.ratings.rating.mean())
+    algo.fit(lktu.ml_pandas.renamed.ratings)
+    assert len(algo.algorithms) == 2
+
+    bias = algo.algorithms[1]
+    assert isinstance(bias, basic.Bias)
+    assert bias.mean_ == approx(lktu.ml_pandas.ratings.rating.mean())
 
     # first user + item
-    preds = algo.predict(model, 10, [1])
+    preds = algo.predict_for_user(10, [1])
     assert preds.loc[1] == 4.0
     # second user + first item
-    preds = algo.predict(model, 15, [1])
-    assert preds.loc[1] == approx(model[1].mean + model[1].users.loc[15] + model[1].items.loc[1])
+    preds = algo.predict_for_user(15, [1])
+    assert preds.loc[1] == approx(bias.mean_ + bias.user_offsets_.loc[15] + bias.item_offsets_.loc[1])
 
     # second item + user item
-    preds = algo.predict(model, 12, [2])
-    assert preds.loc[2] == approx(model[1].mean + model[1].users.loc[12] + model[1].items.loc[2])
+    preds = algo.predict_for_user(12, [2])
+    assert preds.loc[2] == approx(bias.mean_ + bias.user_offsets_.loc[12] + bias.item_offsets_.loc[2])
 
     # blended
-    preds = algo.predict(model, 10, [1, 5])
+    preds = algo.predict_for_user(10, [1, 5])
     assert preds.loc[1] == 4.0
-    assert preds.loc[5] == approx(model[1].mean + model[1].users.loc[10] + model[1].items.loc[5])
+    assert preds.loc[5] == approx(bias.mean_ + bias.user_offsets_.loc[10] + bias.item_offsets_.loc[5])
 
     # blended unknown
-    preds = algo.predict(model, 10, [5, 1, -23081])
+    preds = algo.predict_for_user(10, [5, 1, -23081])
     assert len(preds) == 3
     assert preds.loc[1] == 4.0
-    assert preds.loc[5] == approx(model[1].mean + model[1].users.loc[10] + model[1].items.loc[5])
-    assert preds.loc[-23081] == approx(model[1].mean + model[1].users.loc[10])
+    assert preds.loc[5] == approx(bias.mean_ + bias.user_offsets_.loc[10] + bias.item_offsets_.loc[5])
+    assert preds.loc[-23081] == approx(bias.mean_ + bias.user_offsets_.loc[10])
 
 
 def test_fallback_save_load(tmp_path):
     tmp_path = lktu.norm_path(tmp_path)
 
-    algo = basic.Fallback(basic.Memorized(simple_df), basic.Bias())
-    original = algo.train(lktu.ml_pandas.renamed.ratings)
+    original = basic.Fallback(basic.Memorized(simple_df), basic.Bias())
+    original.fit(lktu.ml_pandas.renamed.ratings)
 
     fn = tmp_path / 'fallback'
-    algo.save_model(original, fn)
+    original.save(fn)
 
-    model = algo.load_model(fn)
+    algo = basic.Fallback(basic.Memorized(simple_df), basic.Bias())
+    algo.load(fn)
 
-    assert len(model) == 2
-    assert isinstance(model[1], basic.BiasModel)
-    assert model[1].mean == approx(lktu.ml_pandas.ratings.rating.mean())
+    bias = algo.algorithms[1]
+    assert bias.mean_ == approx(lktu.ml_pandas.ratings.rating.mean())
 
     # first user + item
-    preds = algo.predict(model, 10, [1])
+    preds = algo.predict_for_user(10, [1])
     assert preds.loc[1] == 4.0
     # second user + first item
-    preds = algo.predict(model, 15, [1])
-    assert preds.loc[1] == approx(model[1].mean + model[1].users.loc[15] + model[1].items.loc[1])
+    preds = algo.predict_for_user(15, [1])
+    assert preds.loc[1] == approx(bias.mean_ + bias.user_offsets_.loc[15] + bias.item_offsets_.loc[1])
 
     # second item + user item
-    preds = algo.predict(model, 12, [2])
-    assert preds.loc[2] == approx(model[1].mean + model[1].users.loc[12] + model[1].items.loc[2])
+    preds = algo.predict_for_user(12, [2])
+    assert preds.loc[2] == approx(bias.mean_ + bias.user_offsets_.loc[12] + bias.item_offsets_.loc[2])
 
     # blended
-    preds = algo.predict(model, 10, [1, 5])
+    preds = algo.predict_for_user(10, [1, 5])
     assert preds.loc[1] == 4.0
-    assert preds.loc[5] == approx(model[1].mean + model[1].users.loc[10] + model[1].items.loc[5])
+    assert preds.loc[5] == approx(bias.mean_ + bias.user_offsets_.loc[10] + bias.item_offsets_.loc[5])
 
     # blended unknown
-    preds = algo.predict(model, 10, [5, 1, -23081])
+    preds = algo.predict_for_user(10, [5, 1, -23081])
     assert len(preds) == 3
     assert preds.loc[1] == 4.0
-    assert preds.loc[5] == approx(model[1].mean + model[1].users.loc[10] + model[1].items.loc[5])
-    assert preds.loc[-23081] == approx(model[1].mean + model[1].users.loc[10])
+    assert preds.loc[5] == approx(bias.mean_ + bias.user_offsets_.loc[10] + bias.item_offsets_.loc[5])
+    assert preds.loc[-23081] == approx(bias.mean_ + bias.user_offsets_.loc[10])
 
 
 def test_topn_recommend():
@@ -138,14 +139,13 @@ def test_topn_recommend():
 
 def test_popular():
     algo = basic.Popular()
-    model = algo.train(lktu.ml_pandas.renamed.ratings)
+    algo.fit(lktu.ml_pandas.renamed.ratings)
     counts = lktu.ml_pandas.renamed.ratings.groupby('item').user.count()
     counts = counts.nlargest(100)
 
-    assert model is not None
-    assert model.max() == counts.max()
+    assert algo.item_pop_.max() == counts.max()
 
-    recs = algo.recommend(model, 2038, 100)
+    recs = algo.recommend(2038, 100)
     assert len(recs) == 100
     assert all(np.diff(recs.score) <= 0)
 
@@ -156,16 +156,15 @@ def test_popular():
 
 def test_pop_candidates():
     algo = basic.Popular()
-    model = algo.train(lktu.ml_pandas.renamed.ratings)
+    algo.fit(lktu.ml_pandas.renamed.ratings)
     counts = lktu.ml_pandas.renamed.ratings.groupby('item').user.count()
     items = lktu.ml_pandas.renamed.ratings.item.unique()
 
-    assert model is not None
-    assert model.max() == counts.max()
+    assert algo.item_pop_.max() == counts.max()
 
     candidates = np.random.choice(items, 500, replace=False)
 
-    recs = algo.recommend(model, 2038, 100, candidates)
+    recs = algo.recommend(2038, 100, candidates)
     assert len(recs) == 100
     assert all(np.diff(recs.score) <= 0)
 
@@ -179,22 +178,21 @@ def test_pop_candidates():
 
 def test_pop_save_load(tmp_path):
     tmp_path = lktu.norm_path(tmp_path)
-    algo = basic.Popular()
-    original = algo.train(lktu.ml_pandas.renamed.ratings)
+    original = basic.Popular()
+    original.fit(lktu.ml_pandas.renamed.ratings)
 
     fn = tmp_path / 'pop.mod'
-    algo.save_model(original, fn)
+    original.save(fn)
 
-    model = algo.load_model(fn)
-    assert model is not original
+    algo = basic.Popular()
+    algo.load(fn)
 
     counts = lktu.ml_pandas.renamed.ratings.groupby('item').user.count()
     counts = counts.nlargest(100)
 
-    assert model is not None
-    assert model.max() == counts.max()
+    assert algo.item_pop_.max() == counts.max()
 
-    recs = algo.recommend(model, 2038, 100)
+    recs = algo.recommend(2038, 100)
     assert len(recs) == 100
     assert all(np.diff(recs.score) <= 0)
 
