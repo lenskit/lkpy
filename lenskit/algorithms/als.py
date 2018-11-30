@@ -9,6 +9,7 @@ from . import Predictor, Trainable
 from .mf_common import BiasMFModel, MFModel
 from ..matrix import sparse_ratings, CSR
 from .. import util
+from ..math.solve import _dtrsv
 
 _logger = logging.getLogger(__name__)
 
@@ -33,7 +34,9 @@ def _train_matrix(mat: CSR, other: np.ndarray, reg: float):
         # assert MMT.shape[1] == ctx.n_features
         A = MMT + regI * len(cols)
         V = M.T @ vals
-        uv = np.linalg.solve(A, V)
+        L = np.linalg.cholesky(A)
+        w = _dtrsv(True, False, L, V)
+        uv = _dtrsv(True, True, L, w)
         # assert len(uv) == ctx.n_features
         result[i, :] = uv
 
@@ -74,7 +77,9 @@ def _train_implicit_matrix(mat: CSR, other: np.ndarray, reg: float):
         # Cu is rates + 1 for the cols, so just trim Ot
         y = Ot[:, cols] @ (rates + 1.0)
         # and solve
-        uv = np.linalg.solve(A, y)
+        L = np.linalg.cholesky(A)
+        w = _dtrsv(True, False, L, y)
+        uv = _dtrsv(True, True, L, w)
         # assert len(uv) == ctx.n_features
         result[i, :] = uv
 
