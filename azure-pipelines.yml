@@ -6,9 +6,9 @@ variables:
   pip.deps: >
     invoke pytest coverage pytest-cov
     pandas scipy pyarrow
-    numba cython
+    numba cython cffi
   pip.extras: >
-    hpfrec==0.2.2.5 implicit
+    hpfrec implicit
 
 jobs:
 
