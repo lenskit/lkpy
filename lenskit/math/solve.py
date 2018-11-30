@@ -5,7 +5,6 @@ Efficient solver routines.
 
 import numpy as np
 
-import ctypes
 import cffi
 import numba as n
 from numba.extending import get_cython_function_address
@@ -21,21 +20,8 @@ __diag_U = np.array(ord('U'), dtype=np.int8)
 __diag_N = np.array(ord('N'), dtype=np.int8)
 __inc_1 = np.ones(1, dtype=np.int32)
 
-__dtrsv_addr = get_cython_function_address("scipy.linalg.cython_blas", "dtrsv")
-__c_p = ctypes.c_char_p
-__i_p = ctypes.POINTER(ctypes.c_int)
-__d_p = ctypes.POINTER(ctypes.c_double)
-__dtrsv_type = ctypes.CFUNCTYPE(None, __c_p, __c_p, __c_p, __i_p, __d_p, __i_p, __d_p, __i_p)
-# __dtrsv = __dtrsv_type(__dtrsv_addr)
 __dtrsv = __ffi.cast("void (*) (char*, char*, char*, int*, double*, int*, double*, int*)",
                      get_cython_function_address("scipy.linalg.cython_blas", "dtrsv"))
-
-__dtrtrs_addr = get_cython_function_address("scipy.linalg.cython_lapack", "dtrtrs")
-__c_p = ctypes.c_char_p
-__i_p = ctypes.POINTER(ctypes.c_int)
-__d_p = ctypes.POINTER(ctypes.c_double)
-__dtrtrs_type = ctypes.CFUNCTYPE(None, __c_p, __c_p, __c_p, __i_p, __i_p, __d_p, __i_p, __d_p, __i_p, __i_p)
-__dtrtrs = __dtrtrs_type(__dtrtrs_addr)
 
 
 @n.njit(n.void(n.boolean, n.boolean, n.double[:, ::1], n.double[::1]), nogil=True)
