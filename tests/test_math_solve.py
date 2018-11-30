@@ -3,7 +3,7 @@ import scipy.linalg as sla
 
 from pytest import approx
 
-from lenskit.math.solve import *
+from lenskit.math.solve import solve_tri
 
 
 def test_solve_ltri():
@@ -13,7 +13,7 @@ def test_solve_ltri():
         b = np.random.randn(size)
         A = np.tril(Af)
 
-        x = solve_ltri(A, b)
+        x = solve_tri(A, b)
         assert len(x) == size
 
         xexp = sla.solve_triangular(A, b, lower=True)
@@ -27,7 +27,7 @@ def test_solve_ltri_transpose():
         b = np.random.randn(size)
         A = np.tril(Af)
 
-        x = solve_ltri(A, b, True)
+        x = solve_tri(A, b, True)
         assert len(x) == size
 
         xexp = sla.solve_triangular(A.T, b, lower=False)
@@ -41,7 +41,7 @@ def test_solve_utri():
         b = np.random.randn(size)
         A = np.triu(Af)
 
-        x = solve_utri(A, b)
+        x = solve_tri(A, b, lower=False)
         assert len(x) == size
         xexp = sla.solve_triangular(A, b, lower=False)
         assert x == approx(xexp, rel=1.0e-6)
@@ -54,7 +54,7 @@ def test_solve_utri_transpose():
         b = np.random.randn(size)
         A = np.triu(Af)
 
-        x = solve_utri(A, b, True)
+        x = solve_tri(A, b, True, lower=False)
         assert len(x) == size
         xexp = sla.solve_triangular(A.T, b, lower=True)
         assert x == approx(xexp, rel=1.0e-6)
@@ -75,7 +75,7 @@ def test_solve_cholesky():
         # chol solve
         L = np.linalg.cholesky(A.T @ A)
 
-        w = solve_ltri(L, A.T @ b)
-        x = solve_ltri(L, w, True)
+        w = solve_tri(L, A.T @ b)
+        x = solve_tri(L, w, transpose=True)
 
         assert x == approx(xexp)

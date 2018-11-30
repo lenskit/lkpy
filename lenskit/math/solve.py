@@ -58,31 +58,19 @@ def _dtrsv(lower, trans, a, x):
             __ffi.from_buffer(x), inc1)
 
 
-@n.njit(nogil=True)
-def solve_ltri(A, b, transpose=False):
+def solve_tri(A, b, transpose=False, lower=True):
     """
-    Solve the system :math:`Ax = b`, where :math:`A` is lower-triangular.
-    This is equivalent to :py:fun:`scipy.linalg.solve_triangular`.
+    Solve the system :math:`Ax = b`, where :math:`A` is triangular.
+    This is equivalent to :py:fun:`scipy.linalg.solve_triangular`, but does *not*
+    check for non-singularity.  It is a thin wrapper around the BLAS ``dtrsv``
+    function.
 
     Args:
         A(ndarray): the matrix.
         b(ndarray): the taget vector.
+        transpose(bool): whether to solve :math:`Ax = b` or :math:`A^T x = b`.
+        lower(bool): whether :math:`A` is lower- or upper-triangular.
     """
     x = b.copy()
-    _dtrsv(True, transpose, A, x)
-    return x
-
-
-@n.njit(nogil=True)
-def solve_utri(A, b, transpose=False):
-    """
-    Solve the system :math:`Ax = b`, where :math:`A` is upper-triangular.
-    This is equivalent to :py:fun:`scipy.linalg.solve_triangular`.
-
-    Args:
-        A(ndarray): the matrix.
-        b(ndarray): the taget vector.
-    """
-    x = b.copy()
-    _dtrsv(False, transpose, A, x)
+    _dtrsv(lower, transpose, A, x)
     return x
