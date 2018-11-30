@@ -38,9 +38,8 @@ __dtrtrs_type = ctypes.CFUNCTYPE(None, __c_p, __c_p, __c_p, __i_p, __i_p, __d_p,
 __dtrtrs = __dtrtrs_type(__dtrtrs_addr)
 
 
-@n.njit(n.double[::1](n.boolean, n.boolean, n.double[:, ::1], n.double[::1]), nogil=True)
+@n.njit(n.void(n.boolean, n.boolean, n.double[:, ::1], n.double[::1]), nogil=True)
 def _dtrsv(lower, trans, a, x):
-    x2 = x.copy()
     inc1 = __ffi.from_buffer(__inc_1)
 
     # dtrsv uses Fortran-layout arrays. Because we use C-layout arrays, we will
@@ -56,8 +55,7 @@ def _dtrsv(lower, trans, a, x):
 
     __dtrsv(__ffi.from_buffer(uplo), __ffi.from_buffer(tspec), __ffi.from_buffer(__diag_N),
             n_p, __ffi.from_buffer(a), lda_p,
-            __ffi.from_buffer(x2), inc1)
-    return x2
+            __ffi.from_buffer(x), inc1)
 
 
 @n.njit(nogil=True)
@@ -70,7 +68,9 @@ def solve_ltri(A, b, transpose=False):
         A(ndarray): the matrix.
         b(ndarray): the taget vector.
     """
-    return _dtrsv(True, transpose, A, b)
+    x = b.copy()
+    _dtrsv(True, transpose, A, x)
+    return x
 
 
 @n.njit(nogil=True)
@@ -83,4 +83,6 @@ def solve_utri(A, b, transpose=False):
         A(ndarray): the matrix.
         b(ndarray): the taget vector.
     """
-    return _dtrsv(False, transpose, A, b)
+    x = b.copy()
+    _dtrsv(False, transpose, A, x)
+    return x

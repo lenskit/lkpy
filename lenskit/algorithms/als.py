@@ -35,10 +35,12 @@ def _train_matrix(mat: CSR, other: np.ndarray, reg: float):
         A = MMT + regI * len(cols)
         V = M.T @ vals
         L = np.linalg.cholesky(A)
-        w = _dtrsv(True, False, L, V)
-        uv = _dtrsv(True, True, L, w)
+        # solve L w = V
+        _dtrsv(True, False, L, V)
+        # solve L^T x = w (which is stored in V...)
+        _dtrsv(True, True, L, V)
         # assert len(uv) == ctx.n_features
-        result[i, :] = uv
+        result[i, :] = V
 
     return result
 
@@ -78,10 +80,10 @@ def _train_implicit_matrix(mat: CSR, other: np.ndarray, reg: float):
         y = Ot[:, cols] @ (rates + 1.0)
         # and solve
         L = np.linalg.cholesky(A)
-        w = _dtrsv(True, False, L, y)
-        uv = _dtrsv(True, True, L, w)
+        _dtrsv(True, False, L, y)
+        _dtrsv(True, True, L, y)
         # assert len(uv) == ctx.n_features
-        result[i, :] = uv
+        result[i, :] = y
 
     return result
 
