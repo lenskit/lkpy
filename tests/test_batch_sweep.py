@@ -1,4 +1,5 @@
 import pathlib
+import json
 
 import pandas as pd
 import numpy as np
@@ -100,7 +101,7 @@ def test_sweep_persist(tmp_path):
     for i in range(1,6):
         assert (work / 'ds{}-train.parquet'.format(i)).exists()
         assert (work / 'ds{}-test.parquet'.format(i)).exists()
-    
+
     for ds, cf, dsa in sweep.datasets:
         assert isinstance(ds, tuple)
         train, test = ds
@@ -127,3 +128,32 @@ def test_sweep_persist(tmp_path):
     # 4 algorithms by 5 partitions
     assert len(runs) == 20
 
+
+def test_sweep_oneshot(tmp_path):
+    tmp_path = norm_path(tmp_path)
+    work = pathlib.Path(tmp_path)
+    sweep = batch.MultiEval(tmp_path, combine=False)
+
+    ratings = ml_pandas.renamed.ratings
+    sweep.add_datasets(lambda: xf.partition_users(ratings, 5, xf.SampleN(5)), name='ml-small')
+    sweep.add_algorithms(Bias(damping=5))
+
+    try:
+        sweep.run(3)
+    finally:
+        if (work / 'runs.csv').exists():
+            runs = pd.read_csv(work / 'runs.csv')
+            print(runs)
+
+    assert not (work / 'runs.csv').exists()
+    assert not (work / 'runs.parquet').exists()
+    assert not (work / 'predictions.parquet').exists()
+    assert not (work / 'recommendations.parquet').exists()
+
+    assert (work / 'run-3.json').exists()
+    assert (work / 'predictions-3.parquet').exists()
+    assert (work / 'recommendations-3.parquet').exists()
+
+    with open(work / 'run-3.json') as f:
+        run = json.load(f)
+    assert run['RunId'] == 3

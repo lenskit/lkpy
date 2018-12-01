@@ -2,6 +2,7 @@ import logging
 import pathlib
 import collections
 import warnings
+import json
 
 import pandas as pd
 
@@ -45,10 +46,14 @@ class MultiEval:
             the default candidate set generator for recommendations.  It should take the
             training data and return a candidate generator, itself a function mapping user
             IDs to candidate sets.
+        combine(bool):
+            whether to combine output; if ``False``, output will be left in separate files, if
+            ``True``, it will be in a single set of files (runs, recommendations, and preditions).
     """
 
     def __init__(self, path, predict=True,
-                 recommend=100, candidates=topn.UnratedCandidates, nprocs=None):
+                 recommend=100, candidates=topn.UnratedCandidates,
+                 nprocs=None, combine=True):
         self.workdir = pathlib.Path(path)
         self.predict = predict
         self.recommend = recommend
@@ -56,6 +61,8 @@ class MultiEval:
         self.algorithms = []
         self.datasets = []
         self.nprocs = nprocs
+        self.combine_output = combine
+        self._is_flat = True
 
     @property
     def run_csv(self):
@@ -125,6 +132,9 @@ class MultiEval:
             attrs['DataSet'] = name
         attrs.update(kwargs)
 
+        if not isinstance(data, tuple):
+            self._is_flat = False
+
         self.datasets.append(_DSRec(data, candidates, attrs))
 
     def persist_data(self):
@@ -148,6 +158,7 @@ class MultiEval:
                 test = fn
             ds2.append(((train, test), cand_f, ds_attrs))
         self.datasets = ds2
+        self._is_flat = True
 
     def _normalize_ds_entry(self, entry):
         # normalize data set to be an iterable of tuples
@@ -176,10 +187,31 @@ class MultiEval:
             for arec in self.algorithms:
                 yield (dse, arec)
 
-    def run(self):
+    def run_count(self):
+        "Get the number of runs in this evaluation."
+        if self._is_flat:
+            nds = len(self.datasets)
+        else:
+            _logger.warning('attempting to count runs in a non-flattened evaluation')
+            nds = len(list(self._flat_datasets()))
+        return nds * len(self.algorithms)
+
+    def run(self, runs=None):
         """
         Run the evaluation.
+
+        Args:
+            runs(int or set-like):
+                If provided, a specific set of runs to run.  Useful for splitting
+                an experiment into individual runs.  This is a set of 1-based run
+                IDs, not 0-based indexes.
         """
+
+        if runs is not None and self.combine_output:
+            raise ValueError('Cannot select runs with combined output')
+
+        if runs is not None and not isinstance(runs, collections.Iterable):
+            runs = [runs]
 
         self.workdir.mkdir(parents=True, exist_ok=True)
 
@@ -190,6 +222,9 @@ class MultiEval:
 
         for i, (dsrec, arec) in enumerate(self._flat_runs()):
             run_id = i + 1
+            if runs is not None and run_id not in runs:
+                _logger.info('skipping deselected run %d', run_id)
+                continue
 
             ds, cand_f, ds_attrs = dsrec
             if cand_f is None:
@@ -208,10 +243,7 @@ class MultiEval:
             _logger.info('finished run %d: %s on %s:%d', run_id, arec.algorithm,
                          ds_name, ds_part)
             run_data.append(run)
-            run_df = pd.DataFrame(run_data)
-            # overwrite files to show progress
-            run_df.to_csv(self.run_csv)
-            run_df.to_parquet(self.run_file, compression=None)
+            self._write_run(run, run_data)
 
     def _run_algo(self, run_id, arec, data):
         train, test, dsp_attrs, cand = data
@@ -225,11 +257,11 @@ class MultiEval:
 
         preds, pred_time = self._predict(run_id, arec.algorithm, model, test)
         run['PredTime'] = pred_time
-        self._write_results(self.preds_file, preds, append=run_id > 1)
+        self._write_results('predictions', preds, run_id)
 
         recs, rec_time = self._recommend(run_id, arec.algorithm, model, test, cand)
         run['RecTime'] = rec_time
-        self._write_results(self.recs_file, recs, append=run_id > 1)
+        self._write_results('recommendations', recs, run_id)
 
         return run
 
@@ -270,15 +302,35 @@ class MultiEval:
         recs['RunId'] = rid
         return recs, watch.elapsed()
 
-    def _write_results(self, file, df, append=True):
+    def _write_run(self, run, run_data):
+        if self.combine_output:
+            run_df = pd.DataFrame(run_data)
+            # overwrite files to show progress
+            run_df.to_csv(self.run_csv)
+            run_df.to_parquet(self.run_file, compression=None)
+        else:
+            rf = self.workdir / 'run-{}.json'.format(run['RunId'])
+            with rf.open('w') as f:
+                json.dump(run, f)
+
+    def _write_results(self, name, df, run_id):
         if df is None:
             return
 
-        if fastparquet is not None:
-            fastparquet.write(str(file), df, append=append, compression='snappy')
-        elif append and file.exists():
-            warnings.warn('fastparquet not available, appending is slow')
-            odf = pd.read_parquet(str(file))
-            pd.concat([odf, df]).to_parquet(str(file))
+        if self.combine_output:
+            out = self.workdir / '{}.parquet'.format(name)
+            _logger.info('run %d: writing predictions to %s', run_id, out)
+            fn = str(out)
+            append = run_id > 1
+            if fastparquet is not None:
+                fastparquet.write(fn, df, append=append, compression='snappy')
+            elif append and out.exists():
+                warnings.warn('fastparquet not available, appending is slow')
+                odf = pd.read_parquet(fn)
+                pd.concat([odf, df], ignore_index=True).to_parquet(fn)
+            else:
+                df.to_parquet(fn)
         else:
-            df.to_parquet(str(file))
+            out = self.workdir / '{}-{}.parquet'.format(name, run_id)
+            _logger.info('run %d: writing predictions to %s', run_id, out)
+            df.to_parquet(out)
