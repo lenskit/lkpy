@@ -154,6 +154,6 @@ def test_sweep_oneshot(tmp_path):
     assert (work / 'predictions-3.parquet').exists()
     assert (work / 'recommendations-3.parquet').exists()
 
-    with open(work / 'run-3.json') as f:
+    with (work / 'run-3.json').open() as f:
         run = json.load(f)
     assert run['RunId'] == 3
