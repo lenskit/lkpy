@@ -202,10 +202,10 @@ class MultiEval:
             ds_part = ds_attrs.get('Partition', None)
             cand = cand_f(train)
 
-            _logger.info('starting run %d: %s on %s:%d', run_id, arec.algorithm,
+            _logger.info('starting run %d: %s on %s:%s', run_id, arec.algorithm,
                          ds_name, ds_part)
             run = self._run_algo(run_id, arec, (train, test, ds_attrs, cand))
-            _logger.info('finished run %d: %s on %s:%d', run_id, arec.algorithm,
+            _logger.info('finished run %d: %s on %s:%s', run_id, arec.algorithm,
                          ds_name, ds_part)
             run_data.append(run)
             run_df = pd.DataFrame(run_data)
