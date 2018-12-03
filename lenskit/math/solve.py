@@ -22,6 +22,8 @@ __inc_1 = np.ones(1, dtype=np.int32)
 
 __dtrsv = __ffi.cast("void (*) (char*, char*, char*, int*, double*, int*, double*, int*)",
                      get_cython_function_address("scipy.linalg.cython_blas", "dtrsv"))
+__dposv = __ffi.cast("void (*) (char*, int*, int*, double*, int*, double*, int*, int*)",
+                     get_cython_function_address("scipy.linalg.cython_lapack", "dposv"))
 
 
 @n.njit(n.void(n.boolean, n.boolean, n.double[:, ::1], n.double[::1]), nogil=True)
@@ -60,3 +62,35 @@ def solve_tri(A, b, transpose=False, lower=True):
     x = b.copy()
     _dtrsv(lower, transpose, A, x)
     return x
+
+
+@n.njit(n.intc(n.float64[:, ::1], n.float64[::1], n.boolean), nogil=True)
+def _dposv(A, b, lower):
+    if A.shape[0] != A.shape[1]:
+        return -11
+    if A.shape[0] != b.shape[0]:
+        return -12
+
+    # dposv uses Fortran-layout arrays. Because we use C-layout arrays, we will
+    # invert the meaning of 'lower' and 'trans', and the function will work fine.
+    # We also need to swap index orders
+    uplo = __uplo_U if lower else __uplo_L
+    n_p = __ffi.from_buffer(np.array([A.shape[0]], dtype=np.intc))
+    nrhs_p = __ffi.from_buffer(np.ones(1, dtype=np.intc))
+    info = np.zeros(1, dtype=np.intc)
+    info_p = __ffi.from_buffer(info)
+
+    __dposv(__ffi.from_buffer(uplo), n_p, nrhs_p,
+            __ffi.from_buffer(A), n_p,
+            __ffi.from_buffer(b), n_p,
+            info_p)
+
+    return info[0]
+
+
+def dposv(A, b, lower=False):
+    info = _dposv(A, b, lower)
+    if info < 0:
+        raise ValueError('invalid args to dposv, code ' + str(info))
+    elif info > 0:
+        raise RuntimeError('error in dposv, code ' + str(info))
