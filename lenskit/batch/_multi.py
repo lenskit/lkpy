@@ -196,7 +196,7 @@ class MultiEval:
                 cand_f = self.candidate_generator
             train, test = ds
             train = train_load(train)
-            test = test_load(train)
+            test = test_load(test)
 
             ds_name = ds_attrs.get('DataSet', None)
             ds_part = ds_attrs.get('Partition', None)
