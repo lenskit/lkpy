@@ -350,9 +350,9 @@ class MultiEval:
             runs.to_csv(self.run_csv, index=False)
 
             for i in range(n):
-                preds = self._read_parquet('predictions', i+1)
+                preds = self._read_parquet('predictions-{}', i+1)
                 self._write_results(self, 'predictions', preds, i+1)
-                recs = self._read_parquet('recommendations', i+1)
+                recs = self._read_parquet('recommendations-{}', i+1)
                 self._write_results(self, 'recommendations', recs, i+1)
         finally:
             self.combine_output = oc

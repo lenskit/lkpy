@@ -194,6 +194,11 @@ def test_sweep_combine(tmp_path):
     assert not (work / 'predictions.parquet').exists()
     assert not (work / 'recommendations.parquet').exists()
 
+    for i in range(1,6):
+        assert (work / 'runs-{}.json'.format(i)).exists()
+        assert (work / 'predictions-{}.parquet'.format(i)).exists()
+        assert (work / 'recommendations-{}.parquet'.format(i)).exists()
+
     sweep.collect_results()
 
     assert (work / 'runs.csv').exists()
