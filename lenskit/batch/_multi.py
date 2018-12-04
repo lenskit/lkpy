@@ -334,3 +334,42 @@ class MultiEval:
             out = self.workdir / '{}-{}.parquet'.format(name, run_id)
             _logger.info('run %d: writing predictions to %s', run_id, out)
             df.to_parquet(out)
+
+    def collect_results(self):
+        """
+        Collect the results from non-combined runs into combined output files.
+        """
+
+        oc = self.combine_output
+        try:
+            self.combine_output = True
+            n = self.run_count()
+            runs = (self._read_json('run-{}.json', i+1) for i in range(n))
+            runs = pd.DataFrame.from_records(runs)
+            runs.to_parquet(self.run_file)
+            runs.to_csv(self.run_csv, index=False)
+
+            for i in range(n):
+                preds = self._read_parquet('predictions', i+1)
+                self._write_results(self, 'predictions', preds, i+1)
+                recs = self._read_parquet('recommendations', i+1)
+                self._write_results(self, 'recommendations', recs, i+1)
+        finally:
+            self.combine_output = oc
+
+    def _read_parquet(self, name, *args):
+        fn = self.workdir / name.format(*args)
+        if not fn.exists():
+            _logger.warning('file %s does not exist', fn)
+            return None
+
+        return pd.read_parquet(fn)
+
+    def _read_json(self, name, *args):
+        fn = self.workdir / name.format(*args)
+        if not fn.exists():
+            _logger.warning('file %s does not exist', fn)
+            return {}
+
+        with fn.open('r') as f:
+            return json.load(f)
