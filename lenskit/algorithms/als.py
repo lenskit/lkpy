@@ -9,6 +9,7 @@ from . import Predictor, Trainable
 from .mf_common import BiasMFModel, MFModel
 from ..matrix import sparse_ratings, CSR
 from .. import util
+from ..math.solve import _dposv
 
 _logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ def _train_matrix(mat: CSR, other: np.ndarray, reg: float):
     "One half of an explicit ALS training round."
     nr = mat.nrows
     nf = other.shape[1]
+    regI = np.identity(nf) * reg
     assert mat.ncols == other.shape[0]
     result = np.zeros((nr, nf))
     for i in prange(nr):
@@ -30,12 +32,11 @@ def _train_matrix(mat: CSR, other: np.ndarray, reg: float):
         MMT = M.T @ M
         # assert MMT.shape[0] == ctx.n_features
         # assert MMT.shape[1] == ctx.n_features
-        A = MMT + np.identity(nf) * reg * len(cols)
-        Ainv = np.linalg.inv(A)
+        A = MMT + regI * len(cols)
         V = M.T @ vals
-        uv = Ainv @ V
-        # assert len(uv) == ctx.n_features
-        result[i, :] = uv
+        # and solve
+        _dposv(A, V, True)
+        result[i, :] = V
 
     return result
 
@@ -68,19 +69,15 @@ def _train_implicit_matrix(mat: CSR, other: np.ndarray, reg: float):
         MMT = (M.T.copy() * rates) @ M
         # assert MMT.shape[0] == ctx.n_features
         # assert MMT.shape[1] == ctx.n_features
-        # Build and invert the matrix
+        # Build the matrix for solving
         A = OtOr + MMT
-        Ainv = np.linalg.inv(A)
-        # And now we can compute the final piece of the update rule
-        AiYt = Ainv @ Ot
-        cu = np.ones(nc)
-        cu[cols] = rates + 1.0
-        AiYt *= cu
-        pu = np.zeros(nc)
-        pu[cols] = 1.0
-        uv = AiYt @ pu
+        # Compute RHS - only used columns (p_ui != 0) values needed
+        # Cu is rates + 1 for the cols, so just trim Ot
+        y = Ot[:, cols] @ (rates + 1.0)
+        # and solve
+        _dposv(A, y, True)
         # assert len(uv) == ctx.n_features
-        result[i, :] = uv
+        result[i, :] = y
 
     return result
 
