@@ -210,7 +210,7 @@ class MultiEval:
             run_data.append(run)
             run_df = pd.DataFrame(run_data)
             # overwrite files to show progress
-            run_df.to_csv(self.run_csv)
+            run_df.to_csv(self.run_csv, index=False)
             run_df.to_parquet(self.run_file, compression=None)
 
     def _run_algo(self, run_id, arec, data):
