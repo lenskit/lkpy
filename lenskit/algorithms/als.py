@@ -171,7 +171,6 @@ class BiasedMF(Predictor, Trainable):
         "Apply bias normalization to the data in preparation for training."
         n_users = len(users)
         n_items = len(items)
-        _logger.info('shape %dx%d, u %d, i %d', ratings.nrows, ratings.ncols, n_users, n_items)
         assert ratings.nrows == n_users
         assert ratings.ncols == n_items
 
