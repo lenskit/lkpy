@@ -231,16 +231,16 @@ class MultiEval:
                 cand_f = self.candidate_generator
             train, test = ds
             train = train_load(train)
-            test = test_load(train)
+            test = test_load(test)
 
             ds_name = ds_attrs.get('DataSet', None)
             ds_part = ds_attrs.get('Partition', None)
             cand = cand_f(train)
 
-            _logger.info('starting run %d: %s on %s:%d', run_id, arec.algorithm,
+            _logger.info('starting run %d: %s on %s:%s', run_id, arec.algorithm,
                          ds_name, ds_part)
             run = self._run_algo(run_id, arec, (train, test, ds_attrs, cand))
-            _logger.info('finished run %d: %s on %s:%d', run_id, arec.algorithm,
+            _logger.info('finished run %d: %s on %s:%s', run_id, arec.algorithm,
                          ds_name, ds_part)
             run_data.append(run)
             self._write_run(run, run_data)
@@ -306,7 +306,7 @@ class MultiEval:
         if self.combine_output:
             run_df = pd.DataFrame(run_data)
             # overwrite files to show progress
-            run_df.to_csv(self.run_csv)
+            run_df.to_csv(self.run_csv, index=False)
             run_df.to_parquet(self.run_file, compression=None)
         else:
             rf = self.workdir / 'run-{}.json'.format(run['RunId'])

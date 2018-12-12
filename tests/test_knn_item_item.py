@@ -524,6 +524,6 @@ def test_ii_batch_recommend(ncpus):
                       in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
 
     _log.info('analyzing recommendations')
-    ndcg = recs.groupby('user').rating.apply(lm.ndcg)
-    _log.info('NDCG for %d users is %f', len(ndcg), ndcg.mean())
-    assert ndcg.mean() > 0
+    dcg = recs.groupby('user').rating.apply(lm.dcg)
+    _log.info('DCG for %d users is %f', len(dcg), dcg.mean())
+    assert dcg.mean() > 0

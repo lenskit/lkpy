@@ -107,9 +107,9 @@ def test_bias_batch_recommend():
                       in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
 
     _log.info('analyzing recommendations')
-    ndcg = recs.groupby('user').rating.apply(lm.ndcg)
-    _log.info('NDCG for %d users is %f (max=%f)', len(ndcg), ndcg.mean(), ndcg.max())
-    assert ndcg.mean() > 0
+    dcg = recs.groupby('user').rating.apply(lm.dcg)
+    _log.info('DCG for %d users is %f (max=%f)', len(dcg), dcg.mean(), dcg.max())
+    assert dcg.mean() > 0
 
 
 @pytest.mark.parametrize('ncpus', [None, 2])
@@ -141,6 +141,6 @@ def test_pop_batch_recommend(ncpus):
 
     _log.info('analyzing recommendations')
     _log.info('have %d recs for good items', (recs.rating > 0).sum())
-    ndcg = recs.groupby('user').rating.agg(lm.ndcg)
-    _log.info('NDCG for %d users is %f (max=%f)', len(ndcg), ndcg.mean(), ndcg.max())
-    assert ndcg.mean() > 0
+    dcg = recs.groupby('user').rating.agg(lm.dcg)
+    _log.info('DCG for %d users is %f (max=%f)', len(dcg), dcg.mean(), dcg.max())
+    assert dcg.mean() > 0

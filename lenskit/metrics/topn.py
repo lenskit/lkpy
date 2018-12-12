@@ -82,50 +82,63 @@ def _dcg(scores, discount=np.log2):
     return np.dot(scores, 1.0/disc)
 
 
-def ndcg(scores, items=None, discount=np.log2):
+def dcg(scores, discount=np.log2):
     """
-    Compute the Normalized Discounted Cumulative Gain of a series of scores.  These should be
-    relevance scores; they can be :math:`{0,1}` for binary relevance data.
+    Compute the Discounted Cumulative Gain of a series of recommended items with rating scores.
+    These should be relevance scores; they can be :math:`{0,1}` for binary relevance data.
 
     Discounted cumultative gain is computed as:
 
     .. math::
         \\begin{align*}
-        \\mathrm{DCG}(L,u) & = \\sum_{i=1}^{|L|} \\frac{r_{ui}}{d(i)} & \\\\
+        \\mathrm{DCG}(L,u) & = \\sum_{i=1}^{|L|} \\frac{r_{ui}}{d(i)}
+        \\end{align*}
+
+    You will usually want *normalized* discounted cumulative gain; this is
+
+    .. math::
+        \\begin{align*}
         \\mathrm{nDCG}(L, u) & = \\frac{\\mathrm{DCG}(L,u)}{\\mathrm{DCG}(L_{\\mathrm{ideal}}, u)}
         \\end{align*}
 
+    Compute that by computing the DCG of the recommendations & the test data, then merge the results
+    and divide.  The :py:fun:`compute_ideal_dcgs` function is helpful for preparing that data.
+
     Args:
-        scores(pd.Series or array-like):
-            relevance scores for items. If ``items`` is ``None``, these should be in order
-            of recommendation; if ``items`` is not ``None``, then this must be a
-            :py:class:`pandas.Series` indexed by item ID.
-        items(array-like):
-            the list of item IDs, if the item list and score list is to be provided separately.
+        scores(array-like):
+            The utility scores of a list of recommendations, in recommendation order.
         discount(ufunc):
             the rank discount function.  Each item's score will be divided the discount of its rank,
             if the discount is greater than 1.
 
     Returns:
-        double: the nDCG of the scored items.
+        double: the DCG of the scored items.
     """
 
-    if not isinstance(scores, pd.Series):
-        check.check_value(items is None, "scores must be Series when items provided")
-        scores = pd.Series(scores)
+    scores = pd.Series(scores)
+    scores = scores.fillna(0)
 
-    if items is None:
-        actual = _dcg(scores, discount)
-        iscores = scores.sort_values(ascending=False)
-        ideal = _dcg(iscores, discount)
-    else:
-        ascores = scores.reindex(items, fill_value=0)
-        actual = _dcg(ascores, discount)
-        iscores = scores.sort_values(ascending=True)
-        iscores = iscores[:len(items)]
-        ideal = _dcg(iscores, discount)
+    return _dcg(scores, discount)
 
-    if ideal > 0:
-        return actual / ideal
-    else:
-        return 0
+
+def compute_ideal_dcgs(ratings, discount=np.log2):
+    """
+    Compute the ideal DCG for rating data.  This groups the rating data by everything *except* its
+    ``item`` and ``rating`` columns, sorts each group by rating, and computes the DCG.
+
+    Args:
+        ratings(pandas.DataFrame):
+            A rating data frame with ``item``, ``rating``, and other columns.
+
+    Returns:
+        pandas.DataFrame: The data frame of DCG values.  The ``item`` and ``rating`` columns in
+            ``ratings`` are replaced by an ``ideal_dcg`` column.
+    """
+
+    def idcg(s):
+        return dcg(s.sort_values(ascending=False), discount=discount)
+
+    cols = [c for c in ratings.columns if c not in ('item', 'rating')]
+
+    res = ratings.groupby(cols).rating.agg(idcg)
+    return res.reset_index(name='ideal_dcg')
