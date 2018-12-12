@@ -254,6 +254,6 @@ def test_uu_implicit_batch_accuracy():
         rec_lists.append(recs)
     recs = pd.concat(rec_lists)
 
-    user_ndcg = recs.groupby('user').rating.apply(lm.ndcg)
-    ndcg = user_ndcg.mean()
-    assert ndcg >= 0.1
+    user_dcg = recs.groupby('user').rating.apply(lm.dcg)
+    dcg = user_dcg.mean()
+    assert dcg >= 0.1

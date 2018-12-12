@@ -62,6 +62,6 @@ def test_hpf_batch_accuracy():
     recs = pd.concat(eval(train, test) for (train, test) in folds)
 
     _log.info('analyzing recommendations')
-    ndcg = recs.groupby('user').rating.apply(lm.ndcg)
-    _log.info('ndcg for users is %.4f', ndcg.mean())
-    assert ndcg.mean() > 0
+    dcg = recs.groupby('user').rating.apply(lm.dcg)
+    _log.info('dcg for users is %.4f', dcg.mean())
+    assert dcg.mean() > 0
