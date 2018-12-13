@@ -63,7 +63,16 @@ class BaseRec(Trainable, Recommender):
         return rec_df.loc[:, ['item', 'score']]
 
     def __getattr__(self, name):
-        return self.algo_kwargs[name]
+        return self.__dict__['algo_kwargs'][name]
+
+    def __getstate__(self):
+        return (self.algo_class, self.algo_args, self.algo_kwargs)
+
+    def __setstate__(self, rec):
+        cls, args, kwargs = rec
+        self.algo_class = cls
+        self.algo_args = args
+        self.algo_kwargs = kwargs
 
     def __str__(self):
         return 'Implicit({}, {}, {})'.format(self.algo_class.__name__, self.algo_args, self.algo_kwargs)
