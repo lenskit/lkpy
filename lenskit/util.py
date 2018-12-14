@@ -122,8 +122,15 @@ class Stopwatch():
         elapsed = self.elapsed()
         if elapsed < 1:
             return "{: 0.0f}ms".format(elapsed * 1000)
+        elif elapsed > 60 * 60:
+            h, m = divmod(elapsed, 60 * 60)
+            m, s = divmod(m, 60)
+            return "{:0.0f}h{:0.0f}m{:0.2f}s".format(h, m, s)
+        elif elapsed > 60:
+            m, s = divmod(elapsed, 60)
+            return "{:0.0f}m{:0.2f}s".format(m, s)
         else:
-            return "{: 0.2f}s".format(elapsed)
+            return "{:0.2f}s".format(elapsed)
 
 
 def npz_path(path):
