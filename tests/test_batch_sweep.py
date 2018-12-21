@@ -168,7 +168,7 @@ def test_sweep_combine(tmp_path):
     sweep.add_datasets(lambda: xf.partition_users(ratings, 5, xf.SampleN(5)), name='ml-small')
     sweep.persist_data()
 
-    for i in range(1,6):
+    for i in range(1, 6):
         assert (work / 'ds{}-train.parquet'.format(i)).exists()
         assert (work / 'ds{}-test.parquet'.format(i)).exists()
 
@@ -194,8 +194,8 @@ def test_sweep_combine(tmp_path):
     assert not (work / 'predictions.parquet').exists()
     assert not (work / 'recommendations.parquet').exists()
 
-    for i in range(1,6):
-        assert (work / 'runs-{}.json'.format(i)).exists()
+    for i in range(1, 6):
+        assert (work / 'run-{}.json'.format(i)).exists()
         assert (work / 'predictions-{}.parquet'.format(i)).exists()
         assert (work / 'recommendations-{}.parquet'.format(i)).exists()
 
