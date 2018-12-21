@@ -7,6 +7,7 @@ import numpy as np
 from lk_test_utils import ml_pandas, norm_path
 
 from lenskit import batch, crossfold as xf
+from lenskit.algorithms import Predictor
 from lenskit.algorithms.basic import Bias, Popular
 
 from pytest import mark
@@ -166,6 +167,11 @@ def test_sweep_combine(tmp_path):
 
     ratings = ml_pandas.renamed.ratings
     sweep.add_datasets(lambda: xf.partition_users(ratings, 5, xf.SampleN(5)), name='ml-small')
+
+    sweep.add_algorithms([Bias(damping=0), Bias(damping=5)],
+                         attrs=['damping'])
+    sweep.add_algorithms(Popular())
+
     sweep.persist_data()
 
     for i in range(1, 6):
@@ -178,9 +184,7 @@ def test_sweep_combine(tmp_path):
         assert isinstance(train, pathlib.Path)
         assert isinstance(test, pathlib.Path)
 
-    sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
-                         attrs=['damping'])
-    sweep.add_algorithms(Popular())
+    assert sweep.run_count() == 5 * 3
 
     try:
         sweep.run()
@@ -194,10 +198,12 @@ def test_sweep_combine(tmp_path):
     assert not (work / 'predictions.parquet').exists()
     assert not (work / 'recommendations.parquet').exists()
 
-    for i in range(1, 6):
-        assert (work / 'run-{}.json'.format(i)).exists()
-        assert (work / 'predictions-{}.parquet'.format(i)).exists()
-        assert (work / 'recommendations-{}.parquet'.format(i)).exists()
+    for i, (ds, a) in enumerate(sweep._flat_runs()):
+        run = i + 1
+        assert (work / 'run-{}.json'.format(run)).exists()
+        if isinstance(a.algorithm, Predictor):
+            assert (work / 'predictions-{}.parquet'.format(run)).exists()
+        assert (work / 'recommendations-{}.parquet'.format(run)).exists()
 
     sweep.collect_results()
 
