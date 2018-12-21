@@ -213,5 +213,4 @@ def test_sweep_combine(tmp_path):
     assert (work / 'recommendations.parquet').exists()
 
     runs = pd.read_parquet(work / 'runs.parquet')
-    # 4 algorithms by 5 partitions
-    assert len(runs) == 20
+    assert len(runs) == 5 * 3
