@@ -320,16 +320,8 @@ class MultiEval:
         if self.combine_output:
             out = self.workdir / '{}.parquet'.format(name)
             _logger.info('run %d: writing predictions to %s', run_id, out)
-            fn = str(out)
             append = run_id > 1
-            if fastparquet is not None:
-                fastparquet.write(fn, df, append=append, compression='snappy')
-            elif append and out.exists():
-                warnings.warn('fastparquet not available, appending is slow')
-                odf = pd.read_parquet(fn)
-                pd.concat([odf, df], ignore_index=True).to_parquet(fn)
-            else:
-                df.to_parquet(fn)
+            util.write_parquet(out, df, append=append)
         else:
             out = self.workdir / '{}-{}.parquet'.format(name, run_id)
             _logger.info('run %d: writing predictions to %s', run_id, out)

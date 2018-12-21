@@ -1,7 +1,9 @@
 import time
 import re
+import pathlib
 
 import numpy as np
+import pandas as pd
 
 from lenskit import util as lku
 
@@ -173,3 +175,30 @@ def test_last_memo():
     assert len(history) == 1
     cache("bar")
     assert len(history) == 2
+
+
+def test_fspath():
+    path = pathlib.Path('lenskit')
+    fn = lku.fspath(path)
+    assert fn == 'lenskit'
+
+
+def test_write_parquet(tmp_path):
+    fn = tmp_path / 'out.parquet'
+    frame = pd.DataFrame({'n': np.arange(10), 'x': np.random.randn(10) + 5})
+    lku.write_parquet(fn, frame)
+
+    f2 = pd.read_parquet(fn)
+    assert all(f2.n == frame.n)
+    assert all(f2.x == frame.x)
+
+
+def test_append_parquet(tmp_path):
+    fn = tmp_path / 'out.parquet'
+    frame = pd.DataFrame({'n': np.arange(10), 'x': np.random.randn(10) + 5})
+    lku.write_parquet(fn, frame.iloc[:5], True)
+    lku.write_parquet(fn, frame.iloc[5:], True)
+
+    f2 = pd.read_parquet(fn)
+    assert all(f2.n == frame.n)
+    assert all(f2.x == frame.x)

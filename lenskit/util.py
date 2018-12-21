@@ -2,12 +2,23 @@
 Miscellaneous utility functions.
 """
 
+import os
+import os.path
 import time
 import pathlib
+import warnings
 
 from numba import jitclass, njit, int32, double
 import numpy as np
 import pandas as pd
+
+try:
+    import fastparquet
+except ImportError:
+    fastparquet = None
+
+
+__os_fp = getattr(os, 'fspath', None)
 
 
 @njit
@@ -133,6 +144,14 @@ class Stopwatch():
             return "{:0.2f}s".format(elapsed)
 
 
+def fspath(path):
+    "Backport of :py:fun:`os.fspath` function for Python 3.5."
+    if __os_fp:
+        return __os_fp(path)
+    else:
+        return str(path)
+
+
 def npz_path(path):
     path = pathlib.Path(path)
     p = path
@@ -166,6 +185,27 @@ def read_df_detect(path):
         return pd.read_csv(path)
     elif path.suffix in ('.parquet', '.parq', '.pq'):
         return pd.read_parquet(path)
+
+
+def write_parquet(path, frame, append=False):
+    """
+    Write a Parquet file.
+
+    Args:
+        path(pathlib.Path): The path of the Parquet file to write.
+        frame(pandas.DataFrame): The data to write.
+        append(bool): Whether to append to the file or overwrite it.
+    """
+    fn = fspath(path)
+    append = append and os.path.exists(fn)
+    if fastparquet is not None:
+        fastparquet.write(fn, frame, append=append, compression='snappy')
+    elif append:
+        warnings.warn('fastparquet not available, appending is slow')
+        odf = pd.read_parquet(fn)
+        pd.concat([odf, frame], ignore_index=True).to_parquet(fn)
+    else:
+        frame.to_parquet(fn)
 
 
 class LastMemo:
