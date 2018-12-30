@@ -158,16 +158,16 @@ def test_topn_recommend():
     pred = basic.Memorized(simple_df)
     rec = basic.TopN(pred)
 
-    rec10 = rec.recommend(None, 10, candidates=[1, 2])
+    rec10 = rec.recommend(10, candidates=[1, 2])
     assert all(rec10.item == [2, 1])
     assert all(rec10.score == [5, 4])
 
-    rec2 = rec.recommend(None, 12, candidates=[1, 2])
+    rec2 = rec.recommend(12, candidates=[1, 2])
     assert len(rec2) == 1
     assert all(rec2.item == [1])
     assert all(rec2.score == [3])
 
-    rec10 = rec.recommend(None, 10, n=1, candidates=[1, 2])
+    rec10 = rec.recommend(10, n=1, candidates=[1, 2])
     assert len(rec10) == 1
     assert all(rec10.item == [2])
     assert all(rec10.score == [5])
