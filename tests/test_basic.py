@@ -24,6 +24,42 @@ def test_memorized():
     assert np.isnan(preds.loc[3])
 
 
+def test_memorized_batch():
+    algo = basic.Memorized(simple_df)
+
+    preds = algo.predict(pd.DataFrame({'user': [10, 10, 12], 'item': [1, 2, 1]}))
+    assert isinstance(preds, pd.Series)
+    assert preds.name == 'prediction'
+    assert set(preds.index) == set([0, 1, 2])
+    assert all(preds == [4.0, 5.0, 3.0])
+
+
+def test_memorized_batch_ord():
+    algo = basic.Memorized(simple_df)
+
+    preds = algo.predict(pd.DataFrame({'user': [10, 12, 10], 'item': [1, 1, 2]}))
+    assert set(preds.index) == set([0, 1, 2])
+    assert all(preds == [4.0, 3.0, 5.0])
+
+
+def test_memorized_batch_missing():
+    algo = basic.Memorized(simple_df)
+
+    preds = algo.predict(pd.DataFrame({'user': [10, 12, 12], 'item': [1, 1, 3]}))
+    assert set(preds.index) == set([0, 1, 2])
+    assert all(preds.iloc[:2] == [4.0, 3.0])
+    assert np.isnan(preds.iloc[2])
+
+
+def test_memorized_batch_keep_index():
+    algo = basic.Memorized(simple_df)
+
+    query = pd.DataFrame({'user': [10, 10, 12], 'item': [1, 2, 1]},
+                         index=np.random.choice(np.arange(10), 3, False))
+    preds = algo.predict(query)
+    assert all(preds.index == query.index)
+    assert all(preds == [4.0, 5.0, 3.0])
+
 def test_fallback_train_one():
     algo = basic.Fallback(basic.Bias())
     algo.fit(lktu.ml_pandas.renamed.ratings)

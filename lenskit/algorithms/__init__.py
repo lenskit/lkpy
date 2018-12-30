@@ -65,7 +65,7 @@ class Predictor(Algorithm, metaclass=ABCMeta):
     granularity.
     """
 
-    def skpredict(self, pairs, ratings=None):
+    def predict(self, pairs, ratings=None):
         """
         Compute predictions for user-item pairs.  This method is designed to be compatible with the
         general SciKit paradigm; applications typically want to use :py:meth:`predict_for_user`.
@@ -75,8 +75,23 @@ class Predictor(Algorithm, metaclass=ABCMeta):
             ratings(pandas.DataFrame): user-item rating data to replace memorized data.
 
         Returns:
-            pandas.DataFrame: The predicted scores for the items, in a `prediction` column.
+            pandas.Series: The predicted scores for each user-item pair.
         """
+        if ratings is not None:
+            raise NotImplementedError()
+
+        def upred(df):
+            user, = df['user'].unique()
+            items = df['item']
+            preds = self.predict_for_user(user, items)
+            preds.name = 'prediction'
+            res = df.join(preds, on='item', how='left')
+            return res.prediction
+
+        res = pairs.loc[:, ['user', 'item']].groupby('user', sort=False).apply(upred)
+        res.reset_index(level='user', inplace=True, drop=True)
+        res.name = 'prediction'
+        return res.loc[pairs.index.values]
 
     @abstractmethod
     def predict_for_user(self, user, items, ratings=None):
