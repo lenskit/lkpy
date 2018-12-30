@@ -2,13 +2,12 @@ import logging
 
 import pandas as pd
 
-from . import Predictor, Trainable
-from .mf_common import MFModel
+from .mf_common import MFPredictor
 
 _logger = logging.getLogger(__name__)
 
 
-class HPF(Predictor, Trainable):
+class HPF(MFPredictor):
     """
     Hierarchical Poisson factorization, provided by hpfrec_.
 
@@ -23,7 +22,7 @@ class HPF(Predictor, Trainable):
         self.features = features
         self._kwargs = kwargs
 
-    def train(self, ratings):
+    def fit(self, ratings):
         import hpfrec
 
         users = pd.Index(ratings.user.unique())
@@ -40,8 +39,13 @@ class HPF(Predictor, Trainable):
         _logger.info('fitting HPF model with %d features', self.features)
         hpf.fit(hpfdf)
 
-        return MFModel(users, items, hpf.Theta, hpf.Beta)
+        self.user_index_ = users
+        self.item_index_ = items
+        self.user_features_ = hpf.Theta
+        self.item_features_ = hpf.Beta
 
-    def predict(self, model: MFModel, user, items, ratings=None):
+        return self
+
+    def predict_for_user(self, user, items, ratings=None):
         # look up user index
-        return model.score_by_ids(user, items)
+        return self.score_by_ids(user, items)

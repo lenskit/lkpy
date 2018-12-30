@@ -13,9 +13,8 @@ _rec_context = None
 
 
 class MPRecContext:
-    def __init__(self, algo, model, candidates, size):
+    def __init__(self, algo, candidates, size):
         self.algo = algo
-        self.model = model
         self.candidates = candidates
         self.size = size
 
@@ -31,21 +30,21 @@ class MPRecContext:
         _rec_context = None
 
 
-def _recommend_user(algo, model, user, n, candidates):
+def _recommend_user(algo, user, n, candidates):
     _logger.debug('generating recommendations for %s', user)
     watch = util.Stopwatch()
-    res = algo.recommend(model, user, n, candidates)
+    res = algo.recommend(user, n, candidates)
     _logger.debug('%s recommended %d/%d items for %s in %s', algo, len(res), n, user, watch)
     res['user'] = user
     res['rank'] = np.arange(1, len(res) + 1)
     return res
 
 
-def _recommend_seq(algo, model, users, n, candidates):
+def _recommend_seq(algo, users, n, candidates):
     if isinstance(candidates, dict):
         candidates = candidates.get
     algo = Recommender.adapt(algo)
-    results = [_recommend_user(algo, model, user, n, candidates(user))
+    results = [_recommend_user(algo, user, n, candidates(user))
                for user in users]
     return results
 
@@ -53,11 +52,11 @@ def _recommend_seq(algo, model, users, n, candidates):
 def _recommend_worker(user):
     candidates = _rec_context.candidates(user)
     algo = Recommender.adapt(_rec_context.algo)
-    res = _recommend_user(algo, _rec_context.model, user, _rec_context.size, candidates)
+    res = _recommend_user(algo, user, _rec_context.size, candidates)
     return res.to_msgpack()
 
 
-def recommend(algo, model, users, n, candidates, ratings=None, nprocs=None):
+def recommend(algo, users, n, candidates, ratings=None, nprocs=None):
     """
     Batch-recommend for multiple users.  The provided algorithm should be a
     :py:class:`algorithms.Recommender` or :py:class:`algorithms.Predictor` (which
@@ -83,12 +82,12 @@ def recommend(algo, model, users, n, candidates, ratings=None, nprocs=None):
 
     if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
         _logger.info('starting recommend process with %d workers', nprocs)
-        with MPRecContext(algo, model, candidates, n), Pool(nprocs) as pool:
+        with MPRecContext(algo, candidates, n), Pool(nprocs) as pool:
             results = pool.map(_recommend_worker, users)
         results = [pd.read_msgpack(r) for r in results]
     else:
         _logger.info('starting sequential recommend process')
-        results = _recommend_seq(algo, model, users, n, candidates)
+        results = _recommend_seq(algo, users, n, candidates)
 
     results = pd.concat(results, ignore_index=True)
 

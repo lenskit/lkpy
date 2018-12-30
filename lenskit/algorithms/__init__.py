@@ -135,3 +135,11 @@ class Recommender(Algorithm, metaclass=ABCMeta):
                 they will be in a ``score`` column.
         """
         raise NotImplementedError()
+
+    @classmethod
+    def adapt(cls, algo):
+        from .basic import TopN
+        if isinstance(algo, Recommender):
+            return algo
+        else:
+            return TopN(algo)
