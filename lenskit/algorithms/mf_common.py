@@ -8,47 +8,37 @@ import logging
 import numpy as np
 import pandas as pd
 
-from .. import check, util
-from . import basic
+from .. import util
+from . import Predictor
 
 _logger = logging.getLogger(__name__)
 
 
-class MFModel:
+class MFPredictor(Predictor):
     """
-    Common model for matrix factorization.
+    Common predictor for matrix factorization.
 
     Attributes:
-        user_index(pandas.Index): Users in the model (length=:math:`m`).
-        item_index(pandas.Index): Items in the model (length=:math:`n`).
-        user_features(numpy.ndarray): The :math:`m \\times k` user-feature matrix.
-        item_features(numpy.ndarray): The :math:`n \\times k` item-feature matrix.
+        user_index_(pandas.Index): Users in the model (length=:math:`m`).
+        item_index_(pandas.Index): Items in the model (length=:math:`n`).
+        user_features_(numpy.ndarray): The :math:`m \\times k` user-feature matrix.
+        item_features_(numpy.ndarray): The :math:`n \\times k` item-feature matrix.
     """
-
-    def __init__(self, users, items, umat, imat):
-        check.check_dimension(users, umat, 'user matrix', d2=0)
-        check.check_dimension(items, imat, 'item matrix', d2=0)
-        check.check_dimension(umat, imat, 'user & item matrices', 1, 1)
-
-        self.user_index = users
-        self.item_index = items
-        self.user_features = umat
-        self.item_features = imat
 
     @property
     def n_features(self):
         "The number of features."
-        return self.user_features.shape[1]
+        return self.user_features_.shape[1]
 
     @property
     def n_users(self):
         "The number of users."
-        return len(self.user_index)
+        return len(self.user_index_)
 
     @property
     def n_items(self):
         "The number of items."
-        return len(self.item_index)
+        return len(self.item_index_)
 
     def lookup_user(self, user):
         """
@@ -61,7 +51,7 @@ class MFModel:
             int: the user index.
         """
         try:
-            return self.user_index.get_loc(user)
+            return self.user_index_.get_loc(user)
         except KeyError:
             return -1
 
@@ -75,7 +65,7 @@ class MFModel:
         Returns:
             numpy.ndarray: the item indices. Unknown items will have negative indices.
         """
-        return self.item_index.get_indexer(items)
+        return self.item_index_.get_indexer(items)
 
     def score(self, user, items):
         """
@@ -92,9 +82,9 @@ class MFModel:
         """
 
         # get user vector
-        uv = self.user_features[user, :]
+        uv = self.user_features_[user, :]
         # get item matrix
-        im = self.item_features[items, :]
+        im = self.item_features_[items, :]
         rv = np.matmul(im, uv)
         assert rv.shape[0] == len(items)
         assert len(rv.shape) == 1
@@ -123,43 +113,32 @@ class MFModel:
         return res
 
     def save(self, path):
-        np.savez_compressed(path, users=self.user_index.values, items=self.item_index.values,
-                            umat=self.user_features, imat=self.item_features)
+        np.savez_compressed(path, users=self.user_index_.values, items=self.item_index_.values,
+                            umat=self.user_features_, imat=self.item_features_)
 
-    @classmethod
-    def load(cls, path):
+    def load(self, path):
         path = util.npz_path(path)
 
         with np.load(path) as npz:
-            users = pd.Index(npz['users'], name='user')
-            items = pd.Index(npz['items'], name='item')
-            umat = npz['umat']
-            imat = npz['imat']
-            return cls(users, items, umat, imat)
+            self.user_index_ = pd.Index(npz['users'], name='user')
+            self.item_index_ = pd.Index(npz['items'], name='item')
+            self.user_features_ = npz['umat']
+            self.item_features_ = npz['imat']
 
 
-class BiasMFModel(MFModel):
+class BiasMFPredictor(MFPredictor):
     """
     Common model for biased matrix factorization.
 
     Attributes:
-        user_index(pandas.Index): Users in the model (length=:math:`m`).
-        item_index(pandas.Index): Items in the model (length=:math:`n`).
-        global_bias(double): The global bias term.
-        user_bias(numpy.ndarray): The user bias terms.
-        item_bias(numpy.ndarray): The item bias terms.
-        user_features(numpy.ndarray): The :math:`m \\times k` user-feature matrix.
-        item_features(numpy.ndarray): The :math:`n \\times k` item-feature matrix.
+        user_index_(pandas.Index): Users in the model (length=:math:`m`).
+        item_index_(pandas.Index): Items in the model (length=:math:`n`).
+        global_bias_(double): The global bias term.
+        user_bias_(numpy.ndarray): The user bias terms.
+        item_bias_(numpy.ndarray): The item bias terms.
+        user_features_(numpy.ndarray): The :math:`m \\times k` user-feature matrix.
+        item_features_(numpy.ndarray): The :math:`n \\times k` item-feature matrix.
     """
-
-    def __init__(self, users, items, bias, umat, imat):
-        super().__init__(users, items, umat, imat)
-        if isinstance(bias, basic.BiasModel):
-            self.global_bias = bias.mean
-            self.user_bias = bias.users.reindex(users, fill_value=0).values
-            self.item_bias = bias.items.reindex(items, fill_value=0).values
-        else:
-            self.global_bias, self.user_bias, self.item_bias = bias
 
     def score(self, user, items, raw=False):
         """
@@ -179,30 +158,28 @@ class BiasMFModel(MFModel):
 
         if not raw:
             # add bias back in
-            rv = rv + self.global_bias
-            if self.user_bias is not None:
-                rv = rv + self.user_bias[user]
-            if self.item_bias is not None:
-                rv = rv + self.item_bias[items]
+            rv = rv + self.global_bias_
+            if self.user_bias_ is not None:
+                rv = rv + self.user_bias_[user]
+            if self.item_bias_ is not None:
+                rv = rv + self.item_bias_[items]
 
         return rv
 
     def save(self, path):
-        np.savez_compressed(path, users=self.user_index.values, items=self.item_index.values,
-                            umat=self.user_features, imat=self.item_features,
-                            gbias=np.array([self.global_bias]),
-                            ubias=self.user_bias, ibias=self.item_bias)
+        np.savez_compressed(path, users=self.user_index_.values, items=self.item_index_.values,
+                            umat=self.user_features_, imat=self.item_features_,
+                            gbias=np.array([self.global_bias_]),
+                            ubias=self.user_bias_, ibias=self.item_bias_)
 
-    @classmethod
-    def load(cls, path: pathlib.Path):
+    def load(self, path: pathlib.Path):
         path = util.npz_path(path)
 
         with np.load(path) as npz:
-            users = pd.Index(npz['users'])
-            items = pd.Index(npz['items'])
-            umat = npz['umat']
-            imat = npz['imat']
-            gbias = npz['gbias'][0]
-            ubias = npz['ubias']
-            ibias = npz['ibias']
-            return cls(users, items, (gbias, ubias, ibias), umat, imat)
+            self.user_index_ = pd.Index(npz['users'])
+            self.item_index_ = pd.Index(npz['items'])
+            self.user_features_ = npz['umat']
+            self.item_features_ = npz['imat']
+            self.global_bias_ = npz['gbias'][0]
+            self.user_bias_ = npz['ubias']
+            self.item_bias_ = npz['ibias']

@@ -14,10 +14,10 @@ Common Support
 The :py:mod:`mf_common` module contains common support code for matrix factorization
 algorithms.
 
-.. autoclass:: MFModel
+.. autoclass:: MFPredictor
    :members:
 
-.. autoclass:: BiasMFModel
+.. autoclass:: BiasMFPredictor
    :members:
 
 Alternating Least Squares

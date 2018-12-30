@@ -9,9 +9,9 @@ import pandas as pd
 import numpy as np
 import numba as n
 
-from . import Trainable, Predictor
+from . import Predictor
 from . import basic
-from .mf_common import BiasMFModel
+from .mf_common import BiasMFPredictor
 from .. import util
 
 _logger = logging.getLogger(__name__)
@@ -26,6 +26,7 @@ _logger = logging.getLogger(__name__)
     ('initial_value', n.double)
 ])
 class Model:
+    "Internal model class for training SGD MF."
     def __init__(self, umat, imat):
         self.user_features = umat
         self.item_features = imat
@@ -186,7 +187,7 @@ def _align_add_bias(bias, index, keys, series):
     return bias, series
 
 
-class FunkSVD(Predictor, Trainable):
+class FunkSVD(BiasMFPredictor):
     """
     Algorithm class implementing FunkSVD matrix factorization.
 
@@ -196,37 +197,37 @@ class FunkSVD(Predictor, Trainable):
         lrate(double): the learning rate
         reg(double): the regularization factor
         damping(double): damping factor for the underlying mean
+        bias(Predictor): the underlying bias model to fit.  If ``True``, then a
+            :py:class:`.basic.Bias` model is fit with ``damping``.
         range(tuple):
             the ``(min, max)`` rating values to clamp ratings, or ``None`` to leave
             predictions unclamped.
     """
 
-    def __init__(self, features, iterations=100, lrate=0.001, reg=0.015, damping=5, range=None):
+    def __init__(self, features, iterations=100, *, lrate=0.001, reg=0.015,
+                 damping=5, range=None, bias=True):
         self.features = features
         self.iterations = iterations
         self.learning_rate = lrate
         self.regularization = reg
         self.damping = damping
         self.range = range
+        if bias is True:
+            self.bias = basic.Bias(damping=damping)
+        else:
+            self.bias = bias
 
-    def train(self, ratings, bias=None):
+    def fit(self, ratings):
         """
         Train a FunkSVD model.
 
         Args:
             ratings: the ratings data frame.
-            bias(.bias.BiasModel): a pre-trained bias model to use.
-
-        Returns:
-            The trained biased MF model.
         """
         timer = util.Stopwatch()
-        if bias is None:
-            _logger.info('[%s] training bias model', timer)
-            bias = basic.Bias(damping=self.damping).train(ratings)
-        # unpack the bias
-        if not isinstance(bias, basic.BiasModel):
-            bias = basic.BiasModel(bias, None, None)
+        if self.bias is not None:
+            _logger.info('[%s] fitting bias model', timer)
+            self.bias.fit(ratings)
 
         _logger.info('[%s] preparing rating data for %d samples', timer, len(ratings))
         _logger.debug('shuffling rating data')
@@ -244,9 +245,9 @@ class FunkSVD(Predictor, Trainable):
         assert np.all(items >= 0)
 
         _logger.debug('[%s] computing initial estimates', timer)
-        initial = pd.Series(bias.mean, index=ratings.index, dtype=np.float_)
-        ibias, initial = _align_add_bias(bias.items, iidx, ratings.item, initial)
-        ubias, initial = _align_add_bias(bias.users, uidx, ratings.user, initial)
+        initial = pd.Series(self.bias.mean_, index=ratings.index, dtype=np.float_)
+        ibias, initial = _align_add_bias(self.bias.item_offsets_, iidx, ratings.item, initial)
+        ubias, initial = _align_add_bias(self.bias.user_offsets_, uidx, ratings.user, initial)
 
         _logger.debug('have %d estimates for %d ratings', len(initial), len(ratings))
         assert len(initial) == len(ratings)
@@ -262,26 +263,33 @@ class FunkSVD(Predictor, Trainable):
         train(context, params, model, timer)
         _logger.info('finished model training in %s', timer)
 
-        return BiasMFModel(uidx, iidx, basic.BiasModel(bias.mean, ibias, ubias),
-                           model.user_features, model.item_features)
+        self.user_index_ = uidx
+        self.item_index_ = iidx
+        self.global_bias_ = self.bias.mean_
+        self.user_bias_ = ubias.values
+        self.item_bias_ = ibias.values
+        self.user_features_ = model.user_features
+        self.item_features_ = model.item_features
 
-    def predict(self, model, user, items, ratings=None):
+        return self
+
+    def predict_for_user(self, user, items, ratings=None):
         # look up user index
-        uidx = model.lookup_user(user)
+        uidx = self.lookup_user(user)
         if uidx < 0:
             _logger.debug('user %s not in model', user)
             return pd.Series(np.nan, index=items)
 
         # get item index & limit to valid ones
         items = np.array(items)
-        iidx = model.lookup_items(items)
+        iidx = self.lookup_items(items)
         good = iidx >= 0
         good_items = items[good]
         good_iidx = iidx[good]
 
         # multiply
         _logger.debug('scoring %d items for user %s', len(good_items), user)
-        rv = model.score(uidx, good_iidx)
+        rv = self.score(uidx, good_iidx)
 
         # clamp if suitable
         if self.range is not None:
@@ -292,12 +300,6 @@ class FunkSVD(Predictor, Trainable):
         res = pd.Series(rv, index=good_items)
         res = res.reindex(items)
         return res
-
-    def save_model(self, model, path):
-        model.save(path)
-
-    def load_model(self, path):
-        return BiasMFModel.load(path)
 
     def __str__(self):
         return 'FunkSVD(features={}, regularization={})'.\
