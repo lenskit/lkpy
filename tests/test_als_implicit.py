@@ -6,7 +6,7 @@ from lenskit.algorithms import als
 import pandas as pd
 import numpy as np
 
-from pytest import approx, mark
+from pytest import mark
 
 import lk_test_utils as lktu
 
@@ -19,19 +19,19 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
 
 def test_als_basic_build():
     algo = als.ImplicitMF(20, iterations=10)
-    model = algo.train(simple_df)
+    algo.fit(simple_df)
 
-    assert model is not None
-    assert isinstance(model, als.MFModel)
+    assert set(algo.user_index_) == set([10, 12, 13])
+    assert set(algo.item_index_) == set([1, 2, 3])
+    assert algo.user_features_.shape == (3, 20)
+    assert algo.item_features_.shape == (3, 20)
 
 
 def test_als_predict_basic():
     algo = als.ImplicitMF(20, iterations=10)
-    model = algo.train(simple_df)
+    algo.fit(simple_df)
 
-    assert model is not None
-
-    preds = algo.predict(model, 10, [3])
+    preds = algo.predict_for_user(10, [3])
     assert len(preds) == 1
     assert preds.index[0] == 3
     assert preds.loc[3] >= -0.1
@@ -40,11 +40,9 @@ def test_als_predict_basic():
 
 def test_als_predict_bad_item():
     algo = als.ImplicitMF(20, iterations=10)
-    model = algo.train(simple_df)
+    algo.fit(simple_df)
 
-    assert model is not None
-
-    preds = algo.predict(model, 10, [4])
+    preds = algo.predict_for_user(10, [4])
     assert len(preds) == 1
     assert preds.index[0] == 4
     assert np.isnan(preds.loc[4])
@@ -52,11 +50,9 @@ def test_als_predict_bad_item():
 
 def test_als_predict_bad_user():
     algo = als.ImplicitMF(20, iterations=10)
-    model = algo.train(simple_df)
+    algo.fit(simple_df)
 
-    assert model is not None
-
-    preds = algo.predict(model, 50, [3])
+    preds = algo.predict_for_user(50, [3])
     assert len(preds) == 1
     assert preds.index[0] == 3
     assert np.isnan(preds.loc[3])
@@ -66,10 +62,12 @@ def test_als_predict_bad_user():
 def test_als_train_large():
     algo = als.ImplicitMF(20, iterations=20)
     ratings = lktu.ml_pandas.renamed.ratings
-    model = algo.train(ratings)
+    algo.fit(ratings)
 
-    assert model is not None
-    # FIXME Write more test assertions
+    assert len(algo.user_index_) == ratings.user.nunique()
+    assert len(algo.item_index_) == ratings.item.nunique()
+    assert algo.user_features_.shape == (ratings.user.nunique(), 20)
+    assert algo.item_features_.shape == (ratings.item.nunique(), 20)
 
 
 def test_als_save_load(tmp_path):
@@ -77,18 +75,17 @@ def test_als_save_load(tmp_path):
     mod_file = tmp_path / 'als.npz'
     algo = als.ImplicitMF(20, iterations=5)
     ratings = lktu.ml_pandas.renamed.ratings
-    model = algo.train(ratings)
+    algo.fit(ratings)
 
-    assert model is not None
-
-    algo.save_model(model, mod_file)
+    algo.save(mod_file)
     assert mod_file.exists()
 
-    restored = algo.load_model(mod_file)
-    assert np.all(restored.user_features == model.user_features)
-    assert np.all(restored.item_features == model.item_features)
-    assert np.all(restored.item_index == model.item_index)
-    assert np.all(restored.user_index == model.user_index)
+    restored = als.ImplicitMF(20)
+    restored.load(mod_file)
+    assert np.all(restored.user_features_ == algo.user_features_)
+    assert np.all(restored.item_features_ == algo.item_features_)
+    assert np.all(restored.item_index_ == algo.item_index_)
+    assert np.all(restored.user_index_ == algo.user_index_)
 
 
 @mark.slow
@@ -96,10 +93,12 @@ def test_als_train_large_noratings():
     algo = als.ImplicitMF(20, iterations=20)
     ratings = lktu.ml_pandas.renamed.ratings
     ratings = ratings.loc[:, ['user', 'item']]
-    model = algo.train(ratings)
+    algo.fit(ratings)
 
-    assert model is not None
-    # FIXME Write more test assertions
+    assert len(algo.user_index_) == ratings.user.nunique()
+    assert len(algo.item_index_) == ratings.item.nunique()
+    assert algo.user_features_.shape == (ratings.user.nunique(), 20)
+    assert algo.item_features_.shape == (ratings.item.nunique(), 20)
 
 
 @mark.slow
@@ -117,11 +116,11 @@ def test_als_implicit_batch_accuracy():
     def eval(train, test):
         _log.info('running training')
         train['rating'] = train.rating.astype(np.float_)
-        model = algo.train(train)
+        algo.fit(train)
         users = test.user.unique()
         _log.info('testing %d users', len(users))
         candidates = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, model, users, 100, candidates, test)
+        recs = batch.recommend(algo, users, 100, candidates, test)
         return recs
 
     folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
