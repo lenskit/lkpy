@@ -45,9 +45,9 @@ class UserUser(Predictor):
             aggregate:
                 the type of aggregation to do. Can be ``weighted-average`` or ``sum``.
         """
-        self.max_neighbors = nnbrs
-        self.min_neighbors = min_nbrs
-        self.min_similarity = min_sim
+        self.nnbrs = nnbrs
+        self.min_nbrs = min_nbrs
+        self.min_sim = min_sim
         self.center = center
         self.aggregate = intern(aggregate)
 
@@ -154,13 +154,13 @@ class UserUser(Predictor):
             i_sims = nsims[i_users]
             mask = np.abs(i_sims >= 1.0e-10)
 
-            if self.max_neighbors is not None and self.max_neighbors > 0:
+            if self.nnbrs is not None and self.nnbrs > 0:
                 rank = stats.rankdata(-i_sims, 'ordinal')
-                mask = np.logical_and(mask, rank <= self.max_neighbors)
-            if self.min_similarity is not None:
-                mask = np.logical_and(mask, i_sims >= self.min_similarity)
+                mask = np.logical_and(mask, rank <= self.nnbrs)
+            if self.min_sim is not None:
+                mask = np.logical_and(mask, i_sims >= self.min_sim)
 
-            if np.sum(mask) < self.min_neighbors:
+            if np.sum(mask) < self.min_nbrs:
                 continue
 
             # now we have picked weights, take a dot product
@@ -230,4 +230,4 @@ class UserUser(Predictor):
         self._mkl_m_ = mkl.SparseM.from_csr(self.rating_matrix_) if mkl else None
 
     def __str__(self):
-        return 'UserUser(nnbrs={}, min_sim={})'.format(self.max_neighbors, self.min_similarity)
+        return 'UserUser(nnbrs={}, min_sim={})'.format(self.nnbrs, self.min_sim)

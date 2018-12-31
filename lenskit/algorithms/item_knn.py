@@ -121,14 +121,14 @@ class ItemItem(Predictor):
             aggregate:
                 the type of aggregation to do. Can be ``weighted-average`` or ``sum``.
         """
-        self.max_neighbors = nnbrs
-        if self.max_neighbors is not None and self.max_neighbors < 1:
-            self.max_neighbors = -1
-        self.min_neighbors = min_nbrs
-        if self.min_neighbors is not None and self.min_neighbors < 1:
-            self.min_neighbors = 1
-        self.min_similarity = min_sim
-        self.save_neighbors = save_nbrs
+        self.nnbrs = nnbrs
+        if self.nnbrs is not None and self.nnbrs < 1:
+            self.nnbrs = -1
+        self.min_nbrs = min_nbrs
+        if self.min_nbrs is not None and self.min_nbrs < 1:
+            self.min_nbrs = 1
+        self.min_sim = min_sim
+        self.save_nbrs = save_nbrs
         self.center = center
         self.aggregate = aggregate
         try:
@@ -259,8 +259,8 @@ class ItemItem(Predictor):
         mask = rows != cols
 
         # remove too-small similarities
-        if self.min_similarity is not None:
-            mask = np.logical_and(mask, vals >= self.min_similarity)
+        if self.min_sim is not None:
+            mask = np.logical_and(mask, vals >= self.min_sim)
 
         _logger.info('[%s] filter keeps %d of %d entries', self._timer, np.sum(mask), len(rows))
 
@@ -271,17 +271,17 @@ class ItemItem(Predictor):
         csr = matrix.csr_from_coo(rows, cols, vals, shape=(nitems, nitems))
         csr.sort_values()
 
-        if self.save_neighbors is None or self.save_neighbors <= 0:
+        if self.save_nbrs is None or self.save_nbrs <= 0:
             return csr
 
-        _logger.info('[%s] picking %d top similarities', self._timer, self.save_neighbors)
+        _logger.info('[%s] picking %d top similarities', self._timer, self.save_nbrs)
         counts = csr.row_nnzs()
         _logger.debug('have %d rows in size range [%d,%d]',
                       len(counts), np.min(counts), np.max(counts))
-        ncounts = np.fmin(counts, self.save_neighbors)
+        ncounts = np.fmin(counts, self.save_nbrs)
         _logger.debug('will have %d rows in size range [%d,%d]',
                       len(ncounts), np.min(ncounts), np.max(ncounts))
-        assert np.all(ncounts <= self.save_neighbors)
+        assert np.all(ncounts <= self.save_nbrs)
         nnz = np.sum(ncounts)
 
         rp2 = np.zeros_like(csr.rowptrs)
@@ -335,7 +335,7 @@ class ItemItem(Predictor):
         # now compute the predictions
         iscore = self._predict_agg(self.sim_matrix_,
                                    len(self.item_index_),
-                                   (self.min_neighbors, self.max_neighbors),
+                                   (self.min_nbrs, self.nnbrs),
                                    rate_v, i_pos)
 
         nscored = np.sum(np.logical_not(np.isnan(iscore)))
@@ -393,4 +393,4 @@ class ItemItem(Predictor):
         self.rating_matrix_ = r_mat
 
     def __str__(self):
-        return 'ItemItem(nnbrs={}, msize={})'.format(self.max_neighbors, self.save_neighbors)
+        return 'ItemItem(nnbrs={}, msize={})'.format(self.nnbrs, self.save_nbrs)

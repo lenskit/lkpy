@@ -254,7 +254,7 @@ class ImplicitMF(MFPredictor):
     def __init__(self, features, iterations=20, reg=0.1, weight=40):
         self.features = features
         self.iterations = iterations
-        self.regularization = reg
+        self.reg = reg
         self.weight = weight
 
     def fit(self, ratings):
@@ -282,9 +282,9 @@ class ImplicitMF(MFPredictor):
         "Generator of training iterations."
         for epoch in range(self.iterations):
             umat = _train_implicit_matrix(uctx, current.item_matrix,
-                                          self.regularization)
+                                          self.reg)
             _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
-            imat = _train_implicit_matrix(ictx, umat, self.regularization)
+            imat = _train_implicit_matrix(ictx, umat, self.reg)
             _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
             di = np.linalg.norm(imat - current.item_matrix, 'fro')
             du = np.linalg.norm(umat - current.user_matrix, 'fro')
@@ -317,5 +317,5 @@ class ImplicitMF(MFPredictor):
         return self.score_by_ids(user, items)
 
     def __str__(self):
-        return 'als.ImplicitMF(features={}, regularization={}, w={})'.\
-            format(self.features, self.regularization, self.weight)
+        return 'als.ImplicitMF(features={}, reg={}, w={})'.\
+            format(self.features, self.reg, self.weight)

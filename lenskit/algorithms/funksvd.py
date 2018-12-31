@@ -9,7 +9,6 @@ import pandas as pd
 import numpy as np
 import numba as n
 
-from . import Predictor
 from . import basic
 from .mf_common import BiasMFPredictor
 from .. import util
@@ -50,7 +49,7 @@ def _fresh_model(nfeatures, nusers, nitems, init=0.1):
 
 @n.jitclass([
     ('iter_count', n.int32),
-    ('learning_rate', n.double),
+    ('lrate', n.double),
     ('reg_term', n.double),
     ('rmin', n.double),
     ('rmax', n.double)
@@ -58,7 +57,7 @@ def _fresh_model(nfeatures, nusers, nitems, init=0.1):
 class _Params:
     def __init__(self, niters, lrate, reg, rmin, rmax):
         self.iter_count = niters
-        self.learning_rate = lrate
+        self.lrate = lrate
         self.reg_term = reg
         self.rmin = rmin
         self.rmax = rmax
@@ -137,10 +136,10 @@ def _feature_loop(ctx: Context, params: _Params, model: Model, fc: _FeatContext)
 
         # compute deltas
         ufd = error * ifv - params.reg_term * ufv
-        ufd = ufd * params.learning_rate
+        ufd = ufd * params.lrate
         acc_ud += ufd * ufd
         ifd = error * ufv - params.reg_term * ifv
-        ifd = ifd * params.learning_rate
+        ifd = ifd * params.lrate
         acc_id += ifd * ifd
         umat[user, f] += ufd
         imat[item, f] += ifd
@@ -208,8 +207,8 @@ class FunkSVD(BiasMFPredictor):
                  damping=5, range=None, bias=True):
         self.features = features
         self.iterations = iterations
-        self.learning_rate = lrate
-        self.regularization = reg
+        self.lrate = lrate
+        self.reg = reg
         self.damping = damping
         self.range = range
         if bias is True:
@@ -255,7 +254,7 @@ class FunkSVD(BiasMFPredictor):
         _logger.debug('[%s] initializing data structures', timer)
         context = Context(users, items, ratings.rating.astype(np.float_).values,
                           initial.values)
-        params = make_params(self.iterations, self.learning_rate, self.regularization, self.range)
+        params = make_params(self.iterations, self.lrate, self.reg, self.range)
 
         model = _fresh_model(self.features, len(uidx), len(iidx))
 
@@ -302,5 +301,5 @@ class FunkSVD(BiasMFPredictor):
         return res
 
     def __str__(self):
-        return 'FunkSVD(features={}, regularization={})'.\
-            format(self.features, self.regularization)
+        return 'FunkSVD(features={}, reg={})'.\
+            format(self.features, self.reg)
