@@ -37,19 +37,18 @@ simple_ratings = pd.DataFrame.from_records([
 
 def test_ii_train():
     algo = knn.ItemItem(30, save_nbrs=500)
-    model = algo.train(simple_ratings)
+    algo.fit(simple_ratings)
 
-    assert model is not None
-    assert isinstance(model.items, pd.Index)
-    assert isinstance(model.means, np.ndarray)
-    assert isinstance(model.counts, np.ndarray)
-    matrix = lm.csr_to_scipy(model.sim_matrix)
+    assert isinstance(algo.item_index_, pd.Index)
+    assert isinstance(algo.item_means_, np.ndarray)
+    assert isinstance(algo.item_counts_, np.ndarray)
+    matrix = lm.csr_to_scipy(algo.sim_matrix_)
 
     # 6 is a neighbor of 7
-    six, seven = model.items.get_indexer([6, 7])
+    six, seven = algo.item_index_.get_indexer([6, 7])
     _log.info('six: %d', six)
     _log.info('seven: %d', seven)
-    _log.info('matrix: %s', model.sim_matrix)
+    _log.info('matrix: %s', algo.sim_matrix_)
     assert matrix[six, seven] > 0
     # and has the correct score
     six_v = simple_ratings[simple_ratings.item == 6].set_index('user').rating
@@ -61,26 +60,24 @@ def test_ii_train():
     num = six_v.dot(seven_v)
     assert matrix[six, seven] == approx(num / denom, 0.01)
 
-    assert all(np.logical_not(np.isnan(model.sim_matrix.values)))
-    assert all(model.sim_matrix.values > 0)
+    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
+    assert all(algo.sim_matrix_.values > 0)
     # a little tolerance
-    assert all(model.sim_matrix.values < 1 + 1.0e-6)
+    assert all(algo.sim_matrix_.values < 1 + 1.0e-6)
 
 
 def test_ii_train_unbounded():
     algo = knn.ItemItem(30)
-    model = algo.train(simple_ratings)
+    algo.fit(simple_ratings)
 
-    assert model is not None
-
-    assert all(np.logical_not(np.isnan(model.sim_matrix.values)))
-    assert all(model.sim_matrix.values > 0)
+    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
+    assert all(algo.sim_matrix_.values > 0)
     # a little tolerance
-    assert all(model.sim_matrix.values < 1 + 1.0e-6)
+    assert all(algo.sim_matrix_.values < 1 + 1.0e-6)
 
     # 6 is a neighbor of 7
-    matrix = lm.csr_to_scipy(model.sim_matrix)
-    six, seven = model.items.get_indexer([6, 7])
+    matrix = lm.csr_to_scipy(algo.sim_matrix_)
+    six, seven = algo.item_index_.get_indexer([6, 7])
     assert matrix[six, seven] > 0
 
     # and has the correct score
@@ -96,9 +93,9 @@ def test_ii_train_unbounded():
 
 def test_ii_simple_predict():
     algo = knn.ItemItem(30, save_nbrs=500)
-    model = algo.train(simple_ratings)
+    algo.fit(simple_ratings)
 
-    res = algo.predict(model, 3, [6])
+    res = algo.predict_for_user(3, [6])
     assert res is not None
     assert len(res) == 1
     assert 6 in res.index
@@ -107,9 +104,9 @@ def test_ii_simple_predict():
 
 def test_ii_simple_implicit_predict():
     algo = knn.ItemItem(30, center=False, aggregate='sum')
-    model = algo.train(simple_ratings.loc[:, ['user', 'item']])
+    algo.fit(simple_ratings.loc[:, ['user', 'item']])
 
-    res = algo.predict(model, 3, [6])
+    res = algo.predict_for_user(3, [6])
     assert res is not None
     assert len(res) == 1
     assert 6 in res.index
@@ -122,19 +119,17 @@ def test_ii_simple_implicit_predict():
 def test_ii_train_big():
     "Simple tests for bounded models"
     algo = knn.ItemItem(30, save_nbrs=500)
-    model = algo.train(ml_ratings)
+    algo.fit(ml_ratings)
 
-    assert model is not None
-
-    assert all(np.logical_not(np.isnan(model.sim_matrix.values)))
-    assert all(model.sim_matrix.values > 0)
+    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
+    assert all(algo.sim_matrix_.values > 0)
     # a little tolerance
-    assert all(model.sim_matrix.values < 1 + 1.0e-6)
+    assert all(algo.sim_matrix_.values < 1 + 1.0e-6)
 
-    assert model.counts.sum() == model.sim_matrix.nnz
+    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
 
     means = ml_ratings.groupby('item').rating.mean()
-    assert means[model.items].values == approx(model.means)
+    assert means[algo.item_index_].values == approx(algo.item_means_)
 
 
 @mark.slow
@@ -142,19 +137,17 @@ def test_ii_train_big():
 def test_ii_train_big_unbounded():
     "Simple tests for unbounded models"
     algo = knn.ItemItem(30)
-    model = algo.train(ml_ratings)
+    algo.fit(ml_ratings)
 
-    assert model is not None
-
-    assert all(np.logical_not(np.isnan(model.sim_matrix.values)))
-    assert all(model.sim_matrix.values > 0)
+    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
+    assert all(algo.sim_matrix_.values > 0)
     # a little tolerance
-    assert all(model.sim_matrix.values < 1 + 1.0e-6)
+    assert all(algo.sim_matrix_.values < 1 + 1.0e-6)
 
-    assert model.counts.sum() == model.sim_matrix.nnz
+    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
 
     means = ml_ratings.groupby('item').rating.mean()
-    assert means[model.items].values == approx(model.means)
+    assert means[algo.item_index_].values == approx(algo.item_means_)
 
 
 @mark.slow
@@ -166,37 +159,36 @@ def test_ii_train_ml100k(tmp_path):
     ratings = lktu.ml100k.load_ratings()
     algo = knn.ItemItem(30)
     _log.info('training model')
-    model = algo.train(ratings)
+    algo.fit(ratings)
 
     _log.info('testing model')
-    assert model is not None
 
-    assert all(np.logical_not(np.isnan(model.sim_matrix.values)))
-    assert all(model.sim_matrix.values > 0)
+    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
+    assert all(algo.sim_matrix_.values > 0)
 
     # a little tolerance
-    assert all(model.sim_matrix.values < 1 + 1.0e-6)
+    assert all(algo.sim_matrix_.values < 1 + 1.0e-6)
 
-    assert model.counts.sum() == model.sim_matrix.nnz
+    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
 
     means = ratings.groupby('item').rating.mean()
-    assert means[model.items].values == approx(model.means)
+    assert means[algo.item_index_].values == approx(algo.item_means_)
 
     # save
     fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
-    algo.save_model(model, fn)
+    algo.save(fn)
     _log.info('reloading model')
-    restored = algo.load_model(fn)
-    assert restored is not None and restored is not model
-    assert all(restored.sim_matrix.values > 0)
+    restored = knn.ItemItem(30)
+    restored.load(fn)
+    assert all(restored.sim_matrix_.values > 0)
 
-    r_mat = restored.sim_matrix
-    o_mat = model.sim_matrix
+    r_mat = restored.sim_matrix_
+    o_mat = algo.sim_matrix_
 
     assert all(r_mat.rowptrs == o_mat.rowptrs)
 
-    for i in range(len(restored.items)):
+    for i in range(len(restored.item_index_)):
         sp = r_mat.rowptrs[i]
         ep = r_mat.rowptrs[i + 1]
 
@@ -211,43 +203,43 @@ def test_ii_large_models():
     _log.info('training limited model')
     MODEL_SIZE = 100
     algo_lim = knn.ItemItem(30, save_nbrs=MODEL_SIZE)
-    model_lim = algo_lim.train(ml_ratings)
+    algo_lim.fit(ml_ratings)
 
     _log.info('training unbounded model')
     algo_ub = knn.ItemItem(30)
-    model_ub = algo_ub.train(ml_ratings)
+    algo_ub.fit(ml_ratings)
 
     _log.info('testing models')
-    assert all(np.logical_not(np.isnan(model_lim.sim_matrix.values)))
-    assert all(model_lim.sim_matrix.values > 0)
+    assert all(np.logical_not(np.isnan(algo_lim.sim_matrix_.values)))
+    assert all(algo_lim.sim_matrix_.values > 0)
     # a little tolerance
-    assert all(model_lim.sim_matrix.values < 1 + 1.0e-6)
+    assert all(algo_lim.sim_matrix_.values < 1 + 1.0e-6)
 
     means = ml_ratings.groupby('item').rating.mean()
-    assert means[model_lim.items].values == approx(model_lim.means)
+    assert means[algo_lim.item_index_].values == approx(algo_lim.item_means_)
 
-    assert all(np.logical_not(np.isnan(model_ub.sim_matrix.values)))
-    assert all(model_ub.sim_matrix.values > 0)
+    assert all(np.logical_not(np.isnan(algo_ub.sim_matrix_.values)))
+    assert all(algo_ub.sim_matrix_.values > 0)
     # a little tolerance
-    assert all(model_ub.sim_matrix.values < 1 + 1.0e-6)
+    assert all(algo_ub.sim_matrix_.values < 1 + 1.0e-6)
 
     means = ml_ratings.groupby('item').rating.mean()
-    assert means[model_ub.items].values == approx(model_ub.means)
+    assert means[algo_ub.item_index_].values == approx(algo_ub.item_means_)
 
     mc_rates = ml_ratings.set_index('item')\
                          .join(pd.DataFrame({'item_mean': means}))\
                          .assign(rating=lambda df: df.rating - df.item_mean)
 
-    mat_lim = lm.csr_to_scipy(model_lim.sim_matrix)
-    mat_ub = lm.csr_to_scipy(model_ub.sim_matrix)
+    mat_lim = lm.csr_to_scipy(algo_lim.sim_matrix_)
+    mat_ub = lm.csr_to_scipy(algo_ub.sim_matrix_)
 
     _log.info('checking a sample of neighborhoods')
-    items = pd.Series(model_ub.items)
-    items = items[model_ub.counts > 0]
+    items = pd.Series(algo_ub.item_index_)
+    items = items[algo_ub.item_counts_ > 0]
     for i in items.sample(50):
-        ipos = model_ub.items.get_loc(i)
+        ipos = algo_ub.item_index_.get_loc(i)
         _log.debug('checking item %d at position %d', i, ipos)
-        assert ipos == model_lim.items.get_loc(i)
+        assert ipos == algo_lim.item_index_.get_loc(i)
         irates = mc_rates.loc[[i], :].set_index('user').rating
 
         ub_row = mat_ub.getrow(ipos)
@@ -262,7 +254,7 @@ def test_ii_large_models():
 
         # spot-check some similarities
         for n in pd.Series(ub_row.indices).sample(min(10, len(ub_row.indices))):
-            n_id = model_ub.items[n]
+            n_id = algo_ub.item_index_[n]
             n_rates = mc_rates.loc[n_id, :].set_index('user').rating
             ir, nr = irates.align(n_rates, fill_value=0)
             cor = ir.corr(nr)
@@ -278,8 +270,8 @@ def test_ii_large_models():
             continue
 
         # row is truncated - check that truncation is correct
-        ub_nbrs = pd.Series(ub_row.data, model_ub.items[ub_row.indices])
-        b_nbrs = pd.Series(b_row.data, model_lim.items[b_row.indices])
+        ub_nbrs = pd.Series(ub_row.data, algo_ub.item_index_[ub_row.indices])
+        b_nbrs = pd.Series(b_row.data, algo_lim.item_index_[b_row.indices])
 
         assert len(ub_nbrs) >= len(b_nbrs)
         assert len(b_nbrs) <= MODEL_SIZE
@@ -302,36 +294,35 @@ def test_ii_large_models():
 def test_ii_save_load(tmp_path):
     "Save and load a model"
     tmp_path = lktu.norm_path(tmp_path)
-    algo = knn.ItemItem(30, save_nbrs=500)
+    original = knn.ItemItem(30, save_nbrs=500)
     _log.info('building model')
-    original = algo.train(lktu.ml_sample())
+    original.fit(lktu.ml_sample())
 
     fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
-    algo.save_model(original, fn)
+    original.save(fn)
     _log.info('reloading model')
-    model = algo.load_model(fn)
+
+    algo = knn.ItemItem(30)
+    algo.load(fn)
     _log.info('checking model')
 
-    assert model is not None
-    assert model is not original
-
-    assert all(np.logical_not(np.isnan(model.sim_matrix.values)))
-    assert all(model.sim_matrix.values > 0)
+    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
+    assert all(algo.sim_matrix_.values > 0)
     # a little tolerance
-    assert all(model.sim_matrix.values < 1 + 1.0e-6)
+    assert all(algo.sim_matrix_.values < 1 + 1.0e-6)
 
-    assert all(model.counts == original.counts)
-    assert model.counts.sum() == model.sim_matrix.nnz
-    assert model.sim_matrix.nnz == original.sim_matrix.nnz
-    assert all(model.sim_matrix.rowptrs == original.sim_matrix.rowptrs)
-    assert model.sim_matrix.values == approx(original.sim_matrix.values)
+    assert all(algo.item_counts_ == original.item_counts_)
+    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
+    assert algo.sim_matrix_.nnz == original.sim_matrix_.nnz
+    assert all(algo.sim_matrix_.rowptrs == original.sim_matrix_.rowptrs)
+    assert algo.sim_matrix_.values == approx(original.sim_matrix_.values)
 
-    r_mat = model.sim_matrix
-    o_mat = original.sim_matrix
+    r_mat = algo.sim_matrix_
+    o_mat = original.sim_matrix_
     assert all(r_mat.rowptrs == o_mat.rowptrs)
 
-    for i in range(len(model.items)):
+    for i in range(len(algo.item_index_)):
         sp = r_mat.rowptrs[i]
         ep = r_mat.rowptrs[i + 1]
 
@@ -340,14 +331,14 @@ def test_ii_save_load(tmp_path):
         assert all(r_mat.values[sp:ep] == o_mat.values[sp:ep])
 
     means = ml_ratings.groupby('item').rating.mean()
-    assert means[model.items].values == approx(original.means)
+    assert means[algo.item_index_].values == approx(original.item_means_)
 
-    matrix = lm.csr_to_scipy(model.sim_matrix)
+    matrix = lm.csr_to_scipy(algo.sim_matrix_)
 
-    items = pd.Series(model.items)
-    items = items[model.counts > 0]
+    items = pd.Series(algo.item_index_)
+    items = items[algo.item_counts_ > 0]
     for i in items.sample(50):
-        ipos = model.items.get_loc(i)
+        ipos = algo.item_index_.get_loc(i)
         _log.debug('checking item %d at position %d', i, ipos)
 
         row = matrix.getrow(ipos)
@@ -360,37 +351,35 @@ def test_ii_save_load(tmp_path):
 def test_ii_implicit_save_load(tmp_path):
     "Save and load a model"
     tmp_path = lktu.norm_path(tmp_path)
-    algo = knn.ItemItem(30, save_nbrs=500, center=False, aggregate='sum')
+    original = knn.ItemItem(30, save_nbrs=500, center=False, aggregate='sum')
     _log.info('building model')
-    original = algo.train(lktu.ml_sample().loc[:, ['user', 'item']])
+    original.fit(lktu.ml_sample().loc[:, ['user', 'item']])
 
     fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
-    algo.save_model(original, fn)
+    original.save(fn)
     _log.info('reloading model')
-    model = algo.load_model(fn)
+    algo = knn.ItemItem(30, save_nbrs=500, center=False, aggregate='sum')
+    algo.load(fn)
     _log.info('checking model')
 
-    assert model is not None
-    assert model is not original
-
-    assert all(np.logical_not(np.isnan(model.sim_matrix.values)))
-    assert all(model.sim_matrix.values > 0)
+    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
+    assert all(algo.sim_matrix_.values > 0)
     # a little tolerance
-    assert all(model.sim_matrix.values < 1 + 1.0e-6)
+    assert all(algo.sim_matrix_.values < 1 + 1.0e-6)
 
-    assert all(model.counts == original.counts)
-    assert model.counts.sum() == model.sim_matrix.nnz
-    assert model.sim_matrix.nnz == original.sim_matrix.nnz
-    assert all(model.sim_matrix.rowptrs == original.sim_matrix.rowptrs)
-    assert model.sim_matrix.values == approx(original.sim_matrix.values)
-    assert model.rating_matrix.values is None
+    assert all(algo.item_counts_ == original.item_counts_)
+    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
+    assert algo.sim_matrix_.nnz == original.sim_matrix_.nnz
+    assert all(algo.sim_matrix_.rowptrs == original.sim_matrix_.rowptrs)
+    assert algo.sim_matrix_.values == approx(original.sim_matrix_.values)
+    assert algo.rating_matrix_.values is None
 
-    r_mat = model.sim_matrix
-    o_mat = original.sim_matrix
+    r_mat = algo.sim_matrix_
+    o_mat = original.sim_matrix_
     assert all(r_mat.rowptrs == o_mat.rowptrs)
 
-    for i in range(len(model.items)):
+    for i in range(len(algo.item_index_)):
         sp = r_mat.rowptrs[i]
         ep = r_mat.rowptrs[i + 1]
 
@@ -398,14 +387,14 @@ def test_ii_implicit_save_load(tmp_path):
         assert all(np.diff(r_mat.values[sp:ep]) <= 0)
         assert all(r_mat.values[sp:ep] == o_mat.values[sp:ep])
 
-    assert model.means is None
+    assert algo.item_means_ is None
 
-    matrix = lm.csr_to_scipy(model.sim_matrix)
+    matrix = lm.csr_to_scipy(algo.sim_matrix_)
 
-    items = pd.Series(model.items)
-    items = items[model.counts > 0]
+    items = pd.Series(algo.item_index_)
+    items = items[algo.item_counts_ > 0]
     for i in items.sample(50):
-        ipos = model.items.get_loc(i)
+        ipos = algo.item_index_.get_loc(i)
         _log.debug('checking item %d at position %d', i, ipos)
 
         row = matrix.getrow(ipos)
@@ -420,13 +409,12 @@ def test_ii_implicit():
     algo = knn.ItemItem(20, save_nbrs=100, center=False, aggregate='sum')
     data = ml_ratings.loc[:, ['user', 'item']]
 
-    model = algo.train(data)
-    assert model is not None
-    assert model.counts.sum() == model.sim_matrix.nnz
-    assert all(model.sim_matrix.values > 0)
-    assert all(model.counts <= 100)
+    algo.fit(data)
+    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
+    assert all(algo.sim_matrix_.values > 0)
+    assert all(algo.item_counts_ <= 100)
 
-    preds = algo.predict(model, 50, [1, 2, 42])
+    preds = algo.predict_for_user(50, [1, 2, 42])
     assert all(preds[preds.notna()] > 0)
 
 
@@ -446,9 +434,9 @@ def test_ii_batch_accuracy():
 
     def eval(train, test):
         _log.info('running training')
-        model = algo.train(train)
+        algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
-        return batch.predict(algo, model, test)
+        return batch.predict(algo, test)
 
     preds = pd.concat((eval(train, test)
                        for (train, test)
@@ -466,10 +454,10 @@ def test_ii_known_preds():
 
     algo = knn.ItemItem(20, min_sim=1.0e-6)
     _log.info('training %s on ml data', algo)
-    model = algo.train(lktu.ml_pandas.renamed.ratings)
+    algo.fit(lktu.ml_pandas.renamed.ratings)
     assert algo.center
-    assert model.means is not None
-    _log.info('model means: %s', model.means)
+    assert algo.item_means_ is not None
+    _log.info('model means: %s', algo.item_means_)
 
     dir = Path(__file__).parent
     pred_file = dir / 'item-item-preds.csv'
@@ -477,7 +465,7 @@ def test_ii_known_preds():
     known_preds = pd.read_csv(str(pred_file))
     pairs = known_preds.loc[:, ['user', 'item']]
 
-    preds = batch.predict(algo, model, pairs)
+    preds = batch.predict(algo, pairs)
     merged = pd.merge(known_preds.rename(columns={'prediction': 'expected'}), preds)
     assert len(merged) == len(preds)
     merged['error'] = merged.expected - merged.prediction
@@ -509,10 +497,10 @@ def test_ii_batch_recommend(ncpus):
 
     def eval(train, test):
         _log.info('running training')
-        model = algo.train(train)
+        algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
         cand_fun = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun, nprocs=ncpus)
+        recs = batch.recommend(algo, test.user.unique(), 100, cand_fun, nprocs=ncpus)
         # combine with test ratings for relevance data
         res = pd.merge(recs, test, how='left', on=('user', 'item'))
         # fill in missing 0s

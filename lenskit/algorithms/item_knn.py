@@ -3,7 +3,6 @@ Item-based k-NN collaborative filtering.
 """
 
 import pathlib
-from collections import namedtuple
 import logging
 
 import pandas as pd
@@ -13,24 +12,9 @@ import scipy.sparse.linalg as spla
 from numba import njit
 
 from lenskit import util, matrix
-from . import Trainable, Predictor
+from . import Predictor
 
 _logger = logging.getLogger(__name__)
-
-IIModel = namedtuple('IIModel', ['items', 'means', 'counts', 'sim_matrix',
-                                 'users', 'rating_matrix'])
-IIModel.__doc__ = """
-Item-item recommendation model.  This stores the necessary data to run the item-based k-NN
-recommender.
-
-Attributes:
-    items(pandas.Index): the index of item IDs.
-    means(numpy.ndarray): the mean rating for each known item.
-    counts(numpy.ndarray): the number of saved neighbors for each item.
-    sim_matrix(matrix.CSR): the similarity matrix.
-    users(pandas.Index): the index of known user IDs for the rating matrix.
-    rating_matrix(matrix.CSR): the user-item rating matrix for looking up users' ratings.
-"""
 
 
 @njit(nogil=True)
@@ -105,11 +89,19 @@ _predictors = {
 }
 
 
-class ItemItem(Trainable, Predictor):
+class ItemItem(Predictor):
     """
     Item-item nearest-neighbor collaborative filtering with ratings. This item-item implementation
     is not terribly configurable; it hard-codes design decisions found to work well in the previous
     Java-based LensKit code.
+
+    Attributes:
+        item_index_(pandas.Index): the index of item IDs.
+        item_means_(numpy.ndarray): the mean rating for each known item.
+        item_counts_(numpy.ndarray): the number of saved neighbors for each item.
+        sim_matrix_(matrix.CSR): the similarity matrix.
+        user_index_(pandas.Index): the index of known user IDs for the rating matrix.
+        rating_matrix_(matrix.CSR): the user-item rating matrix for looking up users' ratings.
     """
 
     def __init__(self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None,
@@ -144,7 +136,7 @@ class ItemItem(Trainable, Predictor):
         except KeyError:
             raise ValueError('unknown aggregator {}'.format(aggregate))
 
-    def train(self, ratings):
+    def fit(self, ratings):
         """
         Train a model.
 
@@ -154,9 +146,6 @@ class ItemItem(Trainable, Predictor):
         Args:
             ratings(pandas.DataFrame):
                 (user,item,rating) data for computing item similarities.
-
-        Returns:
-            a trained item-item CF model.
         """
         # Training proceeds in 2 steps:
         # 1. Normalize item vectors to be mean-centered and unit-normalized
@@ -180,8 +169,14 @@ class ItemItem(Trainable, Predictor):
 
         _logger.info('[%s] computed %d neighbor pairs', self._timer, smat.nnz)
 
-        return IIModel(items, item_means, np.diff(smat.rowptrs),
-                       smat, users, init_rmat)
+        self.item_index_ = items
+        self.item_means_ = item_means
+        self.item_counts_ = np.diff(smat.rowptrs)
+        self.sim_matrix_ = smat
+        self.user_index_ = users
+        self.rating_matrix_ = init_rmat
+
+        return self
 
     def _mean_center(self, ratings, rmat, items):
         if not self.center:
@@ -304,25 +299,25 @@ class ItemItem(Trainable, Predictor):
 
         return matrix.CSR(csr.nrows, csr.ncols, nnz, rp2, ci2, vs2)
 
-    def predict(self, model, user, items, ratings=None):
+    def predict_for_user(self, user, items, ratings=None):
         _logger.debug('predicting %d items for user %s', len(items), user)
         if ratings is None:
-            if user not in model.users:
+            if user not in self.user_index_:
                 _logger.debug('user %s missing, returning empty predictions', user)
                 return pd.Series(np.nan, index=items)
-            upos = model.users.get_loc(user)
-            ratings = pd.Series(model.rating_matrix.row_vs(upos),
-                                index=pd.Index(model.items[model.rating_matrix.row_cs(upos)]))
+            upos = self.user_index_.get_loc(user)
+            ratings = pd.Series(self.rating_matrix_.row_vs(upos),
+                                index=pd.Index(self.item_index_[self.rating_matrix_.row_cs(upos)]))
 
         # set up rating array
         # get rated item positions & limit to in-model items
-        ri_pos = model.items.get_indexer(ratings.index)
+        ri_pos = self.item_index_.get_indexer(ratings.index)
         m_rates = ratings[ri_pos >= 0]
         ri_pos = ri_pos[ri_pos >= 0]
-        rate_v = np.full(len(model.items), np.nan, dtype=np.float_)
+        rate_v = np.full(len(self.item_index_), np.nan, dtype=np.float_)
         # mean-center the rating array
         if self.center:
-            rate_v[ri_pos] = m_rates.values - model.means[ri_pos]
+            rate_v[ri_pos] = m_rates.values - self.item_means_[ri_pos]
         else:
             rate_v[ri_pos] = m_rates.values
         _logger.debug('user %s: %d of %d rated items in model', user, len(ri_pos), len(ratings))
@@ -330,25 +325,25 @@ class ItemItem(Trainable, Predictor):
 
         # set up item result vector
         # ipos will be an array of item indices
-        i_pos = model.items.get_indexer(items)
+        i_pos = self.item_index_.get_indexer(items)
         i_pos = i_pos[i_pos >= 0]
         _logger.debug('user %s: %d of %d requested items in model', user, len(i_pos), len(items))
 
         # scratch result array
-        iscore = np.full(len(model.items), np.nan, dtype=np.float_)
+        iscore = np.full(len(self.item_index_), np.nan, dtype=np.float_)
 
         # now compute the predictions
-        iscore = self._predict_agg(model.sim_matrix,
-                                   len(model.items),
+        iscore = self._predict_agg(self.sim_matrix_,
+                                   len(self.item_index_),
                                    (self.min_neighbors, self.max_neighbors),
                                    rate_v, i_pos)
 
         nscored = np.sum(np.logical_not(np.isnan(iscore)))
         if self.center:
-            iscore += model.means
+            iscore += self.item_means_
         assert np.sum(np.logical_not(np.isnan(iscore))) == nscored
 
-        results = pd.Series(iscore, index=model.items)
+        results = pd.Series(iscore, index=self.item_index_)
         results = results[results.notna()]
         results = results.reindex(items, fill_value=np.nan)
         assert results.notna().sum() == nscored
@@ -358,18 +353,18 @@ class ItemItem(Trainable, Predictor):
 
         return results
 
-    def save_model(self, model, path):
+    def save(self, path):
         path = pathlib.Path(path)
         _logger.info('saving I-I model to %s', path)
 
-        data = dict(items=model.items.values, users=model.users.values,
-                    means=model.means)
-        data.update(matrix.csr_save(model.sim_matrix, 's_'))
-        data.update(matrix.csr_save(model.rating_matrix, 'r_'))
+        data = dict(items=self.item_index_.values, users=self.user_index_.values,
+                    means=self.item_means_)
+        data.update(matrix.csr_save(self.sim_matrix_, 's_'))
+        data.update(matrix.csr_save(self.rating_matrix_, 'r_'))
 
         np.savez_compressed(path, **data)
 
-    def load_model(self, path):
+    def load(self, path):
         path = pathlib.Path(path)
         path = util.npz_path(path)
         _logger.info('loading I-I model from %s', path)
@@ -384,15 +379,18 @@ class ItemItem(Trainable, Predictor):
         if means.dtype == np.object:
             means = None
 
-        items = pd.Index(items, name='item')
-        users = pd.Index(users, name='user')
+        self.item_index_ = pd.Index(items, name='item')
+        self.user_index_ = pd.Index(users, name='user')
         nitems = len(items)
 
         s_mat.sort_values()
 
         _logger.info('read %d similarities for %d items', s_mat.nnz, nitems)
 
-        return IIModel(items, means, s_mat.row_nnzs(), s_mat, users, r_mat)
+        self.item_counts_ = s_mat.row_nnzs()
+        self.item_means_ = means
+        self.sim_matrix_ = s_mat
+        self.rating_matrix_ = r_mat
 
     def __str__(self):
         return 'ItemItem(nnbrs={}, msize={})'.format(self.max_neighbors, self.save_neighbors)
