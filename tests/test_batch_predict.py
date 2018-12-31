@@ -13,27 +13,27 @@ import lenskit.batch as lkb
 
 _log = logging.getLogger(__name__)
 
-MLB = namedtuple('MLB', ['ratings', 'algo', 'model'])
+MLB = namedtuple('MLB', ['ratings', 'algo'])
 
 
 @pytest.fixture
 def mlb():
     ratings = lktu.ml_pandas.renamed.ratings
     algo = Bias()
-    model = algo.train(ratings)
-    return MLB(ratings, algo, model)
+    algo.fit(ratings)
+    return MLB(ratings, algo)
 
 
 def test_predict_single(mlb):
     tf = pd.DataFrame({'user': [1], 'item': [31]})
-    res = lkb.predict(mlb.algo, mlb.model, tf)
+    res = lkb.predict(mlb.algo, tf)
 
     assert len(res) == 1
     assert all(res.user == 1)
     assert set(res.columns) == set(['user', 'item', 'prediction'])
     assert all(res.item == 31)
 
-    expected = mlb.model.mean + mlb.model.items.loc[31] + mlb.model.users.loc[1]
+    expected = mlb.algo.mean_ + mlb.algo.item_offsets_.loc[31] + mlb.algo.user_offsets_.loc[1]
     assert res.prediction.iloc[0] == pytest.approx(expected)
 
 
@@ -47,7 +47,7 @@ def test_predict_user(mlb):
     test_items = pd.concat([test_rated, pd.Series(test_unrated)])
 
     tf = pd.DataFrame({'user': uid, 'item': test_items})
-    res = lkb.predict(mlb.algo, mlb.model, tf)
+    res = lkb.predict(mlb.algo, tf)
 
     assert len(res) == 15
     assert set(res.columns) == set(['user', 'item', 'prediction'])
@@ -56,9 +56,9 @@ def test_predict_user(mlb):
 
     # did we get the right predictions?
     preds = res.set_index(['user', 'item'])
-    preds['rating'] = mlb.model.mean
-    preds['rating'] += mlb.model.items
-    preds['rating'] += mlb.model.users.loc[uid]
+    preds['rating'] = mlb.algo.mean_
+    preds['rating'] += mlb.algo.item_offsets_
+    preds['rating'] += mlb.algo.user_offsets_.loc[uid]
     assert preds.prediction.values == pytest.approx(preds.rating.values)
 
 
@@ -69,15 +69,15 @@ def test_predict_two_users(mlb):
     while tf is None or len(set(tf.user)) < 2:
         tf = mlb.ratings[mlb.ratings.user.isin(uids)].loc[:, ('user', 'item')].sample(10)
 
-    res = lkb.predict(mlb.algo, mlb.model, tf)
+    res = lkb.predict(mlb.algo, tf)
 
     assert len(res) == 10
     assert set(res.user) == set(uids)
 
     preds = res.set_index(['user', 'item'])
-    preds['rating'] = mlb.model.mean
-    preds['rating'] += mlb.model.items
-    preds['rating'] += mlb.model.users
+    preds['rating'] = mlb.algo.mean_
+    preds['rating'] += mlb.algo.item_offsets_
+    preds['rating'] += mlb.algo.user_offsets_
     assert preds.prediction.values == pytest.approx(preds.rating.values)
 
 
@@ -88,15 +88,15 @@ def test_predict_include_rating(mlb):
     while tf is None or len(set(tf.user)) < 2:
         tf = mlb.ratings[mlb.ratings.user.isin(uids)].loc[:, ('user', 'item', 'rating')].sample(10)
 
-    res = lkb.predict(mlb.algo, mlb.model, tf)
+    res = lkb.predict(mlb.algo, tf)
 
     assert len(res) == 10
     assert set(res.user) == set(uids)
 
     preds = res.set_index(['user', 'item'])
-    preds['expected'] = mlb.model.mean
-    preds['expected'] += mlb.model.items
-    preds['expected'] += mlb.model.users
+    preds['expected'] = mlb.algo.mean_
+    preds['expected'] += mlb.algo.item_offsets_
+    preds['expected'] += mlb.algo.user_offsets_
     assert preds.prediction.values == pytest.approx(preds.expected.values)
 
     urv = mlb.ratings.set_index(['user', 'item'])
@@ -117,9 +117,9 @@ def test_bias_batch_predict(ncpus):
 
     def eval(train, test):
         _log.info('running training')
-        model = algo.train(train)
+        algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
-        recs = batch.predict(algo, model, test, nprocs=ncpus)
+        recs = batch.predict(algo, test, nprocs=ncpus)
         return recs
 
     preds = pd.concat((eval(train, test)
