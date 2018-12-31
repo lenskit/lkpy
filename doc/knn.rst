@@ -27,6 +27,3 @@ User-based k-NN
 .. autoclass:: UserUser
    :members:
    :show-inheritance:
-
-.. autoclass:: UUModel
-

@@ -3,7 +3,6 @@ User-based k-NN collaborative filtering.
 """
 
 from sys import intern
-from collections import namedtuple
 import pathlib
 import logging
 
@@ -12,29 +11,23 @@ import numpy as np
 from scipy import stats
 
 from .. import util, matrix
-from . import Trainable, Predictor
+from . import Predictor
 
 _logger = logging.getLogger(__name__)
 
-UUModel = namedtuple('UUModel', ['matrix', 'users', 'user_means', 'items', 'transpose', 'mkl_m'])
-UUModel.__doc__ = """
-Memorized data for user-user collaborative filtering.
 
-Attributes:
-    matrix(matrix.CSR): normalized user-item rating matrix.
-    users(pandas.Index): index of user IDs.
-    user_means(numpy.ndarray): user mean ratings.
-    items(pandas.Index): index of item IDs.
-    transpose(matrix.CSR):
-        the transposed rating matrix (with data transformations but without L2 normalization).
-"""
-
-
-class UserUser(Trainable, Predictor):
+class UserUser(Predictor):
     """
     User-user nearest-neighbor collaborative filtering with ratings. This user-user implementation
     is not terribly configurable; it hard-codes design decisions found to work well in the previous
     Java-based LensKit code.
+
+    Attributes:
+        user_index_(pandas.Index): User index.
+        item_index_(pandas.Index): Item index.
+        user_means_(numpy.ndarray): User mean ratings.
+        rating_matrix_(matrix.CSR): Normalized user-item rating matrix.
+        transpose_matrix_(matrix.CSR): Transposed un-normalized rating matrix.
     """
     AGG_SUM = intern('sum')
     AGG_WA = intern('weighted-average')
@@ -58,7 +51,7 @@ class UserUser(Trainable, Predictor):
         self.center = center
         self.aggregate = intern(aggregate)
 
-    def train(self, ratings):
+    def fit(self, ratings):
         """
         "Train" a user-user CF model.  This memorizes the rating data in a format that is usable
         for future computations.
@@ -98,14 +91,20 @@ class UserUser(Trainable, Predictor):
         mkl = matrix.mkl_ops()
         mkl_m = mkl.SparseM.from_csr(uir) if mkl else None
 
-        return UUModel(uir, users, umeans, items, iur, mkl_m)
+        self.rating_matrix_ = uir
+        self.user_index_ = users
+        self.user_means_ = umeans
+        self.item_index_ = items
+        self.transpose_matrix_ = iur
+        self._mkl_m_ = mkl_m
 
-    def predict(self, model, user, items, ratings=None):
+        return self
+
+    def predict_for_user(self, user, items, ratings=None):
         """
         Compute predictions for a user and items.
 
         Args:
-            model (UUModel): the memorized data to use.
             user: the user ID
             items (array-like): the items to predict
             ratings (pandas.Series):
@@ -119,37 +118,37 @@ class UserUser(Trainable, Predictor):
         watch = util.Stopwatch()
         items = pd.Index(items, name='item')
 
-        ratings, umean = self._get_user_data(model, user, ratings)
+        ratings, umean = self._get_user_data(user, ratings)
         if ratings is None:
             return pd.Series(index=items)
-        assert len(ratings) == len(model.items)  # ratings is a dense vector
+        assert len(ratings) == len(self.item_index_)  # ratings is a dense vector
 
         # now ratings is normalized to be a mean-centered unit vector
         # this means we can dot product to score neighbors
         # score the neighbors!
-        if model.mkl_m:
-            nsims = np.zeros(len(model.users))
-            nsims = model.mkl_m.mult_vec(1, ratings, 0, nsims)
+        if self._mkl_m_:
+            nsims = np.zeros(len(self.user_index_))
+            nsims = self._mkl_m_.mult_vec(1, ratings, 0, nsims)
         else:
-            rmat = model.matrix
+            rmat = self.rating_matrix_
             rmat = matrix.csr_to_scipy(rmat)
             nsims = rmat @ ratings
-        assert len(nsims) == len(model.users)
-        if user in model.users:
-            nsims[model.users.get_loc(user)] = 0
+        assert len(nsims) == len(self.user_index_)
+        if user in self.user_index_:
+            nsims[self.user_index_.get_loc(user)] = 0
 
         _logger.debug('computed user similarities')
 
         results = np.full(len(items), np.nan, dtype=np.float_)
-        ri_pos = model.items.get_indexer(items.values)
+        ri_pos = self.item_index_.get_indexer(items.values)
         for i in range(len(results)):
             ipos = ri_pos[i]
             if ipos < 0:
                 continue
 
             # get the item's users & ratings
-            i_users = model.transpose.row_cs(ipos)
-            i_rates = model.transpose.row_vs(ipos)
+            i_users = self.transpose_matrix_.row_cs(ipos)
+            i_rates = self.transpose_matrix_.row_vs(ipos)
 
             # find and limit the neighbors
             i_sims = nsims[i_users]
@@ -176,15 +175,15 @@ class UserUser(Trainable, Predictor):
                       results.notna().sum(), len(items), user, watch)
         return results
 
-    def _get_user_data(self, model, user, ratings):
+    def _get_user_data(self, user, ratings):
         "Get a user's data for user-user CF"
-        rmat = model.matrix
+        rmat = self.rating_matrix_
 
         if ratings is None:
             try:
-                upos = model.users.get_loc(user)
+                upos = self.user_index_.get_loc(user)
                 ratings = rmat.row(upos)
-                umean = model.user_means[upos] if model.user_means is not None else 0
+                umean = self.user_means_[upos] if self.user_means_ is not None else 0
             except KeyError:
                 _logger.warning('user %d has no ratings and none provided', user)
                 return None, 0
@@ -194,42 +193,41 @@ class UserUser(Trainable, Predictor):
             ratings = ratings - umean
             unorm = np.linalg.norm(ratings)
             ratings = ratings / unorm
-            ratings = ratings.reindex(model.items, fill_value=0).values
+            ratings = ratings.reindex(self.item_index_, fill_value=0).values
 
         return ratings, umean
 
-    def save_model(self, model, path):
+    def save(self, path):
         path = pathlib.Path(path)
         _logger.info('saving to %s', path)
 
         data = {
-            'users': model.users,
-            'items': model.items,
-            'user_means': model.user_means
+            'users': self.user_index_,
+            'items': self.item_index_,
+            'user_means': self.user_means_
         }
-        data.update(matrix.csr_save(model.matrix, prefix='m_'))
-        data.update(matrix.csr_save(model.transpose, prefix='t_'))
+        data.update(matrix.csr_save(self.rating_matrix_, prefix='m_'))
+        data.update(matrix.csr_save(self.transpose_matrix_, prefix='t_'))
 
         np.savez_compressed(path, **data)
 
-    def load_model(self, path):
+    def load(self, path):
         path = util.npz_path(path)
 
         with np.load(path) as npz:
             users = npz['users']
-            users = pd.Index(users, name='user')
-            items = pd.Index(npz['items'], name='item')
+            self.user_index_ = pd.Index(users, name='user')
+            self.item_index_ = pd.Index(npz['items'], name='item')
             user_means = npz['user_means']
             if user_means.ndim > 0:
-                user_means = pd.Series(user_means, index=users, name='mean')
+                self.user_means_ = pd.Series(user_means, index=users, name='mean')
             else:
-                user_means = None
-            mat = matrix.csr_load(npz, 'm_')
-            tx = matrix.csr_load(npz, 't_')
+                self.user_means_ = None
+            self.rating_matrix_ = matrix.csr_load(npz, 'm_')
+            self.transpose_matrix_ = matrix.csr_load(npz, 't_')
 
         mkl = matrix.mkl_ops()
-        mkl_m = mkl.SparseM.from_csr(mat) if mkl else None
-        return UUModel(mat, users, user_means, items, tx, mkl_m)
+        self._mkl_m_ = mkl.SparseM.from_csr(self.rating_matrix_) if mkl else None
 
     def __str__(self):
         return 'UserUser(nnbrs={}, min_sim={})'.format(self.max_neighbors, self.min_similarity)

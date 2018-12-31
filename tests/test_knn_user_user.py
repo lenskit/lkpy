@@ -19,21 +19,22 @@ ml_ratings = lktu.ml_pandas.renamed.ratings
 
 def test_uu_train():
     algo = knn.UserUser(30)
-    model = algo.train(ml_ratings)
+    ret = algo.fit(ml_ratings)
+    assert ret is algo
 
     # it should have computed correct means
     umeans = ml_ratings.groupby('user').rating.mean()
-    mlmeans = pd.Series(model.user_means, index=model.users, name='mean')
+    mlmeans = pd.Series(algo.user_means_, index=algo.user_index_, name='mean')
     umeans, mlmeans = umeans.align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(['user', 'item']).rating
-    r_items = matrix.csr_rowinds(model.transpose)
+    r_items = matrix.csr_rowinds(algo.transpose_matrix_)
     ui_rbdf = pd.DataFrame({
-        'user': model.users[model.transpose.colinds],
-        'item': model.items[r_items],
-        'nrating': model.transpose.values
+        'user': algo.user_index_[algo.transpose_matrix_.colinds],
+        'item': algo.item_index_[r_items],
+        'nrating': algo.transpose_matrix_.values
     }).set_index(['user', 'item'])
     ui_rbdf = ui_rbdf.join(mlmeans)
     ui_rbdf['rating'] = ui_rbdf['nrating'] + ui_rbdf['mean']
@@ -43,9 +44,9 @@ def test_uu_train():
 
 def test_uu_predict_one():
     algo = knn.UserUser(30)
-    model = algo.train(ml_ratings)
+    algo.fit(ml_ratings)
 
-    preds = algo.predict(model, 4, [1016])
+    preds = algo.predict_for_user(4, [1016])
     assert len(preds) == 1
     assert preds.index == [1016]
     assert preds.values == approx([3.62221550680778])
@@ -53,9 +54,9 @@ def test_uu_predict_one():
 
 def test_uu_predict_too_few():
     algo = knn.UserUser(30, min_nbrs=2)
-    model = algo.train(ml_ratings)
+    algo.fit(ml_ratings)
 
-    preds = algo.predict(model, 4, [2091])
+    preds = algo.predict_for_user(4, [2091])
     assert len(preds) == 1
     assert preds.index == [2091]
     assert all(preds.isna())
@@ -63,9 +64,9 @@ def test_uu_predict_too_few():
 
 def test_uu_predict_too_few_blended():
     algo = knn.UserUser(30, min_nbrs=2)
-    model = algo.train(ml_ratings)
+    algo.fit(ml_ratings)
 
-    preds = algo.predict(model, 4, [1016, 2091])
+    preds = algo.predict_for_user(4, [1016, 2091])
     assert len(preds) == 2
     assert np.isnan(preds.loc[2091])
     assert preds.loc[1016] == approx(3.62221550680778)
@@ -74,11 +75,11 @@ def test_uu_predict_too_few_blended():
 def test_uu_predict_live_ratings():
     algo = knn.UserUser(30, min_nbrs=2)
     no4 = ml_ratings[ml_ratings.user != 4]
-    model = algo.train(no4)
+    algo.fit(no4)
 
     ratings = ml_ratings[ml_ratings.user == 4].set_index('item').rating
 
-    preds = algo.predict(model, 20381, [1016, 2091], ratings)
+    preds = algo.predict_for_user(20381, [1016, 2091], ratings)
     assert len(preds) == 2
     assert np.isnan(preds.loc[2091])
     assert preds.loc[1016] == approx(3.62221550680778)
@@ -87,33 +88,34 @@ def test_uu_predict_live_ratings():
 def test_uu_save_load(tmp_path):
     tmp_path = lktu.norm_path(tmp_path)
 
-    algo = knn.UserUser(30)
+    orig = knn.UserUser(30)
     _log.info('training model')
-    original = algo.train(ml_ratings)
+    orig.fit(ml_ratings)
 
     fn = tmp_path / 'uu.model'
     _log.info('saving to %s', fn)
-    algo.save_model(original, fn)
+    orig.save(fn)
 
     _log.info('reloading model')
-    model = algo.load_model(fn)
+    algo = knn.UserUser(30)
+    algo.load(fn)
     _log.info('checking model')
 
     # it should have computed correct means
     umeans = ml_ratings.groupby('user').rating.mean()
-    mlmeans = pd.Series(model.user_means, index=model.users)
+    mlmeans = pd.Series(algo.user_means_, index=algo.user_index_, name='mean')
     umeans, mlmeans = umeans.align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(['user', 'item']).rating
-    r_items = matrix.csr_rowinds(model.transpose)
+    r_items = matrix.csr_rowinds(algo.transpose_matrix_)
     ui_rbdf = pd.DataFrame({
-        'user': model.user_means.index[model.transpose.colinds],
-        'item': model.items[r_items],
-        'nrating': model.transpose.values
+        'user': algo.user_index_[algo.transpose_matrix_.colinds],
+        'item': algo.item_index_[r_items],
+        'nrating': algo.transpose_matrix_.values
     }).set_index(['user', 'item'])
-    ui_rbdf = ui_rbdf.join(model.user_means)
+    ui_rbdf = ui_rbdf.join(mlmeans)
     ui_rbdf['rating'] = ui_rbdf['nrating'] + ui_rbdf['mean']
     ui_rbdf['orig_rating'] = uir
     assert ui_rbdf.rating.values == approx(ui_rbdf.orig_rating.values)
@@ -121,9 +123,9 @@ def test_uu_save_load(tmp_path):
 
 def test_uu_predict_unknown_empty():
     algo = knn.UserUser(30, min_nbrs=2)
-    model = algo.train(ml_ratings)
+    algo.fit(ml_ratings)
 
-    preds = algo.predict(model, -28018, [1016, 2091])
+    preds = algo.predict_for_user(-28018, [1016, 2091])
     assert len(preds) == 2
     assert all(preds.isna())
 
@@ -133,15 +135,14 @@ def test_uu_implicit():
     algo = knn.UserUser(20, center=False, aggregate='sum')
     data = ml_ratings.loc[:, ['user', 'item']]
 
-    model = algo.train(data)
-    assert model is not None
-    assert model.user_means is None
+    algo.fit(data)
+    assert algo.user_means_ is None
 
-    mat = matrix.csr_to_scipy(model.matrix)
+    mat = matrix.csr_to_scipy(algo.rating_matrix_)
     norms = sps.linalg.norm(mat, 2, 1)
     assert norms == approx(1.0)
 
-    preds = algo.predict(model, 50, [1, 2, 42])
+    preds = algo.predict_for_user(50, [1, 2, 42])
     assert all(preds[preds.notna()] > 0)
 
 
@@ -149,25 +150,25 @@ def test_uu_implicit():
 def test_uu_save_load_implicit(tmp_path):
     "Save and load user-user on an implicit data set."
     tmp_path = lktu.norm_path(tmp_path)
-    algo = knn.UserUser(20, center=False, aggregate='sum')
+    orig = knn.UserUser(20, center=False, aggregate='sum')
     data = ml_ratings.loc[:, ['user', 'item']]
 
-    original = algo.train(data)
-    algo.save_model(original, tmp_path / 'uu.mod')
+    orig.fit(data)
+    orig.save(tmp_path / 'uu.mod')
 
-    model = algo.load_model(tmp_path / 'uu.mod')
-    assert model is not None
-    assert model.user_means is None
-    assert all(model.users == original.users)
-    assert all(model.items == original.items)
+    algo = knn.UserUser(20, center=False, aggregate='sum')
+    algo.load(tmp_path / 'uu.mod')
+    assert algo.user_means_ is None
+    assert all(algo.user_index_ == orig.user_index_)
+    assert all(algo.item_index_ == orig.item_index_)
 
-    assert all(model.matrix.rowptrs == original.matrix.rowptrs)
-    assert all(model.matrix.colinds == original.matrix.colinds)
-    assert all(model.matrix.values == original.matrix.values)
+    assert all(algo.rating_matrix_.rowptrs == orig.rating_matrix_.rowptrs)
+    assert all(algo.rating_matrix_.colinds == orig.rating_matrix_.colinds)
+    assert all(algo.rating_matrix_.values == orig.rating_matrix_.values)
 
-    assert all(model.transpose.rowptrs == original.transpose.rowptrs)
-    assert all(model.transpose.colinds == original.transpose.colinds)
-    assert model.transpose.values is None
+    assert all(algo.transpose_matrix_.rowptrs == orig.transpose_matrix_.rowptrs)
+    assert all(algo.transpose_matrix_.colinds == orig.transpose_matrix_.colinds)
+    assert algo.transpose_matrix_.values is None
 
 
 @mark.slow
@@ -176,7 +177,7 @@ def test_uu_known_preds():
 
     algo = knn.UserUser(30, min_sim=1.0e-6)
     _log.info('training %s on ml data', algo)
-    model = algo.train(lktu.ml_pandas.renamed.ratings)
+    algo.fit(lktu.ml_pandas.renamed.ratings)
 
     dir = Path(__file__).parent
     pred_file = dir / 'user-user-preds.csv'
@@ -184,7 +185,7 @@ def test_uu_known_preds():
     known_preds = pd.read_csv(str(pred_file))
     pairs = known_preds.loc[:, ['user', 'item']]
 
-    preds = batch.predict(algo, model, pairs)
+    preds = batch.predict(algo, pairs)
     merged = pd.merge(known_preds.rename(columns={'prediction': 'expected'}), preds)
     assert len(merged) == len(preds)
     merged['error'] = merged.expected - merged.prediction
@@ -203,9 +204,9 @@ def __batch_eval(job):
     from lenskit import batch
     algo, train, test = job
     _log.info('running training')
-    model = algo.train(train)
+    algo.fit(train)
     _log.info('testing %d users', test.user.nunique())
-    return batch.predict(algo, model, test)
+    return batch.predict(algo, test)
 
 
 @mark.slow
@@ -247,10 +248,10 @@ def test_uu_implicit_batch_accuracy():
     rec_lists = []
     for train, test in folds:
         _log.info('running training')
-        model = algo.train(train.loc[:, ['user', 'item']])
+        algo.fit(train.loc[:, ['user', 'item']])
         cands = topn.UnratedCandidates(train)
         _log.info('testing %d users', test.user.nunique())
-        recs = batch.recommend(algo, model, test.user.unique(), 100, cands, test)
+        recs = batch.recommend(algo, test.user.unique(), 100, cands, test)
         rec_lists.append(recs)
     recs = pd.concat(rec_lists)
 
