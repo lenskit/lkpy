@@ -231,30 +231,21 @@ class Fallback(Predictor):
 
         return preds.reindex(items)
 
-    def save_model(self, model, path):
+    def save(self, path):
         path = pathlib.Path(path)
         path.mkdir(parents=True, exist_ok=True)
         for i, algo in enumerate(self.algorithms):
             mp = path / 'algo-{}.dat'.format(i+1)
-            mod = model[i]
-            if mod is not None:
-                _logger.debug('saving {} to {}', mod, mp)
-                algo.save_model(mod, str(mp))
+            _logger.debug('saving {} to {}', algo, mp)
+            algo.save(mp)
 
-    def load_model(self, file):
+    def load(self, file):
         path = pathlib.Path(file)
-
-        model = []
 
         for i, algo in enumerate(self.algorithms):
             mp = path / 'algo-{}.dat'.format(i+1)
-            if mp.exists():
-                _logger.debug('loading {} from {}', algo, mp)
-                model.append(algo.load_model(str(mp)))
-            else:
-                model.append(None)
-
-        return model
+            _logger.debug('loading {} from {}', algo, mp)
+            algo.load(mp)
 
     def __str__(self):
         return 'Fallback([{}])'.format(', '.join(self.algorithms))
