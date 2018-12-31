@@ -1,7 +1,6 @@
 import logging
 import pathlib
 import collections
-import warnings
 import json
 
 import pandas as pd
@@ -252,14 +251,14 @@ class MultiEval:
         run.update(dsp_attrs)
         run.update(arec.attributes)
 
-        model, train_time = self._train_algo(arec.algorithm, train)
+        algo, train_time = self._train_algo(arec.algorithm, train)
         run['TrainTime'] = train_time
 
-        preds, pred_time = self._predict(run_id, arec.algorithm, model, test)
+        preds, pred_time = self._predict(run_id, algo, test)
         run['PredTime'] = pred_time
         self._write_results('predictions', preds, run_id)
 
-        recs, rec_time = self._recommend(run_id, arec.algorithm, model, test, cand)
+        recs, rec_time = self._recommend(run_id, algo, test, cand)
         run['RecTime'] = rec_time
         self._write_results('recommendations', recs, run_id)
 
@@ -268,12 +267,14 @@ class MultiEval:
     def _train_algo(self, algo, train):
         watch = util.Stopwatch()
         _logger.info('training algorithm %s on %d ratings', algo, len(train))
-        model = algo.train(train)
+        # clone the algorithm in case some cannot be reused
+        clone = util.clone(algo)
+        clone.fit(train)
         watch.stop()
         _logger.info('trained algorithm %s in %s', algo, watch)
-        return model, watch.elapsed()
+        return clone, watch.elapsed()
 
-    def _predict(self, rid, algo, model, test):
+    def _predict(self, rid, algo, test):
         if not self.predict:
             return None, None
         if not isinstance(algo, Predictor):
@@ -281,21 +282,21 @@ class MultiEval:
 
         watch = util.Stopwatch()
         _logger.info('generating %d predictions for %s', len(test), algo)
-        preds = predict(algo, model, test, nprocs=self.nprocs)
+        preds = predict(algo, test, nprocs=self.nprocs)
         watch.stop()
         _logger.info('generated predictions in %s', watch)
         preds['RunId'] = rid
         preds = preds[['RunId', 'user', 'item', 'rating', 'prediction']]
         return preds, watch.elapsed()
 
-    def _recommend(self, rid, algo, model, test, candidates):
+    def _recommend(self, rid, algo, test, candidates):
         if self.recommend is None:
             return None, None
 
         watch = util.Stopwatch()
         users = test.user.unique()
         _logger.info('generating recommendations for %d users for %s', len(users), algo)
-        recs = recommend(algo, model, users, self.recommend, candidates, test,
+        recs = recommend(algo, users, self.recommend, candidates, test,
                          nprocs=self.nprocs)
         watch.stop()
         _logger.info('generated recommendations in %s', watch)
