@@ -10,6 +10,7 @@ classes (:py:mod:`abc`) representing different algorithm capabilities.
 from abc import ABCMeta, abstractmethod
 import pickle
 import pathlib
+import inspect
 
 
 class Algorithm(metaclass=ABCMeta):
@@ -32,6 +33,33 @@ class Algorithm(metaclass=ABCMeta):
             The algorithm object.
         """
         raise NotImplementedError()
+
+    def get_params(self, deep=True):
+        """
+        Get the parameters for this algorithm (as in scikit-learn).  Algorithm parameters
+        should match constructor argument names.
+
+        The default implementation returns all attributes that match a constructor parameter
+        name.  It should be compatible with :py:meth:`scikit.base.BaseEstimator.get_params`
+        method so that LensKit alogrithms can be cloned with :py:fun:`scikit.base.clone`
+        as well as :py:fun:`lenskit.util.clone`.
+
+        Returns:
+            dict: the algorithm parameters.
+        """
+        sig = inspect.signature(self.__class__)
+        names = list(sig.parameters.keys())
+        params = {}
+        for name in names:
+            if hasattr(self, name):
+                value = getattr(self, name)
+                params[name] = value
+                if deep and hasattr(value, 'get_params'):
+                    sps = value.get_params(deep)
+                    for k, sv in sps.items():
+                        params[name + '__' + k] = sv
+
+        return params
 
     def save(self, file):
         """

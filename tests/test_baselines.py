@@ -1,4 +1,5 @@
 import lenskit.algorithms.basic as bl
+from lenskit import util as lku
 
 import logging
 
@@ -31,6 +32,20 @@ def test_bias_full():
     assert algo.user_offsets_.index.name == 'user'
     assert set(algo.user_offsets_.index) == set([10, 12, 13])
     assert algo.user_offsets_.loc[[10, 12, 13]].values == approx(np.array([0.25, -0.5, 0]))
+
+
+def test_bias_clone():
+    algo = bl.Bias()
+    algo.fit(simple_df)
+
+    params = algo.get_params()
+    assert sorted(params.keys()) == ['damping', 'items', 'users']
+
+    a2 = lku.clone(algo)
+    assert a2 is not algo
+    assert getattr(a2, 'mean_', None) is None
+    assert getattr(a2, 'item_offsets_', None) is None
+    assert getattr(a2, 'user_offsets_', None) is None
 
 
 def test_bias_global_only():

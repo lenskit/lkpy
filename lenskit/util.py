@@ -7,17 +7,22 @@ import os.path
 import time
 import pathlib
 import warnings
+import logging
+from copy import deepcopy
+from collections.abc import Iterable, Sequence
 
 from numba import jitclass, njit, int32, double
 import numpy as np
 import pandas as pd
+
+from .algorithms import Algorithm
 
 try:
     import fastparquet
 except ImportError:
     fastparquet = None
 
-
+_log = logging.getLogger(__name__)
 __os_fp = getattr(os, 'fspath', None)
 
 
@@ -142,6 +147,27 @@ class Stopwatch():
             return "{:0.0f}m{:0.2f}s".format(m, s)
         else:
             return "{:0.2f}s".format(elapsed)
+
+
+def clone(algo):
+    """
+    Clone an algorithm, but not its fitted data.  This is like
+    :py:fun:`scikit.base.clone`, but may not work on arbitrary SciKit estimators.
+    LensKit algorithms are compatible with SciKit clone, however, so feel free
+    to use that if you need more general capabilities.
+
+    This function is probably somewhat derived from the SciKit one.
+    """
+    _log.debug('cloning %s', algo)
+    if isinstance(algo, Algorithm) or hasattr(algo, 'get_params'):
+        params = algo.get_params(deep=False)
+
+        sps = dict([(k, clone(v)) for (k, v) in params.items()])
+        return algo.__class__(**sps)
+    elif isinstance(algo, list) or isinstance(algo, tuple):
+        return [clone(a) for a in algo]
+    else:
+        return deepcopy(algo)
 
 
 def fspath(path):

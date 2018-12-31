@@ -53,9 +53,10 @@ class Bias(Predictor):
     """
 
     def __init__(self, items=True, users=True, damping=0.0):
-        self._include_items = items
-        self._include_users = users
+        self.items = items
+        self.users = users
         if isinstance(damping, tuple):
+            self.damping = damping
             self.user_damping, self.item_damping = damping
         else:
             self.damping = damping
@@ -84,14 +85,14 @@ class Bias(Predictor):
         _logger.info('global mean: %.3f', self.mean_)
         nrates = data.assign(rating=lambda df: df.rating - self.mean_)
 
-        if self._include_items:
+        if self.items:
             group = nrates.groupby('item').rating
             self.item_offsets_ = self._mean(group, self.item_damping)
             _logger.info('computed means for %d items', len(self.item_offsets_))
         else:
             self.item_offsets_ = None
 
-        if self._include_users:
+        if self.users:
             if self.item_offsets_ is not None:
                 nrates = nrates.join(pd.DataFrame(self.item_offsets_), on='item', how='inner',
                                      rsuffix='_im')
@@ -126,7 +127,7 @@ class Bias(Predictor):
         if self.item_offsets_ is not None:
             preds = preds + self.item_offsets_.reindex(items, fill_value=0)
 
-        if self._include_users and ratings is not None:
+        if self.users and ratings is not None:
             uoff = ratings - self.mean_
             if self.item_offsets_ is not None:
                 uoff = uoff - self.item_offsets_

@@ -1,4 +1,5 @@
 from lenskit.algorithms import basic
+from lenskit import util as lku
 
 import pandas as pd
 import numpy as np
@@ -60,6 +61,7 @@ def test_memorized_batch_keep_index():
     assert all(preds.index == query.index)
     assert all(preds == [4.0, 5.0, 3.0])
 
+
 def test_fallback_train_one():
     algo = basic.Fallback(basic.Bias())
     algo.fit(lktu.ml_pandas.renamed.ratings)
@@ -86,6 +88,24 @@ def test_fallback_list():
     algo = basic.Fallback([basic.Memorized(simple_df), basic.Bias()])
     algo.fit(lktu.ml_pandas.renamed.ratings)
     assert len(algo.algorithms) == 2
+
+    params = algo.get_params()
+    assert list(params.keys()) == ['algorithms']
+    assert len(params['algorithms']) == 2
+    assert isinstance(params['algorithms'][0], basic.Memorized)
+    assert isinstance(params['algorithms'][1], basic.Bias)
+
+
+def test_fallback_clone():
+    algo = basic.Fallback([basic.Memorized(simple_df), basic.Bias()])
+    algo.fit(lktu.ml_pandas.renamed.ratings)
+    assert len(algo.algorithms) == 2
+
+    clone = lku.clone(algo)
+    assert clone is not algo
+    for a1, a2 in zip(algo.algorithms, clone.algorithms):
+        assert a1 is not a2
+        assert type(a2) == type(a1)
 
 
 def test_fallback_predict():
