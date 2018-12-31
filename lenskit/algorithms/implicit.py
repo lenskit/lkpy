@@ -1,4 +1,5 @@
 import logging
+import inspect
 import pandas as pd
 
 from ..matrix import sparse_ratings
@@ -28,8 +29,6 @@ class BaseRec(Recommender):
 
     def __init__(self, delegate):
         self.delegate = delegate
-        params = delegate.__class__.__init__.__code__.co_freevars
-        self.params = params[1:]
 
     def fit(self, ratings):
         matrix, users, items = sparse_ratings(ratings, scipy=True)
@@ -71,15 +70,11 @@ class BaseRec(Recommender):
         else:
             raise AttributeError()
 
-    def __getstate__(self):
+    def get_params(self, deep=True):
         dd = self.delegate.__dict__
-        state = dict([(k, dd.get(k)) for k in self.params])
-        return (self.delegate.__class__, state)
-
-    def __setstate__(self, state):
-        cls, args = state
-        self.delegate = cls(**args)
-        self.params = list(args.keys())
+        sig = inspect.signature(self.delegate.__class__)
+        names = list(sig.parameters.keys())
+        return dict([(k, dd.get(k)) for k in names])
 
     def __str__(self):
         return 'Implicit({})'.format(self.delegate)

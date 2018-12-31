@@ -1,5 +1,4 @@
 import logging
-import copy
 
 import pandas as pd
 import numpy as np
@@ -14,6 +13,7 @@ except ImportError:
 
 import lk_test_utils as lktu
 from lenskit.algorithms.implicit import ALS, BPR
+from lenskit import util
 
 _log = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ def test_implicit_als_batch_accuracy():
     def eval(train, test):
         _log.info('running training')
         train['rating'] = train.rating.astype(np.float_)
-        algo = copy.deepcopy(algo_t)
+        algo = util.clone(algo_t)
         algo.fit(train)
         users = test.user.unique()
         _log.info('testing %d users', len(users))
