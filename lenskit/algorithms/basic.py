@@ -4,6 +4,7 @@ Basic utility algorithms and combiners.
 
 import logging
 import pathlib
+from collections.abc import Iterable, Sequence
 
 import pandas as pd
 
@@ -200,12 +201,20 @@ class Fallback(Predictor):
     missing values, and so forth.
     """
 
-    def __init__(self, *algorithms):
+    def __init__(self, algorithms, *others):
         """
         Args:
             algorithms: a list of component algorithms.  Each one will be trained.
+            others:
+                additional algorithms, in which case ``algorithms`` is taken to be
+                a single algorithm.
         """
-        self.algorithms = algorithms
+        if others:
+            self.algorithms = [algorithms] + list(others)
+        elif isinstance(algorithms, Iterable) or isinstance(algorithms, Sequence):
+            self.algorithms = algorithms
+        else:
+            self.algorithms = [algorithms]
 
     def fit(self, ratings, *args, **kwargs):
         for algo in self.algorithms:

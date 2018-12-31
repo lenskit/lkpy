@@ -82,6 +82,12 @@ def test_fallback_train_one_pred_impossible():
     assert np.isnan(preds.loc[3])
 
 
+def test_fallback_list():
+    algo = basic.Fallback([basic.Memorized(simple_df), basic.Bias()])
+    algo.fit(lktu.ml_pandas.renamed.ratings)
+    assert len(algo.algorithms) == 2
+
+
 def test_fallback_predict():
     algo = basic.Fallback(basic.Memorized(simple_df), basic.Bias())
     algo.fit(lktu.ml_pandas.renamed.ratings)
