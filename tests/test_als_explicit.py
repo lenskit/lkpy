@@ -26,6 +26,10 @@ def test_als_basic_build():
     assert algo.user_features_.shape == (3, 20)
     assert algo.item_features_.shape == (3, 20)
 
+    assert algo.n_features == 20
+    assert algo.n_users == 3
+    assert algo.n_items == 3
+
 
 def test_als_no_bias():
     algo = als.BiasedMF(20, iterations=10, bias=None)
@@ -83,11 +87,14 @@ def test_als_predict_bad_user():
 
 @mark.slow
 def test_als_train_large():
-    algo = als.BiasedMF(20, iterations=20)
+    algo = als.BiasedMF(20, iterations=10)
     ratings = lktu.ml_pandas.renamed.ratings
     algo.fit(ratings)
 
     assert algo.global_bias_ == approx(ratings.rating.mean())
+    assert algo.n_features == 20
+    assert algo.n_items == ratings.item.nunique()
+    assert algo.n_users == ratings.user.nunique()
 
     icounts = ratings.groupby('item').rating.count()
     isums = ratings.groupby('item').rating.sum()

@@ -65,6 +65,23 @@ def test_fsvd_predict_clamp():
     assert preds.loc[3] <= 5
 
 
+def test_fsvd_no_bias():
+    algo = svd.FunkSVD(20, iterations=20, bias=None)
+    algo.fit(simple_df)
+
+    assert algo.global_bias_ == 0
+    assert algo.item_bias_ is None
+    assert algo.user_bias_ is None
+    assert algo.item_features_.shape == (3, 20)
+    assert algo.user_features_.shape == (3, 20)
+
+    preds = algo.predict_for_user(10, [3])
+    assert len(preds) == 1
+    assert preds.index[0] == 3
+    assert preds.loc[3] >= 1
+    assert preds.loc[3] <= 5
+
+
 def test_fsvd_predict_bad_item():
     algo = svd.FunkSVD(20, iterations=20)
     algo.fit(simple_df)
