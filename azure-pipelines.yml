@@ -221,6 +221,10 @@ jobs:
       packageSpecs: $(conda.deps)
 
   - script: |
+      pip install $(pip.extras)
+    displayName: 'Extra PyPI deps'
+
+  - script: |
       python -V
       python setup.py build
     displayName: 'Build LKPY'
