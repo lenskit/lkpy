@@ -32,7 +32,8 @@ setup(
         'pyarrow'
     ],
     tests_require=[
-        'pytest >= 3.9'
+        'pytest >= 3.9',
+        'pytest-doctestplus'
     ],
     extras_require={
         'docs': [
