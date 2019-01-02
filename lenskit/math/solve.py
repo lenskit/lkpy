@@ -49,7 +49,7 @@ def _dtrsv(lower, trans, a, x):
 def solve_tri(A, b, transpose=False, lower=True):
     """
     Solve the system :math:`Ax = b`, where :math:`A` is triangular.
-    This is equivalent to :py:fun:`scipy.linalg.solve_triangular`, but does *not*
+    This is equivalent to :py:func:`scipy.linalg.solve_triangular`, but does *not*
     check for non-singularity.  It is a thin wrapper around the BLAS ``dtrsv``
     function.
 

@@ -120,7 +120,7 @@ class MultiEval:
                   until it is needed.
 
                 Data can be either data frames or paths; paths are loaded after
-                detection using :py:fun:`util.read_df_detect`.
+                detection using :py:func:`util.read_df_detect`.
 
             kwargs:
                 additional attributes pertaining to these data sets.

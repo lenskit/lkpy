@@ -152,7 +152,7 @@ class Stopwatch():
 def clone(algo):
     """
     Clone an algorithm, but not its fitted data.  This is like
-    :py:fun:`scikit.base.clone`, but may not work on arbitrary SciKit estimators.
+    :py:func:`scikit.base.clone`, but may not work on arbitrary SciKit estimators.
     LensKit algorithms are compatible with SciKit clone, however, so feel free
     to use that if you need more general capabilities.
 
@@ -179,7 +179,7 @@ def clone(algo):
 
 
 def fspath(path):
-    "Backport of :py:fun:`os.fspath` function for Python 3.5."
+    "Backport of :py:func:`os.fspath` function for Python 3.5."
     if __os_fp:
         return __os_fp(path)
     else:
@@ -207,10 +207,10 @@ def read_df_detect(path):
     The following file types are supported:
 
     CSV
-        File has suffix ``.csv``, read with :py:fun:`pandas.read_csv`.
+        File has suffix ``.csv``, read with :py:func:`pandas.read_csv`.
     Parquet
         File has suffix ``.parquet``, ``.parq``, or ``.pq``, read with
-        :py:fun:`pandas.read_parquet`.
+        :py:func:`pandas.read_parquet`.
     """
     if not isinstance(path, pathlib.Path):
         path = pathlib.Path(path)

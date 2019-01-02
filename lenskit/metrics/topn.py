@@ -102,7 +102,7 @@ def dcg(scores, discount=np.log2):
         \\end{align*}
 
     Compute that by computing the DCG of the recommendations & the test data, then merge the results
-    and divide.  The :py:fun:`compute_ideal_dcgs` function is helpful for preparing that data.
+    and divide.  The :py:func:`compute_ideal_dcgs` function is helpful for preparing that data.
 
     Args:
         scores(array-like):

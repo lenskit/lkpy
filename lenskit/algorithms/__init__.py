@@ -41,8 +41,8 @@ class Algorithm(metaclass=ABCMeta):
 
         The default implementation returns all attributes that match a constructor parameter
         name.  It should be compatible with :py:meth:`scikit.base.BaseEstimator.get_params`
-        method so that LensKit alogrithms can be cloned with :py:fun:`scikit.base.clone`
-        as well as :py:fun:`lenskit.util.clone`.
+        method so that LensKit alogrithms can be cloned with :py:func:`scikit.base.clone`
+        as well as :py:func:`lenskit.util.clone`.
 
         Returns:
             dict: the algorithm parameters.
