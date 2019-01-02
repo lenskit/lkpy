@@ -99,7 +99,7 @@ def test_sweep_persist(tmp_path):
     sweep.add_datasets(lambda: xf.partition_users(ratings, 5, xf.SampleN(5)), name='ml-small')
     sweep.persist_data()
 
-    for i in range(1,6):
+    for i in range(1, 6):
         assert (work / 'ds{}-train.parquet'.format(i)).exists()
         assert (work / 'ds{}-test.parquet'.format(i)).exists()
 

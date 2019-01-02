@@ -114,7 +114,7 @@ def test_ii_simple_implicit_predict():
     assert res.loc[6] > 0
 
 
-@mark.slow
+@lktu.wantjit
 @mark.skip("redundant with large_models")
 def test_ii_train_big():
     "Simple tests for bounded models"
@@ -132,7 +132,7 @@ def test_ii_train_big():
     assert means[algo.item_index_].values == approx(algo.item_means_)
 
 
-@mark.slow
+@lktu.wantjit
 @mark.skip("redundant with large_models")
 def test_ii_train_big_unbounded():
     "Simple tests for unbounded models"
@@ -150,7 +150,7 @@ def test_ii_train_big_unbounded():
     assert means[algo.item_index_].values == approx(algo.item_means_)
 
 
-@mark.slow
+@lktu.wantjit
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_ii_train_ml100k(tmp_path):
     "Test an unbounded model on ML-100K"
@@ -197,7 +197,7 @@ def test_ii_train_ml100k(tmp_path):
         assert all(r_mat.values[sp:ep] == o_mat.values[sp:ep])
 
 
-@mark.slow
+@lktu.wantjit
 def test_ii_large_models():
     "Several tests of large trained I-I models"
     _log.info('training limited model')
@@ -291,6 +291,7 @@ def test_ii_large_models():
             assert all(ubs_except_min.index.isin(b_nbrs.index))
 
 
+@lktu.wantjit
 def test_ii_save_load(tmp_path):
     "Save and load a model"
     tmp_path = lktu.norm_path(tmp_path)
@@ -404,6 +405,7 @@ def test_ii_implicit_save_load(tmp_path):
         assert all(np.diff(row.data) < 1.0e-6)
 
 
+@lktu.wantjit
 @mark.slow
 def test_ii_implicit():
     algo = knn.ItemItem(20, save_nbrs=100, center=False, aggregate='sum')
@@ -448,7 +450,7 @@ def test_ii_batch_accuracy():
     assert user_rmse.mean() == approx(0.90, abs=0.05)
 
 
-@mark.slow
+@lktu.wantjit
 def test_ii_known_preds():
     from lenskit import batch
 
@@ -480,6 +482,7 @@ def test_ii_known_preds():
         raise e
 
 
+@lktu.wantjit
 @mark.slow
 @mark.eval
 @mark.parametrize('ncpus', [1, 2])

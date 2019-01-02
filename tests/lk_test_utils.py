@@ -89,6 +89,10 @@ def ml_sample():
 ml100k = _ML100K()
 
 
+wantjit = pytest.mark.skipif('NUMBA_DISABLE_JIT' in os.environ,
+                             reason='JIT required')
+
+
 @contextmanager
 def envvars(**vars):
     save = {}

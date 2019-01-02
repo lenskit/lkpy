@@ -123,6 +123,7 @@ def test_fsvd_predict_bad_user():
     assert np.isnan(preds.loc[3])
 
 
+@lktu.wantjit
 @mark.slow
 def test_fsvd_save_load(tmp_path):
     tmp_path = lktu.norm_path(tmp_path)
@@ -151,6 +152,7 @@ def test_fsvd_save_load(tmp_path):
     assert np.all(algo.user_index_ == original.user_index_)
 
 
+@lktu.wantjit
 @mark.slow
 def test_fsvd_known_preds():
     algo = svd.FunkSVD(15, iterations=125, lrate=0.001)
@@ -178,6 +180,7 @@ def test_fsvd_known_preds():
         raise e
 
 
+@lktu.wantjit
 @mark.slow
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')

@@ -50,7 +50,7 @@ jobs:
     displayName: 'Test LKPY'
 
   - script: |
-      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval --no-slow --verbose
+      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval
     displayName: 'Test Coverage'
 
   - script: |
@@ -112,7 +112,7 @@ jobs:
     displayName: 'pytest'
   
   - script: |
-      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval --no-slow --verbose
+      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval
     displayName: 'Test Coverage'
 
   - script: |
@@ -156,7 +156,7 @@ jobs:
     displayName: 'pytest'
   
   - script: |
-      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval --no-slow --verbose
+      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval
     displayName: 'Test Coverage'
 
   - script: |

@@ -58,7 +58,7 @@ def test_als_predict_bad_user():
     assert np.isnan(preds.loc[3])
 
 
-@mark.slow
+@lktu.wantjit
 def test_als_train_large():
     algo = als.ImplicitMF(20, iterations=20)
     ratings = lktu.ml_pandas.renamed.ratings
@@ -88,7 +88,7 @@ def test_als_save_load(tmp_path):
     assert np.all(restored.user_index_ == algo.user_index_)
 
 
-@mark.slow
+@lktu.wantjit
 def test_als_train_large_noratings():
     algo = als.ImplicitMF(20, iterations=20)
     ratings = lktu.ml_pandas.renamed.ratings

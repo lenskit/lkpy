@@ -85,7 +85,7 @@ def test_als_predict_bad_user():
     assert np.isnan(preds.loc[3])
 
 
-@mark.slow
+@lktu.wantjit
 def test_als_train_large():
     algo = als.BiasedMF(20, iterations=10)
     ratings = lktu.ml_pandas.renamed.ratings
