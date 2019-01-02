@@ -75,7 +75,7 @@ class Algorithm(metaclass=ABCMeta):
     def load(self, file):
         """
         Load a fit algorithm from a file.  The default implementation unpickles the object
-        and transplants its parameters into this object.
+        and transplants its parameters and model into this object.
 
         Args:
             file(path-like): the file to load.
