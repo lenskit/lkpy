@@ -156,7 +156,15 @@ def clone(algo):
     LensKit algorithms are compatible with SciKit clone, however, so feel free
     to use that if you need more general capabilities.
 
-    This function is probably somewhat derived from the SciKit one.
+    This function is somewhat derived from the SciKit one.
+
+    >>> from lenskit.algorithms.basic import Bias
+    >>> orig = Bias()
+    >>> copy = clone(orig)
+    >>> copy is orig
+    False
+    >>> copy.damping == orig.damping
+    True
     """
     _log.debug('cloning %s', algo)
     if isinstance(algo, Algorithm) or hasattr(algo, 'get_params'):
