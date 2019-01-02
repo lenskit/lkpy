@@ -78,8 +78,7 @@ def test_fsvd_no_bias():
     preds = algo.predict_for_user(10, [3])
     assert len(preds) == 1
     assert preds.index[0] == 3
-    assert preds.loc[3] >= 1
-    assert preds.loc[3] <= 5
+    assert all(preds.notna())
 
 
 def test_fsvd_predict_bad_item():

@@ -244,9 +244,13 @@ class FunkSVD(BiasMFPredictor):
         assert np.all(items >= 0)
 
         _logger.debug('[%s] computing initial estimates', timer)
-        initial = pd.Series(self.bias.mean_, index=ratings.index, dtype=np.float_)
-        ibias, initial = _align_add_bias(self.bias.item_offsets_, iidx, ratings.item, initial)
-        ubias, initial = _align_add_bias(self.bias.user_offsets_, uidx, ratings.user, initial)
+        if self.bias is not None:
+            initial = pd.Series(self.bias.mean_, index=ratings.index, dtype=np.float_)
+            ibias, initial = _align_add_bias(self.bias.item_offsets_, iidx, ratings.item, initial)
+            ubias, initial = _align_add_bias(self.bias.user_offsets_, uidx, ratings.user, initial)
+        else:
+            initial = pd.Series(0.0, index=ratings.index)
+            ibias = ubias = None
 
         _logger.debug('have %d estimates for %d ratings', len(initial), len(ratings))
         assert len(initial) == len(ratings)
@@ -264,9 +268,9 @@ class FunkSVD(BiasMFPredictor):
 
         self.user_index_ = uidx
         self.item_index_ = iidx
-        self.global_bias_ = self.bias.mean_
-        self.user_bias_ = ubias.values
-        self.item_bias_ = ibias.values
+        self.global_bias_ = self.bias.mean_ if self.bias is not None else 0
+        self.user_bias_ = ubias.values if ubias is not None else None
+        self.item_bias_ = ibias.values if ibias is not None else None
         self.user_features_ = model.user_features
         self.item_features_ = model.item_features
 
