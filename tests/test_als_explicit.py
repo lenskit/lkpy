@@ -27,6 +27,23 @@ def test_als_basic_build():
     assert algo.item_features_.shape == (3, 20)
 
 
+def test_als_no_bias():
+    algo = als.BiasedMF(20, iterations=10, bias=None)
+    algo.fit(simple_df)
+    assert algo.bias is None
+
+    assert algo.global_bias_ == 0
+    assert algo.item_bias_ is None
+    assert algo.user_bias_ is None
+    assert set(algo.user_index_) == set([10, 12, 13])
+    assert set(algo.item_index_) == set([1, 2, 3])
+    assert algo.user_features_.shape == (3, 20)
+    assert algo.item_features_.shape == (3, 20)
+
+    preds = algo.predict_for_user(10, [3])
+    assert len(preds) == 1
+
+
 def test_als_predict_basic():
     algo = als.BiasedMF(20, iterations=10)
     algo.fit(simple_df)

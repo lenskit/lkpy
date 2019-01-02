@@ -119,7 +119,7 @@ class BiasedMF(BiasMFPredictor):
         if bias is True:
             self.bias = basic.Bias(damping=damping)
         else:
-            self.bias = basic.Bias
+            self.bias = bias
 
     def fit(self, ratings):
         """
@@ -251,7 +251,7 @@ class ImplicitMF(MFPredictor):
     """
     timer = None
 
-    def __init__(self, features, iterations=20, reg=0.1, weight=40):
+    def __init__(self, features, *, iterations=20, reg=0.1, weight=40):
         self.features = features
         self.iterations = iterations
         self.reg = reg
