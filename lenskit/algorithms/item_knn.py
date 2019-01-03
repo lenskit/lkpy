@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-from numba import njit
+from numba import njit, prange
 
 from lenskit import util, matrix
 from . import Predictor
@@ -17,12 +17,12 @@ from . import Predictor
 _logger = logging.getLogger(__name__)
 
 
-@njit(nogil=True)
+@njit(nogil=True, parallel=True)
 def _predict_weighted_average(model, nitems, nrange, ratings, targets):
     min_nbrs, max_nbrs = nrange
     scores = np.full(nitems, np.nan, dtype=np.float_)
 
-    for i in range(targets.shape[0]):
+    for i in prange(targets.shape[0]):
         iidx = targets[i]
         rptr = model.rowptrs[iidx]
         rend = model.rowptrs[iidx + 1]
@@ -51,12 +51,12 @@ def _predict_weighted_average(model, nitems, nrange, ratings, targets):
     return scores
 
 
-@njit(nogil=True)
+@njit(nogil=True, parallel=True)
 def _predict_sum(model, nitems, nrange, ratings, targets):
     min_nbrs, max_nbrs = nrange
     scores = np.full(nitems, np.nan, dtype=np.float_)
 
-    for i in range(targets.shape[0]):
+    for i in prange(targets.shape[0]):
         iidx = targets[i]
         rptr = model.rowptrs[iidx]
         rend = model.rowptrs[iidx + 1]
@@ -239,6 +239,7 @@ class ItemItem(Predictor):
         vals = smat.values
 
         rows, cols, vals = self._filter_similarities(rows, cols, vals)
+        del smat
         nnz = len(rows)
 
         _logger.info('[%s] making matrix symmetric (%d nnz)', self._timer, nnz)
@@ -282,6 +283,7 @@ class ItemItem(Predictor):
         _logger.debug('will have %d rows in size range [%d,%d]',
                       len(ncounts), np.min(ncounts), np.max(ncounts))
         assert np.all(ncounts <= self.save_nbrs)
+        assert np.all(ncounts >= 0)
         nnz = np.sum(ncounts)
 
         rp2 = np.zeros_like(csr.rowptrs)
@@ -294,6 +296,8 @@ class ItemItem(Predictor):
 
             ep1 = sp1 + ncounts[i]
             ep2 = sp2 + ncounts[i]
+            assert ep1 - sp1 == ep2 - sp2
+
             ci2[sp2:ep2] = csr.colinds[sp1:ep1]
             vs2[sp2:ep2] = csr.values[sp1:ep1]
 
