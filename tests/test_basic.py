@@ -183,6 +183,7 @@ def test_fallback_save_load(tmp_path):
 def test_topn_recommend():
     pred = basic.Memorized(simple_df)
     rec = basic.TopN(pred)
+    rec.fit(simple_df)
 
     rec10 = rec.recommend(10, candidates=[1, 2])
     assert all(rec10.item == [2, 1])
@@ -197,6 +198,14 @@ def test_topn_recommend():
     assert len(rec10) == 1
     assert all(rec10.item == [2])
     assert all(rec10.score == [5])
+
+
+def test_topn_config():
+    pred = basic.Memorized(simple_df)
+    rec = basic.TopN(pred)
+
+    rs = str(rec)
+    assert rs.startswith('TopN')
 
 
 def test_popular():
