@@ -1,12 +1,9 @@
 import pytest
 
-import sys
 import os
 import os.path
 from collections import namedtuple
-from functools import partial
 import logging
-import warnings
 import pandas as pd
 import numpy as np
 
@@ -15,8 +12,7 @@ import lk_test_utils as lktu
 from lenskit.algorithms.basic import Bias
 import lenskit.batch as lkb
 
-MLB = namedtuple('MLB', ['ratings', 'algo', 'model'])
-MLB.predictor = property(lambda mlb: partial(mlb.algo.predict, mlb.model))
+MLB = namedtuple('MLB', ['ratings', 'algo'])
 _log = logging.getLogger(__name__)
 
 
@@ -24,19 +20,19 @@ _log = logging.getLogger(__name__)
 def mlb():
     ratings = lktu.ml_pandas.renamed.ratings
     algo = Bias()
-    model = algo.train(ratings)
-    return MLB(ratings, algo, model)
+    algo.fit(ratings)
+    return MLB(ratings, algo)
 
 
 def test_recommend_single(mlb):
-    res = lkb.recommend(mlb.algo, mlb.model, [1], None, {1: [31]})
+    res = lkb.recommend(mlb.algo, [1], None, {1: [31]})
 
     assert len(res) == 1
     assert all(res['user'] == 1)
     assert all(res['rank'] == 1)
     assert set(res.columns) == set(['user', 'rank', 'item', 'score'])
 
-    expected = mlb.model.mean + mlb.model.items.loc[31] + mlb.model.users.loc[1]
+    expected = mlb.algo.mean_ + mlb.algo.item_offsets_.loc[31] + mlb.algo.user_offsets_.loc[1]
     assert res.score.iloc[0] == pytest.approx(expected)
 
 
@@ -48,7 +44,7 @@ def test_recommend_user(mlb):
         urs = mlb.ratings[mlb.ratings.user == user]
         return np.setdiff1d(items, urs.item.unique())
 
-    res = lkb.recommend(mlb.algo, mlb.model, [5], 10, candidates)
+    res = lkb.recommend(mlb.algo, [5], 10, candidates)
 
     assert len(res) == 10
     assert set(res.columns) == set(['user', 'rank', 'item', 'score'])
@@ -65,7 +61,7 @@ def test_recommend_two_users(mlb):
         urs = mlb.ratings[mlb.ratings.user == user]
         return np.setdiff1d(items, urs.item.unique())
 
-    res = lkb.recommend(mlb.algo, mlb.model, [5, 10], 10, candidates)
+    res = lkb.recommend(mlb.algo, [5, 10], 10, candidates)
 
     assert len(res) == 20
     assert set(res.user) == set([5, 10])
@@ -92,10 +88,10 @@ def test_bias_batch_recommend():
 
     def eval(train, test):
         _log.info('running training')
-        model = algo.train(train)
+        algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
         cand_fun = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun)
+        recs = batch.recommend(algo, test.user.unique(), 100, cand_fun)
         # combine with test ratings for relevance data
         res = pd.merge(recs, test, how='left', on=('user', 'item'))
         # fill in missing 0s
@@ -107,9 +103,9 @@ def test_bias_batch_recommend():
                       in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
 
     _log.info('analyzing recommendations')
-    ndcg = recs.groupby('user').rating.apply(lm.ndcg)
-    _log.info('NDCG for %d users is %f (max=%f)', len(ndcg), ndcg.mean(), ndcg.max())
-    assert ndcg.mean() > 0
+    dcg = recs.groupby('user').rating.apply(lm.dcg)
+    _log.info('DCG for %d users is %f (max=%f)', len(dcg), dcg.mean(), dcg.max())
+    assert dcg.mean() > 0
 
 
 @pytest.mark.parametrize('ncpus', [None, 2])
@@ -128,10 +124,10 @@ def test_pop_batch_recommend(ncpus):
 
     def eval(train, test):
         _log.info('running training')
-        model = algo.train(train)
+        algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
         cand_fun = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, model, test.user.unique(), 100, cand_fun,
+        recs = batch.recommend(algo, test.user.unique(), 100, cand_fun,
                                test, nprocs=ncpus)
         return recs
 
@@ -141,6 +137,6 @@ def test_pop_batch_recommend(ncpus):
 
     _log.info('analyzing recommendations')
     _log.info('have %d recs for good items', (recs.rating > 0).sum())
-    ndcg = recs.groupby('user').rating.agg(lm.ndcg)
-    _log.info('NDCG for %d users is %f (max=%f)', len(ndcg), ndcg.mean(), ndcg.max())
-    assert ndcg.mean() > 0
+    dcg = recs.groupby('user').rating.agg(lm.dcg)
+    _log.info('DCG for %d users is %f (max=%f)', len(dcg), dcg.mean(), dcg.max())
+    assert dcg.mean() > 0

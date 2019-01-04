@@ -13,6 +13,7 @@ except ImportError:
 
 import lk_test_utils as lktu
 from lenskit.algorithms.implicit import ALS, BPR
+from lenskit import util
 
 _log = logging.getLogger(__name__)
 
@@ -27,10 +28,10 @@ def test_implicit_als_train_rec():
     algo = ALS(25)
     ratings = lktu.ml_pandas.renamed.ratings
 
-    model = algo.train(ratings)
-    assert model is not None
+    ret = algo.fit(ratings)
+    assert ret is algo
 
-    recs = algo.recommend(model, 100, n=20)
+    recs = algo.recommend(100, n=20)
     assert len(recs) == 20
 
 
@@ -45,25 +46,26 @@ def test_implicit_als_batch_accuracy():
 
     ratings = lktu.ml100k.load_ratings()
 
-    algo = ALS(25)
+    algo_t = ALS(25)
 
     def eval(train, test):
         _log.info('running training')
         train['rating'] = train.rating.astype(np.float_)
-        model = algo.train(train)
+        algo = util.clone(algo_t)
+        algo.fit(train)
         users = test.user.unique()
         _log.info('testing %d users', len(users))
         candidates = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, model, users, 100, candidates, test)
+        recs = batch.recommend(algo, users, 100, candidates, test)
         return recs
 
     folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
     recs = pd.concat(eval(train, test) for (train, test) in folds)
 
     _log.info('analyzing recommendations')
-    ndcg = recs.groupby('user').rating.apply(lm.ndcg)
-    _log.info('ndcg for users is %.4f', ndcg.mean())
-    assert ndcg.mean() > 0
+    dcg = recs.groupby('user').rating.apply(lm.dcg)
+    _log.info('dcg for users is %.4f', dcg.mean())
+    assert dcg.mean() > 0
 
 
 @mark.slow
@@ -72,8 +74,7 @@ def test_implicit_bpr_train_rec():
     algo = BPR(25)
     ratings = lktu.ml_pandas.renamed.ratings
 
-    model = algo.train(ratings)
-    assert model is not None
+    algo.fit(ratings)
 
-    recs = algo.recommend(model, 100, n=20)
+    recs = algo.recommend(100, n=20)
     assert len(recs) == 20

@@ -169,8 +169,8 @@ def test_batch_rmse():
     algo = bl.Bias(damping=5)
 
     def eval(train, test):
-        model = algo.train(train)
-        preds = batch.predict(lambda u, xs: algo.predict(model, u, xs), test)
+        algo.fit(train)
+        preds = batch.predict(algo, test)
         return preds.set_index(['user', 'item'])
 
     results = pd.concat((eval(train, test)

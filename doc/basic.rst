@@ -13,8 +13,6 @@ Personalized Mean Rating Prediction
     :members:
     :show-inheritance:
 
-.. autoclass:: BiasModel
-
 
 Fallback Predictor
 ------------------

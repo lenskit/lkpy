@@ -1,8 +1,12 @@
 import scipy.sparse as sps
+import scipy.linalg as sla
+import numpy as np
 
 import lenskit.matrix as lm
 
 import lk_test_utils as lktu
+
+from pytest import approx
 
 
 def test_sparse_matrix():

@@ -286,7 +286,7 @@ def csr_rowinds(csr):
 def csr_save(csr: CSR, prefix=None):
     """
     Extract data needed to save a CSR matrix.  This is intended to be used with, for
-    example, :py:fun:`numpy.savez` to save a matrix::
+    example, :py:func:`numpy.savez` to save a matrix::
 
         np.savez_compressed('file.npz', **csr_save(csr))
 
@@ -317,7 +317,7 @@ def csr_save(csr: CSR, prefix=None):
 
 def csr_load(data, prefix=None):
     """
-    Rematerialize a CSR matrix from loaded data.  The inverse of :py:fun:`csr_save`.
+    Rematerialize a CSR matrix from loaded data.  The inverse of :py:func:`csr_save`.
 
     Args:
         data(dict-like): the input data.

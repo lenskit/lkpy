@@ -10,24 +10,123 @@ classes (:py:mod:`abc`) representing different algorithm capabilities.
 from abc import ABCMeta, abstractmethod
 import pickle
 import pathlib
+import inspect
 
 
-class Predictor(metaclass=ABCMeta):
+class Algorithm(metaclass=ABCMeta):
+    """
+    Base class for LensKit algorithms.  These algorithms follow the SciKit design pattern
+    for estimators.
+    """
+
+    @abstractmethod
+    def fit(self, ratings, *args, **kwargs):
+        """
+        Train a model using the specified ratings (or similar) data.
+
+        Args:
+            ratings(pandas.DataFrame): The ratings data.
+            args: Additional training data the algorithm may require.
+            kwargs: Additional training data the algorithm may require.
+
+        Returns:
+            The algorithm object.
+        """
+        raise NotImplementedError()
+
+    def get_params(self, deep=True):
+        """
+        Get the parameters for this algorithm (as in scikit-learn).  Algorithm parameters
+        should match constructor argument names.
+
+        The default implementation returns all attributes that match a constructor parameter
+        name.  It should be compatible with :py:meth:`scikit.base.BaseEstimator.get_params`
+        method so that LensKit alogrithms can be cloned with :py:func:`scikit.base.clone`
+        as well as :py:func:`lenskit.util.clone`.
+
+        Returns:
+            dict: the algorithm parameters.
+        """
+        sig = inspect.signature(self.__class__)
+        names = list(sig.parameters.keys())
+        params = {}
+        for name in names:
+            if hasattr(self, name):
+                value = getattr(self, name)
+                params[name] = value
+                if deep and hasattr(value, 'get_params'):
+                    sps = value.get_params(deep)
+                    for k, sv in sps.items():
+                        params[name + '__' + k] = sv
+
+        return params
+
+    def save(self, file):
+        """
+        Save a fit algorithm to a file.  The default implementation pickles the object.
+
+        Args:
+            file(path-like): the file to save.
+        """
+        path = pathlib.Path(file)
+        with path.open('wb') as f:
+            pickle.dump(self, f)
+
+    def load(self, file):
+        """
+        Load a fit algorithm from a file.  The default implementation unpickles the object
+        and transplants its parameters and model into this object.
+
+        Args:
+            file(path-like): the file to load.
+        """
+        path = pathlib.Path(file)
+        with path.open('rb') as f:
+            obj = pickle.load(f)
+            self.__dict__.update(obj.__dict__)
+
+
+class Predictor(Algorithm, metaclass=ABCMeta):
     """
     Predicts user ratings of items.  Predictions are really estimates of the user's like or
     dislike, and the ``Predictor`` interface makes no guarantees about their scale or
     granularity.
     """
 
+    def predict(self, pairs, ratings=None):
+        """
+        Compute predictions for user-item pairs.  This method is designed to be compatible with the
+        general SciKit paradigm; applications typically want to use :py:meth:`predict_for_user`.
+
+        Args:
+            pairs(pandas.DataFrame): The user-item pairs, as ``user`` and ``item`` columns.
+            ratings(pandas.DataFrame): user-item rating data to replace memorized data.
+
+        Returns:
+            pandas.Series: The predicted scores for each user-item pair.
+        """
+        if ratings is not None:
+            raise NotImplementedError()
+
+        def upred(df):
+            user, = df['user'].unique()
+            items = df['item']
+            preds = self.predict_for_user(user, items)
+            preds.name = 'prediction'
+            res = df.join(preds, on='item', how='left')
+            return res.prediction
+
+        res = pairs.loc[:, ['user', 'item']].groupby('user', sort=False).apply(upred)
+        res.reset_index(level='user', inplace=True, drop=True)
+        res.name = 'prediction'
+        return res.loc[pairs.index.values]
+
     @abstractmethod
-    def predict(self, model, user, items, ratings=None):
+    def predict_for_user(self, user, items, ratings=None):
         """
         Compute predictions for a user and items.
 
         Args:
-            model:
-                the trained model to use.  Either ``None`` or the ratings matrix if the
-                algorithm has no concept of training.
             user: the user ID
             items (array-like): the items to predict
             ratings (pandas.Series):
@@ -37,23 +136,20 @@ class Predictor(metaclass=ABCMeta):
         Returns:
             pandas.Series: scores for the items, indexed by item id.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
-class Recommender(metaclass=ABCMeta):
+class Recommender(Algorithm, metaclass=ABCMeta):
     """
-    Recommends items for a user.
+    Recommends lists of items for users.
     """
 
     @abstractmethod
-    def recommend(self, model, user, n=None, candidates=None, ratings=None):
+    def recommend(self, user, n=None, candidates=None, ratings=None):
         """
         Compute recommendations for a user.
 
         Args:
-            model:
-                the trained model to use.  Either ``None`` or the ratings matrix if the
-                algorithm has no concept of training.
             user: the user ID
             n(int): the number of recommendations to produce (``None`` for unlimited)
             candidates (array-like): the set of valid candidate items.
@@ -66,80 +162,12 @@ class Recommender(metaclass=ABCMeta):
                 a frame with an ``item`` column; if the recommender also produces scores,
                 they will be in a ``score`` column.
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @classmethod
     def adapt(cls, algo):
-        """
-        Adapt an algorithm to be a recommender.
-
-        Args:
-            algo: the algorithm to adapt.  If the algorithm implements :py:class:`Recommender`,
-                it is returned as-is; if it implements :py:class:`Predictor`, then a top-N
-                recommender using the predictor's scores is returned.
-
-        Returns:
-            Recommender: a recommendation interface to ``algo``.
-        """
-
+        from .basic import TopN
         if isinstance(algo, Recommender):
             return algo
-        elif isinstance(algo, Predictor):
-            from . import basic
-            return basic.TopN(algo)
         else:
-            raise ValueError('cannot adopt type ' + algo.__class__)
-
-
-class Trainable(metaclass=ABCMeta):
-    """
-    Models that can be trained and have their models saved.
-    """
-
-    @abstractmethod
-    def train(self, ratings):
-        """
-        Train the model on rating/consumption data.  Training methods that require additional
-        data may accept it as additional parameters or via class members.
-
-        Args:
-            ratings(pandas.DataFrame):
-                rating data, as a matrix with columns ‘user’, ‘item’, and ‘rating’. The
-                user and item identifiers may be of any type.
-
-        Returns:
-            the trained model (of an implementation-defined type).
-        """
-        raise NotImplementedError()
-
-    def save_model(self, model, path):
-        """
-        Save a trained model to a file or directory.  The default implementation pickles
-        the model.
-
-        Algorithms are allowed to use any format for saving their models, including
-        directories.
-
-        Args:
-            model: the trained model.
-            path(str):
-                the path at which to save the model.
-        """
-        path = pathlib.Path(path)
-        with path.open('wb') as f:
-            pickle.dump(model, f)
-
-    def load_model(self, path):
-        """
-        Save a trained model to a file.
-
-        Args:
-            path(str): the path to file from which to load the model.
-
-        Returns:
-            the re-loaded model (of an implementation-defined type).
-        """
-
-        path = pathlib.Path(path)
-        with path.open('rb') as f:
-            return pickle.load(f)
+            return TopN(algo)

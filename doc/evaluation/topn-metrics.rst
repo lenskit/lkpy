@@ -25,6 +25,8 @@ be relevant.
 Utility Metrics
 ---------------
 
-The nDCG function estimates a utility score for a ranked list of recommendations.
+The DCG function estimates a utility score for a ranked list of recommendations.  The results
+can be combined with ideal DCGs to compute nDCG.
 
-.. autofunction:: ndcg
+.. autofunction:: dcg
+.. autofunction:: compute_ideal_dcgs

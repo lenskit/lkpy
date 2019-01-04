@@ -181,5 +181,6 @@ intersphinx_mapping = {
     'numpy': ('https://docs.scipy.org/doc/numpy/', None),
     'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
     'hpfrec': ('https://hpfrec.readthedocs.io/en/latest/', None),
-    'implicit': ('https://implicit.readthedocs.io/en/latest/', None)
+    'implicit': ('https://implicit.readthedocs.io/en/latest/', None),
+    'scikit': ('https://scikit-learn.org/stable/', None)
 }

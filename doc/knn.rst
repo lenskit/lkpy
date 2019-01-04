@@ -6,7 +6,8 @@ implementations.  These lightly-configurable implementations are intended
 to capture the behavior of the Java-based LensKit implementations to provide
 a good upgrade path and enable basic experiments out of the box.
 
-.. contents:: :toc:
+.. toctree::
+
 
 Item-based k-NN
 ---------------
@@ -17,8 +18,6 @@ Item-based k-NN
     :members:
     :show-inheritance:
 
-.. autoclass:: IIModel
-
 User-based k-NN
 ---------------
 
@@ -27,6 +26,3 @@ User-based k-NN
 .. autoclass:: UserUser
    :members:
    :show-inheritance:
-
-.. autoclass:: UUModel
-

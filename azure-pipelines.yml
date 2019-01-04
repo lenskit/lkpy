@@ -2,13 +2,13 @@ variables:
   conda.deps: >
     python=$(python.version)
     pandas scipy pytables fastparquet python-snappy numba cffi
-    invoke coverage pytest pytest-cov cython
+    invoke coverage pytest pytest-cov pytest-doctestplus cython
   pip.deps: >
-    invoke pytest coverage pytest-cov
+    invoke pytest coverage pytest-cov pytest-doctestplus
     pandas scipy pyarrow
-    numba cython
+    numba cython cffi
   pip.extras: >
-    hpfrec==0.2.2.5 implicit
+    hpfrec implicit
 
 jobs:
 
@@ -31,7 +31,7 @@ jobs:
       packageSpecs: $(conda.deps)
   
   - script: |
-        sudo /usr/envs/lkpy/bin/pip install $(pip.extras)
+        pip install $(pip.extras)
     displayName: 'Extra PyPI deps'
     
   - script: |
@@ -50,7 +50,7 @@ jobs:
     displayName: 'Test LKPY'
 
   - script: |
-      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval --no-slow --verbose
+      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval
     displayName: 'Test Coverage'
 
   - script: |
@@ -112,7 +112,7 @@ jobs:
     displayName: 'pytest'
   
   - script: |
-      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval --no-slow --verbose
+      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval
     displayName: 'Test Coverage'
 
   - script: |
@@ -156,7 +156,7 @@ jobs:
     displayName: 'pytest'
   
   - script: |
-      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval --no-slow --verbose
+      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval
     displayName: 'Test Coverage'
 
   - script: |
@@ -219,6 +219,10 @@ jobs:
       createCustomEnvironment: true
       environmentName: lkpy
       packageSpecs: $(conda.deps)
+
+  - script: |
+      pip install $(pip.extras)
+    displayName: 'Extra PyPI deps'
 
   - script: |
       python -V
