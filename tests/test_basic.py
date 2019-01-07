@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 
 import lk_test_utils as lktu
-from pytest import approx, mark
+from pytest import approx
 
 simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
                           'user': [10, 12, 10, 13],
@@ -117,28 +117,36 @@ def test_fallback_predict():
     assert isinstance(bias, basic.Bias)
     assert bias.mean_ == approx(lktu.ml_pandas.ratings.rating.mean())
 
+    def exp_val(user, item):
+        v = bias.mean_
+        if user is not None:
+            v += bias.user_offsets_.loc[user]
+        if item is not None:
+            v += bias.item_offsets_.loc[item]
+        return v
+
     # first user + item
     preds = algo.predict_for_user(10, [1])
     assert preds.loc[1] == 4.0
     # second user + first item
     preds = algo.predict_for_user(15, [1])
-    assert preds.loc[1] == approx(bias.mean_ + bias.user_offsets_.loc[15] + bias.item_offsets_.loc[1])
+    assert preds.loc[1] == approx(exp_val(15, 1))
 
     # second item + user item
     preds = algo.predict_for_user(12, [2])
-    assert preds.loc[2] == approx(bias.mean_ + bias.user_offsets_.loc[12] + bias.item_offsets_.loc[2])
+    assert preds.loc[2] == approx(exp_val(12, 2))
 
     # blended
     preds = algo.predict_for_user(10, [1, 5])
     assert preds.loc[1] == 4.0
-    assert preds.loc[5] == approx(bias.mean_ + bias.user_offsets_.loc[10] + bias.item_offsets_.loc[5])
+    assert preds.loc[5] == approx(exp_val(10, 5))
 
     # blended unknown
     preds = algo.predict_for_user(10, [5, 1, -23081])
     assert len(preds) == 3
     assert preds.loc[1] == 4.0
-    assert preds.loc[5] == approx(bias.mean_ + bias.user_offsets_.loc[10] + bias.item_offsets_.loc[5])
-    assert preds.loc[-23081] == approx(bias.mean_ + bias.user_offsets_.loc[10])
+    assert preds.loc[5] == approx(exp_val(10, 5))
+    assert preds.loc[-23081] == approx(exp_val(10, None))
 
 
 def test_fallback_save_load(tmp_path):
@@ -156,28 +164,36 @@ def test_fallback_save_load(tmp_path):
     bias = algo.algorithms[1]
     assert bias.mean_ == approx(lktu.ml_pandas.ratings.rating.mean())
 
+    def exp_val(user, item):
+        v = bias.mean_
+        if user is not None:
+            v += bias.user_offsets_.loc[user]
+        if item is not None:
+            v += bias.item_offsets_.loc[item]
+        return v
+
     # first user + item
     preds = algo.predict_for_user(10, [1])
     assert preds.loc[1] == 4.0
     # second user + first item
     preds = algo.predict_for_user(15, [1])
-    assert preds.loc[1] == approx(bias.mean_ + bias.user_offsets_.loc[15] + bias.item_offsets_.loc[1])
+    assert preds.loc[1] == approx(exp_val(15, 1))
 
     # second item + user item
     preds = algo.predict_for_user(12, [2])
-    assert preds.loc[2] == approx(bias.mean_ + bias.user_offsets_.loc[12] + bias.item_offsets_.loc[2])
+    assert preds.loc[2] == approx(exp_val(12, 2))
 
     # blended
     preds = algo.predict_for_user(10, [1, 5])
     assert preds.loc[1] == 4.0
-    assert preds.loc[5] == approx(bias.mean_ + bias.user_offsets_.loc[10] + bias.item_offsets_.loc[5])
+    assert preds.loc[5] == approx(exp_val(10, 5))
 
     # blended unknown
     preds = algo.predict_for_user(10, [5, 1, -23081])
     assert len(preds) == 3
     assert preds.loc[1] == 4.0
-    assert preds.loc[5] == approx(bias.mean_ + bias.user_offsets_.loc[10] + bias.item_offsets_.loc[5])
-    assert preds.loc[-23081] == approx(bias.mean_ + bias.user_offsets_.loc[10])
+    assert preds.loc[5] == approx(exp_val(10, 5))
+    assert preds.loc[-23081] == approx(exp_val(10, None))
 
 
 def test_topn_recommend():
