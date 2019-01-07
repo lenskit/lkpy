@@ -205,7 +205,7 @@ def test_topn_config():
     rec = basic.TopN(pred)
 
     rs = str(rec)
-    assert rs.startswith('TopN')
+    assert rs.startswith('TopN/')
 
 
 def test_popular():
