@@ -46,7 +46,7 @@ jobs:
     displayName: 'Build LKPY'
 
   - script: |
-      python3 -m pytest --junitxml=build/test-results.xml
+      python3 -m pytest --junitxml=build/test-results.xml --verbose
     displayName: 'Test LKPY'
 
   - task: PublishTestResults@2
