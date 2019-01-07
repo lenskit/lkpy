@@ -42,6 +42,7 @@ jobs:
     displayName: 'Download ML-100K'
 
   - script: |
+      mkdir -p build
       python3 setup.py build
     displayName: 'Build LKPY'
 
