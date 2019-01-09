@@ -52,8 +52,14 @@ jobs:
 
   - script: |
       export NUMBA_THREADING_LAYER=omp # Tests don't work with TBB
-      python3 -m pytest
+      python3 -m pytest --junitxml=build/test-results.xml --verbose
     displayName: 'Test LKPY'
+
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'build/test-results.xml'
+      testRunTitle: 'Publish test results for Python $(python.version)'
 
   - script: |
       env NUMBA_DISABLE_JIT=1 python3 -m pytest --cov=lenskit --cov-report=xml --cov-report=html -m 'not eval'
