@@ -33,6 +33,10 @@ jobs:
   - script: |
         pip install $(pip.extras)
     displayName: 'Extra PyPI deps'
+
+  - script: |
+      numba -s
+    displayName: 'Inspect Numba environment'
     
   - script: |
       if [ ! -r ml-100k/u.data ]; then
@@ -47,6 +51,7 @@ jobs:
     displayName: 'Build LKPY'
 
   - script: |
+      export NUMBA_THREADING_LAYER=omp # Tests don't work with TBB
       python3 -m pytest
     displayName: 'Test LKPY'
 
