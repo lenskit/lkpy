@@ -1,7 +1,7 @@
 variables:
   conda.deps: >
     python=$(python.version)
-    pandas scipy pytables fastparquet python-snappy numba cffi
+    pandas scipy fastparquet python-snappy numba cffi
     invoke coverage pytest pytest-cov pytest-doctestplus cython
   pip.deps: >
     invoke pytest coverage pytest-cov pytest-doctestplus
@@ -33,6 +33,10 @@ jobs:
   - script: |
         pip install $(pip.extras)
     displayName: 'Extra PyPI deps'
+
+  - script: |
+      numba -s
+    displayName: 'Inspect Numba environment'
     
   - script: |
       if [ ! -r ml-100k/u.data ]; then
@@ -42,19 +46,26 @@ jobs:
     displayName: 'Download ML-100K'
 
   - script: |
+      mkdir -p build
       python3 setup.py build
     displayName: 'Build LKPY'
 
   - script: |
-      python3 -m pytest
+      export NUMBA_THREADING_LAYER=omp # Tests don't work with TBB
+      python3 -m pytest --junitxml=build/test-results.xml --verbose
     displayName: 'Test LKPY'
 
-  - script: |
-      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval
-    displayName: 'Test Coverage'
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'build/test-results.xml'
+      testRunTitle: 'Publish test results for Python $(python.version)'
 
   - script: |
-      coverage xml
+      env NUMBA_DISABLE_JIT=1 python3 -m pytest --cov=lenskit --cov-report=xml --cov-report=html -m 'not eval'
+    displayName: 'Run Tests with Coverage'
+
+  - script: |
       echo "Fetching Codecov script"
       curl -o /tmp/codecov.sh https://codecov.io/bash
       
@@ -68,7 +79,13 @@ jobs:
       fi
 
       bash /tmp/codecov.sh -C "$BUILD_SOURCEVERSION" -B $BUILD_SOURCEBRANCH $cc_args
-    displayName: 'Upload Coverage'
+    displayName: 'Update CodeCov'
+
+  - task: PublishCodeCoverageResults@1
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/coverage.xml'
+      reportDirectory: '$(System.DefaultWorkingDirectory)/htmlcov'
 
 - job: 'LinuxVanilla'
   pool:

@@ -218,6 +218,7 @@ build/
 dist/
 .coverage
 coverage.xml
+htmlcov/
 .doit.db*
 ml-100k
 *.pyd

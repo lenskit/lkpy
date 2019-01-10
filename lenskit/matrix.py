@@ -118,6 +118,7 @@ class CSR:
         return diff
 
     def sort_values(self):
+        "Sort CSR rows in nonincreasing order by value."
         _csr_sort(self.nrows, self.rowptrs, self.colinds, self.values)
 
     def transpose(self):
@@ -204,10 +205,10 @@ def csr_from_coo(rows, cols, vals, shape=None):
 
     _csr_align(rows, nrows, rowptrs, align)
 
-    colinds = cols[align].copy()
-    values = vals[align].copy() if vals is not None else None
+    cols = cols[align].copy()
+    vals = vals[align].copy() if vals is not None else None
 
-    return CSR(nrows, ncols, nnz, rowptrs, colinds, values)
+    return CSR(nrows, ncols, nnz, rowptrs, cols, vals)
 
 
 @njit
