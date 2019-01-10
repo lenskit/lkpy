@@ -173,4 +173,3 @@ def csr_syrk(csr: CSR):
     _logger.debug('syrk: received %dx%d matrix (%d nnz)',
                   result.nrows, result.ncols, result.nnz)
     return result
-
