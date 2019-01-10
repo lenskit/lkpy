@@ -17,7 +17,7 @@ from . import Predictor
 _logger = logging.getLogger(__name__)
 
 
-@njit(nogil=True, parallel=True)
+@njit(nogil=True)
 def _predict_weighted_average(model, nitems, nrange, ratings, targets):
     min_nbrs, max_nbrs = nrange
     scores = np.full(nitems, np.nan, dtype=np.float_)
@@ -51,7 +51,7 @@ def _predict_weighted_average(model, nitems, nrange, ratings, targets):
     return scores
 
 
-@njit(nogil=True, parallel=True)
+@njit(nogil=True)
 def _predict_sum(model, nitems, nrange, ratings, targets):
     min_nbrs, max_nbrs = nrange
     scores = np.full(nitems, np.nan, dtype=np.float_)
