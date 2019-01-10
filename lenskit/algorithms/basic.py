@@ -288,4 +288,4 @@ class TopN(Recommender):
         return scores.reset_index()
 
     def __str__(self):
-        return 'TN/' + str(self.predidctor)
+        return 'TopN/' + str(self.predictor)

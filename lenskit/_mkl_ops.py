@@ -94,6 +94,7 @@ class SparseM:
 
     def __del__(self):
         if self.h_ptr[0]:
+            _logger.debug('destroying MKL sparse matrix')
             _mkl_lib.mkl_sparse_destroy(self.handle)
 
     def export(self):
@@ -165,8 +166,9 @@ def csr_syrk(csr: CSR):
     mult = SparseM()
     rv = _mkl_lib.mkl_sparse_syrk(11, src.handle, mult.h_ptr)
     _mkl_check_return(rv, 'mkl_sparse_syrk')
-    _logger.debug('syrk: exporting matrix')
+    del src  # free a little memory
 
+    _logger.debug('syrk: exporting matrix')
     result = mult.export()
     _logger.debug('syrk: received %dx%d matrix (%d nnz)',
                   result.nrows, result.ncols, result.nnz)
