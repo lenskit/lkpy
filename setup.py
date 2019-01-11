@@ -39,7 +39,8 @@ setup(
         'docs': [
             'sphinx >= 1.8',
             'sphinx_rtd_theme',
-            'nbsphinx'
+            'nbsphinx',
+            'recommonmark'
         ],
         'hpf': [
             'hpfrec'
