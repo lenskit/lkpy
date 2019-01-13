@@ -30,6 +30,10 @@ for any algorithm that at least implements :py:class:`Predictor`.  For example::
 
     pred = Bias(damping=5)
     rec = Recommender.adapt(pred)
+    
+.. note::
+    We are rethinking the ergonomics of this interface, and it may change in LensKit 0.6. We expect
+    keep compatibility in the :py:func:`lenskit.batch.recommend` API, though.
 
 .. autoclass:: Recommender
     :members:
