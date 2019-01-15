@@ -29,11 +29,15 @@ LensKit provides alternating least squares implementations of matrix factorizati
 for explicit feedback data.  These implementations are parallelized with Numba, and perform
 best with the MKL from Conda.
 
+.. module:: lenskit.algorithms.als
+
 .. autoclass:: BiasedMF
-   :members:
+    :show-inheritance:
+    :members:
 
 .. autoclass:: ImplicitMF
-   :members:
+    :show-inheritance:
+    :members:
 
 FunkSVD
 -------
@@ -47,4 +51,5 @@ configured much like coordinate descent, to train the user-feature and item-feat
 matrices.
 
 .. autoclass:: FunkSVD
-   :members:
+    :show-inheritance:
+    :members:
