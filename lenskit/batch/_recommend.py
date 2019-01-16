@@ -64,7 +64,6 @@ def recommend(algo, users, n, candidates, ratings=None, nprocs=None):
 
     Args:
         algo: the algorithm
-        model: The algorithm model
         users(array-like): the users to recommend for
         n(int): the number of recommendations to generate (None for unlimited)
         candidates:
