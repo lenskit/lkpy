@@ -1,4 +1,5 @@
 import logging
+import pickle
 from pathlib import Path
 
 import lenskit.algorithms.funksvd as svd
@@ -125,10 +126,7 @@ def test_fsvd_predict_bad_user():
 
 @lktu.wantjit
 @mark.slow
-def test_fsvd_save_load(tmp_path):
-    tmp_path = lktu.norm_path(tmp_path)
-    mod_file = tmp_path / 'funksvd.npz'
-
+def test_fsvd_save_load():
     ratings = lktu.ml_pandas.renamed.ratings
 
     original = svd.FunkSVD(20, iterations=20)
@@ -138,11 +136,10 @@ def test_fsvd_save_load(tmp_path):
     assert original.item_features_.shape == (ratings.item.nunique(), 20)
     assert original.user_features_.shape == (ratings.user.nunique(), 20)
 
-    original.save(mod_file)
-    assert mod_file.exists()
+    mod = pickle.dumps(original)
+    _log.info('serialized to %d bytes', len(mod))
+    algo = pickle.loads(mod)
 
-    algo = svd.FunkSVD(20, iterations=20)
-    algo.load(mod_file)
     assert algo.global_bias_ == original.global_bias_
     assert np.all(algo.user_bias_ == original.user_bias_)
     assert np.all(algo.item_bias_ == original.item_bias_)

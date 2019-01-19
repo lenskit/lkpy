@@ -1,4 +1,5 @@
 import logging
+import pickle
 
 from lenskit.algorithms import als
 
@@ -105,20 +106,17 @@ def test_als_train_large():
     assert ibias.values == approx(imeans.values)
 
 
-def test_als_save_load(tmp_path):
-    tmp_path = lktu.norm_path(tmp_path)
-    mod_file = tmp_path / 'als.npz'
+def test_als_save_load():
     original = als.BiasedMF(20, iterations=5)
     ratings = lktu.ml_pandas.renamed.ratings
     original.fit(ratings)
 
     assert original.global_bias_ == approx(ratings.rating.mean())
 
-    original.save(mod_file)
-    assert mod_file.exists()
+    mod = pickle.dumps(original)
+    _log.info('serialized to %d bytes', len(mod))
 
-    algo = als.BiasedMF(20)
-    algo.load(mod_file)
+    algo = pickle.loads(mod)
     assert algo.global_bias_ == original.global_bias_
     assert np.all(algo.user_bias_ == original.user_bias_)
     assert np.all(algo.item_bias_ == original.item_bias_)
