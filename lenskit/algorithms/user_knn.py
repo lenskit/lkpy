@@ -228,5 +228,17 @@ class UserUser(Predictor):
         mkl = matrix.mkl_ops()
         self._mkl_m_ = mkl.SparseM.from_csr(self.rating_matrix_) if mkl else None
 
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        if '_mkl_m_' in state:
+            del state['_mkl_m_']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.aggregate = intern(self.aggregate)
+        mkl = matrix.mkl_ops()
+        self._mkl_m_ = mkl.SparseM.from_csr(self.rating_matrix_) if mkl else None
+
     def __str__(self):
         return 'UserUser(nnbrs={}, min_sim={})'.format(self.nnbrs, self.min_sim)

@@ -1,8 +1,8 @@
-from lenskit import matrix
 import lenskit.algorithms.user_knn as knn
 
 from pathlib import Path
 import logging
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -86,19 +86,19 @@ def test_uu_predict_live_ratings():
 
 
 def test_uu_save_load(tmp_path):
-    tmp_path = lktu.norm_path(tmp_path)
-
     orig = knn.UserUser(30)
     _log.info('training model')
     orig.fit(ml_ratings)
 
     fn = tmp_path / 'uu.model'
     _log.info('saving to %s', fn)
-    orig.save(fn)
+    with open(fn, 'wb') as f:
+        pickle.dump(orig, f)
 
     _log.info('reloading model')
-    algo = knn.UserUser(30)
-    algo.load(fn)
+    with open(fn, 'rb') as f:
+        algo = pickle.load(f)
+
     _log.info('checking model')
 
     # it should have computed correct means
@@ -119,6 +119,12 @@ def test_uu_save_load(tmp_path):
     ui_rbdf['rating'] = ui_rbdf['nrating'] + ui_rbdf['mean']
     ui_rbdf['orig_rating'] = uir
     assert ui_rbdf.rating.values == approx(ui_rbdf.orig_rating.values)
+
+    # running the predictor should work
+    preds = algo.predict_for_user(4, [1016])
+    assert len(preds) == 1
+    assert preds.index == [1016]
+    assert preds.values == approx([3.62221550680778])
 
 
 def test_uu_predict_unknown_empty():
@@ -149,15 +155,14 @@ def test_uu_implicit():
 @mark.slow
 def test_uu_save_load_implicit(tmp_path):
     "Save and load user-user on an implicit data set."
-    tmp_path = lktu.norm_path(tmp_path)
     orig = knn.UserUser(20, center=False, aggregate='sum')
     data = ml_ratings.loc[:, ['user', 'item']]
 
     orig.fit(data)
-    orig.save(tmp_path / 'uu.mod')
+    ser = pickle.dumps(orig)
 
-    algo = knn.UserUser(20, center=False, aggregate='sum')
-    algo.load(tmp_path / 'uu.mod')
+    algo = pickle.loads(ser)
+
     assert algo.user_means_ is None
     assert all(algo.user_index_ == orig.user_index_)
     assert all(algo.item_index_ == orig.item_index_)
