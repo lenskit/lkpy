@@ -6,6 +6,13 @@ See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/1) for a su
 
 - Several bug fixes and testing improvements
 
+### Internal Changes
+
+These changes should not affect you if you are only consuming LensKit's algorithm and evaluation capabilities.
+
+-   Rewrite the `CSR` class to be more ergonomic from Python, at the expense of making the NumPy jitclass
+    indirect. It is available in the `.N` attribute.  Big improvement: it is now picklable.
+
 ## 0.5.0
 
 LensKit 0.5.0 modifies the algorithm APIs to follow the SciKit design patterns instead of
