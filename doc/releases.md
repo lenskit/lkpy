@@ -1,5 +1,11 @@
 # Release Notes
 
+## 0.6.0 (In Progress)
+
+See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/1) for a summary of what's happening!
+
+- Several bug fixes and testing improvements
+
 ## 0.5.0
 
 LensKit 0.5.0 modifies the algorithm APIs to follow the SciKit design patterns instead of
