@@ -255,7 +255,7 @@ class CSR:
 
         .. note:: This method is not available from Numba.
         """
-        return np.repeat(np.arange(self.nrows), np.diff(self.rowptrs))
+        return np.repeat(np.arange(self.nrows, dtype=np.int32), np.diff(self.rowptrs))
 
     def row(self, row):
         """
