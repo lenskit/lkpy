@@ -42,7 +42,7 @@ def test_ii_train():
     assert isinstance(algo.item_index_, pd.Index)
     assert isinstance(algo.item_means_, np.ndarray)
     assert isinstance(algo.item_counts_, np.ndarray)
-    matrix = lm.csr_to_scipy(algo.sim_matrix_)
+    matrix = algo.sim_matrix_.to_scipy()
 
     # 6 is a neighbor of 7
     six, seven = algo.item_index_.get_indexer([6, 7])
@@ -76,7 +76,7 @@ def test_ii_train_unbounded():
     assert all(algo.sim_matrix_.values < 1 + 1.0e-6)
 
     # 6 is a neighbor of 7
-    matrix = lm.csr_to_scipy(algo.sim_matrix_)
+    matrix = algo.sim_matrix_.to_scipy()
     six, seven = algo.item_index_.get_indexer([6, 7])
     assert matrix[six, seven] > 0
 
@@ -230,8 +230,8 @@ def test_ii_large_models():
                          .join(pd.DataFrame({'item_mean': means}))\
                          .assign(rating=lambda df: df.rating - df.item_mean)
 
-    mat_lim = lm.csr_to_scipy(algo_lim.sim_matrix_)
-    mat_ub = lm.csr_to_scipy(algo_ub.sim_matrix_)
+    mat_lim = algo_lim.sim_matrix_.to_scipy()
+    mat_ub = algo_ub.sim_matrix_.to_scipy()
 
     _log.info('checking a sample of neighborhoods')
     items = pd.Series(algo_ub.item_index_)
@@ -334,7 +334,7 @@ def test_ii_save_load(tmp_path):
     means = ml_ratings.groupby('item').rating.mean()
     assert means[algo.item_index_].values == approx(original.item_means_)
 
-    matrix = lm.csr_to_scipy(algo.sim_matrix_)
+    matrix = algo.sim_matrix_.to_scipy()
 
     items = pd.Series(algo.item_index_)
     items = items[algo.item_counts_ > 0]
@@ -390,7 +390,7 @@ def test_ii_implicit_save_load(tmp_path):
 
     assert algo.item_means_ is None
 
-    matrix = lm.csr_to_scipy(algo.sim_matrix_)
+    matrix = algo.sim_matrix_.to_scipy()
 
     items = pd.Series(algo.item_index_)
     items = items[algo.item_counts_ > 0]

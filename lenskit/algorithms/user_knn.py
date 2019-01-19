@@ -130,8 +130,7 @@ class UserUser(Predictor):
             nsims = np.zeros(len(self.user_index_))
             nsims = self._mkl_m_.mult_vec(1, ratings, 0, nsims)
         else:
-            rmat = self.rating_matrix_
-            rmat = matrix.csr_to_scipy(rmat)
+            rmat = self.rating_matrix_.to_scipy()
             nsims = rmat @ ratings
         assert len(nsims) == len(self.user_index_)
         if user in self.user_index_:

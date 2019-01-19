@@ -30,7 +30,7 @@ def test_uu_train():
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(['user', 'item']).rating
-    r_items = matrix.csr_rowinds(algo.transpose_matrix_)
+    r_items = algo.transpose_matrix_.rowinds()
     ui_rbdf = pd.DataFrame({
         'user': algo.user_index_[algo.transpose_matrix_.colinds],
         'item': algo.item_index_[r_items],
@@ -109,7 +109,7 @@ def test_uu_save_load(tmp_path):
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(['user', 'item']).rating
-    r_items = matrix.csr_rowinds(algo.transpose_matrix_)
+    r_items = algo.transpose_matrix_.rowinds()
     ui_rbdf = pd.DataFrame({
         'user': algo.user_index_[algo.transpose_matrix_.colinds],
         'item': algo.item_index_[r_items],
@@ -138,7 +138,7 @@ def test_uu_implicit():
     algo.fit(data)
     assert algo.user_means_ is None
 
-    mat = matrix.csr_to_scipy(algo.rating_matrix_)
+    mat = algo.rating_matrix_.to_scipy()
     norms = sps.linalg.norm(mat, 2, 1)
     assert norms == approx(1.0)
 
