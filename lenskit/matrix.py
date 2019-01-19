@@ -265,7 +265,7 @@ class CSR:
             row(int): the row index.
 
         Returns:
-            np.ndarray: the row, with 0s in the place of missing values.
+            numpy.ndarray: the row, with 0s in the place of missing values.
         """
         return self.N.row(row)
 
@@ -301,7 +301,7 @@ class CSR:
         .. note:: This method is not available from Numba.
 
         Returns:
-            np.ndarray: the number of nonzero entries in each row.
+            numpy.ndarray: the number of nonzero entries in each row.
         """
         return np.diff(self.rowptrs)
 
