@@ -188,25 +188,21 @@ class CSR:
         vs = mat.data.copy() if copy else mat.data
         return cls(mat.shape[0], mat.shape[1], mat.nnz, rp, cs, vs)
 
-    def to_scipy(mat):
+    def to_scipy(self):
         """
         Convert a CSR matrix to a SciPy :py:class:`scipy.sparse.csr_matrix`.
 
         Args:
-            mat(CSR): A CSR matrix.
+            self(CSR): A CSR matrix.
 
         Returns:
             scipy.sparse.csr_matrix:
-                A SciPy sparse matrix with the same data.  It shares
-                storage with ``matrix``.
+                A SciPy sparse matrix with the same data.
         """
-        if sps.isspmatrix(mat):
-            warnings.warn('matrix already a SciPy matrix')
-            return mat.tocsr()
-        values = mat.values
+        values = self.values
         if values is None:
-            values = np.full(mat.nnz, 1.0)
-        return sps.csr_matrix((values, mat.colinds, mat.rowptrs), shape=(mat.nrows, mat.ncols))
+            values = np.full(self.nnz, 1.0)
+        return sps.csr_matrix((values, self.colinds, self.rowptrs), shape=(self.nrows, self.ncols))
 
     @property
     def nrows(self) -> int:
