@@ -1,5 +1,6 @@
 import pathlib
 import json
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -158,6 +159,40 @@ def test_sweep_oneshot(tmp_path):
     with (work / 'run-3.json').open() as f:
         run = json.load(f)
     assert run['RunId'] == 3
+
+
+def test_sweep_save(tmp_path):
+    tmp_path = norm_path(tmp_path)
+    work = pathlib.Path(tmp_path)
+    sweep = batch.MultiEval(tmp_path)
+
+    ratings = ml_pandas.renamed.ratings
+    sweep.add_datasets(lambda: xf.partition_users(ratings, 5, xf.SampleN(5)), name='ml-small')
+    sweep.add_algorithms(Bias(damping=5))
+
+    sweep.persist_data()
+    pf = work / 'sweep.dat'
+    with pf.open('wb') as f:
+        pickle.dump(sweep, f)
+
+    with pf.open('rb') as f:
+        sweep = pickle.load(f)
+
+    try:
+        sweep.run()
+    finally:
+        if (work / 'runs.csv').exists():
+            runs = pd.read_csv(work / 'runs.csv')
+            print(runs)
+
+    assert (work / 'runs.csv').exists()
+    assert (work / 'runs.parquet').exists()
+    assert (work / 'predictions.parquet').exists()
+    assert (work / 'recommendations.parquet').exists()
+
+    runs = pd.read_parquet(work / 'runs.parquet')
+    # 1 algorithms by 5 partitions
+    assert len(runs) == 5
 
 
 def test_sweep_combine(tmp_path):
