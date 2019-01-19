@@ -1,9 +1,9 @@
 import lenskit.algorithms.item_knn as knn
-from lenskit import matrix as lm
 
 from pathlib import Path
 import logging
 import os.path
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -154,8 +154,6 @@ def test_ii_train_big_unbounded():
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_ii_train_ml100k(tmp_path):
     "Test an unbounded model on ML-100K"
-    tmp_path = lktu.norm_path(tmp_path)
-
     ratings = lktu.ml100k.load_ratings()
     algo = knn.ItemItem(30)
     _log.info('training model')
@@ -177,10 +175,13 @@ def test_ii_train_ml100k(tmp_path):
     # save
     fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
-    algo.save(fn)
+    with fn.open('wb') as modf:
+        pickle.dump(algo, modf)
+
     _log.info('reloading model')
-    restored = knn.ItemItem(30)
-    restored.load(fn)
+    with fn.open('rb') as modf:
+        restored = pickle.load(modf)
+
     assert all(restored.sim_matrix_.values > 0)
 
     r_mat = restored.sim_matrix_
@@ -294,20 +295,20 @@ def test_ii_large_models():
 @lktu.wantjit
 def test_ii_save_load(tmp_path):
     "Save and load a model"
-    tmp_path = lktu.norm_path(tmp_path)
     original = knn.ItemItem(30, save_nbrs=500)
     _log.info('building model')
     original.fit(lktu.ml_sample())
 
     fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
-    original.save(fn)
+    with fn.open('wb') as modf:
+        pickle.dump(original, modf)
+
     _log.info('reloading model')
+    with fn.open('rb') as modf:
+        algo = pickle.load(modf)
 
-    algo = knn.ItemItem(30)
-    algo.load(fn)
     _log.info('checking model')
-
     assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
     assert all(algo.sim_matrix_.values > 0)
     # a little tolerance
@@ -351,19 +352,20 @@ def test_ii_save_load(tmp_path):
 
 def test_ii_implicit_save_load(tmp_path):
     "Save and load a model"
-    tmp_path = lktu.norm_path(tmp_path)
     original = knn.ItemItem(30, save_nbrs=500, center=False, aggregate='sum')
     _log.info('building model')
     original.fit(lktu.ml_sample().loc[:, ['user', 'item']])
 
     fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
-    original.save(fn)
-    _log.info('reloading model')
-    algo = knn.ItemItem(30, save_nbrs=500, center=False, aggregate='sum')
-    algo.load(fn)
-    _log.info('checking model')
+    with fn.open('wb') as modf:
+        pickle.dump(original, modf)
 
+    _log.info('reloading model')
+    with fn.open('rb') as modf:
+        algo = pickle.load(modf)
+
+    _log.info('checking model')
     assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
     assert all(algo.sim_matrix_.values > 0)
     # a little tolerance
