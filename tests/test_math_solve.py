@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import scipy.linalg as sla
 
@@ -5,9 +6,11 @@ from pytest import approx
 
 from lenskit.math.solve import solve_tri, dposv
 
+_runs = int(os.environ.get('RAND_TEST_ITERS', 10))
+
 
 def test_solve_ltri():
-    for i in range(10):
+    for i in range(_runs):
         size = np.random.randint(5, 50)
         Af = np.random.randn(size, size)
         b = np.random.randn(size)
@@ -21,7 +24,7 @@ def test_solve_ltri():
 
 
 def test_solve_ltri_transpose():
-    for i in range(10):
+    for i in range(_runs):
         size = np.random.randint(5, 50)
         Af = np.random.randn(size, size)
         b = np.random.randn(size)
@@ -35,7 +38,7 @@ def test_solve_ltri_transpose():
 
 
 def test_solve_utri():
-    for i in range(10):
+    for i in range(_runs):
         size = np.random.randint(5, 50)
         Af = np.random.randn(size, size)
         b = np.random.randn(size)
@@ -48,7 +51,7 @@ def test_solve_utri():
 
 
 def test_solve_utri_transpose():
-    for i in range(10):
+    for i in range(_runs):
         size = np.random.randint(5, 50)
         Af = np.random.randn(size, size)
         b = np.random.randn(size)
@@ -61,7 +64,7 @@ def test_solve_utri_transpose():
 
 
 def test_solve_cholesky():
-    for i in range(10):
+    for i in range(_runs):
         size = np.random.randint(5, 50)
         A = np.random.randn(size, size)
         b = np.random.randn(size)
@@ -82,7 +85,7 @@ def test_solve_cholesky():
 
 
 def test_solve_dposv():
-    for i in range(10):
+    for i in range(_runs):
         size = np.random.randint(5, 50)
         A = np.random.randn(size, size)
         b = np.random.randn(size)
