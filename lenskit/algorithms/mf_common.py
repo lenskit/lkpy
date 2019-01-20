@@ -112,19 +112,6 @@ class MFPredictor(Predictor):
         res = res.reindex(items)
         return res
 
-    def save(self, path):
-        np.savez_compressed(path, users=self.user_index_.values, items=self.item_index_.values,
-                            umat=self.user_features_, imat=self.item_features_)
-
-    def load(self, path):
-        path = util.npz_path(path)
-
-        with np.load(path) as npz:
-            self.user_index_ = pd.Index(npz['users'], name='user')
-            self.item_index_ = pd.Index(npz['items'], name='item')
-            self.user_features_ = npz['umat']
-            self.item_features_ = npz['imat']
-
 
 class BiasMFPredictor(MFPredictor):
     """
@@ -165,21 +152,3 @@ class BiasMFPredictor(MFPredictor):
                 rv = rv + self.item_bias_[items]
 
         return rv
-
-    def save(self, path):
-        np.savez_compressed(path, users=self.user_index_.values, items=self.item_index_.values,
-                            umat=self.user_features_, imat=self.item_features_,
-                            gbias=np.array([self.global_bias_]),
-                            ubias=self.user_bias_, ibias=self.item_bias_)
-
-    def load(self, path: pathlib.Path):
-        path = util.npz_path(path)
-
-        with np.load(path) as npz:
-            self.user_index_ = pd.Index(npz['users'])
-            self.item_index_ = pd.Index(npz['items'])
-            self.user_features_ = npz['umat']
-            self.item_features_ = npz['imat']
-            self.global_bias_ = npz['gbias'][0]
-            self.user_bias_ = npz['ubias']
-            self.item_bias_ = npz['ibias']

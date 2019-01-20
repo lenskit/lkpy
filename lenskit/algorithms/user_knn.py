@@ -196,38 +196,6 @@ class UserUser(Predictor):
 
         return ratings, umean
 
-    def save(self, path):
-        path = pathlib.Path(path)
-        _logger.info('saving to %s', path)
-
-        data = {
-            'users': self.user_index_,
-            'items': self.item_index_,
-            'user_means': self.user_means_
-        }
-        data.update(matrix.csr_save(self.rating_matrix_, prefix='m_'))
-        data.update(matrix.csr_save(self.transpose_matrix_, prefix='t_'))
-
-        np.savez_compressed(path, **data)
-
-    def load(self, path):
-        path = util.npz_path(path)
-
-        with np.load(path) as npz:
-            users = npz['users']
-            self.user_index_ = pd.Index(users, name='user')
-            self.item_index_ = pd.Index(npz['items'], name='item')
-            user_means = npz['user_means']
-            if user_means.ndim > 0:
-                self.user_means_ = pd.Series(user_means, index=users, name='mean')
-            else:
-                self.user_means_ = None
-            self.rating_matrix_ = matrix.csr_load(npz, 'm_')
-            self.transpose_matrix_ = matrix.csr_load(npz, 't_')
-
-        mkl = matrix.mkl_ops()
-        self._mkl_m_ = mkl.SparseM.from_csr(self.rating_matrix_) if mkl else None
-
     def __getstate__(self):
         state = dict(self.__dict__)
         if '_mkl_m_' in state:

@@ -61,30 +61,6 @@ class Algorithm(metaclass=ABCMeta):
 
         return params
 
-    def save(self, file):
-        """
-        Save a fit algorithm to a file.  The default implementation pickles the object.
-
-        Args:
-            file(path-like): the file to save.
-        """
-        path = pathlib.Path(file)
-        with path.open('wb') as f:
-            pickle.dump(self, f)
-
-    def load(self, file):
-        """
-        Load a fit algorithm from a file.  The default implementation unpickles the object
-        and transplants its parameters and model into this object.
-
-        Args:
-            file(path-like): the file to load.
-        """
-        path = pathlib.Path(file)
-        with path.open('rb') as f:
-            obj = pickle.load(f)
-            self.__dict__.update(obj.__dict__)
-
 
 class Predictor(Algorithm, metaclass=ABCMeta):
     """

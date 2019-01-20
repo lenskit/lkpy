@@ -357,44 +357,5 @@ class ItemItem(Predictor):
 
         return results
 
-    def save(self, path):
-        path = pathlib.Path(path)
-        _logger.info('saving I-I model to %s', path)
-
-        data = dict(items=self.item_index_.values, users=self.user_index_.values,
-                    means=self.item_means_)
-        data.update(matrix.csr_save(self.sim_matrix_, 's_'))
-        data.update(matrix.csr_save(self.rating_matrix_, 'r_'))
-
-        np.savez_compressed(path, **data)
-
-    def load(self, path):
-        path = pathlib.Path(path)
-        path = util.npz_path(path)
-        _logger.info('loading I-I model from %s', path)
-
-        with np.load(path) as npz:
-            items = npz['items']
-            users = npz['users']
-            means = npz['means']
-            s_mat = matrix.csr_load(npz, 's_')
-            r_mat = matrix.csr_load(npz, 'r_')
-
-        if means.dtype == np.object:
-            means = None
-
-        self.item_index_ = pd.Index(items, name='item')
-        self.user_index_ = pd.Index(users, name='user')
-        nitems = len(items)
-
-        s_mat.sort_values()
-
-        _logger.info('read %d similarities for %d items', s_mat.nnz, nitems)
-
-        self.item_counts_ = s_mat.row_nnzs()
-        self.item_means_ = means
-        self.sim_matrix_ = s_mat
-        self.rating_matrix_ = r_mat
-
     def __str__(self):
         return 'ItemItem(nnbrs={}, msize={})'.format(self.nnbrs, self.save_nbrs)
