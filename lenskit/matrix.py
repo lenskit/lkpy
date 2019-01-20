@@ -40,6 +40,13 @@ def mkl_ops():
         return None
 
 
+def _csr_delegate(name):
+    def func(self):
+        return getattr(self.N, name)
+
+    return property(func)
+
+
 @jitclass({
     'nrows': n.int32,
     'ncols': n.int32,
@@ -204,29 +211,12 @@ class CSR:
             values = np.full(self.nnz, 1.0)
         return sps.csr_matrix((values, self.colinds, self.rowptrs), shape=(self.nrows, self.ncols))
 
-    @property
-    def nrows(self) -> int:
-        return self.N.nrows
-
-    @property
-    def ncols(self) -> int:
-        return self.N.ncols
-
-    @property
-    def nnz(self) -> int:
-        return self.N.nnz
-
-    @property
-    def rowptrs(self) -> np.ndarray:
-        return self.N.rowptrs
-
-    @property
-    def colinds(self) -> np.ndarray:
-        return self.N.colinds
-
-    @property
-    def values(self) -> np.ndarray:
-        return self.N.values
+    nrows = _csr_delegate('nrows')
+    ncols = _csr_delegate('ncols')
+    nnz = _csr_delegate('nnz')
+    rowptrs = _csr_delegate('rowptrs')
+    colinds = _csr_delegate('colinds')
+    values = _csr_delegate('values')
 
     @values.setter
     def values(self, vs: np.ndarray):
