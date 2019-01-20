@@ -296,8 +296,7 @@ def test_csr_to_sps():
 
 
 @mark.parametrize("values", [True, False])
-def test_csr_pickle(tmp_path, values):
-    tmp_path = lktu.norm_path(tmp_path)
+def test_csr_pickle(values):
     coords = np.random.choice(np.arange(50 * 100, dtype=np.int32), 1000, False)
     rows = np.mod(coords, 100, dtype=np.int32)
     cols = np.floor_divide(coords, 100, dtype=np.int32)
