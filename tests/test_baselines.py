@@ -2,6 +2,7 @@ import lenskit.algorithms.basic as bl
 from lenskit import util as lku
 
 import logging
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -233,19 +234,17 @@ def test_bias_separate_damping():
         approx(np.array([0.266234, -0.08333, -0.22727]), abs=1.0e-4)
 
 
-def test_bias_save(tmp_path):
-    tmp_path = lktu.norm_path(tmp_path)
-
+def test_bias_save():
     original = bl.Bias(damping=5)
     original.fit(simple_df)
     assert original.mean_ == approx(3.5)
-    fn = tmp_path / 'bias.dat'
 
-    _log.info('saving to %s', fn)
-    original.save(fn)
+    _log.info('saving baseline model')
+    mod = pickle.dumps(original)
+    _log.info('serialized to %d bytes', len(mod))
 
-    algo = bl.Bias()
-    algo.load(fn)
+    algo = pickle.loads(mod)
+
     assert algo.mean_ == original.mean_
 
     assert algo.item_offsets_ is not None
