@@ -4,6 +4,8 @@
 
 See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/1) for a summary of what's happening!
 
+- The `save` and `load` methods on algorithms have been removed.  Just pickle fitted models to save
+  their data.  This is what SciKit does, see no need to deviate.
 - Several bug fixes and testing improvements
 
 ### Internal Changes
