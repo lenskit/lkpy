@@ -36,6 +36,15 @@ def test_implicit_als_train_rec():
     recs = algo.recommend(100, n=20)
     assert len(recs) == 20
 
+    _log.info('serializing implicit model')
+    mod = pickle.dumps(algo)
+    _log.info('serialized to %d bytes')
+    a2 = pickle.loads(mod)
+
+    r2 = a2.recommend(100, n=20)
+    assert len(r2) == 20
+    assert all(r2 == recs)
+
 
 @mark.slow
 @mark.eval
@@ -81,6 +90,15 @@ def test_implicit_bpr_train_rec():
 
     recs = algo.recommend(100, n=20)
     assert len(recs) == 20
+
+    _log.info('serializing implicit model')
+    mod = pickle.dumps(algo)
+    _log.info('serialized to %d bytes')
+    a2 = pickle.loads(mod)
+
+    r2 = a2.recommend(100, n=20)
+    assert len(r2) == 20
+    assert all(r2 == recs)
 
 
 @mark.skipif(not have_implicit, reason='implicit not installed')
