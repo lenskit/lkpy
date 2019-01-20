@@ -92,11 +92,11 @@ def test_uu_save_load(tmp_path):
 
     fn = tmp_path / 'uu.model'
     _log.info('saving to %s', fn)
-    with open(fn, 'wb') as f:
+    with fn.open('wb') as f:
         pickle.dump(orig, f)
 
     _log.info('reloading model')
-    with open(fn, 'rb') as f:
+    with fn.open('rb') as f:
         algo = pickle.load(f)
 
     _log.info('checking model')
