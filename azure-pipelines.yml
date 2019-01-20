@@ -125,8 +125,15 @@ jobs:
     displayName: 'Download ML-100K'
     
   - script: |
-      python3 -m pytest
+      mkdir -p build
+      python3 -m pytest --junitxml=build/test-results.xml
     displayName: 'pytest'
+
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'build/test-results.xml'
+      testRunTitle: 'Publish test results for Python $(python.version)'
   
   - script: |
       env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval
@@ -169,8 +176,15 @@ jobs:
     displayName: 'Install partial extra deps'
     
   - script: |
-      python3 -m pytest
+      mkdir -p build
+      python3 -m pytest --junitxml=build/test-results.xml
     displayName: 'pytest'
+
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'build/test-results.xml'
+      testRunTitle: 'Publish test results for Python $(python.version)'
   
   - script: |
       env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval
@@ -247,8 +261,14 @@ jobs:
     displayName: 'Build LKPY'
 
   - script: |
-      python -m pytest
+      python -m pytest --junitxml=build/test-results.xml
     displayName: 'Test LKPY'
+  
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'build/test-results.xml'
+      testRunTitle: 'Publish test results for Windows Python $(python.version)'
 
 - job: 'MacConda'
   pool:
@@ -284,5 +304,12 @@ jobs:
     displayName: 'Build LKPY'
 
   - script: |
-      python3 -m pytest
+      mkdir -p build
+      python3 -m pytest --junitxml=build/test-results.xml
     displayName: 'Test LKPY'
+
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'build/test-results.xml'
+      testRunTitle: 'Publish test results for Mac Python $(python.version)'
