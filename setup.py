@@ -29,7 +29,8 @@ setup(
         'numpy',
         'scipy',
         'numba >= 0.38',
-        'pyarrow'
+        'pyarrow',
+        'cffi'
     ],
     tests_require=[
         'pytest >= 3.9',
