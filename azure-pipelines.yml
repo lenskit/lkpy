@@ -5,7 +5,7 @@ variables:
     invoke coverage pytest pytest-cov pytest-doctestplus cython
   pip.deps: >
     invoke pytest coverage pytest-cov pytest-doctestplus
-    pandas scipy pyarrow
+    pandas scipy pyarrow numpy<1.16
     numba cython cffi
   pip.extras: >
     hpfrec implicit
