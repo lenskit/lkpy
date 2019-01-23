@@ -47,6 +47,17 @@ def test_dcg_single2():
     assert lm.dcg(np.array([0, 0, 0.5, 0])) == approx(0.5 / np.log2(3))
 
 
+def test_dcg_nan():
+    "NANs should be 0"
+    assert lm.dcg(np.array([np.nan, 0.5])) == approx(0.5)
+
+
+def test_dcg_series():
+    "The DCG function should work on a series"
+    assert lm.dcg(pd.Series([np.e, 0, 0, np.pi])) == \
+        approx((np.e + np.pi / np.log2(4)))
+
+
 def test_dcg_mult2():
     "multiple elements should score correctly"
     assert lm.dcg(np.array([np.e, np.pi])) == approx(np.e + np.pi)

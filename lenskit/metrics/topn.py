@@ -78,8 +78,10 @@ def recip_rank(recs, relevant):
 
 def _dcg(scores, discount=np.log2):
     ranks = np.arange(1, len(scores) + 1)
-    disc = np.maximum(discount(ranks), 1)
-    return np.dot(scores, 1.0/disc)
+    disc = discount(ranks)
+    np.maximum(disc, 1, out=disc)
+    np.reciprocal(disc, out=disc)
+    return np.dot(scores, disc)
 
 
 def dcg(scores, discount=np.log2):
@@ -115,9 +117,7 @@ def dcg(scores, discount=np.log2):
         double: the DCG of the scored items.
     """
 
-    scores = pd.Series(scores)
-    scores = scores.fillna(0)
-
+    scores = np.nan_to_num(scores, copy=False)
     return _dcg(scores, discount)
 
 
