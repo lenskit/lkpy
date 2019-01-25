@@ -3,10 +3,20 @@ Prediction Accuracy Metrics
 
 .. module:: lenskit.metrics.predict
 
-The :py:mod:`lenskit.metrics.predict` module containins prediction accuracy metrics.
+The :py:mod:`lenskit.metrics.predict` module contains prediction accuracy metrics.
+These are intended to be used as a part of a Pandas split-apply-combine operation
+on a data frame that contains both predictions and ratings; for convenience, the
+:py:func:`lenskit.batch.predict` function will include ratings in the prediction
+frame when its input user-item pairs contains ratings.  So you can perform the
+following to compute per-user RMSE over some predictions::
+
+    preds = predict(algo, pairs)
+    user_rmse = preds.groupby('user').apply(lambda df: rmse(df.prediction, df.rating))
 
 Metric Functions
 ----------------
+
+Prediction metric functions take two series, `predictions` and `truth`.
 
 .. autofunction:: rmse
 .. autofunction:: mae
