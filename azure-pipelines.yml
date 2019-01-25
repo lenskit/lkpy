@@ -230,8 +230,15 @@ jobs:
     displayName: 'Install dependencies'
 
   - script: |
-      python -m pytest
-    displayName: 'pytest'
+      python -m pytest --junitxml=build/test-results.xml
+    displayName: 'Test LKPY'
+  
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'build/test-results.xml'
+      testRunTitle: 'Publish test results for Windows Python $(python.version)'
+
 
 - job: 'WindowsConda'
   pool:
