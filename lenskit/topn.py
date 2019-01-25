@@ -1,4 +1,9 @@
+import logging
+
 import numpy as np
+import pandas as pd
+
+_log = logging.getLogger(__name__)
 
 
 def precision(recs, truth):
@@ -100,7 +105,88 @@ def ndcg(recs, truth, discount=np.log2):
 
     return achieved / ideal
 
-from .metrics.topn import *
+
+class RecListAnalysis:
+    """
+    Compute one or more top-N metrics over recommendation lists.
+
+    This method groups the recommendations by the specified columns,
+    and computes the metric over each group.  The default set of grouping
+    columns is all columns *except* the following:
+
+    * ``item``
+    * ``rank``
+    * ``score``
+
+    The truth frame, ``truth``, is expected to match over (a subset of) the
+    grouping columns, and contain at least an ``item`` column.  If it also
+    contains a ``rating`` column, that is used as the users' rating for
+    metrics that require it; otherwise, a rating value of 1 is assumed.
+
+    Args:
+        group_cols(list):
+            The columns to group by, or ``None`` to use the default.
+    """
+
+    DEFAULT_SKIP_COLS = ['item', 'rank', 'score']
+
+    def __init__(self, group_cols=None):
+        self.group_cols = group_cols
+        self.metrics = []
+
+    def add_metric(self, metric, *, name=None, **kwargs):
+        """
+        Add a metric to the analysis.
+
+        A metric is a function of two arguments: the a single group of the recommendation
+        frame, and the corresponding truth frame.  The truth frame will be indexed by
+        item ID.  The metric functions in this module are usable; the
+        :mod:`lenskit.metrics.topn` module provides underlying implementations
+        for some of them that operate on more raw structures.
+
+        Args:
+            metric: The metric to compute.
+            name: The name to assign the metric. If not provided, the function name is used.
+            **kwargs: Additional arguments to pass to the metric.
+        """
+        if name is None:
+            name = metric.__name__
+
+        self.metrics.append((metric, name, kwargs))
+
+    def compute(self, recs, truth):
+        """
+        Run the analysis.  Neither data frame should be meaningfully indexed.
+
+        Args:
+            recs(pandas.DataFrame):
+                A data frame of recommendations.
+            truth(pandas.DataFrame):
+                A data frame of ground truth (test) data.
+
+        Returns:
+            pandas.DataFrame: The results of the analysis.
+        """
+        gcols = self.group_cols
+        if gcols is None:
+            gcols = [c for c in recs.columns if c not in self.DEFAULT_SKIP_COLS]
+
+        ti_cols = [c for c in gcols if c in truth.columns]
+        truth = truth.set_index(ti_cols)
+
+        _log.info('analyzing %d recommendations (%d truth rows)', len(recs), len(truth))
+        _log.info('using group columns %s', gcols)
+        _log.info('using truth ID columns %s', ti_cols)
+
+        return recs.groupby(gcols).apply(self._group_compute, truth=truth, cols=ti_cols)
+
+    def _group_compute(self, recs, truth, cols):
+        key = recs.loc[:, cols]
+        key = key.iloc[[0], :]
+        g_truth = key.join(truth, on=cols)
+        g_truth = g_truth.set_index('item')
+        vals = dict((k, f(recs, truth, **args)) for (f, k, args) in self.metrics)
+        return pd.DataFrame(vals)
 
 
 class UnratedCandidates:
