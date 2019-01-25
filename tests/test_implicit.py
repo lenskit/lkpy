@@ -53,7 +53,6 @@ def test_implicit_als_train_rec():
 def test_implicit_als_batch_accuracy():
     import lenskit.crossfold as xf
     from lenskit import batch, topn
-    import lenskit.metrics.topn as lm
 
     ratings = lktu.ml100k.load_ratings()
 
@@ -67,15 +66,20 @@ def test_implicit_als_batch_accuracy():
         users = test.user.unique()
         _log.info('testing %d users', len(users))
         candidates = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, users, 100, candidates, test)
+        recs = batch.recommend(algo, users, 100, candidates)
         return recs
 
-    folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
+    folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
+    test = pd.concat(f.test for f in folds)
+
     recs = pd.concat(eval(train, test) for (train, test) in folds)
 
     _log.info('analyzing recommendations')
-    dcg = recs.groupby('user').rating.apply(lm.dcg)
-    _log.info('dcg for users is %.4f', dcg.mean())
+    rla = topn.RecListAnalysis()
+    rla.add_metric(topn.ndcg)
+    results = rla.compute(recs, test)
+    dcg = results.ndcg
+    _log.info('nDCG for %d users is %.4f', len(dcg), dcg.mean())
     assert dcg.mean() > 0
 
 

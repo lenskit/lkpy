@@ -297,7 +297,7 @@ class MultiEval:
         watch = util.Stopwatch()
         users = test.user.unique()
         _logger.info('generating recommendations for %d users for %s', len(users), algo)
-        recs = recommend(algo, users, self.recommend, candidates, test,
+        recs = recommend(algo, users, self.recommend, candidates,
                          nprocs=self.nprocs)
         watch.stop()
         _logger.info('generated recommendations in %s', watch)

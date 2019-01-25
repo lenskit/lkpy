@@ -491,7 +491,6 @@ def test_ii_known_preds():
 def test_ii_batch_recommend(ncpus):
     import lenskit.crossfold as xf
     from lenskit import batch, topn
-    import lenskit.metrics.topn as lm
 
     if not os.path.exists('ml-100k/u.data'):
         raise pytest.skip()
@@ -512,11 +511,19 @@ def test_ii_batch_recommend(ncpus):
         res.loc[res.rating.isna(), 'rating'] = 0
         return res
 
-    recs = pd.concat((eval(train, test)
-                      for (train, test)
-                      in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
+    test_frames = []
+    recs = []
+    for train, test in xf.partition_users(ratings, 5, xf.SampleFrac(0.2)):
+        test_frames.append(test)
+        recs.append(eval(train, test))
+
+    test = pd.concat(test_frames)
+    recs = pd.concat(recs)
 
     _log.info('analyzing recommendations')
-    dcg = recs.groupby('user').rating.apply(lm.dcg)
-    _log.info('DCG for %d users is %f', len(dcg), dcg.mean())
-    assert dcg.mean() > 0
+    rla = topn.RecListAnalysis()
+    rla.add_metric(topn.ndcg)
+    results = rla.compute(recs, test)
+    dcg = results.ndcg
+    _log.info('nDCG for %d users is %f', len(dcg), dcg.mean())
+    assert dcg.mean() > 0.03

@@ -41,7 +41,7 @@ def _predict_worker(job):
     return res.to_msgpack()
 
 
-def predict(algo, pairs, nprocs=None):
+def predict(algo, pairs, *, nprocs=None):
     """
     Generate predictions for user-item pairs.  The provided algorithm should be a
     :py:class:`algorithms.Predictor` or a function of two arguments: the user ID and

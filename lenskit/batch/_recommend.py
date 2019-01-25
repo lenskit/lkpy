@@ -1,4 +1,5 @@
 import logging
+import warnings
 import multiprocessing as mp
 from multiprocessing.pool import Pool
 
@@ -56,7 +57,7 @@ def _recommend_worker(user):
     return res.to_msgpack()
 
 
-def recommend(algo, users, n, candidates, ratings=None, nprocs=None):
+def recommend(algo, users, n, candidates, *, nprocs=None, **kwargs):
     """
     Batch-recommend for multiple users.  The provided algorithm should be a
     :py:class:`algorithms.Recommender` or :py:class:`algorithms.Predictor` (which
@@ -70,14 +71,16 @@ def recommend(algo, users, n, candidates, ratings=None, nprocs=None):
             the users' candidate sets. This can be a function, in which case it will
             be passed each user ID; it can also be a dictionary, in which case user
             IDs will be looked up in it.
-        ratings(pandas.DataFrame):
-            if not ``None``, a data frame of ratings to attach to recommendations when
-            available.
+        nprocs(int):
+            The number of processes to use for parallel recommendations.
 
     Returns:
         A frame with at least the columns ``user``, ``rank``, and ``item``; possibly also
         ``score``, and any other columns returned by the recommender.
     """
+
+    if 'ratings' in kwargs:
+        warnings.warn('Providing ratings to recommend is not supported', DeprecationWarning)
 
     if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
         _logger.info('starting recommend process with %d workers', nprocs)
@@ -89,11 +92,5 @@ def recommend(algo, users, n, candidates, ratings=None, nprocs=None):
         results = _recommend_seq(algo, users, n, candidates)
 
     results = pd.concat(results, ignore_index=True)
-
-    if ratings is not None and 'rating' in ratings.columns:
-        # combine with test ratings for relevance data
-        results = pd.merge(results, ratings, how='left', on=('user', 'item'))
-        # fill in missing 0s
-        results.loc[results.rating.isna(), 'rating'] = 0
 
     return results
