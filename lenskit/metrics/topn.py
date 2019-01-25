@@ -5,106 +5,53 @@ Top-N evaluation metrics.
 import pandas as pd
 import numpy as np
 
-from .. import check
 
-
-def precision(recs, relevant):
+def precision(recs, truth):
     """
     Compute the precision of a set of recommendations.
-
-    Args:
-        recs(array-like): a sequence of recommended items
-        relevant(set-like): the set of relevant items
-
-    Returns:
-        double: the fraction of recommended items that are relevant
     """
-    check.check_value(not isinstance(relevant, set),
-                      "set type not supported for relevant set",
-                      warn=True)
-    if len(recs) == 0:
+
+    nrecs = len(recs)
+    if nrecs == 0:
         return None
 
-    recs = pd.Series(recs)
-    ngood = recs.isin(relevant).sum()
-    return ngood / len(recs)
+    ngood = recs['item'].isin(truth.index).sum()
+    return ngood / nrecs
 
 
-def recall(recs, relevant):
+def recall(recs, truth):
     """
     Compute the recall of a set of recommendations.
-
-    Args:
-        recs(array-like): a sequence of recommended items
-        relevant(set-like): the set of relevant items
-
-    Returns:
-        double: the fraction of relevant items that were recommended.
     """
-    check.check_value(not isinstance(relevant, set),
-                      "set type not supported for relevant set",
-                      warn=True)
-    if len(relevant) == 0:
-        return np.nan
 
-    recs = pd.Series(recs)
-    ngood = recs.isin(relevant).sum()
-    return ngood / len(relevant)
+    nrel = len(truth)
+    if nrel == 0:
+        return None
+
+    ngood = recs['item'].isin(truth.index).sum()
+    return ngood / nrel
 
 
-def recip_rank(recs, relevant):
+def recip_rank(recs, truth):
     """
-    Compute the reciprocal rank of the first relevant item in a recommendation list.
-    This is used to compute MRR.
+    Compute the reciprocal rank of the first relevant item in a list of recommendations.
 
-    Args:
-        recs(array-like): a sequence of recommended items
-        relevant(set-like): the set of relevant items
-
-    Return:
-        double: the reciprocal rank of the first relevant item.
+    If no elements are relevant, the reciprocal rank is 0.
     """
-    check.check_value(not isinstance(relevant, set),
-                      "set type not supported for relevant set",
-                      warn=True)
-    good = np.isin(recs, relevant)
-    # nonzero returns a tuple, we have one dimension
-    (nzp,) = good.nonzero()
-    if len(nzp) == 0:
-        return 0.0
+    good = recs['item'].isin(truth.index)
+    npz, = np.nonzero(good)
+    if len(npz):
+        return 1.0 / (npz[0] + 1.0)
     else:
-        return 1.0 / (nzp[0] + 1)
+        return 0.0
 
 
 def _dcg(scores, discount=np.log2):
-    ranks = np.arange(1, len(scores) + 1)
-    disc = discount(ranks)
-    np.maximum(disc, 1, out=disc)
-    np.reciprocal(disc, out=disc)
-    return np.dot(scores, disc)
-
-
-def dcg(scores, discount=np.log2):
     """
     Compute the Discounted Cumulative Gain of a series of recommended items with rating scores.
     These should be relevance scores; they can be :math:`{0,1}` for binary relevance data.
 
-    Discounted cumultative gain is computed as:
-
-    .. math::
-        \\begin{align*}
-        \\mathrm{DCG}(L,u) & = \\sum_{i=1}^{|L|} \\frac{r_{ui}}{d(i)}
-        \\end{align*}
-
-    You will usually want *normalized* discounted cumulative gain; this is
-
-    .. math::
-        \\begin{align*}
-        \\mathrm{nDCG}(L, u) & = \\frac{\\mathrm{DCG}(L,u)}{\\mathrm{DCG}(L_{\\mathrm{ideal}}, u)}
-        \\end{align*}
-
-    Compute that by computing the DCG of the recommendations & the test data, then merge the results
-    and divide.  The :py:func:`compute_ideal_dcgs` function is helpful for preparing that data.
+    This is not a true top-N metric, but is a utility function for other metrics.
 
     Args:
         scores(array-like):
@@ -118,27 +65,44 @@ def dcg(scores, discount=np.log2):
     """
 
     scores = np.nan_to_num(scores, copy=False)
-    return _dcg(scores, discount)
+    ranks = np.arange(1, len(scores) + 1)
+    disc = discount(ranks)
+    np.maximum(disc, 1, out=disc)
+    np.reciprocal(disc, out=disc)
+    return np.dot(scores, disc)
 
 
-def compute_ideal_dcgs(ratings, discount=np.log2):
+def ndcg(recs, truth, discount=np.log2):
     """
-    Compute the ideal DCG for rating data.  This groups the rating data by everything *except* its
-    ``item`` and ``rating`` columns, sorts each group by rating, and computes the DCG.
+    Compute the normalized discounted cumulative gain.
+
+    Discounted cumultative gain is computed as:
+
+    .. math::
+        \\begin{align*}
+        \\mathrm{DCG}(L,u) & = \\sum_{i=1}^{|L|} \\frac{r_{ui}}{d(i)}
+        \\end{align*}
+
+    This is then normalized as follows:
+
+    .. math::
+        \\begin{align*}
+        \\mathrm{nDCG}(L, u) & = \\frac{\\mathrm{DCG}(L,u)}{\\mathrm{DCG}(L_{\\mathrm{ideal}}, u)}
+        \\end{align*}
 
     Args:
-        ratings(pandas.DataFrame):
-            A rating data frame with ``item``, ``rating``, and other columns.
-
-    Returns:
-        pandas.DataFrame: The data frame of DCG values.  The ``item`` and ``rating`` columns in
-            ``ratings`` are replaced by an ``ideal_dcg`` column.
+        recs: The recommendation list.
+        truth: The user's test data.
+        discount(ufunc):
+            The rank discount function.  Each item's score will be divided the discount of its rank,
+            if the discount is greater than 1.
     """
+    if 'rating' in truth.columns:
+        ideal = _dcg(truth.rating.sort_values(ascending=False), discount)
+        merged = recs[['item']].join(truth[['rating']], on='item', how='left')
+        achieved = _dcg(merged.rating, discount)
+    else:
+        ideal = _dcg(np.ones(len(truth)), discount)
+        achieved = _dcg(recs.item.isin(truth.index), discount)
 
-    def idcg(s):
-        return dcg(s.sort_values(ascending=False), discount=discount)
-
-    cols = [c for c in ratings.columns if c not in ('item', 'rating')]
-
-    res = ratings.groupby(cols).rating.agg(idcg)
-    return res.reset_index(name='ideal_dcg')
+    return achieved / ideal

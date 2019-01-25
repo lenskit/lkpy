@@ -3,7 +3,7 @@ import pandas as pd
 
 from pytest import approx
 
-from lenskit.topn import _dcg, ndcg
+from lenskit.metrics.topn import _dcg, ndcg
 import lk_test_utils as lktu
 
 

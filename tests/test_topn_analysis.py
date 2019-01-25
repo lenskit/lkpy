@@ -3,6 +3,7 @@ import pandas as pd
 
 from pytest import approx
 
+from lenskit.metrics.topn import _dcg
 from lenskit import topn
 import lk_test_utils as lktu
 
@@ -53,7 +54,7 @@ def test_run_two():
     assert all(res.index.levels[0] == 'a')
     assert all(res.index.levels[1] == ['a', 'b'])
     assert all(res.reset_index().user == ['a', 'b'])
-    partial_ndcg = topn._dcg([0.0, 5.0]) / topn._dcg([5, 4, 3])
+    partial_ndcg = _dcg([0.0, 5.0]) / _dcg([5, 4, 3])
     assert res.ndcg.values == approx([1.0, partial_ndcg])
     assert res.precision.values == approx([1.0, 1/2])
     assert res.recall.values == approx([1.0, 1/3])
@@ -87,7 +88,7 @@ def test_spec_group_cols():
     assert all(res.index.levels[0] == 'a')
     assert all(res.index.levels[1] == ['a', 'b'])
     assert all(res.reset_index().user == ['a', 'b'])
-    partial_ndcg = topn._dcg([0.0, 5.0]) / topn._dcg([5, 4, 3])
+    partial_ndcg = _dcg([0.0, 5.0]) / _dcg([5, 4, 3])
     assert res.ndcg.values == approx([1.0, partial_ndcg])
     assert res.precision.values == approx([1.0, 1/2])
     assert res.recall.values == approx([1.0, 1/3])
