@@ -117,6 +117,7 @@ class RecListAnalysis:
     * ``item``
     * ``rank``
     * ``score``
+    * ``rating``
 
     The truth frame, ``truth``, is expected to match over (a subset of) the
     grouping columns, and contain at least an ``item`` column.  If it also
@@ -128,7 +129,7 @@ class RecListAnalysis:
             The columns to group by, or ``None`` to use the default.
     """
 
-    DEFAULT_SKIP_COLS = ['item', 'rank', 'score']
+    DEFAULT_SKIP_COLS = ['item', 'rank', 'score', 'rating']
 
     def __init__(self, group_cols=None):
         self.group_cols = group_cols
