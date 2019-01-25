@@ -3,9 +3,10 @@ import logging
 import numpy as np
 import pandas as pd
 
+from .metrics.topn import *
+
 _log = logging.getLogger(__name__)
 
-from .metrics.topn import *
 
 class RecListAnalysis:
     """
