@@ -12,15 +12,18 @@ def test_run_one():
     rla.add_metric(topn.precision)
     rla.add_metric(topn.recall)
 
-    recs = pd.DataFrame({'user': 1, 'item': [5]})
+    recs = pd.DataFrame({'user': 1, 'item': [2]})
     truth = pd.DataFrame({'user': 1, 'item': [1, 2, 3], 'rating': [3.0, 5.0, 4.0]})
 
     res = rla.compute(recs, truth)
 
+    assert res.index.name == 'user'
+    assert res.index.is_unique
+
     assert len(res) == 1
-    assert all(res.user == 1)
-    assert all(res.precision == 0.0)
-    assert all(res.recall.isna())
+    assert all(res.index == 1)
+    assert all(res.precision == 1.0)
+    assert res.recall.values == approx(1/3)
 
 
 def test_run_two():
@@ -41,8 +44,15 @@ def test_run_two():
     })
 
     res = rla.compute(recs, truth)
+    print(res)
+
     assert len(res) == 2
-    assert all(res.user == ['a', 'b'])
-    assert res.ndcg == approx([1.0, 0.0])
-    assert res.precision == approx(1.0, 1/2)
-    assert res.precision == approx(1.0, 1/3)
+    assert res.index.nlevels == 2
+    assert res.index.names == ['data', 'user']
+    assert all(res.index.levels[0] == 'a')
+    assert all(res.index.levels[1] == ['a', 'b'])
+    assert all(res.reset_index().user == ['a', 'b'])
+    partial_ndcg = topn._dcg([0.0, 5.0]) / topn._dcg([5, 4, 3])
+    assert res.ndcg.values == approx([1.0, partial_ndcg])
+    assert res.precision.values == approx([1.0, 1/2])
+    assert res.recall.values == approx([1.0, 1/3])

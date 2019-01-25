@@ -185,8 +185,8 @@ class RecListAnalysis:
         key = key.iloc[[0], :]
         g_truth = key.join(truth, on=cols)
         g_truth = g_truth.set_index('item')
-        vals = dict((k, f(recs, truth, **args)) for (f, k, args) in self.metrics)
-        return pd.DataFrame(vals)
+        vals = dict((k, f(recs, g_truth, **args)) for (f, k, args) in self.metrics)
+        return pd.Series(vals)
 
 
 class UnratedCandidates:
