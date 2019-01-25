@@ -2,15 +2,13 @@
 Top-N evaluation metrics.
 """
 
-import pandas as pd
 import numpy as np
 
 
 def precision(recs, truth):
     """
-    Compute the precision of a set of recommendations.
+    Compute recommendation precision.
     """
-
     nrecs = len(recs)
     if nrecs == 0:
         return None
@@ -21,9 +19,8 @@ def precision(recs, truth):
 
 def recall(recs, truth):
     """
-    Compute the recall of a set of recommendations.
+    Compute recommendation recall.
     """
-
     nrel = len(truth)
     if nrel == 0:
         return None
@@ -63,7 +60,6 @@ def _dcg(scores, discount=np.log2):
     Returns:
         double: the DCG of the scored items.
     """
-
     scores = np.nan_to_num(scores, copy=False)
     ranks = np.arange(1, len(scores) + 1)
     disc = discount(ranks)
