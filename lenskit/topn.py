@@ -1,4 +1,6 @@
 import logging
+import warnings
+from collections import OrderedDict as od
 
 import numpy as np
 import pandas as pd
@@ -43,7 +45,7 @@ class RecListAnalysis:
 
         A metric is a function of two arguments: the a single group of the recommendation
         frame, and the corresponding truth frame.  The truth frame will be indexed by
-        item ID.  The metrics are defined in :mod:`lenskit.metrics.topn`; they are
+        item ID.  Many metrics are defined in :mod:`lenskit.metrics.topn`; they are
         re-exported from :mod:`lenskit.topn` for convenience.
 
         Args:
@@ -69,26 +71,42 @@ class RecListAnalysis:
         Returns:
             pandas.DataFrame: The results of the analysis.
         """
+        _log.info('analyzing %d recommendations (%d truth rows)', len(recs), len(truth))
         gcols = self.group_cols
         if gcols is None:
             gcols = [c for c in recs.columns if c not in self.DEFAULT_SKIP_COLS]
+        _log.info('using group columns %s', gcols)
+        gc_map = dict((c, i) for (i, c) in enumerate(gcols))
 
         ti_cols = [c for c in gcols if c in truth.columns]
-        truth = truth.set_index(ti_cols)
+        ti_cols.append('item')
 
-        _log.info('analyzing %d recommendations (%d truth rows)', len(recs), len(truth))
-        _log.info('using group columns %s', gcols)
         _log.info('using truth ID columns %s', ti_cols)
+        truth = truth.set_index(ti_cols)
+        if not truth.index.is_unique:
+            warnings.warn('truth frame does not have unique values')
 
-        return recs.groupby(gcols).apply(self._group_compute, truth=truth, cols=ti_cols)
+        # we manually use grouping internals
+        grouped = recs.groupby(gcols)
 
-    def _group_compute(self, recs, truth, cols):
-        key = recs.loc[:, cols]
-        key = key.iloc[[0], :]
-        g_truth = key.join(truth, on=cols)
-        g_truth = g_truth.set_index('item')
-        vals = dict((k, f(recs, g_truth, **args)) for (f, k, args) in self.metrics)
-        return pd.Series(vals)
+        res = pd.DataFrame(od((k, np.nan) for (f, k, args) in self.metrics),
+                           index=grouped.grouper.result_index)
+        assert len(res) == len(grouped.groups)
+        assert res.index.nlevels == len(gcols)
+
+        for i, row_key in enumerate(res.index):
+            g_rows = grouped.indices[row_key]
+            g_recs = recs.iloc[g_rows, :]
+            if len(ti_cols) == len(gcols) + 1:
+                tr_key = row_key
+            else:
+                tr_key = tuple([row_key[gc_map[c]] for c in ti_cols[:-1]])
+            _log.info(tr_key)
+            g_truth = truth.loc[tr_key, :]
+            for j, (mf, mn, margs) in enumerate(self.metrics):
+                res.iloc[i, j] = mf(g_recs, g_truth, **margs)
+
+        return res
 
 
 class UnratedCandidates:
