@@ -81,7 +81,7 @@ def test_solve_cholesky():
         w = solve_tri(L, A.T @ b)
         x = solve_tri(L, w, transpose=True)
 
-        assert x == approx(xexp)
+        assert x == approx(xexp, abs=1.0e-3)
 
 
 def test_solve_dposv():

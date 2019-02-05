@@ -91,7 +91,7 @@ class RecListAnalysis:
 
         res = pd.DataFrame(od((k, np.nan) for (f, k, args) in self.metrics),
                            index=grouped.grouper.result_index)
-        assert len(res) == len(grouped.groups)
+        assert len(res) == len(grouped.groups), "result set size {} != group count {}".format(len(res), len(grouped.groups))
         assert res.index.nlevels == len(gcols)
 
         for i, row_key in enumerate(res.index):

@@ -77,7 +77,7 @@ def test_inner_format():
 
     def inner(recs, truth, foo='a'):
         assert foo == 'b'
-        assert all(recs.columns == ['data', 'user', 'item', 'rank'])
+        assert set(recs.columns) == set(['data', 'user', 'item', 'rank'])
         assert len(recs[['data', 'user']].drop_duplicates()) == 1
         assert truth.index.name == 'item'
         assert truth.index.is_unique
