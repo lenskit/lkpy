@@ -505,11 +505,7 @@ def test_ii_batch_recommend(ncpus):
         _log.info('testing %d users', test.user.nunique())
         cand_fun = topn.UnratedCandidates(train)
         recs = batch.recommend(algo, test.user.unique(), 100, cand_fun, nprocs=ncpus)
-        # combine with test ratings for relevance data
-        res = pd.merge(recs, test, how='left', on=('user', 'item'))
-        # fill in missing 0s
-        res.loc[res.rating.isna(), 'rating'] = 0
-        return res
+        return recs
 
     test_frames = []
     recs = []
