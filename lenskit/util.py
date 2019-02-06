@@ -217,6 +217,9 @@ def write_parquet(path, frame, append=False):
     """
     fn = fspath(path)
     append = append and os.path.exists(fn)
+    _log.debug('%s %d rows to Parquet file %s',
+               'appending' if append else 'writing',
+               len(frame), fn)
     if fastparquet is not None:
         fastparquet.write(fn, frame, append=append, compression='snappy')
     elif append:
