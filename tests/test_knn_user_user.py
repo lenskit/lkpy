@@ -249,7 +249,7 @@ def test_uu_implicit_batch_accuracy():
     algo = knn.UserUser(30, center=False, aggregate='sum')
 
     folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
-    test = pd.concat(f.test for f in folds)
+    all_test = pd.concat(f.test for f in folds)
 
     rec_lists = []
     for train, test in folds:
@@ -263,7 +263,7 @@ def test_uu_implicit_batch_accuracy():
 
     rla = topn.RecListAnalysis()
     rla.add_metric(topn.ndcg)
-    results = rla.compute(recs, test)
+    results = rla.compute(recs, all_test)
     user_dcg = results.ndcg
 
     dcg = user_dcg.mean()

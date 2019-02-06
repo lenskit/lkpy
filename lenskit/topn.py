@@ -99,7 +99,7 @@ class RecListAnalysis:
             g_rows = grouped.indices[row_key]
             g_recs = recs.iloc[g_rows, :]
             if len(ti_cols) == len(gcols) + 1:
-                tr_key = row_key if isinstance(row_key, tuple) else (row_key,)
+                tr_key = row_key
             else:
                 tr_key = tuple([row_key[gc_map[c]] for c in ti_cols[:-1]])
 
