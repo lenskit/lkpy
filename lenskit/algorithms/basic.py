@@ -267,19 +267,41 @@ class TopN(Recommender):
     """
     Basic recommender that implements top-N recommendation using a predictor.
 
+    .. note::
+        This class does not do anything of its own in :meth:`fit`.  If its
+        predictor and candidate selector are both fit, the top-N recommender
+        does not need to be fit.
+
     Args:
         predictor(Predictor):
             The underlying predictor.
+        selector(CandidateSelector):
+            The candidate selector.  If ``None``, uses :class:`UnratedItemCandidateSelector`.
     """
 
-    def __init__(self, predictor):
+    def __init__(self, predictor, selector=None):
         self.predictor = predictor
+        self.selector = selector if selector is not None else UnratedItemCandidateSelector()
 
     def fit(self, ratings, *args, **kwargs):
+        """
+        Fit the recommender.
+
+        Args:
+            ratings(pandas.DataFrame):
+                The rating or interaction data.  Passed changed to the predictor and
+                candidate selector.
+            args, kwargs:
+                Additional arguments for the predictor to use in its training process.
+        """
         self.predictor.fit(ratings, *args, **kwargs)
+        self.selector.fit(ratings)
         return self
 
     def recommend(self, user, n=None, candidates=None, ratings=None):
+        if candidates is None:
+            candidates = self.selector.candidates(user, ratings)
+
         scores = self.predictor.predict_for_user(user, candidates, ratings)
         scores = scores[scores.notna()]
         scores = scores.sort_values(ascending=False)
