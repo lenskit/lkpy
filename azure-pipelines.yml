@@ -230,7 +230,7 @@ jobs:
     displayName: 'Install dependencies'
 
   - script: |
-      python -m pytest --junitxml=build/test-results.xml --log-file=build/test.log --log-file-level=DEBUG
+      python -m pytest --junitxml=build/test-results.xml
     displayName: 'Test LKPY'
   
   - task: PublishTestResults@2
@@ -238,12 +238,6 @@ jobs:
     inputs:
       testResultsFiles: 'build/test-results.xml'
       testRunTitle: 'Publish test results for Windows Python $(python.version)'
-
-  - task: PublishBuildArtifacts@1
-    condition: succeededOrFailed()
-    inputs:
-      pathtoPublish: build/test.log
-      artifactName: Test log $(python.version)
 
 - job: 'WindowsConda'
   pool:
