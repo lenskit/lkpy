@@ -283,3 +283,20 @@ def test_pop_save_load():
     assert recs.score.iloc[0] == counts.max()
     # the 10 most popular should be the same
     assert all(counts.index[:10] == recs.item[:10])
+
+
+def test_unrated_selector():
+    sel = basic.UnratedItemCandidateSelector()
+    s2 = sel.fit(simple_df)
+    assert s2 is sel
+
+    assert set(sel.candidates(10)) == set([3])
+    assert set(sel.candidates(12)) == set([3, 2])
+    assert set(sel.candidates(11)) == set([1, 2, 3])
+
+
+def test_unrated_override():
+    sel = basic.UnratedItemCandidateSelector()
+    s2 = sel.fit(simple_df)
+
+    assert set(sel.candidates(10, [2])) == set([1, 3])

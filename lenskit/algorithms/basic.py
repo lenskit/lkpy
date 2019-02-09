@@ -7,9 +7,10 @@ import pathlib
 from collections.abc import Iterable, Sequence
 
 import pandas as pd
+import numpy as np
 
 from .. import check
-from . import Predictor, Recommender
+from . import Predictor, Recommender, CandidateSelector
 
 _logger = logging.getLogger(__name__)
 
@@ -273,3 +274,40 @@ class TopN(Recommender):
 
     def __str__(self):
         return 'TopN/' + str(self.predictor)
+
+
+class UnratedItemCandidateSelector(CandidateSelector):
+    """
+    :class:`CandidateSelector` that selects items a user has not rated as
+    candidates.  When this selector is fit, it memorizes the rated items.
+
+    Attributes:
+        items_(pandas.Index): All known items.
+        user_items_(dict):
+            Items rated by each known user, as positions in the ``items`` index.
+    """
+    items_ = None
+    user_items_ = None
+
+    def fit(self, ratings):
+        self.items_ = pd.Index(np.unique(ratings['item']))
+        uimap = {}
+        for u, g in ratings.groupby('user'):
+            uimap[u] = self.items_.get_indexer(np.unique(g['item']))
+
+        self.user_items_ = uimap
+        return self
+
+    def candidates(self, user, ratings=None):
+        if ratings is None:
+            uis = self.user_items_.get(user, None)
+        else:
+            uis = self.items_.get_indexer(self.rated_items(ratings))
+            uis = uis[uis >= 0]
+
+        if uis is not None:
+            mask = np.full(len(self.items_), True)
+            mask[uis] = False
+            return self.items_.values[mask]
+        else:
+            return self.items_.values
