@@ -3,7 +3,6 @@ Basic utility algorithms and combiners.
 """
 
 import logging
-import pathlib
 from collections.abc import Iterable, Sequence
 
 import pandas as pd
