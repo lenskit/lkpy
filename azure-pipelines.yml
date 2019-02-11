@@ -258,6 +258,9 @@ jobs:
       environmentName: lkpy
       packageSpecs: $(conda.deps)
 
+  - script: conda update -y --all
+    displayName: 'Refresh Conda'
+
   - script: |
       pip install $(pip.extras)
     displayName: 'Extra PyPI deps'
