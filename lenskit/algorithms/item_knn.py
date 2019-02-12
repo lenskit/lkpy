@@ -191,7 +191,7 @@ class ItemItem(Predictor):
         return nmat, item_means
 
     def _normalize(self, rmat):
-        rmat = matrix.csr_to_scipy(rmat)
+        rmat = rmat.to_scipy()
         # compute column norms
         norms = spla.norm(rmat, 2, axis=0)
         # and multiply by a diagonal to normalize columns
@@ -203,7 +203,7 @@ class ItemItem(Predictor):
         # and reset NaN
         norm_mat.data[np.isnan(norm_mat.data)] = 0
         _logger.info('[%s] normalized rating matrix columns', self._timer)
-        return matrix.csr_from_scipy(norm_mat, False)
+        return matrix.CSR.from_scipy(norm_mat, False)
 
     def _compute_similarities(self, rmat):
         mkl = matrix.mkl_ops()
@@ -214,7 +214,7 @@ class ItemItem(Predictor):
 
     def _scipy_similarities(self, rmat):
         nitems = rmat.ncols
-        sp_rmat = matrix.csr_to_scipy(rmat)
+        sp_rmat = rmat.to_scipy()
 
         _logger.info('[%s] multiplying matrix with scipy', self._timer)
         smat = sp_rmat.T @ sp_rmat
@@ -234,7 +234,7 @@ class ItemItem(Predictor):
 
         _logger.info('[%s] multiplying matrix with MKL', self._timer)
         smat = mkl.csr_syrk(rmat)
-        rows = matrix.csr_rowinds(smat)
+        rows = smat.rowinds()
         cols = smat.colinds
         vals = smat.values
 
@@ -269,7 +269,7 @@ class ItemItem(Predictor):
 
     def _select_similarities(self, nitems, rows, cols, vals):
         _logger.info('[%s] ordering similarities', self._timer)
-        csr = matrix.csr_from_coo(rows, cols, vals, shape=(nitems, nitems))
+        csr = matrix.CSR.from_coo(rows, cols, vals, shape=(nitems, nitems))
         csr.sort_values()
 
         if self.save_nbrs is None or self.save_nbrs <= 0:
@@ -337,7 +337,7 @@ class ItemItem(Predictor):
         iscore = np.full(len(self.item_index_), np.nan, dtype=np.float_)
 
         # now compute the predictions
-        iscore = self._predict_agg(self.sim_matrix_,
+        iscore = self._predict_agg(self.sim_matrix_.N,
                                    len(self.item_index_),
                                    (self.min_nbrs, self.nnbrs),
                                    rate_v, i_pos)
@@ -356,45 +356,6 @@ class ItemItem(Predictor):
                       user, results.notna().sum(), len(items))
 
         return results
-
-    def save(self, path):
-        path = pathlib.Path(path)
-        _logger.info('saving I-I model to %s', path)
-
-        data = dict(items=self.item_index_.values, users=self.user_index_.values,
-                    means=self.item_means_)
-        data.update(matrix.csr_save(self.sim_matrix_, 's_'))
-        data.update(matrix.csr_save(self.rating_matrix_, 'r_'))
-
-        np.savez_compressed(path, **data)
-
-    def load(self, path):
-        path = pathlib.Path(path)
-        path = util.npz_path(path)
-        _logger.info('loading I-I model from %s', path)
-
-        with np.load(path) as npz:
-            items = npz['items']
-            users = npz['users']
-            means = npz['means']
-            s_mat = matrix.csr_load(npz, 's_')
-            r_mat = matrix.csr_load(npz, 'r_')
-
-        if means.dtype == np.object:
-            means = None
-
-        self.item_index_ = pd.Index(items, name='item')
-        self.user_index_ = pd.Index(users, name='user')
-        nitems = len(items)
-
-        s_mat.sort_values()
-
-        _logger.info('read %d similarities for %d items', s_mat.nnz, nitems)
-
-        self.item_counts_ = s_mat.row_nnzs()
-        self.item_means_ = means
-        self.sim_matrix_ = s_mat
-        self.rating_matrix_ = r_mat
 
     def __str__(self):
         return 'ItemItem(nnbrs={}, msize={})'.format(self.nnbrs, self.save_nbrs)

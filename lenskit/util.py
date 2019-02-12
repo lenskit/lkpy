@@ -186,21 +186,6 @@ def fspath(path):
         return str(path)
 
 
-def npz_path(path):
-    path = pathlib.Path(path)
-    p = path
-    if not p.exists():
-        p = path.with_name(path.name + '.npz')
-
-    if not p.exists():
-        p = path.with_suffix('.npz')
-
-    if not p.exists():
-        raise FileNotFoundError(path)
-
-    return p
-
-
 def read_df_detect(path):
     """
     Read a Pandas data frame, auto-detecting the file format based on filename suffix.

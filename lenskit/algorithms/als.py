@@ -6,7 +6,7 @@ from numba import njit, prange
 
 from . import basic
 from .mf_common import BiasMFPredictor, MFPredictor
-from ..matrix import sparse_ratings, CSR
+from ..matrix import sparse_ratings, _CSR
 from .. import util
 from ..math.solve import _dposv
 
@@ -19,7 +19,7 @@ Context = namedtuple('Context', [
 
 
 @njit(parallel=True, nogil=True)
-def _train_matrix(mat: CSR, other: np.ndarray, reg: float):
+def _train_matrix(mat: _CSR, other: np.ndarray, reg: float):
     "One half of an explicit ALS training round."
     nr = mat.nrows
     nf = other.shape[1]
@@ -46,7 +46,7 @@ def _train_matrix(mat: CSR, other: np.ndarray, reg: float):
 
 
 @njit(parallel=True, nogil=True)
-def _train_implicit_matrix(mat: CSR, other: np.ndarray, reg: float):
+def _train_implicit_matrix(mat: _CSR, other: np.ndarray, reg: float):
     "One half of an implicit ALS training round."
     nr = mat.nrows
     nc = other.shape[0]
@@ -101,13 +101,6 @@ class BiasedMF(BiasMFPredictor):
         iterations(int): the number of iterations to train
         reg(double): the regularization factor
         damping(double): damping factor for the underlying mean
-
-    Attributes:
-        features(int): the number of features.
-        iterations(int): the number of training iterations.
-        regularization(double): the regularization factor.
-        damping(double): the mean damping.
-        bias(.basic.Bias): the bias algorithm, or ``True`` to automatically make one.
     """
     timer = None
 
@@ -212,9 +205,9 @@ class BiasedMF(BiasMFPredictor):
     def _train_iters(self, current, uctx, ictx):
         "Generator of training iterations."
         for epoch in range(self.iterations):
-            umat = _train_matrix(uctx, current.item_matrix, self.regularization)
+            umat = _train_matrix(uctx.N, current.item_matrix, self.regularization)
             _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
-            imat = _train_matrix(ictx, umat, self.regularization)
+            imat = _train_matrix(ictx.N, umat, self.regularization)
             _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
             di = np.linalg.norm(imat - current.item_matrix, 'fro')
             du = np.linalg.norm(umat - current.user_matrix, 'fro')
@@ -281,10 +274,10 @@ class ImplicitMF(MFPredictor):
     def _train_iters(self, current, uctx, ictx):
         "Generator of training iterations."
         for epoch in range(self.iterations):
-            umat = _train_implicit_matrix(uctx, current.item_matrix,
+            umat = _train_implicit_matrix(uctx.N, current.item_matrix,
                                           self.reg)
             _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
-            imat = _train_implicit_matrix(ictx, umat, self.reg)
+            imat = _train_implicit_matrix(ictx.N, umat, self.reg)
             _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
             di = np.linalg.norm(imat - current.item_matrix, 'fro')
             du = np.linalg.norm(umat - current.user_matrix, 'fro')

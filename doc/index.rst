@@ -48,6 +48,7 @@ Resources
    evaluation/index
    algorithms
    util
+   releases
 
 
 Indices and tables

@@ -11,13 +11,13 @@ from numba.extending import get_cython_function_address
 
 __ffi = cffi.FFI()
 
-__uplo_U = np.array(ord('U'), dtype=np.int8)
-__uplo_L = np.array(ord('L'), dtype=np.int8)
-__trans_N = np.array(ord('N'), dtype=np.int8)
-__trans_T = np.array(ord('T'), dtype=np.int8)
-__trans_C = np.array(ord('C'), dtype=np.int8)
-__diag_U = np.array(ord('U'), dtype=np.int8)
-__diag_N = np.array(ord('N'), dtype=np.int8)
+__uplo_U = np.array([ord('U')], dtype=np.int8)
+__uplo_L = np.array([ord('L')], dtype=np.int8)
+__trans_N = np.array([ord('N')], dtype=np.int8)
+__trans_T = np.array([ord('T')], dtype=np.int8)
+__trans_C = np.array([ord('C')], dtype=np.int8)
+__diag_U = np.array([ord('U')], dtype=np.int8)
+__diag_N = np.array([ord('N')], dtype=np.int8)
 __inc_1 = np.ones(1, dtype=np.int32)
 
 __dtrsv = __ffi.cast("void (*) (char*, char*, char*, int*, double*, int*, double*, int*)",
@@ -89,6 +89,10 @@ def _dposv(A, b, lower):
 
 
 def dposv(A, b, lower=False):
+    """
+    Interface to the BLAS dposv function.  A Numba-accessible verison without
+    error checking is exposed as :py:func:`_dposv`.
+    """
     info = _dposv(A, b, lower)
     if info < 0:
         raise ValueError('invalid args to dposv, code ' + str(info))

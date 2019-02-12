@@ -1,11 +1,11 @@
-from itertools import product
+import pickle
 import numpy as np
 import scipy.sparse as sps
 
 import lenskit.matrix as lm
 import lk_test_utils as lktu
 
-from pytest import mark, approx
+from pytest import mark, approx, raises
 
 
 @mark.parametrize('copy', [True, False])
@@ -17,7 +17,7 @@ def test_csr_from_sps(copy):
     # make sure it's sparse
     assert smat.nnz == np.sum(mat > 0)
 
-    csr = lm.csr_from_scipy(smat, copy=copy)
+    csr = lm.CSR.from_scipy(smat, copy=copy)
     assert csr.nnz == smat.nnz
     assert csr.nrows == smat.shape[0]
     assert csr.ncols == smat.shape[1]
@@ -38,7 +38,7 @@ def test_csr_is_numpy_compatible():
     # make sure it's sparse
     assert smat.nnz == np.sum(mat > 0)
 
-    csr = lm.csr_from_scipy(smat)
+    csr = lm.CSR.from_scipy(smat)
 
     d2 = csr.values * 10
     assert d2 == approx(smat.data * 10)
@@ -49,11 +49,86 @@ def test_csr_from_coo():
     cols = np.array([1, 2, 0, 1], dtype=np.int32)
     vals = np.arange(4, dtype=np.float_)
 
-    csr = lm.csr_from_coo(rows, cols, vals)
+    csr = lm.CSR.from_coo(rows, cols, vals)
     assert csr.nrows == 4
     assert csr.ncols == 3
     assert csr.nnz == 4
     assert csr.values == approx(vals)
+
+
+def test_csr_rowinds():
+    rows = np.array([0, 0, 1, 3], dtype=np.int32)
+    cols = np.array([1, 2, 0, 1], dtype=np.int32)
+    vals = np.arange(4, dtype=np.float_)
+    csr = lm.CSR.from_coo(rows, cols, vals)
+
+    ris = csr.rowinds()
+    assert all(ris == rows)
+
+
+def test_csr_set_values():
+    rows = np.array([0, 0, 1, 3], dtype=np.int32)
+    cols = np.array([1, 2, 0, 1], dtype=np.int32)
+    vals = np.arange(4, dtype=np.float_)
+
+    csr = lm.CSR.from_coo(rows, cols, vals)
+
+    v2 = np.random.randn(4)
+    csr.values = v2
+
+    assert all(csr.values == v2)
+
+
+def test_csr_set_values_oversize():
+    rows = np.array([0, 0, 1, 3], dtype=np.int32)
+    cols = np.array([1, 2, 0, 1], dtype=np.int32)
+    vals = np.arange(4, dtype=np.float_)
+
+    csr = lm.CSR.from_coo(rows, cols, vals)
+
+    v2 = np.random.randn(6)
+    csr.values = v2
+
+    assert all(csr.values == v2[:4])
+
+
+def test_csr_set_values_undersize():
+    rows = np.array([0, 0, 1, 3], dtype=np.int32)
+    cols = np.array([1, 2, 0, 1], dtype=np.int32)
+    vals = np.arange(4, dtype=np.float_)
+
+    csr = lm.CSR.from_coo(rows, cols, vals)
+
+    v2 = np.random.randn(3)
+
+    with raises(ValueError):
+        csr.values = v2
+
+    assert all(csr.values == vals)
+
+
+def test_csr_set_values_none():
+    rows = np.array([0, 0, 1, 3], dtype=np.int32)
+    cols = np.array([1, 2, 0, 1], dtype=np.int32)
+    vals = np.arange(4, dtype=np.float_)
+
+    csr = lm.CSR.from_coo(rows, cols, vals)
+    csr.values = None
+
+    assert csr.values is None
+    assert all(csr.row(0) == [0, 1, 1])
+    assert all(csr.row(1) == [1, 0, 0])
+    assert all(csr.row(3) == [0, 1, 0])
+
+
+def test_csr_str():
+    rows = np.array([0, 0, 1, 3], dtype=np.int32)
+    cols = np.array([1, 2, 0, 1], dtype=np.int32)
+    vals = np.arange(4, dtype=np.float_)
+
+    csr = lm.CSR.from_coo(rows, cols, vals)
+
+    assert '4x3' in str(csr)
 
 
 def test_csr_row():
@@ -61,7 +136,7 @@ def test_csr_row():
     cols = np.array([1, 2, 0, 1], dtype=np.int32)
     vals = np.arange(4, dtype=np.float_) + 1
 
-    csr = lm.csr_from_coo(rows, cols, vals)
+    csr = lm.CSR.from_coo(rows, cols, vals)
     assert all(csr.row(0) == np.array([0, 1, 2], dtype=np.float_))
     assert all(csr.row(1) == np.array([3, 0, 0], dtype=np.float_))
     assert all(csr.row(2) == np.array([0, 0, 0], dtype=np.float_))
@@ -73,7 +148,7 @@ def test_csr_sparse_row():
     cols = np.array([1, 2, 0, 1], dtype=np.int32)
     vals = np.arange(4, dtype=np.float_)
 
-    csr = lm.csr_from_coo(rows, cols, vals)
+    csr = lm.CSR.from_coo(rows, cols, vals)
     assert all(csr.row_cs(0) == np.array([1, 2], dtype=np.int32))
     assert all(csr.row_cs(1) == np.array([0], dtype=np.int32))
     assert all(csr.row_cs(2) == np.array([], dtype=np.int32))
@@ -90,7 +165,7 @@ def test_csr_transpose():
     cols = np.array([1, 2, 0, 1], dtype=np.int32)
     vals = np.arange(4, dtype=np.float_)
 
-    csr = lm.csr_from_coo(rows, cols, vals)
+    csr = lm.CSR.from_coo(rows, cols, vals)
     csc = csr.transpose()
     assert csc.nrows == csr.ncols
     assert csc.ncols == csr.nrows
@@ -109,8 +184,8 @@ def test_csr_transpose_coords():
     cols = np.array([1, 2, 0, 1], dtype=np.int32)
     vals = np.arange(4, dtype=np.float_)
 
-    csr = lm.csr_from_coo(rows, cols, vals)
-    csc = csr.transpose_coords()
+    csr = lm.CSR.from_coo(rows, cols, vals)
+    csc = csr.transpose(False)
     assert csc.nrows == csr.ncols
     assert csc.ncols == csr.nrows
 
@@ -130,7 +205,7 @@ def test_csr_row_nnzs():
     smat = sps.csr_matrix(mat)
     # make sure it's sparse
     assert smat.nnz == np.sum(mat > 0)
-    csr = lm.csr_from_scipy(smat)
+    csr = lm.CSR.from_scipy(smat)
 
     nnzs = csr.row_nnzs()
     assert nnzs.sum() == csr.nnz
@@ -146,7 +221,8 @@ def test_csr_from_coo_rand():
         cols = np.floor_divide(coords, 100, dtype=np.int32)
         vals = np.random.randn(1000)
 
-        csr = lm.csr_from_coo(rows, cols, vals, (100, 50))
+        csr = lm.CSR.from_coo(rows, cols, vals, (100, 50))
+        rowinds = csr.rowinds()
         assert csr.nrows == 100
         assert csr.ncols == 50
         assert csr.nnz == 1000
@@ -162,6 +238,8 @@ def test_csr_from_coo_rand():
             assert all(np.sort(csr.colinds[sp:ep]) == cols[points])
             assert all(np.sort(csr.row_cs(i)) == cols[points])
             assert all(csr.values[np.argsort(csr.colinds[sp:ep]) + sp] == vals[points])
+            assert all(rowinds[sp:ep] == i)
+
             row = np.zeros(50)
             row[cols[points]] = vals[points]
             assert np.sum(csr.row(i)) == approx(np.sum(vals[points]))
@@ -174,7 +252,7 @@ def test_csr_from_coo_novals():
         rows = np.mod(coords, 100, dtype=np.int32)
         cols = np.floor_divide(coords, 100, dtype=np.int32)
 
-        csr = lm.csr_from_coo(rows, cols, None, (100, 50))
+        csr = lm.CSR.from_coo(rows, cols, None, (100, 50))
         assert csr.nrows == 100
         assert csr.ncols == 50
         assert csr.nnz == 1000
@@ -199,12 +277,12 @@ def test_csr_to_sps():
     # make sure it's sparse
     assert smat.nnz == np.sum(mat > 0)
 
-    csr = lm.csr_from_coo(smat.row, smat.col, smat.data, shape=smat.shape)
+    csr = lm.CSR.from_coo(smat.row, smat.col, smat.data, shape=smat.shape)
     assert csr.nnz == smat.nnz
     assert csr.nrows == smat.shape[0]
     assert csr.ncols == smat.shape[1]
 
-    smat2 = lm.csr_to_scipy(csr)
+    smat2 = csr.to_scipy()
     assert sps.isspmatrix(smat2)
     assert sps.isspmatrix_csr(smat2)
 
@@ -217,9 +295,8 @@ def test_csr_to_sps():
         assert all(smat2.data[sp:ep] == csr.values[sp:ep])
 
 
-@mark.parametrize("prefix,values", product([None, 'p_'], [True, False]))
-def test_csr_save_load(tmp_path, prefix, values):
-    tmp_path = lktu.norm_path(tmp_path)
+@mark.parametrize("values", [True, False])
+def test_csr_pickle(values):
     coords = np.random.choice(np.arange(50 * 100, dtype=np.int32), 1000, False)
     rows = np.mod(coords, 100, dtype=np.int32)
     cols = np.floor_divide(coords, 100, dtype=np.int32)
@@ -228,17 +305,13 @@ def test_csr_save_load(tmp_path, prefix, values):
     else:
         vals = None
 
-    csr = lm.csr_from_coo(rows, cols, vals, (100, 50))
+    csr = lm.CSR.from_coo(rows, cols, vals, (100, 50))
     assert csr.nrows == 100
     assert csr.ncols == 50
     assert csr.nnz == 1000
 
-    data = lm.csr_save(csr, prefix=prefix)
-
-    np.savez_compressed(tmp_path / 'matrix.npz', **data)
-
-    with np.load(tmp_path / 'matrix.npz') as npz:
-        csr2 = lm.csr_load(npz, prefix=prefix)
+    data = pickle.dumps(csr)
+    csr2 = pickle.loads(data)
 
     assert csr2.nrows == csr.nrows
     assert csr2.ncols == csr.ncols

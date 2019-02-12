@@ -1,4 +1,5 @@
 import logging
+import pickle
 
 from lenskit.algorithms import hpf
 
@@ -24,7 +25,7 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
 
 @mark.slow
 @mark.skipif(not have_hpfrec, reason='hpfrec not installed')
-def test_hpf_train_large():
+def test_hpf_train_large(tmp_path):
     algo = hpf.HPF(20)
     ratings = lktu.ml_pandas.renamed.ratings
     ratings = ratings.assign(rating=ratings.rating + 0.5)
@@ -32,6 +33,16 @@ def test_hpf_train_large():
 
     assert algo.n_users == ratings.user.nunique()
     assert algo.n_items == ratings.item.nunique()
+
+    mfile = tmp_path / 'hpf.dat'
+    with mfile.open('wb') as mf:
+        pickle.dump(algo, mf)
+
+    with mfile.open('rb') as mf:
+        a2 = pickle.load(mf)
+
+    assert a2.n_users == algo.n_users
+    assert a2.n_items == algo.n_items
 
 
 @mark.slow

@@ -3,6 +3,7 @@ from lenskit import util as lku
 
 import pandas as pd
 import numpy as np
+import pickle
 
 import lk_test_utils as lktu
 from pytest import approx
@@ -150,16 +151,16 @@ def test_fallback_predict():
 
 
 def test_fallback_save_load(tmp_path):
-    tmp_path = lktu.norm_path(tmp_path)
-
     original = basic.Fallback(basic.Memorized(simple_df), basic.Bias())
     original.fit(lktu.ml_pandas.renamed.ratings)
 
-    fn = tmp_path / 'fallback'
-    original.save(fn)
+    fn = tmp_path / 'fb.mod'
 
-    algo = basic.Fallback(basic.Memorized(simple_df), basic.Bias())
-    algo.load(fn)
+    with fn.open('wb') as f:
+        pickle.dump(original, f)
+
+    with fn.open('rb') as f:
+        algo = pickle.load(f)
 
     bias = algo.algorithms[1]
     assert bias.mean_ == approx(lktu.ml_pandas.ratings.rating.mean())
@@ -263,16 +264,12 @@ def test_pop_candidates():
     assert recs.item.iloc[0] in equiv.index
 
 
-def test_pop_save_load(tmp_path):
-    tmp_path = lktu.norm_path(tmp_path)
+def test_pop_save_load():
     original = basic.Popular()
     original.fit(lktu.ml_pandas.renamed.ratings)
 
-    fn = tmp_path / 'pop.mod'
-    original.save(fn)
-
-    algo = basic.Popular()
-    algo.load(fn)
+    mod = pickle.dumps(original)
+    algo = pickle.loads(mod)
 
     counts = lktu.ml_pandas.renamed.ratings.groupby('item').user.count()
     counts = counts.nlargest(100)

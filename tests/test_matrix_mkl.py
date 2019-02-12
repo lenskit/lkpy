@@ -18,7 +18,7 @@ def test_mkl_mult_vec():
         s = sps.csr_matrix(M)
         assert s.nnz == np.sum(M > 0)
 
-        csr = lm.csr_from_scipy(s)
+        csr = lm.CSR.from_scipy(s)
         mklM = mkl_ops.SparseM.from_csr(csr)
 
         x = np.random.randn(n)
@@ -40,10 +40,10 @@ def test_mkl_syrk():
         s = sps.csr_matrix(M)
         assert s.nnz == np.sum(M > 0)
 
-        csr = lm.csr_from_scipy(s)
+        csr = lm.CSR.from_scipy(s)
 
         ctc = mkl_ops.csr_syrk(csr)
-        res = lm.csr_to_scipy(ctc).toarray()
+        res = ctc.to_scipy().toarray()
         res = res.T + res
         rd = np.diagonal(res)
         res = res - np.diagflat(rd) * 0.5

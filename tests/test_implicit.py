@@ -1,4 +1,5 @@
 import logging
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -26,6 +27,7 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
 @mark.skipif(not have_implicit, reason='implicit not installed')
 def test_implicit_als_train_rec():
     algo = ALS(25)
+    assert algo.factors == 25
     ratings = lktu.ml_pandas.renamed.ratings
 
     ret = algo.fit(ratings)
@@ -33,6 +35,15 @@ def test_implicit_als_train_rec():
 
     recs = algo.recommend(100, n=20)
     assert len(recs) == 20
+
+    _log.info('serializing implicit model')
+    mod = pickle.dumps(algo)
+    _log.info('serialized to %d bytes')
+    a2 = pickle.loads(mod)
+
+    r2 = a2.recommend(100, n=20)
+    assert len(r2) == 20
+    assert all(r2 == recs)
 
 
 @mark.slow
@@ -72,9 +83,34 @@ def test_implicit_als_batch_accuracy():
 @mark.skipif(not have_implicit, reason='implicit not installed')
 def test_implicit_bpr_train_rec():
     algo = BPR(25)
+    assert algo.factors == 25
     ratings = lktu.ml_pandas.renamed.ratings
 
     algo.fit(ratings)
 
     recs = algo.recommend(100, n=20)
     assert len(recs) == 20
+
+    _log.info('serializing implicit model')
+    mod = pickle.dumps(algo)
+    _log.info('serialized to %d bytes')
+    a2 = pickle.loads(mod)
+
+    r2 = a2.recommend(100, n=20)
+    assert len(r2) == 20
+    assert all(r2 == recs)
+
+
+@mark.skipif(not have_implicit, reason='implicit not installed')
+def test_implicit_pickle_untrained(tmp_path):
+    mf = tmp_path / 'bpr.dat'
+    algo = BPR(25)
+
+    with mf.open('wb') as f:
+        pickle.dump(algo, f)
+
+    with mf.open('rb') as f:
+        a2 = pickle.load(f)
+
+    assert a2 is not algo
+    assert a2.factors == 25

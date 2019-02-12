@@ -2,6 +2,7 @@ import logging
 import pathlib
 import collections
 import json
+from copy import copy
 
 import pandas as pd
 
@@ -366,3 +367,15 @@ class MultiEval:
 
         with fn.open('r') as f:
             return json.load(f)
+
+    def __getstate__(self):
+        if not self._is_flat:
+            _logger.warning('attempting to pickle non-flattened experiment')
+        state = copy(self.__dict__)
+        # clone the algorithms to only pickle their parameters
+        state['algorithms'] = [a._replace(algorithm=util.clone(a.algorithm))
+                               for a in self.algorithms]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)

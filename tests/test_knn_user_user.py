@@ -1,8 +1,8 @@
-from lenskit import matrix
 import lenskit.algorithms.user_knn as knn
 
 from pathlib import Path
 import logging
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -30,7 +30,7 @@ def test_uu_train():
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(['user', 'item']).rating
-    r_items = matrix.csr_rowinds(algo.transpose_matrix_)
+    r_items = algo.transpose_matrix_.rowinds()
     ui_rbdf = pd.DataFrame({
         'user': algo.user_index_[algo.transpose_matrix_.colinds],
         'item': algo.item_index_[r_items],
@@ -86,19 +86,19 @@ def test_uu_predict_live_ratings():
 
 
 def test_uu_save_load(tmp_path):
-    tmp_path = lktu.norm_path(tmp_path)
-
     orig = knn.UserUser(30)
     _log.info('training model')
     orig.fit(ml_ratings)
 
     fn = tmp_path / 'uu.model'
     _log.info('saving to %s', fn)
-    orig.save(fn)
+    with fn.open('wb') as f:
+        pickle.dump(orig, f)
 
     _log.info('reloading model')
-    algo = knn.UserUser(30)
-    algo.load(fn)
+    with fn.open('rb') as f:
+        algo = pickle.load(f)
+
     _log.info('checking model')
 
     # it should have computed correct means
@@ -109,7 +109,7 @@ def test_uu_save_load(tmp_path):
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(['user', 'item']).rating
-    r_items = matrix.csr_rowinds(algo.transpose_matrix_)
+    r_items = algo.transpose_matrix_.rowinds()
     ui_rbdf = pd.DataFrame({
         'user': algo.user_index_[algo.transpose_matrix_.colinds],
         'item': algo.item_index_[r_items],
@@ -119,6 +119,12 @@ def test_uu_save_load(tmp_path):
     ui_rbdf['rating'] = ui_rbdf['nrating'] + ui_rbdf['mean']
     ui_rbdf['orig_rating'] = uir
     assert ui_rbdf.rating.values == approx(ui_rbdf.orig_rating.values)
+
+    # running the predictor should work
+    preds = algo.predict_for_user(4, [1016])
+    assert len(preds) == 1
+    assert preds.index == [1016]
+    assert preds.values == approx([3.62221550680778])
 
 
 def test_uu_predict_unknown_empty():
@@ -138,7 +144,7 @@ def test_uu_implicit():
     algo.fit(data)
     assert algo.user_means_ is None
 
-    mat = matrix.csr_to_scipy(algo.rating_matrix_)
+    mat = algo.rating_matrix_.to_scipy()
     norms = sps.linalg.norm(mat, 2, 1)
     assert norms == approx(1.0)
 
@@ -149,15 +155,14 @@ def test_uu_implicit():
 @mark.slow
 def test_uu_save_load_implicit(tmp_path):
     "Save and load user-user on an implicit data set."
-    tmp_path = lktu.norm_path(tmp_path)
     orig = knn.UserUser(20, center=False, aggregate='sum')
     data = ml_ratings.loc[:, ['user', 'item']]
 
     orig.fit(data)
-    orig.save(tmp_path / 'uu.mod')
+    ser = pickle.dumps(orig)
 
-    algo = knn.UserUser(20, center=False, aggregate='sum')
-    algo.load(tmp_path / 'uu.mod')
+    algo = pickle.loads(ser)
+
     assert algo.user_means_ is None
     assert all(algo.user_index_ == orig.user_index_)
     assert all(algo.item_index_ == orig.item_index_)

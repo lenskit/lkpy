@@ -64,6 +64,8 @@ class BaseRec(Recommender):
         return rec_df.loc[:, ['item', 'score']]
 
     def __getattr__(self, name):
+        if 'delegate' not in self.__dict__:
+            raise AttributeError()
         dd = self.delegate.__dict__
         if name in dd:
             return dd[name]

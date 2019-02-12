@@ -1,9 +1,9 @@
 import lenskit.algorithms.item_knn as knn
-from lenskit import matrix as lm
 
 from pathlib import Path
 import logging
 import os.path
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -42,7 +42,7 @@ def test_ii_train():
     assert isinstance(algo.item_index_, pd.Index)
     assert isinstance(algo.item_means_, np.ndarray)
     assert isinstance(algo.item_counts_, np.ndarray)
-    matrix = lm.csr_to_scipy(algo.sim_matrix_)
+    matrix = algo.sim_matrix_.to_scipy()
 
     # 6 is a neighbor of 7
     six, seven = algo.item_index_.get_indexer([6, 7])
@@ -76,7 +76,7 @@ def test_ii_train_unbounded():
     assert all(algo.sim_matrix_.values < 1 + 1.0e-6)
 
     # 6 is a neighbor of 7
-    matrix = lm.csr_to_scipy(algo.sim_matrix_)
+    matrix = algo.sim_matrix_.to_scipy()
     six, seven = algo.item_index_.get_indexer([6, 7])
     assert matrix[six, seven] > 0
 
@@ -154,8 +154,6 @@ def test_ii_train_big_unbounded():
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_ii_train_ml100k(tmp_path):
     "Test an unbounded model on ML-100K"
-    tmp_path = lktu.norm_path(tmp_path)
-
     ratings = lktu.ml100k.load_ratings()
     algo = knn.ItemItem(30)
     _log.info('training model')
@@ -177,10 +175,13 @@ def test_ii_train_ml100k(tmp_path):
     # save
     fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
-    algo.save(fn)
+    with fn.open('wb') as modf:
+        pickle.dump(algo, modf)
+
     _log.info('reloading model')
-    restored = knn.ItemItem(30)
-    restored.load(fn)
+    with fn.open('rb') as modf:
+        restored = pickle.load(modf)
+
     assert all(restored.sim_matrix_.values > 0)
 
     r_mat = restored.sim_matrix_
@@ -230,8 +231,8 @@ def test_ii_large_models():
                          .join(pd.DataFrame({'item_mean': means}))\
                          .assign(rating=lambda df: df.rating - df.item_mean)
 
-    mat_lim = lm.csr_to_scipy(algo_lim.sim_matrix_)
-    mat_ub = lm.csr_to_scipy(algo_ub.sim_matrix_)
+    mat_lim = algo_lim.sim_matrix_.to_scipy()
+    mat_ub = algo_ub.sim_matrix_.to_scipy()
 
     _log.info('checking a sample of neighborhoods')
     items = pd.Series(algo_ub.item_index_)
@@ -294,20 +295,20 @@ def test_ii_large_models():
 @lktu.wantjit
 def test_ii_save_load(tmp_path):
     "Save and load a model"
-    tmp_path = lktu.norm_path(tmp_path)
     original = knn.ItemItem(30, save_nbrs=500)
     _log.info('building model')
     original.fit(lktu.ml_sample())
 
     fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
-    original.save(fn)
+    with fn.open('wb') as modf:
+        pickle.dump(original, modf)
+
     _log.info('reloading model')
+    with fn.open('rb') as modf:
+        algo = pickle.load(modf)
 
-    algo = knn.ItemItem(30)
-    algo.load(fn)
     _log.info('checking model')
-
     assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
     assert all(algo.sim_matrix_.values > 0)
     # a little tolerance
@@ -334,7 +335,7 @@ def test_ii_save_load(tmp_path):
     means = ml_ratings.groupby('item').rating.mean()
     assert means[algo.item_index_].values == approx(original.item_means_)
 
-    matrix = lm.csr_to_scipy(algo.sim_matrix_)
+    matrix = algo.sim_matrix_.to_scipy()
 
     items = pd.Series(algo.item_index_)
     items = items[algo.item_counts_ > 0]
@@ -351,19 +352,20 @@ def test_ii_save_load(tmp_path):
 
 def test_ii_implicit_save_load(tmp_path):
     "Save and load a model"
-    tmp_path = lktu.norm_path(tmp_path)
     original = knn.ItemItem(30, save_nbrs=500, center=False, aggregate='sum')
     _log.info('building model')
     original.fit(lktu.ml_sample().loc[:, ['user', 'item']])
 
     fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
-    original.save(fn)
-    _log.info('reloading model')
-    algo = knn.ItemItem(30, save_nbrs=500, center=False, aggregate='sum')
-    algo.load(fn)
-    _log.info('checking model')
+    with fn.open('wb') as modf:
+        pickle.dump(original, modf)
 
+    _log.info('reloading model')
+    with fn.open('rb') as modf:
+        algo = pickle.load(modf)
+
+    _log.info('checking model')
     assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
     assert all(algo.sim_matrix_.values > 0)
     # a little tolerance
@@ -390,7 +392,7 @@ def test_ii_implicit_save_load(tmp_path):
 
     assert algo.item_means_ is None
 
-    matrix = lm.csr_to_scipy(algo.sim_matrix_)
+    matrix = algo.sim_matrix_.to_scipy()
 
     items = pd.Series(algo.item_index_)
     items = items[algo.item_counts_ > 0]

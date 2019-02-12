@@ -1,4 +1,5 @@
 import logging
+import pickle
 
 from lenskit import topn
 from lenskit.algorithms import als
@@ -70,18 +71,15 @@ def test_als_train_large():
     assert algo.item_features_.shape == (ratings.item.nunique(), 20)
 
 
-def test_als_save_load(tmp_path):
-    tmp_path = lktu.norm_path(tmp_path)
-    mod_file = tmp_path / 'als.npz'
+def test_als_save_load():
     algo = als.ImplicitMF(20, iterations=5)
     ratings = lktu.ml_pandas.renamed.ratings
     algo.fit(ratings)
 
-    algo.save(mod_file)
-    assert mod_file.exists()
+    mod = pickle.dumps(algo)
+    _log.info('serialized to %d bytes', len(mod))
 
-    restored = als.ImplicitMF(20)
-    restored.load(mod_file)
+    restored = pickle.loads(mod)
     assert np.all(restored.user_features_ == algo.user_features_)
     assert np.all(restored.item_features_ == algo.item_features_)
     assert np.all(restored.item_index_ == algo.item_index_)
