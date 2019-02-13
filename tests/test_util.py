@@ -184,6 +184,7 @@ def test_fspath():
 
 
 def test_write_parquet(tmp_path):
+    assert tmp_path.exists()
     fn = tmp_path / 'out.parquet'
     frame = pd.DataFrame({'n': np.arange(10), 'x': np.random.randn(10) + 5})
     lku.write_parquet(fn, frame)

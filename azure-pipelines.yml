@@ -1,7 +1,7 @@
 variables:
   conda.deps: >
     python=$(python.version)
-    pandas scipy fastparquet python-snappy numba cffi
+    pandas numpy scipy fastparquet python-snappy numba cffi pyarrow
     invoke coverage pytest pytest-cov pytest-doctestplus cython
   pip.deps: >
     invoke pytest coverage pytest-cov pytest-doctestplus
@@ -217,6 +217,7 @@ jobs:
       Python37:
         python.version: '3.7'
     maxParallel: 4
+  condition: False
 
   steps:
   - task: UsePythonVersion@0
@@ -230,8 +231,14 @@ jobs:
     displayName: 'Install dependencies'
 
   - script: |
-      python -m pytest
-    displayName: 'pytest'
+      python -m pytest --junitxml=build/test-results.xml
+    displayName: 'Test LKPY'
+  
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'build/test-results.xml'
+      testRunTitle: 'Publish test results for Windows Python $(python.version)'
 
 - job: 'WindowsConda'
   pool:
@@ -240,8 +247,6 @@ jobs:
     matrix:
       Python36:
         python.version: '3.6'
-      # Python37:
-      #   python.version: '3.7'
     maxParallel: 4
 
   steps:
@@ -250,6 +255,9 @@ jobs:
       createCustomEnvironment: true
       environmentName: lkpy
       packageSpecs: $(conda.deps)
+
+  - script: conda update -y --all
+    displayName: 'Refresh Conda'
 
   - script: |
       pip install $(pip.extras)

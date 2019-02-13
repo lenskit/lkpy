@@ -297,7 +297,7 @@ class MultiEval:
         watch = util.Stopwatch()
         users = test.user.unique()
         _logger.info('generating recommendations for %d users for %s', len(users), algo)
-        recs = recommend(algo, users, self.recommend, candidates, test,
+        recs = recommend(algo, users, self.recommend, candidates,
                          nprocs=self.nprocs)
         watch.stop()
         _logger.info('generated recommendations in %s', watch)
@@ -321,12 +321,12 @@ class MultiEval:
 
         if self.combine_output:
             out = self.workdir / '{}.parquet'.format(name)
-            _logger.info('run %d: writing predictions to %s', run_id, out)
+            _logger.info('run %d: writing results to %s', run_id, out)
             append = run_id > 1
             util.write_parquet(out, df, append=append)
         else:
             out = self.workdir / '{}-{}.parquet'.format(name, run_id)
-            _logger.info('run %d: writing predictions to %s', run_id, out)
+            _logger.info('run %d: writing results to %s', run_id, out)
             df.to_parquet(out)
 
     def collect_results(self):

@@ -243,23 +243,28 @@ def test_uu_batch_accuracy():
 def test_uu_implicit_batch_accuracy():
     from lenskit import batch, topn
     import lenskit.crossfold as xf
-    import lenskit.metrics.topn as lm
 
     ratings = lktu.ml100k.load_ratings()
 
     algo = knn.UserUser(30, center=False, aggregate='sum')
 
-    folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
+    folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
+    all_test = pd.concat(f.test for f in folds)
+
     rec_lists = []
     for train, test in folds:
         _log.info('running training')
         algo.fit(train.loc[:, ['user', 'item']])
         cands = topn.UnratedCandidates(train)
         _log.info('testing %d users', test.user.nunique())
-        recs = batch.recommend(algo, test.user.unique(), 100, cands, test)
+        recs = batch.recommend(algo, test.user.unique(), 100, cands, nprocs=2)
         rec_lists.append(recs)
     recs = pd.concat(rec_lists)
 
-    user_dcg = recs.groupby('user').rating.apply(lm.dcg)
+    rla = topn.RecListAnalysis()
+    rla.add_metric(topn.ndcg)
+    results = rla.compute(recs, all_test)
+    user_dcg = results.ndcg
+
     dcg = user_dcg.mean()
-    assert dcg >= 0.1
+    assert dcg >= 0.03
