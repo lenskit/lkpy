@@ -6,6 +6,9 @@ See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/1) for a su
 
 - The `save` and `load` methods on algorithms have been removed.  Just pickle fitted models to save
   their data.  This is what SciKit does, see no need to deviate.
+- Top-*N* evaluation has been completely revamped to make it easier to correctly implement and run
+  evaluation metrics.  Batch recommend no longer attaches ratings to recommendations.
+- Batch recommend & predict functions now take `nprocs` as keyword-only.
 - Several bug fixes and testing improvements
 
 ### Internal Changes

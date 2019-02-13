@@ -77,7 +77,6 @@ def test_bias_batch_recommend():
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch, topn
-    import lenskit.metrics.topn as lm
 
     if not os.path.exists('ml-100k/u.data'):
         raise pytest.skip()
@@ -92,19 +91,19 @@ def test_bias_batch_recommend():
         _log.info('testing %d users', test.user.nunique())
         cand_fun = topn.UnratedCandidates(train)
         recs = batch.recommend(algo, test.user.unique(), 100, cand_fun)
-        # combine with test ratings for relevance data
-        res = pd.merge(recs, test, how='left', on=('user', 'item'))
-        # fill in missing 0s
-        res.loc[res.rating.isna(), 'rating'] = 0
-        return res
+        return recs
 
-    recs = pd.concat((eval(train, test)
-                      for (train, test)
-                      in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
+    folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
+    test = pd.concat(y for (x, y) in folds)
+
+    recs = pd.concat(eval(train, test) for (train, test) in folds)
 
     _log.info('analyzing recommendations')
-    dcg = recs.groupby('user').rating.apply(lm.dcg)
-    _log.info('DCG for %d users is %f (max=%f)', len(dcg), dcg.mean(), dcg.max())
+    rla = topn.RecListAnalysis()
+    rla.add_metric(topn.ndcg)
+    results = rla.compute(recs, test)
+    dcg = results.ndcg
+    _log.info('nDCG for %d users is %f (max=%f)', len(dcg), dcg.mean(), dcg.max())
     assert dcg.mean() > 0
 
 
@@ -113,7 +112,6 @@ def test_pop_batch_recommend(ncpus):
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch, topn
-    import lenskit.metrics.topn as lm
 
     if not os.path.exists('ml-100k/u.data'):
         raise pytest.skip()
@@ -128,15 +126,18 @@ def test_pop_batch_recommend(ncpus):
         _log.info('testing %d users', test.user.nunique())
         cand_fun = topn.UnratedCandidates(train)
         recs = batch.recommend(algo, test.user.unique(), 100, cand_fun,
-                               test, nprocs=ncpus)
+                               nprocs=ncpus)
         return recs
 
-    recs = pd.concat((eval(train, test)
-                      for (train, test)
-                      in xf.partition_users(ratings, 5, xf.SampleFrac(0.2))))
+    folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
+    test = pd.concat(f.test for f in folds)
+
+    recs = pd.concat(eval(train, test) for (train, test) in folds)
 
     _log.info('analyzing recommendations')
-    _log.info('have %d recs for good items', (recs.rating > 0).sum())
-    dcg = recs.groupby('user').rating.agg(lm.dcg)
-    _log.info('DCG for %d users is %f (max=%f)', len(dcg), dcg.mean(), dcg.max())
+    rla = topn.RecListAnalysis()
+    rla.add_metric(topn.ndcg)
+    results = rla.compute(recs, test)
+    dcg = results.ndcg
+    _log.info('NDCG for %d users is %f (max=%f)', len(dcg), dcg.mean(), dcg.max())
     assert dcg.mean() > 0
