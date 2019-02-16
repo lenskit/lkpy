@@ -44,18 +44,20 @@ def _recommend_user(algo, user, n, candidates):
 def _recommend_seq(algo, users, n, candidates):
     if isinstance(candidates, dict):
         candidates = candidates.get
+    if candidates is None:
+        candidates = lambda u: None
     results = [_recommend_user(algo, user, n, candidates(user))
                for user in users]
     return results
 
 
 def _recommend_worker(user):
-    candidates = _rec_context.candidates(user)
+    candidates = _rec_context.candidates(user) if _rec_context.candidates is not None else None
     res = _recommend_user(_rec_context.algo, user, _rec_context.size, candidates)
     return res.to_msgpack()
 
 
-def recommend(algo, users, n, candidates, *, nprocs=None, **kwargs):
+def recommend(algo, users, n, candidates=None, *, nprocs=None, **kwargs):
     """
     Batch-recommend for multiple users.  The provided algorithm should be a
     :py:class:`algorithms.Recommender`.

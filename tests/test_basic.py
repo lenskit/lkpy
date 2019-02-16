@@ -242,6 +242,24 @@ def test_popular():
     assert all(counts.index[:10] == recs.item[:10])
 
 
+def test_popular_excludes_rated():
+    algo = basic.Popular()
+    algo.fit(lktu.ml_pandas.renamed.ratings)
+    counts = lktu.ml_pandas.renamed.ratings.groupby('item').user.count()
+    counts = counts.nlargest(100)
+
+    recs = algo.recommend(100, 100)
+    assert len(recs) == 100
+    assert all(np.diff(recs.score) <= 0)
+
+    # make sure we didn't recommend anything the user likes
+    ratings = lktu.ml_pandas.renamed.ratings
+    urates = ratings.set_index(['user', 'item'])
+    urates = urates.loc[100, :]
+    match = recs.join(urates, on='item', how='inner')
+    assert len(match) == 0
+
+
 def test_pop_candidates():
     algo = basic.Popular()
     algo.fit(lktu.ml_pandas.renamed.ratings)
@@ -297,6 +315,6 @@ def test_unrated_selector():
 
 def test_unrated_override():
     sel = basic.UnratedItemCandidateSelector()
-    s2 = sel.fit(simple_df)
+    sel.fit(simple_df)
 
     assert set(sel.candidates(10, [2])) == set([1, 3])
