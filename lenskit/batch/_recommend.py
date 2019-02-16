@@ -44,7 +44,6 @@ def _recommend_user(algo, user, n, candidates):
 def _recommend_seq(algo, users, n, candidates):
     if isinstance(candidates, dict):
         candidates = candidates.get
-    algo = Recommender.adapt(algo)
     results = [_recommend_user(algo, user, n, candidates(user))
                for user in users]
     return results
@@ -52,16 +51,14 @@ def _recommend_seq(algo, users, n, candidates):
 
 def _recommend_worker(user):
     candidates = _rec_context.candidates(user)
-    algo = Recommender.adapt(_rec_context.algo)
-    res = _recommend_user(algo, user, _rec_context.size, candidates)
+    res = _recommend_user(_rec_context.algo, user, _rec_context.size, candidates)
     return res.to_msgpack()
 
 
 def recommend(algo, users, n, candidates, *, nprocs=None, **kwargs):
     """
     Batch-recommend for multiple users.  The provided algorithm should be a
-    :py:class:`algorithms.Recommender` or :py:class:`algorithms.Predictor` (which
-    will be converted to a top-N recommender).
+    :py:class:`algorithms.Recommender`.
 
     Args:
         algo: the algorithm
@@ -70,7 +67,8 @@ def recommend(algo, users, n, candidates, *, nprocs=None, **kwargs):
         candidates:
             the users' candidate sets. This can be a function, in which case it will
             be passed each user ID; it can also be a dictionary, in which case user
-            IDs will be looked up in it.
+            IDs will be looked up in it.  Pass ``None`` to use the recommender's
+            built-in candidate selector (usually recommended).
         nprocs(int):
             The number of processes to use for parallel recommendations.
 
@@ -79,17 +77,21 @@ def recommend(algo, users, n, candidates, *, nprocs=None, **kwargs):
         ``score``, and any other columns returned by the recommender.
     """
 
+    rec_algo = Recommender.adapt(algo)
+    if candidates is None and rec_algo is not algo:
+        warnings.warn('no candidates provided and algo is not a recommender, unlikely to work')
+
     if 'ratings' in kwargs:
         warnings.warn('Providing ratings to recommend is not supported', DeprecationWarning)
 
     if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
         _logger.info('starting recommend process with %d workers', nprocs)
-        with MPRecContext(algo, candidates, n), Pool(nprocs) as pool:
+        with MPRecContext(rec_algo, candidates, n), Pool(nprocs) as pool:
             results = pool.map(_recommend_worker, users)
         results = [pd.read_msgpack(r) for r in results]
     else:
         _logger.info('starting sequential recommend process')
-        results = _recommend_seq(algo, users, n, candidates)
+        results = _recommend_seq(rec_algo, users, n, candidates)
 
     results = pd.concat(results, ignore_index=True)
 
