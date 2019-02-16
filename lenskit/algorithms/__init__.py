@@ -145,6 +145,13 @@ class Recommender(Algorithm, metaclass=ABCMeta):
 
     @classmethod
     def adapt(cls, algo):
+        """
+        Ensure that an algorithm is a :class:`Recommender`.  If it is not a recommender,
+        it is wrapped in a :class:`lenskit.basic.TopN` with a default candidate selector.
+
+        Args:
+            algo(Predictor): the underlying rating predictor.
+        """
         from .basic import TopN
         if isinstance(algo, Recommender):
             return algo
