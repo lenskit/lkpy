@@ -24,7 +24,7 @@ To use the latest development version, install directly from GitHub:
 
     pip install git+https://github.com/lenskit/lkpy
 
-Then see [Getting Started](https://lkpy.lenskit.org/en/latest/quickstart.html)
+Then see [Getting Started](https://lkpy.lenskit.org/en/latest/GettingStarted.html)
 
 ## Resources
 
