@@ -304,9 +304,8 @@ jobs:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
     displayName: Add conda to PATH
 
-  - script: conda update -y conda
-
   - script: conda create -n lkpy -y $(conda.deps) llvm-openmp
+    displayName: Set up Conda environment
 
   - script: |
       if [ ! -r ~/ml-100k/u.data ]; then
