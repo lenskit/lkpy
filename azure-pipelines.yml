@@ -27,7 +27,7 @@ jobs:
   - bash: echo "##vso[task.prependpath]/usr/share/miniconda/bin"
     displayName: Add conda to PATH
 
-  - script: conda create -n lkpy -y $(conda.deps)
+  - script: conda create -n lkpy -qy $(conda.deps)
     displayName: Create Anaconda environment
   
   - script: |
@@ -264,7 +264,7 @@ jobs:
   - script: conda update -y conda
     displayName: Update Conda
   
-  - script: conda create -n lkpy -y $(conda.deps)
+  - script: conda create -n lkpy -qy $(conda.deps)
     displayName: Create Conda environment
 
   - script: |
@@ -304,7 +304,9 @@ jobs:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
     displayName: Add conda to PATH
 
-  - script: conda create -n lkpy -y $(conda.deps) llvm-openmp
+  - script: |
+      conda create -n lkpy -qy $(conda.deps)
+      conda install -n lkpy llvm-openmp
     displayName: Set up Conda environment
 
   - script: |
