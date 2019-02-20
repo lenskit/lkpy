@@ -120,6 +120,7 @@ class UnratedCandidates:
     """
 
     def __init__(self, training):
+        warnings.warn('UnratedCandidates deprecated, use default item selector', DeprecationWarning)
         self.training = training.set_index('user').item
         self.items = training.item.unique()
 

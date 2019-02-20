@@ -8,9 +8,10 @@ classes (:py:mod:`abc`) representing different algorithm capabilities.
 """
 
 from abc import ABCMeta, abstractmethod
-import pickle
-import pathlib
 import inspect
+
+import pandas as pd
+import numpy as np
 
 
 class Algorithm(metaclass=ABCMeta):
@@ -128,7 +129,9 @@ class Recommender(Algorithm, metaclass=ABCMeta):
         Args:
             user: the user ID
             n(int): the number of recommendations to produce (``None`` for unlimited)
-            candidates (array-like): the set of valid candidate items.
+            candidates (array-like):
+                The set of valid candidate items; if ``None``, a default set will be used.
+                For many algorithms, this is their :py:class:`CandidateSelector`.
             ratings (pandas.Series):
                 the user's ratings (indexed by item id); if provided, they may be used to
                 override or augment the model's notion of a user's preferences.
@@ -142,8 +145,51 @@ class Recommender(Algorithm, metaclass=ABCMeta):
 
     @classmethod
     def adapt(cls, algo):
+        """
+        Ensure that an algorithm is a :class:`Recommender`.  If it is not a recommender,
+        it is wrapped in a :class:`lenskit.basic.TopN` with a default candidate selector.
+
+        Args:
+            algo(Predictor): the underlying rating predictor.
+        """
         from .basic import TopN
         if isinstance(algo, Recommender):
             return algo
         else:
             return TopN(algo)
+
+
+class CandidateSelector(Algorithm, metaclass=ABCMeta):
+    """
+    Select candidates for recommendation for a user, possibly with some
+    additional ratings.
+    """
+
+    @abstractmethod
+    def candidates(self, user, ratings=None):
+        """
+        Select candidates for the user.
+
+        Args:
+            user:
+                The user key or ID.
+            ratings(pandas.Series or array-like):
+                Ratings or items to use instead of whatever ratings were memorized
+                for this user.  If a :py:class:`pandas.Series`, the series index
+                is used; if it is another array-like it is assumed to be an array
+                of items.
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def rated_items(ratings):
+        """
+        Utility function for converting a series or array into an array of item
+        IDs.  Useful in implementations of :py:meth:`candidates`.
+        """
+        if isinstance(ratings, pd.Series):
+            return ratings.index.values
+        elif isinstance(ratings, np.ndarray):
+            return ratings
+        else:
+            return np.array(ratings)
