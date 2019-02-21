@@ -14,6 +14,7 @@ from lenskit.algorithms.basic import Bias, Popular
 from pytest import mark
 
 
+@mark.slow
 @mark.parametrize('ncpus', [None, 2])
 def test_sweep_bias(tmp_path, ncpus):
     tmp_path = norm_path(tmp_path)
@@ -55,6 +56,7 @@ def test_sweep_bias(tmp_path, ncpus):
     assert all(recs.RunId.isin(runs.RunId))
 
 
+@mark.slow
 def test_sweep_filenames(tmp_path):
     tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
@@ -91,6 +93,7 @@ def test_sweep_filenames(tmp_path):
     assert len(runs) == 8
 
 
+@mark.slow
 def test_sweep_persist(tmp_path):
     tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
@@ -131,6 +134,7 @@ def test_sweep_persist(tmp_path):
     assert len(runs) == 20
 
 
+@mark.slow
 def test_sweep_oneshot(tmp_path):
     tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
@@ -161,6 +165,7 @@ def test_sweep_oneshot(tmp_path):
     assert run['RunId'] == 3
 
 
+@mark.slow
 def test_sweep_save(tmp_path):
     tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
@@ -195,6 +200,7 @@ def test_sweep_save(tmp_path):
     assert len(runs) == 5
 
 
+@mark.slow
 def test_sweep_combine(tmp_path):
     tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
