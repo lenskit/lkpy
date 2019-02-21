@@ -7,6 +7,8 @@ import logging
 from abc import ABC, abstractmethod
 
 import numpy as np
+import pandas as pd
+from . import util
 
 TTPair = namedtuple('TTPair', ['train', 'test'])
 TTPair.__doc__ = 'Train-test pair (named tuple).'
@@ -50,13 +52,46 @@ def sample_rows(data, partitions, size, disjoint=True):
     Sample train-test a frame of ratings into train-test partitions.  This function does not care
     what kind of data is in `data`, so long as it is a Pandas DataFrame (or equivalent).
 
-    :param data: a data frame containing ratings or other data you wish to partition.
-    :type data: :py:class:`pandas.DataFrame` or equivalent
-    :param partitions: the number of partitions to produce
-    :type partitions: integer
-    :rtype: iterator
-    :returns: an iterator of train-test pairs
+    We can loop over a sequence of train-test pairs::
+
+        >>> ratings = util.load_ml_ratings()
+        >>> for train, test in sample_rows(ratings, 5, 1000):
+        ...     print(len(test))
+        1000
+        1000
+        1000
+        1000
+        1000
+
+    Sometimes for testing, it is useful to just get a single pair::
+
+        >>> train, test = sample_rows(ratings, None, 1000)
+        >>> len(test)
+        1000
+        >>> len(test) + len(train) - len(ratings)
+        0
+
+    Args:
+        data(pandas.DataFrame):
+            Data frame containing ratings or other data to partition.
+        partitions(int or None):
+            The number of partitions to produce.  If ``None``, produce a _single_ train-test
+            pair instead of an iterator or list.
+        size(int):
+            The size of each sample.
+        disjoint(bool):
+            If ``True``, force samples to be disjoint.
+
+    Returns:
+        iterator: An iterator of train-test pairs.
     """
+
+    if partitions is None:
+        test = data.sample(n=size)
+        tr_mask = pd.Series(True, index=data.index)
+        tr_mask.loc[test.index] = False
+        train = data[tr_mask]
+        return TTPair(train, test)
 
     if disjoint and partitions * size >= len(data):
         _logger.warning('wanted %d disjoint splits of %d each, but only have %d rows; partitioning',
@@ -65,6 +100,8 @@ def sample_rows(data, partitions, size, disjoint=True):
 
     # create an array of indexes
     rows = np.arange(len(data))
+
+
 
     if disjoint:
         _logger.info('creating %d disjoint samples of size %d', partitions, size)
@@ -225,14 +262,18 @@ def sample_users(data, partitions: int, size: int, method: PartitionMethod, disj
     This function does not care what kind of data is in `data`, so long as it is
     a Pandas DataFrame (or equivalent) and has a `user` column.
 
-    :param data: a data frame containing ratings or other data you wish to partition.
-    :type data: :py:class:`pandas.DataFrame` or equivalent
-    :param partitions: the number of partitions to produce
-    :param size: the sample size
-    :param method: The method for selecting test rows for each user.
-    :param disjoint: whether user samples should be disjoint
-    :rtype: iterator
-    :returns: an iterator of train-test pairs
+    Args:
+        data(pandas.DataFrame):
+            Data frame containing ratings or other data you wish to partition.
+        partitions(int):
+            The number of partitions.
+        size(int):
+            The sample size.
+        method(PartitionMethod):
+            The method for obtaining user test ratings.
+
+    Returns:
+        iterator: An iterator of train-test pairs (as :class:`TTPair` objects).
     """
 
     user_col = data['user']
