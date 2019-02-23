@@ -66,7 +66,7 @@ def predict(algo, pairs, *, nprocs=None):
         99007   664  8636     4.0  1393891175    3.846268
         99008   664  8641     4.5  1393890852    3.710635
         >>> rmse(preds['prediction'], preds['rating'])
-        0.8326992222208454
+        0.8326992222...
 
     Args:
         algo(lenskit.algorithms.Predictor):
