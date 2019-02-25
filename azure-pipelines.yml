@@ -142,11 +142,10 @@ jobs:
       testRunTitle: 'Publish test results for Python $(python.version)'
   
   - script: |
-      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval
+      env NUMBA_DISABLE_JIT=1 python3 -m pytest --cov=lenskit --cov-report=xml --cov-report=html -m 'not eval'
     displayName: 'Test Coverage'
 
   - script: |
-      coverage xml
       echo "Fetching Codecov script"
       curl -o /tmp/codecov.sh https://codecov.io/bash
       
@@ -193,11 +192,10 @@ jobs:
       testRunTitle: 'Publish test results for Python $(python.version)'
   
   - script: |
-      env NUMBA_DISABLE_JIT=1 invoke test --cover --no-eval
+      env NUMBA_DISABLE_JIT=1 python3 -m pytest --cov=lenskit --cov-report=xml --cov-report=html -m 'not eval'
     displayName: 'Test Coverage'
 
   - script: |
-      coverage xml
       echo "Fetching Codecov script"
       curl -o /tmp/codecov.sh https://codecov.io/bash
       
