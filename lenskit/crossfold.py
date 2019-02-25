@@ -101,8 +101,6 @@ def sample_rows(data, partitions, size, disjoint=True):
     # create an array of indexes
     rows = np.arange(len(data))
 
-
-
     if disjoint:
         _logger.info('creating %d disjoint samples of size %d', partitions, size)
         ips = _disjoint_sample(rows, partitions, size)
