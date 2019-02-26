@@ -231,7 +231,7 @@ def test_uu_batch_accuracy():
     preds = [__batch_eval((algo, train, test)) for (train, test) in folds]
     preds = pd.concat(preds)
     mae = pm.mae(preds.prediction, preds.rating)
-    assert mae == approx(0.71, abs=0.027)
+    assert mae == approx(0.71, abs=0.028)
 
     user_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
     assert user_rmse.mean() == approx(0.91, abs=0.055)
