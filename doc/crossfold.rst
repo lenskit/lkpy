@@ -32,7 +32,7 @@ Row-based splitting
 -------------------
 
 The simplest preparation methods sample or partition the rows in the input frame.
-A 5-fold :py:funcc:`partition_rows` split will result in 5
+A 5-fold :py:func:`partition_rows` split will result in 5
 splits, each of which extracts 20% of the rows for testing and leaves 80% for
 training.
 
