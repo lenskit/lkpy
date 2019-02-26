@@ -263,6 +263,7 @@ class Fallback(Predictor):
         str_algos = [str(algo) for algo in self.algorithms]
         return 'Fallback([{}])'.format(', '.join(str_algos))
 
+
 class TopN(Recommender):
     """
     Basic recommender that implements top-N recommendation using a predictor.
