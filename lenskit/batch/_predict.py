@@ -30,7 +30,7 @@ def _predict_user(algo, user, udf):
     watch = util.Stopwatch()
     res = algo.predict_for_user(user, udf['item'])
     res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
-    _logger.debug('%s produced %d/%d predictions for %s in %s',
+    _logger.debug('%s produced %f/%d predictions for %s in %s',
                   algo, res.prediction.notna().sum(), len(udf), user, watch)
     return res
 
