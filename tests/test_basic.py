@@ -98,7 +98,7 @@ def test_fallback_list():
 
 def test_fallback_string():
     algo = basic.Fallback([basic.Memorized(simple_df), basic.Bias()])
-    str(algo)
+    assert 'Fallback' in str(algo)
 
 def test_fallback_clone():
     algo = basic.Fallback([basic.Memorized(simple_df), basic.Bias()])
