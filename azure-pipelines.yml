@@ -27,12 +27,14 @@ jobs:
   - bash: echo "##vso[task.prependpath]/usr/share/miniconda/bin"
     displayName: Add conda to PATH
 
-  - script: conda create -n lkpy -qy $(conda.deps)
+  - script: |
+      conda create -n lkpy -qy $(conda.deps)
+      conda install -n lkpy -qy ipykernel nbformat jupyter-client
     displayName: Create Anaconda environment
   
   - script: |
       source activate lkpy
-      pip install $(pip.extras)
+      pip install $(pip.extras) nbval
     displayName: 'Extra PyPI deps'
 
   - script: |
@@ -64,6 +66,11 @@ jobs:
     inputs:
       testResultsFiles: 'build/test-results.xml'
       testRunTitle: 'Publish test results for Python $(python.version)'
+
+  - script: |
+      source activate lkpy
+      cp -r ml-100k doc
+      python3 -m pytest --nbval-lax doc
 
   - script: |
       source activate lkpy
