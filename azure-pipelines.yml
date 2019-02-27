@@ -29,7 +29,7 @@ jobs:
 
   - script: |
       conda create -n lkpy -qy $(conda.deps)
-      conda install -n lkpy -qy ipykernel nbformat jupyter-client
+      conda install -n lkpy -qy ipykernel nbformat jupyter
     displayName: Create Anaconda environment
   
   - script: |
