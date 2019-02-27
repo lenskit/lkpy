@@ -96,6 +96,9 @@ def test_fallback_list():
     assert isinstance(params['algorithms'][0], basic.Memorized)
     assert isinstance(params['algorithms'][1], basic.Bias)
 
+def test_fallback_string():
+    algo = basic.Fallback([basic.Memorized(simple_df), basic.Bias()])
+    assert 'Fallback' in str(algo)
 
 def test_fallback_clone():
     algo = basic.Fallback([basic.Memorized(simple_df), basic.Bias()])

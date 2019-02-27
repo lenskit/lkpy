@@ -260,7 +260,8 @@ class Fallback(Predictor):
         return preds.reindex(items)
 
     def __str__(self):
-        return 'Fallback([{}])'.format(', '.join(self.algorithms))
+        str_algos = [str(algo) for algo in self.algorithms]
+        return 'Fallback([{}])'.format(', '.join(str_algos))
 
 
 class TopN(Recommender):
