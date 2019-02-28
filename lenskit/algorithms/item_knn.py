@@ -4,6 +4,7 @@ Item-based k-NN collaborative filtering.
 
 import pathlib
 import logging
+import warnings
 
 import pandas as pd
 import numpy as np
@@ -11,7 +12,7 @@ import scipy.sparse as sps
 import scipy.sparse.linalg as spla
 from numba import njit, prange
 
-from lenskit import util, matrix
+from lenskit import util, matrix, DataWarning
 from . import Predictor
 
 _logger = logging.getLogger(__name__)
@@ -312,6 +313,10 @@ class ItemItem(Predictor):
             upos = self.user_index_.get_loc(user)
             ratings = pd.Series(self.rating_matrix_.row_vs(upos),
                                 index=pd.Index(self.item_index_[self.rating_matrix_.row_cs(upos)]))
+
+        if not ratings.index.is_unique:
+            wmsg = 'user {} has duplicate ratings, this is likely to cause problems'.format(user)
+            warnings.warn(wmsg, DataWarning)
 
         # set up rating array
         # get rated item positions & limit to in-model items
