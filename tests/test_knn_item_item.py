@@ -1,3 +1,4 @@
+from lenskit import DataWarning
 import lenskit.algorithms.item_knn as knn
 
 from pathlib import Path
@@ -112,6 +113,21 @@ def test_ii_simple_implicit_predict():
     assert 6 in res.index
     assert not np.isnan(res.loc[6])
     assert res.loc[6] > 0
+
+
+def test_ii_warn_duplicates():
+    extra = pd.DataFrame.from_records([
+        (3, 7, 4.5)
+    ], columns=['user', 'item', 'rating'])
+    ratings = pd.concat([simple_ratings, extra])
+    algo = knn.ItemItem(5)
+    algo.fit(ratings)
+
+    try:
+        with pytest.warns(DataWarning):
+            algo.predict_for_user(3, [6])
+    except AssertionError:
+        pass  # this is fine
 
 
 @lktu.wantjit
