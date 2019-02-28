@@ -22,7 +22,7 @@ Or you can use `pip`:
 
 To use the latest development version, install directly from GitHub:
 
-    pip install git+https://github.com/lenskit/lkpy
+    pip install -U git+https://github.com/lenskit/lkpy
 
 Then see [Getting Started](https://lkpy.lenskit.org/en/latest/GettingStarted.html)
 
