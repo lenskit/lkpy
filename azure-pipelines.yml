@@ -34,7 +34,8 @@ jobs:
   
   - script: |
       source activate lkpy
-      pip install $(pip.extras) nbval
+      pip install $(pip.extras)
+      pip install nbval
     displayName: 'Extra PyPI deps'
 
   - script: |
