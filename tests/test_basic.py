@@ -96,9 +96,11 @@ def test_fallback_list():
     assert isinstance(params['algorithms'][0], basic.Memorized)
     assert isinstance(params['algorithms'][1], basic.Bias)
 
+
 def test_fallback_string():
     algo = basic.Fallback([basic.Memorized(simple_df), basic.Bias()])
     assert 'Fallback' in str(algo)
+
 
 def test_fallback_clone():
     algo = basic.Fallback([basic.Memorized(simple_df), basic.Bias()])
@@ -226,6 +228,28 @@ def test_topn_config():
 
     rs = str(rec)
     assert rs.startswith('TopN/')
+
+
+def test_topn_big():
+    ratings = lktu.ml_pandas.renamed.ratings
+    users = ratings.user.unique()
+    items = ratings.item.unique()
+    user_items = ratings.set_index('user').item
+
+    algo = basic.TopN(basic.Bias())
+    a2 = algo.fit(ratings)
+    assert a2 is algo
+
+    # test 100 random users
+    for u in np.random.choice(users, 100, False):
+        recs = algo.recommend(u, 100)
+        assert len(recs) == 100
+        rated = user_items.loc[u]
+        assert all(~recs['item'].isin(rated))
+        unrated = np.setdiff1d(items, rated)
+        scores = algo.predictor.predict_for_user(u, unrated)
+        top = scores.nlargest(100)
+        assert top.values == approx(recs.score.values)
 
 
 def test_popular():
