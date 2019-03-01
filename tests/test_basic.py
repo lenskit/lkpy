@@ -321,3 +321,23 @@ def test_unrated_override():
     sel.fit(simple_df)
 
     assert set(sel.candidates(10, [2])) == set([1, 3])
+
+
+def test_unrated_big():
+    ratings = lktu.ml_pandas.renamed.ratings
+    users = ratings.user.unique()
+    items = ratings.item.unique()
+    user_items = ratings.set_index('user').item
+
+    sel = basic.UnratedItemCandidateSelector()
+    s2 = sel.fit(ratings)
+    assert s2 is sel
+
+    # test 100 random users
+    for u in np.random.choice(users, 100, False):
+        candidates = sel.candidates(u)
+        candidates = pd.Series(candidates)
+        uis = user_items.loc[u]
+        assert len(uis) + len(candidates) == len(items)
+        assert candidates.nunique() == len(candidates)
+        assert all(~candidates.isin(uis))
