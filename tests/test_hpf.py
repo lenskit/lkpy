@@ -48,7 +48,7 @@ def test_hpf_train_large(tmp_path):
     csel.fit(ratings)
     rec = basic.TopN(algo, csel)
 
-    for u in np.choice(ratings.user.unique(), size=50, replace=False):
+    for u in np.random.choice(ratings.user.unique(), size=50, replace=False):
         recs = rec.recommend(u, 50)
         assert len(recs) == 50
         assert recs.item.nunique() == 50
