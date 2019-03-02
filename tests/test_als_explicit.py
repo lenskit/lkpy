@@ -87,6 +87,7 @@ def test_als_predict_bad_user():
 
 
 @lktu.wantjit
+@mark.slow
 def test_als_train_large():
     algo = als.BiasedMF(20, iterations=10)
     ratings = lktu.ml_pandas.renamed.ratings
@@ -106,6 +107,7 @@ def test_als_train_large():
     assert ibias.values == approx(imeans.values)
 
 
+# don't use wantjit, use this to do a non-JIT test
 def test_als_save_load():
     original = als.BiasedMF(20, iterations=5)
     ratings = lktu.ml_pandas.renamed.ratings
