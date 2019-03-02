@@ -1,4 +1,3 @@
-parameters:
 jobs:
 - job: 'MacConda'
   pool:
