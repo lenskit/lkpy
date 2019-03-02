@@ -1,7 +1,7 @@
 import logging
 import pickle
 
-from lenskit.algorithms import hpf
+from lenskit.algorithms import hpf, basic
 
 import pandas as pd
 import numpy as np
@@ -44,38 +44,11 @@ def test_hpf_train_large(tmp_path):
     assert a2.n_users == algo.n_users
     assert a2.n_items == algo.n_items
 
+    csel = basic.UnratedItemCandidateSelector()
+    csel.fit(ratings)
+    rec = basic.TopN(algo, csel)
 
-@mark.slow
-@mark.eval
-@mark.skipif(not have_hpfrec, reason='hpfrec not installed')
-@mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
-def test_hpf_batch_accuracy():
-    import lenskit.crossfold as xf
-    from lenskit import batch, topn
-
-    ratings = lktu.ml100k.load_ratings()
-
-    algo = hpf.HPF(25)
-
-    def eval(train, test):
-        _log.info('running training')
-        train['rating'] = train.rating.astype(np.float_)
-        algo.fit(train)
-        users = test.user.unique()
-        _log.info('testing %d users', len(users))
-        candidates = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, users, 100, candidates)
-        return recs
-
-    folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
-    test = pd.concat(f.test for f in folds)
-
-    recs = pd.concat(eval(train, test) for (train, test) in folds)
-
-    _log.info('analyzing recommendations')
-    rla = topn.RecListAnalysis()
-    rla.add_metric(topn.ndcg)
-    results = rla.compute(recs, test)
-    dcg = results.ndcg
-    _log.info('nDCG for users is %.4f', dcg.mean())
-    assert dcg.mean() > 0
+    for u in np.choice(ratings.user.unique(), size=50, replace=False):
+        recs = rec.recommend(u, 50)
+        assert len(recs) == 50
+        assert recs.item.nunique() == 50
