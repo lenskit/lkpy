@@ -17,13 +17,10 @@ jobs:
   - script: conda update -y conda
     displayName: Update Conda
   
-  - script: conda create -n lkpy -qy $(conda.deps)
-    displayName: Create Conda environment
-
   - script: |
-      call activate lkpy
-      pip install $(pip.extras)
-    displayName: 'Extra PyPI deps'
+      conda create -n lkpy -qy $(conda.deps)
+      conda install -n lkpy -qy -c mdekstrand implicit hpfrec
+    displayName: Create Conda environment
 
   - script: |
       call activate lkpy

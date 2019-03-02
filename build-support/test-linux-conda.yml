@@ -16,12 +16,8 @@ jobs:
 
   - script: |
       conda create -n lkpy -qy $(conda.deps)
+      conda install -n lkpy -qy -c mdekstrand implicit hpfrec
     displayName: Create Anaconda environment
-  
-  - script: |
-      source activate lkpy
-      pip install $(pip.extras)
-    displayName: 'Extra PyPI deps'
 
   - script: |
       source activate lkpy
@@ -58,33 +54,7 @@ jobs:
       env NUMBA_DISABLE_JIT=1 python3 -m pytest --cov=lenskit --cov-append -m 'not slow'
     displayName: 'Non-JIT Test Coverage'
 
-  - script: |
-      source activate lkpy
-      coverage xml
-      coverage html
-    displayName: 'Process code coverage results'
-
-  - script: |
-      source activate lkpy
-      pip install codecov
-      
-      echo "Building for $BUILD_REASON"
-      cc_args=
-      if [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER" ]; then
-        ccargs="--pr $SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
-      fi
-      if [ -z "$CODECOV_TOKEN" ]; then
-        echo "no CODECOV_TOKEN :(" >&2
-      fi
-
-      codecov -c "$BUILD_SOURCEVERSION" -b $BUILD_SOURCEBRANCH $cc_args
-    displayName: 'Update CodeCov'
-
-  - task: PublishCodeCoverageResults@1
-    inputs:
-      codeCoverageTool: Cobertura
-      summaryFileLocation: '$(System.DefaultWorkingDirectory)/coverage.xml'
-      reportDirectory: '$(System.DefaultWorkingDirectory)/htmlcov'
+  - template: ./nix-coverage.yml
 
   - script: |
       source activate lkpy

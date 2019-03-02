@@ -7,8 +7,6 @@ variables:
     invoke pytest coverage pytest-cov pytest-doctestplus
     pandas scipy pyarrow numpy
     numba cython cffi
-  pip.extras: >
-    hpfrec implicit
 
 jobs:
 
@@ -18,3 +16,4 @@ jobs:
 # - template: build-support/test-windows-vanilla.yml
 - template: build-support/test-windows-conda.yml
 - template: build-support/test-mac-conda.yml
+- template: build-support/publish.yml

@@ -45,4 +45,4 @@ test:
     - pytest
     - pytest-arraydiff
   commands:
-    - pytest tests
+    - pytest tests -m "not slow"
