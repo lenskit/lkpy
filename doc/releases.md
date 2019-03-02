@@ -1,15 +1,21 @@
 # Release Notes
 
-## 0.6.0 (In Progress)
+## 0.6.0
 
 See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/1) for a summary of what's happening!
 
 - The `save` and `load` methods on algorithms have been removed.  Just pickle fitted models to save
-  their data.  This is what SciKit does, see no need to deviate.
+  their data.  This is what SciKit does, we see no need to deviate.
+- The APIs and model structures for top-*N* recommendation is reworked to enable algorithms to
+  produce recommendations more automatically.  The `Recommender` interfaces now take a `CandidateSelector`
+  to determine default candidates, so client code does not need to compute candidates on their own.
+  One effect of this is that the `batch.recommend` function no longer requires a candidate selector,
+  and there can be problems if you call `Recommender.adapt` before fitting a model.
 - Top-*N* evaluation has been completely revamped to make it easier to correctly implement and run
-  evaluation metrics.  Batch recommend no longer attaches ratings to recommendations.
-- Batch recommend & predict functions now take `nprocs` as keyword-only.
-- Several bug fixes and testing improvements
+  evaluation metrics.  Batch recommend no longer attaches ratings to recommendations.  See 
+  [Top-N evaluation](evaluation/topn-metrics.html) for details.
+- Batch recommend & predict functions now take `nprocs` as a keyword-only argument.
+- Several bug fixes and testing improvements.
 
 ### Internal Changes
 

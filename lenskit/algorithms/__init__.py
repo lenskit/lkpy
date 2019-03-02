@@ -149,6 +149,11 @@ class Recommender(Algorithm, metaclass=ABCMeta):
         Ensure that an algorithm is a :class:`Recommender`.  If it is not a recommender,
         it is wrapped in a :class:`lenskit.basic.TopN` with a default candidate selector.
 
+        .. note::
+            Since 0.6.0, since algorithms are fit directly, you should call this method
+            **before** calling :meth:`Algorithm.fit`, unless you will always be passing
+            explicit candidate sets to :meth:`recommend`.
+
         Args:
             algo(Predictor): the underlying rating predictor.
         """
