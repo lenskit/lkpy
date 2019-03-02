@@ -7,8 +7,6 @@ variables:
     invoke pytest coverage pytest-cov pytest-doctestplus
     pandas scipy pyarrow numpy
     numba cython cffi
-  pip.extras: >
-    hpfrec implicit
 
 jobs:
 

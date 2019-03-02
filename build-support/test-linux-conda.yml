@@ -16,12 +16,8 @@ jobs:
 
   - script: |
       conda create -n lkpy -qy $(conda.deps)
+      conda install -n lkpy -qy -c mdekstrand implicit hpfrec
     displayName: Create Anaconda environment
-  
-  - script: |
-      source activate lkpy
-      pip install $(pip.extras)
-    displayName: 'Extra PyPI deps'
 
   - script: |
       source activate lkpy
