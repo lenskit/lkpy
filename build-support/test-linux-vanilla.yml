@@ -54,7 +54,7 @@ jobs:
 
   - script: |
       echo "Fetching Codecov script"
-      curl -o /tmp/codecov.sh https://codecov.io/bash
+      curl -o /tmp/codecov.sh https://codecov.io/bash || exit 1
       
       echo "Building for $BUILD_REASON"
       cc_args=
