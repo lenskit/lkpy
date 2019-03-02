@@ -17,7 +17,6 @@ jobs:
   - script: |
       conda create -n lkpy -qy $(conda.deps)
       conda install -n lkpy -qy llvm-openmp
-      conda install -n lkpy -qy -c mdekstrand implicit hpfrec
     displayName: Set up Conda environment
 
   - script: |
