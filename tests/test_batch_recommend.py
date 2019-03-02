@@ -91,6 +91,7 @@ def test_recommend_no_cands(mlb):
     assert len(merged) == 0
 
 
+@pytest.mark.eval
 def test_bias_batch_recommend():
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
@@ -126,6 +127,7 @@ def test_bias_batch_recommend():
 
 
 @pytest.mark.parametrize('ncpus', [None, 2])
+@pytest.mark.eval
 def test_pop_batch_recommend(ncpus):
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf

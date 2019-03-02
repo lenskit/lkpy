@@ -1,0 +1,50 @@
+jobs:
+- job: 'LinuxSketchyDeps'
+  pool:
+    vmImage: ubuntu-16.04
+
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.6'
+      architecture: 'x64'
+
+  - script: |
+      python -m pip install --upgrade pip
+      pip install $(pip.deps)
+    displayName: 'Install dependencies'
+  
+  - script: |
+      python -m pip install cffi
+    displayName: 'Install partial extra deps'
+    
+  - script: |
+      mkdir -p build
+      python3 -m pytest --junitxml=build/test-results.xml
+    displayName: 'pytest'
+
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'build/test-results.xml'
+      testRunTitle: 'Publish test results for Python $(python.version)'
+  
+  - script: |
+      env NUMBA_DISABLE_JIT=1 python3 -m pytest --cov=lenskit --cov-report=xml --cov-report=html -m 'not eval'
+    displayName: 'Test Coverage'
+
+  - script: |
+      echo "Fetching Codecov script"
+      curl -o /tmp/codecov.sh https://codecov.io/bash
+      
+      echo "Building for $BUILD_REASON"
+      cc_args=
+      if [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER" ]; then
+        ccargs="-P $SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
+      fi
+      if [ -z "$CODECOV_TOKEN" ]; then
+        echo "no CODECOV_TOKEN :(" >&2
+      fi
+
+      bash /tmp/codecov.sh -C "$BUILD_SOURCEVERSION" -B $BUILD_SOURCEBRANCH $cc_args
+    displayName: 'Upload Coverage'
