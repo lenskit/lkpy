@@ -16,13 +16,11 @@ jobs:
 
   - script: |
       conda create -n lkpy -qy $(conda.deps)
-      conda install -n lkpy -qy ipykernel nbformat jupyter matplotlib
     displayName: Create Anaconda environment
   
   - script: |
       source activate lkpy
       pip install $(pip.extras)
-      pip install nbval
     displayName: 'Extra PyPI deps'
 
   - script: |
@@ -85,6 +83,9 @@ jobs:
 
   - script: |
       source activate lkpy
+      conda install -n lkpy -qy ipykernel nbformat jupyter_client matplotlib
+      pip install nbval
       cp -r ml-100k doc
       export PYTHONPATH="$PWD"
       python3 -m pytest --nbval-lax doc
+    displayName: Validate Documentation Examples
