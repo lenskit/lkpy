@@ -100,4 +100,4 @@ def test_solve_dposv():
         x = A.T @ b
         dposv(F, x, True)
 
-        assert x == approx(xexp, rel=1.0e-4)
+        assert x == approx(xexp, rel=1.0e-3)
