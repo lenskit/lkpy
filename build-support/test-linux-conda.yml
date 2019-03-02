@@ -44,7 +44,7 @@ jobs:
   - script: |
       source activate lkpy
       export NUMBA_THREADING_LAYER=omp # Tests don't work with TBB
-      python3 -m pytest --junitxml=build/test-results.xml --verbose
+      python3 -m pytest --junitxml=build/test-results.xml --cov=lenskit --verbose
     displayName: 'Test LKPY'
 
   - task: PublishTestResults@2
@@ -55,24 +55,29 @@ jobs:
 
   - script: |
       source activate lkpy
-      env NUMBA_DISABLE_JIT=1 python3 -m pytest --cov=lenskit --cov-report=xml --cov-report=html -m 'not eval'
-    displayName: 'Run Tests with Coverage'
+      env NUMBA_DISABLE_JIT=1 python3 -m pytest --cov=lenskit --cov-append -m 'not slow'
+    displayName: 'Non-JIT Test Coverage'
 
   - script: |
       source activate lkpy
-      echo "Fetching Codecov script"
-      curl -o /tmp/codecov.sh https://codecov.io/bash || exit 1
+      coverage xml
+      coverage html
+    displayName: 'Process code coverage results'
+
+  - script: |
+      source activate lkpy
+      pip install codecov
       
       echo "Building for $BUILD_REASON"
       cc_args=
       if [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER" ]; then
-        ccargs="-P $SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
+        ccargs="--pr $SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
       fi
       if [ -z "$CODECOV_TOKEN" ]; then
         echo "no CODECOV_TOKEN :(" >&2
       fi
 
-      bash /tmp/codecov.sh -C "$BUILD_SOURCEVERSION" -B $BUILD_SOURCEBRANCH $cc_args
+      codecov -c "$BUILD_SOURCEVERSION" -b $BUILD_SOURCEBRANCH $cc_args
     displayName: 'Update CodeCov'
 
   - task: PublishCodeCoverageResults@1
