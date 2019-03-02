@@ -1,0 +1,45 @@
+parameters:
+jobs:
+- job: 'MacConda'
+  pool:
+    vmImage: 'macOS-10.13'
+  strategy:
+    matrix:
+      Python36:
+        python.version: '3.6'
+      Python37:
+        python.version: '3.7'
+    maxParallel: 4
+
+  steps:
+  - bash: echo "##vso[task.prependpath]$CONDA/bin"
+    displayName: Add conda to PATH
+
+  - script: |
+      conda create -n lkpy -qy $(conda.deps)
+      conda install -n lkpy -qy llvm-openmp
+    displayName: Set up Conda environment
+
+  - script: |
+      if [ ! -r ~/ml-100k/u.data ]; then
+        wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
+        unzip -d ~ ml-100k.zip
+      fi
+    displayName: 'Download ML-100K'
+    
+  - script: |
+      source activate lkpy
+      python3 setup.py build
+    displayName: 'Build LKPY'
+
+  - script: |
+      source activate lkpy
+      mkdir -p build
+      python3 -m pytest --junitxml=build/test-results.xml
+    displayName: 'Test LKPY'
+
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'build/test-results.xml'
+      testRunTitle: 'Publish test results for Mac Python $(python.version)'

@@ -1,0 +1,91 @@
+parameters:
+jobs:
+- job: 'LinuxConda'
+  pool:
+    vmImage: ubuntu-16.04
+  strategy:
+    matrix:
+      Python36:
+        python.version: '3.6'
+      Python37:
+        python.version: '3.7'
+    maxParallel: 4
+
+  steps:
+  - bash: echo "##vso[task.prependpath]/usr/share/miniconda/bin"
+    displayName: Add conda to PATH
+
+  - script: |
+      conda create -n lkpy -qy $(conda.deps)
+      conda install -n lkpy -qy ipykernel nbformat jupyter matplotlib
+    displayName: Create Anaconda environment
+  
+  - script: |
+      source activate lkpy
+      pip install $(pip.extras)
+      pip install nbval
+    displayName: 'Extra PyPI deps'
+
+  - script: |
+      source activate lkpy
+      numba -s
+    displayName: 'Inspect Numba environment'
+    
+  - script: |
+      if [ ! -r ml-100k/u.data ]; then
+        wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
+        unzip ml-100k.zip
+      fi
+    displayName: 'Download ML-100K'
+
+  - script: |
+      source activate lkpy
+      mkdir -p build
+      python3 setup.py build
+    displayName: 'Build LKPY'
+
+  - script: |
+      source activate lkpy
+      export NUMBA_THREADING_LAYER=omp # Tests don't work with TBB
+      python3 -m pytest --junitxml=build/test-results.xml --verbose
+    displayName: 'Test LKPY'
+
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'build/test-results.xml'
+      testRunTitle: 'Publish test results for Python $(python.version)'
+
+  - script: |
+      source activate lkpy
+      env NUMBA_DISABLE_JIT=1 python3 -m pytest --cov=lenskit --cov-report=xml --cov-report=html -m 'not eval'
+    displayName: 'Run Tests with Coverage'
+
+  - script: |
+      source activate lkpy
+      echo "Fetching Codecov script"
+      curl -o /tmp/codecov.sh https://codecov.io/bash
+      
+      echo "Building for $BUILD_REASON"
+      cc_args=
+      if [ -n "$SYSTEM_PULLREQUEST_PULLREQUESTNUMBER" ]; then
+        ccargs="-P $SYSTEM_PULLREQUEST_PULLREQUESTNUMBER"
+      fi
+      if [ -z "$CODECOV_TOKEN" ]; then
+        echo "no CODECOV_TOKEN :(" >&2
+      fi
+
+      bash /tmp/codecov.sh -C "$BUILD_SOURCEVERSION" -B $BUILD_SOURCEBRANCH $cc_args
+    displayName: 'Update CodeCov'
+
+  - task: PublishCodeCoverageResults@1
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/coverage.xml'
+      reportDirectory: '$(System.DefaultWorkingDirectory)/htmlcov'
+
+  - script: |
+      source activate lkpy
+      cp -r ml-100k doc
+      export PYTHONPATH="$PWD"
+      python3 -m pytest --nbval-lax doc
