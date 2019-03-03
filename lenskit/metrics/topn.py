@@ -60,7 +60,7 @@ def _dcg(scores, discount=np.log2):
     Returns:
         double: the DCG of the scored items.
     """
-    scores = np.nan_to_num(scores, copy=False)
+    scores = np.nan_to_num(scores)
     ranks = np.arange(1, len(scores) + 1)
     disc = discount(ranks)
     np.maximum(disc, 1, out=disc)
