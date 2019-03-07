@@ -7,7 +7,6 @@ from pytest import approx
 
 from lenskit.metrics.topn import _dcg
 from lenskit import topn
-import lk_test_utils as lktu
 
 _log = logging.getLogger(__name__)
 
@@ -49,7 +48,11 @@ def test_run_two():
         'rating': [3.0, 5.0, 4.0, 3.0, 5.0, 4.0]
     })
 
-    res = rla.compute(recs, truth)
+    def prog(inner):
+        assert len(inner) == 2
+        return inner
+
+    res = rla.compute(recs, truth, progress=prog)
     print(res)
 
     assert len(res) == 2
