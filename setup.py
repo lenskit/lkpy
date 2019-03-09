@@ -41,7 +41,8 @@ setup(
             'sphinx >= 1.8',
             'sphinx_rtd_theme',
             'nbsphinx',
-            'recommonmark'
+            'recommonmark',
+            'ipython'
         ],
         'hpf': [
             'hpfrec'
