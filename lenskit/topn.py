@@ -58,7 +58,7 @@ class RecListAnalysis:
 
         self.metrics.append((metric, name, kwargs))
 
-    def compute(self, recs, truth):
+    def compute(self, recs, truth, *, progress=lambda x: x):
         """
         Run the analysis.  Neither data frame should be meaningfully indexed.
 
@@ -99,7 +99,7 @@ class RecListAnalysis:
         assert res.index.nlevels == len(gcols)
 
         _log.info('computing anlysis for %d lists', len(res))
-        for i, row_key in enumerate(res.index):
+        for i, row_key in enumerate(progress(res.index)):
             g_rows = grouped.indices[row_key]
             g_recs = recs.iloc[g_rows, :]
             if len(ti_cols) == len(gcols) + 1:

@@ -61,6 +61,7 @@ jobs:
       conda install -n lkpy -qy ipykernel nbformat jupyter_client matplotlib
       pip install nbval
       cp -r ml-100k doc
+      cp -r ml-latest-small doc
       export PYTHONPATH="$PWD"
       python3 -m pytest --nbval-lax doc
     displayName: Validate Documentation Examples

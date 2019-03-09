@@ -132,6 +132,13 @@ class MultiEval:
             attrs['DataSet'] = name
         attrs.update(kwargs)
 
+        # special-case lists to keep multis flat
+        if isinstance(data, list):
+            for part, e in enumerate(data):
+                self.add_datasets(e, name, candidates,
+                                  Partition=part+1, **kwargs)
+            return
+
         if not isinstance(data, tuple):
             self._is_flat = False
 
@@ -196,7 +203,7 @@ class MultiEval:
             nds = len(list(self._flat_datasets()))
         return nds * len(self.algorithms)
 
-    def run(self, runs=None):
+    def run(self, runs=None, *, progress=None):
         """
         Run the evaluation.
 
@@ -205,6 +212,8 @@ class MultiEval:
                 If provided, a specific set of runs to run.  Useful for splitting
                 an experiment into individual runs.  This is a set of 1-based run
                 IDs, not 0-based indexes.
+            progress:
+                A :py:func:`tqdm.tqdm`-compatible progress function.
         """
 
         if runs is not None and self.combine_output:
@@ -220,7 +229,12 @@ class MultiEval:
         train_load = util.LastMemo(self._read_data)
         test_load = util.LastMemo(self._read_data)
 
-        for i, (dsrec, arec) in enumerate(self._flat_runs()):
+        iter = self._flat_runs()
+        if progress is not None:
+            n = self.run_count() if self._is_flat else None
+            iter = progress(iter, total=n)
+
+        for i, (dsrec, arec) in enumerate(iter):
             run_id = i + 1
             if runs is not None and run_id not in runs:
                 _logger.info('skipping deselected run %d', run_id)

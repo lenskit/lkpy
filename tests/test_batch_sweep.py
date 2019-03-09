@@ -76,8 +76,12 @@ def test_sweep_filenames(tmp_path):
                          attrs=['damping'])
     sweep.add_algorithms(Popular())
 
+    def progress(iter, total=None):
+        assert total == len(folds) * 4
+        return iter
+
     try:
-        sweep.run()
+        sweep.run(progress=progress)
     finally:
         if (work / 'runs.csv').exists():
             runs = pd.read_csv(work / 'runs.csv')

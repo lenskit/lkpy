@@ -72,6 +72,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
+highlight_language = 'python3'
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -183,5 +184,6 @@ intersphinx_mapping = {
     'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
     'hpfrec': ('https://hpfrec.readthedocs.io/en/latest/', None),
     'implicit': ('https://implicit.readthedocs.io/en/latest/', None),
-    'scikit': ('https://scikit-learn.org/stable/', None)
+    'scikit': ('https://scikit-learn.org/stable/', None),
+    'tqdm': ('https://tqdm.github.io/', None)
 }

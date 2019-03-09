@@ -127,7 +127,7 @@ class BiasedMF(BiasMFPredictor):
         self.timer = util.Stopwatch()
 
         if self.bias is not None:
-            _logger.info('[%s] fitting bias model')
+            _logger.info('[%s] fitting bias model', self.timer)
             self.bias.fit(ratings)
 
         current, bias, uctx, ictx = self._initial_model(ratings)
