@@ -291,8 +291,11 @@ class MultiEval:
         return preds, watch.elapsed()
 
     def _recommend(self, rid, algo, test, candidates):
-        if self.recommend is None:
+        if self.recommend is None or self.recommend is False or self.recommend is 0:
             return None, None
+
+        if self.recommend is True:
+            self.recommend = None
 
         watch = util.Stopwatch()
         users = test.user.unique()
