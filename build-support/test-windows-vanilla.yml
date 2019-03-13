@@ -4,8 +4,6 @@ jobs:
     vmImage: vs2017-win2016
   strategy:
     matrix:
-      Python36:
-        python.version: '3.6'
       Python37:
         python.version: '3.7'
     maxParallel: 4
@@ -19,6 +17,7 @@ jobs:
 
   - script: |
       python -m pip install --upgrade pip
+      set PIP_PREFER_BINARY=true
       pip install $(pip.deps)
     displayName: 'Install dependencies'
 
