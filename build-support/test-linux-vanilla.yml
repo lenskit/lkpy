@@ -26,6 +26,7 @@ jobs:
 
   - script: |
       python -m pip install --upgrade pip
+      export PIP_PREFER_BINARY=true
       pip install $(pip.deps)
     displayName: 'Install dependencies'
   
