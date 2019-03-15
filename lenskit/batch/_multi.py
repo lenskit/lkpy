@@ -291,16 +291,17 @@ class MultiEval:
         return preds, watch.elapsed()
 
     def _recommend(self, rid, algo, test, candidates):
-        if self.recommend is None or self.recommend is False or self.recommend is 0:
+        if not self.recommend: #if recommend is any false-y val (0, None, False), turn off recs
             return None, None
-
-        if self.recommend is True:
-            self.recommend = None
+        elif self.recommend is True:  # special value True means unlimited
+            nrecs = None
+        else:  # recommend has rec size
+            nrecs = self.recommend
 
         watch = util.Stopwatch()
         users = test.user.unique()
         _logger.info('generating recommendations for %d users for %s', len(users), algo)
-        recs = recommend(algo, users, self.recommend, candidates,
+        recs = recommend(algo, users, nrecs, candidates,
                          nprocs=self.nprocs)
         watch.stop()
         _logger.info('generated recommendations in %s', watch)
