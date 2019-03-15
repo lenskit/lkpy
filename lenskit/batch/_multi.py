@@ -291,7 +291,7 @@ class MultiEval:
         return preds, watch.elapsed()
 
     def _recommend(self, rid, algo, test, candidates):
-        if not self.recommend: #if recommend is any false-y val (0, None, False), turn off recs
+        if not self.recommend:  #if recommend is any false-y val (0, None, False), turn off recs
             return None, None
         elif self.recommend is True:  # special value True means unlimited
             nrecs = None
