@@ -41,14 +41,15 @@ class MultiEval:
         predict(bool):
             whether to generate rating predictions.
         recommend(int):
-            the number of recommendations to generate per user (None to disable top-N).
+            the number of recommendations to generate per user. Any false-y value (None,
+            False, 0) will disable top-n. True will generate the full recommendation list.s
         candidates(function):
             the default candidate set generator for recommendations.  It should take the
             training data and return a candidate generator, itself a function mapping user
             IDs to candidate sets.
         combine(bool):
             whether to combine output; if ``False``, output will be left in separate files, if
-            ``True``, it will be in a single set of files (runs, recommendations, and preditions).
+            ``True``, it will be in a single set of files (runs, recommendations, and predictions).
     """
 
     def __init__(self, path, predict=True,
