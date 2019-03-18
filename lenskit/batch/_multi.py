@@ -42,8 +42,8 @@ class MultiEval:
             whether to generate rating predictions.
         recommend(int):
             the number of recommendations to generate per user. Any false-y value (``None``,
-            ``False``, ``0``) will disable top-n. The literal value ``True`` will generate recommendation
-            lists of unlimited size.
+            ``False``, ``0``) will disable top-n. The literal value ``True`` will generate
+            recommendation lists of unlimited size.
         candidates(function):
             the default candidate set generator for recommendations.  It should take the
             training data and return a candidate generator, itself a function mapping user
