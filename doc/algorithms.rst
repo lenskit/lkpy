@@ -15,7 +15,6 @@ algorithms.  These algorithm interfaces are based on the SciKit design patterns
    :maxdepth: 1
    :caption: Algorithm Families:
 
-   interfaces
    basic
    knn
    mf

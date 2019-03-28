@@ -97,6 +97,11 @@ def test_fallback_list():
     assert isinstance(params['algorithms'][1], basic.Bias)
 
 
+def test_fallback_string():
+    algo = basic.Fallback([basic.Memorized(simple_df), basic.Bias()])
+    assert 'Fallback' in str(algo)
+
+
 def test_fallback_clone():
     algo = basic.Fallback([basic.Memorized(simple_df), basic.Bias()])
     algo.fit(lktu.ml_pandas.renamed.ratings)
@@ -225,6 +230,28 @@ def test_topn_config():
     assert rs.startswith('TopN/')
 
 
+def test_topn_big():
+    ratings = lktu.ml_pandas.renamed.ratings
+    users = ratings.user.unique()
+    items = ratings.item.unique()
+    user_items = ratings.set_index('user').item
+
+    algo = basic.TopN(basic.Bias())
+    a2 = algo.fit(ratings)
+    assert a2 is algo
+
+    # test 100 random users
+    for u in np.random.choice(users, 100, False):
+        recs = algo.recommend(u, 100)
+        assert len(recs) == 100
+        rated = user_items.loc[u]
+        assert all(~recs['item'].isin(rated))
+        unrated = np.setdiff1d(items, rated)
+        scores = algo.predictor.predict_for_user(u, unrated)
+        top = scores.nlargest(100)
+        assert top.values == approx(recs.score.values)
+
+
 def test_popular():
     algo = basic.Popular()
     algo.fit(lktu.ml_pandas.renamed.ratings)
@@ -240,6 +267,24 @@ def test_popular():
     assert recs.score.iloc[0] == counts.max()
     # the 10 most popular should be the same
     assert all(counts.index[:10] == recs.item[:10])
+
+
+def test_popular_excludes_rated():
+    algo = basic.Popular()
+    algo.fit(lktu.ml_pandas.renamed.ratings)
+    counts = lktu.ml_pandas.renamed.ratings.groupby('item').user.count()
+    counts = counts.nlargest(100)
+
+    recs = algo.recommend(100, 100)
+    assert len(recs) == 100
+    assert all(np.diff(recs.score) <= 0)
+
+    # make sure we didn't recommend anything the user likes
+    ratings = lktu.ml_pandas.renamed.ratings
+    urates = ratings.set_index(['user', 'item'])
+    urates = urates.loc[100, :]
+    match = recs.join(urates, on='item', how='inner')
+    assert len(match) == 0
 
 
 def test_pop_candidates():
@@ -283,6 +328,43 @@ def test_pop_save_load():
     assert recs.score.iloc[0] == counts.max()
     # the 10 most popular should be the same
     assert all(counts.index[:10] == recs.item[:10])
+
+
+def test_unrated_selector():
+    sel = basic.UnratedItemCandidateSelector()
+    s2 = sel.fit(simple_df)
+    assert s2 is sel
+
+    assert set(sel.candidates(10)) == set([3])
+    assert set(sel.candidates(12)) == set([3, 2])
+    assert set(sel.candidates(11)) == set([1, 2, 3])
+
+
+def test_unrated_override():
+    sel = basic.UnratedItemCandidateSelector()
+    sel.fit(simple_df)
+
+    assert set(sel.candidates(10, [2])) == set([1, 3])
+
+
+def test_unrated_big():
+    ratings = lktu.ml_pandas.renamed.ratings
+    users = ratings.user.unique()
+    items = ratings.item.unique()
+    user_items = ratings.set_index('user').item
+
+    sel = basic.UnratedItemCandidateSelector()
+    s2 = sel.fit(ratings)
+    assert s2 is sel
+
+    # test 100 random users
+    for u in np.random.choice(users, 100, False):
+        candidates = sel.candidates(u)
+        candidates = pd.Series(candidates)
+        uis = user_items.loc[u]
+        assert len(uis) + len(candidates) == len(items)
+        assert candidates.nunique() == len(candidates)
+        assert all(~candidates.isin(uis))
 
 
 def test_random():

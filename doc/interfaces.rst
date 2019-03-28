@@ -38,6 +38,17 @@ for any algorithm that at least implements :py:class:`Predictor`.  For example::
 .. autoclass:: Recommender
     :members:
 
+Candidate Selection
+-------------------
+
+Some recommenders use a *candidate selector* to identify possible items to recommend.
+These are also treated as algorithms, mainly so that they can memorize users' prior
+ratings to exclude them from recommendation.
+
+.. autoclass:: CandidateSelector
+    :members:
+
+
 Rating Prediction
 -----------------
 

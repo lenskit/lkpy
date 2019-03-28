@@ -43,9 +43,11 @@ Resources
    :caption: Contents:
 
    GettingStarted
+   interfaces
    crossfold
    batch
    evaluation/index
+   diagnostics
    algorithms
    util
    releases

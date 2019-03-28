@@ -1,0 +1,40 @@
+jobs:
+- job: 'WindowsConda'
+  pool:
+    vmImage: vs2017-win2016
+  strategy:
+    matrix:
+      Python36:
+        python.version: '3.6'
+      Python37:
+        python.version: '3.7'
+    maxParallel: 4
+
+  steps:
+  - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
+    displayName: Add conda to PATH
+
+  - script: conda update -y conda
+    displayName: Update Conda
+  
+  - script: |
+      conda create -n lkpy -qy $(conda.deps)
+      conda install -n lkpy -qy -c mdekstrand implicit hpfrec
+    displayName: Create Conda environment
+
+  - script: |
+      call activate lkpy
+      python -V
+      python setup.py build
+    displayName: 'Build LKPY'
+
+  - script: |
+      call activate lkpy
+      python -m pytest --junitxml=build/test-results.xml
+    displayName: 'Test LKPY'
+  
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'build/test-results.xml'
+      testRunTitle: 'Publish test results for Windows Python $(python.version)'

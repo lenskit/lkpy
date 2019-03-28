@@ -3,13 +3,13 @@ Basic utility algorithms and combiners.
 """
 
 import logging
-import pathlib
 from collections.abc import Iterable, Sequence
 
 import pandas as pd
+import numpy as np
 
 from .. import check
-from . import Predictor, Recommender
+from . import Predictor, Recommender, CandidateSelector
 
 _logger = logging.getLogger(__name__)
 
@@ -151,19 +151,37 @@ class Bias(Predictor):
 
 
 class Popular(Recommender):
+    """
+    Recommend the most popular items.
+
+    Args:
+        selector(CandidateSelector):
+            The candidate selector to use. If ``None``, uses a new
+            :class:`UnratedItemCandidateSelector`.
+    """
+
+    def __init__(self, selector=None):
+        if selector is None:
+            self.selector = UnratedItemCandidateSelector()
+        else:
+            self.selector = selector
+
     def fit(self, ratings):
         pop = ratings.groupby('item').user.count()
         pop.name = 'score'
         self.item_pop_ = pop
+        self.selector.fit(ratings)
 
         return self
 
     def recommend(self, user, n=None, candidates=None, ratings=None):
         scores = self.item_pop_
-        if candidates is not None:
-            idx = scores.index.get_indexer(candidates)
-            idx = idx[idx >= 0]
-            scores = scores.iloc[idx]
+        if candidates is None:
+            candidates = self.selector.candidates(user, ratings)
+
+        idx = scores.index.get_indexer(candidates)
+        idx = idx[idx >= 0]
+        scores = scores.iloc[idx]
 
         if n is None:
             return scores.sort_values(ascending=False).reset_index()
@@ -242,26 +260,49 @@ class Fallback(Predictor):
         return preds.reindex(items)
 
     def __str__(self):
-        return 'Fallback([{}])'.format(', '.join(self.algorithms))
+        str_algos = [str(algo) for algo in self.algorithms]
+        return 'Fallback([{}])'.format(', '.join(str_algos))
 
 
 class TopN(Recommender):
     """
     Basic recommender that implements top-N recommendation using a predictor.
 
+    .. note::
+        This class does not do anything of its own in :meth:`fit`.  If its
+        predictor and candidate selector are both fit, the top-N recommender
+        does not need to be fit.
+
     Args:
         predictor(Predictor):
             The underlying predictor.
+        selector(CandidateSelector):
+            The candidate selector.  If ``None``, uses :class:`UnratedItemCandidateSelector`.
     """
 
-    def __init__(self, predictor):
+    def __init__(self, predictor, selector=None):
         self.predictor = predictor
+        self.selector = selector if selector is not None else UnratedItemCandidateSelector()
 
     def fit(self, ratings, *args, **kwargs):
+        """
+        Fit the recommender.
+
+        Args:
+            ratings(pandas.DataFrame):
+                The rating or interaction data.  Passed changed to the predictor and
+                candidate selector.
+            args, kwargs:
+                Additional arguments for the predictor to use in its training process.
+        """
         self.predictor.fit(ratings, *args, **kwargs)
+        self.selector.fit(ratings)
         return self
 
     def recommend(self, user, n=None, candidates=None, ratings=None):
+        if candidates is None:
+            candidates = self.selector.candidates(user, ratings)
+
         scores = self.predictor.predict_for_user(user, candidates, ratings)
         scores = scores[scores.notna()]
         scores = scores.sort_values(ascending=False)
@@ -273,6 +314,43 @@ class TopN(Recommender):
 
     def __str__(self):
         return 'TopN/' + str(self.predictor)
+
+
+class UnratedItemCandidateSelector(CandidateSelector):
+    """
+    :class:`CandidateSelector` that selects items a user has not rated as
+    candidates.  When this selector is fit, it memorizes the rated items.
+
+    Attributes:
+        items_(pandas.Index): All known items.
+        user_items_(dict):
+            Items rated by each known user, as positions in the ``items`` index.
+    """
+    items_ = None
+    user_items_ = None
+
+    def fit(self, ratings):
+        self.items_ = pd.Index(np.unique(ratings['item']))
+        uimap = {}
+        for u, g in ratings.groupby('user'):
+            uimap[u] = self.items_.get_indexer(np.unique(g['item']))
+
+        self.user_items_ = uimap
+        return self
+
+    def candidates(self, user, ratings=None):
+        if ratings is None:
+            uis = self.user_items_.get(user, None)
+        else:
+            uis = self.items_.get_indexer(self.rated_items(ratings))
+            uis = uis[uis >= 0]
+
+        if uis is not None:
+            mask = np.full(len(self.items_), True)
+            mask[uis] = False
+            return self.items_.values[mask]
+        else:
+            return self.items_.values
 
 
 class Random(Recommender):

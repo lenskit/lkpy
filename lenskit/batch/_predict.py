@@ -5,6 +5,7 @@ from multiprocessing.pool import Pool
 import pandas as pd
 
 from .. import util
+from .. import crossfold
 
 _logger = logging.getLogger(__name__)
 _rec_context = None
@@ -30,7 +31,7 @@ def _predict_user(algo, user, udf):
     watch = util.Stopwatch()
     res = algo.predict_for_user(user, udf['item'])
     res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
-    _logger.debug('%s produced %d/%d predictions for %s in %s',
+    _logger.debug('%s produced %f/%d predictions for %s in %s',
                   algo, res.prediction.notna().sum(), len(udf), user, watch)
     return res
 
@@ -47,6 +48,25 @@ def predict(algo, pairs, *, nprocs=None):
     :py:class:`algorithms.Predictor` or a function of two arguments: the user ID and
     a list of item IDs. It should return a dictionary or a :py:class:`pandas.Series`
     mapping item IDs to predictions.
+
+    To use this function, provide a pre-fit algorithm::
+
+        >>> from lenskit.algorithms.basic import Bias
+        >>> from lenskit.metrics.predict import rmse
+        >>> ratings = util.load_ml_ratings()
+        >>> bias = Bias()
+        >>> bias.fit(ratings[:-1000])
+        <lenskit.algorithms.basic.Bias object at ...>
+        >>> preds = predict(bias, ratings[-1000:])
+        >>> preds.head()
+               user  item  rating   timestamp  prediction
+        99004   664  8361     3.0  1393891425    3.288286
+        99005   664  8528     3.5  1393891047    3.559119
+        99006   664  8529     4.0  1393891173    3.573008
+        99007   664  8636     4.0  1393891175    3.846268
+        99008   664  8641     4.5  1393890852    3.710635
+        >>> rmse(preds['prediction'], preds['rating'])
+        0.8326992222...
 
     Args:
         algo(lenskit.algorithms.Predictor):

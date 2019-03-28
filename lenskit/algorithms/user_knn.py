@@ -147,7 +147,6 @@ class UserUser(Predictor):
 
             # get the item's users & ratings
             i_users = self.transpose_matrix_.row_cs(ipos)
-            i_rates = self.transpose_matrix_.row_vs(ipos)
 
             # find and limit the neighbors
             i_sims = nsims[i_users]
@@ -164,8 +163,14 @@ class UserUser(Predictor):
 
             # now we have picked weights, take a dot product
             ism = i_sims[mask]
-            v = np.dot(i_rates[mask], ism)
-            v = v / np.sum(ism)
+            if self.aggregate == self.AGG_WA:
+                i_rates = self.transpose_matrix_.row_vs(ipos)
+                v = np.dot(i_rates[mask], ism)
+                v = v / np.sum(ism)
+            elif self.aggregate == self.AGG_SUM:
+                v = np.sum(ism)
+            else:
+                raise ValueError('invalid aggregate ' + self.aggregate)
             results[i] = v + umean
 
         results = pd.Series(results, index=items, name='prediction')
@@ -188,8 +193,11 @@ class UserUser(Predictor):
                 return None, 0
         else:
             _logger.debug('using provided ratings for user %d', user)
-            umean = ratings.mean()
-            ratings = ratings - umean
+            if self.center:
+                umean = ratings.mean()
+                ratings = ratings - umean
+            else:
+                umean = 0
             unorm = np.linalg.norm(ratings)
             ratings = ratings / unorm
             ratings = ratings.reindex(self.item_index_, fill_value=0).values

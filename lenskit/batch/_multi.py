@@ -41,14 +41,16 @@ class MultiEval:
         predict(bool):
             whether to generate rating predictions.
         recommend(int):
-            the number of recommendations to generate per user (None to disable top-N).
+            the number of recommendations to generate per user. Any false-y value (``None``,
+            ``False``, ``0``) will disable top-n. The literal value ``True`` will generate
+            recommendation lists of unlimited size.
         candidates(function):
             the default candidate set generator for recommendations.  It should take the
             training data and return a candidate generator, itself a function mapping user
             IDs to candidate sets.
         combine(bool):
             whether to combine output; if ``False``, output will be left in separate files, if
-            ``True``, it will be in a single set of files (runs, recommendations, and preditions).
+            ``True``, it will be in a single set of files (runs, recommendations, and predictions).
     """
 
     def __init__(self, path, predict=True,
@@ -132,6 +134,13 @@ class MultiEval:
             attrs['DataSet'] = name
         attrs.update(kwargs)
 
+        # special-case lists to keep multis flat
+        if isinstance(data, list):
+            for part, e in enumerate(data):
+                self.add_datasets(e, name, candidates,
+                                  Partition=part+1, **kwargs)
+            return
+
         if not isinstance(data, tuple):
             self._is_flat = False
 
@@ -196,7 +205,7 @@ class MultiEval:
             nds = len(list(self._flat_datasets()))
         return nds * len(self.algorithms)
 
-    def run(self, runs=None):
+    def run(self, runs=None, *, progress=None):
         """
         Run the evaluation.
 
@@ -205,6 +214,8 @@ class MultiEval:
                 If provided, a specific set of runs to run.  Useful for splitting
                 an experiment into individual runs.  This is a set of 1-based run
                 IDs, not 0-based indexes.
+            progress:
+                A :py:func:`tqdm.tqdm`-compatible progress function.
         """
 
         if runs is not None and self.combine_output:
@@ -220,7 +231,12 @@ class MultiEval:
         train_load = util.LastMemo(self._read_data)
         test_load = util.LastMemo(self._read_data)
 
-        for i, (dsrec, arec) in enumerate(self._flat_runs()):
+        iter = self._flat_runs()
+        if progress is not None:
+            n = self.run_count() if self._is_flat else None
+            iter = progress(iter, total=n)
+
+        for i, (dsrec, arec) in enumerate(iter):
             run_id = i + 1
             if runs is not None and run_id not in runs:
                 _logger.info('skipping deselected run %d', run_id)
@@ -291,13 +307,17 @@ class MultiEval:
         return preds, watch.elapsed()
 
     def _recommend(self, rid, algo, test, candidates):
-        if self.recommend is None:
+        if not self.recommend:  # if recommend is any false-y val (0, None, False), turn off recs
             return None, None
+        elif self.recommend is True:  # special value True means unlimited
+            nrecs = None
+        else:  # recommend has rec size
+            nrecs = self.recommend
 
         watch = util.Stopwatch()
         users = test.user.unique()
         _logger.info('generating recommendations for %d users for %s', len(users), algo)
-        recs = recommend(algo, users, self.recommend, candidates,
+        recs = recommend(algo, users, nrecs, candidates,
                          nprocs=self.nprocs)
         watch.stop()
         _logger.info('generated recommendations in %s', watch)

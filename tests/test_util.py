@@ -203,3 +203,9 @@ def test_append_parquet(tmp_path):
     f2 = pd.read_parquet(fn)
     assert all(f2.n == frame.n)
     assert all(f2.x == frame.x)
+
+
+def test_read_ml():
+    ratings = lku.load_ml_ratings()
+    assert len(ratings) > 100000
+    assert set(ratings.columns) == set(['user', 'item', 'rating', 'timestamp'])

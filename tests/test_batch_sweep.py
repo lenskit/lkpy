@@ -14,6 +14,7 @@ from lenskit.algorithms.basic import Bias, Popular
 from pytest import mark
 
 
+@mark.slow
 @mark.parametrize('ncpus', [None, 2])
 def test_sweep_bias(tmp_path, ncpus):
     tmp_path = norm_path(tmp_path)
@@ -55,6 +56,86 @@ def test_sweep_bias(tmp_path, ncpus):
     assert all(recs.RunId.isin(runs.RunId))
 
 
+@mark.slow
+def test_sweep_norecs(tmp_path):
+    tmp_path = norm_path(tmp_path)
+    work = pathlib.Path(tmp_path)
+    sweep = batch.MultiEval(tmp_path, recommend=None)
+
+    ratings = ml_pandas.renamed.ratings
+    folds = xf.partition_users(ratings, 5, xf.SampleN(5))
+    sweep.add_datasets(folds, DataSet='ml-small')
+    sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
+                         attrs=['damping'])
+    sweep.add_algorithms(Popular())
+
+    try:
+        sweep.run()
+    finally:
+        if (work / 'runs.csv').exists():
+            runs = pd.read_csv(work / 'runs.csv')
+            print(runs)
+
+    assert (work / 'runs.csv').exists()
+    assert (work / 'runs.parquet').exists()
+    assert (work / 'predictions.parquet').exists()
+    assert not (work / 'recommendations.parquet').exists()
+
+    runs = pd.read_parquet(work / 'runs.parquet')
+    # 4 algorithms by 5 partitions
+    assert len(runs) == 20
+    assert all(np.sort(runs.AlgoClass.unique()) == ['Bias', 'Popular'])
+    bias_runs = runs[runs.AlgoClass == 'Bias']
+    assert all(bias_runs.damping.notna())
+    pop_runs = runs[runs.AlgoClass == 'Popular']
+    assert all(pop_runs.damping.isna())
+
+    preds = pd.read_parquet(work / 'predictions.parquet')
+    assert all(preds.RunId.isin(bias_runs.RunId))
+
+
+@mark.slow
+def test_sweep_allrecs(tmp_path):
+    tmp_path = norm_path(tmp_path)
+    work = pathlib.Path(tmp_path)
+    sweep = batch.MultiEval(tmp_path, recommend=True)
+
+    ratings = ml_pandas.renamed.ratings
+    folds = xf.partition_users(ratings, 5, xf.SampleN(5))
+    sweep.add_datasets(folds, DataSet='ml-small')
+    sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
+                             attrs=['damping'])
+    sweep.add_algorithms(Popular())
+
+    try:
+        sweep.run()
+    finally:
+        if (work / 'runs.csv').exists():
+            runs = pd.read_csv(work / 'runs.csv')
+            print(runs)
+
+    assert (work / 'runs.csv').exists()
+    assert (work / 'runs.parquet').exists()
+    assert (work / 'predictions.parquet').exists()
+    assert (work / 'recommendations.parquet').exists()
+
+    runs = pd.read_parquet(work / 'runs.parquet')
+    # 4 algorithms by 5 partitions
+    assert len(runs) == 20
+    assert all(np.sort(runs.AlgoClass.unique()) == ['Bias', 'Popular'])
+    bias_runs = runs[runs.AlgoClass == 'Bias']
+    assert all(bias_runs.damping.notna())
+    pop_runs = runs[runs.AlgoClass == 'Popular']
+    assert all(pop_runs.damping.isna())
+
+    preds = pd.read_parquet(work / 'predictions.parquet')
+    assert all(preds.RunId.isin(bias_runs.RunId))
+
+    recs = pd.read_parquet(work / 'recommendations.parquet')
+    assert all(recs.RunId.isin(runs.RunId))
+
+
+@mark.slow
 def test_sweep_filenames(tmp_path):
     tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
@@ -74,8 +155,12 @@ def test_sweep_filenames(tmp_path):
                          attrs=['damping'])
     sweep.add_algorithms(Popular())
 
+    def progress(iter, total=None):
+        assert total == len(folds) * 4
+        return iter
+
     try:
-        sweep.run()
+        sweep.run(progress=progress)
     finally:
         if (work / 'runs.csv').exists():
             runs = pd.read_csv(work / 'runs.csv')
@@ -91,6 +176,7 @@ def test_sweep_filenames(tmp_path):
     assert len(runs) == 8
 
 
+@mark.slow
 def test_sweep_persist(tmp_path):
     tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
@@ -131,6 +217,7 @@ def test_sweep_persist(tmp_path):
     assert len(runs) == 20
 
 
+@mark.slow
 def test_sweep_oneshot(tmp_path):
     tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
@@ -161,6 +248,7 @@ def test_sweep_oneshot(tmp_path):
     assert run['RunId'] == 3
 
 
+@mark.slow
 def test_sweep_save(tmp_path):
     tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
@@ -195,6 +283,7 @@ def test_sweep_save(tmp_path):
     assert len(runs) == 5
 
 
+@mark.slow
 def test_sweep_combine(tmp_path):
     tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)

@@ -58,7 +58,7 @@ class RecListAnalysis:
 
         self.metrics.append((metric, name, kwargs))
 
-    def compute(self, recs, truth):
+    def compute(self, recs, truth, *, progress=lambda x: x):
         """
         Run the analysis.  Neither data frame should be meaningfully indexed.
 
@@ -76,6 +76,7 @@ class RecListAnalysis:
         if gcols is None:
             gcols = [c for c in recs.columns if c not in self.DEFAULT_SKIP_COLS]
         _log.info('using group columns %s', gcols)
+        _log.info('ungrouped columns: %s', [c for c in recs.columns if c not in gcols])
         gc_map = dict((c, i) for (i, c) in enumerate(gcols))
 
         ti_cols = [c for c in gcols if c in truth.columns]
@@ -85,7 +86,9 @@ class RecListAnalysis:
         truth = truth.set_index(ti_cols)
         if not truth.index.is_unique:
             warnings.warn('truth frame does not have unique values')
+        truth.sort_index(inplace=True)
 
+        _log.info('preparing analysis result storage')
         # we manually use grouping internals
         grouped = recs.groupby(gcols)
 
@@ -95,7 +98,8 @@ class RecListAnalysis:
             "result set size {} != group count {}".format(len(res), len(grouped.groups))
         assert res.index.nlevels == len(gcols)
 
-        for i, row_key in enumerate(res.index):
+        _log.info('computing anlysis for %d lists', len(res))
+        for i, row_key in enumerate(progress(res.index)):
             g_rows = grouped.indices[row_key]
             g_recs = recs.iloc[g_rows, :]
             if len(ti_cols) == len(gcols) + 1:
@@ -120,6 +124,7 @@ class UnratedCandidates:
     """
 
     def __init__(self, training):
+        warnings.warn('UnratedCandidates deprecated, use default item selector', DeprecationWarning)
         self.training = training.set_index('user').item
         self.items = training.item.unique()
 

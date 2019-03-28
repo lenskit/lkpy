@@ -9,7 +9,7 @@ import numpy as np
 
 import lk_test_utils as lktu
 
-from lenskit.algorithms.basic import Bias
+from lenskit.algorithms.basic import Bias, TopN
 import lenskit.batch as lkb
 
 MLB = namedtuple('MLB', ['ratings', 'algo'])
@@ -19,7 +19,7 @@ _log = logging.getLogger(__name__)
 @pytest.fixture
 def mlb():
     ratings = lktu.ml_pandas.renamed.ratings
-    algo = Bias()
+    algo = TopN(Bias())
     algo.fit(ratings)
     return MLB(ratings, algo)
 
@@ -32,7 +32,8 @@ def test_recommend_single(mlb):
     assert all(res['rank'] == 1)
     assert set(res.columns) == set(['user', 'rank', 'item', 'score'])
 
-    expected = mlb.algo.mean_ + mlb.algo.item_offsets_.loc[31] + mlb.algo.user_offsets_.loc[1]
+    algo = mlb.algo.predictor
+    expected = algo.mean_ + algo.item_offsets_.loc[31] + algo.user_offsets_.loc[1]
     assert res.score.iloc[0] == pytest.approx(expected)
 
 
@@ -73,6 +74,24 @@ def test_recommend_two_users(mlb):
     assert all(np.diff(res[res.user == 10]['rank']) == 1)
 
 
+def test_recommend_no_cands(mlb):
+    res = lkb.recommend(mlb.algo, [5, 10], 10)
+
+    assert len(res) == 20
+    assert set(res.user) == set([5, 10])
+    assert all(res.groupby('user').item.count() == 10)
+    assert all(res.groupby('user')['rank'].max() == 10)
+    assert all(np.diff(res[res.user == 5].score) <= 0)
+    assert all(np.diff(res[res.user == 5]['rank']) == 1)
+    assert all(np.diff(res[res.user == 10].score) <= 0)
+    assert all(np.diff(res[res.user == 10]['rank']) == 1)
+
+    idx_rates = mlb.ratings.set_index(['user', 'item'])
+    merged = res.join(idx_rates, on=['user', 'item'], how='inner')
+    assert len(merged) == 0
+
+
+@pytest.mark.eval
 def test_bias_batch_recommend():
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
@@ -84,13 +103,13 @@ def test_bias_batch_recommend():
     ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
 
     algo = basic.Bias(damping=5)
+    algo = TopN(algo)
 
     def eval(train, test):
         _log.info('running training')
         algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
-        cand_fun = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, test.user.unique(), 100, cand_fun)
+        recs = batch.recommend(algo, test.user.unique(), 100)
         return recs
 
     folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
@@ -108,6 +127,7 @@ def test_bias_batch_recommend():
 
 
 @pytest.mark.parametrize('ncpus', [None, 2])
+@pytest.mark.eval
 def test_pop_batch_recommend(ncpus):
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
@@ -124,8 +144,7 @@ def test_pop_batch_recommend(ncpus):
         _log.info('running training')
         algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
-        cand_fun = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, test.user.unique(), 100, cand_fun,
+        recs = batch.recommend(algo, test.user.unique(), 100,
                                nprocs=ncpus)
         return recs
 

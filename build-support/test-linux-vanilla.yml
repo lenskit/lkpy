@@ -1,0 +1,51 @@
+jobs:
+- job: 'LinuxVanilla'
+  pool:
+    vmImage: ubuntu-16.04
+  strategy:
+    matrix:
+      Python35:
+        python.version: '3.5'
+      Python36:
+        python.version: '3.6'
+      Python37:
+        python.version: '3.7'
+    maxParallel: 4
+
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+      architecture: 'x64'
+
+  - script: |
+      echo git hash $GIT_COMMIT_SHA
+      echo git branch $GIT_BRANCH
+      echo Python $(python.version)
+    displayName: 'Inspect environment'
+
+  - script: |
+      python -m pip install --upgrade pip
+      export PIP_PREFER_BINARY=true
+      pip install $(pip.deps)
+    displayName: 'Install dependencies'
+  
+  - script: |
+      if [ ! -r ~/ml-100k/u.data ]; then
+        wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
+        unzip -d ~ ml-100k.zip
+      fi
+    displayName: 'Download ML-100K'
+    
+  - script: |
+      mkdir -p build
+      python3 -m pytest --junitxml=build/test-results.xml --cov=lenskit
+    displayName: 'pytest'
+
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: 'build/test-results.xml'
+      testRunTitle: 'Publish test results for Python $(python.version)'
+
+  - template: ./nix-coverage.yml

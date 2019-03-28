@@ -1,3 +1,5 @@
+from pathlib import Path
+import logging
 import numpy as np
 import pandas as pd
 
@@ -5,7 +7,8 @@ from pytest import approx
 
 from lenskit.metrics.topn import _dcg
 from lenskit import topn
-import lk_test_utils as lktu
+
+_log = logging.getLogger(__name__)
 
 
 def test_run_one():
@@ -45,7 +48,11 @@ def test_run_two():
         'rating': [3.0, 5.0, 4.0, 3.0, 5.0, 4.0]
     })
 
-    res = rla.compute(recs, truth)
+    def prog(inner):
+        assert len(inner) == 2
+        return inner
+
+    res = rla.compute(recs, truth, progress=prog)
     print(res)
 
     assert len(res) == 2
@@ -129,3 +136,19 @@ def test_spec_group_cols():
     assert res.ndcg.values == approx([1.0, partial_ndcg])
     assert res.precision.values == approx([1.0, 1/2])
     assert res.recall.values == approx([1.0, 1/3])
+
+
+def test_java_equiv():
+    dir = Path(__file__).parent
+    metrics = pd.read_csv(str(dir / 'topn-java-metrics.csv'))
+    recs = pd.read_csv(str(dir / 'topn-java-recs.csv'))
+    truth = pd.read_csv(str(dir / 'topn-java-truth.csv'))
+
+    rla = topn.RecListAnalysis()
+    rla.add_metric(topn.ndcg)
+    res = rla.compute(recs, truth)
+
+    umm = pd.merge(metrics, res.reset_index())
+    umm['err'] = umm['ndcg'] - umm['Java.nDCG']
+    _log.info('merged: \n%s', umm)
+    assert umm['err'].values == approx(0, abs=1.0e-6)
