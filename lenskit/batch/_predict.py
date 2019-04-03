@@ -11,6 +11,7 @@ _rec_context = None
 
 
 def _predict_user(algo, user, udf):
+    udf = pd.read_msgpack(udf)
     watch = util.Stopwatch()
     res = algo.predict_for_user(user, udf['item'])
     res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
@@ -66,7 +67,7 @@ def predict(algo, pairs, *, nprocs=None):
 
     loop = Parallel(n_jobs=nprocs)
 
-    results = loop(delayed(_predict_user)(algo, user, udf) for (user, udf) in pairs.groupby('user'))
+    results = loop(delayed(_predict_user)(algo, user, udf.to_msgpack()) for (user, udf) in pairs.groupby('user'))
 
     results = pd.concat(results, ignore_index=True)
 
