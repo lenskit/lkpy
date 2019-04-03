@@ -23,9 +23,9 @@ copyright = '2018 Boise State University'
 author = 'Michael D. Ekstrand'
 
 # The short X.Y version
-version = '0.6'
+version = '0.6.1'
 # The full version, including alpha/beta/rc tags
-release = '0.6.0'
+release = '0.6.1'
 
 
 # -- General configuration ---------------------------------------------------
