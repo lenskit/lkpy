@@ -1,30 +1,13 @@
 import logging
-import multiprocessing as mp
-from multiprocessing.pool import Pool
+from joblib import Parallel, delayed
+import warnings
 
 import pandas as pd
 
 from .. import util
-from .. import crossfold
 
 _logger = logging.getLogger(__name__)
 _rec_context = None
-
-
-class MPRecContext:
-    def __init__(self, algo):
-        self.algo = algo
-
-    def __enter__(self):
-        global _rec_context
-        _logger.debug('installing context for %s', self.algo)
-        _rec_context = self
-        return self
-
-    def __exit__(self, *args, **kwargs):
-        global _rec_context
-        _logger.debug('uninstalling context for %s', self.algo)
-        _rec_context = None
 
 
 def _predict_user(algo, user, udf):
@@ -34,12 +17,6 @@ def _predict_user(algo, user, udf):
     _logger.debug('%s produced %f/%d predictions for %s in %s',
                   algo, res.prediction.notna().sum(), len(udf), user, watch)
     return res
-
-
-def _predict_worker(job):
-    user, udf = job
-    res = _predict_user(_rec_context.algo, user, udf)
-    return res.to_msgpack()
 
 
 def predict(algo, pairs, *, nprocs=None):
@@ -75,7 +52,10 @@ def predict(algo, pairs, *, nprocs=None):
             A data frame of (``user``, ``item``) pairs to predict for. If this frame also
             contains a ``rating`` column, it will be included in the result.
         nprocs(int):
-            The number of processes to use for parallel batch prediction.
+            The number of processes to use for parallel batch prediction.  Passed as
+            ``n_jobs`` to :cls:`joblib.Parallel`.  The default, ``None``, will make
+            the process sequential _unless_ called inside the :func:`joblib.parallel_backend`
+            context manager.
 
     Returns:
         pandas.DataFrame:
@@ -84,19 +64,12 @@ def predict(algo, pairs, *, nprocs=None):
             result will also contain a `rating` column.
     """
 
-    if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
-        _logger.info('starting predict process with %d workers', nprocs)
-        with MPRecContext(algo),  Pool(nprocs) as pool:
-            results = pool.map(_predict_worker, pairs.groupby('user'))
-        results = [pd.read_msgpack(r) for r in results]
-        _logger.info('finished predictions')
-    else:
-        results = []
-        for user, udf in pairs.groupby('user'):
-            res = _predict_user(algo, user, udf)
-            results.append(res)
+    loop = Parallel(n_jobs=nprocs)
 
-    results = pd.concat(results)
+    results = loop(delayed(_predict_user)(algo, user, udf) for (user, udf) in pairs.groupby('user'))
+
+    results = pd.concat(results, ignore_index=True)
+
     if 'rating' in pairs:
         return pairs.join(results.set_index(['user', 'item']), on=('user', 'item'))
     return results
