@@ -1,5 +1,13 @@
 # Release Notes
 
+## 0.6.1
+
+See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/4) for full change list.
+
+- Fix inconsistency in both code and docs for recommend list sizes for top-*N* evaluation.
+- Fix user-user to correctly use `sum` aggregate.
+- Improve performance and documentation
+
 ## 0.6.0
 
 See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/1) for a summary of what's happening!
