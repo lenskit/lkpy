@@ -67,7 +67,8 @@ def predict(algo, pairs, *, nprocs=None):
 
     loop = Parallel(n_jobs=nprocs)
 
-    results = loop(delayed(_predict_user)(algo, user, udf.to_msgpack()) for (user, udf) in pairs.groupby('user'))
+    results = loop(delayed(_predict_user)(algo, user, udf.to_msgpack())
+                   for (user, udf) in pairs.groupby('user'))
 
     results = pd.concat(results, ignore_index=True)
 
