@@ -88,28 +88,25 @@ class RecListAnalysis:
             warnings.warn('truth frame does not have unique values')
         truth.sort_index(inplace=True)
 
-        _log.info('preparing analysis result storage')
-        # we manually use grouping internals
-        grouped = recs.groupby(gcols)
-
-        res = pd.DataFrame(od((k, np.nan) for (f, k, args) in self.metrics),
-                           index=grouped.grouper.result_index)
-        assert len(res) == len(grouped.groups), \
-            "result set size {} != group count {}".format(len(res), len(grouped.groups))
-        assert res.index.nlevels == len(gcols)
-
-        _log.info('computing analysis for %d lists', len(res))
-        for i, row_key in enumerate(progress(res.index)):
-            g_rows = grouped.indices[row_key]
-            g_recs = recs.iloc[g_rows, :]
+        def worker(group):
+            row_key = group.name
             if len(ti_cols) == len(gcols) + 1:
                 tr_key = row_key
             else:
                 tr_key = tuple([row_key[gc_map[c]] for c in ti_cols[:-1]])
 
             g_truth = truth.loc[tr_key, :]
-            for j, (mf, mn, margs) in enumerate(self.metrics):
-                res.iloc[i, j] = mf(g_recs, g_truth, **margs)
+
+            group_results = {}
+            for mf, mn, margs in self.metrics:
+                group_results[mn] = mf(group, g_truth, **margs)
+            return pd.DataFrame(group_results, index=[0])
+
+        grouped = recs.groupby(gcols)
+        _log.info('computing analysis for %d lists', len(grouped.grouper.result_index))
+
+        res = grouped.apply(worker)
+        res.reset_index(level=-1, drop=True, inplace=True)
 
         return res
 

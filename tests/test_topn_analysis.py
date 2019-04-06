@@ -20,6 +20,7 @@ def test_run_one():
     truth = pd.DataFrame({'user': 1, 'item': [1, 2, 3], 'rating': [3.0, 5.0, 4.0]})
 
     res = rla.compute(recs, truth)
+    print(res)
 
     assert res.index.name == 'user'
     assert res.index.is_unique
