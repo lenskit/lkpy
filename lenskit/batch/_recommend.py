@@ -26,6 +26,20 @@ def _recommend_user(algo, user, n, candidates):
     return res
 
 
+def __standard_cand_fun(candidates):
+    """
+    Convert candidates from the formas accepted by :py:fun:`recommend` into
+    a standard form, a function that takes a user and returns a candidate
+    list.
+    """
+    if isinstance(candidates, dict):
+        return candidates.get
+    elif candidates is None:
+        return lambda u: None
+    else:
+        return candidates
+
+
 def recommend(algo, users, n, candidates=None, *, nprocs=None, **kwargs):
     """
     Batch-recommend for multiple users.  The provided algorithm should be a
@@ -58,12 +72,9 @@ def recommend(algo, users, n, candidates=None, *, nprocs=None, **kwargs):
     if 'ratings' in kwargs:
         warnings.warn('Providing ratings to recommend is not supported', DeprecationWarning)
 
-    loop = Parallel(n_jobs=nprocs)
+    candidates = __standard_cand_fun(candidates)
 
-    if isinstance(candidates, dict):
-        candidates = candidates.get
-    if candidates is None:
-        candidates = lambda u: None
+    loop = Parallel(n_jobs=nprocs)
 
     path = None
     try:
