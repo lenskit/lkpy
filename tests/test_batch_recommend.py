@@ -91,8 +91,9 @@ def test_recommend_no_cands(mlb):
     assert len(merged) == 0
 
 
+@pytest.mark.parametrize('ncpus', [None, 2])
 @pytest.mark.eval
-def test_bias_batch_recommend():
+def test_bias_batch_recommend(ncpus):
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch, topn
@@ -109,7 +110,7 @@ def test_bias_batch_recommend():
         _log.info('running training')
         algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
-        recs = batch.recommend(algo, test.user.unique(), 100)
+        recs = batch.recommend(algo, test.user.unique(), 100, nprocs=ncpus)
         return recs
 
     folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
