@@ -85,8 +85,7 @@ def predict(algo, pairs, *, nprocs=None):
 
         results = pd.concat(results, ignore_index=True)
     finally:
-        if path is not None:
-            path.unlink()
+        util.delete_sometime(path)
 
     if 'rating' in pairs:
         return pairs.join(results.set_index(['user', 'item']), on=('user', 'item'))

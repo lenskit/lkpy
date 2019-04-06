@@ -68,6 +68,7 @@ def recommend(algo, users, n, candidates=None, *, nprocs=None, **kwargs):
     rec_algo = Recommender.adapt(algo)
     if candidates is None and rec_algo is not algo:
         warnings.warn('no candidates provided and algo is not a recommender, unlikely to work')
+    del algo  # don't need reference any more
 
     if 'ratings' in kwargs:
         warnings.warn('Providing ratings to recommend is not supported', DeprecationWarning)
@@ -78,23 +79,27 @@ def recommend(algo, users, n, candidates=None, *, nprocs=None, **kwargs):
 
     path = None
     try:
-        if loop._effective_n_jobs() > 1:
-            fd, path = tempfile.mkstemp(prefix='lkpy-predict', suffix='.pkl')
-            path = pathlib.Path(path)
-            os.close(fd)
-            _logger.debug('pre-serializing algorithm %s to %s', algo, path)
-            dump(algo, path)
-            algo = load(path, mmap_mode='r')
+        with loop:
+            backend = loop._backend.__class__.__name__
+            njobs = loop._effective_n_jobs()
+            _logger.info('parallel backend %s, effective njobs %s',
+                         backend, njobs)
+            if njobs > 1:
+                fd, path = tempfile.mkstemp(prefix='lkpy-predict', suffix='.pkl')
+                path = pathlib.Path(path)
+                os.close(fd)
+                _logger.debug('pre-serializing algorithm %s to %s', rec_algo, path)
+                dump(rec_algo, path)
+                rec_algo = load(path, mmap_mode='r')
 
-        _logger.info('recommending for %d users (nprocs=%s)', len(users), nprocs)
-        results = loop(delayed(_recommend_user)(rec_algo, user, n, candidates(user))
-                       for user in users)
+            _logger.info('recommending for %d users (nprocs=%s)', len(users), nprocs)
+            results = loop(delayed(_recommend_user)(rec_algo, user, n, candidates(user))
+                           for user in users)
 
-        del algo
+            del rec_algo
 
         results = pd.concat(results, ignore_index=True)
     finally:
-        if path is not None:
-            path.unlink()
+        util.delete_sometime(path)
 
     return results

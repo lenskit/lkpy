@@ -1,16 +1,22 @@
 import pytest
 
-import os
-import os.path
 from collections import namedtuple
 import logging
 import pandas as pd
 import numpy as np
+import joblib
+from contextlib import closing
 
 import lk_test_utils as lktu
 
-from lenskit.algorithms.basic import Bias, TopN
-import lenskit.batch as lkb
+from lenskit.algorithms.basic import Bias, TopN, Popular
+from lenskit import batch, topn
+import lenskit.crossfold as xf
+
+try:
+    import dask.distributed as dist
+except ImportError:
+    dist = None
 
 MLB = namedtuple('MLB', ['ratings', 'algo'])
 _log = logging.getLogger(__name__)
@@ -24,8 +30,43 @@ def mlb():
     return MLB(ratings, algo)
 
 
+class MLFolds:
+    def __init__(self, ratings):
+        self.ratings = ratings
+        self.folds = list(xf.partition_users(self.ratings, 5, xf.SampleFrac(0.2)))
+        self.test = pd.concat(f.test for f in self.folds)
+
+    def evaluate(self, algo, train, test, **kwargs):
+        _log.info('running training')
+        algo.fit(train)
+        _log.info('testing %d users', test.user.nunique())
+        recs = batch.recommend(algo, test.user.unique(), 100, **kwargs)
+        return recs
+
+    def eval_all(self, algo, **kwargs):
+        return pd.concat(self.evaluate(algo, train, test, **kwargs)
+                         for (train, test) in self.folds)
+
+    def check_positive_ndcg(self, recs):
+        _log.info('analyzing recommendations')
+        rla = topn.RecListAnalysis()
+        rla.add_metric(topn.ndcg)
+        results = rla.compute(recs, self.test)
+        dcg = results.ndcg
+        _log.info('nDCG for %d users is %f (max=%f)', len(dcg), dcg.mean(), dcg.max())
+        assert dcg.mean() > 0
+
+
+@pytest.fixture
+def ml_folds() -> MLFolds:
+    if not lktu.ml100k.available:
+            raise pytest.skip('ML-100K not available')
+    ratings = lktu.ml100k.load_ratings()
+    return MLFolds(ratings)
+
+
 def test_recommend_single(mlb):
-    res = lkb.recommend(mlb.algo, [1], None, {1: [31]})
+    res = batch.recommend(mlb.algo, [1], None, {1: [31]})
 
     assert len(res) == 1
     assert all(res['user'] == 1)
@@ -45,7 +86,7 @@ def test_recommend_user(mlb):
         urs = mlb.ratings[mlb.ratings.user == user]
         return np.setdiff1d(items, urs.item.unique())
 
-    res = lkb.recommend(mlb.algo, [5], 10, candidates)
+    res = batch.recommend(mlb.algo, [5], 10, candidates)
 
     assert len(res) == 10
     assert set(res.columns) == set(['user', 'rank', 'item', 'score'])
@@ -62,7 +103,7 @@ def test_recommend_two_users(mlb):
         urs = mlb.ratings[mlb.ratings.user == user]
         return np.setdiff1d(items, urs.item.unique())
 
-    res = lkb.recommend(mlb.algo, [5, 10], 10, candidates)
+    res = batch.recommend(mlb.algo, [5, 10], 10, candidates)
 
     assert len(res) == 20
     assert set(res.user) == set([5, 10])
@@ -75,7 +116,7 @@ def test_recommend_two_users(mlb):
 
 
 def test_recommend_no_cands(mlb):
-    res = lkb.recommend(mlb.algo, [5, 10], 10)
+    res = batch.recommend(mlb.algo, [5, 10], 10)
 
     assert len(res) == 20
     assert set(res.user) == set([5, 10])
@@ -93,71 +134,32 @@ def test_recommend_no_cands(mlb):
 
 @pytest.mark.parametrize('ncpus', [None, 2])
 @pytest.mark.eval
-def test_bias_batch_recommend(ncpus):
-    from lenskit.algorithms import basic
-    import lenskit.crossfold as xf
-    from lenskit import batch, topn
-
-    if not os.path.exists('ml-100k/u.data'):
-        raise pytest.skip()
-
-    ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
-
-    algo = basic.Bias(damping=5)
+def test_bias_batch_recommend(ml_folds: MLFolds, ncpus):
+    algo = Bias(damping=5)
     algo = TopN(algo)
 
-    def eval(train, test):
-        _log.info('running training')
-        algo.fit(train)
-        _log.info('testing %d users', test.user.nunique())
-        recs = batch.recommend(algo, test.user.unique(), 100, nprocs=ncpus)
-        return recs
+    recs = ml_folds.eval_all(algo, nprocs=ncpus)
 
-    folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
-    test = pd.concat(y for (x, y) in folds)
+    ml_folds.check_positive_ndcg(recs)
 
-    recs = pd.concat(eval(train, test) for (train, test) in folds)
 
-    _log.info('analyzing recommendations')
-    rla = topn.RecListAnalysis()
-    rla.add_metric(topn.ndcg)
-    results = rla.compute(recs, test)
-    dcg = results.ndcg
-    _log.info('nDCG for %d users is %f (max=%f)', len(dcg), dcg.mean(), dcg.max())
-    assert dcg.mean() > 0
+@pytest.mark.skipif(dist is None, reason='distributed unavailable')
+@pytest.mark.eval
+def test_bias_batch_recommend_dask(ml_folds: MLFolds, ncpus):
+    algo = Bias(damping=5)
+    algo = TopN(algo)
+
+    with closing(dist.Client()), joblib.parallel_backend('dask'):
+        recs = ml_folds.eval_all(algo)
+
+    ml_folds.check_positive_ndcg(recs)
 
 
 @pytest.mark.parametrize('ncpus', [None, 2])
 @pytest.mark.eval
-def test_pop_batch_recommend(ncpus):
-    from lenskit.algorithms import basic
-    import lenskit.crossfold as xf
-    from lenskit import batch, topn
+def test_pop_batch_recommend(ml_folds: MLFolds, ncpus):
+    algo = Popular()
 
-    if not os.path.exists('ml-100k/u.data'):
-        raise pytest.skip()
+    recs = ml_folds.eval_all(algo, nprocs=ncpus)
 
-    ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
-
-    algo = basic.Popular()
-
-    def eval(train, test):
-        _log.info('running training')
-        algo.fit(train)
-        _log.info('testing %d users', test.user.nunique())
-        recs = batch.recommend(algo, test.user.unique(), 100,
-                               nprocs=ncpus)
-        return recs
-
-    folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
-    test = pd.concat(f.test for f in folds)
-
-    recs = pd.concat(eval(train, test) for (train, test) in folds)
-
-    _log.info('analyzing recommendations')
-    rla = topn.RecListAnalysis()
-    rla.add_metric(topn.ndcg)
-    results = rla.compute(recs, test)
-    dcg = results.ndcg
-    _log.info('NDCG for %d users is %f (max=%f)', len(dcg), dcg.mean(), dcg.max())
-    assert dcg.mean() > 0
+    ml_folds.check_positive_ndcg(recs)

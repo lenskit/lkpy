@@ -2,17 +2,11 @@
 Miscellaneous utility functions.
 """
 
-import os
-import os.path
-import pathlib
-import warnings
 import logging
 from copy import deepcopy
 
-import pandas as pd
-
 from ..algorithms import Algorithm
-from .files import fspath
+from .files import delete_sometime, fspath
 from .accum import Accumulator
 from .timing import Stopwatch
 from .data import read_df_detect, write_parquet, load_ml_ratings
