@@ -28,7 +28,7 @@ def _recommend_user(algo, user, n, candidates):
 
 def __standard_cand_fun(candidates):
     """
-    Convert candidates from the formas accepted by :py:fun:`recommend` into
+    Convert candidates from the forms accepted by :py:fun:`recommend` into
     a standard form, a function that takes a user and returns a candidate
     list.
     """

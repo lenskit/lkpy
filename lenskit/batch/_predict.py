@@ -4,7 +4,6 @@ import logging
 import tempfile
 import pathlib
 from joblib import Parallel, delayed, dump, load
-import warnings
 
 import pandas as pd
 
