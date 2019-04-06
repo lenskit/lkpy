@@ -73,7 +73,7 @@ def recommend(algo, users, n, candidates=None, *, nprocs=None, **kwargs):
             os.close(fd)
             _logger.debug('pre-serializing algorithm %s to %s', algo, path)
             dump(algo, path)
-            algo = load(path)
+            algo = load(path, mmap_mode='r')
 
         _logger.info('recommending for %d users (nprocs=%s)', len(users), nprocs)
         results = loop(delayed(_recommend_user)(rec_algo, user, n, candidates(user))

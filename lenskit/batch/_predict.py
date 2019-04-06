@@ -78,7 +78,7 @@ def predict(algo, pairs, *, nprocs=None):
             os.close(fd)
             _logger.debug('pre-serializing algorithm %s to %s', algo, path)
             dump(algo, path)
-            algo = load(path)
+            algo = load(path, mmap_mode='r')
 
         results = loop(delayed(_predict_user)(algo, user, udf)
                        for (user, udf) in pairs.groupby('user'))
