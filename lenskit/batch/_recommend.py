@@ -26,8 +26,9 @@ def __load_algo(path):
 def _recommend_user(algo, user, n, candidates):
     if type(algo).__name__ == 'AlgoKey':  # pickling doesn't preserve isinstance
         if algo.type == 'file':
-            print('loading from', algo.data)
             algo = __load_algo(algo.data)
+        elif algo.type == 'future':
+            algo = algo.data.result()
         else:
             raise ValueError('unknown algorithm key type %s', algo.type)
 
@@ -98,7 +99,11 @@ def recommend(algo, users, n, candidates=None, *, nprocs=None, **kwargs):
             njobs = loop._effective_n_jobs()
             _logger.info('parallel backend %s, effective njobs %s',
                          backend, njobs)
-            if njobs > 1:
+            if backend == 'DaskDistributedBackend':
+                _logger.debug('pre-scattering algorithm %s', rec_algo)
+                futures = loop._backend.client.scatter([rec_algo])
+                rec_algo = _AlgoKey('future', futures[0])
+            elif njobs > 1:
                 fd, path = tempfile.mkstemp(prefix='lkpy-predict', suffix='.pkl')
                 path = pathlib.Path(path)
                 os.close(fd)

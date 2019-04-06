@@ -98,7 +98,7 @@ class RecListAnalysis:
             "result set size {} != group count {}".format(len(res), len(grouped.groups))
         assert res.index.nlevels == len(gcols)
 
-        _log.info('computing anlysis for %d lists', len(res))
+        _log.info('computing analysis for %d lists', len(res))
         for i, row_key in enumerate(progress(res.index)):
             g_rows = grouped.indices[row_key]
             g_recs = recs.iloc[g_rows, :]
