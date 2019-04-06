@@ -14,9 +14,10 @@ from lenskit import batch, topn
 import lenskit.crossfold as xf
 
 try:
-    import dask.distributed as dist
+    import distributed
+    import dask.dataframe as ddf
 except ImportError:
-    dist = None
+    distributed = None
 
 MLB = namedtuple('MLB', ['ratings', 'algo'])
 _log = logging.getLogger(__name__)
@@ -43,9 +44,13 @@ class MLFolds:
         recs = batch.recommend(algo, test.user.unique(), 100, **kwargs)
         return recs
 
-    def eval_all(self, algo, **kwargs):
-        return pd.concat(self.evaluate(algo, train, test, **kwargs)
-                         for (train, test) in self.folds)
+    def eval_all(self, algo, dask=False, **kwargs):
+        if dask:
+            concat = lambda dfs: ddf.concat(list(dfs), interleave_partitions=True)
+        else:
+            concat = pd.concat
+        return concat(self.evaluate(algo, train, test, dask_result=dask, **kwargs)
+                      for (train, test) in self.folds)
 
     def check_positive_ndcg(self, recs):
         _log.info('analyzing recommendations')
@@ -60,7 +65,7 @@ class MLFolds:
 @pytest.fixture
 def ml_folds() -> MLFolds:
     if not lktu.ml100k.available:
-            raise pytest.skip('ML-100K not available')
+        raise pytest.skip('ML-100K not available')
     ratings = lktu.ml100k.load_ratings()
     return MLFolds(ratings)
 
@@ -143,16 +148,17 @@ def test_bias_batch_recommend(ml_folds: MLFolds, ncpus):
     ml_folds.check_positive_ndcg(recs)
 
 
-@pytest.mark.skipif(dist is None, reason='distributed unavailable')
+@pytest.mark.skipif(distributed is None, reason='distributed unavailable')
 @pytest.mark.eval
 def test_bias_batch_recommend_dask(ml_folds: MLFolds):
     algo = Bias(damping=5)
     algo = TopN(algo)
 
-    with closing(dist.Client()), joblib.parallel_backend('dask'):
-        recs = ml_folds.eval_all(algo)
+    with closing(distributed.Client()), joblib.parallel_backend('dask'):
+        recs = ml_folds.eval_all(algo, dask=True)
+        assert isinstance(recs, ddf.DataFrame)
 
-    ml_folds.check_positive_ndcg(recs)
+        ml_folds.check_positive_ndcg(recs)
 
 
 @pytest.mark.parametrize('ncpus', [None, 2])

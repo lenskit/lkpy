@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from .metrics.topn import *
+from .util import Stopwatch
 
 _log = logging.getLogger(__name__)
 
@@ -104,6 +105,7 @@ class RecListAnalysis:
                 group_results[mn] = mf(group, g_truth, **margs)
             return pd.DataFrame(group_results, index=[0])
 
+        timer = Stopwatch()
         grouped = recs.groupby(gcols)
         _log.info('computing analysis for %s lists',
                   len(grouped) if hasattr(grouped, '__len__') else 'many')
@@ -117,6 +119,7 @@ class RecListAnalysis:
             res = grouped.apply(worker)
 
         res.reset_index(level=-1, drop=True, inplace=True)
+        _log.info('analyzed %d lists in %s', len(res), timer)
 
         return res
 
