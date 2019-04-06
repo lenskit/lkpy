@@ -209,9 +209,3 @@ def test_read_ml():
     ratings = lku.load_ml_ratings()
     assert len(ratings) > 100000
     assert set(ratings.columns) == set(['user', 'item', 'rating', 'timestamp'])
-
-
-def test_temp_file():
-    with lku.temp_file() as path:
-        assert isinstance(path, pathlib.Path)
-        assert path.exists()
