@@ -71,6 +71,8 @@ class RecListAnalysis:
         Returns:
             pandas.DataFrame: The results of the analysis.
         """
+        using_dask = type(recs).__module__.startswith('dask.')
+
         _log.info('analyzing %d recommendations (%d truth rows)', len(recs), len(truth))
         gcols = self.group_cols
         if gcols is None:
@@ -103,9 +105,17 @@ class RecListAnalysis:
             return pd.DataFrame(group_results, index=[0])
 
         grouped = recs.groupby(gcols)
-        _log.info('computing analysis for %d lists', len(grouped.grouper.result_index))
+        _log.info('computing analysis for %s lists',
+                  len(grouped) if hasattr(grouped, '__len__') else 'many')
 
-        res = grouped.apply(worker)
+        if using_dask:
+            # Dask group-apply requires metadata
+            meta = dict((mn, 'f8') for (mf, mn, margs) in self.metrics)
+            res = grouped.apply(worker, meta=meta)
+            res = res.compute()
+        else:
+            res = grouped.apply(worker)
+
         res.reset_index(level=-1, drop=True, inplace=True)
 
         return res

@@ -3,10 +3,15 @@ import logging
 import numpy as np
 import pandas as pd
 
-from pytest import approx
+from pytest import approx, mark
 
 from lenskit.metrics.topn import _dcg
 from lenskit import topn
+
+try:
+    import dask.dataframe as ddf
+except ImportError:
+    ddf = None
 
 _log = logging.getLogger(__name__)
 
@@ -61,6 +66,46 @@ def test_run_two():
     assert res.index.names == ['data', 'user']
     assert all(res.index.levels[0] == 'a')
     assert all(res.index.levels[1] == ['a', 'b'])
+    assert all(res.reset_index().user == ['a', 'b'])
+    partial_ndcg = _dcg([0.0, 5.0]) / _dcg([5, 4, 3])
+    assert res.ndcg.values == approx([1.0, partial_ndcg])
+    assert res.precision.values == approx([1.0, 1/2])
+    assert res.recall.values == approx([1.0, 1/3])
+
+
+@mark.skipif(ddf is None, reason='dask not installed')
+def test_dask_recs():
+    rla = topn.RecListAnalysis()
+    rla.add_metric(topn.precision)
+    rla.add_metric(topn.recall)
+    rla.add_metric(topn.ndcg)
+
+    recs = pd.DataFrame({
+        'data': 'a',
+        'user': ['a', 'a', 'a', 'b', 'b'],
+        'item': [2, 3, 1, 4, 5],
+        'rank': [1, 2, 3, 1, 2]
+    })
+    recs = ddf.from_pandas(recs, npartitions=2)
+    truth = pd.DataFrame({
+        'user': ['a', 'a', 'a', 'b', 'b', 'b'],
+        'item': [1, 2, 3, 1, 5, 6],
+        'rating': [3.0, 5.0, 4.0, 3.0, 5.0, 4.0]
+    })
+
+    def prog(inner):
+        assert len(inner) == 2
+        return inner
+
+    res = rla.compute(recs, truth, progress=prog)
+    print(res)
+
+    assert len(res) == 2
+    assert res.index.nlevels == 2
+    assert res.index.names == ['data', 'user']
+    assert all(res.index.levels[0] == 'a')
+    assert all(res.index.levels[1] == ['a', 'b'])
+    res.sort_index(level='user', inplace=True)
     assert all(res.reset_index().user == ['a', 'b'])
     partial_ndcg = _dcg([0.0, 5.0]) / _dcg([5, 4, 3])
     assert res.ndcg.values == approx([1.0, partial_ndcg])
