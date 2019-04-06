@@ -33,6 +33,7 @@ requirements:
     - fastparquet
     - python-snappy
     - cffi
+    - joblib
 
 test:
   source_files:
