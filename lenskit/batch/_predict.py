@@ -3,6 +3,7 @@ import os.path
 import logging
 import tempfile
 import pathlib
+from collections import namedtuple
 from joblib import Parallel, delayed, dump, load
 
 import pandas as pd
@@ -12,8 +13,22 @@ from .. import util
 _logger = logging.getLogger(__name__)
 _rec_context = None
 
+_AlgoKey = namedtuple('AlgoKey', ['type', 'data'])
+
+
+@util.last_memo(check_type='equality')
+def __load_algo(path):
+    return load(path, mmap_mode='r')
+
 
 def _predict_user(algo, user, udf):
+    if type(algo).__name__ == 'AlgoKey':  # pickling doesn't preserve isinstance
+        if algo.type == 'file':
+            print('loading from', algo.data)
+            algo = __load_algo(algo.data)
+        else:
+            raise ValueError('unknown algorithm key type %s', algo.type)
+
     watch = util.Stopwatch()
     res = algo.predict_for_user(user, udf['item'])
     res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
@@ -77,11 +92,10 @@ def predict(algo, pairs, *, nprocs=None):
             os.close(fd)
             _logger.debug('pre-serializing algorithm %s to %s', algo, path)
             dump(algo, path)
-            algo = load(path, mmap_mode='r')
+            algo = _AlgoKey('file', path)
 
         results = loop(delayed(_predict_user)(algo, user, udf)
                        for (user, udf) in pairs.groupby('user'))
-        del algo
 
         results = pd.concat(results, ignore_index=True)
     finally:

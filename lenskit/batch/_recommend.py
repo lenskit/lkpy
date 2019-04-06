@@ -4,6 +4,7 @@ import pathlib
 import tempfile
 import logging
 import warnings
+from collections import namedtuple
 
 from joblib import Parallel, delayed, dump, load
 
@@ -14,9 +15,22 @@ from ..algorithms import Recommender
 from .. import util
 
 _logger = logging.getLogger(__name__)
+_AlgoKey = namedtuple('AlgoKey', ['type', 'data'])
+
+
+@util.last_memo(check_type='equality')
+def __load_algo(path):
+    return load(path, mmap_mode='r')
 
 
 def _recommend_user(algo, user, n, candidates):
+    if type(algo).__name__ == 'AlgoKey':  # pickling doesn't preserve isinstance
+        if algo.type == 'file':
+            print('loading from', algo.data)
+            algo = __load_algo(algo.data)
+        else:
+            raise ValueError('unknown algorithm key type %s', algo.type)
+
     _logger.debug('generating recommendations for %s', user)
     watch = util.Stopwatch()
     res = algo.recommend(user, n, candidates)
@@ -90,13 +104,11 @@ def recommend(algo, users, n, candidates=None, *, nprocs=None, **kwargs):
                 os.close(fd)
                 _logger.debug('pre-serializing algorithm %s to %s', rec_algo, path)
                 dump(rec_algo, path)
-                rec_algo = load(path, mmap_mode='r')
+                rec_algo = _AlgoKey('file', path)
 
             _logger.info('recommending for %d users (nprocs=%s)', len(users), nprocs)
             results = loop(delayed(_recommend_user)(rec_algo, user, n, candidates(user))
                            for user in users)
-
-            del rec_algo
 
         results = pd.concat(results, ignore_index=True)
     finally:

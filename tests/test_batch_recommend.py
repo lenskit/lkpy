@@ -145,7 +145,7 @@ def test_bias_batch_recommend(ml_folds: MLFolds, ncpus):
 
 @pytest.mark.skipif(dist is None, reason='distributed unavailable')
 @pytest.mark.eval
-def test_bias_batch_recommend_dask(ml_folds: MLFolds, ncpus):
+def test_bias_batch_recommend_dask(ml_folds: MLFolds):
     algo = Bias(damping=5)
     algo = TopN(algo)
 
