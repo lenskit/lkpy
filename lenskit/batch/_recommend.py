@@ -1,7 +1,7 @@
 import logging
 import warnings
-import multiprocessing as mp
-from multiprocessing.pool import Pool
+
+from joblib import Parallel, delayed
 
 import pandas as pd
 import numpy as np
@@ -10,25 +10,6 @@ from ..algorithms import Recommender
 from .. import util
 
 _logger = logging.getLogger(__name__)
-_rec_context = None
-
-
-class MPRecContext:
-    def __init__(self, algo, candidates, size):
-        self.algo = algo
-        self.candidates = candidates
-        self.size = size
-
-    def __enter__(self):
-        global _rec_context
-        _logger.debug('installing context for %s', self.algo)
-        _rec_context = self
-        return self
-
-    def __exit__(self, *args, **kwargs):
-        global _rec_context
-        _logger.debug('uninstalling context for %s', self.algo)
-        _rec_context = None
 
 
 def _recommend_user(algo, user, n, candidates):
@@ -39,22 +20,6 @@ def _recommend_user(algo, user, n, candidates):
     res['user'] = user
     res['rank'] = np.arange(1, len(res) + 1)
     return res
-
-
-def _recommend_seq(algo, users, n, candidates):
-    if isinstance(candidates, dict):
-        candidates = candidates.get
-    if candidates is None:
-        candidates = lambda u: None
-    results = [_recommend_user(algo, user, n, candidates(user))
-               for user in users]
-    return results
-
-
-def _recommend_worker(user):
-    candidates = _rec_context.candidates(user) if _rec_context.candidates is not None else None
-    res = _recommend_user(_rec_context.algo, user, _rec_context.size, candidates)
-    return res.to_msgpack()
 
 
 def recommend(algo, users, n, candidates=None, *, nprocs=None, **kwargs):
@@ -72,7 +37,10 @@ def recommend(algo, users, n, candidates=None, *, nprocs=None, **kwargs):
             IDs will be looked up in it.  Pass ``None`` to use the recommender's
             built-in candidate selector (usually recommended).
         nprocs(int):
-            The number of processes to use for parallel recommendations.
+            The number of processes to use for parallel recommendations.  Passed as
+            ``n_jobs`` to :cls:`joblib.Parallel`.  The default, ``None``, will make
+            the process sequential _unless_ called inside the :func:`joblib.parallel_backend`
+            context manager.
 
     Returns:
         A frame with at least the columns ``user``, ``rank``, and ``item``; possibly also
@@ -86,14 +54,16 @@ def recommend(algo, users, n, candidates=None, *, nprocs=None, **kwargs):
     if 'ratings' in kwargs:
         warnings.warn('Providing ratings to recommend is not supported', DeprecationWarning)
 
-    if nprocs and nprocs > 1 and mp.get_start_method() == 'fork':
-        _logger.info('starting recommend process with %d workers', nprocs)
-        with MPRecContext(rec_algo, candidates, n), Pool(nprocs) as pool:
-            results = pool.map(_recommend_worker, users)
-        results = [pd.read_msgpack(r) for r in results]
-    else:
-        _logger.info('starting sequential recommend process')
-        results = _recommend_seq(rec_algo, users, n, candidates)
+    loop = Parallel(n_jobs=nprocs)
+
+    if isinstance(candidates, dict):
+        candidates = candidates.get
+    if candidates is None:
+        candidates = lambda u: None
+
+    _logger.info('recommending for %d users (nprocs=%s)', len(users), nprocs)
+    results = loop(delayed(_recommend_user)(rec_algo, user, n, candidates(user))
+                   for user in users)
 
     results = pd.concat(results, ignore_index=True)
 
