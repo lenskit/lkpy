@@ -1,7 +1,11 @@
+import os
+import os.path
+import pathlib
+import tempfile
 import logging
 import warnings
 
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed, dump, load
 
 import pandas as pd
 import numpy as np
@@ -61,10 +65,25 @@ def recommend(algo, users, n, candidates=None, *, nprocs=None, **kwargs):
     if candidates is None:
         candidates = lambda u: None
 
-    _logger.info('recommending for %d users (nprocs=%s)', len(users), nprocs)
-    results = loop(delayed(_recommend_user)(rec_algo, user, n, candidates(user))
-                   for user in users)
+    path = None
+    try:
+        if loop._effective_n_jobs() > 1:
+            fd, path = tempfile.mkstemp(prefix='lkpy-predict', suffix='.pkl')
+            path = pathlib.Path(path)
+            os.close(fd)
+            _logger.debug('pre-serializing algorithm %s to %s', algo, path)
+            dump(algo, path)
+            algo = load(path)
 
-    results = pd.concat(results, ignore_index=True)
+        _logger.info('recommending for %d users (nprocs=%s)', len(users), nprocs)
+        results = loop(delayed(_recommend_user)(rec_algo, user, n, candidates(user))
+                       for user in users)
+
+        del algo
+
+        results = pd.concat(results, ignore_index=True)
+    finally:
+        if path is not None:
+            path.unlink()
 
     return results

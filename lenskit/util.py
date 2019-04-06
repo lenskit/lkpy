@@ -8,7 +8,9 @@ import time
 import pathlib
 import warnings
 import logging
+import tempfile
 from copy import deepcopy
+from contextlib import contextmanager
 from collections.abc import Iterable, Sequence
 
 from numba import jitclass, njit, int32, double
@@ -147,6 +149,26 @@ class Stopwatch():
             return "{:0.0f}m{:0.2f}s".format(m, s)
         else:
             return "{:0.2f}s".format(elapsed)
+
+
+@contextmanager
+def temp_file(*, joblib=False):
+    """
+    Create and delete a (closed) temporary file.
+    """
+    dir = None
+    if joblib:
+        dir = os.environ.get('JOBLIB_TEMP_FOLDER', None)
+
+    path = None
+    try:
+        fd, path = tempfile.mkstemp('lkpy', dir=dir)
+        path = pathlib.Path(path)
+        os.close(fd)
+        yield pathlib.Path(path)
+    finally:
+        if path is not None:
+            path.unlink()
 
 
 def clone(algo):

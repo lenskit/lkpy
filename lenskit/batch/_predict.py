@@ -1,5 +1,9 @@
+import os
+import os.path
 import logging
-from joblib import Parallel, delayed
+import tempfile
+import pathlib
+from joblib import Parallel, delayed, dump, load
 import warnings
 
 import pandas as pd
@@ -11,7 +15,6 @@ _rec_context = None
 
 
 def _predict_user(algo, user, udf):
-    udf = pd.read_msgpack(udf)
     watch = util.Stopwatch()
     res = algo.predict_for_user(user, udf['item'])
     res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
@@ -67,10 +70,24 @@ def predict(algo, pairs, *, nprocs=None):
 
     loop = Parallel(n_jobs=nprocs)
 
-    results = loop(delayed(_predict_user)(algo, user, udf.to_msgpack())
-                   for (user, udf) in pairs.groupby('user'))
+    path = None
+    try:
+        if loop._effective_n_jobs() > 1:
+            fd, path = tempfile.mkstemp(prefix='lkpy-predict', suffix='.pkl')
+            path = pathlib.Path(path)
+            os.close(fd)
+            _logger.debug('pre-serializing algorithm %s to %s', algo, path)
+            dump(algo, path)
+            algo = load(path)
 
-    results = pd.concat(results, ignore_index=True)
+        results = loop(delayed(_predict_user)(algo, user, udf)
+                       for (user, udf) in pairs.groupby('user'))
+        del algo
+
+        results = pd.concat(results, ignore_index=True)
+    finally:
+        if path is not None:
+            path.unlink()
 
     if 'rating' in pairs:
         return pairs.join(results.set_index(['user', 'item']), on=('user', 'item'))
