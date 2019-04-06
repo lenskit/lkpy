@@ -21,11 +21,6 @@ from .. import util
 _logger = logging.getLogger(__name__)
 _AlgoKey = namedtuple('AlgoKey', ['type', 'data'])
 
-import builtins
-if not hasattr(builtins, 'profile'):
-    def profile(f):
-        return f
-
 
 @util.last_memo(check_type='equality')
 def __load_algo(path):
@@ -68,7 +63,6 @@ def __standard_cand_fun(candidates):
         return candidates
 
 
-@profile
 def recommend(algo, users, n, candidates=None, *, nprocs=None, dask_result=False, **kwargs):
     """
     Batch-recommend for multiple users.  The provided algorithm should be a
