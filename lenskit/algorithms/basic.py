@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 
 from .. import check
+from ..matrix import CSR, sparse_ratings
 from . import Predictor, Recommender, CandidateSelector
 
 _logger = logging.getLogger(__name__)
@@ -323,24 +324,30 @@ class UnratedItemCandidateSelector(CandidateSelector):
 
     Attributes:
         items_(pandas.Index): All known items.
-        user_items_(dict):
+        users_(pandas.Index): All known users.
+        user_items_(CSR):
             Items rated by each known user, as positions in the ``items`` index.
     """
     items_ = None
+    users_ = None
     user_items_ = None
 
     def fit(self, ratings):
-        self.items_ = pd.Index(np.unique(ratings['item']))
-        uimap = {}
-        for u, g in ratings.groupby('user'):
-            uimap[u] = self.items_.get_indexer(np.unique(g['item']))
+        r2 = ratings[['user', 'item']]
+        sparse = sparse_ratings(r2)
+        self.items_ = sparse.items
+        self.users_ = sparse.users
+        self.user_items_ = sparse.matrix
 
-        self.user_items_ = uimap
         return self
 
     def candidates(self, user, ratings=None):
         if ratings is None:
-            uis = self.user_items_.get(user, None)
+            try:
+                uidx = self.users_.get_loc(user)
+                uis = self.user_items_.row_cs(uidx)
+            except KeyError:
+                uis = None
         else:
             uis = self.items_.get_indexer(self.rated_items(ratings))
             uis = uis[uis >= 0]
