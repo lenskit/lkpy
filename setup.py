@@ -30,7 +30,8 @@ setup(
         'scipy',
         'numba >= 0.38',
         'pyarrow',
-        'cffi'
+        'cffi',
+        'joblib'
     ],
     tests_require=[
         'pytest >= 3.9',

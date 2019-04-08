@@ -24,6 +24,7 @@ requirements:
     - pyarrow
     - python-snappy
     - cffi
+    - joblib
   run:
     - python
     - pandas
@@ -33,6 +34,7 @@ requirements:
     - fastparquet
     - python-snappy
     - cffi
+    - joblib
 
 test:
   source_files:

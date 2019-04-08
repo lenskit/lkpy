@@ -185,5 +185,6 @@ intersphinx_mapping = {
     'hpfrec': ('https://hpfrec.readthedocs.io/en/latest/', None),
     'implicit': ('https://implicit.readthedocs.io/en/latest/', None),
     'scikit': ('https://scikit-learn.org/stable/', None),
-    'tqdm': ('https://tqdm.github.io/', None)
+    'tqdm': ('https://tqdm.github.io/', None),
+    'joblib': ('https://joblib.readthedocs.io/en/', None)
 }
