@@ -1,5 +1,14 @@
 # Release Notes
 
+## 0.7.0
+
+See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/3) for full change list.
+
+- Use [Joblib][] for parallelism in batch routines
+
+[Joblib]: https://joblib.readthedocs.io
+
+
 ## 0.6.1
 
 See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/4) for full change list.
