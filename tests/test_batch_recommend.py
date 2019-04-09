@@ -143,7 +143,7 @@ def test_bias_batch_recommend(ml_folds: MLFolds, ncpus):
     algo = Bias(damping=5)
     algo = TopN(algo)
 
-    recs = ml_folds.eval_all(algo, nprocs=ncpus)
+    recs = ml_folds.eval_all(algo, n_jobs=ncpus)
 
     ml_folds.check_positive_ndcg(recs)
 
@@ -166,6 +166,6 @@ def test_bias_batch_recommend_dask(ml_folds: MLFolds):
 def test_pop_batch_recommend(ml_folds: MLFolds, ncpus):
     algo = Popular()
 
-    recs = ml_folds.eval_all(algo, nprocs=ncpus)
+    recs = ml_folds.eval_all(algo, n_jobs=ncpus)
 
     ml_folds.check_positive_ndcg(recs)

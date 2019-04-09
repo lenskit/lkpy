@@ -37,7 +37,7 @@ def _predict_user(algo, user, udf):
     return res
 
 
-def predict(algo, pairs, *, nprocs=None):
+def predict(algo, pairs, *, n_jobs=None, **kwargs):
     """
     Generate predictions for user-item pairs.  The provided algorithm should be a
     :py:class:`algorithms.Predictor` or a function of two arguments: the user ID and
@@ -69,11 +69,13 @@ def predict(algo, pairs, *, nprocs=None):
         pairs(pandas.DataFrame):
             A data frame of (``user``, ``item``) pairs to predict for. If this frame also
             contains a ``rating`` column, it will be included in the result.
-        nprocs(int):
+        n_jobs(int):
             The number of processes to use for parallel batch prediction.  Passed as
             ``n_jobs`` to :cls:`joblib.Parallel`.  The default, ``None``, will make
             the process sequential _unless_ called inside the :func:`joblib.parallel_backend`
             context manager.
+
+            .. note:: ``nprocs`` is accepted as a deprecated alias.
 
     Returns:
         pandas.DataFrame:
@@ -81,8 +83,11 @@ def predict(algo, pairs, *, nprocs=None):
             the prediction results. If ``pairs`` contains a `rating` column, this
             result will also contain a `rating` column.
     """
+    if n_jobs is None and 'nprocs' in kwargs:
+        n_jobs = kwargs['nprocs']
+        warnings.warn('nprocs is deprecated, use n_jobs', DeprecationWarning)
 
-    loop = Parallel(n_jobs=nprocs)
+    loop = Parallel(n_jobs=n_jobs)
 
     path = None
     try:

@@ -4,7 +4,8 @@
 
 See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/3) for full change list.
 
-- Use [Joblib][] for parallelism in batch routines
+- Use [Joblib][] for parallelism in batch routines.
+- `nprocs` arguments are renamed to `n_jobs` for consistency with Joblib.
 
 [Joblib]: https://joblib.readthedocs.io
 

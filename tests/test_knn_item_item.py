@@ -520,7 +520,7 @@ def test_ii_batch_recommend(ncpus):
         algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
         cand_fun = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, test.user.unique(), 100, cand_fun, nprocs=ncpus)
+        recs = batch.recommend(algo, test.user.unique(), 100, cand_fun, n_jobs=ncpus)
         return recs
 
     test_frames = []

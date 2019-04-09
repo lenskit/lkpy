@@ -257,7 +257,7 @@ def test_uu_implicit_batch_accuracy():
         algo.fit(train.loc[:, ['user', 'item']])
         cands = topn.UnratedCandidates(train)
         _log.info('testing %d users', test.user.nunique())
-        recs = batch.recommend(algo, test.user.unique(), 100, cands, nprocs=2)
+        recs = batch.recommend(algo, test.user.unique(), 100, cands, n_jobs=2)
         rec_lists.append(recs)
     recs = pd.concat(rec_lists)
 

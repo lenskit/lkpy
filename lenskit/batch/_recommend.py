@@ -63,7 +63,7 @@ def __standard_cand_fun(candidates):
         return candidates
 
 
-def recommend(algo, users, n, candidates=None, *, nprocs=None, dask_result=False, **kwargs):
+def recommend(algo, users, n, candidates=None, *, n_jobs=None, dask_result=False, **kwargs):
     """
     Batch-recommend for multiple users.  The provided algorithm should be a
     :py:class:`algorithms.Recommender`.
@@ -77,11 +77,13 @@ def recommend(algo, users, n, candidates=None, *, nprocs=None, dask_result=False
             be passed each user ID; it can also be a dictionary, in which case user
             IDs will be looked up in it.  Pass ``None`` to use the recommender's
             built-in candidate selector (usually recommended).
-        nprocs(int):
+        n_jobs(int):
             The number of processes to use for parallel recommendations.  Passed as
             ``n_jobs`` to :cls:`joblib.Parallel`.  The default, ``None``, will make
             the process sequential _unless_ called inside the :func:`joblib.parallel_backend`
             context manager.
+
+            .. note:: ``nprocs`` is accepted as a deprecated alias.
         dask_result(bool):
             Whether to return a Dask data frame instead of a Pandas one.
 
@@ -89,6 +91,10 @@ def recommend(algo, users, n, candidates=None, *, nprocs=None, dask_result=False
         A frame with at least the columns ``user``, ``rank``, and ``item``; possibly also
         ``score``, and any other columns returned by the recommender.
     """
+
+    if n_jobs is None and 'nprocs' in kwargs:
+        n_jobs = kwargs['nprocs']
+        warnings.warn('nprocs is deprecated, use n_jobs', DeprecationWarning)
 
     rec_algo = Recommender.adapt(algo)
     if candidates is None and rec_algo is not algo:
@@ -100,7 +106,7 @@ def recommend(algo, users, n, candidates=None, *, nprocs=None, dask_result=False
 
     candidates = __standard_cand_fun(candidates)
 
-    loop = Parallel(n_jobs=nprocs)
+    loop = Parallel(n_jobs=n_jobs)
 
     path = None
     try:
@@ -122,7 +128,7 @@ def recommend(algo, users, n, candidates=None, *, nprocs=None, dask_result=False
                 dump(rec_algo, path)
                 rec_algo = _AlgoKey('file', path)
 
-            _logger.info('recommending for %d users (nprocs=%s)', len(users), nprocs)
+            _logger.info('recommending for %d users (n_jobs=%s)', len(users), n_jobs)
             timer = util.Stopwatch()
             results = loop(delayed(_recommend_user)(rec_algo, user, n, candidates(user))
                            for user in users)

@@ -119,7 +119,7 @@ def test_bias_batch_predict(ncpus):
         _log.info('running training')
         algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
-        recs = batch.predict(algo, test, nprocs=ncpus)
+        recs = batch.predict(algo, test, n_jobs=ncpus)
         return recs
 
     preds = pd.concat((eval(train, test)
