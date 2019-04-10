@@ -24,7 +24,6 @@ def __load_algo(path):
 def _predict_user(algo, user, udf):
     if type(algo).__name__ == 'AlgoKey':  # pickling doesn't preserve isinstance
         if algo.type == 'file':
-            print('loading from', algo.data)
             algo = __load_algo(algo.data)
         else:
             raise ValueError('unknown algorithm key type %s', algo.type)
