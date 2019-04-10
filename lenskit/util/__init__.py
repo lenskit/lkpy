@@ -69,3 +69,7 @@ def last_memo(func=None, check_type='identity'):
         return lambda f: LastMemo(f, check_type)
     else:
         return LastMemo(func, check_type)
+
+
+def no_progress(obj, **kwargs):
+    return obj
