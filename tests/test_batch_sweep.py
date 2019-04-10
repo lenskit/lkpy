@@ -24,9 +24,9 @@ def test_sweep_bias(tmp_path, ncpus):
     ratings = ml_pandas.renamed.ratings
     folds = xf.partition_users(ratings, 5, xf.SampleN(5))
     sweep.add_datasets(folds, DataSet='ml-small')
+    sweep.add_algorithms(Popular())
     sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
                          attrs=['damping'])
-    sweep.add_algorithms(Popular())
 
     try:
         sweep.run()
@@ -54,6 +54,7 @@ def test_sweep_bias(tmp_path, ncpus):
 
     recs = pd.read_parquet(work / 'recommendations.parquet')
     assert all(recs.RunId.isin(runs.RunId))
+    assert recs['score'].dtype == np.float64
 
 
 @mark.slow
