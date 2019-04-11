@@ -16,7 +16,7 @@ jobs:
 
   - script: |
       conda create -n lkpy -qy python=$(python.version)
-      conda env update -n lkpy -qy -f dev-environment.yml
+      conda env update -n lkpy -q -f dev-environment.yml
       conda install -n lkpy -qy llvm-openmp
     displayName: Set up Conda environment
 
