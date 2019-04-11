@@ -15,7 +15,9 @@ jobs:
     displayName: Add conda to PATH
 
   - script: |
+      echo Creating Conda environment
       conda create -n lkpy -qy python=$(python.version)
+      echo Installing dependencies
       conda env update -n lkpy -q -f dev-environment.yml
     displayName: Create Anaconda environment
 
