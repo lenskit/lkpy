@@ -50,6 +50,7 @@ Resources
    diagnostics
    algorithms
    util
+   impl-tips
    releases
 
 
