@@ -15,13 +15,10 @@ jobs:
     displayName: Add conda to PATH
 
   - script: |
-      echo Creating environment
+      set -x
       conda create -n lkpy -qy python=$(python.version)
-      echo Installing packages
       conda env update -n lkpy -q -f dev-environment.yml
-      echo Installing extra Mac packages
       conda install -n lkpy -qy llvm-openmp
-      echo Removing hpfrec <sadface>
       conda remove -n lkpy -qy hpfrec
     displayName: Set up Conda environment
 
