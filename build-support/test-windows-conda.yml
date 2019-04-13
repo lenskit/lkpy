@@ -18,6 +18,7 @@ jobs:
     displayName: Update Conda
   
   - script: |
+      echo on
       conda create -n lkpy -qy python=$(python.version)
       conda env update -n lkpy -q -f dev-environment.yml
     displayName: Create Conda environment
