@@ -265,7 +265,7 @@ class Fallback(Predictor):
         return 'Fallback([{}])'.format(', '.join(str_algos))
 
 
-class TopN(Recommender):
+class TopN(Recommender, Predictor):
     """
     Basic recommender that implements top-N recommendation using a predictor.
 
@@ -312,6 +312,12 @@ class TopN(Recommender):
         scores.name = 'score'
         scores.index.name = 'item'
         return scores.reset_index()
+
+    def predict(self, pairs, ratings=None):
+        return self.predictor.predict(pairs, ratings)
+
+    def predict_for_user(self, user, items, ratings=None):
+        return self.predictor.predict_for_user(user, items, ratings)
 
     def __str__(self):
         return 'TopN/' + str(self.predictor)

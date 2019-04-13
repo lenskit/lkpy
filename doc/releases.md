@@ -6,6 +6,9 @@ See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/3) for full
 
 - Use [Joblib][] for parallelism in batch routines.
 - `nprocs` arguments are renamed to `n_jobs` for consistency with Joblib.
+- Removed `parallel` option on `MultiEval` algorithms, as it was unused.
+- Made `MultiEval` default to using each recommender's default candidate
+  set, and adapt algorithms to recommenders prior to evaluation.
 
 [Joblib]: https://joblib.readthedocs.io
 
