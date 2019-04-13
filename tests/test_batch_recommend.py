@@ -161,6 +161,18 @@ def test_bias_batch_recommend_dask(ml_folds: MLFolds):
         ml_folds.check_positive_ndcg(recs)
 
 
+@pytest.mark.eval
+def test_bias_batch_recommend_threads(ml_folds: MLFolds):
+    algo = Bias(damping=5)
+    algo = TopN(algo)
+
+    with joblib.parallel_backend('threading', n_jobs=2):
+        recs = ml_folds.eval_all(algo, dask=True)
+        assert isinstance(recs, ddf.DataFrame)
+
+        ml_folds.check_positive_ndcg(recs)
+
+
 @pytest.mark.parametrize('ncpus', [None, 2])
 @pytest.mark.eval
 def test_pop_batch_recommend(ml_folds: MLFolds, ncpus):
