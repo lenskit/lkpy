@@ -15,8 +15,11 @@ jobs:
     displayName: Add conda to PATH
 
   - script: |
-      conda create -n lkpy -qy $(conda.deps)
+      set -x
+      conda create -n lkpy -qy python=$(python.version)
+      conda env update -n lkpy -q -f dev-environment.yml
       conda install -n lkpy -qy llvm-openmp
+      conda remove -n lkpy -qy hpfrec
     displayName: Set up Conda environment
 
   - script: |

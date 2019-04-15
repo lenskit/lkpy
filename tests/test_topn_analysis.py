@@ -58,7 +58,7 @@ def test_run_two():
         assert len(inner) == 2
         return inner
 
-    res = rla.compute(recs, truth, progress=prog)
+    res = rla.compute(recs, truth)
     print(res)
 
     assert len(res) == 2
@@ -97,7 +97,7 @@ def test_dask_recs():
         assert len(inner) == 2
         return inner
 
-    res = rla.compute(recs, truth, progress=prog)
+    res = rla.compute(recs, truth)
     print(res)
 
     assert len(res) == 2

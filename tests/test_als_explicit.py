@@ -2,6 +2,7 @@ import logging
 import pickle
 
 from lenskit.algorithms import als
+from lenskit import util
 
 import pandas as pd
 import numpy as np
@@ -18,7 +19,7 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
 
 
 def test_als_basic_build():
-    algo = als.BiasedMF(20, iterations=10)
+    algo = als.BiasedMF(20, iterations=10, progress=util.no_progress)
     algo.fit(simple_df)
 
     assert algo.global_bias_ == approx(simple_df.rating.mean())

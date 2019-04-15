@@ -170,7 +170,7 @@ class Popular(Recommender):
     def fit(self, ratings):
         pop = ratings.groupby('item').user.count()
         pop.name = 'score'
-        self.item_pop_ = pop
+        self.item_pop_ = pop.astype('float64')
         self.selector.fit(ratings)
 
         return self
