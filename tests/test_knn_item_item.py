@@ -456,7 +456,7 @@ def test_ii_batch_accuracy():
         _log.info('running training')
         algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
-        return batch.predict(algo, test)
+        return batch.predict(algo, test, nprocs=4)
 
     preds = pd.concat((eval(train, test)
                        for (train, test)
