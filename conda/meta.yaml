@@ -18,7 +18,7 @@ requirements:
     - setuptools
     - pytest-runner
     - numba >=0.40
-    - pandas
+    - pandas >=0.24
     - numpy
     - scipy
     - pyarrow
@@ -27,7 +27,7 @@ requirements:
     - joblib
   run:
     - python
-    - pandas
+    - pandas >=0.24
     - scipy
     - numba >=0.40
     - pyarrow
