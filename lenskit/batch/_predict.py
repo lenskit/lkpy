@@ -3,6 +3,7 @@ import os.path
 import logging
 import tempfile
 import pathlib
+import warnings
 from collections import namedtuple
 from joblib import Parallel, delayed, dump, load
 
