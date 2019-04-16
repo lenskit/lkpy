@@ -59,7 +59,7 @@ class RecListAnalysis:
 
         self.metrics.append((metric, name, kwargs))
 
-    def compute(self, recs, truth, *, progress=lambda x: x):
+    def compute(self, recs, truth):
         """
         Run the analysis.  Neither data frame should be meaningfully indexed.
 

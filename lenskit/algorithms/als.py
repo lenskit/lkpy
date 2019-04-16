@@ -101,10 +101,11 @@ class BiasedMF(BiasMFPredictor):
         iterations(int): the number of iterations to train
         reg(double): the regularization factor
         damping(double): damping factor for the underlying mean
+        progress: a :func:`tqdm.tqdm`-compatible progress bar function
     """
     timer = None
 
-    def __init__(self, features, *, iterations=20, reg=0.1, damping=5, bias=True):
+    def __init__(self, features, *, iterations=20, reg=0.1, damping=5, bias=True, progress=None):
         self.features = features
         self.iterations = iterations
         self.regularization = reg
@@ -113,6 +114,7 @@ class BiasedMF(BiasMFPredictor):
             self.bias = basic.Bias(damping=damping)
         else:
             self.bias = bias
+        self.progress = progress if progress is not None else util.no_progress
 
     def fit(self, ratings):
         """
@@ -204,7 +206,7 @@ class BiasedMF(BiasMFPredictor):
 
     def _train_iters(self, current, uctx, ictx):
         "Generator of training iterations."
-        for epoch in range(self.iterations):
+        for epoch in self.progress(range(self.iterations), desc='BiasedMF', leave=False):
             umat = _train_matrix(uctx.N, current.item_matrix, self.regularization)
             _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
             imat = _train_matrix(ictx.N, umat, self.regularization)
@@ -241,14 +243,16 @@ class ImplicitMF(MFPredictor):
         iterations(int): the number of iterations to train
         reg(double): the regularization factor
         weight(double): the scaling weight for positive samples (:math:`\\alpha` in [HKV2008]_).
+        progress: a :func:`tqdm.tqdm`-compatible progress bar function
     """
     timer = None
 
-    def __init__(self, features, *, iterations=20, reg=0.1, weight=40):
+    def __init__(self, features, *, iterations=20, reg=0.1, weight=40, progress=None):
         self.features = features
         self.iterations = iterations
         self.reg = reg
         self.weight = weight
+        self.progress = progress if progress is not None else util.no_progress
 
     def fit(self, ratings):
         self.timer = util.Stopwatch()
@@ -273,7 +277,7 @@ class ImplicitMF(MFPredictor):
 
     def _train_iters(self, current, uctx, ictx):
         "Generator of training iterations."
-        for epoch in range(self.iterations):
+        for epoch in self.progress(range(self.iterations), desc='ImplicitMF', leave=False):
             umat = _train_implicit_matrix(uctx.N, current.item_matrix,
                                           self.reg)
             _logger.debug('[%s] finished user epoch %d', self.timer, epoch)

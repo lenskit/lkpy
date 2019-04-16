@@ -25,7 +25,7 @@ setup(
         'pytest-runner'
     ],
     install_requires=[
-        'pandas >= 0.20',
+        'pandas >= 0.24',
         'numpy',
         'scipy',
         'numba >= 0.38',

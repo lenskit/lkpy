@@ -1,0 +1,34 @@
+name: lkpy-dev
+channels:
+  - mdekstrand
+  - defaults
+dependencies:
+- python
+- pip
+- pandas>=0.24
+- numpy
+- scipy
+- fastparquet
+- python-snappy
+- numba>=0.38
+- cffi
+- pyarrow
+- joblib
+- invoke
+- coverage 
+- pytest>=3.9
+- pytest-cov
+- pytest-doctestplus
+- dask
+- distributed
+- implicit
+- hpfrec
+- sphinx>=1.8
+- sphinx_rtd_theme
+- ipython
+- nbformat
+- nbconvert
+- flake8
+- pip:
+  - nbsphinx
+  - recommonmark

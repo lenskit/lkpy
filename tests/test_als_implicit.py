@@ -1,7 +1,7 @@
 import logging
 import pickle
 
-from lenskit import topn
+from lenskit import topn, util
 from lenskit.algorithms import als
 
 import pandas as pd
@@ -19,7 +19,7 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
 
 
 def test_als_basic_build():
-    algo = als.ImplicitMF(20, iterations=10)
+    algo = als.ImplicitMF(20, iterations=10, progress=util.no_progress)
     algo.fit(simple_df)
 
     assert set(algo.user_index_) == set([10, 12, 13])
