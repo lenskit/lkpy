@@ -51,7 +51,8 @@ class BaseRec(Recommender):
             return pd.DataFrame({'item': []})
 
         if candidates is None:
-            recs = self.delegate.recommend(uid, self.matrix_, N=n)
+            i_n = n if n is not None else len(self.item_index_)
+            recs = self.delegate.recommend(uid, self.matrix_, N=i_n)
         else:
             cands = self.item_index_.get_indexer(candidates)
             cands = cands[cands >= 0]
