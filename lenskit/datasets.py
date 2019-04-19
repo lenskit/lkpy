@@ -250,7 +250,7 @@ class MLM:
         Return the rating data (from ``ratings.dat``).
 
         >>> ml = ML10M()
-        >>> ml.ratings
+        >>> ml.ratings      #doctest: +SKIP
                    user  item  rating  timestamp
         0             1   122     5.0  838985046
         1             1   185     5.0  838983525
@@ -275,7 +275,7 @@ class MLM:
         Return the movie data (from ``movies.dat``).  Indexed by movie ID.
 
         >>> ml = ML10M()
-        >>> ml.movies
+        >>> ml.movies       #doctest: +SKIP
                                                             title                                           genres
         item
         1                                        Toy Story (1995)      Adventure|Animation|Children|Comedy|Fantasy
@@ -322,7 +322,7 @@ class ML1M(MLM):
         Return the movie data (from ``users.dat``).  Indexed by user ID.
 
         >>> ml = ML1M()
-        >>> ml.users
+        >>> ml.users        #doctest: +SKIP
              gender  age    zip
         user
         1         F    1  48067
