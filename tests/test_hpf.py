@@ -8,7 +8,7 @@ import numpy as np
 
 from pytest import mark
 
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 
 try:
     import hpfrec
@@ -27,7 +27,7 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
 @mark.skipif(not have_hpfrec, reason='hpfrec not installed')
 def test_hpf_train_large(tmp_path):
     algo = hpf.HPF(20)
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     ratings = ratings.assign(rating=ratings.rating + 0.5)
     algo.fit(ratings)
 

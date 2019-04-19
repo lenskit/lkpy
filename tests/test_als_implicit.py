@@ -9,7 +9,7 @@ import numpy as np
 
 from pytest import mark
 
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 
 _log = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ def test_als_predict_bad_user():
 @lktu.wantjit
 def test_als_train_large():
     algo = als.ImplicitMF(20, iterations=20)
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
     assert len(algo.user_index_) == ratings.user.nunique()
@@ -73,7 +73,7 @@ def test_als_train_large():
 
 def test_als_save_load():
     algo = als.ImplicitMF(20, iterations=5)
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
     mod = pickle.dumps(algo)
@@ -89,7 +89,7 @@ def test_als_save_load():
 @lktu.wantjit
 def test_als_train_large_noratings():
     algo = als.ImplicitMF(20, iterations=20)
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     ratings = ratings.loc[:, ['user', 'item']]
     algo.fit(ratings)
 
@@ -107,7 +107,7 @@ def test_als_implicit_batch_accuracy():
     from lenskit import batch
     from lenskit import topn
 
-    ratings = lktu.ml100k.load_ratings()
+    ratings = lktu.ml100k.ratings
 
     algo = als.ImplicitMF(25, iterations=20)
 

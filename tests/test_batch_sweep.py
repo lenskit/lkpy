@@ -5,8 +5,7 @@ import pickle
 import pandas as pd
 import numpy as np
 
-from lk_test_utils import ml_pandas, norm_path
-
+from lenskit.util import norm_path
 from lenskit import batch, crossfold as xf
 from lenskit.algorithms import Predictor
 from lenskit.algorithms.basic import Bias, Popular
@@ -21,7 +20,7 @@ def test_sweep_bias(tmp_path, ncpus):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, nprocs=ncpus)
 
-    ratings = ml_pandas.renamed.ratings
+    ratings = ml_test.ratings
     folds = xf.partition_users(ratings, 5, xf.SampleN(5))
     sweep.add_datasets(folds, DataSet='ml-small')
     sweep.add_algorithms(Popular())
@@ -63,7 +62,7 @@ def test_sweep_norecs(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, recommend=None)
 
-    ratings = ml_pandas.renamed.ratings
+    ratings = ml_test.ratings
     folds = xf.partition_users(ratings, 5, xf.SampleN(5))
     sweep.add_datasets(folds, DataSet='ml-small')
     sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
@@ -101,7 +100,7 @@ def test_sweep_allrecs(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, recommend=True)
 
-    ratings = ml_pandas.renamed.ratings
+    ratings = ml_test.ratings
     folds = xf.partition_users(ratings, 5, xf.SampleN(5))
     sweep.add_datasets(folds, DataSet='ml-small')
     sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
@@ -142,7 +141,7 @@ def test_sweep_filenames(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path)
 
-    ratings = ml_pandas.renamed.ratings
+    ratings = ml_test.ratings
     folds = []
     for part, (train, test) in enumerate(xf.partition_users(ratings, 2, xf.SampleN(5))):
         trfn = work / 'p{}-train.csv'.format(part)
@@ -183,7 +182,7 @@ def test_sweep_persist(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path)
 
-    ratings = ml_pandas.renamed.ratings
+    ratings = ml_test.ratings
     sweep.add_datasets(lambda: xf.partition_users(ratings, 5, xf.SampleN(5)), name='ml-small')
     sweep.persist_data()
 
@@ -224,7 +223,7 @@ def test_sweep_oneshot(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, combine=False)
 
-    ratings = ml_pandas.renamed.ratings
+    ratings = ml_test.ratings
     sweep.add_datasets(lambda: xf.partition_users(ratings, 5, xf.SampleN(5)), name='ml-small')
     sweep.add_algorithms(Bias(damping=5))
 
@@ -255,7 +254,7 @@ def test_sweep_save(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path)
 
-    ratings = ml_pandas.renamed.ratings
+    ratings = ml_test.ratings
     sweep.add_datasets(lambda: xf.partition_users(ratings, 5, xf.SampleN(5)), name='ml-small')
     sweep.add_algorithms(Bias(damping=5))
 
@@ -290,7 +289,7 @@ def test_sweep_combine(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, combine=False)
 
-    ratings = ml_pandas.renamed.ratings
+    ratings = ml_test.ratings
     sweep.add_datasets(lambda: xf.partition_users(ratings, 5, xf.SampleN(5)), name='ml-small')
 
     sweep.add_algorithms([Bias(damping=0), Bias(damping=5)],

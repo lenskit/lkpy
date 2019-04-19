@@ -13,11 +13,11 @@ from scipy import linalg as la
 import pytest
 from pytest import approx, mark
 
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 
 _log = logging.getLogger(__name__)
 
-ml_ratings = lktu.ml_pandas.renamed.ratings
+ml_ratings = lktu.ml_test.ratings
 simple_ratings = pd.DataFrame.from_records([
     (1, 6, 4.0),
     (2, 6, 2.0),
@@ -170,7 +170,7 @@ def test_ii_train_big_unbounded():
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_ii_train_ml100k(tmp_path):
     "Test an unbounded model on ML-100K"
-    ratings = lktu.ml100k.load_ratings()
+    ratings = lktu.ml100k.ratings
     algo = knn.ItemItem(30)
     _log.info('training model')
     algo.fit(ratings)
@@ -447,7 +447,7 @@ def test_ii_batch_accuracy():
     from lenskit import batch
     import lenskit.metrics.predict as pm
 
-    ratings = lktu.ml100k.load_ratings()
+    ratings = lktu.ml100k.ratings
 
     ii_algo = knn.ItemItem(30)
     algo = basic.Fallback(ii_algo, basic.Bias())
@@ -474,7 +474,7 @@ def test_ii_known_preds():
 
     algo = knn.ItemItem(20, min_sim=1.0e-6)
     _log.info('training %s on ml data', algo)
-    algo.fit(lktu.ml_pandas.renamed.ratings)
+    algo.fit(lktu.ml_test.ratings)
     assert algo.center
     assert algo.item_means_ is not None
     _log.info('model means: %s', algo.item_means_)

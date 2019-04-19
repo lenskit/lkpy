@@ -186,6 +186,11 @@ class ML100K:
     def __init__(self, path='data/ml-100k'):
         self.path = Path(path)
 
+    @property
+    def available(self):
+        "Query whether the data set exists."
+        return (self.path / 'u.data').exists()
+
     @cached
     def ratings(self):
         """

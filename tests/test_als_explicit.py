@@ -9,7 +9,7 @@ import numpy as np
 
 from pytest import approx, mark
 
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 
 _log = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ def test_als_predict_bad_user():
 @mark.slow
 def test_als_train_large():
     algo = als.BiasedMF(20, iterations=10)
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
     assert algo.global_bias_ == approx(ratings.rating.mean())
@@ -111,7 +111,7 @@ def test_als_train_large():
 # don't use wantjit, use this to do a non-JIT test
 def test_als_save_load():
     original = als.BiasedMF(20, iterations=5)
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     original.fit(ratings)
 
     assert original.global_bias_ == approx(ratings.rating.mean())
@@ -137,7 +137,7 @@ def test_als_batch_accuracy():
     import lenskit.crossfold as xf
     import lenskit.metrics.predict as pm
 
-    ratings = lktu.ml100k.load_ratings()
+    ratings = lktu.ml100k.ratings
 
     svd_algo = als.BiasedMF(25, iterations=20, damping=5)
     algo = basic.Fallback(svd_algo, basic.Bias(damping=5))

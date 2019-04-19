@@ -10,11 +10,11 @@ from scipy import sparse as sps
 
 from pytest import approx, mark
 
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 
 _log = logging.getLogger(__name__)
 
-ml_ratings = lktu.ml_pandas.renamed.ratings
+ml_ratings = lktu.ml_test.ratings
 
 
 def test_uu_train():
@@ -182,7 +182,7 @@ def test_uu_known_preds():
 
     algo = knn.UserUser(30, min_sim=1.0e-6)
     _log.info('training %s on ml data', algo)
-    algo.fit(lktu.ml_pandas.renamed.ratings)
+    algo.fit(lktu.ml_test.ratings)
 
     dir = Path(__file__).parent
     pred_file = dir / 'user-user-preds.csv'
@@ -222,7 +222,7 @@ def test_uu_batch_accuracy():
     import lenskit.crossfold as xf
     import lenskit.metrics.predict as pm
 
-    ratings = lktu.ml100k.load_ratings()
+    ratings = lktu.ml100k.ratings
 
     uu_algo = knn.UserUser(30)
     algo = basic.Fallback(uu_algo, basic.Bias())
@@ -244,7 +244,7 @@ def test_uu_implicit_batch_accuracy():
     from lenskit import batch, topn
     import lenskit.crossfold as xf
 
-    ratings = lktu.ml100k.load_ratings()
+    ratings = lktu.ml100k.ratings
 
     algo = knn.UserUser(30, center=False, aggregate='sum')
 
