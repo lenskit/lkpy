@@ -192,7 +192,7 @@ class ML100K:
         Return the rating data (from ``u.data``).
 
         >>> ml = ML100K('ml-100k')
-        >>> ml.ratings
+        >>> ml.ratings              #doctest: +SKIP
                user  item  rating  timestamp
         0       196   242     3.0  881250949
         1       186   302     3.0  891717742
@@ -216,7 +216,7 @@ class ML100K:
         Return the user data (from ``u.user``).
 
         >>> ml = ML100K('ml-100k')
-        >>> ml.users
+        >>> ml.users                #doctest: +SKIP
               age gender     occupation     zip
         user
         1      24      M     technician   85711
