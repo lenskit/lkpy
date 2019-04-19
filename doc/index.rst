@@ -47,9 +47,10 @@ Resources
    crossfold
    batch
    evaluation/index
-   diagnostics
+   datasets
    algorithms
    util
+   diagnostics
    impl-tips
    releases
 

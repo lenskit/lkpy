@@ -219,6 +219,7 @@ dist/
 .coverage
 coverage.xml
 htmlcov/
+/data/
 .doit.db*
 ml-100k
 doc/ml-latest-small
