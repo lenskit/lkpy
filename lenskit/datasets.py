@@ -340,7 +340,8 @@ class ML1M(MLM):
         """
         fn = self.path / 'users.dat'
         users = pd.read_csv(fn, sep=':', header=None,
-                            names=['user', '_ug', 'gender', '_ga', 'age', '_ao', 'occupation', '_oz', 'zip'],
+                            names=['user', '_ug', 'gender', '_ga', 'age',
+                                   '_ao', 'occupation', '_oz', 'zip'],
                             usecols=[0, 2, 4, 8],
                             dtype={'user': np.int32, 'gender': 'category', 'age': np.int8,
                                    'timestamp': np.int32})

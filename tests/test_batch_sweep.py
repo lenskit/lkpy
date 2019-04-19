@@ -104,7 +104,7 @@ def test_sweep_allrecs(tmp_path):
     folds = xf.partition_users(ratings, 5, xf.SampleN(5))
     sweep.add_datasets(folds, DataSet='ml-small')
     sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
-                             attrs=['damping'])
+                         attrs=['damping'])
     sweep.add_algorithms(Popular())
 
     try:
