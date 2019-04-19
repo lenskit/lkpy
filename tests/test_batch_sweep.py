@@ -5,7 +5,8 @@ import pickle
 import pandas as pd
 import numpy as np
 
-from lenskit.util import norm_path, ml_test
+from lenskit.util import norm_path
+from lenskit.util.test import ml_test
 from lenskit import batch, crossfold as xf
 from lenskit.algorithms import Predictor
 from lenskit.algorithms.basic import Bias, Popular
