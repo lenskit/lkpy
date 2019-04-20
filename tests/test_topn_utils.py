@@ -4,11 +4,11 @@ from lenskit.algorithms import CandidateSelector
 import pandas as pd
 import numpy as np
 
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 
 
 def test_unrated():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     unrate = topn.UnratedCandidates(ratings)
 
     cs = unrate(100)

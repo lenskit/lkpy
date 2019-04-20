@@ -5,6 +5,9 @@ File utilities
 import atexit
 import os
 import logging
+import pathlib
+
+__all__ = ['delete_sometime', 'fspath', 'norm_path']
 
 _log = logging.getLogger(__name__)
 __os_fp = getattr(os, 'fspath', None)
@@ -44,3 +47,17 @@ def fspath(path):
         return __os_fp(path)
     else:
         return str(path)
+
+
+def norm_path(path):
+    """
+    Convert a path into a :cls:`pathlib.Path`, in a Python 3.5-compatible way.
+    """
+    if isinstance(path, pathlib.Path):
+        return path
+    elif hasattr(path, '__fspath__'):
+        return pathlib.Path(path.__fspath__())
+    elif isinstance(path, str):
+        return pathlib.Path(str)
+    else:
+        raise ValueError('invalid path: ' + repr(path))

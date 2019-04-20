@@ -5,7 +5,7 @@ import os.path
 from pytest import approx, raises, mark, skip
 
 import lenskit.metrics.predict as pm
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 
 
 def test_check_missing_empty():
@@ -165,7 +165,7 @@ def test_batch_rmse():
     import lenskit.batch as batch
     import lenskit.algorithms.basic as bl
 
-    ratings = lktu.ml100k.load_ratings()
+    ratings = lktu.ml100k.ratings
     algo = bl.Bias(damping=5)
 
     def eval(train, test):

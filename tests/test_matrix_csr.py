@@ -3,7 +3,7 @@ import numpy as np
 import scipy.sparse as sps
 
 import lenskit.matrix as lm
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 
 from pytest import mark, approx, raises
 

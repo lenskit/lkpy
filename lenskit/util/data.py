@@ -10,6 +10,7 @@ import warnings
 import pandas as pd
 
 from .files import fspath
+from ..datasets import MovieLens
 
 try:
     import fastparquet
@@ -75,6 +76,8 @@ def load_ml_ratings(path='ml-latest-small'):
     3   1    1129    2.0 1260759185
     4   1    1172    4.0 1260759205
 
+    .. note:: This is deprecated; use :cls:`lenskit.datasets.MovieLens`.
+
     Args:
         path: The path where the MovieLens data is unpacked.
 
@@ -82,10 +85,7 @@ def load_ml_ratings(path='ml-latest-small'):
         pandas.DataFrame:
             The rating data, with user and item columns named properly for LensKit.
     """
-    path = pathlib.Path(path)
-    file = path / 'ratings.csv'
+    warnings.warn('load_ml_ratings is deprecated, use datsets.MovieLens.')
 
-    ratings = pd.read_csv(fspath(file))
-    ratings.rename(columns={'movieId': 'item', 'userId': 'user'}, inplace=True)
-
-    return ratings
+    ml = MovieLens(path)
+    return ml.ratings

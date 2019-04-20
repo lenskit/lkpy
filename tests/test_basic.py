@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import pickle
 
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 from pytest import approx
 
 simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
@@ -65,15 +65,15 @@ def test_memorized_batch_keep_index():
 
 def test_fallback_train_one():
     algo = basic.Fallback(basic.Bias())
-    algo.fit(lktu.ml_pandas.renamed.ratings)
+    algo.fit(lktu.ml_test.ratings)
     assert len(algo.algorithms) == 1
     assert isinstance(algo.algorithms[0], basic.Bias)
-    assert algo.algorithms[0].mean_ == approx(lktu.ml_pandas.ratings.rating.mean())
+    assert algo.algorithms[0].mean_ == approx(lktu.ml_test.ratings.rating.mean())
 
 
 def test_fallback_train_one_pred_impossible():
     algo = basic.Fallback(basic.Memorized(simple_df))
-    algo.fit(lktu.ml_pandas.renamed.ratings)
+    algo.fit(lktu.ml_test.ratings)
 
     preds = algo.predict_for_user(10, [1, 2])
     assert set(preds.index) == set([1, 2])
@@ -87,7 +87,7 @@ def test_fallback_train_one_pred_impossible():
 
 def test_fallback_list():
     algo = basic.Fallback([basic.Memorized(simple_df), basic.Bias()])
-    algo.fit(lktu.ml_pandas.renamed.ratings)
+    algo.fit(lktu.ml_test.ratings)
     assert len(algo.algorithms) == 2
 
     params = algo.get_params()
@@ -104,7 +104,7 @@ def test_fallback_string():
 
 def test_fallback_clone():
     algo = basic.Fallback([basic.Memorized(simple_df), basic.Bias()])
-    algo.fit(lktu.ml_pandas.renamed.ratings)
+    algo.fit(lktu.ml_test.ratings)
     assert len(algo.algorithms) == 2
 
     clone = lku.clone(algo)
@@ -116,12 +116,12 @@ def test_fallback_clone():
 
 def test_fallback_predict():
     algo = basic.Fallback(basic.Memorized(simple_df), basic.Bias())
-    algo.fit(lktu.ml_pandas.renamed.ratings)
+    algo.fit(lktu.ml_test.ratings)
     assert len(algo.algorithms) == 2
 
     bias = algo.algorithms[1]
     assert isinstance(bias, basic.Bias)
-    assert bias.mean_ == approx(lktu.ml_pandas.ratings.rating.mean())
+    assert bias.mean_ == approx(lktu.ml_test.ratings.rating.mean())
 
     def exp_val(user, item):
         v = bias.mean_
@@ -157,7 +157,7 @@ def test_fallback_predict():
 
 def test_fallback_save_load(tmp_path):
     original = basic.Fallback(basic.Memorized(simple_df), basic.Bias())
-    original.fit(lktu.ml_pandas.renamed.ratings)
+    original.fit(lktu.ml_test.ratings)
 
     fn = tmp_path / 'fb.mod'
 
@@ -168,7 +168,7 @@ def test_fallback_save_load(tmp_path):
         algo = pickle.load(f)
 
     bias = algo.algorithms[1]
-    assert bias.mean_ == approx(lktu.ml_pandas.ratings.rating.mean())
+    assert bias.mean_ == approx(lktu.ml_test.ratings.rating.mean())
 
     def exp_val(user, item):
         v = bias.mean_
@@ -231,7 +231,7 @@ def test_topn_config():
 
 
 def test_topn_big():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     users = ratings.user.unique()
     items = ratings.item.unique()
     user_items = ratings.set_index('user').item
@@ -254,8 +254,8 @@ def test_topn_big():
 
 def test_popular():
     algo = basic.Popular()
-    algo.fit(lktu.ml_pandas.renamed.ratings)
-    counts = lktu.ml_pandas.renamed.ratings.groupby('item').user.count()
+    algo.fit(lktu.ml_test.ratings)
+    counts = lktu.ml_test.ratings.groupby('item').user.count()
     counts = counts.nlargest(100)
 
     assert algo.item_pop_.max() == counts.max()
@@ -271,8 +271,8 @@ def test_popular():
 
 def test_popular_excludes_rated():
     algo = basic.Popular()
-    algo.fit(lktu.ml_pandas.renamed.ratings)
-    counts = lktu.ml_pandas.renamed.ratings.groupby('item').user.count()
+    algo.fit(lktu.ml_test.ratings)
+    counts = lktu.ml_test.ratings.groupby('item').user.count()
     counts = counts.nlargest(100)
 
     recs = algo.recommend(100, 100)
@@ -280,7 +280,7 @@ def test_popular_excludes_rated():
     assert all(np.diff(recs.score) <= 0)
 
     # make sure we didn't recommend anything the user likes
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     urates = ratings.set_index(['user', 'item'])
     urates = urates.loc[100, :]
     match = recs.join(urates, on='item', how='inner')
@@ -289,9 +289,9 @@ def test_popular_excludes_rated():
 
 def test_pop_candidates():
     algo = basic.Popular()
-    algo.fit(lktu.ml_pandas.renamed.ratings)
-    counts = lktu.ml_pandas.renamed.ratings.groupby('item').user.count()
-    items = lktu.ml_pandas.renamed.ratings.item.unique()
+    algo.fit(lktu.ml_test.ratings)
+    counts = lktu.ml_test.ratings.groupby('item').user.count()
+    items = lktu.ml_test.ratings.item.unique()
 
     assert algo.item_pop_.max() == counts.max()
 
@@ -311,12 +311,12 @@ def test_pop_candidates():
 
 def test_pop_save_load():
     original = basic.Popular()
-    original.fit(lktu.ml_pandas.renamed.ratings)
+    original.fit(lktu.ml_test.ratings)
 
     mod = pickle.dumps(original)
     algo = pickle.loads(mod)
 
-    counts = lktu.ml_pandas.renamed.ratings.groupby('item').user.count()
+    counts = lktu.ml_test.ratings.groupby('item').user.count()
     counts = counts.nlargest(100)
 
     assert algo.item_pop_.max() == counts.max()
@@ -348,7 +348,7 @@ def test_unrated_override():
 
 
 def test_unrated_big():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     users = ratings.user.unique()
     items = ratings.item.unique()
     user_items = ratings.set_index('user').item

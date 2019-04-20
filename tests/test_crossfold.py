@@ -5,13 +5,13 @@ import math
 
 import numpy as np
 
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 
 import lenskit.crossfold as xf
 
 
 def test_partition_rows():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     splits = xf.partition_rows(ratings, 5)
     splits = list(splits)
     assert len(splits) == 5
@@ -38,7 +38,7 @@ def test_partition_rows():
 
 
 def test_sample_rows():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     splits = xf.sample_rows(ratings, partitions=5, size=1000)
     splits = list(splits)
     assert len(splits) == 5
@@ -61,7 +61,7 @@ def test_sample_rows():
 
 
 def test_sample_rows_more_smaller_parts():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     splits = xf.sample_rows(ratings, partitions=10, size=500)
     splits = list(splits)
     assert len(splits) == 10
@@ -84,7 +84,7 @@ def test_sample_rows_more_smaller_parts():
 
 
 def test_sample_non_disjoint():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     splits = xf.sample_rows(ratings, partitions=10, size=1000, disjoint=False)
     splits = list(splits)
     assert len(splits) == 10
@@ -105,7 +105,7 @@ def test_sample_non_disjoint():
 
 @pytest.mark.slow
 def test_sample_oversize():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     splits = xf.sample_rows(ratings, 150, 1000)
     splits = list(splits)
     assert len(splits) == 150
@@ -119,7 +119,7 @@ def test_sample_oversize():
 
 
 def test_sample_n():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
 
     users = np.random.choice(ratings.user.unique(), 5, replace=False)
 
@@ -141,7 +141,7 @@ def test_sample_n():
 
 
 def test_sample_frac():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     users = np.random.choice(ratings.user.unique(), 5, replace=False)
 
     samp = xf.SampleFrac(0.2)
@@ -164,7 +164,7 @@ def test_sample_frac():
 
 
 def test_last_n():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     users = np.random.choice(ratings.user.unique(), 5, replace=False)
 
     samp = xf.LastN(5)
@@ -187,7 +187,7 @@ def test_last_n():
 
 
 def test_last_frac():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     users = np.random.choice(ratings.user.unique(), 5, replace=False)
 
     samp = xf.LastFrac(0.2, 'timestamp')
@@ -212,7 +212,7 @@ def test_last_frac():
 
 
 def test_partition_users():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     splits = xf.partition_users(ratings, 5, xf.SampleN(5))
     splits = list(splits)
     assert len(splits) == 5
@@ -230,7 +230,7 @@ def test_partition_users():
 
 
 def test_partition_users_frac():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     splits = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
     splits = list(splits)
     assert len(splits) == 5
@@ -252,7 +252,7 @@ def test_partition_users_frac():
 
 
 def test_sample_users():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     splits = xf.sample_users(ratings, 5, 100, xf.SampleN(5))
     splits = list(splits)
     assert len(splits) == 5
@@ -275,7 +275,7 @@ def test_sample_users():
 
 
 def test_sample_users_frac():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     splits = xf.sample_users(ratings, 5, 100, xf.SampleFrac(0.2))
     splits = list(splits)
     assert len(splits) == 5
@@ -301,7 +301,7 @@ def test_sample_users_frac():
 
 @pytest.mark.slow
 def test_sample_users_frac_oversize():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     splits = xf.sample_users(ratings, 20, 100, xf.SampleN(5))
     splits = list(splits)
     assert len(splits) == 20
@@ -327,7 +327,7 @@ def test_sample_users_frac_oversize():
 
 
 def test_sample_users_frac_oversize_ndj():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     splits = xf.sample_users(ratings, 20, 100, xf.SampleN(5), disjoint=False)
     splits = list(splits)
     assert len(splits) == 20

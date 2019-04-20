@@ -7,7 +7,7 @@ import numpy as np
 import joblib
 from contextlib import closing
 
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 
 from lenskit.algorithms.basic import Bias, TopN, Popular
 from lenskit import batch, topn
@@ -25,7 +25,7 @@ _log = logging.getLogger(__name__)
 
 @pytest.fixture
 def mlb():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     algo = TopN(Bias())
     algo.fit(ratings)
     return MLB(ratings, algo)
@@ -66,7 +66,7 @@ class MLFolds:
 def ml_folds() -> MLFolds:
     if not lktu.ml100k.available:
         raise pytest.skip('ML-100K not available')
-    ratings = lktu.ml100k.load_ratings()
+    ratings = lktu.ml100k.ratings
     return MLFolds(ratings)
 
 
