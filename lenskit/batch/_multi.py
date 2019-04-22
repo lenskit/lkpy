@@ -312,7 +312,6 @@ class MultiEval:
             with open(base.with_suffix('.pkl'), 'wb') as f:
                 pickle.dump(algo, f)
 
-
     def _train_algo(self, algo, train):
         watch = util.Stopwatch()
         # clone the algorithm in case some cannot be reused
