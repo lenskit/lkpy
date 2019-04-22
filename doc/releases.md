@@ -10,6 +10,7 @@ See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/3) for full
 - Made `MultiEval` default to using each recommender's default candidate
   set, and adapt algorithms to recommenders prior to evaluation.
 - Make `MultiEval` require named arguments for most things.
+- Add support to `MultiEval` to save the fit models.
 
 [Joblib]: https://joblib.readthedocs.io
 
