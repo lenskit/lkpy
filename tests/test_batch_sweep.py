@@ -1,6 +1,7 @@
 import pathlib
 import json
 import pickle
+import gzip
 
 import pandas as pd
 import numpy as np
@@ -58,10 +59,10 @@ def test_sweep_bias(tmp_path, ncpus):
 
 
 @mark.slow
-def test_sweep_norecs(tmp_path):
+def test_sweep_norecs_save_models(tmp_path):
     tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
-    sweep = batch.MultiEval(tmp_path, recommend=None)
+    sweep = batch.MultiEval(tmp_path, recommend=None, save_models='gzip')
 
     ratings = ml_test.ratings
     folds = xf.partition_users(ratings, 5, xf.SampleN(5))
@@ -93,6 +94,14 @@ def test_sweep_norecs(tmp_path):
 
     preds = pd.read_parquet(work / 'predictions.parquet')
     assert all(preds.RunId.isin(bias_runs.RunId))
+
+    for i in range(20):
+        run_id = i + 1
+        f = work / 'model-{}.pkl.gz'.format(run_id)
+        assert f.exists()
+        with gzip.open(f, 'rb') as af:
+            a = pickle.load(af)
+            assert a is not None
 
 
 @mark.slow

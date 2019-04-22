@@ -3,8 +3,11 @@ import pathlib
 import collections
 import json
 import warnings
+import gzip
+import pickle
 from copy import copy
 
+import joblib
 import pandas as pd
 
 from ..algorithms import Predictor, Recommender
@@ -49,6 +52,11 @@ class MultiEval:
             training data and return a candidate generator, itself a function mapping user
             IDs to candidate sets.  Pass ``None`` to use the default candidate set configured
             for each algorithm (recommended).
+        save_models(bool or str):
+            save individual estimated models to disk.  If ``True``, models are pickled to
+            ``.pkl`` files; if ``'gzip'``, they are pickled to gzip-compressed ``.pkl.gz``
+            files; if ``'joblib'``, they are pickled with :func:`joblib.dump` to uncompressed
+            ``.jlpkl`` files.
         eval_n_jobs(int or None):
             Value to pass to the ``n_jobs`` parameter in :func:`lenskit.batch.predict` and
             :func:`lenskit.batch.recommend`.
@@ -59,6 +67,7 @@ class MultiEval:
 
     def __init__(self, path, *, predict=True,
                  recommend=100, candidates=None,
+                 save_models=False,
                  eval_n_jobs=None, combine=True, **kwargs):
         if eval_n_jobs is None and 'nprocs' in kwargs:
             warnings.warn('nprocs is deprecated, use eval_n_jobs', DeprecationWarning)
@@ -67,6 +76,7 @@ class MultiEval:
         self.predict = predict
         self.recommend = recommend
         self.candidate_generator = candidates
+        self.save_models = save_models
         self.algorithms = []
         self.datasets = []
         self.n_jobs = eval_n_jobs
@@ -275,6 +285,7 @@ class MultiEval:
 
         algo, train_time = self._train_algo(arec.algorithm, train)
         run['TrainTime'] = train_time
+        self._save_model(run_id, algo)
 
         preds, pred_time = self._predict(run_id, algo, test)
         run['PredTime'] = pred_time
@@ -285,6 +296,22 @@ class MultiEval:
         self._write_results('recommendations', recs, run_id)
 
         return run
+
+    def _save_model(self, run_id, algo):
+        "Save a model to disk"
+        base = 'model-{}'.format(run_id)
+        base = self.workdir / base
+        if not self.save_models:
+            return
+        elif self.save_models == 'gzip':
+            with gzip.open(base.with_suffix('.pkl.gz'), 'wb') as f:
+                pickle.dump(algo, f)
+        elif self.save_models == 'joblib':
+            joblib.dump(algo, base.with_suffix('.jlpkl'))
+        else:
+            with open(base.with_suffix('.pkl'), 'wb') as f:
+                pickle.dump(algo, f)
+
 
     def _train_algo(self, algo, train):
         watch = util.Stopwatch()
