@@ -57,7 +57,7 @@ class MultiEval:
             ``True``, it will be in a single set of files (runs, recommendations, and predictions).
     """
 
-    def __init__(self, path, predict=True,
+    def __init__(self, path, *, predict=True,
                  recommend=100, candidates=None,
                  eval_n_jobs=None, combine=True, **kwargs):
         if eval_n_jobs is None and 'nprocs' in kwargs:

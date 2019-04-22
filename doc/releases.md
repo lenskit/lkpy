@@ -9,6 +9,7 @@ See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/3) for full
 - Removed `parallel` option on `MultiEval` algorithms, as it was unused.
 - Made `MultiEval` default to using each recommender's default candidate
   set, and adapt algorithms to recommenders prior to evaluation.
+- Make `MultiEval` require named arguments for most things.
 
 [Joblib]: https://joblib.readthedocs.io
 
