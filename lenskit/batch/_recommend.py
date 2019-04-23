@@ -138,7 +138,7 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, dask_result=False
                 if not dask_result:  # only if we're running inside dask, but don't want results
                     results = results.compute()
             else:
-                results = pd.concat(results, ignore_index=True)
+                results = pd.concat(results, ignore_index=True, copy=False)
             _logger.info('recommended for %d users in %s', len(users), timer)
     finally:
         util.delete_sometime(path)
