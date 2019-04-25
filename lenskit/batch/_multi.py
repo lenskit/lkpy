@@ -304,12 +304,12 @@ class MultiEval:
         if not self.save_models:
             return
         elif self.save_models == 'gzip':
-            with gzip.open(base.with_suffix('.pkl.gz'), 'wb') as f:
+            with gzip.open(util.fspath(base.with_suffix('.pkl.gz')), 'wb') as f:
                 pickle.dump(algo, f)
         elif self.save_models == 'joblib':
             joblib.dump(algo, base.with_suffix('.jlpkl'))
         else:
-            with open(base.with_suffix('.pkl'), 'wb') as f:
+            with base.with_suffix('.pkl').open('wb') as f:
                 pickle.dump(algo, f)
 
     def _train_algo(self, algo, train):

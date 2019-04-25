@@ -6,7 +6,7 @@ import gzip
 import pandas as pd
 import numpy as np
 
-from lenskit.util import norm_path
+from lenskit.util import norm_path, fspath
 from lenskit.util.test import ml_test
 from lenskit import batch, crossfold as xf
 from lenskit.algorithms import Predictor
@@ -99,7 +99,7 @@ def test_sweep_norecs_save_models(tmp_path):
         run_id = i + 1
         f = work / 'model-{}.pkl.gz'.format(run_id)
         assert f.exists()
-        with gzip.open(f, 'rb') as af:
+        with gzip.open(fspath(f), 'rb') as af:
             a = pickle.load(af)
             assert a is not None
 
