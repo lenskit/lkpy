@@ -5,6 +5,7 @@ import gzip
 
 import pandas as pd
 import numpy as np
+import joblib
 
 from lenskit.util import norm_path, fspath
 from lenskit.util.test import ml_test
@@ -59,10 +60,10 @@ def test_sweep_bias(tmp_path, ncpus):
 
 
 @mark.slow
-def test_sweep_norecs_save_models(tmp_path):
+def test_sweep_norecs(tmp_path):
     tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
-    sweep = batch.MultiEval(tmp_path, recommend=None, save_models='gzip')
+    sweep = batch.MultiEval(tmp_path, recommend=None)
 
     ratings = ml_test.ratings
     folds = xf.partition_users(ratings, 5, xf.SampleN(5))
@@ -94,14 +95,6 @@ def test_sweep_norecs_save_models(tmp_path):
 
     preds = pd.read_parquet(work / 'predictions.parquet')
     assert all(preds.RunId.isin(bias_runs.RunId))
-
-    for i in range(20):
-        run_id = i + 1
-        f = work / 'model-{}.pkl.gz'.format(run_id)
-        assert f.exists()
-        with gzip.open(fspath(f), 'rb') as af:
-            a = pickle.load(af)
-            assert a is not None
 
 
 @mark.slow
@@ -348,3 +341,39 @@ def test_sweep_combine(tmp_path):
 
     runs = pd.read_parquet(work / 'runs.parquet')
     assert len(runs) == 5 * 3
+
+
+@mark.slow
+@mark.parametrize("format", [True, 'gzip', 'joblib'])
+def test_save_models(tmp_path, format):
+    tmp_path = norm_path(tmp_path)
+    work = pathlib.Path(tmp_path)
+    sweep = batch.MultiEval(tmp_path, save_models=format)
+
+    sweep.add_algorithms(Bias(5))
+    sweep.add_algorithms(Popular())
+
+    ratings = ml_test.ratings
+    sweep.add_datasets(lambda: xf.sample_users(ratings, 2, 100, xf.SampleN(5)),
+                       name='ml-small')
+
+    for i in range(4):
+        run_id = i + 1
+        fn = work / f'model-{run_id}'
+        if format is True:
+            fn = fn.with_suffix('.pkl')
+            assert fn.exists()
+            with fn.open('rb') as f:
+                algo = pickle.load(f)
+                assert algo is not None
+        elif format == 'gzip':
+            fn = fn.with_suffix('.pkl.gz')
+            assert fn.exists()
+            with gzip.open(fspath(fn), 'rb') as f:
+                algo = pickle.load(f)
+                assert algo is not None
+        elif format == 'joblib':
+            fn = fn.with_suffix('.jlpkl')
+            assert fn.exists()
+            algo = joblib.load(fn)
+            assert algo is not None
