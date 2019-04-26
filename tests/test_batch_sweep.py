@@ -1,15 +1,17 @@
 import pathlib
 import json
 import pickle
+import gzip
 
 import pandas as pd
 import numpy as np
+import joblib
 
-from lenskit.util import norm_path
+from lenskit.util import norm_path, fspath
 from lenskit.util.test import ml_test
 from lenskit import batch, crossfold as xf
 from lenskit.algorithms import Predictor
-from lenskit.algorithms.basic import Bias, Popular
+from lenskit.algorithms.basic import Bias, Popular, TopN
 
 from pytest import mark
 
@@ -339,3 +341,51 @@ def test_sweep_combine(tmp_path):
 
     runs = pd.read_parquet(work / 'runs.parquet')
     assert len(runs) == 5 * 3
+
+
+@mark.slow
+@mark.parametrize("format", [True, 'gzip', 'joblib'])
+def test_save_models(tmp_path, format):
+    tmp_path = norm_path(tmp_path)
+    work = pathlib.Path(tmp_path)
+    sweep = batch.MultiEval(tmp_path, save_models=format)
+
+    sweep.add_algorithms(Bias(5))
+    sweep.add_algorithms(Popular())
+
+    ratings = ml_test.ratings
+    sweep.add_datasets(lambda: xf.sample_users(ratings, 2, 100, xf.SampleN(5)),
+                       name='ml-small')
+
+    sweep.run()
+
+    runs = pd.read_parquet(fspath(tmp_path / 'runs.parquet'))
+    runs = runs.set_index('RunId')
+
+    for i in range(4):
+        run_id = i + 1
+        fn = work / 'model-{}'.format(run_id)
+        if format is True:
+            fn = fn.with_suffix('.pkl')
+            assert fn.exists()
+            with fn.open('rb') as f:
+                algo = pickle.load(f)
+
+        elif format == 'gzip':
+            fn = fn.with_suffix('.pkl.gz')
+            assert fn.exists()
+            with gzip.open(fspath(fn), 'rb') as f:
+                algo = pickle.load(f)
+        elif format == 'joblib':
+            fn = fn.with_suffix('.jlpkl')
+            assert fn.exists()
+            algo = joblib.load(fn)
+        else:
+            assert False
+
+        assert algo is not None
+        algo_class = algo.__class__.__name__
+        if isinstance(algo, TopN):
+            algo_class = algo.predictor.__class__.__name__
+
+        assert algo_class == runs.loc[run_id, 'AlgoClass']
