@@ -357,6 +357,11 @@ def test_save_models(tmp_path, format):
     sweep.add_datasets(lambda: xf.sample_users(ratings, 2, 100, xf.SampleN(5)),
                        name='ml-small')
 
+    sweep.run()
+
+    runs = pd.read_parquet(fspath(tmp_path / 'runs.parquet'))
+    runs = runs.set_index('RunId')
+
     for i in range(4):
         run_id = i + 1
         fn = work / 'model-{}'.format(run_id)
@@ -366,14 +371,19 @@ def test_save_models(tmp_path, format):
             with fn.open('rb') as f:
                 algo = pickle.load(f)
                 assert algo is not None
+                assert algo.__class__.__name__ == runs.loc[run_id, 'AlgoClass']
         elif format == 'gzip':
             fn = fn.with_suffix('.pkl.gz')
             assert fn.exists()
             with gzip.open(fspath(fn), 'rb') as f:
                 algo = pickle.load(f)
                 assert algo is not None
+                assert algo.__class__.__name__ == runs.loc[run_id, 'AlgoClass']
         elif format == 'joblib':
             fn = fn.with_suffix('.jlpkl')
             assert fn.exists()
             algo = joblib.load(fn)
             assert algo is not None
+            assert algo.__class__.__name__ == runs.loc[run_id, 'AlgoClass']
+        else:
+            assert False
