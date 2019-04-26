@@ -359,7 +359,7 @@ def test_save_models(tmp_path, format):
 
     for i in range(4):
         run_id = i + 1
-        fn = work / f'model-{run_id}'
+        fn = work / 'model-{}'.format(run_id)
         if format is True:
             fn = fn.with_suffix('.pkl')
             assert fn.exists()
