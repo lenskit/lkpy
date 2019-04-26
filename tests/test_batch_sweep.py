@@ -11,7 +11,7 @@ from lenskit.util import norm_path, fspath
 from lenskit.util.test import ml_test
 from lenskit import batch, crossfold as xf
 from lenskit.algorithms import Predictor
-from lenskit.algorithms.basic import Bias, Popular
+from lenskit.algorithms.basic import Bias, Popular, TopN
 
 from pytest import mark
 
@@ -370,20 +370,22 @@ def test_save_models(tmp_path, format):
             assert fn.exists()
             with fn.open('rb') as f:
                 algo = pickle.load(f)
-                assert algo is not None
-                assert algo.__class__.__name__ == runs.loc[run_id, 'AlgoClass']
+
         elif format == 'gzip':
             fn = fn.with_suffix('.pkl.gz')
             assert fn.exists()
             with gzip.open(fspath(fn), 'rb') as f:
                 algo = pickle.load(f)
-                assert algo is not None
-                assert algo.__class__.__name__ == runs.loc[run_id, 'AlgoClass']
         elif format == 'joblib':
             fn = fn.with_suffix('.jlpkl')
             assert fn.exists()
             algo = joblib.load(fn)
-            assert algo is not None
-            assert algo.__class__.__name__ == runs.loc[run_id, 'AlgoClass']
         else:
             assert False
+
+        assert algo is not None
+        algo_class = algo.__class__.__name__
+        if isinstance(algo, TopN):
+            algo_class = algo.predictor.__class__.__name__
+
+        assert algo_class == runs.loc[run_id, 'AlgoClass']
