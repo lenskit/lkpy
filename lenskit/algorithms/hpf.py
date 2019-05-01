@@ -28,10 +28,16 @@ class HPF(MFPredictor):
         users = pd.Index(ratings.user.unique())
         items = pd.Index(ratings.item.unique())
 
+        if 'rating' in ratings.columns:
+            count = ratings.rating.values.copy()
+        else:
+            _logger.info('no ratings found, assuming 1.0')
+            count = 1.0
+
         hpfdf = pd.DataFrame({
             'UserId': users.get_indexer(ratings.user),
             'ItemId': items.get_indexer(ratings.item),
-            'Count': ratings.rating.values.copy()
+            'Count': count
         })
 
         hpf = hpfrec.HPF(self.features, reindex=False, **self._kwargs)

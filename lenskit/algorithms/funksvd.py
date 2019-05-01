@@ -224,7 +224,11 @@ class FunkSVD(BiasMFPredictor):
             ratings: the ratings data frame.
         """
         timer = util.Stopwatch()
-        if self.bias is not None:
+        if 'rating' not in ratings:
+            _logger.warn('no rating column found, assuming rating values of 1.0')
+            ratings = ratings.assign(rating=1.0)
+
+        if self.bias:
             _logger.info('[%s] fitting bias model', timer)
             self.bias.fit(ratings)
 

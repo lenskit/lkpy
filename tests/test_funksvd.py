@@ -151,6 +151,19 @@ def test_fsvd_save_load():
 
 @lktu.wantjit
 @mark.slow
+def test_fsvd_train_binary():
+    ratings = lktu.ml_test.ratings.drop(columns=['rating', 'timestamp'])
+
+    original = svd.FunkSVD(20, iterations=20)
+    original.fit(ratings)
+
+    assert original.global_bias_ == approx(ratings.rating.mean())
+    assert original.item_features_.shape == (ratings.item.nunique(), 20)
+    assert original.user_features_.shape == (ratings.user.nunique(), 20)
+
+
+@lktu.wantjit
+@mark.slow
 def test_fsvd_known_preds():
     algo = svd.FunkSVD(15, iterations=125, lrate=0.001)
     _log.info('training %s on ml data', algo)
