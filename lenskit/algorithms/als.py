@@ -178,7 +178,7 @@ class BiasedMF(BiasMFPredictor):
         assert ratings.nrows == n_users
         assert ratings.ncols == n_items
 
-        if self.bias is not None:
+        if self.bias:
             gbias = self.bias.mean_
             ibias = self.bias.item_offsets_
             ubias = self.bias.user_offsets_
