@@ -248,7 +248,7 @@ class FunkSVD(BiasMFPredictor):
         assert np.all(items >= 0)
 
         _logger.debug('[%s] computing initial estimates', timer)
-        if self.bias is not None:
+        if self.bias:
             initial = pd.Series(self.bias.mean_, index=ratings.index, dtype=np.float_)
             ibias, initial = _align_add_bias(self.bias.item_offsets_, iidx, ratings.item, initial)
             ubias, initial = _align_add_bias(self.bias.user_offsets_, uidx, ratings.user, initial)
