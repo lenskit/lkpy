@@ -86,7 +86,8 @@ class UserUser(Predictor):
             sp, ep = uir.row_extent(u)
             v = uir.values[sp:ep]
             n = np.linalg.norm(v)
-            uir.values[sp:ep] /= n
+            if n > 0:
+                uir.values[sp:ep] /= n
 
         mkl = matrix.mkl_ops()
         mkl_m = mkl.SparseM.from_csr(uir) if mkl else None
