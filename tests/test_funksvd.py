@@ -154,7 +154,7 @@ def test_fsvd_save_load():
 def test_fsvd_train_binary():
     ratings = lktu.ml_test.ratings.drop(columns=['rating', 'timestamp'])
 
-    original = svd.FunkSVD(20, iterations=20, bias=None)
+    original = svd.FunkSVD(20, iterations=20, bias=False)
     original.fit(ratings)
 
     assert original.global_bias_ == 0
