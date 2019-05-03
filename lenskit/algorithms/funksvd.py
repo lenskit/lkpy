@@ -272,7 +272,7 @@ class FunkSVD(BiasMFPredictor):
 
         self.user_index_ = uidx
         self.item_index_ = iidx
-        self.global_bias_ = self.bias.mean_ if self.bias is not None else 0
+        self.global_bias_ = self.bias.mean_ if self.bias else 0
         self.user_bias_ = ubias.values if ubias is not None else None
         self.item_bias_ = ibias.values if ibias is not None else None
         self.user_features_ = model.user_features
