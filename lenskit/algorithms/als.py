@@ -182,9 +182,12 @@ class BiasedMF(BiasMFPredictor):
             gbias = self.bias.mean_
             ibias = self.bias.item_offsets_
             ubias = self.bias.user_offsets_
+            if ratings.values is None:
+                ratings.N.values = np.ones(np.nnz)
         else:
             gbias = 0
             ibias = ubias = None
+            return ratings, (gbias, ibias, ubias)
 
         _logger.info('[%s] normalizing %dx%d matrix (%d nnz)',
                      self.timer, n_users, n_items, ratings.nnz)
