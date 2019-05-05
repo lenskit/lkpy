@@ -7,6 +7,13 @@ from numba import njit, jitclass, int32, double
 
 
 @njit
+def _swap(a, i, j):
+    t = a[i]
+    a[i] = a[j]
+    a[j] = t
+
+
+@njit
 def _ind_downheap(pos: int, size, keys, values):
     min = pos
     left = 2*pos + 1
@@ -16,9 +23,7 @@ def _ind_downheap(pos: int, size, keys, values):
     if right < size and values[keys[right]] < values[keys[min]]:
         min = right
     if min != pos:
-        kt = keys[min]
-        keys[min] = keys[pos]
-        keys[pos] = kt
+        _swap(keys, min, pos)
         _ind_downheap(min, size, keys, values)
 
 
@@ -86,8 +91,71 @@ class Accumulator:
         parent = (current - 1) // 2
         while current > 0 and values[keys[parent]] > values[keys[current]]:
             # swap up
-            kt = keys[parent]
-            keys[parent] = keys[current]
-            keys[current] = kt
+            _swap(keys, parent, current)
             current = parent
             parent = (current - 1) // 2
+
+
+@njit
+def _pair_downheap(pos: int, sp, limit, ks, vs):
+    min = pos
+    left = 2*pos + 1
+    right = 2*pos + 2
+    if left < limit and vs[sp + left] < vs[sp + min]:
+        min = left
+    if right < limit and vs[sp + right] < vs[sp + min]:
+        min = right
+    if min != pos:
+        # we want to swap!
+        _swap(vs, sp + pos, sp + min)
+        _swap(ks, sp + pos, sp + min)
+        _pair_downheap(min, sp, limit, ks, vs)
+
+
+@njit
+def _pair_upheap(pos, sp, ks, vs):
+    parent = (pos - 1) // 2
+    while pos > 0 and vs[sp + parent] > vs[sp + pos]:
+        _swap(vs, sp + parent, sp + pos)
+        _swap(ks, sp + parent, sp + pos)
+        pos = parent
+        parent = (pos - 1) // 2
+
+
+@njit
+def kvp_insert(sp, ep, limit, k, v, keys, vals):
+    """
+    Insert a value (with key) into a heap, only keeping the top values.
+
+    Args:
+        sp(int): the start of the heap
+        ep(int): the current end of the heap
+        limit(int): the maximum size of the heap
+        k: the key
+        v: the value (used for sorting)
+        keys: the key array, must be at least sp+limit.
+        vals: the value array, same size as keys
+
+    Returns:
+        int: the new ep
+    """
+
+    if ep - sp < limit:
+        # insert into heap without size problems
+        # put on end, then upheap
+        keys[ep] = k
+        vals[ep] = v
+        _pair_upheap(ep - sp, sp, keys, vals)
+        return ep + 1
+
+    elif v > vals[sp]:
+        # heap is full, but new value is larger than old min
+        # stick it on the front, and downheap
+        keys[sp] = k
+        vals[sp] = v
+        _pair_downheap(0, sp, limit, keys, vals)
+        return ep
+
+    else:
+        # heap is full and new value doesn't belong
+        return ep
