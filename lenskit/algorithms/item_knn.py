@@ -250,11 +250,13 @@ class ItemItem(Predictor):
         _logger.debug('collecting garbage')
         gc.collect()
         _logger.debug('resizing %d-byte row array', rows.nbytes)
-        rows = np.resize(rows, nnz * 2)
-        _logger.debug('resizing %d-byte col array', rows.nbytes)
-        cols = np.resize(cols, nnz * 2)
-        _logger.debug('resizing %d-byte val array', rows.nbytes)
-        vals = np.resize(vals, nnz * 2)
+        rows.resize(nnz * 2)
+        _logger.debug('resizing %d-byte col array', cols.nbytes)
+        cols.resize(nnz * 2)
+        _logger.debug('resizing %d-byte val array', vals.nbytes)
+        vals.resize(nnz * 2)
+
+        _logger.debug('copying data into back half of the arrays')
         rows[nnz:] = cols[:nnz]
         cols[nnz:] = rows[:nnz]
         vals[nnz:] = vals[:nnz]
@@ -275,11 +277,8 @@ class ItemItem(Predictor):
         _logger.info('[%s] filter keeps %d of %d entries', self._timer, np.sum(mask), len(rows))
 
         rows = rows[mask]
-        _logger.debug('shrunk rows: %s', (rows.shape, rows.dtype, rows.flags))
         cols = cols[mask]
-        _logger.debug('shrunk cols: %s', (cols.shape, cols.dtype, cols.flags))
         vals = vals[mask]
-        _logger.debug('shrunk vals: %s', (vals.shape, vals.dtype, vals.flags))
         return rows, cols, vals
 
     def _select_similarities(self, nitems, rows, cols, vals):
