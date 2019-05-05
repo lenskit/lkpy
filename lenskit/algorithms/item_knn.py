@@ -275,11 +275,11 @@ class ItemItem(Predictor):
         _logger.info('[%s] filter keeps %d of %d entries', self._timer, np.sum(mask), len(rows))
 
         rows = rows[mask]
-        _logger.debug('shrunk rows: %s', rows)
+        _logger.debug('shrunk rows: %s', (rows.shape, rows.dtype, rows.flags))
         cols = cols[mask]
-        _logger.debug('shrunk cols: %s', rows)
+        _logger.debug('shrunk cols: %s', (cols.shape, cols.dtype, cols.flags))
         vals = vals[mask]
-        _logger.debug('shrunk vals: %s', rows)
+        _logger.debug('shrunk vals: %s', (vals.shape, vals.dtype, vals.flags))
         return rows, cols, vals
 
     def _select_similarities(self, nitems, rows, cols, vals):
