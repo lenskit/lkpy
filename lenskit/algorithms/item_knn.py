@@ -236,12 +236,13 @@ class ItemItem(Predictor):
 
         _logger.info('[%s] multiplying matrix with MKL', self._timer)
         smat = mkl.csr_syrk(rmat)
+        _logger.debug('extracting row indexes')
         rows = smat.rowinds()
         cols = smat.colinds
         vals = smat.values
 
         rows, cols, vals = self._filter_similarities(rows, cols, vals)
-        del smat
+        del smat  # free a little memory
         nnz = len(rows)
 
         _logger.info('[%s] making matrix symmetric (%d -> %d nnz)',
@@ -273,7 +274,13 @@ class ItemItem(Predictor):
 
         _logger.info('[%s] filter keeps %d of %d entries', self._timer, np.sum(mask), len(rows))
 
-        return rows[mask], cols[mask], vals[mask]
+        rows = rows[mask]
+        _logger.debug('shrunk rows: %s', rows)
+        cols = cols[mask]
+        _logger.debug('shrunk cols: %s', rows)
+        vals = vals[mask]
+        _logger.debug('shrunk vals: %s', rows)
+        return rows, cols, vals
 
     def _select_similarities(self, nitems, rows, cols, vals):
         _logger.info('[%s] ordering similarities', self._timer)
