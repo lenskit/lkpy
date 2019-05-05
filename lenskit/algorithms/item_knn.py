@@ -2,25 +2,69 @@
 Item-based k-NN collaborative filtering.
 """
 
-import pathlib
 import logging
 import warnings
-import gc
 
 import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-from numba import njit, prange
+from numba import njit, jitclass, prange, int32
 
 from lenskit import util, matrix, DataWarning
+from lenskit.util.accum import kvp_insert
 from . import Predictor
 
 _logger = logging.getLogger(__name__)
 
 
+@jitclass({
+    'counts': int32[:]
+})
+class _CountVisitor:
+    def __init__(self, nrows):
+        self.counts = np.zeros(nrows, dtype=np.int32)
+
+    def visit(self, i, j, v):
+        self.counts[i] += 1
+
+
+@jitclass({
+    'pointers': int32[:],
+    'limits': int32[:],
+    'out': matrix._CSR.class_type.instance_type
+})
+class _AccVisitor:
+    def __init__(self, mat: matrix._CSR, nnbrs):
+        self.out = mat
+        self.limits = nnbrs
+        self.pointers = mat.rowptrs[:-1].copy()
+
+    def visit(self, i, j, v):
+        sp = self.out.rowptrs[i]
+        ep = self.pointers[i]
+        ep = kvp_insert(sp, ep, self.limits[i], j, v, self.out.colinds, self.out.values)
+        self.pointers[i] = ep
+
+
+@njit(nogil=True)
+def _visit_nbrs(smat: matrix._CSR, visitor, thresh: float, triangular: bool):
+    "Count the number of neighbors passing the threshold for each row."
+    for i in range(smat.nrows):
+        sp, ep = smat.row_extent(i)
+        for j in range(ep - sp):
+            jp = sp + j
+            c = smat.colinds[jp]
+            v = smat.values[jp]
+            if c != i and v >= thresh:
+                visitor.visit(i, c, v)
+                if triangular:
+                    visitor.visit(c, i, v)
+
+
 @njit(nogil=True)
 def _predict_weighted_average(model, nitems, nrange, ratings, targets):
+    "Weighted average prediction function"
     min_nbrs, max_nbrs = nrange
     scores = np.full(nitems, np.nan, dtype=np.float_)
 
@@ -55,6 +99,7 @@ def _predict_weighted_average(model, nitems, nrange, ratings, targets):
 
 @njit(nogil=True)
 def _predict_sum(model, nitems, nrange, ratings, targets):
+    "Sum-of-similarities prediction function"
     min_nbrs, max_nbrs = nrange
     scores = np.full(nitems, np.nan, dtype=np.float_)
 
@@ -215,107 +260,57 @@ class ItemItem(Predictor):
             return self._mkl_similarities(mkl, rmat)
 
     def _scipy_similarities(self, rmat):
-        nitems = rmat.ncols
         sp_rmat = rmat.to_scipy()
 
         _logger.info('[%s] multiplying matrix with scipy', self._timer)
         smat = sp_rmat.T @ sp_rmat
-        smat = smat.tocoo()
-        rows, cols, vals = smat.row, smat.col, smat.data
-        rows = rows[:smat.nnz]
-        cols = cols[:smat.nnz]
-        vals = vals[:smat.nnz]
+        smat = matrix.CSR.from_scipy(smat, False)
 
-        rows, cols, vals = self._filter_similarities(rows, cols, vals)
-        csr = self._select_similarities(nitems, rows, cols, vals)
+        csr = self._filter_select(smat, False)
         return csr
 
     def _mkl_similarities(self, mkl, rmat):
-        nitems = rmat.ncols
         assert rmat.values is not None
 
         _logger.info('[%s] multiplying matrix with MKL', self._timer)
         smat = mkl.csr_syrk(rmat)
-        _logger.debug('extracting row indexes')
-        rows = smat.rowinds()
-        cols = smat.colinds
-        vals = smat.values
 
-        rows, cols, vals = self._filter_similarities(rows, cols, vals)
-        del smat  # free a little memory
-        nnz = len(rows)
+        smat = self._filter_select(smat, True)
 
-        _logger.info('[%s] making matrix symmetric (%d -> %d nnz)',
-                     self._timer, nnz, nnz * 2)
-        _logger.debug('collecting garbage')
-        gc.collect()
-        _logger.debug('resizing %d-byte row array', rows.nbytes)
-        rows.resize(nnz * 2)
-        _logger.debug('resizing %d-byte col array', cols.nbytes)
-        cols.resize(nnz * 2)
-        _logger.debug('resizing %d-byte val array', vals.nbytes)
-        vals.resize(nnz * 2)
+        return smat
 
-        _logger.debug('copying data into back half of the arrays')
-        rows[nnz:] = cols[:nnz]
-        cols[nnz:] = rows[:nnz]
-        vals[nnz:] = vals[:nnz]
+    def _filter_select(self, smat, triangular):
+        "Threshold, filter, and symmetrify matrices"
+        nitems = smat.nrows
+        assert smat.ncols == nitems
 
-        csr = self._select_similarities(nitems, rows, cols, vals)
-        return csr
+        # Count possible neighbors
+        cv = _CountVisitor(nitems)
+        _visit_nbrs(smat.N, cv, self.min_sim, triangular)
+        possible = cv.counts
 
-    def _filter_similarities(self, rows, cols, vals):
-        "Threshold similarites & remove self-similarities."
-        _logger.info('[%s] filtering %d similarities', self._timer, len(rows))
-        # remove self-similarity
-        mask = rows != cols
+        # Count neighbors to use neighbors
+        min_nbrs = self.min_nbrs
+        if min_nbrs is not None and min_nbrs > 0:
+            nnbrs = np.maximum(possible, min_nbrs, dtype=np.int32)
+        else:
+            nnbrs = possible
+        nsims = np.sum(nnbrs)
+        _logger.info('truncating %d neighbors to %d', smat.nnz, nsims)
 
-        # remove too-small similarities
-        if self.min_sim is not None:
-            mask = np.logical_and(mask, vals >= self.min_sim)
+        # set up the target matrix
+        trimmed = matrix.CSR.empty((nitems, nitems), nnbrs)
 
-        _logger.info('[%s] filter keeps %d of %d entries', self._timer, np.sum(mask), len(rows))
+        # copy values into target arrays
+        av = _AccVisitor(trimmed.N, nnbrs)
+        _visit_nbrs(smat.N, av, self.min_sim, triangular)
+        assert np.all(av.pointers == trimmed.rowptrs[1:])
 
-        rows = rows[mask]
-        cols = cols[mask]
-        vals = vals[mask]
-        return rows, cols, vals
+        _logger.info('sorting neighborhoods')
+        trimmed.sort_values()
 
-    def _select_similarities(self, nitems, rows, cols, vals):
-        _logger.info('[%s] ordering similarities', self._timer)
-        csr = matrix.CSR.from_coo(rows, cols, vals, shape=(nitems, nitems))
-        csr.sort_values()
-
-        if self.save_nbrs is None or self.save_nbrs <= 0:
-            return csr
-
-        _logger.info('[%s] picking %d top similarities', self._timer, self.save_nbrs)
-        counts = csr.row_nnzs()
-        _logger.debug('have %d rows in size range [%d,%d]',
-                      len(counts), np.min(counts), np.max(counts))
-        ncounts = np.fmin(counts, self.save_nbrs)
-        _logger.debug('will have %d rows in size range [%d,%d]',
-                      len(ncounts), np.min(ncounts), np.max(ncounts))
-        assert np.all(ncounts <= self.save_nbrs)
-        assert np.all(ncounts >= 0)
-        nnz = np.sum(ncounts)
-
-        rp2 = np.zeros_like(csr.rowptrs)
-        rp2[1:] = np.cumsum(ncounts)
-        ci2 = np.zeros(nnz, np.int32)
-        vs2 = np.zeros(nnz)
-        for i in range(nitems):
-            sp1 = csr.rowptrs[i]
-            sp2 = rp2[i]
-
-            ep1 = sp1 + ncounts[i]
-            ep2 = sp2 + ncounts[i]
-            assert ep1 - sp1 == ep2 - sp2
-
-            ci2[sp2:ep2] = csr.colinds[sp1:ep1]
-            vs2[sp2:ep2] = csr.values[sp1:ep1]
-
-        return matrix.CSR(csr.nrows, csr.ncols, nnz, rp2, ci2, vs2)
+        # and construct the new matrix
+        return trimmed
 
     def predict_for_user(self, user, items, ratings=None):
         _logger.debug('predicting %d items for user %s', len(items), user)

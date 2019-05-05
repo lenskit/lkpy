@@ -147,6 +147,27 @@ class CSR:
             self.N = _CSR(nrows, ncols, nnz, ptrs, inds, vals)
 
     @classmethod
+    def empty(cls, shape, row_nnzs):
+        """
+        Create an empty CSR matrix.
+
+        Args:
+            shape(tuple): the array shape (rows,cols)
+            row_nnzs(array-like): the number of nonzero entries for each row
+        """
+        nrows, ncols = shape
+        assert len(row_nnzs) == nrows
+        nnz = np.sum(row_nnzs)
+
+        rowptrs = np.zeros(nrows + 1, dtype=np.int32)
+        rowptrs[1:] = np.cumsum(row_nnzs)
+
+        colinds = np.full(nnz, -1, dtype=np.int32)
+        values = np.full(nnz, np.nan)
+
+        return cls(nrows, ncols, nnz, rowptrs, colinds, values)
+
+    @classmethod
     def from_coo(cls, rows, cols, vals, shape=None):
         """
         Create a CSR matrix from data in COO format.
