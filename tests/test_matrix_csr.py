@@ -295,6 +295,42 @@ def test_csr_to_sps():
         assert all(smat2.data[sp:ep] == csr.values[sp:ep])
 
 
+def test_mean_center():
+    coords = np.random.choice(np.arange(50 * 100, dtype=np.int32), 1000, False)
+    rows = np.mod(coords, 100, dtype=np.int32)
+    cols = np.floor_divide(coords, 100, dtype=np.int32)
+    vals = np.random.randn(1000)
+    csr = lm.CSR.from_coo(rows, cols, vals, (100, 50))
+
+    spm = csr.to_scipy().copy()
+
+    m2 = csr.normalize_rows('center')
+    assert len(m2) == 100
+
+    for i in range(csr.nrows):
+        vs = csr.row_vs(i)
+        assert np.mean(vs) == approx(0.0)
+        assert vs + m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
+
+
+def test_unit_norm():
+    coords = np.random.choice(np.arange(50 * 100, dtype=np.int32), 1000, False)
+    rows = np.mod(coords, 100, dtype=np.int32)
+    cols = np.floor_divide(coords, 100, dtype=np.int32)
+    vals = np.random.randn(1000)
+    csr = lm.CSR.from_coo(rows, cols, vals, (100, 50))
+
+    spm = csr.to_scipy().copy()
+
+    m2 = csr.normalize_rows('unit')
+    assert len(m2) == 100
+
+    for i in range(csr.nrows):
+        vs = csr.row_vs(i)
+        assert np.linalg.norm(vs) == approx(1.0)
+        assert vs * m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
+
+
 @mark.parametrize("values", [True, False])
 def test_csr_pickle(values):
     coords = np.random.choice(np.arange(50 * 100, dtype=np.int32), 1000, False)

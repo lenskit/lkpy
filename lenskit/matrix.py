@@ -299,6 +299,33 @@ class CSR:
         """
         _csr_sort(self.nrows, self.rowptrs, self.colinds, self.values)
 
+    def normalize_rows(self, normalization):
+        """
+        Normalize the rows of the matrix.
+
+        .. note:: The normalization *ignores* missing values instead of treating
+                  them as 0.
+
+        .. note:: This method is not available from Numba.
+
+        Args:
+            normalization(str):
+                The normalization to perform. Can be one of:
+
+                * ``'center'`` - center rows about the mean
+                * ``'unit'`` - convert rows to a unit vector
+
+        Returns:
+            numpy.ndarray:
+                The normalization values for each row.
+        """
+        if normalization == 'center':
+            return _center_rows(self.N)
+        elif normalization == 'unit':
+            return _unit_rows(self.N)
+        else:
+            raise ValueError('unknown normalization: ' + normalization)
+
     def transpose(self, values=True):
         """
         Transpose a CSR matrix.
@@ -355,6 +382,32 @@ def _csr_sort(nrows, rowptrs, colinds, values):
             ord = ord[::-1]
             colinds[sp:ep] = colinds[sp + ord]
             values[sp:ep] = values[sp + ord]
+
+
+@njit(nogil=True)
+def _center_rows(csr: _CSR):
+    means = np.zeros(csr.nrows)
+    for i in range(csr.nrows):
+        sp, ep = csr.row_extent(i)
+        vs = csr.row_vs(i)
+        m = np.mean(vs)
+        means[i] = m
+        csr.values[sp:ep] -= m
+
+    return means
+
+
+@njit(nogil=True)
+def _unit_rows(csr: _CSR):
+    norms = np.zeros(csr.nrows)
+    for i in range(csr.nrows):
+        sp, ep = csr.row_extent(i)
+        vs = csr.row_vs(i)
+        m = np.linalg.norm(vs)
+        norms[i] = m
+        csr.values[sp:ep] /= m
+
+    return norms
 
 
 @njit
