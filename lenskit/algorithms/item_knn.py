@@ -5,6 +5,7 @@ Item-based k-NN collaborative filtering.
 import pathlib
 import logging
 import warnings
+import gc
 
 import pandas as pd
 import numpy as np
@@ -245,8 +246,13 @@ class ItemItem(Predictor):
 
         _logger.info('[%s] making matrix symmetric (%d -> %d nnz)',
                      self._timer, nnz, nnz * 2)
+        _logger.debug('collecting garbage')
+        gc.collect()
+        _logger.debug('resizing %d-byte row array', rows.nbytes)
         rows = np.resize(rows, nnz * 2)
+        _logger.debug('resizing %d-byte col array', rows.nbytes)
         cols = np.resize(cols, nnz * 2)
+        _logger.debug('resizing %d-byte val array', rows.nbytes)
         vals = np.resize(vals, nnz * 2)
         rows[nnz:] = cols[:nnz]
         cols[nnz:] = rows[:nnz]
