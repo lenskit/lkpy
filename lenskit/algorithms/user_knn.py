@@ -67,27 +67,17 @@ class UserUser(Predictor):
 
         # mean-center ratings
         if self.center:
-            umeans = np.zeros(len(users))
-            for u in range(uir.nrows):
-                sp, ep = uir.row_extent(u)
-                v = uir.values[sp:ep]
-                umeans[u] = m = v.mean()
-                uir.values[sp:ep] -= m
+            umeans = uir.normalize_rows('center')
         else:
             umeans = None
 
         # compute centered transpose
         iur = uir.transpose()
 
-        # L2-normalize ratings
+        # L2-normalize ratings so dot product is cosine
         if uir.values is None:
             uir.values = np.full(uir.nnz, 1.0)
-        for u in range(uir.nrows):
-            sp, ep = uir.row_extent(u)
-            v = uir.values[sp:ep]
-            n = np.linalg.norm(v)
-            if n > 0:
-                uir.values[sp:ep] /= n
+        uir.normalize_rows('unit')
 
         mkl = matrix.mkl_ops()
         mkl_m = mkl.SparseM.from_csr(uir) if mkl else None
