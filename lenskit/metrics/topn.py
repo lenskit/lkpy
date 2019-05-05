@@ -36,7 +36,7 @@ def recip_rank(recs, truth):
     If no elements are relevant, the reciprocal rank is 0.
     """
     good = recs['item'].isin(truth.index)
-    npz, = np.nonzero(good)
+    npz, = np.nonzero(good.to_numpy())
     if len(npz):
         return 1.0 / (npz[0] + 1.0)
     else:

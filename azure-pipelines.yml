@@ -1,6 +1,6 @@
 variables:
   pip.deps: >
-    invoke pytest coverage pytest-cov pytest-doctestplus
+    pytest coverage pytest-cov pytest-doctestplus
     pandas scipy pyarrow numpy joblib
     numba cython cffi
 

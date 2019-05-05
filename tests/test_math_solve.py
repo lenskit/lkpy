@@ -73,7 +73,7 @@ def test_solve_cholesky():
         A = A * A
 
         # and solve
-        xexp, resid, rank, s = np.linalg.lstsq(A, b)
+        xexp, resid, rank, s = np.linalg.lstsq(A, b, rcond=None)
 
         # chol solve
         L = np.linalg.cholesky(A.T @ A)
@@ -94,7 +94,7 @@ def test_solve_dposv():
         A = A * A
 
         # and solve
-        xexp, resid, rank, s = np.linalg.lstsq(A, b)
+        xexp, resid, rank, s = np.linalg.lstsq(A, b, rcond=None)
 
         F = A.T @ A
         x = A.T @ b
