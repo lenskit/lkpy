@@ -101,6 +101,13 @@ class _CSR:
         else:
             return self.values[sp:ep]
 
+    def rowinds(self):
+        ris = np.zeros(self.nnz, np.int32)
+        for i in range(self.nrows):
+            sp, ep = self.row_extent(i)
+            ris[sp:ep] = i
+        return ris
+
 
 class CSR:
     """
@@ -241,7 +248,7 @@ class CSR:
 
         .. note:: This method is not available from Numba.
         """
-        return np.repeat(np.arange(self.nrows, dtype=np.int32), np.diff(self.rowptrs))
+        return self.N.rowinds()
 
     def row(self, row):
         """
