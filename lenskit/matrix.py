@@ -50,7 +50,7 @@ def _csr_delegate(name):
 @jitclass({
     'nrows': n.int32,
     'ncols': n.int32,
-    'nnz': n.int32,
+    'nnz': n.int64,
     'rowptrs': n.int32[:],
     'colinds': n.int32[:],
     'values': n.optional(n.float64[:])
