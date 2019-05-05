@@ -243,7 +243,8 @@ class ItemItem(Predictor):
         del smat
         nnz = len(rows)
 
-        _logger.info('[%s] making matrix symmetric (%d nnz)', self._timer, nnz)
+        _logger.info('[%s] making matrix symmetric (%d -> %d nnz)',
+                     self._timer, nnz, nnz * 2)
         rows = np.resize(rows, nnz * 2)
         cols = np.resize(cols, nnz * 2)
         vals = np.resize(vals, nnz * 2)
