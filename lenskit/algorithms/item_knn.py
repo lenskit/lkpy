@@ -49,7 +49,7 @@ def _copy_nbrs(smat: matrix._CSR, out: matrix._CSR, limits, thresh: float, trian
             if c != i and v >= thresh:
                 sp = out.rowptrs[i]
                 ep = ptrs[i]
-                ep = kvp_minheap_insert(sp, ep, limits[i], j, v, out.colinds, out.values)
+                ep = kvp_minheap_insert(sp, ep, limits[i], c, v, out.colinds, out.values)
                 ptrs[i] = ep
                 if triangular:
                     sp = out.rowptrs[c]
