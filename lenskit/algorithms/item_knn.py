@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-from numba import njit, jitclass, prange, int32
+from numba import njit, prange
 
 from lenskit import util, matrix, DataWarning
 from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
@@ -18,38 +18,10 @@ from . import Predictor
 _logger = logging.getLogger(__name__)
 
 
-@jitclass({
-    'counts': int32[:]
-})
-class _CountVisitor:
-    def __init__(self, nrows):
-        self.counts = np.zeros(nrows, dtype=np.int32)
-
-    def visit(self, i, j, v):
-        self.counts[i] += 1
-
-
-@jitclass({
-    'pointers': int32[:],
-    'limits': int32[:],
-    'out': matrix._CSR.class_type.instance_type
-})
-class _AccVisitor:
-    def __init__(self, mat: matrix._CSR, nnbrs):
-        self.out = mat
-        self.limits = nnbrs
-        self.pointers = mat.rowptrs[:-1].copy()
-
-    def visit(self, i, j, v):
-        sp = self.out.rowptrs[i]
-        ep = self.pointers[i]
-        ep = kvp_minheap_insert(sp, ep, self.limits[i], j, v, self.out.colinds, self.out.values)
-        self.pointers[i] = ep
-
-
 @njit(nogil=True)
-def _visit_nbrs(smat: matrix._CSR, visitor, thresh: float, triangular: bool):
+def _count_nbrs(smat: matrix._CSR, thresh: float, triangular: bool):
     "Count the number of neighbors passing the threshold for each row."
+    counts = np.zeros(smat.nrows, dtype=np.int32)
     for i in range(smat.nrows):
         sp, ep = smat.row_extent(i)
         for j in range(ep - sp):
@@ -57,9 +29,35 @@ def _visit_nbrs(smat: matrix._CSR, visitor, thresh: float, triangular: bool):
             c = smat.colinds[jp]
             v = smat.values[jp]
             if c != i and v >= thresh:
-                visitor.visit(i, c, v)
+                counts[i] += 1
                 if triangular:
-                    visitor.visit(c, i, v)
+                    counts[c] += 1
+
+    return counts
+
+
+@njit(nogil=True)
+def _copy_nbrs(smat: matrix._CSR, out: matrix._CSR, limits, thresh: float, triangular: bool):
+    "Count the number of neighbors passing the threshold for each row."
+    ptrs = smat.rowptrs[:-1].copy()
+    for i in range(smat.nrows):
+        sp, ep = smat.row_extent(i)
+        for j in range(ep - sp):
+            jp = sp + j
+            c = smat.colinds[jp]
+            v = smat.values[jp]
+            if c != i and v >= thresh:
+                sp = out.rowptrs[i]
+                ep = ptrs[i]
+                ep = kvp_minheap_insert(sp, ep, limits[i], j, v, out.colinds, out.values)
+                ptrs[i] = ep
+                if triangular:
+                    sp = out.rowptrs[c]
+                    ep = ptrs[c]
+                    ep = kvp_minheap_insert(sp, ep, limits[c], i, v, out.colinds, out.values)
+                    ptrs[c] = ep
+
+    return ptrs
 
 
 @njit(nogil=True, parallel=True)
@@ -293,9 +291,7 @@ class ItemItem(Predictor):
 
         # Count possible neighbors
         _logger.debug('counting neighbors')
-        cv = _CountVisitor(nitems)
-        _visit_nbrs(smat.N, cv, self.min_sim, triangular)
-        possible = cv.counts
+        possible = _count_nbrs(smat.N, self.min_sim, triangular)
 
         # Count neighbors to use neighbors
         save_nbrs = self.save_nbrs
@@ -311,9 +307,8 @@ class ItemItem(Predictor):
         trimmed = matrix.CSR.empty((nitems, nitems), nnbrs)
 
         # copy values into target arrays
-        av = _AccVisitor(trimmed.N, nnbrs)
-        _visit_nbrs(smat.N, av, self.min_sim, triangular)
-        assert np.all(av.pointers == trimmed.rowptrs[1:])
+        chk = _copy_nbrs(smat.N, trimmed.N, nnbrs, self.min_sim, triangular)
+        assert np.all(chk == trimmed.rowptrs[1:])
 
         _logger.info('[%s] sorting neighborhoods', self._timer)
         _sort_nbrs(trimmed.N)
