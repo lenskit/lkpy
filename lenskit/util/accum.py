@@ -6,14 +6,14 @@ import numpy as np
 from numba import njit, jitclass, int32, double
 
 
-@njit
+@njit(nogil=True)
 def _swap(a, i, j):
     t = a[i]
     a[i] = a[j]
     a[j] = t
 
 
-@njit
+@njit(nogil=True)
 def _ind_downheap(pos: int, size, keys, values):
     min = pos
     left = 2*pos + 1
@@ -122,7 +122,7 @@ def _pair_upheap(pos, sp, ks, vs):
         parent = (pos - 1) // 2
 
 
-@njit(nogil=True)
+@njit('int64(int64,int64,int64,int32,float64,int32[:],float64[:])', nogil=True)
 def kvp_minheap_insert(sp, ep, limit, k, v, keys, vals):
     """
     Insert a value (with key) into a heap-organized array subset, only keeping the top values.
@@ -161,7 +161,7 @@ def kvp_minheap_insert(sp, ep, limit, k, v, keys, vals):
         return ep
 
 
-@njit(nogil=True)
+@njit('void(int64,int64,int32[:],float64[:])', nogil=True)
 def kvp_minheap_sort(sp, ep, keys, vals):
     """
     Sort a heap-organized array subset by decreasing values.
