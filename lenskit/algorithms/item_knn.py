@@ -290,9 +290,9 @@ class ItemItem(Predictor):
         possible = cv.counts
 
         # Count neighbors to use neighbors
-        min_nbrs = self.min_nbrs
-        if min_nbrs is not None and min_nbrs > 0:
-            nnbrs = np.maximum(possible, min_nbrs, dtype=np.int32)
+        save_nbrs = self.save_nbrs
+        if save_nbrs is not None and save_nbrs > 0:
+            nnbrs = np.minimum(possible, save_nbrs, dtype=np.int32)
         else:
             nnbrs = possible
         nsims = np.sum(nnbrs)
