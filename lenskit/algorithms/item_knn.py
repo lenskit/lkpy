@@ -292,6 +292,7 @@ class ItemItem(Predictor):
         assert smat.ncols == nitems
 
         # Count possible neighbors
+        _logger.debug('counting neighbors')
         cv = _CountVisitor(nitems)
         _visit_nbrs(smat.N, cv, self.min_sim, triangular)
         possible = cv.counts
@@ -303,7 +304,8 @@ class ItemItem(Predictor):
         else:
             nnbrs = possible
         nsims = np.sum(nnbrs)
-        _logger.info('truncating %d neighbors to %d', smat.nnz, nsims)
+        _logger.info('[%s] truncating %d neighbors to %d (of %d possible)',
+                     self._timer, smat.nnz, nsims, np.sum(possible))
 
         # set up the target matrix
         trimmed = matrix.CSR.empty((nitems, nitems), nnbrs)
@@ -313,7 +315,7 @@ class ItemItem(Predictor):
         _visit_nbrs(smat.N, av, self.min_sim, triangular)
         assert np.all(av.pointers == trimmed.rowptrs[1:])
 
-        _logger.info('sorting neighborhoods')
+        _logger.info('[%s] sorting neighborhoods', self._timer)
         _sort_nbrs(trimmed.N)
 
         # and construct the new matrix
