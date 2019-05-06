@@ -19,13 +19,13 @@ _logger = logging.getLogger(__name__)
 
 
 @njit(nogil=True)
-def _count_nbrs(smat: matrix._CSR, thresh: float, triangular: bool):
+def _count_nbrs(mat: matrix._CSR, thresh: float, triangular: bool):
     "Count the number of neighbors passing the threshold for each row."
-    counts = np.zeros(smat.nrows, dtype=np.int32)
-    cs = smat.colinds
-    vs = smat.values
-    for i in range(smat.nrows):
-        sp, ep = smat.row_extent(i)
+    counts = np.zeros(mat.nrows, dtype=np.int32)
+    cs = mat.colinds
+    vs = mat.values
+    for i in range(mat.nrows):
+        sp, ep = mat.row_extent(i)
         for j in range(sp, ep):
             c = cs[j]
             v = vs[j]
@@ -37,32 +37,22 @@ def _count_nbrs(smat: matrix._CSR, thresh: float, triangular: bool):
     return counts
 
 
-@njit(nogil=True)
-def _copy_nbrs(smat: matrix._CSR, out: matrix._CSR, limits, thresh: float, triangular: bool):
-    "Count the number of neighbors passing the threshold for each row."
-    ptrs = out.rowptrs[:-1].copy()
-    scs = smat.colinds
-    svs = smat.values
-    orps = out.rowptrs
-    ocs = out.colinds
-    ovs = out.values
-    for i in range(smat.nrows):
-        sp, ep = smat.row_extent(i)
-        for j in range(sp, ep):
-            c = scs[j]
-            v = svs[j]
-            if c != i and v >= thresh:
-                hsp = orps[i]
-                hep = ptrs[i]
-                hep = kvp_minheap_insert(hsp, hep, limits[i], c, v, ocs, ovs)
-                ptrs[i] = hep
-                if triangular:
-                    hsp = orps[c]
-                    hep = ptrs[c]
-                    hep = kvp_minheap_insert(hsp, hep, limits[c], i, v, ocs, ovs)
-                    ptrs[c] = hep
+@njit(nogil=True, parallel=True)
+def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, used, limits, thresh: float):
+    "Copy neighbors into the output matrix."
 
-    return ptrs
+    for i in prange(src.nrows):
+        sp, ep = src.row_extent(i)
+        osp = dst.rowptrs[i]
+        oep = osp + used[i]
+
+        for j in range(sp, ep):
+            c = src.colinds[j]
+            v = src.values[j]
+            if c != i and v >= thresh:
+                oep = kvp_minheap_insert(osp, oep, limits[i], c, v, dst.colinds, dst.values)
+
+        used[i] = oep - osp
 
 
 @njit(nogil=True, parallel=True)
@@ -312,8 +302,17 @@ class ItemItem(Predictor):
         trimmed = matrix.CSR.empty((nitems, nitems), nnbrs)
 
         # copy values into target arrays
-        chk = _copy_nbrs(smat.N, trimmed.N, nnbrs, self.min_sim, triangular)
-        assert np.all(chk == trimmed.rowptrs[1:])
+        ptrs = np.zeros(nitems)
+        _copy_nbrs(smat.N, trimmed.N, ptrs, nnbrs, self.min_sim)
+        if triangular:
+            _logger.debug('copying the other half o the matrix')
+            m = smat.to_scipy()
+            m = m.tocsc(False).transpose()
+            assert sps.isspmatrix_csr(m)
+            smat = matrix.CSR.from_scipy(m, copy=False)
+            _copy_nbrs(smat.N, trimmed.N, ptrs, nnbrs, self.min_sim)
+
+        assert np.all(ptrs == nnbrs)
 
         _logger.info('[%s] sorting neighborhoods', self._timer)
         _sort_nbrs(trimmed.N)

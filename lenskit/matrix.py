@@ -50,7 +50,7 @@ def _csr_delegate(name):
 @jitclass({
     'nrows': n.int32,
     'ncols': n.int32,
-    'nnz': n.int64,
+    'nnz': n.int32,
     'rowptrs': n.int32[:],
     'colinds': n.int32[:],
     'values': n.optional(n.float64[:])
@@ -225,7 +225,8 @@ class CSR:
 
     def to_scipy(self):
         """
-        Convert a CSR matrix to a SciPy :py:class:`scipy.sparse.csr_matrix`.
+        Convert a CSR matrix to a SciPy :py:class:`scipy.sparse.csr_matrix`.  Avoids copying
+        if possible.
 
         Args:
             self(CSR): A CSR matrix.
