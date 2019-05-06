@@ -438,7 +438,7 @@ def _unit_rows(csr: _CSR):
     return norms
 
 
-@njit
+@njit(nogil=True)
 def _csr_align(rowinds, nrows, rowptrs, align):
     rcts = np.zeros(nrows, dtype=np.int32)
     for r in rowinds:

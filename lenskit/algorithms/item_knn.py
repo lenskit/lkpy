@@ -12,7 +12,7 @@ import scipy.sparse.linalg as spla
 from numba import njit, jitclass, prange, int32
 
 from lenskit import util, matrix, DataWarning
-from lenskit.util.accum import kvp_insert
+from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
 from . import Predictor
 
 _logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ class _AccVisitor:
     def visit(self, i, j, v):
         sp = self.out.rowptrs[i]
         ep = self.pointers[i]
-        ep = kvp_insert(sp, ep, self.limits[i], j, v, self.out.colinds, self.out.values)
+        ep = kvp_minheap_insert(sp, ep, self.limits[i], j, v, self.out.colinds, self.out.values)
         self.pointers[i] = ep
 
 
@@ -60,6 +60,13 @@ def _visit_nbrs(smat: matrix._CSR, visitor, thresh: float, triangular: bool):
                 visitor.visit(i, c, v)
                 if triangular:
                     visitor.visit(c, i, v)
+
+
+@njit(nogil=True, parallel=True)
+def _sort_nbrs(smat):
+    for i in prange(smat.nrows):
+        sp, ep = smat.row_extent(i)
+        kvp_minheap_sort(sp, ep, smat.colinds, smat.values)
 
 
 @njit(nogil=True)
@@ -307,7 +314,7 @@ class ItemItem(Predictor):
         assert np.all(av.pointers == trimmed.rowptrs[1:])
 
         _logger.info('sorting neighborhoods')
-        trimmed.sort_values()
+        _sort_nbrs(trimmed.N)
 
         # and construct the new matrix
         return trimmed

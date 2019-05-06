@@ -96,7 +96,7 @@ class Accumulator:
             parent = (current - 1) // 2
 
 
-@njit
+@njit(nogil=True)
 def _pair_downheap(pos: int, sp, limit, ks, vs):
     min = pos
     left = 2*pos + 1
@@ -112,7 +112,7 @@ def _pair_downheap(pos: int, sp, limit, ks, vs):
         _pair_downheap(min, sp, limit, ks, vs)
 
 
-@njit
+@njit(nogil=True)
 def _pair_upheap(pos, sp, ks, vs):
     parent = (pos - 1) // 2
     while pos > 0 and vs[sp + parent] > vs[sp + pos]:
@@ -122,14 +122,14 @@ def _pair_upheap(pos, sp, ks, vs):
         parent = (pos - 1) // 2
 
 
-@njit
-def kvp_insert(sp, ep, limit, k, v, keys, vals):
+@njit(nogil=True)
+def kvp_minheap_insert(sp, ep, limit, k, v, keys, vals):
     """
-    Insert a value (with key) into a heap, only keeping the top values.
+    Insert a value (with key) into a heap-organized array subset, only keeping the top values.
 
     Args:
-        sp(int): the start of the heap
-        ep(int): the current end of the heap
+        sp(int): the start of the heap (inclusive)
+        ep(int): the current end of the heap (exclusive)
         limit(int): the maximum size of the heap
         k: the key
         v: the value (used for sorting)
@@ -159,3 +159,21 @@ def kvp_insert(sp, ep, limit, k, v, keys, vals):
     else:
         # heap is full and new value doesn't belong
         return ep
+
+
+@njit(nogil=True)
+def kvp_minheap_sort(sp, ep, keys, vals):
+    """
+    Sort a heap-organized array subset by decreasing values.
+
+    Args:
+        sp(int): the start of the heap (inclusive).
+        ep(int): the end of the heap (exclusive).
+        keys: the key array
+        vals: the value array
+    """
+
+    for i in range(ep-1, sp, -1):
+        _swap(keys, i, sp)
+        _swap(vals, i, sp)
+        _pair_downheap(0, sp, i-sp, keys, vals)
