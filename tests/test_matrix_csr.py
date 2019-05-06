@@ -198,6 +198,24 @@ def test_csr_transpose_coords():
         assert row[r] == 1
 
 
+def test_csr_transpose_many():
+    for i in range(50):
+        mat = np.random.randn(100, 50)
+        mat[mat <= 0] = 0
+        smat = sps.csr_matrix(mat)
+
+        csr = lm.CSR.from_scipy(smat)
+        csrt = csr.transpose()
+        assert csrt.nrows == 50
+        assert csrt.ncols == 100
+
+        s2 = csrt.to_scipy()
+        smat = smat.T.tocsr()
+        assert all(smat.indptr == csrt.rowptrs)
+
+        assert np.all(s2.toarray() == smat.toarray())
+
+
 def test_csr_row_nnzs():
     # initialize sparse matrix
     mat = np.random.randn(10, 5)
