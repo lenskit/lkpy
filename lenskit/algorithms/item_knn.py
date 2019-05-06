@@ -22,12 +22,13 @@ _logger = logging.getLogger(__name__)
 def _count_nbrs(smat: matrix._CSR, thresh: float, triangular: bool):
     "Count the number of neighbors passing the threshold for each row."
     counts = np.zeros(smat.nrows, dtype=np.int32)
+    cs = smat.colinds
+    vs = smat.values
     for i in range(smat.nrows):
         sp, ep = smat.row_extent(i)
-        for j in range(ep - sp):
-            jp = sp + j
-            c = smat.colinds[jp]
-            v = smat.values[jp]
+        for j in range(sp, ep):
+            c = cs[j]
+            v = vs[j]
             if c != i and v >= thresh:
                 counts[i] += 1
                 if triangular:
@@ -40,22 +41,26 @@ def _count_nbrs(smat: matrix._CSR, thresh: float, triangular: bool):
 def _copy_nbrs(smat: matrix._CSR, out: matrix._CSR, limits, thresh: float, triangular: bool):
     "Count the number of neighbors passing the threshold for each row."
     ptrs = smat.rowptrs[:-1].copy()
+    scs = smat.colinds
+    svs = smat.values
+    orps = out.rowptrs
+    ocs = out.colinds
+    ovs = out.values
     for i in range(smat.nrows):
         sp, ep = smat.row_extent(i)
-        for j in range(ep - sp):
-            jp = sp + j
-            c = smat.colinds[jp]
-            v = smat.values[jp]
+        for j in range(sp, ep):
+            c = scs[j]
+            v = svs[j]
             if c != i and v >= thresh:
-                sp = out.rowptrs[i]
-                ep = ptrs[i]
-                ep = kvp_minheap_insert(sp, ep, limits[i], c, v, out.colinds, out.values)
-                ptrs[i] = ep
+                hsp = orps[i]
+                hep = ptrs[i]
+                hep = kvp_minheap_insert(hsp, hep, limits[i], c, v, ocs, ovs)
+                ptrs[i] = hep
                 if triangular:
-                    sp = out.rowptrs[c]
-                    ep = ptrs[c]
-                    ep = kvp_minheap_insert(sp, ep, limits[c], i, v, out.colinds, out.values)
-                    ptrs[c] = ep
+                    hsp = orps[c]
+                    hep = ptrs[c]
+                    hep = kvp_minheap_insert(hsp, hep, limits[c], i, v, ocs, ovs)
+                    ptrs[c] = hep
 
     return ptrs
 
@@ -300,10 +305,10 @@ class ItemItem(Predictor):
         else:
             nnbrs = possible
         nsims = np.sum(nnbrs)
-        _logger.info('[%s] truncating %d neighbors to %d (of %d possible)',
-                     self._timer, smat.nnz, nsims, np.sum(possible))
 
         # set up the target matrix
+        _logger.info('[%s] truncating %d neighbors to %d (of %d possible)',
+                     self._timer, smat.nnz, nsims, np.sum(possible))
         trimmed = matrix.CSR.empty((nitems, nitems), nnbrs)
 
         # copy values into target arrays
