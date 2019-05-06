@@ -40,7 +40,7 @@ def _count_nbrs(smat: matrix._CSR, thresh: float, triangular: bool):
 @njit(nogil=True)
 def _copy_nbrs(smat: matrix._CSR, out: matrix._CSR, limits, thresh: float, triangular: bool):
     "Count the number of neighbors passing the threshold for each row."
-    ptrs = smat.rowptrs[:-1].copy()
+    ptrs = out.rowptrs[:-1].copy()
     scs = smat.colinds
     svs = smat.values
     orps = out.rowptrs
