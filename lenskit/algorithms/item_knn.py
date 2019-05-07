@@ -37,22 +37,32 @@ def _count_nbrs(mat: matrix._CSR, thresh: float, triangular: bool):
     return counts
 
 
-@njit(nogil=True, parallel=True)
-def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, used, limits, thresh: float):
-    "Copy neighbors into the output matrix."
+@njit(nogil=True)
+def _insert(dst, used, limits, i, c, v):
+    "Insert one item into a heap"
+    sp = dst.rowptrs[i]
+    ep = sp + used[i]
+    ep = kvp_minheap_insert(sp, ep, limits[i], c, v, dst.colinds, dst.values)
+    used[i] = ep - sp
 
-    for i in prange(src.nrows):
+
+@njit(nogil=True)
+def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, limits, thresh: float, triangular: bool):
+    "Copy neighbors into the output matrix."
+    used = np.zeros(dst.nrows)
+
+    for i in range(src.nrows):
         sp, ep = src.row_extent(i)
-        osp = dst.rowptrs[i]
-        oep = osp + used[i]
 
         for j in range(sp, ep):
             c = src.colinds[j]
             v = src.values[j]
             if c != i and v >= thresh:
-                oep = kvp_minheap_insert(osp, oep, limits[i], c, v, dst.colinds, dst.values)
+                _insert(dst, used, limits, i, c, v)
+                if triangular:
+                    _insert(dst, used, limits, c, i, v)
 
-        used[i] = oep - osp
+    return used
 
 
 @njit(nogil=True, parallel=True)
@@ -302,17 +312,8 @@ class ItemItem(Predictor):
         trimmed = matrix.CSR.empty((nitems, nitems), nnbrs)
 
         # copy values into target arrays
-        ptrs = np.zeros(nitems)
-        _copy_nbrs(smat.N, trimmed.N, ptrs, nnbrs, self.min_sim)
-        if triangular:
-            _logger.debug('copying the other half o the matrix')
-            m = smat.to_scipy()
-            m = m.tocsc(False).transpose()
-            assert sps.isspmatrix_csr(m)
-            smat = matrix.CSR.from_scipy(m, copy=False)
-            _copy_nbrs(smat.N, trimmed.N, ptrs, nnbrs, self.min_sim)
-
-        assert np.all(ptrs == nnbrs)
+        used = _copy_nbrs(smat.N, trimmed.N, nnbrs, self.min_sim, triangular)
+        assert np.all(used == nnbrs)
 
         _logger.info('[%s] sorting neighborhoods', self._timer)
         _sort_nbrs(trimmed.N)
