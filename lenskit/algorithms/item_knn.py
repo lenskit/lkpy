@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
+import numba as n
 from numba import njit, prange
 
 from lenskit import util, matrix, DataWarning
@@ -18,7 +19,9 @@ from . import Predictor
 _logger = logging.getLogger(__name__)
 
 
-@njit(nogil=True)
+@njit(n.int32[:](matrix._CSR.class_type.instance_type,
+                 n.float64, n.bool_),
+      nogil=True)
 def _count_nbrs(mat: matrix._CSR, thresh: float, triangular: bool):
     "Count the number of neighbors passing the threshold for each row."
     counts = np.zeros(mat.nrows, dtype=np.int32)
@@ -51,10 +54,13 @@ def _mine(part, val):
     return (val & 0xC) >> 2 == part
 
 
-@njit(nogil=True, parallel=True)
+@njit(n.int32[:](matrix._CSR.class_type.instance_type,
+                 matrix._CSR.class_type.instance_type,
+                 n.int32[:], n.float64, n.bool_),
+      nogil=True, parallel=True)
 def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, limits, thresh: float, triangular: bool):
     "Copy neighbors into the output matrix."
-    used = np.zeros(dst.nrows)
+    used = np.zeros(dst.nrows, dtype=np.int32)
 
     for p in prange(4):
         for i in range(src.nrows):
@@ -72,7 +78,8 @@ def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, limits, thresh: float, triang
     return used
 
 
-@njit(nogil=True, parallel=True)
+@njit(n.void(matrix._CSR.class_type.instance_type),
+      nogil=True, parallel=True)
 def _sort_nbrs(smat):
     for i in prange(smat.nrows):
         sp, ep = smat.row_extent(i)
