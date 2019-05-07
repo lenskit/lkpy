@@ -19,9 +19,7 @@ from . import Predictor
 _logger = logging.getLogger(__name__)
 
 
-@njit(n.int32[:](matrix._CSR.class_type.instance_type,
-                 n.float64, n.bool_),
-      nogil=True)
+@njit(nogil=True)
 def _count_nbrs(mat: matrix._CSR, thresh: float, triangular: bool):
     "Count the number of neighbors passing the threshold for each row."
     counts = np.zeros(mat.nrows, dtype=np.int32)
@@ -54,10 +52,7 @@ def _mine(part, val):
     return (val & 0xC) >> 2 == part
 
 
-@njit(n.int32[:](matrix._CSR.class_type.instance_type,
-                 matrix._CSR.class_type.instance_type,
-                 n.int32[:], n.float64, n.bool_),
-      nogil=True, parallel=True)
+@njit(nogil=True, parallel=True)
 def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, limits, thresh: float, triangular: bool):
     "Copy neighbors into the output matrix."
     used = np.zeros(dst.nrows, dtype=np.int32)
@@ -78,8 +73,7 @@ def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, limits, thresh: float, triang
     return used
 
 
-@njit(n.void(matrix._CSR.class_type.instance_type),
-      nogil=True, parallel=True)
+@njit(nogil=True, parallel=True)
 def _sort_nbrs(smat):
     for i in prange(smat.nrows):
         sp, ep = smat.row_extent(i)
