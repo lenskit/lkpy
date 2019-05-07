@@ -47,20 +47,27 @@ def _insert(dst, used, limits, i, c, v):
 
 
 @njit(nogil=True)
+def _mine(part, val):
+    return (val & 0xC) >> 2 == part
+
+
+@njit(nogil=True, parallel=True)
 def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, limits, thresh: float, triangular: bool):
     "Copy neighbors into the output matrix."
     used = np.zeros(dst.nrows)
 
-    for i in range(src.nrows):
-        sp, ep = src.row_extent(i)
+    for p in prange(4):
+        for i in range(src.nrows):
+            sp, ep = src.row_extent(i)
 
-        for j in range(sp, ep):
-            c = src.colinds[j]
-            v = src.values[j]
-            if c != i and v >= thresh:
-                _insert(dst, used, limits, i, c, v)
-                if triangular:
-                    _insert(dst, used, limits, c, i, v)
+            for j in range(sp, ep):
+                c = src.colinds[j]
+                v = src.values[j]
+                if c != i and v >= thresh:
+                    if _mine(p, i):
+                        _insert(dst, used, limits, i, c, v)
+                    if triangular and _mine(p, c):
+                        _insert(dst, used, limits, c, i, v)
 
     return used
 
