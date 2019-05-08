@@ -3,17 +3,88 @@ User-based k-NN collaborative filtering.
 """
 
 from sys import intern
-import pathlib
 import logging
 
 import pandas as pd
 import numpy as np
 from scipy import stats
 
+from numba import njit
+
 from .. import util, matrix
 from . import Predictor
+from ..util.accum import kvp_minheap_insert
 
 _logger = logging.getLogger(__name__)
+
+
+@njit
+def _agg_weighted_avg(iur, item, sims, use):
+    """
+    Weighted-average aggregate.
+
+    Args:
+        iur(matrix._CSR): the item-user ratings matrix
+        item(int): the item index in ``iur``
+        sims(numpy.ndarray): the similarities for the users who have rated ``item``
+        use(numpy.ndarray): positions in sims and the rating row to actually use
+    """
+    rates = iur.row_vs(item)
+    num = 0.0
+    den = 0.0
+    for j in use:
+        num += rates[j] * sims[j]
+        den += np.abs(sims[j])
+    return num / den
+
+
+@njit
+def _agg_sum(iur, item, sims, use):
+    """
+    Sum aggregate
+
+    Args:
+        iur(matrix._CSR): the item-user ratings matrix
+        item(int): the item index in ``iur``
+        sims(numpy.ndarray): the similarities for the users who have rated ``item``
+        use(numpy.ndarray): positions in sims and the rating row to actually use
+    """
+    x = 0.0
+    for j in use:
+        x += sims[j]
+    return x
+
+
+@njit
+def _score(items, results, iur, sims, nnbrs, min_sim, min_nbrs, agg):
+    h_ks = np.empty(nnbrs, dtype=np.int32)
+    h_vs = np.empty(nnbrs)
+
+    for i in range(len(results)):
+        item = items[i]
+        if item < 0:
+            continue
+
+        h_ep = 0
+
+        # who has rated this item?
+        i_users = iur.row_cs(item)
+
+        # what are their similarities to our target user?
+        i_sims = sims[i_users]
+
+        # which of these neighbors do we really want to use?
+        for j, s in enumerate(i_sims):
+            if np.abs(s) < 1.0e-10:
+                break
+            if min_sim is not None and s < min_sim:
+                break
+            h_ep = kvp_minheap_insert(0, h_ep, nnbrs, j, s, h_ks, h_vs)
+
+        if h_ep < min_nbrs:
+            continue
+
+        results[i] = agg(iur, item, i_sims, h_ks[:h_ep])
 
 
 class UserUser(Predictor):
@@ -130,38 +201,16 @@ class UserUser(Predictor):
 
         results = np.full(len(items), np.nan, dtype=np.float_)
         ri_pos = self.item_index_.get_indexer(items.values)
-        for i in range(len(results)):
-            ipos = ri_pos[i]
-            if ipos < 0:
-                continue
+        if self.aggregate == self.AGG_WA:
+            agg = _agg_weighted_avg
+        elif self.aggregate == self.AGG_SUM:
+            agg = _agg_sum
+        else:
+            raise ValueError('invalid aggregate ' + self.aggregate)
 
-            # get the item's users & ratings
-            i_users = self.transpose_matrix_.row_cs(ipos)
-
-            # find and limit the neighbors
-            i_sims = nsims[i_users]
-            mask = np.abs(i_sims >= 1.0e-10)
-
-            if self.nnbrs is not None and self.nnbrs > 0:
-                rank = stats.rankdata(-i_sims, 'ordinal')
-                mask = np.logical_and(mask, rank <= self.nnbrs)
-            if self.min_sim is not None:
-                mask = np.logical_and(mask, i_sims >= self.min_sim)
-
-            if np.sum(mask) < self.min_nbrs:
-                continue
-
-            # now we have picked weights, take a dot product
-            ism = i_sims[mask]
-            if self.aggregate == self.AGG_WA:
-                i_rates = self.transpose_matrix_.row_vs(ipos)
-                v = np.dot(i_rates[mask], ism)
-                v = v / np.sum(ism)
-            elif self.aggregate == self.AGG_SUM:
-                v = np.sum(ism)
-            else:
-                raise ValueError('invalid aggregate ' + self.aggregate)
-            results[i] = v + umean
+        _score(ri_pos, results, self.transpose_matrix_.N, nsims,
+               self.nnbrs, self.min_sim, self.min_nbrs, agg)
+        results += umean
 
         results = pd.Series(results, index=items, name='prediction')
 
