@@ -51,9 +51,9 @@ def _csr_delegate(name):
     'nrows': n.int32,
     'ncols': n.int32,
     'nnz': n.int32,
-    'rowptrs': n.int32[:],
-    'colinds': n.int32[:],
-    'values': n.optional(n.float64[:])
+    'rowptrs': n.int32[::1],
+    'colinds': n.int32[::1],
+    'values': n.optional(n.float64[::1])
 })
 class _CSR:
     """
