@@ -98,18 +98,22 @@ class Accumulator:
 
 @njit(nogil=True)
 def _pair_downheap(pos: int, sp, limit, ks, vs):
-    min = pos
-    left = 2*pos + 1
-    right = 2*pos + 2
-    if left < limit and vs[sp + left] < vs[sp + min]:
-        min = left
-    if right < limit and vs[sp + right] < vs[sp + min]:
-        min = right
-    if min != pos:
-        # we want to swap!
-        _swap(vs, sp + pos, sp + min)
-        _swap(ks, sp + pos, sp + min)
-        _pair_downheap(min, sp, limit, ks, vs)
+    finished = False
+    while not finished:
+        min = pos
+        left = 2*pos + 1
+        right = 2*pos + 2
+        if left < limit and vs[sp + left] < vs[sp + min]:
+            min = left
+        if right < limit and vs[sp + right] < vs[sp + min]:
+            min = right
+        if min != pos:
+            # we want to swap!
+            _swap(vs, sp + pos, sp + min)
+            _swap(ks, sp + pos, sp + min)
+            pos = min
+        else:
+            finished = True
 
 
 @njit(nogil=True)
