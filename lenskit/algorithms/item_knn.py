@@ -39,11 +39,11 @@ def _count_nbrs(mat: matrix._CSR, thresh: float, triangular: bool):
 
 
 @njit
-def _insert(drps, dcs, dvs, used, limits, i, c, v):
+def _insert(dst, used, limits, i, c, v):
     "Insert one item into a heap"
-    sp = drps[i]
+    sp = dst.rowptrs[i]
     ep = sp + used[i]
-    ep = kvp_minheap_insert(sp, ep, limits[i], c, v, dcs, dvs)
+    ep = kvp_minheap_insert(sp, ep, limits[i], c, v, dst.colinds, dst.values)
     used[i] = ep - sp
 
 
@@ -58,10 +58,6 @@ def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, limits, thresh: float, triang
     used = np.zeros(dst.nrows, dtype=np.int32)
 
     for p in prange(4):
-        drps = dst.rowptrs
-        dcs = dst.colinds
-        dvs = dst.values
-
         for i in range(src.nrows):
             sp, ep = src.row_extent(i)
 
@@ -70,9 +66,9 @@ def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, limits, thresh: float, triang
                 v = src.values[j]
                 if c != i and v >= thresh:
                     if _mine(p, i):
-                        _insert(drps, dcs, dvs, used, limits, i, c, v)
+                        _insert(dst, used, limits, i, c, v)
                     if triangular and _mine(p, c):
-                        _insert(drps, dcs, dvs, used, limits, c, i, v)
+                        _insert(dst, used, limits, c, i, v)
 
     return used
 
