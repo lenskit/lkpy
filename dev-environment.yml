@@ -12,6 +12,7 @@ dependencies:
 - python-snappy
 - numba>=0.38
 - cffi
+- tbb
 - pyarrow
 - joblib
 - coverage 
