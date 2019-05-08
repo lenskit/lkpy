@@ -160,6 +160,20 @@ class ItemItem(Predictor):
     is not terribly configurable; it hard-codes design decisions found to work well in the previous
     Java-based LensKit code.
 
+    Args:
+        nnbrs(int):
+            the maximum number of neighbors for scoring each item (``None`` for unlimited)
+        min_nbrs(int): the minimum number of neighbors for scoring each item
+        min_sim(double): minimum similarity threshold for considering a neighbor
+        save_nbrs(double):
+            the number of neighbors to save per item in the trained model
+            (``None`` for unlimited)
+        center(bool):
+            whether to normalize (mean-center) rating vectors.  Turn this off when working
+            with unary data and other data types that don't respond well to centering.
+        aggregate:
+            the type of aggregation to do. Can be ``weighted-average`` or ``sum``.
+
     Attributes:
         item_index_(pandas.Index): the index of item IDs.
         item_means_(numpy.ndarray): the mean rating for each known item.
@@ -171,21 +185,6 @@ class ItemItem(Predictor):
 
     def __init__(self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None,
                  center=True, aggregate='weighted-average'):
-        """
-        Args:
-            nnbrs(int):
-                the maximum number of neighbors for scoring each item (``None`` for unlimited)
-            min_nbrs(int): the minimum number of neighbors for scoring each item
-            min_sim(double): minimum similarity threshold for considering a neighbor
-            save_nbrs(double):
-                the number of neighbors to save per item in the trained model
-                (``None`` for unlimited)
-            center(bool):
-                whether to normalize (mean-center) rating vectors.  Turn this off when working
-                with unary data and other data types that don't respond well to centering.
-            aggregate:
-                the type of aggregation to do. Can be ``weighted-average`` or ``sum``.
-        """
         self.nnbrs = nnbrs
         if self.nnbrs is not None and self.nnbrs < 1:
             self.nnbrs = -1

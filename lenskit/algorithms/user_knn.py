@@ -22,6 +22,17 @@ class UserUser(Predictor):
     is not terribly configurable; it hard-codes design decisions found to work well in the previous
     Java-based LensKit code.
 
+    Args:
+        nnbrs(int):
+            the maximum number of neighbors for scoring each item (``None`` for unlimited)
+        min_nbrs(int): the minimum number of neighbors for scoring each item
+        min_sim(double): minimum similarity threshold for considering a neighbor
+        center(bool):
+            whether to normalize (mean-center) rating vectors.  Turn this off when working
+            with unary data and other data types that don't respond well to centering.
+        aggregate:
+            the type of aggregation to do. Can be ``weighted-average`` or ``sum``.
+
     Attributes:
         user_index_(pandas.Index): User index.
         item_index_(pandas.Index): Item index.
@@ -33,18 +44,6 @@ class UserUser(Predictor):
     AGG_WA = intern('weighted-average')
 
     def __init__(self, nnbrs, min_nbrs=1, min_sim=0, center=True, aggregate='weighted-average'):
-        """
-        Args:
-            nnbrs(int):
-                the maximum number of neighbors for scoring each item (``None`` for unlimited)
-            min_nbrs(int): the minimum number of neighbors for scoring each item
-            min_sim(double): minimum similarity threshold for considering a neighbor
-            center(bool):
-                whether to normalize (mean-center) rating vectors.  Turn this off when working
-                with unary data and other data types that don't respond well to centering.
-            aggregate:
-                the type of aggregation to do. Can be ``weighted-average`` or ``sum``.
-        """
         self.nnbrs = nnbrs
         self.min_nbrs = min_nbrs
         self.min_sim = min_sim
