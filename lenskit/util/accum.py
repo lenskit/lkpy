@@ -6,7 +6,7 @@ import numpy as np
 from numba import njit, jitclass, int32, double
 
 
-@njit(nogil=True)
+@njit
 def _swap(a, i, j):
     t = a[i]
     a[i] = a[j]
@@ -96,7 +96,7 @@ class Accumulator:
             parent = (current - 1) // 2
 
 
-@njit(nogil=True)
+@njit
 def _pair_downheap(pos: int, sp, limit, ks, vs):
     finished = False
     while not finished:
@@ -116,7 +116,7 @@ def _pair_downheap(pos: int, sp, limit, ks, vs):
             finished = True
 
 
-@njit(nogil=True)
+@njit
 def _pair_upheap(pos, sp, ks, vs):
     parent = (pos - 1) // 2
     while pos > 0 and vs[sp + parent] > vs[sp + pos]:
@@ -126,7 +126,7 @@ def _pair_upheap(pos, sp, ks, vs):
         parent = (pos - 1) // 2
 
 
-@njit('int64(int64,int64,int64,int32,float64,int32[:],float64[:])', nogil=True)
+@njit('int64(int64,int64,int64,int32,float64,int32[:],float64[:])')
 def kvp_minheap_insert(sp, ep, limit, k, v, keys, vals):
     """
     Insert a value (with key) into a heap-organized array subset, only keeping the top values.
@@ -165,7 +165,7 @@ def kvp_minheap_insert(sp, ep, limit, k, v, keys, vals):
         return ep
 
 
-@njit('void(int64,int64,int32[:],float64[:])', nogil=True)
+@njit('void(int64,int64,int32[:],float64[:])')
 def kvp_minheap_sort(sp, ep, keys, vals):
     """
     Sort a heap-organized array subset by decreasing values.
