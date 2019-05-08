@@ -13,7 +13,7 @@ def _swap(a, i, j):
     a[j] = t
 
 
-@njit(nogil=True)
+@njit
 def _ind_downheap(pos: int, size, keys, values):
     min = pos
     left = 2*pos + 1
