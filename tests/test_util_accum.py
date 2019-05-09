@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import stats
 
 from lenskit.util import Accumulator
 from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
@@ -189,6 +190,58 @@ def test_kvp_add_several():
     assert all(ks != old_mk)
     assert all(vs > old_mv)
     assert np.count_nonzero(ks == 50) == 1
+
+
+def test_kvp_add_middle():
+    ks = np.full(100, -1, dtype=np.int32)
+    vs = np.full(100, np.nan)
+
+    n = 25
+    avs = []
+
+    for k in range(25):
+        v = np.random.randn()
+        avs.append(v)
+        n = kvp_minheap_insert(25, n, 10, k, v, ks, vs)
+
+    assert n == 35
+    # all the keys
+    assert all(ks[25:35] >= 0)
+    # value is the smallest
+    assert vs[25] == np.min(vs[25:35])
+    # highest-ranked keys
+    assert all(np.sort(vs[25:35]) == np.sort(avs)[15:])
+
+    # early is untouched
+    assert all(ks[:25] == -1)
+    assert all(np.isnan(vs[:25]))
+    assert all(ks[35:] == -1)
+    assert all(np.isnan(vs[35:]))
+
+
+def test_kvp_insert_min():
+    ks = np.full(10, -1, dtype=np.int32)
+    vs = np.zeros(10)
+
+    n = 0
+
+    # something less than existing data
+    n = kvp_minheap_insert(0, n, 10, 5, -3.0, ks, vs)
+    assert n == 1
+    assert ks[0] == 5
+    assert vs[0] == -3.0
+
+    # equal to existing data
+    n = kvp_minheap_insert(0, 0, 10, 7, -3.0, ks, vs)
+    assert n == 1
+    assert ks[0] == 7
+    assert vs[0] == -3.0
+
+    # greater than to existing data
+    n = kvp_minheap_insert(0, 0, 10, 9, 5.0, ks, vs)
+    assert n == 1
+    assert ks[0] == 9
+    assert vs[0] == 5.0
 
 
 def test_kvp_sort():
