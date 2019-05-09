@@ -59,6 +59,7 @@ def _agg_sum(iur, item, sims, use):
 def _score(items, results, iur, sims, nnbrs, min_sim, min_nbrs, agg):
     h_ks = np.empty(nnbrs, dtype=np.int32)
     h_vs = np.empty(nnbrs)
+    used = np.zeros(len(results), dtype=np.int32)
 
     for i in range(len(results)):
         item = items[i]
@@ -76,15 +77,18 @@ def _score(items, results, iur, sims, nnbrs, min_sim, min_nbrs, agg):
         # which of these neighbors do we really want to use?
         for j, s in enumerate(i_sims):
             if np.abs(s) < 1.0e-10:
-                break
+                continue
             if min_sim is not None and s < min_sim:
-                break
+                continue
             h_ep = kvp_minheap_insert(0, h_ep, nnbrs, j, s, h_ks, h_vs)
 
         if h_ep < min_nbrs:
             continue
 
         results[i] = agg(iur, item, i_sims, h_ks[:h_ep])
+        used[i] = h_ep
+
+    return used
 
 
 class UserUser(Predictor):
