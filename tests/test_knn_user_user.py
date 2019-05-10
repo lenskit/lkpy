@@ -6,7 +6,7 @@ import pickle
 
 import pandas as pd
 import numpy as np
-from scipy import sparse as sps
+from scipy.sparse import linalg as spla
 
 from pytest import approx, mark
 
@@ -145,7 +145,7 @@ def test_uu_implicit():
     assert algo.user_means_ is None
 
     mat = algo.rating_matrix_.to_scipy()
-    norms = sps.linalg.norm(mat, 2, 1)
+    norms = spla.norm(mat, 2, 1)
     assert norms == approx(1.0)
 
     preds = algo.predict_for_user(50, [1, 2, 42])
