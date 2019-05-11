@@ -28,6 +28,10 @@ dependencies:
 - nbformat
 - nbconvert
 - flake8
+- ipykernel
+- jupyter_client
+- matplotlib
 - pip:
   - nbsphinx
   - recommonmark
+  - nbval
