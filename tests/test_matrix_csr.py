@@ -3,7 +3,7 @@ import numpy as np
 import scipy.sparse as sps
 
 import lenskit.matrix as lm
-import lenskit.util.test as lktu
+from lenskit.util.test import rand_csr
 
 from pytest import mark, approx, raises
 
@@ -314,52 +314,39 @@ def test_csr_to_sps():
 
 
 def test_mean_center():
-    coords = np.random.choice(np.arange(50 * 100, dtype=np.int32), 1000, False)
-    rows = np.mod(coords, 100, dtype=np.int32)
-    cols = np.floor_divide(coords, 100, dtype=np.int32)
-    vals = np.random.randn(1000)
-    csr = lm.CSR.from_coo(rows, cols, vals, (100, 50))
+    for n in range(50):
+        csr = rand_csr()
 
-    spm = csr.to_scipy().copy()
+        spm = csr.to_scipy().copy()
 
-    m2 = csr.normalize_rows('center')
-    assert len(m2) == 100
+        m2 = csr.normalize_rows('center')
+        assert len(m2) == 100
 
-    for i in range(csr.nrows):
-        vs = csr.row_vs(i)
-        assert np.mean(vs) == approx(0.0)
-        assert vs + m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
+        for i in range(csr.nrows):
+            vs = csr.row_vs(i)
+            assert np.mean(vs) == approx(0.0)
+            assert vs + m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
 
 
 def test_unit_norm():
-    coords = np.random.choice(np.arange(50 * 100, dtype=np.int32), 1000, False)
-    rows = np.mod(coords, 100, dtype=np.int32)
-    cols = np.floor_divide(coords, 100, dtype=np.int32)
-    vals = np.random.randn(1000)
-    csr = lm.CSR.from_coo(rows, cols, vals, (100, 50))
+    for n in range(50):
+        csr = rand_csr()
 
-    spm = csr.to_scipy().copy()
+        spm = csr.to_scipy().copy()
 
-    m2 = csr.normalize_rows('unit')
-    assert len(m2) == 100
+        m2 = csr.normalize_rows('unit')
+        assert len(m2) == 100
 
-    for i in range(csr.nrows):
-        vs = csr.row_vs(i)
-        assert np.linalg.norm(vs) == approx(1.0)
-        assert vs * m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
+        for i in range(csr.nrows):
+            vs = csr.row_vs(i)
+            if len(vs) > 0:
+                assert np.linalg.norm(vs) == approx(1.0)
+                assert vs * m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
 
 
 @mark.parametrize("values", [True, False])
 def test_csr_pickle(values):
-    coords = np.random.choice(np.arange(50 * 100, dtype=np.int32), 1000, False)
-    rows = np.mod(coords, 100, dtype=np.int32)
-    cols = np.floor_divide(coords, 100, dtype=np.int32)
-    if values:
-        vals = np.random.randn(1000)
-    else:
-        vals = None
-
-    csr = lm.CSR.from_coo(rows, cols, vals, (100, 50))
+    csr = rand_csr(100, 50, 1000, values=values)
     assert csr.nrows == 100
     assert csr.ncols == 50
     assert csr.nnz == 1000
