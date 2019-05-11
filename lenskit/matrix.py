@@ -418,6 +418,8 @@ def _center_rows(csr: _CSR):
     means = np.zeros(csr.nrows)
     for i in range(csr.nrows):
         sp, ep = csr.row_extent(i)
+        if sp == ep:
+            continue  # empty row
         vs = csr.row_vs(i)
         m = np.mean(vs)
         means[i] = m
@@ -431,6 +433,8 @@ def _unit_rows(csr: _CSR):
     norms = np.zeros(csr.nrows)
     for i in range(csr.nrows):
         sp, ep = csr.row_extent(i)
+        if sp == ep:
+            continue  # empty row
         vs = csr.row_vs(i)
         m = np.linalg.norm(vs)
         norms[i] = m
