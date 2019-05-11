@@ -324,8 +324,9 @@ def test_mean_center():
 
         for i in range(csr.nrows):
             vs = csr.row_vs(i)
-            assert np.mean(vs) == approx(0.0)
-            assert vs + m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
+            if len(vs) > 0:
+                assert np.mean(vs) == approx(0.0)
+                assert vs + m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
 
 
 def test_unit_norm():
