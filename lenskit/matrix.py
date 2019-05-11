@@ -51,9 +51,9 @@ def _csr_delegate(name):
     'nrows': n.int32,
     'ncols': n.int32,
     'nnz': n.int32,
-    'rowptrs': n.int32[:],
-    'colinds': n.int32[:],
-    'values': n.optional(n.float64[:])
+    'rowptrs': n.int32[::1],
+    'colinds': n.int32[::1],
+    'values': n.optional(n.float64[::1])
 })
 class _CSR:
     """
@@ -101,6 +101,13 @@ class _CSR:
         else:
             return self.values[sp:ep]
 
+    def rowinds(self):
+        ris = np.zeros(self.nnz, np.int32)
+        for i in range(self.nrows):
+            sp, ep = self.row_extent(i)
+            ris[sp:ep] = i
+        return ris
+
 
 class CSR:
     """
@@ -138,6 +145,27 @@ class CSR:
             self.N = N
         else:
             self.N = _CSR(nrows, ncols, nnz, ptrs, inds, vals)
+
+    @classmethod
+    def empty(cls, shape, row_nnzs):
+        """
+        Create an empty CSR matrix.
+
+        Args:
+            shape(tuple): the array shape (rows,cols)
+            row_nnzs(array-like): the number of nonzero entries for each row
+        """
+        nrows, ncols = shape
+        assert len(row_nnzs) == nrows
+        nnz = np.sum(row_nnzs)
+
+        rowptrs = np.zeros(nrows + 1, dtype=np.int32)
+        rowptrs[1:] = np.cumsum(row_nnzs)
+
+        colinds = np.full(nnz, -1, dtype=np.int32)
+        values = np.full(nnz, np.nan)
+
+        return cls(nrows, ncols, nnz, rowptrs, colinds, values)
 
     @classmethod
     def from_coo(cls, rows, cols, vals, shape=None):
@@ -197,7 +225,8 @@ class CSR:
 
     def to_scipy(self):
         """
-        Convert a CSR matrix to a SciPy :py:class:`scipy.sparse.csr_matrix`.
+        Convert a CSR matrix to a SciPy :py:class:`scipy.sparse.csr_matrix`.  Avoids copying
+        if possible.
 
         Args:
             self(CSR): A CSR matrix.
@@ -241,7 +270,7 @@ class CSR:
 
         .. note:: This method is not available from Numba.
         """
-        return np.repeat(np.arange(self.nrows, dtype=np.int32), np.diff(self.rowptrs))
+        return self.N.rowinds()
 
     def row(self, row):
         """
@@ -298,6 +327,33 @@ class CSR:
         .. note:: This method is not available from Numba.
         """
         _csr_sort(self.nrows, self.rowptrs, self.colinds, self.values)
+
+    def normalize_rows(self, normalization):
+        """
+        Normalize the rows of the matrix.
+
+        .. note:: The normalization *ignores* missing values instead of treating
+                  them as 0.
+
+        .. note:: This method is not available from Numba.
+
+        Args:
+            normalization(str):
+                The normalization to perform. Can be one of:
+
+                * ``'center'`` - center rows about the mean
+                * ``'unit'`` - convert rows to a unit vector
+
+        Returns:
+            numpy.ndarray:
+                The normalization values for each row.
+        """
+        if normalization == 'center':
+            return _center_rows(self.N)
+        elif normalization == 'unit':
+            return _unit_rows(self.N)
+        else:
+            raise ValueError('unknown normalization: ' + normalization)
 
     def transpose(self, values=True):
         """
@@ -357,7 +413,37 @@ def _csr_sort(nrows, rowptrs, colinds, values):
             values[sp:ep] = values[sp + ord]
 
 
-@njit
+@njit(nogil=True)
+def _center_rows(csr: _CSR):
+    means = np.zeros(csr.nrows)
+    for i in range(csr.nrows):
+        sp, ep = csr.row_extent(i)
+        if sp == ep:
+            continue  # empty row
+        vs = csr.row_vs(i)
+        m = np.mean(vs)
+        means[i] = m
+        csr.values[sp:ep] -= m
+
+    return means
+
+
+@njit(nogil=True)
+def _unit_rows(csr: _CSR):
+    norms = np.zeros(csr.nrows)
+    for i in range(csr.nrows):
+        sp, ep = csr.row_extent(i)
+        if sp == ep:
+            continue  # empty row
+        vs = csr.row_vs(i)
+        m = np.linalg.norm(vs)
+        norms[i] = m
+        csr.values[sp:ep] /= m
+
+    return norms
+
+
+@njit(nogil=True)
 def _csr_align(rowinds, nrows, rowptrs, align):
     rcts = np.zeros(nrows, dtype=np.int32)
     for r in rowinds:

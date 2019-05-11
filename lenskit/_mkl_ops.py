@@ -78,6 +78,8 @@ class SparseM:
         vals = np.require(csr.values, np.float_, 'C')
 
         m = SparseM()
+        _logger.debug('creating MKL matrix 0x%08x from %dx%d CSR',
+                      id(m), csr.nrows, csr.ncols)
         _sp = _mkl_ffi.cast('int*', sp.ctypes.data)
         _ep = _mkl_ffi.cast('int*', ep.ctypes.data)
         _cols = _mkl_ffi.cast('int*', cols.ctypes.data)
@@ -94,7 +96,7 @@ class SparseM:
 
     def __del__(self):
         if self.h_ptr[0]:
-            _logger.debug('destroying MKL sparse matrix')
+            _logger.debug('destroying MKL sparse matrix 0x%08x', id(self))
             _mkl_lib.mkl_sparse_destroy(self.handle)
 
     def export(self):

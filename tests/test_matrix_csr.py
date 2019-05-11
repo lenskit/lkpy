@@ -3,7 +3,7 @@ import numpy as np
 import scipy.sparse as sps
 
 import lenskit.matrix as lm
-import lenskit.util.test as lktu
+from lenskit.util.test import rand_csr
 
 from pytest import mark, approx, raises
 
@@ -198,6 +198,24 @@ def test_csr_transpose_coords():
         assert row[r] == 1
 
 
+def test_csr_transpose_many():
+    for i in range(50):
+        mat = np.random.randn(100, 50)
+        mat[mat <= 0] = 0
+        smat = sps.csr_matrix(mat)
+
+        csr = lm.CSR.from_scipy(smat)
+        csrt = csr.transpose()
+        assert csrt.nrows == 50
+        assert csrt.ncols == 100
+
+        s2 = csrt.to_scipy()
+        smat = smat.T.tocsr()
+        assert all(smat.indptr == csrt.rowptrs)
+
+        assert np.all(s2.toarray() == smat.toarray())
+
+
 def test_csr_row_nnzs():
     # initialize sparse matrix
     mat = np.random.randn(10, 5)
@@ -295,17 +313,41 @@ def test_csr_to_sps():
         assert all(smat2.data[sp:ep] == csr.values[sp:ep])
 
 
+def test_mean_center():
+    for n in range(50):
+        csr = rand_csr()
+
+        spm = csr.to_scipy().copy()
+
+        m2 = csr.normalize_rows('center')
+        assert len(m2) == 100
+
+        for i in range(csr.nrows):
+            vs = csr.row_vs(i)
+            if len(vs) > 0:
+                assert np.mean(vs) == approx(0.0)
+                assert vs + m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
+
+
+def test_unit_norm():
+    for n in range(50):
+        csr = rand_csr()
+
+        spm = csr.to_scipy().copy()
+
+        m2 = csr.normalize_rows('unit')
+        assert len(m2) == 100
+
+        for i in range(csr.nrows):
+            vs = csr.row_vs(i)
+            if len(vs) > 0:
+                assert np.linalg.norm(vs) == approx(1.0)
+                assert vs * m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
+
+
 @mark.parametrize("values", [True, False])
 def test_csr_pickle(values):
-    coords = np.random.choice(np.arange(50 * 100, dtype=np.int32), 1000, False)
-    rows = np.mod(coords, 100, dtype=np.int32)
-    cols = np.floor_divide(coords, 100, dtype=np.int32)
-    if values:
-        vals = np.random.randn(1000)
-    else:
-        vals = None
-
-    csr = lm.CSR.from_coo(rows, cols, vals, (100, 50))
+    csr = rand_csr(100, 50, 1000, values=values)
     assert csr.nrows == 100
     assert csr.ncols == 50
     assert csr.nnz == 1000

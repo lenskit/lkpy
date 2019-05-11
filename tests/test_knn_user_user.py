@@ -6,7 +6,7 @@ import pickle
 
 import pandas as pd
 import numpy as np
-from scipy import sparse as sps
+from scipy.sparse import linalg as spla
 
 from pytest import approx, mark
 
@@ -145,7 +145,7 @@ def test_uu_implicit():
     assert algo.user_means_ is None
 
     mat = algo.rating_matrix_.to_scipy()
-    norms = sps.linalg.norm(mat, 2, 1)
+    norms = spla.norm(mat, 2, 1)
     assert norms == approx(1.0)
 
     preds = algo.predict_for_user(50, [1, 2, 42])
@@ -189,19 +189,26 @@ def test_uu_known_preds():
     _log.info('reading known predictions from %s', pred_file)
     known_preds = pd.read_csv(str(pred_file))
     pairs = known_preds.loc[:, ['user', 'item']]
+    _log.info('generating %d known predictions', len(pairs))
 
     preds = batch.predict(algo, pairs)
     merged = pd.merge(known_preds.rename(columns={'prediction': 'expected'}), preds)
     assert len(merged) == len(preds)
     merged['error'] = merged.expected - merged.prediction
-    assert not any(merged.prediction.isna() & merged.expected.notna())
+    try:
+        assert not any(merged.prediction.isna() & merged.expected.notna())
+    except AssertionError as e:
+        bad = merged[merged.prediction.isna() & merged.expected.notna()]
+        _log.error('%d missing predictions:\n%s', len(bad), bad)
+        raise e
+
     err = merged.error
     err = err[err.notna()]
     try:
         assert all(err.abs() < 0.01)
     except AssertionError as e:
         bad = merged[merged.error.notna() & (merged.error.abs() >= 0.01)]
-        _log.error('erroneous predictions:\n%s', bad)
+        _log.error('%d erroneous predictions:\n%s', len(bad), bad)
         raise e
 
 

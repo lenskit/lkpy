@@ -37,7 +37,7 @@ jobs:
   - script: |
       source activate lkpy
       mkdir -p build
-      python3 -m pytest --junitxml=build/test-results.xml
+      python3 -m pytest --verbose --junitxml=build/test-results.xml
     displayName: 'Test LKPY'
 
   - task: PublishTestResults@2

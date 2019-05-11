@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 
 from .. import check
-from ..matrix import CSR, sparse_ratings
+from ..matrix import sparse_ratings
 from . import Predictor, Recommender, CandidateSelector
 
 _logger = logging.getLogger(__name__)
@@ -306,9 +306,10 @@ class TopN(Recommender, Predictor):
 
         scores = self.predictor.predict_for_user(user, candidates, ratings)
         scores = scores[scores.notna()]
-        scores = scores.sort_values(ascending=False)
         if n is not None:
-            scores = scores.iloc[:n]
+            scores = scores.nlargest(n)
+        else:
+            scores = scores.sort_values(ascending=False)
         scores.name = 'score'
         scores.index.name = 'item'
         return scores.reset_index()
