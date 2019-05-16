@@ -99,6 +99,8 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
             dump(algo, path)
             algo = _AlgoKey('file', path)
 
+        nusers = pairs['user'].nunique()
+        _logger.info('generating %d predictions for %d users', len(pairs), nusers)
         results = loop(delayed(_predict_user)(algo, user, udf)
                        for (user, udf) in pairs.groupby('user'))
 
