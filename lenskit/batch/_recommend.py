@@ -121,7 +121,8 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, dask_result=False
                 futures = loop._backend.client.scatter([rec_algo], broadcast=True, hash=False)
                 rec_algo = _AlgoKey('future', futures[0])
             elif njobs > 1:
-                fd, path = tempfile.mkstemp(prefix='lkpy-predict', suffix='.pkl')
+                fd, path = tempfile.mkstemp(prefix='lkpy-predict', suffix='.pkl',
+                                            dir=util.scratch_dir(joblib=True))
                 path = pathlib.Path(path)
                 os.close(fd)
                 _logger.debug('pre-serializing algorithm %s to %s', rec_algo, path)

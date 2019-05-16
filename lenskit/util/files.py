@@ -4,10 +4,11 @@ File utilities
 
 import atexit
 import os
+import tempfile
 import logging
 import pathlib
 
-__all__ = ['delete_sometime', 'fspath', 'norm_path']
+__all__ = ['delete_sometime', 'fspath', 'norm_path', 'temp_dir']
 
 _log = logging.getLogger(__name__)
 __os_fp = getattr(os, 'fspath', None)
@@ -39,6 +40,21 @@ def delete_sometime(f):
         except PermissionError:
             _log.debug('cannot delete %s, scheduling', f)
             _removable_files.append(f)
+
+
+def temp_dir(default=True, joblib=False):
+    """
+    Get the configured temporary directory.  Looks for configuration in the following
+    places:
+
+    1. The environment variable ``LENSKIT_TEMP_DIR``.
+    2. If ``joblib`` is ``True``, the environment variable ``JOBLIB_TEMP_FOLDER``.
+    3. If ``default`` is ``True``, the result of :fun:`tempfile.gettempdir`.
+
+    Args:
+        default(bool): whether to look in the Python default locations.
+        joblig(bool): whether to consult the Joblib configuration directory.
+    """
 
 
 def fspath(path):

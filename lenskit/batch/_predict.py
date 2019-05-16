@@ -92,7 +92,8 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
     path = None
     try:
         if loop._effective_n_jobs() > 1:
-            fd, path = tempfile.mkstemp(prefix='lkpy-predict', suffix='.pkl')
+            fd, path = tempfile.mkstemp(prefix='lkpy-predict', suffix='.pkl',
+                                        dir=util.scratch_dir(joblib=True))
             path = pathlib.Path(path)
             os.close(fd)
             _logger.debug('pre-serializing algorithm %s to %s', algo, path)
