@@ -8,7 +8,7 @@ import tempfile
 import logging
 import pathlib
 
-__all__ = ['delete_sometime', 'fspath', 'norm_path', 'temp_dir']
+__all__ = ['delete_sometime', 'fspath', 'norm_path', 'scratch_dir']
 
 _log = logging.getLogger(__name__)
 __os_fp = getattr(os, 'fspath', None)
@@ -42,7 +42,7 @@ def delete_sometime(f):
             _removable_files.append(f)
 
 
-def temp_dir(default=True, joblib=False):
+def scratch_dir(default=True, joblib=False):
     """
     Get the configured temporary directory.  Looks for configuration in the following
     places:
@@ -53,8 +53,14 @@ def temp_dir(default=True, joblib=False):
 
     Args:
         default(bool): whether to look in the Python default locations.
-        joblig(bool): whether to consult the Joblib configuration directory.
+        joblib(bool): whether to consult the Joblib configuration directory.
     """
+    path = os.environ.get('LENSKIT_TEMP_DIR', None)
+    if joblib and not path:
+        path = os.environ.get('JOBLIB_TEMP_FOLDER', None)
+    if default and not path:
+        path = tempfile.gettempdir()
+    return path
 
 
 def fspath(path):
