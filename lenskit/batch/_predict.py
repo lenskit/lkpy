@@ -102,7 +102,7 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
 
         nusers = pairs['user'].nunique()
         _logger.info('generating %d predictions for %d users', len(pairs), nusers)
-        results = loop(delayed(_predict_user)(algo, user, udf)
+        results = loop(delayed(_predict_user)(algo, user, udf.copy())
                        for (user, udf) in pairs.groupby('user'))
 
         results = pd.concat(results, ignore_index=True, copy=False)
