@@ -64,7 +64,7 @@ class RecListAnalysis:
 
         self.metrics.append((metric, name, kwargs))
 
-    def compute(self, recs, truth):
+    def compute(self, recs, truth, *, include_missing=False):
         """
         Run the analysis.  Neither data frame should be meaningfully indexed.
 
@@ -73,6 +73,10 @@ class RecListAnalysis:
                 A data frame of recommendations.
             truth(pandas.DataFrame):
                 A data frame of ground truth (test) data.
+            include_missing(bool):
+                ``True`` to include users from truth missing from recs.
+                Matches are done via group columns that appear in both
+                ``recs`` and ``truth``.
 
         Returns:
             pandas.DataFrame: The results of the analysis.
@@ -87,8 +91,8 @@ class RecListAnalysis:
         _log.info('ungrouped columns: %s', [c for c in recs.columns if c not in gcols])
         gc_map = dict((c, i) for (i, c) in enumerate(gcols))
 
-        ti_cols = [c for c in gcols if c in truth.columns]
-        ti_cols.append('item')
+        ti_bcols = [c for c in gcols if c in truth.columns]
+        ti_cols = ti_bcols + ['item']
 
         _log.info('using truth ID columns %s', ti_cols)
         truth = truth.set_index(ti_cols)
@@ -105,7 +109,7 @@ class RecListAnalysis:
 
             g_truth = truth.loc[tr_key, :]
 
-            group_results = {}
+            group_results = {'nrecs': len(group)}
             for mf, mn, margs in self.metrics:
                 group_results[mn] = mf(group, g_truth, **margs)
             return pd.DataFrame(group_results, index=[0])
@@ -125,6 +129,20 @@ class RecListAnalysis:
 
         res.reset_index(level=-1, drop=True, inplace=True)
         _log.info('analyzed %d lists in %s', len(res), timer)
+        if include_missing:
+            _log.info('filling in missing user info')
+            ug_cols = [c for c in gcols if c not in ti_bcols]
+            tcount = truth.reset_index().groupby(ti_bcols)['item'].count()
+            tcount.name = 'ntruth'
+            if ug_cols:
+                _log.debug('regrouping by %s to fill', ug_cols)
+                res = res.groupby(level=ug_cols).apply(lambda f: f.join(tcount, how='outer'))
+            else:
+                _log.debug('no ungroup cols, directly merging to fill')
+                res = res.join(tcount, how='outer')
+            _log.debug('final columns: %s', res.columns)
+            res['ntruth'] = res['ntruth'].fillna(0)
+            res['nrecs'] = res['nrecs'].fillna(0)
 
         return res
 
