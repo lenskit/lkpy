@@ -168,6 +168,9 @@ class CandidateSelector(Algorithm, metaclass=ABCMeta):
     """
     Select candidates for recommendation for a user, possibly with some
     additional ratings.
+
+    :class:`.UnratedItemCandidateSelector` is the default and most common implementation
+    of this interface.
     """
 
     @abstractmethod
