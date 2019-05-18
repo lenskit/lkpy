@@ -11,6 +11,10 @@ from .util import Stopwatch
 _log = logging.getLogger(__name__)
 
 
+def _length(df, *args, **kwargs):
+    return float(len(df))
+
+
 class RecListAnalysis:
     """
     Compute one or more top-N metrics over recommendation lists.
@@ -43,7 +47,7 @@ class RecListAnalysis:
 
     def __init__(self, group_cols=None):
         self.group_cols = group_cols
-        self.metrics = []
+        self.metrics = [(_length, 'nrecs', {})]
 
     def add_metric(self, metric, *, name=None, **kwargs):
         """
@@ -109,7 +113,7 @@ class RecListAnalysis:
 
             g_truth = truth.loc[tr_key, :]
 
-            group_results = {'nrecs': len(group)}
+            group_results = {}
             for mf, mn, margs in self.metrics:
                 group_results[mn] = mf(group, g_truth, **margs)
             return pd.DataFrame(group_results, index=[0])
@@ -121,8 +125,8 @@ class RecListAnalysis:
 
         if using_dask:
             # Dask group-apply requires metadata
-            meta = dict((mn, 'f8') for (mf, mn, margs) in self.metrics)
-            meta['nrecs'] = 'i8'
+            meta = dict((mn, 'f8') for (_f, mn, _a) in self.metrics)
+            _log.debug('using meta %s', meta)
             res = grouped.apply(worker, meta=meta)
             res = res.compute()
         else:
