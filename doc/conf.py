@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'LensKit'
-copyright = '2018 Boise State University'
+copyright = '2018–2019 Boise State University'
 author = 'Michael D. Ekstrand'
 
 # The short X.Y version
