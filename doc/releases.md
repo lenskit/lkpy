@@ -11,6 +11,9 @@ See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/3) for full
   set, and adapt algorithms to recommenders prior to evaluation.
 - Make `MultiEval` require named arguments for most things.
 - Add support to `MultiEval` to save the fit models.
+- `RecListAnalysis` can optionally ensure all test users are returned, even
+  if they lack recommendation lists.
+- Performance improvements to algorithms and evaluation.
 
 [Joblib]: https://joblib.readthedocs.io
 

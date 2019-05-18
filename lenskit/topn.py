@@ -11,6 +11,10 @@ from .util import Stopwatch
 _log = logging.getLogger(__name__)
 
 
+def _length(df, *args, **kwargs):
+    return float(len(df))
+
+
 class RecListAnalysis:
     """
     Compute one or more top-N metrics over recommendation lists.
@@ -43,7 +47,7 @@ class RecListAnalysis:
 
     def __init__(self, group_cols=None):
         self.group_cols = group_cols
-        self.metrics = []
+        self.metrics = [(_length, 'nrecs', {})]
 
     def add_metric(self, metric, *, name=None, **kwargs):
         """
@@ -64,7 +68,7 @@ class RecListAnalysis:
 
         self.metrics.append((metric, name, kwargs))
 
-    def compute(self, recs, truth):
+    def compute(self, recs, truth, *, include_missing=False):
         """
         Run the analysis.  Neither data frame should be meaningfully indexed.
 
@@ -73,6 +77,10 @@ class RecListAnalysis:
                 A data frame of recommendations.
             truth(pandas.DataFrame):
                 A data frame of ground truth (test) data.
+            include_missing(bool):
+                ``True`` to include users from truth missing from recs.
+                Matches are done via group columns that appear in both
+                ``recs`` and ``truth``.
 
         Returns:
             pandas.DataFrame: The results of the analysis.
@@ -87,8 +95,8 @@ class RecListAnalysis:
         _log.info('ungrouped columns: %s', [c for c in recs.columns if c not in gcols])
         gc_map = dict((c, i) for (i, c) in enumerate(gcols))
 
-        ti_cols = [c for c in gcols if c in truth.columns]
-        ti_cols.append('item')
+        ti_bcols = [c for c in gcols if c in truth.columns]
+        ti_cols = ti_bcols + ['item']
 
         _log.info('using truth ID columns %s', ti_cols)
         truth = truth.set_index(ti_cols)
@@ -117,7 +125,8 @@ class RecListAnalysis:
 
         if using_dask:
             # Dask group-apply requires metadata
-            meta = dict((mn, 'f8') for (mf, mn, margs) in self.metrics)
+            meta = dict((mn, 'f8') for (_f, mn, _a) in self.metrics)
+            _log.debug('using meta %s', meta)
             res = grouped.apply(worker, meta=meta)
             res = res.compute()
         else:
@@ -125,6 +134,22 @@ class RecListAnalysis:
 
         res.reset_index(level=-1, drop=True, inplace=True)
         _log.info('analyzed %d lists in %s', len(res), timer)
+        if include_missing:
+            _log.info('filling in missing user info')
+            ug_cols = [c for c in gcols if c not in ti_bcols]
+            tcount = truth.reset_index().groupby(ti_bcols)['item'].count()
+            tcount.name = 'ntruth'
+            _log.debug('res index levels: %s', res.index.names)
+            if ug_cols:
+                _log.debug('regrouping by %s to fill', ug_cols)
+                res = res.groupby(level=ug_cols).apply(lambda f: f.reset_index(ug_cols, drop=True).join(tcount, how='outer'))
+            else:
+                _log.debug('no ungroup cols, directly merging to fill')
+                res = res.join(tcount, how='outer')
+            _log.debug('final columns: %s', res.columns)
+            _log.debug('index levels: %s', res.index.names)
+            res['ntruth'] = res['ntruth'].fillna(0)
+            res['nrecs'] = res['nrecs'].fillna(0)
 
         return res
 
