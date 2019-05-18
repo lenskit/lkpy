@@ -91,6 +91,9 @@ class BiasedMF(BiasMFPredictor):
     Biased matrix factorization trained with alternating least squares [ZWSP2008]_.  This is a
     prediction-oriented algorithm suitable for explicit feedback data.
 
+    See the base class :class:`.BiasMFPredictor` for documentation on
+    the estimated parameters you can extract from a trained model.
+
     .. [ZWSP2008] Yunhong Zhou, Dennis Wilkinson, Robert Schreiber, and Rong Pan. 2008.
         Large-Scale Parallel Collaborative Filtering for the Netflix Prize.
         In +Algorithmic Aspects in Information and Management_, LNCS 5034, 337–348.
@@ -235,6 +238,9 @@ class ImplicitMF(MFPredictor):
     algorithm outputs 'predictions', but they are not on a meaningful scale.  If its input
     data contains ``rating`` values, these will be used as the 'confidence' values; otherwise,
     confidence will be 1 for every rated item.
+
+    See the base class :class:`.MFPredictor` for documentation on the estimated parameters
+    you can extract from a trained model.
 
     .. [HKV2008] Y. Hu, Y. Koren, and C. Volinsky. 2008.
        Collaborative Filtering for Implicit Feedback Datasets.
