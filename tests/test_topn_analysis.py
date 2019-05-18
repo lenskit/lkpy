@@ -225,6 +225,13 @@ def test_fill_users():
     assert scores['recall'].notna().sum() == len(rec_users)
     assert all(scores['ntruth'] == 5)
 
+    mscores = rla.compute(recs, test)
+    assert len(mscores) < len(scores)
+
+    recall = scores.loc[scores['recall'].notna(), 'recall'].copy()
+    recall, mrecall = recall.align(mscores['recall'])
+    assert all(recall == mrecall)
+
 @mark.slow
 def test_adv_fill_users():
     rla = topn.RecListAnalysis()
@@ -258,6 +265,19 @@ def test_adv_fill_users():
     test.reset_index(drop=True, inplace=True)
     
     scores = rla.compute(recs, test, include_missing=True)
+    inames = scores.index.names
+    scores.sort_index(inplace=True)
     assert len(scores) == 50 * 4
     assert all(scores['ntruth'] == 5)
     assert scores['recall'].isna().sum() > 0
+    _log.info('scores:\n%s', scores)
+
+    mscores = rla.compute(recs, test)
+    mscores = mscores.reset_index().set_index(inames)
+    mscores.sort_index(inplace=True)
+    assert len(mscores) < len(scores)
+    _log.info('mscores:\n%s', mscores)
+    
+    recall = scores.loc[scores['recall'].notna(), 'recall'].copy()
+    recall, mrecall = recall.align(mscores['recall'])
+    assert all(recall == mrecall)

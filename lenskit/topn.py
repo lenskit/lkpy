@@ -122,6 +122,7 @@ class RecListAnalysis:
         if using_dask:
             # Dask group-apply requires metadata
             meta = dict((mn, 'f8') for (mf, mn, margs) in self.metrics)
+            meta['nrecs'] = 'i8'
             res = grouped.apply(worker, meta=meta)
             res = res.compute()
         else:
@@ -134,13 +135,15 @@ class RecListAnalysis:
             ug_cols = [c for c in gcols if c not in ti_bcols]
             tcount = truth.reset_index().groupby(ti_bcols)['item'].count()
             tcount.name = 'ntruth'
+            _log.debug('res index levels: %s', res.index.names)
             if ug_cols:
                 _log.debug('regrouping by %s to fill', ug_cols)
-                res = res.groupby(level=ug_cols).apply(lambda f: f.join(tcount, how='outer'))
+                res = res.groupby(level=ug_cols).apply(lambda f: f.reset_index(ug_cols, drop=True).join(tcount, how='outer'))
             else:
                 _log.debug('no ungroup cols, directly merging to fill')
                 res = res.join(tcount, how='outer')
             _log.debug('final columns: %s', res.columns)
+            _log.debug('index levels: %s', res.index.names)
             res['ntruth'] = res['ntruth'].fillna(0)
             res['nrecs'] = res['nrecs'].fillna(0)
 
