@@ -11,6 +11,7 @@ import numpy as np
 import scipy.sparse as sps
 import numba as n
 from numba import njit, jitclass, prange
+from surprise import Dataset, Reader
 
 _logger = logging.getLogger(__name__)
 
@@ -490,3 +491,20 @@ def sparse_ratings(ratings, scipy=False):
         matrix = matrix.to_scipy()
 
     return RatingMatrix(matrix, uidx, iidx)
+
+
+
+def ratings_surprise(ratings):
+    """
+    Convert a rating table to surprise dataset.
+    
+    Args:
+        ratings(pandas.DataFrame): a data table of (user, item, rating) triples.
+        
+    Returns:
+        dataset:
+            a surprise dataset instance
+    """
+    reader = Reader(rating_scale=(ratings.rating.min(), ratings.rating.max()))
+    dataset = Dataset.load_from_df(ratings[['user', 'item', 'rating']], reader)
+    return dataset
