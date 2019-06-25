@@ -98,3 +98,138 @@ class SurpriseBaseRec(Recommender):
         return 'Surprise({})'.format(self.delegate)
 
 
+class SurpriseKNNBasic(SurpriseBaseRec):
+    """
+    LensKit interface to :py:mod:`surprise.KNNBasic`.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Construct an KNN basic recommender.  The arguments are passed as-is to
+        :py:class:`surprise.KNNBasic`.
+        """
+        from surprise import KNNBasic
+        super().__init__(KNNBasic(*args, **kwargs))
+
+
+
+class SurpriseKNNWithMeans(SurpriseBaseRec):
+    """
+    LensKit interface to :py:mod:`surprise.KNNWithMeans`.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Construct an KNNWithMeans recommender.  The arguments are passed as-is to
+        :py:class:`surprise.KNNWithMeans`.
+        """
+        from surprise import KNNWithMeans
+        super().__init__(KNNWithMeans(*args, **kwargs))
+        
+
+
+class SurpriseKNNBaseline(SurpriseBaseRec):
+    """
+    LensKit interface to :py:mod:`surprise.KNNBaseline`.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Construct an KNNBaseline recommender.  The arguments are passed as-is to
+        :py:class:`surprise.KNNBaseline`.
+        """
+        from surprise import KNNBaseline
+        super().__init__(KNNBaseline(*args, **kwargs))
+
+
+class SurpriseKNNWithZScore(SurpriseBaseRec):
+    """
+    LensKit interface to :py:mod:`surprise.KNNWithZScore`.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Construct an KNNWithZScore recommender.  The arguments are passed as-is to
+        :py:class:`surprise.KNNWithZScore`.
+        """
+        from surprise import KNNWithZScore
+        super().__init__(KNNWithZScore(*args, **kwargs))
+        
+
+
+class SurpriseCoClustering(SurpriseBaseRec):
+    """
+    LensKit interface to :py:mod:`surprise.CoClustering`.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Construct an CoClustering recommender.  The arguments are passed as-is to
+        :py:class:`surprise.CoClustering`.
+        """
+        from surprise import CoClustering
+        super().__init__(CoClustering(*args, **kwargs))
+
+
+
+class SurpriseSVD(SurpriseBaseRec):
+    """
+    LensKit interface to :py:mod:`surprise.SVD`.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Construct an SVD recommender.  The arguments are passed as-is to
+        :py:class:`surprise.SVD`.
+        """
+        from surprise import SVD
+        super().__init__(SVD(*args, **kwargs))
+
+
+class SurpriseSVDpp(SurpriseBaseRec):
+    """
+    LensKit interface to :py:mod:`surprise.SVDpp`.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Construct an SVDpp recommender.  The arguments are passed as-is to
+        :py:class:`surprise.SVDpp`.
+        """
+        from surprise import SVDpp
+        super().__init__(SVDpp(*args, **kwargs))
+
+
+
+class SurpriseNMF(SurpriseBaseRec):
+    """
+    LensKit interface to :py:mod:`surprise.NMF`.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Construct an NMF recommender.  The arguments are passed as-is to
+        :py:class:`surprise.NMF`.
+        """
+        from surprise import NMF
+        super().__init__(NMF(*args, **kwargs))
+
+
+class SurpriseSlopeOne(SurpriseBaseRec):
+    """
+    LensKit interface to :py:mod:`surprise.SlopeOne`.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Construct an SlopeOne recommender.  The arguments are passed as-is to
+        :py:class:`surprise.SlopeOne`.
+        """
+        from surprise import SlopeOne
+        super().__init__(SlopeOne(*args, **kwargs))
+
+
+class SurpriseNormalPredictor(SurpriseBaseRec):
+    """
+    LensKit interface to :py:mod:`surprise.NormalPredictor`.
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        Construct an NormalPredictor recommender.  The arguments are passed as-is to
+        :py:class:`surprise.NormalPredictor`.
+        """
+        from surprise import NormalPredictor
+        super().__init__(NormalPredictor(*args, **kwargs))
+
+
