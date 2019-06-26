@@ -505,6 +505,6 @@ def ratings_surprise(ratings):
         dataset:
             a surprise dataset instance
     """
-    reader = Reader(rating_scale=(ratings.rating.min(), ratings.rating.max()))
-    dataset = Dataset.load_from_df(ratings[['user', 'item', 'rating']], reader)
+    reader = Reader()
+    dataset = Dataset.load_from_df(ratings.loc[:, ['user', 'item', "rating"]], reader)
     return dataset

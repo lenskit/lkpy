@@ -62,3 +62,12 @@ def test_sparse_matrix_scipy_implicit():
     assert len(iidx) == ratings.item.nunique()
 
     assert all(mat.data == 1.0)
+    
+def test_ratings_surprise():
+    ratings = lktu.ml_test.ratings
+    ratings = ratings.loc[:, ['user', 'item']]
+    dataset = lm.ratings_surprise(ratings)
+    
+    trainset = dataset.build_full_trainset()
+    assert trainset.n_items == ratings.item.nunique()
+    assert trainset.n_users == ratings.user.nunique()
