@@ -227,6 +227,7 @@ my-eval/
 *.pyd
 *.so
 *.c
+tests/*.dat
 
 dask-worker-space/
 
