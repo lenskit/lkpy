@@ -72,7 +72,7 @@ def test_surprise_batch_accuracy():
     import lenskit.crossfold as xf
     from lenskit import batch, topn
 
-    ratings = lktu.ml_test.ratings
+    ratings = lktu.ml100k.ratings
     
     def eval(train, test, algo_t):
         _log.info('running training')
@@ -105,7 +105,7 @@ def test_surprise_batch_accuracy():
 
 @mark.skipif(not have_surprise, reason='surprise not installed')
 def test_surprise_pickle_untrained(tmp_path):
-    mf = tmp_path + 'bpr.dat'
+    mf = tmp_path / 'bpr.dat'
     for algorithm_class in surprise_algo_list:
         algo = algorithm_class()    
         with open(mf,'wb') as f:
@@ -118,6 +118,9 @@ def test_surprise_pickle_untrained(tmp_path):
         
 
 def compare_params_to_dict(class_name, params):
+    """
+    function used to compare between params and algo instance params
+    """
     # Instantiate algo with params
     algo = class_name(**params)
     # get instantiated algo params
@@ -157,12 +160,12 @@ def test_surprise_CoClustering_params():
 
 
 def test_surprise_SVD_params():
-    params = {"n_factors": 50, "biased": False, "n_epochs": 30, "lr_all":0.003}
+    params = {"n_factors": 50, "biased": False, "n_epochs": 30, "lr_qi":0.003}
     compare_params_to_dict(SurpriseSVD, params) 
 
 
 def test_surprise_SVDpp_params():
-    params = {"n_factors": 80, "biased": True, "n_epochs": 50, "lr_bi":0.006}
+    params = {"n_factors": 80, "n_epochs": 50, "lr_bi":0.006}
     compare_params_to_dict(SurpriseSVDpp, params) 
 
 
@@ -171,9 +174,6 @@ def test_surprise_NMF_params():
     compare_params_to_dict(SurpriseNMF, params) 
 
 
-def test_surprise_NormalPredictor_params():
-    params = {"n_epochs": 15, "learning_rate":0.004}
-    compare_params_to_dict(SurpriseNormalPredictor, params) 
 
 
 
