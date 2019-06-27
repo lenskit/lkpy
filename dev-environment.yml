@@ -31,6 +31,7 @@ dependencies:
 - ipykernel
 - jupyter_client
 - matplotlib
+- surprise
 - pip:
   - nbsphinx
   - recommonmark

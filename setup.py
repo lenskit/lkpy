@@ -50,6 +50,9 @@ setup(
         ],
         'implicit': [
             'implicit'
+        ],
+        'surprise': [
+            'surprise'
         ]
     },
     packages=find_packages()
