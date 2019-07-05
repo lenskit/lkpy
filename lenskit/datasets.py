@@ -348,3 +348,61 @@ class ML1M(MLM):
         users.set_index('user', inplace=True)
         _log.debug('loaded %s', fn)
         return users
+
+
+class BookCrossing:
+    """
+    Class for reading the BookCrossing data set.
+
+    Parameters:
+        path(str or pathlib.Path): Path to the directory containing the data set.
+    """
+
+    def __init__(self, path='data/bx'):
+        self.path = Path(path)
+
+    @cached
+    def feedback(self):
+        """
+        Read the BookCrossing ratings.  This reads all ratings, including implicit
+        feedback (rating value of 0).
+
+        >>> bx = BookCrossing()
+        >>> bx.feedback        #doctest: +SKIP
+                   user         item  rating
+        0        276725   034545104X       0
+        1        276726   0155061224       5
+        2        276727   0446520802       0
+        3        276729   052165615X       3
+        4        276729   0521795028       6
+        ...
+        [1149780 rows x 3 columns]
+        """
+
+        fn = self.path / 'BX-Book-Ratings.csv'
+        ratings = pd.read_csv(fn, sep=';', encoding='latin1')
+        ratings.rename(columns={'User-ID': 'user', 'ISBN': 'item', 'Book-Rating': 'rating'},
+                       inplace=True)
+        # clean up some stray characters in ISBNs
+        ratings['item'] = ratings['item'].str.replace(r'[^0-9A-Za-z]', '').str.upper()
+        _log.debug('loaded %s', fn)
+        return ratings
+
+    @property
+    def ratings(self):
+        """
+        Read the BookCrossing ratings, returning only the explicit-feedback ratings.
+
+        >>> bx = BookCrossing()
+        >>> bx.ratings        #doctest: +SKIP
+                   user         item  rating
+        1        276726   0155061224       5
+        3        276729   052165615X       3
+        4        276729   0521795028       6
+        6        276736   3257224281       8
+        7        276737   0600570967       6
+        ...
+        [433671 rows x 3 columns]
+        """
+        ratings = self.feedback
+        return ratings[ratings.rating > 0]
