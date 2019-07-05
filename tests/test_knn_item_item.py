@@ -209,8 +209,8 @@ def test_ii_train_ml100k(tmp_path):
         sp = r_mat.rowptrs[i]
         ep = r_mat.rowptrs[i + 1]
 
-        # everything is in decreasing order
-        assert all(np.diff(r_mat.values[sp:ep]) <= 0)
+        # everything is in increasing order
+        assert all(np.diff(r_mat.colinds[sp:ep]) > 0)
         assert all(r_mat.values[sp:ep] == o_mat.values[sp:ep])
 
 
@@ -266,8 +266,10 @@ def test_ii_large_models():
 
         # it should be sorted !
         # check this by diffing the row values, and make sure they're negative
-        assert all(np.diff(b_row.data) < 1.0e-6)
-        assert all(np.diff(ub_row.data) < 1.0e-6)
+        assert all(np.diff(algo_lim.sim_matrix_.row_cs(ipos)) > 0)
+        assert all(np.diff(algo_ub.sim_matrix_.row_cs(ipos)) > 0)
+        # assert all(np.diff(b_row.data) < 1.0e-6)
+        # assert all(np.diff(ub_row.data) < 1.0e-6)
 
         # spot-check some similarities
         for n in pd.Series(ub_row.indices).sample(min(10, len(ub_row.indices))):
@@ -344,8 +346,8 @@ def test_ii_save_load(tmp_path):
         sp = r_mat.rowptrs[i]
         ep = r_mat.rowptrs[i + 1]
 
-        # everything is in decreasing order
-        assert all(np.diff(r_mat.values[sp:ep]) <= 0)
+        # everything is in increasing order
+        assert all(np.diff(r_mat.colinds[sp:ep]) > 0)
         assert all(r_mat.values[sp:ep] == o_mat.values[sp:ep])
 
     means = ml_ratings.groupby('item').rating.mean()
@@ -363,7 +365,7 @@ def test_ii_save_load(tmp_path):
 
         # it should be sorted !
         # check this by diffing the row values, and make sure they're negative
-        assert all(np.diff(row.data) < 1.0e-6)
+        # assert all(np.diff(row.data) < 1.0e-6)
 
 
 def test_ii_implicit_save_load(tmp_path):
@@ -402,8 +404,8 @@ def test_ii_implicit_save_load(tmp_path):
         sp = r_mat.rowptrs[i]
         ep = r_mat.rowptrs[i + 1]
 
-        # everything is in decreasing order
-        assert all(np.diff(r_mat.values[sp:ep]) <= 0)
+        # everything is in increasing order
+        assert all(np.diff(r_mat.colinds[sp:ep]) > 0)
         assert all(r_mat.values[sp:ep] == o_mat.values[sp:ep])
 
     assert algo.item_means_ is None
@@ -420,7 +422,7 @@ def test_ii_implicit_save_load(tmp_path):
 
         # it should be sorted !
         # check this by diffing the row values, and make sure they're negative
-        assert all(np.diff(row.data) < 1.0e-6)
+        # assert all(np.diff(row.data) < 1.0e-6)
 
 
 @lktu.wantjit

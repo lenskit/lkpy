@@ -9,11 +9,10 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-import numba as n
 from numba import njit, prange
 
 from lenskit import util, matrix, DataWarning
-from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
+from lenskit.util.accum import kvp_minheap_insert
 from . import Predictor
 
 _logger = logging.getLogger(__name__)
@@ -73,42 +72,63 @@ def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, limits, thresh: float, triang
     return used
 
 
-@njit(nogil=True, parallel=True)
+# @njit(nogil=True, parallel=True)
 def _sort_nbrs(smat):
     for i in prange(smat.nrows):
         sp, ep = smat.row_extent(i)
-        kvp_minheap_sort(sp, ep, smat.colinds, smat.values)
+        if ep > sp:
+            order = np.argsort(smat.colinds[sp:ep])
+            smat.colinds[sp:ep] = smat.colinds[order + sp]
+            smat.values[sp:ep] = smat.values[order + sp]
 
 
 @njit(nogil=True)
-def _predict_weighted_average(model, nitems, nrange, ratings, targets):
+def _predict_weighted_average(model, nitems, nrange, r_is, r_vs, targets):
     "Weighted average prediction function"
     min_nbrs, max_nbrs = nrange
     scores = np.full(nitems, np.nan, dtype=np.float_)
+
+    scratch_ks = np.zeros(max_nbrs, dtype=np.int32)
+    scratch_vs = np.zeros(max_nbrs, dtype=np.float64)
 
     for i in prange(targets.shape[0]):
         iidx = targets[i]
         rptr = model.rowptrs[iidx]
         rend = model.rowptrs[iidx + 1]
 
-        num = 0
-        denom = 0
-        nnbrs = 0
-
-        for j in range(rptr, rend):
-            nidx = model.colinds[j]
-            if np.isnan(ratings[nidx]):
-                continue
-
-            nnbrs = nnbrs + 1
-            num = num + ratings[nidx] * model.values[j]
-            denom = denom + np.abs(model.values[j])
-
-            if max_nbrs > 0 and nnbrs >= max_nbrs:
-                break
+        nbrs = model.colinds[rptr:rend]
+        sims = model.values[rptr:rend]
+        # find rated items in neighborhood
+        r_nps = np.searchsorted(nbrs, r_is)
+        # find matches - first end-of-list, then direct
+        matched = r_nps < rend - rptr
+        matched[matched] = nbrs[r_nps[matched]] == r_is[matched]
+        # count matches
+        nnbrs = np.sum(matched)
 
         if nnbrs < min_nbrs:
             continue
+
+        # shrink neighborhood if it's oversized
+        if nnbrs > max_nbrs:
+            # so we need to look for values
+            # scan over the dizzy thing
+            ep = 0
+            for j in range(len(r_nps)):
+                if matched[j]:
+                    ep = kvp_minheap_insert(0, ep, max_nbrs, j, sims[r_nps[j]],
+                                            scratch_ks, scratch_vs)
+
+            # ok, we have the max entries in our little array
+            # the keys index into r_vs!
+            num = np.dot(scratch_vs, r_vs[scratch_ks])
+            denom = np.sum(np.abs(scratch_vs))
+
+        else:
+            # nice and easy
+            msims = sims[r_nps[matched]]
+            denom = np.sum(np.abs(msims))
+            num = np.dot(msims, r_vs[matched])
 
         scores[iidx] = num / denom
 
@@ -116,34 +136,49 @@ def _predict_weighted_average(model, nitems, nrange, ratings, targets):
 
 
 @njit(nogil=True)
-def _predict_sum(model, nitems, nrange, ratings, targets):
+def _predict_sum(model, nitems, nrange, r_is, r_vs, targets):
     "Sum-of-similarities prediction function"
     min_nbrs, max_nbrs = nrange
     scores = np.full(nitems, np.nan, dtype=np.float_)
+
+    scratch_ks = np.zeros(max_nbrs, dtype=np.int32)
+    scratch_vs = np.zeros(max_nbrs, dtype=np.float64)
 
     for i in prange(targets.shape[0]):
         iidx = targets[i]
         rptr = model.rowptrs[iidx]
         rend = model.rowptrs[iidx + 1]
 
-        score = 0
-        nnbrs = 0
-
-        for j in range(rptr, rend):
-            nidx = model.colinds[j]
-            if np.isnan(ratings[nidx]):
-                continue
-
-            nnbrs = nnbrs + 1
-            score = score + model.values[j]
-
-            if max_nbrs > 0 and nnbrs >= max_nbrs:
-                break
+        nbrs = model.colinds[rptr:rend]
+        sims = model.values[rptr:rend]
+        # find rated items in neighborhood
+        r_nps = np.searchsorted(nbrs, r_is)
+        # find matches
+        matched = nbrs[r_nps] == r_is
+        # count matches
+        nnbrs = np.sum(matched)
 
         if nnbrs < min_nbrs:
             continue
 
-        scores[iidx] = score
+        # shrink neighborhood if it's oversized
+        if nnbrs > max_nbrs:
+            # so we need to look for values
+            # scan over the dizzy thing
+            ep = 0
+            for j in range(len(r_nps)):
+                if matched[j]:
+                    ep = kvp_minheap_insert(0, ep, max_nbrs, j, sims[r_nps[j]],
+                                            scratch_ks, scratch_vs)
+
+            # ok, we have the max entries in our little array
+            # the keys index into r_vs!
+            scores[iidx] = np.sum(scratch_vs)
+
+        else:
+            # nice and easy
+            msims = sims[r_nps[matched]]
+            scores[iidx] = np.sum(msims)
 
     return scores
 
@@ -347,14 +382,13 @@ class ItemItem(Predictor):
         ri_pos = self.item_index_.get_indexer(ratings.index)
         m_rates = ratings[ri_pos >= 0]
         ri_pos = ri_pos[ri_pos >= 0]
-        rate_v = np.full(len(self.item_index_), np.nan, dtype=np.float_)
+        ri_vs = m_rates.values
+
         # mean-center the rating array
         if self.center:
-            rate_v[ri_pos] = m_rates.values - self.item_means_[ri_pos]
-        else:
-            rate_v[ri_pos] = m_rates.values
+            ri_vs = ri_vs - self.item_means_[ri_pos]
+
         _logger.debug('user %s: %d of %d rated items in model', user, len(ri_pos), len(ratings))
-        assert np.sum(np.logical_not(np.isnan(rate_v))) == len(ri_pos)
 
         # set up item result vector
         # ipos will be an array of item indices
@@ -369,7 +403,7 @@ class ItemItem(Predictor):
         iscore = self._predict_agg(self.sim_matrix_.N,
                                    len(self.item_index_),
                                    (self.min_nbrs, self.nnbrs),
-                                   rate_v, i_pos)
+                                   ri_pos, ri_vs, i_pos)
 
         nscored = np.sum(np.logical_not(np.isnan(iscore)))
         if self.center:
