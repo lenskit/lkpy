@@ -116,6 +116,7 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, dask_result=False
             _logger.info('parallel backend %s, effective njobs %s',
                          backend, njobs)
             using_dask = backend == 'DaskDistributedBackend'
+            astr = str(rec_algo)
             if using_dask:
                 _logger.debug('pre-scattering algorithm %s', rec_algo)
                 futures = loop._backend.client.scatter([rec_algo], broadcast=True, hash=False)
@@ -129,7 +130,7 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, dask_result=False
                 dump(rec_algo, path)
                 rec_algo = _AlgoKey('file', path)
 
-            _logger.info('recommending for %d users (n_jobs=%s)', len(users), n_jobs)
+            _logger.info('recommending with %s for %d users (n_jobs=%s)', astr, len(users), n_jobs)
             timer = util.Stopwatch()
             results = loop(delayed(_recommend_user)(rec_algo, user, n, candidates(user))
                            for user in users)
