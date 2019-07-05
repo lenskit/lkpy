@@ -95,14 +95,14 @@ def _predict_weighted_average(model, nitems, nrange, r_is, r_vs, targets):
         iidx = targets[i]
         rptr = model.rowptrs[iidx]
         rend = model.rowptrs[iidx + 1]
+        rlen = rend - rptr
 
         nbrs = model.colinds[rptr:rend]
         sims = model.values[rptr:rend]
         # find rated items in neighborhood
         r_nps = np.searchsorted(nbrs, r_is)
-        # find matches - first end-of-list, then direct
-        matched = r_nps < rend - rptr
-        matched[matched] = nbrs[r_nps[matched]] == r_is[matched]
+        # find matches - what is in range?
+        matched = np.array([r_nps[p] < rlen and r_is[p] == nbrs[r_nps[p]] for p in range(len(r_nps))])
         # count matches
         nnbrs = np.sum(matched)
 
