@@ -81,7 +81,7 @@ def _sort_nbrs(smat):
 
 
 @njit(nogil=True)
-def _predict_weighted_average(model, nitems, nrange, ratings, targets):
+def _predict_weighted_average(model, nitems, nrange, ratings, rated, targets):
     "Weighted average prediction function"
     min_nbrs, max_nbrs = nrange
     scores = np.full(nitems, np.nan, dtype=np.float_)
@@ -97,7 +97,7 @@ def _predict_weighted_average(model, nitems, nrange, ratings, targets):
 
         for j in range(rptr, rend):
             nidx = model.colinds[j]
-            if np.isnan(ratings[nidx]):
+            if not rated[nidx]:
                 continue
 
             nnbrs = nnbrs + 1
@@ -116,7 +116,7 @@ def _predict_weighted_average(model, nitems, nrange, ratings, targets):
 
 
 @njit(nogil=True)
-def _predict_sum(model, nitems, nrange, ratings, targets):
+def _predict_sum(model, nitems, nrange, ratings, rated, targets):
     "Sum-of-similarities prediction function"
     min_nbrs, max_nbrs = nrange
     scores = np.full(nitems, np.nan, dtype=np.float_)
@@ -131,7 +131,7 @@ def _predict_sum(model, nitems, nrange, ratings, targets):
 
         for j in range(rptr, rend):
             nidx = model.colinds[j]
-            if np.isnan(ratings[nidx]):
+            if not rated[nidx]:
                 continue
 
             nnbrs = nnbrs + 1
@@ -346,17 +346,22 @@ class ItemItem(Predictor):
 
         # set up rating array
         # get rated item positions & limit to in-model items
+        n_items = len(self.item_index_)
         ri_pos = self.item_index_.get_indexer(ratings.index)
         m_rates = ratings[ri_pos >= 0]
         ri_pos = ri_pos[ri_pos >= 0]
-        rate_v = np.full(len(self.item_index_), np.nan, dtype=np.float_)
+        rate_v = np.full(n_items, np.nan, dtype=np.float_)
+        rated = np.zeros(n_items, dtype='bool')
         # mean-center the rating array
         if self.center:
             rate_v[ri_pos] = m_rates.values - self.item_means_[ri_pos]
         else:
             rate_v[ri_pos] = m_rates.values
+        rated[ri_pos] = True
+
         _logger.debug('user %s: %d of %d rated items in model', user, len(ri_pos), len(ratings))
         assert np.sum(np.logical_not(np.isnan(rate_v))) == len(ri_pos)
+        assert np.all(np.isnan(rate_v) == np.logical_not(rated))
 
         # set up item result vector
         # ipos will be an array of item indices
@@ -376,7 +381,7 @@ class ItemItem(Predictor):
         iscore = self._predict_agg(self.sim_matrix_.N,
                                    len(self.item_index_),
                                    (self.min_nbrs, self.nnbrs),
-                                   rate_v, i_pos)
+                                   rate_v, rated, i_pos)
 
         nscored = np.sum(np.logical_not(np.isnan(iscore)))
         if self.center:
