@@ -364,7 +364,7 @@ class ItemItem(Predictor):
         i_pos = i_pos[i_pos >= 0]
         _logger.debug('user %s: %d of %d requested items in model', user, len(i_pos), len(items))
         if len(i_pos) > len(ri_pos) * 2:
-            i_cts = self._count_nbrs(i_pos, ri_pos)
+            i_cts = self._count_viable_targets(i_pos, ri_pos)
             i_pos = i_pos[i_cts >= self.min_nbrs]
             _logger.debug('user %s: %d of %d requested items possibly reachable',
                           user, len(i_pos), len(items))
@@ -393,7 +393,7 @@ class ItemItem(Predictor):
 
         return results
 
-    def _count_nbrs(self, targets, rated):
+    def _count_viable_targets(self, targets, rated):
         "Count upper-bound on possible neighbors for target items and rated items."
         # initialize counts to zero
         counts = np.zeros(len(self.item_index_), dtype=np.int32)
