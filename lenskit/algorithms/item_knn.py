@@ -239,6 +239,8 @@ class ItemItem(Predictor):
         self.sim_matrix_ = smat
         self.user_index_ = users
         self.rating_matrix_ = init_rmat
+        # create an inverted similarity matrix for efficient scanning
+        self._sim_inv_ = smat.transpose(False)
 
         return self
 
@@ -361,6 +363,11 @@ class ItemItem(Predictor):
         i_pos = self.item_index_.get_indexer(items)
         i_pos = i_pos[i_pos >= 0]
         _logger.debug('user %s: %d of %d requested items in model', user, len(i_pos), len(items))
+        if len(i_pos) > len(ri_pos) * 2:
+            i_cts = self._count_nbrs(i_pos, ri_pos)
+            i_pos = i_pos[i_cts >= self.min_nbrs]
+            _logger.debug('user %s: %d of %d requested items possibly reachable',
+                          user, len(i_pos), len(items))
 
         # scratch result array
         iscore = np.full(len(self.item_index_), np.nan, dtype=np.float_)
@@ -385,6 +392,29 @@ class ItemItem(Predictor):
                       user, results.notna().sum(), len(items))
 
         return results
+
+    def _count_nbrs(self, targets, rated):
+        "Count upper-bound on possible neighbors for target items and rated items."
+        # initialize counts to zero
+        counts = np.zeros(len(self.item_index_), dtype=np.int32)
+        # count the number of times each item is reachable from the neighborhood
+        for ri in rated:
+            nbrs = self._sim_inv_.row_cs(ri)
+            counts[nbrs] += 1
+
+        # we want the reachability counts for the target items
+        return counts[targets]
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        if '_sim_inv_' in state:
+            del state['_sim_inv_']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if hasattr(self, 'sim_matrix_'):
+            self._sim_inv_ = self.sim_matrix_.transpose(False)
 
     def __str__(self):
         return 'ItemItem(nnbrs={}, msize={})'.format(self.nnbrs, self.save_nbrs)
