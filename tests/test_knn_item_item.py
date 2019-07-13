@@ -489,7 +489,13 @@ def test_ii_known_preds():
     merged = pd.merge(known_preds.rename(columns={'prediction': 'expected'}), preds)
     assert len(merged) == len(preds)
     merged['error'] = merged.expected - merged.prediction
-    assert not any(merged.prediction.isna() & merged.expected.notna())
+    try:
+        assert not any(merged.prediction.isna() & merged.expected.notna())
+    except AssertionError as e:
+        bad = merged[merged.prediction.isna() & merged.expected.notna()]
+        _log.error('erroneously missing or present predictions:\n%s', bad)
+        raise e
+
     err = merged.error
     err = err[err.notna()]
     try:
