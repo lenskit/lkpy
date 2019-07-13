@@ -379,9 +379,27 @@ class ItemItem(Predictor):
         # look for some fast paths
         if self.aggregate == self.AGG_SUM and self.min_sim >= 0:
             # similarity sums are all we need
-            _logger.debug('user %s: using fast-path similarity sum', user)
-            iscores = np.full(len(self.item_index_), np.nan)
-            iscores[i_pos] = i_sums
+            if self.nnbrs >= 0:
+                fast_mask = i_cts <= self.nnbrs
+                fast_items = i_pos[fast_mask]
+                fast_scores = i_sums[fast_mask]
+                slow_items = i_pos[~fast_mask]
+            else:
+                fast_items = i_pos
+                fast_scores = i_sums
+                slow_items = np.array([], dtype='i4')
+
+            _logger.debug('user %s: using fast-path similarity sum for %d items',
+                          user, len(fast_items))
+
+            if len(slow_items):
+                iscores = _predict_sum(self.sim_matrix_.N, len(self.item_index_),
+                                       (self.min_nbrs, self.nnbrs),
+                                       rate_v, rated, slow_items)
+            else:
+                iscores = np.full(len(self.item_index_), np.nan)
+            iscores[fast_items] = fast_scores
+
         elif self.aggregate == self.AGG_WA and self.min_nbrs == 1:
             # fast-path single-neighbor targets - common in sparse data
             fast_mask = i_cts == 1

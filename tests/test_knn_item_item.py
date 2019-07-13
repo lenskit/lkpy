@@ -439,6 +439,26 @@ def test_ii_implicit():
 
 
 @mark.slow
+def test_ii_implicit_fast_ident():
+    algo = knn.ItemItem(20, save_nbrs=100, center=False, aggregate='sum')
+    data = ml_ratings.loc[:, ['user', 'item']]
+
+    algo.fit(data)
+    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
+    assert all(algo.sim_matrix_.values > 0)
+    assert all(algo.item_counts_ <= 100)
+
+    preds = algo.predict_for_user(50, [1, 2, 42])
+    assert all(preds[preds.notna()] > 0)
+    assert np.isnan(preds.iloc[2])
+
+    algo.min_sim = -1  # force it to take the slow path for all predictions
+    p2 = algo.predict_for_user(50, [1, 2, 42])
+    assert preds.values[:2] == approx(p2.values[:2])
+    assert np.isnan(p2.iloc[2])
+
+
+@mark.slow
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_ii_batch_accuracy():
