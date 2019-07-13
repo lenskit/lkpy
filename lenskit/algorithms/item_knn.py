@@ -390,7 +390,7 @@ class ItemItem(Predictor):
             if self.min_sim < 0:
                 fast_scores *= np.sign(i_sums[fast_mask])
             _logger.debug('user %s: fast-pathed %d scores', user, len(fast_scores))
-            _logger.debug('user %s: FP scores %s', user, fast_scores)
+
             slow_items = i_pos[i_cts > 1]
             iscores = _predict_weighted_average(self.sim_matrix_.N, len(self.item_index_),
                                                 (self.min_nbrs, self.nnbrs),
