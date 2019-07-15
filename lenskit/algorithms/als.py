@@ -12,20 +12,86 @@ from ..math.solve import _dposv
 
 _logger = logging.getLogger(__name__)
 
-Context = namedtuple('Context', [
+PartialModel = namedtuple('PartialModel', [
     'users', 'items',
     'user_matrix', 'item_matrix'
 ])
 
 
+@njit
+def _rr_solve(X, xis, y, w, reg, epochs):
+    """
+    RR1 coordinate descent solver.
+
+    Args:
+        X(ndarray): The feature matrix.
+        xis(ndarray): Row numbers in ``X`` that are rated.
+        y(ndarray): Rating values corresponding to ``xis``.
+        w(ndarray): Input/output vector to solve.
+    """
+
+    nr = len(xis)
+    nd = len(w)
+    resid = y.copy()
+
+    for i in range(nr):
+        resid[i] -= np.dot(X[xis[i], :], w)
+
+    for e in range(epochs):
+        for k in range(nd):
+            xk = X[xis, k]
+            num = np.dot(xk, resid) - reg * w[k]
+            denom = np.dot(xk, xk) + reg
+            dw = num / denom
+            w[k] = w[k] + dw
+            resid -= dw * xk
+
+
 @njit(parallel=True, nogil=True)
-def _train_matrix(mat: _CSR, other: np.ndarray, reg: float):
+def _train_matrix_cd(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float):
+    """
+    One half of an explicit ALS training round.
+
+    Args:
+        mat: the :math:`m \\times n` matrix of ratings
+        this: the :math:`m \\times k` matrix to train
+        other: the :math:`n \\times k` matrix of sample features
+        reg: the regularization term
+    """
+    nr = mat.nrows
+    nf = other.shape[1]
+    assert mat.ncols == other.shape[0]
+    assert mat.nrows == this.shape[0]
+    assert this.shape[1] == nf
+
+    frob = 0.0
+
+    for i in prange(nr):
+        cols = mat.row_cs(i)
+        if len(cols) == 0:
+            continue
+
+        vals = mat.row_vs(i)
+
+        w = this[i, :]
+        delta = w.copy()
+        _rr_solve(other, cols, vals, w, reg, 2)
+        delta -= w
+        frob += np.dot(delta, delta)
+        this[i, :] = w
+
+    return np.sqrt(frob)
+
+
+@njit(parallel=True, nogil=True)
+def _train_matrix_lu(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float):
     "One half of an explicit ALS training round."
     nr = mat.nrows
     nf = other.shape[1]
     regI = np.identity(nf) * reg
     assert mat.ncols == other.shape[0]
-    result = np.zeros((nr, nf))
+    frob = 0.0
+
     for i in prange(nr):
         cols = mat.row_cs(i)
         if len(cols) == 0:
@@ -40,9 +106,11 @@ def _train_matrix(mat: _CSR, other: np.ndarray, reg: float):
         V = M.T @ vals
         # and solve
         _dposv(A, V, True)
-        result[i, :] = V
+        delta = this[i, :] - V
+        frob += np.dot(delta, delta)
+        this[i, :] = V
 
-    return result
+    return np.sqrt(frob)
 
 
 @njit(parallel=True, nogil=True)
@@ -108,11 +176,13 @@ class BiasedMF(BiasMFPredictor):
     """
     timer = None
 
-    def __init__(self, features, *, iterations=20, reg=0.1, damping=5, bias=True, progress=None):
+    def __init__(self, features, *, iterations=20, reg=0.1, damping=5, bias=True, method='cd',
+                 progress=None):
         self.features = features
         self.iterations = iterations
         self.regularization = reg
         self.damping = damping
+        self.method = method
         if bias is True:
             self.bias = basic.Bias(damping=damping)
         else:
@@ -169,10 +239,12 @@ class BiasedMF(BiasMFPredictor):
         trmat = rmat.transpose()
 
         _logger.debug('initializing item matrix')
-        imat = np.random.randn(n_items, self.features) * 0.01
-        umat = np.full((n_users, self.features), np.nan)
+        imat = np.random.randn(n_items, self.features)
+        imat /= np.linalg.norm(imat, axis=1).reshape((n_items, 1))
+        umat = np.random.randn(n_users, self.features)
+        umat /= np.linalg.norm(umat, axis=1).reshape((n_users, 1))
 
-        return Context(users, items, umat, imat), bias, rmat, trmat
+        return PartialModel(users, items, umat, imat), bias, rmat, trmat
 
     def _normalize(self, ratings, users, items):
         "Apply bias normalization to the data in preparation for training."
@@ -211,16 +283,34 @@ class BiasedMF(BiasMFPredictor):
         return ratings, (gbias, ubias, ibias)
 
     def _train_iters(self, current, uctx, ictx):
-        "Generator of training iterations."
+        """
+        Generator of training iterations.
+
+        Args:
+            current(PartialModel): the current model step.
+            uctx(ndarray): the user-item rating matrix for training user features.
+            ictx(ndarray): the item-user rating matrix for training item features.
+        """
+        n_items = len(current.items)
+        n_users = len(current.users)
+        assert uctx.nrows == n_users
+        assert uctx.ncols == n_items
+        assert ictx.nrows == n_items
+        assert ictx.ncols == n_users
+
+        if self.method == 'cd':
+            train = _train_matrix_cd
+        elif self.method == 'lu':
+            train = _train_matrix_lu
+        else:
+            raise ValueError('invalid training method ' + self.method)
+
         for epoch in self.progress(range(self.iterations), desc='BiasedMF', leave=False):
-            umat = _train_matrix(uctx.N, current.item_matrix, self.regularization)
+            du = train(uctx.N, current.user_matrix, current.item_matrix, self.regularization)
             _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
-            imat = _train_matrix(ictx.N, umat, self.regularization)
+            di = train(ictx.N, current.item_matrix, current.user_matrix, self.regularization)
             _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
-            di = np.linalg.norm(imat - current.item_matrix, 'fro')
-            du = np.linalg.norm(umat - current.user_matrix, 'fro')
             _logger.info('[%s] finished epoch %d (|ΔI|=%.3f, |ΔU|=%.3f)', self.timer, epoch, di, du)
-            current = current._replace(user_matrix=umat, item_matrix=imat)
             yield current
 
     def predict_for_user(self, user, items, ratings=None):
@@ -316,7 +406,7 @@ class ImplicitMF(MFPredictor):
         imat = np.square(imat)
         umat = np.full((n_users, self.features), np.nan)
 
-        return Context(users, items, umat, imat), rmat, trmat
+        return PartialModel(users, items, umat, imat), rmat, trmat
 
     def predict_for_user(self, user, items, ratings=None):
         # look up user index

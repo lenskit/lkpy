@@ -9,6 +9,7 @@ import numpy as np
 
 from pytest import approx, mark
 
+from lenskit.util import Stopwatch
 import lenskit.util.test as lktu
 
 _log = logging.getLogger(__name__)
@@ -110,7 +111,7 @@ def test_als_train_large():
 
 # don't use wantjit, use this to do a non-JIT test
 def test_als_save_load():
-    original = als.BiasedMF(20, iterations=5)
+    original = als.BiasedMF(20, iterations=5, method='lu')
     ratings = lktu.ml_test.ratings
     original.fit(ratings)
 
@@ -129,6 +130,38 @@ def test_als_save_load():
     assert np.all(algo.user_index_ == original.user_index_)
 
 
+@lktu.wantjit
+def test_als_method_match():
+    state = np.random.get_state()
+
+    lu = als.BiasedMF(20, iterations=15, reg=0.05, method='lu')
+
+    np.random.set_state(state)
+    cd = als.BiasedMF(20, iterations=15, reg=0.05, method='cd')
+
+    ratings = lktu.ml_test.ratings
+
+    timer = Stopwatch()
+    lu.fit(ratings)
+    timer.stop()
+    _log.info('fit with LU solver in %s', timer)
+
+    timer = Stopwatch()
+    cd.fit(ratings)
+    timer.stop()
+    _log.info('fit with CD solver in %s', timer)
+
+    assert lu.global_bias_ == approx(ratings.rating.mean())
+    assert cd.global_bias_ == approx(ratings.rating.mean())
+
+    for u in np.random.choice(ratings.user.unique(), 10, replace=False):
+        items = np.random.choice(ratings.item.unique(), 15, replace=False)
+        lu_preds = lu.predict_for_user(u, items)
+        cd_preds = cd.predict_for_user(u, items)
+
+        assert all(np.abs(cd_preds - lu_preds) <= 0.01)
+
+
 @mark.slow
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
@@ -139,8 +172,8 @@ def test_als_batch_accuracy():
 
     ratings = lktu.ml100k.ratings
 
-    svd_algo = als.BiasedMF(25, iterations=20, damping=5)
-    algo = basic.Fallback(svd_algo, basic.Bias(damping=5))
+    algo = als.BiasedMF(25, iterations=25, bias=False)
+    # algo = basic.Fallback(svd_algo, basic.Bias(damping=5))
 
     def eval(train, test):
         _log.info('running training')
