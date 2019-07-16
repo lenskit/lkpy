@@ -239,6 +239,7 @@ class ItemItem(Predictor):
         self.rating_matrix_ = init_rmat
         # create an inverted similarity matrix for efficient scanning
         self._sim_inv_ = smat.transpose()
+        _logger.info('[%s] transposed matrix for optimization', self._timer)
 
         return self
 
