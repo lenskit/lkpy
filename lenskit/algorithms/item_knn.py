@@ -416,7 +416,7 @@ class ItemItem(Predictor):
             iscores[fast_items] = fast_scores
         else:
             # now compute the predictions
-            _logger.debug('user %s: taking the slow path')
+            _logger.debug('user %s: taking the slow path', user)
             agg = _predictors[self.aggregate]
             iscores = agg(self.sim_matrix_.N, len(self.item_index_), (self.min_nbrs, self.nnbrs),
                           rate_v, rated, i_pos)
