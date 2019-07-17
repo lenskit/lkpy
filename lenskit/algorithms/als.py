@@ -113,8 +113,91 @@ def _train_matrix_lu(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float)
     return np.sqrt(frob)
 
 
+@njit
+def _cg_a_mult(OtOr, X, y, v):
+    """
+    Compute the multiplication Av, where A = X'X + X'yX + λ.
+    """
+    XtXv = OtOr @ v
+    XtyXv = X.T @ (y * (X @ v))
+    return XtXv + XtyXv
+
+
+@njit
+def _cg_solve(OtOr, X, y, w, epochs):
+    """
+    Use conjugate gradient method to solve the system M†(X'X + X'yX + λ)w = M†X'(y+1).
+    """
+    nf = X.shape[1]
+    # compute inverse of the Jacobi preconditioner
+    Ad = np.diag(OtOr).copy()
+    for k in range(nf):
+        Xk = X[:, k]
+        Ad[k] += np.dot(Xk, y * Xk)
+    iM = np.reciprocal(Ad)
+
+    # compute residuals
+    b = X.T @ (y + 1.0)
+    r = b - _cg_a_mult(OtOr, X, y, w)
+
+    # compute initial values
+    z = iM * r
+    p = z
+
+    # and solve
+    for i in range(epochs):
+        gam = np.dot(r, z)
+        Ap = _cg_a_mult(OtOr, X, y, p)
+        al = gam / np.dot(p, Ap)
+        w += al * p
+        r -= al * Ap
+        z = iM * r
+        bet = np.dot(r, z) / gam
+        p = z + bet * p
+
+
 @njit(parallel=True, nogil=True)
-def _train_implicit_matrix(mat: _CSR, other: np.ndarray, reg: float):
+def _train_implicit_cg(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float):
+    "One half of an implicit ALS training round with conjugate gradient."
+    nr = mat.nrows
+    nc = other.shape[0]
+    nf = other.shape[1]
+
+    assert mat.ncols == nc
+
+    regmat = np.identity(nf) * reg
+    Ot = other.T
+    OtO = Ot @ other
+    OtOr = OtO + regmat
+
+    frob = 0.0
+
+    for i in prange(nr):
+        cols = mat.row_cs(i)
+        if len(cols) == 0:
+            continue
+
+        rates = mat.row_vs(i)
+
+        # we can optimize by only considering the nonzero entries of Cu-I
+        # this means we only need the corresponding matrix columns
+        M = other[cols, :]
+        # and solve
+        w = this[i, :].copy()
+        _cg_solve(OtOr, M, rates, w, 3)
+
+        # update stats
+        delta = this[i, :] - w
+        frob += np.dot(delta, delta)
+
+        # put back the result
+        this[i, :] = w
+
+    return np.sqrt(frob)
+
+
+@njit(parallel=True, nogil=True)
+def _train_implicit_lu(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float):
     "One half of an implicit ALS training round."
     nr = mat.nrows
     nc = other.shape[0]
@@ -126,7 +209,8 @@ def _train_implicit_matrix(mat: _CSR, other: np.ndarray, reg: float):
     OtOr = OtO + regmat
     assert OtO.shape[0] == OtO.shape[1]
     assert OtO.shape[0] == nf
-    result = np.zeros((nr, nf))
+    frob = 0.0
+
     for i in prange(nr):
         cols = mat.row_cs(i)
         if len(cols) == 0:
@@ -137,7 +221,7 @@ def _train_implicit_matrix(mat: _CSR, other: np.ndarray, reg: float):
         # we can optimize by only considering the nonzero entries of Cu-I
         # this means we only need the corresponding matrix columns
         M = other[cols, :]
-        # Compute M^T C_u M, restricted to these nonzero entries
+        # Compute M^T (C_u-I) M, restricted to these nonzero entries
         MMT = (M.T.copy() * rates) @ M
         # assert MMT.shape[0] == ctx.n_features
         # assert MMT.shape[1] == ctx.n_features
@@ -149,9 +233,11 @@ def _train_implicit_matrix(mat: _CSR, other: np.ndarray, reg: float):
         # and solve
         _dposv(A, y, True)
         # assert len(uv) == ctx.n_features
-        result[i, :] = y
+        delta = this[i, :] - y
+        frob += np.dot(delta, delta)
+        this[i, :] = y
 
-    return result
+    return np.sqrt(frob)
 
 
 class BiasedMF(BiasMFPredictor):
@@ -372,11 +458,12 @@ class ImplicitMF(MFPredictor):
     """
     timer = None
 
-    def __init__(self, features, *, iterations=20, reg=0.1, weight=40, progress=None):
+    def __init__(self, features, *, iterations=20, reg=0.1, weight=40, method='lu', progress=None):
         self.features = features
         self.iterations = iterations
         self.reg = reg
         self.weight = weight
+        self.method = method
         self.progress = progress if progress is not None else util.no_progress
 
     def fit(self, ratings):
@@ -390,8 +477,10 @@ class ImplicitMF(MFPredictor):
         for model in self._train_iters(current, uctx, ictx):
             current = model
 
-        _logger.info('[%s] finished training model with %d features',
-                     self.timer, self.features)
+        _logger.info('[%s] finished training model with %d features (|P|=%f, |Q|=%f)',
+                     self.timer, self.features,
+                     np.linalg.norm(current.user_matrix, 'fro'),
+                     np.linalg.norm(current.item_matrix, 'fro'))
 
         self.item_index_ = current.items
         self.user_index_ = current.users
@@ -402,16 +491,19 @@ class ImplicitMF(MFPredictor):
 
     def _train_iters(self, current, uctx, ictx):
         "Generator of training iterations."
+        if self.method == 'lu':
+            train = _train_implicit_lu
+        elif self.method == 'cg':
+            train = _train_implicit_cg
+        else:
+            raise ValueError('unknown solver ' + self.method)
+
         for epoch in self.progress(range(self.iterations), desc='ImplicitMF', leave=False):
-            umat = _train_implicit_matrix(uctx.N, current.item_matrix,
-                                          self.reg)
+            du = train(uctx.N, current.user_matrix, current.item_matrix, self.reg)
             _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
-            imat = _train_implicit_matrix(ictx.N, umat, self.reg)
+            di = train(ictx.N, current.item_matrix, current.user_matrix, self.reg)
             _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
-            di = np.linalg.norm(imat - current.item_matrix, 'fro')
-            du = np.linalg.norm(umat - current.user_matrix, 'fro')
-            _logger.info('[%s] finished epoch %d (|ΔI|=%.3f, |ΔU|=%.3f)', self.timer, epoch, di, du)
-            current = current._replace(user_matrix=umat, item_matrix=imat)
+            _logger.info('[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)', self.timer, epoch, du, di)
             yield current
 
     def _initial_model(self, ratings):
@@ -430,7 +522,8 @@ class ImplicitMF(MFPredictor):
 
         imat = np.random.randn(n_items, self.features) * 0.01
         imat = np.square(imat)
-        umat = np.full((n_users, self.features), np.nan)
+        umat = np.random.randn(n_users, self.features) * 0.01
+        umat = np.square(umat)
 
         return PartialModel(users, items, umat, imat), rmat, trmat
 
