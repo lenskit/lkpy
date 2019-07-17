@@ -441,6 +441,12 @@ class ImplicitMF(MFPredictor):
     data contains ``rating`` values, these will be used as the 'confidence' values; otherwise,
     confidence will be 1 for every rated item.
 
+    ``'cd'`` (the default)
+        Conjugate gradient method [TPT2011]_.
+    ``'lu'``
+        A direct implementation of the original implicit-feedback ALS concept [HKV2008]_ using
+        LU-decomposition to solve for the optimized matrices.
+
     See the base class :class:`.MFPredictor` for documentation on the estimated parameters
     you can extract from a trained model.
 
@@ -448,6 +454,9 @@ class ImplicitMF(MFPredictor):
        Collaborative Filtering for Implicit Feedback Datasets.
        In _Proceedings of the 2008 Eighth IEEE International Conference on Data Mining_, 263–272.
        DOI `10.1109/ICDM.2008.22 <http://dx.doi.org/10.1109/ICDM.2008.22>`_
+
+    .. [TPT2011] Gábor Takács, István Pilászy, and Domonkos Tikk. 2011. Applications of the
+        Conjugate Gradient Method for Implicit Feedback Collaborative Filtering.
 
     Args:
         features(int): the number of features to train
@@ -458,7 +467,7 @@ class ImplicitMF(MFPredictor):
     """
     timer = None
 
-    def __init__(self, features, *, iterations=20, reg=0.1, weight=40, method='lu', progress=None):
+    def __init__(self, features, *, iterations=20, reg=0.1, weight=40, method='cg', progress=None):
         self.features = features
         self.iterations = iterations
         self.reg = reg

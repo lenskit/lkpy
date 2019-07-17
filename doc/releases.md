@@ -8,6 +8,7 @@ See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/5) for full
 
 - Added a coordinate descent solver to explicit-feedback ALS and made it the default.  The old
   LU-based solver is still available with `method='lu'`.
+- Added a conjugate gradient solver to implicit-feedback ALS and made it the default.
 
 ## 0.7.0
 
