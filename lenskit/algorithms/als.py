@@ -159,6 +159,15 @@ class BiasedMF(BiasMFPredictor):
     Biased matrix factorization trained with alternating least squares [ZWSP2008]_.  This is a
     prediction-oriented algorithm suitable for explicit feedback data.
 
+    It provides two solvers for the optimization step (the `method` parameter):
+
+    ``'cd'`` (the default)
+        Coordinate descent [TPT2011]_, adapted for a separately-trained bias model and to use
+        weighted regularization as in the original ALS paper [ZWSP2008]_.
+    ``'lu'``
+        A direct implementation of the original ALS concept [ZWSP2008]_ using LU-decomposition
+        to solve for the optimized matrices.
+
     See the base class :class:`.BiasMFPredictor` for documentation on
     the estimated parameters you can extract from a trained model.
 
@@ -167,11 +176,18 @@ class BiasedMF(BiasMFPredictor):
         In +Algorithmic Aspects in Information and Management_, LNCS 5034, 337–348.
         DOI `10.1007/978-3-540-68880-8_32 <http://dx.doi.org/10.1007/978-3-540-68880-8_32>`_.
 
+    .. [TPT2011] Gábor Takács, István Pilászy, and Domonkos Tikk. 2011. Applications of the
+        Conjugate Gradient Method for Implicit Feedback Collaborative Filtering.
+
     Args:
         features(int): the number of features to train
         iterations(int): the number of iterations to train
-        reg(double): the regularization factor
-        damping(double): damping factor for the underlying mean
+        reg(float): the regularization factor; can also be a tuple ``(ureg, ireg)`` to
+            specify separate user and item regularization terms.
+        damping(float): damping factor for the underlying mean
+        bias(bool or :class:`Bias`): the bias model.  If ``True``, fits a :class:`Bias` with
+            damping ``damping``.
+        method(str): the solver to use (see above).
         progress: a :func:`tqdm.tqdm`-compatible progress bar function
     """
     timer = None
