@@ -2,6 +2,7 @@
 Item-based k-NN collaborative filtering.
 """
 
+from sys import intern
 import logging
 import warnings
 
@@ -9,7 +10,6 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-import numba as n
 from numba import njit, prange
 
 from lenskit import util, matrix, DataWarning
@@ -81,7 +81,7 @@ def _sort_nbrs(smat):
 
 
 @njit(nogil=True)
-def _predict_weighted_average(model, nitems, nrange, ratings, targets):
+def _predict_weighted_average(model, nitems, nrange, ratings, rated, targets):
     "Weighted average prediction function"
     min_nbrs, max_nbrs = nrange
     scores = np.full(nitems, np.nan, dtype=np.float_)
@@ -97,7 +97,7 @@ def _predict_weighted_average(model, nitems, nrange, ratings, targets):
 
         for j in range(rptr, rend):
             nidx = model.colinds[j]
-            if np.isnan(ratings[nidx]):
+            if not rated[nidx]:
                 continue
 
             nnbrs = nnbrs + 1
@@ -116,7 +116,7 @@ def _predict_weighted_average(model, nitems, nrange, ratings, targets):
 
 
 @njit(nogil=True)
-def _predict_sum(model, nitems, nrange, ratings, targets):
+def _predict_sum(model, nitems, nrange, ratings, rated, targets):
     "Sum-of-similarities prediction function"
     min_nbrs, max_nbrs = nrange
     scores = np.full(nitems, np.nan, dtype=np.float_)
@@ -131,7 +131,7 @@ def _predict_sum(model, nitems, nrange, ratings, targets):
 
         for j in range(rptr, rend):
             nidx = model.colinds[j]
-            if np.isnan(ratings[nidx]):
+            if not rated[nidx]:
                 continue
 
             nnbrs = nnbrs + 1
@@ -182,6 +182,8 @@ class ItemItem(Predictor):
         user_index_(pandas.Index): the index of known user IDs for the rating matrix.
         rating_matrix_(matrix.CSR): the user-item rating matrix for looking up users' ratings.
     """
+    AGG_SUM = intern('sum')
+    AGG_WA = intern('weighted-average')
 
     def __init__(self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None,
                  center=True, aggregate='weighted-average'):
@@ -195,10 +197,6 @@ class ItemItem(Predictor):
         self.save_nbrs = save_nbrs
         self.center = center
         self.aggregate = aggregate
-        try:
-            self._predict_agg = _predictors[aggregate]
-        except KeyError:
-            raise ValueError('unknown aggregator {}'.format(aggregate))
 
     def fit(self, ratings):
         """
@@ -239,6 +237,8 @@ class ItemItem(Predictor):
         self.sim_matrix_ = smat
         self.user_index_ = users
         self.rating_matrix_ = init_rmat
+        # create an inverted similarity matrix for efficient scanning
+        self._sim_inv_ = smat.transpose()
 
         return self
 
@@ -344,17 +344,22 @@ class ItemItem(Predictor):
 
         # set up rating array
         # get rated item positions & limit to in-model items
+        n_items = len(self.item_index_)
         ri_pos = self.item_index_.get_indexer(ratings.index)
         m_rates = ratings[ri_pos >= 0]
         ri_pos = ri_pos[ri_pos >= 0]
-        rate_v = np.full(len(self.item_index_), np.nan, dtype=np.float_)
+        rate_v = np.full(n_items, np.nan, dtype=np.float_)
+        rated = np.zeros(n_items, dtype='bool')
         # mean-center the rating array
         if self.center:
             rate_v[ri_pos] = m_rates.values - self.item_means_[ri_pos]
         else:
             rate_v[ri_pos] = m_rates.values
+        rated[ri_pos] = True
+
         _logger.debug('user %s: %d of %d rated items in model', user, len(ri_pos), len(ratings))
         assert np.sum(np.logical_not(np.isnan(rate_v))) == len(ri_pos)
+        assert np.all(np.isnan(rate_v) == np.logical_not(rated))
 
         # set up item result vector
         # ipos will be an array of item indices
@@ -362,29 +367,97 @@ class ItemItem(Predictor):
         i_pos = i_pos[i_pos >= 0]
         _logger.debug('user %s: %d of %d requested items in model', user, len(i_pos), len(items))
 
-        # scratch result array
-        iscore = np.full(len(self.item_index_), np.nan, dtype=np.float_)
+        i_cts, i_sums, i_nbrs = self._count_viable_targets(i_pos, ri_pos)
+        viable = i_cts >= self.min_nbrs
+        i_pos = i_pos[viable]
+        i_cts = i_cts[viable]
+        i_sums = i_sums[viable]
+        i_nbrs = i_nbrs[viable]
+        _logger.debug('user %s: %d of %d requested items possibly reachable',
+                      user, len(i_pos), len(items))
 
-        # now compute the predictions
-        iscore = self._predict_agg(self.sim_matrix_.N,
-                                   len(self.item_index_),
-                                   (self.min_nbrs, self.nnbrs),
-                                   rate_v, i_pos)
+        # look for some fast paths
+        if self.aggregate == self.AGG_SUM and self.min_sim >= 0:
+            # similarity sums are all we need
+            if self.nnbrs >= 0:
+                fast_mask = i_cts <= self.nnbrs
+                fast_items = i_pos[fast_mask]
+                fast_scores = i_sums[fast_mask]
+                slow_items = i_pos[~fast_mask]
+            else:
+                fast_items = i_pos
+                fast_scores = i_sums
+                slow_items = np.array([], dtype='i4')
 
-        nscored = np.sum(np.logical_not(np.isnan(iscore)))
+            _logger.debug('user %s: using fast-path similarity sum for %d items',
+                          user, len(fast_items))
+
+            if len(slow_items):
+                iscores = _predict_sum(self.sim_matrix_.N, len(self.item_index_),
+                                       (self.min_nbrs, self.nnbrs),
+                                       rate_v, rated, slow_items)
+            else:
+                iscores = np.full(len(self.item_index_), np.nan)
+            iscores[fast_items] = fast_scores
+
+        elif self.aggregate == self.AGG_WA and self.min_nbrs == 1:
+            # fast-path single-neighbor targets - common in sparse data
+            fast_mask = i_cts == 1
+            fast_items = i_pos[fast_mask]
+            fast_scores = rate_v[i_nbrs[fast_mask]]
+            if self.min_sim < 0:
+                fast_scores *= np.sign(i_sums[fast_mask])
+            _logger.debug('user %s: fast-pathed %d scores', user, len(fast_scores))
+
+            slow_items = i_pos[i_cts > 1]
+            iscores = _predict_weighted_average(self.sim_matrix_.N, len(self.item_index_),
+                                                (self.min_nbrs, self.nnbrs),
+                                                rate_v, rated, slow_items)
+            iscores[fast_items] = fast_scores
+        else:
+            # now compute the predictions
+            _logger.debug('user %s: taking the slow path')
+            agg = _predictors[self.aggregate]
+            iscores = agg(self.sim_matrix_.N, len(self.item_index_), (self.min_nbrs, self.nnbrs),
+                          rate_v, rated, i_pos)
+
         if self.center:
-            iscore += self.item_means_
-        assert np.sum(np.logical_not(np.isnan(iscore))) == nscored
+            iscores += self.item_means_
 
-        results = pd.Series(iscore, index=self.item_index_)
-        results = results[results.notna()]
+        results = pd.Series(iscores, index=self.item_index_)
         results = results.reindex(items, fill_value=np.nan)
-        assert results.notna().sum() == nscored
 
         _logger.debug('user %s: predicted for %d of %d items',
                       user, results.notna().sum(), len(items))
 
         return results
+
+    def _count_viable_targets(self, targets, rated):
+        "Count upper-bound on possible neighbors for target items and rated items."
+        # initialize counts to zero
+        counts = np.zeros(len(self.item_index_), dtype=np.int32)
+        sums = np.zeros(len(self.item_index_))
+        last_nbrs = np.full(len(self.item_index_), -1, 'i4')
+        # count the number of times each item is reachable from the neighborhood
+        for ri in rated:
+            nbrs = self._sim_inv_.row_cs(ri)
+            counts[nbrs] += 1
+            sums[nbrs] += self._sim_inv_.row_vs(ri)
+            last_nbrs[nbrs] = ri
+
+        # we want the reachability counts for the target items
+        return counts[targets], sums[targets], last_nbrs[targets]
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        if '_sim_inv_' in state:
+            del state['_sim_inv_']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if hasattr(self, 'sim_matrix_'):
+            self._sim_inv_ = self.sim_matrix_.transpose()
 
     def __str__(self):
         return 'ItemItem(nnbrs={}, msize={})'.format(self.nnbrs, self.save_nbrs)
