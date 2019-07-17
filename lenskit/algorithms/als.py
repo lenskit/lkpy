@@ -40,11 +40,11 @@ def _rr_solve(X, xis, y, w, reg, epochs):
     for e in range(epochs):
         for k in range(nd):
             xk = X[xis, k]
-            num = np.dot(xk, resid) - reg * w[k]
+            resid += w[k] * xk
+            num = np.dot(xk, resid)
             denom = np.dot(xk, xk) + reg
-            dw = num / denom
-            w[k] = w[k] + dw
-            resid -= dw * xk
+            w[k] = num / denom
+            resid -= w[k] * xk
 
 
 @njit(parallel=True, nogil=True)
@@ -75,7 +75,7 @@ def _train_matrix_cd(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float)
 
         w = this[i, :]
         delta = w.copy()
-        _rr_solve(other, cols, vals, w, reg, 2)
+        _rr_solve(other, cols, vals, w, reg * len(cols), 2)
         delta -= w
         frob += np.dot(delta, delta)
         this[i, :] = w
@@ -212,7 +212,9 @@ class BiasedMF(BiasMFPredictor):
         for epoch, model in enumerate(self._train_iters(current, uctx, ictx)):
             current = model
 
-        _logger.info('trained model in %s', self.timer)
+        _logger.info('trained model in %s (|P|=%f, |Q|=%f)', self.timer,
+                     np.linalg.norm(current.user_matrix, 'fro'),
+                     np.linalg.norm(current.item_matrix, 'fro'))
 
         # unpack and de-Series bias
         gb, ub, ib = bias
@@ -241,8 +243,11 @@ class BiasedMF(BiasMFPredictor):
         _logger.debug('initializing item matrix')
         imat = np.random.randn(n_items, self.features)
         imat /= np.linalg.norm(imat, axis=1).reshape((n_items, 1))
+        _logger.debug('|Q|: %f', np.linalg.norm(imat, 'fro'))
+        _logger.debug('initializing user matrix')
         umat = np.random.randn(n_users, self.features)
         umat /= np.linalg.norm(umat, axis=1).reshape((n_users, 1))
+        _logger.debug('|P|: %f', np.linalg.norm(umat, 'fro'))
 
         return PartialModel(users, items, umat, imat), bias, rmat, trmat
 
@@ -305,12 +310,17 @@ class BiasedMF(BiasMFPredictor):
         else:
             raise ValueError('invalid training method ' + self.method)
 
+        if isinstance(self.regularization, tuple):
+            ureg, ireg = self.regularization
+        else:
+            ureg = ireg = self.regularization
+
         for epoch in self.progress(range(self.iterations), desc='BiasedMF', leave=False):
-            du = train(uctx.N, current.user_matrix, current.item_matrix, self.regularization)
+            du = train(uctx.N, current.user_matrix, current.item_matrix, ureg)
             _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
-            di = train(ictx.N, current.item_matrix, current.user_matrix, self.regularization)
+            di = train(ictx.N, current.item_matrix, current.user_matrix, ireg)
             _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
-            _logger.info('[%s] finished epoch %d (|ΔI|=%.3f, |ΔU|=%.3f)', self.timer, epoch, di, du)
+            _logger.info('[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)', self.timer, epoch, du, di)
             yield current
 
     def predict_for_user(self, user, items, ratings=None):
