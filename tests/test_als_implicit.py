@@ -20,8 +20,12 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
                           'rating': [4.0, 3.0, 5.0, 2.0]})
 
 
-def test_als_basic_build():
-    algo = als.ImplicitMF(20, iterations=10, progress=util.no_progress)
+methods = mark.parametrize('m', ['lu', 'cd'])
+
+
+@methods
+def test_als_basic_build(m):
+    algo = als.ImplicitMF(20, iterations=10, progress=util.no_progress, method=m)
     algo.fit(simple_df)
 
     assert set(algo.user_index_) == set([10, 12, 13])
@@ -62,8 +66,9 @@ def test_als_predict_bad_user():
 
 
 @lktu.wantjit
-def test_als_train_large():
-    algo = als.ImplicitMF(20, iterations=20)
+@methods
+def test_als_train_large(m):
+    algo = als.ImplicitMF(20, iterations=20, method=m)
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
@@ -73,8 +78,9 @@ def test_als_train_large():
     assert algo.item_features_.shape == (ratings.item.nunique(), 20)
 
 
-def test_als_save_load():
-    algo = als.ImplicitMF(20, iterations=5)
+@methods
+def test_als_save_load(m):
+    algo = als.ImplicitMF(20, iterations=5, method=m)
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
