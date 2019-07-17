@@ -1,5 +1,14 @@
 # Release Notes
 
+## 0.8.0 (in progress)
+
+See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/5) for full change list.
+
+### Algorithm Updates
+
+- Added a coordinate descent solver to explicit-feedback ALS and made it the default.  The old
+  LU-based solver is still available with `method='lu'`.
+
 ## 0.7.0
 
 See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/3) for full change list.
