@@ -144,7 +144,9 @@ def _cg_solve(OtOr, X, y, w, epochs):
 
     # compute residuals
     b = X.T @ (y + 1.0)
-    r = b - _cg_a_mult(OtOr, X, y, w)
+    r = _cg_a_mult(OtOr, X, y, w)
+    r *= -1
+    r += b
 
     # compute initial values
     z = iM * r
