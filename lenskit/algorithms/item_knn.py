@@ -239,6 +239,7 @@ class ItemItem(Predictor):
         self.rating_matrix_ = init_rmat
         # create an inverted similarity matrix for efficient scanning
         self._sim_inv_ = smat.transpose()
+        _logger.info('[%s] transposed matrix for optimization', self._timer)
 
         return self
 
@@ -416,7 +417,7 @@ class ItemItem(Predictor):
             iscores[fast_items] = fast_scores
         else:
             # now compute the predictions
-            _logger.debug('user %s: taking the slow path')
+            _logger.debug('user %s: taking the slow path', user)
             agg = _predictors[self.aggregate]
             iscores = agg(self.sim_matrix_.N, len(self.item_index_), (self.min_nbrs, self.nnbrs),
                           rate_v, rated, i_pos)

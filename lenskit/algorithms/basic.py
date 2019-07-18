@@ -342,6 +342,7 @@ class UnratedItemCandidateSelector(CandidateSelector):
     def fit(self, ratings):
         r2 = ratings[['user', 'item']]
         sparse = sparse_ratings(r2)
+        _logger.info('trained unrated candidate selector for %d ratings', sparse.matrix.nnz)
         self.items_ = sparse.items
         self.users_ = sparse.users
         self.user_items_ = sparse.matrix
