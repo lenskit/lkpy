@@ -79,10 +79,9 @@ def _train_matrix_cd(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float)
 
         vals = mat.row_vs(i)
 
-        w = this[i, :]
-        delta = w.copy()
+        w = this[i, :].copy()
         _rr_solve(other, cols, vals, w, reg * len(cols), 2)
-        delta -= w
+        delta = this[i, :] - w
         frob += np.dot(delta, delta)
         this[i, :] = w
 
@@ -300,7 +299,7 @@ class BiasedMF(BiasMFPredictor):
         else:
             self.bias = bias
         self.progress = progress if progress is not None else util.no_progress
-        self._random = rand if rand is not None else np.random.RandomState()
+        self._random = rand
 
     def fit(self, ratings):
         """
