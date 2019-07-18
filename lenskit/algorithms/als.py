@@ -38,14 +38,14 @@ def _rr_solve(X, xis, y, w, reg, epochs):
 
     nr = len(xis)
     nd = len(w)
-    resid = y.copy()
-
-    for i in range(nr):
-        resid[i] -= np.dot(X[xis[i], :], w)
+    Xt = X.T[:, xis]
+    resid = w @ Xt
+    resid *= -1.0
+    resid += y
 
     for e in range(epochs):
         for k in range(nd):
-            xk = X[xis, k]
+            xk = Xt[k, :]
             num = np.dot(xk, resid) - reg * w[k]
             denom = np.dot(xk, xk) + reg
             dw = num / denom
