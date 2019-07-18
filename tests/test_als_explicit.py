@@ -18,9 +18,12 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
                           'user': [10, 12, 10, 13],
                           'rating': [4.0, 3.0, 5.0, 2.0]})
 
+methods = mark.parametrize('m', ['lu', 'cd'])
 
-def test_als_basic_build():
-    algo = als.BiasedMF(20, iterations=10, progress=util.no_progress)
+
+@methods
+def test_als_basic_build(m):
+    algo = als.BiasedMF(20, iterations=10, progress=util.no_progress, method=m)
     algo.fit(simple_df)
 
     assert algo.global_bias_ == approx(simple_df.rating.mean())
@@ -34,8 +37,9 @@ def test_als_basic_build():
     assert algo.n_items == 3
 
 
-def test_als_no_bias():
-    algo = als.BiasedMF(20, iterations=10, bias=None)
+@methods
+def test_als_no_bias(m):
+    algo = als.BiasedMF(20, iterations=10, bias=None, method=m)
     algo.fit(simple_df)
     assert algo.bias is None
 
@@ -51,8 +55,9 @@ def test_als_no_bias():
     assert len(preds) == 1
 
 
-def test_als_predict_basic():
-    algo = als.BiasedMF(20, iterations=10)
+@methods
+def test_als_predict_basic(m):
+    algo = als.BiasedMF(20, iterations=10, method=m)
     algo.fit(simple_df)
 
     assert algo.global_bias_ == approx(simple_df.rating.mean())

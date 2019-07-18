@@ -20,7 +20,7 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
                           'rating': [4.0, 3.0, 5.0, 2.0]})
 
 
-methods = mark.parametrize('m', ['lu', 'cd'])
+methods = mark.parametrize('m', ['lu', 'cg'])
 
 
 @methods
