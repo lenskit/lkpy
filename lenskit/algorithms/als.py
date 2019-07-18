@@ -19,6 +19,12 @@ PartialModel = namedtuple('PartialModel', [
 
 
 @njit
+def _inplace_axpy(a, x, y):
+    for i in range(len(x)):
+        y[i] += a * x[i]
+
+
+@njit
 def _rr_solve(X, xis, y, w, reg, epochs):
     """
     RR1 coordinate descent solver.
@@ -44,7 +50,7 @@ def _rr_solve(X, xis, y, w, reg, epochs):
             denom = np.dot(xk, xk) + reg
             dw = num / denom
             w[k] += dw
-            resid -= dw * xk
+            _inplace_axpy(-dw, xk, resid)
 
 
 @njit(parallel=True, nogil=True)
@@ -149,8 +155,8 @@ def _cg_solve(OtOr, X, y, w, epochs):
         gam = np.dot(r, z)
         Ap = _cg_a_mult(OtOr, X, y, p)
         al = gam / np.dot(p, Ap)
-        w += al * p
-        r -= al * Ap
+        _inplace_axpy(al, p, w)
+        _inplace_axpy(-al, Ap, r)
         z = iM * r
         bet = np.dot(r, z) / gam
         p = z + bet * p

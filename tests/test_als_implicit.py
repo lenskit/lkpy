@@ -115,14 +115,14 @@ def test_als_method_match():
     ratings = lktu.ml_test.ratings
 
     timer = Stopwatch()
-    state = np.random.get_state()
-    lu.fit(ratings)
+    with lktu.rand_seed(42):
+        lu.fit(ratings)
     timer.stop()
     _log.info('fit with LU solver in %s', timer)
 
     timer = Stopwatch()
-    np.random.set_state(state)
-    cg.fit(ratings)
+    with lktu.rand_seed(42):
+        cg.fit(ratings)
     timer.stop()
     _log.info('fit with CG solver in %s', timer)
 

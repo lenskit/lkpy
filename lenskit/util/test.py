@@ -5,6 +5,7 @@ Test utilities for LKPY tests.
 import os
 import os.path
 import logging
+from contextlib import contextmanager
 
 import numpy as np
 from .. import matrix
@@ -39,6 +40,15 @@ def rand_csr(nrows=100, ncols=50, nnz=1000, values=True):
     else:
         vals = None
     return matrix.CSR.from_coo(rows, cols, vals, (nrows, ncols))
+
+
+@contextmanager
+def rand_seed(seed):
+    state = np.random.get_state()
+    try:
+        yield
+    finally:
+        np.random.set_state(state)
 
 
 wantjit = pytest.mark.skipif('NUMBA_DISABLE_JIT' in os.environ,
