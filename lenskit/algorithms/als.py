@@ -39,12 +39,16 @@ def _rr_solve(X, xis, y, w, reg, epochs):
 
     for e in range(epochs):
         for k in range(nd):
-            xk = X[xis, k]
-            num = np.dot(xk, resid) - reg * w[k]
-            denom = np.dot(xk, xk) + reg
+            num = reg * w[k]
+            denom = reg
+            for i in range(nr):
+                xik = X[xis[i], k]
+                num += xik * resid[i]
+                denom += xik * xik
             dw = num / denom
             w[k] += dw
-            resid -= dw * xk
+            for i in range(nr):
+                resid[i] -= dw * X[xis[i], k]
 
 
 @njit(parallel=True, nogil=True)
