@@ -18,7 +18,7 @@ PartialModel = namedtuple('PartialModel', [
 ])
 
 
-@njit(nogil=True)
+@njit
 def _rr_solve(X, xis, y, w, reg, epochs):
     """
     RR1 coordinate descent solver.
@@ -33,20 +33,18 @@ def _rr_solve(X, xis, y, w, reg, epochs):
     nr = len(xis)
     nd = len(w)
     resid = y.copy()
-    Xs = X[xis, :]
 
     for i in range(nr):
-        resid[i] -= np.dot(Xs[i, :], w)
+        resid[i] -= np.dot(X[xis[i], :], w)
 
     for e in range(epochs):
         for k in range(nd):
-            xk = Xs[:, k]
+            xk = X[xis, k]
             num = np.dot(xk, resid) - reg * w[k]
             denom = np.dot(xk, xk) + reg
             dw = num / denom
             w[k] += dw
-            for i in range(nr):
-                resid[i] -= dw * xk[i]
+            resid -= dw * xk
 
 
 @njit(parallel=True, nogil=True)
