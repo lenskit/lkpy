@@ -282,12 +282,14 @@ class BiasedMF(BiasMFPredictor):
         bias(bool or :class:`Bias`): the bias model.  If ``True``, fits a :class:`Bias` with
             damping ``damping``.
         method(str): the solver to use (see above).
+        rng(function):
+            RNG function compatible with :fun:`numpy.random.randn` for initializing matrices.
         progress: a :func:`tqdm.tqdm`-compatible progress bar function
     """
     timer = None
 
     def __init__(self, features, *, iterations=20, reg=0.1, damping=5, bias=True, method='cd',
-                 progress=None):
+                 rand=np.random.randn, progress=None):
         self.features = features
         self.iterations = iterations
         self.regularization = reg
@@ -298,6 +300,7 @@ class BiasedMF(BiasMFPredictor):
         else:
             self.bias = bias
         self.progress = progress if progress is not None else util.no_progress
+        self._random = rand if rand is not None else np.random.RandomState()
 
     def fit(self, ratings):
         """
@@ -351,11 +354,11 @@ class BiasedMF(BiasMFPredictor):
         trmat = rmat.transpose()
 
         _logger.debug('initializing item matrix')
-        imat = np.random.randn(n_items, self.features)
+        imat = self._random(n_items, self.features)
         imat /= np.linalg.norm(imat, axis=1).reshape((n_items, 1))
         _logger.debug('|Q|: %f', np.linalg.norm(imat, 'fro'))
         _logger.debug('initializing user matrix')
-        umat = np.random.randn(n_users, self.features)
+        umat = self._random(n_users, self.features)
         umat /= np.linalg.norm(umat, axis=1).reshape((n_users, 1))
         _logger.debug('|P|: %f', np.linalg.norm(umat, 'fro'))
 

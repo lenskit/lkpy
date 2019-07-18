@@ -137,20 +137,20 @@ def test_als_save_load():
 
 @lktu.wantjit
 def test_als_method_match():
-    lu = als.BiasedMF(20, iterations=15, reg=(2, 0.001), method='lu')
-    cd = als.BiasedMF(20, iterations=20, reg=(2, 0.001), method='cd')
+    lu = als.BiasedMF(20, iterations=15, reg=(2, 0.001), method='lu',
+                      rand=np.random.RandomState(42).randn)
+    cd = als.BiasedMF(20, iterations=20, reg=(2, 0.001), method='cd',
+                      rand=np.random.RandomState(42).randn)
 
     ratings = lktu.ml_test.ratings
 
     timer = Stopwatch()
-    with lktu.rand_seed(42):
-        lu.fit(ratings)
+    lu.fit(ratings)
     timer.stop()
     _log.info('fit with LU solver in %s', timer)
 
     timer = Stopwatch()
-    with lktu.rand_seed(42):
-        cd.fit(ratings)
+    cd.fit(ratings)
     timer.stop()
     _log.info('fit with CD solver in %s', timer)
 
