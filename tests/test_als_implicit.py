@@ -80,7 +80,7 @@ def test_als_train_large(m):
 
 @methods
 def test_als_save_load(m):
-    algo = als.ImplicitMF(20, iterations=5, method=m)
+    algo = als.ImplicitMF(20, iterations=5, reg=(2, 1), method=m)
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 

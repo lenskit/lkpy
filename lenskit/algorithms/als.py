@@ -517,10 +517,15 @@ class ImplicitMF(MFPredictor):
         else:
             raise ValueError('unknown solver ' + self.method)
 
+        if isinstance(self.reg, tuple):
+            ureg, ireg = self.reg
+        else:
+            ureg = ireg = self.reg
+
         for epoch in self.progress(range(self.iterations), desc='ImplicitMF', leave=False):
-            du = train(uctx.N, current.user_matrix, current.item_matrix, self.reg)
+            du = train(uctx.N, current.user_matrix, current.item_matrix, ureg)
             _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
-            di = train(ictx.N, current.item_matrix, current.user_matrix, self.reg)
+            di = train(ictx.N, current.item_matrix, current.user_matrix, ireg)
             _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
             _logger.info('[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)', self.timer, epoch, du, di)
             yield current
