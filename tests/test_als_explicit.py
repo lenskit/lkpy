@@ -145,14 +145,12 @@ def test_als_method_match():
     ratings = lktu.ml_test.ratings
 
     timer = Stopwatch()
-    with lktu.random_seed(42):
-        lu.fit(ratings)
+    lu.fit(ratings)
     timer.stop()
     _log.info('fit with LU solver in %s', timer)
 
     timer = Stopwatch()
-    with lktu.random_seed(42):
-        cd.fit(ratings)
+    cd.fit(ratings)
     timer.stop()
     _log.info('fit with CD solver in %s', timer)
 
