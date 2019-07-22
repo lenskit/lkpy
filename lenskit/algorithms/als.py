@@ -477,12 +477,14 @@ class ImplicitMF(MFPredictor):
     """
     timer = None
 
-    def __init__(self, features, *, iterations=20, reg=0.1, weight=40, method='cg', progress=None):
+    def __init__(self, features, *, iterations=20, reg=0.1, weight=40, method='cg',
+                 rand=np.random.randn, progress=None):
         self.features = features
         self.iterations = iterations
         self.reg = reg
         self.weight = weight
         self.method = method
+        self._random = rand
         self.progress = progress if progress is not None else util.no_progress
 
     def fit(self, ratings):
@@ -544,9 +546,9 @@ class ImplicitMF(MFPredictor):
         rmat.values *= self.weight
         trmat = rmat.transpose()
 
-        imat = np.random.randn(n_items, self.features) * 0.01
+        imat = self._random(n_items, self.features) * 0.01
         imat = np.square(imat)
-        umat = np.random.randn(n_users, self.features) * 0.01
+        umat = self._random(n_users, self.features) * 0.01
         umat = np.square(umat)
 
         return PartialModel(users, items, umat, imat), rmat, trmat
