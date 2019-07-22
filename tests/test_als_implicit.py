@@ -6,10 +6,12 @@ from lenskit.algorithms import als
 
 import pandas as pd
 import numpy as np
+from scipy import stats
 
-from pytest import mark
+from pytest import mark, approx
 
 import lenskit.util.test as lktu
+from lenskit.util import Stopwatch
 
 _log = logging.getLogger(__name__)
 
@@ -18,8 +20,12 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
                           'rating': [4.0, 3.0, 5.0, 2.0]})
 
 
-def test_als_basic_build():
-    algo = als.ImplicitMF(20, iterations=10, progress=util.no_progress)
+methods = mark.parametrize('m', ['lu', 'cg'])
+
+
+@methods
+def test_als_basic_build(m):
+    algo = als.ImplicitMF(20, iterations=10, progress=util.no_progress, method=m)
     algo.fit(simple_df)
 
     assert set(algo.user_index_) == set([10, 12, 13])
@@ -60,8 +66,9 @@ def test_als_predict_bad_user():
 
 
 @lktu.wantjit
-def test_als_train_large():
-    algo = als.ImplicitMF(20, iterations=20)
+@methods
+def test_als_train_large(m):
+    algo = als.ImplicitMF(20, iterations=20, method=m)
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
@@ -71,8 +78,9 @@ def test_als_train_large():
     assert algo.item_features_.shape == (ratings.item.nunique(), 20)
 
 
-def test_als_save_load():
-    algo = als.ImplicitMF(20, iterations=5)
+@methods
+def test_als_save_load(m):
+    algo = als.ImplicitMF(20, iterations=5, reg=(2, 1), method=m)
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
@@ -99,6 +107,55 @@ def test_als_train_large_noratings():
     assert algo.item_features_.shape == (ratings.item.nunique(), 20)
 
 
+@lktu.wantjit
+def test_als_method_match():
+    lu = als.ImplicitMF(20, iterations=15, method='lu',
+                        rand=np.random.RandomState(42).randn)
+    cg = als.ImplicitMF(20, iterations=15, method='cg',
+                        rand=np.random.RandomState(42).randn)
+
+    ratings = lktu.ml_test.ratings
+
+    timer = Stopwatch()
+    lu.fit(ratings)
+    timer.stop()
+    _log.info('fit with LU solver in %s', timer)
+
+    timer = Stopwatch()
+    cg.fit(ratings)
+    timer.stop()
+    _log.info('fit with CG solver in %s', timer)
+
+    preds = []
+
+    with lktu.rand_seed(42):
+        for u in np.random.choice(ratings.user.unique(), 10, replace=False):
+            items = np.random.choice(ratings.item.unique(), 15, replace=False)
+            lu_preds = lu.predict_for_user(u, items)
+            cd_preds = cg.predict_for_user(u, items)
+            diff = lu_preds - cd_preds
+            adiff = np.abs(diff)
+            _log.info('user %s diffs: L2 = %f, min = %f, med = %f, max = %f, 90%% = %f', u,
+                    np.linalg.norm(diff, 2),
+                    np.min(adiff), np.median(adiff), np.max(adiff), np.quantile(adiff, 0.9))
+
+            preds.append(pd.DataFrame({
+                'user': u,
+                'item': items,
+                'lu': lu_preds,
+                'cg': cd_preds,
+                'adiff': adiff
+            }))
+            _log.info('user %s tau: %s', u, stats.kendalltau(lu_preds, cd_preds))
+
+    preds = pd.concat(preds, ignore_index=True)
+    _log.info('LU preds:\n%s', preds.lu.describe())
+    _log.info('CD preds:\n%s', preds.cg.describe())
+    _log.info('overall differences:\n%s', preds.adiff.describe())
+    # there are differences. our check: the 90% are reasonable
+    assert np.quantile(adiff, 0.9) <= 0.3
+
+
 @mark.slow
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
@@ -109,25 +166,32 @@ def test_als_implicit_batch_accuracy():
 
     ratings = lktu.ml100k.ratings
 
-    algo = als.ImplicitMF(25, iterations=20)
+    cg_algo = als.ImplicitMF(25, iterations=20, method='cg')
+    lu_algo = als.ImplicitMF(25, iterations=20, method='lu')
 
     def eval(train, test):
-        _log.info('running training')
         train['rating'] = train.rating.astype(np.float_)
-        algo.fit(train)
+        _log.info('training CG')
+        cg_algo.fit(train)
+        _log.info('training LU')
+        lu_algo.fit(train)
         users = test.user.unique()
         _log.info('testing %d users', len(users))
         candidates = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, users, 100, candidates)
-        return recs
+        cg_recs = batch.recommend(cg_algo, users, 100, candidates, n_jobs=2)
+        lu_recs = batch.recommend(lu_algo, users, 100, candidates, n_jobs=2)
+        return pd.concat({'CG': cg_recs, 'LU': lu_recs}, names=['Method']).reset_index('Method')
 
     folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
     test = pd.concat(te for (tr, te) in folds)
-    recs = pd.concat(eval(train, test) for (train, test) in folds)
+    recs = pd.concat((eval(train, test) for (train, test) in folds), ignore_index=True)
 
     _log.info('analyzing recommendations')
     rla = topn.RecListAnalysis()
     rla.add_metric(topn.ndcg)
     results = rla.compute(recs, test)
-    _log.info('nDCG for users is %.4f', results.ndcg.mean())
-    assert results.ndcg.mean() > 0
+    results = results.groupby('Method')['ndcg'].mean()
+    _log.info('LU nDCG for users is %.4f', results.loc['LU'].mean())
+    _log.info('CG nDCG for users is %.4f', results.loc['CG'].mean())
+    assert all(results > 0.28)
+    assert results.loc['LU'] == approx(results.loc['CG'], rel=0.05)
