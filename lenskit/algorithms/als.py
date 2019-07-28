@@ -136,9 +136,10 @@ def _cg_solve(OtOr, X, y, w, epochs):
     nf = X.shape[1]
     # compute inverse of the Jacobi preconditioner
     Ad = np.diag(OtOr).copy()
-    for k in range(nf):
-        Xk = X[:, k]
-        Ad[k] += np.dot(Xk, y * Xk)
+    for i in range(X.shape[0]):
+        for k in range(nf):
+            Ad[k] += X[i, k] * y[i] * X[i, k]
+
     iM = np.reciprocal(Ad)
 
     # compute residuals
