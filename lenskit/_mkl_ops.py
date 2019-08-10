@@ -95,10 +95,10 @@ class SparseM:
         m = SparseM()
         _logger.debug('creating MKL matrix 0x%08x from %dx%d CSR',
                       id(m), csr.nrows, csr.ncols)
-        _sp = _mkl_ffi.cast('int*', sp.ctypes.data)
-        _ep = _mkl_ffi.cast('int*', ep.ctypes.data)
-        _cols = _mkl_ffi.cast('int*', cols.ctypes.data)
-        _vals = _mkl_ffi.cast('double*', vals.ctypes.data)
+        _sp = _mkl_ffi.from_buffer('int*', sp)
+        _ep = _mkl_ffi.from_buffer('int*', ep)
+        _cols = _mkl_ffi.from_buffer('int*', cols)
+        _vals = _mkl_ffi.from_buffer('double*', vals)
         rv = _mkl_lib.mkl_sparse_d_create_csr(m.h_ptr, 0, csr.nrows, csr.ncols,
                                               _sp, _ep, _cols, _vals)
         _mkl_check_return(rv, 'mkl_sparse_d_create_csr')
