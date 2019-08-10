@@ -40,9 +40,24 @@ except OSError:
     _mkl_lib = None
 
 
+_mkl_errors = [
+    'SPARSE_STATUS_SUCCESS',
+    'SPARSE_STATUS_NOT_INITIALIZED',
+    'SPARSE_STATUS_ALLOC_FAILED',
+    'SPARSE_STATUS_INVALID_VALUE',
+    'SPARSE_STATUS_EXECUTION_FAILED',
+    'SPARSE_STATUS_INTERNAL_ERROR',
+    'SPARSE_STATUS_NOT_SUPPORTED'
+]
+
+
 def _mkl_check_return(rv, call='<unknown>'):
     if rv:
-        raise RuntimeError('MKL call {} failed with code {}'.format(call, rv))
+        if rv >= 0 and rv < len(_mkl_errors):
+            desc = _mkl_errors[rv]
+        else:
+            desc = 'unknown'
+        raise RuntimeError('MKL call {} failed with code {} ({})'.format(call, rv, desc))
 
 
 def _mkl_basic_descr():
