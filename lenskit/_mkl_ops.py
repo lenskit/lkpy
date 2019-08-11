@@ -12,8 +12,12 @@ from .matrix import CSR
 _logger = logging.getLogger(__name__)
 __dir = pathlib.Path(__file__).parent
 
+
 def _compile_mkl_ops():
     from distutils import ccompiler
+    if not hasattr(os, 'fspath'):
+        raise ImportError('_mkl_ops only works on Python 3.6 and newer')
+
     cc = ccompiler.new_compiler()
 
     mkl_src = __dir / 'mkl_ops.c'
@@ -35,9 +39,13 @@ def _compile_mkl_ops():
         i_dirs.append(os.fspath(lib / 'include'))
         l_dirs.append(os.fspath(lib / 'lib'))
 
-    cc.compile([os.fspath(mkl_src)], include_dirs=i_dirs)
-    cc.link_shared_object(mkl_obj, os.fspath(mkl_so), libraries=['mkl_rt'],
-                          library_dirs=l_dirs)
+    try:
+        cc.compile([os.fspath(mkl_src)], include_dirs=i_dirs)
+        cc.link_shared_object(mkl_obj, os.fspath(mkl_so), libraries=['mkl_rt'],
+                              library_dirs=l_dirs)
+    except (ccompiler.CompileError, ccompiler.LinkError) as e:
+        _logger.error('could not compile MKL support code:\n%s', e)
+        raise ImportError('_mkl_ops compile error')
 
     return mkl_so
 
