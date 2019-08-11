@@ -32,7 +32,7 @@ def mkl_ops():
     """
     try:
         from . import _mkl_ops
-        if _mkl_ops._mkl_lib:
+        if _mkl_ops._mkl_op_lib:
             return _mkl_ops
         else:
             return None
