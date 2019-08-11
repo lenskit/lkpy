@@ -3,6 +3,29 @@ Algorithm Implementation Tips
 
 Implementing algorithms is fun, but there are a few things that are good to keep in mind.
 
+In general, development follows the following:
+
+1. Correct
+2. Clear
+3. Fast
+
+In that order.  Further, we always want LensKit to be *usable* in an easy fashion.  Code
+implementing algorithms, however, may be quite complex in order to achieve good performance.
+
+Performance
+-----------
+
+We use Numba to optimize critical code paths and provide parallelism in a number of cases,
+such as ALS training.  See the ALS source code for examples.
+
+We also directly use MKL sparse matrix routines when available for some operations.  Whenever
+this is done in the main LensKit code base, however, we also provide fallback implementations
+when the MKL is not available.  The k-NN recommenders both demonstrate different versions of
+this.  The ``_mkl_ops`` module exposes MKL operations; we implement them through C wrappers in
+the ``mkl_ops.c`` file, that are then called through FFI.  This extra layer is because the raw
+MKL calls are quite complex to call via FFI, and are not particularly amenable to use with Numba.
+We re-expose simplified interfaces that are also usable with Numba.
+
 Pickling and Sharing
 --------------------
 
