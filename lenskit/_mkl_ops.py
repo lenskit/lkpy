@@ -98,11 +98,14 @@ class SparseM:
             raise RuntimeError('MKL sparse export failed')
         _logger.debug('exporting matrix with shape (%d, %d)', rvs.nrows, rvs.ncols)
 
-        sp = np.frombuffer(_mkl_op_ffi.buffer(rvs.row_sp, rvs.nrows * _mkl_op_ffi.sizeof('int')), 'intc')
-        ep = np.frombuffer(_mkl_op_ffi.buffer(rvs.row_ep, rvs.nrows * _mkl_op_ffi.sizeof('int')), 'intc')
+        rpsize = rvs.nrows * _mkl_op_ffi.sizeof('int')
+        sp = np.frombuffer(_mkl_op_ffi.buffer(rvs.row_sp, rpsize), 'intc')
+        ep = np.frombuffer(_mkl_op_ffi.buffer(rvs.row_ep, rpsize), 'intc')
         end = ep[-1]
-        cis = np.frombuffer(_mkl_op_ffi.buffer(rvs.colinds, end * _mkl_op_ffi.sizeof('int')), 'intc')
-        vs = np.frombuffer(_mkl_op_ffi.buffer(rvs.values, end * _mkl_op_ffi.sizeof('double')), 'float64')
+        cisize = end * _mkl_op_ffi.sizeof('int')
+        cis = np.frombuffer(_mkl_op_ffi.buffer(rvs.colinds, cisize), 'intc')
+        vsize = end * _mkl_op_ffi.sizeof('double')
+        vs = np.frombuffer(_mkl_op_ffi.buffer(rvs.values, vsize), 'float64')
         sizes = ep - sp
         nnz = np.sum(sizes)
 
