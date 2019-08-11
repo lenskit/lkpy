@@ -31,7 +31,7 @@ jobs:
     
   - script: |
       source activate lkpy
-      python3 setup.py build_helper
+      python3 setup.py build_helper || exit 2
       python3 setup.py build
     displayName: 'Build LKPY'
 

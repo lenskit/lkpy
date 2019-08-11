@@ -11,6 +11,7 @@ dependencies:
 - fastparquet
 - python-snappy
 - numba>=0.38
+- mkl-devel
 - cffi
 - pyarrow
 - joblib
