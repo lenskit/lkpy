@@ -23,6 +23,7 @@ jobs:
   - script: |
       call activate lkpy
       python -V
+      python setup.py build_helper
       python setup.py build
     displayName: 'Build LKPY'
 

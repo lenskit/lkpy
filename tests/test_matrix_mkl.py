@@ -1,10 +1,18 @@
+import os
 import numpy as np
 import scipy.sparse as sps
 
-from pytest import mark, approx
+from pytest import mark, approx, skip
 
 import lenskit.matrix as lm
 mkl_ops = lm.mkl_ops()
+
+
+def test_mkl_available():
+    if 'CONDA_PREFIX' in os.environ:
+        assert mkl_ops is not None
+    else:
+        skip('only require MKL availability in Conda')
 
 
 @mark.skipif(mkl_ops is None, reason='MKL not available')

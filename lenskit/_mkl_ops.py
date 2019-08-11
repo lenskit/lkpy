@@ -13,49 +13,18 @@ _logger = logging.getLogger(__name__)
 __dir = pathlib.Path(__file__).parent
 
 
-def _compile_mkl_ops():
-    from distutils import ccompiler
-    if not hasattr(os, 'fspath'):
-        raise ImportError('_mkl_ops only works on Python 3.6 and newer')
+if not hasattr(os, 'fspath'):
+    raise ImportError('_mkl_ops requires Python 3.6 or newer')
 
-    cc = ccompiler.new_compiler()
-
-    mkl_src = __dir / 'mkl_ops.c'
-    mkl_obj = cc.object_filenames([os.fspath(mkl_src)])
-    mkl_so = cc.shared_object_filename('mkl_ops')
-    mkl_so = __dir / mkl_so
-
-    if mkl_so.exists():
-        src_mt = mkl_src.stat().st_mtime
-        so_mt = mkl_so.stat().st_mtime
-        if so_mt > src_mt:
-            return mkl_so
-
-    _logger.info('compiling MKL support library')
-    i_dirs = []
-    l_dirs = []
-    if os.name == 'nt':
-        lib = pathlib.Path(os.environ['CONDA_PREFIX']) / 'Library'
-        i_dirs.append(os.fspath(lib / 'include'))
-        l_dirs.append(os.fspath(lib / 'lib'))
-
-    try:
-        cc.compile([os.fspath(mkl_src)], include_dirs=i_dirs)
-        cc.link_shared_object(mkl_obj, os.fspath(mkl_so), libraries=['mkl_rt'],
-                              library_dirs=l_dirs)
-    except (ccompiler.CompileError, ccompiler.LinkError) as e:
-        _logger.error('could not compile MKL support code:\n%s', e)
-        raise ImportError('_mkl_ops compile error')
-
-    return mkl_so
-
-
+__cc = ccompiler.new_compiler()
+_mkl_so = __dir / __cc.shared_object_filename('mkl_ops')
 __mkl_defs = (__dir / 'mkl_ops.h').read_text()
 _mkl_op_ffi = cffi.FFI()
 _mkl_op_ffi.cdef(__mkl_defs.replace('EXPORT ', ''))
-_mkl_so = _compile_mkl_ops()
-_mkl_op_lib = _mkl_op_ffi.dlopen(os.fspath(_mkl_so))
-
+try:
+    _mkl_op_lib = _mkl_op_ffi.dlopen(os.fspath(_mkl_so))
+except OSError:
+    raise ImportError('_mkl_ops cannot load helper')
 
 _mkl_errors = [
     'SPARSE_STATUS_SUCCESS',

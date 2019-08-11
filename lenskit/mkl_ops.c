@@ -2,11 +2,11 @@
 
 #include <mkl_spblas.h>
 
-// #ifdef WIN32
+#ifdef _WIN32
 #define EXPORT __declspec( dllexport )
-// #else
-// #define EXPORT
-// #endif
+#else
+#define EXPORT
+#endif
 
 #include "mkl_ops.h"
 
@@ -35,7 +35,7 @@ lk_mkl_spfree(void *matrix)
 EXPORT int
 lk_mkl_sporder(void* matrix)
 {
-    mkl_sparse_order(matrix);
+    return mkl_sparse_order(matrix);
 }
 
 EXPORT int
