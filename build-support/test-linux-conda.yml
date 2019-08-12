@@ -34,6 +34,7 @@ jobs:
 
   - script: |
       source activate lkpy
+      echo C compiler: $CC
       mkdir -p build
       python3 setup.py build_helper || exit 2
       python3 setup.py build
