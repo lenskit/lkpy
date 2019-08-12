@@ -380,7 +380,10 @@ class ItemItem(Predictor):
         m_nbrs = self.save_nbrs
         if m_nbrs is None or m_nbrs < 0:
             m_nbrs = 0
-        s_blocks = _mkl_sim_blocks(rmat.transpose().N, self.min_sim, m_nbrs)
+        rmat = rmat.transpose()
+        _logger.debug('[%s] transposed, memory use %s', self._timer, util.max_memory())
+        s_blocks = _mkl_sim_blocks(rmat.N, self.min_sim, m_nbrs)
+        _logger.debug('[%s] computed blocks, memory use %s', self._timer, util.max_memory())
         # blocks may be in any order, fix that
         s_blocks.sort(key=lambda b: b[0])
         s_blocks = [matrix.CSR(N=b) for (bi, b) in s_blocks]
