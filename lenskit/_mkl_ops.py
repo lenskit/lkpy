@@ -79,6 +79,7 @@ class SparseM:
         if not m.ptr:
             raise RuntimeError('MKL matrix creation failed')
 
+        m._csr = csr  # save the CSR matrix to ensure it oulives the SparseH
         return m
 
     def __del__(self):
