@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import scipy.sparse as sps
+import cffi
 
 from pytest import mark, approx, skip
 
@@ -11,6 +12,7 @@ mkl_ops = lm.mkl_ops()
 def test_mkl_available():
     if 'CONDA_PREFIX' in os.environ:
         assert mkl_ops is not None
+        assert mkl_ops.clib is not None
     else:
         skip('only require MKL availability in Conda')
 

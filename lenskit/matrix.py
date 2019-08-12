@@ -32,7 +32,7 @@ def mkl_ops():
     """
     try:
         from . import _mkl_ops
-        if _mkl_ops._mkl_op_lib:
+        if _mkl_ops.clib:
             return _mkl_ops
         else:
             return None
@@ -48,17 +48,20 @@ def _csr_delegate(name):
 
 
 @jitclass({
-    'nrows': n.int32,
-    'ncols': n.int32,
-    'nnz': n.int32,
-    'rowptrs': n.int32[::1],
-    'colinds': n.int32[::1],
-    'values': n.optional(n.float64[::1])
+    'nrows': n.intc,
+    'ncols': n.intc,
+    'nnz': n.intc,
+    'rowptrs': n.intc[::1],
+    'colinds': n.intc[::1],
+    'values': n.float64[::1]
 })
 class _CSR:
     """
     Internal implementation class for :py:class:`CSR`. If you work with CSRs from Numba,
     you will use this.
+
+    Note that the ``values`` array is always present (unlike the Python shim), but is
+    zero-length if no values are present.  This eases Numba type-checking.
     """
     def __init__(self, nrows, ncols, nnz, ptrs, inds, vals):
         self.nrows = nrows
@@ -66,7 +69,10 @@ class _CSR:
         self.nnz = nnz
         self.rowptrs = ptrs
         self.colinds = inds
-        self.values = vals
+        if vals is not None:
+            self.values = vals
+        else:
+            self.values = np.zeros(0)
 
     def row(self, row):
         sp = self.rowptrs[row]
@@ -74,7 +80,7 @@ class _CSR:
 
         v = np.zeros(self.ncols)
         cols = self.colinds[sp:ep]
-        if self.values is None:
+        if self.values.size == 0:
             v[cols] = 1
         else:
             v[cols] = self.values[sp:ep]
@@ -96,13 +102,13 @@ class _CSR:
         sp = self.rowptrs[row]
         ep = self.rowptrs[row + 1]
 
-        if self.values is None:
+        if self.values.size == 0:
             return np.full(ep - sp, 1.0)
         else:
             return self.values[sp:ep]
 
     def rowinds(self):
-        ris = np.zeros(self.nnz, np.int32)
+        ris = np.zeros(self.nnz, np.intc)
         for i in range(self.nrows):
             sp, ep = self.row_extent(i)
             ris[sp:ep] = i
@@ -159,10 +165,10 @@ class CSR:
         assert len(row_nnzs) == nrows
         nnz = np.sum(row_nnzs)
 
-        rowptrs = np.zeros(nrows + 1, dtype=np.int32)
+        rowptrs = np.zeros(nrows + 1, dtype=np.intc)
         rowptrs[1:] = np.cumsum(row_nnzs)
 
-        colinds = np.full(nnz, -1, dtype=np.int32)
+        colinds = np.full(nnz, -1, dtype=np.intc)
         values = np.full(nnz, np.nan)
 
         return cls(nrows, ncols, nnz, rowptrs, colinds, values)
@@ -190,8 +196,8 @@ class CSR:
         assert len(cols) == nnz
         assert vals is None or len(vals) == nnz
 
-        rowptrs = np.zeros(nrows + 1, dtype=np.int32)
-        align = np.full(nnz, -1, dtype=np.int32)
+        rowptrs = np.zeros(nrows + 1, dtype=np.intc)
+        align = np.full(nnz, -1, dtype=np.intc)
 
         _csr_align(rows, nrows, rowptrs, align)
 
@@ -214,10 +220,10 @@ class CSR:
         """
         if not sps.isspmatrix_csr(mat):
             mat = mat.tocsr(copy=copy)
-        rp = np.require(mat.indptr, np.int32, 'C')
+        rp = np.require(mat.indptr, np.intc, 'C')
         if copy and rp is mat.indptr:
             rp = rp.copy()
-        cs = np.require(mat.indices, np.int32, 'C')
+        cs = np.require(mat.indices, np.intc, 'C')
         if copy and cs is mat.indices:
             cs = cs.copy()
         vs = mat.data.copy() if copy else mat.data
@@ -245,7 +251,15 @@ class CSR:
     nnz = _csr_delegate('nnz')
     rowptrs = _csr_delegate('rowptrs')
     colinds = _csr_delegate('colinds')
-    values = _csr_delegate('values')
+
+
+    @property
+    def values(self):
+        if self.N.values.size:
+            return self.N.values
+        else:
+            return None
+
 
     @values.setter
     def values(self, vs: np.ndarray):
@@ -369,8 +383,8 @@ class CSR:
         """
 
         rowinds = self.rowinds()
-        align = np.empty(self.nnz, dtype=np.int32)
-        colptrs = np.zeros(self.ncols + 1, dtype=np.int32)
+        align = np.empty(self.nnz, dtype=np.intc)
+        colptrs = np.zeros(self.ncols + 1, dtype=np.intc)
 
         _csr_align(self.colinds, self.ncols, colptrs, align)
 
@@ -399,7 +413,7 @@ class CSR:
         self.N = _CSR(nrows, ncols, nnz, rps, cis, vs)
 
 
-@njit(n.void(n.intc, n.int32[:], n.int32[:], n.double[:]),
+@njit(n.void(n.intc, n.intc[:], n.intc[:], n.double[:]),
       parallel=True, nogil=True)
 def _csr_sort(nrows, rowptrs, colinds, values):
     assert len(rowptrs) > nrows
@@ -445,7 +459,7 @@ def _unit_rows(csr: _CSR):
 
 @njit(nogil=True)
 def _csr_align(rowinds, nrows, rowptrs, align):
-    rcts = np.zeros(nrows, dtype=np.int32)
+    rcts = np.zeros(nrows, dtype=np.intc)
     for r in rowinds:
         rcts[r] += 1
 
@@ -476,8 +490,8 @@ def sparse_ratings(ratings, scipy=False):
     _logger.debug('creating matrix with %d ratings for %d items by %d users',
                   len(ratings), len(iidx), len(uidx))
 
-    row_ind = uidx.get_indexer(ratings.user).astype(np.int32)
-    col_ind = iidx.get_indexer(ratings.item).astype(np.int32)
+    row_ind = uidx.get_indexer(ratings.user).astype(np.intc)
+    col_ind = iidx.get_indexer(ratings.item).astype(np.intc)
 
     if 'rating' in ratings.columns:
         vals = np.require(ratings.rating.values, np.float64)

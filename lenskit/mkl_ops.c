@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdint.h>
 
 #include <mkl_spblas.h>
 
@@ -8,10 +9,13 @@
 #define EXPORT
 #endif
 
+#define H(p) ((lk_mh_t) (p))
+#define MP(h) ((sparse_matrix_t) (h))
+
 #include "mkl_ops.h"
 
 
-EXPORT void*
+EXPORT lk_mh_t
 lk_mkl_spcreate(int nrows, int ncols, int *rowptrs, int *colinds, double *values)
 {
     sparse_matrix_t matrix;
@@ -20,41 +24,57 @@ lk_mkl_spcreate(int nrows, int ncols, int *rowptrs, int *colinds, double *values
     rv = mkl_sparse_d_create_csr(&matrix, SPARSE_INDEX_BASE_ZERO, nrows, ncols, 
                                  rowptrs, rowptrs + 1, colinds, values);
     if (rv) {
-        return NULL;
+        return H(NULL);
     } else {
-        return matrix;
+        return H(matrix);
+    }
+}
+
+EXPORT lk_mh_t
+lk_mkl_spsubset(int rsp, int rep, int ncols, int *rowptrs, int *colinds, double *values)
+{
+    sparse_matrix_t matrix;
+    sparse_status_t rv;
+    int nrows = rep - rsp;
+
+    rv = mkl_sparse_d_create_csr(&matrix, SPARSE_INDEX_BASE_ZERO, nrows, ncols, 
+                                 rowptrs + rsp, rowptrs + rsp + 1, colinds, values);
+    if (rv) {
+        return H(NULL);
+    } else {
+        return H(matrix);
     }
 }
 
 EXPORT int
-lk_mkl_spfree(void *matrix)
+lk_mkl_spfree(lk_mh_t matrix)
 {
-    return mkl_sparse_destroy(matrix);
+    return mkl_sparse_destroy(MP(matrix));
 }
 
 EXPORT int
-lk_mkl_sporder(void* matrix)
+lk_mkl_sporder(lk_mh_t matrix)
 {
-    return mkl_sparse_order(matrix);
+    return mkl_sparse_order(MP(matrix));
 }
 
 EXPORT int
-lk_mkl_spmv(double alpha, void* matrix, double *x, double beta, double *y)
+lk_mkl_spmv(double alpha, lk_mh_t matrix, double *x, double beta, double *y)
 {
     struct matrix_descr descr = {
         SPARSE_MATRIX_TYPE_GENERAL, 0, 0
     };
-    return mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE, alpha, matrix, descr, x, beta, y);
+    return mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE, alpha, MP(matrix), descr, x, beta, y);
 }
 
 EXPORT struct lk_csr
-lk_mkl_spexport(void* matrix)
+lk_mkl_spexport(lk_mh_t matrix)
 {
     struct lk_csr csr;
     sparse_status_t rv;
     sparse_index_base_t idx;
 
-    rv = mkl_sparse_d_export_csr(matrix, &idx, &csr.nrows, &csr.ncols,
+    rv = mkl_sparse_d_export_csr(MP(matrix), &idx, &csr.nrows, &csr.ncols,
                                  &csr.row_sp, &csr.row_ep, &csr.colinds, &csr.values);
     if (rv) {
         csr.nrows = -1;
@@ -63,17 +83,64 @@ lk_mkl_spexport(void* matrix)
     return csr;
 }
 
-EXPORT void*
-lk_mkl_spsyrk(void* matrix)
+EXPORT lk_mh_t
+lk_mkl_spsyrk(lk_mh_t matrix)
 {
     sparse_matrix_t out;
     sparse_status_t rv;
 
-    rv = mkl_sparse_syrk(SPARSE_OPERATION_TRANSPOSE, matrix, &out);
+    rv = mkl_sparse_syrk(SPARSE_OPERATION_TRANSPOSE, MP(matrix), &out);
 
     if (rv) {
-        return NULL;
+        return H(NULL);
     } else {
-        return out;
+        return H(out);
     }
+}
+
+
+/* Pointer-based export interface for Numba. */
+EXPORT void* lk_mkl_spexport_p(lk_mh_t matrix)
+{
+    struct lk_csr *ep = malloc(sizeof(struct lk_csr));
+    if (!ep) return NULL;
+
+    *ep = lk_mkl_spexport(matrix);
+    return ep;
+}
+
+EXPORT void lk_mkl_spe_free(void* ep)
+{
+    free(ep);
+}
+
+EXPORT int lk_mkl_spe_nrows(void* ep)
+{
+    struct lk_csr *csr = (struct lk_csr*) ep;
+    return csr->nrows;
+}
+EXPORT int lk_mkl_spe_ncols(void* ep)
+{
+    struct lk_csr *csr = (struct lk_csr*) ep;
+    return csr->ncols;
+}
+EXPORT int* lk_mkl_spe_row_sp(void* ep)
+{
+    struct lk_csr *csr = (struct lk_csr*) ep;
+    return csr->row_sp;
+}
+EXPORT int* lk_mkl_spe_row_ep(void* ep)
+{
+    struct lk_csr *csr = (struct lk_csr*) ep;
+    return csr->row_ep;
+}
+EXPORT int* lk_mkl_spe_colinds(void* ep)
+{
+    struct lk_csr *csr = (struct lk_csr*) ep;
+    return csr->colinds;
+}
+EXPORT double* lk_mkl_spe_values(void* ep)
+{
+    struct lk_csr *csr = (struct lk_csr*) ep;
+    return csr->values;
 }
