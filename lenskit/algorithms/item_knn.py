@@ -294,17 +294,23 @@ class ItemItem(Predictor):
         # 2. Compute similarities with pairwise dot products
         self._timer = util.Stopwatch()
 
+        _logger.debug('[%s] beginning fit, memory use %s', self._timer, util.max_memory())
+
         init_rmat, users, items = matrix.sparse_ratings(ratings)
         n_items = len(items)
         _logger.info('[%s] made sparse matrix for %d items (%d ratings from %d users)',
                      self._timer, len(items), init_rmat.nnz, len(users))
+        _logger.debug('[%s] made matrix, memory use %s', self._timer, util.max_memory())
 
         rmat, item_means = self._mean_center(ratings, init_rmat, items)
+        _logger.debug('[%s] centered, memory use %s', self._timer, util.max_memory())
 
         rmat = self._normalize(rmat)
+        _logger.debug('[%s] normalized, memory use %s', self._timer, util.max_memory())
 
         _logger.info('[%s] computing similarity matrix', self._timer)
         smat = self._compute_similarities(rmat)
+        _logger.debug('[%s] computed, memory use %s', self._timer, util.max_memory())
 
         _logger.info('[%s] got neighborhoods for %d of %d items',
                      self._timer, np.sum(np.diff(smat.rowptrs) > 0), n_items)
@@ -320,6 +326,7 @@ class ItemItem(Predictor):
         # create an inverted similarity matrix for efficient scanning
         self._sim_inv_ = smat.transpose()
         _logger.info('[%s] transposed matrix for optimization', self._timer)
+        _logger.debug('[%s] done, memory use %s', self._timer, util.max_memory())
 
         return self
 

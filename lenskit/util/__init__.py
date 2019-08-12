@@ -11,6 +11,11 @@ from .accum import Accumulator
 from .timing import Stopwatch
 from .data import read_df_detect, write_parquet, load_ml_ratings
 
+try:
+    import resource
+except ImportError:
+    resource = None
+
 _log = logging.getLogger(__name__)
 
 
@@ -73,3 +78,21 @@ def last_memo(func=None, check_type='identity'):
 
 def no_progress(obj, **kwargs):
     return obj
+
+
+def max_memory():
+    "Get the maximum memory use for this process"
+    if resource:
+        res = resource.getrusage(resource.RUSAGE_SELF)
+        return "%.1f MiB" % (res.ru_maxrss,)
+    else:
+        return 'unknown'
+
+
+def cur_memory():
+    "Get the current memory use for this process"
+    if resource:
+        res = resource.getrusage(resource.RUSAGE_SELF)
+        return "%.1f MiB" % (res.ru_idrss,)
+    else:
+        return 'unknown'
