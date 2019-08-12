@@ -15,6 +15,7 @@ requirements:
   build:
   host:
     - python {{ python }}
+    - {{ compiler('c') }}
     - setuptools
     - pytest-runner
     - numba >=0.40
