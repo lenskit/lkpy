@@ -67,6 +67,28 @@ lk_mkl_spmv(double alpha, lk_mh_t matrix, double *x, double beta, double *y)
     return mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE, alpha, MP(matrix), descr, x, beta, y);
 }
 
+/**
+ * Compute A * B^T
+ */
+EXPORT lk_mh_t
+lk_mkl_spmabt(lk_mh_t a, lk_mh_t b)
+{
+    sparse_matrix_t c;
+    sparse_status_t rv;
+    struct matrix_descr descr = {
+        SPARSE_MATRIX_TYPE_GENERAL, 0, 0
+    };
+
+    rv = mkl_sparse_sp2m(SPARSE_OPERATION_NON_TRANSPOSE, descr, MP(a),
+                         SPARSE_OPERATION_TRANSPOSE, descr, MP(b),
+                         SPARSE_STAGE_FULL_MULT, &c);
+    if (rv) {
+        return 0;
+    } else {
+        return H(c);
+    }
+}
+
 EXPORT struct lk_csr
 lk_mkl_spexport(lk_mh_t matrix)
 {

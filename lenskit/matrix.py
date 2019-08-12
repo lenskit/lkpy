@@ -163,15 +163,10 @@ class CSR:
         """
         nrows, ncols = shape
         assert len(row_nnzs) == nrows
-        nnz = np.sum(row_nnzs)
 
-        rowptrs = np.zeros(nrows + 1, dtype=np.intc)
-        rowptrs[1:] = np.cumsum(row_nnzs)
+        csr = _empty_csr(nrows, ncols, row_nnzs)
 
-        colinds = np.full(nnz, -1, dtype=np.intc)
-        values = np.full(nnz, np.nan)
-
-        return cls(nrows, ncols, nnz, rowptrs, colinds, values)
+        return cls(N=csr)
 
     @classmethod
     def from_coo(cls, rows, cols, vals, shape=None):
@@ -471,6 +466,17 @@ def _csr_align(rowinds, nrows, rowptrs, align):
         pos = rpos[row]
         align[pos] = i
         rpos[row] += 1
+
+
+@njit
+def _empty_csr(nrows, ncols, sizes):
+    nnz = np.sum(sizes)
+    rowptrs = np.zeros(nrows + 1, dtype=np.intc)
+    for i in range(nrows):
+        rowptrs[i+1] = rowptrs[i] + sizes[i]
+    colinds = np.full(nnz, -1, dtype=np.intc)
+    values = np.full(nnz, np.nan)
+    return _CSR(nrows, ncols, nnz, rowptrs, colinds, values)
 
 
 def sparse_ratings(ratings, scipy=False):

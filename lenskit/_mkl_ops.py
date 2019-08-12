@@ -33,6 +33,7 @@ _lk_mkl_spsubset = clib.lk_mkl_spsubset
 _lk_mkl_spfree = clib.lk_mkl_spfree
 _lk_mkl_sporder = clib.lk_mkl_sporder
 _lk_mkl_spmv = clib.lk_mkl_spmv
+_lk_mkl_spmabt = clib.lk_mkl_spmabt
 _lk_mkl_spexport = clib.lk_mkl_spexport
 _lk_mkl_spsyrk = clib.lk_mkl_spsyrk
 

@@ -17,10 +17,26 @@ from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
 from . import Predictor
 
 _logger = logging.getLogger(__name__)
+_mkl_ops = matrix.mkl_ops()
+
+if _mkl_ops is not None:
+    # we have to import LK CFFI utils into this module
+    for lkv in dir(_mkl_ops):
+        if lkv.startswith('_lk_mkl'):
+            globals()[lkv] = getattr(_mkl_ops, lkv)
+
+
+@njit
+def _make_blocks(n, size):
+    "Create blocks for the range 0..n."
+    blk_sp = np.arange(0, n, size)
+    blk_ep = blk_sp + size
+    blk_ep[-1] = n
+    return (blk_sp, blk_ep)
 
 
 @njit(nogil=True)
-def _count_nbrs(mat: matrix._CSR, thresh: float, triangular: bool):
+def _count_nbrs(mat: matrix._CSR, thresh: float):
     "Count the number of neighbors passing the threshold for each row."
     counts = np.zeros(mat.nrows, dtype=np.int32)
     cs = mat.colinds
@@ -32,8 +48,6 @@ def _count_nbrs(mat: matrix._CSR, thresh: float, triangular: bool):
             v = vs[j]
             if c != i and v >= thresh:
                 counts[i] += 1
-                if triangular:
-                    counts[c] += 1
 
     return counts
 
@@ -47,28 +61,19 @@ def _insert(dst, used, limits, i, c, v):
     used[i] = ep - sp
 
 
-@njit
-def _mine(part, val):
-    return (val & 0xC) >> 2 == part
-
-
-@njit(nogil=True, parallel=True)
-def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, limits, thresh: float, triangular: bool):
+@njit(nogil=True)
+def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, limits, thresh: float):
     "Copy neighbors into the output matrix."
     used = np.zeros(dst.nrows, dtype=np.int32)
 
-    for p in prange(4):
-        for i in range(src.nrows):
-            sp, ep = src.row_extent(i)
+    for i in range(src.nrows):
+        sp, ep = src.row_extent(i)
 
-            for j in range(sp, ep):
-                c = src.colinds[j]
-                v = src.values[j]
-                if c != i and v >= thresh:
-                    if _mine(p, i):
-                        _insert(dst, used, limits, i, c, v)
-                    if triangular and _mine(p, c):
-                        _insert(dst, used, limits, c, i, v)
+        for j in range(sp, ep):
+            c = src.colinds[j]
+            v = src.values[j]
+            if c != i and v >= thresh:
+                _insert(dst, used, limits, i, c, v)
 
     return used
 
@@ -78,6 +83,80 @@ def _sort_nbrs(smat):
     for i in prange(smat.nrows):
         sp, ep = smat.row_extent(i)
         kvp_minheap_sort(sp, ep, smat.colinds, smat.values)
+
+
+@njit
+def _sim_block(rmat, rmh, min_sim, max_nbrs, bsp, bep):
+    "Compute a single block of the similarity matrix"
+    # create a matrix handle for the subset matrix
+    amh = _mkl_ops._from_csr_ss(rmat, bsp, bep)
+    smh = _lk_mkl_spmabt(amh, rmh)
+    _lk_mkl_spfree(amh)
+    if not smh:
+        return None
+
+    _lk_mkl_sporder(smh)  # for reproducibility
+
+    block = _lk_mkl_spexport_p(smh)
+    bnr = _lk_mkl_spe_nrows(block)
+    bnc = _lk_mkl_spe_ncols(block)
+    # bnr and bnc should be right
+    # assert bnr == bep - bsp
+    # assert bnc == rmat.nrows
+
+    r_sp = _lk_mkl_spe_row_sp(block)
+    r_ep = _lk_mkl_spe_row_ep(block)
+    r_cs = _lk_mkl_spe_colinds(block)
+    r_vs = _lk_mkl_spe_values(block)
+
+    # pass 1: compute the size of each row
+    sizes = np.zeros(bep - bsp, np.int_)
+    for i in range(bep - bsp):
+        rsz = 0
+        for j in range(r_sp[i], r_ep[i]):
+            # we accept the neighbor if it passes threshold and isn't a self-similarity
+            if r_cs[j] != bsp + i and r_vs[j] >= min_sim:
+                rsz += 1
+
+        if max_nbrs > 0 and rsz > max_nbrs:
+            rsz = max_nbrs
+        sizes[i] = rsz
+
+    # allocate a matrix
+    block_csr = matrix._empty_csr(bnr, bnc, sizes)
+
+    # pass 2: truncate each row into the matrix
+    for i in range(bep - bsp):
+        sp, lep = block_csr.row_extent(i)
+        ep = sp
+        lim = lep - sp
+        for j in range(r_sp[i], r_ep[i]):
+            v = r_vs[j]
+            c = r_cs[j]
+            if c != bsp + i and v >= min_sim:
+                ep = kvp_minheap_insert(sp, ep, lim, c, v, block_csr.colinds, block_csr.values)
+        # we're done!
+        # assert lim == ep - sp
+
+    _lk_mkl_spe_free(block)
+    _lk_mkl_spfree(smh)
+    return (bsp, block_csr)
+
+
+@njit(parallel=True, nogil=True)
+def _mkl_sim_blocks(rmat, min_sim, max_nbrs):
+    "Compute the similarity matrix with blocked MKL calls"
+    nitems = rmat.nrows
+    blk_sp, blk_ep = _make_blocks(nitems, 1000)
+    nblocks = len(blk_sp)
+    rmat_h = _mkl_ops._from_csr(rmat)
+
+    blocks = [_sim_block(rmat, rmat_h, min_sim, max_nbrs, blk_sp[bi], blk_ep[bi])
+              for bi in prange(nblocks)]
+
+    _lk_mkl_spfree(rmat_h)
+
+    return blocks  # we'll do the rest of the work in Python
 
 
 @njit(nogil=True)
@@ -184,6 +263,7 @@ class ItemItem(Predictor):
     """
     AGG_SUM = intern('sum')
     AGG_WA = intern('weighted-average')
+    _use_mkl = True
 
     def __init__(self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None,
                  center=True, aggregate='weighted-average'):
@@ -271,11 +351,10 @@ class ItemItem(Predictor):
         return matrix.CSR.from_scipy(norm_mat, False)
 
     def _compute_similarities(self, rmat):
-        mkl = matrix.mkl_ops()
-        if mkl is None:
-            return self._scipy_similarities(rmat)
+        if self._use_mkl and _mkl_ops is not None:
+            return self._mkl_similarities(rmat)
         else:
-            return self._mkl_similarities(mkl, rmat)
+            return self._scipy_similarities(rmat)
 
     def _scipy_similarities(self, rmat):
         sp_rmat = rmat.to_scipy()
@@ -284,27 +363,49 @@ class ItemItem(Predictor):
         smat = sp_rmat.T @ sp_rmat
         smat = matrix.CSR.from_scipy(smat, False)
 
-        csr = self._filter_select(smat, False)
+        csr = self._filter_select(smat)
         return csr
 
-    def _mkl_similarities(self, mkl, rmat):
+    def _mkl_similarities(self, rmat):
         assert rmat.values is not None
 
         _logger.info('[%s] multiplying matrix with MKL', self._timer)
-        smat = mkl.csr_syrk(rmat)
+        m_nbrs = self.save_nbrs
+        if m_nbrs is None or m_nbrs < 0:
+            m_nbrs = 0
+        s_blocks = _mkl_sim_blocks(rmat.transpose().N, self.min_sim, m_nbrs)
+        # blocks may be in any order, fix that
+        s_blocks.sort(key=lambda b: b[0])
+        s_blocks = [matrix.CSR(N=b) for (bi, b) in s_blocks]
+        nnz = sum(b.nnz for b in s_blocks)
+        _logger.info('[%s] computed %d similarities in %d blocks', self._timer, nnz, len(s_blocks))
+        row_nnzs = np.concatenate([b.row_nnzs() for b in s_blocks])
+        nitems = rmat.ncols
+        smat = matrix.CSR.empty((nitems, nitems), row_nnzs)
+        start = 0
+        for b in s_blocks:
+            bnr = b.nrows
+            end = start + bnr
+            v_sp = smat.rowptrs[start]
+            v_ep = smat.rowptrs[end]
+            _logger.debug('block %d:%d has %d entries', start, end, b.nnz)
+            smat.colinds[v_sp:v_ep] = b.colinds
+            smat.values[v_sp:v_ep] = b.values
+            start = end
 
-        smat = self._filter_select(smat, True)
+        _logger.info('[%s] sorting similarity matrix with %d entries', self._timer, smat.nnz)
+        _sort_nbrs(smat.N)
 
         return smat
 
-    def _filter_select(self, smat, triangular):
+    def _filter_select(self, smat):
         "Threshold, filter, and symmetrify matrices"
         nitems = smat.nrows
         assert smat.ncols == nitems
 
         # Count possible neighbors
         _logger.debug('counting neighbors')
-        possible = _count_nbrs(smat.N, self.min_sim, triangular)
+        possible = _count_nbrs(smat.N, self.min_sim)
 
         # Count neighbors to use neighbors
         save_nbrs = self.save_nbrs
@@ -320,7 +421,7 @@ class ItemItem(Predictor):
         trimmed = matrix.CSR.empty((nitems, nitems), nnbrs)
 
         # copy values into target arrays
-        used = _copy_nbrs(smat.N, trimmed.N, nnbrs, self.min_sim, triangular)
+        used = _copy_nbrs(smat.N, trimmed.N, nnbrs, self.min_sim)
         assert np.all(used == nnbrs)
 
         _logger.info('[%s] sorting neighborhoods', self._timer)
@@ -368,6 +469,10 @@ class ItemItem(Predictor):
         i_pos = i_pos[i_pos >= 0]
         _logger.debug('user %s: %d of %d requested items in model', user, len(i_pos), len(items))
 
+        # now we take a first pass through the data to count _viable_ targets
+        # This computes the number of neighbors (and their weight sum) for
+        # each target item based on the user's ratings, allowing us to fast-path
+        # other computations and avoid as many neighbor truncations as possible
         i_cts, i_sums, i_nbrs = self._count_viable_targets(i_pos, ri_pos)
         viable = i_cts >= self.min_nbrs
         i_pos = i_pos[viable]

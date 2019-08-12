@@ -527,6 +527,32 @@ def test_ii_known_preds():
 
 
 @lktu.wantjit
+@mark.skipif(knn._mkl_ops is None, reason='only test MKL match when MKL is available')
+def test_ii_impl_match():
+    from lenskit import batch
+
+    sps = knn.ItemItem(20, min_sim=1.0e-6)
+    sps._use_mkl = False
+    _log.info('training SciPy %s on ml data', sps)
+    sps.fit(lktu.ml_test.ratings)
+
+    mkl = knn.ItemItem(20, min_sim=1.0e-6)
+    _log.info('training MKL %s on ml data', mkl)
+    mkl.fit(lktu.ml_test.ratings)
+
+    assert mkl.sim_matrix_.nnz == sps.sim_matrix_.nnz
+    assert mkl.sim_matrix_.nrows == sps.sim_matrix_.nrows
+    assert mkl.sim_matrix_.ncols == sps.sim_matrix_.ncols
+
+    assert all(mkl.sim_matrix_.rowptrs == sps.sim_matrix_.rowptrs)
+    for i in range(mkl.sim_matrix_.nrows):
+        sp, ep = mkl.sim_matrix_.row_extent(i)
+        assert all(np.diff(mkl.sim_matrix_.values[sp:ep]) <= 0)
+        assert all(np.diff(sps.sim_matrix_.values[sp:ep]) <= 0)
+        assert set(mkl.sim_matrix_.colinds[sp:ep]) == set(sps.sim_matrix_.colinds[sp:ep])
+
+
+@lktu.wantjit
 @mark.slow
 @mark.eval
 @mark.parametrize('ncpus', [1, 2])
