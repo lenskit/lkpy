@@ -147,7 +147,7 @@ def _sim_block(rmat, rmh, min_sim, max_nbrs, bsp, bep):
 def _mkl_sim_blocks(rmat, min_sim, max_nbrs):
     "Compute the similarity matrix with blocked MKL calls"
     nitems = rmat.nrows
-    blk_sp, blk_ep = _make_blocks(nitems, 1000)
+    blk_sp, blk_ep = _make_blocks(nitems, 500)
     nblocks = len(blk_sp)
     rmat_h = _mkl_ops._from_csr(rmat)
 
