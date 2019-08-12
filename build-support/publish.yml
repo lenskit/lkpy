@@ -41,6 +41,12 @@ jobs:
     inputs:
       artifactName: 'conda'
 
+  - script: |
+      source activate build
+      anaconda -t $(ANACONDA_TOKEN) upload -u lenskit -l dev $(Build.ArtifactStagingDirectory)/linux-64/*.tar.bz2
+    displayName: Upload to Conda
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+
 - job: WinPkg
   dependsOn: [SourcePkg, WindowsConda]
   pool:
@@ -62,6 +68,12 @@ jobs:
     inputs:
       artifactName: 'conda'
 
+  - script: |
+      source activate build
+      anaconda -t $(ANACONDA_TOKEN) upload -u lenskit -l dev $(Build.ArtifactStagingDirectory)/win-64/*.tar.bz2
+    displayName: Upload to Conda
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+
 - job: MacPkg
   dependsOn: [SourcePkg, MacConda]
   pool:
@@ -82,3 +94,9 @@ jobs:
   - task: PublishBuildArtifacts@1
     inputs:
       artifactName: 'conda'
+
+  - script: |
+      source activate build
+      anaconda -t $(ANACONDA_TOKEN) upload -u lenskit -l dev $(Build.ArtifactStagingDirectory)/osx-64/*.tar.bz2
+    displayName: Upload to Conda
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
