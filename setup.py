@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from setuptools import setup, find_packages
 from distutils.cmd import Command
-from distutils import ccompiler
+from distutils import ccompiler, sysconfig
 
 
 class BuildHelperCommand(Command):
@@ -19,6 +19,7 @@ class BuildHelperCommand(Command):
 
     def run(self):
         cc = ccompiler.new_compiler()
+        sysconfig.customize_compiler(cc)
 
         dir = Path('lenskit')
 
