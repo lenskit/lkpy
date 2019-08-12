@@ -390,7 +390,7 @@ class ItemItem(Predictor):
         nnz = sum(b.nnz for b in s_blocks)
         _logger.info('[%s] computed %d similarities in %d blocks', self._timer, nnz, len(s_blocks))
         row_nnzs = np.concatenate([b.row_nnzs() for b in s_blocks])
-        nitems = rmat.ncols
+        nitems = rmat.nrows
         smat = matrix.CSR.empty((nitems, nitems), row_nnzs)
         start = 0
         for b in s_blocks:
