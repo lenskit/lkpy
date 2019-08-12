@@ -247,14 +247,12 @@ class CSR:
     rowptrs = _csr_delegate('rowptrs')
     colinds = _csr_delegate('colinds')
 
-
     @property
     def values(self):
         if self.N.values.size:
             return self.N.values
         else:
             return None
-
 
     @values.setter
     def values(self, vs: np.ndarray):
