@@ -104,6 +104,9 @@ setup(
         ]
     },
     packages=find_packages(),
+    package_data={
+        'lenskit': ['*.dll', '*.so', '*.dylib', '*.h']
+    },
 
     cmdclass={
         'build_helper': BuildHelperCommand
