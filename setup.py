@@ -37,10 +37,14 @@ class BuildHelperCommand(Command):
         print('compiling MKL support library')
         i_dirs = []
         l_dirs = []
+        conda = Path(os.environ['CONDA_PREFIX'])
         if os.name == 'nt':
-            lib = Path(os.environ['CONDA_PREFIX']) / 'Library'
+            lib = conda / 'Library'
             i_dirs.append(os.fspath(lib / 'include'))
             l_dirs.append(os.fspath(lib / 'lib'))
+        else:
+            i_dirs.append(os.fspath(conda / 'include'))
+            l_dirs.append(os.fspath(conda / 'lib'))
 
         cc.compile([os.fspath(mkl_src)], include_dirs=i_dirs)
         cc.link_shared_object(mkl_obj, os.fspath(mkl_so), libraries=['mkl_rt'],
