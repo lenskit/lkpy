@@ -13,9 +13,9 @@ source:
 
 requirements:
   build:
+    - {{ compiler('c') }}
   host:
     - python {{ python }}
-    - {{ compiler('c') }}
     - setuptools
     - pytest-runner
     - numba >=0.40
@@ -26,6 +26,7 @@ requirements:
     - python-snappy
     - cffi
     - joblib
+    - mkl-devel
   run:
     - python
     - pandas >=0.24
