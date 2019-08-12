@@ -267,8 +267,9 @@ class CSR:
 
             vs = vs[:self.nnz]
             vs = np.require(vs, 'f8')
-
-        self.N.values = vs
+            self.N.values = vs
+        else:
+            self.N.values = np.zeros(0)
 
     def rowinds(self) -> np.ndarray:
         """
