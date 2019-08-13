@@ -201,15 +201,16 @@ def _sim_block(inb, rmh, min_sim, max_nbrs):
     return (bsp, block_csr)
 
 
-@njit(parallel=True, nogil=True)
+@njit(nogil=True)
 def _mkl_sim_blocks(rmat, trmat, min_sim, max_nbrs):
     "Compute the similarity matrix with blocked MKL calls"
     nitems = trmat.nrows
     nusers = rmat.nrows
-    blk_sp, blk_ep = _make_blocks(nitems, 10)
+    blk_sp, blk_ep = _make_blocks(nitems, 5)
     nblocks = len(blk_sp)
     with objmode():
         _logger.info('split %d items into %d blocks', nitems, nblocks)
+        _logger.info('matrices have %d nnz', trmat.nnz)
     rmat_h = _mkl_ops._from_csr(rmat)
     _lk_mkl_sporder(rmat_h)
     _lk_mkl_spopt(rmat_h)
