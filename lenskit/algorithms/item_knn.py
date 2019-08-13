@@ -151,6 +151,7 @@ def _sim_block(inb, rmh, min_sim, max_nbrs):
         _logger.info('computing block %d:%d (%d rows)', bsp, bep, rmat.nrows)
         _logger.info('submatrix has %d entries', rmat.nnz)
         _logger.info('shortest row has length %d', np.min(np.diff(rmat.rowptrs)))
+        _logger.info('longest row has length %d', np.max(np.diff(rmat.rowptrs)))
     assert np.all(rmat.colinds >= 0)
 
     amh = _mkl_ops._from_csr(rmat)
