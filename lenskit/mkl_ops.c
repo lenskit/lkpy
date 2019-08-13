@@ -160,6 +160,7 @@ lk_mkl_spexport(lk_mh_t matrix)
     sparse_status_t rv;
     sparse_index_base_t idx;
 
+    fprintf(stderr, "export 0x%8lx\n", matrix);
     rv = mkl_sparse_d_export_csr(MP(matrix), &idx, &csr.nrows, &csr.ncols,
                                  &csr.row_sp, &csr.row_ep, &csr.colinds, &csr.values);
     
