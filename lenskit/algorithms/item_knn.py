@@ -95,6 +95,7 @@ def _matrix_mult_wtf(ah, bh):
     a_ep = _lk_mkl_spe_row_ep(a)
     a_cs = _lk_mkl_spe_colinds(a)
     a_vs = _lk_mkl_spe_values(a)
+    a_nnz = a_ep[anr-1]
 
     b = _lk_mkl_spexport_p(bh)
     bnr = _lk_mkl_spe_nrows(b)
@@ -104,9 +105,11 @@ def _matrix_mult_wtf(ah, bh):
     b_ep = _lk_mkl_spe_row_ep(b)
     b_cs = _lk_mkl_spe_colinds(b)
     b_vs = _lk_mkl_spe_values(b)
+    b_nnz = b_ep[bnr-1]
 
     with objmode():
-        _logger.info('checking for multiplying %dx%d by %dx%d', anr, anc, bnr, bnc)
+        _logger.info('checking for multiplying %dx%d (%d nnz) by %dx%d (%d nnz)',
+                     anr, anc, a_nnz, bnr, bnc, b_nnz)
 
     assert anc == bnr
 
@@ -146,7 +149,7 @@ def _sim_block(inb, rmh, min_sim, max_nbrs):
 
     amh = _mkl_ops._from_csr(rmat)
     _lk_mkl_sporder(amh)
-    # _lk_mkl_spopt(amh)
+    _lk_mkl_spopt(amh)
     _matrix_mult_wtf(amh, rmh)
     smh = _lk_mkl_spmab(amh, rmh)
     _lk_mkl_spfree(amh)
@@ -203,13 +206,13 @@ def _mkl_sim_blocks(rmat, trmat, min_sim, max_nbrs):
     "Compute the similarity matrix with blocked MKL calls"
     nitems = trmat.nrows
     nusers = rmat.nrows
-    blk_sp, blk_ep = _make_blocks(nitems, 100)
+    blk_sp, blk_ep = _make_blocks(nitems, 10)
     nblocks = len(blk_sp)
     with objmode():
         _logger.info('split %d items into %d blocks', nitems, nblocks)
     rmat_h = _mkl_ops._from_csr(rmat)
     _lk_mkl_sporder(rmat_h)
-    # _lk_mkl_spopt(rmat_h)
+    _lk_mkl_spopt(rmat_h)
 
     in_blocks = [(trmat.subset_rows(blk_sp[bi], blk_ep[bi]), blk_sp[bi], blk_ep[bi])
                  for bi in range(nblocks)]
