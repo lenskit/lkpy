@@ -89,17 +89,17 @@ def _sort_nbrs(smat):
 def _sim_block(inb, rmh, min_sim, max_nbrs):
     "Compute a single block of the similarity matrix"
     rmat, bsp, bep = inb
+    assert rmat.nrows == bep - bsp
     # create a matrix handle for the subset matrix
     with objmode():
         _logger.info('computing block %d:%d (%d rows)', bsp, bep, rmat.nrows)
         _logger.info('submatrix has %d entries', rmat.nnz)
-    vsp = rmat.rowptrs[bsp]
-    vep = rmat.rowptrs[bep]
-    assert np.all(rmat.colinds[vsp:vep] >= 0)
+        _logger.info('shortest row has length %d', np.min(np.diff(rmat.rowptrs)))
+    assert np.all(rmat.colinds >= 0)
 
     amh = _mkl_ops._from_csr(rmat)
     # _lk_mkl_sporder(amh)
-    _lk_mkl_spopt(amh)
+    # _lk_mkl_spopt(amh)
     smh = _lk_mkl_spmab(amh, rmh)
     _lk_mkl_spfree(amh)
 
@@ -109,8 +109,7 @@ def _sim_block(inb, rmh, min_sim, max_nbrs):
     bnr = _lk_mkl_spe_nrows(block)
     bnc = _lk_mkl_spe_ncols(block)
     # bnr and bnc should be right
-    # assert bnr == bep - bsp
-    # assert bnc == rmat.nrows
+    assert bnr == bep - bsp
 
     r_sp = _lk_mkl_spe_row_sp(block)
     r_ep = _lk_mkl_spe_row_ep(block)
@@ -118,8 +117,8 @@ def _sim_block(inb, rmh, min_sim, max_nbrs):
     r_vs = _lk_mkl_spe_values(block)
 
     # pass 1: compute the size of each row
-    sizes = np.zeros(bep - bsp, np.int_)
-    for i in range(bep - bsp):
+    sizes = np.zeros(rmat.nrows, np.int_)
+    for i in range(rmat.nrows):
         rsz = 0
         for j in range(r_sp[i], r_ep[i]):
             # we accept the neighbor if it passes threshold and isn't a self-similarity
@@ -134,7 +133,7 @@ def _sim_block(inb, rmh, min_sim, max_nbrs):
     block_csr = matrix._empty_csr(bnr, bnc, sizes)
 
     # pass 2: truncate each row into the matrix
-    for i in range(bep - bsp):
+    for i in range(rmat.nrows):
         sp, lep = block_csr.row_extent(i)
         ep = sp
         lim = lep - sp
@@ -158,9 +157,11 @@ def _mkl_sim_blocks(rmat, trmat, min_sim, max_nbrs):
     nusers = rmat.nrows
     blk_sp, blk_ep = _make_blocks(nitems, 100)
     nblocks = len(blk_sp)
+    with objmode():
+        _logger.info('split %d items into %d blocks', nitems, nblocks)
     rmat_h = _mkl_ops._from_csr(rmat)
-    _lk_mkl_sporder(rmat_h)
-    _lk_mkl_spopt(rmat_h)
+    # _lk_mkl_sporder(rmat_h)
+    # _lk_mkl_spopt(rmat_h)
 
     in_blocks = [(trmat.subset_rows(blk_sp[bi], blk_ep[bi]), blk_sp[bi], blk_ep[bi])
                  for bi in range(nblocks)]

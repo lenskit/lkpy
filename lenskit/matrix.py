@@ -75,9 +75,10 @@ class _CSR:
             self.values = np.zeros(0)
 
     def subset_rows(self, begin, end):
-        rps = self.rowptrs[begin:(end+1)]
-        st = rps[0]
-        ed = rps[-1]
+        st = self.rowptrs[begin]
+        ed = self.rowptrs[end]
+        rps = self.rowptrs[begin:(end+1)] - st
+
         cis = self.colinds[st:ed]
         if self.values.size == 0:
             vs = self.values
