@@ -86,6 +86,53 @@ def _sort_nbrs(smat):
 
 
 @njit
+def _matrix_mult_wtf(ah, bh):
+    a = _lk_mkl_spexport_p(ah)
+    anr = _lk_mkl_spe_nrows(a)
+    anc = _lk_mkl_spe_ncols(a)
+
+    a_sp = _lk_mkl_spe_row_sp(a)
+    a_ep = _lk_mkl_spe_row_ep(a)
+    a_cs = _lk_mkl_spe_colinds(a)
+    a_vs = _lk_mkl_spe_values(a)
+
+    b = _lk_mkl_spexport_p(bh)
+    bnr = _lk_mkl_spe_nrows(b)
+    bnc = _lk_mkl_spe_ncols(b)
+
+    b_sp = _lk_mkl_spe_row_sp(b)
+    b_ep = _lk_mkl_spe_row_ep(b)
+    b_cs = _lk_mkl_spe_colinds(b)
+    b_vs = _lk_mkl_spe_values(b)
+
+    with objmode():
+        _logger.info('checking for multiplying %dx%d by %dx%d', anr, anc, bnr, bnc)
+
+    assert anc == bnr
+
+    for i in range(anr):
+        sp = a_sp[i]
+        ep = a_ep[i]
+        for j in range(sp, ep):
+            assert a_cs[j] >= 0
+            assert a_cs[j] < anc
+            if j > sp:
+                assert a_cs[j] > a_cs[j-1]
+
+    for i in range(bnr):
+        sp = b_sp[i]
+        ep = b_ep[i]
+        for j in range(sp, ep):
+            assert b_cs[j] >= 0
+            assert b_cs[j] < bnc
+            if j > sp:
+                assert b_cs[j] > b_cs[j-1]
+
+    _lk_mkl_spe_free(a)
+    _lk_mkl_spe_free(b)
+
+
+@njit
 def _sim_block(inb, rmh, min_sim, max_nbrs):
     "Compute a single block of the similarity matrix"
     rmat, bsp, bep = inb
@@ -98,8 +145,9 @@ def _sim_block(inb, rmh, min_sim, max_nbrs):
     assert np.all(rmat.colinds >= 0)
 
     amh = _mkl_ops._from_csr(rmat)
-    # _lk_mkl_sporder(amh)
+    _lk_mkl_sporder(amh)
     # _lk_mkl_spopt(amh)
+    _matrix_mult_wtf(amh, rmh)
     smh = _lk_mkl_spmab(amh, rmh)
     _lk_mkl_spfree(amh)
 
@@ -160,7 +208,7 @@ def _mkl_sim_blocks(rmat, trmat, min_sim, max_nbrs):
     with objmode():
         _logger.info('split %d items into %d blocks', nitems, nblocks)
     rmat_h = _mkl_ops._from_csr(rmat)
-    # _lk_mkl_sporder(rmat_h)
+    _lk_mkl_sporder(rmat_h)
     # _lk_mkl_spopt(rmat_h)
 
     in_blocks = [(trmat.subset_rows(blk_sp[bi], blk_ep[bi]), blk_sp[bi], blk_ep[bi])
