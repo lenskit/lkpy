@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include <mkl_spblas.h>
 
@@ -14,48 +15,92 @@
 
 #include "mkl_ops.h"
 
+void check_return(const char *call, sparse_status_t rc)
+{
+    const char *message = "unknown";
+    switch(rc) {
+    case SPARSE_STATUS_SUCCESS:
+        return;
+    case SPARSE_STATUS_NOT_INITIALIZED:
+        message = "not-initialized";
+        break;
+    case SPARSE_STATUS_ALLOC_FAILED:
+        message = "alloc-failed";
+        break;
+    case SPARSE_STATUS_INVALID_VALUE:
+        message = "invalid-value";
+        break;
+    case SPARSE_STATUS_EXECUTION_FAILED:
+        message = "execution-failed";
+        break;
+    case SPARSE_STATUS_INTERNAL_ERROR:
+        message = "internal-error";
+        break;
+    case SPARSE_STATUS_NOT_SUPPORTED:
+        message = "not-supported";
+        break;
+    }
+    fprintf(stderr, "MKL call %s failed with code %d (%s)\n", call, rc, message);
+    abort();
+}
 
 EXPORT lk_mh_t
 lk_mkl_spcreate(int nrows, int ncols, int *rowptrs, int *colinds, double *values)
 {
-    sparse_matrix_t matrix;
+    sparse_matrix_t matrix = NULL;
     sparse_status_t rv;
 
     rv = mkl_sparse_d_create_csr(&matrix, SPARSE_INDEX_BASE_ZERO, nrows, ncols, 
                                  rowptrs, rowptrs + 1, colinds, values);
-    if (rv) {
-        return H(NULL);
-    } else {
-        return H(matrix);
-    }
+    check_return("mkl_sparse_d_create_csr", rv);
+    
+    fprintf(stderr, "allocated 0x%8lx (%dx%d)\n", matrix, nrows, ncols);
+    return H(matrix);
 }
 
 EXPORT lk_mh_t
 lk_mkl_spsubset(int rsp, int rep, int ncols, int *rowptrs, int *colinds, double *values)
 {
-    sparse_matrix_t matrix;
+    sparse_matrix_t matrix = NULL;
     sparse_status_t rv;
     int nrows = rep - rsp;
 
-    rv = mkl_sparse_d_create_csr(&matrix, SPARSE_INDEX_BASE_ZERO, nrows, ncols, 
+    rv = mkl_sparse_d_create_csr(&matrix, SPARSE_INDEX_BASE_ZERO, nrows, ncols,
                                  rowptrs + rsp, rowptrs + rsp + 1, colinds, values);
-    if (rv) {
-        return H(NULL);
-    } else {
-        return H(matrix);
-    }
+    check_return("mkl_sparse_d_create_csr", rv);
+
+    fprintf(stderr, "allocated 0x%8lx (%d:%d)x%d\n", matrix, rsp, rep, ncols);
+    return H(matrix);
 }
 
 EXPORT int
 lk_mkl_spfree(lk_mh_t matrix)
 {
-    return mkl_sparse_destroy(MP(matrix));
+    sparse_status_t rv;
+    fprintf(stderr, "destroying 0x%8lx\n", matrix);
+    rv = mkl_sparse_destroy(MP(matrix));
+    check_return("mkl_sparse_destroy", rv);
+    return rv;
 }
 
 EXPORT int
 lk_mkl_sporder(lk_mh_t matrix)
 {
-    return mkl_sparse_order(MP(matrix));
+    sparse_status_t rv;
+    fprintf(stderr, "ordering 0x%8lx\n", matrix);
+    rv = mkl_sparse_order(MP(matrix));
+    check_return("mkl_sparse_order", rv);
+    return rv;
+}
+
+EXPORT int
+lk_mkl_spopt(lk_mh_t matrix)
+{
+    sparse_status_t rv;
+    fprintf(stderr, "optimizing 0x%8lx\n", matrix);
+    rv = mkl_sparse_optimize(MP(matrix));
+    check_return("mkl_sparse_optimize", rv);
+    return rv;
 }
 
 EXPORT int
@@ -64,7 +109,27 @@ lk_mkl_spmv(double alpha, lk_mh_t matrix, double *x, double beta, double *y)
     struct matrix_descr descr = {
         SPARSE_MATRIX_TYPE_GENERAL, 0, 0
     };
-    return mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE, alpha, MP(matrix), descr, x, beta, y);
+    sparse_status_t rv;
+    rv = mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE, alpha, MP(matrix), descr, x, beta, y);
+    check_return("mkl_sparse_d_mv", rv);
+    return rv;
+}
+
+/**
+ * Compute A * B
+ */
+EXPORT lk_mh_t
+lk_mkl_spmab(lk_mh_t a, lk_mh_t b)
+{
+    sparse_matrix_t c = NULL;
+    sparse_status_t rv;
+    
+    fprintf(stderr, "multiplying 0x%8lx x 0x%8lx", a, b);
+    rv = mkl_sparse_spmm(SPARSE_OPERATION_NON_TRANSPOSE, MP(a), MP(b), &c);
+    fprintf(stderr, " -> 0x%8lx\n", c);
+    check_return("mkl_sparse_spmm", rv);
+    
+    return H(c);
 }
 
 /**
@@ -73,7 +138,7 @@ lk_mkl_spmv(double alpha, lk_mh_t matrix, double *x, double beta, double *y)
 EXPORT lk_mh_t
 lk_mkl_spmabt(lk_mh_t a, lk_mh_t b)
 {
-    sparse_matrix_t c;
+    sparse_matrix_t c = NULL;
     sparse_status_t rv;
     struct matrix_descr descr = {
         SPARSE_MATRIX_TYPE_GENERAL, 0, 0
@@ -82,11 +147,10 @@ lk_mkl_spmabt(lk_mh_t a, lk_mh_t b)
     rv = mkl_sparse_sp2m(SPARSE_OPERATION_NON_TRANSPOSE, descr, MP(a),
                          SPARSE_OPERATION_TRANSPOSE, descr, MP(b),
                          SPARSE_STAGE_FULL_MULT, &c);
-    if (rv) {
-        return 0;
-    } else {
-        return H(c);
-    }
+    fprintf(stderr, "mult 0x%8lx x 0x%8lx^T -> 0x%8lx\n", a, b, c);
+    check_return("mkl_sparse_sp2m", rv);
+    
+    return H(c);
 }
 
 EXPORT struct lk_csr
@@ -98,26 +162,23 @@ lk_mkl_spexport(lk_mh_t matrix)
 
     rv = mkl_sparse_d_export_csr(MP(matrix), &idx, &csr.nrows, &csr.ncols,
                                  &csr.row_sp, &csr.row_ep, &csr.colinds, &csr.values);
-    if (rv) {
-        csr.nrows = -1;
-        csr.ncols = -1;
-    }
+    
+    check_return("mkl_sparse_d_export_csr", rv);
+    
     return csr;
 }
 
 EXPORT lk_mh_t
 lk_mkl_spsyrk(lk_mh_t matrix)
 {
-    sparse_matrix_t out;
+    sparse_matrix_t out = NULL;
     sparse_status_t rv;
 
     rv = mkl_sparse_syrk(SPARSE_OPERATION_TRANSPOSE, MP(matrix), &out);
 
-    if (rv) {
-        return H(NULL);
-    } else {
-        return H(out);
-    }
+    check_return("mkl_sparse_syrk", rv);
+    
+    return H(out);
 }
 
 

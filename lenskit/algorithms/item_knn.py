@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-from numba import njit, prange
+from numba import njit, prange, objmode
 
 from lenskit import util, matrix, DataWarning
 from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
@@ -86,14 +86,22 @@ def _sort_nbrs(smat):
 
 
 @njit
-def _sim_block(rmat, rmh, min_sim, max_nbrs, bsp, bep):
+def _sim_block(rmat, rmh, min_sim, max_nbrs, bsp, bep, nusers):
     "Compute a single block of the similarity matrix"
     # create a matrix handle for the subset matrix
+    with objmode():
+        _logger.info('computing block %d:%d (%d rows)', bsp, bep, rmat.nrows)
+        _logger.info('submatrix has %d entries', rmat.rowptrs[bep] - rmat.rowptrs[bsp])
+    vsp = rmat.rowptrs[bsp]
+    vep = rmat.rowptrs[bep]
+    assert np.all(rmat.colinds[vsp:vep] >= 0)
+    assert np.all(rmat.colinds[vsp:vep] < nusers)
+
     amh = _mkl_ops._from_csr_ss(rmat, bsp, bep)
-    smh = _lk_mkl_spmabt(amh, rmh)
+    # _lk_mkl_sporder(amh)
+    _lk_mkl_spopt(amh)
+    smh = _lk_mkl_spmab(amh, rmh)
     _lk_mkl_spfree(amh)
-    if not smh:
-        return None
 
     _lk_mkl_sporder(smh)  # for reproducibility
 
@@ -144,14 +152,17 @@ def _sim_block(rmat, rmh, min_sim, max_nbrs, bsp, bep):
 
 
 @njit(parallel=True, nogil=True)
-def _mkl_sim_blocks(rmat, min_sim, max_nbrs):
+def _mkl_sim_blocks(rmat, trmat, min_sim, max_nbrs):
     "Compute the similarity matrix with blocked MKL calls"
-    nitems = rmat.nrows
-    blk_sp, blk_ep = _make_blocks(nitems, 500)
+    nitems = trmat.nrows
+    nusers = rmat.nrows
+    blk_sp, blk_ep = _make_blocks(nitems, 100)
     nblocks = len(blk_sp)
     rmat_h = _mkl_ops._from_csr(rmat)
+    _lk_mkl_sporder(rmat_h)
+    _lk_mkl_spopt(rmat_h)
 
-    blocks = [_sim_block(rmat, rmat_h, min_sim, max_nbrs, blk_sp[bi], blk_ep[bi])
+    blocks = [_sim_block(trmat, rmat_h, min_sim, max_nbrs, blk_sp[bi], blk_ep[bi], nusers)
               for bi in prange(nblocks)]
 
     _lk_mkl_spfree(rmat_h)
@@ -380,9 +391,18 @@ class ItemItem(Predictor):
         m_nbrs = self.save_nbrs
         if m_nbrs is None or m_nbrs < 0:
             m_nbrs = 0
-        rmat = rmat.transpose()
+        trmat = rmat.transpose()
+        nitems = trmat.nrows
+
+        # for i in range(nitems):
+        #     _logger.debug('verifying row %d', i)
+        #     cs = trmat.row_cs(i)
+        #     assert np.all(cs >= 0)
+        #     assert np.all(cs < trmat.ncols)
+        #     assert pd.Series(cs).nunique() == len(cs)
+
         _logger.debug('[%s] transposed, memory use %s', self._timer, util.max_memory())
-        s_blocks = _mkl_sim_blocks(rmat.N, self.min_sim, m_nbrs)
+        s_blocks = _mkl_sim_blocks(rmat.N, trmat.N, self.min_sim, m_nbrs)
         _logger.debug('[%s] computed blocks, memory use %s', self._timer, util.max_memory())
         # blocks may be in any order, fix that
         s_blocks.sort(key=lambda b: b[0])
@@ -390,7 +410,7 @@ class ItemItem(Predictor):
         nnz = sum(b.nnz for b in s_blocks)
         _logger.info('[%s] computed %d similarities in %d blocks', self._timer, nnz, len(s_blocks))
         row_nnzs = np.concatenate([b.row_nnzs() for b in s_blocks])
-        nitems = rmat.nrows
+
         smat = matrix.CSR.empty((nitems, nitems), row_nnzs)
         start = 0
         for b in s_blocks:

@@ -24,8 +24,10 @@ EXPORT int* lk_mkl_spe_colinds(void* ep);
 EXPORT double* lk_mkl_spe_values(void* ep);
 
 EXPORT int lk_mkl_sporder(lk_mh_t matrix);
+EXPORT int lk_mkl_spopt(lk_mh_t matrix);
 
 EXPORT int lk_mkl_spmv(double alpha, lk_mh_t matrix, double *x, double beta, double *y);
+EXPORT lk_mh_t lk_mkl_spmab(lk_mh_t a, lk_mh_t b);
 EXPORT lk_mh_t lk_mkl_spmabt(lk_mh_t a, lk_mh_t b);
 
 EXPORT lk_mh_t lk_mkl_spsyrk(lk_mh_t matrix);

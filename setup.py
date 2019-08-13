@@ -46,7 +46,7 @@ class BuildHelperCommand(Command):
             i_dirs.append(os.fspath(conda / 'include'))
             l_dirs.append(os.fspath(conda / 'lib'))
 
-        cc.compile([os.fspath(mkl_src)], include_dirs=i_dirs)
+        cc.compile([os.fspath(mkl_src)], include_dirs=i_dirs, debug=True)
         cc.link_shared_object(mkl_obj, os.fspath(mkl_so), libraries=['mkl_rt'],
                               library_dirs=l_dirs)
 
