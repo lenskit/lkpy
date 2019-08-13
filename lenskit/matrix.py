@@ -74,6 +74,17 @@ class _CSR:
         else:
             self.values = np.zeros(0)
 
+    def subset_rows(self, begin, end):
+        rps = self.rowptrs[begin:(end+1)]
+        st = rps[0]
+        ed = rps[-1]
+        cis = self.colinds[st:ed]
+        if self.values.size == 0:
+            vs = self.values
+        else:
+            vs = self.values[st:ed]
+        return _CSR(end - begin, self.ncols, ed - st, rps, cis, vs)
+
     def row(self, row):
         sp = self.rowptrs[row]
         ep = self.rowptrs[row + 1]
@@ -270,6 +281,12 @@ class CSR:
             self.N.values = vs
         else:
             self.N.values = np.zeros(0)
+
+    def subset_rows(self, begin, end):
+        """
+        Subset the rows in this matrix.
+        """
+        return CSR(N=self.N.subset_rows(begin, end))
 
     def rowinds(self) -> np.ndarray:
         """

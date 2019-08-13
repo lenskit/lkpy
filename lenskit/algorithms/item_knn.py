@@ -86,8 +86,9 @@ def _sort_nbrs(smat):
 
 
 @njit
-def _sim_block(rmat, rmh, min_sim, max_nbrs, bsp, bep, nusers):
+def _sim_block(inb, rmh, min_sim, max_nbrs):
     "Compute a single block of the similarity matrix"
+    rmat, bsp, bep = inb
     # create a matrix handle for the subset matrix
     with objmode():
         _logger.info('computing block %d:%d (%d rows)', bsp, bep, rmat.nrows)
@@ -95,9 +96,8 @@ def _sim_block(rmat, rmh, min_sim, max_nbrs, bsp, bep, nusers):
     vsp = rmat.rowptrs[bsp]
     vep = rmat.rowptrs[bep]
     assert np.all(rmat.colinds[vsp:vep] >= 0)
-    assert np.all(rmat.colinds[vsp:vep] < nusers)
 
-    amh = _mkl_ops._from_csr_ss(rmat, bsp, bep)
+    amh = _mkl_ops._from_csr(rmat)
     # _lk_mkl_sporder(amh)
     _lk_mkl_spopt(amh)
     smh = _lk_mkl_spmab(amh, rmh)
@@ -162,7 +162,10 @@ def _mkl_sim_blocks(rmat, trmat, min_sim, max_nbrs):
     _lk_mkl_sporder(rmat_h)
     _lk_mkl_spopt(rmat_h)
 
-    blocks = [_sim_block(trmat, rmat_h, min_sim, max_nbrs, blk_sp[bi], blk_ep[bi], nusers)
+    in_blocks = [(trmat.subset_rows(blk_sp[bi], blk_ep[bi]), blk_sp[bi], blk_ep[bi])
+                 for bi in range(nblocks)]
+
+    blocks = [_sim_block(in_blocks[bi], rmat_h, min_sim, max_nbrs)
               for bi in prange(nblocks)]
 
     _lk_mkl_spfree(rmat_h)
