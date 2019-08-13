@@ -116,6 +116,9 @@ def _matrix_mult_wtf(ah, bh):
     for i in range(anr):
         sp = a_sp[i]
         ep = a_ep[i]
+        assert ep >= sp
+        if i > 0:
+            assert sp >= a_ep[i-1]
         for j in range(sp, ep):
             assert a_cs[j] >= 0
             assert a_cs[j] < anc
@@ -125,6 +128,9 @@ def _matrix_mult_wtf(ah, bh):
     for i in range(bnr):
         sp = b_sp[i]
         ep = b_ep[i]
+        assert ep >= sp
+        if i > 0:
+            assert sp >= b_ep[i-1]
         for j in range(sp, ep):
             assert b_cs[j] >= 0
             assert b_cs[j] < bnc
@@ -206,7 +212,7 @@ def _mkl_sim_blocks(rmat, trmat, min_sim, max_nbrs):
     "Compute the similarity matrix with blocked MKL calls"
     nitems = trmat.nrows
     nusers = rmat.nrows
-    blk_sp, blk_ep = _make_blocks(nitems, 5)
+    blk_sp, blk_ep = _make_blocks(nitems, 500)
     nblocks = len(blk_sp)
     with objmode():
         _logger.info('split %d items into %d blocks', nitems, nblocks)
