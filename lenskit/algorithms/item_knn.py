@@ -197,6 +197,7 @@ def _sim_block(inb, rmh, min_sim, max_nbrs, nitems):
     _lk_mkl_spfree(amh)
 
     _lk_mkl_sporder(smh)  # for reproducibility
+    _matrix_wtf(smh)
 
     block = _lk_mkl_spexport_p(smh)
     bnr = _lk_mkl_spe_nrows(block)
@@ -210,28 +211,31 @@ def _sim_block(inb, rmh, min_sim, max_nbrs, nitems):
     r_vs = _lk_mkl_spe_values(block)
 
     # pass 1: compute the size of each row
-    sizes = np.zeros(rmat.nrows, np.int_)
+    sizes = np.zeros(rmat.nrows, np.int32)
     for i in range(bnr):
         for j in range(r_sp[i], r_ep[i]):
             # we accept the neighbor if it passes threshold and isn't a self-similarity
-            c = r_cs[j]
-            if i != bsp + c and r_vs[j] >= min_sim:
-                sizes[c] += 1
+            r = r_cs[j]
+            if i != bsp + r and r_vs[j] >= min_sim:
+                sizes[r] += 1
 
-    sizes = np.maximum(sizes, max_nbrs)
+    if max_nbrs > 0:
+        for i in range(rmat.nrows):
+            if sizes[i] > max_nbrs:
+                sizes[i] = max_nbrs
 
     # allocate a matrix
     block_csr = matrix._empty_csr(bnc, bnr, sizes)
 
     # pass 2: truncate each row into the matrix
     eps = block_csr.rowptrs[:-1].copy()
-    for i in range(bnr):
-        for j in range(r_sp[i], r_ep[i]):
+    for c in range(bnr):
+        for j in range(r_sp[c], r_ep[c]):
             v = r_vs[j]
             r = r_cs[j]
             sp, lep = block_csr.row_extent(r)
             lim = lep - sp
-            if i != bsp + r and v >= min_sim:
+            if c != bsp + r and v >= min_sim:
                 eps[r] = kvp_minheap_insert(sp, eps[r], lim, c, v,
                                             block_csr.colinds, block_csr.values)
         # we're done!
