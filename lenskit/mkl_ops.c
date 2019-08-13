@@ -54,7 +54,9 @@ lk_mkl_spcreate(int nrows, int ncols, int *rowptrs, int *colinds, double *values
                                  rowptrs, rowptrs + 1, colinds, values);
     check_return("mkl_sparse_d_create_csr", rv);
     
+#ifdef LK_TRACE
     fprintf(stderr, "allocated 0x%8lx (%dx%d)\n", matrix, nrows, ncols);
+#endif
     return H(matrix);
 }
 
@@ -69,7 +71,9 @@ lk_mkl_spsubset(int rsp, int rep, int ncols, int *rowptrs, int *colinds, double 
                                  rowptrs + rsp, rowptrs + rsp + 1, colinds, values);
     check_return("mkl_sparse_d_create_csr", rv);
 
+#ifdef LK_TRACE
     fprintf(stderr, "allocated 0x%8lx (%d:%d)x%d\n", matrix, rsp, rep, ncols);
+#endif
     return H(matrix);
 }
 
@@ -77,7 +81,9 @@ EXPORT int
 lk_mkl_spfree(lk_mh_t matrix)
 {
     sparse_status_t rv;
+#ifdef LK_TRACE
     fprintf(stderr, "destroying 0x%8lx\n", matrix);
+#endif
     rv = mkl_sparse_destroy(MP(matrix));
     check_return("mkl_sparse_destroy", rv);
     return rv;
@@ -87,7 +93,9 @@ EXPORT int
 lk_mkl_sporder(lk_mh_t matrix)
 {
     sparse_status_t rv;
+#ifdef LK_TRACE
     fprintf(stderr, "ordering 0x%8lx\n", matrix);
+#endif
     rv = mkl_sparse_order(MP(matrix));
     check_return("mkl_sparse_order", rv);
     return rv;
@@ -97,7 +105,9 @@ EXPORT int
 lk_mkl_spopt(lk_mh_t matrix)
 {
     sparse_status_t rv;
+#ifdef LK_TRACE
     fprintf(stderr, "optimizing 0x%8lx\n", matrix);
+#endif
     rv = mkl_sparse_optimize(MP(matrix));
     check_return("mkl_sparse_optimize", rv);
     return rv;
@@ -124,9 +134,13 @@ lk_mkl_spmab(lk_mh_t a, lk_mh_t b)
     sparse_matrix_t c = NULL;
     sparse_status_t rv;
     
+#ifdef LK_TRACE
     fprintf(stderr, "multiplying 0x%8lx x 0x%8lx", a, b);
+#endif
     rv = mkl_sparse_spmm(SPARSE_OPERATION_NON_TRANSPOSE, MP(a), MP(b), &c);
+#ifdef LK_TRACE
     fprintf(stderr, " -> 0x%8lx\n", c);
+#endif
     check_return("mkl_sparse_spmm", rv);
     
     return H(c);
@@ -147,7 +161,9 @@ lk_mkl_spmabt(lk_mh_t a, lk_mh_t b)
     rv = mkl_sparse_sp2m(SPARSE_OPERATION_NON_TRANSPOSE, descr, MP(a),
                          SPARSE_OPERATION_TRANSPOSE, descr, MP(b),
                          SPARSE_STAGE_FULL_MULT, &c);
+#ifdef LK_TRACE
     fprintf(stderr, "mult 0x%8lx x 0x%8lx^T -> 0x%8lx\n", a, b, c);
+#endif
     check_return("mkl_sparse_sp2m", rv);
     
     return H(c);
@@ -160,7 +176,9 @@ lk_mkl_spexport(lk_mh_t matrix)
     sparse_status_t rv;
     sparse_index_base_t idx;
 
+#ifdef LK_TRACE
     fprintf(stderr, "export 0x%8lx\n", matrix);
+#endif
     rv = mkl_sparse_d_export_csr(MP(matrix), &idx, &csr.nrows, &csr.ncols,
                                  &csr.row_sp, &csr.row_ep, &csr.colinds, &csr.values);
     
