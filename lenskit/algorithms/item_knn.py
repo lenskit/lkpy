@@ -92,7 +92,7 @@ def _sim_block(inb, rmh, min_sim, max_nbrs):
     # create a matrix handle for the subset matrix
     with objmode():
         _logger.info('computing block %d:%d (%d rows)', bsp, bep, rmat.nrows)
-        _logger.info('submatrix has %d entries', rmat.rowptrs[bep] - rmat.rowptrs[bsp])
+        _logger.info('submatrix has %d entries', rmat.nnz)
     vsp = rmat.rowptrs[bsp]
     vep = rmat.rowptrs[bep]
     assert np.all(rmat.colinds[vsp:vep] >= 0)
