@@ -86,124 +86,28 @@ def _sort_nbrs(smat):
 
 
 @njit
-def _matrix_mult_wtf(ah, bh):
-    a = _lk_mkl_spexport_p(ah)
-    anr = _lk_mkl_spe_nrows(a)
-    anc = _lk_mkl_spe_ncols(a)
-
-    a_sp = _lk_mkl_spe_row_sp(a)
-    a_ep = _lk_mkl_spe_row_ep(a)
-    a_cs = _lk_mkl_spe_colinds(a)
-    a_vs = _lk_mkl_spe_values(a)
-    a_nnz = a_ep[anr-1]
-
-    b = _lk_mkl_spexport_p(bh)
-    bnr = _lk_mkl_spe_nrows(b)
-    bnc = _lk_mkl_spe_ncols(b)
-
-    b_sp = _lk_mkl_spe_row_sp(b)
-    b_ep = _lk_mkl_spe_row_ep(b)
-    b_cs = _lk_mkl_spe_colinds(b)
-    b_vs = _lk_mkl_spe_values(b)
-    b_nnz = b_ep[bnr-1]
-
-    with objmode():
-        _logger.info('checking for multiplying %dx%d (%d nnz) by %dx%d (%d nnz)',
-                     anr, anc, a_nnz, bnr, bnc, b_nnz)
-
-    assert anc == bnr
-
-    for i in range(anr):
-        sp = a_sp[i]
-        ep = a_ep[i]
-        assert ep >= sp
-        if i > 0:
-            assert sp >= a_ep[i-1]
-        for j in range(sp, ep):
-            assert a_cs[j] >= 0
-            assert a_cs[j] < anc
-            if j > sp:
-                assert a_cs[j] > a_cs[j-1]
-
-    for i in range(bnr):
-        sp = b_sp[i]
-        ep = b_ep[i]
-        assert ep >= sp
-        if i > 0:
-            assert sp >= b_ep[i-1]
-        for j in range(sp, ep):
-            assert b_cs[j] >= 0
-            assert b_cs[j] < bnc
-            if j > sp:
-                assert b_cs[j] > b_cs[j-1]
-
-    _lk_mkl_spe_free(a)
-    _lk_mkl_spe_free(b)
-
-
-@njit
-def _matrix_wtf(ah):
-    a = _lk_mkl_spexport_p(ah)
-    anr = _lk_mkl_spe_nrows(a)
-    anc = _lk_mkl_spe_ncols(a)
-
-    a_sp = _lk_mkl_spe_row_sp(a)
-    a_ep = _lk_mkl_spe_row_ep(a)
-    a_cs = _lk_mkl_spe_colinds(a)
-    a_vs = _lk_mkl_spe_values(a)
-    a_nnz = a_ep[anr-1]
-
-    with objmode():
-        _logger.info('checking matrix %dx%d (%d nnz)',
-                     anr, anc, a_nnz)
-
-    for i in range(anr):
-        sp = a_sp[i]
-        ep = a_ep[i]
-        assert ep >= sp
-        if i > 0:
-            assert sp >= a_ep[i-1]
-        for j in range(sp, ep):
-            assert a_cs[j] >= 0
-            assert a_cs[j] < anc
-            if j > sp:
-                assert a_cs[j] > a_cs[j-1]
-
-    _lk_mkl_spe_free(a)
-
-
-@njit
 def _sim_block(inb, rmh, min_sim, max_nbrs, nitems):
     "Compute a single block of the similarity matrix"
     rmat, bsp, bep = inb
-    assert rmat.nrows == bep - bsp
+    # assert rmat.nrows == bep - bsp
 
     if rmat.nnz == 0:
         return (bsp, matrix._empty_csr(rmat.nrows, nitems, np.zeros(rmat.nrows, np.int32)))
 
     # create a matrix handle for the subset matrix
-    with objmode():
-        _logger.info('computing block %d:%d (%d rows)', bsp, bep, rmat.nrows)
-        _logger.info('submatrix has %d entries', rmat.nnz)
-        _logger.info('shortest row has length %d', np.min(np.diff(rmat.rowptrs)))
-        _logger.info('longest row has length %d', np.max(np.diff(rmat.rowptrs)))
-    assert np.all(rmat.colinds >= 0)
-
     amh = _mkl_ops._from_csr(rmat)
     _lk_mkl_spopt(amh)
-    _matrix_wtf(amh)
 
     smh = _lk_mkl_spmabt(rmh, amh)
     _lk_mkl_spfree(amh)
 
     _lk_mkl_sporder(smh)  # for reproducibility
-    _matrix_wtf(smh)
 
     block = _lk_mkl_spexport_p(smh)
     bnr = _lk_mkl_spe_nrows(block)
     bnc = _lk_mkl_spe_ncols(block)
     # bnr and bnc should be right
-    assert bnc == bep - bsp
+    # assert bnc == bep - bsp
 
     r_sp = _lk_mkl_spe_row_sp(block)
     r_ep = _lk_mkl_spe_row_ep(block)
@@ -246,7 +150,7 @@ def _sim_block(inb, rmh, min_sim, max_nbrs, nitems):
     return (bsp, block_csr)
 
 
-@njit(nogil=True)
+@njit(nogil=True, parallel=True)
 def _mkl_sim_blocks(trmat, min_sim, max_nbrs):
     "Compute the similarity matrix with blocked MKL calls"
     nitems = trmat.nrows
