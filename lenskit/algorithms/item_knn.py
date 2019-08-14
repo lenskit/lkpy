@@ -18,6 +18,7 @@ from . import Predictor
 
 _logger = logging.getLogger(__name__)
 _mkl_ops = matrix.mkl_ops()
+_slim_model = True
 
 if _mkl_ops is not None:
     # we have to import LK CFFI utils into this module
@@ -90,6 +91,9 @@ def _sim_block(inb, rmh, min_sim, max_nbrs, nitems):
     "Compute a single block of the similarity matrix"
     rmat, bsp, bep = inb
     # assert rmat.nrows == bep - bsp
+
+    with objmode():
+        _logger.debug('processing block %d:%d (%d nnz)', bsp, bep, rmat.nnz)
 
     if rmat.nnz == 0:
         return matrix._empty_csr(rmat.nrows, nitems, np.zeros(rmat.nrows, np.int32))
@@ -599,13 +603,13 @@ class ItemItem(Predictor):
 
     def __getstate__(self):
         state = dict(self.__dict__)
-        if '_sim_inv_' in state:
+        if '_sim_inv_' in state and _slim_model:
             del state['_sim_inv_']
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        if hasattr(self, 'sim_matrix_'):
+        if hasattr(self, 'sim_matrix_') and not hasattr(self, '_sim_inv_'):
             self._sim_inv_ = self.sim_matrix_.transpose()
 
     def __str__(self):
