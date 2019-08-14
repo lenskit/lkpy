@@ -364,3 +364,27 @@ def test_csr_pickle(values):
         assert all(csr2.values == csr.values)
     else:
         assert csr2.values is None
+
+
+@mark.parametrize("values", [True, False])
+def test_csr64_pickle(values):
+    csr = rand_csr(100, 50, 1000, values=values)
+    csr = lm.CSR(csr.nrows, csr.ncols, csr.nnz,
+                 csr.rowptrs.astype(np.int64), csr.colinds, csr.values)
+    assert csr.nrows == 100
+    assert csr.ncols == 50
+    assert csr.nnz == 1000
+
+    data = pickle.dumps(csr)
+    csr2 = pickle.loads(data)
+
+    assert csr2.nrows == csr.nrows
+    assert csr2.ncols == csr.ncols
+    assert csr2.nnz == csr.nnz
+    assert all(csr2.rowptrs == csr.rowptrs)
+    assert csr2.rowptrs.dtype == np.int64
+    assert all(csr2.colinds == csr.colinds)
+    if values:
+        assert all(csr2.values == csr.values)
+    else:
+        assert csr2.values is None

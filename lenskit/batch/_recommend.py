@@ -110,6 +110,7 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, dask_result=False
 
     path = None
     try:
+        _logger.debug('activating recommender loop')
         with loop:
             backend = loop._backend.__class__.__name__
             njobs = loop._effective_n_jobs()

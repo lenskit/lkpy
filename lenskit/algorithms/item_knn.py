@@ -413,7 +413,9 @@ class ItemItem(Predictor):
         s_blocks = [matrix.CSR(N=b) for (bi, b) in s_blocks]
         nnz = sum(b.nnz for b in s_blocks)
         _logger.info('[%s] computed %d similarities in %d blocks', self._timer, nnz, len(s_blocks))
-        row_nnzs = np.concatenate([b.row_nnzs() for b in s_blocks])
+        row_nnzs = np.concatenate([b.row_nnzs().astype(np.int64) for b in s_blocks])
+        assert len(row_nnzs) == nitems, \
+            'only have {} rows for {} items'.format(len(row_nnzs), nitems)
 
         smat = matrix.CSR.empty((nitems, nitems), row_nnzs)
         start = 0

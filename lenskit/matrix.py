@@ -47,14 +47,6 @@ def _csr_delegate(name):
     return property(func)
 
 
-@jitclass({
-    'nrows': n.intc,
-    'ncols': n.intc,
-    'nnz': n.intc,
-    'rowptrs': n.intc[::1],
-    'colinds': n.intc[::1],
-    'values': n.float64[::1]
-})
 class _CSR:
     """
     Internal implementation class for :py:class:`CSR`. If you work with CSRs from Numba,
@@ -127,6 +119,25 @@ class _CSR:
         return ris
 
 
+_CSR64 = type('_CSR64', _CSR.__bases__, dict(_CSR.__dict__))
+_CSR = jitclass({
+    'nrows': n.intc,
+    'ncols': n.intc,
+    'nnz': n.intc,
+    'rowptrs': n.intc[::1],
+    'colinds': n.intc[::1],
+    'values': n.float64[::1]
+})(_CSR)
+_CSR64 = jitclass({
+    'nrows': n.intc,
+    'ncols': n.intc,
+    'nnz': n.int64,
+    'rowptrs': n.int64[::1],
+    'colinds': n.intc[::1],
+    'values': n.float64[::1]
+})(_CSR64)
+
+
 class CSR:
     """
     Simple compressed sparse row matrix.  This is like :py:class:`scipy.sparse.csr_matrix`, with
@@ -162,7 +173,10 @@ class CSR:
         if N is not None:
             self.N = N
         else:
-            self.N = _CSR(nrows, ncols, nnz, ptrs, inds, vals)
+            if ptrs.dtype == np.int64:
+                self.N = _CSR64(nrows, ncols, nnz, ptrs, inds, vals)
+            else:
+                self.N = _CSR(nrows, ncols, nnz, ptrs, inds, vals)
 
     @classmethod
     def empty(cls, shape, row_nnzs):
@@ -409,7 +423,7 @@ class CSR:
 
         return CSR(self.ncols, self.nrows, self.nnz, n_rps, n_cis, n_vs)
 
-    def __str__(self):
+    def __repr__(self):
         return '<CSR {}x{} ({} nnz)>'.format(self.nrows, self.ncols, self.nnz)
 
     def __getstate__(self):
@@ -422,7 +436,10 @@ class CSR:
         rps = state['rowptrs']
         cis = state['colinds']
         vs = state['values']
-        self.N = _CSR(nrows, ncols, nnz, rps, cis, vs)
+        if rps.dtype == np.int64:
+            self.N = _CSR64(nrows, ncols, nnz, rps, cis, vs)
+        else:
+            self.N = _CSR(nrows, ncols, nnz, rps, cis, vs)
 
 
 @njit(n.void(n.intc, n.intc[:], n.intc[:], n.double[:]),
