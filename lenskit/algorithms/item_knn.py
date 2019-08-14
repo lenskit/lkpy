@@ -92,7 +92,7 @@ def _sim_block(inb, rmh, min_sim, max_nbrs, nitems):
     # assert rmat.nrows == bep - bsp
 
     if rmat.nnz == 0:
-        return (bsp, matrix._empty_csr(rmat.nrows, nitems, np.zeros(rmat.nrows, np.int32)))
+        return matrix._empty_csr(rmat.nrows, nitems, np.zeros(rmat.nrows, np.int32))
 
     # create a matrix handle for the subset matrix
     amh = _mkl_ops._from_csr(rmat)
@@ -128,6 +128,10 @@ def _sim_block(inb, rmh, min_sim, max_nbrs, nitems):
             if sizes[i] > max_nbrs:
                 sizes[i] = max_nbrs
 
+    if bnc == 0:
+        # empty resulting matrix, oops
+        return matrix._empty_csr(rmat.nrows, nitems, np.zeros(rmat.nrows, np.int32))
+
     # allocate a matrix
     block_csr = matrix._empty_csr(bnc, bnr, sizes)
 
@@ -147,7 +151,7 @@ def _sim_block(inb, rmh, min_sim, max_nbrs, nitems):
 
     _lk_mkl_spe_free(block)
     _lk_mkl_spfree(smh)
-    return (bsp, block_csr)
+    return block_csr
 
 
 @njit(nogil=True, parallel=True)
@@ -163,11 +167,13 @@ def _mkl_sim_blocks(trmat, min_sim, max_nbrs):
     _lk_mkl_sporder(rmat_h)
     _lk_mkl_spopt(rmat_h)
 
-    in_blocks = [(trmat.subset_rows(blk_sp[bi], blk_ep[bi]), blk_sp[bi], blk_ep[bi])
-                 for bi in range(nblocks)]
+    blocks = [(trmat.subset_rows(blk_sp[bi], blk_ep[bi]), blk_sp[bi], blk_ep[bi])
+              for bi in range(nblocks)]
 
-    blocks = [_sim_block(in_blocks[bi], rmat_h, min_sim, max_nbrs, nitems)
-              for bi in prange(nblocks)]
+    for bi in prange(nblocks):
+        b, bs, be = blocks[bi]
+        bres = _sim_block(blocks[bi], rmat_h, min_sim, max_nbrs, nitems)
+        blocks[bi] = (bres, bs, be)
 
     _lk_mkl_spfree(rmat_h)
 
@@ -408,23 +414,24 @@ class ItemItem(Predictor):
         _logger.debug('[%s] transposed, memory use %s', self._timer, util.max_memory())
         s_blocks = _mkl_sim_blocks(trmat.N, self.min_sim, m_nbrs)
         _logger.debug('[%s] computed blocks, memory use %s', self._timer, util.max_memory())
-        # blocks may be in any order, fix that
-        s_blocks.sort(key=lambda b: b[0])
-        s_blocks = [matrix.CSR(N=b) for (bi, b) in s_blocks]
+        s_blocks = [matrix.CSR(N=b) for (b, bs, be) in s_blocks]
         nnz = sum(b.nnz for b in s_blocks)
-        _logger.info('[%s] computed %d similarities in %d blocks', self._timer, nnz, len(s_blocks))
-        row_nnzs = np.concatenate([b.row_nnzs().astype(np.int64) for b in s_blocks])
+        tot_rows = sum(b.nrows for b in s_blocks)
+        _logger.info('[%s] computed %d similarities for %d items in %d blocks',
+                     self._timer, nnz, tot_rows, len(s_blocks))
+        row_nnzs = np.concatenate([b.row_nnzs() for b in s_blocks])
         assert len(row_nnzs) == nitems, \
             'only have {} rows for {} items'.format(len(row_nnzs), nitems)
 
-        smat = matrix.CSR.empty((nitems, nitems), row_nnzs)
+        smat = matrix.CSR.empty((nitems, nitems), row_nnzs, rpdtype=np.int64)
         start = 0
-        for b in s_blocks:
+        for bi, b in enumerate(s_blocks):
             bnr = b.nrows
             end = start + bnr
             v_sp = smat.rowptrs[start]
             v_ep = smat.rowptrs[end]
-            _logger.debug('block %d:%d has %d entries', start, end, b.nnz)
+            _logger.debug('block %d (%d:%d) has %d entries, storing in %d:%d',
+                          bi, start, end, b.nnz, v_sp, v_ep)
             smat.colinds[v_sp:v_ep] = b.colinds
             smat.values[v_sp:v_ep] = b.values
             start = end

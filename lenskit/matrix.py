@@ -179,7 +179,7 @@ class CSR:
                 self.N = _CSR(nrows, ncols, nnz, ptrs, inds, vals)
 
     @classmethod
-    def empty(cls, shape, row_nnzs):
+    def empty(cls, shape, row_nnzs, *, rpdtype=np.intc):
         """
         Create an empty CSR matrix.
 
@@ -190,9 +190,13 @@ class CSR:
         nrows, ncols = shape
         assert len(row_nnzs) == nrows
 
-        csr = _empty_csr(nrows, ncols, row_nnzs)
+        nnz = np.sum(row_nnzs, dtype=np.int64)
+        rowptrs = np.zeros(nrows + 1, dtype=rpdtype)
+        rowptrs[1:] = np.cumsum(row_nnzs, dtype=rpdtype)
+        colinds = np.full(nnz, -1, dtype=np.intc)
+        values = np.full(nnz, np.nan)
 
-        return cls(N=csr)
+        return cls(nrows, ncols, nnz, rowptrs, colinds, values)
 
     @classmethod
     def from_coo(cls, rows, cols, vals, shape=None):
@@ -409,9 +413,10 @@ class CSR:
         """
 
         rowinds = self.rowinds()
-        align = np.empty(self.nnz, dtype=np.intc)
-        colptrs = np.zeros(self.ncols + 1, dtype=np.intc)
+        align = np.empty(self.nnz, dtype=self.rowptrs.dtype)
+        colptrs = np.zeros(self.ncols + 1, dtype=self.rowptrs.dtype)
 
+        _logger.debug('aligning %d entries for transposed CSR', len(align))
         _csr_align(self.colinds, self.ncols, colptrs, align)
 
         n_rps = colptrs
@@ -488,7 +493,7 @@ def _unit_rows(csr: _CSR):
 
 @njit(nogil=True)
 def _csr_align(rowinds, nrows, rowptrs, align):
-    rcts = np.zeros(nrows, dtype=np.intc)
+    rcts = np.zeros(nrows, dtype=rowptrs.dtype)
     for r in rowinds:
         rcts[r] += 1
 
