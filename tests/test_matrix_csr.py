@@ -200,14 +200,16 @@ def test_csr_transpose_coords():
 
 def test_csr_transpose_many():
     for i in range(50):
-        mat = np.random.randn(100, 50)
+        nrows = np.random.randint(10, 1000)
+        ncols = np.random.randint(10, 500)
+        mat = np.random.randn(nrows, ncols)
         mat[mat <= 0] = 0
         smat = sps.csr_matrix(mat)
 
         csr = lm.CSR.from_scipy(smat)
         csrt = csr.transpose()
-        assert csrt.nrows == 50
-        assert csrt.ncols == 100
+        assert csrt.nrows == ncols
+        assert csrt.ncols == nrows
 
         s2 = csrt.to_scipy()
         smat = smat.T.tocsr()
@@ -343,6 +345,23 @@ def test_unit_norm():
             if len(vs) > 0:
                 assert np.linalg.norm(vs) == approx(1.0)
                 assert vs * m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
+
+
+def test_filter():
+    csr = rand_csr()
+    csrf = csr.filter_nnzs(csr.values > 0)
+    assert all(csrf.values > 0)
+    assert csrf.nnz <= csr.nnz
+
+    for i in range(csr.nrows):
+        spo, epo = csr.row_extent(i)
+        spf, epf = csrf.row_extent(i)
+        assert epf - spf <= epo - spo
+
+    d1 = csr.to_scipy().toarray()
+    df = csrf.to_scipy().toarray()
+    d1[d1 < 0] = 0
+    assert df == approx(d1)
 
 
 @mark.parametrize("values", [True, False])

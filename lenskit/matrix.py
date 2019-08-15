@@ -428,6 +428,34 @@ class CSR:
 
         return CSR(self.ncols, self.nrows, self.nnz, n_rps, n_cis, n_vs)
 
+    def filter_nnzs(self, filt):
+        """
+        Filter the values along the full NNZ axis.
+
+        Args:
+            filt(ndarray):
+                a logical array of length :attr:`nnz` that indicates the values to keep.
+
+        Returns:
+            CSR: The filtered sparse matrix.
+        """
+        if len(filt) != self.nnz:
+            raise ValueError('filter has length %d, expected %d' % (len(filt), self.nnz))
+        rps2 = np.zeros_like(self.rowptrs)
+        for i in range(self.nrows):
+            sp, ep = self.row_extent(i)
+            rlen = np.sum(filt[sp:ep])
+            rps2[i+1] = rps2[i] + rlen
+
+        nnz2 = rps2[-1]
+        assert nnz2 == np.sum(filt)
+
+        cis2 = self.colinds[filt]
+        vs = self.values
+        vs2 = None if vs is None else vs[filt]
+
+        return CSR(self.nrows, self.ncols, nnz2, rps2, cis2, vs2)
+
     def __repr__(self):
         return '<CSR {}x{} ({} nnz)>'.format(self.nrows, self.ncols, self.nnz)
 
