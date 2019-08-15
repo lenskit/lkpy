@@ -18,7 +18,6 @@ from . import Predictor
 
 _logger = logging.getLogger(__name__)
 _mkl_ops = matrix.mkl_ops()
-_slim_model = True
 
 if _mkl_ops is not None:
     # we have to import LK CFFI utils into this module
@@ -603,7 +602,7 @@ class ItemItem(Predictor):
 
     def __getstate__(self):
         state = dict(self.__dict__)
-        if '_sim_inv_' in state and _slim_model:
+        if '_sim_inv_' in state:
             del state['_sim_inv_']
         return state
 
