@@ -199,7 +199,7 @@ class CSR:
         return cls(nrows, ncols, nnz, rowptrs, colinds, values)
 
     @classmethod
-    def from_coo(cls, rows, cols, vals, shape=None):
+    def from_coo(cls, rows, cols, vals, shape=None, rpdtype=np.intc):
         """
         Create a CSR matrix from data in COO format.
 
@@ -221,8 +221,8 @@ class CSR:
         assert len(cols) == nnz
         assert vals is None or len(vals) == nnz
 
-        rowptrs = np.zeros(nrows + 1, dtype=np.intc)
-        align = np.full(nnz, -1, dtype=np.intc)
+        rowptrs = np.zeros(nrows + 1, dtype=rpdtype)
+        align = np.full(nnz, -1, dtype=rpdtype)
 
         _csr_align(rows, nrows, rowptrs, align)
 
