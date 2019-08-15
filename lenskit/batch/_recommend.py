@@ -17,6 +17,7 @@ except ImportError:
 
 from ..algorithms import Recommender
 from .. import util
+from ..sharing import sharing_mode
 
 _logger = logging.getLogger(__name__)
 _AlgoKey = namedtuple('AlgoKey', ['type', 'data'])
@@ -128,7 +129,8 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, dask_result=False
                 path = pathlib.Path(path)
                 os.close(fd)
                 _logger.debug('pre-serializing algorithm %s to %s', rec_algo, path)
-                dump(rec_algo, path)
+                with sharing_mode():
+                    dump(rec_algo, path)
                 rec_algo = _AlgoKey('file', path)
 
             _logger.info('recommending with %s for %d users (n_jobs=%s)', astr, len(users), n_jobs)

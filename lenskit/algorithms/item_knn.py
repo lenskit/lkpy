@@ -13,6 +13,7 @@ import scipy.sparse.linalg as spla
 from numba import njit, prange, objmode
 
 from lenskit import util, matrix, DataWarning
+from lenskit.sharing import in_share_context
 from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
 from . import Predictor
 
@@ -602,7 +603,7 @@ class ItemItem(Predictor):
 
     def __getstate__(self):
         state = dict(self.__dict__)
-        if '_sim_inv_' in state:
+        if '_sim_inv_' in state and not in_share_context():
             del state['_sim_inv_']
         return state
 

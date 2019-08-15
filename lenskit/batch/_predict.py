@@ -10,6 +10,7 @@ from joblib import Parallel, delayed, dump, load
 import pandas as pd
 
 from .. import util
+from ..sharing import sharing_mode
 
 _logger = logging.getLogger(__name__)
 _rec_context = None
@@ -97,7 +98,8 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
             path = pathlib.Path(path)
             os.close(fd)
             _logger.debug('pre-serializing algorithm %s to %s', algo, path)
-            dump(algo, path)
+            with sharing_mode():
+                dump(algo, path)
             algo = _AlgoKey('file', path)
 
         nusers = pairs['user'].nunique()
