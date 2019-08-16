@@ -4,6 +4,7 @@ Array utilities.
 
 from numba import njit
 
+
 @njit
 def swap(a, i, j):
     t = a[i]
