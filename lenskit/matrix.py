@@ -12,6 +12,8 @@ import scipy.sparse as sps
 import numba as n
 from numba import njit, jitclass, prange
 
+from .util.array import swap
+
 _logger = logging.getLogger(__name__)
 
 RatingMatrix = namedtuple('RatingMatrix', ['matrix', 'users', 'items'])
@@ -412,21 +414,17 @@ class CSR:
             CSR: the transpose of this matrix (or, equivalently, this matrix in CSC format).
         """
 
-        rowinds = self.rowinds()
-        align = np.empty(self.nnz, dtype=self.rowptrs.dtype)
-        colptrs = np.zeros(self.ncols + 1, dtype=self.rowptrs.dtype)
+        n_rows = self.rowinds()
+        rows = self.colinds
+        n_vs = self.values if values else None
+        if n_vs is not None:
+            n_vs = n_vs.copy()
 
-        _logger.debug('aligning %d entries for transposed CSR', len(align))
-        _csr_align(self.colinds, self.ncols, colptrs, align)
+        rowptrs = _csr_align_inplace((self.ncols, self.nrows), rows, n_rows, n_vs)
+        if self.rowptrs.dtype == np.int32:
+            rowptrs = rowptrs.astype(np.int32)
 
-        n_rps = colptrs
-        n_cis = rowinds[align].copy()
-        if values and self.values is not None:
-            n_vs = self.values[align].copy()
-        else:
-            n_vs = None
-
-        return CSR(self.ncols, self.nrows, self.nnz, n_rps, n_cis, n_vs)
+        return CSR(self.ncols, self.nrows, self.nnz, rowptrs, n_rows, n_vs)
 
     def filter_nnzs(self, filt):
         """
@@ -533,6 +531,66 @@ def _csr_align(rowinds, nrows, rowptrs, align):
         pos = rpos[row]
         align[pos] = i
         rpos[row] += 1
+
+
+@njit(nogil=True)
+def _csr_align_inplace(shape, rows, cols, vals):
+    """
+    Align COO data in-place for a CSR matrix.
+
+    Args:
+        shape: the matrix shape
+        rows: the matrix row indices (not modified)
+        cols: the matrix column indices (**modified**)
+        vals: the matrix values (**modified**)
+
+    Returns:
+        the CSR row pointers
+    """
+    nrows, ncols = shape
+    nnz = len(rows)
+
+    rps = np.zeros(nrows + 1, np.int64)
+
+    for i in range(nnz):
+        rps[rows[i] + 1] += 1
+    for i in range(nrows):
+        rps[i+1] += rps[i]
+
+    rci = rps[:nrows].copy()
+
+    pos = 0
+    row = 0
+    rend = rps[1]
+    while pos < nnz:
+        r = rows[pos]
+        # swap until we have something in place
+        while r != row:
+            tgt = rci[r]
+            # swap with the target position
+            swap(cols, pos, tgt)
+            if vals is not None:
+                swap(vals, pos, tgt)
+
+            # update the target start pointer
+            rci[r] += 1
+
+            # update the loop check
+            r = rows[tgt]
+
+        # now the current entry in the arrays is good
+        # we need to advance to the next entry
+        if pos < rend:  # keep going in this row
+            pos += 1
+            rci[row] += 1
+
+        # skip finished rows
+        while pos == rend and pos < nnz:
+            row += 1
+            pos = rci[row]
+            rend = rps[row+1]
+
+    return rps
 
 
 @njit
