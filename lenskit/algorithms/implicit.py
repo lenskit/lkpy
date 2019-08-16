@@ -1,14 +1,15 @@
 import logging
 import inspect
 import pandas as pd
+import numpy as np
 
 from ..matrix import sparse_ratings
-from . import Recommender
+from . import Recommender, Predictor
 
 _logger = logging.getLogger(__name__)
 
 
-class BaseRec(Recommender):
+class BaseRec(Recommender, Predictor):
     """
     Base class for Implicit-backed recommenders.
 
@@ -63,6 +64,21 @@ class BaseRec(Recommender):
         rec_df = pd.DataFrame.from_records(recs, columns=['item_pos', 'score'])
         rec_df['item'] = self.item_index_[rec_df.item_pos]
         return rec_df.loc[:, ['item', 'score']]
+
+    def predict_for_user(self, user, items, ratings=None):
+        try:
+            uid = self.user_index_.get_loc(user)
+        except KeyError:
+            return pd.Series(np.nan, index=items)
+
+        iids = self.item_index_.get_indexer(items)
+        iids = iids[iids >= 0]
+
+        ifs = self.delegate.item_factors[iids]
+        uf = self.delegate._user_factor(uid, None, False)
+        scores = ifs.dot(uf)
+        scores = pd.Series(scores, index=self.item_index_[iids])
+        return scores.reindex(items)
 
     def __getattr__(self, name):
         if 'delegate' not in self.__dict__:

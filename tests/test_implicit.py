@@ -95,6 +95,10 @@ def test_implicit_bpr_train_rec():
     recs = algo.recommend(100, n=20)
     assert len(recs) == 20
 
+    preds = algo.predict_for_user(100, [20, 30, 23148010])
+    assert all(preds.index == [20, 30, 23148010])
+    assert all(preds.isna() == [False, False, True])
+
     _log.info('serializing implicit model')
     mod = pickle.dumps(algo)
     _log.info('serialized to %d bytes')
