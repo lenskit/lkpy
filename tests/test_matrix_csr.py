@@ -198,6 +198,26 @@ def test_csr_transpose_coords():
         assert row[r] == 1
 
 
+def test_csr_transpose_erow():
+    nrows = np.random.randint(10, 1000)
+    ncols = np.random.randint(10, 500)
+    mat = np.random.randn(nrows, ncols)
+    mat[mat <= 0] = 0
+    mat[:, 0:1] = 0
+    smat = sps.csr_matrix(mat)
+
+    csr = lm.CSR.from_scipy(smat)
+    csrt = csr.transpose()
+    assert csrt.nrows == ncols
+    assert csrt.ncols == nrows
+
+    s2 = csrt.to_scipy()
+    smat = smat.T.tocsr()
+    assert all(smat.indptr == csrt.rowptrs)
+
+    assert np.all(s2.toarray() == smat.toarray())
+
+
 def test_csr_transpose_many():
     for i in range(50):
         nrows = np.random.randint(10, 1000)

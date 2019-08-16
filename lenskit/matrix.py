@@ -568,12 +568,17 @@ def _csr_align_inplace(shape, rows, cols, vals):
     pos = 0
     row = 0
     rend = rps[1]
+
+    # skip to first nonempty row
+    while row < nrows and rend == 0:
+        row += 1
+        rend = rps[row + 1]
+
     while pos < nnz:
         r = rows[pos]
         # swap until we have something in place
         while r != row:
             tgt = rci[r]
-            assert tgt > pos  # everything behind us is already in place
             # swap with the target position
             swap(cols, pos, tgt)
             if vals is not None:
