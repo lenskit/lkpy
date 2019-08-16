@@ -5,12 +5,7 @@ Accumulator support.
 import numpy as np
 from numba import njit, jitclass, int32, double
 
-
-@njit
-def _swap(a, i, j):
-    t = a[i]
-    a[i] = a[j]
-    a[j] = t
+from .array import swap
 
 
 @njit
@@ -23,7 +18,7 @@ def _ind_downheap(pos: int, size, keys, values):
     if right < size and values[keys[right]] < values[keys[min]]:
         min = right
     if min != pos:
-        _swap(keys, min, pos)
+        swap(keys, min, pos)
         _ind_downheap(min, size, keys, values)
 
 
@@ -91,7 +86,7 @@ class Accumulator:
         parent = (current - 1) // 2
         while current > 0 and values[keys[parent]] > values[keys[current]]:
             # swap up
-            _swap(keys, parent, current)
+            swap(keys, parent, current)
             current = parent
             parent = (current - 1) // 2
 
@@ -109,8 +104,8 @@ def _pair_downheap(pos: int, sp, limit, ks, vs):
             min = right
         if min != pos:
             # we want to swap!
-            _swap(vs, sp + pos, sp + min)
-            _swap(ks, sp + pos, sp + min)
+            swap(vs, sp + pos, sp + min)
+            swap(ks, sp + pos, sp + min)
             pos = min
         else:
             finished = True
@@ -120,8 +115,8 @@ def _pair_downheap(pos: int, sp, limit, ks, vs):
 def _pair_upheap(pos, sp, ks, vs):
     parent = (pos - 1) // 2
     while pos > 0 and vs[sp + parent] > vs[sp + pos]:
-        _swap(vs, sp + parent, sp + pos)
-        _swap(ks, sp + parent, sp + pos)
+        swap(vs, sp + parent, sp + pos)
+        swap(ks, sp + parent, sp + pos)
         pos = parent
         parent = (pos - 1) // 2
 
@@ -178,6 +173,6 @@ def kvp_minheap_sort(sp, ep, keys, vals):
     """
 
     for i in range(ep-1, sp, -1):
-        _swap(keys, i, sp)
-        _swap(vals, i, sp)
+        swap(keys, i, sp)
+        swap(vals, i, sp)
         _pair_downheap(0, sp, i-sp, keys, vals)
