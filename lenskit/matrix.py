@@ -573,6 +573,7 @@ def _csr_align_inplace(shape, rows, cols, vals):
         # swap until we have something in place
         while r != row:
             tgt = rci[r]
+            assert tgt > pos  # everything behind us is already in place
             # swap with the target position
             swap(cols, pos, tgt)
             if vals is not None:
@@ -586,9 +587,8 @@ def _csr_align_inplace(shape, rows, cols, vals):
 
         # now the current entry in the arrays is good
         # we need to advance to the next entry
-        if pos < rend:  # keep going in this row
-            pos += 1
-            rci[row] += 1
+        pos += 1
+        rci[row] += 1
 
         # skip finished rows
         while pos == rend and pos < nnz:
