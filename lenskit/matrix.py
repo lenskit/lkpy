@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import numba as n
-from numba import njit, jitclass, prange
+from numba import njit, jitclass, prange, objmode
 
 from .util.array import swap
 
@@ -550,6 +550,9 @@ def _csr_align_inplace(shape, rows, cols, vals):
     nrows, ncols = shape
     nnz = len(rows)
 
+    with objmode():
+        _logger.debug('aligning matrix with shape (%d, %d) and %d nnz', nrows, ncols, nnz)
+
     rps = np.zeros(nrows + 1, np.int64)
 
     for i in range(nnz):
@@ -558,6 +561,9 @@ def _csr_align_inplace(shape, rows, cols, vals):
         rps[i+1] += rps[i]
 
     rci = rps[:nrows].copy()
+
+    with objmode():
+        _logger.debug('counted row sizes (largest %d), beginning shuffle', np.max(np.diff(rps)))
 
     pos = 0
     row = 0
