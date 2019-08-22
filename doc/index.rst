@@ -30,7 +30,7 @@ To use the latest development version, install directly from GitHub::
 
 Then see `Getting Started`_.
 
-.. _`Getting Started`: quickstart.html
+.. _`Getting Started`: GettingStarted.html
 
 Resources
 ---------
