@@ -40,6 +40,7 @@ requirements:
 
 test:
   source_files:
+    - pytest.ini
     - tests
     - tests/*.py
     - tests/*.csv
@@ -48,5 +49,6 @@ test:
   requires:
     - pytest
     - pytest-arraydiff
+    - statsmodels
   commands:
     - pytest tests -m "not slow"
