@@ -48,5 +48,6 @@ test:
   requires:
     - pytest
     - pytest-arraydiff
+    - statsmodels
   commands:
     - pytest tests -m "not slow"
