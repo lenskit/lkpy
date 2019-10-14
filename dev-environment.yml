@@ -8,7 +8,7 @@ dependencies:
 - pandas>=0.24
 - numpy
 - scipy
-- fastparquet
+# - fastparquet
 - python-snappy
 - numba>=0.38
 - mkl-devel
