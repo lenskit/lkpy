@@ -240,6 +240,35 @@ class ML100K:
         _log.debug('loaded %s', fn)
         return users.set_index('user')
 
+    @cached
+    def movies(self):
+        """
+        Return the user data (from ``u.user``).
+
+        >>> ml = ML100K('ml-100k')
+        >>> ml.movies               #doctest: +SKIP
+                                                  title      release  ...  War Western
+        item                                                          ...
+        1                              Toy Story (1995)  01-Jan-1995  ...    0       0
+        2                              GoldenEye (1995)  01-Jan-1995  ...    0       0
+        3                             Four Rooms (1995)  01-Jan-1995  ...    0       0
+        4                             Get Shorty (1995)  01-Jan-1995  ...    0       0
+        5                                Copycat (1995)  01-Jan-1995  ...    0       0
+        ...
+        [1682 rows x 23 columns]
+        """
+        fn = self.path / 'u.item'
+        genres = [
+            'unknown', 'Action', 'Adventure', 'Animation',
+            "Children's", 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy',
+            'Film-Noir', 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi',
+            'Thriller', 'War', 'Western'
+        ]
+        items = pd.read_csv(fn, sep='|', header=None, encoding='latin1',
+                            names=['item', 'title', 'release', 'vidrelease', 'imdb'] + genres)
+        _log.debug('loaded %s', fn)
+        return items.set_index('item')
+
 
 class MLM:
     """
