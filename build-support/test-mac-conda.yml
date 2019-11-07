@@ -13,6 +13,9 @@ jobs:
   steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
     displayName: Add conda to PATH
+    
+  - bash: sudo chown -R $USER $CONDA
+    displayName: Take ownership of conda installation
 
   - script: |
       set -x
