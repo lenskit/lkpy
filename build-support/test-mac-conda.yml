@@ -41,6 +41,7 @@ jobs:
   - script: |
       source activate lkpy
       mkdir -p build
+      export MKL_THREADING_LAYER=tbb
       python3 -m pytest --verbose --junitxml=build/test-results.xml
     displayName: 'Test LKPY'
 
