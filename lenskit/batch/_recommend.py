@@ -42,7 +42,7 @@ def _recommend_user(algo, user, n, candidates):
     _logger.debug('generating recommendations for %s', user)
     watch = util.Stopwatch()
     res = algo.recommend(user, n, candidates)
-    _logger.debug('%s recommended %d/%d items for %s in %s', algo, len(res), n, user, watch)
+    _logger.debug('%s recommended %d/%s items for %s in %s', algo, len(res), n, user, watch)
     res['user'] = user
     res['rank'] = np.arange(1, len(res) + 1)
     if dask:
