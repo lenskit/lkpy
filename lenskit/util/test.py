@@ -52,5 +52,44 @@ def rand_seed(seed):
         np.random.set_state(state)
 
 
+def repeated(n=50):
+    """
+    Decorator to run a test multiple times. Useful for randomized tests.
+
+    Example::
+        @repeated
+        def test_something_with_random_values():
+            pass
+
+    Args:
+        n(int):
+            The number of iterations.  If the decorator is used without
+            parentheses, this will be the function itself, which will be
+            run the default number of times (50).
+
+    Environment Variables:
+        LK_TEST_ITERATION_MULT(float):
+            A multiplier for the number of test iterations.  This is useful
+            when debugging tests, to cause a test to be run more times than
+            the default.
+    """
+    mult = os.environ.get('LK_TEST_ITERATION_MULT', '1')
+    mult = float(mult)
+
+    def wrap(proc):
+        def run(*args, **kwargs):
+            _log.info('running %s for %d iterations', proc.__name__, n * mult)
+            for i in range(int(n * mult)):
+                proc(*args, **kwargs)
+        return run
+
+    if hasattr(n, '__call__'):
+        proc = n
+        n = 50
+        return wrap(proc)
+    else:
+        return wrap
+
+
 wantjit = pytest.mark.skipif('NUMBA_DISABLE_JIT' in os.environ,
                              reason='JIT required')

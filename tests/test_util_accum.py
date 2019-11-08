@@ -3,6 +3,7 @@ from scipy import stats
 
 from lenskit.util import Accumulator
 from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
+from lenskit.util.test import repeated
 
 
 def test_accum_init_empty():
@@ -157,6 +158,7 @@ def test_kvp_add_smaller():
     assert all(vs[:2] == [1.0, 3.0])
 
 
+@repeated(100)
 def test_kvp_add_several():
     ks = np.full(10, -1, dtype=np.int32)
     vs = np.zeros(10)
@@ -192,6 +194,7 @@ def test_kvp_add_several():
     assert np.count_nonzero(ks == 50) == 1
 
 
+@repeated
 def test_kvp_add_middle():
     ks = np.full(100, -1, dtype=np.int32)
     vs = np.full(100, np.nan)
@@ -244,6 +247,7 @@ def test_kvp_insert_min():
     assert vs[0] == 5.0
 
 
+@repeated
 def test_kvp_sort():
     ks = np.full(10, -1, dtype=np.int32)
     vs = np.zeros(10)
