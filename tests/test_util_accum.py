@@ -160,38 +160,43 @@ def test_kvp_add_smaller():
 
 @repeated(100)
 def test_kvp_add_several():
-    ks = np.full(10, -1, dtype=np.int32)
-    vs = np.zeros(10)
+    kvp_len = 50
+    ks = np.full(kvp_len, -1, dtype=np.int32)
+    vs = np.zeros(kvp_len)
 
     n = 0
 
-    for k in range(10):
+    for k in range(kvp_len):
         v = np.random.randn()
-        n = kvp_minheap_insert(0, n, 10, k, v, ks, vs)
+        n = kvp_minheap_insert(0, n, kvp_len, k, v, ks, vs)
 
-    assert n == 10
-    # all the keys
+    assert n == kvp_len
+    # all key slots are used
     assert all(ks >= 0)
-    assert all(np.sort(ks) == list(range(10)))
+    # all keys are there
+    assert all(np.sort(ks) == list(range(kvp_len)))
     # value is the smallest
     assert vs[0] == np.min(vs)
 
-    # it rejects a smaller value; -100 is extremely unlikely
-    n2 = kvp_minheap_insert(0, n, 10, 50, -100.0, ks, vs)
+    # it rejects a smaller value; -10000 is extremely unlikely
+    special_k = 500
+    n2 = kvp_minheap_insert(0, n, kvp_len, special_k, -10000.0, ks, vs)
 
     assert n2 == n
-    assert all(ks != 50)
+    assert all(ks != special_k)
     assert all(vs > -100.0)
 
-    # it inserts a larger value; all positive is extremely unlikely
+    # it inserts a larger value somewhere; all positive is extremely unlikely
     old_mk = ks[0]
     old_mv = vs[0]
-    n2 = kvp_minheap_insert(0, n, 10, 50, 0.0, ks, vs)
+    n2 = kvp_minheap_insert(0, n, kvp_len, special_k, 0.0, ks, vs)
 
     assert n2 == n
+    # the old value minimum key has been removed
     assert all(ks != old_mk)
+    # the old minimum value has been removed
     assert all(vs > old_mv)
-    assert np.count_nonzero(ks == 50) == 1
+    assert np.count_nonzero(ks == special_k) == 1
 
 
 @repeated
