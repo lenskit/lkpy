@@ -10,8 +10,18 @@ on a data frame that contains both predictions and ratings; for convenience, the
 frame when its input user-item pairs contains ratings.  So you can perform the
 following to compute per-user RMSE over some predictions::
 
+    from lenskit.datasets import MovieLens
+    from lenskit.algorithms.basic import Bias
+    from lenskit.batch import predict
+    from lenskit.metrics.predict import rmse
+    ratings = MovieLens('ml-small').ratings.sample(frac=10
+    test = ratings.iloc[:1000]
+    train = ratings.iloc[1000:]
+    algo = Bias()
+    algo.fit(train)
     preds = predict(algo, pairs)
     user_rmse = preds.groupby('user').apply(lambda df: rmse(df.prediction, df.rating))
+    user_rmse.mean()
 
 Metric Functions
 ----------------

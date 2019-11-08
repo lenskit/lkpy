@@ -13,10 +13,16 @@ jobs:
   steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
     displayName: Add conda to PATH
+    
+  - bash: sudo chown -R $USER $CONDA
+    displayName: Take ownership of conda installation
 
   - script: |
-      conda create -n lkpy -qy $(conda.deps)
+      set -x
+      conda create -n lkpy -qy python=$(python.version)
+      conda env update -n lkpy -q -f dev-environment.yml
       conda install -n lkpy -qy llvm-openmp
+      conda remove -n lkpy -qy hpfrec
     displayName: Set up Conda environment
 
   - script: |
@@ -28,13 +34,15 @@ jobs:
     
   - script: |
       source activate lkpy
+      python3 setup.py build_helper || exit 2
       python3 setup.py build
     displayName: 'Build LKPY'
 
   - script: |
       source activate lkpy
       mkdir -p build
-      python3 -m pytest --junitxml=build/test-results.xml
+      export MKL_THREADING_LAYER=tbb
+      python3 -m pytest --verbose --junitxml=build/test-results.xml
     displayName: 'Test LKPY'
 
   - task: PublishTestResults@2

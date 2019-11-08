@@ -14,17 +14,16 @@ jobs:
   - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
     displayName: Add conda to PATH
 
-  - script: conda update -y conda
-    displayName: Update Conda
-  
   - script: |
-      conda create -n lkpy -qy $(conda.deps)
-      conda install -n lkpy -qy -c mdekstrand implicit hpfrec
+      echo on
+      conda create -n lkpy -qy python=$(python.version)
+      conda env update -n lkpy -q -f dev-environment.yml
     displayName: Create Conda environment
 
   - script: |
       call activate lkpy
       python -V
+      python setup.py build_helper
       python setup.py build
     displayName: 'Build LKPY'
 

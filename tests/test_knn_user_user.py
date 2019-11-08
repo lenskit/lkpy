@@ -6,15 +6,15 @@ import pickle
 
 import pandas as pd
 import numpy as np
-from scipy import sparse as sps
+from scipy.sparse import linalg as spla
 
 from pytest import approx, mark
 
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 
 _log = logging.getLogger(__name__)
 
-ml_ratings = lktu.ml_pandas.renamed.ratings
+ml_ratings = lktu.ml_test.ratings
 
 
 def test_uu_train():
@@ -145,7 +145,7 @@ def test_uu_implicit():
     assert algo.user_means_ is None
 
     mat = algo.rating_matrix_.to_scipy()
-    norms = sps.linalg.norm(mat, 2, 1)
+    norms = spla.norm(mat, 2, 1)
     assert norms == approx(1.0)
 
     preds = algo.predict_for_user(50, [1, 2, 42])
@@ -182,26 +182,33 @@ def test_uu_known_preds():
 
     algo = knn.UserUser(30, min_sim=1.0e-6)
     _log.info('training %s on ml data', algo)
-    algo.fit(lktu.ml_pandas.renamed.ratings)
+    algo.fit(lktu.ml_test.ratings)
 
     dir = Path(__file__).parent
     pred_file = dir / 'user-user-preds.csv'
     _log.info('reading known predictions from %s', pred_file)
     known_preds = pd.read_csv(str(pred_file))
     pairs = known_preds.loc[:, ['user', 'item']]
+    _log.info('generating %d known predictions', len(pairs))
 
     preds = batch.predict(algo, pairs)
     merged = pd.merge(known_preds.rename(columns={'prediction': 'expected'}), preds)
     assert len(merged) == len(preds)
     merged['error'] = merged.expected - merged.prediction
-    assert not any(merged.prediction.isna() & merged.expected.notna())
+    try:
+        assert not any(merged.prediction.isna() & merged.expected.notna())
+    except AssertionError as e:
+        bad = merged[merged.prediction.isna() & merged.expected.notna()]
+        _log.error('%d missing predictions:\n%s', len(bad), bad)
+        raise e
+
     err = merged.error
     err = err[err.notna()]
     try:
         assert all(err.abs() < 0.01)
     except AssertionError as e:
         bad = merged[merged.error.notna() & (merged.error.abs() >= 0.01)]
-        _log.error('erroneous predictions:\n%s', bad)
+        _log.error('%d erroneous predictions:\n%s', len(bad), bad)
         raise e
 
 
@@ -222,7 +229,7 @@ def test_uu_batch_accuracy():
     import lenskit.crossfold as xf
     import lenskit.metrics.predict as pm
 
-    ratings = lktu.ml100k.load_ratings()
+    ratings = lktu.ml100k.ratings
 
     uu_algo = knn.UserUser(30)
     algo = basic.Fallback(uu_algo, basic.Bias())
@@ -244,7 +251,7 @@ def test_uu_implicit_batch_accuracy():
     from lenskit import batch, topn
     import lenskit.crossfold as xf
 
-    ratings = lktu.ml100k.load_ratings()
+    ratings = lktu.ml100k.ratings
 
     algo = knn.UserUser(30, center=False, aggregate='sum')
 
@@ -257,7 +264,7 @@ def test_uu_implicit_batch_accuracy():
         algo.fit(train.loc[:, ['user', 'item']])
         cands = topn.UnratedCandidates(train)
         _log.info('testing %d users', test.user.nunique())
-        recs = batch.recommend(algo, test.user.unique(), 100, cands, nprocs=2)
+        recs = batch.recommend(algo, test.user.unique(), 100, cands, n_jobs=2)
         rec_lists.append(recs)
     recs = pd.concat(rec_lists)
 

@@ -188,7 +188,12 @@ def _align_add_bias(bias, index, keys, series):
 
 class FunkSVD(BiasMFPredictor):
     """
-    Algorithm class implementing FunkSVD matrix factorization.
+    Algorithm class implementing FunkSVD matrix factorization.  FunkSVD is a regularized
+    biased matrix factorization technique trained with featurewise stochastic gradient
+    descent.
+
+    See the base class :class:`.BiasMFPredictor` for documentation on the estimated parameters
+    you can extract from a trained model.
 
     Args:
         features(int): the number of features to train
@@ -224,7 +229,11 @@ class FunkSVD(BiasMFPredictor):
             ratings: the ratings data frame.
         """
         timer = util.Stopwatch()
-        if self.bias is not None:
+        if 'rating' not in ratings:
+            _logger.warning('no rating column found, assuming rating values of 1.0')
+            ratings = ratings.assign(rating=1.0)
+
+        if self.bias:
             _logger.info('[%s] fitting bias model', timer)
             self.bias.fit(ratings)
 
@@ -244,7 +253,7 @@ class FunkSVD(BiasMFPredictor):
         assert np.all(items >= 0)
 
         _logger.debug('[%s] computing initial estimates', timer)
-        if self.bias is not None:
+        if self.bias:
             initial = pd.Series(self.bias.mean_, index=ratings.index, dtype=np.float_)
             ibias, initial = _align_add_bias(self.bias.item_offsets_, iidx, ratings.item, initial)
             ubias, initial = _align_add_bias(self.bias.user_offsets_, uidx, ratings.user, initial)
@@ -268,7 +277,7 @@ class FunkSVD(BiasMFPredictor):
 
         self.user_index_ = uidx
         self.item_index_ = iidx
-        self.global_bias_ = self.bias.mean_ if self.bias is not None else 0
+        self.global_bias_ = self.bias.mean_ if self.bias else 0
         self.user_bias_ = ubias.values if ubias is not None else None
         self.item_bias_ = ibias.values if ibias is not None else None
         self.user_features_ = model.user_features

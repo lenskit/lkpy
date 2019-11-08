@@ -1,56 +1,79 @@
+import os
+import pathlib
 import logging
 
 import cffi
+from distutils import ccompiler
+from numba import njit, types as nt
+import numba.cffi_support
 
 import numpy as np
 
-from .matrix import CSR
+from .matrix import CSR, _CSR
 
 _logger = logging.getLogger(__name__)
+__dir = pathlib.Path(__file__).parent
 
-__mkl_syrk_defs = '''
-typedef void* sparse_matrix_t;
-struct matrix_descr {
-    int  type;
-    int  mode;
-    int  diag;
-};
 
-int mkl_sparse_d_create_csr(sparse_matrix_t *A, int indexing, int rows, int cols,
-                            int *rows_start, int *rows_end, int *col_indx, double *values);
-int mkl_sparse_d_export_csr(const sparse_matrix_t source, int *indexing, int *rows, int *cols,
-                            int **rows_start, int **rows_end, int **col_indx, double **values);
-int mkl_sparse_order(sparse_matrix_t A);
-int mkl_sparse_destroy(sparse_matrix_t A);
+if not hasattr(os, 'fspath'):
+    raise ImportError('_mkl_ops requires Python 3.6 or newer')
 
-int mkl_sparse_syrk (int operation, const sparse_matrix_t A, sparse_matrix_t *C);
-int mkl_sparse_d_mv (int operation, double alpha,
-                     const sparse_matrix_t A, struct matrix_descr descr,
-                     const double *x, double beta, double *y);
-'''
-_logger.debug('initializing CFFI interface')
-_mkl_ffi = cffi.FFI()
-_mkl_ffi.cdef(__mkl_syrk_defs)
+__cc = ccompiler.new_compiler()
+_mkl_so = __dir / __cc.shared_object_filename('mkl_ops')
+__mkl_defs = (__dir / 'mkl_ops.h').read_text()
+ffi = cffi.FFI()
+ffi.cdef(__mkl_defs.replace('EXPORT ', ''))
 try:
-    _logger.debug('importing MKL')
-    _mkl_lib = _mkl_ffi.dlopen('mkl_rt')
-    _logger.info('Loaded MKL')
+    clib = ffi.dlopen(os.fspath(_mkl_so))
 except OSError:
-    _logger.info('Cannot load MKL')
-    _mkl_lib = None
+    raise ImportError('_mkl_ops cannot load helper')
+
+_lk_mkl_spcreate = clib.lk_mkl_spcreate
+_lk_mkl_spsubset = clib.lk_mkl_spsubset
+_lk_mkl_spfree = clib.lk_mkl_spfree
+_lk_mkl_sporder = clib.lk_mkl_sporder
+_lk_mkl_spopt = clib.lk_mkl_spopt
+_lk_mkl_spmv = clib.lk_mkl_spmv
+_lk_mkl_spmab = clib.lk_mkl_spmab
+_lk_mkl_spmabt = clib.lk_mkl_spmabt
+_lk_mkl_spexport = clib.lk_mkl_spexport
+_lk_mkl_spsyrk = clib.lk_mkl_spsyrk
+
+# silly pointer interface
+_lk_mkl_spexport_p = clib.lk_mkl_spexport_p
+_lk_mkl_spe_free = clib.lk_mkl_spe_free
+_lk_mkl_spe_nrows = clib.lk_mkl_spe_nrows
+_lk_mkl_spe_ncols = clib.lk_mkl_spe_ncols
+_lk_mkl_spe_row_sp = clib.lk_mkl_spe_row_sp
+_lk_mkl_spe_row_ep = clib.lk_mkl_spe_row_ep
+_lk_mkl_spe_colinds = clib.lk_mkl_spe_colinds
+_lk_mkl_spe_values = clib.lk_mkl_spe_values
+
+# support intptr_t
+numba.cffi_support.register_type(ffi.typeof('intptr_t'), nt.intp)
+
+# extract sizes
+_int_size = ffi.sizeof('int')
+_dbl_size = ffi.sizeof('double')
+
+_mkl_errors = [
+    'SPARSE_STATUS_SUCCESS',
+    'SPARSE_STATUS_NOT_INITIALIZED',
+    'SPARSE_STATUS_ALLOC_FAILED',
+    'SPARSE_STATUS_INVALID_VALUE',
+    'SPARSE_STATUS_EXECUTION_FAILED',
+    'SPARSE_STATUS_INTERNAL_ERROR',
+    'SPARSE_STATUS_NOT_SUPPORTED'
+]
 
 
 def _mkl_check_return(rv, call='<unknown>'):
     if rv:
-        raise RuntimeError('MKL call {} failed with code {}'.format(call, rv))
-
-
-def _mkl_basic_descr():
-    desc = _mkl_ffi.new('struct matrix_descr*')
-    desc.type = 20  # general matrix
-    desc.mode = 0
-    desc.diag = 0
-    return desc
+        if rv >= 0 and rv < len(_mkl_errors):
+            desc = _mkl_errors[rv]
+        else:
+            desc = 'unknown'
+        raise RuntimeError('MKL call {} failed with code {} ({})'.format(call, rv, desc))
 
 
 class SparseM:
@@ -59,7 +82,7 @@ class SparseM:
     """
 
     def __init__(self):
-        self.h_ptr = _mkl_ffi.new('sparse_matrix_t*')
+        self.ptr = None
 
     @classmethod
     def from_csr(cls, csr):
@@ -72,30 +95,18 @@ class SparseM:
         Returns:
             SparseM: a sparse matrix handle for the CSR matrix.
         """
-        sp = np.require(csr.rowptrs, np.intc, 'C')
-        ep = np.require(csr.rowptrs[1:], np.intc, 'C')
-        cols = np.require(csr.colinds, np.intc, 'C')
-        vals = np.require(csr.values, np.float_, 'C')
-
         m = SparseM()
-        _sp = _mkl_ffi.cast('int*', sp.ctypes.data)
-        _ep = _mkl_ffi.cast('int*', ep.ctypes.data)
-        _cols = _mkl_ffi.cast('int*', cols.ctypes.data)
-        _vals = _mkl_ffi.cast('double*', vals.ctypes.data)
-        rv = _mkl_lib.mkl_sparse_d_create_csr(m.h_ptr, 0, csr.nrows, csr.ncols,
-                                              _sp, _ep, _cols, _vals)
-        _mkl_check_return(rv, 'mkl_sparse_d_create_csr')
+        m.ptr = _from_csr(csr.N)
+        if not m.ptr:
+            raise RuntimeError('MKL matrix creation failed')
 
+        m._csr = csr  # save the CSR matrix to ensure it oulives the SparseH
         return m
 
-    @property
-    def handle(self):
-        return self.h_ptr[0]
-
     def __del__(self):
-        if self.h_ptr[0]:
-            _logger.debug('destroying MKL sparse matrix')
-            _mkl_lib.mkl_sparse_destroy(self.handle)
+        if self.ptr:
+            _logger.debug('destroying MKL sparse matrix 0x%08x', id(self))
+            clib.lk_mkl_spfree(self.ptr)
 
     def export(self):
         """
@@ -104,46 +115,25 @@ class SparseM:
         Returns:
             CSR: the LensKit matrix.
         """
-        indP = _mkl_ffi.new('int*')
-        nrP = _mkl_ffi.new('int*')
-        ncP = _mkl_ffi.new('int*')
-        rsP = _mkl_ffi.new('int**')
-        reP = _mkl_ffi.new('int**')
-        ciP = _mkl_ffi.new('int**')
-        vsP = _mkl_ffi.new('double**')
-        rv = _mkl_lib.mkl_sparse_d_export_csr(self.handle, indP, nrP, ncP, rsP, reP, ciP, vsP)
-        _mkl_check_return(rv, 'mkl_sparse_d_export_csr')
-        if indP[0] != 0:
-            raise ValueError('output index is not 0-indexed')
-        nr = nrP[0]
-        nc = ncP[0]
-        reB = _mkl_ffi.buffer(reP[0], nr * _mkl_ffi.sizeof('int'))
-        re = np.frombuffer(reB, np.intc)
-        nnz = re[nr-1]
-        ciB = _mkl_ffi.buffer(ciP[0], nnz * _mkl_ffi.sizeof('int'))
-        vsB = _mkl_ffi.buffer(vsP[0], nnz * _mkl_ffi.sizeof('double'))
+        csr = _to_csr(self.ptr)
+        if not csr:
+            raise RuntimeError('MKL failed to export CSR')
 
-        cols = np.frombuffer(ciB, np.intc)[:nnz].copy()
-        vals = np.frombuffer(vsB, np.float_)[:nnz].copy()
-        rowptrs = np.zeros(nr + 1, dtype=np.int32)
-        rowptrs[1:] = re
-
-        return CSR(nr, nc, nnz, rowptrs, cols, vals)
+        return CSR(N=csr)
 
     def mult_vec(self, alpha, x, beta, y):
         """
         Compute :math:`\\alpha A x + \\beta y`, where :math:`A` is this matrix.
         """
-        desc = _mkl_basic_descr()
         x = np.require(x, np.float64, 'C')
         yout = np.require(y, np.float64, 'C')
         if yout is y:
             yout = yout.copy()
 
-        _x = _mkl_ffi.cast('double*', x.ctypes.data)
-        _y = _mkl_ffi.cast('double*', yout.ctypes.data)
+        _x = ffi.from_buffer('double[]', x)
+        _y = ffi.from_buffer('double[]', yout)
 
-        rv = _mkl_lib.mkl_sparse_d_mv(10, alpha, self.handle, desc[0], _x, beta, _y)
+        rv = clib.lk_mkl_spmv(alpha, self.ptr, _x, beta, _y)
         _mkl_check_return(rv, 'mkl_sparse_d_mv')
 
         return yout
@@ -159,17 +149,79 @@ def csr_syrk(csr: CSR):
     src = SparseM.from_csr(csr)
 
     _logger.debug('syrk: ordering matrix')
-    rv = _mkl_lib.mkl_sparse_order(src.handle)
+    rv = clib.lk_mkl_sporder(src.ptr)
     _mkl_check_return(rv, 'mkl_sparse_order')
 
     _logger.debug('syrk: multiplying matrix')
-    mult = SparseM()
-    rv = _mkl_lib.mkl_sparse_syrk(11, src.handle, mult.h_ptr)
-    _mkl_check_return(rv, 'mkl_sparse_syrk')
+    m2 = SparseM()
+    m2.ptr = clib.lk_mkl_spsyrk(src.ptr)
+    if not m2.ptr:
+        raise ValueError('SYRK failed')
     del src  # free a little memory
 
     _logger.debug('syrk: exporting matrix')
-    result = mult.export()
+    result = m2.export()
     _logger.debug('syrk: received %dx%d matrix (%d nnz)',
                   result.nrows, result.ncols, result.nnz)
     return result
+
+
+@njit
+def _from_csr(csr: _CSR):
+    """
+    Convert a Numba CSR to an MKL sparse matrix handle.
+    """
+    _sp = ffi.from_buffer(csr.rowptrs)
+    _cols = ffi.from_buffer(csr.colinds)
+    _vals = ffi.from_buffer(csr.values)
+    return _lk_mkl_spcreate(csr.nrows, csr.ncols, _sp, _cols, _vals)
+
+
+@njit
+def _from_csr_ss(csr: _CSR, rsp, rep):
+    """
+    Convert a subset of a Numba CSR to an MKL sparse matrix handle.
+    """
+    _sp = ffi.from_buffer(csr.rowptrs)
+    _cols = ffi.from_buffer(csr.colinds)
+    _vals = ffi.from_buffer(csr.values)
+    return _lk_mkl_spsubset(rsp, rep, csr.ncols, _sp, _cols, _vals)
+
+
+@njit
+def _to_csr(smh):
+    """
+    Convert an MKL sparse matrix handle to a Numba CSR.
+    """
+    rvp = _lk_mkl_spexport_p(smh)
+    if rvp is None:
+        return None
+
+    nrows = _lk_mkl_spe_nrows(rvp)
+    ncols = _lk_mkl_spe_ncols(rvp)
+
+    sp = _lk_mkl_spe_row_sp(rvp)
+    ep = _lk_mkl_spe_row_ep(rvp)
+    cis = _lk_mkl_spe_colinds(rvp)
+    vs = _lk_mkl_spe_values(rvp)
+
+    rowptrs = np.zeros(nrows + 1, dtype=np.intc)
+    nnz = 0
+    for i in range(nrows):
+        nnz += ep[i] - sp[i]
+        rowptrs[i+1] = nnz
+
+    colinds = np.zeros(nnz, dtype=np.intc)
+    values = np.zeros(nnz)
+
+    for i in range(nrows):
+        rs = rowptrs[i]
+        re = rowptrs[i+1]
+        ss = sp[i]
+        for j in range(re - rs):
+            colinds[rs + j] = cis[ss + j]
+            values[rs + j] = vs[ss + j]
+
+    _lk_mkl_spe_free(rvp)
+
+    return _CSR(nrows, ncols, nnz, rowptrs, colinds, values)

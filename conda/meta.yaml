@@ -13,29 +13,34 @@ source:
 
 requirements:
   build:
+    - {{ compiler('c') }}
   host:
     - python {{ python }}
     - setuptools
     - pytest-runner
     - numba >=0.40
-    - pandas
+    - pandas >=0.24
     - numpy
     - scipy
     - pyarrow
     - python-snappy
     - cffi
+    - joblib
+    - mkl-devel
   run:
     - python
-    - pandas
+    - pandas >=0.24
     - scipy
     - numba >=0.40
     - pyarrow
     - fastparquet
     - python-snappy
     - cffi
+    - joblib
 
 test:
   source_files:
+    - pytest.ini
     - tests
     - tests/*.py
     - tests/*.csv
@@ -44,5 +49,6 @@ test:
   requires:
     - pytest
     - pytest-arraydiff
+    - statsmodels
   commands:
     - pytest tests -m "not slow"

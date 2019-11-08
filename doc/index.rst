@@ -30,7 +30,7 @@ To use the latest development version, install directly from GitHub::
 
 Then see `Getting Started`_.
 
-.. _`Getting Started`: quickstart.html
+.. _`Getting Started`: GettingStarted.html
 
 Resources
 ---------
@@ -47,9 +47,11 @@ Resources
    crossfold
    batch
    evaluation/index
-   diagnostics
+   datasets
    algorithms
    util
+   diagnostics
+   impl-tips
    releases
 
 
@@ -59,3 +61,9 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+Acknowledgements
+================
+
+This material is based upon work supported by the National Science Foundation under Grant No. IIS 17-51278.
+Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.

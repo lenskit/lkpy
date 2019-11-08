@@ -3,7 +3,7 @@ import numpy as np
 import scipy.sparse as sps
 
 import lenskit.matrix as lm
-import lk_test_utils as lktu
+from lenskit.util.test import rand_csr
 
 from pytest import mark, approx, raises
 
@@ -198,6 +198,46 @@ def test_csr_transpose_coords():
         assert row[r] == 1
 
 
+def test_csr_transpose_erow():
+    nrows = np.random.randint(10, 1000)
+    ncols = np.random.randint(10, 500)
+    mat = np.random.randn(nrows, ncols)
+    mat[mat <= 0] = 0
+    mat[:, 0:1] = 0
+    smat = sps.csr_matrix(mat)
+
+    csr = lm.CSR.from_scipy(smat)
+    csrt = csr.transpose()
+    assert csrt.nrows == ncols
+    assert csrt.ncols == nrows
+
+    s2 = csrt.to_scipy()
+    smat = smat.T.tocsr()
+    assert all(smat.indptr == csrt.rowptrs)
+
+    assert np.all(s2.toarray() == smat.toarray())
+
+
+def test_csr_transpose_many():
+    for i in range(50):
+        nrows = np.random.randint(10, 1000)
+        ncols = np.random.randint(10, 500)
+        mat = np.random.randn(nrows, ncols)
+        mat[mat <= 0] = 0
+        smat = sps.csr_matrix(mat)
+
+        csr = lm.CSR.from_scipy(smat)
+        csrt = csr.transpose()
+        assert csrt.nrows == ncols
+        assert csrt.ncols == nrows
+
+        s2 = csrt.to_scipy()
+        smat = smat.T.tocsr()
+        assert all(smat.indptr == csrt.rowptrs)
+
+        assert np.all(s2.toarray() == smat.toarray())
+
+
 def test_csr_row_nnzs():
     # initialize sparse matrix
     mat = np.random.randn(10, 5)
@@ -295,17 +335,58 @@ def test_csr_to_sps():
         assert all(smat2.data[sp:ep] == csr.values[sp:ep])
 
 
+def test_mean_center():
+    for n in range(50):
+        csr = rand_csr()
+
+        spm = csr.to_scipy().copy()
+
+        m2 = csr.normalize_rows('center')
+        assert len(m2) == 100
+
+        for i in range(csr.nrows):
+            vs = csr.row_vs(i)
+            if len(vs) > 0:
+                assert np.mean(vs) == approx(0.0)
+                assert vs + m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
+
+
+def test_unit_norm():
+    for n in range(50):
+        csr = rand_csr()
+
+        spm = csr.to_scipy().copy()
+
+        m2 = csr.normalize_rows('unit')
+        assert len(m2) == 100
+
+        for i in range(csr.nrows):
+            vs = csr.row_vs(i)
+            if len(vs) > 0:
+                assert np.linalg.norm(vs) == approx(1.0)
+                assert vs * m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
+
+
+def test_filter():
+    csr = rand_csr()
+    csrf = csr.filter_nnzs(csr.values > 0)
+    assert all(csrf.values > 0)
+    assert csrf.nnz <= csr.nnz
+
+    for i in range(csr.nrows):
+        spo, epo = csr.row_extent(i)
+        spf, epf = csrf.row_extent(i)
+        assert epf - spf <= epo - spo
+
+    d1 = csr.to_scipy().toarray()
+    df = csrf.to_scipy().toarray()
+    d1[d1 < 0] = 0
+    assert df == approx(d1)
+
+
 @mark.parametrize("values", [True, False])
 def test_csr_pickle(values):
-    coords = np.random.choice(np.arange(50 * 100, dtype=np.int32), 1000, False)
-    rows = np.mod(coords, 100, dtype=np.int32)
-    cols = np.floor_divide(coords, 100, dtype=np.int32)
-    if values:
-        vals = np.random.randn(1000)
-    else:
-        vals = None
-
-    csr = lm.CSR.from_coo(rows, cols, vals, (100, 50))
+    csr = rand_csr(100, 50, 1000, values=values)
     assert csr.nrows == 100
     assert csr.ncols == 50
     assert csr.nnz == 1000
@@ -317,6 +398,30 @@ def test_csr_pickle(values):
     assert csr2.ncols == csr.ncols
     assert csr2.nnz == csr.nnz
     assert all(csr2.rowptrs == csr.rowptrs)
+    assert all(csr2.colinds == csr.colinds)
+    if values:
+        assert all(csr2.values == csr.values)
+    else:
+        assert csr2.values is None
+
+
+@mark.parametrize("values", [True, False])
+def test_csr64_pickle(values):
+    csr = rand_csr(100, 50, 1000, values=values)
+    csr = lm.CSR(csr.nrows, csr.ncols, csr.nnz,
+                 csr.rowptrs.astype(np.int64), csr.colinds, csr.values)
+    assert csr.nrows == 100
+    assert csr.ncols == 50
+    assert csr.nnz == 1000
+
+    data = pickle.dumps(csr)
+    csr2 = pickle.loads(data)
+
+    assert csr2.nrows == csr.nrows
+    assert csr2.ncols == csr.ncols
+    assert csr2.nnz == csr.nnz
+    assert all(csr2.rowptrs == csr.rowptrs)
+    assert csr2.rowptrs.dtype == np.int64
     assert all(csr2.colinds == csr.colinds)
     if values:
         assert all(csr2.values == csr.values)

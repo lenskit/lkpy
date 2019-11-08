@@ -19,13 +19,13 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'LensKit'
-copyright = '2018 Boise State University'
+copyright = '2018–2019 Boise State University'
 author = 'Michael D. Ekstrand'
 
 # The short X.Y version
-version = '0.6'
+version = '0.7.0'
 # The full version, including alpha/beta/rc tags
-release = '0.6.0'
+release = '0.7.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -42,6 +42,7 @@ extensions = [
     'recommonmark',
     'sphinx.ext.napoleon',
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax'
 ]
@@ -185,5 +186,6 @@ intersphinx_mapping = {
     'hpfrec': ('https://hpfrec.readthedocs.io/en/latest/', None),
     'implicit': ('https://implicit.readthedocs.io/en/latest/', None),
     'scikit': ('https://scikit-learn.org/stable/', None),
-    'tqdm': ('https://tqdm.github.io/', None)
+    'tqdm': ('https://tqdm.github.io/', None),
+    'joblib': ('https://joblib.readthedocs.io/en/', None)
 }

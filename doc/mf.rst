@@ -12,7 +12,9 @@ Common Support
 .. module:: lenskit.algorithms.mf_common
 
 The :py:mod:`mf_common` module contains common support code for matrix factorization
-algorithms.
+algorithms.  These classes, :py:class:`MFPredictor` and :py:class:`BiasMFPredictor`,
+define the parameters that are estimated during the :py:meth:`.Algorithm.fit` 
+process on common matrix factorization algorithms.
 
 .. autoclass:: MFPredictor
    :members:

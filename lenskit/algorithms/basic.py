@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 
 from .. import check
+from ..matrix import sparse_ratings
 from . import Predictor, Recommender, CandidateSelector
 
 _logger = logging.getLogger(__name__)
@@ -169,7 +170,7 @@ class Popular(Recommender):
     def fit(self, ratings):
         pop = ratings.groupby('item').user.count()
         pop.name = 'score'
-        self.item_pop_ = pop
+        self.item_pop_ = pop.astype('float64')
         self.selector.fit(ratings)
 
         return self
@@ -264,7 +265,7 @@ class Fallback(Predictor):
         return 'Fallback([{}])'.format(', '.join(str_algos))
 
 
-class TopN(Recommender):
+class TopN(Recommender, Predictor):
     """
     Basic recommender that implements top-N recommendation using a predictor.
 
@@ -305,12 +306,19 @@ class TopN(Recommender):
 
         scores = self.predictor.predict_for_user(user, candidates, ratings)
         scores = scores[scores.notna()]
-        scores = scores.sort_values(ascending=False)
         if n is not None:
-            scores = scores.iloc[:n]
+            scores = scores.nlargest(n)
+        else:
+            scores = scores.sort_values(ascending=False)
         scores.name = 'score'
         scores.index.name = 'item'
         return scores.reset_index()
+
+    def predict(self, pairs, ratings=None):
+        return self.predictor.predict(pairs, ratings)
+
+    def predict_for_user(self, user, items, ratings=None):
+        return self.predictor.predict_for_user(user, items, ratings)
 
     def __str__(self):
         return 'TopN/' + str(self.predictor)
@@ -323,24 +331,31 @@ class UnratedItemCandidateSelector(CandidateSelector):
 
     Attributes:
         items_(pandas.Index): All known items.
-        user_items_(dict):
+        users_(pandas.Index): All known users.
+        user_items_(CSR):
             Items rated by each known user, as positions in the ``items`` index.
     """
     items_ = None
+    users_ = None
     user_items_ = None
 
     def fit(self, ratings):
-        self.items_ = pd.Index(np.unique(ratings['item']))
-        uimap = {}
-        for u, g in ratings.groupby('user'):
-            uimap[u] = self.items_.get_indexer(np.unique(g['item']))
+        r2 = ratings[['user', 'item']]
+        sparse = sparse_ratings(r2)
+        _logger.info('trained unrated candidate selector for %d ratings', sparse.matrix.nnz)
+        self.items_ = sparse.items
+        self.users_ = sparse.users
+        self.user_items_ = sparse.matrix
 
-        self.user_items_ = uimap
         return self
 
     def candidates(self, user, ratings=None):
         if ratings is None:
-            uis = self.user_items_.get(user, None)
+            try:
+                uidx = self.users_.get_loc(user)
+                uis = self.user_items_.row_cs(uidx)
+            except KeyError:
+                uis = None
         else:
             uis = self.items_.get_indexer(self.rated_items(ratings))
             uis = uis[uis >= 0]

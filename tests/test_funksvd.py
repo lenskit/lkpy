@@ -9,7 +9,7 @@ import numpy as np
 
 from pytest import approx, mark
 
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 
 _log = logging.getLogger(__name__)
 
@@ -127,7 +127,7 @@ def test_fsvd_predict_bad_user():
 @lktu.wantjit
 @mark.slow
 def test_fsvd_save_load():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
 
     original = svd.FunkSVD(20, iterations=20)
     original.fit(ratings)
@@ -151,10 +151,23 @@ def test_fsvd_save_load():
 
 @lktu.wantjit
 @mark.slow
+def test_fsvd_train_binary():
+    ratings = lktu.ml_test.ratings.drop(columns=['rating', 'timestamp'])
+
+    original = svd.FunkSVD(20, iterations=20, bias=False)
+    original.fit(ratings)
+
+    assert original.global_bias_ == 0
+    assert original.item_features_.shape == (ratings.item.nunique(), 20)
+    assert original.user_features_.shape == (ratings.user.nunique(), 20)
+
+
+@lktu.wantjit
+@mark.slow
 def test_fsvd_known_preds():
     algo = svd.FunkSVD(15, iterations=125, lrate=0.001)
     _log.info('training %s on ml data', algo)
-    algo.fit(lktu.ml_pandas.renamed.ratings)
+    algo.fit(lktu.ml_test.ratings)
 
     dir = Path(__file__).parent
     pred_file = dir / 'funksvd-preds.csv'
@@ -187,7 +200,7 @@ def test_fsvd_batch_accuracy():
     from lenskit import batch
     import lenskit.metrics.predict as pm
 
-    ratings = lktu.ml100k.load_ratings()
+    ratings = lktu.ml100k.ratings
 
     svd_algo = svd.FunkSVD(25, 125, damping=10)
     algo = basic.Fallback(svd_algo, basic.Bias(damping=10))

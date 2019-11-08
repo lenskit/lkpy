@@ -5,7 +5,7 @@ from collections import namedtuple
 import pandas as pd
 import numpy as np
 
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 
 from lenskit.algorithms.basic import Bias
 import lenskit.batch as lkb
@@ -17,7 +17,7 @@ MLB = namedtuple('MLB', ['ratings', 'algo'])
 
 @pytest.fixture
 def mlb():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     algo = Bias()
     algo.fit(ratings)
     return MLB(ratings, algo)
@@ -111,7 +111,7 @@ def test_bias_batch_predict(ncpus):
     from lenskit import batch
     import lenskit.metrics.predict as pm
 
-    ratings = lktu.ml100k.load_ratings()
+    ratings = lktu.ml100k.ratings
 
     algo = basic.Bias(damping=5)
 
@@ -119,7 +119,7 @@ def test_bias_batch_predict(ncpus):
         _log.info('running training')
         algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
-        recs = batch.predict(algo, test, nprocs=ncpus)
+        recs = batch.predict(algo, test, n_jobs=ncpus)
         return recs
 
     preds = pd.concat((eval(train, test)

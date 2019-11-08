@@ -219,12 +219,19 @@ dist/
 .coverage
 coverage.xml
 htmlcov/
+/data/
 .doit.db*
 ml-100k
 doc/ml-latest-small
 my-eval/
 *.pyd
 *.so
-*.c
+*.dll
+*.exp
+*.lib
+*.o
+*.obj
+
+dask-worker-space/
 
 build-env/

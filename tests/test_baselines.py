@@ -9,8 +9,8 @@ import numpy as np
 
 from pytest import approx
 
-import lk_test_utils as lktu
-from lk_test_utils import ml_pandas
+import lenskit.util.test as lktu
+from lenskit.util.test import ml_test
 
 _log = logging.getLogger(__name__)
 
@@ -155,7 +155,7 @@ def test_bias_predict_unknown_user():
 
 def test_bias_train_ml_ratings():
     algo = bl.Bias()
-    ratings = ml_pandas.ratings.rename(columns={'userId': 'user', 'movieId': 'item'})
+    ratings = ml_test.ratings
     algo.fit(ratings)
 
     assert algo.mean_ == approx(ratings.rating.mean())

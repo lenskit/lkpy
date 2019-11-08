@@ -12,7 +12,7 @@ try:
 except ImportError:
     have_implicit = False
 
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 from lenskit.algorithms.implicit import ALS, BPR
 from lenskit import util
 
@@ -28,7 +28,7 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
 def test_implicit_als_train_rec():
     algo = ALS(25)
     assert algo.factors == 25
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
 
     ret = algo.fit(ratings)
     assert ret is algo
@@ -54,7 +54,7 @@ def test_implicit_als_batch_accuracy():
     import lenskit.crossfold as xf
     from lenskit import batch, topn
 
-    ratings = lktu.ml100k.load_ratings()
+    ratings = lktu.ml100k.ratings
 
     algo_t = ALS(25)
 
@@ -88,12 +88,16 @@ def test_implicit_als_batch_accuracy():
 def test_implicit_bpr_train_rec():
     algo = BPR(25)
     assert algo.factors == 25
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
 
     algo.fit(ratings)
 
     recs = algo.recommend(100, n=20)
     assert len(recs) == 20
+
+    preds = algo.predict_for_user(100, [20, 30, 23148010])
+    assert all(preds.index == [20, 30, 23148010])
+    assert all(preds.isna() == [False, False, True])
 
     _log.info('serializing implicit model')
     mod = pickle.dumps(algo)

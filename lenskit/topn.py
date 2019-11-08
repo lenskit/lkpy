@@ -6,8 +6,13 @@ import numpy as np
 import pandas as pd
 
 from .metrics.topn import *
+from .util import Stopwatch
 
 _log = logging.getLogger(__name__)
+
+
+def _length(df, *args, **kwargs):
+    return float(len(df))
 
 
 class RecListAnalysis:
@@ -27,6 +32,11 @@ class RecListAnalysis:
     grouping columns, and contain at least an ``item`` column.  If it also
     contains a ``rating`` column, that is used as the users' rating for
     metrics that require it; otherwise, a rating value of 1 is assumed.
+    
+    .. warning::
+       Currently, RecListAnalysis will silently drop users who received
+       no recommendations.  We are working on an ergonomic API for fixing
+       this problem.
 
     Args:
         group_cols(list):
@@ -37,7 +47,7 @@ class RecListAnalysis:
 
     def __init__(self, group_cols=None):
         self.group_cols = group_cols
-        self.metrics = []
+        self.metrics = [(_length, 'nrecs', {})]
 
     def add_metric(self, metric, *, name=None, **kwargs):
         """
@@ -58,7 +68,7 @@ class RecListAnalysis:
 
         self.metrics.append((metric, name, kwargs))
 
-    def compute(self, recs, truth, *, progress=lambda x: x):
+    def compute(self, recs, truth, *, include_missing=False):
         """
         Run the analysis.  Neither data frame should be meaningfully indexed.
 
@@ -67,10 +77,16 @@ class RecListAnalysis:
                 A data frame of recommendations.
             truth(pandas.DataFrame):
                 A data frame of ground truth (test) data.
+            include_missing(bool):
+                ``True`` to include users from truth missing from recs.
+                Matches are done via group columns that appear in both
+                ``recs`` and ``truth``.
 
         Returns:
             pandas.DataFrame: The results of the analysis.
         """
+        using_dask = type(recs).__module__.startswith('dask.')
+
         _log.info('analyzing %d recommendations (%d truth rows)', len(recs), len(truth))
         gcols = self.group_cols
         if gcols is None:
@@ -79,8 +95,8 @@ class RecListAnalysis:
         _log.info('ungrouped columns: %s', [c for c in recs.columns if c not in gcols])
         gc_map = dict((c, i) for (i, c) in enumerate(gcols))
 
-        ti_cols = [c for c in gcols if c in truth.columns]
-        ti_cols.append('item')
+        ti_bcols = [c for c in gcols if c in truth.columns]
+        ti_cols = ti_bcols + ['item']
 
         _log.info('using truth ID columns %s', ti_cols)
         truth = truth.set_index(ti_cols)
@@ -88,28 +104,52 @@ class RecListAnalysis:
             warnings.warn('truth frame does not have unique values')
         truth.sort_index(inplace=True)
 
-        _log.info('preparing analysis result storage')
-        # we manually use grouping internals
-        grouped = recs.groupby(gcols)
-
-        res = pd.DataFrame(od((k, np.nan) for (f, k, args) in self.metrics),
-                           index=grouped.grouper.result_index)
-        assert len(res) == len(grouped.groups), \
-            "result set size {} != group count {}".format(len(res), len(grouped.groups))
-        assert res.index.nlevels == len(gcols)
-
-        _log.info('computing anlysis for %d lists', len(res))
-        for i, row_key in enumerate(progress(res.index)):
-            g_rows = grouped.indices[row_key]
-            g_recs = recs.iloc[g_rows, :]
+        def worker(group):
+            row_key = group.name
             if len(ti_cols) == len(gcols) + 1:
                 tr_key = row_key
             else:
                 tr_key = tuple([row_key[gc_map[c]] for c in ti_cols[:-1]])
 
             g_truth = truth.loc[tr_key, :]
-            for j, (mf, mn, margs) in enumerate(self.metrics):
-                res.iloc[i, j] = mf(g_recs, g_truth, **margs)
+
+            group_results = {}
+            for mf, mn, margs in self.metrics:
+                group_results[mn] = mf(group, g_truth, **margs)
+            return pd.DataFrame(group_results, index=[0])
+
+        timer = Stopwatch()
+        grouped = recs.groupby(gcols)
+        _log.info('computing analysis for %s lists',
+                  len(grouped) if hasattr(grouped, '__len__') else 'many')
+
+        if using_dask:
+            # Dask group-apply requires metadata
+            meta = dict((mn, 'f8') for (_f, mn, _a) in self.metrics)
+            _log.debug('using meta %s', meta)
+            res = grouped.apply(worker, meta=meta)
+            res = res.compute()
+        else:
+            res = grouped.apply(worker)
+
+        res.reset_index(level=-1, drop=True, inplace=True)
+        _log.info('analyzed %d lists in %s', len(res), timer)
+        if include_missing:
+            _log.info('filling in missing user info')
+            ug_cols = [c for c in gcols if c not in ti_bcols]
+            tcount = truth.reset_index().groupby(ti_bcols)['item'].count()
+            tcount.name = 'ntruth'
+            _log.debug('res index levels: %s', res.index.names)
+            if ug_cols:
+                _log.debug('regrouping by %s to fill', ug_cols)
+                res = res.groupby(level=ug_cols).apply(lambda f: f.reset_index(ug_cols, drop=True).join(tcount, how='outer'))
+            else:
+                _log.debug('no ungroup cols, directly merging to fill')
+                res = res.join(tcount, how='outer')
+            _log.debug('final columns: %s', res.columns)
+            _log.debug('index levels: %s', res.index.names)
+            res['ntruth'] = res['ntruth'].fillna(0)
+            res['nrecs'] = res['nrecs'].fillna(0)
 
         return res
 

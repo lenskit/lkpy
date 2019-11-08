@@ -14,6 +14,41 @@ Personalized Mean Rating Prediction
     :show-inheritance:
 
 
+Most Popular Item Recommendation
+--------------------------------
+
+The :py:class:`Popular` algorithm implements most-popular-item recommendation.
+
+.. autoclass:: Popular
+    :members:
+    :show-inheritance:
+
+
+Top-N Recommender
+-----------------
+
+The :py:class:`TopN` class implements a standard top-*N* recommender that wraps a
+:py:class:`.Predictor` and :py:class:`.CandidateSelector` and returns the top *N*
+candidate items by predicted rating.  It is the type of recommender returned by
+:py:meth:`.Recommender.adapt` if the provided algorithm is not a recommender.
+
+.. autoclass:: TopN
+    :members:
+    :show-inheritance:
+
+
+Unrated Item Candidate Selector
+-------------------------------
+
+:py:class:`UnratedItemCandidateSelector` is a candidate selector that remembers items
+users have rated, and returns a candidate set consisting of all unrated items.  It is the
+default candidate selector for :py:class:`TopN`.
+
+.. autoclass:: UnratedItemCandidateSelector
+    :members:
+    :show-inheritance:
+
+
 Fallback Predictor
 ------------------
 

@@ -4,13 +4,13 @@ import numpy as np
 
 import lenskit.matrix as lm
 
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 
 from pytest import approx
 
 
 def test_sparse_matrix():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     mat, uidx, iidx = lm.sparse_ratings(ratings)
 
     assert mat.nrows == len(uidx)
@@ -25,7 +25,7 @@ def test_sparse_matrix():
 
 
 def test_sparse_matrix_implicit():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     ratings = ratings.loc[:, ['user', 'item']]
     mat, uidx, iidx = lm.sparse_ratings(ratings)
 
@@ -37,7 +37,7 @@ def test_sparse_matrix_implicit():
 
 
 def test_sparse_matrix_scipy():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     mat, uidx, iidx = lm.sparse_ratings(ratings, scipy=True)
 
     assert sps.issparse(mat)
@@ -52,7 +52,7 @@ def test_sparse_matrix_scipy():
 
 
 def test_sparse_matrix_scipy_implicit():
-    ratings = lktu.ml_pandas.renamed.ratings
+    ratings = lktu.ml_test.ratings
     ratings = ratings.loc[:, ['user', 'item']]
     mat, uidx, iidx = lm.sparse_ratings(ratings, scipy=True)
 

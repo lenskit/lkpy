@@ -2,12 +2,16 @@ import logging
 import pathlib
 import collections
 import json
+import warnings
+import gzip
+import pickle
 from copy import copy
 
+import joblib
 import pandas as pd
 
-from ..algorithms import Predictor
-from .. import topn, util
+from ..algorithms import Predictor, Recommender
+from .. import util
 from ._recommend import recommend
 from ._predict import predict
 
@@ -20,7 +24,6 @@ _logger = logging.getLogger(__name__)
 
 _AlgoRec = collections.namedtuple('_AlgoRec', [
     'algorithm',
-    'parallel',
     'attributes'
 ])
 _DSRec = collections.namedtuple('_DSRec', [
@@ -47,22 +50,36 @@ class MultiEval:
         candidates(function):
             the default candidate set generator for recommendations.  It should take the
             training data and return a candidate generator, itself a function mapping user
-            IDs to candidate sets.
+            IDs to candidate sets.  Pass ``None`` to use the default candidate set configured
+            for each algorithm (recommended).
+        save_models(bool or str):
+            save individual estimated models to disk.  If ``True``, models are pickled to
+            ``.pkl`` files; if ``'gzip'``, they are pickled to gzip-compressed ``.pkl.gz``
+            files; if ``'joblib'``, they are pickled with :func:`joblib.dump` to uncompressed
+            ``.jlpkl`` files.
+        eval_n_jobs(int or None):
+            Value to pass to the ``n_jobs`` parameter in :func:`lenskit.batch.predict` and
+            :func:`lenskit.batch.recommend`.
         combine(bool):
             whether to combine output; if ``False``, output will be left in separate files, if
             ``True``, it will be in a single set of files (runs, recommendations, and predictions).
     """
 
-    def __init__(self, path, predict=True,
-                 recommend=100, candidates=topn.UnratedCandidates,
-                 nprocs=None, combine=True):
+    def __init__(self, path, *, predict=True,
+                 recommend=100, candidates=None,
+                 save_models=False,
+                 eval_n_jobs=None, combine=True, **kwargs):
+        if eval_n_jobs is None and 'nprocs' in kwargs:
+            warnings.warn('nprocs is deprecated, use eval_n_jobs', DeprecationWarning)
+            eval_n_jobs = kwargs['nprocs']
         self.workdir = pathlib.Path(path)
         self.predict = predict
         self.recommend = recommend
         self.candidate_generator = candidates
+        self.save_models = save_models
         self.algorithms = []
         self.datasets = []
-        self.nprocs = nprocs
+        self.n_jobs = eval_n_jobs
         self.combine_output = combine
         self._is_flat = True
 
@@ -82,14 +99,12 @@ class MultiEval:
     def recs_file(self):
         return self.workdir / 'recommendations.parquet'
 
-    def add_algorithms(self, algos, parallel=False, attrs=[], **kwargs):
+    def add_algorithms(self, algos, attrs=[], **kwargs):
         """
         Add one or more algorithms to the run.
 
         Args:
             algos(algorithm or list): the algorithm(s) to add.
-            parallel(bool):
-                if ``True``, allow this algorithm to be trained in parallel with others.
             attrs(list of str):
                 a list of attributes to extract from the algorithm objects and include in
                 the run descriptions.
@@ -106,7 +121,7 @@ class MultiEval:
             for an in attrs:
                 aa[an] = getattr(algo, an, None)
 
-            self.algorithms.append(_AlgoRec(algo, parallel, aa))
+            self.algorithms.append(_AlgoRec(algo, aa))
 
     def add_datasets(self, data, name=None, candidates=None, **kwargs):
         """
@@ -251,7 +266,7 @@ class MultiEval:
 
             ds_name = ds_attrs.get('DataSet', None)
             ds_part = ds_attrs.get('Partition', None)
-            cand = cand_f(train)
+            cand = cand_f(train) if cand_f is not None else None
 
             _logger.info('starting run %d: %s on %s:%s', run_id, arec.algorithm,
                          ds_name, ds_part)
@@ -270,6 +285,7 @@ class MultiEval:
 
         algo, train_time = self._train_algo(arec.algorithm, train)
         run['TrainTime'] = train_time
+        self._save_model(run_id, algo)
 
         preds, pred_time = self._predict(run_id, algo, test)
         run['PredTime'] = pred_time
@@ -281,11 +297,30 @@ class MultiEval:
 
         return run
 
+    def _save_model(self, run_id, algo):
+        "Save a model to disk"
+        base = 'model-{}'.format(run_id)
+        base = self.workdir / base
+        if not self.save_models:
+            return
+        elif self.save_models == 'gzip':
+            with gzip.open(util.fspath(base.with_suffix('.pkl.gz')), 'wb') as f:
+                pickle.dump(algo, f)
+        elif self.save_models == 'joblib':
+            joblib.dump(algo, base.with_suffix('.jlpkl'))
+        else:
+            with base.with_suffix('.pkl').open('wb') as f:
+                pickle.dump(algo, f)
+
     def _train_algo(self, algo, train):
         watch = util.Stopwatch()
-        _logger.info('training algorithm %s on %d ratings', algo, len(train))
         # clone the algorithm in case some cannot be reused
         clone = util.clone(algo)
+        if self.recommend and not isinstance(clone, Recommender):
+            _logger.info('adapting %s into a recommender', clone)
+            clone = Recommender.adapt(clone)
+
+        _logger.info('training algorithm %s on %d ratings', algo, len(train))
         clone.fit(train)
         watch.stop()
         _logger.info('trained algorithm %s in %s', algo, watch)
@@ -299,7 +334,7 @@ class MultiEval:
 
         watch = util.Stopwatch()
         _logger.info('generating %d predictions for %s', len(test), algo)
-        preds = predict(algo, test, nprocs=self.nprocs)
+        preds = predict(algo, test, n_jobs=self.n_jobs)
         watch.stop()
         _logger.info('generated predictions in %s', watch)
         preds['RunId'] = rid
@@ -318,7 +353,7 @@ class MultiEval:
         users = test.user.unique()
         _logger.info('generating recommendations for %d users for %s', len(users), algo)
         recs = recommend(algo, users, nrecs, candidates,
-                         nprocs=self.nprocs)
+                         n_jobs=self.n_jobs)
         watch.stop()
         _logger.info('generated recommendations in %s', watch)
         recs['RunId'] = rid

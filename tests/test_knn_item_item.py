@@ -13,11 +13,11 @@ from scipy import linalg as la
 import pytest
 from pytest import approx, mark
 
-import lk_test_utils as lktu
+import lenskit.util.test as lktu
 
 _log = logging.getLogger(__name__)
 
-ml_ratings = lktu.ml_pandas.renamed.ratings
+ml_ratings = lktu.ml_test.ratings
 simple_ratings = pd.DataFrame.from_records([
     (1, 6, 4.0),
     (2, 6, 2.0),
@@ -170,7 +170,7 @@ def test_ii_train_big_unbounded():
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_ii_train_ml100k(tmp_path):
     "Test an unbounded model on ML-100K"
-    ratings = lktu.ml100k.load_ratings()
+    ratings = lktu.ml100k.ratings
     algo = knn.ItemItem(30)
     _log.info('training model')
     algo.fit(ratings)
@@ -439,6 +439,26 @@ def test_ii_implicit():
 
 
 @mark.slow
+def test_ii_implicit_fast_ident():
+    algo = knn.ItemItem(20, save_nbrs=100, center=False, aggregate='sum')
+    data = ml_ratings.loc[:, ['user', 'item']]
+
+    algo.fit(data)
+    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
+    assert all(algo.sim_matrix_.values > 0)
+    assert all(algo.item_counts_ <= 100)
+
+    preds = algo.predict_for_user(50, [1, 2, 42])
+    assert all(preds[preds.notna()] > 0)
+    assert np.isnan(preds.iloc[2])
+
+    algo.min_sim = -1  # force it to take the slow path for all predictions
+    p2 = algo.predict_for_user(50, [1, 2, 42])
+    assert preds.values[:2] == approx(p2.values[:2])
+    assert np.isnan(p2.iloc[2])
+
+
+@mark.slow
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_ii_batch_accuracy():
@@ -447,7 +467,7 @@ def test_ii_batch_accuracy():
     from lenskit import batch
     import lenskit.metrics.predict as pm
 
-    ratings = lktu.ml100k.load_ratings()
+    ratings = lktu.ml100k.ratings
 
     ii_algo = knn.ItemItem(30)
     algo = basic.Fallback(ii_algo, basic.Bias())
@@ -456,7 +476,7 @@ def test_ii_batch_accuracy():
         _log.info('running training')
         algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
-        return batch.predict(algo, test)
+        return batch.predict(algo, test, nprocs=4)
 
     preds = pd.concat((eval(train, test)
                        for (train, test)
@@ -474,7 +494,7 @@ def test_ii_known_preds():
 
     algo = knn.ItemItem(20, min_sim=1.0e-6)
     _log.info('training %s on ml data', algo)
-    algo.fit(lktu.ml_pandas.renamed.ratings)
+    algo.fit(lktu.ml_test.ratings)
     assert algo.center
     assert algo.item_means_ is not None
     _log.info('model means: %s', algo.item_means_)
@@ -489,7 +509,13 @@ def test_ii_known_preds():
     merged = pd.merge(known_preds.rename(columns={'prediction': 'expected'}), preds)
     assert len(merged) == len(preds)
     merged['error'] = merged.expected - merged.prediction
-    assert not any(merged.prediction.isna() & merged.expected.notna())
+    try:
+        assert not any(merged.prediction.isna() & merged.expected.notna())
+    except AssertionError as e:
+        bad = merged[merged.prediction.isna() & merged.expected.notna()]
+        _log.error('erroneously missing or present predictions:\n%s', bad)
+        raise e
+
     err = merged.error
     err = err[err.notna()]
     try:
@@ -498,6 +524,32 @@ def test_ii_known_preds():
         bad = merged[merged.error.notna() & (merged.error.abs() >= 0.01)]
         _log.error('erroneous predictions:\n%s', bad)
         raise e
+
+
+@lktu.wantjit
+@mark.skipif(knn._mkl_ops is None, reason='only test MKL match when MKL is available')
+def test_ii_impl_match():
+    from lenskit import batch
+
+    sps = knn.ItemItem(20, min_sim=1.0e-6)
+    sps._use_mkl = False
+    _log.info('training SciPy %s on ml data', sps)
+    sps.fit(lktu.ml_test.ratings)
+
+    mkl = knn.ItemItem(20, min_sim=1.0e-6)
+    _log.info('training MKL %s on ml data', mkl)
+    mkl.fit(lktu.ml_test.ratings)
+
+    assert mkl.sim_matrix_.nnz == sps.sim_matrix_.nnz
+    assert mkl.sim_matrix_.nrows == sps.sim_matrix_.nrows
+    assert mkl.sim_matrix_.ncols == sps.sim_matrix_.ncols
+
+    assert all(mkl.sim_matrix_.rowptrs == sps.sim_matrix_.rowptrs)
+    for i in range(mkl.sim_matrix_.nrows):
+        sp, ep = mkl.sim_matrix_.row_extent(i)
+        assert all(np.diff(mkl.sim_matrix_.values[sp:ep]) <= 0)
+        assert all(np.diff(sps.sim_matrix_.values[sp:ep]) <= 0)
+        assert set(mkl.sim_matrix_.colinds[sp:ep]) == set(sps.sim_matrix_.colinds[sp:ep])
 
 
 @lktu.wantjit
@@ -520,7 +572,7 @@ def test_ii_batch_recommend(ncpus):
         algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
         cand_fun = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, test.user.unique(), 100, cand_fun, nprocs=ncpus)
+        recs = batch.recommend(algo, test.user.unique(), 100, cand_fun, n_jobs=ncpus)
         return recs
 
     test_frames = []
