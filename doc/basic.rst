@@ -24,6 +24,16 @@ The :py:class:`Popular` algorithm implements most-popular-item recommendation.
     :show-inheritance:
 
 
+Random Item Recommendation
+--------------------------
+
+The :py:class:`Random` algorithm implements random-item recommendation.
+
+.. autoclass:: Random
+    :members:
+    :show-inheritance:
+
+
 Top-N Recommender
 -----------------
 
