@@ -374,7 +374,8 @@ class Random(Recommender):
 
     Attributes:
         selector(CandidateSelector):
-            Selects candidate items for recommendation.  Default is :class:`UnratedItemCandidateSelector`.
+            Selects candidate items for recommendation.
+            Default is :class:`UnratedItemCandidateSelector`.
         random_state(int or numpy.random.RandomState)
                 Seed or random state for generating recommendations.
     """
