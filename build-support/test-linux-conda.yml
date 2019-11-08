@@ -41,7 +41,8 @@ jobs:
 
   - script: |
       source activate lkpy
-      export NUMBA_THREADING_LAYER=omp # Tests don't work with TBB
+      # export NUMBA_THREADING_LAYER=omp # Tests don't work with TBB
+      export MKL_THREADING_LAYER=tbb
       python3 -m pytest --junitxml=build/test-results.xml --cov=lenskit --verbose
     displayName: 'Test LKPY'
 

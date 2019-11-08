@@ -221,12 +221,37 @@ def test_partition_users():
         ucounts = s.test.groupby('user').agg('count')
         assert all(ucounts == 5)
         assert all(s.test.index.union(s.train.index) == ratings.index)
+        assert all(s.train['user'].isin(s.train['user'].unique()))
         assert len(s.test) + len(s.train) == len(ratings)
 
     users = ft.reduce(lambda us1, us2: us1 | us2,
                       (set(s.test.user) for s in splits))
     assert len(users) == ratings.user.nunique()
     assert users == set(ratings.user)
+
+
+def test_partition_may_skip_train():
+    "Partitioning when users may not have enough ratings to be in the train set and test set."
+    ratings = lktu.ml_test.ratings
+    # make a data set where some users only have 1 rating
+    ratings = ratings.sample(frac=0.1)
+    users = ratings.groupby('user')['rating'].count()
+    assert users.min() == 1.0  # we should have some small users!
+    users.name = 'ur_count'
+
+    splits = xf.partition_users(ratings, 5, xf.SampleN(1))
+    splits = list(splits)
+    assert len(splits) == 5
+
+    # now we go make sure we're missing some users! And don't have any NaN ratings
+    for train, test in splits:
+        # no null ratings
+        assert all(train['rating'].notna())
+        # see if test users with 1 rating are missing from train
+        test = test.join(users, on='user')
+        assert all(~(test.loc[test['ur_count'] == 1, 'user'].isin(train['user'].unique())))
+        # and users with more than one rating are in train
+        assert all(test.loc[test['ur_count'] > 1, 'user'].isin(train['user'].unique()))
 
 
 def test_partition_users_frac():
