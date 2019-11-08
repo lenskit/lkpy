@@ -370,44 +370,38 @@ class UnratedItemCandidateSelector(CandidateSelector):
 
 class Random(Recommender):
     """
-    The Random algorithm recommends random items from all the items or candidate items(if provided).
+    A random-item recommender.
+
+    Attributes:
+        selector(CandidateSelector):
+            Selects candidate items for recommendation.  Default is :class:`UnratedItemCandidateSelector`.
+        random_state(int or numpy.random.RandomState)
+                Seed or random state for generating recommendations.
     """
 
-    def __init__(self, random_state=None):
-        """
-        Args:
-             random_state: int or Series, optional
-                Seed/Seeds for the random sampling of items. If int, then recommending random items
-                for each user with the same seed. If Series, then it is the seeds for the users,
-                indexed by user id.
-        """
+    def __init__(self, selector=None, random_state=None):
+        if selector:
+            self.selector = selector
+        else:
+            self.selector = UnratedItemCandidateSelector()
         self.random_state = random_state
         self.items = None
 
     def fit(self, ratings, *args, **kwargs):
+        self.selector.fit(ratings)
         items = pd.DataFrame(ratings['item'].unique(), columns=['item'])
         self.items = items
         return self
 
     def recommend(self, user, n=None, candidates=None, ratings=None):
-        model = self.items
-        seed = None
-        if isinstance(self.random_state, int):
-            seed = self.random_state
-        if isinstance(self.random_state, pd.Series):
-            seed = self.random_state.get(user)
-
-        frac = None
+        if candidates is None:
+            candidates = self.selector.candidates(user, ratings)
         if n is None:
-            frac = 1
+            n = len(candidates)
 
-        if candidates is not None:
-            return (pd.DataFrame(candidates, columns=['item'])
-                    .sample(n, frac, random_state=seed)
-                    .reset_index(drop=True))
-        else:
-            return (model.sample(n, frac, random_state=seed)
-                    .reset_index(drop=True))
+        c_df = pd.DataFrame(candidates, columns=['item'])
+        recs = c_df.sample(n, random_state=self.random_state)
+        return recs.reset_index(drop=True)
 
     def __str__(self):
         return 'Random'
