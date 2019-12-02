@@ -14,10 +14,6 @@ from .matrix import CSR, _CSR
 _logger = logging.getLogger(__name__)
 __dir = pathlib.Path(__file__).parent
 
-
-if not hasattr(os, 'fspath'):
-    raise ImportError('_mkl_ops requires Python 3.6 or newer')
-
 __cc = ccompiler.new_compiler()
 _mkl_so = __dir / __cc.shared_object_filename('mkl_ops')
 __mkl_defs = (__dir / 'mkl_ops.h').read_text()

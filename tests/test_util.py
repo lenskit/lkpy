@@ -75,12 +75,6 @@ def test_last_memo():
     assert len(history) == 2
 
 
-def test_fspath():
-    path = pathlib.Path('lenskit')
-    fn = lku.fspath(path)
-    assert fn == 'lenskit'
-
-
 def test_write_parquet(tmp_path):
     assert tmp_path.exists()
     fn = tmp_path / 'out.parquet'

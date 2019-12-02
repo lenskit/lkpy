@@ -1,3 +1,4 @@
+from os import fspath
 import pathlib
 import json
 import pickle
@@ -7,7 +8,7 @@ import pandas as pd
 import numpy as np
 import joblib
 
-from lenskit.util import norm_path, fspath
+from lenskit.util import norm_path
 from lenskit.util.test import ml_test
 from lenskit import batch, crossfold as xf
 from lenskit.algorithms import Predictor

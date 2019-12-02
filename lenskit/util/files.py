@@ -8,10 +8,9 @@ import tempfile
 import logging
 import pathlib
 
-__all__ = ['delete_sometime', 'fspath', 'norm_path', 'scratch_dir']
+__all__ = ['delete_sometime', 'norm_path', 'scratch_dir']
 
 _log = logging.getLogger(__name__)
-__os_fp = getattr(os, 'fspath', None)
 
 _removable_files = []
 
@@ -61,14 +60,6 @@ def scratch_dir(default=True, joblib=False):
     if default and not path:
         path = tempfile.gettempdir()
     return path
-
-
-def fspath(path):
-    "Backport of :py:func:`os.fspath` function for Python 3.5."
-    if __os_fp:
-        return __os_fp(path)
-    else:
-        return str(path)
 
 
 def norm_path(path):

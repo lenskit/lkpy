@@ -1,3 +1,4 @@
+import os
 import logging
 import pathlib
 import collections
@@ -304,7 +305,7 @@ class MultiEval:
         if not self.save_models:
             return
         elif self.save_models == 'gzip':
-            with gzip.open(util.fspath(base.with_suffix('.pkl.gz')), 'wb') as f:
+            with gzip.open(os.fspath(base.with_suffix('.pkl.gz')), 'wb') as f:
                 pickle.dump(algo, f)
         elif self.save_models == 'joblib':
             joblib.dump(algo, base.with_suffix('.jlpkl'))

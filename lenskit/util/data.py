@@ -2,6 +2,7 @@
 Data utilities
 """
 
+import os
 import os.path
 import logging
 import pathlib
@@ -9,7 +10,6 @@ import warnings
 
 import pandas as pd
 
-from .files import fspath
 from ..datasets import MovieLens
 
 try:
@@ -49,7 +49,7 @@ def write_parquet(path, frame, append=False):
         frame(pandas.DataFrame): The data to write.
         append(bool): Whether to append to the file or overwrite it.
     """
-    fn = fspath(path)
+    fn = os.fspath(path)
     append = append and os.path.exists(fn)
     _log.debug('%s %d rows to Parquet file %s',
                'appending' if append else 'writing',
