@@ -8,7 +8,6 @@ import pandas as pd
 import numpy as np
 import joblib
 
-from lenskit.util import norm_path
 from lenskit.util.test import ml_test
 from lenskit import batch, crossfold as xf
 from lenskit.algorithms import Predictor
@@ -20,7 +19,6 @@ from pytest import mark
 @mark.slow
 @mark.parametrize('ncpus', [None, 2])
 def test_sweep_bias(tmp_path, ncpus):
-    tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, nprocs=ncpus)
 
@@ -62,7 +60,6 @@ def test_sweep_bias(tmp_path, ncpus):
 
 @mark.slow
 def test_sweep_norecs(tmp_path):
-    tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, recommend=None)
 
@@ -100,7 +97,6 @@ def test_sweep_norecs(tmp_path):
 
 @mark.slow
 def test_sweep_allrecs(tmp_path):
-    tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, recommend=True)
 
@@ -141,7 +137,6 @@ def test_sweep_allrecs(tmp_path):
 
 @mark.slow
 def test_sweep_filenames(tmp_path):
-    tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path)
 
@@ -182,7 +177,6 @@ def test_sweep_filenames(tmp_path):
 
 @mark.slow
 def test_sweep_persist(tmp_path):
-    tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path)
 
@@ -223,7 +217,6 @@ def test_sweep_persist(tmp_path):
 
 @mark.slow
 def test_sweep_oneshot(tmp_path):
-    tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, combine=False)
 
@@ -254,7 +247,6 @@ def test_sweep_oneshot(tmp_path):
 
 @mark.slow
 def test_sweep_save(tmp_path):
-    tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path)
 
@@ -289,7 +281,6 @@ def test_sweep_save(tmp_path):
 
 @mark.slow
 def test_sweep_combine(tmp_path):
-    tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, combine=False)
 
@@ -347,7 +338,6 @@ def test_sweep_combine(tmp_path):
 @mark.slow
 @mark.parametrize("format", [True, 'gzip', 'joblib'])
 def test_save_models(tmp_path, format):
-    tmp_path = norm_path(tmp_path)
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, save_models=format)
 

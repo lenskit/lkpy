@@ -8,7 +8,7 @@ import tempfile
 import logging
 import pathlib
 
-__all__ = ['delete_sometime', 'norm_path', 'scratch_dir']
+__all__ = ['delete_sometime', 'scratch_dir']
 
 _log = logging.getLogger(__name__)
 
@@ -60,17 +60,3 @@ def scratch_dir(default=True, joblib=False):
     if default and not path:
         path = tempfile.gettempdir()
     return path
-
-
-def norm_path(path):
-    """
-    Convert a path into a :cls:`pathlib.Path`, in a Python 3.5-compatible way.
-    """
-    if isinstance(path, pathlib.Path):
-        return path
-    elif hasattr(path, '__fspath__'):
-        return pathlib.Path(path.__fspath__())
-    elif isinstance(path, str):
-        return pathlib.Path(str)
-    else:
-        raise ValueError('invalid path: ' + repr(path))
