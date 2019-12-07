@@ -22,7 +22,7 @@ class HPF(MFPredictor):
         self.features = features
         self._kwargs = kwargs
 
-    def fit(self, ratings):
+    def fit(self, ratings, **kwargs):
         import hpfrec
 
         users = pd.Index(ratings.user.unique())

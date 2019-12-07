@@ -7,6 +7,8 @@ See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/5) for full
 ### Infrastructure Updates
 
 - Dropped support for Python 3.5
+- Removed `*args` from `Algorithm.fit`, so additional data must be provided via keyword arguments
+- Made `Algorithm.fit` implementations consistently take `**kwargs` for hybrid flexibility
 
 ### Algorithm Updates
 

@@ -303,7 +303,7 @@ class ItemItem(Predictor):
         self.center = center
         self.aggregate = aggregate
 
-    def fit(self, ratings):
+    def fit(self, ratings, **kwargs):
         """
         Train a model.
 

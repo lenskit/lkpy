@@ -124,7 +124,7 @@ class UserUser(Predictor):
         self.center = center
         self.aggregate = intern(aggregate)
 
-    def fit(self, ratings):
+    def fit(self, ratings, **kwargs):
         """
         "Train" a user-user CF model.  This memorizes the rating data in a format that is usable
         for future computations.

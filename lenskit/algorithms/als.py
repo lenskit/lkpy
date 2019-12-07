@@ -302,7 +302,7 @@ class BiasedMF(BiasMFPredictor):
         self.progress = progress if progress is not None else util.no_progress
         self._random = rand
 
-    def fit(self, ratings):
+    def fit(self, ratings, **kwargs):
         """
         Run ALS to train a model.
 
@@ -488,7 +488,7 @@ class ImplicitMF(MFPredictor):
         self._random = rand
         self.progress = progress if progress is not None else util.no_progress
 
-    def fit(self, ratings):
+    def fit(self, ratings, **kwargs):
         self.timer = util.Stopwatch()
         current, uctx, ictx = self._initial_model(ratings)
 

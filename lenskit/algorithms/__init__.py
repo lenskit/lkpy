@@ -21,14 +21,15 @@ class Algorithm(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def fit(self, ratings, *args, **kwargs):
+    def fit(self, ratings, **kwargs):
         """
         Train a model using the specified ratings (or similar) data.
 
         Args:
             ratings(pandas.DataFrame): The ratings data.
-            args: Additional training data the algorithm may require.
-            kwargs: Additional training data the algorithm may require.
+            kwargs: Additional training data the algorithm may require.  Algorithms should
+                avoid using the same keyword arguments for different purposes, so that
+                they can be more easily hybridized.
 
         Returns:
             The algorithm object.
