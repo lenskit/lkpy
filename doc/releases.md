@@ -4,11 +4,19 @@
 
 See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/5) for full change list.
 
+### Infrastructure Updates
+
+- Dropped support for Python 3.5
+- Removed `*args` from `Algorithm.fit`, so additional data must be provided via keyword arguments
+- Made `Algorithm.fit` implementations consistently take `**kwargs` for hybrid flexibility
+
 ### Algorithm Updates
 
+- Substantial performance and stability improvements to item-item
 - Added a coordinate descent solver to explicit-feedback ALS and made it the default.  The old
   LU-based solver is still available with `method='lu'`.
 - Added a conjugate gradient solver to implicit-feedback ALS and made it the default.
+- Added a random recommender
 
 ## 0.7.0
 

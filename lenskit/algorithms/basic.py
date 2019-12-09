@@ -69,22 +69,22 @@ class Bias(Predictor):
         check.check_value(self.item_damping >= 0, "item damping value {} must be nonnegative",
                           self.item_damping)
 
-    def fit(self, data):
+    def fit(self, ratings, **kwargs):
         """
         Train the bias model on some rating data.
 
         Args:
-            data (DataFrame): a data frame of ratings. Must have at least `user`,
-                              `item`, and `rating` columns.
+            ratings (DataFrame): a data frame of ratings. Must have at least `user`,
+                                 `item`, and `rating` columns.
 
         Returns:
             Bias: the fit bias object.
         """
 
-        _logger.info('building bias model for %d ratings', len(data))
-        self.mean_ = data.rating.mean()
+        _logger.info('building bias model for %d ratings', len(ratings))
+        self.mean_ = ratings.rating.mean()
         _logger.info('global mean: %.3f', self.mean_)
-        nrates = data.assign(rating=lambda df: df.rating - self.mean_)
+        nrates = ratings.assign(rating=lambda df: df.rating - self.mean_)
 
         if self.items:
             group = nrates.groupby('item').rating
@@ -167,7 +167,7 @@ class Popular(Recommender):
         else:
             self.selector = selector
 
-    def fit(self, ratings):
+    def fit(self, ratings, **kwargs):
         pop = ratings.groupby('item').user.count()
         pop.name = 'score'
         self.item_pop_ = pop.astype('float64')
@@ -236,9 +236,9 @@ class Fallback(Predictor):
         else:
             self.algorithms = [algorithms]
 
-    def fit(self, ratings, *args, **kwargs):
+    def fit(self, ratings, **kwargs):
         for algo in self.algorithms:
-            algo.fit(ratings, *args, **kwargs)
+            algo.fit(ratings, **kwargs)
 
         return self
 
@@ -285,7 +285,7 @@ class TopN(Recommender, Predictor):
         self.predictor = predictor
         self.selector = selector if selector is not None else UnratedItemCandidateSelector()
 
-    def fit(self, ratings, *args, **kwargs):
+    def fit(self, ratings, **kwargs):
         """
         Fit the recommender.
 
@@ -296,8 +296,8 @@ class TopN(Recommender, Predictor):
             args, kwargs:
                 Additional arguments for the predictor to use in its training process.
         """
-        self.predictor.fit(ratings, *args, **kwargs)
-        self.selector.fit(ratings)
+        self.predictor.fit(ratings, **kwargs)
+        self.selector.fit(ratings, **kwargs)
         return self
 
     def recommend(self, user, n=None, candidates=None, ratings=None):
@@ -339,7 +339,7 @@ class UnratedItemCandidateSelector(CandidateSelector):
     users_ = None
     user_items_ = None
 
-    def fit(self, ratings):
+    def fit(self, ratings, **kwargs):
         r2 = ratings[['user', 'item']]
         sparse = sparse_ratings(r2)
         _logger.info('trained unrated candidate selector for %d ratings', sparse.matrix.nnz)
@@ -388,8 +388,8 @@ class Random(Recommender):
         self.random_state = random_state
         self.items = None
 
-    def fit(self, ratings, *args, **kwargs):
-        self.selector.fit(ratings)
+    def fit(self, ratings, **kwargs):
+        self.selector.fit(ratings, **kwargs)
         items = pd.DataFrame(ratings['item'].unique(), columns=['item'])
         self.items = items
         return self

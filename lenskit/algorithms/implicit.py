@@ -31,7 +31,7 @@ class BaseRec(Recommender, Predictor):
     def __init__(self, delegate):
         self.delegate = delegate
 
-    def fit(self, ratings):
+    def fit(self, ratings, **kwargs):
         matrix, users, items = sparse_ratings(ratings, scipy=True)
         iur = matrix.T.tocsr()
 

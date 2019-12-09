@@ -221,7 +221,7 @@ class FunkSVD(BiasMFPredictor):
         else:
             self.bias = bias
 
-    def fit(self, ratings):
+    def fit(self, ratings, **kwargs):
         """
         Train a FunkSVD model.
 
