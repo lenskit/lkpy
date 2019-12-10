@@ -56,11 +56,12 @@ with open('README.md', 'r') as fh:
 
 setup(
     name="lenskit",
-    version="0.8.0",
+    version="0.8.1",
     author="Michael Ekstrand",
     author_email="michaelekstrand@boisestate.edu",
     description="Run recommender algorithms and experiments",
     long_description=readme,
+    long_description_content_type='text/markdown',
     url="https://lkpy.lenskit.org",
     classifiers=[
         "Programming Language :: Python :: 3",
