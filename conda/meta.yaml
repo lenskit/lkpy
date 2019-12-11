@@ -32,7 +32,6 @@ requirements:
     - pandas >=0.24
     - scipy
     - numba >=0.40
-    - pyarrow
     - fastparquet
     - python-snappy
     - cffi
