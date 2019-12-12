@@ -26,6 +26,16 @@ To use the latest development version, install directly from GitHub:
 
 Then see [Getting Started](https://lkpy.lenskit.org/en/latest/GettingStarted.html)
 
+## Developing
+
+To contribute to LensKit, clone or fork the repository, get to work, and submit a pull request.  We welcome contributions from anyone; if you are looking for a place to get started, see the [issue tracker](https://github.com/lenskit/lkpy/issues).
+
+We recommend using an Anaconda environment for developing LensKit.  To set this up, run:
+
+    conda env create -f dev-environment.yml
+
+This will create a Conda environment called `lkpy-dev` with the packages required to develop and test LensKit.
+
 ## Resources
 
 - [Documentation](https://lkpy.lenskit.org)
