@@ -18,7 +18,7 @@ requirements:
     - python {{ python }}
     - setuptools
     - pytest-runner
-    - numba >=0.40
+    - numba >=0.43
     - pandas >=0.24
     - numpy
     - scipy
@@ -31,7 +31,7 @@ requirements:
     - python
     - pandas >=0.24
     - scipy
-    - numba >=0.40
+    - numba >=0.43
     - fastparquet
     - python-snappy
     - cffi
