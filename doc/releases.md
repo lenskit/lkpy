@@ -1,5 +1,12 @@
 # Release Notes
 
+## 0.8.3
+
+- Deprecated `lenskit.util.write_parquet`
+- Made `MultiEval` use directories of parquet files, instead of appending to a single file,
+  for writing multiple results to improve performance without fastparquet.
+- Updated Numba dependency to fix incompatibilities (#129).
+
 ## 0.8.0
 
 See the [GitHub milestone](https://github.com/lenskit/lkpy/milestone/5) for full change list.
