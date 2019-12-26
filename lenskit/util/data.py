@@ -49,6 +49,8 @@ def write_parquet(path, frame, append=False):
         frame(pandas.DataFrame): The data to write.
         append(bool): Whether to append to the file or overwrite it.
     """
+    warnings.warn("write_parquet is deprecated and will be removed in LensKit 0.9",
+                  DeprecationWarning)
     fn = os.fspath(path)
     append = append and os.path.exists(fn)
     _log.debug('%s %d rows to Parquet file %s',
