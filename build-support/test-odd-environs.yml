@@ -1,5 +1,5 @@
 jobs:
-- job: 'LinuxSketchyDeps'
+- job: 'MinimalDeps'
   pool:
     vmImage: ubuntu-16.04
 
@@ -10,18 +10,20 @@ jobs:
       architecture: 'x64'
 
   - script: |
-      python -m pip install --upgrade pip
-      pip install $(pip.deps)
-    displayName: 'Install dependencies'
-  
+      # we need pip
+      python -m pip install --upgrade pip wheel
+      # earliest supported versions of versioned deps
+      pip install pandas==0.24.* numba==0.43.*
+    displayName: 'Install base versioned dependencies'
+
   - script: |
-      python -m pip install cffi
-    displayName: 'Install partial extra deps'
-    
+      python -m pip install -e .
+    displayName: 'Install LensKit and dependencies'
+  
   - script: |
       mkdir -p build
       python3 -m pytest --junitxml=build/test-results.xml --cov=lenskit
-    displayName: 'pytest'
+    displayName: 'Run tests'
 
   - task: PublishTestResults@2
     condition: succeededOrFailed()
