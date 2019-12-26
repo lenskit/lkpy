@@ -50,7 +50,7 @@ def test_uu_train_adapt():
     uu = Recommender.adapt(uu)
     ret = uu.fit(ml_ratings)
     assert ret is uu
-    assert isinstance(uu.scorer, knn.UserUser)
+    assert isinstance(uu.predictor, knn.UserUser)
 
 
 def test_uu_predict_one():
