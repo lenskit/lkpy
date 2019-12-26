@@ -47,7 +47,7 @@ def test_uu_train_adapt():
     from lenskit.algorithms import Recommender
 
     uu = knn.UserUser(30)
-    uu = Recommmender.adapt(uu)
+    uu = Recommender.adapt(uu)
     ret = uu.fit(ml_ratings)
     assert ret is uu
     assert isinstance(uu.scorer, knn.UserUser)
