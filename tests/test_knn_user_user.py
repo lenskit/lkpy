@@ -42,6 +42,17 @@ def test_uu_train():
     assert ui_rbdf.rating.values == approx(ui_rbdf.orig_rating.values)
 
 
+def test_uu_train_adapt():
+    "Test training an adapted user-user (#129)."
+    from lenskit.algorithms import Recommender
+
+    uu = knn.UserUser(30)
+    uu = Recommender.adapt(uu)
+    ret = uu.fit(ml_ratings)
+    assert ret is uu
+    assert isinstance(uu.predictor, knn.UserUser)
+
+
 def test_uu_predict_one():
     algo = knn.UserUser(30)
     algo.fit(ml_ratings)

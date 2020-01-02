@@ -378,8 +378,9 @@ class MultiEval:
         if self.combine_output:
             out = self.workdir / '{}.parquet'.format(name)
             _logger.info('run %d: writing results to %s', run_id, out)
-            append = run_id > 1
-            util.write_parquet(out, df, append=append)
+            out_fn = out / 'run-{}.part'.format(run_id)
+            out.mkdir(exist_ok=True, parents=True)
+            df.to_parquet(out_fn, index=False)
         else:
             out = self.workdir / '{}-{}.parquet'.format(name, run_id)
             _logger.info('run %d: writing results to %s', run_id, out)

@@ -80,7 +80,7 @@ setup(
         'pandas >= 0.24',
         'numpy',
         'scipy',
-        'numba >= 0.38',
+        'numba >= 0.43',
         'pyarrow',
         'cffi',
         'joblib'

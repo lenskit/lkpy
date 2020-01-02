@@ -235,3 +235,4 @@ my-eval/
 dask-worker-space/
 
 build-env/
+.tox/
