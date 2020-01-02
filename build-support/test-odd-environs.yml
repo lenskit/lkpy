@@ -15,7 +15,7 @@ jobs:
       # earliest supported versions of versioned deps
       pip install pandas==0.24.* numba==0.43.*
       # install test things
-      pip install pytest pytest-doctestplus
+      pip install pytest pytest-doctestplus coverage pytest-cov
     displayName: 'Install base versioned dependencies'
 
   - script: |
