@@ -24,8 +24,9 @@ jobs:
 
   - script: |
       source activate lkpy
+      python -V
       numba -s
-    displayName: 'Inspect Numba environment'
+    displayName: 'Inspect environment'
     
   - script: |
       if [ ! -r ml-100k/u.data ]; then
