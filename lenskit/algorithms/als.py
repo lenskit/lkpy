@@ -132,6 +132,7 @@ def _cg_a_mult(OtOr, X, y, v):
 def _cg_solve(OtOr, X, y, w, epochs):
     """
     Use conjugate gradient method to solve the system M†(X'X + X'yX + λ)w = M†X'(y+1).
+    The parameter OtOr = X'X + λ.
     """
     nf = X.shape[1]
     # compute inverse of the Jacobi preconditioner
