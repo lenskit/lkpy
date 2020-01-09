@@ -1,5 +1,13 @@
 # Release Notes
 
+## 0.8.4
+
+This release cleans up dependency problems to make it easier to reliably install LensKit.  We remove
+some unused utility code that had compatibility problems.
+
+- Remove `CSR.sort_values` - we were no longer using this function, and it failed to compile with Numba 0.46.
+- Change dependency versions
+
 ## 0.8.3
 
 - Deprecated `lenskit.util.write_parquet`
