@@ -63,7 +63,7 @@ def test_solve_utri_transpose():
 
 
 @repeated
-@mark.skip('we no longer use Cholesky decomposition anywhere')
+@mark.skip(reason='we no longer use Cholesky decomposition anywhere')
 def test_solve_cholesky():
     size = np.random.randint(5, 50)
     A = np.random.randn(size, size)
