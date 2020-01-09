@@ -215,6 +215,7 @@ def test_ii_train_ml100k(tmp_path):
 
 
 @lktu.wantjit
+@mark.slow
 def test_ii_large_models():
     "Several tests of large trained I-I models"
     _log.info('training limited model')
@@ -489,6 +490,7 @@ def test_ii_batch_accuracy():
 
 
 @lktu.wantjit
+@mark.slow
 def test_ii_known_preds():
     from lenskit import batch
 

@@ -80,7 +80,8 @@ def test_als_train_large(m):
 
 @methods
 def test_als_save_load(m):
-    algo = als.ImplicitMF(20, iterations=5, reg=(2, 1), method=m)
+    "Test saving and loading ALS models, and regularized training."
+    algo = als.ImplicitMF(5, iterations=5, reg=(2, 1), method=m)
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
@@ -108,6 +109,7 @@ def test_als_train_large_noratings():
 
 
 @lktu.wantjit
+@mark.slow
 def test_als_method_match():
     lu = als.ImplicitMF(20, iterations=15, method='lu',
                         rand=np.random.RandomState(42).randn)
