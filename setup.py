@@ -56,7 +56,7 @@ with open('README.md', 'r') as fh:
 
 setup(
     name="lenskit",
-    version="0.8.1",
+    version="0.8.4",
     author="Michael Ekstrand",
     author_email="michaelekstrand@boisestate.edu",
     description="Run recommender algorithms and experiments",
