@@ -483,8 +483,10 @@ def _csr_sort(nrows, rowptrs, colinds, values):
         if ep > sp:
             ord = np.argsort(values[sp:ep])
             ord = ord[::-1]
-            colinds[sp:ep] = colinds[sp + ord]
-            values[sp:ep] = values[sp + ord]
+            ord = ord.astype(np.intc)
+            ord += sp
+            colinds[sp:ep] = colinds[ord]
+            values[sp:ep] = values[ord]
 
 
 @njit(nogil=True)
