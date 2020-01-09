@@ -2,102 +2,102 @@ import os
 import numpy as np
 import scipy.linalg as sla
 
-from pytest import approx
+from pytest import approx, mark
 
 from lenskit.math.solve import solve_tri, dposv
+from lenskit.util.test import repeated
 
-_runs = int(os.environ.get('RAND_TEST_ITERS', 10))
 
-
+@repeated
 def test_solve_ltri():
-    for i in range(_runs):
-        size = np.random.randint(5, 50)
-        Af = np.random.randn(size, size)
-        b = np.random.randn(size)
-        A = np.tril(Af)
+    size = np.random.randint(5, 50)
+    Af = np.random.randn(size, size)
+    b = np.random.randn(size)
+    A = np.tril(Af)
 
-        x = solve_tri(A, b)
-        assert len(x) == size
+    x = solve_tri(A, b)
+    assert len(x) == size
 
-        xexp = sla.solve_triangular(A, b, lower=True)
-        assert x == approx(xexp, rel=1.0e-6)
+    xexp = sla.solve_triangular(A, b, lower=True)
+    assert x == approx(xexp, rel=1.0e-6)
 
 
+@repeated
 def test_solve_ltri_transpose():
-    for i in range(_runs):
-        size = np.random.randint(5, 50)
-        Af = np.random.randn(size, size)
-        b = np.random.randn(size)
-        A = np.tril(Af)
+    size = np.random.randint(5, 50)
+    Af = np.random.randn(size, size)
+    b = np.random.randn(size)
+    A = np.tril(Af)
 
-        x = solve_tri(A, b, True)
-        assert len(x) == size
+    x = solve_tri(A, b, True)
+    assert len(x) == size
 
-        xexp = sla.solve_triangular(A.T, b, lower=False)
-        assert x == approx(xexp, rel=1.0e-6)
+    xexp = sla.solve_triangular(A.T, b, lower=False)
+    assert x == approx(xexp, rel=1.0e-6)
 
 
+@repeated
 def test_solve_utri():
-    for i in range(_runs):
-        size = np.random.randint(5, 50)
-        Af = np.random.randn(size, size)
-        b = np.random.randn(size)
-        A = np.triu(Af)
+    size = np.random.randint(5, 50)
+    Af = np.random.randn(size, size)
+    b = np.random.randn(size)
+    A = np.triu(Af)
 
-        x = solve_tri(A, b, lower=False)
-        assert len(x) == size
-        xexp = sla.solve_triangular(A, b, lower=False)
-        assert x == approx(xexp, rel=1.0e-6)
+    x = solve_tri(A, b, lower=False)
+    assert len(x) == size
+    xexp = sla.solve_triangular(A, b, lower=False)
+    assert x == approx(xexp, rel=1.0e-6)
 
 
+@repeated
 def test_solve_utri_transpose():
-    for i in range(_runs):
-        size = np.random.randint(5, 50)
-        Af = np.random.randn(size, size)
-        b = np.random.randn(size)
-        A = np.triu(Af)
+    size = np.random.randint(5, 50)
+    Af = np.random.randn(size, size)
+    b = np.random.randn(size)
+    A = np.triu(Af)
 
-        x = solve_tri(A, b, True, lower=False)
-        assert len(x) == size
-        xexp = sla.solve_triangular(A.T, b, lower=True)
-        assert x == approx(xexp, rel=1.0e-6)
+    x = solve_tri(A, b, True, lower=False)
+    assert len(x) == size
+    xexp = sla.solve_triangular(A.T, b, lower=True)
+    assert x == approx(xexp, rel=1.0e-6)
 
 
+@repeated
+@mark.skip('we no longer use Cholesky decomposition anywhere')
 def test_solve_cholesky():
-    for i in range(_runs):
-        size = np.random.randint(5, 50)
-        A = np.random.randn(size, size)
-        b = np.random.randn(size)
+    size = np.random.randint(5, 50)
+    A = np.random.randn(size, size)
+    b = np.random.randn(size)
 
-        # square values of A
-        A = A * A
+    # square values of A
+    A = A * A
 
-        # and solve
-        xexp, resid, rank, s = np.linalg.lstsq(A, b, rcond=None)
+    # and solve
+    xexp, resid, rank, s = np.linalg.lstsq(A, b, rcond=None)
 
-        # chol solve
-        L = np.linalg.cholesky(A.T @ A)
+    # chol solve
+    L = np.linalg.cholesky(A.T @ A)
 
-        w = solve_tri(L, A.T @ b)
-        x = solve_tri(L, w, transpose=True)
+    w = solve_tri(L, A.T @ b)
+    x = solve_tri(L, w, transpose=True)
 
-        assert x == approx(xexp, abs=1.0e-3)
+    assert x == approx(xexp, abs=1.0e-3)
 
 
+@repeated
 def test_solve_dposv():
-    for i in range(_runs):
-        size = np.random.randint(5, 50)
-        A = np.random.randn(size, size)
-        b = np.random.randn(size)
+    size = np.random.randint(5, 50)
+    A = np.random.randn(size, size)
+    b = np.random.randn(size)
 
-        # square values of A
-        A = A * A
+    # square values of A
+    A = A * A
 
-        # and solve
-        xexp, resid, rank, s = np.linalg.lstsq(A, b, rcond=None)
+    # and solve
+    xexp, resid, rank, s = np.linalg.lstsq(A, b, rcond=None)
 
-        F = A.T @ A
-        x = A.T @ b
-        dposv(F, x, True)
+    F = A.T @ A
+    x = A.T @ b
+    dposv(F, x, True)
 
-        assert x == approx(xexp, rel=1.0e-3)
+    assert x == approx(xexp, rel=1.0e-3)
