@@ -129,6 +129,9 @@ class RecListAnalysis:
             _log.debug('using meta %s', meta)
             res = grouped.apply(worker, meta=meta)
             res = res.compute()
+        elif hasattr(grouped, 'progress_apply'):
+            # Pandas has been patched with TQDM, use it
+            res = grouped.progress_apply(worker)
         else:
             res = grouped.apply(worker)
 
