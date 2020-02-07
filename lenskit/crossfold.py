@@ -54,6 +54,7 @@ def sample_rows(data, partitions, size, disjoint=True):
 
     We can loop over a sequence of train-test pairs::
 
+        >>> from lenskit import datasets
         >>> ratings = datasets.MovieLens('ml-latest-small').ratings
         >>> for train, test in sample_rows(ratings, 5, 1000):
         ...     print(len(test))
