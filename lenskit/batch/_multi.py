@@ -2,6 +2,7 @@ import os
 import logging
 import pathlib
 import collections
+from collections.abc import Iterable
 import json
 import warnings
 import gzip
@@ -113,7 +114,7 @@ class MultiEval:
                 additional attributes to include in the run descriptions.
         """
 
-        if not isinstance(algos, collections.Iterable):
+        if not isinstance(algos, Iterable):
             algos = [algos]
 
         for algo in algos:
@@ -237,7 +238,7 @@ class MultiEval:
         if runs is not None and self.combine_output:
             raise ValueError('Cannot select runs with combined output')
 
-        if runs is not None and not isinstance(runs, collections.Iterable):
+        if runs is not None and not isinstance(runs, Iterable):
             runs = [runs]
 
         self.workdir.mkdir(parents=True, exist_ok=True)
