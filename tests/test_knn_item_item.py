@@ -1,4 +1,5 @@
 from lenskit import DataWarning
+from lenskit.algorithms import Recommender
 import lenskit.algorithms.item_knn as knn
 
 from pathlib import Path
@@ -477,7 +478,7 @@ def test_ii_batch_accuracy():
         _log.info('running training')
         algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
-        return batch.predict(algo, test, nprocs=4)
+        return batch.predict(algo, test, n_jobs=4)
 
     preds = pd.concat((eval(train, test)
                        for (train, test)
@@ -567,14 +568,13 @@ def test_ii_batch_recommend(ncpus):
 
     ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
 
-    algo = knn.ItemItem(30)
-
     def eval(train, test):
         _log.info('running training')
+        algo = knn.ItemItem(30)
+        algo = Recommender.adapt(algo)
         algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
-        cand_fun = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, test.user.unique(), 100, cand_fun, n_jobs=ncpus)
+        recs = batch.recommend(algo, test.user.unique(), 100, n_jobs=ncpus)
         return recs
 
     test_frames = []

@@ -1,7 +1,7 @@
 import logging
 import pickle
 
-from lenskit import topn, util
+from lenskit import util
 from lenskit.algorithms import als
 
 import pandas as pd
@@ -11,6 +11,7 @@ from scipy import stats
 from pytest import mark, approx
 
 import lenskit.util.test as lktu
+from lenskit.algorithms import Recommender
 from lenskit.util import Stopwatch
 
 _log = logging.getLogger(__name__)
@@ -168,20 +169,20 @@ def test_als_implicit_batch_accuracy():
 
     ratings = lktu.ml100k.ratings
 
-    cg_algo = als.ImplicitMF(25, iterations=20, method='cg')
-    lu_algo = als.ImplicitMF(25, iterations=20, method='lu')
-
     def eval(train, test):
         train['rating'] = train.rating.astype(np.float_)
         _log.info('training CG')
+        cg_algo = als.ImplicitMF(25, iterations=20, method='cg')
+        cg_algo = Recommender.adapt(cg_algo)
         cg_algo.fit(train)
         _log.info('training LU')
+        lu_algo = als.ImplicitMF(25, iterations=20, method='lu')
+        lu_algo = Recommender.adapt(lu_algo)
         lu_algo.fit(train)
         users = test.user.unique()
         _log.info('testing %d users', len(users))
-        candidates = topn.UnratedCandidates(train)
-        cg_recs = batch.recommend(cg_algo, users, 100, candidates, n_jobs=2)
-        lu_recs = batch.recommend(lu_algo, users, 100, candidates, n_jobs=2)
+        cg_recs = batch.recommend(cg_algo, users, 100, n_jobs=2)
+        lu_recs = batch.recommend(lu_algo, users, 100, n_jobs=2)
         return pd.concat({'CG': cg_recs, 'LU': lu_recs}, names=['Method']).reset_index('Method')
 
     folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))

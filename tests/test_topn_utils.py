@@ -1,21 +1,7 @@
-from lenskit import topn
 from lenskit.algorithms import CandidateSelector
 
 import pandas as pd
 import numpy as np
-
-import lenskit.util.test as lktu
-
-
-def test_unrated():
-    ratings = lktu.ml_test.ratings
-    unrate = topn.UnratedCandidates(ratings)
-
-    cs = unrate(100)
-    items = ratings.item.unique()
-    rated = ratings[ratings.user == 100].item.unique()
-    assert len(cs) == len(items) - len(rated)
-    assert len(np.intersect1d(cs, rated)) == 0
 
 
 def test_cs_rated_items_series():

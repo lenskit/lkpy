@@ -1,3 +1,4 @@
+from lenskit.algorithms import Recommender
 import lenskit.algorithms.user_knn as knn
 
 from pathlib import Path
@@ -272,10 +273,10 @@ def test_uu_implicit_batch_accuracy():
     rec_lists = []
     for train, test in folds:
         _log.info('running training')
-        algo.fit(train.loc[:, ['user', 'item']])
-        cands = topn.UnratedCandidates(train)
+        rec_algo = Recommender.adapt(algo)
+        rec_algo.fit(train.loc[:, ['user', 'item']])
         _log.info('testing %d users', test.user.nunique())
-        recs = batch.recommend(algo, test.user.unique(), 100, cands, n_jobs=2)
+        recs = batch.recommend(rec_algo, test.user.unique(), 100, n_jobs=2)
         rec_lists.append(recs)
     recs = pd.concat(rec_lists)
 
