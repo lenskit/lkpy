@@ -1,5 +1,10 @@
 # Release Notes
 
+## 0.9.0
+
+- Tested with Python 3.8 and Pandas 1.0
+- Removed direct support for Dask-based parallelism (ssupot for Dask frames in RecListAnalysis remains)
+
 ## 0.8.4
 
 This release cleans up dependency problems to make it easier to reliably install LensKit.  We remove

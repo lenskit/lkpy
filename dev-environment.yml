@@ -21,7 +21,6 @@ dependencies:
 - pytest-cov
 - pytest-doctestplus
 - dask
-- distributed
 - implicit
 - hpfrec
 - sphinx>=1.8

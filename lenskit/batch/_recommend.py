@@ -10,10 +10,6 @@ from joblib import Parallel, delayed, dump, load
 
 import pandas as pd
 import numpy as np
-try:
-    import dask.dataframe as ddf
-except ImportError:
-    ddf = None
 
 from ..algorithms import Recommender
 from .. import util
@@ -29,13 +25,9 @@ def __load_algo(path):
 
 
 def _recommend_user(algo, user, n, candidates):
-    dask = False
     if type(algo).__name__ == 'AlgoKey':  # pickling doesn't preserve isinstance
         if algo.type == 'file':
             algo = __load_algo(algo.data)
-        elif algo.type == 'future':
-            algo = algo.data.result()
-            dask = True
         else:
             raise ValueError('unknown algorithm key type %s', algo.type)
 
@@ -45,8 +37,6 @@ def _recommend_user(algo, user, n, candidates):
     _logger.debug('%s recommended %d/%s items for %s in %s', algo, len(res), n, user, watch)
     res['user'] = user
     res['rank'] = np.arange(1, len(res) + 1)
-    if dask:
-        res = ddf.from_pandas(res, npartitions=1)
     return res
 
 
@@ -64,7 +54,7 @@ def __standard_cand_fun(candidates):
         return candidates
 
 
-def recommend(algo, users, n, candidates=None, *, n_jobs=None, dask_result=False, **kwargs):
+def recommend(algo, users, n, candidates=None, *, n_jobs=None, **kwargs):
     """
     Batch-recommend for multiple users.  The provided algorithm should be a
     :py:class:`algorithms.Recommender`.
@@ -85,8 +75,6 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, dask_result=False
             context manager.
 
             .. note:: ``nprocs`` is accepted as a deprecated alias.
-        dask_result(bool):
-            Whether to return a Dask data frame instead of a Pandas one.
 
     Returns:
         A frame with at least the columns ``user``, ``rank``, and ``item``; possibly also
@@ -117,13 +105,8 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, dask_result=False
             njobs = loop._effective_n_jobs()
             _logger.info('parallel backend %s, effective njobs %s',
                          backend, njobs)
-            using_dask = backend == 'DaskDistributedBackend'
             astr = str(rec_algo)
-            if using_dask:
-                _logger.debug('pre-scattering algorithm %s', rec_algo)
-                futures = loop._backend.client.scatter([rec_algo], broadcast=True, hash=False)
-                rec_algo = _AlgoKey('future', futures[0])
-            elif njobs > 1:
+            if njobs > 1:
                 fd, path = tempfile.mkstemp(prefix='lkpy-predict', suffix='.pkl',
                                             dir=util.scratch_dir(joblib=True))
                 path = pathlib.Path(path)
@@ -138,12 +121,7 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, dask_result=False
             results = loop(delayed(_recommend_user)(rec_algo, user, n, candidates(user))
                            for user in users)
 
-            if using_dask or dask_result:
-                results = ddf.concat(results, interleave_partitions=True)
-                if not dask_result:  # only if we're running inside dask, but don't want results
-                    results = results.compute()
-            else:
-                results = pd.concat(results, ignore_index=True, copy=False)
+            results = pd.concat(results, ignore_index=True, copy=False)
             _logger.info('recommended for %d users in %s', len(users), timer)
     finally:
         util.delete_sometime(path)

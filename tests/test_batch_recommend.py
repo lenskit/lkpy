@@ -5,19 +5,12 @@ import logging
 import pandas as pd
 import numpy as np
 import joblib
-from contextlib import closing
 
 import lenskit.util.test as lktu
 
 from lenskit.algorithms.basic import Bias, TopN, Popular
 from lenskit import batch, topn
 import lenskit.crossfold as xf
-
-try:
-    import distributed
-    import dask.dataframe as ddf
-except ImportError:
-    distributed = None
 
 MLB = namedtuple('MLB', ['ratings', 'algo'])
 _log = logging.getLogger(__name__)
@@ -44,13 +37,9 @@ class MLFolds:
         recs = batch.recommend(algo, test.user.unique(), 100, **kwargs)
         return recs
 
-    def eval_all(self, algo, dask=False, **kwargs):
-        if dask:
-            concat = lambda dfs: ddf.concat(list(dfs), interleave_partitions=True)
-        else:
-            concat = pd.concat
-        return concat(self.evaluate(algo, train, test, dask_result=dask, **kwargs)
-                      for (train, test) in self.folds)
+    def eval_all(self, algo, **kwargs):
+        return pd.concat(self.evaluate(algo, train, test, **kwargs)
+                         for (train, test) in self.folds)
 
     def check_positive_ndcg(self, recs):
         _log.info('analyzing recommendations')
@@ -148,28 +137,13 @@ def test_bias_batch_recommend(ml_folds: MLFolds, ncpus):
     ml_folds.check_positive_ndcg(recs)
 
 
-@pytest.mark.skipif(distributed is None, reason='distributed unavailable')
-@pytest.mark.eval
-def test_bias_batch_recommend_dask(ml_folds: MLFolds):
-    algo = Bias(damping=5)
-    algo = TopN(algo)
-
-    with closing(distributed.Client()), joblib.parallel_backend('dask'):
-        recs = ml_folds.eval_all(algo, dask=True)
-        assert isinstance(recs, ddf.DataFrame)
-
-        ml_folds.check_positive_ndcg(recs)
-
-
 @pytest.mark.eval
 def test_bias_batch_recommend_threads(ml_folds: MLFolds):
     algo = Bias(damping=5)
     algo = TopN(algo)
 
     with joblib.parallel_backend('threading', n_jobs=2):
-        recs = ml_folds.eval_all(algo, dask=True)
-        assert isinstance(recs, ddf.DataFrame)
-
+        recs = ml_folds.eval_all(algo)
         ml_folds.check_positive_ndcg(recs)
 
 
@@ -179,5 +153,4 @@ def test_pop_batch_recommend(ml_folds: MLFolds, ncpus):
     algo = Popular()
 
     recs = ml_folds.eval_all(algo, n_jobs=ncpus)
-
     ml_folds.check_positive_ndcg(recs)

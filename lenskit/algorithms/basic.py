@@ -2,6 +2,7 @@
 Basic utility algorithms and combiners.
 """
 
+import sys
 import logging
 from collections.abc import Iterable, Sequence
 
@@ -126,7 +127,7 @@ class Bias(Predictor):
         preds = pd.Series(self.mean_, idx)
 
         if self.item_offsets_ is not None:
-            preds = preds + self.item_offsets_.reindex(items, fill_value=0)
+            preds = preds + self.item_offsets_.reindex(idx, fill_value=0)
 
         if self.users and ratings is not None:
             uoff = ratings - self.mean_
