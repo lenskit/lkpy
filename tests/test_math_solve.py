@@ -62,8 +62,8 @@ def test_solve_utri_transpose():
     assert x == approx(xexp, rel=1.0e-6)
 
 
-@repeated
 @mark.skip(reason='we no longer use Cholesky decomposition anywhere')
+@repeated
 def test_solve_cholesky():
     size = np.random.randint(5, 50)
     A = np.random.randn(size, size)
