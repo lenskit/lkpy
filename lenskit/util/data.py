@@ -40,32 +40,6 @@ def read_df_detect(path):
         return pd.read_parquet(path)
 
 
-def write_parquet(path, frame, append=False):
-    """
-    Write a Parquet file.
-
-    Args:
-        path(pathlib.Path): The path of the Parquet file to write.
-        frame(pandas.DataFrame): The data to write.
-        append(bool): Whether to append to the file or overwrite it.
-    """
-    warnings.warn("write_parquet is deprecated and will be removed in LensKit 0.9",
-                  DeprecationWarning)
-    fn = os.fspath(path)
-    append = append and os.path.exists(fn)
-    _log.debug('%s %d rows to Parquet file %s',
-               'appending' if append else 'writing',
-               len(frame), fn)
-    if fastparquet is not None:
-        fastparquet.write(fn, frame, append=append, compression='snappy')
-    elif append:
-        warnings.warn('fastparquet not available, appending is slow')
-        odf = pd.read_parquet(fn)
-        pd.concat([odf, frame], ignore_index=True).to_parquet(fn)
-    else:
-        frame.to_parquet(fn)
-
-
 def load_ml_ratings(path='ml-latest-small'):
     """
     Load the ratings from a modern MovieLens data set (ML-20M or one of the ‘latest’ data sets).
