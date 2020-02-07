@@ -38,30 +38,3 @@ def read_df_detect(path):
         return pd.read_csv(path)
     elif path.suffix in ('.parquet', '.parq', '.pq'):
         return pd.read_parquet(path)
-
-
-def load_ml_ratings(path='ml-latest-small'):
-    """
-    Load the ratings from a modern MovieLens data set (ML-20M or one of the ‘latest’ data sets).
-
-    >>> load_ml_ratings().head()
-        user item rating  timestamp
-    0   1      31    2.5 1260759144
-    1   1    1029    3.0 1260759179
-    2   1    1061    3.0 1260759182
-    3   1    1129    2.0 1260759185
-    4   1    1172    4.0 1260759205
-
-    .. note:: This is deprecated; use :cls:`lenskit.datasets.MovieLens`.
-
-    Args:
-        path: The path where the MovieLens data is unpacked.
-
-    Returns:
-        pandas.DataFrame:
-            The rating data, with user and item columns named properly for LensKit.
-    """
-    warnings.warn('load_ml_ratings is deprecated, use datsets.MovieLens.')
-
-    ml = MovieLens(path)
-    return ml.ratings

@@ -73,9 +73,3 @@ def test_last_memo():
     assert len(history) == 1
     cache("bar")
     assert len(history) == 2
-
-
-def test_read_ml():
-    ratings = lku.load_ml_ratings()
-    assert len(ratings) > 100000
-    assert set(ratings.columns) == set(['user', 'item', 'rating', 'timestamp'])
