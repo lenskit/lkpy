@@ -9,7 +9,7 @@ import lenskit.util.test as lktu
 
 
 def test_check_missing_empty():
-    pm._check_missing(pd.Series([]), 'error')
+    pm._check_missing(pd.Series([], dtype='float64'), 'error')
     # should pass
     assert True
 

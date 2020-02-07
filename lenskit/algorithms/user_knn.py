@@ -184,7 +184,7 @@ class UserUser(Predictor):
 
         ratings, umean = self._get_user_data(user, ratings)
         if ratings is None:
-            return pd.Series(index=items)
+            return pd.Series(index=items, dtype='float64')
         assert len(ratings) == len(self.item_index_)  # ratings is a dense vector
 
         # now ratings is normalized to be a mean-centered unit vector
