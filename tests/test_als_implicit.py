@@ -154,7 +154,7 @@ def test_als_method_match():
     _log.info('CD preds:\n%s', preds.cg.describe())
     _log.info('overall differences:\n%s', preds.adiff.describe())
     # there are differences. our check: the 90% are reasonable
-    assert np.quantile(adiff, 0.9) <= 0.3
+    assert np.quantile(adiff, 0.9) < 0.5
 
 
 @mark.slow
