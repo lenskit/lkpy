@@ -3,10 +3,11 @@ Utilities to manage randomness in LensKit and LensKit experiments.
 """
 
 import numpy as np
+import random
+import warnings
 
 _have_gen = hasattr(np.random, 'Generator')
 _seed = None
-_generator = None
 
 
 def _get_rng():
@@ -18,6 +19,35 @@ def _get_rng():
         return np.random.default_rng(kids[0])
     else:
         return np.random.mtrand._rand
+
+
+def init_rng(seed, *, propagate=True):
+    """
+    Initialize the random infrastructure with a seed.  This function should generally be
+    called very early in the setup.
+
+    Args:
+        seed(int or np.random.SeedSequence):
+            The random seed to initialize with.
+        propagate(bool):
+            If ``True``, initialize other RNG infrastructure.
+    """
+    global _seed
+    if _have_gen:
+        if isinstance(seed, int):
+            seed = np.random.SeedSequence(seed)
+        _seed = seed
+
+        if propagate:
+            nps, pys = seed.spawn(2)
+            np.random.seed(nps.generate_state(1))
+            random.seed(pys.generate_state(1)[0])
+
+    else:
+        warnings.warn('initializing random seeds with legacy infrastructure')
+        np.random.seed(seed)
+        if propagate:
+            random.seed(seed)
 
 
 def rng(seed=None, *, legacy=False):

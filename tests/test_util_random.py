@@ -61,3 +61,9 @@ def test_generator_passthrough():
     rng = random.rng(rng1)
     assert isinstance(rng, np.random.Generator)
     assert rng is rng1
+
+
+@new_gen
+def test_initialize():
+    random.init_rng(42)
+    assert random._seed.entropy == 42
