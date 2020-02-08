@@ -6,7 +6,7 @@ For example:
     from lenskit.batch import MultiEval
     from lenskit.crossfold import partition_users, SampleN
     from lenskit.algorithms import basic, als
-    from lenskit.util import load_ml_ratings
+    from lenskit.datasets import MovieLens
     from lenskit import topn
     import pandas as pd
 
@@ -14,7 +14,8 @@ Generate the train-test pairs:
 
 .. code:: ipython3
 
-    pairs = list(partition_users(load_ml_ratings(), 5, SampleN(5)))
+    ml = MovieLens('ml-latest-small')
+    pairs = list(partition_users(ml.ratings, 5, SampleN(5)))
 
 Set up and run the ``MultiEval`` experiment:
 

@@ -73,31 +73,3 @@ def test_last_memo():
     assert len(history) == 1
     cache("bar")
     assert len(history) == 2
-
-
-def test_write_parquet(tmp_path):
-    assert tmp_path.exists()
-    fn = tmp_path / 'out.parquet'
-    frame = pd.DataFrame({'n': np.arange(10), 'x': np.random.randn(10) + 5})
-    lku.write_parquet(fn, frame)
-
-    f2 = pd.read_parquet(fn)
-    assert all(f2.n == frame.n)
-    assert all(f2.x == frame.x)
-
-
-def test_append_parquet(tmp_path):
-    fn = tmp_path / 'out.parquet'
-    frame = pd.DataFrame({'n': np.arange(10), 'x': np.random.randn(10) + 5})
-    lku.write_parquet(fn, frame.iloc[:5], True)
-    lku.write_parquet(fn, frame.iloc[5:], True)
-
-    f2 = pd.read_parquet(fn)
-    assert all(f2.n == frame.n)
-    assert all(f2.x == frame.x)
-
-
-def test_read_ml():
-    ratings = lku.load_ml_ratings()
-    assert len(ratings) > 100000
-    assert set(ratings.columns) == set(['user', 'item', 'rating', 'timestamp'])

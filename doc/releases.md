@@ -3,6 +3,18 @@
 ## 0.9.0
 
 - Tested with Python 3.8 and Pandas 1.0
+
+### Deprecated Feature Removal
+
+We removed the following previously-deprecated features:
+
+- `write_parquet`
+- `UnratedCandidates`
+
+### Unused Feature Removal
+
+We removed some unused features that were causing maintenance problems:
+
 - Removed direct support for Dask-based parallelism (ssupot for Dask frames in RecListAnalysis remains)
 
 ## 0.8.4

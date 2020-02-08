@@ -9,7 +9,7 @@ from ..algorithms import Algorithm
 from .files import *
 from .accum import Accumulator
 from .timing import Stopwatch
-from .data import read_df_detect, write_parquet, load_ml_ratings
+from .data import read_df_detect
 
 try:
     import resource

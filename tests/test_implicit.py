@@ -65,8 +65,7 @@ def test_implicit_als_batch_accuracy():
         algo.fit(train)
         users = test.user.unique()
         _log.info('testing %d users', len(users))
-        candidates = topn.UnratedCandidates(train)
-        recs = batch.recommend(algo, users, 100, candidates)
+        recs = batch.recommend(algo, users, 100)
         return recs
 
     folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))

@@ -32,7 +32,7 @@ class RecListAnalysis:
     grouping columns, and contain at least an ``item`` column.  If it also
     contains a ``rating`` column, that is used as the users' rating for
     metrics that require it; otherwise, a rating value of 1 is assumed.
-    
+
     .. warning::
        Currently, RecListAnalysis will silently drop users who received
        no recommendations.  We are working on an ergonomic API for fixing
@@ -155,22 +155,3 @@ class RecListAnalysis:
             res['nrecs'] = res['nrecs'].fillna(0)
 
         return res
-
-
-class UnratedCandidates:
-    """
-    Candidate selector that selects unrated items from a training set.
-
-    Args:
-        training(pandas.DataFrame):
-            the training data; must have ``user`` and ``item`` columns.
-    """
-
-    def __init__(self, training):
-        warnings.warn('UnratedCandidates deprecated, use default item selector', DeprecationWarning)
-        self.training = training.set_index('user').item
-        self.items = training.item.unique()
-
-    def __call__(self, user, *args, **kwargs):
-        urates = self.training.loc[user]
-        return np.setdiff1d(self.items, urates)
