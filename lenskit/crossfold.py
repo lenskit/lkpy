@@ -18,24 +18,29 @@ TTPair.test.__doc__ = 'Test data for this pair.'
 _logger = logging.getLogger(__name__)
 
 
-def partition_rows(data, partitions):
+def partition_rows(data, partitions, *, rng=None):
     """
     Partition a frame of ratings or other datainto train-test partitions.  This function does not
     care what kind of data is in `data`, so long as it is a Pandas DataFrame (or equivalent).
 
-    :param data: a data frame containing ratings or other data you wish to partition.
-    :type data: :py:class:`pandas.DataFrame` or equivalent
-    :param partitions: the number of partitions to produce
-    :type partitions: integer
-    :rtype: iterator
-    :returns: an iterator of train-test pairs
+    Args:
+        data(pandas.DataFrame):
+            Ratings or other data you wish to partition.
+        partitions(int):
+            The number of partitions to produce.
+        rng:
+            The random seed.
+
+    Returns:
+        iterator: an iterator of train-test pairs
     """
     _logger.info('partitioning %d ratings into %d partitions', len(data), partitions)
 
     # create an array of indexes
     rows = np.arange(len(data))
     # shuffle the indices & split into partitions
-    np.random.shuffle(rows)
+    rng = util.rng(rng)
+    rng.shuffle(rows)
     test_sets = np.array_split(rows, partitions)
 
     # convert each partition into a split
@@ -47,7 +52,7 @@ def partition_rows(data, partitions):
         yield TTPair(train, test)
 
 
-def sample_rows(data, partitions, size, disjoint=True):
+def sample_rows(data, partitions, size, disjoint=True, *, rng=None):
     """
     Sample train-test a frame of ratings into train-test partitions.  This function does not care
     what kind of data is in `data`, so long as it is a Pandas DataFrame (or equivalent).
@@ -82,6 +87,8 @@ def sample_rows(data, partitions, size, disjoint=True):
             The size of each sample.
         disjoint(bool):
             If ``True``, force samples to be disjoint.
+        rng:
+            The random number generator or seed.
 
     Returns:
         iterator: An iterator of train-test pairs.
@@ -104,18 +111,19 @@ def sample_rows(data, partitions, size, disjoint=True):
 
     if disjoint:
         _logger.info('creating %d disjoint samples of size %d', partitions, size)
-        ips = _disjoint_sample(rows, partitions, size)
+        ips = _disjoint_sample(rows, partitions, size, rng)
 
     else:
         _logger.info('taking %d samples of size %d', partitions, size)
-        ips = _n_samples(rows, partitions, size)
+        ips = _n_samples(rows, partitions, size, rng)
 
     return (TTPair(data.iloc[ip.train, :], data.iloc[ip.test, :]) for ip in ips)
 
 
-def _disjoint_sample(xs, n, size):
+def _disjoint_sample(xs, n, size, rng):
     # shuffle the indices & split into partitions
-    np.random.shuffle(xs)
+    rng = util.rng(rng)
+    rng.shuffle(xs)
 
     # convert each partition into a split
     for i in range(n):
@@ -125,9 +133,10 @@ def _disjoint_sample(xs, n, size):
         yield TTPair(train, test)
 
 
-def _n_samples(xs, n, size):
+def _n_samples(xs, n, size, rng):
+    rng = util.rng(rng)
     for i in range(n):
-        test = np.random.choice(xs, size, False)
+        test = rng.choice(xs, size, False)
         train = np.setdiff1d(xs, test, assume_unique=True)
         yield TTPair(train, test)
 
@@ -143,9 +152,13 @@ class PartitionMethod(ABC):
         """
         Subset a data frame.
 
-        :param udf: The input data frame of rows for a user or item.
-        :paramtype udf: :py:class:`pandas.DataFrame`
-        :returns: The data frame of test rows, a subset of `udf`.
+        Args:
+            udf(pandas.DataFrame):
+                The input data frame of rows for a user or item.
+
+        Returns:
+            pandas.DataFrame:
+                The data frame of test rows, a subset of ``udf``.
         """
         pass
 
@@ -154,29 +167,32 @@ class SampleN(PartitionMethod):
     """
     Randomly select a fixed number of test rows per user/item.
 
-    :param n: The number of test items to select.
-    :paramtype n: integer
+    Args:
+        n(int): the number of test items to select
+        rng: the random number generator or seed
     """
 
-    def __init__(self, n):
+    def __init__(self, n, *, rng=None):
         self.n = n
+        self.rng = util.rng(rng, legacy=True)
 
     def __call__(self, udf):
-        return udf.sample(n=self.n)
+        return udf.sample(n=self.n, random_state=self.rng)
 
 
 class SampleFrac(PartitionMethod):
     """
     Randomly select a fraction of test rows per user/item.
 
-    :param frac: the fraction of items to select for testing.
-    :paramtype frac: double
+    Args:
+        frac(float): the fraction items to select for testing.
     """
-    def __init__(self, frac):
+    def __init__(self, frac, *, rng=None):
         self.fraction = frac
+        self.rng = util.rng(rng, legacy=True)
 
     def __call__(self, udf):
-        return udf.sample(frac=self.fraction)
+        return udf.sample(frac=self.fraction, random_state=self.rng)
 
 
 class LastN(PartitionMethod):
@@ -184,9 +200,8 @@ class LastN(PartitionMethod):
     Select a fixed number of test rows per user/item, based on ordering by a
     column.
 
-    :param n: The number of test items to select.
-    :paramtype n: integer
-    :param col: The column to sort by.
+    Args:
+        n(int): The number of test items to select.
     """
 
     def __init__(self, n, col='timestamp'):
@@ -201,9 +216,8 @@ class LastFrac(PartitionMethod):
     """
     Select a fraction of test rows per user/item.
 
-    :param frac: the fraction of items to select for testing.
-    :paramtype frac: double
-    :param col: The column to sort by.
+    Args:
+        frac(double): the fraction of items to select for testing.
     """
     def __init__(self, frac, col='timestamp'):
         self.fraction = frac
@@ -214,19 +228,19 @@ class LastFrac(PartitionMethod):
         return udf.sort_values(self.column).iloc[-n:]
 
 
-def partition_users(data, partitions: int, method: PartitionMethod):
+def partition_users(data, partitions: int, method: PartitionMethod, *, rng=None):
     """
     Partition a frame of ratings or other data into train-test partitions user-by-user.
     This function does not care what kind of data is in `data`, so long as it is a Pandas DataFrame
     (or equivalent) and has a `user` column.
 
-    :param data: a data frame containing ratings or other data you wish to partition.
-    :type data: :py:class:`pandas.DataFrame` or equivalent
-    :param partitions: the number of partitions to produce
-    :type partitions: integer
-    :param method: The method for selecting test rows for each user.
-    :rtype: iterator
-    :returns: an iterator of train-test pairs
+    Args:
+        data(pandas.DataFrame): a data frame containing ratings or other data you wish to partition.
+        partitions(int): the number of partitions to produce
+        method(PartitionMethod): The method for selecting test rows for each user.
+
+    Returns
+        iterator: an iterator of train-test pairs
     """
 
     user_col = data['user']
@@ -237,7 +251,8 @@ def partition_users(data, partitions: int, method: PartitionMethod):
     # create an array of indexes into user row
     rows = np.arange(len(users))
     # shuffle the indices & split into partitions
-    np.random.shuffle(rows)
+    rng = util.rng(rng)
+    rng.shuffle(rows)
     test_sets = np.array_split(rows, partitions)
 
     # convert each partition into a split
@@ -255,7 +270,8 @@ def partition_users(data, partitions: int, method: PartitionMethod):
         yield TTPair(train, test)
 
 
-def sample_users(data, partitions: int, size: int, method: PartitionMethod, disjoint=True):
+def sample_users(data, partitions: int, size: int, method: PartitionMethod, disjoint=True, *,
+                 rng=None):
     """
     Create train-test partitions by sampling users.
     This function does not care what kind of data is in `data`, so long as it is
@@ -270,10 +286,14 @@ def sample_users(data, partitions: int, size: int, method: PartitionMethod, disj
             The sample size.
         method(PartitionMethod):
             The method for obtaining user test ratings.
+        rng:
+            The random number generator.
 
     Returns:
         iterator: An iterator of train-test pairs (as :class:`TTPair` objects).
     """
+
+    rng = util.rng(rng)
 
     user_col = data['user']
     users = user_col.unique()
@@ -288,7 +308,7 @@ def sample_users(data, partitions: int, size: int, method: PartitionMethod, disj
                  len(users), partitions, size)
 
     if disjoint:
-        np.random.shuffle(users)
+        rng.shuffle(users)
 
     # generate our samples
     for i in range(partitions):
@@ -296,7 +316,7 @@ def sample_users(data, partitions: int, size: int, method: PartitionMethod, disj
         if disjoint:
             test_us = users[i*size:(i+1)*size]
         else:
-            test_us = np.random.choice(users, size, False)
+            test_us = rng.choice(users, size, False)
 
         # sample the data frame
         test = data[data.user.isin(test_us)].groupby('user').apply(method)
