@@ -55,6 +55,9 @@ def init_rng(seed, *keys, propagate=True):
 
             * :func:`np.random.seed`
             * :func:`random.seed`
+
+    Returns:
+        The random seed.
     """
     global root_seed
     if _have_gen:
@@ -69,11 +72,14 @@ def init_rng(seed, *keys, propagate=True):
             np.random.seed(nps.generate_state(1))
             random.seed(pys.generate_state(1)[0])
 
+        return root_seed
+
     else:
         warnings.warn('initializing random seeds with legacy infrastructure')
         np.random.seed(seed)
         if propagate:
             random.seed(seed)
+        return seed
 
 
 def derive_seed(*keys, base=None):
