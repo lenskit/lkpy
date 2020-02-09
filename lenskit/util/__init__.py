@@ -10,7 +10,7 @@ from .files import *
 from .accum import Accumulator
 from .timing import Stopwatch
 from .data import read_df_detect
-from .random import rng, init_rng
+from .random import rng, init_rng, derivable_rng
 
 try:
     import resource

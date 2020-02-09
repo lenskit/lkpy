@@ -6,7 +6,7 @@ import numpy as np
 import pickle
 
 import lenskit.util.test as lktu
-from pytest import approx
+from pytest import approx, mark
 
 simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
                           'user': [10, 12, 10, 13],
@@ -370,6 +370,29 @@ def test_unrated_big():
 def test_random():
     # test case: no seed
     algo = basic.Random()
+    model = algo.fit(lktu.ml_test.ratings)
+    items = lktu.ml_test.ratings['item'].unique()
+    users = lktu.ml_test.ratings['user'].unique()
+    nitems = len(items)
+    nusers = len(users)
+
+    assert model is not None
+
+    recs1 = algo.recommend(2038, 100)
+    recs2 = algo.recommend(2028, 100)
+    assert len(recs1) == 100
+    assert len(recs2) == 100
+    # with very high probabilities
+    assert set(recs1['item']) != set(recs2['item'])
+
+    recs_all = algo.recommend(2038)
+    assert len(recs_all) == nitems
+    assert set(items) == set(recs_all['item'])
+
+
+@mark.skipif(not lku.random._have_gen, reason='derived seeds require NumPy 1.17')
+def test_random_derive_seed():
+    algo = basic.Random(rng='user')
     model = algo.fit(lktu.ml_test.ratings)
     items = lktu.ml_test.ratings['item'].unique()
     users = lktu.ml_test.ratings['user'].unique()

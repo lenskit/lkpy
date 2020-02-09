@@ -1,3 +1,4 @@
+import zlib
 import numpy as np
 from lenskit.util import random
 
@@ -66,4 +67,28 @@ def test_generator_passthrough():
 @new_gen
 def test_initialize():
     random.init_rng(42)
-    assert random._seed.entropy == 42
+    assert random.root_seed.entropy == 42
+
+
+@new_gen
+def test_derive_seed():
+    random.init_rng(42, propagate=False)
+    s2 = random.derive_seed()
+    assert s2.entropy == 42
+    assert s2.spawn_key == (0,)
+
+
+@new_gen
+def test_derive_seed_intkey():
+    random.init_rng(42, propagate=False)
+    s2 = random.derive_seed(10, 7)
+    assert s2.entropy == 42
+    assert s2.spawn_key == (10, 7)
+
+
+@new_gen
+def test_derive_seed_str():
+    random.init_rng(42, propagate=False)
+    s2 = random.derive_seed(b'wombat')
+    assert s2.entropy == 42
+    assert s2.spawn_key == (zlib.crc32(b'wombat'),)

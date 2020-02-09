@@ -2,23 +2,40 @@
 Utilities to manage randomness in LensKit and LensKit experiments.
 """
 
+import zlib
 import numpy as np
 import random
 import warnings
 
 _have_gen = hasattr(np.random, 'Generator')
-_seed = None
+root_seed = None
+
+
+def _get_seed():
+    global root_seed
+    if root_seed is None:
+        root_seed = np.random.SeedSequence()
+    return root_seed
 
 
 def _get_rng():
-    global _seed
     if _have_gen:
-        if _seed is None:
-            _seed = np.random.SeedSequence()
-        kids = _seed.spawn(1)
+        seed = _get_seed()
+        kids = seed.spawn(1)
         return np.random.default_rng(kids[0])
     else:
         return np.random.mtrand._rand
+
+
+def _make_int(obj):
+    if isinstance(obj, int):
+        return obj
+    elif isinstance(obj, bytes):
+        return zlib.crc32(obj)
+    elif isinstance(obj, str):
+        return zlib.crc32(str.encode('utf8'))
+    else:
+        return ValueError('invalid RNG key ' + str(obj))
 
 
 def init_rng(seed, *, propagate=True):
@@ -27,16 +44,16 @@ def init_rng(seed, *, propagate=True):
     called very early in the setup.
 
     Args:
-        seed(int or np.random.SeedSequence):
+        seed(int or numpy.random.SeedSequence):
             The random seed to initialize with.
         propagate(bool):
             If ``True``, initialize other RNG infrastructure.
     """
-    global _seed
+    global root_seed
     if _have_gen:
         if isinstance(seed, int):
             seed = np.random.SeedSequence(seed)
-        _seed = seed
+        root_seed = seed
 
         if propagate:
             nps, pys = seed.spawn(2)
@@ -50,17 +67,43 @@ def init_rng(seed, *, propagate=True):
             random.seed(seed)
 
 
+def derive_seed(*keys, base=None):
+    """
+    Derive a seed from the root seed, optionally with additional seed keys.
+
+    Args:
+        keys(list of int or str):
+            Additional components to add to the spawn key for reproducible derivation.
+            If unspecified, the seed's internal counter is incremented.
+        base(numpy.random.SeedSequence):
+            The base seed to use.  If ``None``, uses the root seed.
+    """
+    if not _have_gen:
+        raise NotImplementedError('derive_seed requires NumPy 1.17 or newer')
+
+    if base is None:
+        base = _get_seed()
+
+    if keys:
+        k2 = tuple(_make_int(k) for k in keys)
+        return np.random.SeedSequence(base.entropy, spawn_key=base.spawn_key + k2)
+    else:
+        return base.spawn(1)[0]
+
+
 def rng(seed=None, *, legacy=False):
     """
     Get a random number generator.  This is similar to :func:`sklearn.utils.check_random_seed`, but
-    it usually returns a :cls:`numpy.random.Generator` instead.
+    it usually returns a :class:`numpy.random.Generator` instead.
 
     Args:
-        seed(int or None or np.random.RandomState or np.random.Generator):
+        seed(int or None or numpy.random.SeedSequence or
+             numpy.random.mtrand.RandomState or
+             numpy.random.Generator):
             The seed for this RNG.
         legacy(bool):
-            If ``True``, return :cls:`numpy.random.RandomState` instead of a new-style
-            :cls:`numpy.random.Generator`.
+            If ``True``, return :class:`numpy.random.mtrand.RandomState` instead of a new-style
+            :class:`numpy.random.Generator`.
     """
 
     if _have_gen and legacy and isinstance(seed, np.random.Generator):
@@ -87,3 +130,65 @@ def rng(seed=None, *, legacy=False):
         return seed
     else:
         raise ValueError('invalid random seed ' + str(seed))
+
+
+class FixedRNG:
+    "RNG provider that always provides the same RNG"
+    def __init__(self, rng):
+        self.rng = rng
+
+    def __call__(self, *keys):
+        return self.rng
+
+    def __str__(self):
+        return 'Fixed({})'.format(self.rng)
+
+
+class DerivingRNG:
+    "RNG provider that derives new RNGs from the key"
+    def __init__(self, seed, legacy):
+        self.seed = seed
+        self.legacy = legacy
+
+    def __call__(self, *keys):
+        seed = derive_seed(*keys, base=self.seed)
+        if self.legacy:
+            bg = np.random.MT19937(seed)
+            return np.random.RandomState(bg)
+        else:
+            return np.random.default_rng(seed)
+
+    def __str__(self):
+        return 'Derive({})'.format(self.seed)
+
+
+def derivable_rng(spec, *, legacy=False):
+    """
+    Get a derivable RNG, for use cases where the code needs to be able to reproducibly derive
+    sub-RNGs for different keys, such as user IDs.
+
+    Args:
+        spec:
+            Any value supported by the `seed` parameter of :func:`rng`, in addition to the
+            following values:
+            * the string ``'user'``
+            * a tuple of the form (`seed`, ``'user'``)
+
+            Either of the second form will cause the returned function to re-derive new RNGs.
+
+    Returns:
+        function:
+            A function taking one (or more) key values, like :func:`derive_seed`, and
+            returning a random number generator (the type of which is determined by
+            the ``legacy`` parameter).
+    """
+
+    if spec == 'user':
+        return DerivingRNG(derive_seed(), legacy)
+    elif isinstance(spec, tuple):
+        seed, key = spec
+        if key != 'user':
+            raise ValueError('unrecognized key %s', key)
+        return DerivingRNG(seed, legacy)
+    else:
+        return FixedRNG(rng(spec, legacy=legacy))
