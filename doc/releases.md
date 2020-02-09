@@ -4,6 +4,10 @@
 
 - Tested with Python 3.8 and Pandas 1.0
 
+### RNG Infrastructure
+
+LensKit 0.9 brings a new random number generation infrastructure to support reproducible experiments.
+
 ### Deprecated Feature Removal
 
 We removed the following previously-deprecated features:
