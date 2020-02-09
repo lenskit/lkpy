@@ -38,7 +38,7 @@ def _make_int(obj):
         return ValueError('invalid RNG key ' + str(obj))
 
 
-def init_rng(seed, *, propagate=True):
+def init_rng(seed, *keys, propagate=True):
     """
     Initialize the random infrastructure with a seed.  This function should generally be
     called very early in the setup.
@@ -46,14 +46,23 @@ def init_rng(seed, *, propagate=True):
     Args:
         seed(int or numpy.random.SeedSequence):
             The random seed to initialize with.
+        keys:
+            Additional keys, to use as a ``spawn_key`` on NumPy 1.17.  Passed to
+            :func:`derive_seed`.
+
         propagate(bool):
-            If ``True``, initialize other RNG infrastructure.
+            If ``True``, initialize other RNG infrastructure. This currently initializes:
+
+            * :func:`np.random.seed`
+            * :func:`random.seed`
     """
     global root_seed
     if _have_gen:
         if isinstance(seed, int):
             seed = np.random.SeedSequence(seed)
         root_seed = seed
+        if keys:
+            root_seed = derive_seed(*keys, base=root_seed)
 
         if propagate:
             nps, pys = seed.spawn(2)

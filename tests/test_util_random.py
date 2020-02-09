@@ -68,6 +68,14 @@ def test_generator_passthrough():
 def test_initialize():
     random.init_rng(42)
     assert random.root_seed.entropy == 42
+    assert len(random.root_seed.spawn_key) == 0
+
+
+@new_gen
+def test_initialize_key():
+    random.init_rng(42, b'wombat')
+    assert random.root_seed.entropy == 42
+    assert random.root_seed.spawn_key == (zlib.crc32(b'wombat'),)
 
 
 @new_gen
