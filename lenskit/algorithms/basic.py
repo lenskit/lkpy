@@ -12,6 +12,7 @@ import numpy as np
 from .. import check
 from ..matrix import sparse_ratings
 from . import Predictor, Recommender, CandidateSelector
+from ..util import derivable_rng
 
 _logger = logging.getLogger(__name__)
 
@@ -377,16 +378,19 @@ class Random(Recommender):
         selector(CandidateSelector):
             Selects candidate items for recommendation.
             Default is :class:`UnratedItemCandidateSelector`.
-        random_state(int or numpy.random.RandomState)
-                Seed or random state for generating recommendations.
+        rng:
+            Seed or random state for generating recommendations.  Pass
+            ``'user'`` to deterministically derive per-user RNGS from
+            the user IDs for reproducibility.
     """
 
-    def __init__(self, selector=None, random_state=None):
+    def __init__(self, selector=None, rng=None):
         if selector:
             self.selector = selector
         else:
             self.selector = UnratedItemCandidateSelector()
-        self.random_state = random_state
+        # Get a Pandas-compatible RNG
+        self.rng_source = derivable_rng(rng, legacy=True)
         self.items = None
 
     def fit(self, ratings, **kwargs):
@@ -401,8 +405,9 @@ class Random(Recommender):
         if n is None:
             n = len(candidates)
 
+        rng = self.rng_source(user)
         c_df = pd.DataFrame(candidates, columns=['item'])
-        recs = c_df.sample(n, random_state=self.random_state)
+        recs = c_df.sample(n, random_state=rng)
         return recs.reset_index(drop=True)
 
     def __str__(self):

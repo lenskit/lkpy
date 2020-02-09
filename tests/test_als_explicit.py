@@ -138,10 +138,8 @@ def test_als_save_load():
 @lktu.wantjit
 @mark.slow
 def test_als_method_match():
-    lu = als.BiasedMF(20, iterations=15, reg=(2, 0.001), method='lu',
-                      rand=np.random.RandomState(42).randn)
-    cd = als.BiasedMF(20, iterations=20, reg=(2, 0.001), method='cd',
-                      rand=np.random.RandomState(42).randn)
+    lu = als.BiasedMF(20, iterations=15, reg=(2, 0.001), method='lu', rng=42)
+    cd = als.BiasedMF(20, iterations=20, reg=(2, 0.001), method='cd', rng=42)
 
     ratings = lktu.ml_test.ratings
 
@@ -160,24 +158,24 @@ def test_als_method_match():
 
     preds = []
 
-    with lktu.rand_seed(42):
-        for u in np.random.choice(ratings.user.unique(), 10, replace=False):
-            items = np.random.choice(ratings.item.unique(), 15, replace=False)
-            lu_preds = lu.predict_for_user(u, items)
-            cd_preds = cd.predict_for_user(u, items)
-            diff = lu_preds - cd_preds
-            adiff = np.abs(diff)
-            _log.info('user %s diffs: L2 = %f, min = %f, med = %f, max = %f, 90%% = %f', u,
-                    np.linalg.norm(diff, 2),
-                    np.min(adiff), np.median(adiff), np.max(adiff), np.quantile(adiff, 0.9))
+    rng = util.rng(42, legacy=True)
+    for u in rng.choice(ratings.user.unique(), 10, replace=False):
+        items = np.random.choice(ratings.item.unique(), 15, replace=False)
+        lu_preds = lu.predict_for_user(u, items)
+        cd_preds = cd.predict_for_user(u, items)
+        diff = lu_preds - cd_preds
+        adiff = np.abs(diff)
+        _log.info('user %s diffs: L2 = %f, min = %f, med = %f, max = %f, 90%% = %f', u,
+                  np.linalg.norm(diff, 2),
+                  np.min(adiff), np.median(adiff), np.max(adiff), np.quantile(adiff, 0.9))
 
-            preds.append(pd.DataFrame({
-                'user': u,
-                'item': items,
-                'lu': lu_preds,
-                'cd': cd_preds,
-                'adiff': adiff
-            }))
+        preds.append(pd.DataFrame({
+            'user': u,
+            'item': items,
+            'lu': lu_preds,
+            'cd': cd_preds,
+            'adiff': adiff
+        }))
 
     preds = pd.concat(preds, ignore_index=True)
     _log.info('LU preds:\n%s', preds.lu.describe())

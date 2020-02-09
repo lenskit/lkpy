@@ -42,19 +42,32 @@ model parameters and estimated parameters should be pickled.  If you have caches
 ephemeral structures, override ``__getstate__`` and ``__setstate__`` to exclude them from the
 saved data and to initialize caches to empty values on unpickling.
 
+Random Number Generation
+------------------------
+
+See :py:mod:`lenskit.util.random` for documentation on how to use random number generation.
+
+In general, algorithms using randomization should have an ``rng`` parameter that takes a seed
+or RNG, and pass this to :py:func:`lenskit.util.random.rng` to get a random number generator.
+Algorithms that use randomness at predict or recommendation time, not just training time, should
+support the value ``'user'`` for the ``rng`` parameter, and if it is passed, derive a new seed
+for each user using :py:func:`lenskit.util.random.derive_seed` to allow reproducibility in
+the face of parallelism for common experimental designs.  :py:func:`lenskit.util.random.derivable_rng`
+automates this logic.
+
 Memory Map Friendliness
 -----------------------
 
-LensKit uses :py:cls:`joblib.Parallel` to parallelize internal operations (when it isn't using Numba).
+LensKit uses :py:class:`joblib.Parallel` to parallelize internal operations (when it isn't using Numba).
 Joblib is pretty good about using shared memory to minimize memory overhead in parallel computations,
 and LensKit has some tricks to maximize this use. However, it does require a bit of attention in
 your algorithm implementation.
 
 The easiest way to make this fail is to use many small NumPy or Pandas data structures.  If you have
-a dictionary of :py:cls:`np.ndarray` objects, for instance, it will cause a problem.  This is because
+a dictionary of :py:class:`np.ndarray` objects, for instance, it will cause a problem.  This is because
 each array will be memory-mapped, and each map will *reopen* the file.  Having too many active
 open files will cause your process to run out of file descriptors on many systems.  Keep your
-object count to a small, ideally fixed number; in :py:cls:`lenskit.algorithms.basic.UnratedItemSelector`,
-we do this by storing user and item indexes along with a :py:cls:`matrix.CSR` containing the items
+object count to a small, ideally fixed number; in :py:class:`lenskit.algorithms.basic.UnratedItemSelector`,
+we do this by storing user and item indexes along with a :py:class:`matrix.CSR` containing the items
 rated by each user.  The old implementation had a dictionary mapping user IDs to ``ndarray``s with
 each user's rated items.  This is a change from :math:`|U|+1` arrays to 5 arrays.

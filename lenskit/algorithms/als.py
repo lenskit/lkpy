@@ -283,14 +283,14 @@ class BiasedMF(BiasMFPredictor):
         bias(bool or :class:`Bias`): the bias model.  If ``True``, fits a :class:`Bias` with
             damping ``damping``.
         method(str): the solver to use (see above).
-        rng(function):
-            RNG function compatible with :fun:`numpy.random.randn` for initializing matrices.
+        rng:
+            Random number generator or state.
         progress: a :func:`tqdm.tqdm`-compatible progress bar function
     """
     timer = None
 
     def __init__(self, features, *, iterations=20, reg=0.1, damping=5, bias=True, method='cd',
-                 rand=np.random.randn, progress=None):
+                 rng=None, progress=None):
         self.features = features
         self.iterations = iterations
         self.regularization = reg
@@ -301,7 +301,7 @@ class BiasedMF(BiasMFPredictor):
         else:
             self.bias = bias
         self.progress = progress if progress is not None else util.no_progress
-        self._random = rand
+        self.rng = util.rng(rng)
 
     def fit(self, ratings, **kwargs):
         """
@@ -355,11 +355,11 @@ class BiasedMF(BiasMFPredictor):
         trmat = rmat.transpose()
 
         _logger.debug('initializing item matrix')
-        imat = self._random(n_items, self.features)
+        imat = self.rng.standard_normal((n_items, self.features))
         imat /= np.linalg.norm(imat, axis=1).reshape((n_items, 1))
         _logger.debug('|Q|: %f', np.linalg.norm(imat, 'fro'))
         _logger.debug('initializing user matrix')
-        umat = self._random(n_users, self.features)
+        umat = self.rng.standard_normal((n_users, self.features))
         umat /= np.linalg.norm(umat, axis=1).reshape((n_users, 1))
         _logger.debug('|P|: %f', np.linalg.norm(umat, 'fro'))
 
@@ -475,18 +475,19 @@ class ImplicitMF(MFPredictor):
         iterations(int): the number of iterations to train
         reg(double): the regularization factor
         weight(double): the scaling weight for positive samples (:math:`\\alpha` in [HKV2008]_).
+        rng: random number generator or seed.
         progress: a :func:`tqdm.tqdm`-compatible progress bar function
     """
     timer = None
 
     def __init__(self, features, *, iterations=20, reg=0.1, weight=40, method='cg',
-                 rand=np.random.randn, progress=None):
+                 rng=None, progress=None):
         self.features = features
         self.iterations = iterations
         self.reg = reg
         self.weight = weight
         self.method = method
-        self._random = rand
+        self.rng = util.rng(rng)
         self.progress = progress if progress is not None else util.no_progress
 
     def fit(self, ratings, **kwargs):
@@ -548,9 +549,9 @@ class ImplicitMF(MFPredictor):
         rmat.values *= self.weight
         trmat = rmat.transpose()
 
-        imat = self._random(n_items, self.features) * 0.01
+        imat = self.rng.standard_normal((n_items, self.features)) * 0.01
         imat = np.square(imat)
-        umat = self._random(n_users, self.features) * 0.01
+        umat = self.rng.standard_normal((n_users, self.features)) * 0.01
         umat = np.square(umat)
 
         return PartialModel(users, items, umat, imat), rmat, trmat

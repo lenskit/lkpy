@@ -206,10 +206,12 @@ class FunkSVD(BiasMFPredictor):
         range(tuple):
             the ``(min, max)`` rating values to clamp ratings, or ``None`` to leave
             predictions unclamped.
+        random_state:
+            The random state for shuffling the data prior to training.
     """
 
     def __init__(self, features, iterations=100, *, lrate=0.001, reg=0.015,
-                 damping=5, range=None, bias=True):
+                 damping=5, range=None, bias=True, random_state=None):
         self.features = features
         self.iterations = iterations
         self.lrate = lrate
@@ -220,6 +222,7 @@ class FunkSVD(BiasMFPredictor):
             self.bias = basic.Bias(damping=damping)
         else:
             self.bias = bias
+        self.random = util.rng(random_state)
 
     def fit(self, ratings, **kwargs):
         """
@@ -240,7 +243,7 @@ class FunkSVD(BiasMFPredictor):
         _logger.info('[%s] preparing rating data for %d samples', timer, len(ratings))
         _logger.debug('shuffling rating data')
         shuf = np.arange(len(ratings), dtype=np.int_)
-        np.random.shuffle(shuf)
+        self.random.shuffle(shuf)
         ratings = ratings.iloc[shuf, :]
 
         _logger.debug('[%s] indexing users and items', timer)
