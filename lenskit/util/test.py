@@ -42,16 +42,6 @@ def rand_csr(nrows=100, ncols=50, nnz=1000, values=True):
     return matrix.CSR.from_coo(rows, cols, vals, (nrows, ncols))
 
 
-@contextmanager
-def rand_seed(seed):
-    state = np.random.get_state()
-    try:
-        np.random.seed(seed)
-        yield
-    finally:
-        np.random.set_state(state)
-
-
 def repeated(n=50):
     """
     Decorator to run a test multiple times. Useful for randomized tests.
