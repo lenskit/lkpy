@@ -112,13 +112,20 @@ def rng(seed=None, *, legacy=False):
     it usually returns a :class:`numpy.random.Generator` instead.
 
     Args:
-        seed(int or None or numpy.random.SeedSequence or
-             numpy.random.mtrand.RandomState or
-             numpy.random.Generator):
-            The seed for this RNG.
+        seed:
+            The seed for this RNG.  Can be any of the following types:
+
+            * ``int``
+            * ``None``
+            * :class:`numpy.random.SeedSequence`
+            * :class:`numpy.random.mtrand.RandomState`
+            * :class:`numpy.random.Generator)`
         legacy(bool):
             If ``True``, return :class:`numpy.random.mtrand.RandomState` instead of a new-style
             :class:`numpy.random.Generator`.
+
+    Returns:
+        numpy.random.Generator: A random number generator.
     """
 
     if _have_gen and legacy and isinstance(seed, np.random.Generator):
