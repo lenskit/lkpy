@@ -119,7 +119,7 @@ def rng(seed=None, *, legacy=False):
             * ``None``
             * :class:`numpy.random.SeedSequence`
             * :class:`numpy.random.mtrand.RandomState`
-            * :class:`numpy.random.Generator)`
+            * :class:`numpy.random.Generator`
         legacy(bool):
             If ``True``, return :class:`numpy.random.mtrand.RandomState` instead of a new-style
             :class:`numpy.random.Generator`.
