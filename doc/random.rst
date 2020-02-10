@@ -23,7 +23,7 @@ Seeds
 -----
 
 LensKit random number generation starts from a global seed, stored in :py:data:`global_seed`.
-This seed can be initialized with py:func:`init_rng`.
+This seed can be initialized with :py:func:`init_rng`.
 
 
 .. py:data:: global_seed
