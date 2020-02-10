@@ -33,7 +33,7 @@ def _make_int(obj):
     elif isinstance(obj, bytes):
         return zlib.crc32(obj)
     elif isinstance(obj, str):
-        return zlib.crc32(str.encode('utf8'))
+        return zlib.crc32(obj.encode('utf8'))
     else:
         return ValueError('invalid RNG key ' + str(obj))
 

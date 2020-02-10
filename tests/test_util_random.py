@@ -73,7 +73,7 @@ def test_initialize():
 
 @new_gen
 def test_initialize_key():
-    random.init_rng(42, b'wombat')
+    random.init_rng(42, 'wombat')
     assert random.root_seed.entropy == 42
     assert random.root_seed.spawn_key == (zlib.crc32(b'wombat'),)
 
