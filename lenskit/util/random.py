@@ -6,12 +6,89 @@ import zlib
 import numpy as np
 import random
 import warnings
+import logging
 
-# are we on modern NumPy?
-_have_gen = hasattr(np.random, 'Generator')
-# global root seed, on modern NumPy it will be a seed sequence.
-_root_seed = None
-_global_rng = None
+_log = logging.getLogger(__name__)
+
+
+class LegacyRNG:
+    _seed = None
+    _rng = None
+
+    @property
+    def seed(self):
+        if self._seed is None:
+            self._seed = np.random.randint(0, np.iinfo('i4').max)
+        return self._seed
+
+    @property
+    def int_seed(self):
+        return self._seed
+
+    def initialize(self, seed, keys):
+        warnings.warn('initializing legacy RNG infrastructure')
+        if keys:
+            raise NotImplementedError('legacy RNG does not support seed keys')
+        self._seed = seed
+        if self._rng is not None:
+            del self._rng
+        return seed
+
+    def derive(self, keys):
+        raise NotImplementedError('legacy RNG does not support deriving seeds')
+
+    def rng(self, seed=None):
+        if seed is None:
+            if self._rng is None:
+                seed = self.seed
+                self._rng = np.random.RandomState(seed)
+            return self._rng
+        else:
+            return np.random.RandomState(seed)
+
+
+class ModernRNG:
+    _seed = None
+
+    @property
+    def seed(self):
+        if self._seed is None:
+            self._seed = np.random.SeedSequence()
+        return self._seed
+
+    @property
+    def int_seed(self):
+        return self._seed.generate_state(1)[0]
+
+    def initialize(self, seed, keys):
+        if isinstance(seed, int):
+            seed = np.random.SeedSequence(seed)
+
+        if not isinstance(seed, np.random.SeedSequence):
+            raise TypeError('unexpected seed type %s', type(seed))
+
+        if keys:
+            seed = self.derive(seed, keys)
+
+        self._seed = seed
+        return seed
+
+    def derive(self, base, keys):
+        if base is None:
+            base = self.seed
+
+        if keys:
+            k2 = tuple(_make_int(k) for k in keys)
+            return np.random.SeedSequence(base.entropy, spawn_key=base.spawn_key + k2)
+        else:
+            return base.spawn(1)[0]
+
+    def rng(self, seed=None):
+        if seed is None:
+            seed, = self.seed.spawn(1)
+        elif isinstance(seed, int):
+            seed = np.random.SeedSequence(seed)
+        return np.random.default_rng(seed)
 
 
 def get_root_seed():
@@ -21,29 +98,7 @@ def get_root_seed():
     Returns:
         numpy.random.SeedSequence: The LensKit root seed.
     """
-    global _root_seed
-    if _root_seed is None:
-        if _have_gen:
-            _root_seed = np.random.SeedSequence()
-        else:
-            _root_seed = np.random.randint(0, np.iinfo('i4').max)
-    return _root_seed
-
-
-def _get_rng(legacy=False):
-    global _global_rng
-    if _have_gen:
-        seed = get_root_seed()
-        kids = seed.spawn(1)
-        if legacy:
-            return np.random.RandomState(np.random.MT19937(kids[0]))
-        else:
-            return np.random.default_rng(kids[0])
-    else:
-        if _global_rng is None:
-            state = get_root_seed()
-            _global_rng = np.random.RandomState(state)
-        return _global_rng
+    return _rng_impl.seed()
 
 
 def _make_int(obj):
@@ -82,30 +137,16 @@ def init_rng(seed, *keys, propagate=True):
     Returns:
         The random seed.
     """
-    global _root_seed
-    if _have_gen:
-        if isinstance(seed, int):
-            seed = np.random.SeedSequence(seed)
-        elif not isinstance(seed, np.random.SeedSequence):
-            raise TypeError('seed must be an int or SeedSequence, got {}'.format(type(seed)))
-        _root_seed = seed
-        if keys:
-            _root_seed = derive_seed(*keys, base=_root_seed)
+    _rng_impl.initialize(seed, keys)
+    _log.info('initialized LensKit RNG with seed %s', _rng_impl.seed)
 
-        if propagate:
-            nps, pys = seed.spawn(2)
-            np.random.seed(nps.generate_state(1))
-            random.seed(pys.generate_state(1)[0])
+    if propagate:
+        ik = _rng_impl.int_seed
+        _log.info('initializing numpy.random and random with seed %u', ik)
+        np.random.seed(ik)
+        random.seed(ik)
 
-        return _root_seed
-
-    else:
-        warnings.warn('initializing random seeds with legacy infrastructure')
-        _root_seed = seed
-        if propagate:
-            np.random.seed(seed)
-            random.seed(seed)
-        return seed
+    return _rng_impl.seed
 
 
 def derive_seed(*keys, base=None):
@@ -119,17 +160,7 @@ def derive_seed(*keys, base=None):
         base(numpy.random.SeedSequence):
             The base seed to use.  If ``None``, uses the root seed.
     """
-    if not _have_gen:
-        raise NotImplementedError('derive_seed requires NumPy 1.17 or newer')
-
-    if base is None:
-        base = get_root_seed()
-
-    if keys:
-        k2 = tuple(_make_int(k) for k in keys)
-        return np.random.SeedSequence(base.entropy, spawn_key=base.spawn_key + k2)
-    else:
-        return base.spawn(1)[0]
+    return _rng_impl.derive(base, keys)
 
 
 def rng(seed=None, *, legacy=False):
@@ -154,27 +185,19 @@ def rng(seed=None, *, legacy=False):
         numpy.random.Generator: A random number generator.
     """
 
-    if _have_gen and legacy and isinstance(seed, np.random.Generator):
-        # convert a new generator to a NumPy random state
-        return np.random.RandomState(seed.bit_generator)
-    elif seed is None:
-        return _get_rng(legacy)
-    elif isinstance(seed, int):
-        if legacy:
-            return np.random.RandomState(seed)
-        else:
-            return np.random.default_rng(seed)
-    elif _have_gen and isinstance(seed, np.random.SeedSequence):
-        if legacy:
-            return np.random.RandomState(np.random.MT19937(seed))
-        else:
-            return np.random.default_rng(seed)
-    elif isinstance(seed, np.random.RandomState):
-        return seed
+    rng = None
+    if isinstance(seed, np.random.RandomState):
+        rng = seed
     elif _have_gen and isinstance(seed, np.random.Generator):
-        return seed
+        rng = seed
     else:
-        raise ValueError('invalid random seed ' + str(seed))
+        rng = _rng_impl.rng(seed)
+
+    if legacy and _have_gen and isinstance(rng, np.random.Generator):
+        rng = np.random.RandomState(rng.bit_generator)
+    # case where rng is a random state, and we are on new numpy and want a generator, is ok
+
+    return rng
 
 
 class FixedRNG:
@@ -238,3 +261,11 @@ def derivable_rng(spec, *, legacy=False):
         return DerivingRNG(seed, legacy)
     else:
         return FixedRNG(rng(spec, legacy=legacy))
+
+
+# are we on modern NumPy?
+_have_gen = hasattr(np.random, 'Generator')
+if _have_gen:
+    _rng_impl = ModernRNG()
+else:
+    _rng_impl = LegacyRNG()
