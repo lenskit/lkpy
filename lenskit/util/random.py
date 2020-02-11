@@ -7,24 +7,42 @@ import numpy as np
 import random
 import warnings
 
+# are we on modern NumPy?
 _have_gen = hasattr(np.random, 'Generator')
-root_seed = None
+# global root seed, on modern NumPy it will be a seed sequence.
+_root_seed = None
+_global_rng = None
 
 
-def _get_seed():
-    global root_seed
-    if root_seed is None:
-        root_seed = np.random.SeedSequence()
-    return root_seed
+def get_root_seed():
+    """
+    Get the root seed.
+
+    Returns:
+        numpy.random.SeedSequence: The LensKit root seed.
+    """
+    global _root_seed
+    if _root_seed is None:
+        if _have_gen:
+            _root_seed = np.random.SeedSequence()
+        else:
+            _root_seed = np.random.randint(0, np.iinfo('i4').max)
+    return _root_seed
 
 
-def _get_rng():
-    if _have_gen:
-        seed = _get_seed()
+def _get_rng(legacy=False):
+    global _global_rng
+    if legacy or not _have_gen:
+        if _global_rng is None:
+            state = get_root_seed()
+            if _have_gen:
+                state = np.random.MT19937(state)
+            _global_rng = np.random.RandomState(state)
+        return np.random.mtrand._rand
+    else:
+        seed = get_root_seed()
         kids = seed.spawn(1)
         return np.random.default_rng(kids[0])
-    else:
-        return np.random.mtrand._rand
 
 
 def _make_int(obj):
@@ -56,28 +74,35 @@ def init_rng(seed, *keys, propagate=True):
             * :func:`np.random.seed`
             * :func:`random.seed`
 
+            If ``propagate=False``, LensKit is still fully seeded — no component included
+            with LensKit uses any of the global RNGs, they all use RNGs seeded with the
+            specified seed.
+
     Returns:
         The random seed.
     """
-    global root_seed
+    global _root_seed
     if _have_gen:
         if isinstance(seed, int):
             seed = np.random.SeedSequence(seed)
-        root_seed = seed
+        elif not isinstance(seed, np.random.SeedSequence):
+            raise TypeError('seed must be an int or SeedSequence, got {}'.format(type(seed)))
+        _root_seed = seed
         if keys:
-            root_seed = derive_seed(*keys, base=root_seed)
+            _root_seed = derive_seed(*keys, base=_root_seed)
 
         if propagate:
             nps, pys = seed.spawn(2)
             np.random.seed(nps.generate_state(1))
             random.seed(pys.generate_state(1)[0])
 
-        return root_seed
+        return _root_seed
 
     else:
         warnings.warn('initializing random seeds with legacy infrastructure')
-        np.random.seed(seed)
+        _root_seed = seed
         if propagate:
+            np.random.seed(seed)
             random.seed(seed)
         return seed
 
@@ -97,7 +122,7 @@ def derive_seed(*keys, base=None):
         raise NotImplementedError('derive_seed requires NumPy 1.17 or newer')
 
     if base is None:
-        base = _get_seed()
+        base = get_root_seed()
 
     if keys:
         k2 = tuple(_make_int(k) for k in keys)
@@ -132,10 +157,7 @@ def rng(seed=None, *, legacy=False):
         # convert a new generator to a NumPy random state
         return np.random.RandomState(seed.bit_generator)
     elif seed is None:
-        if legacy:
-            return np.random.mtrand._rand
-        else:
-            return _get_rng()
+        return _get_rng(legacy)
     elif isinstance(seed, int):
         if legacy:
             return np.random.RandomState(seed)
@@ -143,7 +165,7 @@ def rng(seed=None, *, legacy=False):
             return np.random.default_rng(seed)
     elif _have_gen and isinstance(seed, np.random.SeedSequence):
         if legacy:
-            return np.random.RandomState(seed.generate_state(1))
+            return np.random.RandomState(np.random.MT19937(seed))
         else:
             return np.random.default_rng(seed)
     elif isinstance(seed, np.random.RandomState):
@@ -193,10 +215,11 @@ def derivable_rng(spec, *, legacy=False):
         spec:
             Any value supported by the `seed` parameter of :func:`rng`, in addition to the
             following values:
+
             * the string ``'user'``
             * a tuple of the form (`seed`, ``'user'``)
 
-            Either of the second form will cause the returned function to re-derive new RNGs.
+            Either of these forms will cause the returned function to re-derive new RNGs.
 
     Returns:
         function:
