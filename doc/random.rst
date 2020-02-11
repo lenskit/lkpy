@@ -29,7 +29,8 @@ in parallel), initializing the global RNG is sufficient.
 Developers writing new LensKit algorithms that use randomization will also need
 pay attention to the :py:func:`rng` function, along with :py:func:`derivable_rng`
 and :py:func:`derive_seed` if predictions or recommendations, not just model
-training, requires random values.
+training, requires random values.  Their constructors should take a parameter
+``rng_spec`` to specify the RNG initialization.
 
 Seeds
 -----

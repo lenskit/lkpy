@@ -378,19 +378,19 @@ class Random(Recommender):
         selector(CandidateSelector):
             Selects candidate items for recommendation.
             Default is :class:`UnratedItemCandidateSelector`.
-        rng:
+        rng_spec:
             Seed or random state for generating recommendations.  Pass
             ``'user'`` to deterministically derive per-user RNGS from
             the user IDs for reproducibility.
     """
 
-    def __init__(self, selector=None, rng=None):
+    def __init__(self, selector=None, rng_spec=None):
         if selector:
             self.selector = selector
         else:
             self.selector = UnratedItemCandidateSelector()
         # Get a Pandas-compatible RNG
-        self.rng_source = derivable_rng(rng, legacy=True)
+        self.rng_source = derivable_rng(rng_spec, legacy=True)
         self.items = None
 
     def fit(self, ratings, **kwargs):

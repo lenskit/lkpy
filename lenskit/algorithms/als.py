@@ -283,14 +283,14 @@ class BiasedMF(BiasMFPredictor):
         bias(bool or :class:`Bias`): the bias model.  If ``True``, fits a :class:`Bias` with
             damping ``damping``.
         method(str): the solver to use (see above).
-        rng:
-            Random number generator or state.
+        rng_spec:
+            Random number generator or state (see :func:`lenskit.util.random.rng`).
         progress: a :func:`tqdm.tqdm`-compatible progress bar function
     """
     timer = None
 
     def __init__(self, features, *, iterations=20, reg=0.1, damping=5, bias=True, method='cd',
-                 rng=None, progress=None):
+                 rng_spec=None, progress=None):
         self.features = features
         self.iterations = iterations
         self.regularization = reg
@@ -301,7 +301,7 @@ class BiasedMF(BiasMFPredictor):
         else:
             self.bias = bias
         self.progress = progress if progress is not None else util.no_progress
-        self.rng = util.rng(rng)
+        self.rng = util.rng(rng_spec)
 
     def fit(self, ratings, **kwargs):
         """
@@ -475,19 +475,20 @@ class ImplicitMF(MFPredictor):
         iterations(int): the number of iterations to train
         reg(double): the regularization factor
         weight(double): the scaling weight for positive samples (:math:`\\alpha` in [HKV2008]_).
-        rng: random number generator or seed.
+        rng_spec:
+            Random number generator or state (see :func:`lenskit.util.random.rng`).
         progress: a :func:`tqdm.tqdm`-compatible progress bar function
     """
     timer = None
 
     def __init__(self, features, *, iterations=20, reg=0.1, weight=40, method='cg',
-                 rng=None, progress=None):
+                 rng_spec=None, progress=None):
         self.features = features
         self.iterations = iterations
         self.reg = reg
         self.weight = weight
         self.method = method
-        self.rng = util.rng(rng)
+        self.rng = util.rng(rng_spec)
         self.progress = progress if progress is not None else util.no_progress
 
     def fit(self, ratings, **kwargs):
