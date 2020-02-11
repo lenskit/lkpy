@@ -38,7 +38,7 @@ def _get_rng(legacy=False):
             if _have_gen:
                 state = np.random.MT19937(state)
             _global_rng = np.random.RandomState(state)
-        return np.random.mtrand._rand
+        return _global_rng
     else:
         seed = get_root_seed()
         kids = seed.spawn(1)
