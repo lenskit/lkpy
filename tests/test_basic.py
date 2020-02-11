@@ -392,7 +392,7 @@ def test_random():
 
 @mark.skipif(not lku.random._have_gen, reason='derived seeds require NumPy 1.17')
 def test_random_derive_seed():
-    algo = basic.Random(rng='user')
+    algo = basic.Random(rng_spec='user')
     model = algo.fit(lktu.ml_test.ratings)
     items = lktu.ml_test.ratings['item'].unique()
     users = lktu.ml_test.ratings['user'].unique()

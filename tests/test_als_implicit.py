@@ -112,8 +112,8 @@ def test_als_train_large_noratings():
 @lktu.wantjit
 @mark.slow
 def test_als_method_match():
-    lu = als.ImplicitMF(20, iterations=15, method='lu', rng=42)
-    cg = als.ImplicitMF(20, iterations=15, method='cg', rng=42)
+    lu = als.ImplicitMF(20, iterations=15, method='lu', rng_spec=42)
+    cg = als.ImplicitMF(20, iterations=15, method='cg', rng_spec=42)
 
     ratings = lktu.ml_test.ratings
 
@@ -131,7 +131,7 @@ def test_als_method_match():
 
     rng = util.rng(42, legacy=True)
     for u in rng.choice(ratings.user.unique(), 10, replace=False):
-        items = np.random.choice(ratings.item.unique(), 15, replace=False)
+        items = rng.choice(ratings.item.unique(), 15, replace=False)
         lu_preds = lu.predict_for_user(u, items)
         cd_preds = cg.predict_for_user(u, items)
         diff = lu_preds - cd_preds

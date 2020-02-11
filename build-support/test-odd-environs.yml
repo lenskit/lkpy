@@ -13,7 +13,7 @@ jobs:
       # we need pip
       python -m pip install --upgrade pip wheel
       # earliest supported versions of versioned deps
-      pip install pandas==0.24.* numba==0.43.* 'llvmlite<0.31'
+      pip install pandas==0.24.* numba==0.43.* 'numpy<1.17' 'llvmlite<0.31'
       # install test things
       pip install pytest pytest-doctestplus coverage pytest-cov
     displayName: 'Install base versioned dependencies'

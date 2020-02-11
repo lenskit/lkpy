@@ -19,31 +19,39 @@ number generation and initialization.  LensKit is compatible with older versions
 of NumPy, but the RNG reproducibility logic will not fully function, and some
 functions will not work.
 
+Developers *using* LensKit will be primarily intrested in the :py:func:`init_rng`
+function, so they can initialize LensKit's random seed.  LensKit components using
+randomization also take an ``rng`` option, usually in their constructor, to set
+the seed on a per-operation basis; if the script is straightforward and performs
+LensKit operations in a deterministic order (e.g. does not train multiple models
+in parallel), initializing the global RNG is sufficient.
+
+Developers writing new LensKit algorithms that use randomization will also need
+pay attention to the :py:func:`rng` function, along with :py:func:`derivable_rng`
+and :py:func:`derive_seed` if predictions or recommendations, not just model
+training, requires random values.  Their constructors should take a parameter
+``rng_spec`` to specify the RNG initialization.
+
 Seeds
 -----
 
-LensKit random number generation starts from a global seed, stored in :py:data:`global_seed`.
-This seed can be initialized with :py:func:`init_rng`.
-
-
-.. py:data:: global_seed
-   
-   The global seed for LensKit RNGs.
+LensKit random number generation starts from a global root seed, accessible with
+:py:func:`get_root_seed`. This seed can be initialized with :py:func:`init_rng`.
 
 .. autofunction:: init_rng
 
 .. autofunction:: derive_seed
 
+.. autofunction:: get_root_seed
+
 Random Number Generators
 ------------------------
 
-All LensKit components that use randomization take an ``rng`` parameter, usually to their constructor.
-This parameter is passed to the :py:func:`rng` function to obtain a random number generator that is
-compatible with the code's requirements.
-
-This function can produce both new-style :py:class:`numpy.random.Generator` RNGs and legacy
-:py:class:`numpy.random.mtrand.RandomState`; the latter is needed because some libraries, such as Pandas and
-scikit-learn, do not yet know what to do with a new-style RNG.
+These functions create actual RNGs from the LensKit global seed or a user-provided
+seed. They can produce both new-style :py:class:`numpy.random.Generator` RNGs and 
+legacy :py:class:`numpy.random.mtrand.RandomState`; the latter is needed because
+some libraries, such as Pandas and scikit-learn, do not yet know what to do with
+a new-style RNG.
 
 .. autofunction:: rng
 

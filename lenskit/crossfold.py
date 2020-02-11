@@ -18,7 +18,7 @@ TTPair.test.__doc__ = 'Test data for this pair.'
 _logger = logging.getLogger(__name__)
 
 
-def partition_rows(data, partitions, *, rng=None):
+def partition_rows(data, partitions, *, rng_spec=None):
     """
     Partition a frame of ratings or other datainto train-test partitions.  This function does not
     care what kind of data is in `data`, so long as it is a Pandas DataFrame (or equivalent).
@@ -28,8 +28,8 @@ def partition_rows(data, partitions, *, rng=None):
             Ratings or other data you wish to partition.
         partitions(int):
             The number of partitions to produce.
-        rng:
-            The random seed.
+        rng_spec:
+            The random number generator or seed (see :py:func:`lenskit.util.rng`).
 
     Returns:
         iterator: an iterator of train-test pairs
@@ -39,7 +39,7 @@ def partition_rows(data, partitions, *, rng=None):
     # create an array of indexes
     rows = np.arange(len(data))
     # shuffle the indices & split into partitions
-    rng = util.rng(rng)
+    rng = util.rng(rng_spec)
     rng.shuffle(rows)
     test_sets = np.array_split(rows, partitions)
 
@@ -52,7 +52,7 @@ def partition_rows(data, partitions, *, rng=None):
         yield TTPair(train, test)
 
 
-def sample_rows(data, partitions, size, disjoint=True, *, rng=None):
+def sample_rows(data, partitions, size, disjoint=True, *, rng_spec=None):
     """
     Sample train-test a frame of ratings into train-test partitions.  This function does not care
     what kind of data is in `data`, so long as it is a Pandas DataFrame (or equivalent).
@@ -87,8 +87,8 @@ def sample_rows(data, partitions, size, disjoint=True, *, rng=None):
             The size of each sample.
         disjoint(bool):
             If ``True``, force samples to be disjoint.
-        rng:
-            The random number generator or seed.
+        rng_spec:
+            The random number generator or seed (see :py:func:`lenskit.util.rng`).
 
     Returns:
         iterator: An iterator of train-test pairs.
@@ -109,6 +109,8 @@ def sample_rows(data, partitions, size, disjoint=True, *, rng=None):
     # create an array of indexes
     rows = np.arange(len(data))
 
+    rng = util.rng(rng_spec)
+
     if disjoint:
         _logger.info('creating %d disjoint samples of size %d', partitions, size)
         ips = _disjoint_sample(rows, partitions, size, rng)
@@ -122,7 +124,6 @@ def sample_rows(data, partitions, size, disjoint=True, *, rng=None):
 
 def _disjoint_sample(xs, n, size, rng):
     # shuffle the indices & split into partitions
-    rng = util.rng(rng)
     rng.shuffle(xs)
 
     # convert each partition into a split
@@ -134,7 +135,6 @@ def _disjoint_sample(xs, n, size, rng):
 
 
 def _n_samples(xs, n, size, rng):
-    rng = util.rng(rng)
     for i in range(n):
         test = rng.choice(xs, size, False)
         train = np.setdiff1d(xs, test, assume_unique=True)
@@ -172,9 +172,9 @@ class SampleN(PartitionMethod):
         rng: the random number generator or seed
     """
 
-    def __init__(self, n, *, rng=None):
+    def __init__(self, n, rng_spec=None):
         self.n = n
-        self.rng = util.rng(rng, legacy=True)
+        self.rng = util.rng(rng_spec, legacy=True)
 
     def __call__(self, udf):
         return udf.sample(n=self.n, random_state=self.rng)
@@ -187,9 +187,9 @@ class SampleFrac(PartitionMethod):
     Args:
         frac(float): the fraction items to select for testing.
     """
-    def __init__(self, frac, *, rng=None):
+    def __init__(self, frac, rng_spec=None):
         self.fraction = frac
-        self.rng = util.rng(rng, legacy=True)
+        self.rng = util.rng(rng_spec, legacy=True)
 
     def __call__(self, udf):
         return udf.sample(frac=self.fraction, random_state=self.rng)
@@ -228,7 +228,7 @@ class LastFrac(PartitionMethod):
         return udf.sort_values(self.column).iloc[-n:]
 
 
-def partition_users(data, partitions: int, method: PartitionMethod, *, rng=None):
+def partition_users(data, partitions: int, method: PartitionMethod, *, rng_spec=None):
     """
     Partition a frame of ratings or other data into train-test partitions user-by-user.
     This function does not care what kind of data is in `data`, so long as it is a Pandas DataFrame
@@ -238,6 +238,7 @@ def partition_users(data, partitions: int, method: PartitionMethod, *, rng=None)
         data(pandas.DataFrame): a data frame containing ratings or other data you wish to partition.
         partitions(int): the number of partitions to produce
         method(PartitionMethod): The method for selecting test rows for each user.
+        rng_spec: The random number generator or seed (see :py:func:`lenskit.util.rng`).
 
     Returns
         iterator: an iterator of train-test pairs
@@ -251,7 +252,7 @@ def partition_users(data, partitions: int, method: PartitionMethod, *, rng=None)
     # create an array of indexes into user row
     rows = np.arange(len(users))
     # shuffle the indices & split into partitions
-    rng = util.rng(rng)
+    rng = util.rng(rng_spec, legacy=True)
     rng.shuffle(rows)
     test_sets = np.array_split(rows, partitions)
 
@@ -271,7 +272,7 @@ def partition_users(data, partitions: int, method: PartitionMethod, *, rng=None)
 
 
 def sample_users(data, partitions: int, size: int, method: PartitionMethod, disjoint=True, *,
-                 rng=None):
+                 rng_spec=None):
     """
     Create train-test partitions by sampling users.
     This function does not care what kind of data is in `data`, so long as it is
@@ -286,22 +287,21 @@ def sample_users(data, partitions: int, size: int, method: PartitionMethod, disj
             The sample size.
         method(PartitionMethod):
             The method for obtaining user test ratings.
-        rng:
-            The random number generator.
+        rng_spec:
+            The random number generator or seed (see :py:func:`lenskit.util.rng`).
 
     Returns:
         iterator: An iterator of train-test pairs (as :class:`TTPair` objects).
     """
 
-    rng = util.rng(rng)
+    rng = util.rng(rng_spec, legacy=True)
 
     user_col = data['user']
     users = user_col.unique()
     if disjoint and partitions * size >= len(users):
         _logger.warning('cannot take %d disjoint samples of size %d from %d users',
                         partitions, size, len(users))
-        for p in partition_users(data, partitions, method):
-            yield p
+        yield from partition_users(data, partitions, method)
         return
 
     _logger.info('sampling %d users into %d partitions (n=%d)',
