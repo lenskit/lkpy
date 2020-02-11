@@ -32,17 +32,18 @@ def get_root_seed():
 
 def _get_rng(legacy=False):
     global _global_rng
-    if legacy or not _have_gen:
-        if _global_rng is None:
-            state = get_root_seed()
-            if _have_gen:
-                state = np.random.MT19937(state)
-            _global_rng = np.random.RandomState(state)
-        return _global_rng
-    else:
+    if _have_gen:
         seed = get_root_seed()
         kids = seed.spawn(1)
-        return np.random.default_rng(kids[0])
+        if legacy:
+            return np.random.RandomState(np.random.MT19937(kids[0]))
+        else:
+            return np.random.default_rng(kids[0])
+    else:
+        if _global_rng is None:
+            state = get_root_seed()
+            _global_rng = np.random.RandomState(state)
+        return _global_rng
 
 
 def _make_int(obj):
