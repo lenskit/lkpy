@@ -138,8 +138,8 @@ def test_als_save_load():
 @lktu.wantjit
 @mark.slow
 def test_als_method_match():
-    lu = als.BiasedMF(20, iterations=15, reg=(2, 0.001), method='lu', rng=42)
-    cd = als.BiasedMF(20, iterations=20, reg=(2, 0.001), method='cd', rng=42)
+    lu = als.BiasedMF(20, iterations=15, reg=(2, 0.001), method='lu', rng_spec=42)
+    cd = als.BiasedMF(20, iterations=20, reg=(2, 0.001), method='cd', rng_spec=42)
 
     ratings = lktu.ml_test.ratings
 

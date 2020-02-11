@@ -112,8 +112,8 @@ def test_als_train_large_noratings():
 @lktu.wantjit
 @mark.slow
 def test_als_method_match():
-    lu = als.ImplicitMF(20, iterations=15, method='lu', rng=42)
-    cg = als.ImplicitMF(20, iterations=15, method='cg', rng=42)
+    lu = als.ImplicitMF(20, iterations=15, method='lu', rng_spec=42)
+    cg = als.ImplicitMF(20, iterations=15, method='cg', rng_spec=42)
 
     ratings = lktu.ml_test.ratings
 
