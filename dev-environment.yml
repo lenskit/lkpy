@@ -2,6 +2,7 @@ name: lkpy-dev
 channels:
   - mdekstrand
   - defaults
+  - conda-forge # last to not override things
 dependencies:
 - python
 - pip
