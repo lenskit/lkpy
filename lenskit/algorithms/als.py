@@ -56,7 +56,7 @@ def _rr_solve(X, xis, y, w, reg, epochs):
 @njit(parallel=True, nogil=True)
 def _train_matrix_cd(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float):
     """
-    One half of an explicit ALS training round.
+    One half of an explicit ALS training round using coordinate descent.
 
     Args:
         mat: the :math:`m \\times n` matrix of ratings
@@ -90,7 +90,16 @@ def _train_matrix_cd(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float)
 
 @njit(parallel=True, nogil=True)
 def _train_matrix_lu(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float):
-    "One half of an explicit ALS training round."
+    """
+    One half of an explicit ALS training round using LU-decomposition on the normal
+    matrices to solve the least squares problem.
+
+    Args:
+        mat: the :math:`m \\times n` matrix of ratings
+        this: the :math:`m \\times k` matrix to train
+        other: the :math:`n \\times k` matrix of sample features
+        reg: the regularization term
+    """
     nr = mat.nrows
     nf = other.shape[1]
     regI = np.identity(nf) * reg
