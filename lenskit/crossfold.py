@@ -261,13 +261,16 @@ def partition_users(data, partitions: int, method: PartitionMethod, *, rng_spec=
         # get our users!
         test_us = users[ts]
         # sample the data frame
+        _logger.info('fold %d: selecting test ratings', i)
         ugf = data[data.user.isin(test_us)].groupby('user')
         test = ugf.apply(method)
         # get rid of the group index
         test = test.reset_index(0, drop=True)
         # now test is indexed on the data frame! so we can get the rest
-        rest = data.index.difference(test.index)
-        train = data.loc[rest]
+        _logger.info('fold %d: partitioning training data', i)
+        mask = pd.Series(True, index=data.index)
+        mask[test.index] = False
+        train = data[mask]
         yield TTPair(train, test)
 
 
