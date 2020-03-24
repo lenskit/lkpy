@@ -2,8 +2,10 @@
 Miscellaneous utility functions.
 """
 
+import os
 import logging
 from copy import deepcopy
+import multiprocessing as mp
 
 from ..algorithms import Algorithm
 from .files import *
@@ -97,3 +99,22 @@ def cur_memory():
         return "%.1f MiB" % (res.ru_idrss,)
     else:
         return 'unknown'
+
+
+def desired_job_count(core_div=2):
+    """
+    Get the number of desired jobs for multiprocessing operations.  This does not
+    affect Numba or MKL multithreading.
+
+    This count can come from a number of sources:
+    * The ``LK_NUM_PROCS`` environment variable
+    * The number of CPUs, divided by ``core_div`` (default 2)
+    """
+
+    nprocs = os.environ.get('LK_NUM_PROCS')
+    if nprocs is not None:
+        nprocs = int(nprocs)
+    else:
+        nprocs = max(mp.cpu_count() // core_div, 1)
+
+    return nprocs
