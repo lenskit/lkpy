@@ -3,14 +3,24 @@ Support for sharing and saving models and data structures.
 """
 
 from abc import abstractmethod
-from contextlib import contextmanager, AbstractContextManager
+from contextlib import contextmanager
+import threading
 import logging
 import pickle
 
 _log = logging.getLogger(__name__)
 
-__save_mode = 'save'
-_active_stores = []
+_store_state = threading.local()
+
+
+def _save_mode():
+    return getattr(_store_state, 'mode', 'save')
+
+
+def _active_stores():
+    if not hasattr(_store_state, 'active'):
+        _store_state.active = []
+    return _store_state.active
 
 
 @contextmanager
@@ -19,22 +29,21 @@ def sharing_mode():
     Context manager to tell models that pickling will be used for cross-process
     sharing, not model persistence.
     """
-    global __save_mode
-    old = __save_mode
-    __save_mode = 'share'
+    old = _save_mode()
+    _store_state.save_mode = 'share'
     try:
         yield
     finally:
-        __save_mode = old
+        _store_state.save_mode = old
 
 
 def in_share_context():
     """
     Query whether sharing mode is active.  If ``True``, we are currently in a
-    :fun:`sharing_mode` context, which means model pickling will be used for
+    :func:`sharing_mode` context, which means model pickling will be used for
     cross-process sharing.
     """
-    return __save_mode == 'share'
+    return _save_mode() == 'share'
 
 
 def get_store(reuse=True, *, in_process=False):
@@ -45,7 +54,12 @@ def get_store(reuse=True, *, in_process=False):
     >>> with get_store() as store:
     ...     pass
 
-    .. note:: This is not thread-safe.
+    This function uses the following priority list for locating a suitable store:
+
+    1. The currently-active store, if ``reuse=True``
+    2. A no-op store, if ``in_process=True``
+    3. :class:`SHMModelStore`, if on Python 3.8
+    4. :class:`JoblibModelStore`
 
     Args:
         reuse(bool):
@@ -57,11 +71,12 @@ def get_store(reuse=True, *, in_process=False):
     Returns:
         BaseModelStore: the model store.
     """
-    if reuse and _active_stores:
-        return _active_stores[-1]
+    stores = _active_stores()
+    if reuse and stores:
+        return stores[-1]
     elif in_process:
         return NoopModelStore()
-    elif 'SHMModelStore' in globals():
+    elif SHMModelStore.ENABLED:
         return SHMModelStore()
     else:
         return JoblibModelStore()
@@ -140,15 +155,15 @@ class BaseModelStore(BaseModelClient):
         if self._act_count == 0:
             self.init()
         self._act_count = self._act_count + 1
-        _active_stores.append(self)
+        _active_stores().append(self)
         return self
 
     def __exit__(self, *args):
         self._act_count = self._act_count - 1
         if self._act_count == 0:
             self.shutdown()
-        assert _active_stores[-1] is self
-        _active_stores.pop()
+        assert _active_stores()[-1] is self
+        _active_stores().pop()
         return None
 
     def __getstate__(self):
@@ -174,9 +189,6 @@ class NoopModelStore(BaseModelStore):
         return 'NoopModelStore'
 
 
-## more imports
+# more imports
 from .joblib import JoblibModelStore
-try:
-    from .sharedmem import SHMModelStore
-except ImportError:
-    pass  # shared memory not available
+from .sharedmem import SHMModelStore

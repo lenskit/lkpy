@@ -16,16 +16,16 @@ exclude intermediate data structures, such as caches or inverse indexes, from th
 representation of an algorithm, and reconstruct them when the model is loaded.
 
 However, LensKit's multi-process sharing *also* uses pickling to capture the object state
-while using shared memory for :py:cls:`numpy.ndarray` objects.  In these cases, the structures
+while using shared memory for :py:class:`numpy.ndarray` objects.  In these cases, the structures
 should be pickled, so they can be shared between model instances.
 
 To support this, we have the concept of *sharing mode*.  Code that excludes objects when
 pickling should call :py:func:`in_share_context` to determine if that exclusion should
 actually happen.
 
-.. autofunc:: in_share_context
+.. autofunction:: in_share_context
 
-.. autofunc:: sharing_mode
+.. autofunction:: sharing_mode
 
 
 Model Store API
@@ -37,9 +37,18 @@ making objects available to other classes.
 .. autofunction:: get_store
 
 .. autoclass:: BaseModelStore
+    :members:
+    :show-inheritance:
+
 .. autoclass:: BaseModelClient
+    :members:
+    :show-inheritance:
 
 Model Store Implementations
 ---------------------------
 
 .. autoclass:: JoblibModelStore
+    :show-inheritance:
+
+.. autoclass:: SHMModelStore
+    :show-inheritance:
