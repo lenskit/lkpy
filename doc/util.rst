@@ -4,6 +4,7 @@ Utility Functions
 .. toctree::
     matrix
     math
+    sharing
 
 Miscellaneous
 -------------
