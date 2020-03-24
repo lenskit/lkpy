@@ -43,7 +43,7 @@ def get_store(reuse=True, *, in_process=False):
     resulting store should be used as a context manager, as in:
 
     >>> with get_store() as store:
-    >>>     pass
+    ...     pass
 
     .. note:: This is not thread-safe.
 
