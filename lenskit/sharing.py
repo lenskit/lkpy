@@ -17,6 +17,7 @@ from .util import scratch_dir
 _log = logging.getLogger(__name__)
 
 __save_mode = 'save'
+_active_stores = []
 
 
 @contextmanager
@@ -43,11 +44,23 @@ def in_share_context():
     return __save_mode == 'share'
 
 
-def create_store():
+def get_store(reuse=True):
     """
-    Create a new model store, using the best available on the current platform.
+    Get a model store, using the best available on the current platform.  The
+    resulting store should be used as a context manager, as in:
+
+    >>> with get_store() as store:
+    >>>     pass
+
+    Args:
+        reuse(bool):
+            If a store is active (with a ``with`` block), use that store instead
+            of creating a new one.
     """
-    return JoblibModelStore()
+    if reuse and _active_stores:
+        return _active_stores[-1]
+    else:
+        return JoblibModelStore()
 
 
 class BaseModelStore(AbstractContextManager):
@@ -55,8 +68,11 @@ class BaseModelStore(AbstractContextManager):
     Base class for storing models for access across processes.
 
     Stores are also context managers that initalize themselves and clean themselves
-    up.
+    up.  As context managers, they are also re-entrant, and register themselves so
+    that :func:`create_store` can re-use existing managers.
     """
+
+    _act_count = 0
 
     @abstractmethod
     def put_model(self, model):
@@ -99,11 +115,18 @@ class BaseModelStore(AbstractContextManager):
         "Shut down the store"
 
     def __enter__(self):
-        self.init()
+        if self._act_count == 0:
+            self.init()
+        self._act_count = self._act_count + 1
+        _active_stores.append(self)
         return self
 
     def __exit__(self, *args):
-        self.shutdown()
+        self._act_count = self._act_count - 1
+        if self._act_count == 0:
+            self.shutdown()
+        assert _active_stores[-1] is self
+        _active_stores.pop()
         return None
 
 
@@ -146,16 +169,16 @@ class JoblibModelStore(BaseModelStore):
                 f.unlink()
             except PermissionError:
                 failed += 1
-                _log.warn('could not unlink %s', f)
+                _log.warning('could not unlink %s', f)
 
         # clean up directory
         if failed:
-            _log.warn('failed to delete %d temporary files from %s', failed, self.path)
+            _log.warning('failed to delete %d temporary files from %s', failed, self.path)
         elif self._rmdir:
             try:
                 self._path.rmdir()
             except IOError as e:
-                _log.warn('could not delete %s: %s', self._path, e)
+                _log.warning('could not delete %s: %s', self._path, e)
 
         # and clean up internal data structures
         del self._files

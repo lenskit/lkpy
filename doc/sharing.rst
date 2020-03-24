@@ -34,6 +34,8 @@ Model Store API
 Model stores handle persisting models into shared memory, cleaning up shared memory, and
 making objects available to other classes.
 
+.. autofunction:: get_store
+
 .. autoclass:: BaseModelStore
 
 Model Store Implementations

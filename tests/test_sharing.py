@@ -36,3 +36,29 @@ def test_store_save(store_cls):
         assert a2 is not algo
         assert a2.item_pop_ is not algo.item_pop_
         assert all(a2.item_pop_ == algo.item_pop_)
+        del a2
+
+
+def test_create_store():
+    with lks.get_store() as store:
+        assert len(lks._active_stores) == 1
+        assert lks._active_stores[-1] is store
+
+
+def test_reuse_store():
+    with lks.get_store() as outer:
+        with lks.get_store() as inner:
+            assert inner is outer
+            assert len(lks._active_stores) == 2
+            assert lks._active_stores[-1] is inner
+        assert len(lks._active_stores) == 1
+
+
+def test_new_store():
+    with lks.get_store() as outer:
+        with lks.get_store(False) as inner:
+            assert inner is not outer
+            assert len(lks._active_stores) == 2
+            assert lks._active_stores[-1] is inner
+            assert lks._active_stores[0] is outer
+        assert len(lks._active_stores) == 1
