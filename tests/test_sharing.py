@@ -3,8 +3,10 @@ import numpy as np
 
 import lenskit.util.test as lktu
 from lenskit import sharing as lks
+from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import Popular
 from lenskit.algorithms.als import BiasedMF
+from lenskit.algorithms.item_knn import ItemItem
 
 from pytest import mark
 
@@ -96,6 +98,21 @@ def test_store_als(store_cls):
         assert np.all(a2.item_features_ == algo.item_features_)
         assert a2.user_features_ is not algo.user_features_
         assert np.all(a2.user_features_ == algo.user_features_)
+        del a2
+
+
+@store_param
+def test_store_iknn(store_cls):
+    algo = ItemItem(10)
+    algo = Recommender.adapt(algo)
+    algo.fit(lktu.ml_test.ratings)
+
+    with store_cls() as store:
+        k = store.put_model(algo)
+        client = store.client()
+
+        a2 = client.get_model(k)
+        assert a2 is not algo
         del a2
 
 
