@@ -46,7 +46,7 @@ def scratch_dir(default=True, joblib=False):
     Get the configured temporary directory.  Looks for configuration in the following
     places:
 
-    1. The environment variable ``LENSKIT_TEMP_DIR``.
+    1. The environment variable ``LK_TEMP_DIR``.
     2. If ``joblib`` is ``True``, the environment variable ``JOBLIB_TEMP_FOLDER``.
     3. If ``default`` is ``True``, the result of :fun:`tempfile.gettempdir`.
 
@@ -54,7 +54,11 @@ def scratch_dir(default=True, joblib=False):
         default(bool): whether to look in the Python default locations.
         joblib(bool): whether to consult the Joblib configuration directory.
     """
-    path = os.environ.get('LENSKIT_TEMP_DIR', None)
+    path = os.environ.get('LK_TEMP_DIR', None)
+    if joblib and not path:
+        path = os.environ.get('LENSKIT_TEMP_DIR', None)
+        if path is not None:
+            _log.warn('LENSKIT_TEMP_DIR is deprecated, use LK_TEMP_DIR instead')
     if joblib and not path:
         path = os.environ.get('JOBLIB_TEMP_FOLDER', None)
     if default and not path:
