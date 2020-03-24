@@ -1,35 +1,20 @@
-import os
-import os.path
-import pathlib
-import tempfile
 import logging
 import warnings
-from collections import namedtuple
 
-from joblib import Parallel, delayed, dump, load
+from joblib import Parallel, delayed
 
 import pandas as pd
 import numpy as np
 
 from ..algorithms import Recommender
 from .. import util
-from ..sharing import sharing_mode
+from ..sharing import get_store, NoopModelStore
 
 _logger = logging.getLogger(__name__)
-_AlgoKey = namedtuple('AlgoKey', ['type', 'data'])
 
 
-@util.last_memo(check_type='equality')
-def __load_algo(path):
-    return load(path, mmap_mode='r')
-
-
-def _recommend_user(algo, user, n, candidates):
-    if type(algo).__name__ == 'AlgoKey':  # pickling doesn't preserve isinstance
-        if algo.type == 'file':
-            algo = __load_algo(algo.data)
-        else:
-            raise ValueError('unknown algorithm key type %s', algo.type)
+def _recommend_user(client, key, user, n, candidates):
+    algo = client.get_model(key)
 
     _logger.debug('generating recommendations for %s', user)
     watch = util.Stopwatch()
@@ -105,25 +90,20 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, **kwargs):
     try:
         _logger.debug('activating recommender loop')
         with loop:
-            backend = loop._backend.__class__.__name__
-            njobs = loop._effective_n_jobs()
-            _logger.info('parallel backend %s, effective njobs %s',
-                         backend, njobs)
+            store = get_store(in_process=loop._effective_n_jobs() == 1)
+            _logger.info('using model store %s', store)
             astr = str(rec_algo)
-            if njobs > 1:
-                fd, path = tempfile.mkstemp(prefix='lkpy-predict', suffix='.pkl',
-                                            dir=util.scratch_dir(joblib=True))
-                path = pathlib.Path(path)
-                os.close(fd)
-                _logger.debug('pre-serializing algorithm %s to %s', rec_algo, path)
-                with sharing_mode():
-                    dump(rec_algo, path)
-                rec_algo = _AlgoKey('file', path)
 
-            _logger.info('recommending with %s for %d users (n_jobs=%s)', astr, len(users), n_jobs)
-            timer = util.Stopwatch()
-            results = loop(delayed(_recommend_user)(rec_algo, user, n, candidates(user))
-                           for user in users)
+            with store:
+                key = store.put_model(rec_algo)
+                del rec_algo
+                client = store.client()
+
+                _logger.info('recommending with %s for %d users (n_jobs=%s)',
+                             astr, len(users), n_jobs)
+                timer = util.Stopwatch()
+                results = loop(delayed(_recommend_user)(client, key, user, n, candidates(user))
+                               for user in users)
 
             results = pd.concat(results, ignore_index=True, copy=False)
             _logger.info('recommended for %d users in %s', len(users), timer)

@@ -37,6 +37,7 @@ making objects available to other classes.
 .. autofunction:: get_store
 
 .. autoclass:: BaseModelStore
+.. autoclass:: BaseModelClient
 
 Model Store Implementations
 ---------------------------

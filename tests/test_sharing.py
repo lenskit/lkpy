@@ -1,3 +1,5 @@
+import pickle
+
 import lenskit.util.test as lktu
 from lenskit import sharing as lks
 from lenskit.algorithms.basic import Popular
@@ -33,6 +35,40 @@ def test_store_save(store_cls):
     with store_cls() as store:
         k = store.put_model(algo)
         a2 = store.get_model(k)
+        assert a2 is not algo
+        assert a2.item_pop_ is not algo.item_pop_
+        assert all(a2.item_pop_ == algo.item_pop_)
+        del a2
+
+
+@store_param
+def test_store_client(store_cls):
+    algo = Popular()
+    algo.fit(lktu.ml_test.ratings)
+
+    with store_cls() as store:
+        k = store.put_model(algo)
+        client = store.client()
+
+        a2 = client.get_model(k)
+        assert a2 is not algo
+        assert a2.item_pop_ is not algo.item_pop_
+        assert all(a2.item_pop_ == algo.item_pop_)
+        del a2
+
+
+@store_param
+def test_store_client_pickle(store_cls):
+    algo = Popular()
+    algo.fit(lktu.ml_test.ratings)
+
+    with store_cls() as store:
+        k = store.put_model(algo)
+        client = store.client()
+        client = pickle.loads(pickle.dumps(client))
+        k = pickle.loads(pickle.dumps(k))
+
+        a2 = client.get_model(k)
         assert a2 is not algo
         assert a2.item_pop_ is not algo.item_pop_
         assert all(a2.item_pop_ == algo.item_pop_)
