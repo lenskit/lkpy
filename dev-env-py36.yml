@@ -1,4 +1,4 @@
-name: lk38
+name: lk36
 channels:
 - defaults
 - conda-forge
