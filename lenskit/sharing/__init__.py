@@ -61,6 +61,8 @@ def get_store(reuse=True, *, in_process=False):
         return _active_stores[-1]
     elif in_process:
         return NoopModelStore()
+    elif 'SHMModelStore' in globals():
+        return SHMModelStore()
     else:
         return JoblibModelStore()
 
@@ -174,3 +176,7 @@ class NoopModelStore(BaseModelStore):
 
 ## more imports
 from .joblib import JoblibModelStore
+try:
+    from .sharedmem import SHMModelStore
+except ImportError:
+    pass  # shared memory not available
