@@ -6,10 +6,13 @@ jobs:
     matrix:
       Python36:
         python.version: '3.6'
+        env.file: dev-env-py36.yml
       Python37:
         python.version: '3.7'
+        env.file: dev-environment.yml
       Python38:
         python.version: '3.8'
+        env.file: dev-env-py38.yml
     maxParallel: 4
 
   steps:
@@ -18,8 +21,7 @@ jobs:
 
   - script: |
       set -x
-      conda create -n lkpy -qy python=$(python.version)
-      conda env update -n lkpy -q -f dev-environment.yml
+      conda env create -n lkpy -q -f $(env.file)
     displayName: Create Anaconda environment
 
   - script: |
