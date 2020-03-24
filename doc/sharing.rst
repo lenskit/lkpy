@@ -47,8 +47,31 @@ making objects available to other classes.
 Model Store Implementations
 ---------------------------
 
+We provide several model store implementations.
+
+Joblib-based
+~~~~~~~~~~~~
+
+.. py:module:: lenskit.sharing.joblib
+
+The :joblib-based store works on any supported platform and Python version.  It uses
+Joblib's memory-mapped Pickle extension to store models on disk and use their storage to back
+memory-mapped views of major data structures.
+
 .. autoclass:: JoblibModelStore
     :show-inheritance:
+.. autoclass:: JoblibModelClient
+    :show-inheritance:
+
+Shared Memory
+~~~~~~~~~~~~~
+
+.. py:module:: lenskit.sharing.sharedmem
+
+This store uses Python 3.8's :py:mod:`multiprocessing.shared_memory` module, along with out-of-band
+buffer support in Pickle Protcol 5, to pass model data through shared memory.
 
 .. autoclass:: SHMModelStore
+    :show-inheritance:
+.. autoclass:: SHMClient
     :show-inheritance:

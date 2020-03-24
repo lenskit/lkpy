@@ -97,7 +97,7 @@ class BaseModelClient:
             key: the model key to retrieve.
 
         Returns:
-            The model, previously stored with :meth:`put_model`.
+            The model, previously stored with :meth:`BaseModelStore.put_model`.
         """
 
 
@@ -121,7 +121,7 @@ class BaseModelStore(BaseModelClient):
             model(object): the model to store.
 
         Returns:
-            a key to retrieve the model with :meth:`get_model`
+            a key to retrieve the model with :meth:`BaseModelClient.get_model`
         """
         pass
 
@@ -129,7 +129,7 @@ class BaseModelStore(BaseModelClient):
         """
         Deserialize a model and load it into the store.
 
-        The base class method unpickles ``path`` and calls :meth:`store`.
+        The base class method unpickles ``path`` and calls :meth:`put_model`.
         """
         with open(path, 'rb') as mf:
             return self.put_model(pickle.load(mf))
