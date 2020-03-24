@@ -43,6 +43,13 @@ def in_share_context():
     return __save_mode == 'share'
 
 
+def create_store():
+    """
+    Create a new model store, using the best available on the current platform.
+    """
+    return JoblibModelStore()
+
+
 class BaseModelStore(AbstractContextManager):
     """
     Base class for storing models for access across processes.
