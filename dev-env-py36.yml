@@ -18,5 +18,6 @@ dependencies:
 - flake8
 - mkl-devel
 - c-compiler
+- matplotlib
 - pip:
   - nbval
