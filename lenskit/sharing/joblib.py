@@ -15,10 +15,21 @@ class JoblibModelClient(BaseModelClient):
     Client using Joblib's memory-mapping pickle support.
     """
 
+    _last_key = None
+
     def get_model(self, key):
-        _log.debug('loading model from %s', key)
-        model = joblib.load(key, mmap_mode='r')
-        return model
+        if self._last_key == key:
+            _log.debug('reusing model %s', key)
+        else:
+            _log.debug('loading model from %s', key)
+            self._last_model = joblib.load(key, mmap_mode='r')
+        return self._last_model
+
+    def __getstate__(self):
+        if isinstance(self, BaseModelStore):
+            raise RuntimeError('stores cannot be pickled')
+        else:
+            return {}  # nothing to pickle here
 
 
 class JoblibModelStore(BaseModelStore, JoblibModelClient):
