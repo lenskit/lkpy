@@ -1,0 +1,18 @@
+name: lk38
+channels:
+- defaults
+dependencies:
+- python>=3.8
+- pip
+- pandas
+- numpy
+- scipy
+- numba
+- pyarrow
+- cffi
+- joblib
+- pytest
+- pytest-cov
+- ipython
+- flake8
+- mkl-devel
