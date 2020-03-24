@@ -1,6 +1,7 @@
 name: lk38
 channels:
 - defaults
+- conda-forge
 dependencies:
 - python>=3.6
 - pip
@@ -16,3 +17,6 @@ dependencies:
 - ipython
 - flake8
 - mkl-devel
+- c-compiler
+- pip:
+  - nbval
