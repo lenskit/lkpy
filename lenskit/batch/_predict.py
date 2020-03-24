@@ -73,9 +73,10 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
             contains a ``rating`` column, it will be included in the result.
         n_jobs(int):
             The number of processes to use for parallel batch prediction.  Passed as
-            ``n_jobs`` to :cls:`joblib.Parallel`.  The default, ``None``, will make
+            ``n_jobs`` to :cls:`joblib.Parallel`.  The default, ``None``, will result
+            in a call to :func:`util.proc_count`(``None``), so the process will be
             the process sequential _unless_ called inside the :func:`joblib.parallel_backend`
-            context manager.
+            context manager or the ``LK_NUM_PROCS`` environment variable is set.
 
             .. note:: ``nprocs`` is accepted as a deprecated alias.
 
@@ -88,6 +89,9 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
     if n_jobs is None and 'nprocs' in kwargs:
         n_jobs = kwargs['nprocs']
         warnings.warn('nprocs is deprecated, use n_jobs', DeprecationWarning)
+
+    if n_jobs is None:
+        n_jobs = util.proc_count(None)
 
     loop = Parallel(n_jobs=n_jobs)
 

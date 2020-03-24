@@ -101,7 +101,7 @@ def cur_memory():
         return 'unknown'
 
 
-def desired_job_count(core_div=2):
+def proc_count(core_div=2):
     """
     Get the number of desired jobs for multiprocessing operations.  This does not
     affect Numba or MKL multithreading.
@@ -109,12 +109,20 @@ def desired_job_count(core_div=2):
     This count can come from a number of sources:
     * The ``LK_NUM_PROCS`` environment variable
     * The number of CPUs, divided by ``core_div`` (default 2)
+
+    Args:
+        core_div(int or None):
+            The divisor to scale down the number of cores; ``None`` to turn off core-based
+            fallback.
+
+    Returns:
+        int: The number of jobs desired.
     """
 
     nprocs = os.environ.get('LK_NUM_PROCS')
     if nprocs is not None:
         nprocs = int(nprocs)
-    else:
+    elif core_div is not None:
         nprocs = max(mp.cpu_count() // core_div, 1)
 
     return nprocs
