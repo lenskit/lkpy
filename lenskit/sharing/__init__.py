@@ -30,11 +30,11 @@ def sharing_mode():
     sharing, not model persistence.
     """
     old = _save_mode()
-    _store_state.save_mode = 'share'
+    _store_state.mode = 'share'
     try:
         yield
     finally:
-        _store_state.save_mode = old
+        _store_state.mode = old
 
 
 def in_share_context():
