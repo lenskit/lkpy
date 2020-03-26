@@ -83,6 +83,7 @@ def test_store_client_pickle(store_cls):
         del a2
 
 
+@lktu.wantjit
 @store_param
 def test_store_als(store_cls):
     algo = BiasedMF(10)
@@ -101,6 +102,7 @@ def test_store_als(store_cls):
         del a2
 
 
+@lktu.wantjit
 @store_param
 def test_store_iknn(store_cls):
     algo = ItemItem(10)
