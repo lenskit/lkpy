@@ -96,27 +96,26 @@ class RecListAnalysis:
         gc_map = dict((c, i) for (i, c) in enumerate(gcols))
 
         ti_bcols = [c for c in gcols if c in truth.columns]
-        ti_cols = ti_bcols + ['item']
+        truth_frames = dict((k, f.set_index('item').drop(columns=ti_bcols))
+                            for (k, f) in truth.groupby(ti_bcols))
 
-        _log.info('using truth ID columns %s', ti_cols)
-        truth = truth.set_index(ti_cols)
-        if not truth.index.is_unique:
-            warnings.warn('truth frame does not have unique values')
-        truth.sort_index(inplace=True)
+        _log.info('using truth ID columns %s', ti_bcols)
+
+        mnames = pd.Index([mn for (mf, mn, margs) in self.metrics])
 
         def worker(group):
             row_key = group.name
-            if len(ti_cols) == len(gcols) + 1:
+            if len(ti_bcols) == len(gcols):
                 tr_key = row_key
             else:
-                tr_key = tuple([row_key[gc_map[c]] for c in ti_cols[:-1]])
+                tr_key = tuple([row_key[gc_map[c]] for c in ti_bcols])
+                if len(tr_key) == 1:
+                    tr_key = tr_key[0]
 
-            g_truth = truth.loc[tr_key, :]
+            g_truth = truth_frames[tr_key]
 
-            group_results = {}
-            for mf, mn, margs in self.metrics:
-                group_results[mn] = mf(group, g_truth, **margs)
-            return pd.DataFrame(group_results, index=[0])
+            results = [mf(group, g_truth, **margs) for (mf, mn, margs) in self.metrics]
+            return pd.Series(results, index=mnames)
 
         timer = Stopwatch()
         grouped = recs.groupby(gcols)
@@ -135,7 +134,6 @@ class RecListAnalysis:
         else:
             res = grouped.apply(worker)
 
-        res.reset_index(level=-1, drop=True, inplace=True)
         _log.info('analyzed %d lists in %s', len(res), timer)
         if include_missing:
             _log.info('filling in missing user info')
