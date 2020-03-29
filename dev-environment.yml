@@ -17,6 +17,7 @@ dependencies:
 - cffi
 - pyarrow
 - joblib
+- pickle5
 - coverage 
 - pytest>=3.9
 - pytest-cov
