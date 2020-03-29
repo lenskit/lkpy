@@ -68,6 +68,7 @@ def _dcg(scores, discount=np.log2):
     return np.dot(scores, disc)
 
 
+# @profile
 def ndcg(recs, truth, discount=np.log2):
     """
     Compute the normalized discounted cumulative gain.
@@ -93,12 +94,18 @@ def ndcg(recs, truth, discount=np.log2):
             The rank discount function.  Each item's score will be divided the discount of its rank,
             if the discount is greater than 1.
     """
+
+    tpos = truth.index.get_indexer(recs['item'])
+    tgood = tpos >= 0
     if 'rating' in truth.columns:
-        ideal = _dcg(truth.rating.sort_values(ascending=False), discount)
-        merged = recs[['item']].join(truth[['rating']], on='item', how='left')
-        achieved = _dcg(merged.rating, discount)
+        i_rates = np.sort(truth.rating.values)[::-1]
+        ideal = _dcg(i_rates, discount)
+        # make an array of ratings for this rec list
+        r_rates = truth['rating'].values[tpos]
+        r_rates[tpos < 0] = 0
+        achieved = _dcg(r_rates, discount)
     else:
         ideal = _dcg(np.ones(len(truth)), discount)
-        achieved = _dcg(recs.item.isin(truth.index), discount)
+        achieved = _dcg(tgood, discount)
 
     return achieved / ideal

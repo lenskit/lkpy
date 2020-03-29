@@ -65,6 +65,7 @@ def test_run_two():
     res = rla.compute(recs, truth)
     print(res)
 
+    assert res.columns.nlevels == 1
     assert len(res) == 2
     assert res.index.nlevels == 2
     assert res.index.names == ['data', 'user']
@@ -138,6 +139,7 @@ def test_inner_format():
         assert len(recs[['data', 'user']].drop_duplicates()) == 1
         assert truth.index.name == 'item'
         assert truth.index.is_unique
+        print(truth)
         assert all(truth.columns == ['rating'])
         return len(recs.join(truth, on='item', how='inner'))
     rla.add_metric(inner, name='bob', foo='b')
@@ -250,20 +252,20 @@ def test_adv_fill_users():
         a_uu.fit(train)
         rec_users = test['user'].sample(50).unique()
         all_recs[(i+1, 'UU')] = batch.recommend(a_uu, rec_users, 25)
-        
+
         a_ii.fit(train)
         rec_users = test['user'].sample(50).unique()
         all_recs[(i+1, 'II')] = batch.recommend(a_ii, rec_users, 25)
         all_test[i+1] = test
-    
+
     recs = pd.concat(all_recs, names=['part', 'algo'])
     recs.reset_index(['part', 'algo'], inplace=True)
     recs.reset_index(drop=True, inplace=True)
-    
+
     test = pd.concat(all_test, names=['part'])
     test.reset_index(['part'], inplace=True)
     test.reset_index(drop=True, inplace=True)
-    
+
     scores = rla.compute(recs, test, include_missing=True)
     inames = scores.index.names
     scores.sort_index(inplace=True)
@@ -277,7 +279,7 @@ def test_adv_fill_users():
     mscores.sort_index(inplace=True)
     assert len(mscores) < len(scores)
     _log.info('mscores:\n%s', mscores)
-    
+
     recall = scores.loc[scores['recall'].notna(), 'recall'].copy()
     recall, mrecall = recall.align(mscores['recall'])
     assert all(recall == mrecall)
