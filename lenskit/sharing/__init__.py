@@ -79,7 +79,7 @@ def get_store(reuse=True, *, in_process=False):
     elif SHMModelStore.ENABLED:
         return SHMModelStore()
     else:
-        return JoblibModelStore()
+        return FileModelStore()
 
 
 class BaseModelClient:
@@ -190,5 +190,5 @@ class NoopModelStore(BaseModelStore):
 
 
 # more imports
-from .joblib import JoblibModelStore
+from .file import FileModelStore
 from .sharedmem import SHMModelStore

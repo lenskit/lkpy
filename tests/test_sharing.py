@@ -10,7 +10,7 @@ from lenskit.algorithms.item_knn import ItemItem
 
 from pytest import mark
 
-stores = [lks.JoblibModelStore]
+stores = [lks.FileModelStore]
 if pickle.HIGHEST_PROTOCOL >= 5:
     # we have Python 3.8
     stores.append(lks.SHMModelStore)

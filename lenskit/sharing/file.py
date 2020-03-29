@@ -10,7 +10,7 @@ from . import BaseModelStore, BaseModelClient, sharing_mode
 _log = logging.getLogger(__name__)
 
 
-class JoblibModelClient(BaseModelClient):
+class FileClient(BaseModelClient):
     """
     Client using Joblib's memory-mapping pickle support.
     """
@@ -32,7 +32,7 @@ class JoblibModelClient(BaseModelClient):
             return {}  # nothing to pickle here
 
 
-class JoblibModelStore(BaseModelStore, JoblibModelClient):
+class FileModelStore(BaseModelStore, FileClient):
     """
     Model store using JobLib's memory-mapping pickle support.
 
@@ -88,7 +88,7 @@ class JoblibModelStore(BaseModelStore, JoblibModelClient):
         del self._rmdir
 
     def client(self):
-        return JoblibModelClient()
+        return FileClient()
 
     def put_model(self, model):
         fd, fn = tempfile.mkstemp('.model', 'lk-joblib', self._path)
@@ -109,6 +109,6 @@ class JoblibModelStore(BaseModelStore, JoblibModelClient):
 
     def __str__(self):
         if self.path is not None:
-            return f'JoblibModelStore({self.path})'
+            return f'FileModelStore({self.path})'
         else:
-            return 'JoblibModelStore()'
+            return 'FileModelStore()'

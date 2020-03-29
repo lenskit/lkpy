@@ -49,18 +49,18 @@ Model Store Implementations
 
 We provide several model store implementations.
 
-Joblib-based
-~~~~~~~~~~~~
+Memory Mapping
+~~~~~~~~~~~~~~
 
-.. py:module:: lenskit.sharing.joblib
+.. py:module:: lenskit.sharing.file
 
-The :joblib-based store works on any supported platform and Python version.  It uses
-Joblib's memory-mapped Pickle extension to store models on disk and use their storage to back
-memory-mapped views of major data structures.
+The memory-mapped-file store works on any supported platform and Python version.  It uses
+Joblib's memory-mapped Pickle extension to store models on disk and use their storage
+to back memory-mapped views of major data structures.
 
-.. autoclass:: JoblibModelStore
+.. autoclass:: FileModelStore
     :show-inheritance:
-.. autoclass:: JoblibModelClient
+.. autoclass:: File
     :show-inheritance:
 
 Shared Memory
