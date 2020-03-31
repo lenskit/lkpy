@@ -161,6 +161,10 @@ class Popular(Recommender):
         selector(CandidateSelector):
             The candidate selector to use. If ``None``, uses a new
             :class:`UnratedItemCandidateSelector`.
+
+    Attributes:
+        item_pop_(pandas.Series):
+            Item rating counts (popularity)
     """
 
     def __init__(self, selector=None):

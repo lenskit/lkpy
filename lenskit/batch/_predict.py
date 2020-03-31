@@ -1,34 +1,18 @@
-import os
-import os.path
 import logging
-import tempfile
-import pathlib
 import warnings
-from collections import namedtuple
-from joblib import Parallel, delayed, dump, load
+from joblib import Parallel, delayed
 
 import pandas as pd
 
 from .. import util
-from ..sharing import sharing_mode
+from ..sharing import get_store, NoopModelStore
 
 _logger = logging.getLogger(__name__)
 _rec_context = None
 
-_AlgoKey = namedtuple('AlgoKey', ['type', 'data'])
 
-
-@util.last_memo(check_type='equality')
-def __load_algo(path):
-    return load(path, mmap_mode='r')
-
-
-def _predict_user(algo, user, udf):
-    if type(algo).__name__ == 'AlgoKey':  # pickling doesn't preserve isinstance
-        if algo.type == 'file':
-            algo = __load_algo(algo.data)
-        else:
-            raise ValueError('unknown algorithm key type %s', algo.type)
+def _predict_user(client, key, user, udf):
+    algo = client.get_model(key)
 
     watch = util.Stopwatch()
     res = algo.predict_for_user(user, udf['item'])
@@ -97,20 +81,18 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
 
     path = None
     try:
-        if loop._effective_n_jobs() > 1:
-            fd, path = tempfile.mkstemp(prefix='lkpy-predict', suffix='.pkl',
-                                        dir=util.scratch_dir(joblib=True))
-            path = pathlib.Path(path)
-            os.close(fd)
-            _logger.debug('pre-serializing algorithm %s to %s', algo, path)
-            with sharing_mode():
-                dump(algo, path)
-            algo = _AlgoKey('file', path)
+        store = get_store(in_process=loop._effective_n_jobs() == 1)
+        _logger.info('using model store %s', store)
 
-        nusers = pairs['user'].nunique()
-        _logger.info('generating %d predictions for %d users', len(pairs), nusers)
-        results = loop(delayed(_predict_user)(algo, user, udf.copy())
-                       for (user, udf) in pairs.groupby('user'))
+        with store:
+            key = store.put_model(algo)
+            del algo
+            client = store.client()
+
+            nusers = pairs['user'].nunique()
+            _logger.info('generating %d predictions for %d users', len(pairs), nusers)
+            results = loop(delayed(_predict_user)(client, key, user, udf.copy())
+                           for (user, udf) in pairs.groupby('user'))
 
         results = pd.concat(results, ignore_index=True, copy=False)
     finally:

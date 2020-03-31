@@ -12,6 +12,11 @@ from lenskit.algorithms.basic import Bias, TopN, Popular
 from lenskit import batch, topn
 import lenskit.crossfold as xf
 
+try:
+    import pickle5
+except ImportError:
+    pickle5 = None
+
 MLB = namedtuple('MLB', ['ratings', 'algo'])
 _log = logging.getLogger(__name__)
 
@@ -133,6 +138,41 @@ def test_bias_batch_recommend(ml_folds: MLFolds, ncpus):
     algo = TopN(algo)
 
     recs = ml_folds.eval_all(algo, n_jobs=ncpus)
+
+    ml_folds.check_positive_ndcg(recs)
+
+
+@pytest.mark.eval
+def test_bias_batch_recommend_pickle(ml_folds: MLFolds):
+    algo = Bias(damping=5)
+    algo = TopN(algo)
+
+    from joblib.externals import loky
+
+    old = loky.backend.reduction.get_loky_pickler_name()
+    try:
+        loky.set_loky_pickler('pickle')
+        recs = ml_folds.eval_all(algo, n_jobs=2)
+    finally:
+        loky.set_loky_pickler(old)
+
+    ml_folds.check_positive_ndcg(recs)
+
+
+@pytest.mark.skipif(pickle5 is None, reason='requires pickle5 module')
+@pytest.mark.eval
+def test_bias_batch_recommend_pickle5(ml_folds: MLFolds):
+    algo = Bias(damping=5)
+    algo = TopN(algo)
+
+    from joblib.externals import loky
+
+    old = loky.backend.reduction.get_loky_pickler_name()
+    try:
+        loky.set_loky_pickler('pickle5')
+        recs = ml_folds.eval_all(algo, n_jobs=2)
+    finally:
+        loky.set_loky_pickler(old)
 
     ml_folds.check_positive_ndcg(recs)
 
