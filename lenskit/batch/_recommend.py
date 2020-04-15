@@ -60,8 +60,6 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, **kwargs):
             the process sequential _unless_ called inside the :func:`joblib.parallel_backend`
             context manager or the ``LK_NUM_PROCS`` environment variable is set.
 
-            .. note:: ``nprocs`` is accepted as a deprecated alias.
-
     Returns:
         A frame with at least the columns ``user``, ``rank``, and ``item``; possibly also
         ``score``, and any other columns returned by the recommender.

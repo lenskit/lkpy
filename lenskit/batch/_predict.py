@@ -62,8 +62,6 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
             the process sequential _unless_ called inside the :func:`joblib.parallel_backend`
             context manager or the ``LK_NUM_PROCS`` environment variable is set.
 
-            .. note:: ``nprocs`` is accepted as a deprecated alias.
-
     Returns:
         pandas.DataFrame:
             a frame with columns ``user``, ``item``, and ``prediction`` containing
