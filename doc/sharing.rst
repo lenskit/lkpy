@@ -60,7 +60,7 @@ to back memory-mapped views of major data structures.
 
 .. autoclass:: FileModelStore
     :show-inheritance:
-.. autoclass:: File
+.. autoclass:: FileClient
     :show-inheritance:
 
 Shared Memory

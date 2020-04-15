@@ -55,7 +55,7 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, **kwargs):
             built-in candidate selector (usually recommended).
         n_jobs(int):
             The number of processes to use for parallel recommendations.  Passed as
-            ``n_jobs`` to :cls:`joblib.Parallel`.  The default, ``None``, will result
+            ``n_jobs`` to :class:`joblib.Parallel`.  The default, ``None``, will result
             in a call to :func:`util.proc_count`(``None``), so the process will be
             the process sequential _unless_ called inside the :func:`joblib.parallel_backend`
             context manager or the ``LK_NUM_PROCS`` environment variable is set.

@@ -57,7 +57,7 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
             contains a ``rating`` column, it will be included in the result.
         n_jobs(int):
             The number of processes to use for parallel batch prediction.  Passed as
-            ``n_jobs`` to :cls:`joblib.Parallel`.  The default, ``None``, will result
+            ``n_jobs`` to :class:`joblib.Parallel`.  The default, ``None``, will result
             in a call to :func:`util.proc_count`(``None``), so the process will be
             the process sequential _unless_ called inside the :func:`joblib.parallel_backend`
             context manager or the ``LK_NUM_PROCS`` environment variable is set.
