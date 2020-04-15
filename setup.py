@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from setuptools import setup, find_packages
+from setuptools import setup
 from distutils.cmd import Command
 from distutils import ccompiler, sysconfig
 
@@ -51,65 +51,7 @@ class BuildHelperCommand(Command):
                               library_dirs=l_dirs)
 
 
-with open('README.md', 'r') as fh:
-    readme = fh.read()
-
-setup(
-    name="lenskit",
-    version="0.9.0",
-    author="Michael Ekstrand",
-    author_email="michaelekstrand@boisestate.edu",
-    description="Run recommender algorithms and experiments",
-    long_description=readme,
-    long_description_content_type='text/markdown',
-    url="https://lkpy.lenskit.org",
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
-        "Development Status :: 4 - Beta",
-        "Intended Audience :: Science/Research",
-        "Topic :: Scientific/Engineering :: Artificial Intelligence"
-    ],
-
-    python_requires='>= 3.6',
-    setup_requires=[
-        'pytest-runner'
-    ],
-    install_requires=[
-        'pandas >= 0.24',
-        'numpy',
-        'scipy',
-        'numba >= 0.43, < 0.49',
-        'pyarrow',
-        'cffi',
-        'joblib'
-    ],
-    tests_require=[
-        'pytest >= 3.9',
-        'pytest-doctestplus'
-    ],
-    extras_require={
-        'docs': [
-            'sphinx >= 1.8',
-            'sphinx_rtd_theme',
-            'nbsphinx',
-            'recommonmark',
-            'ipython'
-        ],
-        'hpf': [
-            'hpfrec'
-        ],
-        'implicit': [
-            'implicit'
-        ]
-    },
-    packages=find_packages(),
-    package_data={
-        'lenskit': ['*.dll', '*.so', '*.dylib', '*.h']
-    },
-
-    cmdclass={
+if __name__ == "__main__":
+    setup(cmdclass={
         'build_helper': BuildHelperCommand
-    }
-)
+    })
