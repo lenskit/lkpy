@@ -1,0 +1,52 @@
+name: Conda Builds
+on: [push, pull_request]
+jobs:
+  linux:
+    name: Linux Conda Python ${{matrix.env}}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env:
+        - dev-environment.yml
+        - dev-env-py38.yml
+        - dev-env-py36.yml
+    steps:
+      - use: @actions/checkout
+      - name: Set up Conda
+        run: |
+          conda env create -n lkpy -q -f $(env.file)
+      - name: Inspect environment
+        run: |
+          source activate lkpy
+          python -V numba -s
+      - name: Download ML-100K
+        run: |
+          if [ ! -r ml-100k/u.data ]; then
+            wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
+            unzip ml-100k.zip
+          fi
+      - name: Build LKPY
+        run: |
+          source activate lkpy
+          mkdir -p build
+          python3 setup.py build_helper || exit 2
+          python3 setup.py build
+      - name: Test LKPY
+        env:
+          MKL_THREADING_LAYER: tbb
+        run: |
+          source activate lkpy
+          python3 -m pytest --junitxml=buid/test-results.xml --cov=lenskit --verbose
+      - name: Non-JIT Test Coverage
+        env:
+          NUMBA_DISABLE_JIT: 1
+        run: |
+          source activate lkpy
+          python3 -m pytest --cov=lenskit --cov-append -m 'not slow'
+      - name: Validate Documentation Examples
+        run: |
+          source activate lkpy
+          cp -r ml-100k doc
+          cp -r ml-latest-small doc
+          export PYTHONPATH="$PWD"
+          python3 -m pytest --nbval-lax doc
