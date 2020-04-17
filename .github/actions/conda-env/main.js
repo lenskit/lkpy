@@ -57,13 +57,17 @@ async function exportUnix(cfg) {
     let vars = {};
     for (let line of before.stdout.split(/\r?\n/)) {
         let v = parseVar(line);
-        vars[v.name] = v.value;
+        if (v) {
+            vars[v.name] = v.value;
+        }
     }
     for (let line of after.stdout.split(/\r?\n/)) {
         let v = parseVar(line);
-        if (vars[v.name] != v.value) {
-            core.info('exporting variable ' + v.name);
-            core.exportVariable(v.name, v.value);
+        if (v) {
+            if (vars[v.name] != v.value) {
+                core.info('exporting variable ' + v.name);
+                core.exportVariable(v.name, v.value);
+            }
         }
     }
 }
