@@ -15,7 +15,7 @@ async function fixPerms(cfg) {
         await writeFile(path.join(conda_dir, 'envs', '.test-path'));
     } catch (e) {
         core.info('changing $CONDA ownership');
-        await exec(`sudo chown $USER $CONDA`, {shell: true});
+        await exec(`sudo chown -R $USER $CONDA`, {shell: true});
     }
 }
 
