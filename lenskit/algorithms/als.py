@@ -322,7 +322,28 @@ class BiasedMF(BiasMFPredictor):
         Returns:
             The algorithm (for chaining).
         """
+
         self.timer = util.Stopwatch()
+
+        for epoch, algo in enumerate(self.fit_iters(ratings, **kwargs)):
+            pass  # we just need to do the iterations
+
+        _logger.info('trained model in %s (|P|=%f, |Q|=%f)', self.timer,
+                     np.linalg.norm(self.user_features_, 'fro'),
+                     np.linalg.norm(self.item_features_, 'fro'))
+
+        return self
+
+    def fit_iters(self, ratings, **kwargs):
+        """
+        Run ALS to train a model, returning each iteration as a generator.
+
+        Args:
+            ratings: the ratings data frame.
+
+        Returns:
+            The algorithm (for chaining).
+        """
 
         if self.bias:
             _logger.info('[%s] fitting bias model', self.timer)
@@ -330,27 +351,24 @@ class BiasedMF(BiasMFPredictor):
 
         current, bias, uctx, ictx = self._initial_model(ratings)
 
-        _logger.info('[%s] training biased MF model with ALS for %d features',
-                     self.timer, self.features)
-        for epoch, model in enumerate(self._train_iters(current, uctx, ictx)):
-            current = model
-
-        _logger.info('trained model in %s (|P|=%f, |Q|=%f)', self.timer,
-                     np.linalg.norm(current.user_matrix, 'fro'),
-                     np.linalg.norm(current.item_matrix, 'fro'))
-
         # unpack and de-Series bias
         gb, ub, ib = bias
         self.global_bias_ = gb
         self.user_bias_ = np.require(ub.values, None, 'C') if ub is not None else None
         self.item_bias_ = np.require(ib.values, None, 'C') if ib is not None else None
 
-        self.item_index_ = current.items
-        self.user_index_ = current.users
-        self.item_features_ = current.item_matrix
-        self.user_features_ = current.user_matrix
+        _logger.info('[%s] training biased MF model with ALS for %d features',
+                     self.timer, self.features)
+        for epoch, model in enumerate(self._train_iters(current, uctx, ictx)):
+            self._save_params(model)
+            yield self
 
-        return self
+    def _save_params(self, model):
+        "Save the parameters into model attributes."
+        self.item_index_ = model.items
+        self.user_index_ = model.users
+        self.item_features_ = model.item_matrix
+        self.user_features_ = model.user_matrix
 
     def _initial_model(self, ratings, bias=None):
         "Initialize a model and build contexts."
@@ -502,6 +520,17 @@ class ImplicitMF(MFPredictor):
 
     def fit(self, ratings, **kwargs):
         self.timer = util.Stopwatch()
+        for algo in self.fit_iters(ratings, **kwargs):
+            pass
+
+        _logger.info('[%s] finished training model with %d features (|P|=%f, |Q|=%f)',
+                     self.timer, self.features,
+                     np.linalg.norm(self.user_features_, 'fro'),
+                     np.linalg.norm(self.item_features_, 'fro'))
+
+        return self
+
+    def fit_iters(self, ratings, **kwargs):
         current, uctx, ictx = self._initial_model(ratings)
 
         _logger.info('[%s] training implicit MF model with ALS for %d features',
@@ -509,19 +538,14 @@ class ImplicitMF(MFPredictor):
         _logger.info('have %d observations for %d users and %d items',
                      uctx.nnz, uctx.nrows, ictx.nrows)
         for model in self._train_iters(current, uctx, ictx):
-            current = model
+            self._save_model(model)
+            yield self
 
-        _logger.info('[%s] finished training model with %d features (|P|=%f, |Q|=%f)',
-                     self.timer, self.features,
-                     np.linalg.norm(current.user_matrix, 'fro'),
-                     np.linalg.norm(current.item_matrix, 'fro'))
-
-        self.item_index_ = current.items
-        self.user_index_ = current.users
-        self.item_features_ = current.item_matrix
-        self.user_features_ = current.user_matrix
-
-        return self
+    def _save_model(self, model):
+        self.item_index_ = model.items
+        self.user_index_ = model.users
+        self.item_features_ = model.item_matrix
+        self.user_features_ = model.user_matrix
 
     def _train_iters(self, current, uctx, ictx):
         "Generator of training iterations."
