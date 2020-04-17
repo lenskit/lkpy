@@ -27,7 +27,8 @@ jobs:
         # This is a hack to export Conda env vars back out to Actions
         run: |
           env |sort >old-env.txt
-          eval $(conda shell.posix activate lkpy)
+          _conda=$(conda shell.posix activate lkpy)
+          eval "$_conda"
           env |sort |join -v1 - old-env.txt |while read update; do
             echo "setting $update"
             echo ::set-env name=$(echo "$update" |sed -e 's/=/::/')
