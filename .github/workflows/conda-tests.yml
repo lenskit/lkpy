@@ -1,4 +1,4 @@
-name: Conda Builds
+name: Conda Tests
 on: [push, pull_request]
 jobs:
   linux:
