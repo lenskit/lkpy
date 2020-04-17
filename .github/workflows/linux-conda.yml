@@ -22,7 +22,7 @@ jobs:
           conda env create -n lkpy -q -f $env_file
       - name: Inspect environment
         run: |
-          source activate lkpy
+          conda activate lkpy
           python -V numba -s
       - name: Download ML-100K
         run: |
@@ -32,7 +32,7 @@ jobs:
           fi
       - name: Build LKPY
         run: |
-          source activate lkpy
+          conda activate lkpy
           mkdir -p build
           python3 setup.py build_helper || exit 2
           python3 setup.py build
@@ -40,17 +40,17 @@ jobs:
         env:
           MKL_THREADING_LAYER: tbb
         run: |
-          source activate lkpy
+          conda activate lkpy
           python3 -m pytest --junitxml=buid/test-results.xml --cov=lenskit --verbose
       - name: Non-JIT Test Coverage
         env:
           NUMBA_DISABLE_JIT: 1
         run: |
-          source activate lkpy
+          conda activate lkpy
           python3 -m pytest --cov=lenskit --cov-append -m 'not slow'
       - name: Validate Documentation Examples
         run: |
-          source activate lkpy
+          conda activate lkpy
           cp -r ml-100k doc
           cp -r ml-latest-small doc
           export PYTHONPATH="$PWD"
