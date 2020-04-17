@@ -35,7 +35,8 @@ jobs:
 
       - name: Inspect environment
         run: |
-          python -V numba -s
+          python -V
+          numba -s
       - name: Download ML-100K
         run: |
           if [ ! -r ml-100k/u.data ]; then
