@@ -40,7 +40,7 @@ async function initialize(cfg) {
 }
 
 function parseVar(s) {
-    let m = /(\w+)=(.*)/.match(s);
+    let m = s.match(/(\w+)=(.*)/);
     return {
         name: m.group(1),
         value: m.group(2)
