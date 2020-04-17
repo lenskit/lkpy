@@ -42,8 +42,8 @@ async function initialize(cfg) {
 function parseVar(s) {
     let m = s.match(/(\w+)=(.*)/);
     return {
-        name: m.group(1),
-        value: m.group(2)
+        name: m[1],
+        value: m[2]
     }
 }
 
