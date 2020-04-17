@@ -16,22 +16,22 @@ async function exportUnix(cfg) {
     let after = await exec(`_c=$(${conda_bin} shell.posix activate ${cfg.name}); eval "$_c"; env`, {shell: true})
     let vars = {};
     for (let line of before.stdout.split(/\r?\n/)) {
-        let [var, val] = line.split(/=/, 2);
-        vars[var] = val;
+        let [name, val] = line.split(/=/, 2);
+        vars[name] = val;
     }
     for (let line of after.stdout.split(/\r?\n/)) {
-        let [var, val] = line.split(/=/, 2);
-        if (vars[var] != val) {
-            core.info('exporting variable ' + var);
-            core.exportVariable(var, val);
+        let [name, val] = line.split(/=/, 2);
+        if (vars[name] != val) {
+            core.info('exporting variable ' + name);
+            core.exportVariable(name, val);
         }
     }
 }
 
 async function main() {
     let cfg = {
-        name: core.getInput('name');
-        file: core.getInput('env-file');
+        name: core.getInput('name'),
+        file: core.getInput('env-file')
     };
     await initialize(cfg);
     await exportUnix(cfg);
