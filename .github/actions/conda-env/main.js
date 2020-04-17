@@ -10,6 +10,22 @@ const writeFile = util.promisify(fs.writeFile);
 const conda_dir = process.env.CONDA;
 const conda_bin = path.join(conda_dir, 'condabin', 'conda');
 
+function run(cmd, args) {
+    return new Promise((ok, fail) => {
+        let p = cp.spawn(cmd, args, {
+            stdio: 'inherit'
+        });
+        p.on('error', fail);
+        p.on('exit', (code) => {
+            if (code == 0) {
+                ok();
+            } else {
+                fail("exited with code " + code);
+            }
+        });
+    });
+}
+
 async function fixPerms(cfg) {
     try {
         await writeFile(path.join(conda_dir, 'envs', '.test-path'));
@@ -20,12 +36,12 @@ async function fixPerms(cfg) {
 }
 
 async function initialize(cfg) {
-    await execFile(conda_bin, ['env', 'create', '-q', '-n', cfg.name, '-f', cfg.file]);
+    await run(conda_bin, ['env', 'create', '-q', '-n', cfg.name, '-f', cfg.file]);
 }
 
 async function exportUnix(cfg) {
-    let before = await exec('env', {shell: true});
-    let after = await exec(`_c=\`${conda_bin} shell.posix activate ${cfg.name}\`; eval "$_c"; env`, {shell: true})
+    let before = await exec('env', {shell: '/bin/bash'});
+    let after = await exec(`_c=$(${conda_bin} shell.posix activate ${cfg.name}); eval "$_c"; env`, {shell: '/bin/bash'});
     let vars = {};
     for (let line of before.stdout.split(/\r?\n/)) {
         let [name, val] = line.split(/=/, 2);
