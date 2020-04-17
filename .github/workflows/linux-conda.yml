@@ -11,7 +11,7 @@ jobs:
         - dev-env-py38.yml
         - dev-env-py36.yml
     steps:
-      - uses: actions/checkout
+      - uses: actions/checkout@v2
       - name: Set up Conda
         run: |
           conda env create -n lkpy -q -f $(env.file)
