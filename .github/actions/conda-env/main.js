@@ -41,9 +41,13 @@ async function initialize(cfg) {
 
 function parseVar(s) {
     let m = s.match(/(\w+)=(.*)/);
-    return {
-        name: m[1],
-        value: m[2]
+    if (m) {
+        return {
+            name: m[1],
+            value: m[2]
+        }
+    } else {
+        return null;
     }
 }
 
@@ -52,14 +56,14 @@ async function exportUnix(cfg) {
     let after = await exec(`_c=$(${conda_bin} shell.posix activate ${cfg.name}); eval "$_c"; env`, {shell: '/bin/bash'});
     let vars = {};
     for (let line of before.stdout.split(/\r?\n/)) {
-        let {name, value} = parseVar(line);
-        vars[name] = value;
+        let v = parseVar(line);
+        vars[v.name] = v.value;
     }
     for (let line of after.stdout.split(/\r?\n/)) {
-        let {name, value} = parseVar(line);
-        if (vars[name] != value) {
-            core.info('exporting variable ' + name);
-            core.exportVariable(name, val);
+        let v = parseVar(line);
+        if (vars[v.name] != v.value) {
+            core.info('exporting variable ' + v.name);
+            core.exportVariable(v.name, v.value);
         }
     }
 }
