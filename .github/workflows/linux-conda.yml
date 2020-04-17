@@ -19,7 +19,9 @@ jobs:
           else
             env_file=dev-env-py${{matrix.python}}.yml
           fi
-          conda env create -n lkpy -f $env_file
+          conda env create -n lkpy -q -f $env_file
+          echo "Installed packages:"
+          conda list -n lkpy
 
       - name: Activate Conda environment
         # This is a hack to export Conda env vars back out to Actions
