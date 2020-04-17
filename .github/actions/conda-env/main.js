@@ -37,4 +37,6 @@ async function main() {
     await exportUnix(cfg);
 }
 
-main()
+main().catch((err) => {
+    core.setFailed(`Failed with error ${err}`);
+});
