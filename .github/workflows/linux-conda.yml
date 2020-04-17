@@ -20,9 +20,18 @@ jobs:
             env_file=dev-env-py${{matrix.python}}.yml
           fi
           conda env create -n lkpy -q -f $env_file
+
+      - name: Activate Conda environment
+        # This is a hack to export Conda env vars back out to Actions
+        run: |
+          setenv()
+          {
+            echo "::set-env name=$1::$2"
+          }
+          eval $(conda shell.tcsh activate lkpy)
+
       - name: Inspect environment
         run: |
-          conda activate lkpy
           python -V numba -s
       - name: Download ML-100K
         run: |
@@ -32,7 +41,6 @@ jobs:
           fi
       - name: Build LKPY
         run: |
-          conda activate lkpy
           mkdir -p build
           python3 setup.py build_helper || exit 2
           python3 setup.py build
@@ -40,17 +48,14 @@ jobs:
         env:
           MKL_THREADING_LAYER: tbb
         run: |
-          conda activate lkpy
           python3 -m pytest --junitxml=buid/test-results.xml --cov=lenskit --verbose
       - name: Non-JIT Test Coverage
         env:
           NUMBA_DISABLE_JIT: 1
         run: |
-          conda activate lkpy
           python3 -m pytest --cov=lenskit --cov-append -m 'not slow'
       - name: Validate Documentation Examples
         run: |
-          conda activate lkpy
           cp -r ml-100k doc
           cp -r ml-latest-small doc
           export PYTHONPATH="$PWD"
