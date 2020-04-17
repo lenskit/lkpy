@@ -12,13 +12,13 @@ jobs:
         - 38
     steps:
       - uses: actions/checkout@v2
-      
-      - uses: ./.github/actions/conda-env
+      - uses: goanpeca/setup-miniconda@v1
         with:
-          name: lkpy
-          env-file: dev-env-py${{matrix.python}}.yml
-
+          environment-file: dev-env-py${{matrix.python}}.yml
+          activate-environment: lkpy-dev
+      
       - name: Inspect environment
+        shell: bash -le {0}
         run: |
           python -V
           numba -s
@@ -31,29 +31,34 @@ jobs:
           fi
       
       - name: Build LKPY
+        shell: bash -le {0}
         run: |
           mkdir -p build
           python3 setup.py build_helper || exit 2
           python3 setup.py build
       
       - name: Test LKPY
+        shell: bash -le {0}
         env:
           MKL_THREADING_LAYER: tbb
         run: |
           python3 -m pytest --junitxml=buid/test-results.xml --cov=lenskit --verbose
       
       - name: Non-JIT Test Coverage
+        shell: bash -le {0}
         env:
           NUMBA_DISABLE_JIT: 1
         run: |
           python3 -m pytest --cov=lenskit --cov-append -m 'not slow'
 
       - name: Aggreagate Coverage Data
+        shell: bash -le {0}
         run: coverage xml
 
       - uses: codecov/codecov-action@v1
      
       - name: Validate Documentation Examples
+        shell: bash -le {0}
         run: |
           cp -r ml-100k doc
           cp -r ml-latest-small doc
@@ -71,6 +76,10 @@ jobs:
         - 38
     steps:
       - uses: actions/checkout@v2
+      - uses: goanpeca/setup-miniconda@v1
+        with:
+          environment-file: dev-env-py${{matrix.python}}.yml
+          activate-environment: lkpy-dev
 
       - uses: ./.github/actions/conda-env
         with:
@@ -78,8 +87,9 @@ jobs:
           env-file: dev-env-py${{matrix.python}}.yml
 
       - name: Inspect environment
+        shell: bash -le {0}
         run: |
-          python -V
+          python3 -V
           numba -s
       
       - name: Download ML-100K
@@ -90,12 +100,14 @@ jobs:
           fi
       
       - name: Build LKPY
+        shell: bash -le {0}
         run: |
           mkdir -p build
           python3 setup.py build_helper || exit 2
           python3 setup.py build
       
       - name: Test LKPY
+        shell: bash -le {0}
         env:
           MKL_THREADING_LAYER: tbb
         run: |
@@ -104,6 +116,7 @@ jobs:
       - uses: codecov/codecov-action@v1
      
       - name: Validate Documentation Examples
+        shell: bash -le {0}
         run: |
           cp -r ml-100k doc
           cp -r ml-latest-small doc
