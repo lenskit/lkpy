@@ -19,13 +19,14 @@ jobs:
           else
             env_file=dev-env-py${{matrix.python}}.yml
           fi
-          conda env create -n lkpy -q -f $env_file
+          conda env create -n lkpy -f $env_file
 
       - name: Activate Conda environment
         # This is a hack to export Conda env vars back out to Actions
         run: |
           setenv()
           {
+            echo "$1: $2"
             echo "::set-env name=$1::$2"
           }
           eval $(conda shell.tcsh activate lkpy)
