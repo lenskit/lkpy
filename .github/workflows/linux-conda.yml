@@ -2,19 +2,24 @@ name: Conda Builds
 on: [push, pull_request]
 jobs:
   linux:
-    name: Linux Conda Python ${{matrix.env}}
+    name: Linux Conda Python ${{matrix.python}}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        env:
-        - dev-environment.yml
-        - dev-env-py38.yml
-        - dev-env-py36.yml
+        python:
+        - 36
+        - 37
+        - 38
     steps:
       - uses: actions/checkout@v2
       - name: Set up Conda
         run: |
-          conda env create -n lkpy -q -f $(env.file)
+          if [ ${{matrix.python}} == 37 ]; then
+            env_file=dev-environment.yml
+          else
+            env_file=dev-env-py${{matrix.python}}.yml
+          fi
+          conda env create -n lkpy -q -f $env_file
       - name: Inspect environment
         run: |
           source activate lkpy
