@@ -2,8 +2,8 @@ name: Conda Builds
 on: [push, pull_request]
 jobs:
   linux:
-    name: Linux Conda Python ${{matrix.python}}
-    runs-on: ubuntu-16.04
+    name: macOS Conda Python ${{matrix.python}}
+    runs-on: macos-latest
     strategy:
       matrix:
         python:
@@ -21,6 +21,8 @@ jobs:
             env_file=dev-env-py${{matrix.python}}.yml
           fi
           conda env create -n lkpy -q -f $env_file
+          conda install -n lkpy -qy llvm-openmp
+          conda remove -n lkpy -qy hpfrec
           echo "Installed packages:"
           conda list -n lkpy
 
@@ -57,17 +59,8 @@ jobs:
         env:
           MKL_THREADING_LAYER: tbb
         run: |
-          python3 -m pytest --junitxml=buid/test-results.xml --cov=lenskit --verbose
+          python3 -m pytest --cov=lenskit --cov-report=xml --verbose
       
-      - name: Non-JIT Test Coverage
-        env:
-          NUMBA_DISABLE_JIT: 1
-        run: |
-          python3 -m pytest --cov=lenskit --cov-append -m 'not slow'
-
-      - name: Aggreagate Coverage Data
-        run: coverage xml
-
       - uses: codecov/codecov-action@v1
      
       - name: Validate Documentation Examples
