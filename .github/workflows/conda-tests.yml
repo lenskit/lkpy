@@ -2,14 +2,18 @@ name: Conda Tests
 on: [push, pull_request]
 jobs:
   linux:
-    name: Linux Conda Python ${{matrix.python}}
-    runs-on: ubuntu-16.04
+    name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
+    runs-on: ${{matrix.platform}}
     strategy:
       matrix:
         python:
         - 36
         - 37
         - 38
+        platform:
+        - macos-latest
+        - windows-latest
+        - ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       
@@ -18,107 +22,20 @@ jobs:
           name: lkpy
           env-file: dev-env-py${{matrix.python}}.yml
 
-      - name: Inspect environment
-        run: numba -s
-      
-      - name: Download ML-100K
-        run: |
-          if [ ! -r ml-100k/u.data ]; then
-            wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
-            unzip ml-100k.zip
-          fi
-      
-      - name: Build LKPY
-        run: |
-          mkdir -p build
-          python3 setup.py build_helper || exit 2
-          python3 setup.py build
-      
-      - name: Test LKPY
-        env:
-          MKL_THREADING_LAYER: tbb
-        run: |
-          python3 -m pytest --cov=lenskit --verbose
-      
-      - name: Non-JIT Test Coverage
-        env:
-          NUMBA_DISABLE_JIT: 1
-        run: |
-          python3 -m pytest --cov=lenskit --cov-append -m 'not slow'
-
-      - name: Aggreagate Coverage Data
-        run: coverage xml
-
-      - uses: codecov/codecov-action@v1
-     
-      - name: Validate Documentation Examples
-        run: |
-          cp -r ml-100k doc
-          cp -r ml-latest-small doc
-          export PYTHONPATH="$PWD"
-          python3 -m pytest --nbval-lax doc
-
-  macos:
-    name: macOS Conda Python ${{matrix.python}}
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        python:
-        - 36
-        - 37
-        - 38
-    steps:
-      - uses: actions/checkout@v2
-
-      - uses: ./.github/actions/conda-env
-        with:
-          name: lkpy
-          env-file: dev-env-py${{matrix.python}}.yml
-      
       - name: Remove unusable Mac packages
+        if: runner.os == 'macOS'
         run: conda remove -qy hpfrec
 
       - name: Inspect environment
         run: numba -s
       
       - name: Download ML-100K
+        if: runner.os != 'Windows'
         run: |
           if [ ! -r ml-100k/u.data ]; then
             wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
             unzip ml-100k.zip
           fi
-      
-      - name: Build LKPY
-        run: |
-          mkdir -p build
-          python3 setup.py build_helper || exit 2
-          python3 setup.py build
-      
-      - name: Test LKPY
-        run: |
-          python3 -m pytest --cov=lenskit --cov-report=xml --verbose
-      
-      - uses: codecov/codecov-action@v1
-
-  windows:
-    name: Windows Conda Python ${{matrix.python}}
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        python:
-        - 36
-        - 37
-        - 38
-    steps:
-      - uses: actions/checkout@v2
-
-      - uses: ./.github/actions/conda-env
-        with:
-          name: lkpy
-          env-file: dev-env-py${{matrix.python}}.yml
-
-      - name: Inspect environment
-        run: numba -s
       
       - name: Build LKPY
         run: |
@@ -127,7 +44,27 @@ jobs:
           python setup.py build
       
       - name: Test LKPY
+        env:
+          MKL_THREADING_LAYER: tbb
         run: |
-          python -m pytest --cov=lenskit --cov-report=xml --verbose
+          python -m pytest --cov=lenskit --verbose
       
+      - name: Non-JIT Test Coverage
+        if: runner.os == 'Linux'
+        env:
+          NUMBA_DISABLE_JIT: 1
+        run: |
+          python -m pytest --cov=lenskit --cov-append -m 'not slow'
+
+      - name: Aggreagate Coverage Data
+        run: coverage xml
+
       - uses: codecov/codecov-action@v1
+     
+      - name: Validate Documentation Examples
+        if: runner.os == 'Linux'
+        run: |
+          cp -r ml-100k doc
+          cp -r ml-latest-small doc
+          export PYTHONPATH="$PWD"
+          python -m pytest --nbval-lax doc
