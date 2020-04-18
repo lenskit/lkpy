@@ -9,7 +9,7 @@ jobs:
         env.file: dev-env-py36.yml
       Python37:
         python.version: '3.7'
-        env.file: dev-environment.yml
+        env.file: dev-env-py37.yml
       Python38:
         python.version: '3.8'
         env.file: dev-env-py38.yml

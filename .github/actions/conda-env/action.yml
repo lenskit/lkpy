@@ -1,0 +1,13 @@
+name: Setup Conda Environment
+description: >
+  Set up a Conda environment.
+inputs:
+  name:
+    description: Environment name
+    required: true
+  env-file:
+    description: Environment file
+    required: true
+runs:
+  using: node12
+  main: main.js

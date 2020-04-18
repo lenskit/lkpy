@@ -19,5 +19,4 @@ dependencies:
 - mkl-devel
 - c-compiler
 - matplotlib
-- pip:
-  - nbval
+- nbval
