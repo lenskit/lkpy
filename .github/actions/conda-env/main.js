@@ -30,8 +30,12 @@ async function fixPerms(cfg) {
     try {
         await writeFile(path.join(conda_dir, 'envs', '.test-path'));
     } catch (e) {
-        core.info('changing $CONDA ownership');
-        await exec(`sudo chown -R $USER $CONDA`, {shell: true});
+        if (process.platform != 'win32') {
+            core.info('changing $CONDA ownership');
+            await exec(`sudo chown -R $USER $CONDA`, {shell: true});
+        } else {
+            core.warning('could not create directory in Conda, this might cause a problem');
+        }
     }
 }
 
