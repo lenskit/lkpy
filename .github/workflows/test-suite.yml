@@ -130,7 +130,7 @@ jobs:
         
       - name: Run tests
         run: |
-          python -m tox -e minimal --cov=lenskit --cov-report=xml
+          python -m tox -e minimal -- --cov=lenskit --cov-report=xml
         
       - name: Upload coverage
         uses: codecov/codecov-action@v1
