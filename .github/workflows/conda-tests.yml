@@ -3,7 +3,7 @@ on: [push, pull_request]
 jobs:
   linux:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
-    runs-on: ${{matrix.platform}}
+    runs-on: ${{matrix.platform}}-latest
     strategy:
       matrix:
         python:
@@ -11,9 +11,9 @@ jobs:
         - 37
         - 38
         platform:
-        - macos-latest
-        - windows-latest
-        - ubuntu-latest
+        - macos
+        - windows
+        - ubuntu
     steps:
       - uses: actions/checkout@v2
       
