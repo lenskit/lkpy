@@ -74,6 +74,9 @@ jobs:
         with:
           name: lkpy
           env-file: dev-env-py${{matrix.python}}.yml
+      
+      - name: Remove unusable Mac packages
+        run: conda remove -qy hpfrec
 
       - name: Inspect environment
         run: numba -s
