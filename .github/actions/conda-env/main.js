@@ -13,7 +13,8 @@ const conda_bin = path.join(conda_dir, 'condabin', 'conda');
 function run(cmd, args) {
     return new Promise((ok, fail) => {
         let p = cp.spawn(cmd, args, {
-            stdio: 'inherit'
+            stdio: 'inherit',
+            shell: true
         });
         p.on('error', fail);
         p.on('exit', (code) => {
@@ -41,7 +42,7 @@ async function fixPerms(cfg) {
 
 async function initialize(cfg) {
     core.info('creating conda environment');
-    await run(conda_bin, ['env', 'create', '-q', '-n', cfg.name, '-f', cfg.file], {shell: true});
+    await run(conda_bin, ['env', 'create', '-q', '-n', cfg.name, '-f', cfg.file]);
 }
 
 async function exportUnix(cfg) {
