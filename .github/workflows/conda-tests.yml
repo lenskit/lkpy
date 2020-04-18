@@ -19,9 +19,7 @@ jobs:
           env-file: dev-env-py${{matrix.python}}.yml
 
       - name: Inspect environment
-        run: |
-          python -V
-          numba -s
+        run: numba -s
       
       - name: Download ML-100K
         run: |
@@ -40,7 +38,7 @@ jobs:
         env:
           MKL_THREADING_LAYER: tbb
         run: |
-          python3 -m pytest --junitxml=buid/test-results.xml --cov=lenskit --verbose
+          python3 -m pytest --cov=lenskit --verbose
       
       - name: Non-JIT Test Coverage
         env:
@@ -78,9 +76,7 @@ jobs:
           env-file: dev-env-py${{matrix.python}}.yml
 
       - name: Inspect environment
-        run: |
-          python -V
-          numba -s
+        run: numba -s
       
       - name: Download ML-100K
         run: |
@@ -96,16 +92,39 @@ jobs:
           python3 setup.py build
       
       - name: Test LKPY
-        env:
-          MKL_THREADING_LAYER: tbb
         run: |
           python3 -m pytest --cov=lenskit --cov-report=xml --verbose
       
       - uses: codecov/codecov-action@v1
-     
-      - name: Validate Documentation Examples
+
+  windows:
+    name: Windows Conda Python ${{matrix.python}}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python:
+        - 36
+        - 37
+        - 38
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: ./.github/actions/conda-env
+        with:
+          name: lkpy
+          env-file: dev-env-py${{matrix.python}}.yml
+
+      - name: Inspect environment
+        run: numba -s
+      
+      - name: Build LKPY
         run: |
-          cp -r ml-100k doc
-          cp -r ml-latest-small doc
-          export PYTHONPATH="$PWD"
-          python3 -m pytest --nbval-lax doc
+          mkdir -p build
+          python setup.py build_helper || exit 2
+          python setup.py build
+      
+      - name: Test LKPY
+        run: |
+          python -m pytest --cov=lenskit --cov-report=xml --verbose
+      
+      - uses: codecov/codecov-action@v1

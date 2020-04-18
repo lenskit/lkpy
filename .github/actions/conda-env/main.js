@@ -39,19 +39,19 @@ async function initialize(cfg) {
     await run(conda_bin, ['env', 'create', '-q', '-n', cfg.name, '-f', cfg.file]);
 }
 
-function parseVar(s) {
-    let m = s.match(/(\w+)=(.*)/);
-    if (m) {
-        return {
-            name: m[1],
-            value: m[2]
-        }
-    } else {
-        return null;
-    }
-}
-
 async function exportUnix(cfg) {
+    function parseVar(s) {
+        let m = s.match(/(\w+)=(.*)/);
+        if (m) {
+            return {
+                name: m[1],
+                value: m[2]
+            }
+        } else {
+            return null;
+        }
+    }
+
     let before = await exec('env', {shell: '/bin/bash'});
     let after = await exec(`_c=$(${conda_bin} shell.posix activate ${cfg.name}); eval "$_c"; env`, {shell: '/bin/bash'});
     let vars = {};
@@ -72,6 +72,19 @@ async function exportUnix(cfg) {
     }
 }
 
+async function exportWindows(cfg) {
+    let res = await execFile(conda_bin, ['shell.powershell', 'activate', cfg.name]);
+    let vars = {};
+    for (let line of res.stdout.split(/\r?\n/)) {
+        let m = line.match(/^\$Env:(\w+)\s*=\s*"(.*)"/);
+        if (m) {
+            core.exportVariable(m[1], m[2]);
+        } else if (line.trim().length) {
+            core.warning('unrecognized env line: ' + line);
+        }
+    }
+}
+
 async function main() {
     let cfg = {
         name: core.getInput('name'),
@@ -79,7 +92,11 @@ async function main() {
     };
     await fixPerms(cfg);
     await initialize(cfg);
-    await exportUnix(cfg);
+    if (process.platform == 'win32') {
+        await exportWindows(cfg);
+    } else {
+        await exportUnix(cfg);
+    }
 }
 
 main().catch((err) => {
