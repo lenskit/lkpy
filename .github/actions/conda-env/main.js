@@ -81,7 +81,7 @@ async function exportUnix(cfg) {
 
 async function exportWindows(cfg) {
     core.info('exporting Windows environment variables');
-    let res = await execFile(conda_bin, ['shell.powershell', 'activate', cfg.name]);
+    let res = await execFile(conda_bin, ['shell.powershell', 'activate', cfg.name], {shell: true});
     let vars = {};
     for (let line of res.stdout.split(/\r?\n/)) {
         let m = line.match(/^\$Env:(\w+)\s*=\s*"(.*)"/);
