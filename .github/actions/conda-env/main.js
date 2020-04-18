@@ -40,7 +40,8 @@ async function fixPerms(cfg) {
 }
 
 async function initialize(cfg) {
-    await run(conda_bin, ['env', 'create', '-q', '-n', cfg.name, '-f', cfg.file]);
+    core.info('creating conda environment');
+    await run(conda_bin, ['env', 'create', '-q', '-n', cfg.name, '-f', cfg.file], {shell: true});
 }
 
 async function exportUnix(cfg) {
@@ -56,6 +57,7 @@ async function exportUnix(cfg) {
         }
     }
 
+    core.info('exporting UNIX environment variables');
     let before = await exec('env', {shell: '/bin/bash'});
     let after = await exec(`_c=$(${conda_bin} shell.posix activate ${cfg.name}); eval "$_c"; env`, {shell: '/bin/bash'});
     let vars = {};
@@ -77,6 +79,7 @@ async function exportUnix(cfg) {
 }
 
 async function exportWindows(cfg) {
+    core.info('exporting Windows environment variables');
     let res = await execFile(conda_bin, ['shell.powershell', 'activate', cfg.name]);
     let vars = {};
     for (let line of res.stdout.split(/\r?\n/)) {
