@@ -24,10 +24,12 @@ jobs:
 
       - name: Remove unusable Mac packages
         if: runner.os == 'macOS'
-        run: conda remove -qy hpfrec
+        run: conda remove -qy hpfrec || true
 
       - name: Inspect environment
-        run: numba -s
+        run: |
+          conda info
+          numba -s
       
       - name: Download ML-100K
         if: runner.os != 'Windows'
