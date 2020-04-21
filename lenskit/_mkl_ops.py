@@ -12,7 +12,7 @@ except ImportError as e:
     try:  # earlier Numba versions have an old module
         from numba import cffi_utils
     except ImportError:
-        raise e  # raise the original fail
+        cffi_utils = None
 
 import numpy as np
 
@@ -53,7 +53,9 @@ _lk_mkl_spe_colinds = clib.lk_mkl_spe_colinds
 _lk_mkl_spe_values = clib.lk_mkl_spe_values
 
 # support intptr_t
-cffi_utils.register_type(ffi.typeof('intptr_t'), nt.intp)
+if cffi_utils is not None:
+    # if we don't have working Numba, skip this
+    cffi_utils.register_type(ffi.typeof('intptr_t'), nt.intp)
 
 # extract sizes
 _int_size = ffi.sizeof('int')
