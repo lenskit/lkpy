@@ -5,7 +5,14 @@ import logging
 import cffi
 from distutils import ccompiler
 from numba import njit, types as nt
-import numba.cffi_support
+
+try:
+    from numba.typing import cffi_utils as cffi_utils
+except ImportError as e:
+    try:  # earlier Numba versions have an old module
+        from numba import cffi_utils
+    except ImportError:
+        raise e  # raise the original fail
 
 import numpy as np
 
@@ -46,7 +53,7 @@ _lk_mkl_spe_colinds = clib.lk_mkl_spe_colinds
 _lk_mkl_spe_values = clib.lk_mkl_spe_values
 
 # support intptr_t
-numba.cffi_support.register_type(ffi.typeof('intptr_t'), nt.intp)
+cffi_utils.register_type(ffi.typeof('intptr_t'), nt.intp)
 
 # extract sizes
 _int_size = ffi.sizeof('int')
