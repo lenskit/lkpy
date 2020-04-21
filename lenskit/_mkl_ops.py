@@ -7,7 +7,7 @@ from distutils import ccompiler
 from numba import njit, types as nt
 
 try:
-    from numba.typing import cffi_utils as cffi_utils
+    from numba.core.typing import cffi_utils as cffi_utils
 except ImportError as e:
     try:  # earlier Numba versions have an old module
         from numba import cffi_utils
