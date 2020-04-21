@@ -34,7 +34,6 @@ dependencies:
 - ipykernel
 - jupyter_client
 - matplotlib
-- pip:
-  - nbsphinx
-  - recommonmark
-  - nbval
+- nbval
+- nbsphinx
+- recommonmark

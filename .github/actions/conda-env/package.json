@@ -1,0 +1,6 @@
+{
+    "name": "@lenskit/conda-env",
+    "dependencies": {
+        "@actions/core": "^1.2.3"
+    }
+}

@@ -32,7 +32,7 @@ To contribute to LensKit, clone or fork the repository, get to work, and submit 
 
 We recommend using an Anaconda environment for developing LensKit.  To set this up, run:
 
-    conda env create -f dev-environment.yml
+    conda env create -f dev-env-py37.yml
 
 This will create a Conda environment called `lkpy-dev` with the packages required to develop and test LensKit.
 

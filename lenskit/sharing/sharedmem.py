@@ -120,7 +120,7 @@ class SHMModelStore(BaseModelStore, SHMClient):
             block = shm.SharedMemory(create=True, size=ba.nbytes)
             _log.debug('serializing %d bytes to %s', ba.nbytes, block.name)
             # blit the buffer into shared memory
-            block.buf[:] = ba
+            block.buf[:ba.nbytes] = ba
             buffers.append(block)
             buf_keys.append((block.name, ba.nbytes))
 
