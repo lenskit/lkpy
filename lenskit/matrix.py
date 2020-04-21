@@ -10,7 +10,11 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import numba as n
-from numba import njit, jitclass, prange, objmode
+from numba import njit, prange, objmode
+try:
+    from numba.experimental import jitclass
+except ImportError:
+    from numba import jitclass
 
 from .util.array import swap
 
