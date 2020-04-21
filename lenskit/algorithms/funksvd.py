@@ -8,6 +8,10 @@ import time
 import pandas as pd
 import numpy as np
 import numba as n
+try:
+    from numba.experimental import jitclass
+except ImportError:
+    from numba import jitclass
 
 from . import basic
 from .mf_common import BiasMFPredictor
@@ -16,7 +20,7 @@ from .. import util
 _logger = logging.getLogger(__name__)
 
 
-@n.jitclass([
+@jitclass([
     ('user_features', n.double[:, :]),
     ('item_features', n.double[:, :]),
     ('feature_count', n.int32),
@@ -47,7 +51,7 @@ def _fresh_model(nfeatures, nusers, nitems, init=0.1):
     return model
 
 
-@n.jitclass([
+@jitclass([
     ('iter_count', n.int32),
     ('lrate', n.double),
     ('reg_term', n.double),
@@ -73,7 +77,7 @@ def make_params(niters, lrate, reg, range):
     return _Params(niters, lrate, reg, rmin, rmax)
 
 
-@n.jitclass([
+@jitclass([
     ('est', n.double[:]),
     ('feature', n.int32),
     ('trail', n.double)
@@ -85,7 +89,7 @@ class _FeatContext:
         self.trail = trail
 
 
-@n.jitclass([
+@jitclass([
     ('users', n.int32[:]),
     ('items', n.int32[:]),
     ('ratings', n.double[:]),
