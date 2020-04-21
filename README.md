@@ -1,6 +1,6 @@
 # Python recommendation tools
 
-[![Build Status](https://dev.azure.com/md0553/md/_apis/build/status/lenskit.lkpy)](https://dev.azure.com/md0553/md/_build/latest?definitionId=1)
+![Test Suite](https://github.com/lenskit/lkpy/workflows/Test%20Suite/badge.svg)
 [![codecov](https://codecov.io/gh/lenskit/lkpy/branch/master/graph/badge.svg)](https://codecov.io/gh/lenskit/lkpy)
 [![Maintainability](https://api.codeclimate.com/v1/badges/c02098c161112e19c148/maintainability)](https://codeclimate.com/github/lenskit/lkpy/maintainability)
 
