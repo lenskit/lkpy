@@ -1,0 +1,34 @@
+name: Build Packages
+on:
+  push:
+    branches:
+      - master
+  tag:
+jobs:
+  conda:
+    name: Build Packages on ${{matrix.platform}}
+    runs-on: ${{matrix.platform}}-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+        - macos
+        - windows
+        - ubuntu
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Fix Conda Perms
+      if: runner.os == 'macOS'
+      run: chown -R $USER $CONDA/
+
+    - name: Set Conda path
+      run: echo "::add-path::$CONDA/condabin"
+      shell: bash
+
+    - name: Install Conda deps
+      run: conda install -qy conda-build
+
+    - name: Build Conda packages
+      run: conda build conda
