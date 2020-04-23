@@ -306,6 +306,18 @@ class TopN(Recommender, Predictor):
         self.selector.fit(ratings, **kwargs)
         return self
 
+    def fit_iters(self, ratings, **kwargs):
+        if not hasattr(self.predictor, 'fit_iters'):
+            raise AttributeError('predictor has no method fit_iters')
+
+        self.selector.fit(ratings, **kwargs)
+        pred = self.predictor
+        for p in pred.fit_iters(ratings, **kwargs):
+            self.predictor = p
+            yield self
+
+        self.predictor = pred
+
     def recommend(self, user, n=None, candidates=None, ratings=None):
         if candidates is None:
             candidates = self.selector.candidates(user, ratings)
