@@ -18,10 +18,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
 
     - name: Fix Conda Perms
       if: runner.os == 'macOS'
-      run: chown -R $USER $CONDA/
+      run: sudo chown -R $USER $CONDA/
 
     - name: Set Conda path
       run: echo "::add-path::$CONDA/condabin"
@@ -32,3 +34,15 @@ jobs:
 
     - name: Build Conda packages
       run: conda build conda
+
+    - name: Copy Conda packages
+      shell: bash
+      run: |
+        mkdir dist
+        cp $CONDA/conda-bld/*/*.bz2 dist
+      
+    - name: Upload Conda packages
+      uses: actions/upload-artifact@v1
+      with:
+        name: conda-pkgs
+        path: dist
