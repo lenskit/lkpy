@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - master
-  tag:
+    tag:
 jobs:
   conda:
     name: Build Packages on ${{matrix.platform}}
