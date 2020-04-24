@@ -42,7 +42,7 @@ jobs:
       shell: bash
       run: |
         mkdir dist
-        cp $CONDA/conda-bld/*/*.bz2 dist
+        cp $CONDA/conda-bld/*/*.conda dist
       
     - name: Upload Conda packages
       uses: actions/upload-artifact@v1
