@@ -36,10 +36,10 @@ jobs:
       run: conda install -qy conda-build
 
     - name: Build Conda packages
-      run: conda --croot dist build conda
+      run: conda build --croot dist conda
 
     - name: Clean up Conda build leftovers
-      run: conda --croot dist build purge
+      run: conda build --croot dist purge
       
     - name: Upload packages
       uses: actions/upload-artifact@v1
