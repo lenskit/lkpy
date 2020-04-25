@@ -36,10 +36,13 @@ jobs:
       run: conda install -qy conda-build
 
     - name: Build Conda packages
-      run: conda build --croot dist conda
+      run: conda build conda
 
-    - name: Clean up Conda build leftovers
-      run: conda build --croot dist purge
+    - name: Copy Conda packages
+      run: |
+        mkdir dist
+        cp $CONDA/conda-bld/*/*.tar.bz2 dist
+      shell: bash
       
     - name: Upload packages
       uses: actions/upload-artifact@v1
