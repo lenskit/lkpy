@@ -33,7 +33,7 @@ jobs:
       shell: bash
 
     - name: Install Conda deps
-      run:
+      run: |
         conda update -qy --all
         conda install -qy conda-build
 
