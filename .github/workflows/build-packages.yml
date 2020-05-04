@@ -7,7 +7,7 @@ on:
 jobs:
   conda:
     name: Build Packages on ${{matrix.platform}}
-    runs-on: ${{matrix.platform}}-latest
+    runs-on: ${{matrix.image}}
     strategy:
       fail-fast: false
       matrix:
@@ -15,6 +15,16 @@ jobs:
         - macos
         - windows
         - ubuntu
+        include:
+        - platform: macos
+          condaplat: osx-64
+          image: macos-latest
+        - platform: ubuntu
+          condaplat: linux-64
+          image: ubuntu-latest
+        - platform: windows
+          condaplat: osx-64
+          image: windows-2016
 
     steps:
     - uses: actions/checkout@v2
@@ -43,7 +53,7 @@ jobs:
     - name: Copy Conda packages
       run: |
         mkdir dist
-        cp $CONDA/conda-bld/*/*.tar.bz2 dist
+        cp -r $CONDA/conda-bld/${{matrix.condaplat}}/ dist
       shell: bash
       
     - name: Upload packages
