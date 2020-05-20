@@ -332,6 +332,7 @@ class BiasedMF(BiasMFPredictor):
                      np.linalg.norm(self.user_features_, 'fro'),
                      np.linalg.norm(self.item_features_, 'fro'))
 
+        del self.timer
         return self
 
     def fit_iters(self, ratings, **kwargs):
@@ -467,6 +468,12 @@ class BiasedMF(BiasMFPredictor):
     def predict_for_user(self, user, items, ratings=None):
         # look up user index
         return self.score_by_ids(user, items)
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        if state.get('bias', None):  # don't save bias training
+            state['bias'] = util.clone(self.bias)
+        return state
 
     def __str__(self):
         return 'als.BiasedMF(features={}, regularization={})'.\
