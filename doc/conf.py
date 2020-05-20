@@ -16,6 +16,8 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
 
+import sphinx_rtd_theme
+
 # -- Project information -----------------------------------------------------
 
 project = 'LensKit'
@@ -44,7 +46,8 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.mathjax'
+    'sphinx.ext.mathjax',
+    'sphinx_rtd_theme'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -81,18 +84,18 @@ highlight_language = 'python3'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-# html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
 html_theme_options = {
-    'github_user': 'lenskit',
-    'github_repo': 'lkpy',
-    'travis_button': False,
-    'canonical_url': 'https://lkpy.lenskit.org/',
-    'font_family': 'Charter, serif'
+    # 'github_user': 'lenskit',
+    # 'github_repo': 'lkpy',
+    # 'travis_button': False,
+    # 'canonical_url': 'https://lkpy.lenskit.org/',
+    # 'font_family': 'Charter, serif'
     # 'font_family': '"Source Sans Pro", "Georgia Pro", Georgia, serif',
     # 'font_size': '15px',
     # 'head_font_family': '"Merriweather Sans", "Arial", sans-serif',
