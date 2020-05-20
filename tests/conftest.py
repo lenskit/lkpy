@@ -1,6 +1,8 @@
 import logging
 from pytest import fixture
 
+logging.getLogger('numba').setLevel(logging.INFO)
+
 _log = logging.getLogger('lenskit.tests')
 
 
