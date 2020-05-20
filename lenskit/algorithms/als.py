@@ -373,11 +373,7 @@ class BiasedMF(BiasMFPredictor):
 
     def _initial_model(self, ratings, bias=None):
         "Initialize a model and build contexts."
-        # Reuse indexes from bias model if feasible
-        users = self.bias.user_offsets_.index if self.bias else None
-        items = self.bias.item_offsets_.index if self.bias else None
-        rmat, users, items = sparse_ratings(ratings, users=users, items=items)
-
+        rmat, users, items = sparse_ratings(ratings)
         n_users = len(users)
         n_items = len(items)
 
