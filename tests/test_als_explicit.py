@@ -1,6 +1,15 @@
 import logging
 import pickle
 
+# get a usable pickle disassembler
+if pickle.HIGHEST_PROTOCOL >= 5:
+    from pickletools import pickle_dis
+else:
+    try:
+        from pickle5.pickletools import dis as pickle_dis
+    except ImportError:
+        pass
+
 from lenskit.algorithms import als
 from lenskit import util
 
@@ -11,6 +20,11 @@ from pytest import approx, mark
 
 from lenskit.util import Stopwatch
 import lenskit.util.test as lktu
+
+try:
+    import binpickle
+except ImportError:
+    binpickle = None
 
 _log = logging.getLogger(__name__)
 
@@ -133,6 +147,36 @@ def test_als_save_load():
     assert np.all(algo.item_features_ == original.item_features_)
     assert np.all(algo.item_index_ == original.item_index_)
     assert np.all(algo.user_index_ == original.user_index_)
+
+
+@mark.skipif(not binpickle, reason='binpickle not available')
+def test_als_binpickle(tmp_path):
+    "Test saving ALS with BinPickle"
+
+    original = als.BiasedMF(20, iterations=5, method='lu')
+    ratings = lktu.ml_test.ratings
+    original.fit(ratings)
+
+    assert original.global_bias_ == approx(ratings.rating.mean())
+
+    file = tmp_path / 'als.bpk'
+    binpickle.dump(original, file)
+
+    with binpickle.BinPickleFile(file) as bpf:
+        # the pickle data should be small
+        _log.info('serialized to %d pickle bytes', bpf.entries[-1].dec_length)
+        pickle_dis(bpf._read_buffer(bpf.entries[-1]))
+        assert bpf.entries[-1].dec_length < 1024
+
+        algo = bpf.load()
+
+        assert algo.global_bias_ == original.global_bias_
+        assert np.all(algo.user_bias_ == original.user_bias_)
+        assert np.all(algo.item_bias_ == original.item_bias_)
+        assert np.all(algo.user_features_ == original.user_features_)
+        assert np.all(algo.item_features_ == original.item_features_)
+        assert np.all(algo.item_index_ == original.item_index_)
+        assert np.all(algo.user_index_ == original.user_index_)
 
 
 @lktu.wantjit
