@@ -81,5 +81,10 @@ def repeated(n=50):
         return wrap
 
 
+@pytest.fixture
+def rng():
+    return np.random.default_rng()
+
+
 wantjit = pytest.mark.skipif('NUMBA_DISABLE_JIT' in os.environ,
                              reason='JIT required')

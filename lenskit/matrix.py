@@ -597,34 +597,44 @@ def _empty_csr(nrows, ncols, sizes):
     return _CSR(nrows, ncols, nnz, rowptrs, colinds, values)
 
 
-def sparse_ratings(ratings, scipy=False):
+def sparse_ratings(ratings, scipy=False, *, users=None, items=None):
     """
     Convert a rating table to a sparse matrix of ratings.
 
     Args:
         ratings(pandas.DataFrame): a data table of (user, item, rating) triples.
         scipy: if ``True``, return a SciPy matrix instead of :py:class:`CSR`.
+        users(pandas.Index): an index of user IDs.
+        items(pandas.Index): an index of items IDs.
 
     Returns:
         RatingMatrix:
             a named tuple containing the sparse matrix, user index, and item index.
     """
-    uidx = pd.Index(ratings.user.unique(), name='user')
-    iidx = pd.Index(ratings.item.unique(), name='item')
-    _logger.debug('creating matrix with %d ratings for %d items by %d users',
-                  len(ratings), len(iidx), len(uidx))
+    if users is None:
+        users = pd.Index(ratings.user.unique(), name='user')
 
-    row_ind = uidx.get_indexer(ratings.user).astype(np.intc)
-    col_ind = iidx.get_indexer(ratings.item).astype(np.intc)
+    if items is None:
+        items = pd.Index(ratings.item.unique(), name='item')
+
+    _logger.debug('creating matrix with %d ratings for %d items by %d users',
+                  len(ratings), len(items), len(users))
+
+    row_ind = users.get_indexer(ratings.user).astype(np.intc)
+    if np.any(row_ind < 0):
+        raise ValueError('provided user index does not cover all users')
+    col_ind = items.get_indexer(ratings.item).astype(np.intc)
+    if np.any(col_ind < 0):
+        raise ValueError('provided item index does not cover all users')
 
     if 'rating' in ratings.columns:
         vals = np.require(ratings.rating.values, np.float64)
     else:
         vals = None
 
-    matrix = CSR.from_coo(row_ind, col_ind, vals, (len(uidx), len(iidx)))
+    matrix = CSR.from_coo(row_ind, col_ind, vals, (len(users), len(items)))
 
     if scipy:
         matrix = matrix.to_scipy()
 
-    return RatingMatrix(matrix, uidx, iidx)
+    return RatingMatrix(matrix, users, items)

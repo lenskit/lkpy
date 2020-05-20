@@ -1,16 +1,17 @@
 import scipy.sparse as sps
 import scipy.linalg as sla
 import numpy as np
+import pandas as pd
 
 import lenskit.matrix as lm
 
-import lenskit.util.test as lktu
+from lenskit.util.test import ml_test, rng
 
 from pytest import approx
 
 
-def test_sparse_matrix():
-    ratings = lktu.ml_test.ratings
+def test_sparse_matrix(rng):
+    ratings = ml_test.ratings
     mat, uidx, iidx = lm.sparse_ratings(ratings)
 
     assert mat.nrows == len(uidx)
@@ -23,9 +24,21 @@ def test_sparse_matrix():
     ucounts = ucounts.loc[uidx].cumsum()
     assert all(mat.rowptrs[1:] == ucounts.values)
 
+    # verify rating values
+    ratings = ratings.set_index(['user', 'item'])
+    for u in rng.choice(uidx, size=50):
+        ui = uidx.get_loc(u)
+        vs = mat.row_vs(ui)
+        vs = pd.Series(vs, iidx[mat.row_cs(ui)])
+        rates = ratings.loc[u]['rating']
+        vs, rates = vs.align(rates)
+        assert not any(vs.isna())
+        assert not any(rates.isna())
+        assert all(vs == rates)
+
 
 def test_sparse_matrix_implicit():
-    ratings = lktu.ml_test.ratings
+    ratings = ml_test.ratings
     ratings = ratings.loc[:, ['user', 'item']]
     mat, uidx, iidx = lm.sparse_ratings(ratings)
 
@@ -37,7 +50,7 @@ def test_sparse_matrix_implicit():
 
 
 def test_sparse_matrix_scipy():
-    ratings = lktu.ml_test.ratings
+    ratings = ml_test.ratings
     mat, uidx, iidx = lm.sparse_ratings(ratings, scipy=True)
 
     assert sps.issparse(mat)
@@ -52,7 +65,7 @@ def test_sparse_matrix_scipy():
 
 
 def test_sparse_matrix_scipy_implicit():
-    ratings = lktu.ml_test.ratings
+    ratings = ml_test.ratings
     ratings = ratings.loc[:, ['user', 'item']]
     mat, uidx, iidx = lm.sparse_ratings(ratings, scipy=True)
 
@@ -62,3 +75,28 @@ def test_sparse_matrix_scipy_implicit():
     assert len(iidx) == ratings.item.nunique()
 
     assert all(mat.data == 1.0)
+
+
+def test_sparse_matrix_indexes(rng):
+    ratings = ml_test.ratings
+    uidx = pd.Index(rng.permutation(ratings['user'].unique()))
+    iidx = pd.Index(rng.permutation(ratings['item'].unique()))
+
+    mat, _uidx, _iidx = lm.sparse_ratings(ratings, users=uidx, items=iidx)
+
+    assert _uidx is uidx
+    assert _iidx is iidx
+    assert len(_uidx) == ratings.user.nunique()
+    assert len(_iidx) == ratings.item.nunique()
+
+    # verify rating values
+    ratings = ratings.set_index(['user', 'item'])
+    for u in rng.choice(_uidx, size=50):
+        ui = _uidx.get_loc(u)
+        vs = mat.row_vs(ui)
+        vs = pd.Series(vs, _iidx[mat.row_cs(ui)])
+        rates = ratings.loc[u]['rating']
+        vs, rates = vs.align(rates)
+        assert not any(vs.isna())
+        assert not any(rates.isna())
+        assert all(vs == rates)
