@@ -18,7 +18,8 @@ def _recommend_user(client, key, user, n, candidates):
         _logger.debug('generating recommendations for %s', user)
         watch = util.Stopwatch()
         res = algo.recommend(user, n, candidates)
-        _logger.debug('%s recommended %d/%s items for %s in %s', algo, len(res), n, user, watch)
+        _logger.debug('%s recommended %d/%s items for %s in %s',
+                      str(algo), len(res), n, user, watch)
         del algo
 
     res['user'] = user
