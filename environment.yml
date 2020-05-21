@@ -1,10 +1,11 @@
+# LensKit development Conda environment
 name: lkpy-dev
 channels:
   - mdekstrand
   - defaults
   - conda-forge # last to not override things
 dependencies:
-- python=3.7
+- python>=3.6
 - pip
 - pandas>=0.24
 - numpy
@@ -17,14 +18,13 @@ dependencies:
 - cffi
 - pyarrow
 - joblib
-- pickle5
 - coverage 
 - pytest>=3.9
 - pytest-cov
 - pytest-doctestplus
 - dask
 - implicit
-- hpfrec
+# - hpfrec
 - sphinx>=1.8
 - sphinx_rtd_theme
 - ipython
@@ -37,3 +37,4 @@ dependencies:
 - nbval
 - nbsphinx
 - recommonmark
+- binpickle

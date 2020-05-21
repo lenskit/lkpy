@@ -1,10 +1,11 @@
 Utility Functions
 =================
 
+These utility functions are useful for data processing.
+
 .. toctree::
     matrix
     math
-    sharing
 
 Miscellaneous
 -------------

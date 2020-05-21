@@ -41,8 +41,15 @@ async function fixPerms(cfg) {
 }
 
 async function initialize(cfg) {
-    core.info('creating conda environment');
-    await run(conda_bin, ['env', 'create', '-q', '-n', cfg.name, '-f', cfg.file]);
+    if (cfg.py_version) {
+        core.info(`creating conda environment w/ Python ${cfg.py_version}`);
+        await run(conda_bin, ['create', '-qy', '-n', cfg.name, `python=${cfg.py_version}`]);
+        core.info(`updating conda environment from ${cfg.file}`);
+        await run(conda_bin, ['env', 'update', '-q', '-n', cfg.name, '-f', cfg.file]);
+    } else {
+        core.info(`creating conda environment from ${cfg.file}`);
+        await run(conda_bin, ['env', 'create', '-q', '-n', cfg.name, '-f', cfg.file]);
+    }
 }
 
 async function exportUnix(cfg) {
@@ -96,6 +103,7 @@ async function exportWindows(cfg) {
 async function main() {
     let cfg = {
         name: core.getInput('name'),
+        py_version: core.getInput('python-version'),
         file: core.getInput('env-file')
     };
     await fixPerms(cfg);

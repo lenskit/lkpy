@@ -2,11 +2,14 @@
 Support for sharing and saving models and data structures.
 """
 
+import sys
+import warnings
 from abc import abstractmethod
 from contextlib import contextmanager
 import threading
 import logging
 import pickle
+import binpickle as bpk
 
 _log = logging.getLogger(__name__)
 
@@ -97,8 +100,77 @@ class BaseModelClient:
             key: the model key to retrieve.
 
         Returns:
-            The model, previously stored with :meth:`BaseModelStore.put_model`.
+            SharedObject:
+                The model, previously stored with :meth:`BaseModelStore.put_model`,
+                wrapped in a :class:`SharedObject` to manage underlying resources.
         """
+
+
+class SharedObject:
+    """
+    Wrapper for a shared object that can release it when the object is no longer needed.
+
+    Objects of this type are context managers, that return the *shared object* (not
+    themselves) when entered.
+
+    Any other refernces to ``object``, or its contents, **must** be released before
+    calling :meth:`release` or exiting the context manager.  Among other things, that
+    means that you will need to delete its variable::
+
+        with client.get_model(k) as model:
+            # model here is the actual model object wrapped by the SharedObject
+            # returned by get_model
+            pass       # actually do the things you want to do
+            del model  # release model, so the shared object can be closed
+
+    Be careful of stray references to the model object!  Some things we have seen
+    causing stray references include:
+
+    * passing the algorithm to a logger (call :func:`str` on it explicitly), at least
+      in the test harness
+
+    The default implementation uses :func:`sys.getrefcount` to provide debugging
+    support to help catch stray references.
+
+    Attributes:
+        object: the underlying shared object.
+    """
+    _rc = None
+    _exiting = False
+
+    def __init__(self, obj):
+        self.object = obj
+
+    def release(self):
+        """
+        Release the shared object.  Automatically called by :meth:`__exit__`, so in
+        normal use of a shared object with a ``with`` statement, this method is not
+        needed.
+
+        The base class implementation simply deletes the object reference.  Subclasses
+        should override this method to handle their own release logic.
+        """
+        if self.object is not None:
+            rc = sys.getrefcount(self.object)
+            if self._rc and rc > self._rc:
+                # since most backends won't actually crash, track & emit a warning
+                _log.debug('reference count to %s increased from %d to %d',
+                           self.object, self._rc, rc)
+                wm = f'reference count to {self.object} increased, object leak?'
+                level = 3 if self._exiting else 2
+                warnings.warn(wm, ResourceWarning, stacklevel=level)
+            del self.object
+
+    def __enter__(self):
+        self._rc = sys.getrefcount(self.object)
+        return self.object
+
+    def __exit__(self, *args):
+        self._exiting = True
+        try:
+            self.release()
+        finally:
+            del self._exiting
 
 
 class BaseModelStore(BaseModelClient):
@@ -125,14 +197,21 @@ class BaseModelStore(BaseModelClient):
         """
         pass
 
-    def put_serialized(self, path):
+    def put_serialized(self, path, binpickle=False):
         """
         Deserialize a model and load it into the store.
 
         The base class method unpickles ``path`` and calls :meth:`put_model`.
+
+        Args:
+            path(str or pathlib.Path): the path to deserialize
+            binpickle: if ``True``, deserialize with :func:`binpickle.load` instead of pickle.
         """
-        with open(path, 'rb') as mf:
-            return self.put_model(pickle.load(mf))
+        if binpickle:
+            self.put_model(bpk.load(path))
+        else:
+            with open(path, 'rb') as mf:
+                return self.put_model(pickle.load(mf))
 
     @abstractmethod
     def client(self):
@@ -177,7 +256,7 @@ class NoopModelStore(BaseModelStore):
     """
 
     def get_model(self, key):
-        return key
+        return SharedObject(key)
 
     def put_model(self, model):
         return model

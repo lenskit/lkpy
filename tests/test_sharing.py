@@ -42,11 +42,11 @@ def test_store_save(store_cls):
 
     with store_cls() as store:
         k = store.put_model(algo)
-        a2 = store.get_model(k)
-        assert a2 is not algo
-        assert a2.item_pop_ is not algo.item_pop_
-        assert all(a2.item_pop_ == algo.item_pop_)
-        del a2
+        with store.get_model(k) as a2:
+            assert a2 is not algo
+            assert a2.item_pop_ is not algo.item_pop_
+            assert all(a2.item_pop_ == algo.item_pop_)
+            del a2
 
 
 @store_param
@@ -58,11 +58,11 @@ def test_store_client(store_cls):
         k = store.put_model(algo)
         client = store.client()
 
-        a2 = client.get_model(k)
-        assert a2 is not algo
-        assert a2.item_pop_ is not algo.item_pop_
-        assert all(a2.item_pop_ == algo.item_pop_)
-        del a2
+        with client.get_model(k) as a2:
+            assert a2 is not algo
+            assert a2.item_pop_ is not algo.item_pop_
+            assert all(a2.item_pop_ == algo.item_pop_)
+            del a2
 
 
 @store_param
@@ -76,11 +76,11 @@ def test_store_client_pickle(store_cls):
         client = pickle.loads(pickle.dumps(client))
         k = pickle.loads(pickle.dumps(k))
 
-        a2 = client.get_model(k)
-        assert a2 is not algo
-        assert a2.item_pop_ is not algo.item_pop_
-        assert all(a2.item_pop_ == algo.item_pop_)
-        del a2
+        with client.get_model(k) as a2:
+            assert a2 is not algo
+            assert a2.item_pop_ is not algo.item_pop_
+            assert all(a2.item_pop_ == algo.item_pop_)
+            del a2
 
 
 @lktu.wantjit
@@ -93,13 +93,13 @@ def test_store_als(store_cls):
         k = store.put_model(algo)
         client = store.client()
 
-        a2 = client.get_model(k)
-        assert a2 is not algo
-        assert a2.item_features_ is not algo.item_features_
-        assert np.all(a2.item_features_ == algo.item_features_)
-        assert a2.user_features_ is not algo.user_features_
-        assert np.all(a2.user_features_ == algo.user_features_)
-        del a2
+        with client.get_model(k) as a2:
+            assert a2 is not algo
+            assert a2.item_features_ is not algo.item_features_
+            assert np.all(a2.item_features_ == algo.item_features_)
+            assert a2.user_features_ is not algo.user_features_
+            assert np.all(a2.user_features_ == algo.user_features_)
+            del a2
 
 
 @lktu.wantjit
@@ -113,9 +113,9 @@ def test_store_iknn(store_cls):
         k = store.put_model(algo)
         client = store.client()
 
-        a2 = client.get_model(k)
-        assert a2 is not algo
-        del a2
+        with client.get_model(k) as a2:
+            assert a2 is not algo
+            del a2
 
 
 def test_create_store():

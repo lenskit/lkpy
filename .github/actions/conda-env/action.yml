@@ -8,6 +8,9 @@ inputs:
   env-file:
     description: Environment file
     required: true
+  python-version:
+    description: Python version (for initializing the environment)
+    required: false
 runs:
   using: node12
   main: main.js

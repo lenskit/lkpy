@@ -42,6 +42,18 @@ model parameters and estimated parameters should be pickled.  If you have caches
 ephemeral structures, override ``__getstate__`` and ``__setstate__`` to exclude them from the
 saved data and to initialize caches to empty values on unpickling.
 
+**If your model excludes secondary data structures from pickling**, such as a reverse index of
+user-item interactions, then you should only exclude them when pickling for serialization. When
+pickling for model sharing (see :py:func:`lenskit.sharing.in_share_context`), you should include
+the derived structures so they can also be shared.
+
+**If your algorithm uses subsidiary models as a part of the training process**, but does not need them
+for prediction or recommendation (for example, :py:class:`lenskit.algorithms.als.BiasMF`'s use of
+:py:class:`lenskit.algorithms.basic.Bias` in ``fit``, during which it copies the bias model's
+internal state to its own fields), then consider overriding ``__getstate__`` to remove the underlying
+model or replace it with a cloned copy (with :py:func:`lenskit.util.clone`) to reduce serialized
+disk space (and deserialized memory use).
+
 Random Number Generation
 ------------------------
 

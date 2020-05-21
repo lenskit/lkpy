@@ -234,6 +234,7 @@ def test_fill_users():
     recall, mrecall = recall.align(mscores['recall'])
     assert all(recall == mrecall)
 
+
 @mark.slow
 def test_adv_fill_users():
     rla = topn.RecListAnalysis()

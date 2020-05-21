@@ -22,7 +22,7 @@ try:
 except ImportError:
     shm = None
 
-from . import BaseModelClient, BaseModelStore, sharing_mode
+from . import BaseModelClient, BaseModelStore, SharedObject, sharing_mode
 
 _log = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class SHMClient(BaseModelClient):
             self._last_bufs = shm_bufs
             self._last_key = key
 
-        return self._last_model
+        return SharedObject(self._last_model)
 
     def __getstate__(self):
         if isinstance(self, BaseModelStore):
