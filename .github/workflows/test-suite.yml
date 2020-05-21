@@ -108,7 +108,7 @@ jobs:
 
       - name: Run tests
         run: |
-          python -m pytest --cov=lenskit --cov-report=xml
+          python -m pytest --cov=lenskit --cov-report=xml tests
       
       - name: Upload coverage
         uses: codecov/codecov-action@v1
