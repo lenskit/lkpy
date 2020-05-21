@@ -10,6 +10,18 @@ The interfaces are realized as abstract base classes with the Python :py:mod:`ab
 Implementations must be registered with their interfaces, either by subclassing the interface
 or by calling :py:meth:`abc.ABCMeta.register`.
 
+Serialization
+-------------
+
+Like SciKit models, all LensKit algorithms are pickleable, and this is how we recommend
+saving models to disk for later use.  This can be done with :py:mod:`pickle`, but we
+recommend using :py:mod:`binpickle` for more automatically-optimized storage.  For
+example, to save a fully-configured ALS module with fairly aggressive ZSTD compression::
+
+    algo = Recommender.adapt(ImplicitMF(50))
+    algo.fit(ratings)
+    binpickle.dump(algo, binpickle.codecs.Blosc('zstd', 9))
+
 Base Algorithm
 --------------
 
