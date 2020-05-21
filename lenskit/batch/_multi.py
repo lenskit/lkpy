@@ -333,6 +333,9 @@ class MultiEval:
             return None, None
         if not isinstance(algo, Predictor):
             return None, None
+        if 'rating' not in test.columns:
+            _logger.info('test data has no ratings, skipping prediction')
+            return None, None
 
         watch = util.Stopwatch()
         _logger.info('generating %d predictions for %s', len(test), algo)
