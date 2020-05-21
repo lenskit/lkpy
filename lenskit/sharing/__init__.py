@@ -9,6 +9,7 @@ from contextlib import contextmanager
 import threading
 import logging
 import pickle
+import binpickle as bpk
 
 _log = logging.getLogger(__name__)
 
@@ -196,14 +197,21 @@ class BaseModelStore(BaseModelClient):
         """
         pass
 
-    def put_serialized(self, path):
+    def put_serialized(self, path, binpickle=False):
         """
         Deserialize a model and load it into the store.
 
         The base class method unpickles ``path`` and calls :meth:`put_model`.
+
+        Args:
+            path(str or pathlib.Path): the path to deserialize
+            binpickle: if ``True``, deserialize with :func:`binpickle.load` instead of pickle.
         """
-        with open(path, 'rb') as mf:
-            return self.put_model(pickle.load(mf))
+        if binpickle:
+            self.put_model(bpk.load(path))
+        else:
+            with open(path, 'rb') as mf:
+                return self.put_model(pickle.load(mf))
 
     @abstractmethod
     def client(self):

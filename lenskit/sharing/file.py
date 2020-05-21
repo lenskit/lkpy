@@ -33,7 +33,7 @@ class BPKObject(SharedObject):
             del self.bp_file
 
     def __del__(self):
-        # enforce a deletion order
+        _log.debug('releasing %s', str(self.object))
         del self.object
         del self.bp_file
 
@@ -69,7 +69,7 @@ class FileClient(BaseModelClient):
 
 class FileModelStore(BaseModelStore, FileClient):
     """
-    Model store using JobLib's memory-mapping pickle support.
+    Model store using BinPickle's memory-mapping pickle support.
 
     Args:
         path:
@@ -77,7 +77,7 @@ class FileModelStore(BaseModelStore, FileClient):
             :func:`util.scratch_dir`.
         reserialize:
             if ``True`` (the default), models passed to :meth:`put_serialized` are
-            re-serialized in the JobLib storage.
+            re-serialized in the BinPickle storage, even if they are binpickle files.
     """
 
     path: Path
@@ -137,9 +137,9 @@ class FileModelStore(BaseModelStore, FileClient):
         self._files.append(fpath)
         return fpath
 
-    def put_serialized(self, path):
-        if self.reserialize:
-            return super().put_serialized(path)
+    def put_serialized(self, path, binpickle=False):
+        if self.reserialize or not binpickle:
+            return super().put_serialized(path, binpickle)
         else:
             return path
 
