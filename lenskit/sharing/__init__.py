@@ -122,10 +122,20 @@ class SharedObject:
             pass       # actually do the things you want to do
             del model  # release model, so the shared object can be closed
 
+    Be careful of stray references to the model object!  Some things we have seen
+    causing stray references include:
+
+    * passing the algorithm to a logger (call :func:`str` on it explicitly), at least
+      in the test harness
+
+    The default implementation uses :func:`sys.getrefcount` to provide debugging
+    support to help catch stray references.
+
     Attributes:
         object: the underlying shared object.
     """
     _rc = None
+    _exiting = False
 
     def __init__(self, obj):
         self.object = obj
@@ -142,7 +152,12 @@ class SharedObject:
         if self.object is not None:
             rc = sys.getrefcount(self.object)
             if self._rc and rc > self._rc:
-                warnings.warn(f'reference count to {self.object} increased, object leak?')
+                # since most backends won't actually crash, track & emit a warning
+                _log.debug('reference count to %s increased from %d to %d',
+                           self.object, self._rc, rc)
+                wm = f'reference count to {self.object} increased, object leak?'
+                level = 3 if self._exiting else 2
+                warnings.warn(wm, ResourceWarning, stacklevel=level)
             del self.object
 
     def __enter__(self):
@@ -150,7 +165,11 @@ class SharedObject:
         return self.object
 
     def __exit__(self, *args):
-        self.release()
+        self._exiting = True
+        try:
+            self.release()
+        finally:
+            del self._exiting
 
 
 class BaseModelStore(BaseModelClient):
