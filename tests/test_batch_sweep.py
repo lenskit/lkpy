@@ -96,6 +96,45 @@ def test_sweep_norecs(tmp_path):
 
 
 @mark.slow
+def test_sweep_nopreds(tmp_path):
+    work = pathlib.Path(tmp_path)
+    sweep = batch.MultiEval(tmp_path, n_jobs=2)
+
+    ratings = ml_test.ratings
+    folds = [(train, test.drop(columns=['rating']))
+             for (train, test) in xf.partition_users(ratings, 5, xf.SampleN(5))]
+    sweep.add_datasets(folds, DataSet='ml-small')
+    sweep.add_algorithms(Popular())
+    sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
+                         attrs=['damping'])
+
+    try:
+        sweep.run()
+    finally:
+        if (work / 'runs.csv').exists():
+            runs = pd.read_csv(work / 'runs.csv')
+            print(runs)
+
+    assert (work / 'runs.csv').exists()
+    assert (work / 'runs.parquet').exists()
+    assert not (work / 'predictions.parquet').exists()
+    assert (work / 'recommendations.parquet').exists()
+
+    runs = pd.read_parquet(work / 'runs.parquet')
+    # 4 algorithms by 5 partitions
+    assert len(runs) == 20
+    assert all(np.sort(runs.AlgoClass.unique()) == ['Bias', 'Popular'])
+    bias_runs = runs[runs.AlgoClass == 'Bias']
+    assert all(bias_runs.damping.notna())
+    pop_runs = runs[runs.AlgoClass == 'Popular']
+    assert all(pop_runs.damping.isna())
+
+    recs = pd.read_parquet(work / 'recommendations.parquet')
+    assert all(recs.RunId.isin(runs.RunId))
+    assert recs['score'].dtype == np.float64
+
+
+@mark.slow
 def test_sweep_allrecs(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, recommend=True)
