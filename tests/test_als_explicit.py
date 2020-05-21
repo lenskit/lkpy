@@ -3,7 +3,7 @@ import pickle
 
 # get a usable pickle disassembler
 if pickle.HIGHEST_PROTOCOL >= 5:
-    from pickletools import pickle_dis
+    from pickletools import dis as pickle_dis
 else:
     try:
         from pickle5.pickletools import dis as pickle_dis
