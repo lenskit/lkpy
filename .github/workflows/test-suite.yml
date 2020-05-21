@@ -12,9 +12,9 @@ jobs:
       fail-fast: false
       matrix:
         python:
-        - 36
-        - 37
-        - 38
+        - 3.6
+        - 3.7
+        - 3.8
         platform:
         - macos
         - windows
@@ -25,7 +25,8 @@ jobs:
       - uses: ./.github/actions/conda-env
         with:
           name: lkpy
-          env-file: dev-env-py${{matrix.python}}.yml
+          env-file: environment.yml
+          python-version: ${{matrix.python}}
 
       - name: Remove unusable Mac packages
         if: runner.os == 'macOS'
@@ -33,6 +34,7 @@ jobs:
 
       - name: Inspect environment
         run: |
+          python -V
           conda info
           numba -s
       
