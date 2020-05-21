@@ -20,7 +20,7 @@ from pytest import mark
 @mark.parametrize('ncpus', [None, 2])
 def test_sweep_bias(tmp_path, ncpus):
     work = pathlib.Path(tmp_path)
-    sweep = batch.MultiEval(tmp_path, n_jobs=ncpus)
+    sweep = batch.MultiEval(tmp_path, eval_n_jobs=ncpus)
 
     ratings = ml_test.ratings
     folds = xf.partition_users(ratings, 5, xf.SampleN(5))
@@ -98,7 +98,7 @@ def test_sweep_norecs(tmp_path):
 @mark.slow
 def test_sweep_nopreds(tmp_path):
     work = pathlib.Path(tmp_path)
-    sweep = batch.MultiEval(tmp_path, n_jobs=2)
+    sweep = batch.MultiEval(tmp_path, eval_n_jobs=2)
 
     ratings = ml_test.ratings
     folds = [(train, test.drop(columns=['rating']))
