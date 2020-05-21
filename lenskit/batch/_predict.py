@@ -12,13 +12,15 @@ _rec_context = None
 
 
 def _predict_user(client, key, user, udf):
-    algo = client.get_model(key)
+    with client.get_model(key) as algo:
 
-    watch = util.Stopwatch()
-    res = algo.predict_for_user(user, udf['item'])
-    res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
-    _logger.debug('%s produced %f/%d predictions for %s in %s',
-                  algo, res.prediction.notna().sum(), len(udf), user, watch)
+        watch = util.Stopwatch()
+        res = algo.predict_for_user(user, udf['item'])
+        res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
+        _logger.debug('%s produced %f/%d predictions for %s in %s',
+                      algo, res.prediction.notna().sum(), len(udf), user, watch)
+        del algo
+
     return res
 
 

@@ -14,14 +14,16 @@ _logger = logging.getLogger(__name__)
 
 
 def _recommend_user(client, key, user, n, candidates):
-    algo = client.get_model(key)
+    with client.get_model(key) as algo:
+        _logger.debug('generating recommendations for %s', user)
+        watch = util.Stopwatch()
+        res = algo.recommend(user, n, candidates)
+        _logger.debug('%s recommended %d/%s items for %s in %s', algo, len(res), n, user, watch)
+        del algo
 
-    _logger.debug('generating recommendations for %s', user)
-    watch = util.Stopwatch()
-    res = algo.recommend(user, n, candidates)
-    _logger.debug('%s recommended %d/%s items for %s in %s', algo, len(res), n, user, watch)
     res['user'] = user
     res['rank'] = np.arange(1, len(res) + 1)
+
     return res
 
 

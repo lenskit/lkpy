@@ -2,6 +2,8 @@
 Support for sharing and saving models and data structures.
 """
 
+import sys
+import warnings
 from abc import abstractmethod
 from contextlib import contextmanager
 import threading
@@ -97,8 +99,58 @@ class BaseModelClient:
             key: the model key to retrieve.
 
         Returns:
-            The model, previously stored with :meth:`BaseModelStore.put_model`.
+            SharedObject:
+                The model, previously stored with :meth:`BaseModelStore.put_model`,
+                wrapped in a :class:`SharedObject` to manage underlying resources.
         """
+
+
+class SharedObject:
+    """
+    Wrapper for a shared object that can release it when the object is no longer needed.
+
+    Objects of this type are context managers, that return the *shared object* (not
+    themselves) when entered.
+
+    Any other refernces to ``object``, or its contents, **must** be released before
+    calling :meth:`release` or exiting the context manager.  Among other things, that
+    means that you will need to delete its variable::
+
+        with client.get_model(k) as model:
+            # model here is the actual model object wrapped by the SharedObject
+            # returned by get_model
+            pass       # actually do the things you want to do
+            del model  # release model, so the shared object can be closed
+
+    Attributes:
+        object: the underlying shared object.
+    """
+    _rc = None
+
+    def __init__(self, obj):
+        self.object = obj
+
+    def release(self):
+        """
+        Release the shared object.  Automatically called by :meth:`__exit__`, so in
+        normal use of a shared object with a ``with`` statement, this method is not
+        needed.
+
+        The base class implementation simply deletes the object reference.  Subclasses
+        should override this method to handle their own release logic.
+        """
+        if self.object is not None:
+            rc = sys.getrefcount(self.object)
+            if self._rc and rc > self._rc:
+                warnings.warn(f'reference count to {self.object} increased, object leak?')
+            del self.object
+
+    def __enter__(self):
+        self._rc = sys.getrefcount(self.object)
+        return self.object
+
+    def __exit__(self, *args):
+        self.release()
 
 
 class BaseModelStore(BaseModelClient):
@@ -177,7 +229,7 @@ class NoopModelStore(BaseModelStore):
     """
 
     def get_model(self, key):
-        return key
+        return SharedObject(key)
 
     def put_model(self, model):
         return model

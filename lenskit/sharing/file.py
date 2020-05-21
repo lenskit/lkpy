@@ -5,7 +5,7 @@ from pathlib import Path
 
 import joblib
 from ..util import scratch_dir
-from . import BaseModelStore, BaseModelClient, sharing_mode
+from . import BaseModelStore, BaseModelClient, SharedObject, sharing_mode
 
 _log = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class FileClient(BaseModelClient):
         else:
             _log.debug('loading model from %s', key)
             self._last_model = joblib.load(key, mmap_mode='r')
-        return self._last_model
+        return SharedObject(self._last_model)
 
     def __getstate__(self):
         if isinstance(self, BaseModelStore):
