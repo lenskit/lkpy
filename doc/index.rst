@@ -53,6 +53,7 @@ Resources
    util
    diagnostics
    impl-tips
+   internals
    releases
 
 

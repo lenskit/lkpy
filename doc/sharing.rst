@@ -6,7 +6,6 @@ Model Sharing
 The :py:mod:`lenskit.sharing` module provides utilities for managing models and sharing them
 between processes, particularly for the  multiprocessing in :py:mod:`lenskit.batch`.
 
-
 Sharing Mode
 -------------
 
@@ -34,6 +33,9 @@ Model Store API
 Model stores handle persisting models into shared memory, cleaning up shared memory, and
 making objects available to other classes.
 
+LensKit users and algorithm implementers will generally not need to use this code themselves,
+unlessthey are implementing their own batch processing logic.
+
 .. autofunction:: get_store
 
 .. autoclass:: BaseModelStore
@@ -41,6 +43,10 @@ making objects available to other classes.
     :show-inheritance:
 
 .. autoclass:: BaseModelClient
+    :members:
+    :show-inheritance:
+
+.. autoclass:: SharedObject
     :members:
     :show-inheritance:
 
