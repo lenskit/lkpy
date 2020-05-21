@@ -37,3 +37,4 @@ dependencies:
 - nbval
 - nbsphinx
 - recommonmark
+- binpickle

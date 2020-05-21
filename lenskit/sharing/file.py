@@ -3,27 +3,62 @@ import logging
 import tempfile
 from pathlib import Path
 
-import joblib
+import binpickle
 from ..util import scratch_dir
 from . import BaseModelStore, BaseModelClient, SharedObject, sharing_mode
 
 _log = logging.getLogger(__name__)
 
 
+class BPKObject(SharedObject):
+    """
+    BinPickle-specific shared object class that manages the file reference.
+    """
+
+    def __init__(self, file, object):
+        super(BPKObject, self).__init__(object)
+        self.count = 1
+        self.bp_file = file
+
+    def incr(self):
+        self.count += 1
+        return self
+
+    def release(self):
+        self.count -= 1
+        if self.count <= 0:
+            _log.debug('releasing %s', str(self.object))
+            del self.object
+            self.bp_file.close()
+            del self.bp_file
+
+    def __del__(self):
+        # enforce a deletion order
+        del self.object
+        del self.bp_file
+
+
 class FileClient(BaseModelClient):
     """
-    Client using Joblib's memory-mapping pickle support.
+    Client using BinPickle's memory-mapping pickle support.
     """
 
     _last_key = None
+    _last_model = None
 
     def get_model(self, key):
         if self._last_key == key:
             _log.debug('reusing model %s', key)
         else:
+            if self._last_model:
+                self._last_model.release()
+                self._last_model = None
+
             _log.debug('loading model from %s', key)
-            self._last_model = joblib.load(key, mmap_mode='r')
-        return SharedObject(self._last_model)
+            bpf = binpickle.BinPickleFile(key, direct=True)
+            obj = bpf.load()
+            self._last_model = BPKObject(bpf, obj)
+        return self._last_model.incr()
 
     def __getstate__(self):
         if isinstance(self, BaseModelStore):
@@ -91,13 +126,14 @@ class FileModelStore(BaseModelStore, FileClient):
         return FileClient()
 
     def put_model(self, model):
-        fd, fn = tempfile.mkstemp('.model', 'lk-joblib', self._path)
+        fd, fn = tempfile.mkstemp('.model', 'lk-bpk', self._path)
         fpath = Path(fn)
         _log.debug('saving model %s to %s', model, fpath)
         os.close(fd)
 
         with sharing_mode():
-            joblib.dump(model, fn)
+            binpickle.dump(model, fn, mappable=True)
+
         self._files.append(fpath)
         return fpath
 

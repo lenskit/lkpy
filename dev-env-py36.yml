@@ -20,3 +20,4 @@ dependencies:
 - c-compiler
 - matplotlib
 - nbval
+- binpickle
