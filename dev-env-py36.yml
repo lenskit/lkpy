@@ -1,5 +1,6 @@
 name: lk36
 channels:
+- mdekstrand
 - defaults
 - conda-forge
 dependencies:
