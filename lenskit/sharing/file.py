@@ -1,6 +1,7 @@
 import os
 import logging
 import tempfile
+import gc
 from pathlib import Path
 
 import binpickle
@@ -29,13 +30,15 @@ class BPKObject(SharedObject):
         if self.count <= 0:
             _log.debug('releasing %s', str(self.object))
             del self.object
+            gc.collect()
             self.bp_file.close()
             del self.bp_file
 
     def __del__(self):
-        _log.debug('releasing %s', str(self.object))
-        del self.object
-        del self.bp_file
+        if hasattr(self, 'object'):
+            _log.debug('releasing %s', str(self.object))
+            del self.object
+            del self.bp_file
 
 
 class FileClient(BaseModelClient):
