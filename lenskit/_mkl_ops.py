@@ -29,7 +29,7 @@ ffi.cdef(__mkl_defs.replace('EXPORT ', ''))
 try:
     clib = ffi.dlopen(os.fspath(_mkl_so))
 except OSError:
-    raise ImportError('_mkl_ops cannot load helper')
+    clib = None
 
 _lk_mkl_spcreate = clib.lk_mkl_spcreate
 _lk_mkl_spsubset = clib.lk_mkl_spsubset
