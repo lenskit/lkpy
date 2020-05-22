@@ -28,29 +28,29 @@ ffi = cffi.FFI()
 ffi.cdef(__mkl_defs.replace('EXPORT ', ''))
 try:
     clib = ffi.dlopen(os.fspath(_mkl_so))
+
+    _lk_mkl_spcreate = clib.lk_mkl_spcreate
+    _lk_mkl_spsubset = clib.lk_mkl_spsubset
+    _lk_mkl_spfree = clib.lk_mkl_spfree
+    _lk_mkl_sporder = clib.lk_mkl_sporder
+    _lk_mkl_spopt = clib.lk_mkl_spopt
+    _lk_mkl_spmv = clib.lk_mkl_spmv
+    _lk_mkl_spmab = clib.lk_mkl_spmab
+    _lk_mkl_spmabt = clib.lk_mkl_spmabt
+    _lk_mkl_spexport = clib.lk_mkl_spexport
+    _lk_mkl_spsyrk = clib.lk_mkl_spsyrk
+
+    # silly pointer interface
+    _lk_mkl_spexport_p = clib.lk_mkl_spexport_p
+    _lk_mkl_spe_free = clib.lk_mkl_spe_free
+    _lk_mkl_spe_nrows = clib.lk_mkl_spe_nrows
+    _lk_mkl_spe_ncols = clib.lk_mkl_spe_ncols
+    _lk_mkl_spe_row_sp = clib.lk_mkl_spe_row_sp
+    _lk_mkl_spe_row_ep = clib.lk_mkl_spe_row_ep
+    _lk_mkl_spe_colinds = clib.lk_mkl_spe_colinds
+    _lk_mkl_spe_values = clib.lk_mkl_spe_values
 except OSError:
     clib = None
-
-_lk_mkl_spcreate = clib.lk_mkl_spcreate
-_lk_mkl_spsubset = clib.lk_mkl_spsubset
-_lk_mkl_spfree = clib.lk_mkl_spfree
-_lk_mkl_sporder = clib.lk_mkl_sporder
-_lk_mkl_spopt = clib.lk_mkl_spopt
-_lk_mkl_spmv = clib.lk_mkl_spmv
-_lk_mkl_spmab = clib.lk_mkl_spmab
-_lk_mkl_spmabt = clib.lk_mkl_spmabt
-_lk_mkl_spexport = clib.lk_mkl_spexport
-_lk_mkl_spsyrk = clib.lk_mkl_spsyrk
-
-# silly pointer interface
-_lk_mkl_spexport_p = clib.lk_mkl_spexport_p
-_lk_mkl_spe_free = clib.lk_mkl_spe_free
-_lk_mkl_spe_nrows = clib.lk_mkl_spe_nrows
-_lk_mkl_spe_ncols = clib.lk_mkl_spe_ncols
-_lk_mkl_spe_row_sp = clib.lk_mkl_spe_row_sp
-_lk_mkl_spe_row_ep = clib.lk_mkl_spe_row_ep
-_lk_mkl_spe_colinds = clib.lk_mkl_spe_colinds
-_lk_mkl_spe_values = clib.lk_mkl_spe_values
 
 # support intptr_t
 if cffi_utils is not None:
