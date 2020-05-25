@@ -113,7 +113,7 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v1
 
-  tox:
+  mindep:
     name: Minimal Supported Dependencies
     runs-on: ubuntu-latest
     steps:
