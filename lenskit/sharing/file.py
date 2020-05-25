@@ -27,7 +27,7 @@ class BPKObject(SharedObject):
 
     def release(self):
         self.count -= 1
-        if self.count <= 0:
+        if self.count <= 0 and hasattr(self, 'object'):
             _log.debug('releasing %s', str(self.object))
             del self.object
             gc.collect()
