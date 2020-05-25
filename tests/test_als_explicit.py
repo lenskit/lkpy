@@ -203,7 +203,7 @@ def test_als_method_match():
     preds = []
 
     rng = util.rng(42, legacy=True)
-    for u in rng.choice(np.unique(ratings.user), 10, replace=False):
+    for u in rng.choice(np.unique(ratings.user), 15, replace=False):
         items = rng.choice(np.unique(ratings.item), 15, replace=False)
         lu_preds = lu.predict_for_user(u, items)
         cd_preds = cd.predict_for_user(u, items)
