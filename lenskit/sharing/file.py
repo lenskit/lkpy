@@ -1,4 +1,5 @@
 import os
+import warnings
 import logging
 import tempfile
 import gc
@@ -27,12 +28,15 @@ class BPKObject(SharedObject):
 
     def release(self):
         self.count -= 1
-        if self.count <= 0 and hasattr(self, 'object'):
+        if self.count == 0:
             _log.debug('releasing %s', str(self.object))
             del self.object
             gc.collect()
             self.bp_file.close()
             del self.bp_file
+        elif self.count < 0:
+            warnings.warn('over-released BPK', ResourceWarning, stacklevel=2)
+            assert not hasattr(self, 'object')
 
     def __del__(self):
         if hasattr(self, 'object'):
