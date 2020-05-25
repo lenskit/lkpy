@@ -612,10 +612,10 @@ def sparse_ratings(ratings, scipy=False, *, users=None, items=None):
             a named tuple containing the sparse matrix, user index, and item index.
     """
     if users is None:
-        users = pd.Index(ratings.user.unique(), name='user')
+        users = pd.Index(np.unique(ratings.user), name='user')
 
     if items is None:
-        items = pd.Index(ratings.item.unique(), name='item')
+        items = pd.Index(np.unique(ratings.item), name='item')
 
     _logger.debug('creating matrix with %d ratings for %d items by %d users',
                   len(ratings), len(items), len(users))
