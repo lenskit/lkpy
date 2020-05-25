@@ -17,25 +17,24 @@ requirements:
   host:
     - python {{ python }}
     - setuptools
-    - pytest-runner
+    - pip
     - numba >=0.43
     - pandas >=0.24
-    - numpy
-    - scipy
-    - pyarrow
-    - python-snappy
-    - cffi
-    - joblib
+    - numpy >=1.16
+    - scipy >=1.2
+    - pyarrow >=0.15
+    - cffi >=1.12.2
+    - joblib >=0.13.0
     - mkl-devel
   run:
     - python
     - pandas >=0.24
-    - scipy
+    - scipy >=1.2
     - numba >=0.43
-    - fastparquet
-    - python-snappy
-    - cffi
-    - joblib
+    - pyarrow >=0.15
+    - cffi >=1.12.2
+    - joblib >=0.13.0
+    - binpickle >=0.1
 
 test:
   source_files:
