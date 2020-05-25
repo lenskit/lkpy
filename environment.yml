@@ -1,7 +1,7 @@
 # LensKit development Conda environment
 name: lkpy-dev
 channels:
-  - mdekstrand
+  - lenskit
   - defaults
   - conda-forge # last to not override things
 dependencies:

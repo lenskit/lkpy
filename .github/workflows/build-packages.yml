@@ -48,7 +48,9 @@ jobs:
         conda install -qy conda-build
 
     - name: Build Conda packages
-      run: conda build -c lenskit conda
+      run: |
+        cd conda
+        conda build -c lenskit .
 
     - name: Copy Conda packages
       run: |
