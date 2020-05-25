@@ -126,18 +126,15 @@ jobs:
           python-version: '3.6'
           architecture: x64
 
-      - name: Set up base Python deps
+      - name: Set up Python deps
         run: |
           python -m pip install --upgrade pip
-          python -m pip install tox
+          python -m pip install pytest pytest-cov pytest-doctestplus
+          python -m pip install -c min-constraints.txt -e .
 
-      - name: Set up environment
-        run: |
-          python -m tox -e minimal --notest
-        
       - name: Run tests
         run: |
-          python -m tox -e minimal -- --cov=lenskit --cov-report=xml
+          python -m pytest --cov=lenskit --cov-report=xml
         
       - name: Upload coverage
         uses: codecov/codecov-action@v1
