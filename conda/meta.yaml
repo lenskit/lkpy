@@ -17,6 +17,7 @@ requirements:
   host:
     - python {{ python }}
     - setuptools
+    - pytest-runner
     - pip
     - numba >=0.43
     - pandas >=0.24
