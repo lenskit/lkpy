@@ -54,7 +54,7 @@ Resources
    diagnostics
    impl-tips
    internals
-   releases
+   Release Notes <https://github.com/lenskit/lkpy/releases>
 
 
 Indices and tables
