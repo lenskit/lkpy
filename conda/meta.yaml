@@ -51,4 +51,4 @@ test:
     - pytest-arraydiff
     - statsmodels
   commands:
-    - pytest tests -m "not slow"
+    - pytest tests -m "not slow" --verbose
