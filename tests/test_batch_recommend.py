@@ -4,7 +4,6 @@ from collections import namedtuple
 import logging
 import pandas as pd
 import numpy as np
-import joblib
 
 import lenskit.util.test as lktu
 
@@ -140,51 +139,6 @@ def test_bias_batch_recommend(ml_folds: MLFolds, ncpus):
     recs = ml_folds.eval_all(algo, n_jobs=ncpus)
 
     ml_folds.check_positive_ndcg(recs)
-
-
-@pytest.mark.eval
-def test_bias_batch_recommend_pickle(ml_folds: MLFolds):
-    algo = Bias(damping=5)
-    algo = TopN(algo)
-
-    from joblib.externals import loky
-
-    old = loky.backend.reduction.get_loky_pickler_name()
-    try:
-        loky.set_loky_pickler('pickle')
-        recs = ml_folds.eval_all(algo, n_jobs=2)
-    finally:
-        loky.set_loky_pickler(old)
-
-    ml_folds.check_positive_ndcg(recs)
-
-
-@pytest.mark.skipif(pickle5 is None, reason='requires pickle5 module')
-@pytest.mark.eval
-def test_bias_batch_recommend_pickle5(ml_folds: MLFolds):
-    algo = Bias(damping=5)
-    algo = TopN(algo)
-
-    from joblib.externals import loky
-
-    old = loky.backend.reduction.get_loky_pickler_name()
-    try:
-        loky.set_loky_pickler('pickle5')
-        recs = ml_folds.eval_all(algo, n_jobs=2)
-    finally:
-        loky.set_loky_pickler(old)
-
-    ml_folds.check_positive_ndcg(recs)
-
-
-@pytest.mark.eval
-def test_bias_batch_recommend_threads(ml_folds: MLFolds):
-    algo = Bias(damping=5)
-    algo = TopN(algo)
-
-    with joblib.parallel_backend('threading', n_jobs=2):
-        recs = ml_folds.eval_all(algo)
-        ml_folds.check_positive_ndcg(recs)
 
 
 @pytest.mark.parametrize('ncpus', [None, 2])
