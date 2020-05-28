@@ -107,7 +107,13 @@ def persist(model):
     Returns:
         PersistedModel: The persisted object.
     """
-    pass
+    lk_tmp = os.environ.get('LK_TEMP_DIR', None)
+    if lk_tmp is not None:
+        return persist_binpickle(model, lk_tmp)
+    elif shm is not None:
+        return persist_shm(model)
+    else:
+        return persist_binpickle(model)
 
 
 def persist_binpickle(model, dir=None):

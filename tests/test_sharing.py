@@ -1,3 +1,5 @@
+import os
+
 import pickle
 import numpy as np
 
@@ -45,6 +47,38 @@ def test_persist_bpk():
 def test_persist_shm():
     matrix = np.random.randn(1000, 100)
     share = lks.persist_shm(matrix)
+    try:
+        m2 = share.get()
+        assert m2 is not matrix
+        assert np.all(m2 == matrix)
+        del m2
+    finally:
+        share.close()
+
+
+def test_persist():
+    "Test default persistence"
+    matrix = np.random.randn(1000, 100)
+    share = lks.persist(matrix)
+    try:
+        m2 = share.get()
+        assert m2 is not matrix
+        assert np.all(m2 == matrix)
+        del m2
+    finally:
+        share.close()
+
+
+def test_persist_dir(tmp_path):
+    "Test persistence with a configured directory"
+    matrix = np.random.randn(1000, 100)
+    os.environ['LK_TEMP_DIR'] = os.fspath(tmp_path)
+    try:
+        share = lks.persist(matrix)
+        assert isinstance(share, lks.BPKPersisted)
+    finally:
+        del os.environ['LK_TEMP_DIR']
+
     try:
         m2 = share.get()
         assert m2 is not matrix
