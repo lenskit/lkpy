@@ -23,7 +23,7 @@ jobs:
           condaplat: linux-64
           image: ubuntu-latest
         - platform: windows
-          condaplat: osx-64
+          condaplat: win-64
           image: windows-2016
 
     steps:
