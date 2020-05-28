@@ -25,7 +25,6 @@ requirements:
     - scipy >=1.2
     - pyarrow >=0.15
     - cffi >=1.12.2
-    - joblib >=0.13.0
     - binpickle >=0.1
     - mkl-devel
   run:
@@ -35,7 +34,6 @@ requirements:
     - numba >=0.43
     - pyarrow >=0.15
     - cffi >=1.12.2
-    - joblib >=0.13.0
     - binpickle >=0.1
 
 test:
