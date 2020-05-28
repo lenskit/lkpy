@@ -54,11 +54,8 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, **kwargs):
             IDs will be looked up in it.  Pass ``None`` to use the recommender's
             built-in candidate selector (usually recommended).
         n_jobs(int):
-            The number of processes to use for parallel recommendations.  Passed as
-            ``n_jobs`` to :class:`joblib.Parallel`.  The default, ``None``, will result
-            in a call to :func:`util.proc_count`(``None``), so the process will be
-            the process sequential _unless_ called inside the :func:`joblib.parallel_backend`
-            context manager or the ``LK_NUM_PROCS`` environment variable is set.
+            The number of processes to use for parallel recommendations.  Passed to
+            :func:`lenskit.util.parallel.invoker`.
 
     Returns:
         A frame with at least the columns ``user``, ``rank``, and ``item``; possibly also
