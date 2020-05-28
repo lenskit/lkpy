@@ -6,7 +6,6 @@ import gzip
 
 import pandas as pd
 import numpy as np
-import joblib
 
 from lenskit.util.test import ml_test
 from lenskit import batch, crossfold as xf
@@ -406,10 +405,6 @@ def test_save_models(tmp_path, format):
             assert fn.exists()
             with gzip.open(fspath(fn), 'rb') as f:
                 algo = pickle.load(f)
-        elif format == 'joblib':
-            fn = fn.with_suffix('.jlpkl')
-            assert fn.exists()
-            algo = joblib.load(fn)
         else:
             assert False
 
