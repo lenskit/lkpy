@@ -3,13 +3,21 @@ Support for sharing and saving models and data structures.
 """
 
 import sys
+import os
+import pathlib
 import warnings
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from contextlib import contextmanager
+import tempfile
 import threading
 import logging
 import pickle
-import binpickle as bpk
+try:
+    import multiprocessing.shared_memory as shm
+except ImportError:
+    shm = None
+
+import binpickle
 
 _log = logging.getLogger(__name__)
 
@@ -47,6 +55,115 @@ def in_share_context():
     cross-process sharing.
     """
     return _save_mode() == 'share'
+
+
+class PersistedModel(ABC):
+    """
+    A persisted model for inter-process model sharing.
+
+    These objects can be pickled for transmission to a worker process.
+
+    .. note::
+        Subclasses need to override the pickling protocol to implement the
+        proper pickling implementation.
+    """
+
+    @abstractmethod
+    def get(self):
+        """
+        Get the persisted model, reconstructing it if necessary.
+        """
+        pass
+
+    @abstractmethod
+    def close(self):
+        """
+        Release the persisted model resources.  Should only be called in the
+        parent process (will do nothing in a child process).
+        """
+        pass
+
+
+def persist(model):
+    """
+    Persist a model for cross-process sharing.
+
+    This will return a persiste dmodel that can be used to reconstruct the model
+    in a worker process (using :func:`reconstruct`).
+
+    This function automatically selects a model persistence strategy from the
+    the following, in order:
+
+    1. If `LK_TEMP_DIR` is set, use :mod:`binpickle` in shareable mode to save
+       the object into the LensKit temporary directory.
+    2. If :mod:`multiprocessing.shared_memory` is available, use :mod:`pickle`
+       to save the model, placing the buffers into shared memory blocks.
+    3. Otherwise, use :mod:`binpickle` in shareable mode to save the object
+       into the system temporary directory.
+
+    Args:
+        model(obj): the model to persist.
+
+    Returns:
+        PersistedModel: The persisted object.
+    """
+    pass
+
+
+def persist_binpickle(model, dir=None):
+    """
+    Persist a model using binpickle.
+
+    Args:
+        model: The model to persist.
+        dir: The temporary directory for persisting the model object.
+
+    Returns:
+        PersistedModel: The persisted object.
+    """
+    fd, path = tempfile.mkstemp(suffix='.bpk', prefix='lkpy-', dir=dir)
+    os.close(fd)
+    path = pathlib.Path(path)
+    with binpickle.BinPickler.mappable(path) as bp, sharing_mode():
+        bp.dump(model)
+    return BPKPersisted(path)
+
+
+class BPKPersisted(PersistedModel):
+    def __init__(self, path):
+        self.path = path
+        self.is_owner = True
+        self._bpk_file = None
+        self._model = None
+
+    def get(self):
+        if self._bpk_file is None:
+            self._bpk_file = binpickle.BinPickleFile(self.path, direct=True)
+            self._model = self._bpk_file.load()
+        return self._model
+
+    def close(self, unlink=True):
+        if self._bpk_file is not None:
+            self._model = None
+            try:
+                self._bpk_file.close()
+            except IOError as e:
+                _log.warn('error closing %s: %s', self.path, e)
+            self._bpk_file = None
+
+        if self.is_owner and unlink:
+            assert self._model is None
+            if unlink:
+                self.path.unlink()
+            self.is_owner = False
+
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        d['is_owner'] = False
+        return d
+
+    def __del___(self):
+        self.close(False)
 
 
 def get_store(reuse=True, *, in_process=False):

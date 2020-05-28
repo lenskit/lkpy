@@ -28,6 +28,19 @@ def test_sharing_mode():
     assert not lks.in_share_context()
 
 
+def test_persist_bpk():
+    matrix = np.random.randn(1000, 100)
+    share = lks.persist_binpickle(matrix)
+    try:
+        assert share.path.exists()
+        m2 = share.get()
+        assert m2 is not matrix
+        assert np.all(m2 == matrix)
+        del m2
+    finally:
+        share.close()
+
+
 @store_param
 def test_store_init(store_cls):
     "Test that a store initializes and shuts down."
