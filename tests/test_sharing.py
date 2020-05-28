@@ -41,6 +41,19 @@ def test_persist_bpk():
         share.close()
 
 
+@mark.skipif(lks.shm is None, reason='shared_memory not available')
+def test_persist_shm():
+    matrix = np.random.randn(1000, 100)
+    share = lks.persist_shm(matrix)
+    try:
+        m2 = share.get()
+        assert m2 is not matrix
+        assert np.all(m2 == matrix)
+        del m2
+    finally:
+        share.close()
+
+
 @store_param
 def test_store_init(store_cls):
     "Test that a store initializes and shuts down."
