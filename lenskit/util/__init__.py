@@ -100,4 +100,3 @@ def cur_memory():
         return "%.1f MiB" % (res.ru_idrss,)
     else:
         return 'unknown'
-
