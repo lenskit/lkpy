@@ -1,26 +1,23 @@
 import logging
 import warnings
 
-from joblib import Parallel, delayed
-
 import pandas as pd
 import numpy as np
 
 from ..algorithms import Recommender
 from .. import util
-from ..sharing import get_store, NoopModelStore
 
 _logger = logging.getLogger(__name__)
 
 
-def _recommend_user(client, key, user, n, candidates):
-    with client.get_model(key) as algo:
-        _logger.debug('generating recommendations for %s', user)
-        watch = util.Stopwatch()
-        res = algo.recommend(user, n, candidates)
-        _logger.debug('%s recommended %d/%s items for %s in %s',
-                      str(algo), len(res), n, user, watch)
-        del algo
+def _recommend_user(algo, req):
+    user, n, candidates = req
+
+    _logger.debug('generating recommendations for %s', user)
+    watch = util.Stopwatch()
+    res = algo.recommend(user, n, candidates)
+    _logger.debug('%s recommended %d/%s items for %s in %s',
+                  str(algo), len(res), n, user, watch)
 
     res['user'] = user
     res['rank'] = np.arange(1, len(res) + 1)
@@ -72,9 +69,6 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, **kwargs):
         n_jobs = kwargs['nprocs']
         warnings.warn('nprocs is deprecated, use n_jobs', DeprecationWarning)
 
-    if n_jobs is None:
-        n_jobs = util.proc_count(None)
-
     rec_algo = Recommender.adapt(algo)
     if candidates is None and rec_algo is not algo:
         warnings.warn('no candidates provided and algo is not a recommender, unlikely to work')
@@ -85,30 +79,14 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, **kwargs):
 
     candidates = __standard_cand_fun(candidates)
 
-    loop = Parallel(n_jobs=n_jobs)
+    _logger.info('recommending with %s for %d users (n_jobs=%s)',
+                 rec_algo, len(users), n_jobs)
 
-    path = None
-    try:
-        _logger.debug('activating recommender loop')
-        with loop:
-            store = get_store(in_process=loop._effective_n_jobs() == 1)
-            _logger.info('using model store %s', store)
-            astr = str(rec_algo)
-
-            with store:
-                key = store.put_model(rec_algo)
-                del rec_algo
-                client = store.client()
-
-                _logger.info('recommending with %s for %d users (n_jobs=%s)',
-                             astr, len(users), n_jobs)
-                timer = util.Stopwatch()
-                results = loop(delayed(_recommend_user)(client, key, user, n, candidates(user))
-                               for user in users)
-
-            results = pd.concat(results, ignore_index=True, copy=False)
-            _logger.info('recommended for %d users in %s', len(users), timer)
-    finally:
-        util.delete_sometime(path)
+    with util.parallel.invoker(rec_algo, _recommend_user, n_jobs=n_jobs) as worker:
+        del rec_algo
+        timer = util.Stopwatch()
+        results = worker.map((user, n, candidates(user)) for user in users)
+        results = pd.concat(results, ignore_index=True, copy=False)
+        _logger.info('recommended for %d users in %s', len(users), timer)
 
     return results
