@@ -1,25 +1,21 @@
 import logging
 import warnings
-from joblib import Parallel, delayed
 
 import pandas as pd
 
 from .. import util
-from ..sharing import get_store, NoopModelStore
 
 _logger = logging.getLogger(__name__)
 _rec_context = None
 
 
-def _predict_user(client, key, user, udf):
-    with client.get_model(key) as algo:
-        watch = util.Stopwatch()
-        res = algo.predict_for_user(user, udf['item'])
-        res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
-        _logger.debug('%s produced %f/%d predictions for %s in %s',
-                      str(algo), res.prediction.notna().sum(), len(udf), user, watch)
-        del algo
-
+def _predict_user(model, req):
+    user, udf = req
+    watch = util.Stopwatch()
+    res = model.predict_for_user(user, udf['item'])
+    res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
+    _logger.debug('%s produced %f/%d predictions for %s in %s',
+                  model, res.prediction.notna().sum(), len(udf), user, watch)
     return res
 
 
@@ -57,11 +53,8 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
             A data frame of (``user``, ``item``) pairs to predict for. If this frame also
             contains a ``rating`` column, it will be included in the result.
         n_jobs(int):
-            The number of processes to use for parallel batch prediction.  Passed as
-            ``n_jobs`` to :class:`joblib.Parallel`.  The default, ``None``, will result
-            in a call to :func:`util.proc_count`(``None``), so the process will be
-            the process sequential _unless_ called inside the :func:`joblib.parallel_backend`
-            context manager or the ``LK_NUM_PROCS`` environment variable is set.
+            The number of processes to use for parallel batch prediction.  Passed to
+            :func:`lenskit.util.parallel.invoker`.
 
     Returns:
         pandas.DataFrame:
@@ -73,29 +66,14 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
         n_jobs = kwargs['nprocs']
         warnings.warn('nprocs is deprecated, use n_jobs', DeprecationWarning)
 
-    if n_jobs is None:
-        n_jobs = util.proc_count(None)
+    nusers = pairs['user'].nunique()
 
-    loop = Parallel(n_jobs=n_jobs)
+    with util.parallel.invoker(algo, _predict_user, n_jobs=n_jobs) as worker:
+        del algo  # maybe free some memory
 
-    path = None
-    try:
-        store = get_store(in_process=loop._effective_n_jobs() == 1)
-        _logger.info('using model store %s', store)
-
-        with store:
-            key = store.put_model(algo)
-            del algo
-            client = store.client()
-
-            nusers = pairs['user'].nunique()
-            _logger.info('generating %d predictions for %d users', len(pairs), nusers)
-            results = loop(delayed(_predict_user)(client, key, user, udf.copy())
-                           for (user, udf) in pairs.groupby('user'))
-
-        results = pd.concat(results, ignore_index=True, copy=False)
-    finally:
-        util.delete_sometime(path)
+        _logger.info('generating %d predictions for %d users', len(pairs), nusers)
+        results = worker.map(pairs.groupby('user'))
+        results = pd.concat(results)
 
     if 'rating' in pairs:
         return pairs.join(results.set_index(['user', 'item']), on=('user', 'item'))
