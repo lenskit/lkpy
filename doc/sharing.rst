@@ -26,6 +26,17 @@ actually happen.
 
 .. autofunction:: sharing_mode
 
+Persistence API
+---------------
+
+These functions are used for internal LensKit infrastructure code to persist models into
+shared memory for parallel processing.
+
+.. autofunction:: persist
+
+.. autoclass:: PersistedModel
+    :members:
+
 
 Model Store API
 ---------------
