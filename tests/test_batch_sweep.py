@@ -375,7 +375,7 @@ def test_sweep_combine(tmp_path):
 
 
 @mark.slow
-@mark.parametrize("format", [True, 'gzip', 'joblib'])
+@mark.parametrize("format", [True, 'gzip'])
 def test_save_models(tmp_path, format):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, save_models=format)
