@@ -61,8 +61,8 @@ Memory Mapping
 .. py:module:: lenskit.sharing.file
 
 The memory-mapped-file store works on any supported platform and Python version.  It uses
-Joblib's memory-mapped Pickle extension to store models on disk and use their storage
-to back memory-mapped views of major data structures.
+BinPickle's memory-mapped file support extension to store models on disk and use their
+storage to back memory-mapped views of major data structures.
 
 .. autoclass:: FileModelStore
     :show-inheritance:

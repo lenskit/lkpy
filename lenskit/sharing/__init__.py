@@ -62,7 +62,7 @@ def get_store(reuse=True, *, in_process=False):
     1. The currently-active store, if ``reuse=True``
     2. A no-op store, if ``in_process=True``
     3. :class:`SHMModelStore`, if on Python 3.8
-    4. :class:`JoblibModelStore`
+    4. :class:`FileModelStore`
 
     Args:
         reuse(bool):
