@@ -22,7 +22,7 @@ def _recommend_user(algo, req):
     res['user'] = user
     res['rank'] = np.arange(1, len(res) + 1)
 
-    return res
+    return res.reset_index(drop=True)
 
 
 def __standard_cand_fun(candidates):
