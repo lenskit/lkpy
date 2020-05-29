@@ -76,10 +76,9 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, **kwargs):
 
     candidates = __standard_cand_fun(candidates)
 
-    _logger.info('recommending with %s for %d users (n_jobs=%s)',
-                 rec_algo, len(users), n_jobs)
-
     with util.parallel.invoker(rec_algo, _recommend_user, n_jobs=n_jobs) as worker:
+        _logger.info('recommending with %s for %d users (n_jobs=%s)',
+                     str(rec_algo), len(users), n_jobs)
         del rec_algo
         timer = util.Stopwatch()
         results = worker.map((user, n, candidates(user)) for user in users)
