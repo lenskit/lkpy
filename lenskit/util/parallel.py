@@ -4,6 +4,7 @@ Utilities for parallel processing.
 
 import os
 import multiprocessing as mp
+from multiprocessing.queues import SimpleQueue
 import functools as ft
 import logging
 import inspect
@@ -31,7 +32,7 @@ def _p5_send(self, obj):
     self._send_bytes(buf)
 
 
-class FastQ(mp.queues.SimpleQueue):
+class FastQ(SimpleQueue):
     """
     SimpleQueue subclass that uses Pickle5 instead of default pickling.
     """
