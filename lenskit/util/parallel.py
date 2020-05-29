@@ -28,7 +28,7 @@ def _proc_worker(*args):
     return __work_func(model, *args)
 
 
-def proc_count(core_div=2):
+def proc_count(core_div=2, max_default=None):
     """
     Get the number of desired jobs for multiprocessing operations.  This does not
     affect Numba or MKL multithreading.
@@ -41,6 +41,9 @@ def proc_count(core_div=2):
         core_div(int or None):
             The divisor to scale down the number of cores; ``None`` to turn off core-based
             fallback.
+        max_default:
+            The maximum number of processes to use if the environment variable is not
+            configured.
 
     Returns:
         int: The number of jobs desired.
@@ -51,6 +54,8 @@ def proc_count(core_div=2):
         nprocs = int(nprocs)
     elif core_div is not None:
         nprocs = max(mp.cpu_count() // core_div, 1)
+        if max_default is not None:
+            nprocs = min(nprocs, max_default)
 
     return nprocs
 
@@ -64,14 +69,14 @@ def invoker(model, func, n_jobs=None):
         func(functio): The function to call.  The function must be pickleable.
         n_jobs(int or None):
             The number of processes to use for parallel operations.  If ``None``, will
-            call :func:`proc_count`.
+            call :func:`proc_count` with a maximum default process count of 4.
 
     Returns:
         ModelOpInvoker:
             An invoker to perform operations on the model.
     """
     if n_jobs is None:
-        n_jobs = proc_count()
+        n_jobs = proc_count(max_default=4)
 
     if n_jobs == 1:
         return InProcessOpInvoker(model, func)
@@ -117,6 +122,7 @@ class ModelOpInvoker(ABC):
 
 class InProcessOpInvoker(ModelOpInvoker):
     def __init__(self, model, func):
+        _log.info('setting up in-process worker')
         self.model = model
         self.function = func
 
@@ -129,6 +135,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker):
     def __init__(self, model, func, n_jobs):
         key = persist(model)
         ctx = mp.get_context('spawn')
+        _log.info('setting up ProcessPoolExecutor w/ %d workers', n_jobs)
         self.executor = ProcessPoolExecutor(n_jobs, ctx, _initialize_worker, (key, func))
 
     def map(self, *iterables):
@@ -142,6 +149,7 @@ class MPOpInvoker(ModelOpInvoker):
     def __init__(self, model, func, n_jobs):
         key = persist(model)
         ctx = mp.get_context('spawn')
+        _log.info('setting up multiprocessing.Pool w/ %d workers', n_jobs)
         self.pool = ctx.Pool(n_jobs, _initialize_worker, (key, func))
 
     def map(self, *iterables):
