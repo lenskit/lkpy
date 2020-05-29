@@ -261,7 +261,8 @@ class CSR:
                 self._N = impl._CSR64(n.nrows, n.ncols, n.nnz, n.rowptrs, n.colinds, n.values)
             else:
                 self._N = impl._CSR(n.nrows, n.ncols, n.nnz, n.rowptrs, n.colinds, n.values)
-            assert not isinstance(self._N, _CSR)  # make sure types behave how we expect
+            # make sure types behave how we expect
+            assert impl.n.config.DISABLE_JIT or not isinstance(self._N, _CSR)
         return self._N
 
     nrows = _csr_delegate('nrows')
