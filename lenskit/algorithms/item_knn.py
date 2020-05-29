@@ -19,6 +19,8 @@ from . import Predictor
 
 _logger = logging.getLogger(__name__)
 _mkl_ops = matrix.mkl_ops()
+_empty_csr = matrix._impl_mod()._empty_csr
+_CSR = matrix._impl_mod()._CSR
 
 if _mkl_ops is not None:
     # we have to import LK CFFI utils into this module
@@ -37,7 +39,7 @@ def _make_blocks(n, size):
 
 
 @njit(nogil=True)
-def _count_nbrs(mat: matrix._CSR, thresh: float):
+def _count_nbrs(mat: _CSR, thresh: float):
     "Count the number of neighbors passing the threshold for each row."
     counts = np.zeros(mat.nrows, dtype=np.int32)
     cs = mat.colinds
@@ -63,7 +65,7 @@ def _insert(dst, used, limits, i, c, v):
 
 
 @njit(nogil=True)
-def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, limits, thresh: float):
+def _copy_nbrs(src: _CSR, dst: _CSR, limits, thresh: float):
     "Copy neighbors into the output matrix."
     used = np.zeros(dst.nrows, dtype=np.int32)
 
@@ -96,7 +98,7 @@ def _sim_block(inb, rmh, min_sim, max_nbrs, nitems):
         _logger.debug('processing block %d:%d (%d nnz)', bsp, bep, rmat.nnz)
 
     if rmat.nnz == 0:
-        return matrix._empty_csr(rmat.nrows, nitems, np.zeros(rmat.nrows, np.int32))
+        return _empty_csr(rmat.nrows, nitems, np.zeros(rmat.nrows, np.int32))
 
     # create a matrix handle for the subset matrix
     amh = _mkl_ops._from_csr(rmat)
@@ -134,10 +136,10 @@ def _sim_block(inb, rmh, min_sim, max_nbrs, nitems):
 
     if bnc == 0:
         # empty resulting matrix, oops
-        return matrix._empty_csr(rmat.nrows, nitems, np.zeros(rmat.nrows, np.int32))
+        return _empty_csr(rmat.nrows, nitems, np.zeros(rmat.nrows, np.int32))
 
     # allocate a matrix
-    block_csr = matrix._empty_csr(bnc, bnr, sizes)
+    block_csr = _empty_csr(bnc, bnr, sizes)
 
     # pass 2: truncate each row into the matrix
     eps = block_csr.rowptrs[:-1].copy()

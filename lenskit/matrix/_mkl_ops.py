@@ -16,7 +16,8 @@ except ImportError:
 
 import numpy as np
 
-from .matrix import CSR, _CSR
+from . import CSR, _impl_mod
+_CSR = _impl_mod()._CSR
 
 _logger = logging.getLogger(__name__)
 __dir = pathlib.Path(__file__).parent

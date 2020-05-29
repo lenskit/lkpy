@@ -6,11 +6,12 @@ from numba import njit, prange
 
 from . import basic
 from .mf_common import BiasMFPredictor, MFPredictor
-from ..matrix import sparse_ratings, _CSR
+from ..matrix import sparse_ratings, _impl_mod
 from .. import util
 from ..math.solve import _dposv
 
 _logger = logging.getLogger(__name__)
+_CSR = _impl_mod()._CSR
 
 PartialModel = namedtuple('PartialModel', [
     'users', 'items',
