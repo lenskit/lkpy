@@ -9,10 +9,8 @@ from numba import njit, types as nt
 try:
     from numba.core.typing import cffi_utils
 except ImportError:
-    try:  # earlier Numba versions have an old module
-        from numba import cffi_utils
-    except ImportError:
-        cffi_utils = None
+    # earlier Numba versions have an old module
+    from numba import cffi_support as cffi_utils
 
 import numpy as np
 

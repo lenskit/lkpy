@@ -12,81 +12,9 @@ except ImportError:
     from numba import jitclass
 
 from ..util.array import swap
+from . import _CSR
 
 _log = logging.getLogger(__name__)
-
-
-class _CSR:
-    """
-    Internal implementation class for :py:class:`CSR`. If you work with CSRs from Numba,
-    you will use this.
-
-    Note that the ``values`` array is always present (unlike the Python shim), but is
-    zero-length if no values are present.  This eases Numba type-checking.
-    """
-    def __init__(self, nrows, ncols, nnz, ptrs, inds, vals):
-        self.nrows = nrows
-        self.ncols = ncols
-        self.nnz = nnz
-        self.rowptrs = ptrs
-        self.colinds = inds
-        if vals is not None:
-            self.values = vals
-        else:
-            self.values = np.zeros(0)
-
-    def subset_rows(self, begin, end):
-        st = self.rowptrs[begin]
-        ed = self.rowptrs[end]
-        rps = self.rowptrs[begin:(end+1)] - st
-
-        cis = self.colinds[st:ed]
-        if self.values.size == 0:
-            vs = self.values
-        else:
-            vs = self.values[st:ed]
-        return _CSR(end - begin, self.ncols, ed - st, rps, cis, vs)
-
-    def row(self, row):
-        sp = self.rowptrs[row]
-        ep = self.rowptrs[row + 1]
-
-        v = np.zeros(self.ncols)
-        cols = self.colinds[sp:ep]
-        if self.values.size == 0:
-            v[cols] = 1
-        else:
-            v[cols] = self.values[sp:ep]
-
-        return v
-
-    def row_extent(self, row):
-        sp = self.rowptrs[row]
-        ep = self.rowptrs[row+1]
-        return (sp, ep)
-
-    def row_cs(self, row):
-        sp = self.rowptrs[row]
-        ep = self.rowptrs[row + 1]
-
-        return self.colinds[sp:ep]
-
-    def row_vs(self, row):
-        sp = self.rowptrs[row]
-        ep = self.rowptrs[row + 1]
-
-        if self.values.size == 0:
-            return np.full(ep - sp, 1.0)
-        else:
-            return self.values[sp:ep]
-
-    def rowinds(self):
-        ris = np.zeros(self.nnz, np.intc)
-        for i in range(self.nrows):
-            sp, ep = self.row_extent(i)
-            ris[sp:ep] = i
-        return ris
-
 
 _CSR64 = type('_CSR64', _CSR.__bases__, dict(_CSR.__dict__))
 _CSR = jitclass({
