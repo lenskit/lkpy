@@ -1,26 +1,31 @@
 import os
 import numpy as np
 import scipy.sparse as sps
-import cffi
 
-from pytest import mark, approx, skip
+from pytest import approx, skip, fixture
 
 import lenskit.matrix as lm
 import lenskit.util.test as lktu
 
-mkl_ops = lm.mkl_ops()
+
+@fixture(scope='module')
+def mkl_ops():
+    ops = lm.mkl_ops()
+    if ops is None:
+        skip('MKL not available')
+    return ops
 
 
 def test_mkl_available():
     if 'CONDA_PREFIX' in os.environ:
-        assert mkl_ops is not None
-        assert mkl_ops.clib is not None
+        ops = lm.mkl_ops()
+        assert ops is not None
+        assert ops.clib is not None
     else:
         skip('only require MKL availability in Conda')
 
 
-@mark.skipif(mkl_ops is None, reason='MKL not available')
-def test_mkl_mult_vec():
+def test_mkl_mult_vec(mkl_ops):
     for i in range(50):
         m = np.random.randint(5, 100)
         n = np.random.randint(5, 100)
@@ -44,8 +49,7 @@ def test_mkl_mult_vec():
         assert y == approx(y2)
 
 
-@mark.skipif(mkl_ops is None, reason='MKL not available')
-def test_mkl_syrk():
+def test_mkl_syrk(mkl_ops):
     for i in range(50):
         M = np.random.randn(10, 5)
         M[M <= 0] = 0
@@ -64,8 +68,7 @@ def test_mkl_syrk():
         assert res == approx(mtm)
 
 
-@mark.skipif(mkl_ops is None, reason='MKL not available')
-def test_mkl_mabt():
+def test_mkl_mabt(mkl_ops):
     for i in range(50):
         A = lktu.rand_csr(20, 10, nnz=50)
         B = lktu.rand_csr(5, 10, nnz=20)

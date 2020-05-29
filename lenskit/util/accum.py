@@ -125,7 +125,7 @@ def _pair_upheap(pos, sp, ks, vs):
         parent = (pos - 1) // 2
 
 
-@njit('int64(int64,int64,int64,int32,float64,int32[:],float64[:])')
+@njit
 def kvp_minheap_insert(sp, ep, limit, k, v, keys, vals):
     """
     Insert a value (with key) into a heap-organized array subset, only keeping the top values.
@@ -164,7 +164,7 @@ def kvp_minheap_insert(sp, ep, limit, k, v, keys, vals):
         return ep
 
 
-@njit('void(int64,int64,int32[:],float64[:])')
+@njit
 def kvp_minheap_sort(sp, ep, keys, vals):
     """
     Sort a heap-organized array subset by decreasing values.

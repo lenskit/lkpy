@@ -7,7 +7,8 @@ Batch-Running Recommenders
 The functions in :py:mod:`lenskit.batch` enable you to generate many recommendations or 
 predictions at the same time, useful for evaluations and experiments.
 
-The batch functions can parallelize over users.
+The batch functions can parallelize over users with the optional ``n_jobs`` parameter, or
+the ``LK_NUM_PROCS`` environment variable.
 
 .. note::
     Scripts calling the batch recommendation or prediction facilites must be *protected*;
@@ -21,9 +22,8 @@ The batch functions can parallelize over users.
         if __name__ == '__main__':
             main()
     
-    This is to ensure compatibility with the parallel processing code, including in future
-    LensKit versions.  If you are using the batch functions from a Jupyter notbook, you
-    should be fine - the Jupyter programs are appropriately protected.
+    If you are using the batch functions from a Jupyter notbook, you should be fine - the
+    Jupyter programs are appropriately protected.
 
 Recommendation
 ~~~~~~~~~~~~~~

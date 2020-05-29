@@ -12,12 +12,12 @@ dependencies:
 - scipy
 # - fastparquet
 - python-snappy
-- numba>=0.38
+- numba>=0.43
+- tbb
 - mkl-devel
 - c-compiler
 - cffi
 - pyarrow
-- joblib
 - coverage 
 - pytest>=3.9
 - pytest-cov

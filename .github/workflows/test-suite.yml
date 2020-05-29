@@ -8,8 +8,8 @@ jobs:
   conda:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}-latest
+    timeout-minutes: 30
     strategy:
-      fail-fast: false
       matrix:
         python:
         - 3.6
@@ -55,6 +55,10 @@ jobs:
       - name: Test LKPY
         run: |
           python -m pytest --cov=lenskit --verbose
+        env:
+          MKL_THREADING_LAYER: tbb
+          NUMBA_NUM_THREADS: 4
+          MKL_NUM_THREADS: 1
       
       - name: Non-JIT Test Coverage
         if: runner.os == 'Linux'

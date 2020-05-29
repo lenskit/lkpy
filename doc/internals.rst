@@ -7,3 +7,4 @@ code directly.
 
 .. toctree::
     sharing
+    parallel

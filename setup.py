@@ -21,12 +21,12 @@ class BuildHelperCommand(Command):
         cc = ccompiler.new_compiler()
         sysconfig.customize_compiler(cc)
 
-        dir = Path('lenskit')
+        m_dir = Path('lenskit') / 'matrix'
 
-        mkl_src = dir / 'mkl_ops.c'
+        mkl_src = m_dir / 'mkl_ops.c'
         mkl_obj = cc.object_filenames([os.fspath(mkl_src)])
         mkl_so = cc.shared_object_filename('mkl_ops')
-        mkl_so = dir / mkl_so
+        mkl_so = m_dir / mkl_so
 
         if mkl_so.exists():
             src_mt = mkl_src.stat().st_mtime

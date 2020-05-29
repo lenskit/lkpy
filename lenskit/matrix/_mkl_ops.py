@@ -9,14 +9,13 @@ from numba import njit, types as nt
 try:
     from numba.core.typing import cffi_utils
 except ImportError:
-    try:  # earlier Numba versions have an old module
-        from numba import cffi_utils
-    except ImportError:
-        cffi_utils = None
+    # earlier Numba versions have an old module
+    from numba import cffi_support as cffi_utils
 
 import numpy as np
 
-from .matrix import CSR, _CSR
+from . import CSR, _impl_mod
+_CSR = _impl_mod()._CSR
 
 _logger = logging.getLogger(__name__)
 __dir = pathlib.Path(__file__).parent

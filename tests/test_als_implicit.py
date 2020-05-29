@@ -79,10 +79,9 @@ def test_als_train_large(m):
     assert algo.item_features_.shape == (ratings.item.nunique(), 20)
 
 
-@methods
-def test_als_save_load(m):
+def test_als_save_load():
     "Test saving and loading ALS models, and regularized training."
-    algo = als.ImplicitMF(5, iterations=5, reg=(2, 1), method=m)
+    algo = als.ImplicitMF(5, iterations=5, reg=(2, 1))
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 

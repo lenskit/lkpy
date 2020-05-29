@@ -1,8 +1,7 @@
 import numpy as np
 from scipy import stats
 
-from lenskit.util import Accumulator
-from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
+from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort, Accumulator
 from lenskit.util.test import repeated
 
 

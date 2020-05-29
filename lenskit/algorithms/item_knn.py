@@ -19,6 +19,8 @@ from . import Predictor
 
 _logger = logging.getLogger(__name__)
 _mkl_ops = matrix.mkl_ops()
+_empty_csr = matrix._impl_mod()._empty_csr
+_subset_rows = matrix._impl_mod()._subset_rows
 
 if _mkl_ops is not None:
     # we have to import LK CFFI utils into this module
@@ -96,7 +98,7 @@ def _sim_block(inb, rmh, min_sim, max_nbrs, nitems):
         _logger.debug('processing block %d:%d (%d nnz)', bsp, bep, rmat.nnz)
 
     if rmat.nnz == 0:
-        return matrix._empty_csr(rmat.nrows, nitems, np.zeros(rmat.nrows, np.int32))
+        return _empty_csr(rmat.nrows, nitems, np.zeros(rmat.nrows, np.int32))
 
     # create a matrix handle for the subset matrix
     amh = _mkl_ops._from_csr(rmat)
@@ -134,10 +136,10 @@ def _sim_block(inb, rmh, min_sim, max_nbrs, nitems):
 
     if bnc == 0:
         # empty resulting matrix, oops
-        return matrix._empty_csr(rmat.nrows, nitems, np.zeros(rmat.nrows, np.int32))
+        return _empty_csr(rmat.nrows, nitems, np.zeros(rmat.nrows, np.int32))
 
     # allocate a matrix
-    block_csr = matrix._empty_csr(bnc, bnr, sizes)
+    block_csr = _empty_csr(bnc, bnr, sizes)
 
     # pass 2: truncate each row into the matrix
     eps = block_csr.rowptrs[:-1].copy()
@@ -171,7 +173,7 @@ def _mkl_sim_blocks(trmat, min_sim, max_nbrs):
     _lk_mkl_sporder(rmat_h)
     _lk_mkl_spopt(rmat_h)
 
-    blocks = [(trmat.subset_rows(blk_sp[bi], blk_ep[bi]), blk_sp[bi], blk_ep[bi])
+    blocks = [(_subset_rows(trmat, blk_sp[bi], blk_ep[bi]), blk_sp[bi], blk_ep[bi])
               for bi in range(nblocks)]
 
     for bi in prange(nblocks):

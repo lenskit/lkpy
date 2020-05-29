@@ -6,7 +6,6 @@ import gzip
 
 import pandas as pd
 import numpy as np
-import joblib
 
 from lenskit.util.test import ml_test
 from lenskit import batch, crossfold as xf
@@ -17,7 +16,7 @@ from pytest import mark
 
 
 @mark.slow
-@mark.parametrize('ncpus', [None, 2])
+@mark.parametrize('ncpus', [None, 1, 2])
 def test_sweep_bias(tmp_path, ncpus):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, eval_n_jobs=ncpus)
@@ -98,7 +97,7 @@ def test_sweep_norecs(tmp_path):
 @mark.slow
 def test_sweep_nopreds(tmp_path):
     work = pathlib.Path(tmp_path)
-    sweep = batch.MultiEval(tmp_path, eval_n_jobs=2)
+    sweep = batch.MultiEval(tmp_path, eval_n_jobs=1)
 
     ratings = ml_test.ratings
     folds = [(train, test.drop(columns=['rating']))
@@ -375,7 +374,7 @@ def test_sweep_combine(tmp_path):
 
 
 @mark.slow
-@mark.parametrize("format", [True, 'gzip', 'joblib'])
+@mark.parametrize("format", [True, 'gzip'])
 def test_save_models(tmp_path, format):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, save_models=format)
@@ -406,10 +405,6 @@ def test_save_models(tmp_path, format):
             assert fn.exists()
             with gzip.open(fspath(fn), 'rb') as f:
                 algo = pickle.load(f)
-        elif format == 'joblib':
-            fn = fn.with_suffix('.jlpkl')
-            assert fn.exists()
-            algo = joblib.load(fn)
         else:
             assert False
 

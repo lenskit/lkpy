@@ -104,7 +104,7 @@ def test_predict_include_rating(mlb):
 
 @pytest.mark.skipif(not lktu.ml100k.available, reason='ML-100K required')
 @pytest.mark.eval
-@pytest.mark.parametrize('ncpus', [None, 2])
+@pytest.mark.parametrize('ncpus', [None, 1, 2])
 def test_bias_batch_predict(ncpus):
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
