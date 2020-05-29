@@ -12,7 +12,8 @@ dependencies:
 - scipy
 # - fastparquet
 - python-snappy
-- numba>=0.38
+- numba>=0.43
+- tbb
 - mkl-devel
 - c-compiler
 - cffi
