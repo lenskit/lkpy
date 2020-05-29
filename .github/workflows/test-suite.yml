@@ -8,8 +8,8 @@ jobs:
   conda:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}-latest
+    timeout-minutes: 30
     strategy:
-      fail-fast: false
       matrix:
         python:
         - 3.6
