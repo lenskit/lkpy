@@ -9,7 +9,6 @@ import multiprocessing as mp
 
 from ..algorithms import Algorithm
 from .files import *
-from .accum import Accumulator
 from .timing import Stopwatch
 from .data import read_df_detect
 from .random import rng, init_rng, derivable_rng
