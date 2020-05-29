@@ -130,7 +130,7 @@ def test_recommend_no_cands(mlb):
     assert len(merged) == 0
 
 
-@pytest.mark.parametrize('ncpus', [None, 2])
+@pytest.mark.parametrize('ncpus', [None, 1, 2])
 @pytest.mark.eval
 def test_bias_batch_recommend(ml_folds: MLFolds, ncpus):
     algo = Bias(damping=5)
@@ -141,7 +141,7 @@ def test_bias_batch_recommend(ml_folds: MLFolds, ncpus):
     ml_folds.check_positive_ndcg(recs)
 
 
-@pytest.mark.parametrize('ncpus', [None, 2])
+@pytest.mark.parametrize('ncpus', [None, 1, 2])
 @pytest.mark.eval
 def test_pop_batch_recommend(ml_folds: MLFolds, ncpus):
     algo = Popular()
