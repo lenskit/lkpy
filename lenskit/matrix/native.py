@@ -161,3 +161,17 @@ def _empty_csr(nrows, ncols, sizes):
     colinds = np.full(nnz, -1, dtype=np.intc)
     values = np.full(nnz, np.nan)
     return _CSR(nrows, ncols, nnz, rowptrs, colinds, values)
+
+
+@njit
+def _subset_rows(csr, begin, end):
+    st = csr.rowptrs[begin]
+    ed = csr.rowptrs[end]
+    rps = csr.rowptrs[begin:(end+1)] - st
+
+    cis = csr.colinds[st:ed]
+    if csr.values.size == 0:
+        vs = csr.values
+    else:
+        vs = csr.values[st:ed]
+    return _CSR(end - begin, csr.ncols, ed - st, rps, cis, vs)

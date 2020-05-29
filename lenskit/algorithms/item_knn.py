@@ -20,7 +20,7 @@ from . import Predictor
 _logger = logging.getLogger(__name__)
 _mkl_ops = matrix.mkl_ops()
 _empty_csr = matrix._impl_mod()._empty_csr
-_CSR = matrix._impl_mod()._CSR
+_subset_rows = matrix._impl_mod()._subset_rows
 
 if _mkl_ops is not None:
     # we have to import LK CFFI utils into this module
@@ -39,7 +39,7 @@ def _make_blocks(n, size):
 
 
 @njit(nogil=True)
-def _count_nbrs(mat: _CSR, thresh: float):
+def _count_nbrs(mat: matrix._CSR, thresh: float):
     "Count the number of neighbors passing the threshold for each row."
     counts = np.zeros(mat.nrows, dtype=np.int32)
     cs = mat.colinds
@@ -65,7 +65,7 @@ def _insert(dst, used, limits, i, c, v):
 
 
 @njit(nogil=True)
-def _copy_nbrs(src: _CSR, dst: _CSR, limits, thresh: float):
+def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, limits, thresh: float):
     "Copy neighbors into the output matrix."
     used = np.zeros(dst.nrows, dtype=np.int32)
 
@@ -173,7 +173,7 @@ def _mkl_sim_blocks(trmat, min_sim, max_nbrs):
     _lk_mkl_sporder(rmat_h)
     _lk_mkl_spopt(rmat_h)
 
-    blocks = [(trmat.subset_rows(blk_sp[bi], blk_ep[bi]), blk_sp[bi], blk_ep[bi])
+    blocks = [(_subset_rows(trmat, blk_sp[bi], blk_ep[bi]), blk_sp[bi], blk_ep[bi])
               for bi in range(nblocks)]
 
     for bi in prange(nblocks):
