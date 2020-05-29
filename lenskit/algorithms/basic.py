@@ -2,7 +2,6 @@
 Basic utility algorithms and combiners.
 """
 
-import sys
 import logging
 from collections.abc import Iterable, Sequence
 

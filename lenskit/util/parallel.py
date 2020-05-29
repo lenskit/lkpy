@@ -3,6 +3,7 @@ Utilities for parallel processing.
 """
 
 import os
+import sys
 import multiprocessing as mp
 import functools as ft
 import logging
@@ -71,10 +72,26 @@ class LKContext(mp.context.SpawnContext):
 LKContext.INSTANCE = LKContext()
 
 
+class log_imp:
+    _log = logging.getLogger('import')
+
+    def find_module(self, name, path):
+        self._log.info('importing %s (path=%s)', name, path)
+        return None
+
+
 def _initialize_worker(mkey, func):
     global __work_model, __work_func, __profile
     __work_model = mkey
     __work_func = func
+    pid = os.getpid()
+    h = logging.FileHandler(f'worker-{pid}.log')
+    h.setLevel(logging.DEBUG)
+    h.setFormatter(logging.Formatter('%(levelname)s %(name)s %(message)s'))
+    root = logging.getLogger()
+    root.addHandler(h)
+    root.setLevel(logging.DEBUG)
+    sys.meta_path.insert(0, log_imp())
 
 
 def _proc_worker(*args):

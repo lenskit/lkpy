@@ -10,9 +10,6 @@ classes (:py:mod:`abc`) representing different algorithm capabilities.
 from abc import ABCMeta, abstractmethod
 import inspect
 
-import pandas as pd
-import numpy as np
-
 
 class Algorithm(metaclass=ABCMeta):
     """
@@ -196,6 +193,8 @@ class CandidateSelector(Algorithm, metaclass=ABCMeta):
         Utility function for converting a series or array into an array of item
         IDs.  Useful in implementations of :py:meth:`candidates`.
         """
+        import pandas as pd
+        import numpy as np
         if isinstance(ratings, pd.Series):
             return ratings.index.values
         elif isinstance(ratings, np.ndarray):

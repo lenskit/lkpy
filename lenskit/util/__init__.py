@@ -2,10 +2,8 @@
 Miscellaneous utility functions.
 """
 
-import os
 import logging
 from copy import deepcopy
-import multiprocessing as mp
 
 from ..algorithms import Algorithm
 from .files import *

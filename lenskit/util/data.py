@@ -2,15 +2,8 @@
 Data utilities
 """
 
-import os
-import os.path
 import logging
 import pathlib
-import warnings
-
-import pandas as pd
-
-from ..datasets import MovieLens
 
 try:
     import fastparquet
@@ -31,6 +24,7 @@ def read_df_detect(path):
         File has suffix ``.parquet``, ``.parq``, or ``.pq``, read with
         :py:func:`pandas.read_parquet`.
     """
+    import pandas as pd
     if not isinstance(path, pathlib.Path):
         path = pathlib.Path(path)
 
