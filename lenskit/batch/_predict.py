@@ -72,7 +72,7 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
         del algo  # maybe free some memory
 
         _logger.info('generating %d predictions for %d users', len(pairs), nusers)
-        results = worker.map(pairs.groupby('user'))
+        results = worker.map((user, udf.copy()) for (user, udf) in pairs.groupby('user'))
         results = pd.concat(results)
 
     if 'rating' in pairs:
