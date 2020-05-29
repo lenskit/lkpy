@@ -145,6 +145,7 @@ class BPKPersisted(PersistedModel):
 
     def get(self):
         if self._bpk_file is None:
+            _log.debug('loading file %s', self.path)
             self._bpk_file = binpickle.BinPickleFile(self.path, direct=True)
             self._model = self._bpk_file.load()
         return self._model
