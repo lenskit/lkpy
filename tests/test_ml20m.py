@@ -33,9 +33,10 @@ def ml20m():
         pytest.skip('ML-20M not available')
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize('n_jobs', [1, 2])
 def test_pop_recommend(ml20m, rng, n_jobs):
-    users = rng.choose(ml20m['user'].unique(), 10000)
+    users = rng.choice(ml20m['user'].unique(), 10000, replace=False)
     algo = Popular()
     _log.info('training %s', algo)
     algo.fit(ml20m)
