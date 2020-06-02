@@ -3,13 +3,13 @@ from lenskit import util as lku
 
 import logging
 import pickle
+import binpickle
 
 import pandas as pd
 import numpy as np
 
 from pytest import approx
 
-import lenskit.util.test as lktu
 from lenskit.util.test import ml_test
 
 _log = logging.getLogger(__name__)
@@ -244,6 +244,32 @@ def test_bias_save():
     _log.info('serialized to %d bytes', len(mod))
 
     algo = pickle.loads(mod)
+
+    assert algo.mean_ == original.mean_
+
+    assert algo.item_offsets_ is not None
+    assert algo.item_offsets_.index.name == 'item'
+    assert set(algo.item_offsets_.index) == set([1, 2, 3])
+    assert algo.item_offsets_.loc[1:3].values == approx(np.array([0, 0.25, -0.25]))
+
+    assert algo.user_offsets_ is not None
+    assert algo.user_offsets_.index.name == 'user'
+    assert set(algo.user_offsets_.index) == set([10, 12, 13])
+    assert algo.user_offsets_.loc[[10, 12, 13]].values == \
+        approx(np.array([0.25, -00.08333, -0.20833]), abs=1.0e-4)
+
+
+def test_bias_binpickle(tmp_path):
+    original = bl.Bias(damping=5)
+    original.fit(simple_df)
+    assert original.mean_ == approx(3.5)
+
+    _log.info('saving baseline model')
+    fn = tmp_path / 'bias.bpk'
+    mod = binpickle.dump(original, fn)
+    _log.info('serialized to %d bytes', len(mod))
+
+    algo = binpickle.load(fn)
 
     assert algo.mean_ == original.mean_
 
