@@ -41,6 +41,18 @@ best with the MKL from Conda.
     :show-inheritance:
     :members:
 
+SciKit SVD
+----------
+
+.. module:: lenskit.algorithms.svd
+
+This code implements a traditional SVD using scikit-learn.  It requires ``scikit-learn`` to
+be installed in order to function.
+
+.. autoclass:: BiasedSVD
+    :show-inheritance:
+    :members:
+
 FunkSVD
 -------
 
