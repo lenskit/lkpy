@@ -10,6 +10,7 @@ dependencies:
 - pandas>=0.24
 - numpy
 - scipy
+- scikit-learn
 # - fastparquet
 - python-snappy
 - numba>=0.43
