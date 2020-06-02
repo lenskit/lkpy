@@ -65,10 +65,10 @@ class Bias(Predictor):
             self.user_damping = damping
             self.item_damping = damping
 
-        check.check_value(self.user_damping >= 0, "user damping value {} must be nonnegative",
-                          self.user_damping)
-        check.check_value(self.item_damping >= 0, "item damping value {} must be nonnegative",
-                          self.item_damping)
+        if self.user_damping < 0:
+            raise ValueError("user damping must be non-negative")
+        if self.item_damping < 0:
+            raise ValueError("item damping must be non-negative")
 
     def fit(self, ratings, **kwargs):
         """

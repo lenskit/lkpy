@@ -1,4 +1,4 @@
-import lenskit.algorithms.basic as bl
+from lenskit.algorithms.basic import Bias
 from lenskit import util as lku
 
 import logging
@@ -8,7 +8,7 @@ import binpickle
 import pandas as pd
 import numpy as np
 
-from pytest import approx
+from pytest import approx, raises
 
 from lenskit.util.test import ml_test
 
@@ -19,8 +19,22 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
                           'rating': [4.0, 3.0, 5.0, 2.0]})
 
 
+def test_bias_check_arguments():
+    # negative damping is not allowed
+    with raises(ValueError):
+        Bias(damping=-1)
+
+    # negative user damping not allowed
+    with raises(ValueError):
+        Bias(damping=(-1, 5))
+
+    # negative user damping not allowed
+    with raises(ValueError):
+        Bias(damping=(5, -1))
+
+
 def test_bias_full():
-    algo = bl.Bias()
+    algo = Bias()
     algo.fit(simple_df)
     assert algo.mean_ == approx(3.5)
 
@@ -36,7 +50,7 @@ def test_bias_full():
 
 
 def test_bias_clone():
-    algo = bl.Bias()
+    algo = Bias()
     algo.fit(simple_df)
 
     params = algo.get_params()
@@ -50,7 +64,7 @@ def test_bias_clone():
 
 
 def test_bias_global_only():
-    algo = bl.Bias(users=False, items=False)
+    algo = Bias(users=False, items=False)
     algo.fit(simple_df)
     assert algo.mean_ == approx(3.5)
     assert algo.item_offsets_ is None
@@ -58,7 +72,7 @@ def test_bias_global_only():
 
 
 def test_bias_no_user():
-    algo = bl.Bias(users=False)
+    algo = Bias(users=False)
     algo.fit(simple_df)
     assert algo.mean_ == approx(3.5)
 
@@ -71,7 +85,7 @@ def test_bias_no_user():
 
 
 def test_bias_no_item():
-    algo = bl.Bias(items=False)
+    algo = Bias(items=False)
     algo.fit(simple_df)
     assert algo.mean_ == approx(3.5)
     assert algo.item_offsets_ is None
@@ -83,7 +97,7 @@ def test_bias_no_item():
 
 
 def test_bias_global_predict():
-    algo = bl.Bias(items=False, users=False)
+    algo = Bias(items=False, users=False)
     algo.fit(simple_df)
     p = algo.predict_for_user(10, [1, 2, 3])
 
@@ -93,7 +107,7 @@ def test_bias_global_predict():
 
 
 def test_bias_item_predict():
-    algo = bl.Bias(users=False)
+    algo = Bias(users=False)
     algo.fit(simple_df)
     p = algo.predict_for_user(10, [1, 2, 3])
 
@@ -102,7 +116,7 @@ def test_bias_item_predict():
 
 
 def test_bias_user_predict():
-    algo = bl.Bias(items=False)
+    algo = Bias(items=False)
     algo.fit(simple_df)
     p = algo.predict_for_user(10, [1, 2, 3])
 
@@ -116,7 +130,7 @@ def test_bias_user_predict():
 
 
 def test_bias_new_user_predict():
-    algo = bl.Bias()
+    algo = Bias()
     algo.fit(simple_df)
 
     ratings = pd.DataFrame({'item': [1, 2, 3], 'rating': [1.5, 2.5, 3.5]})
@@ -132,7 +146,7 @@ def test_bias_new_user_predict():
 
 
 def test_bias_predict_unknown_item():
-    algo = bl.Bias()
+    algo = Bias()
     algo.fit(simple_df)
 
     p = algo.predict_for_user(10, [1, 3, 4])
@@ -144,7 +158,7 @@ def test_bias_predict_unknown_item():
 
 
 def test_bias_predict_unknown_user():
-    algo = bl.Bias()
+    algo = Bias()
     algo.fit(simple_df)
 
     p = algo.predict_for_user(15, [1, 3])
@@ -154,7 +168,7 @@ def test_bias_predict_unknown_user():
 
 
 def test_bias_train_ml_ratings():
-    algo = bl.Bias()
+    algo = Bias()
     ratings = ml_test.ratings
     algo.fit(ratings)
 
@@ -174,7 +188,7 @@ def test_bias_train_ml_ratings():
 
 
 def test_bias_item_damp():
-    algo = bl.Bias(users=False, damping=5)
+    algo = Bias(users=False, damping=5)
     algo.fit(simple_df)
     assert algo.mean_ == approx(3.5)
 
@@ -187,7 +201,7 @@ def test_bias_item_damp():
 
 
 def test_bias_user_damp():
-    algo = bl.Bias(items=False, damping=5)
+    algo = Bias(items=False, damping=5)
     algo.fit(simple_df)
     assert algo.mean_ == approx(3.5)
     assert algo.item_offsets_ is None
@@ -200,7 +214,7 @@ def test_bias_user_damp():
 
 
 def test_bias_damped():
-    algo = bl.Bias(damping=5)
+    algo = Bias(damping=5)
     algo.fit(simple_df)
     assert algo.mean_ == approx(3.5)
 
@@ -217,7 +231,7 @@ def test_bias_damped():
 
 
 def test_bias_separate_damping():
-    algo = bl.Bias(damping=(5, 10))
+    algo = Bias(damping=(5, 10))
     algo.fit(simple_df)
     assert algo.mean_ == approx(3.5)
 
@@ -235,7 +249,7 @@ def test_bias_separate_damping():
 
 
 def test_bias_save():
-    original = bl.Bias(damping=5)
+    original = Bias(damping=5)
     original.fit(simple_df)
     assert original.mean_ == approx(3.5)
 
@@ -260,15 +274,13 @@ def test_bias_save():
 
 
 def test_bias_binpickle(tmp_path):
-    original = bl.Bias(damping=5)
+    original = Bias(damping=5)
     original.fit(simple_df)
     assert original.mean_ == approx(3.5)
 
     _log.info('saving baseline model')
     fn = tmp_path / 'bias.bpk'
-    mod = binpickle.dump(original, fn)
-    _log.info('serialized to %d bytes', len(mod))
-
+    binpickle.dump(original, fn)
     algo = binpickle.load(fn)
 
     assert algo.mean_ == original.mean_
