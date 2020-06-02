@@ -8,7 +8,6 @@ from collections.abc import Iterable, Sequence
 import pandas as pd
 import numpy as np
 
-from .. import check
 from ..matrix import sparse_ratings
 from . import Predictor, Recommender, CandidateSelector
 from ..util import derivable_rng
