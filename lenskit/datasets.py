@@ -217,7 +217,7 @@ class ML100K:
         """
         Return the rating data (from ``u.data``).
 
-        >>> ml = ML100K('ml-100k')
+        >>> ml = ML100K()
         >>> ml.ratings
                user  item  rating  timestamp
         0       196   242     3.0  881250949
@@ -241,7 +241,7 @@ class ML100K:
         """
         Return the user data (from ``u.user``).
 
-        >>> ml = ML100K('ml-100k')
+        >>> ml = ML100K()
         >>> ml.users
               age gender     occupation     zip
         user
@@ -266,7 +266,7 @@ class ML100K:
         """
         Return the user data (from ``u.user``).
 
-        >>> ml = ML100K('ml-100k')
+        >>> ml = ML100K()
         >>> ml.movies
                                                   title      release  ...  War Western
         item                                                          ...

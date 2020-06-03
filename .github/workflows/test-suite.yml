@@ -44,35 +44,19 @@ jobs:
           path: |
             ml-100k
             data
+            !data/*.zip
         key: ${{runner.os}}-mldata
       
       - name: Download ML-100K
         shell: bash
         run: |
-          if [ ! -r ml-100k/u.data ]; then
-            wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
-            unzip ml-100k.zip
-          fi
+          /bin/bash fetch-datasets.sh ml-100k
         
       - name: Download Other ML
         if: runner.os == 'Linux' && matrix.python == 3.8
         shell: bash
-          cd data
-          if [ ! -r ml-1m/ratings.dat ]; then
-            wget --no-verbose -O ml-1m.zip http://files.grouplens.org/datasets/movielens/ml-1m.zip
-            unzip ml-1m.zip
-            rm ml-1m.zip
-          fi
-          if [ ! -r ml-10M100K/ratings.dat ]; then
-            wget --no-verbose -O ml-10m.zip http://files.grouplens.org/datasets/movielens/ml-10m.zip
-            unzip ml-10m.zip
-            rm ml-10m.zip
-          fi
-          if [ ! -r ml-20m/ratings.csv ]; then
-            wget --no-verbose -O ml-20m.zip http://files.grouplens.org/datasets/movielens/ml-20m.zip
-            unzip ml-20m.zip
-            rm ml-20m.zip
-          fi
+        run: |
+          /bin/bash fetch-datasets.sh ml-1m ml-10m ml-20m
       
       - name: Build LKPY
         run: |
@@ -103,7 +87,7 @@ jobs:
       - name: Validate Documentation Examples
         if: runner.os == 'Linux'
         run: |
-          cp -r ml-100k doc
+          cp -r data/ml-100k doc
           cp -r ml-latest-small doc
           export PYTHONPATH="$PWD"
           python -m pytest --nbval-lax doc
