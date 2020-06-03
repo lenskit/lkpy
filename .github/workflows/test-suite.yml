@@ -37,13 +37,41 @@ jobs:
           python -V
           conda info
           numba -s
+
+      - name: Cache ML data
+        uses: action/cache@v2
+        with:
+          path: |
+            ml-100k
+            data
+        key: ${{runner.os}}-mldata
       
       - name: Download ML-100K
-        if: runner.os != 'Windows'
+        shell: bash
         run: |
           if [ ! -r ml-100k/u.data ]; then
             wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
             unzip ml-100k.zip
+          fi
+        
+      - name: Download Other ML
+        if: runner.os == 'Linux' && matrix.python == 3.8
+        shell: bash
+          cd data
+          if [ ! -r ml-1m/ratings.dat ]; then
+            wget --no-verbose -O ml-1m.zip http://files.grouplens.org/datasets/movielens/ml-1m.zip
+            unzip ml-1m.zip
+            rm ml-1m.zip
+          fi
+          if [ ! -r ml-10M100K/ratings.dat ]; then
+            wget --no-verbose -O ml-10m.zip http://files.grouplens.org/datasets/movielens/ml-10m.zip
+            unzip ml-10m.zip
+            rm ml-10m.zip
+          fi
+          if [ ! -r ml-20m/ratings.csv ]; then
+            wget --no-verbose -O ml-20m.zip http://files.grouplens.org/datasets/movielens/ml-20m.zip
+            unzip ml-20m.zip
+            rm ml-20m.zip
           fi
       
       - name: Build LKPY

@@ -18,7 +18,7 @@ import pytest
 
 _log = logging.getLogger(__name__)
 
-_ml_path = Path('ml-20m')
+_ml_path = Path('data/ml-20m')
 if _ml_path.exists():
     _ml_20m = MovieLens(_ml_path)
 else:

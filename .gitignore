@@ -20,7 +20,8 @@ htmlcov/
 .doit.db*
 ml-100k
 doc/ml-latest-small
-ml-20m
+ml-*/
+ml-*.zip
 my-eval/
 *.pyd
 *.so
