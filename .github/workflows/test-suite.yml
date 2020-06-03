@@ -28,9 +28,9 @@ jobs:
           env-file: environment.yml
           python-version: ${{matrix.python}}
 
-      - name: Remove unusable Mac packages
-        if: runner.os == 'macOS'
-        run: conda remove -qy hpfrec || true
+      - name: Install add-on packages
+        if: runner.os == 'Linux' && matrix.python == 3.8
+        run: conda install -qy implicit hpfrec
 
       - name: Inspect environment
         run: |
