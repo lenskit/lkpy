@@ -45,7 +45,7 @@ jobs:
             ml-100k
             data
             !data/*.zip
-        key: ${{runner.os}}-mldata
+          key: ${{runner.os}}-mldata
       
       - name: Download ML-100K
         shell: bash
