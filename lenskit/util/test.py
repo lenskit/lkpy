@@ -5,7 +5,6 @@ Test utilities for LKPY tests.
 import os
 import os.path
 import logging
-from contextlib import contextmanager
 
 import numpy as np
 from .. import matrix

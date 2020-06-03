@@ -6,10 +6,10 @@ import logging
 from copy import deepcopy
 
 from ..algorithms import Algorithm
-from .timing import Stopwatch
-from .data import read_df_detect
-from .random import rng, init_rng, derivable_rng
-from .parallel import proc_count
+from .timing import Stopwatch  # noqa: F401
+from .data import read_df_detect  # noqa: F401
+from .random import rng, init_rng, derivable_rng  # noqa: F401
+from .parallel import proc_count  # noqa: F401
 
 try:
     import resource

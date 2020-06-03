@@ -2,13 +2,7 @@
 Accumulator support.
 """
 
-import numpy as np
-from numba import njit, int32, double
-try:
-    from numba.experimental import jitclass
-except ImportError:
-    from numba import jitclass
-
+from numba import njit
 from .array import swap
 
 
