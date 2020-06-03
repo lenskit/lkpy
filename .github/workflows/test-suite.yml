@@ -30,7 +30,7 @@ jobs:
 
       - name: Install add-on packages
         if: runner.os == 'Linux' && matrix.python == 3.8
-        run: conda install -qy implicit hpfrec
+        run: conda install -qy -c conda-forge -c lenskit implicit hpfrec
 
       - name: Inspect environment
         run: |
