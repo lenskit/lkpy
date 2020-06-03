@@ -39,7 +39,7 @@ jobs:
           numba -s
 
       - name: Cache ML data
-        uses: action/cache@v2
+        uses: actions/cache@v2
         with:
           path: |
             ml-100k
