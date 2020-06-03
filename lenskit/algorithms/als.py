@@ -36,7 +36,6 @@ def _rr_solve(X, xis, y, w, reg, epochs):
         w(ndarray): Input/output vector to solve.
     """
 
-    nr = len(xis)
     nd = len(w)
     Xt = X.T[:, xis]
     resid = w @ Xt
