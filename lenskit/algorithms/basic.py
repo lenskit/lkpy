@@ -107,11 +107,24 @@ class Bias(Predictor):
 
         return self
 
-    def transform(self, ratings):
+    def transform(self, ratings, *, indexes=False):
         """
         Transform ratings by removing the bias term.
+
+        Args:
+            ratings(pandas.DataFrame):
+                The ratings to transform.  Must contain at least ``user``, ``item``, and
+                ``rating`` columns.
+            indexes(bool):
+                if ``True``, the resulting frame will include ``uidx`` and ``iidx``
+                columns containing the 0-based user and item indexes for each rating.
+
+        Returns:
+            pandas.DataFrame:
+                A data frame with ``rating`` transformed by subtracting
+                user-item bias prediction.
         """
-        rvps = ratings[['user', 'item']]
+        rvps = ratings[['user', 'item']].copy()
         rvps['rating'] = ratings['rating'] - self.mean_
         if self.item_offsets_ is not None:
             rvps = rvps.join(self.item_offsets_, on='item', how='left')
@@ -119,6 +132,9 @@ class Bias(Predictor):
         if self.user_offsets_ is not None:
             rvps = rvps.join(self.user_offsets_, on='item', how='left')
             rvps['rating'] -= rvps['u_off'].fillna(0)
+        if indexes:
+            rvps['uidx'] = self.user_offsets_.index.get_indexer(rvps['user'])
+            rvps['iidx'] = self.item_offsets_.index.get_indexer(rvps['item'])
         return rvps.drop(columns=['u_off', 'i_off'])
 
     def inverse_transform(self, ratings):
@@ -135,9 +151,12 @@ class Bias(Predictor):
             rvps['rating'] += rvps['u_off'].fillna(0)
         return rvps.drop(columns=['u_off', 'i_off'])
 
-    def fit_transform(self, ratings):
+    def fit_transform(self, ratings, **kwargs):
+        """
+        Fit with ratings and return the training data transformed.
+        """
         self.fit(ratings)
-        return self.transform(ratings)
+        return self.transform(ratings, **kwargs)
 
     def predict_for_user(self, user, items, ratings=None):
         """
@@ -173,6 +192,16 @@ class Bias(Predictor):
             preds = preds + umean
 
         return preds
+
+    @property
+    def user_index(self):
+        "Get the user index from this (fit) bias."
+        return self.user_offsets_.index
+
+    @property
+    def item_index(self):
+        "Get the item index from this (fit) bias."
+        return self.item_offsets_.index
 
     def _mean(self, series, damping):
         if damping is not None and damping > 0:

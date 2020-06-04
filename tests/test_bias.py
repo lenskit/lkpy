@@ -96,6 +96,13 @@ def test_bias_no_item():
     assert algo.user_offsets_.loc[[10, 12, 13]].values == approx(np.array([1.0, -0.5, -1.5]))
 
 
+def test_bias_index_props():
+    algo = Bias()
+    algo.fit(simple_df)
+    assert all(np.sort(algo.user_index) == np.unique(simple_df['user']))
+    assert all(np.sort(algo.item_index) == np.unique(simple_df['item']))
+
+
 def test_bias_global_predict():
     algo = Bias(items=False, users=False)
     algo.fit(simple_df)
@@ -195,6 +202,20 @@ def test_bias_transform():
 
     assert all(normed['user'] == ratings['user'])
     assert all(normed['item'] == ratings['item'])
+    denorm = algo.inverse_transform(normed)
+    assert approx(denorm['rating'] == ratings['rating'], 1.0e-6)
+
+
+def test_bias_transform_indexes():
+    algo = Bias()
+    ratings = ml_test.ratings
+
+    normed = algo.fit_transform(ratings, indexes=True)
+
+    assert all(normed['user'] == ratings['user'])
+    assert all(normed['item'] == ratings['item'])
+    assert all(normed['uidx'] == algo.user_offsets_.index.get_indexer(ratings['user']))
+    assert all(normed['iidx'] == algo.item_offsets_.index.get_indexer(ratings['item']))
     denorm = algo.inverse_transform(normed)
     assert approx(denorm['rating'] == ratings['rating'], 1.0e-6)
 
