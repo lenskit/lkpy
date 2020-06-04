@@ -7,7 +7,7 @@ fetch_movielens()
     testfile="$1"; shift
 
     echo "checking for $testfile"
-    if [! -r "$testfile" ]; then
+    if [ ! -r "$testfile" ]; then
         echo "downloading $zipfile"
         wget --no-verbose -O $zipfile http://files.grouplens.org/datasets/movielens/$zipfile
         unzip $zipfile
