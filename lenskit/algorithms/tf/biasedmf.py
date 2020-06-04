@@ -8,6 +8,7 @@ import tensorflow.keras as k
 from lenskit import util
 from ..mf_common import BiasMFPredictor
 from ..basic import Bias
+from .util import make_graph
 
 _log = logging.getLogger(__name__)
 
@@ -23,6 +24,17 @@ class BiasedMF(BiasMFPredictor):
     .. math::
         s(i|u) = b + b_u + b_i + \\vec{p}_u \\cdot \\vec{q_i}
 
+    User and item embedding matrices are regularized with :math:`L_2` regularization,
+    governed by a regularization term :math:`\\lambda`.  Regularizations for the user
+    and item embeddings are then computed as follows:
+
+    .. math::
+        \\lambda_u = \\lambda / |U| \\\\
+        \\lambda_i = \\lambda / |I| \\\\
+
+    This rescaling allows the regularization term to be independent of the number of
+    users and items.
+
     Because the model is very simple, this algorithm works best with large
     batch sizes.
 
@@ -36,6 +48,18 @@ class BiasedMF(BiasMFPredictor):
     A variety of resources informed the design, most notably `this one`_.
 
     .. _this one:: https://towardsdatascience.com/building-a-book-recommendation-system-using-keras-1fba34180699
+
+    Args:
+        features(int): The number of latent features to learn.
+        bias: The bias model to use.
+        damping: The bias damping, if ``bias`` is ``True``.
+        epochs(int): The number of epochs to train.
+        batch_size(int): The Keras batch size.
+        reg(double):
+            The regularization term :math:`\\lambda` used to derive embedding vector
+            regularizations.
+        rng_spec:
+            The random number generator initialization.
     """
 
     def __init__(self, features=50, *, bias=True, damping=5, epochs=5, batch_size=10000, reg=0.02, rng_spec=None):
@@ -47,7 +71,7 @@ class BiasedMF(BiasMFPredictor):
             self.bias = Bias(damping)
         else:
             self.bias = bias
-        self.rng_spec = None
+        self.rng_spec = rng_spec
 
     def fit(self, ratings, **kwargs):
         timer = util.Stopwatch()
@@ -76,18 +100,14 @@ class BiasedMF(BiasMFPredictor):
         n_features = self.features
         _log.info('configuring TensorFlow model for %d features from %d users and %d items',
                   n_features, n_users, n_items)
-        rng = util.rng(self.rng_spec)
-        graph = tf.Graph()
-        graph.seed = rng.integers(2**32)
-        _log.info('using random seed %s', graph.seed)
+        graph = make_graph(self.rng_spec)
         with graph.as_default():
             # User input layer
             u_input = k.Input(shape=(1,), dtype='int32', name='user')
-            # User embedding layer. We regularize the output, not embedding, so we don't have
-            # to scale the regularization term with the number of users.
-            u_reg = k.regularizers.l2(self.reg)
+            # User embedding layer.
+            u_reg = k.regularizers.l2(self.reg / n_users)
             u_embed = k.layers.Embedding(input_dim=n_users, output_dim=n_features, input_length=1,
-                                         activity_regularizer=u_reg,
+                                         embeddings_regularizer=u_reg,
                                          embeddings_initializer='random_normal',
                                          name='user-embed')(u_input)
             # The embedding layer produces an extra dimension. Remove it.
@@ -95,9 +115,9 @@ class BiasedMF(BiasMFPredictor):
 
             # Do the same thing for items
             i_input = k.Input(shape=(1,), dtype='int32', name='item')
-            i_reg = k.regularizers.l2(self.reg)
+            i_reg = k.regularizers.l2(self.reg / n_items)
             i_embed = k.layers.Embedding(input_dim=n_items, output_dim=n_features, input_length=1,
-                                         activity_regularizer=i_reg,
+                                         embeddings_regularizer=i_reg,
                                          embeddings_initializer='random_normal',
                                          name='item-embed')(i_input)
             i_flat = k.layers.Flatten(name='item-vector')(i_embed)
