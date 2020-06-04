@@ -187,6 +187,18 @@ def test_bias_train_ml_ratings():
     assert p.iloc[2] == approx(ratings.rating.mean() + umean)
 
 
+def test_bias_transform():
+    algo = Bias()
+    ratings = ml_test.ratings
+
+    normed = algo.fit_transform(ratings)
+
+    assert all(normed['user'] == ratings['user'])
+    assert all(normed['item'] == ratings['item'])
+    denorm = algo.inverse_transform(normed)
+    assert approx(denorm['rating'] == ratings['rating'], 1.0e-6)
+
+
 def test_bias_item_damp():
     algo = Bias(users=False, damping=5)
     algo.fit(simple_df)

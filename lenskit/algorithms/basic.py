@@ -89,22 +89,55 @@ class Bias(Predictor):
         if self.items:
             group = nrates.groupby('item').rating
             self.item_offsets_ = self._mean(group, self.item_damping)
+            self.item_offsets_.name = 'i_off'
             _logger.info('computed means for %d items', len(self.item_offsets_))
         else:
             self.item_offsets_ = None
 
         if self.users:
             if self.item_offsets_ is not None:
-                nrates = nrates.join(pd.DataFrame(self.item_offsets_), on='item', how='inner',
-                                     rsuffix='_im')
-                nrates = nrates.assign(rating=lambda df: df.rating - df.rating_im)
+                nrates = nrates.join(pd.DataFrame(self.item_offsets_), on='item', how='inner')
+                nrates = nrates.assign(rating=lambda df: df.rating - df.i_off)
 
             self.user_offsets_ = self._mean(nrates.groupby('user').rating, self.user_damping)
+            self.user_offsets_.name = 'u_off'
             _logger.info('computed means for %d users', len(self.user_offsets_))
         else:
             self.user_offsets_ = None
 
         return self
+
+    def transform(self, ratings):
+        """
+        Transform ratings by removing the bias term.
+        """
+        rvps = ratings[['user', 'item']]
+        rvps['rating'] = ratings['rating'] - self.mean_
+        if self.item_offsets_ is not None:
+            rvps = rvps.join(self.item_offsets_, on='item', how='left')
+            rvps['rating'] -= rvps['i_off'].fillna(0)
+        if self.user_offsets_ is not None:
+            rvps = rvps.join(self.user_offsets_, on='item', how='left')
+            rvps['rating'] -= rvps['u_off'].fillna(0)
+        return rvps.drop(columns=['u_off', 'i_off'])
+
+    def inverse_transform(self, ratings):
+        """
+        Transform ratings by removing the bias term.
+        """
+        rvps = ratings[['user', 'item']]
+        rvps['rating'] = ratings['rating'] + self.mean_
+        if self.item_offsets_ is not None:
+            rvps = rvps.join(self.item_offsets_, on='item', how='left')
+            rvps['rating'] += rvps['i_off'].fillna(0)
+        if self.user_offsets_ is not None:
+            rvps = rvps.join(self.user_offsets_, on='item', how='left')
+            rvps['rating'] += rvps['u_off'].fillna(0)
+        return rvps.drop(columns=['u_off', 'i_off'])
+
+    def fit_transform(self, ratings):
+        self.fit(ratings)
+        return self.transform(ratings)
 
     def predict_for_user(self, user, items, ratings=None):
         """
