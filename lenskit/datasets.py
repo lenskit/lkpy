@@ -13,14 +13,14 @@ _log = logging.getLogger(__name__)
 
 __doctest_skip__ = []
 if not os.path.exists('data/ml-100k'):
-    __doctest_skip__.append('ML100K')
+    __doctest_skip__.append('ML100K.*')
 if not os.path.exists('data/ml-20m'):
     __doctest_skip__.append('MovieLens.tag_genome')
-if not os.path.exists('data/ml-1m'):
-    __doctest_skip__.append('ML1M')
+if not os.path.exists('data/ml-1m.*'):
+    __doctest_skip__.append('ML1M.*')
 if not os.path.exists('data/ml-10M100K'):
-    __doctest_skip__.append('ML10M')
-    __doctest_skip__.append('MLM')
+    __doctest_skip__.append('ML10M.*')
+    __doctest_skip__.append('MLM.*')
 
 
 def cached(prop):
