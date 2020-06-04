@@ -3,8 +3,8 @@ set -e
 
 fetch_movielens()
 {
-    zipfile="$1"; shift 1
     testfile="$1"; shift 1
+    zipfile="$1"; shift 1
 
     echo "checking for $testfile"
     if [ ! -r "$testfile" ]; then
