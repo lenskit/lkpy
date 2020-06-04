@@ -27,6 +27,9 @@ function Fetch-DataSet
     }
 }
 
+if (-Not (Test-Path $DataDir)) {
+    New-Item -ItemType Directory $DataDir
+}
 foreach ($arg in $args) {
     switch ($arg) {
         "ml-100k" {
