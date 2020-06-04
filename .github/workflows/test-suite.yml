@@ -48,15 +48,15 @@ jobs:
           key: ${{runner.os}}-mldata
       
       - name: Download ML-100K
-        shell: bash
+        shell: pwsh
         run: |
-          /bin/bash fetch-datasets.sh ml-100k
+          ./fetch-datasets.ps1 ml-100k
         
       - name: Download Other ML
         if: runner.os == 'Linux' && matrix.python == 3.8
-        shell: bash
+        shell: pwsh
         run: |
-          /bin/bash fetch-datasets.sh ml-1m ml-10m ml-20m
+          ./fetch-datasets.ps1 ml-1m ml-10m ml-20m
       
       - name: Build LKPY
         run: |
