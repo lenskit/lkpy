@@ -27,6 +27,7 @@ jobs:
         run: |
           source $CONDA/etc/profile.d/conda.sh
           conda activate base
+          conda config --set channel_priority strict
           if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
             echo "Using all extras"
             e_opts="-A"
@@ -35,6 +36,7 @@ jobs:
             e_opts="-E dev"
           fi
           python setup.py dep_info --conda-env environment.yml $e_opts
+          cat environment.yml
         env:
           RUNNER: ${{runner.os}}
           PYVER: ${{matrix.python}}
