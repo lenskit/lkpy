@@ -25,7 +25,7 @@ jobs:
       - name: Prepare Conda environment
         shell: bash
         run: |
-          if [ $RUNNER = Linux -a $PYVER = 3.8 ]; do
+          if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
             echo "Using all extras"
             e_opts="-A"
           else
