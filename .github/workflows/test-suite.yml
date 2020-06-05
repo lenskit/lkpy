@@ -25,6 +25,8 @@ jobs:
       - name: Prepare Conda environment
         shell: bash
         run: |
+          source $CONDA/etc/profile.d/conda.sh
+          conda activate base
           if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
             echo "Using all extras"
             e_opts="-A"
