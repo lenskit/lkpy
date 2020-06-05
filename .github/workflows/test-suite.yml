@@ -31,8 +31,8 @@ jobs:
             echo "Using all extras"
             e_opts="-A"
           else
-            echo "Using basic test deps"
-            e_opts="-E dev,test"
+            echo "Using basic dev deps"
+            e_opts="-E dev"
           fi
           python setup.py dep_info --conda-env environment.yml $e_opts
         env:
