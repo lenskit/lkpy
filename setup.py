@@ -3,6 +3,7 @@ from pathlib import Path
 from setuptools import setup
 from distutils.cmd import Command
 from distutils import ccompiler, sysconfig
+from distutils.command.build import build
 
 
 class BuildHelperCommand(Command):
@@ -49,6 +50,17 @@ class BuildHelperCommand(Command):
         cc.compile([os.fspath(mkl_src)], include_dirs=i_dirs, debug=True)
         cc.link_shared_object(mkl_obj, os.fspath(mkl_so), libraries=['mkl_rt'],
                               library_dirs=l_dirs)
+
+
+def has_mkl(build):
+    try:
+        import mkl
+        return True
+    except ImportError:
+        return False
+
+
+build.sub_commands.append(('build_helper', has_mkl))
 
 
 if __name__ == "__main__":
