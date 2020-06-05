@@ -10,7 +10,7 @@ import lenskit.util.test as lktu
 try:
     from lenskit.algorithms import tf as lktf
 except ImportError:
-    skip('tensorflow not available')
+    pytestmark = mark.skip('tensorflow not available')
 
 _log = logging.getLogger(__name__)
 
