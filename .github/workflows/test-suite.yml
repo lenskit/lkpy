@@ -34,7 +34,7 @@ jobs:
             echo "Using basic test deps"
             e_opts="-E dev,test"
           fi
-          python setup.py dep_info --conda-environment environment.yml $e_opts
+          python setup.py dep_info --conda-env environment.yml $e_opts
         env:
           RUNNER: ${{runner.os}}
           PYVER: ${{matrix.python}}
