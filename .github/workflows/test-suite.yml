@@ -21,16 +21,27 @@ jobs:
         - ubuntu
     steps:
       - uses: actions/checkout@v2
-      
+
+      - name: Prepare Conda environment
+        shell: bash
+        run: |
+          if [ $RUNNER = Linux -a $PYVER = 3.8 ]; do
+            echo "Using all extras"
+            e_opts="-A"
+          else
+            echo "Using basic test deps"
+            e_opts="-E dev,test"
+          fi
+          python setup.py dep_info --conda-environment environment.yml $e_opts
+        env:
+          RUNNER: ${{runner.os}}
+          PYVER: ${{matrix.python}}
+          
       - uses: ./.github/actions/conda-env
         with:
           name: lkpy
           env-file: environment.yml
           python-version: ${{matrix.python}}
-
-      - name: Install add-on packages
-        if: runner.os == 'Linux' && matrix.python == 3.8
-        run: conda install -qy -c conda-forge -c lenskit implicit hpfrec
 
       - name: Inspect environment
         run: |
