@@ -84,7 +84,7 @@ class BiasedMF(BiasMFPredictor):
             model.fit([normed['uidx'], normed['iidx']], normed['rating'],
                       epochs=self.epochs, batch_size=self.batch_size)
 
-            _log.info('[%s] model finished, extracting weights')
+            _log.info('[%s] model finished, extracting weights', timer)
             self.user_features_ = model.get_layer('user-embed').get_weights()[0]
             self.item_features_ = model.get_layer('item-embed').get_weights()[0]
 
