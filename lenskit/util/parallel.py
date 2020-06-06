@@ -83,7 +83,7 @@ def _proc_worker(*args):
     return __work_func(model, *args)
 
 
-def proc_count(core_div=2, max_default=None):
+def proc_count(core_div=2, max_default=None, level=0):
     """
     Get the number of desired jobs for multiprocessing operations.  This does not
     affect Numba or MKL multithreading.
@@ -99,20 +99,30 @@ def proc_count(core_div=2, max_default=None):
         max_default:
             The maximum number of processes to use if the environment variable is not
             configured.
+        level:
+            The process nesting level.  0 is the outermost level of parallelism; subsequent
+            levels control nesting.  Levels deeper than 1 are rare, and it isn't expected
+            that callers actually have an accurate idea of the threading nesting, just that
+            they are configuring a child.  If the process count is unconfigured, then level
+            1 will use ``core_div``, and deeper levels will use 1.
 
     Returns:
         int: The number of jobs desired.
     """
 
-    nprocs = os.environ.get('LK_NUM_PROCS')
+    nprocs = os.environ.get('LK_NUM_PROCS', None)
     if nprocs is not None:
-        nprocs = int(nprocs)
+        nprocs = [int(s) for s in nprocs.split(',')]
     elif core_div is not None:
         nprocs = max(mp.cpu_count() // core_div, 1)
         if max_default is not None:
             nprocs = min(nprocs, max_default)
+        nprocs = [nprocs, core_div]
 
-    return nprocs
+    if level >= len(nprocs):
+        return 1
+    else:
+        return nprocs[level]
 
 
 def invoker(model, func, n_jobs=None):
