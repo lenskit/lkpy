@@ -15,7 +15,7 @@ from lenskit.datasets import MovieLens, ML100K
 
 _log = logging.getLogger(__name__)
 
-ml_test = MovieLens('ml-latest-small')
+ml_test = MovieLens('data/ml-latest-small')
 ml100k = ML100K('data/ml-100k')
 
 

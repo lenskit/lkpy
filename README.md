@@ -8,7 +8,11 @@ LensKit is a set of Python tools for experimenting with and studying recommender
 systems.  It provides support for training, running, and evaluating recommender
 algorithms in a flexible fashion suitable for research and education.
 
-Python LensKit (LKPY) is the successor to the Java-based LensKit project.
+LensKit for Python (LKPY) is the successor to the Java-based LensKit project.
+
+If you use LensKit for Python in published research, please cite:
+
+> Michael D. Ekstrand. 2018. The LKPY Package for Recommender Systems Experiments: Next-Generation Tools and Lessons Learned from the LensKit Project. <cite>Computer Science Faculty Publications and Presentations> 147. Boise State University. DOI:[10.18122/cs_facpubs/147/boisestate](https://dx.doi.org/10.18122/cs_facpubs/147/boisestate). arXiv:[1809.03125](https://arxiv.org/abs/1809.03125) [cs.IR].
 
 ## Installing
 
@@ -32,9 +36,15 @@ To contribute to LensKit, clone or fork the repository, get to work, and submit 
 
 We recommend using an Anaconda environment for developing LensKit.  To set this up, run:
 
-    conda env create -f dev-env-py37.yml
+    python setup.py dep_info --conda-environment dev-env.yml
+    conda env create -f dev-env.yml
 
 This will create a Conda environment called `lkpy-dev` with the packages required to develop and test LensKit.
+
+We don't maintain the Conda environment specification directly - instead, we maintain information in `setup.cfg`
+to be able to generate it, so that we define dependencies and versions in one place (well, two, if you count the
+`meta.yaml` file used to build the Conda recipes).  The `dep_info` setuptools command will generate a Conda
+environment specification from the current dependencies in `setup.cfg`.
 
 ## Resources
 

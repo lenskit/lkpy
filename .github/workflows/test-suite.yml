@@ -21,21 +21,35 @@ jobs:
         - ubuntu
     steps:
       - uses: actions/checkout@v2
-      
+
+      - name: Prepare Conda environment
+        shell: bash
+        run: |
+          source $CONDA/etc/profile.d/conda.sh
+          conda activate base
+          conda config --set channel_priority strict
+          if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
+            echo "Using all non-demo extras"
+            e_opts="-A -I demo"
+          else
+            echo "Using basic dev deps"
+            e_opts="-E dev"
+          fi
+          python setup.py dep_info --conda-env environment.yml $e_opts
+          cat environment.yml
+        env:
+          RUNNER: ${{runner.os}}
+          PYVER: ${{matrix.python}}
+          
       - uses: ./.github/actions/conda-env
         with:
           name: lkpy
           env-file: environment.yml
           python-version: ${{matrix.python}}
 
-      - name: Install add-on packages
-        if: runner.os == 'Linux' && matrix.python == 3.8
-        run: conda install -qy -c conda-forge -c lenskit implicit hpfrec
-
       - name: Inspect environment
         run: |
           python -V
-          conda info
           numba -s
 
       - name: Cache ML data
@@ -83,14 +97,51 @@ jobs:
         run: coverage xml
 
       - uses: codecov/codecov-action@v1
-     
-      - name: Validate Documentation Examples
-        if: runner.os == 'Linux'
+
+  check-docs:
+    name: Validate Documentation and Examples
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Prepare Conda environment
+        shell: bash
         run: |
-          cp -r data/ml-100k doc
-          cp -r ml-latest-small doc
-          export PYTHONPATH="$PWD"
-          python -m pytest --nbval-lax doc
+          source $CONDA/etc/profile.d/conda.sh
+          conda activate base
+          conda config --set channel_priority strict
+          python setup.py dep_info --conda-env environment.yml -E dev,demo
+          cat environment.yml
+          
+      - uses: ./.github/actions/conda-env
+        with:
+          name: lkpy
+          env-file: environment.yml
+          python-version: 3.8
+
+      - name: Download ML-100K
+        shell: pwsh
+        run: |
+          ./fetch-datasets.ps1 ml-100k
+
+      - name: Install for Testing
+        run: python -m pip install -e .
+
+      - name: Validate Doc Notebooks
+        run: |
+          cp doc/*.ipynb data
+          python -m pytest --nbval-lax --cov=lenskit data
+
+      - name: Validate Examples
+        run: |
+          python -m pytest --nbval-lax --cov=lenskit --cov-append examples
+
+      - name: Aggreagate Coverage Data
+        run: coverage xml
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v1
 
   vanilla:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}

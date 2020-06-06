@@ -16,13 +16,8 @@ dist/
 .coverage*
 coverage.xml
 htmlcov/
-/data/
-.doit.db*
-ml-100k
-doc/ml-latest-small
-ml-*/
-ml-*.zip
 my-eval/
+doc/data/
 *.pyd
 *.so
 *.dll
@@ -30,6 +25,7 @@ my-eval/
 *.lib
 *.o
 *.obj
+*env*.yml
 
 dask-worker-space/
 
