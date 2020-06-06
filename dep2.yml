@@ -1,0 +1,39 @@
+{
+  "name": "lkpy-dev",
+  "channels": [
+    "lenskit",
+    "default"
+  ],
+  "dependencies": [
+    "python >=3.6",
+    "pip",
+    "mkl-devel",
+    "tbb",
+    "pandas >=0.24",
+    "numpy >=1.16",
+    "scipy >=1.2",
+    "numba <0.50,>=0.42",
+    "pyarrow >=0.15",
+    "cffi >=1.12.2",
+    "binpickle >=0.1",
+    "pytest >=3.9",
+    "pytest-doctestplus",
+    "sphinx >=1.8",
+    "sphinx_rtd_theme",
+    "recommonmark",
+    "ipython",
+    "hpfrec",
+    "scikit-learn >=0.22",
+    "flake8",
+    "coverage",
+    "pytest-cov",
+    "dask",
+    "ipython",
+    "notebook",
+    {
+      "pip": [
+        "nbsphinx"
+      ]
+    }
+  ]
+}

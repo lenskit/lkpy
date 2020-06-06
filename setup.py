@@ -6,7 +6,8 @@ from distutils.cmd import Command
 from distutils import ccompiler, sysconfig
 from distutils.command.build import build
 from textwrap import dedent
-
+from setuptools._vendor.packaging.requirements import Requirement
+import json
 
 def d(s):
     return dedent(s.strip())
@@ -65,9 +66,16 @@ class DepInfo(Command):
         ('all-extras', 'A', 'include all extras'),
         ('ignore-extras=', 'I', 'ignore an extra from all-extras'),
         ('conda-env=', 'c', 'write Conda environment file'),
-        ('conda-requires=', None, 'extra Conda requirements (raw yaml)')
+        ('conda-requires=', None, 'extra Conda requirements (raw yaml)'),
+        ('conda-forge', None, 'use conda-forge channel')
     ]
-    boolean_options = ['all-extras']
+    boolean_options = ['all-extras', 'conda-forge']
+    MAIN_PACKAGE_MAP = {
+        'nbsphinx': '$pip',
+        'nbval': '$pip'
+    }
+    FORGE_PACKAGE_MAP = {}
+    CONDA_DEPS = ['mkl-devel', 'tbb']
 
     def initialize_options(self):
         """Set default values for options."""
@@ -77,6 +85,7 @@ class DepInfo(Command):
         self.ignore_extras = None
         self.conda_env = None
         self.conda_requires = None
+        self.conda_forge = None
 
     def finalize_options(self):
         """Post-process options."""
@@ -91,6 +100,7 @@ class DepInfo(Command):
                            if e not in self.ignore_extras]
         if self.conda_requires is None:
             self.conda_requires = ''
+        self.PACKAGE_MAP = self.FORGE_PACKAGE_MAP if self.conda_forge else self.MAIN_PACKAGE_MAP
 
     def run(self):
         if self.conda_env:
@@ -104,27 +114,43 @@ class DepInfo(Command):
                 print(msg)
 
     def _write_conda(self, file):
-        if file == '-':
-            f = sys.stdout
-        else:
-            f = open(file, 'w')
-
         pyver = self.distribution.python_requires
-        print('name: lkpy-dev', file=f)
-        print(dedent(f'''\
-            channels:
-            - lenskit
-            - default
-            - conda-forge  # last to not override things
-            dependencies:
-            - python{pyver}'''), file=f)
-        for req, src in self._get_reqs():
-            if src:
-                print(f'- {req}  # {src}', file=f)
+        pip_deps = []
+        dep_spec = {
+            'name': 'lkpy-dev',
+        }
+        if self.conda_forge:
+            dep_spec['channels'] = ['conda-forge']
+        else:
+            dep_spec['channels'] = ['lenskit', 'default']
+
+        dep_spec['dependencies'] = [
+            f'python {pyver}',
+            'pip'
+        ] + self.CONDA_DEPS
+        for req_str, src in self._get_reqs():
+            req = Requirement(req_str)
+            mapped = self.PACKAGE_MAP.get(req.name, req.name)
+            if mapped == '$pip':
+                pip_deps.append(self._spec_str(req))
             else:
-                print(f'- {req}', file=f)
-        print(self.conda_requires.strip(), file=f)
-        # let it auto-close
+                dep_spec['dependencies'].append(self._spec_str(req, mapped, src))
+        if pip_deps:
+            dep_spec['dependencies'].append({
+                'pip': pip_deps
+            })
+
+        if file == '-':
+            json.dump(dep_spec, sys.stdout, indent=2)
+        else:
+            with open(file, 'w') as f:
+                json.dump(dep_spec, f, indent=2)
+
+    def _spec_str(self, req, name=None, src=None):
+        spec = name if name is not None else req.name
+        if req.specifier:
+            spec += ' ' + str(req.specifier)
+        return spec
 
     def _get_reqs(self):
         for req in self.distribution.install_requires:

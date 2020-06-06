@@ -30,7 +30,7 @@ jobs:
           conda config --set channel_priority strict
           if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
             echo "Using all extras"
-            e_opts="-A"
+            e_opts="-A -I implicit"
           else
             echo "Using basic dev deps"
             e_opts="-E dev"
