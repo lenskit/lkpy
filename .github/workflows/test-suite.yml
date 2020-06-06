@@ -50,7 +50,6 @@ jobs:
       - name: Inspect environment
         run: |
           python -V
-          conda info
           numba -s
 
       - name: Cache ML data
