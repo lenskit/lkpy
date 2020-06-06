@@ -120,6 +120,11 @@ jobs:
           env-file: environment.yml
           python-version: 3.8
 
+      - name: Download ML-100K
+        shell: pwsh
+        run: |
+          ./fetch-datasets.ps1 ml-100k
+
       - name: Install for Testing
         run: python -m pip install -e .
 
