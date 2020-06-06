@@ -101,8 +101,7 @@ jobs:
       - name: Validate Documentation Examples
         if: runner.os == 'Linux'
         run: |
-          cp -r data/ml-100k doc
-          cp -r ml-latest-small doc
+          cp doc/*.ipynb data
           export PYTHONPATH="$PWD"
           python -m pytest --nbval-lax doc
 
