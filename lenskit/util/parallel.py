@@ -72,10 +72,17 @@ class LKContext(mp.context.SpawnContext):
 LKContext.INSTANCE = LKContext()
 
 
-def _initialize_worker(mkey, func):
-    global __work_model, __work_func, __profile
+def _initialize_worker(mkey, func, threads):
+    global __work_model, __work_func
     __work_model = mkey
     __work_func = func
+    import numba
+    numba.config.NUMBA_NUM_THREADS = threads
+    try:
+        import mkl
+        mkl.set_num_threads(threads)
+    except ImportError:
+        pass
 
 
 def _proc_worker(*args):
@@ -201,7 +208,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker):
         key = persist(model)
         ctx = LKContext.INSTANCE
         _log.info('setting up ProcessPoolExecutor w/ %d workers', n_jobs)
-        self.executor = ProcessPoolExecutor(n_jobs, ctx, _initialize_worker, (key, func))
+        self.executor = ProcessPoolExecutor(n_jobs, ctx, _initialize_worker, (key, func, kid_tc))
 
     def map(self, *iterables):
         return self.executor.map(_proc_worker, *iterables)
@@ -214,8 +221,9 @@ class MPOpInvoker(ModelOpInvoker):
     def __init__(self, model, func, n_jobs):
         key = persist(model)
         ctx = LKContext.INSTANCE
+        kid_tc = proc_count(level=1)
         _log.info('setting up multiprocessing.Pool w/ %d workers', n_jobs)
-        self.pool = ctx.Pool(n_jobs, _initialize_worker, (key, func))
+        self.pool = ctx.Pool(n_jobs, _initialize_worker, (key, func, kid_tc))
 
     def map(self, *iterables):
         return self.pool.starmap(_proc_worker, zip(*iterables))
