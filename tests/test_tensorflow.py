@@ -125,10 +125,10 @@ def test_tf_ibias_batch_accuracy(n_jobs):
     folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
     preds = pd.concat(eval(train, test) for (train, test) in folds)
     mae = pm.mae(preds.prediction, preds.rating)
-    assert mae == approx(0.83, abs=0.025)
+    assert mae == approx(0.73, abs=0.025)
 
     user_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
-    assert user_rmse.mean() == approx(1.03, abs=0.05)
+    assert user_rmse.mean() == approx(0.93, abs=0.05)
 
 
 @mark.slow
