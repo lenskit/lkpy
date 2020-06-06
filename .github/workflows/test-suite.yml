@@ -120,10 +120,12 @@ jobs:
           env-file: environment.yml
           python-version: 3.8
 
+      - name: Install for Testing
+        run: python -m pip install -e .
+
       - name: Validate Doc Notebooks
         run: |
           cp doc/*.ipynb data
-          export PYTHONPATH="$PWD"
           python -m pytest --nbval-lax --cov=lenskit data
 
       - name: Validate Examples
