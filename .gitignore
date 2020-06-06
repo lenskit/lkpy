@@ -30,6 +30,7 @@ my-eval/
 *.lib
 *.o
 *.obj
+*env*.yml
 
 dask-worker-space/
 
