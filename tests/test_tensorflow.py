@@ -6,6 +6,7 @@ import numpy as np
 import binpickle
 
 import lenskit.util.test as lktu
+from lenskit.algorithms import Recommender
 
 try:
     from lenskit.algorithms import tf as lktf
@@ -128,3 +129,69 @@ def test_tf_ibias_batch_accuracy(n_jobs):
 
     user_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
     assert user_rmse.mean() == approx(0.92, abs=0.05)
+
+
+@mark.slow
+def test_tf_bpr_general(tmp_path):
+    "Training, saving, loading, and using a BPR model."
+    fn = tmp_path / 'bias.bpk'
+    ratings = lktu.ml_test.ratings
+
+    original = lktf.BPR(20, batch_size=1024, epochs=50, neg_count=2)
+    original.fit(ratings)
+    with original.graph.as_default():
+        ue = original.model.get_layer('user-embed')
+        assert ue.get_weights()[0].shape == (ratings.user.nunique(), 20)
+        ie = original.model.get_layer('item-embed')
+        assert ie.get_weights()[0].shape == (ratings.item.nunique(), 20)
+
+    binpickle.dump(original, fn)
+
+    _log.info('serialized to %d bytes', fn.stat().st_size)
+    algo = binpickle.load(fn)
+
+    # does scoring work?
+    preds = algo.predict_for_user(100, [5, 10, 30])
+    assert all(preds.notna())
+
+    # can we include a nonexistent item?
+    preds = algo.predict_for_user(100, [5, 10, 230413804])
+    assert len(preds) == 3
+    assert all(preds.loc[[230413804]].isna())
+    assert preds.isna().sum() == 1
+
+
+@mark.slow
+@mark.eval
+@mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
+def test_tf_bpr_batch_accuracy():
+    from lenskit.algorithms import basic
+    import lenskit.crossfold as xf
+    from lenskit import batch, topn
+
+    ratings = lktu.ml100k.ratings
+
+    algo = lktf.BPR(20, batch_size=1024, epochs=50)
+    algo = Recommender.adapt(algo)
+
+    all_recs = []
+    all_test = []
+    for train, test in xf.partition_users(ratings, 5, xf.SampleFrac(0.2)):
+        _log.info('running training')
+        algo.fit(train)
+        _log.info('testing %d users', test.user.nunique())
+        recs = batch.recommend(algo, np.unique(test.user), 50)
+        all_recs.append(recs)
+        all_test.append(test)
+
+    _log.info('analyzing results')
+    rla = topn.RecListAnalysis()
+    rla.add_metric(topn.ndcg)
+    rla.add_metric(topn.recip_rank)
+    scores = rla.compute(pd.concat(all_recs, ignore_index=True),
+                         pd.concat(all_test, ignore_index=True),
+                         include_missing=True)
+    scores.fillna(0, inplace=True)
+    _log.info('MRR: %f', scores['recip_rank'].mean())
+    _log.info('nDCG: %f', scores['ndcg'].mean())
+    assert scores['ndcg'].mean() > 0.1
