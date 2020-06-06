@@ -31,7 +31,7 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
         >>> from lenskit.algorithms.basic import Bias
         >>> from lenskit.metrics.predict import rmse
         >>> from lenskit import datasets
-        >>> ratings = datasets.MovieLens('ml-latest-small').ratings
+        >>> ratings = datasets.MovieLens('data/ml-latest-small').ratings
         >>> bias = Bias()
         >>> bias.fit(ratings[:-1000])
         <lenskit.algorithms.basic.Bias object at ...>

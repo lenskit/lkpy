@@ -55,7 +55,7 @@ class MovieLens:
         """
         The rating table.
 
-        >>> mlsmall = MovieLens('ml-latest-small')
+        >>> mlsmall = MovieLens('data/ml-latest-small')
         >>> mlsmall.ratings
                 user  item  rating   timestamp
         0          1    31     2.5  1260759144
@@ -83,7 +83,7 @@ class MovieLens:
         """
         The movie table, with titles and genres.  It is indexed by movie ID.
 
-        >>> mlsmall = MovieLens('ml-latest-small')
+        >>> mlsmall = MovieLens('data/ml-latest-small')
         >>> mlsmall.movies
                                                             title                                           genres
         item
@@ -113,7 +113,7 @@ class MovieLens:
         The movie link table, connecting movie IDs to external identifiers.  It is indexed
         by movie ID.
 
-        >>> mlsmall = MovieLens('ml-latest-small')
+        >>> mlsmall = MovieLens('data/ml-latest-small')
         >>> mlsmall.links
                  imdbId  tmdbId
         item
@@ -143,7 +143,7 @@ class MovieLens:
         The tag application table, recording user-supplied tags for movies.
 
 
-        >>> mlsmall = MovieLens('ml-latest-small')
+        >>> mlsmall = MovieLens('data/ml-latest-small')
         >>> mlsmall.tags
               user  ...   timestamp
         0       15  ...  1138537770
