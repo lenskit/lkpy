@@ -6,6 +6,7 @@ import logging
 from copy import deepcopy
 
 from ..algorithms import Algorithm
+from .log import log_to_notebook, log_to_stderr  # noqa: F401
 from .timing import Stopwatch  # noqa: F401
 from .data import read_df_detect  # noqa: F401
 from .random import rng, init_rng, derivable_rng  # noqa: F401
@@ -17,6 +18,15 @@ except ImportError:
     resource = None
 
 _log = logging.getLogger(__name__)
+
+__all__ = [
+    'log_to_stderr', 'log_to_notebook',
+    'Stopwatch',
+    'read_df_detect',
+    'rng', 'init_rng', 'derivable_rng',
+    'proc_count',
+    'clone'
+]
 
 
 def clone(algo):
