@@ -42,10 +42,29 @@ The :py:class:`MultiEval` class is useful to build scripts that evaluate multipl
 or algorithm variants, simultaneously, across multiple data sets. It can extract parameters
 from algorithms and include them in the output, useful for hyperparameter search.
 
-.. include:: MultiEvalExample.rst
+For example::
 
-Multi-Eval Class Reference
---------------------------
+    from lenskit.batch import MultiEval
+    from lenskit.crossfold import partition_users, SampleN
+    from lenskit.algorithms import basic, als
+    from lenskit.datasets import MovieLens
+    from lenskit import topn
+    import pandas as pd
+
+    ml = MovieLens('ml-latest-small')
+
+    eval = MultiEval('my-eval', recommend=20)
+    eval.add_datasets(partition_users(ml.ratings, 5, SampleN(5)), name='ML-Small')
+    eval.add_algorithms(basic.Popular(), name='Pop')
+    eval.add_algorithms([als.BiasedMF(f) for f in [20, 30, 40, 50]],
+                        attrs=['features'], name='ALS')
+    eval.run()
+
+The ``my-eval/runs.csv`` file will then contain the results of running these 
+algorithms on this data set.  A more complete example is available in the
+`MultiEval notebook`_.
+
+.. _MultiEval notebook: https://nbviewer.jupyter.org/github/lenskit/lkpy/blob/master/examples/MultiEval.ipynb
 
 .. autoclass:: MultiEval
     :members:
