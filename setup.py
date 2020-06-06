@@ -69,7 +69,8 @@ class DepInfo(Command):
     boolean_options = ['all-extras', 'conda-forge']
     MAIN_PACKAGE_MAP = {
         'nbsphinx': '$pip',
-        'nbval': '$pip'
+        'nbval': '$pip',
+        'implicit': '$pip'
     }
     FORGE_PACKAGE_MAP = {}
     CONDA_DEPS = ['mkl-devel', 'tbb']
