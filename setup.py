@@ -9,9 +9,6 @@ from textwrap import dedent
 from setuptools._vendor.packaging.requirements import Requirement
 import json
 
-def d(s):
-    return dedent(s.strip())
-
 
 class BuildHelperCommand(Command):
     description = 'compile helper modules'
@@ -165,7 +162,7 @@ class DepInfo(Command):
 
 def has_mkl(build):
     try:
-        import mkl
+        import mkl  # noqa: F401
         return True
     except ImportError:
         return False
