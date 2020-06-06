@@ -8,7 +8,11 @@ LensKit is a set of Python tools for experimenting with and studying recommender
 systems.  It provides support for training, running, and evaluating recommender
 algorithms in a flexible fashion suitable for research and education.
 
-Python LensKit (LKPY) is the successor to the Java-based LensKit project.
+LensKit for Python (LKPY) is the successor to the Java-based LensKit project.
+
+If you use LensKit for Python in published research, please cite:
+
+> Michael D. Ekstrand. 2018. The LKPY Package for Recommender Systems Experiments: Next-Generation Tools and Lessons Learned from the LensKit Project. <cite>Computer Science Faculty Publications and Presentations> 147. Boise State University. DOI:[10.18122/cs_facpubs/147/boisestate](https://dx.doi.org/10.18122/cs_facpubs/147/boisestate). arXiv:[1809.03125](https://arxiv.org/abs/1809.03125) [cs.IR].
 
 ## Installing
 
