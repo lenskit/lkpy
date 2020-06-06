@@ -103,7 +103,7 @@ jobs:
         run: |
           cp doc/*.ipynb data
           export PYTHONPATH="$PWD"
-          python -m pytest --nbval-lax doc
+          python -m pytest --nbval-lax data
 
   vanilla:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
