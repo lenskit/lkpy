@@ -29,8 +29,8 @@ jobs:
           conda activate base
           conda config --set channel_priority strict
           if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
-            echo "Using all extras"
-            e_opts="-A"
+            echo "Using all non-demo extras"
+            e_opts="-A -I demo"
           else
             echo "Using basic dev deps"
             e_opts="-E dev"
@@ -97,13 +97,44 @@ jobs:
         run: coverage xml
 
       - uses: codecov/codecov-action@v1
-     
-      - name: Validate Documentation Examples
-        if: runner.os == 'Linux'
+
+  check-docs:
+    name: Validate Documentation and Examples
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Prepare Conda environment
+        shell: bash
+        run: |
+          source $CONDA/etc/profile.d/conda.sh
+          conda activate base
+          conda config --set channel_priority strict
+          python setup.py dep_info --conda-env environment.yml -E dev,demo
+          cat environment.yml
+          
+      - uses: ./.github/actions/conda-env
+        with:
+          name: lkpy
+          env-file: environment.yml
+          python-version: 3.8
+
+      - name: Validate Doc Notebooks
         run: |
           cp doc/*.ipynb data
           export PYTHONPATH="$PWD"
-          python -m pytest --nbval-lax data
+          python -m pytest --nbval-lax --cov=lenskit data
+
+      - name: Validate Examples
+        run: |
+          python -m pytest --nbval-lax --cov=lenskit --cov-append examples
+
+      - name: Aggreagate Coverage Data
+        run: coverage xml
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v1
 
   vanilla:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
