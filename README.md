@@ -41,6 +41,11 @@ We recommend using an Anaconda environment for developing LensKit.  To set this 
 
 This will create a Conda environment called `lkpy-dev` with the packages required to develop and test LensKit.
 
+We don't maintain the Conda environment specification directly - instead, we maintain information in `setup.cfg`
+to be able to generate it, so that we define dependencies and versions in one place (well, two, if you count the
+`meta.yaml` file used to build the Conda recipes).  The `dep_info` setuptools command will generate a Conda
+environment specification from the current dependencies in `setup.cfg`.
+
 ## Resources
 
 - [Documentation](https://lkpy.lenskit.org)
