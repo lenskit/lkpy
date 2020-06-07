@@ -64,7 +64,8 @@ class DepInfo(Command):
         ('ignore-extras=', 'I', 'ignore an extra from all-extras'),
         ('conda-env=', 'c', 'write Conda environment file'),
         ('conda-requires=', None, 'extra Conda requirements (raw yaml)'),
-        ('conda-forge', None, 'use conda-forge channel')
+        ('conda-forge', None, 'use conda-forge channel'),
+        ('python-version=', None, 'use specified Python version')
     ]
     boolean_options = ['all-extras', 'conda-forge']
     MAIN_PACKAGE_MAP = {
@@ -84,6 +85,7 @@ class DepInfo(Command):
         self.conda_env = None
         self.conda_requires = None
         self.conda_forge = None
+        self.python_version = None
 
     def finalize_options(self):
         """Post-process options."""
@@ -114,7 +116,10 @@ class DepInfo(Command):
                 print(msg)
 
     def _write_conda(self, file):
-        pyver = self.distribution.python_requires
+        if self.python_version:
+            pyver = f'={self.python_version}'
+        else:
+            pyver = self.distribution.python_requires
         pip_deps = []
         dep_spec = {
             'name': 'lkpy-dev',
