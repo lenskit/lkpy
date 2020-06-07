@@ -118,6 +118,7 @@ def proc_count(core_div=2, max_default=None, level=0):
     affect Numba or MKL multithreading.
 
     This count can come from a number of sources:
+
     * The ``LK_NUM_PROCS`` environment variable
     * The number of CPUs, divided by ``core_div`` (default 2)
 
@@ -160,7 +161,7 @@ def invoker(model, func, n_jobs=None):
 
     Args:
         model(obj): The model object on which to perform operations.
-        func(functio): The function to call.  The function must be pickleable.
+        func(function): The function to call.  The function must be pickleable.
         n_jobs(int or None):
             The number of processes to use for parallel operations.  If ``None``, will
             call :func:`proc_count` with a maximum default process count of 4.
