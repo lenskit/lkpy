@@ -4,7 +4,7 @@ import numpy as np
 
 from lenskit.util.parallel import invoker, proc_count, run_sp
 from lenskit.util.test import set_env_var
-from lenskit.sharing import persist
+from lenskit.sharing import persist_binpickle
 
 from pytest import mark, raises
 
@@ -65,7 +65,7 @@ def _sp_matmul(a1, a2, *, fail=False):
 
 def _sp_matmul_p(a1, a2, *, fail=False):
     _log.info('in worker process')
-    return persist(a1 @ a2).transfer()
+    return persist_binpickle(a1 @ a2).transfer()
 
 
 def test_run_sp():
