@@ -144,31 +144,32 @@ class RecListAnalysis:
         return rec_key, truth_key
 
     def _iter_grouped(self, df, *keys):
-        # Fast-ish groupby, since Pandas blows out the memory
-        k_ilists = [[df.columns.get_loc(kc) for kc in kcs]
-                    for kcs in keys]
+        # try to do some memory optimization for groupby
+        key = keys[0]
+        kc_pos = dict((k, i) for (i, k) in enumerate(key))
 
-        def tk(row, kil=k_ilists[0]):
-            return tuple(df.iloc[row, i] for i in kil)
+        _log.debug('reindexing by %s', key)
+        dfs = df.set_index(key, append=True)
+        dfs = dfs.reorder_levels([i+1 for i in range(len(key))] + [0])
+        assert dfs.index.names[:-1] == key
+        dfs = dfs.sort_index()
 
-        # we sort indexes to get a stable sort & reduce memory use
-        _log.debug('sorting %d rows', len(df))
-        key_cols = [df[k] for k in reversed(keys[0])]
-        order = np.lexsort(key_cols)
         if self.progress is not None:
-            prog = self.progress()
+            _log.debug('counting')
+            n = len(dfs.index.droplevel(-1).unique())
+            prog = self.progress(total=n)
         else:
             prog = None
 
-        _log.debug('sorted, now iterating')
-        for key, indexes in it.groupby(order, tk):
-            indexes = np.fromiter(indexes, dtype=np.int64)
-            row = [key]
-            # create the DF for this group
-            df2 = df.iloc[indexes]
-            for kil in k_ilists[1:]:
-                row.append(tk(indexes[0], kil))
-            row.append(df2.drop(columns=keys[0]))
+        _log.debug('iterating')
+        for rk, df in dfs.groupby(level=key):
+            if not isinstance(rk, tuple):
+                rk = (rk,)
+            row = [rk]
+            for ok in keys[1:]:
+                row.append(tuple(rk[kc_pos[kc]] for kc in ok))
+
+            row.append(df.reset_index(key, drop=True))
             if prog is not None:
                 prog.update()
             yield row
