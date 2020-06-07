@@ -23,7 +23,7 @@ def tf_session():
 
 
 @mark.slow
-def test_tf_bias_save_load(tmp_path, tf_session):
+def test_tf_bmf_save_load(tmp_path, tf_session):
     "Training, saving, and loading a bias model."
     fn = tmp_path / 'bias.bpk'
     ratings = lktu.ml_test.ratings
@@ -51,7 +51,7 @@ def test_tf_bias_save_load(tmp_path, tf_session):
 @mark.slow
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
-def test_tf_bias_batch_accuracy(tf_session):
+def test_tf_bmf_batch_accuracy(tf_session):
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch
@@ -78,18 +78,18 @@ def test_tf_bias_batch_accuracy(tf_session):
 
 
 @mark.slow
-def test_tf_ibias_general(tmp_path, tf_session):
+def test_tf_ibmf_general(tmp_path, tf_session):
     "Training, saving, loading, and using an integrated bias model."
     fn = tmp_path / 'bias.bpk'
     ratings = lktu.ml_test.ratings
 
     original = lktf.IntegratedBiasMF(20, batch_size=1024, epochs=20, rng_spec=42)
     original.fit(ratings)
-    with original.graph.as_default():
-        ue = original.model.get_layer('user-embed')
-        assert ue.get_weights()[0].shape == (ratings.user.nunique(), 20)
-        ie = original.model.get_layer('item-embed')
-        assert ie.get_weights()[0].shape == (ratings.item.nunique(), 20)
+
+    ue = original.model.get_layer('user-embed')
+    assert ue.get_weights()[0].shape == (ratings.user.nunique(), 20)
+    ie = original.model.get_layer('item-embed')
+    assert ie.get_weights()[0].shape == (ratings.item.nunique(), 20)
 
     binpickle.dump(original, fn)
 
@@ -111,7 +111,7 @@ def test_tf_ibias_general(tmp_path, tf_session):
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 @mark.parametrize('n_jobs', [1, None])
-def test_tf_ibias_batch_accuracy(n_jobs, tf_session):
+def test_tf_ibmf_batch_accuracy(n_jobs, tf_session):
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch

@@ -6,6 +6,15 @@ import tensorflow as tf
 _log = getLogger(__name__)
 
 
+def init_rng(spec):
+    if spec is None:
+        return
+
+    seed = util.random.rng_seed(spec)
+    seed, = seed.generate_state(1)
+    tf.random.set_seed(seed)
+
+
 def make_graph(rng_spec=None):
     "Construct a TensorFlow graph (with an optional random seed)"
     rng = util.rng(rng_spec)
