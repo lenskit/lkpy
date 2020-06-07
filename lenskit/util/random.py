@@ -163,14 +163,47 @@ def derive_seed(*keys, base=None):
     return _rng_impl.derive(base, keys)
 
 
-def rng(seed=None, *, legacy=False):
+def rng_seed(spec=None):
+    """
+    Get a random number generator seed.  ``spec`` is interpreted as in :func:`rng`, and
+    is used as follows:
+
+    * If a :class:`numpy.random.SeedSequence`, returned as-is.
+    * If an integer, used to create a seed sequence.
+    * If ``None``, returns global seed (after initializing).
+    * If a :class:`numpy.random.Generator` or :class:`numpy.random.RandomState`, it is
+      used to generate an integer that is used to create a seed sequence.
+
+    This function is only available when used with NumPy 1.17 or newer.
+
+    Returns:
+        numpy.random.SeedSequence:
+            The seed.
+    """
+    if not hasattr(np.random, 'Generator'):
+        raise RuntimeError('rng_seed requires NumPy 1.17')
+
+    if spec is None:
+        return _rng_impl.seed
+    elif isinstance(spec, int):
+        return np.random.SeedSequence(spec)
+    elif isinstance(spec, np.random.SeedSequence):
+        return spec
+    elif hasattr(spec, 'integers'):
+        seed = rng.integers(2**32-1)
+        return np.random.SeedSequence(seed)
+    else:
+        raise ValueError('unknown RNG spec ' + str(spec))
+
+
+def rng(spec=None, *, legacy=False):
     """
     Get a random number generator.  This is similar to :func:`sklearn.utils.check_random_seed`, but
     it usually returns a :class:`numpy.random.Generator` instead.
 
     Args:
-        seed:
-            The seed for this RNG.  Can be any of the following types:
+        spec:
+            The spec for this RNG.  Can be any of the following types:
 
             * ``int``
             * ``None``
@@ -186,12 +219,12 @@ def rng(seed=None, *, legacy=False):
     """
 
     rng = None
-    if isinstance(seed, np.random.RandomState):
-        rng = seed
-    elif _have_gen and isinstance(seed, np.random.Generator):
-        rng = seed
+    if isinstance(spec, np.random.RandomState):
+        rng = spec
+    elif _have_gen and isinstance(spec, np.random.Generator):
+        rng = spec
     else:
-        rng = _rng_impl.rng(seed)
+        rng = _rng_impl.rng(spec)
 
     if legacy and _have_gen and isinstance(rng, np.random.Generator):
         rng = np.random.RandomState(rng.bit_generator)

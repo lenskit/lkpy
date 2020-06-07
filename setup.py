@@ -93,6 +93,8 @@ class DepInfo(Command):
             self.extras = self.extras.split(',')
         if self.ignore_extras is None:
             self.ignore_extras = []
+        else:
+            self.ignore_extras = self.ignore_extras.split(',')
         if self.all_extras:
             self.extras = [e for e in self.distribution.extras_require.keys()
                            if e not in self.ignore_extras]

@@ -37,6 +37,7 @@ requirements:
     - binpickle >=0.1
   run_constrained:
     - scikit-learn >=0.23
+    - tensorflow >=2.1
 
 test:
   source_files:

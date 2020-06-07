@@ -29,8 +29,9 @@ jobs:
           conda activate base
           conda config --set channel_priority strict
           if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
-            echo "Using all non-demo extras"
-            e_opts="-A -I demo"
+            echo "Using most extras"
+            # we'll test tensorflow in a separate run
+            e_opts="-A -I demo,tf"
           else
             echo "Using basic dev deps"
             e_opts="-E dev"
@@ -98,8 +99,53 @@ jobs:
 
       - uses: codecov/codecov-action@v1
 
+  check-tf:
+    name: Test TensorFlow on ${{matrix.platform}}
+    timeout-minutes: 30
+    runs-on: ${{matrix.platform}}-latest
+    strategy:
+      matrix:
+        platform: [ubuntu,windows]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Prepare Conda environment
+        shell: bash
+        run: |
+          source $CONDA/etc/profile.d/conda.sh
+          conda activate base
+          conda config --set channel_priority strict
+          python setup.py dep_info --conda-env environment.yml -E dev,tf
+          cat environment.yml
+          
+      - uses: ./.github/actions/conda-env
+        with:
+          name: lkpy
+          env-file: environment.yml
+          python-version: 3.8
+
+      - name: Download ML-100K
+        shell: pwsh
+        run: |
+          ./fetch-datasets.ps1 ml-100k
+
+      - name: Install for Testing
+        run: python -m pip install -e .[tf]
+
+      - name: Run Tests
+        run: |
+          python -m pytest --cov=lenskit -k tensorflow
+
+      - name: Aggreagate Coverage Data
+        run: coverage xml
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v1
+
   check-docs:
     name: Validate Documentation and Examples
+    timeout-minutes: 30
     runs-on: ubuntu-latest
 
     steps:

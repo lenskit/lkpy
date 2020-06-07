@@ -57,3 +57,10 @@ and works as follows:
   the process count and 2 as the inner thread count.
 
 .. _batch functions: batch.html
+
+Other Notes
+-----------
+
+* Batch parallelism **disables** TensorFlow GPUs in the worker threads.  This is fine,
+  because GPUs are most useful for model training; multiple worker processes competing
+  for the GPU causes problems.

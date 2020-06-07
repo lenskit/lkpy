@@ -26,7 +26,7 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
 @mark.slow
 @mark.skipif(not have_implicit, reason='implicit not installed')
 def test_implicit_als_train_rec():
-    algo = ALS(25)
+    algo = ALS(25, use_gpu=False)
     assert algo.factors == 25
     ratings = lktu.ml_test.ratings
 
@@ -85,7 +85,7 @@ def test_implicit_als_batch_accuracy():
 @mark.slow
 @mark.skipif(not have_implicit, reason='implicit not installed')
 def test_implicit_bpr_train_rec():
-    algo = BPR(25)
+    algo = BPR(25, use_gpu=False)
     assert algo.factors == 25
     ratings = lktu.ml_test.ratings
 

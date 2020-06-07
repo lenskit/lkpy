@@ -23,6 +23,11 @@ if pickle.HIGHEST_PROTOCOL < 5:
 _log = logging.getLogger(__name__)
 __work_model = None
 __work_func = None
+__is_worker = False
+
+
+def is_worker():
+    return __is_worker
 
 
 def _p5_recv(self):
@@ -85,9 +90,10 @@ class InjectHandler:
 
 
 def _initialize_worker(mkey, func, threads, queue):
-    global __work_model, __work_func
+    global __work_model, __work_func, __is_worker
     __work_model = mkey
     __work_func = func
+    __is_worker = True
 
     if queue is not None:
         h = logging.handlers.QueueHandler(queue)
@@ -100,6 +106,7 @@ def _initialize_worker(mkey, func, threads, queue):
     numba.config.NUMBA_NUM_THREADS = threads
     try:
         import mkl
+        _log.debug('configuring Numba thread count')
         mkl.set_num_threads(threads)
     except ImportError:
         pass

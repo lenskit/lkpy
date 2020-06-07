@@ -68,12 +68,17 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
 
     nusers = pairs['user'].nunique()
 
+    timer = util.Stopwatch()
     with util.parallel.invoker(algo, _predict_user, n_jobs=n_jobs) as worker:
         del algo  # maybe free some memory
 
-        _logger.info('generating %d predictions for %d users', len(pairs), nusers)
+        _logger.info('generating %d predictions for %d users (setup took %s)',
+                     len(pairs), nusers, timer)
+        timer = util.Stopwatch()
         results = worker.map((user, udf.copy()) for (user, udf) in pairs.groupby('user'))
         results = pd.concat(results)
+        _logger.info('generated %d predictions for %d users in %s',
+                     len(pairs), nusers, timer)
 
     if 'rating' in pairs:
         return pairs.join(results.set_index(['user', 'item']), on=('user', 'item'))
