@@ -185,7 +185,8 @@ class ModelOpInvoker(ABC):
     """
     Interface for invoking operations on a model, possibly in parallel.  The operation
     invoker is configured with a model and a function to apply, and applies that function
-    to the arguments supplied in `map`.
+    to the arguments supplied in `map`.  Child process invokers also route logging messages
+    to the parent process, so logging works even with multiprocessing.
 
     An invoker is a context manager that calls :meth:`shutdown` when exited.
     """
