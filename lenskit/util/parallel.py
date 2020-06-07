@@ -256,7 +256,7 @@ class MPOpInvoker(ModelOpInvoker):
         self.log_listener = logging.handlers.QueueListener(log_queue, InjectHandler())
         self.log_listener.start()
         _log.info('setting up multiprocessing.Pool w/ %d workers', n_jobs)
-        self.pool = ctx.Pool(n_jobs, _initialize_worker, (key, func, kid_tc, queue))
+        self.pool = ctx.Pool(n_jobs, _initialize_worker, (key, func, kid_tc, log_queue))
 
     def map(self, *iterables):
         return self.pool.starmap(_proc_worker, zip(*iterables))
