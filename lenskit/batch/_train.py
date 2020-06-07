@@ -14,7 +14,7 @@ def _train_and_save(algo, file, ratings, kwargs):
     algo.fit(ratings, **kwargs)
     _log.info('trained %s in %s', algo, timer)
     if file is None:
-        return persist(algo).transfer()
+        return persist_binpickle(algo).transfer()
     else:
         return persist_binpickle(algo, file=file).transfer()
 
