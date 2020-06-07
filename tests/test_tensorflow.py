@@ -145,11 +145,10 @@ def test_tf_bpr_general(tmp_path, tf_session):
 
     original = lktf.BPR(20, batch_size=1024, epochs=20, neg_count=2, rng_spec=42)
     original.fit(ratings)
-    with original.graph.as_default():
-        ue = original.model.get_layer('user-embed')
-        assert ue.get_weights()[0].shape == (ratings.user.nunique(), 20)
-        ie = original.model.get_layer('item-embed')
-        assert ie.get_weights()[0].shape == (ratings.item.nunique(), 20)
+    ue = original.model.get_layer('user-embed')
+    assert ue.get_weights()[0].shape == (ratings.user.nunique(), 20)
+    ie = original.model.get_layer('item-embed')
+    assert ie.get_weights()[0].shape == (ratings.item.nunique(), 20)
 
     binpickle.dump(original, fn)
 

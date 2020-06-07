@@ -1,6 +1,5 @@
 import logging
 import math
-import random
 
 import pandas as pd
 import numpy as np
@@ -11,7 +10,7 @@ from numba import njit
 from lenskit import util
 from lenskit.matrix import sparse_ratings
 from .. import Predictor
-from .util import make_graph
+from .util import init_tf_rng
 
 _log = logging.getLogger(__name__)
 
@@ -71,6 +70,7 @@ class BprInputs(k.utils.Sequence):
         if self.neg_count > 1:
             # expand picked size to sample more items
             picked = np.concatenate([picked for i in range(self.neg_count)])
+        assert len(picked) == self.neg_count * (end - start)
         uv = self.users[picked]
         iv = self.items[picked]
         jv, j_samps = _neg_sample(self.matrix.N, uv)
@@ -78,7 +78,7 @@ class BprInputs(k.utils.Sequence):
         _log.debug('max sample count: %d', j_samps.max())
         return [uv.astype(np.int32),
                 iv.astype(np.int32),
-                jv.astype(np.int32)], None
+                jv.astype(np.int32)], (None,)
 
     def on_epoch_end(self):
         _log.info('re-shuffling')
@@ -125,7 +125,6 @@ class BPR(Predictor):
             The random number generator initialization.
 
     Attributes:
-        graph: The TensorFlow graph in which the model was built.
         model: The Keras model.
     """
 
@@ -147,69 +146,67 @@ class BPR(Predictor):
         matrix, users, items = sparse_ratings(ratings[['user', 'item']])
 
         _log.info('[%s] setting up model', timer)
-        graph, train, model = self._build_model(len(users), len(items), rng)
+        train, model = self._build_model(len(users), len(items))
 
         _log.info('[%s] preparing training dataset', timer)
         train_data = BprInputs(matrix, self.batch_size, self.neg_count, rng)
 
         _log.info('[%s] training model', timer)
-        with graph.as_default():
-            train.fit(train_data, epochs=self.epochs)
+        train.fit(train_data, epochs=self.epochs)
 
-            _log.info('[%s] model finished', timer)
+        _log.info('[%s] model finished', timer)
 
         self.user_index_ = users
         self.item_index_ = items
-        self.graph = graph
         self.model = model
 
         return self
 
-    def _build_model(self, n_users, n_items, rng):
+    def _build_model(self, n_users, n_items):
         n_features = self.features
         _log.info('configuring TensorFlow model for %d features from %d users and %d items',
                   n_features, n_users, n_items)
 
-        graph = make_graph(rng)
-        with graph.as_default():
-            # User input layer
-            u_input = k.Input(shape=(1,), dtype='int32', name='user')
-            # User embedding layer.
-            u_reg = k.regularizers.l2(self.reg / n_users)
-            u_embed = k.layers.Embedding(input_dim=n_users, output_dim=n_features, input_length=1,
-                                         embeddings_regularizer=u_reg,
-                                         embeddings_initializer='random_normal',
-                                         name='user-embed')
-            # The embedding layer produces an extra dimension. Remove it.
-            u_flat = k.layers.Flatten(name='user-vector')(u_embed(u_input))
+        init_tf_rng(self.rng_spec)
 
-            # Do the same thing for items
-            i_input = k.Input(shape=(1,), dtype='int32', name='item')
-            i_reg = k.regularizers.l2(self.reg / n_items)
-            i_embed = k.layers.Embedding(input_dim=n_items, output_dim=n_features, input_length=1,
-                                         embeddings_regularizer=i_reg,
-                                         embeddings_initializer='random_normal',
-                                         name='item-embed')
-            i_flat = k.layers.Flatten(name='item-vector')(i_embed(i_input))
+        # User input layer
+        u_input = k.Input(shape=(1,), dtype='int32', name='user')
+        # User embedding layer.
+        u_reg = k.regularizers.l2(self.reg / n_users)
+        u_embed = k.layers.Embedding(input_dim=n_users, output_dim=n_features, input_length=1,
+                                     embeddings_regularizer=u_reg,
+                                     embeddings_initializer='random_normal',
+                                     name='user-embed')
+        # The embedding layer produces an extra dimension. Remove it.
+        u_flat = k.layers.Flatten(name='user-vector')(u_embed(u_input))
 
-            # we need negative examples, run through the same embedding
-            j_input = k.Input(shape=(1,), dtype='int32', name='neg-item')
-            j_flat = k.layers.Flatten(name='neg-vector')(i_embed(j_input))
+        # Do the same thing for items
+        i_input = k.Input(shape=(1,), dtype='int32', name='item')
+        i_reg = k.regularizers.l2(self.reg / n_items)
+        i_embed = k.layers.Embedding(input_dim=n_items, output_dim=n_features, input_length=1,
+                                     embeddings_regularizer=i_reg,
+                                     embeddings_initializer='random_normal',
+                                     name='item-embed')
+        i_flat = k.layers.Flatten(name='item-vector')(i_embed(i_input))
 
-            # Score positive items with the dot product
-            score = k.layers.Dot(name='pos-score', axes=1)([u_flat, i_flat])
-            # And score negative items too
-            neg_score = k.layers.Dot(name='neg-score', axes=1)([u_flat, j_flat])
-            # Training is based on score differences
-            train_score = k.layers.Subtract(name='score-diff')([score, neg_score])
+        # we need negative examples, run through the same embedding
+        j_input = k.Input(shape=(1,), dtype='int32', name='neg-item')
+        j_flat = k.layers.Flatten(name='neg-vector')(i_embed(j_input))
 
-            # Assemble the model for prediction
-            model = k.Model([u_input, i_input], score, name='bpr-mf')
-            # Assemble the training model and configure to optimize
-            train = k.Model([u_input, i_input, j_input], train_score, name='bpr-train')
-            train.compile('adam', BprLoss())
+        # Score positive items with the dot product
+        score = k.layers.Dot(name='pos-score', axes=1)([u_flat, i_flat])
+        # And score negative items too
+        neg_score = k.layers.Dot(name='neg-score', axes=1)([u_flat, j_flat])
+        # Training is based on score differences
+        train_score = k.layers.Subtract(name='score-diff')([score, neg_score])
 
-        return graph, train, model
+        # Assemble the model for prediction
+        model = k.Model([u_input, i_input], score, name='bpr-mf')
+        # Assemble the training model and configure to optimize
+        train = k.Model([u_input, i_input, j_input], train_score, name='bpr-train')
+        train.compile('adam', BprLoss())
+
+        return train, model
 
     def predict_for_user(self, user, items, ratings=None):
         if user not in self.user_index_:
@@ -223,8 +220,7 @@ class BPR(Predictor):
         unos = np.full(len(good_inos), uno, dtype='i4')
         _log.debug('scoring %d items for user %d', len(good_inos), user)
 
-        with self.graph.as_default():
-            ys = self.model.predict([unos, good_inos])
+        ys = self.model.predict([unos, good_inos])
 
         res = pd.Series(ys[:, 0], index=good_items)
         return res.reindex(items)
@@ -233,18 +229,17 @@ class BPR(Predictor):
         state = dict(self.__dict__)
         if self.model is not None:
             # we need to save the model
-            del state['graph'], state['model']
+            del state['model']
             _log.info('extracting model config and weights')
-            with self.graph.as_default():
-                state['model_config'] = self.model.get_config()
-                state['model_weights'] = self.model.get_weights()
+            state['model_config'] = self.model.get_config()
+            state['model_weights'] = self.model.get_weights()
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
         if 'model_config' in state:
             _log.info('rehydrating model')
-            self.graph = tf.Graph()
-            with self.graph.as_default():
-                self.model = k.Model.from_config(state['model_config'])
-                self.model.set_weights(state['model_weights'])
+            self.model = k.Model.from_config(state['model_config'])
+            self.model.set_weights(state['model_weights'])
+            del self.model_config
+            del self.model_weights

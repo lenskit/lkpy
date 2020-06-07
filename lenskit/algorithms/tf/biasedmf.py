@@ -1,14 +1,12 @@
 import logging
 
-import pandas as pd
-import numpy as np
 import tensorflow as tf
 import tensorflow.keras as k
 
 from lenskit import util
 from ..mf_common import BiasMFPredictor
 from ..basic import Bias
-from .util import make_graph
+from .util import init_tf_rng
 
 _log = logging.getLogger(__name__)
 
@@ -47,7 +45,7 @@ class BiasedMF(BiasMFPredictor):
 
     A variety of resources informed the design, most notably `this one`_.
 
-    .. _this one:: https://towardsdatascience.com/building-a-book-recommendation-system-using-keras-1fba34180699
+    .. _this one:: https://towardsdatascience.com/1fba34180699
 
     Args:
         features(int): The number of latent features to learn.
@@ -76,17 +74,16 @@ class BiasedMF(BiasMFPredictor):
     def fit(self, ratings, **kwargs):
         timer = util.Stopwatch()
         normed = self.bias.fit_transform(ratings, indexes=True)
-        graph, model = self._build_model(len(self.bias.user_offsets_),
-                                         len(self.bias.item_offsets_))
+        model = self._build_model(len(self.bias.user_offsets_),
+                                  len(self.bias.item_offsets_))
 
         _log.info('[%s] training model', timer)
-        with graph.as_default():
-            model.fit([normed['uidx'], normed['iidx']], normed['rating'],
-                      epochs=self.epochs, batch_size=self.batch_size)
+        model.fit([normed['uidx'], normed['iidx']], normed['rating'],
+                    epochs=self.epochs, batch_size=self.batch_size)
 
-            _log.info('[%s] model finished, extracting weights', timer)
-            self.user_features_ = model.get_layer('user-embed').get_weights()[0]
-            self.item_features_ = model.get_layer('item-embed').get_weights()[0]
+        _log.info('[%s] model finished, extracting weights', timer)
+        self.user_features_ = model.get_layer('user-embed').get_weights()[0]
+        self.item_features_ = model.get_layer('item-embed').get_weights()[0]
 
         self.global_bias_ = self.bias.mean_
         self.user_bias_ = self.bias.user_offsets_.values
@@ -100,36 +97,37 @@ class BiasedMF(BiasMFPredictor):
         n_features = self.features
         _log.info('configuring TensorFlow model for %d features from %d users and %d items',
                   n_features, n_users, n_items)
-        graph = make_graph(self.rng_spec)
-        with graph.as_default():
-            # User input layer
-            u_input = k.Input(shape=(1,), dtype='int32', name='user')
-            # User embedding layer.
-            u_reg = k.regularizers.l2(self.reg / n_users)
-            u_embed = k.layers.Embedding(input_dim=n_users, output_dim=n_features, input_length=1,
-                                         embeddings_regularizer=u_reg,
-                                         embeddings_initializer='random_normal',
-                                         name='user-embed')(u_input)
-            # The embedding layer produces an extra dimension. Remove it.
-            u_flat = k.layers.Flatten(name='user-vector')(u_embed)
 
-            # Do the same thing for items
-            i_input = k.Input(shape=(1,), dtype='int32', name='item')
-            i_reg = k.regularizers.l2(self.reg / n_items)
-            i_embed = k.layers.Embedding(input_dim=n_items, output_dim=n_features, input_length=1,
-                                         embeddings_regularizer=i_reg,
-                                         embeddings_initializer='random_normal',
-                                         name='item-embed')(i_input)
-            i_flat = k.layers.Flatten(name='item-vector')(i_embed)
+        init_tf_rng(self.rng_spec)
 
-            # Predict ratings using a dot product of users and items
-            prod = k.layers.Dot(name='score', axes=1)([u_flat, i_flat])
+        # User input layer
+        u_input = k.Input(shape=(1,), dtype='int32', name='user')
+        # User embedding layer.
+        u_reg = k.regularizers.l2(self.reg / n_users)
+        u_embed = k.layers.Embedding(input_dim=n_users, output_dim=n_features, input_length=1,
+                                     embeddings_regularizer=u_reg,
+                                     embeddings_initializer='random_normal',
+                                     name='user-embed')(u_input)
+        # The embedding layer produces an extra dimension. Remove it.
+        u_flat = k.layers.Flatten(name='user-vector')(u_embed)
 
-            # Assemble the model and configure to optimize
-            model = k.Model([u_input, i_input], prod, name='classic-mf')
-            model.compile('adam', 'mean_squared_error')
+        # Do the same thing for items
+        i_input = k.Input(shape=(1,), dtype='int32', name='item')
+        i_reg = k.regularizers.l2(self.reg / n_items)
+        i_embed = k.layers.Embedding(input_dim=n_items, output_dim=n_features, input_length=1,
+                                     embeddings_regularizer=i_reg,
+                                     embeddings_initializer='random_normal',
+                                     name='item-embed')(i_input)
+        i_flat = k.layers.Flatten(name='item-vector')(i_embed)
 
-        return graph, model
+        # Predict ratings using a dot product of users and items
+        prod = k.layers.Dot(name='score', axes=1)([u_flat, i_flat])
+
+        # Assemble the model and configure to optimize
+        model = k.Model([u_input, i_input], prod, name='classic-mf')
+        model.compile('adam', 'mean_squared_error')
+
+        return model
 
     def predict_for_user(self, user, items, ratings=None):
         # look up user index

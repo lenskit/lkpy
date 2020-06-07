@@ -6,7 +6,7 @@ import tensorflow as tf
 _log = getLogger(__name__)
 
 
-def init_rng(spec):
+def init_tf_rng(spec):
     if spec is None:
         return
 

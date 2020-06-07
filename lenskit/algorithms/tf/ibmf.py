@@ -7,7 +7,7 @@ import tensorflow.keras as k
 
 from lenskit import util
 from .. import Predictor
-from .util import init_rng
+from .util import init_tf_rng
 
 _log = logging.getLogger(__name__)
 
@@ -122,7 +122,7 @@ class IntegratedBiasMF(Predictor):
                   n_features, n_users, n_items)
         _log.info('global mean rating is %f', mean)
 
-        init_rng(self.rng_spec)
+        init_tf_rng(self.rng_spec)
 
         # User input layer
         u_input = k.Input(shape=(1,), dtype='int32', name='user')
