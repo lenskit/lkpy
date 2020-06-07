@@ -1,5 +1,4 @@
 import logging
-import itertools as it
 import warnings
 from collections import OrderedDict as od
 
@@ -46,10 +45,9 @@ class RecListAnalysis:
 
     DEFAULT_SKIP_COLS = ['item', 'rank', 'score', 'rating']
 
-    def __init__(self, group_cols=None, progress=None):
+    def __init__(self, group_cols=None):
         self.group_cols = group_cols
         self.metrics = [(_length, 'nrecs', {})]
-        self.progress = progress
 
     def add_metric(self, metric, *, name=None, **kwargs):
         """
@@ -57,9 +55,8 @@ class RecListAnalysis:
 
         A metric is a function of two arguments: the a single group of the recommendation
         frame, and the corresponding truth frame.  The truth frame will be indexed by
-        item ID.  The recommendation frame will be in the order in the data.  Many metrics
-        are defined in :mod:`lenskit.metrics.topn`; they are re-exported from
-        :mod:`lenskit.topn` for convenience.
+        item ID.  Many metrics are defined in :mod:`lenskit.metrics.topn`; they are
+        re-exported from :mod:`lenskit.topn` for convenience.
 
         Args:
             metric: The metric to compute.
@@ -88,34 +85,60 @@ class RecListAnalysis:
         Returns:
             pandas.DataFrame: The results of the analysis.
         """
+        using_dask = type(recs).__module__.startswith('dask.')
+
         _log.info('analyzing %d recommendations (%d truth rows)', len(recs), len(truth))
+        gcols = self.group_cols
+        if gcols is None:
+            gcols = [c for c in recs.columns if c not in self.DEFAULT_SKIP_COLS]
+        _log.info('using group columns %s', gcols)
+        _log.info('ungrouped columns: %s', [c for c in recs.columns if c not in gcols])
+        gc_map = dict((c, i) for (i, c) in enumerate(gcols))
 
-        rec_key, truth_key = self._df_keys(recs.columns, truth.columns)
+        ti_bcols = [c for c in gcols if c in truth.columns]
+        truth_frames = dict((k, f.set_index('item').drop(columns=ti_bcols))
+                            for (k, f) in truth.groupby(ti_bcols))
 
-        _log.info('collecting truth data')
-        truth_frames = dict((k, df.set_index('item'))
-                            for (k, df)
-                            in self._iter_grouped(truth, truth_key))
-        _log.debug('found truth for %d users', len(truth_frames))
+        _log.info('using truth ID columns %s', ti_bcols)
 
-        mnames = [mn for (mf, mn, margs) in self.metrics]
+        mnames = pd.Index([mn for (mf, mn, margs) in self.metrics])
 
-        def list_measure_gen():
-            for rk, tk, df in self._iter_grouped(recs, rec_key, truth_key):
-                g_truth = truth_frames[tk]
-                results = tuple(mf(df, g_truth, **margs) for (mf, mn, margs) in self.metrics)
-                yield rk + results
+        def worker(group):
+            row_key = group.name
+            if len(ti_bcols) == len(gcols):
+                tr_key = row_key
+            else:
+                tr_key = tuple([row_key[gc_map[c]] for c in ti_bcols])
+                if len(tr_key) == 1:
+                    tr_key = tr_key[0]
+
+            g_truth = truth_frames[tr_key]
+
+            results = [mf(group, g_truth, **margs) for (mf, mn, margs) in self.metrics]
+            return pd.Series(results, index=mnames)
 
         timer = Stopwatch()
-        _log.info('collecting metric results')
-        res = pd.DataFrame.from_records(list_measure_gen(), columns=rec_key + mnames)
-        res.set_index(rec_key, inplace=True)
-        _log.info('measured %d lists in %s', len(res), timer)
+        grouped = recs.groupby(gcols)
+        _log.info('computing analysis for %s lists',
+                  len(grouped) if hasattr(grouped, '__len__') else 'many')
 
+        if using_dask:
+            # Dask group-apply requires metadata
+            meta = dict((mn, 'f8') for (_f, mn, _a) in self.metrics)
+            _log.debug('using meta %s', meta)
+            res = grouped.apply(worker, meta=meta)
+            res = res.compute()
+        elif hasattr(grouped, 'progress_apply'):
+            # Pandas has been patched with TQDM, use it
+            res = grouped.progress_apply(worker)
+        else:
+            res = grouped.apply(worker)
+
+        _log.info('analyzed %d lists in %s', len(res), timer)
         if include_missing:
             _log.info('filling in missing user info')
-            ug_cols = [c for c in rec_key if c not in truth_key]
-            tcount = truth.reset_index().groupby(truth_key)['item'].count()
+            ug_cols = [c for c in gcols if c not in ti_bcols]
+            tcount = truth.reset_index().groupby(ti_bcols)['item'].count()
             tcount.name = 'ntruth'
             _log.debug('res index levels: %s', res.index.names)
             if ug_cols:
@@ -130,49 +153,3 @@ class RecListAnalysis:
             res['nrecs'] = res['nrecs'].fillna(0)
 
         return res
-
-    def _df_keys(self, r_cols, t_cols):
-        "Identify rec list and truth list keys."
-        gcols = self.group_cols
-        if gcols is None:
-            gcols = [c for c in r_cols if c not in self.DEFAULT_SKIP_COLS]
-
-        truth_key = [c for c in gcols if c in t_cols]
-        rec_key = [c for c in gcols if c not in t_cols] + truth_key
-        _log.info('using rec key columns %s', rec_key)
-        _log.info('using truth key columns %s', truth_key)
-        return rec_key, truth_key
-
-    def _iter_grouped(self, df, *keys):
-        # try to do some memory optimization for groupby
-        key = keys[0]
-        kc_pos = dict((k, i) for (i, k) in enumerate(key))
-
-        _log.debug('reindexing by %s', key)
-        dfs = df.set_index(key, append=True)
-        dfs = dfs.reorder_levels([i+1 for i in range(len(key))] + [0])
-        assert dfs.index.names[:-1] == key
-        dfs = dfs.sort_index()
-
-        if self.progress is not None:
-            _log.debug('counting')
-            n = len(dfs.index.droplevel(-1).unique())
-            prog = self.progress(total=n)
-        else:
-            prog = None
-
-        _log.debug('iterating')
-        for rk, df in dfs.groupby(level=key):
-            if not isinstance(rk, tuple):
-                rk = (rk,)
-            row = [rk]
-            for ok in keys[1:]:
-                row.append(tuple(rk[kc_pos[kc]] for kc in ok))
-
-            row.append(df.reset_index(key, drop=True))
-            if prog is not None:
-                prog.update()
-            yield row
-
-        if prog is not None:
-            prog.close()
