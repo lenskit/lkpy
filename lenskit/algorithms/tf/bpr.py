@@ -57,6 +57,7 @@ class BprInputs(k.utils.Sequence):
         self.batch_size = batch_size
         self.neg_count = neg_count
         self.permutation = np.arange(self.matrix.nnz, dtype='i4')
+        self.targets = np.ones(batch_size * neg_count)
         rng.shuffle(self.permutation)
 
     def __len__(self):
@@ -78,7 +79,7 @@ class BprInputs(k.utils.Sequence):
         _log.debug('max sample count: %d', j_samps.max())
         return [uv.astype(np.int32),
                 iv.astype(np.int32),
-                jv.astype(np.int32)], (None,)
+                jv.astype(np.int32)], np.ones[:len(picked)]
 
     def on_epoch_end(self):
         _log.info('re-shuffling')
