@@ -100,7 +100,15 @@ def _initialize_worker(mkey, func, threads, queue):
     numba.config.NUMBA_NUM_THREADS = threads
     try:
         import mkl
+        _log.debug('configuring Numba thread count')
         mkl.set_num_threads(threads)
+    except ImportError:
+        pass
+
+    try:
+        import tensorflow as tf
+        _log.debug('disabling GPUs on TensorFlow')
+        tf.config.set_visible_devices([], 'GPU')
     except ImportError:
         pass
 
