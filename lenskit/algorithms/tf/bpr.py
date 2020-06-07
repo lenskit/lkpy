@@ -79,7 +79,7 @@ class BprInputs(k.utils.Sequence):
         _log.debug('max sample count: %d', j_samps.max())
         return [uv.astype(np.int32),
                 iv.astype(np.int32),
-                jv.astype(np.int32)], np.ones[:len(picked)]
+                jv.astype(np.int32)], self.targets[:len(picked)]
 
     def on_epoch_end(self):
         _log.info('re-shuffling')
