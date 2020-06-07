@@ -20,7 +20,8 @@ class InjectHandler:
 
     def handle(self, record):
         logger = logging.getLogger(record.name)
-        logger.handle(record)
+        if logger.isEnabledFor(record.levelno):
+            logger.handle(record)
 
 
 class LowPassFilter:
