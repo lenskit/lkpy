@@ -35,6 +35,26 @@ Rating Prediction
 
 .. autofunction:: predict
 
+Isolated Training
+~~~~~~~~~~~~~~~~~
+
+This function isn't a batch function per se, as it doesn't perform multiple operations, but it
+is primarily useful with batch operations.  The :py:func:`train_isolated` function trains an
+algorithm in a subprocess, so all temporary resources are released by virtue of the training
+process exiting.  It returns a shared memory serialization of the trained model, which can
+be passed directly to :py:func:`recommend` or :py:func:`predict` in lieu of an algorithm object,
+to reduce the total memory consumption.
+
+Example usage::
+
+    algo = BiasedMF(50)
+    algo = Recommender.adapt(algo)
+    algo = batch.train_isolated(algo, train_ratings)
+    preds = batch.predict(algo, test_ratings)
+
+.. autofunction:: train_isolated
+
+
 Scripting Evaluation
 ~~~~~~~~~~~~~~~~~~~~
 
