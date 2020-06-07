@@ -5,8 +5,11 @@ Utilities for parallel processing.
 import os
 import multiprocessing as mp
 from multiprocessing.queues import SimpleQueue
+from multiprocessing.connection import Listener, Client, wait
+import threading
 import functools as ft
 import logging
+import logging.handlers
 import inspect
 from concurrent.futures import ProcessPoolExecutor
 from abc import ABC, abstractmethod
@@ -72,10 +75,27 @@ class LKContext(mp.context.SpawnContext):
 LKContext.INSTANCE = LKContext()
 
 
-def _initialize_worker(mkey, func, threads):
+class InjectHandler:
+    "Handler that re-injects a message into parent process logging"
+    level = logging.DEBUG
+
+    def handle(self, record):
+        logger = logging.getLogger(record.name)
+        logger.handle(record)
+
+
+def _initialize_worker(mkey, func, threads, queue):
     global __work_model, __work_func
     __work_model = mkey
     __work_func = func
+
+    if queue is not None:
+        h = logging.handlers.QueueHandler(queue)
+        root = logging.getLogger()
+        root.addHandler(h)
+        root.setLevel(logging.DEBUG)
+        h.setLevel(logging.DEBUG)
+
     import numba
     numba.config.NUMBA_NUM_THREADS = threads
     try:
@@ -83,6 +103,8 @@ def _initialize_worker(mkey, func, threads):
         mkl.set_num_threads(threads)
     except ImportError:
         pass
+
+    _log.debug('worker %d ready', os.getpid())
 
 
 def _proc_worker(*args):
@@ -208,13 +230,19 @@ class ProcessPoolOpInvoker(ModelOpInvoker):
         key = persist(model)
         ctx = LKContext.INSTANCE
         _log.info('setting up ProcessPoolExecutor w/ %d workers', n_jobs)
-        self.executor = ProcessPoolExecutor(n_jobs, ctx, _initialize_worker, (key, func, kid_tc))
+        kid_tc = proc_count(level=1)
+        log_queue = ctx.Queue()
+        self.log_listener = logging.handlers.QueueListener(log_queue, InjectHandler())
+        self.log_listener.start()
+        self.executor = ProcessPoolExecutor(n_jobs, ctx, _initialize_worker,
+                                            (key, func, kid_tc, log_queue))
 
     def map(self, *iterables):
         return self.executor.map(_proc_worker, *iterables)
 
     def shutdown(self):
         self.executor.shutdown()
+        self.log_listener.stop()
 
 
 class MPOpInvoker(ModelOpInvoker):
@@ -222,11 +250,15 @@ class MPOpInvoker(ModelOpInvoker):
         key = persist(model)
         ctx = LKContext.INSTANCE
         kid_tc = proc_count(level=1)
+        log_queue = ctx.Queue()
+        self.log_listener = logging.handlers.QueueListener(log_queue, InjectHandler())
+        self.log_listener.start()
         _log.info('setting up multiprocessing.Pool w/ %d workers', n_jobs)
-        self.pool = ctx.Pool(n_jobs, _initialize_worker, (key, func, kid_tc))
+        self.pool = ctx.Pool(n_jobs, _initialize_worker, (key, func, kid_tc, queue))
 
     def map(self, *iterables):
         return self.pool.starmap(_proc_worker, zip(*iterables))
 
     def shutdown(self):
         self.pool.close()
+        self.log_listener.stop()
