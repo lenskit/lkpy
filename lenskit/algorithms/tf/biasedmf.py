@@ -60,7 +60,8 @@ class BiasedMF(BiasMFPredictor):
             The random number generator initialization.
     """
 
-    def __init__(self, features=50, *, bias=True, damping=5, epochs=5, batch_size=10000, reg=0.02, rng_spec=None):
+    def __init__(self, features=50, *, bias=True, damping=5,
+                 epochs=5, batch_size=10000, reg=0.02, rng_spec=None):
         self.features = features
         self.epochs = epochs
         self.batch_size = batch_size
@@ -79,7 +80,7 @@ class BiasedMF(BiasMFPredictor):
 
         _log.info('[%s] training model', timer)
         model.fit([normed['uidx'], normed['iidx']], normed['rating'],
-                    epochs=self.epochs, batch_size=self.batch_size)
+                  epochs=self.epochs, batch_size=self.batch_size)
 
         _log.info('[%s] model finished, extracting weights', timer)
         self.user_features_ = model.get_layer('user-embed').get_weights()[0]
