@@ -2,10 +2,8 @@
 Support for sharing and saving models and data structures.
 """
 
-import sys
 import os
 import pathlib
-import warnings
 from abc import abstractmethod, ABC
 from contextlib import contextmanager
 import tempfile
@@ -26,12 +24,6 @@ _store_state = threading.local()
 
 def _save_mode():
     return getattr(_store_state, 'mode', 'save')
-
-
-def _active_stores():
-    if not hasattr(_store_state, 'active'):
-        _store_state.active = []
-    return _store_state.active
 
 
 @contextmanager
