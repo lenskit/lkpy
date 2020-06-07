@@ -33,10 +33,14 @@ class MLFolds:
         self.ratings = ratings
         self.folds = list(xf.partition_users(self.ratings, 5, xf.SampleFrac(0.2)))
         self.test = pd.concat(f.test for f in self.folds)
+        self.isolate = False
 
     def evaluate(self, algo, train, test, **kwargs):
         _log.info('running training')
-        algo.fit(train)
+        if self.isolate:
+            algo = batch.train_isolated(algo, train)
+        else:
+            algo.fit(train)
         _log.info('testing %d users', test.user.nunique())
         recs = batch.recommend(algo, test.user.unique(), 100, **kwargs)
         return recs
@@ -130,11 +134,12 @@ def test_recommend_no_cands(mlb):
     assert len(merged) == 0
 
 
-@pytest.mark.parametrize('ncpus', [None, 1, 2])
+@pytest.mark.parametrize(('ncpus', 'isolate'), [(None, False), (1, False), (2, True)])
 @pytest.mark.eval
-def test_bias_batch_recommend(ml_folds: MLFolds, ncpus):
+def test_bias_batch_recommend(ml_folds: MLFolds, ncpus, isolate):
     algo = Bias(damping=5)
     algo = TopN(algo)
+    ml_folds.isolate = isolate
 
     recs = ml_folds.eval_all(algo, n_jobs=ncpus)
 

@@ -13,7 +13,7 @@ from concurrent.futures import ProcessPoolExecutor
 from abc import ABC, abstractmethod
 import pickle
 
-from lenskit.sharing import persist
+from lenskit.sharing import persist, PersistedModel
 from lenskit.util.log import log_queue
 
 if pickle.HIGHEST_PROTOCOL < 5:
@@ -190,6 +190,7 @@ def run_sp(func, *args, **kwargs):
     proc.start()
     _log.debug('waiting for process %s to return', proc)
     success, payload = rq.get()
+    _log.debug('received success=%s', success)
     _log.debug('waiting for process %s to exit', proc)
     proc.join()
     if proc.exitcode:
@@ -266,17 +267,26 @@ class ModelOpInvoker(ABC):
 class InProcessOpInvoker(ModelOpInvoker):
     def __init__(self, model, func):
         _log.info('setting up in-process worker')
-        self.model = model
+        if isinstance(model, PersistedModel):
+            self.model = model.get()
+        else:
+            self.model = model
         self.function = func
 
     def map(self, *iterables):
         proc = ft.partial(self.function, self.model)
         return map(proc, *iterables)
 
+    def shutdown(self):
+        self.model = None
+
 
 class ProcessPoolOpInvoker(ModelOpInvoker):
     def __init__(self, model, func, n_jobs):
-        key = persist(model)
+        if isinstance(model, PersistedModel):
+            key = model
+        else:
+            key = persist(model)
         ctx = LKContext.INSTANCE
         _log.info('setting up ProcessPoolExecutor w/ %d workers', n_jobs)
         kid_tc = proc_count(level=1)
@@ -292,7 +302,10 @@ class ProcessPoolOpInvoker(ModelOpInvoker):
 
 class MPOpInvoker(ModelOpInvoker):
     def __init__(self, model, func, n_jobs):
-        key = persist(model)
+        if isinstance(model, PersistedModel):
+            key = model
+        else:
+            key = persist(model)
         ctx = LKContext.INSTANCE
         kid_tc = proc_count(level=1)
         _log.info('setting up multiprocessing.Pool w/ %d workers', n_jobs)

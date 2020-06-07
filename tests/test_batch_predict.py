@@ -130,3 +130,17 @@ def test_bias_batch_predict(ncpus):
     rmse = pm.rmse(preds.prediction, preds.rating)
     _log.info('RMSE is %f', rmse)
     assert rmse == pytest.approx(0.95, abs=0.1)
+
+
+def test_batch_predict_preshared():
+    from lenskit.algorithms import basic
+    import lenskit.crossfold as xf
+
+    algo = basic.Bias()
+    splits = xf.sample_users(lktu.ml_test.ratings, 1, 100, xf.SampleN(5))
+    train, test = next(splits)
+
+    ares = lkb.train_isolated(algo, train)
+    preds = lkb.predict(ares, test)
+    assert len(preds) == len(test)
+    assert not any(preds['prediction'].isna())
