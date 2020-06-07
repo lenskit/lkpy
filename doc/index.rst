@@ -50,6 +50,7 @@ Resources
    datasets
    algorithms
    random
+   performance
    util
    diagnostics
    impl-tips
