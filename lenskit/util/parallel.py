@@ -5,8 +5,6 @@ Utilities for parallel processing.
 import os
 import multiprocessing as mp
 from multiprocessing.queues import SimpleQueue
-from multiprocessing.connection import Listener, Client, wait
-import threading
 import functools as ft
 import logging
 import logging.handlers
@@ -15,7 +13,8 @@ from concurrent.futures import ProcessPoolExecutor
 from abc import ABC, abstractmethod
 import pickle
 
-from ..sharing import persist
+from lenskit.sharing import persist
+from lenskit.util.log import log_queue
 
 if pickle.HIGHEST_PROTOCOL < 5:
     import pickle5 as pickle
@@ -24,10 +23,16 @@ _log = logging.getLogger(__name__)
 __work_model = None
 __work_func = None
 __is_worker = False
+__is_mp_worker = False
 
 
 def is_worker():
-    return __is_worker
+    "uery whether the process is a worker, either for MP or for isolation."
+
+
+def is_mp_worker():
+    "Query whether the current process is a multiprocessing worker."
+    return __is_mp_worker
 
 
 def _p5_recv(self):
@@ -80,27 +85,24 @@ class LKContext(mp.context.SpawnContext):
 LKContext.INSTANCE = LKContext()
 
 
-class InjectHandler:
-    "Handler that re-injects a message into parent process logging"
-    level = logging.DEBUG
-
-    def handle(self, record):
-        logger = logging.getLogger(record.name)
-        logger.handle(record)
-
-
-def _initialize_worker(mkey, func, threads, queue):
-    global __work_model, __work_func, __is_worker
-    __work_model = mkey
-    __work_func = func
+def _initialize_worker(log_queue):
+    "Initialize a worker process."
+    global __is_worker
     __is_worker = True
-
-    if queue is not None:
-        h = logging.handlers.QueueHandler(queue)
+    if log_queue is not None:
+        h = logging.handlers.QueueHandler(log_queue)
         root = logging.getLogger()
         root.addHandler(h)
         root.setLevel(logging.DEBUG)
         h.setLevel(logging.DEBUG)
+
+
+def _initialize_mp_worker(mkey, func, threads, log_queue):
+    _initialize_worker(log_queue)
+    global __work_model, __work_func, __is_mp_worker
+    __work_model = mkey
+    __work_func = func
+    __is_mp_worker = True
 
     import numba
     numba.config.NUMBA_NUM_THREADS = threads
@@ -240,18 +242,14 @@ class ProcessPoolOpInvoker(ModelOpInvoker):
         ctx = LKContext.INSTANCE
         _log.info('setting up ProcessPoolExecutor w/ %d workers', n_jobs)
         kid_tc = proc_count(level=1)
-        log_queue = ctx.Queue()
-        self.log_listener = logging.handlers.QueueListener(log_queue, InjectHandler())
-        self.log_listener.start()
-        self.executor = ProcessPoolExecutor(n_jobs, ctx, _initialize_worker,
-                                            (key, func, kid_tc, log_queue))
+        self.executor = ProcessPoolExecutor(n_jobs, ctx, _initialize_mp_worker,
+                                            (key, func, kid_tc, log_queue()))
 
     def map(self, *iterables):
         return self.executor.map(_proc_worker, *iterables)
 
     def shutdown(self):
         self.executor.shutdown()
-        self.log_listener.stop()
 
 
 class MPOpInvoker(ModelOpInvoker):
@@ -259,15 +257,11 @@ class MPOpInvoker(ModelOpInvoker):
         key = persist(model)
         ctx = LKContext.INSTANCE
         kid_tc = proc_count(level=1)
-        log_queue = ctx.Queue()
-        self.log_listener = logging.handlers.QueueListener(log_queue, InjectHandler())
-        self.log_listener.start()
         _log.info('setting up multiprocessing.Pool w/ %d workers', n_jobs)
-        self.pool = ctx.Pool(n_jobs, _initialize_worker, (key, func, kid_tc, log_queue))
+        self.pool = ctx.Pool(n_jobs, _initialize_mp_worker, (key, func, kid_tc, log_queue()))
 
     def map(self, *iterables):
         return self.pool.starmap(_proc_worker, zip(*iterables))
 
     def shutdown(self):
         self.pool.close()
-        self.log_listener.stop()
