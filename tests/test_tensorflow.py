@@ -1,5 +1,5 @@
 import logging
-from pytest import approx, mark, skip
+from pytest import approx, mark, skip, fixture
 
 import pandas as pd
 import numpy as np
@@ -10,14 +10,20 @@ from lenskit.algorithms import Recommender
 
 try:
     from lenskit.algorithms import tf as lktf
+    import tensorflow as tf
 except ImportError:
     pytestmark = mark.skip('tensorflow not available')
 
 _log = logging.getLogger(__name__)
 
 
+@fixture(scope='function')
+def tf_session():
+    tf.keras.backend.clear_session()
+
+
 @mark.slow
-def test_tf_bias_save_load(tmp_path):
+def test_tf_bias_save_load(tmp_path, tf_session):
     "Training, saving, and loading a bias model."
     fn = tmp_path / 'bias.bpk'
     ratings = lktu.ml_test.ratings
@@ -45,7 +51,7 @@ def test_tf_bias_save_load(tmp_path):
 @mark.slow
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
-def test_tf_bias_batch_accuracy():
+def test_tf_bias_batch_accuracy(tf_session):
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch
@@ -72,7 +78,7 @@ def test_tf_bias_batch_accuracy():
 
 
 @mark.slow
-def test_tf_ibias_general(tmp_path):
+def test_tf_ibias_general(tmp_path, tf_session):
     "Training, saving, loading, and using an integrated bias model."
     fn = tmp_path / 'bias.bpk'
     ratings = lktu.ml_test.ratings
@@ -105,7 +111,7 @@ def test_tf_ibias_general(tmp_path):
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 @mark.parametrize('n_jobs', [1, None])
-def test_tf_ibias_batch_accuracy(n_jobs):
+def test_tf_ibias_batch_accuracy(n_jobs, tf_session):
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch
@@ -132,7 +138,7 @@ def test_tf_ibias_batch_accuracy(n_jobs):
 
 
 @mark.slow
-def test_tf_bpr_general(tmp_path):
+def test_tf_bpr_general(tmp_path, tf_session):
     "Training, saving, loading, and using a BPR model."
     fn = tmp_path / 'bias.bpk'
     ratings = lktu.ml_test.ratings
@@ -164,7 +170,7 @@ def test_tf_bpr_general(tmp_path):
 @mark.slow
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
-def test_tf_bpr_batch_accuracy():
+def test_tf_bpr_batch_accuracy(tf_session):
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
     from lenskit import batch, topn
