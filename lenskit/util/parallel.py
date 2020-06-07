@@ -116,9 +116,21 @@ def _initialize_mp_worker(mkey, func, threads, log_queue):
     _log.debug('worker %d ready', os.getpid())
 
 
-def _proc_worker(*args):
+def _mp_invoke_worker(*args):
     model = __work_model.get()
     return __work_func(model, *args)
+
+
+def _sp_worker(log_queue, res_queue, func, args, kwargs):
+    _initialize_worker(log_queue)
+    _log.debug('running %s in worker', func)
+    try:
+        res = func(*args, **kwargs)
+        _log.debug('completed successfully')
+        res_queue.put((True, res))
+    except Exception as e:
+        _log.debug('failed, transmitting error %s', e)
+        res_queue.put((False, e))
 
 
 def proc_count(core_div=2, max_default=None, level=0):
@@ -162,6 +174,32 @@ def proc_count(core_div=2, max_default=None, level=0):
         return 1
     else:
         return nprocs[level]
+
+
+def run_sp(func, *args, **kwargs):
+    """
+    Run a function in a subprocess and return its value.  This is for achieving subprocess
+    isolation, not parallelism.  The subprocess is configured so things like logging work
+    correctly.
+    """
+    ctx = LKContext.INSTANCE
+    rq = ctx.SimpleQueue()
+    worker_args = (log_queue(), rq, func, args, kwargs)
+    _log.debug('spawning subprocess to run %s', func)
+    proc = ctx.Process(target=_sp_worker, args=worker_args)
+    proc.start()
+    _log.debug('waiting for process %s to return', proc)
+    success, payload = rq.get()
+    _log.debug('waiting for process %s to exit', proc)
+    proc.join()
+    if proc.exitcode:
+        _log.error('subprocess failed with code %d', proc.exitcode)
+        raise RuntimeError('subprocess failed with code ' + str(proc.exitcode))
+    if success:
+        return payload
+    else:
+        _log.error('subprocess raised exception: %s', payload)
+        raise ChildProcessError('error in child process', payload)
 
 
 def invoker(model, func, n_jobs=None):
@@ -246,7 +284,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker):
                                             (key, func, kid_tc, log_queue()))
 
     def map(self, *iterables):
-        return self.executor.map(_proc_worker, *iterables)
+        return self.executor.map(_mp_invoke_worker, *iterables)
 
     def shutdown(self):
         self.executor.shutdown()
@@ -261,7 +299,7 @@ class MPOpInvoker(ModelOpInvoker):
         self.pool = ctx.Pool(n_jobs, _initialize_mp_worker, (key, func, kid_tc, log_queue()))
 
     def map(self, *iterables):
-        return self.pool.starmap(_proc_worker, zip(*iterables))
+        return self.pool.starmap(_mp_invoke_worker, zip(*iterables))
 
     def shutdown(self):
         self.pool.close()

@@ -4,6 +4,7 @@ Support for sharing and saving models and data structures.
 
 import os
 import pathlib
+import warnings
 from abc import abstractmethod, ABC
 from contextlib import contextmanager
 import tempfile
@@ -75,6 +76,24 @@ class PersistedModel(ABC):
         """
         pass
 
+    def transfer(self):
+        """
+        Mark an object for ownership transfer.  This object, when pickled, will
+        unpickle into an owning model that frees resources when closed. Used to
+        transfer ownership of shared memory resources from child processes to
+        parent processes.  Such an object should only be unpickled once.
+
+        The default implementation sets the ``is_owner`` attribute to ``'transfer'``.
+
+        Returns:
+            ``self`` (for convenience)
+        """
+        if not self.is_owner:
+            warnings.warn('non-owning objects should not be transferred', stacklevel=1)
+        else:
+            self.is_owner = 'transfer'
+        return self
+
 
 def persist(model):
     """
@@ -108,21 +127,25 @@ def persist(model):
         return persist_binpickle(model)
 
 
-def persist_binpickle(model, dir=None):
+def persist_binpickle(model, dir=None, file=None):
     """
     Persist a model using binpickle.
 
     Args:
         model: The model to persist.
         dir: The temporary directory for persisting the model object.
+        file: The file in which to save the object.
 
     Returns:
         PersistedModel: The persisted object.
     """
-    fd, path = tempfile.mkstemp(suffix='.bpk', prefix='lkpy-', dir=dir)
-    os.close(fd)
-    path = pathlib.Path(path)
-    _log.info('persisting %s to %s', model, path)
+    if file is not None:
+        path = pathlib.Path(file)
+    else:
+        fd, path = tempfile.mkstemp(suffix='.bpk', prefix='lkpy-', dir=dir)
+        os.close(fd)
+        path = pathlib.Path(path)
+    _log.debug('persisting %s to %s', model, path)
     with binpickle.BinPickler.mappable(path) as bp, sharing_mode():
         bp.dump(model)
     return BPKPersisted(path)
@@ -137,6 +160,7 @@ class BPKPersisted(PersistedModel):
 
     def get(self):
         if self._bpk_file is None:
+            _log.debug('loading %s', self.path)
             self._bpk_file = binpickle.BinPickleFile(self.path, direct=True)
             self._model = self._bpk_file.load()
         return self._model
@@ -145,6 +169,7 @@ class BPKPersisted(PersistedModel):
         if self._bpk_file is not None:
             self._model = None
             try:
+                _log.debug('closing BPK file')
                 self._bpk_file.close()
             except IOError as e:
                 _log.warn('error closing %s: %s', self.path, e)
@@ -153,12 +178,18 @@ class BPKPersisted(PersistedModel):
         if self.is_owner and unlink:
             assert self._model is None
             if unlink:
+                _log.debug('deleting %s', self.path)
                 self.path.unlink()
             self.is_owner = False
 
     def __getstate__(self):
         d = dict(self.__dict__)
-        d['is_owner'] = False
+        d['_bpk_file'] = None
+        d['_model'] = None
+        if self.is_owner == 'transfer':
+            d['is_owner'] = True
+        else:
+            d['is_owner'] = False
         return d
 
     def __del___(self):
@@ -212,16 +243,15 @@ class SHMPersisted(PersistedModel):
 
     def get(self):
         if self._model is None:
+            _log.debug('loading model from shared memory')
+            shm_bufs = self._open_buffers()
             buffers = []
-            shm_bufs = []
-            for bn, bs in self.buffer_specs:
+            for (bn, bs), block in zip(self.buffer_specs, shm_bufs):
                 # funny business with buffer sizes
-                block = shm.SharedMemory(name=bn)
                 _log.debug('%s: %d bytes (%d used)', block.name, bs, block.size)
                 buffers.append(block.buf[:bs])
                 shm_bufs.append(block)
 
-            self.buffers = shm_bufs
             self._model = pickle.loads(self.pickle_data, buffers=buffers)
 
         return self._model
@@ -229,15 +259,27 @@ class SHMPersisted(PersistedModel):
     def close(self, unlink=True):
         self._model = None
         if self.is_owner:
+            _log.debug('releasing SHM buffers')
             for buf in self.buffers:
                 buf.close()
                 buf.unlink()
             del self.buffers
             self.is_owner = False
 
+    def _open_buffers(self):
+        if not self.buffers:
+            self.buffers = [shm.SharedMemory(name=bn) for (bn, bs) in self.buffer_specs]
+        return self.buffers
+
     def __getstate__(self):
         return {
             'pickle_data': self.pickle_data,
             'buffer_specs': self.buffer_specs,
-            'is_owner': False
+            'is_owner': True if self.is_owner == 'transfer' else False
         }
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if self.is_owner:
+            _log.debug('opening shared buffers after ownership transfer')
+            self._open_buffers
