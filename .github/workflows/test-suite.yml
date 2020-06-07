@@ -105,7 +105,7 @@ jobs:
     runs-on: ${{matrix.platform}}-latest
     strategy:
       matrix:
-        platform: [ubuntu,windows,macos]
+        platform: [ubuntu,windows]
 
     steps:
       - uses: actions/checkout@v2
