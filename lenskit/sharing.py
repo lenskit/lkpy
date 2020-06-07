@@ -250,7 +250,6 @@ class SHMPersisted(PersistedModel):
                 # funny business with buffer sizes
                 _log.debug('%s: %d bytes (%d used)', block.name, bs, block.size)
                 buffers.append(block.buf[:bs])
-                shm_bufs.append(block)
 
             self._model = pickle.loads(self.pickle_data, buffers=buffers)
 
