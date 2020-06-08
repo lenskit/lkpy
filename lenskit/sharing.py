@@ -7,6 +7,7 @@ import pathlib
 import warnings
 from abc import abstractmethod, ABC
 from contextlib import contextmanager
+import gc
 import tempfile
 import threading
 import logging
@@ -89,7 +90,7 @@ class PersistedModel(ABC):
             ``self`` (for convenience)
         """
         if not self.is_owner:
-            warnings.warn('non-owning objects should not be transferred', stacklevel=1)
+            warnings.warning('non-owning objects should not be transferred', stacklevel=1)
         else:
             self.is_owner = 'transfer'
         return self
@@ -170,7 +171,12 @@ class BPKPersisted(PersistedModel):
             self._model = None
             try:
                 _log.debug('closing BPK file')
-                self._bpk_file.close()
+                try:
+                    self._bpk_file.close()
+                except BufferError:
+                    _log.warn('could not close %s, collecting garbage and retrying', self.path)
+                    gc.collect()
+                    self._bpk_file.close()
             except IOError as e:
                 _log.warn('error closing %s: %s', self.path, e)
             self._bpk_file = None
