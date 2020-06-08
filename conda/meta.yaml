@@ -36,7 +36,7 @@ requirements:
     - cffi >=1.12.2
     - binpickle >=0.1
   run_constrained:
-    - scikit-learn >=0.23
+    - scikit-learn >=0.22
     - tensorflow >=2.1
 
 test:
