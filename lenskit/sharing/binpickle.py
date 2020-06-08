@@ -88,5 +88,3 @@ class BPKPersisted(PersistedModel):
 
     def __del___(self):
         self.close(False)
-
-

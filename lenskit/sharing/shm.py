@@ -1,5 +1,7 @@
 import logging
 import pickle
+from . import sharing_mode, PersistedModel
+
 try:
     import multiprocessing.shared_memory as shm
     SHM_AVAILABLE = True
@@ -8,8 +10,6 @@ except ImportError:
 
 if pickle.HIGHEST_PROTOCOL < 5:
     import pickle5 as pickle
-
-from . import sharing_mode, PersistedModel
 
 _log = logging.getLogger(__name__)
 
