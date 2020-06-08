@@ -62,12 +62,25 @@ def test_persist():
 def test_persist_dir(tmp_path):
     "Test persistence with a configured directory"
     matrix = np.random.randn(1000, 100)
-    os.environ['LK_TEMP_DIR'] = os.fspath(tmp_path)
-    try:
+    with lktu.set_env_var('LK_TEMP_DIR', os.fspath(tmp_path)):
         share = lks.persist(matrix)
         assert isinstance(share, lks.BPKPersisted)
+
+    try:
+        m2 = share.get()
+        assert m2 is not matrix
+        assert np.all(m2 == matrix)
+        del m2
     finally:
-        del os.environ['LK_TEMP_DIR']
+        share.close()
+
+
+def test_persist_method():
+    "Test persistence with a specified method"
+    matrix = np.random.randn(1000, 100)
+
+    share = lks.persist(matrix, method='binpickle')
+    assert isinstance(share, lks.BPKPersisted)
 
     try:
         m2 = share.get()

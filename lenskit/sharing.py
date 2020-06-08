@@ -96,15 +96,15 @@ class PersistedModel(ABC):
         return self
 
 
-def persist(model):
+def persist(model, *, method=None):
     """
     Persist a model for cross-process sharing.
 
     This will return a persiste dmodel that can be used to reconstruct the model
     in a worker process (using :func:`reconstruct`).
 
-    This function automatically selects a model persistence strategy from the
-    the following, in order:
+    If no method is provided, this function automatically selects a model persistence
+    strategy from the the following, in order:
 
     1. If `LK_TEMP_DIR` is set, use :mod:`binpickle` in shareable mode to save
        the object into the LensKit temporary directory.
@@ -114,18 +114,29 @@ def persist(model):
        into the system temporary directory.
 
     Args:
-        model(obj): the model to persist.
+        model(obj):
+            The model to persist.
+        method(str or None):
+            The method to use.  Can be one of ``binpickle`` or ``shm``.
 
     Returns:
         PersistedModel: The persisted object.
     """
-    lk_tmp = os.environ.get('LK_TEMP_DIR', None)
-    if lk_tmp is not None:
-        return persist_binpickle(model, lk_tmp)
-    elif shm is not None:
-        return persist_shm(model)
-    else:
-        return persist_binpickle(model)
+    if method is not None:
+        if method == 'binpickle':
+            method = persist_binpickle
+        elif method == 'shm':
+            method = persist_shm
+        elif not hasattr(method, '__call__'):
+            raise ValueError('invalid method %s: must be one of binpickle, shm, or a funciton')
+
+    if method is None:
+        if shm is not None and 'LK_TEMP_DIR' not in os.environ:
+            method = persist_shm
+        else:
+            method = persist_binpickle
+
+    return method(model)
 
 
 def persist_binpickle(model, dir=None, file=None):
@@ -143,6 +154,8 @@ def persist_binpickle(model, dir=None, file=None):
     if file is not None:
         path = pathlib.Path(file)
     else:
+        if dir is None:
+            dir = os.environ.get('LK_TEMP_DIR', None)
         fd, path = tempfile.mkstemp(suffix='.bpk', prefix='lkpy-', dir=dir)
         os.close(fd)
         path = pathlib.Path(path)

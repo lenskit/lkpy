@@ -204,7 +204,7 @@ def run_sp(func, *args, **kwargs):
         raise ChildProcessError('error in child process', payload)
 
 
-def invoker(model, func, n_jobs=None):
+def invoker(model, func, n_jobs=None, *, persist_method=None):
     """
     Get an appropriate invoker for performing oeprations on ``model``.
 
@@ -214,6 +214,9 @@ def invoker(model, func, n_jobs=None):
         n_jobs(int or None):
             The number of processes to use for parallel operations.  If ``None``, will
             call :func:`proc_count` with a maximum default process count of 4.
+        persist_method(str or None):
+            The persistence method to use.  Passed as ``method`` to
+            :func:`lenskit.sharing.persist`.
 
     Returns:
         ModelOpInvoker:
@@ -225,10 +228,10 @@ def invoker(model, func, n_jobs=None):
     if n_jobs == 1:
         return InProcessOpInvoker(model, func)
     elif 'mp_context' in inspect.signature(ProcessPoolExecutor).parameters:
-        return ProcessPoolOpInvoker(model, func, n_jobs)
+        return ProcessPoolOpInvoker(model, func, n_jobs, persist_method)
     else:
         _log.warn('using multiprocessing.Pool, upgrade to Python 3.7 for best results')
-        return MPOpInvoker(model, func, n_jobs)
+        return MPOpInvoker(model, func, n_jobs, persist_method)
 
 
 class ModelOpInvoker(ABC):
@@ -283,11 +286,11 @@ class InProcessOpInvoker(ModelOpInvoker):
 
 
 class ProcessPoolOpInvoker(ModelOpInvoker):
-    def __init__(self, model, func, n_jobs):
+    def __init__(self, model, func, n_jobs, persist_method):
         if isinstance(model, PersistedModel):
             key = model
         else:
-            key = persist(model)
+            key = persist(model, method=persist_method)
         ctx = LKContext.INSTANCE
         _log.info('setting up ProcessPoolExecutor w/ %d workers', n_jobs)
         kid_tc = proc_count(level=1)
@@ -302,11 +305,11 @@ class ProcessPoolOpInvoker(ModelOpInvoker):
 
 
 class MPOpInvoker(ModelOpInvoker):
-    def __init__(self, model, func, n_jobs):
+    def __init__(self, model, func, n_jobs, persist_method):
         if isinstance(model, PersistedModel):
             key = model
         else:
-            key = persist(model)
+            key = persist(model, method=persist_method)
         ctx = LKContext.INSTANCE
         kid_tc = proc_count(level=1)
         _log.info('setting up multiprocessing.Pool w/ %d workers', n_jobs)
