@@ -45,8 +45,9 @@ test:
     - tests
     - tests/*.py
     - tests/*.csv
-    - ml-latest-small
-    - ml-latest-small/*.csv
+    - data
+    - data/ml-latest-small
+    - data/ml-latest-small/*.csv
   requires:
     - pytest
     - pytest-arraydiff
