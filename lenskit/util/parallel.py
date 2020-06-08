@@ -27,7 +27,8 @@ __is_mp_worker = False
 
 
 def is_worker():
-    "uery whether the process is a worker, either for MP or for isolation."
+    "Query whether the process is a worker, either for MP or for isolation."
+    return __is_worker
 
 
 def is_mp_worker():
