@@ -17,24 +17,23 @@ _log = logging.getLogger(__name__)
 
 def test_split_keys():
     rla = topn.RecListAnalysis()
-    recs, truth = rla._df_keys(['algorithm', 'user', 'item', 'rank', 'score'],
-                               ['user', 'item', 'rating'])
+    recs, truth = topn._df_keys(['algorithm', 'user', 'item', 'rank', 'score'],
+                                ['user', 'item', 'rating'])
     assert truth == ['user']
     assert recs == ['algorithm', 'user']
 
 
 def test_split_keys_gcol():
-    rla = topn.RecListAnalysis(group_cols=['algorithm', 'fishtank', 'user'])
-    recs, truth = rla._df_keys(['algorithm', 'user', 'item', 'rank', 'score', 'fishtank'],
-                               ['user', 'item', 'rating'])
+    recs, truth = topn._df_keys(['algorithm', 'user', 'item', 'rank', 'score', 'fishtank'],
+                                ['user', 'item', 'rating'],
+                                ['algorithm', 'fishtank', 'user'])
     assert truth == ['user']
     assert recs == ['algorithm', 'fishtank', 'user']
 
 
 def test_iter_one():
-    rla = topn.RecListAnalysis()
     df = pd.DataFrame({'user': 1, 'item': [17]})
-    gs = list(rla._iter_grouped(df, ['user']))
+    gs = list(topn._grouping_iter(df, ['user']))
     assert len(gs) == 1
     uk, idf = gs[0]
     assert uk == (1,)
@@ -42,9 +41,8 @@ def test_iter_one():
 
 
 def test_iter_one_group():
-    rla = topn.RecListAnalysis()
     df = pd.DataFrame({'user': 1, 'item': [17, 13, 24]})
-    gs = list(rla._iter_grouped(df, ['user']))
+    gs = list(topn._grouping_iter(df, ['user']))
     assert len(gs) == 1
     uk, idf = gs[0]
     assert uk == (1,)
@@ -53,9 +51,8 @@ def test_iter_one_group():
 
 
 def test_iter_mixed():
-    rla = topn.RecListAnalysis()
     df = pd.DataFrame({'user': [1, 1, 2, 2, 1], 'item': ['a', 'b', 'c', 'd', 'e']})
-    gs = list(rla._iter_grouped(df, ['user']))
+    gs = list(topn._grouping_iter(df, ['user']))
     assert len(gs) == 2
     uk, idf = gs[0]
     assert uk == (1,)
@@ -69,13 +66,12 @@ def test_iter_mixed():
 
 
 def test_iter_multilevel():
-    rla = topn.RecListAnalysis()
     df = pd.DataFrame({
         'user': [1, 1, 2, 2, 1],
         'bob': [10, 13, 10, 10, 10],
         'item': ['a', 'b', 'c', 'd', 'e']
     })
-    gs = list(rla._iter_grouped(df, ['user', 'bob']))
+    gs = list(topn._grouping_iter(df, ['user', 'bob']))
     assert len(gs) == 3
     uk, idf = gs[0]
     assert uk == (1, 10)
