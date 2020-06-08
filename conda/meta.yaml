@@ -26,6 +26,7 @@ requirements:
     - pyarrow >=0.15
     - cffi >=1.12.2
     - binpickle >=0.1
+    - mkl-service
     - mkl-devel
   run:
     - python
@@ -35,6 +36,7 @@ requirements:
     - pyarrow >=0.15
     - cffi >=1.12.2
     - binpickle >=0.1
+    - mkl-service
   run_constrained:
     - scikit-learn >=0.23
     - tensorflow >=2.1
