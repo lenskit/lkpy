@@ -80,8 +80,10 @@ def log_queue():
     Get the log queue for child process logging.
     """
     global _log_queue, _log_listener
+    from lenskit.util.parallel import LKContext
+    ctx = LKContext.INSTANCE
     if _log_queue is None:
-        _log_queue = mp.Queue()
+        _log_queue = ctx.Queue()
         _log_listener = QueueListener(_log_queue, InjectHandler())
         _log_listener.start()
     return _log_queue
