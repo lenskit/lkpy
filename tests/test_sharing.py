@@ -33,7 +33,7 @@ def test_persist_bpk():
         share.close()
 
 
-@mark.skipif(lks.shm is None, reason='shared_memory not available')
+@mark.skipif(not lks.SHM_AVAILABLE, reason='shared_memory not available')
 def test_persist_shm():
     matrix = np.random.randn(1000, 100)
     share = lks.persist_shm(matrix)
