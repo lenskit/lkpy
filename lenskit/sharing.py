@@ -177,7 +177,7 @@ class BPKPersisted(PersistedModel):
                     _log.debug('could not close %s, collecting garbage and retrying', self.path)
                     gc.collect()
                     self._bpk_file.close()
-            except BufferError, IOError as e:
+            except (BufferError, IOError) as e:
                 _log.warn('error closing %s: %s', self.path, e)
             self._bpk_file = None
 
