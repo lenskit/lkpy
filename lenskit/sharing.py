@@ -174,10 +174,10 @@ class BPKPersisted(PersistedModel):
                 try:
                     self._bpk_file.close()
                 except BufferError:
-                    _log.warn('could not close %s, collecting garbage and retrying', self.path)
+                    _log.debug('could not close %s, collecting garbage and retrying', self.path)
                     gc.collect()
                     self._bpk_file.close()
-            except IOError as e:
+            except BufferError, IOError as e:
                 _log.warn('error closing %s: %s', self.path, e)
             self._bpk_file = None
 
@@ -185,7 +185,10 @@ class BPKPersisted(PersistedModel):
             assert self._model is None
             if unlink:
                 _log.debug('deleting %s', self.path)
-                self.path.unlink()
+                try:
+                    self.path.unlink()
+                except IOError as e:
+                    _log.warn('could not remove %s: %s', self.path, e)
             self.is_owner = False
 
     def __getstate__(self):
