@@ -96,10 +96,10 @@ class RecListAnalysis:
         gc_map = dict((c, i) for (i, c) in enumerate(gcols))
 
         ti_bcols = [c for c in gcols if c in truth.columns]
+        _log.info('using truth ID columns %s', ti_bcols)
         truth_frames = dict((k, f.set_index('item').drop(columns=ti_bcols))
                             for (k, f) in truth.groupby(ti_bcols))
-
-        _log.info('using truth ID columns %s', ti_bcols)
+        _log.info('computed %d truth frames', len(truth_frames))
 
         mnames = pd.Index([mn for (mf, mn, margs) in self.metrics])
 

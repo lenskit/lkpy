@@ -14,6 +14,8 @@ and then passing lists of argument sets to the function::
 
 The model is persisted into shared memory to be used by the worker processes.
 
+Parallel Model Ops
+~~~~~~~~~~~~~~~~~~
 
 .. autofunction:: invoker
 
@@ -21,3 +23,11 @@ The model is persisted into shared memory to be used by the worker processes.
 
 .. autoclass:: ModelOpInvoker
     :members:
+
+
+Single Process Isolation
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+We also have a single-process isolation function that runs a function in a subprocess.
+
+.. autofunction:: run_sp

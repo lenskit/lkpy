@@ -6,4 +6,4 @@ llvmlite<0.31
 pyarrow==0.15.1
 cffi==1.12.2
 joblib==0.13.0
-binpickle==0.1
+binpickle==0.3.2

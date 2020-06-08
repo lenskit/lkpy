@@ -5,8 +5,6 @@ Utilities for parallel processing.
 import os
 import multiprocessing as mp
 from multiprocessing.queues import SimpleQueue
-from multiprocessing.connection import Listener, Client, wait
-import threading
 import functools as ft
 import logging
 import logging.handlers
@@ -15,7 +13,8 @@ from concurrent.futures import ProcessPoolExecutor
 from abc import ABC, abstractmethod
 import pickle
 
-from ..sharing import persist
+from lenskit.sharing import persist, PersistedModel
+from lenskit.util.log import log_queue
 
 if pickle.HIGHEST_PROTOCOL < 5:
     import pickle5 as pickle
@@ -24,10 +23,17 @@ _log = logging.getLogger(__name__)
 __work_model = None
 __work_func = None
 __is_worker = False
+__is_mp_worker = False
 
 
 def is_worker():
+    "Query whether the process is a worker, either for MP or for isolation."
     return __is_worker
+
+
+def is_mp_worker():
+    "Query whether the current process is a multiprocessing worker."
+    return __is_mp_worker
 
 
 def _p5_recv(self):
@@ -80,27 +86,24 @@ class LKContext(mp.context.SpawnContext):
 LKContext.INSTANCE = LKContext()
 
 
-class InjectHandler:
-    "Handler that re-injects a message into parent process logging"
-    level = logging.DEBUG
-
-    def handle(self, record):
-        logger = logging.getLogger(record.name)
-        logger.handle(record)
-
-
-def _initialize_worker(mkey, func, threads, queue):
-    global __work_model, __work_func, __is_worker
-    __work_model = mkey
-    __work_func = func
+def _initialize_worker(log_queue):
+    "Initialize a worker process."
+    global __is_worker
     __is_worker = True
-
-    if queue is not None:
-        h = logging.handlers.QueueHandler(queue)
+    if log_queue is not None:
+        h = logging.handlers.QueueHandler(log_queue)
         root = logging.getLogger()
         root.addHandler(h)
         root.setLevel(logging.DEBUG)
         h.setLevel(logging.DEBUG)
+
+
+def _initialize_mp_worker(mkey, func, threads, log_queue):
+    _initialize_worker(log_queue)
+    global __work_model, __work_func, __is_mp_worker
+    __work_model = mkey
+    __work_func = func
+    __is_mp_worker = True
 
     import numba
     numba.config.NUMBA_NUM_THREADS = threads
@@ -114,9 +117,21 @@ def _initialize_worker(mkey, func, threads, queue):
     _log.debug('worker %d ready', os.getpid())
 
 
-def _proc_worker(*args):
+def _mp_invoke_worker(*args):
     model = __work_model.get()
     return __work_func(model, *args)
+
+
+def _sp_worker(log_queue, res_queue, func, args, kwargs):
+    _initialize_worker(log_queue)
+    _log.debug('running %s in worker', func)
+    try:
+        res = func(*args, **kwargs)
+        _log.debug('completed successfully')
+        res_queue.put((True, res))
+    except Exception as e:
+        _log.debug('failed, transmitting error %s', e)
+        res_queue.put((False, e))
 
 
 def proc_count(core_div=2, max_default=None, level=0):
@@ -162,7 +177,34 @@ def proc_count(core_div=2, max_default=None, level=0):
         return nprocs[level]
 
 
-def invoker(model, func, n_jobs=None):
+def run_sp(func, *args, **kwargs):
+    """
+    Run a function in a subprocess and return its value.  This is for achieving subprocess
+    isolation, not parallelism.  The subprocess is configured so things like logging work
+    correctly.
+    """
+    ctx = LKContext.INSTANCE
+    rq = ctx.SimpleQueue()
+    worker_args = (log_queue(), rq, func, args, kwargs)
+    _log.debug('spawning subprocess to run %s', func)
+    proc = ctx.Process(target=_sp_worker, args=worker_args)
+    proc.start()
+    _log.debug('waiting for process %s to return', proc)
+    success, payload = rq.get()
+    _log.debug('received success=%s', success)
+    _log.debug('waiting for process %s to exit', proc)
+    proc.join()
+    if proc.exitcode:
+        _log.error('subprocess failed with code %d', proc.exitcode)
+        raise RuntimeError('subprocess failed with code ' + str(proc.exitcode))
+    if success:
+        return payload
+    else:
+        _log.error('subprocess raised exception: %s', payload)
+        raise ChildProcessError('error in child process', payload)
+
+
+def invoker(model, func, n_jobs=None, *, persist_method=None):
     """
     Get an appropriate invoker for performing oeprations on ``model``.
 
@@ -172,6 +214,9 @@ def invoker(model, func, n_jobs=None):
         n_jobs(int or None):
             The number of processes to use for parallel operations.  If ``None``, will
             call :func:`proc_count` with a maximum default process count of 4.
+        persist_method(str or None):
+            The persistence method to use.  Passed as ``method`` to
+            :func:`lenskit.sharing.persist`.
 
     Returns:
         ModelOpInvoker:
@@ -183,10 +228,10 @@ def invoker(model, func, n_jobs=None):
     if n_jobs == 1:
         return InProcessOpInvoker(model, func)
     elif 'mp_context' in inspect.signature(ProcessPoolExecutor).parameters:
-        return ProcessPoolOpInvoker(model, func, n_jobs)
+        return ProcessPoolOpInvoker(model, func, n_jobs, persist_method)
     else:
         _log.warn('using multiprocessing.Pool, upgrade to Python 3.7 for best results')
-        return MPOpInvoker(model, func, n_jobs)
+        return MPOpInvoker(model, func, n_jobs, persist_method)
 
 
 class ModelOpInvoker(ABC):
@@ -226,48 +271,52 @@ class ModelOpInvoker(ABC):
 class InProcessOpInvoker(ModelOpInvoker):
     def __init__(self, model, func):
         _log.info('setting up in-process worker')
-        self.model = model
+        if isinstance(model, PersistedModel):
+            self.model = model.get()
+        else:
+            self.model = model
         self.function = func
 
     def map(self, *iterables):
         proc = ft.partial(self.function, self.model)
         return map(proc, *iterables)
 
+    def shutdown(self):
+        self.model = None
+
 
 class ProcessPoolOpInvoker(ModelOpInvoker):
-    def __init__(self, model, func, n_jobs):
-        key = persist(model)
+    def __init__(self, model, func, n_jobs, persist_method):
+        if isinstance(model, PersistedModel):
+            key = model
+        else:
+            key = persist(model, method=persist_method)
         ctx = LKContext.INSTANCE
         _log.info('setting up ProcessPoolExecutor w/ %d workers', n_jobs)
         kid_tc = proc_count(level=1)
-        log_queue = ctx.Queue()
-        self.log_listener = logging.handlers.QueueListener(log_queue, InjectHandler())
-        self.log_listener.start()
-        self.executor = ProcessPoolExecutor(n_jobs, ctx, _initialize_worker,
-                                            (key, func, kid_tc, log_queue))
+        self.executor = ProcessPoolExecutor(n_jobs, ctx, _initialize_mp_worker,
+                                            (key, func, kid_tc, log_queue()))
 
     def map(self, *iterables):
-        return self.executor.map(_proc_worker, *iterables)
+        return self.executor.map(_mp_invoke_worker, *iterables)
 
     def shutdown(self):
         self.executor.shutdown()
-        self.log_listener.stop()
 
 
 class MPOpInvoker(ModelOpInvoker):
-    def __init__(self, model, func, n_jobs):
-        key = persist(model)
+    def __init__(self, model, func, n_jobs, persist_method):
+        if isinstance(model, PersistedModel):
+            key = model
+        else:
+            key = persist(model, method=persist_method)
         ctx = LKContext.INSTANCE
         kid_tc = proc_count(level=1)
-        log_queue = ctx.Queue()
-        self.log_listener = logging.handlers.QueueListener(log_queue, InjectHandler())
-        self.log_listener.start()
         _log.info('setting up multiprocessing.Pool w/ %d workers', n_jobs)
-        self.pool = ctx.Pool(n_jobs, _initialize_worker, (key, func, kid_tc, log_queue))
+        self.pool = ctx.Pool(n_jobs, _initialize_mp_worker, (key, func, kid_tc, log_queue()))
 
     def map(self, *iterables):
-        return self.pool.starmap(_proc_worker, zip(*iterables))
+        return self.pool.starmap(_mp_invoke_worker, zip(*iterables))
 
     def shutdown(self):
         self.pool.close()
-        self.log_listener.stop()

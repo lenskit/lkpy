@@ -19,6 +19,9 @@ jobs:
         - macos
         - windows
         - ubuntu
+        exclude:  # Deadlocks on this combination
+        - platform: macos
+          python: 3.6
     steps:
       - uses: actions/checkout@v2
 

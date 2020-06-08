@@ -4,10 +4,24 @@ Logging utilities.
 
 import sys
 import logging
+from logging.handlers import QueueListener
+import multiprocessing as mp
 
 _log = logging.getLogger(__name__)
 _lts_initialized = False
 _ltn_initialized = False
+_log_queue = None
+_log_listener = None
+
+
+class InjectHandler:
+    "Handler that re-injects a message into parent process logging"
+    level = logging.DEBUG
+
+    def handle(self, record):
+        logger = logging.getLogger(record.name)
+        if logger.isEnabledFor(record.levelno):
+            logger.handle(record)
 
 
 class LowPassFilter:
@@ -59,3 +73,17 @@ def log_to_notebook(level=logging.INFO):
 
     _log.info('notebook logging configured')
     _ltn_initialized = True
+
+
+def log_queue():
+    """
+    Get the log queue for child process logging.
+    """
+    global _log_queue, _log_listener
+    from lenskit.util.parallel import LKContext
+    ctx = LKContext.INSTANCE
+    if _log_queue is None:
+        _log_queue = ctx.Queue()
+        _log_listener = QueueListener(_log_queue, InjectHandler())
+        _log_listener.start()
+    return _log_queue

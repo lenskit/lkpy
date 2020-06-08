@@ -13,6 +13,7 @@ from lenskit.metrics import predict as pm
 from lenskit import batch
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import Popular
+from lenskit.algorithms.als import BiasedMF
 from lenskit.util.test import rng
 
 try:
@@ -51,6 +52,25 @@ def test_pop_recommend(ml20m, rng, n_jobs):
     recs = batch.recommend(algo, users, 10, n_jobs=n_jobs)
 
     assert recs['user'].nunique() == 10000
+
+
+@pytest.mark.slow
+def test_als_isolate(ml20m, rng):
+    users = rng.choice(ml20m['user'].unique(), 5000, replace=False)
+    algo = BiasedMF(20, iterations=10)
+    algo = Recommender.adapt(algo)
+    _log.info('training %s', algo)
+    ares = batch.train_isolated(algo, ml20m)
+    try:
+        _log.info('recommending with %s', algo)
+        recs = batch.recommend(ares, users, 10)
+        assert recs['user'].nunique() == 5000
+        _log.info('predicting with %s', algo)
+        pairs = ml20m.sample(1000)
+        preds = batch.predict(ares, pairs)
+        assert len(preds) == len(pairs)
+    finally:
+        ares.close()
 
 
 @pytest.mark.slow

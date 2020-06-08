@@ -1,10 +1,14 @@
+import logging
 import multiprocessing as mp
 import numpy as np
 
-from lenskit.util.parallel import invoker, proc_count
+from lenskit.util.parallel import invoker, proc_count, run_sp
 from lenskit.util.test import set_env_var
+from lenskit.sharing import persist_binpickle
 
-from pytest import mark
+from pytest import mark, raises
+
+_log = logging.getLogger(__name__)
 
 
 def _mul_op(m, v):
@@ -49,3 +53,44 @@ def test_proc_count_nest_env():
         assert proc_count() == 7
         assert proc_count(level=1) == 3
         assert proc_count(level=2) == 1
+
+
+def _sp_matmul(a1, a2, *, fail=False):
+    _log.info('in worker process')
+    if fail:
+        raise RuntimeError('you rang?')
+    else:
+        return a1 @ a2
+
+
+def _sp_matmul_p(a1, a2, *, fail=False):
+    _log.info('in worker process')
+    return persist_binpickle(a1 @ a2).transfer()
+
+
+def test_run_sp():
+    a1 = np.random.randn(100, 100)
+    a2 = np.random.randn(100, 100)
+
+    res = run_sp(_sp_matmul, a1, a2)
+    assert np.all(res == a1 @ a2)
+
+
+def test_run_sp_fail():
+    a1 = np.random.randn(100, 100)
+    a2 = np.random.randn(100, 100)
+
+    with raises(ChildProcessError):
+        run_sp(_sp_matmul, a1, a2, fail=True)
+
+
+def test_run_sp_persist():
+    a1 = np.random.randn(100, 100)
+    a2 = np.random.randn(100, 100)
+
+    res = run_sp(_sp_matmul_p, a1, a2)
+    try:
+        assert res.is_owner
+        assert np.all(res.get() == a1 @ a2)
+    finally:
+        res.close()
