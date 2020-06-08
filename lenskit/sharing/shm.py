@@ -29,45 +29,49 @@ def persist_shm(model, dir=None):
         raise ImportError('multiprocessing.shared_memory')
 
     buffers = []
-    buf_keys = []
-
-    def buf_cb(buf):
-        ba = buf.raw()
-        block = shm.SharedMemory(create=True, size=ba.nbytes)
-        _log.debug('serializing %d bytes to %s', ba.nbytes, block.name)
-        # blit the buffer into shared memory
-        block.buf[:ba.nbytes] = ba
-        buffers.append(block)
-        buf_keys.append((block.name, ba.nbytes))
 
     with sharing_mode():
-        data = pickle.dumps(model, protocol=5, buffer_callback=buf_cb)
-        shm_bytes = sum(b.size for b in buffers)
-        _log.info('serialized %s to %d pickle bytes with %d buffers of %d bytes',
-                  model, len(data), len(buffers), shm_bytes)
+        data = pickle.dumps(model, protocol=5, buffer_callback=buffers.append)
 
-    return SHMPersisted(data, buf_keys, buffers)
+    total_size = sum(memoryview(b).nbytes for b in buffers)
+    _log.info('serialized %s to %d pickle bytes with %d buffers of %d bytes',
+              model, len(data), len(buffers), total_size)
+
+    # blit the buffers to the SHM block
+    memory = shm.SharedMemory(create=True, size=total_size)
+    cur_offset = 0
+    blocks = []
+    for buf in buffers:
+        ba = buf.raw()
+        blen = ba.nbytes
+        bend = cur_offset + blen
+        _log.debug('saving %d bytes', blen)
+        memory.buf[cur_offset:bend] = ba
+        blocks.append((cur_offset, bend))
+        cur_offset = bend
+
+    return SHMPersisted(data, memory, blocks)
 
 
 class SHMPersisted(PersistedModel):
     buffers = []
     _model = None
+    memory = None
 
-    def __init__(self, data, buf_specs, buffers):
+    def __init__(self, data, memory, blocks):
         self.pickle_data = data
-        self.buffer_specs = buf_specs
-        self.buffers = buffers
+        self.blocks = blocks
+        self.memory = memory
+        self.shm_name = memory.name
         self.is_owner = True
 
     def get(self):
         if self._model is None:
             _log.debug('loading model from shared memory')
-            shm_bufs = self._open_buffers()
+            shm = self._open()
             buffers = []
-            for (bn, bs), block in zip(self.buffer_specs, shm_bufs):
-                # funny business with buffer sizes
-                _log.debug('%s: %d bytes (%d used)', block.name, bs, block.size)
-                buffers.append(block.buf[:bs])
+            for bs, be in self.blocks:
+                buffers.append(shm.buf[bs:be])
 
             self._model = pickle.loads(self.pickle_data, buffers=buffers)
 
@@ -75,23 +79,26 @@ class SHMPersisted(PersistedModel):
 
     def close(self, unlink=True):
         self._model = None
-        if self.is_owner:
-            _log.debug('releasing SHM buffers')
-            for buf in self.buffers:
-                buf.close()
-                buf.unlink()
-            del self.buffers
-            self.is_owner = False
 
-    def _open_buffers(self):
-        if not self.buffers:
-            self.buffers = [shm.SharedMemory(name=bn) for (bn, bs) in self.buffer_specs]
-        return self.buffers
+        _log.debug('releasing SHM buffers')
+        self.buffers = None
+        if self.memory is not None:
+            self.memory.close()
+            if self.is_owner:
+                self.memory.unlink()
+                self.is_owner = False
+            self.memory = None
+
+    def _open(self):
+        if not self.memory:
+            self.memory = shm.SharedMemory(name=self.shm_name)
+        return self.memory
 
     def __getstate__(self):
         return {
             'pickle_data': self.pickle_data,
-            'buffer_specs': self.buffer_specs,
+            'blocks': self.blocks,
+            'shm_name': self.shm_name,
             'is_owner': True if self.is_owner == 'transfer' else False
         }
 
@@ -99,4 +106,4 @@ class SHMPersisted(PersistedModel):
         self.__dict__.update(state)
         if self.is_owner:
             _log.debug('opening shared buffers after ownership transfer')
-            self._open_buffers
+            self._open()
