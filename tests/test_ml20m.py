@@ -16,10 +16,7 @@ from lenskit.algorithms.basic import Popular
 from lenskit.algorithms.als import BiasedMF
 from lenskit.util.test import rng
 
-try:
-    from lenskit.algorithms import tf as lktf
-except ImportError:
-    lktf = None
+from lenskit.algorithms import tf as lktf
 
 import pytest
 from pytest import approx
@@ -75,7 +72,7 @@ def test_als_isolate(ml20m, rng):
 
 @pytest.mark.slow
 @pytest.mark.skip
-@pytest.mark.skipif(lktf is None, reason='TensorFlow not available')
+@pytest.mark.skipif(not lktf.TF_AVAILABLE, reason='TensorFlow not available')
 def test_tf_isvd(ml20m):
     algo = lktf.IntegratedBiasMF(20)
 
