@@ -19,11 +19,6 @@ from .util import init_tf_rng
 _log = logging.getLogger(__name__)
 
 
-class BprLoss(k.losses.Loss):
-    def call(self, y_true, y_pred):
-        return k.backend.mean(-tf.math.log_sigmoid(y_pred))
-
-
 @njit
 def _neg_sample(mat, uv):
     """
@@ -51,6 +46,10 @@ def _neg_sample(mat, uv):
 
 
 if tf is not None:
+    class BprLoss(k.losses.Loss):
+        def call(self, y_true, y_pred):
+            return k.backend.mean(-tf.math.log_sigmoid(y_pred))
+
     class BprInputs(k.utils.Sequence):
         def __init__(self, urmat, batch_size, neg_count, rng):
             super().__init__()
