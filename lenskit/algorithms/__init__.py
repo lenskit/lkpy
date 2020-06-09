@@ -17,6 +17,8 @@ class Algorithm(metaclass=ABCMeta):
     """
     Base class for LensKit algorithms.  These algorithms follow the SciKit design pattern
     for estimators.
+
+    :canonical: lenskit.Algorithm
     """
 
     @abstractmethod

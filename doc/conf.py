@@ -191,3 +191,9 @@ intersphinx_mapping = {
     'scikit': ('https://scikit-learn.org/stable/', None),
     'binpickle': ('https://binpickle.lenskit.org/en/stable/', None)
 }
+
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'bysource',
+    'show-inheritance': True
+}

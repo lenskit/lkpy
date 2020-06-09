@@ -30,7 +30,7 @@ Resources
 
    install
    GettingStarted
-   
+   Demo Experiment <https://github.com/lenskit/lk-demo-experiment>   
    Release Notes <https://github.com/lenskit/lkpy/releases>
 
 .. toctree::
@@ -51,6 +51,7 @@ Resources
     basic
     knn
     mf
+    tf
     hpf
     implicit
 

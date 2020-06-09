@@ -45,7 +45,7 @@ class BiasedMF(BiasMFPredictor):
 
     A variety of resources informed the design, most notably `this one`_.
 
-    .. _this one:: https://towardsdatascience.com/1fba34180699
+    .. _this one: https://towardsdatascience.com/1fba34180699
 
     Args:
         features(int): The number of latent features to learn.

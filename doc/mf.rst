@@ -17,9 +17,11 @@ define the parameters that are estimated during the :py:meth:`.Algorithm.fit`
 process on common matrix factorization algorithms.
 
 .. autoclass:: MFPredictor
+   :show-inheritance:
    :members:
 
 .. autoclass:: BiasMFPredictor
+   :show-inheritance:
    :members:
 
 Alternating Least Squares
@@ -30,8 +32,6 @@ Alternating Least Squares
 LensKit provides alternating least squares implementations of matrix factorization suitable
 for explicit feedback data.  These implementations are parallelized with Numba, and perform
 best with the MKL from Conda.
-
-.. module:: lenskit.algorithms.als
 
 .. autoclass:: BiasedMF
     :show-inheritance:
@@ -60,9 +60,12 @@ FunkSVD
 
 .. module:: lenskit.algorithms.funksvd
 
-FunkSVD_ is an SVD-like matrix factorization that uses stochastic gradient descent,
-configured much like coordinate descent, to train the user-feature and item-feature
-matrices.
+FunkSVD_ is an SVD-like matrix factorization that uses stochastic gradient
+descent, configured much like coordinate descent, to train the user-feature and
+item-feature matrices.  We generally don't recommend using it in new
+applications or experiments; the ALS-based algorithms are less sensitive to
+hyperparameters, and the TensorFlow algorithms provide more optimized gradient
+descent training of the same prediction model.
 
 .. autoclass:: FunkSVD
     :show-inheritance:
