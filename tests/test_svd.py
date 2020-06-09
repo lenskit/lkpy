@@ -16,7 +16,7 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
                           'user': [10, 12, 10, 13],
                           'rating': [4.0, 3.0, 5.0, 2.0]})
 
-need_skl = mark.skipif(svd.SKL_AVAILABLE, reason='scikit-learn not installed')
+need_skl = mark.skipif(not svd.SKL_AVAILABLE, reason='scikit-learn not installed')
 
 
 @need_skl
