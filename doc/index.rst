@@ -1,17 +1,22 @@
-.. LensKit documentation master file, created by
-   sphinx-quickstart on Fri Jun 15 13:06:49 2018.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 LensKit
-===================================
+=======
 
 LensKit is a set of Python tools for experimenting with and studying recommender
 systems.  It provides support for training, running, and evaluating recommender
 algorithms in a flexible fashion suitable for research and education.
 
-LensKit for Python (also known as LKPY) is the successor to the Java-based LensKit
-project.
+LensKit for Python (also known as LKPY) is the successor to the Java-based
+LensKit toolkit and a part of the LensKit project.
+
+If you use Lenskit in published research, cite [LKPY]_.
+
+.. [LKPY]
+    Michael D. Ekstrand. 2018. The LKPY Package for Recommender Systems
+    Experiments: Next-Generation Tools and Lessons Learned from the LensKit
+    Project. *Computer Science Faculty Publications and Presentations*
+    147. Boise State University.
+    DOI:`10.18122/cs_facpubs/147/boisestate <https://dx.doi.org/10.18122/cs_facpubs/147/boisestate>`_.
+    arXiv:`1809.03125 <https://arxiv.org/abs/1809.03125>`_ [cs.IR].
 
 Installation
 ------------
@@ -68,5 +73,7 @@ Indices and tables
 Acknowledgements
 ================
 
-This material is based upon work supported by the National Science Foundation under Grant No. IIS 17-51278.
-Any opinions, findings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.
+This material is based upon work supported by the National Science Foundation
+under Grant No. IIS 17-51278. Any opinions, findings, and conclusions or
+recommendations expressed in this material are those of the author(s) and do not
+necessarily reflect the views of the National Science Foundation.
