@@ -1,7 +1,10 @@
 from logging import getLogger
 from lenskit import util
 
-import tensorflow as tf
+try:
+    import tensorflow as tf
+except ImportError:
+    tf = None
 
 _log = getLogger(__name__)
 
