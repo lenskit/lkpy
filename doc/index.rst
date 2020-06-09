@@ -45,22 +45,48 @@ Resources
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Overview
 
    GettingStarted
    interfaces
+   
+   Release Notes <https://github.com/lenskit/lkpy/releases>
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Running Experiments
+   
+   datasets
    crossfold
    batch
    evaluation/index
-   datasets
-   algorithms
-   random
-   performance
-   util
-   diagnostics
-   impl-tips
-   internals
-   Release Notes <https://github.com/lenskit/lkpy/releases>
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Algorithms
+
+    algorithms
+    basic
+    knn
+    mf
+    hpf
+    implicit
+
+.. toctree::
+    :maxdepth: 2
+    :caption: Tips and Tricks
+
+    performance
+    diagnostics
+    impl-tips
+
+.. toctree::
+    :maxdepth: 2
+    :caption: Configuration and Internals
+
+    util
+    random
+    internals
 
 
 Indices and tables

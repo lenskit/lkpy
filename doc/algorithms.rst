@@ -1,5 +1,5 @@
-Algorithms
-==========
+Algorithm Summary
+=================
 
 .. py:module:: lenskit.algorithms
 
@@ -7,15 +7,10 @@ LKPY provides general algorithmic concepts, along with implementations of severa
 algorithms.  These algorithm interfaces are based on the SciKit design patterns
 [SKAPI]_, adapted for Pandas-based data structures.
 
-.. toctree::
-   :maxdepth: 1
-   :caption: Algorithm Families:
 
-   basic
-   knn
-   mf
-   hpf
-   implicit
+All algorithms implement the `standard interfaces`_.
+
+.. _standard interfaces: interfaces.html
 
 Basic Algorithms
 ~~~~~~~~~~~~~~~~
@@ -46,7 +41,17 @@ Matrix Factorization
     als.ImplicitMF
     funksvd.FunkSVD
 
+TensorFlow
+~~~~~~~~~~
+
+.. autosummary::
+
+    tf.BiasedMF
+    tf.IntegratedBiasMF
+    tf.BPR
+
 External Library Wrappers
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
     
