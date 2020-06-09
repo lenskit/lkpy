@@ -15,22 +15,23 @@ from .util import init_tf_rng
 _log = logging.getLogger(__name__)
 
 
-class ScoreLayer(k.layers.Layer):
-    """
-    Custom layer for scoring.  We use this so that we can have the global mean value
-    as an isolated variable for TensorFlow to optimize. Optimization is more effective
-    if we initialize this variable to the global average rating.
-    """
-    def __init__(self, mean, **kwargs):
-        super().__init__(**kwargs)
-        self._mean = mean
-        self.global_bias = tf.Variable(mean)
+if tf is not None:
+    class ScoreLayer(k.layers.Layer):
+        """
+        Custom layer for scoring.  We use this so that we can have the global mean value
+        as an isolated variable for TensorFlow to optimize. Optimization is more effective
+        if we initialize this variable to the global average rating.
+        """
+        def __init__(self, mean, **kwargs):
+            super().__init__(**kwargs)
+            self._mean = mean
+            self.global_bias = tf.Variable(mean)
 
-    def call(self, ub, ib, dot):
-        return self.global_bias + ub + ib + dot
+        def call(self, ub, ib, dot):
+            return self.global_bias + ub + ib + dot
 
-    def get_config(self):
-        return {'mean': self._mean}
+        def get_config(self):
+            return {'mean': self._mean}
 
 
 class IntegratedBiasMF(Predictor):

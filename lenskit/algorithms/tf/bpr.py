@@ -50,44 +50,45 @@ def _neg_sample(mat, uv):
     return jv, sc
 
 
-class BprInputs(k.utils.Sequence):
-    def __init__(self, urmat, batch_size, neg_count, rng):
-        super().__init__()
-        self.n_items = urmat.ncols
-        self.matrix = urmat
-        self.users = urmat.rowinds()
-        self.items = urmat.colinds
-        self.rng = rng
-        self.batch_size = batch_size
-        self.neg_count = neg_count
-        self.permutation = np.arange(self.matrix.nnz, dtype='i4')
-        self.targets = np.ones(batch_size * neg_count)
-        rng.shuffle(self.permutation)
+if tf is not None:
+    class BprInputs(k.utils.Sequence):
+        def __init__(self, urmat, batch_size, neg_count, rng):
+            super().__init__()
+            self.n_items = urmat.ncols
+            self.matrix = urmat
+            self.users = urmat.rowinds()
+            self.items = urmat.colinds
+            self.rng = rng
+            self.batch_size = batch_size
+            self.neg_count = neg_count
+            self.permutation = np.arange(self.matrix.nnz, dtype='i4')
+            self.targets = np.ones(batch_size * neg_count)
+            rng.shuffle(self.permutation)
 
-    def __len__(self):
-        return math.ceil(self.matrix.nnz / self.batch_size)
+        def __len__(self):
+            return math.ceil(self.matrix.nnz / self.batch_size)
 
-    def __getitem__(self, idx):
-        _log.debug('preparing batch %d', idx)
-        start = idx * self.batch_size
-        end = min(start + self.batch_size, self.matrix.nnz)
-        picked = self.permutation[start:end]
-        if self.neg_count > 1:
-            # expand picked size to sample more items
-            picked = np.concatenate([picked for i in range(self.neg_count)])
-        assert len(picked) == self.neg_count * (end - start)
-        uv = self.users[picked]
-        iv = self.items[picked]
-        jv, j_samps = _neg_sample(self.matrix.N, uv)
-        assert all(jv < self.n_items)
-        _log.debug('max sample count: %d', j_samps.max())
-        return [uv.astype(np.int32),
-                iv.astype(np.int32),
-                jv.astype(np.int32)], self.targets[:len(picked)]
+        def __getitem__(self, idx):
+            _log.debug('preparing batch %d', idx)
+            start = idx * self.batch_size
+            end = min(start + self.batch_size, self.matrix.nnz)
+            picked = self.permutation[start:end]
+            if self.neg_count > 1:
+                # expand picked size to sample more items
+                picked = np.concatenate([picked for i in range(self.neg_count)])
+            assert len(picked) == self.neg_count * (end - start)
+            uv = self.users[picked]
+            iv = self.items[picked]
+            jv, j_samps = _neg_sample(self.matrix.N, uv)
+            assert all(jv < self.n_items)
+            _log.debug('max sample count: %d', j_samps.max())
+            return [uv.astype(np.int32),
+                    iv.astype(np.int32),
+                    jv.astype(np.int32)], self.targets[:len(picked)]
 
-    def on_epoch_end(self):
-        _log.info('re-shuffling')
-        self.rng.shuffle(self.permutation)
+        def on_epoch_end(self):
+            _log.info('re-shuffling')
+            self.rng.shuffle(self.permutation)
 
 
 class BPR(Predictor):
