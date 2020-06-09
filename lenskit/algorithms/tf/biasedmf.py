@@ -1,7 +1,10 @@
 import logging
 
-import tensorflow as tf
-import tensorflow.keras as k
+try:
+    import tensorflow as tf
+    import tensorflow.keras as k
+except ImportError:
+    tf = None
 
 from lenskit import util
 from ..mf_common import BiasMFPredictor
@@ -62,6 +65,8 @@ class BiasedMF(BiasMFPredictor):
 
     def __init__(self, features=50, *, bias=True, damping=5,
                  epochs=5, batch_size=10000, reg=0.02, rng_spec=None):
+        if tf is None:
+            raise ImportError('tensorflow')
         self.features = features
         self.epochs = epochs
         self.batch_size = batch_size

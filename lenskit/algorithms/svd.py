@@ -3,7 +3,10 @@ import logging
 import pandas as pd
 import numpy as np
 
-from sklearn.decomposition import TruncatedSVD
+try:
+    from sklearn.decomposition import TruncatedSVD
+except ImportError:
+    TruncatedSVD = None
 
 from . import Predictor
 from .basic import Bias
@@ -25,6 +28,8 @@ class BiasedSVD(Predictor):
     """
 
     def __init__(self, features, *, damping=5, bias=True, algorithm='randomized'):
+        if TruncatedSVD is None:
+            raise ImportError('sklearn.decomposition')
         if bias is True:
             self.bias = Bias(damping=damping)
         else:

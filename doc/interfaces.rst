@@ -34,7 +34,7 @@ The :py:class:`Algorithm` interface defines common methods.
 .. autoclass:: Algorithm
     :members:
 
-.. class:: lenskit.algorithms.Algorithm
+.. class:: algorithms.Algorithm
 
     This is an alias of :py:class:`lenskit.Algorithm`.
 
@@ -57,7 +57,7 @@ algorithm you will need for top-*N* recommendations to mak sure it is suitable.
 .. autoclass:: Recommender
     :members:
 
-.. class:: lenskit.algorithms.Recommender
+.. class:: algorithms.Recommender
 
     This is an alias of :py:class:`lenskit.Recommender`.
 
@@ -71,7 +71,7 @@ memorize users' prior ratings to exclude them from recommendation.
 .. autoclass:: CandidateSelector
     :members:
 
-.. class:: lenskit.algorithms.CandidateSelector
+.. class:: algorithms.CandidateSelector
 
     This is an alias of :py:class:`lenskit.CandidateSelector`.
 
@@ -85,6 +85,6 @@ Most algorithms actually implement this interface.
 .. autoclass:: Predictor
    :members:
 
-.. class:: lenskit.algorithms.Predictor
+.. class:: algorithms.Predictor
 
     This is an alias of :py:class:`lenskit.Predictor`.

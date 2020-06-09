@@ -3,9 +3,13 @@ import math
 
 import pandas as pd
 import numpy as np
-import tensorflow as tf
-import tensorflow.keras as k
 from numba import njit
+
+try:
+    import tensorflow as tf
+    import tensorflow.keras as k
+except ImportError:
+    tf = None
 
 from lenskit import util
 from lenskit.matrix import sparse_ratings
@@ -133,6 +137,8 @@ class BPR(Predictor):
 
     def __init__(self, features=50, *, epochs=5, batch_size=10000,
                  reg=0.02, neg_count=1, rng_spec=None):
+        if tf is None:
+            raise ImportError('tensorflow')
         self.features = features
         self.epochs = epochs
         self.batch_size = batch_size

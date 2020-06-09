@@ -145,6 +145,12 @@ def init_rng(seed, *keys, propagate=True):
         _log.info('initializing numpy.random and random with seed %u', ik)
         np.random.seed(ik)
         random.seed(ik)
+        try:
+            import tensorflow as tf
+            _log.debug('setting TensorFlow seed')
+            tf.random.set_seed(ik)
+        except ImportError:
+            _log.debug('TensorFlow not available')
 
     return _rng_impl.seed
 
