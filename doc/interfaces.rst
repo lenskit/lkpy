@@ -1,7 +1,7 @@
 Algorithm Interfaces
 ====================
 
-.. module:: lenskit.algorithms
+.. module:: lenskit
 
 LKPY's batch routines and utility support for managing algorithms expect algorithms
 to implement consistent interfaces.  This page describes those interfaces.
@@ -13,10 +13,11 @@ or by calling :py:meth:`abc.ABCMeta.register`.
 Serialization
 -------------
 
-Like SciKit models, all LensKit algorithms are pickleable, and this is how we recommend
-saving models to disk for later use.  This can be done with :py:mod:`pickle`, but we
-recommend using :py:mod:`binpickle` for more automatically-optimized storage.  For
-example, to save a fully-configured ALS module with fairly aggressive ZSTD compression::
+Like SciKit models, all LensKit algorithms are pickleable, and this is how we
+recommend saving models to disk for later use.  This can be done with
+:py:mod:`pickle`, but we recommend using :py:mod:`binpickle` for more
+automatically-optimized storage.  For example, to save a fully-configured ALS
+module with fairly aggressive ZSTD compression::
 
     algo = Recommender.adapt(ImplicitMF(50))
     algo.fit(ratings)
@@ -25,8 +26,8 @@ example, to save a fully-configured ALS module with fairly aggressive ZSTD compr
 Base Algorithm
 --------------
 
-Algorithms follow the SciKit fit-predict paradigm for estimators, except they know natively
-how to work with Pandas objects.
+Algorithms follow the SciKit fit-predict paradigm for estimators, except they
+know natively how to work with Pandas objects.
 
 The :py:class:`Algorithm` interface defines common methods.
 
@@ -36,16 +37,17 @@ The :py:class:`Algorithm` interface defines common methods.
 Recommendation
 --------------
 
-The :py:class:`Recommender` interface provides an interface to generating recommendations.  Not
-all algorithms implement it; call :py:meth:`Recommender.adapt` on an algorithm to get a recommender
-for any algorithm that at least implements :py:class:`Predictor`.  For example::
+The :py:class:`Recommender` interface provides an interface to generating
+recommendations.  Not all algorithms implement it; call
+:py:meth:`Recommender.adapt` on an algorithm to get a recommender for any
+algorithm that at least implements :py:class:`Predictor`.  For example::
 
     pred = Bias(damping=5)
     rec = Recommender.adapt(pred)
-    
-.. note::
-    We are rethinking the ergonomics of this interface, and it may change in LensKit 0.6. We expect
-    keep compatibility in the :py:func:`lenskit.batch.recommend` API, though.
+
+If the algorithm already implements :py:class:`Recommender`, it is returned, so
+it is safe to always call :py:meth:`Recommender.adapt` before fitting an
+algorithm you will need for top-*N* recommendations to mak sure it is suitable.
 
 .. autoclass:: Recommender
     :members:
@@ -53,13 +55,12 @@ for any algorithm that at least implements :py:class:`Predictor`.  For example::
 Candidate Selection
 -------------------
 
-Some recommenders use a *candidate selector* to identify possible items to recommend.
-These are also treated as algorithms, mainly so that they can memorize users' prior
-ratings to exclude them from recommendation.
+Some recommenders use a *candidate selector* to identify possible items to
+recommend. These are also treated as algorithms, mainly so that they can
+memorize users' prior ratings to exclude them from recommendation.
 
 .. autoclass:: CandidateSelector
     :members:
-
 
 Rating Prediction
 -----------------

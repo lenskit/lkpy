@@ -18,25 +18,6 @@ If you use Lenskit in published research, cite [LKPY]_.
     DOI:`10.18122/cs_facpubs/147/boisestate <https://dx.doi.org/10.18122/cs_facpubs/147/boisestate>`_.
     arXiv:`1809.03125 <https://arxiv.org/abs/1809.03125>`_ [cs.IR].
 
-Installation
-------------
-
-To install the current release with Anaconda (recommended)::
-
-    conda install -c lenskit lenskit
-
-Or you can use ``pip``::
-
-    pip install lenskit
-
-To use the latest development version, install directly from GitHub::
-
-    pip install git+https://github.com/lenskit/lkpy
-
-Then see `Getting Started`_.
-
-.. _`Getting Started`: GettingStarted.html
-
 Resources
 ---------
 
@@ -47,8 +28,8 @@ Resources
    :maxdepth: 2
    :caption: Overview
 
+   install
    GettingStarted
-   interfaces
    
    Release Notes <https://github.com/lenskit/lkpy/releases>
 
@@ -65,6 +46,7 @@ Resources
     :maxdepth: 1
     :caption: Algorithms
 
+    interfaces
     algorithms
     basic
     knn

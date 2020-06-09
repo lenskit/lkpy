@@ -10,6 +10,8 @@ classes (:py:mod:`abc`) representing different algorithm capabilities.
 from abc import ABCMeta, abstractmethod
 import inspect
 
+__all__ = ['Algorithm', 'Recommender', 'Predictor', 'CandidateSelector']
+
 
 class Algorithm(metaclass=ABCMeta):
     """
