@@ -1,10 +1,7 @@
 import logging
 import pickle
 
-try:
-    from lenskit.algorithms import svd
-except ImportError:
-    svd = None
+from lenskit.algorithms import svd
 
 import pandas as pd
 import numpy as np
@@ -19,7 +16,7 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
                           'user': [10, 12, 10, 13],
                           'rating': [4.0, 3.0, 5.0, 2.0]})
 
-need_skl = mark.skipif(svd is None, reason='scikit-learn not installed')
+need_skl = mark.skipif(svd.SKL_AVAILABLE, reason='scikit-learn not installed')
 
 
 @need_skl

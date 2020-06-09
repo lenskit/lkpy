@@ -5,8 +5,10 @@ import numpy as np
 
 try:
     from sklearn.decomposition import TruncatedSVD
+    SKL_AVAILABLE = True
 except ImportError:
     TruncatedSVD = None
+    SKL_AVAILABLE = False
 
 from . import Predictor
 from .basic import Bias
