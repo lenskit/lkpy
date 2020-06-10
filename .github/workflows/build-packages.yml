@@ -9,7 +9,7 @@ on:
 jobs:
   conda:
     name: Build Packages on ${{matrix.platform}}
-    runs-on: ${{matrix.image}}
+    runs-on: ${{matrix.platform}}-latest
     strategy:
       fail-fast: false
       matrix:
@@ -20,13 +20,10 @@ jobs:
         include:
         - platform: macos
           condaplat: osx-64
-          image: macos-latest
         - platform: ubuntu
           condaplat: linux-64
-          image: ubuntu-latest
         - platform: windows
           condaplat: win-64
-          image: windows-2016
 
     steps:
     - uses: actions/checkout@v2
@@ -56,9 +53,12 @@ jobs:
 
     - name: Copy Conda packages
       run: |
-        mkdir dist
-        cp -r $CONDA/conda-bld/${{matrix.condaplat}}/ dist
-      shell: bash
+        $ddir = (Join-Path dist ${{matrix.condaplat}})
+        $bld = (Join-Path $env:CONDA conda-bld ${{matrix.condaplat}})
+        New-Item -Type Directory $ddir
+        Get-ChildItem $bld |Copy-Item -Destination $ddir
+        Get-ChildItem -Recurse dist
+      shell: pwsh
       
     - name: Upload packages
       uses: actions/upload-artifact@v1
