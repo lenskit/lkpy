@@ -126,6 +126,31 @@ def _train_matrix_lu(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float)
 
     return np.sqrt(frob)
 
+#@njit(parallel=True, nogil=True)
+def _train_bias_row_lu(items, ratings, other, reg):
+    """
+    Args:
+        items(np.ndarray[i64]): the item IDs the user has rated
+        ratings(np.ndarray): the user's (normalized) ratings for those items
+        other(np.ndarray): the item-feature matrix
+        reg(float): the regularization term
+
+    Returns:
+        np.ndarray: the user-feature vector (equivalent to V in the current LU code) 
+    """
+    M = other[items, :]
+    nf = other.shape[1]
+    regI = np.identity(nf) * reg
+    MMT = M.T @ M
+    A = MMT + regI * len(items)
+
+    #vals = ratings[i]
+    #V = M.T @ ratings
+    V = np.dot(M.T, ratings).flatten()
+    # and solve
+    _dposv(A, V, True)
+
+    return V
 
 @njit
 def _cg_a_mult(OtOr, X, y, v):
@@ -466,8 +491,16 @@ class BiasedMF(BiasMFPredictor):
             yield current
 
     def predict_for_user(self, user, items, ratings=None):
-        # look up user index
-        return self.score_by_ids(user, items)
+        if ratings is not None:
+            # get the indexes for the items in ratings
+            indexes = []
+            for i in ratings.index: # ratings has as index the item id
+                indexes.append(self.item_index_.get_loc(i))
+            user_feature = _train_bias_row_lu(indexes, ratings.values, self.item_features_, self.regularization)
+            return self.score_by_ids(user, items, user_feature)
+        else:
+            # look up user index
+            return self.score_by_ids(user, items)
 
     def __getstate__(self):
         state = dict(self.__dict__)

@@ -82,6 +82,23 @@ def test_als_predict_basic(m):
     assert preds.loc[3] >= -0.1
     assert preds.loc[3] <= 5.1
 
+@methods
+def test_als_predict_basic_for_new_ratings(m):
+    algo = als.BiasedMF(20, iterations=10, method=m)
+    algo.fit(simple_df)
+
+    assert algo.global_bias_ == approx(simple_df.rating.mean())
+
+    new_ratings = pd.DataFrame({'item': [1, 2],
+                            'rating': [4.0, 5.0]}).set_index('item')
+
+    #preds0 = algo.predict_for_user(10, [3])
+    preds = algo.predict_for_user(15, [3], new_ratings)
+
+    assert len(preds) == 1
+    assert preds.index[0] == 3
+    assert preds.loc[3] >= -0.1
+    assert preds.loc[3] <= 5.1
 
 def test_als_predict_bad_item():
     algo = als.BiasedMF(20, iterations=10)
