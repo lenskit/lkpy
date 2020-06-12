@@ -1,11 +1,19 @@
 import logging
 from pytest import fixture
 
-from lenskit.util import test as lktu
+import numpy as np
 
 logging.getLogger('numba').setLevel(logging.INFO)
 
 _log = logging.getLogger('lenskit.tests')
+
+
+@fixture(scope='session')
+def rng():
+    if hasattr(np.random, 'default_rng'):
+        return np.random.default_rng()
+    else:
+        return np.random.RandomState()
 
 
 @fixture(autouse=True)

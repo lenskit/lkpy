@@ -71,14 +71,6 @@ def repeated(n=50):
         return wrap
 
 
-@pytest.fixture
-def rng():
-    if hasattr(np.random, 'default_rng'):
-        return np.random.default_rng()
-    else:
-        return np.random.RandomState()
-
-
 @contextmanager
 def set_env_var(var, val):
     "Set an environment variable & restore it."

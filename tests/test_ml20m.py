@@ -14,7 +14,6 @@ from lenskit import batch
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import Popular
 from lenskit.algorithms.als import BiasedMF
-from lenskit.util.test import rng
 
 from lenskit.algorithms import tf as lktf
 
