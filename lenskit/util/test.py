@@ -20,16 +20,6 @@ ml_test = MovieLens('data/ml-latest-small')
 ml100k = ML100K('data/ml-100k')
 
 
-def ml_sample():
-    ratings = ml_test.ratings
-    icounts = ratings.groupby('item').rating.count()
-    top = icounts.nlargest(500)
-    ratings = ratings.set_index('item')
-    top_rates = ratings.loc[top.index, :]
-    _log.info('top 500 items yield %d of %d ratings', len(top_rates), len(ratings))
-    return top_rates.reset_index()
-
-
 def rand_csr(nrows=100, ncols=50, nnz=1000, values=True):
     "Generate a random CSR for testing."
     coords = np.random.choice(np.arange(ncols * nrows, dtype=np.int32), nnz, False)
