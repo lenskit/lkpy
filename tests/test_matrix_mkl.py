@@ -3,6 +3,9 @@ import numpy as np
 import scipy.sparse as sps
 
 from pytest import approx, skip, fixture
+from hypothesis import given, assume, settings, HealthCheck
+import hypothesis.strategies as st
+import hypothesis.extra.numpy as nph
 
 import lenskit.matrix as lm
 import lenskit.util.test as lktu
@@ -49,22 +52,26 @@ def test_mkl_mult_vec(mkl_ops):
         assert y == approx(y2)
 
 
-def test_mkl_mabt(mkl_ops):
-    for i in range(50):
-        A = lktu.rand_csr(20, 10, nnz=50)
-        B = lktu.rand_csr(5, 10, nnz=20)
+@settings(deadline=None)
+@given(st.data())
+def test_mkl_mabt(mkl_ops, data):
+    Anr = data.draw(st.integers(5, 100))
+    nc = data.draw(st.integers(5, 100))
+    Bnr = data.draw(st.integers(5, 100))
+    A = data.draw(lktu.csrs(nrows=Anr, ncols=nc, values=True))
+    B = data.draw(lktu.csrs(nrows=Bnr, ncols=nc, values=True))
 
-        As = mkl_ops.SparseM.from_csr(A)
-        Bs = mkl_ops.SparseM.from_csr(B)
+    As = mkl_ops.SparseM.from_csr(A)
+    Bs = mkl_ops.SparseM.from_csr(B)
 
-        Ch = mkl_ops._lk_mkl_spmabt(As.ptr, Bs.ptr)
-        C = mkl_ops._to_csr(Ch)
-        C = lm.CSR(N=C)
+    Ch = mkl_ops._lk_mkl_spmabt(As.ptr, Bs.ptr)
+    C = mkl_ops._to_csr(Ch)
+    C = lm.CSR(N=C)
 
-        assert C.nrows == 20
-        assert C.ncols == 5
+    assert C.nrows == A.nrows
+    assert C.ncols == B.nrows
 
-        Csp = A.to_scipy() @ B.to_scipy().T
-        Cspa = Csp.toarray()
-        Ca = C.to_scipy().toarray()
-        assert Ca == approx(Cspa)
+    Csp = A.to_scipy() @ B.to_scipy().T
+    Cspa = Csp.toarray()
+    Ca = C.to_scipy().toarray()
+    assert Ca == approx(Cspa)

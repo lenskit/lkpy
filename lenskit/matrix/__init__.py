@@ -439,8 +439,17 @@ class CSR:
 
         return CSR(self.nrows, self.ncols, nnz2, rps2, cis2, vs2)
 
-    def __repr__(self):
+    def __str__(self):
         return '<CSR {}x{} ({} nnz)>'.format(self.nrows, self.ncols, self.nnz)
+
+    def __repr__(self):
+        repr = '<CSR {}x{} ({} nnz)'.format(self.nrows, self.ncols, self.nnz)
+        repr += ' {\n'
+        repr += '  rowptrs={}\n'.format(self.rowptrs)
+        repr += '  colinds={}\n'.format(self.colinds)
+        repr += '  values={}\n'.format(self.values)
+        repr += '}'
+        return repr
 
     def __getstate__(self):
         return dict(shape=(self.nrows, self.ncols), nnz=self.nnz,

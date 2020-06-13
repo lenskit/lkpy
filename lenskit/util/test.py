@@ -11,6 +11,9 @@ import numpy as np
 from .. import matrix
 
 import pytest
+from hypothesis import given, assume
+import hypothesis.strategies as st
+import hypothesis.extra.numpy as nph
 
 from lenskit.datasets import MovieLens, ML100K
 
@@ -20,13 +23,31 @@ ml_test = MovieLens('data/ml-latest-small')
 ml100k = ML100K('data/ml-100k')
 
 
-def rand_csr(nrows=100, ncols=50, nnz=1000, values=True):
-    "Generate a random CSR for testing."
-    coords = np.random.choice(np.arange(ncols * nrows, dtype=np.int32), nnz, False)
+@st.composite
+def csrs(draw, nrows=None, ncols=None, nnz=None, values=None):
+    if ncols is None:
+        ncols = draw(st.integers(5, 1000))
+    elif not isinstance(ncols, int):
+        ncols = draw(ncols)
+
+    if nrows is None:
+        nrows = draw(st.integers(5, 1000))
+    elif not isinstance(nrows, int):
+        nrows = draw(nrows)
+
+    if nnz is None:
+        nnz = draw(st.integers(10, nrows * ncols // 2))
+    elif not isinstance(nnz, int):
+        nnz = draw(nnz)
+
+    coords = draw(nph.arrays(np.int32, nnz, elements=st.integers(0, nrows*ncols - 1), unique=True))
     rows = np.mod(coords, nrows, dtype=np.int32)
     cols = np.floor_divide(coords, nrows, dtype=np.int32)
+    if values is None:
+        values = draw(st.booleans())
     if values:
-        vals = np.random.randn(nnz)
+        rng = draw(st.randoms())
+        vals = np.array([rng.normalvariate(0, 1) for i in range(nnz)])
     else:
         vals = None
     return matrix.CSR.from_coo(rows, cols, vals, (nrows, ncols))

@@ -3,9 +3,12 @@ import numpy as np
 import scipy.sparse as sps
 
 import lenskit.matrix as lm
-from lenskit.util.test import rand_csr
+from lenskit.util.test import csrs
 
 from pytest import mark, approx, raises
+from hypothesis import given, assume, settings, HealthCheck
+import hypothesis.strategies as st
+import hypothesis.extra.numpy as nph
 
 
 @mark.parametrize('copy', [True, False])
@@ -335,40 +338,40 @@ def test_csr_to_sps():
         assert all(smat2.data[sp:ep] == csr.values[sp:ep])
 
 
-def test_mean_center():
-    for n in range(50):
-        csr = rand_csr()
+@settings(deadline=None, suppress_health_check=HealthCheck.all())
+@given(csrs(nrows=st.integers(1, 100), values=True))
+def test_mean_center(csr):
+    assume(csr.nnz >= 10)
+    spm = csr.to_scipy().copy()
 
-        spm = csr.to_scipy().copy()
+    m2 = csr.normalize_rows('center')
+    assert len(m2) == csr.nrows
 
-        m2 = csr.normalize_rows('center')
-        assert len(m2) == 100
-
-        for i in range(csr.nrows):
-            vs = csr.row_vs(i)
-            if len(vs) > 0:
-                assert np.mean(vs) == approx(0.0)
-                assert vs + m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
-
-
-def test_unit_norm():
-    for n in range(50):
-        csr = rand_csr()
-
-        spm = csr.to_scipy().copy()
-
-        m2 = csr.normalize_rows('unit')
-        assert len(m2) == 100
-
-        for i in range(csr.nrows):
-            vs = csr.row_vs(i)
-            if len(vs) > 0:
-                assert np.linalg.norm(vs) == approx(1.0)
-                assert vs * m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
+    for i in range(csr.nrows):
+        vs = csr.row_vs(i)
+        if len(vs) > 0:
+            assert np.mean(vs) == approx(0.0)
+            assert vs + m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
 
 
-def test_filter():
-    csr = rand_csr()
+@settings(deadline=None, suppress_health_check=HealthCheck.all())
+@given(csrs(nrows=st.integers(1, 100), values=True))
+def test_unit_norm(csr):
+    spm = csr.to_scipy().copy()
+
+    m2 = csr.normalize_rows('unit')
+    assert len(m2) == csr.nrows
+
+    for i in range(csr.nrows):
+        vs = csr.row_vs(i)
+        if len(vs) > 0:
+            assert np.linalg.norm(vs) == approx(1.0)
+            assert vs * m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
+
+
+@given(csrs(nrows=st.integers(1, 50), values=True))
+def test_filter(csr):
+    assume(not np.all(csr.values <= 0))  # we have to have at least one to retain
     csrf = csr.filter_nnzs(csr.values > 0)
     assert all(csrf.values > 0)
     assert csrf.nnz <= csr.nnz
@@ -384,13 +387,8 @@ def test_filter():
     assert df == approx(d1)
 
 
-@mark.parametrize("values", [True, False])
-def test_csr_pickle(values):
-    csr = rand_csr(100, 50, 1000, values=values)
-    assert csr.nrows == 100
-    assert csr.ncols == 50
-    assert csr.nnz == 1000
-
+@given(csrs())
+def test_csr_pickle(csr):
     data = pickle.dumps(csr)
     csr2 = pickle.loads(data)
 
@@ -399,20 +397,16 @@ def test_csr_pickle(values):
     assert csr2.nnz == csr.nnz
     assert all(csr2.rowptrs == csr.rowptrs)
     assert all(csr2.colinds == csr.colinds)
-    if values:
+    if csr.values is not None:
         assert all(csr2.values == csr.values)
     else:
         assert csr2.values is None
 
 
-@mark.parametrize("values", [True, False])
-def test_csr64_pickle(values):
-    csr = rand_csr(100, 50, 1000, values=values)
+@given(csrs())
+def test_csr64_pickle(csr):
     csr = lm.CSR(csr.nrows, csr.ncols, csr.nnz,
                  csr.rowptrs.astype(np.int64), csr.colinds, csr.values)
-    assert csr.nrows == 100
-    assert csr.ncols == 50
-    assert csr.nnz == 1000
 
     data = pickle.dumps(csr)
     csr2 = pickle.loads(data)
@@ -423,7 +417,7 @@ def test_csr64_pickle(values):
     assert all(csr2.rowptrs == csr.rowptrs)
     assert csr2.rowptrs.dtype == np.int64
     assert all(csr2.colinds == csr.colinds)
-    if values:
+    if csr.values is not None:
         assert all(csr2.values == csr.values)
     else:
         assert csr2.values is None
