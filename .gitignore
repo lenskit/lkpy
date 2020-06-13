@@ -28,6 +28,7 @@ doc/data/
 *env*.yml
 
 dask-worker-space/
+.hypothesis/
 
 build-env/
 .tox/
