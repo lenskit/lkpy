@@ -187,19 +187,6 @@ lk_mkl_spexport(lk_mh_t matrix)
     return csr;
 }
 
-EXPORT lk_mh_t
-lk_mkl_spsyrk(lk_mh_t matrix)
-{
-    sparse_matrix_t out = NULL;
-    sparse_status_t rv;
-
-    rv = mkl_sparse_syrk(SPARSE_OPERATION_TRANSPOSE, MP(matrix), &out);
-
-    check_return("mkl_sparse_syrk", rv);
-    
-    return H(out);
-}
-
 
 /* Pointer-based export interface for Numba. */
 EXPORT void* lk_mkl_spexport_p(lk_mh_t matrix)

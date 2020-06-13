@@ -49,25 +49,6 @@ def test_mkl_mult_vec(mkl_ops):
         assert y == approx(y2)
 
 
-def test_mkl_syrk(mkl_ops):
-    for i in range(50):
-        M = np.random.randn(10, 5)
-        M[M <= 0] = 0
-        s = sps.csr_matrix(M)
-        assert s.nnz == np.sum(M > 0)
-
-        csr = lm.CSR.from_scipy(s)
-
-        ctc = mkl_ops.csr_syrk(csr)
-        res = ctc.to_scipy().toarray()
-        res = res.T + res
-        rd = np.diagonal(res)
-        res = res - np.diagflat(rd) * 0.5
-
-        mtm = M.T @ M
-        assert res == approx(mtm)
-
-
 def test_mkl_mabt(mkl_ops):
     for i in range(50):
         A = lktu.rand_csr(20, 10, nnz=50)

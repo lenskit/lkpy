@@ -37,7 +37,6 @@ try:
     _lk_mkl_spmab = clib.lk_mkl_spmab
     _lk_mkl_spmabt = clib.lk_mkl_spmabt
     _lk_mkl_spexport = clib.lk_mkl_spexport
-    _lk_mkl_spsyrk = clib.lk_mkl_spsyrk
 
     # silly pointer interface
     _lk_mkl_spexport_p = clib.lk_mkl_spexport_p
@@ -141,33 +140,6 @@ class SparseM:
         _mkl_check_return(rv, 'mkl_sparse_d_mv')
 
         return yout
-
-
-def csr_syrk(csr: CSR):
-    """
-    Interface to the ``mkl_sparse_syrk`` routine, with necessary setup and conversion.
-    """
-
-    _logger.debug('syrk: processing %dx%d matrix (%d nnz)', csr.nrows, csr.ncols, csr.nnz)
-
-    src = SparseM.from_csr(csr)
-
-    _logger.debug('syrk: ordering matrix')
-    rv = clib.lk_mkl_sporder(src.ptr)
-    _mkl_check_return(rv, 'mkl_sparse_order')
-
-    _logger.debug('syrk: multiplying matrix')
-    m2 = SparseM()
-    m2.ptr = clib.lk_mkl_spsyrk(src.ptr)
-    if not m2.ptr:
-        raise ValueError('SYRK failed')
-    del src  # free a little memory
-
-    _logger.debug('syrk: exporting matrix')
-    result = m2.export()
-    _logger.debug('syrk: received %dx%d matrix (%d nnz)',
-                  result.nrows, result.ncols, result.nnz)
-    return result
 
 
 @njit
