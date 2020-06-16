@@ -5,7 +5,7 @@ from pytest import approx
 
 from lenskit.math.solve import dposv
 
-from hypothesis import given
+from hypothesis import given, settings
 import hypothesis.strategies as st
 
 
@@ -19,6 +19,7 @@ def square_problem(draw, scale=10):
     return A, b, size
 
 
+@settings(deadline=None)
 @given(square_problem())
 def test_solve_dposv(problem):
     A, b, size = problem

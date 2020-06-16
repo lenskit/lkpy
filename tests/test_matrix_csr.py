@@ -339,7 +339,7 @@ def test_csr_to_sps():
 
 
 @settings(deadline=None, suppress_health_check=HealthCheck.all())
-@given(csrs(nrows=st.integers(1, 100), values=True))
+@given(csrs(nrows=st.integers(2, 100), values=True))
 def test_mean_center(csr):
     assume(csr.nnz >= 10)
     spm = csr.to_scipy().copy()
@@ -355,7 +355,7 @@ def test_mean_center(csr):
 
 
 @settings(deadline=None, suppress_health_check=HealthCheck.all())
-@given(csrs(nrows=st.integers(1, 100), values=True))
+@given(csrs(nrows=st.integers(2, 100), values=True))
 def test_unit_norm(csr):
     spm = csr.to_scipy().copy()
 
