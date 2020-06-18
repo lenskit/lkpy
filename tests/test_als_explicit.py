@@ -119,24 +119,6 @@ def test_als_predict_basic_for_new_user_with_new_ratings(m):
     assert preds.loc[i] == approx(new_preds.loc[i])
 
 @methods
-def test_als_predict_for_new_ratings(m):
-    ratings = lktu.ml_test.ratings
-    users = np.random.choice(ratings.user.unique(), 10)
-    items = np.random.choice(ratings.item.unique(), 100)
-    new_u_id = -1
-
-    algo = als.BiasedMF(20, iterations=10, method=m)
-    algo.fit(ratings)
-    
-    for u in users:
-        preds = algo.predict_for_user(u, items)  
-
-        new_ratings = ratings[ratings.user == u].set_index('item').drop(columns=['user', 'timestamp'])
-        new_preds = algo.predict_for_user(new_u_id, items, new_ratings)
-
-        for i in items:
-            assert preds.loc[i] == approx(new_preds.loc[i])
-@methods
 def test_als_predict_for_new_user_with_new_ratings(m):
     ratings = lktu.ml_test.ratings
     u = np.random.choice(ratings.user.unique(), 1)[0]
@@ -155,6 +137,25 @@ def test_als_predict_for_new_user_with_new_ratings(m):
     new_preds = algo.predict_for_user(new_u_id, [i], new_ratings)
 
     assert preds.loc[i] == approx(new_preds.loc[i])
+
+@methods
+def test_als_predict_for_new_users_with_new_ratings(m):
+    ratings = lktu.ml_test.ratings
+    users = np.random.choice(ratings.user.unique(), 10)
+    items = np.random.choice(ratings.item.unique(), 100)
+    new_u_id = -1
+
+    algo = als.BiasedMF(20, iterations=10, method=m)
+    algo.fit(ratings)
+    
+    for u in users:
+        preds = algo.predict_for_user(u, items)  
+
+        new_ratings = ratings[ratings.user == u].set_index('item').drop(columns=['user', 'timestamp'])
+        new_preds = algo.predict_for_user(new_u_id, items, new_ratings)
+
+        for i in items:
+            assert preds.loc[i] == approx(new_preds.loc[i])
 
 def test_als_predict_bad_item():
     algo = als.BiasedMF(20, iterations=10)
