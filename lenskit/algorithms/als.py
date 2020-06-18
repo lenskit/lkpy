@@ -146,7 +146,8 @@ def _train_bias_row_lu(items, ratings, other, reg):
 
     #vals = ratings[i]
     #V = M.T @ ratings
-    V = np.dot(M.T, ratings).flatten()
+    V = np.dot(M.T, ratings)
+    V = V.flatten()
     # and solve
     _dposv(A, V, True)
 

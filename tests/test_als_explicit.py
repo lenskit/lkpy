@@ -101,74 +101,60 @@ def test_als_predict_basic_for_new_ratings(m):
     assert preds.loc[3] <= 5.1
 
 @methods
+def test_als_predict_basic_for_new_user_with_new_ratings(m):
+    u = 10
+    u_ratings = simple_df[simple_df.user == u]
+    i = 3
+
+    algo = als.BiasedMF(20, iterations=10, method=m)
+    algo.fit(simple_df)
+
+    preds = algo.predict_for_user(u, [i])
+
+    new_u_id = -1
+    new_ratings = u_ratings.set_index('item').drop(columns=['user'])   
+    print(new_ratings) 
+    new_preds = algo.predict_for_user(new_u_id, [i], new_ratings)
+
+    assert preds.loc[i] == approx(new_preds.loc[i])
+
+@methods
 def test_als_predict_for_new_ratings(m):
     ratings = lktu.ml_test.ratings
-    users = np.random.choice(ratings.user.unique(), 2)
-    new_ratings = pd.DataFrame({'item': [1, 2],
-                            'rating': [4.0, 5.0]}).set_index('item')
+    users = np.random.choice(ratings.user.unique(), 10)
+    items = np.random.choice(ratings.item.unique(), 100)
+    new_u_id = -1
 
+    algo = als.BiasedMF(20, iterations=10, method=m)
+    algo.fit(ratings)
+    
     for u in users:
-        algo = als.BiasedMF(20, iterations=10, method=m)
-        u_ratings = ratings[ratings.user == u]
-        algo.fit(u_ratings)
+        preds = algo.predict_for_user(u, items)  
 
-        # icounts = u_ratings.groupby('item').rating.count()
-        # isums = u_ratings.groupby('item').rating.sum()
-        # is2 = isums - icounts * u_ratings.rating.mean()
-        # imeans = is2 / (icounts + 5)
-        # ibias = pd.Series(algo.item_bias_, index=algo.item_index_)
-        # imeans, ibias = imeans.align(ibias)
-        # assert ibias.values == approx(imeans.values)
+        new_ratings = ratings[ratings.user == u].set_index('item').drop(columns=['user', 'timestamp'])
+        new_preds = algo.predict_for_user(new_u_id, items, new_ratings)
 
-    #algo.fit(ratings)
-
-    
-    
-    # assert algo.global_bias_ == approx(simple_df.rating.mean())
-
-
-
-    # #preds0 = algo.predict_for_user(10, [3])
-    # preds = algo.predict_for_user(15, [3], new_ratings)
-
-    # assert len(preds) == 1
-    # assert preds.index[0] == 3
-    # assert preds.loc[3] >= -0.1
-    # assert preds.loc[3] <= 5.1
-
-    assert False
-
+        for i in items:
+            assert preds.loc[i] == approx(new_preds.loc[i])
 @methods
 def test_als_predict_for_new_user_with_new_ratings(m):
     ratings = lktu.ml_test.ratings
     u = np.random.choice(ratings.user.unique(), 1)[0]
     u_ratings = ratings[ratings.user == u]
-    new_ratings = pd.DataFrame({'item': [1, 2],
-                            'rating': [4.0, 5.0]}).set_index('item')
+    i = 1
+    print(u)
+
     algo = als.BiasedMF(20, iterations=10, method=m)
-    algo.fit(u_ratings)
-    preds = algo.predict_for_user(u, [3], new_ratings)
+    algo.fit(ratings)
+    
+    preds = algo.predict_for_user(u, [i])
     
     new_u_id = -1
-    u_ratings.user = new_u_id
-    algo_new = als.BiasedMF(20, iterations=10, method=m)
-    algo_new.fit(u_ratings)
-    new_preds = algo_new.predict_for_user(new_u_id, [3], new_ratings)
+    new_ratings = u_ratings.set_index('item').drop(columns=['user', 'timestamp'])
+    print(new_ratings)
+    new_preds = algo.predict_for_user(new_u_id, [i], new_ratings)
 
-    assert preds.loc[3] == approx(new_preds.loc[3])
-    
-    # assert algo.global_bias_ == approx(simple_df.rating.mean())
-
-    # new_ratings = pd.DataFrame({'item': [1, 2],
-    #                         'rating': [4.0, 5.0]}).set_index('item')
-
-    # #preds0 = algo.predict_for_user(10, [3])
-    # preds = algo.predict_for_user(15, [3], new_ratings)
-
-    # assert len(preds) == 1
-    # assert preds.index[0] == 3
-    # assert preds.loc[3] >= -0.1
-    # assert preds.loc[3] <= 5.1
+    assert preds.loc[i] == approx(new_preds.loc[i])
 
 def test_als_predict_bad_item():
     algo = als.BiasedMF(20, iterations=10)
