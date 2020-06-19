@@ -13,8 +13,8 @@ import hypothesis.strategies as st
 def square_problem(draw, scale=10):
     size = draw(st.integers(1, 1000))
     # Hypothesis doesn't do well at generating problem data, so go with this
-    A = np.randn(size, size) * scale
-    b = np.randn(size) * scale
+    A = np.random.randn(size, size) * scale
+    b = np.random.randn(size) * scale
     return A, b, size
 
 
