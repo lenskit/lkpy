@@ -3,7 +3,7 @@ import numpy as np
 from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
 
 
-from hypothesis import given, assume
+from hypothesis import given, assume, settings
 import hypothesis.strategies as st
 import hypothesis.extra.numpy as nph
 
@@ -89,6 +89,7 @@ def test_kvp_add_several(kvp_len, data):
     # it inserts a larger value somewhere
     old_mk = ks[0]
     old_mv = vs[0]
+    assume(np.median(vs) < 40)
     nv = data.draw(st.floats(np.median(vs), 50))
     n2 = kvp_minheap_insert(0, n, kvp_len, special_k, nv, ks, vs)
 
@@ -155,6 +156,7 @@ def test_kvp_insert_min():
     assert vs[0] == 5.0
 
 
+@settings(deadline=None)
 @given(nph.arrays(np.float64, 20, elements=st.floats(-100, 100), unique=True))
 def test_kvp_sort(values):
     "Test that sorting logic works"
