@@ -10,6 +10,8 @@ from hypothesis import given, assume, settings, HealthCheck
 import hypothesis.strategies as st
 import hypothesis.extra.numpy as nph
 
+csr_slow = settings(deadline=None, suppress_health_check=HealthCheck.all(), max_examples=15)
+
 
 @mark.parametrize('copy', [True, False])
 def test_csr_from_sps(copy):
@@ -338,8 +340,8 @@ def test_csr_to_sps():
         assert all(smat2.data[sp:ep] == csr.values[sp:ep])
 
 
-@settings(deadline=None, suppress_health_check=HealthCheck.all())
-@given(csrs(nrows=st.integers(2, 100), values=True))
+@csr_slow
+@given(csrs(values=True))
 def test_mean_center(csr):
     assume(csr.nnz >= 10)
     spm = csr.to_scipy().copy()
@@ -354,8 +356,8 @@ def test_mean_center(csr):
             assert vs + m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
 
 
-@settings(deadline=None, suppress_health_check=HealthCheck.all())
-@given(csrs(nrows=st.integers(2, 100), values=True))
+@csr_slow
+@given(csrs(values=True))
 def test_unit_norm(csr):
     spm = csr.to_scipy().copy()
 
@@ -369,7 +371,8 @@ def test_unit_norm(csr):
             assert vs * m2[i] == approx(spm.getrow(i).toarray()[0, csr.row_cs(i)])
 
 
-@given(csrs(nrows=st.integers(1, 50), values=True))
+@csr_slow
+@given(csrs(values=True))
 def test_filter(csr):
     assume(not np.all(csr.values <= 0))  # we have to have at least one to retain
     csrf = csr.filter_nnzs(csr.values > 0)
@@ -387,6 +390,7 @@ def test_filter(csr):
     assert df == approx(d1)
 
 
+@csr_slow
 @given(csrs())
 def test_csr_pickle(csr):
     data = pickle.dumps(csr)
@@ -403,6 +407,7 @@ def test_csr_pickle(csr):
         assert csr2.values is None
 
 
+@csr_slow
 @given(csrs())
 def test_csr64_pickle(csr):
     csr = lm.CSR(csr.nrows, csr.ncols, csr.nnz,

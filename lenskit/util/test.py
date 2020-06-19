@@ -26,12 +26,12 @@ ml100k = ML100K('data/ml-100k')
 @st.composite
 def csrs(draw, nrows=None, ncols=None, nnz=None, values=None):
     if ncols is None:
-        ncols = draw(st.integers(5, 1000))
+        ncols = draw(st.integers(5, 100))
     elif not isinstance(ncols, int):
         ncols = draw(ncols)
 
     if nrows is None:
-        nrows = draw(st.integers(5, 1000))
+        nrows = draw(st.integers(5, 100))
     elif not isinstance(nrows, int):
         nrows = draw(nrows)
 
