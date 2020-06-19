@@ -109,7 +109,9 @@ class Bias(Predictor):
 
     def transform(self, ratings, *, indexes=False):
         """
-        Transform ratings by removing the bias term.
+        Transform ratings by removing the bias term.  This method does *not* recompute
+        user (or item) biases based on these ratings, but rather uses the biases that
+        were estimated with :meth:`fit`.
 
         Args:
             ratings(pandas.DataFrame):
