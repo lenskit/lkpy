@@ -14,7 +14,6 @@ from lenskit import batch
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import Popular
 from lenskit.algorithms.als import BiasedMF
-from lenskit.util.test import rng
 
 from lenskit.algorithms import tf as lktf
 
@@ -39,6 +38,7 @@ def ml20m():
 
 
 @pytest.mark.slow
+@pytest.mark.realdata
 @pytest.mark.parametrize('n_jobs', [1, 2])
 def test_pop_recommend(ml20m, rng, n_jobs):
     users = rng.choice(ml20m['user'].unique(), 10000, replace=False)
@@ -51,6 +51,7 @@ def test_pop_recommend(ml20m, rng, n_jobs):
     assert recs['user'].nunique() == 10000
 
 
+@pytest.mark.realdata
 @pytest.mark.slow
 def test_als_isolate(ml20m, rng):
     users = rng.choice(ml20m['user'].unique(), 5000, replace=False)
@@ -70,6 +71,7 @@ def test_als_isolate(ml20m, rng):
         ares.close()
 
 
+@pytest.mark.realdata
 @pytest.mark.slow
 @pytest.mark.skip
 @pytest.mark.skipif(not lktf.TF_AVAILABLE, reason='TensorFlow not available')

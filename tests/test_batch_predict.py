@@ -133,6 +133,7 @@ def test_bias_batch_predict(ncpus):
 
 
 def test_batch_predict_preshared():
+    "Test batch prediction with isolated training and a pre-serialized algorithm."
     from lenskit.algorithms import basic
     import lenskit.crossfold as xf
 

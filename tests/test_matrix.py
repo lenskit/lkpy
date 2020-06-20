@@ -5,7 +5,7 @@ import pandas as pd
 
 import lenskit.matrix as lm
 
-from lenskit.util.test import ml_test, rng
+from lenskit.util.test import ml_test
 
 from pytest import approx
 

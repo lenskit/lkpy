@@ -11,6 +11,9 @@ import numpy as np
 from .. import matrix
 
 import pytest
+from hypothesis import given, assume
+import hypothesis.strategies as st
+import hypothesis.extra.numpy as nph
 
 from lenskit.datasets import MovieLens, ML100K
 
@@ -20,73 +23,34 @@ ml_test = MovieLens('data/ml-latest-small')
 ml100k = ML100K('data/ml-100k')
 
 
-def ml_sample():
-    ratings = ml_test.ratings
-    icounts = ratings.groupby('item').rating.count()
-    top = icounts.nlargest(500)
-    ratings = ratings.set_index('item')
-    top_rates = ratings.loc[top.index, :]
-    _log.info('top 500 items yield %d of %d ratings', len(top_rates), len(ratings))
-    return top_rates.reset_index()
+@st.composite
+def csrs(draw, nrows=None, ncols=None, nnz=None, values=None):
+    if ncols is None:
+        ncols = draw(st.integers(5, 100))
+    elif not isinstance(ncols, int):
+        ncols = draw(ncols)
 
+    if nrows is None:
+        nrows = draw(st.integers(5, 100))
+    elif not isinstance(nrows, int):
+        nrows = draw(nrows)
 
-def rand_csr(nrows=100, ncols=50, nnz=1000, values=True):
-    "Generate a random CSR for testing."
-    coords = np.random.choice(np.arange(ncols * nrows, dtype=np.int32), nnz, False)
+    if nnz is None:
+        nnz = draw(st.integers(10, nrows * ncols // 2))
+    elif not isinstance(nnz, int):
+        nnz = draw(nnz)
+
+    coords = draw(nph.arrays(np.int32, nnz, elements=st.integers(0, nrows*ncols - 1), unique=True))
     rows = np.mod(coords, nrows, dtype=np.int32)
     cols = np.floor_divide(coords, nrows, dtype=np.int32)
+    if values is None:
+        values = draw(st.booleans())
     if values:
-        vals = np.random.randn(nnz)
+        rng = draw(st.randoms())
+        vals = np.array([rng.normalvariate(0, 1) for i in range(nnz)])
     else:
         vals = None
     return matrix.CSR.from_coo(rows, cols, vals, (nrows, ncols))
-
-
-def repeated(n=50):
-    """
-    Decorator to run a test multiple times. Useful for randomized tests.
-
-    Example::
-        @repeated
-        def test_something_with_random_values():
-            pass
-
-    Args:
-        n(int):
-            The number of iterations.  If the decorator is used without
-            parentheses, this will be the function itself, which will be
-            run the default number of times (50).
-
-    Environment Variables:
-        LK_TEST_ITERATION_MULT(float):
-            A multiplier for the number of test iterations.  This is useful
-            when debugging tests, to cause a test to be run more times than
-            the default.
-    """
-    mult = os.environ.get('LK_TEST_ITERATION_MULT', '1')
-    mult = float(mult)
-
-    def wrap(proc):
-        def run(*args, **kwargs):
-            _log.info('running %s for %d iterations', proc.__name__, n * mult)
-            for i in range(int(n * mult)):
-                proc(*args, **kwargs)
-        return run
-
-    if hasattr(n, '__call__'):
-        proc = n
-        n = 50
-        return wrap(proc)
-    else:
-        return wrap
-
-
-@pytest.fixture
-def rng():
-    if hasattr(np.random, 'default_rng'):
-        return np.random.default_rng()
-    else:
-        return np.random.RandomState()
 
 
 @contextmanager

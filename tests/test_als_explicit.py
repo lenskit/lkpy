@@ -130,7 +130,7 @@ def test_als_train_large():
 
 # don't use wantjit, use this to do a non-JIT test
 def test_als_save_load():
-    original = als.BiasedMF(20, iterations=5, method='lu')
+    original = als.BiasedMF(5, iterations=5, method='lu')
     ratings = lktu.ml_test.ratings
     original.fit(ratings)
 

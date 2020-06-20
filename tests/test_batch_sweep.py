@@ -65,8 +65,7 @@ def test_sweep_norecs(tmp_path):
     ratings = ml_test.ratings
     folds = xf.partition_users(ratings, 5, xf.SampleN(5))
     sweep.add_datasets(folds, DataSet='ml-small')
-    sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
-                         attrs=['damping'])
+    sweep.add_algorithms(Bias(damping=0))
     sweep.add_algorithms(Popular())
 
     try:
@@ -82,13 +81,10 @@ def test_sweep_norecs(tmp_path):
     assert not (work / 'recommendations.parquet').exists()
 
     runs = pd.read_parquet(work / 'runs.parquet')
-    # 4 algorithms by 5 partitions
-    assert len(runs) == 20
+    # 2 algorithms by 5 partitions
+    assert len(runs) == 10
     assert all(np.sort(runs.AlgoClass.unique()) == ['Bias', 'Popular'])
     bias_runs = runs[runs.AlgoClass == 'Bias']
-    assert all(bias_runs.damping.notna())
-    pop_runs = runs[runs.AlgoClass == 'Popular']
-    assert all(pop_runs.damping.isna())
 
     preds = pd.read_parquet(work / 'predictions.parquet')
     assert all(preds.RunId.isin(bias_runs.RunId))
@@ -104,8 +100,7 @@ def test_sweep_nopreds(tmp_path):
              for (train, test) in xf.partition_users(ratings, 5, xf.SampleN(5))]
     sweep.add_datasets(folds, DataSet='ml-small')
     sweep.add_algorithms(Popular())
-    sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
-                         attrs=['damping'])
+    sweep.add_algorithms(Bias(damping=0))
 
     try:
         sweep.run()
@@ -120,13 +115,10 @@ def test_sweep_nopreds(tmp_path):
     assert (work / 'recommendations.parquet').exists()
 
     runs = pd.read_parquet(work / 'runs.parquet')
-    # 4 algorithms by 5 partitions
-    assert len(runs) == 20
+    # 2 algorithms by 5 partitions
+    assert len(runs) == 10
     assert all(np.sort(runs.AlgoClass.unique()) == ['Bias', 'Popular'])
     bias_runs = runs[runs.AlgoClass == 'Bias']
-    assert all(bias_runs.damping.notna())
-    pop_runs = runs[runs.AlgoClass == 'Popular']
-    assert all(pop_runs.damping.isna())
 
     recs = pd.read_parquet(work / 'recommendations.parquet')
     assert all(recs.RunId.isin(runs.RunId))
@@ -141,8 +133,7 @@ def test_sweep_allrecs(tmp_path):
     ratings = ml_test.ratings
     folds = xf.partition_users(ratings, 5, xf.SampleN(5))
     sweep.add_datasets(folds, DataSet='ml-small')
-    sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
-                         attrs=['damping'])
+    sweep.add_algorithms(Bias(damping=0))
     sweep.add_algorithms(Popular())
 
     try:
@@ -158,13 +149,10 @@ def test_sweep_allrecs(tmp_path):
     assert (work / 'recommendations.parquet').exists()
 
     runs = pd.read_parquet(work / 'runs.parquet')
-    # 4 algorithms by 5 partitions
-    assert len(runs) == 20
+    # 2 algorithms by 5 partitions
+    assert len(runs) == 10
     assert all(np.sort(runs.AlgoClass.unique()) == ['Bias', 'Popular'])
     bias_runs = runs[runs.AlgoClass == 'Bias']
-    assert all(bias_runs.damping.notna())
-    pop_runs = runs[runs.AlgoClass == 'Popular']
-    assert all(pop_runs.damping.isna())
 
     preds = pd.read_parquet(work / 'predictions.parquet')
     assert all(preds.RunId.isin(bias_runs.RunId))
@@ -232,8 +220,7 @@ def test_sweep_persist(tmp_path):
         assert isinstance(train, pathlib.Path)
         assert isinstance(test, pathlib.Path)
 
-    sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
-                         attrs=['damping'])
+    sweep.add_algorithms(Bias(5))
     sweep.add_algorithms(Popular())
 
     try:
@@ -249,8 +236,8 @@ def test_sweep_persist(tmp_path):
     assert (work / 'recommendations.parquet').exists()
 
     runs = pd.read_parquet(work / 'runs.parquet')
-    # 4 algorithms by 5 partitions
-    assert len(runs) == 20
+    # 2 algorithms by 5 partitions
+    assert len(runs) == 10
 
 
 @mark.slow

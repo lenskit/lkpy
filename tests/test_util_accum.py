@@ -1,7 +1,11 @@
 import numpy as np
 
 from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
-from lenskit.util.test import repeated
+
+
+from hypothesis import given, assume, settings
+import hypothesis.strategies as st
+import hypothesis.extra.numpy as nph
 
 
 def test_kvp_add_to_empty():
@@ -51,16 +55,19 @@ def test_kvp_add_smaller():
     assert all(vs[:2] == [1.0, 3.0])
 
 
-@repeated(100)
-def test_kvp_add_several():
-    kvp_len = 50
+@given(st.integers(10, 100), st.data())
+def test_kvp_add_several(kvp_len, data):
+    "Test filling up a KVP."
     ks = np.full(kvp_len, -1, dtype=np.int32)
     vs = np.zeros(kvp_len)
 
     n = 0
 
+    values = st.floats(-100, 100)
+
     for k in range(kvp_len):
-        v = np.random.randn()
+        v = data.draw(values)
+        assume(v not in vs[:n])  # we can't keep drawing the same value
         n = kvp_minheap_insert(0, n, kvp_len, k, v, ks, vs)
 
     assert n == kvp_len
@@ -71,7 +78,7 @@ def test_kvp_add_several():
     # value is the smallest
     assert vs[0] == np.min(vs)
 
-    # it rejects a smaller value; -10000 is extremely unlikely
+    # it rejects a smaller value; -10000 is below our min value
     special_k = 500
     n2 = kvp_minheap_insert(0, n, kvp_len, special_k, -10000.0, ks, vs)
 
@@ -79,10 +86,12 @@ def test_kvp_add_several():
     assert all(ks != special_k)
     assert all(vs > -100.0)
 
-    # it inserts a larger value somewhere; all positive is extremely unlikely
+    # it inserts a larger value somewhere
     old_mk = ks[0]
     old_mv = vs[0]
-    n2 = kvp_minheap_insert(0, n, kvp_len, special_k, 0.0, ks, vs)
+    assume(np.median(vs) < 40)
+    nv = data.draw(st.floats(np.median(vs), 50))
+    n2 = kvp_minheap_insert(0, n, kvp_len, special_k, nv, ks, vs)
 
     assert n2 == n
     # the old value minimum key has been removed
@@ -92,16 +101,18 @@ def test_kvp_add_several():
     assert np.count_nonzero(ks == special_k) == 1
 
 
-@repeated
-def test_kvp_add_middle():
+@given(st.data())
+def test_kvp_add_middle(data):
+    "Test that KVP works in the middle of an array."
     ks = np.full(100, -1, dtype=np.int32)
     vs = np.full(100, np.nan)
 
     n = 25
     avs = []
 
+    values = st.floats(-100, 100)
     for k in range(25):
-        v = np.random.randn()
+        v = data.draw(values)
         avs.append(v)
         n = kvp_minheap_insert(25, n, 10, k, v, ks, vs)
 
@@ -145,15 +156,17 @@ def test_kvp_insert_min():
     assert vs[0] == 5.0
 
 
-@repeated
-def test_kvp_sort():
+@settings(deadline=None)
+@given(nph.arrays(np.float64, 20, elements=st.floats(-100, 100), unique=True))
+def test_kvp_sort(values):
+    "Test that sorting logic works"
     ks = np.full(10, -1, dtype=np.int32)
     vs = np.zeros(10)
 
     n = 0
 
     for k in range(20):
-        v = np.random.randn()
+        v = values[k]
         n = kvp_minheap_insert(0, n, 10, k, v, ks, vs)
 
     assert n == 10

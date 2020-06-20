@@ -12,7 +12,7 @@ import numpy as np
 from scipy import linalg as la
 
 import pytest
-from pytest import approx, mark
+from pytest import approx, mark, fixture
 
 import lenskit.util.test as lktu
 
@@ -35,6 +35,18 @@ simple_ratings = pd.DataFrame.from_records([
     (1, 9, 3.0),
     (3, 9, 4.0)
 ], columns=['user', 'item', 'rating'])
+
+
+@fixture(scope='module')
+def ml_subset():
+    "Fixture that returns a subset of the MovieLens database."
+    ratings = lktu.ml_test.ratings
+    icounts = ratings.groupby('item').rating.count()
+    top = icounts.nlargest(500)
+    ratings = ratings.set_index('item')
+    top_rates = ratings.loc[top.index, :]
+    _log.info('top 500 items yield %d of %d ratings', len(top_rates), len(ratings))
+    return top_rates.reset_index()
 
 
 def test_ii_train():
@@ -311,11 +323,11 @@ def test_ii_large_models():
 
 
 @lktu.wantjit
-def test_ii_save_load(tmp_path):
+def test_ii_save_load(tmp_path, ml_subset):
     "Save and load a model"
     original = knn.ItemItem(30, save_nbrs=500)
     _log.info('building model')
-    original.fit(lktu.ml_sample())
+    original.fit(ml_subset)
 
     fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
@@ -368,11 +380,11 @@ def test_ii_save_load(tmp_path):
         assert all(np.diff(row.data) < 1.0e-6)
 
 
-def test_ii_implicit_save_load(tmp_path):
+def test_ii_implicit_save_load(tmp_path, ml_subset):
     "Save and load a model"
     original = knn.ItemItem(30, save_nbrs=500, center=False, aggregate='sum')
     _log.info('building model')
-    original.fit(lktu.ml_sample().loc[:, ['user', 'item']])
+    original.fit(ml_subset.loc[:, ['user', 'item']])
 
     fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
@@ -530,10 +542,9 @@ def test_ii_known_preds():
 
 
 @lktu.wantjit
+@mark.slow
 @mark.skipif(knn._mkl_ops is None, reason='only test MKL match when MKL is available')
 def test_ii_impl_match():
-    from lenskit import batch
-
     sps = knn.ItemItem(20, min_sim=1.0e-6)
     sps._use_mkl = False
     _log.info('training SciPy %s on ml data', sps)
