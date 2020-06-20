@@ -9,6 +9,7 @@ import functools as ft
 import logging
 import logging.handlers
 import inspect
+import faulthandler
 from concurrent.futures import ProcessPoolExecutor
 from abc import ABC, abstractmethod
 import pickle
@@ -90,6 +91,7 @@ def _initialize_worker(log_queue):
     "Initialize a worker process."
     global __is_worker
     __is_worker = True
+    faulthandler.enable()
     if log_queue is not None:
         h = logging.handlers.QueueHandler(log_queue)
         root = logging.getLogger()
@@ -101,18 +103,22 @@ def _initialize_worker(log_queue):
 def _initialize_mp_worker(mkey, func, threads, log_queue):
     _initialize_worker(log_queue)
     global __work_model, __work_func, __is_mp_worker
-    __work_model = mkey
-    __work_func = func
     __is_mp_worker = True
 
-    import numba
-    numba.config.NUMBA_NUM_THREADS = threads
+    if 'NUMBA_NUM_THREADS' not in os.environ:
+        _log.debug('configuring Numba thread count')
+        import numba
+        numba.config.NUMBA_NUM_THREADS = threads
     try:
         import mkl
-        _log.debug('configuring Numba thread count')
+        _log.debug('configuring MKL thread count')
         mkl.set_num_threads(threads)
     except ImportError:
         pass
+
+    __work_model = mkey
+    # deferred function unpickling to minimize imports before initialization
+    __work_func = pickle.loads(func)
 
     _log.debug('worker %d ready', os.getpid())
 
@@ -291,6 +297,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker):
             key = model
         else:
             key = persist(model, method=persist_method)
+        func = pickle.dumps(func)
         ctx = LKContext.INSTANCE
         _log.info('setting up ProcessPoolExecutor w/ %d workers', n_jobs)
         kid_tc = proc_count(level=1)
@@ -310,6 +317,7 @@ class MPOpInvoker(ModelOpInvoker):
             key = model
         else:
             key = persist(model, method=persist_method)
+        func = pickle.dumps(func)
         ctx = LKContext.INSTANCE
         kid_tc = proc_count(level=1)
         _log.info('setting up multiprocessing.Pool w/ %d workers', n_jobs)

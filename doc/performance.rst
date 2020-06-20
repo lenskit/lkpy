@@ -52,9 +52,10 @@ and works as follows:
   of processes, and with 1 inner thread.
 * If ``LK_NUM_PROCS`` is a comma-separated pair of integers (e.g. ``8,4``), the batch
   functions will use the first number for the process count and the second number as
-  the inner thread count.
+  the inner thread count (but it will **not** override ``NUMBA_NUM_THREADS``).
 * If ``LK_NUM_PROCS`` is not set, the batch functions use half the number of cores as
-  the process count and 2 as the inner thread count.
+  the process count and 2 as the inner thread count (unless ``NUMBA_NUM_THREADS`` is
+  specified in the environment).
 
 .. _batch functions: batch.html
 
