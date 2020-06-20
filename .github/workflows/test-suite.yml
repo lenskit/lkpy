@@ -224,6 +224,16 @@ jobs:
       - name: Run tests
         run: |
           python -m pytest --cov=lenskit --cov-report=xml
+
+      - name: Non-JIT Test Coverage
+        if: runner.os == 'Linux'
+        env:
+          NUMBA_DISABLE_JIT: 1
+        run: |
+          python -m pytest --cov=lenskit --cov-append -m 'not slow'
+      
+      - name: Aggreagate Coverage Data
+        run: coverage xml
       
       - name: Upload coverage
         uses: codecov/codecov-action@v1
