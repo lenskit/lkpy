@@ -9,6 +9,7 @@ jobs:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}-latest
     timeout-minutes: 30
+    fail-fast: false
     strategy:
       matrix:
         python:
@@ -193,6 +194,7 @@ jobs:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}-latest
     strategy:
+      fail-fast: false
       matrix:
         python:
         - 3.6
