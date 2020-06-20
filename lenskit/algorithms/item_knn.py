@@ -14,6 +14,7 @@ from numba import njit, prange, objmode
 
 from lenskit import util, matrix, DataWarning
 from lenskit.sharing import in_share_context
+from lenskit.util.parallel import is_mp_worker
 from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
 from . import Predictor
 
@@ -81,7 +82,7 @@ def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, limits, thresh: float):
     return used
 
 
-@njit(nogil=True, parallel=True)
+@njit(nogil=True, parallel=not is_mp_worker())
 def _sort_nbrs(smat):
     for i in prange(smat.nrows):
         sp, ep = smat.row_extent(i)
@@ -105,6 +106,7 @@ def _sim_block(inb, rmh, min_sim, max_nbrs, nitems):
     _lk_mkl_spopt(amh)
 
     smh = _lk_mkl_spmabt(rmh, amh)
+
     _lk_mkl_spfree(amh)
 
     _lk_mkl_sporder(smh)  # for reproducibility
@@ -160,7 +162,7 @@ def _sim_block(inb, rmh, min_sim, max_nbrs, nitems):
     return block_csr
 
 
-@njit(nogil=True, parallel=True)
+@njit(nogil=True, parallel=not is_mp_worker())
 def _mkl_sim_blocks(trmat, min_sim, max_nbrs):
     "Compute the similarity matrix with blocked MKL calls"
     nitems = trmat.nrows
