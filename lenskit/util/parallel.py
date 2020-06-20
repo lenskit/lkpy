@@ -103,7 +103,8 @@ def _initialize_mp_worker(mkey, func, threads, log_queue):
     _initialize_worker(log_queue)
     global __work_model, __work_func
 
-    if 'NUMBA_NUM_THREADS' not in os.environ:
+    nnt_env = os.environ.get('NUMBA_NUM_THREADS', None)
+    if nnt_env is None or int(nnt_env) > threads:
         _log.debug('configuring Numba thread count')
         import numba
         numba.config.NUMBA_NUM_THREADS = threads
