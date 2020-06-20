@@ -1,8 +1,9 @@
+import os
 import logging
 import multiprocessing as mp
 import numpy as np
 
-from lenskit.util.parallel import invoker, proc_count, run_sp
+from lenskit.util.parallel import invoker, proc_count, run_sp, is_worker, is_mp_worker
 from lenskit.util.test import set_env_var
 from lenskit.sharing import persist_binpickle
 
@@ -15,6 +16,10 @@ def _mul_op(m, v):
     return m @ v
 
 
+def _worker_status(blob, *args):
+    return os.getpid(), is_worker(), is_mp_worker()
+
+
 @mark.parametrize('n_jobs', [None, 1, 2, 8])
 def test_invoke_matrix(n_jobs):
     matrix = np.random.randn(100, 100)
@@ -24,6 +29,13 @@ def test_invoke_matrix(n_jobs):
         for rv, v in zip(mults, vectors):
             act_rv = matrix @ v
             assert np.all(rv == act_rv)
+
+
+def test_mp_is_worker():
+    with invoker('foo', _worker_status, 2) as loop:
+        res = list(loop.map(range(10)))
+        assert all([w for (pid, w, mpw) in res])
+        assert all([mpw for (pid, w, mpw) in res])
 
 
 def test_proc_count_default():
@@ -94,3 +106,10 @@ def test_run_sp_persist():
         assert np.all(res.get() == a1 @ a2)
     finally:
         res.close()
+
+
+def test_sp_is_worker():
+    pid, w, mpw = run_sp(_worker_status, 'fishtank')
+    assert pid != os.getpid()
+    assert w
+    assert not mpw
