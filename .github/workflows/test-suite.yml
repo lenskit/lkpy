@@ -147,8 +147,15 @@ jobs:
           name: lkpy
           env-file: environment.yml
 
+      - name: Cache ML data
+        uses: actions/cache@v2
+        with:
+          path: |
+            data
+            !data/*.zip
+          key: test-mldata
+
       - name: Download ML Data
-        if: runner.os == 'Linux' && matrix.python == 3.8
         shell: pwsh
         run: |
           ./fetch-datasets.ps1 ml-100k ml-1m ml-10m ml-20m
@@ -159,7 +166,7 @@ jobs:
       - name: Run Eval Tests
         run: |
           python -m pytest --cov=lenskit -m eval
-          python -m pytest --cov=lenskit --cov-append -m ml20m
+          python -m pytest --cov=lenskit --cov-append -m realdata
 
       - name: Validate Doc Notebooks
         run: |
