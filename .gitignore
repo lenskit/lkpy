@@ -6,6 +6,8 @@ __pycache__/
 *.prof
 *.lprof
 .ipynb_checkpoints/
+.idea/
+.vs/
 
 .eggs/
 .*_cache/
