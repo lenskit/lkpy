@@ -37,18 +37,22 @@ def persist_shm(model, dir=None):
     _log.info('serialized %s to %d pickle bytes with %d buffers of %d bytes',
               model, len(data), len(buffers), total_size)
 
-    # blit the buffers to the SHM block
-    memory = shm.SharedMemory(create=True, size=total_size)
-    cur_offset = 0
-    blocks = []
-    for buf in buffers:
-        ba = buf.raw()
-        blen = ba.nbytes
-        bend = cur_offset + blen
-        _log.debug('saving %d bytes', blen)
-        memory.buf[cur_offset:bend] = ba
-        blocks.append((cur_offset, bend))
-        cur_offset = bend
+    if buffers:
+        # blit the buffers to the SHM block
+        memory = shm.SharedMemory(create=True, size=total_size)
+        cur_offset = 0
+        blocks = []
+        for buf in buffers:
+            ba = buf.raw()
+            blen = ba.nbytes
+            bend = cur_offset + blen
+            _log.debug('saving %d bytes', blen)
+            memory.buf[cur_offset:bend] = ba
+            blocks.append((cur_offset, bend))
+            cur_offset = bend
+    else:
+        memory = None
+        blocks = []
 
     return SHMPersisted(data, memory, blocks)
 
@@ -62,7 +66,7 @@ class SHMPersisted(PersistedModel):
         self.pickle_data = data
         self.blocks = blocks
         self.memory = memory
-        self.shm_name = memory.name
+        self.shm_name = memory.name if memory is not None else None
         self.is_owner = True
 
     def get(self):
@@ -90,7 +94,7 @@ class SHMPersisted(PersistedModel):
             self.memory = None
 
     def _open(self):
-        if not self.memory:
+        if self.shm_name and not self.memory:
             self.memory = shm.SharedMemory(name=self.shm_name)
         return self.memory
 
