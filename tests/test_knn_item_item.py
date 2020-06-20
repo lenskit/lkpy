@@ -542,10 +542,9 @@ def test_ii_known_preds():
 
 
 @lktu.wantjit
+@mark.slow
 @mark.skipif(knn._mkl_ops is None, reason='only test MKL match when MKL is available')
 def test_ii_impl_match():
-    from lenskit import batch
-
     sps = knn.ItemItem(20, min_sim=1.0e-6)
     sps._use_mkl = False
     _log.info('training SciPy %s on ml data', sps)
