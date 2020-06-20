@@ -619,7 +619,8 @@ def _build_predict(ratings, fold):
 
 @lktu.wantjit
 @mark.slow
-def test_ii_multi_build():
+def test_ii_parallel_multi_build():
+    "Build multiple item-item models in parallel"
     ratings = lktu.ml_test.ratings
     ratings['partition'] = np.random.choice(4, len(ratings), replace=True)
 
