@@ -55,26 +55,6 @@ jobs:
         run: |
           python -V
           numba -s
-
-      - name: Cache ML data
-        uses: actions/cache@v2
-        with:
-          path: |
-            ml-100k
-            data
-            !data/*.zip
-          key: ${{runner.os}}-py${{matrix.python}}-mldata
-      
-      - name: Download ML-100K
-        shell: pwsh
-        run: |
-          ./fetch-datasets.ps1 ml-100k
-        
-      - name: Download Other ML
-        if: runner.os == 'Linux' && matrix.python == 3.8
-        shell: pwsh
-        run: |
-          ./fetch-datasets.ps1 ml-1m ml-10m ml-20m
       
       - name: Build LKPY
         run: |
@@ -146,7 +126,7 @@ jobs:
         uses: codecov/codecov-action@v1
 
   check-docs:
-    name: Validate Documentation and Examples
+    name: Docs, Examples, and Eval
     timeout-minutes: 30
     runs-on: ubuntu-latest
 
@@ -167,18 +147,24 @@ jobs:
           name: lkpy
           env-file: environment.yml
 
-      - name: Download ML-100K
+      - name: Download ML Data
+        if: runner.os == 'Linux' && matrix.python == 3.8
         shell: pwsh
         run: |
-          ./fetch-datasets.ps1 ml-100k
+          ./fetch-datasets.ps1 ml-100k ml-1m ml-10m ml-20m
 
       - name: Install for Testing
         run: python -m pip install -e .
 
+      - name: Run Eval Tests
+        run: |
+          python -m pytest --cov=lenskit -m eval
+          python -m pytest --cov=lenskit --cov-append -m ml20m
+
       - name: Validate Doc Notebooks
         run: |
           cp doc/*.ipynb data
-          python -m pytest --nbval-lax --cov=lenskit data
+          python -m pytest --nbval-lax --cov=lenskit --cov-append data
 
       - name: Validate Examples
         run: |
