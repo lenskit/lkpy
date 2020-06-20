@@ -52,7 +52,7 @@ def test_mkl_mult_vec(mkl_ops):
         assert y == approx(y2)
 
 
-@settings(deadline=None)
+@settings(deadline=None, suppress_health_check=HealthCheck.all())
 @given(st.data())
 def test_mkl_mabt(mkl_ops, data):
     Anr = data.draw(st.integers(5, 100))
