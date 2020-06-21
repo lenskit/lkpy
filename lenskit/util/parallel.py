@@ -9,6 +9,7 @@ import functools as ft
 import logging
 import logging.handlers
 import inspect
+import faulthandler
 from concurrent.futures import ProcessPoolExecutor
 from abc import ABC, abstractmethod
 import pickle
@@ -23,7 +24,6 @@ _log = logging.getLogger(__name__)
 __work_model = None
 __work_func = None
 __is_worker = False
-__is_mp_worker = False
 
 
 def is_worker():
@@ -33,7 +33,7 @@ def is_worker():
 
 def is_mp_worker():
     "Query whether the current process is a multiprocessing worker."
-    return __is_mp_worker
+    return os.environ.get('_LK_IN_MP', 'no') == 'yes'
 
 
 def _p5_recv(self):
@@ -90,6 +90,7 @@ def _initialize_worker(log_queue):
     "Initialize a worker process."
     global __is_worker
     __is_worker = True
+    faulthandler.enable()
     if log_queue is not None:
         h = logging.handlers.QueueHandler(log_queue)
         root = logging.getLogger()
@@ -100,21 +101,25 @@ def _initialize_worker(log_queue):
 
 def _initialize_mp_worker(mkey, func, threads, log_queue):
     _initialize_worker(log_queue)
-    global __work_model, __work_func, __is_mp_worker
-    __work_model = mkey
-    __work_func = func
-    __is_mp_worker = True
+    global __work_model, __work_func
 
-    import numba
-    numba.config.NUMBA_NUM_THREADS = threads
+    nnt_env = os.environ.get('NUMBA_NUM_THREADS', None)
+    if nnt_env is None or int(nnt_env) > threads:
+        _log.debug('configuring Numba thread count')
+        import numba
+        numba.config.NUMBA_NUM_THREADS = threads
     try:
         import mkl
-        _log.debug('configuring Numba thread count')
+        _log.debug('configuring MKL thread count')
         mkl.set_num_threads(threads)
     except ImportError:
         pass
 
-    _log.debug('worker %d ready', os.getpid())
+    __work_model = mkey
+    # deferred function unpickling to minimize imports before initialization
+    __work_func = pickle.loads(func)
+
+    _log.debug('worker %d ready (process %s)', os.getpid(), mp.current_process())
 
 
 def _mp_invoke_worker(*args):
@@ -130,7 +135,7 @@ def _sp_worker(log_queue, res_queue, func, args, kwargs):
         _log.debug('completed successfully')
         res_queue.put((True, res))
     except Exception as e:
-        _log.debug('failed, transmitting error %s', e)
+        _log.error('failed, transmitting error %r', e)
         res_queue.put((False, e))
 
 
@@ -291,8 +296,10 @@ class ProcessPoolOpInvoker(ModelOpInvoker):
             key = model
         else:
             key = persist(model, method=persist_method)
+        func = pickle.dumps(func)
         ctx = LKContext.INSTANCE
         _log.info('setting up ProcessPoolExecutor w/ %d workers', n_jobs)
+        os.environ['_LK_IN_MP'] = 'yes'
         kid_tc = proc_count(level=1)
         self.executor = ProcessPoolExecutor(n_jobs, ctx, _initialize_mp_worker,
                                             (key, func, kid_tc, log_queue()))
@@ -302,6 +309,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker):
 
     def shutdown(self):
         self.executor.shutdown()
+        os.environ.pop('_LK_IN_MP', 'yes')
 
 
 class MPOpInvoker(ModelOpInvoker):
@@ -310,8 +318,10 @@ class MPOpInvoker(ModelOpInvoker):
             key = model
         else:
             key = persist(model, method=persist_method)
+        func = pickle.dumps(func)
         ctx = LKContext.INSTANCE
         kid_tc = proc_count(level=1)
+        os.environ['_LK_IN_MP'] = 'yes'
         _log.info('setting up multiprocessing.Pool w/ %d workers', n_jobs)
         self.pool = ctx.Pool(n_jobs, _initialize_mp_worker, (key, func, kid_tc, log_queue()))
 
@@ -320,3 +330,4 @@ class MPOpInvoker(ModelOpInvoker):
 
     def shutdown(self):
         self.pool.close()
+        os.environ.pop('_LK_IN_MP', 'yes')

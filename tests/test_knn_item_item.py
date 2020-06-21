@@ -1,5 +1,7 @@
 from lenskit import DataWarning
 from lenskit.algorithms import Recommender
+from lenskit.algorithms.basic import Fallback, Bias
+from lenskit import batch
 import lenskit.algorithms.item_knn as knn
 
 from pathlib import Path
@@ -15,6 +17,7 @@ import pytest
 from pytest import approx, mark, fixture
 
 import lenskit.util.test as lktu
+from lenskit.util.parallel import invoker
 
 _log = logging.getLogger(__name__)
 
@@ -569,15 +572,13 @@ def test_ii_impl_match():
 @lktu.wantjit
 @mark.slow
 @mark.eval
+@mark.skipif(not lktu.ml100k.available, reason='ML100K not available')
 @mark.parametrize('ncpus', [1, 2])
 def test_ii_batch_recommend(ncpus):
     import lenskit.crossfold as xf
-    from lenskit import batch, topn
+    from lenskit import topn
 
-    if not os.path.exists('ml-100k/u.data'):
-        raise pytest.skip()
-
-    ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
+    ratings = lktu.ml100k.ratings
 
     def eval(train, test):
         _log.info('running training')
@@ -604,3 +605,27 @@ def test_ii_batch_recommend(ncpus):
     dcg = results.ndcg
     _log.info('nDCG for %d users is %f', len(dcg), dcg.mean())
     assert dcg.mean() > 0.03
+
+
+def _build_predict(ratings, fold):
+    algo = Fallback(knn.ItemItem(20), Bias(5))
+    train = ratings[ratings['partition'] != fold]
+    algo.fit(train)
+
+    test = ratings[ratings['partition'] == fold]
+    preds = batch.predict(algo, test, n_jobs=1)
+    return preds
+
+
+@lktu.wantjit
+@mark.slow
+def test_ii_parallel_multi_build():
+    "Build multiple item-item models in parallel"
+    ratings = lktu.ml_test.ratings
+    ratings['partition'] = np.random.choice(4, len(ratings), replace=True)
+
+    with invoker(ratings, _build_predict, 2) as inv:
+        preds = inv.map(range(4))
+        preds = pd.concat(preds, ignore_index=True)
+
+    assert len(preds) == len(ratings)
