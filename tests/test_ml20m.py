@@ -122,3 +122,4 @@ def test_ii_impl_match(ml20m):
         assert all(np.diff(mkl.sim_matrix_.values[sp:ep]) <= 0)
         assert all(np.diff(sps.sim_matrix_.values[sp:ep]) <= 0)
         assert set(mkl.sim_matrix_.colinds[sp:ep]) == set(sps.sim_matrix_.colinds[sp:ep])
+        assert all(np.abs(mkl.sim_matrix_.values[sp:ep] - sps.sim_matrix_.values[sp:ep]) < 1.0e-3)
