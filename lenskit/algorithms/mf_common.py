@@ -67,7 +67,7 @@ class MFPredictor(Predictor):
         """
         return self.item_index_.get_indexer(items)
 
-    def score(self, user, items, user_feature=None):
+    def score(self, user, items, u_features=None):
         """
         Score a set of items for a user. User and item parameters must be indices
         into the matrices.
@@ -82,7 +82,7 @@ class MFPredictor(Predictor):
         """
 
         # get user vector
-        uv = self.user_features_[user, :] if user_feature is None else user_feature
+        uv = self.user_features_[user, :] if u_features is None else u_features
         # get item matrix
         im = self.item_features_[items, :]
         rv = np.matmul(im, uv)
@@ -91,8 +91,8 @@ class MFPredictor(Predictor):
 
         return rv
 
-    def score_by_ids(self, user, items, user_feature=None):        
-        if user_feature is None:
+    def score_by_ids(self, user, items, u_features=None):
+        if u_features is None:
             uidx = self.lookup_user(user)
             if uidx < 0:
                 _logger.debug('user %s not in model', user)
@@ -109,11 +109,11 @@ class MFPredictor(Predictor):
 
         # multiply
         _logger.debug('scoring %d items for user %s', len(good_items), user)
-        rv = self.score(uidx, good_iidx, user_feature)
+        rv = self.score(uidx, good_iidx, u_features)
 
         res = pd.Series(rv, index=good_items)
         res = res.reindex(items)
-        return res       
+        return res
 
 class BiasMFPredictor(MFPredictor):
     """
@@ -129,7 +129,7 @@ class BiasMFPredictor(MFPredictor):
         item_features_(numpy.ndarray): The :math:`n \\times k` item-feature matrix.
     """
 
-    def score(self, user, items, user_feature=None, raw=False):
+    def score(self, user, items, u_features=None, raw=False):
         """
         Score a set of items for a user. User and item parameters must be indices
         into the matrices.
@@ -143,7 +143,7 @@ class BiasMFPredictor(MFPredictor):
             numpy.ndarray: the scores for the items.
         """
 
-        rv = super().score(user, items, user_feature)
+        rv = super().score(user, items, u_features)
 
         if not raw:
             # add bias back in

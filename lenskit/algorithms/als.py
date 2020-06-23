@@ -126,7 +126,7 @@ def _train_matrix_lu(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float)
 
     return np.sqrt(frob)
 
-#@njit(parallel=True, nogil=True)
+@njit(parallel=True, nogil=True)
 def _train_bias_row_lu(items, ratings, other, reg):
     """
     Args:
@@ -134,9 +134,8 @@ def _train_bias_row_lu(items, ratings, other, reg):
         ratings(np.ndarray): the user's (normalized) ratings for those items
         other(np.ndarray): the item-feature matrix
         reg(float): the regularization term
-
     Returns:
-        np.ndarray: the user-feature vector (equivalent to V in the current LU code) 
+        np.ndarray: the user-feature vector (equivalent to V in the current LU code)
     """
     M = other[items, :]
     nf = other.shape[1]
@@ -144,11 +143,8 @@ def _train_bias_row_lu(items, ratings, other, reg):
     MMT = M.T @ M
     A = MMT + regI * len(items)
 
-    #vals = ratings[i]
-    #V = M.T @ ratings
     V = np.dot(M.T, ratings)
     V = V.flatten()
-    # and solve
     _dposv(A, V, True)
 
     return V
@@ -493,11 +489,16 @@ class BiasedMF(BiasMFPredictor):
 
     def predict_for_user(self, user, items, ratings=None):
         if ratings is not None:
-            # get the indexes for the items in ratings
-            indexes = []
-            for i in ratings.index: # ratings has as index the item id
-                indexes.append(self.item_index_.get_loc(i))
-            user_feature = _train_bias_row_lu(indexes, ratings.values, self.item_features_, self.regularization)
+            rmat, c_users, c_items = sparse_ratings(ratings)
+            rmat, bias = self._normalize(rmat, c_users, c_items)
+
+            ri_idxes = self.item_index_.get_indexer_for(ratings.item)
+            ri_good = ri_idxes >= 0
+            ri_items = ri_idxes[ri_good]
+            ri_values = rmat.N.values[ri_good]
+
+            user_feature = _train_bias_row_lu(ri_items, ri_values,
+                                    self.item_features_, self.regularization)
             return self.score_by_ids(user, items, user_feature)
         else:
             # look up user index
