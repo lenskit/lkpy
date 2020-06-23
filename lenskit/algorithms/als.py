@@ -496,10 +496,10 @@ class BiasedMF(BiasMFPredictor):
 
             ri_idxes = self.item_index_.get_indexer_for(ratings.item)
             ri_good = ri_idxes >= 0
-            ri_items = ri_idxes[ri_good]
-            ri_values = rmat.N.values[ri_good]
+            ri_i = ri_idxes[ri_good]
+            ri_val = rmat.N.values[ri_good]
 
-            u_feat = _train_bias_row_lu(ri_items, ri_values,self.item_features_, self.regularization)
+            u_feat = _train_bias_row_lu(ri_i, ri_val, self.item_features_, self.regularization)
             return self.score_by_ids(user, items, u_feat)
         else:
             # look up user index
