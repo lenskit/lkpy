@@ -181,7 +181,8 @@ def _mkl_sim_blocks(trmat, blocks, ptrs, min_sim, max_nbrs):
     for bi in prange(nblocks):
         b = blocks[bi]
         p = ptrs[bi]
-        bres = _mkl_sim_block(b, p.bs, p.be, rmat_h, min_sim, max_nbrs, nitems)
+        bs, be = p
+        bres = _mkl_sim_block(b, bs, be, rmat_h, min_sim, max_nbrs, nitems)
         res[bi] = bres
 
     _lk_mkl_spfree(rmat_h)
@@ -448,9 +449,14 @@ class ItemItem(Predictor):
 
         if self._use_mkl and _mkl_ops is not None:
             _logger.info('[%s] computing similarities with MKL', self._timer)
-            ptrs = np.array(bounds, dtype=[('bs', 'i4'), ('be', 'i4')])
-            blocks = List(b.N for b in blocks)
-            s_blocks = _mkl_sim_blocks(trmat.N, blocks, ptrs, self.min_sim, m_nbrs)
+            ptrs = List(bounds)
+            nbs = List(b.N for b in blocks)
+            if not nbs:
+                # oops, this is the bad place
+                # in non-JIT node, List doesn't actually make the list
+                nbs = [b.N for b in blocks]
+                ptrs = bounds
+            s_blocks = _mkl_sim_blocks(trmat.N, nbs, ptrs, self.min_sim, m_nbrs)
         else:
             s_blocks = _scipy_sim_blocks(trmat.to_scipy(), blocks, bounds, self.min_sim, m_nbrs)
 
