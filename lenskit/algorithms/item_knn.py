@@ -11,6 +11,7 @@ import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
 from numba import jit, njit, prange, objmode
+from numba.typed import List
 
 from lenskit import util, matrix, DataWarning
 from lenskit.sharing import in_share_context
@@ -448,7 +449,7 @@ class ItemItem(Predictor):
         if self._use_mkl and _mkl_ops is not None:
             _logger.info('[%s] computing similarities with MKL', self._timer)
             ptrs = np.array(bounds, dtype=[('bs', 'i4'), ('be', 'i4')])
-            blocks = [b.N for b in blocks]
+            blocks = List(b.N for b in blocks)
             s_blocks = _mkl_sim_blocks(trmat.N, blocks, ptrs, self.min_sim, m_nbrs)
         else:
             s_blocks = _scipy_sim_blocks(trmat.to_scipy(), blocks, bounds, self.min_sim, m_nbrs)
