@@ -96,6 +96,7 @@ def test_tf_isvd(ml20m):
     assert user_rmse.mean() == approx(0.92, abs=0.05)
 
 
+@pytest.mark.realdata
 @pytest.mark.slow
 @pytest.mark.skipif(knn._mkl_ops is None, reason='only test MKL match when MKL is available')
 def test_ii_impl_match(ml20m):
