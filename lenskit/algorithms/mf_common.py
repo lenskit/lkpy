@@ -115,6 +115,7 @@ class MFPredictor(Predictor):
         res = res.reindex(items)
         return res
 
+
 class BiasMFPredictor(MFPredictor):
     """
     Common model for biased matrix factorization.
