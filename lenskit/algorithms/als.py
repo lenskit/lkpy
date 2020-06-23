@@ -126,6 +126,7 @@ def _train_matrix_lu(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float)
 
     return np.sqrt(frob)
 
+
 @njit(parallel=True, nogil=True)
 def _train_bias_row_lu(items, ratings, other, reg):
     """
@@ -497,9 +498,8 @@ class BiasedMF(BiasMFPredictor):
             ri_items = ri_idxes[ri_good]
             ri_values = rmat.N.values[ri_good]
 
-            user_feature = _train_bias_row_lu(ri_items, ri_values,
-                                    self.item_features_, self.regularization)
-            return self.score_by_ids(user, items, user_feature)
+            u_feat = _train_bias_row_lu(ri_items, ri_values,self.item_features_, self.regularization)
+            return self.score_by_ids(user, items, u_feat)
         else:
             # look up user index
             return self.score_by_ids(user, items)
