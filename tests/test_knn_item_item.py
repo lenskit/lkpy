@@ -18,6 +18,7 @@ from pytest import approx, mark, fixture
 
 import lenskit.util.test as lktu
 from lenskit.util.parallel import invoker
+from lenskit.util import Stopwatch
 
 _log = logging.getLogger(__name__)
 
@@ -550,12 +551,16 @@ def test_ii_known_preds():
 def test_ii_impl_match():
     sps = knn.ItemItem(20, min_sim=1.0e-6)
     sps._use_mkl = False
+    timer = Stopwatch()
     _log.info('training SciPy %s on ml data', sps)
     sps.fit(lktu.ml_test.ratings)
+    _log.info('trained SciPy in %s', timer)
 
     mkl = knn.ItemItem(20, min_sim=1.0e-6)
+    timer = Stopwatch()
     _log.info('training MKL %s on ml data', mkl)
     mkl.fit(lktu.ml_test.ratings)
+    _log.info('trained MKL in %s', timer)
 
     assert mkl.sim_matrix_.nnz == sps.sim_matrix_.nnz
     assert mkl.sim_matrix_.nrows == sps.sim_matrix_.nrows
@@ -567,6 +572,7 @@ def test_ii_impl_match():
         assert all(np.diff(mkl.sim_matrix_.values[sp:ep]) <= 0)
         assert all(np.diff(sps.sim_matrix_.values[sp:ep]) <= 0)
         assert set(mkl.sim_matrix_.colinds[sp:ep]) == set(sps.sim_matrix_.colinds[sp:ep])
+        assert all(np.abs(mkl.sim_matrix_.values[sp:ep] - sps.sim_matrix_.values[sp:ep]) < 1.0e-3)
 
 
 @lktu.wantjit
