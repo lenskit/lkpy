@@ -150,6 +150,7 @@ def _train_bias_row_lu(items, ratings, other, reg):
 
     return V
 
+
 @njit
 def _cg_a_mult(OtOr, X, y, v):
     """
