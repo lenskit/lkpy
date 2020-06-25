@@ -16,6 +16,7 @@ import pickle
 
 from lenskit.sharing import persist, PersistedModel
 from lenskit.util.log import log_queue
+from lenskit.util.random import derive_seed, init_rng, get_root_seed
 
 if pickle.HIGHEST_PROTOCOL < 5:
     import pickle5 as pickle
@@ -86,11 +87,12 @@ class LKContext(mp.context.SpawnContext):
 LKContext.INSTANCE = LKContext()
 
 
-def _initialize_worker(log_queue):
+def _initialize_worker(log_queue, seed):
     "Initialize a worker process."
     global __is_worker
     __is_worker = True
     faulthandler.enable()
+    init_rng(seed)
     if log_queue is not None:
         h = logging.handlers.QueueHandler(log_queue)
         root = logging.getLogger()
@@ -99,8 +101,9 @@ def _initialize_worker(log_queue):
         h.setLevel(logging.DEBUG)
 
 
-def _initialize_mp_worker(mkey, func, threads, log_queue):
-    _initialize_worker(log_queue)
+def _initialize_mp_worker(mkey, func, threads, log_queue, seed):
+    seed = derive_seed(mp.current_process().name, base=seed, none_on_old_numpy=True)
+    _initialize_worker(log_queue, seed)
     global __work_model, __work_func
 
     nnt_env = os.environ.get('NUMBA_NUM_THREADS', None)
@@ -127,8 +130,8 @@ def _mp_invoke_worker(*args):
     return __work_func(model, *args)
 
 
-def _sp_worker(log_queue, res_queue, func, args, kwargs):
-    _initialize_worker(log_queue)
+def _sp_worker(log_queue, seed, res_queue, func, args, kwargs):
+    _initialize_worker(log_queue, seed)
     _log.debug('running %s in worker', func)
     try:
         res = func(*args, **kwargs)
@@ -186,11 +189,12 @@ def run_sp(func, *args, **kwargs):
     """
     Run a function in a subprocess and return its value.  This is for achieving subprocess
     isolation, not parallelism.  The subprocess is configured so things like logging work
-    correctly.
+    correctly, and is initialized with a derived random seed.
     """
     ctx = LKContext.INSTANCE
     rq = ctx.SimpleQueue()
-    worker_args = (log_queue(), rq, func, args, kwargs)
+    seed = derive_seed(none_on_old_numpy=True)
+    worker_args = (log_queue(), seed, rq, func, args, kwargs)
     _log.debug('spawning subprocess to run %s', func)
     proc = ctx.Process(target=_sp_worker, args=worker_args)
     proc.start()
@@ -302,7 +306,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker):
         os.environ['_LK_IN_MP'] = 'yes'
         kid_tc = proc_count(level=1)
         self.executor = ProcessPoolExecutor(n_jobs, ctx, _initialize_mp_worker,
-                                            (key, func, kid_tc, log_queue()))
+                                            (key, func, kid_tc, log_queue(), get_root_seed()))
 
     def map(self, *iterables):
         return self.executor.map(_mp_invoke_worker, *iterables)
@@ -323,7 +327,8 @@ class MPOpInvoker(ModelOpInvoker):
         kid_tc = proc_count(level=1)
         os.environ['_LK_IN_MP'] = 'yes'
         _log.info('setting up multiprocessing.Pool w/ %d workers', n_jobs)
-        self.pool = ctx.Pool(n_jobs, _initialize_mp_worker, (key, func, kid_tc, log_queue()))
+        self.pool = ctx.Pool(n_jobs, _initialize_mp_worker,
+                             (key, func, kid_tc, log_queue(), get_root_seed()))
 
     def map(self, *iterables):
         return self.pool.starmap(_mp_invoke_worker, zip(*iterables))
