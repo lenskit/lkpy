@@ -92,7 +92,8 @@ def _initialize_worker(log_queue, seed):
     global __is_worker
     __is_worker = True
     faulthandler.enable()
-    init_rng(seed)
+    if seed is not None:
+        init_rng(seed)
     if log_queue is not None:
         h = logging.handlers.QueueHandler(log_queue)
         root = logging.getLogger()
