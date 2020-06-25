@@ -53,6 +53,7 @@ test:
   requires:
     - pytest
     - pytest-arraydiff
+    - hypothesis
     - statsmodels
     - scikit-learn
   commands:
