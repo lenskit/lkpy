@@ -27,7 +27,7 @@ author = 'Michael D. Ekstrand'
 # The short X.Y version
 version = '0.10'
 # The full version, including alpha/beta/rc tags
-release = '0.10.0'
+release = '0.10.1'
 
 
 # -- General configuration ---------------------------------------------------
