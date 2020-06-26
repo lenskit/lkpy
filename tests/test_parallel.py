@@ -5,7 +5,7 @@ import numpy as np
 
 from lenskit.util.parallel import invoker, proc_count, run_sp, is_worker, is_mp_worker
 from lenskit.util.test import set_env_var
-from lenskit.util.random import get_root_seed
+from lenskit.util.random import get_root_seed, _have_gen
 from lenskit.sharing import persist_binpickle
 
 from pytest import mark, raises
@@ -121,6 +121,7 @@ def _get_seed():
     return get_root_seed()
 
 
+@mark.skipif(not _have_gen, reason='only works on NumPy 1.17 and newer')
 def test_sp_random_seed():
     init = get_root_seed()
     seed = run_sp(_get_seed)
