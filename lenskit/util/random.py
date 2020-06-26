@@ -27,6 +27,7 @@ class LegacyRNG:
 
     def initialize(self, seed, keys):
         warnings.warn('initializing legacy RNG infrastructure')
+        _log.warn('initializing legacy RNG infrastructure - use NumPy 1.17+ for better seeds')
         if keys:
             raise NotImplementedError('legacy RNG does not support seed keys')
         self._seed = seed
@@ -34,7 +35,7 @@ class LegacyRNG:
             del self._rng
         return seed
 
-    def derive(self, keys):
+    def derive(self, base, keys):
         raise NotImplementedError('legacy RNG does not support deriving seeds')
 
     def rng(self, seed=None):
@@ -98,7 +99,7 @@ def get_root_seed():
     Returns:
         numpy.random.SeedSequence: The LensKit root seed.
     """
-    return _rng_impl.seed()
+    return _rng_impl.seed
 
 
 def _make_int(obj):
@@ -155,18 +156,28 @@ def init_rng(seed, *keys, propagate=True):
     return _rng_impl.seed
 
 
-def derive_seed(*keys, base=None):
+def derive_seed(*keys, base=None, none_on_old_numpy=False):
     """
     Derive a seed from the root seed, optionally with additional seed keys.
 
     Args:
         keys(list of int or str):
             Additional components to add to the spawn key for reproducible derivation.
-            If unspecified, the seed's internal counter is incremented.
+            If unspecified, the seed's internal counter is incremented (by calling
+            :meth:`numpy.random.SeedSequence.spawn`).
         base(numpy.random.SeedSequence):
             The base seed to use.  If ``None``, uses the root seed.
+        none_on_old_numpy(bool):
+            If ``True``, return ``None`` instead of raising :class:`NotImplementedError`
+            if running on an old version of NumPy.
     """
-    return _rng_impl.derive(base, keys)
+    try:
+        return _rng_impl.derive(base, keys)
+    except NotImplementedError as e:
+        if none_on_old_numpy:
+            return None
+        else:
+            raise e
 
 
 def rng_seed(spec=None):

@@ -5,6 +5,7 @@ import numpy as np
 
 from lenskit.util.parallel import invoker, proc_count, run_sp, is_worker, is_mp_worker
 from lenskit.util.test import set_env_var
+from lenskit.util.random import get_root_seed, _have_gen
 from lenskit.sharing import persist_binpickle
 
 from pytest import mark, raises
@@ -17,6 +18,7 @@ def _mul_op(m, v):
 
 
 def _worker_status(blob, *args):
+    _log.info('in worker %s', mp.current_process().name)
     return os.getpid(), is_worker(), is_mp_worker()
 
 
@@ -113,3 +115,16 @@ def test_sp_is_worker():
     assert pid != os.getpid()
     assert w
     assert not mpw
+
+
+def _get_seed():
+    return get_root_seed()
+
+
+@mark.skipif(not _have_gen, reason='only works on NumPy 1.17 and newer')
+def test_sp_random_seed():
+    init = get_root_seed()
+    seed = run_sp(_get_seed)
+    # we should spawn a seed for the worker
+    assert seed.entropy == init.entropy
+    assert seed.spawn_key == (init.n_children_spawned - 1, )
