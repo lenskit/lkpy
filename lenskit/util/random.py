@@ -35,7 +35,7 @@ class LegacyRNG:
             del self._rng
         return seed
 
-    def derive(self, keys):
+    def derive(self, base, keys):
         raise NotImplementedError('legacy RNG does not support deriving seeds')
 
     def rng(self, seed=None):
