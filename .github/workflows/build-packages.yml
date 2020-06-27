@@ -131,7 +131,7 @@ jobs:
         run: |
           source $CONDA/etc/profile.d/conda.sh
           conda activate base
-          twine upload dist/lenskit*.tar.gz dist/lenskit*.zip
+          twine upload dist/lenskit*.zip
         shell: bash
         env:
           TWINE_NON_INTERACTIVE: y
