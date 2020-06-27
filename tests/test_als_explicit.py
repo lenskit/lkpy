@@ -89,8 +89,7 @@ def test_als_predict_basic_for_new_ratings():
     assert algo.global_bias_ == approx(simple_df.rating.mean())
 
     new_ratings = pd.DataFrame({'item': [1, 2],
-                          'user': [10, 10],
-                          'rating': [4.0, 5.0]})
+                            'rating': [4.0, 5.0]}).set_index('item')
 
     preds = algo.predict_for_user(15, [3], new_ratings)
 
@@ -109,7 +108,7 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
     preds = algo.predict_for_user(u, [i])
 
     new_u_id = -1
-    new_ratings = simple_df[simple_df.user == u]
+    new_ratings = simple_df[simple_df.user == u].set_index('item').drop(columns=['user'])
     new_preds = algo.predict_for_user(new_u_id, [i], new_ratings)
 
     assert preds.loc[i] == approx(new_preds.loc[i])
@@ -128,7 +127,7 @@ def test_als_predict_for_new_users_with_new_ratings():
     for u in users:
         preds = algo.predict_for_user(u, items)
 
-        new_ratings = ratings[ratings.user == u]
+        new_ratings = ratings[ratings.user == u].set_index('item').drop(columns=['user', 'timestamp'])
         new_preds = algo.predict_for_user(new_u_id, items, new_ratings)
 
         assert new_preds.values == approx(preds.values)

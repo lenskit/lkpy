@@ -491,13 +491,24 @@ class BiasedMF(BiasMFPredictor):
 
     def predict_for_user(self, user, items, ratings=None):
         if ratings is not None:
-            rmat, c_users, c_items = sparse_ratings(ratings)
-            rmat, bias = self._normalize(rmat, c_users, c_items)
+            if self.bias:
+                gbias = self.bias.mean_
+                ibias = self.bias.item_offsets_
+                ubias = self.bias.user_offsets_
 
-            ri_idxes = self.item_index_.get_indexer_for(ratings.item)
+                ratings.rating = ratings.rating - gbias
+                if ibias is not None:
+                    ibias = ibias.reindex(ratings.index, fill_value=0)
+                    ratings.rating = ratings.rating - ibias.values
+                if ubias is not None:
+                    users = [user]
+                    ubias = ubias.reindex(users, fill_value=0)
+                    ratings.rating = ratings.rating - ubias.values
+
+            ri_idxes = self.item_index_.get_indexer_for(ratings.index)
             ri_good = ri_idxes >= 0
             ri_it = ri_idxes[ri_good]
-            ri_val = rmat.N.values[ri_good]
+            ri_val = ratings.values[ri_good]
 
             u_feat = _train_bias_row_lu(ri_it, ri_val, self.item_features_, self.regularization)
             return self.score_by_ids(user, items, u_feat)
