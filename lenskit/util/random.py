@@ -27,6 +27,7 @@ class LegacyRNG:
 
     def initialize(self, seed, keys):
         warnings.warn('initializing legacy RNG infrastructure')
+        _log.warn('initializing legacy RNG infrastructure - use NumPy 1.17+ for better seeds')
         if keys:
             raise NotImplementedError('legacy RNG does not support seed keys')
         self._seed = seed
@@ -34,7 +35,7 @@ class LegacyRNG:
             del self._rng
         return seed
 
-    def derive(self, keys):
+    def derive(self, base, keys):
         raise NotImplementedError('legacy RNG does not support deriving seeds')
 
     def rng(self, seed=None):
@@ -98,7 +99,7 @@ def get_root_seed():
     Returns:
         numpy.random.SeedSequence: The LensKit root seed.
     """
-    return _rng_impl.seed()
+    return _rng_impl.seed
 
 
 def _make_int(obj):
@@ -145,32 +146,81 @@ def init_rng(seed, *keys, propagate=True):
         _log.info('initializing numpy.random and random with seed %u', ik)
         np.random.seed(ik)
         random.seed(ik)
+        try:
+            import tensorflow as tf
+            _log.debug('setting TensorFlow seed')
+            tf.random.set_seed(ik)
+        except ImportError:
+            _log.debug('TensorFlow not available')
 
     return _rng_impl.seed
 
 
-def derive_seed(*keys, base=None):
+def derive_seed(*keys, base=None, none_on_old_numpy=False):
     """
     Derive a seed from the root seed, optionally with additional seed keys.
 
     Args:
         keys(list of int or str):
             Additional components to add to the spawn key for reproducible derivation.
-            If unspecified, the seed's internal counter is incremented.
+            If unspecified, the seed's internal counter is incremented (by calling
+            :meth:`numpy.random.SeedSequence.spawn`).
         base(numpy.random.SeedSequence):
             The base seed to use.  If ``None``, uses the root seed.
+        none_on_old_numpy(bool):
+            If ``True``, return ``None`` instead of raising :class:`NotImplementedError`
+            if running on an old version of NumPy.
     """
-    return _rng_impl.derive(base, keys)
+    try:
+        return _rng_impl.derive(base, keys)
+    except NotImplementedError as e:
+        if none_on_old_numpy:
+            return None
+        else:
+            raise e
 
 
-def rng(seed=None, *, legacy=False):
+def rng_seed(spec=None):
+    """
+    Get a random number generator seed.  ``spec`` is interpreted as in :func:`rng`, and
+    is used as follows:
+
+    * If a :class:`numpy.random.SeedSequence`, returned as-is.
+    * If an integer, used to create a seed sequence.
+    * If ``None``, returns global seed (after initializing).
+    * If a :class:`numpy.random.Generator` or :class:`numpy.random.RandomState`, it is
+      used to generate an integer that is used to create a seed sequence.
+
+    This function is only available when used with NumPy 1.17 or newer.
+
+    Returns:
+        numpy.random.SeedSequence:
+            The seed.
+    """
+    if not hasattr(np.random, 'Generator'):
+        raise RuntimeError('rng_seed requires NumPy 1.17')
+
+    if spec is None:
+        return _rng_impl.seed
+    elif isinstance(spec, int):
+        return np.random.SeedSequence(spec)
+    elif isinstance(spec, np.random.SeedSequence):
+        return spec
+    elif hasattr(spec, 'integers'):
+        seed = rng.integers(2**32-1)
+        return np.random.SeedSequence(seed)
+    else:
+        raise ValueError('unknown RNG spec ' + str(spec))
+
+
+def rng(spec=None, *, legacy=False):
     """
     Get a random number generator.  This is similar to :func:`sklearn.utils.check_random_seed`, but
     it usually returns a :class:`numpy.random.Generator` instead.
 
     Args:
-        seed:
-            The seed for this RNG.  Can be any of the following types:
+        spec:
+            The spec for this RNG.  Can be any of the following types:
 
             * ``int``
             * ``None``
@@ -186,12 +236,12 @@ def rng(seed=None, *, legacy=False):
     """
 
     rng = None
-    if isinstance(seed, np.random.RandomState):
-        rng = seed
-    elif _have_gen and isinstance(seed, np.random.Generator):
-        rng = seed
+    if isinstance(spec, np.random.RandomState):
+        rng = spec
+    elif _have_gen and isinstance(spec, np.random.Generator):
+        rng = spec
     else:
-        rng = _rng_impl.rng(seed)
+        rng = _rng_impl.rng(spec)
 
     if legacy and _have_gen and isinstance(rng, np.random.Generator):
         rng = np.random.RandomState(rng.bit_generator)

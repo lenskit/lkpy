@@ -179,7 +179,7 @@ def test_als_train_large():
 
 # don't use wantjit, use this to do a non-JIT test
 def test_als_save_load():
-    original = als.BiasedMF(20, iterations=5, method='lu')
+    original = als.BiasedMF(5, iterations=5, method='lu')
     ratings = lktu.ml_test.ratings
     original.fit(ratings)
 
@@ -252,8 +252,8 @@ def test_als_method_match():
     preds = []
 
     rng = util.rng(42, legacy=True)
-    for u in rng.choice(ratings.user.unique(), 10, replace=False):
-        items = rng.choice(ratings.item.unique(), 15, replace=False)
+    for u in rng.choice(np.unique(ratings.user), 15, replace=False):
+        items = rng.choice(np.unique(ratings.item), 15, replace=False)
         lu_preds = lu.predict_for_user(u, items)
         cd_preds = cd.predict_for_user(u, items)
         diff = lu_preds - cd_preds
@@ -307,9 +307,9 @@ def test_als_batch_accuracy():
     _log.info('diff summary:\n%s', preds.abs_diff.describe())
 
     lu_mae = pm.mae(preds.lu_pred, preds.rating)
-    assert lu_mae == approx(0.73, abs=0.025)
+    assert lu_mae == approx(0.73, abs=0.03)
     cd_mae = pm.mae(preds.cd_pred, preds.rating)
-    assert cd_mae == approx(0.73, abs=0.025)
+    assert cd_mae == approx(0.73, abs=0.03)
 
     user_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.lu_pred, df.rating))
     assert user_rmse.mean() == approx(0.91, abs=0.05)

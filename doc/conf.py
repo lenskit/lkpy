@@ -25,9 +25,9 @@ copyright = '2018–2019 Boise State University'
 author = 'Michael D. Ekstrand'
 
 # The short X.Y version
-version = '0.9'
+version = '0.10'
 # The full version, including alpha/beta/rc tags
-release = '0.9.0'
+release = '0.10.1'
 
 
 # -- General configuration ---------------------------------------------------
@@ -189,6 +189,11 @@ intersphinx_mapping = {
     'hpfrec': ('https://hpfrec.readthedocs.io/en/latest/', None),
     'implicit': ('https://implicit.readthedocs.io/en/latest/', None),
     'scikit': ('https://scikit-learn.org/stable/', None),
-    'binpcikle': ('https://binpickle.lenskit.org/en/stable/', None),
-    'joblib': ('https://joblib.readthedocs.io/en/latest/', None)
+    'binpickle': ('https://binpickle.lenskit.org/en/stable/', None)
+}
+
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'bysource',
+    'show-inheritance': True
 }

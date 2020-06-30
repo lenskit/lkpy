@@ -9,9 +9,8 @@ _logger = logging.getLogger(__name__)
 
 class HPF(MFPredictor):
     """
-    Hierarchical Poisson factorization, provided by hpfrec_.
-
-    .. _hpfrec: https://hpfrec.readthedocs.io/en/latest/
+    Hierarchical Poisson factorization, provided by
+    `hpfrec <https://hpfrec.readthedocs.io/en/latest/>`_.
 
     Args:
         features(int): the number of features

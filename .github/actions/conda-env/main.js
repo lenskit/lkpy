@@ -45,7 +45,7 @@ async function initialize(cfg) {
         core.info(`creating conda environment w/ Python ${cfg.py_version}`);
         await run(conda_bin, ['create', '-qy', '-n', cfg.name, `python=${cfg.py_version}`]);
         core.info(`updating conda environment from ${cfg.file}`);
-        await run(conda_bin, ['env', 'update', '-q', '-n', cfg.name, '-f', cfg.file]);
+        await run(conda_bin, ['env', 'update', '-n', cfg.name, '-f', cfg.file]);
     } else {
         core.info(`creating conda environment from ${cfg.file}`);
         await run(conda_bin, ['env', 'create', '-q', '-n', cfg.name, '-f', cfg.file]);
@@ -113,6 +113,8 @@ async function main() {
     } else {
         await exportUnix(cfg);
     }
+    core.info('built environment, listing packages')
+    await run(conda_bin, ['list', '-n', cfg.name])
 }
 
 main().catch((err) => {

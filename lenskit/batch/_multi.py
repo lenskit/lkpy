@@ -9,7 +9,6 @@ import gzip
 import pickle
 from copy import copy
 
-import joblib
 import pandas as pd
 
 from ..algorithms import Predictor, Recommender
@@ -57,8 +56,7 @@ class MultiEval:
         save_models(bool or str):
             save individual estimated models to disk.  If ``True``, models are pickled to
             ``.pkl`` files; if ``'gzip'``, they are pickled to gzip-compressed ``.pkl.gz``
-            files; if ``'joblib'``, they are pickled with :func:`joblib.dump` to uncompressed
-            ``.jlpkl`` files.
+            files.
         eval_n_jobs(int or None):
             Value to pass to the ``n_jobs`` parameter in :func:`lenskit.batch.predict` and
             :func:`lenskit.batch.recommend`.
@@ -308,8 +306,6 @@ class MultiEval:
         elif self.save_models == 'gzip':
             with gzip.open(os.fspath(base.with_suffix('.pkl.gz')), 'wb') as f:
                 pickle.dump(algo, f)
-        elif self.save_models == 'joblib':
-            joblib.dump(algo, base.with_suffix('.jlpkl'))
         else:
             with base.with_suffix('.pkl').open('wb') as f:
                 pickle.dump(algo, f)

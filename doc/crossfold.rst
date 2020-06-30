@@ -1,5 +1,5 @@
-Crossfold preparation
-=====================
+Splitting Data
+==============
 
 .. module:: lenskit.crossfold
 

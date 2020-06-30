@@ -6,7 +6,7 @@ from numba import njit, prange
 
 from . import basic
 from .mf_common import BiasMFPredictor, MFPredictor
-from ..matrix import sparse_ratings, _CSR
+from ..matrix import sparse_ratings
 from .. import util
 from ..math.solve import _dposv
 
@@ -36,7 +36,6 @@ def _rr_solve(X, xis, y, w, reg, epochs):
         w(ndarray): Input/output vector to solve.
     """
 
-    nr = len(xis)
     nd = len(w)
     Xt = X.T[:, xis]
     resid = w @ Xt
@@ -54,7 +53,7 @@ def _rr_solve(X, xis, y, w, reg, epochs):
 
 
 @njit(parallel=True, nogil=True)
-def _train_matrix_cd(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float):
+def _train_matrix_cd(mat, this: np.ndarray, other: np.ndarray, reg: float):
     """
     One half of an explicit ALS training round using coordinate descent.
 
@@ -89,7 +88,7 @@ def _train_matrix_cd(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float)
 
 
 @njit(parallel=True, nogil=True)
-def _train_matrix_lu(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float):
+def _train_matrix_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
     """
     One half of an explicit ALS training round using LU-decomposition on the normal
     matrices to solve the least squares problem.
@@ -199,7 +198,7 @@ def _cg_solve(OtOr, X, y, w, epochs):
 
 
 @njit(parallel=True, nogil=True)
-def _train_implicit_cg(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float):
+def _train_implicit_cg(mat, this: np.ndarray, other: np.ndarray, reg: float):
     "One half of an implicit ALS training round with conjugate gradient."
     nr = mat.nrows
     nc = other.shape[0]
@@ -239,7 +238,7 @@ def _train_implicit_cg(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: floa
 
 
 @njit(parallel=True, nogil=True)
-def _train_implicit_lu(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float):
+def _train_implicit_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
     "One half of an implicit ALS training round."
     nr = mat.nrows
     nc = other.shape[0]

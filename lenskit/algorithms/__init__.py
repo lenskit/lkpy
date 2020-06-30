@@ -10,14 +10,15 @@ classes (:py:mod:`abc`) representing different algorithm capabilities.
 from abc import ABCMeta, abstractmethod
 import inspect
 
-import pandas as pd
-import numpy as np
+__all__ = ['Algorithm', 'Recommender', 'Predictor', 'CandidateSelector']
 
 
 class Algorithm(metaclass=ABCMeta):
     """
     Base class for LensKit algorithms.  These algorithms follow the SciKit design pattern
     for estimators.
+
+    :canonical: lenskit.Algorithm
     """
 
     @abstractmethod
@@ -196,6 +197,8 @@ class CandidateSelector(Algorithm, metaclass=ABCMeta):
         Utility function for converting a series or array into an array of item
         IDs.  Useful in implementations of :py:meth:`candidates`.
         """
+        import pandas as pd
+        import numpy as np
         if isinstance(ratings, pd.Series):
             return ratings.index.values
         elif isinstance(ratings, np.ndarray):

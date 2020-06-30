@@ -12,12 +12,81 @@ from lenskit.util.test import ml_test
 from lenskit.metrics.topn import _dcg
 from lenskit import topn, batch, crossfold as xf
 
-try:
-    import dask.dataframe as ddf
-except ImportError:
-    ddf = None
-
 _log = logging.getLogger(__name__)
+
+
+def test_split_keys():
+    rla = topn.RecListAnalysis()
+    recs, truth = topn._df_keys(['algorithm', 'user', 'item', 'rank', 'score'],
+                                ['user', 'item', 'rating'])
+    assert truth == ['user']
+    assert recs == ['algorithm', 'user']
+
+
+def test_split_keys_gcol():
+    recs, truth = topn._df_keys(['algorithm', 'user', 'item', 'rank', 'score', 'fishtank'],
+                                ['user', 'item', 'rating'],
+                                ['algorithm', 'fishtank', 'user'])
+    assert truth == ['user']
+    assert recs == ['algorithm', 'fishtank', 'user']
+
+
+def test_iter_one():
+    df = pd.DataFrame({'user': 1, 'item': [17]})
+    gs = list(topn._grouping_iter(df, ['user']))
+    assert len(gs) == 1
+    uk, idf = gs[0]
+    assert uk == (1,)
+    assert all(idf['item'] == df['item'])
+
+
+def test_iter_one_group():
+    df = pd.DataFrame({'user': 1, 'item': [17, 13, 24]})
+    gs = list(topn._grouping_iter(df, ['user']))
+    assert len(gs) == 1
+    uk, idf = gs[0]
+    assert uk == (1,)
+    assert len(idf) == 3
+    assert all(idf['item'] == df['item'])
+
+
+def test_iter_mixed():
+    df = pd.DataFrame({'user': [1, 1, 2, 2, 1], 'item': ['a', 'b', 'c', 'd', 'e']})
+    gs = list(topn._grouping_iter(df, ['user']))
+    assert len(gs) == 2
+    uk, idf = gs[0]
+    assert uk == (1,)
+    assert len(idf) == 3
+    assert all(idf['item'] == ['a', 'b', 'e'])
+
+    uk, idf = gs[1]
+    assert uk == (2,)
+    assert len(idf) == 2
+    assert all(idf['item'] == ['c', 'd'])
+
+
+def test_iter_multilevel():
+    df = pd.DataFrame({
+        'user': [1, 1, 2, 2, 1],
+        'bob': [10, 13, 10, 10, 10],
+        'item': ['a', 'b', 'c', 'd', 'e']
+    })
+    gs = list(topn._grouping_iter(df, ['user', 'bob']))
+    assert len(gs) == 3
+    uk, idf = gs[0]
+    assert uk == (1, 10)
+    assert len(idf) == 2
+    assert all(idf['item'] == ['a', 'e'])
+
+    uk, idf = gs[1]
+    assert uk == (1, 13)
+    assert len(idf) == 1
+    assert all(idf['item'] == ['b'])
+
+    uk, idf = gs[2]
+    assert uk == (2, 10)
+    assert len(idf) == 2
+    assert all(idf['item'] == ['c', 'd'])
 
 
 def test_run_one():
@@ -26,7 +95,12 @@ def test_run_one():
     rla.add_metric(topn.recall)
 
     recs = pd.DataFrame({'user': 1, 'item': [2]})
+    recs.name = 'recs'
     truth = pd.DataFrame({'user': 1, 'item': [1, 2, 3], 'rating': [3.0, 5.0, 4.0]})
+    truth.name = 'truth'
+
+    print(recs)
+    print(truth)
 
     res = rla.compute(recs, truth)
     print(res)
@@ -78,46 +152,6 @@ def test_run_two():
     assert res.recall.values == approx([1.0, 1/3])
 
 
-@mark.skipif(ddf is None, reason='dask not installed')
-def test_dask_recs():
-    rla = topn.RecListAnalysis()
-    rla.add_metric(topn.precision)
-    rla.add_metric(topn.recall)
-    rla.add_metric(topn.ndcg)
-
-    recs = pd.DataFrame({
-        'data': 'a',
-        'user': ['a', 'a', 'a', 'b', 'b'],
-        'item': [2, 3, 1, 4, 5],
-        'rank': [1, 2, 3, 1, 2]
-    })
-    recs = ddf.from_pandas(recs, npartitions=2)
-    truth = pd.DataFrame({
-        'user': ['a', 'a', 'a', 'b', 'b', 'b'],
-        'item': [1, 2, 3, 1, 5, 6],
-        'rating': [3.0, 5.0, 4.0, 3.0, 5.0, 4.0]
-    })
-
-    def prog(inner):
-        assert len(inner) == 2
-        return inner
-
-    res = rla.compute(recs, truth)
-    print(res)
-
-    assert len(res) == 2
-    assert res.index.nlevels == 2
-    assert res.index.names == ['data', 'user']
-    assert all(res.index.levels[0] == 'a')
-    assert all(res.index.levels[1] == ['a', 'b'])
-    res.sort_index(level='user', inplace=True)
-    assert all(res.reset_index().user == ['a', 'b'])
-    partial_ndcg = _dcg([0.0, 5.0]) / _dcg([5, 4, 3])
-    assert res.ndcg.values == approx([1.0, partial_ndcg])
-    assert res.precision.values == approx([1.0, 1/2])
-    assert res.recall.values == approx([1.0, 1/3])
-
-
 def test_inner_format():
     rla = topn.RecListAnalysis()
 
@@ -135,8 +169,7 @@ def test_inner_format():
 
     def inner(recs, truth, foo='a'):
         assert foo == 'b'
-        assert set(recs.columns) == set(['data', 'user', 'item', 'rank'])
-        assert len(recs[['data', 'user']].drop_duplicates()) == 1
+        assert set(recs.columns) == set(['item', 'rank'])
         assert truth.index.name == 'item'
         assert truth.index.is_unique
         print(truth)

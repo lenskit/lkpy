@@ -18,24 +18,28 @@ requirements:
     - python {{ python }}
     - setuptools
     - pytest-runner
-    - numba >=0.43
+    - pip
+    - numba >=0.45
     - pandas >=0.24
-    - numpy
-    - scipy
-    - pyarrow
-    - python-snappy
-    - cffi
-    - joblib
+    - numpy >=1.16
+    - scipy >=1.2
+    - pyarrow >=0.15
+    - cffi >=1.12.2
+    - binpickle >=0.1
+    - mkl-service
     - mkl-devel
   run:
     - python
     - pandas >=0.24
-    - scipy
-    - numba >=0.43
-    - fastparquet
-    - python-snappy
-    - cffi
-    - joblib
+    - scipy >=1.2
+    - numba >=0.45
+    - pyarrow >=0.15
+    - cffi >=1.12.2
+    - binpickle >=0.1
+    - mkl-service
+  run_constrained:
+    - scikit-learn >=0.22
+    - tensorflow >=2.1
 
 test:
   source_files:
@@ -43,11 +47,14 @@ test:
     - tests
     - tests/*.py
     - tests/*.csv
-    - ml-latest-small
-    - ml-latest-small/*.csv
+    - data
+    - data/ml-latest-small
+    - data/ml-latest-small/*.csv
   requires:
     - pytest
     - pytest-arraydiff
+    - hypothesis
     - statsmodels
+    - scikit-learn
   commands:
-    - pytest tests -m "not slow"
+    - pytest tests -m "not slow" --verbose

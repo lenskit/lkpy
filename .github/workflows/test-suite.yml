@@ -8,6 +8,7 @@ jobs:
   conda:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -19,32 +20,41 @@ jobs:
         - macos
         - windows
         - ubuntu
+        exclude:  # Deadlocks on this combination
+        - platform: macos
+          python: 3.6
     steps:
       - uses: actions/checkout@v2
-      
+
+      - name: Prepare Conda environment
+        shell: bash
+        run: |
+          source $CONDA/etc/profile.d/conda.sh
+          conda activate base
+          conda config --set channel_priority strict
+          if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
+            echo "Using most extras"
+            # we'll test tensorflow in a separate run
+            e_opts="-A -I demo,tf"
+          else
+            echo "Using basic dev deps"
+            e_opts="-E dev"
+          fi
+          python setup.py dep_info --conda-env environment.yml $e_opts --python-version $PYVER
+          cat environment.yml
+        env:
+          RUNNER: ${{runner.os}}
+          PYVER: ${{matrix.python}}
+          
       - uses: ./.github/actions/conda-env
         with:
           name: lkpy
           env-file: environment.yml
-          python-version: ${{matrix.python}}
-
-      - name: Remove unusable Mac packages
-        if: runner.os == 'macOS'
-        run: conda remove -qy hpfrec || true
 
       - name: Inspect environment
         run: |
           python -V
-          conda info
           numba -s
-      
-      - name: Download ML-100K
-        if: runner.os != 'Windows'
-        run: |
-          if [ ! -r ml-100k/u.data ]; then
-            wget --no-verbose -O ml-100k.zip http://files.grouplens.org/datasets/movielens/ml-100k.zip
-            unzip ml-100k.zip
-          fi
       
       - name: Build LKPY
         run: |
@@ -55,6 +65,10 @@ jobs:
       - name: Test LKPY
         run: |
           python -m pytest --cov=lenskit --verbose
+        env:
+          MKL_THREADING_LAYER: tbb
+          NUMBA_NUM_THREADS: 4
+          MKL_NUM_THREADS: 1
       
       - name: Non-JIT Test Coverage
         if: runner.os == 'Linux'
@@ -67,19 +81,113 @@ jobs:
         run: coverage xml
 
       - uses: codecov/codecov-action@v1
-     
-      - name: Validate Documentation Examples
-        if: runner.os == 'Linux'
+
+  check-tf:
+    name: Test TensorFlow on ${{matrix.platform}}
+    timeout-minutes: 30
+    runs-on: ${{matrix.platform}}-latest
+    strategy:
+      matrix:
+        platform: [ubuntu,windows]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Prepare Conda environment
+        shell: bash
         run: |
-          cp -r ml-100k doc
-          cp -r ml-latest-small doc
-          export PYTHONPATH="$PWD"
-          python -m pytest --nbval-lax doc
+          source $CONDA/etc/profile.d/conda.sh
+          conda activate base
+          conda config --set channel_priority strict
+          python setup.py dep_info --conda-env environment.yml -E dev,tf --python-version 3.7
+          cat environment.yml
+          
+      - uses: ./.github/actions/conda-env
+        with:
+          name: lkpy
+          env-file: environment.yml
+
+      - name: Download ML-100K
+        shell: pwsh
+        run: |
+          ./fetch-datasets.ps1 ml-100k
+
+      - name: Install for Testing
+        run: python -m pip install -e .[tf]
+
+      - name: Run Tests
+        run: |
+          python -m pytest --cov=lenskit -k tensorflow
+
+      - name: Aggreagate Coverage Data
+        run: coverage xml
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v1
+
+  check-docs:
+    name: Docs, Examples, and Eval
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Prepare Conda environment
+        shell: bash
+        run: |
+          source $CONDA/etc/profile.d/conda.sh
+          conda activate base
+          conda config --set channel_priority strict
+          python setup.py dep_info --conda-env environment.yml -E dev,demo --python-version 3.8
+          cat environment.yml
+          
+      - uses: ./.github/actions/conda-env
+        with:
+          name: lkpy
+          env-file: environment.yml
+
+      - name: Cache ML data
+        uses: actions/cache@v2
+        with:
+          path: |
+            data
+            !data/*.zip
+          key: test-mldata
+
+      - name: Download ML Data
+        shell: pwsh
+        run: |
+          ./fetch-datasets.ps1 ml-100k ml-1m ml-10m ml-20m
+
+      - name: Install for Testing
+        run: python -m pip install -e .
+
+      - name: Run Eval Tests
+        run: |
+          python -m pytest --cov=lenskit -m eval
+          python -m pytest --cov=lenskit --cov-append -m realdata
+
+      - name: Validate Doc Notebooks
+        run: |
+          cp doc/*.ipynb data
+          python -m pytest --nbval-lax --cov=lenskit --cov-append data
+
+      - name: Validate Examples
+        run: |
+          python -m pytest --nbval-lax --cov=lenskit --cov-append examples
+
+      - name: Aggreagate Coverage Data
+        run: coverage xml
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v1
 
   vanilla:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}-latest
     strategy:
+      fail-fast: false
       matrix:
         python:
         - 3.6
@@ -103,17 +211,27 @@ jobs:
           PIP_PREFER_BINARY: 'true'
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest pytest-cov pytest-doctestplus
+          python -m pip install pytest pytest-cov pytest-doctestplus hypothesis
           python -m pip install -e .
 
       - name: Run tests
         run: |
           python -m pytest --cov=lenskit --cov-report=xml
+
+      - name: Non-JIT Test Coverage
+        if: runner.os == 'Linux' && matrix.python == 3.8
+        env:
+          NUMBA_DISABLE_JIT: 1
+        run: |
+          python -m pytest --cov=lenskit --cov-append -m 'not slow'
+      
+      - name: Aggreagate Coverage Data
+        run: coverage xml
       
       - name: Upload coverage
         uses: codecov/codecov-action@v1
 
-  tox:
+  mindep:
     name: Minimal Supported Dependencies
     runs-on: ubuntu-latest
     steps:
@@ -126,18 +244,15 @@ jobs:
           python-version: '3.6'
           architecture: x64
 
-      - name: Set up base Python deps
+      - name: Set up Python deps
         run: |
           python -m pip install --upgrade pip
-          python -m pip install tox
+          python -m pip install pytest pytest-cov pytest-doctestplus hypothesis
+          python -m pip install -c min-constraints.txt -e .
 
-      - name: Set up environment
-        run: |
-          python -m tox -e minimal --notest
-        
       - name: Run tests
         run: |
-          python -m tox -e minimal -- --cov=lenskit --cov-report=xml
+          python -m pytest --cov=lenskit --cov-report=xml
         
       - name: Upload coverage
         uses: codecov/codecov-action@v1

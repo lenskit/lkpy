@@ -7,6 +7,7 @@ from lenskit.algorithms import als
 import pandas as pd
 import numpy as np
 from scipy import stats
+import binpickle
 
 from pytest import mark, approx
 
@@ -79,17 +80,16 @@ def test_als_train_large(m):
     assert algo.item_features_.shape == (ratings.item.nunique(), 20)
 
 
-@methods
-def test_als_save_load(m):
+def test_als_save_load(tmp_path):
     "Test saving and loading ALS models, and regularized training."
-    algo = als.ImplicitMF(5, iterations=5, reg=(2, 1), method=m)
+    algo = als.ImplicitMF(5, iterations=5, reg=(2, 1))
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
-    mod = pickle.dumps(algo)
-    _log.info('serialized to %d bytes', len(mod))
+    fn = tmp_path / 'model.bpk'
+    binpickle.dump(algo, fn, codec=None)
 
-    restored = pickle.loads(mod)
+    restored = binpickle.load(fn)
     assert np.all(restored.user_features_ == algo.user_features_)
     assert np.all(restored.item_features_ == algo.item_features_)
     assert np.all(restored.item_index_ == algo.item_index_)

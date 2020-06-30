@@ -1,5 +1,29 @@
-Data Set Utilities
-==================
+Loading Data
+============
+
+LensKit can work with any data in a :py:class:`pandas.DataFrame` with the expected
+columns.  LensKit algorithms expect a ``ratings`` frame to contain the following
+columns (in any order):
+
+* ``user``, containing user identifiers.  No requirements are placed on user IDs —
+  if an algorithm requires something specific, such as contiguous 0-based identifiers
+  for indexing into an array — it will use a :py:class:`pandas.Index` to map them.
+* ``item``, containing item identifiers. The same comments apply as for ``user``.
+* ``rating``, containing user ratings (if available).  Implicit-feedback code will
+  not require ratings.
+
+‘Rating’ data can contain other columns as well, and is a catch-all for any user-item
+interaction data.  Algorithms will document any non-standard columns they can make
+use of.
+
+:py:meth:`lenskit.algorithms.Recommender.fit` can also accept additional data objects
+as keyword arguments, and algorithms that wrap other algorithms will pass this data
+through unchanged.  Algorithms ignore extra data objects they receive.  This allows
+you to build algorithms that train on data besides user-item interactions, such as
+user metadata or item content.
+
+Data Loaders
+------------
 
 .. module:: lenskit.datasets
 
@@ -26,11 +50,18 @@ Other column names are unchanged.  Data tables that provide information about
 specific things, such as a table of movie titles, are indexed by the relevant
 ID (e.g. :py:attr:`MovieLens.ratings` is indexed by ``item``).
 
+Data sets supported:
+
+* :class:`MovieLens`
+* :class:`ML100K`
+* :class:`ML1M`
+* :class:`ML10M`
+
 MovieLens Data Sets
 -------------------
 
 The GroupLens research group provides several data sets extracted from the
-MovieLens service [ML]_.  These can be downloaded from https://grouplens.org/datasets/movielens/.
+MovieLens service [HK2015]_.  These can be downloaded from https://grouplens.org/datasets/movielens/.
 
 .. autoclass:: MovieLens
     :members:
@@ -47,7 +78,7 @@ MovieLens service [ML]_.  These can be downloaded from https://grouplens.org/dat
     :members:
 
 
-.. [ML] F. Maxwell Harper and Joseph A. Konstan. 2015.
+.. [HK2015] F. Maxwell Harper and Joseph A. Konstan. 2015.
    The MovieLens Datasets: History and Context.
    *ACM Transactions on Interactive Intelligent Systems* (TiiS) **5**, 4, Article 19 (December 2015),
    19 pages. DOI=http://dx.doi.org/10.1145/2827872

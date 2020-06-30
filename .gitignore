@@ -6,6 +6,8 @@ __pycache__/
 *.prof
 *.lprof
 .ipynb_checkpoints/
+.idea/
+.vs/
 
 .eggs/
 .*_cache/
@@ -13,14 +15,11 @@ __pycache__/
 *.egg-info/
 build/
 dist/
-.coverage
+.coverage*
 coverage.xml
 htmlcov/
-/data/
-.doit.db*
-ml-100k
-doc/ml-latest-small
 my-eval/
+doc/data/
 *.pyd
 *.so
 *.dll
@@ -28,8 +27,10 @@ my-eval/
 *.lib
 *.o
 *.obj
+*env*.yml
 
 dask-worker-space/
+.hypothesis/
 
 build-env/
 .tox/

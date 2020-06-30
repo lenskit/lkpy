@@ -2,97 +2,8 @@
 Accumulator support.
 """
 
-import numpy as np
-from numba import njit, int32, double
-try:
-    from numba.experimental import jitclass
-except ImportError:
-    from numba import jitclass
-
+from numba import njit
 from .array import swap
-
-
-@njit
-def _ind_downheap(pos: int, size, keys, values):
-    min = pos
-    left = 2*pos + 1
-    right = 2*pos + 2
-    if left < size and values[keys[left]] < values[keys[min]]:
-        min = left
-    if right < size and values[keys[right]] < values[keys[min]]:
-        min = right
-    if min != pos:
-        swap(keys, min, pos)
-        _ind_downheap(min, size, keys, values)
-
-
-@jitclass([
-    ('nmax', int32),
-    ('size', int32),
-    ('keys', int32[:]),
-    ('values', double[:])
-])
-class Accumulator:
-    def __init__(self, values, nmax):
-        self.values = values
-        self.nmax = nmax
-        self.size = 0
-        self.keys = np.zeros(nmax + 1, dtype=np.int32)
-
-    def __len__(self):
-        return self.size
-
-    def add(self, key):
-        if key < 0 or key >= self.values.shape[0]:
-            raise IndexError()
-        self.keys[self.size] = key
-        self._upheap(self.size)
-        if self.size < self.nmax:
-            self.size = self.size + 1
-        else:
-            # we are at capacity, we need to drop the smallest value
-            self.keys[0] = self.keys[self.size]
-            _ind_downheap(0, self.size, self.keys, self.values)
-
-    def add_all(self, keys):
-        for i in range(len(keys)):
-            self.add(keys[i])
-
-    def peek(self):
-        if self.size > 0:
-            return self.keys[0]
-        else:
-            return -1
-
-    def remove(self):
-        if self.size == 0:
-            return -1
-
-        top = self.keys[0]
-
-        self.keys[0] = self.keys[self.size - 1]
-        self.size = self.size - 1
-        if self.size > 0:
-            _ind_downheap(0, self.size, self.keys, self.values)
-        return top
-
-    def top_keys(self):
-        keys = np.empty(self.size, dtype=np.int32)
-        while self.size > 0:
-            i = self.size - 1
-            keys[i] = self.remove()
-        return keys
-
-    def _upheap(self, pos):
-        keys = self.keys
-        values = self.values
-        current = pos
-        parent = (current - 1) // 2
-        while current > 0 and values[keys[parent]] > values[keys[current]]:
-            # swap up
-            swap(keys, parent, current)
-            current = parent
-            parent = (current - 1) // 2
 
 
 @njit
@@ -125,7 +36,7 @@ def _pair_upheap(pos, sp, ks, vs):
         parent = (pos - 1) // 2
 
 
-@njit('int64(int64,int64,int64,int32,float64,int32[:],float64[:])')
+@njit
 def kvp_minheap_insert(sp, ep, limit, k, v, keys, vals):
     """
     Insert a value (with key) into a heap-organized array subset, only keeping the top values.
@@ -164,7 +75,7 @@ def kvp_minheap_insert(sp, ep, limit, k, v, keys, vals):
         return ep
 
 
-@njit('void(int64,int64,int32[:],float64[:])')
+@njit
 def kvp_minheap_sort(sp, ep, keys, vals):
     """
     Sort a heap-organized array subset by decreasing values.

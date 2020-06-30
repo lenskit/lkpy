@@ -2,6 +2,7 @@
 Code to import commonly-used RecSys data sets into LensKit-compatible data frames.
 """
 
+import os.path
 from pathlib import Path
 import logging
 
@@ -9,6 +10,17 @@ import pandas as pd
 import numpy as np
 
 _log = logging.getLogger(__name__)
+
+__doctest_skip__ = []
+if not os.path.exists('data/ml-100k'):
+    __doctest_skip__.append('ML100K.*')
+if not os.path.exists('data/ml-20m'):
+    __doctest_skip__.append('MovieLens.tag_genome')
+if not os.path.exists('data/ml-1m.*'):
+    __doctest_skip__.append('ML1M.*')
+if not os.path.exists('data/ml-10M100K'):
+    __doctest_skip__.append('ML10M.*')
+    __doctest_skip__.append('MLM.*')
 
 
 def cached(prop):
@@ -43,7 +55,7 @@ class MovieLens:
         """
         The rating table.
 
-        >>> mlsmall = MovieLens('ml-latest-small')
+        >>> mlsmall = MovieLens('data/ml-latest-small')
         >>> mlsmall.ratings
                 user  item  rating   timestamp
         0          1    31     2.5  1260759144
@@ -71,7 +83,7 @@ class MovieLens:
         """
         The movie table, with titles and genres.  It is indexed by movie ID.
 
-        >>> mlsmall = MovieLens('ml-latest-small')
+        >>> mlsmall = MovieLens('data/ml-latest-small')
         >>> mlsmall.movies
                                                             title                                           genres
         item
@@ -101,7 +113,7 @@ class MovieLens:
         The movie link table, connecting movie IDs to external identifiers.  It is indexed
         by movie ID.
 
-        >>> mlsmall = MovieLens('ml-latest-small')
+        >>> mlsmall = MovieLens('data/ml-latest-small')
         >>> mlsmall.links
                  imdbId  tmdbId
         item
@@ -131,7 +143,7 @@ class MovieLens:
         The tag application table, recording user-supplied tags for movies.
 
 
-        >>> mlsmall = MovieLens('ml-latest-small')
+        >>> mlsmall = MovieLens('data/ml-latest-small')
         >>> mlsmall.tags
               user  ...   timestamp
         0       15  ...  1138537770
@@ -159,6 +171,18 @@ class MovieLens:
         """
         The tag genome table, recording inferred item-tag relevance scores.  This gets returned
         as a wide Pandas data frame, with rows indexed by item ID.
+
+        >>> ml20m = MovieLens('data/ml-20m')
+        >>> ml20m.tag_genome
+        tag         007  007 (series)  18th century  ...     wwii   zombie  zombies
+        item                                         ...
+        1       0.02500       0.02500       0.05775  ...  0.03625  0.07775  0.02300
+        2       0.03975       0.04375       0.03775  ...  0.01475  0.09025  0.01875
+        3       0.04350       0.05475       0.02800  ...  0.01950  0.09700  0.01850
+        4       0.03725       0.03950       0.03675  ...  0.01525  0.06450  0.01300
+        5       0.04200       0.05275       0.05925  ...  0.01675  0.10750  0.01825
+        ...
+        [10381 rows x 1128 columns]
         """
 
         fn = self.path / 'genome-scores.csv'
@@ -196,8 +220,8 @@ class ML100K:
         """
         Return the rating data (from ``u.data``).
 
-        >>> ml = ML100K('ml-100k')
-        >>> ml.ratings              #doctest: +SKIP
+        >>> ml = ML100K()
+        >>> ml.ratings
                user  item  rating  timestamp
         0       196   242     3.0  881250949
         1       186   302     3.0  891717742
@@ -220,8 +244,8 @@ class ML100K:
         """
         Return the user data (from ``u.user``).
 
-        >>> ml = ML100K('ml-100k')
-        >>> ml.users                #doctest: +SKIP
+        >>> ml = ML100K()
+        >>> ml.users
               age gender     occupation     zip
         user
         1      24      M     technician   85711
@@ -245,8 +269,8 @@ class ML100K:
         """
         Return the user data (from ``u.user``).
 
-        >>> ml = ML100K('ml-100k')
-        >>> ml.movies               #doctest: +SKIP
+        >>> ml = ML100K()
+        >>> ml.movies
                                                   title      release  ...  War Western
         item                                                          ...
         1                              Toy Story (1995)  01-Jan-1995  ...    0       0
@@ -284,7 +308,7 @@ class MLM:
         Return the rating data (from ``ratings.dat``).
 
         >>> ml = ML10M()
-        >>> ml.ratings      #doctest: +SKIP
+        >>> ml.ratings
                    user  item  rating  timestamp
         0             1   122     5.0  838985046
         1             1   185     5.0  838983525
@@ -309,7 +333,7 @@ class MLM:
         Return the movie data (from ``movies.dat``).  Indexed by movie ID.
 
         >>> ml = ML10M()
-        >>> ml.movies       #doctest: +SKIP
+        >>> ml.movies
                                                             title                                           genres
         item
         1                                        Toy Story (1995)      Adventure|Animation|Children|Comedy|Fantasy
@@ -356,7 +380,7 @@ class ML1M(MLM):
         Return the movie data (from ``users.dat``).  Indexed by user ID.
 
         >>> ml = ML1M()
-        >>> ml.users        #doctest: +SKIP
+        >>> ml.users
              gender  age    zip
         user
         1         F    1  48067

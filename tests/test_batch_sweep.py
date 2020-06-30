@@ -6,7 +6,6 @@ import gzip
 
 import pandas as pd
 import numpy as np
-import joblib
 
 from lenskit.util.test import ml_test
 from lenskit import batch, crossfold as xf
@@ -17,10 +16,9 @@ from pytest import mark
 
 
 @mark.slow
-@mark.parametrize('ncpus', [None, 2])
-def test_sweep_bias(tmp_path, ncpus):
+def test_sweep_bias(tmp_path):
     work = pathlib.Path(tmp_path)
-    sweep = batch.MultiEval(tmp_path, eval_n_jobs=ncpus)
+    sweep = batch.MultiEval(tmp_path)
 
     ratings = ml_test.ratings
     folds = xf.partition_users(ratings, 5, xf.SampleN(5))
@@ -66,8 +64,7 @@ def test_sweep_norecs(tmp_path):
     ratings = ml_test.ratings
     folds = xf.partition_users(ratings, 5, xf.SampleN(5))
     sweep.add_datasets(folds, DataSet='ml-small')
-    sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
-                         attrs=['damping'])
+    sweep.add_algorithms(Bias(damping=0))
     sweep.add_algorithms(Popular())
 
     try:
@@ -83,13 +80,10 @@ def test_sweep_norecs(tmp_path):
     assert not (work / 'recommendations.parquet').exists()
 
     runs = pd.read_parquet(work / 'runs.parquet')
-    # 4 algorithms by 5 partitions
-    assert len(runs) == 20
+    # 2 algorithms by 5 partitions
+    assert len(runs) == 10
     assert all(np.sort(runs.AlgoClass.unique()) == ['Bias', 'Popular'])
     bias_runs = runs[runs.AlgoClass == 'Bias']
-    assert all(bias_runs.damping.notna())
-    pop_runs = runs[runs.AlgoClass == 'Popular']
-    assert all(pop_runs.damping.isna())
 
     preds = pd.read_parquet(work / 'predictions.parquet')
     assert all(preds.RunId.isin(bias_runs.RunId))
@@ -98,15 +92,14 @@ def test_sweep_norecs(tmp_path):
 @mark.slow
 def test_sweep_nopreds(tmp_path):
     work = pathlib.Path(tmp_path)
-    sweep = batch.MultiEval(tmp_path, eval_n_jobs=2)
+    sweep = batch.MultiEval(tmp_path, eval_n_jobs=1)
 
     ratings = ml_test.ratings
     folds = [(train, test.drop(columns=['rating']))
              for (train, test) in xf.partition_users(ratings, 5, xf.SampleN(5))]
     sweep.add_datasets(folds, DataSet='ml-small')
     sweep.add_algorithms(Popular())
-    sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
-                         attrs=['damping'])
+    sweep.add_algorithms(Bias(damping=0))
 
     try:
         sweep.run()
@@ -121,13 +114,10 @@ def test_sweep_nopreds(tmp_path):
     assert (work / 'recommendations.parquet').exists()
 
     runs = pd.read_parquet(work / 'runs.parquet')
-    # 4 algorithms by 5 partitions
-    assert len(runs) == 20
+    # 2 algorithms by 5 partitions
+    assert len(runs) == 10
     assert all(np.sort(runs.AlgoClass.unique()) == ['Bias', 'Popular'])
     bias_runs = runs[runs.AlgoClass == 'Bias']
-    assert all(bias_runs.damping.notna())
-    pop_runs = runs[runs.AlgoClass == 'Popular']
-    assert all(pop_runs.damping.isna())
 
     recs = pd.read_parquet(work / 'recommendations.parquet')
     assert all(recs.RunId.isin(runs.RunId))
@@ -142,8 +132,7 @@ def test_sweep_allrecs(tmp_path):
     ratings = ml_test.ratings
     folds = xf.partition_users(ratings, 5, xf.SampleN(5))
     sweep.add_datasets(folds, DataSet='ml-small')
-    sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
-                         attrs=['damping'])
+    sweep.add_algorithms(Bias(damping=0))
     sweep.add_algorithms(Popular())
 
     try:
@@ -159,13 +148,10 @@ def test_sweep_allrecs(tmp_path):
     assert (work / 'recommendations.parquet').exists()
 
     runs = pd.read_parquet(work / 'runs.parquet')
-    # 4 algorithms by 5 partitions
-    assert len(runs) == 20
+    # 2 algorithms by 5 partitions
+    assert len(runs) == 10
     assert all(np.sort(runs.AlgoClass.unique()) == ['Bias', 'Popular'])
     bias_runs = runs[runs.AlgoClass == 'Bias']
-    assert all(bias_runs.damping.notna())
-    pop_runs = runs[runs.AlgoClass == 'Popular']
-    assert all(pop_runs.damping.isna())
 
     preds = pd.read_parquet(work / 'predictions.parquet')
     assert all(preds.RunId.isin(bias_runs.RunId))
@@ -233,8 +219,7 @@ def test_sweep_persist(tmp_path):
         assert isinstance(train, pathlib.Path)
         assert isinstance(test, pathlib.Path)
 
-    sweep.add_algorithms([Bias(damping=0), Bias(damping=5), Bias(damping=10)],
-                         attrs=['damping'])
+    sweep.add_algorithms(Bias(5))
     sweep.add_algorithms(Popular())
 
     try:
@@ -250,8 +235,8 @@ def test_sweep_persist(tmp_path):
     assert (work / 'recommendations.parquet').exists()
 
     runs = pd.read_parquet(work / 'runs.parquet')
-    # 4 algorithms by 5 partitions
-    assert len(runs) == 20
+    # 2 algorithms by 5 partitions
+    assert len(runs) == 10
 
 
 @mark.slow
@@ -375,7 +360,7 @@ def test_sweep_combine(tmp_path):
 
 
 @mark.slow
-@mark.parametrize("format", [True, 'gzip', 'joblib'])
+@mark.parametrize("format", [True, 'gzip'])
 def test_save_models(tmp_path, format):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, save_models=format)
@@ -406,10 +391,6 @@ def test_save_models(tmp_path, format):
             assert fn.exists()
             with gzip.open(fspath(fn), 'rb') as f:
                 algo = pickle.load(f)
-        elif format == 'joblib':
-            fn = fn.with_suffix('.jlpkl')
-            assert fn.exists()
-            algo = joblib.load(fn)
         else:
             assert False
 

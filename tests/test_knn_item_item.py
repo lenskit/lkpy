@@ -1,5 +1,7 @@
 from lenskit import DataWarning
 from lenskit.algorithms import Recommender
+from lenskit.algorithms.basic import Fallback, Bias
+from lenskit import batch
 import lenskit.algorithms.item_knn as knn
 
 from pathlib import Path
@@ -12,9 +14,11 @@ import numpy as np
 from scipy import linalg as la
 
 import pytest
-from pytest import approx, mark
+from pytest import approx, mark, fixture
 
 import lenskit.util.test as lktu
+from lenskit.util.parallel import invoker
+from lenskit.util import Stopwatch
 
 _log = logging.getLogger(__name__)
 
@@ -35,6 +39,18 @@ simple_ratings = pd.DataFrame.from_records([
     (1, 9, 3.0),
     (3, 9, 4.0)
 ], columns=['user', 'item', 'rating'])
+
+
+@fixture(scope='module')
+def ml_subset():
+    "Fixture that returns a subset of the MovieLens database."
+    ratings = lktu.ml_test.ratings
+    icounts = ratings.groupby('item').rating.count()
+    top = icounts.nlargest(500)
+    ratings = ratings.set_index('item')
+    top_rates = ratings.loc[top.index, :]
+    _log.info('top 500 items yield %d of %d ratings', len(top_rates), len(ratings))
+    return top_rates.reset_index()
 
 
 def test_ii_train():
@@ -311,11 +327,11 @@ def test_ii_large_models():
 
 
 @lktu.wantjit
-def test_ii_save_load(tmp_path):
+def test_ii_save_load(tmp_path, ml_subset):
     "Save and load a model"
     original = knn.ItemItem(30, save_nbrs=500)
     _log.info('building model')
-    original.fit(lktu.ml_sample())
+    original.fit(ml_subset)
 
     fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
@@ -368,11 +384,11 @@ def test_ii_save_load(tmp_path):
         assert all(np.diff(row.data) < 1.0e-6)
 
 
-def test_ii_implicit_save_load(tmp_path):
+def test_ii_implicit_save_load(tmp_path, ml_subset):
     "Save and load a model"
     original = knn.ItemItem(30, save_nbrs=500, center=False, aggregate='sum')
     _log.info('building model')
-    original.fit(lktu.ml_sample().loc[:, ['user', 'item']])
+    original.fit(ml_subset.loc[:, ['user', 'item']])
 
     fn = tmp_path / 'ii.mod'
     _log.info('saving model to %s', fn)
@@ -530,18 +546,21 @@ def test_ii_known_preds():
 
 
 @lktu.wantjit
+@mark.slow
 @mark.skipif(knn._mkl_ops is None, reason='only test MKL match when MKL is available')
 def test_ii_impl_match():
-    from lenskit import batch
-
     sps = knn.ItemItem(20, min_sim=1.0e-6)
     sps._use_mkl = False
+    timer = Stopwatch()
     _log.info('training SciPy %s on ml data', sps)
     sps.fit(lktu.ml_test.ratings)
+    _log.info('trained SciPy in %s', timer)
 
     mkl = knn.ItemItem(20, min_sim=1.0e-6)
+    timer = Stopwatch()
     _log.info('training MKL %s on ml data', mkl)
     mkl.fit(lktu.ml_test.ratings)
+    _log.info('trained MKL in %s', timer)
 
     assert mkl.sim_matrix_.nnz == sps.sim_matrix_.nnz
     assert mkl.sim_matrix_.nrows == sps.sim_matrix_.nrows
@@ -553,20 +572,19 @@ def test_ii_impl_match():
         assert all(np.diff(mkl.sim_matrix_.values[sp:ep]) <= 0)
         assert all(np.diff(sps.sim_matrix_.values[sp:ep]) <= 0)
         assert set(mkl.sim_matrix_.colinds[sp:ep]) == set(sps.sim_matrix_.colinds[sp:ep])
+        assert all(np.abs(mkl.sim_matrix_.values[sp:ep] - sps.sim_matrix_.values[sp:ep]) < 1.0e-3)
 
 
 @lktu.wantjit
 @mark.slow
 @mark.eval
+@mark.skipif(not lktu.ml100k.available, reason='ML100K not available')
 @mark.parametrize('ncpus', [1, 2])
 def test_ii_batch_recommend(ncpus):
     import lenskit.crossfold as xf
-    from lenskit import batch, topn
+    from lenskit import topn
 
-    if not os.path.exists('ml-100k/u.data'):
-        raise pytest.skip()
-
-    ratings = pd.read_csv('ml-100k/u.data', sep='\t', names=['user', 'item', 'rating', 'timestamp'])
+    ratings = lktu.ml100k.ratings
 
     def eval(train, test):
         _log.info('running training')
@@ -593,3 +611,27 @@ def test_ii_batch_recommend(ncpus):
     dcg = results.ndcg
     _log.info('nDCG for %d users is %f', len(dcg), dcg.mean())
     assert dcg.mean() > 0.03
+
+
+def _build_predict(ratings, fold):
+    algo = Fallback(knn.ItemItem(20), Bias(5))
+    train = ratings[ratings['partition'] != fold]
+    algo.fit(train)
+
+    test = ratings[ratings['partition'] == fold]
+    preds = batch.predict(algo, test, n_jobs=1)
+    return preds
+
+
+@lktu.wantjit
+@mark.slow
+def test_ii_parallel_multi_build():
+    "Build multiple item-item models in parallel"
+    ratings = lktu.ml_test.ratings
+    ratings['partition'] = np.random.choice(4, len(ratings), replace=True)
+
+    with invoker(ratings, _build_predict, 2) as inv:
+        preds = inv.map(range(4))
+        preds = pd.concat(preds, ignore_index=True)
+
+    assert len(preds) == len(ratings)

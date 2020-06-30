@@ -2,7 +2,8 @@
 The LensKit package.
 """
 
-from . import batch
+
+from lenskit.algorithms import *  # noqa: F401,F403
 
 
 class DataWarning(UserWarning):

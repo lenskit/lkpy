@@ -26,58 +26,13 @@ actually happen.
 
 .. autofunction:: sharing_mode
 
-
-Model Store API
+Persistence API
 ---------------
 
-Model stores handle persisting models into shared memory, cleaning up shared memory, and
-making objects available to other classes.
+These functions are used for internal LensKit infrastructure code to persist models into
+shared memory for parallel processing.
 
-LensKit users and algorithm implementers will generally not need to use this code themselves,
-unlessthey are implementing their own batch processing logic.
+.. autofunction:: persist
 
-.. autofunction:: get_store
-
-.. autoclass:: BaseModelStore
+.. autoclass:: PersistedModel
     :members:
-    :show-inheritance:
-
-.. autoclass:: BaseModelClient
-    :members:
-    :show-inheritance:
-
-.. autoclass:: SharedObject
-    :members:
-    :show-inheritance:
-
-Model Store Implementations
----------------------------
-
-We provide several model store implementations.
-
-Memory Mapping
-~~~~~~~~~~~~~~
-
-.. py:module:: lenskit.sharing.file
-
-The memory-mapped-file store works on any supported platform and Python version.  It uses
-Joblib's memory-mapped Pickle extension to store models on disk and use their storage
-to back memory-mapped views of major data structures.
-
-.. autoclass:: FileModelStore
-    :show-inheritance:
-.. autoclass:: FileClient
-    :show-inheritance:
-
-Shared Memory
-~~~~~~~~~~~~~
-
-.. py:module:: lenskit.sharing.sharedmem
-
-This store uses Python 3.8's :py:mod:`multiprocessing.shared_memory` module, along with out-of-band
-buffer support in Pickle Protcol 5, to pass model data through shared memory.
-
-.. autoclass:: SHMModelStore
-    :show-inheritance:
-.. autoclass:: SHMClient
-    :show-inheritance:
