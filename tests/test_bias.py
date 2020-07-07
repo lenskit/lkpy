@@ -280,6 +280,18 @@ def test_bias_separate_damping():
     assert algo.user_offsets_.loc[[10, 12, 13]].values == \
         approx(np.array([0.266234, -0.08333, -0.22727]), abs=1.0e-4)
 
+def test_transform_user():
+    algo = Bias()
+    algo.fit(simple_df)
+
+    new_ratings = pd.Series([4.0, 5.0], index=[1, 2]) # items as index and ratings as values
+    ratings_with_bias = algo.transform_user(13, new_ratings)
+
+    new_ratings_with_bias = ratings_with_bias.drop(columns=['user']).set_index('item')
+    ratings_without_bias = algo.inverse_transform_user(13, new_ratings_with_bias)
+
+    no_bias_new_ratings = ratings_without_bias.drop(columns=['user']).set_index('item').values.flatten()
+    assert no_bias_new_ratings[0] == new_ratings.values[0] and no_bias_new_ratings[1] == new_ratings.values[1]
 
 def test_bias_save():
     original = Bias(damping=5)

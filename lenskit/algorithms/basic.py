@@ -153,6 +153,46 @@ class Bias(Predictor):
             rvps['rating'] += rvps['u_off'].fillna(0)
         return rvps.drop(columns=['u_off', 'i_off'])
 
+    def transform_user(self, user, ratings):
+        """
+        Transform a user's ratings by subtracting the bias model.
+
+        Args:
+            ratings(pandas.Series): The user's ratings, indexed by item.
+                Must have at least `item` as index and `rating` column.
+
+        Returns:
+            pandas.Series:
+                The transformed ratings and the user bias.
+        """
+        ratings_df = pd.DataFrame({ 'rating': ratings.tolist(), 'item': ratings.index.tolist(), 'user': user})
+        return self.transform(ratings_df)
+
+    def inverse_transform_user(self, user, ratings: pd.Series, user_bias: float or None = None) -> pd.Series:
+        """
+        Un-transform a user's ratings by adding in the bias model.
+
+        Args:
+            user: The user ID.
+            ratings(pandas.Series): The user's ratings, indexed by item.
+            user_bias(float or None): The user's bias. If `None`, it looks up the user bias learned by `fit`, if available.
+
+        Returns:
+            pandas.Series: The user's de-normalized ratings.
+        """
+        rvps = pd.DataFrame({'item': ratings.index.tolist(), 'user': user})
+        rvps['rating'] = ratings.values + self.mean_
+        rvps['rating'].fillna(0, inplace=True)
+        if self.item_offsets_ is not None:
+            rvps = rvps.join(self.item_offsets_, on='item', how='left')
+            rvps['rating'] += rvps['i_off'].fillna(0)
+        if user_bias is not None:
+            rvps['rating'] += user_bias
+        elif self.user_offsets_ is not None:
+            rvps = rvps.join(self.user_offsets_, on='item', how='left')
+            rvps['rating'] += rvps['u_off'].fillna(0)
+        return rvps.drop(columns=['u_off', 'i_off'])
+
     def fit_transform(self, ratings, **kwargs):
         """
         Fit with ratings and return the training data transformed.
