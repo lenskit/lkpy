@@ -165,17 +165,20 @@ class Bias(Predictor):
             pandas.Series:
                 The transformed ratings and the user bias.
         """
-        ratings_df = pd.DataFrame({ 'rating': ratings.tolist(), 'item': ratings.index.tolist(), 'user': user})
+        ratings_df = pd.DataFrame({
+            'rating': ratings.tolist(),
+            'item': ratings.index.tolist(),
+            'user': user})
         return self.transform(ratings_df)
 
-    def inverse_transform_user(self, user, ratings: pd.Series, user_bias: float or None = None) -> pd.Series:
+    def inverse_transform_user(self, user, ratings, user_bias=None):
         """
         Un-transform a user's ratings by adding in the bias model.
 
         Args:
             user: The user ID.
             ratings(pandas.Series): The user's ratings, indexed by item.
-            user_bias(float or None): The user's bias. If `None`, it looks up the user bias learned by `fit`, if available.
+            user_bias(float or None): If `None`, it looks up the user bias learned by `fit`.
 
         Returns:
             pandas.Series: The user's de-normalized ratings.
