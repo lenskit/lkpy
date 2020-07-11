@@ -153,7 +153,7 @@ class Bias(Predictor):
             rvps['rating'] += rvps['u_off'].fillna(0)
         return rvps.drop(columns=['u_off', 'i_off'])
 
-    def transform_user(self, user, ratings):
+    def transform_user(self, ratings):
         """
         Transform a user's ratings by subtracting the bias model.
 
@@ -165,11 +165,23 @@ class Bias(Predictor):
             pandas.Series:
                 The transformed ratings and the user bias.
         """
-        ratings_df = pd.DataFrame({
-            'rating': ratings.tolist(),
-            'item': ratings.index.tolist(),
-            'user': user})
-        return self.transform(ratings_df)
+        ratings = ratings.subtract(self.mean_)
+
+        # build user_offsets_
+        if self.item_offsets_ is not None:
+            rv = ratings.values - self.item_offsets_[
+                self.item_offsets_.index.isin(ratings.index)].values
+        else:
+            rv = ratings
+        user_offsets_ = self._mean(rv, self.user_damping)
+
+        # subtracts bias
+        if self.item_offsets_ is not None:
+            ratings = ratings.subtract(
+                    self.item_offsets_[self.item_offsets_.index.isin(ratings.index)].values)
+
+        ratings = ratings.subtract(user_offsets_)
+        return ratings, user_offsets_
 
     def inverse_transform_user(self, user, ratings, user_bias=None):
         """
@@ -183,18 +195,17 @@ class Bias(Predictor):
         Returns:
             pandas.Series: The user's de-normalized ratings.
         """
-        rvps = pd.DataFrame({'item': ratings.index.tolist(), 'user': user})
-        rvps['rating'] = ratings.values + self.mean_
-        rvps['rating'].fillna(0, inplace=True)
+        ratings = ratings.add(self.mean_)
         if self.item_offsets_ is not None:
-            rvps = rvps.join(self.item_offsets_, on='item', how='left')
-            rvps['rating'] += rvps['i_off'].fillna(0)
+            ratings = ratings.add(self.item_offsets_[
+                self.item_offsets_.index.isin(ratings.index)].values)
         if user_bias is not None:
-            rvps['rating'] += user_bias
+            ratings = ratings.add(user_bias)
         elif self.user_offsets_ is not None:
-            rvps = rvps.join(self.user_offsets_, on='item', how='left')
-            rvps['rating'] += rvps['u_off'].fillna(0)
-        return rvps.drop(columns=['u_off', 'i_off'])
+            current_u_b = self.user_offsets_[self.user_offsets_.index == user]
+            if len(current_u_b) > 0:
+                ratings = ratings.add(current_u_b.values[0])
+        return ratings
 
     def fit_transform(self, ratings, **kwargs):
         """
