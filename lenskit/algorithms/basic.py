@@ -167,21 +167,13 @@ class Bias(Predictor):
         """
         ratings = ratings.subtract(self.mean_)
 
-        # build user_offsets_
-        if self.item_offsets_ is not None:
-            rv = ratings.values - self.item_offsets_[
-                self.item_offsets_.index.isin(ratings.index)].values
-        else:
-            rv = ratings
-        user_offsets_ = self._mean(rv, self.user_damping)
+        ioff = self.item_offsets_.reindex(ratings.index, fill_value=0)
+        ratings = ratings - ioff
 
-        # subtracts bias
-        if self.item_offsets_ is not None:
-            ratings = ratings.subtract(
-                    self.item_offsets_[self.item_offsets_.index.isin(ratings.index)].values)
+        u_offset = self._mean(ratings, self.user_damping)
 
-        ratings = ratings.subtract(user_offsets_)
-        return ratings, user_offsets_
+        ratings = ratings.subtract(u_offset)
+        return ratings, u_offset
 
     def inverse_transform_user(self, user, ratings, user_bias=None):
         """
@@ -196,15 +188,14 @@ class Bias(Predictor):
             pandas.Series: The user's de-normalized ratings.
         """
         ratings = ratings.add(self.mean_)
-        if self.item_offsets_ is not None:
-            ratings = ratings.add(self.item_offsets_[
-                self.item_offsets_.index.isin(ratings.index)].values)
+        ioff = self.item_offsets_.reindex(ratings.index, fill_value=0)
+        ratings = ratings + ioff
+
         if user_bias is not None:
             ratings = ratings.add(user_bias)
-        elif self.user_offsets_ is not None:
-            current_u_b = self.user_offsets_[self.user_offsets_.index == user]
-            if len(current_u_b) > 0:
-                ratings = ratings.add(current_u_b.values[0])
+        elif self.user_offsets_ is not None and user in self.user_offsets_.index:
+            ratings = ratings + self.user_offsets_.loc[user]
+
         return ratings
 
     def fit_transform(self, ratings, **kwargs):
