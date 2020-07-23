@@ -167,8 +167,9 @@ class Bias(Predictor):
         """
         ratings = ratings.subtract(self.mean_)
 
-        ioff = self.item_offsets_.reindex(ratings.index, fill_value=0)
-        ratings = ratings - ioff
+        if self.item_offsets_ is not None:
+            ioff = self.item_offsets_.reindex(ratings.index, fill_value=0)
+            ratings = ratings - ioff
 
         u_offset = self._mean(ratings, self.user_damping)
 
@@ -188,8 +189,10 @@ class Bias(Predictor):
             pandas.Series: The user's de-normalized ratings.
         """
         ratings = ratings.add(self.mean_)
-        ioff = self.item_offsets_.reindex(ratings.index, fill_value=0)
-        ratings = ratings + ioff
+
+        if self.item_offsets_ is not None:
+            ioff = self.item_offsets_.reindex(ratings.index, fill_value=0)
+            ratings = ratings + ioff
 
         if user_bias is not None:
             ratings = ratings.add(user_bias)
