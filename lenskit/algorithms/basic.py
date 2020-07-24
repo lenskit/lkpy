@@ -153,6 +153,54 @@ class Bias(Predictor):
             rvps['rating'] += rvps['u_off'].fillna(0)
         return rvps.drop(columns=['u_off', 'i_off'])
 
+    def transform_user(self, ratings):
+        """
+        Transform a user's ratings by subtracting the bias model.
+
+        Args:
+            ratings(pandas.Series): The user's ratings, indexed by item.
+                Must have at least `item` as index and `rating` column.
+
+        Returns:
+            pandas.Series:
+                The transformed ratings and the user bias.
+        """
+        ratings = ratings.subtract(self.mean_)
+
+        if self.item_offsets_ is not None:
+            ioff = self.item_offsets_.reindex(ratings.index, fill_value=0)
+            ratings = ratings - ioff
+
+        u_offset = self._mean(ratings, self.user_damping)
+
+        ratings = ratings.subtract(u_offset)
+        return ratings, u_offset
+
+    def inverse_transform_user(self, user, ratings, user_bias=None):
+        """
+        Un-transform a user's ratings by adding in the bias model.
+
+        Args:
+            user: The user ID.
+            ratings(pandas.Series): The user's ratings, indexed by item.
+            user_bias(float or None): If `None`, it looks up the user bias learned by `fit`.
+
+        Returns:
+            pandas.Series: The user's de-normalized ratings.
+        """
+        ratings = ratings.add(self.mean_)
+
+        if self.item_offsets_ is not None:
+            ioff = self.item_offsets_.reindex(ratings.index, fill_value=0)
+            ratings = ratings + ioff
+
+        if user_bias is not None:
+            ratings = ratings.add(user_bias)
+        elif self.user_offsets_ is not None and user in self.user_offsets_.index:
+            ratings = ratings + self.user_offsets_.loc[user]
+
+        return ratings
+
     def fit_transform(self, ratings, **kwargs):
         """
         Fit with ratings and return the training data transformed.
