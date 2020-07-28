@@ -146,7 +146,7 @@ class BiasMFPredictor(MFPredictor):
 
         rv = super().score(user, items, u_features)
 
-        if not raw:
+        if not raw and u_features is None:
             # add bias back in
             rv = rv + self.global_bias_
             if self.user_bias_ is not None and user is not None:

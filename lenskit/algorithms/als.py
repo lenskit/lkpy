@@ -395,6 +395,9 @@ class BiasedMF(BiasMFPredictor):
         self.user_features_ = model.user_matrix
 
     def _initial_model(self, ratings, bias=None):
+        # transform ratings using offsets
+        ratings = self.bias.transform(ratings)
+
         "Initialize a model and build contexts."
         rmat, users, items = sparse_ratings(ratings)
         n_users = len(users)
@@ -436,19 +439,20 @@ class BiasedMF(BiasMFPredictor):
 
         _logger.info('[%s] normalizing %dx%d matrix (%d nnz)',
                      self.timer, n_users, n_items, ratings.nnz)
-        ratings.values = ratings.values - gbias
-        if ibias is not None:
-            ibias = ibias.reindex(items, fill_value=0)
-            ratings.values = ratings.values - ibias.values[ratings.colinds]
-        if ubias is not None:
-            ubias = ubias.reindex(users, fill_value=0)
-            # create a user index array the size of the data
-            reps = np.repeat(np.arange(len(users), dtype=np.int32),
-                             ratings.row_nnzs())
-            assert len(reps) == ratings.nnz
-            # subtract user means
-            ratings.values = ratings.values - ubias.values[reps]
-            del reps
+
+        # ratings.values = ratings.values - gbias
+        # if ibias is not None:
+        #     ibias = ibias.reindex(items, fill_value=0)
+        #     ratings.values = ratings.values - ibias.values[ratings.colinds]
+        # if ubias is not None:
+        #     ubias = ubias.reindex(users, fill_value=0)
+        #     # create a user index array the size of the data
+        #     reps = np.repeat(np.arange(len(users), dtype=np.int32),
+        #                      ratings.row_nnzs())
+        #     assert len(reps) == ratings.nnz
+        #     # subtract user means
+        #     ratings.values = ratings.values - ubias.values[reps]
+        #     del reps
 
         return ratings, (gbias, ubias, ibias)
 
@@ -490,19 +494,9 @@ class BiasedMF(BiasMFPredictor):
 
     def predict_for_user(self, user, items, ratings=None):
         if ratings is not None:
+            u_offset = None
             if self.bias:
-                gbias = self.bias.mean_
-                ibias = self.bias.item_offsets_
-                ubias = self.bias.user_offsets_
-
-                ratings.rating = ratings.rating - gbias
-                if ibias is not None:
-                    ibias = ibias.reindex(ratings.index, fill_value=0)
-                    ratings.rating = ratings.rating - ibias.values
-                if ubias is not None:
-                    users = [user]
-                    ubias = ubias.reindex(users, fill_value=0)
-                    ratings.rating = ratings.rating - ubias.values
+                ratings, u_offset = self.bias.transform_user(ratings)
 
             ri_idxes = self.item_index_.get_indexer_for(ratings.index)
             ri_good = ri_idxes >= 0
@@ -510,7 +504,12 @@ class BiasedMF(BiasMFPredictor):
             ri_val = ratings.values[ri_good]
 
             u_feat = _train_bias_row_lu(ri_it, ri_val, self.item_features_, self.regularization)
-            return self.score_by_ids(user, items, u_feat)
+            scores = self.score_by_ids(user, items, u_feat)
+
+            if self.bias:
+                return self.bias.inverse_transform_user(user, scores, u_offset)
+            else:
+                return scores
         else:
             # look up user index
             return self.score_by_ids(user, items)

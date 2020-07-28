@@ -108,8 +108,12 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
     preds = algo.predict_for_user(u, [i])
 
     new_u_id = -1
-    new_ratings = simple_df[simple_df.user == u].set_index('item').drop(columns=['user'])
+    new_ratings = pd.Series([4.0, 5.0], index=[1, 2]) # items as index and ratings as values
+
     new_preds = algo.predict_for_user(new_u_id, [i], new_ratings)
+
+    print(preds)
+    print(new_preds)
 
     assert preds.loc[i] == approx(new_preds.loc[i])
 
@@ -127,7 +131,9 @@ def test_als_predict_for_new_users_with_new_ratings():
     for u in users:
         preds = algo.predict_for_user(u, items)
 
-        new_ratings = ratings[ratings.user == u].set_index('item').drop(columns=['user', 'timestamp'])
+        user_data = simple_df[simple_df.user == u]
+        new_ratings = pd.Series(user_data.rating.tolist(), index=user_data.item.tolist()) # items as index and ratings as values
+
         new_preds = algo.predict_for_user(new_u_id, items, new_ratings)
 
         assert new_preds.values == approx(preds.values)
