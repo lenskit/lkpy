@@ -126,7 +126,7 @@ def _train_matrix_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
     return np.sqrt(frob)
 
 
-@njit(parallel=True, nogil=True)
+@njit(nogil=True)
 def _train_bias_row_lu(items, ratings, other, reg):
     """
     Args:
@@ -281,7 +281,7 @@ def _train_implicit_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
     return np.sqrt(frob)
 
 
-class BiasedMF(BiasMFPredictor):
+class BiasedMF(MFPredictor):
     """
     Biased matrix factorization trained with alternating least squares [ZWSP2008]_.  This is a
     prediction-oriented algorithm suitable for explicit feedback data.
@@ -373,13 +373,14 @@ class BiasedMF(BiasMFPredictor):
             _logger.info('[%s] fitting bias model', self.timer)
             self.bias.fit(ratings)
 
-        current, bias, uctx, ictx = self._initial_model(ratings)
+        #current, bias, uctx, ictx = self._initial_model(ratings)
+        current, uctx, ictx = self._initial_model(ratings)
 
-        # unpack and de-Series bias
-        gb, ub, ib = bias
-        self.global_bias_ = gb
-        self.user_bias_ = np.require(ub.values, None, 'C') if ub is not None else None
-        self.item_bias_ = np.require(ib.values, None, 'C') if ib is not None else None
+        # # unpack and de-Series bias
+        # gb, ub, ib = bias
+        # self.global_bias_ = gb
+        # self.user_bias_ = np.require(ub.values, None, 'C') if ub is not None else None
+        # self.item_bias_ = np.require(ib.values, None, 'C') if ib is not None else None
 
         _logger.info('[%s] training biased MF model with ALS for %d features',
                      self.timer, self.features)
@@ -403,7 +404,8 @@ class BiasedMF(BiasMFPredictor):
         n_users = len(users)
         n_items = len(items)
 
-        rmat, bias = self._normalize(rmat, users, items)
+        #rmat, bias = self._normalize(rmat, users, items)
+        rmat = self._normalize(rmat, users, items)
 
         _logger.debug('setting up contexts')
         trmat = rmat.transpose()
@@ -417,7 +419,8 @@ class BiasedMF(BiasMFPredictor):
         umat /= np.linalg.norm(umat, axis=1).reshape((n_users, 1))
         _logger.debug('|P|: %f', np.linalg.norm(umat, 'fro'))
 
-        return PartialModel(users, items, umat, imat), bias, rmat, trmat
+        #return PartialModel(users, items, umat, imat), bias, rmat, trmat
+        return PartialModel(users, items, umat, imat), rmat, trmat
 
     def _normalize(self, ratings, users, items):
         "Apply bias normalization to the data in preparation for training."
@@ -427,15 +430,15 @@ class BiasedMF(BiasMFPredictor):
         assert ratings.ncols == n_items
 
         if self.bias:
-            gbias = self.bias.mean_
-            ibias = self.bias.item_offsets_
-            ubias = self.bias.user_offsets_
+            # gbias = self.bias.mean_
+            # ibias = self.bias.item_offsets_
+            # ubias = self.bias.user_offsets_
             if ratings.values is None:
                 ratings.N.values = np.ones(np.nnz)
-        else:
-            gbias = 0
-            ibias = ubias = None
-            return ratings, (gbias, ibias, ubias)
+        # else:
+        #     gbias = 0
+        #     ibias = ubias = None
+        #     return ratings, (gbias, ibias, ubias)
 
         _logger.info('[%s] normalizing %dx%d matrix (%d nnz)',
                      self.timer, n_users, n_items, ratings.nnz)
@@ -454,7 +457,7 @@ class BiasedMF(BiasMFPredictor):
         #     ratings.values = ratings.values - ubias.values[reps]
         #     del reps
 
-        return ratings, (gbias, ubias, ibias)
+        return ratings #, (gbias, ubias, ibias)
 
     def _train_iters(self, current, uctx, ictx):
         """
@@ -493,6 +496,7 @@ class BiasedMF(BiasMFPredictor):
             yield current
 
     def predict_for_user(self, user, items, ratings=None):
+        scores = None
         if ratings is not None:
             u_offset = None
             if self.bias:
@@ -505,14 +509,16 @@ class BiasedMF(BiasMFPredictor):
 
             u_feat = _train_bias_row_lu(ri_it, ri_val, self.item_features_, self.regularization)
             scores = self.score_by_ids(user, items, u_feat)
-
-            if self.bias:
-                return self.bias.inverse_transform_user(user, scores, u_offset)
-            else:
-                return scores
         else:
             # look up user index
-            return self.score_by_ids(user, items)
+            scores = self.score_by_ids(user, items)
+
+        if self.bias and ratings is not None:
+            return self.bias.inverse_transform_user(user, scores, u_offset)
+        elif self.bias:
+            return self.bias.inverse_transform_user(user, scores)
+        else:
+            return scores
 
     def __getstate__(self):
         state = dict(self.__dict__)
