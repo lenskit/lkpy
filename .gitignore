@@ -34,3 +34,4 @@ dask-worker-space/
 
 build-env/
 .tox/
+.vagrant/
