@@ -8,7 +8,7 @@ except ImportError:
 
 from lenskit import util
 from ..mf_common import BiasMFPredictor
-from ..basic import Bias
+from ..bias import Bias
 from .util import init_tf_rng
 
 _log = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ class BiasedMF(BiasMFPredictor):
     Because the model is very simple, this algorithm works best with large
     batch sizes.
 
-    This implementation uses :class:`lenskit.algorithms.basic.Bias` for computing
+    This implementation uses :class:`lenskit.algorithms.bias.Bias` for computing
     the biases, and uses TensorFlow to fit a matrix factorization on the residuals.
     It then extracts the resulting matrices, and relies on :class:`BiasedMFPredictor`
     to implement the prediction logic, like :class:`lenskit.algorithms.als.BiasedMF`.

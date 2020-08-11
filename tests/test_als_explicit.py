@@ -233,7 +233,7 @@ def test_als_method_match():
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_als_batch_accuracy():
-    from lenskit.algorithms import basic
+    from lenskit.algorithms import bias
     import lenskit.crossfold as xf
     import lenskit.metrics.predict as pm
 
@@ -241,7 +241,7 @@ def test_als_batch_accuracy():
 
     lu_algo = als.BiasedMF(25, iterations=20, damping=5, method='lu')
     cd_algo = als.BiasedMF(25, iterations=25, damping=5, method='cd')
-    # algo = basic.Fallback(svd_algo, basic.Bias(damping=5))
+    # algo = bias.Fallback(svd_algo, bias.Bias(damping=5))
 
     def eval(train, test):
         _log.info('training LU')

@@ -53,6 +53,7 @@ def test_tf_bmf_save_load(tmp_path, tf_session):
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_tf_bmf_batch_accuracy(tf_session):
     from lenskit.algorithms import basic
+    from lenskit.algorithms import bias
     import lenskit.crossfold as xf
     from lenskit import batch
     import lenskit.metrics.predict as pm
@@ -60,7 +61,7 @@ def test_tf_bmf_batch_accuracy(tf_session):
     ratings = lktu.ml100k.ratings
 
     algo = lktf.BiasedMF(25, damping=10, batch_size=1024, epochs=20, rng_spec=42)
-    algo = basic.Fallback(algo, basic.Bias(damping=10))
+    algo = basic.Fallback(algo, bias.Bias(damping=10))
 
     def eval(train, test):
         _log.info('running training')
@@ -113,6 +114,7 @@ def test_tf_ibmf_general(tmp_path, tf_session):
 @mark.parametrize('n_jobs', [1, None])
 def test_tf_ibmf_batch_accuracy(n_jobs, tf_session):
     from lenskit.algorithms import basic
+    from lenskit.algorithms import bias
     import lenskit.crossfold as xf
     from lenskit import batch
     import lenskit.metrics.predict as pm
@@ -120,7 +122,7 @@ def test_tf_ibmf_batch_accuracy(n_jobs, tf_session):
     ratings = lktu.ml100k.ratings
 
     algo = lktf.IntegratedBiasMF(20, batch_size=1024, epochs=20, rng_spec=42)
-    algo = basic.Fallback(algo, basic.Bias(damping=10))
+    algo = basic.Fallback(algo, bias.Bias(damping=10))
 
     def eval(train, test):
         _log.info('running training')

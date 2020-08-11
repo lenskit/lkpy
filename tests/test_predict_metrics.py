@@ -163,10 +163,10 @@ def test_mae_series_two():
 def test_batch_rmse():
     import lenskit.crossfold as xf
     import lenskit.batch as batch
-    import lenskit.algorithms.basic as bl
+    import lenskit.algorithms.bias as bs
 
     ratings = lktu.ml100k.ratings
-    algo = bl.Bias(damping=5)
+    algo = bs.Bias(damping=5)
 
     def eval(train, test):
         algo.fit(train)

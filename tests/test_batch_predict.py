@@ -7,7 +7,7 @@ import numpy as np
 
 import lenskit.util.test as lktu
 
-from lenskit.algorithms.basic import Bias
+from lenskit.algorithms.bias import Bias
 import lenskit.batch as lkb
 
 _log = logging.getLogger(__name__)
@@ -106,14 +106,14 @@ def test_predict_include_rating(mlb):
 @pytest.mark.eval
 @pytest.mark.parametrize('ncpus', [None, 1, 2])
 def test_bias_batch_predict(ncpus):
-    from lenskit.algorithms import basic
+    from lenskit.algorithms import bias
     import lenskit.crossfold as xf
     from lenskit import batch
     import lenskit.metrics.predict as pm
 
     ratings = lktu.ml100k.ratings
 
-    algo = basic.Bias(damping=5)
+    algo = bias.Bias(damping=5)
 
     def eval(train, test):
         _log.info('running training')
@@ -134,10 +134,10 @@ def test_bias_batch_predict(ncpus):
 
 def test_batch_predict_preshared():
     "Test batch prediction with isolated training and a pre-serialized algorithm."
-    from lenskit.algorithms import basic
+    from lenskit.algorithms import bias
     import lenskit.crossfold as xf
 
-    algo = basic.Bias()
+    algo = bias.Bias()
     splits = xf.sample_users(lktu.ml_test.ratings, 1, 100, xf.SampleN(5))
     train, test = next(splits)
 

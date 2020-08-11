@@ -7,7 +7,8 @@ import numpy as np
 
 import lenskit.util.test as lktu
 
-from lenskit.algorithms.basic import Bias, TopN, Popular
+from lenskit.algorithms.basic import TopN, Popular
+from lenskit.algorithms.bias import Bias
 from lenskit import batch, topn
 import lenskit.crossfold as xf
 

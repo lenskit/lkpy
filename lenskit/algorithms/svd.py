@@ -11,7 +11,7 @@ except ImportError:
     SKL_AVAILABLE = False
 
 from . import Predictor
-from .basic import Bias
+from .bias import Bias
 from ..matrix import sparse_ratings
 from ..util import Stopwatch
 

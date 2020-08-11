@@ -3,12 +3,12 @@ Basic and Utility Algorithms
 
 .. module:: lenskit.algorithms.basic
 
-The :py:mod:`lenskit.algorithms.basic` module contains baseline and utility algorithms
+The :py:mod:`lenskit.algorithms.basic` and :py:mod:`lenskit.algorithms.bias` modules contain baseline and utility algorithms
 for nonpersonalized recommendation and testing.
 
 Personalized Mean Rating Prediction
 -----------------------------------
-
+.. module:: lenskit.algorithms.bias
 .. autoclass:: Bias
     :members:
     :show-inheritance:

@@ -1,4 +1,5 @@
 from lenskit.algorithms import basic
+from lenskit.algorithms import bias
 
 import pandas as pd
 import numpy as np
@@ -45,7 +46,7 @@ def test_topn_big():
     items = ratings.item.unique()
     user_items = ratings.set_index('user').item
 
-    algo = basic.TopN(basic.Bias())
+    algo = basic.TopN(bias.Bias())
     a2 = algo.fit(ratings)
     assert a2 is algo
 

@@ -49,7 +49,7 @@ the derived structures so they can also be shared.
 
 **If your algorithm uses subsidiary models as a part of the training process**, but does not need them
 for prediction or recommendation (for example, :py:class:`lenskit.algorithms.als.BiasMF`'s use of
-:py:class:`lenskit.algorithms.basic.Bias` in ``fit``, during which it copies the bias model's
+:py:class:`lenskit.algorithms.bias.Bias` in ``fit``, during which it copies the bias model's
 internal state to its own fields), then consider overriding ``__getstate__`` to remove the underlying
 model or replace it with a cloned copy (with :py:func:`lenskit.util.clone`) to reduce serialized
 disk space (and deserialized memory use).

@@ -1,7 +1,8 @@
 from lenskit.batch import train_isolated
 from lenskit.util.test import ml_test
 from lenskit.algorithms import Recommender
-from lenskit.algorithms.basic import Bias, TopN
+from lenskit.algorithms.basic import TopN
+from lenskit.algorithms.bias import Bias
 
 
 def test_train_isolate():
