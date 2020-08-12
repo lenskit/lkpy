@@ -12,6 +12,8 @@ from ..matrix import sparse_ratings
 from . import Predictor, Recommender, CandidateSelector
 from ..util import derivable_rng
 
+from .bias import Bias
+
 _logger = logging.getLogger(__name__)
 
 

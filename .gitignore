@@ -34,3 +34,5 @@ dask-worker-space/
 
 build-env/
 .tox/
+
+.DS_Store
