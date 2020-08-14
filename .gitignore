@@ -36,3 +36,5 @@ build-env/
 .tox/
 .vagrant/
 scratch/
+
+.DS_Store

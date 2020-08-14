@@ -116,12 +116,12 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
 def test_als_predict_for_new_users_with_new_ratings():
     n_users = 10
     n_items = 3
+    new_u_id = -1
     ratings = lktu.ml_test.ratings
     # users = np.random.choice(ratings.user.unique(), n_users)
     # items = np.random.choice(ratings.item.unique(), n_items)
     users = [544]
     items = [2411, 112070, 781]
-    new_u_id = -1
 
     algo = als.BiasedMF(20, iterations=10)
     algo.fit(ratings)
