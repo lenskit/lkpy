@@ -143,8 +143,7 @@ def _train_bias_row_lu(items, ratings, other, reg):
     MMT = M.T @ M
     A = MMT + regI * len(items)
 
-    V = np.dot(M.T, ratings)
-    V = V.flatten()
+    V = M.T @ ratings
     _dposv(A, V, True)
 
     return V
