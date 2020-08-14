@@ -6,6 +6,7 @@ from . import Predictor
 
 _logger = logging.getLogger(__name__)
 
+
 class Bias(Predictor):
     """
     A user-item bias rating prediction algorithm.  This implements the following
