@@ -114,29 +114,34 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
     assert preds.loc[i] == approx(new_preds.loc[i], rel=9e-2)
 
 def test_als_predict_for_new_users_with_new_ratings():
-    n_users = 10
-    n_items = 3
+    n_users = 3
+    n_items = 2
     new_u_id = -1
     ratings = lktu.ml_test.ratings
-    # users = np.random.choice(ratings.user.unique(), n_users)
-    # items = np.random.choice(ratings.item.unique(), n_items)
-    users = [544]
-    items = [2411, 112070, 781]
+    users = np.random.choice(ratings.user.unique(), n_users)
+    items = np.random.choice(ratings.item.unique(), n_items)
+    # users = [544]
+    # items = [2411, 112070, 781]
 
-    algo = als.BiasedMF(20, iterations=10)
+    algo = als.BiasedMF(20, iterations=10, method="lu")
     algo.fit(ratings)
-    print(items)
+    print("Items: " + str(items))
 
     for u in users:
+        print("user: " + str(u))
         preds = algo.predict_for_user(u, items)
 
         user_data = ratings[ratings.user == u]
+        #print(len(user_data))
+
+        print("user_features from fit: " + str(algo.user_features_[u, :]))
+
         new_ratings = pd.Series(user_data.rating.to_numpy(), index=user_data.item) # items as index and ratings as values
         new_preds = algo.predict_for_user(new_u_id, items, new_ratings)
 
-        print(u)
-        print(preds.values)
-        print(new_preds.values)
+        print("preds: " + str(preds.values))
+        print("new_preds: " + str(new_preds.values))
+        print()
         assert new_preds.values == approx(preds.values, rel=9e-2)
 
 def test_als_predict_bad_item():
