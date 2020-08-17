@@ -293,6 +293,7 @@ class Random(Recommender):
     def __str__(self):
         return 'Random'
 
+
 class KnownRating(Predictor):
     """
     The known rating algorithm memorizes ratings provided in the fit method.
