@@ -117,3 +117,25 @@ def test_random_rec_from_candidates():
     recs2 = algo.recommend(user2, 100, candidates=candidates)
     assert len(recs1) == 100
     assert len(recs2) == 100
+
+def test_knownrating():
+    algo = basic.KnownRating()
+    algo.fit(simple_df)
+
+    preds = algo.predict_for_user(10, [1, 2])
+    assert set(preds.index) == set([1, 2])
+    assert all(preds == pd.Series({1: 4.0, 2: 5.0}))
+
+    preds = algo.predict_for_user(12, [1, 3])
+    assert set(preds.index) == set([1, 3])
+    assert preds.loc[1] == 3.0
+    assert np.isnan(preds.loc[3])
+
+def test_knownrating_batch_missing():
+    algo = basic.KnownRating()
+    algo.fit(simple_df)
+
+    preds = algo.predict(pd.DataFrame({'user': [10, 12, 12], 'item': [1, 1, 3]}))
+    assert set(preds.index) == set([0, 1, 2])
+    assert all(preds.iloc[:2] == [4.0, 3.0])
+    assert np.isnan(preds.iloc[2])
