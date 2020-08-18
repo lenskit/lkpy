@@ -115,6 +115,8 @@ def test_als_predict_for_new_users_with_new_ratings():
     n_items = 2
     new_u_id = -1
     ratings = lktu.ml_test.ratings
+
+    np.random.seed(45)
     users = np.random.choice(ratings.user.unique(), n_users)
     items = np.random.choice(ratings.item.unique(), n_items)
 
