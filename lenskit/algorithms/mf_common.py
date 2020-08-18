@@ -83,7 +83,6 @@ class MFPredictor(Predictor):
 
         # get user vector
         uv = self.user_features_[user, :] if u_features is None else u_features
-        #print(uv)
         # get item matrix
         im = self.item_features_[items, :]
         rv = np.matmul(im, uv)
