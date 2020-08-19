@@ -122,22 +122,22 @@ def test_als_predict_for_new_users_with_new_ratings():
 
     algo = als.BiasedMF(20, iterations=10, method="lu")
     algo.fit(ratings)
-    print("Items: " + str(items))
+    _log.debug("Items: " + str(items))
 
     for u in users:
-        print(f"user: {u}")
+        _log.debug(f"user: {u}")
         preds = algo.predict_for_user(u, items)
 
         user_data = ratings[ratings.user == u]
 
-        print("user_features from fit: " + str(algo.user_features_[algo.user_index_.get_loc(u), :]))
+        _log.debug("user_features from fit: " + str(algo.user_features_[algo.user_index_.get_loc(u), :]))
 
         new_ratings = pd.Series(user_data.rating.to_numpy(), index=user_data.item) # items as index and ratings as values
         new_preds = algo.predict_for_user(new_u_id, items, new_ratings)
 
-        print("preds: " + str(preds.values))
-        print("new_preds: " + str(new_preds.values))
-        print()
+        _log.debug("preds: " + str(preds.values))
+        _log.debug("new_preds: " + str(new_preds.values))
+        _log.debug("------------")
         assert new_preds.values == approx(preds.values, rel=9e-2)
 
 def test_als_predict_bad_item():
