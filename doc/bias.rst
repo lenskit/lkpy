@@ -1,11 +1,8 @@
 Bias
 ====
 
-The :py:mod:`lenskit.algorithms.bias` module contains baseline and utility algorithms
-for nonpersonalized recommendation and testing.
+The :py:mod:`lenskit.algorithms.bias` module contains the personalized mean rating prediction.
 
-Personalized Mean Rating Prediction
-------------------------------------
 .. module:: lenskit.algorithms.bias
 .. autoclass:: Bias
     :members:
