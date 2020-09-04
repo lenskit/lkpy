@@ -300,10 +300,9 @@ class KnownRating(Predictor):
     """
 
     def fit(self, ratings, **kwargs):
-        self.ratings = ratings
+        self.ratings = ratings.set_index(['user', 'item']).sort_index()
         return self
 
     def predict_for_user(self, user, items, ratings=None):
-        uscores = self.ratings[self.ratings.user == user]
-        urates = uscores.set_index('item').rating
-        return urates.reindex(items)
+        uscores = self.ratings.xs(user, level='user', drop_level=True)
+        return uscores.rating.reindex(items)
