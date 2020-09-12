@@ -14,6 +14,7 @@
 #
 import os
 import sys
+from importlib import import_module
 sys.path.insert(0, os.path.abspath('..'))
 
 import sphinx_rtd_theme
@@ -197,3 +198,15 @@ autodoc_default_options = {
     'member-order': 'bysource',
     'show-inheritance': True
 }
+
+# -- Module Canonicalization ------------------------------------------------
+
+cleanups = {
+    'lenskit': ['Algorithm', 'Recommender', 'Predictor', 'CandidateSelector']
+}
+
+for module, objects in cleanups.items():
+    mod = import_module(module)
+    for name in objects:
+        obj = getattr(mod, name)
+        obj.__module__ = module
