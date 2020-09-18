@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-from numba import jit, njit, prange, objmode
+from numba import jit, njit, prange
 from numba.typed import List
 
 from lenskit import util, matrix, DataWarning
@@ -128,9 +128,6 @@ def _make_sim_block(nitems, bsp, bitems, r_sp, r_ep, r_cs, r_vs, min_sim, max_nb
 def _mkl_sim_block(block, bsp, bep, rmh, min_sim, max_nbrs, nitems):
     "Compute a single block of the similarity matrix"
     # assert block.nrows == bep - bsp
-
-    with objmode():
-        _logger.debug('processing block %d:%d (%d nnz)', bsp, bep, block.nnz)
 
     bitems = block.nrows
     if block.nnz == 0:
