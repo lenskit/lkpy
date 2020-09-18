@@ -477,6 +477,10 @@ class BiasedMF(MFPredictor):
             ri_it = ri_idxes[ri_good]
             ri_val = ratings.values[ri_good]
             u_feat = _train_bias_row_lu(ri_it, ri_val, self.item_features_, self.regularization)
+<<<<<<< HEAD
+=======
+            _logger.debug('learned features for user %s: %s', user, u_feat)
+>>>>>>> cc57f2303d56d5f1923f9285e2510a5b7e3ad4f7
             scores = self.score_by_ids(user, items, u_feat)
         else:
             # look up user index
