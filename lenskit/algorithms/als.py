@@ -126,7 +126,7 @@ def _train_matrix_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
     return np.sqrt(frob)
 
 
-@njit(nogil=True)
+@njit
 def _train_bias_row_lu(items, ratings, other, reg):
     """
     Args:
@@ -467,7 +467,7 @@ class BiasedMF(MFPredictor):
 
     def predict_for_user(self, user, items, ratings=None):
         scores = None
-        if ratings is not None:
+        if ratings is not None and len(ratings) > 0:
             u_offset = None
             if self.bias:
                 ratings, u_offset = self.bias.transform_user(ratings)
@@ -476,15 +476,13 @@ class BiasedMF(MFPredictor):
             ri_good = ri_idxes >= 0
             ri_it = ri_idxes[ri_good]
             ri_val = ratings.values[ri_good]
-
             u_feat = _train_bias_row_lu(ri_it, ri_val, self.item_features_, self.regularization)
-            print("user_features from predic_for_user: " + str(u_feat))
             scores = self.score_by_ids(user, items, u_feat)
         else:
             # look up user index
             scores = self.score_by_ids(user, items)
 
-        if self.bias and ratings is not None:
+        if self.bias and ratings is not None and len(ratings) > 0:
             return self.bias.inverse_transform_user(user, scores, u_offset)
         elif self.bias:
             return self.bias.inverse_transform_user(user, scores)
