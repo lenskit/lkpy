@@ -11,11 +11,10 @@ LensKit toolkit and a part of the LensKit project.
 If you use Lenskit in published research, cite [LKPY]_.
 
 .. [LKPY]
-    Michael D. Ekstrand. 2018. The LKPY Package for Recommender Systems
-    Experiments: Next-Generation Tools and Lessons Learned from the LensKit
-    Project. *Computer Science Faculty Publications and Presentations*
-    147. Boise State University.
-    DOI:`10.18122/cs_facpubs/147/boisestate <https://dx.doi.org/10.18122/cs_facpubs/147/boisestate>`_.
+    Michael D. Ekstrand. 2020.
+    LensKit for Python: Next-Generation Software for Recommender Systems Experiments.
+    In <cite>Proceedings of the 29th ACM International Conference on Information and Knowledge Management</cite> (CIKM '20).
+    DOI:`10.1145/3340531.3412778 <https://dx.doi.org/10.1145/3340531.3412778>`_.
     arXiv:`1809.03125 <https://arxiv.org/abs/1809.03125>`_ [cs.IR].
 
 Resources
