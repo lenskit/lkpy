@@ -292,3 +292,17 @@ class Random(Recommender):
 
     def __str__(self):
         return 'Random'
+
+
+class KnownRating(Predictor):
+    """
+    The known rating algorithm memorizes ratings provided in the fit method.
+    """
+
+    def fit(self, ratings, **kwargs):
+        self.ratings = ratings.set_index(['user', 'item']).sort_index()
+        return self
+
+    def predict_for_user(self, user, items, ratings=None):
+        uscores = self.ratings.xs(user, level='user', drop_level=True)
+        return uscores.rating.reindex(items)
