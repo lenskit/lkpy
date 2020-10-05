@@ -11,7 +11,7 @@ frame when its input user-item pairs contains ratings.  So you can perform the
 following to compute per-user RMSE over some predictions::
 
     from lenskit.datasets import MovieLens
-    from lenskit.algorithms.basic import Bias
+    from lenskit.algorithms.bias import Bias
     from lenskit.batch import predict
     from lenskit.metrics.predict import rmse
     ratings = MovieLens('ml-small').ratings.sample(frac=10

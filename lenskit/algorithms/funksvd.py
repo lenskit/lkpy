@@ -13,7 +13,7 @@ try:
 except ImportError:
     from numba import jitclass
 
-from . import basic
+from .bias import Bias
 from .mf_common import BiasMFPredictor
 from .. import util
 
@@ -206,7 +206,7 @@ class FunkSVD(BiasMFPredictor):
         reg(double): the regularization factor
         damping(double): damping factor for the underlying mean
         bias(Predictor): the underlying bias model to fit.  If ``True``, then a
-            :py:class:`.basic.Bias` model is fit with ``damping``.
+            :py:class:`.bias.Bias` model is fit with ``damping``.
         range(tuple):
             the ``(min, max)`` rating values to clamp ratings, or ``None`` to leave
             predictions unclamped.
@@ -223,7 +223,7 @@ class FunkSVD(BiasMFPredictor):
         self.damping = damping
         self.range = range
         if bias is True:
-            self.bias = basic.Bias(damping=damping)
+            self.bias = Bias(damping=damping)
         else:
             self.bias = bias
         self.random = util.rng(random_state)

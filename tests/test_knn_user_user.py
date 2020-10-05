@@ -238,13 +238,14 @@ def __batch_eval(job):
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_uu_batch_accuracy():
     from lenskit.algorithms import basic
+    from lenskit.algorithms import bias
     import lenskit.crossfold as xf
     import lenskit.metrics.predict as pm
 
     ratings = lktu.ml100k.ratings
 
     uu_algo = knn.UserUser(30)
-    algo = basic.Fallback(uu_algo, basic.Bias())
+    algo = basic.Fallback(uu_algo, bias.Bias())
 
     folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
     preds = [__batch_eval((algo, train, test)) for (train, test) in folds]

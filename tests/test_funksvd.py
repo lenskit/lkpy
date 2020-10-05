@@ -196,6 +196,7 @@ def test_fsvd_known_preds():
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_fsvd_batch_accuracy():
     from lenskit.algorithms import basic
+    from lenskit.algorithms import bias
     import lenskit.crossfold as xf
     from lenskit import batch
     import lenskit.metrics.predict as pm
@@ -203,7 +204,7 @@ def test_fsvd_batch_accuracy():
     ratings = lktu.ml100k.ratings
 
     svd_algo = svd.FunkSVD(25, 125, damping=10)
-    algo = basic.Fallback(svd_algo, basic.Bias(damping=10))
+    algo = basic.Fallback(svd_algo, bias.Bias(damping=10))
 
     def eval(train, test):
         _log.info('running training')

@@ -4,7 +4,7 @@ from collections import namedtuple
 import numpy as np
 from numba import njit, prange
 
-from . import basic
+from .bias import Bias
 from .mf_common import BiasMFPredictor, MFPredictor
 from ..matrix import sparse_ratings
 from .. import util
@@ -328,7 +328,7 @@ class BiasedMF(MFPredictor):
         self.damping = damping
         self.method = method
         if bias is True:
-            self.bias = basic.Bias(damping=damping)
+            self.bias = Bias(damping=damping)
         else:
             self.bias = bias
         self.progress = progress if progress is not None else util.no_progress

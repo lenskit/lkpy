@@ -10,7 +10,8 @@ import numpy as np
 from lenskit.util.test import ml_test
 from lenskit import batch, crossfold as xf
 from lenskit.algorithms import Predictor
-from lenskit.algorithms.basic import Bias, Popular, TopN
+from lenskit.algorithms.basic import Popular, TopN
+from lenskit.algorithms.bias import Bias
 
 from pytest import mark
 

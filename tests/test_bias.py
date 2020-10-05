@@ -1,4 +1,4 @@
-from lenskit.algorithms.basic import Bias
+from lenskit.algorithms.bias import Bias
 from lenskit import util as lku
 
 import logging

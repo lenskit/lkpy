@@ -17,7 +17,7 @@ Basic Algorithms
 
 .. autosummary::
 
-    basic.Bias
+    bias.Bias
     basic.Popular
     basic.TopN
     basic.Fallback

@@ -28,13 +28,13 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
 
     To use this function, provide a pre-fit algorithm::
 
-        >>> from lenskit.algorithms.basic import Bias
+        >>> from lenskit.algorithms.bias import Bias
         >>> from lenskit.metrics.predict import rmse
         >>> from lenskit import datasets
         >>> ratings = datasets.MovieLens('data/ml-latest-small').ratings
         >>> bias = Bias()
         >>> bias.fit(ratings[:-1000])
-        <lenskit.algorithms.basic.Bias object at ...>
+        <lenskit.algorithms.bias.Bias object at ...>
         >>> preds = predict(bias, ratings[-1000:])
         >>> preds.head()
                user  item  rating   timestamp  prediction

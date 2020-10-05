@@ -38,7 +38,7 @@ def clone(algo):
 
     This function is somewhat derived from the SciKit one.
 
-    >>> from lenskit.algorithms.basic import Bias
+    >>> from lenskit.algorithms.bias import Bias
     >>> orig = Bias()
     >>> copy = clone(orig)
     >>> copy is orig

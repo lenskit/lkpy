@@ -1,6 +1,7 @@
 from lenskit import DataWarning
 from lenskit.algorithms import Recommender
-from lenskit.algorithms.basic import Fallback, Bias
+from lenskit.algorithms.basic import Fallback
+from lenskit.algorithms.bias import Bias
 from lenskit import batch
 import lenskit.algorithms.item_knn as knn
 
@@ -481,6 +482,7 @@ def test_ii_implicit_fast_ident():
 @mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
 def test_ii_batch_accuracy():
     from lenskit.algorithms import basic
+    from lenskit.algorithms import bias
     import lenskit.crossfold as xf
     from lenskit import batch
     import lenskit.metrics.predict as pm
@@ -488,7 +490,7 @@ def test_ii_batch_accuracy():
     ratings = lktu.ml100k.ratings
 
     ii_algo = knn.ItemItem(30)
-    algo = basic.Fallback(ii_algo, basic.Bias())
+    algo = basic.Fallback(ii_algo, bias.Bias())
 
     def eval(train, test):
         _log.info('running training')

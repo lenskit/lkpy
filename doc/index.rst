@@ -49,6 +49,7 @@ Resources
     interfaces
     algorithms
     basic
+    bias
     knn
     mf
     tf
