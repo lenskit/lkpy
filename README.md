@@ -12,11 +12,10 @@ LensKit for Python (LKPY) is the successor to the Java-based LensKit project.
 
 If you use LensKit for Python in published research, please cite:
 
-> Michael D. Ekstrand. 2018. The LKPY Package for Recommender Systems
-> Experiments: Next-Generation Tools and Lessons Learned from the LensKit
-> Project. <cite>Computer Science Faculty Publications and Presentations</cite>
-> 147. Boise State University.
-> DOI:[10.18122/cs_facpubs/147/boisestate](https://dx.doi.org/10.18122/cs_facpubs/147/boisestate).
+> Michael D. Ekstrand. 2020.
+> LensKit for Python: Next-Generation Software for Recommender Systems Experiments.
+> In <cite>Proceedings of the 29th ACM International Conference on Information and Knowledge Management</cite> (CIKM '20).
+> DOI:[10.1145/3340531.3412778](https://dx.doi.org/10.1145/3340531.3412778>).
 > arXiv:[1809.03125](https://arxiv.org/abs/1809.03125) [cs.IR].
 
 ## Installing
