@@ -40,7 +40,7 @@ def test_als_basic_build(m):
     algo = als.BiasedMF(20, iterations=10, progress=util.no_progress, method=m)
     algo.fit(simple_df)
 
-    assert algo.global_bias_ == approx(simple_df.rating.mean())
+    assert algo.bias.mean_ == approx(simple_df.rating.mean())
     assert set(algo.user_index_) == set([10, 12, 13])
     assert set(algo.item_index_) == set([1, 2, 3])
     assert algo.user_features_.shape == (3, 20)
@@ -55,11 +55,8 @@ def test_als_basic_build(m):
 def test_als_no_bias(m):
     algo = als.BiasedMF(20, iterations=10, bias=None, method=m)
     algo.fit(simple_df)
-    assert algo.bias is None
 
-    assert algo.global_bias_ == 0
-    assert algo.item_bias_ is None
-    assert algo.user_bias_ is None
+    assert algo.bias is None
     assert set(algo.user_index_) == set([10, 12, 13])
     assert set(algo.item_index_) == set([1, 2, 3])
     assert algo.user_features_.shape == (3, 20)
@@ -74,7 +71,7 @@ def test_als_predict_basic(m):
     algo = als.BiasedMF(20, iterations=10, method=m)
     algo.fit(simple_df)
 
-    assert algo.global_bias_ == approx(simple_df.rating.mean())
+    assert algo.bias.mean_ == approx(simple_df.rating.mean())
 
     preds = algo.predict_for_user(10, [3])
     assert len(preds) == 1
@@ -82,12 +79,72 @@ def test_als_predict_basic(m):
     assert preds.loc[3] >= -0.1
     assert preds.loc[3] <= 5.1
 
+def test_als_predict_basic_for_new_ratings():
+    algo = als.BiasedMF(20, iterations=10)
+    algo.fit(simple_df)
+
+    assert algo.bias.mean_ == approx(simple_df.rating.mean())
+
+    new_ratings = pd.Series([4.0, 5.0], index=[1, 2]) # items as index and ratings as values
+
+    preds = algo.predict_for_user(15, [3], new_ratings)
+
+    assert len(preds) == 1
+    assert preds.index[0] == 3
+    assert preds.loc[3] >= -0.1
+    assert preds.loc[3] <= 5.1
+
+def test_als_predict_basic_for_new_user_with_new_ratings():
+    u = 10
+    i = 3
+
+    algo = als.BiasedMF(20, iterations=10)
+    algo.fit(simple_df)
+
+    preds = algo.predict_for_user(u, [i])
+
+    new_u_id = -1
+    new_ratings = pd.Series([4.0, 5.0], index=[1, 2]) # items as index and ratings as values
+
+    new_preds = algo.predict_for_user(new_u_id, [i], new_ratings)
+
+    assert preds.loc[i] == approx(new_preds.loc[i], rel=9e-2)
+
+def test_als_predict_for_new_users_with_new_ratings():
+    n_users = 3
+    n_items = 2
+    new_u_id = -1
+    ratings = lktu.ml_test.ratings
+
+    np.random.seed(45)
+    users = np.random.choice(ratings.user.unique(), n_users)
+    items = np.random.choice(ratings.item.unique(), n_items)
+
+    algo = als.BiasedMF(20, iterations=10, method="lu")
+    algo.fit(ratings)
+    _log.debug("Items: " + str(items))
+
+    for u in users:
+        _log.debug(f"user: {u}")
+        preds = algo.predict_for_user(u, items)
+
+        user_data = ratings[ratings.user == u]
+
+        _log.debug("user_features from fit: " + str(algo.user_features_[algo.user_index_.get_loc(u), :]))
+
+        new_ratings = pd.Series(user_data.rating.to_numpy(), index=user_data.item) # items as index and ratings as values
+        new_preds = algo.predict_for_user(new_u_id, items, new_ratings)
+
+        _log.debug("preds: " + str(preds.values))
+        _log.debug("new_preds: " + str(new_preds.values))
+        _log.debug("------------")
+        assert new_preds.values == approx(preds.values, rel=9e-2)
 
 def test_als_predict_bad_item():
     algo = als.BiasedMF(20, iterations=10)
     algo.fit(simple_df)
 
-    assert algo.global_bias_ == approx(simple_df.rating.mean())
+    assert algo.bias.mean_ == approx(simple_df.rating.mean())
 
     preds = algo.predict_for_user(10, [4])
     assert len(preds) == 1
@@ -99,7 +156,7 @@ def test_als_predict_bad_user():
     algo = als.BiasedMF(20, iterations=10)
     algo.fit(simple_df)
 
-    assert algo.global_bias_ == approx(simple_df.rating.mean())
+    assert algo.bias.mean_ == approx(simple_df.rating.mean())
 
     preds = algo.predict_for_user(50, [3])
     assert len(preds) == 1
@@ -114,7 +171,7 @@ def test_als_train_large():
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
-    assert algo.global_bias_ == approx(ratings.rating.mean())
+    assert algo.bias.mean_ == approx(ratings.rating.mean())
     assert algo.n_features == 20
     assert algo.n_items == ratings.item.nunique()
     assert algo.n_users == ratings.user.nunique()
@@ -123,7 +180,7 @@ def test_als_train_large():
     isums = ratings.groupby('item').rating.sum()
     is2 = isums - icounts * ratings.rating.mean()
     imeans = is2 / (icounts + 5)
-    ibias = pd.Series(algo.item_bias_, index=algo.item_index_)
+    ibias = pd.Series(algo.bias.item_offsets_, index=algo.item_index_)
     imeans, ibias = imeans.align(ibias)
     assert ibias.values == approx(imeans.values)
 
@@ -134,15 +191,15 @@ def test_als_save_load():
     ratings = lktu.ml_test.ratings
     original.fit(ratings)
 
-    assert original.global_bias_ == approx(ratings.rating.mean())
+    assert original.bias.mean_ == approx(ratings.rating.mean())
 
     mod = pickle.dumps(original)
     _log.info('serialized to %d bytes', len(mod))
 
     algo = pickle.loads(mod)
-    assert algo.global_bias_ == original.global_bias_
-    assert np.all(algo.user_bias_ == original.user_bias_)
-    assert np.all(algo.item_bias_ == original.item_bias_)
+    assert algo.bias.mean_ == original.bias.mean_
+    assert np.all(algo.bias.user_offsets_ == original.bias.user_offsets_)
+    assert np.all(algo.bias.item_offsets_ == original.bias.item_offsets_)
     assert np.all(algo.user_features_ == original.user_features_)
     assert np.all(algo.item_features_ == original.item_features_)
     assert np.all(algo.item_index_ == original.item_index_)
@@ -157,7 +214,7 @@ def test_als_binpickle(tmp_path):
     ratings = lktu.ml_test.ratings
     original.fit(ratings)
 
-    assert original.global_bias_ == approx(ratings.rating.mean())
+    assert original.bias.mean_ == approx(ratings.rating.mean())
 
     file = tmp_path / 'als.bpk'
     binpickle.dump(original, file)
@@ -166,13 +223,13 @@ def test_als_binpickle(tmp_path):
         # the pickle data should be small
         _log.info('serialized to %d pickle bytes', bpf.entries[-1].dec_length)
         pickle_dis(bpf._read_buffer(bpf.entries[-1]))
-        assert bpf.entries[-1].dec_length < 1024
+        assert bpf.entries[-1].dec_length < 2048
 
         algo = bpf.load()
 
-        assert algo.global_bias_ == original.global_bias_
-        assert np.all(algo.user_bias_ == original.user_bias_)
-        assert np.all(algo.item_bias_ == original.item_bias_)
+        assert algo.bias.mean_ == original.bias.mean_
+        assert np.all(algo.bias.user_offsets_ == original.bias.user_offsets_)
+        assert np.all(algo.bias.item_offsets_ == original.bias.item_offsets_)
         assert np.all(algo.user_features_ == original.user_features_)
         assert np.all(algo.item_features_ == original.item_features_)
         assert np.all(algo.item_index_ == original.item_index_)
@@ -197,8 +254,8 @@ def test_als_method_match():
     timer.stop()
     _log.info('fit with CD solver in %s', timer)
 
-    assert lu.global_bias_ == approx(ratings.rating.mean())
-    assert cd.global_bias_ == approx(ratings.rating.mean())
+    assert lu.bias.mean_ == approx(ratings.rating.mean())
+    assert cd.bias.mean_ == approx(ratings.rating.mean())
 
     preds = []
 
@@ -226,7 +283,7 @@ def test_als_method_match():
     _log.info('CD preds:\n%s', preds.cd.describe())
     _log.info('overall differences:\n%s', preds.adiff.describe())
     # there are differences. our check: the 90% are under a quarter star
-    assert np.quantile(adiff, 0.9) <= 0.25
+    assert np.quantile(adiff, 0.9) <= 0.27
 
 
 @mark.slow
@@ -258,11 +315,11 @@ def test_als_batch_accuracy():
     _log.info('diff summary:\n%s', preds.abs_diff.describe())
 
     lu_mae = pm.mae(preds.lu_pred, preds.rating)
-    assert lu_mae == approx(0.73, abs=0.03)
+    assert lu_mae == approx(0.73, abs=0.04)
     cd_mae = pm.mae(preds.cd_pred, preds.rating)
-    assert cd_mae == approx(0.73, abs=0.03)
+    assert cd_mae == approx(0.73, abs=0.04)
 
     user_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.lu_pred, df.rating))
-    assert user_rmse.mean() == approx(0.91, abs=0.05)
+    assert user_rmse.mean() == approx(0.94, abs=0.05)
     user_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.cd_pred, df.rating))
-    assert user_rmse.mean() == approx(0.91, abs=0.05)
+    assert user_rmse.mean() == approx(0.94, abs=0.05)

@@ -34,7 +34,7 @@ dask-worker-space/
 
 build-env/
 .tox/
-
+pythonenv*/
 .vagrant/
 scratch/
 
