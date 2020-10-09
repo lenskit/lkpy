@@ -501,7 +501,7 @@ class ImplicitMF(MFPredictor):
     data contains ``rating`` values, these will be used as the 'confidence' values; otherwise,
     confidence will be 1 for every rated item.
 
-    ``'cd'`` (the default)
+    ``'cg'`` (the default)
         Conjugate gradient method [TPT2011]_.
     ``'lu'``
         A direct implementation of the original implicit-feedback ALS concept [HKV2008]_ using
