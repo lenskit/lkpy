@@ -310,7 +310,7 @@ class BiasedMF(MFPredictor):
         iterations(int): the number of iterations to train
         reg(float): the regularization factor; can also be a tuple ``(ureg, ireg)`` to
             specify separate user and item regularization terms.
-        damping(float): damping factor for the underlying mean
+        damping(float): damping factor for the underlying bias.
         bias(bool or :class:`Bias`): the bias model.  If ``True``, fits a :class:`Bias` with
             damping ``damping``.
         method(str): the solver to use (see above).
