@@ -14,7 +14,7 @@ except ImportError:
 from lenskit import util
 from lenskit.matrix import sparse_ratings
 from .. import Predictor
-from .util import init_tf_rng
+from .util import init_tf_rng, check_tensorflow
 
 _log = logging.getLogger(__name__)
 
@@ -137,8 +137,7 @@ class BPR(Predictor):
 
     def __init__(self, features=50, *, epochs=5, batch_size=10000,
                  reg=0.02, neg_count=1, rng_spec=None):
-        if tf is None:
-            raise ImportError('tensorflow')
+        check_tensorflow()
         self.features = features
         self.epochs = epochs
         self.batch_size = batch_size
