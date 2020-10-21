@@ -21,6 +21,10 @@ def mkl_ops():
 
 def test_mkl_available():
     if 'CONDA_PREFIX' in os.environ:
+        try:
+            import mkl
+        except ImportError:
+            skip('in MKL-free Conda environment')
         ops = lm.mkl_ops()
         assert ops is not None
         assert ops.clib is not None
