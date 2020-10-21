@@ -9,6 +9,10 @@ import lenskit.util.test as lktu
 from lenskit.algorithms import Recommender
 
 from lenskit.algorithms import tf as lktf
+try:
+    import tensorflow as tf
+except ImportError:
+    pytestmark = mark.skip('cannot import tensorflow')
 
 if not lktf.TF_AVAILABLE:
     pytestmark = mark.skip('tensorflow not available')
