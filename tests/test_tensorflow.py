@@ -8,10 +8,9 @@ import binpickle
 import lenskit.util.test as lktu
 from lenskit.algorithms import Recommender
 
-try:
-    from lenskit.algorithms import tf as lktf
-    import tensorflow as tf
-except ImportError:
+from lenskit.algorithms import tf as lktf
+
+if not lktf.TF_AVAILABLE:
     pytestmark = mark.skip('tensorflow not available')
 
 _log = logging.getLogger(__name__)
