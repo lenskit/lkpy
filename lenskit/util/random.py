@@ -148,8 +148,12 @@ def init_rng(seed, *keys, propagate=True):
         random.seed(ik)
         try:
             import tensorflow as tf
-            _log.debug('setting TensorFlow seed')
-            tf.random.set_seed(ik)
+            _tf_seed = getattr(tf.random, 'set_seed', None)
+            if _tf_seed is not None:
+                _log.debug('setting TensorFlow seed')
+                _tf_seed(ik)
+            else:
+                _log.warn('old TensorFlow, not setting seed')
         except ImportError:
             _log.debug('TensorFlow not available')
 

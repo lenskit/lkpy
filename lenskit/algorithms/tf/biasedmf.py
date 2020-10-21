@@ -9,7 +9,7 @@ except ImportError:
 from lenskit import util
 from ..mf_common import BiasMFPredictor
 from ..bias import Bias
-from .util import init_tf_rng
+from .util import init_tf_rng, check_tensorflow
 
 _log = logging.getLogger(__name__)
 
@@ -65,8 +65,7 @@ class BiasedMF(BiasMFPredictor):
 
     def __init__(self, features=50, *, bias=True, damping=5,
                  epochs=5, batch_size=10000, reg=0.02, rng_spec=None):
-        if tf is None:
-            raise ImportError('tensorflow')
+        check_tensorflow()
         self.features = features
         self.epochs = epochs
         self.batch_size = batch_size
