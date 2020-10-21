@@ -148,8 +148,8 @@ def init_rng(seed, *keys, propagate=True):
         random.seed(ik)
         try:
             import tensorflow as tf
-            _tf_set = getattr(tf.random, 'set_seed', None)
-            if _tf_set is not None:
+            _tf_seed = getattr(tf.random, 'set_seed', None)
+            if _tf_seed is not None:
                 _log.debug('setting TensorFlow seed')
                 _tf_seed(ik)
             else:
