@@ -14,7 +14,7 @@ except ImportError:
     from numba import jitclass
 
 from .bias import Bias
-from .mf_common import BiasMFPredictor
+from .mf_common import MFPredictor
 from .. import util
 
 _logger = logging.getLogger(__name__)
@@ -190,7 +190,7 @@ def _align_add_bias(bias, index, keys, series):
     return bias, series
 
 
-class FunkSVD(BiasMFPredictor):
+class FunkSVD(MFPredictor):
     """
     Algorithm class implementing FunkSVD matrix factorization.  FunkSVD is a regularized
     biased matrix factorization technique trained with featurewise stochastic gradient
@@ -242,7 +242,7 @@ class FunkSVD(BiasMFPredictor):
 
         if self.bias:
             _logger.info('[%s] fitting bias model', timer)
-            self.bias.fit(ratings)
+            ratings = self.bias.fit_transform(ratings)
 
         _logger.info('[%s] preparing rating data for %d samples', timer, len(ratings))
         _logger.debug('shuffling rating data')
@@ -266,7 +266,6 @@ class FunkSVD(BiasMFPredictor):
             ubias, initial = _align_add_bias(self.bias.user_offsets_, uidx, ratings.user, initial)
         else:
             initial = pd.Series(0.0, index=ratings.index)
-            ibias = ubias = None
 
         _logger.debug('have %d estimates for %d ratings', len(initial), len(ratings))
         assert len(initial) == len(ratings)
@@ -284,9 +283,6 @@ class FunkSVD(BiasMFPredictor):
 
         self.user_index_ = uidx
         self.item_index_ = iidx
-        self.global_bias_ = self.bias.mean_ if self.bias else 0
-        self.user_bias_ = ubias.values if ubias is not None else None
-        self.item_bias_ = ibias.values if ibias is not None else None
         self.user_features_ = model.user_features
         self.item_features_ = model.item_features
 
@@ -309,15 +305,16 @@ class FunkSVD(BiasMFPredictor):
         # multiply
         _logger.debug('scoring %d items for user %s', len(good_items), user)
         rv = self.score(uidx, good_iidx)
+        res = pd.Series(rv, index=good_items)
+        res = res.reindex(items)
+        if self.bias is not None:
+            res = self.bias.inverse_transform_user(user, res)
 
         # clamp if suitable
         if self.range is not None:
             rmin, rmax = self.range
-            rv = np.maximum(rv, rmin)
-            rv = np.minimum(rv, rmax)
+            res = np.clip(res, rmin, rmax)
 
-        res = pd.Series(rv, index=good_items)
-        res = res.reindex(items)
         return res
 
     def __str__(self):
