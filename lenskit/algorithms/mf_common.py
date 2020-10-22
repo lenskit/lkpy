@@ -2,13 +2,11 @@
 Common utilities & implementations for matrix factorization.
 """
 
-import pathlib
 import logging
 
 import numpy as np
 import pandas as pd
 
-from .. import util
 from . import Predictor
 
 _logger = logging.getLogger(__name__)
@@ -114,44 +112,3 @@ class MFPredictor(Predictor):
         res = pd.Series(rv, index=good_items)
         res = res.reindex(items)
         return res
-
-
-class BiasMFPredictor(MFPredictor):
-    """
-    Common model for biased matrix factorization.
-
-    Attributes:
-        user_index_(pandas.Index): Users in the model (length=:math:`m`).
-        item_index_(pandas.Index): Items in the model (length=:math:`n`).
-        global_bias_(double): The global bias term.
-        user_bias_(numpy.ndarray): The user bias terms.
-        item_bias_(numpy.ndarray): The item bias terms.
-        user_features_(numpy.ndarray): The :math:`m \\times k` user-feature matrix.
-        item_features_(numpy.ndarray): The :math:`n \\times k` item-feature matrix.
-    """
-
-    def score(self, user, items, u_features=None, raw=False):
-        """
-        Score a set of items for a user. User and item parameters must be indices
-        into the matrices.
-
-        Args:
-            user(int): the user index
-            items(array-like of int): the item indices
-            raw(bool): if ``True``, do return raw scores without biases added back.
-
-        Returns:
-            numpy.ndarray: the scores for the items.
-        """
-
-        rv = super().score(user, items, u_features)
-
-        if not raw and u_features is None:
-            # add bias back in
-            rv = rv + self.global_bias_
-            if self.user_bias_ is not None and user is not None:
-                rv = rv + self.user_bias_[user]
-            if self.item_bias_ is not None:
-                rv = rv + self.item_bias_[items]
-
-        return rv
