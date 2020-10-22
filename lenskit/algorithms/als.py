@@ -5,7 +5,7 @@ import numpy as np
 from numba import njit, prange
 
 from .bias import Bias
-from .mf_common import BiasMFPredictor, MFPredictor
+from .mf_common import MFPredictor
 from ..matrix import sparse_ratings
 from .. import util
 from ..math.solve import _dposv
