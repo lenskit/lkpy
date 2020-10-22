@@ -196,7 +196,7 @@ class FunkSVD(MFPredictor):
     biased matrix factorization technique trained with featurewise stochastic gradient
     descent.
 
-    See the base class :class:`.BiasMFPredictor` for documentation on the estimated parameters
+    See the base class :class:`.MFPredictor` for documentation on the estimated parameters
     you can extract from a trained model.
 
     Args:

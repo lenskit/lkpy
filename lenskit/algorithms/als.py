@@ -294,7 +294,7 @@ class BiasedMF(MFPredictor):
         A direct implementation of the original ALS concept [ZWSP2008]_ using LU-decomposition
         to solve for the optimized matrices.
 
-    See the base class :class:`.BiasMFPredictor` for documentation on
+    See the base class :class:`.MFPredictor` for documentation on
     the estimated parameters you can extract from a trained model.
 
     .. [ZWSP2008] Yunhong Zhou, Dennis Wilkinson, Robert Schreiber, and Rong Pan. 2008.
