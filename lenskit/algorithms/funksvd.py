@@ -290,32 +290,16 @@ class FunkSVD(MFPredictor):
 
     def predict_for_user(self, user, items, ratings=None):
         # look up user index
-        uidx = self.lookup_user(user)
-        if uidx < 0:
-            _logger.debug('user %s not in model', user)
-            return pd.Series(np.nan, index=items)
-
-        # get item index & limit to valid ones
-        items = np.array(items)
-        iidx = self.lookup_items(items)
-        good = iidx >= 0
-        good_items = items[good]
-        good_iidx = iidx[good]
-
-        # multiply
-        _logger.debug('scoring %d items for user %s', len(good_items), user)
-        rv = self.score(uidx, good_iidx)
-        res = pd.Series(rv, index=good_items)
-        res = res.reindex(items)
-        if self.bias is not None:
-            res = self.bias.inverse_transform_user(user, res)
+        # look up user index
+        preds = self.score_by_ids(user, items)
+        preds = self.bias.inverse_transform_user(user, preds)
 
         # clamp if suitable
         if self.range is not None:
             rmin, rmax = self.range
-            res = np.clip(res, rmin, rmax)
+            preds = np.clip(preds, rmin, rmax)
 
-        return res
+        return preds
 
     def __str__(self):
         return 'FunkSVD(features={}, reg={})'.\
