@@ -22,7 +22,7 @@ def test_fsvd_basic_build():
     algo = svd.FunkSVD(20, iterations=20)
     algo.fit(simple_df)
 
-    assert algo.global_bias_ == approx(simple_df.rating.mean())
+    assert algo.bias.mean_ == approx(simple_df.rating.mean())
     assert algo.item_features_.shape == (3, 20)
     assert algo.user_features_.shape == (3, 20)
 
@@ -31,7 +31,7 @@ def test_fsvd_clamp_build():
     algo = svd.FunkSVD(20, iterations=20, range=(1, 5))
     algo.fit(simple_df)
 
-    assert algo.global_bias_ == approx(simple_df.rating.mean())
+    assert algo.bias.mean_ == approx(simple_df.rating.mean())
     assert algo.item_features_.shape == (3, 20)
     assert algo.user_features_.shape == (3, 20)
 
@@ -40,7 +40,7 @@ def test_fsvd_predict_basic():
     algo = svd.FunkSVD(20, iterations=20)
     algo.fit(simple_df)
 
-    assert algo.global_bias_ == approx(simple_df.rating.mean())
+    assert algo.bias.mean_ == approx(simple_df.rating.mean())
     assert algo.item_features_.shape == (3, 20)
     assert algo.user_features_.shape == (3, 20)
 
@@ -55,7 +55,7 @@ def test_fsvd_predict_clamp():
     algo = svd.FunkSVD(20, iterations=20, range=(1, 5))
     algo.fit(simple_df)
 
-    assert algo.global_bias_ == approx(simple_df.rating.mean())
+    assert algo.bias.mean_ == approx(simple_df.rating.mean())
     assert algo.item_features_.shape == (3, 20)
     assert algo.user_features_.shape == (3, 20)
 
@@ -70,9 +70,7 @@ def test_fsvd_no_bias():
     algo = svd.FunkSVD(20, iterations=20, bias=None)
     algo.fit(simple_df)
 
-    assert algo.global_bias_ == 0
-    assert algo.item_bias_ is None
-    assert algo.user_bias_ is None
+    assert algo.bias is None
     assert algo.item_features_.shape == (3, 20)
     assert algo.user_features_.shape == (3, 20)
 
@@ -86,7 +84,7 @@ def test_fsvd_predict_bad_item():
     algo = svd.FunkSVD(20, iterations=20)
     algo.fit(simple_df)
 
-    assert algo.global_bias_ == approx(simple_df.rating.mean())
+    assert algo.bias.mean_ == approx(simple_df.rating.mean())
     assert algo.item_features_.shape == (3, 20)
     assert algo.user_features_.shape == (3, 20)
 
@@ -100,7 +98,7 @@ def test_fsvd_predict_bad_item_clamp():
     algo = svd.FunkSVD(20, iterations=20, range=(1, 5))
     algo.fit(simple_df)
 
-    assert algo.global_bias_ == approx(simple_df.rating.mean())
+    assert algo.bias.mean_ == approx(simple_df.rating.mean())
     assert algo.item_features_.shape == (3, 20)
     assert algo.user_features_.shape == (3, 20)
 
@@ -114,7 +112,7 @@ def test_fsvd_predict_bad_user():
     algo = svd.FunkSVD(20, iterations=20)
     algo.fit(simple_df)
 
-    assert algo.global_bias_ == approx(simple_df.rating.mean())
+    assert algo.bias.mean_ == approx(simple_df.rating.mean())
     assert algo.item_features_.shape == (3, 20)
     assert algo.user_features_.shape == (3, 20)
 
@@ -132,7 +130,7 @@ def test_fsvd_save_load():
     original = svd.FunkSVD(20, iterations=20)
     original.fit(ratings)
 
-    assert original.global_bias_ == approx(ratings.rating.mean())
+    assert original.bias.mean_ == approx(ratings.rating.mean())
     assert original.item_features_.shape == (ratings.item.nunique(), 20)
     assert original.user_features_.shape == (ratings.user.nunique(), 20)
 
@@ -140,9 +138,9 @@ def test_fsvd_save_load():
     _log.info('serialized to %d bytes', len(mod))
     algo = pickle.loads(mod)
 
-    assert algo.global_bias_ == original.global_bias_
-    assert np.all(algo.user_bias_ == original.user_bias_)
-    assert np.all(algo.item_bias_ == original.item_bias_)
+    assert algo.bias.mean_ == original.bias.mean_
+    assert np.all(algo.bias.user_offsets_ == original.bias.user_offsets_)
+    assert np.all(algo.bias.item_offsets_ == original.bias.item_offsets_)
     assert np.all(algo.user_features_ == original.user_features_)
     assert np.all(algo.item_features_ == original.item_features_)
     assert np.all(algo.item_index_ == original.item_index_)
@@ -157,7 +155,7 @@ def test_fsvd_train_binary():
     original = svd.FunkSVD(20, iterations=20, bias=False)
     original.fit(ratings)
 
-    assert original.global_bias_ == 0
+    assert original.bias.mean_ == 0
     assert original.item_features_.shape == (ratings.item.nunique(), 20)
     assert original.user_features_.shape == (ratings.user.nunique(), 20)
 
