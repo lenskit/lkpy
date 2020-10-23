@@ -315,9 +315,9 @@ def test_als_batch_accuracy():
     _log.info('diff summary:\n%s', preds.abs_diff.describe())
 
     lu_mae = pm.mae(preds.lu_pred, preds.rating)
-    assert lu_mae == approx(0.73, abs=0.04)
+    assert lu_mae == approx(0.73, abs=0.045)
     cd_mae = pm.mae(preds.cd_pred, preds.rating)
-    assert cd_mae == approx(0.73, abs=0.04)
+    assert cd_mae == approx(0.73, abs=0.045)
 
     user_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.lu_pred, df.rating))
     assert user_rmse.mean() == approx(0.94, abs=0.05)

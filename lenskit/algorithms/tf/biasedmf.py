@@ -7,14 +7,14 @@ except ImportError:
     tf = None
 
 from lenskit import util
-from ..mf_common import BiasMFPredictor
+from ..mf_common import MFPredictor
 from ..bias import Bias
 from .util import init_tf_rng, check_tensorflow
 
 _log = logging.getLogger(__name__)
 
 
-class BiasedMF(BiasMFPredictor):
+class BiasedMF(MFPredictor):
     """
     Biased matrix factorization model for explicit feedback, optimized with
     TensorFlow.
@@ -41,7 +41,7 @@ class BiasedMF(BiasMFPredictor):
 
     This implementation uses :class:`lenskit.algorithms.bias.Bias` for computing
     the biases, and uses TensorFlow to fit a matrix factorization on the residuals.
-    It then extracts the resulting matrices, and relies on :class:`BiasedMFPredictor`
+    It then extracts the resulting matrices, and relies on :class:`MFPredictor`
     to implement the prediction logic, like :class:`lenskit.algorithms.als.BiasedMF`.
     Its code is suitable as an example of how to build a Keras/TensorFlow algorithm
     implementation for LensKit where TF is only used in the train stage.
@@ -90,9 +90,6 @@ class BiasedMF(BiasMFPredictor):
         self.user_features_ = model.get_layer('user-embed').get_weights()[0]
         self.item_features_ = model.get_layer('item-embed').get_weights()[0]
 
-        self.global_bias_ = self.bias.mean_
-        self.user_bias_ = self.bias.user_offsets_.values
-        self.item_bias_ = self.bias.item_offsets_.values
         self.user_index_ = self.bias.user_index
         self.item_index_ = self.bias.item_index
 
@@ -136,4 +133,6 @@ class BiasedMF(BiasMFPredictor):
 
     def predict_for_user(self, user, items, ratings=None):
         # look up user index
-        return self.score_by_ids(user, items)
+        preds = self.score_by_ids(user, items)
+        preds = self.bias.inverse_transform_user(user, preds)
+        return preds
