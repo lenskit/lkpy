@@ -8,6 +8,7 @@ import time
 import pandas as pd
 import numpy as np
 import numba as n
+from pandas.core.series import Series
 try:
     from numba.experimental import jitclass
 except ImportError:
@@ -222,6 +223,8 @@ class FunkSVD(MFPredictor):
         self.reg = reg
         self.damping = damping
         self.range = range
+        if not bias:
+            bias = None
         if bias is True:
             self.bias = Bias(damping=damping)
         else:
@@ -292,7 +295,8 @@ class FunkSVD(MFPredictor):
         # look up user index
         # look up user index
         preds = self.score_by_ids(user, items)
-        preds = self.bias.inverse_transform_user(user, preds)
+        if self.bias is not None:
+            preds = self.bias.inverse_transform_user(user, preds)
 
         # clamp if suitable
         if self.range is not None:

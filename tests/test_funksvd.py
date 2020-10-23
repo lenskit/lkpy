@@ -60,6 +60,7 @@ def test_fsvd_predict_clamp():
     assert algo.user_features_.shape == (3, 20)
 
     preds = algo.predict_for_user(10, [3])
+    assert isinstance(preds, pd.Series)
     assert len(preds) == 1
     assert preds.index[0] == 3
     assert preds.loc[3] >= 1
@@ -155,7 +156,7 @@ def test_fsvd_train_binary():
     original = svd.FunkSVD(20, iterations=20, bias=False)
     original.fit(ratings)
 
-    assert original.bias.mean_ == 0
+    assert original.bias is None
     assert original.item_features_.shape == (ratings.item.nunique(), 20)
     assert original.user_features_.shape == (ratings.user.nunique(), 20)
 
