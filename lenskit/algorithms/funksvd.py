@@ -245,7 +245,7 @@ class FunkSVD(MFPredictor):
 
         if self.bias:
             _logger.info('[%s] fitting bias model', timer)
-            ratings = self.bias.fit_transform(ratings)
+            self.bias.fit(ratings)
 
         _logger.info('[%s] preparing rating data for %d samples', timer, len(ratings))
         _logger.debug('shuffling rating data')
