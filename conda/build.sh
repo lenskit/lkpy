@@ -1,4 +1,4 @@
 #!/bin/bash
 
 $PYTHON setup.py build_helper
-$PYTHON setup.py install
+$PYTHON -m pip install --no-deps .

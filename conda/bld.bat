@@ -1,5 +1,5 @@
 "%PYTHON%" setup.py build_helper || goto :fail
-"%PYTHON%" setup.py install || goto :fail
+"%PYTHON%" -m pip install --no-deps . || goto :fail
 
 goto :EOF
 
