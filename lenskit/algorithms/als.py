@@ -279,6 +279,40 @@ def _train_implicit_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
 
     return np.sqrt(frob)
 
+@njit(nogil=True)
+def _train_implicit_row_lu(items, ratings, other, reg):
+    """
+    Args:
+        items(np.ndarray[i64]): the item IDs the user has rated
+        ratings(np.ndarray): the user's (normalized) ratings for those items
+        other(np.ndarray): the item-feature matrix
+        reg(float): the regularization term
+    Returns:
+        np.ndarray: the user-feature vector (equivalent to V in the current LU code)
+    """
+    nf = other.shape[1]
+    regmat = np.identity(nf) * reg
+    Ot = other.T
+    OtO = Ot @ other
+    OtOr = OtO + regmat
+
+   # we can optimize by only considering the nonzero entries of Cu-I
+    # this means we only need the corresponding matrix columns
+    M = other[items, :]
+    # Compute M^T (C_u-I) M, restricted to these nonzero entries
+    MMT = (M.T.copy() * ratings) @ M
+    # assert MMT.shape[0] == ctx.n_features
+    # assert MMT.shape[1] == ctx.n_features
+    # Build the matrix for solving
+    A = OtOr + MMT
+    # Compute RHS - only used columns (p_ui != 0) values needed
+    # Cu is rates + 1 for the cols, so just trim Ot
+    y = Ot[:, items] @ (ratings + 1.0)
+    # and solve
+    _dposv(A, y, True)
+
+    return y
+
 
 class BiasedMF(MFPredictor):
     """
@@ -612,8 +646,17 @@ class ImplicitMF(MFPredictor):
         return PartialModel(users, items, umat, imat), rmat, trmat
 
     def predict_for_user(self, user, items, ratings=None):
-        # look up user index
-        return self.score_by_ids(user, items)
+        if ratings is not None and len(ratings) > 0:
+            ri_idxes = self.item_index_.get_indexer_for(ratings.index)
+            ri_good = ri_idxes >= 0
+            ri_it = ri_idxes[ri_good]
+            ri_val = ratings.values[ri_good]
+            ri_val *= self.weight
+            u_feat = _train_implicit_row_lu(ri_it, ri_val, self.item_features_, self.reg)
+            return self.score_by_ids(user, items, u_feat)
+        else:
+            # look up user index
+            return self.score_by_ids(user, items)
 
     def __str__(self):
         return 'als.ImplicitMF(features={}, reg={}, w={})'.\
