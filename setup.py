@@ -74,7 +74,7 @@ class DepInfo(Command):
         'implicit': '$pip'
     }
     FORGE_PACKAGE_MAP = {}
-    CONDA_DEPS = ['mkl-devel', 'tbb']
+    CONDA_MAIN_DEPS = ['mkl-devel', 'tbb']
 
     def initialize_options(self):
         """Set default values for options."""
@@ -125,14 +125,16 @@ class DepInfo(Command):
             'name': 'lkpy-dev',
         }
         if self.conda_forge:
+            conda_deps = []
             dep_spec['channels'] = ['conda-forge']
         else:
+            conda_deps = self.CONDA_MAIN_DEPS
             dep_spec['channels'] = ['lenskit', 'default']
 
         dep_spec['dependencies'] = [
             f'python {pyver}',
             'pip'
-        ] + self.CONDA_DEPS
+        ] + conda_deps
         for req_str, src in self._get_reqs():
             req = Requirement(req_str)
             mapped = self.PACKAGE_MAP.get(req.name, req.name)
