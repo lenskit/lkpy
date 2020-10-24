@@ -205,7 +205,6 @@ def _scipy_sim_block(block, bsp, bep, rmat, min_sim, max_nbrs, nitems):
     r_vs = sims.values
 
     block_csr = _make_sim_block(nitems, bsp, block.nrows, r_sp, r_ep, r_cs, r_vs, min_sim, max_nbrs)
-    _logger.debug('umm %d %d', block_csr.nrows, block.nrows)
     assert block_csr.nrows == block.nrows
     assert block_csr.ncols == nitems
     _logger.debug('block %d:%d has %d similarities', bsp, bep, block_csr.nnz)
