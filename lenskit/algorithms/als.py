@@ -279,6 +279,7 @@ def _train_implicit_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
 
     return np.sqrt(frob)
 
+
 @njit(nogil=True)
 def _train_implicit_row_lu(items, ratings, other, reg):
     """
@@ -296,7 +297,7 @@ def _train_implicit_row_lu(items, ratings, other, reg):
     OtO = Ot @ other
     OtOr = OtO + regmat
 
-   # we can optimize by only considering the nonzero entries of Cu-I
+    # we can optimize by only considering the nonzero entries of Cu-I
     # this means we only need the corresponding matrix columns
     M = other[items, :]
     # Compute M^T (C_u-I) M, restricted to these nonzero entries
