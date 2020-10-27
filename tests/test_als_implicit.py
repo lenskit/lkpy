@@ -107,7 +107,36 @@ def test_als_predict_for_new_users_with_new_ratings():
         diffs = abs(preds.values - new_preds.values)
         assert all(i <= 0.1 for i in diffs) == True
 
-# TODO: Add a test to check if ImplicitMF with new ratings gives the same top 10 recommendations as the current one.
+def test_als_recs_topn_for_new_users_with_new_ratings():
+    from lenskit.algorithms import basic
+    import scipy.stats as stats
+
+    n_users = 1
+    n_items = 10
+    new_u_id = -1
+    ratings = lktu.ml_test.ratings
+
+    np.random.seed(45)
+    users = np.random.choice(ratings.user.unique(), n_users)
+    items = np.random.choice(ratings.item.unique(), n_items)
+
+    algo = als.ImplicitMF(20, iterations=10, method="lu")
+    rec_algo = basic.TopN(algo)
+    rec_algo.fit(ratings)
+    _log.debug("Items: " + str(items))
+
+    for u in users:
+        _log.debug(f"user: {u}")
+        recs = rec_algo.recommend(u, 10, candidates=items)
+        user_data = ratings[ratings.user == u]
+
+        _log.debug("user_features from fit: " + str(algo.user_features_[algo.user_index_.get_loc(u), :]))
+
+        new_ratings = pd.Series(user_data.rating.to_numpy(), index=user_data.item) # items as index and ratings as values
+        new_recs = rec_algo.recommend(new_u_id, 10, candidates=items, ratings=new_ratings)
+
+        tau = stats.kendalltau(recs.item.to_numpy(), new_recs.item.to_numpy())
+        assert tau.correlation > 0.8
 
 def test_als_predict_bad_item():
     algo = als.ImplicitMF(20, iterations=10)
