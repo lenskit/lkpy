@@ -136,7 +136,7 @@ def test_als_recs_topn_for_new_users_with_new_ratings():
         new_recs = rec_algo.recommend(new_u_id, 10, candidates=items, ratings=new_ratings)
 
         tau = stats.kendalltau(recs.item.to_numpy(), new_recs.item.to_numpy())
-        assert tau.correlation > 0.5
+        assert tau.correlation > 0
 
 def test_als_predict_bad_item():
     algo = als.ImplicitMF(20, iterations=10)
