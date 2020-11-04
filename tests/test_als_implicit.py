@@ -41,13 +41,14 @@ def test_als_predict_basic():
     algo.fit(simple_df)
 
     preds = algo.predict_for_user(10, [3])
-    print(preds)
+
     assert len(preds) == 1
     assert preds.index[0] == 3
     assert preds.loc[3] >= -0.1
     assert preds.loc[3] <= 5
 
 def test_als_predict_basic_for_new_ratings():
+    """ Test ImplicitMF ability to support new ratings """
     algo = als.ImplicitMF(20, iterations=10)
     algo.fit(simple_df)
 
@@ -61,6 +62,10 @@ def test_als_predict_basic_for_new_ratings():
     assert preds.loc[3] <= 5
 
 def test_als_predict_basic_for_new_user_with_new_ratings():
+    """
+        Test if ImplicitMF predictions using the same ratings for a new user
+        is the same as a user in the current simple_df dataset.
+    """
     u = 10
     i = 3
 
@@ -76,6 +81,11 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
     assert abs(preds.loc[i] - new_preds.loc[i]) <= 0.1
 
 def test_als_predict_for_new_users_with_new_ratings():
+    """
+        Test if ImplicitMF predictions using the same ratings for a new user
+        is the same as a user in ml-latest-small dataset.
+        The test is run for more than one user.
+    """
     n_users = 3
     n_items = 2
     new_u_id = -1
@@ -108,10 +118,15 @@ def test_als_predict_for_new_users_with_new_ratings():
         assert all(i <= 0.1 for i in diffs) == True
 
 def test_als_recs_topn_for_new_users_with_new_ratings():
+    """
+        Test if ImplicitMF topn recommendations using the same ratings for a new user
+        is the same as a user in ml-latest-small dataset.
+        The test is run for more than one user.
+    """
     from lenskit.algorithms import basic
     import scipy.stats as stats
 
-    n_users = 1
+    n_users = 3
     n_items = 10
     new_u_id = -1
     ratings = lktu.ml_test.ratings
@@ -156,6 +171,7 @@ def test_als_predict_bad_user():
     assert len(preds) == 1
     assert preds.index[0] == 3
     assert np.isnan(preds.loc[3])
+
 
 @lktu.wantjit
 @methods
