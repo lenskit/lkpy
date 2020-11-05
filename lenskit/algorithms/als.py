@@ -594,7 +594,7 @@ class ImplicitMF(MFPredictor):
         regmat = np.identity(nf) * ureg
         Ot = self.item_features_.T
         OtO = Ot @ self.item_features_
-        self.OtOr = OtO + regmat
+        self.OtOr_ = OtO + regmat
 
         return self
 
@@ -665,7 +665,7 @@ class ImplicitMF(MFPredictor):
             ri_it = ri_idxes[ri_good]
             ri_val = ratings.values[ri_good]
             ri_val *= self.weight
-            u_feat = _train_implicit_row_lu(ri_it, ri_val, self.item_features_, self.OtOr)
+            u_feat = _train_implicit_row_lu(ri_it, ri_val, self.item_features_, self.OtOr_)
             return self.score_by_ids(user, items, u_feat)
         else:
             # look up user index
