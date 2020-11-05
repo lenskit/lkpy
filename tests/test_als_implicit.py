@@ -41,11 +41,117 @@ def test_als_predict_basic():
     algo.fit(simple_df)
 
     preds = algo.predict_for_user(10, [3])
+
     assert len(preds) == 1
     assert preds.index[0] == 3
     assert preds.loc[3] >= -0.1
     assert preds.loc[3] <= 5
 
+def test_als_predict_basic_for_new_ratings():
+    """ Test ImplicitMF ability to support new ratings """
+    algo = als.ImplicitMF(20, iterations=10)
+    algo.fit(simple_df)
+
+    new_ratings = pd.Series([4.0, 5.0], index=[1, 2]) # items as index and ratings as values
+
+    preds = algo.predict_for_user(15, [3], new_ratings)
+
+    assert len(preds) == 1
+    assert preds.index[0] == 3
+    assert preds.loc[3] >= -0.1
+    assert preds.loc[3] <= 5
+
+def test_als_predict_basic_for_new_user_with_new_ratings():
+    """
+        Test if ImplicitMF predictions using the same ratings for a new user
+        is the same as a user in the current simple_df dataset.
+    """
+    u = 10
+    i = 3
+
+    algo = als.ImplicitMF(20, iterations=10)
+    algo.fit(simple_df)
+
+    preds = algo.predict_for_user(u, [i])
+
+    new_u_id = 1
+    new_ratings = pd.Series([4.0, 5.0], index=[1, 2]) # items as index and ratings as values
+
+    new_preds = algo.predict_for_user(new_u_id, [i], new_ratings)
+    assert abs(preds.loc[i] - new_preds.loc[i]) <= 0.1
+
+def test_als_predict_for_new_users_with_new_ratings():
+    """
+        Test if ImplicitMF predictions using the same ratings for a new user
+        is the same as a user in ml-latest-small dataset.
+        The test is run for more than one user.
+    """
+    n_users = 3
+    n_items = 2
+    new_u_id = -1
+    ratings = lktu.ml_test.ratings
+
+    np.random.seed(45)
+    users = np.random.choice(ratings.user.unique(), n_users)
+    items = np.random.choice(ratings.item.unique(), n_items)
+
+    algo = als.ImplicitMF(20, iterations=10, method="lu")
+    algo.fit(ratings)
+    _log.debug("Items: " + str(items))
+
+    for u in users:
+        _log.debug(f"user: {u}")
+        preds = algo.predict_for_user(u, items)
+
+        user_data = ratings[ratings.user == u]
+
+        _log.debug("user_features from fit: " + str(algo.user_features_[algo.user_index_.get_loc(u), :]))
+
+        new_ratings = pd.Series(user_data.rating.to_numpy(), index=user_data.item) # items as index and ratings as values
+        new_preds = algo.predict_for_user(new_u_id, items, new_ratings)
+
+        _log.debug("preds: " + str(preds.values))
+        _log.debug("new_preds: " + str(new_preds.values))
+        _log.debug("------------")
+
+        diffs = abs(preds.values - new_preds.values)
+        assert all(i <= 0.1 for i in diffs) == True
+
+def test_als_recs_topn_for_new_users_with_new_ratings():
+    """
+        Test if ImplicitMF topn recommendations using the same ratings for a new user
+        is the same as a user in ml-latest-small dataset.
+        The test is run for more than one user.
+    """
+    from lenskit.algorithms import basic
+    import scipy.stats as stats
+
+    n_users = 3
+    n_items = 10
+    new_u_id = -1
+    ratings = lktu.ml_test.ratings
+
+    np.random.seed(45)
+    users = np.random.choice(ratings.user.unique(), n_users)
+    items = np.random.choice(ratings.item.unique(), n_items)
+
+    algo = als.ImplicitMF(20, iterations=10, method="lu")
+    rec_algo = basic.TopN(algo)
+    rec_algo.fit(ratings)
+    _log.debug("Items: " + str(items))
+
+    for u in users:
+        _log.debug(f"user: {u}")
+        recs = rec_algo.recommend(u, 10, candidates=items)
+        user_data = ratings[ratings.user == u]
+
+        _log.debug("user_features from fit: " + str(algo.user_features_[algo.user_index_.get_loc(u), :]))
+
+        new_ratings = pd.Series(user_data.rating.to_numpy(), index=user_data.item) # items as index and ratings as values
+        new_recs = rec_algo.recommend(new_u_id, 10, candidates=items, ratings=new_ratings)
+
+        tau = stats.kendalltau(recs.item.to_numpy(), new_recs.item.to_numpy())
+        assert tau.correlation > 0
 
 def test_als_predict_bad_item():
     algo = als.ImplicitMF(20, iterations=10)
