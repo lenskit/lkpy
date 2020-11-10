@@ -47,6 +47,7 @@ def test_als_predict_basic():
     assert preds.loc[3] >= -0.1
     assert preds.loc[3] <= 5
 
+
 def test_als_predict_basic_for_new_ratings():
     """ Test ImplicitMF ability to support new ratings """
     algo = als.ImplicitMF(20, iterations=10)
@@ -60,6 +61,7 @@ def test_als_predict_basic_for_new_ratings():
     assert preds.index[0] == 3
     assert preds.loc[3] >= -0.1
     assert preds.loc[3] <= 5
+
 
 def test_als_predict_basic_for_new_user_with_new_ratings():
     """
@@ -79,6 +81,7 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
 
     new_preds = algo.predict_for_user(new_u_id, [i], new_ratings)
     assert abs(preds.loc[i] - new_preds.loc[i]) <= 0.1
+
 
 def test_als_predict_for_new_users_with_new_ratings():
     """
@@ -117,6 +120,7 @@ def test_als_predict_for_new_users_with_new_ratings():
         diffs = abs(preds.values - new_preds.values)
         assert all(i <= 0.1 for i in diffs) == True
 
+
 def test_als_recs_topn_for_new_users_with_new_ratings():
     """
         Test if ImplicitMF topn recommendations using the same ratings for a new user
@@ -152,6 +156,7 @@ def test_als_recs_topn_for_new_users_with_new_ratings():
 
         tau = stats.kendalltau(recs.item.to_numpy(), new_recs.item.to_numpy())
         assert tau.correlation > 0
+
 
 def test_als_predict_bad_item():
     algo = als.ImplicitMF(20, iterations=10)
