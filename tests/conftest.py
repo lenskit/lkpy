@@ -3,17 +3,26 @@ from pytest import fixture
 
 import numpy as np
 
+from lenskit import util
+
 logging.getLogger('numba').setLevel(logging.INFO)
 
 _log = logging.getLogger('lenskit.tests')
 
 
-@fixture(scope='session')
+@fixture
 def rng():
-    if hasattr(np.random, 'default_rng'):
-        return np.random.default_rng()
-    else:
-        return np.random.RandomState()
+    return util.rng(42)
+
+
+@fixture
+def legacy_rng():
+    return util.rng(42, legacy_rng=True)
+
+
+@fixture(autouse=True)
+def init_rng(request):
+    util.init_rng(42)
 
 
 @fixture(autouse=True)
