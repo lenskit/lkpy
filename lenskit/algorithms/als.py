@@ -196,19 +196,26 @@ def _cg_solve(OtOr, X, y, w, epochs):
         p = z + bet * p
 
 
+@njit(nogil=True)
+def _implicit_otor(other, reg):
+    nf = other.shape[1]
+    regmat = np.identity(nf)
+    regmat *= reg
+    Ot = other.T
+    OtO = Ot @ other
+    OtO += regmat
+    return OtO
+
+
 @njit(parallel=True, nogil=True)
 def _train_implicit_cg(mat, this: np.ndarray, other: np.ndarray, reg: float):
     "One half of an implicit ALS training round with conjugate gradient."
     nr = mat.nrows
     nc = other.shape[0]
-    nf = other.shape[1]
 
     assert mat.ncols == nc
 
-    regmat = np.identity(nf) * reg
-    Ot = other.T
-    OtO = Ot @ other
-    OtOr = OtO + regmat
+    OtOr = _implicit_otor(other, reg)
 
     frob = 0.0
 
@@ -241,14 +248,8 @@ def _train_implicit_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
     "One half of an implicit ALS training round."
     nr = mat.nrows
     nc = other.shape[0]
-    nf = other.shape[1]
     assert mat.ncols == nc
-    regmat = np.identity(nf) * reg
-    Ot = other.T
-    OtO = Ot @ other
-    OtOr = OtO + regmat
-    assert OtO.shape[0] == OtO.shape[1]
-    assert OtO.shape[0] == nf
+    OtOr = _implicit_otor(other, reg)
     frob = 0.0
 
     for i in prange(nr):
@@ -269,7 +270,7 @@ def _train_implicit_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
         A = OtOr + MMT
         # Compute RHS - only used columns (p_ui != 0) values needed
         # Cu is rates + 1 for the cols, so just trim Ot
-        y = Ot[:, cols] @ (rates + 1.0)
+        y = other.T[:, cols] @ (rates + 1.0)
         # and solve
         _dposv(A, y, True)
         # assert len(uv) == ctx.n_features
@@ -590,11 +591,7 @@ class ImplicitMF(MFPredictor):
             ureg = ireg = self.reg
 
         # compute OtOr and save it on the model
-        nf = self.item_features_.shape[1]
-        regmat = np.identity(nf) * ureg
-        Ot = self.item_features_.T
-        OtO = Ot @ self.item_features_
-        self.OtOr_ = OtO + regmat
+        self.OtOr_ = _implicit_otor(self.item_features_, ureg)
 
         return self
 
