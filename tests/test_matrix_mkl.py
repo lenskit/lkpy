@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import scipy.sparse as sps
 
-from pytest import approx, skip, fixture, skipif
+from pytest import approx, skip, fixture, mark
 from hypothesis import given, assume, settings, HealthCheck
 import hypothesis.strategies as st
 import hypothesis.extra.numpy as nph
@@ -20,7 +20,7 @@ def mkl_ops():
     return ops
 
 
-@skipif(sys.platform=='darwin', reason='MKL not built on macOS')
+@mark.skipif(sys.platform=='darwin', reason='MKL not built on macOS')
 def test_mkl_available():
     if 'CONDA_PREFIX' in os.environ:
         try:
