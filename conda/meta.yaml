@@ -46,7 +46,6 @@ test:
     - pytest
     - pytest-arraydiff
     - hypothesis
-    - statsmodels
     - scikit-learn
   commands:
     - pytest tests -m "not slow" --verbose
