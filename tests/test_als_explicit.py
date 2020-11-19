@@ -205,6 +205,10 @@ def test_als_save_load():
     assert np.all(algo.item_index_ == original.item_index_)
     assert np.all(algo.user_index_ == original.user_index_)
 
+    # make sure it still works
+    preds = algo.predict_for_user(10, np.arange(0, 50, dtype='i8'))
+    assert len(preds) == 50
+
 
 @mark.skipif(not binpickle, reason='binpickle not available')
 def test_als_binpickle(tmp_path):
@@ -234,6 +238,10 @@ def test_als_binpickle(tmp_path):
         assert np.all(algo.item_features_ == original.item_features_)
         assert np.all(algo.item_index_ == original.item_index_)
         assert np.all(algo.user_index_ == original.user_index_)
+
+        # make sure it still works
+        preds = algo.predict_for_user(10, np.arange(0, 50, dtype='i8'))
+        assert len(preds) == 50
 
 
 @lktu.wantjit
