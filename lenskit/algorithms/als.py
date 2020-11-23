@@ -125,6 +125,7 @@ def _train_matrix_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
 
     return np.sqrt(frob)
 
+
 @njit(nogil=True)
 def _train_bias_row_lu(items, ratings, other, reg):
     """
