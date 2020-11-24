@@ -349,7 +349,7 @@ class BiasedMF(MFPredictor):
     timer = None
 
     def __init__(self, features, *, iterations=20, reg=0.1, damping=5, bias=True, method='cd',
-                 rng_spec=None, progress=None):
+                 rng_spec=None, progress=None, save_user_features=True):
         self.features = features
         self.iterations = iterations
         self.regularization = reg
@@ -361,6 +361,7 @@ class BiasedMF(MFPredictor):
             self.bias = bias
         self.progress = progress if progress is not None else util.no_progress
         self.rng = util.rng(rng_spec)
+        self.save_user_features = save_user_features
 
     def fit(self, ratings, **kwargs):
         """
@@ -378,9 +379,13 @@ class BiasedMF(MFPredictor):
         for epoch, algo in enumerate(self.fit_iters(ratings, **kwargs)):
             pass  # we just need to do the iterations
 
-        _logger.info('trained model in %s (|P|=%f, |Q|=%f)', self.timer,
-                     np.linalg.norm(self.user_features_, 'fro'),
-                     np.linalg.norm(self.item_features_, 'fro'))
+        if self.user_features_ is not None:
+            _logger.info('trained model in %s (|P|=%f, |Q|=%f)', self.timer,
+                         np.linalg.norm(self.user_features_, 'fro'),
+                         np.linalg.norm(self.item_features_, 'fro'))
+        else:
+            _logger.info('trained model in %s (|Q|=%f)', self.timer,
+                         np.linalg.norm(self.item_features_, 'fro'))
 
         del self.timer
         return self
@@ -413,7 +418,10 @@ class BiasedMF(MFPredictor):
         self.item_index_ = model.items
         self.user_index_ = model.users
         self.item_features_ = model.item_matrix
-        self.user_features_ = model.user_matrix
+        if self.save_user_features:
+            self.user_features_ = model.user_matrix
+        else:
+            self.user_features_ = None
 
     def _initial_model(self, ratings, bias=None):
         # transform ratings using offsets
@@ -565,7 +573,7 @@ class ImplicitMF(MFPredictor):
     timer = None
 
     def __init__(self, features, *, iterations=20, reg=0.1, weight=40, method='cg',
-                 rng_spec=None, progress=None):
+                 rng_spec=None, progress=None, save_user_features=True):
         self.features = features
         self.iterations = iterations
         self.reg = reg
@@ -573,16 +581,22 @@ class ImplicitMF(MFPredictor):
         self.method = method
         self.rng = util.rng(rng_spec)
         self.progress = progress if progress is not None else util.no_progress
+        self.save_user_features = save_user_features
 
     def fit(self, ratings, **kwargs):
         self.timer = util.Stopwatch()
         for algo in self.fit_iters(ratings, **kwargs):
             pass
 
-        _logger.info('[%s] finished training model with %d features (|P|=%f, |Q|=%f)',
-                     self.timer, self.features,
-                     np.linalg.norm(self.user_features_, 'fro'),
-                     np.linalg.norm(self.item_features_, 'fro'))
+        if self.user_features_ is not None:
+            _logger.info('[%s] finished training model with %d features (|P|=%f, |Q|=%f)',
+                         self.timer, self.features,
+                         np.linalg.norm(self.user_features_, 'fro'),
+                         np.linalg.norm(self.item_features_, 'fro'))
+        else:
+            _logger.info('[%s] finished training model with %d features (|Q|=%f)',
+                         self.timer, self.features,
+                         np.linalg.norm(self.item_features_, 'fro'))
 
         # unpack the regularization
         if isinstance(self.reg, tuple):
@@ -610,7 +624,10 @@ class ImplicitMF(MFPredictor):
         self.item_index_ = model.items
         self.user_index_ = model.users
         self.item_features_ = model.item_matrix
-        self.user_features_ = model.user_matrix
+        if self.save_user_features:
+            self.user_features_ = model.user_matrix
+        else:
+            self.user_features_ = None
 
     def _train_iters(self, current, uctx, ictx):
         "Generator of training iterations."
