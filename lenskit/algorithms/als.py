@@ -381,11 +381,11 @@ class BiasedMF(MFPredictor):
 
         if self.user_features_ is not None:
             _logger.info('trained model in %s (|P|=%f, |Q|=%f)', self.timer,
-                            np.linalg.norm(self.user_features_, 'fro'),
-                            np.linalg.norm(self.item_features_, 'fro'))
+                         np.linalg.norm(self.user_features_, 'fro'),
+                         np.linalg.norm(self.item_features_, 'fro'))
         else:
             _logger.info('trained model in %s (|Q|=%f)', self.timer,
-                            np.linalg.norm(self.item_features_, 'fro'))
+                         np.linalg.norm(self.item_features_, 'fro'))
 
         del self.timer
         return self
@@ -590,13 +590,13 @@ class ImplicitMF(MFPredictor):
 
         if self.user_features_ is not None:
             _logger.info('[%s] finished training model with %d features (|P|=%f, |Q|=%f)',
-                            self.timer, self.features,
-                            np.linalg.norm(self.user_features_, 'fro'),
-                            np.linalg.norm(self.item_features_, 'fro'))
+                         self.timer, self.features,
+                         np.linalg.norm(self.user_features_, 'fro'),
+                         np.linalg.norm(self.item_features_, 'fro'))
         else:
             _logger.info('[%s] finished training model with %d features (|Q|=%f)',
-                            self.timer, self.features,
-                            np.linalg.norm(self.item_features_, 'fro'))
+                         self.timer, self.features,
+                         np.linalg.norm(self.item_features_, 'fro'))
 
         # unpack the regularization
         if isinstance(self.reg, tuple):
