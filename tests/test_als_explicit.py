@@ -1,6 +1,8 @@
 import logging
 import pickle
 
+from numpy.lib.npyio import _save_dispatcher
+
 # get a usable pickle disassembler
 if pickle.HIGHEST_PROTOCOL >= 5:
     from pickletools import dis as pickle_dis
@@ -79,6 +81,7 @@ def test_als_predict_basic(m):
     assert preds.loc[3] >= -0.1
     assert preds.loc[3] <= 5.1
 
+
 def test_als_predict_basic_for_new_ratings():
     algo = als.BiasedMF(20, iterations=10)
     algo.fit(simple_df)
@@ -93,6 +96,7 @@ def test_als_predict_basic_for_new_ratings():
     assert preds.index[0] == 3
     assert preds.loc[3] >= -0.1
     assert preds.loc[3] <= 5.1
+
 
 def test_als_predict_basic_for_new_user_with_new_ratings():
     u = 10
@@ -109,6 +113,7 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
     new_preds = algo.predict_for_user(new_u_id, [i], new_ratings)
 
     assert preds.loc[i] == approx(new_preds.loc[i], rel=9e-2)
+
 
 def test_als_predict_for_new_users_with_new_ratings():
     n_users = 3
@@ -140,6 +145,7 @@ def test_als_predict_for_new_users_with_new_ratings():
         _log.debug("------------")
         assert new_preds.values == approx(preds.values, rel=9e-2)
 
+
 def test_als_predict_bad_item():
     algo = als.BiasedMF(20, iterations=10)
     algo.fit(simple_df)
@@ -163,6 +169,23 @@ def test_als_predict_bad_user():
     assert preds.index[0] == 3
     assert np.isnan(preds.loc[3])
 
+
+@methods
+def test_als_predict_no_user_features_basic(m):
+    algo = als.BiasedMF(20, iterations=10, method=m)
+    algo.fit(simple_df)
+    preds = algo.predict_for_user(10, [3])
+
+
+    algo_no_user_features = als.BiasedMF(20, iterations=10, method=m, save_user_features=False)
+    algo_no_user_features.fit(simple_df)
+    preds_no_user_features = algo.predict_for_user(10, [3])
+
+    print(preds)
+    print(preds_no_user_features)
+
+    assert algo_no_user_features.user_features_ == None
+    assert preds.values == preds_no_user_features.values
 
 @lktu.wantjit
 @mark.slow

@@ -194,6 +194,24 @@ def test_als_predict_bad_user():
     assert np.isnan(preds.loc[3])
 
 
+@methods
+def test_als_predict_no_user_features_basic(m):
+    algo = als.ImplicitMF(20, iterations=10, method=m)
+    algo.fit(simple_df)
+    preds = algo.predict_for_user(10, [3])
+
+
+    algo_no_user_features = als.BiasedMF(20, iterations=10, method=m, save_user_features=False)
+    algo_no_user_features.fit(simple_df)
+    preds_no_user_features = algo.predict_for_user(10, [3])
+
+    print(preds)
+    print(preds_no_user_features)
+
+    assert algo_no_user_features.user_features_ == None
+    assert preds.values == preds_no_user_features.values
+
+
 @lktu.wantjit
 @methods
 def test_als_train_large(m):
