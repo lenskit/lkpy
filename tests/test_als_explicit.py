@@ -170,22 +170,40 @@ def test_als_predict_bad_user():
     assert np.isnan(preds.loc[3])
 
 
-@methods
-def test_als_predict_no_user_features_basic(m):
-    algo = als.BiasedMF(20, iterations=10, method=m)
-    algo.fit(simple_df)
-    preds = algo.predict_for_user(10, [3])
+def test_als_predict_no_user_features_basic():
+    n_users = 1
+    n_items = 2
+    new_u_id = -1
+    ratings = lktu.ml_test.ratings
 
-    new_ratings = pd.Series([4.0, 5.0], index=[1, 2]) # items as index and ratings as values
-    algo_no_user_features = als.BiasedMF(20, iterations=10, method=m, save_user_features=False)
-    algo_no_user_features.fit(simple_df)
-    preds_no_user_features = algo_no_user_features.predict_for_user(10, [3], new_ratings)
+    np.random.seed(45)
+    u = np.random.choice(ratings.user.unique(), 1)[0]
+    items = np.random.choice(ratings.item.unique(), n_items)
 
-    print(preds)
-    print(preds_no_user_features)
+    algo = als.BiasedMF(5, iterations=10, method="lu")
+    algo.fit(ratings)
+    _log.debug("Items: " + str(items))
+
+    algo_no_user_features = als.BiasedMF(5, iterations=10, method="lu", save_user_features=False)
+    algo_no_user_features.fit(ratings)
 
     assert algo_no_user_features.user_features_ == None
-    assert preds.values == approx(preds_no_user_features.values, rel=9e-2)
+
+    _log.debug(f"user: {u}")
+    preds = algo.predict_for_user(u, items)
+
+    user_data = ratings[ratings.user == u]
+
+    _log.debug("user_features from fit: " + str(algo.user_features_[algo.user_index_.get_loc(u), :]))
+
+    new_ratings = pd.Series(user_data.rating.to_numpy(), index=user_data.item) # items as index and ratings as values
+    new_preds = algo_no_user_features.predict_for_user(new_u_id, items, new_ratings)
+
+    _log.debug("preds: " + str(preds.values))
+    _log.debug("new_preds: " + str(new_preds.values))
+    _log.debug("------------")
+    assert new_preds.values == approx(preds.values, rel=9e-2)
+
 
 @lktu.wantjit
 @mark.slow

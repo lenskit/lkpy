@@ -194,23 +194,27 @@ def test_als_predict_bad_user():
     assert np.isnan(preds.loc[3])
 
 
-@methods
-def test_als_predict_no_user_features_basic(m):
+def test_als_predict_no_user_features_basic():
     i = 3
-    algo = als.ImplicitMF(20, iterations=10, method=m)
-    algo.fit(simple_df)
-    preds = algo.predict_for_user(10, [i])
+    ratings = lktu.ml_test.ratings
+    np.random.seed(45)
+    u = np.random.choice(ratings.user.unique(), 1)[0]
+    items = np.random.choice(ratings.item.unique(), 2)
 
-    new_ratings = pd.Series([4.0, 5.0], index=[1, 2]) # items as index and ratings as values
-    algo_no_user_features = als.ImplicitMF(20, iterations=10, method=m, save_user_features=False)
-    algo_no_user_features.fit(simple_df)
-    preds_no_user_features = algo_no_user_features.predict_for_user(10, [i], new_ratings)
+    algo = als.ImplicitMF(5, iterations=10, method="lu")
+    algo.fit(ratings)
+    preds = algo.predict_for_user(u, items)
 
-    print(preds)
-    print(preds_no_user_features)
+    user_data = ratings[ratings.user == u]
+    new_ratings = user_data.set_index('item')['rating'].copy()
+
+    algo_no_user_features = als.ImplicitMF(5, iterations=10, method="lu", save_user_features=False)
+    algo_no_user_features.fit(ratings)
+    preds_no_user_features = algo_no_user_features.predict_for_user(u, items, new_ratings)
 
     assert algo_no_user_features.user_features_ == None
-    assert abs(preds.loc[i] - preds_no_user_features.loc[i]) <= 0.1
+    diffs = np.abs(preds.values - preds_no_user_features.values)
+    assert all(diffs <= 0.1)
 
 
 @lktu.wantjit
