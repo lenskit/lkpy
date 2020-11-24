@@ -176,16 +176,16 @@ def test_als_predict_no_user_features_basic(m):
     algo.fit(simple_df)
     preds = algo.predict_for_user(10, [3])
 
-
+    new_ratings = pd.Series([4.0, 5.0], index=[1, 2]) # items as index and ratings as values
     algo_no_user_features = als.BiasedMF(20, iterations=10, method=m, save_user_features=False)
     algo_no_user_features.fit(simple_df)
-    preds_no_user_features = algo.predict_for_user(10, [3])
+    preds_no_user_features = algo_no_user_features.predict_for_user(10, [3], new_ratings)
 
     print(preds)
     print(preds_no_user_features)
 
     assert algo_no_user_features.user_features_ == None
-    assert preds.values == preds_no_user_features.values
+    assert preds.values == approx(preds_no_user_features.values, rel=9e-2)
 
 @lktu.wantjit
 @mark.slow

@@ -196,20 +196,21 @@ def test_als_predict_bad_user():
 
 @methods
 def test_als_predict_no_user_features_basic(m):
+    i = 3
     algo = als.ImplicitMF(20, iterations=10, method=m)
     algo.fit(simple_df)
-    preds = algo.predict_for_user(10, [3])
+    preds = algo.predict_for_user(10, [i])
 
-
-    algo_no_user_features = als.BiasedMF(20, iterations=10, method=m, save_user_features=False)
+    new_ratings = pd.Series([4.0, 5.0], index=[1, 2]) # items as index and ratings as values
+    algo_no_user_features = als.ImplicitMF(20, iterations=10, method=m, save_user_features=False)
     algo_no_user_features.fit(simple_df)
-    preds_no_user_features = algo.predict_for_user(10, [3])
+    preds_no_user_features = algo_no_user_features.predict_for_user(10, [i], new_ratings)
 
     print(preds)
     print(preds_no_user_features)
 
     assert algo_no_user_features.user_features_ == None
-    assert preds.values == preds_no_user_features.values
+    assert abs(preds.loc[i] - preds_no_user_features.loc[i]) <= 0.1
 
 
 @lktu.wantjit
