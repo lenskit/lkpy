@@ -11,6 +11,13 @@ package:
 source:
   path: ../
 
+build:
+  number: 0
+  script: |
+    # build helper library for Conda / MKL
+    {{ PYTHON }} setup.py build_helper #[not osx]
+    {{ PYTHON }} -m pip install --no-deps .
+
 requirements:
   build:
     - {{ compiler('c') }}
@@ -19,24 +26,17 @@ requirements:
     - setuptools
     - pytest-runner
     - pip
-    - numba >=0.45,<0.52
-    - pandas >=0.24
-    - numpy >=1.16
-    - scipy >=1.2
-    - pyarrow >=0.15
-    - cffi >=1.12.2
-    - binpickle >=0.1
-    - mkl-service
-    - mkl-devel
+    - mkl-devel #[not osx]
   run:
-    - python
+    - python {{ python }}
     - pandas >=0.24
     - scipy >=1.2
+    - numpy >=1.17
     - numba >=0.45,<0.52
     - pyarrow >=0.15
     - cffi >=1.12.2
     - binpickle >=0.1
-    - mkl-service
+    - mkl-service #[not osx]
   run_constrained:
     - scikit-learn >=0.22
     - tensorflow >=2.1
@@ -52,9 +52,7 @@ test:
     - data/ml-latest-small/*.csv
   requires:
     - pytest
-    - pytest-arraydiff
     - hypothesis
-    - statsmodels
     - scikit-learn
   commands:
     - pytest tests -m "not slow" --verbose

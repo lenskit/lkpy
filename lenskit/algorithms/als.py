@@ -5,7 +5,7 @@ import numpy as np
 from numba import njit, prange
 
 from .bias import Bias
-from .mf_common import BiasMFPredictor, MFPredictor
+from .mf_common import MFPredictor
 from ..matrix import sparse_ratings
 from .. import util
 from ..math.solve import _dposv
@@ -196,19 +196,26 @@ def _cg_solve(OtOr, X, y, w, epochs):
         p = z + bet * p
 
 
+@njit(nogil=True)
+def _implicit_otor(other, reg):
+    nf = other.shape[1]
+    regmat = np.identity(nf)
+    regmat *= reg
+    Ot = other.T
+    OtO = Ot @ other
+    OtO += regmat
+    return OtO
+
+
 @njit(parallel=True, nogil=True)
 def _train_implicit_cg(mat, this: np.ndarray, other: np.ndarray, reg: float):
     "One half of an implicit ALS training round with conjugate gradient."
     nr = mat.nrows
     nc = other.shape[0]
-    nf = other.shape[1]
 
     assert mat.ncols == nc
 
-    regmat = np.identity(nf) * reg
-    Ot = other.T
-    OtO = Ot @ other
-    OtOr = OtO + regmat
+    OtOr = _implicit_otor(other, reg)
 
     frob = 0.0
 
@@ -241,14 +248,8 @@ def _train_implicit_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
     "One half of an implicit ALS training round."
     nr = mat.nrows
     nc = other.shape[0]
-    nf = other.shape[1]
     assert mat.ncols == nc
-    regmat = np.identity(nf) * reg
-    Ot = other.T
-    OtO = Ot @ other
-    OtOr = OtO + regmat
-    assert OtO.shape[0] == OtO.shape[1]
-    assert OtO.shape[0] == nf
+    OtOr = _implicit_otor(other, reg)
     frob = 0.0
 
     for i in prange(nr):
@@ -269,7 +270,7 @@ def _train_implicit_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
         A = OtOr + MMT
         # Compute RHS - only used columns (p_ui != 0) values needed
         # Cu is rates + 1 for the cols, so just trim Ot
-        y = Ot[:, cols] @ (rates + 1.0)
+        y = other.T[:, cols] @ (rates + 1.0)
         # and solve
         _dposv(A, y, True)
         # assert len(uv) == ctx.n_features
@@ -278,6 +279,33 @@ def _train_implicit_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
         this[i, :] = y
 
     return np.sqrt(frob)
+
+
+@njit(nogil=True)
+def _train_implicit_row_lu(items, ratings, other, otOr):
+    """
+    Args:
+        items(np.ndarray[i64]): the item IDs the user has rated
+        ratings(np.ndarray): the user's (normalized) ratings for those items
+        other(np.ndarray): the item-feature matrix
+        reg(float): the regularization term
+    Returns:
+        np.ndarray: the user-feature vector (equivalent to V in the current LU code)
+    """
+    # we can optimize by only considering the nonzero entries of Cu-I
+    # this means we only need the corresponding matrix columns
+    M = other[items, :]
+    # Compute M^T (C_u-I) M, restricted to these nonzero entries
+    MMT = (M.T.copy() * ratings) @ M
+    # Build the matrix for solving
+    A = otOr + MMT
+    # Compute RHS - only used columns (p_ui != 0) values needed
+    # Cu is rates + 1 for the cols, so just trim Ot
+    y = other.T[:, items] @ (ratings + 1.0)
+    # and solve
+    _dposv(A, y, True)
+
+    return y
 
 
 class BiasedMF(MFPredictor):
@@ -294,7 +322,7 @@ class BiasedMF(MFPredictor):
         A direct implementation of the original ALS concept [ZWSP2008]_ using LU-decomposition
         to solve for the optimized matrices.
 
-    See the base class :class:`.BiasMFPredictor` for documentation on
+    See the base class :class:`.MFPredictor` for documentation on
     the estimated parameters you can extract from a trained model.
 
     .. [ZWSP2008] Yunhong Zhou, Dennis Wilkinson, Robert Schreiber, and Rong Pan. 2008.
@@ -467,8 +495,8 @@ class BiasedMF(MFPredictor):
 
     def predict_for_user(self, user, items, ratings=None):
         scores = None
+        u_offset = None
         if ratings is not None and len(ratings) > 0:
-            u_offset = None
             if self.bias:
                 ratings, u_offset = self.bias.transform_user(ratings)
 
@@ -476,7 +504,14 @@ class BiasedMF(MFPredictor):
             ri_good = ri_idxes >= 0
             ri_it = ri_idxes[ri_good]
             ri_val = ratings.values[ri_good]
-            u_feat = _train_bias_row_lu(ri_it, ri_val, self.item_features_, self.regularization)
+
+            # unpack regularization
+            if isinstance(self.regularization, tuple):
+                ureg, ireg = self.regularization
+            else:
+                ureg = ireg = self.regularization
+
+            u_feat = _train_bias_row_lu(ri_it, ri_val, self.item_features_, ureg)
             scores = self.score_by_ids(user, items, u_feat)
         else:
             # look up user index
@@ -549,6 +584,15 @@ class ImplicitMF(MFPredictor):
                      np.linalg.norm(self.user_features_, 'fro'),
                      np.linalg.norm(self.item_features_, 'fro'))
 
+        # unpack the regularization
+        if isinstance(self.reg, tuple):
+            ureg, ireg = self.reg
+        else:
+            ureg = ireg = self.reg
+
+        # compute OtOr and save it on the model
+        self.OtOr_ = _implicit_otor(self.item_features_, ureg)
+
         return self
 
     def fit_iters(self, ratings, **kwargs):
@@ -612,8 +656,17 @@ class ImplicitMF(MFPredictor):
         return PartialModel(users, items, umat, imat), rmat, trmat
 
     def predict_for_user(self, user, items, ratings=None):
-        # look up user index
-        return self.score_by_ids(user, items)
+        if ratings is not None and len(ratings) > 0:
+            ri_idxes = self.item_index_.get_indexer_for(ratings.index)
+            ri_good = ri_idxes >= 0
+            ri_it = ri_idxes[ri_good]
+            ri_val = ratings.values[ri_good]
+            ri_val *= self.weight
+            u_feat = _train_implicit_row_lu(ri_it, ri_val, self.item_features_, self.OtOr_)
+            return self.score_by_ids(user, items, u_feat)
+        else:
+            # look up user index
+            return self.score_by_ids(user, items)
 
     def __str__(self):
         return 'als.ImplicitMF(features={}, reg={}, w={})'.\
