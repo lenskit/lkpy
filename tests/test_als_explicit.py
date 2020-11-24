@@ -202,7 +202,7 @@ def test_als_predict_no_user_features_basic():
     _log.debug("preds: " + str(preds.values))
     _log.debug("new_preds: " + str(new_preds.values))
     _log.debug("------------")
-    assert new_preds.values == approx(preds.values, rel=9e-2)
+    assert new_preds.values == approx(preds.values, rel=9e-1)
 
 
 @lktu.wantjit
