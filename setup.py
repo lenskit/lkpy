@@ -64,17 +64,19 @@ class DepInfo(Command):
         ('ignore-extras=', 'I', 'ignore an extra from all-extras'),
         ('conda-env=', 'c', 'write Conda environment file'),
         ('conda-requires=', None, 'extra Conda requirements (raw yaml)'),
-        ('conda-forge', None, 'use conda-forge channel'),
+        ('conda-main', None, 'use main Anaconda channel instead of conda-forge'),
+        ('blas=', None, 'specify BLAS implementation for Conda environment'),
         ('python-version=', None, 'use specified Python version')
     ]
-    boolean_options = ['all-extras', 'conda-forge']
+    boolean_options = ['all-extras', 'conda-main']
     MAIN_PACKAGE_MAP = {
         'nbsphinx': '$pip',
         'nbval': '$pip',
         'implicit': '$pip'
     }
     FORGE_PACKAGE_MAP = {}
-    CONDA_MAIN_DEPS = ['mkl-devel', 'tbb']
+    CONDA_EXTRA_DEPS = ['tbb']
+    # CONDA_MAIN_DEPS = ['mkl-devel', 'tbb']
 
     def initialize_options(self):
         """Set default values for options."""
@@ -84,8 +86,9 @@ class DepInfo(Command):
         self.ignore_extras = None
         self.conda_env = None
         self.conda_requires = None
-        self.conda_forge = None
+        self.conda_main = False
         self.python_version = None
+        self.blas = None
 
     def finalize_options(self):
         """Post-process options."""
@@ -102,7 +105,7 @@ class DepInfo(Command):
                            if e not in self.ignore_extras]
         if self.conda_requires is None:
             self.conda_requires = ''
-        self.PACKAGE_MAP = self.FORGE_PACKAGE_MAP if self.conda_forge else self.MAIN_PACKAGE_MAP
+        self.PACKAGE_MAP = self.MAIN_PACKAGE_MAP if self.conda_main else self.FORGE_PACKAGE_MAP
 
     def run(self):
         if self.conda_env:
@@ -124,17 +127,19 @@ class DepInfo(Command):
         dep_spec = {
             'name': 'lkpy-dev',
         }
-        if self.conda_forge:
-            conda_deps = []
-            dep_spec['channels'] = ['conda-forge']
-        else:
-            conda_deps = self.CONDA_MAIN_DEPS
+        if self.conda_main:
             dep_spec['channels'] = ['lenskit', 'default']
+        else:
+            dep_spec['channels'] = ['conda-forge']
 
         dep_spec['dependencies'] = [
             f'python {pyver}',
             'pip'
-        ] + conda_deps
+        ] + self.CONDA_EXTRA_DEPS
+        if self.blas:
+            dep_spec['dependencies'].append('libblas=*=*' + self.blas)
+            if self.blas == 'mkl':
+                dep_spec['dependencies'].append('mkl-devel')
         for req_str, src in self._get_reqs():
             req = Requirement(req_str)
             mapped = self.PACKAGE_MAP.get(req.name, req.name)
