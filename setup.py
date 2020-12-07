@@ -74,7 +74,9 @@ class DepInfo(Command):
         'nbval': '$pip',
         'implicit': '$pip'
     }
-    FORGE_PACKAGE_MAP = {}
+    FORGE_PACKAGE_MAP = {
+        'hpfrec': '$pip'
+    }
     CONDA_EXTRA_DEPS = ['tbb']
     # CONDA_MAIN_DEPS = ['mkl-devel', 'tbb']
 
