@@ -40,7 +40,7 @@ jobs:
             echo "Using basic dev deps"
             e_opts="-E dev"
           fi
-          python setup.py dep_info --conda-env environment.yml $e_opts --python-version $PYVER
+          python setup.py dep_info --conda-env environment.yml $e_opts --python-version $PYVER --blas mkl
           cat environment.yml
         env:
           RUNNER: ${{runner.os}}
