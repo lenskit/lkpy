@@ -26,7 +26,12 @@ __dposv = __ffi.cast("void (*) (char*, int*, int*, double*, int*, double*, int*,
                      get_cython_function_address("scipy.linalg.cython_lapack", "dposv"))
 
 
-@n.njit(n.intc(n.float64[:, ::1], n.float64[::1], n.boolean), nogil=True)
+@n.njit
+def _ref_sink(*args):
+    return args
+
+
+@n.njit(n.intc(n.float64[:, ::1], n.float64[::1], n.boolean))
 def _dposv(A, b, lower):
     if A.shape[0] != A.shape[1]:
         return -11
@@ -46,6 +51,8 @@ def _dposv(A, b, lower):
             __ffi.from_buffer(A), n_p,
             __ffi.from_buffer(b), n_p,
             info_p)
+
+    _ref_sink(n_p, nrhs_p, info, info_p)
 
     return info[0]
 
