@@ -8,6 +8,11 @@ from distutils.command.build import build
 from textwrap import dedent
 from setuptools._vendor.packaging.requirements import Requirement
 import json
+try:
+    from yaml import dump
+except ImportError:
+    def dump(obj, f):
+        json.dump(obj, f, indent=2)
 
 
 class BuildHelperCommand(Command):
@@ -155,10 +160,10 @@ class DepInfo(Command):
             })
 
         if file == '-':
-            json.dump(dep_spec, sys.stdout, indent=2)
+            dump(dep_spec, sys.stdout)
         else:
             with open(file, 'w') as f:
-                json.dump(dep_spec, f, indent=2)
+                dump(dep_spec, f)
 
     def _spec_str(self, req, name=None, src=None):
         spec = name if name is not None else req.name
