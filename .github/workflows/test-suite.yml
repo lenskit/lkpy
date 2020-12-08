@@ -101,7 +101,7 @@ jobs:
         run: |
           source $CONDA/etc/profile.d/conda.sh
           conda activate base
-          conda config --set channel_priority strict
+          # conda config --set channel_priority strict
           python setup.py dep_info --conda-env environment.yml -E dev,tf --python-version 3.8
           cat environment.yml
           
