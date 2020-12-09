@@ -544,14 +544,11 @@ class ImplicitMF(MFPredictor):
     data contains ``rating`` values, these will be used as the 'confidence' values; otherwise,
     confidence will be 1 for every rated item.
 
-    ``'cg'`` (the default)
-        Conjugate gradient method [TPT2011]_.
-    ``'lu'``
-        A direct implementation of the original implicit-feedback ALS concept [HKV2008]_ using
-        LU-decomposition to solve for the optimized matrices.
-
     See the base class :class:`.MFPredictor` for documentation on the estimated parameters
     you can extract from a trained model.
+
+    With weight :math:`w`, this function decomposes the matrix :matrix:`\\mathbb{1}^* + Rw`, where
+    $\\mathbb{1}^*$ is an $m \\times n$ matrix of all 1s.
 
     .. [HKV2008] Y. Hu, Y. Koren, and C. Volinsky. 2008.
        Collaborative Filtering for Implicit Feedback Datasets.
@@ -566,6 +563,15 @@ class ImplicitMF(MFPredictor):
         iterations(int): the number of iterations to train
         reg(double): the regularization factor
         weight(double): the scaling weight for positive samples (:math:`\\alpha` in [HKV2008]_).
+        method(string):
+            the training method.
+
+            ``'cg'`` (the default)
+                Conjugate gradient method [TPT2011]_.
+            ``'lu'``
+                A direct implementation of the original implicit-feedback ALS concept [HKV2008]_ using
+                LU-decomposition to solve for the optimized matrices.
+
         rng_spec:
             Random number generator or state (see :func:`lenskit.util.random.rng`).
         progress: a :func:`tqdm.tqdm`-compatible progress bar function
