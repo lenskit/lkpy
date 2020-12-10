@@ -64,8 +64,13 @@ jobs:
       - name: Build LKPY
         run: |
           mkdir -p build
-          # python setup.py build_helper || exit 2
+          if [ "$BLAS_IMPL" = mkl ]; then
+            python setup.py build_helper
+          fi
           python setup.py build
+        shell: bash
+        env:
+          BLAS_IMPL: ${{matrix.blas}}
       
       - name: Test LKPY
         run: |
