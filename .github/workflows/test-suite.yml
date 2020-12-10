@@ -6,7 +6,7 @@ on:
   pull_request:
 jobs:
   conda:
-    name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
+    name: Conda Python ${{matrix.python}} on ${{matrix.platform}} with ${{matrix.blas}}
     runs-on: ${{matrix.platform}}-latest
     timeout-minutes: 30
     strategy:
@@ -21,6 +21,9 @@ jobs:
         - macos
         - windows
         - ubuntu
+        blas:
+        - mkl
+        - openblas
         exclude:  # Deadlocks on this combination
         - platform: macos
           python: 3.6
@@ -41,11 +44,12 @@ jobs:
             echo "Using basic dev deps"
             e_opts="-E dev"
           fi
-          python setup.py dep_info --conda-env environment.yml $e_opts --python-version $PYVER --blas mkl
+          python setup.py dep_info --conda-env environment.yml $e_opts --python-version $PYVER --blas $BLAS_IMPL
           cat environment.yml
         env:
           RUNNER: ${{runner.os}}
           PYVER: ${{matrix.python}}
+          BLAS_IMPL: ${{matrix.blas}}
           
       - uses: ./.github/actions/conda-env
         with:
@@ -60,7 +64,7 @@ jobs:
       - name: Build LKPY
         run: |
           mkdir -p build
-          python setup.py build_helper || exit 2
+          # python setup.py build_helper || exit 2
           python setup.py build
       
       - name: Test LKPY
