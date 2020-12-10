@@ -74,6 +74,7 @@ jobs:
           MKL_THREADING_LAYER: tbb
           NUMBA_NUM_THREADS: 4
           MKL_NUM_THREADS: 1
+          OPENBLAS_NUM_THREADS: 1
       
       - name: Non-JIT Test Coverage
         if: runner.os == 'Linux'
