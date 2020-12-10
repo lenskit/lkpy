@@ -37,6 +37,7 @@ jobs:
   conda:
     name: Build Packages on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -96,7 +97,9 @@ jobs:
   upload:
     name: Publish packages
     runs-on: ubuntu-latest
-    needs: [sdist, conda]
+    needs: 
+      - sdist
+      # - conda
 
     steps:
       - name: Check out source
