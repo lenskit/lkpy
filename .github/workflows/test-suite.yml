@@ -343,6 +343,6 @@ jobs:
 
       - name: Upload all test data
         uses: actions/upload-artifact@v1
-        name: test-outputs
         with:
+          name: test-outputs
           path: test-logs
