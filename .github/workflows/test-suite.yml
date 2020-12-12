@@ -326,3 +326,22 @@ jobs:
       
       - name: List log files
         run: ls -lR test-logs
+
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+          architecture: x64
+
+      - name: Install script deps
+        run: |
+          python -m pip install pandas docopt
+
+      - name: Integrate power data
+        run: |
+          python utils/all-power.py
+
+      - name: Upload all test data
+        uses: actions/upload-artifact@v1
+        with:
+          path: test-logs
