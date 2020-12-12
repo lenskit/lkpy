@@ -37,5 +37,7 @@ build-env/
 pythonenv*/
 .vagrant/
 scratch/
+emissions.csv
+intel_power_gadget_log.csv
 
 .DS_Store
