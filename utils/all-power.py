@@ -16,6 +16,8 @@ from docopt import docopt
 
 def main(opts):
     dir = opts['<dir>']
+    if not dir:
+        dir = 'test-logs'
     dir = Path(dir)
     print('scanning directory', dir)
 
