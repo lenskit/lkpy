@@ -9,7 +9,7 @@ Options:
         The directory containing test results [default: test-logs]
 """
 
-from pathlib import Glob
+from pathlib import Path
 import pandas as pd
 from docopt import docopt
 
