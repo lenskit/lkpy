@@ -59,7 +59,7 @@ jobs:
       - name: Set up CodeCarbon
         if: runner.os == 'Linux'
         run: |
-          conda install -c conda-forge -q plotly dash
+          conda install -c conda-forge -q plotly dash requests
           python -m pip install codecarbon
 
       - name: Inspect environment
