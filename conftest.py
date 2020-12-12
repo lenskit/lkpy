@@ -27,7 +27,9 @@ def init_rng(request):
 
 @fixture(autouse=True)
 def log_test(request):
-    _log.info('running test %s:%s', request.module.__name__, request.function.__name__)
+    modname = request.module.__name__ if request.module else '<unknown>'
+    funcname = request.function.__name__ if request.function else '<unknown>'
+    _log.info('running test %s:%s', modname, funcname)
 
 
 @fixture(autouse=True, scope='session')
