@@ -27,7 +27,26 @@ def init_rng(request):
 
 @fixture(autouse=True)
 def log_test(request):
-    _log.info('running test %s:%s', request.module.__name__, request.function.__name__)
+    modname = request.module.__name__ if request.module else '<unknown>'
+    funcname = request.function.__name__ if request.function else '<unknown>'
+    _log.info('running test %s:%s', modname, funcname)
+
+
+@fixture(autouse=True, scope='session')
+def carbon(request):
+    try:
+        from codecarbon import EmissionsTracker
+    except ImportError:
+        yield True  # we do nothing
+        return
+
+    tracker = EmissionsTracker("lkpy-tests", 5)
+    tracker.start()
+    try:
+        yield True
+    finally:
+        emissions = tracker.stop()
+        _log.info('test suite used %.3f kgCO2eq', emissions)
 
 
 def pytest_collection_modifyitems(items):
