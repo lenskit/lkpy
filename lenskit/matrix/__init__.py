@@ -11,7 +11,7 @@ import scipy.sparse as sps
 
 _logger = logging.getLogger(__name__)
 
-RatingMatrix = namedtuple('RatingMatrix', ['matrix', 'users', 'items'])
+RatingMatrix = namedtuple("RatingMatrix", ["matrix", "users", "items"])
 RatingMatrix.__doc__ = """
 A rating matrix with associated indices.
 
@@ -29,6 +29,7 @@ def _impl_mod():
     global __impl_mod
     if __impl_mod is None:
         from . import native
+
         __impl_mod = native
     return __impl_mod
 
@@ -39,13 +40,14 @@ def mkl_ops():
     """
     try:
         from . import _mkl_ops
+
         if _mkl_ops.clib:
             return _mkl_ops
         else:
-            _logger.debug('MKL imported but not available')
+            _logger.debug("MKL imported but not available")
             return None
     except ImportError as e:
-        _logger.debug('MKL not importable: %s', e)
+        _logger.debug("MKL not importable: %s", e)
         return None
 
 
@@ -58,6 +60,7 @@ class _CSR:
     Note that the ``values`` array is always present (unlike the Python shim), but is
     zero-length if no values are present.  This eases Numba type-checking.
     """
+
     def __init__(self, nrows, ncols, nnz, ptrs, inds, vals):
         self.nrows = nrows
         self.ncols = ncols
@@ -84,7 +87,7 @@ class _CSR:
 
     def row_extent(self, row):
         sp = self.rowptrs[row]
-        ep = self.rowptrs[row+1]
+        ep = self.rowptrs[row + 1]
         return (sp, ep)
 
     def row_cs(self, row):
@@ -146,9 +149,12 @@ class CSR:
         colinds(numpy.ndarray): the column indices.
         values(numpy.ndarray): the values
     """
-    __slots__ = ['_N']
 
-    def __init__(self, nrows=None, ncols=None, nnz=None, ptrs=None, inds=None, vals=None, N=None):
+    __slots__ = ["_N"]
+
+    def __init__(
+        self, nrows=None, ncols=None, nnz=None, ptrs=None, inds=None, vals=None, N=None
+    ):
         if N is not None:
             self._N = N
         else:
@@ -221,16 +227,16 @@ class CSR:
         """
         if not sps.isspmatrix_csr(mat):
             mat = mat.tocsr(copy=copy)
-        rp = np.require(mat.indptr, np.intc, 'C')
+        rp = np.require(mat.indptr, np.intc, "C")
         if copy and rp is mat.indptr:
             rp = rp.copy()
-        cs = np.require(mat.indices, np.intc, 'C')
+        cs = np.require(mat.indices, np.intc, "C")
         if copy and cs is mat.indices:
             cs = cs.copy()
         vs = mat.data.copy() if copy else mat.data
         return cls(mat.shape[0], mat.shape[1], mat.nnz, rp, cs, vs)
 
-    def to_scipy(self):
+    def to_scipy(self, format="csr"):
         """
         Convert a CSR matrix to a SciPy :py:class:`scipy.sparse.csr_matrix`.  Avoids copying
         if possible.
@@ -245,7 +251,14 @@ class CSR:
         values = self.values
         if values is None:
             values = np.full(self.nnz, 1.0)
-        return sps.csr_matrix((values, self.colinds, self.rowptrs), shape=(self.nrows, self.ncols))
+        if format == "coo":
+            return sps.coo_matrix(
+                (values, self.colinds, self.rowptrs), shape=(self.nrows, self.ncols)
+            )
+        else:
+            return sps.csr_matrix(
+                (values, self.colinds, self.rowptrs), shape=(self.nrows, self.ncols)
+            )
 
     @property
     def N(self):
@@ -258,18 +271,22 @@ class CSR:
             # This is not yet upgraded
             impl = _impl_mod()
             if n.rowptrs.dtype == np.int64:
-                self._N = impl._CSR64(n.nrows, n.ncols, n.nnz, n.rowptrs, n.colinds, n.values)
+                self._N = impl._CSR64(
+                    n.nrows, n.ncols, n.nnz, n.rowptrs, n.colinds, n.values
+                )
             else:
-                self._N = impl._CSR(n.nrows, n.ncols, n.nnz, n.rowptrs, n.colinds, n.values)
+                self._N = impl._CSR(
+                    n.nrows, n.ncols, n.nnz, n.rowptrs, n.colinds, n.values
+                )
             # make sure types behave how we expect
             assert impl.n.config.DISABLE_JIT or not isinstance(self._N, _CSR)
         return self._N
 
-    nrows = _csr_delegate('nrows')
-    ncols = _csr_delegate('ncols')
-    nnz = _csr_delegate('nnz')
-    rowptrs = _csr_delegate('rowptrs')
-    colinds = _csr_delegate('colinds')
+    nrows = _csr_delegate("nrows")
+    ncols = _csr_delegate("ncols")
+    nnz = _csr_delegate("nnz")
+    rowptrs = _csr_delegate("rowptrs")
+    colinds = _csr_delegate("colinds")
 
     @property
     def values(self):
@@ -282,15 +299,17 @@ class CSR:
     def values(self, vs: np.ndarray):
         if vs is not None:
             if not isinstance(vs, np.ndarray):
-                raise TypeError('values not an ndarray')
+                raise TypeError("values not an ndarray")
             if vs.ndim != 1:
-                raise ValueError('values has {} dimensions, expected 1'.format(vs.ndims))
+                raise ValueError(
+                    "values has {} dimensions, expected 1".format(vs.ndims)
+                )
             if vs.shape[0] < self.nnz:
-                s = 'values has only {} entries (expected at least {})'
+                s = "values has only {} entries (expected at least {})"
                 raise ValueError(s.format(vs.shape[0], self.nnz))
 
-            vs = vs[:self.nnz]
-            vs = np.require(vs, 'f8')
+            vs = vs[: self.nnz]
+            vs = np.require(vs, "f8")
             self._N.values = vs
         else:
             self._N.values = np.zeros(0)
@@ -379,12 +398,12 @@ class CSR:
                 The normalization values for each row.
         """
         impl = _impl_mod()
-        if normalization == 'center':
+        if normalization == "center":
             return impl._center_rows(self.N)
-        elif normalization == 'unit':
+        elif normalization == "unit":
             return impl._unit_rows(self.N)
         else:
-            raise ValueError('unknown normalization: ' + normalization)
+            raise ValueError("unknown normalization: " + normalization)
 
     def transpose(self, values=True):
         """
@@ -423,12 +442,14 @@ class CSR:
             CSR: The filtered sparse matrix.
         """
         if len(filt) != self.nnz:
-            raise ValueError('filter has length %d, expected %d' % (len(filt), self.nnz))
+            raise ValueError(
+                "filter has length %d, expected %d" % (len(filt), self.nnz)
+            )
         rps2 = np.zeros_like(self.rowptrs)
         for i in range(self.nrows):
             sp, ep = self.row_extent(i)
             rlen = np.sum(filt[sp:ep])
-            rps2[i+1] = rps2[i] + rlen
+            rps2[i + 1] = rps2[i] + rlen
 
         nnz2 = rps2[-1]
         assert nnz2 == np.sum(filt)
@@ -440,27 +461,32 @@ class CSR:
         return CSR(self.nrows, self.ncols, nnz2, rps2, cis2, vs2)
 
     def __str__(self):
-        return '<CSR {}x{} ({} nnz)>'.format(self.nrows, self.ncols, self.nnz)
+        return "<CSR {}x{} ({} nnz)>".format(self.nrows, self.ncols, self.nnz)
 
     def __repr__(self):
-        repr = '<CSR {}x{} ({} nnz)'.format(self.nrows, self.ncols, self.nnz)
-        repr += ' {\n'
-        repr += '  rowptrs={}\n'.format(self.rowptrs)
-        repr += '  colinds={}\n'.format(self.colinds)
-        repr += '  values={}\n'.format(self.values)
-        repr += '}'
+        repr = "<CSR {}x{} ({} nnz)".format(self.nrows, self.ncols, self.nnz)
+        repr += " {\n"
+        repr += "  rowptrs={}\n".format(self.rowptrs)
+        repr += "  colinds={}\n".format(self.colinds)
+        repr += "  values={}\n".format(self.values)
+        repr += "}"
         return repr
 
     def __getstate__(self):
-        return dict(shape=(self.nrows, self.ncols), nnz=self.nnz,
-                    rowptrs=self.rowptrs, colinds=self.colinds, values=self.values)
+        return dict(
+            shape=(self.nrows, self.ncols),
+            nnz=self.nnz,
+            rowptrs=self.rowptrs,
+            colinds=self.colinds,
+            values=self.values,
+        )
 
     def __setstate__(self, state):
-        nrows, ncols = state['shape']
-        nnz = state['nnz']
-        rps = state['rowptrs']
-        cis = state['colinds']
-        vs = state['values']
+        nrows, ncols = state["shape"]
+        nnz = state["nnz"]
+        rps = state["rowptrs"]
+        cis = state["colinds"]
+        vs = state["values"]
         self._N = _CSR(nrows, ncols, nnz, rps, cis, vs)
 
 
@@ -479,22 +505,26 @@ def sparse_ratings(ratings, scipy=False, *, users=None, items=None):
             a named tuple containing the sparse matrix, user index, and item index.
     """
     if users is None:
-        users = pd.Index(np.unique(ratings.user), name='user')
+        users = pd.Index(np.unique(ratings.user), name="user")
 
     if items is None:
-        items = pd.Index(np.unique(ratings.item), name='item')
+        items = pd.Index(np.unique(ratings.item), name="item")
 
-    _logger.debug('creating matrix with %d ratings for %d items by %d users',
-                  len(ratings), len(items), len(users))
+    _logger.debug(
+        "creating matrix with %d ratings for %d items by %d users",
+        len(ratings),
+        len(items),
+        len(users),
+    )
 
     row_ind = users.get_indexer(ratings.user).astype(np.intc)
     if np.any(row_ind < 0):
-        raise ValueError('provided user index does not cover all users')
+        raise ValueError("provided user index does not cover all users")
     col_ind = items.get_indexer(ratings.item).astype(np.intc)
     if np.any(col_ind < 0):
-        raise ValueError('provided item index does not cover all users')
+        raise ValueError("provided item index does not cover all users")
 
-    if 'rating' in ratings.columns:
+    if "rating" in ratings.columns:
         vals = np.require(ratings.rating.values, np.float64)
     else:
         vals = None
@@ -502,6 +532,7 @@ def sparse_ratings(ratings, scipy=False, *, users=None, items=None):
     matrix = CSR.from_coo(row_ind, col_ind, vals, (len(users), len(items)))
 
     if scipy:
-        matrix = matrix.to_scipy()
+        format = "csr" if scipy is True else scipy
+        matrix = matrix.to_scipy(format=format)
 
     return RatingMatrix(matrix, users, items)
