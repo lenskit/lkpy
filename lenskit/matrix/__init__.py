@@ -470,8 +470,8 @@ def sparse_ratings(ratings, scipy=False, *, users=None, items=None):
 
     Args:
         ratings(pandas.DataFrame): a data table of (user, item, rating) triples.
-        scipy: if ``True`` or ``"csr"``, return a SciPy csr matrix instead of
-        :py:class:`CSR`. if ``"coo"``, return a SciPy coo matrix.
+        scipy: if ``True`` or ``'csr'``, return a SciPy csr matrix instead of
+        :py:class:`CSR`. if ``'coo'``, return a SciPy coo matrix.
         users(pandas.Index): an index of user IDs.
         items(pandas.Index): an index of items IDs.
 
@@ -500,7 +500,7 @@ def sparse_ratings(ratings, scipy=False, *, users=None, items=None):
     else:
         vals = None
 
-    if scipy == "coo":
+    if scipy == 'coo':
         matrix = sps.coo_matrix(
             (vals, (row_ind, col_ind)), shape=(len(users), len(items))
         )
