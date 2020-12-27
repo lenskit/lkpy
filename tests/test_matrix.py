@@ -20,17 +20,17 @@ def test_sparse_matrix(rng):
     assert mat.ncols == ratings.item.nunique()
 
     # user indicators should correspond to user item counts
-    ucounts = ratings.groupby('user').item.count()
+    ucounts = ratings.groupby("user").item.count()
     ucounts = ucounts.loc[uidx].cumsum()
     assert all(mat.rowptrs[1:] == ucounts.values)
 
     # verify rating values
-    ratings = ratings.set_index(['user', 'item'])
+    ratings = ratings.set_index(["user", "item"])
     for u in rng.choice(uidx, size=50):
         ui = uidx.get_loc(u)
         vs = mat.row_vs(ui)
         vs = pd.Series(vs, iidx[mat.row_cs(ui)])
-        rates = ratings.loc[u]['rating']
+        rates = ratings.loc[u]["rating"]
         vs, rates = vs.align(rates)
         assert not any(vs.isna())
         assert not any(rates.isna())
@@ -39,7 +39,7 @@ def test_sparse_matrix(rng):
 
 def test_sparse_matrix_implicit():
     ratings = ml_test.ratings
-    ratings = ratings.loc[:, ['user', 'item']]
+    ratings = ratings.loc[:, ["user", "item"]]
     mat, uidx, iidx = lm.sparse_ratings(ratings)
 
     assert mat.nrows == len(uidx)
@@ -49,7 +49,14 @@ def test_sparse_matrix_implicit():
     assert mat.values is None
 
 
-@mark.parametrize("format,sps_fmt_checker",[(True,sps.isspmatrix_csr), ("csr",sps.isspmatrix_csr),("coo",sps.isspmatrix_coo)])
+@mark.parametrize(
+    "format,sps_fmt_checker",
+    [
+        (True, sps.isspmatrix_csr),
+        ("csr", sps.isspmatrix_csr),
+        ("coo", sps.isspmatrix_coo),
+    ],
+)
 def test_sparse_matrix_scipy(format, sps_fmt_checker):
     ratings = ml_test.ratings
     mat, uidx, iidx = lm.sparse_ratings(ratings, scipy=format)
@@ -60,7 +67,7 @@ def test_sparse_matrix_scipy(format, sps_fmt_checker):
     assert len(iidx) == ratings.item.nunique()
 
     # user indicators should correspond to user item counts
-    ucounts = ratings.groupby('user').item.count()
+    ucounts = ratings.groupby("user").item.count()
     ucounts = ucounts.loc[uidx].cumsum()
     if sps.isspmatrix_coo(mat):
         mat = mat.tocsr()
@@ -69,7 +76,7 @@ def test_sparse_matrix_scipy(format, sps_fmt_checker):
 
 def test_sparse_matrix_scipy_implicit():
     ratings = ml_test.ratings
-    ratings = ratings.loc[:, ['user', 'item']]
+    ratings = ratings.loc[:, ["user", "item"]]
     mat, uidx, iidx = lm.sparse_ratings(ratings, scipy=True)
 
     assert sps.issparse(mat)
@@ -82,8 +89,8 @@ def test_sparse_matrix_scipy_implicit():
 
 def test_sparse_matrix_indexes(rng):
     ratings = ml_test.ratings
-    uidx = pd.Index(rng.permutation(ratings['user'].unique()))
-    iidx = pd.Index(rng.permutation(ratings['item'].unique()))
+    uidx = pd.Index(rng.permutation(ratings["user"].unique()))
+    iidx = pd.Index(rng.permutation(ratings["item"].unique()))
 
     mat, _uidx, _iidx = lm.sparse_ratings(ratings, users=uidx, items=iidx)
 
@@ -93,12 +100,12 @@ def test_sparse_matrix_indexes(rng):
     assert len(_iidx) == ratings.item.nunique()
 
     # verify rating values
-    ratings = ratings.set_index(['user', 'item'])
+    ratings = ratings.set_index(["user", "item"])
     for u in rng.choice(_uidx, size=50):
         ui = _uidx.get_loc(u)
         vs = mat.row_vs(ui)
         vs = pd.Series(vs, _iidx[mat.row_cs(ui)])
-        rates = ratings.loc[u]['rating']
+        rates = ratings.loc[u]["rating"]
         vs, rates = vs.align(rates)
         assert not any(vs.isna())
         assert not any(rates.isna())
