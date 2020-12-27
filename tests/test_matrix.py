@@ -49,13 +49,13 @@ def test_sparse_matrix_implicit():
     assert mat.values is None
 
 
-@mark.parametrize("format,type_validation_fcn",[(True,sps.isspmatrix_csr), ("csr",sps.isspmatrix_csr),("coo",sps.isspmatrix_coo)])
-def test_sparse_matrix_scipy(format, type_validation_fcn):
+@mark.parametrize("format,sps_fmt_checker",[(True,sps.isspmatrix_csr), ("csr",sps.isspmatrix_csr),("coo",sps.isspmatrix_coo)])
+def test_sparse_matrix_scipy(format, sps_fmt_checker):
     ratings = ml_test.ratings
     mat, uidx, iidx = lm.sparse_ratings(ratings, scipy=format)
 
     assert sps.issparse(mat)
-    assert type_validation_fcn(mat)
+    assert sps_fmt_checker(mat)
     assert len(uidx) == ratings.user.nunique()
     assert len(iidx) == ratings.item.nunique()
 
