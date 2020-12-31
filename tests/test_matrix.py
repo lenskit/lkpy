@@ -7,7 +7,7 @@ import lenskit.matrix as lm
 
 from lenskit.util.test import ml_test
 
-from pytest import approx
+from pytest import approx, mark
 
 
 def test_sparse_matrix(rng):
@@ -49,18 +49,28 @@ def test_sparse_matrix_implicit():
     assert mat.values is None
 
 
-def test_sparse_matrix_scipy():
+@mark.parametrize(
+    'format, sps_fmt_checker',
+    [
+        (True, sps.isspmatrix_csr),
+        ('csr', sps.isspmatrix_csr),
+        ('coo', sps.isspmatrix_coo),
+    ],
+)
+def test_sparse_matrix_scipy(format, sps_fmt_checker):
     ratings = ml_test.ratings
-    mat, uidx, iidx = lm.sparse_ratings(ratings, scipy=True)
+    mat, uidx, iidx = lm.sparse_ratings(ratings, scipy=format)
 
     assert sps.issparse(mat)
-    assert sps.isspmatrix_csr(mat)
+    assert sps_fmt_checker(mat)
     assert len(uidx) == ratings.user.nunique()
     assert len(iidx) == ratings.item.nunique()
 
     # user indicators should correspond to user item counts
     ucounts = ratings.groupby('user').item.count()
     ucounts = ucounts.loc[uidx].cumsum()
+    if sps.isspmatrix_coo(mat):
+        mat = mat.tocsr()
     assert all(mat.indptr[1:] == ucounts.values)
 
 
