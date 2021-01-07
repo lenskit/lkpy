@@ -8,7 +8,7 @@ from lenskit.util.test import set_env_var
 from lenskit.util.random import get_root_seed, _have_gen
 from lenskit.sharing import persist_binpickle
 
-from pytest import mark, raises
+from pytest import mark, raises, approx
 
 _log = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ def test_invoke_matrix(n_jobs):
         mults = inv.map(vectors)
         for rv, v in zip(mults, vectors):
             act_rv = matrix @ v
-            assert np.all(rv == act_rv)
+            assert act_rv == approx(rv, abs=1.0e-6)
 
 
 def test_mp_is_worker():
