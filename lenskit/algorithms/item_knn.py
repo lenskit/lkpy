@@ -208,6 +208,16 @@ class ItemItem(Predictor):
     is not terribly configurable; it hard-codes design decisions found to work well in the previous
     Java-based LensKit code.
 
+    The k-NN predictor supports several aggregate functions:
+
+    ``weighted-average``
+        The weighted average of the user's rating values, using item-item similarities as
+        weights.
+
+    ``sum``
+        The sum of the similarities between the target item and the user's rated items,
+        regardless of the rating the user gave the items.
+
     Args:
         nnbrs(int):
             the maximum number of neighbors for scoring each item (``None`` for unlimited)
@@ -217,8 +227,9 @@ class ItemItem(Predictor):
             the number of neighbors to save per item in the trained model
             (``None`` for unlimited)
         center(bool):
-            whether to normalize (mean-center) rating vectors.  Turn this off when working
-            with unary data and other data types that don't respond well to centering.
+            whether to normalize (mean-center) rating vectors prior to computing similarities
+            and aggregating user rating values.  Turn this off when working with unary data
+            and other data types that don't respond well to centering.
         aggregate:
             the type of aggregation to do. Can be ``weighted-average`` or ``sum``.
 
