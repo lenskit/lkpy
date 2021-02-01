@@ -232,6 +232,7 @@ class ItemItem(Predictor):
     """
     AGG_SUM = intern('sum')
     AGG_WA = intern('weighted-average')
+    RATING_AGGS = [AGG_WA]  # the aggregates that use rating values
 
     def __init__(self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None,
                  center=True, aggregate='weighted-average'):
@@ -472,7 +473,7 @@ class ItemItem(Predictor):
             iscores = agg(self.sim_matrix_.R, len(self.item_index_), (self.min_nbrs, self.nnbrs),
                           rate_v, rated, i_pos)
 
-        if self.center:
+        if self.center and self.aggregate in self.RATING_AGGS:
             iscores += self.item_means_
 
         results = pd.Series(iscores, index=self.item_index_)
