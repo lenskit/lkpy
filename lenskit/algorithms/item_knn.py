@@ -157,6 +157,7 @@ def _sim_blocks(trmat, blocks, ptrs, min_sim, max_nbrs):
     res = [null for i in range(nblocks)]
 
     rmat_h = csrk.to_handle(trmat)
+    csrk.order_columns(rmat_h)
 
     for bi in prange(nblocks):
         b = blocks[bi]
