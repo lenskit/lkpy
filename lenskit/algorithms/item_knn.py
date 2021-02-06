@@ -13,7 +13,7 @@ import scipy.sparse.linalg as spla
 from csr import CSR, _CSR
 import csr.native_ops as csrn
 import csr.kernel as csrk
-from numba import jit, njit, prange
+from numba import njit, prange
 from numba.typed import List
 
 from lenskit import util, DataWarning
@@ -31,57 +31,14 @@ def _make_blocks(n, size):
     return [(s, min(s + size, n)) for s in range(0, n, size)]
 
 
-@njit(nogil=True)
-def _count_nbrs(mat: _CSR, thresh: float):
-    "Count the number of neighbors passing the threshold for each row."
-    counts = np.zeros(mat.nrows, dtype=np.int32)
-    cs = mat.colinds
-    vs = mat.values
-    for i in range(mat.nrows):
-        sp, ep = csrn.row_extent(mat, i)
-        for j in range(sp, ep):
-            c = cs[j]
-            v = vs[j]
-            if c != i and v >= thresh:
-                counts[i] += 1
-
-    return counts
-
-
-@njit
-def _insert(dst, used, limits, i, c, v):
-    "Insert one item into a heap"
-    sp = dst.rowptrs[i]
-    ep = sp + used[i]
-    ep = kvp_minheap_insert(sp, ep, limits[i], c, v, dst.colinds, dst.values)
-    used[i] = ep - sp
-
-
-@njit(nogil=True)
-def _copy_nbrs(src: _CSR, dst: _CSR, limits, thresh: float):
-    "Copy neighbors into the output matrix."
-    used = np.zeros(dst.nrows, dtype=np.int32)
-
-    for i in range(src.nrows):
-        sp, ep = csrn.row_extent(src, i)
-
-        for j in range(sp, ep):
-            c = src.colinds[j]
-            v = src.values[j]
-            if c != i and v >= thresh:
-                _insert(dst, used, limits, i, c, v)
-
-    return used
-
-
-@njit(nogil=True, parallel=not is_mp_worker())
-def _sort_nbrs(smat):
+@njit(parallel=not is_mp_worker())
+def _sort_nbrs(smat: _CSR):
     for i in prange(smat.nrows):
         sp, ep = csrn.row_extent(smat, i)
         kvp_minheap_sort(sp, ep, smat.colinds, smat.values)
 
 
-@njit(nogil=True)
+@njit
 def _trim_sim_block(nitems, bsp, bitems, block, min_sim, max_nbrs):
     # pass 1: compute the size of each row
     sizes = np.zeros(bitems, np.int32)
@@ -121,7 +78,7 @@ def _trim_sim_block(nitems, bsp, bitems, block, min_sim, max_nbrs):
     return block_csr
 
 
-@njit(nogil=True)
+@njit
 def _sim_block(block, bsp, bep, rmh, min_sim, max_nbrs, nitems):
     "Compute a single block of the similarity matrix"
     # assert block.nrows == bep - bsp
