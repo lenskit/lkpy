@@ -306,6 +306,7 @@ class ItemItem(Predictor):
         self._timer = util.Stopwatch()
 
         _logger.debug('[%s] beginning fit, memory use %s', self._timer, util.max_memory())
+        _logger.debug('[%s] using CSR kernel %s', self._timer, csrk.name)
 
         init_rmat, users, items = sparse_ratings(ratings)
         n_items = len(items)
