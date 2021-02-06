@@ -137,9 +137,7 @@ def _sim_block(block, bsp, bep, rmh, min_sim, max_nbrs, nitems):
 
     csrk.release_handle(amh)
 
-    # TODO Re-add ordering
-    # _lk_mkl_sporder(smh)  # for reproducibility
-
+    csrk.order_columns(smh)
     block_csr = csrk.from_handle(smh)
     # this is allowed now
     csrk.release_handle(smh)
