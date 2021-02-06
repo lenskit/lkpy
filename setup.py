@@ -80,7 +80,8 @@ class DepInfo(Command):
         'implicit': '$pip'
     }
     FORGE_PACKAGE_MAP = {
-        'hpfrec': '$pip'
+        'hpfrec': '$pip',
+        'csr': '$pip:git+https://github.com/lenskit/csr.git'
     }
     CONDA_EXTRA_DEPS = ['tbb']
     # CONDA_MAIN_DEPS = ['mkl-devel', 'tbb']
@@ -150,8 +151,8 @@ class DepInfo(Command):
         for req_str, src in self._get_reqs():
             req = Requirement(req_str)
             mapped = self.PACKAGE_MAP.get(req.name, req.name)
-            if mapped == '$pip':
-                pip_deps.append(self._spec_str(req))
+            if mapped.startswith('$pip'):
+                pip_deps.append(self._pip_dep(req, mapped))
             else:
                 dep_spec['dependencies'].append(self._spec_str(req, mapped, src))
         if pip_deps:
@@ -167,6 +168,15 @@ class DepInfo(Command):
 
     def _spec_str(self, req, name=None, src=None):
         spec = name if name is not None else req.name
+        if req.specifier:
+            spec += ' ' + str(req.specifier)
+        return spec
+
+    def _pip_dep(self, req, key):
+        if key != '$pip':
+            # it's $pip:
+            return key[5:]
+        spec = req.name
         if req.specifier:
             spec += ' ' + str(req.specifier)
         return spec
