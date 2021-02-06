@@ -3,7 +3,7 @@ import inspect
 import pandas as pd
 import numpy as np
 
-from ..matrix import sparse_ratings
+from ..data import sparse_ratings
 from . import Recommender, Predictor
 
 _logger = logging.getLogger(__name__)
