@@ -7,10 +7,12 @@ import logging
 
 import pandas as pd
 import numpy as np
+import csr.native_ops as csrn
 
 from numba import njit
 
-from .. import util, matrix
+from .. import util
+from ..data import sparse_ratings
 from . import Predictor
 from ..util.accum import kvp_minheap_insert
 
@@ -28,7 +30,7 @@ def _agg_weighted_avg(iur, item, sims, use):
         sims(numpy.ndarray): the similarities for the users who have rated ``item``
         use(numpy.ndarray): positions in sims and the rating row to actually use
     """
-    rates = iur.row_vs(item)
+    rates = csrn.row_vs(iur, item)
     num = 0.0
     den = 0.0
     for j in use:
@@ -68,7 +70,7 @@ def _score(items, results, iur, sims, nnbrs, min_sim, min_nbrs, agg):
         h_ep = 0
 
         # who has rated this item?
-        i_users = iur.row_cs(item)
+        i_users = csrn.row_cs(iur, item)
 
         # what are their similarities to our target user?
         i_sims = sims[i_users]
@@ -136,7 +138,7 @@ class UserUser(Predictor):
             UUModel: a memorized model for efficient user-based CF computation.
         """
 
-        uir, users, items = matrix.sparse_ratings(ratings)
+        uir, users, items = sparse_ratings(ratings)
 
         # mean-center ratings
         if self.center:
@@ -152,15 +154,11 @@ class UserUser(Predictor):
             uir.values = np.full(uir.nnz, 1.0)
         uir.normalize_rows('unit')
 
-        mkl = matrix.mkl_ops()
-        mkl_m = mkl.SparseM.from_csr(uir) if mkl else None
-
         self.rating_matrix_ = uir
         self.user_index_ = users
         self.user_means_ = umeans
         self.item_index_ = items
         self.transpose_matrix_ = iur
-        self._mkl_m_ = mkl_m
 
         return self
 
@@ -190,12 +188,7 @@ class UserUser(Predictor):
         # now ratings is normalized to be a mean-centered unit vector
         # this means we can dot product to score neighbors
         # score the neighbors!
-        if self._mkl_m_:
-            nsims = np.zeros(len(self.user_index_))
-            nsims = self._mkl_m_.mult_vec(1, ratings, 0, nsims)
-        else:
-            rmat = self.rating_matrix_.to_scipy()
-            nsims = rmat @ ratings
+        nsims = self.rating_matrix_.mult_vec(ratings)
         assert len(nsims) == len(self.user_index_)
         if user in self.user_index_:
             nsims[self.user_index_.get_loc(user)] = 0
@@ -211,7 +204,7 @@ class UserUser(Predictor):
         else:
             raise ValueError('invalid aggregate ' + self.aggregate)
 
-        _score(ri_pos, results, self.transpose_matrix_.N, nsims,
+        _score(ri_pos, results, self.transpose_matrix_.R, nsims,
                self.nnbrs, self.min_sim, self.min_nbrs, agg)
         results += umean
 
@@ -248,15 +241,11 @@ class UserUser(Predictor):
 
     def __getstate__(self):
         state = dict(self.__dict__)
-        if '_mkl_m_' in state:
-            del state['_mkl_m_']
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.aggregate = intern(self.aggregate)
-        mkl = matrix.mkl_ops()
-        self._mkl_m_ = mkl.SparseM.from_csr(self.rating_matrix_) if mkl else None
 
     def __str__(self):
         return 'UserUser(nnbrs={}, min_sim={})'.format(self.nnbrs, self.min_sim)
