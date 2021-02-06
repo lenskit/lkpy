@@ -190,7 +190,8 @@ intersphinx_mapping = {
     'hpfrec': ('https://hpfrec.readthedocs.io/en/latest/', None),
     'implicit': ('https://implicit.readthedocs.io/en/latest/', None),
     'scikit': ('https://scikit-learn.org/stable/', None),
-    'binpickle': ('https://binpickle.lenskit.org/en/stable/', None)
+    'binpickle': ('https://binpickle.lenskit.org/en/stable/', None),
+    'csr': ('https://csr.lenskit.org/en/latest/', None),
 }
 
 autodoc_default_options = {
