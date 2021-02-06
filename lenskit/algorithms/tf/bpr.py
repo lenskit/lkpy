@@ -4,6 +4,7 @@ import math
 import pandas as pd
 import numpy as np
 from numba import njit
+import csr.native_ops as csrn
 
 try:
     import tensorflow as tf
@@ -35,7 +36,7 @@ def _neg_sample(mat, uv):
 
     for i in range(n):
         u = uv[i]
-        used = mat.row_cs(u)
+        used = csrn.row_cs(mat, u)
         j = np.random.randint(0, ni)
         while np.any(used == j):
             j = np.random.randint(0, ni)
