@@ -4,9 +4,12 @@ from collections import namedtuple
 import numpy as np
 from numba import njit, prange
 
+from csr import _CSR
+import csr.native_ops as csrn
+
 from .bias import Bias
 from .mf_common import MFPredictor
-from ..matrix import sparse_ratings
+from ..data import sparse_ratings
 from .. import util
 from ..math.solve import _dposv
 
@@ -53,7 +56,7 @@ def _rr_solve(X, xis, y, w, reg, epochs):
 
 
 @njit(parallel=True, nogil=True)
-def _train_matrix_cd(mat, this: np.ndarray, other: np.ndarray, reg: float):
+def _train_matrix_cd(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float):
     """
     One half of an explicit ALS training round using coordinate descent.
 
@@ -72,11 +75,11 @@ def _train_matrix_cd(mat, this: np.ndarray, other: np.ndarray, reg: float):
     frob = 0.0
 
     for i in prange(nr):
-        cols = mat.row_cs(i)
+        cols = csrn.row_cs(mat, i)
         if len(cols) == 0:
             continue
 
-        vals = mat.row_vs(i)
+        vals = csrn.row_vs(mat, i)
 
         w = this[i, :].copy()
         _rr_solve(other, cols, vals, w, reg * len(cols), 2)
@@ -106,11 +109,11 @@ def _train_matrix_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
     frob = 0.0
 
     for i in prange(nr):
-        cols = mat.row_cs(i)
+        cols = csrn.row_cs(mat, i)
         if len(cols) == 0:
             continue
 
-        vals = mat.row_vs(i)
+        vals = csrn.row_vs(mat, i)
         M = other[cols, :]
         MMT = M.T @ M
         # assert MMT.shape[0] == ctx.n_features
@@ -220,11 +223,11 @@ def _train_implicit_cg(mat, this: np.ndarray, other: np.ndarray, reg: float):
     frob = 0.0
 
     for i in prange(nr):
-        cols = mat.row_cs(i)
+        cols = csrn.row_cs(mat, i)
         if len(cols) == 0:
             continue
 
-        rates = mat.row_vs(i)
+        rates = csrn.row_vs(mat, i)
 
         # we can optimize by only considering the nonzero entries of Cu-I
         # this means we only need the corresponding matrix columns
@@ -253,11 +256,11 @@ def _train_implicit_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
     frob = 0.0
 
     for i in prange(nr):
-        cols = mat.row_cs(i)
+        cols = csrn.row_cs(mat, i)
         if len(cols) == 0:
             continue
 
-        rates = mat.row_vs(i)
+        rates = csrn.row_vs(mat, i)
 
         # we can optimize by only considering the nonzero entries of Cu-I
         # this means we only need the corresponding matrix columns
@@ -494,9 +497,9 @@ class BiasedMF(MFPredictor):
             ureg = ireg = self.regularization
 
         for epoch in self.progress(range(self.iterations), desc='BiasedMF', leave=False):
-            du = train(uctx.N, current.user_matrix, current.item_matrix, ureg)
+            du = train(uctx.R, current.user_matrix, current.item_matrix, ureg)
             _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
-            di = train(ictx.N, current.item_matrix, current.user_matrix, ireg)
+            di = train(ictx.R, current.item_matrix, current.user_matrix, ireg)
             _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
             _logger.info('[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)', self.timer, epoch, du, di)
             yield current
@@ -650,9 +653,9 @@ class ImplicitMF(MFPredictor):
             ureg = ireg = self.reg
 
         for epoch in self.progress(range(self.iterations), desc='ImplicitMF', leave=False):
-            du = train(uctx.N, current.user_matrix, current.item_matrix, ureg)
+            du = train(uctx.R, current.user_matrix, current.item_matrix, ureg)
             _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
-            di = train(ictx.N, current.item_matrix, current.user_matrix, ireg)
+            di = train(ictx.R, current.item_matrix, current.user_matrix, ireg)
             _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
             _logger.info('[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)', self.timer, epoch, du, di)
             yield current
