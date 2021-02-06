@@ -4,15 +4,18 @@ from lenskit.algorithms.basic import Fallback
 from lenskit.algorithms.bias import Bias
 from lenskit import batch
 import lenskit.algorithms.item_knn as knn
+from lenskit.sharing import persist
+from lenskit.util.parallel import run_sp
 
+import gc
 from pathlib import Path
 import logging
-import os.path
 import pickle
 
 import pandas as pd
 import numpy as np
 from scipy import linalg as la
+import csr.kernel as csrk
 
 import pytest
 from pytest import approx, mark, fixture
@@ -546,6 +549,52 @@ def test_ii_known_preds():
         bad = merged[merged.error.notna() & (merged.error.abs() >= 0.01)]
         _log.error('erroneous predictions:\n%s', bad)
         raise e
+
+
+def _train_ii():
+    algo = knn.ItemItem(20, min_sim=1.0e-6)
+    timer = Stopwatch()
+    _log.info('training %s on ml data', algo)
+    algo.fit(lktu.ml_test.ratings)
+    _log.info('trained in %s', timer)
+    shr = persist(algo)
+    return shr.transfer()
+
+
+@lktu.wantjit
+@mark.slow
+@mark.skipif(csrk.name != 'csr.kernels.mkl', reason='only needed when MKL is available')
+def test_ii_impl_match():
+    mkl_h = None
+    nba_h = None
+    try:
+        with lktu.set_env_var('CSR_KERNEL', 'mkl'):
+            mkl_h = run_sp(_train_ii)
+        mkl = mkl_h.get()
+
+        with lktu.set_env_var('CSR_KERNEL', 'numba'):
+            nba_h = run_sp(_train_ii)
+        nba = nba_h.get()
+
+        assert mkl.sim_matrix_.nnz == nba.sim_matrix_.nnz
+        assert mkl.sim_matrix_.nrows == nba.sim_matrix_.nrows
+        assert mkl.sim_matrix_.ncols == nba.sim_matrix_.ncols
+
+        assert all(mkl.sim_matrix_.rowptrs == nba.sim_matrix_.rowptrs)
+        for i in range(mkl.sim_matrix_.nrows):
+            sp, ep = mkl.sim_matrix_.row_extent(i)
+            assert all(np.diff(mkl.sim_matrix_.values[sp:ep]) <= 0)
+            assert all(np.diff(nba.sim_matrix_.values[sp:ep]) <= 0)
+            assert set(mkl.sim_matrix_.colinds[sp:ep]) == set(nba.sim_matrix_.colinds[sp:ep])
+            assert mkl.sim_matrix_.values[sp:ep] == \
+                approx(nba.sim_matrix_.values[sp:ep], abs=1.0e-3)
+
+    finally:
+        mkl = None
+        nba = None
+        gc.collect()
+        mkl_h.close()
+        nba_h.close()
 
 
 @lktu.wantjit
