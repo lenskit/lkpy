@@ -306,7 +306,7 @@ class ItemItem(Predictor):
         item_means = ratings.groupby('item').rating.mean()
         item_means = item_means.reindex(items).values
         mcvals = rmat.values - item_means[rmat.colinds]
-        nmat = rmat.copy(False, False)
+        nmat = rmat.copy(False)
         nmat.values = mcvals
         _logger.info('[%s] computed means for %d items', self._timer, len(item_means))
         return nmat, item_means
