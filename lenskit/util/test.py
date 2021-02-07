@@ -4,14 +4,11 @@ Test utilities for LKPY tests.
 
 import os
 import os.path
-import logging
 from contextlib import contextmanager
 
 import pytest
 
 from lenskit.datasets import MovieLens, ML100K
-
-_log = logging.getLogger(__name__)
 
 ml_test = MovieLens('data/ml-latest-small')
 ml100k = ML100K('data/ml-100k')
@@ -21,6 +18,7 @@ ml100k = ML100K('data/ml-100k')
 def set_env_var(var, val):
     "Set an environment variable & restore it."
     is_set = var in os.environ
+    old_val = None
     if is_set:
         old_val = os.environ[var]
     try:
