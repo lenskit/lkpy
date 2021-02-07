@@ -231,8 +231,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v2
-          with:
-            fetch-depth: 0
+        with:
+          fetch-depth: 0
       
       - name: Set up Python
         uses: actions/setup-python@v1
@@ -280,8 +280,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v2
-          with:
-            fetch-depth: 0
+        with:
+          fetch-depth: 0
       
       - name: Set up Python
         uses: actions/setup-python@v1
@@ -323,8 +323,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v2
-          with:
-            fetch-depth: 0
+        with:
+          fetch-depth: 0
 
       - uses: actions/download-artifact@v2
         with:
