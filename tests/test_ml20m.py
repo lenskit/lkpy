@@ -94,33 +94,3 @@ def test_tf_isvd(ml20m):
 
     user_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
     assert user_rmse.mean() == approx(0.92, abs=0.05)
-
-
-@pytest.mark.realdata
-@pytest.mark.slow
-@pytest.mark.skipif(knn._mkl_ops is None, reason='only test MKL match when MKL is available')
-def test_ii_impl_match(ml20m):
-    sps = knn.ItemItem(20, min_sim=1.0e-6)
-    sps._use_mkl = False
-    timer = Stopwatch()
-    _log.info('training SciPy %s on ml data', sps)
-    sps.fit(ml20m)
-    _log.info('trained SciPy in %s', timer)
-
-    mkl = knn.ItemItem(20, min_sim=1.0e-6)
-    timer = Stopwatch()
-    _log.info('training MKL %s on ml data', mkl)
-    mkl.fit(ml20m)
-    _log.info('trained MKL in %s', timer)
-
-    assert mkl.sim_matrix_.nnz == sps.sim_matrix_.nnz
-    assert mkl.sim_matrix_.nrows == sps.sim_matrix_.nrows
-    assert mkl.sim_matrix_.ncols == sps.sim_matrix_.ncols
-
-    assert all(mkl.sim_matrix_.rowptrs == sps.sim_matrix_.rowptrs)
-    for i in range(mkl.sim_matrix_.nrows):
-        sp, ep = mkl.sim_matrix_.row_extent(i)
-        assert all(np.diff(mkl.sim_matrix_.values[sp:ep]) <= 0)
-        assert all(np.diff(sps.sim_matrix_.values[sp:ep]) <= 0)
-        assert set(mkl.sim_matrix_.colinds[sp:ep]) == set(sps.sim_matrix_.colinds[sp:ep])
-        assert all(np.abs(mkl.sim_matrix_.values[sp:ep] - sps.sim_matrix_.values[sp:ep]) < 1.0e-3)

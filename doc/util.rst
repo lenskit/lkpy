@@ -4,7 +4,7 @@ Utility Functions
 These utility functions are useful for data processing.
 
 .. toctree::
-    matrix
+    data
     math
 
 Miscellaneous

@@ -4,6 +4,7 @@ import math
 import pandas as pd
 import numpy as np
 from numba import njit
+import csr.native_ops as csrn
 
 try:
     import tensorflow as tf
@@ -12,7 +13,7 @@ except ImportError:
     tf = None
 
 from lenskit import util
-from lenskit.matrix import sparse_ratings
+from lenskit.data import sparse_ratings
 from .. import Predictor
 from .util import init_tf_rng, check_tensorflow
 
@@ -35,7 +36,7 @@ def _neg_sample(mat, uv):
 
     for i in range(n):
         u = uv[i]
-        used = mat.row_cs(u)
+        used = csrn.row_cs(mat, u)
         j = np.random.randint(0, ni)
         while np.any(used == j):
             j = np.random.randint(0, ni)
@@ -78,7 +79,7 @@ if tf is not None:
             assert len(picked) == self.neg_count * (end - start)
             uv = self.users[picked]
             iv = self.items[picked]
-            jv, j_samps = _neg_sample(self.matrix.N, uv)
+            jv, j_samps = _neg_sample(self.matrix.R, uv)
             assert all(jv < self.n_items)
             _log.debug('max sample count: %d', j_samps.max())
             return [uv.astype(np.int32),

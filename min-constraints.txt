@@ -1,8 +1,7 @@
 pandas==0.24
 numpy==1.16.2
 scipy==1.2.1
-numba==0.45.0
-llvmlite<0.31
+numba==0.51.0
 pyarrow==0.15.1
 cffi==1.12.2
 joblib==0.13.0

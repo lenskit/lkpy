@@ -1,18 +1,15 @@
 import scipy.sparse as sps
-import scipy.linalg as sla
-import numpy as np
 import pandas as pd
 
-import lenskit.matrix as lm
-
+from lenskit.data import sparse_ratings
 from lenskit.util.test import ml_test
 
-from pytest import approx, mark
+from pytest import mark
 
 
 def test_sparse_matrix(rng):
     ratings = ml_test.ratings
-    mat, uidx, iidx = lm.sparse_ratings(ratings)
+    mat, uidx, iidx = sparse_ratings(ratings)
 
     assert mat.nrows == len(uidx)
     assert mat.nrows == ratings.user.nunique()
@@ -40,7 +37,7 @@ def test_sparse_matrix(rng):
 def test_sparse_matrix_implicit():
     ratings = ml_test.ratings
     ratings = ratings.loc[:, ['user', 'item']]
-    mat, uidx, iidx = lm.sparse_ratings(ratings)
+    mat, uidx, iidx = sparse_ratings(ratings)
 
     assert mat.nrows == len(uidx)
     assert mat.nrows == ratings.user.nunique()
@@ -59,7 +56,7 @@ def test_sparse_matrix_implicit():
 )
 def test_sparse_matrix_scipy(format, sps_fmt_checker):
     ratings = ml_test.ratings
-    mat, uidx, iidx = lm.sparse_ratings(ratings, scipy=format)
+    mat, uidx, iidx = sparse_ratings(ratings, scipy=format)
 
     assert sps.issparse(mat)
     assert sps_fmt_checker(mat)
@@ -77,7 +74,7 @@ def test_sparse_matrix_scipy(format, sps_fmt_checker):
 def test_sparse_matrix_scipy_implicit():
     ratings = ml_test.ratings
     ratings = ratings.loc[:, ['user', 'item']]
-    mat, uidx, iidx = lm.sparse_ratings(ratings, scipy=True)
+    mat, uidx, iidx = sparse_ratings(ratings, scipy=True)
 
     assert sps.issparse(mat)
     assert sps.isspmatrix_csr(mat)
@@ -92,7 +89,7 @@ def test_sparse_matrix_indexes(rng):
     uidx = pd.Index(rng.permutation(ratings['user'].unique()))
     iidx = pd.Index(rng.permutation(ratings['item'].unique()))
 
-    mat, _uidx, _iidx = lm.sparse_ratings(ratings, users=uidx, items=iidx)
+    mat, _uidx, _iidx = sparse_ratings(ratings, users=uidx, items=iidx)
 
     assert _uidx is uidx
     assert _iidx is iidx

@@ -15,52 +15,6 @@ except ImportError:
         json.dump(obj, f, indent=2)
 
 
-class BuildHelperCommand(Command):
-    description = 'compile helper modules'
-    user_options = []
-
-    def initialize_options(self):
-        """Set default values for options."""
-        pass
-
-    def finalize_options(self):
-        """Post-process options."""
-        pass
-
-    def run(self):
-        cc = ccompiler.new_compiler()
-        sysconfig.customize_compiler(cc)
-
-        m_dir = Path('lenskit') / 'matrix'
-
-        mkl_src = m_dir / 'mkl_ops.c'
-        mkl_obj = cc.object_filenames([os.fspath(mkl_src)])
-        mkl_so = cc.shared_object_filename('mkl_ops')
-        mkl_so = m_dir / mkl_so
-
-        if mkl_so.exists():
-            src_mt = mkl_src.stat().st_mtime
-            so_mt = mkl_so.stat().st_mtime
-            if so_mt > src_mt:
-                return mkl_so
-
-        print('compiling MKL support library')
-        i_dirs = []
-        l_dirs = []
-        conda = Path(os.environ['CONDA_PREFIX'])
-        if os.name == 'nt':
-            lib = conda / 'Library'
-            i_dirs.append(os.fspath(lib / 'include'))
-            l_dirs.append(os.fspath(lib / 'lib'))
-        else:
-            i_dirs.append(os.fspath(conda / 'include'))
-            l_dirs.append(os.fspath(conda / 'lib'))
-
-        cc.compile([os.fspath(mkl_src)], include_dirs=i_dirs, debug=True)
-        cc.link_shared_object(mkl_obj, os.fspath(mkl_so), libraries=['mkl_rt'],
-                              library_dirs=l_dirs)
-
-
 class DepInfo(Command):
     description = 'get dependency information'
     user_options = [
@@ -80,7 +34,8 @@ class DepInfo(Command):
         'implicit': '$pip'
     }
     FORGE_PACKAGE_MAP = {
-        'hpfrec': '$pip'
+        'hpfrec': '$pip',
+        'csr': '$pip'
     }
     CONDA_EXTRA_DEPS = ['tbb']
     # CONDA_MAIN_DEPS = ['mkl-devel', 'tbb']
@@ -150,8 +105,8 @@ class DepInfo(Command):
         for req_str, src in self._get_reqs():
             req = Requirement(req_str)
             mapped = self.PACKAGE_MAP.get(req.name, req.name)
-            if mapped == '$pip':
-                pip_deps.append(self._spec_str(req))
+            if mapped.startswith('$pip'):
+                pip_deps.append(self._pip_dep(req, mapped))
             else:
                 dep_spec['dependencies'].append(self._spec_str(req, mapped, src))
         if pip_deps:
@@ -171,6 +126,15 @@ class DepInfo(Command):
             spec += ' ' + str(req.specifier)
         return spec
 
+    def _pip_dep(self, req, key):
+        if key != '$pip':
+            # it's $pip:
+            return key[5:]
+        spec = req.name
+        if req.specifier:
+            spec += ' ' + str(req.specifier)
+        return spec
+
     def _get_reqs(self):
         for req in self.distribution.install_requires:
             yield req, None
@@ -182,19 +146,7 @@ class DepInfo(Command):
                 yield req, ex
 
 
-def has_mkl(build):
-    try:
-        import mkl  # noqa: F401
-        return True
-    except ImportError:
-        return False
-
-
-build.sub_commands.append(('build_helper', has_mkl))
-
-
 if __name__ == "__main__":
     setup(cmdclass={
-        'build_helper': BuildHelperCommand,
         'dep_info': DepInfo
     })

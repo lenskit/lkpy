@@ -29,6 +29,8 @@ jobs:
           python: 3.6
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Prepare Conda environment
         shell: bash
@@ -60,17 +62,6 @@ jobs:
         run: |
           python -V
           numba -s
-      
-      - name: Build LKPY
-        run: |
-          mkdir -p build
-          if [ "$BLAS_IMPL" = mkl ]; then
-            python setup.py build_helper
-          fi
-          python setup.py build
-        shell: bash
-        env:
-          BLAS_IMPL: ${{matrix.blas}}
       
       - name: Test LKPY
         run: |
@@ -113,6 +104,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Prepare Conda environment
         shell: bash
@@ -161,6 +154,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Prepare Conda environment
         shell: bash
@@ -236,6 +231,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       
       - name: Set up Python
         uses: actions/setup-python@v1
@@ -283,6 +280,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       
       - name: Set up Python
         uses: actions/setup-python@v1
@@ -324,6 +323,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - uses: actions/download-artifact@v2
         with:

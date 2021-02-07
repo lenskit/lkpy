@@ -12,7 +12,7 @@ except ImportError:
 
 from . import Predictor
 from .bias import Bias
-from ..matrix import sparse_ratings
+from ..data import sparse_ratings
 from ..util import Stopwatch
 
 _log = logging.getLogger(__name__)

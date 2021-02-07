@@ -10,25 +10,20 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-from numba import jit, njit, prange
+from csr import CSR, _CSR
+import csr.native_ops as csrn
+import csr.kernel as csrk
+from numba import njit, prange
 from numba.typed import List
 
-from lenskit import util, matrix, DataWarning
+from lenskit import util, DataWarning
+from lenskit.data import sparse_ratings
 from lenskit.sharing import in_share_context
 from lenskit.util.parallel import is_mp_worker
 from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
 from . import Predictor
 
 _logger = logging.getLogger(__name__)
-_mkl_ops = matrix.mkl_ops()
-_empty_csr = matrix._impl_mod()._empty_csr
-_subset_rows = matrix._impl_mod()._subset_rows
-
-if _mkl_ops is not None:
-    # we have to import LK CFFI utils into this module
-    for lkv in dir(_mkl_ops):
-        if lkv.startswith('_lk_mkl'):
-            globals()[lkv] = getattr(_mkl_ops, lkv)
 
 
 def _make_blocks(n, size):
@@ -36,65 +31,23 @@ def _make_blocks(n, size):
     return [(s, min(s + size, n)) for s in range(0, n, size)]
 
 
-@njit(nogil=True)
-def _count_nbrs(mat: matrix._CSR, thresh: float):
-    "Count the number of neighbors passing the threshold for each row."
-    counts = np.zeros(mat.nrows, dtype=np.int32)
-    cs = mat.colinds
-    vs = mat.values
-    for i in range(mat.nrows):
-        sp, ep = mat.row_extent(i)
-        for j in range(sp, ep):
-            c = cs[j]
-            v = vs[j]
-            if c != i and v >= thresh:
-                counts[i] += 1
-
-    return counts
-
-
-@njit
-def _insert(dst, used, limits, i, c, v):
-    "Insert one item into a heap"
-    sp = dst.rowptrs[i]
-    ep = sp + used[i]
-    ep = kvp_minheap_insert(sp, ep, limits[i], c, v, dst.colinds, dst.values)
-    used[i] = ep - sp
-
-
-@njit(nogil=True)
-def _copy_nbrs(src: matrix._CSR, dst: matrix._CSR, limits, thresh: float):
-    "Copy neighbors into the output matrix."
-    used = np.zeros(dst.nrows, dtype=np.int32)
-
-    for i in range(src.nrows):
-        sp, ep = src.row_extent(i)
-
-        for j in range(sp, ep):
-            c = src.colinds[j]
-            v = src.values[j]
-            if c != i and v >= thresh:
-                _insert(dst, used, limits, i, c, v)
-
-    return used
-
-
-@njit(nogil=True, parallel=not is_mp_worker())
-def _sort_nbrs(smat):
+@njit(parallel=not is_mp_worker())
+def _sort_nbrs(smat: _CSR):
     for i in prange(smat.nrows):
-        sp, ep = smat.row_extent(i)
+        sp, ep = csrn.row_extent(smat, i)
         kvp_minheap_sort(sp, ep, smat.colinds, smat.values)
 
 
-@njit(nogil=True)
-def _make_sim_block(nitems, bsp, bitems, r_sp, r_ep, r_cs, r_vs, min_sim, max_nbrs):
+@njit
+def _trim_sim_block(nitems, bsp, bitems, block, min_sim, max_nbrs):
     # pass 1: compute the size of each row
     sizes = np.zeros(bitems, np.int32)
     for i in range(nitems):
-        for j in range(r_sp[i], r_ep[i]):
+        sp, ep = csrn.row_extent(block, i)
+        for j in range(sp, ep):
             # we accept the neighbor if it passes threshold and isn't a self-similarity
-            r = r_cs[j]
-            if i != bsp + r and r_vs[j] >= min_sim:
+            r = block.colinds[j]
+            if i != bsp + r and block.values[j] >= min_sim:
                 sizes[r] += 1
 
     if max_nbrs > 0:
@@ -107,15 +60,16 @@ def _make_sim_block(nitems, bsp, bitems, r_sp, r_ep, r_cs, r_vs, min_sim, max_nb
     #     return _empty_csr(bitems, nitems, np.zeros(bitems, np.int32))
 
     # allocate a matrix
-    block_csr = _empty_csr(bitems, nitems, sizes)
+    block_csr = csrn.make_unintialized(bitems, nitems, sizes)
 
     # pass 2: truncate each row into the matrix
     eps = block_csr.rowptrs[:-1].copy()
     for c in range(nitems):
-        for j in range(r_sp[c], r_ep[c]):
-            v = r_vs[j]
-            r = r_cs[j]
-            sp, lep = block_csr.row_extent(r)
+        sp, ep = csrn.row_extent(block, c)
+        for j in range(sp, ep):
+            v = block.values[j]
+            r = block.colinds[j]
+            sp, lep = csrn.row_extent(block_csr, r)
             lim = lep - sp
             if c != bsp + r and v >= min_sim:
                 eps[r] = kvp_minheap_insert(sp, eps[r], lim, c, v,
@@ -124,111 +78,52 @@ def _make_sim_block(nitems, bsp, bitems, r_sp, r_ep, r_cs, r_vs, min_sim, max_nb
     return block_csr
 
 
-@njit(nogil=True)
-def _mkl_sim_block(block, bsp, bep, rmh, min_sim, max_nbrs, nitems):
+@njit
+def _sim_block(block, bsp, bep, rmh, min_sim, max_nbrs, nitems):
     "Compute a single block of the similarity matrix"
     # assert block.nrows == bep - bsp
 
     bitems = block.nrows
     if block.nnz == 0:
-        return _empty_csr(bitems, nitems, np.zeros(bitems, np.int32))
+        return csrn.make_empty(bitems, nitems)
 
     # create a matrix handle for the subset matrix
-    amh = _mkl_ops._from_csr(block)
-    _lk_mkl_spopt(amh)
+    amh = csrk.to_handle(block)
 
-    smh = _lk_mkl_spmabt(rmh, amh)
+    smh = csrk.mult_abt(rmh, amh)
 
-    _lk_mkl_spfree(amh)
+    csrk.release_handle(amh)
 
-    _lk_mkl_sporder(smh)  # for reproducibility
+    csrk.order_columns(smh)
+    block_csr = csrk.from_handle(smh)
+    # this is allowed now
+    csrk.release_handle(smh)
 
-    block = _lk_mkl_spexport_p(smh)
-    bnr = _lk_mkl_spe_nrows(block)
-    bnc = _lk_mkl_spe_ncols(block)
-    # bnr and bnc should be right
-    # assert bnc == bep - bsp
-    # assert bnr == nitems
+    block_csr = _trim_sim_block(nitems, bsp, bitems, block_csr, min_sim, max_nbrs)
 
-    r_sp = _lk_mkl_spe_row_sp(block)
-    r_ep = _lk_mkl_spe_row_ep(block)
-    r_cs = _lk_mkl_spe_colinds(block)
-    r_vs = _lk_mkl_spe_values(block)
-
-    block_csr = _make_sim_block(nitems, bsp, bitems, r_sp, r_ep, r_cs, r_vs, min_sim, max_nbrs)
-
-    _lk_mkl_spe_free(block)
-    _lk_mkl_spfree(smh)
     return block_csr
 
 
 @njit(nogil=True, parallel=not is_mp_worker())
-def _mkl_sim_blocks(trmat, blocks, ptrs, min_sim, max_nbrs):
-    "Compute the similarity matrix with blocked MKL calls"
+def _sim_blocks(trmat, blocks, ptrs, min_sim, max_nbrs):
+    "Compute the similarity matrix with blocked CSR kernel calls"
     nitems = trmat.nrows
     nblocks = len(blocks)
 
-    null = _empty_csr(1, 1, np.zeros(1, dtype=np.int32))
+    null = csrn.make_empty(1, 1)
     res = [null for i in range(nblocks)]
 
-    rmat_h = _mkl_ops._from_csr(trmat)
-    _lk_mkl_sporder(rmat_h)
-    _lk_mkl_spopt(rmat_h)
+    rmat_h = csrk.to_handle(trmat)
+    csrk.order_columns(rmat_h)
 
     for bi in prange(nblocks):
         b = blocks[bi]
         p = ptrs[bi]
         bs, be = p
-        bres = _mkl_sim_block(b, bs, be, rmat_h, min_sim, max_nbrs, nitems)
+        bres = _sim_block(b, bs, be, rmat_h, min_sim, max_nbrs, nitems)
         res[bi] = bres
 
-    _lk_mkl_spfree(rmat_h)
-
-    return res
-
-
-def _scipy_sim_block(block, bsp, bep, rmat, min_sim, max_nbrs, nitems):
-    "Compute a single block of the similarity matrix"
-    assert block.nrows == bep - bsp
-
-    _logger.debug('processing block %d:%d (%d nnz)', bsp, bep, block.nnz)
-
-    if rmat.nnz == 0:
-        return _empty_csr(block.nrows, nitems, np.zeros(block.nrows, np.int32))
-
-    sims = rmat @ block.to_scipy().transpose()
-    sims = matrix.CSR.from_scipy(sims)
-
-    r_sp = sims.rowptrs[:-1]
-    r_ep = sims.rowptrs[1:]
-    r_cs = sims.colinds
-    r_vs = sims.values
-
-    block_csr = _make_sim_block(nitems, bsp, block.nrows, r_sp, r_ep, r_cs, r_vs, min_sim, max_nbrs)
-    assert block_csr.nrows == block.nrows
-    assert block_csr.ncols == nitems
-    _logger.debug('block %d:%d has %d similarities', bsp, bep, block_csr.nnz)
-    _logger.debug('block: %s', matrix.CSR(N=block_csr))
-
-    return block_csr
-
-
-# we compile this in object mode so we can use numba's thread pool with scipy
-@jit(parallel=not is_mp_worker(), forceobj=True)
-def _scipy_sim_blocks(trmat, blocks, ptrs, min_sim, max_nbrs):
-    "Compute the similarity matrix with blocked SciPy calls"
-    nitems, nusers = trmat.shape
-    nblocks = len(blocks)
-
-    null = _empty_csr(1, 1, np.zeros(1, dtype=np.int32))
-    res = [null for i in range(nblocks)]
-
-    for bi in prange(nblocks):
-        b = blocks[bi]
-        bs, be = ptrs[bi]
-        bres = _scipy_sim_block(b, bs, be, trmat, min_sim, max_nbrs, nitems)
-        res[bi] = bres
-        assert bres.nrows == be - bs
+    csrk.release_handle(rmat_h)
 
     return res
 
@@ -337,7 +232,6 @@ class ItemItem(Predictor):
     """
     AGG_SUM = intern('sum')
     AGG_WA = intern('weighted-average')
-    _use_mkl = True
 
     def __init__(self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None,
                  center=True, aggregate='weighted-average'):
@@ -369,8 +263,9 @@ class ItemItem(Predictor):
         self._timer = util.Stopwatch()
 
         _logger.debug('[%s] beginning fit, memory use %s', self._timer, util.max_memory())
+        _logger.debug('[%s] using CSR kernel %s', self._timer, csrk.name)
 
-        init_rmat, users, items = matrix.sparse_ratings(ratings)
+        init_rmat, users, items = sparse_ratings(ratings)
         n_items = len(items)
         _logger.info('[%s] made sparse matrix for %d items (%d ratings from %d users)',
                      self._timer, len(items), init_rmat.nnz, len(users))
@@ -411,8 +306,8 @@ class ItemItem(Predictor):
         item_means = ratings.groupby('item').rating.mean()
         item_means = item_means.reindex(items).values
         mcvals = rmat.values - item_means[rmat.colinds]
-        nmat = matrix.CSR(rmat.nrows, rmat.ncols, rmat.nnz,
-                          rmat.rowptrs.copy(), rmat.colinds.copy(), mcvals)
+        nmat = rmat.copy(False)
+        nmat.values = mcvals
         _logger.info('[%s] computed means for %d items', self._timer, len(item_means))
         return nmat, item_means
 
@@ -429,7 +324,7 @@ class ItemItem(Predictor):
         # and reset NaN
         norm_mat.data[np.isnan(norm_mat.data)] = 0
         _logger.info('[%s] normalized rating matrix columns', self._timer)
-        return matrix.CSR.from_scipy(norm_mat, False)
+        return CSR.from_scipy(norm_mat, False)
 
     def _compute_similarities(self, rmat):
         trmat = rmat.transpose()
@@ -443,20 +338,17 @@ class ItemItem(Predictor):
                      self._timer, nitems, trmat.nnz, len(bounds))
         blocks = [trmat.subset_rows(sp, ep) for (sp, ep) in bounds]
 
-        if self._use_mkl and _mkl_ops is not None:
-            _logger.info('[%s] computing similarities with MKL', self._timer)
-            ptrs = List(bounds)
-            nbs = List(b.N for b in blocks)
-            if not nbs:
-                # oops, this is the bad place
-                # in non-JIT node, List doesn't actually make the list
-                nbs = [b.N for b in blocks]
-                ptrs = bounds
-            s_blocks = _mkl_sim_blocks(trmat.N, nbs, ptrs, self.min_sim, m_nbrs)
-        else:
-            s_blocks = _scipy_sim_blocks(trmat.to_scipy(), blocks, bounds, self.min_sim, m_nbrs)
+        _logger.info('[%s] computing similarities', self._timer)
+        ptrs = List(bounds)
+        nbs = List(b.R for b in blocks)
+        if not nbs:
+            # oops, this is the bad place
+            # in non-JIT node, List doesn't actually make the list
+            nbs = [b.R for b in blocks]
+            ptrs = bounds
+        s_blocks = _sim_blocks(trmat.R, nbs, ptrs, self.min_sim, m_nbrs)
 
-        s_blocks = [matrix.CSR(N=b) for b in s_blocks]
+        s_blocks = [CSR(R=b) for b in s_blocks]
         nnz = sum(b.nnz for b in s_blocks)
         tot_rows = sum(b.nrows for b in s_blocks)
         _logger.info('[%s] computed %d similarities for %d items in %d blocks',
@@ -465,7 +357,7 @@ class ItemItem(Predictor):
         assert len(row_nnzs) == nitems, \
             'only have {} rows for {} items'.format(len(row_nnzs), nitems)
 
-        smat = matrix.CSR.empty((nitems, nitems), row_nnzs, rpdtype=np.int64)
+        smat = CSR.empty(nitems, nitems, row_nnzs)
         start = 0
         for bi, b in enumerate(s_blocks):
             bnr = b.nrows
@@ -479,7 +371,7 @@ class ItemItem(Predictor):
             start = end
 
         _logger.info('[%s] sorting similarity matrix with %d entries', self._timer, smat.nnz)
-        _sort_nbrs(smat.N)
+        _sort_nbrs(smat.R)
 
         return smat
 
@@ -552,7 +444,7 @@ class ItemItem(Predictor):
                           user, len(fast_items))
 
             if len(slow_items):
-                iscores = _predict_sum(self.sim_matrix_.N, len(self.item_index_),
+                iscores = _predict_sum(self.sim_matrix_.R, len(self.item_index_),
                                        (self.min_nbrs, self.nnbrs),
                                        rate_v, rated, slow_items)
             else:
@@ -569,7 +461,7 @@ class ItemItem(Predictor):
             _logger.debug('user %s: fast-pathed %d scores', user, len(fast_scores))
 
             slow_items = i_pos[i_cts > 1]
-            iscores = _predict_weighted_average(self.sim_matrix_.N, len(self.item_index_),
+            iscores = _predict_weighted_average(self.sim_matrix_.R, len(self.item_index_),
                                                 (self.min_nbrs, self.nnbrs),
                                                 rate_v, rated, slow_items)
             iscores[fast_items] = fast_scores
@@ -577,7 +469,7 @@ class ItemItem(Predictor):
             # now compute the predictions
             _logger.debug('user %s: taking the slow path', user)
             agg = _predictors[self.aggregate]
-            iscores = agg(self.sim_matrix_.N, len(self.item_index_), (self.min_nbrs, self.nnbrs),
+            iscores = agg(self.sim_matrix_.R, len(self.item_index_), (self.min_nbrs, self.nnbrs),
                           rate_v, rated, i_pos)
 
         if self.center:

@@ -8,11 +8,11 @@ from collections.abc import Iterable, Sequence
 import pandas as pd
 import numpy as np
 
-from ..matrix import sparse_ratings
+from ..data import sparse_ratings
 from . import Predictor, Recommender, CandidateSelector
 from ..util import derivable_rng
 
-from .bias import Bias
+from .bias import Bias  # noqa: F401
 
 _logger = logging.getLogger(__name__)
 
