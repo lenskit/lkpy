@@ -35,7 +35,7 @@ class DepInfo(Command):
     }
     FORGE_PACKAGE_MAP = {
         'hpfrec': '$pip',
-        'csr': '$pip:git+https://github.com/lenskit/csr.git'
+        'csr': '$pip'
     }
     CONDA_EXTRA_DEPS = ['tbb']
     # CONDA_MAIN_DEPS = ['mkl-devel', 'tbb']
