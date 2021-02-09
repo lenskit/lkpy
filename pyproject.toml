@@ -70,7 +70,10 @@ exclude = [
 
 [tool.envtool.conda]
 name = "lkpy"
-channels = ["conda-forge"]
+channels = [
+    "conda-forge",
+    "defaults"
+]
 
 [tool.envtool.conda.overrides]
 hpfrec = { source="pip" }

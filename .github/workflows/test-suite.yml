@@ -57,7 +57,6 @@ jobs:
           
       - name: Create Conda environment
         run: |
-          conda config --set channel_priority strict
           conda env update -n base -q -f environment.yml
 
       - name: Inspect environment
@@ -127,7 +126,6 @@ jobs:
           
       - name: Create Conda environment
         run: |
-          conda config --set channel_priority strict
           conda env update -n base -q -f environment.yml
 
       - name: Download ML-100K
@@ -181,7 +179,6 @@ jobs:
           
       - name: Create Conda environment
         run: |
-          conda config --set channel_priority strict
           conda env update -n base -q -f environment.yml
 
       - name: Cache ML data
