@@ -137,7 +137,7 @@ jobs:
 
       - name: Install for Testing
         run: |
-          flit install -s --extras tf
+          flit install -s --deps develop --extras tf
 
       - name: Run Tests
         run: |
@@ -199,7 +199,7 @@ jobs:
 
       - name: Install for Testing
         run: 
-          flit install -s
+          flit install --deps none -s
 
       - name: Run Eval Tests
         run: |
@@ -260,7 +260,7 @@ jobs:
           PIP_PREFER_BINARY: 'true'
         run: |
           python -m pip install -U flit
-          flit install --pth-file
+          flit install --deps develop --pth-file
       
       - name: Run tests
         run: |
@@ -306,7 +306,7 @@ jobs:
       - name: Set up Python deps
         run: |
           python -m pip install -U pip
-          python -m pip install -c min-constraints.txt -e .[test]
+          python -m pip install -c min-constraints.txt .[test]
           python -m pip install pytest-cov
 
       - name: Run tests
