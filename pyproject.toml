@@ -36,10 +36,11 @@ test = [
     "hypothesis"
 ]
 dev = [
+    "flit",
     "flake8",
     "coverage",
     "pytest-cov",
-    "ipython"
+    "ipython",
 ]
 doc = [
     "sphinx >= 1.8",
@@ -78,4 +79,7 @@ csr = { source="pip" }
 [tool.envtool.conda.extras]
 mkl = [
     "libblas=*=*mkl"
+]
+openblas = [
+    "libblas=*=*openblas"
 ]

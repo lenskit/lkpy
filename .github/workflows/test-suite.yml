@@ -32,31 +32,33 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Prepare Conda environment
+      - name: Initialize Conda
+        uses: s-weigand/setup-conda@v1
+        with:
+          python-version: ${{matrix.python}}
+          conda-channels: conda-forge
+
+      - name: Prepare Conda environment spec
         shell: bash
         run: |
-          source $CONDA/etc/profile.d/conda.sh
-          conda activate base
-          conda config --set channel_priority strict
+          conda install -qy -c conda-forge flit packaging
+          e_opts="-E ${{matrix.blas}}"
           if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
             echo "Using most extras"
             # we'll test tensorflow in a separate run
-            e_opts="-A -I demo,tf"
-          else
-            echo "Using basic dev deps"
-            e_opts="-E dev"
+            e_opts="-E demo -E hpf -E implicit -E sklearn"
           fi
-          python setup.py dep_info --conda-env environment.yml $e_opts --python-version $PYVER --blas $BLAS_IMPL
+          envtool.py $e_opts --python-version $PYVER --save-env environment.yml
           cat environment.yml
         env:
           RUNNER: ${{runner.os}}
           PYVER: ${{matrix.python}}
           BLAS_IMPL: ${{matrix.blas}}
           
-      - uses: ./.github/actions/conda-env
-        with:
-          name: lkpy
-          env-file: environment.yml
+      - name: Create Conda environment
+        run: |
+          conda config --set channel_priority strict
+          conda env update -n base -q -f environment.yml
 
       - name: Inspect environment
         run: |
@@ -88,7 +90,8 @@ jobs:
             emissions.csv
 
       - name: Aggreagate Coverage Data
-        run: coverage xml
+        run: |
+          coverage xml
 
       - uses: codecov/codecov-action@v1
 
@@ -107,19 +110,25 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Prepare Conda environment
+      - name: Initialize Conda
+        uses: s-weigand/setup-conda@v1
+        with:
+          python-version: '3.8'
+          conda-channels: conda-forge
+
+      - name: Prepare Conda environment spec
         shell: bash
         run: |
-          source $CONDA/etc/profile.d/conda.sh
-          conda activate base
-          # conda config --set channel_priority strict
-          python setup.py dep_info --conda-env environment.yml -E dev,tf --python-version 3.8
+          conda install -qy -c conda-forge flit packaging
+          envtool.py -E tf --python-version $PYVER --save-env environment.yml
           cat environment.yml
+        env:
+          PYVER: '3.8'
           
-      - uses: ./.github/actions/conda-env
-        with:
-          name: lkpy
-          env-file: environment.yml
+      - name: Create Conda environment
+        run: |
+          conda config --set channel_priority strict
+          conda env update -n base -q -f environment.yml
 
       - name: Download ML-100K
         shell: pwsh
@@ -127,11 +136,12 @@ jobs:
           ./fetch-datasets.ps1 ml-100k
 
       - name: Install for Testing
-        run: python -m pip install -e .[tf]
+        run: |
+          flit install -s --extras tf
 
       - name: Run Tests
         run: |
-          python -m pytest --cov=lenskit -k tensorflow --log-file=test.log
+          python -m pytest --cov=lenskit --cov-report=xml -k tensorflow --log-file=test.log
 
       - name: Upload logs
         uses: actions/upload-artifact@v2
@@ -140,9 +150,6 @@ jobs:
           path: |
             test*.log
             emissions.csv
-
-      - name: Aggreagate Coverage Data
-        run: coverage xml
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v1
@@ -157,19 +164,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Prepare Conda environment
+      - name: Prepare Conda environment spec
         shell: bash
         run: |
-          source $CONDA/etc/profile.d/conda.sh
-          conda activate base
-          conda config --set channel_priority strict
-          python setup.py dep_info --conda-env environment.yml -E dev,demo --python-version 3.8
+          conda install -qy -c conda-forge flit packaging
+          envtool.py -E demo --python-version $PYVER --save-env environment.yml
           cat environment.yml
+        env:
+          PYVER: '3.8'
           
-      - uses: ./.github/actions/conda-env
-        with:
-          name: lkpy
-          env-file: environment.yml
+      - name: Create Conda environment
+        run: |
+          conda config --set channel_priority strict
+          conda env update -n base -q -f environment.yml
 
       - name: Cache ML data
         uses: actions/cache@v2
@@ -185,7 +192,8 @@ jobs:
           ./fetch-datasets.ps1 ml-100k ml-1m ml-10m ml-20m
 
       - name: Install for Testing
-        run: python -m pip install -e .
+        run: 
+          flit install -s
 
       - name: Run Eval Tests
         run: |
@@ -210,7 +218,8 @@ jobs:
             emissions.csv
 
       - name: Aggreagate Coverage Data
-        run: coverage xml
+        run: |
+          coverage xml
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v1
@@ -244,9 +253,8 @@ jobs:
         env:
           PIP_PREFER_BINARY: 'true'
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest==5.0.1 pytest-cov pytest-doctestplus hypothesis
-          python -m pip install -e .
+          python -m pip install -U flit
+          flit install --pth-file
       
       - name: Run tests
         run: |
@@ -291,9 +299,9 @@ jobs:
 
       - name: Set up Python deps
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest==5.0.1 pytest-cov pytest-doctestplus hypothesis
-          python -m pip install -c min-constraints.txt -e .
+          python -m pip install -U pip
+          python -m pip install -c min-constraints.txt -e .[test]
+          python -m pip install pytest-cov
 
       - name: Run tests
         run: |
