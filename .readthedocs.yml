@@ -1,8 +1,12 @@
-build:
-  image: latest
+version: 2
+
+sphinx:
+  configuration: docs/conf.py
 
 python:
   version: 3.8
-  pip_install: true
-  extra_requirements:
-  - doc
+  install:
+  - method: pip
+    path: .
+    extra_requirements:
+    - doc
