@@ -48,7 +48,7 @@ jobs:
             # we'll test tensorflow in a separate run
             e_opts="-E demo -E hpf -E implicit -E sklearn"
           fi
-          envtool.py $e_opts --python-version $PYVER --save-env environment.yml
+          python envtool.py $e_opts --python-version $PYVER --save-env environment.yml
           cat environment.yml
         env:
           RUNNER: ${{runner.os}}
@@ -120,7 +120,7 @@ jobs:
         shell: bash
         run: |
           conda install -qy -c conda-forge flit packaging
-          envtool.py -E tf --python-version $PYVER --save-env environment.yml
+          python envtool.py -E tf --python-version $PYVER --save-env environment.yml
           cat environment.yml
         env:
           PYVER: '3.8'
@@ -168,7 +168,7 @@ jobs:
         shell: bash
         run: |
           conda install -qy -c conda-forge flit packaging
-          envtool.py -E demo --python-version $PYVER --save-env environment.yml
+          python envtool.py -E demo --python-version $PYVER --save-env environment.yml
           cat environment.yml
         env:
           PYVER: '3.8'
