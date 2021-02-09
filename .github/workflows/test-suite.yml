@@ -164,6 +164,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Initialize Conda
+        uses: s-weigand/setup-conda@v1
+        with:
+          python-version: '3.8'
+          conda-channels: conda-forge
+
       - name: Prepare Conda environment spec
         shell: bash
         run: |
