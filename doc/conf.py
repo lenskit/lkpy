@@ -18,6 +18,7 @@ from importlib import import_module
 sys.path.insert(0, os.path.abspath('..'))
 
 import sphinx_rtd_theme
+import lenskit
 
 # -- Project information -----------------------------------------------------
 
@@ -26,9 +27,9 @@ copyright = '2018–2019 Boise State University'
 author = 'Michael D. Ekstrand'
 
 # The short X.Y version
-version = '0.11'
+version = '.'.join(lenskit.__version__.split('.')[:2])
 # The full version, including alpha/beta/rc tags
-release = '0.11.1'
+release = lenskit.__version__
 
 
 # -- General configuration ---------------------------------------------------

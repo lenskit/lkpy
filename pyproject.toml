@@ -1,2 +1,81 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["flit_core >=2,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.flit.metadata]
+module = "lenskit"
+author = "Michael Ekstrand"
+author-email = "michaelekstrand@boisestate.edu"
+home-page = "https://lenskit.lenskit.org"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+]
+requires-python = ">= 3.6.1"
+description-file = "README.md"
+requires = [
+    "pandas >= 0.24",
+    "numpy >= 1.16",
+    "scipy >= 1.2",
+    "numba >= 0.45, < 0.53",
+    "pyarrow >= 0.15",
+    "cffi >= 1.12.2",
+    "binpickle >= 0.3.2",
+    "csr >= 0.1",
+]
+
+[tool.flit.metadata.requires-extra]
+test = [
+    "pytest >= 3.9",
+    "pytest-doctestplus",
+    "hypothesis"
+]
+dev = [
+    "flake8",
+    "coverage",
+    "pytest-cov",
+    "ipython"
+]
+doc = [
+    "sphinx >= 1.8",
+    "sphinx_rtd_theme",
+    "nbsphinx",
+    "recommonmark",
+    "ipython",
+]
+demo = [
+    "notebook",
+    "nbval",
+    "matplotlib",
+    "ipywidgets",
+    "tqdm"
+]
+hpf = ["hpfrec"]
+implicit = ["implicit"]
+sklearn = ["scikit-learn >= 0.22"]
+tf = ["tensorflow >= 2.1"]
+
+[tool.flit.sdist]
+include = ["tests/*"]
+exclude = [
+    ".github",
+    "*.ipynb"
+]
+
+[tool.envtool.conda]
+name = "lkpy"
+channels = ["conda-forge"]
+
+[tool.envtool.conda.overrides]
+hpfrec = { source="pip" }
+csr = { source="pip" }
+
+[tool.envtool.conda.extras]
+mkl = [
+    "libblas=*=*mkl"
+]
