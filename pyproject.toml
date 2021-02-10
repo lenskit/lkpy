@@ -83,6 +83,9 @@ csr = { source="pip" }
 ".none" = [
     "tbb"
 ]
+csr = [
+    "c-compiler"
+]
 mkl = [
     "libblas=*=*mkl"
 ]
