@@ -82,6 +82,7 @@ channels = [
 
 [tool.envtool.conda.overrides]
 hpfrec = { source="pip" }
+csr = { source="pip" }
 
 [tool.envtool.conda.extras]
 ".none" = [
