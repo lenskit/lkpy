@@ -171,8 +171,8 @@ jobs:
       - name: Prepare Conda environment spec
         shell: bash
         run: |
-          conda install -qy -c conda-forge flit packaging
-          python build-tools/flit-conda.py -E demo --python-version $PYVER --save-env environment.yml
+          conda install -qy -c conda-forge flit-core packaging pyyaml
+          python build-tools/flit-conda.py -E demo -E mkl --python-version $PYVER --save-env environment.yml
           cat environment.yml
         env:
           PYVER: '3.8'
