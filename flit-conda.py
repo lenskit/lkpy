@@ -128,11 +128,12 @@ def conda_env(args, pyp, flp):
     extras = set(['.none'])
     if not args.no_dev:
         extras |= set(['dev', 'doc', 'test'])
-    for e in args.extra:
-        if e == 'all':
-            extras |= set(flp.reqs_by_extra.keys())
-        else:
-            extras.add(e)
+    if args.extra:
+        for e in args.extra:
+            if e == 'all':
+                extras |= set(flp.reqs_by_extra.keys())
+            else:
+                extras.add(e)
 
     pip_deps = []
 
