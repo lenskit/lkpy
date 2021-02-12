@@ -185,7 +185,7 @@ class IntegratedBiasMF(Predictor):
         unos = np.full(len(good_inos), uno, dtype='i4')
         _log.debug('predicting %d items for user %d', len(good_inos), user)
 
-        ys = self.model.predict([unos, good_inos])
+        ys = self.model([unos, good_inos], training=False)
 
         res = pd.Series(ys[:, 0], index=good_items)
         return res.reindex(items)
