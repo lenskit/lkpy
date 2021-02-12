@@ -37,6 +37,7 @@ test = [
 ]
 dev = [
     "flit",
+    "packaging",
     "flake8",
     "coverage",
     "pytest-cov",
@@ -62,10 +63,14 @@ sklearn = ["scikit-learn >= 0.22"]
 tf = ["tensorflow >= 2.1"]
 
 [tool.flit.sdist]
-include = ["tests/*"]
 exclude = [
     ".github",
-    "*.ipynb"
+    "*.ipynb",
+    "doc",
+    "data",
+    "examples",
+    "build-tools",
+    "tests",
 ]
 
 [tool.envtool.conda]
