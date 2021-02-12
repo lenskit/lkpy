@@ -7,7 +7,6 @@ import logging
 
 import pandas as pd
 import numpy as np
-import csr.native_ops as csrn
 
 from numba import njit
 
@@ -30,7 +29,7 @@ def _agg_weighted_avg(iur, item, sims, use):
         sims(numpy.ndarray): the similarities for the users who have rated ``item``
         use(numpy.ndarray): positions in sims and the rating row to actually use
     """
-    rates = csrn.row_vs(iur, item)
+    rates = iur.row_vs(item)
     num = 0.0
     den = 0.0
     for j in use:
@@ -70,7 +69,7 @@ def _score(items, results, iur, sims, nnbrs, min_sim, min_nbrs, agg):
         h_ep = 0
 
         # who has rated this item?
-        i_users = csrn.row_cs(iur, item)
+        i_users = iur.row_cs(item)
 
         # what are their similarities to our target user?
         i_sims = sims[i_users]
