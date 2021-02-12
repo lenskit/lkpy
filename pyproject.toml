@@ -26,7 +26,7 @@ requires = [
     "pyarrow >= 0.15",
     "cffi >= 1.12.2",
     "binpickle >= 0.3.2",
-    "csr == 0.1.*",
+    "csr == 0.2.*",
 ]
 
 [tool.flit.metadata.requires-extra]
@@ -82,6 +82,7 @@ channels = [
 
 [tool.envtool.conda.overrides]
 hpfrec = { source="pip" }
+csr = { source="pip" }
 
 [tool.envtool.conda.extras]
 ".none" = [

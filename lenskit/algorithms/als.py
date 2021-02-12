@@ -4,8 +4,7 @@ from collections import namedtuple
 import numpy as np
 from numba import njit, prange
 
-from csr import _CSR
-import csr.native_ops as csrn
+from csr import CSR
 
 from .bias import Bias
 from .mf_common import MFPredictor
@@ -56,7 +55,7 @@ def _rr_solve(X, xis, y, w, reg, epochs):
 
 
 @njit(parallel=True, nogil=True)
-def _train_matrix_cd(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float):
+def _train_matrix_cd(mat: CSR, this: np.ndarray, other: np.ndarray, reg: float):
     """
     One half of an explicit ALS training round using coordinate descent.
 
@@ -75,11 +74,11 @@ def _train_matrix_cd(mat: _CSR, this: np.ndarray, other: np.ndarray, reg: float)
     frob = 0.0
 
     for i in prange(nr):
-        cols = csrn.row_cs(mat, i)
+        cols = mat.row_cs(i)
         if len(cols) == 0:
             continue
 
-        vals = csrn.row_vs(mat, i)
+        vals = mat.row_vs(i)
 
         w = this[i, :].copy()
         _rr_solve(other, cols, vals, w, reg * len(cols), 2)
@@ -109,11 +108,11 @@ def _train_matrix_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
     frob = 0.0
 
     for i in prange(nr):
-        cols = csrn.row_cs(mat, i)
+        cols = mat.row_cs(i)
         if len(cols) == 0:
             continue
 
-        vals = csrn.row_vs(mat, i)
+        vals = mat.row_vs(i)
         M = other[cols, :]
         MMT = M.T @ M
         # assert MMT.shape[0] == ctx.n_features
@@ -223,11 +222,11 @@ def _train_implicit_cg(mat, this: np.ndarray, other: np.ndarray, reg: float):
     frob = 0.0
 
     for i in prange(nr):
-        cols = csrn.row_cs(mat, i)
+        cols = mat.row_cs(i)
         if len(cols) == 0:
             continue
 
-        rates = csrn.row_vs(mat, i)
+        rates = mat.row_vs(i)
 
         # we can optimize by only considering the nonzero entries of Cu-I
         # this means we only need the corresponding matrix columns
@@ -256,11 +255,11 @@ def _train_implicit_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
     frob = 0.0
 
     for i in prange(nr):
-        cols = csrn.row_cs(mat, i)
+        cols = mat.row_cs(i)
         if len(cols) == 0:
             continue
 
-        rates = csrn.row_vs(mat, i)
+        rates = mat.row_vs(i)
 
         # we can optimize by only considering the nonzero entries of Cu-I
         # this means we only need the corresponding matrix columns
@@ -520,7 +519,7 @@ class BiasedMF(MFPredictor):
             if isinstance(self.regularization, tuple):
                 ureg, ireg = self.regularization
             else:
-                ureg = ireg = self.regularization
+                ureg = self.regularization
 
             u_feat = _train_bias_row_lu(ri_it, ri_val, self.item_features_, ureg)
             scores = self.score_by_ids(user, items, u_feat)
@@ -572,8 +571,8 @@ class ImplicitMF(MFPredictor):
             ``'cg'`` (the default)
                 Conjugate gradient method [TPT2011]_.
             ``'lu'``
-                A direct implementation of the original implicit-feedback ALS concept [HKV2008]_ using
-                LU-decomposition to solve for the optimized matrices.
+                A direct implementation of the original implicit-feedback ALS concept [HKV2008]_
+                using LU-decomposition to solve for the optimized matrices.
 
         rng_spec:
             Random number generator or state (see :func:`lenskit.util.random.rng`).
@@ -611,7 +610,7 @@ class ImplicitMF(MFPredictor):
         if isinstance(self.reg, tuple):
             ureg, ireg = self.reg
         else:
-            ureg = ireg = self.reg
+            ureg = self.reg
 
         # compute OtOr and save it on the model
         self.OtOr_ = _implicit_otor(self.item_features_, ureg)
