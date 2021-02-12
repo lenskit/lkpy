@@ -118,6 +118,7 @@ class UserUser(Predictor):
     """
     AGG_SUM = intern('sum')
     AGG_WA = intern('weighted-average')
+    RATING_AGGS = [AGG_WA]
 
     def __init__(self, nnbrs, min_nbrs=1, min_sim=0, center=True, aggregate='weighted-average'):
         self.nnbrs = nnbrs
@@ -206,7 +207,8 @@ class UserUser(Predictor):
 
         _score(ri_pos, results, self.transpose_matrix_.R, nsims,
                self.nnbrs, self.min_sim, self.min_nbrs, agg)
-        results += umean
+        if self.aggregate in self.RATING_AGGS:
+            results += umean
 
         results = pd.Series(results, index=items, name='prediction')
 
