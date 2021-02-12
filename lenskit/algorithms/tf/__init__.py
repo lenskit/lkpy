@@ -19,3 +19,6 @@ if TF_AVAILABLE and is_mp_worker():
     import tensorflow as _tf
     _log.info('disabling GPUs in worker process')
     _tf.config.set_visible_devices([], 'GPU')
+    _log.info('disabling multithreading in worker')
+    _tf.config.threading.set_inter_op_parallelism_threads(1)
+    _tf.config.threading.set_intra_op_parallelism_threads(1)
