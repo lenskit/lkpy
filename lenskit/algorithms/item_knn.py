@@ -10,8 +10,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-from csr import CSR, _CSR
-import csr.native_ops as csrn
+from csr import CSR, create_from_sizes, create_empty
 import csr.kernel as csrk
 from numba import njit, prange
 from numba.typed import List
@@ -32,9 +31,9 @@ def _make_blocks(n, size):
 
 
 @njit(parallel=not is_mp_worker())
-def _sort_nbrs(smat: _CSR):
+def _sort_nbrs(smat: CSR):
     for i in prange(smat.nrows):
-        sp, ep = csrn.row_extent(smat, i)
+        sp, ep = smat.row_extent(i)
         kvp_minheap_sort(sp, ep, smat.colinds, smat.values)
 
 
@@ -43,7 +42,7 @@ def _trim_sim_block(nitems, bsp, bitems, block, min_sim, max_nbrs):
     # pass 1: compute the size of each row
     sizes = np.zeros(bitems, np.int32)
     for i in range(nitems):
-        sp, ep = csrn.row_extent(block, i)
+        sp, ep = block.row_extent(i)
         for j in range(sp, ep):
             # we accept the neighbor if it passes threshold and isn't a self-similarity
             r = block.colinds[j]
@@ -60,16 +59,16 @@ def _trim_sim_block(nitems, bsp, bitems, block, min_sim, max_nbrs):
     #     return _empty_csr(bitems, nitems, np.zeros(bitems, np.int32))
 
     # allocate a matrix
-    block_csr = csrn.make_unintialized(bitems, nitems, sizes)
+    block_csr = create_from_sizes(bitems, nitems, sizes)
 
     # pass 2: truncate each row into the matrix
     eps = block_csr.rowptrs[:-1].copy()
     for c in range(nitems):
-        sp, ep = csrn.row_extent(block, c)
+        sp, ep = block.row_extent(c)
         for j in range(sp, ep):
             v = block.values[j]
             r = block.colinds[j]
-            sp, lep = csrn.row_extent(block_csr, r)
+            sp, lep = block_csr.row_extent(r)
             lim = lep - sp
             if c != bsp + r and v >= min_sim:
                 eps[r] = kvp_minheap_insert(sp, eps[r], lim, c, v,
@@ -85,7 +84,7 @@ def _sim_block(block, bsp, bep, rmh, min_sim, max_nbrs, nitems):
 
     bitems = block.nrows
     if block.nnz == 0:
-        return csrn.make_empty(bitems, nitems)
+        return create_empty(bitems, nitems)
 
     # create a matrix handle for the subset matrix
     amh = csrk.to_handle(block)
@@ -110,7 +109,7 @@ def _sim_blocks(trmat, blocks, ptrs, min_sim, max_nbrs):
     nitems = trmat.nrows
     nblocks = len(blocks)
 
-    null = csrn.make_empty(1, 1)
+    null = create_empty(1, 1)
     res = [null for i in range(nblocks)]
 
     rmat_h = csrk.to_handle(trmat)
@@ -352,15 +351,14 @@ class ItemItem(Predictor):
 
         _logger.info('[%s] computing similarities', self._timer)
         ptrs = List(bounds)
-        nbs = List(b.R for b in blocks)
+        nbs = List(blocks)
         if not nbs:
             # oops, this is the bad place
             # in non-JIT node, List doesn't actually make the list
-            nbs = [b.R for b in blocks]
+            nbs = blocks
             ptrs = bounds
-        s_blocks = _sim_blocks(trmat.R, nbs, ptrs, self.min_sim, m_nbrs)
+        s_blocks = _sim_blocks(trmat, nbs, ptrs, self.min_sim, m_nbrs)
 
-        s_blocks = [CSR(R=b) for b in s_blocks]
         nnz = sum(b.nnz for b in s_blocks)
         tot_rows = sum(b.nrows for b in s_blocks)
         _logger.info('[%s] computed %d similarities for %d items in %d blocks',
