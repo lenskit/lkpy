@@ -20,7 +20,18 @@ _log = logging.getLogger(__name__)
 
 
 @njit
-def _neg_sample(mat, uv):
+def _sample_unweighted(mat):
+    return np.random.randint(0, mat.ncols)
+
+
+@njit
+def _sample_weighted(mat):
+    j = np.random.randint(0, mat.nnz)
+    return mat.colinds[j]
+
+
+@njit(nogil=True)
+def _neg_sample(mat, uv, sample):
     """
     Sample the negative examples.  For each user in uv, it samples an item that
     they have not rated using rejection sampling.
@@ -29,16 +40,15 @@ def _neg_sample(mat, uv):
     will request multiple batches in parallel.
     """
     n = len(uv)
-    ni = mat.ncols
     jv = np.empty(n, dtype=np.int32)
     sc = np.ones(n, dtype=np.int32)
 
     for i in range(n):
         u = uv[i]
         used = mat.row_cs(u)
-        j = np.random.randint(0, ni)
+        j = sample(mat)
         while np.any(used == j):
-            j = np.random.randint(0, ni)
+            j = sample(mat)
             sc[i] = sc[i] + 1
         jv[i] = j
 
@@ -51,7 +61,7 @@ if tf is not None:
             return k.backend.mean(-tf.math.log_sigmoid(y_pred))
 
     class BprInputs(k.utils.Sequence):
-        def __init__(self, urmat, batch_size, neg_count, rng):
+        def __init__(self, urmat, batch_size, neg_count, neg_weight, rng):
             super().__init__()
             self.n_items = urmat.ncols
             self.matrix = urmat
@@ -60,6 +70,10 @@ if tf is not None:
             self.rng = rng
             self.batch_size = batch_size
             self.neg_count = neg_count
+            if neg_weight:
+                self._sample = _sample_weighted
+            else:
+                self._sample = _sample_unweighted
             self.permutation = np.arange(self.matrix.nnz, dtype='i4')
             self.targets = np.ones(batch_size * neg_count)
             rng.shuffle(self.permutation)
@@ -78,7 +92,7 @@ if tf is not None:
             assert len(picked) == self.neg_count * (end - start)
             uv = self.users[picked]
             iv = self.items[picked]
-            jv, j_samps = _neg_sample(self.matrix.R, uv)
+            jv, j_samps = _neg_sample(self.matrix.R, uv, self._sample)
             assert all(jv < self.n_items)
             _log.debug('max sample count: %d', j_samps.max())
             return [uv.astype(np.int32),
@@ -126,6 +140,8 @@ class BPR(Predictor):
             The regularization term for the embedding vectors.
         neg_count(int):
             The number of negative examples to sample for each positive one.
+        neg_weight(bool):
+            Whether to weight negative sampling by popularity (``True``) or not.
         rng_spec:
             The random number generator initialization.
 
@@ -136,13 +152,14 @@ class BPR(Predictor):
     model = None
 
     def __init__(self, features=50, *, epochs=5, batch_size=10000,
-                 reg=0.02, neg_count=1, rng_spec=None):
+                 reg=0.02, neg_count=1, neg_weight=True, rng_spec=None):
         check_tensorflow()
         self.features = features
         self.epochs = epochs
         self.batch_size = batch_size
         self.reg = reg
         self.neg_count = neg_count
+        self.neg_weight = neg_weight
         self.rng_spec = rng_spec
 
     def fit(self, ratings, **kwargs):
@@ -155,7 +172,7 @@ class BPR(Predictor):
         train, model = self._build_model(len(users), len(items))
 
         _log.info('[%s] preparing training dataset', timer)
-        train_data = BprInputs(matrix, self.batch_size, self.neg_count, rng)
+        train_data = BprInputs(matrix, self.batch_size, self.neg_count, self.neg_weight, rng)
 
         _log.info('[%s] training model', timer)
         train.fit(train_data, epochs=self.epochs)

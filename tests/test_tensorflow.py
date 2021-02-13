@@ -143,12 +143,14 @@ def test_tf_ibmf_batch_accuracy(n_jobs, tf_session):
 
 
 @mark.slow
-def test_tf_bpr_general(tmp_path, tf_session):
+@mark.parametrize('weight', [True, False])
+def test_tf_bpr_general(tmp_path, tf_session, weight):
     "Training, saving, loading, and using a BPR model."
     fn = tmp_path / 'bias.bpk'
     ratings = lktu.ml_test.ratings
 
-    original = lktf.BPR(20, batch_size=1024, epochs=20, neg_count=2, rng_spec=42)
+    original = lktf.BPR(20, batch_size=1024, epochs=20,
+                        neg_count=2, neg_weight=weight, rng_spec=42)
     original.fit(ratings)
     ue = original.model.get_layer('user-embed')
     assert ue.get_weights()[0].shape == (ratings.user.nunique(), 20)
