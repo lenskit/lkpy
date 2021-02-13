@@ -41,6 +41,7 @@ jobs:
       - name: Prepare Conda environment spec
         shell: bash
         run: |
+          conda clean -i
           conda install -qy -c conda-forge flit packaging pyyaml
           e_opts="-E ${{matrix.blas}}"
           if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
@@ -118,6 +119,7 @@ jobs:
       - name: Prepare Conda environment spec
         shell: bash
         run: |
+          conda clean -i
           conda install -qy -c conda-forge flit packaging pyyaml
           python build-tools/flit-conda.py -E tf --python-version $PYVER --save-env environment.yml
           cat environment.yml
@@ -171,6 +173,7 @@ jobs:
       - name: Prepare Conda environment spec
         shell: bash
         run: |
+          conda clean -i
           conda install -qy -c conda-forge flit-core packaging pyyaml
           python build-tools/flit-conda.py -E demo -E mkl --python-version $PYVER --save-env environment.yml
           cat environment.yml
