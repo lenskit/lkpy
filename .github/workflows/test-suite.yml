@@ -41,7 +41,7 @@ jobs:
       - name: Prepare Conda environment spec
         shell: bash
         run: |
-          conda install -qy -c conda-forge flit packaging
+          conda install -qy -c conda-forge flit packaging pyyaml
           e_opts="-E ${{matrix.blas}}"
           if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
             echo "Using most extras"
@@ -118,7 +118,7 @@ jobs:
       - name: Prepare Conda environment spec
         shell: bash
         run: |
-          conda install -qy -c conda-forge flit packaging
+          conda install -qy -c conda-forge flit packaging pyyaml
           python build-tools/flit-conda.py -E tf --python-version $PYVER --save-env environment.yml
           cat environment.yml
         env:
