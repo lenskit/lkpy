@@ -64,10 +64,12 @@ def test_svd_predict_bad_user():
 
 @need_skl
 def test_svd_clone():
-    algo = svd.BiasedSVD(5)
+    algo = svd.BiasedSVD(5, damping=10)
 
     a2 = clone(algo)
     assert a2.factorization.n_components == algo.factorization.n_components
+    assert a2.bias.user_damping == algo.bias.user_damping
+    assert a2.bias.item_damping == algo.bias.item_damping
 
 @need_skl
 @mark.slow

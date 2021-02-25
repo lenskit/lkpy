@@ -89,6 +89,8 @@ class BiasedSVD(Predictor):
         if deep and self.bias:
             for k, v in self.bias.get_params(True).items():
                 params['bias__' + k] = v
+        else:
+            params['bias'] = self.bias
         return params
 
     def __str__(self):
