@@ -9,6 +9,7 @@ import numpy as np
 from pytest import approx, mark
 
 import lenskit.util.test as lktu
+from lenskit.util import clone
 
 _log = logging.getLogger(__name__)
 
@@ -60,6 +61,15 @@ def test_svd_predict_bad_user():
     assert preds.index[0] == 3
     assert np.isnan(preds.loc[3])
 
+
+@need_skl
+def test_svd_clone():
+    algo = svd.BiasedSVD(5, damping=10)
+
+    a2 = clone(algo)
+    assert a2.factorization.n_components == algo.factorization.n_components
+    assert a2.bias.user_damping == algo.bias.user_damping
+    assert a2.bias.item_damping == algo.bias.item_damping
 
 @need_skl
 @mark.slow
