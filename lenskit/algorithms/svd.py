@@ -81,11 +81,15 @@ class BiasedSVD(Predictor):
         scores += self.bias.predict_for_user(user, items, ratings)
         return scores
 
-    def get_params(self, deep):
-        return {
+    def get_params(self, deep=True):
+        params = {
             'features': self.factorization.n_components,
             'algorithm': self.factorization.algorithm
         }
+        if deep and self.bias:
+            for k, v in self.bias.get_params(True).items():
+                params['bias__' + k] = v
+        return params
 
     def __str__(self):
         return f'BiasedSVD({self.factorization})'
