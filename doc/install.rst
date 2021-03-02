@@ -19,7 +19,7 @@ Then see `Getting Started`_.
 .. _`Getting Started`: GettingStarted.html
 
 .. note::
-    LensKit is optimized for MKL-based Anaconda installs. It works in other
-    Python environments, but performance will usually suffer for some
-    algorithms.  :py:class:`lenskit.algorithms.item_knn` is particularly
-    affected by this.
+    If you install MKL-based BLAS in Conda, LensKit will use it to optimize
+    several of its operations::
+
+        conda install -c conda-forge libblas=*=*mkl
