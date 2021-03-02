@@ -19,7 +19,7 @@ requires-python = ">= 3.7"
 description-file = "README.md"
 requires = [
     "pandas >= 0.24",
-    "numpy >= 1.16",
+    "numpy >= 1.17",
     "scipy >= 1.2",
     "numba >= 0.51, < 0.53",
     "pyarrow >= 0.15",
