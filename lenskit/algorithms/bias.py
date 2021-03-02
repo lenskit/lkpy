@@ -135,7 +135,10 @@ class Bias(Predictor):
         """
         Transform ratings by removing the bias term.
         """
-        rvps = ratings[['user', 'item']]
+        rvps = pd.DataFrame({
+            'user': ratings['user'],
+            'item': ratings['item']
+        })
         rvps['rating'] = ratings['rating'] + self.mean_
         if self.item_offsets_ is not None:
             rvps = rvps.join(self.item_offsets_, on='item', how='left')

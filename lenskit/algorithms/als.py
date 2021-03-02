@@ -496,9 +496,9 @@ class BiasedMF(MFPredictor):
             ureg = ireg = self.regularization
 
         for epoch in self.progress(range(self.iterations), desc='BiasedMF', leave=False):
-            du = train(uctx.R, current.user_matrix, current.item_matrix, ureg)
+            du = train(uctx, current.user_matrix, current.item_matrix, ureg)
             _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
-            di = train(ictx.R, current.item_matrix, current.user_matrix, ireg)
+            di = train(ictx, current.item_matrix, current.user_matrix, ireg)
             _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
             _logger.info('[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)', self.timer, epoch, du, di)
             yield current
@@ -652,9 +652,9 @@ class ImplicitMF(MFPredictor):
             ureg = ireg = self.reg
 
         for epoch in self.progress(range(self.iterations), desc='ImplicitMF', leave=False):
-            du = train(uctx.R, current.user_matrix, current.item_matrix, ureg)
+            du = train(uctx, current.user_matrix, current.item_matrix, ureg)
             _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
-            di = train(ictx.R, current.item_matrix, current.user_matrix, ireg)
+            di = train(ictx, current.item_matrix, current.user_matrix, ireg)
             _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
             _logger.info('[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)', self.timer, epoch, du, di)
             yield current
