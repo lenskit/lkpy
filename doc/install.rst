@@ -6,8 +6,7 @@ To install the current release with Anaconda (recommended)::
     conda install -c lenskit lenskit
 
 The packages in the ``lenskit`` channel are intended to be used with
-Anaconda's default channels.  We publish packages for Python 3.6, 3.7,
-and 3.8.
+Anaconda's default channels.  We publish packages for Python 3.7, and 3.8.
 
 You can also use ``pip`` to install LensKit in a stock Python environment,
 such as a virtual environment::
