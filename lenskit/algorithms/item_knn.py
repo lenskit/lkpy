@@ -381,7 +381,7 @@ class ItemItem(Predictor):
             start = end
 
         _logger.info('[%s] sorting similarity matrix with %d entries', self._timer, smat.nnz)
-        _sort_nbrs(smat.R)
+        _sort_nbrs(smat)
 
         return smat
 
@@ -454,7 +454,7 @@ class ItemItem(Predictor):
                           user, len(fast_items))
 
             if len(slow_items):
-                iscores = _predict_sum(self.sim_matrix_.R, len(self.item_index_),
+                iscores = _predict_sum(self.sim_matrix_, len(self.item_index_),
                                        (self.min_nbrs, self.nnbrs),
                                        rate_v, rated, slow_items)
             else:
@@ -471,7 +471,7 @@ class ItemItem(Predictor):
             _logger.debug('user %s: fast-pathed %d scores', user, len(fast_scores))
 
             slow_items = i_pos[i_cts > 1]
-            iscores = _predict_weighted_average(self.sim_matrix_.R, len(self.item_index_),
+            iscores = _predict_weighted_average(self.sim_matrix_, len(self.item_index_),
                                                 (self.min_nbrs, self.nnbrs),
                                                 rate_v, rated, slow_items)
             iscores[fast_items] = fast_scores
@@ -479,7 +479,7 @@ class ItemItem(Predictor):
             # now compute the predictions
             _logger.debug('user %s: taking the slow path', user)
             agg = _predictors[self.aggregate]
-            iscores = agg(self.sim_matrix_.R, len(self.item_index_), (self.min_nbrs, self.nnbrs),
+            iscores = agg(self.sim_matrix_, len(self.item_index_), (self.min_nbrs, self.nnbrs),
                           rate_v, rated, i_pos)
 
         if self.center and self.aggregate in self.RATING_AGGS:

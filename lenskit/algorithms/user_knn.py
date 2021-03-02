@@ -204,7 +204,7 @@ class UserUser(Predictor):
         else:
             raise ValueError('invalid aggregate ' + self.aggregate)
 
-        _score(ri_pos, results, self.transpose_matrix_.R, nsims,
+        _score(ri_pos, results, self.transpose_matrix_, nsims,
                self.nnbrs, self.min_sim, self.min_nbrs, agg)
         if self.aggregate in self.RATING_AGGS:
             results += umean
