@@ -8,7 +8,6 @@ from multiprocessing.queues import SimpleQueue
 import functools as ft
 import logging
 import logging.handlers
-import inspect
 import faulthandler
 from concurrent.futures import ProcessPoolExecutor
 from abc import ABC, abstractmethod
@@ -237,11 +236,8 @@ def invoker(model, func, n_jobs=None, *, persist_method=None):
 
     if n_jobs == 1:
         return InProcessOpInvoker(model, func)
-    elif 'mp_context' in inspect.signature(ProcessPoolExecutor).parameters:
-        return ProcessPoolOpInvoker(model, func, n_jobs, persist_method)
     else:
-        _log.warn('using multiprocessing.Pool, upgrade to Python 3.7 for best results')
-        return MPOpInvoker(model, func, n_jobs, persist_method)
+        return ProcessPoolOpInvoker(model, func, n_jobs, persist_method)
 
 
 class ModelOpInvoker(ABC):
@@ -314,26 +310,4 @@ class ProcessPoolOpInvoker(ModelOpInvoker):
 
     def shutdown(self):
         self.executor.shutdown()
-        os.environ.pop('_LK_IN_MP', 'yes')
-
-
-class MPOpInvoker(ModelOpInvoker):
-    def __init__(self, model, func, n_jobs, persist_method):
-        if isinstance(model, PersistedModel):
-            key = model
-        else:
-            key = persist(model, method=persist_method)
-        func = pickle.dumps(func)
-        ctx = LKContext.INSTANCE
-        kid_tc = proc_count(level=1)
-        os.environ['_LK_IN_MP'] = 'yes'
-        _log.info('setting up multiprocessing.Pool w/ %d workers', n_jobs)
-        self.pool = ctx.Pool(n_jobs, _initialize_mp_worker,
-                             (key, func, kid_tc, log_queue(), get_root_seed()))
-
-    def map(self, *iterables):
-        return self.pool.starmap(_mp_invoke_worker, zip(*iterables))
-
-    def shutdown(self):
-        self.pool.close()
         os.environ.pop('_LK_IN_MP', 'yes')
