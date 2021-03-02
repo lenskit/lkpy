@@ -13,18 +13,14 @@ random seed and the conclusions compared.
 
 LensKit is built to support this experimental design, making consistent use of
 configurable random number generators throughout its algorithm implementations.
-When run against NumPy 1.17 or later, it uses the new :py:class:`numpy.random.Generator`
-and :py:class:`numpy.random.SeedSequence` facilities to provide consistent random
-number generation and initialization.  LensKit is compatible with older versions
-of NumPy, but the RNG reproducibility logic will not fully function, and some
-functions will not work.
+It uses the new :py:class:`numpy.random.Generator` and
+:py:class:`numpy.random.SeedSequence` facilities to provide consistent random
+number generation and initialization.
 
 .. note::
    For fully reproducible research, including random seeds and the use thereof,
    make sure that you are running on the same platform with the same verions of all
-   packages (particularly LensKit, NumPy, SciPy, Pandas, and related packages),
-   and are using at least NumPy 1.17.  LensKit manages state for older versions of
-   NumPy on a best-effort basis.
+   packages (particularly LensKit, NumPy, SciPy, Pandas, and related packages).
 
 Developers *using* LensKit will be primarily intrested in the :py:func:`init_rng`
 function, so they can initialize LensKit's random seed.  LensKit components using

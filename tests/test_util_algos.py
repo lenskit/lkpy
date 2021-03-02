@@ -1,11 +1,9 @@
 from lenskit.algorithms import basic
-from lenskit import util as lku
 
 import pandas as pd
 import numpy as np
 
 import lenskit.util.test as lktu
-from pytest import mark
 
 simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
                           'user': [10, 12, 10, 13],
@@ -83,7 +81,6 @@ def test_random():
     assert set(items) == set(recs_all['item'])
 
 
-@mark.skipif(not lku.random._have_gen, reason='derived seeds require NumPy 1.17')
 def test_random_derive_seed():
     algo = basic.Random(rng_spec='user')
     model = algo.fit(lktu.ml_test.ratings)
@@ -118,6 +115,7 @@ def test_random_rec_from_candidates():
     assert len(recs1) == 100
     assert len(recs2) == 100
 
+
 def test_knownrating():
     algo = basic.KnownRating()
     algo.fit(simple_df)
@@ -130,6 +128,7 @@ def test_knownrating():
     assert set(preds.index) == set([1, 3])
     assert preds.loc[1] == 3.0
     assert np.isnan(preds.loc[3])
+
 
 def test_knownrating_batch_missing():
     algo = basic.KnownRating()

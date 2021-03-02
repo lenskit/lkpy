@@ -5,47 +5,9 @@ Utilities to manage randomness in LensKit and LensKit experiments.
 import zlib
 import numpy as np
 import random
-import warnings
 import logging
 
 _log = logging.getLogger(__name__)
-
-
-class LegacyRNG:
-    _seed = None
-    _rng = None
-
-    @property
-    def seed(self):
-        if self._seed is None:
-            self._seed = np.random.randint(0, np.iinfo('i4').max)
-        return self._seed
-
-    @property
-    def int_seed(self):
-        return self._seed
-
-    def initialize(self, seed, keys):
-        warnings.warn('initializing legacy RNG infrastructure')
-        _log.warn('initializing legacy RNG infrastructure - use NumPy 1.17+ for better seeds')
-        if keys:
-            raise NotImplementedError('legacy RNG does not support seed keys')
-        self._seed = seed
-        if self._rng is not None:
-            del self._rng
-        return seed
-
-    def derive(self, base, keys):
-        raise NotImplementedError('legacy RNG does not support deriving seeds')
-
-    def rng(self, seed=None):
-        if seed is None:
-            if self._rng is None:
-                seed = self.seed
-                self._rng = np.random.RandomState(seed)
-            return self._rng
-        else:
-            return np.random.RandomState(seed)
 
 
 class ModernRNG:
@@ -242,12 +204,12 @@ def rng(spec=None, *, legacy=False):
     rng = None
     if isinstance(spec, np.random.RandomState):
         rng = spec
-    elif _have_gen and isinstance(spec, np.random.Generator):
+    elif isinstance(spec, np.random.Generator):
         rng = spec
     else:
         rng = _rng_impl.rng(spec)
 
-    if legacy and _have_gen and isinstance(rng, np.random.Generator):
+    if legacy and isinstance(rng, np.random.Generator):
         rng = np.random.RandomState(rng.bit_generator)
     # case where rng is a random state, and we are on new numpy and want a generator, is ok
 
@@ -317,9 +279,4 @@ def derivable_rng(spec, *, legacy=False):
         return FixedRNG(rng(spec, legacy=legacy))
 
 
-# are we on modern NumPy?
-_have_gen = hasattr(np.random, 'Generator')
-if _have_gen:
-    _rng_impl = ModernRNG()
-else:
-    _rng_impl = LegacyRNG()
+_rng_impl = ModernRNG()
