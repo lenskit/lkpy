@@ -12,47 +12,11 @@ except ImportError:
     tf = None
 
 from lenskit import util
-from lenskit.data import sparse_ratings
+from lenskit.data import sparse_ratings, sampling
 from .. import Predictor
 from .util import init_tf_rng, check_tensorflow
 
 _log = logging.getLogger(__name__)
-
-
-@njit
-def _sample_unweighted(mat):
-    return np.random.randint(0, mat.ncols)
-
-
-@njit
-def _sample_weighted(mat):
-    j = np.random.randint(0, mat.nnz)
-    return mat.colinds[j]
-
-
-@njit(nogil=True)
-def _neg_sample(mat, uv, sample):
-    """
-    Sample the negative examples.  For each user in uv, it samples an item that
-    they have not rated using rejection sampling.
-
-    While this is embarassingly parallel, we do not parallelize because TensorFlow
-    will request multiple batches in parallel.
-    """
-    n = len(uv)
-    jv = np.empty(n, dtype=np.int32)
-    sc = np.ones(n, dtype=np.int32)
-
-    for i in range(n):
-        u = uv[i]
-        used = mat.row_cs(u)
-        j = sample(mat)
-        while np.any(used == j):
-            j = sample(mat)
-            sc[i] = sc[i] + 1
-        jv[i] = j
-
-    return jv, sc
 
 
 if tf is not None:
@@ -71,9 +35,9 @@ if tf is not None:
             self.batch_size = batch_size
             self.neg_count = neg_count
             if neg_weight:
-                self._sample = _sample_weighted
+                self._sample = sampling.sample_weighted
             else:
-                self._sample = _sample_unweighted
+                self._sample = sampling.sample_unweighted
             self.permutation = np.arange(self.matrix.nnz, dtype='i4')
             self.targets = np.ones(batch_size * neg_count)
             rng.shuffle(self.permutation)
@@ -92,7 +56,7 @@ if tf is not None:
             assert len(picked) == self.neg_count * (end - start)
             uv = self.users[picked]
             iv = self.items[picked]
-            jv, j_samps = _neg_sample(self.matrix, uv, self._sample)
+            jv, j_samps = sampling.neg_sample(self.matrix, uv, self._sample)
             assert all(jv < self.n_items)
             _log.debug('max sample count: %d', j_samps.max())
             return [uv.astype(np.int32),
