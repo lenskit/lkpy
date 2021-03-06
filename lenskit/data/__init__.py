@@ -1,1 +1,1 @@
-from .matrix import sparse_ratings  # noqa: F401
+from .matrix import RatingMatrix, sparse_ratings  # noqa: F401
