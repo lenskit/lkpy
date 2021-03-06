@@ -69,7 +69,6 @@ jobs:
         run: |
           python -m pytest --cov=lenskit --verbose --log-file=test.log
         env:
-          MKL_THREADING_LAYER: tbb
           NUMBA_NUM_THREADS: 4
           MKL_NUM_THREADS: 1
           OPENBLAS_NUM_THREADS: 1
