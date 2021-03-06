@@ -47,7 +47,8 @@ def _rr_solve(X, xis, y, w, reg, epochs):
     for e in range(epochs):
         for k in range(nd):
             xk = Xt[k, :]
-            num = np.dot(xk, resid) - reg * w[k]
+            w[k] = 0
+            num = np.dot(xk, resid)
             denom = np.dot(xk, xk) + reg
             dw = num / denom
             w[k] += dw
@@ -428,14 +429,13 @@ class BiasedMF(MFPredictor):
     def _initial_model(self, ratings, bias=None):
         # transform ratings using offsets
         if self.bias:
+            _logger.info('[%s] normalizing ratings', self.timer)
             ratings = self.bias.transform(ratings)
 
         "Initialize a model and build contexts."
         rmat, users, items = sparse_ratings(ratings)
         n_users = len(users)
         n_items = len(items)
-
-        rmat = self._normalize(rmat, users, items)
 
         _logger.debug('setting up contexts')
         trmat = rmat.transpose()
@@ -450,22 +450,6 @@ class BiasedMF(MFPredictor):
         _logger.debug('|P|: %f', np.linalg.norm(umat, 'fro'))
 
         return PartialModel(users, items, umat, imat), rmat, trmat
-
-    def _normalize(self, ratings, users, items):
-        "Apply bias normalization to the data in preparation for training."
-        n_users = len(users)
-        n_items = len(items)
-        assert ratings.nrows == n_users
-        assert ratings.ncols == n_items
-
-        if self.bias:
-            if ratings.values is None:
-                ratings.N.values = np.ones(np.nnz)
-
-        _logger.info('[%s] normalizing %dx%d matrix (%d nnz)',
-                     self.timer, n_users, n_items, ratings.nnz)
-
-        return ratings
 
     def _train_iters(self, current, uctx, ictx):
         """
