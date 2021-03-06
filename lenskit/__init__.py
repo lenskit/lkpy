@@ -5,7 +5,7 @@ The LensKit package.
 
 from lenskit.algorithms import *  # noqa: F401,F403
 
-__version__ = '0.12.1'
+__version__ = '0.12.2'
 
 
 class DataWarning(UserWarning):
