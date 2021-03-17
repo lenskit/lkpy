@@ -14,12 +14,12 @@ following to compute per-user RMSE over some predictions::
     from lenskit.algorithms.bias import Bias
     from lenskit.batch import predict
     from lenskit.metrics.predict import rmse
-    ratings = MovieLens('ml-small').ratings.sample(frac=10
+    ratings = MovieLens('ml-small').ratings.sample(frac=0.1)
     test = ratings.iloc[:1000]
     train = ratings.iloc[1000:]
     algo = Bias()
     algo.fit(train)
-    preds = predict(algo, pairs)
+    preds = predict(algo, test)
     user_rmse = preds.groupby('user').apply(lambda df: rmse(df.prediction, df.rating))
     user_rmse.mean()
 
