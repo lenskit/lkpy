@@ -25,7 +25,7 @@ requires = [
     "pyarrow >= 0.15",
     "cffi >= 1.12.2",
     "binpickle >= 0.3.2",
-    "csr >=0.2,<0.3",
+    "csr @ git+https://github.com/lenskit/csr.git",
 ]
 
 [tool.flit.metadata.requires-extra]
