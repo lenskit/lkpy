@@ -41,6 +41,7 @@ dev = [
     "coverage",
     "pytest-cov",
     "ipython",
+    "docopt",
 ]
 doc = [
     "sphinx >= 1.8",
