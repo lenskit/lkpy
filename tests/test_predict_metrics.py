@@ -190,3 +190,43 @@ def test_batch_rmse():
 
     # we should have a reasonable mean
     assert user_rmse.mean() == approx(0.93, abs=0.05)
+
+
+@mark.slow
+def test_global_metric():
+    import lenskit.crossfold as xf
+    import lenskit.batch as batch
+    from lenskit.algorithms.bias import Bias
+
+    train, test = next(xf.sample_users(lktu.ml_test.ratings, 1, 200, xf.SampleFrac(0.5)))
+    algo = Bias()
+    algo.fit(train)
+
+    preds = batch.predict(algo, test)
+
+    rmse = pm.global_metric(preds)
+    assert rmse == pm.rmse(preds.prediction, preds.rating)
+
+    mae = pm.global_metric(preds, metric=pm.mae)
+    assert mae == pm.mae(preds.prediction, preds.rating)
+
+
+@mark.slow
+def test_user_metric():
+    import lenskit.crossfold as xf
+    import lenskit.batch as batch
+    from lenskit.algorithms.bias import Bias
+
+    train, test = next(xf.sample_users(lktu.ml_test.ratings, 1, 200, xf.SampleFrac(0.5)))
+    algo = Bias()
+    algo.fit(train)
+
+    preds = batch.predict(algo, test)
+
+    rmse = pm.user_metric(preds)
+    u_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
+    assert rmse == approx(u_rmse.mean())
+
+    mae = pm.user_metric(preds, metric=pm.mae)
+    u_mae = preds.groupby('user').apply(lambda df: pm.mae(df.prediction, df.rating))
+    assert mae == approx(u_mae.mean())

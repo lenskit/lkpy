@@ -13,23 +13,32 @@ following to compute per-user RMSE over some predictions::
     from lenskit.datasets import MovieLens
     from lenskit.algorithms.bias import Bias
     from lenskit.batch import predict
-    from lenskit.metrics.predict import rmse
+    from lenskit.metrics.predict import user_metric, rmse
     ratings = MovieLens('ml-small').ratings.sample(frac=0.1)
     test = ratings.iloc[:1000]
     train = ratings.iloc[1000:]
     algo = Bias()
     algo.fit(train)
     preds = predict(algo, test)
-    user_rmse = preds.groupby('user').apply(lambda df: rmse(df.prediction, df.rating))
-    user_rmse.mean()
+    user_metric(preds, metric=rmse)
 
 Metric Functions
 ----------------
 
-Prediction metric functions take two series, `predictions` and `truth`.
+Prediction metric functions take two series, `predictions` and `truth`, and compute
+a prediction accuracy metric for them.
 
 .. autofunction:: rmse
 .. autofunction:: mae
+
+Convenience Functions
+---------------------
+
+These functions make it easier to compute global and per-user prediction metrics.
+
+.. autofunction:: user_metric
+.. autofunction:: global_metric
+
 
 Working with Missing Data
 -------------------------
