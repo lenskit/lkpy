@@ -94,7 +94,7 @@ def max_memory():
     "Get the maximum memory use for this process"
     if resource:
         res = resource.getrusage(resource.RUSAGE_SELF)
-        return "%.1f MiB" % (res.ru_maxrss,)
+        return "%.1f MiB" % (res.ru_maxrss / 1024,)
     else:
         return 'unknown'
 
