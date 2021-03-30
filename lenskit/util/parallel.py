@@ -294,9 +294,12 @@ class InProcessOpInvoker(ModelOpInvoker):
 class ProcessPoolOpInvoker(ModelOpInvoker):
     def __init__(self, model, func, n_jobs, persist_method):
         if isinstance(model, PersistedModel):
+            _log.debug('model already persisted')
             key = model
         else:
+            _log.debug('persisting model with method %s', persist_method)
             key = persist(model, method=persist_method)
+        _log.debug('persisting function')
         func = pickle.dumps(func)
         ctx = LKContext.INSTANCE
         _log.info('setting up ProcessPoolExecutor w/ %d workers', n_jobs)

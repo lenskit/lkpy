@@ -39,14 +39,15 @@ def persist_shm(model, dir=None):
 
     if buffers:
         # blit the buffers to the SHM block
+        _log.debug('preparing to share %d buffers', len(buffers))
         memory = shm.SharedMemory(create=True, size=total_size)
         cur_offset = 0
         blocks = []
-        for buf in buffers:
+        for i, buf in enumerate(buffers):
             ba = buf.raw()
             blen = ba.nbytes
             bend = cur_offset + blen
-            _log.debug('saving %d bytes', blen)
+            _log.debug('saving %d bytes in buffer %d/%d', blen, i+1, len(buffers))
             memory.buf[cur_offset:bend] = ba
             blocks.append((cur_offset, bend))
             cur_offset = bend
