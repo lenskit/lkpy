@@ -23,6 +23,9 @@ jobs:
         blas:
         - mkl
         - openblas
+        exclude:
+        - platform: macos
+          python: 3.9
     steps:
       - uses: actions/checkout@v2
         with:
