@@ -89,7 +89,8 @@ def do_measure(opts):
 if __name__ == '__main__':
     opts = docopt(__doc__)
     level = logging.DEBUG if opts['--verbose'] else logging.INFO
-    logging.basicConfig(stream=sys.stderr, level=level)
+    format = '%(relativeCreated)6d: %(levelname)s %(name)s %(message)s'
+    logging.basicConfig(stream=sys.stderr, level=level, format=format)
 
     if opts['--prepare']:
         do_prepare(opts)
