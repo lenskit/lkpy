@@ -1,40 +1,16 @@
 import logging
-import itertools as it
-import warnings
-from collections import OrderedDict as od
 
 import numpy as np
 import pandas as pd
 
 from .metrics.topn import *
 from .util import Stopwatch
-from .util.parallel import invoker
 
 _log = logging.getLogger(__name__)
 
 
 def _length(df, *args, **kwargs):
     return float(len(df))
-
-
-def _grouping_iter(df, cols, ksf=()):
-    # what key are we going to work on?
-    current = cols[0]
-    remaining = cols[1:]
-
-    if not remaining:
-        # this is the last column. we group by it.
-        for gk, gdf in df.groupby(current):
-            yield ksf + (gk,), gdf.drop(columns=[current])
-    else:
-        # we have columns remaining, let's start grouping by this one
-        for v, subdf in df.groupby(current):
-            yield from _grouping_iter(subdf.drop(columns=[current]), remaining, ksf + (v,))
-
-
-def _rla_worker(model, req):
-    col, val = req
-    return model._compute_group(col, val)
 
 
 class _RLAJob:
@@ -45,53 +21,50 @@ class _RLAJob:
 
     def prepare(self, group_cols):
         rec_key, truth_key = _df_keys(self.recs.columns, self.truth.columns, group_cols)
+        _log.info('numbering truth lists')
+        truth_df = self.truth[truth_key].drop_duplicates()
+        truth_df['LKTruthID'] = np.arange(len(truth_df))
+        truth = pd.merge(truth_df, self.truth, on=truth_key).drop(columns=truth_key)
+        _log.debug('truth lists:\n%s', truth_df)
+
+        _log.info('numbering rec lists')
+        rec_df = self.recs[rec_key].drop_duplicates()
+        rec_df['LKRecID'] = np.arange(len(rec_df))
+        rec_df = pd.merge(rec_df, truth_df, on=truth_key, how='left')
+        recs = pd.merge(rec_df, self.recs, on=rec_key).drop(columns=rec_key)
+        _log.debug('rec lists:\n%s', rec_df)
+
         _log.info('collecting truth data')
-        truth_frames = dict((k, df.set_index('item'))
-                            for (k, df)
-                            in _grouping_iter(self.truth, truth_key))
-        _log.debug('found truth for %d users', len(truth_frames))
-        self.truth = truth_frames
+        truth = truth.set_index(['LKTruthID', 'item'])
+        if not truth.index.is_unique:
+            _log.warn('truth index not unique: may have duplicate items\n%s', truth)
+
+        _log.debug('found truth for %d users', len(truth_df))
+        self.truth = truth
+        self.recs = recs
+        self.rec_attrs = rec_df
         self.rec_key = rec_key
         self.truth_key = truth_key
 
     def compute(self, n_jobs=None):
-        first = self.rec_key[0]
-        bins = self.recs.groupby(first)['item'].count()
-        total = bins.sum()
-        _log.debug('info RLA for %d rows in %d bins', total, len(bins))
-        if total < 1000 or len(bins) < 4:
-            n_jobs = 1  # force in-process for small runs
+        def worker(rdf):
+            rk, tk = rdf.name
+            tdf = self.truth.loc[tk]
+            res = pd.Series(dict((mn, mf(rdf, tdf, **margs)) for (mf, mn, margs) in self.metrics))
+            return res
 
-        with invoker(self, _rla_worker, n_jobs) as loop:
-            res = loop.map((first, v) for v in bins.index.values)
-            res = pd.concat(res, ignore_index=True)
-
-        return res.set_index(self.rec_key)
-
-    def _compute_group(self, col, val):
-        _log.debug('computing for %s=%s', col, val)
-        mnames = [mn for (mf, mn, margs) in self.metrics]
-        gen = self._iter_measurements(col, val)
-        return pd.DataFrame.from_records(gen, columns=self.rec_key + mnames)
-
-    def _iter_measurements(self, col, val):
-        key = self.rec_key[1:]
-        df = self.recs[self.recs[col] == val]
-        df = df.drop(columns=[col])
-        nt = len(self.truth_key)
-        if key:
-            for rk, gdf in _grouping_iter(df, key):
-                rk = (val,) + rk
-                tk = rk[-nt:]
-                g_truth = self.truth[tk]
-                results = tuple(mf(gdf, g_truth, **margs) for (mf, mn, margs) in self.metrics)
-                yield rk + results
+        _log.debug('applying metrics')
+        groups = self.recs.groupby(['LKRecID', 'LKTruthID'])
+        if hasattr(groups, 'progress_apply'):
+            result = groups.progress_apply(worker)
         else:
-            # we only have one group level
-            tk = (val,)
-            g_truth = self.truth[tk]
-            results = tuple(mf(df, g_truth, **margs) for (mf, mn, margs) in self.metrics)
-            yield tk + results
+            result = groups.apply(worker)
+        _log.debug('result frame:\n%s', result)
+        _log.debug('transforming results')
+        result = result.reset_index('LKTruthID', drop=True)
+        result = self.rec_attrs.join(result, on='LKRecID').drop(columns=['LKRecID', 'LKTruthID'])
+        _log.debug('result frame:\n%s', result)
+        return result
 
 
 class RecListAnalysis:
@@ -178,16 +151,9 @@ class RecListAnalysis:
 
         if include_missing:
             _log.info('filling in missing user info')
-            ug_cols = [c for c in job.rec_key if c not in job.truth_key]
-            tcount = truth.reset_index().groupby(job.truth_key)['item'].count()
+            tcount = truth.groupby(job.truth_key)['item'].count()
             tcount.name = 'ntruth'
-            _log.debug('res index levels: %s', res.index.names)
-            if ug_cols:
-                _log.debug('regrouping by %s to fill', ug_cols)
-                res = res.groupby(level=ug_cols).apply(lambda f: f.reset_index(ug_cols, drop=True).join(tcount, how='outer'))
-            else:
-                _log.debug('no ungroup cols, directly merging to fill')
-                res = res.join(tcount, how='outer')
+            res = res.join(tcount, how='outer', on=job.truth_key)
             _log.debug('final columns: %s', res.columns)
             _log.debug('index levels: %s', res.index.names)
             res['ntruth'] = res['ntruth'].fillna(0)
