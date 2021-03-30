@@ -70,6 +70,7 @@ jobs:
         env:
           NUMBA_NUM_THREADS: 4
           MKL_THREADING_LAYER: sequential
+          OMP_NUM_THREADS: 1
           OPENBLAS_NUM_THREADS: 1
       
       - name: Non-JIT Test Coverage
