@@ -22,6 +22,7 @@ from pathlib import Path
 homedir = Path(__file__).parent.parent
 sys.path.insert(0, fspath(homedir))
 
+import tqdm
 from docopt import docopt
 import pandas as pd
 
@@ -91,6 +92,7 @@ if __name__ == '__main__':
     level = logging.DEBUG if opts['--verbose'] else logging.INFO
     format = '%(relativeCreated)6d: %(levelname)s %(name)s %(message)s'
     logging.basicConfig(stream=sys.stderr, level=level, format=format)
+    tqdm.tqdm.pandas()
 
     if opts['--prepare']:
         do_prepare(opts)
