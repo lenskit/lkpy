@@ -17,10 +17,6 @@ Options:
 
 import sys
 import logging
-from os import fspath
-from pathlib import Path
-homedir = Path(__file__).parent.parent
-sys.path.insert(0, fspath(homedir))
 
 import tqdm
 from docopt import docopt
