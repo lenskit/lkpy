@@ -128,11 +128,12 @@ def conda_env(args, pyp, flp):
     extras = set(['.none'])
     if not args.no_dev:
         extras |= set(['dev', 'doc', 'test'])
-    for e in args.extra:
-        if e == 'all':
-            extras |= set(flp.reqs_by_extra.keys())
-        else:
-            extras.add(e)
+    if args.extra:
+        for e in args.extra:
+            if e == 'all':
+                extras |= set(flp.reqs_by_extra.keys())
+            else:
+                extras.add(e)
 
     pip_deps = []
 
@@ -140,7 +141,7 @@ def conda_env(args, pyp, flp):
         for req in flp.reqs_by_extra.get(e, []):
             req = Requirement(req)
             if req_active(mkenv, req):
-                if cfg.source(req.name) == 'pip':
+                if req.url or cfg.source(req.name) == 'pip':
                     pip_deps.append(req)
                 else:
                     deps.append(dep_str(cfg, req))
