@@ -3,7 +3,11 @@ import pandas as pd
 
 from pytest import approx
 
-from lenskit.topn import recip_rank
+from lenskit.topn import RecListAnalysis, recip_rank
+from lenskit.util.test import ml_test
+from lenskit.algorithms.basic import Popular
+from lenskit.batch import recommend
+from lenskit.crossfold import simple_test_pair
 
 
 def _test_rr(items, rel):
@@ -51,3 +55,25 @@ def test_mrr_array_late():
     "deep -> 0.1"
     rr = _test_rr(np.arange(1, 21, 1, 'u4'), [20, 10])
     assert rr == approx(0.1)
+
+
+def test_mrr_bulk():
+    "bulk and normal match"
+    train, test = simple_test_pair(ml_test.ratings)
+
+    users = test['user'].unique()
+    algo = Popular()
+    algo.fit(train)
+
+    recs = recommend(algo, users, 100)
+
+    bulk_rla = RecListAnalysis()
+    bulk_rla.add_metric(recip_rank)
+    bulk = bulk_rla.compute(recs, test)
+
+    ind_rla = RecListAnalysis()
+    ind_rla._use_bulk = False
+    ind_rla.add_metric(recip_rank)
+    ind = ind_rla.compute(recs, test)
+
+    assert all(bulk.recip_rank == ind.recip_rank)
