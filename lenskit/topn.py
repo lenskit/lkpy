@@ -97,12 +97,13 @@ class RecListAnalysis:
 
         def worker(rdf):
             rk, tk = rdf.name
+            rdf = rdf.drop(columns=['LKTruthID', 'LKRecID'])
             tdf = t_data.loc[tk]
             res = pd.Series(dict((mn, mf(rdf, tdf, **margs)) for (mf, mn, margs) in self.metrics))
             return res
 
         _log.debug('applying metrics')
-        groups = r_data.groupby(['LKRecID', 'LKTruthID'])
+        groups = r_data.groupby(['LKRecID', 'LKTruthID'], sort=False)
         if hasattr(groups, 'progress_apply'):
             res = groups.progress_apply(worker)
         else:
@@ -114,12 +115,19 @@ class RecListAnalysis:
         _log.info('measured %d lists in %s', len(res), timer)
 
         if include_missing:
-            _log.info('filling in missing user info')
+            _log.info('filling in missing user info (%d initial rows)', len(res))
+            ug_cols = [c for c in rec_key if c not in truth_key]
             tcount = truth.groupby(truth_key)['item'].count()
             tcount.name = 'ntruth'
-            res = res.join(tcount, how='outer', on=truth_key)
+            if ug_cols:
+                _log.debug('regrouping by %s to fill', ug_cols)
+                res = res.groupby(ug_cols).apply(lambda f: f.join(tcount, how='outer', on=truth_key))
+            else:
+                _log.debug('no ungroup cols, directly merging to fill')
+                res = res.join(tcount, how='outer', on=truth_key)
             _log.debug('final columns: %s', res.columns)
             _log.debug('index levels: %s', res.index.names)
+            _log.debug('expanded to %d rows', len(res))
             res['ntruth'] = res['ntruth'].fillna(0)
             res['nrecs'] = res['nrecs'].fillna(0)
 
