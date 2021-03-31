@@ -67,13 +67,10 @@ def test_mrr_bulk():
 
     recs = recommend(algo, users, 100)
 
-    bulk_rla = RecListAnalysis()
-    bulk_rla.add_metric(recip_rank)
-    bulk = bulk_rla.compute(recs, test)
+    rla = RecListAnalysis()
+    rla.add_metric(recip_rank)
+    # metric without the bulk capabilities
+    rla.add_metric(lambda *a: recip_rank(*a), name='ind_rr')
+    res = rla.compute(recs, test)
 
-    ind_rla = RecListAnalysis()
-    ind_rla._use_bulk = False
-    ind_rla.add_metric(recip_rank)
-    ind = ind_rla.compute(recs, test)
-
-    assert all(bulk.recip_rank == ind.recip_rank)
+    assert all(res.recip_rank == res.ind_rr)
