@@ -9,6 +9,13 @@ simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
                           'rating': [4.0, 3.0, 5.0, 2.0]})
 
 
+def test_empty():
+    sel = basic.EmptyCandidateSelector()
+
+    res = sel.candidates(42)
+    assert res.tolist() == []
+
+
 def test_unrated_selector():
     sel = basic.UnratedItemCandidateSelector()
     s2 = sel.fit(simple_df)

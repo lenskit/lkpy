@@ -206,6 +206,20 @@ class TopN(Recommender, Predictor):
         return 'TopN/' + str(self.predictor)
 
 
+class EmptyCandidateSelector(CandidateSelector):
+    """
+    :class:`CandidateSelector` that never returns any candidates.
+    """
+
+    dtype_ = np.int64
+
+    def fit(self, ratings, **kwarsg):
+        self.dtype_ = ratings['item'].dtype
+
+    def candidates(self, user, ratings=None):
+        return np.array([], dtype=self.dtype_)
+
+
 class UnratedItemCandidateSelector(CandidateSelector):
     """
     :class:`CandidateSelector` that selects items a user has not rated as
