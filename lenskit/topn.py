@@ -105,7 +105,7 @@ class RecListAnalysis:
         bulk_res = []
         ind_metrics = []
         for mf, mn, margs in self.metrics:
-            if self._use_bulk and hasattr(mf, 'bulk_score'):
+            if self._use_bulk and hasattr(mf, 'bulk_score') and 'rank' in r_data.columns:
                 _log.debug('bulk-scoring %s', mn)
                 mbs = mf.bulk_score(r_data, t_data, **margs).to_frame(name=mn)
                 assert mbs.index.name == 'LKRecID'
