@@ -123,7 +123,7 @@ class RecListAnalysis:
             res['ntruth'] = res['ntruth'].fillna(0)
             res['nrecs'] = res['nrecs'].fillna(0)
 
-        return res
+        return res.set_index(rec_key)
 
     def _number_truth(self, truth, truth_key):
         _log.info('numbering truth lists')
