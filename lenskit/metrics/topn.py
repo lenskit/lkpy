@@ -2,7 +2,19 @@
 Top-N evaluation metrics.
 """
 
+import logging
 import numpy as np
+import pandas as pd
+
+_log = logging.getLogger(__name__)
+
+
+def bulk_impl(metric):
+    def wrap(impl):
+        metric.bulk_score = impl
+        return impl
+
+    return wrap
 
 
 def precision(recs, truth):
@@ -34,6 +46,8 @@ def recip_rank(recs, truth):
     Compute the reciprocal rank of the first relevant item in a list of recommendations.
 
     If no elements are relevant, the reciprocal rank is 0.
+
+    This metric has a bulk equivalent.
     """
     good = recs['item'].isin(truth.index)
     npz, = np.nonzero(good.to_numpy())
@@ -41,6 +55,23 @@ def recip_rank(recs, truth):
         return 1.0 / (npz[0] + 1.0)
     else:
         return 0.0
+
+
+@bulk_impl(recip_rank)
+def _bulk_rr(recs, truth):
+    # find everything with truth
+    joined = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
+    # compute min ranks
+    ranks = joined.groupby('LKRecID')['rank'].agg('min')
+    # reciprocal ranks
+    scores = 1.0 / ranks
+    _log.debug('have %d scores with MRR %.3f', len(scores), scores.mean())
+    # fill with zeros
+    rec_ids = recs['LKRecID'].unique()
+    scores = scores.reindex(rec_ids, fill_value=0.0)
+    _log.debug('filled to get %s scores w/ MRR %.3f', len(scores), scores.mean())
+    # and we're done
+    return scores
 
 
 def _dcg(scores, discount=np.log2):

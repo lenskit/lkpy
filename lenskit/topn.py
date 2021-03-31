@@ -1,4 +1,5 @@
 import logging
+import functools as ft
 
 import numpy as np
 import pandas as pd
@@ -11,6 +12,11 @@ _log = logging.getLogger(__name__)
 
 def _length(df, *args, **kwargs):
     return float(len(df))
+
+
+@bulk_impl(_length)
+def _bulk_length(df, *args):
+    return df.groupby('LKRecID')['item'].count()
 
 
 class RecListAnalysis:
@@ -93,23 +99,46 @@ class RecListAnalysis:
         r_ident, r_data = self._number_recs(recs, truth_key, rec_key, t_ident)
 
         timer = Stopwatch()
+
         _log.info('collecting metric results')
+        bulk_res = []
+        ind_metrics = []
+        for mf, mn, margs in self.metrics:
+            if hasattr(mf, 'bulk_score'):
+                _log.debug('bulk-scoring %s', mn)
+                mbs = mf.bulk_score(r_data, t_data, **margs).to_frame(name=mn)
+                assert mbs.index.name == 'LKRecID'
+                bulk_res.append(mbs)
+            else:
+                ind_metrics.append((mf, mn, margs))
+        if bulk_res:
+            bulk_res = ft.reduce(lambda df1, df2: df1.join(df2, how='outer'), bulk_res)
+        else:
+            bulk_res = None
 
         def worker(rdf):
             rk, tk = rdf.name
-            rdf = rdf.drop(columns=['LKTruthID', 'LKRecID'])
             tdf = t_data.loc[tk]
-            res = pd.Series(dict((mn, mf(rdf, tdf, **margs)) for (mf, mn, margs) in self.metrics))
+            res = pd.Series(dict((mn, mf(rdf, tdf, **margs)) for (mf, mn, margs) in ind_metrics))
             return res
 
-        _log.debug('applying metrics')
-        groups = r_data.groupby(['LKRecID', 'LKTruthID'], sort=False)
-        if hasattr(groups, 'progress_apply'):
-            res = groups.progress_apply(worker)
+        if ind_metrics:
+            _log.debug('applying individual metrics')
+            groups = r_data.groupby(['LKRecID', 'LKTruthID'], sort=False)
+            if hasattr(groups, 'progress_apply'):
+                ind_res = groups.progress_apply(worker)
+            else:
+                ind_res = groups.apply(worker)
+            ind_res = ind_res.reset_index('LKTruthID', drop=True)
+
+            if bulk_res is not None:
+                res = bulk_res.join(ind_res)
+            else:
+                res = ind_res
         else:
-            res = groups.apply(worker)
+            res = bulk_res
+
         _log.debug('transforming results')
-        res = res.reset_index('LKTruthID', drop=True)
         res = r_ident.join(res, on='LKRecID').drop(columns=['LKRecID', 'LKTruthID'])
 
         _log.info('measured %d lists in %s', len(res), timer)
@@ -143,7 +172,6 @@ class RecListAnalysis:
         if not truth.index.is_unique:
             _log.warn('truth index not unique: may have duplicate items\n%s', truth)
 
-        _log.debug('truth lists:\n%s', truth_df)
         return truth_df, truth
 
     def _number_recs(self, recs, truth_key, rec_key, t_ident):
@@ -152,7 +180,6 @@ class RecListAnalysis:
         rec_df['LKRecID'] = np.arange(len(rec_df))
         rec_df = pd.merge(rec_df, t_ident, on=truth_key, how='left')
         recs = pd.merge(rec_df, recs, on=rec_key).drop(columns=rec_key)
-        _log.debug('rec lists:\n%s', rec_df)
 
         return rec_df, recs
 

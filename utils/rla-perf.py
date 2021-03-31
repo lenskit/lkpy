@@ -80,7 +80,10 @@ def do_measure(opts):
 
     results = results.fillna(0)
     a_res = results.groupby('Algorithm').mean()
-    _log.info('finished, results:\n%s', a_res)
+    a_res['count'] = results.groupby('Algorithm')['nrecs'].count()
+    _log.info('finished')
+    print(a_res)
+    print(results.groupby('Algorithm')['recip_rank'].describe())
 
 
 if __name__ == '__main__':

@@ -111,7 +111,7 @@ def test_inner_format():
 
     def inner(recs, truth, foo='a'):
         assert foo == 'b'
-        assert set(recs.columns) == set(['item', 'rank'])
+        assert set(recs.columns) == set(['LKRecID', 'LKTruthID', 'item', 'rank'])
         assert truth.index.name == 'item'
         assert truth.index.is_unique
         print(truth)
