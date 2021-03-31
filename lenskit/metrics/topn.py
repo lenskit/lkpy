@@ -4,7 +4,6 @@ Top-N evaluation metrics.
 
 import logging
 import numpy as np
-import pandas as pd
 
 _log = logging.getLogger(__name__)
 
