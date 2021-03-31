@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from pytest import approx
+from pytest import approx, mark
 
 from lenskit.metrics.topn import _dcg, dcg, ndcg, _bulk_ndcg
 from lenskit.topn import RecListAnalysis
@@ -9,6 +9,7 @@ from lenskit.util.test import ml_test
 from lenskit.algorithms.basic import Popular
 from lenskit.batch import recommend
 from lenskit.crossfold import simple_test_pair
+
 
 def test_dcg_empty():
     "empty should be zero"
@@ -132,9 +133,12 @@ def test_ndcg_bulk_not_at_top():
     assert ndcg.iloc[0] == approx(0.8155, abs=0.001)
 
 
-def test_ndcg_bulk():
+@mark.parametrize('drop_rating', [False, True])
+def test_ndcg_bulk_match(drop_rating):
     "bulk and normal match"
     train, test = simple_test_pair(ml_test.ratings)
+    if drop_rating:
+        test = test[['user', 'item']]
 
     users = test['user'].unique()
     algo = Popular()

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from pytest import approx
+from pytest import approx, mark
 
 from lenskit.topn import RecListAnalysis, recip_rank
 from lenskit.util.test import ml_test
@@ -57,9 +57,12 @@ def test_mrr_array_late():
     assert rr == approx(0.1)
 
 
-def test_mrr_bulk():
+@mark.parametrize('drop_rating', [False, True])
+def test_mrr_bulk(drop_rating):
     "bulk and normal match"
     train, test = simple_test_pair(ml_test.ratings)
+    if drop_rating:
+        test = test[['user', 'item']]
 
     users = test['user'].unique()
     algo = Popular()
