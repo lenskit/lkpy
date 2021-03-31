@@ -99,7 +99,6 @@ def _dcg(scores, discount=np.log2):
     return np.dot(scores, disc)
 
 
-# @profile
 def ndcg(recs, truth, discount=np.log2):
     """
     Compute the normalized discounted cumulative gain.
