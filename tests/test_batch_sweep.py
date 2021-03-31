@@ -17,6 +17,7 @@ from pytest import mark
 
 
 @mark.slow
+@mark.sweep
 def test_sweep_bias(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path)
@@ -58,6 +59,7 @@ def test_sweep_bias(tmp_path):
 
 
 @mark.slow
+@mark.sweep
 def test_sweep_norecs(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, recommend=None)
@@ -91,6 +93,7 @@ def test_sweep_norecs(tmp_path):
 
 
 @mark.slow
+@mark.sweep
 def test_sweep_nopreds(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, eval_n_jobs=1)
@@ -126,6 +129,7 @@ def test_sweep_nopreds(tmp_path):
 
 
 @mark.slow
+@mark.sweep
 def test_sweep_allrecs(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, recommend=True)
@@ -162,6 +166,7 @@ def test_sweep_allrecs(tmp_path):
 
 
 @mark.slow
+@mark.sweep
 def test_sweep_filenames(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path)
@@ -202,6 +207,7 @@ def test_sweep_filenames(tmp_path):
 
 
 @mark.slow
+@mark.sweep
 def test_sweep_persist(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path)
@@ -241,6 +247,7 @@ def test_sweep_persist(tmp_path):
 
 
 @mark.slow
+@mark.sweep
 def test_sweep_oneshot(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, combine=False)
@@ -271,6 +278,7 @@ def test_sweep_oneshot(tmp_path):
 
 
 @mark.slow
+@mark.sweep
 def test_sweep_save(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path)
@@ -305,6 +313,7 @@ def test_sweep_save(tmp_path):
 
 
 @mark.slow
+@mark.sweep
 def test_sweep_combine(tmp_path):
     work = pathlib.Path(tmp_path)
     sweep = batch.MultiEval(tmp_path, combine=False)
@@ -361,6 +370,7 @@ def test_sweep_combine(tmp_path):
 
 
 @mark.slow
+@mark.sweep
 @mark.parametrize("format", [True, 'gzip'])
 def test_save_models(tmp_path, format):
     work = pathlib.Path(tmp_path)
