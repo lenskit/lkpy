@@ -329,3 +329,14 @@ def sample_users(data, partitions: int, size: int, method: PartitionMethod, disj
         rest = data.index.difference(test.index)
         train = data.loc[rest]
         yield TTPair(train, test)
+
+
+def simple_test_pair(ratings, n_users=1000, n_rates=5):
+    """
+    Return a single, basic train-test pair for some ratings.  This is only intended
+    for convenience use in test and demos - do not use for research.
+    """
+
+    train, test = next(sample_users(ratings, 1, n_users, SampleN(n_rates)))
+
+    return train, test
