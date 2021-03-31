@@ -51,18 +51,16 @@ at <https://lkpy.lenskit.org>.
 We recommend using an Anaconda environment for developing LensKit.  To set this
 up, run:
 
-    python setup.py dep_info --conda-environment dev-env.yml
-    conda env create -f dev-env.yml
+    pip install flit_core packaging
+    python build-tools/flit-conda.py --create-env --python-version 3.8
 
-This will create a Conda environment called `lkpy-dev` with the packages
-required to develop and test LensKit.
+This will create a Conda environment called `lkpy` with the packages required to develop and test
+LensKit.
 
 We don't maintain the Conda environment specification directly - instead, we
-maintain information in `setup.cfg` to be able to generate it, so that we define
-dependencies and versions in one place (well, two, if you count the `meta.yaml`
-file used to build the Conda recipes).  The `dep_info` setuptools command will
-generate a Conda environment specification from the current dependencies in
-`setup.cfg`.
+maintain information in `setup.toml` to be able to generate it, so that we define
+dependencies and versions in one place.  The `flit-conda` package uses Flit's
+configuration parser to load this data and generate Conda environment files.
 
 ## Resources
 
