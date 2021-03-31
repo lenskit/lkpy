@@ -38,6 +38,10 @@ class MultiEval:
     """
     A runner for carrying out multiple evaluations, such as parameter sweeps.
 
+    .. warning::
+        This class is deprecated. We recommend that you write Python loops or other scripts
+        to run multiple algorithms directly, in a way that matches your particular needs.
+
     Args:
         path(str or :py:class:`pathlib.Path`):
             the working directory for this evaluation.
@@ -69,6 +73,9 @@ class MultiEval:
                  recommend=100, candidates=None,
                  save_models=False,
                  eval_n_jobs=None, combine=True, **kwargs):
+        warnings.warn('MultiEval is deprecated and will be removed in an upcoming version of LensKit',
+                      DeprecationWarning)
+        _logger.warn('initializing deprecated MultiEval')
         if eval_n_jobs is None and 'nprocs' in kwargs:
             warnings.warn('nprocs is deprecated, use eval_n_jobs', DeprecationWarning)
             eval_n_jobs = kwargs['nprocs']
