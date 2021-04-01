@@ -15,7 +15,18 @@ The :py:class:`TopN` class implements a standard top-*N* recommender that wraps 
 candidate items by predicted rating.  It is the type of recommender returned by
 :py:meth:`.Recommender.adapt` if the provided algorithm is not a recommender.
 
-.. module:: lenskit.algorithms.basic
 .. autoclass:: TopN
+    :members:
+    :show-inheritance:
+
+
+Stochastic Recommenders
+-----------------------
+
+The :py:class:`PlackettLuce` class implements a stochastic recommender.  The underlying
+relevance scores are kept the same, but the rankings are sampled from a Plackett-Luce
+distribution instead using a deterministic top-N policy.
+
+.. autoclass:: PlackettLuce
     :members:
     :show-inheritance:
