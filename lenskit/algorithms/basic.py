@@ -35,15 +35,15 @@ class Popular(Recommender):
     """
 
     def __init__(self, selector=None):
-        if selector is None:
-            self.selector = UnratedItemCandidateSelector()
-        else:
-            self.selector = selector
+        self.selector = selector
 
     def fit(self, ratings, **kwargs):
         pop = ratings.groupby('item').user.count()
         pop.name = 'score'
         self.item_pop_ = pop.astype('float64')
+
+        if self.selector is None:
+            self.selector = UnratedItemCandidateSelector()
         self.selector.fit(ratings)
 
         return self
