@@ -65,14 +65,15 @@ def get_root_seed():
 
 
 def _make_int(obj):
-    if isinstance(obj, int):
+    if isinstance(obj, int) or isinstance(obj, np.integer):
         return obj
     elif isinstance(obj, bytes):
         return zlib.crc32(obj)
     elif isinstance(obj, str):
         return zlib.crc32(obj.encode('utf8'))
     else:
-        return ValueError('invalid RNG key ' + str(obj))
+        ot = type(obj)
+        raise ValueError(f'invalid RNG key {obj} (type: {ot})')
 
 
 def init_rng(seed, *keys, propagate=True):
