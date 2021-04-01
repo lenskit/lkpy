@@ -263,7 +263,7 @@ jobs:
       
       - name: Run tests
         run: |
-          python -m pytest --cov=lenskit --cov-report=xml --log-file=test.log
+          python -m pytest --cov=lenskit --cov-report=xml --log-file=test.log -m 'not sweep'
 
       - name: Non-JIT Test Coverage
         if: runner.os == 'Linux' && matrix.python == 3.8
