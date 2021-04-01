@@ -6,7 +6,8 @@ from pytest import approx, mark
 from lenskit.metrics.topn import _dcg, dcg, ndcg, _bulk_ndcg
 from lenskit.topn import RecListAnalysis
 from lenskit.util.test import ml_test
-from lenskit.algorithms.basic import Popular
+from lenskit.algorithms.basic import PopScore
+from lenskit.algorithms.ranking import PlackettLuce
 from lenskit.batch import recommend
 from lenskit.crossfold import simple_test_pair
 
@@ -141,7 +142,8 @@ def test_ndcg_bulk_match(drop_rating):
         test = test[['user', 'item']]
 
     users = test['user'].unique()
-    algo = Popular()
+    algo = PopScore()
+    algo = PlackettLuce(algo, rng_spec='user')
     algo.fit(train)
 
     recs = recommend(algo, users, 100)
