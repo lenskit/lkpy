@@ -2,7 +2,14 @@
 Algorithms to rank items based on scores.
 """
 
+import logging
+
+import numpy as np
+
 from . import Recommender, Predictor
+from ..util import derivable_rng
+
+_log = logging.getLogger(__name__)
 
 
 class TopN(Recommender, Predictor):
@@ -75,3 +82,61 @@ class TopN(Recommender, Predictor):
 
     def __str__(self):
         return 'TopN/' + str(self.predictor)
+
+
+class PlackettLuce(Recommender):
+    """
+    Re-ranking algorithm that uses Plackett-Luce sampling on underlying scores.
+    This uses the Gumbel trick [GWZE19]_ to efficiently simulate from a Plackett-Luce
+    distribution.
+
+    .. [GWZE19] Grover, A., Wang, E., Zweig, A., & Ermon, S. (2019, March 21).
+        Stochastic Optimization of Sorting Networks via Continuous Relaxations.
+        _Proceedings of the Seventh International Conference on Learning Representations_.
+        ICLR 2019. https://openreview.net/forum?id=H1eSS3CcKX
+
+    Args:
+        predictor(Predictor):
+            A predictor that can score candidate items.
+        selector(CandidateSelector):
+            The candidate selector.
+            If ``None``, defaults to :py:class:`UnratedItemsCandidateSelector`.
+        rng_spec:
+            A random number generator specification; see :py:func:`derivable_rng`.
+    """
+
+    def __init__(self, predictor, selector=None, *, rng_spec=None):
+        from .basic import UnratedItemCandidateSelector, Popular
+        if isinstance(predictor, TopN):
+            _log.warn('wrapping Top-N in PlackettLuce, candidate selector probably redundant')
+        elif isinstance(predictor, Popular):
+            _log.warn('wrapping Popular in Plackett-Luce, consider PopScore')
+
+        self.predictor = predictor
+        self.selector = selector if selector is not None else UnratedItemCandidateSelector()
+        self.rng_spec = rng_spec
+
+    def fit(self, ratings, **kwargs):
+        self.predictor.fit(ratings, **kwargs)
+        self.selector.fit(ratings, **kwargs)
+        self.rng_ = derivable_rng(self.rng_spec)
+        return self
+
+    def recommend(self, user, n=None, candidates=None, ratings=None):
+        if candidates is None:
+            candidates = self.selector.candidates(user, ratings)
+
+        rng = self.rng_(user)
+
+        scores = self.predictor.predict_for_user(user, candidates)
+        scores = scores.dropna()
+        adjs = rng.gumbel(size=len(scores))
+        scores = np.log(scores) + adjs
+
+        if n is not None:
+            scores = scores.nlargest(n)
+        else:
+            scores = scores.sort_values(ascending=False)
+        scores.name = 'score'
+        scores.index.name = 'item'
+        return scores.reset_index()
