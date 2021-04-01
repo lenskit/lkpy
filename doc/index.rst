@@ -48,6 +48,7 @@ Resources
     interfaces
     algorithms
     basic
+    ranking
     bias
     knn
     mf
