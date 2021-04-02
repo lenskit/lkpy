@@ -31,64 +31,6 @@ def test_split_keys_gcol():
     assert recs == ['algorithm', 'fishtank', 'user']
 
 
-def test_iter_one():
-    df = pd.DataFrame({'user': 1, 'item': [17]})
-    gs = list(topn._grouping_iter(df, ['user']))
-    assert len(gs) == 1
-    uk, idf = gs[0]
-    assert uk == (1,)
-    assert all(idf['item'] == df['item'])
-
-
-def test_iter_one_group():
-    df = pd.DataFrame({'user': 1, 'item': [17, 13, 24]})
-    gs = list(topn._grouping_iter(df, ['user']))
-    assert len(gs) == 1
-    uk, idf = gs[0]
-    assert uk == (1,)
-    assert len(idf) == 3
-    assert all(idf['item'] == df['item'])
-
-
-def test_iter_mixed():
-    df = pd.DataFrame({'user': [1, 1, 2, 2, 1], 'item': ['a', 'b', 'c', 'd', 'e']})
-    gs = list(topn._grouping_iter(df, ['user']))
-    assert len(gs) == 2
-    uk, idf = gs[0]
-    assert uk == (1,)
-    assert len(idf) == 3
-    assert all(idf['item'] == ['a', 'b', 'e'])
-
-    uk, idf = gs[1]
-    assert uk == (2,)
-    assert len(idf) == 2
-    assert all(idf['item'] == ['c', 'd'])
-
-
-def test_iter_multilevel():
-    df = pd.DataFrame({
-        'user': [1, 1, 2, 2, 1],
-        'bob': [10, 13, 10, 10, 10],
-        'item': ['a', 'b', 'c', 'd', 'e']
-    })
-    gs = list(topn._grouping_iter(df, ['user', 'bob']))
-    assert len(gs) == 3
-    uk, idf = gs[0]
-    assert uk == (1, 10)
-    assert len(idf) == 2
-    assert all(idf['item'] == ['a', 'e'])
-
-    uk, idf = gs[1]
-    assert uk == (1, 13)
-    assert len(idf) == 1
-    assert all(idf['item'] == ['b'])
-
-    uk, idf = gs[2]
-    assert uk == (2, 10)
-    assert len(idf) == 2
-    assert all(idf['item'] == ['c', 'd'])
-
-
 def test_run_one():
     rla = topn.RecListAnalysis()
     rla.add_metric(topn.precision)
@@ -169,7 +111,7 @@ def test_inner_format():
 
     def inner(recs, truth, foo='a'):
         assert foo == 'b'
-        assert set(recs.columns) == set(['item', 'rank'])
+        assert set(recs.columns) == set(['LKRecID', 'LKTruthID', 'item', 'rank'])
         assert truth.index.name == 'item'
         assert truth.index.is_unique
         print(truth)

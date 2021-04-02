@@ -50,6 +50,10 @@ The analysis will use this truth as the relevant item data for measuring the acc
 roecommendation lists.  Recommendations will be matched to test ratings by data set, user, 
 and item, using :py:class:`RecListAnalysis` defaults.
 
+Identifying columns will be used to create two synthetic identifiers, `LKRecID` (the recommendation
+list identifier) and `LKTruthID` (the truth list identifier), that are used in the internal data
+frames.  Custom metric classes will see these on the data frames instead of other identifying columns.
+
 .. autoclass:: RecListAnalysis
     :members:
 
@@ -84,8 +88,42 @@ Utility Metrics
 The NDCG function estimates a utility score for a ranked list of recommendations.
 
 .. autofunction:: ndcg
-
+.. autofunction:: dcg
 
 We also expose the internal DCG computation directly.
 
 .. autofunction:: _dcg
+
+
+Writing a Metric
+----------------
+
+A metric is a function that takes two positional parameters:
+
+
+- ``recs``, a data frame of recommendations for a single recommendation list.
+- ``truth``, a data frame of ground-truth data (usually ratings) for the user for whom the list was generated.
+
+It can take additional keyword arguments that are passed through from :py:meth:`RecListAnalysis.add_metric`.
+A metric then returns a single floating-point value; NaN is allowed.
+
+Metrics can be further optimized with the *bulk interface*.  A bulk metric function takes ``recs``
+and ``truth`` frames for the *entire set of recommendations*, with transformation (they have
+``LKRecID`` and ``LKTruthID`` columns instead of other identifying columns), and returns a series 
+whose index is ``LKRecID`` and values are the metric values for each list.  Further, the ``recs``
+passed to a bulk implementation includes a 1-based *rank* for each recommendation.
+
+The :py:func:`bulk_impl` function registers a bulk implementation of a metric::
+
+    def metric(recs, truth):
+        # normal metric implementation
+        pass
+    
+    @bulk_impl(metric)
+    def _bulk_metric(recs, truth):
+        # bulk metric implementation
+
+If a bulk implementation of a metric is available, and it is possible to use it, it will be used automatically
+when the corresponding metric is passed to :py:meth:`RecListAnalysis.add_metric`.
+
+.. autofunction: bulk_impl

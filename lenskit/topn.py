@@ -1,14 +1,11 @@
 import logging
-import itertools as it
-import warnings
-from collections import OrderedDict as od
+import functools as ft
 
 import numpy as np
 import pandas as pd
 
 from .metrics.topn import *
 from .util import Stopwatch
-from .util.parallel import invoker
 
 _log = logging.getLogger(__name__)
 
@@ -17,81 +14,9 @@ def _length(df, *args, **kwargs):
     return float(len(df))
 
 
-def _grouping_iter(df, cols, ksf=()):
-    # what key are we going to work on?
-    current = cols[0]
-    remaining = cols[1:]
-
-    if not remaining:
-        # this is the last column. we group by it.
-        for gk, gdf in df.groupby(current):
-            yield ksf + (gk,), gdf.drop(columns=[current])
-    else:
-        # we have columns remaining, let's start grouping by this one
-        for v, subdf in df.groupby(current):
-            yield from _grouping_iter(subdf.drop(columns=[current]), remaining, ksf + (v,))
-
-
-def _rla_worker(model, req):
-    col, val = req
-    return model._compute_group(col, val)
-
-
-class _RLAJob:
-    def __init__(self, recs, truth, metrics):
-        self.recs = recs
-        self.truth = truth
-        self.metrics = metrics
-
-    def prepare(self, group_cols):
-        rec_key, truth_key = _df_keys(self.recs.columns, self.truth.columns, group_cols)
-        _log.info('collecting truth data')
-        truth_frames = dict((k, df.set_index('item'))
-                            for (k, df)
-                            in _grouping_iter(self.truth, truth_key))
-        _log.debug('found truth for %d users', len(truth_frames))
-        self.truth = truth_frames
-        self.rec_key = rec_key
-        self.truth_key = truth_key
-
-    def compute(self, n_jobs=None):
-        first = self.rec_key[0]
-        bins = self.recs.groupby(first)['item'].count()
-        total = bins.sum()
-        _log.debug('info RLA for %d rows in %d bins', total, len(bins))
-        if total < 1000 or len(bins) < 4:
-            n_jobs = 1  # force in-process for small runs
-
-        with invoker(self, _rla_worker, n_jobs) as loop:
-            res = loop.map((first, v) for v in bins.index.values)
-            res = pd.concat(res, ignore_index=True)
-
-        return res.set_index(self.rec_key)
-
-    def _compute_group(self, col, val):
-        _log.debug('computing for %s=%s', col, val)
-        mnames = [mn for (mf, mn, margs) in self.metrics]
-        gen = self._iter_measurements(col, val)
-        return pd.DataFrame.from_records(gen, columns=self.rec_key + mnames)
-
-    def _iter_measurements(self, col, val):
-        key = self.rec_key[1:]
-        df = self.recs[self.recs[col] == val]
-        df = df.drop(columns=[col])
-        nt = len(self.truth_key)
-        if key:
-            for rk, gdf in _grouping_iter(df, key):
-                rk = (val,) + rk
-                tk = rk[-nt:]
-                g_truth = self.truth[tk]
-                results = tuple(mf(gdf, g_truth, **margs) for (mf, mn, margs) in self.metrics)
-                yield rk + results
-        else:
-            # we only have one group level
-            tk = (val,)
-            g_truth = self.truth[tk]
-            results = tuple(mf(df, g_truth, **margs) for (mf, mn, margs) in self.metrics)
-            yield tk + results
+@bulk_impl(_length)
+def _bulk_length(df, *args):
+    return df.groupby('LKRecID')['item'].count()
 
 
 class RecListAnalysis:
@@ -168,32 +93,95 @@ class RecListAnalysis:
         """
         _log.info('analyzing %d recommendations (%d truth rows)', len(recs), len(truth))
 
-        job = _RLAJob(recs, truth, self.metrics)
-        job.prepare(self.group_cols)
+        rec_key, truth_key = _df_keys(recs.columns, truth.columns, self.group_cols)
+
+        t_ident, t_data = self._number_truth(truth, truth_key)
+        r_ident, r_data = self._number_recs(recs, truth_key, rec_key, t_ident)
 
         timer = Stopwatch()
+
         _log.info('collecting metric results')
-        res = job.compute(self.n_jobs)
+        bulk_res = []
+        ind_metrics = []
+        for mf, mn, margs in self.metrics:
+            if hasattr(mf, 'bulk_score') and 'rank' in r_data.columns:
+                _log.debug('bulk-scoring %s', mn)
+                mbs = mf.bulk_score(r_data, t_data, **margs).to_frame(name=mn)
+                assert mbs.index.name == 'LKRecID'
+                bulk_res.append(mbs)
+            else:
+                ind_metrics.append((mf, mn, margs))
+        if bulk_res:
+            bulk_res = ft.reduce(lambda df1, df2: df1.join(df2, how='outer'), bulk_res)
+        else:
+            bulk_res = None
+
+        def worker(rdf):
+            rk, tk = rdf.name
+            tdf = t_data.loc[tk]
+            res = pd.Series(dict((mn, mf(rdf, tdf, **margs)) for (mf, mn, margs) in ind_metrics))
+            return res
+
+        if ind_metrics:
+            _log.debug('applying individual metrics')
+            groups = r_data.groupby(['LKRecID', 'LKTruthID'], sort=False)
+            if hasattr(groups, 'progress_apply'):
+                ind_res = groups.progress_apply(worker)
+            else:
+                ind_res = groups.apply(worker)
+            ind_res = ind_res.reset_index('LKTruthID', drop=True)
+
+            if bulk_res is not None:
+                res = bulk_res.join(ind_res)
+            else:
+                res = ind_res
+        else:
+            res = bulk_res
+
+        _log.debug('transforming results')
+        res = r_ident.join(res, on='LKRecID').drop(columns=['LKRecID', 'LKTruthID'])
+
         _log.info('measured %d lists in %s', len(res), timer)
 
         if include_missing:
-            _log.info('filling in missing user info')
-            ug_cols = [c for c in job.rec_key if c not in job.truth_key]
-            tcount = truth.reset_index().groupby(job.truth_key)['item'].count()
+            _log.info('filling in missing user info (%d initial rows)', len(res))
+            ug_cols = [c for c in rec_key if c not in truth_key]
+            tcount = truth.groupby(truth_key)['item'].count()
             tcount.name = 'ntruth'
-            _log.debug('res index levels: %s', res.index.names)
             if ug_cols:
                 _log.debug('regrouping by %s to fill', ug_cols)
-                res = res.groupby(level=ug_cols).apply(lambda f: f.reset_index(ug_cols, drop=True).join(tcount, how='outer'))
+                res = res.groupby(ug_cols).apply(lambda f: f.join(tcount, how='outer', on=truth_key))
             else:
                 _log.debug('no ungroup cols, directly merging to fill')
-                res = res.join(tcount, how='outer')
+                res = res.join(tcount, how='outer', on=truth_key)
             _log.debug('final columns: %s', res.columns)
             _log.debug('index levels: %s', res.index.names)
+            _log.debug('expanded to %d rows', len(res))
             res['ntruth'] = res['ntruth'].fillna(0)
             res['nrecs'] = res['nrecs'].fillna(0)
 
-        return res
+        return res.set_index(rec_key)
+
+    def _number_truth(self, truth, truth_key):
+        _log.info('numbering truth lists')
+        truth_df = truth[truth_key].drop_duplicates()
+        truth_df['LKTruthID'] = np.arange(len(truth_df))
+        truth = pd.merge(truth_df, truth, on=truth_key).drop(columns=truth_key)
+
+        truth.set_index(['LKTruthID', 'item'], inplace=True)
+        if not truth.index.is_unique:
+            _log.warn('truth index not unique: may have duplicate items\n%s', truth)
+
+        return truth_df, truth
+
+    def _number_recs(self, recs, truth_key, rec_key, t_ident):
+        _log.info('numbering rec lists')
+        rec_df = recs[rec_key].drop_duplicates()
+        rec_df['LKRecID'] = np.arange(len(rec_df))
+        rec_df = pd.merge(rec_df, t_ident, on=truth_key, how='left')
+        recs = pd.merge(rec_df, recs, on=rec_key).drop(columns=rec_key)
+
+        return rec_df, recs
 
 
 def _df_keys(r_cols, t_cols, g_cols=None, skip_cols=RecListAnalysis.DEFAULT_SKIP_COLS):

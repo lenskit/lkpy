@@ -2,7 +2,18 @@
 Top-N evaluation metrics.
 """
 
+import logging
 import numpy as np
+
+_log = logging.getLogger(__name__)
+
+
+def bulk_impl(metric):
+    def wrap(impl):
+        metric.bulk_score = impl
+        return impl
+
+    return wrap
 
 
 def precision(recs, truth):
@@ -34,6 +45,8 @@ def recip_rank(recs, truth):
     Compute the reciprocal rank of the first relevant item in a list of recommendations.
 
     If no elements are relevant, the reciprocal rank is 0.
+
+    This metric has a bulk equivalent.
     """
     good = recs['item'].isin(truth.index)
     npz, = np.nonzero(good.to_numpy())
@@ -41,6 +54,23 @@ def recip_rank(recs, truth):
         return 1.0 / (npz[0] + 1.0)
     else:
         return 0.0
+
+
+@bulk_impl(recip_rank)
+def _bulk_rr(recs, truth):
+    # find everything with truth
+    joined = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
+    # compute min ranks
+    ranks = joined.groupby('LKRecID')['rank'].agg('min')
+    # reciprocal ranks
+    scores = 1.0 / ranks
+    _log.debug('have %d scores with MRR %.3f', len(scores), scores.mean())
+    # fill with zeros
+    rec_ids = recs['LKRecID'].unique()
+    scores = scores.reindex(rec_ids, fill_value=0.0)
+    _log.debug('filled to get %s scores w/ MRR %.3f', len(scores), scores.mean())
+    # and we're done
+    return scores
 
 
 def _dcg(scores, discount=np.log2):
@@ -68,7 +98,46 @@ def _dcg(scores, discount=np.log2):
     return np.dot(scores, disc)
 
 
-# @profile
+def _fixed_dcg(n, discount=np.log2):
+    ranks = np.arange(1, n+1)
+    disc = discount(ranks)
+    disc = np.maximum(disc, 1)
+    disc = np.reciprocal(disc)
+    return np.sum(disc)
+
+
+def dcg(recs, truth, discount=np.log2):
+    """
+    Compute the **unnormalized** discounted cumulative gain.
+
+    Discounted cumultative gain is computed as:
+
+    .. math::
+        \\begin{align*}
+        \\mathrm{DCG}(L,u) & = \\sum_{i=1}^{|L|} \\frac{r_{ui}}{d(i)}
+        \\end{align*}
+
+    Args:
+        recs: The recommendation list.
+        truth: The user's test data.
+        discount(ufunc):
+            The rank discount function.  Each item's score will be divided the discount of its rank,
+            if the discount is greater than 1.
+    """
+
+    tpos = truth.index.get_indexer(recs['item'])
+    tgood = tpos >= 0
+    if 'rating' in truth.columns:
+        # make an array of ratings for this rec list
+        r_rates = truth['rating'].values[tpos]
+        r_rates[tpos < 0] = 0
+        achieved = _dcg(r_rates, discount)
+    else:
+        achieved = _dcg(tgood, discount)
+
+    return achieved
+
+
 def ndcg(recs, truth, discount=np.log2):
     """
     Compute the normalized discounted cumulative gain.
@@ -109,3 +178,33 @@ def ndcg(recs, truth, discount=np.log2):
         achieved = _dcg(tgood, discount)
 
     return achieved / ideal
+
+
+@bulk_impl(ndcg)
+def _bulk_ndcg(recs, truth, discount=np.log2):
+    if 'rating' not in truth.columns:
+        truth = truth.assign(rating=np.ones(len(truth), dtype=np.float32))
+
+    ideal = truth.groupby(level='LKTruthID')['rating'].rank(method='first', ascending=False)
+    ideal = discount(ideal)
+    ideal = np.maximum(ideal, 1)
+    ideal = truth['rating'] / ideal
+    ideal = ideal.groupby(level='LKTruthID').sum()
+    ideal.name = 'ideal'
+
+    list_ideal = recs[['LKRecID', 'LKTruthID']].drop_duplicates()
+    list_ideal = list_ideal.join(ideal, on='LKTruthID', how='left')
+    list_ideal = list_ideal.set_index('LKRecID')
+
+    rated = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
+    rd = discount(rated['rank'])
+    rd = np.maximum(rd, 1)
+    rd = rated['rating'] / rd
+    rd = rated[['LKRecID']].assign(util=rd)
+    dcg = rd.groupby(['LKRecID'])['util'].sum().reset_index(name='dcg')
+    dcg = dcg.set_index('LKRecID')
+
+    dcg = dcg.join(list_ideal, how='outer')
+    dcg['ndcg'] = dcg['dcg'].fillna(0) / dcg['ideal']
+
+    return dcg['ndcg']
