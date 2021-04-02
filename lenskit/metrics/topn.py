@@ -28,6 +28,19 @@ def precision(recs, truth):
     return ngood / nrecs
 
 
+@bulk_impl(precision)
+def _bulk_precision(recs, truth):
+    good = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
+    gcounts = good.groupby('LKRecID')['item'].count()
+
+    lcounts = recs.groupby(['LKRecID'])['item'].count()
+    gcounts = good.groupby(['LKRecID'])['item'].count()
+
+    lcounts, gcounts = lcounts.align(gcounts, join='left', fill_value=0)
+
+    return gcounts / lcounts
+
+
 def recall(recs, truth):
     """
     Compute recommendation recall.
@@ -38,6 +51,23 @@ def recall(recs, truth):
 
     ngood = recs['item'].isin(truth.index).sum()
     return ngood / nrel
+
+
+@bulk_impl(recall)
+def _bulk_recall(recs, truth):
+    tcounts = truth.reset_index().groupby('LKTruthID')['item'].count()
+
+    good = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
+    gcounts = good.groupby('LKRecID')['item'].count()
+
+    # we need all lists, because some might have no truth (oops), some no recs (also oops)
+    lists = recs[['LKRecID', 'LKTruthID']].drop_duplicates()
+
+    scores = lists.join(gcounts.to_frame('ngood'), on='LKRecID', how='left')
+    scores['ngood'].fillna(0, inplace=True)
+    scores = scores.join(tcounts.to_frame('nrel'), on='LKTruthID', how='left')
+    scores = scores.set_index('LKRecID')
+    return scores['ngood'] / scores['nrel']
 
 
 def recip_rank(recs, truth):
