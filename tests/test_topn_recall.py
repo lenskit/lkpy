@@ -112,7 +112,7 @@ def test_recall_long_rel():
     assert r == approx(0.8)
 
 
-def test_recall_long_truth():
+def test_recall_long_items():
     rel = np.arange(100)
     items = [1, 0, 150, 3, 10, 30, 120, 4, 17]
 
