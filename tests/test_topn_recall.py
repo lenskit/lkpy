@@ -9,7 +9,7 @@ from lenskit.algorithms.item_knn import ItemItem
 from lenskit.algorithms.basic import PopScore
 from lenskit.algorithms.ranking import PlackettLuce
 from lenskit.algorithms import Recommender
-from lenskit.util.test import ml_test
+from lenskit.util.test import ml_test, demo_recs
 from lenskit.metrics.topn import recall
 from lenskit import topn, batch, crossfold as xf
 
@@ -128,17 +128,10 @@ def test_recall_partial_rel():
     assert r == approx(0.4)
 
 
-def test_recall_bulk_k():
+def test_recall_bulk_k(demo_recs):
     "bulk and normal match"
-    train, test = xf.simple_test_pair(ml_test.ratings, f_rates=0.5)
+    train, test, recs = demo_recs
     assert test['user'].value_counts().max() > 5
-
-    users = test['user'].unique()
-    algo = PopScore()
-    algo = PlackettLuce(algo, rng_spec='user')
-    algo.fit(train)
-
-    recs = batch.recommend(algo, users, 1000)
 
     rla = topn.RecListAnalysis()
     rla.add_metric(recall, name='rk', k=5)
