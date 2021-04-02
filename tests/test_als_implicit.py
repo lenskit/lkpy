@@ -141,7 +141,7 @@ def test_als_recs_topn_for_new_users_with_new_ratings(rng):
 
     users = rng.choice(np.unique(ratings.user), n_users)
 
-    algo = als.ImplicitMF(20, iterations=10, method="lu", use_ratings=False)
+    algo = als.ImplicitMF(20, iterations=10, method="lu", use_ratings=True)
     rec_algo = basic.TopN(algo)
     rec_algo.fit(ratings)
     # _log.debug("Items: " + str(items))
