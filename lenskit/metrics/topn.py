@@ -186,7 +186,7 @@ def dcg(recs, truth, discount=np.log2):
     return achieved
 
 
-def ndcg(recs, truth, discount=np.log2):
+def ndcg(recs, truth, discount=np.log2, k=None):
     """
     Compute the normalized discounted cumulative gain.
 
@@ -213,27 +213,38 @@ def ndcg(recs, truth, discount=np.log2):
     """
 
     tpos = truth.index.get_indexer(recs['item'])
-    tgood = tpos >= 0
+
+    if k is not None:
+        recs = recs.iloc[:k]
+
     if 'rating' in truth.columns:
         i_rates = np.sort(truth.rating.values)[::-1]
+        if k is not None:
+            i_rates = i_rates[:k]
         ideal = _dcg(i_rates, discount)
         # make an array of ratings for this rec list
         r_rates = truth['rating'].values[tpos]
         r_rates[tpos < 0] = 0
         achieved = _dcg(r_rates, discount)
     else:
-        ideal = _dcg(np.ones(len(truth)), discount)
+        ntrue = len(truth)
+        if k is not None and ntrue > k:
+            ntrue = k
+        ideal = _fixed_dcg(ntrue, discount)
+        tgood = tpos >= 0
         achieved = _dcg(tgood, discount)
 
     return achieved / ideal
 
 
 @bulk_impl(ndcg)
-def _bulk_ndcg(recs, truth, discount=np.log2):
+def _bulk_ndcg(recs, truth, discount=np.log2, k=None):
     if 'rating' not in truth.columns:
         truth = truth.assign(rating=np.ones(len(truth), dtype=np.float32))
 
     ideal = truth.groupby(level='LKTruthID')['rating'].rank(method='first', ascending=False)
+    if k is not None:
+        ideal = ideal[ideal <= k]
     ideal = discount(ideal)
     ideal = np.maximum(ideal, 1)
     ideal = truth['rating'] / ideal
@@ -244,6 +255,8 @@ def _bulk_ndcg(recs, truth, discount=np.log2):
     list_ideal = list_ideal.join(ideal, on='LKTruthID', how='left')
     list_ideal = list_ideal.set_index('LKRecID')
 
+    if k is not None:
+        recs = recs[recs['rank'] <= k]
     rated = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
     rd = discount(rated['rank'])
     rd = np.maximum(rd, 1)
