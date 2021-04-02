@@ -58,8 +58,13 @@ def recall(recs, truth, k=None):
 
 
 @bulk_impl(recall)
-def _bulk_recall(recs, truth):
+def _bulk_recall(recs, truth, k=None):
     tcounts = truth.reset_index().groupby('LKTruthID')['item'].count()
+
+    if k is not None:
+        _log.debug('truncating to k for recall')
+        tcounts = np.minimum(tcounts, k)
+        recs = recs[recs['rank'] <= k]
 
     good = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
     gcounts = good.groupby('LKRecID')['item'].count()

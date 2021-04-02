@@ -1,9 +1,19 @@
+import logging
 import numpy as np
 import pandas as pd
 
 from pytest import approx
 
-from lenskit.topn import recall
+from lenskit.algorithms.user_knn import UserUser
+from lenskit.algorithms.item_knn import ItemItem
+from lenskit.algorithms.basic import PopScore
+from lenskit.algorithms.ranking import PlackettLuce
+from lenskit.algorithms import Recommender
+from lenskit.util.test import ml_test
+from lenskit.metrics.topn import recall
+from lenskit import topn, batch, crossfold as xf
+
+_log = logging.getLogger(__name__)
 
 
 def _test_recall(items, rel, **kwargs):
@@ -116,3 +126,31 @@ def test_recall_partial_rel():
 
     r = _test_recall(items, rel, k=10)
     assert r == approx(0.4)
+
+
+def test_recall_bulk_k():
+    "bulk and normal match"
+    train, test = xf.simple_test_pair(ml_test.ratings, f_rates=0.5)
+    assert test['user'].value_counts().max() > 5
+
+    users = test['user'].unique()
+    algo = PopScore()
+    algo = PlackettLuce(algo, rng_spec='user')
+    algo.fit(train)
+
+    recs = batch.recommend(algo, users, 1000)
+
+    rla = topn.RecListAnalysis()
+    rla.add_metric(recall, name='rk', k=5)
+    rla.add_metric(recall)
+    # metric without the bulk capabilities
+    rla.add_metric(lambda *a, **k: recall(*a, **k), name='ind_rk', k=5)
+    rla.add_metric(lambda *a: recall(*a), name='ind_r')
+    res = rla.compute(recs, test)
+
+    print(res)
+    _log.info('recall mismatches:\n%s',
+              res[res.recall != res.ind_r])
+
+    assert res.recall.values == approx(res.ind_r.values)
+    assert res.rk.values == approx(res.ind_rk.values)
