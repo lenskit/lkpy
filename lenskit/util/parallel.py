@@ -292,6 +292,8 @@ class InProcessOpInvoker(ModelOpInvoker):
 
 
 class ProcessPoolOpInvoker(ModelOpInvoker):
+    _close_key = None
+
     def __init__(self, model, func, n_jobs, persist_method):
         if isinstance(model, PersistedModel):
             _log.debug('model already persisted')
@@ -299,6 +301,8 @@ class ProcessPoolOpInvoker(ModelOpInvoker):
         else:
             _log.debug('persisting model with method %s', persist_method)
             key = persist(model, method=persist_method)
+            self._close_key = key
+
         _log.debug('persisting function')
         func = pickle.dumps(func)
         ctx = LKContext.INSTANCE
@@ -314,3 +318,6 @@ class ProcessPoolOpInvoker(ModelOpInvoker):
     def shutdown(self):
         self.executor.shutdown()
         os.environ.pop('_LK_IN_MP', 'yes')
+        if self._close_key is not None:
+            self._close_key.close()
+            del self._close_key
