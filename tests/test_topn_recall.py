@@ -6,10 +6,10 @@ from pytest import approx
 from lenskit.topn import recall
 
 
-def _test_recall(items, rel):
+def _test_recall(items, rel, **kwargs):
     recs = pd.DataFrame({'item': items})
     truth = pd.DataFrame({'item': rel}).set_index('item')
-    return recall(recs, truth)
+    return recall(recs, truth, **kwargs)
 
 
 def test_recall_empty_zero():
@@ -92,3 +92,27 @@ def test_recall_array():
 
     prec = _test_recall(np.array([1, 2, 3, 4]), np.arange(4, 9, 1, 'u4'))
     assert prec == approx(0.2)
+
+
+def test_recall_long_rel():
+    rel = np.arange(100)
+    items = [1, 0, 150, 3, 10]
+
+    r = _test_recall(items, rel, k=5)
+    assert r == approx(0.8)
+
+
+def test_recall_long_truth():
+    rel = np.arange(100)
+    items = [1, 0, 150, 3, 10, 30, 120, 4, 17]
+
+    r = _test_recall(items, rel, k=5)
+    assert r == approx(0.8)
+
+
+def test_recall_partial_rel():
+    rel = np.arange(100)
+    items = [1, 0, 150, 3, 10]
+
+    r = _test_recall(items, rel, k=10)
+    assert r == approx(0.4)

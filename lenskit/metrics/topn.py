@@ -41,13 +41,17 @@ def _bulk_precision(recs, truth):
     return gcounts / lcounts
 
 
-def recall(recs, truth):
+def recall(recs, truth, k=None):
     """
     Compute recommendation recall.
     """
     nrel = len(truth)
     if nrel == 0:
         return None
+
+    if k is not None:
+        nrel = min(nrel, k)
+        recs = recs.iloc[:k]
 
     ngood = recs['item'].isin(truth.index).sum()
     return ngood / nrel
