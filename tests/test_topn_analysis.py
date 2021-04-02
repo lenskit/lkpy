@@ -10,7 +10,7 @@ from lenskit.algorithms.item_knn import ItemItem
 from lenskit.algorithms.basic import PopScore
 from lenskit.algorithms.ranking import PlackettLuce
 from lenskit.algorithms import Recommender
-from lenskit.util.test import ml_test
+from lenskit.util.test import ml_test, demo_recs
 from lenskit.metrics.topn import _dcg, precision, recall
 from lenskit import topn, batch, crossfold as xf
 
@@ -264,18 +264,11 @@ def test_adv_fill_users():
 
 
 @mark.parametrize('drop_rating', [False, True])
-def test_pr_bulk_match(drop_rating):
+def test_pr_bulk_match(demo_recs, drop_rating):
     "bulk and normal match"
-    train, test = xf.simple_test_pair(ml_test.ratings)
+    train, test, recs = demo_recs
     if drop_rating:
         test = test[['user', 'item']]
-
-    users = test['user'].unique()
-    algo = PopScore()
-    algo = PlackettLuce(algo, rng_spec='user')
-    algo.fit(train)
-
-    recs = batch.recommend(algo, users, 1000)
 
     rla = topn.RecListAnalysis()
     rla.add_metric(precision)

@@ -4,6 +4,7 @@ Top-N evaluation metrics.
 
 import logging
 import numpy as np
+import pandas as pd
 
 _log = logging.getLogger(__name__)
 
@@ -16,10 +17,19 @@ def bulk_impl(metric):
     return wrap
 
 
-def precision(recs, truth):
+def precision(recs, truth, k=None):
     """
-    Compute recommendation precision.
+    Compute recommendation precision.  This is computed as:
+
+    .. math::
+        \\frac{|L \\cap I_u^{\\mathrm{test}}|}{|L|}
+
+    In the uncommon case that ``k`` is specified and ``len(recs) < k``, this metric uses
+    ``len(recs)`` as the denominator.
     """
+    if k is not None:
+        recs = recs.iloc[:k]
+
     nrecs = len(recs)
     if nrecs == 0:
         return None
@@ -29,11 +39,15 @@ def precision(recs, truth):
 
 
 @bulk_impl(precision)
-def _bulk_precision(recs, truth):
-    good = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
-    gcounts = good.groupby('LKRecID')['item'].count()
+def _bulk_precision(recs, truth, k=None):
+    if k is not None:
+        recs = recs[recs['rank'] <= k]
+        lcounts = pd.Series(k, index=recs['LKRecID'].unique())
+        lcounts.index.name = 'LKRecID'
+    else:
+        lcounts = recs.groupby(['LKRecID'])['item'].count()
 
-    lcounts = recs.groupby(['LKRecID'])['item'].count()
+    good = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
     gcounts = good.groupby(['LKRecID'])['item'].count()
 
     lcounts, gcounts = lcounts.align(gcounts, join='left', fill_value=0)
@@ -41,7 +55,7 @@ def _bulk_precision(recs, truth):
     return gcounts / lcounts
 
 
-def recall(recs, truth):
+def recall(recs, truth, k=None):
     """
     Compute recommendation recall.
     """
@@ -49,13 +63,22 @@ def recall(recs, truth):
     if nrel == 0:
         return None
 
+    if k is not None:
+        nrel = min(nrel, k)
+        recs = recs.iloc[:k]
+
     ngood = recs['item'].isin(truth.index).sum()
     return ngood / nrel
 
 
 @bulk_impl(recall)
-def _bulk_recall(recs, truth):
+def _bulk_recall(recs, truth, k=None):
     tcounts = truth.reset_index().groupby('LKTruthID')['item'].count()
+
+    if k is not None:
+        _log.debug('truncating to k for recall')
+        tcounts = np.minimum(tcounts, k)
+        recs = recs[recs['rank'] <= k]
 
     good = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
     gcounts = good.groupby('LKRecID')['item'].count()
@@ -70,7 +93,7 @@ def _bulk_recall(recs, truth):
     return scores['ngood'] / scores['nrel']
 
 
-def recip_rank(recs, truth):
+def recip_rank(recs, truth, k=None):
     """
     Compute the reciprocal rank of the first relevant item in a list of recommendations.
 
@@ -78,6 +101,9 @@ def recip_rank(recs, truth):
 
     This metric has a bulk equivalent.
     """
+    if k is not None:
+        recs = recs.iloc[:k]
+
     good = recs['item'].isin(truth.index)
     npz, = np.nonzero(good.to_numpy())
     if len(npz):
@@ -87,8 +113,10 @@ def recip_rank(recs, truth):
 
 
 @bulk_impl(recip_rank)
-def _bulk_rr(recs, truth):
+def _bulk_rr(recs, truth, k=None):
     # find everything with truth
+    if k is not None:
+        recs = recs[recs['rank'] <= k]
     joined = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
     # compute min ranks
     ranks = joined.groupby('LKRecID')['rank'].agg('min')
@@ -168,7 +196,7 @@ def dcg(recs, truth, discount=np.log2):
     return achieved
 
 
-def ndcg(recs, truth, discount=np.log2):
+def ndcg(recs, truth, discount=np.log2, k=None):
     """
     Compute the normalized discounted cumulative gain.
 
@@ -195,27 +223,38 @@ def ndcg(recs, truth, discount=np.log2):
     """
 
     tpos = truth.index.get_indexer(recs['item'])
-    tgood = tpos >= 0
+
+    if k is not None:
+        recs = recs.iloc[:k]
+
     if 'rating' in truth.columns:
         i_rates = np.sort(truth.rating.values)[::-1]
+        if k is not None:
+            i_rates = i_rates[:k]
         ideal = _dcg(i_rates, discount)
         # make an array of ratings for this rec list
         r_rates = truth['rating'].values[tpos]
         r_rates[tpos < 0] = 0
         achieved = _dcg(r_rates, discount)
     else:
-        ideal = _dcg(np.ones(len(truth)), discount)
+        ntrue = len(truth)
+        if k is not None and ntrue > k:
+            ntrue = k
+        ideal = _fixed_dcg(ntrue, discount)
+        tgood = tpos >= 0
         achieved = _dcg(tgood, discount)
 
     return achieved / ideal
 
 
 @bulk_impl(ndcg)
-def _bulk_ndcg(recs, truth, discount=np.log2):
+def _bulk_ndcg(recs, truth, discount=np.log2, k=None):
     if 'rating' not in truth.columns:
         truth = truth.assign(rating=np.ones(len(truth), dtype=np.float32))
 
     ideal = truth.groupby(level='LKTruthID')['rating'].rank(method='first', ascending=False)
+    if k is not None:
+        ideal = ideal[ideal <= k]
     ideal = discount(ideal)
     ideal = np.maximum(ideal, 1)
     ideal = truth['rating'] / ideal
@@ -226,6 +265,8 @@ def _bulk_ndcg(recs, truth, discount=np.log2):
     list_ideal = list_ideal.join(ideal, on='LKTruthID', how='left')
     list_ideal = list_ideal.set_index('LKRecID')
 
+    if k is not None:
+        recs = recs[recs['rank'] <= k]
     rated = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
     rd = discount(rated['rank'])
     rd = np.maximum(rd, 1)

@@ -5,11 +5,7 @@ from pytest import approx, mark
 
 from lenskit.metrics.topn import _dcg, dcg, ndcg, _bulk_ndcg
 from lenskit.topn import RecListAnalysis
-from lenskit.util.test import ml_test
-from lenskit.algorithms.basic import PopScore
-from lenskit.algorithms.ranking import PlackettLuce
-from lenskit.batch import recommend
-from lenskit.crossfold import simple_test_pair
+from lenskit.util.test import demo_recs
 
 
 def test_dcg_empty():
@@ -98,6 +94,13 @@ def test_ndcg_wrong():
     assert ndcg(recs, truth) == approx(_dcg([3.0, 5.0] / _dcg([5.0, 4.0, 3.0])))
 
 
+def test_ndcg_perfect_k():
+    recs = pd.DataFrame({'item': [2, 3]})
+    truth = pd.DataFrame({'item': [1, 2, 3], 'rating': [3.0, 5.0, 4.0]})
+    truth = truth.set_index('item')
+    assert ndcg(recs, truth, k=2) == approx(1.0)
+
+
 def test_ndcg_bulk_at_top():
     truth = pd.DataFrame.from_records([
         (1, 50, 3.5),
@@ -135,24 +138,19 @@ def test_ndcg_bulk_not_at_top():
 
 
 @mark.parametrize('drop_rating', [False, True])
-def test_ndcg_bulk_match(drop_rating):
+def test_ndcg_bulk_match(demo_recs, drop_rating):
     "bulk and normal match"
-    train, test = simple_test_pair(ml_test.ratings)
+    train, test, recs = demo_recs
     if drop_rating:
         test = test[['user', 'item']]
 
-    users = test['user'].unique()
-    algo = PopScore()
-    algo = PlackettLuce(algo, rng_spec='user')
-    algo.fit(train)
-
-    recs = recommend(algo, users, 100)
-
     rla = RecListAnalysis()
     rla.add_metric(ndcg)
+    rla.add_metric(ndcg, name='ndcg_k', k=5)
     rla.add_metric(dcg)
     # metric without the bulk capabilities
     rla.add_metric(lambda *a: ndcg(*a), name='ind_ndcg')
+    rla.add_metric(lambda *a, **k: ndcg(*a, **k), name='ind_ndcg_k', k=5)
     res = rla.compute(recs, test)
 
     res['ind_ideal'] = res['dcg'] / res['ind_ndcg']

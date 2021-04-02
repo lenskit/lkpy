@@ -331,12 +331,17 @@ def sample_users(data, partitions: int, size: int, method: PartitionMethod, disj
         yield TTPair(train, test)
 
 
-def simple_test_pair(ratings, n_users=1000, n_rates=5):
+def simple_test_pair(ratings, n_users=1000, n_rates=5, f_rates=None):
     """
     Return a single, basic train-test pair for some ratings.  This is only intended
     for convenience use in test and demos - do not use for research.
     """
 
-    train, test = next(sample_users(ratings, 1, n_users, SampleN(n_rates)))
+    if f_rates:
+        samp = SampleFrac(f_rates)
+    else:
+        samp = SampleN(n_rates)
+
+    train, test = next(sample_users(ratings, 1, n_users, samp))
 
     return train, test
