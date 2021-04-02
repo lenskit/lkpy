@@ -66,6 +66,20 @@ Metrics
 The :py:mod:`lenskit.metrics.topn` module contains metrics for evaluating top-*N*
 recommendation lists.
 
+Each of the top-*N* metrics supports an optional keyword argument ``k`` that specifies the expected list
+length.  Recommendation lists are truncated to this length prior to measurment (so you can measure a
+a metric at multiple values of ``k`` in a single analysis), and for recall-oriented metrics like
+:py:func:`recall` and :py:func:`ndcg`, it normalizes the best-case possible items to ``k`` (because if
+there are 10 relevant items, Recall@5 should be 1 when the list returns any 5 relevant items).
+To use this, pass extra arguments to :py:meth:`RecListAnalysis.add_metric`::
+
+    rla.add_metric(ndcg, k=5)
+    rla.add_metric(ndcg, name='ndcg_10', k=10)
+
+The default is to allow unbounded lists.  When using large recommendation lists, and users never have
+more test ratings than there are recommended items, the default makes sense.
+
+
 Classification Metrics
 ----------------------
 
