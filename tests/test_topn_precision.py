@@ -112,7 +112,7 @@ def test_prec_short_items():
     items = [1, 0, 150]
 
     r = _test_prec(items, rel, k=5)
-    assert r == approx(0.4)
+    assert r == approx(2 / 3)
 
 
 def test_recall_bulk_k(demo_recs):

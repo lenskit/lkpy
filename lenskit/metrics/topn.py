@@ -19,15 +19,20 @@ def bulk_impl(metric):
 
 def precision(recs, truth, k=None):
     """
-    Compute recommendation precision.
+    Compute recommendation precision.  This is computed as:
+
+    .. math::
+        \\frac{|L \\cap I_u^{\\mathrm{test}}|}{|L|}
+
+    In the uncommon case that ``k`` is specified and ``len(recs) < k``, this metric uses
+    ``len(recs)`` as the denominator.
     """
     if k is not None:
-        nrecs = k
         recs = recs.iloc[:k]
-    else:
-        nrecs = len(recs)
-        if nrecs == 0:
-            return None
+
+    nrecs = len(recs)
+    if nrecs == 0:
+        return None
 
     ngood = recs['item'].isin(truth.index).sum()
     return ngood / nrecs
