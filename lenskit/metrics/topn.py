@@ -93,7 +93,7 @@ def _bulk_recall(recs, truth, k=None):
     return scores['ngood'] / scores['nrel']
 
 
-def recip_rank(recs, truth):
+def recip_rank(recs, truth, k=None):
     """
     Compute the reciprocal rank of the first relevant item in a list of recommendations.
 
@@ -101,6 +101,9 @@ def recip_rank(recs, truth):
 
     This metric has a bulk equivalent.
     """
+    if k is not None:
+        recs = recs.iloc[:k]
+
     good = recs['item'].isin(truth.index)
     npz, = np.nonzero(good.to_numpy())
     if len(npz):
@@ -110,8 +113,10 @@ def recip_rank(recs, truth):
 
 
 @bulk_impl(recip_rank)
-def _bulk_rr(recs, truth):
+def _bulk_rr(recs, truth, k=None):
     # find everything with truth
+    if k is not None:
+        recs = recs[recs['rank'] <= k]
     joined = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
     # compute min ranks
     ranks = joined.groupby('LKRecID')['rank'].agg('min')
