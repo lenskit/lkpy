@@ -4,14 +4,9 @@ import pandas as pd
 
 from pytest import approx
 
-from lenskit.algorithms.user_knn import UserUser
-from lenskit.algorithms.item_knn import ItemItem
-from lenskit.algorithms.basic import PopScore
-from lenskit.algorithms.ranking import PlackettLuce
-from lenskit.algorithms import Recommender
-from lenskit.util.test import ml_test, demo_recs
 from lenskit.metrics.topn import recall
-from lenskit import topn, batch, crossfold as xf
+from lenskit.util.test import demo_recs
+from lenskit import topn
 
 _log = logging.getLogger(__name__)
 
