@@ -21,9 +21,9 @@ from hypothesis.strategies import randoms
 _log = logging.getLogger(__name__)
 
 simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
-                          'user': [10, 12, 10, 13],
-                          'rating': [4.0, 3.0, 5.0, 2.0]})
+                          'user': [10, 12, 10, 13]})
 
+simple_dfr = simple_df.assign(rating=[4.0, 3.0, 5.0, 2.0])
 
 methods = mark.parametrize('m', ['lu', 'cg'])
 
@@ -74,8 +74,8 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
     u = 10
     i = 3
 
-    algo = als.ImplicitMF(20, iterations=10)
-    algo.fit(simple_df)
+    algo = als.ImplicitMF(20, iterations=10, use_ratings=True)
+    algo.fit(simple_dfr)
 
     preds = algo.predict_for_user(u, [i])
 
@@ -101,7 +101,7 @@ def test_als_predict_for_new_users_with_new_ratings():
     users = np.random.choice(ratings.user.unique(), n_users)
     items = np.random.choice(ratings.item.unique(), n_items)
 
-    algo = als.ImplicitMF(20, iterations=10, method="lu")
+    algo = als.ImplicitMF(20, iterations=10, method="lu", use_ratings=False)
     algo.fit(ratings)
     _log.debug("Items: " + str(items))
 
@@ -141,7 +141,7 @@ def test_als_recs_topn_for_new_users_with_new_ratings(rng):
 
     users = rng.choice(np.unique(ratings.user), n_users)
 
-    algo = als.ImplicitMF(20, iterations=10, method="lu")
+    algo = als.ImplicitMF(20, iterations=10, method="lu", use_ratings=False)
     rec_algo = basic.TopN(algo)
     rec_algo.fit(ratings)
     # _log.debug("Items: " + str(items))
@@ -201,7 +201,7 @@ def test_als_predict_no_user_features_basic():
     u = np.random.choice(ratings.user.unique(), 1)[0]
     items = np.random.choice(ratings.item.unique(), 2)
 
-    algo = als.ImplicitMF(5, iterations=10, method="lu")
+    algo = als.ImplicitMF(5, iterations=10, method="lu", use_ratings=True)
     algo.fit(ratings)
     preds = algo.predict_for_user(u, items)
 
@@ -220,7 +220,7 @@ def test_als_predict_no_user_features_basic():
 @lktu.wantjit
 @methods
 def test_als_train_large(m):
-    algo = als.ImplicitMF(20, iterations=20, method=m)
+    algo = als.ImplicitMF(20, iterations=20, method=m, use_ratings=False)
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
@@ -232,7 +232,7 @@ def test_als_train_large(m):
 
 def test_als_save_load(tmp_path):
     "Test saving and loading ALS models, and regularized training."
-    algo = als.ImplicitMF(5, iterations=5, reg=(2, 1))
+    algo = als.ImplicitMF(5, iterations=5, reg=(2, 1), use_ratings=False)
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
@@ -251,6 +251,18 @@ def test_als_train_large_noratings():
     algo = als.ImplicitMF(20, iterations=20)
     ratings = lktu.ml_test.ratings
     ratings = ratings.loc[:, ['user', 'item']]
+    algo.fit(ratings)
+
+    assert len(algo.user_index_) == ratings.user.nunique()
+    assert len(algo.item_index_) == ratings.item.nunique()
+    assert algo.user_features_.shape == (ratings.user.nunique(), 20)
+    assert algo.item_features_.shape == (ratings.item.nunique(), 20)
+
+
+@lktu.wantjit
+def test_als_train_large_ratings():
+    algo = als.ImplicitMF(20, iterations=20, use_ratings=True)
+    ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
     assert len(algo.user_index_) == ratings.user.nunique()

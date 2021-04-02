@@ -1,5 +1,6 @@
 import logging
 from collections import namedtuple
+import warnings
 
 import numpy as np
 from numba import njit, prange
@@ -535,6 +536,12 @@ class ImplicitMF(MFPredictor):
     With weight :math:`w`, this function decomposes the matrix :matrix:`\\mathbb{1}^* + Rw`, where
     $\\mathbb{1}^*$ is an $m \\times n$ matrix of all 1s.
 
+    .. warning::
+        In versions prior to 0.13, ``ImplicitMF`` used the rating column if it was present.
+        In 0.13, we added an option to control whether or not the rating column is used; it
+        currently defaults to ``True``, but with a warning.  In LensKit for Python 0.14,
+        **this default will change**.
+
     .. [HKV2008] Y. Hu, Y. Koren, and C. Volinsky. 2008.
        Collaborative Filtering for Implicit Feedback Datasets.
        In _Proceedings of the 2008 Eighth IEEE International Conference on Data Mining_, 263–272.
@@ -548,6 +555,11 @@ class ImplicitMF(MFPredictor):
         iterations(int): the number of iterations to train
         reg(double): the regularization factor
         weight(double): the scaling weight for positive samples (:math:`\\alpha` in [HKV2008]_).
+        use_ratings(bool):
+            Whether to use the `rating` column, if present.  Currently defaults to ``True``; this
+            default will change in LensKit 0.14.  When ``True``, the values from the ``rating``
+            column are used, and multipled by ``weight``; if ``False``, ImplicitMF treats every
+            user-item pair as having a rating of 1.
         method(string):
             the training method.
 
@@ -563,12 +575,13 @@ class ImplicitMF(MFPredictor):
     """
     timer = None
 
-    def __init__(self, features, *, iterations=20, reg=0.1, weight=40, method='cg',
-                 rng_spec=None, progress=None, save_user_features=True):
+    def __init__(self, features, *, iterations=20, reg=0.1, weight=40, use_ratings=None,
+                 method='cg', rng_spec=None, progress=None, save_user_features=True):
         self.features = features
         self.iterations = iterations
         self.reg = reg
         self.weight = weight
+        self.use_ratings = use_ratings
         self.method = method
         self.rng = util.rng(rng_spec)
         self.progress = progress if progress is not None else util.no_progress
@@ -645,6 +658,20 @@ class ImplicitMF(MFPredictor):
     def _initial_model(self, ratings):
         "Initialize a model and build contexts."
 
+        if self.use_ratings is None and 'rating' in ratings:
+            _logger.warning('fitting an Implicit ALS model with ratings and default settings')
+            _logger.warning('in LensKit 0.14, the default behavior for this scenario will change')
+            _logger.warning('explicitly specify the use_ratings option for consistent behavior')
+            _logger.warning('see http://bit.ly/lkpy-imf for details')
+            warnings.warn(util.clean_str('''
+                Fitting Implicit ALS with ratings and defaults; the default behavior in this
+                scenario will change in LensKit 0.14. Specify the use_ratings option to
+                ImplicitMF to get consistent behavior in the future. See the documentation
+                at http://bit.ly/lkpy-imf for more details.
+            '''))
+        elif not self.use_ratings:
+            ratings = ratings[['user', 'item']]
+
         rmat, users, items = sparse_ratings(ratings)
         n_users = len(users)
         n_items = len(items)
@@ -668,7 +695,10 @@ class ImplicitMF(MFPredictor):
             ri_idxes = self.item_index_.get_indexer_for(ratings.index)
             ri_good = ri_idxes >= 0
             ri_it = ri_idxes[ri_good]
-            ri_val = ratings.values[ri_good]
+            if self.use_ratings is False:
+                ri_val = np.ones(len(ri_good))
+            else:
+                ri_val = ratings.values[ri_good]
             ri_val *= self.weight
             u_feat = _train_implicit_row_lu(ri_it, ri_val, self.item_features_, self.OtOr_)
             return self.score_by_ids(user, items, u_feat)
