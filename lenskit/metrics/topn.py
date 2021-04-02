@@ -4,6 +4,7 @@ Top-N evaluation metrics.
 
 import logging
 import numpy as np
+import pandas as pd
 
 _log = logging.getLogger(__name__)
 
@@ -16,24 +17,32 @@ def bulk_impl(metric):
     return wrap
 
 
-def precision(recs, truth):
+def precision(recs, truth, k=None):
     """
     Compute recommendation precision.
     """
-    nrecs = len(recs)
-    if nrecs == 0:
-        return None
+    if k is not None:
+        nrecs = k
+        recs = recs.iloc[:k]
+    else:
+        nrecs = len(recs)
+        if nrecs == 0:
+            return None
 
     ngood = recs['item'].isin(truth.index).sum()
     return ngood / nrecs
 
 
 @bulk_impl(precision)
-def _bulk_precision(recs, truth):
-    good = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
-    gcounts = good.groupby('LKRecID')['item'].count()
+def _bulk_precision(recs, truth, k=None):
+    if k is not None:
+        recs = recs[recs['rank'] <= k]
+        lcounts = pd.Series(k, index=recs['LKRecID'].unique())
+        lcounts.index.name = 'LKRecID'
+    else:
+        lcounts = recs.groupby(['LKRecID'])['item'].count()
 
-    lcounts = recs.groupby(['LKRecID'])['item'].count()
+    good = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
     gcounts = good.groupby(['LKRecID'])['item'].count()
 
     lcounts, gcounts = lcounts.align(gcounts, join='left', fill_value=0)
