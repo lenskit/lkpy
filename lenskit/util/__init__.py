@@ -3,6 +3,7 @@ Miscellaneous utility functions.
 """
 
 import logging
+from textwrap import dedent
 from copy import deepcopy
 
 from ..algorithms import Algorithm
@@ -25,7 +26,7 @@ __all__ = [
     'read_df_detect',
     'rng', 'init_rng', 'derivable_rng',
     'proc_count',
-    'clone'
+    'clone', 'clean_str'
 ]
 
 
@@ -106,3 +107,7 @@ def cur_memory():
         return "%.1f MiB" % (res.ru_idrss,)
     else:
         return 'unknown'
+
+
+def clean_str(s):
+    return dedent(s).strip()
