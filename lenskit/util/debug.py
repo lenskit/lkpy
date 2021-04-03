@@ -145,7 +145,7 @@ def _find_win_blas():
         blas_dll = ctypes.cdll.libblas
         _log.debug('loaded MKL dll %s', blas_dll)
         return blas_dll
-    except FileNotFoundError as e:
+    except (FileNotFoundError, OSError) as e:
         _log.debug('no LIBBLAS, searching')
         path = _find_win_blas_path()
         if path is not None:
