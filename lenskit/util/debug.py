@@ -181,7 +181,11 @@ def numba_info():
     x = _par_test(100)
     _log.debug('sum: %d', x)
 
-    layer = numba.threading_layer()
+    try:
+        layer = numba.threading_layer()
+    except ValueError:
+        _log.info('Numba threading not initialized')
+        return None
     _log.info('numba threading layer: %s', layer)
     nth = numba.get_num_threads()
     return NumbaInfo(layer, nth)
