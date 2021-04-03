@@ -21,7 +21,10 @@ import numba
 import psutil
 import numpy as np
 
+from .parallel import is_worker
+
 _log = logging.getLogger(__name__)
+_already_checked = False
 
 
 @numba.njit(parallel=True)
@@ -210,6 +213,47 @@ def numba_info():
     _log.info('numba threading layer: %s', layer)
     nth = numba.get_num_threads()
     return NumbaInfo(layer, nth)
+
+
+def check_env():
+    """
+    Check the runtime environment for potential performance or stability problems.
+    """
+    global _already_checked
+    problems = 0
+    if _already_checked or is_worker():
+        return
+
+    try:
+        blas = blas_info()
+        numba = numba_info()
+    except Exception as e:
+        _log.error('error inspecting runtime environment: %s', e)
+        _already_checked = True
+        return
+
+    if numba is None:
+        _log.warn('Numba JIT seems to be disabled - this will hurt performance')
+        _already_checked = True
+        return
+
+    if numba.threading != 'tbb':
+        _log.warn('Numba is using threading layer %s - consider TBB', numba.threading)
+        _log.info('Non-TBB threading is often slower and can cause crashes')
+        problems += 1
+
+    if numba.threading == 'tbb' and blas.threading == 'tbb':
+        _log.info('Numba and BLAS both using TBB - good')
+    elif blas.threads and blas.threads > 1 and numba.threads > 1:
+        _log.warn('BLAS using multiple threads - can cause oversubscription')
+        problems += 1
+
+    if problems:
+        _log.warn('found %d potential runtime problems - see https://bit.ly/lkpy-envlint',
+                  problems)
+
+    _already_checked = True
+    return problems
 
 
 def print_libraries():
