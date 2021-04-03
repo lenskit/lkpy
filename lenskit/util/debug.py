@@ -20,6 +20,8 @@ from pathlib import Path
 import numba
 from numba.np.ufunc import parallel
 import psutil
+import numpy as np
+import numpy.__config__ as npc
 
 _log = logging.getLogger(__name__)
 
@@ -97,13 +99,14 @@ def guess_blas_unix():
         pass  # no MKL
 
     _log.debug('checking for OpenBLAS')
+    np_dll = ctypes.CDLL(np.core._multiarray_umath.__file__)
     try:
-        openblas_vstr = dll.openblas_get_config
+        openblas_vstr = np_dll.openblas_get_config
         openblas_vstr.restype = ctypes.c_char_p
         version = openblas_vstr().decode()
         _log.debug('version %s', version)
 
-        openblas_th = dll.openblas_get_num_threads
+        openblas_th = np_dll.openblas_get_num_threads
         openblas_th.restype = ctypes.c_int
         threads = openblas_th()
         _log.debug('threads %d', threads)
