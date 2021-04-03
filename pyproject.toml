@@ -43,6 +43,7 @@ dev = [
     "ipython",
     "docopt",
     "tqdm",
+    "psutil",
 ]
 doc = [
     "sphinx >= 1.8",
