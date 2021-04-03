@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import numba
 from numba.np.ufunc import parallel
+import psutil
 
 _log = logging.getLogger(__name__)
 
@@ -116,8 +117,19 @@ def guess_blas_windows():
         mkl_mth.restype = ctypes.c_int
         threads = mkl_mth()
 
-        _log.debug('guessing threading layer')
-        layer = _win_search_dlls(tbb='mkl_tbb_thread', intel='mkl_intel_thread')
+        proc = psutil.Process()
+        layer = None
+        for mm in proc.memory_maps():
+            if 'mkl_intel_thread' in mm.path:
+                _log.debug('found library %s linked', mm.path)
+                if layer:
+                    _log.warn('multiple threading layers detected')
+                layer = 'intel'
+            elif 'mkl_tbb_thread' in mm.path:
+                _log.debug('found library %s linked', mm.path)
+                if layer:
+                    _log.warn('multiple threading layers detected')
+                layer = 'tbb'
 
         return BlasInfo('mkl', layer, threads, version)
     except AttributeError:
@@ -159,7 +171,6 @@ def numba_info():
 
 
 def print_libraries():
-    import psutil
     p = psutil.Process()
 
     _log.info('printing process libraries')

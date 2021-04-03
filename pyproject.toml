@@ -25,6 +25,7 @@ requires = [
     "pyarrow >= 0.15",
     "cffi >= 1.12.2",
     "binpickle >= 0.3.2",
+    "psutil >= 5",
     "csr @ git+https://github.com/lenskit/csr.git",
 ]
 
@@ -43,7 +44,6 @@ dev = [
     "ipython",
     "docopt",
     "tqdm",
-    "psutil",
 ]
 doc = [
     "sphinx >= 1.8",
