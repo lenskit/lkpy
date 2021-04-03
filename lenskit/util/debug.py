@@ -11,6 +11,7 @@ Options:
         Turn on verbose logging
 """
 
+from pathlib import Path
 import sys
 import logging
 import ctypes
@@ -47,14 +48,19 @@ class NumbaInfo:
     threads: int
 
 
-def _guess_layer():
+def _get_shlibs():
     proc = psutil.Process()
+    if hasattr(proc, 'memory_maps'):
+        return [mm.path for mm in proc.memory_maps()]
+    else:
+        return []
+
+
+def _guess_layer():
     layer = None
-    if not hasattr(proc, 'memory_maps'):
-        return None
 
     _log.debug('scanning process memory maps for threading layers')
-    for mm in proc.memory_maps():
+    for mm in _get_shlibs():
         if 'mkl_intel_thread' in mm.path:
             _log.debug('found library %s linked', mm.path)
             if layer:
@@ -116,23 +122,38 @@ def guess_blas_unix():
     return BlasInfo(None, None, None, 'unknown')
 
 
-def _win_search_dlls(**kwargs):
-    for key, dll in kwargs.items():
-        try:
-            _log.debug('looking for %s', dll)
-            getattr(ctypes.cdll, dll)
-            return key
-        except FileNotFoundError:
-            pass
+def _find_win_blas_path():
+    for lib in _get_shlibs():
+        path = Path(lib)
+        name = path.name
+        if not name.startswith('libopenblas'):
+            continue
+
+        if path.parent.parent.name == 'numpy':
+            _log.debug('found BLAS at %s', lib)
+            return lib
+        elif path.parent.name == 'numpy.libs':
+            _log.debug('found BLAS at %s', lib)
+            return lib
 
 
-def guess_blas_windows():
+def _find_win_blas():
     try:
         blas_dll = ctypes.cdll.libblas
         _log.debug('loaded MKL dll %s', blas_dll)
+        return blas_dll
     except FileNotFoundError as e:
-        _log.error('could not load LIBBLAS')
-        raise e
+        _log.debug('no LIBBLAS, searching')
+        path = _find_win_blas_path()
+        if path is not None:
+            return ctypes.CDLL(path)
+        else:
+            _log.error('could not load LIBBLAS: %s', e)
+            return BlasInfo(None, None, None, 'unknown')
+
+
+def guess_blas_windows():
+    blas_dll = _find_win_blas()
 
     _log.debug('checking for MKL')
     try:
