@@ -48,6 +48,32 @@ class NumbaInfo:
     threads: int
 
 
+def _guess_layer():
+    proc = psutil.Process()
+    layer = None
+    if not hasattr(proc, 'memory_maps'):
+        return None
+
+    _log.debug('scanning process memory maps for threading layers')
+    for mm in proc.memory_maps():
+        if 'mkl_intel_thread' in mm.path:
+            _log.debug('found library %s linked', mm.path)
+            if layer:
+                _log.warn('multiple threading layers detected')
+            layer = 'intel'
+        elif 'mkl_tbb_thread' in mm.path:
+            _log.debug('found library %s linked', mm.path)
+            if layer:
+                _log.warn('multiple threading layers detected')
+            layer = 'tbb'
+        elif 'mkl_gnu_thread' in mm.path:
+            _log.debug('found library %s linked', mm.path)
+            if layer:
+                _log.warn('multiple threading layers detected')
+            layer = 'gnu'
+
+    return layer
+
 def guess_blas_unix():
     _log.info('opening self DLL')
     dll = ctypes.CDLL(None)
@@ -64,7 +90,9 @@ def guess_blas_unix():
         mkl_mth.restype = ctypes.c_int
         threads = mkl_mth()
 
-        return BlasInfo('mkl', None, threads, version)
+        layer = _guess_layer()
+
+        return BlasInfo('mkl', layer, threads, version)
     except AttributeError:
         pass  # no MKL
 
@@ -117,19 +145,7 @@ def guess_blas_windows():
         mkl_mth.restype = ctypes.c_int
         threads = mkl_mth()
 
-        proc = psutil.Process()
-        layer = None
-        for mm in proc.memory_maps():
-            if 'mkl_intel_thread' in mm.path:
-                _log.debug('found library %s linked', mm.path)
-                if layer:
-                    _log.warn('multiple threading layers detected')
-                layer = 'intel'
-            elif 'mkl_tbb_thread' in mm.path:
-                _log.debug('found library %s linked', mm.path)
-                if layer:
-                    _log.warn('multiple threading layers detected')
-                layer = 'tbb'
+        layer = _guess_layer()
 
         return BlasInfo('mkl', layer, threads, version)
     except AttributeError:
