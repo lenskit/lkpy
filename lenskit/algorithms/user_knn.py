@@ -137,7 +137,7 @@ class UserUser(Predictor):
         Returns:
             UUModel: a memorized model for efficient user-based CF computation.
         """
-
+        util.check_env()
         uir, users, items = sparse_ratings(ratings)
 
         # mean-center ratings

@@ -238,6 +238,7 @@ class FunkSVD(MFPredictor):
         Args:
             ratings: the ratings data frame.
         """
+        util.check_env()
         timer = util.Stopwatch()
         if 'rating' not in ratings:
             _logger.warning('no rating column found, assuming rating values of 1.0')

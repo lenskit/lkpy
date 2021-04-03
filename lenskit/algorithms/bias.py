@@ -72,7 +72,6 @@ class Bias(Predictor):
         Returns:
             Bias: the fit bias object.
         """
-
         _logger.info('building bias model for %d ratings', len(ratings))
         self.mean_ = ratings.rating.mean()
         _logger.info('global mean: %.3f', self.mean_)
