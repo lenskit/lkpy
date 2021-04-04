@@ -268,6 +268,7 @@ class ItemItem(Predictor):
             ratings(pandas.DataFrame):
                 (user,item,rating) data for computing item similarities.
         """
+        util.check_env()
         # Training proceeds in 2 steps:
         # 1. Normalize item vectors to be mean-centered and unit-normalized
         # 2. Compute similarities with pairwise dot products

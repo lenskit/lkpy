@@ -376,7 +376,7 @@ class BiasedMF(MFPredictor):
         Returns:
             The algorithm (for chaining).
         """
-
+        util.check_env()
         self.timer = util.Stopwatch()
 
         for epoch, algo in enumerate(self.fit_iters(ratings, **kwargs)):
@@ -588,6 +588,7 @@ class ImplicitMF(MFPredictor):
         self.save_user_features = save_user_features
 
     def fit(self, ratings, **kwargs):
+        util.check_env()
         self.timer = util.Stopwatch()
         for algo in self.fit_iters(ratings, **kwargs):
             pass
