@@ -78,8 +78,7 @@ exclude = [
 [tool.envtool.conda]
 name = "lkpy"
 channels = [
-    "conda-forge",
-    "defaults"
+    "conda-forge"
 ]
 
 [tool.envtool.conda.overrides]
