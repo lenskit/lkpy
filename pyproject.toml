@@ -26,6 +26,7 @@ requires = [
     "cffi >= 1.12.2",
     "binpickle >= 0.3.2",
     "psutil >= 5",
+    "seedbank @ git+https://github.com/lenskit/seedbank.git",
     "csr @ git+https://github.com/lenskit/csr.git",
 ]
 
