@@ -1,5 +1,6 @@
 from logging import getLogger
 from lenskit import util
+import seedbank
 
 try:
     import tensorflow as tf
@@ -29,7 +30,7 @@ def init_tf_rng(spec):
     if spec is None:
         return
 
-    seed = util.random.rng_seed(spec)
+    seed = seedbank.make_seed(spec)
     seed, = seed.generate_state(1)
     tf.random.set_seed(seed)
 
