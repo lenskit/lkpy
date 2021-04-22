@@ -45,6 +45,7 @@ dev = [
     "ipython",
     "docopt",
     "tqdm",
+    "sphinx-autobuild",
 ]
 doc = [
     "sphinx >= 1.8",
