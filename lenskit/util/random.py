@@ -2,56 +2,16 @@
 Utilities to manage randomness in LensKit and LensKit experiments.
 """
 
+import warnings
 import zlib
 import numpy as np
 import random
 import logging
 
+import seedbank
+
 _log = logging.getLogger(__name__)
-
-
-class ModernRNG:
-    _seed = None
-
-    @property
-    def seed(self):
-        if self._seed is None:
-            self._seed = np.random.SeedSequence()
-        return self._seed
-
-    @property
-    def int_seed(self):
-        return self._seed.generate_state(1)[0]
-
-    def initialize(self, seed, keys):
-        if isinstance(seed, int):
-            seed = np.random.SeedSequence(seed)
-
-        if not isinstance(seed, np.random.SeedSequence):
-            raise TypeError('unexpected seed type %s', type(seed))
-
-        if keys:
-            seed = self.derive(seed, keys)
-
-        self._seed = seed
-        return seed
-
-    def derive(self, base, keys):
-        if base is None:
-            base = self.seed
-
-        if keys:
-            k2 = tuple(_make_int(k) for k in keys)
-            return np.random.SeedSequence(base.entropy, spawn_key=base.spawn_key + k2)
-        else:
-            return base.spawn(1)[0]
-
-    def rng(self, seed=None):
-        if seed is None:
-            seed, = self.seed.spawn(1)
-        elif isinstance(seed, int):
-            seed = np.random.SeedSequence(seed)
-        return np.random.default_rng(seed)
+derive_seed = seedbank.derive_seed
 
 
 def get_root_seed():
@@ -61,19 +21,8 @@ def get_root_seed():
     Returns:
         numpy.random.SeedSequence: The LensKit root seed.
     """
-    return _rng_impl.seed
-
-
-def _make_int(obj):
-    if isinstance(obj, int) or isinstance(obj, np.integer):
-        return obj
-    elif isinstance(obj, bytes):
-        return zlib.crc32(obj)
-    elif isinstance(obj, str):
-        return zlib.crc32(obj.encode('utf8'))
-    else:
-        ot = type(obj)
-        raise ValueError(f'invalid RNG key {obj} (type: {ot})')
+    warnings.warn('get_root_seed is deprecated, use seedbank.root_seed', DeprecationWarning)
+    return seedbank.root_seed()
 
 
 def init_rng(seed, *keys, propagate=True):
@@ -101,83 +50,8 @@ def init_rng(seed, *keys, propagate=True):
     Returns:
         The random seed.
     """
-    _rng_impl.initialize(seed, keys)
-    _log.info('initialized LensKit RNG with seed %s', _rng_impl.seed)
-
-    if propagate:
-        ik = _rng_impl.int_seed
-        _log.info('initializing numpy.random and random with seed %u', ik)
-        np.random.seed(ik)
-        random.seed(ik)
-        try:
-            import tensorflow as tf
-            _tf_seed = getattr(tf.random, 'set_seed', None)
-            if _tf_seed is not None:
-                _log.debug('setting TensorFlow seed')
-                _tf_seed(ik)
-            else:
-                _log.warn('old TensorFlow, not setting seed')
-        except ImportError:
-            _log.debug('TensorFlow not available')
-
-    return _rng_impl.seed
-
-
-def derive_seed(*keys, base=None, none_on_old_numpy=False):
-    """
-    Derive a seed from the root seed, optionally with additional seed keys.
-
-    Args:
-        keys(list of int or str):
-            Additional components to add to the spawn key for reproducible derivation.
-            If unspecified, the seed's internal counter is incremented (by calling
-            :meth:`numpy.random.SeedSequence.spawn`).
-        base(numpy.random.SeedSequence):
-            The base seed to use.  If ``None``, uses the root seed.
-        none_on_old_numpy(bool):
-            If ``True``, return ``None`` instead of raising :class:`NotImplementedError`
-            if running on an old version of NumPy.
-    """
-    try:
-        return _rng_impl.derive(base, keys)
-    except NotImplementedError as e:
-        if none_on_old_numpy:
-            return None
-        else:
-            raise e
-
-
-def rng_seed(spec=None):
-    """
-    Get a random number generator seed.  ``spec`` is interpreted as in :func:`rng`, and
-    is used as follows:
-
-    * If a :class:`numpy.random.SeedSequence`, returned as-is.
-    * If an integer, used to create a seed sequence.
-    * If ``None``, returns global seed (after initializing).
-    * If a :class:`numpy.random.Generator` or :class:`numpy.random.RandomState`, it is
-      used to generate an integer that is used to create a seed sequence.
-
-    This function is only available when used with NumPy 1.17 or newer.
-
-    Returns:
-        numpy.random.SeedSequence:
-            The seed.
-    """
-    if not hasattr(np.random, 'Generator'):
-        raise RuntimeError('rng_seed requires NumPy 1.17')
-
-    if spec is None:
-        return _rng_impl.seed
-    elif isinstance(spec, int):
-        return np.random.SeedSequence(spec)
-    elif isinstance(spec, np.random.SeedSequence):
-        return spec
-    elif hasattr(spec, 'integers'):
-        seed = rng.integers(2**32-1)
-        return np.random.SeedSequence(seed)
-    else:
-        raise ValueError('unknown RNG spec ' + str(spec))
+    warnings.warn('init_rng is deprecated, use seedbank.initialize', DeprecationWarning)
+    seedbank.initialize(seed, *keys)
 
 
 def rng(spec=None, *, legacy=False):
@@ -201,20 +75,12 @@ def rng(spec=None, *, legacy=False):
     Returns:
         numpy.random.Generator: A random number generator.
     """
+    warnings.warn('rng is deprecated, use seedbank.numpy_rng', DeprecationWarning)
 
-    rng = None
-    if isinstance(spec, np.random.RandomState):
-        rng = spec
-    elif isinstance(spec, np.random.Generator):
-        rng = spec
+    if legacy:
+        return seedbank.numpy_random_state(spec)
     else:
-        rng = _rng_impl.rng(spec)
-
-    if legacy and isinstance(rng, np.random.Generator):
-        rng = np.random.RandomState(rng.bit_generator)
-    # case where rng is a random state, and we are on new numpy and want a generator, is ok
-
-    return rng
+        return seedbank.numpy_rng(spec)
 
 
 class FixedRNG:
@@ -278,6 +144,3 @@ def derivable_rng(spec, *, legacy=False):
         return DerivingRNG(seed, legacy)
     else:
         return FixedRNG(rng(spec, legacy=legacy))
-
-
-_rng_impl = ModernRNG()

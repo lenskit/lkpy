@@ -102,7 +102,7 @@ def _initialize_worker(log_queue, seed):
 
 
 def _initialize_mp_worker(mkey, func, threads, log_queue, seed):
-    seed = derive_seed(mp.current_process().name, base=seed, none_on_old_numpy=True)
+    seed = derive_seed(mp.current_process().name, base=seed)
     _initialize_worker(log_queue, seed)
     global __work_model, __work_func
 
@@ -193,7 +193,7 @@ def run_sp(func, *args, **kwargs):
     """
     ctx = LKContext.INSTANCE
     rq = ctx.SimpleQueue()
-    seed = derive_seed(none_on_old_numpy=True)
+    seed = derive_seed()
     worker_args = (log_queue(), seed, rq, func, args, kwargs)
     _log.debug('spawning subprocess to run %s', func)
     proc = ctx.Process(target=_sp_worker, args=worker_args)
