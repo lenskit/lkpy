@@ -55,15 +55,14 @@ disk space (and deserialized memory use).
 Random Number Generation
 ------------------------
 
-See :py:mod:`lenskit.util.random` for documentation on how to use random number generation.
+LensKit uses :py:mod:`seedbank` for managing RNG seeds and constructing random number generation.
 
-In general, algorithms using randomization should have an ``rng`` parameter that takes a seed
-or RNG, and pass this to :py:func:`lenskit.util.random.rng` to get a random number generator.
-Algorithms that use randomness at predict or recommendation time, not just training time, should
-support the value ``'user'`` for the ``rng`` parameter, and if it is passed, derive a new seed
-for each user using :py:func:`lenskit.util.random.derive_seed` to allow reproducibility in
-the face of parallelism for common experimental designs.  :py:func:`lenskit.util.random.derivable_rng`
-automates this logic.
+In general, algorithms using randomization should have an ``rng_spec`` parameter that takes a seed
+or RNG, and pass this to :py:func:`seedbank.numpy_rng` to get a random number generator. Algorithms
+that use randomness at predict or recommendation time, not just training time, should support the
+value ``'user'`` for the ``rng`` parameter, and if it is passed, derive a new seed for each user
+using :py:func:`seedbank.derive_seed` to allow reproducibility in the face of parallelism for common
+experimental designs.  :py:func:`lenskit.util.derivable_rng` automates this logic.
 
 Memory Map Friendliness
 -----------------------

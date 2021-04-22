@@ -30,6 +30,10 @@ def init_rng(seed, *keys, propagate=True):
     Initialize the random infrastructure with a seed.  This function should generally be
     called very early in the setup.
 
+    .. warning::
+
+        This method is deprecated. Use :func:`seedbank.initialize` instead.
+
     Args:
         seed(int or numpy.random.SeedSequence):
             The random seed to initialize with.
@@ -58,6 +62,11 @@ def rng(spec=None, *, legacy=False):
     """
     Get a random number generator.  This is similar to :func:`sklearn.utils.check_random_seed`, but
     it usually returns a :class:`numpy.random.Generator` instead.
+
+    .. warning::
+
+        This method is deprecated. Use :func:`seedbank.numpy_rng` instead.
+
 
     Args:
         spec:
@@ -120,11 +129,11 @@ def derivable_rng(spec, *, legacy=False):
 
     Args:
         spec:
-            Any value supported by the `seed` parameter of :func:`rng`, in addition to the
+            Any value supported by the `seed` parameter of :func:`seedbank.numpy_rng`, in addition to the
             following values:
 
             * the string ``'user'``
-            * a tuple of the form (`seed`, ``'user'``)
+            * a tuple of the form (``seed``, ``'user'``)
 
             Either of these forms will cause the returned function to re-derive new RNGs.
 

@@ -69,7 +69,6 @@ Resources
     :caption: Configuration and Internals
 
     util
-    random
     internals
 
 

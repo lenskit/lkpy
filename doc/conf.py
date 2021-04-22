@@ -193,7 +193,7 @@ intersphinx_mapping = {
     'scikit': ('https://scikit-learn.org/stable/', None),
     'binpickle': ('https://binpickle.lenskit.org/en/stable/', None),
     'csr': ('https://csr.lenskit.org/en/latest/', None),
-    'seedbank': ('https://seedbank.lenskit.org/en/stable/', None),
+    'seedbank': ('https://seedbank.lenskit.org/en/latest/', None),
 }
 
 autodoc_default_options = {
