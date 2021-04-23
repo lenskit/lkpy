@@ -129,8 +129,8 @@ def derivable_rng(spec, *, legacy=False):
 
     Args:
         spec:
-            Any value supported by the `seed` parameter of :func:`seedbank.numpy_rng`, in addition to the
-            following values:
+            Any value supported by the `seed` parameter of :func:`seedbank.numpy_rng`, in addition
+            to the following values:
 
             * the string ``'user'``
             * a tuple of the form (``seed``, ``'user'``)
