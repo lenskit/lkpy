@@ -13,6 +13,10 @@ factorization, using TensorFlow_.  These algorithms serve two purposes:
 * Demonstrate how to connect TensorFlow to LensKit for use in your own
   experiments.
 
+.. warning::
+    These implementations are not yet battle-tested --- they are here
+    primarily for demonstration purposes at this time.
+
 .. toctree::
     :caption: Contents
 
