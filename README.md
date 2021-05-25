@@ -15,7 +15,7 @@ If you use LensKit for Python in published research, please cite:
 > Michael D. Ekstrand. 2020.
 > LensKit for Python: Next-Generation Software for Recommender Systems Experiments.
 > In <cite>Proceedings of the 29th ACM International Conference on Information and Knowledge Management</cite> (CIKM '20).
-> DOI:[10.1145/3340531.3412778](https://dx.doi.org/10.1145/3340531.3412778>).
+> DOI:[10.1145/3340531.3412778](https://dx.doi.org/10.1145/3340531.3412778).
 > arXiv:[1809.03125](https://arxiv.org/abs/1809.03125) [cs.IR].
 
 ## Installing
