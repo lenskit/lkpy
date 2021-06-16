@@ -46,7 +46,7 @@ jobs:
           if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
             echo "Using most extras"
             # we'll test tensorflow in a separate run
-            e_opts="-E demo -E implicit -E sklearn"
+            e_opts="-E implicit -E sklearn"
           fi
           python build-tools/flit-conda.py $e_opts --python-version $PYVER --save-env environment.yml
           cat environment.yml
