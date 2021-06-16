@@ -32,9 +32,9 @@ requires = [
 
 [tool.flit.metadata.requires-extra]
 test = [
-    "pytest >= 3.9",
-    "pytest-doctestplus",
-    "hypothesis"
+    "pytest >= 6",
+    "pytest-doctestplus >= 0.9",
+    "hypothesis >= 6"
 ]
 dev = [
     "flit",
@@ -48,18 +48,16 @@ dev = [
     "sphinx-autobuild",
 ]
 doc = [
-    "sphinx >= 1.8",
+    "sphinx >= 3",
     "sphinx_rtd_theme",
     "nbsphinx",
     "recommonmark",
     "ipython",
 ]
 demo = [
-    "notebook",
-    "nbval",
-    "matplotlib",
-    "ipywidgets",
-    "tqdm"
+    "notebook >= 6",
+    "nbval >= 0.9",
+    "matplotlib >= 3",
 ]
 hpf = ["hpfrec"]
 implicit = ["implicit"]
