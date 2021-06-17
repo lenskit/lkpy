@@ -55,7 +55,7 @@ doc = [
 demo = [
     "notebook >= 6",
     "nbval >= 0.9",
-    "matplotlib == 3.4",
+    "matplotlib ~= 3.4",
 ]
 hpf = ["hpfrec"]
 implicit = ["implicit"]
