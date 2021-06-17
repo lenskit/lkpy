@@ -37,7 +37,7 @@ test = [
     "hypothesis >= 6"
 ]
 dev = [
-    "flit",
+    "flit >= 1",
     "packaging",
     "flake8",
     "coverage",
@@ -52,7 +52,6 @@ doc = [
     "sphinx_rtd_theme",
     "nbsphinx",
     "recommonmark",
-    "ipython",
 ]
 demo = [
     "notebook >= 6",
