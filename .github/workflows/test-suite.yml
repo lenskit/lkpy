@@ -211,9 +211,9 @@ jobs:
           cp doc/*.ipynb data
           python -m pytest --nbval-lax --cov=lenskit --cov-append data --log-file test-docs.log
 
-      - name: Validate Examples
-        run: |
-          python -m pytest --nbval-lax --cov=lenskit --cov-append examples --log-file test-examples.log
+      # - name: Validate Examples
+      #   run: |
+      #     python -m pytest --nbval-lax --cov=lenskit --cov-append examples --log-file test-examples.log
 
       - name: Upload logs
         uses: actions/upload-artifact@v2
