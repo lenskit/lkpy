@@ -35,11 +35,13 @@ jobs:
         uses: s-weigand/setup-conda@v1
         with:
           python-version: ${{matrix.python}}
+          update-conda: true
           conda-channels: conda-forge
 
       - name: Prepare Conda environment spec
         shell: bash
         run: |
+          conda config --set channel_priority strict
           conda clean -i
           conda install -qy -c conda-forge flit packaging pyyaml
           e_opts="-E ${{matrix.blas}}"
@@ -113,11 +115,13 @@ jobs:
         uses: s-weigand/setup-conda@v1
         with:
           python-version: '3.8'
+          update-conda: true
           conda-channels: conda-forge
 
       - name: Prepare Conda environment spec
         shell: bash
         run: |
+          conda config --set channel_priority strict
           conda clean -i
           conda install -qy -c conda-forge flit packaging pyyaml
           python build-tools/flit-conda.py -E tf --python-version $PYVER --save-env environment.yml
@@ -167,11 +171,13 @@ jobs:
         uses: s-weigand/setup-conda@v1
         with:
           python-version: '3.8'
+          update-conda: true
           conda-channels: conda-forge
 
       - name: Prepare Conda environment spec
         shell: bash
         run: |
+          conda config --set channel_priority strict
           conda clean -i
           conda install -qy -c conda-forge flit-core packaging pyyaml
           python build-tools/flit-conda.py -E demo -E mkl --python-version $PYVER --save-env environment.yml
