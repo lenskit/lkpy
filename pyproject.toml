@@ -27,7 +27,7 @@ requires = [
     "binpickle >= 0.3.2",
     "psutil >= 5",
     "seedbank >= 0.1.0",
-    "csr @ git+https://github.com/lenskit/csr.git",
+    "csr >= 0.3.1",
 ]
 
 [tool.flit.metadata.requires-extra]
