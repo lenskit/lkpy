@@ -222,7 +222,7 @@ def test_bias_transform_indexes():
     assert all(normed['uidx'] == algo.user_offsets_.index.get_indexer(ratings['user']))
     assert all(normed['iidx'] == algo.item_offsets_.index.get_indexer(ratings['item']))
     denorm = algo.inverse_transform(normed)
-    assert approx(denorm['rating'] == ratings['rating'], 1.0e-6)
+    assert denorm['rating'].values == approx(ratings['rating'].values, 1.0e-6)
 
 
 def test_bias_item_damp():
