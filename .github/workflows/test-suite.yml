@@ -41,7 +41,6 @@ jobs:
       - name: Prepare Conda environment spec
         shell: bash
         run: |
-          conda config --set channel_priority strict
           conda clean -i
           conda install -qy -c conda-forge flit packaging pyyaml
           e_opts="-E ${{matrix.blas}}"
@@ -121,7 +120,6 @@ jobs:
       - name: Prepare Conda environment spec
         shell: bash
         run: |
-          conda config --set channel_priority strict
           conda clean -i
           conda install -qy -c conda-forge flit packaging pyyaml
           python build-tools/flit-conda.py -E tf --python-version $PYVER --save-env environment.yml
@@ -177,7 +175,6 @@ jobs:
       - name: Prepare Conda environment spec
         shell: bash
         run: |
-          conda config --set channel_priority strict
           conda clean -i
           conda install -qy -c conda-forge flit-core packaging pyyaml
           python build-tools/flit-conda.py -E demo -E mkl --python-version $PYVER --save-env environment.yml
