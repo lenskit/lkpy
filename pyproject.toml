@@ -37,7 +37,7 @@ test = [
     "hypothesis >= 6"
 ]
 dev = [
-    "flit >= 1",
+    "flit >= 2",
     "packaging",
     "flake8",
     "coverage",
