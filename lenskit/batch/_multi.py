@@ -16,11 +16,6 @@ from .. import util
 from ._recommend import recommend
 from ._predict import predict
 
-try:
-    import fastparquet
-except ImportError:
-    fastparquet = None
-
 _logger = logging.getLogger(__name__)
 
 _AlgoRec = collections.namedtuple('_AlgoRec', [

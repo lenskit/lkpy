@@ -5,11 +5,6 @@ Data utilities
 import logging
 import pathlib
 
-try:
-    import fastparquet
-except ImportError:
-    fastparquet = None
-
 _log = logging.getLogger(__name__)
 
 
