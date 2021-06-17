@@ -5,6 +5,7 @@ Usage:
     lenskit.util.debug [options] --libraries
     lenskit.util.debug [options] --blas-info
     lenskit.util.debug [options] --numba-info
+    lenskit.util.debug [options] --check-env
 
 Options:
     --verbose
@@ -62,20 +63,20 @@ def _get_shlibs():
 def _guess_layer():
     layer = None
 
-    _log.debug('scanning process memory maps for threading layers')
+    _log.debug('scanning process memory maps for MKL threading layers')
     for mm in _get_shlibs():
-        if 'mkl_intel_thread' in mm.path:
-            _log.debug('found library %s linked', mm.path)
+        if 'mkl_intel_thread' in mm:
+            _log.debug('found library %s linked', mm)
             if layer:
                 _log.warn('multiple threading layers detected')
             layer = 'intel'
-        elif 'mkl_tbb_thread' in mm.path:
-            _log.debug('found library %s linked', mm.path)
+        elif 'mkl_tbb_thread' in mm:
+            _log.debug('found library %s linked', mm)
             if layer:
                 _log.warn('multiple threading layers detected')
             layer = 'tbb'
-        elif 'mkl_gnu_thread' in mm.path:
-            _log.debug('found library %s linked', mm.path)
+        elif 'mkl_gnu_thread' in mm:
+            _log.debug('found library %s linked', mm)
             if layer:
                 _log.warn('multiple threading layers detected')
             layer = 'gnu'
@@ -102,10 +103,11 @@ def guess_blas_unix():
         layer = _guess_layer()
 
         return BlasInfo('mkl', layer, threads, version)
-    except AttributeError:
+    except AttributeError as e:
+        _log.debug('MKL attribute error: %s', e)
         pass  # no MKL
 
-    _log.debug('checking for OpenBLAS')
+    _log.debug('checking BLAS for OpenBLAS')
     np_dll = ctypes.CDLL(np.core._multiarray_umath.__file__)
     try:
         openblas_vstr = np_dll.openblas_get_config
@@ -143,7 +145,7 @@ def _find_win_blas_path():
 def _find_win_blas():
     try:
         blas_dll = ctypes.cdll.libblas
-        _log.debug('loaded MKL dll %s', blas_dll)
+        _log.debug('loaded BLAS dll %s', blas_dll)
         return blas_dll
     except (FileNotFoundError, OSError) as e:
         _log.debug('no LIBBLAS, searching')
@@ -158,7 +160,7 @@ def _find_win_blas():
 def guess_blas_windows():
     blas_dll = _find_win_blas()
 
-    _log.debug('checking for MKL')
+    _log.debug('checking BLAS for MKL')
     try:
         mkl_vstr = blas_dll.mkl_get_version_string
         mkl_vbuf = ctypes.create_string_buffer(256)
@@ -173,10 +175,11 @@ def guess_blas_windows():
         layer = _guess_layer()
 
         return BlasInfo('mkl', layer, threads, version)
-    except AttributeError:
+    except AttributeError as e:
+        _log.debug('MKL attribute error: %s', e)
         pass  # no MKL
 
-    _log.debug('checking for OpenBLAS')
+    _log.debug('checking BLAS for OpenBLAS')
     try:
         openblas_vstr = blas_dll.openblas_get_config
         openblas_vstr.restype = ctypes.c_char_p
@@ -233,24 +236,24 @@ def check_env():
         return
 
     if numba is None:
-        _log.warn('Numba JIT seems to be disabled - this will hurt performance')
+        _log.warning('Numba JIT seems to be disabled - this will hurt performance')
         _already_checked = True
         return
 
     if numba.threading != 'tbb':
-        _log.warn('Numba is using threading layer %s - consider TBB', numba.threading)
+        _log.warning('Numba is using threading layer %s - consider TBB', numba.threading)
         _log.info('Non-TBB threading is often slower and can cause crashes')
         problems += 1
 
     if numba.threading == 'tbb' and blas.threading == 'tbb':
         _log.info('Numba and BLAS both using TBB - good')
     elif blas.threads and blas.threads > 1 and numba.threads > 1:
-        _log.warn('BLAS using multiple threads - can cause oversubscription')
+        _log.warning('BLAS using multiple threads - can cause oversubscription')
         problems += 1
 
     if problems:
-        _log.warn('found %d potential runtime problems - see https://bit.ly/lkpy-envlint',
-                  problems)
+        _log.warning('found %d potential runtime problems - see https://boi.st/lkpy-perf',
+                     problems)
 
     _already_checked = True
     return problems
@@ -286,6 +289,8 @@ def main():
         print_blas_info()
     if opts['--numba-info']:
         print_numba_info()
+    if opts['--check-env']:
+        check_env()
 
 
 if __name__ == '__main__':
