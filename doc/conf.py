@@ -43,7 +43,6 @@ release = lenskit.__version__
 # ones.
 extensions = [
     'nbsphinx',
-    'recommonmark',
     'sphinx.ext.napoleon',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',

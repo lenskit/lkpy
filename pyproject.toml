@@ -44,14 +44,13 @@ dev = [
     "pytest-cov >= 2.12",
     "ipython >= 7",
     "docopt >= 0.6",
-    "tqdm",
+    "tqdm >= 4",
     "sphinx-autobuild >= 2021",
 ]
 doc = [
     "sphinx >= 3",
-    "sphinx_rtd_theme",
-    "nbsphinx",
-    "recommonmark",
+    "sphinx_rtd_theme >= 0.5",
+    "nbsphinx >= 0.8",
 ]
 demo = [
     "notebook >= 6",
@@ -88,7 +87,8 @@ hpfrec = { source="pip" }
 #     "tbb"
 # ]
 mkl = [
-    "libblas=*=*mkl"
+    "libblas=*=*mkl",
+    "mkl=2020"
 ]
 openblas = [
     "libblas=*=*openblas"
