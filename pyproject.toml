@@ -26,40 +26,36 @@ requires = [
     "cffi >= 1.12.2",
     "binpickle >= 0.3.2",
     "psutil >= 5",
-    "seedbank @ git+https://github.com/lenskit/seedbank.git",
+    "seedbank >= 0.1.0",
     "csr @ git+https://github.com/lenskit/csr.git",
 ]
 
 [tool.flit.metadata.requires-extra]
 test = [
-    "pytest >= 3.9",
-    "pytest-doctestplus",
-    "hypothesis"
+    "pytest >= 6",
+    "pytest-doctestplus >= 0.9",
+    "hypothesis >= 6"
 ]
 dev = [
-    "flit",
-    "packaging",
-    "flake8",
-    "coverage",
-    "pytest-cov",
-    "ipython",
-    "docopt",
-    "tqdm",
-    "sphinx-autobuild",
+    "flit >= 3",
+    "packaging >= 20",
+    "flake8 >= 3",
+    "coverage >= 5",
+    "pytest-cov >= 2.12",
+    "ipython >= 7",
+    "docopt >= 0.6",
+    "tqdm >= 4",
+    "sphinx-autobuild >= 2021",
 ]
 doc = [
-    "sphinx >= 1.8",
-    "sphinx_rtd_theme",
-    "nbsphinx",
-    "recommonmark",
-    "ipython",
+    "sphinx >= 3",
+    "sphinx_rtd_theme >= 0.5",
+    "nbsphinx >= 0.8",
 ]
 demo = [
-    "notebook",
-    "nbval",
-    "matplotlib",
-    "ipywidgets",
-    "tqdm"
+    "notebook >= 6",
+    "nbval >= 0.9",
+    "matplotlib ~= 3.4",
 ]
 hpf = ["hpfrec"]
 implicit = ["implicit"]
@@ -85,13 +81,15 @@ channels = [
 
 [tool.envtool.conda.overrides]
 hpfrec = { source="pip" }
+seedbank = { source="pip" }
 
 [tool.envtool.conda.extras]
 # ".none" = [
 #     "tbb"
 # ]
 mkl = [
-    "libblas=*=*mkl"
+    "libblas=*=*mkl",
+    "mkl=2020"
 ]
 openblas = [
     "libblas=*=*openblas"
