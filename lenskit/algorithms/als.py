@@ -426,7 +426,7 @@ class BiasedMF(MFPredictor):
         else:
             self.user_features_ = None
 
-    def _initial_model(self, ratings, bias=None):
+    def _initial_model(self, ratings):
         # transform ratings using offsets
         if self.bias:
             _logger.info('[%s] normalizing ratings', self.timer)

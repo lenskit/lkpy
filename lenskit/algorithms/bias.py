@@ -123,7 +123,7 @@ class Bias(Predictor):
             rvps = rvps.join(self.item_offsets_, on='item', how='left')
             rvps['rating'] -= rvps['i_off'].fillna(0)
         if self.user_offsets_ is not None:
-            rvps = rvps.join(self.user_offsets_, on='item', how='left')
+            rvps = rvps.join(self.user_offsets_, on='user', how='left')
             rvps['rating'] -= rvps['u_off'].fillna(0)
         if indexes:
             rvps['uidx'] = self.user_offsets_.index.get_indexer(rvps['user'])
@@ -143,7 +143,7 @@ class Bias(Predictor):
             rvps = rvps.join(self.item_offsets_, on='item', how='left')
             rvps['rating'] += rvps['i_off'].fillna(0)
         if self.user_offsets_ is not None:
-            rvps = rvps.join(self.user_offsets_, on='item', how='left')
+            rvps = rvps.join(self.user_offsets_, on='user', how='left')
             rvps['rating'] += rvps['u_off'].fillna(0)
         return rvps.drop(columns=['u_off', 'i_off'])
 
