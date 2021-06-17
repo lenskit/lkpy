@@ -203,7 +203,12 @@ def test_bias_transform():
     assert all(normed['user'] == ratings['user'])
     assert all(normed['item'] == ratings['item'])
     denorm = algo.inverse_transform(normed)
-    assert approx(denorm['rating'] == ratings['rating'], 1.0e-6)
+    assert denorm['rating'].values == approx(ratings['rating'], 1.0e-6)
+
+    n2 = ratings.join(algo.item_offsets_, on='item')
+    n2 = n2.join(algo.user_offsets_, on='user')
+    nr = n2.rating - algo.mean_ - n2.i_off - n2.u_off
+    assert normed['rating'].values == approx(nr.values)
 
 
 def test_bias_transform_indexes():
