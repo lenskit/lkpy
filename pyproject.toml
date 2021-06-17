@@ -37,15 +37,15 @@ test = [
     "hypothesis >= 6"
 ]
 dev = [
-    "flit >= 2",
-    "packaging",
-    "flake8",
-    "coverage",
-    "pytest-cov",
-    "ipython",
-    "docopt",
+    "flit >= 3",
+    "packaging >= 20",
+    "flake8 >= 3",
+    "coverage >= 5",
+    "pytest-cov >= 2.12",
+    "ipython >= 7",
+    "docopt >= 0.6",
     "tqdm",
-    "sphinx-autobuild",
+    "sphinx-autobuild >= 2021",
 ]
 doc = [
     "sphinx >= 3",
