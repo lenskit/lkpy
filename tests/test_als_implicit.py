@@ -330,7 +330,7 @@ def test_als_implicit_batch_accuracy():
     ratings = lktu.ml100k.ratings
 
     def eval(train, test):
-        train['rating'] = train.rating.astype(np.float_)
+        train = train.astype({'rating': np.float_})
         _log.info('training CG')
         cg_algo = als.ImplicitMF(25, iterations=20, method='cg')
         cg_algo = Recommender.adapt(cg_algo)

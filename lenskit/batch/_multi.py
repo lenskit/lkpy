@@ -73,9 +73,9 @@ class MultiEval:
                  recommend=100, candidates=None,
                  save_models=False,
                  eval_n_jobs=None, combine=True, **kwargs):
-        warnings.warn('MultiEval is deprecated and will be removed in an upcoming version of LensKit',
+        warnings.warn('MultiEval is deprecated and will be removed in LensKit 0.14',
                       DeprecationWarning)
-        _logger.warn('initializing deprecated MultiEval')
+        _logger.warning('initializing deprecated MultiEval')
         if eval_n_jobs is None and 'nprocs' in kwargs:
             warnings.warn('nprocs is deprecated, use eval_n_jobs', DeprecationWarning)
             eval_n_jobs = kwargs['nprocs']
