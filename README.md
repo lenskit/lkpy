@@ -22,7 +22,7 @@ If you use LensKit for Python in published research, please cite:
 
 To install the current release with Anaconda (recommended):
 
-    conda install -c lenskit lenskit
+    conda install -c conda-forge lenskit
 
 Or you can use `pip`:
 
