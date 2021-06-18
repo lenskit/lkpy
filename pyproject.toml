@@ -24,8 +24,8 @@ requires = [
     "numba >= 0.51, < 0.54",
     "pyarrow >= 0.15",
     "cffi >= 1.12.2",
-    "binpickle >= 0.3.2",
     "psutil >= 5",
+    "binpickle >= 0.3.2",
     "seedbank >= 0.1.0",
     "csr >= 0.3.1",
 ]
