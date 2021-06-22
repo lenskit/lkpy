@@ -6,7 +6,7 @@ build-backend = "flit_core.buildapi"
 module = "lenskit"
 author = "Michael Ekstrand"
 author-email = "michaelekstrand@boisestate.edu"
-home-page = "https://lenskit.lenskit.org"
+home-page = "https://lenskit.org"
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -30,6 +30,10 @@ requires = [
     "seedbank >= 0.1.0",
     "csr >= 0.3.1",
 ]
+
+[tool.flit.metadata.urls]
+Documentation = "https://lkpy.lenskit.org"
+GitHub = "https://github.com/lenskit/lkpy"
 
 [tool.flit.metadata.requires-extra]
 test = [
