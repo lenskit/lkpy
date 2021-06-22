@@ -122,13 +122,15 @@ class Bias(Predictor):
         if self.item_offsets_ is not None:
             rvps = rvps.join(self.item_offsets_, on='item', how='left')
             rvps['rating'] -= rvps['i_off'].fillna(0)
+            rvps = rvps.drop(columns='i_off')
         if self.user_offsets_ is not None:
             rvps = rvps.join(self.user_offsets_, on='user', how='left')
             rvps['rating'] -= rvps['u_off'].fillna(0)
+            rvps = rvps.drop(columns='u_off')
         if indexes:
             rvps['uidx'] = self.user_offsets_.index.get_indexer(rvps['user'])
             rvps['iidx'] = self.item_offsets_.index.get_indexer(rvps['item'])
-        return rvps.drop(columns=['u_off', 'i_off'])
+        return rvps
 
     def inverse_transform(self, ratings):
         """
@@ -142,10 +144,12 @@ class Bias(Predictor):
         if self.item_offsets_ is not None:
             rvps = rvps.join(self.item_offsets_, on='item', how='left')
             rvps['rating'] += rvps['i_off'].fillna(0)
+            del rvps['i_off']
         if self.user_offsets_ is not None:
             rvps = rvps.join(self.user_offsets_, on='user', how='left')
             rvps['rating'] += rvps['u_off'].fillna(0)
-        return rvps.drop(columns=['u_off', 'i_off'])
+            del rvps['u_off']
+        return rvps
 
     def transform_user(self, ratings):
         """

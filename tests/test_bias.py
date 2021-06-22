@@ -8,7 +8,7 @@ import binpickle
 import pandas as pd
 import numpy as np
 
-from pytest import approx, raises
+from pytest import approx, raises, mark
 
 from lenskit.util.test import ml_test
 
@@ -223,6 +223,29 @@ def test_bias_transform_indexes():
     assert all(normed['iidx'] == algo.item_offsets_.index.get_indexer(ratings['item']))
     denorm = algo.inverse_transform(normed)
     assert denorm['rating'].values == approx(ratings['rating'].values, 1.0e-6)
+
+
+@mark.parametrize(['users', 'items'], [(True, False), (False, True), (False, False)])
+def test_bias_transform_disable(users, items):
+    algo = Bias(users=users, items=items)
+    ratings = ml_test.ratings
+
+    normed = algo.fit_transform(ratings)
+
+    assert all(normed['user'] == ratings['user'])
+    assert all(normed['item'] == ratings['item'])
+    denorm = algo.inverse_transform(normed)
+    assert denorm['rating'].values == approx(ratings['rating'], 1.0e-6)
+
+    n2 = ratings
+    nr = n2.rating - algo.mean_
+    if items:
+        n2 = n2.join(algo.item_offsets_, on='item')
+        nr = nr - n2.i_off
+    if users:
+        n2 = n2.join(algo.user_offsets_, on='user')
+        nr = nr - n2.u_off
+    assert normed['rating'].values == approx(nr.values)
 
 
 def test_bias_item_damp():
