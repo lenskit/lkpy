@@ -18,6 +18,7 @@ classifiers = [
 ]
 requires-python = ">= 3.7"
 description-file = "README.md"
+license = "MIT"
 requires = [
     "pandas >=1.0, ==1.*",
     "numpy >= 1.17",
