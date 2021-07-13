@@ -76,8 +76,10 @@ To use this, pass extra arguments to :py:meth:`RecListAnalysis.add_metric`::
     rla.add_metric(ndcg, k=5)
     rla.add_metric(ndcg, name='ndcg_10', k=10)
 
-The default is to allow unbounded lists.  When using large recommendation lists, and users never have
-more test ratings than there are recommended items, the default makes sense.
+The default is to allow unbounded lists.  When using large recommendation lists, if users never have
+more test ratings than there are recommended items, the default makes sense. For short recommendation
+lists you will usually need to specify ``k``.  Unfortunately, there isn't a practical way to guess ``k``,
+because shorter lists may mean that the recommender could not produce a full-length list.
 
 
 Classification Metrics
