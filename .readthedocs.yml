@@ -10,3 +10,4 @@ python:
     path: .
     extra_requirements:
     - doc
+  - requirements: doc/requirements.txt --no-deps
