@@ -1,0 +1,13 @@
+# YAML 1.2
+---
+authors: 
+  -
+    family-names: Ekstrand
+    given-names: "Michael D."
+    orcid: "https://orcid.org/0000-0003-2467-0108"
+cff-version: "1.1.0"
+license: MIT
+message: "If you use this software, please cite the CIKM paper."
+title: "LensKit for Python"
+version: "0.14.0"
+...
