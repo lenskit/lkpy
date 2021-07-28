@@ -10,4 +10,19 @@ license: MIT
 message: "If you use this software, please cite the CIKM paper."
 title: "LensKit for Python"
 version: "0.14.0"
+references:
+- type: conference-paper
+  authors:
+  - family-names: Ekstrand
+    given-names: "Michael D."
+  title: "LensKit for Python: Next-Generation Software for Recommender Systems Experiments"
+  collection-title: "Proceedings of the 29th ACM International Conference on Information and Knowledge Management"
+  conference: "CIKM '20"
+  doi: "10.1145/3340531.3412778"
+  start: 2999
+  end: 3006
+  abstract: >
+    LensKit is an open-source toolkit for building, researching, and learning about recommender systems. First released in 2010 as a Java framework, it has supported diverse published research, small-scale production deployments, and education in both MOOC and traditional classroom settings. In this paper, I present the next generation of the LensKit project, re-envisioning the original tool's objectives as flexible Python package for supporting recommender systems research and development. LensKit for Python (LKPY) enables researchers and students to build robust, flexible, and reproducible experiments that make use of the large and growing PyData and Scientific Python ecosystem, including scikit-learn, TensorFlow, and PyTorch. To that end, it provides classical collaborative filtering implementations, recommender system evaluation metrics, data preparation routines, and tools for efficiently batch running recommendation algorithms, all usable in any combination with each other or with other Python software.
+
+    This paper describes the design goals, use cases, and capabilities of LKPY, contextualized in a reflection on the successes and failures of the original LensKit for Java software.
 ...
