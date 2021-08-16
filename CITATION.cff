@@ -5,12 +5,12 @@ authors:
     family-names: Ekstrand
     given-names: "Michael D."
     orcid: "https://orcid.org/0000-0003-2467-0108"
-cff-version: "1.1.0"
+cff-version: "1.2.0"
 license: MIT
-message: "If you use this software, please cite the CIKM paper."
+message: "If you use this software, please cite the CIKM paper in 'preferred-citation'."
 title: "LensKit for Python"
 version: "0.14.0"
-references:
+preferred-citation
 - type: conference-paper
   authors:
   - family-names: Ekstrand
