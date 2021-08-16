@@ -10,7 +10,7 @@ license: MIT
 message: "If you use this software, please cite the CIKM paper in 'preferred-citation'."
 title: "LensKit for Python"
 version: "0.14.0"
-preferred-citation
+preferred-citation:
 - type: conference-paper
   authors:
   - family-names: Ekstrand
