@@ -328,14 +328,6 @@ class BiasedMF(MFPredictor):
     See the base class :class:`.MFPredictor` for documentation on
     the estimated parameters you can extract from a trained model.
 
-    .. [ZWSP2008] Yunhong Zhou, Dennis Wilkinson, Robert Schreiber, and Rong Pan. 2008.
-        Large-Scale Parallel Collaborative Filtering for the Netflix Prize.
-        In +Algorithmic Aspects in Information and Management_, LNCS 5034, 337–348.
-        DOI `10.1007/978-3-540-68880-8_32 <http://dx.doi.org/10.1007/978-3-540-68880-8_32>`_.
-
-    .. [TPT2011] Gábor Takács, István Pilászy, and Domonkos Tikk. 2011. Applications of the
-        Conjugate Gradient Method for Implicit Feedback Collaborative Filtering.
-
     Args:
         features(int): the number of features to train
         iterations(int): the number of iterations to train
@@ -541,14 +533,6 @@ class ImplicitMF(MFPredictor):
         In 0.13, we added an option to control whether or not the rating column is used; it
         currently defaults to ``True``, but with a warning.  In LensKit for Python 0.14,
         **this default will change**.
-
-    .. [HKV2008] Y. Hu, Y. Koren, and C. Volinsky. 2008.
-       Collaborative Filtering for Implicit Feedback Datasets.
-       In _Proceedings of the 2008 Eighth IEEE International Conference on Data Mining_, 263–272.
-       DOI `10.1109/ICDM.2008.22 <http://dx.doi.org/10.1109/ICDM.2008.22>`_
-
-    .. [TPT2011] Gábor Takács, István Pilászy, and Domonkos Tikk. 2011. Applications of the
-        Conjugate Gradient Method for Implicit Feedback Collaborative Filtering.
 
     Args:
         features(int): the number of features to train
