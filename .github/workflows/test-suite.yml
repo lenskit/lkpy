@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           conda clean -i
-          conda install -qy -c conda-forge flit packaging pyyaml
+          conda install -qy -c conda-forge flit packaging pyyaml tomli
           e_opts="-E ${{matrix.blas}}"
           if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
             echo "Using most extras"
@@ -121,7 +121,7 @@ jobs:
         shell: bash
         run: |
           conda clean -i
-          conda install -qy -c conda-forge flit packaging pyyaml
+          conda install -qy -c conda-forge flit packaging pyyaml tomli
           python build-tools/flit-conda.py -E tf --python-version $PYVER --save-env environment.yml
           cat environment.yml
         env:
@@ -176,7 +176,7 @@ jobs:
         shell: bash
         run: |
           conda clean -i
-          conda install -qy -c conda-forge flit-core packaging pyyaml
+          conda install -qy -c conda-forge flit-core packaging pyyaml tomli
           python build-tools/flit-conda.py -E demo -E mkl --python-version $PYVER --save-env environment.yml
           cat environment.yml
         env:
