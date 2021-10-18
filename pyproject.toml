@@ -54,6 +54,7 @@ dev = [
 ]
 doc = [
     "sphinx >= 3",
+    "sphinxcontrib-bibtex >= 2.0",
     "sphinx_rtd_theme >= 0.5",
     "nbsphinx >= 0.8",
 ]
