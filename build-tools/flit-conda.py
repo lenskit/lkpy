@@ -9,7 +9,8 @@ import tempfile
 import subprocess
 from pathlib import Path
 import argparse
-from flit_core.config import read_flit_config, toml
+import toml
+from flit_core.config import read_flit_config
 from packaging.requirements import Requirement
 from packaging.markers import default_environment
 
