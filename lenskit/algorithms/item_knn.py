@@ -205,7 +205,8 @@ class ItemItem(Predictor):
     """
     Item-item nearest-neighbor collaborative filtering with ratings. This item-item implementation
     is not terribly configurable; it hard-codes design decisions found to work well in the previous
-    Java-based LensKit code.
+    Java-based LensKit code :cite:p:`Ekstrand2011-bp`.  This implementation is based on the description
+    of item-based CF by :cite:t:`Deshpande2004-ht`, and produces results equivalent to Java LensKit.
 
     The k-NN predictor supports several aggregate functions:
 
