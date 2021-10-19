@@ -152,6 +152,14 @@ def test_ii_warn_duplicates():
         pass  # this is fine
 
 
+def test_ii_warns_center():
+    "Test that item-item warns if you center non-centerable data"
+    data = simple_ratings.assign(rating=1)
+    algo = knn.ItemItem(5)
+    with pytest.warns(DataWarning):
+        algo.fit(data)
+
+
 @lktu.wantjit
 @mark.skip("redundant with large_models")
 def test_ii_train_big():
