@@ -64,11 +64,6 @@ jobs:
           PYVER: ${{matrix.python}}
           BLAS_IMPL: ${{matrix.blas}}
           
-      - name: Create Conda environment
-        run: |
-          conda-lock install conda-
-          conda env update -n base -f environment.yml
-
       - name: Inspect environment
         run: |
           python -V
