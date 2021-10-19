@@ -44,9 +44,9 @@ jobs:
           conda clean -i
           conda install -qy -c conda-forge mamba conda-lock
           case "$RUNNER" in
-            ubuntu) plat=linux-x64;;
-            macos) plat=osx-x64;;
-            windows) plat=win-x64;;
+            ubuntu) plat=linux-64;;
+            macos) plat=osx-64;;
+            windows) plat=win-64;;
             *) echo "Invalid platform" >&2; exit 2;;
           esac
           ptag=$(echo "$PYVER" | sed -e 's/\.//')
