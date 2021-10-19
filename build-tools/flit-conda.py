@@ -9,7 +9,8 @@ import tempfile
 import subprocess
 from pathlib import Path
 import argparse
-from flit_core.config import read_flit_config, toml
+import tomli
+from flit_core.config import read_flit_config
 from packaging.requirements import Requirement
 from packaging.markers import default_environment
 
@@ -45,7 +46,7 @@ def parse_args():
 def load_project():
     tp = Path('pyproject.toml')
     fc = read_flit_config(tp)
-    pyp = toml.loads(tp.read_text())
+    pyp = tomli.loads(tp.read_text())
     return pyp, fc
 
 
