@@ -43,10 +43,10 @@ jobs:
         run: |
           conda clean -i
           conda install -qy -c conda-forge mamba conda-lock
-          case "$RUNNER" in
-            ubuntu) plat=linux-64;;
-            macos) plat=osx-64;;
-            windows) plat=win-64;;
+          case "$PLAT" in
+            ubuntu) plat=linux-x64;;
+            macos) plat=osx-x64;;
+            windows) plat=win-x64;;
             *) echo "Invalid platform" >&2; exit 2;;
           esac
           ptag=$(echo "$PYVER" | sed -e 's/\.//')
@@ -60,6 +60,7 @@ jobs:
           conda-lock install conda-$plat.lock
         env:
           RUNNER: ${{runner.os}}
+          PLAT: ${{matrix.platform}}
           PYVER: ${{matrix.python}}
           BLAS_IMPL: ${{matrix.blas}}
           
