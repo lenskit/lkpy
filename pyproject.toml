@@ -67,6 +67,12 @@ hpf = ["hpfrec"]
 implicit = ["implicit"]
 sklearn = ["scikit-learn >= 0.22"]
 tf = ["tensorflow >= 2.1"]
+# extras used for constraining versions for CI with conda-lock
+# these extras almost certainly don't work on pip
+py37 = ["python ==3.7.*"]
+py38 = ["python ==3.8.*"]
+py39 = ["python ==3.9.*"]
+py310 = ["python ==3.10.*"]
 
 [tool.flit.sdist]
 exclude = [
@@ -78,6 +84,9 @@ exclude = [
     "build-tools",
     "tests",
 ]
+
+[tool.conda-lock]
+channels = ['conda-forge']
 
 [tool.envtool.conda]
 name = "lkpy"
