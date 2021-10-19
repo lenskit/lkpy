@@ -321,6 +321,10 @@ class ItemItem(Predictor):
         mcvals = rmat.values - item_means[rmat.colinds]
         nmat = rmat.copy(False)
         nmat.values = mcvals
+        if np.allclose(nmat.values, 0):
+            _logger.warn('normalized ratings are zero, centering is not recommended')
+            warnings.warn("Ratings seem to have the same value, centering is not recommended.",
+                          DataWarning)
         _logger.info('[%s] computed means for %d items', self._timer, len(item_means))
         return nmat, item_means
 
