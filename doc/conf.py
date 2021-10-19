@@ -48,7 +48,8 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
-    'sphinx_rtd_theme'
+    'sphinxcontrib.bibtex',
+    'sphinx_rtd_theme',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -200,6 +201,8 @@ autodoc_default_options = {
     'member-order': 'bysource',
     'show-inheritance': True
 }
+
+bibtex_bibfiles = ['lenskit.bib']
 
 # -- Module Canonicalization ------------------------------------------------
 

@@ -71,6 +71,12 @@ Resources
     util
     internals
 
+.. toctree::
+    :maxdepth: 2
+    :caption: Links
+
+    references
+
 
 Indices and tables
 ==================
