@@ -42,15 +42,22 @@ jobs:
         shell: bash
         run: |
           conda clean -i
-          conda install -qy -c conda-forge flit packaging pyyaml tomli
-          e_opts="-E ${{matrix.blas}}"
+          conda install -qy -c conda-forge mamba conda-lock
+          case "$RUNNER" in
+            ubuntu) plat=linux-x64;;
+            macos) plat=osx-x64;;
+            windows) plat=win-x64;;
+            *) echo "Invalid platform" >&2; exit 2;;
+          esac
+          ptag=$(echo "$PYVER" | sed -e 's/\.//')
+          e_opts="-e py$ptag"
           if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
             echo "Using most extras"
             # we'll test tensorflow in a separate run
-            e_opts="-E implicit -E sklearn"
+            e_opts="$e_opts,implicit,sklearn"
           fi
-          python build-tools/flit-conda.py $e_opts --python-version $PYVER --save-env environment.yml
-          cat environment.yml
+          conda-lock --mamba -p $plat $e_opts -f pyproject.toml
+          conda-lock install conda-$plat.lock
         env:
           RUNNER: ${{runner.os}}
           PYVER: ${{matrix.python}}
@@ -58,6 +65,7 @@ jobs:
           
       - name: Create Conda environment
         run: |
+          conda-lock install conda-
           conda env update -n base -f environment.yml
 
       - name: Inspect environment
