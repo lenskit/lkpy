@@ -40,20 +40,12 @@ spec_opts=""
 while getopts "p:V:e:s:" opt; do
     case $opt in
         p) os_plat="$OPTARG";;
-        V) ptag=py$(echo "$OPTARG" | sed -e 's/\.//');;
-        e) extras="$extras,$OPTARG";;
+        V) spec_opts="$spec_opts -f build-tools/python-$OPTARG-spec.yml";;
+        e) if [ -z "$extras" ]; then extras="$OPTARG"; else extras="$extras,$OPTARG"; fi;;
         s) spec_opts="$spec_opts -f build-tools/$OPTARG-spec.yml";;
         \?) err "invalid argument";;
     esac
 done
-
-if [ -n "$ptag" ]; then
-    msg "Using Python tag $ptag"
-else
-    msg "No Python tag specified"
-fi
-# 2 cases: extras is empty, or it's not and has a leading comma
-extras="$ptag$extras"
 
 if [ -z "$os_plat" ]; then
     PLAT=$(uname |tr [A-Z] [a-z])
