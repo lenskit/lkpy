@@ -41,24 +41,13 @@ jobs:
       - name: Prepare Conda environment spec
         shell: bash
         run: |
-          set -x
-          conda clean -i
-          conda install -qy -c conda-forge mamba conda-lock
-          case "$PLAT" in
-            ubuntu) plat=linux-64;;
-            macos) plat=osx-64;;
-            windows) plat=win-64;;
-            *) echo "Invalid platform" >&2; exit 2;;
-          esac
-          ptag=$(echo "$PYVER" | sed -e 's/\.//')
-          e_opts="-e py$ptag"
+          e_opt=""
           if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
             echo "Using most extras"
             # we'll test tensorflow in a separate run
-            e_opts="$e_opts,implicit,sklearn"
+            e_opt="-e implicit,sklearn"
           fi
-          conda-lock --mamba -p $plat $e_opts -f pyproject.toml
-          conda-lock install conda-$plat.lock
+          bash build-tools/setup-env.sh -V $PYVER -p $PLAT $e_opt
         env:
           RUNNER: ${{runner.os}}
           PLAT: ${{matrix.platform}}
