@@ -5,9 +5,9 @@ on:
       - main
   pull_request:
 
-defaults:
-  run:
-    shell: bash -l {0}
+# defaults:
+#   run:
+#     shell: bash -l {0}
 
 jobs:
   conda:
@@ -37,13 +37,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Initialize Conda
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: lkboot
-          environment-file: build-tools/boot-env.yml
-
       - name: Prepare Conda environment spec
+        id: conda-lock
         run: |
           e_opt=""
           if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
@@ -57,16 +52,20 @@ jobs:
           PLAT: ${{matrix.platform}}
           PYVER: ${{matrix.python}}
           BLAS_IMPL: ${{matrix.blas}}
+
+      - name: Initialize Conda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: lktest
+          environment-file: ${{steps.conda-lock.outputs.environment-file}}
           
       - name: Inspect environment
         run: |
-          conda activate lktest
           python -V
           numba -s
       
       - name: Test LKPY
         run: |
-          conda activate lktest
           python -m pytest --cov=lenskit --verbose -m 'not sweep' --log-file=test.log
         env:
           NUMBA_NUM_THREADS: 4
@@ -79,7 +78,6 @@ jobs:
         env:
           NUMBA_DISABLE_JIT: 1
         run: |
-          conda activate lktest
           python -m pytest --cov=lenskit --cov-append -m 'not slow' --log-file=test-nojit.log
 
       - name: Upload logs
@@ -92,7 +90,6 @@ jobs:
 
       - name: Aggreagate Coverage Data
         run: |
-          conda activate lktest
           coverage xml
 
       - uses: codecov/codecov-action@v1

@@ -21,6 +21,14 @@ vr()
     fi
 }
 
+gh_out()
+{
+  local name
+  name="$1"
+  shift
+  echo "::set-output name=$name::$*"
+}
+
 set_platform()
 {
     case "$1" in
@@ -37,6 +45,7 @@ set_platform()
 extras=""
 spec_opts=""
 env_name="lktest"
+mode=lock
 
 while getopts "p:V:e:s:n:" opt; do
     case $opt in
@@ -55,8 +64,22 @@ fi
 set_platform "$os_plat"
 test -n "$CONDA_PLATFORM" || err "conda platform not set for some reason"
 
+if [ -n "$CONDA" ]; then
+  msg "activating Conda from $CONDA"
+  eval "$($CONDA/condabin/conda shell.bash hook)"
+  python -V
+  
+  msg "installing conda-lock in $CONDA"
+  conda install -c conda-forge mamba conda-lock
+fi
+
 msg "Preparing Conda environment lockfile"
 vr conda-lock lock --mamba -k env -p $CONDA_PLATFORM -e "$extras" -f pyproject.toml $spec_opts
 
-msg "Updating environment with Conda dependencies"
-vr mamba env create -n "$env_name" -f conda-$CONDA_PLATFORM.lock.yml
+gh_out environment-file "conda-$CONDA_PLATFORM.lock.yml"
+
+if [ "$mode" = install ]; then
+  msg "Creating Conda environment"
+  vr mamba env create -n "$env_name" -f conda-$CONDA_PLATFORM.lock.yml
+  gh_out environment-name "$env_name"
+fi
