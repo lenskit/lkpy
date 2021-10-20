@@ -47,20 +47,48 @@ Our development workflow is documented in [the wiki][workflow]; the wiki also
 contains other information on *developing* LensKit. User-facing documentation is
 at <https://lkpy.lenskit.org>.
 
+[conda-lock]: https://github.com/conda-incubator/conda-lock
 
-We recommend using an Anaconda environment for developing LensKit.  To set this
-up, run:
+We recommend using an Anaconda environment for developing LensKit.  [conda-lock][]
+can help you set up the environment (replace `linux-64` with your platform):
 
-    pip install flit_core packaging
-    python build-tools/flit-conda.py --create-env --python-version 3.8
+    # install conda-lock in base environment
+    # alternatively: pip install conda-lock
+    conda install -c conda-forge conda-lock
+    # create the lock file for Python 3.9
+    conda-lock -p linux-64 -f pyproject.toml -f build-tools/python-3.9-spec.yml
+    # create the environment
+    conda env create -n lkpy -f conda-linux-64.lock
 
 This will create a Conda environment called `lkpy` with the packages required to develop and test
 LensKit.
 
 We don't maintain the Conda environment specification directly - instead, we
 maintain information in `setup.toml` to be able to generate it, so that we define
-dependencies and versions in one place.  The `flit-conda` package uses Flit's
-configuration parser to load this data and generate Conda environment files.
+dependencies and versions in one place.
+
+## Testing Changes
+
+You should always test your changes by running the LensKit test suite:
+
+    python -m pytest
+
+If you want to use your changes in a LensKit experiment, you can locally install
+your modified LensKit into your experiment's environment.  We recommend using 
+separate environments for LensKit development and for each experiment; you will
+need to install the modified LensKit into your experiment's repository:
+
+    conda activate my-exp
+    conda install -c conda-forge flit
+    cd /path/to/lkpy
+    flit install --pth-file --deps none
+
+You may need to first uninstall LensKit from your experiment repo; make sure that
+LensKit's dependencies are all still installed.
+
+Once you have pushed your code to a GitHub branch, you can use a Git repository as
+a Pip dependency in an `environment.yml` for your experiment, to keep using the
+correct modified version of LensKit until your changes make it in to a release.
 
 ## Resources
 
