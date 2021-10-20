@@ -4,6 +4,11 @@ on:
     branches:
       - main
   pull_request:
+
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   conda:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}} with ${{matrix.blas}}
@@ -26,20 +31,19 @@ jobs:
         exclude:
         - platform: macos
           python: 3.9
+
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
 
       - name: Initialize Conda
-        uses: s-weigand/setup-conda@v1
+        uses: conda-incubator/setup-miniconda@v2
         with:
-          python-version: ${{matrix.python}}
-          update-conda: true
-          conda-channels: conda-forge
+          activate-environment: lkboot
+          environment-file: build-tools/boot-env.yml
 
       - name: Prepare Conda environment spec
-        shell: bash
         run: |
           e_opt=""
           if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
@@ -56,11 +60,13 @@ jobs:
           
       - name: Inspect environment
         run: |
+          conda activate lktest
           python -V
           numba -s
       
       - name: Test LKPY
         run: |
+          conda activate lktest
           python -m pytest --cov=lenskit --verbose -m 'not sweep' --log-file=test.log
         env:
           NUMBA_NUM_THREADS: 4
@@ -73,6 +79,7 @@ jobs:
         env:
           NUMBA_DISABLE_JIT: 1
         run: |
+          conda activate lktest
           python -m pytest --cov=lenskit --cov-append -m 'not slow' --log-file=test-nojit.log
 
       - name: Upload logs
@@ -85,6 +92,7 @@ jobs:
 
       - name: Aggreagate Coverage Data
         run: |
+          conda activate lktest
           coverage xml
 
       - uses: codecov/codecov-action@v1
@@ -105,14 +113,12 @@ jobs:
           fetch-depth: 0
 
       - name: Initialize Conda
-        uses: s-weigand/setup-conda@v1
+        uses: conda-incubator/setup-miniconda@v2
         with:
-          python-version: '3.8'
-          update-conda: true
-          conda-channels: conda-forge
-
-      - name: Prepare Conda environment spec
-        shell: bash
+          activate-environment: lkboot
+          environment-file: build-tools/boot-env.yml
+          
+      - name: Prepare Conda environment
         run: |
           bash build-tools/setup-env.sh -p linux-64 -V $PYVER -e tf
         env:
@@ -125,10 +131,12 @@ jobs:
 
       - name: Install for Testing
         run: |
+          conda activate lktest
           flit install -s --deps develop --extras tf
 
       - name: Run Tests
         run: |
+          conda activate lktest
           python -m pytest --cov=lenskit --cov-report=xml -k tensorflow --log-file=test.log
 
       - name: Upload logs
@@ -153,14 +161,12 @@ jobs:
           fetch-depth: 0
 
       - name: Initialize Conda
-        uses: s-weigand/setup-conda@v1
+        uses: conda-incubator/setup-miniconda@v2
         with:
-          python-version: '3.8'
-          update-conda: true
-          conda-channels: conda-forge
+          activate-environment: lkboot
+          environment-file: build-tools/boot-env.yml
 
       - name: Prepare Conda environment
-        shell: bash
         run: |
           bash build-tools/setup-env.sh -p linux-64 -V $PYVER -e demo
         env:
@@ -180,17 +186,20 @@ jobs:
           ./fetch-datasets.ps1 ml-100k ml-1m ml-10m ml-20m
 
       - name: Install for Testing
-        run: 
+        run: |
+          conda activate lktest
           flit install --deps none -s
 
       - name: Run Eval Tests
         run: |
+          conda activate lktest
           python -m pytest --cov=lenskit -m eval --log-file test-eval.log
           python -m pytest --cov=lenskit --cov-append -m sweep --log-file test-sweep.log
           python -m pytest --cov=lenskit --cov-append -m realdata --log-file test-realdata.log
 
       - name: Validate Doc Notebooks
         run: |
+          conda activate lktest
           cp doc/*.ipynb data
           python -m pytest --nbval-lax --cov=lenskit --cov-append data --log-file test-docs.log
 

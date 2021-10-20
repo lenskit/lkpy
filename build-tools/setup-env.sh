@@ -36,9 +36,11 @@ set_platform()
 
 extras=""
 spec_opts=""
+env_name="lktest"
 
-while getopts "p:V:e:s:" opt; do
+while getopts "p:V:e:s:n:" opt; do
     case $opt in
+        n) env_name="$OPTARG";;
         p) os_plat="$OPTARG";;
         V) spec_opts="$spec_opts -f build-tools/python-$OPTARG-spec.yml";;
         e) if [ -z "$extras" ]; then extras="$OPTARG"; else extras="$extras,$OPTARG"; fi;;
@@ -59,4 +61,4 @@ msg "Preparing Conda environment lockfile"
 vr conda-lock lock --mamba -k env -p $CONDA_PLATFORM -e "$extras" -f pyproject.toml $spec_opts
 
 msg "Updating environment with Conda dependencies"
-vr mamba env update -n base -f conda-$CONDA_PLATFORM.lock.yml
+vr mamba env create -n "$env_name" -f conda-$CONDA_PLATFORM.lock.yml

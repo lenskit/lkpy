@@ -27,7 +27,7 @@ doc/data/
 *.lib
 *.o
 *.obj
-*env*.yml
+/*env*.yml
 *.lock
 *.lock.yml
 
