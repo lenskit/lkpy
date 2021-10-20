@@ -67,10 +67,12 @@ test -n "$CONDA_PLATFORM" || err "conda platform not set for some reason"
 if [ -n "$CONDA" ]; then
   msg "activating Conda from $CONDA"
   eval "$($CONDA/condabin/conda shell.bash hook)"
-  python -V
+  vr python -V
   
-  msg "installing conda-lock in $CONDA"
-  conda install -c conda-forge mamba conda-lock
+  msg "creating bootstrap environment"
+  vr mamba env create -n lkboot -c conda-forge -f build-tools/boot-env.yml
+  msg "activating bootstrap environment"
+  conda activate lkboot
 fi
 
 msg "Preparing Conda environment lockfile"
