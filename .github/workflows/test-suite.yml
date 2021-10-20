@@ -114,17 +114,10 @@ jobs:
       - name: Prepare Conda environment spec
         shell: bash
         run: |
-          conda clean -i
-          conda install -qy -c conda-forge flit packaging pyyaml tomli
-          python build-tools/flit-conda.py -E tf --python-version $PYVER --save-env environment.yml
-          cat environment.yml
+          bash build-tools/setup-env.sh -p linux-64 -V $PYVER -e tf
         env:
           PYVER: '3.8'
           
-      - name: Create Conda environment
-        run: |
-          conda env update -n base -q -f environment.yml
-
       - name: Download ML-100K
         shell: pwsh
         run: |
@@ -166,20 +159,13 @@ jobs:
           update-conda: true
           conda-channels: conda-forge
 
-      - name: Prepare Conda environment spec
+      - name: Prepare Conda environment
         shell: bash
         run: |
-          conda clean -i
-          conda install -qy -c conda-forge flit-core packaging pyyaml tomli
-          python build-tools/flit-conda.py -E demo -E mkl --python-version $PYVER --save-env environment.yml
-          cat environment.yml
+          bash build-tools/setup-env.sh -p linux-64 -V $PYVER -e demo
         env:
           PYVER: '3.8'
           
-      - name: Create Conda environment
-        run: |
-          conda env update -n base -q -f environment.yml
-
       - name: Cache ML data
         uses: actions/cache@v2
         with:
