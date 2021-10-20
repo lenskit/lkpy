@@ -28,6 +28,8 @@ doc/data/
 *.o
 *.obj
 *env*.yml
+*.lock
+*.lock.yml
 
 dask-worker-space/
 .hypothesis/
