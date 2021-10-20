@@ -28,7 +28,7 @@ set_platform()
         ubuntu) CONDA_PLATFORM=linux-64;;
         macos) CONDA_PLATFORM=osx-64;;
         windows) CONDA_PLATFORM=win-64;;
-        *) err "Invalid platform";;
+        *) err "Invalid platform $1";;
     esac
     echo "::set-output name=conda_platform::$CONDA_PLATFORM"
     msg "Running with Conda platform $CONDA_PLATFORM"
@@ -47,11 +47,18 @@ while getopts "p:V:e:s:" opt; do
     esac
 done
 
-msg "Using Python tag $pytag"
+if [ -n "$ptag" ]; then
+    msg "Using Python tag $ptag"
+else
+    msg "No Python tag specified"
+fi
 # 2 cases: extras is empty, or it's not and has a leading comma
 extras="$ptag$extras"
 
-set_platform "$PLAT"
+if [ -z "$os_plat" ]; then
+    PLAT=$(uname |tr [A-Z] [a-z])
+fi
+set_platform "$os_plat"
 test -n "$CONDA_PLATFORM" || err "conda platform not set for some reason"
 msg "Installing Conda management tools"
 vr conda install -qy -c conda-forge mamba conda-lock
