@@ -66,7 +66,7 @@ demo = [
 hpf = ["hpfrec"]
 implicit = ["implicit"]
 sklearn = ["scikit-learn >= 0.22"]
-tf = ["tensorflow >= 2.1"]
+tf = ["tensorflow >=2.1,<2.6"]
 
 [tool.flit.sdist]
 exclude = [
