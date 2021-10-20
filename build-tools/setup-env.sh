@@ -58,4 +58,4 @@ msg "Preparing Conda environment lockfile"
 vr conda-lock lock --mamba -k env -p $CONDA_PLATFORM -e "$extras" -f pyproject.toml
 
 msg "Updating environment with Conda dependencies"
-vr mamba env update -n base conda-$CONDA_PLATFORM.lock.yml
+vr mamba env update -n base -f conda-$CONDA_PLATFORM.lock.yml
