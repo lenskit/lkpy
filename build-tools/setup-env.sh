@@ -66,11 +66,12 @@ test -n "$CONDA_PLATFORM" || err "conda platform not set for some reason"
 
 if [ -n "$CONDA" ]; then
   msg "activating Conda from $CONDA"
-  eval "$($CONDA/condabin/conda shell.bash hook)"
+  export PATH="$CONDA/condabin:$PATH"
+  eval "$(conda shell.bash hook)"
   vr python -V
   
   msg "creating bootstrap environment"
-  vr conda env create -n lkboot -c conda-forge -f build-tools/boot-env.yml
+  vr conda env create -n lkboot -f build-tools/boot-env.yml
   msg "activating bootstrap environment"
   conda activate lkboot
 fi
