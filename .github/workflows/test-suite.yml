@@ -130,12 +130,10 @@ jobs:
 
       - name: Install for Testing
         run: |
-          conda activate lktest
           flit install -s --deps develop --extras tf
 
       - name: Run Tests
         run: |
-          conda activate lktest
           python -m pytest --cov=lenskit --cov-report=xml -k tensorflow --log-file=test.log
 
       - name: Upload logs
@@ -186,19 +184,16 @@ jobs:
 
       - name: Install for Testing
         run: |
-          conda activate lktest
           flit install --deps none -s
 
       - name: Run Eval Tests
         run: |
-          conda activate lktest
           python -m pytest --cov=lenskit -m eval --log-file test-eval.log
           python -m pytest --cov=lenskit --cov-append -m sweep --log-file test-sweep.log
           python -m pytest --cov=lenskit --cov-append -m realdata --log-file test-realdata.log
 
       - name: Validate Doc Notebooks
         run: |
-          conda activate lktest
           cp doc/*.ipynb data
           python -m pytest --nbval-lax --cov=lenskit --cov-append data --log-file test-docs.log
 
