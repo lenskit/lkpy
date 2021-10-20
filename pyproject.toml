@@ -43,6 +43,7 @@ test = [
 ]
 dev = [
     "flit >= 3",
+    "conda-lock",
     "packaging >= 20",
     "flake8 >= 3",
     "coverage >= 5",
