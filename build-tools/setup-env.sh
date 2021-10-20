@@ -54,8 +54,6 @@ if [ -z "$os_plat" ]; then
 fi
 set_platform "$os_plat"
 test -n "$CONDA_PLATFORM" || err "conda platform not set for some reason"
-msg "Installing Conda management tools"
-vr conda install -qy -c conda-forge mamba conda-lock
 
 msg "Preparing Conda environment lockfile"
 vr conda-lock lock --mamba -k env -p $CONDA_PLATFORM -e "$extras" -f pyproject.toml $spec_opts
