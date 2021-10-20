@@ -66,8 +66,12 @@ test -n "$CONDA_PLATFORM" || err "conda platform not set for some reason"
 
 if [ -n "$CONDA" ]; then
   msg "activating Conda from $CONDA"
-  export PATH="$CONDA/condabin:$PATH"
-  eval "$(conda shell.bash hook)"
+  if [ $CONDA_PLATFORM = win-64 ]; then
+    CONDA_EXE="$CONDA/Scripts/conda.exe"
+  else
+    CONDA_EXE="$CONDA/condabin/conda"
+  fi
+  eval "$($CONDA_EXE shell.bash hook)"
   vr python -V
   
   msg "creating bootstrap environment"
