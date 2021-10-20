@@ -54,7 +54,7 @@ msg "Installing Conda management tools"
 vr conda install -qy -c conda-forge mamba conda-lock
 
 msg "Preparing Conda environment lockfile"
-vr conda-lock --mamba -k env -p $CONDA_PLATFORM -e "$extras" -f pyproject.toml
+vr conda-lock lock --mamba -k env -p $CONDA_PLATFORM -e "$extras" -f pyproject.toml
 
 msg "Updating environment with Conda dependencies"
 vr mamba env update -n base conda-$CONDA_PLATFORM.lock.yml
