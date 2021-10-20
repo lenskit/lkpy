@@ -70,7 +70,7 @@ if [ -n "$CONDA" ]; then
   vr python -V
   
   msg "creating bootstrap environment"
-  vr mamba env create -n lkboot -c conda-forge -f build-tools/boot-env.yml
+  vr conda env create -n lkboot -c conda-forge -f build-tools/boot-env.yml
   msg "activating bootstrap environment"
   conda activate lkboot
 fi
