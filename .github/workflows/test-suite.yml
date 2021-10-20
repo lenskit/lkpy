@@ -109,18 +109,19 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
-
-      - name: Initialize Conda
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: lkboot
-          environment-file: build-tools/boot-env.yml
-          
-      - name: Prepare Conda environment
+      
+      - name: Prepare Conda environment lock
         run: |
           bash build-tools/setup-env.sh -p linux-64 -V $PYVER -e tf
         env:
           PYVER: '3.8'
+
+      - name: Initialize Conda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: lktest
+          environment-file: ${{steps.conda-lock.outputs.environment-file}}
+          
           
       - name: Download ML-100K
         shell: pwsh
@@ -158,18 +159,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Initialize Conda
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: lkboot
-          environment-file: build-tools/boot-env.yml
-
       - name: Prepare Conda environment
         run: |
           bash build-tools/setup-env.sh -p linux-64 -V $PYVER -e demo
         env:
           PYVER: '3.8'
-          
+      
+      - name: Initialize Conda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: lktest
+          environment-file: ${{steps.conda-lock.outputs.environment-file}}
+
       - name: Cache ML data
         uses: actions/cache@v2
         with:
