@@ -111,6 +111,7 @@ jobs:
           fetch-depth: 0
       
       - name: Prepare Conda environment lock
+        id: conda-lock
         run: |
           bash build-tools/setup-env.sh -p linux-64 -V $PYVER -e tf
         env:
@@ -158,6 +159,7 @@ jobs:
           fetch-depth: 0
 
       - name: Prepare Conda environment
+        id: conda-lock
         run: |
           bash build-tools/setup-env.sh -p linux-64 -V $PYVER -e demo
         env:
