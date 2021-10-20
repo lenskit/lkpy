@@ -49,7 +49,8 @@ msg "Using Python tag $pytag"
 # 2 cases: extras is empty, or it's not and has a leading comma
 extras="$ptag$extras"
 
-scan_platform "$PLAT"
+set_platform "$PLAT"
+test -n "$CONDA_PLATFORM" || err "conda platform not set for some reason"
 msg "Installing Conda management tools"
 vr conda install -qy -c conda-forge mamba conda-lock
 
