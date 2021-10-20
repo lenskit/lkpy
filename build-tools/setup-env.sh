@@ -73,6 +73,9 @@ if [ -n "$CONDA" ]; then
   fi
   eval "$($CONDA_EXE shell.bash hook)"
   vr python -V
+
+  msg "configuring cache dir"
+  conda config --add pkgs_dirs $HOME/conda_pkgs_dir
   
   msg "creating bootstrap environment"
   vr conda env create -n lkboot -f build-tools/boot-env.yml
