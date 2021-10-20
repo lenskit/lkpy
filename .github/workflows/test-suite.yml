@@ -47,7 +47,7 @@ jobs:
             # we'll test tensorflow in a separate run
             e_opt="-e implicit,sklearn"
           fi
-          bash build-tools/setup-env.sh -V $PYVER -p $PLAT $e_opt
+          bash build-tools/setup-env.sh -V $PYVER -p $PLAT $e_opt -s $BLAS_IMPL
         env:
           RUNNER: ${{runner.os}}
           PLAT: ${{matrix.platform}}

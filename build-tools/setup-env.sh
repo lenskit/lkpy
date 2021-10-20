@@ -35,12 +35,14 @@ set_platform()
 }
 
 extras=""
+spec_opts=""
 
-while getopts "p:V:e:" opt; do
+while getopts "p:V:e:s:" opt; do
     case $opt in
         p) os_plat="$OPTARG";;
         V) ptag=py$(echo "$OPTARG" | sed -e 's/\.//');;
         e) extras="$extras,$OPTARG";;
+        s) spec_opts="$spec_opts -f build-tools/$OPTARG-spec.yml";;
         \?) err "invalid argument";;
     esac
 done
@@ -55,7 +57,7 @@ msg "Installing Conda management tools"
 vr conda install -qy -c conda-forge mamba conda-lock
 
 msg "Preparing Conda environment lockfile"
-vr conda-lock lock --mamba -k env -p $CONDA_PLATFORM -e "$extras" -f pyproject.toml
+vr conda-lock lock --mamba -k env -p $CONDA_PLATFORM -e "$extras" -f pyproject.toml $spec_opts
 
 msg "Updating environment with Conda dependencies"
 vr mamba env update -n base -f conda-$CONDA_PLATFORM.lock.yml
