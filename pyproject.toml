@@ -81,24 +81,3 @@ exclude = [
 
 [tool.conda-lock]
 channels = ['conda-forge']
-
-[tool.envtool.conda]
-name = "lkpy"
-channels = [
-    "conda-forge"
-]
-
-[tool.envtool.conda.overrides]
-hpfrec = { source="pip" }
-
-[tool.envtool.conda.extras]
-# ".none" = [
-#     "tbb"
-# ]
-mkl = [
-    "libblas=*=*mkl",
-    "mkl=2020"
-]
-openblas = [
-    "libblas=*=*openblas"
-]
