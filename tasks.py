@@ -24,7 +24,7 @@ def dev_lock(c, platform=None, extras=None, version=None, blas=None, env_file=Fa
     else:
         plat_opt = f'-p {plat}'
 
-    cmd = f'conda-lock lock {plat_opt} -f pyproject.toml'
+    cmd = f'conda-lock lock --mamba {plat_opt} -f pyproject.toml'
     if env_file:
         cmd += ' -k env'
 
