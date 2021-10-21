@@ -72,7 +72,7 @@ jobs:
 
       - name: Test LKPY
         run: |
-          python -m pytest --cov=lenskit --verbose -m 'not sweep' --log-file=test.log
+          python -m pytest --cov=lenskit --verbose --log-file=test.log
         env:
           NUMBA_NUM_THREADS: 4
           MKL_THREADING_LAYER: sequential
@@ -195,7 +195,6 @@ jobs:
       - name: Run Eval Tests
         run: |
           python -m pytest --cov=lenskit -m eval --log-file test-eval.log
-          python -m pytest --cov=lenskit --cov-append -m sweep --log-file test-sweep.log
           python -m pytest --cov=lenskit --cov-append -m realdata --log-file test-realdata.log
 
       - name: Validate Doc Notebooks
@@ -255,7 +254,7 @@ jobs:
 
       - name: Run tests
         run: |
-          python -m pytest --cov=lenskit --cov-report=xml --log-file=test.log -m 'not sweep'
+          python -m pytest --cov=lenskit --cov-report=xml --log-file=test.log
 
       - name: Aggreagate Coverage Data
         run: coverage xml
