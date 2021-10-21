@@ -41,7 +41,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          choco install wget tar --no-progress
+          choco install wget --no-progress
 
       - name: Prepare Conda environment spec
         id: conda-lock
