@@ -37,10 +37,10 @@ setup_micromamba()
   mkdir -p ~/micromamba
   vr wget -O micromamba.tar.bz2 https://micromamba.snakepit.net/api/micromamba/$CONDA_PLATFORM/latest
   vr tar -C ~/micromamba -xvjf micromamba.tar.bz2
-  if [ $OSTYPE =~ '^(win|msys)' ]; then
-    MM=$HOME/Library/bin/micromamba.exe
+  if [[ $OSTYPE =~ '^(win|msys)' ]]; then
+    MM=$HOME/micromamba/Library/bin/micromamba.exe
   else
-    MM=$HOME/bin/micromamba
+    MM=$HOME/micromamba/bin/micromamba
   fi
   eval "$($MM shell hook -p $HOME/micromamba -s bash)"
 }
