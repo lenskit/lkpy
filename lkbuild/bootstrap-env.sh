@@ -34,13 +34,13 @@ setup_micromamba()
   msg "Installing Micromamba"
   CONDA_PLATFORM=$(python3 lkbuild/env.py)
   test "$?" -eq 0 || exit 2
-  mkdir -p ~/micromamba
-  vr wget -O micromamba.tar.bz2 https://micromamba.snakepit.net/api/micromamba/$CONDA_PLATFORM/latest
-  vr tar -C ~/micromamba -xvjf micromamba.tar.bz2
+  mkdir -p build/mmboot
+  vr wget -O build/micromamba.tar.bz2 https://micromamba.snakepit.net/api/micromamba/$CONDA_PLATFORM/latest
+  vr tar -C build/mmboot -xvjf micromamba.tar.bz2
   if [[ $OSTYPE =~ '^(win|msys)' ]]; then
-    MM=$HOME/micromamba/Library/bin/micromamba.exe
+    MM=build/mmboot/Library/bin/micromamba.exe
   else
-    MM=$HOME/micromamba/bin/micromamba
+    MM=build/mmboot/bin/micromamba
   fi
   eval "$($MM shell hook -p $HOME/micromamba -s bash)"
 }
