@@ -38,7 +38,7 @@ set_platform()
         windows) CONDA_PLATFORM=win-64;;
         *) err "Invalid platform $1";;
     esac
-    echo "::set-output name=conda_platform::$CONDA_PLATFORM"
+    gh_out conda-platform "$CONDA_PLATFORM"
     msg "Running with Conda platform $CONDA_PLATFORM"
 }
 
