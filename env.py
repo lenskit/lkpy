@@ -8,9 +8,9 @@ def conda_platform():
         return 'osx-64'
     if re.match(r'^macosx-.*-arm64', plat):
         return 'osx-arm64'
-    if re.match(r'^[Ll]inux-.*-x86_64', plat):
+    if re.match(r'^[Ll]inux.*-x86_64', plat):
         return 'linux-64'
-    if re.match(r'^[Ll]inux-.*-aarch64', plat):
+    if re.match(r'^[Ll]inux.*-aarch64', plat):
         return 'linux-aarch64'
     if plat == 'win-amd64':
         return 'win-64'
