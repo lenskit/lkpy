@@ -49,23 +49,40 @@ at <https://lkpy.lenskit.org>.
 
 [conda-lock]: https://github.com/conda-incubator/conda-lock
 
-We recommend using an Anaconda environment for developing LensKit.  [conda-lock][]
-can help you set up the environment (replace `linux-64` with your platform):
+We recommend using an Anaconda environment for developing LensKit.
+We don't maintain the Conda environment specification directly - instead, we
+maintain information in `setup.toml` to be able to generate it, so that we define
+dependencies and versions in one place.
+
+[conda-lock][] can help you set up the environment (replace `linux-64` with your platform):
 
     # install conda-lock in base environment
     # alternatively: pip install conda-lock
     conda install -c conda-forge conda-lock
     # create the lock file for Python 3.9
-    conda-lock -p linux-64 -f pyproject.toml -f build-tools/python-3.9-spec.yml
+    conda-lock -p linux-64 -f pyproject.toml -f lkbuild/python-3.9-spec.yml
     # create the environment
     conda env create -n lkpy -f conda-linux-64.lock
 
 This will create a Conda environment called `lkpy` with the packages required to develop and test
 LensKit.
 
-We don't maintain the Conda environment specification directly - instead, we
-maintain information in `setup.toml` to be able to generate it, so that we define
-dependencies and versions in one place.
+We also provide support for automating some of this process through LensKit's
+infrastructure utilities:
+
+    invoke dev-lock
+
+The `lkbuild/boot-env.yml` file defines a Conda environment with the packages necessary
+for the lockfile generation to work.  The full set of commands:
+
+    conda env create -f lkbuild/boot-env.yml
+    conda activate lkboot
+    invoke dev-lock
+    conda create -n lkpy -f conda-linux-64.lock
+    conda activate lkpy
+
+`invoke dev-lock` can optionally specify the BLAS implementation (`openblas` or `mkl`), and the
+Python version.
 
 ## Testing Changes
 
@@ -74,7 +91,7 @@ You should always test your changes by running the LensKit test suite:
     python -m pytest
 
 If you want to use your changes in a LensKit experiment, you can locally install
-your modified LensKit into your experiment's environment.  We recommend using 
+your modified LensKit into your experiment's environment.  We recommend using
 separate environments for LensKit development and for each experiment; you will
 need to install the modified LensKit into your experiment's repository:
 
