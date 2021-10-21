@@ -10,15 +10,6 @@ defaults:
     shell: bash -l {0}
 
 jobs:
-  cancel:
-    name: Cancel Previous Runs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-
   conda:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}} with ${{matrix.blas}}
     runs-on: ${{matrix.platform}}-latest
