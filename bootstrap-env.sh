@@ -52,4 +52,5 @@ setup_boot_env()
 setup_micromamba
 setup_boot_env
 
+msg "Inspecting environment"
 CONDA_PLATFORM=$(invoke conda-platform)
