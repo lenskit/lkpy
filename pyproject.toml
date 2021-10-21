@@ -44,6 +44,7 @@ test = [
 dev = [
     "flit >= 3",
     "conda-lock",
+    "invoke >=1",
     "packaging >= 20",
     "flake8 >= 3",
     "coverage >= 5",

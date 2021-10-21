@@ -30,6 +30,7 @@ doc/data/
 /*env*.yml
 *.lock
 *.lock.yml
+*.tar.bz2
 
 dask-worker-space/
 .hypothesis/
