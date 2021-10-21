@@ -174,7 +174,7 @@ jobs:
       - name: Prepare Conda environment
         id: conda-lock
         run: |
-          bash build-tools/setup-env.sh -v $PYVER -e demo
+          bash lkbuild/lock-for-ci.sh -v $PYVER -e demo
         env:
           PYVER: '3.8'
 
