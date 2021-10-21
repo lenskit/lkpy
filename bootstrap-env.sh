@@ -33,6 +33,7 @@ setup_micromamba()
 {
   msg "Installing Micromamba"
   CONDA_PLATFORM=$(python3 lkbuild/env.py)
+  test "$?" -eq 0 || exit 2
   mkdir -p ~/micromamba
   vr wget -O micromamba.tar.bz2 https://micromamba.snakepit.net/api/micromamba/$CONDA_PLATFORM/latest
   vr tar -C ~/micromamba -xvjf micromamba.tar.bz2

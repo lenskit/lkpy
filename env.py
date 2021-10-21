@@ -15,6 +15,8 @@ def conda_platform():
     if plat == 'win-amd64':
         return 'win-64'
 
+    raise ValueError('unrecognized platform ' + plat)
+
 
 if __name__ == '__main__':
     print(conda_platform())
