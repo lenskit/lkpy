@@ -14,3 +14,7 @@ def conda_platform():
         return 'linux-aarch64'
     if plat == 'win-amd64':
         return 'win-64'
+
+
+if __name__ == '__main__':
+    print(conda_platform())
