@@ -35,8 +35,8 @@ setup_micromamba()
   CONDA_PLATFORM=$(python3 lkbuild/env.py)
   test "$?" -eq 0 || exit 2
   mkdir -p build/mmboot
-  vr wget -O build/micromamba.tar.bz2 https://micromamba.snakepit.net/api/micromamba/$CONDA_PLATFORM/latest
-  vr tar -C build/mmboot -xvjf micromamba.tar.bz2
+  vr wget -qO build/micromamba.tar.bz2 https://micromamba.snakepit.net/api/micromamba/$CONDA_PLATFORM/latest
+  vr tar -C build/mmboot -xvjf build/micromamba.tar.bz2
   if [[ $OSTYPE =~ '^(win|msys)' ]]; then
     MM=build/mmboot/Library/bin/micromamba.exe
   else
@@ -48,7 +48,7 @@ setup_micromamba()
 setup_boot_env()
 {
   msg "Installing bootstrap environment"
-  vr micromamba env create -y -n lkboot -f lkbuild/boot-env.yml
+  vr micromamba env create -qy -n lkboot -f lkbuild/boot-env.yml
   msg "Activating bootstrap environment"
   micromamba activate lkboot
 }
