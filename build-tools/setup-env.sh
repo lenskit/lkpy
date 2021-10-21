@@ -50,7 +50,7 @@ setup_micromamba()
   if [ $CONDA_PLATFORM = win-64 ]; then
     MM=build-tools/Library/bin/micromamba.exe
   else
-    MM=build-tools/bin/micromamba.exe
+    MM=build-tools/bin/micromamba
   fi
   eval "$($MM shell hook -p $HOME/micromamba -s bash)"
 }
