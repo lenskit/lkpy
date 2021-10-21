@@ -78,6 +78,8 @@ exclude = [
     "data",
     "examples",
     "build-tools",
+    "lkbuild",
+    "tasks.py",
     "tests",
 ]
 
