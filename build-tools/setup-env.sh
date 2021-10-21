@@ -45,7 +45,7 @@ set_platform()
 setup_micromamba()
 {
   msg "Installing Micromamba"
-  vr wget -qO build-tools/micromamba.tar.bz2 https://micromamba.snakepit.net/api/micromamba/$CONDA_PLATFORM/latest 
+  vr wget -qO build-tools/micromamba.tar.bz2 https://micromamba.snakepit.net/api/micromamba/$CONDA_PLATFORM/latest
   vr tar -C build-tools -xvjf build-tools/micromamba.tar.bz2
   if [ $CONDA_PLATFORM = win-64 ]; then
     MM=build-tools/Library/bin/micromamba.exe
