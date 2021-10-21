@@ -37,7 +37,7 @@ setup_micromamba()
   mkdir -p build/mmboot
   vr wget -qO build/micromamba.tar.bz2 https://micromamba.snakepit.net/api/micromamba/$CONDA_PLATFORM/latest
   vr tar -C build/mmboot -xvjf build/micromamba.tar.bz2
-  if [[ $OSTYPE =~ '^(win|msys)' ]]; then
+  if [[ "$OSTYPE" =~ '^\(win\|msys\)' ]]; then
     MM=build/mmboot/Library/bin/micromamba.exe
   else
     MM=build/mmboot/bin/micromamba
