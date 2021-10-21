@@ -19,19 +19,21 @@ err()
 
 vr()
 {
-    echo + "$@" >&2
-    "$@"
-    if [ $? -ne 0 ]; then
-        echo "command $1 terminated with code $?" >&2
-        exit 2
-    fi
+  local ec
+  echo + "$@" >&2
+  "$@"
+  ec="$?"
+  if [ $ec -ne 0 ]; then
+      echo "command $1 terminated with code $ec" >&2
+      exit 2
+  fi
 }
 
 setup_micromamba()
 {
   msg "Installing Micromamba"
   mkdir -p ~/micromamba
-  vr wget -qO micromamba.tar.bz2 https://micromamba.snakepit.net/api/micromamba/$CONDA_PLATFORM/latest
+  vr wget -O micromamba.tar.bz2 https://micromamba.snakepit.net/api/micromamba/$CONDA_PLATFORM/latest
   vr tar -C ~/micromamba -xvjf micromamba.tar.bz2
   if [ $OSTYPE =~ '^(win|msys)' ]; then
     MM=$HOME/Library/bin/micromamba.exe
