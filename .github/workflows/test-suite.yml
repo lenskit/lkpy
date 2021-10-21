@@ -36,6 +36,12 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
+  
+      - name: Prepare Windows environment
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install wget tar --no-progress
 
       - name: Prepare Conda environment spec
         id: conda-lock
