@@ -42,6 +42,31 @@ set_platform()
     msg "Running with Conda platform $CONDA_PLATFORM"
 }
 
+setup_micromamba()
+{
+  msg "Installing Micromamba"
+  vr wget -qO build-tools/micromamba.tar.bz2 https://micromamba.snakepit.net/api/micromamba/$CONDA_PLATFORM/latest 
+  vr tar -C build-tools -xvjf build-tools/micromamba.tar.bz2
+  if [ $CONDA_PLATFORM = win-64 ]; then
+    MM=build-tools/Library/bin/micromamba.exe
+  else
+    MM=build-tools/bin/micromamba.exe
+  fi
+  eval "$($MM shell hook -p $HOME/micromamba -s bash)"
+}
+
+setup_boot_env()
+{
+  msg "Installing bootstrap environment"
+  vr micromamba env create -y -n lkboot -f build-tools/boot-env.yml
+  msg "Activating bootstrap environment"
+  micromamba activate lkboot
+}
+
+if [ ! -d build-tools ]; then
+  err "build-tools not found, is this being run from package root?"
+fi
+
 extras=""
 spec_opts=""
 env_name="lktest"
@@ -64,24 +89,8 @@ fi
 set_platform "$os_plat"
 test -n "$CONDA_PLATFORM" || err "conda platform not set for some reason"
 
-if [ -n "$CONDA" ]; then
-  msg "activating Conda from $CONDA"
-  if [ $CONDA_PLATFORM = win-64 ]; then
-    CONDA_EXE="$CONDA/Scripts/conda.exe"
-  else
-    CONDA_EXE="$CONDA/condabin/conda"
-  fi
-  eval "$($CONDA_EXE shell.bash hook)"
-  vr python -V
-
-  msg "configuring cache dir"
-  conda config --add pkgs_dirs $HOME/conda_pkgs_dir
-  
-  msg "creating bootstrap environment"
-  vr conda env create -n lkboot -f build-tools/boot-env.yml
-  msg "activating bootstrap environment"
-  conda activate lkboot
-fi
+setup_micromamba
+setup_boot_env
 
 msg "Preparing Conda environment lockfile"
 vr conda-lock lock --mamba -k env -p $CONDA_PLATFORM -e "$extras" -f pyproject.toml $spec_opts
