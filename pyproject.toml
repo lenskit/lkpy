@@ -23,7 +23,6 @@ requires = [
     "numpy >= 1.17",
     "scipy >= 1.2",
     "numba >= 0.51, < 0.54",
-    "pyarrow >= 0.15",
     "cffi >= 1.12.2",
     "psutil >= 5",
     "binpickle >= 0.3.2",
