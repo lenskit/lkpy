@@ -257,7 +257,7 @@ jobs:
           PIP_PREFER_BINARY: 'true'
         run: |
           python -m pip install -U flit
-          python -m pip install .[test]
+          python -m pip install .[test,dev]
 
       - name: Run tests
         run: |
