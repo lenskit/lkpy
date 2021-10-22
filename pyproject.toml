@@ -19,7 +19,7 @@ classifiers = [
 requires-python = ">= 3.7"
 description-file = "README.md"
 requires = [
-    "pandas ~=1.0",
+    "pandas >=1.0, ==1.*",
     "numpy >= 1.17",
     "scipy >= 1.2",
     "numba >= 0.51, < 0.55",
