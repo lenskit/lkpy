@@ -77,7 +77,7 @@ tf = ["tensorflow >=2.1,<2.6"]
 exclude = [
     ".github",
     "*.ipynb",
-    "doc",
+    "docs",
     "data",
     "examples",
     "build-tools",
