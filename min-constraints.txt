@@ -1,4 +1,4 @@
-pandas==0.24
+pandas==1.0.0
 numpy==1.17.0
 scipy==1.2.1
 numba==0.51.0
