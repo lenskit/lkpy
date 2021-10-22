@@ -226,6 +226,7 @@ jobs:
   vanilla:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
