@@ -257,7 +257,7 @@ jobs:
           PIP_PREFER_BINARY: 'true'
         run: |
           python -m pip install -U flit
-          flit install --deps develop --pth-file
+          python -m pip install .[test]
 
       - name: Run tests
         run: |
