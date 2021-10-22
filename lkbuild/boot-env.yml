@@ -5,6 +5,7 @@ dependencies:
 - python>=3.8
 - flit=3
 - invoke=1
+- requests=2
 - pip
 - conda-lock
 - mamba
