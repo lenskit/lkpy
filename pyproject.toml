@@ -18,6 +18,7 @@ classifiers = [
 ]
 requires-python = ">= 3.7"
 description-file = "README.md"
+license = "MIT"
 requires = [
     "pandas >=1.0, ==1.*",
     "numpy >= 1.17",
@@ -65,7 +66,7 @@ demo = [
     "nbval >= 0.9",
     "matplotlib ~= 3.4",
 ]
-hpf = ["hpfrec"]
+hpf = ["lenskit-hpf"]
 implicit = ["implicit"]
 sklearn = ["scikit-learn >= 0.22"]
 tf = ["tensorflow >=2.1,<2.6"]
