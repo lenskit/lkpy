@@ -130,6 +130,9 @@ jobs:
           activate-environment: lktest
           environment-file: ${{steps.conda-lock.outputs.environment-file}}
 
+      - name: Insepct envonment
+        run: numba -s
+
       - name: Download ML-100K
         shell: pwsh
         run: |
@@ -137,7 +140,7 @@ jobs:
 
       - name: Install for Testing
         run: |
-          flit install -s --deps develop --extras tf
+          flit install -s --deps none --extras tf
 
       - name: Run Tests
         run: |
