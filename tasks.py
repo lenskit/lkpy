@@ -3,8 +3,10 @@ Support tasks shared across LensKit packages.
 """
 
 import sys
+from pathlib import Path
 from invoke import task
 from . import env
+import yaml
 
 __ALL__ = [
     'dev_lock',
@@ -37,6 +39,39 @@ def dev_lock(c, platform=None, extras=None, version=None, blas=None, env_file=Fa
 
     print('running', cmd, file=sys.stderr)
     c.run(cmd)
+
+
+@task(iterable=['extras'])
+def env_file(c, platform=None, extras=None, version=None, blas=None, dev_deps=True,
+             output=None, name=None):
+    "Create an unresolved environment file"
+    from conda_lock.conda_lock import parse_source_files, aggregate_lock_specs
+
+    if not platform:
+        platform = env.conda_platform()
+
+    files = [Path('pyproject.toml')]
+    if version:
+        files.append(Path(f'lkbuild/python-{version}-spec.yml'))
+    if blas:
+        files.append(Path(f'lkbuild/{blas}-spec.yml'))
+
+    lock = parse_source_files(files, platform, dev_deps, extras)
+    lock = aggregate_lock_specs(lock)
+    env_spec = {
+        'channels': lock.channels,
+        'dependencies': lock.specs,
+    }
+    if name:
+        env_spec['name'] = name
+
+    if output:
+        print('writing environment to', output, file=sys.stderr)
+        out = Path(output)
+        with out.open('w') as f:
+            yaml.dump(env_spec, f)
+    else:
+        yaml.dump(env_spec, sys.stdout)
 
 
 @task
