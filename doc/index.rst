@@ -35,7 +35,7 @@ Resources
 .. toctree::
    :maxdepth: 2
    :caption: Running Experiments
-   
+
    datasets
    crossfold
    batch
@@ -52,8 +52,8 @@ Resources
     bias
     knn
     mf
+    addons
     tf
-    hpf
     implicit
 
 .. toctree::

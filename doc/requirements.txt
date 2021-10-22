@@ -1,1 +1,0 @@
-lenskit-hpf@git+https://github.com/lenskit/lenskit-hpf.git
