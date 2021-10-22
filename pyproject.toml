@@ -44,6 +44,7 @@ dev = [
     "flit >= 3",
     "conda-lock",
     "invoke >=1",
+    "requests >=2",
     "packaging >= 20",
     "flake8 >= 3",
     "coverage >= 5",
