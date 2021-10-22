@@ -4,5 +4,4 @@ scipy==1.2.1
 numba==0.51.0
 pyarrow==0.15.1
 cffi==1.12.2
-joblib==0.13.0
 binpickle==0.3.2
