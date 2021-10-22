@@ -31,7 +31,7 @@ jobs:
         exclude:
         - python: 3.7
           blas: mkl
-        - exclude: 3.8
+        - python: 3.8
           blas: openblas
 
     steps:
