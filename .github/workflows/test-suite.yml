@@ -140,7 +140,7 @@ jobs:
 
       - name: Install for Testing
         run: |
-          flit install -s --deps none --extras tf
+          flit install -s --deps none
 
       - name: Run Tests
         run: |
