@@ -31,6 +31,8 @@ jobs:
         exclude:
         - platform: macos
           python: 3.9
+        - python: 3.7
+          blas: mkl
 
     steps:
       - uses: actions/checkout@v2
@@ -128,6 +130,9 @@ jobs:
           activate-environment: lktest
           environment-file: ${{steps.conda-lock.outputs.environment-file}}
 
+      - name: Insepct envonment
+        run: numba -s
+
       - name: Download ML-100K
         shell: pwsh
         run: |
@@ -135,7 +140,7 @@ jobs:
 
       - name: Install for Testing
         run: |
-          flit install -s --deps develop --extras tf
+          flit install -s --deps none
 
       - name: Run Tests
         run: |
@@ -224,12 +229,14 @@ jobs:
   vanilla:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         python:
         - 3.7
         - 3.8
+        - 3.9
         platform:
         - windows
         - ubuntu
@@ -250,7 +257,7 @@ jobs:
           PIP_PREFER_BINARY: 'true'
         run: |
           python -m pip install -U flit
-          flit install --deps develop --pth-file
+          python -m pip install .[test,dev]
 
       - name: Run tests
         run: |
