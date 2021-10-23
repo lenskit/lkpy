@@ -204,7 +204,7 @@ jobs:
 
       - name: Validate Doc Notebooks
         run: |
-          cp doc/*.ipynb data
+          cp docs/*.ipynb data
           python -m pytest --nbval-lax --cov=lenskit --cov-append data --log-file test-docs.log
 
       # - name: Validate Examples
