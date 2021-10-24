@@ -7,4 +7,5 @@ to implementations in other packages.
 .. toctree::
     :caption: External Algorithms
 
+    Implicit wrappers <https://lkpy.lenskit.org/projects/lenskit-implicit>
     Poisson factorization <https://lkpy.lenskit.org/projects/lenskit-hpf/>

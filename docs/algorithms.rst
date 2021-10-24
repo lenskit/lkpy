@@ -55,8 +55,3 @@ Add-On Packages
 
 See `add-on algorithms <addons.rst>`_ for additional algorithm families and bridges to other
 packages.
-
-.. autosummary::
-
-    implicit.BPR
-    implicit.ALS

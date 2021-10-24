@@ -68,10 +68,10 @@ demo = [
     "nbval >= 0.9",
     "matplotlib ~= 3.4",
 ]
-hpf = ["lenskit-hpf"]
-implicit = ["implicit"]
 sklearn = ["scikit-learn >= 0.22"]
 tf = ["tensorflow >=2.1,<2.6"]
+hpf = ["lenskit-hpf"]
+implicit = ["lenskit-implicit"]
 
 [tool.flit.sdist]
 exclude = [

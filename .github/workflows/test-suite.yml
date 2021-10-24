@@ -53,7 +53,7 @@ jobs:
           if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
             echo "Using most extras"
             # we'll test tensorflow in a separate run
-            e_opt="-e implicit,sklearn"
+            e_opt="-e sklearn"
           fi
           bash lkbuild/lock-for-ci.sh -v $PYVER -b $BLAS_IMPL $e_opt
         env:
