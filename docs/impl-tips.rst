@@ -29,10 +29,11 @@ We re-expose simplified interfaces that are also usable with Numba.
 Pickling and Sharing
 --------------------
 
-LensKit uses Python pickling (or JobLib's modified pickling in :py:func:`joblib.dump`) quite
-a bit to save and reload models and to share model data between concurrent processes.  This
-generally just works, and you don't need to implement any particular save/load logic in order
-to have your algorithm be savable and sharable.
+.. _binpickle: https://binpickle.lenskit.org
+
+LensKit uses binpickle_ quite a bit to save and reload models and to share model data between
+concurrent processes.  This generally just works, and you don't need to implement any particular
+save/load logic in order to have your algorithm be savable and sharable.
 
 There are a few exceptions, though.
 
