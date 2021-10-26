@@ -15,16 +15,19 @@ implementing algorithms, however, may be quite complex in order to achieve good 
 Performance
 -----------
 
+.. _CSR: https://csr.lenskit.org
+
 We use Numba to optimize critical code paths and provide parallelism in a number of cases,
 such as ALS training.  See the ALS source code for examples.
 
-We also directly use MKL sparse matrix routines when available for some operations.  Whenever
-this is done in the main LensKit code base, however, we also provide fallback implementations
-when the MKL is not available.  The k-NN recommenders both demonstrate different versions of
-this.  The ``_mkl_ops`` module exposes MKL operations; we implement them through C wrappers in
-the ``mkl_ops.c`` file, that are then called through FFI.  This extra layer is because the raw
-MKL calls are quite complex to call via FFI, and are not particularly amenable to use with Numba.
-We re-expose simplified interfaces that are also usable with Numba.
+We also use the CSR_ package for sparse matrices that are usable from Numba-accelerated code,
+and to provide unified access to important sparse matrix operations that use MKL acceleration
+when available.  Previous versions of LensKit included the MKL code directly, but we have
+moved that logic over into CSR.
+
+If you are working on an algorithm implementation that needs access to additional MKL operations,
+please add the relevant operations to CSR to keep LensKit pure Python + Numba.  We do not have
+plans to re-add the MKL wrapper logic to the LensKit core.
 
 Pickling and Sharing
 --------------------
