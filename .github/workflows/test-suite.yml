@@ -88,19 +88,18 @@ jobs:
         run: |
           python -m pytest --cov=lenskit --cov-append -m 'not slow' --log-file=test-nojit.log
 
+      - name: Aggreagate Coverage Data
+        run: |
+          coverage xml
+
       - name: Upload logs
         uses: actions/upload-artifact@v2
         with:
           name: log-conda-${{matrix.platform}}-py${{matrix.python}}-${{matrix.blas}}
           path: |
+            coverage.xml
             test*.log
             emissions.csv
-
-      - name: Aggreagate Coverage Data
-        run: |
-          coverage xml
-
-      - uses: codecov/codecov-action@v1
 
   check-docs:
     name: Docs, Examples, and Eval
@@ -155,6 +154,9 @@ jobs:
       # - name: Validate Examples
       #   run: |
       #     python -m pytest --nbval-lax --cov=lenskit --cov-append examples --log-file test-examples.log
+      - name: Aggreagate Coverage Data
+        run: |
+          coverage xml
 
       - name: Upload logs
         uses: actions/upload-artifact@v2
@@ -162,14 +164,8 @@ jobs:
           name: log-check-docs
           path: |
             test*.log
+            coverage.xml
             emissions.csv
-
-      - name: Aggreagate Coverage Data
-        run: |
-          coverage xml
-
-      - name: Upload Coverage
-        uses: codecov/codecov-action@v1
 
   vanilla:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
@@ -211,15 +207,13 @@ jobs:
       - name: Aggreagate Coverage Data
         run: coverage xml
 
-      - name: Upload coverage
-        uses: codecov/codecov-action@v1
-
       - name: Upload logs
         uses: actions/upload-artifact@v2
         with:
           name: log-vanilla-${{matrix.platform}}-py${{matrix.python}}
           path: |
             test*.log
+            coverage.xml
             emissions.csv
 
   mindep:
@@ -253,10 +247,8 @@ jobs:
           name: log-mindep
           path: |
             test*.log
+            coverage.xml
             emissions.csv
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v1
 
   results:
     name: Test Suite Results
@@ -279,6 +271,11 @@ jobs:
 
       - name: List log files
         run: ls -lR test-logs
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v2
+        with:
+          directory: test-logs/
 
       - name: Upload all test data
         uses: actions/upload-artifact@v1

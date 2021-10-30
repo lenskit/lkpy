@@ -17,6 +17,8 @@ build/
 dist/
 .coverage*
 coverage.xml
+cov-reports/
+test-logs/
 htmlcov/
 my-eval/
 doc/data/
