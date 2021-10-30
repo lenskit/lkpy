@@ -53,8 +53,6 @@ Resources
     knn
     mf
     addons
-    tf
-    implicit
 
 .. toctree::
     :maxdepth: 2
