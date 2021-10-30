@@ -102,61 +102,6 @@ jobs:
 
       - uses: codecov/codecov-action@v1
 
-  check-tf:
-    name: Test TensorFlow on ${{matrix.platform}}
-    timeout-minutes: 30
-    runs-on: ${{matrix.platform}}-latest
-    strategy:
-      matrix:
-        platform:
-          - ubuntu
-          # - windows
-
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: Prepare Conda environment lock
-        id: conda-lock
-        run: |
-          bash lkbuild/lock-for-ci.sh -v $PYVER -e tf
-        env:
-          PYVER: '3.8'
-
-      - name: Initialize Conda
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: lktest
-          environment-file: ${{steps.conda-lock.outputs.environment-file}}
-
-      - name: Insepct envonment
-        run: numba -s
-
-      - name: Download ML-100K
-        shell: pwsh
-        run: |
-          ./fetch-datasets.ps1 ml-100k
-
-      - name: Install for Testing
-        run: |
-          flit install -s --deps none
-
-      - name: Run Tests
-        run: |
-          python -m pytest --cov=lenskit --cov-report=xml -k tensorflow --log-file=test.log
-
-      - name: Upload logs
-        uses: actions/upload-artifact@v2
-        with:
-          name: log-tensorflow
-          path: |
-            test*.log
-            emissions.csv
-
-      - name: Upload Coverage
-        uses: codecov/codecov-action@v1
-
   check-docs:
     name: Docs, Examples, and Eval
     timeout-minutes: 30
@@ -319,7 +264,6 @@ jobs:
     needs:
     - conda
     - vanilla
-    - check-tf
     - check-docs
     - mindep
 

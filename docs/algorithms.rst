@@ -41,15 +41,6 @@ Matrix Factorization
     als.ImplicitMF
     funksvd.FunkSVD
 
-TensorFlow
-~~~~~~~~~~
-
-.. autosummary::
-
-    tf.BiasedMF
-    tf.IntegratedBiasMF
-    tf.BPR
-
 Add-On Packages
 ~~~~~~~~~~~~~~~
 
