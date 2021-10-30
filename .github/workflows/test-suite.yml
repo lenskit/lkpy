@@ -264,7 +264,6 @@ jobs:
     needs:
     - conda
     - vanilla
-    - check-tf
     - check-docs
     - mindep
 
