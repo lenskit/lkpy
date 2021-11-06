@@ -11,8 +11,7 @@ Top-*N* Analysis
 .. module:: lenskit.topn
 
 The :py:mod:`lenskit.topn` module contains the utilities for carrying out top-*N*
-analysis, in conjucntion with :py:func:`lenskit.batch.recommend` and its wrapper
-in :py:class:`lenskit.batch.MultiEval`.
+analysis, in conjucntion with :py:func:`lenskit.batch.recommend`.
 
 The entry point to this is :py:class:`RecListAnalysis`.  This class encapsulates
 an analysis with one or more metrics, and can apply it to data frames of recommendations.
@@ -47,7 +46,7 @@ And the truth frame:
 * rating
 
 The analysis will use this truth as the relevant item data for measuring the accuracy of the
-roecommendation lists.  Recommendations will be matched to test ratings by data set, user, 
+roecommendation lists.  Recommendations will be matched to test ratings by data set, user,
 and item, using :py:class:`RecListAnalysis` defaults.
 
 Identifying columns will be used to create two synthetic identifiers, `LKRecID` (the recommendation
@@ -125,7 +124,7 @@ A metric then returns a single floating-point value; NaN is allowed.
 
 Metrics can be further optimized with the *bulk interface*.  A bulk metric function takes ``recs``
 and ``truth`` frames for the *entire set of recommendations*, with transformation (they have
-``LKRecID`` and ``LKTruthID`` columns instead of other identifying columns), and returns a series 
+``LKRecID`` and ``LKTruthID`` columns instead of other identifying columns), and returns a series
 whose index is ``LKRecID`` and values are the metric values for each list.  Further, the ``recs``
 passed to a bulk implementation includes a 1-based *rank* for each recommendation.
 
@@ -134,7 +133,7 @@ The :py:func:`bulk_impl` function registers a bulk implementation of a metric::
     def metric(recs, truth):
         # normal metric implementation
         pass
-    
+
     @bulk_impl(metric)
     def _bulk_metric(recs, truth):
         # bulk metric implementation

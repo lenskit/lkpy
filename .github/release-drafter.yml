@@ -1,3 +1,17 @@
+categories:
+- title: Bug Fixes
+  labels:
+  - bug
+- title: Algorithms
+  labels:
+  - algorithms
+- title: Internals
+  labels:
+  - internals
+- title: Maintenance
+  labels:
+  - build
+  - dependencies
 template: |
   ## What’s Changed
 

@@ -17,6 +17,8 @@ build/
 dist/
 .coverage*
 coverage.xml
+cov-reports/
+test-logs/
 htmlcov/
 my-eval/
 doc/data/
@@ -27,7 +29,10 @@ doc/data/
 *.lib
 *.o
 *.obj
-*env*.yml
+/*env*.yml
+*.lock
+*.lock.yml
+*.tar.bz2
 
 dask-worker-space/
 .hypothesis/
