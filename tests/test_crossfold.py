@@ -384,7 +384,6 @@ def test_sample_users():
             pass
 
 
-
 def test_sample_rows():
     """Sampling ratings when dataframe has non-unique indices"""
     ratings = lktu.ml_test.ratings
@@ -392,7 +391,6 @@ def test_sample_rows():
     with pytest.raises(ValueError):
         for split in xf.sample_rows(ratings, partitions=5, size=1000):
             pass
-
 
 
 def test_partition_users():

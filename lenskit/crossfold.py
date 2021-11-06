@@ -355,6 +355,7 @@ def simple_test_pair(ratings, n_users=1000, n_rates=5, f_rates=None):
 def confirm_unique_index(data):
     """Confirms dataframe has unique index values, and if not,
      throws ValueError with helpful log message"""
+
     if not data.index.is_unique:
         _logger.error("Index column has duplicate values")
         _logger.info("If index values do not matter, consider running " +
