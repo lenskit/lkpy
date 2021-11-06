@@ -365,10 +365,11 @@ def test_sample_users_frac_oversize_ndj():
         assert all(s.test.index.union(s.train.index) == ratings.index)
         assert len(s.test) + len(s.train) == len(ratings)
 
+
 def test_non_unique_index_partition_users():
+    "Partitioning when dataframe has non-unique indices"
     ratings = lktu.ml_test.ratings
     ratings = ratings.set_index('user')  ##forces non-unique index
     with pytest.raises(ValueError):
-        splits = xf.partition_users(ratings, 5, xf.SampleN(5))
-        splits = list(splits)
-
+        for split in xf.partition_users(ratings, 5, xf.SampleN(5)):
+            pass
