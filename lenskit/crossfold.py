@@ -244,6 +244,12 @@ def partition_users(data, partitions: int, method: PartitionMethod, *, rng_spec=
         iterator: an iterator of train-test pairs
     """
 
+
+    if data.index.duplicated().any():
+        _logger.error("Index column has duplicate values")
+        _logger.info("If index values do not matter, consider running .reset_index() on the dataframe before passing it in")
+        raise ValueError('Index column is not uniquely valued')
+
     user_col = data['user']
     users = user_col.unique()
     _logger.info('partitioning %d rows for %d users into %d partitions',
