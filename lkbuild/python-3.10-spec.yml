@@ -1,0 +1,3 @@
+# environment mini-spec for ensuring Python 3.10
+dependencies:
+- python=3.10

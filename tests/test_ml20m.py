@@ -16,7 +16,10 @@ from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import Popular
 from lenskit.algorithms.als import BiasedMF
 from lenskit.algorithms import item_knn as knn
-from lenskit.algorithms import tf as lktf
+try:
+    import lenskit_tf
+except:
+    lenskit_tf = None
 from lenskit.util import Stopwatch
 from lenskit.util import test as lktu
 
@@ -77,9 +80,9 @@ def test_als_isolate(ml20m, rng):
 @pytest.mark.realdata
 @pytest.mark.slow
 @pytest.mark.skip
-@pytest.mark.skipif(not lktf.TF_AVAILABLE, reason='TensorFlow not available')
+@pytest.mark.skipif(lenskit_tf is None or not lenskit_tf.TF_AVAILABLE, reason='TensorFlow not available')
 def test_tf_isvd(ml20m):
-    algo = lktf.IntegratedBiasMF(20)
+    algo = lenskit_tf.IntegratedBiasMF(20)
 
     def eval(train, test):
         _log.info('running training')

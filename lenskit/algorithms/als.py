@@ -313,28 +313,20 @@ def _train_implicit_row_lu(items, ratings, other, otOr):
 
 class BiasedMF(MFPredictor):
     """
-    Biased matrix factorization trained with alternating least squares [ZWSP2008]_.  This is a
+    Biased matrix factorization trained with alternating least squares :cite:p:`Zhou2008-bj`.  This is a
     prediction-oriented algorithm suitable for explicit feedback data.
 
     It provides two solvers for the optimization step (the `method` parameter):
 
     ``'cd'`` (the default)
-        Coordinate descent [TPT2011]_, adapted for a separately-trained bias model and to use
-        weighted regularization as in the original ALS paper [ZWSP2008]_.
+        Coordinate descent :cite:p:`Takacs2011-ix`, adapted for a separately-trained bias model and to use
+        weighted regularization as in the original ALS paper :cite:p:`Zhou2008-bj`.
     ``'lu'``
-        A direct implementation of the original ALS concept [ZWSP2008]_ using LU-decomposition
+        A direct implementation of the original ALS concept :cite:p:`Zhou2008-bj` using LU-decomposition
         to solve for the optimized matrices.
 
     See the base class :class:`.MFPredictor` for documentation on
     the estimated parameters you can extract from a trained model.
-
-    .. [ZWSP2008] Yunhong Zhou, Dennis Wilkinson, Robert Schreiber, and Rong Pan. 2008.
-        Large-Scale Parallel Collaborative Filtering for the Netflix Prize.
-        In +Algorithmic Aspects in Information and Management_, LNCS 5034, 337–348.
-        DOI `10.1007/978-3-540-68880-8_32 <http://dx.doi.org/10.1007/978-3-540-68880-8_32>`_.
-
-    .. [TPT2011] Gábor Takács, István Pilászy, and Domonkos Tikk. 2011. Applications of the
-        Conjugate Gradient Method for Implicit Feedback Collaborative Filtering.
 
     Args:
         features(int): the number of features to train
@@ -525,7 +517,7 @@ class BiasedMF(MFPredictor):
 
 class ImplicitMF(MFPredictor):
     """
-    Implicit matrix factorization trained with alternating least squares [HKV2008]_.  This
+    Implicit matrix factorization trained with alternating least squares :cite:p:`Hu2008-li`.  This
     algorithm outputs 'predictions', but they are not on a meaningful scale.  If its input
     data contains ``rating`` values, these will be used as the 'confidence' values; otherwise,
     confidence will be 1 for every rated item.
@@ -542,19 +534,11 @@ class ImplicitMF(MFPredictor):
         currently defaults to ``True``, but with a warning.  In LensKit for Python 0.14,
         **this default will change**.
 
-    .. [HKV2008] Y. Hu, Y. Koren, and C. Volinsky. 2008.
-       Collaborative Filtering for Implicit Feedback Datasets.
-       In _Proceedings of the 2008 Eighth IEEE International Conference on Data Mining_, 263–272.
-       DOI `10.1109/ICDM.2008.22 <http://dx.doi.org/10.1109/ICDM.2008.22>`_
-
-    .. [TPT2011] Gábor Takács, István Pilászy, and Domonkos Tikk. 2011. Applications of the
-        Conjugate Gradient Method for Implicit Feedback Collaborative Filtering.
-
     Args:
         features(int): the number of features to train
         iterations(int): the number of iterations to train
         reg(double): the regularization factor
-        weight(double): the scaling weight for positive samples (:math:`\\alpha` in [HKV2008]_).
+        weight(double): the scaling weight for positive samples (:math:`\\alpha` in :cite:p:`Hu2008-li`).
         use_ratings(bool):
             Whether to use the `rating` column, if present.  Currently defaults to ``True``; this
             default will change in LensKit 0.14.  When ``True``, the values from the ``rating``
@@ -564,9 +548,9 @@ class ImplicitMF(MFPredictor):
             the training method.
 
             ``'cg'`` (the default)
-                Conjugate gradient method [TPT2011]_.
+                Conjugate gradient method :cite:p:`Takacs2011-ix`.
             ``'lu'``
-                A direct implementation of the original implicit-feedback ALS concept [HKV2008]_
+                A direct implementation of the original implicit-feedback ALS concept :cite:p:`Hu2008-li`
                 using LU-decomposition to solve for the optimized matrices.
 
         rng_spec:

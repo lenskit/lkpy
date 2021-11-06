@@ -87,13 +87,8 @@ class TopN(Recommender, Predictor):
 class PlackettLuce(Recommender):
     """
     Re-ranking algorithm that uses Plackett-Luce sampling on underlying scores.
-    This uses the Gumbel trick [GWZE19]_ to efficiently simulate from a Plackett-Luce
+    This uses the Gumbel trick :cite:p:`Grover2019-nc` to efficiently simulate from a Plackett-Luce
     distribution.
-
-    .. [GWZE19] Grover, A., Wang, E., Zweig, A., & Ermon, S. (2019, March 21).
-        Stochastic Optimization of Sorting Networks via Continuous Relaxations.
-        _Proceedings of the Seventh International Conference on Learning Representations_.
-        ICLR 2019. https://openreview.net/forum?id=H1eSS3CcKX
 
     Args:
         predictor(Predictor):

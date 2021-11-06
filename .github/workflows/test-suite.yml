@@ -4,6 +4,11 @@ on:
     branches:
       - main
   pull_request:
+
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   conda:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}} with ${{matrix.blas}}
@@ -24,56 +29,58 @@ jobs:
         - mkl
         - openblas
         exclude:
-        - platform: macos
-          python: 3.9
+        - python: 3.7
+          blas: mkl
+        - python: 3.8
+          blas: openblas
+
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
 
-      - name: Initialize Conda
-        uses: s-weigand/setup-conda@v1
-        with:
-          python-version: ${{matrix.python}}
-          update-conda: true
-          conda-channels: conda-forge
+      - name: Prepare Windows environment
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install wget --no-progress
 
       - name: Prepare Conda environment spec
+        id: conda-lock
         shell: bash
         run: |
-          conda clean -i
-          conda install -qy -c conda-forge flit packaging pyyaml
-          e_opts="-E ${{matrix.blas}}"
+          e_opt=""
           if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
             echo "Using most extras"
             # we'll test tensorflow in a separate run
-            e_opts="-E implicit -E sklearn"
+            e_opt="-e sklearn"
           fi
-          python build-tools/flit-conda.py $e_opts --python-version $PYVER --save-env environment.yml
-          cat environment.yml
+          bash lkbuild/lock-for-ci.sh -v $PYVER -b $BLAS_IMPL $e_opt
         env:
           RUNNER: ${{runner.os}}
           PYVER: ${{matrix.python}}
           BLAS_IMPL: ${{matrix.blas}}
-          
-      - name: Create Conda environment
-        run: |
-          conda env update -n base -f environment.yml
+
+      - name: Initialize Conda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: lktest
+          environment-file: ${{steps.conda-lock.outputs.environment-file}}
 
       - name: Inspect environment
         run: |
           python -V
           numba -s
-      
+
       - name: Test LKPY
         run: |
-          python -m pytest --cov=lenskit --verbose -m 'not sweep' --log-file=test.log
+          python -m pytest --cov=lenskit --verbose --log-file=test.log
         env:
           NUMBA_NUM_THREADS: 4
           MKL_THREADING_LAYER: sequential
           OMP_NUM_THREADS: 1
           OPENBLAS_NUM_THREADS: 1
-      
+
       - name: Non-JIT Test Coverage
         if: runner.os == 'Linux'
         env:
@@ -81,79 +88,18 @@ jobs:
         run: |
           python -m pytest --cov=lenskit --cov-append -m 'not slow' --log-file=test-nojit.log
 
+      - name: Aggreagate Coverage Data
+        run: |
+          coverage xml
+
       - name: Upload logs
         uses: actions/upload-artifact@v2
         with:
           name: log-conda-${{matrix.platform}}-py${{matrix.python}}-${{matrix.blas}}
           path: |
+            coverage.xml
             test*.log
             emissions.csv
-
-      - name: Aggreagate Coverage Data
-        run: |
-          coverage xml
-
-      - uses: codecov/codecov-action@v1
-
-  check-tf:
-    name: Test TensorFlow on ${{matrix.platform}}
-    timeout-minutes: 30
-    runs-on: ${{matrix.platform}}-latest
-    strategy:
-      matrix:
-        platform: 
-          - ubuntu
-          # - windows
-
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: Initialize Conda
-        uses: s-weigand/setup-conda@v1
-        with:
-          python-version: '3.8'
-          update-conda: true
-          conda-channels: conda-forge
-
-      - name: Prepare Conda environment spec
-        shell: bash
-        run: |
-          conda clean -i
-          conda install -qy -c conda-forge flit packaging pyyaml
-          python build-tools/flit-conda.py -E tf --python-version $PYVER --save-env environment.yml
-          cat environment.yml
-        env:
-          PYVER: '3.8'
-          
-      - name: Create Conda environment
-        run: |
-          conda env update -n base -q -f environment.yml
-
-      - name: Download ML-100K
-        shell: pwsh
-        run: |
-          ./fetch-datasets.ps1 ml-100k
-
-      - name: Install for Testing
-        run: |
-          flit install -s --deps develop --extras tf
-
-      - name: Run Tests
-        run: |
-          python -m pytest --cov=lenskit --cov-report=xml -k tensorflow --log-file=test.log
-
-      - name: Upload logs
-        uses: actions/upload-artifact@v2
-        with:
-          name: log-tensorflow
-          path: |
-            test*.log
-            emissions.csv
-
-      - name: Upload Coverage
-        uses: codecov/codecov-action@v1
 
   check-docs:
     name: Docs, Examples, and Eval
@@ -165,26 +111,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Initialize Conda
-        uses: s-weigand/setup-conda@v1
-        with:
-          python-version: '3.8'
-          update-conda: true
-          conda-channels: conda-forge
-
-      - name: Prepare Conda environment spec
-        shell: bash
+      - name: Prepare Conda environment
+        id: conda-lock
         run: |
-          conda clean -i
-          conda install -qy -c conda-forge flit-core packaging pyyaml
-          python build-tools/flit-conda.py -E demo -E mkl --python-version $PYVER --save-env environment.yml
-          cat environment.yml
+          bash lkbuild/lock-for-ci.sh -v $PYVER -e demo
         env:
           PYVER: '3.8'
-          
-      - name: Create Conda environment
-        run: |
-          conda env update -n base -q -f environment.yml
+
+      - name: Initialize Conda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: lktest
+          environment-file: ${{steps.conda-lock.outputs.environment-file}}
 
       - name: Cache ML data
         uses: actions/cache@v2
@@ -200,23 +138,25 @@ jobs:
           ./fetch-datasets.ps1 ml-100k ml-1m ml-10m ml-20m
 
       - name: Install for Testing
-        run: 
+        run: |
           flit install --deps none -s
 
       - name: Run Eval Tests
         run: |
           python -m pytest --cov=lenskit -m eval --log-file test-eval.log
-          python -m pytest --cov=lenskit --cov-append -m sweep --log-file test-sweep.log
           python -m pytest --cov=lenskit --cov-append -m realdata --log-file test-realdata.log
 
       - name: Validate Doc Notebooks
         run: |
-          cp doc/*.ipynb data
+          cp docs/*.ipynb data
           python -m pytest --nbval-lax --cov=lenskit --cov-append data --log-file test-docs.log
 
       # - name: Validate Examples
       #   run: |
       #     python -m pytest --nbval-lax --cov=lenskit --cov-append examples --log-file test-examples.log
+      - name: Aggreagate Coverage Data
+        run: |
+          coverage xml
 
       - name: Upload logs
         uses: actions/upload-artifact@v2
@@ -224,24 +164,20 @@ jobs:
           name: log-check-docs
           path: |
             test*.log
+            coverage.xml
             emissions.csv
-
-      - name: Aggreagate Coverage Data
-        run: |
-          coverage xml
-
-      - name: Upload Coverage
-        uses: codecov/codecov-action@v1
 
   vanilla:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         python:
         - 3.7
         - 3.8
+        - 3.9
         platform:
         - windows
         - ubuntu
@@ -250,7 +186,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      
+
       - name: Set up Python
         uses: actions/setup-python@v1
         with:
@@ -262,24 +198,14 @@ jobs:
           PIP_PREFER_BINARY: 'true'
         run: |
           python -m pip install -U flit
-          flit install --deps develop --pth-file
-      
+          python -m pip install .[test,dev]
+
       - name: Run tests
         run: |
-          python -m pytest --cov=lenskit --cov-report=xml --log-file=test.log -m 'not sweep'
+          python -m pytest --cov=lenskit --cov-report=xml --log-file=test.log
 
-      - name: Non-JIT Test Coverage
-        if: runner.os == 'Linux' && matrix.python == 3.8
-        env:
-          NUMBA_DISABLE_JIT: 1
-        run: |
-          python -m pytest --cov=lenskit --cov-append -m 'not slow' --log-file=test-nojit.log
-      
       - name: Aggreagate Coverage Data
         run: coverage xml
-      
-      - name: Upload coverage
-        uses: codecov/codecov-action@v1
 
       - name: Upload logs
         uses: actions/upload-artifact@v2
@@ -287,8 +213,8 @@ jobs:
           name: log-vanilla-${{matrix.platform}}-py${{matrix.python}}
           path: |
             test*.log
+            coverage.xml
             emissions.csv
-
 
   mindep:
     name: Minimal Supported Dependencies
@@ -298,7 +224,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      
+
       - name: Set up Python
         uses: actions/setup-python@v1
         with:
@@ -321,10 +247,8 @@ jobs:
           name: log-mindep
           path: |
             test*.log
+            coverage.xml
             emissions.csv
-        
-      - name: Upload coverage
-        uses: codecov/codecov-action@v1
 
   results:
     name: Test Suite Results
@@ -332,7 +256,6 @@ jobs:
     needs:
     - conda
     - vanilla
-    - check-tf
     - check-docs
     - mindep
 
@@ -345,19 +268,14 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           path: test-logs
-      
+
       - name: List log files
         run: ls -lR test-logs
 
-      - name: Set up Python
-        uses: actions/setup-python@v1
+      - name: Upload coverage
+        uses: codecov/codecov-action@v2
         with:
-          python-version: 3.8
-          architecture: x64
-
-      - name: Install script deps
-        run: |
-          python -m pip install pandas docopt
+          directory: test-logs/
 
       - name: Upload all test data
         uses: actions/upload-artifact@v1

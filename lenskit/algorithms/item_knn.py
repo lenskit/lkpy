@@ -205,7 +205,8 @@ class ItemItem(Predictor):
     """
     Item-item nearest-neighbor collaborative filtering with ratings. This item-item implementation
     is not terribly configurable; it hard-codes design decisions found to work well in the previous
-    Java-based LensKit code.
+    Java-based LensKit code :cite:p:`Ekstrand2011-bp`.  This implementation is based on the description
+    of item-based CF by :cite:t:`Deshpande2004-ht`, and produces results equivalent to Java LensKit.
 
     The k-NN predictor supports several aggregate functions:
 
@@ -320,6 +321,10 @@ class ItemItem(Predictor):
         mcvals = rmat.values - item_means[rmat.colinds]
         nmat = rmat.copy(False)
         nmat.values = mcvals
+        if np.allclose(nmat.values, 0):
+            _logger.warn('normalized ratings are zero, centering is not recommended')
+            warnings.warn("Ratings seem to have the same value, centering is not recommended.",
+                          DataWarning)
         _logger.info('[%s] computed means for %d items', self._timer, len(item_means))
         return nmat, item_means
 
