@@ -7,11 +7,15 @@ from pathlib import Path
 from invoke import task
 from . import env
 import yaml
+import requests
 
 __ALL__ = [
     'dev_lock',
     'conda_platform'
 ]
+
+BIBTEX_URL = 'https://paperpile.com/eb/YdOlWmnlit'
+BIBTEX_FILE = Path('docs/lenskit.bib')
 
 
 @task(iterable=['extras'])
@@ -81,3 +85,11 @@ def conda_platform(c, gh_output=False):
         print('::set-output name=conda-platform::' + plat)
     else:
         print(plat)
+
+
+@task
+def update_bibtex(c):
+    "Update the BibTeX file"
+    res = requests.get(BIBTEX_URL)
+    print('updating file', BIBTEX_FILE)
+    BIBTEX_FILE.write_text(res.text, encoding='utf-8')
