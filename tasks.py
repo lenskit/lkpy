@@ -12,8 +12,8 @@ __ALL__ = [
 ]
 
 
-@task(iterable=['extras'])
-def dev_lock(c, platform=None, extras=None, version=None, blas=None, env_file=False):
+@task(iterable=['extras', 'mixins'])
+def dev_lock(c, platform=None, extras=None, version=None, blas=None, mixins=None, env_file=False):
     "Create a development lockfile"
     plat = env.conda_platform()
 
@@ -32,6 +32,8 @@ def dev_lock(c, platform=None, extras=None, version=None, blas=None, env_file=Fa
         cmd += f' -f lkbuild/python-{version}-spec.yml'
     if blas:
         cmd += f' -f lkbuild/{blas}-spec.yml'
+    for m in mixins:
+        cmd += f' -f {m}'
     for e in extras:
         cmd += f' -e {e}'
 
