@@ -130,7 +130,7 @@ jobs:
           path: |
             data
             !data/*.zip
-          key: test-mldata-hashFiles('lkbuild/datasets.py')
+          key: test-mldata-${{ hashFiles('lkbuild/datasets.py') }}
 
       - name: Download ML Data
         shell: pwsh
