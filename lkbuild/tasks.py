@@ -14,6 +14,7 @@ __ALL__ = [
     'conda_platform'
 ]
 
+DATA_DIR = Path('data')
 BIBTEX_URL = 'https://paperpile.com/eb/YdOlWmnlit'
 BIBTEX_FILE = Path('docs/lenskit.bib')
 
@@ -93,3 +94,12 @@ def update_bibtex(c):
     res = requests.get(BIBTEX_URL)
     print('updating file', BIBTEX_FILE)
     BIBTEX_FILE.write_text(res.text, encoding='utf-8')
+
+
+@task
+def fetch_data(c, data='ml-100k', data_dir=DATA_DIR):
+    "Fetch a data set."
+    from . import datasets
+
+    if data.startswith('ml-'):
+        datasets.fetch_ml(DATA_DIR, data)
