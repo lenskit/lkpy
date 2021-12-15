@@ -135,7 +135,10 @@ jobs:
       - name: Download ML Data
         shell: pwsh
         run: |
-          ./fetch-datasets.ps1 ml-100k ml-1m ml-10m ml-20m
+          invoke fetch-data -d ml-100k
+          invoke fetch-data -d ml-1m
+          invoke fetch-data -d ml-10m
+          invoke fetch-data -d ml-20m
 
       - name: Install for Testing
         run: |
