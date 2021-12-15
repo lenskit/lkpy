@@ -133,7 +133,6 @@ jobs:
           key: test-mldata-${{ hashFiles('lkbuild/datasets.py') }}
 
       - name: Download ML Data
-        shell: pwsh
         run: |
           invoke fetch-data -d ml-100k
           invoke fetch-data -d ml-1m
