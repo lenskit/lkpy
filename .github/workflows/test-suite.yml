@@ -201,7 +201,7 @@ jobs:
         env:
           PIP_PREFER_BINARY: 'true'
         run: |
-          python -m pip install --pre numba
+          python -m pip install --pre numba numpy pandas
 
       - name: Set up Python deps
         env:
