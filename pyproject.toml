@@ -25,7 +25,7 @@ dependencies = [
     "numpy >= 1.17",
     "scipy >= 1.2",
     "numba >= 0.51, < 0.56",
-    "numba >= 0.55; python_version >= '3.10'",
+    "numba >= 0.55.0rc0; python_version >= '3.10'",
     "cffi >= 1.12.2",
     "psutil >= 5",
     "binpickle >= 0.3.2",
