@@ -197,7 +197,7 @@ jobs:
           architecture: x64
 
       - name: Install Numba pre-release
-        if: matrix.python == "3.10"
+        if: matrix.python == '3.10'
         env:
           PIP_PREFER_BINARY: 'true'
         run: |
