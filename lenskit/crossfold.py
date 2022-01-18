@@ -357,7 +357,7 @@ def confirm_unique_index(data):
      throws ValueError with helpful log message"""
 
     if not data.index.is_unique:
-        _logger.error("Index column has duplicate values")
+        _logger.error("Index has duplicate values")
         _logger.info("If index values do not matter, consider running " +
                      ".reset_index() on the dataframe before partitioning")
-        raise ValueError('Index column is not uniquely valued')
+        raise ValueError('Index is not uniquely valued')
