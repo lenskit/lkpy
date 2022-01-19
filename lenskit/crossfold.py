@@ -34,6 +34,8 @@ def partition_rows(data, partitions, *, rng_spec=None):
     Returns:
         iterator: an iterator of train-test pairs
     """
+
+    confirm_unique_index(data)
     _logger.info('partitioning %d ratings into %d partitions', len(data), partitions)
 
     # create an array of indexes
@@ -94,6 +96,7 @@ def sample_rows(data, partitions, size, disjoint=True, *, rng_spec=None):
         iterator: An iterator of train-test pairs.
     """
 
+    confirm_unique_index(data)
     if partitions is None:
         test = data.sample(n=size)
         tr_mask = pd.Series(True, index=data.index)
@@ -244,6 +247,7 @@ def partition_users(data, partitions: int, method: PartitionMethod, *, rng_spec=
         iterator: an iterator of train-test pairs
     """
 
+    confirm_unique_index(data)
     user_col = data['user']
     users = user_col.unique()
     _logger.info('partitioning %d rows for %d users into %d partitions',
@@ -297,6 +301,7 @@ def sample_users(data, partitions: int, size: int, method: PartitionMethod, disj
         iterator: An iterator of train-test pairs (as :class:`TTPair` objects).
     """
 
+    confirm_unique_index(data)
     rng = util.rng(rng_spec, legacy=True)
 
     user_col = data['user']
@@ -345,3 +350,14 @@ def simple_test_pair(ratings, n_users=1000, n_rates=5, f_rates=None):
     train, test = next(sample_users(ratings, 1, n_users, samp))
 
     return train, test
+
+
+def confirm_unique_index(data):
+    """Confirms dataframe has unique index values, and if not,
+     throws ValueError with helpful log message"""
+
+    if not data.index.is_unique:
+        _logger.error("Index has duplicate values")
+        _logger.info("If index values do not matter, consider running " +
+                     ".reset_index() on the dataframe before partitioning")
+        raise ValueError('Index is not uniquely valued')

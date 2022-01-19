@@ -231,7 +231,7 @@ def test_partition_users():
 
 
 def test_partition_may_skip_train():
-    "Partitioning when users may not have enough ratings to be in the train set and test set."
+    """Partitioning when users may not have enough ratings to be in the train set and test set."""
     ratings = lktu.ml_test.ratings
     # make a data set where some users only have 1 rating
     ratings = ratings.sample(frac=0.1)
@@ -364,3 +364,39 @@ def test_sample_users_frac_oversize_ndj():
         assert all(ucounts == 5)
         assert all(s.test.index.union(s.train.index) == ratings.index)
         assert len(s.test) + len(s.train) == len(ratings)
+
+
+def test_non_unique_index_partition_users():
+    """Partitioning users when dataframe has non-unique indices"""
+    ratings = lktu.ml_test.ratings
+    ratings = ratings.set_index('user')  ##forces non-unique index
+    with pytest.raises(ValueError):
+        for split in xf.partition_users(ratings, 5, xf.SampleN(5)):
+            pass
+
+
+def test_sample_users():
+    """Sampling users when dataframe has non-unique indices"""
+    ratings = lktu.ml_test.ratings
+    ratings = ratings.set_index('user')  ##forces non-unique index
+    with pytest.raises(ValueError):
+        for split in xf.sample_users(ratings, 5, 100, xf.SampleN(5)):
+            pass
+
+
+def test_sample_rows():
+    """Sampling ratings when dataframe has non-unique indices"""
+    ratings = lktu.ml_test.ratings
+    ratings = ratings.set_index('user')  ##forces non-unique index
+    with pytest.raises(ValueError):
+        for split in xf.sample_rows(ratings, partitions=5, size=1000):
+            pass
+
+
+def test_partition_users():
+    """Partitioning ratings when dataframe has non-unique indices"""
+    ratings = lktu.ml_test.ratings
+    ratings = ratings.set_index('user')  ##forces non-unique index
+    with pytest.raises(ValueError):
+        for split in xf.partition_users(ratings, 5, xf.SampleN(5)):
+            pass
