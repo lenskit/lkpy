@@ -148,9 +148,21 @@ class RecListAnalysis:
             ug_cols = [c for c in rec_key if c not in truth_key]
             tcount = truth.groupby(truth_key)['item'].count()
             tcount.name = 'ntruth'
+            _log.debug('truth data:\n%s', tcount)
             if ug_cols:
                 _log.debug('regrouping by %s to fill', ug_cols)
-                res = res.groupby(ug_cols).apply(lambda f: f.join(tcount, how='outer', on=truth_key))
+                _log.debug('pre-group series:\n%s', res)
+
+                rdict = {}
+
+                for key, df in res.groupby(ug_cols):
+                    df2 = df.drop(columns=ug_cols).join(tcount, how='outer', on=truth_key)
+                    rdict[key] = df2
+
+                res = pd.concat(rdict, names=ug_cols)
+                res = res.reset_index()
+                _log.debug('joined result:\n%s', res)
+
             else:
                 _log.debug('no ungroup cols, directly merging to fill')
                 res = res.join(tcount, how='outer', on=truth_key)

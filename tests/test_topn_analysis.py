@@ -197,6 +197,7 @@ def test_fill_users():
     algo.fit(train)
 
     rec_users = test['user'].sample(50).unique()
+    assert len(rec_users) < 50
     recs = batch.recommend(algo, rec_users, 25)
 
     scores = rla.compute(recs, test, include_missing=True)
@@ -251,6 +252,10 @@ def test_adv_fill_users():
     assert all(scores['ntruth'] == 5)
     assert scores['recall'].isna().sum() > 0
     _log.info('scores:\n%s', scores)
+
+    ucounts = scores.reset_index().groupby('algo')['user'].agg(['count', 'nunique'])
+    assert all(ucounts['count'] == 100)
+    assert all(ucounts['nunique'] == 100)
 
     mscores = rla.compute(recs, test)
     mscores = mscores.reset_index().set_index(inames)
