@@ -18,9 +18,9 @@ jobs:
       fail-fast: false
       matrix:
         python:
-        - 3.7
-        - 3.8
-        - 3.9
+        - "3.8"
+        - "3.7"
+        - "3.9"
         platform:
         - macos
         - windows
@@ -29,9 +29,9 @@ jobs:
         - mkl
         - openblas
         exclude:
-        - python: 3.7
+        - python: "3.7"
           blas: mkl
-        - python: 3.8
+        - python: "3.8"
           blas: openblas
 
     steps:
