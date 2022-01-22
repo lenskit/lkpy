@@ -1,4 +1,4 @@
 # environment mini-spec for ensuring MKL
 dependencies:
   - libblas=*=*mkl
-  - mkl=2020
+  - tbb
