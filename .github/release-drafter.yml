@@ -2,6 +2,10 @@ categories:
 - title: Bug Fixes
   labels:
   - bug
+- title: Evaluation Support
+  labels:
+  - evaluation
+  - batch
 - title: Algorithms
   labels:
   - algorithms
