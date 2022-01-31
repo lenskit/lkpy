@@ -48,7 +48,7 @@ setup_micromamba()
 setup_boot_env()
 {
   msg "Installing bootstrap environment"
-  vr micromamba env create -qy -n lkboot -f lkbuild/boot-env.yml
+  vr micromamba create -qy -n lkboot -f lkbuild/boot-env.yml
   msg "Activating bootstrap environment"
   micromamba activate lkboot
 }
