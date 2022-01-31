@@ -11,7 +11,7 @@ defaults:
 
 jobs:
   conda:
-    name: Conda Python ${{matrix.python}} on ${{matrix.platform}} with ${{matrix.blas}}
+    name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}-latest
     timeout-minutes: 30
     strategy:
@@ -21,18 +21,11 @@ jobs:
         - "3.8"
         - "3.7"
         - "3.9"
+        - "3.10"
         platform:
         - macos
         - windows
         - ubuntu
-        blas:
-        - mkl
-        - openblas
-        exclude:
-        - python: "3.7"
-          blas: mkl
-        - python: "3.8"
-          blas: openblas
 
     steps:
       - uses: actions/checkout@v2
@@ -55,11 +48,10 @@ jobs:
             # we'll test tensorflow in a separate run
             e_opt="-e sklearn"
           fi
-          bash lkbuild/lock-for-ci.sh -v $PYVER -b $BLAS_IMPL $e_opt
+          bash lkbuild/lock-for-ci.sh -v $PYVER $e_opt
         env:
           RUNNER: ${{runner.os}}
           PYVER: ${{matrix.python}}
-          BLAS_IMPL: ${{matrix.blas}}
 
       - name: Initialize Conda
         uses: conda-incubator/setup-miniconda@v2
