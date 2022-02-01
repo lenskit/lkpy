@@ -15,7 +15,7 @@ import csr.kernel as csrk
 from numba import njit, prange
 from numba.typed import List
 
-from lenskit import util, DataWarning
+from lenskit import util, DataWarning, ConfigWarning
 from lenskit.data import sparse_ratings
 from lenskit.sharing import in_share_context
 from lenskit.util.parallel import is_mp_worker
@@ -263,17 +263,17 @@ class ItemItem(Predictor):
         self.use_ratings = use_ratings
         if not use_ratings:
             if center:
-                _logger.warn('item-item configured to ignore ratings, but ``center=True`` - likey bug')
+                _logger.warning('item-item configured to ignore ratings, but ``center=True`` - likely bug')
                 warnings.warn(util.clean_str('''
                     item-item configured to ignore ratings, but ``center=True``.  This configuration
                     is unlikely to work well.
-                '''))
+                '''), ConfigWarning)
             if aggregate == 'weighted-average':
-                _logger.warn('item-item configured to ignore ratings, but using weighted averages - likley bug')
+                _logger.warning('item-item configured to ignore ratings, but using weighted averages - likely bug')
                 warnings.warn(util.clean_str('''
                     item-item configured to ignore ratings, but use weighted averages.  This configuration
                     is unlikely to work well.
-                '''))
+                '''), ConfigWarning)
 
     def fit(self, ratings, **kwargs):
         """
