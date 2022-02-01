@@ -261,6 +261,19 @@ class ItemItem(Predictor):
         self.center = center
         self.aggregate = aggregate
         self.use_ratings = use_ratings
+        if not use_ratings:
+            if center:
+                _logger.warn('item-item configured to ignore ratings, but ``center=True`` - likey bug')
+                warnings.warn(util.clean_str('''
+                    item-item configured to ignore ratings, but ``center=True``.  This configuration
+                    is unlikely to work well.
+                '''))
+            if aggregate == 'weighted-average':
+                _logger.warn('item-item configured to ignore ratings, but using weighted averages - likley bug')
+                warnings.warn(util.clean_str('''
+                    item-item configured to ignore ratings, but use weighted averages.  This configuration
+                    is unlikely to work well.
+                '''))
 
     def fit(self, ratings, **kwargs):
         """

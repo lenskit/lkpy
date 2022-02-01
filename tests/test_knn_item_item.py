@@ -1,4 +1,4 @@
-from lenskit import DataWarning
+from lenskit import ConfigWarning, DataWarning
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import Fallback
 from lenskit.algorithms.bias import Bias
@@ -158,6 +158,18 @@ def test_ii_warns_center():
     algo = knn.ItemItem(5)
     with pytest.warns(DataWarning):
         algo.fit(data)
+
+
+def test_ii_warns_center_with_no_use_ratings():
+    "Test that item-item warns if you configure to ignore ratings but center."
+    with pytest.warns(ConfigWarning):
+        knn.ItemItem(5, use_ratings=False, aggregate='sum')
+
+
+def test_ii_warns_wa_with_no_use_ratings():
+    "Test that item-item warns if you configure to ignore ratings but weighted=average."
+    with pytest.warns(ConfigWarning):
+        algo = knn.ItemItem(5, use_ratings=False, center=False)
 
 
 @lktu.wantjit
