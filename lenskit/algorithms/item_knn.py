@@ -228,10 +228,10 @@ class ItemItem(Predictor):
             (``None`` for unlimited)
         center(bool):
             whether to normalize (mean-center) rating vectors prior to computing similarities
-            and aggregating user rating values.  Turn this off when working with unary data
-            and other data types that don't respond well to centering.
+            and aggregating user rating values.  Defaults to ``True``; turn this off when working
+            with unary data and other data types that don't respond well to centering.
         aggregate:
-            the type of aggregation to do. Can be ``weighted-average`` or ``sum``.
+            the type of aggregation to do. Can be ``weighted-average`` (the default) or ``sum``.
         use_ratings:
             whether or not to use the rating values. If ``False``, it ignores rating values and
             considers an implicit feedback signal of 1 for every (user,item) pair present.
