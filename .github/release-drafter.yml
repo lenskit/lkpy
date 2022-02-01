@@ -1,18 +1,21 @@
 categories:
-- title: Bug Fixes
+- title: ⚠ Breaking Changes
+  labels:
+  - breaking
+- title: 🐜 Bug Fixes
   labels:
   - bug
-- title: Evaluation Support
+- title: 📏 Evaluation Support
   labels:
   - evaluation
   - batch
-- title: Algorithms
+- title: 🧩 Algorithms
   labels:
   - algorithms
-- title: Internals
+- title: 🧱 Internals
   labels:
   - internals
-- title: Maintenance
+- title: 🔧 Maintenance
   labels:
   - build
   - dependencies
