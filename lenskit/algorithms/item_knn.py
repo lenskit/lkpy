@@ -232,6 +232,9 @@ class ItemItem(Predictor):
             and other data types that don't respond well to centering.
         aggregate:
             the type of aggregation to do. Can be ``weighted-average`` or ``sum``.
+        use_ratings:
+            whether or not to use the rating values. If ``False``, it ignores rating values and
+            considers an implicit feedback signal of 1 for every (user,item) pair present.
 
     Attributes:
         item_index_(pandas.Index): the index of item IDs.
@@ -246,7 +249,7 @@ class ItemItem(Predictor):
     RATING_AGGS = [AGG_WA]  # the aggregates that use rating values
 
     def __init__(self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None,
-                 center=True, aggregate='weighted-average'):
+                 center=True, aggregate='weighted-average', use_ratings=True):
         self.nnbrs = nnbrs
         if self.nnbrs is not None and self.nnbrs < 1:
             self.nnbrs = -1
@@ -257,6 +260,7 @@ class ItemItem(Predictor):
         self.save_nbrs = save_nbrs
         self.center = center
         self.aggregate = aggregate
+        self.use_ratings = use_ratings
 
     def fit(self, ratings, **kwargs):
         """
