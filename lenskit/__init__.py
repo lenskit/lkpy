@@ -13,3 +13,10 @@ class DataWarning(UserWarning):
     Warning raised for detectable problems with input data.
     """
     pass
+
+
+class ConfigWarning(UserWarning):
+    """
+    Warning raised for detectable problems with algorithm configurations.
+    """
+    pass

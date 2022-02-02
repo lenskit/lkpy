@@ -1,4 +1,4 @@
-from lenskit import DataWarning
+from lenskit import ConfigWarning, DataWarning
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import Fallback
 from lenskit.algorithms.bias import Bias
@@ -158,6 +158,18 @@ def test_ii_warns_center():
     algo = knn.ItemItem(5)
     with pytest.warns(DataWarning):
         algo.fit(data)
+
+
+def test_ii_warns_center_with_no_use_ratings():
+    "Test that item-item warns if you configure to ignore ratings but center."
+    with pytest.warns(ConfigWarning):
+        knn.ItemItem(5, use_ratings=False, aggregate='sum')
+
+
+def test_ii_warns_wa_with_no_use_ratings():
+    "Test that item-item warns if you configure to ignore ratings but weighted=average."
+    with pytest.warns(ConfigWarning):
+        algo = knn.ItemItem(5, use_ratings=False, center=False)
 
 
 @lktu.wantjit
@@ -456,7 +468,7 @@ def test_ii_implicit_save_load(tmp_path, ml_subset):
 
 @lktu.wantjit
 @mark.slow
-def test_ii_implicit():
+def test_ii_old_implicit():
     algo = knn.ItemItem(20, save_nbrs=100, center=False, aggregate='sum')
     data = ml_ratings.loc[:, ['user', 'item']]
 
@@ -467,6 +479,26 @@ def test_ii_implicit():
 
     preds = algo.predict_for_user(50, [1, 2, 42])
     assert all(preds[preds.notna()] > 0)
+
+
+@lktu.wantjit
+@mark.slow
+def test_ii_no_ratings():
+    a1 = knn.ItemItem(20, save_nbrs=100, center=False, aggregate='sum')
+    a1.fit(ml_ratings.loc[:, ['user', 'item']])
+
+    algo = knn.ItemItem(20, save_nbrs=100, center=False, aggregate='sum', use_ratings=False)
+
+    algo.fit(ml_ratings)
+    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
+    assert all(algo.sim_matrix_.values > 0)
+    assert all(algo.item_counts_ <= 100)
+
+    preds = algo.predict_for_user(50, [1, 2, 42])
+    assert all(preds[preds.notna()] > 0)
+    p2 = algo.predict_for_user(50, [1, 2, 42])
+    preds, p2 = preds.align(p2)
+    assert preds.values == approx(p2.values, nan_ok=True)
 
 
 @mark.slow
