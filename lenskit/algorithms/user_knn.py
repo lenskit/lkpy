@@ -102,11 +102,26 @@ class UserUser(Predictor):
             the maximum number of neighbors for scoring each item (``None`` for unlimited)
         min_nbrs(int): the minimum number of neighbors for scoring each item
         min_sim(double): minimum similarity threshold for considering a neighbor
+        feedback(str):
+            Control how feedback should be interpreted.  Specifies defaults for the other
+            settings, which can be overridden individually; can be one of the following values:
+
+            ``explicit``
+                Configure for explicit-feedback mode: use rating values, center ratings, and
+                use the ``weighted-average`` aggregate method for prediction.  This is the
+                default setting.
+
+            ``implicit``
+                Configure for implicit-feedback mode: ignore rating values, do not center ratings,
+                and use the ``sum`` aggregate method for prediction.
         center(bool):
             whether to normalize (mean-center) rating vectors.  Turn this off when working
             with unary data and other data types that don't respond well to centering.
-        aggregate:
+        aggregate(str):
             the type of aggregation to do. Can be ``weighted-average`` or ``sum``.
+        use_ratings(bool):
+            whether or not to use rating values; default is ``True``.  If ``False``, it ignores
+            rating values and treates every present rating as 1.
 
     Attributes:
         user_index_(pandas.Index): User index.
@@ -119,12 +134,38 @@ class UserUser(Predictor):
     AGG_WA = intern('weighted-average')
     RATING_AGGS = [AGG_WA]
 
-    def __init__(self, nnbrs, min_nbrs=1, min_sim=0, center=True, aggregate='weighted-average'):
+    def __init__(self, nnbrs, min_nbrs=1, min_sim=0, feedback='explicit', **kwargs):
         self.nnbrs = nnbrs
         self.min_nbrs = min_nbrs
         self.min_sim = min_sim
-        self.center = center
-        self.aggregate = intern(aggregate)
+
+        if feedback == 'explicit':
+            defaults = {
+                'center': True,
+                'aggregate': self.AGG_WA,
+                'use_ratings': True
+            }
+        elif feedback == 'implicit':
+            defaults = {
+                'center': False,
+                'aggregate': self.AGG_SUM,
+                'use_ratings': False
+            }
+        else:
+            raise ValueError(f'invalid feedback mode: {feedback}')
+
+        defaults.update(kwargs)
+        self.center = defaults['center']
+        self.aggregate = intern(defaults['aggregate'])
+        self.use_ratings = defaults['use_ratings']
+
+    def get_params(self, deep=True):
+        params = super().get_params(deep)
+        for p in ['center', 'aggregate', 'use_ratings']:
+            params[p] = self.__dict__[p]
+        if 'feedback' in params:
+            del params['feedback']
+        return params
 
     def fit(self, ratings, **kwargs):
         """
@@ -150,7 +191,7 @@ class UserUser(Predictor):
         iur = uir.transpose()
 
         # L2-normalize ratings so dot product is cosine
-        if uir.values is None:
+        if uir.values is None or not self.use_ratings:
             uir.values = np.full(uir.nnz, 1.0)
         uir.normalize_rows('unit')
 

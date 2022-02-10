@@ -1,5 +1,6 @@
 from lenskit.algorithms import Recommender
 import lenskit.algorithms.user_knn as knn
+from lenskit.util import clone
 
 from pathlib import Path
 import logging
@@ -16,6 +17,38 @@ import lenskit.util.test as lktu
 _log = logging.getLogger(__name__)
 
 ml_ratings = lktu.ml_test.ratings
+
+
+def test_uu_dft_config():
+    algo = knn.UserUser(30)
+    assert algo.nnbrs == 30
+    assert algo.center
+    assert algo.aggregate == 'weighted-average'
+    assert algo.use_ratings
+
+
+def test_uu_exp_config():
+    algo = knn.UserUser(30, feedback='explicit')
+    assert algo.nnbrs == 30
+    assert algo.center
+    assert algo.aggregate == 'weighted-average'
+    assert algo.use_ratings
+
+
+def test_uu_imp_config():
+    algo = knn.UserUser(30, feedback='implicit')
+    assert algo.nnbrs == 30
+    assert not algo.center
+    assert algo.aggregate == 'sum'
+    assert not algo.use_ratings
+
+
+def test_uu_imp_clone():
+    algo = knn.UserUser(30, feedback='implicit')
+    a2 = clone(algo)
+
+    assert a2.get_params() == algo.get_params()
+    assert a2.__dict__ == algo.__dict__
 
 
 def test_uu_train():
@@ -150,7 +183,7 @@ def test_uu_predict_unknown_empty():
 
 def test_uu_implicit():
     "Train and use user-user on an implicit data set."
-    algo = knn.UserUser(20, center=False, aggregate='sum')
+    algo = knn.UserUser(20, feedback='implicit')
     data = ml_ratings.loc[:, ['user', 'item']]
 
     algo.fit(data)
@@ -167,7 +200,7 @@ def test_uu_implicit():
 @mark.slow
 def test_uu_save_load_implicit(tmp_path):
     "Save and load user-user on an implicit data set."
-    orig = knn.UserUser(20, center=False, aggregate='sum')
+    orig = knn.UserUser(20, feedback='implicit')
     data = ml_ratings.loc[:, ['user', 'item']]
 
     orig.fit(data)
