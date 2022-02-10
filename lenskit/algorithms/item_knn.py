@@ -256,6 +256,9 @@ class ItemItem(Predictor):
         user_index_(pandas.Index): the index of known user IDs for the rating matrix.
         rating_matrix_(matrix.CSR): the user-item rating matrix for looking up users' ratings.
     """
+    IGNORED_PARAMS = ['feedback']
+    EXTRA_PARAMS = ['center', 'aggregate', 'use_ratings']
+
     AGG_SUM = intern('sum')
     AGG_WA = intern('weighted-average')
     RATING_AGGS = [AGG_WA]  # the aggregates that use rating values
@@ -307,14 +310,6 @@ class ItemItem(Predictor):
                     item-item configured to ignore ratings, but use weighted averages.  This configuration
                     is unlikely to work well.
                 '''), ConfigWarning)
-
-    def get_params(self, deep=True):
-        params = super().get_params(deep)
-        for p in ['center', 'aggregate', 'use_ratings']:
-            params[p] = self.__dict__[p]
-        if 'feedback' in params:
-            del params['feedback']
-        return params
 
     def fit(self, ratings, **kwargs):
         """

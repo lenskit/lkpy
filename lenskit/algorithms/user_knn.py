@@ -130,6 +130,8 @@ class UserUser(Predictor):
         rating_matrix_(matrix.CSR): Normalized user-item rating matrix.
         transpose_matrix_(matrix.CSR): Transposed un-normalized rating matrix.
     """
+    IGNORED_PARAMS = ['feedback']
+    EXTRA_PARAMS = ['center', 'aggregate', 'use_ratings']
     AGG_SUM = intern('sum')
     AGG_WA = intern('weighted-average')
     RATING_AGGS = [AGG_WA]
@@ -158,14 +160,6 @@ class UserUser(Predictor):
         self.center = defaults['center']
         self.aggregate = intern(defaults['aggregate'])
         self.use_ratings = defaults['use_ratings']
-
-    def get_params(self, deep=True):
-        params = super().get_params(deep)
-        for p in ['center', 'aggregate', 'use_ratings']:
-            params[p] = self.__dict__[p]
-        if 'feedback' in params:
-            del params['feedback']
-        return params
 
     def fit(self, ratings, **kwargs):
         """

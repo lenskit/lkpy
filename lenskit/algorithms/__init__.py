@@ -21,6 +21,16 @@ class Algorithm(metaclass=ABCMeta):
     :canonical: lenskit.Algorithm
     """
 
+    """
+    Names of parameters to ignore in :meth:`get_params`.
+    """
+    IGNORED_PARAMS = []
+    """
+    Names of extra parameters to include in :meth:`get_params`.  Useful when the
+    constructor takes ``**kwargs``.
+    """
+    EXTRA_PARAMS = []
+
     @abstractmethod
     def fit(self, ratings, **kwargs):
         """
@@ -51,10 +61,10 @@ class Algorithm(metaclass=ABCMeta):
             dict: the algorithm parameters.
         """
         sig = inspect.signature(self.__class__)
-        names = list(sig.parameters.keys())
+        names = list(sig.parameters.keys()) + self.EXTRA_PARAMS
         params = {}
         for name in names:
-            if hasattr(self, name):
+            if hasattr(self, name) and name not in self.IGNORED_PARAMS:
                 value = getattr(self, name)
                 params[name] = value
                 if deep and hasattr(value, 'get_params'):
