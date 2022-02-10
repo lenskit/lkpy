@@ -508,7 +508,7 @@ def test_ii_no_ratings():
     a1 = knn.ItemItem(20, save_nbrs=100, center=False, aggregate='sum')
     a1.fit(ml_ratings.loc[:, ['user', 'item']])
 
-    algo = knn.ItemItem(20, save_nbrs=100, center=False, aggregate='sum', use_ratings=False)
+    algo = knn.ItemItem(20, save_nbrs=100, feedback='implicit')
 
     algo.fit(ml_ratings)
     assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
