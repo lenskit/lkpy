@@ -101,7 +101,7 @@ class UserUser(Predictor):
         nnbrs(int):
             the maximum number of neighbors for scoring each item (``None`` for unlimited)
         min_nbrs(int): the minimum number of neighbors for scoring each item
-        min_sim(double): minimum similarity threshold for considering a neighbor
+        min_sim(float): minimum similarity threshold for considering a neighbor
         feedback(str):
             Control how feedback should be interpreted.  Specifies defaults for the other
             settings, which can be overridden individually; can be one of the following values:

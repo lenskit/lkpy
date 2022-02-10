@@ -14,7 +14,7 @@ mean-centering normalization.  This is the default mode, and can be selected exp
 With **implicit feedback** (unary data such as clicks and purchases, typically represented with
 rating values of 1 for positive items), the usual design is sum aggregation and no centering. This
 can be selected with ``feedback='implicit'``, which also configures the algorithm to ignore rating
-values (when present) and treat every rating as 1:
+values (when present) and treat every rating as 1::
 
     implicit_knn = ItemItem(20, feedback='implicit')
 

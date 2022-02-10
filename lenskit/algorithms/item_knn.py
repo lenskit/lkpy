@@ -222,8 +222,8 @@ class ItemItem(Predictor):
         nnbrs(int):
             the maximum number of neighbors for scoring each item (``None`` for unlimited)
         min_nbrs(int): the minimum number of neighbors for scoring each item
-        min_sim(double): minimum similarity threshold for considering a neighbor
-        save_nbrs(double):
+        min_sim(float): minimum similarity threshold for considering a neighbor
+        save_nbrs(float):
             the number of neighbors to save per item in the trained model
             (``None`` for unlimited)
         feedback(str):
