@@ -57,6 +57,27 @@ def ml_subset():
     return top_rates.reset_index()
 
 
+def test_ii_dft_config():
+    algo = knn.ItemItem(30, save_nbrs=500)
+    assert algo.center
+    assert algo.aggregate == 'weighted-average'
+    assert algo.use_ratings
+
+
+def test_ii_exp_config():
+    algo = knn.ItemItem(30, save_nbrs=500, feedback='explicit')
+    assert algo.center
+    assert algo.aggregate == 'weighted-average'
+    assert algo.use_ratings
+
+
+def test_ii_imp_config():
+    algo = knn.ItemItem(30, save_nbrs=500, feedback='implicit')
+    assert not algo.center
+    assert algo.aggregate == 'sum'
+    assert not algo.use_ratings
+
+
 def test_ii_train():
     algo = knn.ItemItem(30, save_nbrs=500)
     algo.fit(simple_ratings)

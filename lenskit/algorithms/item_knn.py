@@ -226,13 +226,25 @@ class ItemItem(Predictor):
         save_nbrs(double):
             the number of neighbors to save per item in the trained model
             (``None`` for unlimited)
+        feedback(str):
+            Control how feedback should be interpreted.  Specifies defaults for the other
+            settings, which can be overridden individually; can be one of the following values:
+
+            ``explicit``
+                Configure for explicit-feedback mode: use rating values, center ratings, and
+                use the ``weighted-average`` aggregate method for prediction.  This is the
+                default setting.
+
+            ``implicit``
+                Configure for implicit-feedback mode: ignore rating values, do not center ratings,
+                and use the ``sum`` aggregate method for prediction.
         center(bool):
             whether to normalize (mean-center) rating vectors prior to computing similarities
             and aggregating user rating values.  Defaults to ``True``; turn this off when working
             with unary data and other data types that don't respond well to centering.
-        aggregate:
+        aggregate(str):
             the type of aggregation to do. Can be ``weighted-average`` (the default) or ``sum``.
-        use_ratings:
+        use_ratings(bool):
             whether or not to use the rating values. If ``False``, it ignores rating values and
             considers an implicit feedback signal of 1 for every (user,item) pair present.
 
@@ -248,8 +260,7 @@ class ItemItem(Predictor):
     AGG_WA = intern('weighted-average')
     RATING_AGGS = [AGG_WA]  # the aggregates that use rating values
 
-    def __init__(self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None,
-                 center=True, aggregate='weighted-average', use_ratings=True):
+    def __init__(self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None, feedback='explicit', **kwargs):
         self.nnbrs = nnbrs
         if self.nnbrs is not None and self.nnbrs < 1:
             self.nnbrs = -1
@@ -258,17 +269,38 @@ class ItemItem(Predictor):
             self.min_nbrs = 1
         self.min_sim = min_sim
         self.save_nbrs = save_nbrs
-        self.center = center
-        self.aggregate = aggregate
-        self.use_ratings = use_ratings
-        if not use_ratings:
-            if center:
+
+        if feedback == 'explicit':
+            defaults = {
+                'center': True,
+                'aggregate': self.AGG_WA,
+                'use_ratings': True
+            }
+        elif feedback == 'implicit':
+            defaults = {
+                'center': True,
+                'aggregate': self.AGG_WA,
+                'use_ratings': True
+            }
+        else:
+            raise ValueError(f'invalid feedback mode: {feedback}')
+
+        defaults.update(kwargs)
+        self.center = defaults['center']
+        self.aggregate = intern(defaults['aggregate'])
+        self.use_ratings = defaults['use_ratings']
+
+        self._check_setup()
+
+    def _check_setup(self):
+        if not self.use_ratings:
+            if self.center:
                 _logger.warning('item-item configured to ignore ratings, but ``center=True`` - likely bug')
                 warnings.warn(util.clean_str('''
                     item-item configured to ignore ratings, but ``center=True``.  This configuration
                     is unlikely to work well.
                 '''), ConfigWarning)
-            if aggregate == 'weighted-average':
+            if self.aggregate == 'weighted-average':
                 _logger.warning('item-item configured to ignore ratings, but using weighted averages - likely bug')
                 warnings.warn(util.clean_str('''
                     item-item configured to ignore ratings, but use weighted averages.  This configuration
