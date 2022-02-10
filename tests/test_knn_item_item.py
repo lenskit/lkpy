@@ -6,6 +6,7 @@ from lenskit import batch
 import lenskit.algorithms.item_knn as knn
 from lenskit.sharing import persist
 from lenskit.util.parallel import run_sp
+from lenskit.util import clone
 
 import gc
 from pathlib import Path
@@ -76,6 +77,14 @@ def test_ii_imp_config():
     assert not algo.center
     assert algo.aggregate == 'sum'
     assert not algo.use_ratings
+
+
+def test_ii_imp_clone():
+    algo = knn.ItemItem(30, save_nbrs=500, feedback='implicit')
+    a2 = clone(algo)
+
+    assert a2.get_params() == algo.get_params()
+    assert a2.__dict__ == algo.__dict__
 
 
 def test_ii_train():

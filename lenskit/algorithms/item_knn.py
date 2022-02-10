@@ -260,7 +260,8 @@ class ItemItem(Predictor):
     AGG_WA = intern('weighted-average')
     RATING_AGGS = [AGG_WA]  # the aggregates that use rating values
 
-    def __init__(self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None, feedback='explicit', **kwargs):
+    def __init__(self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None, feedback='explicit',
+                 **kwargs):
         self.nnbrs = nnbrs
         if self.nnbrs is not None and self.nnbrs < 1:
             self.nnbrs = -1
@@ -278,9 +279,9 @@ class ItemItem(Predictor):
             }
         elif feedback == 'implicit':
             defaults = {
-                'center': True,
-                'aggregate': self.AGG_WA,
-                'use_ratings': True
+                'center': False,
+                'aggregate': self.AGG_SUM,
+                'use_ratings': False
             }
         else:
             raise ValueError(f'invalid feedback mode: {feedback}')
@@ -306,6 +307,14 @@ class ItemItem(Predictor):
                     item-item configured to ignore ratings, but use weighted averages.  This configuration
                     is unlikely to work well.
                 '''), ConfigWarning)
+
+    def get_params(self, deep=True):
+        params = super().get_params(deep)
+        for p in ['center', 'aggregate', 'use_ratings']:
+            params[p] = self.__dict__[p]
+        if 'feedback' in params:
+            del params['feedback']
+        return params
 
     def fit(self, ratings, **kwargs):
         """
