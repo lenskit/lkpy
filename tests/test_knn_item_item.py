@@ -633,6 +633,7 @@ def _train_ii():
 
 @lktu.wantjit
 @mark.slow
+@mark.skip('no longer testing II match')
 @mark.skipif(csrk.name != 'csr.kernels.mkl', reason='only needed when MKL is available')
 def test_ii_impl_match():
     mkl_h = None
