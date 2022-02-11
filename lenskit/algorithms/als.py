@@ -315,12 +315,8 @@ class BiasedMF(MFPredictor):
     """
     Biased matrix factorization trained with alternating least squares :cite:p:`Zhou2008-bj`.  This
     is a prediction-oriented algorithm suitable for explicit feedback data, using the alternating
-    least squares approach to compute :math:`P` and :math:`Q` to minimize:
-
-    .. math::
-        \\sum_{r_{ui} \\in R} (r_{ui} - b_{ui} - \\mathbf{p}_u \\mathbf{q}_i^T)^2
-
-    where :math:`b_{ui}` is the baseline bias prediction from :class:`Bias`.
+    least squares approach to compute :math:`P` and :math:`Q` to minimize the regularized squared
+    reconstruction error of the ratings matrix.
 
     It provides two solvers for the optimization step (the `method` parameter):
 
