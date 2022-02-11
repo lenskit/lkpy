@@ -18,14 +18,24 @@ class TopN(Recommender, Predictor):
 
     .. note::
         This class does not do anything of its own in :meth:`fit`.  If its
-        predictor and candidate selector are both fit, the top-N recommender
-        does not need to be fit.
+        predictor and candidate selector are both fit separately, the top-N recommender
+        does not need to be fit.  This can be useful when reusing a predictor in other
+        contexts::
+
+            pred = item_knn.ItemItem(20, feedback='implicit')
+            select = UnratedItemCandidateSelector()
+            topn = TopN(pred, select)
+
+            pred.fit(ratings)
+            select.fit(ratings)
+            # topn.fit is unnecessary now
 
     Args:
         predictor(Predictor):
             The underlying predictor.
         selector(CandidateSelector):
-            The candidate selector.  If ``None``, uses :class:`UnratedItemCandidateSelector`.
+            The candidate selector.  If ``None``, uses
+            :class:`UnratedItemCandidateSelector`.
     """
 
     def __init__(self, predictor, selector=None):

@@ -1,7 +1,7 @@
 Ranking Methods
 ===============
 
-.. :py:module:: lenskit.algorithms.ranking
+.. module:: lenskit.algorithms.ranking
 
 The :py:mod:`lenskit.algorithms.ranking` module contains various *ranking methods*:
 algorithms that can use scores to produce ranks.  This includes primary rankers, like
