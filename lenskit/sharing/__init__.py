@@ -90,8 +90,8 @@ def persist(model, *, method=None):
     """
     Persist a model for cross-process sharing.
 
-    This will return a persiste dmodel that can be used to reconstruct the model
-    in a worker process (using :func:`reconstruct`).
+    This will return a persisted model that can be used to reconstruct the model
+    in a worker process (using :meth:`PersistedModel.get`).
 
     If no method is provided, this function automatically selects a model persistence
     strategy from the the following, in order:

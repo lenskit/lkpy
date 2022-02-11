@@ -313,16 +313,18 @@ def _train_implicit_row_lu(items, ratings, other, otOr):
 
 class BiasedMF(MFPredictor):
     """
-    Biased matrix factorization trained with alternating least squares :cite:p:`Zhou2008-bj`.  This is a
-    prediction-oriented algorithm suitable for explicit feedback data.
+    Biased matrix factorization trained with alternating least squares :cite:p:`Zhou2008-bj`.  This
+    is a prediction-oriented algorithm suitable for explicit feedback data, using the alternating
+    least squares approach to compute :math:`P` and :math:`Q` to minimize the regularized squared
+    reconstruction error of the ratings matrix.
 
     It provides two solvers for the optimization step (the `method` parameter):
 
     ``'cd'`` (the default)
-        Coordinate descent :cite:p:`Takacs2011-ix`, adapted for a separately-trained bias model and to use
-        weighted regularization as in the original ALS paper :cite:p:`Zhou2008-bj`.
+        Coordinate descent :cite:p:`Takacs2011-ix`, adapted for a separately-trained bias model and
+        to use weighted regularization as in the original ALS paper :cite:p:`Zhou2008-bj`.
     ``'lu'``
-        A direct implementation of the original ALS concept :cite:p:`Zhou2008-bj` using LU-decomposition
+        A direct implementation of the original ALS :cite:p:`Zhou2008-bj` using LU-decomposition
         to solve for the optimized matrices.
 
     See the base class :class:`.MFPredictor` for documentation on
@@ -525,8 +527,8 @@ class ImplicitMF(MFPredictor):
     See the base class :class:`.MFPredictor` for documentation on the estimated parameters
     you can extract from a trained model.
 
-    With weight :math:`w`, this function decomposes the matrix :matrix:`\\mathbb{1}^* + Rw`, where
-    $\\mathbb{1}^*$ is an $m \\times n$ matrix of all 1s.
+    With weight :math:`w`, this function decomposes the matrix :math:`\\mathbb{1}^* + Rw`, where
+    :math:`\\mathbb{1}^*` is an :math:`m \\times n` matrix of all 1s.
 
     .. versionchanged:: 0.14
         By default, ``ImplicitMF`` ignores a ``rating`` column if one is present in the training
@@ -546,7 +548,7 @@ class ImplicitMF(MFPredictor):
             Whether to use the `rating` column, if present.  Defaults to ``False``; when ``True``,
             the values from the ``rating`` column are used, and multipled by ``weight``; if ``False``,
             ImplicitMF treats every rated user-item pair as having a rating of 1.
-        method(string):
+        method(str):
             the training method.
 
             ``'cg'`` (the default)

@@ -59,7 +59,7 @@ dev = [
     "sphinx-autobuild >= 2021",
 ]
 doc = [
-    "sphinx >= 3",
+    "sphinx >= 4.2",
     "sphinxcontrib-bibtex >= 2.0",
     "sphinx_rtd_theme >= 0.5",
     "nbsphinx >= 0.8",

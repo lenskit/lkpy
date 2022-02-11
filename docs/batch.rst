@@ -47,9 +47,10 @@ to reduce the total memory consumption.
 
 Example usage::
 
+    from contextlib import closing
     algo = BiasedMF(50)
     algo = Recommender.adapt(algo)
-    algo = batch.train_isolated(algo, train_ratings)
-    preds = batch.predict(algo, test_ratings)
+    with closing(batch.train_isolated(algo, train_ratings)) as algo:
+        preds = batch.predict(algo, test_ratings)
 
 .. autofunction:: train_isolated

@@ -32,7 +32,7 @@ __all__ = [
 def clone(algo):
     """
     Clone an algorithm, but not its fitted data.  This is like
-    :py:func:`scikit.base.clone`, but may not work on arbitrary SciKit estimators.
+    :func:`sklearn.base.clone`, but may not work on arbitrary SciKit estimators.
     LensKit algorithms are compatible with SciKit clone, however, so feel free
     to use that if you need more general capabilities.
 

@@ -10,6 +10,9 @@ _log = logging.getLogger(__name__)
 
 
 def bulk_impl(metric):
+    """
+    Decorator to register a bulk implementation for a metric.
+    """
     def wrap(impl):
         metric.bulk_score = impl
         return impl

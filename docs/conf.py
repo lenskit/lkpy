@@ -206,12 +206,12 @@ bibtex_bibfiles = ['lenskit.bib']
 
 # -- Module Canonicalization ------------------------------------------------
 
-cleanups = {
-    'lenskit': ['Algorithm', 'Recommender', 'Predictor', 'CandidateSelector']
-}
+# cleanups = {
+#     'lenskit': ['Algorithm', 'Recommender', 'Predictor', 'CandidateSelector']
+# }
 
-for module, objects in cleanups.items():
-    mod = import_module(module)
-    for name in objects:
-        obj = getattr(mod, name)
-        obj.__module__ = module
+# for module, objects in cleanups.items():
+#     mod = import_module(module)
+#     for name in objects:
+#         obj = getattr(mod, name)
+#         obj.__module__ = module

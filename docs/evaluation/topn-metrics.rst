@@ -139,6 +139,6 @@ The :py:func:`bulk_impl` function registers a bulk implementation of a metric::
         # bulk metric implementation
 
 If a bulk implementation of a metric is available, and it is possible to use it, it will be used automatically
-when the corresponding metric is passed to :py:meth:`RecListAnalysis.add_metric`.
+when the corresponding metric is passed to :py:meth:`~lenskit.topn.RecListAnalysis.add_metric`.
 
-.. autofunction: bulk_impl
+.. autofunction:: bulk_impl
