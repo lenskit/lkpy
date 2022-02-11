@@ -2,11 +2,12 @@ import os
 import logging
 import multiprocessing as mp
 import numpy as np
+import pytest
 
 from lenskit.util.parallel import invoker, proc_count, run_sp, is_worker, is_mp_worker
 from lenskit.util.test import set_env_var
 from lenskit.util.random import get_root_seed
-from lenskit.sharing import persist_binpickle
+from lenskit.sharing import persist, SHM_AVAILABLE
 
 from pytest import mark, raises, approx
 
@@ -77,9 +78,9 @@ def _sp_matmul(a1, a2, *, fail=False):
         return a1 @ a2
 
 
-def _sp_matmul_p(a1, a2, *, fail=False):
+def _sp_matmul_p(a1, a2, *, method=None, fail=False):
     _log.info('in worker process')
-    return persist_binpickle(a1 @ a2).transfer()
+    return persist(a1 @ a2, method=method).transfer()
 
 
 def test_run_sp():
@@ -98,11 +99,15 @@ def test_run_sp_fail():
         run_sp(_sp_matmul, a1, a2, fail=True)
 
 
-def test_run_sp_persist():
+@pytest.mark.parametrize('method', [None, 'binpickle', 'shm'])
+def test_run_sp_persist(method):
+    if method == 'shm' and not SHM_AVAILABLE:
+        pytest.skip('SHM backend not available')
+
     a1 = np.random.randn(100, 100)
     a2 = np.random.randn(100, 100)
 
-    res = run_sp(_sp_matmul_p, a1, a2)
+    res = run_sp(_sp_matmul_p, a1, a2, method=method)
     try:
         assert res.is_owner
         assert np.all(res.get() == a1 @ a2)
