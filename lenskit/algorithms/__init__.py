@@ -21,15 +21,16 @@ class Algorithm(metaclass=ABCMeta):
     :canonical: lenskit.Algorithm
     """
 
+    IGNORED_PARAMS = []
     """
     Names of parameters to ignore in :meth:`get_params`.
     """
-    IGNORED_PARAMS = []
+
+    EXTRA_PARAMS = []
     """
     Names of extra parameters to include in :meth:`get_params`.  Useful when the
     constructor takes ``**kwargs``.
     """
-    EXTRA_PARAMS = []
 
     @abstractmethod
     def fit(self, ratings, **kwargs):
@@ -53,8 +54,8 @@ class Algorithm(metaclass=ABCMeta):
         should match constructor argument names.
 
         The default implementation returns all attributes that match a constructor parameter
-        name.  It should be compatible with :py:meth:`scikit.base.BaseEstimator.get_params`
-        method so that LensKit alogrithms can be cloned with :py:func:`scikit.base.clone`
+        name.  It should be compatible with :py:meth:`sklearn.base.BaseEstimator.get_params`
+        method so that LensKit alogrithms can be cloned with :py:func:`sklearn.base.clone`
         as well as :py:func:`lenskit.util.clone`.
 
         Returns:
@@ -80,6 +81,8 @@ class Predictor(Algorithm, metaclass=ABCMeta):
     Predicts user ratings of items.  Predictions are really estimates of the user's like or
     dislike, and the ``Predictor`` interface makes no guarantees about their scale or
     granularity.
+
+    :canonical: lenskit.Predictor
     """
 
     def predict(self, pairs, ratings=None):
