@@ -20,3 +20,5 @@ LensKit uses the following warning classes to report anomalous problems in
 use of LensKit.
 
 .. autoclass:: lenskit.DataWarning
+
+.. autoclass:: lenskit.ConfigWarning
