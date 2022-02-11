@@ -168,9 +168,6 @@ class UserUser(Predictor):
 
         Args:
             ratings(pandas.DataFrame): (user, item, rating) data for collaborative filtering.
-
-        Returns:
-            UUModel: a memorized model for efficient user-based CF computation.
         """
         util.check_env()
         uir, users, items = sparse_ratings(ratings)
