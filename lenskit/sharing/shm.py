@@ -1,10 +1,11 @@
+import sys
 import logging
 import pickle
 from . import sharing_mode, PersistedModel
 
 try:
     import multiprocessing.shared_memory as shm
-    SHM_AVAILABLE = True
+    SHM_AVAILABLE = sys.platform != 'win32'
 except ImportError:
     SHM_AVAILABLE = False
 
@@ -89,7 +90,7 @@ class SHMPersisted(PersistedModel):
         self.buffers = None
         if self.memory is not None:
             self.memory.close()
-            if self.is_owner:
+            if unlink and self.is_owner and self.is_owner != 'transfer':
                 self.memory.unlink()
                 self.is_owner = False
             self.memory = None
@@ -112,3 +113,6 @@ class SHMPersisted(PersistedModel):
         if self.is_owner:
             _log.debug('opening shared buffers after ownership transfer')
             self._open()
+
+    def __del__(self):
+        self.close(False)
