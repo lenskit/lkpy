@@ -528,22 +528,24 @@ class ImplicitMF(MFPredictor):
     With weight :math:`w`, this function decomposes the matrix :matrix:`\\mathbb{1}^* + Rw`, where
     $\\mathbb{1}^*$ is an $m \\times n$ matrix of all 1s.
 
-    .. warning::
+    .. versionchanged:: 0.14
+        By default, ``ImplicitMF`` ignores a ``rating`` column if one is present in the training
+        data.  This can be changed through the ``use_ratings`` option.
+
+    .. versionchanged:: 0.13
         In versions prior to 0.13, ``ImplicitMF`` used the rating column if it was present.
         In 0.13, we added an option to control whether or not the rating column is used; it
-        currently defaults to ``True``, but with a warning.  In LensKit for Python 0.14,
-        **this default will change**.
+        initially defaulted to ``True``, but with a warning.  In 0.14 it defaults to ``False``.
 
     Args:
         features(int): the number of features to train
         iterations(int): the number of iterations to train
-        reg(double): the regularization factor
-        weight(double): the scaling weight for positive samples (:math:`\\alpha` in :cite:p:`Hu2008-li`).
+        reg(float): the regularization factor
+        weight(float): the scaling weight for positive samples (:math:`\\alpha` in :cite:p:`Hu2008-li`).
         use_ratings(bool):
-            Whether to use the `rating` column, if present.  Currently defaults to ``True``; this
-            default will change in LensKit 0.14.  When ``True``, the values from the ``rating``
-            column are used, and multipled by ``weight``; if ``False``, ImplicitMF treats every
-            user-item pair as having a rating of 1.
+            Whether to use the `rating` column, if present.  Defaults to ``False``; when ``True``,
+            the values from the ``rating`` column are used, and multipled by ``weight``; if ``False``,
+            ImplicitMF treats every rated user-item pair as having a rating of 1.
         method(string):
             the training method.
 
@@ -559,7 +561,7 @@ class ImplicitMF(MFPredictor):
     """
     timer = None
 
-    def __init__(self, features, *, iterations=20, reg=0.1, weight=40, use_ratings=None,
+    def __init__(self, features, *, iterations=20, reg=0.1, weight=40, use_ratings=False,
                  method='cg', rng_spec=None, progress=None, save_user_features=True):
         self.features = features
         self.iterations = iterations
@@ -643,18 +645,7 @@ class ImplicitMF(MFPredictor):
     def _initial_model(self, ratings):
         "Initialize a model and build contexts."
 
-        if self.use_ratings is None and 'rating' in ratings:
-            _logger.warning('fitting an Implicit ALS model with ratings and default settings')
-            _logger.warning('in LensKit 0.14, the default behavior for this scenario will change')
-            _logger.warning('explicitly specify the use_ratings option for consistent behavior')
-            _logger.warning('see http://bit.ly/lkpy-imf for details')
-            warnings.warn(util.clean_str('''
-                Fitting Implicit ALS with ratings and defaults; the default behavior in this
-                scenario will change in LensKit 0.14. Specify the use_ratings option to
-                ImplicitMF to get consistent behavior in the future. See the documentation
-                at http://bit.ly/lkpy-imf for more details.
-            '''))
-        elif not self.use_ratings:
+        if not self.use_ratings:
             ratings = ratings[['user', 'item']]
 
         rmat, users, items = sparse_ratings(ratings)
