@@ -9,16 +9,11 @@ defaults:
   run:
     shell: bash -l {0}
 
-jobs:
-  info:
-    name: Extract Request Info
-    runs-on: ubuntu-latest
-    steps:
-    - run: |
-        echo ref: ${{github.ref}}
-        echo base ref: ${{github.base_ref}}
-        echo head ref: ${{github.head_ref}}
+concurrency:
+  group: test-${{github.ref}}
+  cancel-in-progress: true
 
+jobs:
   conda:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}-latest
@@ -37,8 +32,6 @@ jobs:
         - ubuntu
 
     steps:
-      - run: |
-          exit 1
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
