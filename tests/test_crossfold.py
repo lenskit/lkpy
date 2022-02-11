@@ -106,9 +106,9 @@ def test_sample_non_disjoint():
 @pytest.mark.slow
 def test_sample_oversize():
     ratings = lktu.ml_test.ratings
-    splits = xf.sample_rows(ratings, 150, 1000)
+    splits = xf.sample_rows(ratings, 50, 10000)
     splits = list(splits)
-    assert len(splits) == 150
+    assert len(splits) == 50
 
     for s in splits:
         assert len(s.test) + len(s.train) == len(ratings)
