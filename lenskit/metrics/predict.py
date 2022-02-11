@@ -21,7 +21,16 @@ def _check_missing(truth, missing):
 
 def rmse(predictions, truth, missing='error'):
     """
-    Compute RMSE (root mean squared error).
+    Compute RMSE (root mean squared error).  This is computed as:
+
+    .. math::
+        \\sum_{r_{ui} \\in R} \\left(r_{ui} - s(i|u)\\right)^2
+
+    When used with :func:`user_metric`, or on series grouped by user, it computes
+    a per-user RMSE; when applied to an entire prediction frame, it computes global
+    RMSE.  It does not do any fallbacks; if you want to compute RMSE with fallback
+    predictions (e.g. usign a bias model when a collaborative filter cannot predict),
+    generate predictions with :class:`lenskit.algorithms.basic.Fallback`.
 
     Args:
         predictions(pandas.Series): the predictions
@@ -51,7 +60,16 @@ def rmse(predictions, truth, missing='error'):
 
 def mae(predictions, truth, missing='error'):
     """
-    Compute MAE (mean absolute error).
+    Compute MAE (mean absolute error).  This is computed as:
+
+    .. math::
+        \\sum_{r_{ui} \\in R} \\left|r_{ui} - s(i|u)\\right|
+
+    When used with :func:`user_metric`, or on series grouped by user, it computes
+    a per-user MAE; when applied to an entire prediction frame, it computes global
+    MAE.  It does not do any fallbacks; if you want to compute MAE with fallback
+    predictions (e.g. usign a bias model when a collaborative filter cannot predict),
+    generate predictions with :class:`lenskit.algorithms.basic.Fallback`.
 
     Args:
         predictions(pandas.Series): the predictions
