@@ -37,11 +37,6 @@ class RecListAnalysis:
     contains a ``rating`` column, that is used as the users' rating for
     metrics that require it; otherwise, a rating value of 1 is assumed.
 
-    .. warning::
-       Currently, RecListAnalysis will silently drop users who received
-       no recommendations.  We are working on an ergonomic API for fixing
-       this problem.
-
     Args:
         group_cols(list):
             The columns to group by, or ``None`` to use the default.
