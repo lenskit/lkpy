@@ -29,6 +29,8 @@ def precision(recs, truth, k=None):
 
     In the uncommon case that ``k`` is specified and ``len(recs) < k``, this metric uses
     ``len(recs)`` as the denominator.
+
+    This metric has a bulk implementation.
     """
     if k is not None:
         recs = recs.iloc[:k]
@@ -60,7 +62,12 @@ def _bulk_precision(recs, truth, k=None):
 
 def recall(recs, truth, k=None):
     """
-    Compute recommendation recall.
+    Compute recommendation recall.  This is computed as:
+
+    .. math::
+        \\frac{|L \\cap I_u^{\\mathrm{test}}|}{\\operatorname{max}\\{|I_u^{\\mathrm{test}}|, k\\}}
+
+    This metric has a bulk implementation.
     """
     nrel = len(truth)
     if nrel == 0:
@@ -99,8 +106,10 @@ def _bulk_recall(recs, truth, k=None):
 def recip_rank(recs, truth, k=None):
     """
     Compute the reciprocal rank of the first relevant item in a list of recommendations.
-
-    If no elements are relevant, the reciprocal rank is 0.
+    Let :math:`\\kappa` denote the 1-based rank of the first relevant item in :math:`L`,
+    with :math:`\\kappa=\infty` if none of the first :math:`k` items in :math:`L` are relevant;
+    then the reciprocal rank is :math:`1 / \\kappa`. If no elements are relevant, the reciprocal
+    rank is therefore 0.
 
     This metric has a bulk equivalent.
     """
@@ -178,6 +187,9 @@ def dcg(recs, truth, discount=np.log2):
         \\mathrm{DCG}(L,u) & = \\sum_{i=1}^{|L|} \\frac{r_{ui}}{d(i)}
         \\end{align*}
 
+    Unrated items are assumed to have a utility of 0; if no rating values are provided in the
+    truth frame, item ratings are assumed to be 1.
+
     Args:
         recs: The recommendation list.
         truth: The user's test data.
@@ -210,6 +222,9 @@ def ndcg(recs, truth, discount=np.log2, k=None):
         \\mathrm{DCG}(L,u) & = \\sum_{i=1}^{|L|} \\frac{r_{ui}}{d(i)}
         \\end{align*}
 
+    Unrated items are assumed to have a utility of 0; if no rating values are provided in the
+    truth frame, item ratings are assumed to be 1.
+
     This is then normalized as follows:
 
     .. math::
@@ -217,12 +232,16 @@ def ndcg(recs, truth, discount=np.log2, k=None):
         \\mathrm{nDCG}(L, u) & = \\frac{\\mathrm{DCG}(L,u)}{\\mathrm{DCG}(L_{\\mathrm{ideal}}, u)}
         \\end{align*}
 
+    This metric has a bulk implementation.
+
     Args:
         recs: The recommendation list.
         truth: The user's test data.
-        discount(ufunc):
+        discount(numpy.ufunc):
             The rank discount function.  Each item's score will be divided the discount of its rank,
             if the discount is greater than 1.
+        k(int):
+            The maximum list length.
     """
 
     tpos = truth.index.get_indexer(recs['item'])
