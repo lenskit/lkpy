@@ -105,11 +105,13 @@ def _bulk_recall(recs, truth, k=None):
 
 def recip_rank(recs, truth, k=None):
     """
-    Compute the reciprocal rank of the first relevant item in a list of recommendations.
-    Let :math:`\\kappa` denote the 1-based rank of the first relevant item in :math:`L`,
-    with :math:`\\kappa=\\infty` if none of the first :math:`k` items in :math:`L` are relevant;
-    then the reciprocal rank is :math:`1 / \\kappa`. If no elements are relevant, the reciprocal
-    rank is therefore 0.
+    Compute the reciprocal rank :cite:p:`Kantor1997-lm` of the first relevant
+    item in a list of recommendations. Let :math:`\\kappa` denote the 1-based
+    rank of the first relevant item in :math:`L`, with :math:`\\kappa=\\infty`
+    if none of the first :math:`k` items in :math:`L` are relevant; then the
+    reciprocal rank is :math:`1 / \\kappa`. If no elements are relevant, the
+    reciprocal rank is therefore 0.  :cite:t:`Deshpande2004-ht` call this the
+    “reciprocal hit rate”.
 
     This metric has a bulk equivalent.
     """
@@ -178,7 +180,7 @@ def _fixed_dcg(n, discount=np.log2):
 
 def dcg(recs, truth, discount=np.log2):
     """
-    Compute the **unnormalized** discounted cumulative gain.
+    Compute the **unnormalized** discounted cumulative gain :cite:p:`Jarvelin2002-xf`.
 
     Discounted cumultative gain is computed as:
 
@@ -213,7 +215,7 @@ def dcg(recs, truth, discount=np.log2):
 
 def ndcg(recs, truth, discount=np.log2, k=None):
     """
-    Compute the normalized discounted cumulative gain.
+    Compute the normalized discounted cumulative gain :cite:p:`Jarvelin2002-xf`.
 
     Discounted cumultative gain is computed as:
 
