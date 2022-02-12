@@ -88,6 +88,7 @@ These metrics treat the recommendation list as a classification of relevant item
 
 .. autofunction:: precision
 .. autofunction:: recall
+.. autofunction:: hit
 
 Ranked List Metrics
 -------------------

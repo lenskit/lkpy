@@ -103,6 +103,60 @@ def _bulk_recall(recs, truth, k=None):
     return scores['ngood'] / scores['nrel']
 
 
+def hit(recs, truth, k=None):
+    """
+    Compute whether or not a list is a hit; any list with at least one relevant item in the
+    first :math:`k` positions (:math:`L_{\\le k} \\cap I_u^{\\mathrm{test}} \\ne \\emptyset`)
+    is scored as 1, and lists with no relevant items as 0.  When averaged over the recommendation
+    lists, this computes the *hit rate* :cite:p:`Deshpande2004-ht`.
+
+    .. math::
+        \\frac{|L \\cap I_u^{\\mathrm{test}}|}{\\operatorname{max}\\{|I_u^{\\mathrm{test}}|, k\\}}
+
+    This metric has a bulk implementation.
+    """
+    nrel = len(truth)
+    if nrel == 0:
+        return None
+
+    if k is not None:
+        nrel = min(nrel, k)
+        recs = recs.iloc[:k]
+
+    good = recs['item'].isin(truth.index)
+    if np.any(good):
+        return 1
+    else:
+        return 0
+
+
+@bulk_impl(hit)
+def _bulk_hit(recs, truth, k=None):
+    tcounts = truth.reset_index().groupby('LKTruthID')['item'].count()
+
+    if k is not None:
+        _log.debug('truncating to k for recall')
+        tcounts = np.minimum(tcounts, k)
+        recs = recs[recs['rank'] <= k]
+
+    good = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
+    gcounts = good.groupby('LKRecID')['item'].count()
+
+    # we need all lists, because some might have no truth (oops), some no recs (also oops)
+    lists = recs[['LKRecID', 'LKTruthID']].drop_duplicates()
+
+    scores = lists.join(gcounts.to_frame('ngood'), on='LKRecID', how='left')
+    scores['ngood'].fillna(0, inplace=True)
+
+    scores = scores.join(tcounts.to_frame('nrel'), on='LKTruthID', how='left')
+    scores = scores.set_index('LKRecID')
+
+    good = scores['ngood'] > 0
+    good = good.astype('f4')
+    good[scores['nrel'] == 0] = np.nan
+    return good
+
+
 def recip_rank(recs, truth, k=None):
     """
     Compute the reciprocal rank :cite:p:`Kantor1997-lm` of the first relevant
