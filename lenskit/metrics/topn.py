@@ -107,7 +107,7 @@ def recip_rank(recs, truth, k=None):
     """
     Compute the reciprocal rank of the first relevant item in a list of recommendations.
     Let :math:`\\kappa` denote the 1-based rank of the first relevant item in :math:`L`,
-    with :math:`\\kappa=\infty` if none of the first :math:`k` items in :math:`L` are relevant;
+    with :math:`\\kappa=\\infty` if none of the first :math:`k` items in :math:`L` are relevant;
     then the reciprocal rank is :math:`1 / \\kappa`. If no elements are relevant, the reciprocal
     rank is therefore 0.
 
