@@ -246,6 +246,24 @@ class UnratedItemCandidateSelector(CandidateSelector):
             return self.items_.values
 
 
+class AllItemsCandidateSelector(CandidateSelector):
+    """
+    :class:`CandidateSelector` that selects all items, regardless of whether
+    the user has rated them, as candidates.  When this selector is fit, it memorizes
+    the set of items.
+
+    Attributes:
+        items_(numpy.ndarray): All known items.
+    """
+    items_ = None
+
+    def fit(self, ratings, **kwargs):
+        self.items_ = ratings['item'].unique()
+        return self
+
+    def candidates(self, user, ratings=None):
+        return self.items_.copy()
+
 class Random(Recommender):
     """
     A random-item recommender.
