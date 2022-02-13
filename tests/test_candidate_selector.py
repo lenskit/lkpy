@@ -16,6 +16,14 @@ def test_empty():
     assert res.tolist() == []
 
 
+def test_all():
+    sel = basic.AllItemsCandidateSelector()
+    sel.fit(simple_df)
+
+    assert set(sel.candidates(10)) == set([1, 2, 3])
+    assert set(sel.candidates(5)) == set([1, 2, 3])
+
+
 def test_unrated_selector():
     sel = basic.UnratedItemCandidateSelector()
     s2 = sel.fit(simple_df)
