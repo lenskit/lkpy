@@ -264,6 +264,7 @@ class AllItemsCandidateSelector(CandidateSelector):
     def candidates(self, user, ratings=None):
         return self.items_.copy()
 
+
 class Random(Recommender):
     """
     A random-item recommender.
