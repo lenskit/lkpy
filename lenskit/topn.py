@@ -141,9 +141,8 @@ class RecListAnalysis:
         if include_missing:
             _log.info('filling in missing user info (%d initial rows)', len(res))
             ug_cols = [c for c in rec_key if c not in truth_key]
-            tcount = truth.groupby(truth_key)['item'].count()
-            tcount.name = 'ntruth'
-            _log.debug('truth data:\n%s', tcount)
+            tcount = truth.groupby(truth_key)['item'].count().to_frame('ntruth')
+            _log.debug('truth counts:\n%s', tcount)
             if ug_cols:
                 _log.debug('regrouping by %s to fill', ug_cols)
                 _log.debug('pre-group series:\n%s', res)
@@ -155,8 +154,10 @@ class RecListAnalysis:
                     rdict[key] = df2
 
                 res = pd.concat(rdict, names=ug_cols)
-                res = res.reset_index()
                 _log.debug('joined result:\n%s', res)
+                res = res.reset_index(ug_cols)
+                res.reset_index(inplace=True, drop=True)
+                _log.debug('final joined result:\n%s', res)
 
             else:
                 _log.debug('no ungroup cols, directly merging to fill')
