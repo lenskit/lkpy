@@ -17,9 +17,6 @@ from lenskit.sharing import persist, PersistedModel
 from lenskit.util.log import log_queue
 from lenskit.util.random import derive_seed, init_rng, get_root_seed
 
-if pickle.HIGHEST_PROTOCOL < 5:
-    import pickle5 as pickle
-
 _log = logging.getLogger(__name__)
 __work_model = None
 __work_func = None

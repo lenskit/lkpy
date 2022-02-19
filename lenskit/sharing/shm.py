@@ -3,14 +3,8 @@ import logging
 import pickle
 from . import sharing_mode, PersistedModel
 
-try:
-    import multiprocessing.shared_memory as shm
-    SHM_AVAILABLE = sys.platform != 'win32'
-except ImportError:
-    SHM_AVAILABLE = False
-
-if pickle.HIGHEST_PROTOCOL < 5:
-    import pickle5 as pickle
+import multiprocessing.shared_memory as shm
+SHM_AVAILABLE = sys.platform != 'win32'
 
 _log = logging.getLogger(__name__)
 
@@ -26,8 +20,6 @@ def persist_shm(model, dir=None):
     Returns:
         PersistedModel: The persisted object.
     """
-    if shm is None:
-        raise ImportError('multiprocessing.shared_memory')
 
     buffers = []
 
