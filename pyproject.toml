@@ -10,7 +10,6 @@ authors = [
 classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -19,7 +18,7 @@ classifiers = [
 ]
 readme = "README.md"
 license = { file = "LICENSE.md" }
-requires-python = ">= 3.7"
+requires-python = ">= 3.8"
 dynamic = ['version', 'description']
 dependencies = [
     "pandas >=1.0, ==1.*",
