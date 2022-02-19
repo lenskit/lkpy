@@ -4,6 +4,7 @@ import pickle
 from . import sharing_mode, PersistedModel
 
 import multiprocessing.shared_memory as shm
+SHM_AVAILABLE = sys.platform != 'win32'
 
 _log = logging.getLogger(__name__)
 
