@@ -55,6 +55,7 @@ dev = [
     "ipython >= 7",
     "docopt >= 0.6",
     "tqdm >= 4",
+    "keyring",
     "sphinx-autobuild >= 2021",
 ]
 doc = [
