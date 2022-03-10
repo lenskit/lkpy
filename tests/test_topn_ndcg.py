@@ -87,6 +87,14 @@ def test_ndcg_perfect():
     assert ndcg(recs, truth) == approx(1.0)
 
 
+def test_ndcg_perfect_k_short():
+    recs = pd.DataFrame({'item': [2, 3, 1]})
+    truth = pd.DataFrame({'item': [1, 2, 3], 'rating': [3.0, 5.0, 4.0]})
+    truth = truth.set_index('item')
+    assert ndcg(recs, truth, k=2) == approx(1.0)
+    assert ndcg(recs[:2], truth, k=2) == approx(1.0)
+
+
 def test_ndcg_wrong():
     recs = pd.DataFrame({'item': [1, 2]})
     truth = pd.DataFrame({'item': [1, 2, 3], 'rating': [3.0, 5.0, 4.0]})
