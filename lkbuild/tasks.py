@@ -18,6 +18,7 @@ DATA_DIR = Path('data')
 BIBTEX_URL = 'https://paperpile.com/eb/YdOlWmnlit'
 BIBTEX_FILE = Path('docs/lenskit.bib')
 
+
 @task(iterable=['extras', 'mixins'])
 def dev_lock(c, platform=None, extras=None, version=None, blas=None, mixins=None, env_file=False):
     "Create a development lockfile"
@@ -30,7 +31,7 @@ def dev_lock(c, platform=None, extras=None, version=None, blas=None, mixins=None
     else:
         plat_opt = f'-p {plat}'
 
-    cmd = f'conda-lock lock --mamba {plat_opt} -f pyproject.toml'
+    cmd = f'conda-lock lock --mamba {plat_opt} -k explicit --dev-dependencies -f pyproject.toml'
     if env_file:
         cmd += ' -k env'
 

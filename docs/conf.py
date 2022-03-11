@@ -42,7 +42,7 @@ release = lenskit.__version__
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'nbsphinx',
+    'myst_nb',
     'sphinx.ext.napoleon',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
@@ -203,6 +203,8 @@ autodoc_default_options = {
 }
 
 bibtex_bibfiles = ['lenskit.bib']
+
+jupyter_execute_notebooks = 'off'
 
 # -- Module Canonicalization ------------------------------------------------
 
