@@ -53,7 +53,7 @@ dev = [
     "flake8 >= 3",
     "coverage >= 5",
     "pytest-cov >= 2.12",
-    "ipython >= 7",
+    "ipython == 7.*",
     "docopt >= 0.6",
     "tqdm >= 4",
     "sphinx-autobuild >= 2021",
@@ -63,6 +63,8 @@ doc = [
     "sphinxcontrib-bibtex >= 2.0",
     "sphinx_rtd_theme >= 0.5",
     "nbsphinx >= 0.8",
+    "ipython == 7.*",
+    "notebook >=6",
 ]
 demo = [
     "notebook >= 6",
