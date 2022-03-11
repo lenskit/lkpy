@@ -64,6 +64,7 @@ doc = [
     "sphinx_rtd_theme >= 0.5",
     "nbsphinx >= 0.8",
     "ipython == 7.*",
+    "notebook >=6",
 ]
 demo = [
     "notebook >= 6",
