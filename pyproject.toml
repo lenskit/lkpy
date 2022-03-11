@@ -63,6 +63,7 @@ doc = [
     "sphinxcontrib-bibtex >= 2.0",
     "sphinx_rtd_theme >= 0.5",
     "nbsphinx >= 0.8",
+    "ipython == 7.*",
 ]
 demo = [
     "notebook >= 6",
