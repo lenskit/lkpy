@@ -62,7 +62,7 @@ doc = [
     "sphinx >= 4.2",
     "sphinxcontrib-bibtex >= 2.0",
     "sphinx_rtd_theme >= 0.5",
-    "nbsphinx >= 0.8",
+    "myst-nb >= 0.13",
 ]
 demo = [
     "notebook >= 6",
