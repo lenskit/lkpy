@@ -204,6 +204,8 @@ autodoc_default_options = {
 
 bibtex_bibfiles = ['lenskit.bib']
 
+jupyter_execute_notebooks = 'off'
+
 # -- Module Canonicalization ------------------------------------------------
 
 # cleanups = {
