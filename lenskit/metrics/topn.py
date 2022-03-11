@@ -300,10 +300,10 @@ def ndcg(recs, truth, discount=np.log2, k=None):
             The maximum list length.
     """
 
-    tpos = truth.index.get_indexer(recs['item'])
-
     if k is not None:
         recs = recs.iloc[:k]
+
+    tpos = truth.index.get_indexer(recs['item'])
 
     if 'rating' in truth.columns:
         i_rates = np.sort(truth.rating.values)[::-1]
