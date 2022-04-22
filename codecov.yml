@@ -1,0 +1,4 @@
+ignore:
+- build*.py
+- build-tools/*
+- lkbuild/*

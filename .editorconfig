@@ -1,0 +1,17 @@
+root = true
+
+[*]
+insert_final_newline = true
+charset = utf-8
+trim_trailing_whitespace = true
+indent_size = 4
+indent_style = space
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.sh]
+end_of_line = lf
+
+[*.md]
+trim_trailing_whitespace = false
