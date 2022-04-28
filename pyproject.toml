@@ -69,6 +69,7 @@ demo = [
     "nbval >= 0.9",
     "matplotlib ~= 3.4",
     "nbformat ==5.2.*",
+    "ipython >= 7",
 ]
 sklearn = ["scikit-learn >= 0.22"]
 
