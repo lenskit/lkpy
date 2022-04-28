@@ -68,8 +68,7 @@ demo = [
     "notebook >= 6",
     "nbval >= 0.9",
     "matplotlib ~= 3.4",
-    "nbformat",
-    "fastjsonschema",
+    "nbformat ==5.2.*",
 ]
 sklearn = ["scikit-learn >= 0.22"]
 
