@@ -119,6 +119,14 @@ jobs:
           activate-environment: lktest
           environment-file: ${{steps.conda-lock.outputs.environment-file}}
 
+      - name: Inspect Conda environment
+        run: |
+          echo "Conda environment info"
+          conda info
+          echo "Conda environment package list"
+          conda list
+
+
       - name: Cache ML data
         uses: actions/cache@v2
         with:
