@@ -41,12 +41,6 @@ jobs:
         with:
           python-version: ${{matrix.python}}
 
-      - name: Initialize Conda
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: lktest
-          environment-file: ${{steps.setup.outputs.environment-file}}
-
       - name: Inspect environment
         run: |
           python -V
