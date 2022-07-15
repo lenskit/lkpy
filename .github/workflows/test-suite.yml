@@ -36,7 +36,7 @@ jobs:
           fetch-depth: 0
 
       - name: 👢 Set up Conda environment
-        uses: lenskit/lkbuild@master
+        uses: lenskit/lkbuild@main
         id: setup
         with:
           python-version: ${{matrix.python}}
