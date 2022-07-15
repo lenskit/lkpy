@@ -35,23 +35,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Prepare Windows environment
-        if: runner.os == 'Windows'
-        shell: pwsh
+      - name: 👢 Create boostrap environment
         run: |
-          choco install wget --no-progress
+          $CONDA/condabin/conda env create -n lkboot -f https://raw.githubusercontent.com/lenskit/lkbuild/main/boot-env.yml
 
-      - name: Prepare Conda environment spec
+      - name: 🔒 Prepare Conda environment spec
         id: conda-lock
-        shell: bash
         run: |
-          e_opt=""
-          if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
-            echo "Using most extras"
-            # we'll test tensorflow in a separate run
-            e_opt="-e sklearn"
-          fi
-          bash lkbuild/lock-for-ci.sh -v $PYVER $e_opt
+          $CONDA/condabin/conda run -n lkboot --no-capture-output lkbuild dev-lock -v $PYVER --gh-set-output
         env:
           RUNNER: ${{runner.os}}
           PYVER: ${{matrix.python}}
@@ -106,12 +97,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Prepare Conda environment
+      - name: 👢 Create boostrap environment
+        run: |
+          $CONDA/condabin/conda env create -n lkboot -f https://raw.githubusercontent.com/lenskit/lkbuild/main/boot-env.yml
+
+      - name: 🔒 Prepare Conda environment spec
         id: conda-lock
         run: |
-          bash lkbuild/lock-for-ci.sh -v $PYVER -e demo
+          $CONDA/condabin/conda run -n lkboot --no-capture-output lkbuild dev-lock -v $PYVER -e demo --gh-set-output
         env:
-          PYVER: '3.8'
+          RUNNER: ${{runner.os}}
+          PYVER: "3.8"
 
       - name: Initialize Conda
         uses: conda-incubator/setup-miniconda@v2
@@ -126,21 +122,20 @@ jobs:
           echo "Conda environment package list"
           conda list
 
-
       - name: Cache ML data
         uses: actions/cache@v2
         with:
           path: |
             data
             !data/*.zip
-          key: test-mldata-${{ hashFiles('lkbuild/datasets.py') }}
+          key: test-mldata-000
 
       - name: Download ML Data
         run: |
-          invoke fetch-data -d ml-100k
-          invoke fetch-data -d ml-1m
-          invoke fetch-data -d ml-10m
-          invoke fetch-data -d ml-20m
+          lkbuild fetch-data -d ml-100k
+          lkbuild fetch-data -d ml-1m
+          lkbuild fetch-data -d ml-10m
+          lkbuild fetch-data -d ml-20m
 
       - name: Install for Testing
         run: |
