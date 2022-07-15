@@ -36,7 +36,7 @@ jobs:
           fetch-depth: 0
 
       - name: 👢 Set up Conda environment
-        uses: lenskit/lkbuild@main
+        uses: lenskit/lkbuild/actions/setup-env@main
         id: setup
         with:
           python-version: ${{matrix.python}}
@@ -181,7 +181,7 @@ jobs:
           python-version: ${{matrix.python}}
           architecture: x64
 
-      - name: Set up Python buil deps
+      - name: Set up Python build deps
         env:
           PIP_PREFER_BINARY: 'true'
         run: |
