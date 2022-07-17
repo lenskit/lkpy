@@ -84,7 +84,7 @@ def test_kvp_add_several(kvp_len, data):
 
     assert n2 == n
     assert all(ks != special_k)
-    assert all(vs > -100.0)
+    assert all(vs > -1000.0)
 
     # it inserts a larger value somewhere
     old_mk = ks[0]
