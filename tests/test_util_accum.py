@@ -63,11 +63,9 @@ def test_kvp_add_several(kvp_len, data):
 
     n = 0
 
-    values = st.floats(-100, 100)
+    values = np.random.randn(kvp_len) * 100
 
-    for k in range(kvp_len):
-        v = data.draw(values)
-        assume(v not in vs[:n])  # we can't keep drawing the same value
+    for k, v in enumerate(values):
         n = kvp_minheap_insert(0, n, kvp_len, k, v, ks, vs)
 
     assert n == kvp_len
@@ -89,8 +87,8 @@ def test_kvp_add_several(kvp_len, data):
     # it inserts a larger value somewhere
     old_mk = ks[0]
     old_mv = vs[0]
-    assume(np.median(vs) < 40)
-    nv = data.draw(st.floats(np.median(vs), 50))
+    assume(np.median(vs) < 50)
+    nv = data.draw(st.floats(np.median(vs), 100))
     n2 = kvp_minheap_insert(0, n, kvp_len, special_k, nv, ks, vs)
 
     assert n2 == n
