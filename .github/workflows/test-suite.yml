@@ -89,7 +89,7 @@ jobs:
         uses: lenskit/lkbuild/actions/setup-env@main
         id: setup
         with:
-          python-version: ${{matrix.python}}
+          python-version: '3.8'
           extras: demo
 
       - name: Inspect Conda environment
