@@ -85,23 +85,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 👢 Create boostrap environment
-        run: |
-          $CONDA/condabin/conda env create -n lkboot -f https://raw.githubusercontent.com/lenskit/lkbuild/main/boot-env.yml
-
-      - name: 🔒 Prepare Conda environment spec
-        id: conda-lock
-        run: |
-          $CONDA/condabin/conda run -n lkboot --no-capture-output lkbuild dev-lock -v $PYVER -e demo --gh-set-output
-        env:
-          RUNNER: ${{runner.os}}
-          PYVER: "3.8"
-
-      - name: Initialize Conda
-        uses: conda-incubator/setup-miniconda@v2
+      - name: 👢 Set up Conda environment
+        uses: lenskit/lkbuild/actions/setup-env@main
+        id: setup
         with:
-          activate-environment: lktest
-          environment-file: ${{steps.conda-lock.outputs.environment-file}}
+          python-version: ${{matrix.python}}
+          extras: demo
 
       - name: Inspect Conda environment
         run: |
