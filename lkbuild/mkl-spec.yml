@@ -1,4 +1,0 @@
-# environment mini-spec for ensuring MKL
-dependencies:
-  - libblas=*=*mkl
-  - tbb
