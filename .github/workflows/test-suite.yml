@@ -39,6 +39,7 @@ jobs:
         uses: lenskit/lkbuild/actions/setup-conda-env@main
         id: setup
         with:
+          extras: slkearn
           python-version: ${{matrix.python}}
 
       - name: Inspect environment
