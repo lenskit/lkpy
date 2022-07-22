@@ -44,7 +44,7 @@ test = [
     "hypothesis >= 6"
 ]
 dev = [
-    "lenskit-build-helpers",
+    "lenskit-build-helpers >=0.1",
     "flit >= 3",
     "conda-lock",
     "invoke >=1",
