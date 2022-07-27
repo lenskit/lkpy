@@ -22,6 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         python:
+        - "3.7"
         - "3.8"
         - "3.9"
         - "3.10"
@@ -198,7 +199,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v1
         with:
-          python-version: '3.8'
+          python-version: '3.7'
           architecture: x64
 
       - name: Set up Python deps
