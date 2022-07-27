@@ -35,32 +35,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Prepare Windows environment
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          choco install wget --no-progress
-
-      - name: Prepare Conda environment spec
-        id: conda-lock
-        shell: bash
-        run: |
-          e_opt=""
-          if [ $RUNNER = Linux -a $PYVER = 3.8 ]; then
-            echo "Using most extras"
-            # we'll test tensorflow in a separate run
-            e_opt="-e sklearn"
-          fi
-          bash lkbuild/lock-for-ci.sh -v $PYVER $e_opt
-        env:
-          RUNNER: ${{runner.os}}
-          PYVER: ${{matrix.python}}
-
-      - name: Initialize Conda
-        uses: conda-incubator/setup-miniconda@v2
+      - name: 👢 Set up Conda environment
+        uses: lenskit/lkbuild/actions/setup-conda-env@main
+        id: setup
         with:
-          activate-environment: lktest
-          environment-file: ${{steps.conda-lock.outputs.environment-file}}
+          extras: sklearn
+          python-version: ${{matrix.python}}
 
       - name: Inspect environment
         run: |
@@ -106,18 +86,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Prepare Conda environment
-        id: conda-lock
-        run: |
-          bash lkbuild/lock-for-ci.sh -v $PYVER -e demo
-        env:
-          PYVER: '3.8'
-
-      - name: Initialize Conda
-        uses: conda-incubator/setup-miniconda@v2
+      - name: 👢 Set up Conda environment
+        uses: lenskit/lkbuild/actions/setup-conda-env@main
+        id: setup
         with:
-          activate-environment: lktest
-          environment-file: ${{steps.conda-lock.outputs.environment-file}}
+          python-version: '3.8'
+          extras: demo
 
       - name: Inspect Conda environment
         run: |
@@ -126,21 +100,20 @@ jobs:
           echo "Conda environment package list"
           conda list
 
-
       - name: Cache ML data
         uses: actions/cache@v2
         with:
           path: |
             data
             !data/*.zip
-          key: test-mldata-${{ hashFiles('lkbuild/datasets.py') }}
+          key: test-mldata-000
 
       - name: Download ML Data
         run: |
-          invoke fetch-data -d ml-100k
-          invoke fetch-data -d ml-1m
-          invoke fetch-data -d ml-10m
-          invoke fetch-data -d ml-20m
+          lkbuild fetch-data -d ml-100k
+          lkbuild fetch-data -d ml-1m
+          lkbuild fetch-data -d ml-10m
+          lkbuild fetch-data -d ml-20m
 
       - name: Install for Testing
         run: |
@@ -192,23 +165,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v1
+      - name: Set up Python and environment
+        uses: lenskit/lkbuild/actions/setup-vanilla-env@main
         with:
           python-version: ${{matrix.python}}
-          architecture: x64
-
-      - name: Set up Python buil deps
-        env:
-          PIP_PREFER_BINARY: 'true'
-        run: |
-          python -m pip install -U flit wheel
-
-      - name: Install LensKit adnd eps
-        env:
-          PIP_PREFER_BINARY: 'true'
-        run: |
-          python -m pip install .[test,dev]
 
       - name: Run tests
         run: |

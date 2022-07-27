@@ -1,3 +1,0 @@
-# environment mini-spec for ensuring OpenBLAS
-dependencies:
-  - libblas=*=*openblas

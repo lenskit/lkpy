@@ -44,6 +44,7 @@ test = [
     "hypothesis >= 6"
 ]
 dev = [
+    "lenskit-build-helpers >=0.1",
     "flit >= 3",
     "conda-lock",
     "invoke >=1",
@@ -87,4 +88,7 @@ exclude = [
 ]
 
 [tool.conda-lock]
-channels = ['conda-forge']
+channels = [
+    "conda-forge",
+    "lenskit",
+]
