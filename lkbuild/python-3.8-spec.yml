@@ -1,3 +1,0 @@
-# environment mini-spec for ensuring Python 3.8
-dependencies:
-- python=3.8
