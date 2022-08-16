@@ -42,8 +42,10 @@ def _dposv(A, b, lower):
     # invert the meaning of 'lower' and 'trans', and the function will work fine.
     # We also need to swap index orders
     uplo = __uplo_U if lower else __uplo_L
-    n_p = __ffi.from_buffer(np.array([A.shape[0]], dtype=np.intc))
-    nrhs_p = __ffi.from_buffer(np.ones(1, dtype=np.intc))
+    narr = np.array([A.shape[0]], dtype=np.intc)
+    n_p = __ffi.from_buffer(narr)
+    nrhs = np.ones(1, dtype=np.intc)
+    nrhs_p = __ffi.from_buffer(nrhs)
     info = np.zeros(1, dtype=np.intc)
     info_p = __ffi.from_buffer(info)
 
@@ -52,7 +54,7 @@ def _dposv(A, b, lower):
             __ffi.from_buffer(b), n_p,
             info_p)
 
-    _ref_sink(n_p, nrhs_p, info, info_p)
+    _ref_sink(narr, n_p, nrhs, nrhs_p, info, info_p)
 
     return info[0]
 
