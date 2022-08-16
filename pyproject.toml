@@ -24,12 +24,12 @@ dependencies = [
     "pandas >=1.0, ==1.*",
     "numpy >= 1.19",
     "scipy >= 1.2",
-    "numba >= 0.51, < 0.56",
+    "numba >= 0.51, < 0.57",
     "cffi >= 1.12.2",
     "psutil >= 5",
     "binpickle >= 0.3.2",
     "seedbank >= 0.1.0",
-    "csr >= 0.3.1",
+    "csr >= 0.4",
 ]
 
 [project.urls]
