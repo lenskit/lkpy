@@ -5,3 +5,4 @@ numba==0.51.0
 pyarrow==0.15.1
 cffi==1.12.2
 binpickle==0.3.2
+csr==0.4.0
