@@ -30,6 +30,7 @@ doc/data/
 *.o
 *.obj
 /*env*.yml
+conda-lock.yml
 *.lock
 *.lock.yml
 *.tar.bz2
