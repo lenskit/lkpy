@@ -39,7 +39,7 @@ source = "https://github.com/lenskit/lkpy"
 
 [project.optional-dependencies]
 test = [
-    "pytest >= 6",
+    "pytest ==6.*",
     "pytest-doctestplus >= 0.9",
     "hypothesis >= 6"
 ]
