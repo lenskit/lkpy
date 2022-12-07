@@ -48,41 +48,24 @@ contains other information on *developing* LensKit. User-facing documentation is
 at <https://lkpy.lenskit.org>.
 
 [conda-lock]: https://github.com/conda-incubator/conda-lock
+[lkbuild]: https://github.com/lenskit/lkbuild
 
 We recommend using an Anaconda environment for developing LensKit.
 We don't maintain the Conda environment specification directly - instead, we
-maintain information in `setup.toml` to be able to generate it, so that we define
+maintain information in `pyproject.toml` to be able to generate it, so that we define
 dependencies and versions in one place.
 
-[conda-lock][] can help you set up the environment (replace `linux-64` with your platform):
+[conda-lock][] can help you set up the environment; the [LensKit build tools][lkbuild] automate this.
 
-    # install conda-lock in base environment
-    # alternatively: pip install conda-lock
-    conda install -c conda-forge conda-lock
-    # create the lock file for Python 3.9
-    conda-lock -p linux-64 -f pyproject.toml -f lkbuild/python-3.9-spec.yml
+    # install bootstrap enviroinment
+    conda env create -n lkboot -f https://raw.githubusercontent.com/lenskit/lkbuild/main/boot-env.yml
+    # create the lock file for Python 3.10
+    conda run -n lkboot --no-capture lkbuild dev-lock -v 3.10
     # create the environment
     conda env create -n lkpy -f conda-linux-64.lock
 
 This will create a Conda environment called `lkpy` with the packages required to develop and test
 LensKit.
-
-We also provide support for automating some of this process through LensKit's
-infrastructure utilities:
-
-    invoke dev-lock
-
-The `lkbuild/boot-env.yml` file defines a Conda environment with the packages necessary
-for the lockfile generation to work.  The full set of commands:
-
-    conda env create -f lkbuild/boot-env.yml
-    conda activate lkboot
-    invoke dev-lock
-    conda create -n lkpy -f conda-linux-64.lock
-    conda activate lkpy
-
-`invoke dev-lock` can optionally specify the BLAS implementation (`openblas` or `mkl`), and the
-Python version.
 
 ## Testing Changes
 
