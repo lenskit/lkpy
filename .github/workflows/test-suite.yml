@@ -64,7 +64,7 @@ jobs:
           python -m pytest --cov=lenskit --cov-append -m 'not slow' --log-file=test-nojit.log
 
       - name: Process Test Results
-        uses: lesnkit/lkbuild/actions/save-test-results@main
+        uses: lenskit/lkbuild/actions/save-test-results@main
         with:
           artifact-name: test-conda-${{matrix.platform}}-py${{matrix.python}}-${{matrix.blas}}
 
@@ -125,7 +125,7 @@ jobs:
       #   run: |
       #     python -m pytest --nbval-lax --cov=lenskit --cov-append examples --log-file test-examples.log
       - name: Process Test Results
-        uses: lesnkit/lkbuild/actions/save-test-results@main
+        uses: lenskit/lkbuild/actions/save-test-results@main
         with:
           artifact-name: test-check-docs
 
@@ -159,7 +159,7 @@ jobs:
           python -m pytest --cov=lenskit --cov-report=xml --log-file=test.log
 
       - name: Process Test Results
-        uses: lesnkit/lkbuild/actions/save-test-results@main
+        uses: lenskit/lkbuild/actions/save-test-results@main
         with:
           artifact-name: test-vanilla-${{matrix.platform}}-py${{matrix.python}}
 
@@ -186,7 +186,7 @@ jobs:
           python -m pip install pytest-cov
 
       - name: Process Test Results
-        uses: lesnkit/lkbuild/actions/save-test-results@main
+        uses: lenskit/lkbuild/actions/save-test-results@main
         with:
           artifact-name: test-mindeps
 
