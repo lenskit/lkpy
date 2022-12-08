@@ -63,18 +63,10 @@ jobs:
         run: |
           python -m pytest --cov=lenskit --cov-append -m 'not slow' --log-file=test-nojit.log
 
-      - name: Aggreagate Coverage Data
-        run: |
-          coverage xml
-
-      - name: Upload logs
-        uses: actions/upload-artifact@v2
+      - name: Process Test Results
+        uses: lesnkit/lkbuild/actions/save-test-results@main
         with:
-          name: log-conda-${{matrix.platform}}-py${{matrix.python}}-${{matrix.blas}}
-          path: |
-            coverage.xml
-            test*.log
-            emissions.csv
+          artifact-name: test-conda-${{matrix.platform}}-py${{matrix.python}}-${{matrix.blas}}
 
   check-docs:
     name: Docs, Examples, and Eval
@@ -132,18 +124,10 @@ jobs:
       # - name: Validate Examples
       #   run: |
       #     python -m pytest --nbval-lax --cov=lenskit --cov-append examples --log-file test-examples.log
-      - name: Aggreagate Coverage Data
-        run: |
-          coverage xml
-
-      - name: Upload logs
-        uses: actions/upload-artifact@v2
+      - name: Process Test Results
+        uses: lesnkit/lkbuild/actions/save-test-results@main
         with:
-          name: log-check-docs
-          path: |
-            test*.log
-            coverage.xml
-            emissions.csv
+          artifact-name: test-check-docs
 
   vanilla:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
@@ -174,17 +158,10 @@ jobs:
         run: |
           python -m pytest --cov=lenskit --cov-report=xml --log-file=test.log
 
-      - name: Aggreagate Coverage Data
-        run: coverage xml
-
-      - name: Upload logs
-        uses: actions/upload-artifact@v2
+      - name: Process Test Results
+        uses: lesnkit/lkbuild/actions/save-test-results@main
         with:
-          name: log-vanilla-${{matrix.platform}}-py${{matrix.python}}
-          path: |
-            test*.log
-            coverage.xml
-            emissions.csv
+          artifact-name: test-vanilla-${{matrix.platform}}-py${{matrix.python}}
 
   mindep:
     name: Minimal Supported Dependencies
@@ -208,18 +185,10 @@ jobs:
           python -m pip install -c min-constraints.txt .[test]
           python -m pip install pytest-cov
 
-      - name: Run tests
-        run: |
-          python -m pytest --cov=lenskit --cov-report=xml --log-file test.log
-
-      - name: Upload logs
-        uses: actions/upload-artifact@v2
+      - name: Process Test Results
+        uses: lesnkit/lkbuild/actions/save-test-results@main
         with:
-          name: log-mindep
-          path: |
-            test*.log
-            coverage.xml
-            emissions.csv
+          artifact-name: test-mindeps
 
   results:
     name: Test Suite Results
@@ -236,20 +205,4 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v2
-        with:
-          path: test-logs
-
-      - name: List log files
-        run: ls -lR test-logs
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v2
-        with:
-          directory: test-logs/
-
-      - name: Upload all test data
-        uses: actions/upload-artifact@v1
-        with:
-          name: test-outputs
-          path: test-logs
+      - uses: lenskit/lkbuild/actions/report-test-results@main
