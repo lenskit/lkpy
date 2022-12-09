@@ -204,7 +204,7 @@ jobs:
       - name: Set up Python deps
         run: |
           set -e
-          python -m pip install -U pip
+          python -m pip install -U pip wheel
           python -m pip install -c min-constraints.txt .[test]
           python -m pip install pytest-cov
 
