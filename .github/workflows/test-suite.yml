@@ -185,6 +185,10 @@ jobs:
           python -m pip install -c min-constraints.txt .[test]
           python -m pip install pytest-cov
 
+      - name: Run tests
+        run: |
+          python -m pytest --cov=lenskit --cov-report=xml --log-file test.log
+
       - name: Process Test Results
         uses: lenskit/lkbuild/actions/save-test-results@main
         with:
