@@ -23,9 +23,10 @@ We generally find the best performance using MKL with TBB throughout the stack. 
 LensKit's Numba-accelerated code and MKL are using TBB, they will coordinate their
 thread pools to coordinate threading levels.
 
-If you are **not** using TBB, we recommend setting ``MKL_NUM_THREADS=1`` to turn off MKL's
-threading.  When LensKit starts (usually at model training time), it will check your
-runtime environment and log warning messages if it detects problems.
+If you are **not** using MKL with TBB, we recommend setting ``MKL_NUM_THREADS=1`` and/or
+``OPENBLAS_NUM_THREADS=1`` (depending on your BLAS implementation) to turn off
+BLAS threading.  When LensKit starts (usually at model training time), it will
+check your runtime environment and log warning messages if it detects problems.
 
 Controlling Parallelism
 -----------------------

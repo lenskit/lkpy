@@ -240,6 +240,8 @@ def check_env():
         _already_checked = True
         return
 
+    _log.info('Using BLAS %s', blas.impl)
+
     if numba.threading != 'tbb':
         _log.warning('Numba is using threading layer %s - consider TBB', numba.threading)
         _log.info('Non-TBB threading is often slower and can cause crashes')
