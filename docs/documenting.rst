@@ -33,6 +33,10 @@ accurately reported.
 Reporting Algorithms
 ~~~~~~~~~~~~~~~~~~~~
 
+.. note::
+
+    This section is still in progress.
+
 You need to clearly report the algorithms that you have used along with their
 hyperparameters.
 
