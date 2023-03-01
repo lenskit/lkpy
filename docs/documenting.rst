@@ -111,3 +111,31 @@ and the target list length is in ``N``::
 
 You can then use :py:meth:`pandas.DataFrame.to_latex` to convert ``algo_scores``
 to a LaTeX table to include in your paper.
+
+Citing LensKit
+~~~~~~~~~~~~~~
+
+Finally, cite [LKPY]_ as the package used for producing and/or evaluating
+recommendations.
+
+.. [LKPY]
+    Michael D. Ekstrand. 2020.
+    LensKit for Python: Next-Generation Software for Recommender Systems Experiments.
+    In <cite>Proceedings of the 29th ACM International Conference on Information and Knowledge Management</cite> (CIKM '20).
+    DOI:`10.1145/3340531.3412778 <https://dx.doi.org/10.1145/3340531.3412778>`_.
+    arXiv:`1809.03125 <https://arxiv.org/abs/1809.03125>`_ [cs.IR].
+
+.. code-block:: bibtex
+
+    @INPROCEEDINGS{lkpy,
+    title           = "{LensKit} for {Python}: Next-Generation Software for
+                        Recommender System Experiments",
+    booktitle       = "Proceedings of the 29th {ACM} International Conference on
+                        Information and Knowledge Management",
+    author          = "Ekstrand, Michael D.",
+    year            =  2020,
+    url             = "http://dx.doi.org/10.1145/3340531.3412778",
+    conference      = "CIKM '20",
+    doi             = "10.1145/3340531.3412778"
+    pages           = "2999--3006"
+    }
