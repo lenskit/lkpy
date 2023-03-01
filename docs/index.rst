@@ -42,6 +42,7 @@ Resources
    crossfold
    batch
    evaluation/index
+   documenting
 
 .. toctree::
     :maxdepth: 1
