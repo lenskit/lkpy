@@ -99,8 +99,8 @@ class MovieLens:
         fn = self.path / 'movies.csv'
         movies = pd.read_csv(fn, dtype={
             'movieId': np.int32,
-            'title': np.object,
-            'genres': np.object
+            'title': object,
+            'genres': object,
         })
         movies.rename(columns={'movieId': 'item'}, inplace=True)
         movies.set_index('item', inplace=True)
@@ -159,8 +159,8 @@ class MovieLens:
         tags = pd.read_csv(fn, dtype={
             'movieId': np.int32,
             'userId': np.int32,
-            'tag': np.object,
-            'timestamp': np.int32
+            'tag': object,
+            'timestamp': np.int32,
         })
         tags.rename(columns={'userId': 'user', 'movieId': 'item'}, inplace=True)
         _log.debug('loaded %s, takes %d bytes', fn, tags.memory_usage().sum())
@@ -192,7 +192,7 @@ class MovieLens:
         genome = pd.read_csv(fn, dtype={
             'movieId': np.int32,
             'tagId': np.int32,
-            'relevance': np.float64
+            'relevance': np.float64,
         })
         genome.rename(columns={'userId': 'user', 'movieId': 'item'}, inplace=True)
         genome = genome.join(tags, on='tagId')
