@@ -269,7 +269,7 @@ def dcg(recs, truth, discount=np.log2):
 
 def ndcg(recs, truth, discount=np.log2, k=None):
     """
-    Compute the normalized discounted cumulative gain :cite:p:`Jarvelin2002-xf`.
+    Compute the normalized discounted cumulative gain :cite:p:`ndcg`.
 
     Discounted cumultative gain is computed as:
 
@@ -357,3 +357,60 @@ def _bulk_ndcg(recs, truth, discount=np.log2, k=None):
     dcg['ndcg'] = dcg['dcg'].fillna(0) / dcg['ideal']
 
     return dcg['ndcg']
+
+
+def rbp(recs, truth, k=None, patience=0.5, normalize=False):
+    """
+    Evaluate recommendations with rank-biased precision :cite:p:`rbp` with a
+    patience parameter :math:`\\gamma`.
+
+    If :math:`r_{ui} \\in \\{0, 1\\}` is binary implicit ratings, this is
+    computed by:
+
+    .. math::
+        \\begin{align*}
+        \\operatorname{RBP}_\\gamma(L, u) & =(1 - \\gamma) \sum_i r_{ui} p^i
+        \\end{align*}
+
+    The original RBP metric depends on the idea that the rank-biased sum of
+    binary relevance scores in an infinitely-long, perfectly-precise list has is
+    :math:`1/(1 - \\gamma)`. However, in recommender evaluation, we usually have
+    a small test set, so the maximum achievable RBP is significantly less, and
+    is a function of the number of test items.  With ``normalize=True``, the RBP
+    metric will be normalized by the maximum achievable with the provided test
+    data.
+
+    Parameters:
+        recs: the recommendation list.
+        truth: the user's truth data.
+        k(int): the maximum recommendation list length.
+        patience(float): the patience parameter :math:`\\gamma`, the probability that the user continues
+            browsing at each point.
+        normalize(bool): whether to normalize the RBP
+            scores; if ``True``, divides the RBP score by the maximum achievable
+            with the test data.
+    """
+    if k is not None:
+        recs = recs.iloc[:k]
+
+    nrel = len(truth)
+    if nrel == 0:
+        return None
+
+    good = recs['item'].isin(truth.index)
+    ranks = recs['rank'][good]
+    disc = patience ** ranks
+    rbp = np.sum(disc) * (1 - patience)
+    return rbp
+
+
+@bulk_impl(rbp)
+def _bulk_rbp(recs, truth, k=None, patience=0.5):
+    if k is not None:
+        recs = recs[recs['rank'] <= k]
+
+    good = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
+    good['rbp_disc'] = patience ** good['rank']
+    scores = good.groupby('LKRecID')['rbp_disc'].sum()
+    scores *= (1 - patience)
+    return scores
