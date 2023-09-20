@@ -399,7 +399,7 @@ def rbp(recs, truth, k=None, patience=0.5, normalize=False):
 
     good = recs['item'].isin(truth.index)
     ranks = recs['rank'][good]
-    disc = patience ** ranks
+    disc = patience ** (ranks - 1)
     rbp = np.sum(disc) * (1 - patience)
     return rbp
 
