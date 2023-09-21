@@ -412,7 +412,9 @@ def rbp(recs, truth, k=None, patience=0.5, normalize=False):
     rbp = np.sum(disc)
     if normalize:
         # normalize by achievable RBP
-        return rbp / (np.sum(patience ** np.arange(min(nrel, k))))
+        max = np.sum(patience ** np.arange(min(nrel, k)))
+        # _log.info('rbp=%e, nrel=%d, eff=%d, max=%e', rbp, nrel, min(nrel, k), max)
+        return rbp / max
     else:
         # normal RBP normalization
         return rbp * (1 - patience)
@@ -428,7 +430,7 @@ def _bulk_rbp(recs, truth, k=None, patience=0.5, normalize=False):
     scores = good.groupby('LKRecID')['rbp_disc'].sum()
 
     if normalize:
-        tns = recs.groupby('LKTruthID')['item'].count()
+        tns = truth.reset_index().groupby('LKTruthID')['item'].count()
         if k is not None:
             tns[tns > k] = k
         max_nrel = np.max(tns)
@@ -438,8 +440,6 @@ def _bulk_rbp(recs, truth, k=None, patience=0.5, normalize=False):
         nd = patience ** kseq
         # convert to a series of the sums, up through each k
         max_rbps = pd.Series(np.cumsum(nd), index=kseq + 1)
-        _log.debug('n=%d, max=%.10e, emax=%.10e', max_nrel, max_rbps.loc[max_nrel],
-                   np.sum(patience ** np.arange(max_nrel)))
 
         # get a rec/truth mapping
         map = recs[['LKRecID', 'LKTruthID']].drop_duplicates()

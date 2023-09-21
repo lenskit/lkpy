@@ -129,8 +129,11 @@ def test_rbp_bulk_match(demo_recs, normalize):
     rla.add_metric(lambda *a, **k: rbp(*a, normalize=normalize, **k), name='ind_rbp_k', k=5)
     res = rla.compute(recs, test)
 
-    user = res.index[43]
-    _log.info('user: %s\n%s', user, res.iloc[43])
+    res['diff'] = np.abs(res.rbp - res.ind_rbp)
+    rl = res.nlargest(5, 'diff')
+    _log.info('res:\n%s', rl)
+    user = rl.index[0]
+    _log.info('user: %s\n%s', user, rl.iloc[0])
     _log.info('test:\n%s', test[test['user'] == user])
     urecs = recs[recs['user'] == user].join(test.set_index(['user', 'item'])['rating'], on=['user', 'item'], how='left')
     _log.info('recs:\n%s', urecs[urecs['rating'].notnull()])
