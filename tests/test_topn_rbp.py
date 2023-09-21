@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import pandas as pd
 
@@ -9,6 +10,8 @@ import hypothesis.extra.numpy as nph
 from lenskit.metrics.topn import rbp, _bulk_rbp
 from lenskit.topn import RecListAnalysis
 from lenskit.util.test import demo_recs
+
+_log = logging.getLogger(__name__)
 
 
 def test_rbp_empty():
@@ -126,5 +129,11 @@ def test_rbp_bulk_match(demo_recs, normalize):
     rla.add_metric(lambda *a, **k: rbp(*a, normalize=normalize, **k), name='ind_rbp_k', k=5)
     res = rla.compute(recs, test)
 
-    assert res.rbp.values == approx(res.ind_rbp.values, abs=1.0e-6)
-    assert res.rbp_k.values == approx(res.ind_rbp_k.values, abs=1.0e-6)
+    user = res.index[43]
+    _log.info('user: %s\n%s', user, res.iloc[43])
+    _log.info('test:\n%s', test[test['user'] == user])
+    urecs = recs[recs['user'] == user].join(test.set_index(['user', 'item'])['rating'], on=['user', 'item'], how='left')
+    _log.info('recs:\n%s', urecs[urecs['rating'].notnull()])
+
+    assert res.rbp.values == approx(res.ind_rbp.values)
+    assert res.rbp_k.values == approx(res.ind_rbp_k.values)

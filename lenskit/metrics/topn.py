@@ -429,6 +429,8 @@ def _bulk_rbp(recs, truth, k=None, patience=0.5, normalize=False):
 
     if normalize:
         tns = recs.groupby('LKTruthID')['item'].count()
+        if k is not None:
+            tns[tns > k] = k
         max_nrel = np.max(tns)
         # compute 0...k-1 (the powers of k-1 for 1..k)
         kseq = np.arange(max_nrel)
@@ -436,7 +438,7 @@ def _bulk_rbp(recs, truth, k=None, patience=0.5, normalize=False):
         nd = patience ** kseq
         # convert to a series of the sums, up through each k
         max_rbps = pd.Series(np.cumsum(nd), index=kseq + 1)
-        _log.debug('n=%d, max=%e, emax=%e', max_nrel, max_rbps.iloc[-1],
+        _log.debug('n=%d, max=%.10e, emax=%.10e', max_nrel, max_rbps.loc[max_nrel],
                    np.sum(patience ** np.arange(max_nrel)))
 
         # get a rec/truth mapping
