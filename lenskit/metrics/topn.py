@@ -3,6 +3,7 @@ Top-N evaluation metrics.
 """
 
 import logging
+import warnings
 import numpy as np
 import pandas as pd
 
@@ -390,8 +391,16 @@ def rbp(recs, truth, k=None, patience=0.5, normalize=False):
             scores; if ``True``, divides the RBP score by the maximum achievable
             with the test data.
     """
-    if k is not None:
+    if k is not None and k <= len(recs):
         recs = recs.iloc[:k]
+    else:
+        k = len(recs)
+
+    if 'rank' not in recs.columns:
+        recs = recs.assign(rank=np.arange(1, len(recs)+1))
+
+    if np.min(recs['rank']) != 1:
+        warnings.warn('rank should start with 1')
 
     nrel = len(truth)
     if nrel == 0:
@@ -400,17 +409,48 @@ def rbp(recs, truth, k=None, patience=0.5, normalize=False):
     good = recs['item'].isin(truth.index)
     ranks = recs['rank'][good]
     disc = patience ** (ranks - 1)
-    rbp = np.sum(disc) * (1 - patience)
-    return rbp
+    rbp = np.sum(disc)
+    if normalize:
+        # normalize by achievable RBP
+        return rbp / (np.sum(patience ** np.arange(min(nrel, k))))
+    else:
+        # normal RBP normalization
+        return rbp * (1 - patience)
 
 
 @bulk_impl(rbp)
-def _bulk_rbp(recs, truth, k=None, patience=0.5):
+def _bulk_rbp(recs, truth, k=None, patience=0.5, normalize=False):
     if k is not None:
         recs = recs[recs['rank'] <= k]
 
     good = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
-    good['rbp_disc'] = patience ** good['rank']
+    good['rbp_disc'] = patience ** (good['rank'] - 1)
     scores = good.groupby('LKRecID')['rbp_disc'].sum()
-    scores *= (1 - patience)
+
+    if normalize:
+        tns = recs.groupby('LKTruthID')['item'].count()
+        max_nrel = np.max(tns)
+        # compute 0...k-1 (the powers of k-1 for 1..k)
+        kseq = np.arange(max_nrel)
+        # compute the discounts at each k-1
+        nd = patience ** kseq
+        # convert to a series of the sums, up through each k
+        max_rbps = pd.Series(np.cumsum(nd), index=kseq + 1)
+        _log.debug('n=%d, max=%e, emax=%e', max_nrel, max_rbps.iloc[-1],
+                   np.sum(patience ** np.arange(max_nrel)))
+
+        # get a rec/truth mapping
+        map = recs[['LKRecID', 'LKTruthID']].drop_duplicates()
+        map.set_index('LKRecID', inplace=True)
+        map = map.reindex(scores.index)
+        # map to nrel, and then to the max RBPs
+        map = map.join(tns.to_frame('nrel'), on='LKTruthID', how='left')
+        map = map.join(max_rbps.to_frame('rbp_max'), on='nrel', how='left')
+
+        # divide each score by max RBP
+        scores /= map['rbp_max']
+    else:
+        scores *= (1 - patience)
+
+    scores = scores.reindex(recs['LKRecID'].unique(), fill_value=0)
     return scores
