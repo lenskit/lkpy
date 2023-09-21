@@ -370,7 +370,7 @@ def rbp(recs, truth, k=None, patience=0.5, normalize=False):
 
     .. math::
         \\begin{align*}
-        \\operatorname{RBP}_\\gamma(L, u) & =(1 - \\gamma) \sum_i r_{ui} p^i
+        \\operatorname{RBP}_\\gamma(L, u) & =(1 - \\gamma) \\sum_i r_{ui} p^i
         \\end{align*}
 
     The original RBP metric depends on the idea that the rank-biased sum of
@@ -385,8 +385,8 @@ def rbp(recs, truth, k=None, patience=0.5, normalize=False):
         recs: the recommendation list.
         truth: the user's truth data.
         k(int): the maximum recommendation list length.
-        patience(float): the patience parameter :math:`\\gamma`, the probability that the user continues
-            browsing at each point.
+        patience(float): the patience parameter :math:`\\gamma`, the probability
+            that the user continues browsing at each point.
         normalize(bool): whether to normalize the RBP
             scores; if ``True``, divides the RBP score by the maximum achievable
             with the test data.
