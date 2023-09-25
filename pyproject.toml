@@ -14,6 +14,7 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Operating System :: OS Independent",
     "Intended Audience :: Science/Research",
 ]
@@ -25,7 +26,7 @@ dependencies = [
     "pandas >=1.0, ==1.*",
     "numpy >= 1.17",
     "scipy >= 1.2",
-    "numba >= 0.51, < 0.57",
+    "numba >= 0.51, < 0.59",
     "cffi >= 1.12.2",
     "psutil >= 5",
     "binpickle >= 0.3.2",
