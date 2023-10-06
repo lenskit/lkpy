@@ -156,6 +156,10 @@ jobs:
         with:
           python-version: ${{matrix.python}}
 
+      - name: Inspect environment
+        run: |
+          numba -s
+
       - name: Run tests
         run: |
           python -m pytest --cov=lenskit --cov-report=xml --log-file=test.log
@@ -186,6 +190,10 @@ jobs:
           python -m pip install -U pip wheel
           python -m pip install -c min-constraints.txt .[test]
           python -m pip install pytest-cov
+
+      - name: Inspect environment
+        run: |
+          numba -s
 
       - name: Run tests
         run: |
