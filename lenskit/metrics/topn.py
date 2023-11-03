@@ -3,6 +3,7 @@ Top-N evaluation metrics.
 """
 
 import logging
+import warnings
 import numpy as np
 import pandas as pd
 
@@ -269,7 +270,7 @@ def dcg(recs, truth, discount=np.log2):
 
 def ndcg(recs, truth, discount=np.log2, k=None):
     """
-    Compute the normalized discounted cumulative gain :cite:p:`Jarvelin2002-xf`.
+    Compute the normalized discounted cumulative gain :cite:p:`ndcg`.
 
     Discounted cumultative gain is computed as:
 
@@ -357,3 +358,101 @@ def _bulk_ndcg(recs, truth, discount=np.log2, k=None):
     dcg['ndcg'] = dcg['dcg'].fillna(0) / dcg['ideal']
 
     return dcg['ndcg']
+
+
+def rbp(recs, truth, k=None, patience=0.5, normalize=False):
+    """
+    Evaluate recommendations with rank-biased precision :cite:p:`rbp` with a
+    patience parameter :math:`\\gamma`.
+
+    If :math:`r_{ui} \\in \\{0, 1\\}` is binary implicit ratings, this is
+    computed by:
+
+    .. math::
+        \\begin{align*}
+        \\operatorname{RBP}_\\gamma(L, u) & =(1 - \\gamma) \\sum_i r_{ui} p^i
+        \\end{align*}
+
+    The original RBP metric depends on the idea that the rank-biased sum of
+    binary relevance scores in an infinitely-long, perfectly-precise list has is
+    :math:`1/(1 - \\gamma)`. However, in recommender evaluation, we usually have
+    a small test set, so the maximum achievable RBP is significantly less, and
+    is a function of the number of test items.  With ``normalize=True``, the RBP
+    metric will be normalized by the maximum achievable with the provided test
+    data.
+
+    Parameters:
+        recs: the recommendation list.
+        truth: the user's truth data.
+        k(int): the maximum recommendation list length.
+        patience(float): the patience parameter :math:`\\gamma`, the probability
+            that the user continues browsing at each point.
+        normalize(bool): whether to normalize the RBP
+            scores; if ``True``, divides the RBP score by the maximum achievable
+            with the test data.
+    """
+    if k is not None and k <= len(recs):
+        recs = recs.iloc[:k]
+    else:
+        k = len(recs)
+
+    if 'rank' not in recs.columns:
+        recs = recs.assign(rank=np.arange(1, len(recs)+1))
+
+    if np.min(recs['rank']) != 1:
+        warnings.warn('rank should start with 1')
+
+    nrel = len(truth)
+    if nrel == 0:
+        return None
+
+    good = recs['item'].isin(truth.index)
+    ranks = recs['rank'][good]
+    disc = patience ** (ranks - 1)
+    rbp = np.sum(disc)
+    if normalize:
+        # normalize by achievable RBP
+        max = np.sum(patience ** np.arange(min(nrel, k)))
+        # _log.info('rbp=%e, nrel=%d, eff=%d, max=%e', rbp, nrel, min(nrel, k), max)
+        return rbp / max
+    else:
+        # normal RBP normalization
+        return rbp * (1 - patience)
+
+
+@bulk_impl(rbp)
+def _bulk_rbp(recs, truth, k=None, patience=0.5, normalize=False):
+    if k is not None:
+        recs = recs[recs['rank'] <= k]
+
+    good = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
+    good['rbp_disc'] = patience ** (good['rank'] - 1)
+    scores = good.groupby('LKRecID')['rbp_disc'].sum()
+
+    if normalize:
+        tns = truth.reset_index().groupby('LKTruthID')['item'].count()
+        if k is not None:
+            tns[tns > k] = k
+        max_nrel = np.max(tns)
+        # compute 0...k-1 (the powers of k-1 for 1..k)
+        kseq = np.arange(max_nrel)
+        # compute the discounts at each k-1
+        nd = patience ** kseq
+        # convert to a series of the sums, up through each k
+        max_rbps = pd.Series(np.cumsum(nd), index=kseq + 1)
+
+        # get a rec/truth mapping
+        map = recs[['LKRecID', 'LKTruthID']].drop_duplicates()
+        map.set_index('LKRecID', inplace=True)
+        map = map.reindex(scores.index)
+        # map to nrel, and then to the max RBPs
+        map = map.join(tns.to_frame('nrel'), on='LKTruthID', how='left')
+        map = map.join(max_rbps.to_frame('rbp_max'), on='nrel', how='left')
+
+        # divide each score by max RBP
+        scores /= map['rbp_max']
+    else:
+        scores *= (1 - patience)
+
+    scores = scores.reindex(recs['LKRecID'].unique(), fill_value=0)
+    return scores
