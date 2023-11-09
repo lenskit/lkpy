@@ -284,6 +284,7 @@ def main():
     opts = docopt(__doc__)
     level = logging.DEBUG if opts['--verbose'] else logging.INFO
     logging.basicConfig(level=level, stream=sys.stderr, format='%(levelname)s %(name)s %(message)s')
+    logging.getLogger('numba').setLevel(logging.INFO)
 
     if opts['--libraries']:
         print_libraries()
