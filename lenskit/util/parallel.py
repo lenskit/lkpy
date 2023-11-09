@@ -12,6 +12,7 @@ import faulthandler
 from concurrent.futures import ProcessPoolExecutor
 from abc import ABC, abstractmethod
 import pickle
+from threadpoolctl import threadpool_limits
 
 from lenskit.sharing import persist, PersistedModel
 from lenskit.util.log import log_queue
@@ -103,17 +104,8 @@ def _initialize_mp_worker(mkey, func, threads, log_queue, seed):
     _initialize_worker(log_queue, seed)
     global __work_model, __work_func
 
-    nnt_env = os.environ.get('NUMBA_NUM_THREADS', None)
-    if nnt_env is None or int(nnt_env) > threads:
-        _log.debug('configuring Numba thread count')
-        import numba
-        numba.config.NUMBA_NUM_THREADS = threads
-    try:
-        import mkl
-        _log.debug('configuring MKL thread count')
-        mkl.set_num_threads(threads)
-    except ImportError:
-        pass
+    # disable BLAS threading
+    threadpool_limits(limits=1, user_api="blas")
 
     __work_model = mkey
     # deferred function unpickling to minimize imports before initialization
