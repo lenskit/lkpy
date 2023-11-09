@@ -14,19 +14,24 @@ Quick Tips
 ----------
 
 * Use Conda-based Python, with ``tbb`` installed.
-* Set the ``MKL_THREADING_LAYER`` environment variable to ``tbb``, so both MKL and LensKit
-  will use TBB and can coordinate their thread pools.
+* When using MKL, set the ``MKL_THREADING_LAYER`` environment variable to ``tbb``, so both
+  MKL and LensKit will use TBB and can coordinate their thread pools.
 * Use ``LK_NUM_PROCS`` if you want to control LensKit's batch prediction and recommendation
   parallelism, and ``NUMBA_NUM_THREADS`` to control its model training parallelism.
 
-We generally find the best performance using MKL with TBB throughout the stack.  If both
-LensKit's Numba-accelerated code and MKL are using TBB, they will coordinate their
-thread pools to coordinate threading levels.
+We generally find the best performance using MKL with TBB throughout the stack on Intel
+processors.  If both LensKit's Numba-accelerated code and MKL are using TBB, they will
+coordinate their thread pools to coordinate threading levels.
 
-If you are **not** using MKL with TBB, we recommend setting ``MKL_NUM_THREADS=1`` and/or
-``OPENBLAS_NUM_THREADS=1`` (depending on your BLAS implementation) to turn off
-BLAS threading.  When LensKit starts (usually at model training time), it will
-check your runtime environment and log warning messages if it detects problems.
+If you are **not** using MKL (Apple Silicon, maybe also AMD processors), we recommend
+controlling your BLAS parallelism.  For OpenBLAS, how you control this depends on how
+OpenBLAS was built, whether Numba is using OpenMP or TBB, and whether you are training
+or evaluating the model.
+
+When LensKit starts (usually at model training time), it will check your runtime environment
+and log warning messages if it detects problems.  During evaluation, it also makes a
+best-effort attempt, through `threadpoolctl`_, to disable nested parallelism when running
+a parallel evaluation.
 
 Controlling Parallelism
 -----------------------
