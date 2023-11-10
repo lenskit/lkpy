@@ -83,7 +83,7 @@ jobs:
         uses: mamba-org/setup-micromamba@v1
         id: setup
         with:
-          environment-file: envs/lenskit-py3.10-demo.yaml
+          environment-file: envs/lenskit-py3.10-demo-ci.yaml
           environment-name: lkpy
           cache-environment: true
           init-shell: bash
