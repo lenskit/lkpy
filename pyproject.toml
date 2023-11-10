@@ -90,7 +90,7 @@ exclude = [
 channels = ["conda-forge"]
 python = ["3.10", "3.11"]
 default_envs = ["test", "sklearn", "doc"]
-template_python = "envs/lenskit-py{py}-{env}"
+template_python = "envs/lenskit-py{py_version}-{env}"
 template = "envs/{env}"
 
 [tool.pyproject2conda.envs.dev]
