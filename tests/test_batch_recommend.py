@@ -12,11 +12,6 @@ from lenskit.algorithms.bias import Bias
 from lenskit import batch, topn
 import lenskit.crossfold as xf
 
-try:
-    import pickle5
-except ImportError:
-    pickle5 = None
-
 MLB = namedtuple('MLB', ['ratings', 'algo'])
 _log = logging.getLogger(__name__)
 
