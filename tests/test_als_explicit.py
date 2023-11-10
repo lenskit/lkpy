@@ -1,16 +1,8 @@
 import logging
 import pickle
 
-from numpy.lib.npyio import _save_dispatcher
-
 # get a usable pickle disassembler
-if pickle.HIGHEST_PROTOCOL >= 5:
-    from pickletools import dis as pickle_dis
-else:
-    try:
-        from pickle5.pickletools import dis as pickle_dis
-    except ImportError:
-        pass
+from pickletools import dis as pickle_dis
 
 from lenskit.algorithms import als
 from lenskit import util
