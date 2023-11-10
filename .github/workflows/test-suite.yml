@@ -158,7 +158,7 @@ jobs:
           cache: 'pip'
 
       - name: Set up dependencies
-        run:
+        run: |
           pip install 'flit>=3.8'
           flit install --deps=production --extras=test --only-deps
 
