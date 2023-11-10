@@ -12,15 +12,12 @@ Options:
         Turn on verbose logging
 """
 
-from pathlib import Path
 import sys
 import logging
-import ctypes
 from typing import Optional
 from dataclasses import dataclass
 import numba
-import psutil
-import numpy as np
+import threadpoolctl
 
 from .parallel import is_worker
 
@@ -52,157 +49,21 @@ class NumbaInfo:
     threads: int
 
 
-def _get_shlibs():
-    proc = psutil.Process()
-    if hasattr(proc, 'memory_maps'):
-        return [mm.path for mm in proc.memory_maps()]
-    else:
-        return []
-
-
-def _guess_layer():
-    layer = None
-
-    _log.debug('scanning process memory maps for MKL threading layers')
-    for mm in _get_shlibs():
-        if 'mkl_intel_thread' in mm:
-            _log.debug('found library %s linked', mm)
-            if layer:
-                _log.warn('multiple threading layers detected')
-            layer = 'intel'
-        elif 'mkl_tbb_thread' in mm:
-            _log.debug('found library %s linked', mm)
-            if layer:
-                _log.warn('multiple threading layers detected')
-            layer = 'tbb'
-        elif 'mkl_gnu_thread' in mm:
-            _log.debug('found library %s linked', mm)
-            if layer:
-                _log.warn('multiple threading layers detected')
-            layer = 'gnu'
-
-    return layer
-
-
-def guess_blas_unix():
-    _log.info('opening self DLL')
-    dll = ctypes.CDLL(None)
-
-    _log.debug('checking for MKL')
-    try:
-        mkl_vstr = dll.mkl_get_version_string
-        mkl_vbuf = ctypes.create_string_buffer(256)
-        mkl_vstr(mkl_vbuf, 256)
-        version = mkl_vbuf.value.decode().strip()
-        _log.debug('version %s', version)
-
-        mkl_mth = dll.mkl_get_max_threads
-        mkl_mth.restype = ctypes.c_int
-        threads = mkl_mth()
-
-        layer = _guess_layer()
-
-        return BlasInfo('mkl', layer, threads, version)
-    except AttributeError as e:
-        _log.debug('MKL attribute error: %s', e)
-        pass  # no MKL
-
-    _log.debug('checking BLAS for OpenBLAS')
-    np_dll = ctypes.CDLL(np.core._multiarray_umath.__file__)
-    try:
-        openblas_vstr = np_dll.openblas_get_config
-        openblas_vstr.restype = ctypes.c_char_p
-        version = openblas_vstr().decode()
-        _log.debug('version %s', version)
-
-        openblas_th = np_dll.openblas_get_num_threads
-        openblas_th.restype = ctypes.c_int
-        threads = openblas_th()
-        _log.debug('threads %d', threads)
-
-        return BlasInfo('openblas', None, threads, version)
-    except AttributeError as e:
-        _log.info('OpenBLAS error: %s', e)
-
-    return BlasInfo(None, None, None, 'unknown')
-
-
-def _find_win_blas_path():
-    for lib in _get_shlibs():
-        path = Path(lib)
-        name = path.name
-        if not name.startswith('libopenblas'):
+def blas_info():
+    pools = threadpoolctl.threadpool_info()
+    blas = None
+    for pool in pools:
+        if pool['user_api'] != 'blas':
             continue
 
-        if path.parent.parent.name == 'numpy':
-            _log.debug('found BLAS at %s', lib)
-            return lib
-        elif path.parent.name == 'numpy.libs':
-            _log.debug('found BLAS at %s', lib)
-            return lib
+        if blas is not None:
+            _log.warning("found multiple BLAS layers, using first")
+            _log.info("later layer is: %s", pool)
+            continue
 
+        blas = BlasInfo(pool['internal_api'], pool.get('threading_layer', None), pool.get('num_threads', None), pool['version'])
 
-def _find_win_blas():
-    try:
-        blas_dll = ctypes.cdll.libblas
-        _log.debug('loaded BLAS dll %s', blas_dll)
-        return blas_dll
-    except (FileNotFoundError, OSError) as e:
-        _log.debug('no LIBBLAS, searching')
-        path = _find_win_blas_path()
-        if path is not None:
-            return ctypes.CDLL(path)
-        else:
-            _log.error('could not load LIBBLAS: %s', e)
-            return BlasInfo(None, None, None, 'unknown')
-
-
-def guess_blas_windows():
-    blas_dll = _find_win_blas()
-
-    _log.debug('checking BLAS for MKL')
-    try:
-        mkl_vstr = blas_dll.mkl_get_version_string
-        mkl_vbuf = ctypes.create_string_buffer(256)
-        mkl_vstr(mkl_vbuf, 256)
-        version = mkl_vbuf.value.decode().strip()
-        _log.debug('version %s', version)
-
-        mkl_mth = blas_dll.mkl_get_max_threads
-        mkl_mth.restype = ctypes.c_int
-        threads = mkl_mth()
-
-        layer = _guess_layer()
-
-        return BlasInfo('mkl', layer, threads, version)
-    except AttributeError as e:
-        _log.debug('MKL attribute error: %s', e)
-        pass  # no MKL
-
-    _log.debug('checking BLAS for OpenBLAS')
-    try:
-        openblas_vstr = blas_dll.openblas_get_config
-        openblas_vstr.restype = ctypes.c_char_p
-        version = openblas_vstr().decode()
-
-        openblas_th = blas_dll.openblas_get_num_threads
-        openblas_th.restype = ctypes.c_int
-        threads = openblas_th()
-        _log.debug('threads %d', threads)
-
-        return BlasInfo('openblas', None, threads, version)
-    except AttributeError as e:
-        _log.info('OpenBLAS error: %s', e)
-
-    return BlasInfo(None, None, None, 'unknown')
-
-
-def blas_info():
-    if sys.platform == 'win32':
-        return guess_blas_windows()
-    else:
-        return guess_blas_unix()
-
+    return blas
 
 def numba_info():
     x = _par_test(100)
@@ -240,17 +101,28 @@ def check_env():
         _already_checked = True
         return
 
+    if blas is None:
+        _log.warning('threadpoolctl could not find your BLAS')
+        _already_checked = True
+        return
+
     _log.info('Using BLAS %s', blas.impl)
 
     if numba.threading != 'tbb':
-        _log.warning('Numba is using threading layer %s - consider TBB', numba.threading)
-        _log.info('Non-TBB threading is often slower and can cause crashes')
-        problems += 1
+        _log.info('Numba is using threading layer %s - consider TBB', numba.threading)
 
     if numba.threading == 'tbb' and blas.threading == 'tbb':
         _log.info('Numba and BLAS both using TBB - good')
-    elif blas.threads and blas.threads > 1 and numba.threads > 1:
+
+    if numba.threading == 'tbb' and blas.impl == 'mkl' and blas.threading != 'tbb':
+        _log.warning('Numba using TBB but MKL is using %s', blas.threading)
+        _log.info('Set MKL_THREADING_LAYER=tbb for improved performance')
+        problems += 1
+
+    if blas.threads and blas.threads > 1 and numba.threads > 1:
+        # TODO make this be fine in OpenMP configurations
         _log.warning('BLAS using multiple threads - can cause oversubscription')
+        _log.info('See https://mde.one/lkpy-blas for information on tuning BLAS for LensKit')
         problems += 1
 
     if problems:
