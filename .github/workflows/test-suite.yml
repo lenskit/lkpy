@@ -79,11 +79,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Create Conda environment file
+        run: |
+          pipx run pyproject2conda yaml -p 3.10 -e test -e demo -o environment.yml
+
       - name: 👢 Set up Conda environment
         uses: mamba-org/setup-micromamba@v1
         id: setup
         with:
-          environment-file: envs/lenskit-py3.10-demo-ci.yaml
+          environment-file: environment.yml
           environment-name: lkpy
           cache-environment: true
           init-shell: bash
