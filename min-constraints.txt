@@ -1,8 +1,8 @@
-pandas==1.0.0
-numpy==1.19.0
-scipy==1.3.2
-numba==0.51.0
-pyarrow==0.15.1
+pandas==1.4.0
+numpy==1.22.0
+scipy==1.8.0
+numba==0.56.0
 cffi==1.12.2
 binpickle==0.3.2
 csr==0.4.0
+scikit-learn==1.1.0
