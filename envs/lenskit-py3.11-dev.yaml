@@ -44,6 +44,7 @@ dependencies:
   - sphinx-autobuild >= 2021
   - sphinx_rtd_theme >= 0.5
   - sphinxcontrib-bibtex >= 2.0
+  - tbb
   - tqdm >= 4
   - pip
   - pip:
