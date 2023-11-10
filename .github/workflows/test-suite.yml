@@ -7,7 +7,7 @@ on:
 
 defaults:
   run:
-    shell: bash -l {0}
+    shell: bash -el {0}
 
 concurrency:
   group: test-${{github.ref}}
@@ -23,7 +23,7 @@ jobs:
       matrix:
         python:
         - "3.10"
-        # - "3.11"
+        - "3.11"
         platform:
         - macos
         - windows
@@ -35,11 +35,13 @@ jobs:
           fetch-depth: 0
 
       - name: 👢 Set up Conda environment
-        uses: lenskit/lkbuild/actions/setup-conda-env@main
+        uses: mamba-org/setup-micromamba@v1
         id: setup
         with:
-          extras: sklearn
-          python-version: ${{matrix.python}}
+          environment-file: envs/lenskit-py${{matrix.python}}-ci.yaml
+          environment-name: lkpy
+          cache-environment: true
+          init-shell: bash
 
       - name: Inspect environment
         run: |
@@ -78,11 +80,13 @@ jobs:
           fetch-depth: 0
 
       - name: 👢 Set up Conda environment
-        uses: lenskit/lkbuild/actions/setup-conda-env@main
+        uses: mamba-org/setup-micromamba@v1
         id: setup
         with:
-          python-version: '3.10'
-          extras: demo
+          environment-file: envs/lenskit-py3.10-demo.yaml
+          environment-name: lkpy
+          cache-environment: true
+          init-shell: bash
 
       - name: Inspect Conda environment
         run: |
