@@ -57,14 +57,14 @@ jobs:
           OMP_NUM_THREADS: 1
           OPENBLAS_NUM_THREADS: 1
 
-      - name: Non-JIT Test Coverage
+      - name: Non-JIT test coverage
         if: runner.os == 'Linux'
         env:
           NUMBA_DISABLE_JIT: 1
         run: |
           python -m pytest --cov=lenskit --cov-append -m 'not slow' --log-file=test-nojit.log
 
-      - name: Process Test Results
+      - name: Process test results
         uses: lenskit/lkbuild/actions/save-test-results@main
         with:
           artifact-name: test-conda-${{matrix.platform}}-py${{matrix.python}}-${{matrix.blas}}
@@ -103,14 +103,14 @@ jobs:
             !data/*.zip
           key: test-mldata-000
 
-      - name: Download ML Data
+      - name: Download ML data
         run: |
           python -m lenskit.datasets.fetch ml-100k
           python -m lenskit.datasets.fetch ml-1m
           python -m lenskit.datasets.fetch ml-10m
           python -m lenskit.datasets.fetch ml-20m
 
-      - name: Install for Testing
+      - name: Install for testing
         run: |
           flit install --deps none -s
 
@@ -119,7 +119,7 @@ jobs:
           python -m pytest --cov=lenskit -m eval --log-file test-eval.log
           python -m pytest --cov=lenskit --cov-append -m realdata --log-file test-realdata.log
 
-      - name: Validate Doc Notebooks
+      - name: Validate doc notebooks
         run: |
           cp docs/*.ipynb data
           python -m pytest --nbval-lax --cov=lenskit --cov-append data --log-file test-docs.log
@@ -127,7 +127,7 @@ jobs:
       # - name: Validate Examples
       #   run: |
       #     python -m pytest --nbval-lax --cov=lenskit --cov-append examples --log-file test-examples.log
-      - name: Process Test Results
+      - name: Process test results
         uses: lenskit/lkbuild/actions/save-test-results@main
         with:
           artifact-name: test-check-docs
@@ -151,10 +151,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python and environment
-        uses: lenskit/lkbuild/actions/setup-vanilla-env@main
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: ${{matrix.python}}
+          cache: 'pip'
+
+      - name: Set up dependencies
+        run:
+          pip install 'flit>=3.8'
+          flit install --deps=production --extras=test --only-deps
 
       - name: Inspect environment
         run: |
@@ -164,7 +170,7 @@ jobs:
         run: |
           python -m pytest --cov=lenskit --cov-report=xml --log-file=test.log
 
-      - name: Process Test Results
+      - name: Process test results
         uses: lenskit/lkbuild/actions/save-test-results@main
         with:
           artifact-name: test-vanilla-${{matrix.platform}}-py${{matrix.python}}
