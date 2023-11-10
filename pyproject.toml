@@ -43,7 +43,7 @@ test = [
     "hypothesis >= 6"
 ]
 dev = [
-    "lenskit-build-helpers >=0.1",
+    "lenskit-build-helpers >=0.1",  # p2c: -p
     "flit >= 3",
     "conda-lock",
     "invoke >=1",
@@ -86,8 +86,12 @@ exclude = [
     "tests",
 ]
 
-[tool.conda-lock]
-channels = [
-    "conda-forge",
-    "lenskit",
-]
+[tool.pyproject2conda]
+channels = ["conda-forge"]
+python = ["3.10", "3.11"]
+default_envs = ["test", "sklearn", "doc"]
+template_python = "envs/lenskit-py{py}-{env}"
+template = "envs/{env}"
+
+[tool.pyproject2conda.envs.dev]
+extras = ["dev", "test", "doc", "demo", "sklearn"]
