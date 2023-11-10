@@ -40,6 +40,8 @@ source = "https://github.com/lenskit/lkpy"
 test = [
     "pytest ==7.*",
     "pytest-doctestplus >= 0.9",
+    "coverage >= 5",
+    "pytest-cov >= 2.12",
     "hypothesis >= 6"
 ]
 dev = [
@@ -50,8 +52,6 @@ dev = [
     "requests >=2",
     "packaging >= 20",
     "flake8 >= 3",
-    "coverage >= 5",
-    "pytest-cov >= 2.12",
     "ipython >= 7",
     "docopt >= 0.6",
     "tqdm >= 4",
