@@ -30,7 +30,7 @@ dependencies:
   - numba >= 0.51, < 0.59
   - numpy >= 1.19
   - packaging >= 20
-  - pandas >=1.0, ==1.*
+  - pandas >=1.0, <2
   - psutil >= 5
   - pyproject2conda >=0.8
   - pytest ==7.*

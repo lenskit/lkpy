@@ -17,7 +17,7 @@ dependencies:
   - hypothesis >= 6
   - numba >= 0.51, < 0.59
   - numpy >= 1.19
-  - pandas >=1.0, ==1.*
+  - pandas >=1.0, <2
   - psutil >= 5
   - pytest ==7.*
   - pytest-doctestplus >= 0.9
