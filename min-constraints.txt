@@ -4,5 +4,4 @@ scipy==1.8.0
 numba==0.56.0
 cffi==1.12.2
 binpickle==0.3.2
-csr==0.4.0
 scikit-learn==1.1.0

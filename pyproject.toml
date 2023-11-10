@@ -28,7 +28,7 @@ dependencies = [
     "psutil >= 5",
     "binpickle >= 0.3.2",
     "seedbank >= 0.1.0",
-    "csr >= 0.4",
+    "csr >= 0.5",
 ]
 
 [project.urls]
