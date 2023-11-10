@@ -45,7 +45,7 @@ test = [
 dev = [
     "lenskit-build-helpers >=0.1",  # p2c: -p
     "flit >= 3",
-    "conda-lock",
+    "pyproject2conda >=0.8",
     "invoke >=1",
     "requests >=2",
     "packaging >= 20",
@@ -95,3 +95,6 @@ template = "envs/{env}"
 
 [tool.pyproject2conda.envs.dev]
 extras = ["dev", "test", "doc", "demo", "sklearn"]
+
+[tool.pyproject2conda.envs.ci]
+extras = ["test", "sklearn"]
