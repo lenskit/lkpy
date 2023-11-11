@@ -13,7 +13,6 @@ from lenskit.algorithms.basic import Popular
 from lenskit.algorithms.als import BiasedMF
 
 import pytest
-from pytest import approx
 
 _log = logging.getLogger(__name__)
 
