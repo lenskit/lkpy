@@ -8,6 +8,7 @@ import logging
 
 import pandas as pd
 import numpy as np
+from lenskit.util import cached
 
 _log = logging.getLogger(__name__)
 
@@ -22,20 +23,7 @@ if not os.path.exists('data/ml-10M100K'):
     __doctest_skip__.append('ML10M.*')
     __doctest_skip__.append('MLM.*')
 
-
-def cached(prop):
-    cache = '_cached_' + prop.__name__
-
-    def getter(self):
-        val = getattr(self, cache, None)
-        if val is None:
-            val = prop(self)
-            setattr(self, cache, val)
-        return val
-
-    getter.__doc__ = prop.__doc__
-
-    return property(getter)
+__all__ = ['MovieLens', 'ML100K', 'ML1M', 'ML10M']
 
 
 class MovieLens:
