@@ -67,7 +67,7 @@ jobs:
       - name: Process test results
         uses: lenskit/lkbuild/actions/save-test-results@main
         with:
-          artifact-name: test-conda-${{matrix.platform}}-py${{matrix.python}}-${{matrix.blas}}
+          artifact-name: test-conda-${{matrix.platform}}-py${{matrix.python}}
 
   check-docs:
     name: Docs, Examples, and Eval
