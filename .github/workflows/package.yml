@@ -3,14 +3,13 @@ on:
   push:
     branches:
       - main
-    tag:
   release:
     types: [published]
 jobs:
   sdist:
     name: Build and upload packages
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v2
 
@@ -33,7 +32,7 @@ jobs:
       with:
         name: pypi-pkgs
         path: dist
-    
+
     - name: List dist dir
       run: ls -R dist
 
