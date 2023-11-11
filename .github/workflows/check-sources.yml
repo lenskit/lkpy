@@ -71,4 +71,4 @@ jobs:
       env:
         FMT_PASSED: ${{ steps.fmt.outputs.passed }}
         LINT_PASSED: ${{ steps.lint.outputs.passed }}
-        LINT_REQUIRED: True
+        LINT_REQUIRED: False

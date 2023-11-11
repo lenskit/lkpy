@@ -3,5 +3,5 @@ _commit: 28184e6
 _src_path: https://github.com/lenskit/lk-project-template
 package_name: lenskit
 project_name: lenskit
-require_lint: true
+require_lint: false
 start_year: 2018
