@@ -101,10 +101,10 @@ jobs:
 
       - name: Download ML Data
         run: |
-          lkbuild fetch-data -d ml-100k
-          lkbuild fetch-data -d ml-1m
-          lkbuild fetch-data -d ml-10m
-          lkbuild fetch-data -d ml-20m
+          python -m lenskit.datasets.fetch ml-100k
+          python -m lenskit.datasets.fetch ml-1m
+          python -m lenskit.datasets.fetch ml-10m
+          python -m lenskit.datasets.fetch ml-20m
 
       - name: Install for Testing
         run: |
