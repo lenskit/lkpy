@@ -2,7 +2,6 @@
 Debugging utility code.  Also runnable as a Python command.
 
 Usage:
-    lenskit.util.debug [options] --libraries
     lenskit.util.debug [options] --blas-info
     lenskit.util.debug [options] --numba-info
     lenskit.util.debug [options] --check-env
@@ -133,14 +132,6 @@ def check_env():
     return problems
 
 
-def print_libraries():
-    p = psutil.Process()
-
-    _log.info('printing process libraries')
-    for map in p.memory_maps():
-        print(map.path)
-
-
 def print_blas_info():
     blas = blas_info()
     print(blas)
@@ -158,8 +149,6 @@ def main():
     logging.basicConfig(level=level, stream=sys.stderr, format='%(levelname)s %(name)s %(message)s')
     logging.getLogger('numba').setLevel(logging.INFO)
 
-    if opts['--libraries']:
-        print_libraries()
     if opts['--blas-info']:
         print_blas_info()
     if opts['--numba-info']:
