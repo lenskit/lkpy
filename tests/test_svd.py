@@ -13,11 +13,11 @@ from lenskit.util import clone
 
 _log = logging.getLogger(__name__)
 
-simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
-                          'user': [10, 12, 10, 13],
-                          'rating': [4.0, 3.0, 5.0, 2.0]})
+simple_df = pd.DataFrame(
+    {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
+)
 
-need_skl = mark.skipif(not svd.SKL_AVAILABLE, reason='scikit-learn not installed')
+need_skl = mark.skipif(not svd.SKL_AVAILABLE, reason="scikit-learn not installed")
 
 
 @need_skl
@@ -71,6 +71,7 @@ def test_svd_clone():
     assert a2.bias.user_damping == algo.bias.user_damping
     assert a2.bias.item_damping == algo.bias.item_damping
 
+
 @need_skl
 @mark.slow
 def test_svd_save_load():
@@ -80,7 +81,7 @@ def test_svd_save_load():
     original.fit(ratings)
 
     mod = pickle.dumps(original)
-    _log.info('serialized to %d bytes', len(mod))
+    _log.info("serialized to %d bytes", len(mod))
     algo = pickle.loads(mod)
 
     assert algo.bias.mean_ == original.bias.mean_
@@ -92,7 +93,7 @@ def test_svd_save_load():
 @need_skl
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
+@mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
 def test_svd_batch_accuracy():
     from lenskit.algorithms import basic
     from lenskit.algorithms import bias
@@ -106,9 +107,9 @@ def test_svd_batch_accuracy():
     algo = basic.Fallback(svd_algo, bias.Bias(damping=10))
 
     def eval(train, test):
-        _log.info('running training')
+        _log.info("running training")
         algo.fit(train)
-        _log.info('testing %d users', test.user.nunique())
+        _log.info("testing %d users", test.user.nunique())
         return batch.predict(algo, test)
 
     folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
@@ -116,5 +117,5 @@ def test_svd_batch_accuracy():
     mae = pm.mae(preds.prediction, preds.rating)
     assert mae == approx(0.74, abs=0.025)
 
-    user_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
+    user_rmse = preds.groupby("user").apply(lambda df: pm.rmse(df.prediction, df.rating))
     assert user_rmse.mean() == approx(0.92, abs=0.05)

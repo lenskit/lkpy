@@ -17,7 +17,7 @@ def square_problem(draw, scale=10):
     size = draw(st.integers(2, 100))
 
     # Hypothesis doesn't do well at generating problem data, so go with this
-    seed = draw(st.integers(min_value=0, max_value=2**32-1))
+    seed = draw(st.integers(min_value=0, max_value=2**32 - 1))
     rng = np.random.RandomState(seed)
     A = rng.randn(size, size) * scale
     b = rng.randn(size) * scale

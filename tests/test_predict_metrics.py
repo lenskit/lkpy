@@ -9,44 +9,44 @@ import lenskit.util.test as lktu
 
 
 def test_check_missing_empty():
-    pm._check_missing(pd.Series([], dtype='float64'), 'error')
+    pm._check_missing(pd.Series([], dtype="float64"), "error")
     # should pass
     assert True
 
 
 def test_check_missing_has_values():
-    pm._check_missing(pd.Series([1, 3, 2]), 'error')
+    pm._check_missing(pd.Series([1, 3, 2]), "error")
     # should pass
     assert True
 
 
 def test_check_missing_nan_raises():
     with raises(ValueError):
-        pm._check_missing(pd.Series([1, np.nan, 3]), 'error')
+        pm._check_missing(pd.Series([1, np.nan, 3]), "error")
 
 
 def test_check_missing_raises():
-    data = pd.Series([1, 7, 3], ['a', 'b', 'd'])
-    ref = pd.Series([3, 2, 4], ['b', 'c', 'd'])
-    ref, data = ref.align(data, join='left')
+    data = pd.Series([1, 7, 3], ["a", "b", "d"])
+    ref = pd.Series([3, 2, 4], ["b", "c", "d"])
+    ref, data = ref.align(data, join="left")
     with raises(ValueError):
-        pm._check_missing(data, 'error')
+        pm._check_missing(data, "error")
 
 
 def test_check_joined_ok():
-    data = pd.Series([1, 7, 3], ['a', 'b', 'd'])
-    ref = pd.Series([3, 2, 4], ['b', 'c', 'd'])
-    ref, data = ref.align(data, join='inner')
-    pm._check_missing(ref, 'error')
+    data = pd.Series([1, 7, 3], ["a", "b", "d"])
+    ref = pd.Series([3, 2, 4], ["b", "c", "d"])
+    ref, data = ref.align(data, join="inner")
+    pm._check_missing(ref, "error")
     # should get here
     assert True
 
 
 def test_check_missing_ignore():
-    data = pd.Series([1, 7, 3], ['a', 'b', 'd'])
-    ref = pd.Series([3, 2, 4], ['b', 'c', 'd'])
-    ref, data = ref.align(data, join='left')
-    pm._check_missing(data, 'ignore')
+    data = pd.Series([1, 7, 3], ["a", "b", "d"])
+    ref = pd.Series([3, 2, 4], ["b", "c", "d"])
+    ref, data = ref.align(data, join="left")
+    pm._check_missing(data, "ignore")
     # should get here
     assert True
 
@@ -103,18 +103,19 @@ def test_rmse_series_two():
 
 
 def test_rmse_series_subset_axis():
-    rmse = pm.rmse(pd.Series([1, 3], ['a', 'c']), pd.Series([3, 4, 1], ['a', 'b', 'c']))
+    rmse = pm.rmse(pd.Series([1, 3], ["a", "c"]), pd.Series([3, 4, 1], ["a", "b", "c"]))
     assert rmse == approx(2)
 
 
 def test_rmse_series_missing_value_error():
     with raises(ValueError):
-        pm.rmse(pd.Series([1, 3], ['a', 'd']), pd.Series([3, 4, 1], ['a', 'b', 'c']))
+        pm.rmse(pd.Series([1, 3], ["a", "d"]), pd.Series([3, 4, 1], ["a", "b", "c"]))
 
 
 def test_rmse_series_missing_value_ignore():
-    rmse = pm.rmse(pd.Series([1, 3], ['a', 'd']), pd.Series([3, 4, 1], ['a', 'b', 'c']),
-                   missing='ignore')
+    rmse = pm.rmse(
+        pd.Series([1, 3], ["a", "d"]), pd.Series([3, 4, 1], ["a", "b", "c"]), missing="ignore"
+    )
     assert rmse == approx(2)
 
 
@@ -159,7 +160,7 @@ def test_mae_series_two():
 
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
+@mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
 def test_batch_rmse():
     import lenskit.crossfold as xf
     import lenskit.batch as batch
@@ -171,13 +172,13 @@ def test_batch_rmse():
     def eval(train, test):
         algo.fit(train)
         preds = batch.predict(algo, test)
-        return preds.set_index(['user', 'item'])
+        return preds.set_index(["user", "item"])
 
-    results = pd.concat((eval(train, test)
-                         for (train, test)
-                         in xf.partition_users(ratings, 5, xf.SampleN(5))))
+    results = pd.concat(
+        (eval(train, test) for (train, test) in xf.partition_users(ratings, 5, xf.SampleN(5)))
+    )
 
-    user_rmse = results.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
+    user_rmse = results.groupby("user").apply(lambda df: pm.rmse(df.prediction, df.rating))
 
     # we should have all users
     users = ratings.user.unique()
@@ -224,9 +225,9 @@ def test_user_metric():
     preds = batch.predict(algo, test)
 
     rmse = pm.user_metric(preds)
-    u_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
+    u_rmse = preds.groupby("user").apply(lambda df: pm.rmse(df.prediction, df.rating))
     assert rmse == approx(u_rmse.mean())
 
     mae = pm.user_metric(preds, metric=pm.mae)
-    u_mae = preds.groupby('user').apply(lambda df: pm.mae(df.prediction, df.rating))
+    u_mae = preds.groupby("user").apply(lambda df: pm.mae(df.prediction, df.rating))
     assert mae == approx(u_mae.mean())

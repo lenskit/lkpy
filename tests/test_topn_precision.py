@@ -9,8 +9,8 @@ from lenskit import topn
 
 
 def _test_prec(items, rel, **k):
-    recs = pd.DataFrame({'item': items})
-    truth = pd.DataFrame({'item': rel}).set_index('item')
+    recs = pd.DataFrame({"item": items})
+    truth = pd.DataFrame({"item": rel}).set_index("item")
     return precision(recs, truth, **k)
 
 
@@ -76,7 +76,7 @@ def test_precision_series_array():
     prec = _test_prec(pd.Series([1, 2, 3, 4]), np.array([1, 3, 5]))
     assert prec == approx(0.5)
 
-    prec = _test_prec(pd.Series([1, 2, 3, 4]), np.arange(4, 10, 1, 'u4'))
+    prec = _test_prec(pd.Series([1, 2, 3, 4]), np.arange(4, 10, 1, "u4"))
     assert prec == approx(0.25)
 
 
@@ -87,7 +87,7 @@ def test_precision_array():
     prec = _test_prec(np.array([1, 2, 3, 4]), np.array([1, 3, 5]))
     assert prec == approx(0.5)
 
-    prec = _test_prec(np.array([1, 2, 3, 4]), np.arange(4, 10, 1, 'u4'))
+    prec = _test_prec(np.array([1, 2, 3, 4]), np.arange(4, 10, 1, "u4"))
     assert prec == approx(0.25)
 
 
@@ -118,14 +118,14 @@ def test_prec_short_items():
 def test_recall_bulk_k(demo_recs):
     "bulk and normal match"
     train, test, recs = demo_recs
-    assert test['user'].value_counts().max() > 5
+    assert test["user"].value_counts().max() > 5
 
     rla = topn.RecListAnalysis()
-    rla.add_metric(precision, name='pk', k=5)
+    rla.add_metric(precision, name="pk", k=5)
     rla.add_metric(precision)
     # metric without the bulk capabilities
-    rla.add_metric(lambda *a, **k: precision(*a, **k), name='ind_pk', k=5)
-    rla.add_metric(lambda *a: precision(*a), name='ind_p')
+    rla.add_metric(lambda *a, **k: precision(*a, **k), name="ind_pk", k=5)
+    rla.add_metric(lambda *a: precision(*a), name="ind_p")
     res = rla.compute(recs, test)
 
     assert res.precision.values == approx(res.ind_p.values)

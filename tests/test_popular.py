@@ -6,15 +6,15 @@ import pickle
 
 import lenskit.util.test as lktu
 
-simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
-                          'user': [10, 12, 10, 13],
-                          'rating': [4.0, 3.0, 5.0, 2.0]})
+simple_df = pd.DataFrame(
+    {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
+)
 
 
 def test_popular():
     algo = basic.Popular()
     algo.fit(lktu.ml_test.ratings)
-    counts = lktu.ml_test.ratings.groupby('item').user.count()
+    counts = lktu.ml_test.ratings.groupby("item").user.count()
     counts = counts.nlargest(100)
 
     assert algo.item_pop_.max() == counts.max()
@@ -31,7 +31,7 @@ def test_popular():
 def test_popular_excludes_rated():
     algo = basic.Popular()
     algo.fit(lktu.ml_test.ratings)
-    counts = lktu.ml_test.ratings.groupby('item').user.count()
+    counts = lktu.ml_test.ratings.groupby("item").user.count()
     counts = counts.nlargest(100)
 
     recs = algo.recommend(100, 100)
@@ -40,16 +40,16 @@ def test_popular_excludes_rated():
 
     # make sure we didn't recommend anything the user likes
     ratings = lktu.ml_test.ratings
-    urates = ratings.set_index(['user', 'item'])
+    urates = ratings.set_index(["user", "item"])
     urates = urates.loc[100, :]
-    match = recs.join(urates, on='item', how='inner')
+    match = recs.join(urates, on="item", how="inner")
     assert len(match) == 0
 
 
 def test_pop_candidates():
     algo = basic.Popular()
     algo.fit(lktu.ml_test.ratings)
-    counts = lktu.ml_test.ratings.groupby('item').user.count()
+    counts = lktu.ml_test.ratings.groupby("item").user.count()
     items = lktu.ml_test.ratings.item.unique()
 
     assert algo.item_pop_.max() == counts.max()
@@ -75,7 +75,7 @@ def test_pop_save_load():
     mod = pickle.dumps(original)
     algo = pickle.loads(mod)
 
-    counts = lktu.ml_test.ratings.groupby('item').user.count()
+    counts = lktu.ml_test.ratings.groupby("item").user.count()
     counts = counts.nlargest(100)
 
     assert algo.item_pop_.max() == counts.max()
@@ -95,7 +95,7 @@ def test_popscore_quantile(rng):
 
     assert algo.item_scores_.max() == 1.0
 
-    counts = lktu.ml_test.ratings.groupby('item').user.count()
+    counts = lktu.ml_test.ratings.groupby("item").user.count()
     counts = counts.sort_values()
 
     winner = counts.index[-1]
@@ -103,10 +103,10 @@ def test_popscore_quantile(rng):
 
 
 def test_popscore_rank(rng):
-    algo = basic.PopScore('rank')
+    algo = basic.PopScore("rank")
     algo.fit(lktu.ml_test.ratings)
 
-    counts = lktu.ml_test.ratings.groupby('item').user.count()
+    counts = lktu.ml_test.ratings.groupby("item").user.count()
     counts = counts.sort_values()
 
     assert algo.item_scores_.max() == len(counts)
@@ -116,10 +116,10 @@ def test_popscore_rank(rng):
 
 
 def test_popscore_counts(rng):
-    algo = basic.PopScore('count')
+    algo = basic.PopScore("count")
     algo.fit(lktu.ml_test.ratings)
 
-    counts = lktu.ml_test.ratings.groupby('item').user.count()
+    counts = lktu.ml_test.ratings.groupby("item").user.count()
 
     scores, counts = algo.item_scores_.align(counts)
     assert all(scores == counts)

@@ -62,7 +62,7 @@ def test_initialize():
 
 
 def test_initialize_key():
-    random.init_rng(42, 'wombat')
+    random.init_rng(42, "wombat")
     assert root_seed().entropy == 42
     # assert root_seed().spawn_key == (zlib.crc32(b'wombat'),)
 
@@ -83,6 +83,6 @@ def test_derive_seed_intkey():
 
 def test_derive_seed_str():
     random.init_rng(42, propagate=False)
-    s2 = random.derive_seed(b'wombat')
+    s2 = random.derive_seed(b"wombat")
     assert s2.entropy == 42
     # assert s2.spawn_key == (zlib.crc32(b'wombat'),)

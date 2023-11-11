@@ -13,9 +13,9 @@ import lenskit.util.test as lktu
 
 _log = logging.getLogger(__name__)
 
-simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
-                          'user': [10, 12, 10, 13],
-                          'rating': [4.0, 3.0, 5.0, 2.0]})
+simple_df = pd.DataFrame(
+    {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
+)
 
 
 def test_fsvd_basic_build():
@@ -136,7 +136,7 @@ def test_fsvd_save_load():
     assert original.user_features_.shape == (ratings.user.nunique(), 20)
 
     mod = pickle.dumps(original)
-    _log.info('serialized to %d bytes', len(mod))
+    _log.info("serialized to %d bytes", len(mod))
     algo = pickle.loads(mod)
 
     assert algo.bias.mean_ == original.bias.mean_
@@ -151,7 +151,7 @@ def test_fsvd_save_load():
 @lktu.wantjit
 @mark.slow
 def test_fsvd_train_binary():
-    ratings = lktu.ml_test.ratings.drop(columns=['rating', 'timestamp'])
+    ratings = lktu.ml_test.ratings.drop(columns=["rating", "timestamp"])
 
     original = svd.FunkSVD(20, iterations=20, bias=False)
     original.fit(ratings)
@@ -165,19 +165,19 @@ def test_fsvd_train_binary():
 @mark.slow
 def test_fsvd_known_preds():
     algo = svd.FunkSVD(15, iterations=125, lrate=0.001)
-    _log.info('training %s on ml data', algo)
+    _log.info("training %s on ml data", algo)
     algo.fit(lktu.ml_test.ratings)
 
     dir = Path(__file__).parent
-    pred_file = dir / 'funksvd-preds.csv'
-    _log.info('reading known predictions from %s', pred_file)
+    pred_file = dir / "funksvd-preds.csv"
+    _log.info("reading known predictions from %s", pred_file)
     known_preds = pd.read_csv(str(pred_file))
-    pairs = known_preds.loc[:, ['user', 'item']]
+    pairs = known_preds.loc[:, ["user", "item"]]
 
     preds = algo.predict(pairs)
-    known_preds.rename(columns={'prediction': 'expected'}, inplace=True)
+    known_preds.rename(columns={"prediction": "expected"}, inplace=True)
     merged = known_preds.assign(prediction=preds)
-    merged['error'] = merged.expected - merged.prediction
+    merged["error"] = merged.expected - merged.prediction
     assert not any(merged.prediction.isna() & merged.expected.notna())
     err = merged.error
     err = err[err.notna()]
@@ -185,14 +185,14 @@ def test_fsvd_known_preds():
         assert all(err.abs() < 0.01)
     except AssertionError as e:
         bad = merged[merged.error.notna() & (merged.error.abs() >= 0.01)]
-        _log.error('erroneous predictions:\n%s', bad)
+        _log.error("erroneous predictions:\n%s", bad)
         raise e
 
 
 @lktu.wantjit
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
+@mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
 def test_fsvd_batch_accuracy():
     from lenskit.algorithms import basic
     from lenskit.algorithms import bias
@@ -206,9 +206,9 @@ def test_fsvd_batch_accuracy():
     algo = basic.Fallback(svd_algo, bias.Bias(damping=10))
 
     def eval(train, test):
-        _log.info('running training')
+        _log.info("running training")
         algo.fit(train)
-        _log.info('testing %d users', test.user.nunique())
+        _log.info("testing %d users", test.user.nunique())
         return batch.predict(algo, test)
 
     folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
@@ -216,5 +216,5 @@ def test_fsvd_batch_accuracy():
     mae = pm.mae(preds.prediction, preds.rating)
     assert mae == approx(0.74, abs=0.025)
 
-    user_rmse = preds.groupby('user').apply(lambda df: pm.rmse(df.prediction, df.rating))
+    user_rmse = preds.groupby("user").apply(lambda df: pm.rmse(df.prediction, df.rating))
     assert user_rmse.mean() == approx(0.92, abs=0.05)

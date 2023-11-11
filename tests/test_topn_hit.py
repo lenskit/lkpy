@@ -12,8 +12,8 @@ _log = logging.getLogger(__name__)
 
 
 def _test_hit(items, rel, **kwargs):
-    recs = pd.DataFrame({'item': items})
-    truth = pd.DataFrame({'item': rel}).set_index('item')
+    recs = pd.DataFrame({"item": items})
+    truth = pd.DataFrame({"item": rel}).set_index("item")
     return hit(recs, truth, **kwargs)
 
 
@@ -81,7 +81,7 @@ def test_hit_series_array():
     hr = _test_hit(pd.Series([1, 2, 3, 4]), np.array([1, 3, 5, 7]))
     assert hr == 1
 
-    hr = _test_hit(pd.Series([1, 2, 3]), np.arange(4, 9, 1, 'u4'))
+    hr = _test_hit(pd.Series([1, 2, 3]), np.arange(4, 9, 1, "u4"))
     assert hr == 0
 
 
@@ -92,7 +92,7 @@ def test_hit_array():
     hr = _test_hit(np.array([1, 2, 3, 4]), np.array([1, 3, 5, 7]))
     assert hr == 1
 
-    hr = _test_hit(np.array([1, 2, 3]), np.arange(4, 9, 1, 'u4'))
+    hr = _test_hit(np.array([1, 2, 3]), np.arange(4, 9, 1, "u4"))
     assert hr == 0
 
 
@@ -122,19 +122,18 @@ def test_hit_partial_rel():
 def test_hit_bulk_k(demo_recs):
     "bulk and normal match"
     train, test, recs = demo_recs
-    assert test['user'].value_counts().max() > 5
+    assert test["user"].value_counts().max() > 5
 
     rla = topn.RecListAnalysis()
-    rla.add_metric(hit, name='hk', k=5)
+    rla.add_metric(hit, name="hk", k=5)
     rla.add_metric(hit)
     # metric without the bulk capabilities
-    rla.add_metric(lambda *a, **k: hit(*a, **k), name='ind_hk', k=5)
-    rla.add_metric(lambda *a: hit(*a), name='ind_h')
+    rla.add_metric(lambda *a, **k: hit(*a, **k), name="ind_hk", k=5)
+    rla.add_metric(lambda *a: hit(*a), name="ind_h")
     res = rla.compute(recs, test)
 
     print(res)
-    _log.info('recall mismatches:\n%s',
-              res[res.hit != res.ind_h])
+    _log.info("recall mismatches:\n%s", res[res.hit != res.ind_h])
 
     assert res.hit.values == approx(res.ind_h.values)
     assert res.hk.values == approx(res.ind_hk.values)

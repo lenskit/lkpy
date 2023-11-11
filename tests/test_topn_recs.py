@@ -7,9 +7,9 @@ import numpy as np
 import lenskit.util.test as lktu
 from pytest import approx
 
-simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
-                          'user': [10, 12, 10, 13],
-                          'rating': [4.0, 3.0, 5.0, 2.0]})
+simple_df = pd.DataFrame(
+    {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
+)
 
 
 def test_topn_recommend():
@@ -37,14 +37,14 @@ def test_topn_config():
     rec = basic.TopN(pred)
 
     rs = str(rec)
-    assert rs.startswith('TopN/')
+    assert rs.startswith("TopN/")
 
 
 def test_topn_big():
     ratings = lktu.ml_test.ratings
     users = ratings.user.unique()
     items = ratings.item.unique()
-    user_items = ratings.set_index('user').item
+    user_items = ratings.set_index("user").item
 
     algo = basic.TopN(bias.Bias())
     a2 = algo.fit(ratings)
@@ -55,7 +55,7 @@ def test_topn_big():
         recs = algo.recommend(u, 100)
         assert len(recs) == 100
         rated = user_items.loc[u]
-        assert all(~recs['item'].isin(rated))
+        assert all(~recs["item"].isin(rated))
         unrated = np.setdiff1d(items, rated)
         scores = algo.predictor.predict_for_user(u, unrated)
         top = scores.nlargest(100)

@@ -11,8 +11,8 @@ from lenskit.crossfold import simple_test_pair
 
 
 def _test_rr(items, rel, **kw):
-    recs = pd.DataFrame({'item': items})
-    truth = pd.DataFrame({'item': rel}).set_index('item')
+    recs = pd.DataFrame({"item": items})
+    truth = pd.DataFrame({"item": rel}).set_index("item")
     return recip_rank(recs, truth, **kw)
 
 
@@ -53,36 +53,36 @@ def test_mrr_series_idx():
 
 def test_mrr_array_late():
     "deep -> 0.1"
-    rr = _test_rr(np.arange(1, 21, 1, 'u4'), [20, 10])
+    rr = _test_rr(np.arange(1, 21, 1, "u4"), [20, 10])
     assert rr == approx(0.1)
 
 
 def test_mrr_k_trunc():
-    rr = _test_rr(np.arange(1, 21, 1, 'u4'), [20, 10], k=5)
+    rr = _test_rr(np.arange(1, 21, 1, "u4"), [20, 10], k=5)
     assert rr == approx(0.0)
 
-    rr = _test_rr(np.arange(1, 21, 1, 'u4'), [20, 10, 5], k=5)
+    rr = _test_rr(np.arange(1, 21, 1, "u4"), [20, 10, 5], k=5)
     assert rr == approx(0.2)
 
 
 def test_mrr_k_short():
-    rr = _test_rr(np.arange(1, 5, 1, 'u4'), [2], k=10)
+    rr = _test_rr(np.arange(1, 5, 1, "u4"), [2], k=10)
     assert rr == approx(0.5)
 
 
-@mark.parametrize('drop_rating', [False, True])
+@mark.parametrize("drop_rating", [False, True])
 def test_mrr_bulk(demo_recs, drop_rating):
     "bulk and normal match"
     train, test, recs = demo_recs
     if drop_rating:
-        test = test[['user', 'item']]
+        test = test[["user", "item"]]
 
     rla = RecListAnalysis()
     rla.add_metric(recip_rank)
-    rla.add_metric(recip_rank, name='rr_k', k=10)
+    rla.add_metric(recip_rank, name="rr_k", k=10)
     # metric without the bulk capabilities
-    rla.add_metric(lambda *a: recip_rank(*a), name='ind_rr')
-    rla.add_metric(lambda *a, **k: recip_rank(*a, **k), name='ind_rr_k', k=10)
+    rla.add_metric(lambda *a: recip_rank(*a), name="ind_rr")
+    rla.add_metric(lambda *a, **k: recip_rank(*a, **k), name="ind_rr_k", k=10)
     res = rla.compute(recs, test)
 
     assert all(res.recip_rank == res.ind_rr)

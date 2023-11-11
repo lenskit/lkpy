@@ -21,7 +21,7 @@ def test_train_isolate():
 
 
 def test_train_isolate_file(tmp_path):
-    fn = tmp_path / 'saved.bpk'
+    fn = tmp_path / "saved.bpk"
     algo = Bias()
     algo = Recommender.adapt(algo)
 

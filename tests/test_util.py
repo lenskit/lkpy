@@ -31,14 +31,14 @@ def test_stopwatch_str():
     w = lku.Stopwatch()
     time.sleep(0.5)
     s = str(w)
-    assert s.endswith('ms')
+    assert s.endswith("ms")
 
 
 def test_stopwatch_long_str():
     w = lku.Stopwatch()
     time.sleep(1.2)
     s = str(w)
-    assert s.endswith('s')
+    assert s.endswith("s")
 
 
 def test_stopwatch_minutes():
@@ -46,7 +46,7 @@ def test_stopwatch_minutes():
     w.stop()
     w.start_time = w.stop_time - 62
     s = str(w)
-    p = re.compile(r'1m2.\d\ds')
+    p = re.compile(r"1m2.\d\ds")
     assert p.match(s)
 
 
@@ -55,7 +55,7 @@ def test_stopwatch_hours():
     w.stop()
     w.start_time = w.stop_time - 3663
     s = str(w)
-    p = re.compile(r'1h1m3.\d\ds')
+    p = re.compile(r"1h1m3.\d\ds")
     assert p.match(s)
 
 
@@ -64,6 +64,7 @@ def test_last_memo():
 
     def func(foo):
         history.append(foo)
+
     cache = lku.LastMemo(func)
 
     cache("foo")

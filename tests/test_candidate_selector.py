@@ -4,9 +4,9 @@ import lenskit.util.test as lktu
 import pandas as pd
 import numpy as np
 
-simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
-                          'user': [10, 12, 10, 13],
-                          'rating': [4.0, 3.0, 5.0, 2.0]})
+simple_df = pd.DataFrame(
+    {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
+)
 
 
 def test_empty():
@@ -45,7 +45,7 @@ def test_unrated_big():
     ratings = lktu.ml_test.ratings
     users = ratings.user.unique()
     items = ratings.item.unique()
-    user_items = ratings.set_index('user').item
+    user_items = ratings.set_index("user").item
 
     sel = basic.UnratedItemCandidateSelector()
     s2 = sel.fit(ratings)

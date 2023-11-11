@@ -19,8 +19,8 @@ def test_partition_rows():
     for s in splits:
         assert len(s.test) + len(s.train) == len(ratings)
         assert all(s.test.index.union(s.train.index) == ratings.index)
-        test_idx = s.test.set_index(['user', 'item']).index
-        train_idx = s.train.set_index(['user', 'item']).index
+        test_idx = s.test.set_index(["user", "item"]).index
+        train_idx = s.train.set_index(["user", "item"]).index
         assert len(test_idx.intersection(train_idx)) == 0
 
     # we should partition!
@@ -28,8 +28,8 @@ def test_partition_rows():
         if s1 is s2:
             continue
 
-        i1 = s1.test.set_index(['user', 'item']).index
-        i2 = s2.test.set_index(['user', 'item']).index
+        i1 = s1.test.set_index(["user", "item"]).index
+        i2 = s2.test.set_index(["user", "item"]).index
         inter = i1.intersection(i2)
         assert len(inter) == 0
 
@@ -46,16 +46,16 @@ def test_sample_rows():
     for s in splits:
         assert len(s.test) == 1000
         assert len(s.test) + len(s.train) == len(ratings)
-        test_idx = s.test.set_index(['user', 'item']).index
-        train_idx = s.train.set_index(['user', 'item']).index
+        test_idx = s.test.set_index(["user", "item"]).index
+        train_idx = s.train.set_index(["user", "item"]).index
         assert len(test_idx.intersection(train_idx)) == 0
 
     for s1, s2 in it.product(splits, splits):
         if s1 is s2:
             continue
 
-        i1 = s1.test.set_index(['user', 'item']).index
-        i2 = s2.test.set_index(['user', 'item']).index
+        i1 = s1.test.set_index(["user", "item"]).index
+        i2 = s2.test.set_index(["user", "item"]).index
         inter = i1.intersection(i2)
         assert len(inter) == 0
 
@@ -69,16 +69,16 @@ def test_sample_rows_more_smaller_parts():
     for s in splits:
         assert len(s.test) == 500
         assert len(s.test) + len(s.train) == len(ratings)
-        test_idx = s.test.set_index(['user', 'item']).index
-        train_idx = s.train.set_index(['user', 'item']).index
+        test_idx = s.test.set_index(["user", "item"]).index
+        train_idx = s.train.set_index(["user", "item"]).index
         assert len(test_idx.intersection(train_idx)) == 0
 
     for s1, s2 in it.product(splits, splits):
         if s1 is s2:
             continue
 
-        i1 = s1.test.set_index(['user', 'item']).index
-        i2 = s2.test.set_index(['user', 'item']).index
+        i1 = s1.test.set_index(["user", "item"]).index
+        i2 = s2.test.set_index(["user", "item"]).index
         inter = i1.intersection(i2)
         assert len(inter) == 0
 
@@ -92,13 +92,15 @@ def test_sample_non_disjoint():
     for s in splits:
         assert len(s.test) == 1000
         assert len(s.test) + len(s.train) == len(ratings)
-        test_idx = s.test.set_index(['user', 'item']).index
-        train_idx = s.train.set_index(['user', 'item']).index
+        test_idx = s.test.set_index(["user", "item"]).index
+        train_idx = s.train.set_index(["user", "item"]).index
         assert len(test_idx.intersection(train_idx)) == 0
 
     # There are enough splits & items we should pick at least one duplicate
-    ipairs = ((s1.test.set_index('user', 'item').index, s2.test.set_index('user', 'item').index)
-              for (s1, s2) in it.product(splits, splits))
+    ipairs = (
+        (s1.test.set_index("user", "item").index, s2.test.set_index("user", "item").index)
+        for (s1, s2) in it.product(splits, splits)
+    )
     isizes = [len(i1.intersection(i2)) for (i1, i2) in ipairs]
     assert any(n > 0 for n in isizes)
 
@@ -113,8 +115,8 @@ def test_sample_oversize():
     for s in splits:
         assert len(s.test) + len(s.train) == len(ratings)
         assert all(s.test.index.union(s.train.index) == ratings.index)
-        test_idx = s.test.set_index(['user', 'item']).index
-        train_idx = s.train.set_index(['user', 'item']).index
+        test_idx = s.test.set_index(["user", "item"]).index
+        train_idx = s.train.set_index(["user", "item"]).index
         assert len(test_idx.intersection(train_idx)) == 0
 
 
@@ -190,7 +192,7 @@ def test_last_frac():
     ratings = lktu.ml_test.ratings
     users = np.random.choice(ratings.user.unique(), 5, replace=False)
 
-    samp = xf.LastFrac(0.2, 'timestamp')
+    samp = xf.LastFrac(0.2, "timestamp")
     for u in users:
         udf = ratings[ratings.user == u]
         tst = samp(udf)
@@ -200,7 +202,7 @@ def test_last_frac():
         assert len(tst) <= math.ceil(len(udf) * 0.2)
         assert tst.timestamp.min() >= trn.timestamp.max()
 
-    samp = xf.LastFrac(0.5, 'timestamp')
+    samp = xf.LastFrac(0.5, "timestamp")
     for u in users:
         udf = ratings[ratings.user == u]
         tst = samp(udf)
@@ -218,14 +220,13 @@ def test_partition_users():
     assert len(splits) == 5
 
     for s in splits:
-        ucounts = s.test.groupby('user').agg('count')
+        ucounts = s.test.groupby("user").agg("count")
         assert all(ucounts == 5)
         assert all(s.test.index.union(s.train.index) == ratings.index)
-        assert all(s.train['user'].isin(s.train['user'].unique()))
+        assert all(s.train["user"].isin(s.train["user"].unique()))
         assert len(s.test) + len(s.train) == len(ratings)
 
-    users = ft.reduce(lambda us1, us2: us1 | us2,
-                      (set(s.test.user) for s in splits))
+    users = ft.reduce(lambda us1, us2: us1 | us2, (set(s.test.user) for s in splits))
     assert len(users) == ratings.user.nunique()
     assert users == set(ratings.user)
 
@@ -235,9 +236,9 @@ def test_partition_may_skip_train():
     ratings = lktu.ml_test.ratings
     # make a data set where some users only have 1 rating
     ratings = ratings.sample(frac=0.1)
-    users = ratings.groupby('user')['rating'].count()
+    users = ratings.groupby("user")["rating"].count()
     assert users.min() == 1.0  # we should have some small users!
-    users.name = 'ur_count'
+    users.name = "ur_count"
 
     splits = xf.partition_users(ratings, 5, xf.SampleN(1))
     splits = list(splits)
@@ -246,12 +247,12 @@ def test_partition_may_skip_train():
     # now we go make sure we're missing some users! And don't have any NaN ratings
     for train, test in splits:
         # no null ratings
-        assert all(train['rating'].notna())
+        assert all(train["rating"].notna())
         # see if test users with 1 rating are missing from train
-        test = test.join(users, on='user')
-        assert all(~(test.loc[test['ur_count'] == 1, 'user'].isin(train['user'].unique())))
+        test = test.join(users, on="user")
+        assert all(~(test.loc[test["ur_count"] == 1, "user"].isin(train["user"].unique())))
         # and users with more than one rating are in train
-        assert all(test.loc[test['ur_count'] > 1, 'user'].isin(train['user'].unique()))
+        assert all(test.loc[test["ur_count"] > 1, "user"].isin(train["user"].unique()))
 
 
 def test_partition_users_frac():
@@ -259,19 +260,18 @@ def test_partition_users_frac():
     splits = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
     splits = list(splits)
     assert len(splits) == 5
-    ucounts = ratings.groupby('user').item.count()
+    ucounts = ratings.groupby("user").item.count()
     uss = ucounts * 0.2
 
     for s in splits:
-        tucs = s.test.groupby('user').item.count()
+        tucs = s.test.groupby("user").item.count()
         assert all(tucs >= uss.loc[tucs.index] - 1)
         assert all(tucs <= uss.loc[tucs.index] + 1)
         assert all(s.test.index.union(s.train.index) == ratings.index)
         assert len(s.test) + len(s.train) == len(ratings)
 
     # we have all users
-    users = ft.reduce(lambda us1, us2: us1 | us2,
-                      (set(s.test.user) for s in splits))
+    users = ft.reduce(lambda us1, us2: us1 | us2, (set(s.test.user) for s in splits))
     assert len(users) == ratings.user.nunique()
     assert users == set(ratings.user)
 
@@ -283,7 +283,7 @@ def test_sample_users():
     assert len(splits) == 5
 
     for s in splits:
-        ucounts = s.test.groupby('user').agg('count')
+        ucounts = s.test.groupby("user").agg("count")
         assert len(s.test) == 5 * 100
         assert len(ucounts) == 100
         assert all(ucounts == 5)
@@ -304,11 +304,11 @@ def test_sample_users_frac():
     splits = xf.sample_users(ratings, 5, 100, xf.SampleFrac(0.2))
     splits = list(splits)
     assert len(splits) == 5
-    ucounts = ratings.groupby('user').item.count()
+    ucounts = ratings.groupby("user").item.count()
     uss = ucounts * 0.2
 
     for s in splits:
-        tucs = s.test.groupby('user').item.count()
+        tucs = s.test.groupby("user").item.count()
         assert len(tucs) == 100
         assert all(tucs >= uss.loc[tucs.index] - 1)
         assert all(tucs <= uss.loc[tucs.index] + 1)
@@ -332,14 +332,13 @@ def test_sample_users_frac_oversize():
     assert len(splits) == 20
 
     for s in splits:
-        ucounts = s.test.groupby('user').agg('count')
+        ucounts = s.test.groupby("user").agg("count")
         assert len(ucounts) < 100
         assert all(ucounts == 5)
         assert all(s.test.index.union(s.train.index) == ratings.index)
         assert len(s.test) + len(s.train) == len(ratings)
 
-    users = ft.reduce(lambda us1, us2: us1 | us2,
-                      (set(s.test.user) for s in splits))
+    users = ft.reduce(lambda us1, us2: us1 | us2, (set(s.test.user) for s in splits))
     assert len(users) == ratings.user.nunique()
     assert users == set(ratings.user)
     for s1, s2 in it.product(splits, splits):
@@ -358,7 +357,7 @@ def test_sample_users_frac_oversize_ndj():
     assert len(splits) == 20
 
     for s in splits:
-        ucounts = s.test.groupby('user').agg('count')
+        ucounts = s.test.groupby("user").agg("count")
         assert len(ucounts) == 100
         assert len(s.test) == 5 * 100
         assert all(ucounts == 5)
@@ -369,7 +368,7 @@ def test_sample_users_frac_oversize_ndj():
 def test_non_unique_index_partition_users():
     """Partitioning users when dataframe has non-unique indices"""
     ratings = lktu.ml_test.ratings
-    ratings = ratings.set_index('user')  ##forces non-unique index
+    ratings = ratings.set_index("user")  ##forces non-unique index
     with pytest.raises(ValueError):
         for split in xf.partition_users(ratings, 5, xf.SampleN(5)):
             pass
@@ -378,7 +377,7 @@ def test_non_unique_index_partition_users():
 def test_sample_users():
     """Sampling users when dataframe has non-unique indices"""
     ratings = lktu.ml_test.ratings
-    ratings = ratings.set_index('user')  ##forces non-unique index
+    ratings = ratings.set_index("user")  ##forces non-unique index
     with pytest.raises(ValueError):
         for split in xf.sample_users(ratings, 5, 100, xf.SampleN(5)):
             pass
@@ -387,7 +386,7 @@ def test_sample_users():
 def test_sample_rows():
     """Sampling ratings when dataframe has non-unique indices"""
     ratings = lktu.ml_test.ratings
-    ratings = ratings.set_index('user')  ##forces non-unique index
+    ratings = ratings.set_index("user")  ##forces non-unique index
     with pytest.raises(ValueError):
         for split in xf.sample_rows(ratings, partitions=5, size=1000):
             pass
@@ -396,7 +395,7 @@ def test_sample_rows():
 def test_partition_users():
     """Partitioning ratings when dataframe has non-unique indices"""
     ratings = lktu.ml_test.ratings
-    ratings = ratings.set_index('user')  ##forces non-unique index
+    ratings = ratings.set_index("user")  ##forces non-unique index
     with pytest.raises(ValueError):
         for split in xf.partition_users(ratings, 5, xf.SampleN(5)):
             pass

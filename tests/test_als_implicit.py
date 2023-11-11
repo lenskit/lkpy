@@ -20,12 +20,11 @@ from hypothesis.strategies import randoms
 
 _log = logging.getLogger(__name__)
 
-simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
-                          'user': [10, 12, 10, 13]})
+simple_df = pd.DataFrame({"item": [1, 1, 2, 3], "user": [10, 12, 10, 13]})
 
 simple_dfr = simple_df.assign(rating=[4.0, 3.0, 5.0, 2.0])
 
-methods = mark.parametrize('m', ['lu', 'cg'])
+methods = mark.parametrize("m", ["lu", "cg"])
 
 
 @methods
@@ -52,7 +51,7 @@ def test_als_predict_basic():
 
 
 def test_als_predict_basic_for_new_ratings():
-    """ Test ImplicitMF ability to support new ratings """
+    """Test ImplicitMF ability to support new ratings"""
     algo = als.ImplicitMF(20, iterations=10)
     algo.fit(simple_df)
 
@@ -115,7 +114,7 @@ def test_als_predict_for_new_users_with_new_ratings():
         _log.debug("user_features from fit: " + str(algo.user_features_[upos, :]))
 
         # get the user's rating series
-        new_ratings = user_data.set_index('item')['rating'].copy()
+        new_ratings = user_data.set_index("item")["rating"].copy()
         new_preds = algo.predict_for_user(new_u_id, items, new_ratings)
 
         _log.debug("preds: " + str(preds.values))
@@ -151,26 +150,28 @@ def test_als_recs_topn_for_new_users_with_new_ratings(rng):
         recs = rec_algo.recommend(u, 10)
         user_data = ratings[ratings.user == u]
         upos = algo.user_index_.get_loc(u)
-        _log.info('user %s: %s ratings', u, len(user_data))
+        _log.info("user %s: %s ratings", u, len(user_data))
 
         _log.debug("user_features from fit: " + str(algo.user_features_[upos, :]))
 
         # get the user's rating series
-        new_ratings = user_data.set_index('item')['rating'].copy()
+        new_ratings = user_data.set_index("item")["rating"].copy()
         new_recs = rec_algo.recommend(new_u_id, 10, ratings=new_ratings)
 
         # merge new & old recs
-        all_recs = pd.merge(recs.rename(columns={'score': 'old_score'}),
-                            new_recs.rename(columns={'score': 'new_score'}),
-                            how='outer').fillna(-np.inf)
+        all_recs = pd.merge(
+            recs.rename(columns={"score": "old_score"}),
+            new_recs.rename(columns={"score": "new_score"}),
+            how="outer",
+        ).fillna(-np.inf)
 
         tau = stats.kendalltau(all_recs.old_score, all_recs.new_score)
-        _log.info('correlation for user %s: %f', u, tau.correlation)
+        _log.info("correlation for user %s: %f", u, tau.correlation)
         correlations.loc[u] = tau.correlation
 
-    _log.debug('correlations: %s', correlations)
+    _log.debug("correlations: %s", correlations)
 
-    assert not(any(correlations.isnull()))
+    assert not (any(correlations.isnull()))
     assert all(correlations >= 0.5)
 
 
@@ -206,7 +207,7 @@ def test_als_predict_no_user_features_basic():
     preds = algo.predict_for_user(u, items)
 
     user_data = ratings[ratings.user == u]
-    new_ratings = user_data.set_index('item')['rating'].copy()
+    new_ratings = user_data.set_index("item")["rating"].copy()
 
     algo_no_user_features = als.ImplicitMF(5, iterations=10, method="lu", save_user_features=False)
     algo_no_user_features.fit(ratings)
@@ -236,7 +237,7 @@ def test_als_save_load(tmp_path):
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
-    fn = tmp_path / 'model.bpk'
+    fn = tmp_path / "model.bpk"
     binpickle.dump(algo, fn, codec=None)
 
     restored = binpickle.load(fn)
@@ -250,7 +251,7 @@ def test_als_save_load(tmp_path):
 def test_als_train_large_noratings():
     algo = als.ImplicitMF(20, iterations=20)
     ratings = lktu.ml_test.ratings
-    ratings = ratings.loc[:, ['user', 'item']]
+    ratings = ratings.loc[:, ["user", "item"]]
     algo.fit(ratings)
 
     assert len(algo.user_index_) == ratings.user.nunique()
@@ -274,20 +275,20 @@ def test_als_train_large_ratings():
 @lktu.wantjit
 @mark.slow
 def test_als_method_match():
-    lu = als.ImplicitMF(20, iterations=15, method='lu', rng_spec=42)
-    cg = als.ImplicitMF(20, iterations=15, method='cg', rng_spec=42)
+    lu = als.ImplicitMF(20, iterations=15, method="lu", rng_spec=42)
+    cg = als.ImplicitMF(20, iterations=15, method="cg", rng_spec=42)
 
     ratings = lktu.ml_test.ratings
 
     timer = Stopwatch()
     lu.fit(ratings)
     timer.stop()
-    _log.info('fit with LU solver in %s', timer)
+    _log.info("fit with LU solver in %s", timer)
 
     timer = Stopwatch()
     cg.fit(ratings)
     timer.stop()
-    _log.info('fit with CG solver in %s', timer)
+    _log.info("fit with CG solver in %s", timer)
 
     preds = []
 
@@ -298,30 +299,32 @@ def test_als_method_match():
         cd_preds = cg.predict_for_user(u, items)
         diff = lu_preds - cd_preds
         adiff = np.abs(diff)
-        _log.info('user %s diffs: L2 = %f, min = %f, med = %f, max = %f, 90%% = %f', u,
-                  np.linalg.norm(diff, 2),
-                  np.min(adiff), np.median(adiff), np.max(adiff), np.quantile(adiff, 0.9))
+        _log.info(
+            "user %s diffs: L2 = %f, min = %f, med = %f, max = %f, 90%% = %f",
+            u,
+            np.linalg.norm(diff, 2),
+            np.min(adiff),
+            np.median(adiff),
+            np.max(adiff),
+            np.quantile(adiff, 0.9),
+        )
 
-        preds.append(pd.DataFrame({
-            'user': u,
-            'item': items,
-            'lu': lu_preds,
-            'cg': cd_preds,
-            'adiff': adiff
-        }))
-        _log.info('user %s tau: %s', u, stats.kendalltau(lu_preds, cd_preds))
+        preds.append(
+            pd.DataFrame({"user": u, "item": items, "lu": lu_preds, "cg": cd_preds, "adiff": adiff})
+        )
+        _log.info("user %s tau: %s", u, stats.kendalltau(lu_preds, cd_preds))
 
     preds = pd.concat(preds, ignore_index=True)
-    _log.info('LU preds:\n%s', preds.lu.describe())
-    _log.info('CD preds:\n%s', preds.cg.describe())
-    _log.info('overall differences:\n%s', preds.adiff.describe())
+    _log.info("LU preds:\n%s", preds.lu.describe())
+    _log.info("CD preds:\n%s", preds.cg.describe())
+    _log.info("overall differences:\n%s", preds.adiff.describe())
     # there are differences. our check: the 90% are reasonable
     assert np.quantile(adiff, 0.9) < 0.5
 
 
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml100k.available, reason='ML100K data not present')
+@mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
 def test_als_implicit_batch_accuracy():
     import lenskit.crossfold as xf
     from lenskit import batch
@@ -330,31 +333,31 @@ def test_als_implicit_batch_accuracy():
     ratings = lktu.ml100k.ratings
 
     def eval(train, test):
-        train = train.astype({'rating': np.float_})
-        _log.info('training CG')
-        cg_algo = als.ImplicitMF(25, iterations=20, method='cg')
+        train = train.astype({"rating": np.float_})
+        _log.info("training CG")
+        cg_algo = als.ImplicitMF(25, iterations=20, method="cg")
         cg_algo = Recommender.adapt(cg_algo)
         cg_algo.fit(train)
-        _log.info('training LU')
-        lu_algo = als.ImplicitMF(25, iterations=20, method='lu')
+        _log.info("training LU")
+        lu_algo = als.ImplicitMF(25, iterations=20, method="lu")
         lu_algo = Recommender.adapt(lu_algo)
         lu_algo.fit(train)
         users = test.user.unique()
-        _log.info('testing %d users', len(users))
+        _log.info("testing %d users", len(users))
         cg_recs = batch.recommend(cg_algo, users, 100, n_jobs=2)
         lu_recs = batch.recommend(lu_algo, users, 100, n_jobs=2)
-        return pd.concat({'CG': cg_recs, 'LU': lu_recs}, names=['Method']).reset_index('Method')
+        return pd.concat({"CG": cg_recs, "LU": lu_recs}, names=["Method"]).reset_index("Method")
 
     folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
     test = pd.concat(te for (tr, te) in folds)
     recs = pd.concat((eval(train, test) for (train, test) in folds), ignore_index=True)
 
-    _log.info('analyzing recommendations')
+    _log.info("analyzing recommendations")
     rla = topn.RecListAnalysis()
     rla.add_metric(topn.ndcg)
     results = rla.compute(recs, test)
-    results = results.groupby('Method')['ndcg'].mean()
-    _log.info('LU nDCG for users is %.4f', results.loc['LU'].mean())
-    _log.info('CG nDCG for users is %.4f', results.loc['CG'].mean())
+    results = results.groupby("Method")["ndcg"].mean()
+    _log.info("LU nDCG for users is %.4f", results.loc["LU"].mean())
+    _log.info("CG nDCG for users is %.4f", results.loc["CG"].mean())
     assert all(results > 0.28)
-    assert results.loc['LU'] == approx(results.loc['CG'], rel=0.05)
+    assert results.loc["LU"] == approx(results.loc["CG"], rel=0.05)

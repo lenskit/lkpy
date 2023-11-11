@@ -9,9 +9,9 @@ import binpickle
 import lenskit.util.test as lktu
 from pytest import approx
 
-simple_df = pd.DataFrame({'item': [1, 1, 2, 3],
-                          'user': [10, 12, 10, 13],
-                          'rating': [4.0, 3.0, 5.0, 2.0]})
+simple_df = pd.DataFrame(
+    {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
+)
 
 
 def test_fallback_train_one():
@@ -42,15 +42,15 @@ def test_fallback_list():
     assert len(algo.algorithms) == 2
 
     params = algo.get_params()
-    assert list(params.keys()) == ['algorithms']
-    assert len(params['algorithms']) == 2
-    assert isinstance(params['algorithms'][0], basic.Memorized)
-    assert isinstance(params['algorithms'][1], Bias)
+    assert list(params.keys()) == ["algorithms"]
+    assert len(params["algorithms"]) == 2
+    assert isinstance(params["algorithms"][0], basic.Memorized)
+    assert isinstance(params["algorithms"][1], Bias)
 
 
 def test_fallback_string():
     algo = basic.Fallback([basic.Memorized(simple_df), Bias()])
-    assert 'Fallback' in str(algo)
+    assert "Fallback" in str(algo)
 
 
 def test_fallback_clone():
@@ -110,7 +110,7 @@ def test_fallback_save_load(tmp_path):
     original = basic.Fallback(basic.Memorized(simple_df), Bias())
     original.fit(lktu.ml_test.ratings)
 
-    fn = tmp_path / 'fb.mod'
+    fn = tmp_path / "fb.mod"
 
     binpickle.dump(original, fn)
 

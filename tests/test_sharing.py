@@ -33,7 +33,7 @@ def test_persist_bpk():
         share.close()
 
 
-@mark.skipif(not lks.SHM_AVAILABLE, reason='shared_memory not available')
+@mark.skipif(not lks.SHM_AVAILABLE, reason="shared_memory not available")
 def test_persist_shm():
     matrix = np.random.randn(1000, 100)
     share = lks.persist_shm(matrix)
@@ -62,7 +62,7 @@ def test_persist():
 def test_persist_dir(tmp_path):
     "Test persistence with a configured directory"
     matrix = np.random.randn(1000, 100)
-    with lktu.set_env_var('LK_TEMP_DIR', os.fspath(tmp_path)):
+    with lktu.set_env_var("LK_TEMP_DIR", os.fspath(tmp_path)):
         share = lks.persist(matrix)
         assert isinstance(share, lks.BPKPersisted)
 
@@ -79,7 +79,7 @@ def test_persist_method():
     "Test persistence with a specified method"
     matrix = np.random.randn(1000, 100)
 
-    share = lks.persist(matrix, method='binpickle')
+    share = lks.persist(matrix, method="binpickle")
     assert isinstance(share, lks.BPKPersisted)
 
     try:
