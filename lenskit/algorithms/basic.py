@@ -38,9 +38,9 @@ class Popular(Recommender):
         self.selector = selector
 
     def fit(self, ratings, **kwargs):
-        pop = ratings.groupby('item').user.count()
-        pop.name = 'score'
-        self.item_pop_ = pop.astype('float64')
+        pop = ratings.groupby("item").user.count()
+        pop.name = "score"
+        self.item_pop_ = pop.astype("float64")
 
         if self.selector is None:
             self.selector = UnratedItemCandidateSelector()
@@ -63,7 +63,7 @@ class Popular(Recommender):
             return scores.nlargest(n).reset_index()
 
     def __str__(self):
-        return 'Popular'
+        return "Popular"
 
 
 class PopScore(Predictor):
@@ -84,26 +84,26 @@ class PopScore(Predictor):
             Item popularity scores.
     """
 
-    def __init__(self, score_method='quantile'):
+    def __init__(self, score_method="quantile"):
         self.score_method = score_method
 
     def fit(self, ratings, **kwargs):
-        _logger.info('counting item popularity')
-        scores = ratings['item'].value_counts()
-        if self.score_method == 'rank':
-            _logger.info('ranking %d items', len(scores))
+        _logger.info("counting item popularity")
+        scores = ratings["item"].value_counts()
+        if self.score_method == "rank":
+            _logger.info("ranking %d items", len(scores))
             scores = scores.rank().sort_index()
-        elif self.score_method == 'quantile':
-            _logger.info('computing quantiles for %d items', len(scores))
+        elif self.score_method == "quantile":
+            _logger.info("computing quantiles for %d items", len(scores))
             cmass = scores.sort_values()
             cmass = cmass.cumsum()
             cdens = cmass / scores.sum()
             scores = cdens.sort_index()
-        elif self.score_method == 'count':
-            _logger.info('scoring items with their rating counts')
+        elif self.score_method == "count":
+            _logger.info("scoring items with their rating counts")
             scores = scores.sort_index()
         else:
-            raise ValueError('invalid scoring method ' + repr(self.score_method))
+            raise ValueError("invalid scoring method " + repr(self.score_method))
 
         self.item_scores_ = scores
 
@@ -113,7 +113,7 @@ class PopScore(Predictor):
         return self.item_scores_.reindex(items)
 
     def __str__(self):
-        return 'PopScore({})'.format(self.score_method)
+        return "PopScore({})".format(self.score_method)
 
 
 class Memorized(Predictor):
@@ -134,7 +134,7 @@ class Memorized(Predictor):
 
     def predict_for_user(self, user, items, ratings=None):
         uscores = self.scores[self.scores.user == user]
-        urates = uscores.set_index('item').rating
+        urates = uscores.set_index("item").rating
         return urates.reindex(items)
 
 
@@ -170,7 +170,7 @@ class Fallback(Predictor):
         preds = None
 
         for algo in self.algorithms:
-            _logger.debug('predicting for %d items for user %s', len(remaining), user)
+            _logger.debug("predicting for %d items for user %s", len(remaining), user)
             aps = algo.predict_for_user(user, remaining, ratings=ratings)
             aps = aps[aps.notna()]
             if preds is None:
@@ -185,7 +185,7 @@ class Fallback(Predictor):
 
     def __str__(self):
         str_algos = [str(algo) for algo in self.algorithms]
-        return 'Fallback([{}])'.format(', '.join(str_algos))
+        return "Fallback([{}])".format(", ".join(str_algos))
 
 
 class EmptyCandidateSelector(CandidateSelector):
@@ -196,7 +196,7 @@ class EmptyCandidateSelector(CandidateSelector):
     dtype_ = np.int64
 
     def fit(self, ratings, **kwarsg):
-        self.dtype_ = ratings['item'].dtype
+        self.dtype_ = ratings["item"].dtype
 
     def candidates(self, user, ratings=None):
         return np.array([], dtype=self.dtype_)
@@ -213,14 +213,15 @@ class UnratedItemCandidateSelector(CandidateSelector):
         user_items_(CSR):
             Items rated by each known user, as positions in the ``items`` index.
     """
+
     items_ = None
     users_ = None
     user_items_ = None
 
     def fit(self, ratings, **kwargs):
-        r2 = ratings[['user', 'item']]
+        r2 = ratings[["user", "item"]]
         sparse = sparse_ratings(r2)
-        _logger.info('trained unrated candidate selector for %d ratings', sparse.matrix.nnz)
+        _logger.info("trained unrated candidate selector for %d ratings", sparse.matrix.nnz)
         self.items_ = sparse.items
         self.users_ = sparse.users
         self.user_items_ = sparse.matrix
@@ -255,10 +256,11 @@ class AllItemsCandidateSelector(CandidateSelector):
     Attributes:
         items_(numpy.ndarray): All known items.
     """
+
     items_ = None
 
     def fit(self, ratings, **kwargs):
-        self.items_ = ratings['item'].unique()
+        self.items_ = ratings["item"].unique()
         return self
 
     def candidates(self, user, ratings=None):
@@ -290,7 +292,7 @@ class Random(Recommender):
 
     def fit(self, ratings, **kwargs):
         self.selector.fit(ratings, **kwargs)
-        items = pd.DataFrame(ratings['item'].unique(), columns=['item'])
+        items = pd.DataFrame(ratings["item"].unique(), columns=["item"])
         self.items = items
         return self
 
@@ -301,12 +303,12 @@ class Random(Recommender):
             n = len(candidates)
 
         rng = self.rng_source(user)
-        c_df = pd.DataFrame(candidates, columns=['item'])
+        c_df = pd.DataFrame(candidates, columns=["item"])
         recs = c_df.sample(n, random_state=rng)
         return recs.reset_index(drop=True)
 
     def __str__(self):
-        return 'Random'
+        return "Random"
 
 
 class KnownRating(Predictor):
@@ -315,9 +317,9 @@ class KnownRating(Predictor):
     """
 
     def fit(self, ratings, **kwargs):
-        self.ratings = ratings.set_index(['user', 'item']).sort_index()
+        self.ratings = ratings.set_index(["user", "item"]).sort_index()
         return self
 
     def predict_for_user(self, user, items, ratings=None):
-        uscores = self.ratings.xs(user, level='user', drop_level=True)
+        uscores = self.ratings.xs(user, level="user", drop_level=True)
         return uscores.rating.reindex(items)

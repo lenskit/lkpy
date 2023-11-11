@@ -15,7 +15,7 @@ _store_state = threading.local()
 
 
 def _save_mode():
-    return getattr(_store_state, 'mode', 'save')
+    return getattr(_store_state, "mode", "save")
 
 
 @contextmanager
@@ -25,7 +25,7 @@ def sharing_mode():
     sharing, not model persistence.
     """
     old = _save_mode()
-    _store_state.mode = 'share'
+    _store_state.mode = "share"
     try:
         yield
     finally:
@@ -38,7 +38,7 @@ def in_share_context():
     :func:`sharing_mode` context, which means model pickling will be used for
     cross-process sharing.
     """
-    return _save_mode() == 'share'
+    return _save_mode() == "share"
 
 
 class PersistedModel(ABC):
@@ -80,9 +80,9 @@ class PersistedModel(ABC):
             ``self`` (for convenience)
         """
         if not self.is_owner:
-            warnings.warning('non-owning objects should not be transferred', stacklevel=1)
+            warnings.warning("non-owning objects should not be transferred", stacklevel=1)
         else:
-            self.is_owner = 'transfer'
+            self.is_owner = "transfer"
         return self
 
 
@@ -113,15 +113,15 @@ def persist(model, *, method=None):
         PersistedModel: The persisted object.
     """
     if method is not None:
-        if method == 'binpickle':
+        if method == "binpickle":
             method = persist_binpickle
-        elif method == 'shm':
+        elif method == "shm":
             method = persist_shm
-        elif not hasattr(method, '__call__'):
-            raise ValueError('invalid method %s: must be one of binpickle, shm, or a funciton')
+        elif not hasattr(method, "__call__"):
+            raise ValueError("invalid method %s: must be one of binpickle, shm, or a funciton")
 
     if method is None:
-        if SHM_AVAILABLE and 'LK_TEMP_DIR' not in os.environ:
+        if SHM_AVAILABLE and "LK_TEMP_DIR" not in os.environ:
             method = persist_shm
         else:
             method = persist_binpickle
@@ -129,5 +129,5 @@ def persist(model, *, method=None):
     return method(model)
 
 
-from .binpickle import persist_binpickle, BPKPersisted     # noqa: E402,F401
+from .binpickle import persist_binpickle, BPKPersisted  # noqa: E402,F401
 from .shm import persist_shm, SHMPersisted, SHM_AVAILABLE  # noqa: E402,F401

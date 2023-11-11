@@ -9,10 +9,10 @@ _log = logging.getLogger(__name__)
 
 def _train_and_save(algo, file, ratings, kwargs):
     "Worker for subprocess model training"
-    _log.info('training %s on %d ratings', algo, len(ratings))
+    _log.info("training %s on %d ratings", algo, len(ratings))
     timer = Stopwatch()
     algo.fit(ratings, **kwargs)
-    _log.info('trained %s in %s', algo, timer)
+    _log.info("trained %s in %s", algo, timer)
     if file is None:
         return persist_binpickle(algo).transfer()
     else:

@@ -13,17 +13,17 @@ from lenskit.util import cached
 _log = logging.getLogger(__name__)
 
 __doctest_skip__ = []
-if not os.path.exists('data/ml-100k'):
-    __doctest_skip__.append('ML100K.*')
-if not os.path.exists('data/ml-20m'):
-    __doctest_skip__.append('MovieLens.tag_genome')
-if not os.path.exists('data/ml-1m.*'):
-    __doctest_skip__.append('ML1M.*')
-if not os.path.exists('data/ml-10M100K'):
-    __doctest_skip__.append('ML10M.*')
-    __doctest_skip__.append('MLM.*')
+if not os.path.exists("data/ml-100k"):
+    __doctest_skip__.append("ML100K.*")
+if not os.path.exists("data/ml-20m"):
+    __doctest_skip__.append("MovieLens.tag_genome")
+if not os.path.exists("data/ml-1m.*"):
+    __doctest_skip__.append("ML1M.*")
+if not os.path.exists("data/ml-10M100K"):
+    __doctest_skip__.append("ML10M.*")
+    __doctest_skip__.append("MLM.*")
 
-__all__ = ['MovieLens', 'ML100K', 'ML1M', 'ML10M']
+__all__ = ["MovieLens", "ML100K", "ML1M", "ML10M"]
 
 
 class MovieLens:
@@ -35,7 +35,7 @@ class MovieLens:
         path(str or pathlib.Path): Path to the directory containing the data set.
     """
 
-    def __init__(self, path='data/ml-20m'):
+    def __init__(self, path="data/ml-20m"):
         self.path = Path(path)
 
     @cached
@@ -55,15 +55,18 @@ class MovieLens:
         [100004 rows x 4 columns]
         """
 
-        fn = self.path / 'ratings.csv'
-        ratings = pd.read_csv(fn, dtype={
-            'movieId': np.int32,
-            'userId': np.int32,
-            'rating': np.float64,
-            'timestamp': np.int32
-        })
-        ratings.rename(columns={'userId': 'user', 'movieId': 'item'}, inplace=True)
-        _log.debug('loaded %s, takes %d bytes', fn, ratings.memory_usage().sum())
+        fn = self.path / "ratings.csv"
+        ratings = pd.read_csv(
+            fn,
+            dtype={
+                "movieId": np.int32,
+                "userId": np.int32,
+                "rating": np.float64,
+                "timestamp": np.int32,
+            },
+        )
+        ratings.rename(columns={"userId": "user", "movieId": "item"}, inplace=True)
+        _log.debug("loaded %s, takes %d bytes", fn, ratings.memory_usage().sum())
         return ratings
 
     @cached
@@ -84,15 +87,18 @@ class MovieLens:
         [9125 rows x 2 columns]
         """
 
-        fn = self.path / 'movies.csv'
-        movies = pd.read_csv(fn, dtype={
-            'movieId': np.int32,
-            'title': object,
-            'genres': object,
-        })
-        movies.rename(columns={'movieId': 'item'}, inplace=True)
-        movies.set_index('item', inplace=True)
-        _log.debug('loaded %s, takes %d bytes', fn, movies.memory_usage().sum())
+        fn = self.path / "movies.csv"
+        movies = pd.read_csv(
+            fn,
+            dtype={
+                "movieId": np.int32,
+                "title": object,
+                "genres": object,
+            },
+        )
+        movies.rename(columns={"movieId": "item"}, inplace=True)
+        movies.set_index("item", inplace=True)
+        _log.debug("loaded %s, takes %d bytes", fn, movies.memory_usage().sum())
         return movies
 
     @cached
@@ -114,15 +120,13 @@ class MovieLens:
         [9125 rows x 2 columns]
         """
 
-        fn = self.path / 'links.csv'
-        links = pd.read_csv(fn, dtype={
-            'movieId': np.int32,
-            'imdbId': np.int64,
-            'tmdbId': pd.Int64Dtype()
-        })
-        links.rename(columns={'movieId': 'item'}, inplace=True)
-        links.set_index('item', inplace=True)
-        _log.debug('loaded %s, takes %d bytes', fn, links.memory_usage().sum())
+        fn = self.path / "links.csv"
+        links = pd.read_csv(
+            fn, dtype={"movieId": np.int32, "imdbId": np.int64, "tmdbId": pd.Int64Dtype()}
+        )
+        links.rename(columns={"movieId": "item"}, inplace=True)
+        links.set_index("item", inplace=True)
+        _log.debug("loaded %s, takes %d bytes", fn, links.memory_usage().sum())
         return links
 
     @cached
@@ -143,15 +147,18 @@ class MovieLens:
         [1296 rows x 4 columns]
         """
 
-        fn = self.path / 'tags.csv'
-        tags = pd.read_csv(fn, dtype={
-            'movieId': np.int32,
-            'userId': np.int32,
-            'tag': object,
-            'timestamp': np.int32,
-        })
-        tags.rename(columns={'userId': 'user', 'movieId': 'item'}, inplace=True)
-        _log.debug('loaded %s, takes %d bytes', fn, tags.memory_usage().sum())
+        fn = self.path / "tags.csv"
+        tags = pd.read_csv(
+            fn,
+            dtype={
+                "movieId": np.int32,
+                "userId": np.int32,
+                "tag": object,
+                "timestamp": np.int32,
+            },
+        )
+        tags.rename(columns={"userId": "user", "movieId": "item"}, inplace=True)
+        _log.debug("loaded %s, takes %d bytes", fn, tags.memory_usage().sum())
         return tags
 
     @cached
@@ -173,19 +180,22 @@ class MovieLens:
         [10381 rows x 1128 columns]
         """
 
-        fn = self.path / 'genome-scores.csv'
-        tags = pd.read_csv(self.path / 'genome-tags.csv')
-        tags = tags.set_index('tagId')
-        tags = tags['tag'].astype('category')
-        genome = pd.read_csv(fn, dtype={
-            'movieId': np.int32,
-            'tagId': np.int32,
-            'relevance': np.float64,
-        })
-        genome.rename(columns={'userId': 'user', 'movieId': 'item'}, inplace=True)
-        genome = genome.join(tags, on='tagId')
-        genome = genome.pivot(index='item', columns='tag', values='relevance')
-        _log.debug('loaded %s, takes %d bytes', fn, genome.memory_usage().sum())
+        fn = self.path / "genome-scores.csv"
+        tags = pd.read_csv(self.path / "genome-tags.csv")
+        tags = tags.set_index("tagId")
+        tags = tags["tag"].astype("category")
+        genome = pd.read_csv(
+            fn,
+            dtype={
+                "movieId": np.int32,
+                "tagId": np.int32,
+                "relevance": np.float64,
+            },
+        )
+        genome.rename(columns={"userId": "user", "movieId": "item"}, inplace=True)
+        genome = genome.join(tags, on="tagId")
+        genome = genome.pivot(index="item", columns="tag", values="relevance")
+        _log.debug("loaded %s, takes %d bytes", fn, genome.memory_usage().sum())
         return genome
 
 
@@ -195,13 +205,13 @@ class ML100K:
     the more current data sets loaded by :class:`MovieLens`.
     """
 
-    def __init__(self, path='data/ml-100k'):
+    def __init__(self, path="data/ml-100k"):
         self.path = Path(path)
 
     @property
     def available(self):
         "Query whether the data set exists."
-        return (self.path / 'u.data').exists()
+        return (self.path / "u.data").exists()
 
     @cached
     def ratings(self):
@@ -219,12 +229,15 @@ class ML100K:
         ...
         [100000 rows x 4 columns]
         """
-        fn = self.path / 'u.data'
-        ratings = pd.read_csv(fn, sep='\t', header=None,
-                              names=['user', 'item', 'rating', 'timestamp'],
-                              dtype={'user': np.int32, 'item': np.int32,
-                                     'rating': np.float32, 'timestamp': np.int32})
-        _log.debug('loaded %s', fn)
+        fn = self.path / "u.data"
+        ratings = pd.read_csv(
+            fn,
+            sep="\t",
+            header=None,
+            names=["user", "item", "rating", "timestamp"],
+            dtype={"user": np.int32, "item": np.int32, "rating": np.float32, "timestamp": np.int32},
+        )
+        _log.debug("loaded %s", fn)
         return ratings
 
     @cached
@@ -244,13 +257,16 @@ class ML100K:
         ...
         [943 rows x 4 columns]
         """
-        fn = self.path / 'u.user'
-        users = pd.read_csv(fn, sep='|', header=None,
-                            names=['user', 'age', 'gender', 'occupation', 'zip'],
-                            dtype={'user': np.int32, 'age': np.int8,
-                                   'occupation': 'category'})
-        _log.debug('loaded %s', fn)
-        return users.set_index('user')
+        fn = self.path / "u.user"
+        users = pd.read_csv(
+            fn,
+            sep="|",
+            header=None,
+            names=["user", "age", "gender", "occupation", "zip"],
+            dtype={"user": np.int32, "age": np.int8, "occupation": "category"},
+        )
+        _log.debug("loaded %s", fn)
+        return users.set_index("user")
 
     @cached
     def movies(self):
@@ -269,17 +285,37 @@ class ML100K:
         ...
         [1682 rows x 23 columns]
         """
-        fn = self.path / 'u.item'
+        fn = self.path / "u.item"
         genres = [
-            'unknown', 'Action', 'Adventure', 'Animation',
-            "Children's", 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy',
-            'Film-Noir', 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi',
-            'Thriller', 'War', 'Western'
+            "unknown",
+            "Action",
+            "Adventure",
+            "Animation",
+            "Children's",
+            "Comedy",
+            "Crime",
+            "Documentary",
+            "Drama",
+            "Fantasy",
+            "Film-Noir",
+            "Horror",
+            "Musical",
+            "Mystery",
+            "Romance",
+            "Sci-Fi",
+            "Thriller",
+            "War",
+            "Western",
         ]
-        items = pd.read_csv(fn, sep='|', header=None, encoding='latin1',
-                            names=['item', 'title', 'release', 'vidrelease', 'imdb'] + genres)
-        _log.debug('loaded %s', fn)
-        return items.set_index('item')
+        items = pd.read_csv(
+            fn,
+            sep="|",
+            header=None,
+            encoding="latin1",
+            names=["item", "title", "release", "vidrelease", "imdb"] + genres,
+        )
+        _log.debug("loaded %s", fn)
+        return items.set_index("item")
 
 
 class MLM:
@@ -306,13 +342,16 @@ class MLM:
         ...
         [10000054 rows x 4 columns]
         """
-        fn = self.path / 'ratings.dat'
-        ratings = pd.read_csv(fn, sep=':', header=None,
-                              names=['user', '_ui', 'item', '_ir', 'rating', '_rt', 'timestamp'],
-                              usecols=[0, 2, 4, 6],
-                              dtype={'user': np.int32, 'item': np.int32,
-                                     'rating': np.float32, 'timestamp': np.int32})
-        _log.debug('loaded %s', fn)
+        fn = self.path / "ratings.dat"
+        ratings = pd.read_csv(
+            fn,
+            sep=":",
+            header=None,
+            names=["user", "_ui", "item", "_ir", "rating", "_rt", "timestamp"],
+            usecols=[0, 2, 4, 6],
+            dtype={"user": np.int32, "item": np.int32, "rating": np.float32, "timestamp": np.int32},
+        )
+        _log.debug("loaded %s", fn)
         return ratings
 
     @cached
@@ -332,13 +371,17 @@ class MLM:
         ...
         [10681 rows x 2 columns]
         """
-        fn = self.path / 'movies.dat'
-        movies = pd.read_csv(fn, sep=':', header=None,
-                             names=['item', '_ir', 'title', '_tg', 'genres'],
-                             usecols=[0, 2, 4],
-                             dtype={'item': np.int32})
-        movies.set_index('item', inplace=True)
-        _log.debug('loaded %s', fn)
+        fn = self.path / "movies.dat"
+        movies = pd.read_csv(
+            fn,
+            sep=":",
+            header=None,
+            names=["item", "_ir", "title", "_tg", "genres"],
+            usecols=[0, 2, 4],
+            dtype={"item": np.int32},
+        )
+        movies.set_index("item", inplace=True)
+        _log.debug("loaded %s", fn)
         return movies
 
 
@@ -346,7 +389,8 @@ class ML10M(MLM):
     """
     MovieLens 10M100K data set.
     """
-    def __init__(self, path='data/ml-10M100K'):
+
+    def __init__(self, path="data/ml-10M100K"):
         super().__init__(path)
 
 
@@ -359,7 +403,7 @@ class ML1M(MLM):
        with the 10M data set.
     """
 
-    def __init__(self, path='data/ml-1m'):
+    def __init__(self, path="data/ml-1m"):
         super().__init__(path)
 
     @cached
@@ -379,13 +423,15 @@ class ML1M(MLM):
         ...
         [6040 rows x 3 columns]
         """
-        fn = self.path / 'users.dat'
-        users = pd.read_csv(fn, sep=':', header=None,
-                            names=['user', '_ug', 'gender', '_ga', 'age',
-                                   '_ao', 'occupation', '_oz', 'zip'],
-                            usecols=[0, 2, 4, 8],
-                            dtype={'user': np.int32, 'gender': 'category', 'age': np.int8,
-                                   'timestamp': np.int32})
-        users.set_index('user', inplace=True)
-        _log.debug('loaded %s', fn)
+        fn = self.path / "users.dat"
+        users = pd.read_csv(
+            fn,
+            sep=":",
+            header=None,
+            names=["user", "_ug", "gender", "_ga", "age", "_ao", "occupation", "_oz", "zip"],
+            usecols=[0, 2, 4, 8],
+            dtype={"user": np.int32, "gender": "category", "age": np.int8, "timestamp": np.int32},
+        )
+        users.set_index("user", inplace=True)
+        _log.debug("loaded %s", fn)
         return users

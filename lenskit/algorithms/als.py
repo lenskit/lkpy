@@ -15,10 +15,7 @@ from ..math.solve import _dposv
 
 _logger = logging.getLogger(__name__)
 
-PartialModel = namedtuple('PartialModel', [
-    'users', 'items',
-    'user_matrix', 'item_matrix'
-])
+PartialModel = namedtuple("PartialModel", ["users", "items", "user_matrix", "item_matrix"])
 
 
 @njit
@@ -343,10 +340,22 @@ class BiasedMF(MFPredictor):
             Random number generator or state (see :func:`lenskit.util.random.rng`).
         progress: a :func:`tqdm.tqdm`-compatible progress bar function
     """
+
     timer = None
 
-    def __init__(self, features, *, iterations=20, reg=0.1, damping=5, bias=True, method='cd',
-                 rng_spec=None, progress=None, save_user_features=True):
+    def __init__(
+        self,
+        features,
+        *,
+        iterations=20,
+        reg=0.1,
+        damping=5,
+        bias=True,
+        method="cd",
+        rng_spec=None,
+        progress=None,
+        save_user_features=True,
+    ):
         self.features = features
         self.iterations = iterations
         self.regularization = reg
@@ -377,12 +386,18 @@ class BiasedMF(MFPredictor):
             pass  # we just need to do the iterations
 
         if self.user_features_ is not None:
-            _logger.info('trained model in %s (|P|=%f, |Q|=%f)', self.timer,
-                         np.linalg.norm(self.user_features_, 'fro'),
-                         np.linalg.norm(self.item_features_, 'fro'))
+            _logger.info(
+                "trained model in %s (|P|=%f, |Q|=%f)",
+                self.timer,
+                np.linalg.norm(self.user_features_, "fro"),
+                np.linalg.norm(self.item_features_, "fro"),
+            )
         else:
-            _logger.info('trained model in %s (|Q|=%f)', self.timer,
-                         np.linalg.norm(self.item_features_, 'fro'))
+            _logger.info(
+                "trained model in %s (|Q|=%f)",
+                self.timer,
+                np.linalg.norm(self.item_features_, "fro"),
+            )
 
         del self.timer
         return self
@@ -399,13 +414,14 @@ class BiasedMF(MFPredictor):
         """
 
         if self.bias:
-            _logger.info('[%s] fitting bias model', self.timer)
+            _logger.info("[%s] fitting bias model", self.timer)
             self.bias.fit(ratings)
 
         current, uctx, ictx = self._initial_model(ratings)
 
-        _logger.info('[%s] training biased MF model with ALS for %d features',
-                     self.timer, self.features)
+        _logger.info(
+            "[%s] training biased MF model with ALS for %d features", self.timer, self.features
+        )
         for epoch, model in enumerate(self._train_iters(current, uctx, ictx)):
             self._save_params(model)
             yield self
@@ -423,7 +439,7 @@ class BiasedMF(MFPredictor):
     def _initial_model(self, ratings):
         # transform ratings using offsets
         if self.bias:
-            _logger.info('[%s] normalizing ratings', self.timer)
+            _logger.info("[%s] normalizing ratings", self.timer)
             ratings = self.bias.transform(ratings)
 
         "Initialize a model and build contexts."
@@ -431,17 +447,17 @@ class BiasedMF(MFPredictor):
         n_users = len(users)
         n_items = len(items)
 
-        _logger.debug('setting up contexts')
+        _logger.debug("setting up contexts")
         trmat = rmat.transpose()
 
-        _logger.debug('initializing item matrix')
+        _logger.debug("initializing item matrix")
         imat = self.rng.standard_normal((n_items, self.features))
         imat /= np.linalg.norm(imat, axis=1).reshape((n_items, 1))
-        _logger.debug('|Q|: %f', np.linalg.norm(imat, 'fro'))
-        _logger.debug('initializing user matrix')
+        _logger.debug("|Q|: %f", np.linalg.norm(imat, "fro"))
+        _logger.debug("initializing user matrix")
         umat = self.rng.standard_normal((n_users, self.features))
         umat /= np.linalg.norm(umat, axis=1).reshape((n_users, 1))
-        _logger.debug('|P|: %f', np.linalg.norm(umat, 'fro'))
+        _logger.debug("|P|: %f", np.linalg.norm(umat, "fro"))
 
         return PartialModel(users, items, umat, imat), rmat, trmat
 
@@ -461,24 +477,24 @@ class BiasedMF(MFPredictor):
         assert ictx.nrows == n_items
         assert ictx.ncols == n_users
 
-        if self.method == 'cd':
+        if self.method == "cd":
             train = _train_matrix_cd
-        elif self.method == 'lu':
+        elif self.method == "lu":
             train = _train_matrix_lu
         else:
-            raise ValueError('invalid training method ' + self.method)
+            raise ValueError("invalid training method " + self.method)
 
         if isinstance(self.regularization, tuple):
             ureg, ireg = self.regularization
         else:
             ureg = ireg = self.regularization
 
-        for epoch in self.progress(range(self.iterations), desc='BiasedMF', leave=False):
+        for epoch in self.progress(range(self.iterations), desc="BiasedMF", leave=False):
             du = train(uctx, current.user_matrix, current.item_matrix, ureg)
-            _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
+            _logger.debug("[%s] finished user epoch %d", self.timer, epoch)
             di = train(ictx, current.item_matrix, current.user_matrix, ireg)
-            _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
-            _logger.info('[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)', self.timer, epoch, du, di)
+            _logger.debug("[%s] finished item epoch %d", self.timer, epoch)
+            _logger.info("[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)", self.timer, epoch, du, di)
             yield current
 
     def predict_for_user(self, user, items, ratings=None):
@@ -513,8 +529,9 @@ class BiasedMF(MFPredictor):
             return scores
 
     def __str__(self):
-        return 'als.BiasedMF(features={}, regularization={})'.\
-            format(self.features, self.regularization)
+        return "als.BiasedMF(features={}, regularization={})".format(
+            self.features, self.regularization
+        )
 
 
 class ImplicitMF(MFPredictor):
@@ -561,10 +578,22 @@ class ImplicitMF(MFPredictor):
             Random number generator or state (see :func:`lenskit.util.random.rng`).
         progress: a :func:`tqdm.tqdm`-compatible progress bar function
     """
+
     timer = None
 
-    def __init__(self, features, *, iterations=20, reg=0.1, weight=40, use_ratings=False,
-                 method='cg', rng_spec=None, progress=None, save_user_features=True):
+    def __init__(
+        self,
+        features,
+        *,
+        iterations=20,
+        reg=0.1,
+        weight=40,
+        use_ratings=False,
+        method="cg",
+        rng_spec=None,
+        progress=None,
+        save_user_features=True,
+    ):
         self.features = features
         self.iterations = iterations
         self.reg = reg
@@ -582,14 +611,20 @@ class ImplicitMF(MFPredictor):
             pass
 
         if self.user_features_ is not None:
-            _logger.info('[%s] finished training model with %d features (|P|=%f, |Q|=%f)',
-                         self.timer, self.features,
-                         np.linalg.norm(self.user_features_, 'fro'),
-                         np.linalg.norm(self.item_features_, 'fro'))
+            _logger.info(
+                "[%s] finished training model with %d features (|P|=%f, |Q|=%f)",
+                self.timer,
+                self.features,
+                np.linalg.norm(self.user_features_, "fro"),
+                np.linalg.norm(self.item_features_, "fro"),
+            )
         else:
-            _logger.info('[%s] finished training model with %d features (|Q|=%f)',
-                         self.timer, self.features,
-                         np.linalg.norm(self.item_features_, 'fro'))
+            _logger.info(
+                "[%s] finished training model with %d features (|Q|=%f)",
+                self.timer,
+                self.features,
+                np.linalg.norm(self.item_features_, "fro"),
+            )
 
         # unpack the regularization
         if isinstance(self.reg, tuple):
@@ -605,10 +640,12 @@ class ImplicitMF(MFPredictor):
     def fit_iters(self, ratings, **kwargs):
         current, uctx, ictx = self._initial_model(ratings)
 
-        _logger.info('[%s] training implicit MF model with ALS for %d features',
-                     self.timer, self.features)
-        _logger.info('have %d observations for %d users and %d items',
-                     uctx.nnz, uctx.nrows, ictx.nrows)
+        _logger.info(
+            "[%s] training implicit MF model with ALS for %d features", self.timer, self.features
+        )
+        _logger.info(
+            "have %d observations for %d users and %d items", uctx.nnz, uctx.nrows, ictx.nrows
+        )
         for model in self._train_iters(current, uctx, ictx):
             self._save_model(model)
             yield self
@@ -624,37 +661,37 @@ class ImplicitMF(MFPredictor):
 
     def _train_iters(self, current, uctx, ictx):
         "Generator of training iterations."
-        if self.method == 'lu':
+        if self.method == "lu":
             train = _train_implicit_lu
-        elif self.method == 'cg':
+        elif self.method == "cg":
             train = _train_implicit_cg
         else:
-            raise ValueError('unknown solver ' + self.method)
+            raise ValueError("unknown solver " + self.method)
 
         if isinstance(self.reg, tuple):
             ureg, ireg = self.reg
         else:
             ureg = ireg = self.reg
 
-        for epoch in self.progress(range(self.iterations), desc='ImplicitMF', leave=False):
+        for epoch in self.progress(range(self.iterations), desc="ImplicitMF", leave=False):
             du = train(uctx, current.user_matrix, current.item_matrix, ureg)
-            _logger.debug('[%s] finished user epoch %d', self.timer, epoch)
+            _logger.debug("[%s] finished user epoch %d", self.timer, epoch)
             di = train(ictx, current.item_matrix, current.user_matrix, ireg)
-            _logger.debug('[%s] finished item epoch %d', self.timer, epoch)
-            _logger.info('[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)', self.timer, epoch, du, di)
+            _logger.debug("[%s] finished item epoch %d", self.timer, epoch)
+            _logger.info("[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)", self.timer, epoch, du, di)
             yield current
 
     def _initial_model(self, ratings):
         "Initialize a model and build contexts."
 
         if not self.use_ratings:
-            ratings = ratings[['user', 'item']]
+            ratings = ratings[["user", "item"]]
 
         rmat, users, items = sparse_ratings(ratings)
         n_users = len(users)
         n_items = len(items)
 
-        _logger.debug('setting up contexts')
+        _logger.debug("setting up contexts")
         # force values to exist
         if rmat.values is None:
             rmat.values = np.ones(rmat.nnz)
@@ -685,5 +722,6 @@ class ImplicitMF(MFPredictor):
             return self.score_by_ids(user, items)
 
     def __str__(self):
-        return 'als.ImplicitMF(features={}, reg={}, w={})'.\
-            format(self.features, self.reg, self.weight)
+        return "als.ImplicitMF(features={}, reg={}, w={})".format(
+            self.features, self.reg, self.weight
+        )

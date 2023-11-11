@@ -130,36 +130,29 @@ class UserUser(Predictor):
         rating_matrix_(matrix.CSR): Normalized user-item rating matrix.
         transpose_matrix_(matrix.CSR): Transposed un-normalized rating matrix.
     """
-    IGNORED_PARAMS = ['feedback']
-    EXTRA_PARAMS = ['center', 'aggregate', 'use_ratings']
-    AGG_SUM = intern('sum')
-    AGG_WA = intern('weighted-average')
+
+    IGNORED_PARAMS = ["feedback"]
+    EXTRA_PARAMS = ["center", "aggregate", "use_ratings"]
+    AGG_SUM = intern("sum")
+    AGG_WA = intern("weighted-average")
     RATING_AGGS = [AGG_WA]
 
-    def __init__(self, nnbrs, min_nbrs=1, min_sim=0, feedback='explicit', **kwargs):
+    def __init__(self, nnbrs, min_nbrs=1, min_sim=0, feedback="explicit", **kwargs):
         self.nnbrs = nnbrs
         self.min_nbrs = min_nbrs
         self.min_sim = min_sim
 
-        if feedback == 'explicit':
-            defaults = {
-                'center': True,
-                'aggregate': self.AGG_WA,
-                'use_ratings': True
-            }
-        elif feedback == 'implicit':
-            defaults = {
-                'center': False,
-                'aggregate': self.AGG_SUM,
-                'use_ratings': False
-            }
+        if feedback == "explicit":
+            defaults = {"center": True, "aggregate": self.AGG_WA, "use_ratings": True}
+        elif feedback == "implicit":
+            defaults = {"center": False, "aggregate": self.AGG_SUM, "use_ratings": False}
         else:
-            raise ValueError(f'invalid feedback mode: {feedback}')
+            raise ValueError(f"invalid feedback mode: {feedback}")
 
         defaults.update(kwargs)
-        self.center = defaults['center']
-        self.aggregate = intern(defaults['aggregate'])
-        self.use_ratings = defaults['use_ratings']
+        self.center = defaults["center"]
+        self.aggregate = intern(defaults["aggregate"])
+        self.use_ratings = defaults["use_ratings"]
 
     def fit(self, ratings, **kwargs):
         """
@@ -174,7 +167,7 @@ class UserUser(Predictor):
 
         # mean-center ratings
         if self.center:
-            umeans = uir.normalize_rows('center')
+            umeans = uir.normalize_rows("center")
         else:
             umeans = None
 
@@ -184,7 +177,7 @@ class UserUser(Predictor):
         # L2-normalize ratings so dot product is cosine
         if uir.values is None or not self.use_ratings:
             uir.values = np.full(uir.nnz, 1.0)
-        uir.normalize_rows('unit')
+        uir.normalize_rows("unit")
 
         self.rating_matrix_ = uir
         self.user_index_ = users
@@ -210,11 +203,11 @@ class UserUser(Predictor):
         """
 
         watch = util.Stopwatch()
-        items = pd.Index(items, name='item')
+        items = pd.Index(items, name="item")
 
         ratings, umean = self._get_user_data(user, ratings)
         if ratings is None:
-            return pd.Series(index=items, dtype='float64')
+            return pd.Series(index=items, dtype="float64")
         assert len(ratings) == len(self.item_index_)  # ratings is a dense vector
 
         # now ratings is normalized to be a mean-centered unit vector
@@ -225,7 +218,7 @@ class UserUser(Predictor):
         if user in self.user_index_:
             nsims[self.user_index_.get_loc(user)] = 0
 
-        _logger.debug('computed user similarities')
+        _logger.debug("computed user similarities")
 
         results = np.full(len(items), np.nan, dtype=np.float_)
         ri_pos = self.item_index_.get_indexer(items.values)
@@ -234,17 +227,26 @@ class UserUser(Predictor):
         elif self.aggregate == self.AGG_SUM:
             agg = _agg_sum
         else:
-            raise ValueError('invalid aggregate ' + self.aggregate)
+            raise ValueError("invalid aggregate " + self.aggregate)
 
-        _score(ri_pos, results, self.transpose_matrix_, nsims,
-               self.nnbrs, self.min_sim, self.min_nbrs, agg)
+        _score(
+            ri_pos,
+            results,
+            self.transpose_matrix_,
+            nsims,
+            self.nnbrs,
+            self.min_sim,
+            self.min_nbrs,
+            agg,
+        )
         if self.aggregate in self.RATING_AGGS:
             results += umean
 
-        results = pd.Series(results, index=items, name='prediction')
+        results = pd.Series(results, index=items, name="prediction")
 
-        _logger.debug('scored %d of %d items for %s in %s',
-                      results.notna().sum(), len(items), user, watch)
+        _logger.debug(
+            "scored %d of %d items for %s in %s", results.notna().sum(), len(items), user, watch
+        )
         return results
 
     def _get_user_data(self, user, ratings):
@@ -257,10 +259,10 @@ class UserUser(Predictor):
                 ratings = rmat.row(upos)
                 umean = self.user_means_[upos] if self.user_means_ is not None else 0
             except KeyError:
-                _logger.warning('user %d has no ratings and none provided', user)
+                _logger.warning("user %d has no ratings and none provided", user)
                 return None, 0
         else:
-            _logger.debug('using provided ratings for user %d', user)
+            _logger.debug("using provided ratings for user %d", user)
             if self.center:
                 umean = ratings.mean()
                 ratings = ratings - umean
@@ -281,4 +283,4 @@ class UserUser(Predictor):
         self.aggregate = intern(self.aggregate)
 
     def __str__(self):
-        return 'UserUser(nnbrs={}, min_sim={})'.format(self.nnbrs, self.min_sim)
+        return "UserUser(nnbrs={}, min_sim={})".format(self.nnbrs, self.min_sim)

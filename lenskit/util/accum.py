@@ -11,8 +11,8 @@ def _pair_downheap(pos: int, sp, limit, ks, vs):
     finished = False
     while not finished:
         min = pos
-        left = 2*pos + 1
-        right = 2*pos + 2
+        left = 2 * pos + 1
+        right = 2 * pos + 2
         if left < limit and vs[sp + left] < vs[sp + min]:
             min = left
         if right < limit and vs[sp + right] < vs[sp + min]:
@@ -87,7 +87,7 @@ def kvp_minheap_sort(sp, ep, keys, vals):
         vals: the value array
     """
 
-    for i in range(ep-1, sp, -1):
+    for i in range(ep - 1, sp, -1):
         swap(keys, i, sp)
         swap(vals, i, sp)
-        _pair_downheap(0, sp, i-sp, keys, vals)
+        _pair_downheap(0, sp, i - sp, keys, vals)

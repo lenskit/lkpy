@@ -20,12 +20,16 @@ except ImportError:
 _log = logging.getLogger(__name__)
 
 __all__ = [
-    'log_to_stderr', 'log_to_notebook',
-    'Stopwatch',
-    'read_df_detect',
-    'rng', 'init_rng', 'derivable_rng',
-    'proc_count',
-    'clone', 'clean_str'
+    "log_to_stderr",
+    "log_to_notebook",
+    "Stopwatch",
+    "read_df_detect",
+    "rng",
+    "init_rng",
+    "derivable_rng",
+    "proc_count",
+    "clone",
+    "clean_str",
 ]
 
 
@@ -46,8 +50,8 @@ def clone(algo):
     >>> copy.damping == orig.damping
     True
     """
-    _log.debug('cloning %s', algo)
-    if isinstance(algo, Algorithm) or hasattr(algo, 'get_params'):
+    _log.debug("cloning %s", algo)
+    if isinstance(algo, Algorithm) or hasattr(algo, "get_params"):
         params = algo.get_params(deep=False)
 
         sps = dict([(k, clone(v)) for (k, v) in params.items()])
@@ -59,7 +63,7 @@ def clone(algo):
 
 
 class LastMemo:
-    def __init__(self, func, check_type='identity'):
+    def __init__(self, func, check_type="identity"):
         self.function = func
         self.check = check_type
         self.memory = None
@@ -73,13 +77,13 @@ class LastMemo:
         return self.result
 
     def _arg_is_last(self, arg):
-        if self.check == 'identity':
+        if self.check == "identity":
             return arg is self.memory
-        elif self.check == 'equality':
+        elif self.check == "equality":
             return arg == self.memory
 
 
-def last_memo(func=None, check_type='identity'):
+def last_memo(func=None, check_type="identity"):
     if func is None:
         return lambda f: LastMemo(f, check_type)
     else:
@@ -90,7 +94,7 @@ def cached(prop):
     """
     Decorator for property getters to cache the property value.
     """
-    cache = '_cached_' + prop.__name__
+    cache = "_cached_" + prop.__name__
 
     def getter(self):
         val = getattr(self, cache, None)
@@ -114,7 +118,7 @@ def max_memory():
         res = resource.getrusage(resource.RUSAGE_SELF)
         return "%.1f MiB" % (res.ru_maxrss / 1024,)
     else:
-        return 'unknown'
+        return "unknown"
 
 
 def cur_memory():
@@ -123,7 +127,7 @@ def cur_memory():
         res = resource.getrusage(resource.RUSAGE_SELF)
         return "%.1f MiB" % (res.ru_idrss,)
     else:
-        return 'unknown'
+        return "unknown"
 
 
 def clean_str(s):
@@ -135,4 +139,5 @@ def check_env():
     Check the runtime environment for potential performance or stability problems.
     """
     from .debug import check_env
+
     return check_env()

@@ -10,10 +10,10 @@ import numpy as np
 import pandas as pd
 from . import util
 
-TTPair = namedtuple('TTPair', ['train', 'test'])
-TTPair.__doc__ = 'Train-test pair (named tuple).'
-TTPair.train.__doc__ = 'Train data for this pair.'
-TTPair.test.__doc__ = 'Test data for this pair.'
+TTPair = namedtuple("TTPair", ["train", "test"])
+TTPair.__doc__ = "Train-test pair (named tuple)."
+TTPair.train.__doc__ = "Train data for this pair."
+TTPair.test.__doc__ = "Test data for this pair."
 
 _logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ def partition_rows(data, partitions, *, rng_spec=None):
     """
 
     confirm_unique_index(data)
-    _logger.info('partitioning %d ratings into %d partitions', len(data), partitions)
+    _logger.info("partitioning %d ratings into %d partitions", len(data), partitions)
 
     # create an array of indexes
     rows = np.arange(len(data))
@@ -48,7 +48,7 @@ def partition_rows(data, partitions, *, rng_spec=None):
     # convert each partition into a split
     for i, ts in enumerate(test_sets):
         test = data.iloc[ts, :]
-        trains = test_sets[:i] + test_sets[(i + 1):]
+        trains = test_sets[:i] + test_sets[(i + 1) :]
         train_idx = np.concatenate(trains)
         train = data.iloc[train_idx, :]
         yield TTPair(train, test)
@@ -105,8 +105,12 @@ def sample_rows(data, partitions, size, disjoint=True, *, rng_spec=None):
         return TTPair(train, test)
 
     if disjoint and partitions * size >= len(data):
-        _logger.warning('wanted %d disjoint splits of %d each, but only have %d rows; partitioning',
-                        partitions, size, len(data))
+        _logger.warning(
+            "wanted %d disjoint splits of %d each, but only have %d rows; partitioning",
+            partitions,
+            size,
+            len(data),
+        )
         return partition_rows(data, partitions)
 
     # create an array of indexes
@@ -115,11 +119,11 @@ def sample_rows(data, partitions, size, disjoint=True, *, rng_spec=None):
     rng = util.rng(rng_spec)
 
     if disjoint:
-        _logger.info('creating %d disjoint samples of size %d', partitions, size)
+        _logger.info("creating %d disjoint samples of size %d", partitions, size)
         ips = _disjoint_sample(rows, partitions, size, rng)
 
     else:
-        _logger.info('taking %d samples of size %d', partitions, size)
+        _logger.info("taking %d samples of size %d", partitions, size)
         ips = _n_samples(rows, partitions, size, rng)
 
     return (TTPair(data.iloc[ip.train, :], data.iloc[ip.test, :]) for ip in ips)
@@ -132,8 +136,8 @@ def _disjoint_sample(xs, n, size, rng):
     # convert each partition into a split
     for i in range(n):
         start = i * size
-        test = xs[start:start + size]
-        train = np.concatenate((xs[:start], xs[start + size:]))
+        test = xs[start : start + size]
+        train = np.concatenate((xs[:start], xs[start + size :]))
         yield TTPair(train, test)
 
 
@@ -190,6 +194,7 @@ class SampleFrac(PartitionMethod):
     Args:
         frac(float): the fraction items to select for testing.
     """
+
     def __init__(self, frac, rng_spec=None):
         self.fraction = frac
         self.rng = util.rng(rng_spec, legacy=True)
@@ -207,12 +212,12 @@ class LastN(PartitionMethod):
         n(int): The number of test items to select.
     """
 
-    def __init__(self, n, col='timestamp'):
+    def __init__(self, n, col="timestamp"):
         self.n = n
         self.column = col
 
     def __call__(self, udf):
-        return udf.sort_values(self.column).iloc[-self.n:]
+        return udf.sort_values(self.column).iloc[-self.n :]
 
 
 class LastFrac(PartitionMethod):
@@ -222,7 +227,8 @@ class LastFrac(PartitionMethod):
     Args:
         frac(double): the fraction of items to select for testing.
     """
-    def __init__(self, frac, col='timestamp'):
+
+    def __init__(self, frac, col="timestamp"):
         self.fraction = frac
         self.column = col
 
@@ -248,10 +254,11 @@ def partition_users(data, partitions: int, method: PartitionMethod, *, rng_spec=
     """
 
     confirm_unique_index(data)
-    user_col = data['user']
+    user_col = data["user"]
     users = user_col.unique()
-    _logger.info('partitioning %d rows for %d users into %d partitions',
-                 len(data), len(users), partitions)
+    _logger.info(
+        "partitioning %d rows for %d users into %d partitions", len(data), len(users), partitions
+    )
 
     # create an array of indexes into user row
     rows = np.arange(len(users))
@@ -265,21 +272,22 @@ def partition_users(data, partitions: int, method: PartitionMethod, *, rng_spec=
         # get our users!
         test_us = users[ts]
         # sample the data frame
-        _logger.info('fold %d: selecting test ratings', i)
-        ugf = data[data.user.isin(test_us)].groupby('user')
+        _logger.info("fold %d: selecting test ratings", i)
+        ugf = data[data.user.isin(test_us)].groupby("user")
         test = ugf.apply(method)
         # get rid of the group index
         test = test.reset_index(0, drop=True)
         # now test is indexed on the data frame! so we can get the rest
-        _logger.info('fold %d: partitioning training data', i)
+        _logger.info("fold %d: partitioning training data", i)
         mask = pd.Series(True, index=data.index)
         mask[test.index] = False
         train = data[mask]
         yield TTPair(train, test)
 
 
-def sample_users(data, partitions: int, size: int, method: PartitionMethod, disjoint=True, *,
-                 rng_spec=None):
+def sample_users(
+    data, partitions: int, size: int, method: PartitionMethod, disjoint=True, *, rng_spec=None
+):
     """
     Create train-test partitions by sampling users.
     This function does not care what kind of data is in `data`, so long as it is
@@ -304,16 +312,16 @@ def sample_users(data, partitions: int, size: int, method: PartitionMethod, disj
     confirm_unique_index(data)
     rng = util.rng(rng_spec, legacy=True)
 
-    user_col = data['user']
+    user_col = data["user"]
     users = user_col.unique()
     if disjoint and partitions * size >= len(users):
-        _logger.warning('cannot take %d disjoint samples of size %d from %d users',
-                        partitions, size, len(users))
+        _logger.warning(
+            "cannot take %d disjoint samples of size %d from %d users", partitions, size, len(users)
+        )
         yield from partition_users(data, partitions, method)
         return
 
-    _logger.info('sampling %d users into %d partitions (n=%d)',
-                 len(users), partitions, size)
+    _logger.info("sampling %d users into %d partitions (n=%d)", len(users), partitions, size)
 
     if disjoint:
         rng.shuffle(users)
@@ -322,12 +330,12 @@ def sample_users(data, partitions: int, size: int, method: PartitionMethod, disj
     for i in range(partitions):
         # get our test users!
         if disjoint:
-            test_us = users[i*size:(i+1)*size]
+            test_us = users[i * size : (i + 1) * size]
         else:
             test_us = rng.choice(users, size, False)
 
         # sample the data frame
-        test = data[data.user.isin(test_us)].groupby('user').apply(method)
+        test = data[data.user.isin(test_us)].groupby("user").apply(method)
         # get rid of the group index
         test = test.reset_index(0, drop=True)
         # now test is indexed on the data frame! so we can get the rest
@@ -354,10 +362,12 @@ def simple_test_pair(ratings, n_users=1000, n_rates=5, f_rates=None):
 
 def confirm_unique_index(data):
     """Confirms dataframe has unique index values, and if not,
-     throws ValueError with helpful log message"""
+    throws ValueError with helpful log message"""
 
     if not data.index.is_unique:
         _logger.error("Index has duplicate values")
-        _logger.info("If index values do not matter, consider running " +
-                     ".reset_index() on the dataframe before partitioning")
-        raise ValueError('Index is not uniquely valued')
+        _logger.info(
+            "If index values do not matter, consider running "
+            + ".reset_index() on the dataframe before partitioning"
+        )
+        raise ValueError("Index is not uniquely valued")

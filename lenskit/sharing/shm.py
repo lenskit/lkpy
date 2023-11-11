@@ -4,7 +4,8 @@ import pickle
 from . import sharing_mode, PersistedModel
 
 import multiprocessing.shared_memory as shm
-SHM_AVAILABLE = sys.platform != 'win32'
+
+SHM_AVAILABLE = sys.platform != "win32"
 
 _log = logging.getLogger(__name__)
 
@@ -27,12 +28,17 @@ def persist_shm(model, dir=None):
         data = pickle.dumps(model, protocol=5, buffer_callback=buffers.append)
 
     total_size = sum(memoryview(b).nbytes for b in buffers)
-    _log.info('serialized %s to %d pickle bytes with %d buffers of %d bytes',
-              model, len(data), len(buffers), total_size)
+    _log.info(
+        "serialized %s to %d pickle bytes with %d buffers of %d bytes",
+        model,
+        len(data),
+        len(buffers),
+        total_size,
+    )
 
     if buffers:
         # blit the buffers to the SHM block
-        _log.debug('preparing to share %d buffers', len(buffers))
+        _log.debug("preparing to share %d buffers", len(buffers))
         memory = shm.SharedMemory(create=True, size=total_size)
         cur_offset = 0
         blocks = []
@@ -40,7 +46,7 @@ def persist_shm(model, dir=None):
             ba = buf.raw()
             blen = ba.nbytes
             bend = cur_offset + blen
-            _log.debug('saving %d bytes in buffer %d/%d', blen, i+1, len(buffers))
+            _log.debug("saving %d bytes in buffer %d/%d", blen, i + 1, len(buffers))
             memory.buf[cur_offset:bend] = ba
             blocks.append((cur_offset, bend))
             cur_offset = bend
@@ -65,7 +71,7 @@ class SHMPersisted(PersistedModel):
 
     def get(self):
         if self._model is None:
-            _log.debug('loading model from shared memory')
+            _log.debug("loading model from shared memory")
             shm = self._open()
             buffers = []
             for bs, be in self.blocks:
@@ -78,11 +84,11 @@ class SHMPersisted(PersistedModel):
     def close(self, unlink=True):
         self._model = None
 
-        _log.debug('releasing SHM buffers')
+        _log.debug("releasing SHM buffers")
         self.buffers = None
         if self.memory is not None:
             self.memory.close()
-            if unlink and self.is_owner and self.is_owner != 'transfer':
+            if unlink and self.is_owner and self.is_owner != "transfer":
                 self.memory.unlink()
                 self.is_owner = False
             self.memory = None
@@ -94,16 +100,16 @@ class SHMPersisted(PersistedModel):
 
     def __getstate__(self):
         return {
-            'pickle_data': self.pickle_data,
-            'blocks': self.blocks,
-            'shm_name': self.shm_name,
-            'is_owner': True if self.is_owner == 'transfer' else False
+            "pickle_data": self.pickle_data,
+            "blocks": self.blocks,
+            "shm_name": self.shm_name,
+            "is_owner": True if self.is_owner == "transfer" else False,
         }
 
     def __setstate__(self, state):
         self.__dict__.update(state)
         if self.is_owner:
-            _log.debug('opening shared buffers after ownership transfer')
+            _log.debug("opening shared buffers after ownership transfer")
             self._open()
 
     def __del__(self):

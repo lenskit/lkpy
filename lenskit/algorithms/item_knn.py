@@ -71,8 +71,9 @@ def _trim_sim_block(nitems, bsp, bitems, block, min_sim, max_nbrs):
             sp, lep = block_csr.row_extent(r)
             lim = lep - sp
             if c != bsp + r and v >= min_sim:
-                eps[r] = kvp_minheap_insert(sp, eps[r], lim, c, v,
-                                            block_csr.colinds, block_csr.values)
+                eps[r] = kvp_minheap_insert(
+                    sp, eps[r], lim, c, v, block_csr.colinds, block_csr.values
+                )
         # we're done!
     return block_csr
 
@@ -195,10 +196,7 @@ def _predict_sum(model, nitems, nrange, ratings, rated, targets):
     return scores
 
 
-_predictors = {
-    'weighted-average': _predict_weighted_average,
-    'sum': _predict_sum
-}
+_predictors = {"weighted-average": _predict_weighted_average, "sum": _predict_sum}
 
 
 class ItemItem(Predictor):
@@ -256,15 +254,17 @@ class ItemItem(Predictor):
         user_index_(pandas.Index): the index of known user IDs for the rating matrix.
         rating_matrix_(matrix.CSR): the user-item rating matrix for looking up users' ratings.
     """
-    IGNORED_PARAMS = ['feedback']
-    EXTRA_PARAMS = ['center', 'aggregate', 'use_ratings']
 
-    AGG_SUM = intern('sum')
-    AGG_WA = intern('weighted-average')
+    IGNORED_PARAMS = ["feedback"]
+    EXTRA_PARAMS = ["center", "aggregate", "use_ratings"]
+
+    AGG_SUM = intern("sum")
+    AGG_WA = intern("weighted-average")
     RATING_AGGS = [AGG_WA]  # the aggregates that use rating values
 
-    def __init__(self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None, feedback='explicit',
-                 **kwargs):
+    def __init__(
+        self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None, feedback="explicit", **kwargs
+    ):
         self.nnbrs = nnbrs
         if self.nnbrs is not None and self.nnbrs < 1:
             self.nnbrs = -1
@@ -274,42 +274,48 @@ class ItemItem(Predictor):
         self.min_sim = min_sim
         self.save_nbrs = save_nbrs
 
-        if feedback == 'explicit':
-            defaults = {
-                'center': True,
-                'aggregate': self.AGG_WA,
-                'use_ratings': True
-            }
-        elif feedback == 'implicit':
-            defaults = {
-                'center': False,
-                'aggregate': self.AGG_SUM,
-                'use_ratings': False
-            }
+        if feedback == "explicit":
+            defaults = {"center": True, "aggregate": self.AGG_WA, "use_ratings": True}
+        elif feedback == "implicit":
+            defaults = {"center": False, "aggregate": self.AGG_SUM, "use_ratings": False}
         else:
-            raise ValueError(f'invalid feedback mode: {feedback}')
+            raise ValueError(f"invalid feedback mode: {feedback}")
 
         defaults.update(kwargs)
-        self.center = defaults['center']
-        self.aggregate = intern(defaults['aggregate'])
-        self.use_ratings = defaults['use_ratings']
+        self.center = defaults["center"]
+        self.aggregate = intern(defaults["aggregate"])
+        self.use_ratings = defaults["use_ratings"]
 
         self._check_setup()
 
     def _check_setup(self):
         if not self.use_ratings:
             if self.center:
-                _logger.warning('item-item configured to ignore ratings, but ``center=True`` - likely bug')
-                warnings.warn(util.clean_str('''
+                _logger.warning(
+                    "item-item configured to ignore ratings, but ``center=True`` - likely bug"
+                )
+                warnings.warn(
+                    util.clean_str(
+                        """
                     item-item configured to ignore ratings, but ``center=True``.  This configuration
                     is unlikely to work well.
-                '''), ConfigWarning)
-            if self.aggregate == 'weighted-average':
-                _logger.warning('item-item configured to ignore ratings, but using weighted averages - likely bug')
-                warnings.warn(util.clean_str('''
+                """
+                    ),
+                    ConfigWarning,
+                )
+            if self.aggregate == "weighted-average":
+                _logger.warning(
+                    "item-item configured to ignore ratings, but using weighted averages - likely bug"
+                )
+                warnings.warn(
+                    util.clean_str(
+                        """
                     item-item configured to ignore ratings, but use weighted averages.  This configuration
                     is unlikely to work well.
-                '''), ConfigWarning)
+                """
+                    ),
+                    ConfigWarning,
+                )
 
     def fit(self, ratings, **kwargs):
         """
@@ -328,29 +334,38 @@ class ItemItem(Predictor):
         # 2. Compute similarities with pairwise dot products
         self._timer = util.Stopwatch()
 
-        _logger.debug('[%s] beginning fit, memory use %s', self._timer, util.max_memory())
-        _logger.debug('[%s] using CSR kernel %s', self._timer, csrk.name)
+        _logger.debug("[%s] beginning fit, memory use %s", self._timer, util.max_memory())
+        _logger.debug("[%s] using CSR kernel %s", self._timer, csrk.name)
 
         init_rmat, users, items = sparse_ratings(ratings)
         n_items = len(items)
-        _logger.info('[%s] made sparse matrix for %d items (%d ratings from %d users)',
-                     self._timer, len(items), init_rmat.nnz, len(users))
-        _logger.debug('[%s] made matrix, memory use %s', self._timer, util.max_memory())
+        _logger.info(
+            "[%s] made sparse matrix for %d items (%d ratings from %d users)",
+            self._timer,
+            len(items),
+            init_rmat.nnz,
+            len(users),
+        )
+        _logger.debug("[%s] made matrix, memory use %s", self._timer, util.max_memory())
 
         rmat, item_means = self._mean_center(ratings, init_rmat, items)
-        _logger.debug('[%s] centered, memory use %s', self._timer, util.max_memory())
+        _logger.debug("[%s] centered, memory use %s", self._timer, util.max_memory())
 
         rmat = self._normalize(rmat)
-        _logger.debug('[%s] normalized, memory use %s', self._timer, util.max_memory())
+        _logger.debug("[%s] normalized, memory use %s", self._timer, util.max_memory())
 
-        _logger.info('[%s] computing similarity matrix', self._timer)
+        _logger.info("[%s] computing similarity matrix", self._timer)
         smat = self._compute_similarities(rmat)
-        _logger.debug('[%s] computed, memory use %s', self._timer, util.max_memory())
+        _logger.debug("[%s] computed, memory use %s", self._timer, util.max_memory())
 
-        _logger.info('[%s] got neighborhoods for %d of %d items',
-                     self._timer, np.sum(np.diff(smat.rowptrs) > 0), n_items)
+        _logger.info(
+            "[%s] got neighborhoods for %d of %d items",
+            self._timer,
+            np.sum(np.diff(smat.rowptrs) > 0),
+            n_items,
+        )
 
-        _logger.info('[%s] computed %d neighbor pairs', self._timer, smat.nnz)
+        _logger.info("[%s] computed %d neighbor pairs", self._timer, smat.nnz)
 
         self.item_index_ = items
         self.item_means_ = item_means
@@ -360,8 +375,8 @@ class ItemItem(Predictor):
         self.rating_matrix_ = init_rmat
         # create an inverted similarity matrix for efficient scanning
         self._sim_inv_ = smat.transpose()
-        _logger.info('[%s] transposed matrix for optimization', self._timer)
-        _logger.debug('[%s] done, memory use %s', self._timer, util.max_memory())
+        _logger.info("[%s] transposed matrix for optimization", self._timer)
+        _logger.debug("[%s] done, memory use %s", self._timer, util.max_memory())
 
         return self
 
@@ -369,16 +384,17 @@ class ItemItem(Predictor):
         if not self.center:
             return rmat, None
 
-        item_means = ratings.groupby('item').rating.mean()
+        item_means = ratings.groupby("item").rating.mean()
         item_means = item_means.reindex(items).values
         mcvals = rmat.values - item_means[rmat.colinds]
         nmat = rmat.copy(False)
         nmat.values = mcvals
         if np.allclose(nmat.values, 0):
-            _logger.warn('normalized ratings are zero, centering is not recommended')
-            warnings.warn("Ratings seem to have the same value, centering is not recommended.",
-                          DataWarning)
-        _logger.info('[%s] computed means for %d items', self._timer, len(item_means))
+            _logger.warn("normalized ratings are zero, centering is not recommended")
+            warnings.warn(
+                "Ratings seem to have the same value, centering is not recommended.", DataWarning
+            )
+        _logger.info("[%s] computed means for %d items", self._timer, len(item_means))
         return nmat, item_means
 
     def _normalize(self, rmat):
@@ -393,7 +409,7 @@ class ItemItem(Predictor):
         assert norm_mat.shape[1] == rmat.shape[1]
         # and reset NaN
         norm_mat.data[np.isnan(norm_mat.data)] = 0
-        _logger.info('[%s] normalized rating matrix columns', self._timer)
+        _logger.info("[%s] normalized rating matrix columns", self._timer)
         return CSR.from_scipy(norm_mat, False)
 
     def _compute_similarities(self, rmat):
@@ -404,11 +420,16 @@ class ItemItem(Predictor):
             m_nbrs = 0
 
         bounds = _make_blocks(nitems, 1000)
-        _logger.info('[%s] splitting %d items (%d ratings) into %d blocks',
-                     self._timer, nitems, trmat.nnz, len(bounds))
+        _logger.info(
+            "[%s] splitting %d items (%d ratings) into %d blocks",
+            self._timer,
+            nitems,
+            trmat.nnz,
+            len(bounds),
+        )
         blocks = [trmat.subset_rows(sp, ep) for (sp, ep) in bounds]
 
-        _logger.info('[%s] computing similarities', self._timer)
+        _logger.info("[%s] computing similarities", self._timer)
         ptrs = List(bounds)
         nbs = List(blocks)
         if not nbs:
@@ -420,11 +441,17 @@ class ItemItem(Predictor):
 
         nnz = sum(b.nnz for b in s_blocks)
         tot_rows = sum(b.nrows for b in s_blocks)
-        _logger.info('[%s] computed %d similarities for %d items in %d blocks',
-                     self._timer, nnz, tot_rows, len(s_blocks))
+        _logger.info(
+            "[%s] computed %d similarities for %d items in %d blocks",
+            self._timer,
+            nnz,
+            tot_rows,
+            len(s_blocks),
+        )
         row_nnzs = np.concatenate([b.row_nnzs() for b in s_blocks])
-        assert len(row_nnzs) == nitems, \
-            'only have {} rows for {} items'.format(len(row_nnzs), nitems)
+        assert len(row_nnzs) == nitems, "only have {} rows for {} items".format(
+            len(row_nnzs), nitems
+        )
 
         smat = CSR.empty(nitems, nitems, row_nnzs)
         start = 0
@@ -433,29 +460,38 @@ class ItemItem(Predictor):
             end = start + bnr
             v_sp = smat.rowptrs[start]
             v_ep = smat.rowptrs[end]
-            _logger.debug('block %d (%d:%d) has %d entries, storing in %d:%d',
-                          bi, start, end, b.nnz, v_sp, v_ep)
+            _logger.debug(
+                "block %d (%d:%d) has %d entries, storing in %d:%d",
+                bi,
+                start,
+                end,
+                b.nnz,
+                v_sp,
+                v_ep,
+            )
             smat.colinds[v_sp:v_ep] = b.colinds
             smat.values[v_sp:v_ep] = b.values
             start = end
 
-        _logger.info('[%s] sorting similarity matrix with %d entries', self._timer, smat.nnz)
+        _logger.info("[%s] sorting similarity matrix with %d entries", self._timer, smat.nnz)
         _sort_nbrs(smat)
 
         return smat
 
     def predict_for_user(self, user, items, ratings=None):
-        _logger.debug('predicting %d items for user %s', len(items), user)
+        _logger.debug("predicting %d items for user %s", len(items), user)
         if ratings is None:
             if user not in self.user_index_:
-                _logger.debug('user %s missing, returning empty predictions', user)
+                _logger.debug("user %s missing, returning empty predictions", user)
                 return pd.Series(np.nan, index=items)
             upos = self.user_index_.get_loc(user)
-            ratings = pd.Series(self.rating_matrix_.row_vs(upos),
-                                index=pd.Index(self.item_index_[self.rating_matrix_.row_cs(upos)]))
+            ratings = pd.Series(
+                self.rating_matrix_.row_vs(upos),
+                index=pd.Index(self.item_index_[self.rating_matrix_.row_cs(upos)]),
+            )
 
         if not ratings.index.is_unique:
-            wmsg = 'user {} has duplicate ratings, this is likely to cause problems'.format(user)
+            wmsg = "user {} has duplicate ratings, this is likely to cause problems".format(user)
             warnings.warn(wmsg, DataWarning)
 
         # set up rating array
@@ -465,7 +501,7 @@ class ItemItem(Predictor):
         m_rates = ratings[ri_pos >= 0]
         ri_pos = ri_pos[ri_pos >= 0]
         rate_v = np.full(n_items, np.nan, dtype=np.float_)
-        rated = np.zeros(n_items, dtype='bool')
+        rated = np.zeros(n_items, dtype="bool")
         # mean-center the rating array
         if self.center:
             rate_v[ri_pos] = m_rates.values - self.item_means_[ri_pos]
@@ -473,7 +509,7 @@ class ItemItem(Predictor):
             rate_v[ri_pos] = m_rates.values
         rated[ri_pos] = True
 
-        _logger.debug('user %s: %d of %d rated items in model', user, len(ri_pos), len(ratings))
+        _logger.debug("user %s: %d of %d rated items in model", user, len(ri_pos), len(ratings))
         assert np.sum(np.logical_not(np.isnan(rate_v))) == len(ri_pos)
         assert np.all(np.isnan(rate_v) == np.logical_not(rated))
 
@@ -481,7 +517,7 @@ class ItemItem(Predictor):
         # ipos will be an array of item indices
         i_pos = self.item_index_.get_indexer(items)
         i_pos = i_pos[i_pos >= 0]
-        _logger.debug('user %s: %d of %d requested items in model', user, len(i_pos), len(items))
+        _logger.debug("user %s: %d of %d requested items in model", user, len(i_pos), len(items))
 
         # now we take a first pass through the data to count _viable_ targets
         # This computes the number of neighbors (and their weight sum) for
@@ -493,8 +529,9 @@ class ItemItem(Predictor):
         i_cts = i_cts[viable]
         i_sums = i_sums[viable]
         i_nbrs = i_nbrs[viable]
-        _logger.debug('user %s: %d of %d requested items possibly reachable',
-                      user, len(i_pos), len(items))
+        _logger.debug(
+            "user %s: %d of %d requested items possibly reachable", user, len(i_pos), len(items)
+        )
 
         # look for some fast paths
         if self.aggregate == self.AGG_SUM and self.min_sim >= 0:
@@ -507,15 +544,21 @@ class ItemItem(Predictor):
             else:
                 fast_items = i_pos
                 fast_scores = i_sums
-                slow_items = np.array([], dtype='i4')
+                slow_items = np.array([], dtype="i4")
 
-            _logger.debug('user %s: using fast-path similarity sum for %d items',
-                          user, len(fast_items))
+            _logger.debug(
+                "user %s: using fast-path similarity sum for %d items", user, len(fast_items)
+            )
 
             if len(slow_items):
-                iscores = _predict_sum(self.sim_matrix_, len(self.item_index_),
-                                       (self.min_nbrs, self.nnbrs),
-                                       rate_v, rated, slow_items)
+                iscores = _predict_sum(
+                    self.sim_matrix_,
+                    len(self.item_index_),
+                    (self.min_nbrs, self.nnbrs),
+                    rate_v,
+                    rated,
+                    slow_items,
+                )
             else:
                 iscores = np.full(len(self.item_index_), np.nan)
             iscores[fast_items] = fast_scores
@@ -527,19 +570,30 @@ class ItemItem(Predictor):
             fast_scores = rate_v[i_nbrs[fast_mask]]
             if self.min_sim < 0:
                 fast_scores *= np.sign(i_sums[fast_mask])
-            _logger.debug('user %s: fast-pathed %d scores', user, len(fast_scores))
+            _logger.debug("user %s: fast-pathed %d scores", user, len(fast_scores))
 
             slow_items = i_pos[i_cts > 1]
-            iscores = _predict_weighted_average(self.sim_matrix_, len(self.item_index_),
-                                                (self.min_nbrs, self.nnbrs),
-                                                rate_v, rated, slow_items)
+            iscores = _predict_weighted_average(
+                self.sim_matrix_,
+                len(self.item_index_),
+                (self.min_nbrs, self.nnbrs),
+                rate_v,
+                rated,
+                slow_items,
+            )
             iscores[fast_items] = fast_scores
         else:
             # now compute the predictions
-            _logger.debug('user %s: taking the slow path', user)
+            _logger.debug("user %s: taking the slow path", user)
             agg = _predictors[self.aggregate]
-            iscores = agg(self.sim_matrix_, len(self.item_index_), (self.min_nbrs, self.nnbrs),
-                          rate_v, rated, i_pos)
+            iscores = agg(
+                self.sim_matrix_,
+                len(self.item_index_),
+                (self.min_nbrs, self.nnbrs),
+                rate_v,
+                rated,
+                i_pos,
+            )
 
         if self.center and self.aggregate in self.RATING_AGGS:
             iscores += self.item_means_
@@ -547,8 +601,9 @@ class ItemItem(Predictor):
         results = pd.Series(iscores, index=self.item_index_)
         results = results.reindex(items, fill_value=np.nan)
 
-        _logger.debug('user %s: predicted for %d of %d items',
-                      user, results.notna().sum(), len(items))
+        _logger.debug(
+            "user %s: predicted for %d of %d items", user, results.notna().sum(), len(items)
+        )
 
         return results
 
@@ -557,7 +612,7 @@ class ItemItem(Predictor):
         # initialize counts to zero
         counts = np.zeros(len(self.item_index_), dtype=np.int32)
         sums = np.zeros(len(self.item_index_))
-        last_nbrs = np.full(len(self.item_index_), -1, 'i4')
+        last_nbrs = np.full(len(self.item_index_), -1, "i4")
         # count the number of times each item is reachable from the neighborhood
         for ri in rated:
             nbrs = self._sim_inv_.row_cs(ri)
@@ -570,14 +625,14 @@ class ItemItem(Predictor):
 
     def __getstate__(self):
         state = dict(self.__dict__)
-        if '_sim_inv_' in state and not in_share_context():
-            del state['_sim_inv_']
+        if "_sim_inv_" in state and not in_share_context():
+            del state["_sim_inv_"]
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        if hasattr(self, 'sim_matrix_') and not hasattr(self, '_sim_inv_'):
+        if hasattr(self, "sim_matrix_") and not hasattr(self, "_sim_inv_"):
             self._sim_inv_ = self.sim_matrix_.transpose()
 
     def __str__(self):
-        return 'ItemItem(nnbrs={}, msize={})'.format(self.nnbrs, self.save_nbrs)
+        return "ItemItem(nnbrs={}, msize={})".format(self.nnbrs, self.save_nbrs)

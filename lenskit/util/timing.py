@@ -5,10 +5,11 @@ Timing support
 import time
 
 
-class Stopwatch():
+class Stopwatch:
     """
     Timer class for recording elapsed wall time in operations.
     """
+
     start_time = None
     stop_time = None
 

@@ -72,27 +72,27 @@ class Bias(Predictor):
         Returns:
             Bias: the fit bias object.
         """
-        _logger.info('building bias model for %d ratings', len(ratings))
+        _logger.info("building bias model for %d ratings", len(ratings))
         self.mean_ = ratings.rating.mean()
-        _logger.info('global mean: %.3f', self.mean_)
+        _logger.info("global mean: %.3f", self.mean_)
         nrates = ratings.assign(rating=lambda df: df.rating - self.mean_)
 
         if self.items:
-            group = nrates.groupby('item').rating
+            group = nrates.groupby("item").rating
             self.item_offsets_ = self._mean(group, self.item_damping)
-            self.item_offsets_.name = 'i_off'
-            _logger.info('computed means for %d items', len(self.item_offsets_))
+            self.item_offsets_.name = "i_off"
+            _logger.info("computed means for %d items", len(self.item_offsets_))
         else:
             self.item_offsets_ = None
 
         if self.users:
             if self.item_offsets_ is not None:
-                nrates = nrates.join(pd.DataFrame(self.item_offsets_), on='item', how='inner')
+                nrates = nrates.join(pd.DataFrame(self.item_offsets_), on="item", how="inner")
                 nrates = nrates.assign(rating=lambda df: df.rating - df.i_off)
 
-            self.user_offsets_ = self._mean(nrates.groupby('user').rating, self.user_damping)
-            self.user_offsets_.name = 'u_off'
-            _logger.info('computed means for %d users', len(self.user_offsets_))
+            self.user_offsets_ = self._mean(nrates.groupby("user").rating, self.user_damping)
+            self.user_offsets_.name = "u_off"
+            _logger.info("computed means for %d users", len(self.user_offsets_))
         else:
             self.user_offsets_ = None
 
@@ -117,38 +117,35 @@ class Bias(Predictor):
                 A data frame with ``rating`` transformed by subtracting
                 user-item bias prediction.
         """
-        rvps = ratings[['user', 'item']].copy()
-        rvps['rating'] = ratings['rating'] - self.mean_
+        rvps = ratings[["user", "item"]].copy()
+        rvps["rating"] = ratings["rating"] - self.mean_
         if self.item_offsets_ is not None:
-            rvps = rvps.join(self.item_offsets_, on='item', how='left')
-            rvps['rating'] -= rvps['i_off'].fillna(0)
-            rvps = rvps.drop(columns='i_off')
+            rvps = rvps.join(self.item_offsets_, on="item", how="left")
+            rvps["rating"] -= rvps["i_off"].fillna(0)
+            rvps = rvps.drop(columns="i_off")
         if self.user_offsets_ is not None:
-            rvps = rvps.join(self.user_offsets_, on='user', how='left')
-            rvps['rating'] -= rvps['u_off'].fillna(0)
-            rvps = rvps.drop(columns='u_off')
+            rvps = rvps.join(self.user_offsets_, on="user", how="left")
+            rvps["rating"] -= rvps["u_off"].fillna(0)
+            rvps = rvps.drop(columns="u_off")
         if indexes:
-            rvps['uidx'] = self.user_offsets_.index.get_indexer(rvps['user'])
-            rvps['iidx'] = self.item_offsets_.index.get_indexer(rvps['item'])
+            rvps["uidx"] = self.user_offsets_.index.get_indexer(rvps["user"])
+            rvps["iidx"] = self.item_offsets_.index.get_indexer(rvps["item"])
         return rvps
 
     def inverse_transform(self, ratings):
         """
         Transform ratings by removing the bias term.
         """
-        rvps = pd.DataFrame({
-            'user': ratings['user'],
-            'item': ratings['item']
-        })
-        rvps['rating'] = ratings['rating'] + self.mean_
+        rvps = pd.DataFrame({"user": ratings["user"], "item": ratings["item"]})
+        rvps["rating"] = ratings["rating"] + self.mean_
         if self.item_offsets_ is not None:
-            rvps = rvps.join(self.item_offsets_, on='item', how='left')
-            rvps['rating'] += rvps['i_off'].fillna(0)
-            del rvps['i_off']
+            rvps = rvps.join(self.item_offsets_, on="item", how="left")
+            rvps["rating"] += rvps["i_off"].fillna(0)
+            del rvps["i_off"]
         if self.user_offsets_ is not None:
-            rvps = rvps.join(self.user_offsets_, on='user', how='left')
-            rvps['rating'] += rvps['u_off'].fillna(0)
-            del rvps['u_off']
+            rvps = rvps.join(self.user_offsets_, on="user", how="left")
+            rvps["rating"] += rvps["u_off"].fillna(0)
+            del rvps["u_off"]
         return rvps
 
     def transform_user(self, ratings):
@@ -236,7 +233,7 @@ class Bias(Predictor):
             preds = preds + umean
         elif self.user_offsets_ is not None:
             umean = self.user_offsets_.get(user, 0.0)
-            _logger.debug('using mean(user %s) = %.3f', user, umean)
+            _logger.debug("using mean(user %s) = %.3f", user, umean)
             preds = preds + umean
 
         return preds
@@ -258,4 +255,4 @@ class Bias(Predictor):
             return series.mean()
 
     def __str__(self):
-        return 'Bias(ud={}, id={})'.format(self.user_damping, self.item_damping)
+        return "Bias(ud={}, id={})".format(self.user_damping, self.item_damping)

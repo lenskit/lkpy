@@ -14,12 +14,12 @@ def _check_missing(truth, missing):
         truth: the series of truth values
         missing: what to do with missing values
     """
-    if missing == 'error' and truth.isna().any():
+    if missing == "error" and truth.isna().any():
         nmissing = truth.isna().sum()
-        raise ValueError('missing truth for {} predictions'.format(nmissing))
+        raise ValueError("missing truth for {} predictions".format(nmissing))
 
 
-def rmse(predictions, truth, missing='error'):
+def rmse(predictions, truth, missing="error"):
     """
     Compute RMSE (root mean squared error).  This is computed as:
 
@@ -48,7 +48,7 @@ def rmse(predictions, truth, missing='error'):
     truth = pd.Series(truth)
 
     # realign
-    predictions, truth = predictions.align(truth, join='left')
+    predictions, truth = predictions.align(truth, join="left")
     _check_missing(truth, missing)
 
     diff = predictions - truth
@@ -58,7 +58,7 @@ def rmse(predictions, truth, missing='error'):
     return np.sqrt(msq)
 
 
-def mae(predictions, truth, missing='error'):
+def mae(predictions, truth, missing="error"):
     """
     Compute MAE (mean absolute error).  This is computed as:
 
@@ -86,7 +86,7 @@ def mae(predictions, truth, missing='error'):
     predictions = pd.Series(predictions)
     truth = pd.Series(truth)
 
-    predictions, truth = predictions.align(truth, join='left')
+    predictions, truth = predictions.align(truth, join="left")
     _check_missing(truth, missing)
 
     diff = predictions - truth
@@ -95,7 +95,7 @@ def mae(predictions, truth, missing='error'):
     return adiff.mean()
 
 
-def global_metric(predictions, *, score_column='prediction', metric=rmse, **kwargs):
+def global_metric(predictions, *, score_column="prediction", metric=rmse, **kwargs):
     """
     Compute a global prediction accuracy metric for a set of predictions.
 
@@ -114,11 +114,11 @@ def global_metric(predictions, *, score_column='prediction', metric=rmse, **kwar
     """
 
     scores = predictions[score_column]
-    truth = predictions['rating']
+    truth = predictions["rating"]
     return metric(scores, truth, **kwargs)
 
 
-def user_metric(predictions, *, score_column='prediction', metric=rmse, **kwargs):
+def user_metric(predictions, *, score_column="prediction", metric=rmse, **kwargs):
     """
     Compute a mean per-user prediction accuracy metric for a set of predictions.
 
@@ -138,7 +138,7 @@ def user_metric(predictions, *, score_column='prediction', metric=rmse, **kwargs
     """
 
     def score(df):
-        return metric(df[score_column], df['rating'])
+        return metric(df[score_column], df["rating"])
 
-    u_scores = predictions.groupby('user').apply(score)
+    u_scores = predictions.groupby("user").apply(score)
     return u_scores.mean()

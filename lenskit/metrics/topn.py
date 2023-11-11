@@ -14,6 +14,7 @@ def bulk_impl(metric):
     """
     Decorator to register a bulk implementation for a metric.
     """
+
     def wrap(impl):
         metric.bulk_score = impl
         return impl
@@ -40,23 +41,23 @@ def precision(recs, truth, k=None):
     if nrecs == 0:
         return None
 
-    ngood = recs['item'].isin(truth.index).sum()
+    ngood = recs["item"].isin(truth.index).sum()
     return ngood / nrecs
 
 
 @bulk_impl(precision)
 def _bulk_precision(recs, truth, k=None):
     if k is not None:
-        recs = recs[recs['rank'] <= k]
-        lcounts = pd.Series(k, index=recs['LKRecID'].unique())
-        lcounts.index.name = 'LKRecID'
+        recs = recs[recs["rank"] <= k]
+        lcounts = pd.Series(k, index=recs["LKRecID"].unique())
+        lcounts.index.name = "LKRecID"
     else:
-        lcounts = recs.groupby(['LKRecID'])['item'].count()
+        lcounts = recs.groupby(["LKRecID"])["item"].count()
 
-    good = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
-    gcounts = good.groupby(['LKRecID'])['item'].count()
+    good = recs.join(truth, on=["LKTruthID", "item"], how="inner")
+    gcounts = good.groupby(["LKRecID"])["item"].count()
 
-    lcounts, gcounts = lcounts.align(gcounts, join='left', fill_value=0)
+    lcounts, gcounts = lcounts.align(gcounts, join="left", fill_value=0)
 
     return gcounts / lcounts
 
@@ -78,30 +79,30 @@ def recall(recs, truth, k=None):
         nrel = min(nrel, k)
         recs = recs.iloc[:k]
 
-    ngood = recs['item'].isin(truth.index).sum()
+    ngood = recs["item"].isin(truth.index).sum()
     return ngood / nrel
 
 
 @bulk_impl(recall)
 def _bulk_recall(recs, truth, k=None):
-    tcounts = truth.reset_index().groupby('LKTruthID')['item'].count()
+    tcounts = truth.reset_index().groupby("LKTruthID")["item"].count()
 
     if k is not None:
-        _log.debug('truncating to k for recall')
+        _log.debug("truncating to k for recall")
         tcounts = np.minimum(tcounts, k)
-        recs = recs[recs['rank'] <= k]
+        recs = recs[recs["rank"] <= k]
 
-    good = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
-    gcounts = good.groupby('LKRecID')['item'].count()
+    good = recs.join(truth, on=["LKTruthID", "item"], how="inner")
+    gcounts = good.groupby("LKRecID")["item"].count()
 
     # we need all lists, because some might have no truth (oops), some no recs (also oops)
-    lists = recs[['LKRecID', 'LKTruthID']].drop_duplicates()
+    lists = recs[["LKRecID", "LKTruthID"]].drop_duplicates()
 
-    scores = lists.join(gcounts.to_frame('ngood'), on='LKRecID', how='left')
-    scores['ngood'].fillna(0, inplace=True)
-    scores = scores.join(tcounts.to_frame('nrel'), on='LKTruthID', how='left')
-    scores = scores.set_index('LKRecID')
-    return scores['ngood'] / scores['nrel']
+    scores = lists.join(gcounts.to_frame("ngood"), on="LKRecID", how="left")
+    scores["ngood"].fillna(0, inplace=True)
+    scores = scores.join(tcounts.to_frame("nrel"), on="LKTruthID", how="left")
+    scores = scores.set_index("LKRecID")
+    return scores["ngood"] / scores["nrel"]
 
 
 def hit(recs, truth, k=None):
@@ -124,7 +125,7 @@ def hit(recs, truth, k=None):
         nrel = min(nrel, k)
         recs = recs.iloc[:k]
 
-    good = recs['item'].isin(truth.index)
+    good = recs["item"].isin(truth.index)
     if np.any(good):
         return 1
     else:
@@ -133,28 +134,28 @@ def hit(recs, truth, k=None):
 
 @bulk_impl(hit)
 def _bulk_hit(recs, truth, k=None):
-    tcounts = truth.reset_index().groupby('LKTruthID')['item'].count()
+    tcounts = truth.reset_index().groupby("LKTruthID")["item"].count()
 
     if k is not None:
-        _log.debug('truncating to k for recall')
+        _log.debug("truncating to k for recall")
         tcounts = np.minimum(tcounts, k)
-        recs = recs[recs['rank'] <= k]
+        recs = recs[recs["rank"] <= k]
 
-    good = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
-    gcounts = good.groupby('LKRecID')['item'].count()
+    good = recs.join(truth, on=["LKTruthID", "item"], how="inner")
+    gcounts = good.groupby("LKRecID")["item"].count()
 
     # we need all lists, because some might have no truth (oops), some no recs (also oops)
-    lists = recs[['LKRecID', 'LKTruthID']].drop_duplicates()
+    lists = recs[["LKRecID", "LKTruthID"]].drop_duplicates()
 
-    scores = lists.join(gcounts.to_frame('ngood'), on='LKRecID', how='left')
-    scores['ngood'].fillna(0, inplace=True)
+    scores = lists.join(gcounts.to_frame("ngood"), on="LKRecID", how="left")
+    scores["ngood"].fillna(0, inplace=True)
 
-    scores = scores.join(tcounts.to_frame('nrel'), on='LKTruthID', how='left')
-    scores = scores.set_index('LKRecID')
+    scores = scores.join(tcounts.to_frame("nrel"), on="LKTruthID", how="left")
+    scores = scores.set_index("LKRecID")
 
-    good = scores['ngood'] > 0
-    good = good.astype('f4')
-    good[scores['nrel'] == 0] = np.nan
+    good = scores["ngood"] > 0
+    good = good.astype("f4")
+    good[scores["nrel"] == 0] = np.nan
     return good
 
 
@@ -173,8 +174,8 @@ def recip_rank(recs, truth, k=None):
     if k is not None:
         recs = recs.iloc[:k]
 
-    good = recs['item'].isin(truth.index)
-    npz, = np.nonzero(good.to_numpy())
+    good = recs["item"].isin(truth.index)
+    (npz,) = np.nonzero(good.to_numpy())
     if len(npz):
         return 1.0 / (npz[0] + 1.0)
     else:
@@ -185,17 +186,17 @@ def recip_rank(recs, truth, k=None):
 def _bulk_rr(recs, truth, k=None):
     # find everything with truth
     if k is not None:
-        recs = recs[recs['rank'] <= k]
-    joined = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
+        recs = recs[recs["rank"] <= k]
+    joined = recs.join(truth, on=["LKTruthID", "item"], how="inner")
     # compute min ranks
-    ranks = joined.groupby('LKRecID')['rank'].agg('min')
+    ranks = joined.groupby("LKRecID")["rank"].agg("min")
     # reciprocal ranks
     scores = 1.0 / ranks
-    _log.debug('have %d scores with MRR %.3f', len(scores), scores.mean())
+    _log.debug("have %d scores with MRR %.3f", len(scores), scores.mean())
     # fill with zeros
-    rec_ids = recs['LKRecID'].unique()
+    rec_ids = recs["LKRecID"].unique()
     scores = scores.reindex(rec_ids, fill_value=0.0)
-    _log.debug('filled to get %s scores w/ MRR %.3f', len(scores), scores.mean())
+    _log.debug("filled to get %s scores w/ MRR %.3f", len(scores), scores.mean())
     # and we're done
     return scores
 
@@ -226,7 +227,7 @@ def _dcg(scores, discount=np.log2):
 
 
 def _fixed_dcg(n, discount=np.log2):
-    ranks = np.arange(1, n+1)
+    ranks = np.arange(1, n + 1)
     disc = discount(ranks)
     disc = np.maximum(disc, 1)
     disc = np.reciprocal(disc)
@@ -255,11 +256,11 @@ def dcg(recs, truth, discount=np.log2):
             if the discount is greater than 1.
     """
 
-    tpos = truth.index.get_indexer(recs['item'])
+    tpos = truth.index.get_indexer(recs["item"])
     tgood = tpos >= 0
-    if 'rating' in truth.columns:
+    if "rating" in truth.columns:
         # make an array of ratings for this rec list
-        r_rates = truth['rating'].values[tpos]
+        r_rates = truth["rating"].values[tpos]
         r_rates[tpos < 0] = 0
         achieved = _dcg(r_rates, discount)
     else:
@@ -304,15 +305,15 @@ def ndcg(recs, truth, discount=np.log2, k=None):
     if k is not None:
         recs = recs.iloc[:k]
 
-    tpos = truth.index.get_indexer(recs['item'])
+    tpos = truth.index.get_indexer(recs["item"])
 
-    if 'rating' in truth.columns:
+    if "rating" in truth.columns:
         i_rates = np.sort(truth.rating.values)[::-1]
         if k is not None:
             i_rates = i_rates[:k]
         ideal = _dcg(i_rates, discount)
         # make an array of ratings for this rec list
-        r_rates = truth['rating'].values[tpos]
+        r_rates = truth["rating"].values[tpos]
         r_rates[tpos < 0] = 0
         achieved = _dcg(r_rates, discount)
     else:
@@ -328,36 +329,36 @@ def ndcg(recs, truth, discount=np.log2, k=None):
 
 @bulk_impl(ndcg)
 def _bulk_ndcg(recs, truth, discount=np.log2, k=None):
-    if 'rating' not in truth.columns:
+    if "rating" not in truth.columns:
         truth = truth.assign(rating=np.ones(len(truth), dtype=np.float32))
 
-    ideal = truth.groupby(level='LKTruthID')['rating'].rank(method='first', ascending=False)
+    ideal = truth.groupby(level="LKTruthID")["rating"].rank(method="first", ascending=False)
     if k is not None:
         ideal = ideal[ideal <= k]
     ideal = discount(ideal)
     ideal = np.maximum(ideal, 1)
-    ideal = truth['rating'] / ideal
-    ideal = ideal.groupby(level='LKTruthID').sum()
-    ideal.name = 'ideal'
+    ideal = truth["rating"] / ideal
+    ideal = ideal.groupby(level="LKTruthID").sum()
+    ideal.name = "ideal"
 
-    list_ideal = recs[['LKRecID', 'LKTruthID']].drop_duplicates()
-    list_ideal = list_ideal.join(ideal, on='LKTruthID', how='left')
-    list_ideal = list_ideal.set_index('LKRecID')
+    list_ideal = recs[["LKRecID", "LKTruthID"]].drop_duplicates()
+    list_ideal = list_ideal.join(ideal, on="LKTruthID", how="left")
+    list_ideal = list_ideal.set_index("LKRecID")
 
     if k is not None:
-        recs = recs[recs['rank'] <= k]
-    rated = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
-    rd = discount(rated['rank'])
+        recs = recs[recs["rank"] <= k]
+    rated = recs.join(truth, on=["LKTruthID", "item"], how="inner")
+    rd = discount(rated["rank"])
     rd = np.maximum(rd, 1)
-    rd = rated['rating'] / rd
-    rd = rated[['LKRecID']].assign(util=rd)
-    dcg = rd.groupby(['LKRecID'])['util'].sum().reset_index(name='dcg')
-    dcg = dcg.set_index('LKRecID')
+    rd = rated["rating"] / rd
+    rd = rated[["LKRecID"]].assign(util=rd)
+    dcg = rd.groupby(["LKRecID"])["util"].sum().reset_index(name="dcg")
+    dcg = dcg.set_index("LKRecID")
 
-    dcg = dcg.join(list_ideal, how='outer')
-    dcg['ndcg'] = dcg['dcg'].fillna(0) / dcg['ideal']
+    dcg = dcg.join(list_ideal, how="outer")
+    dcg["ndcg"] = dcg["dcg"].fillna(0) / dcg["ideal"]
 
-    return dcg['ndcg']
+    return dcg["ndcg"]
 
 
 def rbp(recs, truth, k=None, patience=0.5, normalize=False):
@@ -396,18 +397,18 @@ def rbp(recs, truth, k=None, patience=0.5, normalize=False):
     else:
         k = len(recs)
 
-    if 'rank' not in recs.columns:
-        recs = recs.assign(rank=np.arange(1, len(recs)+1))
+    if "rank" not in recs.columns:
+        recs = recs.assign(rank=np.arange(1, len(recs) + 1))
 
-    if np.min(recs['rank']) != 1:
-        warnings.warn('rank should start with 1')
+    if np.min(recs["rank"]) != 1:
+        warnings.warn("rank should start with 1")
 
     nrel = len(truth)
     if nrel == 0:
         return None
 
-    good = recs['item'].isin(truth.index)
-    ranks = recs['rank'][good]
+    good = recs["item"].isin(truth.index)
+    ranks = recs["rank"][good]
     disc = patience ** (ranks - 1)
     rbp = np.sum(disc)
     if normalize:
@@ -423,36 +424,36 @@ def rbp(recs, truth, k=None, patience=0.5, normalize=False):
 @bulk_impl(rbp)
 def _bulk_rbp(recs, truth, k=None, patience=0.5, normalize=False):
     if k is not None:
-        recs = recs[recs['rank'] <= k]
+        recs = recs[recs["rank"] <= k]
 
-    good = recs.join(truth, on=['LKTruthID', 'item'], how='inner')
-    good['rbp_disc'] = patience ** (good['rank'] - 1)
-    scores = good.groupby('LKRecID')['rbp_disc'].sum()
+    good = recs.join(truth, on=["LKTruthID", "item"], how="inner")
+    good["rbp_disc"] = patience ** (good["rank"] - 1)
+    scores = good.groupby("LKRecID")["rbp_disc"].sum()
 
     if normalize:
-        tns = truth.reset_index().groupby('LKTruthID')['item'].count()
+        tns = truth.reset_index().groupby("LKTruthID")["item"].count()
         if k is not None:
             tns[tns > k] = k
         max_nrel = np.max(tns)
         # compute 0...k-1 (the powers of k-1 for 1..k)
         kseq = np.arange(max_nrel)
         # compute the discounts at each k-1
-        nd = patience ** kseq
+        nd = patience**kseq
         # convert to a series of the sums, up through each k
         max_rbps = pd.Series(np.cumsum(nd), index=kseq + 1)
 
         # get a rec/truth mapping
-        map = recs[['LKRecID', 'LKTruthID']].drop_duplicates()
-        map.set_index('LKRecID', inplace=True)
+        map = recs[["LKRecID", "LKTruthID"]].drop_duplicates()
+        map.set_index("LKRecID", inplace=True)
         map = map.reindex(scores.index)
         # map to nrel, and then to the max RBPs
-        map = map.join(tns.to_frame('nrel'), on='LKTruthID', how='left')
-        map = map.join(max_rbps.to_frame('rbp_max'), on='nrel', how='left')
+        map = map.join(tns.to_frame("nrel"), on="LKTruthID", how="left")
+        map = map.join(max_rbps.to_frame("rbp_max"), on="nrel", how="left")
 
         # divide each score by max RBP
-        scores /= map['rbp_max']
+        scores /= map["rbp_max"]
     else:
-        scores *= (1 - patience)
+        scores *= 1 - patience
 
-    scores = scores.reindex(recs['LKRecID'].unique(), fill_value=0)
+    scores = scores.reindex(recs["LKRecID"].unique(), fill_value=0)
     return scores

@@ -31,7 +31,7 @@ def is_worker():
 
 def is_mp_worker():
     "Query whether the current process is a multiprocessing worker."
-    return os.environ.get('_LK_IN_MP', 'no') == 'yes'
+    return os.environ.get("_LK_IN_MP", "no") == "yes"
 
 
 def _p5_recv(self):
@@ -48,6 +48,7 @@ class FastQ(SimpleQueue):
     """
     SimpleQueue subclass that uses Pickle5 instead of default pickling.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__patch()
@@ -111,7 +112,7 @@ def _initialize_mp_worker(mkey, func, threads, log_queue, seed):
     # deferred function unpickling to minimize imports before initialization
     __work_func = pickle.loads(func)
 
-    _log.debug('worker %d ready (process %s)', os.getpid(), mp.current_process())
+    _log.debug("worker %d ready (process %s)", os.getpid(), mp.current_process())
 
 
 def _mp_invoke_worker(*args):
@@ -121,13 +122,13 @@ def _mp_invoke_worker(*args):
 
 def _sp_worker(log_queue, seed, res_queue, func, args, kwargs):
     _initialize_worker(log_queue, seed)
-    _log.debug('running %s in worker', func)
+    _log.debug("running %s in worker", func)
     try:
         res = func(*args, **kwargs)
-        _log.debug('completed successfully')
+        _log.debug("completed successfully")
         res_queue.put((True, res))
     except Exception as e:
-        _log.error('failed, transmitting error %r', e)
+        _log.error("failed, transmitting error %r", e)
         res_queue.put((False, e))
 
 
@@ -159,9 +160,9 @@ def proc_count(core_div=2, max_default=None, level=0):
         int: The number of jobs desired.
     """
 
-    nprocs = os.environ.get('LK_NUM_PROCS', None)
+    nprocs = os.environ.get("LK_NUM_PROCS", None)
     if nprocs is not None:
-        nprocs = [int(s) for s in nprocs.split(',')]
+        nprocs = [int(s) for s in nprocs.split(",")]
     elif core_div is not None:
         nprocs = max(mp.cpu_count() // core_div, 1)
         if max_default is not None:
@@ -184,22 +185,22 @@ def run_sp(func, *args, **kwargs):
     rq = ctx.SimpleQueue()
     seed = derive_seed()
     worker_args = (log_queue(), seed, rq, func, args, kwargs)
-    _log.debug('spawning subprocess to run %s', func)
+    _log.debug("spawning subprocess to run %s", func)
     proc = ctx.Process(target=_sp_worker, args=worker_args)
     proc.start()
-    _log.debug('waiting for process %s to return', proc)
+    _log.debug("waiting for process %s to return", proc)
     success, payload = rq.get()
-    _log.debug('received success=%s', success)
-    _log.debug('waiting for process %s to exit', proc)
+    _log.debug("received success=%s", success)
+    _log.debug("waiting for process %s to exit", proc)
     proc.join()
     if proc.exitcode:
-        _log.error('subprocess failed with code %d', proc.exitcode)
-        raise RuntimeError('subprocess failed with code ' + str(proc.exitcode))
+        _log.error("subprocess failed with code %d", proc.exitcode)
+        raise RuntimeError("subprocess failed with code " + str(proc.exitcode))
     if success:
         return payload
     else:
-        _log.error('subprocess raised exception: %s', payload)
-        raise ChildProcessError('error in child process', payload)
+        _log.error("subprocess raised exception: %s", payload)
+        raise ChildProcessError("error in child process", payload)
 
 
 def invoker(model, func, n_jobs=None, *, persist_method=None):
@@ -265,7 +266,7 @@ class ModelOpInvoker(ABC):
 
 class InProcessOpInvoker(ModelOpInvoker):
     def __init__(self, model, func):
-        _log.info('setting up in-process worker')
+        _log.info("setting up in-process worker")
         if isinstance(model, PersistedModel):
             self.model = model.get()
         else:
@@ -285,28 +286,29 @@ class ProcessPoolOpInvoker(ModelOpInvoker):
 
     def __init__(self, model, func, n_jobs, persist_method):
         if isinstance(model, PersistedModel):
-            _log.debug('model already persisted')
+            _log.debug("model already persisted")
             key = model
         else:
-            _log.debug('persisting model with method %s', persist_method)
+            _log.debug("persisting model with method %s", persist_method)
             key = persist(model, method=persist_method)
             self._close_key = key
 
-        _log.debug('persisting function')
+        _log.debug("persisting function")
         func = pickle.dumps(func)
         ctx = LKContext.INSTANCE
-        _log.info('setting up ProcessPoolExecutor w/ %d workers', n_jobs)
-        os.environ['_LK_IN_MP'] = 'yes'
+        _log.info("setting up ProcessPoolExecutor w/ %d workers", n_jobs)
+        os.environ["_LK_IN_MP"] = "yes"
         kid_tc = proc_count(level=1)
-        self.executor = ProcessPoolExecutor(n_jobs, ctx, _initialize_mp_worker,
-                                            (key, func, kid_tc, log_queue(), get_root_seed()))
+        self.executor = ProcessPoolExecutor(
+            n_jobs, ctx, _initialize_mp_worker, (key, func, kid_tc, log_queue(), get_root_seed())
+        )
 
     def map(self, *iterables):
         return self.executor.map(_mp_invoke_worker, *iterables)
 
     def shutdown(self):
         self.executor.shutdown()
-        os.environ.pop('_LK_IN_MP', 'yes')
+        os.environ.pop("_LK_IN_MP", "yes")
         if self._close_key is not None:
             self._close_key.close()
             del self._close_key

@@ -1,1 +1,1 @@
-from .movielens import * # noqa: F403
+from .movielens import *  # noqa: F403

@@ -12,10 +12,16 @@ _rec_context = None
 def _predict_user(model, req):
     user, udf = req
     watch = util.Stopwatch()
-    res = model.predict_for_user(user, udf['item'])
-    res = pd.DataFrame({'user': user, 'item': res.index, 'prediction': res.values})
-    _logger.debug('%s produced %f/%d predictions for %s in %s',
-                  model, res.prediction.notna().sum(), len(udf), user, watch)
+    res = model.predict_for_user(user, udf["item"])
+    res = pd.DataFrame({"user": user, "item": res.index, "prediction": res.values})
+    _logger.debug(
+        "%s produced %f/%d predictions for %s in %s",
+        model,
+        res.prediction.notna().sum(),
+        len(udf),
+        user,
+        watch,
+    )
     return res
 
 
@@ -62,24 +68,24 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
             the prediction results. If ``pairs`` contains a `rating` column, this
             result will also contain a `rating` column.
     """
-    if n_jobs is None and 'nprocs' in kwargs:
-        n_jobs = kwargs['nprocs']
-        warnings.warn('nprocs is deprecated, use n_jobs', DeprecationWarning)
+    if n_jobs is None and "nprocs" in kwargs:
+        n_jobs = kwargs["nprocs"]
+        warnings.warn("nprocs is deprecated, use n_jobs", DeprecationWarning)
 
-    nusers = pairs['user'].nunique()
+    nusers = pairs["user"].nunique()
 
     timer = util.Stopwatch()
     with util.parallel.invoker(algo, _predict_user, n_jobs=n_jobs) as worker:
         del algo  # maybe free some memory
 
-        _logger.info('generating %d predictions for %d users (setup took %s)',
-                     len(pairs), nusers, timer)
+        _logger.info(
+            "generating %d predictions for %d users (setup took %s)", len(pairs), nusers, timer
+        )
         timer = util.Stopwatch()
-        results = worker.map((user, udf.copy()) for (user, udf) in pairs.groupby('user'))
+        results = worker.map((user, udf.copy()) for (user, udf) in pairs.groupby("user"))
         results = pd.concat(results)
-        _logger.info('generated %d predictions for %d users in %s',
-                     len(pairs), nusers, timer)
+        _logger.info("generated %d predictions for %d users in %s", len(pairs), nusers, timer)
 
-    if 'rating' in pairs:
-        return pairs.join(results.set_index(['user', 'item']), on=('user', 'item'))
+    if "rating" in pairs:
+        return pairs.join(results.set_index(["user", "item"]), on=("user", "item"))
     return results

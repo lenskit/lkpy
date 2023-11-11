@@ -5,6 +5,7 @@ import numpy as np
 
 try:
     from sklearn.decomposition import TruncatedSVD
+
     SKL_AVAILABLE = True
 except ImportError:
     TruncatedSVD = None
@@ -29,9 +30,9 @@ class BiasedSVD(Predictor):
     example and for cases where you want to evaluate a pure SVD implementation.
     """
 
-    def __init__(self, features, *, damping=5, bias=True, algorithm='randomized'):
+    def __init__(self, features, *, damping=5, bias=True, algorithm="randomized"):
         if TruncatedSVD is None:
-            raise ImportError('sklearn.decomposition')
+            raise ImportError("sklearn.decomposition")
         if bias is True:
             self.bias = Bias(damping=damping)
         else:
@@ -40,14 +41,14 @@ class BiasedSVD(Predictor):
 
     def fit(self, ratings, **kwargs):
         timer = Stopwatch()
-        _log.info('[%s] computing bias', timer)
+        _log.info("[%s] computing bias", timer)
         self.bias.fit(ratings)
 
         g_bias = self.bias.mean_
         u_bias = self.bias.user_offsets_
         i_bias = self.bias.item_offsets_
 
-        _log.info('[%s] sparsifying and normalizing matrix', timer)
+        _log.info("[%s] sparsifying and normalizing matrix", timer)
         r_mat, users, items = sparse_ratings(ratings, users=u_bias.index, items=i_bias.index)
         # global
         r_mat.values -= g_bias
@@ -56,7 +57,7 @@ class BiasedSVD(Predictor):
         r_mat = r_mat.to_scipy()
         assert r_mat.shape == (len(u_bias), len(i_bias))
 
-        _log.info('[%s] training SVD (k=%d)', timer, self.factorization.n_components)
+        _log.info("[%s] training SVD (k=%d)", timer, self.factorization.n_components)
         Xt = self.factorization.fit_transform(r_mat)
         self.user_components_ = Xt
         _log.info("finished model training in %s", timer)
@@ -83,15 +84,15 @@ class BiasedSVD(Predictor):
 
     def get_params(self, deep=True):
         params = {
-            'features': self.factorization.n_components,
-            'algorithm': self.factorization.algorithm
+            "features": self.factorization.n_components,
+            "algorithm": self.factorization.algorithm,
         }
         if deep and self.bias:
             for k, v in self.bias.get_params(True).items():
-                params['bias__' + k] = v
+                params["bias__" + k] = v
         else:
-            params['bias'] = self.bias
+            params["bias"] = self.bias
         return params
 
     def __str__(self):
-        return f'BiasedSVD({self.factorization})'
+        return f"BiasedSVD({self.factorization})"

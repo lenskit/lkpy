@@ -10,7 +10,7 @@ classes (:py:mod:`abc`) representing different algorithm capabilities.
 from abc import ABCMeta, abstractmethod
 import inspect
 
-__all__ = ['Algorithm', 'Recommender', 'Predictor', 'CandidateSelector']
+__all__ = ["Algorithm", "Recommender", "Predictor", "CandidateSelector"]
 
 
 class Algorithm(metaclass=ABCMeta):
@@ -68,10 +68,10 @@ class Algorithm(metaclass=ABCMeta):
             if hasattr(self, name) and name not in self.IGNORED_PARAMS:
                 value = getattr(self, name)
                 params[name] = value
-                if deep and hasattr(value, 'get_params'):
+                if deep and hasattr(value, "get_params"):
                     sps = value.get_params(deep)
                     for k, sv in sps.items():
-                        params[name + '__' + k] = sv
+                        params[name + "__" + k] = sv
 
         return params
 
@@ -101,16 +101,16 @@ class Predictor(Algorithm, metaclass=ABCMeta):
             raise NotImplementedError()
 
         def upred(df):
-            user, = df['user'].unique()
-            items = df['item']
+            (user,) = df["user"].unique()
+            items = df["item"]
             preds = self.predict_for_user(user, items)
-            preds.name = 'prediction'
-            res = df.join(preds, on='item', how='left')
+            preds.name = "prediction"
+            res = df.join(preds, on="item", how="left")
             return res.prediction
 
-        res = pairs.loc[:, ['user', 'item']].groupby('user', sort=False).apply(upred)
-        res.reset_index(level='user', inplace=True, drop=True)
-        res.name = 'prediction'
+        res = pairs.loc[:, ["user", "item"]].groupby("user", sort=False).apply(upred)
+        res.reset_index(level="user", inplace=True, drop=True)
+        res.name = "prediction"
         return res.loc[pairs.index.values]
 
     @abstractmethod
@@ -173,6 +173,7 @@ class Recommender(Algorithm, metaclass=ABCMeta):
             algo(Predictor): the underlying rating predictor.
         """
         from .basic import TopN
+
         if isinstance(algo, Recommender):
             return algo
         else:
@@ -212,6 +213,7 @@ class CandidateSelector(Algorithm, metaclass=ABCMeta):
         """
         import pandas as pd
         import numpy as np
+
         if isinstance(ratings, pd.Series):
             return ratings.index.values
         elif isinstance(ratings, np.ndarray):

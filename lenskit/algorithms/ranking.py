@@ -40,6 +40,7 @@ class TopN(Recommender, Predictor):
 
     def __init__(self, predictor, selector=None):
         from .basic import UnratedItemCandidateSelector
+
         self.predictor = predictor
         self.selector = selector if selector is not None else UnratedItemCandidateSelector()
 
@@ -59,8 +60,8 @@ class TopN(Recommender, Predictor):
         return self
 
     def fit_iters(self, ratings, **kwargs):
-        if not hasattr(self.predictor, 'fit_iters'):
-            raise AttributeError('predictor has no method fit_iters')
+        if not hasattr(self.predictor, "fit_iters"):
+            raise AttributeError("predictor has no method fit_iters")
 
         self.selector.fit(ratings, **kwargs)
         pred = self.predictor
@@ -80,8 +81,8 @@ class TopN(Recommender, Predictor):
             scores = scores.nlargest(n)
         else:
             scores = scores.sort_values(ascending=False)
-        scores.name = 'score'
-        scores.index.name = 'item'
+        scores.name = "score"
+        scores.index.name = "item"
         return scores.reset_index()
 
     def predict(self, pairs, ratings=None):
@@ -91,7 +92,7 @@ class TopN(Recommender, Predictor):
         return self.predictor.predict_for_user(user, items, ratings)
 
     def __str__(self):
-        return 'TopN/' + str(self.predictor)
+        return "TopN/" + str(self.predictor)
 
 
 class PlackettLuce(Recommender):
@@ -112,10 +113,11 @@ class PlackettLuce(Recommender):
 
     def __init__(self, predictor, selector=None, *, rng_spec=None):
         from .basic import UnratedItemCandidateSelector, Popular
+
         if isinstance(predictor, TopN):
-            _log.warn('wrapping Top-N in PlackettLuce, candidate selector probably redundant')
+            _log.warn("wrapping Top-N in PlackettLuce, candidate selector probably redundant")
         elif isinstance(predictor, Popular):
-            _log.warn('wrapping Popular in Plackett-Luce, consider PopScore')
+            _log.warn("wrapping Popular in Plackett-Luce, consider PopScore")
 
         self.predictor = predictor
         self.selector = selector if selector is not None else UnratedItemCandidateSelector()
@@ -142,6 +144,6 @@ class PlackettLuce(Recommender):
             scores = scores.nlargest(n)
         else:
             scores = scores.sort_values(ascending=False)
-        scores.name = 'score'
-        scores.index.name = 'item'
+        scores.name = "score"
+        scores.index.name = "item"
         return scores.reset_index()

@@ -21,7 +21,7 @@ def get_root_seed():
     Returns:
         numpy.random.SeedSequence: The LensKit root seed.
     """
-    warnings.warn('get_root_seed is deprecated, use seedbank.root_seed', DeprecationWarning)
+    warnings.warn("get_root_seed is deprecated, use seedbank.root_seed", DeprecationWarning)
     return seedbank.root_seed()
 
 
@@ -54,7 +54,7 @@ def init_rng(seed, *keys, propagate=True):
     Returns:
         The random seed.
     """
-    warnings.warn('init_rng is deprecated, use seedbank.initialize', DeprecationWarning)
+    warnings.warn("init_rng is deprecated, use seedbank.initialize", DeprecationWarning)
     seedbank.initialize(seed, *keys)
 
 
@@ -84,7 +84,7 @@ def rng(spec=None, *, legacy=False):
     Returns:
         numpy.random.Generator: A random number generator.
     """
-    warnings.warn('rng is deprecated, use seedbank.numpy_rng', DeprecationWarning)
+    warnings.warn("rng is deprecated, use seedbank.numpy_rng", DeprecationWarning)
 
     if legacy:
         return seedbank.numpy_random_state(spec)
@@ -94,6 +94,7 @@ def rng(spec=None, *, legacy=False):
 
 class FixedRNG:
     "RNG provider that always provides the same RNG"
+
     def __init__(self, rng):
         self.rng = rng
 
@@ -101,11 +102,12 @@ class FixedRNG:
         return self.rng
 
     def __str__(self):
-        return 'Fixed({})'.format(self.rng)
+        return "Fixed({})".format(self.rng)
 
 
 class DerivingRNG:
     "RNG provider that derives new RNGs from the key"
+
     def __init__(self, seed, legacy):
         self.seed = seed
         self.legacy = legacy
@@ -119,7 +121,7 @@ class DerivingRNG:
             return np.random.default_rng(seed)
 
     def __str__(self):
-        return 'Derive({})'.format(self.seed)
+        return "Derive({})".format(self.seed)
 
 
 def derivable_rng(spec, *, legacy=False):
@@ -144,12 +146,12 @@ def derivable_rng(spec, *, legacy=False):
             the ``legacy`` parameter).
     """
 
-    if spec == 'user':
+    if spec == "user":
         return DerivingRNG(derive_seed(), legacy)
     elif isinstance(spec, tuple):
         seed, key = spec
-        if key != 'user':
-            raise ValueError('unrecognized key %s', key)
+        if key != "user":
+            raise ValueError("unrecognized key %s", key)
         return DerivingRNG(seed, legacy)
     else:
         return FixedRNG(rng(spec, legacy=legacy))

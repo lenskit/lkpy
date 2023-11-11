@@ -11,19 +11,23 @@ from numba.extending import get_cython_function_address
 
 __ffi = cffi.FFI()
 
-__uplo_U = np.array([ord('U')], dtype=np.int8)
-__uplo_L = np.array([ord('L')], dtype=np.int8)
-__trans_N = np.array([ord('N')], dtype=np.int8)
-__trans_T = np.array([ord('T')], dtype=np.int8)
-__trans_C = np.array([ord('C')], dtype=np.int8)
-__diag_U = np.array([ord('U')], dtype=np.int8)
-__diag_N = np.array([ord('N')], dtype=np.int8)
+__uplo_U = np.array([ord("U")], dtype=np.int8)
+__uplo_L = np.array([ord("L")], dtype=np.int8)
+__trans_N = np.array([ord("N")], dtype=np.int8)
+__trans_T = np.array([ord("T")], dtype=np.int8)
+__trans_C = np.array([ord("C")], dtype=np.int8)
+__diag_U = np.array([ord("U")], dtype=np.int8)
+__diag_N = np.array([ord("N")], dtype=np.int8)
 __inc_1 = np.ones(1, dtype=np.int32)
 
-__dtrsv = __ffi.cast("void (*) (char*, char*, char*, int*, double*, int*, double*, int*)",
-                     get_cython_function_address("scipy.linalg.cython_blas", "dtrsv"))
-__dposv = __ffi.cast("void (*) (char*, int*, int*, double*, int*, double*, int*, int*)",
-                     get_cython_function_address("scipy.linalg.cython_lapack", "dposv"))
+__dtrsv = __ffi.cast(
+    "void (*) (char*, char*, char*, int*, double*, int*, double*, int*)",
+    get_cython_function_address("scipy.linalg.cython_blas", "dtrsv"),
+)
+__dposv = __ffi.cast(
+    "void (*) (char*, int*, int*, double*, int*, double*, int*, int*)",
+    get_cython_function_address("scipy.linalg.cython_lapack", "dposv"),
+)
 
 
 @n.njit
@@ -49,10 +53,16 @@ def _dposv(A, b, lower):
     info = np.zeros(1, dtype=np.intc)
     info_p = __ffi.from_buffer(info)
 
-    __dposv(__ffi.from_buffer(uplo), n_p, nrhs_p,
-            __ffi.from_buffer(A), n_p,
-            __ffi.from_buffer(b), n_p,
-            info_p)
+    __dposv(
+        __ffi.from_buffer(uplo),
+        n_p,
+        nrhs_p,
+        __ffi.from_buffer(A),
+        n_p,
+        __ffi.from_buffer(b),
+        n_p,
+        info_p,
+    )
 
     _ref_sink(narr, n_p, nrhs, nrhs_p, info, info_p)
 
@@ -66,6 +76,6 @@ def dposv(A, b, lower=False):
     """
     info = _dposv(A, b, lower)
     if info < 0:
-        raise ValueError('invalid args to dposv, code ' + str(info))
+        raise ValueError("invalid args to dposv, code " + str(info))
     elif info > 0:
-        raise RuntimeError('error in dposv, code ' + str(info))
+        raise RuntimeError("error in dposv, code " + str(info))

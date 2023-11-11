@@ -12,7 +12,7 @@ from csr import CSR
 
 _log = logging.getLogger(__name__)
 
-RatingMatrix = namedtuple('RatingMatrix', ['matrix', 'users', 'items'])
+RatingMatrix = namedtuple("RatingMatrix", ["matrix", "users", "items"])
 RatingMatrix.__doc__ = """
 A rating matrix with associated indices.
 
@@ -41,30 +41,32 @@ def sparse_ratings(ratings, scipy=False, *, users=None, items=None):
             a named tuple containing the sparse matrix, user index, and item index.
     """
     if users is None:
-        users = pd.Index(np.unique(ratings.user), name='user')
+        users = pd.Index(np.unique(ratings.user), name="user")
 
     if items is None:
-        items = pd.Index(np.unique(ratings.item), name='item')
+        items = pd.Index(np.unique(ratings.item), name="item")
 
-    _log.debug('creating matrix with %d ratings for %d items by %d users',
-               len(ratings), len(items), len(users))
+    _log.debug(
+        "creating matrix with %d ratings for %d items by %d users",
+        len(ratings),
+        len(items),
+        len(users),
+    )
 
     row_ind = users.get_indexer(ratings.user).astype(np.intc)
     if np.any(row_ind < 0):
-        raise ValueError('provided user index does not cover all users')
+        raise ValueError("provided user index does not cover all users")
     col_ind = items.get_indexer(ratings.item).astype(np.intc)
     if np.any(col_ind < 0):
-        raise ValueError('provided item index does not cover all users')
+        raise ValueError("provided item index does not cover all users")
 
-    if 'rating' in ratings.columns:
+    if "rating" in ratings.columns:
         vals = np.require(ratings.rating.values, np.float64)
     else:
         vals = None
 
-    if scipy == 'coo':
-        matrix = sps.coo_matrix(
-            (vals, (row_ind, col_ind)), shape=(len(users), len(items))
-        )
+    if scipy == "coo":
+        matrix = sps.coo_matrix((vals, (row_ind, col_ind)), shape=(len(users), len(items)))
     else:
         matrix = CSR.from_coo(row_ind, col_ind, vals, (len(users), len(items)))
         if scipy:

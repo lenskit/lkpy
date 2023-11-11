@@ -93,7 +93,7 @@ class MFPredictor(Predictor):
         if u_features is None:
             uidx = self.lookup_user(user)
             if uidx < 0:
-                _logger.debug('user %s not in model', user)
+                _logger.debug("user %s not in model", user)
                 return pd.Series(np.nan, index=items)
         else:
             uidx = None
@@ -106,7 +106,7 @@ class MFPredictor(Predictor):
         good_iidx = iidx[good]
 
         # multiply
-        _logger.debug('scoring %d items for user %s', len(good_items), user)
+        _logger.debug("scoring %d items for user %s", len(good_items), user)
         rv = self.score(uidx, good_iidx, u_features)
 
         res = pd.Series(rv, index=good_items)
