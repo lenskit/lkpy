@@ -1,27 +1,32 @@
+# log and debug outputs
 *.log
 *.pdb
-
-__pycache__/
-*.pyc
 *.prof
 *.lprof
-.ipynb_checkpoints/
-.idea/
-.vs/
-
-.eggs/
-.*_cache/
-.vscode/
-*.egg-info/
-build/
-dist/
+emissions.csv
+intel_power_gadget_log.csv
 .coverage*
 coverage.xml
 cov-reports/
 test-logs/
 htmlcov/
-my-eval/
-doc/data/
+
+# caches and working directories
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+dask-worker-space/
+.idea/
+.*_cache/
+.hypothesis/
+.tox/
+.vagrant/
+.venv/
+scratch/
+
+# build outputs
+build/
+dist/
 *.pyd
 *.so
 *.dll
@@ -29,21 +34,16 @@ doc/data/
 *.lib
 *.o
 *.obj
+
+# environment locks that aren't committed
 /*env*.yml
 conda-lock.yml
 *.lock
 *.lock.yml
-*.tar.bz2
 
-dask-worker-space/
-.hypothesis/
-
-build-env/
-.tox/
-pythonenv*/
-.vagrant/
-scratch/
-emissions.csv
-intel_power_gadget_log.csv
-
+# Editor and OS cruft
 .DS_Store
+._.DS_Store
+*~
+*.tmp
+.vs/

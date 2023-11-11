@@ -5,64 +5,59 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "lenskit"
 authors = [
-    {name = "Michael Ekstrand", email = "michaelekstrand@boisestate.edu"}
+  {name="Michael Ekstrand", email="mdekstrand@drexel.edu"}
 ]
 classifiers = [
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Operating System :: OS Independent",
-    "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Science/Research",
 ]
+requires-python = ">= 3.10"
 readme = "README.md"
 license = { file = "LICENSE.md" }
-requires-python = ">= 3.8"
-dynamic = ['version', 'description']
+dynamic = ["version", "description"]
 dependencies = [
-    "pandas >=1.4, <2",
-    "numpy >= 1.22",
-    "scipy >= 1.8.0",
-    "numba >= 0.56, < 0.59",
-    "cffi >= 1.15.0",
-    "threadpoolctl >=3.0",
-    "binpickle >= 0.3.2",
-    "seedbank >= 0.1.0",
-    "csr >= 0.5",
+  "pandas >=1.4, <2",
+  "numpy >= 1.22",
+  "scipy >= 1.8.0",
+  "numba >= 0.56, < 0.59",
+  "cffi >= 1.15.0",
+  "threadpoolctl >=3.0",
+  "binpickle >= 0.3.2",
+  "seedbank >= 0.1.0",
+  "csr >= 0.5",
 ]
-
-[project.urls]
-homepage = "https://lenskit.org"
-documentation = "https://lkpy.lenskit.org"
-source = "https://github.com/lenskit/lkpy"
 
 [project.optional-dependencies]
-test = [
-    "pytest ==7.*",
-    "pytest-doctestplus >= 0.9",
-    "coverage >= 5",
-    "pytest-cov >= 2.12",
-    "hypothesis >= 6"
-]
 dev = [
-    "lenskit-build-helpers >=0.1",  # p2c: -p
-    "flit >= 3",
-    "pyproject2conda >=0.8",
-    "invoke >=1",
-    "requests >=2",
-    "packaging >= 20",
-    "flake8 >= 3",
-    "ipython >= 7",
-    "docopt >= 0.6",
-    "tqdm >= 4",
-    "keyring",
-    "sphinx-autobuild >= 2021",
+  "lenskit-build-helpers >=0.1",  # p2c: -p
+  "flit >= 3.8",
+  "ruff",
+  "copier",
+  "pyproject2conda >=0.8",
+  "invoke >=1",
+  "packaging >= 20",
+  "ipython >= 7",
+  "docopt >= 0.6",
+  "tqdm >= 4",
+  "keyring",
+  "sphinx-autobuild >= 2021",
+]
+test = [
+  "pytest ==7.*",
+  "pytest-doctestplus >= 0.9",
+  "coverage >= 5",
+  "pytest-cov >= 2.12",
+  "hypothesis >= 6"
 ]
 doc = [
-    "sphinx >= 4.2",
-    "sphinxcontrib-bibtex >= 2.0",
-    "sphinx_rtd_theme >= 0.5",
-    "myst-nb >= 0.13",
+  "sphinx >= 4.2",
+  "sphinxcontrib-bibtex >= 2.0",
+  "sphinx_rtd_theme >= 0.5",
+  "myst-nb >= 0.13",
 ]
 demo = [
     "notebook >= 6",
@@ -73,19 +68,30 @@ demo = [
 ]
 sklearn = ["scikit-learn >= 1.1"]
 
+[project.urls]
+homepage = "https://lenskit.org"
+documentation = "https://lkpy.lenskit.org"
+source = "https://github.com/lenskit/lkpy"
+
+# configure build tools
 [tool.flit.sdist]
+include = ["tests/*"]
 exclude = [
-    ".github",
-    "*.ipynb",
-    "docs",
-    "data",
-    "examples",
-    "build-tools",
-    "lkbuild",
-    "tasks.py",
-    "tests",
+  ".github",
+  "*.ipynb",
+  "docs",
+  "data",
+  "examples",
+  "build-tools",
+  "lkbuild",
+  "tasks.py",
 ]
 
+# need this for the SCM plugins to work
+[tool.setuptools.packages.find]
+exclude = ["envs"]
+
+# settings for generating conda environments for dev & CI, when needed
 [tool.pyproject2conda]
 channels = ["conda-forge"]
 python = ["3.10", "3.11"]
@@ -99,3 +105,14 @@ extras = ["dev", "test", "doc", "demo", "sklearn"]
 
 [tool.pyproject2conda.envs.ci]
 extras = ["test", "sklearn"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+exclude = [
+  ".git",
+  "__pycache__",
+  "docs/conf.py",
+  "build",
+  "dist",
+]
