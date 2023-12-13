@@ -1,6 +1,5 @@
 import logging
 from collections import namedtuple
-import warnings
 
 import numpy as np
 from numba import njit, prange
