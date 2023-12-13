@@ -2,88 +2,9 @@
 Utilities to manage randomness in LensKit and LensKit experiments.
 """
 
-import warnings
 import numpy as np
 
 import seedbank
-
-
-def get_root_seed():
-    """
-    Get the root seed.
-
-    Returns:
-        numpy.random.SeedSequence: The LensKit root seed.
-    """
-    warnings.warn("get_root_seed is deprecated, use seedbank.root_seed", DeprecationWarning)
-    return seedbank.root_seed()
-
-
-def init_rng(seed, *keys, propagate=True):
-    """
-    Initialize the random infrastructure with a seed.  This function should generally be
-    called very early in the setup.
-
-    .. warning::
-
-        This method is deprecated. Use :func:`seedbank.initialize` instead.
-
-    Args:
-        seed(int or numpy.random.SeedSequence):
-            The random seed to initialize with.
-        keys:
-            Additional keys, to use as a ``spawn_key`` on NumPy 1.17.  Passed to
-            :func:`seedbank.derive_seed`.
-
-        propagate(bool):
-            If ``True``, initialize other RNG infrastructure. This currently initializes:
-
-            * :func:`np.random.seed`
-            * :func:`random.seed`
-
-            If ``propagate=False``, LensKit is still fully seeded — no component included
-            with LensKit uses any of the global RNGs, they all use RNGs seeded with the
-            specified seed.
-
-    Returns:
-        The random seed.
-    """
-    warnings.warn("init_rng is deprecated, use seedbank.initialize", DeprecationWarning)
-    seedbank.initialize(seed, *keys)
-
-
-def rng(spec=None, *, legacy=False):
-    """
-    Get a random number generator.  This is similar to :func:`sklearn.utils.check_random_seed`, but
-    it usually returns a :class:`numpy.random.Generator` instead.
-
-    .. warning::
-
-        This method is deprecated. Use :func:`seedbank.numpy_rng` instead.
-
-
-    Args:
-        spec:
-            The spec for this RNG.  Can be any of the following types:
-
-            * ``int``
-            * ``None``
-            * :class:`numpy.random.SeedSequence`
-            * :class:`numpy.random.mtrand.RandomState`
-            * :class:`numpy.random.Generator`
-        legacy(bool):
-            If ``True``, return :class:`numpy.random.mtrand.RandomState` instead of a new-style
-            :class:`numpy.random.Generator`.
-
-    Returns:
-        numpy.random.Generator: A random number generator.
-    """
-    warnings.warn("rng is deprecated, use seedbank.numpy_rng", DeprecationWarning)
-
-    if legacy:
-        return seedbank.numpy_random_state(spec)
-    else:
-        return seedbank.numpy_rng(spec)
 
 
 class FixedRNG:
@@ -148,4 +69,4 @@ def derivable_rng(spec, *, legacy=False):
             raise ValueError("unrecognized key %s", key)
         return DerivingRNG(seed, legacy)
     else:
-        return FixedRNG(rng(spec, legacy=legacy))
+        return FixedRNG(seedbank.numpy_rng(spec, legacy=legacy))
