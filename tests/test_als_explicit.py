@@ -174,7 +174,7 @@ def test_als_predict_no_user_features_basic():
     ratings = lktu.ml_test.ratings
 
     np.random.seed(45)
-    u = np.random.choice(ratings.user.unique(), 1)[0]
+    u = np.random.choice(ratings.user.unique(), n_users)[0]
     items = np.random.choice(ratings.item.unique(), n_items)
 
     algo = als.BiasedMF(5, iterations=10, method="lu")
@@ -184,7 +184,7 @@ def test_als_predict_no_user_features_basic():
     algo_no_user_features = als.BiasedMF(5, iterations=10, method="lu", save_user_features=False)
     algo_no_user_features.fit(ratings)
 
-    assert algo_no_user_features.user_features_ == None
+    assert algo_no_user_features.user_features_ is None
 
     _log.debug(f"user: {u}")
     preds = algo.predict_for_user(u, items)
@@ -342,7 +342,6 @@ def test_als_method_match():
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
 def test_als_batch_accuracy():
-    from lenskit.algorithms import bias
     import lenskit.crossfold as xf
     import lenskit.metrics.predict as pm
 
