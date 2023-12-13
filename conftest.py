@@ -1,10 +1,7 @@
 import logging
 from pytest import fixture
 
-import numpy as np
 from seedbank import numpy_rng, initialize
-
-from lenskit import util
 
 logging.getLogger("numba").setLevel(logging.INFO)
 
