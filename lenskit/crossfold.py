@@ -97,8 +97,9 @@ def sample_rows(data, partitions, size, disjoint=True, *, rng_spec=None):
     """
 
     confirm_unique_index(data)
+    rng = numpy_rng(rng_spec)
     if partitions is None:
-        test = data.sample(n=size)
+        test = data.sample(n=size, random_state=rng)
         tr_mask = pd.Series(True, index=data.index)
         tr_mask.loc[test.index] = False
         train = data[tr_mask]
@@ -111,12 +112,10 @@ def sample_rows(data, partitions, size, disjoint=True, *, rng_spec=None):
             size,
             len(data),
         )
-        return partition_rows(data, partitions)
+        return partition_rows(data, partitions, rng_spec=rng)
 
     # create an array of indexes
     rows = np.arange(len(data))
-
-    rng = numpy_rng(rng_spec)
 
     if disjoint:
         _logger.info("creating %d disjoint samples of size %d", partitions, size)
