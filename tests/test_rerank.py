@@ -1,6 +1,3 @@
-import pandas as pd
-import numpy as np
-
 import lenskit.util.test as lktu
 from lenskit.algorithms.basic import PopScore
 from lenskit.algorithms.bias import Bias
