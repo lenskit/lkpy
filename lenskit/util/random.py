@@ -13,7 +13,7 @@ class FixedRNG:
     def __init__(self, rng):
         self.rng = rng
 
-    def __call__(self, *keys):
+    def __call__(self, *keys) -> np.random.Generator:
         return self.rng
 
     def __str__(self):
@@ -23,23 +23,18 @@ class FixedRNG:
 class DerivingRNG:
     "RNG provider that derives new RNGs from the key"
 
-    def __init__(self, seed, legacy):
+    def __init__(self, seed):
         self.seed = seed
-        self.legacy = legacy
 
-    def __call__(self, *keys):
+    def __call__(self, *keys) -> np.random.Generator:
         seed = seedbank.derive_seed(*keys, base=self.seed)
-        if self.legacy:
-            bg = np.random.MT19937(seed)
-            return np.random.RandomState(bg)
-        else:
-            return np.random.default_rng(seed)
+        return seedbank.numpy_rng(seed)
 
     def __str__(self):
         return "Derive({})".format(self.seed)
 
 
-def derivable_rng(spec, *, legacy=False):
+def derivable_rng(spec):
     """
     Get a derivable RNG, for use cases where the code needs to be able to reproducibly derive
     sub-RNGs for different keys, such as user IDs.
@@ -57,16 +52,15 @@ def derivable_rng(spec, *, legacy=False):
     Returns:
         function:
             A function taking one (or more) key values, like :func:`derive_seed`, and
-            returning a random number generator (the type of which is determined by
-            the ``legacy`` parameter).
+            returning a random number generator.
     """
 
     if spec == "user":
-        return DerivingRNG(seedbank.derive_seed(), legacy)
+        return DerivingRNG(seedbank.derive_seed())
     elif isinstance(spec, tuple):
         seed, key = spec
         if key != "user":
             raise ValueError("unrecognized key %s", key)
-        return DerivingRNG(seed, legacy)
+        return DerivingRNG(seed)
     else:
-        return FixedRNG(seedbank.numpy_rng(spec, legacy=legacy))
+        return FixedRNG(seedbank.numpy_rng(spec))

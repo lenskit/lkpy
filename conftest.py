@@ -13,11 +13,6 @@ def rng():
     return numpy_rng(42)
 
 
-@fixture
-def legacy_rng():
-    return numpy_rng(42, legacy_rng=True)
-
-
 @fixture(autouse=True)
 def init_rng(request):
     initialize(42)

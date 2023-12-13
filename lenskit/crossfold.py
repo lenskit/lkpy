@@ -180,7 +180,7 @@ class SampleN(PartitionMethod):
 
     def __init__(self, n, rng_spec=None):
         self.n = n
-        self.rng = numpy_rng(rng_spec, legacy=True)
+        self.rng = numpy_rng(rng_spec)
 
     def __call__(self, udf):
         return udf.sample(n=self.n, random_state=self.rng)
@@ -196,7 +196,7 @@ class SampleFrac(PartitionMethod):
 
     def __init__(self, frac, rng_spec=None):
         self.fraction = frac
-        self.rng = numpy_rng(rng_spec, legacy=True)
+        self.rng = numpy_rng(rng_spec)
 
     def __call__(self, udf):
         return udf.sample(frac=self.fraction, random_state=self.rng)
@@ -262,7 +262,7 @@ def partition_users(data, partitions: int, method: PartitionMethod, *, rng_spec=
     # create an array of indexes into user row
     rows = np.arange(len(users))
     # shuffle the indices & split into partitions
-    rng = numpy_rng(rng_spec, legacy=True)
+    rng = numpy_rng(rng_spec)
     rng.shuffle(rows)
     test_sets = np.array_split(rows, partitions)
 
@@ -309,7 +309,7 @@ def sample_users(
     """
 
     confirm_unique_index(data)
-    rng = numpy_rng(rng_spec, legacy=True)
+    rng = numpy_rng(rng_spec)
 
     user_col = data["user"]
     users = user_col.unique()
