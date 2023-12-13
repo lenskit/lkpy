@@ -4,9 +4,10 @@ import multiprocessing as mp
 import numpy as np
 import pytest
 
+from seedbank import get_root_seed
+
 from lenskit.util.parallel import invoker, proc_count, run_sp, is_worker, is_mp_worker
 from lenskit.util.test import set_env_var
-from lenskit.util.random import get_root_seed
 from lenskit.sharing import persist, SHM_AVAILABLE
 
 from pytest import mark, raises, approx
