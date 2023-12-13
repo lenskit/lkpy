@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 import binpickle
+from seedbank import numpy_rng
 
 from pytest import mark, approx
 
@@ -292,7 +293,7 @@ def test_als_method_match():
 
     preds = []
 
-    rng = util.rng(42, legacy=True)
+    rng = numpy_rng(42, legacy=True)
     for u in rng.choice(ratings.user.unique(), 10, replace=False):
         items = rng.choice(ratings.item.unique(), 15, replace=False)
         lu_preds = lu.predict_for_user(u, items)
