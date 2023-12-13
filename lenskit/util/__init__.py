@@ -24,8 +24,6 @@ __all__ = [
     "log_to_notebook",
     "Stopwatch",
     "read_df_detect",
-    "rng",
-    "init_rng",
     "derivable_rng",
     "proc_count",
     "clone",
