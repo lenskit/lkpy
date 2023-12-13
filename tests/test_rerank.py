@@ -4,9 +4,9 @@ from lenskit.algorithms.bias import Bias
 from lenskit.algorithms.ranking import PlackettLuce
 
 
-def test_plackett_luce_rec(rng):
+def test_plackett_luce_rec():
     pop = PopScore()
-    algo = PlackettLuce(pop, rng_spec=(rng, "user"))
+    algo = PlackettLuce(pop, rng_spec=(1005, "user"))
     algo.fit(lktu.ml_test.ratings)
 
     items = lktu.ml_test.ratings["item"].unique()
