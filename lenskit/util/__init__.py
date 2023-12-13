@@ -30,7 +30,6 @@ __all__ = [
     "proc_count",
     "clone",
     "clean_str",
-    "derivable_rng",
 ]
 
 
