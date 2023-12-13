@@ -337,7 +337,7 @@ class BiasedMF(MFPredictor):
             damping ``damping``.
         method(str): the solver to use (see above).
         rng_spec:
-            Random number generator or state (see :func:`lenskit.util.random.rng`).
+            Random number generator or state (see :func:`seedbank.numpy_rng`).
         progress: a :func:`tqdm.tqdm`-compatible progress bar function
     """
 
