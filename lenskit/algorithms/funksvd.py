@@ -8,7 +8,6 @@ import time
 import pandas as pd
 import numpy as np
 import numba as n
-from pandas.core.series import Series
 from seedbank import numpy_rng
 
 try:
