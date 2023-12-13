@@ -2,7 +2,7 @@ import logging
 from pytest import fixture
 
 import numpy as np
-from seedbank import numpy_rng
+from seedbank import numpy_rng, initialize
 
 from lenskit import util
 
@@ -23,7 +23,7 @@ def legacy_rng():
 
 @fixture(autouse=True)
 def init_rng(request):
-    util.init_rng(42)
+    initialize(42)
 
 
 @fixture(autouse=True)
