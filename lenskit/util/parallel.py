@@ -14,9 +14,10 @@ from abc import ABC, abstractmethod
 import pickle
 from threadpoolctl import threadpool_limits
 
+import seedbank
+
 from lenskit.sharing import persist, PersistedModel
 from lenskit.util.log import log_queue
-from lenskit.util.random import derive_seed, init_rng, get_root_seed
 
 _log = logging.getLogger(__name__)
 __work_model = None
@@ -91,7 +92,7 @@ def _initialize_worker(log_queue, seed):
     __is_worker = True
     faulthandler.enable()
     if seed is not None:
-        init_rng(seed)
+        seedbank.initialize(seed)
     if log_queue is not None:
         h = logging.handlers.QueueHandler(log_queue)
         root = logging.getLogger()
@@ -101,7 +102,7 @@ def _initialize_worker(log_queue, seed):
 
 
 def _initialize_mp_worker(mkey, func, threads, log_queue, seed):
-    seed = derive_seed(mp.current_process().name, base=seed)
+    seed = seedbank.derive_seed(mp.current_process().name, base=seed)
     _initialize_worker(log_queue, seed)
     global __work_model, __work_func
 
@@ -183,7 +184,7 @@ def run_sp(func, *args, **kwargs):
     """
     ctx = LKContext.INSTANCE
     rq = ctx.SimpleQueue()
-    seed = derive_seed()
+    seed = seedbank.derive_seed()
     worker_args = (log_queue(), seed, rq, func, args, kwargs)
     _log.debug("spawning subprocess to run %s", func)
     proc = ctx.Process(target=_sp_worker, args=worker_args)
@@ -300,7 +301,10 @@ class ProcessPoolOpInvoker(ModelOpInvoker):
         os.environ["_LK_IN_MP"] = "yes"
         kid_tc = proc_count(level=1)
         self.executor = ProcessPoolExecutor(
-            n_jobs, ctx, _initialize_mp_worker, (key, func, kid_tc, log_queue(), get_root_seed())
+            n_jobs,
+            ctx,
+            _initialize_mp_worker,
+            (key, func, kid_tc, log_queue(), seedbank.root_seed()),
         )
 
     def map(self, *iterables):
