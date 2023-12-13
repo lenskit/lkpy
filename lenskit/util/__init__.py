@@ -9,7 +9,7 @@ from copy import deepcopy
 from ..algorithms import Algorithm
 from .log import log_to_notebook, log_to_stderr  # noqa: F401
 from .timing import Stopwatch  # noqa: F401
-from .random import rng, init_rng, derivable_rng  # noqa: F401
+from .random import derivable_rng
 from .parallel import proc_count  # noqa: F401
 
 try:
@@ -24,8 +24,6 @@ __all__ = [
     "log_to_notebook",
     "Stopwatch",
     "read_df_detect",
-    "rng",
-    "init_rng",
     "derivable_rng",
     "proc_count",
     "clone",

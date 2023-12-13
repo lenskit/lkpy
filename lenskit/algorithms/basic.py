@@ -287,7 +287,7 @@ class Random(Recommender):
         else:
             self.selector = UnratedItemCandidateSelector()
         # Get a Pandas-compatible RNG
-        self.rng_source = derivable_rng(rng_spec, legacy=True)
+        self.rng_source = derivable_rng(rng_spec)
         self.items = None
 
     def fit(self, ratings, **kwargs):

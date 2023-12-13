@@ -1,11 +1,11 @@
 import logging
 from collections import namedtuple
-import warnings
 
 import numpy as np
 from numba import njit, prange
 
 from csr import CSR
+from seedbank import numpy_rng
 
 from .bias import Bias
 from .mf_common import MFPredictor
@@ -337,7 +337,7 @@ class BiasedMF(MFPredictor):
             damping ``damping``.
         method(str): the solver to use (see above).
         rng_spec:
-            Random number generator or state (see :func:`lenskit.util.random.rng`).
+            Random number generator or state (see :func:`seedbank.numpy_rng`).
         progress: a :func:`tqdm.tqdm`-compatible progress bar function
     """
 
@@ -366,7 +366,7 @@ class BiasedMF(MFPredictor):
         else:
             self.bias = bias
         self.progress = progress if progress is not None else util.no_progress
-        self.rng = util.rng(rng_spec)
+        self.rng = numpy_rng(rng_spec)
         self.save_user_features = save_user_features
 
     def fit(self, ratings, **kwargs):
@@ -600,7 +600,7 @@ class ImplicitMF(MFPredictor):
         self.weight = weight
         self.use_ratings = use_ratings
         self.method = method
-        self.rng = util.rng(rng_spec)
+        self.rng = numpy_rng(rng_spec)
         self.progress = progress if progress is not None else util.no_progress
         self.save_user_features = save_user_features
 

@@ -8,7 +8,7 @@ import time
 import pandas as pd
 import numpy as np
 import numba as n
-from pandas.core.series import Series
+from seedbank import numpy_rng
 
 try:
     from numba.experimental import jitclass
@@ -242,7 +242,7 @@ class FunkSVD(MFPredictor):
             self.bias = Bias(damping=damping)
         else:
             self.bias = bias
-        self.random = util.rng(random_state)
+        self.random = numpy_rng(random_state)
 
     def fit(self, ratings, **kwargs):
         """

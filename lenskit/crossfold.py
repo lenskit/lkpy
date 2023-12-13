@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 import pandas as pd
-from . import util
+from seedbank import numpy_rng
 
 TTPair = namedtuple("TTPair", ["train", "test"])
 TTPair.__doc__ = "Train-test pair (named tuple)."
@@ -29,7 +29,7 @@ def partition_rows(data, partitions, *, rng_spec=None):
         partitions(int):
             The number of partitions to produce.
         rng_spec:
-            The random number generator or seed (see :py:func:`lenskit.util.rng`).
+            The random number generator or seed (see :py:func:`seedbank.numpy_rng`).
 
     Returns:
         iterator: an iterator of train-test pairs
@@ -41,7 +41,7 @@ def partition_rows(data, partitions, *, rng_spec=None):
     # create an array of indexes
     rows = np.arange(len(data))
     # shuffle the indices & split into partitions
-    rng = util.rng(rng_spec)
+    rng = numpy_rng(rng_spec)
     rng.shuffle(rows)
     test_sets = np.array_split(rows, partitions)
 
@@ -90,15 +90,16 @@ def sample_rows(data, partitions, size, disjoint=True, *, rng_spec=None):
         disjoint(bool):
             If ``True``, force samples to be disjoint.
         rng_spec:
-            The random number generator or seed (see :py:func:`lenskit.util.rng`).
+            The random number generator or seed (see :py:func:`seedbank.numpy_rng`).
 
     Returns:
         iterator: An iterator of train-test pairs.
     """
 
     confirm_unique_index(data)
+    rng = numpy_rng(rng_spec)
     if partitions is None:
-        test = data.sample(n=size)
+        test = data.sample(n=size, random_state=rng)
         tr_mask = pd.Series(True, index=data.index)
         tr_mask.loc[test.index] = False
         train = data[tr_mask]
@@ -111,12 +112,10 @@ def sample_rows(data, partitions, size, disjoint=True, *, rng_spec=None):
             size,
             len(data),
         )
-        return partition_rows(data, partitions)
+        return partition_rows(data, partitions, rng_spec=rng)
 
     # create an array of indexes
     rows = np.arange(len(data))
-
-    rng = util.rng(rng_spec)
 
     if disjoint:
         _logger.info("creating %d disjoint samples of size %d", partitions, size)
@@ -181,7 +180,7 @@ class SampleN(PartitionMethod):
 
     def __init__(self, n, rng_spec=None):
         self.n = n
-        self.rng = util.rng(rng_spec, legacy=True)
+        self.rng = numpy_rng(rng_spec)
 
     def __call__(self, udf):
         return udf.sample(n=self.n, random_state=self.rng)
@@ -197,7 +196,7 @@ class SampleFrac(PartitionMethod):
 
     def __init__(self, frac, rng_spec=None):
         self.fraction = frac
-        self.rng = util.rng(rng_spec, legacy=True)
+        self.rng = numpy_rng(rng_spec)
 
     def __call__(self, udf):
         return udf.sample(frac=self.fraction, random_state=self.rng)
@@ -247,7 +246,7 @@ def partition_users(data, partitions: int, method: PartitionMethod, *, rng_spec=
         data(pandas.DataFrame): a data frame containing ratings or other data you wish to partition.
         partitions(int): the number of partitions to produce
         method(PartitionMethod): The method for selecting test rows for each user.
-        rng_spec: The random number generator or seed (see :py:func:`lenskit.util.rng`).
+        rng_spec: The random number generator or seed (see :py:func:`seedbank.numpy_rng`).
 
     Returns
         iterator: an iterator of train-test pairs
@@ -263,7 +262,7 @@ def partition_users(data, partitions: int, method: PartitionMethod, *, rng_spec=
     # create an array of indexes into user row
     rows = np.arange(len(users))
     # shuffle the indices & split into partitions
-    rng = util.rng(rng_spec, legacy=True)
+    rng = numpy_rng(rng_spec)
     rng.shuffle(rows)
     test_sets = np.array_split(rows, partitions)
 
@@ -303,14 +302,14 @@ def sample_users(
         method(PartitionMethod):
             The method for obtaining user test ratings.
         rng_spec:
-            The random number generator or seed (see :py:func:`lenskit.util.rng`).
+            The random number generator or seed (see :py:func:`seedbank.numpy_rng`).
 
     Returns:
         iterator: An iterator of train-test pairs (as :class:`TTPair` objects).
     """
 
     confirm_unique_index(data)
-    rng = util.rng(rng_spec, legacy=True)
+    rng = numpy_rng(rng_spec)
 
     user_col = data["user"]
     users = user_col.unique()

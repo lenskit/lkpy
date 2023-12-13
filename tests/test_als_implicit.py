@@ -1,5 +1,4 @@
 import logging
-import pickle
 
 from lenskit import util
 from lenskit.algorithms import als
@@ -8,15 +7,13 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 import binpickle
+from seedbank import numpy_rng
 
 from pytest import mark, approx
 
 import lenskit.util.test as lktu
 from lenskit.algorithms import Recommender
 from lenskit.util import Stopwatch
-
-from hypothesis import given
-from hypothesis.strategies import randoms
 
 _log = logging.getLogger(__name__)
 
@@ -196,7 +193,6 @@ def test_als_predict_bad_user():
 
 
 def test_als_predict_no_user_features_basic():
-    i = 3
     ratings = lktu.ml_test.ratings
     np.random.seed(45)
     u = np.random.choice(ratings.user.unique(), 1)[0]
@@ -213,7 +209,7 @@ def test_als_predict_no_user_features_basic():
     algo_no_user_features.fit(ratings)
     preds_no_user_features = algo_no_user_features.predict_for_user(u, items, new_ratings)
 
-    assert algo_no_user_features.user_features_ == None
+    assert algo_no_user_features.user_features_ is None
     diffs = np.abs(preds.values - preds_no_user_features.values)
     assert all(diffs <= 0.1)
 
@@ -292,7 +288,7 @@ def test_als_method_match():
 
     preds = []
 
-    rng = util.rng(42, legacy=True)
+    rng = numpy_rng(42)
     for u in rng.choice(ratings.user.unique(), 10, replace=False):
         items = rng.choice(ratings.item.unique(), 15, replace=False)
         lu_preds = lu.predict_for_user(u, items)

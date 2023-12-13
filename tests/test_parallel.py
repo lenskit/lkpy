@@ -4,9 +4,10 @@ import multiprocessing as mp
 import numpy as np
 import pytest
 
+from seedbank import root_seed
+
 from lenskit.util.parallel import invoker, proc_count, run_sp, is_worker, is_mp_worker
 from lenskit.util.test import set_env_var
-from lenskit.util.random import get_root_seed
 from lenskit.sharing import persist, SHM_AVAILABLE
 
 from pytest import mark, raises, approx
@@ -123,11 +124,11 @@ def test_sp_is_worker():
 
 
 def _get_seed():
-    return get_root_seed()
+    return root_seed()
 
 
 def test_sp_random_seed():
-    init = get_root_seed()
+    init = root_seed()
     seed = run_sp(_get_seed)
     # we should spawn a seed for the worker
     assert seed.entropy == init.entropy
