@@ -3,15 +3,9 @@ Utilities to manage randomness in LensKit and LensKit experiments.
 """
 
 import warnings
-import zlib
 import numpy as np
-import random
-import logging
 
 import seedbank
-
-_log = logging.getLogger(__name__)
-derive_seed = seedbank.derive_seed
 
 
 def get_root_seed():
@@ -39,7 +33,7 @@ def init_rng(seed, *keys, propagate=True):
             The random seed to initialize with.
         keys:
             Additional keys, to use as a ``spawn_key`` on NumPy 1.17.  Passed to
-            :func:`derive_seed`.
+            :func:`seedbank.derive_seed`.
 
         propagate(bool):
             If ``True``, initialize other RNG infrastructure. This currently initializes:
@@ -113,7 +107,7 @@ class DerivingRNG:
         self.legacy = legacy
 
     def __call__(self, *keys):
-        seed = derive_seed(*keys, base=self.seed)
+        seed = seedbank.derive_seed(*keys, base=self.seed)
         if self.legacy:
             bg = np.random.MT19937(seed)
             return np.random.RandomState(bg)
@@ -147,7 +141,7 @@ def derivable_rng(spec, *, legacy=False):
     """
 
     if spec == "user":
-        return DerivingRNG(derive_seed(), legacy)
+        return DerivingRNG(seedbank.derive_seed(), legacy)
     elif isinstance(spec, tuple):
         seed, key = spec
         if key != "user":
