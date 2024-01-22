@@ -23,7 +23,7 @@ license = { file = "LICENSE.md" }
 requires-python = ">= 3.7"
 dynamic = ['version', 'description']
 dependencies = [
-    "pandas >=1.0, ==1.*",
+    "pandas >=1.0",
     "numpy >= 1.17",
     "scipy >= 1.2",
     "numba >= 0.51, < 0.59",
