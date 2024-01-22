@@ -99,8 +99,8 @@ class MovieLens:
         fn = self.path / 'movies.csv'
         movies = pd.read_csv(fn, dtype={
             'movieId': np.int32,
-            'title': np.object,
-            'genres': np.object
+            'title': object,
+            'genres': object
         })
         movies.rename(columns={'movieId': 'item'}, inplace=True)
         movies.set_index('item', inplace=True)
@@ -159,7 +159,7 @@ class MovieLens:
         tags = pd.read_csv(fn, dtype={
             'movieId': np.int32,
             'userId': np.int32,
-            'tag': np.object,
+            'tag': object,
             'timestamp': np.int32
         })
         tags.rename(columns={'userId': 'user', 'movieId': 'item'}, inplace=True)
