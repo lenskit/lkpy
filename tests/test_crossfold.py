@@ -97,7 +97,7 @@ def test_sample_non_disjoint():
         assert len(test_idx.intersection(train_idx)) == 0
 
     # There are enough splits & items we should pick at least one duplicate
-    ipairs = ((s1.test.set_index('user', 'item').index, s2.test.set_index('user', 'item').index)
+    ipairs = ((s1.test.set_index(['user', 'item']).index, s2.test.set_index(['user', 'item']).index)
               for (s1, s2) in it.product(splits, splits))
     isizes = [len(i1.intersection(i2)) for (i1, i2) in ipairs]
     assert any(n > 0 for n in isizes)
