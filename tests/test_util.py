@@ -10,6 +10,8 @@ import pathlib
 
 import numpy as np
 import pandas as pd
+from hypothesis import given
+from hypothesis import strategies as st
 
 from lenskit import util as lku
 
@@ -80,3 +82,18 @@ def test_last_memo():
     assert len(history) == 1
     cache("bar")
     assert len(history) == 2
+
+
+@given(
+    st.one_of(
+        st.lists(st.floats(allow_nan=False)),
+        st.tuples(st.floats(allow_nan=False)),
+        st.integers(),
+        st.floats(allow_nan=False),
+        st.emails(),
+    )
+)
+def test_clone_core_obj(obj):
+    o2 = lku.clone(obj)
+    assert o2 == obj
+    assert type(o2) == type(obj)
