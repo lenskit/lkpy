@@ -52,8 +52,10 @@ def clone(algo):
 
         sps = dict([(k, clone(v)) for (k, v) in params.items()])
         return algo.__class__(**sps)
-    elif isinstance(algo, list) or isinstance(algo, tuple):
+    elif isinstance(algo, list):
         return [clone(a) for a in algo]
+    elif isinstance(algo, tuple):
+        return tuple(clone(a) for a in algo)
     else:
         return deepcopy(algo)
 
