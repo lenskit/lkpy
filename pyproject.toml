@@ -37,7 +37,7 @@ dependencies = [
 dev = [
   "setuptools>=64",
   "setuptools_scm>=8",
-  "build ==1.*",
+  "build ==1.*",                 # p2c: -s python-build==1
   "ruff >= 0.2",
   "copier ==9.*",
   "unbeheader ~= 1.3",           # p2c: -p

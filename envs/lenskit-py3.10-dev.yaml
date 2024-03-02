@@ -12,7 +12,6 @@ channels:
 dependencies:
   - python=3.10
   - binpickle>=0.3.2
-  - build==1.*
   - cffi>=1.15.0
   - copier==9.*
   - coverage>=5
@@ -34,6 +33,7 @@ dependencies:
   - pytest-cov>=2.12
   - pytest-doctestplus>=0.9
   - pytest==7.*
+  - python-build==1
   - ruff>=0.2
   - scikit-learn>=1.1
   - scipy>=1.8.0
