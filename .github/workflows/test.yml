@@ -195,9 +195,8 @@ jobs:
       - name: Set up Python deps
         run: |
           set -e
-          python -m pip install -U pip wheel
-          python -m pip install -c min-constraints.txt .[test]
-          python -m pip install pytest-cov
+          python -m pip install -U 'uv>=0.1.13'
+          uv pip install --system --resolution=lowest -e '.[test]'
 
       - name: Inspect environment
         run: |
