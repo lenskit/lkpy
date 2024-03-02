@@ -116,7 +116,7 @@ jobs:
 
       - name: Install for testing
         run: |
-          pip install -e --no-deps .
+          pip install --no-deps -e .
 
       - name: Run Eval Tests
         run: |
