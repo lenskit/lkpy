@@ -11,17 +11,17 @@ channels:
   - conda-forge
 dependencies:
   - python=3.11
-  - binpickle >= 0.3.2
-  - cffi >= 1.15.0
-  - csr >= 0.5
-  - myst-nb >= 0.13
-  - numba >= 0.56, < 0.59
-  - numpy >= 1.22
-  - pandas >=1.4, <2
-  - scipy >= 1.8.0
-  - seedbank >= 0.1.0
-  - sphinx >= 4.2
-  - sphinx_rtd_theme >= 0.5
-  - sphinxcontrib-bibtex >= 2.0
+  - binpickle>=0.3.2
+  - cffi>=1.15.0
+  - csr>=0.5
+  - myst-nb>=0.13
+  - numba<0.59,>=0.56
+  - numpy>=1.22
+  - pandas<2,>=1.4
+  - scipy>=1.8.0
+  - seedbank>=0.1.0
+  - sphinx>=4.2
+  - sphinx_rtd_theme>=0.5
+  - sphinxcontrib-bibtex>=2.0
   - tbb
-  - threadpoolctl >=3.0
+  - threadpoolctl>=3.0

@@ -11,41 +11,43 @@ channels:
   - conda-forge
 dependencies:
   - python=3.10
-  - binpickle >= 0.3.2
-  - cffi >= 1.15.0
-  - copier
-  - coverage >= 5
-  - csr >= 0.5
-  - docopt >= 0.6
-  - flit >= 3.8
-  - hypothesis >= 6
-  - invoke >=1
-  - ipython >= 7
-  - keyring
-  - matplotlib ~= 3.4
-  - myst-nb >= 0.13
-  - nbformat >=5.2
-  - nbval >= 0.9
-  - notebook >= 6
-  - numba >= 0.56, < 0.59
-  - numpy >= 1.22
-  - packaging >= 20
-  - pandas >=1.4, <2
-  - pyproject2conda >=0.8
-  - pytest ==7.*
-  - pytest-cov >= 2.12
-  - pytest-doctestplus >= 0.9
-  - ruff
-  - scikit-learn >= 1.1
-  - scipy >= 1.8.0
-  - seedbank >= 0.1.0
-  - sphinx >= 4.2
-  - sphinx-autobuild >= 2021
-  - sphinx_rtd_theme >= 0.5
-  - sphinxcontrib-bibtex >= 2.0
+  - binpickle>=0.3.2
+  - build==1.*
+  - cffi>=1.15.0
+  - copier==9.*
+  - coverage>=5
+  - csr>=0.5
+  - docopt>=0.6
+  - hypothesis>=6
+  - invoke>=1
+  - ipython
+  - ipython>=7
+  - matplotlib~=3.4
+  - myst-nb>=0.13
+  - nbformat>=5.2
+  - nbval>=0.9
+  - notebook>=6
+  - numba<0.59,>=0.56
+  - numpy>=1.22
+  - pandas<2,>=1.4
+  - pyproject2conda
+  - pytest-cov>=2.12
+  - pytest-doctestplus>=0.9
+  - pytest==7.*
+  - ruff>=0.2
+  - scikit-learn>=1.1
+  - scipy>=1.8.0
+  - seedbank>=0.1.0
+  - setuptools>=64
+  - setuptools_scm>=8
+  - sphinx-autobuild>=2021
+  - sphinx>=4.2
+  - sphinx_rtd_theme>=0.5
+  - sphinxcontrib-bibtex>=2.0
   - tbb
-  - threadpoolctl >=3.0
-  - tqdm >= 4
+  - threadpoolctl>=3.0
+  - tqdm>=4
   - pip
   - pip:
-      - lenskit-build-helpers >=0.1
+      - lenskit-build-helpers>=0.1
+      - unbeheader~=1.3
