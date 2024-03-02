@@ -41,8 +41,8 @@ dev = [
   "ruff >= 0.2",
   "copier ==9.*",
   "unbeheader ~= 1.3",           # p2c: -p
-  "ipython",
-  "pyproject2conda",
+  "ipython >= 7",
+  "pyproject2conda ~=0.11",
   "sphinx-autobuild >= 2021",
   "lenskit-build-helpers >=0.1", # p2c: -p
   "invoke >=1",
