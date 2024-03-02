@@ -116,7 +116,7 @@ jobs:
 
       - name: Install for testing
         run: |
-          flit install --deps none -s
+          pip install -e --no-deps .
 
       - name: Run Eval Tests
         run: |
@@ -163,8 +163,7 @@ jobs:
 
       - name: Set up dependencies
         run: |
-          pip install 'flit>=3.8'
-          flit install --deps=production --extras=test --only-deps
+          pip install -e '.[test]'
 
       - name: Inspect environment
         run: |
