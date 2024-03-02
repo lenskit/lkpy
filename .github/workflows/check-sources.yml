@@ -11,64 +11,66 @@ concurrency:
 
 jobs:
   lint:
-    name: Check Source Style
+    name: Check Source Code
     runs-on: ubuntu-latest
 
     steps:
-    - name: 📥 Check out source code
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
+      - name: 📥 Check out source code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: 🐍 Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
-        cache: 'pip'
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "pip"
 
-    - name: 🛠️ Install tools
-      run: |
-        pip install ruff
+      - name: 🛠️ Install development tools and dependencies
+        run: |
+          pip install -e .[dev]
 
-    - name: 🪮 Check source code formatting
-      id: format
-      run: |
-        if pipx run ruff format --diff $PKG_DIR; then
-          echo passed=yes >>"$GITHUB_OUTPUT"
-        else
-          echo passed=no >>"$GITHUB_OUTPUT"
-          echo "::error::source code not formatted"
-        fi
-      env:
-        PKG_DIR: lenskit
+      - name: 🪮 Check source code formatting
+        id: format
+        run: |
+          if ruff format --diff $PKG_DIR; then
+            echo passed=yes >>"$GITHUB_OUTPUT"
+          else
+            echo passed=no >>"$GITHUB_OUTPUT"
+            echo "::error::source code not formatted"
+          fi
+        env:
+          PKG_DIR: lenskit
 
-    - name: 🐜 Check source code lint rules
-      id: lint
-      run: |
-        if pipx run ruff check --output-format=github $PKG_DIR; then
-          echo passed=yes >>"$GITHUB_OUTPUT"
-        else
-          echo passed=no >>"$GITHUB_OUTPUT"
-          echo "::error::source code lint check failed"
-        fi
-      env:
-        PKG_DIR: lenskit
+      - name: 🐜 Check source code lint rules
+        id: lint
+        run: |
+          if ruff check --output-format=github $PKG_DIR; then
+            echo passed=yes >>"$GITHUB_OUTPUT"
+          else
+            echo passed=no >>"$GITHUB_OUTPUT"
+            echo "::error::source code lint check failed"
+          fi
+        env:
+          PKG_DIR: lenskit
 
-    - name: 🧾 Checking results
-      run: |
-        if [ "$FMT_PASSED" = no ]; then
-            echo "::error::format failed, failing build"
-            exit 1
-        fi
-        if [ "$LINT_PASSED" = no ]; then
-            if [ "$LINT_REQUIRED" = true ]; then
-                echo "::error::lint failed, failing build"
-                exit 2
-            else
-                echo "::error::lint failed but non-mandatory"
-            fi
-        fi
-      env:
-        FMT_PASSED: ${{ steps.fmt.outputs.passed }}
-        LINT_PASSED: ${{ steps.lint.outputs.passed }}
-        LINT_REQUIRED: False
+      - name: 🧾 Checking lint and format results
+        run: |
+          if [ "$FMT_PASSED" = no ]; then
+              echo "::error::format failed, failing build"
+              exit 1
+          fi
+          if [ "$LINT_PASSED" = no ]; then
+              if [ "$LINT_REQUIRED" = true ]; then
+                  echo "::error::lint failed, failing build"
+                  exit 2
+              else
+                  echo "::error::lint failed but non-mandatory"
+              fi
+          fi
+        env:
+          FMT_PASSED: ${{ steps.format.outputs.passed }}
+          LINT_PASSED: ${{ steps.lint.outputs.passed }}
+          LINT_REQUIRED: False
+
+      

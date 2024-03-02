@@ -27,6 +27,7 @@ scratch/
 # build outputs
 build/
 dist/
+*.egg-info
 *.pyd
 *.so
 *.dll

@@ -1,0 +1,5 @@
+prune envs
+prune .github
+prune .vscode
+exclude .*.yml
+exclude .*.yaml

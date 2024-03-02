@@ -1,46 +1,61 @@
-name: Build Packages
+name: Package and Publish
+
 on:
   push:
     branches:
       - main
   release:
     types: [published]
+
 jobs:
-  sdist:
-    name: Build and upload packages
+  dist:
+    name: Build Packages
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Fetch Git tags
-      run: git fetch --tags
+      - name: Fetch Git tags
+        run: git fetch --tags
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
 
-    - name: Install Python packaging deps
-      run: pip install -U flit
+      - name: Install Python deps
+        run: pip install -U build
 
-    - name: Build source dist
-      run: flit build
+      - name: Build distribution
+        run: python -m build
 
-    - name: Save archive
-      uses: actions/upload-artifact@v1
-      with:
-        name: pypi-pkgs
-        path: dist
+      - name: Save archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: pypi-pkgs
+          path: dist
 
-    - name: List dist dir
-      run: ls -R dist
+      - name: List dist dir
+        run: ls -R dist
 
-    - name: Publish PyPI packages
-      if: github.event_name == 'release'
-      run: |
-        flit publish
-      env:
-        TWINE_NON_INTERACTIVE: y
-        FLIT_USERNAME: __token__
-        FLIT_PASSWORD: ${{ secrets.TWINE_TOKEN }}
+  pypi-publish:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: [dist]
+    if: github.event_name == 'release'
+
+    environment: release
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Fetch compiled package distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: pypi-pkgs
+          path: dist
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
