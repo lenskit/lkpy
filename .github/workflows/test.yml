@@ -165,7 +165,6 @@ jobs:
 
       - name: Set up dependencies
         run: |
-          pip install cython
           pip install -e '.[test]'
 
       - name: Inspect environment
