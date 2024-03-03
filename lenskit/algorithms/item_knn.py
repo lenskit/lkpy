@@ -208,58 +208,67 @@ _predictors = {"weighted-average": _predict_weighted_average, "sum": _predict_su
 
 class ItemItem(Predictor):
     """
-    Item-item nearest-neighbor collaborative filtering with ratings. This item-item implementation
-    is not terribly configurable; it hard-codes design decisions found to work well in the previous
-    Java-based LensKit code :cite:p:`Ekstrand2011-bp`.  This implementation is based on the description
-    of item-based CF by :cite:t:`Deshpande2004-ht`, and produces results equivalent to Java LensKit.
+    Item-item nearest-neighbor collaborative filtering with ratings. This
+    item-item implementation is not terribly configurable; it hard-codes design
+    decisions found to work well in the previous Java-based LensKit code
+    :cite:p:`Ekstrand2011-bp`.  This implementation is based on the description
+    of item-based CF by :cite:t:`Deshpande2004-ht`, and produces results
+    equivalent to Java LensKit.
 
     The k-NN predictor supports several aggregate functions:
 
     ``weighted-average``
-        The weighted average of the user's rating values, using item-item similarities as
-        weights.
+        The weighted average of the user's rating values, using item-item
+        similarities as weights.
 
     ``sum``
-        The sum of the similarities between the target item and the user's rated items,
-        regardless of the rating the user gave the items.
+        The sum of the similarities between the target item and the user's rated
+        items, regardless of the rating the user gave the items.
 
     Args:
         nnbrs(int):
-            the maximum number of neighbors for scoring each item (``None`` for unlimited)
+            the maximum number of neighbors for scoring each item (``None`` for
+            unlimited)
         min_nbrs(int): the minimum number of neighbors for scoring each item
         min_sim(float): minimum similarity threshold for considering a neighbor
         save_nbrs(float):
             the number of neighbors to save per item in the trained model
             (``None`` for unlimited)
         feedback(str):
-            Control how feedback should be interpreted.  Specifies defaults for the other
-            settings, which can be overridden individually; can be one of the following values:
+            Control how feedback should be interpreted.  Specifies defaults for
+            the other settings, which can be overridden individually; can be one
+            of the following values:
 
             ``explicit``
-                Configure for explicit-feedback mode: use rating values, center ratings, and
-                use the ``weighted-average`` aggregate method for prediction.  This is the
-                default setting.
+                Configure for explicit-feedback mode: use rating values, center
+                ratings, and use the ``weighted-average`` aggregate method for
+                prediction.  This is the default setting.
 
             ``implicit``
-                Configure for implicit-feedback mode: ignore rating values, do not center ratings,
-                and use the ``sum`` aggregate method for prediction.
+                Configure for implicit-feedback mode: ignore rating values, do
+                not center ratings, and use the ``sum`` aggregate method for
+                prediction.
         center(bool):
-            whether to normalize (mean-center) rating vectors prior to computing similarities
-            and aggregating user rating values.  Defaults to ``True``; turn this off when working
-            with unary data and other data types that don't respond well to centering.
+            whether to normalize (mean-center) rating vectors prior to computing
+            similarities and aggregating user rating values.  Defaults to
+            ``True``; turn this off when working with unary data and other data
+            types that don't respond well to centering.
         aggregate(str):
-            the type of aggregation to do. Can be ``weighted-average`` (the default) or ``sum``.
+            the type of aggregation to do. Can be ``weighted-average`` (the
+            default) or ``sum``.
         use_ratings(bool):
-            whether or not to use the rating values. If ``False``, it ignores rating values and
-            considers an implicit feedback signal of 1 for every (user,item) pair present.
+            whether or not to use the rating values. If ``False``, it ignores
+            rating values and considers an implicit feedback signal of 1 for
+            every (user,item) pair present.
 
     Attributes:
         item_index_(pandas.Index): the index of item IDs.
         item_means_(numpy.ndarray): the mean rating for each known item.
-        item_counts_(numpy.ndarray): the number of saved neighbors for each item.
-        sim_matrix_(matrix.CSR): the similarity matrix.
-        user_index_(pandas.Index): the index of known user IDs for the rating matrix.
-        rating_matrix_(matrix.CSR): the user-item rating matrix for looking up users' ratings.
+        item_counts_(numpy.ndarray): the number of saved neighbors for each
+        item. sim_matrix_(matrix.CSR): the similarity matrix.
+        user_index_(pandas.Index): the index of known user IDs for the rating
+        matrix. rating_matrix_(matrix.CSR): the user-item rating matrix for
+        looking up users' ratings.
     """
 
     IGNORED_PARAMS = ["feedback"]
@@ -312,12 +321,12 @@ class ItemItem(Predictor):
                 )
             if self.aggregate == "weighted-average":
                 _logger.warning(
-                    "item-item configured to ignore ratings, but using weighted averages - likely bug"
+                    "item-item ignoring ratings but using weighted averages - likely bug"
                 )
                 warnings.warn(
                     util.clean_str(
                         """
-                    item-item configured to ignore ratings, but use weighted averages.  This configuration
+                    item-item ignoring ratings but using weighted averages.  This configuration
                     is unlikely to work well.
                 """
                     ),
