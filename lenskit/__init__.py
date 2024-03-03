@@ -8,7 +8,6 @@
 Toolkit for recommender systems research, teaching, and more.
 """
 
-
 from importlib.metadata import PackageNotFoundError, version
 
 from lenskit.algorithms import *  # noqa: F401,F403

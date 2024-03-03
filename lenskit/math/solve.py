@@ -8,7 +8,6 @@
 Efficient solver routines.
 """
 
-
 import numpy as np
 
 import cffi
