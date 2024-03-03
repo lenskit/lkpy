@@ -4,16 +4,16 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import itertools as it
 import functools as ft
-import pytest
+import itertools as it
 import math
 
 import numpy as np
 
-import lenskit.util.test as lktu
+import pytest
 
 import lenskit.crossfold as xf
+import lenskit.util.test as lktu
 
 
 def test_partition_rows():
@@ -104,7 +104,7 @@ def test_sample_non_disjoint():
 
     # There are enough splits & items we should pick at least one duplicate
     ipairs = (
-        (s1.test.set_index("user", "item").index, s2.test.set_index("user", "item").index)
+        (s1.test.set_index(["user", "item"]).index, s2.test.set_index(["user", "item"]).index)
         for (s1, s2) in it.product(splits, splits)
     )
     isizes = [len(i1.intersection(i2)) for (i1, i2) in ipairs]
