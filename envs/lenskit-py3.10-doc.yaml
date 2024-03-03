@@ -23,5 +23,6 @@ dependencies:
   - sphinx>=4.2
   - sphinx_rtd_theme>=0.5
   - sphinxcontrib-bibtex>=2.0
+  - sphinxext-opengraph>=0.5
   - tbb
   - threadpoolctl>=3.0
