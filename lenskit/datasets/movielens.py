@@ -92,7 +92,7 @@ class MovieLens:
         5                      Father of the Bride Part II (1995)                                           Comedy
         ...
         [9125 rows x 2 columns]
-        """
+        """  # noqa: E501
 
         fn = self.path / "movies.csv"
         movies = pd.read_csv(
@@ -377,7 +377,7 @@ class MLM:
         5                      Father of the Bride Part II (1995)                                           Comedy
         ...
         [10681 rows x 2 columns]
-        """
+        """  # noqa: E501
         fn = self.path / "movies.dat"
         movies = pd.read_csv(
             fn,
