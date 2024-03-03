@@ -118,7 +118,6 @@ target-version = "py310"
 exclude = [
   ".git",
   "__pycache__",
-  "docs/conf.py",
   "build",
   "dist",
 ]
