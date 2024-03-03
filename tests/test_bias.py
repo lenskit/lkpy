@@ -69,6 +69,22 @@ def test_bias_clone():
     assert getattr(a2, "user_offsets_", None) is None
 
 
+def test_bias_clone_damping():
+    algo = Bias(damping=(10, 5))
+    algo.fit(simple_df)
+
+    params = algo.get_params()
+    assert sorted(params.keys()) == ["damping", "items", "users"]
+
+    a2 = lku.clone(algo)
+    assert a2 is not algo
+    assert getattr(a2, "item_damping", None) == 5
+    assert getattr(a2, "user_damping", None) == 10
+    assert getattr(a2, "mean_", None) is None
+    assert getattr(a2, "item_offsets_", None) is None
+    assert getattr(a2, "user_offsets_", None) is None
+
+
 def test_bias_global_only():
     algo = Bias(users=False, items=False)
     algo.fit(simple_df)

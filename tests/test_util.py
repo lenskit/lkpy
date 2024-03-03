@@ -4,12 +4,11 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import time
 import re
-import pathlib
+import time
 
-import numpy as np
-import pandas as pd
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 
 from lenskit import util as lku
 
@@ -50,6 +49,7 @@ def test_stopwatch_long_str():
 def test_stopwatch_minutes():
     w = lku.Stopwatch()
     w.stop()
+    assert w.stop_time is not None
     w.start_time = w.stop_time - 62
     s = str(w)
     p = re.compile(r"1m2.\d\ds")
@@ -59,6 +59,7 @@ def test_stopwatch_minutes():
 def test_stopwatch_hours():
     w = lku.Stopwatch()
     w.stop()
+    assert w.stop_time is not None
     w.start_time = w.stop_time - 3663
     s = str(w)
     p = re.compile(r"1h1m3.\d\ds")
@@ -80,3 +81,23 @@ def test_last_memo():
     assert len(history) == 1
     cache("bar")
     assert len(history) == 2
+
+
+@settings(suppress_health_check=[HealthCheck.too_slow])
+@given(
+    st.one_of(
+        st.integers(),
+        st.floats(allow_nan=False),
+        st.lists(st.floats(allow_nan=False), max_size=100),
+        st.tuples(st.floats(allow_nan=False)),
+        st.tuples(st.floats(allow_nan=False), st.floats(allow_nan=False)),
+        st.tuples(
+            st.floats(allow_nan=False), st.floats(allow_nan=False), st.floats(allow_nan=False)
+        ),
+        st.emails(),
+    )
+)
+def test_clone_core_obj(obj):
+    o2 = lku.clone(obj)
+    assert o2 == obj
+    assert type(o2) == type(obj)
