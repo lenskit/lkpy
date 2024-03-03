@@ -11,7 +11,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from hypothesis import given
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from lenskit import util as lku
@@ -85,6 +85,7 @@ def test_last_memo():
     assert len(history) == 2
 
 
+@settings(suppress_health_check=[HealthCheck.too_slow])
 @given(
     st.one_of(
         st.integers(),
