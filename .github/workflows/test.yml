@@ -196,7 +196,7 @@ jobs:
         run: |
           set -e
           python -m pip install -U 'uv>=0.1.13'
-          uv pip install --system --resolution=lowest -e '.[test]'
+          uv pip install --system --resolution=lowest-direct -e '.[test]'
 
       - name: Inspect environment
         run: |
