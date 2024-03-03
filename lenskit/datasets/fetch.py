@@ -49,7 +49,7 @@ def fetch_ml(name: str, base_dir: Path):
 
     test_file = base_dir / ML_DATASETS[name]
     if test_file.exists():
-        _log.info(test_file, "already exists")
+        _log.info("%s already exists", test_file)
         return
 
     _log.info("downloading data set %s", name)
