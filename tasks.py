@@ -4,8 +4,6 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from lkbuild.tasks import *
-
 
 @task
 def update_env_specs(c):
