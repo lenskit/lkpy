@@ -19,7 +19,6 @@ dependencies:
   - docopt>=0.6
   - hypothesis>=6
   - invoke>=1
-  - ipython
   - ipython>=7
   - matplotlib~=3.4
   - myst-nb>=0.13
@@ -27,16 +26,16 @@ dependencies:
   - nbval>=0.9
   - notebook>=6
   - numba<0.59,>=0.56
-  - numpy>=1.22
-  - pandas<2,>=1.4
-  - pyproject2conda
+  - numpy>=1.23
+  - pandas<3,>=1.5
+  - pyproject2conda~=0.11
   - pytest-cov>=2.12
   - pytest-doctestplus>=0.9
   - pytest==7.*
   - python-build==1
   - ruff>=0.2
   - scikit-learn>=1.1
-  - scipy>=1.8.0
+  - scipy>=1.9.0
   - seedbank>=0.1.0
   - setuptools>=64
   - setuptools_scm>=8

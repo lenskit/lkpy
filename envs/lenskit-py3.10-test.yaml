@@ -17,12 +17,12 @@ dependencies:
   - csr>=0.5
   - hypothesis>=6
   - numba<0.59,>=0.56
-  - numpy>=1.22
-  - pandas<2,>=1.4
+  - numpy>=1.23
+  - pandas<3,>=1.5
   - pytest-cov>=2.12
   - pytest-doctestplus>=0.9
   - pytest==7.*
-  - scipy>=1.8.0
+  - scipy>=1.9.0
   - seedbank>=0.1.0
   - tbb
   - threadpoolctl>=3.0
