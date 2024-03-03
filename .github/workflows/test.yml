@@ -25,9 +25,10 @@ jobs:
         - "3.10"
         - "3.11"
         platform:
-        - macos
-        - windows
-        - ubuntu
+        - macos-latest
+        - macos-14
+        - windows-latest
+        - ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
