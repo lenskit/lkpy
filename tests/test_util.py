@@ -53,6 +53,7 @@ def test_stopwatch_long_str():
 def test_stopwatch_minutes():
     w = lku.Stopwatch()
     w.stop()
+    assert w.stop_time is not None
     w.start_time = w.stop_time - 62
     s = str(w)
     p = re.compile(r"1m2.\d\ds")
@@ -62,6 +63,7 @@ def test_stopwatch_minutes():
 def test_stopwatch_hours():
     w = lku.Stopwatch()
     w.stop()
+    assert w.stop_time is not None
     w.start_time = w.stop_time - 3663
     s = str(w)
     p = re.compile(r"1h1m3.\d\ds")
