@@ -87,10 +87,14 @@ def test_last_memo():
 
 @given(
     st.one_of(
-        st.lists(st.floats(allow_nan=False)),
-        st.tuples(st.floats(allow_nan=False)),
         st.integers(),
         st.floats(allow_nan=False),
+        st.lists(st.floats(allow_nan=False), max_size=100),
+        st.tuples(st.floats(allow_nan=False)),
+        st.tuples(st.floats(allow_nan=False), st.floats(allow_nan=False)),
+        st.tuples(
+            st.floats(allow_nan=False), st.floats(allow_nan=False), st.floats(allow_nan=False)
+        ),
         st.emails(),
     )
 )
