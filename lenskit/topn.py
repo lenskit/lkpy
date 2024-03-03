@@ -4,13 +4,13 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import logging
 import functools as ft
+import logging
 
 import numpy as np
 import pandas as pd
 
-from .metrics.topn import *
+from .metrics.topn import *  # noqa: F403
 from .util import Stopwatch
 
 _log = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ def _length(df, *args, **kwargs):
     return float(len(df))
 
 
-@bulk_impl(_length)
+@bulk_impl(_length)  # noqa: F405
 def _bulk_length(df, *args):
     return df.groupby("LKRecID")["item"].count()
 

@@ -7,11 +7,11 @@
 import logging
 import warnings
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-from ..algorithms import Recommender
 from .. import util
+from ..algorithms import Recommender
 from ..sharing import PersistedModel
 
 _logger = logging.getLogger(__name__)

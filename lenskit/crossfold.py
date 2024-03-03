@@ -8,9 +8,9 @@
 Data set cross-folding.
 """
 
-from collections import namedtuple
 import logging
 from abc import ABC, abstractmethod
+from collections import namedtuple
 
 import numpy as np
 import pandas as pd

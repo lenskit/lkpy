@@ -8,24 +8,25 @@
 Item-based k-NN collaborative filtering.
 """
 
-from sys import intern
 import logging
 import warnings
+from sys import intern
 
-import pandas as pd
+import csr.kernel as csrk
 import numpy as np
+import pandas as pd
 import scipy.sparse as sps
 import scipy.sparse.linalg as spla
-from csr import CSR, create_from_sizes, create_empty
-import csr.kernel as csrk
+from csr import CSR, create_empty, create_from_sizes
 from numba import njit, prange
 from numba.typed import List
 
-from lenskit import util, DataWarning, ConfigWarning
+from lenskit import ConfigWarning, DataWarning, util
 from lenskit.data import sparse_ratings
 from lenskit.sharing import in_share_context
-from lenskit.util.parallel import is_mp_worker
 from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
+from lenskit.util.parallel import is_mp_worker
+
 from . import Predictor
 
 _logger = logging.getLogger(__name__)

@@ -14,11 +14,11 @@ from contextlib import contextmanager
 
 import pytest
 
-from lenskit.datasets import MovieLens, ML100K
-from lenskit.crossfold import simple_test_pair
 from lenskit.algorithms.basic import PopScore
 from lenskit.algorithms.ranking import PlackettLuce
 from lenskit.batch import recommend
+from lenskit.crossfold import simple_test_pair
+from lenskit.datasets import ML100K, MovieLens
 
 ml_test = MovieLens("data/ml-latest-small")
 ml100k = ML100K("data/ml-100k")

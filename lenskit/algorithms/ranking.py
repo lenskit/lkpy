@@ -12,8 +12,8 @@ import logging
 
 import numpy as np
 
-from . import Recommender, Predictor
 from ..util import derivable_rng
+from . import Predictor, Recommender
 
 _log = logging.getLogger(__name__)
 
@@ -118,7 +118,7 @@ class PlackettLuce(Recommender):
     """
 
     def __init__(self, predictor, selector=None, *, rng_spec=None):
-        from .basic import UnratedItemCandidateSelector, Popular
+        from .basic import Popular, UnratedItemCandidateSelector
 
         if isinstance(predictor, TopN):
             _log.warn("wrapping Top-N in PlackettLuce, candidate selector probably redundant")

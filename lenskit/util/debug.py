@@ -17,10 +17,11 @@ Options:
         Turn on verbose logging
 """
 
-import sys
 import logging
-from typing import Optional
+import sys
 from dataclasses import dataclass
+from typing import Optional
+
 import numba
 import threadpoolctl
 

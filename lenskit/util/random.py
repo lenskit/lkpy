@@ -9,7 +9,6 @@ Utilities to manage randomness in LensKit and LensKit experiments.
 """
 
 import numpy as np
-
 import seedbank
 
 

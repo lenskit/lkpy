@@ -8,12 +8,12 @@
 Data manipulation routines.
 """
 
-from collections import namedtuple
 import logging
+from collections import namedtuple
 
-import scipy.sparse as sps
 import numpy as np
 import pandas as pd
+import scipy.sparse as sps
 from csr import CSR
 
 _log = logging.getLogger(__name__)

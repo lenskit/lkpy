@@ -8,10 +8,9 @@
 Efficient solver routines.
 """
 
-import numpy as np
-
 import cffi
 import numba as n
+import numpy as np
 from numba.extending import get_cython_function_address
 
 __ffi = cffi.FFI()

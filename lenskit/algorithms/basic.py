@@ -11,13 +11,12 @@ Basic utility algorithms and combiners.
 import logging
 from collections.abc import Iterable, Sequence
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from ..data import sparse_ratings
-from . import Predictor, Recommender, CandidateSelector
 from ..util import derivable_rng
-
+from . import CandidateSelector, Predictor, Recommender
 from .bias import Bias  # noqa: F401
 from .ranking import TopN  # noqa: F401
 

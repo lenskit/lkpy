@@ -4,15 +4,15 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import gc
+import logging
 import os
 import pathlib
 import tempfile
-import logging
-import gc
 
 import binpickle
 
-from . import sharing_mode, PersistedModel
+from . import PersistedModel, sharing_mode
 
 _log = logging.getLogger(__name__)
 

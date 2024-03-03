@@ -8,10 +8,9 @@
 Logging utilities.
 """
 
-import sys
 import logging
+import sys
 from logging.handlers import QueueListener
-import multiprocessing as mp
 
 _log = logging.getLogger(__name__)
 _lts_initialized = False

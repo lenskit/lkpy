@@ -8,18 +8,17 @@
 User-based k-NN collaborative filtering.
 """
 
-from sys import intern
 import logging
+from sys import intern
 
-import pandas as pd
 import numpy as np
-
+import pandas as pd
 from numba import njit
 
 from .. import util
 from ..data import sparse_ratings
-from . import Predictor
 from ..util.accum import kvp_minheap_insert
+from . import Predictor
 
 _logger = logging.getLogger(__name__)
 

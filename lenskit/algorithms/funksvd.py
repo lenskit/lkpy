@@ -11,9 +11,9 @@ FunkSVD (biased MF).
 import logging
 import time
 
-import pandas as pd
-import numpy as np
 import numba as n
+import numpy as np
+import pandas as pd
 from seedbank import numpy_rng
 
 try:
@@ -21,9 +21,9 @@ try:
 except ImportError:
     from numba import jitclass
 
+from .. import util
 from .bias import Bias
 from .mf_common import MFPredictor
-from .. import util
 
 _logger = logging.getLogger(__name__)
 

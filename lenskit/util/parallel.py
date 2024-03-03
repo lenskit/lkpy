@@ -8,21 +8,21 @@
 Utilities for parallel processing.
 """
 
-import os
-import multiprocessing as mp
-from multiprocessing.queues import SimpleQueue
+import faulthandler
 import functools as ft
 import logging
 import logging.handlers
-import faulthandler
-from concurrent.futures import ProcessPoolExecutor
-from abc import ABC, abstractmethod
+import multiprocessing as mp
+import os
 import pickle
-from threadpoolctl import threadpool_limits
+from abc import ABC, abstractmethod
+from concurrent.futures import ProcessPoolExecutor
+from multiprocessing.queues import SimpleQueue
 
 import seedbank
+from threadpoolctl import threadpool_limits
 
-from lenskit.sharing import persist, PersistedModel
+from lenskit.sharing import PersistedModel, persist
 from lenskit.util.log import log_queue
 
 _log = logging.getLogger(__name__)

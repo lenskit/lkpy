@@ -8,12 +8,12 @@
 Support for sharing and saving models and data structures.
 """
 
-import os
-import warnings
-from abc import abstractmethod, ABC
-from contextlib import contextmanager
-import threading
 import logging
+import os
+import threading
+import warnings
+from abc import ABC, abstractmethod
+from contextlib import contextmanager
 
 _log = logging.getLogger(__name__)
 
@@ -135,5 +135,5 @@ def persist(model, *, method=None):
     return method(model)
 
 
-from .binpickle import persist_binpickle, BPKPersisted  # noqa: E402,F401
-from .shm import persist_shm, SHMPersisted, SHM_AVAILABLE  # noqa: E402,F401
+from .binpickle import BPKPersisted, persist_binpickle  # noqa: E402,F401
+from .shm import SHM_AVAILABLE, SHMPersisted, persist_shm  # noqa: E402,F401

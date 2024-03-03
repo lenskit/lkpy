@@ -8,12 +8,13 @@
 Code to import commonly-used RecSys data sets into LensKit-compatible data frames.
 """
 
+import logging
 import os.path
 from pathlib import Path
-import logging
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+
 from lenskit.util import cached
 
 _log = logging.getLogger(__name__)

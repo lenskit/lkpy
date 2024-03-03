@@ -9,6 +9,7 @@ Accumulator support.
 """
 
 from numba import njit
+
 from .array import swap
 
 

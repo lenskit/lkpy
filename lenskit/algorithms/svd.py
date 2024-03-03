@@ -6,8 +6,8 @@
 
 import logging
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 try:
     from sklearn.decomposition import TruncatedSVD
@@ -17,10 +17,10 @@ except ImportError:
     TruncatedSVD = None
     SKL_AVAILABLE = False
 
-from . import Predictor
-from .bias import Bias
 from ..data import sparse_ratings
 from ..util import Stopwatch
+from . import Predictor
+from .bias import Bias
 
 _log = logging.getLogger(__name__)
 

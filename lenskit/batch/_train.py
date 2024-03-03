@@ -6,9 +6,9 @@
 
 import logging
 
-from lenskit.sharing import persist, persist_binpickle
-from lenskit.util.parallel import run_sp
+from lenskit.sharing import persist_binpickle
 from lenskit.util import Stopwatch
+from lenskit.util.parallel import run_sp
 
 _log = logging.getLogger(__name__)
 

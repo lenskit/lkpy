@@ -4,12 +4,12 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import sys
-from zipfile import ZipFile
-from urllib.request import urlopen
 import argparse
-from pathlib import Path
 import logging
+import sys
+from pathlib import Path
+from urllib.request import urlopen
+from zipfile import ZipFile
 
 _log = logging.getLogger("lenskit.datasets.fetch")
 

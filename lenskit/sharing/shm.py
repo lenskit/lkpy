@@ -4,12 +4,12 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import sys
 import logging
-import pickle
-from . import sharing_mode, PersistedModel
-
 import multiprocessing.shared_memory as shm
+import pickle
+import sys
+
+from . import PersistedModel, sharing_mode
 
 SHM_AVAILABLE = sys.platform != "win32"
 

@@ -8,16 +8,15 @@ import logging
 from collections import namedtuple
 
 import numpy as np
-from numba import njit, prange
-
 from csr import CSR
+from numba import njit, prange
 from seedbank import numpy_rng
 
+from .. import util
+from ..data import sparse_ratings
+from ..math.solve import _dposv
 from .bias import Bias
 from .mf_common import MFPredictor
-from ..data import sparse_ratings
-from .. import util
-from ..math.solve import _dposv
 
 _logger = logging.getLogger(__name__)
 
@@ -563,22 +562,26 @@ class ImplicitMF(MFPredictor):
         initially defaulted to ``True``, but with a warning.  In 0.14 it defaults to ``False``.
 
     Args:
-        features(int): the number of features to train
-        iterations(int): the number of iterations to train
-        reg(float): the regularization factor
-        weight(float): the scaling weight for positive samples (:math:`\\alpha` in :cite:p:`Hu2008-li`).
+        features(int):
+            The number of features to train
+        iterations(int):
+            The number of iterations to train
+        reg(float):
+            The regularization factor
+        weight(float):
+            The scaling weight for positive samples (:math:`\\alpha` in :cite:p:`Hu2008-li`).
         use_ratings(bool):
             Whether to use the `rating` column, if present.  Defaults to ``False``; when ``True``,
-            the values from the ``rating`` column are used, and multipled by ``weight``; if ``False``,
-            ImplicitMF treats every rated user-item pair as having a rating of 1.
+            the values from the ``rating`` column are used, and multipled by ``weight``; if
+            ``False``, ImplicitMF treats every rated user-item pair as having a rating of 1.
         method(str):
             the training method.
 
             ``'cg'`` (the default)
                 Conjugate gradient method :cite:p:`Takacs2011-ix`.
             ``'lu'``
-                A direct implementation of the original implicit-feedback ALS concept :cite:p:`Hu2008-li`
-                using LU-decomposition to solve for the optimized matrices.
+                A direct implementation of the original implicit-feedback ALS concept
+                :cite:p:`Hu2008-li` using LU-decomposition to solve for the optimized matrices.
 
         rng_spec:
             Random number generator or state (see :func:`lenskit.util.random.rng`).

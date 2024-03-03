@@ -13,8 +13,8 @@ implementations provided by the original LensKit Java package.  It also provides
 classes (:py:mod:`abc`) representing different algorithm capabilities.
 """
 
-from abc import ABCMeta, abstractmethod
 import inspect
+from abc import ABCMeta, abstractmethod
 
 __all__ = ["Algorithm", "Recommender", "Predictor", "CandidateSelector"]
 
@@ -217,8 +217,8 @@ class CandidateSelector(Algorithm, metaclass=ABCMeta):
         Utility function for converting a series or array into an array of item
         IDs.  Useful in implementations of :py:meth:`candidates`.
         """
-        import pandas as pd
         import numpy as np
+        import pandas as pd
 
         if isinstance(ratings, pd.Series):
             return ratings.index.values
