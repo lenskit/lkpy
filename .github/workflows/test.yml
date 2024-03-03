@@ -49,6 +49,10 @@ jobs:
           python -V
           numba -s
 
+      - name: Compile extension modules
+        run: |
+          just build-inplace
+
       - name: Test LKPY
         run: |
           python -m pytest --cov=lenskit --verbose --log-file=test.log
@@ -107,6 +111,10 @@ jobs:
             data
             !data/*.zip
           key: test-mldata-000
+
+      - name: Compile extension modules
+        run: |
+          just build-inplace
 
       - name: Download ML data
         run: |
