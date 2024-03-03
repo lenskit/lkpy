@@ -89,8 +89,8 @@ exclude = [
   "tasks.py",
 ]
 
-[tool.setuptools]
-packages = ["lenskit"]
+[tool.setuptools.packages.find]
+include = ["lenskit*"]
 
 [tool.setuptools_scm]
 version_scheme = "release-branch-semver"
