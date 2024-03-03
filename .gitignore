@@ -35,6 +35,7 @@ dist/
 *.lib
 *.o
 *.obj
+lenskit/**/*.c
 
 # environment locks that aren't committed
 /*env*.yml
@@ -48,3 +49,6 @@ conda-lock.yml
 *~
 *.tmp
 .vs/
+
+# CPP configurations are per-environment
+.vscode/c_cpp_properties.json
