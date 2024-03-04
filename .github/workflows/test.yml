@@ -16,7 +16,7 @@ concurrency:
 jobs:
   conda:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
-    runs-on: ${{matrix.platform}}-latest
+    runs-on: ${{matrix.platform}}
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -139,7 +139,7 @@ jobs:
 
   vanilla:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
-    runs-on: ${{matrix.platform}}-latest
+    runs-on: ${{matrix.platform}}
     timeout-minutes: 30
     strategy:
       fail-fast: false
