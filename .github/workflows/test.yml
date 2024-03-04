@@ -141,6 +141,40 @@ jobs:
         with:
           artifact-name: test-check-docs
 
+  cython-cover:
+    name: Measure Cython Coverage
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 👢 Set up Conda environment
+        uses: mamba-org/setup-micromamba@v1
+        id: setup
+        with:
+          environment-file: envs/lenskit-py3.11-dev.yaml
+          environment-name: lkpy
+          cache-environment: true
+          init-shell: bash
+
+      - name: Compile extension modules
+        run: |
+          just build-inplace
+        env:
+          BUILD_FOR_COVER: 1
+
+      - name: Run Eval Tests
+        run: |
+          python -m pytest --cov=lenskit -m 'not slow' --log-file test-cython-cover.log
+
+      - name: Process test results
+        uses: lenskit/lkbuild/actions/save-test-results@main
+        with:
+          artifact-name: test-cython-cover
+
   vanilla:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}
@@ -241,6 +275,7 @@ jobs:
     - vanilla
     - check-docs
     - mindep
+    - cython-cover
 
     steps:
       - name: Check out source

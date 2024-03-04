@@ -15,6 +15,7 @@ dependencies:
   - cffi>=1.15.0
   - coverage>=5
   - csr>=0.5
+  - cython==3.*
   - hypothesis>=6
   - numba<0.59,>=0.56
   - numpy>=1.23

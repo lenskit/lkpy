@@ -53,6 +53,7 @@ test = [
   "pytest-doctestplus ==1.*",
   "pytest-cov >= 2.12",
   "coverage >= 5",
+  "cython ==3.*",
   "hypothesis >= 6",
 ]
 doc = [
@@ -156,3 +157,6 @@ exclude = [
 ]
 reportMissingImports = true
 reportMissingTypeStubs = false
+
+[tool.coverage.run]
+plugins = ["Cython.Coverage"]
