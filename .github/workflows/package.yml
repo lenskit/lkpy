@@ -8,8 +8,8 @@ on:
     types: [published]
 
 jobs:
-  dist:
-    name: Build Packages
+  build_sdist:
+    name: Build Source Package
     runs-on: ubuntu-latest
 
     steps:
@@ -28,22 +28,42 @@ jobs:
       - name: Install Python deps
         run: pip install -U build
 
-      - name: Build distribution
-        run: python -m build
+      - name: Build source distribution
+        run: python -m build -s
 
       - name: Save archive
         uses: actions/upload-artifact@v4
         with:
-          name: pypi-pkgs
+          name: dist-src
           path: dist
 
       - name: List dist dir
         run: ls -R dist
 
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, windows-2019, macos-11]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.16.5
+        with:
+          output-dir: dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-wheels-${{ matrix.os }}
+          path: ./dist/*.whl
+
   pypi-publish:
     name: Publish to PyPI
     runs-on: ubuntu-latest
-    needs: [dist]
+    needs: [build_sdist, build_wheels]
     if: github.event_name == 'release'
 
     environment: release
@@ -54,8 +74,9 @@ jobs:
       - name: Fetch compiled package distributions
         uses: actions/download-artifact@v4
         with:
-          name: pypi-pkgs
+          pattern: dist-*
           path: dist
+          merge-multiple: true
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
