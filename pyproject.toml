@@ -101,7 +101,7 @@ build = "cp310* cp311*"
 skip = "pp*"
 
 [tool.cibuildwheel.macos]
-archs = "all"
+archs = "x86_64 arm64"
 
 # settings for generating conda environments for dev & CI, when needed
 [tool.pyproject2conda]
