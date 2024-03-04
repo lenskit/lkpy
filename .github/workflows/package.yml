@@ -12,6 +12,8 @@ jobs:
   build_sdist:
     name: Build Source Package
     runs-on: ubuntu-latest
+    outputs:
+      filename: ${{steps.build.outputs.filename}}
 
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +32,11 @@ jobs:
         run: pip install -U build
 
       - name: Build source distribution
-        run: python -m build -s
+        id: build
+        run: |
+          python -m build -s
+          basename dist/*.tar.gz |sed -e 's/^/filename=/' >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
 
       - name: Save archive
         uses: actions/upload-artifact@v4
@@ -44,18 +50,22 @@ jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    needs: [build_sdist]
     strategy:
       matrix:
         os: [ubuntu-20.04, windows-2019, macos-11]
 
     steps:
-      - uses: actions/checkout@v4
-      - name: Fetch Git tags
-        run: git fetch --tags
+      - name: Fetch compiled package distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-src
+          path: dist
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.16.5
         with:
+          package-dir: dist/${{needs.build_sdist.outputs.filename}}
           output-dir: dist
 
       - uses: actions/upload-artifact@v4
