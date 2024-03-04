@@ -16,7 +16,7 @@ concurrency:
 jobs:
   conda:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
-    runs-on: ${{matrix.platform}}-latest
+    runs-on: ${{matrix.platform}}
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -25,9 +25,10 @@ jobs:
         - "3.10"
         - "3.11"
         platform:
-        - macos
-        - windows
-        - ubuntu
+        - macos-latest
+        - macos-14
+        - windows-latest
+        - ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -138,7 +139,7 @@ jobs:
 
   vanilla:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
-    runs-on: ${{matrix.platform}}-latest
+    runs-on: ${{matrix.platform}}
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -147,8 +148,9 @@ jobs:
         - "3.10"
         - "3.11"
         platform:
-        - windows
-        - ubuntu
+        - windows-latest
+        - ubuntu-latest
+        - macos-14
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -163,7 +165,8 @@ jobs:
 
       - name: Set up dependencies
         run: |
-          pip install -e '.[test]'
+          python -m pip install -U 'uv>=0.1.13'
+          pip install --prefer-binary -e '.[test]'
 
       - name: Inspect environment
         run: |
