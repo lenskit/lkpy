@@ -96,6 +96,13 @@ include = ["lenskit*"]
 [tool.setuptools_scm]
 version_scheme = "release-branch-semver"
 
+[tool.cibuildwheel]
+build = "cp310* cp311*"
+skip = "pp*"
+
+[tool.cibuildwheel.macos]
+archs = "all"
+
 # settings for generating conda environments for dev & CI, when needed
 [tool.pyproject2conda]
 channels = ["conda-forge"]

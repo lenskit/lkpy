@@ -50,6 +50,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: Fetch Git tags
+        run: git fetch --tags
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.16.5
