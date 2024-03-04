@@ -167,7 +167,7 @@ jobs:
       - name: Set up dependencies
         run: |
           python -m pip install -U 'uv>=0.1.13'
-          uv pip install --system -e '.[test]'
+          pip install --prefer-binary -e '.[test]'
 
       - name: Inspect environment
         run: |
