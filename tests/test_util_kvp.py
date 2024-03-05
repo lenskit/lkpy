@@ -9,6 +9,7 @@ import numpy as np
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import assume, given, settings
+from pytest import mark
 
 from lenskit.util.kvp import KVPHeap
 
@@ -195,3 +196,21 @@ def test_kvp_sort(values):
     assert vs[-1] == np.min(ovs)
     assert all(ks == oks[ord])
     assert all(vs == ovs[ord])
+
+
+@mark.benchmark(group="KVPSort")
+def test_kvp_sort_cython(rng, benchmark):
+    N = 10000
+    K = 500
+    in_keys = np.arange(N)
+    in_vals = rng.uniform(size=N)
+
+    def op():
+        ks = np.zeros(K, np.int32)
+        vs = np.zeros(K, np.float64)
+        kvp = KVPHeap(0, 0, K, ks, vs)
+        for i in range(N):
+            kvp.insert(in_keys[i], in_vals[i])
+        kvp.sort()
+
+    benchmark(op)

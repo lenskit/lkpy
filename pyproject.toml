@@ -53,6 +53,7 @@ test = [
   "pytest-doctestplus ==1.*",
   "pytest-cov >= 2.12",
   "coverage >= 5",
+  "pytest-benchmark >=4.0.0",
   "cython ==3.*",
   "hypothesis >= 6",
 ]
