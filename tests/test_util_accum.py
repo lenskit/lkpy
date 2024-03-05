@@ -5,13 +5,14 @@
 # SPDX-License-Identifier: MIT
 
 import numpy as np
+from numba import njit
+
+import hypothesis.extra.numpy as nph
+import hypothesis.strategies as st
+from hypothesis import assume, given, settings
+from pytest import mark
 
 from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
-
-
-from hypothesis import given, assume, settings
-import hypothesis.strategies as st
-import hypothesis.extra.numpy as nph
 
 
 def test_kvp_add_to_empty():
@@ -185,3 +186,25 @@ def test_kvp_sort(values):
     assert vs[-1] == np.min(ovs)
     assert all(ks == oks[ord])
     assert all(vs == ovs[ord])
+
+
+@mark.benchmark(group="KVPSort")
+def test_kvp_sort_numba(rng, benchmark):
+    N = 10000
+    K = 500
+    in_keys = np.arange(N)
+    in_vals = rng.uniform(size=N)
+
+    def op():
+        ks = np.zeros(K, np.int32)
+        vs = np.zeros(K, np.float64)
+        ep = 0
+        for i in range(N):
+            ep = kvp_minheap_insert(0, ep, K, in_keys[i], in_vals[i], ks, vs)
+
+        kvp_minheap_sort(0, ep, ks, vs)
+
+    # dry run to compile
+    op()
+
+    benchmark(op)

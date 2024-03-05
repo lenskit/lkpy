@@ -20,6 +20,7 @@ dependencies:
   - numba<0.59,>=0.56
   - numpy>=1.23
   - pandas<3,>=1.5
+  - pytest-benchmark==4.*
   - pytest-cov>=2.12
   - pytest-doctestplus==1.*
   - pytest==7.*
