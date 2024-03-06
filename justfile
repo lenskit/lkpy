@@ -1,4 +1,5 @@
-default:
+# list the tasks in this project (default)
+list-tasks:
     just --list
 
 # clean up build artifacts
@@ -35,9 +36,11 @@ test-fast:
 test-matching query:
     python -m pytest -k {{query}}
 
+# build documentation
 docs:
     sphinx-build docs build/doc
 
+# preview documentation with live rebuild
 preview-docs:
     sphinx-autobuild --watch lenskit docs build/doc
 
