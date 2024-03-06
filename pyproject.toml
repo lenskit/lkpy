@@ -50,7 +50,7 @@ dev = [
 ]
 test = [
   "pytest ==7.*",
-  "pytest-doctestplus >= 0.9",
+  "pytest-doctestplus ==1.*",
   "pytest-cov >= 2.12",
   "coverage >= 5",
   "hypothesis >= 6",
