@@ -35,6 +35,12 @@ test-fast:
 test-matching query:
     python -m pytest -k {{query}}
 
+docs:
+    sphinx-build docs build/doc
+
+preview-docs:
+    sphinx-autobuild --watch lenskit docs build/doc
+
 # update environment specifications
 update-envs:
     pyproject2conda project
