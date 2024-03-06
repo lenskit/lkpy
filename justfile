@@ -11,6 +11,10 @@ clean:
 build:
     python -m build -n
 
+# build the extension modules in-place for testing
+build-inplace:
+    python setup.py build_ext --inplace
+
 # install the package
 [confirm("this installs package from a wheel, continue [y/N]?")]
 install:
@@ -29,15 +33,15 @@ setup-conda-env version="3.11" env="dev":
     conda env create -n lkpy -f envs/lenskit-py{{version}}-{{env}}.yaml
 
 # run tests with default configuration
-test:
+test: build-inplace
     python -m pytest
 
 # run fast tests
-test-fast:
+test-fast: build-inplace
     python -m pytest -m 'not slow'
 
 # run tests matching a keyword query
-test-matching query:
+test-matching query: build-inplace
     python -m pytest -k {{query}}
 
 # build documentation
