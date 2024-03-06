@@ -12,14 +12,15 @@ channels:
 dependencies:
   - python=3.10
   - binpickle>=0.3.2
+  - c-compiler
   - cffi>=1.15.0
   - copier==9.*
   - coverage>=5
   - csr>=0.5
   - docopt>=0.6
   - hypothesis>=6
-  - invoke>=1
   - ipython>=7
+  - just==1
   - matplotlib~=3.4
   - myst-nb>=0.13
   - nbformat>=5.2
@@ -30,7 +31,7 @@ dependencies:
   - pandas<3,>=1.5
   - pyproject2conda~=0.11
   - pytest-cov>=2.12
-  - pytest-doctestplus>=0.9
+  - pytest-doctestplus==1.*
   - pytest==7.*
   - python-build==1
   - ruff>=0.2
@@ -44,7 +45,6 @@ dependencies:
   - sphinx_rtd_theme>=0.5
   - sphinxcontrib-bibtex>=2.0
   - sphinxext-opengraph>=0.5
-  - tbb
   - threadpoolctl>=3.0
   - tqdm>=4
   - pip
