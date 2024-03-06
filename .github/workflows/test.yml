@@ -166,7 +166,7 @@ jobs:
 
       - name: Install build tools
         run: |
-          "$PYTHON" -m pip install -U 'uv>=0.1.15'
+          "$PYTHON" -m pip install -U 'uv>=0.1.15' cython
         env:
           PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
