@@ -12,10 +12,12 @@ channels:
 dependencies:
   - python=3.11
   - binpickle>=0.3.2
+  - c-compiler
   - cffi>=1.15.0
   - copier==9.*
   - coverage>=5
   - csr>=0.5
+  - cython==3.*
   - docopt>=0.6
   - hypothesis>=6
   - ipython>=7
