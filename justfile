@@ -24,6 +24,10 @@ install-editable:
 install-dev:
     pip install -e '.[dev,test,doc,sklearn]'
 
+# set up a conda environment for development
+setup-conda-env version="3.11" env="dev":
+    conda env create -n lkpy -f envs/lenskit-py{{version}}-{{env}}.yaml
+
 # run tests with default configuration
 test:
     python -m pytest
