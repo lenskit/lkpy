@@ -12,7 +12,6 @@ channels:
 dependencies:
   - python=3.10
   - binpickle>=0.3.2
-  - c-compiler
   - cffi>=1.15.0
   - copier==9.*
   - coverage>=5
@@ -36,6 +35,7 @@ dependencies:
   - setuptools>=64
   - setuptools_scm>=8
   - sphinx-autobuild>=2021
+  - tbb
   - threadpoolctl>=3.0
   - tqdm>=4
   - pip

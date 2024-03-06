@@ -12,7 +12,6 @@ channels:
 dependencies:
   - python=3.11
   - binpickle>=0.3.2
-  - c-compiler
   - cffi>=1.15.0
   - copier==9.*
   - coverage>=5
@@ -20,7 +19,7 @@ dependencies:
   - docopt>=0.6
   - hypothesis>=6
   - ipython>=7
-  - just==1
+  - just==1.*
   - matplotlib~=3.4
   - myst-nb>=0.13
   - nbformat>=5.2
@@ -45,6 +44,7 @@ dependencies:
   - sphinx_rtd_theme>=0.5
   - sphinxcontrib-bibtex>=2.0
   - sphinxext-opengraph>=0.5
+  - tbb
   - threadpoolctl>=3.0
   - tqdm>=4
   - pip
