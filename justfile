@@ -20,7 +20,7 @@ install:
 install-editable:
     pip install -e .
 
-# set up for development
+# set up for development in non-conda environments
 install-dev:
     pip install -e '.[dev,test,doc,sklearn]'
 
