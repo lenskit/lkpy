@@ -51,3 +51,7 @@ preview-docs:
 # update environment specifications
 update-envs:
     pyproject2conda project
+
+# update source file headers
+update-headers:
+    unbehead
