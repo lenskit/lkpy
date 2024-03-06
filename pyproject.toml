@@ -106,11 +106,11 @@ deps = ["tbb"]
 
 [tool.pyproject2conda.envs.dev]
 extras = ["dev", "test", "doc", "demo", "sklearn"]
-deps = ["just==1"]
+deps = ["just==1.*", "tbb"]
 
 [tool.pyproject2conda.envs.ci]
 extras = ["test", "sklearn", "dev"]
-deps = ["just==1.*"]
+deps = ["just==1.*", "tbb"]
 
 [tool.ruff]
 line-length = 100
