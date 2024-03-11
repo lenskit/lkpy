@@ -74,7 +74,7 @@ def recall(recs, truth, k=None):
     Compute recommendation recall.  This is computed as:
 
     .. math::
-        \\frac{|L \\cap I_u^{\\mathrm{test}}|}{\\operatorname{max}\\{|I_u^{\\mathrm{test}}|, k\\}}
+        \\frac{|L \\cap I_u^{\\mathrm{test}}|}{\\operatorname{min}\\{|I_u^{\\mathrm{test}}|, k\\}}
 
     This metric has a bulk implementation.
     """
@@ -120,7 +120,7 @@ def hit(recs, truth, k=None):
     lists, this computes the *hit rate* :cite:p:`Deshpande2004-ht`.
 
     .. math::
-        \\frac{|L \\cap I_u^{\\mathrm{test}}|}{\\operatorname{max}\\{|I_u^{\\mathrm{test}}|, k\\}}
+        \\frac{|L \\cap I_u^{\\mathrm{test}}|}{\\operatorname{min}\\{|I_u^{\\mathrm{test}}|, k\\}}
 
     This metric has a bulk implementation.
     """
