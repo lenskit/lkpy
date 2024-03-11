@@ -122,7 +122,10 @@ def hit(recs, truth, k=None):
     This metric has a bulk implementation.
     """
 
-    if k is not None:        
+    if len(truth) == 0:
+        return None
+
+    if k is not None:
         recs = recs.iloc[:k]
 
     good = recs["item"].isin(truth.index)
