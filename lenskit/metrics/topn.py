@@ -74,7 +74,7 @@ def recall(recs, truth, k=None):
     Compute recommendation recall.  This is computed as:
 
     .. math::
-        \\frac{|L \\cap I_u^{\\mathrm{test}}|}{\\operatorname{max}\\{|I_u^{\\mathrm{test}}|, k\\}}
+        \\frac{|L \\cap I_u^{\\mathrm{test}}|}{\\operatorname{min}\\{|I_u^{\\mathrm{test}}|, k\\}}
 
     This metric has a bulk implementation.
     """
@@ -119,17 +119,13 @@ def hit(recs, truth, k=None):
     is scored as 1, and lists with no relevant items as 0.  When averaged over the recommendation
     lists, this computes the *hit rate* :cite:p:`Deshpande2004-ht`.
 
-    .. math::
-        \\frac{|L \\cap I_u^{\\mathrm{test}}|}{\\operatorname{max}\\{|I_u^{\\mathrm{test}}|, k\\}}
-
     This metric has a bulk implementation.
     """
-    nrel = len(truth)
-    if nrel == 0:
+
+    if len(truth) == 0:
         return None
 
     if k is not None:
-        nrel = min(nrel, k)
         recs = recs.iloc[:k]
 
     good = recs["item"].isin(truth.index)
