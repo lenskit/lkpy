@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools_scm>=8"]
+requires = ["setuptools>=64", "setuptools_scm>=8", "cython==3.*"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -41,6 +41,7 @@ dev = [
   "ruff >= 0.2",
   "copier ==9.*",
   "unbeheader ~= 1.3",        # p2c: -p
+  "cython ==3.*",
   "ipython >= 7",
   "pyproject2conda ~=0.11",
   "sphinx-autobuild >= 2021",
@@ -52,6 +53,8 @@ test = [
   "pytest-doctestplus ==1.*",
   "pytest-cov >= 2.12",
   "coverage >= 5",
+  "pytest-benchmark >=4.0.0",
+  "cython ==3.*",
   "hypothesis >= 6",
 ]
 doc = [
@@ -89,11 +92,18 @@ exclude = [
   "tasks.py",
 ]
 
-[tool.setuptools]
-packages = ["lenskit"]
+[tool.setuptools.packages.find]
+include = ["lenskit*"]
 
 [tool.setuptools_scm]
 version_scheme = "release-branch-semver"
+
+[tool.cibuildwheel]
+build = "cp310* cp311*"
+skip = "pp*"
+
+[tool.cibuildwheel.macos]
+archs = "x86_64 arm64"
 
 # settings for generating conda environments for dev & CI, when needed
 [tool.pyproject2conda]
@@ -106,11 +116,11 @@ deps = ["tbb", "just"]
 
 [tool.pyproject2conda.envs.dev]
 extras = ["dev", "test", "doc", "demo", "sklearn"]
-deps = ["just==1.*", "tbb"]
+deps = ["just==1.*", "c-compiler", "tbb"]
 
 [tool.pyproject2conda.envs.ci]
 extras = ["test", "sklearn", "dev"]
-deps = ["just==1.*", "tbb"]
+deps = ["just==1.*", "c-compiler", "tbb"]
 
 [tool.ruff]
 line-length = 100
@@ -148,3 +158,6 @@ exclude = [
 ]
 reportMissingImports = true
 reportMissingTypeStubs = false
+
+[tool.coverage.run]
+plugins = ["Cython.Coverage"]

@@ -5,14 +5,13 @@
 # SPDX-License-Identifier: MIT
 
 import numpy as np
-from numba import njit
 
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import assume, given, settings
 from pytest import mark
 
-from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
+from lenskit.util.kvp import KVPHeap
 
 
 def test_kvp_add_to_empty():
@@ -20,10 +19,12 @@ def test_kvp_add_to_empty():
     vs = np.empty(10)
 
     # insert an item
-    n = kvp_minheap_insert(0, 0, 10, 5, 3.0, ks, vs)
+    kvp = KVPHeap(0, 0, 10, ks, vs)
+    n = kvp.insert(5, 3.0)
 
     # ep has moved
     assert n == 1
+    assert kvp.ep == 1
 
     # item is there
     assert ks[0] == 5
@@ -35,11 +36,13 @@ def test_kvp_add_larger():
     vs = np.empty(10)
 
     # insert an item
-    n = kvp_minheap_insert(0, 0, 10, 5, 3.0, ks, vs)
-    n = kvp_minheap_insert(0, n, 10, 1, 6.0, ks, vs)
+    kvp = KVPHeap(0, 0, 10, ks, vs)
+    n = kvp.insert(5, 3.0)
+    n = kvp.insert(1, 6.0)
 
     # ep has moved
     assert n == 2
+    assert kvp.ep == 2
 
     # data is there
     assert all(ks[:2] == [5, 1])
@@ -51,8 +54,9 @@ def test_kvp_add_smaller():
     vs = np.empty(10)
 
     # insert an item
-    n = kvp_minheap_insert(0, 0, 10, 5, 3.0, ks, vs)
-    n = kvp_minheap_insert(0, n, 10, 1, 1.0, ks, vs)
+    kvp = KVPHeap(0, 0, 10, ks, vs)
+    n = kvp.insert(5, 3.0)
+    n = kvp.insert(1, 1.0)
 
     # ep has moved
     assert n == 2
@@ -72,8 +76,9 @@ def test_kvp_add_several(kvp_len, data):
 
     values = np.random.randn(kvp_len) * 100
 
+    kvp = KVPHeap(0, 0, kvp_len, ks, vs)
     for k, v in enumerate(values):
-        n = kvp_minheap_insert(0, n, kvp_len, k, v, ks, vs)
+        n = kvp.insert(k, v)
 
     assert n == kvp_len
     # all key slots are used
@@ -85,7 +90,7 @@ def test_kvp_add_several(kvp_len, data):
 
     # it rejects a smaller value; -10000 is below our min value
     special_k = 500
-    n2 = kvp_minheap_insert(0, n, kvp_len, special_k, -10000.0, ks, vs)
+    n2 = kvp.insert(special_k, -10000)
 
     assert n2 == n
     assert all(ks != special_k)
@@ -96,7 +101,7 @@ def test_kvp_add_several(kvp_len, data):
     old_mv = vs[0]
     assume(np.median(vs) < 50)
     nv = data.draw(st.floats(np.median(vs), 100))
-    n2 = kvp_minheap_insert(0, n, kvp_len, special_k, nv, ks, vs)
+    n2 = kvp.insert(special_k, nv)
 
     assert n2 == n
     # the old value minimum key has been removed
@@ -116,10 +121,11 @@ def test_kvp_add_middle(data):
     avs = []
 
     values = st.floats(-100, 100)
+    kvp = KVPHeap(25, 25, 10, ks, vs)
     for k in range(25):
         v = data.draw(values)
         avs.append(v)
-        n = kvp_minheap_insert(25, n, 10, k, v, ks, vs)
+        n = kvp.insert(k, v)
 
     assert n == 35
     # all the keys
@@ -143,19 +149,22 @@ def test_kvp_insert_min():
     n = 0
 
     # something less than existing data
-    n = kvp_minheap_insert(0, n, 10, 5, -3.0, ks, vs)
+    kvp = KVPHeap(0, 0, 10, ks, vs)
+    n = kvp.insert(5, -3)
     assert n == 1
     assert ks[0] == 5
     assert vs[0] == -3.0
 
     # equal to existing data
-    n = kvp_minheap_insert(0, 0, 10, 7, -3.0, ks, vs)
+    kvp = KVPHeap(0, 0, 10, ks, vs)
+    n = kvp.insert(7, -3.0)
     assert n == 1
     assert ks[0] == 7
     assert vs[0] == -3.0
 
     # greater than to existing data
-    n = kvp_minheap_insert(0, 0, 10, 9, 5.0, ks, vs)
+    kvp = KVPHeap(0, 0, 10, ks, vs)
+    n = kvp.insert(9, 5.0)
     assert n == 1
     assert ks[0] == 9
     assert vs[0] == 5.0
@@ -170,9 +179,10 @@ def test_kvp_sort(values):
 
     n = 0
 
+    kvp = KVPHeap(0, 0, 10, ks, vs)
     for k in range(20):
         v = values[k]
-        n = kvp_minheap_insert(0, n, 10, k, v, ks, vs)
+        n = kvp.insert(k, v)
 
     assert n == 10
 
@@ -181,7 +191,7 @@ def test_kvp_sort(values):
     ord = np.argsort(ovs)
     ord = ord[::-1]
 
-    kvp_minheap_sort(0, n, ks, vs)
+    kvp.sort()
     assert vs[0] == np.max(ovs)
     assert vs[-1] == np.min(ovs)
     assert all(ks == oks[ord])
@@ -189,7 +199,7 @@ def test_kvp_sort(values):
 
 
 @mark.benchmark(group="KVPSort")
-def test_kvp_sort_numba(rng, benchmark):
+def test_kvp_sort_cython(rng, benchmark):
     N = 10000
     K = 500
     in_keys = np.arange(N)
@@ -198,13 +208,9 @@ def test_kvp_sort_numba(rng, benchmark):
     def op():
         ks = np.zeros(K, np.int32)
         vs = np.zeros(K, np.float64)
-        ep = 0
+        kvp = KVPHeap(0, 0, K, ks, vs)
         for i in range(N):
-            ep = kvp_minheap_insert(0, ep, K, in_keys[i], in_vals[i], ks, vs)
-
-        kvp_minheap_sort(0, ep, ks, vs)
-
-    # dry run to compile
-    op()
+            kvp.insert(in_keys[i], in_vals[i])
+        kvp.sort()
 
     benchmark(op)
