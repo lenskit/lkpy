@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.typing as npt
+from scipy.sparse import csr_array
 
 class CSMatrix:
     nrows: int
@@ -19,3 +20,5 @@ class CSMatrix:
         vs: npt.NDArray[np.float64],
     ): ...
     def row_ep(self, row: int) -> tuple[int, int]: ...
+    @staticmethod
+    def from_scipy(matrix: csr_array) -> CSMatrix: ...

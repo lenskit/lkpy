@@ -43,11 +43,20 @@ def test_init_matrix(m: sps.csr_array):
 
 
 @given(sparse_matrices())
-def test_csm_row_ep(m: sps.csr_array):
-    nr, nc = m.shape
-    m2 = CSMatrix(nr, nc, m.indptr, m.indices, m.data)
+def test_from_scipy(m: sps.csr_array):
+    print(m.shape, m.nnz, m.indptr.dtype, m.indices.dtype)
+    m2 = CSMatrix.from_scipy(m)
 
-    for i in range(nr):
+    assert m2.nrows == m.shape[0]
+    assert m2.ncols == m.shape[1]
+    assert m2.nnz == m.nnz
+
+
+@given(sparse_matrices())
+def test_csm_row_ep(m: sps.csr_array):
+    m2 = CSMatrix.from_scipy(m)
+
+    for i in range(m2.nrows):
         sp, ep = m2.row_ep(i)
         assert sp == m2.rowptr[i]
         assert ep == m2.rowptr[i + 1]

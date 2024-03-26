@@ -14,6 +14,12 @@ cdef class CSMatrix:
         self.values = vs
         self.nnz = self.rowptr[nr]
 
+    @staticmethod
+    def from_scipy(m):
+        nr, nc = m.shape
+
+        return CSMatrix(nr, nc, m.indptr, m.indices, m.data)
+
     cpdef (int,int) row_ep(self, row):
         if row < 0 or row >= self.nrows:
             raise IndexError(f"invalid row {row} for {self.nrows}x{self.ncols} matrix")
