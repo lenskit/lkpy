@@ -17,7 +17,7 @@ except ImportError:
 
 
 COVERAGE = os.environ.get("BUILD_FOR_COVER", None)
-EXT_SPECS = {"lenskit.util.kvp": None}
+EXT_SPECS = {"lenskit.util.kvp": None, "lenskit.util.csmatrix": None}
 
 CYTHON_OPTIONS = {}
 C_DEFINES = []
