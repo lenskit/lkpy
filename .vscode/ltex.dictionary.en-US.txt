@@ -1,1 +1,6 @@
 LensKit
+SemCalVer
+YYYY
+CalVer
+backported
+semver-stable

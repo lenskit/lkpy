@@ -1,0 +1,1 @@
+{"rule":"COMMA_COMPOUND_SENTENCE","sentence":"^\\QThis combination does mean that we may sometimes release a minor revision with the previous\nyear's major version number, if there are breaking changes in progress but not yet ready for\nrelease and we need to release new features or fixes for the current major version.\\E$"}
