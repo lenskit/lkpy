@@ -33,6 +33,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
+    "sphinx.ext.extlinks",
     "sphinxext.opengraph",
     "sphinxcontrib.bibtex",
     "sphinx_rtd_theme",
@@ -127,6 +128,14 @@ autodoc_typehints = "description"
 
 bibtex_bibfiles = ["lenskit.bib"]
 jupyter_execute_notebooks = "off"
+
+# -- external links
+
+extlinks = {
+    "issue": ("https://github.com/lenskit/lkpy/issues/%s", "🐞 %s"),
+    "pr": ("https://github.com/lenskit/lkpy/pull/%s", "⛙ %s"),
+    "user": ("https://github.com/%s", "@%s"),
+}
 
 # -- Module Canonicalization ------------------------------------------------
 

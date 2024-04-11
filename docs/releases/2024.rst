@@ -1,0 +1,42 @@
+2024 Releases
+=============
+
+The 2024 release series is **currently in development**.  No specific release
+date is set yet.
+
+2024 will bring breaking changes to several LensKit APIs to improve ergonomics,
+correctness-by-default, and flexibility.  It also adopts SPEC0_, a standard for
+supported versions of scientific Python libraries.
+
+.. _SPEC0: https://scientific-python.org/specs/spec-0000/
+
+2024.1 (in progress)
+--------------------
+
+The first 2024 release is currently in-progress.
+
+This document presents the highlights for this release. The full changelog for this release is available in the `Git history <https://github.com/lenskit/lkpy/compare/0.14.4...main>`_
+and `issue/PR milestone <https://github.com/lenskit/lkpy/milestone/14>`_.
+
+New Features (incremental)
+~~~~~~~~~
+
+* Added RBP top-N metric (:pr:`334`).
+* Added command-line tool to fetch datasets (:pr:`347`).
+
+Bug Fixes
+~~~~~~~~~
+
+* Fixed bug in NDCG list truncation (:issue:`309`, :pr:`312`).
+* :py:func:`lenskit.util.clone` now properly clones tuples (:pr:`358`).
+* Corrected documentation errors for :py:func:`~lenskit.metrics.topn.recall` and :py:func:`~lenskit.metrics.topn.hit` (:pr:`369` by :user:`lukas-wegmeth`).
+
+Dependencies and Maintenance
+~~~~~~~~~
+
+* Bumped minimum supported dependencies as per SPEC0_ (Python 3.10, NumPy 1.23, Pandas 1.5, SciPy 1.9).
+* Added support for Pandas 2 (:pr:`364`) and Python 3.12.
+* Improved Apple testing to include vanilla Python and Apple Silicon (:pr:`366`).
+* Updated build environment, dependency setup, taskrunning, and CI to more consistent and maintainable.
+* Removed legacy random code in favor of :py:mod:`seedbank` (:pr:`351`).
+* Code is now auto-formatted with Ruff.

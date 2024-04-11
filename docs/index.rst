@@ -32,7 +32,7 @@ Resources
    install
    GettingStarted
    examples
-   Release Notes <https://github.com/lenskit/lkpy/releases>
+   releases/index
 
 .. toctree::
    :maxdepth: 2
