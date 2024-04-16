@@ -171,7 +171,7 @@ jobs:
           PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
       - name: Set up Python deps
-        run: uv pip install --python "$PYTHON" --system -e '.[test]'
+        run: uv pip install --python "$PYTHON" -e '.[test]'
         env:
           PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
@@ -212,7 +212,7 @@ jobs:
           PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
       - name: Set up Python deps
-        run: uv pip install --python "$PYTHON" --system --resolution=lowest-direct -e '.[test]'
+        run: uv pip install --python "$PYTHON" --resolution=lowest-direct -e '.[test]'
         env:
           PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
