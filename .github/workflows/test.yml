@@ -159,22 +159,21 @@ jobs:
 
       - name: Set up Python
         uses: actions/setup-python@v5
+        id: pyinstall
         with:
           python-version: ${{matrix.python}}
           cache: 'pip'
 
-      - name: Set up build tools
+      - name: Install build tools
         run: |
-          python -m pip install -U 'uv>=0.1.13'
+          "$PYTHON" -m pip install -U 'uv>=0.1.15'
+        env:
+          PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
-      - name: Debug environment
-        run: |
-          which python
-          set
-
-      - name: Install Python dependencies
-        run: |
-          uv pip install --system -e '.[test]'
+      - name: Set up Python deps
+        run: uv pip install --python "$PYTHON" --system -e '.[test]'
+        env:
+          PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
       - name: Inspect environment
         run: |
@@ -182,7 +181,9 @@ jobs:
 
       - name: Run tests
         run: |
-          python -m pytest --cov=lenskit --cov-report=xml --log-file=test.log
+          "$PYTHON" -m pytest --cov=lenskit --cov-report=xml --log-file=test.log
+        env:
+          PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
       - name: Process test results
         uses: lenskit/lkbuild/actions/save-test-results@main
@@ -200,14 +201,20 @@ jobs:
 
       - name: Set up Python
         uses: actions/setup-python@v5
+        id: pyinstall
         with:
           python-version: '3.10'
 
       - name: Install build tools
-        run: python -m pip install -U 'uv>=0.1.15'
+        run: |
+          "$PYTHON" -m pip install -U 'uv>=0.1.15'
+        env:
+          PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
       - name: Set up Python deps
-        run: uv pip install --system --resolution=lowest-direct -e '.[test]'
+        run: uv pip install --python "$PYTHON" --system --resolution=lowest-direct -e '.[test]'
+        env:
+          PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
       - name: Inspect environment
         run: |
