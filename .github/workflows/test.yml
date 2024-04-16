@@ -163,9 +163,17 @@ jobs:
           python-version: ${{matrix.python}}
           cache: 'pip'
 
-      - name: Set up dependencies
+      - name: Set up build tools
         run: |
           python -m pip install -U 'uv>=0.1.13'
+
+      - name: Debug environment
+        run: |
+          which python
+          set
+
+      - name: Install Python dependencies
+        run: |
           uv pip install --system -e '.[test]'
 
       - name: Inspect environment
