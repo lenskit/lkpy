@@ -27,6 +27,7 @@ dependencies = [
   "scipy >= 1.9.0",
   "numba >= 0.56, < 0.59",
   "cffi >= 1.15.0",
+  "torch ==2.*",           # p2c: -s pytorch==2.*
   "threadpoolctl >=3.0",
   "binpickle >= 0.3.2",
   "seedbank >= 0.1.0",
@@ -98,7 +99,7 @@ version_scheme = "release-branch-semver"
 
 # settings for generating conda environments for dev & CI, when needed
 [tool.pyproject2conda]
-channels = ["conda-forge"]
+channels = ["conda-forge", "pytorch", "nodefaults"]
 python = ["3.10", "3.11"]
 default_envs = ["test", "doc"]
 template_python = "envs/lenskit-py{py_version}-{env}"

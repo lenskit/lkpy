@@ -9,6 +9,8 @@
 #
 channels:
   - conda-forge
+  - pytorch
+  - nodefaults
 dependencies:
   - python=3.11
   - binpickle>=0.3.2
@@ -23,6 +25,7 @@ dependencies:
   - pytest-cov>=2.12
   - pytest-doctestplus==1.*
   - pytest==7.*
+  - pytorch==2.*
   - scipy>=1.9.0
   - seedbank>=0.1.0
   - tbb
