@@ -4,13 +4,14 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import scipy.sparse as sps
 import pandas as pd
+import scipy.sparse as sps
+import torch
+
+from pytest import mark
 
 from lenskit.data import sparse_ratings
 from lenskit.util.test import ml_test
-
-from pytest import mark
 
 
 def test_sparse_matrix(rng):
@@ -88,6 +89,17 @@ def test_sparse_matrix_scipy_implicit():
     assert len(iidx) == ratings.item.nunique()
 
     assert all(mat.data == 1.0)
+
+
+def test_sparse_matrix_torch():
+    ratings = ml_test.ratings
+    mat: torch.Tensor
+    mat, uidx, iidx = sparse_ratings(ratings, torch=True)
+
+    assert torch.is_tensor(mat)
+    assert mat.is_sparse_csr
+    assert len(uidx) == ratings.user.nunique()
+    assert len(iidx) == ratings.item.nunique()
 
 
 def test_sparse_matrix_indexes(rng):

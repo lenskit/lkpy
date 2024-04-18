@@ -11,18 +11,16 @@ Item-based k-NN collaborative filtering.
 import logging
 import warnings
 from sys import intern
+from typing import Callable, Literal, TypeAlias
 
-import csr.kernel as csrk
 import numpy as np
 import pandas as pd
-import scipy.sparse as sps
-import scipy.sparse.linalg as spla
-from csr import CSR, create_empty, create_from_sizes
+import torch
+from csr import CSR, create_from_sizes
 from numba import njit, prange
-from numba.typed import List
 
 from lenskit import ConfigWarning, DataWarning, util
-from lenskit.data import sparse_ratings
+from lenskit.data.matrix import DimStats, sparse_ratings, sparse_row_stats
 from lenskit.sharing import in_share_context
 from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
 from lenskit.util.parallel import is_mp_worker
@@ -30,6 +28,21 @@ from lenskit.util.parallel import is_mp_worker
 from . import Predictor
 
 _logger = logging.getLogger(__name__)
+AggFun: TypeAlias = Callable[
+    [
+        torch.Tensor,
+        tuple[int, int],
+        torch.Tensor,
+        torch.Tensor,
+    ],
+    torch.Tensor,
+]
+
+
+@torch.jit.ignore
+def _msg(level, msg):
+    # type: (int, str) -> None
+    _logger.log(level, msg)
 
 
 def _make_blocks(n, size):
@@ -85,125 +98,173 @@ def _trim_sim_block(nitems, bsp, bitems, block, min_sim, max_nbrs):
     return block_csr
 
 
-@njit
-def _sim_block(block, bsp, bep, rmh, min_sim, max_nbrs, nitems):
+def _sim_row(matrix: torch.Tensor, row: torch.Tensor, min_sim: float, max_nbrs: int | None):
+    nitems, nusers = matrix.shape
+    # print("matrix", matrix.shape)
+    # print("row", row.shape)
+    # print("row", row)
+    # row = torch.sparse_csc_tensor(
+    #     ccol_indices=[0, 1],
+    #     row_indices=row.indices()[0],
+    #     values=row.values(),
+    #     size=(nusers, 1),
+    # )
+    # sim = torch.mm(matrix, row)
+    if len(row.indices()) == 0:
+        return 0, torch.empty((0,), dtype=torch.int32), torch.empty((0,), dtype=torch.float64)
+
+    row = row.to_dense()
+    sim = torch.mv(matrix, row)
+
+    mask = sim >= min_sim
+    cols = torch.nonzero(mask)[:, 0]
+    vals = sim[mask]
+
+    if max_nbrs is not None and max_nbrs > 0 and max_nbrs < vals.shape[0]:
+        cis, vals = torch.topk(vals, max_nbrs)
+        cols = cols[cis]
+
+    return len(cols), cols, vals
+
+
+def _sim_block(matrix: torch.Tensor, start: int, end: int, min_sim: float, max_nbrs: int | None):
     "Compute a single block of the similarity matrix"
-    # assert block.nrows == bep - bsp
+    bsize = end - start
 
-    bitems = block.nrows
-    if block.nnz == 0:
-        return create_empty(bitems, nitems)
+    counts = torch.zeros(bsize, dtype=torch.int32)
+    columns = []
+    values = []
 
-    # create a matrix handle for the subset matrix
-    amh = csrk.to_handle(block)
+    for i in range(start, end):
+        c, cs, vs = _sim_row(matrix, matrix[i], min_sim, max_nbrs)
+        counts[i - start] = c
+        columns.append(cs)
+        values.append(vs)
 
-    smh = csrk.mult_abt(rmh, amh)
-
-    csrk.release_handle(amh)
-
-    csrk.order_columns(smh)
-    block_csr = csrk.from_handle(smh)
-    # this is allowed now
-    csrk.release_handle(smh)
-
-    block_csr = _trim_sim_block(nitems, bsp, bitems, block_csr, min_sim, max_nbrs)
-
-    return block_csr
+    return counts, torch.cat(columns), torch.cat(values)
 
 
-@njit(nogil=True, parallel=not is_mp_worker())
-def _sim_blocks(trmat, blocks, ptrs, min_sim, max_nbrs):
-    "Compute the similarity matrix with blocked CSR kernel calls"
-    nitems = trmat.nrows
-    nblocks = len(blocks)
+def _sim_blocks(
+    matrix: torch.Tensor, min_sim: float, max_nbrs: int | None, block_size: int
+) -> torch.Tensor:
+    "Compute the similarity matrix with blocked matrix-matrix multiplies"
+    nitems, nusers = matrix.shape
 
-    null = create_empty(1, 1)
-    res = [null for i in range(nblocks)]
+    counts = [torch.tensor([0], dtype=torch.int32)]
+    columns = []
+    values = []
 
-    rmat_h = csrk.to_handle(trmat)
-    csrk.order_columns(rmat_h)
+    for start in range(0, nitems, block_size):
+        end = min(start + block_size, nitems)
+        cts, cis, vs = _sim_block(matrix, start, end, min_sim, max_nbrs)
+        counts.append(cts)
+        columns.append(cis)
+        values.append(vs)
 
-    for bi in prange(nblocks):
-        b = blocks[bi]
-        p = ptrs[bi]
-        bs, be = p
-        bres = _sim_block(b, bs, be, rmat_h, min_sim, max_nbrs, nitems)
-        res[bi] = bres
+    c_cat = torch.cat(counts)
+    crow_indices = torch.cumsum(c_cat, 0)
+    col_indices = torch.cat(columns)
+    c_values = torch.cat(values)
 
-    csrk.release_handle(rmat_h)
-
-    return res
+    return torch.sparse_csr_tensor(
+        crow_indices=crow_indices, col_indices=col_indices, values=c_values, size=(nitems, nitems)
+    )
 
 
-@njit(nogil=True)
-def _predict_weighted_average(model, nitems, nrange, ratings, rated, targets):
+def _predict_weighted_average(
+    model: torch.Tensor,
+    nrange: tuple[int, int],
+    rate_v: torch.Tensor,
+    rated: torch.Tensor,
+) -> torch.Tensor:
     "Weighted average prediction function"
+    nitems, _ni = model.shape
+    assert nitems == _ni
     min_nbrs, max_nbrs = nrange
-    scores = np.full(nitems, np.nan, dtype=np.float_)
+    sims = np.full(nitems, np.nan, dtype=np.float_)
 
-    for i in prange(targets.shape[0]):
-        iidx = targets[i]
-        rptr = model.rowptrs[iidx]
-        rend = model.rowptrs[iidx + 1]
+    _logger.debug("rated: %s", rated)
+    _logger.debug("ratev: %s", rate_v)
 
-        num = 0
-        denom = 0
-        nnbrs = 0
+    # we proceed rating-by-rating, and accumulate results
+    sims = torch.zeros(nitems)
+    sims = torch.zeros(nitems)
+    counts = torch.zeros(nitems, dtype=torch.int32)
 
-        for j in range(rptr, rend):
-            nidx = model.colinds[j]
-            if not rated[nidx]:
-                continue
+    # fast path: compute everything that we can
+    for i, iidx in enumerate(rated):
+        row = model[iidx]
+        row_is = row.indices()
+        row_vs = row.values()
+        _logger.debug("item %d: %d neighbors", iidx, len(row_is))
 
-            nnbrs = nnbrs + 1
-            num = num + ratings[nidx] * model.values[j]
-            denom = denom + np.abs(model.values[j])
+        counts[row_is] += 1
+        sims[row_is] += torch.abs(row_vs)
+        sims[row_is] += row_vs * rate_v[i]
 
-            if max_nbrs > 0 and nnbrs >= max_nbrs:
-                break
+    # slow-path items that have too many sims
+    if torch.any(counts > max_nbrs):
+        n = torch.sum(counts > max_nbrs)
+        _msg(logging.WARNING, f"{n} items have too many neighbors")
 
-        if nnbrs < min_nbrs:
-            continue
+    # compute averages for items that don't match the threshold
+    _logger.debug("sims: %s", sims)
+    _logger.debug("sims: %s", sims)
+    _logger.debug("counts: %s", counts)
+    mask = counts >= min_nbrs
+    sims[mask] /= sims[mask]
+    sims[torch.logical_not(mask)] = torch.nan
 
-        scores[iidx] = num / denom
-
-    return scores
+    return sims
 
 
-@njit(nogil=True)
-def _predict_sum(model, nitems, nrange, ratings, rated, targets):
+def _predict_sum(
+    model: torch.Tensor,
+    nrange: tuple[int, int],
+    rate_v: torch.Tensor,
+    rated: torch.Tensor,
+) -> torch.Tensor:
     "Sum-of-similarities prediction function"
+    nitems, _ni = model.shape
+    assert nitems == _ni
     min_nbrs, max_nbrs = nrange
-    scores = np.full(nitems, np.nan, dtype=np.float_)
+    sims = np.full(nitems, np.nan, dtype=np.float_)
 
-    for i in prange(targets.shape[0]):
-        iidx = targets[i]
-        rptr = model.rowptrs[iidx]
-        rend = model.rowptrs[iidx + 1]
+    _logger.debug("rated: %s", rated)
+    _logger.debug("ratev: %s", rate_v)
 
-        score = 0
-        nnbrs = 0
+    # we proceed rating-by-rating, and accumulate results
+    sims = torch.zeros(nitems)
+    counts = torch.zeros(nitems, dtype=torch.int32)
 
-        for j in range(rptr, rend):
-            nidx = model.colinds[j]
-            if not rated[nidx]:
-                continue
+    # fast path: compute everything that we can
+    for i, iidx in enumerate(rated):
+        row = model[iidx]
+        row_is = row.indices()
+        row_vs = row.values()
+        _logger.debug("item %d: %d neighbors", iidx, len(row_is))
 
-            nnbrs = nnbrs + 1
-            score = score + model.values[j]
+        counts[row_is] += 1
+        sims[row_is] += torch.abs(row_vs)
 
-            if max_nbrs > 0 and nnbrs >= max_nbrs:
-                break
+    # slow-path items that have too many sims
+    if torch.any(counts > max_nbrs):
+        n = torch.sum(counts > max_nbrs)
+        _msg(logging.WARNING, f"{n} items have too many neighbors")
 
-        if nnbrs < min_nbrs:
-            continue
+    # compute averages for items that don't match the threshold
+    _logger.debug("sims: %s", sims)
+    _logger.debug("sims: %s", sims)
+    _logger.debug("counts: %s", counts)
+    mask = counts >= min_nbrs
 
-        scores[iidx] = score
-
-    return scores
+    return torch.where(mask, sims, torch.nan)
 
 
-_predictors = {"weighted-average": _predict_weighted_average, "sum": _predict_sum}
+_predictors: dict[str, AggFun] = {
+    "weighted-average": _predict_weighted_average,
+    "sum": _predict_sum,
+}
 
 
 class ItemItem(Predictor):
@@ -260,15 +321,6 @@ class ItemItem(Predictor):
             whether or not to use the rating values. If ``False``, it ignores
             rating values and considers an implicit feedback signal of 1 for
             every (user,item) pair present.
-
-    Attributes:
-        item_index_(pandas.Index): the index of item IDs.
-        item_means_(numpy.ndarray): the mean rating for each known item.
-        item_counts_(numpy.ndarray): the number of saved neighbors for each
-        item. sim_matrix_(matrix.CSR): the similarity matrix.
-        user_index_(pandas.Index): the index of known user IDs for the rating
-        matrix. rating_matrix_(matrix.CSR): the user-item rating matrix for
-        looking up users' ratings.
     """
 
     IGNORED_PARAMS = ["feedback"]
@@ -278,17 +330,43 @@ class ItemItem(Predictor):
     AGG_WA = intern("weighted-average")
     RATING_AGGS = [AGG_WA]  # the aggregates that use rating values
 
+    nnbrs: int | None
+    min_nbrs: int
+    min_sim: float
+    save_nbrs: int | None
+    feedback: Literal["explicit", "implicit"]
+    block_size: int
+
+    item_index_: pd.Index
+    "The index of item IDs."
+    item_means_: torch.Tensor | None
+    "Mean rating for each known item."
+    item_counts_: torch.Tensor
+    "Number of saved neighbors for each item."
+    sim_matrix_: torch.Tensor
+    "Similarity matrix (sparse CSR tensor)."
+    user_index_: pd.Index
+    "Index of user IDs."
+    rating_matrix_: torch.Tensor
+    "Normalized rating matrix to look up user ratings at prediction time."
+
     def __init__(
-        self, nnbrs, min_nbrs=1, min_sim=1.0e-6, save_nbrs=None, feedback="explicit", **kwargs
+        self,
+        nnbrs: int | None,
+        min_nbrs: int = 1,
+        min_sim: float = 1.0e-6,
+        save_nbrs: int | None = None,
+        feedback: Literal["explicit", "implicit"] = "explicit",
+        block_size: int = 250,
+        **kwargs,
     ):
         self.nnbrs = nnbrs
-        if self.nnbrs is not None and self.nnbrs < 1:
-            self.nnbrs = -1
         self.min_nbrs = min_nbrs
         if self.min_nbrs is not None and self.min_nbrs < 1:
             self.min_nbrs = 1
         self.min_sim = min_sim
         self.save_nbrs = save_nbrs
+        self.block_size = block_size
 
         if feedback == "explicit":
             defaults = {"center": True, "aggregate": self.AGG_WA, "use_ratings": True}
@@ -351,23 +429,26 @@ class ItemItem(Predictor):
         self._timer = util.Stopwatch()
 
         _logger.debug("[%s] beginning fit, memory use %s", self._timer, util.max_memory())
-        _logger.debug("[%s] using CSR kernel %s", self._timer, csrk.name)
 
-        init_rmat, users, items = sparse_ratings(ratings)
+        init_rmat, users, items = sparse_ratings(ratings, torch=True)
         n_items = len(items)
         _logger.info(
             "[%s] made sparse matrix for %d items (%d ratings from %d users)",
             self._timer,
             len(items),
-            init_rmat.nnz,
+            len(init_rmat.values()),
             len(users),
         )
         _logger.debug("[%s] made matrix, memory use %s", self._timer, util.max_memory())
 
-        rmat, item_means = self._mean_center(ratings, init_rmat, items)
+        # we operate on *transposed* rating matrix: items on the rows
+        rmat = init_rmat.transpose(0, 1).to_sparse_csr()
+        stats = sparse_row_stats(rmat)
+
+        self._mean_center(rmat, stats)
         _logger.debug("[%s] centered, memory use %s", self._timer, util.max_memory())
 
-        rmat = self._normalize(rmat)
+        self._normalize(rmat, stats)
         _logger.debug("[%s] normalized, memory use %s", self._timer, util.max_memory())
 
         _logger.info("[%s] computing similarity matrix", self._timer)
@@ -377,120 +458,62 @@ class ItemItem(Predictor):
         _logger.info(
             "[%s] got neighborhoods for %d of %d items",
             self._timer,
-            np.sum(np.diff(smat.rowptrs) > 0),
+            np.sum(np.diff(smat.crow_indices()) > 0),
             n_items,
         )
 
-        _logger.info("[%s] computed %d neighbor pairs", self._timer, smat.nnz)
+        _logger.info("[%s] computed %d neighbor pairs", self._timer, len(smat.col_indices()))
 
         self.item_index_ = items
-        self.item_means_ = item_means
-        self.item_counts_ = np.diff(smat.rowptrs)
+        self.item_means_ = stats.means
+        self.item_counts_ = torch.diff(smat.crow_indices())
         self.sim_matrix_ = smat
+        self.sim_ind_ = torch.sparse_csr_tensor(
+            crow_indices=smat.crow_indices(),
+            col_indices=smat.col_indices(),
+            values=torch.full(smat.values().shape, 1, dtype=torch.uint8),
+        )
         self.user_index_ = users
         self.rating_matrix_ = init_rmat
-        # create an inverted similarity matrix for efficient scanning
-        self._sim_inv_ = smat.transpose()
-        _logger.info("[%s] transposed matrix for optimization", self._timer)
         _logger.debug("[%s] done, memory use %s", self._timer, util.max_memory())
 
         return self
 
-    def _mean_center(self, ratings, rmat, items):
+    def _mean_center(
+        self,
+        rmat: torch.Tensor,
+        stats: DimStats,
+    ) -> None:
         if not self.center:
-            return rmat, None
+            return
 
-        item_means = ratings.groupby("item").rating.mean()
-        item_means = item_means.reindex(items).values
-        mcvals = rmat.values - item_means[rmat.colinds]
-        nmat = rmat.copy(False)
-        nmat.values = mcvals
-        if np.allclose(nmat.values, 0):
+        rmat.values().subtract_(torch.repeat_interleave(stats.means, stats.counts))
+        if np.allclose(rmat.values(), 0.0):
             _logger.warn("normalized ratings are zero, centering is not recommended")
             warnings.warn(
                 "Ratings seem to have the same value, centering is not recommended.", DataWarning
             )
-        _logger.info("[%s] computed means for %d items", self._timer, len(item_means))
-        return nmat, item_means
+        _logger.info("[%s] computed means for %d items", self._timer, stats.n)
 
-    def _normalize(self, rmat):
-        rmat = rmat.to_scipy()
+    def _normalize(self, rmat: torch.Tensor, stats: DimStats) -> None:
         # compute column norms
-        norms = spla.norm(rmat, 2, axis=0)
-        # and multiply by a diagonal to normalize columns
-        recip_norms = norms.copy()
-        is_nz = recip_norms > 0
-        recip_norms[is_nz] = np.reciprocal(recip_norms[is_nz])
-        norm_mat = rmat @ sps.diags(recip_norms)
-        assert norm_mat.shape[1] == rmat.shape[1]
-        # and reset NaN
-        norm_mat.data[np.isnan(norm_mat.data)] = 0
+        sqmat = torch.sparse_csr_tensor(
+            crow_indices=rmat.crow_indices(),
+            col_indices=rmat.col_indices(),
+            values=rmat.values().square(),
+        )
+        norms = sqmat.sum(dim=1, keepdim=True).to_dense().reshape(rmat.shape[0])
+        norms.sqrt_()
+        # don't divide when norm is zero to avoid NaN
+        recip_norms = torch.where(norms > 0, torch.reciprocal(norms), 0.0)
+        # and multiply the reciprocal into our values
+        rmat.values().multiply_(torch.repeat_interleave(recip_norms, stats.counts))
         _logger.info("[%s] normalized rating matrix columns", self._timer)
-        return CSR.from_scipy(norm_mat, False)
 
-    def _compute_similarities(self, rmat):
-        trmat = rmat.transpose()
-        nitems = trmat.nrows
-        m_nbrs = self.save_nbrs
-        if m_nbrs is None or m_nbrs < 0:
-            m_nbrs = 0
+    def _compute_similarities(self, rmat: torch.Tensor):
+        nitems, nusers = rmat.shape
 
-        bounds = _make_blocks(nitems, 1000)
-        _logger.info(
-            "[%s] splitting %d items (%d ratings) into %d blocks",
-            self._timer,
-            nitems,
-            trmat.nnz,
-            len(bounds),
-        )
-        blocks = [trmat.subset_rows(sp, ep) for (sp, ep) in bounds]
-
-        _logger.info("[%s] computing similarities", self._timer)
-        ptrs = List(bounds)
-        nbs = List(blocks)
-        if not nbs:
-            # oops, this is the bad place
-            # in non-JIT node, List doesn't actually make the list
-            nbs = blocks
-            ptrs = bounds
-        s_blocks = _sim_blocks(trmat, nbs, ptrs, self.min_sim, m_nbrs)
-
-        nnz = sum(b.nnz for b in s_blocks)
-        tot_rows = sum(b.nrows for b in s_blocks)
-        _logger.info(
-            "[%s] computed %d similarities for %d items in %d blocks",
-            self._timer,
-            nnz,
-            tot_rows,
-            len(s_blocks),
-        )
-        row_nnzs = np.concatenate([b.row_nnzs() for b in s_blocks])
-        assert len(row_nnzs) == nitems, "only have {} rows for {} items".format(
-            len(row_nnzs), nitems
-        )
-
-        smat = CSR.empty(nitems, nitems, row_nnzs)
-        start = 0
-        for bi, b in enumerate(s_blocks):
-            bnr = b.nrows
-            end = start + bnr
-            v_sp = smat.rowptrs[start]
-            v_ep = smat.rowptrs[end]
-            _logger.debug(
-                "block %d (%d:%d) has %d entries, storing in %d:%d",
-                bi,
-                start,
-                end,
-                b.nnz,
-                v_sp,
-                v_ep,
-            )
-            smat.colinds[v_sp:v_ep] = b.colinds
-            smat.values[v_sp:v_ep] = b.values
-            start = end
-
-        _logger.info("[%s] sorting similarity matrix with %d entries", self._timer, smat.nnz)
-        _sort_nbrs(smat)
+        smat = _sim_blocks(rmat, self.min_sim, self.save_nbrs, self.block_size)
 
         return smat
 
@@ -501,9 +524,10 @@ class ItemItem(Predictor):
                 _logger.debug("user %s missing, returning empty predictions", user)
                 return pd.Series(np.nan, index=items)
             upos = self.user_index_.get_loc(user)
+            row = self.rating_matrix_[upos]
             ratings = pd.Series(
-                self.rating_matrix_.row_vs(upos),
-                index=pd.Index(self.item_index_[self.rating_matrix_.row_cs(upos)]),
+                row.values(),
+                index=pd.Index(self.item_index_[row.indices()[0]]),
             )
 
         if not ratings.index.is_unique:
@@ -514,107 +538,31 @@ class ItemItem(Predictor):
         # get rated item positions & limit to in-model items
         n_items = len(self.item_index_)
         ri_pos = self.item_index_.get_indexer(ratings.index)
-        m_rates = ratings[ri_pos >= 0]
-        ri_pos = ri_pos[ri_pos >= 0]
-        rate_v = np.full(n_items, np.nan, dtype=np.float_)
-        rated = np.zeros(n_items, dtype="bool")
+
+        ri_vals = torch.from_numpy(ratings.values[ri_pos >= 0])
+        ri_pos = torch.from_numpy(ri_pos[ri_pos >= 0])
+
         # mean-center the rating array
         if self.center:
-            rate_v[ri_pos] = m_rates.values - self.item_means_[ri_pos]
-        else:
-            rate_v[ri_pos] = m_rates.values
-        rated[ri_pos] = True
+            assert self.item_means_ is not None
+            ri_vals -= self.item_means_[ri_pos]
 
         _logger.debug("user %s: %d of %d rated items in model", user, len(ri_pos), len(ratings))
-        assert np.sum(np.logical_not(np.isnan(rate_v))) == len(ri_pos)
-        assert np.all(np.isnan(rate_v) == np.logical_not(rated))
 
-        # set up item result vector
-        # ipos will be an array of item indices
-        i_pos = self.item_index_.get_indexer(items)
-        i_pos = i_pos[i_pos >= 0]
-        _logger.debug("user %s: %d of %d requested items in model", user, len(i_pos), len(items))
-
-        # now we take a first pass through the data to count _viable_ targets
-        # This computes the number of neighbors (and their weight sum) for
-        # each target item based on the user's ratings, allowing us to fast-path
-        # other computations and avoid as many neighbor truncations as possible
-        i_cts, i_sums, i_nbrs = self._count_viable_targets(i_pos, ri_pos)
-        viable = i_cts >= self.min_nbrs
-        i_pos = i_pos[viable]
-        i_cts = i_cts[viable]
-        i_sums = i_sums[viable]
-        i_nbrs = i_nbrs[viable]
-        _logger.debug(
-            "user %s: %d of %d requested items possibly reachable", user, len(i_pos), len(items)
+        # now compute the predictions
+        agg = _predictors[self.aggregate]
+        sims = agg(
+            self.sim_matrix_,
+            (self.min_nbrs, self.nnbrs),
+            ri_vals,
+            ri_pos,
         )
 
-        # look for some fast paths
-        if self.aggregate == self.AGG_SUM and self.min_sim >= 0:
-            # similarity sums are all we need
-            if self.nnbrs >= 0:
-                fast_mask = i_cts <= self.nnbrs
-                fast_items = i_pos[fast_mask]
-                fast_scores = i_sums[fast_mask]
-                slow_items = i_pos[~fast_mask]
-            else:
-                fast_items = i_pos
-                fast_scores = i_sums
-                slow_items = np.array([], dtype="i4")
-
-            _logger.debug(
-                "user %s: using fast-path similarity sum for %d items", user, len(fast_items)
-            )
-
-            if len(slow_items):
-                iscores = _predict_sum(
-                    self.sim_matrix_,
-                    len(self.item_index_),
-                    (self.min_nbrs, self.nnbrs),
-                    rate_v,
-                    rated,
-                    slow_items,
-                )
-            else:
-                iscores = np.full(len(self.item_index_), np.nan)
-            iscores[fast_items] = fast_scores
-
-        elif self.aggregate == self.AGG_WA and self.min_nbrs == 1:
-            # fast-path single-neighbor targets - common in sparse data
-            fast_mask = i_cts == 1
-            fast_items = i_pos[fast_mask]
-            fast_scores = rate_v[i_nbrs[fast_mask]]
-            if self.min_sim < 0:
-                fast_scores *= np.sign(i_sums[fast_mask])
-            _logger.debug("user %s: fast-pathed %d scores", user, len(fast_scores))
-
-            slow_items = i_pos[i_cts > 1]
-            iscores = _predict_weighted_average(
-                self.sim_matrix_,
-                len(self.item_index_),
-                (self.min_nbrs, self.nnbrs),
-                rate_v,
-                rated,
-                slow_items,
-            )
-            iscores[fast_items] = fast_scores
-        else:
-            # now compute the predictions
-            _logger.debug("user %s: taking the slow path", user)
-            agg = _predictors[self.aggregate]
-            iscores = agg(
-                self.sim_matrix_,
-                len(self.item_index_),
-                (self.min_nbrs, self.nnbrs),
-                rate_v,
-                rated,
-                i_pos,
-            )
-
         if self.center and self.aggregate in self.RATING_AGGS:
-            iscores += self.item_means_
+            assert self.item_means_ is not None
+            sims += self.item_means_
 
-        results = pd.Series(iscores, index=self.item_index_)
+        results = pd.Series(sims.numpy(), index=self.item_index_)
         results = results.reindex(items, fill_value=np.nan)
 
         _logger.debug(

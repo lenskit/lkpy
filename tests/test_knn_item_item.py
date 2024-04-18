@@ -4,32 +4,29 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from lenskit import ConfigWarning, DataWarning
+import gc
+import logging
+import pickle
+from pathlib import Path
+
+import csr.kernel as csrk
+import numpy as np
+import pandas as pd
+import torch
+from scipy import linalg as la
+
+import pytest
+from pytest import approx, fixture, mark
+
+import lenskit.algorithms.item_knn as knn
+import lenskit.util.test as lktu
+from lenskit import ConfigWarning, DataWarning, batch
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import Fallback
 from lenskit.algorithms.bias import Bias
-from lenskit import batch
-import lenskit.algorithms.item_knn as knn
 from lenskit.sharing import persist
-from lenskit.util.parallel import run_sp
-from lenskit.util import clone
-
-import gc
-from pathlib import Path
-import logging
-import pickle
-
-import pandas as pd
-import numpy as np
-from scipy import linalg as la
-import csr.kernel as csrk
-
-import pytest
-from pytest import approx, mark, fixture
-
-import lenskit.util.test as lktu
-from lenskit.util.parallel import invoker
-from lenskit.util import Stopwatch
+from lenskit.util import Stopwatch, clone
+from lenskit.util.parallel import invoker, run_sp
 
 _log = logging.getLogger(__name__)
 
@@ -101,9 +98,13 @@ def test_ii_train():
     algo.fit(simple_ratings)
 
     assert isinstance(algo.item_index_, pd.Index)
-    assert isinstance(algo.item_means_, np.ndarray)
-    assert isinstance(algo.item_counts_, np.ndarray)
-    matrix = algo.sim_matrix_.to_scipy()
+    assert isinstance(algo.item_means_, torch.Tensor)
+    assert isinstance(algo.item_counts_, torch.Tensor)
+    matrix = algo.sim_matrix_
+
+    test_means = simple_ratings.groupby("item")["rating"].mean()
+    test_means = test_means.reindex(algo.item_index_)
+    assert np.all(algo.item_means_.numpy() == test_means.values.astype("f4"))
 
     # 6 is a neighbor of 7
     six, seven = algo.item_index_.get_indexer([6, 7])
@@ -121,23 +122,23 @@ def test_ii_train():
     num = six_v.dot(seven_v)
     assert matrix[six, seven] == approx(num / denom, 0.01)
 
-    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
-    assert all(algo.sim_matrix_.values > 0)
+    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values().numpy())))
+    assert all(algo.sim_matrix_.values() > 0)
     # a little tolerance
-    assert all(algo.sim_matrix_.values < 1 + 1.0e-6)
+    assert all(algo.sim_matrix_.values() < 1 + 1.0e-6)
 
 
 def test_ii_train_unbounded():
     algo = knn.ItemItem(30)
     algo.fit(simple_ratings)
 
-    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
-    assert all(algo.sim_matrix_.values > 0)
+    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values())))
+    assert all(algo.sim_matrix_.values() > 0)
     # a little tolerance
-    assert all(algo.sim_matrix_.values < 1 + 1.0e-6)
+    assert all(algo.sim_matrix_.values() < 1 + 1.0e-6)
 
     # 6 is a neighbor of 7
-    matrix = algo.sim_matrix_.to_scipy()
+    matrix = algo.sim_matrix_
     six, seven = algo.item_index_.get_indexer([6, 7])
     assert matrix[six, seven] > 0
 
@@ -157,6 +158,7 @@ def test_ii_simple_predict():
     algo.fit(simple_ratings)
 
     res = algo.predict_for_user(3, [6])
+    _log.info("got predictions: %s", res)
     assert res is not None
     assert len(res) == 1
     assert 6 in res.index
@@ -216,10 +218,10 @@ def test_ii_train_big():
     algo = knn.ItemItem(30, save_nbrs=500)
     algo.fit(ml_ratings)
 
-    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
-    assert all(algo.sim_matrix_.values > 0)
+    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values())))
+    assert all(algo.sim_matrix_.values() > 0)
     # a little tolerance
-    assert all(algo.sim_matrix_.values < 1 + 1.0e-6)
+    assert all(algo.sim_matrix_.values() < 1 + 1.0e-6)
 
     assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
 
@@ -234,10 +236,10 @@ def test_ii_train_big_unbounded():
     algo = knn.ItemItem(30)
     algo.fit(ml_ratings)
 
-    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
-    assert all(algo.sim_matrix_.values > 0)
+    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values())))
+    assert all(algo.sim_matrix_.values() > 0)
     # a little tolerance
-    assert all(algo.sim_matrix_.values < 1 + 1.0e-6)
+    assert all(algo.sim_matrix_.values() < 1 + 1.0e-6)
 
     assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
 
@@ -256,11 +258,11 @@ def test_ii_train_ml100k(tmp_path):
 
     _log.info("testing model")
 
-    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
-    assert all(algo.sim_matrix_.values > 0)
+    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values())))
+    assert all(algo.sim_matrix_.values() > 0)
 
     # a little tolerance
-    assert all(algo.sim_matrix_.values < 1 + 1.0e-6)
+    assert all(algo.sim_matrix_.values() < 1 + 1.0e-6)
 
     assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
 
@@ -277,7 +279,7 @@ def test_ii_train_ml100k(tmp_path):
     with fn.open("rb") as modf:
         restored = pickle.load(modf)
 
-    assert all(restored.sim_matrix_.values > 0)
+    assert all(restored.sim_matrix_.values() > 0)
 
     r_mat = restored.sim_matrix_
     o_mat = algo.sim_matrix_
@@ -307,18 +309,18 @@ def test_ii_large_models():
     algo_ub.fit(ml_ratings)
 
     _log.info("testing models")
-    assert all(np.logical_not(np.isnan(algo_lim.sim_matrix_.values)))
-    assert all(algo_lim.sim_matrix_.values > 0)
+    assert all(np.logical_not(np.isnan(algo_lim.sim_matrix_.values())))
+    assert all(algo_lim.sim_matrix_.values() > 0)
     # a little tolerance
-    assert all(algo_lim.sim_matrix_.values < 1 + 1.0e-6)
+    assert all(algo_lim.sim_matrix_.values() < 1 + 1.0e-6)
 
     means = ml_ratings.groupby("item").rating.mean()
     assert means[algo_lim.item_index_].values == approx(algo_lim.item_means_)
 
-    assert all(np.logical_not(np.isnan(algo_ub.sim_matrix_.values)))
-    assert all(algo_ub.sim_matrix_.values > 0)
+    assert all(np.logical_not(np.isnan(algo_ub.sim_matrix_.values())))
+    assert all(algo_ub.sim_matrix_.values() > 0)
     # a little tolerance
-    assert all(algo_ub.sim_matrix_.values < 1 + 1.0e-6)
+    assert all(algo_ub.sim_matrix_.values() < 1 + 1.0e-6)
 
     means = ml_ratings.groupby("item").rating.mean()
     assert means[algo_ub.item_index_].values == approx(algo_ub.item_means_)
@@ -329,8 +331,8 @@ def test_ii_large_models():
         .assign(rating=lambda df: df.rating - df.item_mean)
     )
 
-    mat_lim = algo_lim.sim_matrix_.to_scipy()
-    mat_ub = algo_ub.sim_matrix_.to_scipy()
+    mat_lim = algo_lim.sim_matrix_
+    mat_ub = algo_ub.sim_matrix_
 
     _log.info("checking a sample of neighborhoods")
     items = pd.Series(algo_ub.item_index_)
@@ -407,16 +409,16 @@ def test_ii_save_load(tmp_path, ml_subset):
         algo = pickle.load(modf)
 
     _log.info("checking model")
-    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
-    assert all(algo.sim_matrix_.values > 0)
+    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values())))
+    assert all(algo.sim_matrix_.values() > 0)
     # a little tolerance
-    assert all(algo.sim_matrix_.values < 1 + 1.0e-6)
+    assert all(algo.sim_matrix_.values() < 1 + 1.0e-6)
 
     assert all(algo.item_counts_ == original.item_counts_)
     assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
     assert algo.sim_matrix_.nnz == original.sim_matrix_.nnz
     assert all(algo.sim_matrix_.rowptrs == original.sim_matrix_.rowptrs)
-    assert algo.sim_matrix_.values == approx(original.sim_matrix_.values)
+    assert algo.sim_matrix_.values() == approx(original.sim_matrix_.values())
 
     r_mat = algo.sim_matrix_
     o_mat = original.sim_matrix_
@@ -433,7 +435,7 @@ def test_ii_save_load(tmp_path, ml_subset):
     means = ml_ratings.groupby("item").rating.mean()
     assert means[algo.item_index_].values == approx(original.item_means_)
 
-    matrix = algo.sim_matrix_.to_scipy()
+    matrix = algo.sim_matrix_
 
     items = pd.Series(algo.item_index_)
     items = items[algo.item_counts_ > 0]
@@ -464,16 +466,16 @@ def test_ii_implicit_save_load(tmp_path, ml_subset):
         algo = pickle.load(modf)
 
     _log.info("checking model")
-    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values)))
-    assert all(algo.sim_matrix_.values > 0)
+    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values())))
+    assert all(algo.sim_matrix_.values() > 0)
     # a little tolerance
-    assert all(algo.sim_matrix_.values < 1 + 1.0e-6)
+    assert all(algo.sim_matrix_.values() < 1 + 1.0e-6)
 
     assert all(algo.item_counts_ == original.item_counts_)
     assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
     assert algo.sim_matrix_.nnz == original.sim_matrix_.nnz
     assert all(algo.sim_matrix_.rowptrs == original.sim_matrix_.rowptrs)
-    assert algo.sim_matrix_.values == approx(original.sim_matrix_.values)
+    assert algo.sim_matrix_.values() == approx(original.sim_matrix_.values())
     assert algo.rating_matrix_.values is None
 
     r_mat = algo.sim_matrix_
@@ -490,7 +492,7 @@ def test_ii_implicit_save_load(tmp_path, ml_subset):
 
     assert algo.item_means_ is None
 
-    matrix = algo.sim_matrix_.to_scipy()
+    matrix = algo.sim_matrix_
 
     items = pd.Series(algo.item_index_)
     items = items[algo.item_counts_ > 0]
@@ -513,7 +515,7 @@ def test_ii_old_implicit():
 
     algo.fit(data)
     assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
-    assert all(algo.sim_matrix_.values > 0)
+    assert all(algo.sim_matrix_.values() > 0)
     assert all(algo.item_counts_ <= 100)
 
     preds = algo.predict_for_user(50, [1, 2, 42])
@@ -530,7 +532,7 @@ def test_ii_no_ratings():
 
     algo.fit(ml_ratings)
     assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
-    assert all(algo.sim_matrix_.values > 0)
+    assert all(algo.sim_matrix_.values() > 0)
     assert all(algo.item_counts_ <= 100)
 
     preds = algo.predict_for_user(50, [1, 2, 42])
@@ -547,7 +549,7 @@ def test_ii_implicit_fast_ident():
 
     algo.fit(data)
     assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
-    assert all(algo.sim_matrix_.values > 0)
+    assert all(algo.sim_matrix_.values() > 0)
     assert all(algo.item_counts_ <= 100)
 
     preds = algo.predict_for_user(50, [1, 2, 42])
@@ -564,11 +566,10 @@ def test_ii_implicit_fast_ident():
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
 def test_ii_batch_accuracy():
-    from lenskit.algorithms import basic
-    from lenskit.algorithms import bias
     import lenskit.crossfold as xf
-    from lenskit import batch
     import lenskit.metrics.predict as pm
+    from lenskit import batch
+    from lenskit.algorithms import basic, bias
 
     ratings = lktu.ml100k.ratings
 
@@ -663,11 +664,11 @@ def test_ii_impl_match():
         assert all(mkl.sim_matrix_.rowptrs == nba.sim_matrix_.rowptrs)
         for i in range(mkl.sim_matrix_.nrows):
             sp, ep = mkl.sim_matrix_.row_extent(i)
-            assert all(np.diff(mkl.sim_matrix_.values[sp:ep]) <= 0)
-            assert all(np.diff(nba.sim_matrix_.values[sp:ep]) <= 0)
+            assert all(np.diff(mkl.sim_matrix_.values()[sp:ep]) <= 0)
+            assert all(np.diff(nba.sim_matrix_.values()[sp:ep]) <= 0)
             assert set(mkl.sim_matrix_.colinds[sp:ep]) == set(nba.sim_matrix_.colinds[sp:ep])
-            assert mkl.sim_matrix_.values[sp:ep] == approx(
-                nba.sim_matrix_.values[sp:ep], abs=1.0e-3
+            assert mkl.sim_matrix_.values()[sp:ep] == approx(
+                nba.sim_matrix_.values()[sp:ep], abs=1.0e-3
             )
 
     finally:

@@ -16,7 +16,7 @@ try:
     __version__ = version("lenskit")
 except PackageNotFoundError:
     # package is not installed
-    pass
+    __version__ = "UNKNOWN"
 
 
 class DataWarning(UserWarning):
