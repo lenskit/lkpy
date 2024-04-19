@@ -10,17 +10,16 @@ import pickle
 # get a usable pickle disassembler
 from pickletools import dis as pickle_dis
 
-from lenskit.algorithms import als
-from lenskit import util
-
-import pandas as pd
 import numpy as np
+import pandas as pd
 from seedbank import numpy_rng
 
 from pytest import approx, mark
 
-from lenskit.util import Stopwatch
 import lenskit.util.test as lktu
+from lenskit import util
+from lenskit.algorithms import als
+from lenskit.util import Stopwatch
 
 try:
     import binpickle
