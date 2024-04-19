@@ -32,9 +32,8 @@ def _inplace_axpy(a, x, y):
         y[i] += a * x[i]
 
 
-# @torch.compile
 def _rr_solve(
-    X: torch.Tensor, xis: np.ndarray, y: torch.Tensor, w: torch.Tensor, reg: float, epochs: int
+    X: torch.Tensor, xis: torch.Tensor, y: torch.Tensor, w: torch.Tensor, reg: float, epochs: int
 ) -> float:
     """
     RR1 coordinate descent solver.
@@ -68,7 +67,6 @@ def _rr_solve(
     return float(torch.dot(delta, delta))
 
 
-# @torch.compile
 def _train_matrix_cd(mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor, reg: float):
     """
     One half of an explicit ALS training round using coordinate descent.
@@ -101,7 +99,7 @@ def _train_matrix_cd(mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor,
     return np.sqrt(frob)
 
 
-# @torch.compile
+@torch.compile
 def _train_matrix_cholesky(mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor, reg: float):
     """
     One half of an explicit ALS training round using Cholesky decomposition on the normal
@@ -417,22 +415,23 @@ class BiasedMF(MFPredictor):
         util.check_env()
         self.timer = util.Stopwatch()
 
-        for epoch, algo in enumerate(self.fit_iters(ratings, **kwargs)):
-            pass  # we just need to do the iterations
+        with torch.no_grad():
+            for epoch, algo in enumerate(self.fit_iters(ratings, **kwargs)):
+                pass  # we just need to do the iterations
 
-        if self.user_features_ is not None:
-            _logger.info(
-                "trained model in %s (|P|=%f, |Q|=%f)",
-                self.timer,
-                torch.norm(self.user_features_, "fro"),
-                torch.norm(self.item_features_, "fro"),
-            )
-        else:
-            _logger.info(
-                "trained model in %s (|Q|=%f)",
-                self.timer,
-                torch.norm(self.item_features_, "fro"),
-            )
+            if self.user_features_ is not None:
+                _logger.info(
+                    "trained model in %s (|P|=%f, |Q|=%f)",
+                    self.timer,
+                    torch.norm(self.user_features_, "fro"),
+                    torch.norm(self.item_features_, "fro"),
+                )
+            else:
+                _logger.info(
+                    "trained model in %s (|Q|=%f)",
+                    self.timer,
+                    torch.norm(self.item_features_, "fro"),
+                )
 
         del self.timer
         return self
