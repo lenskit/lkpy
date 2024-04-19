@@ -539,6 +539,13 @@ class BiasedMF(MFPredictor):
         # umat = torch.from_numpy(umat)
         _logger.debug("|P|: %f", torch.norm(umat, "fro"))
 
+        if False:
+            _logger.info("training on CUDA")
+            imat = imat.to("cuda")
+            umat = umat.to("cuda")
+            rmat = rmat.to("cuda")
+            trmat = trmat.to("cuda")
+
         return PartialModel(users, items, umat, imat), rmat, trmat
 
     def _train_iters(self, current, uctx, ictx):
@@ -564,11 +571,13 @@ class BiasedMF(MFPredictor):
         i_trainer = ALSCholeskyTrainer(ictx, current.item_matrix, current.user_matrix, ireg)
 
         ctx = tmp.get_context("spawn")
-        with ctx.Pool(8, _worker_init, (u_trainer, i_trainer)) as pool:
+        with ctx.Pool(32, _worker_init, (u_trainer, i_trainer)) as pool:
             for epoch in self.progress(range(self.iterations), desc="BiasedMF", leave=False):
                 du = _train_parallel(pool, u_trainer, "left")
+                # du = _train_sequential(u_trainer)
                 _logger.debug("[%s] finished user epoch %d", self.timer, epoch)
                 di = _train_parallel(pool, i_trainer, "right")
+                # di = _train_sequential(i_trainer)
                 _logger.debug("[%s] finished item epoch %d", self.timer, epoch)
                 _logger.info(
                     "[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)", self.timer, epoch, du, di
