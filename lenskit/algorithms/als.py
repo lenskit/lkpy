@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import logging
 import math
-import sys
 import warnings
 from collections import namedtuple
 from typing import Literal, TypeAlias
@@ -65,6 +64,7 @@ def _train_solve_row(
 def _worker_init(left, right):
     global __trainers
     __trainers = left, right
+    torch.set_num_threads(1)
 
 
 def _worker_row(input):
@@ -564,7 +564,7 @@ class BiasedMF(MFPredictor):
         i_trainer = ALSCholeskyTrainer(ictx, current.item_matrix, current.user_matrix, ireg)
 
         ctx = tmp.get_context("spawn")
-        with ctx.Pool(4, _worker_init, (u_trainer, i_trainer)) as pool:
+        with ctx.Pool(8, _worker_init, (u_trainer, i_trainer)) as pool:
             for epoch in self.progress(range(self.iterations), desc="BiasedMF", leave=False):
                 du = _train_parallel(pool, u_trainer, "left")
                 _logger.debug("[%s] finished user epoch %d", self.timer, epoch)
