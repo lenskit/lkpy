@@ -8,6 +8,8 @@ import logging
 from collections import namedtuple
 
 import numpy as np
+import pandas as pd
+import torch
 from csr import CSR
 from numba import njit, prange
 from seedbank import numpy_rng
@@ -92,8 +94,7 @@ def _train_matrix_cd(mat: CSR, this: np.ndarray, other: np.ndarray, reg: float):
     return np.sqrt(frob)
 
 
-@njit(parallel=True, nogil=True)
-def _train_matrix_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
+def _train_matrix_lu(mat: CSR, npthis: np.ndarray, npother: np.ndarray, reg: float):
     """
     One half of an explicit ALS training round using LU-decomposition on the normal
     matrices to solve the least squares problem.
@@ -105,27 +106,36 @@ def _train_matrix_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
         reg: the regularization term
     """
     nr = mat.nrows
-    nf = other.shape[1]
-    regI = np.identity(nf) * reg
+    nf = npother.shape[1]
+    this = torch.from_numpy(npthis)
+    other = torch.from_numpy(npother)
+    regI = torch.eye(nf) * reg
+    regI.to(this.device)
     assert mat.ncols == other.shape[0]
     frob = 0.0
 
-    for i in prange(nr):
+    for i in range(nr):
         cols = mat.row_cs(i)
         if len(cols) == 0:
             continue
+        cols = torch.from_numpy(cols).to(this.device)
 
         vals = mat.row_vs(i)
+        vals = torch.from_numpy(vals).to(this.device)
         M = other[cols, :]
         MMT = M.T @ M
         # assert MMT.shape[0] == ctx.n_features
         # assert MMT.shape[1] == ctx.n_features
         A = MMT + regI * len(cols)
         V = M.T @ vals
+        V = V.resize(1, nf, 1)
         # and solve
-        _dposv(A, V, True)
+        L, info = torch.linalg.cholesky_ex(A)
+        if int(info):
+            raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
+        V = torch.cholesky_solve(V, L).reshape(nf)
         delta = this[i, :] - V
-        frob += np.dot(delta, delta)
+        frob += torch.dot(delta, delta)
         this[i, :] = V
 
     return np.sqrt(frob)
@@ -249,7 +259,7 @@ def _train_implicit_cg(mat, this: np.ndarray, other: np.ndarray, reg: float):
 
 
 @njit(parallel=True, nogil=True)
-def _train_implicit_lu(mat, this: np.ndarray, other: np.ndarray, reg: float):
+def _train_implicit_lu(mat: CSR, this: np.ndarray, other: np.ndarray, reg: float):
     "One half of an implicit ALS training round."
     nr = mat.nrows
     nc = other.shape[0]
@@ -347,6 +357,12 @@ class BiasedMF(MFPredictor):
     """
 
     timer = None
+    bias: Bias | None
+
+    user_index_: pd.Index | None
+    item_index_: pd.Index | None
+    user_features_: torch.Tensor | None
+    item_features_: torch.Tensor | None
 
     def __init__(
         self,
@@ -369,7 +385,7 @@ class BiasedMF(MFPredictor):
         if bias is True:
             self.bias = Bias(damping=damping)
         else:
-            self.bias = bias
+            self.bias = bias or None
         self.progress = progress if progress is not None else util.no_progress
         self.rng = numpy_rng(rng_spec)
         self.save_user_features = save_user_features
@@ -458,10 +474,12 @@ class BiasedMF(MFPredictor):
         _logger.debug("initializing item matrix")
         imat = self.rng.standard_normal((n_items, self.features))
         imat /= np.linalg.norm(imat, axis=1).reshape((n_items, 1))
+        # imat = torch.from_numpy(imat)
         _logger.debug("|Q|: %f", np.linalg.norm(imat, "fro"))
         _logger.debug("initializing user matrix")
         umat = self.rng.standard_normal((n_users, self.features))
         umat /= np.linalg.norm(umat, axis=1).reshape((n_users, 1))
+        # umat = torch.from_numpy(umat)
         _logger.debug("|P|: %f", np.linalg.norm(umat, "fro"))
 
         return PartialModel(users, items, umat, imat), rmat, trmat
