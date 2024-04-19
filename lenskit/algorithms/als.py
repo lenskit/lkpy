@@ -34,7 +34,7 @@ def _inplace_axpy(a, x, y):
 
 def _rr_solve(
     X: torch.Tensor, xis: np.ndarray, y: torch.Tensor, w: torch.Tensor, reg: float, epochs: int
-):
+) -> float:
     """
     RR1 coordinate descent solver.
 
@@ -43,12 +43,16 @@ def _rr_solve(
         xis: Row numbers in ``X`` that are rated.
         y: Rating values corresponding to ``xis``.
         w: Input/output vector to solve.
+
+    Returns:
+        The total squared change in ``w``.
     """
 
     nd = len(w)
     Xt = X[xis, :].transpose(0, 1)
     preds = w @ Xt
     resid = y - preds
+    delta = torch.zeros_like(w)
 
     for _e in range(epochs):
         for k in range(nd):
@@ -57,7 +61,10 @@ def _rr_solve(
             denom = float(torch.dot(xk, xk) + reg)
             dw = num / denom
             w[k] += dw
+            delta[k] += dw
             resid.add_(xk, alpha=-dw)
+
+    return float(torch.dot(delta, delta))
 
 
 def _train_matrix_cd(mat: CSR, npthis: np.ndarray, npother: np.ndarray, reg: float):
@@ -88,11 +95,8 @@ def _train_matrix_cd(mat: CSR, npthis: np.ndarray, npother: np.ndarray, reg: flo
         vals = mat.row_vs(i)
         vals = torch.from_numpy(vals)
 
-        w = this[i, :].clone()
-        _rr_solve(other, cols, vals, w, reg * len(cols), 2)
-        delta = this[i, :] - w
-        frob += np.dot(delta, delta)
-        this[i, :] = w
+        w = this[i, :]
+        frob += _rr_solve(other, cols, vals, w, reg * len(cols), 2)
 
     return np.sqrt(frob)
 
