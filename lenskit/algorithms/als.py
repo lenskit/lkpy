@@ -32,6 +32,7 @@ def _inplace_axpy(a, x, y):
         y[i] += a * x[i]
 
 
+# @torch.compile
 def _rr_solve(
     X: torch.Tensor, xis: np.ndarray, y: torch.Tensor, w: torch.Tensor, reg: float, epochs: int
 ) -> float:
@@ -67,7 +68,8 @@ def _rr_solve(
     return float(torch.dot(delta, delta))
 
 
-def _train_matrix_cd(mat: CSR, npthis: np.ndarray, npother: np.ndarray, reg: float):
+# @torch.compile
+def _train_matrix_cd(mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor, reg: float):
     """
     One half of an explicit ALS training round using coordinate descent.
 
@@ -77,23 +79,21 @@ def _train_matrix_cd(mat: CSR, npthis: np.ndarray, npother: np.ndarray, reg: flo
         other: the :math:`n \\times k` matrix of sample features
         reg: the regularization term
     """
-    nr = mat.nrows
-    this = torch.from_numpy(npthis)
-    other = torch.from_numpy(npother)
+    nr, nc = mat.shape
     nf = other.shape[1]
-    assert mat.ncols == other.shape[0]
-    assert mat.nrows == this.shape[0]
-    assert this.shape[1] == nf
+    assert nc == other.shape[0]
+    assert this.shape == (nr, nf)
 
     frob = 0.0
 
     for i in range(nr):
-        cols = mat.row_cs(i)
-        if len(cols) == 0:
+        row = mat[i]
+        (n,) = row.shape
+        if n == 0:
             continue
 
-        vals = mat.row_vs(i)
-        vals = torch.from_numpy(vals)
+        cols = row.indices()[0]
+        vals = row.values()
 
         w = this[i, :]
         frob += _rr_solve(other, cols, vals, w, reg * len(cols), 2)
@@ -101,7 +101,8 @@ def _train_matrix_cd(mat: CSR, npthis: np.ndarray, npother: np.ndarray, reg: flo
     return np.sqrt(frob)
 
 
-def _train_matrix_cholesky(mat: CSR, npthis: np.ndarray, npother: np.ndarray, reg: float):
+# @torch.compile
+def _train_matrix_cholesky(mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor, reg: float):
     """
     One half of an explicit ALS training round using Cholesky decomposition on the normal
     matrices to solve the least squares problem.
@@ -112,23 +113,19 @@ def _train_matrix_cholesky(mat: CSR, npthis: np.ndarray, npother: np.ndarray, re
         other: the :math:`n \\times k` matrix of sample features
         reg: the regularization term
     """
-    nr = mat.nrows
-    nf = npother.shape[1]
-    this = torch.from_numpy(npthis)
-    other = torch.from_numpy(npother)
-    regI = torch.eye(nf) * reg
-    regI.to(this.device)
-    assert mat.ncols == other.shape[0]
+    nr, nc = mat.shape
+    nf = other.shape[1]
+    regI = torch.eye(nf, device=this.device) * reg
     frob = 0.0
 
     for i in range(nr):
-        cols = mat.row_cs(i)
-        if len(cols) == 0:
+        row = mat[i]
+        (n,) = row.shape
+        if n == 0:
             continue
-        cols = torch.from_numpy(cols).to(this.device)
 
-        vals = mat.row_vs(i)
-        vals = torch.from_numpy(vals).to(this.device)
+        cols = row.indices()[0]
+        vals = row.values()
         M = other[cols, :]
         MMT = M.T @ M
         # assert MMT.shape[0] == ctx.n_features
@@ -148,25 +145,30 @@ def _train_matrix_cholesky(mat: CSR, npthis: np.ndarray, npother: np.ndarray, re
     return np.sqrt(frob)
 
 
-@njit(nogil=True)
-def _train_bias_row_lu(items, ratings, other, reg):
+def _train_bias_row_cholesky(
+    items: torch.Tensor, ratings: torch.Tensor, other: torch.Tensor, reg: float
+) -> torch.Tensor:
     """
     Args:
-        items(np.ndarray[i64]): the item IDs the user has rated
-        ratings(np.ndarray): the user's (normalized) ratings for those items
-        other(np.ndarray): the item-feature matrix
-        reg(float): the regularization term
+        items: the item IDs the user has rated
+        ratings: the user's (normalized) ratings for those items
+        other: the item-feature matrix
+        reg: the regularization term
     Returns:
-        np.ndarray: the user-feature vector (equivalent to V in the current LU code)
+        the user-feature vector (equivalent to V in the current Cholesky code)
     """
     M = other[items, :]
     nf = other.shape[1]
-    regI = np.identity(nf) * reg
+    regI = torch.eye(nf, device=other.device) * reg
     MMT = M.T @ M
     A = MMT + regI * len(items)
 
     V = M.T @ ratings
-    _dposv(A, V, True)
+    L, info = torch.linalg.cholesky_ex(A)
+    if int(info):
+        raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
+    V = V.resize(1, nf, 1)
+    V = torch.cholesky_solve(V, L).reshape(nf)
 
     return V
 
@@ -422,14 +424,14 @@ class BiasedMF(MFPredictor):
             _logger.info(
                 "trained model in %s (|P|=%f, |Q|=%f)",
                 self.timer,
-                np.linalg.norm(self.user_features_, "fro"),
-                np.linalg.norm(self.item_features_, "fro"),
+                torch.norm(self.user_features_, "fro"),
+                torch.norm(self.item_features_, "fro"),
             )
         else:
             _logger.info(
                 "trained model in %s (|Q|=%f)",
                 self.timer,
-                np.linalg.norm(self.item_features_, "fro"),
+                torch.norm(self.item_features_, "fro"),
             )
 
         del self.timer
@@ -476,23 +478,25 @@ class BiasedMF(MFPredictor):
             ratings = self.bias.transform(ratings)
 
         "Initialize a model and build contexts."
-        rmat, users, items = sparse_ratings(ratings)
+        rmat, users, items = sparse_ratings(ratings, torch=True)
         n_users = len(users)
         n_items = len(items)
 
         _logger.debug("setting up contexts")
-        trmat = rmat.transpose()
+        trmat = rmat.transpose(0, 1).to_sparse_csr()
 
         _logger.debug("initializing item matrix")
         imat = self.rng.standard_normal((n_items, self.features))
         imat /= np.linalg.norm(imat, axis=1).reshape((n_items, 1))
+        imat = torch.from_numpy(imat)
         # imat = torch.from_numpy(imat)
-        _logger.debug("|Q|: %f", np.linalg.norm(imat, "fro"))
+        _logger.debug("|Q|: %f", torch.norm(imat, "fro"))
         _logger.debug("initializing user matrix")
         umat = self.rng.standard_normal((n_users, self.features))
         umat /= np.linalg.norm(umat, axis=1).reshape((n_users, 1))
+        umat = torch.from_numpy(umat)
         # umat = torch.from_numpy(umat)
-        _logger.debug("|P|: %f", np.linalg.norm(umat, "fro"))
+        _logger.debug("|P|: %f", torch.norm(umat, "fro"))
 
         return PartialModel(users, items, umat, imat), rmat, trmat
 
@@ -507,10 +511,8 @@ class BiasedMF(MFPredictor):
         """
         n_items = len(current.items)
         n_users = len(current.users)
-        assert uctx.nrows == n_users
-        assert uctx.ncols == n_items
-        assert ictx.nrows == n_items
-        assert ictx.ncols == n_users
+        assert uctx.shape == (n_users, n_items)
+        assert ictx.shape == (n_items, n_users)
 
         if self.method == "cd":
             train = _train_matrix_cd
@@ -550,7 +552,7 @@ class BiasedMF(MFPredictor):
             else:
                 ureg = self.regularization
 
-            u_feat = _train_bias_row_lu(ri_it, ri_val, self.item_features_, ureg)
+            u_feat = _train_bias_row_cholesky(ri_it, ri_val, self.item_features_, ureg)
             scores = self.score_by_ids(user, items, u_feat)
         else:
             # look up user index
