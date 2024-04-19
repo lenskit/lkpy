@@ -3,14 +3,19 @@
 # Copyright (C) 2023-2024 Drexel University
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
 
 import logging
+import math
+import sys
 import warnings
 from collections import namedtuple
+from typing import Literal, TypeAlias
 
 import numpy as np
 import pandas as pd
 import torch
+import torch.multiprocessing as tmp
 from csr import CSR
 from numba import njit, prange
 from seedbank import numpy_rng
@@ -22,6 +27,8 @@ from .bias import Bias
 from .mf_common import MFPredictor
 
 _logger = logging.getLogger(__name__)
+__trainer: ALSCholeskyTrainer
+TrainHalf: TypeAlias = Literal["left", "right"]
 
 PartialModel = namedtuple("PartialModel", ["users", "items", "user_matrix", "item_matrix"])
 
@@ -33,6 +40,126 @@ def _inplace_axpy(a, x, y):
 
 
 @torch.compile
+def _train_solve_row(
+    cols: torch.Tensor,
+    vals: torch.Tensor,
+    this: torch.Tensor,
+    other: torch.Tensor,
+    regI: torch.Tensor,
+) -> torch.Tensor:
+    nf = this.shape[1]
+    M = other[cols, :]
+    MMT = M.T @ M
+    # assert MMT.shape[0] == ctx.n_features
+    # assert MMT.shape[1] == ctx.n_features
+    A = MMT + regI * len(cols)
+    V = M.T @ vals
+    V = V.reshape(1, nf, 1)
+    # and solve
+    L, info = torch.linalg.cholesky_ex(A)
+    if int(info):
+        raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
+    V = torch.cholesky_solve(V, L).reshape(nf)
+    return V
+
+
+def _worker_init(trainer):
+    global __trainer
+    __trainer = trainer
+
+
+def _worker_row(input):
+    # convert to numpy so we don't waste shm resources on results
+    mode, row, cols, vals = input
+    return row, __trainer.train_row(mode, torch.from_numpy(cols), torch.from_numpy(vals)).numpy()
+
+
+class ALSCholeskyTrainer:
+    matrix: torch.Tensor
+    left: torch.Tensor
+    right: torch.Tensor
+    lreg: float
+    embed_size: int
+    device: torch.device
+    dtype: torch.dtype
+
+    lregI: torch.Tensor | None = None
+    rregI: torch.Tensor | None = None
+
+    def __init__(self, left: torch.Tensor, right: torch.Tensor, lreg: float, rreg: float) -> None:
+        self.left = left
+        self.right = right
+        self.lreg = lreg
+        self.rreg = rreg
+        self.embed_size = right.shape[1]
+        self.device = left.device
+        self.dtype = left.dtype
+        assert right.dtype == left.dtype
+        assert right.device == left.device
+
+    def train_row(self, mode: TrainHalf, cols: torch.Tensor, vals: torch.Tensor) -> torch.Tensor:
+        with torch.inference_mode():
+            match mode:
+                case "left":
+                    if self.lregI is None:
+                        self.lregI = torch.eye(
+                            self.embed_size, device=self.device, dtype=self.dtype
+                        )
+                        self.lregI *= self.lreg
+                    return _train_solve_row(cols, vals, self.left, self.right, self.lregI)
+                case "right":
+                    if self.rregI is None:
+                        self.rregI = torch.eye(
+                            self.embed_size, device=self.device, dtype=self.dtype
+                        )
+                        self.rregI *= self.rreg
+                    return _train_solve_row(cols, vals, self.right, self.left, self.rregI)
+
+    def update_row(self, i, V) -> float:
+        delta = self.left[i, :] - V
+        self.left[i, :] = V
+        return torch.dot(delta, delta).item()
+
+
+def _train_sequential(mat: torch.Tensor, trainer: ALSCholeskyTrainer, mode: TrainHalf) -> float:
+    nr, nc = mat.shape
+    frob = 0.0
+
+    for i in range(nr):
+        row = mat[i]
+        (n,) = row.shape
+        if n == 0:
+            continue
+
+        cols = row.indices()[0].detach()
+        vals = row.values().detach()
+
+        V = trainer.train_row(mode, cols, vals)
+        frob += trainer.update_row(i, V)
+
+    return math.sqrt(frob)
+
+
+def _train_rows(mat: torch.Tensor, mode: TrainHalf):
+    nr, nc = mat.shape
+    for i in range(nr):
+        row = mat[i]
+        if row.shape[0] > 0:
+            cols = row.indices()[0].numpy()
+            vals = row.values().numpy()
+            yield mode, i, cols, vals
+
+
+def _train_parallel(pool, mat: torch.Tensor, trainer: ALSCholeskyTrainer, mode: TrainHalf) -> float:
+    frob = 0.0
+
+    for i, V in pool.imap(_worker_row, _train_rows(mat, mode)):
+        V = torch.from_numpy(V)
+        frob += trainer.update_row(i, V)
+
+    return math.sqrt(frob)
+
+
 def _train_matrix_cholesky(mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor, reg: float):
     """
     One half of an explicit ALS training round using Cholesky decomposition on the normal
@@ -46,7 +173,7 @@ def _train_matrix_cholesky(mat: torch.Tensor, this: torch.Tensor, other: torch.T
     """
     nr, nc = mat.shape
     nf = other.shape[1]
-    regI = torch.eye(nf, device=this.device) * reg
+    regI = torch.eye(nf, device=this.device, dtype=this.dtype) * reg
     frob = 0.0
 
     for i in range(nr):
@@ -56,19 +183,9 @@ def _train_matrix_cholesky(mat: torch.Tensor, this: torch.Tensor, other: torch.T
             continue
 
         cols = row.indices()[0]
-        vals = row.values()
-        M = other[cols, :]
-        MMT = M.T @ M
-        # assert MMT.shape[0] == ctx.n_features
-        # assert MMT.shape[1] == ctx.n_features
-        A = MMT + regI * len(cols)
-        V = M.T @ vals
-        V = V.reshape(1, nf, 1)
-        # and solve
-        L, info = torch.linalg.cholesky_ex(A)
-        if int(info):
-            raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
-        V = torch.cholesky_solve(V, L).reshape(nf)
+        vals = row.values().type(this.type())
+
+        V = _train_solve_row(cols, vals, this, other, regI)
         delta = this[i, :] - V
         frob += torch.dot(delta, delta)
         this[i, :] = V
@@ -342,23 +459,22 @@ class BiasedMF(MFPredictor):
         util.check_env()
         self.timer = util.Stopwatch()
 
-        with torch.no_grad():
-            for epoch, algo in enumerate(self.fit_iters(ratings, **kwargs)):
-                pass  # we just need to do the iterations
+        for epoch, algo in enumerate(self.fit_iters(ratings, **kwargs)):
+            pass  # we just need to do the iterations
 
-            if self.user_features_ is not None:
-                _logger.info(
-                    "trained model in %s (|P|=%f, |Q|=%f)",
-                    self.timer,
-                    torch.norm(self.user_features_, "fro"),
-                    torch.norm(self.item_features_, "fro"),
-                )
-            else:
-                _logger.info(
-                    "trained model in %s (|Q|=%f)",
-                    self.timer,
-                    torch.norm(self.item_features_, "fro"),
-                )
+        if self.user_features_ is not None:
+            _logger.info(
+                "trained model in %s (|P|=%f, |Q|=%f)",
+                self.timer,
+                torch.norm(self.user_features_, "fro"),
+                torch.norm(self.item_features_, "fro"),
+            )
+        else:
+            _logger.info(
+                "trained model in %s (|Q|=%f)",
+                self.timer,
+                torch.norm(self.item_features_, "fro"),
+            )
 
         del self.timer
         return self
@@ -373,7 +489,6 @@ class BiasedMF(MFPredictor):
         Returns:
             The algorithm (for chaining).
         """
-
         if self.bias:
             _logger.info("[%s] fitting bias model", self.timer)
             self.bias.fit(ratings)
@@ -445,13 +560,19 @@ class BiasedMF(MFPredictor):
         else:
             ureg = ireg = self.regularization
 
-        for epoch in self.progress(range(self.iterations), desc="BiasedMF", leave=False):
-            du = _train_matrix_cholesky(uctx, current.user_matrix, current.item_matrix, ureg)
-            _logger.debug("[%s] finished user epoch %d", self.timer, epoch)
-            di = _train_matrix_cholesky(ictx, current.item_matrix, current.user_matrix, ireg)
-            _logger.debug("[%s] finished item epoch %d", self.timer, epoch)
-            _logger.info("[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)", self.timer, epoch, du, di)
-            yield current
+        trainer = ALSCholeskyTrainer(current.user_matrix, current.item_matrix, ureg, ireg)
+
+        ctx = tmp.get_context("spawn")
+        with ctx.Pool(4, _worker_init, (trainer,)) as pool:
+            for epoch in self.progress(range(self.iterations), desc="BiasedMF", leave=False):
+                du = _train_parallel(pool, uctx, trainer, "left")
+                _logger.debug("[%s] finished user epoch %d", self.timer, epoch)
+                di = _train_parallel(pool, ictx, trainer, "right")
+                _logger.debug("[%s] finished item epoch %d", self.timer, epoch)
+                _logger.info(
+                    "[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)", self.timer, epoch, du, di
+                )
+                yield current
 
     def predict_for_user(self, user, items, ratings=None):
         scores = None
