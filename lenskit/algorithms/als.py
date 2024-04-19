@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 import logging
+import warnings
 from collections import namedtuple
 
 import numpy as np
@@ -94,9 +95,9 @@ def _train_matrix_cd(mat: CSR, this: np.ndarray, other: np.ndarray, reg: float):
     return np.sqrt(frob)
 
 
-def _train_matrix_lu(mat: CSR, npthis: np.ndarray, npother: np.ndarray, reg: float):
+def _train_matrix_cholesky(mat: CSR, npthis: np.ndarray, npother: np.ndarray, reg: float):
     """
-    One half of an explicit ALS training round using LU-decomposition on the normal
+    One half of an explicit ALS training round using Cholesky decomposition on the normal
     matrices to solve the least squares problem.
 
     Args:
@@ -335,9 +336,11 @@ class BiasedMF(MFPredictor):
     ``'cd'`` (the default)
         Coordinate descent :cite:p:`Takacs2011-ix`, adapted for a separately-trained bias model and
         to use weighted regularization as in the original ALS paper :cite:p:`Zhou2008-bj`.
-    ``'lu'``
-        A direct implementation of the original ALS :cite:p:`Zhou2008-bj` using LU-decomposition
+    ``'cholesky'``
+        The original ALS :cite:p:`Zhou2008-bj`, using Cholesky decomposition
         to solve for the optimized matrices.
+    ``'lu'``:
+        Deprecated alias for ``'cholskey'``
 
     See the base class :class:`.MFPredictor` for documentation on
     the estimated parameters you can extract from a trained model.
@@ -382,6 +385,9 @@ class BiasedMF(MFPredictor):
         self.regularization = reg
         self.damping = damping
         self.method = method
+        if method == "lu":
+            warnings.warn('method="lu" is deprecated alias for cholesky')
+            self.method = "cholesky"
         if bias is True:
             self.bias = Bias(damping=damping)
         else:
@@ -502,8 +508,8 @@ class BiasedMF(MFPredictor):
 
         if self.method == "cd":
             train = _train_matrix_cd
-        elif self.method == "lu":
-            train = _train_matrix_lu
+        elif self.method == "cholesky":
+            train = _train_matrix_cholesky
         else:
             raise ValueError("invalid training method " + self.method)
 
