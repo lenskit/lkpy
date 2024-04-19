@@ -32,36 +32,35 @@ def _inplace_axpy(a, x, y):
         y[i] += a * x[i]
 
 
-@njit
-def _rr_solve(X, xis, y, w, reg, epochs):
+def _rr_solve(
+    X: torch.Tensor, xis: np.ndarray, y: torch.Tensor, w: torch.Tensor, reg: float, epochs: int
+):
     """
     RR1 coordinate descent solver.
 
     Args:
-        X(ndarray): The feature matrix.
-        xis(ndarray): Row numbers in ``X`` that are rated.
-        y(ndarray): Rating values corresponding to ``xis``.
-        w(ndarray): Input/output vector to solve.
+        X: The feature matrix.
+        xis: Row numbers in ``X`` that are rated.
+        y: Rating values corresponding to ``xis``.
+        w: Input/output vector to solve.
     """
 
     nd = len(w)
-    Xt = X.T[:, xis]
-    resid = w @ Xt
-    resid *= -1.0
-    resid += y
+    Xt = X[xis, :].transpose(0, 1)
+    preds = w @ Xt
+    resid = y - preds
 
-    for e in range(epochs):
+    for _e in range(epochs):
         for k in range(nd):
             xk = Xt[k, :]
-            num = np.dot(xk, resid) - reg * w[k]
-            denom = np.dot(xk, xk) + reg
+            num = float(torch.dot(xk, resid) - reg * w[k])
+            denom = float(torch.dot(xk, xk) + reg)
             dw = num / denom
             w[k] += dw
-            _inplace_axpy(-dw, xk, resid)
+            resid.add_(xk, alpha=-dw)
 
 
-@njit(parallel=True, nogil=True)
-def _train_matrix_cd(mat: CSR, this: np.ndarray, other: np.ndarray, reg: float):
+def _train_matrix_cd(mat: CSR, npthis: np.ndarray, npother: np.ndarray, reg: float):
     """
     One half of an explicit ALS training round using coordinate descent.
 
@@ -72,6 +71,8 @@ def _train_matrix_cd(mat: CSR, this: np.ndarray, other: np.ndarray, reg: float):
         reg: the regularization term
     """
     nr = mat.nrows
+    this = torch.from_numpy(npthis)
+    other = torch.from_numpy(npother)
     nf = other.shape[1]
     assert mat.ncols == other.shape[0]
     assert mat.nrows == this.shape[0]
@@ -79,14 +80,15 @@ def _train_matrix_cd(mat: CSR, this: np.ndarray, other: np.ndarray, reg: float):
 
     frob = 0.0
 
-    for i in prange(nr):
+    for i in range(nr):
         cols = mat.row_cs(i)
         if len(cols) == 0:
             continue
 
         vals = mat.row_vs(i)
+        vals = torch.from_numpy(vals)
 
-        w = this[i, :].copy()
+        w = this[i, :].clone()
         _rr_solve(other, cols, vals, w, reg * len(cols), 2)
         delta = this[i, :] - w
         frob += np.dot(delta, delta)
