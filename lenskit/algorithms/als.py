@@ -27,7 +27,7 @@ from .bias import Bias
 from .mf_common import MFPredictor
 
 _logger = logging.getLogger(__name__)
-__trainer: ALSCholeskyTrainer
+__trainers: tuple[ALSCholeskyTrainer, ALSCholeskyTrainer]
 TrainHalf: TypeAlias = Literal["left", "right"]
 
 PartialModel = namedtuple("PartialModel", ["users", "items", "user_matrix", "item_matrix"])
@@ -39,7 +39,6 @@ def _inplace_axpy(a, x, y):
         y[i] += a * x[i]
 
 
-@torch.compile
 def _train_solve_row(
     cols: torch.Tensor,
     vals: torch.Tensor,
@@ -63,57 +62,68 @@ def _train_solve_row(
     return V
 
 
-def _worker_init(trainer):
-    global __trainer
-    __trainer = trainer
+def _worker_init(left, right):
+    global __trainers
+    __trainers = left, right
 
 
 def _worker_row(input):
     # convert to numpy so we don't waste shm resources on results
-    mode, row, cols, vals = input
-    return row, __trainer.train_row(mode, torch.from_numpy(cols), torch.from_numpy(vals)).numpy()
+    left, right = __trainers
+    mode, row = input
+    match mode:
+        case "left":
+            trainer = left
+        case "right":
+            trainer = right
+
+    return row, trainer.train_row(row)
 
 
 class ALSCholeskyTrainer:
     matrix: torch.Tensor
+    nrows: int
+    ncols: int
     left: torch.Tensor
     right: torch.Tensor
-    lreg: float
+    reg: float
     embed_size: int
     device: torch.device
     dtype: torch.dtype
 
-    lregI: torch.Tensor | None = None
-    rregI: torch.Tensor | None = None
+    regI: torch.Tensor | None = None
 
-    def __init__(self, left: torch.Tensor, right: torch.Tensor, lreg: float, rreg: float) -> None:
+    def __init__(
+        self, mat: torch.Tensor, left: torch.Tensor, right: torch.Tensor, reg: float
+    ) -> None:
+        self.matrix = mat
+        self.nrows, self.ncols = mat.shape
         self.left = left
         self.right = right
-        self.lreg = lreg
-        self.rreg = rreg
+        self.reg = reg
         self.embed_size = right.shape[1]
         self.device = left.device
         self.dtype = left.dtype
         assert right.dtype == left.dtype
         assert right.device == left.device
 
-    def train_row(self, mode: TrainHalf, cols: torch.Tensor, vals: torch.Tensor) -> torch.Tensor:
-        with torch.inference_mode():
-            match mode:
-                case "left":
-                    if self.lregI is None:
-                        self.lregI = torch.eye(
-                            self.embed_size, device=self.device, dtype=self.dtype
-                        )
-                        self.lregI *= self.lreg
-                    return _train_solve_row(cols, vals, self.left, self.right, self.lregI)
-                case "right":
-                    if self.rregI is None:
-                        self.rregI = torch.eye(
-                            self.embed_size, device=self.device, dtype=self.dtype
-                        )
-                        self.rregI *= self.rreg
-                    return _train_solve_row(cols, vals, self.right, self.left, self.rregI)
+    def train_row(self, i: int) -> float:
+        row = self.matrix[i]
+        (n,) = row.shape
+        if n == 0:
+            return 0.0
+
+        cols = row.indices()[0].detach()
+        vals = row.values().detach()
+
+        if self.regI is None:
+            self.regI = torch.eye(self.embed_size, device=self.device, dtype=self.dtype)
+            self.regI *= self.reg
+
+        V = _train_solve_row(cols, vals, self.left, self.right, self.regI)
+        delta = self.left[i, :] - V
+        self.left[i, :] = V
+        return float(torch.dot(delta, delta))
 
     def update_row(self, i, V) -> float:
         delta = self.left[i, :] - V
@@ -121,20 +131,11 @@ class ALSCholeskyTrainer:
         return torch.dot(delta, delta).item()
 
 
-def _train_sequential(mat: torch.Tensor, trainer: ALSCholeskyTrainer, mode: TrainHalf) -> float:
-    nr, nc = mat.shape
+def _train_sequential(trainer: ALSCholeskyTrainer) -> float:
     frob = 0.0
 
-    for i in range(nr):
-        row = mat[i]
-        (n,) = row.shape
-        if n == 0:
-            continue
-
-        cols = row.indices()[0].detach()
-        vals = row.values().detach()
-
-        V = trainer.train_row(mode, cols, vals)
+    for i in range(trainer.nrows):
+        V = trainer.train_row(i)
         frob += trainer.update_row(i, V)
 
     return math.sqrt(frob)
@@ -150,12 +151,11 @@ def _train_rows(mat: torch.Tensor, mode: TrainHalf):
             yield mode, i, cols, vals
 
 
-def _train_parallel(pool, mat: torch.Tensor, trainer: ALSCholeskyTrainer, mode: TrainHalf) -> float:
+def _train_parallel(pool, trainer: ALSCholeskyTrainer, mode: TrainHalf) -> float:
     frob = 0.0
 
-    for i, V in pool.imap(_worker_row, _train_rows(mat, mode)):
-        V = torch.from_numpy(V)
-        frob += trainer.update_row(i, V)
+    for i, diff in pool.imap(_worker_row, ((mode, x) for x in range(trainer.nrows))):
+        frob += diff
 
     return math.sqrt(frob)
 
@@ -560,14 +560,15 @@ class BiasedMF(MFPredictor):
         else:
             ureg = ireg = self.regularization
 
-        trainer = ALSCholeskyTrainer(current.user_matrix, current.item_matrix, ureg, ireg)
+        u_trainer = ALSCholeskyTrainer(uctx, current.user_matrix, current.item_matrix, ureg)
+        i_trainer = ALSCholeskyTrainer(ictx, current.item_matrix, current.user_matrix, ireg)
 
         ctx = tmp.get_context("spawn")
-        with ctx.Pool(4, _worker_init, (trainer,)) as pool:
+        with ctx.Pool(4, _worker_init, (u_trainer, i_trainer)) as pool:
             for epoch in self.progress(range(self.iterations), desc="BiasedMF", leave=False):
-                du = _train_parallel(pool, uctx, trainer, "left")
+                du = _train_parallel(pool, u_trainer, "left")
                 _logger.debug("[%s] finished user epoch %d", self.timer, epoch)
-                di = _train_parallel(pool, ictx, trainer, "right")
+                di = _train_parallel(pool, i_trainer, "right")
                 _logger.debug("[%s] finished item epoch %d", self.timer, epoch)
                 _logger.info(
                     "[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)", self.timer, epoch, du, di
