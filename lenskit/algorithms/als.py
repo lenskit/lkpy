@@ -32,73 +32,6 @@ def _inplace_axpy(a, x, y):
         y[i] += a * x[i]
 
 
-def _rr_solve(
-    X: torch.Tensor, xis: torch.Tensor, y: torch.Tensor, w: torch.Tensor, reg: float, epochs: int
-) -> float:
-    """
-    RR1 coordinate descent solver.
-
-    Args:
-        X: The feature matrix.
-        xis: Row numbers in ``X`` that are rated.
-        y: Rating values corresponding to ``xis``.
-        w: Input/output vector to solve.
-
-    Returns:
-        The total squared change in ``w``.
-    """
-
-    nd = len(w)
-    Xt = X[xis, :].transpose(0, 1)
-    preds = w @ Xt
-    resid = y - preds
-    delta = torch.zeros_like(w)
-
-    for _e in range(epochs):
-        for k in range(nd):
-            xk = Xt[k, :]
-            num = float(torch.dot(xk, resid) - reg * w[k])
-            denom = float(torch.dot(xk, xk) + reg)
-            dw = num / denom
-            w[k] += dw
-            delta[k] += dw
-            resid.add_(xk, alpha=-dw)
-
-    return float(torch.dot(delta, delta))
-
-
-def _train_matrix_cd(mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor, reg: float):
-    """
-    One half of an explicit ALS training round using coordinate descent.
-
-    Args:
-        mat: the :math:`m \\times n` matrix of ratings
-        this: the :math:`m \\times k` matrix to train
-        other: the :math:`n \\times k` matrix of sample features
-        reg: the regularization term
-    """
-    nr, nc = mat.shape
-    nf = other.shape[1]
-    assert nc == other.shape[0]
-    assert this.shape == (nr, nf)
-
-    frob = 0.0
-
-    for i in range(nr):
-        row = mat[i]
-        (n,) = row.shape
-        if n == 0:
-            continue
-
-        cols = row.indices()[0]
-        vals = row.values()
-
-        w = this[i, :]
-        frob += _rr_solve(other, cols, vals, w, reg * len(cols), 2)
-
-    return np.sqrt(frob)
-
-
 @torch.compile
 def _train_matrix_cholesky(mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor, reg: float):
     """
@@ -130,7 +63,7 @@ def _train_matrix_cholesky(mat: torch.Tensor, this: torch.Tensor, other: torch.T
         # assert MMT.shape[1] == ctx.n_features
         A = MMT + regI * len(cols)
         V = M.T @ vals
-        V = V.resize(1, nf, 1)
+        V = V.reshape(1, nf, 1)
         # and solve
         L, info = torch.linalg.cholesky_ex(A)
         if int(info):
@@ -165,7 +98,7 @@ def _train_bias_row_cholesky(
     L, info = torch.linalg.cholesky_ex(A)
     if int(info):
         raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
-    V = V.resize(1, nf, 1)
+    V = V.reshape(1, nf, 1)
     V = torch.cholesky_solve(V, L).reshape(nf)
 
     return V
@@ -359,7 +292,6 @@ class BiasedMF(MFPredictor):
         damping(float): damping factor for the underlying bias.
         bias(bool or :class:`Bias`): the bias model.  If ``True``, fits a :class:`Bias` with
             damping ``damping``.
-        method(str): the solver to use (see above).
         rng_spec:
             Random number generator or state (see :func:`seedbank.numpy_rng`).
         progress: a :func:`tqdm.tqdm`-compatible progress bar function
@@ -381,7 +313,6 @@ class BiasedMF(MFPredictor):
         reg=0.1,
         damping=5,
         bias=True,
-        method="cd",
         rng_spec=None,
         progress=None,
         save_user_features=True,
@@ -390,10 +321,6 @@ class BiasedMF(MFPredictor):
         self.iterations = iterations
         self.regularization = reg
         self.damping = damping
-        self.method = method
-        if method == "lu":
-            warnings.warn('method="lu" is deprecated alias for cholesky')
-            self.method = "cholesky"
         if bias is True:
             self.bias = Bias(damping=damping)
         else:
@@ -513,22 +440,15 @@ class BiasedMF(MFPredictor):
         assert uctx.shape == (n_users, n_items)
         assert ictx.shape == (n_items, n_users)
 
-        if self.method == "cd":
-            train = _train_matrix_cd
-        elif self.method == "cholesky":
-            train = _train_matrix_cholesky
-        else:
-            raise ValueError("invalid training method " + self.method)
-
         if isinstance(self.regularization, tuple):
             ureg, ireg = self.regularization
         else:
             ureg = ireg = self.regularization
 
         for epoch in self.progress(range(self.iterations), desc="BiasedMF", leave=False):
-            du = train(uctx, current.user_matrix, current.item_matrix, ureg)
+            du = _train_matrix_cholesky(uctx, current.user_matrix, current.item_matrix, ureg)
             _logger.debug("[%s] finished user epoch %d", self.timer, epoch)
-            di = train(ictx, current.item_matrix, current.user_matrix, ireg)
+            di = _train_matrix_cholesky(ictx, current.item_matrix, current.user_matrix, ireg)
             _logger.debug("[%s] finished item epoch %d", self.timer, epoch)
             _logger.info("[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)", self.timer, epoch, du, di)
             yield current

@@ -12,6 +12,7 @@ from pickletools import dis as pickle_dis
 
 import numpy as np
 import pandas as pd
+import torch
 from seedbank import numpy_rng
 
 from pytest import approx, mark
@@ -32,12 +33,9 @@ simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
 )
 
-methods = mark.parametrize("m", ["lu", "cd"])
 
-
-@methods
-def test_als_basic_build(m):
-    algo = als.BiasedMF(20, iterations=10, progress=util.no_progress, method=m)
+def test_als_basic_build():
+    algo = als.BiasedMF(20, iterations=10, progress=util.no_progress)
     algo.fit(simple_df)
 
     assert algo.bias.mean_ == approx(simple_df.rating.mean())
@@ -51,9 +49,8 @@ def test_als_basic_build(m):
     assert algo.n_items == 3
 
 
-@methods
-def test_als_no_bias(m):
-    algo = als.BiasedMF(20, iterations=10, bias=None, method=m)
+def test_als_no_bias():
+    algo = als.BiasedMF(20, iterations=10, bias=None)
     algo.fit(simple_df)
 
     assert algo.bias is None
@@ -66,9 +63,8 @@ def test_als_no_bias(m):
     assert len(preds) == 1
 
 
-@methods
-def test_als_predict_basic(m):
-    algo = als.BiasedMF(20, iterations=10, method=m)
+def test_als_predict_basic():
+    algo = als.BiasedMF(20, iterations=10)
     algo.fit(simple_df)
 
     assert algo.bias.mean_ == approx(simple_df.rating.mean())
@@ -123,7 +119,7 @@ def test_als_predict_for_new_users_with_new_ratings():
     users = np.random.choice(ratings.user.unique(), n_users)
     items = np.random.choice(ratings.item.unique(), n_items)
 
-    algo = als.BiasedMF(20, iterations=10, method="lu")
+    algo = als.BiasedMF(20, iterations=10)
     algo.fit(ratings)
     _log.debug("Items: " + str(items))
 
@@ -182,11 +178,11 @@ def test_als_predict_no_user_features_basic():
     u = np.random.choice(ratings.user.unique(), n_users)[0]
     items = np.random.choice(ratings.item.unique(), n_items)
 
-    algo = als.BiasedMF(5, iterations=10, method="lu")
+    algo = als.BiasedMF(5, iterations=10)
     algo.fit(ratings)
     _log.debug("Items: " + str(items))
 
-    algo_no_user_features = als.BiasedMF(5, iterations=10, method="lu", save_user_features=False)
+    algo_no_user_features = als.BiasedMF(5, iterations=10, save_user_features=False)
     algo_no_user_features.fit(ratings)
 
     assert algo_no_user_features.user_features_ is None
@@ -234,7 +230,7 @@ def test_als_train_large():
 
 # don't use wantjit, use this to do a non-JIT test
 def test_als_save_load():
-    original = als.BiasedMF(5, iterations=5, method="lu")
+    original = als.BiasedMF(5, iterations=5)
     ratings = lktu.ml_test.ratings
     original.fit(ratings)
 
@@ -247,8 +243,8 @@ def test_als_save_load():
     assert algo.bias.mean_ == original.bias.mean_
     assert np.all(algo.bias.user_offsets_ == original.bias.user_offsets_)
     assert np.all(algo.bias.item_offsets_ == original.bias.item_offsets_)
-    assert np.all(algo.user_features_ == original.user_features_)
-    assert np.all(algo.item_features_ == original.item_features_)
+    assert torch.all(algo.user_features_ == original.user_features_)
+    assert torch.all(algo.item_features_ == original.item_features_)
     assert np.all(algo.item_index_ == original.item_index_)
     assert np.all(algo.user_index_ == original.user_index_)
 
@@ -261,7 +257,7 @@ def test_als_save_load():
 def test_als_binpickle(tmp_path):
     "Test saving ALS with BinPickle"
 
-    original = als.BiasedMF(20, iterations=5, method="lu")
+    original = als.BiasedMF(20, iterations=5)
     ratings = lktu.ml_test.ratings
     original.fit(ratings)
 
@@ -291,58 +287,6 @@ def test_als_binpickle(tmp_path):
         assert len(preds) == 50
 
 
-@lktu.wantjit
-@mark.slow
-def test_als_method_match():
-    lu = als.BiasedMF(20, iterations=15, reg=(2, 0.001), method="lu", rng_spec=42)
-    cd = als.BiasedMF(20, iterations=20, reg=(2, 0.001), method="cd", rng_spec=42)
-
-    ratings = lktu.ml_test.ratings
-
-    timer = Stopwatch()
-    lu.fit(ratings)
-    timer.stop()
-    _log.info("fit with LU solver in %s", timer)
-
-    timer = Stopwatch()
-    cd.fit(ratings)
-    timer.stop()
-    _log.info("fit with CD solver in %s", timer)
-
-    assert lu.bias.mean_ == approx(ratings.rating.mean())
-    assert cd.bias.mean_ == approx(ratings.rating.mean())
-
-    preds = []
-
-    rng = numpy_rng(42)
-    for u in rng.choice(np.unique(ratings.user), 15, replace=False):
-        items = rng.choice(np.unique(ratings.item), 15, replace=False)
-        lu_preds = lu.predict_for_user(u, items)
-        cd_preds = cd.predict_for_user(u, items)
-        diff = lu_preds - cd_preds
-        adiff = np.abs(diff)
-        _log.info(
-            "user %s diffs: L2 = %f, min = %f, med = %f, max = %f, 90%% = %f",
-            u,
-            np.linalg.norm(diff, 2),
-            np.min(adiff),
-            np.median(adiff),
-            np.max(adiff),
-            np.quantile(adiff, 0.9),
-        )
-
-        preds.append(
-            pd.DataFrame({"user": u, "item": items, "lu": lu_preds, "cd": cd_preds, "adiff": adiff})
-        )
-
-    preds = pd.concat(preds, ignore_index=True)
-    _log.info("LU preds:\n%s", preds.lu.describe())
-    _log.info("CD preds:\n%s", preds.cd.describe())
-    _log.info("overall differences:\n%s", preds.adiff.describe())
-    # there are differences. our check: the 90% are under a quarter star
-    assert np.quantile(adiff, 0.9) <= 0.27
-
-
 @mark.slow
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
@@ -352,17 +296,14 @@ def test_als_batch_accuracy():
 
     ratings = lktu.ml100k.ratings
 
-    lu_algo = als.BiasedMF(25, iterations=20, damping=5, method="lu")
-    cd_algo = als.BiasedMF(25, iterations=25, damping=5, method="cd")
+    lu_algo = als.BiasedMF(25, iterations=20, damping=5)
     # algo = bias.Fallback(svd_algo, bias.Bias(damping=5))
 
     def eval(train, test):
         _log.info("training LU")
         lu_algo.fit(train)
-        _log.info("training CD")
-        cd_algo.fit(train)
         _log.info("testing %d users", test.user.nunique())
-        return test.assign(lu_pred=lu_algo.predict(test), cd_pred=cd_algo.predict(test))
+        return test.assign(lu_pred=lu_algo.predict(test))
 
     folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
     preds = pd.concat(eval(train, test) for (train, test) in folds)
@@ -372,10 +313,6 @@ def test_als_batch_accuracy():
 
     lu_mae = pm.mae(preds.lu_pred, preds.rating)
     assert lu_mae == approx(0.73, abs=0.045)
-    cd_mae = pm.mae(preds.cd_pred, preds.rating)
-    assert cd_mae == approx(0.73, abs=0.045)
 
     user_rmse = preds.groupby("user").apply(lambda df: pm.rmse(df.lu_pred, df.rating))
-    assert user_rmse.mean() == approx(0.94, abs=0.05)
-    user_rmse = preds.groupby("user").apply(lambda df: pm.rmse(df.cd_pred, df.rating))
     assert user_rmse.mean() == approx(0.94, abs=0.05)
