@@ -9,7 +9,7 @@ import logging
 import math
 import warnings
 from collections import namedtuple
-from typing import Literal, TypeAlias
+from typing import Literal, NamedTuple, TypeAlias
 
 import numpy as np
 import pandas as pd
@@ -32,12 +32,35 @@ TrainHalf: TypeAlias = Literal["left", "right"]
 PartialModel = namedtuple("PartialModel", ["users", "items", "user_matrix", "item_matrix"])
 
 
+class TrainContext(NamedTuple):
+    matrix: torch.Tensor
+    left: torch.Tensor
+    right: torch.Tensor
+    reg: float
+    nrows: int
+    ncols: int
+    embed_size: int
+    regI: torch.Tensor
+
+    @classmethod
+    def create(
+        cls, matrix: torch.Tensor, left: torch.Tensor, right: torch.Tensor, reg: float
+    ) -> TrainContext:
+        nrows, ncols = matrix.shape
+        lnr, embed_size = left.shape
+        assert lnr == nrows
+        assert right.shape == (ncols, embed_size)
+        regI = torch.eye(embed_size, dtype=left.dtype, device=left.device)
+        return TrainContext(matrix, left, right, reg, nrows, ncols, embed_size, regI)
+
+
 @njit
 def _inplace_axpy(a, x, y):
     for i in range(len(x)):
         y[i] += a * x[i]
 
 
+@torch.jit.script
 def _train_solve_row(
     cols: torch.Tensor,
     vals: torch.Tensor,
@@ -68,7 +91,6 @@ def _worker_init(left, right):
 
 
 def _worker_row(input):
-    # convert to numpy so we don't waste shm resources on results
     left, right = __trainers
     mode, row = input
     match mode:
@@ -160,6 +182,27 @@ def _train_parallel(pool, trainer: ALSCholeskyTrainer, mode: TrainHalf) -> float
     return math.sqrt(frob)
 
 
+@torch.jit.script
+def _train_update_rows(ctx: TrainContext, start: int, end: int) -> float:
+    frob = torch.tensor(0.0)
+
+    for i in range(start, end):
+        row = ctx.matrix[i]
+        (n,) = row.shape
+        if n == 0:
+            continue
+
+        cols = row.indices()[0]
+        vals = row.values().type(ctx.left.type())
+
+        V = _train_solve_row(cols, vals, ctx.left, ctx.right, ctx.regI)
+        delta = ctx.left[i, :] - V
+        frob += torch.dot(delta, delta).item()
+        ctx.left[i, :] = V
+
+    return frob.item()
+
+
 def _train_matrix_cholesky(mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor, reg: float):
     """
     One half of an explicit ALS training round using Cholesky decomposition on the normal
@@ -171,26 +214,11 @@ def _train_matrix_cholesky(mat: torch.Tensor, this: torch.Tensor, other: torch.T
         other: the :math:`n \\times k` matrix of sample features
         reg: the regularization term
     """
-    nr, nc = mat.shape
-    nf = other.shape[1]
-    regI = torch.eye(nf, device=this.device, dtype=this.dtype) * reg
-    frob = 0.0
+    context = TrainContext.create(mat, this, other, reg)
 
-    for i in range(nr):
-        row = mat[i]
-        (n,) = row.shape
-        if n == 0:
-            continue
+    frob = _train_update_rows(context, 0, context.nrows)
 
-        cols = row.indices()[0]
-        vals = row.values().type(this.type())
-
-        V = _train_solve_row(cols, vals, this, other, regI)
-        delta = this[i, :] - V
-        frob += torch.dot(delta, delta)
-        this[i, :] = V
-
-    return np.sqrt(frob)
+    return math.sqrt(frob)
 
 
 def _train_bias_row_cholesky(
@@ -571,18 +599,18 @@ class BiasedMF(MFPredictor):
         i_trainer = ALSCholeskyTrainer(ictx, current.item_matrix, current.user_matrix, ireg)
 
         ctx = tmp.get_context("spawn")
-        with ctx.Pool(32, _worker_init, (u_trainer, i_trainer)) as pool:
-            for epoch in self.progress(range(self.iterations), desc="BiasedMF", leave=False):
-                du = _train_parallel(pool, u_trainer, "left")
-                # du = _train_sequential(u_trainer)
-                _logger.debug("[%s] finished user epoch %d", self.timer, epoch)
-                di = _train_parallel(pool, i_trainer, "right")
-                # di = _train_sequential(i_trainer)
-                _logger.debug("[%s] finished item epoch %d", self.timer, epoch)
-                _logger.info(
-                    "[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)", self.timer, epoch, du, di
-                )
-                yield current
+        # with ctx.Pool(32, _worker_init, (u_trainer, i_trainer)) as pool:
+        for epoch in self.progress(range(self.iterations), desc="BiasedMF", leave=False):
+            # du = _train_parallel(pool, u_trainer, "left")
+            # du = _train_sequential(u_trainer)
+            du = _train_matrix_cholesky(uctx, current.user_matrix, current.item_matrix, ureg)
+            _logger.debug("[%s] finished user epoch %d", self.timer, epoch)
+            # di = _train_parallel(pool, i_trainer, "right")
+            # di = _train_sequential(i_trainer)
+            di = _train_matrix_cholesky(ictx, current.item_matrix, current.user_matrix, ireg)
+            _logger.debug("[%s] finished item epoch %d", self.timer, epoch)
+            _logger.info("[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)", self.timer, epoch, du, di)
+            yield current
 
     def predict_for_user(self, user, items, ratings=None):
         scores = None
