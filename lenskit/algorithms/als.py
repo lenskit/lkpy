@@ -183,8 +183,8 @@ def _train_parallel(pool, trainer: ALSCholeskyTrainer, mode: TrainHalf) -> float
 
 
 @torch.jit.script
-def _train_update_rows(ctx: TrainContext, start: int, end: int) -> float:
-    frob = torch.tensor(0.0)
+def _train_update_rows(ctx: TrainContext, start: int, end: int) -> torch.Tensor:
+    result = ctx.left[start:end, :].clone()
 
     for i in range(start, end):
         row = ctx.matrix[i]
@@ -196,14 +196,41 @@ def _train_update_rows(ctx: TrainContext, start: int, end: int) -> float:
         vals = row.values().type(ctx.left.type())
 
         V = _train_solve_row(cols, vals, ctx.left, ctx.right, ctx.regI)
-        delta = ctx.left[i, :] - V
-        frob += torch.dot(delta, delta).item()
-        ctx.left[i, :] = V
+        result[i - start] = V
 
-    return frob.item()
+    return result
 
 
-def _train_matrix_cholesky(mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor, reg: float):
+@torch.jit.script
+def _train_update_fanout(ctx: TrainContext) -> float:
+    if ctx.nrows <= 50:
+        # at 50 rows, we run sequentially
+        M = _train_update_rows(ctx, 0, ctx.nrows)
+        sqerr = torch.norm(ctx.left - M)
+        ctx.left[:, :] = M
+        return sqerr.item()
+
+    # no more than 1024 chunks, and chunks must be at least 20
+    csize = max(ctx.nrows // 1024, 20)
+
+    results: list[tuple[int, int, torch.jit.Future[torch.Tensor]]] = []
+    for start in range(0, ctx.nrows, csize):
+        end = min(start + csize, ctx.nrows)
+        results.append((start, end, torch.jit.fork(_train_update_rows, ctx, start, end)))
+
+    sqerr = torch.tensor(0.0)
+    for start, end, r in results:
+        M = r.wait()
+        diff = (ctx.left[start:end, :] - M).ravel()
+        sqerr += torch.dot(diff, diff)
+        ctx.left[start:end, :] = M
+
+    return sqerr.item()
+
+
+def _train_matrix_cholesky(
+    mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor, reg: float
+) -> float:
     """
     One half of an explicit ALS training round using Cholesky decomposition on the normal
     matrices to solve the least squares problem.
@@ -216,9 +243,9 @@ def _train_matrix_cholesky(mat: torch.Tensor, this: torch.Tensor, other: torch.T
     """
     context = TrainContext.create(mat, this, other, reg)
 
-    frob = _train_update_rows(context, 0, context.nrows)
+    sqerr = _train_update_fanout(context)
 
-    return math.sqrt(frob)
+    return math.sqrt(sqerr)
 
 
 def _train_bias_row_cholesky(
