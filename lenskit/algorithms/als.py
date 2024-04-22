@@ -26,7 +26,6 @@ from .bias import Bias
 from .mf_common import MFPredictor
 
 _logger = logging.getLogger(__name__)
-__trainers: tuple[ALSCholeskyTrainer, ALSCholeskyTrainer]
 TrainHalf: TypeAlias = Literal["left", "right"]
 
 PartialModel = namedtuple("PartialModel", ["users", "items", "user_matrix", "item_matrix"])
@@ -82,104 +81,6 @@ def _train_solve_row(
         raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
     V = torch.cholesky_solve(V, L).reshape(nf)
     return V
-
-
-def _worker_init(left, right):
-    global __trainers
-    __trainers = left, right
-    torch.set_num_threads(1)
-
-
-def _worker_row(input):
-    left, right = __trainers
-    mode, row = input
-    match mode:
-        case "left":
-            trainer = left
-        case "right":
-            trainer = right
-
-    return row, trainer.train_row(row)
-
-
-class ALSCholeskyTrainer:
-    matrix: torch.Tensor
-    nrows: int
-    ncols: int
-    left: torch.Tensor
-    right: torch.Tensor
-    reg: float
-    embed_size: int
-    device: torch.device
-    dtype: torch.dtype
-
-    regI: torch.Tensor | None = None
-
-    def __init__(
-        self, mat: torch.Tensor, left: torch.Tensor, right: torch.Tensor, reg: float
-    ) -> None:
-        self.matrix = mat
-        self.nrows, self.ncols = mat.shape
-        self.left = left
-        self.right = right
-        self.reg = reg
-        self.embed_size = right.shape[1]
-        self.device = left.device
-        self.dtype = left.dtype
-        assert right.dtype == left.dtype
-        assert right.device == left.device
-
-    def train_row(self, i: int) -> float:
-        row = self.matrix[i]
-        (n,) = row.shape
-        if n == 0:
-            return 0.0
-
-        cols = row.indices()[0].detach()
-        vals = row.values().detach()
-
-        if self.regI is None:
-            self.regI = torch.eye(self.embed_size, device=self.device, dtype=self.dtype)
-            self.regI *= self.reg
-
-        V = _train_solve_row(cols, vals, self.left, self.right, self.regI)
-        delta = self.left[i, :] - V
-        self.left[i, :] = V
-        return float(torch.dot(delta, delta))
-
-    def update_row(self, i, V) -> float:
-        delta = self.left[i, :] - V
-        self.left[i, :] = V
-        return torch.dot(delta, delta).item()
-
-
-def _train_sequential(trainer: ALSCholeskyTrainer) -> float:
-    frob = 0.0
-
-    for i in range(trainer.nrows):
-        V = trainer.train_row(i)
-        frob += trainer.update_row(i, V)
-
-    return math.sqrt(frob)
-
-
-def _train_rows(mat: torch.Tensor, mode: TrainHalf):
-    nr, nc = mat.shape
-    for i in range(nr):
-        row = mat[i]
-        if row.shape[0] > 0:
-            cols = row.indices()[0].numpy()
-            vals = row.values().numpy()
-            yield mode, i, cols, vals
-
-
-def _train_parallel(pool, trainer: ALSCholeskyTrainer, mode: TrainHalf) -> float:
-    frob = 0.0
-
-    for i, diff in pool.imap(_worker_row, ((mode, x) for x in range(trainer.nrows))):
-        frob += diff
-
-    return math.sqrt(frob)
 
 
 @torch.jit.script
@@ -622,11 +523,6 @@ class BiasedMF(MFPredictor):
         else:
             ureg = ireg = self.regularization
 
-        u_trainer = ALSCholeskyTrainer(uctx, current.user_matrix, current.item_matrix, ureg)
-        i_trainer = ALSCholeskyTrainer(ictx, current.item_matrix, current.user_matrix, ireg)
-
-        ctx = tmp.get_context("spawn")
-        # with ctx.Pool(32, _worker_init, (u_trainer, i_trainer)) as pool:
         for epoch in self.progress(range(self.iterations), desc="BiasedMF", leave=False):
             # du = _train_parallel(pool, u_trainer, "left")
             # du = _train_sequential(u_trainer)
