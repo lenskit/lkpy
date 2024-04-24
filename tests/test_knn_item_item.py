@@ -501,7 +501,7 @@ def test_ii_no_ratings():
     algo = knn.ItemItem(20, save_nbrs=100, feedback="implicit")
 
     algo.fit(ml_ratings)
-    assert algo.item_counts_.sum() == algo.sim_matrix_.values().shape
+    assert algo.item_counts_.sum().item() == algo.sim_matrix_.values().shape[0]
     assert all(algo.sim_matrix_.values() > 0)
     assert all(algo.item_counts_ <= 100)
 
