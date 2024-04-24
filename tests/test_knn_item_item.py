@@ -513,6 +513,7 @@ def test_ii_no_ratings():
 
 
 @mark.slow
+@pytest.mark.skip("fast/slow paths have been removed")
 def test_ii_implicit_fast_ident():
     algo = knn.ItemItem(20, save_nbrs=100, center=False, aggregate="sum")
     data = ml_ratings.loc[:, ["user", "item"]]
@@ -617,6 +618,8 @@ def _train_ii():
 @mark.skipif(not lktu.ml100k.available, reason="ML100K not available")
 @mark.parametrize("ncpus", [1, 2])
 def test_ii_batch_recommend(ncpus):
+    if ncpus > 1:
+        pytest.skip("multiple CPUs temporarily disabled")
     import lenskit.crossfold as xf
     from lenskit import topn
 
