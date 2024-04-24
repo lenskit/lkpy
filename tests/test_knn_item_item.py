@@ -289,7 +289,7 @@ def test_ii_train_ml100k(tmp_path):
 
 @lktu.wantjit
 @mark.slow
-def test_ii_large_models():
+def test_ii_large_models(rng):
     "Several tests of large trained I-I models"
     _log.info("training limited model")
     MODEL_SIZE = 100
@@ -302,17 +302,16 @@ def test_ii_large_models():
 
     _log.info("testing models")
     assert all(np.logical_not(np.isnan(algo_lim.sim_matrix_.values())))
-    assert all(algo_lim.sim_matrix_.values() > 0)
+    assert algo_lim.sim_matrix_.values().min() > 0
     # a little tolerance
-    assert all(algo_lim.sim_matrix_.values() < 1 + 1.0e-6)
+    assert algo_lim.sim_matrix_.values().max() <= 1
 
     means = ml_ratings.groupby("item").rating.mean()
     assert means[algo_lim.item_index_].values == approx(algo_lim.item_means_)
 
     assert all(np.logical_not(np.isnan(algo_ub.sim_matrix_.values())))
-    assert all(algo_ub.sim_matrix_.values() > 0)
-    # a little tolerance
-    assert all(algo_ub.sim_matrix_.values() < 1 + 1.0e-6)
+    assert algo_ub.sim_matrix_.values().min() > 0
+    assert algo_ub.sim_matrix_.values().max() <= 1
 
     means = ml_ratings.groupby("item").rating.mean()
     assert means[algo_ub.item_index_].values == approx(algo_ub.item_means_)
@@ -326,10 +325,23 @@ def test_ii_large_models():
     mat_lim = algo_lim.sim_matrix_
     mat_ub = algo_ub.sim_matrix_
 
+    _log.info("make sure the similarity matrix is sorted")
+    for i in range(len(algo_lim.item_index_)):
+        sp = algo_lim.sim_matrix_.crow_indices()[i]
+        ep = algo_lim.sim_matrix_.crow_indices()[i + 1]
+        cols = algo_lim.sim_matrix_.col_indices()[sp:ep]
+        diffs = np.diff(cols.numpy())
+        if np.any(diffs <= 0):
+            _log.error("row %d: %d non-sorted indices", i, np.sum(diffs <= 0))
+            (bad,) = np.nonzero(diffs <= 0)
+            for i in bad:
+                _log.info("bad indices %d: %d %d", i, cols[i], cols[i + 1])
+            raise AssertionError(f"{np.sum(diffs <= 0)} non-sorted indices")
+
     _log.info("checking a sample of neighborhoods")
-    items = pd.Series(algo_ub.item_index_)
+    items = algo_ub.item_index_.values
     items = items[algo_ub.item_counts_.numpy() > 0]
-    for i in items.sample(50):
+    for i in rng.choice(items, 100):
         ipos = algo_ub.item_index_.get_loc(i)
         _log.debug("checking item %d at position %d", i, ipos)
         assert ipos == algo_lim.item_index_.get_loc(i)
@@ -340,10 +352,23 @@ def test_ii_large_models():
         assert len(b_row.values()) <= MODEL_SIZE
         ub_cols = ub_row.indices()[0].numpy()
         b_cols = b_row.indices()[0].numpy()
-        assert all(np.isin(b_cols, ub_cols))
+        _log.debug("kept %d of %d neighbors", len(b_cols), len(ub_cols))
+
+        _log.debug("checking for sorted indices")
+        assert np.all(np.diff(ub_cols) > 0)
+        assert np.all(np.diff(b_cols) > 0)
+
+        # all bounded columns are in the unbounded columns
+        _log.debug("checking that bounded columns are a subset of unbounded")
+        present = np.isin(b_cols, ub_cols)
+        if not np.all(present):
+            _log.error("missing items: %s", b_cols[~present])
+            _log.error("scores: %s", b_row.values()[~present])
+            raise AssertionError(f"missing {np.sum(~present)} values from unbounded")
 
         # spot-check some similarities
-        for n in pd.Series(ub_cols).sample(min(10, len(ub_cols))):
+        _log.debug("checking equal similarities")
+        for n in rng.choice(ub_cols, min(10, len(ub_cols))):
             n_id = algo_ub.item_index_[n]
             n_rates = mc_rates.loc[n_id, :].set_index("user").rating
             ir, nr = irates.align(n_rates, fill_value=0)
@@ -375,8 +400,12 @@ def test_ii_large_models():
             # the minimums should be equal
             assert ub_shrink.min() == approx(b_nbrs.min())
             # everything above minimum value should be the same set of items
+            # the minimum value might be a tie
             ubs_except_min = ub_shrink[ub_shrink > b_nbrs.min()]
-            assert all(ubs_except_min.index.isin(b_nbrs.index))
+            missing = ~ubs_except_min.index.isin(b_nbrs.index)
+            if np.any(missing):
+                _log.error("missing unbounded values:\n%s", ubs_except_min[missing])
+                raise AssertionError(f"missing {np.sum(missing)} unbounded values")
 
 
 @lktu.wantjit
@@ -391,6 +420,7 @@ def test_ii_save_load(tmp_path, ml_subset):
     with fn.open("wb") as modf:
         pickle.dump(original, modf)
 
+    _log.info("pickled %d bytes", fn.stat().st_size)
     _log.info("reloading model")
     with fn.open("rb") as modf:
         algo = pickle.load(modf)
@@ -402,41 +432,20 @@ def test_ii_save_load(tmp_path, ml_subset):
     assert all(algo.sim_matrix_.values() < 1 + 1.0e-6)
 
     assert all(algo.item_counts_ == original.item_counts_)
-    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
-    assert algo.sim_matrix_.nnz == original.sim_matrix_.nnz
-    assert all(algo.sim_matrix_.rowptrs == original.sim_matrix_.rowptrs)
+    assert algo.item_counts_.sum() == len(algo.sim_matrix_.values())
+    assert len(algo.sim_matrix_.values()) == len(algo.sim_matrix_.values())
+    assert all(algo.sim_matrix_.crow_indices() == original.sim_matrix_.crow_indices())
     assert algo.sim_matrix_.values() == approx(original.sim_matrix_.values())
 
     r_mat = algo.sim_matrix_
     o_mat = original.sim_matrix_
-    assert all(r_mat.rowptrs == o_mat.rowptrs)
-
-    for i in range(len(algo.item_index_)):
-        sp = r_mat.rowptrs[i]
-        ep = r_mat.rowptrs[i + 1]
-
-        # everything is in decreasing order
-        assert all(np.diff(r_mat.values[sp:ep]) <= 0)
-        assert all(r_mat.values[sp:ep] == o_mat.values[sp:ep])
+    assert all(r_mat.crow_indices() == o_mat.crow_indices())
 
     means = ml_ratings.groupby("item").rating.mean()
     assert means[algo.item_index_].values == approx(original.item_means_)
 
-    matrix = algo.sim_matrix_
 
-    items = pd.Series(algo.item_index_)
-    items = items[algo.item_counts_ > 0]
-    for i in items.sample(50):
-        ipos = algo.item_index_.get_loc(i)
-        _log.debug("checking item %d at position %d", i, ipos)
-
-        row = matrix.getrow(ipos)
-
-        # it should be sorted !
-        # check this by diffing the row values, and make sure they're negative
-        assert all(np.diff(row.data) < 1.0e-6)
-
-
+@lktu.wantjit
 def test_ii_implicit_save_load(tmp_path, ml_subset):
     "Save and load a model"
     original = knn.ItemItem(30, save_nbrs=500, center=False, aggregate="sum")
@@ -447,6 +456,7 @@ def test_ii_implicit_save_load(tmp_path, ml_subset):
     _log.info("saving model to %s", fn)
     with fn.open("wb") as modf:
         pickle.dump(original, modf)
+    _log.info("pickled %d bytes", fn.stat().st_size)
 
     _log.info("reloading model")
     with fn.open("rb") as modf:
@@ -459,39 +469,12 @@ def test_ii_implicit_save_load(tmp_path, ml_subset):
     assert all(algo.sim_matrix_.values() < 1 + 1.0e-6)
 
     assert all(algo.item_counts_ == original.item_counts_)
-    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
-    assert algo.sim_matrix_.nnz == original.sim_matrix_.nnz
-    assert all(algo.sim_matrix_.rowptrs == original.sim_matrix_.rowptrs)
+    assert algo.item_counts_.sum() == len(algo.sim_matrix_.values())
+    assert algo.sim_matrix_.values().shape == original.sim_matrix_.values().shape
+    assert all(algo.sim_matrix_.crow_indices() == original.sim_matrix_.crow_indices())
     assert algo.sim_matrix_.values() == approx(original.sim_matrix_.values())
-    assert algo.rating_matrix_.values is None
-
-    r_mat = algo.sim_matrix_
-    o_mat = original.sim_matrix_
-    assert all(r_mat.rowptrs == o_mat.rowptrs)
-
-    for i in range(len(algo.item_index_)):
-        sp = r_mat.rowptrs[i]
-        ep = r_mat.rowptrs[i + 1]
-
-        # everything is in decreasing order
-        assert all(np.diff(r_mat.values[sp:ep]) <= 0)
-        assert all(r_mat.values[sp:ep] == o_mat.values[sp:ep])
 
     assert algo.item_means_ is None
-
-    matrix = algo.sim_matrix_
-
-    items = pd.Series(algo.item_index_)
-    items = items[algo.item_counts_ > 0]
-    for i in items.sample(50):
-        ipos = algo.item_index_.get_loc(i)
-        _log.debug("checking item %d at position %d", i, ipos)
-
-        row = matrix.getrow(ipos)
-
-        # it should be sorted !
-        # check this by diffing the row values, and make sure they're negative
-        assert all(np.diff(row.data) < 1.0e-6)
 
 
 @lktu.wantjit
@@ -501,7 +484,7 @@ def test_ii_old_implicit():
     data = ml_ratings.loc[:, ["user", "item"]]
 
     algo.fit(data)
-    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
+    assert algo.item_counts_.sum() == algo.sim_matrix_.values().shape[0]
     assert all(algo.sim_matrix_.values() > 0)
     assert all(algo.item_counts_ <= 100)
 
@@ -518,7 +501,7 @@ def test_ii_no_ratings():
     algo = knn.ItemItem(20, save_nbrs=100, feedback="implicit")
 
     algo.fit(ml_ratings)
-    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
+    assert algo.item_counts_.sum() == algo.sim_matrix_.values().shape
     assert all(algo.sim_matrix_.values() > 0)
     assert all(algo.item_counts_ <= 100)
 
@@ -535,7 +518,7 @@ def test_ii_implicit_fast_ident():
     data = ml_ratings.loc[:, ["user", "item"]]
 
     algo.fit(data)
-    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
+    assert algo.item_counts_.sum() == algo.sim_matrix_.values().shape
     assert all(algo.sim_matrix_.values() > 0)
     assert all(algo.item_counts_ <= 100)
 
@@ -630,44 +613,6 @@ def _train_ii():
 
 @lktu.wantjit
 @mark.slow
-@mark.skip("no longer testing II match")
-@mark.skipif(csrk.name != "csr.kernels.mkl", reason="only needed when MKL is available")
-def test_ii_impl_match():
-    mkl_h = None
-    nba_h = None
-    try:
-        with lktu.set_env_var("CSR_KERNEL", "mkl"):
-            mkl_h = run_sp(_train_ii)
-        mkl = mkl_h.get()
-
-        with lktu.set_env_var("CSR_KERNEL", "numba"):
-            nba_h = run_sp(_train_ii)
-        nba = nba_h.get()
-
-        assert mkl.sim_matrix_.nnz == nba.sim_matrix_.nnz
-        assert mkl.sim_matrix_.nrows == nba.sim_matrix_.nrows
-        assert mkl.sim_matrix_.ncols == nba.sim_matrix_.ncols
-
-        assert all(mkl.sim_matrix_.rowptrs == nba.sim_matrix_.rowptrs)
-        for i in range(mkl.sim_matrix_.nrows):
-            sp, ep = mkl.sim_matrix_.row_extent(i)
-            assert all(np.diff(mkl.sim_matrix_.values()[sp:ep]) <= 0)
-            assert all(np.diff(nba.sim_matrix_.values()[sp:ep]) <= 0)
-            assert set(mkl.sim_matrix_.colinds[sp:ep]) == set(nba.sim_matrix_.colinds[sp:ep])
-            assert mkl.sim_matrix_.values()[sp:ep] == approx(
-                nba.sim_matrix_.values()[sp:ep], abs=1.0e-3
-            )
-
-    finally:
-        mkl = None
-        nba = None
-        gc.collect()
-        mkl_h.close()
-        nba_h.close()
-
-
-@lktu.wantjit
-@mark.slow
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason="ML100K not available")
 @mark.parametrize("ncpus", [1, 2])
@@ -705,7 +650,7 @@ def test_ii_batch_recommend(ncpus):
 
 
 def _build_predict(ratings, fold):
-    algo = Fallback(knn.ItemItem(20), Bias(5))
+    algo = Fallback(knn.ItemItem(20), Bias(damping=5))
     train = ratings[ratings["partition"] != fold]
     algo.fit(train)
 

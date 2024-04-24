@@ -8,6 +8,8 @@
 Data manipulation routines.
 """
 
+from __future__ import annotations
+
 import logging
 from collections import namedtuple
 from typing import Generic, Literal, NamedTuple, TypeVar, overload
@@ -23,7 +25,7 @@ _log = logging.getLogger(__name__)
 M = TypeVar("M", CSR, sps.csr_matrix, sps.coo_matrix, t.Tensor)
 
 
-class RatingMatrix(NamedTuple, Generic[M]):
+class RatingMatrix(NamedTuple):
     """
     A rating matrix with associated indices.
 

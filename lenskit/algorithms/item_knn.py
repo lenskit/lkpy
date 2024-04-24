@@ -11,23 +11,17 @@ Item-based k-NN collaborative filtering.
 import logging
 import warnings
 from sys import intern
-from typing import Callable, Literal, TypeAlias
+from typing import Callable, Literal, Optional, TypeAlias
 
 import numpy as np
 import pandas as pd
 import torch
-from csr import CSR, create_from_sizes
-from numba import njit, prange
 
 from lenskit import ConfigWarning, DataWarning, util
 from lenskit.data.matrix import DimStats, sparse_ratings, sparse_row_stats
-from lenskit.sharing import in_share_context
-from lenskit.util.accum import kvp_minheap_insert, kvp_minheap_sort
-from lenskit.util.parallel import is_mp_worker
 
 from . import Predictor
 
-_logger = logging.getLogger(__name__)
 AggFun: TypeAlias = Callable[
     [
         torch.Tensor,
@@ -38,6 +32,9 @@ AggFun: TypeAlias = Callable[
     torch.Tensor,
 ]
 
+_logger = logging.getLogger(__name__)
+MAX_BLOCKS = 1024
+
 
 @torch.jit.ignore
 def _msg(level, msg):
@@ -45,79 +42,46 @@ def _msg(level, msg):
     _logger.log(level, msg)
 
 
-def _make_blocks(n, size):
-    "Create blocks for the range 0..n."
-    return [(s, min(s + size, n)) for s in range(0, n, size)]
+@torch.jit.ignore
+def _item_dbg(item, msg):
+    # type: (int, str) -> None
+    _logger.debug("item %d: %s", item, msg)
 
 
-@njit(parallel=not is_mp_worker())
-def _sort_nbrs(smat: CSR):
-    for i in prange(smat.nrows):
-        sp, ep = smat.row_extent(i)
-        kvp_minheap_sort(sp, ep, smat.colinds, smat.values)
-
-
-@njit
-def _trim_sim_block(nitems, bsp, bitems, block, min_sim, max_nbrs):
-    # pass 1: compute the size of each row
-    sizes = np.zeros(bitems, np.int32)
-    for i in range(nitems):
-        sp, ep = block.row_extent(i)
-        for j in range(sp, ep):
-            # we accept the neighbor if it passes threshold and isn't a self-similarity
-            r = block.colinds[j]
-            if i != bsp + r and block.values[j] >= min_sim:
-                sizes[r] += 1
-
-    if max_nbrs > 0:
-        for i in range(bitems):
-            if sizes[i] > max_nbrs:
-                sizes[i] = max_nbrs
-
-    # if bnc == 0:
-    #     # empty resulting matrix, oops
-    #     return _empty_csr(bitems, nitems, np.zeros(bitems, np.int32))
-
-    # allocate a matrix
-    block_csr = create_from_sizes(bitems, nitems, sizes)
-
-    # pass 2: truncate each row into the matrix
-    eps = block_csr.rowptrs[:-1].copy()
-    for c in range(nitems):
-        sp, ep = block.row_extent(c)
-        for j in range(sp, ep):
-            v = block.values[j]
-            r = block.colinds[j]
-            sp, lep = block_csr.row_extent(r)
-            lim = lep - sp
-            if c != bsp + r and v >= min_sim:
-                eps[r] = kvp_minheap_insert(
-                    sp, eps[r], lim, c, v, block_csr.colinds, block_csr.values
-                )
-        # we're done!
-    return block_csr
-
-
-def _sim_row(matrix: torch.Tensor, row: torch.Tensor, min_sim: float, max_nbrs: int | None):
+@torch.jit.script
+def _sim_row(
+    item: int, matrix: torch.Tensor, row: torch.Tensor, min_sim: float, max_nbrs: Optional[int]
+) -> tuple[int, torch.Tensor, torch.Tensor]:
     nitems, nusers = matrix.shape
     if len(row.indices()) == 0:
-        return 0, torch.empty((0,), dtype=torch.int32), torch.empty((0,), dtype=torch.float64)
+        return 0, torch.zeros((0,), dtype=torch.int32), torch.zeros((0,), dtype=torch.float64)
 
+    # _item_dbg(item, f"comparing item with {row.indices().shape[1]} users")
+    # _item_dbg(item, f"row norm {torch.linalg.vector_norm(row.values()).item()}")
     row = row.to_dense()
     sim = torch.mv(matrix, row.to(torch.float64))
 
     mask = sim >= min_sim
-    cols = torch.nonzero(mask)[:, 0]
+    cols = torch.nonzero(mask)[:, 0].to(torch.int32)
     vals = sim[mask]
+    # _item_dbg(item, f"found {len(vals)} acceptable similarities")
+    assert len(cols) == torch.sum(mask)
 
     if max_nbrs is not None and max_nbrs > 0 and max_nbrs < vals.shape[0]:
-        vals, cis = torch.topk(vals, max_nbrs)
+        _item_dbg(item, "truncating similarities")
+        vals, cis = torch.topk(vals, max_nbrs, sorted=False)
         cols = cols[cis]
+        order = torch.argsort(cols)
+        cols = cols[order]
+        vals = vals[order]
 
     return len(cols), cols, torch.clamp(vals, -1, 1)
 
 
-def _sim_block(matrix: torch.Tensor, start: int, end: int, min_sim: float, max_nbrs: int | None):
+@torch.jit.script
+def _sim_block(
+    matrix: torch.Tensor, start: int, end: int, min_sim: float, max_nbrs: Optional[int]
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     "Compute a single block of the similarity matrix"
     bsize = end - start
 
@@ -126,38 +90,50 @@ def _sim_block(matrix: torch.Tensor, start: int, end: int, min_sim: float, max_n
     values = []
 
     for i in range(start, end):
-        c, cs, vs = _sim_row(matrix, matrix[i], min_sim, max_nbrs)
+        c, cs, vs = _sim_row(i, matrix, matrix[i], min_sim, max_nbrs)
         counts[i - start] = c
         columns.append(cs)
         values.append(vs)
 
-    return counts, torch.cat(columns), torch.cat(values)
+    return counts, torch.cat(columns), torch.cat(values).to(torch.float32)
 
 
+@torch.jit.script
 def _sim_blocks(
-    matrix: torch.Tensor, min_sim: float, max_nbrs: int | None, block_size: int
+    matrix: torch.Tensor, min_sim: float, max_nbrs: Optional[int], block_size: int
 ) -> torch.Tensor:
     "Compute the similarity matrix with blocked matrix-matrix multiplies"
     nitems, nusers = matrix.shape
+
+    jobs: list[torch.jit.Future[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]] = []
+
+    for start in range(0, nitems, block_size):
+        end = min(start + block_size, nitems)
+        jobs.append(torch.jit.fork(_sim_block, matrix, start, end, min_sim, max_nbrs))
 
     counts = [torch.tensor([0], dtype=torch.int32)]
     columns = []
     values = []
 
-    for start in range(0, nitems, block_size):
-        end = min(start + block_size, nitems)
-        cts, cis, vs = _sim_block(matrix, start, end, min_sim, max_nbrs)
+    for job in jobs:
+        cts, cis, vs = job.wait()
         counts.append(cts)
         columns.append(cis)
         values.append(vs)
 
     c_cat = torch.cat(counts)
-    crow_indices = torch.cumsum(c_cat, 0)
+    crow_indices = torch.cumsum(c_cat, 0, dtype=torch.int32)
+    assert len(crow_indices) == nitems + 1
     col_indices = torch.cat(columns)
     c_values = torch.cat(values)
+    assert crow_indices[nitems] == len(col_indices)
+    assert crow_indices[nitems] == len(c_values)
 
     return torch.sparse_csr_tensor(
-        crow_indices=crow_indices, col_indices=col_indices, values=c_values, size=(nitems, nitems)
+        crow_indices=crow_indices,
+        col_indices=col_indices,
+        values=c_values,
+        size=(nitems, nitems),
     )
 
 
@@ -503,9 +479,11 @@ class ItemItem(Predictor):
     def _compute_similarities(self, rmat: torch.Tensor):
         nitems, nusers = rmat.shape
 
-        smat = _sim_blocks(rmat.to(torch.float64), self.min_sim, self.save_nbrs, self.block_size)
+        bs = max(self.block_size, nitems // MAX_BLOCKS)
+        _logger.debug("computing with effective block size %d", bs)
+        smat = _sim_blocks(rmat.to(torch.float64), self.min_sim, self.save_nbrs, bs)
 
-        return smat
+        return smat.to(torch.float32)
 
     def predict_for_user(self, user, items, ratings=None):
         _logger.debug("predicting %d items for user %s", len(items), user)
