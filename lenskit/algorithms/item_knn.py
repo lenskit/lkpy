@@ -100,31 +100,21 @@ def _trim_sim_block(nitems, bsp, bitems, block, min_sim, max_nbrs):
 
 def _sim_row(matrix: torch.Tensor, row: torch.Tensor, min_sim: float, max_nbrs: int | None):
     nitems, nusers = matrix.shape
-    # print("matrix", matrix.shape)
-    # print("row", row.shape)
-    # print("row", row)
-    # row = torch.sparse_csc_tensor(
-    #     ccol_indices=[0, 1],
-    #     row_indices=row.indices()[0],
-    #     values=row.values(),
-    #     size=(nusers, 1),
-    # )
-    # sim = torch.mm(matrix, row)
     if len(row.indices()) == 0:
         return 0, torch.empty((0,), dtype=torch.int32), torch.empty((0,), dtype=torch.float64)
 
     row = row.to_dense()
-    sim = torch.mv(matrix, row)
+    sim = torch.mv(matrix, row.to(torch.float64))
 
     mask = sim >= min_sim
     cols = torch.nonzero(mask)[:, 0]
     vals = sim[mask]
 
     if max_nbrs is not None and max_nbrs > 0 and max_nbrs < vals.shape[0]:
-        cis, vals = torch.topk(vals, max_nbrs)
+        vals, cis = torch.topk(vals, max_nbrs)
         cols = cols[cis]
 
-    return len(cols), cols, vals
+    return len(cols), cols, torch.clamp(vals, -1, 1)
 
 
 def _sim_block(matrix: torch.Tensor, start: int, end: int, min_sim: float, max_nbrs: int | None):
@@ -513,7 +503,7 @@ class ItemItem(Predictor):
     def _compute_similarities(self, rmat: torch.Tensor):
         nitems, nusers = rmat.shape
 
-        smat = _sim_blocks(rmat, self.min_sim, self.save_nbrs, self.block_size)
+        smat = _sim_blocks(rmat.to(torch.float64), self.min_sim, self.save_nbrs, self.block_size)
 
         return smat
 
@@ -536,7 +526,6 @@ class ItemItem(Predictor):
 
         # set up rating array
         # get rated item positions & limit to in-model items
-        n_items = len(self.item_index_)
         ri_pos = self.item_index_.get_indexer(ratings.index)
 
         ri_vals = torch.from_numpy(ratings.values[ri_pos >= 0])
@@ -570,33 +559,6 @@ class ItemItem(Predictor):
         )
 
         return results
-
-    def _count_viable_targets(self, targets, rated):
-        "Count upper-bound on possible neighbors for target items and rated items."
-        # initialize counts to zero
-        counts = np.zeros(len(self.item_index_), dtype=np.int32)
-        sums = np.zeros(len(self.item_index_))
-        last_nbrs = np.full(len(self.item_index_), -1, "i4")
-        # count the number of times each item is reachable from the neighborhood
-        for ri in rated:
-            nbrs = self._sim_inv_.row_cs(ri)
-            counts[nbrs] += 1
-            sums[nbrs] += self._sim_inv_.row_vs(ri)
-            last_nbrs[nbrs] = ri
-
-        # we want the reachability counts for the target items
-        return counts[targets], sums[targets], last_nbrs[targets]
-
-    def __getstate__(self):
-        state = dict(self.__dict__)
-        if "_sim_inv_" in state and not in_share_context():
-            del state["_sim_inv_"]
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        if hasattr(self, "sim_matrix_") and not hasattr(self, "_sim_inv_"):
-            self._sim_inv_ = self.sim_matrix_.transpose()
 
     def __str__(self):
         return "ItemItem(nnbrs={}, msize={})".format(self.nnbrs, self.save_nbrs)

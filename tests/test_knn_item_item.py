@@ -262,9 +262,9 @@ def test_ii_train_ml100k(tmp_path):
     assert all(algo.sim_matrix_.values() > 0)
 
     # a little tolerance
-    assert all(algo.sim_matrix_.values() < 1 + 1.0e-6)
+    assert np.max(algo.sim_matrix_.values().numpy()) <= 1
 
-    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
+    assert algo.item_counts_.sum() == len(algo.sim_matrix_.values())
 
     means = ratings.groupby("item").rating.mean()
     assert means[algo.item_index_].values == approx(algo.item_means_)
@@ -284,15 +284,7 @@ def test_ii_train_ml100k(tmp_path):
     r_mat = restored.sim_matrix_
     o_mat = algo.sim_matrix_
 
-    assert all(r_mat.rowptrs == o_mat.rowptrs)
-
-    for i in range(len(restored.item_index_)):
-        sp = r_mat.rowptrs[i]
-        ep = r_mat.rowptrs[i + 1]
-
-        # everything is in decreasing order
-        assert all(np.diff(r_mat.values[sp:ep]) <= 0)
-        assert all(r_mat.values[sp:ep] == o_mat.values[sp:ep])
+    assert all(r_mat.values() == o_mat.values())
 
 
 @lktu.wantjit
@@ -336,43 +328,38 @@ def test_ii_large_models():
 
     _log.info("checking a sample of neighborhoods")
     items = pd.Series(algo_ub.item_index_)
-    items = items[algo_ub.item_counts_ > 0]
+    items = items[algo_ub.item_counts_.numpy() > 0]
     for i in items.sample(50):
         ipos = algo_ub.item_index_.get_loc(i)
         _log.debug("checking item %d at position %d", i, ipos)
         assert ipos == algo_lim.item_index_.get_loc(i)
         irates = mc_rates.loc[[i], :].set_index("user").rating
 
-        ub_row = mat_ub.getrow(ipos)
-        b_row = mat_lim.getrow(ipos)
-        assert b_row.nnz <= MODEL_SIZE
-        assert all(pd.Series(b_row.indices).isin(ub_row.indices))
-
-        # it should be sorted !
-        # check this by diffing the row values, and make sure they're negative
-        assert all(np.diff(b_row.data) < 1.0e-6)
-        assert all(np.diff(ub_row.data) < 1.0e-6)
+        ub_row = mat_ub[ipos]
+        b_row = mat_lim[ipos]
+        assert len(b_row.values()) <= MODEL_SIZE
+        ub_cols = ub_row.indices()[0].numpy()
+        b_cols = b_row.indices()[0].numpy()
+        assert all(np.isin(b_cols, ub_cols))
 
         # spot-check some similarities
-        for n in pd.Series(ub_row.indices).sample(min(10, len(ub_row.indices))):
+        for n in pd.Series(ub_cols).sample(min(10, len(ub_cols))):
             n_id = algo_ub.item_index_[n]
             n_rates = mc_rates.loc[n_id, :].set_index("user").rating
             ir, nr = irates.align(n_rates, fill_value=0)
             cor = ir.corr(nr)
-            assert mat_ub[ipos, n] == approx(cor)
+            assert mat_ub[ipos, n].item() == approx(cor, abs=1.0e-6)
 
         # short rows are equal
-        if b_row.nnz < MODEL_SIZE:
-            _log.debug("short row of length %d", b_row.nnz)
-            assert b_row.nnz == ub_row.nnz
-            ub_row.sort_indices()
-            b_row.sort_indices()
-            assert b_row.data == approx(ub_row.data)
+        if len(b_cols) < MODEL_SIZE:
+            _log.debug("short row of length %d", len(b_cols))
+            assert len(b_row) == len(ub_row)
+            assert b_row.values().numpy() == approx(ub_row.values().numpy())
             continue
 
         # row is truncated - check that truncation is correct
-        ub_nbrs = pd.Series(ub_row.data, algo_ub.item_index_[ub_row.indices])
-        b_nbrs = pd.Series(b_row.data, algo_lim.item_index_[b_row.indices])
+        ub_nbrs = pd.Series(ub_row.values().numpy(), algo_ub.item_index_[ub_cols])
+        b_nbrs = pd.Series(b_row.values().numpy(), algo_lim.item_index_[b_cols])
 
         assert len(ub_nbrs) >= len(b_nbrs)
         assert len(b_nbrs) <= MODEL_SIZE
