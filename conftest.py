@@ -5,23 +5,37 @@
 # SPDX-License-Identifier: MIT
 
 import logging
-from pytest import fixture
+import os
+import time
+import warnings
 
-from seedbank import numpy_rng, initialize
+from seedbank import initialize, numpy_rng
+
+from pytest import fixture
 
 logging.getLogger("numba").setLevel(logging.INFO)
 
 _log = logging.getLogger("lenskit.tests")
+RNG_SEED = 42
+if "LK_TEST_FREE_RNG" in os.environ:
+    warnings.warn("using nondeterministic RNG initialization")
+    RNG_SEED = None
 
 
 @fixture
 def rng():
-    return numpy_rng(42)
+    if RNG_SEED is None:
+        return numpy_rng(os.urandom(4))
+    else:
+        return numpy_rng(RNG_SEED)
 
 
 @fixture(autouse=True)
 def init_rng(request):
-    initialize(42)
+    if RNG_SEED is None:
+        initialize(os.urandom(4))
+    else:
+        initialize(RNG_SEED)
 
 
 @fixture(autouse=True)
