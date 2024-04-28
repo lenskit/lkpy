@@ -147,14 +147,14 @@ def _predict_weighted_average(
     nitems, _ni = model.shape
     assert nitems == _ni
     min_nbrs, max_nbrs = nrange
-    sims = np.full(nitems, np.nan, dtype=np.float_)
+    t_sims = np.full(nitems, np.nan, dtype=np.float_)
 
     _logger.debug("rated: %s", rated)
     _logger.debug("ratev: %s", rate_v)
 
     # we proceed rating-by-rating, and accumulate results
-    sims = torch.zeros(nitems)
-    sims = torch.zeros(nitems)
+    scores = torch.zeros(nitems)
+    t_sims = torch.zeros(nitems)
     counts = torch.zeros(nitems, dtype=torch.int32)
 
     # fast path: compute everything that we can
@@ -165,8 +165,8 @@ def _predict_weighted_average(
         _logger.debug("item %d: %d neighbors", iidx, len(row_is))
 
         counts[row_is] += 1
-        sims[row_is] += torch.abs(row_vs)
-        sims[row_is] += row_vs * rate_v[i]
+        t_sims[row_is] += torch.abs(row_vs)
+        scores[row_is] += row_vs * rate_v[i]
 
     # slow-path items that have too many sims
     if torch.any(counts > max_nbrs):
@@ -174,14 +174,14 @@ def _predict_weighted_average(
         _msg(logging.WARNING, f"{n} items have too many neighbors")
 
     # compute averages for items that don't match the threshold
-    _logger.debug("sims: %s", sims)
-    _logger.debug("sims: %s", sims)
+    _logger.debug("sims: %s", t_sims)
+    _logger.debug("sims: %s", t_sims)
     _logger.debug("counts: %s", counts)
     mask = counts >= min_nbrs
-    sims[mask] /= sims[mask]
-    sims[torch.logical_not(mask)] = torch.nan
+    scores[mask] /= t_sims[mask]
+    scores[torch.logical_not(mask)] = torch.nan
 
-    return sims
+    return scores
 
 
 def _predict_sum(
