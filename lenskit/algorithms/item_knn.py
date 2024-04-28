@@ -156,27 +156,58 @@ def _predict_weighted_average(
     scores = torch.zeros(nitems)
     t_sims = torch.zeros(nitems)
     counts = torch.zeros(nitems, dtype=torch.int32)
+    nbr_sims = torch.empty((nitems, max_nbrs))
+    nbr_vals = torch.empty((nitems, max_nbrs))
 
-    # fast path: compute everything that we can
     for i, iidx in enumerate(rated):
         row = model[iidx]
-        row_is = row.indices()
+        row_is = row.indices()[0]
         row_vs = row.values()
+        assert row_is.shape == row_vs.shape
         _logger.debug("item %d: %d neighbors", iidx, len(row_is))
 
-        counts[row_is] += 1
-        t_sims[row_is] += torch.abs(row_vs)
-        scores[row_is] += row_vs * rate_v[i]
+        row_avs = torch.abs(row_vs)
+        fast = counts[row_is] < max_nbrs
 
-    # slow-path items that have too many sims
-    if torch.any(counts > max_nbrs):
-        n = torch.sum(counts > max_nbrs)
-        _msg(logging.WARNING, f"{n} items have too many neighbors")
+        # save the fast-path items
+        if torch.any(fast):
+            ris_fast = row_is[fast]
+            avs_fast = row_avs[fast]
+            vals_fast = row_vs[fast] * rate_v[i]
+            nbr_sims[ris_fast, counts[ris_fast]] = avs_fast
+            nbr_vals[ris_fast, counts[ris_fast]] = vals_fast
+            counts[ris_fast] += 1
+            t_sims[ris_fast] += avs_fast
+            scores[ris_fast] += vals_fast
 
-    # compute averages for items that don't match the threshold
-    _logger.debug("sims: %s", t_sims)
-    _logger.debug("sims: %s", t_sims)
-    _logger.debug("counts: %s", counts)
+        # skip early if we're done
+        if torch.all(fast):
+            continue
+
+        # now we have the slow-path items
+        slow = ~fast
+        ris_slow = row_is[slow]
+        # this is brute-force linear search for simplicity right now
+        # for each, find the neighbor that's the smallest:
+        mins = torch.argmin(nbr_sims[ris_slow], dim=1)
+        # find the items where this neighbor exceeds the smallest so far:
+        min_sims = nbr_sims[ris_slow, mins]
+        exc = min_sims < row_vs[slow]
+        if not torch.any(exc):
+            continue
+
+        # now we need to update values: add in new and remove old
+        min_vals = nbr_vals[ris_slow, mins]
+        ris_exc = row_is[slow][exc]
+        ravs_exc = row_avs[slow][exc]
+        rvs_exc = row_vs[slow][exc]
+        t_sims[ris_exc] += ravs_exc - min_sims[exc]
+        scores[ris_exc] += rvs_exc * rate_v[i] - min_vals[exc]
+        # and save
+        nbr_sims[ris_exc, mins[exc]] = ravs_exc
+        nbr_vals[ris_exc, mins[exc]] = rvs_exc * rate_v[i]
+
+    # compute averages for items that pass match the threshold
     mask = counts >= min_nbrs
     scores[mask] /= t_sims[mask]
     scores[torch.logical_not(mask)] = torch.nan
@@ -194,13 +225,13 @@ def _predict_sum(
     nitems, _ni = model.shape
     assert nitems == _ni
     min_nbrs, max_nbrs = nrange
-    sims = np.full(nitems, np.nan, dtype=np.float_)
+    t_sims = np.full(nitems, np.nan, dtype=np.float_)
 
     _logger.debug("rated: %s", rated)
     _logger.debug("ratev: %s", rate_v)
 
     # we proceed rating-by-rating, and accumulate results
-    sims = torch.zeros(nitems)
+    t_sims = torch.zeros(nitems)
     counts = torch.zeros(nitems, dtype=torch.int32)
 
     # fast path: compute everything that we can
@@ -211,7 +242,7 @@ def _predict_sum(
         _logger.debug("item %d: %d neighbors", iidx, len(row_is))
 
         counts[row_is] += 1
-        sims[row_is] += torch.abs(row_vs)
+        t_sims[row_is] += torch.abs(row_vs)
 
     # slow-path items that have too many sims
     if torch.any(counts > max_nbrs):
@@ -219,12 +250,11 @@ def _predict_sum(
         _msg(logging.WARNING, f"{n} items have too many neighbors")
 
     # compute averages for items that don't match the threshold
-    _logger.debug("sims: %s", sims)
-    _logger.debug("sims: %s", sims)
+    _logger.debug("sims: %s", t_sims)
     _logger.debug("counts: %s", counts)
     mask = counts >= min_nbrs
 
-    return torch.where(mask, sims, torch.nan)
+    return torch.where(mask, t_sims, torch.nan)
 
 
 _predictors: dict[str, AggFun] = {
