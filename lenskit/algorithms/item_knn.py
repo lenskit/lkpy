@@ -181,7 +181,7 @@ def _predict_weighted_average(
             continue
 
         # now we have the slow-path items
-        slow = ~fast
+        slow = torch.logical_not(fast)
         ris_slow = row_is[slow]
         # this is brute-force linear search for simplicity right now
         # for each, find the neighbor that's the smallest:
@@ -194,7 +194,7 @@ def _predict_weighted_average(
 
         # now we need to update values: add in new and remove old
         min_vals = nbr_vals[ris_slow, mins]
-        ris_exc = ris_slow
+        ris_exc = ris_slow[exc]
         ravs_exc = row_avs[slow][exc]
         rvs_exc = row_vs[slow][exc]
         t_sims[ris_exc] += ravs_exc - min_sims[exc]
