@@ -137,6 +137,7 @@ def _sim_blocks(
     )
 
 
+@torch.jit.script
 def _predict_weighted_average(
     model: torch.Tensor,
     nrange: tuple[int, int],
@@ -147,10 +148,6 @@ def _predict_weighted_average(
     nitems, _ni = model.shape
     assert nitems == _ni
     min_nbrs, max_nbrs = nrange
-    t_sims = np.full(nitems, np.nan, dtype=np.float_)
-
-    _logger.debug("rated: %s", rated)
-    _logger.debug("ratev: %s", rate_v)
 
     # we proceed rating-by-rating, and accumulate results
     scores = torch.zeros(nitems)
@@ -160,11 +157,10 @@ def _predict_weighted_average(
     nbr_vals = torch.empty((nitems, max_nbrs))
 
     for i, iidx in enumerate(rated):
-        row = model[iidx]
+        row = model[int(iidx)]
         row_is = row.indices()[0]
         row_vs = row.values()
         assert row_is.shape == row_vs.shape
-        _logger.debug("item %d: %d neighbors", iidx, len(row_is))
 
         row_avs = torch.abs(row_vs)
         fast = counts[row_is] < max_nbrs
@@ -198,7 +194,7 @@ def _predict_weighted_average(
 
         # now we need to update values: add in new and remove old
         min_vals = nbr_vals[ris_slow, mins]
-        ris_exc = row_is[slow][exc]
+        ris_exc = ris_slow
         ravs_exc = row_avs[slow][exc]
         rvs_exc = row_vs[slow][exc]
         t_sims[ris_exc] += ravs_exc - min_sims[exc]
