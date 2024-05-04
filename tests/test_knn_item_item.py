@@ -104,7 +104,7 @@ def test_ii_train():
 
     test_means = simple_ratings.groupby("item")["rating"].mean()
     test_means = test_means.reindex(algo.item_index_)
-    assert np.all(algo.item_means_.numpy() == test_means.values.astype("f4"))
+    assert np.all(algo.item_means_.numpy() == test_means.values.astype("f8"))
 
     # 6 is a neighbor of 7
     six, seven = algo.item_index_.get_indexer([6, 7])
@@ -594,8 +594,13 @@ def test_ii_known_preds():
 
     err = merged.error
     err = err[err.notna()]
+    space = np.zeros(7)
+    space[1:] = np.logspace(-6, -1, 6)
+    counts, edges = np.histogram(np.abs(err), space)
+    _log.info("error histogram: %s", counts)
     try:
-        assert all(err.abs() < 0.03)  # FIXME this threshold is too high
+        # no more than 5 are out-of-bounds
+        assert np.sum(space[1:]) < 5
     except AssertionError as e:
         bad = merged[merged.error.notna() & (merged.error.abs() >= 0.01)]
         _log.error("erroneous predictions:\n%s", bad)

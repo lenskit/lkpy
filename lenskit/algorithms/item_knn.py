@@ -435,7 +435,7 @@ class ItemItem(Predictor):
         _logger.debug("[%s] made matrix, memory use %s", self._timer, util.max_memory())
 
         # we operate on *transposed* rating matrix: items on the rows
-        rmat = init_rmat.transpose(0, 1).to_sparse_csr()
+        rmat = init_rmat.transpose(0, 1).to_sparse_csr().to(torch.float64)
         stats = sparse_row_stats(rmat)
 
         self._mean_center(rmat, stats)
@@ -528,7 +528,7 @@ class ItemItem(Predictor):
         # get rated item positions & limit to in-model items
         ri_pos = self.item_index_.get_indexer(ratings.index)
 
-        ri_vals = torch.from_numpy(ratings.values[ri_pos >= 0])
+        ri_vals = torch.from_numpy(ratings.values[ri_pos >= 0]).to(torch.float64)
         ri_pos = torch.from_numpy(ri_pos[ri_pos >= 0])
 
         # mean-center the rating array
