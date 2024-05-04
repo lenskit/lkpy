@@ -16,6 +16,7 @@ dependencies:
   - coverage>=5
   - csr>=0.5
   - hypothesis>=6
+  - just
   - numba<0.59,>=0.56
   - numpy>=1.23
   - pandas<3,>=1.5
