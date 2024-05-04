@@ -2,13 +2,15 @@
 Train and save the item-item similarity matrix.
 
 Usage:
-    dump-iknn.py [-d DATA] [-n NBRS] [-m NBRS] [-s SIM] -o FILE
+    dump-iknn.py [-d DATA] [-n NBRS] [-m NBRS] [-s SIM] [-S FILE] [-I FILE]
 
 Options:
     -d DATA, --dataset=DATA
         Learn k-NN matrix on DATA [default: ml-latest-small].
-    -o FILE, --output=FILE
-        Write output to FILE.
+    -S FILE, --sim-output=FILE
+        Write similarities to FILE.
+    -I FILE, --item-output=FILE
+        Write item data to FILE.
 """
 
 import logging
@@ -41,13 +43,20 @@ def main(args):
     _log.info("training algorithm")
     algo.fit(ml.ratings)
 
-    outf = args["--output"]
-    _log.info("saving neighbors to %s", outf)
+    i_outf = args["--item-output"]
+    _log.info("saving items to %s", i_outf)
     items = algo.item_index_
+    stats = pd.DataFrame({"mean": algo.item_means_, "nnbrs": algo.item_counts_}, index=items)
+    stats.index.name = "item"
+    stats = stats.reset_index()
+    stats.to_parquet(i_outf, index=False)
+
+    sim_outf = args["--sim-output"]
+    _log.info("saving neighbors to %s", sim_outf)
     mat = algo.sim_matrix_.to_scipy().tocoo()
     sims = pd.DataFrame({"i1": items[mat.row], "i2": items[mat.col], "sim": mat.data})
     sims.sort_values(["i1", "i2"], inplace=True)
-    sims.to_parquet(outf, index=False)
+    sims.to_parquet(sim_outf, index=False)
 
 
 if __name__ == "__main__":
