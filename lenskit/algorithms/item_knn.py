@@ -60,6 +60,7 @@ def _sim_row(
     # _item_dbg(item, f"row norm {torch.linalg.vector_norm(row.values()).item()}")
     row = row.to_dense()
     sim = torch.mv(matrix, row.to(torch.float64))
+    sim[item] = 0
 
     mask = sim >= min_sim
     cols = torch.nonzero(mask)[:, 0].to(torch.int32)
