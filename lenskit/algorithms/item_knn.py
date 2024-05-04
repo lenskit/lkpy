@@ -169,9 +169,10 @@ def _predict_weighted_average(
         # save the fast-path items
         if torch.any(fast):
             ris_fast = row_is[fast]
+            vs_fast = row_vs[fast]
             avs_fast = row_avs[fast]
-            vals_fast = row_vs[fast] * rate_v[i]
-            nbr_sims[ris_fast, counts[ris_fast]] = avs_fast
+            vals_fast = vs_fast * rate_v[i]
+            nbr_sims[ris_fast, counts[ris_fast]] = vs_fast
             nbr_vals[ris_fast, counts[ris_fast]] = vals_fast
             counts[ris_fast] += 1
             t_sims[ris_fast] += avs_fast
@@ -198,7 +199,7 @@ def _predict_weighted_average(
         ris_exc = ris_slow[exc]
         ravs_exc = row_avs[slow][exc]
         rvs_exc = row_vs[slow][exc]
-        t_sims[ris_exc] += ravs_exc - min_sims[exc]
+        t_sims[ris_exc] += ravs_exc - min_sims[exc].abs()
         scores[ris_exc] += rvs_exc * rate_v[i] - min_vals[exc]
         # and save
         nbr_sims[ris_exc, mins[exc]] = ravs_exc
@@ -212,6 +213,7 @@ def _predict_weighted_average(
     return scores
 
 
+@torch.jit.script
 def _predict_sum(
     model: torch.Tensor,
     nrange: tuple[int, int],
@@ -222,36 +224,60 @@ def _predict_sum(
     nitems, _ni = model.shape
     assert nitems == _ni
     min_nbrs, max_nbrs = nrange
-    t_sims = np.full(nitems, np.nan, dtype=np.float_)
-
-    _logger.debug("rated: %s", rated)
-    _logger.debug("ratev: %s", rate_v)
+    _msg(logging.DEBUG, f"sum-scoring with {len(rated)} items")
 
     # we proceed rating-by-rating, and accumulate results
     t_sims = torch.zeros(nitems)
     counts = torch.zeros(nitems, dtype=torch.int32)
+    nbr_sims = torch.zeros((nitems, max_nbrs))
 
-    # fast path: compute everything that we can
     for i, iidx in enumerate(rated):
+        iidx = int(iidx)
         row = model[iidx]
-        row_is = row.indices()
+        row_is = row.indices()[0]
         row_vs = row.values()
-        _logger.debug("item %d: %d neighbors", iidx, len(row_is))
+        assert row_is.shape == row_vs.shape
 
-        counts[row_is] += 1
-        t_sims[row_is] += torch.abs(row_vs)
+        fast = counts[row_is] < max_nbrs
 
-    # slow-path items that have too many sims
-    if torch.any(counts > max_nbrs):
-        n = torch.sum(counts > max_nbrs)
-        _msg(logging.WARNING, f"{n} items have too many neighbors")
+        # save the fast-path items
+        if torch.any(fast):
+            ris_fast = row_is[fast]
+            vs_fast = row_vs[fast]
+            nbr_sims[ris_fast, counts[ris_fast]] = vs_fast
+            counts[ris_fast] += 1
+            t_sims[ris_fast] += vs_fast
 
-    # compute averages for items that don't match the threshold
-    _logger.debug("sims: %s", t_sims)
-    _logger.debug("counts: %s", counts)
-    mask = counts >= min_nbrs
+        # skip early if we're done
+        if torch.all(fast):
+            continue
 
-    return torch.where(mask, t_sims, torch.nan)
+        # now we have the slow-path items
+        slow = torch.logical_not(fast)
+        ris_slow = row_is[slow]
+        rvs_slow = row_vs[slow]
+        # this is brute-force linear search for simplicity right now
+        # for each, find the neighbor that's the smallest:
+        mins = torch.argmin(nbr_sims[ris_slow], dim=1)
+        # find the items where this neighbor exceeds the smallest so far:
+        min_sims = nbr_sims[ris_slow, mins]
+        exc = min_sims < rvs_slow
+        if not torch.any(exc):
+            continue
+
+        # now we need to update values: add in new and remove old
+        # anywhere our new neighbor is grater than smallest, replace smallest
+        ris_exc = ris_slow[exc]
+        rvs_exc = rvs_slow[exc]
+        t_sims[ris_exc] -= min_sims[exc]
+        t_sims[ris_exc] += rvs_exc
+        # and save
+        nbr_sims[ris_exc, mins[exc]] = rvs_exc
+
+    # compute averages for items that pass match the threshold
+    t_sims[counts < min_nbrs] = torch.nan
+
+    return t_sims
 
 
 _predictors: dict[str, AggFun] = {

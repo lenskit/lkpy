@@ -409,6 +409,47 @@ def test_ii_large_models(rng):
 
 
 @lktu.wantjit
+@mark.slow
+def test_ii_implicit_large(rng):
+    "Test that implicit-feedback mode works on full test data."
+    _log.info("training model")
+    NBRS = 5
+    NUSERS = 25
+    NRECS = 50
+    algo = knn.ItemItem(NBRS, feedback="implicit")
+    _log.info("agg: %s", algo.aggregate)
+    algo = Recommender.adapt(algo)
+    algo.fit(ml_ratings[["user", "item"]])
+
+    users = rng.choice(ml_ratings["user"].unique(), NUSERS)
+
+    items: pd.Index = algo.predictor.item_index_
+    mat: torch.Tensor = algo.predictor.sim_matrix_.to_dense()
+
+    for user in users:
+        recs = algo.recommend(user, NRECS)
+        _log.info("user %s recs\n%s", user, recs)
+        assert len(recs) == NRECS
+        urates = ml_ratings[ml_ratings["user"] == user]
+
+        smat = mat[torch.from_numpy(items.get_indexer_for(urates["item"].values)), :]
+        for row in recs.itertuples():
+            col = smat[:, items.get_loc(row.item)]
+            top, _is = torch.topk(col, NBRS)
+            score = top.sum()
+            try:
+                assert row.score == approx(score)
+            except AssertionError as e:
+                _log.error("test failed for user %s item %s", user, row.item)
+                _log.info("score: %.6f", row.score)
+                _log.info("sims:\n%s", col)
+                _log.info("total: %.3f", col.sum())
+                _log.info("filtered: %s", top)
+                _log.info("filtered sum: %.3f", top.sum())
+                raise e
+
+
+@lktu.wantjit
 def test_ii_save_load(tmp_path, ml_subset):
     "Save and load a model"
     original = knn.ItemItem(30, save_nbrs=500)
