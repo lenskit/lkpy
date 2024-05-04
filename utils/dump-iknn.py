@@ -46,15 +46,23 @@ def main(args):
     i_outf = args["--item-output"]
     _log.info("saving items to %s", i_outf)
     items = algo.item_index_
-    stats = pd.DataFrame({"mean": algo.item_means_, "nnbrs": algo.item_counts_}, index=items)
+    stats = pd.DataFrame(
+        {"mean": algo.item_means_.numpy(), "nnbrs": algo.item_counts_.numpy()}, index=items
+    )
     stats.index.name = "item"
     stats = stats.reset_index()
     stats.to_parquet(i_outf, index=False)
 
     sim_outf = args["--sim-output"]
     _log.info("saving neighbors to %s", sim_outf)
-    mat = algo.sim_matrix_.to_scipy().tocoo()
-    sims = pd.DataFrame({"i1": items[mat.row], "i2": items[mat.col], "sim": mat.data})
+    mat = algo.sim_matrix_.to_sparse_coo()
+    sims = pd.DataFrame(
+        {
+            "i1": items[mat.indices()[0].numpy()],
+            "i2": items[mat.indices()[1].numpy()],
+            "sim": mat.values().numpy(),
+        }
+    )
     sims.sort_values(["i1", "i2"], inplace=True)
     sims.to_parquet(sim_outf, index=False)
 
