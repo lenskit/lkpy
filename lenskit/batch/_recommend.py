@@ -90,6 +90,11 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, **kwargs):
         timer = util.Stopwatch()
         results = worker.map((user, n, candidates(user)) for user in users)
         results = pd.concat(results, ignore_index=True, copy=False)
-        _logger.info("recommended for %d users in %s", len(users), timer)
+        timer.stop()
+        time = timer.elapsed()
+        rate = time / len(users)
+        _logger.info(
+            "recommended for %d users in %s (%.1fms per user)", len(users), timer, rate * 1000
+        )
 
     return results
