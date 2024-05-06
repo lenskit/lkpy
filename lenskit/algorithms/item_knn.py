@@ -191,13 +191,15 @@ def _predict_weighted_average(
         rvs_slow = row_vs[slow]
         # which slow items might actually need an update?
         exc = rvs_slow > nbr_min[ris_slow]
+        if not torch.any(exc):
+            continue
+
         ris_slow = ris_slow[exc]
         rvs_slow = rvs_slow[exc]
 
         # this is brute-force linear search for simplicity right now
         # for each, find the neighbor that's the smallest:
         min_sims, mins = torch.min(nbr_sims[ris_slow], dim=1)
-        # find the items where this neighbor exceeds the smallest so far:
         assert torch.all(min_sims < rvs_slow)
 
         # now we need to update values: add in new and remove old
@@ -221,7 +223,6 @@ def _predict_weighted_average(
     return scores
 
 
-@torch.jit.script
 def _predict_sum(
     model: torch.Tensor,
     nrange: tuple[int, int],
@@ -238,6 +239,8 @@ def _predict_sum(
     t_sims = torch.zeros(nitems)
     counts = torch.zeros(nitems, dtype=torch.int32)
     nbr_sims = torch.zeros((nitems, max_nbrs))
+    # and this stores the smallest similarity so far for each item
+    nbr_min = torch.full((nitems,), torch.finfo().max)
 
     for i, iidx in enumerate(rated):
         iidx = int(iidx)
@@ -255,6 +258,7 @@ def _predict_sum(
             nbr_sims[ris_fast, counts[ris_fast]] = vs_fast
             counts[ris_fast] += 1
             t_sims[ris_fast] += vs_fast
+            nbr_min[ris_fast] = torch.minimum(nbr_min[ris_fast], vs_fast)
 
         # skip early if we're done
         if torch.all(fast):
@@ -264,23 +268,27 @@ def _predict_sum(
         slow = torch.logical_not(fast)
         ris_slow = row_is[slow]
         rvs_slow = row_vs[slow]
-        # this is brute-force linear search for simplicity right now
-        # for each, find the neighbor that's the smallest:
-        mins = torch.argmin(nbr_sims[ris_slow], dim=1)
-        # find the items where this neighbor exceeds the smallest so far:
-        min_sims = nbr_sims[ris_slow, mins]
-        exc = min_sims < rvs_slow
+        # which slow items might actually need an update?
+        exc = rvs_slow > nbr_min[ris_slow]
         if not torch.any(exc):
             continue
 
+        ris_slow = ris_slow[exc]
+        rvs_slow = rvs_slow[exc]
+
+        # this is brute-force linear search for simplicity right now
+        # for each, find the neighbor that's the smallest:
+        min_sims, mins = torch.min(nbr_sims[ris_slow], dim=1)
+
         # now we need to update values: add in new and remove old
         # anywhere our new neighbor is grater than smallest, replace smallest
-        ris_exc = ris_slow[exc]
-        rvs_exc = rvs_slow[exc]
-        t_sims[ris_exc] -= min_sims[exc]
-        t_sims[ris_exc] += rvs_exc
+        t_sims[ris_slow] -= min_sims
+        t_sims[ris_slow] += rvs_slow
         # and save
-        nbr_sims[ris_exc, mins[exc]] = rvs_exc
+        nbr_sims[ris_slow, mins] = rvs_slow
+        # save the minimums
+        nm_sims, _nm_is = torch.min(nbr_sims[ris_slow], dim=1)
+        nbr_min[ris_slow] = nm_sims
 
     # compute averages for items that pass match the threshold
     t_sims[counts < min_nbrs] = torch.nan
