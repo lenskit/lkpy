@@ -245,3 +245,5 @@ jobs:
           fetch-depth: 0
 
       - uses: lenskit/lkbuild/actions/report-test-results@main
+        env:
+          CODECOV_TOKEN: 5cdb6ef4-e80b-44ce-b88d-1402e4dfb781
