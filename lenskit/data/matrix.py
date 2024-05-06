@@ -120,9 +120,11 @@ def sparse_ratings(
     if items is None:
         items = pd.Index(np.unique(ratings.item), name="item")
 
-    nu = len(users)
+    n = len(ratings)
     ni = len(items)
-    _log.debug("creating matrix with %d ratings for %d items by %d users", len(ratings), ni, nu)
+    nu = len(users)
+
+    _log.debug("creating matrix with %d ratings for %d items by %d users", n, ni, nu)
 
     row_ind = users.get_indexer(ratings.user).astype(np.intc)
     if np.any(row_ind < 0):

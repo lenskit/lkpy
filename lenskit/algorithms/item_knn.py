@@ -68,7 +68,7 @@ def _sim_row(
     assert len(cols) == torch.sum(mask)
 
     if max_nbrs is not None and max_nbrs > 0 and max_nbrs < vals.shape[0]:
-        _item_dbg(item, "truncating similarities")
+        # _item_dbg(item, "truncating similarities")
         vals, cis = torch.topk(vals, max_nbrs, sorted=False)
         cols = cols[cis]
         order = torch.argsort(cols)
@@ -431,14 +431,9 @@ class ItemItem(Predictor):
         _logger.info("[%s] computed %d neighbor pairs", self._timer, len(smat.col_indices()))
 
         self.item_index_ = items
-        self.item_means_ = stats.means
+        self.item_means_ = stats.means if self.center else None
         self.item_counts_ = torch.diff(smat.crow_indices())
         self.sim_matrix_ = smat
-        self.sim_ind_ = torch.sparse_csr_tensor(
-            crow_indices=smat.crow_indices(),
-            col_indices=smat.col_indices(),
-            values=torch.full(smat.values().shape, 1, dtype=torch.uint8),
-        )
         self.user_index_ = users
         self.rating_matrix_ = init_rmat
         _logger.debug("[%s] done, memory use %s", self._timer, util.max_memory())
