@@ -62,6 +62,7 @@ jobs:
         if: runner.os == 'Linux'
         env:
           NUMBA_DISABLE_JIT: 1
+          TORCH_JIT: 0
         run: |
           python -m pytest --cov=lenskit --cov-append -m 'not slow' --log-file=test-nojit.log
 
