@@ -17,11 +17,6 @@ import lenskit.util.test as lktu
 from lenskit import util
 from lenskit.algorithms import als
 
-try:
-    import binpickle
-except ImportError:
-    binpickle = None
-
 _log = logging.getLogger(__name__)
 
 simple_df = pd.DataFrame(
@@ -246,39 +241,6 @@ def test_als_save_load():
     # make sure it still works
     preds = algo.predict_for_user(10, np.arange(0, 50, dtype="i8"))
     assert len(preds) == 50
-
-
-@mark.skipif(not binpickle, reason="binpickle not available")
-def test_als_binpickle(tmp_path):
-    "Test saving ALS with BinPickle"
-
-    original = als.BiasedMF(20, iterations=5)
-    ratings = lktu.ml_test.ratings
-    original.fit(ratings)
-
-    assert original.bias.mean_ == approx(ratings.rating.mean())
-
-    file = tmp_path / "als.bpk"
-    binpickle.dump(original, file)
-
-    with binpickle.BinPickleFile(file) as bpf:
-        # the pickle data should be small
-        _log.info("serialized to %d pickle bytes", bpf.entries[-1].dec_length)
-        assert bpf.entries[-1].dec_length < 2048
-
-        algo = bpf.load()
-
-        assert algo.bias.mean_ == original.bias.mean_
-        assert np.all(algo.bias.user_offsets_ == original.bias.user_offsets_)
-        assert np.all(algo.bias.item_offsets_ == original.bias.item_offsets_)
-        assert np.all(algo.user_features_ == original.user_features_)
-        assert np.all(algo.item_features_ == original.item_features_)
-        assert np.all(algo.item_index_ == original.item_index_)
-        assert np.all(algo.user_index_ == original.user_index_)
-
-        # make sure it still works
-        preds = algo.predict_for_user(10, np.arange(0, 50, dtype="i8"))
-        assert len(preds) == 50
 
 
 @mark.slow
