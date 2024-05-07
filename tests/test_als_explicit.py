@@ -7,20 +7,15 @@
 import logging
 import pickle
 
-# get a usable pickle disassembler
-from pickletools import dis as pickle_dis
-
 import numpy as np
 import pandas as pd
 import torch
-from seedbank import numpy_rng
 
 from pytest import approx, mark
 
 import lenskit.util.test as lktu
 from lenskit import util
 from lenskit.algorithms import als
-from lenskit.util import Stopwatch
 
 try:
     import binpickle
@@ -269,7 +264,6 @@ def test_als_binpickle(tmp_path):
     with binpickle.BinPickleFile(file) as bpf:
         # the pickle data should be small
         _log.info("serialized to %d pickle bytes", bpf.entries[-1].dec_length)
-        pickle_dis(bpf._read_buffer(bpf.entries[-1]))
         assert bpf.entries[-1].dec_length < 2048
 
         algo = bpf.load()
