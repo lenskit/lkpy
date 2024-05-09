@@ -25,7 +25,6 @@ from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import Fallback
 from lenskit.algorithms.bias import Bias
 from lenskit.parallel import invoker
-from lenskit.sharing import persist
 from lenskit.util import Stopwatch, clone
 
 _log = logging.getLogger(__name__)
@@ -646,16 +645,6 @@ def test_ii_known_preds():
         bad = merged[merged.error.notna() & (merged.error.abs() >= 0.01)]
         _log.error("erroneous predictions:\n%s", bad)
         raise e
-
-
-def _train_ii():
-    algo = knn.ItemItem(20, min_sim=1.0e-6)
-    timer = Stopwatch()
-    _log.info("training %s on ml data", algo)
-    algo.fit(lktu.ml_test.ratings)
-    _log.info("trained in %s", timer)
-    shr = persist(algo)
-    return shr.transfer()
 
 
 @lktu.wantjit

@@ -32,9 +32,6 @@ def invoker(
         n_jobs(int or None):
             The number of processes to use for parallel operations.  If ``None``, will
             call :func:`proc_count` with a maximum default process count of 4.
-        persist_method(str or None):
-            The persistence method to use.  Passed as ``method`` to
-            :func:`lenskit.sharing.persist`.
 
     Returns:
         ModelOpInvoker:
