@@ -664,8 +664,6 @@ def _train_ii():
 @mark.skipif(not lktu.ml100k.available, reason="ML100K not available")
 @mark.parametrize("ncpus", [1, 2])
 def test_ii_batch_recommend(ncpus):
-    if ncpus > 1:
-        pytest.skip("multiple CPUs temporarily disabled")
     import lenskit.crossfold as xf
     from lenskit import topn
 
