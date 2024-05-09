@@ -12,7 +12,7 @@ import pandas as pd
 
 from .. import util
 from ..algorithms import Recommender
-from ..sharing import PersistedModel
+from ..parallel import invoker
 
 _logger = logging.getLogger(__name__)
 
@@ -72,19 +72,18 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, **kwargs):
         n_jobs = kwargs["nprocs"]
         warnings.warn("nprocs is deprecated, use n_jobs", DeprecationWarning)
 
-    if not isinstance(algo, PersistedModel):
-        rec_algo = Recommender.adapt(algo)
-        if candidates is None and rec_algo is not algo:
-            warnings.warn("no candidates provided and algo is not a recommender, unlikely to work")
-        algo = rec_algo
-        del rec_algo
+    rec_algo = Recommender.adapt(algo)
+    if candidates is None and rec_algo is not algo:
+        warnings.warn("no candidates provided and algo is not a recommender, unlikely to work")
+    algo = rec_algo
+    del rec_algo
 
     if "ratings" in kwargs:
         warnings.warn("Providing ratings to recommend is not supported", DeprecationWarning)
 
     candidates = __standard_cand_fun(candidates)
 
-    with util.parallel.invoker(algo, _recommend_user, n_jobs=n_jobs) as worker:
+    with invoker(algo, _recommend_user, n_jobs=n_jobs) as worker:
         _logger.info("recommending with %s for %d users (n_jobs=%s)", str(algo), len(users), n_jobs)
         del algo
         timer = util.Stopwatch()

@@ -10,6 +10,7 @@ import warnings
 import pandas as pd
 
 from .. import util
+from ..parallel import invoker
 
 _logger = logging.getLogger(__name__)
 _rec_context = None
@@ -81,7 +82,7 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
     nusers = pairs["user"].nunique()
 
     timer = util.Stopwatch()
-    with util.parallel.invoker(algo, _predict_user, n_jobs=n_jobs) as worker:
+    with invoker(algo, _predict_user, n_jobs=n_jobs) as worker:
         del algo  # maybe free some memory
 
         _logger.info(
