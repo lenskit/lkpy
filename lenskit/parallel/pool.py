@@ -18,7 +18,7 @@ from torch.multiprocessing import get_context
 from . import worker
 from .config import proc_count
 from .invoker import A, InvokeOp, M, ModelOpInvoker, R
-from .serialize import shm_serialize
+from .serialize import init_reductions
 
 _log = logging.getLogger(__name__)
 _log_listener: manylog.LogListener | None = None
@@ -36,7 +36,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         log_addr = ensure_log_listener()
 
         cfg = worker.WorkerConfig(kid_tc, seed, log_addr)
-        job = shm_serialize(worker.WorkerContext(func, model))
+        job = worker.WorkerContext(func, model)
         self.pool = ctx.Pool(n_jobs, worker.initalize, (cfg, job), None)
 
     def map(self, tasks: Iterable[A]) -> Iterator[R]:
@@ -56,3 +56,6 @@ def ensure_log_listener() -> str:
     addr = _log_listener.address
     assert addr is not None
     return addr
+
+
+init_reductions()

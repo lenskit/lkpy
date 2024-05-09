@@ -21,8 +21,13 @@ def _rebuild_ndarray(tensor):
 
 
 def _reduce_ndarray(a: np.ndarray):
-    print("serializing: %s", a)
-    return (_rebuild_ndarray, (torch.from_numpy(a),))
+    print("serializing", a)
+    print(f"{a.dtype} {a.shape}")
+    try:
+        t = torch.from_numpy(a)
+        return (_rebuild_ndarray, (t,))
+    except TypeError:
+        return a.__reduce__()
 
 
 def init_reductions():

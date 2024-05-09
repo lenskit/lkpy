@@ -4,10 +4,12 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import itertools
 import logging
 import multiprocessing as mp
 
 import numpy as np
+import torch
 
 from pytest import approx, mark
 
@@ -21,10 +23,13 @@ def _mul_op(m, v):
     return m @ v
 
 
-@mark.parametrize("n_jobs", [None, 1, 2, 8])
-def test_invoke_matrix(n_jobs):
-    matrix = np.random.randn(100, 100)
-    vectors = [np.random.randn(100) for i in range(100)]
+@mark.parametrize("pkg,n_jobs", itertools.product(["numpy", "torch"], [None, 1, 2, 8]))
+def test_invoke_matrix(pkg, n_jobs, rng: np.random.Generator):
+    matrix = rng.normal(size=(100, 100))
+    vectors = [rng.normal(size=100) for i in range(100)]
+    if pkg == "torch":
+        matrix = torch.from_numpy(matrix)
+        vectors = [torch.from_numpy(v) for v in vectors]
     with invoker(matrix, _mul_op, n_jobs) as inv:
         mults = inv.map(vectors)
         for rv, v in zip(mults, vectors):
