@@ -19,6 +19,15 @@ The first 2024 release is currently in-progress.
 This document presents the highlights for this release. The full changelog for this release is available in the `Git history <https://github.com/lenskit/lkpy/compare/0.14.4...main>`_
 and `issue/PR milestone <https://github.com/lenskit/lkpy/milestone/14>`_.
 
+Significant Changes
+~~~~~~~~~~~~~~~~~~~
+
+2024.1 brings substantial changes to LensKit.
+
+* **PyTorch**. LensKit now uses PyTorch to implement most of its algorithms,
+  instead of Numba-accelerated NumPy code.  Algorithms using PyTorch are:
+  * :py:class:`~lenskit.algorithms.item_knn.ItemItem`
+
 New Features (incremental)
 ~~~~~~~~~
 
