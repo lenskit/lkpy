@@ -30,3 +30,6 @@ dependencies:
   - sphinxext-opengraph>=0.5
   - tbb
   - threadpoolctl>=3.0
+  - pip
+  - pip:
+      - progress-api>=0.1.0a6

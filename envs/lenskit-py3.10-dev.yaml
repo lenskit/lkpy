@@ -53,4 +53,5 @@ dependencies:
   - tqdm>=4
   - pip
   - pip:
+      - progress-api>=0.1.0a6
       - unbeheader~=1.3
