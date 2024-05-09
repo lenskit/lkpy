@@ -36,13 +36,13 @@ _logger = logging.getLogger(__name__)
 MAX_BLOCKS = 1024
 
 
-@torch.jit.ignore
+@torch.jit.ignore  # type: ignore
 def _msg(level, msg):
     # type: (int, str) -> None
     _logger.log(level, msg)
 
 
-@torch.jit.ignore
+@torch.jit.ignore  # type: ignore
 def _item_dbg(item, msg):
     # type: (int, str) -> None
     _logger.debug("item %d: %s", item, msg)
@@ -110,7 +110,7 @@ def _sim_blocks(
 
     for start in range(0, nitems, block_size):
         end = min(start + block_size, nitems)
-        jobs.append(torch.jit.fork(_sim_block, matrix, start, end, min_sim, max_nbrs))
+        jobs.append(torch.jit.fork(_sim_block, matrix, start, end, min_sim, max_nbrs))  # type: ignore
 
     counts = [torch.tensor([0], dtype=torch.int32)]
     columns = []
