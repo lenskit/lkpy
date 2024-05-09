@@ -14,6 +14,7 @@ from typing import Any
 
 import numpy as np
 import torch
+from torch.multiprocessing.reductions import reduce_tensor
 
 
 def _rebuild_ndarray(tensor):
@@ -21,8 +22,6 @@ def _rebuild_ndarray(tensor):
 
 
 def _reduce_ndarray(a: np.ndarray):
-    print("serializing", a)
-    print(f"{a.dtype} {a.shape}")
     try:
         t = torch.from_numpy(a)
         return (_rebuild_ndarray, (t,))
@@ -30,8 +29,28 @@ def _reduce_ndarray(a: np.ndarray):
         return a.__reduce__()
 
 
+def _reduce_tensor_wrapper(t: torch.Tensor):
+    if t.is_sparse_csr:
+        return torch.sparse_csr_tensor, (
+            t.crow_indices(),
+            t.col_indices(),
+            t.values(),
+            t.shape,
+        )
+    elif t.is_sparse:
+        return torch.sparse_coo_tensor, (
+            t.row_indices(),
+            t.col_indices(),
+            t.values(),
+            t.shape,
+        )
+    else:
+        return reduce_tensor(t)
+
+
 def init_reductions():
     ForkingPickler.register(np.ndarray, _reduce_ndarray)
+    ForkingPickler.register(torch.Tensor, _reduce_tensor_wrapper)
 
 
 def shm_serialize(obj: Any) -> bytes:
