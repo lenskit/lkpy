@@ -26,7 +26,6 @@ jobs:
         - "3.11"
         platform:
         - macos-latest
-        - macos-14
         - windows-latest
         - ubuntu-latest
 
@@ -151,7 +150,7 @@ jobs:
         platform:
         - windows-latest
         - ubuntu-latest
-        - macos-14
+        - macos-latest
     steps:
       - name: Check out source
         uses: actions/checkout@v4
