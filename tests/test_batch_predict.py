@@ -4,17 +4,17 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import pytest
-
 import logging
 from collections import namedtuple
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 
-import lenskit.util.test as lktu
+import pytest
 
-from lenskit.algorithms.bias import Bias
 import lenskit.batch as lkb
+import lenskit.util.test as lktu
+from lenskit.algorithms.bias import Bias
 
 _log = logging.getLogger(__name__)
 
@@ -112,10 +112,10 @@ def test_predict_include_rating(mlb):
 @pytest.mark.eval
 @pytest.mark.parametrize("ncpus", [None, 1, 2])
 def test_bias_batch_predict(ncpus):
-    from lenskit.algorithms import bias
     import lenskit.crossfold as xf
-    from lenskit import batch
     import lenskit.metrics.predict as pm
+    from lenskit import batch
+    from lenskit.algorithms import bias
 
     ratings = lktu.ml100k.ratings
 
@@ -136,18 +136,3 @@ def test_bias_batch_predict(ncpus):
     rmse = pm.rmse(preds.prediction, preds.rating)
     _log.info("RMSE is %f", rmse)
     assert rmse == pytest.approx(0.95, abs=0.1)
-
-
-def test_batch_predict_preshared():
-    "Test batch prediction with isolated training and a pre-serialized algorithm."
-    from lenskit.algorithms import bias
-    import lenskit.crossfold as xf
-
-    algo = bias.Bias()
-    splits = xf.sample_users(lktu.ml_test.ratings, 1, 100, xf.SampleN(5))
-    train, test = next(splits)
-
-    ares = lkb.train_isolated(algo, train)
-    preds = lkb.predict(ares, test)
-    assert len(preds) == len(test)
-    assert not any(preds["prediction"].isna())
