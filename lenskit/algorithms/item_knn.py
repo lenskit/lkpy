@@ -16,9 +16,11 @@ from typing import Callable, Literal, Optional, TypeAlias
 import numpy as np
 import pandas as pd
 import torch
+from progress_api import Progress, make_progress
 
 from lenskit import ConfigWarning, DataWarning, util
 from lenskit.data.matrix import DimStats, sparse_ratings, sparse_row_stats
+from lenskit.util.logging import pbh_update, progress_handle
 
 from . import Predictor
 
@@ -33,6 +35,7 @@ AggFun: TypeAlias = Callable[
 ]
 
 _logger = logging.getLogger(__name__)
+_progress: Progress | None
 MAX_BLOCKS = 1024
 
 
@@ -81,7 +84,7 @@ def _sim_row(
 
 @torch.jit.script
 def _sim_block(
-    matrix: torch.Tensor, start: int, end: int, min_sim: float, max_nbrs: Optional[int]
+    matrix: torch.Tensor, start: int, end: int, min_sim: float, max_nbrs: Optional[int], pbh: str
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     "Compute a single block of the similarity matrix"
     bsize = end - start
@@ -95,13 +98,14 @@ def _sim_block(
         counts[i - start] = c
         columns.append(cs)
         values.append(vs)
+        pbh_update(pbh, 1)
 
     return counts, torch.cat(columns), torch.cat(values).to(torch.float32)
 
 
 @torch.jit.script
 def _sim_blocks(
-    matrix: torch.Tensor, min_sim: float, max_nbrs: Optional[int], block_size: int
+    matrix: torch.Tensor, min_sim: float, max_nbrs: Optional[int], block_size: int, pbh: str
 ) -> torch.Tensor:
     "Compute the similarity matrix with blocked matrix-matrix multiplies"
     nitems, nusers = matrix.shape
@@ -110,7 +114,7 @@ def _sim_blocks(
 
     for start in range(0, nitems, block_size):
         end = min(start + block_size, nitems)
-        jobs.append(torch.jit.fork(_sim_block, matrix, start, end, min_sim, max_nbrs))  # type: ignore
+        jobs.append(torch.jit.fork(_sim_block, matrix, start, end, min_sim, max_nbrs, pbh))  # type: ignore
 
     counts = [torch.tensor([0], dtype=torch.int32)]
     columns = []
@@ -549,7 +553,8 @@ class ItemItem(Predictor):
 
         bs = max(self.block_size, nitems // MAX_BLOCKS)
         _logger.debug("computing with effective block size %d", bs)
-        smat = _sim_blocks(rmat.to(torch.float64), self.min_sim, self.save_nbrs, bs)
+        with progress_handle(_logger, "items", nitems, leave=False) as pbh:
+            smat = _sim_blocks(rmat.to(torch.float64), self.min_sim, self.save_nbrs, bs, pbh)
 
         return smat.to(torch.float32)
 

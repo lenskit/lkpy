@@ -27,10 +27,11 @@ dependencies = [
   "scipy >= 1.9.0",
   "numba >= 0.56, < 0.59",
   "cffi >= 1.15.0",
-  "torch ~=2.1",           # p2c: -s pytorch==2.*
+  "torch ~=2.1",            # p2c: -s pytorch==2.*
   "threadpoolctl >=3.0",
   "binpickle >= 0.3.2",
   "seedbank >= 0.1.0",
+  "progress-api >=0.1.0a6", # p2c: -p
   "csr >= 0.5",
 ]
 
