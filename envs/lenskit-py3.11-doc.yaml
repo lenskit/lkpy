@@ -23,7 +23,6 @@ dependencies:
   - pandas<3,>=1.5
   - pytorch==2.*
   - scipy>=1.9.0
-  - seedbank>=0.1.0
   - sphinx>=4.2
   - sphinx_rtd_theme>=0.5
   - sphinxcontrib-bibtex>=2.0
@@ -32,4 +31,6 @@ dependencies:
   - threadpoolctl>=3.0
   - pip
   - pip:
+      - manylog>=0.1.0a3
       - progress-api>=0.1.0a6
+      - seedbank>=0.2.0a1
