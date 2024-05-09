@@ -1,10 +1,10 @@
 Parallel Execution
 ------------------
 
-.. py:module:: lenskit.util.parallel
+.. py:module:: lenskit.parallel
 
-LensKit uses :py:class:`concurrent.futures.ProcessPoolExecutor` to paralellize batch
-operations (see :py:mod:`lenskit.batch`).
+LensKit uses a custom API wrapping  :py:class:`multiprocessing.pool.Pool` to
+paralellize batch operations (see :py:mod:`lenskit.batch`).
 
 The basic idea of this API is to create an *invoker* that has a model and a function,
 and then passing lists of argument sets to the function::
@@ -13,6 +13,7 @@ and then passing lists of argument sets to the function::
         results = list(func.map(args))
 
 The model is persisted into shared memory to be used by the worker processes.
+PyTorch tensors, including those on CUDA devices, are shared.
 
 Parallel Model Ops
 ~~~~~~~~~~~~~~~~~~
@@ -25,9 +26,3 @@ Parallel Model Ops
     :members:
 
 
-Single Process Isolation
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-We also have a single-process isolation function that runs a function in a subprocess.
-
-.. autofunction:: run_sp

@@ -6,5 +6,4 @@ Neither LensKit users nor algorithm developers are likely to need to use this
 code directly.
 
 .. toctree::
-    sharing
     parallel
