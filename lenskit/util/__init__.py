@@ -14,7 +14,6 @@ from textwrap import dedent
 
 from ..algorithms import Algorithm
 from .log import log_to_notebook, log_to_stderr  # noqa: F401
-from .parallel import proc_count  # noqa: F401
 from .random import derivable_rng
 from .timing import Stopwatch  # noqa: F401
 
@@ -31,7 +30,6 @@ __all__ = [
     "Stopwatch",
     "read_df_detect",
     "derivable_rng",
-    "proc_count",
     "clone",
     "clean_str",
 ]

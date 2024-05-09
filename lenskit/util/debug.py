@@ -25,8 +25,6 @@ from typing import Optional
 import numba
 import threadpoolctl
 
-from .parallel import is_worker
-
 _log = logging.getLogger(__name__)
 _already_checked = False
 
@@ -97,7 +95,7 @@ def check_env():
     """
     global _already_checked
     problems = 0
-    if _already_checked or is_worker():
+    if _already_checked:
         return
 
     try:

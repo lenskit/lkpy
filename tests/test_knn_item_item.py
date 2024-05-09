@@ -24,9 +24,9 @@ from lenskit import ConfigWarning, DataWarning, batch
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import Fallback
 from lenskit.algorithms.bias import Bias
+from lenskit.parallel import invoker
 from lenskit.sharing import persist
 from lenskit.util import Stopwatch, clone
-from lenskit.util.parallel import invoker, run_sp
 
 _log = logging.getLogger(__name__)
 
