@@ -7,3 +7,12 @@
 """
 LensKit parallel computation support.
 """
+
+from .config import proc_count
+from .invoker import ModelOpInvoker, invoker
+
+__all__ = [
+    "invoker",
+    "ModelOpInvoker",
+    "proc_count",
+]
