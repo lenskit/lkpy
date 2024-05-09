@@ -365,7 +365,7 @@ class ItemItem(Predictor):
     AGG_WA = intern("weighted-average")
     RATING_AGGS = [AGG_WA]  # the aggregates that use rating values
 
-    nnbrs: int | None
+    nnbrs: int
     min_nbrs: int
     min_sim: float
     save_nbrs: int | None
@@ -387,7 +387,7 @@ class ItemItem(Predictor):
 
     def __init__(
         self,
-        nnbrs: int | None,
+        nnbrs: int,
         min_nbrs: int = 1,
         min_sim: float = 1.0e-6,
         save_nbrs: int | None = None,
@@ -560,9 +560,9 @@ class ItemItem(Predictor):
                 _logger.debug("user %s missing, returning empty predictions", user)
                 return pd.Series(np.nan, index=items)
             upos = self.user_index_.get_loc(user)
-            row = self.rating_matrix_[upos]
+            row = self.rating_matrix_[upos]  # type: ignore
             ratings = pd.Series(
-                row.values(),
+                row.values().numpy(),
                 index=pd.Index(self.item_index_[row.indices()[0]]),
             )
 

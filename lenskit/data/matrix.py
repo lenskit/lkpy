@@ -11,21 +11,20 @@ Data manipulation routines.
 from __future__ import annotations
 
 import logging
-from collections import namedtuple
-from typing import Generic, Literal, NamedTuple, TypeVar, overload
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as sps
 import torch as t
 from csr import CSR
+from typing_extensions import Generic, Literal, NamedTuple, TypeVar, overload
 
 _log = logging.getLogger(__name__)
 
 M = TypeVar("M", CSR, sps.csr_matrix, sps.coo_matrix, t.Tensor)
 
 
-class RatingMatrix(NamedTuple):
+class RatingMatrix(NamedTuple, Generic[M]):
     """
     A rating matrix with associated indices.
 
