@@ -8,6 +8,7 @@
 Serialization utilities for parallel processing.
 """
 
+import logging
 import pickle
 from multiprocessing.reduction import ForkingPickler
 from typing import Any
@@ -15,6 +16,8 @@ from typing import Any
 import numpy as np
 import torch
 from torch.multiprocessing.reductions import reduce_tensor
+
+_log = logging.getLogger(__name__)
 
 
 def _rebuild_ndarray(tensor):
@@ -58,11 +61,13 @@ def shm_serialize(obj: Any) -> bytes:
     Serialize an object for processing in a subclass with shared memory when
     feasible (including CUDA).
     """
-    return ForkingPickler.dumps(obj, pickle.HIGHEST_PROTOCOL)
+    data = ForkingPickler.dumps(obj, pickle.HIGHEST_PROTOCOL)
+    _log.debug("serialized model into %s pickle bytes", len(data))
+    return bytes(data)
 
 
 def shm_deserialize(data) -> Any:
     """
-    Deserialize pickled data.
+    Deserialize SHM-pickled data.
     """
     return pickle.loads(data)

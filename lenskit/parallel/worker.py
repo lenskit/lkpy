@@ -19,6 +19,7 @@ from threadpoolctl import threadpool_limits
 from typing_extensions import Generic, NamedTuple
 
 from .invoker import A, InvokeOp, M, R
+from .serialize import shm_deserialize
 
 _log = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ def initalize(cfg: WorkerConfig, ctx: WorkerContext[M, A, R]) -> None:
     threadpool_limits(limits=cfg.threads, user_api="blas")
     torch.set_num_interop_threads(cfg.threads)
 
-    __work_context = ctx
+    __work_context = shm_deserialize(ctx)
 
     _log.debug("worker %d ready (process %s)", os.getpid(), mp.current_process())
 
