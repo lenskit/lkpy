@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import multiprocessing as mp
 import os
+import pickle
 from typing import Any
 
 import manylog
@@ -55,4 +56,5 @@ def initalize(cfg: WorkerConfig, ctx: bytes) -> None:
 
 
 def worker(arg: Any) -> Any:
-    return __work_context.func(__work_context.model, arg)
+    res = __work_context.func(__work_context.model, arg)
+    return pickle.dumps(res, pickle.HIGHEST_PROTOCOL)

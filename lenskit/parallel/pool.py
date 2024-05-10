@@ -8,12 +8,13 @@
 from __future__ import annotations
 
 import logging
-import multiprocessing as mp
+import pickle
 from concurrent.futures import ProcessPoolExecutor
 from typing import Generic, Iterable, Iterator
 
 import manylog
 import seedbank
+from torch.multiprocessing import get_context
 
 from . import worker
 from .config import proc_count
@@ -29,7 +30,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
 
     def __init__(self, model: M, func: InvokeOp[M, A, R], n_jobs: int):
         _log.debug("persisting function")
-        ctx = mp.get_context("spawn")
+        ctx = get_context("spawn")
         _log.info("setting up process pool w/ %d workers", n_jobs)
         kid_tc = proc_count(level=1)
         seed = seedbank.root_seed()
@@ -41,7 +42,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         self.pool = ProcessPoolExecutor(n_jobs, ctx, worker.initalize, (cfg, job))
 
     def map(self, tasks: Iterable[A]) -> Iterator[R]:
-        return self.pool.map(worker.worker, tasks)
+        return (pickle.loads(b) for b in self.pool.map(worker.worker, tasks))
 
     def shutdown(self):
         self.pool.shutdown()
