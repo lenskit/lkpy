@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import logging
+import multiprocessing as mp
 import pickle
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing.managers import SharedMemoryManager
@@ -15,7 +16,6 @@ from typing import Generic, Iterable, Iterator
 
 import manylog
 import seedbank
-from torch.multiprocessing import get_context
 
 from . import worker
 from .config import get_parallel_config
@@ -32,7 +32,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
 
     def __init__(self, model: M, func: InvokeOp[M, A, R], n_jobs: int):
         _log.debug("persisting function")
-        ctx = get_context("spawn")
+        ctx = mp.get_context("spawn")
         _log.info("setting up process pool w/ %d workers", n_jobs)
         kid_tc = get_parallel_config().child_threads
         seed = seedbank.root_seed()
@@ -51,7 +51,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
             raise e
 
     def map(self, tasks: Iterable[A]) -> Iterator[R]:
-        return (pickle.loads(b) for b in self.pool.map(worker.worker, tasks))
+        return self.pool.map(worker.worker, tasks)
 
     def shutdown(self):
         self.pool.shutdown()

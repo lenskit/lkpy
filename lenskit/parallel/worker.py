@@ -59,4 +59,4 @@ def initalize(cfg: WorkerConfig, ctx: ModelData) -> None:
 
 def worker(arg: Any) -> Any:
     res = __work_context.func(__work_context.model, arg)
-    return pickle.dumps(res, pickle.HIGHEST_PROTOCOL)
+    return res
