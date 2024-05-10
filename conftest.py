@@ -6,7 +6,6 @@
 
 import logging
 import os
-import time
 import warnings
 
 from seedbank import initialize, numpy_rng
