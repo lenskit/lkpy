@@ -38,7 +38,7 @@ class WorkerContext(NamedTuple, Generic[M, A, R]):
     model: M
 
 
-def initalize(cfg: WorkerConfig, ctx: WorkerContext[M, A, R]) -> None:
+def initalize(cfg: WorkerConfig, ctx: bytes) -> None:
     global __work_context
 
     manylog.init_worker_logging(cfg.log_addr)

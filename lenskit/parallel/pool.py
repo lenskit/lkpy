@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import multiprocessing as mp
-from multiprocessing.pool import Pool
+from concurrent.futures import ProcessPoolExecutor
 from typing import Generic, Iterable, Iterator
 
 import manylog
@@ -25,7 +25,7 @@ _log_listener: manylog.LogListener | None = None
 
 
 class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
-    pool: Pool
+    pool: ProcessPoolExecutor
 
     def __init__(self, model: M, func: InvokeOp[M, A, R], n_jobs: int):
         _log.debug("persisting function")
@@ -38,14 +38,13 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         cfg = worker.WorkerConfig(kid_tc, seed, log_addr)
         job = worker.WorkerContext(func, model)
         job = shm_serialize(job)
-        self.pool = ctx.Pool(n_jobs, worker.initalize, (cfg, job), None)
+        self.pool = ProcessPoolExecutor(n_jobs, ctx, worker.initalize, (cfg, job))
 
     def map(self, tasks: Iterable[A]) -> Iterator[R]:
-        return self.pool.imap(worker.worker, tasks)
+        return self.pool.map(worker.worker, tasks)
 
     def shutdown(self):
-        self.pool.close()
-        self.pool.join()
+        self.pool.shutdown()
 
 
 def ensure_log_listener() -> str:
