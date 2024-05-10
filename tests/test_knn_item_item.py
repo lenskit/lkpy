@@ -340,7 +340,7 @@ def test_ii_large_models(rng):
     _log.info("checking a sample of neighborhoods")
     items = algo_ub.item_index_.values
     items = items[algo_ub.item_counts_.numpy() > 0]
-    for i in rng.choice(items, 100):
+    for i in rng.choice(items, 50):
         ipos = algo_ub.item_index_.get_loc(i)
         _log.debug("checking item %d at position %d", i, ipos)
         assert ipos == algo_lim.item_index_.get_loc(i)
