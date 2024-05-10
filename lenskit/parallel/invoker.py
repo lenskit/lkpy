@@ -10,7 +10,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Generic, Iterable, Iterator, Optional, TypeAlias, TypeVar
 
-from lenskit.parallel.config import proc_count
+from lenskit.parallel.config import ensure_init, get_parallel_config
 
 M = TypeVar("M")
 A = TypeVar("A")
@@ -24,7 +24,7 @@ def invoker(
     n_jobs: Optional[int] = None,
 ) -> ModelOpInvoker[A, R]:
     """
-    Get an appropriate invoker for performing oeprations on ``model``.
+    Get an appropriate invoker for performing operations on ``model``.
 
     Args:
         model(obj): The model object on which to perform operations.
@@ -37,8 +37,9 @@ def invoker(
         ModelOpInvoker:
             An invoker to perform operations on the model.
     """
+    ensure_init()
     if n_jobs is None:
-        n_jobs = proc_count(max_default=4)
+        n_jobs = get_parallel_config().processes
 
     if n_jobs == 1:
         from .sequential import InProcessOpInvoker

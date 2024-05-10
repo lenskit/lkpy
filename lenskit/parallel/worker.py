@@ -14,11 +14,10 @@ from typing import Any
 
 import manylog
 import seedbank
-import torch
 from numpy.random import SeedSequence
-from threadpoolctl import threadpool_limits
 from typing_extensions import Generic, NamedTuple
 
+from .config import initialize as init_parallel
 from .invoker import A, InvokeOp, M, R
 from .serialize import shm_deserialize
 
@@ -41,16 +40,17 @@ class WorkerContext(NamedTuple, Generic[M, A, R]):
 
 def initalize(cfg: WorkerConfig, ctx: bytes) -> None:
     global __work_context
-
     manylog.init_worker_logging(cfg.log_addr)
+    init_parallel(processes=1, threads=cfg.threads, child_threads=1)
+
     seed = seedbank.derive_seed(mp.current_process().name, base=cfg.seed)
     seedbank.initialize(seed)
 
-    # disable BLAS threading
-    threadpool_limits(limits=cfg.threads, user_api="blas")
-    torch.set_num_interop_threads(cfg.threads)
-
-    __work_context = shm_deserialize(ctx)
+    try:
+        __work_context = shm_deserialize(ctx)
+    except Exception as e:
+        _log.error("deserialization failed: %s", e)
+        raise e
 
     _log.debug("worker %d ready (process %s)", os.getpid(), mp.current_process())
 

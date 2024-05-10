@@ -17,7 +17,7 @@ import seedbank
 from torch.multiprocessing import get_context
 
 from . import worker
-from .config import proc_count
+from .config import get_parallel_config
 from .invoker import A, InvokeOp, M, ModelOpInvoker, R
 from .serialize import init_reductions, shm_serialize
 
@@ -32,7 +32,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         _log.debug("persisting function")
         ctx = get_context("spawn")
         _log.info("setting up process pool w/ %d workers", n_jobs)
-        kid_tc = proc_count(level=1)
+        kid_tc = get_parallel_config().child_threads
         seed = seedbank.root_seed()
         log_addr = ensure_log_listener()
 
