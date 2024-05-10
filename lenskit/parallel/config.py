@@ -134,7 +134,7 @@ def _resolve_parallel_config(
         threads = min(ncpus, 8)
 
     if backend_threads is None:
-        backend_threads = max(ncpus // threads, 1)
+        backend_threads = max(min(ncpus // threads, 4), 1)
 
     if child_threads is None:
         child_threads = min(ncpus // processes, 4)
