@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import pickle
 from concurrent.futures import ProcessPoolExecutor
+from multiprocessing.managers import SharedMemoryManager
 from typing import Generic, Iterable, Iterator
 
 import manylog
@@ -19,13 +20,14 @@ from torch.multiprocessing import get_context
 from . import worker
 from .config import get_parallel_config
 from .invoker import A, InvokeOp, M, ModelOpInvoker, R
-from .serialize import init_reductions, shm_serialize
+from .serialize import shm_serialize
 
 _log = logging.getLogger(__name__)
 _log_listener: manylog.LogListener | None = None
 
 
 class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
+    manager: SharedMemoryManager
     pool: ProcessPoolExecutor
 
     def __init__(self, model: M, func: InvokeOp[M, A, R], n_jobs: int):
@@ -36,16 +38,24 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         seed = seedbank.root_seed()
         log_addr = ensure_log_listener()
 
-        cfg = worker.WorkerConfig(kid_tc, seed, log_addr)
-        job = worker.WorkerContext(func, model)
-        job = shm_serialize(job)
-        self.pool = ProcessPoolExecutor(n_jobs, ctx, worker.initalize, (cfg, job))
+        self.manager = SharedMemoryManager()
+        self.manager.start()
+
+        try:
+            cfg = worker.WorkerConfig(kid_tc, seed, log_addr)
+            job = worker.WorkerContext(func, model)
+            job = shm_serialize(job, self.manager)
+            self.pool = ProcessPoolExecutor(n_jobs, ctx, worker.initalize, (cfg, job))
+        except Exception as e:
+            self.manager.shutdown()
+            raise e
 
     def map(self, tasks: Iterable[A]) -> Iterator[R]:
         return (pickle.loads(b) for b in self.pool.map(worker.worker, tasks))
 
     def shutdown(self):
         self.pool.shutdown()
+        self.manager.shutdown()
 
 
 def ensure_log_listener() -> str:
@@ -57,6 +67,3 @@ def ensure_log_listener() -> str:
     addr = _log_listener.address
     assert addr is not None
     return addr
-
-
-init_reductions()

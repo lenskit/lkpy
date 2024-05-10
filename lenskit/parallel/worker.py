@@ -20,7 +20,7 @@ from typing_extensions import Generic, NamedTuple
 
 from .config import initialize as init_parallel
 from .invoker import A, InvokeOp, M, R
-from .serialize import shm_deserialize
+from .serialize import ModelData, shm_deserialize
 
 _log = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class WorkerContext(NamedTuple, Generic[M, A, R]):
     model: M
 
 
-def initalize(cfg: WorkerConfig, ctx: bytes) -> None:
+def initalize(cfg: WorkerConfig, ctx: ModelData) -> None:
     global __work_context
     manylog.init_worker_logging(cfg.log_addr)
     init_parallel(processes=1, threads=cfg.threads, child_threads=1)

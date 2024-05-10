@@ -8,66 +8,97 @@
 Serialization utilities for parallel processing.
 """
 
+import io
 import logging
 import pickle
-from multiprocessing.reduction import ForkingPickler
-from typing import Any
+from multiprocessing.managers import SharedMemoryManager
+from multiprocessing.shared_memory import SharedMemory
+from typing import Any, NamedTuple
 
-import numpy as np
 import torch
-from torch.multiprocessing.reductions import reduce_tensor
+from torch.multiprocessing.reductions import reduce_storage, reduce_tensor
 
 _log = logging.getLogger(__name__)
 
 
-def _rebuild_ndarray(tensor):
-    return tensor.numpy()
+class ModelData(NamedTuple):
+    """
+    Serialized model data (with shared memory handles).
+    """
+
+    pickle: bytes
+    buffers: list[tuple[SharedMemory, int]]
 
 
-def _reduce_ndarray(a: np.ndarray):
-    try:
-        t = torch.from_numpy(a)
-        return (_rebuild_ndarray, (t,))
-    except TypeError:
-        return a.__reduce__()
+class ModelPickler(pickle.Pickler):
+    manager: SharedMemoryManager | None
+    buffers: list[tuple[SharedMemory, int]]
+
+    def __init__(
+        self,
+        file,
+        protocol: int | None = pickle.HIGHEST_PROTOCOL,
+        manager: SharedMemoryManager | None = None,
+        *,
+        fix_imports: bool = False,
+    ) -> None:
+        super().__init__(file, protocol, fix_imports=fix_imports, buffer_callback=self._buffer_cb)
+        self.manager = manager
+        self.buffers = []
+
+    def _buffer_cb(self, buffer: pickle.PickleBuffer):
+        mem = buffer.raw()
+        if self.manager:
+            shm = self.manager.SharedMemory(mem.nbytes)
+        else:
+            shm = SharedMemory(create=True, size=mem.nbytes)
+
+        # copy the data
+        shm.buf[: mem.nbytes] = mem
+        self.buffers.append((shm, mem.nbytes))
+
+    def reducer_override(self, obj: Any) -> Any:
+        if isinstance(obj, torch.Tensor):
+            if obj.is_sparse_csr:
+                return torch.sparse_csr_tensor, (
+                    obj.crow_indices(),
+                    obj.col_indices(),
+                    obj.values(),
+                    obj.shape,
+                )
+            elif obj.is_sparse:
+                return torch.sparse_coo_tensor, (
+                    obj.row_indices(),
+                    obj.col_indices(),
+                    obj.values(),
+                    obj.shape,
+                )
+            else:
+                return reduce_tensor(obj)
+
+        if isinstance(obj, torch.UntypedStorage):
+            return reduce_storage(obj)
+
+        return NotImplemented
 
 
-def _reduce_tensor_wrapper(t: torch.Tensor):
-    if t.is_sparse_csr:
-        return torch.sparse_csr_tensor, (
-            t.crow_indices(),
-            t.col_indices(),
-            t.values(),
-            t.shape,
-        )
-    elif t.is_sparse:
-        return torch.sparse_coo_tensor, (
-            t.row_indices(),
-            t.col_indices(),
-            t.values(),
-            t.shape,
-        )
-    else:
-        return reduce_tensor(t)
-
-
-def init_reductions():
-    ForkingPickler.register(np.ndarray, _reduce_ndarray)
-    ForkingPickler.register(torch.Tensor, _reduce_tensor_wrapper)
-
-
-def shm_serialize(obj: Any) -> bytes:
+def shm_serialize(obj: Any, manager: SharedMemoryManager | None = None) -> ModelData:
     """
     Serialize an object for processing in a subclass with shared memory when
     feasible (including CUDA).
     """
-    data = ForkingPickler.dumps(obj, pickle.HIGHEST_PROTOCOL)
+    out = io.BytesIO()
+    pkl = ModelPickler(out, pickle.HIGHEST_PROTOCOL, manager)
+    pkl.dump(obj)
+
+    data = out.getvalue()
     _log.debug("serialized model into %s pickle bytes", len(data))
-    return bytes(data)
+    return ModelData(bytes(data), pkl.buffers)
 
 
-def shm_deserialize(data) -> Any:
+def shm_deserialize(data: ModelData) -> Any:
     """
     Deserialize SHM-pickled data.
     """
-    return pickle.loads(data)
+    buffers = [shm.buf[:n] for shm, n in data.buffers]
+    return pickle.loads(data.pickle, buffers=buffers)
