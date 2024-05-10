@@ -73,7 +73,7 @@ def initialize(
     threadpool_limits(_config.threads, "blas")
 
 
-def ensure_init():
+def ensure_parallel_init():
     """
     Make sure LensKit parallelism is configured, and configure with defaults if
     it is not.
@@ -89,7 +89,7 @@ def get_parallel_config() -> ParallelConfig:
     """
     Ensure that parallelism is configured and return the configuration.
     """
-    ensure_init()
+    ensure_parallel_init()
     assert _config is not None
     return _config
 

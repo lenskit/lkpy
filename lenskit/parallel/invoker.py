@@ -10,7 +10,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Generic, Iterable, Iterator, Optional, TypeAlias, TypeVar
 
-from lenskit.parallel.config import ensure_init, get_parallel_config
+from lenskit.parallel.config import ensure_parallel_init, get_parallel_config
 
 M = TypeVar("M")
 A = TypeVar("A")
@@ -37,7 +37,7 @@ def invoker(
         ModelOpInvoker:
             An invoker to perform operations on the model.
     """
-    ensure_init()
+    ensure_parallel_init()
     if n_jobs is None:
         n_jobs = get_parallel_config().processes
 

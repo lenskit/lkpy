@@ -10,13 +10,13 @@ LensKit parallel computation support.
 
 from __future__ import annotations
 
-from .config import ensure_init, get_parallel_config, initialize
+from .config import ensure_parallel_init, get_parallel_config, initialize
 from .invoker import ModelOpInvoker, invoker
 
 __all__ = [
     "initialize",
     "get_parallel_config",
-    "ensure_init",
+    "ensure_parallel_init",
     "invoker",
     "ModelOpInvoker",
 ]
