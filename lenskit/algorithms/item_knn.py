@@ -16,10 +16,11 @@ from typing import Callable, Literal, Optional, TypeAlias
 import numpy as np
 import pandas as pd
 import torch
-from progress_api import Progress, make_progress
+from progress_api import Progress
 
 from lenskit import ConfigWarning, DataWarning, util
 from lenskit.data.matrix import DimStats, sparse_ratings, sparse_row_stats
+from lenskit.parallel import ensure_parallel_init
 from lenskit.util.logging import pbh_update, progress_handle
 
 from . import Predictor
@@ -465,7 +466,7 @@ class ItemItem(Predictor):
             ratings(pandas.DataFrame):
                 (user,item,rating) data for computing item similarities.
         """
-        util.check_env()
+        ensure_parallel_init()
         # Training proceeds in 2 steps:
         # 1. Normalize item vectors to be mean-centered and unit-normalized
         # 2. Compute similarities with pairwise dot products
