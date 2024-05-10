@@ -24,6 +24,7 @@ _log = logging.getLogger(__name__)
 class ParallelConfig:
     processes: int
     threads: int
+    backend_threads: int
     child_threads: int
 
 
@@ -31,6 +32,7 @@ def initialize(
     *,
     processes: int | None = None,
     threads: int | None = None,
+    backend_threads: int | None = None,
     child_threads: int | None = None,
 ):
     """
@@ -46,17 +48,23 @@ def initialize(
             4, whichever is smaller.
         threads:
             The number of threads to use for parallel model training and similar
-            operations.  This is passed to :func:`torch.set_num_threads` and to
-            the BLAS library's threading layer.  Environment variable is
+            operations.  This is passed to
+            :func:`torch.set_num_interop_threads`. Environment variable is
             ``LK_NUM_THREADS``.  Defaults to the number of CPUs or 8, whichever
             is smaller, to avoid runaway thread coordination overhead on large
             machines.
+        backend_threads:
+            The number of threads underlying computational engines should use.
+            This is passed to :func:`torch.set_num_threads` and to the BLAS
+            threading layer.  Configured from ``LK_NUM_BACKEND_THREADS``.
         child_threads:
-            The number of threads to use in the worker processes in multiprocessing
-            operations.  This is like ``threads``, except it is passed to the
-            underlying libraries in worker processes.  Environment variable is
-            ``LK_NUM_CHILD_THREADS``.  Defaults is computed from the number
-            of CPUs with a max of 4 threads per worker.
+            The number of threads backends are allowed to use in the worker
+            processes in multiprocessing operations.  This is like
+            ``backend_threads``, except it is passed to the underlying libraries
+            in worker processes.  Environment variable is
+            ``LK_NUM_CHILD_THREADS``.  Defaults is computed from the number of
+            CPUs with a max of 4 threads per worker.  Child processes set both
+            ``processes`` and ``threads`` to 1.
     """
     global _config
     if _config:
@@ -66,11 +74,12 @@ def initialize(
     # our parallel computation doesn't work with FD sharing
     torch.multiprocessing.set_sharing_strategy("file_system")
 
-    _config = _resolve_parallel_config(processes, threads, child_threads)
+    _config = _resolve_parallel_config(processes, threads, backend_threads, child_threads)
     _log.debug("configuring for parallelism: %s", _config)
 
-    torch.set_num_threads(_config.threads)
-    threadpool_limits(_config.threads, "blas")
+    torch.set_num_interop_threads(_config.threads)
+    torch.set_num_threads(_config.backend_threads)
+    threadpool_limits(_config.backend_threads, "blas")
 
 
 def ensure_parallel_init():
@@ -97,10 +106,12 @@ def get_parallel_config() -> ParallelConfig:
 def _resolve_parallel_config(
     processes: int | None = None,
     threads: int | None = None,
+    backend_threads: int | None = None,
     child_threads: int | None = None,
 ) -> ParallelConfig:
     nprocs = os.environ.get("LK_NUM_PROCS", None)
     nthreads = os.environ.get("LK_NUM_THREADS", None)
+    nbthreads = os.environ.get("LK_NUM_BACKEND_THREADS", None)
     cthreads = os.environ.get("LK_NUM_CHILD_THREADS", None)
     ncpus = mp.cpu_count()
 
@@ -109,6 +120,9 @@ def _resolve_parallel_config(
 
     if threads is None and nthreads:
         threads = int(nthreads)
+
+    if backend_threads is None and nbthreads:
+        backend_threads = int(nbthreads)
 
     if child_threads is None and cthreads:
         child_threads = int(cthreads)
@@ -119,7 +133,10 @@ def _resolve_parallel_config(
     if threads is None:
         threads = min(ncpus, 8)
 
+    if backend_threads is None:
+        backend_threads = max(ncpus // threads, 1)
+
     if child_threads is None:
         child_threads = min(ncpus // processes, 4)
 
-    return ParallelConfig(processes, threads, child_threads)
+    return ParallelConfig(processes, threads, backend_threads, child_threads)
