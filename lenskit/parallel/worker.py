@@ -42,7 +42,7 @@ class WorkerContext(NamedTuple, Generic[M, A, R]):
 def initalize(cfg: WorkerConfig, ctx: ModelData) -> None:
     global __work_context
     manylog.init_worker_logging(cfg.log_addr)
-    init_parallel(processes=1, threads=cfg.threads, child_threads=1)
+    init_parallel(processes=1, threads=1, backend_threads=cfg.threads, child_threads=1)
 
     seed = seedbank.derive_seed(mp.current_process().name, base=cfg.seed)
     seedbank.initialize(seed)
