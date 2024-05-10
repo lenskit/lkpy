@@ -10,6 +10,7 @@ import logging
 import multiprocessing as mp
 import os
 import pickle
+import warnings
 from typing import Any
 
 import manylog
@@ -45,6 +46,7 @@ def initalize(cfg: WorkerConfig, ctx: bytes) -> None:
 
     seed = seedbank.derive_seed(mp.current_process().name, base=cfg.seed)
     seedbank.initialize(seed)
+    warnings.filterwarnings("ignore", "Sparse CSR tensor support is in beta state", UserWarning)
 
     try:
         __work_context = shm_deserialize(ctx)
