@@ -43,28 +43,18 @@ def initialize(
 
     Args:
         processes:
-            The number of processes to use for multiprocessing evaluations.
-            Configured from ``LK_NUM_PROCS``.  Defaults to the number of CPUs or
-            4, whichever is smaller.
+            The number of processes to use for multiprocessing evaluations (see
+            :envvar:`LK_NUM_PROCS`)
         threads:
             The number of threads to use for parallel model training and similar
-            operations.  This is passed to
-            :func:`torch.set_num_interop_threads`. Environment variable is
-            ``LK_NUM_THREADS``.  Defaults to the number of CPUs or 8, whichever
-            is smaller, to avoid runaway thread coordination overhead on large
-            machines.
+            operations (see :envvar:`LK_NUM_THREADS`).
         backend_threads:
-            The number of threads underlying computational engines should use.
-            This is passed to :func:`torch.set_num_threads` and to the BLAS
-            threading layer.  Configured from ``LK_NUM_BACKEND_THREADS``.
+            The number of threads underlying computational engines should use
+            (see :envvar:`LK_NUM_BACKEND_THREADS`).
         child_threads:
             The number of threads backends are allowed to use in the worker
-            processes in multiprocessing operations.  This is like
-            ``backend_threads``, except it is passed to the underlying libraries
-            in worker processes.  Environment variable is
-            ``LK_NUM_CHILD_THREADS``.  Defaults is computed from the number of
-            CPUs with a max of 4 threads per worker.  Child processes set both
-            ``processes`` and ``threads`` to 1.
+            processes in multiprocessing operations (see
+            :envvar:`LK_NUM_CHILD_THREADS`).
     """
     global _config
     if _config:
@@ -137,6 +127,6 @@ def _resolve_parallel_config(
         backend_threads = max(min(ncpus // threads, 4), 1)
 
     if child_threads is None:
-        child_threads = min(ncpus // processes, 4)
+        child_threads = max(min(ncpus // processes, 4), 1)
 
     return ParallelConfig(processes, threads, backend_threads, child_threads)

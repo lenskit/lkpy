@@ -43,6 +43,7 @@ Resources
    batch
    evaluation/index
    documenting
+   parallel
 
 .. toctree::
     :maxdepth: 1

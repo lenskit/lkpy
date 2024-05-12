@@ -1,3 +1,5 @@
+.. _batch::
+
 Batch-Running Recommenders
 ==========================
 

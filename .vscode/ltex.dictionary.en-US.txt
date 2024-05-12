@@ -4,3 +4,7 @@ YYYY
 CalVer
 backported
 semver-stable
+invokers
+lenskit
+invoker
+CUDA

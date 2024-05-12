@@ -121,6 +121,9 @@ intersphinx_mapping = {
     "binpickle": ("https://binpickle.lenskit.org/en/stable/", None),
     "csr": ("https://csr.lenskit.org/en/latest/", None),
     "seedbank": ("https://seedbank.lenskit.org/en/latest/", None),
+    "progress_api": ("https://progress-api.readthedocs.io/en/latest/", None),
+    "manylog": ("https://manylog.readthedocs.io/en/latest/", None),
+    "torch": ("https://pytorch.org/docs/stable/", None),
 }
 
 autodoc_default_options = {"members": True, "member-order": "bysource", "show-inheritance": True}
