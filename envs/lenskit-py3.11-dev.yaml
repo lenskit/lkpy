@@ -52,7 +52,7 @@ dependencies:
   - tqdm>=4
   - pip
   - pip:
-      - manylog>=0.1.0a3
-      - progress-api>=0.1.0a6
+      - manylog>=0.1.0a5
+      - progress-api>=0.1.0a9
       - seedbank>=0.2.0a1
       - unbeheader~=1.3
