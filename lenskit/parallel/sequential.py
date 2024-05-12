@@ -9,6 +9,8 @@ import functools as ft
 import logging
 from typing import Generic, Iterable, Iterator
 
+from progress_api import Progress
+
 from .invoker import A, InvokeOp, M, ModelOpInvoker, R
 
 _log = logging.getLogger(__name__)
@@ -18,7 +20,7 @@ class InProcessOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
     model: M
     function: InvokeOp[M, A, R]
 
-    def __init__(self, model: M, func: InvokeOp[M, A, R]):
+    def __init__(self, model: M, func: InvokeOp[M, A, R], progress: Progress | None = None):
         _log.info("setting up in-process worker")
         self.model = model
         self.function = func

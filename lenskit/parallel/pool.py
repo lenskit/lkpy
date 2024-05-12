@@ -15,6 +15,7 @@ from typing import Generic, Iterable, Iterator
 
 import manylog
 import seedbank
+from progress_api import Progress
 
 from . import worker
 from .config import get_parallel_config
@@ -29,7 +30,9 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
     manager: SharedMemoryManager
     pool: ProcessPoolExecutor
 
-    def __init__(self, model: M, func: InvokeOp[M, A, R], n_jobs: int):
+    def __init__(
+        self, model: M, func: InvokeOp[M, A, R], n_jobs: int, progress: Progress | None = None
+    ):
         _log.debug("persisting function")
         ctx = mp.get_context("spawn")
         _log.info("setting up process pool w/ %d workers", n_jobs)

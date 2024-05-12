@@ -8,7 +8,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from logging import Logger
 from typing import Any, Callable, Generic, Iterable, Iterator, Optional, TypeAlias, TypeVar
+
+from progress_api import Progress, make_progress
 
 from lenskit.parallel.config import ensure_parallel_init, get_parallel_config
 
@@ -18,20 +21,43 @@ R = TypeVar("R")
 InvokeOp: TypeAlias = Callable[[M, A], R]
 
 
+def invoke_progress(
+    logger: str | Logger | None = None, label: str | None = None, total: int | None = None
+) -> Progress:
+    """
+    Create a progress bar for parallel tasks.  It is populated with the
+    correct state of tasks for :func:`invoker`.
+
+    See :func:`make_progress` for details on parameter meanings.
+    """
+    return make_progress(
+        logger, label, total, outcomes="finished", states=["in-progress", "dispatched"]
+    )
+
+
 def invoker(
     model: M,
     func: InvokeOp[M, A, R],
     n_jobs: Optional[int] = None,
+    progress: Progress | None = None,
 ) -> ModelOpInvoker[A, R]:
     """
     Get an appropriate invoker for performing operations on ``model``.
 
     Args:
-        model(obj): The model object on which to perform operations.
-        func(function): The function to call.  The function must be pickleable.
-        n_jobs(int or None):
+        model: The model object on which to perform operations.
+        func: The function to call.  The function must be pickleable.
+        n_jobs:
             The number of processes to use for parallel operations.  If ``None``, will
             call :func:`proc_count` with a maximum default process count of 4.
+        progress:
+            A progress bar to use to report status. It should have the following states:
+
+            * dispatched
+            * in-progress
+            * finished
+
+            One can be created with :func:`invoke_progress`
 
     Returns:
         ModelOpInvoker:
@@ -44,11 +70,11 @@ def invoker(
     if n_jobs == 1:
         from .sequential import InProcessOpInvoker
 
-        return InProcessOpInvoker(model, func)
+        return InProcessOpInvoker(model, func, progress)
     else:
         from .pool import ProcessPoolOpInvoker
 
-        return ProcessPoolOpInvoker(model, func, n_jobs)
+        return ProcessPoolOpInvoker(model, func, n_jobs, progress)
 
 
 class ModelOpInvoker(ABC, Generic[A, R]):
