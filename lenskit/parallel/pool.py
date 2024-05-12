@@ -15,7 +15,7 @@ from typing import Generic, Iterable, Iterator
 
 import manylog
 import seedbank
-from progress_api import Progress
+from progress_api import Progress, null_progress
 
 from . import worker
 from .config import get_parallel_config
@@ -27,6 +27,7 @@ _log_listener: manylog.LogListener | None = None
 
 
 class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
+    progress: Progress
     manager: SharedMemoryManager
     pool: ProcessPoolExecutor
 
@@ -38,14 +39,16 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         _log.info("setting up process pool w/ %d workers", n_jobs)
         kid_tc = get_parallel_config().child_threads
         seed = seedbank.root_seed()
-        log_addr = ensure_log_listener()
+        manylog.initialize()
 
+        self.progress = progress or null_progress()
         self.manager = SharedMemoryManager()
         self.manager.start()
+        prog_uuid = manylog.share_progress(self.progress)
 
         try:
-            cfg = worker.WorkerConfig(kid_tc, seed, log_addr)
-            job = worker.WorkerContext(func, model)
+            cfg = worker.WorkerConfig(kid_tc, seed)
+            job = worker.WorkerContext(func, model, prog_uuid)
             job = shm_serialize(job, self.manager)
             self.pool = ProcessPoolExecutor(n_jobs, ctx, worker.initalize, (cfg, job))
         except Exception as e:
@@ -53,7 +56,15 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
             raise e
 
     def map(self, tasks: Iterable[A]) -> Iterator[R]:
-        return self.pool.map(worker.worker, tasks)
+        return self.pool.map(worker.worker, self._task_iter(tasks))
+
+    def _task_iter(self, tasks: Iterable[A]):
+        """
+        Yield the tasks, recording each as dispatched before it is yielded.
+        """
+        for task in tasks:
+            self.progress.update(1, "dispatched")
+            yield task
 
     def shutdown(self):
         self.pool.shutdown()

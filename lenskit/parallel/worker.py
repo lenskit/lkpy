@@ -12,10 +12,12 @@ import os
 import pickle
 import warnings
 from typing import Any
+from uuid import UUID
 
 import manylog
 import seedbank
 from numpy.random import SeedSequence
+from progress_api import Progress
 from typing_extensions import Generic, NamedTuple
 
 from .config import initialize as init_parallel
@@ -26,22 +28,23 @@ _log = logging.getLogger(__name__)
 
 
 __work_context: WorkerContext
+__progress: Progress
 
 
 class WorkerConfig(NamedTuple):
     threads: int
     seed: SeedSequence
-    log_addr: str
 
 
 class WorkerContext(NamedTuple, Generic[M, A, R]):
     func: InvokeOp[M, A, R]
     model: M
+    progress: UUID
 
 
 def initalize(cfg: WorkerConfig, ctx: ModelData) -> None:
-    global __work_context
-    manylog.init_worker_logging(cfg.log_addr)
+    global __work_context, __progress
+    manylog.initialize()
     init_parallel(processes=1, threads=1, backend_threads=cfg.threads, child_threads=1)
 
     seed = seedbank.derive_seed(mp.current_process().name, base=cfg.seed)
@@ -54,9 +57,13 @@ def initalize(cfg: WorkerConfig, ctx: ModelData) -> None:
         _log.error("deserialization failed: %s", e)
         raise e
 
+    __progress = manylog.connect_progress(__work_context.progress)
+
     _log.debug("worker %d ready (process %s)", os.getpid(), mp.current_process())
 
 
 def worker(arg: Any) -> Any:
+    __progress.update(1, "in-progress", "dispatched")
     res = __work_context.func(__work_context.model, arg)
+    __progress.update(1, "finished", "in-progress")
     return res
