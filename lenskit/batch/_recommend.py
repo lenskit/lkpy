@@ -9,6 +9,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
+from progress_api import make_progress
 
 from .. import util
 from ..algorithms import Recommender
@@ -83,8 +84,11 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, **kwargs):
 
     candidates = __standard_cand_fun(candidates)
 
-    with invoker(algo, _recommend_user, n_jobs=n_jobs) as worker:
-        _logger.info("recommending with %s for %d users (n_jobs=%s)", str(algo), len(users), n_jobs)
+    _logger.info("recommending with %s for %d users (n_jobs=%s)", str(algo), len(users), n_jobs)
+    with (
+        make_progress(_logger, "recommending", len(users), unit="user") as progress,
+        invoker(algo, _recommend_user, n_jobs=n_jobs, progress=progress) as worker,
+    ):
         del algo
         timer = util.Stopwatch()
         results = worker.map((user, n, candidates(user)) for user in users)
