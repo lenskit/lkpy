@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 import multiprocessing as mp
-import pickle
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing.managers import SharedMemoryManager
 from typing import Generic, Iterable, Iterator
