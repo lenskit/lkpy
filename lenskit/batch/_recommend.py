@@ -13,7 +13,7 @@ from progress_api import make_progress
 
 from .. import util
 from ..algorithms import Recommender
-from ..parallel import invoker
+from ..parallel import invoke_progress, invoker
 
 _logger = logging.getLogger(__name__)
 
@@ -86,7 +86,7 @@ def recommend(algo, users, n, candidates=None, *, n_jobs=None, **kwargs):
 
     _logger.info("recommending with %s for %d users (n_jobs=%s)", str(algo), len(users), n_jobs)
     with (
-        make_progress(_logger, "recommending", len(users), unit="user") as progress,
+        invoke_progress(_logger, "recommending", len(users), unit="user") as progress,
         invoker(algo, _recommend_user, n_jobs=n_jobs, progress=progress) as worker,
     ):
         del algo

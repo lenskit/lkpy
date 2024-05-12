@@ -22,7 +22,10 @@ InvokeOp: TypeAlias = Callable[[M, A], R]
 
 
 def invoke_progress(
-    logger: str | Logger | None = None, label: str | None = None, total: int | None = None
+    logger: str | Logger | None = None,
+    label: str | None = None,
+    total: int | None = None,
+    unit: str | None = None,
 ) -> Progress:
     """
     Create a progress bar for parallel tasks.  It is populated with the
@@ -31,7 +34,7 @@ def invoke_progress(
     See :func:`make_progress` for details on parameter meanings.
     """
     return make_progress(
-        logger, label, total, outcomes="finished", states=["in-progress", "dispatched"]
+        logger, label, total, outcomes="finished", states=["in-progress", "dispatched"], unit=unit
     )
 
 

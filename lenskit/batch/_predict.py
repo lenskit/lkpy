@@ -8,10 +8,9 @@ import logging
 import warnings
 
 import pandas as pd
-from progress_api import make_progress
 
 from .. import util
-from ..parallel import invoker
+from ..parallel import invoke_progress, invoker
 
 _logger = logging.getLogger(__name__)
 
@@ -84,7 +83,7 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
     timer = util.Stopwatch()
     nusers = pairs["user"].nunique()
     with (
-        make_progress(_logger, "predictions", nusers, unit="user") as progress,
+        invoke_progress(_logger, "predictions", nusers, unit="user") as progress,
         invoker(algo, _predict_user, n_jobs=n_jobs, progress=progress) as worker,
     ):
         del algo  # maybe free some memory
