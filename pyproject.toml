@@ -31,8 +31,8 @@ dependencies = [
   "threadpoolctl >=3.0",
   "binpickle >= 0.3.2",
   "seedbank >= 0.2.0a1",    # p2c: -p
-  "progress-api >=0.1.0a8", # p2c: -p
-  "manylog >=0.1.0a4",      # p2c: -p
+  "progress-api >=0.1.0a9", # p2c: -p
+  "manylog >=0.1.0a5",      # p2c: -p
   "csr >= 0.5",
 ]
 
