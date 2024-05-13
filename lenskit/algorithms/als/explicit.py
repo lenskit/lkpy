@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import logging
 import math
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 import torch
-from seedbank import numpy_rng
+from progress_api import make_progress
+from seedbank import SeedLike, numpy_rng
 
 from lenskit.parallel.config import ensure_parallel_init
 
@@ -41,12 +43,12 @@ class BiasedMF(MFPredictor):
     the estimated parameters you can extract from a trained model.
 
     Args:
-        features(int): the number of features to train
-        iterations(int): the number of iterations to train
-        reg(float): the regularization factor; can also be a tuple ``(ureg, ireg)`` to
+        features: the number of features to train
+        epochs: the number of iterations to train
+        reg: the regularization factor; can also be a tuple ``(ureg, ireg)`` to
             specify separate user and item regularization terms.
-        damping(float): damping factor for the underlying bias.
-        bias(bool or :class:`Bias`): the bias model.  If ``True``, fits a :class:`Bias` with
+        damping: damping factor for the underlying bias.
+        bias: the bias model.  If ``True``, fits a :class:`Bias` with
             damping ``damping``.
         rng_spec:
             Random number generator or state (see :func:`seedbank.numpy_rng`).
@@ -54,7 +56,13 @@ class BiasedMF(MFPredictor):
     """
 
     timer = None
+
+    features: int
+    epochs: int
+    reg: float | tuple[float, float]
     bias: Bias | None
+    rng: np.random.Generator
+    save_user_features: bool
 
     user_index_: pd.Index | None
     item_index_: pd.Index | None
@@ -63,25 +71,23 @@ class BiasedMF(MFPredictor):
 
     def __init__(
         self,
-        features,
+        features: int,
         *,
-        iterations=20,
-        reg=0.1,
-        damping=5,
-        bias=True,
-        rng_spec=None,
-        progress=None,
-        save_user_features=True,
+        epochs: int = 20,
+        reg: float | tuple[float, float] = 0.1,
+        damping: float = 5,
+        bias: bool | Bias = True,
+        rng_spec: Optional[SeedLike] = None,
+        save_user_features: bool = True,
     ):
         self.features = features
-        self.iterations = iterations
-        self.regularization = reg
+        self.epochs = epochs
+        self.reg = reg
         self.damping = damping
         if bias is True:
             self.bias = Bias(damping=damping)
         else:
             self.bias = bias or None
-        self.progress = progress if progress is not None else util.no_progress
         self.rng = numpy_rng(rng_spec)
         self.save_user_features = save_user_features
 
@@ -202,22 +208,26 @@ class BiasedMF(MFPredictor):
         assert uctx.shape == (n_users, n_items)
         assert ictx.shape == (n_items, n_users)
 
-        if isinstance(self.regularization, tuple):
-            ureg, ireg = self.regularization
+        if isinstance(self.reg, tuple):
+            ureg, ireg = self.reg
         else:
-            ureg = ireg = self.regularization
+            ureg = ireg = self.reg
 
-        for epoch in self.progress(range(self.iterations), desc="BiasedMF", leave=False):
-            # du = _train_parallel(pool, u_trainer, "left")
-            # du = _train_sequential(u_trainer)
-            du = _train_matrix_cholesky(uctx, current.user_matrix, current.item_matrix, ureg)
-            _log.debug("[%s] finished user epoch %d", self.timer, epoch)
-            # di = _train_parallel(pool, i_trainer, "right")
-            # di = _train_sequential(i_trainer)
-            di = _train_matrix_cholesky(ictx, current.item_matrix, current.user_matrix, ireg)
-            _log.debug("[%s] finished item epoch %d", self.timer, epoch)
-            _log.info("[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)", self.timer, epoch, du, di)
-            yield current
+        with make_progress("BiasedMF", self.epochs) as epb:
+            for epoch in range(self.epochs):
+                # du = _train_parallel(pool, u_trainer, "left")
+                # du = _train_sequential(u_trainer)
+                du = _train_matrix_cholesky(uctx, current.user_matrix, current.item_matrix, ureg)
+                _log.debug("[%s] finished user epoch %d", self.timer, epoch)
+                # di = _train_parallel(pool, i_trainer, "right")
+                # di = _train_sequential(i_trainer)
+                di = _train_matrix_cholesky(ictx, current.item_matrix, current.user_matrix, ireg)
+                _log.debug("[%s] finished item epoch %d", self.timer, epoch)
+                _log.info(
+                    "[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)", self.timer, epoch, du, di
+                )
+                epb.update()
+                yield current
 
     def predict_for_user(self, user, items, ratings=None):
         assert self.item_index_ is not None
@@ -235,10 +245,10 @@ class BiasedMF(MFPredictor):
             ri_val = ratings.values[ri_good]
 
             # unpack regularization
-            if isinstance(self.regularization, tuple):
-                ureg, ireg = self.regularization
+            if isinstance(self.reg, tuple):
+                ureg, ireg = self.reg
             else:
-                ureg = self.regularization
+                ureg = self.reg
 
             u_feat = _train_bias_row_cholesky(ri_it, ri_val, self.item_features_, ureg)
             scores = self.score_by_ids(user, items, u_feat)
@@ -254,9 +264,7 @@ class BiasedMF(MFPredictor):
             return scores
 
     def __str__(self):
-        return "als.BiasedMF(features={}, regularization={})".format(
-            self.features, self.regularization
-        )
+        return "als.BiasedMF(features={}, regularization={})".format(self.features, self.reg)
 
 
 @torch.jit.script
