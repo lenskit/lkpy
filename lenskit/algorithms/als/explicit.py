@@ -8,6 +8,8 @@ import pandas as pd
 import torch
 from seedbank import numpy_rng
 
+from lenskit.parallel.config import ensure_parallel_init
+
 from ... import util
 from ...data import sparse_ratings
 from ..bias import Bias
@@ -94,6 +96,7 @@ class BiasedMF(MFPredictor):
             The algorithm (for chaining).
         """
         util.check_env()
+        ensure_parallel_init()
         self.timer = util.Stopwatch()
 
         for epoch, algo in enumerate(self.fit_iters(ratings, **kwargs)):

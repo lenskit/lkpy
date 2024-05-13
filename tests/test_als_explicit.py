@@ -263,9 +263,9 @@ def test_als_batch_accuracy():
 
     folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
     preds = pd.concat(eval(train, test) for (train, test) in folds)
-    preds["abs_diff"] = np.abs(preds.lu_pred - preds.cd_pred)
-    _log.info("predictions:\n%s", preds.sort_values("abs_diff", ascending=False))
-    _log.info("diff summary:\n%s", preds.abs_diff.describe())
+    # preds["abs_diff"] = np.abs(preds.lu_pred - preds.cd_pred)
+    # _log.info("predictions:\n%s", preds.sort_values("abs_diff", ascending=False))
+    # _log.info("diff summary:\n%s", preds.abs_diff.describe())
 
     lu_mae = pm.mae(preds.lu_pred, preds.rating)
     assert lu_mae == approx(0.73, abs=0.045)
