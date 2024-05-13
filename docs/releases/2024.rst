@@ -27,7 +27,7 @@ Significant Changes
 *   **PyTorch**. LensKit now uses PyTorch to implement most of its algorithms,
     instead of Numba-accelerated NumPy code.  Algorithms using PyTorch are:
 
-  * :py:class:`~lenskit.algorithms.item_knn.ItemItem`
+    * :py:class:`~lenskit.algorithms.item_knn.ItemItem`
 
 *   Many LensKit components (batch running, model training, etc.) now report progress with
     :py:mod:`progress_api`, and can be connected to TQDM or Enlighten.
