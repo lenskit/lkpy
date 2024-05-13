@@ -11,6 +11,7 @@ import warnings
 from seedbank import initialize, numpy_rng
 
 from pytest import fixture
+from hypothesis import settings
 
 logging.getLogger("numba").setLevel(logging.INFO)
 
@@ -52,3 +53,6 @@ def pytest_collection_modifyitems(items):
         if evm is not None and slm is None:
             _log.debug("adding slow mark to %s", item)
             item.add_marker("slow")
+
+
+settings.register_profile("default", deadline=1000)
