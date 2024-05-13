@@ -21,7 +21,7 @@ LensKit for Python (LKPY) is the successor to the Java-based LensKit project.
 > [!WARNING]
 > This is the `main` branch of LensKit, following new development in preparation
 > for the 2024 release.  It will be changing frequently and incompatibly. You
-> probably want to use a [stable release][release]
+> probably want to use a [stable release][release].
 
 [release]: https://lkpy.lenskit.org/en/stable/
 
@@ -48,7 +48,7 @@ Then see [Getting Started](https://lkpy.lenskit.org/en/latest/GettingStarted.htm
 
 To contribute to LensKit, clone or fork the repository, get to work, and submit
 a pull request.  We welcome contributions from anyone; if you are looking for a
-place to get started, see the [issue tracker][].
+place to get started, see the [issue tracker][issues].
 
 Our development workflow is documented in [the wiki][workflow]; the wiki also
 contains other information on *developing* LensKit. User-facing documentation is
@@ -57,22 +57,10 @@ at <https://lkpy.lenskit.org>.
 [conda-lock]: https://github.com/conda-incubator/conda-lock
 [lkbuild]: https://github.com/lenskit/lkbuild
 
-We recommend using an Anaconda environment for developing LensKit.
-We don't maintain the Conda environment specification directly - instead, we
-maintain information in `pyproject.toml` to be able to generate it, so that we define
-dependencies and versions in one place.
+We recommend using an Anaconda environment for developing LensKit. To create
+this environment, checkout LensKit, then run:
 
-[conda-lock][] can help you set up the environment; the [LensKit build tools][lkbuild] automate this.
-
-    # install bootstrap enviroinment
-    conda env create -n lkboot -f https://raw.githubusercontent.com/lenskit/lkbuild/main/boot-env.yml
-    # create the lock file for Python 3.10
-    conda run -n lkboot --no-capture lkbuild dev-lock -v 3.10
-    # create the environment
-    conda env create -n lkpy -f conda-linux-64.lock
-
-This will create a Conda environment called `lkpy` with the packages required to develop and test
-LensKit.
+    conda env create -n lkpy -f envs/lenskit-py3.11-dev.yaml
 
 ## Testing Changes
 
@@ -86,9 +74,9 @@ separate environments for LensKit development and for each experiment; you will
 need to install the modified LensKit into your experiment's repository:
 
     conda activate my-exp
-    conda install -c conda-forge flit
+    conda install -c conda-forge
     cd /path/to/lkpy
-    flit install --pth-file --deps none
+    pip install -e . --no-deps
 
 You may need to first uninstall LensKit from your experiment repo; make sure that
 LensKit's dependencies are all still installed.
