@@ -40,3 +40,29 @@ year's major version number, if there are breaking changes in progress but not y
 release and we need to release new features or fixes for the current major version.  This
 will typically happen early in the year (except for important bug fixes that need to be backported
 to previous stable versions).
+
+.. _dep-policy:
+
+Dependency Versioning
+---------------------
+
+.. _SPEC0: https://scientific-python.org/specs/spec-0000/
+
+LensKit uses SPEC0_, a new standard adopted by many packages in the scientific
+Python ecosystem, to decide what versions of Python and core dependencies are
+supported.  Our CI environment includes a job that runs the tests on the oldest
+supported dependency versions to reduce the risk that we accidentally introduce
+a dependency on newer code.
+
+We anchor dependency versions based on when the first release of a year occurs
+(under SemCalVer_).  We won't drop support for a core dependency version
+mid-stream unless absolutely necessary and clearly-communicated.
+
+As of 2024, these versions are:
+
+*   Python 3.10
+*   Pandas 1.5
+*   SciPy 1.9.0
+
+We do **not** currently include PyTorch in our SPEC0 version commitments, but
+LensKit currently works with PyTorch 2.1 and newer.
