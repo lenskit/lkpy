@@ -6,19 +6,16 @@
 
 import logging
 
-from lenskit import util
-from lenskit.algorithms import als
-
-import pandas as pd
-import numpy as np
-from scipy import stats
 import binpickle
+import numpy as np
+import pandas as pd
+from scipy import stats
 from seedbank import numpy_rng
 
-from pytest import mark, approx
+from pytest import approx, mark
 
 import lenskit.util.test as lktu
-from lenskit.algorithms import Recommender
+from lenskit.algorithms import Recommender, als
 from lenskit.util import Stopwatch
 
 _log = logging.getLogger(__name__)
@@ -32,7 +29,7 @@ methods = mark.parametrize("m", ["lu", "cg"])
 
 @methods
 def test_als_basic_build(m):
-    algo = als.ImplicitMF(20, iterations=10, progress=util.no_progress, method=m)
+    algo = als.ImplicitMF(20, epochs=10, method=m)
     algo.fit(simple_df)
 
     assert set(algo.user_index_) == set([10, 12, 13])
@@ -42,7 +39,7 @@ def test_als_basic_build(m):
 
 
 def test_als_predict_basic():
-    algo = als.ImplicitMF(20, iterations=10)
+    algo = als.ImplicitMF(20, epochs=10)
     algo.fit(simple_df)
 
     preds = algo.predict_for_user(10, [3])
@@ -55,7 +52,7 @@ def test_als_predict_basic():
 
 def test_als_predict_basic_for_new_ratings():
     """Test ImplicitMF ability to support new ratings"""
-    algo = als.ImplicitMF(20, iterations=10)
+    algo = als.ImplicitMF(20, epochs=10)
     algo.fit(simple_df)
 
     new_ratings = pd.Series([4.0, 5.0], index=[1, 2])  # items as index and ratings as values
@@ -76,7 +73,7 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
     u = 10
     i = 3
 
-    algo = als.ImplicitMF(20, iterations=10, use_ratings=True)
+    algo = als.ImplicitMF(20, epochs=10, use_ratings=True)
     algo.fit(simple_dfr)
 
     preds = algo.predict_for_user(u, [i])
@@ -103,7 +100,7 @@ def test_als_predict_for_new_users_with_new_ratings():
     users = np.random.choice(ratings.user.unique(), n_users)
     items = np.random.choice(ratings.item.unique(), n_items)
 
-    algo = als.ImplicitMF(20, iterations=10, method="lu", use_ratings=False)
+    algo = als.ImplicitMF(20, epochs=10, method="lu", use_ratings=False)
     algo.fit(ratings)
     _log.debug("Items: " + str(items))
 
@@ -134,8 +131,9 @@ def test_als_recs_topn_for_new_users_with_new_ratings(rng):
     is the same as a user in ml-latest-small dataset.
     The test is run for more than one user.
     """
-    from lenskit.algorithms import basic
     import scipy.stats as stats
+
+    from lenskit.algorithms import basic
 
     n_users = 10
     new_u_id = -1
@@ -143,7 +141,7 @@ def test_als_recs_topn_for_new_users_with_new_ratings(rng):
 
     users = rng.choice(np.unique(ratings.user), n_users)
 
-    algo = als.ImplicitMF(20, iterations=10, method="lu", use_ratings=True)
+    algo = als.ImplicitMF(20, epochs=10, method="lu", use_ratings=True)
     rec_algo = basic.TopN(algo)
     rec_algo.fit(ratings)
     # _log.debug("Items: " + str(items))
@@ -179,7 +177,7 @@ def test_als_recs_topn_for_new_users_with_new_ratings(rng):
 
 
 def test_als_predict_bad_item():
-    algo = als.ImplicitMF(20, iterations=10)
+    algo = als.ImplicitMF(20, epochs=10)
     algo.fit(simple_df)
 
     preds = algo.predict_for_user(10, [4])
@@ -189,7 +187,7 @@ def test_als_predict_bad_item():
 
 
 def test_als_predict_bad_user():
-    algo = als.ImplicitMF(20, iterations=10)
+    algo = als.ImplicitMF(20, epochs=10)
     algo.fit(simple_df)
 
     preds = algo.predict_for_user(50, [3])
@@ -204,14 +202,14 @@ def test_als_predict_no_user_features_basic():
     u = np.random.choice(ratings.user.unique(), 1)[0]
     items = np.random.choice(ratings.item.unique(), 2)
 
-    algo = als.ImplicitMF(5, iterations=10, method="lu", use_ratings=True)
+    algo = als.ImplicitMF(5, epochs=10, method="lu", use_ratings=True)
     algo.fit(ratings)
     preds = algo.predict_for_user(u, items)
 
     user_data = ratings[ratings.user == u]
     new_ratings = user_data.set_index("item")["rating"].copy()
 
-    algo_no_user_features = als.ImplicitMF(5, iterations=10, method="lu", save_user_features=False)
+    algo_no_user_features = als.ImplicitMF(5, epochs=10, method="lu", save_user_features=False)
     algo_no_user_features.fit(ratings)
     preds_no_user_features = algo_no_user_features.predict_for_user(u, items, new_ratings)
 
@@ -223,7 +221,7 @@ def test_als_predict_no_user_features_basic():
 @lktu.wantjit
 @methods
 def test_als_train_large(m):
-    algo = als.ImplicitMF(20, iterations=20, method=m, use_ratings=False)
+    algo = als.ImplicitMF(20, epochs=20, method=m, use_ratings=False)
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
@@ -235,7 +233,7 @@ def test_als_train_large(m):
 
 def test_als_save_load(tmp_path):
     "Test saving and loading ALS models, and regularized training."
-    algo = als.ImplicitMF(5, iterations=5, reg=(2, 1), use_ratings=False)
+    algo = als.ImplicitMF(5, epochs=5, reg=(2, 1), use_ratings=False)
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
@@ -251,7 +249,7 @@ def test_als_save_load(tmp_path):
 
 @lktu.wantjit
 def test_als_train_large_noratings():
-    algo = als.ImplicitMF(20, iterations=20)
+    algo = als.ImplicitMF(20, epochs=20)
     ratings = lktu.ml_test.ratings
     ratings = ratings.loc[:, ["user", "item"]]
     algo.fit(ratings)
@@ -264,7 +262,7 @@ def test_als_train_large_noratings():
 
 @lktu.wantjit
 def test_als_train_large_ratings():
-    algo = als.ImplicitMF(20, iterations=20, use_ratings=True)
+    algo = als.ImplicitMF(20, epochs=20, use_ratings=True)
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
@@ -277,8 +275,8 @@ def test_als_train_large_ratings():
 @lktu.wantjit
 @mark.slow
 def test_als_method_match():
-    lu = als.ImplicitMF(20, iterations=15, method="lu", rng_spec=42)
-    cg = als.ImplicitMF(20, iterations=15, method="cg", rng_spec=42)
+    lu = als.ImplicitMF(20, epochs=15, method="lu", rng_spec=42)
+    cg = als.ImplicitMF(20, epochs=15, method="cg", rng_spec=42)
 
     ratings = lktu.ml_test.ratings
 
@@ -329,19 +327,18 @@ def test_als_method_match():
 @mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
 def test_als_implicit_batch_accuracy():
     import lenskit.crossfold as xf
-    from lenskit import batch
-    from lenskit import topn
+    from lenskit import batch, topn
 
     ratings = lktu.ml100k.ratings
 
     def eval(train, test):
         train = train.astype({"rating": np.float_})
         _log.info("training CG")
-        cg_algo = als.ImplicitMF(25, iterations=20, method="cg")
+        cg_algo = als.ImplicitMF(25, epochs=20, method="cg")
         cg_algo = Recommender.adapt(cg_algo)
         cg_algo.fit(train)
         _log.info("training LU")
-        lu_algo = als.ImplicitMF(25, iterations=20, method="lu")
+        lu_algo = als.ImplicitMF(25, epochs=20, method="lu")
         lu_algo = Recommender.adapt(lu_algo)
         lu_algo.fit(train)
         users = test.user.unique()
