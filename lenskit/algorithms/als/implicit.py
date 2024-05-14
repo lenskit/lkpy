@@ -21,7 +21,6 @@ from ..mf_common import MFPredictor
 from .common import PartialModel, TrainContext
 
 _log = logging.getLogger(__name__)
-SolveMethod: TypeAlias = Literal["cg", "lu", "cholesky"]
 
 
 class ImplicitMF(MFPredictor):
@@ -38,6 +37,10 @@ class ImplicitMF(MFPredictor):
     With weight :math:`w`, this function decomposes the matrix
     :math:`\\mathbb{1}^* + Rw`, where :math:`\\mathbb{1}^*` is an :math:`m
     \\times n` matrix of all 1s.
+
+    .. versionchanged:: 2024.1
+        ``ImplicitMF`` no longer supports multiple training methods. It always uses
+        Cholesky decomposition now.
 
     .. versionchanged:: 0.14
         By default, ``ImplicitMF`` ignores a ``rating`` column if one is present in the training
@@ -63,15 +66,6 @@ class ImplicitMF(MFPredictor):
             ``False``; when ``True``, the values from the ``rating`` column are
             used, and multipled by ``weight``; if ``False``, ImplicitMF treats
             every rated user-item pair as having a rating of 1.
-        method:
-            the training method.
-
-            ``'cg'`` (the default)
-                Conjugate gradient method :cite:p:`Takacs2011-ix`.
-            ``'cholesky'``
-                A direct implementation of the original implicit-feedback ALS
-                concept :cite:p:`Hu2008-li` using Cholesky decomposition to
-                solve for the optimized matrices.
 
         rng_spec:
             Random number generator or state (see
@@ -86,7 +80,6 @@ class ImplicitMF(MFPredictor):
     reg: float | tuple[float, float]
     weight: float
     use_ratings: bool
-    method: SolveMethod
     rng: np.random.Generator
     save_user_features: bool
 
@@ -104,7 +97,6 @@ class ImplicitMF(MFPredictor):
         reg: float | tuple[float, float] = 0.1,
         weight: float = 40,
         use_ratings: bool = False,
-        method: SolveMethod = "cg",
         rng_spec: Optional[SeedLike] = None,
         save_user_features: bool = True,
     ):
@@ -113,11 +105,6 @@ class ImplicitMF(MFPredictor):
         self.reg = reg
         self.weight = weight
         self.use_ratings = use_ratings
-        if method == "lu":
-            warnings.warn("method=lu has been renamed to cholesky")
-            self.method = "cholesky"
-        else:
-            self.method = method
         self.rng = numpy_rng(rng_spec)
         self.save_user_features = save_user_features
 
@@ -208,12 +195,6 @@ class ImplicitMF(MFPredictor):
 
     def _train_iters(self, current, uctx, ictx):
         "Generator of training iterations."
-        if self.method == "cholesky":
-            train = _train_implicit_cholesky
-        elif self.method == "cg":
-            train = _train_implicit_cg
-        else:
-            raise ValueError("unknown solver " + self.method)
 
         if isinstance(self.reg, tuple):
             ureg, ireg = self.reg
@@ -222,9 +203,9 @@ class ImplicitMF(MFPredictor):
 
         with make_progress(_log, "ImplicitMF", self.epochs) as epb:
             for epoch in range(self.epochs):
-                du = train(uctx, current.user_matrix, current.item_matrix, ureg)
+                du = _train_implicit_cholesky(uctx, current.user_matrix, current.item_matrix, ureg)
                 _log.debug("[%s] finished user epoch %d", self.timer, epoch)
-                di = train(ictx, current.item_matrix, current.user_matrix, ireg)
+                di = _train_implicit_cholesky(ictx, current.item_matrix, current.user_matrix, ireg)
                 _log.debug("[%s] finished item epoch %d", self.timer, epoch)
                 _log.info(
                     "[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)", self.timer, epoch, du, di
@@ -258,103 +239,45 @@ class ImplicitMF(MFPredictor):
         )
 
 
-@torch.jit.script
-def _cg_a_mult(
-    OtOr: torch.Tensor, X: torch.Tensor, y: torch.Tensor, v: torch.Tensor
-) -> torch.Tensor:
-    """
-    Compute the multiplication Av, where A = X'X + X'yX + λ.
-    """
-    XtXv = OtOr @ v
-    XtyXv = X.T @ (y * (X @ v))
-    return XtXv + XtyXv
-
-
-@torch.jit.script
-def _cg_solve(
-    OtOr: torch.Tensor, X: torch.Tensor, y: torch.Tensor, w: torch.Tensor, epochs: int
-) -> None:
-    """
-    Use conjugate gradient method to solve the system M†(X'X + X'yX + λ)w = M†X'(y+1).
-    The parameter OtOr = X'X + λ.
-    """
-    nf = X.shape[1]
-    # compute inverse of the Jacobi preconditioner
-    Ad = torch.diag(OtOr).clone()
-    for i in range(X.shape[0]):
-        for k in range(nf):
-            Ad[k] += X[i, k] * y[i] * X[i, k]
-
-    iM = torch.reciprocal(Ad)
-
-    # compute residuals
-    b = X.T @ (y + 1.0)
-    r = _cg_a_mult(OtOr, X, y, w)
-    r *= -1
-    r += b
-
-    # compute initial values
-    z = iM * r
-    p = z
-
-    # and solve
-    for i in range(epochs):
-        gam = torch.dot(r, z)
-        Ap = _cg_a_mult(OtOr, X, y, p)
-        al = float(gam / torch.dot(p, Ap))
-        w.add_(p, alpha=al)
-        r.add_(Ap, alpha=-al)
-        z = iM * r
-        bet = torch.dot(r, z) / gam
-        p = z + bet * p
-
-
-@torch.jit.script
-def _implicit_otor(other: torch.Tensor, reg: float) -> torch.Tensor:
-    nf = other.shape[1]
-    regmat = torch.eye(nf)
-    regmat *= reg
-    Ot = other.T
-    OtO = Ot @ other
-    OtO += regmat
-    return OtO
-
-
-@torch.jit.script
-def _train_implicit_cg(
+def _train_implicit_cholesky(
     mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor, reg: float
 ) -> float:
-    "One half of an implicit ALS training round with conjugate gradient."
-    nr = mat.shape[0]
-
+    "One half of an implicit ALS training round."
+    context = TrainContext.create(mat, this, other, reg)
     OtOr = _implicit_otor(other, reg)
 
-    frob = 0.0
+    sqerr = _train_implicit_cholesky_fanout(context, OtOr)
 
-    for i in range(nr):
-        row = mat[i]
-        (n,) = row.shape
-        if n == 0:
-            continue
+    return math.sqrt(sqerr)
 
-        cols = row.indices()[0]
-        vals = row.values().type(this.dtype)
 
-        # we can optimize by only considering the nonzero entries of Cu-I
-        # this means we only need the corresponding matrix columns
-        M = other[cols, :]
-        # and solve
-        w = this[i, :].clone()
-        _cg_solve(OtOr, M, vals, w, 3)
+@torch.jit.script
+def _train_implicit_cholesky_fanout(ctx: TrainContext, OtOr: torch.Tensor) -> float:
+    if ctx.nrows <= 50:
+        # at 50 rows, we run sequentially
+        M = _train_implicit_cholesky_rows(ctx, OtOr, 0, ctx.nrows)
+        sqerr = torch.norm(ctx.left - M)
+        ctx.left[:, :] = M
+        return sqerr.item()
 
-        # update stats
-        delta = this[i, :] - w
-        frob += torch.dot(delta, delta)
+    # no more than 1024 chunks, and chunk size must be at least 20
+    csize = max(ctx.nrows // 1024, 20)
 
-        # put back the result
-        this[i, :] = w
+    results: list[tuple[int, int, torch.jit.Future[torch.Tensor]]] = []
+    for start in range(0, ctx.nrows, csize):
+        end = min(start + csize, ctx.nrows)
+        results.append(
+            (start, end, torch.jit.fork(_train_implicit_cholesky_rows, ctx, OtOr, start, end))  # type: ignore
+        )
 
-    return math.sqrt(frob)
+    sqerr = torch.tensor(0.0)
+    for start, end, r in results:
+        M = r.wait()
+        diff = (ctx.left[start:end, :] - M).ravel()
+        sqerr += torch.dot(diff, diff)
+        ctx.left[start:end, :] = M
+
+    return sqerr.item()
 
 
 def _train_implicit_cholesky_rows(
@@ -397,44 +320,14 @@ def _train_implicit_cholesky_rows(
 
 
 @torch.jit.script
-def _train_implicit_cholesky_fanout(ctx: TrainContext, OtOr: torch.Tensor) -> float:
-    if ctx.nrows <= 50:
-        # at 50 rows, we run sequentially
-        M = _train_implicit_cholesky_rows(ctx, OtOr, 0, ctx.nrows)
-        sqerr = torch.norm(ctx.left - M)
-        ctx.left[:, :] = M
-        return sqerr.item()
-
-    # no more than 1024 chunks, and chunk size must be at least 20
-    csize = max(ctx.nrows // 1024, 20)
-
-    results: list[tuple[int, int, torch.jit.Future[torch.Tensor]]] = []
-    for start in range(0, ctx.nrows, csize):
-        end = min(start + csize, ctx.nrows)
-        results.append(
-            (start, end, torch.jit.fork(_train_implicit_cholesky_rows, ctx, OtOr, start, end))
-        )
-
-    sqerr = torch.tensor(0.0)
-    for start, end, r in results:
-        M = r.wait()
-        diff = (ctx.left[start:end, :] - M).ravel()
-        sqerr += torch.dot(diff, diff)
-        ctx.left[start:end, :] = M
-
-    return sqerr.item()
-
-
-def _train_implicit_cholesky(
-    mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor, reg: float
-) -> float:
-    "One half of an implicit ALS training round."
-    context = TrainContext.create(mat, this, other, reg)
-    OtOr = _implicit_otor(other, reg)
-
-    sqerr = _train_implicit_cholesky_fanout(context, OtOr)
-
-    return math.sqrt(sqerr)
+def _implicit_otor(other: torch.Tensor, reg: float) -> torch.Tensor:
+    nf = other.shape[1]
+    regmat = torch.eye(nf)
+    regmat *= reg
+    Ot = other.T
+    OtO = Ot @ other
+    OtO += regmat
+    return OtO
 
 
 @torch.jit.script
