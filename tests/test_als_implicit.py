@@ -24,12 +24,9 @@ simple_df = pd.DataFrame({"item": [1, 1, 2, 3], "user": [10, 12, 10, 13]})
 
 simple_dfr = simple_df.assign(rating=[4.0, 3.0, 5.0, 2.0])
 
-methods = mark.parametrize("m", ["lu", "cg"])
 
-
-@methods
-def test_als_basic_build(m):
-    algo = als.ImplicitMF(20, epochs=10, method=m)
+def test_als_basic_build():
+    algo = als.ImplicitMF(20, epochs=10)
     algo.fit(simple_df)
 
     assert set(algo.user_index_) == set([10, 12, 13])
@@ -100,7 +97,7 @@ def test_als_predict_for_new_users_with_new_ratings():
     users = np.random.choice(ratings.user.unique(), n_users)
     items = np.random.choice(ratings.item.unique(), n_items)
 
-    algo = als.ImplicitMF(20, epochs=10, method="lu", use_ratings=False)
+    algo = als.ImplicitMF(20, epochs=10, use_ratings=False)
     algo.fit(ratings)
     _log.debug("Items: " + str(items))
 
@@ -141,7 +138,7 @@ def test_als_recs_topn_for_new_users_with_new_ratings(rng):
 
     users = rng.choice(np.unique(ratings.user), n_users)
 
-    algo = als.ImplicitMF(20, epochs=10, method="lu", use_ratings=True)
+    algo = als.ImplicitMF(20, epochs=10, use_ratings=True)
     rec_algo = basic.TopN(algo)
     rec_algo.fit(ratings)
     # _log.debug("Items: " + str(items))
@@ -202,14 +199,14 @@ def test_als_predict_no_user_features_basic():
     u = np.random.choice(ratings.user.unique(), 1)[0]
     items = np.random.choice(ratings.item.unique(), 2)
 
-    algo = als.ImplicitMF(5, epochs=10, method="lu", use_ratings=True)
+    algo = als.ImplicitMF(5, epochs=10, use_ratings=True)
     algo.fit(ratings)
     preds = algo.predict_for_user(u, items)
 
     user_data = ratings[ratings.user == u]
     new_ratings = user_data.set_index("item")["rating"].copy()
 
-    algo_no_user_features = als.ImplicitMF(5, epochs=10, method="lu", save_user_features=False)
+    algo_no_user_features = als.ImplicitMF(5, epochs=10, save_user_features=False)
     algo_no_user_features.fit(ratings)
     preds_no_user_features = algo_no_user_features.predict_for_user(u, items, new_ratings)
 
@@ -219,9 +216,8 @@ def test_als_predict_no_user_features_basic():
 
 
 @lktu.wantjit
-@methods
 def test_als_train_large(m):
-    algo = als.ImplicitMF(20, epochs=20, method=m, use_ratings=False)
+    algo = als.ImplicitMF(20, epochs=20, use_ratings=False)
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
 
@@ -272,56 +268,6 @@ def test_als_train_large_ratings():
     assert algo.item_features_.shape == (ratings.item.nunique(), 20)
 
 
-@lktu.wantjit
-@mark.slow
-def test_als_method_match():
-    lu = als.ImplicitMF(20, epochs=15, method="lu", rng_spec=42)
-    cg = als.ImplicitMF(20, epochs=15, method="cg", rng_spec=42)
-
-    ratings = lktu.ml_test.ratings
-
-    timer = Stopwatch()
-    lu.fit(ratings)
-    timer.stop()
-    _log.info("fit with LU solver in %s", timer)
-
-    timer = Stopwatch()
-    cg.fit(ratings)
-    timer.stop()
-    _log.info("fit with CG solver in %s", timer)
-
-    preds = []
-
-    rng = numpy_rng(42)
-    for u in rng.choice(ratings.user.unique(), 10, replace=False):
-        items = rng.choice(ratings.item.unique(), 15, replace=False)
-        lu_preds = lu.predict_for_user(u, items)
-        cd_preds = cg.predict_for_user(u, items)
-        diff = lu_preds - cd_preds
-        adiff = np.abs(diff)
-        _log.info(
-            "user %s diffs: L2 = %f, min = %f, med = %f, max = %f, 90%% = %f",
-            u,
-            np.linalg.norm(diff, 2),
-            np.min(adiff),
-            np.median(adiff),
-            np.max(adiff),
-            np.quantile(adiff, 0.9),
-        )
-
-        preds.append(
-            pd.DataFrame({"user": u, "item": items, "lu": lu_preds, "cg": cd_preds, "adiff": adiff})
-        )
-        _log.info("user %s tau: %s", u, stats.kendalltau(lu_preds, cd_preds))
-
-    preds = pd.concat(preds, ignore_index=True)
-    _log.info("LU preds:\n%s", preds.lu.describe())
-    _log.info("CD preds:\n%s", preds.cg.describe())
-    _log.info("overall differences:\n%s", preds.adiff.describe())
-    # there are differences. our check: the 90% are reasonable
-    assert np.quantile(adiff, 0.9) < 0.5
-
-
 @mark.slow
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
@@ -333,19 +279,14 @@ def test_als_implicit_batch_accuracy():
 
     def eval(train, test):
         train = train.astype({"rating": np.float_})
-        _log.info("training CG")
-        cg_algo = als.ImplicitMF(25, epochs=20, method="cg")
-        cg_algo = Recommender.adapt(cg_algo)
-        cg_algo.fit(train)
-        _log.info("training LU")
-        lu_algo = als.ImplicitMF(25, epochs=20, method="lu")
-        lu_algo = Recommender.adapt(lu_algo)
-        lu_algo.fit(train)
+        _log.info("training implicit MF")
+        ials_algo = als.ImplicitMF(25, epochs=20)
+        ials_algo = Recommender.adapt(ials_algo)
+        ials_algo.fit(train)
         users = test.user.unique()
         _log.info("testing %d users", len(users))
-        cg_recs = batch.recommend(cg_algo, users, 100, n_jobs=2)
-        lu_recs = batch.recommend(lu_algo, users, 100, n_jobs=2)
-        return pd.concat({"CG": cg_recs, "LU": lu_recs}, names=["Method"]).reset_index("Method")
+        lu_recs = batch.recommend(ials_algo, users, 100, n_jobs=2)
+        return lu_recs
 
     folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
     test = pd.concat(te for (tr, te) in folds)
@@ -355,8 +296,5 @@ def test_als_implicit_batch_accuracy():
     rla = topn.RecListAnalysis()
     rla.add_metric(topn.ndcg)
     results = rla.compute(recs, test)
-    results = results.groupby("Method")["ndcg"].mean()
-    _log.info("LU nDCG for users is %.4f", results.loc["LU"].mean())
-    _log.info("CG nDCG for users is %.4f", results.loc["CG"].mean())
-    assert all(results > 0.28)
-    assert results.loc["LU"] == approx(results.loc["CG"], rel=0.05)
+    _log.info("nDCG for users is %.4f", results["ndcg"].mean())
+    assert results["ndcg"].mean() > 0.28
