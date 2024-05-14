@@ -1,29 +1,24 @@
 from __future__ import annotations
 
 import logging
-import math
-import warnings
-from typing import Literal, Optional, TypeAlias
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 import torch
-from csr import CSR
-from numba import njit, prange
-from progress_api import make_progress
-from seedbank import SeedLike, numpy_rng
+from seedbank import SeedLike
 
-from ... import util
-from ...data import sparse_ratings
-from ...math.solve import _dposv
-from ..bias import Bias
-from ..mf_common import MFPredictor
-from .common import PartialModel, TrainContext
+from lenskit.algorithms.als.common import TrainingData
+from lenskit.data import sparse_ratings
+from lenskit.parallel.chunking import WorkChunks
+from lenskit.util.logging import pbh_update, progress_handle
+
+from .common import ALSBase, TrainContext
 
 _log = logging.getLogger(__name__)
 
 
-class ImplicitMF(MFPredictor):
+class ImplicitMF(ALSBase):
     """
     Implicit matrix factorization trained with alternating least squares
     :cite:p:`Hu2008-li`.  This algorithm outputs 'predictions', but they are not
@@ -73,20 +68,9 @@ class ImplicitMF(MFPredictor):
         progress: a :func:`tqdm.tqdm`-compatible progress bar function
     """
 
-    timer = None
-
-    features: int
-    epochs: int
-    reg: float | tuple[float, float]
     weight: float
     use_ratings: bool
-    rng: np.random.Generator
-    save_user_features: bool
 
-    user_index_: pd.Index | None
-    item_index_: pd.Index
-    user_features_: torch.Tensor | None
-    item_features_: torch.Tensor
     OtOr_: torch.Tensor
 
     def __init__(
@@ -100,155 +84,73 @@ class ImplicitMF(MFPredictor):
         rng_spec: Optional[SeedLike] = None,
         save_user_features: bool = True,
     ):
-        self.features = features
-        self.epochs = epochs
-        self.reg = reg
+        super().__init__(
+            features,
+            epochs=epochs,
+            reg=reg,
+            rng_spec=rng_spec,
+            save_user_features=save_user_features,
+        )
         self.weight = weight
         self.use_ratings = use_ratings
-        self.rng = numpy_rng(rng_spec)
-        self.save_user_features = save_user_features
+
+    @property
+    def logger(self):
+        return _log
 
     def fit(self, ratings, **kwargs):
-        util.check_env()
-        self.timer = util.Stopwatch()
-        for algo in self.fit_iters(ratings, **kwargs):
-            pass
-
-        if self.user_features_ is not None:
-            _log.info(
-                "[%s] finished training model with %d features (|P|=%f, |Q|=%f)",
-                self.timer,
-                self.features,
-                torch.norm(self.user_features_, "fro"),
-                torch.norm(self.item_features_, "fro"),
-            )
-        else:
-            _log.info(
-                "[%s] finished training model with %d features (|Q|=%f)",
-                self.timer,
-                self.features,
-                torch.norm(self.item_features_, "fro"),
-            )
-
-        # unpack the regularization
-        if isinstance(self.reg, tuple):
-            ureg, ireg = self.reg
-        else:
-            ureg = self.reg
+        super().fit(ratings, **kwargs)
 
         # compute OtOr and save it on the model
-        self.OtOr_ = _implicit_otor(self.item_features_, ureg)
+        reg = self.reg[0] if isinstance(self.reg, tuple) else self.reg
+        self.OtOr_ = _implicit_otor(self.item_features_, reg)
 
         return self
 
-    def fit_iters(self, ratings, **kwargs):
-        assert self.timer is not None
-        current, uctx, ictx = self._initial_model(ratings)
-
-        _log.info(
-            "[%s] training implicit MF model with ALS for %d features", self.timer, self.features
-        )
-        start = self.timer.elapsed()
-        for model in self._train_iters(current, uctx, ictx):
-            self.save_params(model)
-            yield self
-        end = self.timer.elapsed()
-        _log.info(
-            "[%s] trained %d epochs (%.1fs/epoch)",
-            self.timer,
-            self.epochs,
-            (end - start) / self.epochs,
-        )
-
-    def save_params(self, model):
-        self.item_index_ = model.items
-        self.user_index_ = model.users
-        self.item_features_ = model.item_matrix
-        if self.save_user_features:
-            self.user_features_ = model.user_matrix
-        else:
-            self.user_features_ = None
-
-    def _initial_model(self, ratings):
-        "Initialize a model and build contexts."
-
+    def prepare_data(self, ratings: pd.DataFrame) -> TrainingData:
         if not self.use_ratings:
             ratings = ratings[["user", "item"]]
 
         rmat, users, items = sparse_ratings(ratings, torch=True)
-        n_users = len(users)
-        n_items = len(items)
+        return TrainingData.create(users, items, rmat)
 
-        _log.debug("setting up contexts")
-        rmat.values().mul_(self.weight)
-        trmat = rmat.transpose(0, 1).to_sparse_csr()
+    def initialize_params(self, data: TrainingData):
+        super().initialize_params(data)
 
-        imat = self.rng.standard_normal((n_items, self.features)) * 0.01
-        imat = np.square(imat)
-        imat = torch.from_numpy(imat)
+        # square the features to start out positive
+        assert self.user_features_ is not None
+        self.user_features_.square_()
+        self.item_features_.square_()
 
-        umat = self.rng.standard_normal((n_users, self.features)) * 0.01
-        umat = np.square(umat)
-        umat = torch.from_numpy(umat)
+    def als_half_epoch(self, epoch: int, context: TrainContext) -> float:
+        chunks = WorkChunks.create(context.nrows)
 
-        return PartialModel(users, items, umat, imat), rmat, trmat
+        OtOr = _implicit_otor(context.right, context.reg)
+        with progress_handle(
+            _log, f"epoch {epoch} {context.label}s", total=context.nrows, unit="row"
+        ) as pbh:
+            return _train_implicit_cholesky_fanout(context, OtOr, chunks, pbh)
 
-    def _train_iters(self, current, uctx, ictx):
-        "Generator of training iterations."
-
-        if isinstance(self.reg, tuple):
-            ureg, ireg = self.reg
+    def new_user_embedding(self, user, ratings: pd.Series) -> tuple[torch.Tensor, None]:
+        ri_idxes = self.item_index_.get_indexer_for(ratings.index)
+        ri_good = ri_idxes >= 0
+        ri_it = ri_idxes[ri_good]
+        if self.use_ratings:
+            ri_val = ratings.values[ri_good]
         else:
-            ureg = ireg = self.reg
+            ri_val = np.ones(len(ri_good))
+        ri_val *= self.weight
 
-        with make_progress(_log, "ImplicitMF", self.epochs) as epb:
-            for epoch in range(self.epochs):
-                du = _train_implicit_cholesky(uctx, current.user_matrix, current.item_matrix, ureg)
-                _log.debug("[%s] finished user epoch %d", self.timer, epoch)
-                di = _train_implicit_cholesky(ictx, current.item_matrix, current.user_matrix, ireg)
-                _log.debug("[%s] finished item epoch %d", self.timer, epoch)
-                _log.info(
-                    "[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)", self.timer, epoch, du, di
-                )
-                epb.update()
-                yield current
+        ri_it = torch.from_numpy(ri_it)
+        ri_val = torch.from_numpy(ri_val)
 
-    def predict_for_user(self, user, items, ratings: Optional[pd.Series] = None):
-        if ratings is not None and len(ratings) > 0:
-            ri_idxes = self.item_index_.get_indexer_for(ratings.index)
-            ri_good = ri_idxes >= 0
-            ri_it = ri_idxes[ri_good]
-            if self.use_ratings is False:
-                ri_val = np.ones(len(ri_good))
-            else:
-                ri_val = ratings.values[ri_good]
-            ri_val *= self.weight
-
-            ri_it = torch.from_numpy(ri_it)
-            ri_val = torch.from_numpy(ri_val)
-
-            u_feat = _train_implicit_row_cholesky(ri_it, ri_val, self.item_features_, self.OtOr_)
-            return self.score_by_ids(user, items, u_feat)
-        else:
-            # look up user index
-            return self.score_by_ids(user, items)
+        u_feat = _train_implicit_row_cholesky(ri_it, ri_val, self.item_features_, self.OtOr_)
+        return u_feat, None
 
     def __str__(self):
         return "als.ImplicitMF(features={}, reg={}, w={})".format(
             self.features, self.reg, self.weight
         )
-
-
-def _train_implicit_cholesky(
-    mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor, reg: float
-) -> float:
-    "One half of an implicit ALS training round."
-    context = TrainContext.create(mat, this, other, reg)
-    OtOr = _implicit_otor(other, reg)
-
-    sqerr = _train_implicit_cholesky_fanout(context, OtOr)
-
-    return math.sqrt(sqerr)
 
 
 @torch.jit.script
@@ -297,7 +199,7 @@ def _train_implicit_row_cholesky(
 
 
 def _train_implicit_cholesky_rows(
-    ctx: TrainContext, OtOr: torch.Tensor, start: int, end: int
+    ctx: TrainContext, OtOr: torch.Tensor, start: int, end: int, pbh: str
 ) -> torch.Tensor:
     result = ctx.left[start:end, :].clone()
     nf = ctx.left.shape[1]
@@ -332,26 +234,20 @@ def _train_implicit_cholesky_rows(
         # assert len(uv) == ctx.n_features
         result[i - start, :] = y
 
+        pbh_update(pbh, 1)
+
     return result
 
 
 @torch.jit.script
-def _train_implicit_cholesky_fanout(ctx: TrainContext, OtOr: torch.Tensor) -> float:
-    if ctx.nrows <= 50:
-        # at 50 rows, we run sequentially
-        M = _train_implicit_cholesky_rows(ctx, OtOr, 0, ctx.nrows)
-        sqerr = torch.norm(ctx.left - M)
-        ctx.left[:, :] = M
-        return sqerr.item()
-
-    # no more than 1024 chunks, and chunk size must be at least 20
-    csize = max(ctx.nrows // 1024, 20)
-
+def _train_implicit_cholesky_fanout(
+    ctx: TrainContext, OtOr: torch.Tensor, chunks: WorkChunks, pbh: str
+) -> float:
     results: list[tuple[int, int, torch.jit.Future[torch.Tensor]]] = []
-    for start in range(0, ctx.nrows, csize):
-        end = min(start + csize, ctx.nrows)
+    for start in range(0, ctx.nrows, chunks.chunk_size):
+        end = min(start + chunks.chunk_size, ctx.nrows)
         results.append(
-            (start, end, torch.jit.fork(_train_implicit_cholesky_rows, ctx, OtOr, start, end))  # type: ignore
+            (start, end, torch.jit.fork(_train_implicit_cholesky_rows, ctx, OtOr, start, end, pbh))  # type: ignore
         )
 
     sqerr = torch.tensor(0.0)

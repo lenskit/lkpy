@@ -108,10 +108,12 @@ def test_als_predict_for_new_users_with_new_ratings():
 
         user_data = ratings[ratings.user == u]
 
-        _log.debug("user_features from fit: " + str(algo.user_features_[upos, :]))
+        _log.debug("user_features from fit: %s", algo.user_features_[upos, :])
 
         # get the user's rating series
         new_ratings = user_data.set_index("item")["rating"].copy()
+        _log.debug("user features from new: %s", algo.new_user_embedding(new_u_id, new_ratings)[0])
+
         new_preds = algo.predict_for_user(new_u_id, items, new_ratings)
 
         _log.debug("preds: " + str(preds.values))

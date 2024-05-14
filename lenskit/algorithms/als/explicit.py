@@ -6,23 +6,19 @@ from typing import Optional, cast
 import numpy as np
 import pandas as pd
 import torch
-from progress_api import make_progress
-from seedbank import SeedLike, numpy_rng
+from seedbank import SeedLike
 
-from lenskit import util
 from lenskit.algorithms.bias import Bias
-from lenskit.algorithms.mf_common import MFPredictor
 from lenskit.data import sparse_ratings
 from lenskit.parallel.chunking import WorkChunks
-from lenskit.parallel.config import ensure_parallel_init
 from lenskit.util.logging import pbh_update, progress_handle
 
-from .common import PartialModel, TrainContext
+from .common import ALSBase, TrainContext, TrainingData
 
 _log = logging.getLogger(__name__)
 
 
-class BiasedMF(MFPredictor):
+class BiasedMF(ALSBase):
     """
     Biased matrix factorization trained with alternating least squares :cite:p:`Zhou2008-bj`.  This
     is a prediction-oriented algorithm suitable for explicit feedback data, using the alternating
@@ -65,11 +61,6 @@ class BiasedMF(MFPredictor):
     rng: np.random.Generator
     save_user_features: bool
 
-    user_index_: pd.Index | None
-    item_index_: pd.Index
-    user_features_: torch.Tensor | None
-    item_features_: torch.Tensor
-
     def __init__(
         self,
         features: int,
@@ -81,203 +72,60 @@ class BiasedMF(MFPredictor):
         rng_spec: Optional[SeedLike] = None,
         save_user_features: bool = True,
     ):
-        self.features = features
-        self.epochs = epochs
-        self.reg = reg
-        self.damping = damping
+        super().__init__(
+            features,
+            epochs=epochs,
+            reg=reg,
+            rng_spec=rng_spec,
+            save_user_features=save_user_features,
+        )
         if bias is True:
             self.bias = Bias(damping=damping)
         else:
             self.bias = bias or None
-        self.rng = numpy_rng(rng_spec)
-        self.save_user_features = save_user_features
 
-    def fit(self, ratings, **kwargs):
-        """
-        Run ALS to train a model.
+    @property
+    def logger(self):
+        return _log
 
-        Args:
-            ratings: the ratings data frame.
-
-        Returns:
-            The algorithm (for chaining).
-        """
-        util.check_env()
-        ensure_parallel_init()
-        self.timer = util.Stopwatch()
-
-        for algo in self.fit_iters(ratings, **kwargs):
-            pass  # we just need to do the iterations
-
-        if self.user_features_ is not None:
-            _log.info(
-                "trained model in %s (|P|=%f, |Q|=%f)",
-                self.timer,
-                torch.norm(self.user_features_, "fro"),
-                torch.norm(self.item_features_, "fro"),
-            )
-        else:
-            _log.info(
-                "trained model in %s (|Q|=%f)",
-                self.timer,
-                torch.norm(self.item_features_, "fro"),
-            )
-
-        del self.timer
-        return self
-
-    def fit_iters(self, ratings, **kwargs):
-        """
-        Run ALS to train a model, returning each iteration as a generator.
-
-        Args:
-            ratings: the ratings data frame.
-
-        Returns:
-            The algorithm (for chaining).
-        """
-        assert self.timer is not None
-        if self.bias:
-            _log.info("[%s] fitting bias model", self.timer)
-            self.bias.fit(ratings)
-
-        current, uctx, ictx = self._initial_model(ratings)
-
-        _log.info(
-            "[%s] training biased MF model with ALS for %d features", self.timer, self.features
-        )
-        start = self.timer.elapsed()
-        for model in self._train_iters(current, uctx, ictx):
-            self._save_params(model)
-            yield self
-        end = self.timer.elapsed()
-        _log.info(
-            "[%s] trained %d epochs (%.1fs/epoch)",
-            self.timer,
-            self.epochs,
-            (end - start) / self.epochs,
-        )
-
-    def _save_params(self, model):
-        "Save the parameters into model attributes."
-        self.item_index_ = model.items
-        self.user_index_ = model.users
-        self.item_features_ = model.item_matrix
-        if self.save_user_features:
-            self.user_features_ = model.user_matrix
-        else:
-            self.user_features_ = None
-
-    def _initial_model(self, ratings):
+    def prepare_data(self, ratings: pd.DataFrame):
         # transform ratings using offsets
         if self.bias:
             _log.info("[%s] normalizing ratings", self.timer)
-            ratings = self.bias.transform(ratings)
+            ratings = self.bias.fit_transform(ratings)
 
-        "Initialize a model and build contexts."
         rmat, users, items = sparse_ratings(ratings, torch=True)
-        n_users = len(users)
-        n_items = len(items)
+        return TrainingData.create(users, items, rmat)
 
-        _log.debug("setting up contexts")
-        trmat = rmat.transpose(0, 1).to_sparse_csr()
+    def als_half_epoch(self, epoch: int, context: TrainContext):
+        chunks = WorkChunks.create(context.nrows)
+        with progress_handle(
+            _log, f"epoch {epoch} {context.label}s", total=context.nrows, unit="row"
+        ) as pbh:
+            return _train_update_fanout(context, chunks, pbh)
 
-        _log.debug("initializing item matrix")
-        imat = self.rng.standard_normal((n_items, self.features))
-        imat /= np.linalg.norm(imat, axis=1).reshape((n_items, 1))
-        imat = torch.from_numpy(imat)
-        _log.debug("|Q|: %f", torch.norm(imat, "fro"))
+    def new_user_embedding(self, user, ratings: pd.Series) -> tuple[torch.Tensor, float | None]:
+        u_offset = None
+        if self.bias:
+            ratings, u_offset = self.bias.transform_user(ratings)
+        ratings = cast(pd.Series, ratings)
 
-        _log.debug("initializing user matrix")
-        umat = self.rng.standard_normal((n_users, self.features))
-        umat /= np.linalg.norm(umat, axis=1).reshape((n_users, 1))
-        umat = torch.from_numpy(umat)
-        _log.debug("|P|: %f", torch.norm(umat, "fro"))
+        ri_idxes = self.item_index_.get_indexer_for(ratings.index)
+        ri_good = ri_idxes >= 0
+        ri_it = torch.from_numpy(ri_idxes[ri_good])
+        ri_val = torch.from_numpy(ratings.values[ri_good])
 
-        if False:
-            _log.info("training on CUDA")
-            imat = imat.to("cuda")
-            umat = umat.to("cuda")
-            rmat = rmat.to("cuda")
-            trmat = trmat.to("cuda")
-
-        return PartialModel(users, items, umat, imat), rmat, trmat
-
-    def _train_iters(self, current: PartialModel, ui_rates: torch.Tensor, iu_rates: torch.Tensor):
-        """
-        Generator of training iterations.
-
-        Args:
-            current:
-                The current model step.
-            ui_rates:
-                The user-item rating matrix for training user features.
-            iu_rates:
-                The item-user rating matrix for training item features.
-        """
-        n_items = len(current.items)
-        n_users = len(current.users)
-        assert ui_rates.shape == (n_users, n_items)
-        assert iu_rates.shape == (n_items, n_users)
-
+        # unpack regularization
         if isinstance(self.reg, tuple):
             ureg, ireg = self.reg
         else:
-            ureg = ireg = self.reg
+            ureg = self.reg
 
-        u_ctx = TrainContext.create(ui_rates, current.user_matrix, current.item_matrix, ureg)
-        u_chunks = WorkChunks.create(n_users)
-        i_ctx = TrainContext.create(iu_rates, current.item_matrix, current.user_matrix, ireg)
-        i_chunks = WorkChunks.create(n_items)
+        u_feat = _train_bias_row_cholesky(ri_it, ri_val, self.item_features_, ureg)
+        return u_feat, u_offset
 
-        with make_progress(_log, "BiasedMF", self.epochs) as epb:
-            for epoch in range(self.epochs):
-                epoch = epoch + 1
-
-                with progress_handle(
-                    _log, f"epoch {epoch} users", total=n_users, unit="iter"
-                ) as pbh:
-                    du = _train_update_fanout(u_ctx, u_chunks, pbh)
-                _log.debug("[%s] finished user epoch %d", self.timer, epoch)
-
-                with progress_handle(
-                    _log, f"epoch {epoch} items", total=n_items, unit="iter"
-                ) as pbh:
-                    di = _train_update_fanout(i_ctx, i_chunks, pbh)
-                _log.debug("[%s] finished item epoch %d", self.timer, epoch)
-
-                _log.info(
-                    "[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)", self.timer, epoch, du, di
-                )
-                epb.update()
-                yield current
-
-    def predict_for_user(self, user, items, ratings: Optional[pd.Series] = None):
-        scores = None
-        u_offset = None
-        if ratings is not None and len(ratings) > 0:
-            if self.bias:
-                ratings, u_offset = self.bias.transform_user(ratings)
-            ratings = cast(pd.Series, ratings)
-
-            ri_idxes = self.item_index_.get_indexer_for(ratings.index)
-            ri_good = ri_idxes >= 0
-            ri_it = torch.from_numpy(ri_idxes[ri_good])
-            ri_val = torch.from_numpy(ratings.values[ri_good])
-
-            # unpack regularization
-            if isinstance(self.reg, tuple):
-                ureg, ireg = self.reg
-            else:
-                ureg = self.reg
-
-            u_feat = _train_bias_row_cholesky(ri_it, ri_val, self.item_features_, ureg)
-            scores = self.score_by_ids(user, items, u_feat)
-        else:
-            # look up user index
-            scores = self.score_by_ids(user, items)
-
-        if self.bias and ratings is not None and len(ratings) > 0:
+    def finalize_scores(self, user, scores: torch.Tensor, u_offset: float | None) -> torch.Tensor:
+        if self.bias and u_offset is not None:
             return self.bias.inverse_transform_user(user, scores, u_offset)
         elif self.bias:
             return self.bias.inverse_transform_user(user, scores)
@@ -333,7 +181,7 @@ def _train_update_rows(ctx: TrainContext, start: int, end: int, pbh: str) -> tor
 
 
 @torch.jit.script
-def _train_update_fanout(ctx: TrainContext, chunking: TrainChunking, pbh: str) -> float:
+def _train_update_fanout(ctx: TrainContext, chunking: WorkChunks, pbh: str) -> float:
     if ctx.nrows <= 50:
         # at 50 rows, we run sequentially
         M = _train_update_rows(ctx, 0, ctx.nrows, pbh)
