@@ -33,4 +33,4 @@ dependencies:
   - pip:
       - manylog>=0.1.0a5
       - progress-api>=0.1.0a9
-      - seedbank>=0.2.0a1
+      - seedbank>=0.2.0a2
