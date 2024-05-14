@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import math
-from typing import Optional
+from typing import Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -65,9 +65,9 @@ class BiasedMF(MFPredictor):
     save_user_features: bool
 
     user_index_: pd.Index | None
-    item_index_: pd.Index | None
+    item_index_: pd.Index
     user_features_: torch.Tensor | None
-    item_features_: torch.Tensor | None
+    item_features_: torch.Tensor
 
     def __init__(
         self,
@@ -105,7 +105,7 @@ class BiasedMF(MFPredictor):
         ensure_parallel_init()
         self.timer = util.Stopwatch()
 
-        for epoch, algo in enumerate(self.fit_iters(ratings, **kwargs)):
+        for algo in self.fit_iters(ratings, **kwargs):
             pass  # we just need to do the iterations
 
         if self.user_features_ is not None:
@@ -144,7 +144,7 @@ class BiasedMF(MFPredictor):
         _log.info(
             "[%s] training biased MF model with ALS for %d features", self.timer, self.features
         )
-        for epoch, model in enumerate(self._train_iters(current, uctx, ictx)):
+        for model in self._train_iters(current, uctx, ictx):
             self._save_params(model)
             yield self
 
@@ -176,13 +176,12 @@ class BiasedMF(MFPredictor):
         imat = self.rng.standard_normal((n_items, self.features))
         imat /= np.linalg.norm(imat, axis=1).reshape((n_items, 1))
         imat = torch.from_numpy(imat)
-        # imat = torch.from_numpy(imat)
         _log.debug("|Q|: %f", torch.norm(imat, "fro"))
+
         _log.debug("initializing user matrix")
         umat = self.rng.standard_normal((n_users, self.features))
         umat /= np.linalg.norm(umat, axis=1).reshape((n_users, 1))
         umat = torch.from_numpy(umat)
-        # umat = torch.from_numpy(umat)
         _log.debug("|P|: %f", torch.norm(umat, "fro"))
 
         if False:
@@ -229,20 +228,18 @@ class BiasedMF(MFPredictor):
                 epb.update()
                 yield current
 
-    def predict_for_user(self, user, items, ratings=None):
-        assert self.item_index_ is not None
-        assert self.item_features_ is not None
-
+    def predict_for_user(self, user, items, ratings: Optional[pd.Series] = None):
         scores = None
         u_offset = None
         if ratings is not None and len(ratings) > 0:
             if self.bias:
                 ratings, u_offset = self.bias.transform_user(ratings)
+            ratings = cast(pd.Series, ratings)
 
             ri_idxes = self.item_index_.get_indexer_for(ratings.index)
             ri_good = ri_idxes >= 0
-            ri_it = ri_idxes[ri_good]
-            ri_val = ratings.values[ri_good]
+            ri_it = torch.from_numpy(ri_idxes[ri_good])
+            ri_val = torch.from_numpy(ratings.values[ri_good])
 
             # unpack regularization
             if isinstance(self.reg, tuple):
