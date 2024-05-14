@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import logging
 from abc import abstractmethod
-from typing import Iterator, NamedTuple, Optional, Self
 
 import numpy as np
 import pandas as pd
 import torch
 from progress_api import make_progress
 from seedbank import SeedLike, numpy_rng
+from typing_extensions import Iterator, NamedTuple, Optional, Self
 
 from lenskit import util
 from lenskit.algorithms.mf_common import MFPredictor
