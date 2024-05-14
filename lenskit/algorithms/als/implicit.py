@@ -296,35 +296,6 @@ def _train_implicit_row_cholesky(
     return y
 
 
-@torch.jit.script
-def _train_implicit_cholesky_fanout(ctx: TrainContext, OtOr: torch.Tensor) -> float:
-    if ctx.nrows <= 50:
-        # at 50 rows, we run sequentially
-        M = _train_implicit_cholesky_rows(ctx, OtOr, 0, ctx.nrows)
-        sqerr = torch.norm(ctx.left - M)
-        ctx.left[:, :] = M
-        return sqerr.item()
-
-    # no more than 1024 chunks, and chunk size must be at least 20
-    csize = max(ctx.nrows // 1024, 20)
-
-    results: list[tuple[int, int, torch.jit.Future[torch.Tensor]]] = []
-    for start in range(0, ctx.nrows, csize):
-        end = min(start + csize, ctx.nrows)
-        results.append(
-            (start, end, torch.jit.fork(_train_implicit_cholesky_rows, ctx, OtOr, start, end))  # type: ignore
-        )
-
-    sqerr = torch.tensor(0.0)
-    for start, end, r in results:
-        M = r.wait()
-        diff = (ctx.left[start:end, :] - M).ravel()
-        sqerr += torch.dot(diff, diff)
-        ctx.left[start:end, :] = M
-
-    return sqerr.item()
-
-
 def _train_implicit_cholesky_rows(
     ctx: TrainContext, OtOr: torch.Tensor, start: int, end: int
 ) -> torch.Tensor:
@@ -362,3 +333,32 @@ def _train_implicit_cholesky_rows(
         result[i - start, :] = y
 
     return result
+
+
+@torch.jit.script
+def _train_implicit_cholesky_fanout(ctx: TrainContext, OtOr: torch.Tensor) -> float:
+    if ctx.nrows <= 50:
+        # at 50 rows, we run sequentially
+        M = _train_implicit_cholesky_rows(ctx, OtOr, 0, ctx.nrows)
+        sqerr = torch.norm(ctx.left - M)
+        ctx.left[:, :] = M
+        return sqerr.item()
+
+    # no more than 1024 chunks, and chunk size must be at least 20
+    csize = max(ctx.nrows // 1024, 20)
+
+    results: list[tuple[int, int, torch.jit.Future[torch.Tensor]]] = []
+    for start in range(0, ctx.nrows, csize):
+        end = min(start + csize, ctx.nrows)
+        results.append(
+            (start, end, torch.jit.fork(_train_implicit_cholesky_rows, ctx, OtOr, start, end))  # type: ignore
+        )
+
+    sqerr = torch.tensor(0.0)
+    for start, end, r in results:
+        M = r.wait()
+        diff = (ctx.left[start:end, :] - M).ravel()
+        sqerr += torch.dot(diff, diff)
+        ctx.left[start:end, :] = M
+
+    return sqerr.item()

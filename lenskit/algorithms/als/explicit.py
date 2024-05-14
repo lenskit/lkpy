@@ -14,9 +14,10 @@ from lenskit.parallel.config import ensure_parallel_init
 
 from ... import util
 from ...data import sparse_ratings
+from ...util.logging import pbh_update, progress_handle
 from ..bias import Bias
 from ..mf_common import MFPredictor
-from .common import PartialModel, TrainContext
+from .common import PartialModel, TrainChunking, TrainContext, train_chunking
 
 _log = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ class BiasedMF(MFPredictor):
         self,
         features: int,
         *,
-        epochs: int = 20,
+        epochs: int = 10,
         reg: float | tuple[float, float] = 0.1,
         damping: float = 5,
         bias: bool | Bias = True,
@@ -202,35 +203,49 @@ class BiasedMF(MFPredictor):
 
         return PartialModel(users, items, umat, imat), rmat, trmat
 
-    def _train_iters(self, current, uctx, ictx):
+    def _train_iters(self, current: PartialModel, ui_rates: torch.Tensor, iu_rates: torch.Tensor):
         """
         Generator of training iterations.
 
         Args:
-            current(PartialModel): the current model step.
-            uctx(ndarray): the user-item rating matrix for training user features.
-            ictx(ndarray): the item-user rating matrix for training item features.
+            current:
+                The current model step.
+            ui_rates:
+                The user-item rating matrix for training user features.
+            iu_rates:
+                The item-user rating matrix for training item features.
         """
         n_items = len(current.items)
         n_users = len(current.users)
-        assert uctx.shape == (n_users, n_items)
-        assert ictx.shape == (n_items, n_users)
+        assert ui_rates.shape == (n_users, n_items)
+        assert iu_rates.shape == (n_items, n_users)
 
         if isinstance(self.reg, tuple):
             ureg, ireg = self.reg
         else:
             ureg = ireg = self.reg
 
+        u_ctx = TrainContext.create(ui_rates, current.user_matrix, current.item_matrix, ureg)
+        u_chunks = train_chunking(n_users)
+        i_ctx = TrainContext.create(iu_rates, current.item_matrix, current.user_matrix, ireg)
+        i_chunks = train_chunking(n_items)
+
         with make_progress(_log, "BiasedMF", self.epochs) as epb:
             for epoch in range(self.epochs):
-                # du = _train_parallel(pool, u_trainer, "left")
-                # du = _train_sequential(u_trainer)
-                du = _train_matrix_cholesky(uctx, current.user_matrix, current.item_matrix, ureg)
+                epoch = epoch + 1
+
+                with progress_handle(
+                    _log, f"epoch {epoch} users", total=n_users, unit="iter"
+                ) as pbh:
+                    du = _train_update_fanout(u_ctx, u_chunks, pbh)
                 _log.debug("[%s] finished user epoch %d", self.timer, epoch)
-                # di = _train_parallel(pool, i_trainer, "right")
-                # di = _train_sequential(i_trainer)
-                di = _train_matrix_cholesky(ictx, current.item_matrix, current.user_matrix, ireg)
+
+                with progress_handle(
+                    _log, f"epoch {epoch} items", total=n_items, unit="iter"
+                ) as pbh:
+                    di = _train_update_fanout(i_ctx, i_chunks, pbh)
                 _log.debug("[%s] finished item epoch %d", self.timer, epoch)
+
                 _log.info(
                     "[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)", self.timer, epoch, du, di
                 )
@@ -273,26 +288,6 @@ class BiasedMF(MFPredictor):
         return "als.BiasedMF(features={}, regularization={})".format(self.features, self.reg)
 
 
-def _train_matrix_cholesky(
-    mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor, reg: float
-) -> float:
-    """
-    One half of an explicit ALS training round using Cholesky decomposition on the normal
-    matrices to solve the least squares problem.
-
-    Args:
-        mat: the :math:`m \\times n` matrix of ratings
-        this: the :math:`m \\times k` matrix to train
-        other: the :math:`n \\times k` matrix of sample features
-        reg: the regularization term
-    """
-    context = TrainContext.create(mat, this, other, reg)
-
-    sqerr = _train_update_fanout(context)
-
-    return math.sqrt(sqerr)
-
-
 @torch.jit.script
 def _train_solve_row(
     cols: torch.Tensor,
@@ -318,7 +313,7 @@ def _train_solve_row(
 
 
 @torch.jit.script
-def _train_update_rows(ctx: TrainContext, start: int, end: int) -> torch.Tensor:
+def _train_update_rows(ctx: TrainContext, start: int, end: int, pbh: str) -> torch.Tensor:
     result = ctx.left[start:end, :].clone()
 
     for i in range(start, end):
@@ -332,26 +327,24 @@ def _train_update_rows(ctx: TrainContext, start: int, end: int) -> torch.Tensor:
 
         V = _train_solve_row(cols, vals, ctx.left, ctx.right, ctx.regI)
         result[i - start] = V
+        pbh_update(pbh, 1)
 
     return result
 
 
 @torch.jit.script
-def _train_update_fanout(ctx: TrainContext) -> float:
+def _train_update_fanout(ctx: TrainContext, chunking: TrainChunking, pbh: str) -> float:
     if ctx.nrows <= 50:
         # at 50 rows, we run sequentially
-        M = _train_update_rows(ctx, 0, ctx.nrows)
+        M = _train_update_rows(ctx, 0, ctx.nrows, pbh)
         sqerr = torch.norm(ctx.left - M)
         ctx.left[:, :] = M
         return sqerr.item()
 
-    # no more than 1024 chunks, and chunks must be at least 20
-    csize = max(ctx.nrows // 1024, 20)
-
     results: list[tuple[int, int, torch.jit.Future[torch.Tensor]]] = []
-    for start in range(0, ctx.nrows, csize):
-        end = min(start + csize, ctx.nrows)
-        results.append((start, end, torch.jit.fork(_train_update_rows, ctx, start, end)))  # type: ignore
+    for start in range(0, ctx.nrows, chunking.chunk_size):
+        end = min(start + chunking.chunk_size, ctx.nrows)
+        results.append((start, end, torch.jit.fork(_train_update_rows, ctx, start, end, pbh)))  # type: ignore
 
     sqerr = torch.tensor(0.0)
     for start, end, r in results:
@@ -360,7 +353,7 @@ def _train_update_fanout(ctx: TrainContext) -> float:
         sqerr += torch.dot(diff, diff)
         ctx.left[start:end, :] = M
 
-    return sqerr.item()
+    return sqerr.sqrt().item()
 
 
 def _train_bias_row_cholesky(
