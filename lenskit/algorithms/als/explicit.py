@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import math
 from typing import Optional, cast
 
 import numpy as np
@@ -10,14 +9,15 @@ import torch
 from progress_api import make_progress
 from seedbank import SeedLike, numpy_rng
 
+from lenskit import util
+from lenskit.algorithms.bias import Bias
+from lenskit.algorithms.mf_common import MFPredictor
+from lenskit.data import sparse_ratings
+from lenskit.parallel.chunking import WorkChunks
 from lenskit.parallel.config import ensure_parallel_init
+from lenskit.util.logging import pbh_update, progress_handle
 
-from ... import util
-from ...data import sparse_ratings
-from ...util.logging import pbh_update, progress_handle
-from ..bias import Bias
-from ..mf_common import MFPredictor
-from .common import PartialModel, TrainChunking, TrainContext, train_chunking
+from .common import PartialModel, TrainContext
 
 _log = logging.getLogger(__name__)
 
@@ -226,9 +226,9 @@ class BiasedMF(MFPredictor):
             ureg = ireg = self.reg
 
         u_ctx = TrainContext.create(ui_rates, current.user_matrix, current.item_matrix, ureg)
-        u_chunks = train_chunking(n_users)
+        u_chunks = WorkChunks.create(n_users)
         i_ctx = TrainContext.create(iu_rates, current.item_matrix, current.user_matrix, ireg)
-        i_chunks = train_chunking(n_items)
+        i_chunks = WorkChunks.create(n_items)
 
         with make_progress(_log, "BiasedMF", self.epochs) as epb:
             for epoch in range(self.epochs):
