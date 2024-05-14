@@ -290,13 +290,13 @@ def _cg_solve(
 
     # and solve
     for i in range(epochs):
-        gam = np.dot(r, z)
+        gam = torch.dot(r, z)
         Ap = _cg_a_mult(OtOr, X, y, p)
-        al = gam / np.dot(p, Ap)
+        al = float(gam / torch.dot(p, Ap))
         w.add_(p, alpha=al)
         r.add_(Ap, alpha=-al)
         z = iM * r
-        bet = np.dot(r, z) / gam
+        bet = torch.dot(r, z) / gam
         p = z + bet * p
 
 
@@ -340,12 +340,12 @@ def _train_implicit_cg(
 
         # update stats
         delta = this[i, :] - w
-        frob += np.dot(delta, delta)
+        frob += torch.dot(delta, delta)
 
         # put back the result
         this[i, :] = w
 
-    return np.sqrt(frob)
+    return math.sqrt(frob)
 
 
 def _train_implicit_cholesky_rows(
