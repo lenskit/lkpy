@@ -216,7 +216,7 @@ def test_als_predict_no_user_features_basic():
 
 
 @lktu.wantjit
-def test_als_train_large(m):
+def test_als_train_large():
     algo = als.ImplicitMF(20, epochs=20, use_ratings=False)
     ratings = lktu.ml_test.ratings
     algo.fit(ratings)
