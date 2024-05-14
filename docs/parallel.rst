@@ -94,3 +94,13 @@ work across processes using the :py:mod:`manylog` package.  Op invokers can also
 report the progress of queued jobs to a :py:class:`progress_api.Progress`.
 
 .. autofunction:: invoke_progress
+
+Computing Work Chunks
+~~~~~~~~~~~~~~~~~~~~~
+
+.. py:module:: lenskit.parallel.chunking
+
+The :py:class:`WorkChunks` class provides support for dividing work into chunks for
+parallel processing, particularly for model training.
+
+.. autoclass:: WorkChunks
