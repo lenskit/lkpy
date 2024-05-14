@@ -273,28 +273,51 @@ class BiasedMF(MFPredictor):
         return "als.BiasedMF(features={}, regularization={})".format(self.features, self.reg)
 
 
+def _train_matrix_cholesky(
+    mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor, reg: float
+) -> float:
+    """
+    One half of an explicit ALS training round using Cholesky decomposition on the normal
+    matrices to solve the least squares problem.
+
+    Args:
+        mat: the :math:`m \\times n` matrix of ratings
+        this: the :math:`m \\times k` matrix to train
+        other: the :math:`n \\times k` matrix of sample features
+        reg: the regularization term
+    """
+    context = TrainContext.create(mat, this, other, reg)
+
+    sqerr = _train_update_fanout(context)
+
+    return math.sqrt(sqerr)
+
+
 @torch.jit.script
-def _train_solve_row(
-    cols: torch.Tensor,
-    vals: torch.Tensor,
-    this: torch.Tensor,
-    other: torch.Tensor,
-    regI: torch.Tensor,
-) -> torch.Tensor:
-    nf = this.shape[1]
-    M = other[cols, :]
-    MMT = M.T @ M
-    # assert MMT.shape[0] == ctx.n_features
-    # assert MMT.shape[1] == ctx.n_features
-    A = MMT + regI * len(cols)
-    V = M.T @ vals
-    V = V.reshape(1, nf, 1)
-    # and solve
-    L, info = torch.linalg.cholesky_ex(A)
-    if int(info):
-        raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
-    V = torch.cholesky_solve(V, L).reshape(nf)
-    return V
+def _train_update_fanout(ctx: TrainContext) -> float:
+    if ctx.nrows <= 50:
+        # at 50 rows, we run sequentially
+        M = _train_update_rows(ctx, 0, ctx.nrows)
+        sqerr = torch.norm(ctx.left - M)
+        ctx.left[:, :] = M
+        return sqerr.item()
+
+    # no more than 1024 chunks, and chunks must be at least 20
+    csize = max(ctx.nrows // 1024, 20)
+
+    results: list[tuple[int, int, torch.jit.Future[torch.Tensor]]] = []
+    for start in range(0, ctx.nrows, csize):
+        end = min(start + csize, ctx.nrows)
+        results.append((start, end, torch.jit.fork(_train_update_rows, ctx, start, end)))  # type: ignore
+
+    sqerr = torch.tensor(0.0)
+    for start, end, r in results:
+        M = r.wait()
+        diff = (ctx.left[start:end, :] - M).ravel()
+        sqerr += torch.dot(diff, diff)
+        ctx.left[start:end, :] = M
+
+    return sqerr.item()
 
 
 @torch.jit.script
@@ -317,50 +340,27 @@ def _train_update_rows(ctx: TrainContext, start: int, end: int) -> torch.Tensor:
 
 
 @torch.jit.script
-def _train_update_fanout(ctx: TrainContext) -> float:
-    if ctx.nrows <= 50:
-        # at 50 rows, we run sequentially
-        M = _train_update_rows(ctx, 0, ctx.nrows)
-        sqerr = torch.norm(ctx.left - M)
-        ctx.left[:, :] = M
-        return sqerr.item()
-
-    # no more than 1024 chunks, and chunks must be at least 20
-    csize = max(ctx.nrows // 1024, 20)
-
-    results: list[tuple[int, int, torch.jit.Future[torch.Tensor]]] = []
-    for start in range(0, ctx.nrows, csize):
-        end = min(start + csize, ctx.nrows)
-        results.append((start, end, torch.jit.fork(_train_update_rows, ctx, start, end)))
-
-    sqerr = torch.tensor(0.0)
-    for start, end, r in results:
-        M = r.wait()
-        diff = (ctx.left[start:end, :] - M).ravel()
-        sqerr += torch.dot(diff, diff)
-        ctx.left[start:end, :] = M
-
-    return sqerr.item()
-
-
-def _train_matrix_cholesky(
-    mat: torch.Tensor, this: torch.Tensor, other: torch.Tensor, reg: float
-) -> float:
-    """
-    One half of an explicit ALS training round using Cholesky decomposition on the normal
-    matrices to solve the least squares problem.
-
-    Args:
-        mat: the :math:`m \\times n` matrix of ratings
-        this: the :math:`m \\times k` matrix to train
-        other: the :math:`n \\times k` matrix of sample features
-        reg: the regularization term
-    """
-    context = TrainContext.create(mat, this, other, reg)
-
-    sqerr = _train_update_fanout(context)
-
-    return math.sqrt(sqerr)
+def _train_solve_row(
+    cols: torch.Tensor,
+    vals: torch.Tensor,
+    this: torch.Tensor,
+    other: torch.Tensor,
+    regI: torch.Tensor,
+) -> torch.Tensor:
+    nf = this.shape[1]
+    M = other[cols, :]
+    MMT = M.T @ M
+    # assert MMT.shape[0] == ctx.n_features
+    # assert MMT.shape[1] == ctx.n_features
+    A = MMT + regI * len(cols)
+    V = M.T @ vals
+    V = V.reshape(1, nf, 1)
+    # and solve
+    L, info = torch.linalg.cholesky_ex(A)
+    if int(info):
+        raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
+    V = torch.cholesky_solve(V, L).reshape(nf)
+    return V
 
 
 def _train_bias_row_cholesky(
