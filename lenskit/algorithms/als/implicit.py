@@ -211,7 +211,7 @@ class ImplicitMF(MFPredictor):
         else:
             ureg = ireg = self.reg
 
-        with make_progress("ImplicitMF", self.epochs) as epb:
+        with make_progress(_log, "ImplicitMF", self.epochs) as epb:
             for epoch in range(self.epochs):
                 du = train(uctx, current.user_matrix, current.item_matrix, ureg)
                 _log.debug("[%s] finished user epoch %d", self.timer, epoch)

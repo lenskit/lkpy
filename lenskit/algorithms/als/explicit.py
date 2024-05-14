@@ -212,7 +212,7 @@ class BiasedMF(MFPredictor):
         else:
             ureg = ireg = self.reg
 
-        with make_progress("BiasedMF", self.epochs) as epb:
+        with make_progress(_log, "BiasedMF", self.epochs) as epb:
             for epoch in range(self.epochs):
                 # du = _train_parallel(pool, u_trainer, "left")
                 # du = _train_sequential(u_trainer)
