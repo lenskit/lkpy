@@ -9,14 +9,12 @@ import logging
 import binpickle
 import numpy as np
 import pandas as pd
-from scipy import stats
-from seedbank import numpy_rng
+import torch
 
-from pytest import approx, mark
+from pytest import mark
 
 import lenskit.util.test as lktu
 from lenskit.algorithms import Recommender, als
-from lenskit.util import Stopwatch
 
 _log = logging.getLogger(__name__)
 
@@ -239,8 +237,8 @@ def test_als_save_load(tmp_path):
     binpickle.dump(algo, fn, codec=None)
 
     restored = binpickle.load(fn)
-    assert np.all(restored.user_features_ == algo.user_features_)
-    assert np.all(restored.item_features_ == algo.item_features_)
+    assert torch.all(restored.user_features_ == algo.user_features_)
+    assert torch.all(restored.item_features_ == algo.item_features_)
     assert np.all(restored.item_index_ == algo.item_index_)
     assert np.all(restored.user_index_ == algo.user_index_)
 
