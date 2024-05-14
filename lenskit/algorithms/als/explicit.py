@@ -294,6 +294,49 @@ def _train_matrix_cholesky(
 
 
 @torch.jit.script
+def _train_solve_row(
+    cols: torch.Tensor,
+    vals: torch.Tensor,
+    this: torch.Tensor,
+    other: torch.Tensor,
+    regI: torch.Tensor,
+) -> torch.Tensor:
+    nf = this.shape[1]
+    M = other[cols, :]
+    MMT = M.T @ M
+    # assert MMT.shape[0] == ctx.n_features
+    # assert MMT.shape[1] == ctx.n_features
+    A = MMT + regI * len(cols)
+    V = M.T @ vals
+    V = V.reshape(1, nf, 1)
+    # and solve
+    L, info = torch.linalg.cholesky_ex(A)
+    if int(info):
+        raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
+    V = torch.cholesky_solve(V, L).reshape(nf)
+    return V
+
+
+@torch.jit.script
+def _train_update_rows(ctx: TrainContext, start: int, end: int) -> torch.Tensor:
+    result = ctx.left[start:end, :].clone()
+
+    for i in range(start, end):
+        row = ctx.matrix[i]
+        (n,) = row.shape
+        if n == 0:
+            continue
+
+        cols = row.indices()[0]
+        vals = row.values().type(ctx.left.type())
+
+        V = _train_solve_row(cols, vals, ctx.left, ctx.right, ctx.regI)
+        result[i - start] = V
+
+    return result
+
+
+@torch.jit.script
 def _train_update_fanout(ctx: TrainContext) -> float:
     if ctx.nrows <= 50:
         # at 50 rows, we run sequentially
@@ -318,49 +361,6 @@ def _train_update_fanout(ctx: TrainContext) -> float:
         ctx.left[start:end, :] = M
 
     return sqerr.item()
-
-
-@torch.jit.script
-def _train_update_rows(ctx: TrainContext, start: int, end: int) -> torch.Tensor:
-    result = ctx.left[start:end, :].clone()
-
-    for i in range(start, end):
-        row = ctx.matrix[i]
-        (n,) = row.shape
-        if n == 0:
-            continue
-
-        cols = row.indices()[0]
-        vals = row.values().type(ctx.left.type())
-
-        V = _train_solve_row(cols, vals, ctx.left, ctx.right, ctx.regI)
-        result[i - start] = V
-
-    return result
-
-
-@torch.jit.script
-def _train_solve_row(
-    cols: torch.Tensor,
-    vals: torch.Tensor,
-    this: torch.Tensor,
-    other: torch.Tensor,
-    regI: torch.Tensor,
-) -> torch.Tensor:
-    nf = this.shape[1]
-    M = other[cols, :]
-    MMT = M.T @ M
-    # assert MMT.shape[0] == ctx.n_features
-    # assert MMT.shape[1] == ctx.n_features
-    A = MMT + regI * len(cols)
-    V = M.T @ vals
-    V = V.reshape(1, nf, 1)
-    # and solve
-    L, info = torch.linalg.cholesky_ex(A)
-    if int(info):
-        raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
-    V = torch.cholesky_solve(V, L).reshape(nf)
-    return V
 
 
 def _train_bias_row_cholesky(

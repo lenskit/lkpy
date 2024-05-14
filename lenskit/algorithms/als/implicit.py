@@ -252,6 +252,51 @@ def _train_implicit_cholesky(
 
 
 @torch.jit.script
+def _implicit_otor(other: torch.Tensor, reg: float) -> torch.Tensor:
+    nf = other.shape[1]
+    regmat = torch.eye(nf)
+    regmat *= reg
+    Ot = other.T
+    OtO = Ot @ other
+    OtO += regmat
+    return OtO
+
+
+@torch.jit.script
+def _train_implicit_row_cholesky(
+    items: torch.Tensor, ratings: torch.Tensor, other: torch.Tensor, otOr: torch.Tensor
+) -> torch.Tensor:
+    """
+    Args:
+        items(np.ndarray[i64]): the item IDs the user has rated
+        ratings(np.ndarray): the user's (normalized) ratings for those items
+        other(np.ndarray): the item-feature matrix
+        reg(float): the regularization term
+    Returns:
+        np.ndarray: the user-feature vector (equivalent to V in the current LU code)
+    """
+    # we can optimize by only considering the nonzero entries of Cu-I
+    # this means we only need the corresponding matrix columns
+    M = other[items, :]
+    nf = other.shape[1]
+    # Compute M^T (C_u-I) M, restricted to these nonzero entries
+    MMT = (M.T * ratings) @ M
+    # Build the matrix for solving
+    A = otOr + MMT
+    # Compute RHS - only used columns (p_ui != 0) values needed
+    # Cu is rates + 1 for the cols, so just trim Ot
+    y = other.T[:, items] @ (ratings + 1.0)
+    # and solve
+    L, info = torch.linalg.cholesky_ex(A)
+    if int(info):
+        raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
+    y = y.reshape(1, nf, 1)
+    y = torch.cholesky_solve(y, L).reshape(nf)
+
+    return y
+
+
+@torch.jit.script
 def _train_implicit_cholesky_fanout(ctx: TrainContext, OtOr: torch.Tensor) -> float:
     if ctx.nrows <= 50:
         # at 50 rows, we run sequentially
@@ -317,48 +362,3 @@ def _train_implicit_cholesky_rows(
         result[i - start, :] = y
 
     return result
-
-
-@torch.jit.script
-def _implicit_otor(other: torch.Tensor, reg: float) -> torch.Tensor:
-    nf = other.shape[1]
-    regmat = torch.eye(nf)
-    regmat *= reg
-    Ot = other.T
-    OtO = Ot @ other
-    OtO += regmat
-    return OtO
-
-
-@torch.jit.script
-def _train_implicit_row_cholesky(
-    items: torch.Tensor, ratings: torch.Tensor, other: torch.Tensor, otOr: torch.Tensor
-) -> torch.Tensor:
-    """
-    Args:
-        items(np.ndarray[i64]): the item IDs the user has rated
-        ratings(np.ndarray): the user's (normalized) ratings for those items
-        other(np.ndarray): the item-feature matrix
-        reg(float): the regularization term
-    Returns:
-        np.ndarray: the user-feature vector (equivalent to V in the current LU code)
-    """
-    # we can optimize by only considering the nonzero entries of Cu-I
-    # this means we only need the corresponding matrix columns
-    M = other[items, :]
-    nf = other.shape[1]
-    # Compute M^T (C_u-I) M, restricted to these nonzero entries
-    MMT = (M.T * ratings) @ M
-    # Build the matrix for solving
-    A = otOr + MMT
-    # Compute RHS - only used columns (p_ui != 0) values needed
-    # Cu is rates + 1 for the cols, so just trim Ot
-    y = other.T[:, items] @ (ratings + 1.0)
-    # and solve
-    L, info = torch.linalg.cholesky_ex(A)
-    if int(info):
-        raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
-    y = y.reshape(1, nf, 1)
-    y = torch.cholesky_solve(y, L).reshape(nf)
-
-    return y
