@@ -135,6 +135,7 @@ class BiasedMF(MFPredictor):
         Returns:
             The algorithm (for chaining).
         """
+        assert self.timer is not None
         if self.bias:
             _log.info("[%s] fitting bias model", self.timer)
             self.bias.fit(ratings)
@@ -144,9 +145,17 @@ class BiasedMF(MFPredictor):
         _log.info(
             "[%s] training biased MF model with ALS for %d features", self.timer, self.features
         )
+        start = self.timer.elapsed()
         for model in self._train_iters(current, uctx, ictx):
             self._save_params(model)
             yield self
+        end = self.timer.elapsed()
+        _log.info(
+            "[%s] trained %d epochs (%.1fs/epoch)",
+            self.timer,
+            self.epochs,
+            (end - start) / self.epochs,
+        )
 
     def _save_params(self, model):
         "Save the parameters into model attributes."

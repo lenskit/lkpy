@@ -155,14 +155,23 @@ class ImplicitMF(MFPredictor):
         return self
 
     def fit_iters(self, ratings, **kwargs):
+        assert self.timer is not None
         current, uctx, ictx = self._initial_model(ratings)
 
         _log.info(
             "[%s] training implicit MF model with ALS for %d features", self.timer, self.features
         )
+        start = self.timer.elapsed()
         for model in self._train_iters(current, uctx, ictx):
             self.save_params(model)
             yield self
+        end = self.timer.elapsed()
+        _log.info(
+            "[%s] trained %d epochs (%.1fs/epoch)",
+            self.timer,
+            self.epochs,
+            (end - start) / self.epochs,
+        )
 
     def save_params(self, model):
         self.item_index_ = model.items
