@@ -38,6 +38,18 @@ New Features (incremental)
 * Added RBP top-N metric (:pr:`334`).
 * Added command-line tool to fetch datasets (:pr:`347`).
 
+Model Behavior Changes
+~~~~~~~~~~~~~~~~~~~~~~
+
+Most models will exhibit some changes, hopefully mostly in performance, due to
+moving to PyTorch.  There are some deliberate behavior changes in this new version,
+however, documented here.
+
+* ALS models only use Cholesky decomposition (previously selected with the
+  erroneously-named ``method="lu"`` option); conjugate gradient and coordinate
+  descent are no longer available.  Cholesky decomposition is faster on PyTorch
+  than it was with Numba, and is easier to maintain.
+
 Bug Fixes
 ~~~~~~~~~
 
