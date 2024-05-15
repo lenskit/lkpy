@@ -88,12 +88,15 @@ def dposv(A, b, lower=False):
 
 def solve_cholesky(A: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     """
-    Solve the system :math:`A\\mathbf{x}=\\mathbf{y}` for :math:`\\mathbf{x}` with
-    Cholesky decomposition.
+    Solve the system :math:`A\\mathbf{x}=\\mathbf{y}` for :math:`\\mathbf{x}`
+    with Cholesky decomposition.
+
+    This wraps :func:`torch.linalg.cholesky_ex` and :func:`torch.cholesky_solve`
+    in an easier-to-use interface with error checking.
 
     Args:
-        A: the left-hand matrix :math:`A`
-        y: the right-hand vector :math:`\\mathbf{y}`
+        A: the left-hand matrix :math:`A` y: the right-hand vector
+        :math:`\\mathbf{y}`
 
     Returns:
         the solution :math:`\\mathbf{x}`
