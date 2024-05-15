@@ -145,14 +145,12 @@ def _train_solve_row(
     other: torch.Tensor,
     regI: torch.Tensor,
 ) -> torch.Tensor:
-    nf = this.shape[1]
     M = other[cols, :]
     MMT = M.T @ M
     # assert MMT.shape[0] == ctx.n_features
     # assert MMT.shape[1] == ctx.n_features
     A = MMT + regI * len(cols)
     V = M.T @ vals
-    V = V.reshape(1, nf, 1)
     # and solve
     return solve_cholesky(A, V)
 

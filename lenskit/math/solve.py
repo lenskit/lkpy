@@ -102,7 +102,7 @@ def solve_cholesky(A: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         the solution :math:`\\mathbf{x}`
     """
     if len(y.shape) > 1:
-        raise TypeError("y must be 1D")
+        raise TypeError(f"y must be 1D (found shape {y.shape})")
     (n,) = y.shape
     if A.shape != (n, n):
         raise TypeError("A must be n⨉n")

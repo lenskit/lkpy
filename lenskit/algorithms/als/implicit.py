@@ -180,7 +180,6 @@ def _train_implicit_row_cholesky(
         The user-feature vector.
     """
     _log.debug("learning new user row with %d items", len(items))
-    nf = i_embeds.shape[1]
 
     # we can optimize by only considering the nonzero entries of Cu-I
     # this means we only need the corresponding matrix columns
@@ -201,7 +200,6 @@ def _train_implicit_cholesky_rows(
     ctx: TrainContext, OtOr: torch.Tensor, start: int, end: int, pbh: str
 ) -> torch.Tensor:
     result = ctx.left[start:end, :].clone()
-    nf = ctx.left.shape[1]
 
     for i in range(start, end):
         row = ctx.matrix[i]
