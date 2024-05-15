@@ -98,6 +98,12 @@ class BiasedMF(ALSBase):
         rmat, users, items = sparse_ratings(ratings, torch=True)
         return TrainingData.create(users, items, rmat)
 
+    def initial_params(self, nrows: int, ncols: int) -> torch.Tensor:
+        mat = self.rng.standard_normal((nrows, ncols))
+        mat /= np.linalg.norm(mat, axis=1).reshape((nrows, 1))
+        mat = torch.from_numpy(mat)
+        return mat
+
     def als_half_epoch(self, epoch: int, context: TrainContext):
         chunks = WorkChunks.create(context.nrows)
         with progress_handle(

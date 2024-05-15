@@ -80,7 +80,6 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
     assert abs(preds.loc[i] - new_preds.loc[i]) <= 0.1
 
 
-@mark.skip(reason="new users not working")
 def test_als_predict_for_new_users_with_new_ratings():
     """
     Test if ImplicitMF predictions using the same ratings for a new user
@@ -105,13 +104,24 @@ def test_als_predict_for_new_users_with_new_ratings():
         preds = algo.predict_for_user(u, items)
         upos = algo.user_index_.get_loc(u)
 
-        user_data = ratings[ratings.user == u]
-
-        _log.debug("user_features from fit: %s", algo.user_features_[upos, :])
-
         # get the user's rating series
+        user_data = ratings[ratings.user == u]
         new_ratings = user_data.set_index("item")["rating"].copy()
-        _log.debug("user features from new: %s", algo.new_user_embedding(new_u_id, new_ratings)[0])
+
+        nr_info = new_ratings.to_frame()
+        ifs = algo.item_features_[algo.item_index_.get_indexer_for(nr_info.index), :]
+        fit_uv = algo.user_features_[upos, :]
+        nr_info["fit_recon"] = ifs @ fit_uv
+        nr_info["fit_sqerr"] = np.square(algo.weight + 1.0 - nr_info["fit_recon"])
+
+        _log.debug("user_features from fit:\n%s", fit_uv)
+        new_uv, _new_off = algo.new_user_embedding(new_u_id, new_ratings)
+        nr_info["new_recon"] = ifs @ new_uv
+        nr_info["new_sqerr"] = np.square(algo.weight + 1.0 - nr_info["new_recon"])
+
+        _log.debug("user features from new:\n%s", new_uv)
+
+        _log.debug("training data reconstruction:\n%s", nr_info)
 
         new_preds = algo.predict_for_user(new_u_id, items, new_ratings)
 
@@ -123,7 +133,6 @@ def test_als_predict_for_new_users_with_new_ratings():
         assert all(diffs <= 0.1)
 
 
-@mark.skip(reason="new users not working")
 def test_als_recs_topn_for_new_users_with_new_ratings(rng):
     """
     Test if ImplicitMF topn recommendations using the same ratings for a new user

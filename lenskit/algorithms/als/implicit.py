@@ -115,13 +115,11 @@ class ImplicitMF(ALSBase):
         rmat, users, items = sparse_ratings(ratings, torch=True)
         return TrainingData.create(users, items, rmat)
 
-    def initialize_params(self, data: TrainingData):
-        super().initialize_params(data)
-
-        # square the features to start out positive
-        assert self.user_features_ is not None
-        self.user_features_.square_()
-        self.item_features_.square_()
+    def initial_params(self, nrows: int, ncols: int) -> torch.Tensor:
+        mat = self.rng.standard_normal((nrows, ncols)) * 0.01
+        mat = torch.from_numpy(mat)
+        mat.square_()
+        return mat
 
     def als_half_epoch(self, epoch: int, context: TrainContext) -> float:
         chunks = WorkChunks.create(context.nrows)

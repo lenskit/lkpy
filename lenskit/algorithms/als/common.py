@@ -232,19 +232,26 @@ class ALSBase(MFPredictor):
         Initialize the model parameters at the beginning of training.
         """
         self.logger.debug("initializing item matrix")
-        imat = self.rng.standard_normal((data.n_items, self.features))
-        imat = torch.from_numpy(imat)
-        self.logger.debug("|Q|: %f", torch.norm(imat, "fro"))
-        self.item_features_ = imat
+        self.item_features_ = self.initial_params(data.n_items, self.features)
+        self.logger.debug("|Q|: %f", torch.norm(self.item_features_, "fro"))
 
         self.logger.debug("initializing user matrix")
-        umat = self.rng.standard_normal((data.n_users, self.features))
-        umat = torch.from_numpy(umat)
-        self.logger.debug("|P|: %f", torch.norm(umat, "fro"))
-        self.user_features_ = umat
+        self.user_features_ = self.initial_params(data.n_users, self.features)
+        self.logger.debug("|P|: %f", torch.norm(self.user_features_, "fro"))
 
     @abstractmethod
-    def als_half_epoch(self, epoch: int, context: TrainContext) -> float: ...
+    def initial_params(self, nrows: int, ncols: int) -> torch.Tensor:
+        """
+        Compute initial parameter values of the specified shape.
+        """
+        ...
+
+    @abstractmethod
+    def als_half_epoch(self, epoch: int, context: TrainContext) -> float:
+        """
+        Run one half of an ALS training epoch.
+        """
+        ...
 
     def predict_for_user(self, user, items, ratings: Optional[pd.Series] = None):
         scores = None
