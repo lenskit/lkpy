@@ -7,14 +7,13 @@
 import logging
 
 import numpy as np
-import scipy.linalg as sla
 import torch
 
 import hypothesis.strategies as st
-from hypothesis import given, settings
+from hypothesis import given
 from pytest import approx
 
-from lenskit.math.solve import dposv, solve_cholesky
+from lenskit.math.solve import solve_cholesky
 
 _log = logging.getLogger(__name__)
 
@@ -29,24 +28,6 @@ def square_problem(draw, scale=10):
     A = rng.randn(size, size) * scale
     b = rng.randn(size) * scale
     return A, b, size
-
-
-@settings(deadline=None)
-@given(square_problem())
-def test_solve_dposv(problem):
-    A, b, size = problem
-
-    # square values of A
-    A = A * A
-
-    # and solve
-    xexp, resid, rank, s = np.linalg.lstsq(A, b, rcond=None)
-
-    F = A.T @ A
-    x = A.T @ b
-    dposv(F, x, True)
-
-    assert x == approx(xexp, rel=1.0e-3)
 
 
 @given(square_problem())
