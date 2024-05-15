@@ -10,6 +10,7 @@ from seedbank import SeedLike
 
 from lenskit.algorithms.bias import Bias
 from lenskit.data import sparse_ratings
+from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
 from lenskit.util.logging import pbh_update, progress_handle
 
@@ -153,11 +154,7 @@ def _train_solve_row(
     V = M.T @ vals
     V = V.reshape(1, nf, 1)
     # and solve
-    L, info = torch.linalg.cholesky_ex(A)
-    if int(info):
-        raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
-    V = torch.cholesky_solve(V, L).reshape(nf)
-    return V
+    return solve_cholesky(A, V)
 
 
 @torch.jit.script
@@ -223,10 +220,6 @@ def _train_bias_row_cholesky(
     A = MMT + regI * len(items)
 
     V = M.T @ ratings
-    L, info = torch.linalg.cholesky_ex(A)
-    if int(info):
-        raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
-    V = V.reshape(1, nf, 1)
-    V = torch.cholesky_solve(V, L).reshape(nf)
+    x = solve_cholesky(A, V)
 
-    return V
+    return x

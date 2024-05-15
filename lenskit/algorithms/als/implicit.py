@@ -10,6 +10,7 @@ from seedbank import SeedLike
 
 from lenskit.algorithms.als.common import TrainingData
 from lenskit.data import sparse_ratings
+from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
 from lenskit.util.logging import pbh_update, progress_handle
 
@@ -136,13 +137,12 @@ class ImplicitMF(ALSBase):
         ri_good = ri_idxes >= 0
         ri_it = ri_idxes[ri_good]
         if self.use_ratings:
-            ri_val = ratings.values[ri_good]
+            ri_val = ratings.values[ri_good] * self.weight
         else:
-            ri_val = np.ones(len(ri_good))
-        ri_val *= self.weight
+            ri_val = np.full(len(ri_good), self.weight)
 
         ri_it = torch.from_numpy(ri_it)
-        ri_val = torch.from_numpy(ri_val)
+        ri_val = torch.from_numpy(ri_val).type(self.item_features_.dtype)
 
         u_feat = _train_implicit_row_cholesky(ri_it, ri_val, self.item_features_, self.OtOr_)
         return u_feat, None
@@ -164,38 +164,37 @@ def _implicit_otor(other: torch.Tensor, reg: float) -> torch.Tensor:
     return OtO
 
 
-@torch.jit.script
 def _train_implicit_row_cholesky(
-    items: torch.Tensor, ratings: torch.Tensor, other: torch.Tensor, otOr: torch.Tensor
+    items: torch.Tensor, ratings: torch.Tensor, i_embeds: torch.Tensor, OtOr: torch.Tensor
 ) -> torch.Tensor:
     """
+    Train a single user row with new rating data.
+
     Args:
-        items(np.ndarray[i64]): the item IDs the user has rated
-        ratings(np.ndarray): the user's (normalized) ratings for those items
-        other(np.ndarray): the item-feature matrix
-        reg(float): the regularization term
+        items: the item IDs the user has rated
+        ratings: the user's ratings for those items (when rating values are used)
+        other: the item-feature matrix
+        OtOr: the pre-computed regularization and background matrix.
+
     Returns:
-        np.ndarray: the user-feature vector (equivalent to V in the current LU code)
+        The user-feature vector.
     """
+    _log.debug("learning new user row with %d items", len(items))
+    nf = i_embeds.shape[1]
+
     # we can optimize by only considering the nonzero entries of Cu-I
     # this means we only need the corresponding matrix columns
-    M = other[items, :]
-    nf = other.shape[1]
+    M = i_embeds[items, :]
     # Compute M^T (C_u-I) M, restricted to these nonzero entries
     MMT = (M.T * ratings) @ M
     # Build the matrix for solving
-    A = otOr + MMT
+    A = OtOr + MMT
     # Compute RHS - only used columns (p_ui != 0) values needed
-    # Cu is rates + 1 for the cols, so just trim Ot
-    y = other.T[:, items] @ (ratings + 1.0)
+    y = i_embeds.T[:, items] @ (ratings + 1.0)
     # and solve
-    L, info = torch.linalg.cholesky_ex(A)
-    if int(info):
-        raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
-    y = y.reshape(1, nf, 1)
-    y = torch.cholesky_solve(y, L).reshape(nf)
+    x = solve_cholesky(A, y)
 
-    return y
+    return x
 
 
 def _train_implicit_cholesky_rows(
@@ -226,13 +225,9 @@ def _train_implicit_cholesky_rows(
         # Cu is rates + 1 for the cols, so just trim Ot
         y = ctx.right.T[:, cols] @ (vals + 1.0)
         # and solve
-        L, info = torch.linalg.cholesky_ex(A)
-        if int(info):
-            raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
-        y = y.reshape(1, nf, 1)
-        y = torch.cholesky_solve(y, L).reshape(nf)
+        x = solve_cholesky(A, y)
         # assert len(uv) == ctx.n_features
-        result[i - start, :] = y
+        result[i - start, :] = x
 
         pbh_update(pbh, 1)
 
