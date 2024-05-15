@@ -11,6 +11,7 @@ Efficient solver routines.
 import cffi
 import numba as n
 import numpy as np
+import torch
 from numba.extending import get_cython_function_address
 
 __ffi = cffi.FFI()
@@ -83,3 +84,28 @@ def dposv(A, b, lower=False):
         raise ValueError("invalid args to dposv, code " + str(info))
     elif info > 0:
         raise RuntimeError("error in dposv, code " + str(info))
+
+
+def solve_cholesky(A: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    """
+    Solve the system :math:`A\\mathbf{x}=\\mathbf{y}` for :math:`\\mathbf{x}` with
+    Cholesky decomposition.
+
+    Args:
+        A: the left-hand matrix :math:`A`
+        y: the right-hand vector :math:`\\mathbf{y}`
+
+    Returns:
+        the solution :math:`\\mathbf{x}`
+    """
+    if len(y.shape) > 1:
+        raise TypeError("y must be 1D")
+    (n,) = y.shape
+    if A.shape != (n, n):
+        raise TypeError("A must be n⨉n")
+
+    L, info = torch.linalg.cholesky_ex(A)
+    if int(info):
+        raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
+    y = y.reshape(1, n, 1)
+    return torch.cholesky_solve(y, L).reshape(n)

@@ -5,15 +5,16 @@
 # SPDX-License-Identifier: MIT
 
 import logging
+
 import numpy as np
 import scipy.linalg as sla
+import torch
 
+import hypothesis.strategies as st
+from hypothesis import given, settings
 from pytest import approx
 
-from lenskit.math.solve import dposv
-
-from hypothesis import given, settings
-import hypothesis.strategies as st
+from lenskit.math.solve import dposv, solve_cholesky
 
 _log = logging.getLogger(__name__)
 
@@ -46,3 +47,22 @@ def test_solve_dposv(problem):
     dposv(F, x, True)
 
     assert x == approx(xexp, rel=1.0e-3)
+
+
+@given(square_problem())
+def test_solve_cholesky(problem):
+    A, b, size = problem
+
+    # square values of A so it's positive
+    A = A * A
+
+    # and solve least squares
+    xexp, resid, rank, s = np.linalg.lstsq(A, b, rcond=None)
+
+    F = A.T @ A
+    y = A.T @ b
+    x = solve_cholesky(torch.from_numpy(F), torch.from_numpy(y))
+
+    assert x.numpy() == approx(xexp, rel=1.0e-3)
+
+    assert F @ x.numpy() == approx(y)
