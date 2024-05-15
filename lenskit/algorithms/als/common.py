@@ -226,6 +226,7 @@ class ALSBase(MFPredictor):
             the appropriate member variables.
         -   Return the training data object to use for model training.
         """
+        ...
 
     def initialize_params(self, data: TrainingData):
         """
