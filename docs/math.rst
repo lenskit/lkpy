@@ -6,9 +6,7 @@ Solvers
 
 .. module:: lenskit.math.solve
 
-.. autofunction:: dposv
+The :py:mod:`lenskit.math.solve` module provides utility functions for solving
+systems of equations.
 
-Numba-accessible internals
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autofunction:: _dposv
+.. autofunction:: solve_cholesky
