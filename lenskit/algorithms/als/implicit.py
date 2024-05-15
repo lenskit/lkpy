@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from typing import Optional
 
 import numpy as np
@@ -113,6 +114,7 @@ class ImplicitMF(ALSBase):
             ratings = ratings[["user", "item"]]
 
         rmat, users, items = sparse_ratings(ratings, torch=True)
+        rmat.values().multiply_(self.weight)
         return TrainingData.create(users, items, rmat)
 
     def initial_params(self, nrows: int, ncols: int) -> torch.Tensor:
@@ -248,4 +250,4 @@ def _train_implicit_cholesky_fanout(
         sqerr += torch.dot(diff, diff)
         ctx.left[start:end, :] = M
 
-    return sqerr.item()
+    return math.sqrt(sqerr.item())
