@@ -14,7 +14,6 @@ channels:
 dependencies:
   - python=3.11
   - binpickle>=0.3.2
-  - cffi>=1.15.0
   - coverage>=5
   - csr>=0.5
   - hypothesis>=6
