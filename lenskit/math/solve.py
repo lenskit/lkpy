@@ -26,14 +26,14 @@ def solve_cholesky(A: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     Returns:
         the solution :math:`\\mathbf{x}`
     """
-    if len(y.shape) > 1:
+    if len(y.shape) > 1:  # pragma: no cover
         raise TypeError(f"y must be 1D (found shape {y.shape})")
     (n,) = y.shape
-    if A.shape != (n, n):
+    if A.shape != (n, n):  # pragma: no cover
         raise TypeError("A must be n⨉n")
 
     L, info = torch.linalg.cholesky_ex(A)
-    if int(info):
+    if int(info):  # pragma: no cover
         raise RuntimeError("error computing Cholesky decomposition (not symmetric?)")
     y = y.reshape(1, n, 1)
     return torch.cholesky_solve(y, L).reshape(n)

@@ -96,7 +96,7 @@ class ALSBase(MFPredictor):
 
     @property
     @abstractmethod
-    def logger(self) -> logging.Logger:
+    def logger(self) -> logging.Logger:  # pragma: no cover
         """
         Overridden in implementation to provide the logger.
         """
@@ -215,7 +215,7 @@ class ALSBase(MFPredictor):
         )
 
     @abstractmethod
-    def prepare_data(self, ratings: pd.DataFrame) -> TrainingData:
+    def prepare_data(self, ratings: pd.DataFrame) -> TrainingData:  # pragma: no cover
         """
         Prepare data for training this model.  This takes in the ratings, and is
         supposed to do two things:
@@ -241,14 +241,14 @@ class ALSBase(MFPredictor):
         self.logger.debug("|P|: %f", torch.norm(self.user_features_, "fro"))
 
     @abstractmethod
-    def initial_params(self, nrows: int, ncols: int) -> torch.Tensor:
+    def initial_params(self, nrows: int, ncols: int) -> torch.Tensor:  # pragma: no cover
         """
         Compute initial parameter values of the specified shape.
         """
         ...
 
     @abstractmethod
-    def als_half_epoch(self, epoch: int, context: TrainContext) -> float:
+    def als_half_epoch(self, epoch: int, context: TrainContext) -> float:  # pragma: no cover
         """
         Run one half of an ALS training epoch.
         """
@@ -267,7 +267,9 @@ class ALSBase(MFPredictor):
         return scores
 
     @abstractmethod
-    def new_user_embedding(self, user, ratings: pd.Series) -> tuple[torch.Tensor, float | None]:
+    def new_user_embedding(
+        self, user, ratings: pd.Series
+    ) -> tuple[torch.Tensor, float | None]:  # pragma: no cover
         """
         Generate an embedding for a user given their current ratings.
         """

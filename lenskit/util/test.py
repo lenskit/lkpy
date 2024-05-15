@@ -64,7 +64,7 @@ def set_env_var(var, val):
 jit_enabled = True
 if "NUMBA_DISABLE_JIT" in os.environ:
     jit_enabled = False
-if os.environ.get("TORCH_JIT", None) == "0":
+if os.environ.get("PYTORCH_JIT", None) == "0":
     jit_enabled = False
 
 wantjit = pytest.mark.skipif(not jit_enabled, reason="JIT required")
