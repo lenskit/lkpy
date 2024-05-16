@@ -65,24 +65,21 @@ version_scheme = "release-branch-semver"
 
 [tool.pdm]
 distribution = true
+plugins = [
+  "pdm-conda>=0.17.5",
+]
 
 [tool.pdm.version]
 source = "scm"
 
 [tool.pdm.build]
-excludes = [
-  ".github",
-  "*.ipynb",
-  "docs",
-  "data",
-  "examples",
-  "build-tools",
-  "lkbuild",
-  "tasks.py",
-]
 includes = [
+  "lenskit",
+]
+source-includes = [
   "LICENSE.md",
-  "lenskit/*",
+  "README.md",
+  "CITATION.cff",
   "tests/*",
   "docs/*",
   "conftest.py",
@@ -124,6 +121,36 @@ demo = [
   "nbformat >=5.2",
   "ipython >= 7",
 ]
+
+[tool.pdm.conda]
+solver = "libmamba"
+as-default-manager = true
+# auto-excludes = true
+runner = "conda"
+batched-commands = true
+channels = [
+  "conda-forge",
+  "pytorch",
+  "nodefaults",
+]
+dependencies = [
+  "tbb",
+]
+excludes = [
+  "manylog",
+  "progress-api",
+  "seedbank",
+  "unbeheader",
+]
+
+[tool.pdm.conda.pypi-mapping]
+download-dir = "/tmp"
+
+[tool.pdm.conda.dev-dependencies]
+dev = [
+  "just==1.*",
+]
+
 
 # settings for generating conda environments for dev & CI, when needed
 [tool.pyproject2conda]

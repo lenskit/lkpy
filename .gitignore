@@ -42,8 +42,13 @@ lenskit/**/*.c
 conda-lock.yml
 *.lock
 *.lock.yml
-.pdm-python
 pdm.lock
+.pdm-build/
+.pdm-plugins/
+
+# ignore local pdm config
+.pdm-python
+pdm.toml
 
 # Editor and OS cruft
 .DS_Store
