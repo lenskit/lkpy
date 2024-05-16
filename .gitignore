@@ -43,6 +43,7 @@ conda-lock.yml
 *.lock
 *.lock.yml
 .pdm-python
+pdm.lock
 
 # Editor and OS cruft
 .DS_Store
