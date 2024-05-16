@@ -42,6 +42,7 @@ lenskit/**/*.c
 conda-lock.yml
 *.lock
 *.lock.yml
+.pdm-python
 
 # Editor and OS cruft
 .DS_Store

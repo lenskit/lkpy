@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools_scm>=8"]
-build-backend = "setuptools.build_meta"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
 
 [project]
 name = "lenskit"
@@ -97,6 +97,31 @@ packages = ["lenskit"]
 
 [tool.setuptools_scm]
 version_scheme = "release-branch-semver"
+
+[tool.pdm]
+distribution = true
+
+[tool.pdm.version]
+source = "scm"
+
+[tool.pdm.build]
+excludes = [
+  ".github",
+  "*.ipynb",
+  "docs",
+  "data",
+  "examples",
+  "build-tools",
+  "lkbuild",
+  "tasks.py",
+]
+includes = [
+  "LICENSE.md",
+  "lenskit/*",
+  "tests/*",
+  "docs/*",
+  "conftest.py",
+]
 
 # settings for generating conda environments for dev & CI, when needed
 [tool.pyproject2conda]
