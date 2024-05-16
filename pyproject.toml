@@ -77,8 +77,6 @@ includes = [
   "lenskit",
 ]
 source-includes = [
-  "LICENSE.md",
-  "README.md",
   "CITATION.cff",
   "tests/*",
   "docs/*",
