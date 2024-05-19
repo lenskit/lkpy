@@ -44,12 +44,6 @@ documentation = "https://lkpy.lenskit.org"
 source = "https://github.com/lenskit/lkpy"
 
 # configure build tools
-[tool.setuptools]
-packages = ["lenskit"]
-
-[tool.setuptools_scm]
-version_scheme = "release-branch-semver"
-
 [tool.pdm]
 distribution = true
 plugins = [
