@@ -44,19 +44,6 @@ documentation = "https://lkpy.lenskit.org"
 source = "https://github.com/lenskit/lkpy"
 
 # configure build tools
-[tool.flit.sdist]
-include = ["tests/*"]
-exclude = [
-  ".github",
-  "*.ipynb",
-  "docs",
-  "data",
-  "examples",
-  "build-tools",
-  "lkbuild",
-  "tasks.py",
-]
-
 [tool.setuptools]
 packages = ["lenskit"]
 
