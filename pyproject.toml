@@ -46,9 +46,6 @@ source = "https://github.com/lenskit/lkpy"
 # configure build tools
 [tool.pdm]
 distribution = true
-plugins = [
-  "pdm-conda>=0.17.5",
-]
 
 [tool.pdm.version]
 source = "scm"
