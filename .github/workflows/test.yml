@@ -166,22 +166,22 @@ jobs:
 
       - name: Install build tools
         run: |
-          "$PYTHON" -m pip install -U 'uv>=0.1.15'
+          "$PYTHON" -m pip install -U pdm
         env:
           PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
       - name: Set up Python deps
-        run: uv pip install --python "$PYTHON" -e '.[test]'
-        env:
-          PYTHON: ${{ steps.pyinstall.outputs.python-path }}
+        run:
+          pdm install -dG test
 
       - name: Inspect environment
         run: |
-          pip list
+          pdm info
+          pdm list
 
       - name: Run tests
         run: |
-          "$PYTHON" -m pytest --cov=lenskit --cov-report=xml --log-file=test.log
+          pdm run python -m pytest --cov=lenskit --cov-report=xml --log-file=test.log
         env:
           PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
