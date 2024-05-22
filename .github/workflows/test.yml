@@ -171,7 +171,7 @@ jobs:
           PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
       - name: 📦 Set up Python deps
-        run:
+        run: |
           pdm venv create "${{matrix.python}}"
           pdm install -dG test
 
