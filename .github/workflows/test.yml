@@ -152,43 +152,49 @@ jobs:
         - ubuntu-latest
         - macos-latest
     steps:
-      - name: Check out source
+      - name: 📥 Check out source
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Python
+      - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         id: pyinstall
         with:
           python-version: ${{matrix.python}}
           cache: 'pip'
 
-      - name: Install build tools
+      - name: 🛠️ Install build tools
         run: |
           "$PYTHON" -m pip install -U pdm
         env:
           PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
-      - name: Set up Python deps
+      - name: 📦 Set up Python deps
         run:
           pdm install -dG test
 
-      - name: Inspect environment
+      - name: 🔍 Inspect environment
         run: |
           pdm info
           pdm list
 
-      - name: Run tests
+      - name: 🏃🏽‍♀️‍➡️ Run tests
         run: |
           pdm run python -m pytest --cov=lenskit --cov-report=xml --log-file=test.log
         env:
           PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
-      - name: Process test results
-        uses: lenskit/lkbuild/actions/save-test-results@main
+      - name: 🥼 Aggreagate coverage data
+        run: pdm run coverage xml
+
+      - name: 🪵 Upload logs
+        uses: actions/upload-artifact@v3
         with:
-          artifact-name: test-vanilla-${{matrix.platform}}-py${{matrix.python}}
+          name: test-vanilla-${{matrix.platform}}-py${{matrix.python}}
+          path: |
+            test*.log
+            coverage.xml
 
   mindep:
     name: Minimal Supported Dependencies
