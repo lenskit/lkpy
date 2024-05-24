@@ -173,7 +173,7 @@ jobs:
       - name: 📦 Set up Python deps
         run: |
           pdm venv create "${{matrix.python}}"
-          pdm install -dG test
+          pdm install -dG test -v
 
       - name: 🔍 Inspect environment
         run: |
