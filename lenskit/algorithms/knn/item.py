@@ -26,7 +26,7 @@ from lenskit.util.logging import pbh_update, progress_handle
 
 from .. import Predictor
 
-_logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 MAX_BLOCKS = 1024
 
 
@@ -148,7 +148,7 @@ class ItemItem(Predictor):
     def _check_setup(self):
         if not self.use_ratings:
             if self.center:
-                _logger.warning(
+                _log.warning(
                     "item-item configured to ignore ratings, but ``center=True`` - likely bug"
                 )
                 warnings.warn(
@@ -161,9 +161,7 @@ class ItemItem(Predictor):
                     ConfigWarning,
                 )
             if self.aggregate == "weighted-average":
-                _logger.warning(
-                    "item-item ignoring ratings but using weighted averages - likely bug"
-                )
+                _log.warning("item-item ignoring ratings but using weighted averages - likely bug")
                 warnings.warn(
                     util.clean_str(
                         """
@@ -175,7 +173,7 @@ class ItemItem(Predictor):
                 )
 
         if self.min_sim < 0:
-            _logger.warning("item-item does not currently support negative similarities")
+            _log.warning("item-item does not currently support negative similarities")
             warnings.warn("item-item does not currently support negative similarities")
 
     def fit(self, ratings, **kwargs):
@@ -195,41 +193,41 @@ class ItemItem(Predictor):
         # 2. Compute similarities with pairwise dot products
         self._timer = util.Stopwatch()
 
-        _logger.debug("[%s] beginning fit, memory use %s", self._timer, util.max_memory())
+        _log.debug("[%s] beginning fit, memory use %s", self._timer, util.max_memory())
 
         init_rmat, users, items = sparse_ratings(ratings, torch=True)
         n_items = len(items)
-        _logger.info(
+        _log.info(
             "[%s] made sparse matrix for %d items (%d ratings from %d users)",
             self._timer,
             len(items),
             len(init_rmat.values()),
             len(users),
         )
-        _logger.debug("[%s] made matrix, memory use %s", self._timer, util.max_memory())
+        _log.debug("[%s] made matrix, memory use %s", self._timer, util.max_memory())
 
         # we operate on *transposed* rating matrix: items on the rows
         rmat = init_rmat.transpose(0, 1).to_sparse_csr().to(torch.float64)
         stats = sparse_row_stats(rmat)
 
         self._mean_center(rmat, stats)
-        _logger.debug("[%s] centered, memory use %s", self._timer, util.max_memory())
+        _log.debug("[%s] centered, memory use %s", self._timer, util.max_memory())
 
         self._normalize(rmat, stats)
-        _logger.debug("[%s] normalized, memory use %s", self._timer, util.max_memory())
+        _log.debug("[%s] normalized, memory use %s", self._timer, util.max_memory())
 
-        _logger.info("[%s] computing similarity matrix", self._timer)
+        _log.info("[%s] computing similarity matrix", self._timer)
         smat = self._compute_similarities(rmat)
-        _logger.debug("[%s] computed, memory use %s", self._timer, util.max_memory())
+        _log.debug("[%s] computed, memory use %s", self._timer, util.max_memory())
 
-        _logger.info(
+        _log.info(
             "[%s] got neighborhoods for %d of %d items",
             self._timer,
             np.sum(np.diff(smat.crow_indices()) > 0),
             n_items,
         )
 
-        _logger.info("[%s] computed %d neighbor pairs", self._timer, len(smat.col_indices()))
+        _log.info("[%s] computed %d neighbor pairs", self._timer, len(smat.col_indices()))
 
         self.item_index_ = items
         self.item_means_ = stats.means if self.center else None
@@ -237,7 +235,7 @@ class ItemItem(Predictor):
         self.sim_matrix_ = smat
         self.user_index_ = users
         self.rating_matrix_ = init_rmat
-        _logger.debug("[%s] done, memory use %s", self._timer, util.max_memory())
+        _log.debug("[%s] done, memory use %s", self._timer, util.max_memory())
 
         return self
 
@@ -251,11 +249,11 @@ class ItemItem(Predictor):
 
         rmat.values().subtract_(torch.repeat_interleave(stats.means, stats.counts))
         if np.allclose(rmat.values(), 0.0):
-            _logger.warn("normalized ratings are zero, centering is not recommended")
+            _log.warn("normalized ratings are zero, centering is not recommended")
             warnings.warn(
                 "Ratings seem to have the same value, centering is not recommended.", DataWarning
             )
-        _logger.info("[%s] computed means for %d items", self._timer, stats.n)
+        _log.info("[%s] computed means for %d items", self._timer, stats.n)
 
     def _normalize(self, rmat: torch.Tensor, stats: DimStats) -> None:
         # compute column norms
@@ -270,23 +268,23 @@ class ItemItem(Predictor):
         recip_norms = torch.where(norms > 0, torch.reciprocal(norms), 0.0)
         # and multiply the reciprocal into our values
         rmat.values().multiply_(torch.repeat_interleave(recip_norms, stats.counts))
-        _logger.info("[%s] normalized rating matrix columns", self._timer)
+        _log.info("[%s] normalized rating matrix columns", self._timer)
 
     def _compute_similarities(self, rmat: torch.Tensor):
         nitems, nusers = rmat.shape
 
         bs = max(self.block_size, nitems // MAX_BLOCKS)
-        _logger.debug("computing with effective block size %d", bs)
-        with progress_handle(_logger, "items", nitems, leave=False) as pbh:
+        _log.debug("computing with effective block size %d", bs)
+        with progress_handle(_log, "items", nitems, leave=False) as pbh:
             smat = _sim_blocks(rmat.to(torch.float64), self.min_sim, self.save_nbrs, bs, pbh)
 
         return smat.to(torch.float32)
 
     def predict_for_user(self, user, items, ratings=None):
-        _logger.debug("predicting %d items for user %s", len(items), user)
+        _log.debug("predicting %d items for user %s", len(items), user)
         if ratings is None:
             if user not in self.user_index_:
-                _logger.debug("user %s missing, returning empty predictions", user)
+                _log.debug("user %s missing, returning empty predictions", user)
                 return pd.Series(np.nan, index=items)
             upos = self.user_index_.get_loc(user)
             row = self.rating_matrix_[upos]  # type: ignore
@@ -311,7 +309,7 @@ class ItemItem(Predictor):
             assert self.item_means_ is not None
             ri_vals -= self.item_means_[ri_pos]
 
-        _logger.debug("user %s: %d of %d rated items in model", user, len(ri_pos), len(ratings))
+        _log.debug("user %s: %d of %d rated items in model", user, len(ri_pos), len(ratings))
 
         # now compute the predictions
         agg = _predictors[self.aggregate]
@@ -329,9 +327,7 @@ class ItemItem(Predictor):
         results = pd.Series(sims.numpy(), index=self.item_index_)
         results = results.reindex(items, fill_value=np.nan)
 
-        _logger.debug(
-            "user %s: predicted for %d of %d items", user, results.notna().sum(), len(items)
-        )
+        _log.debug("user %s: predicted for %d of %d items", user, results.notna().sum(), len(items))
 
         return results
 
@@ -342,7 +338,7 @@ class ItemItem(Predictor):
 @torch.jit.ignore  # type: ignore
 def _msg(level, msg):
     # type: (int, str) -> None
-    _logger.log(level, msg)
+    _log.log(level, msg)
 
 
 @torch.jit.script
