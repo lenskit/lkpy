@@ -4,21 +4,20 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from lenskit.algorithms import Recommender
-import lenskit.algorithms.user_knn as knn
-from lenskit.util import clone
-
-from pathlib import Path
 import logging
 import pickle
+from pathlib import Path
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from scipy.sparse import linalg as spla
 
 from pytest import approx, mark
 
+import lenskit.algorithms.knn.user as knn
 import lenskit.util.test as lktu
+from lenskit.algorithms import Recommender
+from lenskit.util import clone
 
 _log = logging.getLogger(__name__)
 
@@ -281,10 +280,9 @@ def __batch_eval(job):
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
 def test_uu_batch_accuracy():
-    from lenskit.algorithms import basic
-    from lenskit.algorithms import bias
     import lenskit.crossfold as xf
     import lenskit.metrics.predict as pm
+    from lenskit.algorithms import basic, bias
 
     ratings = lktu.ml100k.ratings
 
@@ -305,8 +303,8 @@ def test_uu_batch_accuracy():
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
 def test_uu_implicit_batch_accuracy():
-    from lenskit import batch, topn
     import lenskit.crossfold as xf
+    from lenskit import batch, topn
 
     ratings = lktu.ml100k.ratings
 

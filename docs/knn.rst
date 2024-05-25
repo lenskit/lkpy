@@ -47,7 +47,7 @@ This is LensKit's item-based k-NN model, based on the description by :cite:t:`De
 User-based k-NN
 ---------------
 
-.. module:: lenskit.algorithms.user_knn
+.. module:: lenskit.algorithms.knn.user
 
 .. autoclass:: UserUser
    :members:

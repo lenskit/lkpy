@@ -17,8 +17,8 @@ from lenskit import crossfold as xf
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import PopScore
 from lenskit.algorithms.knn.item import ItemItem
+from lenskit.algorithms.knn.user import UserUser
 from lenskit.algorithms.ranking import PlackettLuce
-from lenskit.algorithms.user_knn import UserUser
 from lenskit.metrics.topn import _dcg, precision, recall
 from lenskit.util.test import demo_recs, ml_test
 

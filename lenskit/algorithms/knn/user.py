@@ -15,10 +15,10 @@ import numpy as np
 import pandas as pd
 from numba import njit
 
-from .. import util
-from ..data import sparse_ratings
-from ..util.accum import kvp_minheap_insert
-from . import Predictor
+from ... import util
+from ...data import sparse_ratings
+from ...util.accum import kvp_minheap_insert
+from .. import Predictor
 
 _logger = logging.getLogger(__name__)
 
