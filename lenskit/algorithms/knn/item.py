@@ -100,6 +100,9 @@ class ItemItem(Predictor):
     save_nbrs: int | None
     feedback: Literal["explicit", "implicit"]
     block_size: int
+    center: bool
+    aggregate: str
+    use_ratings: bool
 
     item_index_: pd.Index
     "The index of item IDs."
