@@ -4,21 +4,23 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from pathlib import Path
 import logging
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
 from pytest import approx, mark
 
-from lenskit.algorithms.user_knn import UserUser
-from lenskit.algorithms.item_knn import ItemItem
-from lenskit.algorithms.basic import PopScore
-from lenskit.algorithms.ranking import PlackettLuce
+from lenskit import batch, topn
+from lenskit import crossfold as xf
 from lenskit.algorithms import Recommender
-from lenskit.util.test import ml_test, demo_recs
+from lenskit.algorithms.basic import PopScore
+from lenskit.algorithms.knn.item import ItemItem
+from lenskit.algorithms.ranking import PlackettLuce
+from lenskit.algorithms.user_knn import UserUser
 from lenskit.metrics.topn import _dcg, precision, recall
-from lenskit import topn, batch, crossfold as xf
+from lenskit.util.test import demo_recs, ml_test
 
 _log = logging.getLogger(__name__)
 

@@ -23,7 +23,7 @@ from lenskit.data.matrix import DimStats, sparse_ratings, sparse_row_stats
 from lenskit.parallel import ensure_parallel_init
 from lenskit.util.logging import pbh_update, progress_handle
 
-from . import Predictor
+from .. import Predictor
 
 AggFun: TypeAlias = Callable[
     [
