@@ -16,7 +16,6 @@ from typing import Callable, Literal, Optional, TypeAlias
 import numpy as np
 import pandas as pd
 import torch
-from progress_api import Progress
 
 from lenskit import ConfigWarning, DataWarning, util
 from lenskit.data.matrix import DimStats, sparse_ratings, sparse_row_stats
@@ -36,7 +35,6 @@ AggFun: TypeAlias = Callable[
 ]
 
 _logger = logging.getLogger(__name__)
-_progress: Progress | None
 MAX_BLOCKS = 1024
 
 
