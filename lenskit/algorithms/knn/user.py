@@ -20,80 +20,7 @@ from ...data import sparse_ratings
 from ...util.accum import kvp_minheap_insert
 from .. import Predictor
 
-_logger = logging.getLogger(__name__)
-
-
-@njit
-def _agg_weighted_avg(iur, item, sims, use):
-    """
-    Weighted-average aggregate.
-
-    Args:
-        iur(matrix._CSR): the item-user ratings matrix
-        item(int): the item index in ``iur``
-        sims(numpy.ndarray): the similarities for the users who have rated ``item``
-        use(numpy.ndarray): positions in sims and the rating row to actually use
-    """
-    rates = iur.row_vs(item)
-    num = 0.0
-    den = 0.0
-    for j in use:
-        num += rates[j] * sims[j]
-        den += np.abs(sims[j])
-    return num / den
-
-
-@njit
-def _agg_sum(iur, item, sims, use):
-    """
-    Sum aggregate
-
-    Args:
-        iur(matrix._CSR): the item-user ratings matrix
-        item(int): the item index in ``iur``
-        sims(numpy.ndarray): the similarities for the users who have rated ``item``
-        use(numpy.ndarray): positions in sims and the rating row to actually use
-    """
-    x = 0.0
-    for j in use:
-        x += sims[j]
-    return x
-
-
-@njit
-def _score(items, results, iur, sims, nnbrs, min_sim, min_nbrs, agg):
-    h_ks = np.empty(nnbrs, dtype=np.int32)
-    h_vs = np.empty(nnbrs)
-    used = np.zeros(len(results), dtype=np.int32)
-
-    for i in range(len(results)):
-        item = items[i]
-        if item < 0:
-            continue
-
-        h_ep = 0
-
-        # who has rated this item?
-        i_users = iur.row_cs(item)
-
-        # what are their similarities to our target user?
-        i_sims = sims[i_users]
-
-        # which of these neighbors do we really want to use?
-        for j, s in enumerate(i_sims):
-            if np.abs(s) < 1.0e-10:
-                continue
-            if min_sim is not None and s < min_sim:
-                continue
-            h_ep = kvp_minheap_insert(0, h_ep, nnbrs, j, s, h_ks, h_vs)
-
-        if h_ep < min_nbrs:
-            continue
-
-        results[i] = agg(iur, item, i_sims, h_ks[:h_ep])
-        used[i] = h_ep
-
-    return used
+_log = logging.getLogger(__name__)
 
 
 class UserUser(Predictor):
@@ -223,7 +150,7 @@ class UserUser(Predictor):
         if user in self.user_index_:
             nsims[self.user_index_.get_loc(user)] = 0
 
-        _logger.debug("computed user similarities")
+        _log.debug("computed user similarities")
 
         results = np.full(len(items), np.nan, dtype=np.float_)
         ri_pos = self.item_index_.get_indexer(items.values)
@@ -249,7 +176,7 @@ class UserUser(Predictor):
 
         results = pd.Series(results, index=items, name="prediction")
 
-        _logger.debug(
+        _log.debug(
             "scored %d of %d items for %s in %s", results.notna().sum(), len(items), user, watch
         )
         return results
@@ -264,10 +191,10 @@ class UserUser(Predictor):
                 ratings = rmat.row(upos)
                 umean = self.user_means_[upos] if self.user_means_ is not None else 0
             except KeyError:
-                _logger.warning("user %d has no ratings and none provided", user)
+                _log.warning("user %d has no ratings and none provided", user)
                 return None, 0
         else:
-            _logger.debug("using provided ratings for user %d", user)
+            _log.debug("using provided ratings for user %d", user)
             if self.center:
                 umean = ratings.mean()
                 ratings = ratings - umean
@@ -289,3 +216,76 @@ class UserUser(Predictor):
 
     def __str__(self):
         return "UserUser(nnbrs={}, min_sim={})".format(self.nnbrs, self.min_sim)
+
+
+@njit
+def _agg_weighted_avg(iur, item, sims, use):
+    """
+    Weighted-average aggregate.
+
+    Args:
+        iur(matrix._CSR): the item-user ratings matrix
+        item(int): the item index in ``iur``
+        sims(numpy.ndarray): the similarities for the users who have rated ``item``
+        use(numpy.ndarray): positions in sims and the rating row to actually use
+    """
+    rates = iur.row_vs(item)
+    num = 0.0
+    den = 0.0
+    for j in use:
+        num += rates[j] * sims[j]
+        den += np.abs(sims[j])
+    return num / den
+
+
+@njit
+def _agg_sum(iur, item, sims, use):
+    """
+    Sum aggregate
+
+    Args:
+        iur(matrix._CSR): the item-user ratings matrix
+        item(int): the item index in ``iur``
+        sims(numpy.ndarray): the similarities for the users who have rated ``item``
+        use(numpy.ndarray): positions in sims and the rating row to actually use
+    """
+    x = 0.0
+    for j in use:
+        x += sims[j]
+    return x
+
+
+@njit
+def _score(items, results, iur, sims, nnbrs, min_sim, min_nbrs, agg):
+    h_ks = np.empty(nnbrs, dtype=np.int32)
+    h_vs = np.empty(nnbrs)
+    used = np.zeros(len(results), dtype=np.int32)
+
+    for i in range(len(results)):
+        item = items[i]
+        if item < 0:
+            continue
+
+        h_ep = 0
+
+        # who has rated this item?
+        i_users = iur.row_cs(item)
+
+        # what are their similarities to our target user?
+        i_sims = sims[i_users]
+
+        # which of these neighbors do we really want to use?
+        for j, s in enumerate(i_sims):
+            if np.abs(s) < 1.0e-10:
+                continue
+            if min_sim is not None and s < min_sim:
+                continue
+            h_ep = kvp_minheap_insert(0, h_ep, nnbrs, j, s, h_ks, h_vs)
+
+        if h_ep < min_nbrs:
+            continue
+
+        results[i] = agg(iur, item, i_sims, h_ks[:h_ep])
+        used[i] = h_ep
+
+    return used
