@@ -9,15 +9,16 @@ User-based k-NN collaborative filtering.
 """
 
 import logging
-from sys import intern
 
 import numpy as np
 import pandas as pd
+import torch
 from numba import njit
 
-from ... import util
-from ...data import sparse_ratings
-from ...util.accum import kvp_minheap_insert
+from lenskit import util
+from lenskit.data import FeedbackType, sparse_ratings
+from lenskit.util.accum import kvp_minheap_insert
+
 from .. import Predictor
 
 _log = logging.getLogger(__name__)
@@ -30,11 +31,11 @@ class UserUser(Predictor):
     Java-based LensKit code.
 
     Args:
-        nnbrs(int):
+        nnbrs:
             the maximum number of neighbors for scoring each item (``None`` for unlimited)
-        min_nbrs(int): the minimum number of neighbors for scoring each item
-        min_sim(float): minimum similarity threshold for considering a neighbor
-        feedback(str):
+        min_nbrs: the minimum number of neighbors for scoring each item
+        min_sim: minimum similarity threshold for considering a neighbor
+        feedback:
             Control how feedback should be interpreted.  Specifies defaults for the other
             settings, which can be overridden individually; can be one of the following values:
 
@@ -46,30 +47,47 @@ class UserUser(Predictor):
             ``implicit``
                 Configure for implicit-feedback mode: ignore rating values, do not center ratings,
                 and use the ``sum`` aggregate method for prediction.
-        center(bool):
+        center:
             whether to normalize (mean-center) rating vectors.  Turn this off when working
             with unary data and other data types that don't respond well to centering.
-        aggregate(str):
+        aggregate:
             the type of aggregation to do. Can be ``weighted-average`` or ``sum``.
-        use_ratings(bool):
+        use_ratings:
             whether or not to use rating values; default is ``True``.  If ``False``, it ignores
             rating values and treates every present rating as 1.
-
-    Attributes:
-        user_index_(pandas.Index): User index.
-        item_index_(pandas.Index): Item index.
-        user_means_(numpy.ndarray): User mean ratings.
-        rating_matrix_(matrix.CSR): Normalized user-item rating matrix.
-        transpose_matrix_(matrix.CSR): Transposed un-normalized rating matrix.
     """
 
     IGNORED_PARAMS = ["feedback"]
     EXTRA_PARAMS = ["center", "aggregate", "use_ratings"]
-    AGG_SUM = intern("sum")
-    AGG_WA = intern("weighted-average")
+    AGG_SUM = "sum"
+    AGG_WA = "weighted-average"
     RATING_AGGS = [AGG_WA]
 
-    def __init__(self, nnbrs, min_nbrs=1, min_sim=0, feedback="explicit", **kwargs):
+    nnbrs: int
+    min_nbrs: int
+    min_sim: float
+    feedback: FeedbackType
+    center: bool
+    aggregate: str
+    use_ratings: bool
+
+    user_index_: pd.Index
+    "The index of user IDs."
+    user_means_: torch.Tensor | None
+    "Mean rating for each known user."
+    user_counts_: torch.Tensor
+    "Number of saved neighbors for each user."
+    rating_matrix_: torch.Tensor
+    "Normalized rating matrix to look up user ratings at prediction time."
+
+    def __init__(
+        self,
+        nnbrs: int,
+        min_nbrs: int = 1,
+        min_sim: float = 0,
+        feedback: FeedbackType = "explicit",
+        **kwargs,
+    ):
         self.nnbrs = nnbrs
         self.min_nbrs = min_nbrs
         self.min_sim = min_sim
@@ -83,7 +101,7 @@ class UserUser(Predictor):
 
         defaults.update(kwargs)
         self.center = defaults["center"]
-        self.aggregate = intern(defaults["aggregate"])
+        self.aggregate = defaults["aggregate"]
         self.use_ratings = defaults["use_ratings"]
 
     def fit(self, ratings, **kwargs):
@@ -205,14 +223,6 @@ class UserUser(Predictor):
             ratings = ratings.reindex(self.item_index_, fill_value=0).values
 
         return ratings, umean
-
-    def __getstate__(self):
-        state = dict(self.__dict__)
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        self.aggregate = intern(self.aggregate)
 
     def __str__(self):
         return "UserUser(nnbrs={}, min_sim={})".format(self.nnbrs, self.min_sim)
