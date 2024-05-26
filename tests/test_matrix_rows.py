@@ -44,7 +44,7 @@ def test_sparse_mean_center(tensor):
     nr, nc = tensor.shape
 
     stats = sparse_row_stats(tensor)
-    nt, means = normalize_sparse_rows(tensor, "mean")
+    nt, means = normalize_sparse_rows(tensor, "center")
 
     assert means.numpy() == approx(stats.means.numpy(), nan_ok=True)
 
@@ -52,3 +52,20 @@ def test_sparse_mean_center(tensor):
         tr = tensor[i].values().numpy()
         nr = nt[i].values().numpy()
         assert nr == approx(tr - means[i].numpy())
+
+
+@settings(deadline=500)
+@given(sparse_tensors())
+def test_sparse_unit_norm(tensor):
+    nr, nc = tensor.shape
+
+    nt, norms = normalize_sparse_rows(tensor, "unit")
+
+    assert norms.numpy() == approx(
+        torch.linalg.vector_norm(tensor.to_dense(), dim=1).numpy(), rel=1.0e-3
+    )
+
+    for i in range(nr):
+        tr = tensor[i].values().numpy()
+        nr = nt[i].values().numpy()
+        assert nr * norms[i].numpy() == approx(tr)
