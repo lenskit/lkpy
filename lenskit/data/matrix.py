@@ -167,3 +167,36 @@ def sparse_row_stats(matrix: t.Tensor) -> DimStats:
     means = sums / counts
 
     return DimStats(n, n_other, counts, sums, means)
+
+
+@overload
+def normalize_sparse_rows(
+    matrix: t.Tensor, method: Literal["center"], inplace: bool = False
+) -> tuple[t.Tensor, t.Tensor]: ...
+@overload
+def normalize_sparse_rows(
+    matrix: t.Tensor, method: Literal["unit"], inplace: bool = False
+) -> tuple[t.Tensor, t.Tensor]: ...
+def normalize_sparse_rows(
+    matrix: t.Tensor, method: str, inplace: bool = False
+) -> tuple[t.Tensor, t.Tensor]:
+    """
+    Normalize the rows of a sparse matrix.
+    """
+    match method:
+        case "unit":
+            return _nsr_unit(matrix)
+        case "mean":
+            return _nsr_mean_center(matrix)
+        case _:
+            raise ValueError(f"unsupported normalization method {method}")
+
+
+def _nsr_mean_center(matrix: t.Tensor) -> tuple[t.Tensor, t.Tensor]:
+    stats = sparse_row_stats(matrix)
+    return t.sparse_csr_tensor(
+        crow_indices=matrix.crow_indices(),
+        col_indices=matrix.col_indices(),
+        values=matrix.values() - t.repeat_interleave(stats.means, stats.counts),
+        size=matrix.shape,
+    ), stats.means

@@ -14,7 +14,7 @@ import hypothesis.strategies as st
 from hypothesis import HealthCheck, assume, given, settings
 from pytest import approx, mark
 
-from lenskit.data.matrix import sparse_row_stats
+from lenskit.data.matrix import normalize_sparse_rows, sparse_row_stats
 from lenskit.util.test import sparse_tensors
 
 _log = logging.getLogger(__name__)
@@ -37,3 +37,18 @@ def test_sparse_stats(tensor):
     tots = stats.means * stats.counts
     mask = stats.counts.numpy() > 0
     assert tots.numpy()[mask] == approx(sums.numpy()[mask])
+
+
+@given(sparse_tensors())
+def test_sparse_mean_center(tensor):
+    nr, nc = tensor.shape
+
+    stats = sparse_row_stats(tensor)
+    nt, means = normalize_sparse_rows(tensor, "mean")
+
+    assert means.numpy() == approx(stats.means.numpy(), nan_ok=True)
+
+    for i in range(nr):
+        tr = tensor[i].values().numpy()
+        nr = nt[i].values().numpy()
+        assert nr == approx(tr - means[i].numpy())
