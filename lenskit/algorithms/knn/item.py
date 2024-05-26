@@ -20,7 +20,7 @@ import pandas as pd
 import torch
 
 from lenskit import ConfigWarning, DataWarning, util
-from lenskit.data.matrix import DimStats, sparse_ratings, sparse_row_stats
+from lenskit.data.matrix import normalize_sparse_rows, sparse_ratings
 from lenskit.parallel import ensure_parallel_init
 from lenskit.util.logging import pbh_update, progress_handle
 
@@ -208,12 +208,20 @@ class ItemItem(Predictor):
 
         # we operate on *transposed* rating matrix: items on the rows
         rmat = init_rmat.transpose(0, 1).to_sparse_csr().to(torch.float64)
-        stats = sparse_row_stats(rmat)
 
-        self._mean_center(rmat, stats)
+        if self.center:
+            rmat, means = normalize_sparse_rows(rmat, "center")
+            if np.allclose(rmat.values(), 0.0):
+                _log.warn("normalized ratings are zero, centering is not recommended")
+                warnings.warn(
+                    "Ratings seem to have the same value, centering is not recommended.",
+                    DataWarning,
+                )
+        else:
+            means = None
         _log.debug("[%s] centered, memory use %s", self._timer, util.max_memory())
 
-        self._normalize(rmat, stats)
+        rmat, _norms = normalize_sparse_rows(rmat, "unit")
         _log.debug("[%s] normalized, memory use %s", self._timer, util.max_memory())
 
         _log.info("[%s] computing similarity matrix", self._timer)
@@ -230,7 +238,7 @@ class ItemItem(Predictor):
         _log.info("[%s] computed %d neighbor pairs", self._timer, len(smat.col_indices()))
 
         self.item_index_ = items
-        self.item_means_ = stats.means if self.center else None
+        self.item_means_ = means
         self.item_counts_ = torch.diff(smat.crow_indices())
         self.sim_matrix_ = smat
         self.user_index_ = users
@@ -238,37 +246,6 @@ class ItemItem(Predictor):
         _log.debug("[%s] done, memory use %s", self._timer, util.max_memory())
 
         return self
-
-    def _mean_center(
-        self,
-        rmat: torch.Tensor,
-        stats: DimStats,
-    ) -> None:
-        if not self.center:
-            return
-
-        rmat.values().subtract_(torch.repeat_interleave(stats.means, stats.counts))
-        if np.allclose(rmat.values(), 0.0):
-            _log.warn("normalized ratings are zero, centering is not recommended")
-            warnings.warn(
-                "Ratings seem to have the same value, centering is not recommended.", DataWarning
-            )
-        _log.info("[%s] computed means for %d items", self._timer, stats.n)
-
-    def _normalize(self, rmat: torch.Tensor, stats: DimStats) -> None:
-        # compute column norms
-        sqmat = torch.sparse_csr_tensor(
-            crow_indices=rmat.crow_indices(),
-            col_indices=rmat.col_indices(),
-            values=rmat.values().square(),
-        )
-        norms = sqmat.sum(dim=1, keepdim=True).to_dense().reshape(rmat.shape[0])
-        norms.sqrt_()
-        # don't divide when norm is zero to avoid NaN
-        recip_norms = torch.where(norms > 0, torch.reciprocal(norms), 0.0)
-        # and multiply the reciprocal into our values
-        rmat.values().multiply_(torch.repeat_interleave(recip_norms, stats.counts))
-        _log.info("[%s] normalized rating matrix columns", self._timer)
 
     def _compute_similarities(self, rmat: torch.Tensor):
         nitems, nusers = rmat.shape
