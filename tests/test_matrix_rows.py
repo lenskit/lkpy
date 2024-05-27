@@ -11,7 +11,7 @@ import torch
 
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
-from hypothesis import assume, given
+from hypothesis import HealthCheck, assume, given, settings
 from pytest import approx, mark
 
 from lenskit.data.matrix import sparse_row_stats
@@ -20,6 +20,7 @@ from lenskit.util.test import sparse_tensors
 _log = logging.getLogger(__name__)
 
 
+@settings(suppress_health_check=[HealthCheck.too_slow])
 @given(sparse_tensors())
 def test_sparse_stats(tensor):
     nr, nc = tensor.shape
