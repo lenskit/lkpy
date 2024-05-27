@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import torch
 from scipy.sparse import linalg as spla
 
 from pytest import approx, mark
@@ -61,20 +62,25 @@ def test_uu_train():
     ret = algo.fit(ml_ratings)
     assert ret is algo
 
+    # we have data structures
+    assert algo.user_means_ is not None
+    assert algo.user_vectors_ is not None
+    assert algo.user_ratings_ is not None
+
     # it should have computed correct means
     umeans = ml_ratings.groupby("user").rating.mean()
-    mlmeans = pd.Series(algo.user_means_, index=algo.user_index_, name="mean")
+    mlmeans = pd.Series(algo.user_means_.numpy(), index=algo.user_index_, name="mean")
     umeans, mlmeans = umeans.align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(["user", "item"]).rating
-    r_items = algo.transpose_matrix_.rowinds()
+    rates = algo.user_ratings_.to_sparse_coo()
     ui_rbdf = pd.DataFrame(
         {
-            "user": algo.user_index_[algo.transpose_matrix_.colinds],
-            "item": algo.item_index_[r_items],
-            "nrating": algo.transpose_matrix_.values,
+            "user": algo.user_index_[rates.indices()[0]],
+            "item": algo.item_index_[rates.indices()[1]],
+            "nrating": rates.values(),
         }
     ).set_index(["user", "item"])
     ui_rbdf = ui_rbdf.join(mlmeans)
@@ -161,12 +167,12 @@ def test_uu_save_load(tmp_path):
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(["user", "item"]).rating
-    r_items = algo.transpose_matrix_.rowinds()
+    rates = algo.user_ratings_.to_sparse_coo()
     ui_rbdf = pd.DataFrame(
         {
-            "user": algo.user_index_[algo.transpose_matrix_.colinds],
-            "item": algo.item_index_[r_items],
-            "nrating": algo.transpose_matrix_.values,
+            "user": algo.user_index_[rates.indices()[0]],
+            "item": algo.item_index_[rates.indices()[1]],
+            "nrating": rates.values(),
         }
     ).set_index(["user", "item"])
     ui_rbdf = ui_rbdf.join(mlmeans)
@@ -198,9 +204,10 @@ def test_uu_implicit():
     algo.fit(data)
     assert algo.user_means_ is None
 
-    mat = algo.rating_matrix_.to_scipy()
-    norms = spla.norm(mat, 2, 1)
-    assert norms == approx(1.0)
+    mat = algo.user_vectors_
+    norms = torch.linalg.vector_norm(mat.to_dense(), dim=1)
+    assert norms.shape == mat.shape[:1]
+    assert np.allclose(norms.numpy(), 1.0)
 
     preds = algo.predict_for_user(50, [1, 2, 42])
     assert all(preds[preds.notna()] > 0)
@@ -220,14 +227,6 @@ def test_uu_save_load_implicit(tmp_path):
     assert algo.user_means_ is None
     assert all(algo.user_index_ == orig.user_index_)
     assert all(algo.item_index_ == orig.item_index_)
-
-    assert all(algo.rating_matrix_.rowptrs == orig.rating_matrix_.rowptrs)
-    assert all(algo.rating_matrix_.colinds == orig.rating_matrix_.colinds)
-    assert all(algo.rating_matrix_.values == orig.rating_matrix_.values)
-
-    assert all(algo.transpose_matrix_.rowptrs == orig.transpose_matrix_.rowptrs)
-    assert all(algo.transpose_matrix_.colinds == orig.transpose_matrix_.colinds)
-    assert algo.transpose_matrix_.values is None
 
 
 @mark.slow

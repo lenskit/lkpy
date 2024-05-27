@@ -8,8 +8,12 @@
 User-based k-NN collaborative filtering.
 """
 
+# pyright: basic
+from __future__ import annotations
+
 import logging
 import warnings
+from typing import NamedTuple, Optional
 
 import numpy as np
 import pandas as pd
@@ -81,12 +85,10 @@ class UserUser(Predictor):
     "The index of user IDs."
     user_means_: torch.Tensor | None
     "Mean rating for each known user."
-    user_norms_: torch.Tensor
-    "Original vector norms for each known user."
-    user_counts_: torch.Tensor
-    "Number of saved neighbors for each user."
-    rating_matrix_: torch.Tensor
-    "Normalized rating matrix to look up user ratings at prediction time."
+    user_vectors_: torch.Tensor
+    "Normalized rating matrix (CSR) to find neighbors at prediction time."
+    user_ratings_: torch.Tensor
+    "Centered but un-normalized rating matrix (COO) to find neighbor ratings."
 
     def __init__(
         self,
@@ -141,7 +143,10 @@ class UserUser(Predictor):
         else:
             means = None
 
-        self.rating_matrix_ = rmat
+        normed, _norms = normalize_sparse_rows(rmat, "unit")
+
+        self.user_vectors_ = normed
+        self.user_ratings_ = rmat.to_sparse_coo()
         self.user_index_ = users
         self.user_means_ = means
         self.item_index_ = items
@@ -166,23 +171,35 @@ class UserUser(Predictor):
         watch = util.Stopwatch()
         items = pd.Index(items, name="item")
 
-        ratings, umean = self._get_user_data(user, ratings)
-        if ratings is None:
-            return pd.Series(index=items, dtype="float64")
+        udata = self._get_user_data(user, ratings)
+        if udata is None:
+            _log.debug("user %s has no ratings, skipping", user)
+            return pd.Series(index=items, dtype="float32")
+
+        index, ratings, umean = udata
         assert len(ratings) == len(self.item_index_)  # ratings is a dense vector
 
         # now ratings is normalized to be a mean-centered unit vector
         # this means we can dot product to score neighbors
         # score the neighbors!
-        nsims = self.rating_matrix_.mult_vec(ratings)
-        assert len(nsims) == len(self.user_index_)
-        if user in self.user_index_:
-            nsims[self.user_index_.get_loc(user)] = 0
+        nbr_sims = torch.mv(self.user_vectors_, ratings)
+        assert nbr_sims.shape == (len(self.user_index_),)
+        if index is not None:
+            # zero out the self-similarity
+            nbr_sims[index] = 0
 
-        _log.debug("computed user similarities")
+        # get indices for these neighbors
+        nbr_idxs = torch.arange(len(self.user_index_), dtype=torch.int64)
 
-        results = np.full(len(items), np.nan, dtype=np.float_)
-        ri_pos = self.item_index_.get_indexer(items.values)
+        nbr_mask = nbr_sims >= self.min_sim
+
+        kn_sims = nbr_sims[nbr_mask]
+        kn_idxs = nbr_idxs[nbr_mask]
+
+        _log.debug("found %d candidate neighbor similarities", kn_sims.shape[0])
+
+        iidxs = self.item_index_.get_indexer(items.values)
+        iidxs = torch.from_numpy(iidxs)
         if self.aggregate == self.AGG_WA:
             agg = _agg_weighted_avg
         elif self.aggregate == self.AGG_SUM:
@@ -190,38 +207,42 @@ class UserUser(Predictor):
         else:
             raise ValueError("invalid aggregate " + self.aggregate)
 
-        _score(
-            ri_pos,
-            results,
-            self.transpose_matrix_,
-            nsims,
+        scores = score_items_with_neighbors(
+            iidxs,
+            kn_idxs,
+            kn_sims,
+            self.user_ratings_,
             self.nnbrs,
-            self.min_sim,
             self.min_nbrs,
             agg,
         )
-        if self.aggregate in self.RATING_AGGS:
-            results += umean
 
-        results = pd.Series(results, index=items, name="prediction")
+        scores += umean
+
+        results = pd.Series(scores, index=items, name="prediction")
 
         _log.debug(
             "scored %d of %d items for %s in %s", results.notna().sum(), len(items), user, watch
         )
         return results
 
-    def _get_user_data(self, user, ratings):
+    def _get_user_data(self, user, ratings) -> Optional[UserRatings]:
         "Get a user's data for user-user CF"
-        rmat = self.rating_matrix_
+
+        try:
+            index = self.user_index_.get_loc(user)
+            assert isinstance(index, int)
+        except KeyError:
+            index = None
 
         if ratings is None:
-            try:
-                upos = self.user_index_.get_loc(user)
-                ratings = rmat.row(upos)
-                umean = self.user_means_[upos] if self.user_means_ is not None else 0
-            except KeyError:
+            if index is None:
                 _log.warning("user %d has no ratings and none provided", user)
-                return None, 0
+                return None
+
+            row = self.user_vectors_[index].to_dense()
+            umean = self.user_means_[index].item() if self.user_means_ is not None else 0
+            return UserRatings(index, row, umean)
         else:
             _log.debug("using provided ratings for user %d", user)
             if self.center:
@@ -232,11 +253,21 @@ class UserUser(Predictor):
             unorm = np.linalg.norm(ratings)
             ratings = ratings / unorm
             ratings = ratings.reindex(self.item_index_, fill_value=0).values
-
-        return ratings, umean
+            ratings = torch.from_numpy(np.require(ratings, "f4"))
+            return UserRatings(index, ratings, umean)
 
     def __str__(self):
         return "UserUser(nnbrs={}, min_sim={})".format(self.nnbrs, self.min_sim)
+
+
+class UserRatings(NamedTuple):
+    """
+    Dense user ratings.
+    """
+
+    index: int | None
+    ratings: torch.Tensor
+    mean: float
 
 
 @njit
@@ -274,6 +305,67 @@ def _agg_sum(iur, item, sims, use):
     for j in use:
         x += sims[j]
     return x
+
+
+def score_items_with_neighbors(
+    items: torch.Tensor,
+    nbr_rows: torch.Tensor,
+    nbr_sims: torch.Tensor,
+    ratings: torch.Tensor,
+    max_nbrs: int,
+    min_nbrs: int,
+    agg,
+) -> torch.Tensor:
+    # select a sub-matrix for further manipulation
+    (ni,) = items.shape
+    nbr_rates = ratings.index_select(0, nbr_rows)
+    nbr_rates = nbr_rates.index_select(1, items)
+    nbr_rates = nbr_rates.coalesce()
+    nbr_t = nbr_rates.transpose(0, 1).to_sparse_csr()
+
+    # count nbrs for each item
+    counts = nbr_t.crow_indices().diff()
+    assert counts.shape == items.shape
+
+    _log.debug("scoring %d items, max count %d", ni, torch.max(counts).item())
+
+    # fast-path items with small neighborhoods
+    fp_mask = counts <= max_nbrs
+    r_mask = fp_mask[nbr_rates.indices()[1]]
+    nbr_fp = torch.sparse_coo_tensor(
+        indices=nbr_rates.indices()[:, r_mask],
+        values=nbr_rates.values()[r_mask],
+        size=nbr_rates.shape,
+    ).coalesce()
+    results = torch.mv(nbr_fp.transpose(0, 1), nbr_sims)
+
+    nnz = len(nbr_fp.values())
+    nbr_fp_ones = torch.sparse_coo_tensor(
+        indices=nbr_rates.indices()[:, r_mask],
+        values=torch.ones(nnz),
+        size=nbr_rates.shape,
+    )
+    results /= torch.mv(nbr_fp_ones.transpose(0, 1), nbr_sims)
+
+    # clear out too-small neighborhoods
+    results[counts < min_nbrs] = torch.nan
+
+    # deal with too-large items
+    exc_mask = counts > max_nbrs
+    if torch.any(exc_mask):
+        _log.debug("scoring %d slow-path items", torch.sum(exc_mask))
+    for badi in items[exc_mask]:
+        col = nbr_t[badi]
+        assert col.shape == nbr_rates.shape[:1]
+
+        bi_users = col.indices()[0]
+        bi_rates = col.values()
+        bi_sims = nbr_sims[bi_users]
+
+        tk_vs, tk_is = torch.topk(bi_sims, max_nbrs)
+        results[badi] = torch.sum(tk_vs * bi_rates[tk_is])
+
+    return results
 
 
 @njit
