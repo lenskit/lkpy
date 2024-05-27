@@ -29,10 +29,12 @@ Significant Changes
 
     * :py:class:`~lenskit.algorithms.knn.ItemItem`
     * :py:class:`~lenskit.algorithms.als.ImplicitMF`
-    * :py:class:`~lenskit.algorithms.als.ExplicitMF`
+    * :py:class:`~lenskit.algorithms.als.BiasedMF`
 
 *   Many LensKit components (batch running, model training, etc.) now report progress with
     :py:mod:`progress_api`, and can be connected to TQDM or Enlighten.
+
+*   Algorithms refactored to more consistent package locations.
 
 New Features (incremental)
 ~~~~~~~~~

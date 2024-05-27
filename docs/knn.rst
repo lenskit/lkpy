@@ -36,8 +36,6 @@ rating values) with additional parameters to the constructor.
 Item-based k-NN
 ---------------
 
-.. module:: lenskit.algorithms.knn.item
-
 This is LensKit's item-based k-NN model, based on the description by :cite:t:`Deshpande2004-ht`.
 
 .. autoclass:: ItemItem
@@ -46,8 +44,6 @@ This is LensKit's item-based k-NN model, based on the description by :cite:t:`De
 
 User-based k-NN
 ---------------
-
-.. module:: lenskit.algorithms.knn.user
 
 .. autoclass:: UserUser
    :members:
