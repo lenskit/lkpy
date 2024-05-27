@@ -27,12 +27,12 @@ class ModelData(NamedTuple):
     """
 
     pickle: bytes
-    buffers: list[tuple[SharedMemory, int]]
+    buffers: list[tuple[SharedMemory | None, int]]
 
 
 class ModelPickler(pickle.Pickler):
     manager: SharedMemoryManager | None
-    buffers: list[tuple[SharedMemory, int]]
+    buffers: list[tuple[SharedMemory | None, int]]
 
     def __init__(
         self,
@@ -48,13 +48,16 @@ class ModelPickler(pickle.Pickler):
 
     def _buffer_cb(self, buffer: pickle.PickleBuffer):
         mem = buffer.raw()
-        if self.manager:
+        if mem.nbytes == 0:
+            shm = None
+        elif self.manager:
             shm = self.manager.SharedMemory(mem.nbytes)
         else:
             shm = SharedMemory(create=True, size=mem.nbytes)
 
         # copy the data
-        shm.buf[: mem.nbytes] = mem
+        if shm is not None:
+            shm.buf[: mem.nbytes] = mem
         self.buffers.append((shm, mem.nbytes))
 
     def reducer_override(self, obj: Any) -> Any:
@@ -68,8 +71,7 @@ class ModelPickler(pickle.Pickler):
                 )
             elif obj.is_sparse:
                 return torch.sparse_coo_tensor, (
-                    obj.row_indices(),
-                    obj.col_indices(),
+                    obj.indices(),
                     obj.values(),
                     obj.shape,
                 )
@@ -100,5 +102,5 @@ def shm_deserialize(data: ModelData) -> Any:
     """
     Deserialize SHM-pickled data.
     """
-    buffers = [shm.buf[:n] for shm, n in data.buffers]
+    buffers = [(shm.buf[:n] if shm is not None else b"") for shm, n in data.buffers]
     return pickle.loads(data.pickle, buffers=buffers)
