@@ -27,32 +27,22 @@ _log = logging.getLogger(__name__)
 
 class BiasedMF(ALSBase):
     """
-    Biased matrix factorization trained with alternating least squares :cite:p:`Zhou2008-bj`.  This
-    is a prediction-oriented algorithm suitable for explicit feedback data, using the alternating
-    least squares approach to compute :math:`P` and :math:`Q` to minimize the regularized squared
-    reconstruction error of the ratings matrix.
+    Biased matrix factorization trained with alternating least squares
+    :cite:p:`zhouLargeScaleParallelCollaborative2008`.  This is a
+    prediction-oriented algorithm suitable for explicit feedback data, using the
+    alternating least squares approach to compute :math:`P` and :math:`Q` to
+    minimize the regularized squared reconstruction error of the ratings matrix.
 
-    It provides two solvers for the optimization step (the `method` parameter):
-
-    ``'cd'`` (the default)
-        Coordinate descent :cite:p:`Takacs2011-ix`, adapted for a separately-trained bias model and
-        to use weighted regularization as in the original ALS paper :cite:p:`Zhou2008-bj`.
-    ``'cholesky'``
-        The original ALS :cite:p:`Zhou2008-bj`, using Cholesky decomposition
-        to solve for the optimized matrices.
-    ``'lu'``:
-        Deprecated alias for ``'cholskey'``
-
-    See the base class :class:`.MFPredictor` for documentation on
-    the estimated parameters you can extract from a trained model.
+    See the base class :class:`.MFPredictor` for documentation on the estimated
+    parameters you can extract from a trained model.
 
     Args:
-        features: the number of features to train
-        epochs: the number of iterations to train
-        reg: the regularization factor; can also be a tuple ``(ureg, ireg)`` to
+        features: the number of features to train epochs: the number of
+        iterations to train reg: the regularization factor; can also be a tuple
+        ``(ureg, ireg)`` to
             specify separate user and item regularization terms.
-        damping: damping factor for the underlying bias.
-        bias: the bias model.  If ``True``, fits a :class:`Bias` with
+        damping: damping factor for the underlying bias. bias: the bias model.
+        If ``True``, fits a :class:`Bias` with
             damping ``damping``.
         rng_spec:
             Random number generator or state (see :func:`seedbank.numpy_rng`).
