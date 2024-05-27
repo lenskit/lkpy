@@ -7,3 +7,8 @@
 """
 k-NN recommender models.
 """
+
+from .item import ItemItem
+from .user import UserUser
+
+__all__ = ["ItemItem", "UserUser"]
