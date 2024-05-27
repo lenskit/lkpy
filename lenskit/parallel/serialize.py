@@ -75,6 +75,13 @@ class ModelPickler(pickle.Pickler):
                     obj.values(),
                     obj.shape,
                 )
+            elif obj.layout == torch.sparse_csc:
+                return torch.sparse_csc_tensor, (
+                    obj.row_indices(),
+                    obj.ccol_indices(),
+                    obj.values(),
+                    obj.shape,
+                )
             else:
                 return reduce_tensor(obj)
 
