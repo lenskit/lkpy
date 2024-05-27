@@ -18,7 +18,7 @@ from numba import njit
 
 from lenskit import DataWarning, util
 from lenskit.data import FeedbackType, sparse_ratings
-from lenskit.data.matrix import sparse_row_stats
+from lenskit.data.matrix import normalize_sparse_rows, sparse_row_stats
 from lenskit.util.accum import kvp_minheap_insert
 
 from .. import Predictor
@@ -34,9 +34,13 @@ class UserUser(Predictor):
 
     Args:
         nnbrs:
-            the maximum number of neighbors for scoring each item (``None`` for unlimited)
-        min_nbrs: the minimum number of neighbors for scoring each item
-        min_sim: minimum similarity threshold for considering a neighbor
+            the maximum number of neighbors for scoring each item (``None`` for unlimited).
+        min_nbrs:
+            The minimum number of neighbors for scoring each item.
+        min_sim:
+            Minimum similarity threshold for considering a neighbor.  Must be
+            positive; if less than the smallest 32-bit normal (:math:`1.175
+            \\times 10^{-38}`), is clamped to that value.
         feedback:
             Control how feedback should be interpreted.  Specifies defaults for the other
             settings, which can be overridden individually; can be one of the following values:
@@ -88,13 +92,20 @@ class UserUser(Predictor):
         self,
         nnbrs: int,
         min_nbrs: int = 1,
-        min_sim: float = 0,
+        min_sim: float = 1.0e-6,
         feedback: FeedbackType = "explicit",
         **kwargs,
     ):
         self.nnbrs = nnbrs
         self.min_nbrs = min_nbrs
-        self.min_sim = min_sim
+        if min_sim < 0:
+            raise ValueError("minimum similarity must be positive")
+        elif min_sim == 0:
+            f4i = np.finfo("f4")
+            self.min_sim = float(f4i.smallest_normal)
+            _log.warn("minimum similarity %e is too low, using %e", min_sim, self.min_sim)
+        else:
+            self.min_sim = min_sim
 
         if feedback == "explicit":
             defaults = {"center": True, "aggregate": self.AGG_WA, "use_ratings": True}
@@ -119,21 +130,21 @@ class UserUser(Predictor):
         util.check_env()
         rmat, users, items = sparse_ratings(ratings, torch=True)
 
-        ustats = sparse_row_stats(rmat)
         if self.center:
-            rmat.values().subtract_(torch.repeat_interleave(ustats.means, ustats.counts))
+            rmat, means = normalize_sparse_rows(rmat, "center")
             if np.allclose(rmat.values(), 0.0):
                 _log.warn("normalized ratings are zero, centering is not recommended")
                 warnings.warn(
                     "Ratings seem to have the same value, centering is not recommended.",
                     DataWarning,
                 )
+        else:
+            means = None
 
-        self.rating_matrix_ = uir
+        self.rating_matrix_ = rmat
         self.user_index_ = users
-        self.user_means_ = umeans
+        self.user_means_ = means
         self.item_index_ = items
-        self.transpose_matrix_ = iur
 
         return self
 

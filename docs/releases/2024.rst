@@ -53,6 +53,10 @@ however, documented here.
   erroneously-named ``method="lu"`` option); conjugate gradient and coordinate
   descent are no longer available.  Cholesky decomposition is faster on PyTorch
   than it was with Numba, and is easier to maintain.
+* The default minimum similarity for :class:`~lenskit.algorithms.knn.UserUser`
+  is now :math:`10^{-6}`.
+* k-NN algorithms no longer support negative similarities; ``min_sim`` is clamped
+  to be at least the smallest normal in 32-bit floating point (:math:`1.75 \times 10^{-38}`).
 
 Bug Fixes
 ~~~~~~~~~
