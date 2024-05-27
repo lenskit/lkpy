@@ -68,7 +68,7 @@ def set_env_var(var, val):
 
 
 @st.composite
-def sparse_tensors(draw, shape=None):
+def sparse_tensors(draw, shape=None, layout="csr"):
     if shape is None:
         shape = st.tuples(st.integers(1, 100), st.integers(1, 100))
 
@@ -82,6 +82,11 @@ def sparse_tensors(draw, shape=None):
         rows = draw(rows)
     if isinstance(cols, st.SearchStrategy):
         cols = draw(cols)
+
+    if isinstance(layout, list):
+        layout = st.sampled_from(layout)
+    if isinstance(layout, st.SearchStrategy):
+        layout = draw(layout)
 
     total = rows * cols
 
@@ -98,7 +103,15 @@ def sparse_tensors(draw, shape=None):
     matrix[mask] = 0
 
     tensor = torch.from_numpy(matrix)
-    return tensor.to_sparse_csr()
+    match layout:
+        case "csr":
+            return tensor.to_sparse_csr()
+        case "csc":
+            return tensor.to_sparse_csc()
+        case "coo":
+            return tensor.to_sparse_coo()
+        case _:
+            raise ValueError(f"invalid layout {layout}")
 
 
 jit_enabled = True
