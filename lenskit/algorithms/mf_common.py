@@ -19,6 +19,10 @@ from . import Predictor
 
 _logger = logging.getLogger(__name__)
 M = TypeVar("M", torch.Tensor, np.ndarray)
+"""
+Type of matrix factorization parameter data. Can be either
+:class:`~torch.Tensor` or :class:`~numpy.ndarray`.
+"""
 
 
 class MFPredictor(Predictor, Generic[M]):
