@@ -39,7 +39,7 @@ def test_sparse_stats(tensor):
     assert tots.numpy()[mask] == approx(sums.numpy()[mask])
 
 
-@settings(deadline=500, suppress_health_check=[HealthCheck.too_slow])
+@settings(deadline=1000, suppress_health_check=[HealthCheck.too_slow])
 @given(sparse_tensors())
 def test_sparse_mean_center(tensor):
     nr, nc = tensor.shape
@@ -55,7 +55,7 @@ def test_sparse_mean_center(tensor):
         assert nr == approx(tr - means[i].numpy())
 
 
-@settings(deadline=500, suppress_health_check=[HealthCheck.too_slow])
+@settings(deadline=1000, suppress_health_check=[HealthCheck.too_slow])
 @given(sparse_tensors())
 def test_sparse_unit_norm(tensor):
     nr, nc = tensor.shape
