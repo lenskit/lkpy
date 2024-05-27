@@ -29,8 +29,8 @@ k-NN Algorithms
 
 .. autosummary::
 
-    user_knn.UserUser
-    item_knn.ItemItem
+    knn.UserUser
+    knn.ItemItem
 
 Matrix Factorization
 ~~~~~~~~~~~~~~~~~~~~

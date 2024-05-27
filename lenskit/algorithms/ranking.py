@@ -28,7 +28,7 @@ class TopN(Recommender, Predictor):
         does not need to be fit.  This can be useful when reusing a predictor in other
         contexts::
 
-            pred = item_knn.ItemItem(20, feedback='implicit')
+            pred = knn.ItemItem(20, feedback='implicit')
             select = UnratedItemCandidateSelector()
             topn = TopN(pred, select)
 

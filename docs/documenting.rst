@@ -41,7 +41,7 @@ You need to clearly report the algorithms that you have used along with their
 hyperparameters.
 
 The algorithm name should be the name of the class that you used (e.g.
-:py:class:`~lenskit.algorithms.item_knn.ItemItem`). The hyperparameters are the
+:py:class:`~lenskit.algorithms.knn.ItemItem`). The hyperparameters are the
 options specified to the constructor, except for options that only affect
 algorithn peformance but not behavior.
 
