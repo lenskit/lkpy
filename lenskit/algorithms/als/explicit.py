@@ -137,7 +137,7 @@ class BiasedMF(ALSBase):
         u_feat = _train_bias_row_cholesky(ri_it, ri_val, self.item_features_, ureg)
         return u_feat, u_offset
 
-    def finalize_scores(self, user, scores: torch.Tensor, u_offset: float | None) -> torch.Tensor:
+    def finalize_scores(self, user, scores: pd.Series, u_offset: float | None) -> pd.Series:
         if self.bias and u_offset is not None:
             return self.bias.inverse_transform_user(user, scores, u_offset)
         elif self.bias:

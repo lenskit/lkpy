@@ -84,7 +84,7 @@ class TrainingData(NamedTuple):
         return self._replace(ui_rates=self.ui_rates.to(device), iu_rates=self.iu_rates.to(device))
 
 
-class ALSBase(MFPredictor):
+class ALSBase(MFPredictor[torch.Tensor]):
     """
     Base class for ALS models.
     """
@@ -281,7 +281,7 @@ class ALSBase(MFPredictor):
         """
         ...
 
-    def finalize_scores(self, user, scores: torch.Tensor, u_offset: float | None) -> torch.Tensor:
+    def finalize_scores(self, user, scores: pd.Series, u_offset: float | None) -> pd.Series:
         """
         Perform any final transformation of scores prior to returning them.
         """
