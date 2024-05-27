@@ -9,14 +9,16 @@ User-based k-NN collaborative filtering.
 """
 
 import logging
+import warnings
 
 import numpy as np
 import pandas as pd
 import torch
 from numba import njit
 
-from lenskit import util
+from lenskit import DataWarning, util
 from lenskit.data import FeedbackType, sparse_ratings
+from lenskit.data.matrix import sparse_row_stats
 from lenskit.util.accum import kvp_minheap_insert
 
 from .. import Predictor
@@ -75,6 +77,8 @@ class UserUser(Predictor):
     "The index of user IDs."
     user_means_: torch.Tensor | None
     "Mean rating for each known user."
+    user_norms_: torch.Tensor
+    "Original vector norms for each known user."
     user_counts_: torch.Tensor
     "Number of saved neighbors for each user."
     rating_matrix_: torch.Tensor
@@ -113,21 +117,17 @@ class UserUser(Predictor):
             ratings(pandas.DataFrame): (user, item, rating) data for collaborative filtering.
         """
         util.check_env()
-        uir, users, items = sparse_ratings(ratings)
+        rmat, users, items = sparse_ratings(ratings, torch=True)
 
-        # mean-center ratings
+        ustats = sparse_row_stats(rmat)
         if self.center:
-            umeans = uir.normalize_rows("center")
-        else:
-            umeans = None
-
-        # compute centered transpose
-        iur = uir.transpose()
-
-        # L2-normalize ratings so dot product is cosine
-        if uir.values is None or not self.use_ratings:
-            uir.values = np.full(uir.nnz, 1.0)
-        uir.normalize_rows("unit")
+            rmat.values().subtract_(torch.repeat_interleave(ustats.means, ustats.counts))
+            if np.allclose(rmat.values(), 0.0):
+                _log.warn("normalized ratings are zero, centering is not recommended")
+                warnings.warn(
+                    "Ratings seem to have the same value, centering is not recommended.",
+                    DataWarning,
+                )
 
         self.rating_matrix_ = uir
         self.user_index_ = users
