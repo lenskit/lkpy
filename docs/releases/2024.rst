@@ -28,6 +28,8 @@ Significant Changes
     instead of Numba-accelerated NumPy code.  Algorithms using PyTorch are:
 
     * :py:class:`~lenskit.algorithms.knn.ItemItem`
+    * :py:class:`~lenskit.algorithms.als.ImplicitMF`
+    * :py:class:`~lenskit.algorithms.als.ExplicitMF`
 
 *   Many LensKit components (batch running, model training, etc.) now report progress with
     :py:mod:`progress_api`, and can be connected to TQDM or Enlighten.
