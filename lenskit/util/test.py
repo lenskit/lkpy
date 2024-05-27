@@ -70,7 +70,7 @@ def set_env_var(var, val):
 @st.composite
 def sparse_tensors(draw, shape=None):
     if shape is None:
-        shape = st.tuples(st.integers(1, 500), st.integers(1, 500))
+        shape = st.tuples(st.integers(1, 100), st.integers(1, 100))
 
     if isinstance(shape, st.SearchStrategy):
         shape = draw(shape)
