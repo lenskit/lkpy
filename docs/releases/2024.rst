@@ -37,7 +37,7 @@ Significant Changes
 *   Algorithms refactored to more consistent package locations.
 
 New Features (incremental)
-~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * Added RBP top-N metric (:pr:`334`).
 * Added command-line tool to fetch datasets (:pr:`347`).
@@ -62,7 +62,7 @@ Bug Fixes
 * Corrected documentation errors for :py:func:`~lenskit.metrics.topn.recall` and :py:func:`~lenskit.metrics.topn.hit` (:pr:`369` by :user:`lukas-wegmeth`).
 
 Dependencies and Maintenance
-~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 * Bumped minimum supported dependencies as per SPEC0_ (Python 3.10, NumPy 1.23, Pandas 1.5, SciPy 1.9).
 * Added support for Pandas 2 (:pr:`364`) and Python 3.12.
