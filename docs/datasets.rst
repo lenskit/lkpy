@@ -61,7 +61,7 @@ MovieLens Data Sets
 -------------------
 
 The GroupLens research group provides several data sets extracted from the
-MovieLens service :cite:p:`Harper2015-cx`.
+MovieLens service :cite:p:`movielens`.
 These can be downloaded from https://grouplens.org/datasets/movielens/.
 
 .. autoclass:: MovieLens

@@ -29,7 +29,7 @@ _log = logging.getLogger(__name__)
 class ImplicitMF(ALSBase):
     """
     Implicit matrix factorization trained with alternating least squares
-    :cite:p:`huCollaborativeFilteringImplicit2008`.  This algorithm outputs
+    :cite:p:`hu:implicit-mf`.  This algorithm outputs
     'predictions', but they are not on a meaningful scale.  If its input data
     contains ``rating`` values, these will be used as the 'confidence' values;
     otherwise, confidence will be 1 for every rated item.
@@ -63,7 +63,7 @@ class ImplicitMF(ALSBase):
             The regularization factor
         weight:
             The scaling weight for positive samples (:math:`\\alpha` in
-            :cite:p:`huCollaborativeFilteringImplicit2008`).
+            :cite:p:`hu:implicit-mf`).
         use_ratings:
             Whether to use the `rating` column, if present.  Defaults to
             ``False``; when ``True``, the values from the ``rating`` column are

@@ -36,7 +36,8 @@ rating values) with additional parameters to the constructor.
 Item-based k-NN
 ---------------
 
-This is LensKit's item-based k-NN model, based on the description by :cite:t:`Deshpande2004-ht`.
+This is LensKit's item-based k-NN model, based on the description by
+:cite:t:`deshpande:iknn`.
 
 .. autoclass:: ItemItem
     :members:

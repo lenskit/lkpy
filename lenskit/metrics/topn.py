@@ -117,7 +117,7 @@ def hit(recs, truth, k=None):
     Compute whether or not a list is a hit; any list with at least one relevant item in the
     first :math:`k` positions (:math:`L_{\\le k} \\cap I_u^{\\mathrm{test}} \\ne \\emptyset`)
     is scored as 1, and lists with no relevant items as 0.  When averaged over the recommendation
-    lists, this computes the *hit rate* :cite:p:`Deshpande2004-ht`.
+    lists, this computes the *hit rate* :cite:p:`deshpande:iknn`.
 
     This metric has a bulk implementation.
     """
@@ -164,12 +164,12 @@ def _bulk_hit(recs, truth, k=None):
 
 def recip_rank(recs, truth, k=None):
     """
-    Compute the reciprocal rank :cite:p:`Kantor1997-lm` of the first relevant
+    Compute the reciprocal rank :cite:p:`trec5-confusion` of the first relevant
     item in a list of recommendations. Let :math:`\\kappa` denote the 1-based
     rank of the first relevant item in :math:`L`, with :math:`\\kappa=\\infty`
     if none of the first :math:`k` items in :math:`L` are relevant; then the
     reciprocal rank is :math:`1 / \\kappa`. If no elements are relevant, the
-    reciprocal rank is therefore 0.  :cite:t:`Deshpande2004-ht` call this the
+    reciprocal rank is therefore 0.  :cite:t:`deshpande:iknn` call this the
     “reciprocal hit rate”.
 
     This metric has a bulk equivalent.
@@ -239,7 +239,7 @@ def _fixed_dcg(n, discount=np.log2):
 
 def dcg(recs, truth, discount=np.log2):
     """
-    Compute the **unnormalized** discounted cumulative gain :cite:p:`Jarvelin2002-xf`.
+    Compute the **unnormalized** discounted cumulative gain :cite:p:`ndcg`.
 
     Discounted cumultative gain is computed as:
 
