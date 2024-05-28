@@ -246,7 +246,7 @@ def test_uu_known_preds():
     pairs = known_preds.loc[:, ["user", "item"]]
     _log.info("generating %d known predictions", len(pairs))
 
-    preds = batch.predict(algo, pairs)
+    preds = batch.predict(algo, pairs, n_jobs=1)
     merged = pd.merge(known_preds.rename(columns={"prediction": "expected"}), preds)
     assert len(merged) == len(preds)
     merged["error"] = merged.expected - merged.prediction
