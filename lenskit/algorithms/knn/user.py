@@ -147,7 +147,7 @@ class UserUser(Predictor):
         normed, _norms = normalize_sparse_rows(rmat, "unit")
 
         self.user_vectors_ = normed
-        self.user_ratings_ = rmat.to_sparse_coo()
+        self.user_ratings_ = rmat.to_sparse_coo().coalesce()
         self.user_index_ = users
         self.user_means_ = means
         self.item_index_ = items
@@ -178,9 +178,10 @@ class UserUser(Predictor):
             return pd.Series(index=items, dtype="float32")
 
         uidx, ratings, umean = udata
-        assert len(ratings) == len(self.item_index_)  # ratings is a dense vector
+        _log.debug("scoring %d items for user %s (idx %d)", len(items), user, uidx)
+        assert ratings.shape == (len(self.item_index_),)  # ratings is a dense vector
 
-        # now ratings is normalized to be a mean-centered unit vector
+        # now ratings has vbeen normalized to be a mean-centered unit vector
         # this means we can dot product to score neighbors
         # score the neighbors!
         nbr_sims = torch.mv(self.user_vectors_, ratings)
@@ -196,8 +197,14 @@ class UserUser(Predictor):
 
         kn_sims = nbr_sims[nbr_mask]
         kn_idxs = nbr_idxs[nbr_mask]
-
-        _log.debug("found %d candidate neighbor similarities", kn_sims.shape[0])
+        _log.debug(
+            "user %s: %d candidate neighbors (of %d total), max sim %0.4f",
+            user,
+            len(kn_sims),
+            len(self.user_index_),
+            torch.max(kn_sims).item(),
+        )
+        assert not torch.any(torch.isnan(kn_sims))
 
         iidxs = self.item_index_.get_indexer_for(items)
         iidxs = torch.from_numpy(iidxs)
@@ -239,8 +246,13 @@ class UserUser(Predictor):
                 _log.warning("user %d has no ratings and none provided", user)
                 return None
 
+            assert index >= 0
             row = self.user_vectors_[index].to_dense()
-            umean = self.user_means_[index].item() if self.user_means_ is not None else 0
+            if self.center:
+                assert self.user_means_ is not None
+                umean = self.user_means_[index].item()
+            else:
+                umean = 0
             return UserRatings(index, row, umean)
         else:
             _log.debug("using provided ratings for user %d", user)
@@ -283,13 +295,22 @@ def score_items_with_neighbors(
     nbr_rates = ratings.index_select(0, nbr_rows)
     nbr_rates = nbr_rates.index_select(1, items)
     nbr_rates = nbr_rates.coalesce()
+    assert nbr_rates.shape == (
+        len(nbr_rows),
+        ni,
+    ), f"nbr rates has shape {nbr_rates.shape} (expected {len(nbr_rows)}, {ni})"
     nbr_t = nbr_rates.transpose(0, 1).to_sparse_csr()
 
     # count nbrs for each item
     counts = nbr_t.crow_indices().diff()
     assert counts.shape == items.shape
 
-    _log.debug("scoring %d items, max count %d", ni, torch.max(counts).item())
+    _log.debug(
+        "scoring %d items, max count %d, nbr shape %s",
+        ni,
+        torch.max(counts).item(),
+        nbr_rates.shape,
+    )
 
     # fast-path items with small neighborhoods
     fp_mask = counts <= max_nbrs
@@ -308,16 +329,22 @@ def score_items_with_neighbors(
             values=torch.ones(nnz),
             size=nbr_rates.shape,
         )
-        results /= torch.mv(nbr_fp_ones.transpose(0, 1), nbr_sims)
+        tot_sims = torch.mv(nbr_fp_ones.transpose(0, 1), nbr_sims)
+        assert torch.all(torch.isfinite(tot_sims))
+        results /= tot_sims
 
     # clear out too-small neighborhoods
-    results[counts < min_nbrs] = torch.nan
+    assert torch.min(counts) >= 1
+    if min_nbrs > 1:
+        results[counts < min_nbrs] = torch.nan
 
     # deal with too-large items
     exc_mask = counts > max_nbrs
     if torch.any(exc_mask):
         _log.debug("scoring %d slow-path items", torch.sum(exc_mask))
-    for badi in torch.arange(ni)[exc_mask]:
+
+    bads = torch.argwhere(exc_mask)[:, 0]
+    for badi in bads:
         col = nbr_t[badi]
         assert col.shape == nbr_rates.shape[:1]
 
@@ -328,7 +355,7 @@ def score_items_with_neighbors(
         tk_vs, tk_is = torch.topk(bi_sims, max_nbrs)
         sum = torch.sum(tk_vs)
         if average:
-            results[badi] = torch.sum(tk_vs * bi_rates[tk_is]) / sum
+            results[badi] = torch.dot(tk_vs, bi_rates[tk_is]) / sum
         else:
             results[badi] = sum
 
