@@ -13,7 +13,7 @@ import pandas as pd
 import torch
 from scipy.sparse import linalg as spla
 
-from pytest import approx, mark
+from pytest import approx, fail, mark
 
 import lenskit.algorithms.knn.user as knn
 import lenskit.util.test as lktu
@@ -250,21 +250,18 @@ def test_uu_known_preds():
     merged = pd.merge(known_preds.rename(columns={"prediction": "expected"}), preds)
     assert len(merged) == len(preds)
     merged["error"] = merged.expected - merged.prediction
-    try:
-        assert not any(merged.prediction.isna() & merged.expected.notna())
-    except AssertionError as e:
+    missing = merged.prediction.isna() & merged.expected.notna()
+    if np.any(missing):
         bad = merged[merged.prediction.isna() & merged.expected.notna()]
         _log.error("%d missing predictions:\n%s", len(bad), bad)
-        raise e
+        fail(f"missing predictions for {np.sum(missing)} items")
 
     err = merged.error
     err = err[err.notna()]
-    try:
-        assert all(err.abs() < 0.01)
-    except AssertionError as e:
-        bad = merged[merged.error.notna() & (merged.error.abs() >= 0.01)]
+    if np.any(err.abs() > 0.01):
+        bad = merged[merged.error.notna() & (merged.error.abs() > 0.01)]
         _log.error("%d erroneous predictions:\n%s", len(bad), bad)
-        raise e
+        fail(f"{len(bad)} erroneous predictions")
 
 
 def __batch_eval(job):
