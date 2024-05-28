@@ -334,9 +334,7 @@ def score_items_with_neighbors(
         results /= tot_sims
 
     # clear out too-small neighborhoods
-    assert torch.min(counts) >= 1
-    if min_nbrs > 1:
-        results[counts < min_nbrs] = torch.nan
+    results[counts < min_nbrs] = torch.nan
 
     # deal with too-large items
     exc_mask = counts > max_nbrs
