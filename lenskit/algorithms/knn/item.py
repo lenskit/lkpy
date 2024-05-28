@@ -55,7 +55,10 @@ class ItemItem(Predictor):
             the maximum number of neighbors for scoring each item (``None`` for
             unlimited)
         min_nbrs(int): the minimum number of neighbors for scoring each item
-        min_sim(float): minimum similarity threshold for considering a neighbor
+        min_sim(float):
+            Minimum similarity threshold for considering a neighbor.  Must be
+            positive; if less than the smallest 32-bit normal (:math:`1.175
+            \\times 10^{-38}`), is clamped to that value.
         save_nbrs(float):
             the number of neighbors to save per item in the trained model
             (``None`` for unlimited)
@@ -179,6 +182,12 @@ class ItemItem(Predictor):
         if self.min_sim < 0:
             _log.warning("item-item does not currently support negative similarities")
             warnings.warn("item-item does not currently support negative similarities")
+        elif self.min_sim == 0:
+            f4i = np.finfo("f4")
+            _log.warn(
+                "minimum similarity %e is too low, using %e", self.min_sim, f4i.smallest_normal
+            )
+            self.min_sim = float(f4i.smallest_normal)
 
     def fit(self, ratings, **kwargs):
         """
