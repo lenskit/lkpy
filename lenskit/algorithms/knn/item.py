@@ -8,6 +8,7 @@
 Item-based k-NN collaborative filtering.
 """
 
+# pyright: basic
 from __future__ import annotations
 
 import logging
@@ -189,7 +190,7 @@ class ItemItem(Predictor):
             )
             self.min_sim = float(f4i.smallest_normal)
 
-    def fit(self, ratings, **kwargs):
+    def fit(self, ratings: pd.DataFrame, **kwargs):
         """
         Train a model.
 
@@ -197,7 +198,7 @@ class ItemItem(Predictor):
         algorithm parameters.
 
         Args:
-            ratings(pandas.DataFrame):
+            ratings:
                 (user,item,rating) data for computing item similarities.
         """
         ensure_parallel_init()
