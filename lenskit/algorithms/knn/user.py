@@ -170,14 +170,14 @@ class UserUser(Predictor):
         """
 
         watch = util.Stopwatch()
-        items = pd.Index(items, name="item")
+        items = np.asarray(items)
 
         udata = self._get_user_data(user, ratings)
         if udata is None:
             _log.debug("user %s has no ratings, skipping", user)
             return pd.Series(index=items, dtype="float32")
 
-        index, ratings, umean = udata
+        uidx, ratings, umean = udata
         assert len(ratings) == len(self.item_index_)  # ratings is a dense vector
 
         # now ratings is normalized to be a mean-centered unit vector
@@ -185,9 +185,9 @@ class UserUser(Predictor):
         # score the neighbors!
         nbr_sims = torch.mv(self.user_vectors_, ratings)
         assert nbr_sims.shape == (len(self.user_index_),)
-        if index is not None:
+        if uidx is not None:
             # zero out the self-similarity
-            nbr_sims[index] = 0
+            nbr_sims[uidx] = 0
 
         # get indices for these neighbors
         nbr_idxs = torch.arange(len(self.user_index_), dtype=torch.int64)
@@ -199,11 +199,14 @@ class UserUser(Predictor):
 
         _log.debug("found %d candidate neighbor similarities", kn_sims.shape[0])
 
-        iidxs = self.item_index_.get_indexer(items.values)
+        iidxs = self.item_index_.get_indexer_for(items)
         iidxs = torch.from_numpy(iidxs)
 
+        ki_mask = iidxs >= 0
+        usable_iidxs = iidxs[ki_mask]
+
         scores = score_items_with_neighbors(
-            iidxs,
+            usable_iidxs,
             kn_idxs,
             kn_sims,
             self.user_ratings_,
@@ -214,7 +217,8 @@ class UserUser(Predictor):
 
         scores += umean
 
-        results = pd.Series(scores, index=items, name="prediction")
+        results = pd.Series(scores.numpy(), index=items[ki_mask], name="prediction")
+        results = results.reindex(items)
 
         _log.debug(
             "scored %d of %d items for %s in %s", results.notna().sum(), len(items), user, watch
