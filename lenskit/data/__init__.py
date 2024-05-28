@@ -4,4 +4,8 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+from typing import Literal, TypeAlias
+
 from .matrix import RatingMatrix, sparse_ratings  # noqa: F401
+
+FeedbackType: TypeAlias = Literal["explicit", "implicit"]

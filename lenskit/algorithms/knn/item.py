@@ -20,6 +20,7 @@ import pandas as pd
 import torch
 
 from lenskit import ConfigWarning, DataWarning, util
+from lenskit.data import FeedbackType
 from lenskit.data.matrix import normalize_sparse_rows, sparse_ratings
 from lenskit.parallel import ensure_parallel_init
 from lenskit.util.logging import pbh_update, progress_handle
@@ -119,7 +120,7 @@ class ItemItem(Predictor):
         min_nbrs: int = 1,
         min_sim: float = 1.0e-6,
         save_nbrs: int | None = None,
-        feedback: Literal["explicit", "implicit"] = "explicit",
+        feedback: FeedbackType = "explicit",
         block_size: int = 250,
         **kwargs,
     ):
