@@ -51,18 +51,18 @@ class ItemItem(Predictor):
         items, regardless of the rating the user gave the items.
 
     Args:
-        nnbrs(int):
+        nnbrs:
             the maximum number of neighbors for scoring each item (``None`` for
             unlimited)
-        min_nbrs(int): the minimum number of neighbors for scoring each item
-        min_sim(float):
+        min_nbrs: the minimum number of neighbors for scoring each item
+        min_sim:
             Minimum similarity threshold for considering a neighbor.  Must be
             positive; if less than the smallest 32-bit normal (:math:`1.175
             \\times 10^{-38}`), is clamped to that value.
-        save_nbrs(float):
+        save_nbrs:
             the number of neighbors to save per item in the trained model
             (``None`` for unlimited)
-        feedback(str):
+        feedback:
             Control how feedback should be interpreted.  Specifies defaults for
             the other settings, which can be overridden individually; can be one
             of the following values:
@@ -76,15 +76,15 @@ class ItemItem(Predictor):
                 Configure for implicit-feedback mode: ignore rating values, do
                 not center ratings, and use the ``sum`` aggregate method for
                 prediction.
-        center(bool):
+        center:
             whether to normalize (mean-center) rating vectors prior to computing
             similarities and aggregating user rating values.  Defaults to
             ``True``; turn this off when working with unary data and other data
             types that don't respond well to centering.
-        aggregate(str):
+        aggregate:
             the type of aggregation to do. Can be ``weighted-average`` (the
             default) or ``sum``.
-        use_ratings(bool):
+        use_ratings:
             whether or not to use the rating values. If ``False``, it ignores
             rating values and considers an implicit feedback signal of 1 for
             every (user,item) pair present.
