@@ -8,6 +8,7 @@
 Data manipulation routines.
 """
 
+# pyright: basic
 from __future__ import annotations
 
 import logging
@@ -17,7 +18,7 @@ import pandas as pd
 import scipy.sparse as sps
 import torch as t
 from csr import CSR
-from typing_extensions import Generic, Literal, NamedTuple, TypeVar, overload
+from typing_extensions import Any, Generic, Literal, NamedTuple, Optional, TypeVar, overload
 
 _log = logging.getLogger(__name__)
 
@@ -36,8 +37,8 @@ class RatingMatrix(NamedTuple, Generic[M]):
     """
 
     matrix: M
-    users: pd.Index
-    items: pd.Index
+    users: pd.Index[Any]
+    items: pd.Index[Any]
 
 
 class DimStats(NamedTuple):
@@ -61,41 +62,41 @@ class DimStats(NamedTuple):
 def sparse_ratings(
     ratings: pd.DataFrame,
     *,
-    users=None,
-    items=None,
+    users: Optional[pd.Index[Any]] = None,
+    items: Optional[pd.Index[Any]] = None,
 ) -> RatingMatrix[CSR]: ...
 @overload
 def sparse_ratings(
     ratings: pd.DataFrame,
     scipy: Literal[True] | Literal["csr"],
     *,
-    users=None,
-    items=None,
+    users: Optional[pd.Index[Any]] = None,
+    items: Optional[pd.Index[Any]] = None,
 ) -> RatingMatrix[sps.csr_matrix]: ...
 @overload
 def sparse_ratings(
     ratings: pd.DataFrame,
     scipy: Literal["coo"],
     *,
-    users=None,
-    items=None,
+    users: Optional[pd.Index[Any]] = None,
+    items: Optional[pd.Index[Any]] = None,
 ) -> RatingMatrix[sps.coo_matrix]: ...
 @overload
 def sparse_ratings(
     ratings: pd.DataFrame,
     *,
     torch: Literal[True],
-    users=None,
-    items=None,
+    users: Optional[pd.Index[Any]] = None,
+    items: Optional[pd.Index[Any]] = None,
 ) -> RatingMatrix[t.Tensor]: ...
 def sparse_ratings(
     ratings: pd.DataFrame,
     scipy: bool | Literal["csr", "coo"] = False,
     *,
     torch: bool = False,
-    users=None,
-    items=None,
-):
+    users: Optional[pd.Index[Any]] = None,
+    items: Optional[pd.Index[Any]] = None,
+) -> RatingMatrix[Any]:
     """
     Convert a rating table to a sparse matrix of ratings.
 
