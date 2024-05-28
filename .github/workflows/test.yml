@@ -152,7 +152,6 @@ jobs:
         - windows-latest
         - ubuntu-latest
         - macos-latest
-        - macos-13
     steps:
       - name: Check out source
         uses: actions/checkout@v4
