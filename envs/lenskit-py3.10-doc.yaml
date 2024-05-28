@@ -8,8 +8,8 @@
 # Instead edit the corresponding pyproject.toml file.
 #
 channels:
-  - conda-forge
   - pytorch
+  - conda-forge
   - nodefaults
 dependencies:
   - python=3.10
@@ -20,7 +20,7 @@ dependencies:
   - numba<0.59,>=0.56
   - numpy>=1.23
   - pandas<3,>=1.5
-  - pytorch==2.*
+  - pytorch<3,>=2.1
   - scipy>=1.9.0
   - sphinx>=4.2
   - sphinx_rtd_theme>=0.5
