@@ -21,7 +21,7 @@ def _predict_user(model, req):
     res = model.predict_for_user(user, udf["item"])
     res = pd.DataFrame({"user": user, "item": res.index, "prediction": res.values})
     _logger.debug(
-        "%s produced %f/%d predictions for %s in %s",
+        "%s produced %d/%d predictions for %s in %s",
         model,
         res.prediction.notna().sum(),
         len(udf),
