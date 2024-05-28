@@ -224,7 +224,7 @@ class UserUser(Predictor):
 
         scores += umean
 
-        results = pd.Series(scores.numpy(), index=items[ki_mask], name="prediction")
+        results = pd.Series(scores.numpy(), index=items[ki_mask.numpy()], name="prediction")
         results = results.reindex(items)
 
         _log.debug(
