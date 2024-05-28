@@ -49,6 +49,7 @@ dev = [
   "sphinx-autobuild >= 2021",
   "docopt >= 0.6",
   "tqdm >= 4",
+  "pandas-stubs >=1.5,<3",
 ]
 test = [
   "pytest ==7.*",
