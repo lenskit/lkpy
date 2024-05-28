@@ -13,11 +13,11 @@ from __future__ import annotations
 
 import logging
 import warnings
-from typing import NamedTuple, Optional
 
 import numpy as np
 import pandas as pd
 import torch
+from typing_extensions import NamedTuple, Optional, Self
 
 from lenskit import DataWarning, util
 from lenskit.data import FeedbackType, sparse_ratings
@@ -122,7 +122,7 @@ class UserUser(Predictor):
         if self.aggregate not in [self.AGG_WA, self.AGG_SUM]:
             raise ValueError(f"invalid aggregate {self.aggregate}")
 
-    def fit(self, ratings, **kwargs):
+    def fit(self, ratings: pd.DataFrame, **kwargs) -> Self:
         """
         "Train" a user-user CF model.  This memorizes the rating data in a format that is usable
         for future computations.
