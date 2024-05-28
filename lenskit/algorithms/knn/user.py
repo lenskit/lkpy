@@ -178,7 +178,7 @@ class UserUser(Predictor):
             return pd.Series(index=items, dtype="float32")
 
         uidx, ratings, umean = udata
-        _log.debug("scoring %d items for user %s (idx %d)", len(items), user, uidx)
+        _log.debug("scoring %d items for user %s (idx %d)", len(items), user, uidx or -1)
         assert ratings.shape == (len(self.item_index_),)  # ratings is a dense vector
 
         # now ratings has vbeen normalized to be a mean-centered unit vector
