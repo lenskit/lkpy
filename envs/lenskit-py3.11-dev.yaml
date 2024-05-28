@@ -35,6 +35,7 @@ dependencies:
   - pytest-benchmark==4.*
   - pytest-cov>=2.12
   - pytest-doctestplus==1.*
+  - pytest-repeat>=0.9
   - pytest==7.*
   - python-build==1
   - pytorch==2.*
