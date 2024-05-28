@@ -18,12 +18,10 @@ from typing import NamedTuple, Optional
 import numpy as np
 import pandas as pd
 import torch
-from numba import njit
 
 from lenskit import DataWarning, util
 from lenskit.data import FeedbackType, sparse_ratings
 from lenskit.data.matrix import normalize_sparse_rows
-from lenskit.util.accum import kvp_minheap_insert
 
 from .. import Predictor
 
@@ -267,43 +265,6 @@ class UserRatings(NamedTuple):
     mean: float
 
 
-@njit
-def _agg_weighted_avg(iur, item, sims, use):
-    """
-    Weighted-average aggregate.
-
-    Args:
-        iur(matrix._CSR): the item-user ratings matrix
-        item(int): the item index in ``iur``
-        sims(numpy.ndarray): the similarities for the users who have rated ``item``
-        use(numpy.ndarray): positions in sims and the rating row to actually use
-    """
-    rates = iur.row_vs(item)
-    num = 0.0
-    den = 0.0
-    for j in use:
-        num += rates[j] * sims[j]
-        den += np.abs(sims[j])
-    return num / den
-
-
-@njit
-def _agg_sum(iur, item, sims, use):
-    """
-    Sum aggregate
-
-    Args:
-        iur(matrix._CSR): the item-user ratings matrix
-        item(int): the item index in ``iur``
-        sims(numpy.ndarray): the similarities for the users who have rated ``item``
-        use(numpy.ndarray): positions in sims and the rating row to actually use
-    """
-    x = 0.0
-    for j in use:
-        x += sims[j]
-    return x
-
-
 def score_items_with_neighbors(
     items: torch.Tensor,
     nbr_rows: torch.Tensor,
@@ -368,39 +329,3 @@ def score_items_with_neighbors(
             results[badi] = sum
 
     return results
-
-
-@njit
-def _score(items, results, iur, sims, nnbrs, min_sim, min_nbrs, agg):
-    h_ks = np.empty(nnbrs, dtype=np.int32)
-    h_vs = np.empty(nnbrs)
-    used = np.zeros(len(results), dtype=np.int32)
-
-    for i in range(len(results)):
-        item = items[i]
-        if item < 0:
-            continue
-
-        h_ep = 0
-
-        # who has rated this item?
-        i_users = iur.row_cs(item)
-
-        # what are their similarities to our target user?
-        i_sims = sims[i_users]
-
-        # which of these neighbors do we really want to use?
-        for j, s in enumerate(i_sims):
-            if np.abs(s) < 1.0e-10:
-                continue
-            if min_sim is not None and s < min_sim:
-                continue
-            h_ep = kvp_minheap_insert(0, h_ep, nnbrs, j, s, h_ks, h_vs)
-
-        if h_ep < min_nbrs:
-            continue
-
-        results[i] = agg(iur, item, i_sims, h_ks[:h_ep])
-        used[i] = h_ep
-
-    return used
