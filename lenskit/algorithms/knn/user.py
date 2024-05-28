@@ -313,7 +313,7 @@ def score_items_with_neighbors(
     exc_mask = counts > max_nbrs
     if torch.any(exc_mask):
         _log.debug("scoring %d slow-path items", torch.sum(exc_mask))
-    for badi in items[exc_mask]:
+    for badi in torch.arange(ni)[exc_mask]:
         col = nbr_t[badi]
         assert col.shape == nbr_rates.shape[:1]
 
