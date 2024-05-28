@@ -22,7 +22,7 @@ from numba import njit
 
 from lenskit import DataWarning, util
 from lenskit.data import FeedbackType, sparse_ratings
-from lenskit.data.matrix import normalize_sparse_rows, sparse_row_stats
+from lenskit.data.matrix import normalize_sparse_rows
 from lenskit.util.accum import kvp_minheap_insert
 
 from .. import Predictor
@@ -121,6 +121,9 @@ class UserUser(Predictor):
         self.aggregate = defaults["aggregate"]
         self.use_ratings = defaults["use_ratings"]
 
+        if self.aggregate not in [self.AGG_WA, self.AGG_SUM]:
+            raise ValueError(f"invalid aggregate {self.aggregate}")
+
     def fit(self, ratings, **kwargs):
         """
         "Train" a user-user CF model.  This memorizes the rating data in a format that is usable
@@ -200,12 +203,6 @@ class UserUser(Predictor):
 
         iidxs = self.item_index_.get_indexer(items.values)
         iidxs = torch.from_numpy(iidxs)
-        if self.aggregate == self.AGG_WA:
-            agg = _agg_weighted_avg
-        elif self.aggregate == self.AGG_SUM:
-            agg = _agg_sum
-        else:
-            raise ValueError("invalid aggregate " + self.aggregate)
 
         scores = score_items_with_neighbors(
             iidxs,
@@ -214,7 +211,7 @@ class UserUser(Predictor):
             self.user_ratings_,
             self.nnbrs,
             self.min_nbrs,
-            agg,
+            self.aggregate == "weighted-average",
         )
 
         scores += umean
@@ -314,7 +311,7 @@ def score_items_with_neighbors(
     ratings: torch.Tensor,
     max_nbrs: int,
     min_nbrs: int,
-    agg,
+    average: bool,
 ) -> torch.Tensor:
     # select a sub-matrix for further manipulation
     (ni,) = items.shape
@@ -339,13 +336,14 @@ def score_items_with_neighbors(
     ).coalesce()
     results = torch.mv(nbr_fp.transpose(0, 1), nbr_sims)
 
-    nnz = len(nbr_fp.values())
-    nbr_fp_ones = torch.sparse_coo_tensor(
-        indices=nbr_rates.indices()[:, r_mask],
-        values=torch.ones(nnz),
-        size=nbr_rates.shape,
-    )
-    results /= torch.mv(nbr_fp_ones.transpose(0, 1), nbr_sims)
+    if average:
+        nnz = len(nbr_fp.values())
+        nbr_fp_ones = torch.sparse_coo_tensor(
+            indices=nbr_rates.indices()[:, r_mask],
+            values=torch.ones(nnz),
+            size=nbr_rates.shape,
+        )
+        results /= torch.mv(nbr_fp_ones.transpose(0, 1), nbr_sims)
 
     # clear out too-small neighborhoods
     results[counts < min_nbrs] = torch.nan
@@ -363,7 +361,11 @@ def score_items_with_neighbors(
         bi_sims = nbr_sims[bi_users]
 
         tk_vs, tk_is = torch.topk(bi_sims, max_nbrs)
-        results[badi] = torch.sum(tk_vs * bi_rates[tk_is])
+        sum = torch.sum(tk_vs)
+        if average:
+            results[badi] = torch.sum(tk_vs * bi_rates[tk_is]) / sum
+        else:
+            results[badi] = sum
 
     return results
 
