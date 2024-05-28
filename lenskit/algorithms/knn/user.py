@@ -17,7 +17,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import torch
-from typing_extensions import NamedTuple, Optional, Self
+from typing_extensions import Any, NamedTuple, Optional, Self
 
 from lenskit import DataWarning, util
 from lenskit.data import FeedbackType, sparse_ratings
@@ -79,8 +79,10 @@ class UserUser(Predictor):
     aggregate: str
     use_ratings: bool
 
-    user_index_: pd.Index
+    user_index_: pd.Index[Any]
     "The index of user IDs."
+    item_index_: pd.Index[Any]
+    "The index of item IDs."
     user_means_: torch.Tensor | None
     "Mean rating for each known user."
     user_vectors_: torch.Tensor
