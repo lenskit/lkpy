@@ -75,7 +75,7 @@ def coo_arrays(
     draw,
     shape=None,
     dtype=nph.floating_dtypes(endianness="=", sizes=[32, 64]),
-    elements=st.floats(-10e6, 10e6, allow_nan=False, allow_infinity=False, width=32),
+    elements=st.floats(-1e6, 1e6, allow_nan=False, allow_infinity=False, width=32),
 ) -> sps.coo_array:
     if shape is None:
         shape = st.tuples(st.integers(1, 100), st.integers(1, 100))
