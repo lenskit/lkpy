@@ -167,9 +167,6 @@ testpaths = [
 doctest_plus = true
 doctest_subpackage_requires = [
   "lenskit/algorithms/svd* = scikit-learn",
-  "lenskit/algorithms/implicit* = lenskit-implicit",
-  "lenskit/algorithms/hpf* = lenskit-hpf",
-  "lenskit/algorithms/tf* = lenskit-tf",
 ]
 filterwarnings = [
   "ignore:::pyarrow[.*]",
