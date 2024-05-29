@@ -218,3 +218,26 @@ def _nsr_unit(matrix: t.Tensor) -> tuple[t.Tensor, t.Tensor]:
         values=matrix.values() * t.repeat_interleave(recip_norms, matrix.crow_indices().diff()),
         size=matrix.shape,
     ), norms
+
+
+def torch_sparse_from_scipy(
+    M: sps.coo_array, layout: Literal["csr", "coo", "csc"] = "coo"
+) -> t.Tensor:
+    """
+    Convert a SciPy :class:`sps.coo_array` into a torch sparse tensor.
+    """
+    ris = t.from_numpy(M.row)
+    cis = t.from_numpy(M.col)
+    vs = t.from_numpy(M.data)
+    indices = t.stack([ris, cis])
+    T = t.sparse_coo_tensor(indices, vs, size=M.shape)
+
+    match layout:
+        case "csr":
+            return T.to_sparse_csr()
+        case "csc":
+            return T.to_sparse_csc()
+        case "coo":
+            return T
+        case _:
+            raise ValueError(f"invalid layout {layout}")

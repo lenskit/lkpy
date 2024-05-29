@@ -8,11 +8,13 @@
 Test utilities for LKPY tests.
 """
 
+import math
 import os
 import os.path
 from contextlib import contextmanager
 
 import numpy as np
+import scipy.sparse as sps
 import torch
 
 import hypothesis.extra.numpy as nph
@@ -24,6 +26,7 @@ from lenskit.algorithms.basic import PopScore
 from lenskit.algorithms.ranking import PlackettLuce
 from lenskit.batch import recommend
 from lenskit.crossfold import simple_test_pair
+from lenskit.data.matrix import torch_sparse_from_scipy
 from lenskit.datasets import ML100K, MovieLens
 
 ml_test = MovieLens("data/ml-latest-small")
@@ -68,7 +71,12 @@ def set_env_var(var, val):
 
 
 @st.composite
-def sparse_tensors(draw, shape=None, layout="csr"):
+def coo_arrays(
+    draw,
+    shape=None,
+    dtype=nph.floating_dtypes(endianness="=", sizes=[32, 64]),
+    elements=st.floats(-10e6, 10e6, allow_nan=False, allow_infinity=False, width=32),
+) -> sps.coo_array:
     if shape is None:
         shape = st.tuples(st.integers(1, 100), st.integers(1, 100))
 
@@ -83,35 +91,49 @@ def sparse_tensors(draw, shape=None, layout="csr"):
     if isinstance(cols, st.SearchStrategy):
         cols = draw(cols)
 
+    mask = draw(nph.arrays(np.bool_, (rows, cols)))
+    # at least one nonzero value
+    assume(np.any(mask))
+    nnz = int(np.sum(mask))
+
+    ris, cis = np.nonzero(mask)
+
+    vs = draw(
+        nph.arrays(dtype, nnz, elements=elements),
+    )
+
+    return sps.coo_array((vs, (ris, cis)), shape=(rows, cols))
+
+
+@st.composite
+def sparse_arrays(draw, *, layout="csr", **kwargs):
     if isinstance(layout, list):
         layout = st.sampled_from(layout)
     if isinstance(layout, st.SearchStrategy):
         layout = draw(layout)
 
-    total = rows * cols
+    M: sps.coo_array = draw(coo_arrays(**kwargs))
 
-    mask = draw(nph.arrays(np.bool_, total))
-    assume(np.any(mask))
-    mask = mask.reshape(rows, cols)
-
-    vals = st.floats(-10e6, 10e6, allow_nan=False, allow_infinity=False, width=32)
-    matrix = draw(
-        nph.arrays(np.float32, (rows, cols), elements=vals),
-    )
-
-    # fill in the zeros
-    matrix[mask] = 0
-
-    tensor = torch.from_numpy(matrix)
     match layout:
         case "csr":
-            return tensor.to_sparse_csr()
+            return M.tocsr()
         case "csc":
-            return tensor.to_sparse_csc()
+            return M.tocsc()
         case "coo":
-            return tensor.to_sparse_coo()
+            return M
         case _:
             raise ValueError(f"invalid layout {layout}")
+
+
+@st.composite
+def sparse_tensors(draw, *, layout="csr", **kwargs):
+    if isinstance(layout, list):
+        layout = st.sampled_from(layout)
+    if isinstance(layout, st.SearchStrategy):
+        layout = draw(layout)
+
+    M: sps.coo_array = draw(coo_arrays(**kwargs))
+    return torch_sparse_from_scipy(M, layout)  # type: ignore
 
 
 jit_enabled = True
