@@ -238,6 +238,6 @@ def torch_sparse_from_scipy(
         case "csc":
             return T.to_sparse_csc()
         case "coo":
-            return T
+            return T.coalesce()
         case _:
             raise ValueError(f"invalid layout {layout}")
