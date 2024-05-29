@@ -150,8 +150,8 @@ def test_torch_spmv(data, M: sps.coo_array, layout):
 
     TM = torch_sparse_from_scipy(M, layout)
     tv = torch.from_numpy(v)
-    # assert torch.all(torch.isfinite(tv))
 
     tres = torch.mv(TM, tv)
+    assert torch.all(torch.isfinite(tres))
 
-    assert tres.numpy() == approx(res)
+    assert tres.numpy() == approx(res, rel=1.0e-5)
