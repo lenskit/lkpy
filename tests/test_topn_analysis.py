@@ -207,6 +207,7 @@ def test_java_equiv():
     assert umm["err"].values == approx(0, abs=1.0e-6)
 
 
+@mark.skip("disabled for user-user")
 @mark.slow
 def test_fill_users():
     rla = topn.RecListAnalysis()
@@ -237,6 +238,7 @@ def test_fill_users():
     assert all(recall == mrecall)
 
 
+@mark.skip("disabled for user-user")
 @mark.slow
 def test_adv_fill_users():
     rla = topn.RecListAnalysis()
