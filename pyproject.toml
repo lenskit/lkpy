@@ -178,6 +178,7 @@ filterwarnings = [
   "ignore:.*deprecated create function*:DeprecationWarning",
   "ignore:.*importing the ABCs*:DeprecationWarning",
   "ignore:.*use_ratings option.*:UserWarning",
+  "ignore:.*tensor support is in beta state.*:UserWarning",
 ]
 markers = [
   "eval: mark the test as running the evaluator over custom data",
