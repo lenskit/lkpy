@@ -4,17 +4,22 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import numpy as np
 import pandas as pd
 import scipy.sparse as sps
 import torch
 
-from pytest import mark
+import hypothesis.extra.numpy as nph
+import hypothesis.strategies as st
+from hypothesis import HealthCheck, assume, given, settings
+from pytest import approx, mark
 
 from lenskit.data import sparse_ratings
-from lenskit.util.test import ml_test
+from lenskit.data.matrix import torch_sparse_from_scipy
+from lenskit.util.test import coo_arrays, ml_test, sparse_tensors
 
 
-def test_sparse_matrix(rng):
+def test_sparse_ratings(rng):
     ratings = ml_test.ratings
     mat, uidx, iidx = sparse_ratings(ratings)
 
@@ -41,7 +46,7 @@ def test_sparse_matrix(rng):
         assert all(vs == rates)
 
 
-def test_sparse_matrix_implicit():
+def test_sparse_ratings_implicit():
     ratings = ml_test.ratings
     ratings = ratings.loc[:, ["user", "item"]]
     mat, uidx, iidx = sparse_ratings(ratings)
@@ -61,7 +66,7 @@ def test_sparse_matrix_implicit():
         ("coo", sps.isspmatrix_coo),
     ],
 )
-def test_sparse_matrix_scipy(format, sps_fmt_checker):
+def test_sparse_ratings_scipy(format, sps_fmt_checker):
     ratings = ml_test.ratings
     mat, uidx, iidx = sparse_ratings(ratings, scipy=format)
 
@@ -78,7 +83,7 @@ def test_sparse_matrix_scipy(format, sps_fmt_checker):
     assert all(mat.indptr[1:] == ucounts.values)
 
 
-def test_sparse_matrix_scipy_implicit():
+def test_sparse_ratings_scipy_implicit():
     ratings = ml_test.ratings
     ratings = ratings.loc[:, ["user", "item"]]
     mat, uidx, iidx = sparse_ratings(ratings, scipy=True)
@@ -91,7 +96,7 @@ def test_sparse_matrix_scipy_implicit():
     assert all(mat.data == 1.0)
 
 
-def test_sparse_matrix_torch():
+def test_sparse_ratings_torch():
     ratings = ml_test.ratings
     mat: torch.Tensor
     mat, uidx, iidx = sparse_ratings(ratings, torch=True)
@@ -102,7 +107,7 @@ def test_sparse_matrix_torch():
     assert len(iidx) == ratings.item.nunique()
 
 
-def test_sparse_matrix_indexes(rng):
+def test_sparse_ratings_indexes(rng):
     ratings = ml_test.ratings
     uidx = pd.Index(rng.permutation(ratings["user"].unique()))
     iidx = pd.Index(rng.permutation(ratings["item"].unique()))
@@ -125,3 +130,28 @@ def test_sparse_matrix_indexes(rng):
         assert not any(vs.isna())
         assert not any(rates.isna())
         assert all(vs == rates)
+
+
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(st.data(), coo_arrays(shape=(500, 500)), st.sampled_from(["coo", "csc", "csr"]))
+def test_torch_spmv(data, M: sps.coo_array, layout):
+    "Test to make sure Torch spmv is behaved"
+    nr, nc = M.shape
+    v = data.draw(
+        nph.arrays(
+            M.data.dtype,
+            nc,
+            elements=st.floats(-10e6, 10e6, allow_nan=False, allow_infinity=False, width=32),
+        )
+    )
+    assume(not np.any(np.isnan(v)))
+    res = M @ v
+    assert np.all(np.isfinite(res))
+
+    TM = torch_sparse_from_scipy(M, layout)
+    tv = torch.from_numpy(v)
+    # assert torch.all(torch.isfinite(tv))
+
+    tres = torch.mv(TM, tv)
+
+    assert tres.numpy() == approx(res)
