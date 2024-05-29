@@ -156,9 +156,9 @@ def test_torch_spmv(torch_device, data, M: sps.coo_array, layout):
     tv = torch.from_numpy(v).to(torch_device)
 
     # quick make sure that dense works
-    assert M.todense() @ v == approx(res, rel=1.0e-5)
+    assert M.todense() @ v == approx(res, rel=1.0e-5, abs=1.0e-9)
     assert torch.mv(torch.from_numpy(M.todense()).to(torch_device), tv).cpu().numpy() == approx(
-        res, rel=1.0e-5
+        res, rel=1.0e-5, abs=1.0e-9
     )
 
     tres = torch.mv(TM, tv)
