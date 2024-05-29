@@ -134,7 +134,7 @@ def test_sparse_ratings_indexes(rng):
 
 @settings(deadline=500, suppress_health_check=[HealthCheck.too_slow])
 @given(st.data(), coo_arrays(shape=(500, 500)), st.sampled_from(["coo", "csc", "csr"]))
-def test_torch_spmv(data, M: sps.coo_array, layout):
+def test_torch_spmv(torch_device, data, M: sps.coo_array, layout):
     "Test to make sure Torch spmv is behaved"
     nr, nc = M.shape
     v = data.draw(
@@ -148,10 +148,11 @@ def test_torch_spmv(data, M: sps.coo_array, layout):
     res = M @ v
     assert np.all(np.isfinite(res))
 
-    TM = torch_sparse_from_scipy(M, layout)
-    tv = torch.from_numpy(v)
+    TM = torch_sparse_from_scipy(M, layout).to(torch_device)
+    tv = torch.from_numpy(v).to(torch_device)
 
     tres = torch.mv(TM, tv)
-    assert torch.all(torch.isfinite(tres))
+    assert np.all(np.isfinite(tres.numpy()))
+    # assert torch.all(torch.isfinite(tres))
 
     assert tres.numpy() == approx(res, rel=1.0e-5)

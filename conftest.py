@@ -8,10 +8,11 @@ import logging
 import os
 import warnings
 
+import torch
 from seedbank import initialize, numpy_rng
 
-from pytest import fixture
 from hypothesis import settings
+from pytest import fixture, skip
 
 logging.getLogger("numba").setLevel(logging.INFO)
 
@@ -36,6 +37,19 @@ def init_rng(request):
         initialize(os.urandom(4))
     else:
         initialize(RNG_SEED)
+
+
+@fixture(scope="module", params=["cpu", "cuda"])
+def torch_device(request):
+    """
+    Fixture for testing across Torch devices.  This fixture is parameterized, so
+    if you write a test function with a parameter ``torch_device`` as its first
+    parameter, it will be called once for each available Torch device.
+    """
+    dev = request.param
+    if dev == "cuda" and not torch.cuda.is_available():
+        skip("CUDA not available")
+    yield dev
 
 
 @fixture(autouse=True)
