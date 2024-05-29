@@ -230,7 +230,9 @@ def torch_sparse_from_scipy(
     cis = t.from_numpy(M.col)
     vs = t.from_numpy(M.data)
     indices = t.stack([ris, cis])
+    assert indices.shape == (2, M.nnz)
     T = t.sparse_coo_tensor(indices, vs, size=M.shape)
+    assert T.shape == M.shape
 
     match layout:
         case "csr":
