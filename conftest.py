@@ -49,6 +49,8 @@ def torch_device(request):
     dev = request.param
     if dev == "cuda" and not torch.cuda.is_available():
         skip("CUDA not available")
+    if dev == "mps" and not torch.backends.mps.is_available():
+        skip("MPS not available")
     yield dev
 
 
