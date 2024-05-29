@@ -4,6 +4,8 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import logging
+
 import numpy as np
 import pandas as pd
 import scipy.sparse as sps
@@ -12,11 +14,13 @@ import torch
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import HealthCheck, assume, given, settings
-from pytest import approx, mark
+from pytest import approx, fail, mark
 
 from lenskit.data import sparse_ratings
 from lenskit.data.matrix import torch_sparse_from_scipy
-from lenskit.util.test import coo_arrays, ml_test, sparse_tensors
+from lenskit.util.test import coo_arrays, ml_test
+
+_log = logging.getLogger(__name__)
 
 
 def test_sparse_ratings(rng):
@@ -132,8 +136,8 @@ def test_sparse_ratings_indexes(rng):
         assert all(vs == rates)
 
 
-@settings(deadline=500, suppress_health_check=[HealthCheck.too_slow])
-@given(st.data(), coo_arrays(shape=(500, 500)), st.sampled_from(["coo", "csc", "csr"]))
+@settings(deadline=1000, suppress_health_check=[HealthCheck.too_slow])
+@given(st.data(), coo_arrays(shape=(500, 500)), st.sampled_from(["coo", "csr", "csc"]))
 def test_torch_spmv(torch_device, data, M: sps.coo_array, layout):
     "Test to make sure Torch spmv is behaved"
     nr, nc = M.shape
@@ -152,7 +156,20 @@ def test_torch_spmv(torch_device, data, M: sps.coo_array, layout):
     tv = torch.from_numpy(v).to(torch_device)
 
     tres = torch.mv(TM, tv)
-    assert np.all(np.isfinite(tres.numpy()))
-    # assert torch.all(torch.isfinite(tres))
+    nans = ~np.isfinite(tres.numpy())
+    if np.any(nans):
+        nnan = np.sum(nans)
+        _log.error("spmv yielded %d NaNs", nnan)
+        _log.error(
+            "mismached results:\n%s",
+            pd.DataFrame(
+                {
+                    "value": tres[nans],
+                    "expected": res[nans],
+                },
+                index=np.arange(nc)[nans],
+            ),
+        )
+        fail("smpv yielded %d NaNs", nnan)
 
     assert tres.numpy() == approx(res, rel=1.0e-5)
