@@ -14,6 +14,8 @@ from seedbank import initialize, numpy_rng
 from hypothesis import settings
 from pytest import fixture, skip
 
+from lenskit.parallel import ensure_parallel_init
+
 logging.getLogger("numba").setLevel(logging.INFO)
 
 _log = logging.getLogger("lenskit.tests")
@@ -72,3 +74,4 @@ def pytest_collection_modifyitems(items):
 
 
 settings.register_profile("default", deadline=1000)
+ensure_parallel_init()
