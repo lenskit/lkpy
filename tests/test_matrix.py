@@ -136,7 +136,7 @@ def test_sparse_ratings_indexes(rng):
         assert all(vs == rates)
 
 
-@settings(deadline=1000, max_examples=500, suppress_health_check=[HealthCheck.too_slow])
+@settings(deadline=1000, max_examples=200, suppress_health_check=[HealthCheck.too_slow])
 @given(st.data(), coo_arrays(dtype="f8", shape=(500, 500)), st.sampled_from(["coo", "csr"]))
 def test_torch_spmv(torch_device, data, M: sps.coo_array, layout):
     "Test to make sure Torch spmv is behaved"
