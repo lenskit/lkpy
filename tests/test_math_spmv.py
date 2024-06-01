@@ -5,6 +5,7 @@ Bug: https://github.com/pytorch/pytorch/issues/127491
 """
 
 import numpy as np
+import scipy.sparse as sps
 import torch
 
 import hypothesis.extra.numpy as nph
@@ -160,3 +161,52 @@ def test_torch_spmm_csc(data, nrows, ncols):
 
     tres = torch.mm(TS, tv.reshape(-1, 1)).reshape(-1)
     assert tres.numpy() == approx(res, rel=rtol, abs=atol)
+
+
+@mark.benchmark(max_time=10)
+def test_torch_spmv_bench(benchmark):
+    A: sps.csr_matrix = sps.random(500, 500, 0.1, format="csr")
+    x = np.random.randn(500)
+
+    T = torch.sparse_csr_tensor(
+        torch.from_numpy(A.indptr),
+        torch.from_numpy(A.indices),
+        torch.from_numpy(A.data),
+        size=A.shape,
+    )
+    v = torch.from_numpy(x)
+
+    def op():
+        torch.mv(T, v)
+
+    benchmark(op)
+
+
+@mark.benchmark(max_time=10)
+def test_torch_spmm_bench(benchmark):
+    A: sps.csr_matrix = sps.random(2500, 2500, 0.1, format="csr")
+    x = np.random.randn(2500)
+
+    T = torch.sparse_csr_tensor(
+        torch.from_numpy(A.indptr),
+        torch.from_numpy(A.indices),
+        torch.from_numpy(A.data),
+        size=A.shape,
+    )
+    v = torch.from_numpy(x)
+
+    def op():
+        torch.mm(T, v.reshape(-1, 1)).reshape(-1)
+
+    benchmark(op)
+
+
+@mark.benchmark(max_time=10)
+def test_scipy_spmv_bench(benchmark):
+    A: sps.csr_matrix = sps.random(2500, 2500, 0.1, format="csr")
+    x = np.random.randn(2500)
+
+    def op():
+        A @ x
+
+    benchmark(op)
