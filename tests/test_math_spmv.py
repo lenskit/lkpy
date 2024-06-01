@@ -11,7 +11,7 @@ import torch
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import HealthCheck, given, note, settings
-from pytest import approx, mark
+from pytest import approx, mark, skip
 
 
 def draw_problem(
@@ -164,7 +164,10 @@ def test_torch_spmm_csc(data, nrows, ncols):
 
 
 @mark.benchmark(max_time=10)
-def test_torch_spmv_bench(benchmark):
+@mark.parametrize("device", ["cpu", "cuda"])
+def test_torch_spmv_bench(device, benchmark):
+    if device == "cuda" and not torch.cuda.is_available():
+        skip("CUDA disabled")
     A: sps.csr_matrix = sps.random(500, 500, 0.1, format="csr")
     x = np.random.randn(500)
 
@@ -173,8 +176,8 @@ def test_torch_spmv_bench(benchmark):
         torch.from_numpy(A.indices),
         torch.from_numpy(A.data),
         size=A.shape,
-    )
-    v = torch.from_numpy(x)
+    ).to(device)
+    v = torch.from_numpy(x).to(device)
 
     def op():
         torch.mv(T, v)
@@ -183,7 +186,10 @@ def test_torch_spmv_bench(benchmark):
 
 
 @mark.benchmark(max_time=10)
-def test_torch_spmm_bench(benchmark):
+@mark.parametrize("device", ["cpu", "cuda"])
+def test_torch_spmm_bench(device, benchmark):
+    if device == "cuda" and not torch.cuda.is_available():
+        skip("CUDA disabled")
     A: sps.csr_matrix = sps.random(2500, 2500, 0.1, format="csr")
     x = np.random.randn(2500)
 
@@ -192,8 +198,8 @@ def test_torch_spmm_bench(benchmark):
         torch.from_numpy(A.indices),
         torch.from_numpy(A.data),
         size=A.shape,
-    )
-    v = torch.from_numpy(x)
+    ).to(device)
+    v = torch.from_numpy(x).to(device)
 
     def op():
         torch.mm(T, v.reshape(-1, 1)).reshape(-1)
