@@ -21,7 +21,7 @@ from typing_extensions import Any, NamedTuple, Optional, Self
 
 from lenskit import DataWarning, util
 from lenskit.data import FeedbackType, sparse_ratings
-from lenskit.data.matrix import normalize_sparse_rows
+from lenskit.data.matrix import normalize_sparse_rows, safe_spmv
 
 from .. import Predictor
 
@@ -186,7 +186,7 @@ class UserUser(Predictor):
         # now ratings has vbeen normalized to be a mean-centered unit vector
         # this means we can dot product to score neighbors
         # score the neighbors!
-        nbr_sims = torch.mv(self.user_vectors_, ratings)
+        nbr_sims = safe_spmv(self.user_vectors_, ratings)
         assert nbr_sims.shape == (len(self.user_index_),)
         if uidx is not None:
             # zero out the self-similarity
@@ -322,7 +322,7 @@ def score_items_with_neighbors(
         values=nbr_rates.values()[r_mask],
         size=nbr_rates.shape,
     ).coalesce()
-    results = torch.mv(nbr_fp.transpose(0, 1), nbr_sims)
+    results = safe_spmv(nbr_fp.transpose(0, 1), nbr_sims)
 
     if average:
         nnz = len(nbr_fp.values())
@@ -331,7 +331,7 @@ def score_items_with_neighbors(
             values=torch.ones(nnz),
             size=nbr_rates.shape,
         )
-        tot_sims = torch.mv(nbr_fp_ones.transpose(0, 1), nbr_sims)
+        tot_sims = safe_spmv(nbr_fp_ones.transpose(0, 1), nbr_sims)
         assert torch.all(torch.isfinite(tot_sims))
         results /= tot_sims
 
