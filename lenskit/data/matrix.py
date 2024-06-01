@@ -17,12 +17,13 @@ import platform
 import numpy as np
 import pandas as pd
 import scipy.sparse as sps
-import torch as t
+import torch
 from csr import CSR
 from typing_extensions import Any, Generic, Literal, NamedTuple, Optional, TypeVar, overload
 
 _log = logging.getLogger(__name__)
 
+t = torch
 M = TypeVar("M", CSR, sps.csr_matrix, sps.coo_matrix, t.Tensor)
 
 
@@ -248,7 +249,8 @@ def torch_sparse_from_scipy(
 
 if platform.machine() == "arm64":
 
-    def safe_spmv(matrix: t.Tensor, vector: t.Tensor) -> t.Tensor:
+    @torch.jit.ignore  # type: ignore
+    def safe_spmv(matrix, vector):  # type: ignore
         """
         Sparse matrix-vector multiplication working around PyTorch bugs.
 
@@ -267,11 +269,11 @@ if platform.machine() == "arm64":
             (nr, nc),
         )
         v = vector.numpy()
-        return t.from_numpy(M @ v)
+        return torch.from_numpy(M @ v)
 
 else:
 
-    def safe_spmv(matrix: t.Tensor, vector: t.Tensor) -> t.Tensor:
+    def safe_spmv(matrix: torch.Tensor, vector: torch.Tensor) -> torch.Tensor:
         """
         Sparse matrix-vector multiplication working around PyTorch bugs.
 
@@ -282,4 +284,4 @@ else:
         .. _127491: https://github.com/pytorch/pytorch/issues/127491
         """
         assert matrix.is_sparse_csr
-        return t.mv(matrix, vector)
+        return torch.mv(matrix, vector)
