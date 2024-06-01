@@ -8,14 +8,12 @@
 Test utilities for LKPY tests.
 """
 
-import math
 import os
 import os.path
 from contextlib import contextmanager
 
 import numpy as np
 import scipy.sparse as sps
-import torch
 
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
@@ -52,19 +50,16 @@ def demo_recs():
 @contextmanager
 def set_env_var(var, val):
     "Set an environment variable & restore it."
-    is_set = var in os.environ
-    old_val = None
-    if is_set:
-        old_val = os.environ[var]
+    old_val = os.environ.get(var, None)
     try:
         if val is None:
-            if is_set:
+            if old_val is not None:
                 del os.environ[var]
         else:
             os.environ[var] = val
         yield
     finally:
-        if is_set:
+        if old_val is not None:
             os.environ[var] = old_val
         elif val is not None:
             del os.environ[var]
