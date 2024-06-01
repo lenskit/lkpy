@@ -127,6 +127,7 @@ def test_torch_spmv_csc(data, nrows, ncols):
     assert tres.numpy() == approx(res, rel=rtol, abs=atol)
 
 
+@mark.skip("not using SPMM fallback")
 @torch_test
 def test_torch_spmm_coo(data, nrows, ncols):
     rtol, atol = tolerances(np.float64)
@@ -139,6 +140,7 @@ def test_torch_spmm_coo(data, nrows, ncols):
     assert tres.numpy() == approx(res, rel=rtol, abs=atol)
 
 
+@mark.skip("not using SPMM fallback")
 @torch_test
 def test_torch_spmm_csr(data, nrows, ncols):
     rtol, atol = tolerances(np.float64)
@@ -151,6 +153,7 @@ def test_torch_spmm_csr(data, nrows, ncols):
     assert tres.numpy() == approx(res, rel=rtol, abs=atol)
 
 
+@mark.skip("not using SPMM fallback")
 @torch_test
 def test_torch_spmm_csc(data, nrows, ncols):
     rtol, atol = tolerances(np.float64)
