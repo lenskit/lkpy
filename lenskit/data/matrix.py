@@ -12,6 +12,7 @@ Data manipulation routines.
 from __future__ import annotations
 
 import logging
+import platform
 
 import numpy as np
 import pandas as pd
@@ -245,15 +246,40 @@ def torch_sparse_from_scipy(
             raise ValueError(f"invalid layout {layout}")
 
 
-def safe_spmv(matrix: t.Tensor, vector: t.Tensor) -> t.Tensor:
-    """
-    Sparse matrix-vector multiplication working around PyTorch bugs.
+if platform.machine() == "arm64":
 
-    This is equivalent to :func:`torch.mv` for sparse CSR matrix
-    and dense vector, but it works around PyTorch bug 127491_ by
-    falling back to SciPy on ARM.
+    def safe_spmv(matrix: t.Tensor, vector: t.Tensor) -> t.Tensor:
+        """
+        Sparse matrix-vector multiplication working around PyTorch bugs.
 
-    .. _127491: https://github.com/pytorch/pytorch/issues/127491
-    """
-    assert matrix.is_sparse_csr
-    return t.mv(matrix, vector)
+        This is equivalent to :func:`torch.mv` for sparse CSR matrix
+        and dense vector, but it works around PyTorch bug 127491_ by
+        falling back to SciPy on ARM.
+
+        .. _127491: https://github.com/pytorch/pytorch/issues/127491
+        """
+        assert matrix.is_sparse_csr
+        nr, nc = matrix.shape
+        print(matrix.shape)
+        print(matrix.crow_indices().shape)
+        M = sps.csr_array(
+            (matrix.values().numpy(), matrix.col_indices().numpy(), matrix.crow_indices().numpy()),
+            (nr, nc),
+        )
+        v = vector.numpy()
+        return t.from_numpy(M @ v)
+
+else:
+
+    def safe_spmv(matrix: t.Tensor, vector: t.Tensor) -> t.Tensor:
+        """
+        Sparse matrix-vector multiplication working around PyTorch bugs.
+
+        This is equivalent to :func:`torch.mv` for sparse CSR matrix
+        and dense vector, but it works around PyTorch bug 127491_ by
+        falling back to SciPy on ARM.
+
+        .. _127491: https://github.com/pytorch/pytorch/issues/127491
+        """
+        assert matrix.is_sparse_csr
+        return t.mv(matrix, vector)
