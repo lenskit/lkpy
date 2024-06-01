@@ -243,3 +243,17 @@ def torch_sparse_from_scipy(
             return T.coalesce()
         case _:
             raise ValueError(f"invalid layout {layout}")
+
+
+def safe_spmv(matrix: t.Tensor, vector: t.Tensor) -> t.Tensor:
+    """
+    Sparse matrix-vector multiplication working around PyTorch bugs.
+
+    This is equivalent to :func:`torch.mv` for sparse CSR matrix
+    and dense vector, but it works around PyTorch bug 127491_ by
+    falling back to SciPy on ARM.
+
+    .. _127491: https://github.com/pytorch/pytorch/issues/127491
+    """
+    assert matrix.is_sparse_csr
+    return t.mv(matrix, vector)

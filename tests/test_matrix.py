@@ -6,14 +6,19 @@
 
 import logging
 
+import numpy as np
 import pandas as pd
 import scipy.sparse as sps
 import torch
 
-from pytest import mark
+import hypothesis.extra.numpy as nph
+import hypothesis.strategies as st
+from hypothesis import HealthCheck, assume, given, settings
+from pytest import approx, mark
 
 from lenskit.data import sparse_ratings
-from lenskit.util.test import ml_test
+from lenskit.data.matrix import safe_spmv, torch_sparse_from_scipy
+from lenskit.util.test import coo_arrays, ml_test
 
 _log = logging.getLogger(__name__)
 
@@ -129,3 +134,25 @@ def test_sparse_ratings_indexes(rng):
         assert not any(vs.isna())
         assert not any(rates.isna())
         assert all(vs == rates)
+
+
+@settings(deadline=1000, max_examples=500, suppress_health_check=[HealthCheck.too_slow])
+@given(st.data())
+def test_safe_spmv(data):
+    M = data.draw(coo_arrays(dtype="f8", shape=st.tuples(st.integers(1, 500), st.integers(1, 500))))
+    nr, nc = M.shape
+    v = data.draw(
+        nph.arrays(
+            M.data.dtype,
+            nc,
+            elements=st.floats(-1e6, 1e6, allow_nan=False, allow_infinity=False, width=32),
+        )
+    )
+    res = M @ v
+    assume(np.all(np.isfinite(res)))
+
+    TM = torch_sparse_from_scipy(M, "csr")
+    tv = torch.from_numpy(v)
+
+    tres = safe_spmv(TM, tv)
+    assert tres.cpu().numpy() == approx(res, rel=1.0e-5, abs=1.0e-9)
