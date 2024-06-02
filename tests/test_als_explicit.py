@@ -255,7 +255,7 @@ def test_als_batch_accuracy():
     # algo = bias.Fallback(svd_algo, bias.Bias(damping=5))
 
     def eval(train, test):
-        _log.info("training LU")
+        _log.info("training Cholesky")
         lu_algo.fit(train)
         _log.info("testing %d users", test.user.nunique())
         return test.assign(lu_pred=lu_algo.predict(test))
