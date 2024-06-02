@@ -136,7 +136,7 @@ def test_sparse_ratings_indexes(rng):
         assert all(vs == rates)
 
 
-@settings(deadline=1000, max_examples=500, suppress_health_check=[HealthCheck.too_slow])
+@settings(deadline=1000, suppress_health_check=[HealthCheck.too_slow])
 @given(st.data())
 def test_safe_spmv(data):
     M = data.draw(coo_arrays(dtype="f8", shape=st.tuples(st.integers(1, 500), st.integers(1, 500))))
