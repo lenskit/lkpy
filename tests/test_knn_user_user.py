@@ -11,7 +11,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
-from scipy.sparse import linalg as spla
 
 from pytest import approx, fail, mark
 
@@ -19,8 +18,6 @@ import lenskit.algorithms.knn.user as knn
 import lenskit.util.test as lktu
 from lenskit.algorithms import Recommender
 from lenskit.util import clone
-
-pytestmark = mark.skip("temporarily disabled while fixing")
 
 _log = logging.getLogger(__name__)
 
