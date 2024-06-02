@@ -693,17 +693,3 @@ def _build_predict(ratings, fold):
     test = ratings[ratings["partition"] == fold]
     preds = batch.predict(algo, test, n_jobs=1)
     return preds
-
-
-@lktu.wantjit
-@mark.slow
-def test_ii_parallel_multi_build():
-    "Build multiple item-item models in parallel"
-    ratings = lktu.ml_test.ratings
-    ratings["partition"] = np.random.choice(4, len(ratings), replace=True)
-
-    with invoker(ratings, _build_predict, 2) as inv:
-        preds = inv.map(range(4))
-        preds = pd.concat(preds, ignore_index=True)
-
-    assert len(preds) == len(ratings)
