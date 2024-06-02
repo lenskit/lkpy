@@ -10,6 +10,7 @@ coverage.xml
 cov-reports/
 test-logs/
 htmlcov/
+perf.data*
 
 # caches and working directories
 __pycache__/
