@@ -14,6 +14,7 @@ import torch
 from pytest import approx, mark
 
 import lenskit.util.test as lktu
+from lenskit import batch
 from lenskit.algorithms import als
 
 _log = logging.getLogger(__name__)
@@ -251,14 +252,13 @@ def test_als_batch_accuracy():
 
     ratings = lktu.ml100k.ratings
 
-    lu_algo = als.BiasedMF(25, epochs=20, damping=5)
-    # algo = bias.Fallback(svd_algo, bias.Bias(damping=5))
+    algo = als.BiasedMF(25, epochs=20, damping=5)
 
     def eval(train, test):
         _log.info("training Cholesky")
-        lu_algo.fit(train)
+        algo.fit(train)
         _log.info("testing %d users", test.user.nunique())
-        return test.assign(lu_pred=lu_algo.predict(test))
+        return batch.predict(algo, test, n_jobs=2)
 
     folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
     preds = pd.concat(eval(train, test) for (train, test) in folds)
@@ -266,8 +266,8 @@ def test_als_batch_accuracy():
     # _log.info("predictions:\n%s", preds.sort_values("abs_diff", ascending=False))
     # _log.info("diff summary:\n%s", preds.abs_diff.describe())
 
-    lu_mae = pm.mae(preds.lu_pred, preds.rating)
+    lu_mae = pm.mae(preds.prediction, preds.rating)
     assert lu_mae == approx(0.73, abs=0.045)
 
-    user_rmse = preds.groupby("user").apply(lambda df: pm.rmse(df.lu_pred, df.rating))
+    user_rmse = preds.groupby("user").apply(lambda df: pm.rmse(df.prediction, df.rating))
     assert user_rmse.mean() == approx(0.94, abs=0.05)
