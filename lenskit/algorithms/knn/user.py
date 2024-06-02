@@ -322,16 +322,16 @@ def score_items_with_neighbors(
         values=nbr_rates.values()[r_mask],
         size=nbr_rates.shape,
     ).coalesce()
-    results = safe_spmv(nbr_fp.transpose(0, 1), nbr_sims)
+    results = torch.mv(nbr_fp.transpose(0, 1), nbr_sims)
 
     if average:
         nnz = len(nbr_fp.values())
         nbr_fp_ones = torch.sparse_coo_tensor(
-            indices=nbr_rates.indices()[:, r_mask],
+            indices=nbr_fp.indices(),
             values=torch.ones(nnz),
             size=nbr_rates.shape,
         )
-        tot_sims = safe_spmv(nbr_fp_ones.transpose(0, 1), nbr_sims)
+        tot_sims = torch.mv(nbr_fp_ones.transpose(0, 1), nbr_sims)
         assert torch.all(torch.isfinite(tot_sims))
         results /= tot_sims
 
