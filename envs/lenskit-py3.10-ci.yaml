@@ -8,8 +8,8 @@
 # Instead edit the corresponding pyproject.toml file.
 #
 channels:
-  - conda-forge
   - pytorch
+  - conda-forge
   - nodefaults
 dependencies:
   - python=3.10
@@ -30,9 +30,10 @@ dependencies:
   - pytest-benchmark==4.*
   - pytest-cov>=2.12
   - pytest-doctestplus==1.*
+  - pytest-repeat>=0.9
   - pytest==7.*
   - python-build==1
-  - pytorch==2.*
+  - pytorch<3,>=2.1
   - ruff>=0.2
   - scikit-learn>=1.1
   - scipy>=1.9.0

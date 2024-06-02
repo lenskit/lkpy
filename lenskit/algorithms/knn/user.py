@@ -13,17 +13,15 @@ from __future__ import annotations
 
 import logging
 import warnings
-from typing import NamedTuple, Optional
 
 import numpy as np
 import pandas as pd
 import torch
-from numba import njit
+from typing_extensions import Any, NamedTuple, Optional, Self
 
 from lenskit import DataWarning, util
 from lenskit.data import FeedbackType, sparse_ratings
-from lenskit.data.matrix import normalize_sparse_rows, sparse_row_stats
-from lenskit.util.accum import kvp_minheap_insert
+from lenskit.data.matrix import normalize_sparse_rows, safe_spmv
 
 from .. import Predictor
 
@@ -81,8 +79,10 @@ class UserUser(Predictor):
     aggregate: str
     use_ratings: bool
 
-    user_index_: pd.Index
+    user_index_: pd.Index[Any]
     "The index of user IDs."
+    item_index_: pd.Index[Any]
+    "The index of item IDs."
     user_means_: torch.Tensor | None
     "Mean rating for each known user."
     user_vectors_: torch.Tensor
@@ -121,7 +121,10 @@ class UserUser(Predictor):
         self.aggregate = defaults["aggregate"]
         self.use_ratings = defaults["use_ratings"]
 
-    def fit(self, ratings, **kwargs):
+        if self.aggregate not in [self.AGG_WA, self.AGG_SUM]:
+            raise ValueError(f"invalid aggregate {self.aggregate}")
+
+    def fit(self, ratings: pd.DataFrame, **kwargs) -> Self:
         """
         "Train" a user-user CF model.  This memorizes the rating data in a format that is usable
         for future computations.
@@ -146,7 +149,7 @@ class UserUser(Predictor):
         normed, _norms = normalize_sparse_rows(rmat, "unit")
 
         self.user_vectors_ = normed
-        self.user_ratings_ = rmat.to_sparse_coo()
+        self.user_ratings_ = rmat.to_sparse_coo().coalesce()
         self.user_index_ = users
         self.user_means_ = means
         self.item_index_ = items
@@ -169,24 +172,25 @@ class UserUser(Predictor):
         """
 
         watch = util.Stopwatch()
-        items = pd.Index(items, name="item")
+        items = np.asarray(items)
 
         udata = self._get_user_data(user, ratings)
         if udata is None:
             _log.debug("user %s has no ratings, skipping", user)
             return pd.Series(index=items, dtype="float32")
 
-        index, ratings, umean = udata
-        assert len(ratings) == len(self.item_index_)  # ratings is a dense vector
+        uidx, ratings, umean = udata
+        _log.debug("scoring %d items for user %s (idx %d)", len(items), user, uidx or -1)
+        assert ratings.shape == (len(self.item_index_),)  # ratings is a dense vector
 
-        # now ratings is normalized to be a mean-centered unit vector
+        # now ratings has vbeen normalized to be a mean-centered unit vector
         # this means we can dot product to score neighbors
         # score the neighbors!
-        nbr_sims = torch.mv(self.user_vectors_, ratings)
+        nbr_sims = safe_spmv(self.user_vectors_, ratings)
         assert nbr_sims.shape == (len(self.user_index_),)
-        if index is not None:
+        if uidx is not None:
             # zero out the self-similarity
-            nbr_sims[index] = 0
+            nbr_sims[uidx] = 0
 
         # get indices for these neighbors
         nbr_idxs = torch.arange(len(self.user_index_), dtype=torch.int64)
@@ -195,31 +199,35 @@ class UserUser(Predictor):
 
         kn_sims = nbr_sims[nbr_mask]
         kn_idxs = nbr_idxs[nbr_mask]
+        _log.debug(
+            "user %s: %d candidate neighbors (of %d total), max sim %0.4f",
+            user,
+            len(kn_sims),
+            len(self.user_index_),
+            torch.max(kn_sims).item(),
+        )
+        assert not torch.any(torch.isnan(kn_sims))
 
-        _log.debug("found %d candidate neighbor similarities", kn_sims.shape[0])
-
-        iidxs = self.item_index_.get_indexer(items.values)
+        iidxs = self.item_index_.get_indexer_for(items)
         iidxs = torch.from_numpy(iidxs)
-        if self.aggregate == self.AGG_WA:
-            agg = _agg_weighted_avg
-        elif self.aggregate == self.AGG_SUM:
-            agg = _agg_sum
-        else:
-            raise ValueError("invalid aggregate " + self.aggregate)
+
+        ki_mask = iidxs >= 0
+        usable_iidxs = iidxs[ki_mask]
 
         scores = score_items_with_neighbors(
-            iidxs,
+            usable_iidxs,
             kn_idxs,
             kn_sims,
             self.user_ratings_,
             self.nnbrs,
             self.min_nbrs,
-            agg,
+            self.aggregate == "weighted-average",
         )
 
         scores += umean
 
-        results = pd.Series(scores, index=items, name="prediction")
+        results = pd.Series(scores.numpy(), index=items[ki_mask.numpy()], name="prediction")
+        results = results.reindex(items)
 
         _log.debug(
             "scored %d of %d items for %s in %s", results.notna().sum(), len(items), user, watch
@@ -240,8 +248,13 @@ class UserUser(Predictor):
                 _log.warning("user %d has no ratings and none provided", user)
                 return None
 
+            assert index >= 0
             row = self.user_vectors_[index].to_dense()
-            umean = self.user_means_[index].item() if self.user_means_ is not None else 0
+            if self.center:
+                assert self.user_means_ is not None
+                umean = self.user_means_[index].item()
+            else:
+                umean = 0
             return UserRatings(index, row, umean)
         else:
             _log.debug("using provided ratings for user %d", user)
@@ -270,43 +283,6 @@ class UserRatings(NamedTuple):
     mean: float
 
 
-@njit
-def _agg_weighted_avg(iur, item, sims, use):
-    """
-    Weighted-average aggregate.
-
-    Args:
-        iur(matrix._CSR): the item-user ratings matrix
-        item(int): the item index in ``iur``
-        sims(numpy.ndarray): the similarities for the users who have rated ``item``
-        use(numpy.ndarray): positions in sims and the rating row to actually use
-    """
-    rates = iur.row_vs(item)
-    num = 0.0
-    den = 0.0
-    for j in use:
-        num += rates[j] * sims[j]
-        den += np.abs(sims[j])
-    return num / den
-
-
-@njit
-def _agg_sum(iur, item, sims, use):
-    """
-    Sum aggregate
-
-    Args:
-        iur(matrix._CSR): the item-user ratings matrix
-        item(int): the item index in ``iur``
-        sims(numpy.ndarray): the similarities for the users who have rated ``item``
-        use(numpy.ndarray): positions in sims and the rating row to actually use
-    """
-    x = 0.0
-    for j in use:
-        x += sims[j]
-    return x
-
-
 def score_items_with_neighbors(
     items: torch.Tensor,
     nbr_rows: torch.Tensor,
@@ -314,20 +290,29 @@ def score_items_with_neighbors(
     ratings: torch.Tensor,
     max_nbrs: int,
     min_nbrs: int,
-    agg,
+    average: bool,
 ) -> torch.Tensor:
     # select a sub-matrix for further manipulation
     (ni,) = items.shape
     nbr_rates = ratings.index_select(0, nbr_rows)
     nbr_rates = nbr_rates.index_select(1, items)
     nbr_rates = nbr_rates.coalesce()
+    assert nbr_rates.shape == (
+        len(nbr_rows),
+        ni,
+    ), f"nbr rates has shape {nbr_rates.shape} (expected {len(nbr_rows)}, {ni})"
     nbr_t = nbr_rates.transpose(0, 1).to_sparse_csr()
 
     # count nbrs for each item
     counts = nbr_t.crow_indices().diff()
     assert counts.shape == items.shape
 
-    _log.debug("scoring %d items, max count %d", ni, torch.max(counts).item())
+    _log.debug(
+        "scoring %d items, max count %d, nbr shape %s",
+        ni,
+        torch.max(counts).item(),
+        nbr_rates.shape,
+    )
 
     # fast-path items with small neighborhoods
     fp_mask = counts <= max_nbrs
@@ -339,13 +324,16 @@ def score_items_with_neighbors(
     ).coalesce()
     results = torch.mv(nbr_fp.transpose(0, 1), nbr_sims)
 
-    nnz = len(nbr_fp.values())
-    nbr_fp_ones = torch.sparse_coo_tensor(
-        indices=nbr_rates.indices()[:, r_mask],
-        values=torch.ones(nnz),
-        size=nbr_rates.shape,
-    )
-    results /= torch.mv(nbr_fp_ones.transpose(0, 1), nbr_sims)
+    if average:
+        nnz = len(nbr_fp.values())
+        nbr_fp_ones = torch.sparse_coo_tensor(
+            indices=nbr_fp.indices(),
+            values=torch.ones(nnz),
+            size=nbr_rates.shape,
+        )
+        tot_sims = torch.mv(nbr_fp_ones.transpose(0, 1), nbr_sims)
+        assert torch.all(torch.isfinite(tot_sims))
+        results /= tot_sims
 
     # clear out too-small neighborhoods
     results[counts < min_nbrs] = torch.nan
@@ -354,7 +342,9 @@ def score_items_with_neighbors(
     exc_mask = counts > max_nbrs
     if torch.any(exc_mask):
         _log.debug("scoring %d slow-path items", torch.sum(exc_mask))
-    for badi in items[exc_mask]:
+
+    bads = torch.argwhere(exc_mask)[:, 0]
+    for badi in bads:
         col = nbr_t[badi]
         assert col.shape == nbr_rates.shape[:1]
 
@@ -363,42 +353,10 @@ def score_items_with_neighbors(
         bi_sims = nbr_sims[bi_users]
 
         tk_vs, tk_is = torch.topk(bi_sims, max_nbrs)
-        results[badi] = torch.sum(tk_vs * bi_rates[tk_is])
+        sum = torch.sum(tk_vs)
+        if average:
+            results[badi] = torch.dot(tk_vs, bi_rates[tk_is]) / sum
+        else:
+            results[badi] = sum
 
     return results
-
-
-@njit
-def _score(items, results, iur, sims, nnbrs, min_sim, min_nbrs, agg):
-    h_ks = np.empty(nnbrs, dtype=np.int32)
-    h_vs = np.empty(nnbrs)
-    used = np.zeros(len(results), dtype=np.int32)
-
-    for i in range(len(results)):
-        item = items[i]
-        if item < 0:
-            continue
-
-        h_ep = 0
-
-        # who has rated this item?
-        i_users = iur.row_cs(item)
-
-        # what are their similarities to our target user?
-        i_sims = sims[i_users]
-
-        # which of these neighbors do we really want to use?
-        for j, s in enumerate(i_sims):
-            if np.abs(s) < 1.0e-10:
-                continue
-            if min_sim is not None and s < min_sim:
-                continue
-            h_ep = kvp_minheap_insert(0, h_ep, nnbrs, j, s, h_ks, h_vs)
-
-        if h_ep < min_nbrs:
-            continue
-
-        results[i] = agg(iur, item, i_sims, h_ks[:h_ep])
-        used[i] = h_ep
-
-    return used
