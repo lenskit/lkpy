@@ -5,7 +5,6 @@
 # SPDX-License-Identifier: MIT
 
 # pyright: strict
-import functools as ft
 import logging
 from typing import Generic, Iterable, Iterator
 

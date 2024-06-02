@@ -9,7 +9,6 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from progress_api import make_progress
 
 from .. import util
 from ..algorithms import Recommender
