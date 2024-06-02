@@ -55,6 +55,7 @@ test = [
   "pytest ==7.*",
   "pytest-doctestplus ==1.*",
   "pytest-cov >= 2.12",
+  "pytest-benchmark ==4.*",
   "coverage >= 5",
   "hypothesis >= 6",
 ]
@@ -159,6 +160,7 @@ log_format = "[%(levelname)7s] [%(processName)s] %(name)s %(message)s"
 log_cli_format = "[%(levelname)7s] %(asctime)s [%(processName)s] %(name)s %(message)s"
 log_file_format = "[%(levelname)7s] %(asctime)s [%(processName)s] %(name)s %(message)s"
 log_file_level = "DEBUG"
+addopts = "--benchmark-skip"
 testpaths = [
   "tests",
   "lenskit",

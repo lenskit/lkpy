@@ -27,6 +27,7 @@ dependencies:
   - pandas<3,>=1.5
   - pyarrow>=15
   - pyproject2conda~=0.11
+  - pytest-benchmark==4.*
   - pytest-cov>=2.12
   - pytest-doctestplus==1.*
   - pytest==7.*

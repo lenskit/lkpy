@@ -8,10 +8,13 @@ import logging
 import os
 import warnings
 
+import torch
 from seedbank import initialize, numpy_rng
 
-from pytest import fixture
 from hypothesis import settings
+from pytest import fixture, skip
+
+from lenskit.parallel import ensure_parallel_init
 
 logging.getLogger("numba").setLevel(logging.INFO)
 
@@ -38,6 +41,21 @@ def init_rng(request):
         initialize(RNG_SEED)
 
 
+@fixture(scope="module", params=["cpu", "cuda"])
+def torch_device(request):
+    """
+    Fixture for testing across Torch devices.  This fixture is parameterized, so
+    if you write a test function with a parameter ``torch_device`` as its first
+    parameter, it will be called once for each available Torch device.
+    """
+    dev = request.param
+    if dev == "cuda" and not torch.cuda.is_available():
+        skip("CUDA not available")
+    if dev == "mps" and not torch.backends.mps.is_available():
+        skip("MPS not available")
+    yield dev
+
+
 @fixture(autouse=True)
 def log_test(request):
     modname = request.module.__name__ if request.module else "<unknown>"
@@ -56,3 +74,4 @@ def pytest_collection_modifyitems(items):
 
 
 settings.register_profile("default", deadline=1000)
+ensure_parallel_init()

@@ -22,7 +22,7 @@ import torch
 
 from lenskit import ConfigWarning, DataWarning, util
 from lenskit.data import FeedbackType
-from lenskit.data.matrix import normalize_sparse_rows, sparse_ratings
+from lenskit.data.matrix import normalize_sparse_rows, safe_spmv, sparse_ratings
 from lenskit.parallel import ensure_parallel_init
 from lenskit.util.logging import pbh_update, progress_handle
 
@@ -343,7 +343,7 @@ def _sim_row(
     # _item_dbg(item, f"comparing item with {row.indices().shape[1]} users")
     # _item_dbg(item, f"row norm {torch.linalg.vector_norm(row.values()).item()}")
     row = row.to_dense()
-    sim = torch.mv(matrix, row.to(torch.float64))
+    sim = safe_spmv(matrix, row.to(torch.float64))
     sim[item] = 0
 
     mask = sim >= min_sim

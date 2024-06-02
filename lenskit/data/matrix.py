@@ -12,16 +12,18 @@ Data manipulation routines.
 from __future__ import annotations
 
 import logging
+import platform
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as sps
-import torch as t
+import torch
 from csr import CSR
 from typing_extensions import Any, Generic, Literal, NamedTuple, Optional, TypeVar, overload
 
 _log = logging.getLogger(__name__)
 
+t = torch
 M = TypeVar("M", CSR, sps.csr_matrix, sps.coo_matrix, t.Tensor)
 
 
@@ -218,3 +220,68 @@ def _nsr_unit(matrix: t.Tensor) -> tuple[t.Tensor, t.Tensor]:
         values=matrix.values() * t.repeat_interleave(recip_norms, matrix.crow_indices().diff()),
         size=matrix.shape,
     ), norms
+
+
+def torch_sparse_from_scipy(
+    M: sps.coo_array, layout: Literal["csr", "coo", "csc"] = "coo"
+) -> t.Tensor:
+    """
+    Convert a SciPy :class:`sps.coo_array` into a torch sparse tensor.
+    """
+    ris = t.from_numpy(M.row)
+    cis = t.from_numpy(M.col)
+    vs = t.from_numpy(M.data)
+    indices = t.stack([ris, cis])
+    assert indices.shape == (2, M.nnz)
+    T = t.sparse_coo_tensor(indices, vs, size=M.shape)
+    assert T.shape == M.shape
+
+    match layout:
+        case "csr":
+            return T.to_sparse_csr()
+        case "csc":
+            return T.to_sparse_csc()
+        case "coo":
+            return T.coalesce()
+        case _:
+            raise ValueError(f"invalid layout {layout}")
+
+
+if platform.machine() == "arm64":
+
+    @torch.jit.ignore  # type: ignore
+    def safe_spmv(matrix, vector):  # type: ignore
+        """
+        Sparse matrix-vector multiplication working around PyTorch bugs.
+
+        This is equivalent to :func:`torch.mv` for sparse CSR matrix
+        and dense vector, but it works around PyTorch bug 127491_ by
+        falling back to SciPy on ARM.
+
+        .. _127491: https://github.com/pytorch/pytorch/issues/127491
+        """
+        assert matrix.is_sparse_csr
+        nr, nc = matrix.shape
+        print(matrix.shape)
+        print(matrix.crow_indices().shape)
+        M = sps.csr_array(
+            (matrix.values().numpy(), matrix.col_indices().numpy(), matrix.crow_indices().numpy()),
+            (nr, nc),
+        )
+        v = vector.numpy()
+        return torch.from_numpy(M @ v)
+
+else:
+
+    def safe_spmv(matrix: torch.Tensor, vector: torch.Tensor) -> torch.Tensor:
+        """
+        Sparse matrix-vector multiplication working around PyTorch bugs.
+
+        This is equivalent to :func:`torch.mv` for sparse CSR matrix
+        and dense vector, but it works around PyTorch bug 127491_ by
+        falling back to SciPy on ARM.
+
+        .. _127491: https://github.com/pytorch/pytorch/issues/127491
+        """
+        assert matrix.is_sparse_csr
+        return torch.mv(matrix, vector)
