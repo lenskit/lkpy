@@ -51,7 +51,7 @@ jobs:
 
       - name: Test LKPY
         run: |
-          python -m pytest --cov=lenskit --verbose --log-file=test.log
+          python -m pytest --cov=lenskit --verbose --log-file=test.log --durations=25
         env:
           NUMBA_NUM_THREADS: 4
           MKL_THREADING_LAYER: sequential
@@ -182,7 +182,7 @@ jobs:
 
       - name: Run tests
         run: |
-          "$PYTHON" -m pytest --cov=lenskit --cov-report=xml --log-file=test.log
+          "$PYTHON" -m pytest --cov=lenskit --cov-report=xml --log-file=test.log --durations=25
         env:
           PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
