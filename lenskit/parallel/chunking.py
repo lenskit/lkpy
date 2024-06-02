@@ -12,9 +12,9 @@ Support for computing chunks for parallel computation.
 import math
 from typing import NamedTuple
 
-MIN_CHUNKABLE = 50
+MIN_CHUNKABLE = 100
 TGT_CHUNK_LIMIT = 1000
-MIN_CHUNK_SIZE = 20
+MIN_CHUNK_SIZE = 100
 MAX_CHUNK_SIZE = 4000
 
 
