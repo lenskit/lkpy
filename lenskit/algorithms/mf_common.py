@@ -9,25 +9,35 @@ Common utilities & implementations for matrix factorization.
 """
 
 import logging
+from typing import Generic, TypeVar
 
 import numpy as np
 import pandas as pd
+import torch
 
 from . import Predictor
 
 _logger = logging.getLogger(__name__)
+M = TypeVar("M", torch.Tensor, np.ndarray)
+"""
+Type of matrix factorization parameter data. Can be either
+:class:`~torch.Tensor` or :class:`~numpy.ndarray`.
+"""
 
 
-class MFPredictor(Predictor):
+class MFPredictor(Predictor, Generic[M]):
     """
     Common predictor for matrix factorization.
-
-    Attributes:
-        user_index_(pandas.Index): Users in the model (length=:math:`m`).
-        item_index_(pandas.Index): Items in the model (length=:math:`n`).
-        user_features_(numpy.ndarray): The :math:`m \\times k` user-feature matrix.
-        item_features_(numpy.ndarray): The :math:`n \\times k` item-feature matrix.
     """
+
+    user_index_: pd.Index
+    "Users in the model (length=:math:`m`)."
+    item_index_: pd.Index
+    "Items in the model (length=:math:`n`)."
+    user_features_: M
+    "The :math:`m \\times k` user-feature matrix."
+    item_features_: M
+    "The :math:`m \\times k` user-feature matrix."
 
     @property
     def n_features(self):
@@ -44,7 +54,7 @@ class MFPredictor(Predictor):
         "The number of items."
         return len(self.item_index_)
 
-    def lookup_user(self, user):
+    def lookup_user(self, user) -> int:
         """
         Look up the index for a user.
 
@@ -55,7 +65,9 @@ class MFPredictor(Predictor):
             int: the user index.
         """
         try:
-            return self.user_index_.get_loc(user)
+            idx = self.user_index_.get_loc(user)
+            assert isinstance(idx, int)  # single user, single index
+            return idx
         except KeyError:
             return -1
 

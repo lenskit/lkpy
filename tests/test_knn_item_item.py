@@ -18,7 +18,7 @@ from scipy import linalg as la
 import pytest
 from pytest import approx, fixture, mark
 
-import lenskit.algorithms.item_knn as knn
+import lenskit.algorithms.knn.item as knn
 import lenskit.util.test as lktu
 from lenskit import ConfigWarning, DataWarning, batch
 from lenskit.algorithms import Recommender

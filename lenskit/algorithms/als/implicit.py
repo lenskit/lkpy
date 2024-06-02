@@ -29,10 +29,10 @@ _log = logging.getLogger(__name__)
 class ImplicitMF(ALSBase):
     """
     Implicit matrix factorization trained with alternating least squares
-    :cite:p:`Hu2008-li`.  This algorithm outputs 'predictions', but they are not
-    on a meaningful scale.  If its input data contains ``rating`` values, these
-    will be used as the 'confidence' values; otherwise, confidence will be 1 for
-    every rated item.
+    :cite:p:`hu:implicit-mf`.  This algorithm outputs
+    'predictions', but they are not on a meaningful scale.  If its input data
+    contains ``rating`` values, these will be used as the 'confidence' values;
+    otherwise, confidence will be 1 for every rated item.
 
     See the base class :class:`.MFPredictor` for documentation on the estimated
     parameters you can extract from a trained model.
@@ -63,16 +63,14 @@ class ImplicitMF(ALSBase):
             The regularization factor
         weight:
             The scaling weight for positive samples (:math:`\\alpha` in
-            :cite:p:`Hu2008-li`).
+            :cite:p:`hu:implicit-mf`).
         use_ratings:
             Whether to use the `rating` column, if present.  Defaults to
             ``False``; when ``True``, the values from the ``rating`` column are
             used, and multipled by ``weight``; if ``False``, ImplicitMF treats
             every rated user-item pair as having a rating of 1.
-
         rng_spec:
-            Random number generator or state (see
-            :func:`lenskit.util.random.rng`).
+            Random number generator or state (see :func:`~seedbank.numpy_rng`).
         progress: a :func:`tqdm.tqdm`-compatible progress bar function
     """
 

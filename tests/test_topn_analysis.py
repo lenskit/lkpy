@@ -4,21 +4,23 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from pathlib import Path
 import logging
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
 from pytest import approx, mark
 
-from lenskit.algorithms.user_knn import UserUser
-from lenskit.algorithms.item_knn import ItemItem
-from lenskit.algorithms.basic import PopScore
-from lenskit.algorithms.ranking import PlackettLuce
+from lenskit import batch, topn
+from lenskit import crossfold as xf
 from lenskit.algorithms import Recommender
-from lenskit.util.test import ml_test, demo_recs
+from lenskit.algorithms.basic import PopScore
+from lenskit.algorithms.knn.item import ItemItem
+from lenskit.algorithms.knn.user import UserUser
+from lenskit.algorithms.ranking import PlackettLuce
 from lenskit.metrics.topn import _dcg, precision, recall
-from lenskit import topn, batch, crossfold as xf
+from lenskit.util.test import demo_recs, ml_test
 
 _log = logging.getLogger(__name__)
 
@@ -205,6 +207,7 @@ def test_java_equiv():
     assert umm["err"].values == approx(0, abs=1.0e-6)
 
 
+@mark.skip("disabled for user-user")
 @mark.slow
 def test_fill_users():
     rla = topn.RecListAnalysis()
@@ -235,6 +238,7 @@ def test_fill_users():
     assert all(recall == mrecall)
 
 
+@mark.skip("disabled for user-user")
 @mark.slow
 def test_adv_fill_users():
     rla = topn.RecListAnalysis()

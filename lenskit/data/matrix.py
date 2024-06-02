@@ -8,6 +8,7 @@
 Data manipulation routines.
 """
 
+# pyright: basic
 from __future__ import annotations
 
 import logging
@@ -17,7 +18,7 @@ import pandas as pd
 import scipy.sparse as sps
 import torch as t
 from csr import CSR
-from typing_extensions import Generic, Literal, NamedTuple, TypeVar, overload
+from typing_extensions import Any, Generic, Literal, NamedTuple, Optional, TypeVar, overload
 
 _log = logging.getLogger(__name__)
 
@@ -36,8 +37,8 @@ class RatingMatrix(NamedTuple, Generic[M]):
     """
 
     matrix: M
-    users: pd.Index
-    items: pd.Index
+    users: pd.Index[Any]
+    items: pd.Index[Any]
 
 
 class DimStats(NamedTuple):
@@ -61,41 +62,41 @@ class DimStats(NamedTuple):
 def sparse_ratings(
     ratings: pd.DataFrame,
     *,
-    users=None,
-    items=None,
+    users: Optional[pd.Index[Any]] = None,
+    items: Optional[pd.Index[Any]] = None,
 ) -> RatingMatrix[CSR]: ...
 @overload
 def sparse_ratings(
     ratings: pd.DataFrame,
     scipy: Literal[True] | Literal["csr"],
     *,
-    users=None,
-    items=None,
+    users: Optional[pd.Index[Any]] = None,
+    items: Optional[pd.Index[Any]] = None,
 ) -> RatingMatrix[sps.csr_matrix]: ...
 @overload
 def sparse_ratings(
     ratings: pd.DataFrame,
     scipy: Literal["coo"],
     *,
-    users=None,
-    items=None,
+    users: Optional[pd.Index[Any]] = None,
+    items: Optional[pd.Index[Any]] = None,
 ) -> RatingMatrix[sps.coo_matrix]: ...
 @overload
 def sparse_ratings(
     ratings: pd.DataFrame,
     *,
     torch: Literal[True],
-    users=None,
-    items=None,
+    users: Optional[pd.Index[Any]] = None,
+    items: Optional[pd.Index[Any]] = None,
 ) -> RatingMatrix[t.Tensor]: ...
 def sparse_ratings(
     ratings: pd.DataFrame,
     scipy: bool | Literal["csr", "coo"] = False,
     *,
     torch: bool = False,
-    users=None,
-    items=None,
-):
+    users: Optional[pd.Index[Any]] = None,
+    items: Optional[pd.Index[Any]] = None,
+) -> RatingMatrix[Any]:
     """
     Convert a rating table to a sparse matrix of ratings.
 
@@ -167,3 +168,53 @@ def sparse_row_stats(matrix: t.Tensor) -> DimStats:
     means = sums / counts
 
     return DimStats(n, n_other, counts, sums, means)
+
+
+@overload
+def normalize_sparse_rows(
+    matrix: t.Tensor, method: Literal["center"], inplace: bool = False
+) -> tuple[t.Tensor, t.Tensor]: ...
+@overload
+def normalize_sparse_rows(
+    matrix: t.Tensor, method: Literal["unit"], inplace: bool = False
+) -> tuple[t.Tensor, t.Tensor]: ...
+def normalize_sparse_rows(
+    matrix: t.Tensor, method: str, inplace: bool = False
+) -> tuple[t.Tensor, t.Tensor]:
+    """
+    Normalize the rows of a sparse matrix.
+    """
+    match method:
+        case "unit":
+            return _nsr_unit(matrix)
+        case "center":
+            return _nsr_mean_center(matrix)
+        case _:
+            raise ValueError(f"unsupported normalization method {method}")
+
+
+def _nsr_mean_center(matrix: t.Tensor) -> tuple[t.Tensor, t.Tensor]:
+    stats = sparse_row_stats(matrix)
+    return t.sparse_csr_tensor(
+        crow_indices=matrix.crow_indices(),
+        col_indices=matrix.col_indices(),
+        values=matrix.values() - t.repeat_interleave(stats.means, stats.counts),
+        size=matrix.shape,
+    ), stats.means
+
+
+def _nsr_unit(matrix: t.Tensor) -> tuple[t.Tensor, t.Tensor]:
+    sqmat = t.sparse_csr_tensor(
+        crow_indices=matrix.crow_indices(),
+        col_indices=matrix.col_indices(),
+        values=matrix.values().square(),
+    )
+    norms = sqmat.sum(dim=1, keepdim=True).to_dense().reshape(matrix.shape[0])
+    norms.sqrt_()
+    recip_norms = t.where(norms > 0, t.reciprocal(norms), 0.0)
+    return t.sparse_csr_tensor(
+        crow_indices=matrix.crow_indices(),
+        col_indices=matrix.col_indices(),
+        values=matrix.values() * t.repeat_interleave(recip_norms, matrix.crow_indices().diff()),
+        size=matrix.shape,
+    ), norms

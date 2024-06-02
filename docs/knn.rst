@@ -1,6 +1,8 @@
 k-NN Collaborative Filtering
 ============================
 
+.. module:: lenskit.algorithms.knn
+
 LKPY provides user- and item-based classical k-NN collaborative Filtering
 implementations.  These lightly-configurable implementations are intended
 to capture the behavior of the Java-based LensKit implementations to provide
@@ -34,9 +36,8 @@ rating values) with additional parameters to the constructor.
 Item-based k-NN
 ---------------
 
-.. module:: lenskit.algorithms.item_knn
-
-This is LensKit's item-based k-NN model, based on the description by :cite:t:`Deshpande2004-ht`.
+This is LensKit's item-based k-NN model, based on the description by
+:cite:t:`deshpande:iknn`.
 
 .. autoclass:: ItemItem
     :members:
@@ -44,8 +45,6 @@ This is LensKit's item-based k-NN model, based on the description by :cite:t:`De
 
 User-based k-NN
 ---------------
-
-.. module:: lenskit.algorithms.user_knn
 
 .. autoclass:: UserUser
    :members:

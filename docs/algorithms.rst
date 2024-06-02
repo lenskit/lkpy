@@ -5,7 +5,7 @@ Algorithm Summary
 
 LKPY provides general algorithmic concepts, along with implementations of several
 algorithms.  These algorithm interfaces are based on the SciKit design patterns
-:cite:p:`Buitinck2013-ks`, adapted for Pandas-based data structures.
+:cite:p:`sklearn-api`, adapted for Pandas-based data structures.
 
 
 All algorithms implement the `standard interfaces`_.
@@ -29,8 +29,8 @@ k-NN Algorithms
 
 .. autosummary::
 
-    user_knn.UserUser
-    item_knn.ItemItem
+    knn.UserUser
+    knn.ItemItem
 
 Matrix Factorization
 ~~~~~~~~~~~~~~~~~~~~

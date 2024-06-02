@@ -17,7 +17,7 @@ If you use Lenskit in published research, cite [LKPY]_.
     DOI:`10.1145/3340531.3412778 <https://dx.doi.org/10.1145/3340531.3412778>`_.
     arXiv:`1809.03125 <https://arxiv.org/abs/1809.03125>`_ [cs.IR].
 
-Throughout this documentation, we use the notation of :cite:t:`Ekstrand2019-dh`.
+Throughout this documentation, we use the notation of :cite:t:`ekstrand:notation`.
 
 Resources
 ---------

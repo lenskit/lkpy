@@ -25,7 +25,7 @@ import sys
 import pandas as pd
 from docopt import docopt
 
-from lenskit.algorithms.item_knn import ItemItem
+from lenskit.algorithms.knn.item import ItemItem
 from lenskit.datasets import MovieLens
 
 _log = logging.getLogger("dump-iknn")

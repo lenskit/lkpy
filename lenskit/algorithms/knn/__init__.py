@@ -4,8 +4,11 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from typing import Literal, TypeAlias
+"""
+k-NN recommender models.
+"""
 
-from .matrix import RatingMatrix, sparse_ratings  # noqa: F401
+from .item import ItemItem
+from .user import UserUser
 
-FeedbackType: TypeAlias = Literal["explicit", "implicit"]
+__all__ = ["ItemItem", "UserUser"]

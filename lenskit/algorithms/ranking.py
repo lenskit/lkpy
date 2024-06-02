@@ -28,7 +28,7 @@ class TopN(Recommender, Predictor):
         does not need to be fit.  This can be useful when reusing a predictor in other
         contexts::
 
-            pred = item_knn.ItemItem(20, feedback='implicit')
+            pred = knn.ItemItem(20, feedback='implicit')
             select = UnratedItemCandidateSelector()
             topn = TopN(pred, select)
 
@@ -104,17 +104,18 @@ class TopN(Recommender, Predictor):
 class PlackettLuce(Recommender):
     """
     Re-ranking algorithm that uses Plackett-Luce sampling on underlying scores.
-    This uses the Gumbel trick :cite:p:`Grover2019-nc` to efficiently simulate from a Plackett-Luce
-    distribution.
+    This uses the Gumbel trick :cite:p:`groverStochasticOptimizationSorting2019`
+    to efficiently simulate from a Plackett-Luce distribution.
 
     Args:
         predictor(Predictor):
             A predictor that can score candidate items.
         selector(CandidateSelector):
-            The candidate selector.
-            If ``None``, defaults to :py:class:`UnratedItemsCandidateSelector`.
+            The candidate selector. If ``None``, defaults to
+            :py:class:`UnratedItemsCandidateSelector`.
         rng_spec:
-            A random number generator specification; see :py:func:`derivable_rng`.
+            A random number generator specification; see
+            :py:func:`derivable_rng`.
     """
 
     def __init__(self, predictor, selector=None, *, rng_spec=None):

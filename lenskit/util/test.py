@@ -12,7 +12,13 @@ import os
 import os.path
 from contextlib import contextmanager
 
+import numpy as np
+import torch
+
+import hypothesis.extra.numpy as nph
+import hypothesis.strategies as st
 import pytest
+from hypothesis import assume
 
 from lenskit.algorithms.basic import PopScore
 from lenskit.algorithms.ranking import PlackettLuce
@@ -59,6 +65,53 @@ def set_env_var(var, val):
             os.environ[var] = old_val
         elif val is not None:
             del os.environ[var]
+
+
+@st.composite
+def sparse_tensors(draw, shape=None, layout="csr"):
+    if shape is None:
+        shape = st.tuples(st.integers(1, 100), st.integers(1, 100))
+
+    if isinstance(shape, st.SearchStrategy):
+        shape = draw(shape)
+
+    if not isinstance(shape, tuple):
+        shape = shape, shape
+    rows, cols = shape
+    if isinstance(rows, st.SearchStrategy):
+        rows = draw(rows)
+    if isinstance(cols, st.SearchStrategy):
+        cols = draw(cols)
+
+    if isinstance(layout, list):
+        layout = st.sampled_from(layout)
+    if isinstance(layout, st.SearchStrategy):
+        layout = draw(layout)
+
+    total = rows * cols
+
+    mask = draw(nph.arrays(np.bool_, total))
+    assume(np.any(mask))
+    mask = mask.reshape(rows, cols)
+
+    vals = st.floats(-10e6, 10e6, allow_nan=False, allow_infinity=False, width=32)
+    matrix = draw(
+        nph.arrays(np.float32, (rows, cols), elements=vals),
+    )
+
+    # fill in the zeros
+    matrix[mask] = 0
+
+    tensor = torch.from_numpy(matrix)
+    match layout:
+        case "csr":
+            return tensor.to_sparse_csr()
+        case "csc":
+            return tensor.to_sparse_csc()
+        case "coo":
+            return tensor.to_sparse_coo()
+        case _:
+            raise ValueError(f"invalid layout {layout}")
 
 
 jit_enabled = True

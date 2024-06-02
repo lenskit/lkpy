@@ -13,12 +13,14 @@ Common Support
 
 The :py:mod:`mf_common` module contains common support code for matrix factorization
 algorithms.  This class, :py:class:`MFPredictor`,
-defines the parameters that are estimated during the :py:meth:`.Algorithm.fit` 
+defines the parameters that are estimated during the :py:meth:`.Algorithm.fit`
 process on common matrix factorization algorithms.
 
 .. autoclass:: MFPredictor
    :show-inheritance:
    :members:
+
+.. autodata:: M
 
 Alternating Least Squares
 -------------------------

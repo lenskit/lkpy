@@ -24,10 +24,10 @@ def _mul_op(m, v):
     return m @ v
 
 
-@mark.parametrize("pkg,n_jobs", itertools.product(["numpy", "torch"], [None, 1, 2, 8]))
+@mark.parametrize("pkg,n_jobs", itertools.product(["numpy", "torch"], [None, 1, 2, 4]))
 def test_invoke_matrix(pkg, n_jobs, rng: np.random.Generator):
-    matrix = rng.normal(size=(100, 100))
-    vectors = [rng.normal(size=100) for i in range(100)]
+    matrix = rng.normal(size=(1000, 1000))
+    vectors = [rng.normal(size=1000) for i in range(100)]
     if pkg == "torch":
         matrix = torch.from_numpy(matrix)
         vectors = [torch.from_numpy(v) for v in vectors]
