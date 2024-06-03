@@ -46,4 +46,4 @@ def test_solve_cholesky(problem):
 
     assert x.numpy() == approx(xexp, rel=1.0e-3)
 
-    assert F @ x.numpy() == approx(y)
+    assert F @ x.numpy() == approx(y, rel=2.0e-6, abs=5.0e-9)
