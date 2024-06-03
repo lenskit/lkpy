@@ -67,6 +67,9 @@ deps = ["just==1.*", "tbb"]
 extras = ["test", "sklearn", "dev"]
 deps = ["just==1.*", "tbb"]
 
+[tool.coverage.run]
+relative_files = true
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"
