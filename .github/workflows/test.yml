@@ -83,7 +83,7 @@ jobs:
 
       - name: Create Conda environment file
         run: |
-          pipx run pyproject2conda yaml -p 3.10 -e test -e demo -e dev -o environment.yml
+          pipx run ./utils/conda-tool.py --env -o environment.yml -p 3.10 pyproject.toml demo-requirements.txt test-requirements.txt
 
       - name: 👢 Set up Conda environment
         uses: mamba-org/setup-micromamba@v1

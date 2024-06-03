@@ -4,7 +4,7 @@ channels:
 - nodefaults
 dependencies:
 - python =3.10
-- pandas >=1.5,<3
+- pandas <3,>=1.5
 - numpy >=1.23
 - scipy >=1.9.0
 - numba <0.59,>=0.56
@@ -21,8 +21,11 @@ dependencies:
 - pyarrow >=15
 - sphinx-autobuild >=2021
 - docopt >=0.6
+- tomlkit >=0.12
+- pyyaml ==6.*
+- packaging >=24.0
 - tqdm >=4
-- pandas-stubs >=1.5,<3
+- pandas-stubs <3,>=1.5
 - pytest ==7.*
 - pytest-doctestplus ==1.*
 - pytest-cov >=2.12

@@ -17,6 +17,10 @@ Options:
     --env           write a Conda environment specification
 """
 
+# /// script
+# dependencies = ["tomlkit>=0.12", "pyyaml==6.*", "packaging>=24.0", "docopt>=0.6"]
+# ///
+
 import logging
 import re
 import sys
