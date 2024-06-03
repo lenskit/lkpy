@@ -28,7 +28,7 @@ jobs:
 
       - name: 🛠️ Install development tools and dependencies
         run: |
-          pip install -e .[dev]
+          pip install -r dev-requirements.txt
 
       - name: 🪮 Check source code formatting
         id: format
@@ -73,4 +73,4 @@ jobs:
           LINT_PASSED: ${{ steps.lint.outputs.passed }}
           LINT_REQUIRED: False
 
-      
+
