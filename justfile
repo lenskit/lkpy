@@ -23,7 +23,7 @@ install-editable:
 
 # set up for development in non-conda environments
 install-dev:
-    pip install -e '.[dev,test,doc,sklearn]'
+    pip install -r dev-requirements.txt -e . --all-extras
 
 # set up a conda environment for development
 setup-conda-env version="3.11" env="dev":
