@@ -31,7 +31,7 @@ from packaging.requirements import Requirement
 
 _log = logging.getLogger("conda-tool")
 
-CONDA_CHANNELS = ["conda-forge", "pytorch", "nodefaults"]
+CONDA_CHANNELS = ["pytorch", "conda-forge", "nodefaults"]
 MKL_DEP = ["libblas=*=*mkl*"]
 ALL_PYTHONS = ["3.10", "3.11"]
 ALL_VARIANTS = {
