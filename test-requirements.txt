@@ -5,3 +5,4 @@ pytest-benchmark ==4.*
 pytest-repeat >=0.9
 coverage >= 5
 hypothesis >= 6
+scikit-learn >=1.1
