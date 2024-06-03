@@ -172,7 +172,7 @@ jobs:
           PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
       - name: Set up Python deps
-        run: uv pip install --python "$PYTHON" -e '.[test]'
+        run: uv pip install --python "$PYTHON" -r test-requirements.txt -e .
         env:
           PYTHON: ${{ steps.pyinstall.outputs.python-path }}
 
