@@ -3,15 +3,21 @@
 Generate and manage Conda environments.
 
 Usage:
-    conda-tool.py [options] --env [-o OUTFILE] REQFILE...
-    conda-tool.py [options] --env --all
+    conda-tool.py [-v] --env [-o FILE | -n NAME]
+        [--micromamba]
+        [-p VER] [--mkl] [--cuda] [-e EXTRA]... REQFILE...
 
 Options:
     -v, --verbose   enable verbose logging
     -o FILE, --output=FILE
                     write output to FILE
+    -n NAME, --name=NAME
+                    create environment NAME
     -p VER, --python-version=VER
                     use Python version VER
+    -e EXTRA, --extra=EXTRA
+                    include extra EXTRA ('all' to include all extras)
+    --micromamba    use micromamba
     --mkl           enable MKL BLAS
     --cuda          enable CUDA PyTorch
     --env           write a Conda environment specification
@@ -22,9 +28,13 @@ Options:
 # ///
 
 import logging
+import os
 import re
+import shutil
+import subprocess as sp
 import sys
 from pathlib import Path
+from tempfile import mkstemp
 from typing import Any, Generator, Iterable, NamedTuple, Optional
 
 import tomlkit
@@ -83,14 +93,25 @@ def main():
     init_logging()
 
     if options["--env"]:
-        if options["--all"]:
-            for py in ALL_PYTHONS:
-                for var, files in ALL_VARIANTS.items():
-                    fn = f"envs/lenskit-py{py}-{var}.yaml"
-                    reqs = list(load_reqfiles(files))
-                    make_env_file(reqs, fn, python=py)
+        specs = list(load_reqfiles(options["REQFILE"]))
+        env = make_env_object(specs, options["--python-version"])
+        if options["--name"]:
+            tmpfd, tmpf = mkstemp(suffix="-env.yml", prefix="lkpy-")
+            try:
+                _log.debug("saving environment to %s", tmpf)
+                with os.fdopen(tmpfd, "wt") as tf:
+                    yaml.safe_dump(env, tf)
+                _log.debug("creating environment")
+                conda = find_conda_executable()
+                sp.check_call([conda, "env", "create", "-n", options["--name"], "-f", tmpf])
+            finally:
+                os.unlink(tmpf)
+        elif options["--output"]:
+            _log.info("writing to file %s", options["--output"])
+            with open(options["--output"], "wt") as f:
+                yaml.safe_dump(env, f)
         else:
-            make_env_file(list(load_reqfiles(options["REQFILE"])), options["--output"])
+            yaml.safe_dump(env, sys.stdout)
 
 
 def init_logging():
@@ -118,13 +139,32 @@ def load_req_toml(file: Path) -> list[ParsedReq]:
     assert isinstance(proj, tomlkit.items.Table)
     deps = proj["dependencies"]
     assert isinstance(deps, tomlkit.items.Array)
-    dtext = deps.as_string()
-    lines = [
-        re.sub(r'^\s+"(.*)",', "\\1", line)
-        for line in dtext.splitlines()
-        if re.match(r'^\s*"', line)
-    ]
+
+    lines = list(array_lines(deps))
+
+    extras = options["--extra"]
+    edeps = proj["optional-dependencies"]
+    assert isinstance(edeps, tomlkit.items.Table)
+    for e in edeps.keys():
+        _log.debug("checking extra %s", e)
+        if "all" in extras or e in extras:
+            _log.info("including extra %s", e)
+            earr = edeps[e]
+            assert isinstance(earr, tomlkit.items.Array)
+            lines += array_lines(earr)
+
     return list(parse_requirements(lines, file))
+
+
+def array_lines(tbl: tomlkit.items.Array):
+    for d in tbl._value:
+        if not d.value:
+            continue
+
+        text = str(d.value)
+        if d.comment:
+            text += str(d.comment)
+        yield text
 
 
 def load_req_txt(file: Path) -> list[ParsedReq]:
@@ -179,15 +219,22 @@ def parse_conda_spec(text: str) -> tuple[str, Optional[str]]:
         return text.strip(), None
 
 
-def make_env_file(specs: list[ParsedReq], outfile: str | None, python=None):
-    env = make_env_object(specs, python)
+def find_conda_executable():
+    if options["--micromamba"]:
+        path = shutil.which("micromamba")
+        if not path:
+            _log.error("cannot find micromamba")
+            sys.exit(3)
+        return path
 
-    if outfile:
-        _log.info("writing %s", outfile)
-        with open(outfile, "wt") as outf:
-            yaml.safe_dump(env, outf, indent=2)
-    else:
-        yaml.safe_dump(env, sys.stdout, indent=2)
+    path = shutil.which("mamba")
+    if path is None:
+        path = shutil.which("conda")
+    if path is None:
+        _log.error("cannot find mamba or conda")
+        sys.exit(3)
+
+    return path
 
 
 def make_env_object(specs: list[ParsedReq], python=None) -> dict[str, Any]:
