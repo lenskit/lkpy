@@ -35,11 +35,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: ⤵️ Generate Conda environment file
+        run: |
+          pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all pyproject.toml dev-requirements.txt
+
       - name: 👢 Set up Conda environment
         uses: mamba-org/setup-micromamba@v1
         id: setup
         with:
-          environment-file: envs/lenskit-py${{matrix.python}}-ci.yaml
+          environment-file: ci-environment.yml
           environment-name: lkpy
           cache-environment: true
           init-shell: bash
