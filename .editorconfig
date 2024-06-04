@@ -10,6 +10,9 @@ indent_style = space
 [{*.json,*.yml,*.yaml,*.yml.jinja}]
 indent_size = 2
 
+[*.jsonnet]
+indent_size = 2
+
 [*.toml]
 indent_size = 2
 
