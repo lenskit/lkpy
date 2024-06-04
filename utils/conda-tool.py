@@ -24,8 +24,10 @@ Options:
 """
 
 # /// script
+# requires-python = ">= 3.10"
 # dependencies = ["tomlkit>=0.12", "pyyaml==6.*", "packaging>=24.0", "docopt>=0.6"]
 # ///
+from __future__ import annotations
 
 import logging
 import os
