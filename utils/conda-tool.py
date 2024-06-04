@@ -27,6 +27,7 @@ Options:
 # requires-python = ">= 3.10"
 # dependencies = ["tomlkit>=0.12", "pyyaml==6.*", "packaging>=24.0", "docopt>=0.6"]
 # ///
+# pyright: strict, reportPrivateUsage=false
 from __future__ import annotations
 
 import logging
@@ -37,7 +38,7 @@ import subprocess as sp
 import sys
 from pathlib import Path
 from tempfile import mkstemp
-from typing import Any, Generator, Iterable, NamedTuple, Optional
+from typing import Any, Generator, Iterable, Iterator, NamedTuple, Optional
 
 import tomlkit
 import tomlkit.items
@@ -63,7 +64,7 @@ class ParsedReq(NamedTuple):
     conda: Optional[tuple[str, Optional[str]]]
     force_pip: bool
 
-    def conda_spec(self):
+    def conda_spec(self) -> str | None:
         name = None
         ver = None
         if self.requirement:
@@ -73,7 +74,7 @@ class ParsedReq(NamedTuple):
 
         if self.requirement:
             pip_spec = self.requirement.specifier
-            if ver is None and pip_spec is not None:
+            if ver is None:
                 ver = ",".join(str(s) for s in pip_spec._specs)
 
         if ver:
@@ -121,7 +122,7 @@ def init_logging():
     logging.basicConfig(stream=sys.stderr, level=level)
 
 
-def load_reqfiles(files: Iterable[Path | str]):
+def load_reqfiles(files: Iterable[Path | str]) -> Iterator[ParsedReq]:
     for file in files:
         yield from load_requirements(Path(file))
 
@@ -147,7 +148,8 @@ def load_req_toml(file: Path) -> list[ParsedReq]:
     extras = options["--extra"]
     edeps = proj["optional-dependencies"]
     assert isinstance(edeps, tomlkit.items.Table)
-    for e in edeps.keys():
+    for e in edeps.keys():  # type: ignore
+        assert isinstance(e, str)
         _log.debug("checking extra %s", e)
         if "all" in extras or e in extras:
             _log.info("including extra %s", e)
@@ -180,6 +182,7 @@ def parse_requirements(text: str | list[str], path: Path) -> Generator[ParsedReq
         text = text.splitlines()
     for line in text:
         line = line.strip()
+        req = None
 
         # look for include line
         r_m = re.match(r"^\s*-r\s+(.*)", line)
@@ -239,10 +242,10 @@ def find_conda_executable():
     return path
 
 
-def make_env_object(specs: list[ParsedReq], python=None) -> dict[str, Any]:
+def make_env_object(specs: list[ParsedReq], python: Optional[str] = None) -> dict[str, Any]:
     _log.info("creating environment spec for %d requirements", len(specs))
-    deps = []
-    pip_deps = []
+    deps: list[str | dict[str, list[str]]] = []
+    pip_deps: list[str] = []
     if python is None:
         python = options["--python-version"]
     if python:
@@ -252,10 +255,12 @@ def make_env_object(specs: list[ParsedReq], python=None) -> dict[str, Any]:
         if spec.force_pip:
             pip_deps.append(str(spec.requirement))
         else:
-            deps.append(spec.conda_spec())
+            cs = spec.conda_spec()
+            assert cs is not None
+            deps.append(cs)
 
     if options["--mkl"]:
-        deps.append(MKL_DEP)
+        deps += MKL_DEP
 
     if pip_deps:
         deps.append("pip")
