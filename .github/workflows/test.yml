@@ -212,7 +212,7 @@ jobs:
         fetch-depth: 0
     - name: 👢 Generate Conda environment file
       run: |
-        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all pyproject.toml test-requirements.txt
+        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all pyproject.toml dev-requirements.txt
     - id: setup
       name: 📦 Set up Conda environment
       uses: mamba-org/setup-micromamba@v1

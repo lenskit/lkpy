@@ -291,7 +291,9 @@ def test_job(options: JobOptions) -> GHJob:
 
 
 def test_demo_job() -> GHJob:
-    opts = JobOptions("examples", "Demos, Examples, and Docs", env="conda")
+    opts = JobOptions(
+        "examples", "Demos, Examples, and Docs", env="conda", req_file="dev-requirements.txt"
+    )
     return {
         "name": opts.name,
         "runs-on": opts.vm_platform,
