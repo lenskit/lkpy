@@ -51,10 +51,6 @@ docs:
 preview-docs:
     sphinx-autobuild --watch lenskit docs build/doc
 
-# update environment specifications
-update-envs:
-    pyproject2conda project
-
 # update source file headers
 update-headers:
     unbehead
