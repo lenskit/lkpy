@@ -18,8 +18,8 @@ classifiers = [
   "Intended Audience :: Science/Research",
 ]
 requires-python = ">= 3.10"
-readme = "README.md"
-license = { file = "LICENSE.md" }
+readme = "../README.md"
+license = { file = "../LICENSE.md" }
 dynamic = ["version"]
 dependencies = [
   "pandas >=1.5, <3",
@@ -49,74 +49,3 @@ include = ["lenskit*"]
 
 [tool.setuptools_scm]
 version_scheme = "release-branch-semver"
-
-[tool.coverage.run]
-relative_files = true
-
-[tool.ruff]
-line-length = 100
-target-version = "py310"
-exclude = [
-  ".git",
-  "__pycache__",
-  "build",
-  "dist",
-]
-
-[tool.ruff.lint]
-select = ["E", "F", "I"]
-
-[tool.ruff.lint.isort]
-section-order = [
-  "future",
-  "standard-library",
-  "third-party",
-  "testing",
-  "first-party",
-  "local-folder",
-]
-
-[tool.ruff.lint.isort.sections]
-testing = ["pytest", "hypothesis"]
-
-[tool.mypy]
-exclude = "^docs/"
-
-[tool.pyright]
-typeCheckingMode = "basic"
-exclude = [
-  "docs/*",
-]
-reportMissingImports = true
-reportMissingTypeStubs = false
-
-[tool.pytest.ini_options]
-log_level = "INFO"
-log_format = "[%(levelname)7s] [%(processName)s] %(name)s %(message)s"
-log_cli_format = "[%(levelname)7s] %(asctime)s [%(processName)s] %(name)s %(message)s"
-log_file_format = "[%(levelname)7s] %(asctime)s [%(processName)s] %(name)s %(message)s"
-log_file_level = "DEBUG"
-addopts = "--benchmark-skip"
-testpaths = [
-  "tests",
-  "lenskit",
-  "docs",
-]
-doctest_plus = true
-doctest_subpackage_requires = [
-  "lenskit/algorithms/svd* = scikit-learn",
-]
-filterwarnings = [
-  "ignore:::pyarrow[.*]",
-  "ignore:.*matrix subclass.*:PendingDeprecationWarning",
-  "ignore:.*np.asscalar.*:DeprecationWarning",
-  "ignore:.*deprecated create function*:DeprecationWarning",
-  "ignore:.*importing the ABCs*:DeprecationWarning",
-  "ignore:.*use_ratings option.*:UserWarning",
-  "ignore:.*tensor support is in beta state.*:UserWarning",
-]
-markers = [
-  "eval: mark the test as running the evaluator over custom data",
-  "slow: mark the test as taking a larger-than-usual amount of time",
-  "realdata: mark the test as using a real data set like ML-20M",
-]
