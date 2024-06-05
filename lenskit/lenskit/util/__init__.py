@@ -12,7 +12,8 @@ import logging
 from copy import deepcopy
 from textwrap import dedent
 
-from ..algorithms import Algorithm
+from lenskit.algorithms import Algorithm
+
 from .log import log_to_notebook, log_to_stderr  # noqa: F401
 from .random import derivable_rng
 from .timing import Stopwatch  # noqa: F401

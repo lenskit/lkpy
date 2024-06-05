@@ -19,9 +19,10 @@ import pandas as pd
 import torch
 from typing_extensions import Any, NamedTuple, Optional, Self
 
-from lenskit import DataWarning, util
+from lenskit import util
 from lenskit.data import FeedbackType, sparse_ratings
 from lenskit.data.matrix import normalize_sparse_rows, safe_spmv
+from lenskit.diagnostics import DataWarning
 
 from .. import Predictor
 

@@ -20,9 +20,10 @@ import numpy as np
 import pandas as pd
 import torch
 
-from lenskit import ConfigWarning, DataWarning, util
+from lenskit import util
 from lenskit.data import FeedbackType
 from lenskit.data.matrix import normalize_sparse_rows, safe_spmv, sparse_ratings
+from lenskit.diagnostics import ConfigWarning, DataWarning
 from lenskit.parallel import ensure_parallel_init
 from lenskit.util.logging import pbh_update, progress_handle
 

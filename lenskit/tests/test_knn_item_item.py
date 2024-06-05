@@ -20,10 +20,11 @@ from pytest import approx, fixture, mark
 
 import lenskit.algorithms.knn.item as knn
 import lenskit.util.test as lktu
-from lenskit import ConfigWarning, DataWarning, batch
+from lenskit import batch
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import Fallback
 from lenskit.algorithms.bias import Bias
+from lenskit.diagnostics import ConfigWarning, DataWarning
 from lenskit.parallel import invoker
 from lenskit.util import Stopwatch, clone
 

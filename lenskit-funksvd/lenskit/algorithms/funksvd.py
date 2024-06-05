@@ -21,9 +21,9 @@ try:
 except ImportError:
     from numba import jitclass
 
-from .. import util
-from .bias import Bias
-from .mf_common import MFPredictor
+from lenskit import util
+from lenskit.algorithms.bias import Bias
+from lenskit.algorithms.mf_common import MFPredictor
 
 _logger = logging.getLogger(__name__)
 
