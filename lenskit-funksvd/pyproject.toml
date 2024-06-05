@@ -36,3 +36,4 @@ include = ["lenskit*"]
 
 [tool.setuptools_scm]
 version_scheme = "release-branch-semver"
+root = ".."
