@@ -304,6 +304,7 @@ def test_demo_job() -> GHJob:
     return {
         "name": opts.name,
         "runs-on": opts.vm_platform,
+        "defaults": {"run": {"shell": "bash -el {0}"}},
         "steps": [step_checkout(opts)]
         + step_setup_conda(opts)
         + [

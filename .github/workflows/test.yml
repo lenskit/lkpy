@@ -90,6 +90,7 @@ jobs:
       id: install-deps
       run: |
         uv pip install --python $PYTHON -r test-requirements.txt -e .
+      shell: bash
       env:
         PYTHON: ${{steps.install-python.outputs.python-path}}
         UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
@@ -132,6 +133,7 @@ jobs:
       id: install-deps
       run: |
         uv pip install --python $PYTHON -r test-requirements.txt -e .
+      shell: bash
       env:
         PYTHON: ${{steps.install-python.outputs.python-path}}
         UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
@@ -177,6 +179,7 @@ jobs:
       id: install-deps
       run: |
         uv pip install --python $PYTHON -r test-requirements.txt -e . --resolution=lowest-direct
+      shell: bash
       env:
         PYTHON: ${{steps.install-python.outputs.python-path}}
         UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
@@ -201,6 +204,9 @@ jobs:
   examples:
     name: Demos, Examples, and Docs
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
     steps:
     - name: 🛒 Checkout
       uses: actions/checkout@v4
