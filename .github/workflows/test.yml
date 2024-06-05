@@ -45,7 +45,6 @@ jobs:
     - name: 🔍 Inspect environment
       run: |
         which -a python
-        which -a python3
         python -V
         numba -s
     - name: 🏃🏻‍➡️ Test LKPY
@@ -98,7 +97,6 @@ jobs:
     - name: 🔍 Inspect environment
       run: |
         which -a python
-        which -a python3
         python -V
         numba -s
     - name: 🏃🏻‍➡️ Test LKPY
@@ -141,7 +139,6 @@ jobs:
     - name: 🔍 Inspect environment
       run: |
         which -a python
-        which -a python3
         python -V
         numba -s
     - name: 🏃🏻‍➡️ Test LKPY
@@ -187,7 +184,6 @@ jobs:
     - name: 🔍 Inspect environment
       run: |
         which -a python
-        which -a python3
         python -V
         numba -s
     - name: 🏃🏻‍➡️ Test LKPY
