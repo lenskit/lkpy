@@ -30,7 +30,7 @@ def bulk_impl(metric):
     return wrap
 
 
-def precision(recs, truth, k=None):
+def precision(recs: pd.DataFrame, truth: pd.DataFrame, k: Optional[int] = None) -> float | None:
     """
     Compute recommendation precision.  This is computed as:
 
@@ -41,6 +41,17 @@ def precision(recs, truth, k=None):
     ``len(recs)`` as the denominator.
 
     This metric has a bulk implementation.
+
+    Args:
+        recs:
+            The recommendation list.  This is expected to have a column ``item``
+            with the recommended item IDs; all other columns are ignored.
+        truth:
+            The user's test data. It is expected to be *indexed* by item ID. If
+            it has a ``rating`` column, that is used as the item gains; otherwise,
+            each item has gain 1. All other columns are ignored.
+        k:
+            The maximum list length to consider.
     """
     if k is not None:
         recs = recs.iloc[:k]
@@ -70,7 +81,7 @@ def _bulk_precision(recs, truth, k=None):
     return gcounts / lcounts
 
 
-def recall(recs, truth, k=None):
+def recall(recs: pd.DataFrame, truth: pd.DataFrame, k: Optional[int] = None) -> float | None:
     """
     Compute recommendation recall.  This is computed as:
 
@@ -78,6 +89,17 @@ def recall(recs, truth, k=None):
         \\frac{|L \\cap I_u^{\\mathrm{test}}|}{\\operatorname{min}\\{|I_u^{\\mathrm{test}}|, k\\}}
 
     This metric has a bulk implementation.
+
+    Args:
+        recs:
+            The recommendation list.  This is expected to have a column ``item``
+            with the recommended item IDs; all other columns are ignored.
+        truth:
+            The user's test data. It is expected to be *indexed* by item ID. If
+            it has a ``rating`` column, that is used as the item gains; otherwise,
+            each item has gain 1. All other columns are ignored.
+        k:
+            The maximum list length to consider.
     """
     nrel = len(truth)
     if nrel == 0:
@@ -113,7 +135,7 @@ def _bulk_recall(recs, truth, k=None):
     return scores["ngood"] / scores["nrel"]
 
 
-def hit(recs, truth, k=None):
+def hit(recs: pd.DataFrame, truth: pd.DataFrame, k: Optional[int] = None) -> float | None:
     """
     Compute whether or not a list is a hit; any list with at least one relevant item in the
     first :math:`k` positions (:math:`L_{\\le k} \\cap I_u^{\\mathrm{test}} \\ne \\emptyset`)
@@ -121,6 +143,17 @@ def hit(recs, truth, k=None):
     lists, this computes the *hit rate* :cite:p:`deshpande:iknn`.
 
     This metric has a bulk implementation.
+
+    Args:
+        recs:
+            The recommendation list.  This is expected to have a column ``item``
+            with the recommended item IDs; all other columns are ignored.
+        truth:
+            The user's test data. It is expected to be *indexed* by item ID. If
+            it has a ``rating`` column, that is used as the item gains; otherwise,
+            each item has gain 1. All other columns are ignored.
+        k:
+            The maximum list length to consider.
     """
 
     if len(truth) == 0:
@@ -163,7 +196,7 @@ def _bulk_hit(recs, truth, k=None):
     return good
 
 
-def recip_rank(recs, truth, k=None):
+def recip_rank(recs: pd.DataFrame, truth: pd.DataFrame, k: Optional[int] = None) -> float | None:
     """
     Compute the reciprocal rank :cite:p:`trec5-confusion` of the first relevant
     item in a list of recommendations. Let :math:`\\kappa` denote the 1-based
@@ -174,6 +207,17 @@ def recip_rank(recs, truth, k=None):
     “reciprocal hit rate”.
 
     This metric has a bulk equivalent.
+
+    Args:
+        recs:
+            The recommendation list.  This is expected to have a column ``item``
+            with the recommended item IDs; all other columns are ignored.
+        truth:
+            The user's test data. It is expected to be *indexed* by item ID. If
+            it has a ``rating`` column, that is used as the item gains; otherwise,
+            each item has gain 1. All other columns are ignored.
+        k:
+            The maximum list length to consider.
     """
     if k is not None:
         recs = recs.iloc[:k]
@@ -205,7 +249,7 @@ def _bulk_rr(recs, truth, k=None):
     return scores
 
 
-def _dcg(scores, discount=np.log2):
+def _dcg(scores: np.ndarray, discount=np.log2):
     """
     Compute the Discounted Cumulative Gain of a series of recommended items with rating scores.
     These should be relevance scores; they can be :math:`{0,1}` for binary relevance data.
@@ -238,7 +282,7 @@ def _fixed_dcg(n, discount=np.log2):
     return np.sum(disc)
 
 
-def dcg(recs, truth, discount=np.log2):
+def dcg(recs: pd.DataFrame, truth: pd.DataFrame, discount=np.log2) -> float | None:
     """
     Compute the **unnormalized** discounted cumulative gain :cite:p:`ndcg`.
 
@@ -253,9 +297,14 @@ def dcg(recs, truth, discount=np.log2):
     truth frame, item ratings are assumed to be 1.
 
     Args:
-        recs: The recommendation list.
-        truth: The user's test data.
-        discount(ufunc):
+        recs:
+            The recommendation list.  This is expected to have a column ``item``
+            with the recommended item IDs; all other columns are ignored.
+        truth:
+            The user's test data. It is expected to be *indexed* by item ID. If
+            it has a ``rating`` column, that is used as the item gains; otherwise,
+            each item has gain 1. All other columns are ignored.
+        discount:
             The rank discount function.  Each item's score will be divided the discount of its rank,
             if the discount is greater than 1.
     """
@@ -275,7 +324,7 @@ def dcg(recs, truth, discount=np.log2):
 
 def ndcg(
     recs: pd.DataFrame, truth: pd.DataFrame, discount: Callable = np.log2, k: Optional[int] = None
-):
+) -> float | None:
     """
     Compute the normalized discounted cumulative gain :cite:p:`ndcg`.
 
@@ -372,7 +421,13 @@ def _bulk_ndcg(recs, truth, discount=np.log2, k=None):
     return dcg["ndcg"]
 
 
-def rbp(recs, truth, k=None, patience=0.5, normalize=False):
+def rbp(
+    recs: pd.DataFrame,
+    truth: pd.DataFrame,
+    k: Optional[int] = None,
+    patience: float = 0.5,
+    normalize: bool = False,
+) -> float | None:
     """
     Evaluate recommendations with rank-biased precision :cite:p:`rbp` with a
     patience parameter :math:`\\gamma`.
@@ -393,15 +448,22 @@ def rbp(recs, truth, k=None, patience=0.5, normalize=False):
     metric will be normalized by the maximum achievable with the provided test
     data.
 
-    Parameters:
-        recs: the recommendation list.
-        truth: the user's truth data.
-        k(int): the maximum recommendation list length.
-        patience(float): the patience parameter :math:`\\gamma`, the probability
-            that the user continues browsing at each point.
-        normalize(bool): whether to normalize the RBP
-            scores; if ``True``, divides the RBP score by the maximum achievable
-            with the test data.
+    Args:
+        recs:
+            The recommendation list.  This is expected to have a column ``item``
+            with the recommended item IDs; all other columns are ignored.
+        truth:
+            The user's test data. It is expected to be *indexed* by item ID. If
+            it has a ``rating`` column, that is used as the item gains;
+            otherwise, each item has gain 1. All other columns are ignored.
+        k:
+            The maximum recommendation list length.
+        patience:
+            The patience parameter :math:`\\gamma`, the probability that the
+            user continues browsing at each point.
+        normalize:
+            Whether to normalize the RBP scores; if ``True``, divides the RBP
+            score by the maximum achievable with the test data (as in nDCG).
     """
     if k is not None and k <= len(recs):
         recs = recs.iloc[:k]
