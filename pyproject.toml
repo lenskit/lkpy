@@ -50,22 +50,8 @@ include = ["lenskit*"]
 [tool.setuptools_scm]
 version_scheme = "release-branch-semver"
 
-# settings for generating conda environments for dev & CI, when needed
-[tool.pyproject2conda]
-channels = ["pytorch", "conda-forge", "nodefaults"]
-python = ["3.10", "3.11"]
-default_envs = ["test", "doc"]
-template_python = "envs/lenskit-py{py_version}-{env}"
-template = "envs/{env}"
-deps = ["tbb", "just"]
-
-[tool.pyproject2conda.envs.dev]
-extras = ["dev", "test", "doc", "demo", "sklearn"]
-deps = ["just==1.*", "tbb"]
-
-[tool.pyproject2conda.envs.ci]
-extras = ["test", "sklearn", "dev"]
-deps = ["just==1.*", "tbb"]
+[tool.coverage.run]
+relative_files = true
 
 [tool.ruff]
 line-length = 100

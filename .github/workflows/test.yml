@@ -1,143 +1,64 @@
 name: Test Suite
-on:
+'on':
   push:
     branches:
-      - main
-  pull_request:
-
-defaults:
-  run:
-    shell: bash -el {0}
-
+    - main
+  pull_request: {}
 concurrency:
   group: test-${{github.ref}}
   cancel-in-progress: true
-
 jobs:
   conda:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}
     timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash -el {0}
     strategy:
       fail-fast: false
       matrix:
         python:
-        - "3.10"
-        - "3.11"
+        - '3.10'
+        - '3.11'
         platform:
+        - ubuntu-latest
         - macos-latest
         - windows-latest
-        - ubuntu-latest
         - macos-13
-
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: 👢 Set up Conda environment
-        uses: mamba-org/setup-micromamba@v1
-        id: setup
-        with:
-          environment-file: envs/lenskit-py${{matrix.python}}-ci.yaml
-          environment-name: lkpy
-          cache-environment: true
-          init-shell: bash
-
-      - name: Inspect environment
-        run: |
-          python -V
-          numba -s
-
-      - name: Test LKPY
-        run: |
-          python -m pytest --cov=lenskit --verbose --log-file=test.log --durations=25
-        env:
-          NUMBA_NUM_THREADS: 4
-          MKL_THREADING_LAYER: sequential
-          OMP_NUM_THREADS: 1
-          OPENBLAS_NUM_THREADS: 1
-
-      - name: Non-JIT test coverage
-        if: runner.os == 'Linux'
-        env:
-          NUMBA_DISABLE_JIT: 1
-          PYTORCH_JIT: 0
-        run: |
-          python -m pytest --cov=lenskit --cov-append -m 'not slow' --log-file=test-nojit.log
-
-      - name: Process test results
-        uses: lenskit/lkbuild/actions/save-test-results@main
-        with:
-          artifact-name: test-conda-${{matrix.platform}}-py${{matrix.python}}
-
-  check-docs:
-    name: Docs, Examples, and Eval
-    timeout-minutes: 30
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Create Conda environment file
-        run: |
-          pipx run ./utils/conda-tool.py --env -o environment.yml -p 3.10 pyproject.toml demo-requirements.txt test-requirements.txt
-
-      - name: 👢 Set up Conda environment
-        uses: mamba-org/setup-micromamba@v1
-        id: setup
-        with:
-          environment-file: environment.yml
-          environment-name: lkpy
-          cache-environment: true
-          init-shell: bash
-
-      - name: Inspect Conda environment
-        run: |
-          echo "Conda environment info"
-          conda info
-          echo "Conda environment package list"
-          conda list
-
-      - name: Cache ML data
-        uses: actions/cache@v2
-        with:
-          path: |
-            data
-            !data/*.zip
-          key: test-mldata-000
-
-      - name: Download ML data
-        run: |
-          python -m lenskit.datasets.fetch ml-100k
-          python -m lenskit.datasets.fetch ml-1m
-          python -m lenskit.datasets.fetch ml-10m
-          python -m lenskit.datasets.fetch ml-20m
-
-      - name: Install for testing
-        run: |
-          pip install --no-deps -e .
-
-      - name: Run Eval Tests
-        run: |
-          python -m pytest --cov=lenskit -m eval --log-file test-eval.log
-          python -m pytest --cov=lenskit --cov-append -m realdata --log-file test-realdata.log
-
-      - name: Validate doc notebooks
-        run: |
-          cp docs/*.ipynb data
-          python -m pytest --nbval-lax --cov=lenskit --cov-append data --log-file test-docs.log
-
-      # - name: Validate Examples
-      #   run: |
-      #     python -m pytest --nbval-lax --cov=lenskit --cov-append examples --log-file test-examples.log
-      - name: Process test results
-        uses: lenskit/lkbuild/actions/save-test-results@main
-        with:
-          artifact-name: test-check-docs
-
+    - name: 🛒 Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: 👢 Generate Conda environment file
+      run: |
+        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all pyproject.toml test-requirements.txt
+    - id: setup
+      name: 📦 Set up Conda environment
+      uses: mamba-org/setup-micromamba@v1
+      with:
+        environment-file: ci-environment.yml
+        environment-name: lkpy
+        cache-environment: true
+        init-shell: bash
+    - name: 🔍 Inspect environment
+      run: |
+        which -a python
+        python -V
+        numba -s
+    - name: 🏃🏻‍➡️ Test LKPY
+      run: |
+        python -m pytest --cov=lenskit --verbose --log-file=test.log --durations=25
+    - name: 📐 Coverage results
+      run: coverage xml
+    - name: 📤 Upload test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-conda-${{matrix.platform}}-py${{matrix.python}}
+        path: |
+          test*.log
+          coverage.xml
   vanilla:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}
@@ -146,108 +67,218 @@ jobs:
       fail-fast: false
       matrix:
         python:
-        - "3.10"
-        - "3.11"
+        - '3.10'
+        - '3.11'
         platform:
-        - windows-latest
         - ubuntu-latest
         - macos-latest
+        - windows-latest
     steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        id: pyinstall
-        with:
-          python-version: ${{matrix.python}}
-          cache: 'pip'
-
-      - name: Install build tools
-        run: |
-          "$PYTHON" -m pip install -U 'uv>=0.1.15'
-        env:
-          PYTHON: ${{ steps.pyinstall.outputs.python-path }}
-
-      - name: Set up Python deps
-        run: uv pip install --python "$PYTHON" -r test-requirements.txt -e .
-        env:
-          PYTHON: ${{ steps.pyinstall.outputs.python-path }}
-
-      - name: Inspect environment
-        run: |
-          pip list
-
-      - name: Run tests
-        run: |
-          "$PYTHON" -m pytest --cov=lenskit --cov-report=xml --log-file=test.log --durations=25
-        env:
-          PYTHON: ${{ steps.pyinstall.outputs.python-path }}
-
-      - name: Process test results
-        uses: lenskit/lkbuild/actions/save-test-results@main
-        with:
-          artifact-name: test-vanilla-${{matrix.platform}}-py${{matrix.python}}
-
-  mindep:
-    name: Minimal Supported Dependencies
+    - name: 🛒 Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: 🐍 Set up Python
+      id: install-python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{matrix.python}}
+    - name: 🕶️ Set up uv
+      run: |
+        pip install -U 'uv>=0.1.15'
+    - name: 📦 Set up Python dependencies
+      id: install-deps
+      run: |
+        uv pip install --python $PYTHON -r test-requirements.txt -e .
+      shell: bash
+      env:
+        PYTHON: ${{steps.install-python.outputs.python-path}}
+        UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+        UV_INDEX_STRATEGY: unsafe-first-match
+    - name: 🔍 Inspect environment
+      run: |
+        which -a python
+        python -V
+        numba -s
+    - name: 🏃🏻‍➡️ Test LKPY
+      run: |
+        python -m pytest --cov=lenskit --verbose --log-file=test.log --durations=25
+    - name: 📐 Coverage results
+      run: coverage xml
+    - name: 📤 Upload test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-vanilla-${{matrix.platform}}-py${{matrix.python}}
+        path: |
+          test*.log
+          coverage.xml
+  nojit:
+    name: Non-JIT test coverage
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        id: pyinstall
-        with:
-          python-version: '3.10'
-
-      - name: Install build tools
-        run: |
-          "$PYTHON" -m pip install -U 'uv>=0.1.15'
-        env:
-          PYTHON: ${{ steps.pyinstall.outputs.python-path }}
-
-      - name: Set up Python deps
-        run: |
-          uv pip install --python "$PYTHON" --resolution=lowest-direct -r test-requirements.txt -e .
-        env:
-          PYTHON: ${{ steps.pyinstall.outputs.python-path }}
-          UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
-          UV_INDEX_STRATEGY: unsafe-first-match
-
-      - name: Inspect environment
-        run: |
-          pip list
-
-      - name: Run tests
-        run: |
-          python -m pytest --cov=lenskit --cov-report=xml --log-file test.log
-
-      - name: Process Test Results
-        uses: lenskit/lkbuild/actions/save-test-results@main
-        with:
-          artifact-name: test-mindeps
-
+    - name: 🛒 Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: 🐍 Set up Python
+      id: install-python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    - name: 🕶️ Set up uv
+      run: |
+        pip install -U 'uv>=0.1.15'
+    - name: 📦 Set up Python dependencies
+      id: install-deps
+      run: |
+        uv pip install --python $PYTHON -r test-requirements.txt -e .
+      shell: bash
+      env:
+        PYTHON: ${{steps.install-python.outputs.python-path}}
+        UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+        UV_INDEX_STRATEGY: unsafe-first-match
+    - name: 🔍 Inspect environment
+      run: |
+        which -a python
+        python -V
+        numba -s
+    - name: 🏃🏻‍➡️ Test LKPY
+      run: |
+        python -m pytest --cov=lenskit --verbose --log-file=test.log --durations=25 -m "not slow"
+      env:
+        NUMBA_DISABLE_JIT: 1
+        PYTORCH_JIT: 0
+    - name: 📐 Coverage results
+      run: coverage xml
+    - name: 📤 Upload test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-nojit
+        path: |
+          test*.log
+          coverage.xml
+  mindep:
+    name: Minimal dependency tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+    - name: 🛒 Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: 🐍 Set up Python
+      id: install-python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    - name: 🕶️ Set up uv
+      run: |
+        pip install -U 'uv>=0.1.15'
+    - name: 📦 Set up Python dependencies
+      id: install-deps
+      run: |
+        uv pip install --python $PYTHON -r test-requirements.txt -e . --resolution=lowest-direct
+      shell: bash
+      env:
+        PYTHON: ${{steps.install-python.outputs.python-path}}
+        UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+        UV_INDEX_STRATEGY: unsafe-first-match
+    - name: 🔍 Inspect environment
+      run: |
+        which -a python
+        python -V
+        numba -s
+    - name: 🏃🏻‍➡️ Test LKPY
+      run: |
+        python -m pytest --cov=lenskit --verbose --log-file=test.log --durations=25
+    - name: 📐 Coverage results
+      run: coverage xml
+    - name: 📤 Upload test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-mindep
+        path: |
+          test*.log
+          coverage.xml
+  examples:
+    name: Demos, Examples, and Docs
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+    - name: 🛒 Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: 👢 Generate Conda environment file
+      run: |
+        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all pyproject.toml dev-requirements.txt
+    - id: setup
+      name: 📦 Set up Conda environment
+      uses: mamba-org/setup-micromamba@v1
+      with:
+        environment-file: ci-environment.yml
+        environment-name: lkpy
+        cache-environment: true
+        init-shell: bash
+    - name: Cache ML data
+      uses: actions/cache@v2
+      with:
+        path: |
+          data
+          !data/*.zip
+        key: test-mldata-000
+    - name: Download ML data
+      run: |
+        python -m lenskit.datasets.fetch ml-100k
+        python -m lenskit.datasets.fetch ml-1m
+        python -m lenskit.datasets.fetch ml-10m
+        python -m lenskit.datasets.fetch ml-20m
+    - name: Install for testing
+      run: |
+        pip install --no-deps -e .
+    - name: Run Eval Tests
+      run: |
+        python -m pytest --cov=lenskit -m eval --log-file test-eval.log
+        python -m pytest --cov=lenskit --cov-append -m realdata --log-file test-realdata.log
+    - name: Validate doc notebooks
+      run: |
+        cp docs/*.ipynb data
+        python -m pytest --nbval-lax --cov=lenskit --cov-append data --log-file test-docs.log
+    - name: 📐 Coverage results
+      run: coverage xml
+    - name: 📤 Upload test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-examples
+        path: |
+          test*.log
+          coverage.xml
   results:
-    name: Test Suite Results
+    name: Test suite results
     runs-on: ubuntu-latest
     needs:
     - conda
     - vanilla
-    - check-docs
+    - nojit
     - mindep
-
+    - examples
     steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: lenskit/lkbuild/actions/report-test-results@main
-        env:
-          CODECOV_TOKEN: 5cdb6ef4-e80b-44ce-b88d-1402e4dfb781
+    - name: 🛒 Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: 📥 Download test artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: test-logs
+    - name: 📋 List log files
+      run: ls -lR test-logs
+    - name: ✅ Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        directory: test-logs/
+      env:
+        CODECOV_TOKEN: 5cdb6ef4-e80b-44ce-b88d-1402e4dfb781

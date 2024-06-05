@@ -1,3 +1,5 @@
+PIP := "uv pip"
+
 # list the tasks in this project (default)
 list-tasks:
     just --list
@@ -15,15 +17,15 @@ build:
 # install the package
 [confirm("this installs package from a wheel, continue [y/N]?")]
 install:
-    pip install .
+    {{PIP}} install .
 
 # install the package (editable)
 install-editable:
-    pip install -e .
+    {{PIP}} install -e .
 
 # set up for development in non-conda environments
 install-dev:
-    pip install -e '.[dev,test,doc,sklearn]'
+    {{PIP}} install -r dev-requirements.txt -e . --all-extras
 
 # set up a conda environment for development
 setup-conda-env version="3.11" env="dev":
@@ -49,10 +51,10 @@ docs:
 preview-docs:
     sphinx-autobuild --watch lenskit docs build/doc
 
-# update environment specifications
-update-envs:
-    pyproject2conda project
-
 # update source file headers
 update-headers:
     unbehead
+
+# update GH workflows
+update-workflows:
+    python ./utils/render-test-workflow.py -o .github/workflows/test.yml

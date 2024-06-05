@@ -57,10 +57,13 @@ at <https://lkpy.lenskit.org>.
 [conda-lock]: https://github.com/conda-incubator/conda-lock
 [lkbuild]: https://github.com/lenskit/lkbuild
 
-We recommend using an Anaconda environment for developing LensKit. To create
-this environment, checkout LensKit, then run:
+We recommend using an Anaconda environment for developing LensKit.  We provide a
+tool to automate setting up Conda environments from the LensKit dependencies; to
+create a dev environment, checkout LensKit, then run:
 
-    conda env create -n lkpy -f envs/lenskit-py3.11-dev.yaml
+    pipx ./utils/conda-tool.py --env -n lkpy pyproject.toml dev-requirements.txt
+
+That will create an environment named `lkpy` with all the LensKit dependencies.
 
 ## Testing Changes
 
