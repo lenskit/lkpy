@@ -56,7 +56,7 @@ FunkSVD
 
 .. _FunkSVD: http://sifter.org/~simon/journal/20061211.html
 
-.. module:: lenskit.algorithms.funksvd
+.. module:: lenskit.funksvd
 
 FunkSVD_ is an SVD-like matrix factorization that uses stochastic gradient
 descent, configured much like coordinate descent, to train the user-feature and
@@ -64,6 +64,11 @@ item-feature matrices.  We generally don't recommend using it in new
 applications or experiments; the ALS-based algorithms are less sensitive to
 hyperparameters, and the TensorFlow algorithms provide more optimized gradient
 descent training of the same prediction model.
+
+.. note::
+    FunkSVD must be installed separately from the lenskit-funksvd_ package.
+
+.. _lenskit-funksvd: https://pypi.org/project/lenskit-funksvd
 
 .. autoclass:: FunkSVD
     :show-inheritance:
