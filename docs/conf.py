@@ -6,13 +6,11 @@
 
 import os
 import sys
-from importlib import import_module  # noqa: F401
+from importlib.metadata import version
 
 sys.path.insert(0, os.path.abspath(".."))
 
 import sphinx_rtd_theme  # noqa: F401
-
-import lenskit
 
 # -- Project information -----------------------------------------------------
 
@@ -20,10 +18,8 @@ project = "LensKit"
 copyright = "2018–2024 Drexel University, Boise State University, and collaborators"
 author = "Michael D. Ekstrand"
 
-# The short X.Y version
-version = ".".join(lenskit.__version__.split(".")[:2])
-# The full version, including alpha/beta/rc tags
-release = lenskit.__version__
+release = version("lenskit")
+version = ".".join(release.split(".")[:3])
 
 
 extensions = [
