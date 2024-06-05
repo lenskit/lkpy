@@ -10,11 +10,10 @@ Top-N evaluation metrics.
 
 import logging
 import warnings
+from typing import Callable, Optional
 
 import numpy as np
 import pandas as pd
-
-from typing import Callable, Optional
 
 _log = logging.getLogger(__name__)
 
@@ -274,7 +273,9 @@ def dcg(recs, truth, discount=np.log2):
     return achieved
 
 
-def ndcg(recs: pd.DataFrame, truth: pd.DataFrame, discount: Callable = np.log2, k: Optional[int] = None):
+def ndcg(
+    recs: pd.DataFrame, truth: pd.DataFrame, discount: Callable = np.log2, k: Optional[int] = None
+):
     """
     Compute the normalized discounted cumulative gain :cite:p:`ndcg`.
 
