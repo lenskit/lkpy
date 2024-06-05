@@ -44,7 +44,8 @@ jobs:
         init-shell: bash
     - name: 🔍 Inspect environment
       run: |
-        which python
+        which -a python
+        which -a python3
         python -V
         numba -s
     - name: 🏃🏻‍➡️ Test LKPY
@@ -96,7 +97,8 @@ jobs:
         UV_INDEX_STRATEGY: unsafe-first-match
     - name: 🔍 Inspect environment
       run: |
-        which python
+        which -a python
+        which -a python3
         python -V
         numba -s
     - name: 🏃🏻‍➡️ Test LKPY
@@ -138,7 +140,8 @@ jobs:
         UV_INDEX_STRATEGY: unsafe-first-match
     - name: 🔍 Inspect environment
       run: |
-        which python
+        which -a python
+        which -a python3
         python -V
         numba -s
     - name: 🏃🏻‍➡️ Test LKPY
@@ -183,7 +186,8 @@ jobs:
         UV_INDEX_STRATEGY: unsafe-first-match
     - name: 🔍 Inspect environment
       run: |
-        which python
+        which -a python
+        which -a python3
         python -V
         numba -s
     - name: 🏃🏻‍➡️ Test LKPY

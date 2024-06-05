@@ -213,7 +213,8 @@ def steps_inspect(options: JobOptions) -> list[GHStep]:
         {
             "name": "🔍 Inspect environment",
             "run": script("""
-                which python
+                which -a python
+                which -a python3
                 python -V
                 numba -s
             """),
