@@ -4,9 +4,6 @@ name: Test Suite
     branches:
     - main
   pull_request: {}
-defaults:
-  run:
-    shell: bash -el {0}
 concurrency:
   group: test-${{github.ref}}
   cancel-in-progress: true
@@ -15,6 +12,9 @@ jobs:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}
     timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash -el {0}
     strategy:
       fail-fast: false
       matrix:

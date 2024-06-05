@@ -32,11 +32,6 @@ WORKFLOW_HEADER = {
         },
         "pull_request": {},
     },
-    "defaults": {
-        "run": {
-            "shell": "bash -el {0}",
-        },
-    },
     "concurrency": {
         "group": "test-${{github.ref}}",
         "cancel-in-progress": True,
@@ -124,6 +119,7 @@ GHJob = TypedDict(
         "runs-on": str,
         "timeout-minutes": NotRequired[int],
         "strategy": NotRequired[dict[str, Any]],
+        "defaults": NotRequired[dict[str, Any]],
         "needs": NotRequired[list[str]],
         "steps": NotRequired[list[GHStep]],
     },
@@ -282,6 +278,13 @@ def test_job(options: JobOptions) -> GHJob:
         "runs-on": options.vm_platform,
         "timeout-minutes": 30,
     }
+    if options.env == "conda":
+        job["defaults"] = {
+            "run": {
+                "shell": "bash -el {0}",
+            },
+        }
+
     job.update(job_strategy(options))  # type: ignore
     job["steps"] = test_job_steps(options)
     return job
