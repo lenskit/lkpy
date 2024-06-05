@@ -113,6 +113,7 @@ GHStep = TypedDict(
         "name": NotRequired[str],
         "uses": NotRequired[str],
         "run": NotRequired[str | script],
+        "shell": NotRequired["str"],
         "with": NotRequired[dict[str, str | int | bool | script]],
         "env": NotRequired[dict[str, str | int]],
     },
@@ -201,6 +202,7 @@ def steps_setup_vanilla(options: JobOptions) -> list[GHStep]:
             "name": "📦 Set up Python dependencies",
             "id": "install-deps",
             "run": script.command(pip),
+            "shell": "bash",
             "env": {
                 "PYTHON": "${{steps.install-python.outputs.python-path}}",
                 "UV_EXTRA_INDEX_URL": "https://download.pytorch.org/whl/cpu",
