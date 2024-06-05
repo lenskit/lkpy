@@ -280,3 +280,5 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         directory: test-logs/
+      env:
+        CODECOV_TOKEN: 5cdb6ef4-e80b-44ce-b88d-1402e4dfb781

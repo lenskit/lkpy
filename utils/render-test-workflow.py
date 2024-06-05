@@ -27,6 +27,7 @@ import yaml
 from docopt import docopt
 
 _log = logging.getLogger("render-workflows")
+CODECOV_TOKEN = "5cdb6ef4-e80b-44ce-b88d-1402e4dfb781"
 PYTHONS = ["3.10", "3.11"]
 BASIC_PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
 ALL_PLATFORMS = BASIC_PLATFORMS + ["macos-13"]
@@ -411,6 +412,7 @@ def result_job(deps: list[str]) -> GHJob:
                 "with": {
                     "directory": "test-logs/",
                 },
+                "env": {"CODECOV_TOKEN": CODECOV_TOKEN},
             },
         ],
     }
