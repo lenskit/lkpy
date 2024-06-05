@@ -194,6 +194,58 @@ jobs:
         path: |
           test*.log
           coverage.xml
+  examples:
+    name: Demos, Examples, and Docs
+    runs-on: ubuntu-latest
+    steps:
+    - name: 🛒 Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: 👢 Generate Conda environment file
+      run: |
+        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all pyproject.toml test-requirements.txt
+    - id: setup
+      name: 📦 Set up Conda environment
+      uses: mamba-org/setup-micromamba@v1
+      with:
+        environment-file: ci-environment.yml
+        environment-name: lkpy
+        cache-environment: true
+        init-shell: bash
+    - name: Cache ML data
+      uses: actions/cache@v2
+      with:
+        path: |
+          data
+          !data/*.zip
+        key: test-mldata-000
+    - name: Download ML data
+      run: |
+        python -m lenskit.datasets.fetch ml-100k
+        python -m lenskit.datasets.fetch ml-1m
+        python -m lenskit.datasets.fetch ml-10m
+        python -m lenskit.datasets.fetch ml-20m
+    - name: Install for testing
+      run: |
+        pip install --no-deps -e .
+    - name: Run Eval Tests
+      run: |
+        python -m pytest --cov=lenskit -m eval --log-file test-eval.log
+        python -m pytest --cov=lenskit --cov-append -m realdata --log-file test-realdata.log
+    - name: Validate doc notebooks
+      run: |
+        cp docs/*.ipynb data
+        python -m pytest --nbval-lax --cov=lenskit --cov-append data --log-file test-docs.log
+    - name: 📐 Coverage results
+      run: coverage xml
+    - name: 📤 Upload test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-examples
+        path: |
+          test*.log
+          coverage.xml
   results:
     name: Test suite results
     runs-on: ubuntu-latest
@@ -202,6 +254,7 @@ jobs:
     - vanilla
     - nojit
     - mindep
+    - examples
     steps:
     - name: 🛒 Checkout
       uses: actions/checkout@v4
