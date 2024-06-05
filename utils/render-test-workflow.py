@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from textwrap import dedent
 from typing import Any, Literal, NotRequired, Optional, TypedDict
 
@@ -52,7 +52,7 @@ class JobOptions:
     runs_on: Optional[str] = None
     python: Optional[str] = None
     matrix: Optional[dict[str, list[str]]] = None
-    extras: list[str] = field(default=list)  # type: ignore
+    extras: Optional[list[str]] = None
     pip_args: Optional[list[str]] = None
     req_file: str = "test-requirements.txt"
     test_args: Optional[list[str]] = None
@@ -289,6 +289,7 @@ def test_jobs() -> dict[str, GHJob]:
                 "conda",
                 "Conda Python ${{matrix.python}} on ${{matrix.platform}}",
                 matrix={"python": PYTHONS, "platform": ALL_PLATFORMS},
+                env="conda",
             )
         ),
         "vanilla": test_job(
