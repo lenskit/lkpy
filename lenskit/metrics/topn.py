@@ -14,6 +14,8 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from typing import Callable, Optional
+
 _log = logging.getLogger(__name__)
 
 
@@ -272,7 +274,7 @@ def dcg(recs, truth, discount=np.log2):
     return achieved
 
 
-def ndcg(recs, truth, discount=np.log2, k=None):
+def ndcg(recs: pd.DataFrame, truth: pd.DataFrame, discount: Callable = np.log2, k: Optional[int] = None):
     """
     Compute the normalized discounted cumulative gain :cite:p:`ndcg`.
 
@@ -283,8 +285,8 @@ def ndcg(recs, truth, discount=np.log2, k=None):
         \\mathrm{DCG}(L,u) & = \\sum_{i=1}^{|L|} \\frac{r_{ui}}{d(i)}
         \\end{align*}
 
-    Unrated items are assumed to have a utility of 0; if no rating values are provided in the
-    truth frame, item ratings are assumed to be 1.
+    Unrated items are assumed to have a utility of 0; if no rating values are
+    provided in the truth frame, item ratings are assumed to be 1.
 
     This is then normalized as follows:
 
@@ -296,12 +298,17 @@ def ndcg(recs, truth, discount=np.log2, k=None):
     This metric has a bulk implementation.
 
     Args:
-        recs: The recommendation list.
-        truth: The user's test data.
-        discount(numpy.ufunc):
-            The rank discount function.  Each item's score will be divided the discount of its rank,
-            if the discount is greater than 1.
-        k(int):
+        recs:
+            The recommendation list.  This is expected to have a column ``item``
+            with the recommended item IDs; all other columns are ignored.
+        truth:
+            The user's test data. It is expected to be *indexed* by item ID. If
+            it has a ``rating`` column, that is used as the item gains; otherwise,
+            each item has gain 1. All other columns are ignored.
+        discount:
+            The rank discount function.  Each item's score will be divided the
+            discount of its rank, if the discount is greater than 1.
+        k:
             The maximum list length.
     """
 
