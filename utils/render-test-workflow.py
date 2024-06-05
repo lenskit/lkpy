@@ -185,8 +185,8 @@ def steps_setup_vanilla(options: JobOptions) -> list[GHStep]:
     return [
         {
             "name": "🐍 Set up Python",
+            "id": "install-python",
             "uses": "actions/setup-python@v5",
-            "id": "pyinstall",
             "with": {
                 "python-version": options.python_version,
             },
