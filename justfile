@@ -58,3 +58,7 @@ update-envs:
 # update source file headers
 update-headers:
     unbehead
+
+# update GH workflows
+update-workflows:
+    python ./utils/render-workflows.py -o .github/workflows/test.yml

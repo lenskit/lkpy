@@ -2,10 +2,11 @@
 Render workflows and project template infrastructure.
 
 Usage:
-    render-workflows.py [-v]
+    render-workflows.py [-v] [-o FILE]
 
 Options:
-    -v, --verbose   verbose logging
+    -v, --verbose           verbose logging
+    -o FILE, --output=FILE  write to FILE
 """
 
 from __future__ import annotations
@@ -13,9 +14,8 @@ from __future__ import annotations
 import logging
 import sys
 from dataclasses import dataclass, field
-from pathlib import Path
 from textwrap import dedent
-from typing import Literal, NotRequired, Optional, TypedDict
+from typing import Any, Literal, NotRequired, Optional, TypedDict
 
 import yaml
 from docopt import docopt
@@ -52,14 +52,14 @@ class JobOptions:
     runs_on: Optional[str] = None
     python: Optional[str] = None
     matrix: Optional[dict[str, list[str]]] = None
-    extras: list[str] = field(default=list)
+    extras: list[str] = field(default=list)  # type: ignore
     pip_args: Optional[list[str]] = None
     req_file: str = "test-requirements.txt"
     test_args: Optional[list[str]] = None
     test_env: Optional[dict[str, str | int]] = None
 
     @property
-    def test_artifact_name(self):
+    def test_artifact_name(self) -> str:
         name = f"test-{self.key}"
         if self.matrix:
             if "platform" in self.matrix:
@@ -69,13 +69,14 @@ class JobOptions:
             for key in self.matrix:
                 if key not in ["platform", "python"]:
                     name += "-${{matrix." + key + "}}"
+        return name
 
     @property
     def vm_platform(self) -> str:
         if self.runs_on:
             return self.runs_on
         elif self.matrix and "platform" in self.matrix:
-            return self.matrix["platform"][0]
+            return "${{matrix.platform}}"
         else:
             return "ubuntu-latest"
 
@@ -91,11 +92,11 @@ class JobOptions:
 
 class script:
     def __init__(self, source: str):
-        self.source = dedent(source)
+        self.source = dedent(source).strip() + "\n"
 
     @staticmethod
-    def presenter(dumper, script: script):
-        return dumper.represent_scaler("tag:yaml.org,2002:str", script.source, style="|")
+    def presenter(dumper: yaml.Dumper, script: script):
+        return dumper.represent_scalar("tag:yaml.org,2002:str", script.source, style="|")
 
     @classmethod
     def command(cls, args: list[str]):
@@ -111,15 +112,32 @@ GHStep = TypedDict(
         "name": NotRequired[str],
         "uses": NotRequired[str],
         "run": NotRequired[str | script],
-        "with": NotRequired[dict[str, str | int | bool]],
+        "with": NotRequired[dict[str, str | int | bool | script]],
         "env": NotRequired[dict[str, str | int]],
     },
 )
 
+GHJob = TypedDict(
+    "GHJob",
+    {
+        "name": str,
+        "runs-on": str,
+        "timeout-minutes": NotRequired[int],
+        "strategy": NotRequired[dict[str, Any]],
+        "needs": NotRequired[list[str]],
+        "steps": NotRequired[list[GHStep]],
+    },
+)
 
-def job_strategy(options: JobOptions):
+
+def job_strategy(options: JobOptions) -> dict[str, Any]:
     if options.matrix:
-        return {"strategy": {"fail-fast": False, "matrix": options.matrix}}
+        return {
+            "strategy": {
+                "fail-fast": False,
+                "matrix": {k: v[:] for (k, v) in options.matrix.items()},
+            }
+        }
     else:
         return {}
 
@@ -133,16 +151,18 @@ def step_checkout(options: Optional[JobOptions] = None) -> GHStep:
 
 
 def step_setup_conda(options: JobOptions) -> list[GHStep]:
-    extra_args = []
-    for e in options.extras:
-        extra_args += ["-e", e]
-    if not extra_args:
-        extra_args = ["-e", "all"]
+    pip = ["pipx run", "./utils/conda-tool.py", "--env", "-o", "ci-environment.yml"]
+    if options.extras:
+        for e in options.extras:
+            pip += ["-e", e]
+    else:
+        pip += ["-e", "all"]
+    pip += ["pyproject.toml", options.req_file]
 
     return [
         {
             "name": "👢 Generate Conda environment file",
-            "run": f"pipx run ./utils/conda-tool.py --env -o ci-environment.yml {extra_args} pyproject.toml dev-requirements.txt",
+            "run": script.command(pip),
         },
         {
             "id": "setup",
@@ -158,7 +178,7 @@ def step_setup_conda(options: JobOptions) -> list[GHStep]:
     ]
 
 
-def step_setup_vailla(options: JobOptions):
+def steps_setup_vanilla(options: JobOptions) -> list[GHStep]:
     pip = ["uv pip install", "--python", "$PYTHON", "-r", options.req_file, "-e", "."]
     if options.pip_args:
         pip += options.pip_args
@@ -188,7 +208,7 @@ def step_setup_vailla(options: JobOptions):
     ]
 
 
-def steps_inspect(options: JobOptions):
+def steps_inspect(options: JobOptions) -> list[GHStep]:
     return [
         {
             "name": "🔍 Inspect environment",
@@ -200,16 +220,21 @@ def steps_inspect(options: JobOptions):
     ]
 
 
-def steps_test(options: JobOptions):
+def steps_test(options: JobOptions) -> list[GHStep]:
+    test_cmd = [
+        "python",
+        "-m",
+        "pytest",
+        "--cov=lenskit",
+        "--verbose",
+        "--log-file=test.log",
+        "--durations=25",
+    ]
     if options.test_args:
-        test_args = " ".join(options.test_args)
-    else:
-        test_args = ""
-    test = {
+        test_cmd += options.test_args
+    test: GHStep = {
         "name": "🏃🏻‍➡️ Test LKPY",
-        "run": script(f"""
-        python -m pytest --cov=lenskit --verbose --log-file=test.log --durations=25 {test_args}
-    """),
+        "run": script.command(test_cmd),
     }
     if options.test_env:
         test["env"] = options.test_env
@@ -233,29 +258,31 @@ def steps_test(options: JobOptions):
     ]
 
 
-def test_job_steps(options: JobOptions):
+def test_job_steps(options: JobOptions) -> list[GHStep]:
     steps = [
         step_checkout(options),
     ]
     if options.env == "conda":
         steps += step_setup_conda(options)
     else:
-        steps += step_setup_vailla(options)
+        steps += steps_setup_vanilla(options)
     steps += steps_inspect(options)
     steps += steps_test(options)
+    return steps
 
 
-def test_job(options: JobOptions):
-    job = {
+def test_job(options: JobOptions) -> GHJob:
+    job: GHJob = {
         "name": options.name,
         "runs-on": options.vm_platform,
         "timeout-minutes": 30,
     }
-    job.update(job_strategy(options))
+    job.update(job_strategy(options))  # type: ignore
     job["steps"] = test_job_steps(options)
+    return job
 
 
-def test_jobs():
+def test_jobs() -> dict[str, GHJob]:
     return {
         "conda": test_job(
             JobOptions(
@@ -287,7 +314,7 @@ def test_jobs():
     }
 
 
-def result_job(deps: list[str]):
+def result_job(deps: list[str]) -> GHJob:
     return {
         "name": "Test suite results",
         "runs-on": "ubuntu-latest",
@@ -318,12 +345,18 @@ def result_job(deps: list[str]):
 
 def main(options):
     init_logging(options)
-    dir = Path(".github/workflows")
 
-    jobs = test_jobs()
+    jobs: dict[str, GHJob] = test_jobs()
     jobs["results"] = result_job(list(jobs.keys()))
 
     workflow = dict(WORKFLOW_HEADER) | {"jobs": jobs}
+
+    if options["--output"]:
+        _log.info("writing %s", options["--output"])
+        with open(options["--output"], "wt") as wf:
+            yaml.dump(workflow, wf, allow_unicode=True, sort_keys=False)
+    else:
+        yaml.dump(workflow, sys.stdout, allow_unicode=True, sort_keys=False)
 
 
 def init_logging(options):
