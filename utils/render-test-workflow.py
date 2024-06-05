@@ -2,7 +2,7 @@
 Render workflows and project template infrastructure.
 
 Usage:
-    render-workflows.py [-v] [-o FILE]
+    render-test-workflow.py [-v] [-o FILE]
 
 Options:
     -v, --verbose           verbose logging
