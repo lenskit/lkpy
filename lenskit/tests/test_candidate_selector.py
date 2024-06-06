@@ -4,11 +4,11 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from lenskit.algorithms import basic
-import lenskit.util.test as lktu
-
-import pandas as pd
 import numpy as np
+import pandas as pd
+
+import lenskit.util.test as lktu
+from lenskit.algorithms import basic
 
 simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
@@ -34,6 +34,10 @@ def test_unrated_selector():
     sel = basic.UnratedItemCandidateSelector()
     s2 = sel.fit(simple_df)
     assert s2 is sel
+
+    print(sel.items_)
+    print(sel.users_)
+    print(sel.user_items_)
 
     assert set(sel.candidates(10)) == set([3])
     assert set(sel.candidates(12)) == set([3, 2])

@@ -194,13 +194,14 @@ def sparse_ratings(
     elif type == "structure":
         if layout != "csr":
             raise ValueError("only CSR is supported for structure matrices")
+
         df = pd.DataFrame({"row": row_ind, "col": col_ind})
         df.sort_values(["row", "col"], inplace=True, ignore_index=True)
         counts = df["row"].value_counts(sort=False)
         rps = np.zeros(nu + 1, dtype=np.int32)
         rps[counts.index + 1] = counts.values
         rps = np.cumsum(rps)
-        matrix = CSRStructure(rps, col_ind, (nu, ni))
+        matrix = CSRStructure(rps, df["col"].values, (nu, ni))
     else:
         raise ValueError(f"unknown type {type}")
 
