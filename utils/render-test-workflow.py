@@ -174,7 +174,7 @@ def steps_setup_conda(options: JobOptions) -> list[GHStep]:
     ctool += options.req_files + [f"{pkg}/pyproject.toml" for pkg in options.required_packages]
 
     pip = ["pip", "install", "--no-deps"]
-    pip += [f"./{pkg}" for pkg in options.required_packages]
+    pip += [f"-e {pkg}" for pkg in options.required_packages]
 
     return [
         {
@@ -200,7 +200,7 @@ def steps_setup_vanilla(options: JobOptions) -> list[GHStep]:
     pip = ["uv pip install", "--python", "$PYTHON"]
     for req in options.req_files:
         pip += ["-r", req]
-    pip += [f"./{pkg}" for pkg in options.required_packages]
+    pip += [f"-e {pkg}" for pkg in options.required_packages]
     if options.pip_args:
         pip += options.pip_args
 
