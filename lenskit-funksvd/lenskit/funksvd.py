@@ -14,12 +14,8 @@ import time
 import numba as n
 import numpy as np
 import pandas as pd
+from numba.experimental import jitclass
 from seedbank import numpy_rng
-
-try:
-    from numba.experimental import jitclass
-except ImportError:
-    from numba import jitclass
 
 from lenskit import util
 from lenskit.algorithms.bias import Bias
