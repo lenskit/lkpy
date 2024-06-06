@@ -69,21 +69,21 @@ def fetch_ml(name: str, base_dir: Path):
 def _fetch_main():
     logging.basicConfig(stream=sys.stderr, level=logging.INFO)
     parser = argparse.ArgumentParser()
-    parser.add_argument("name", help="the name of the dataset to fetch")
+    parser.add_argument("name", action="append", help="the name of the dataset to fetch")
     parser.add_argument(
         "--data-dir", metavar="DIR", help="save extracted data to DIR", default="data"
     )
     args = parser.parse_args()
 
-    name = args.name
-    _log.info("fetching data set %s", name)
     dir = Path(args.data_dir)
     _log.info("extracting data to %s", dir)
-    if name.startswith("ml-"):
-        fetch_ml(name, dir)
-    else:
-        _log.error("unknown data set %s", name)
-        raise ValueError("invalid data set")
+    for name in args.name:
+        _log.info("fetching data set %s", name)
+        if name.startswith("ml-"):
+            fetch_ml(name, dir)
+        else:
+            _log.error("unknown data set %s", name)
+            raise ValueError("invalid data set")
 
 
 if __name__ == "__main__":
