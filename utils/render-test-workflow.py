@@ -192,9 +192,9 @@ def step_setup_conda(options: JobOptions) -> list[GHStep]:
 
 
 def steps_setup_vanilla(options: JobOptions) -> list[GHStep]:
-    pip = ["uv pip install", "--python", "$PYTHON", "-r", options.req_file, "-e", "lenskit"]
+    pip = ["uv pip install", "--python", "$PYTHON", "-r", options.req_file, "lenskit"]
     if options.package != "lenskit":
-        pip += ["-e", options.package]
+        pip += [options.package]
     if options.pip_args:
         pip += options.pip_args
 
@@ -345,7 +345,7 @@ def test_demo_job() -> GHJob:
             {
                 "name": "Install for testing",
                 "run": script("""
-                    pip install --no-deps -e lenskit
+                    pip install --no-deps lenskit
                 """),
             },
             {
