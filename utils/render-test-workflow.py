@@ -57,7 +57,7 @@ class JobOptions:
     matrix: Optional[dict[str, list[str]]] = None
     extras: Optional[list[str]] = None
     pip_args: Optional[list[str]] = None
-    req_file: str = "test-requirements.txt"
+    req_file: str = "requirements-test.txt"
     test_args: Optional[list[str]] = None
     test_env: Optional[dict[str, str | int]] = None
     packages: list[str] = field(default_factory=lambda: ["lenskit"])
@@ -319,7 +319,7 @@ def test_demo_job() -> GHJob:
         "examples",
         "Demos, examples, and docs",
         env="conda",
-        req_file="dev-requirements.txt",
+        req_file="requirements-test.txt",
         packages=["lenskit-funksvd"],
     )
     cov = "--cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit"

@@ -86,7 +86,7 @@ You can also use traditional Pip:
 
     python -m venv .venv
     . .venv/bin/activate
-    python -m pip install -r full-dev-requirements.txt
+    python -m pip install -r requirements-full-dev.txt
 
 ## Testing Changes
 

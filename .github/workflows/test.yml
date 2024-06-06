@@ -33,7 +33,7 @@ jobs:
         fetch-depth: 0
     - name: 👢 Generate Conda environment file
       run: |
-        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all test-requirements.txt lenskit/pyproject.toml
+        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all requirements-test.txt lenskit/pyproject.toml
     - id: setup
       name: 📦 Set up Conda environment
       uses: mamba-org/setup-micromamba@v1
@@ -92,7 +92,7 @@ jobs:
     - name: 📦 Set up Python dependencies
       id: install-deps
       run: |
-        uv pip install --python $PYTHON -r test-requirements.txt ./lenskit
+        uv pip install --python $PYTHON -r requirements-test.txt ./lenskit
       shell: bash
       env:
         PYTHON: ${{steps.install-python.outputs.python-path}}
@@ -135,7 +135,7 @@ jobs:
     - name: 📦 Set up Python dependencies
       id: install-deps
       run: |
-        uv pip install --python $PYTHON -r test-requirements.txt ./lenskit
+        uv pip install --python $PYTHON -r requirements-test.txt ./lenskit
       shell: bash
       env:
         PYTHON: ${{steps.install-python.outputs.python-path}}
@@ -181,7 +181,7 @@ jobs:
     - name: 📦 Set up Python dependencies
       id: install-deps
       run: |
-        uv pip install --python $PYTHON -r test-requirements.txt ./lenskit --resolution=lowest-direct
+        uv pip install --python $PYTHON -r requirements-test.txt ./lenskit --resolution=lowest-direct
       shell: bash
       env:
         PYTHON: ${{steps.install-python.outputs.python-path}}
@@ -217,7 +217,7 @@ jobs:
         fetch-depth: 0
     - name: 👢 Generate Conda environment file
       run: |
-        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all dev-requirements.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml
+        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all requirements-test.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml
     - id: setup
       name: 📦 Set up Conda environment
       uses: mamba-org/setup-micromamba@v1
@@ -282,7 +282,7 @@ jobs:
         fetch-depth: 0
     - name: 👢 Generate Conda environment file
       run: |
-        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all test-requirements.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml
+        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all requirements-test.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml
     - id: setup
       name: 📦 Set up Conda environment
       uses: mamba-org/setup-micromamba@v1
