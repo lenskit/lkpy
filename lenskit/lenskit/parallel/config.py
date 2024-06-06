@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import multiprocessing as mp
 import os
+import warnings
 from dataclasses import dataclass
 from typing import Optional
 
@@ -67,9 +68,17 @@ def initialize(
     _config = _resolve_parallel_config(processes, threads, backend_threads, child_threads)
     _log.debug("configuring for parallelism: %s", _config)
 
-    torch.set_num_interop_threads(_config.threads)
-    torch.set_num_threads(_config.backend_threads)
     threadpool_limits(_config.backend_threads, "blas")
+    try:
+        torch.set_num_interop_threads(_config.threads)
+    except RuntimeError as e:
+        _log.warn("failed to configure Pytorch interop threads: %s", e)
+        warnings.warn("failed to set interop threads", RuntimeWarning)
+    try:
+        torch.set_num_threads(_config.backend_threads)
+    except RuntimeError as e:
+        _log.warn("failed to configure Pytorch intra-op threads: %s", e)
+        warnings.warn("failed to set intra-op threads", RuntimeWarning)
 
 
 def ensure_parallel_init():
