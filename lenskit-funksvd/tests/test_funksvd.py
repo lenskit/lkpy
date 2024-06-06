@@ -13,7 +13,7 @@ import pandas as pd
 
 from pytest import approx, mark
 
-import lenskit.algorithms.funksvd as svd
+import lenskit.funksvd as svd
 import lenskit.util.test as lktu
 
 _log = logging.getLogger(__name__)
