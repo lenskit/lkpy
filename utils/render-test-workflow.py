@@ -313,7 +313,7 @@ def test_job(options: JobOptions) -> GHJob:
 
 def test_demo_job() -> GHJob:
     opts = JobOptions(
-        "examples", "Demos, Examples, and Docs", env="conda", req_file="dev-requirements.txt"
+        "examples", "Demos, examples, and docs", env="conda", req_file="dev-requirements.txt"
     )
     return {
         "name": opts.name,
@@ -345,7 +345,7 @@ def test_demo_job() -> GHJob:
             {
                 "name": "Install for testing",
                 "run": script("""
-                    pip install --no-deps -e .
+                    pip install --no-deps -e lenskit
                 """),
             },
             {
