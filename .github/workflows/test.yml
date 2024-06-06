@@ -50,6 +50,7 @@ jobs:
         which -a python
         python -V
         numba -s
+        pip list
     - name: 🏃🏻‍➡️ Test LKPY
       run: |
         python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
@@ -109,6 +110,7 @@ jobs:
         which -a python
         python -V
         numba -s
+        pip list
     - name: 🏃🏻‍➡️ Test LKPY
       run: |
         python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
@@ -120,6 +122,58 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: test-vanilla-${{matrix.platform}}-py${{matrix.python}}
+        path: |
+          test*.log
+          coverage.xml
+  funksvd:
+    name: FunkSVD tests on Python ${{matrix.python}}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash -el {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+        - '3.10'
+        - '3.11'
+    steps:
+    - name: 🛒 Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: 👢 Generate Conda environment file
+      run: |
+        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all requirements-test.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml
+    - id: setup
+      name: 📦 Set up Conda environment
+      uses: mamba-org/setup-micromamba@v1
+      with:
+        environment-file: ci-environment.yml
+        environment-name: lkpy
+        cache-environment: true
+        init-shell: bash
+    - name: 🍱 Install LensKit packages
+      run: |
+        pip install --no-deps -e lenskit -e lenskit-funksvd
+    - name: 🔍 Inspect environment
+      run: |
+        which -a python
+        python -V
+        numba -s
+        pip list
+    - name: 🏃🏻‍➡️ Test LKPY
+      run: |
+        python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
+    - name: 📐 Coverage results
+      run: |
+        coverage xml
+        coverage report
+    - name: 📤 Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-funksvd-py${{matrix.python}}
         path: |
           test*.log
           coverage.xml
@@ -147,7 +201,7 @@ jobs:
     - name: 📦 Set up Python dependencies
       id: install-deps
       run: |
-        uv pip install --python $PYTHON -r requirements-test.txt -e lenskit
+        uv pip install --python $PYTHON -r requirements-test.txt -e lenskit -e lenskit-funksvd
       shell: bash
       env:
         PYTHON: ${{steps.install-python.outputs.python-path}}
@@ -158,9 +212,10 @@ jobs:
         which -a python
         python -V
         numba -s
+        pip list
     - name: 🏃🏻‍➡️ Test LKPY
       run: |
-        python -m pytest --verbose --log-file=test.log --durations=25 -m "not slow" --cov=lenskit/lenskit lenskit/tests
+        python -m pytest --verbose --log-file=test.log --durations=25 -m 'not slow' --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit lenskit/tests lenskit-funksvd/tests
       env:
         NUMBA_DISABLE_JIT: 1
         PYTORCH_JIT: 0
@@ -199,7 +254,7 @@ jobs:
     - name: 📦 Set up Python dependencies
       id: install-deps
       run: |
-        uv pip install --python $PYTHON -r requirements-test.txt -e lenskit --resolution=lowest-direct
+        uv pip install --python $PYTHON -r requirements-test.txt -e lenskit -e lenskit-funksvd --resolution=lowest-direct
       shell: bash
       env:
         PYTHON: ${{steps.install-python.outputs.python-path}}
@@ -210,9 +265,10 @@ jobs:
         which -a python
         python -V
         numba -s
+        pip list
     - name: 🏃🏻‍➡️ Test LKPY
       run: |
-        python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
+        python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit lenskit/tests lenskit-funksvd/tests
     - name: 📐 Coverage results
       run: |
         coverage xml
@@ -221,55 +277,6 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: test-mindep
-        path: |
-          test*.log
-          coverage.xml
-  doc-tests:
-    name: Demos, examples, and docs
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -el {0}
-    steps:
-    - name: 🛒 Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: 👢 Generate Conda environment file
-      run: |
-        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all requirements-test.txt requirements-demo.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml
-    - id: setup
-      name: 📦 Set up Conda environment
-      uses: mamba-org/setup-micromamba@v1
-      with:
-        environment-file: ci-environment.yml
-        environment-name: lkpy
-        cache-environment: true
-        init-shell: bash
-    - name: 🍱 Install LensKit packages
-      run: |
-        pip install --no-deps -e lenskit -e lenskit-funksvd
-    - name: Cache ML data
-      uses: actions/cache@v4
-      with:
-        path: |
-          data
-          !data/*.zip
-        key: test-mldata-000-cd26f1c44a6962b0936346b346a9b418a3ed04b01a2892269fccd24a6387e943dba6d5e64ab2f8feb1823475601d65c2e6ebbeeeca0c2c210f0d37c00aabf2e9
-    - name: Download ML data
-      run: |
-        python -m lenskit.datasets.fetch ml-100k ml-1m ml-10m ml-20m
-    - name: 📕 Validate documentation examples
-      run: |
-        python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --nbval-lax --log-file test-docs.log docs */lenskit
-    - name: 📐 Coverage results
-      run: |
-        coverage xml
-        coverage report
-    - name: 📤 Upload test results
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-examples
         path: |
           test*.log
           coverage.xml
@@ -323,19 +330,12 @@ jobs:
         path: |
           test*.log
           coverage.xml
-  funksvd:
-    name: FunkSVD tests on Python ${{matrix.python}}
+  doc-tests:
+    name: Demos, examples, and docs
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     defaults:
       run:
         shell: bash -el {0}
-    strategy:
-      fail-fast: false
-      matrix:
-        python:
-        - '3.10'
-        - '3.11'
     steps:
     - name: 🛒 Checkout
       uses: actions/checkout@v4
@@ -343,7 +343,7 @@ jobs:
         fetch-depth: 0
     - name: 👢 Generate Conda environment file
       run: |
-        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all requirements-test.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml
+        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all requirements-test.txt requirements-demo.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml
     - id: setup
       name: 📦 Set up Conda environment
       uses: mamba-org/setup-micromamba@v1
@@ -355,14 +355,19 @@ jobs:
     - name: 🍱 Install LensKit packages
       run: |
         pip install --no-deps -e lenskit -e lenskit-funksvd
-    - name: 🔍 Inspect environment
+    - name: Cache ML data
+      uses: actions/cache@v4
+      with:
+        path: |
+          data
+          !data/*.zip
+        key: test-mldata-000-cd26f1c44a6962b0936346b346a9b418a3ed04b01a2892269fccd24a6387e943dba6d5e64ab2f8feb1823475601d65c2e6ebbeeeca0c2c210f0d37c00aabf2e9
+    - name: Download ML data
       run: |
-        which -a python
-        python -V
-        numba -s
-    - name: 🏃🏻‍➡️ Test LKPY
+        python -m lenskit.datasets.fetch ml-100k ml-1m ml-10m ml-20m
+    - name: 📕 Validate documentation examples
       run: |
-        python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
+        python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --nbval-lax --log-file test-docs.log docs */lenskit
     - name: 📐 Coverage results
       run: |
         coverage xml
@@ -370,7 +375,7 @@ jobs:
     - name: 📤 Upload test results
       uses: actions/upload-artifact@v4
       with:
-        name: test-funksvd-py${{matrix.python}}
+        name: test-examples
         path: |
           test*.log
           coverage.xml
@@ -380,11 +385,11 @@ jobs:
     needs:
     - conda
     - vanilla
+    - funksvd
     - nojit
     - mindep
-    - doc-tests
     - eval-tests
-    - funksvd
+    - doc-tests
     steps:
     - name: 🛒 Checkout
       uses: actions/checkout@v4

@@ -244,6 +244,7 @@ def steps_inspect(options: JobOptions) -> list[GHStep]:
                 which -a python
                 python -V
                 numba -s
+                pip list
             """),
         }
     ]
@@ -423,21 +424,6 @@ def test_jobs() -> dict[str, GHJob]:
                 matrix={"python": PYTHONS, "platform": BASIC_PLATFORMS},
             )
         ),
-        "nojit": test_job(
-            JobOptions(
-                "nojit",
-                "Non-JIT test coverage",
-                test_env={"NUMBA_DISABLE_JIT": 1, "PYTORCH_JIT": 0},
-                test_args=["-m", '"not slow"'],
-            )
-        ),
-        "mindep": test_job(
-            JobOptions(
-                "mindep", "Minimal dependency tests", pip_args=["--resolution=lowest-direct"]
-            )
-        ),
-        "doc-tests": test_doc_job(),
-        "eval-tests": test_eval_job(),
         "funksvd": test_job(
             JobOptions(
                 "funksvd",
@@ -447,6 +433,25 @@ def test_jobs() -> dict[str, GHJob]:
                 env="conda",
             )
         ),
+        "nojit": test_job(
+            JobOptions(
+                "nojit",
+                "Non-JIT test coverage",
+                packages=["lenskit", "lenskit-funksvd"],
+                test_env={"NUMBA_DISABLE_JIT": 1, "PYTORCH_JIT": 0},
+                test_args=["-m", "'not slow'"],
+            )
+        ),
+        "mindep": test_job(
+            JobOptions(
+                "mindep",
+                "Minimal dependency tests",
+                pip_args=["--resolution=lowest-direct"],
+                packages=["lenskit", "lenskit-funksvd"],
+            )
+        ),
+        "eval-tests": test_eval_job(),
+        "doc-tests": test_doc_job(),
     }
 
 
