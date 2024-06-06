@@ -115,7 +115,6 @@ intersphinx_mapping = {
     "scikit": ("https://scikit-learn.org/stable/", None),
     "sklearn": ("https://scikit-learn.org/stable/", None),
     "binpickle": ("https://binpickle.lenskit.org/en/stable/", None),
-    "csr": ("https://csr.lenskit.org/en/latest/", None),
     "seedbank": ("https://seedbank.lenskit.org/en/latest/", None),
     "progress_api": ("https://progress-api.readthedocs.io/en/latest/", None),
     "manylog": ("https://manylog.readthedocs.io/en/latest/", None),
