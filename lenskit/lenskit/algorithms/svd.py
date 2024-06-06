@@ -14,7 +14,6 @@ try:
 
     SKL_AVAILABLE = True
 except ImportError:
-    TruncatedSVD = None
     SKL_AVAILABLE = False
 
 from ..data import sparse_ratings
@@ -36,8 +35,10 @@ class BiasedSVD(Predictor):
     example and for cases where you want to evaluate a pure SVD implementation.
     """
 
+    factorization: TruncatedSVD
+
     def __init__(self, features, *, damping=5, bias=True, algorithm="randomized"):
-        if TruncatedSVD is None:
+        if not SKL_AVAILABLE:
             raise ImportError("sklearn.decomposition")
         if bias is True:
             self.bias = Bias(damping=damping)
