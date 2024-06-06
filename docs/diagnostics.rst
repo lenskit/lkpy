@@ -19,6 +19,6 @@ In addition to Python standard warning types such as :py:class:`warnings.Depreca
 LensKit uses the following warning classes to report anomalous problems in
 use of LensKit.
 
-.. autoclass:: lenskit.DataWarning
+.. autoclass:: lenskit.diagnostics.DataWarning
 
-.. autoclass:: lenskit.ConfigWarning
+.. autoclass:: lenskit.diagnostics.ConfigWarning
