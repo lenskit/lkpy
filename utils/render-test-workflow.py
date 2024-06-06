@@ -59,6 +59,7 @@ class JobOptions:
     req_file: str = "test-requirements.txt"
     test_args: Optional[list[str]] = None
     test_env: Optional[dict[str, str | int]] = None
+    package: str = "lenskit"
 
     @property
     def test_artifact_name(self) -> str:
@@ -161,7 +162,7 @@ def step_setup_conda(options: JobOptions) -> list[GHStep]:
             pip += ["-e", e]
     else:
         pip += ["-e", "all"]
-    pip += ["pyproject.toml", options.req_file]
+    pip += [options.req_file, f"{options.package}/pyproject.toml"]
 
     return [
         {
@@ -183,9 +184,12 @@ def step_setup_conda(options: JobOptions) -> list[GHStep]:
 
 
 def steps_setup_vanilla(options: JobOptions) -> list[GHStep]:
-    pip = ["uv pip install", "--python", "$PYTHON", "-r", options.req_file, "-e", "."]
+    pip = ["uv pip install", "--python", "$PYTHON", "-r", options.req_file, "-e", "lenskit"]
+    if options.package != "lenskit":
+        pip += ["-e", options.package]
     if options.pip_args:
         pip += options.pip_args
+
     return [
         {
             "name": "🐍 Set up Python",
@@ -238,6 +242,7 @@ def steps_test(options: JobOptions) -> list[GHStep]:
     ]
     if options.test_args:
         test_cmd += options.test_args
+    test_cmd.append(f"{options.package}/tests")
     test: GHStep = {
         "name": "🏃🏻‍➡️ Test LKPY",
         "run": script.command(test_cmd),
@@ -385,6 +390,11 @@ def test_jobs() -> dict[str, GHJob]:
             )
         ),
         "examples": test_demo_job(),
+        "funksvd": test_job(
+            JobOptions(
+                "funksvd", "FunkSVD tests", package="lenskit-funksvd", matrix={"python": PYTHONS}
+            )
+        ),
     }
 
 

@@ -8,13 +8,12 @@ import logging
 import pickle
 from pathlib import Path
 
-import lenskit.algorithms.funksvd as svd
-
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from pytest import approx, mark
 
+import lenskit.algorithms.funksvd as svd
 import lenskit.util.test as lktu
 
 _log = logging.getLogger(__name__)
@@ -200,11 +199,10 @@ def test_fsvd_known_preds():
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
 def test_fsvd_batch_accuracy():
-    from lenskit.algorithms import basic
-    from lenskit.algorithms import bias
     import lenskit.crossfold as xf
-    from lenskit import batch
     import lenskit.metrics.predict as pm
+    from lenskit import batch
+    from lenskit.algorithms import basic, bias
 
     ratings = lktu.ml100k.ratings
 
