@@ -28,7 +28,7 @@ jobs:
 
       - name: 🛠️ Install development tools and dependencies
         run: |
-          pip install -r dev-requirements.txt
+          pip install -r requirements-dev.txt
 
       - name: 🪮 Check source code formatting
         id: format
