@@ -58,6 +58,7 @@ class JobOptions:
     matrix: Optional[dict[str, list[str]]] = None
     extras: Optional[list[str]] = None
     pip_args: Optional[list[str]] = None
+    dep_strategy: Literal["default", "minimum"] = "default"
     req_files: list[str] = field(default_factory=lambda: ["requirements-test.txt"])
     test_args: Optional[list[str]] = None
     test_env: Optional[dict[str, str | int]] = None
@@ -201,6 +202,8 @@ def steps_setup_vanilla(options: JobOptions) -> list[GHStep]:
     for req in options.req_files:
         pip += ["-r", req]
     pip += [f"-e {pkg}" for pkg in options.required_packages]
+    if options.dep_strategy == "minimum":
+        pip.append("--resolution=lowest-direct")
     if options.pip_args:
         pip += options.pip_args
 
@@ -443,8 +446,15 @@ def test_jobs() -> dict[str, GHJob]:
             JobOptions(
                 "mindep",
                 "Minimal dependency tests",
-                pip_args=["--resolution=lowest-direct"],
-                packages=["lenskit", "lenskit-funksvd"],
+                dep_strategy="minimum",
+            )
+        ),
+        "funksvd-mindep": test_job(
+            JobOptions(
+                "mindep",
+                "Minimal dependency tests for FunkSVD",
+                dep_strategy="minimum",
+                packages=["lenskit-funksvd"],
             )
         ),
         "eval-tests": test_eval_job(),
