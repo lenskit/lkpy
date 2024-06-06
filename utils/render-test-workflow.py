@@ -395,14 +395,7 @@ def test_doc_job() -> GHJob:
             {
                 "name": "📕 Validate documentation examples",
                 "run": script(f"""
-                    python -m pytest {cov} --log-file test-docs.log docs */lenskit
-                """),
-            },
-            {
-                "name": "📒 Validate doc notebooks",
-                "run": script(f"""
-                    cp docs/*.ipynb data
-                    python -m pytest {cov} --nbval-lax --log-file test-demo.log data
+                    python -m pytest {cov} --nbval-lax --log-file test-docs.log docs */lenskit
                 """),
             },
         ]
