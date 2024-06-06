@@ -15,11 +15,12 @@ Options:
     -o FILE, --output=FILE  write to FILE
 """
 
+# pyright: strict
 from __future__ import annotations
 
 import logging
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from textwrap import dedent
 from typing import Any, Literal, NotRequired, Optional, TypedDict
 
@@ -59,7 +60,7 @@ class JobOptions:
     req_file: str = "test-requirements.txt"
     test_args: Optional[list[str]] = None
     test_env: Optional[dict[str, str | int]] = None
-    package: str = "lenskit"
+    packages: list[str] = field(default_factory=lambda: ["lenskit"])
 
     @property
     def test_artifact_name(self) -> str:
@@ -92,6 +93,13 @@ class JobOptions:
         else:
             return PYTHONS[0]
 
+    @property
+    def required_packages(self) -> list[str]:
+        if "lenskit" not in self.packages:
+            return ["lenskit"] + self.packages
+        else:
+            return self.packages
+
 
 class script:
     def __init__(self, source: str):
@@ -99,7 +107,7 @@ class script:
 
     @staticmethod
     def presenter(dumper: yaml.Dumper, script: script):
-        return dumper.represent_scalar("tag:yaml.org,2002:str", script.source, style="|")
+        return dumper.represent_scalar("tag:yaml.org,2002:str", script.source, style="|")  # type: ignore
 
     @classmethod
     def command(cls, args: list[str]):
@@ -162,14 +170,10 @@ def steps_setup_conda(options: JobOptions) -> list[GHStep]:
             ctool += ["-e", e]
     else:
         ctool += ["-e", "all"]
-    pkgs = ["lenskit"]
-    if options.package != "lenskit":
-        pkgs.append(options.package)
-    ctool += [options.req_file] + [f"{pkg}/pyproject.toml" for pkg in pkgs]
+    ctool += [options.req_file] + [f"{pkg}/pyproject.toml" for pkg in options.required_packages]
 
     pip = ["pip", "install", "--no-deps"]
-    for pkg in pkgs:
-        pip += ["-e", pkg]
+    pip += [f"./{pkg}" for pkg in options.required_packages]
 
     return [
         {
@@ -187,14 +191,13 @@ def steps_setup_conda(options: JobOptions) -> list[GHStep]:
                 "init-shell": "bash",
             },
         },
-        {"name": "🍱 Install editable packages", "run": script.command(pip)},
+        {"name": "🍱 Install LensKit packages", "run": script.command(pip)},
     ]
 
 
 def steps_setup_vanilla(options: JobOptions) -> list[GHStep]:
-    pip = ["uv pip install", "--python", "$PYTHON", "-r", options.req_file, "./lenskit"]
-    if options.package != "lenskit":
-        pip += [f"./{options.package}"]
+    pip = ["uv pip install", "--python", "$PYTHON", "-r", options.req_file]
+    pip += [f"./{pkg}" for pkg in options.required_packages]
     if options.pip_args:
         pip += options.pip_args
 
@@ -250,7 +253,7 @@ def steps_test(options: JobOptions) -> list[GHStep]:
     ]
     if options.test_args:
         test_cmd += options.test_args
-    test_cmd.append(f"{options.package}/tests")
+    test_cmd += [f"{pkg}/tests" for pkg in options.packages]
     test: GHStep = {
         "name": "🏃🏻‍➡️ Test LKPY",
         "run": script.command(test_cmd),
@@ -313,8 +316,13 @@ def test_job(options: JobOptions) -> GHJob:
 
 def test_demo_job() -> GHJob:
     opts = JobOptions(
-        "examples", "Demos, examples, and docs", env="conda", req_file="dev-requirements.txt"
+        "examples",
+        "Demos, examples, and docs",
+        env="conda",
+        req_file="dev-requirements.txt",
+        packages=["lenskit-funksvd"],
     )
+    cov = "--cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit"
     return {
         "name": opts.name,
         "runs-on": opts.vm_platform,
@@ -345,21 +353,21 @@ def test_demo_job() -> GHJob:
             {
                 "name": "Install for testing",
                 "run": script("""
-                    pip install --no-deps ./lenskit
+                    pip install --no-deps ./lenskit ./lenskit-funksvd
                 """),
             },
             {
                 "name": "Run Eval Tests",
-                "run": script("""
-                    python -m pytest --cov=lenskit -m eval --log-file test-eval.log
-                    python -m pytest --cov=lenskit --cov-append -m realdata --log-file test-realdata.log
+                "run": script(f"""
+                    python -m pytest {cov} -m eval --log-file test-eval.log
+                    python -m pytest {cov} --cov-append -m realdata --log-file test-realdata.log
                 """),
             },
             {
                 "name": "Validate doc notebooks",
-                "run": script("""
+                "run": script(f"""
                     cp docs/*.ipynb data
-                    python -m pytest --nbval-lax --cov=lenskit --cov-append data --log-file test-docs.log
+                    python -m pytest {cov} --cov-append --nbval-lax data --log-file test-docs.log
                 """),
             },
         ]
@@ -402,7 +410,7 @@ def test_jobs() -> dict[str, GHJob]:
             JobOptions(
                 "funksvd",
                 "FunkSVD tests on Python ${{matrix.python}}",
-                package="lenskit-funksvd",
+                packages=["lenskit-funksvd"],
                 matrix={"python": PYTHONS},
                 env="conda",
             )
@@ -440,7 +448,7 @@ def result_job(deps: list[str]) -> GHJob:
     }
 
 
-def main(options):
+def main(options: dict[str, str | int | bool | None]):
     init_logging(options)
 
     jobs: dict[str, GHJob] = test_jobs()
@@ -456,7 +464,7 @@ def main(options):
         yaml.dump(workflow, sys.stdout, allow_unicode=True, sort_keys=False)
 
 
-def init_logging(options):
+def init_logging(options: dict[str, str | int | bool | None]):
     level = logging.DEBUG if options["--verbose"] else logging.INFO
     logging.basicConfig(stream=sys.stderr, level=level)
 

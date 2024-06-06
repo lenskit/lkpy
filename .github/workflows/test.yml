@@ -42,9 +42,9 @@ jobs:
         environment-name: lkpy
         cache-environment: true
         init-shell: bash
-    - name: 🍱 Install editable packages
+    - name: 🍱 Install LensKit packages
       run: |
-        pip install --no-deps -e lenskit
+        pip install --no-deps ./lenskit
     - name: 🔍 Inspect environment
       run: |
         which -a python
@@ -217,7 +217,7 @@ jobs:
         fetch-depth: 0
     - name: 👢 Generate Conda environment file
       run: |
-        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all dev-requirements.txt lenskit/pyproject.toml
+        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all dev-requirements.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml
     - id: setup
       name: 📦 Set up Conda environment
       uses: mamba-org/setup-micromamba@v1
@@ -226,9 +226,9 @@ jobs:
         environment-name: lkpy
         cache-environment: true
         init-shell: bash
-    - name: 🍱 Install editable packages
+    - name: 🍱 Install LensKit packages
       run: |
-        pip install --no-deps -e lenskit
+        pip install --no-deps ./lenskit ./lenskit-funksvd
     - name: Cache ML data
       uses: actions/cache@v2
       with:
@@ -244,15 +244,15 @@ jobs:
         python -m lenskit.datasets.fetch ml-20m
     - name: Install for testing
       run: |
-        pip install --no-deps ./lenskit
+        pip install --no-deps ./lenskit ./lenskit-funksvd
     - name: Run Eval Tests
       run: |
-        python -m pytest --cov=lenskit -m eval --log-file test-eval.log
-        python -m pytest --cov=lenskit --cov-append -m realdata --log-file test-realdata.log
+        python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit -m eval --log-file test-eval.log
+        python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov-append -m realdata --log-file test-realdata.log
     - name: Validate doc notebooks
       run: |
         cp docs/*.ipynb data
-        python -m pytest --nbval-lax --cov=lenskit --cov-append data --log-file test-docs.log
+        python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov-append --nbval-lax data --log-file test-docs.log
     - name: 📐 Coverage results
       run: coverage xml
     - name: 📤 Upload test results
@@ -291,9 +291,9 @@ jobs:
         environment-name: lkpy
         cache-environment: true
         init-shell: bash
-    - name: 🍱 Install editable packages
+    - name: 🍱 Install LensKit packages
       run: |
-        pip install --no-deps -e lenskit -e lenskit-funksvd
+        pip install --no-deps ./lenskit ./lenskit-funksvd
     - name: 🔍 Inspect environment
       run: |
         which -a python
