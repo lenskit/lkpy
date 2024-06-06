@@ -392,7 +392,11 @@ def test_jobs() -> dict[str, GHJob]:
         "examples": test_demo_job(),
         "funksvd": test_job(
             JobOptions(
-                "funksvd", "FunkSVD tests", package="lenskit-funksvd", matrix={"python": PYTHONS}
+                "funksvd",
+                "FunkSVD tests on Python ${{matrix.python}}",
+                package="lenskit-funksvd",
+                matrix={"python": PYTHONS},
+                env="conda",
             )
         ),
     }
