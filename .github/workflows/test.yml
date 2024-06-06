@@ -52,7 +52,7 @@ jobs:
         numba -s
     - name: 🏃🏻‍➡️ Test LKPY
       run: |
-        python -m pytest --cov=lenskit --verbose --log-file=test.log --durations=25 lenskit/tests
+        python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
     - name: 📐 Coverage results
       run: coverage xml
     - name: 📤 Upload test results
@@ -105,7 +105,7 @@ jobs:
         numba -s
     - name: 🏃🏻‍➡️ Test LKPY
       run: |
-        python -m pytest --cov=lenskit --verbose --log-file=test.log --durations=25 lenskit/tests
+        python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
     - name: 📐 Coverage results
       run: coverage xml
     - name: 📤 Upload test results
@@ -148,7 +148,7 @@ jobs:
         numba -s
     - name: 🏃🏻‍➡️ Test LKPY
       run: |
-        python -m pytest --cov=lenskit --verbose --log-file=test.log --durations=25 -m "not slow" lenskit/tests
+        python -m pytest --verbose --log-file=test.log --durations=25 -m "not slow" --cov=lenskit/lenskit lenskit/tests
       env:
         NUMBA_DISABLE_JIT: 1
         PYTORCH_JIT: 0
@@ -194,7 +194,7 @@ jobs:
         numba -s
     - name: 🏃🏻‍➡️ Test LKPY
       run: |
-        python -m pytest --cov=lenskit --verbose --log-file=test.log --durations=25 lenskit/tests
+        python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
     - name: 📐 Coverage results
       run: coverage xml
     - name: 📤 Upload test results
@@ -301,7 +301,7 @@ jobs:
         numba -s
     - name: 🏃🏻‍➡️ Test LKPY
       run: |
-        python -m pytest --cov=lenskit --verbose --log-file=test.log --durations=25 lenskit-funksvd/tests
+        python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
     - name: 📐 Coverage results
       run: coverage xml
     - name: 📤 Upload test results

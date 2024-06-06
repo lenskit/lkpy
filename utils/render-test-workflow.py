@@ -246,13 +246,13 @@ def steps_test(options: JobOptions) -> list[GHStep]:
         "python",
         "-m",
         "pytest",
-        "--cov=lenskit",
         "--verbose",
         "--log-file=test.log",
         "--durations=25",
     ]
     if options.test_args:
         test_cmd += options.test_args
+    test_cmd += [f"--cov={pkg}/lenskit" for pkg in options.packages]
     test_cmd += [f"{pkg}/tests" for pkg in options.packages]
     test: GHStep = {
         "name": "🏃🏻‍➡️ Test LKPY",
