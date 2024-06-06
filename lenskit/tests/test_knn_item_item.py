@@ -4,12 +4,10 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import gc
 import logging
 import pickle
 from pathlib import Path
 
-import csr.kernel as csrk
 import numpy as np
 import pandas as pd
 import torch
@@ -25,8 +23,7 @@ from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import Fallback
 from lenskit.algorithms.bias import Bias
 from lenskit.diagnostics import ConfigWarning, DataWarning
-from lenskit.parallel import invoker
-from lenskit.util import Stopwatch, clone
+from lenskit.util import clone
 
 _log = logging.getLogger(__name__)
 
