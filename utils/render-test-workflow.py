@@ -156,18 +156,25 @@ def step_checkout(options: Optional[JobOptions] = None) -> GHStep:
 
 
 def step_setup_conda(options: JobOptions) -> list[GHStep]:
-    pip = ["pipx run", "./utils/conda-tool.py", "--env", "-o", "ci-environment.yml"]
+    ctool = ["pipx run", "./utils/conda-tool.py", "--env", "-o", "ci-environment.yml"]
     if options.extras:
         for e in options.extras:
-            pip += ["-e", e]
+            ctool += ["-e", e]
     else:
-        pip += ["-e", "all"]
-    pip += [options.req_file, f"{options.package}/pyproject.toml"]
+        ctool += ["-e", "all"]
+    pkgs = ["lenskit"]
+    if options.package != "lenskit":
+        pkgs.append(options.package)
+    ctool += [options.req_file] + [f"{pkg}/pyproject.toml" for pkg in pkgs]
+
+    pip = ["pip", "install", "--no-deps"]
+    for pkg in pkgs:
+        pip += ["-e", pkg]
 
     return [
         {
             "name": "👢 Generate Conda environment file",
-            "run": script.command(pip),
+            "run": script.command(ctool),
         },
         {
             "id": "setup",
@@ -180,6 +187,7 @@ def step_setup_conda(options: JobOptions) -> list[GHStep]:
                 "init-shell": "bash",
             },
         },
+        {"name": "🍱 Install editable packages", "run": script.command(pip)},
     ]
 
 

@@ -257,6 +257,7 @@ def make_env_object(specs: list[ParsedReq], python: Optional[str] = None) -> dic
     if python:
         deps.append(f"python ={python}")
 
+    deps.append("pip")
     for spec in specs:
         if spec.force_pip:
             pip_deps.append(str(spec.requirement))
@@ -269,7 +270,6 @@ def make_env_object(specs: list[ParsedReq], python: Optional[str] = None) -> dic
         deps += MKL_DEP
 
     if pip_deps:
-        deps.append("pip")
         deps.append({"pip": pip_deps})
 
     return {"channels": CONDA_CHANNELS, "dependencies": deps}
