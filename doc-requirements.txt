@@ -1,3 +1,4 @@
+# Requirements for building the LensKit documentation.
 sphinx >= 4.2
 sphinxext-opengraph >= 0.5
 sphinxcontrib-bibtex >= 2.0

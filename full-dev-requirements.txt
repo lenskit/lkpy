@@ -1,0 +1,5 @@
+# This requirements file sets up a *full* dev environment, including
+# editable copies of LensKit.
+-r dev-requirements.txt
+-e ./lenskit
+-e ./lenskit-funksvd

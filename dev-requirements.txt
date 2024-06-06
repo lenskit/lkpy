@@ -1,3 +1,5 @@
+# This requirements file pulls in the development requirements for
+# LensKit, but *not* LensKit itself (or its runtime dependencies).
 setuptools>=64
 setuptools_scm>=8
 build ==1.* # conda: python-build

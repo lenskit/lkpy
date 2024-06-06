@@ -1,3 +1,4 @@
+# Additional requirements for the LensKit demos.
 notebook >= 6
 nbval >= 0.9
 matplotlib ~= 3.4

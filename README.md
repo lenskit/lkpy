@@ -62,8 +62,31 @@ tool to automate setting up Conda environments from the LensKit dependencies; to
 create a dev environment, checkout LensKit, then run:
 
     pipx ./utils/conda-tool.py --env -n lkpy pyproject.toml dev-requirements.txt
+    conda activate lkpy
 
-That will create an environment named `lkpy` with all the LensKit dependencies.
+That will create and activate an environment named `lkpy` with all the LensKit
+dependencies. You will also need to install LensKit in editable mode to do
+things like run the tests:
+
+    pip install -e lenskit
+
+Each LensKit subpackage you want to work on will also need to be installed.
+
+### Developing with Standard Virtual Environments
+
+[uv]: https://github.com/astral-sh/uv
+
+You can also use a standard virtual environment and vanilla Python to develop LensKit.
+To do this, the easiest way is to use [uv][]:
+
+    uv venv -p python3.11
+    uv pip install -r full-dev-requirements.txt
+
+You can also use traditional Pip:
+
+    python -m venv .venv
+    . .venv/bin/activate
+    python -m pip install -r full-dev-requirements.txt
 
 ## Testing Changes
 
