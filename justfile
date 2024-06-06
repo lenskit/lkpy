@@ -15,6 +15,11 @@ build:
     python -m build -n -o dist lenskit
     python -m build -n -o dist lenskit-funksvd
 
+build-sdist:
+    python -m build -n -s -o dist lenskit
+    python -m build -n -s -o dist lenskit-funksvd
+
+
 # install the package
 [confirm("this installs package from a wheel, continue [y/N]?")]
 install:
