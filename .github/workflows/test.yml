@@ -253,11 +253,7 @@ jobs:
         python -m lenskit.datasets.fetch ml-100k ml-1m ml-10m ml-20m
     - name: 📕 Validate documentation examples
       run: |
-        python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --log-file test-docs.log docs */lenskit
-    - name: 📒 Validate doc notebooks
-      run: |
-        cp docs/*.ipynb data
-        python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --nbval-lax --log-file test-demo.log data
+        python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --nbval-lax --log-file test-docs.log docs */lenskit
     - name: 📐 Coverage results
       run: coverage xml
     - name: 📤 Upload test results
