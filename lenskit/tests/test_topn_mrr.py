@@ -10,10 +10,6 @@ import pandas as pd
 from pytest import approx, mark
 
 from lenskit.topn import RecListAnalysis, recip_rank
-from lenskit.util.test import ml_test, demo_recs
-from lenskit.algorithms.basic import Popular
-from lenskit.batch import recommend
-from lenskit.crossfold import simple_test_pair
 
 
 def _test_rr(items, rel, **kw):
