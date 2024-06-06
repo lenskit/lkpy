@@ -15,7 +15,8 @@ import pytest
 import lenskit.crossfold as xf
 import lenskit.util.test as lktu
 from lenskit import batch, topn
-from lenskit.algorithms.basic import Popular, TopN
+from lenskit.algorithms import Recommender
+from lenskit.algorithms.basic import PopScore, TopN
 from lenskit.algorithms.bias import Bias
 
 MLB = namedtuple("MLB", ["ratings", "algo"])
@@ -145,7 +146,8 @@ def test_bias_batch_recommend(ml_folds: MLFolds, ncpus):
 @pytest.mark.parametrize("ncpus", [None, 1, 2])
 @pytest.mark.eval
 def test_pop_batch_recommend(ml_folds: MLFolds, ncpus):
-    algo = Popular()
+    algo = PopScore()
+    algo = Recommender.adapt(algo)
 
     recs = ml_folds.eval_all(algo, n_jobs=ncpus)
     ml_folds.check_positive_ndcg(recs)

@@ -8,13 +8,11 @@ for nonpersonalized recommendation and testing.
 Most Popular Item Recommendation
 --------------------------------
 
-The :py:class:`PopScore` algorithm scores items by their populariy for enabling most-popular-item recommendation.
+The :py:class:`PopScore` algorithm scores items by their popularity for enabling
+most-popular-item recommendation.
 
 .. module:: lenskit.algorithms.basic
 .. autoclass:: PopScore
-    :members:
-    :show-inheritance:
-.. autoclass:: Popular
     :members:
     :show-inheritance:
 

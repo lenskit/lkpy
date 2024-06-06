@@ -18,7 +18,7 @@ Basic Algorithms
 .. autosummary::
 
     bias.Bias
-    basic.Popular
+    basic.PopScore
     basic.TopN
     basic.Fallback
     basic.UnratedItemCandidateSelector

@@ -41,6 +41,8 @@ Significant Changes
     package).  Classes and functions must be imported from appropriate
     subpackages.
 
+*   The ``Popular`` recommender has been removed in favor of :class:`~lenskit.algorithms.basic.PopScore`.
+
 New Features (incremental)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 

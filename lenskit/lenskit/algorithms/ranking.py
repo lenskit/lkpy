@@ -119,12 +119,10 @@ class PlackettLuce(Recommender):
     """
 
     def __init__(self, predictor, selector=None, *, rng_spec=None):
-        from .basic import Popular, UnratedItemCandidateSelector
+        from .basic import UnratedItemCandidateSelector
 
         if isinstance(predictor, TopN):
             _log.warn("wrapping Top-N in PlackettLuce, candidate selector probably redundant")
-        elif isinstance(predictor, Popular):
-            _log.warn("wrapping Popular in Plackett-Luce, consider PopScore")
 
         self.predictor = predictor
         self.selector = selector if selector is not None else UnratedItemCandidateSelector()

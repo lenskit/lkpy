@@ -23,54 +23,6 @@ from .ranking import TopN  # noqa: F401
 _logger = logging.getLogger(__name__)
 
 
-class Popular(Recommender):
-    """
-    Recommend the most popular items.
-
-    The :py:class:`PopScore` class is more flexible, and recommended for new code.
-
-    Args:
-        selector(CandidateSelector):
-            The candidate selector to use. If ``None``, uses a new
-            :class:`UnratedItemCandidateSelector`.
-
-    Attributes:
-        item_pop_(pandas.Series):
-            Item rating counts (popularity)
-    """
-
-    def __init__(self, selector=None):
-        self.selector = selector
-
-    def fit(self, ratings, **kwargs):
-        pop = ratings.groupby("item").user.count()
-        pop.name = "score"
-        self.item_pop_ = pop.astype("float64")
-
-        if self.selector is None:
-            self.selector = UnratedItemCandidateSelector()
-        self.selector.fit(ratings)
-
-        return self
-
-    def recommend(self, user, n=None, candidates=None, ratings=None):
-        scores = self.item_pop_
-        if candidates is None:
-            candidates = self.selector.candidates(user, ratings)
-
-        idx = scores.index.get_indexer(candidates)
-        idx = idx[idx >= 0]
-        scores = scores.iloc[idx]
-
-        if n is None:
-            return scores.sort_values(ascending=False).reset_index()
-        else:
-            return scores.nlargest(n).reset_index()
-
-    def __str__(self):
-        return "Popular"
-
-
 class PopScore(Predictor):
     """
     Score items by their popularity.  Use with :py:class:`TopN` to get a

@@ -15,8 +15,7 @@ import pytest
 
 from lenskit import batch
 from lenskit.algorithms import Recommender
-from lenskit.algorithms.als import BiasedMF
-from lenskit.algorithms.basic import Popular
+from lenskit.algorithms.basic import PopScore
 from lenskit.datasets import MovieLens
 
 _log = logging.getLogger(__name__)
@@ -41,7 +40,8 @@ def ml20m():
 @pytest.mark.parametrize("n_jobs", [1, 2])
 def test_pop_recommend(ml20m, rng, n_jobs):
     users = rng.choice(ml20m["user"].unique(), 10000, replace=False)
-    algo = Popular()
+    algo = PopScore()
+    algo = Recommender.adapt(algo)
     _log.info("training %s", algo)
     algo.fit(ml20m)
     _log.info("recommending with %s", algo)
