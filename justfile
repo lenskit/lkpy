@@ -12,7 +12,8 @@ clean:
 
 # build the modules and wheels
 build:
-    python -m build -n
+    python -m build -n -o dist lenskit
+    python -m build -n -o dist lenskit-funksvd
 
 # install the package
 [confirm("this installs package from a wheel, continue [y/N]?")]

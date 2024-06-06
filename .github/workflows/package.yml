@@ -29,7 +29,9 @@ jobs:
         run: pip install -U build
 
       - name: Build distribution
-        run: python -m build
+        run: |
+          python -m build -o dist lenskit
+          python -m build -o dist lenskit-funksvd
 
       - name: Save archive
         uses: actions/upload-artifact@v4
