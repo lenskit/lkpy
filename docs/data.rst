@@ -10,3 +10,4 @@ Building Ratings Matrices
 
 .. autofunction:: sparse_ratings
 .. autoclass:: RatingMatrix
+.. autoclass:: CSRStructure

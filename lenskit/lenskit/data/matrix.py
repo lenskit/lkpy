@@ -27,6 +27,29 @@ t = torch
 M = TypeVar("M", CSR, sps.csr_matrix, sps.coo_matrix, t.Tensor)
 
 
+class CSRStructure(NamedTuple):
+    """
+    Representation of the compressed sparse row structure of a sparse matrix,
+    without any data values.
+    """
+
+    rowptrs: np.ndarray
+    colinds: np.ndarray
+    shape: tuple[int, int]
+
+    @property
+    def nrows(self):
+        return self.shape[0]
+
+    @property
+    def ncols(self):
+        return self.shape[1]
+
+    @property
+    def nnz(self):
+        return self.rowptrs[self.nrows]
+
+
 class RatingMatrix(NamedTuple, Generic[M]):
     """
     A rating matrix with associated indices.
