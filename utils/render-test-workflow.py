@@ -21,6 +21,7 @@ from __future__ import annotations
 import logging
 import sys
 from dataclasses import dataclass, field
+from hashlib import blake2b
 from textwrap import dedent
 from typing import Any, Literal, NotRequired, Optional, TypedDict
 
@@ -246,6 +247,30 @@ def steps_inspect(options: JobOptions) -> list[GHStep]:
     ]
 
 
+def steps_mldata(options: JobOptions, datasets: list[str]) -> list[GHStep]:
+    ds_str = " ".join(datasets)
+    ds_hash = blake2b(ds_str.encode("ascii")).hexdigest()
+    return [
+        {
+            "name": "Cache ML data",
+            "uses": "actions/cache@v2",
+            "with": {
+                "path": script("""
+                        data
+                        !data/*.zip
+                    """),
+                "key": f"test-mldata-000-{ds_hash}",
+            },
+        },
+        {
+            "name": "Download ML data",
+            "run": script(f"""
+                python -m lenskit.datasets.fetch {ds_str}
+            """),
+        },
+    ]
+
+
 def steps_test(options: JobOptions) -> list[GHStep]:
     test_cmd = [
         "python",
@@ -319,7 +344,36 @@ def test_job(options: JobOptions) -> GHJob:
     return job
 
 
-def test_demo_job() -> GHJob:
+def test_eval_job() -> GHJob:
+    opts = JobOptions(
+        "eval-tests",
+        "Evaluation-based tests",
+        env="conda",
+        req_file="requirements-test.txt",
+        packages=["lenskit-funksvd"],
+    )
+    cov = "--cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit"
+    return {
+        "name": opts.name,
+        "runs-on": opts.vm_platform,
+        "defaults": {"run": {"shell": "bash -el {0}"}},
+        "steps": [step_checkout(opts)]
+        + steps_setup_conda(opts)
+        + steps_mldata(opts, ["ml-100k", "ml-20m"])
+        + [
+            {
+                "name": "Run Eval Tests",
+                "run": script(f"""
+                    python -m pytest {cov} -m eval --log-file test-eval.log */tests
+                    python -m pytest {cov} --cov-append -m realdata --log-file test-realdata.log */tests
+                """),
+            },
+        ]
+        + steps_coverage(opts),
+    }
+
+
+def test_doc_job() -> GHJob:
     opts = JobOptions(
         "examples",
         "Demos, examples, and docs",
@@ -334,45 +388,19 @@ def test_demo_job() -> GHJob:
         "defaults": {"run": {"shell": "bash -el {0}"}},
         "steps": [step_checkout(opts)]
         + steps_setup_conda(opts)
+        + steps_mldata(opts, ["ml-100k", "ml-1m", "ml-10m", "ml-20m"])
         + [
             {
-                "name": "Cache ML data",
-                "uses": "actions/cache@v2",
-                "with": {
-                    "path": script("""
-                        data
-                        !data/*.zip
-                    """),
-                    "key": "test-mldata-000",
-                },
-            },
-            {
-                "name": "Download ML data",
-                "run": script("""
-                    python -m lenskit.datasets.fetch ml-100k
-                    python -m lenskit.datasets.fetch ml-1m
-                    python -m lenskit.datasets.fetch ml-10m
-                    python -m lenskit.datasets.fetch ml-20m
-                """),
-            },
-            {
-                "name": "Install for testing",
-                "run": script("""
-                    pip install --no-deps ./lenskit ./lenskit-funksvd
-                """),
-            },
-            {
-                "name": "Run Eval Tests",
+                "name": "📕 Validate documentation examples",
                 "run": script(f"""
-                    python -m pytest {cov} -m eval --log-file test-eval.log
-                    python -m pytest {cov} --cov-append -m realdata --log-file test-realdata.log
+                    python -m pytest {cov} --log-file test-docs.log docs */lenskit
                 """),
             },
             {
-                "name": "Validate doc notebooks",
+                "name": "📒 Validate doc notebooks",
                 "run": script(f"""
                     cp docs/*.ipynb data
-                    python -m pytest {cov} --cov-append --nbval-lax data --log-file test-docs.log
+                    python -m pytest {cov} --nbval-lax --log-file test-demo.log data
                 """),
             },
         ]
@@ -410,7 +438,8 @@ def test_jobs() -> dict[str, GHJob]:
                 "mindep", "Minimal dependency tests", pip_args=["--resolution=lowest-direct"]
             )
         ),
-        "examples": test_demo_job(),
+        "doc-tests": test_doc_job(),
+        "eval-tests": test_eval_job(),
         "funksvd": test_job(
             JobOptions(
                 "funksvd",

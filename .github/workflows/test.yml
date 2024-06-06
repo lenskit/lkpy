@@ -216,7 +216,7 @@ jobs:
         path: |
           test*.log
           coverage.xml
-  examples:
+  doc-tests:
     name: Demos, examples, and docs
     runs-on: ubuntu-latest
     defaults:
@@ -247,30 +247,71 @@ jobs:
         path: |
           data
           !data/*.zip
-        key: test-mldata-000
+        key: test-mldata-000-cd26f1c44a6962b0936346b346a9b418a3ed04b01a2892269fccd24a6387e943dba6d5e64ab2f8feb1823475601d65c2e6ebbeeeca0c2c210f0d37c00aabf2e9
     - name: Download ML data
       run: |
-        python -m lenskit.datasets.fetch ml-100k
-        python -m lenskit.datasets.fetch ml-1m
-        python -m lenskit.datasets.fetch ml-10m
-        python -m lenskit.datasets.fetch ml-20m
-    - name: Install for testing
+        python -m lenskit.datasets.fetch ml-100k ml-1m ml-10m ml-20m
+    - name: 📕 Validate documentation examples
       run: |
-        pip install --no-deps ./lenskit ./lenskit-funksvd
-    - name: Run Eval Tests
-      run: |
-        python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit -m eval --log-file test-eval.log
-        python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov-append -m realdata --log-file test-realdata.log
-    - name: Validate doc notebooks
+        python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --log-file test-docs.log docs */lenskit
+    - name: 📒 Validate doc notebooks
       run: |
         cp docs/*.ipynb data
-        python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov-append --nbval-lax data --log-file test-docs.log
+        python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --nbval-lax --log-file test-demo.log data
     - name: 📐 Coverage results
       run: coverage xml
     - name: 📤 Upload test results
       uses: actions/upload-artifact@v3
       with:
         name: test-examples
+        path: |
+          test*.log
+          coverage.xml
+  eval-tests:
+    name: Evaluation-based tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+    - name: 🛒 Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: 👢 Generate Conda environment file
+      run: |
+        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all requirements-test.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml
+    - id: setup
+      name: 📦 Set up Conda environment
+      uses: mamba-org/setup-micromamba@v1
+      with:
+        environment-file: ci-environment.yml
+        environment-name: lkpy
+        cache-environment: true
+        init-shell: bash
+    - name: 🍱 Install LensKit packages
+      run: |
+        pip install --no-deps ./lenskit ./lenskit-funksvd
+    - name: Cache ML data
+      uses: actions/cache@v2
+      with:
+        path: |
+          data
+          !data/*.zip
+        key: test-mldata-000-2ee919d5c0eef34d5a4f40bcf0480c1bf0310417db6921e3a2575c48991f379c2f4ad179f8514390133795614a96fa5b4ece55906c68a90af07c09670b2c3c5b
+    - name: Download ML data
+      run: |
+        python -m lenskit.datasets.fetch ml-100k ml-20m
+    - name: Run Eval Tests
+      run: |
+        python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit -m eval --log-file test-eval.log */tests
+        python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov-append -m realdata --log-file test-realdata.log */tests
+    - name: 📐 Coverage results
+      run: coverage xml
+    - name: 📤 Upload test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-eval-tests
         path: |
           test*.log
           coverage.xml
@@ -331,7 +372,8 @@ jobs:
     - vanilla
     - nojit
     - mindep
-    - examples
+    - doc-tests
+    - eval-tests
     - funksvd
     steps:
     - name: 🛒 Checkout
