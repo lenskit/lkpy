@@ -48,6 +48,13 @@ class CSRStructure(NamedTuple):
     def nnz(self):
         return self.rowptrs[self.nrows]
 
+    def extent(self, row: int) -> tuple[int, int]:
+        return self.rowptrs[row], self.rowptrs[row + 1]
+
+    def row_cs(self, row: int) -> np.ndarray:
+        sp, ep = self.extent(row)
+        return self.colinds[sp:ep]
+
 
 class RatingMatrix(NamedTuple, Generic[M]):
     """
@@ -117,7 +124,7 @@ def sparse_ratings(
     layout: Literal["csr"] = "csr",
     users: Optional[pd.Index[Any]] = None,
     items: Optional[pd.Index[Any]] = None,
-) -> RatingMatrix[sps.csr_array]: ...
+) -> RatingMatrix[CSRStructure]: ...
 def sparse_ratings(
     ratings: pd.DataFrame,
     *,
