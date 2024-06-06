@@ -10,6 +10,7 @@ import pandas as pd
 from pytest import approx, mark
 
 from lenskit.topn import RecListAnalysis, recip_rank
+from lenskit.util.test import demo_recs  # noqa: F401
 
 
 def _test_rr(items, rel, **kw):
