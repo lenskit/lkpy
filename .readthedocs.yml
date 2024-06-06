@@ -12,4 +12,6 @@ python:
   install:
     - requirements: doc-requirements.txt
     - method: pip
-      path: .
+      path: lenskit
+    - method: pip
+      path: lenskit-funksvd
