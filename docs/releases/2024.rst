@@ -37,6 +37,10 @@ Significant Changes
 *   Algorithms refactored to more consistent package locations, without the
     ``algorithms`` subpackage.
 
+*   LensKit no longer has top-level exports (and is now in fact a namespace
+    package).  Classes and functions must be imported from appropriate
+    subpackages.
+
 New Features (incremental)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
