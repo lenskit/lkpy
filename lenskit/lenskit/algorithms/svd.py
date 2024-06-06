@@ -55,12 +55,14 @@ class BiasedSVD(Predictor):
         i_bias = self.bias.item_offsets_
 
         _log.info("[%s] sparsifying and normalizing matrix", timer)
-        r_mat, users, items = sparse_ratings(ratings, users=u_bias.index, items=i_bias.index)
+        r_mat, users, items = sparse_ratings(
+            ratings, layout="coo", users=u_bias.index, items=i_bias.index
+        )
         # global
-        r_mat.values -= g_bias
-        r_mat.values -= i_bias.values[r_mat.colinds]
-        r_mat.values -= u_bias.values[r_mat.rowinds()]
-        r_mat = r_mat.to_scipy()
+        r_mat.data -= g_bias
+        r_mat.data -= i_bias.values[r_mat.col]
+        r_mat.data -= u_bias.values[r_mat.row]
+        r_mat = r_mat.tocsr()
         assert r_mat.shape == (len(u_bias), len(i_bias))
 
         _log.info("[%s] training SVD (k=%d)", timer, self.factorization.n_components)
