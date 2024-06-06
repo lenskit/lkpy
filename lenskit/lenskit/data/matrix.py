@@ -18,13 +18,12 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sps
 import torch
-from csr import CSR
 from typing_extensions import Any, Generic, Literal, NamedTuple, Optional, TypeVar, overload
 
 _log = logging.getLogger(__name__)
 
 t = torch
-M = TypeVar("M", CSR, sps.csr_array, sps.coo_array, t.Tensor)
+M = TypeVar("M", sps.csr_array, sps.coo_array, t.Tensor)
 
 
 class CSRStructure(NamedTuple):
