@@ -31,8 +31,7 @@ from docopt import docopt
 _log = logging.getLogger("render-workflows")
 CODECOV_TOKEN = "5cdb6ef4-e80b-44ce-b88d-1402e4dfb781"
 PYTHONS = ["3.10", "3.11"]
-BASIC_PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
-ALL_PLATFORMS = BASIC_PLATFORMS + ["macos-13"]
+PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
 WORKFLOW_HEADER = {
     "name": "Test Suite",
     "on": {
@@ -413,7 +412,7 @@ def test_jobs() -> dict[str, GHJob]:
             JobOptions(
                 "conda",
                 "Conda Python ${{matrix.python}} on ${{matrix.platform}}",
-                matrix={"python": PYTHONS, "platform": ALL_PLATFORMS},
+                matrix={"python": PYTHONS, "platform": PLATFORMS},
                 env="conda",
             )
         ),
@@ -421,7 +420,7 @@ def test_jobs() -> dict[str, GHJob]:
             JobOptions(
                 "vanilla",
                 "Vanilla Python ${{matrix.python}} on ${{matrix.platform}}",
-                matrix={"python": PYTHONS, "platform": BASIC_PLATFORMS},
+                matrix={"python": PYTHONS, "platform": PLATFORMS},
             )
         ),
         "funksvd": test_job(

@@ -25,7 +25,6 @@ jobs:
         - ubuntu-latest
         - macos-latest
         - windows-latest
-        - macos-13
     steps:
     - name: 🛒 Checkout
       uses: actions/checkout@v4
