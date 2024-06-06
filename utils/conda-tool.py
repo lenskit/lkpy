@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # This file is part of LensKit.
 # Copyright (C) 2018-2023 Boise State University
 # Copyright (C) 2023-2024 Drexel University
