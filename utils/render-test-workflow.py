@@ -456,8 +456,10 @@ def result_job(deps: list[str]) -> GHJob:
             step_checkout(),
             {
                 "name": "📥 Download test artifacts",
-                "uses": "actions/download-artifact@v3",
+                "uses": "actions/download-artifact@v4",
                 "with": {
+                    "pattern": "test-*",
+                    "merge-multiple": "true",
                     "path": "test-logs",
                 },
             },
