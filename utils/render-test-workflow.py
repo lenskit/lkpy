@@ -58,7 +58,7 @@ class JobOptions:
     matrix: Optional[dict[str, list[str]]] = None
     extras: Optional[list[str]] = None
     pip_args: Optional[list[str]] = None
-    req_file: str = "requirements-test.txt"
+    req_files: list[str] = field(default_factory=lambda: ["requirements-test.txt"])
     test_args: Optional[list[str]] = None
     test_env: Optional[dict[str, str | int]] = None
     packages: list[str] = field(default_factory=lambda: ["lenskit"])
@@ -171,7 +171,7 @@ def steps_setup_conda(options: JobOptions) -> list[GHStep]:
             ctool += ["-e", e]
     else:
         ctool += ["-e", "all"]
-    ctool += [options.req_file] + [f"{pkg}/pyproject.toml" for pkg in options.required_packages]
+    ctool += options.req_files + [f"{pkg}/pyproject.toml" for pkg in options.required_packages]
 
     pip = ["pip", "install", "--no-deps"]
     pip += [f"./{pkg}" for pkg in options.required_packages]
@@ -197,7 +197,9 @@ def steps_setup_conda(options: JobOptions) -> list[GHStep]:
 
 
 def steps_setup_vanilla(options: JobOptions) -> list[GHStep]:
-    pip = ["uv pip install", "--python", "$PYTHON", "-r", options.req_file]
+    pip = ["uv pip install", "--python", "$PYTHON"]
+    for req in options.req_files:
+        pip += ["-r", req]
     pip += [f"./{pkg}" for pkg in options.required_packages]
     if options.pip_args:
         pip += options.pip_args
@@ -210,8 +212,8 @@ def steps_setup_vanilla(options: JobOptions) -> list[GHStep]:
             "with": {
                 "python-version": options.python_version,
                 "cache": "pip",
-                "cache-dependency-path": script(f"""
-                    {options.req_file}
+                "cache-dependency-path": script("""
+                    requirements*.txt
                     */pyproject.toml
                 """),
             },
@@ -349,7 +351,7 @@ def test_eval_job() -> GHJob:
         "eval-tests",
         "Evaluation-based tests",
         env="conda",
-        req_file="requirements-test.txt",
+        req_files=["requirements-test.txt"],
         packages=["lenskit-funksvd"],
     )
     cov = "--cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit"
@@ -378,7 +380,7 @@ def test_doc_job() -> GHJob:
         "examples",
         "Demos, examples, and docs",
         env="conda",
-        req_file="requirements-test.txt",
+        req_files=["requirements-test.txt", "requirements-demo.txt"],
         packages=["lenskit-funksvd"],
     )
     cov = "--cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit"
