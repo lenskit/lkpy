@@ -23,6 +23,7 @@ from lenskit import util
 from lenskit.data import FeedbackType, sparse_ratings
 from lenskit.data.matrix import normalize_sparse_rows, safe_spmv
 from lenskit.diagnostics import DataWarning
+from lenskit.parallel.config import ensure_parallel_init
 
 from .. import Predictor
 
@@ -133,7 +134,7 @@ class UserUser(Predictor):
         Args:
             ratings(pandas.DataFrame): (user, item, rating) data for collaborative filtering.
         """
-        util.check_env()
+        ensure_parallel_init()
         rmat, users, items = sparse_ratings(ratings, type="torch")
 
         if self.center:

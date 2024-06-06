@@ -137,12 +137,3 @@ def cur_memory():
 
 def clean_str(s):
     return dedent(s).strip()
-
-
-def check_env():
-    """
-    Check the runtime environment for potential performance or stability problems.
-    """
-    from .debug import check_env
-
-    return check_env()
