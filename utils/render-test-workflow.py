@@ -450,7 +450,7 @@ def test_jobs() -> dict[str, GHJob]:
         ),
         "funksvd-mindep": test_job(
             JobOptions(
-                "mindep",
+                "mindep-funksvd",
                 "Minimal dependency tests for FunkSVD",
                 dep_strategy="minimum",
                 packages=["lenskit-funksvd"],
