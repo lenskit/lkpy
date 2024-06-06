@@ -33,26 +33,22 @@ jobs:
       - name: 🪮 Check source code formatting
         id: format
         run: |
-          if ruff format --diff $PKG_DIR; then
+          if ruff format --diff */lenskit; then
             echo passed=yes >>"$GITHUB_OUTPUT"
           else
             echo passed=no >>"$GITHUB_OUTPUT"
             echo "::error::source code not formatted"
           fi
-        env:
-          PKG_DIR: lenskit
 
       - name: 🐜 Check source code lint rules
         id: lint
         run: |
-          if ruff check --output-format=github $PKG_DIR; then
+          if ruff check --output-format=github */lenskit; then
             echo passed=yes >>"$GITHUB_OUTPUT"
           else
             echo passed=no >>"$GITHUB_OUTPUT"
             echo "::error::source code lint check failed"
           fi
-        env:
-          PKG_DIR: lenskit
 
       - name: 🧾 Checking lint and format results
         run: |
