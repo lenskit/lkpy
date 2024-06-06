@@ -83,9 +83,8 @@ def test_sparse_ratings_scipy(format, sps_fmt_checker):
     # user indicators should correspond to user item counts
     ucounts = ratings.groupby("user").item.count()
     ucounts = ucounts.loc[uidx].cumsum()
-    if format != "csr":
-        mat = mat.tocsr()
-    assert all(mat.indptr[1:] == ucounts.values)
+    m2 = mat.tocsr()
+    assert np.all(m2.indptr[1:] == ucounts.values)
 
 
 def test_sparse_ratings_scipy_implicit():
