@@ -92,7 +92,7 @@ jobs:
     - name: 📦 Set up Python dependencies
       id: install-deps
       run: |
-        uv pip install --python $PYTHON -r test-requirements.txt lenskit
+        uv pip install --python $PYTHON -r test-requirements.txt ./lenskit
       shell: bash
       env:
         PYTHON: ${{steps.install-python.outputs.python-path}}
@@ -135,7 +135,7 @@ jobs:
     - name: 📦 Set up Python dependencies
       id: install-deps
       run: |
-        uv pip install --python $PYTHON -r test-requirements.txt lenskit
+        uv pip install --python $PYTHON -r test-requirements.txt ./lenskit
       shell: bash
       env:
         PYTHON: ${{steps.install-python.outputs.python-path}}
@@ -181,7 +181,7 @@ jobs:
     - name: 📦 Set up Python dependencies
       id: install-deps
       run: |
-        uv pip install --python $PYTHON -r test-requirements.txt lenskit --resolution=lowest-direct
+        uv pip install --python $PYTHON -r test-requirements.txt ./lenskit --resolution=lowest-direct
       shell: bash
       env:
         PYTHON: ${{steps.install-python.outputs.python-path}}
@@ -244,7 +244,7 @@ jobs:
         python -m lenskit.datasets.fetch ml-20m
     - name: Install for testing
       run: |
-        pip install --no-deps lenskit
+        pip install --no-deps ./lenskit
     - name: Run Eval Tests
       run: |
         python -m pytest --cov=lenskit -m eval --log-file test-eval.log
