@@ -459,7 +459,6 @@ def result_job(deps: list[str]) -> GHJob:
                 "uses": "actions/download-artifact@v4",
                 "with": {
                     "pattern": "test-*",
-                    "merge-multiple": "true",
                     "path": "test-logs",
                 },
             },

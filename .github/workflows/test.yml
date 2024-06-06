@@ -380,7 +380,6 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         pattern: test-*
-        merge-multiple: 'true'
         path: test-logs
     - name: 📋 List log files
       run: ls -lR test-logs
