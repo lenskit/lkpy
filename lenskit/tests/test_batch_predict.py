@@ -31,7 +31,7 @@ def mlb():
 
 def test_predict_single(mlb):
     tf = pd.DataFrame({"user": [1], "item": [31]})
-    res = lkb.predict(mlb.algo, tf)
+    res = lkb.predict(mlb.algo, tf, n_jobs=1)
 
     assert len(res) == 1
     assert all(res.user == 1)
@@ -52,7 +52,7 @@ def test_predict_user(mlb):
     test_items = pd.concat([test_rated, pd.Series(test_unrated)])
 
     tf = pd.DataFrame({"user": uid, "item": test_items})
-    res = lkb.predict(mlb.algo, tf)
+    res = lkb.predict(mlb.algo, tf, n_jobs=1)
 
     assert len(res) == 15
     assert set(res.columns) == set(["user", "item", "prediction"])
@@ -74,7 +74,7 @@ def test_predict_two_users(mlb):
     while tf is None or len(set(tf.user)) < 2:
         tf = mlb.ratings[mlb.ratings.user.isin(uids)].loc[:, ("user", "item")].sample(10)
 
-    res = lkb.predict(mlb.algo, tf)
+    res = lkb.predict(mlb.algo, tf, n_jobs=1)
 
     assert len(res) == 10
     assert set(res.user) == set(uids)
@@ -93,7 +93,7 @@ def test_predict_include_rating(mlb):
     while tf is None or len(set(tf.user)) < 2:
         tf = mlb.ratings[mlb.ratings.user.isin(uids)].loc[:, ("user", "item", "rating")].sample(10)
 
-    res = lkb.predict(mlb.algo, tf)
+    res = lkb.predict(mlb.algo, tf, n_jobs=1)
 
     assert len(res) == 10
     assert set(res.user) == set(uids)

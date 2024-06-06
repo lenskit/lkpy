@@ -66,7 +66,7 @@ def ml_folds() -> MLFolds:
 
 
 def test_recommend_single(mlb):
-    res = batch.recommend(mlb.algo, [1], None, {1: [31]})
+    res = batch.recommend(mlb.algo, [1], None, {1: [31]}, n_jobs=1)
 
     assert len(res) == 1
     assert all(res["user"] == 1)
@@ -86,7 +86,7 @@ def test_recommend_user(mlb):
         urs = mlb.ratings[mlb.ratings.user == user]
         return np.setdiff1d(items, urs.item.unique())
 
-    res = batch.recommend(mlb.algo, [5], 10, candidates)
+    res = batch.recommend(mlb.algo, [5], 10, candidates, n_jobs=1)
 
     assert len(res) == 10
     assert set(res.columns) == set(["user", "rank", "item", "score"])
@@ -103,7 +103,7 @@ def test_recommend_two_users(mlb):
         urs = mlb.ratings[mlb.ratings.user == user]
         return np.setdiff1d(items, urs.item.unique())
 
-    res = batch.recommend(mlb.algo, [5, 10], 10, candidates)
+    res = batch.recommend(mlb.algo, [5, 10], 10, candidates, n_jobs=1)
 
     assert len(res) == 20
     assert set(res.user) == set([5, 10])
@@ -116,7 +116,7 @@ def test_recommend_two_users(mlb):
 
 
 def test_recommend_no_cands(mlb):
-    res = batch.recommend(mlb.algo, [5, 10], 10)
+    res = batch.recommend(mlb.algo, [5, 10], 10, n_jobs=1)
 
     assert len(res) == 20
     assert set(res.user) == set([5, 10])

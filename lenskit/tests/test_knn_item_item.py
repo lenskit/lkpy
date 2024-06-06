@@ -248,6 +248,7 @@ def test_ii_train_big_unbounded():
 
 
 @lktu.wantjit
+@mark.slow
 @mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
 def test_ii_train_ml100k(tmp_path):
     "Test an unbounded model on ML-100K"
