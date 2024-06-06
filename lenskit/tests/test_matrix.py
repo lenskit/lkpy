@@ -17,7 +17,7 @@ from hypothesis import HealthCheck, assume, given, settings
 from pytest import approx, mark
 
 from lenskit.data import sparse_ratings
-from lenskit.data.matrix import safe_spmv, torch_sparse_from_scipy
+from lenskit.data.matrix import CSRStructure, safe_spmv, torch_sparse_from_scipy
 from lenskit.util.test import coo_arrays, ml_test
 
 _log = logging.getLogger(__name__)
@@ -99,6 +99,21 @@ def test_sparse_ratings_scipy_implicit():
     assert len(iidx) == ratings.item.nunique()
 
     assert all(mat.data == 1.0)
+
+
+def test_sparse_ratings_structure():
+    ratings = ml_test.ratings
+    ratings = ratings.loc[:, ["user", "item"]]
+    mat, uidx, iidx = sparse_ratings(ratings, type="structure")
+    spmat, _uidx, _iidx = sparse_ratings(ratings, users=uidx, items=iidx)
+
+    assert isinstance(mat, CSRStructure)
+    assert mat.nrows == ratings.user.nunique()
+    assert mat.ncols == ratings.item.nunique()
+    assert mat.nnz == len(ratings)
+    assert mat.rowptrs[mat.nrows] == mat.nnz
+    assert np.all(mat.rowptrs == spmat.indptr)
+    assert np.all(mat.colinds == spmat.indices)
 
 
 def test_sparse_ratings_torch():

@@ -23,7 +23,7 @@ from typing_extensions import Any, Generic, Literal, NamedTuple, Optional, TypeV
 _log = logging.getLogger(__name__)
 
 t = torch
-M = TypeVar("M", sps.csr_array, sps.coo_array, t.Tensor)
+M = TypeVar("M", "CSRStructure", sps.csr_array, sps.coo_array, t.Tensor)
 
 
 class CSRStructure(NamedTuple):
@@ -109,10 +109,19 @@ def sparse_ratings(
     users: Optional[pd.Index[Any]] = None,
     items: Optional[pd.Index[Any]] = None,
 ) -> RatingMatrix[t.Tensor]: ...
+@overload
 def sparse_ratings(
     ratings: pd.DataFrame,
     *,
-    type: Literal["scipy", "torch"] = "scipy",
+    type: Literal["structure"] = "structure",
+    layout: Literal["csr"] = "csr",
+    users: Optional[pd.Index[Any]] = None,
+    items: Optional[pd.Index[Any]] = None,
+) -> RatingMatrix[sps.csr_array]: ...
+def sparse_ratings(
+    ratings: pd.DataFrame,
+    *,
+    type: Literal["scipy", "torch", "structure"] = "scipy",
     layout: Literal["csr", "coo"] = "csr",
     users: Optional[pd.Index[Any]] = None,
     items: Optional[pd.Index[Any]] = None,
@@ -175,6 +184,16 @@ def sparse_ratings(
         matrix = sps.coo_array((vals, (row_ind, col_ind)), shape=(nu, ni))
         if layout == "csr":
             matrix = matrix.tocsr()
+    elif type == "structure":
+        if layout != "csr":
+            raise ValueError("only CSR is supported for structure matrices")
+        df = pd.DataFrame({"row": row_ind, "col": col_ind})
+        df.sort_values(["row", "col"], inplace=True, ignore_index=True)
+        counts = df["row"].value_counts(sort=False)
+        rps = np.zeros(nu + 1, dtype=np.int32)
+        rps[counts.index + 1] = counts.values
+        rps = np.cumsum(rps)
+        matrix = CSRStructure(rps, col_ind, (nu, ni))
     else:
         raise ValueError(f"unknown type {type}")
 
