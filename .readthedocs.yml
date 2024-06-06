@@ -10,7 +10,7 @@ sphinx:
 
 python:
   install:
-    - requirements: doc-requirements.txt
+    - requirements: requirements-doc.txt
     - method: pip
       path: lenskit
     - method: pip
