@@ -22,7 +22,7 @@ license = { file = "LICENSE.md" }
 dynamic = ["version"]
 dependencies = [
   "lenskit",
-  "numba >= 0.56, < 0.59",
+  "numba >= 0.56",
 ]
 
 [project.urls]
