@@ -14,11 +14,11 @@ from collections.abc import Iterable, Sequence
 import numpy as np
 import pandas as pd
 
-from ..data import sparse_ratings
-from ..util import derivable_rng
-from . import CandidateSelector, Predictor, Recommender
-from .bias import Bias  # noqa: F401
-from .ranking import TopN  # noqa: F401
+from lenskit.algorithms import CandidateSelector, Predictor, Recommender
+from lenskit.algorithms.bias import Bias  # noqa: F401
+from lenskit.algorithms.ranking import TopN  # noqa: F401
+from lenskit.data.matrix import CSRStructure, sparse_ratings
+from lenskit.util import derivable_rng
 
 _logger = logging.getLogger(__name__)
 
@@ -165,19 +165,18 @@ class UnratedItemCandidateSelector(CandidateSelector):
     candidates.  When this selector is fit, it memorizes the rated items.
 
     Attributes:
-        items_(pandas.Index): All known items.
-        users_(pandas.Index): All known users.
-        user_items_(CSR):
+        items_: All known items.
+        users_: All known users.
+        user_items_:
             Items rated by each known user, as positions in the ``items`` index.
     """
 
-    items_ = None
-    users_ = None
-    user_items_ = None
+    items_: pd.Index
+    users_: pd.Index
+    user_items_: CSRStructure
 
     def fit(self, ratings, **kwargs):
-        r2 = ratings[["user", "item"]]
-        sparse = sparse_ratings(r2)
+        sparse = sparse_ratings(ratings, type="structure")
         _logger.info("trained unrated candidate selector for %d ratings", sparse.matrix.nnz)
         self.items_ = sparse.items
         self.users_ = sparse.users
@@ -214,7 +213,7 @@ class AllItemsCandidateSelector(CandidateSelector):
         items_(numpy.ndarray): All known items.
     """
 
-    items_ = None
+    items_: np.ndarray
 
     def fit(self, ratings, **kwargs):
         self.items_ = ratings["item"].unique()
