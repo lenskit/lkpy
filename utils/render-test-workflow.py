@@ -241,10 +241,7 @@ def steps_inspect(options: JobOptions) -> list[GHStep]:
         {
             "name": "🔍 Inspect environment",
             "run": script("""
-                which -a python
-                python -V
-                numba -s
-                pip list
+                python -m lenskit.util.envcheck
             """),
         }
     ]

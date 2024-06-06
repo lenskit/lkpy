@@ -47,10 +47,7 @@ jobs:
         pip install --no-deps -e lenskit
     - name: 🔍 Inspect environment
       run: |
-        which -a python
-        python -V
-        numba -s
-        pip list
+        python -m lenskit.util.envcheck
     - name: 🏃🏻‍➡️ Test LKPY
       run: |
         python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
@@ -107,10 +104,7 @@ jobs:
         UV_INDEX_STRATEGY: unsafe-first-match
     - name: 🔍 Inspect environment
       run: |
-        which -a python
-        python -V
-        numba -s
-        pip list
+        python -m lenskit.util.envcheck
     - name: 🏃🏻‍➡️ Test LKPY
       run: |
         python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
@@ -159,10 +153,7 @@ jobs:
         pip install --no-deps -e lenskit -e lenskit-funksvd
     - name: 🔍 Inspect environment
       run: |
-        which -a python
-        python -V
-        numba -s
-        pip list
+        python -m lenskit.util.envcheck
     - name: 🏃🏻‍➡️ Test LKPY
       run: |
         python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
@@ -209,10 +200,7 @@ jobs:
         UV_INDEX_STRATEGY: unsafe-first-match
     - name: 🔍 Inspect environment
       run: |
-        which -a python
-        python -V
-        numba -s
-        pip list
+        python -m lenskit.util.envcheck
     - name: 🏃🏻‍➡️ Test LKPY
       run: |
         python -m pytest --verbose --log-file=test.log --durations=25 -m 'not slow' --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit lenskit/tests lenskit-funksvd/tests
@@ -262,10 +250,7 @@ jobs:
         UV_INDEX_STRATEGY: unsafe-first-match
     - name: 🔍 Inspect environment
       run: |
-        which -a python
-        python -V
-        numba -s
-        pip list
+        python -m lenskit.util.envcheck
     - name: 🏃🏻‍➡️ Test LKPY
       run: |
         python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit lenskit/tests lenskit-funksvd/tests

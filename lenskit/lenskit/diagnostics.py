@@ -4,7 +4,6 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-
 class DataWarning(UserWarning):
     """
     Warning raised for detectable problems with input data.
