@@ -262,8 +262,6 @@ if platform.machine() == "arm64":
         """
         assert matrix.is_sparse_csr
         nr, nc = matrix.shape
-        print(matrix.shape)
-        print(matrix.crow_indices().shape)
         M = sps.csr_array(
             (matrix.values().numpy(), matrix.col_indices().numpy(), matrix.crow_indices().numpy()),
             (nr, nc),
