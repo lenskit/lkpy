@@ -24,7 +24,7 @@ from typing_extensions import Any, Generic, Literal, NamedTuple, Optional, TypeV
 _log = logging.getLogger(__name__)
 
 t = torch
-M = TypeVar("M", CSR, sps.csr_matrix, sps.coo_matrix, t.Tensor)
+M = TypeVar("M", CSR, sps.csr_array, sps.coo_array, t.Tensor)
 
 
 class CSRStructure(NamedTuple):
@@ -87,38 +87,34 @@ class DimStats(NamedTuple):
 def sparse_ratings(
     ratings: pd.DataFrame,
     *,
+    type: Literal["scipy"] = "scipy",
+    layout: Literal["csr"] = "csr",
     users: Optional[pd.Index[Any]] = None,
     items: Optional[pd.Index[Any]] = None,
-) -> RatingMatrix[CSR]: ...
-@overload
-def sparse_ratings(
-    ratings: pd.DataFrame,
-    scipy: Literal[True] | Literal["csr"],
-    *,
-    users: Optional[pd.Index[Any]] = None,
-    items: Optional[pd.Index[Any]] = None,
-) -> RatingMatrix[sps.csr_matrix]: ...
-@overload
-def sparse_ratings(
-    ratings: pd.DataFrame,
-    scipy: Literal["coo"],
-    *,
-    users: Optional[pd.Index[Any]] = None,
-    items: Optional[pd.Index[Any]] = None,
-) -> RatingMatrix[sps.coo_matrix]: ...
+) -> RatingMatrix[sps.csr_array]: ...
 @overload
 def sparse_ratings(
     ratings: pd.DataFrame,
     *,
-    torch: Literal[True],
+    type: Literal["scipy"] = "scipy",
+    layout: Literal["coo"] = "coo",
+    users: Optional[pd.Index[Any]] = None,
+    items: Optional[pd.Index[Any]] = None,
+) -> RatingMatrix[sps.coo_array]: ...
+@overload
+def sparse_ratings(
+    ratings: pd.DataFrame,
+    *,
+    type: Literal["torch"],
+    layout: Literal["coo", "csr"] = "csr",
     users: Optional[pd.Index[Any]] = None,
     items: Optional[pd.Index[Any]] = None,
 ) -> RatingMatrix[t.Tensor]: ...
 def sparse_ratings(
     ratings: pd.DataFrame,
-    scipy: bool | Literal["csr", "coo"] = False,
     *,
-    torch: bool = False,
+    type: Literal["scipy", "torch"] = "scipy",
+    layout: Literal["csr", "coo"] = "csr",
     users: Optional[pd.Index[Any]] = None,
     items: Optional[pd.Index[Any]] = None,
 ) -> RatingMatrix[Any]:
@@ -126,18 +122,23 @@ def sparse_ratings(
     Convert a rating table to a sparse matrix of ratings.
 
     Args:
-        ratings: a data table of (user, item, rating) triples.
-        scipy:
-            if ``True`` or ``'csr'``, return a SciPy csr matrix instead of
-            :class:`CSR`. if ``'coo'``, return a SciPy coo matrix.
-        torch:
-            if ``True``, return a PyTorch sparse tensor instead of a :class:`CSR`.
-        users: an index of user IDs.
-        items: an index of items IDs.
+        ratings:
+            A data table of (user, item, rating) triples.
+        type:
+            The type of matrix to create.  Can be ``scipy`` to create a SciPy
+            sparse array (see :mod:`scipy.sparse`), or ``torch`` to create a
+            sparse tensor (see :mod:`torch.sparse`).
+        layout:
+            The matrix layout to use.
+        users:
+            An index of user IDs.
+        items:
+            An index of items IDs.
 
     Returns:
         RatingMatrix:
-            a named tuple containing the sparse matrix, user index, and item index.
+            a named tuple containing the sparse matrix, user index, and item
+            index.
     """
     if users is None:
         users = pd.Index(np.unique(ratings.user), name="user")
@@ -158,27 +159,27 @@ def sparse_ratings(
     if np.any(col_ind < 0):
         raise ValueError("provided item index does not cover all users")
 
-    if "rating" in ratings.columns:
-        vals = np.require(ratings.rating.values, np.float64)
-    else:
-        vals = None
-
-    if scipy == "coo":
-        matrix = sps.coo_matrix((vals, (row_ind, col_ind)), shape=(nu, ni))
-    elif torch:
-        if vals is None:
-            vals = t.ones((len(ratings),), dtype=t.float32)
+    if type == "torch":
+        if "rating" in ratings.columns:
+            vals = t.from_numpy(ratings["rating"].values).to(t.float32)
         else:
-            vals = t.from_numpy(vals).to(t.float32)
+            vals = t.ones((len(ratings),), dtype=t.float32)
         indices = t.stack([t.from_numpy(row_ind), t.from_numpy(col_ind)], dim=0)
         matrix = t.sparse_coo_tensor(indices, vals, size=(nu, ni))
-        matrix = matrix.to_sparse_csr()
+        if layout == "csr":
+            matrix = matrix.to_sparse_csr()
+    elif type == "scipy":
+        if "rating" in ratings.columns:
+            vals = ratings["rating"].values
+        else:
+            vals = np.ones((len(ratings),), dtype=np.float32)
+        matrix = sps.coo_array((vals, (row_ind, col_ind)), shape=(nu, ni))
+        if layout == "csr":
+            matrix = matrix.tocsr()
     else:
-        matrix = CSR.from_coo(row_ind, col_ind, vals, (len(users), len(items)))
-        if scipy:
-            matrix = matrix.to_scipy()
+        raise ValueError(f"unknown type {type}")
 
-    return RatingMatrix(matrix, users, items)  # pyright: ignore
+    return RatingMatrix(matrix, users, items)
 
 
 def sparse_row_stats(matrix: t.Tensor) -> DimStats:

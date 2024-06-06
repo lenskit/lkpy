@@ -91,7 +91,7 @@ class BiasedMF(ALSBase):
             _log.info("[%s] normalizing ratings", self.timer)
             ratings = self.bias.fit_transform(ratings)
 
-        rmat, users, items = sparse_ratings(ratings, torch=True)
+        rmat, users, items = sparse_ratings(ratings, type="torch")
         return TrainingData.create(users, items, rmat)
 
     def initial_params(self, nrows: int, ncols: int) -> torch.Tensor:

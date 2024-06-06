@@ -210,7 +210,7 @@ class ItemItem(Predictor):
 
         _log.debug("[%s] beginning fit, memory use %s", self._timer, util.max_memory())
 
-        init_rmat, users, items = sparse_ratings(ratings, torch=True)
+        init_rmat, users, items = sparse_ratings(ratings, type="torch")
         n_items = len(items)
         _log.info(
             "[%s] made sparse matrix for %d items (%d ratings from %d users)",

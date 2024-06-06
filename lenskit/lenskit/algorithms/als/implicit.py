@@ -117,7 +117,7 @@ class ImplicitMF(ALSBase):
         if not self.use_ratings:
             ratings = ratings[["user", "item"]]
 
-        rmat, users, items = sparse_ratings(ratings, torch=True)
+        rmat, users, items = sparse_ratings(ratings, type="torch")
         rmat.values().multiply_(self.weight)
         return TrainingData.create(users, items, rmat)
 

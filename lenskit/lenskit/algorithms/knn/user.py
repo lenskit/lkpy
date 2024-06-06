@@ -134,7 +134,7 @@ class UserUser(Predictor):
             ratings(pandas.DataFrame): (user, item, rating) data for collaborative filtering.
         """
         util.check_env()
-        rmat, users, items = sparse_ratings(ratings, torch=True)
+        rmat, users, items = sparse_ratings(ratings, type="torch")
 
         if self.center:
             rmat, means = normalize_sparse_rows(rmat, "center")
