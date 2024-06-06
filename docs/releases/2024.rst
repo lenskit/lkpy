@@ -34,7 +34,8 @@ Significant Changes
 *   Many LensKit components (batch running, model training, etc.) now report progress with
     :py:mod:`progress_api`, and can be connected to TQDM or Enlighten.
 
-*   Algorithms refactored to more consistent package locations.
+*   Algorithms refactored to more consistent package locations, without the
+    ``algorithms`` subpackage.
 
 New Features (incremental)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

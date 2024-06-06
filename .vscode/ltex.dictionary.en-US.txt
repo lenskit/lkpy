@@ -8,3 +8,4 @@ invokers
 lenskit
 invoker
 CUDA
+subpackages
