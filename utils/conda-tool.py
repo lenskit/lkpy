@@ -152,16 +152,17 @@ def load_req_toml(file: Path) -> list[ParsedReq]:
     lines = list(array_lines(deps))
 
     extras = options["--extra"]
-    edeps = proj["optional-dependencies"]
-    assert isinstance(edeps, tomlkit.items.Table)
-    for e in edeps.keys():  # type: ignore
-        assert isinstance(e, str)
-        _log.debug("checking extra %s", e)
-        if "all" in extras or e in extras:
-            _log.info("including extra %s", e)
-            earr = edeps[e]
-            assert isinstance(earr, tomlkit.items.Array)
-            lines += array_lines(earr)
+    if "optional-dependencies" in proj:
+        edeps = proj["optional-dependencies"]
+        assert isinstance(edeps, tomlkit.items.Table)
+        for e in edeps.keys():  # type: ignore
+            assert isinstance(e, str)
+            _log.debug("checking extra %s", e)
+            if "all" in extras or e in extras:
+                _log.info("including extra %s", e)
+                earr = edeps[e]
+                assert isinstance(earr, tomlkit.items.Array)
+                lines += array_lines(earr)
 
     return list(parse_requirements(lines, file))
 
