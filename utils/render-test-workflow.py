@@ -253,7 +253,7 @@ def steps_mldata(options: JobOptions, datasets: list[str]) -> list[GHStep]:
     return [
         {
             "name": "Cache ML data",
-            "uses": "actions/cache@v2",
+            "uses": "actions/cache@v4",
             "with": {
                 "path": script("""
                         data
@@ -301,7 +301,7 @@ def steps_coverage(options: JobOptions) -> list[GHStep]:
         },
         {
             "name": "📤 Upload test results",
-            "uses": "actions/upload-artifact@v3",
+            "uses": "actions/upload-artifact@v4",
             "with": {
                 "name": options.test_artifact_name,
                 "path": script("""

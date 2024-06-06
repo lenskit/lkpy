@@ -56,7 +56,7 @@ jobs:
     - name: 📐 Coverage results
       run: coverage xml
     - name: 📤 Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-conda-${{matrix.platform}}-py${{matrix.python}}
         path: |
@@ -113,7 +113,7 @@ jobs:
     - name: 📐 Coverage results
       run: coverage xml
     - name: 📤 Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-vanilla-${{matrix.platform}}-py${{matrix.python}}
         path: |
@@ -163,7 +163,7 @@ jobs:
     - name: 📐 Coverage results
       run: coverage xml
     - name: 📤 Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-nojit
         path: |
@@ -210,7 +210,7 @@ jobs:
     - name: 📐 Coverage results
       run: coverage xml
     - name: 📤 Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-mindep
         path: |
@@ -242,7 +242,7 @@ jobs:
       run: |
         pip install --no-deps ./lenskit ./lenskit-funksvd
     - name: Cache ML data
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: |
           data
@@ -261,7 +261,7 @@ jobs:
     - name: 📐 Coverage results
       run: coverage xml
     - name: 📤 Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-examples
         path: |
@@ -293,7 +293,7 @@ jobs:
       run: |
         pip install --no-deps ./lenskit ./lenskit-funksvd
     - name: Cache ML data
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: |
           data
@@ -309,7 +309,7 @@ jobs:
     - name: 📐 Coverage results
       run: coverage xml
     - name: 📤 Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-eval-tests
         path: |
@@ -358,7 +358,7 @@ jobs:
     - name: 📐 Coverage results
       run: coverage xml
     - name: 📤 Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-funksvd-py${{matrix.python}}
         path: |
