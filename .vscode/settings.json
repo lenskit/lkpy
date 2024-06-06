@@ -21,8 +21,13 @@
     "editor.formatOnSave": true,
   },
   "python.testing.pytestArgs": [
-    "tests"
+    "lenskit/tests",
+    "lenskit-funksvd/tests",
   ],
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
+  "python.analysis.extraPaths": [
+    "lenskit",
+    "lenskit-funksvd"
+  ],
 }
