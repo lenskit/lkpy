@@ -7,14 +7,13 @@
 import logging
 import pickle
 
-from lenskit.algorithms import svd
-
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from pytest import approx, mark
 
 import lenskit.util.test as lktu
+from lenskit.algorithms import svd
 from lenskit.util import clone
 
 _log = logging.getLogger(__name__)
@@ -36,8 +35,11 @@ def test_svd_basic_build():
 
 @need_skl
 def test_svd_predict_basic():
-    algo = svd.BiasedSVD(2)
+    algo = svd.BiasedSVD(2, damping=0)
     algo.fit(simple_df)
+    print("user means:\n" + str(algo.bias.user_offsets_))
+    print("item means:\n" + str(algo.bias.item_offsets_))
+    print("matrix:\n" + str(algo.factorization.components_))
 
     preds = algo.predict_for_user(10, [3])
     assert len(preds) == 1
@@ -101,11 +103,10 @@ def test_svd_save_load():
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
 def test_svd_batch_accuracy():
-    from lenskit.algorithms import basic
-    from lenskit.algorithms import bias
     import lenskit.crossfold as xf
-    from lenskit import batch
     import lenskit.metrics.predict as pm
+    from lenskit import batch
+    from lenskit.algorithms import basic, bias
 
     ratings = lktu.ml100k.ratings
 
