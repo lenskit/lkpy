@@ -155,7 +155,7 @@ def step_checkout(options: Optional[JobOptions] = None) -> GHStep:
     }
 
 
-def step_setup_conda(options: JobOptions) -> list[GHStep]:
+def steps_setup_conda(options: JobOptions) -> list[GHStep]:
     ctool = ["pipx run", "./utils/conda-tool.py", "--env", "-o", "ci-environment.yml"]
     if options.extras:
         for e in options.extras:
@@ -285,7 +285,7 @@ def test_job_steps(options: JobOptions) -> list[GHStep]:
         step_checkout(options),
     ]
     if options.env == "conda":
-        steps += step_setup_conda(options)
+        steps += steps_setup_conda(options)
     else:
         steps += steps_setup_vanilla(options)
     steps += steps_inspect(options)
@@ -320,7 +320,7 @@ def test_demo_job() -> GHJob:
         "runs-on": opts.vm_platform,
         "defaults": {"run": {"shell": "bash -el {0}"}},
         "steps": [step_checkout(opts)]
-        + step_setup_conda(opts)
+        + steps_setup_conda(opts)
         + [
             {
                 "name": "Cache ML data",
