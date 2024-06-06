@@ -208,6 +208,11 @@ def steps_setup_vanilla(options: JobOptions) -> list[GHStep]:
             "uses": "actions/setup-python@v5",
             "with": {
                 "python-version": options.python_version,
+                "cache": "pip",
+                "cache-dependency-path": script(f"""
+                    {options.req_file}
+                    */pyproject.toml
+                """),
             },
         },
         {
