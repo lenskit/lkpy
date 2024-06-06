@@ -54,7 +54,9 @@ jobs:
       run: |
         python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
     - name: 📐 Coverage results
-      run: coverage xml
+      run: |
+        coverage xml
+        coverage report
     - name: 📤 Upload test results
       uses: actions/upload-artifact@v4
       with:
@@ -111,7 +113,9 @@ jobs:
       run: |
         python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
     - name: 📐 Coverage results
-      run: coverage xml
+      run: |
+        coverage xml
+        coverage report
     - name: 📤 Upload test results
       uses: actions/upload-artifact@v4
       with:
@@ -161,7 +165,9 @@ jobs:
         NUMBA_DISABLE_JIT: 1
         PYTORCH_JIT: 0
     - name: 📐 Coverage results
-      run: coverage xml
+      run: |
+        coverage xml
+        coverage report
     - name: 📤 Upload test results
       uses: actions/upload-artifact@v4
       with:
@@ -208,7 +214,9 @@ jobs:
       run: |
         python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
     - name: 📐 Coverage results
-      run: coverage xml
+      run: |
+        coverage xml
+        coverage report
     - name: 📤 Upload test results
       uses: actions/upload-artifact@v4
       with:
@@ -255,7 +263,9 @@ jobs:
       run: |
         python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --nbval-lax --log-file test-docs.log docs */lenskit
     - name: 📐 Coverage results
-      run: coverage xml
+      run: |
+        coverage xml
+        coverage report
     - name: 📤 Upload test results
       uses: actions/upload-artifact@v4
       with:
@@ -303,7 +313,9 @@ jobs:
         python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit -m eval --log-file test-eval.log */tests
         python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov-append -m realdata --log-file test-realdata.log */tests
     - name: 📐 Coverage results
-      run: coverage xml
+      run: |
+        coverage xml
+        coverage report
     - name: 📤 Upload test results
       uses: actions/upload-artifact@v4
       with:
@@ -352,7 +364,9 @@ jobs:
       run: |
         python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
     - name: 📐 Coverage results
-      run: coverage xml
+      run: |
+        coverage xml
+        coverage report
     - name: 📤 Upload test results
       uses: actions/upload-artifact@v4
       with:

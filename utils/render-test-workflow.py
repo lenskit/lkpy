@@ -299,7 +299,10 @@ def steps_coverage(options: JobOptions) -> list[GHStep]:
     return [
         {
             "name": "📐 Coverage results",
-            "run": "coverage xml",
+            "run": script("""
+                coverage xml
+                coverage report
+            """),
         },
         {
             "name": "📤 Upload test results",
