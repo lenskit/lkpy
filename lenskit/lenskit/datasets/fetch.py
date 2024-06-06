@@ -69,7 +69,7 @@ def fetch_ml(name: str, base_dir: Path):
 def _fetch_main():
     logging.basicConfig(stream=sys.stderr, level=logging.INFO)
     parser = argparse.ArgumentParser()
-    parser.add_argument("name", action="append", help="the name of the dataset to fetch")
+    parser.add_argument("name", nargs="+", help="the name(s) of the dataset to fetch")
     parser.add_argument(
         "--data-dir", metavar="DIR", help="save extracted data to DIR", default="data"
     )
