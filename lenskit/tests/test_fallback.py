@@ -4,16 +4,17 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from lenskit.algorithms import basic
-from lenskit.algorithms.bias import Bias
-from lenskit import util as lku
+import pickle
 
-import pandas as pd
 import numpy as np
-import binpickle
+import pandas as pd
+
+from pytest import approx
 
 import lenskit.util.test as lktu
-from pytest import approx
+from lenskit import util as lku
+from lenskit.algorithms import basic
+from lenskit.algorithms.bias import Bias
 
 simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
@@ -117,10 +118,10 @@ def test_fallback_save_load(tmp_path):
     original.fit(lktu.ml_test.ratings)
 
     fn = tmp_path / "fb.mod"
-
-    binpickle.dump(original, fn)
-
-    algo = binpickle.load(fn)
+    with fn.open("wb") as pf:
+        pickle.dump(original, pf)
+    with fn.open("rb") as pf:
+        algo = pickle.load(pf)
 
     bias = algo.algorithms[1]
     assert bias.mean_ == approx(lktu.ml_test.ratings.rating.mean())

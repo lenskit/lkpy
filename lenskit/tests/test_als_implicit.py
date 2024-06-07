@@ -5,8 +5,8 @@
 # SPDX-License-Identifier: MIT
 
 import logging
+import pickle
 
-import binpickle
 import numpy as np
 import pandas as pd
 import torch
@@ -245,9 +245,12 @@ def test_als_save_load(tmp_path):
     algo.fit(ratings)
 
     fn = tmp_path / "model.bpk"
-    binpickle.dump(algo, fn, codec=None)
+    with fn.open("wb") as pf:
+        pickle.dump(algo, pf, protocol=pickle.HIGHEST_PROTOCOL)
 
-    restored = binpickle.load(fn)
+    with fn.open("rb") as pf:
+        restored = pickle.load(pf)
+
     assert torch.all(restored.user_features_ == algo.user_features_)
     assert torch.all(restored.item_features_ == algo.item_features_)
     assert np.all(restored.item_index_ == algo.item_index_)
