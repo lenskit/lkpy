@@ -60,8 +60,8 @@ class BiasedSVD(Predictor):
         r_mat, users, items = sparse_ratings(
             ratings, layout="coo", users=u_bias.index, items=i_bias.index
         )
-        # global
-        r_mat.data -= g_bias
+        # copy the data and start subtracting
+        r_mat.data = r_mat.data - g_bias
         r_mat.data -= i_bias.values[r_mat.col]
         r_mat.data -= u_bias.values[r_mat.row]
         r_mat = r_mat.tocsr()
