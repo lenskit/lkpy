@@ -35,6 +35,7 @@ def test_svd_basic_build():
 
 @need_skl
 def test_svd_predict_basic():
+    _log.info("SVD input data:\n%s", simple_df)
     algo = svd.BiasedSVD(2, damping=0)
     _log.info("SVD bias: %s", algo.bias)
     algo.fit(simple_df)
