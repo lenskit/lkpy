@@ -36,10 +36,11 @@ def test_svd_basic_build():
 @need_skl
 def test_svd_predict_basic():
     algo = svd.BiasedSVD(2, damping=0)
+    _log.info("SVD bias: %s", algo.bias)
     algo.fit(simple_df)
-    print("user means:\n" + str(algo.bias.user_offsets_))
-    print("item means:\n" + str(algo.bias.item_offsets_))
-    print("matrix:\n" + str(algo.factorization.components_))
+    _log.info("user means:\n%s", str(algo.bias.user_offsets_))
+    _log.info("item means:\n%s", str(algo.bias.item_offsets_))
+    _log.info("user matrix:\n%s", str(algo.user_components_))
 
     preds = algo.predict_for_user(10, [3])
     assert len(preds) == 1
