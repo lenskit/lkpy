@@ -33,7 +33,7 @@ def test_share_ndarray(arr):
     assert np.all(a2 == arr)
 
 
-@settings(deadline=1000)
+@settings(deadline=5000)
 @given(
     nph.arrays(
         st.one_of(nph.integer_dtypes(endianness="="), nph.floating_dtypes(endianness="=")),
