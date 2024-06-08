@@ -30,7 +30,7 @@ from docopt import docopt
 
 _log = logging.getLogger("render-workflows")
 CODECOV_TOKEN = "5cdb6ef4-e80b-44ce-b88d-1402e4dfb781"
-PYTHONS = ["3.10", "3.11"]
+PYTHONS = ["3.10", "3.11", "3.12"]
 PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
 WORKFLOW_HEADER = {
     "name": "Test Suite",
