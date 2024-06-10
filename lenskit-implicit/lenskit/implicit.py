@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 from implicit.als import AlternatingLeastSquares
 from implicit.bpr import BayesianPersonalizedRanking
+from implicit.recommender_base import RecommenderBase
+from scipy.sparse import csr_array
 
 from lenskit.algorithms import Predictor, Recommender
 from lenskit.data import sparse_ratings
@@ -37,7 +39,28 @@ class BaseRec(Recommender, Predictor):
             The item index.
     """
 
-    def __init__(self, delegate):
+    delegate: RecommenderBase
+    """
+    The delegate algorithm from :mod:`implicit`.
+    """
+    weight: float
+    """
+    The weight for positive examples (only used by some algorithms).
+    """
+    matrix_: csr_array
+    """
+    The user-item rating matrix from training.
+    """
+    user_index_: pd.Index
+    """
+    The user ID mapping from training.
+    """
+    item_index_: pd.Index
+    """
+    The item ID mapping from training.
+    """
+
+    def __init__(self, delegate: RecommenderBase):
         self.delegate = delegate
         self.weight = 1.0
 
@@ -148,7 +171,7 @@ class BPR(BaseRec):
 
     def __init__(self, *args, **kwargs):
         """
-        Construct an ALS recommender.  The arguments are passed as-is to
+        Construct a BPR recommender.  The arguments are passed as-is to
         :py:class:`implicit.als.BayesianPersonalizedRanking`.
         """
         super().__init__(BayesianPersonalizedRanking(*args, **kwargs))
