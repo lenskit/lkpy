@@ -32,6 +32,7 @@ _log = logging.getLogger("render-workflows")
 CODECOV_TOKEN = "5cdb6ef4-e80b-44ce-b88d-1402e4dfb781"
 PYTHONS = ["3.10", "3.11", "3.12"]
 PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
+PACKAGES = ["lenskit", "lenskit-funksvd", "lenskit-implicit"]
 WORKFLOW_HEADER = {
     "name": "Test Suite",
     "on": {
@@ -355,9 +356,9 @@ def test_eval_job() -> GHJob:
         "Evaluation-based tests",
         env="conda",
         req_files=["requirements-test.txt"],
-        packages=["lenskit-funksvd"],
+        packages=PACKAGES,
     )
-    cov = "--cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit"
+    cov = " ".join([f"--cov={pkg}/lenskit" for pkg in PACKAGES])
     return {
         "name": opts.name,
         "runs-on": opts.vm_platform,
@@ -369,8 +370,7 @@ def test_eval_job() -> GHJob:
             {
                 "name": "Run Eval Tests",
                 "run": script(f"""
-                    python -m pytest {cov} -m eval --log-file test-eval.log */tests
-                    python -m pytest {cov} --cov-append -m realdata --log-file test-realdata.log */tests
+                    python -m pytest {cov} -m 'eval or realdata' --log-file test-eval.log */tests
                 """),
             },
         ]
@@ -384,9 +384,9 @@ def test_doc_job() -> GHJob:
         "Demos, examples, and docs",
         env="conda",
         req_files=["requirements-test.txt", "requirements-demo.txt"],
-        packages=["lenskit-funksvd"],
+        packages=PACKAGES,
     )
-    cov = "--cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit"
+    cov = " ".join([f"--cov={pkg}/lenskit" for pkg in PACKAGES])
     return {
         "name": opts.name,
         "runs-on": opts.vm_platform,
