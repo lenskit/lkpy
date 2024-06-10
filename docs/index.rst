@@ -56,7 +56,7 @@ Resources
     bias
     knn
     mf
-    addons
+    addons/index
 
 .. toctree::
     :maxdepth: 2
