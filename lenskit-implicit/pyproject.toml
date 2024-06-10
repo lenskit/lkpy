@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lenskit-implicit"
+authors = [
+  { name = "Michael Ekstrand", email = "michaelekstrand@boisestate.edu" },
+]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Science/Research",
+]
+readme = "README.md"
+license = { file = "LICENSE.md" }
+requires-python = ">= 3.10"
+dependencies = [
+  "lenskit",
+  "implicit >=0.6.1",
+]
+dynamic = ["version"]
+
+[project.urls]
+homepage = "https://lenskit.org"
+documentation = "https://lkpy.lenskit.org"
+source = "https://github.com/lenskit/lkpy"
+
+# configure build tools
+[tool.setuptools.packages.find]
+include = ["lenskit*"]
+
+[tool.setuptools_scm]
+version_scheme = "release-branch-semver"
+root = ".."
