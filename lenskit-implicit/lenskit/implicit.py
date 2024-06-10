@@ -42,7 +42,7 @@ class BaseRec(Recommender, Predictor):
         self.weight = 1.0
 
     def fit(self, ratings, **kwargs):
-        matrix, users, items = sparse_ratings(ratings, scipy=True)
+        matrix, users, items = sparse_ratings(ratings)
         uir = matrix.tocsr()
         uir.data *= self.weight
         if getattr(self.delegate, "item_factors", None) is not None:
