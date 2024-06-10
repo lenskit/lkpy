@@ -23,7 +23,7 @@ from typing_extensions import Any, Generic, Literal, NamedTuple, Optional, TypeV
 _log = logging.getLogger(__name__)
 
 t = torch
-M = TypeVar("M", "CSRStructure", sps.csr_array, sps.coo_array, t.Tensor)
+M = TypeVar("M", "CSRStructure", sps.csr_array, sps.coo_array, sps.spmatrix, t.Tensor)
 
 
 class CSRStructure(NamedTuple):
@@ -111,6 +111,24 @@ def sparse_ratings(
 def sparse_ratings(
     ratings: pd.DataFrame,
     *,
+    type: Literal["spmatrix"] = "spmatrix",
+    layout: Literal["csr"] = "csr",
+    users: Optional[pd.Index[Any]] = None,
+    items: Optional[pd.Index[Any]] = None,
+) -> RatingMatrix[sps.csr_matrix]: ...
+@overload
+def sparse_ratings(
+    ratings: pd.DataFrame,
+    *,
+    type: Literal["spmatrix"] = "spmatrix",
+    layout: Literal["coo"] = "coo",
+    users: Optional[pd.Index[Any]] = None,
+    items: Optional[pd.Index[Any]] = None,
+) -> RatingMatrix[sps.coo_matrix]: ...
+@overload
+def sparse_ratings(
+    ratings: pd.DataFrame,
+    *,
     type: Literal["torch"],
     layout: Literal["coo", "csr"] = "csr",
     users: Optional[pd.Index[Any]] = None,
@@ -128,7 +146,7 @@ def sparse_ratings(
 def sparse_ratings(
     ratings: pd.DataFrame,
     *,
-    type: Literal["scipy", "torch", "structure"] = "scipy",
+    type: Literal["scipy", "spmatrix", "torch", "structure"] = "scipy",
     layout: Literal["csr", "coo"] = "csr",
     users: Optional[pd.Index[Any]] = None,
     items: Optional[pd.Index[Any]] = None,
@@ -140,9 +158,11 @@ def sparse_ratings(
         ratings:
             A data table of (user, item, rating) triples.
         type:
-            The type of matrix to create.  Can be ``scipy`` to create a SciPy
-            sparse array (see :mod:`scipy.sparse`), or ``torch`` to create a
-            sparse tensor (see :mod:`torch.sparse`).
+            The type of matrix to create.  Can be any of the following:
+
+            * ``scipy`` creates a SciPy sparse array (see :mod:`scipy.sparse`)
+            * ``torch`` creates a sparse tensor (see :mod:`torch.sparse`)
+            * ``spmatrix`` creates a legacy SciPy :class:`~scipy.sparse.spmatrix`
         layout:
             The matrix layout to use.
         users:
@@ -183,12 +203,15 @@ def sparse_ratings(
         matrix = t.sparse_coo_tensor(indices, vals, size=(nu, ni))
         if layout == "csr":
             matrix = matrix.to_sparse_csr()
-    elif type == "scipy":
+    elif type == "scipy" or type == "spmatrix":
         if "rating" in ratings.columns:
             vals = ratings["rating"].values
         else:
             vals = np.ones((len(ratings),), dtype=np.float32)
-        matrix = sps.coo_array((vals, (row_ind, col_ind)), shape=(nu, ni))
+        if type == "spmatrix":
+            matrix = sps.coo_matrix((vals, (row_ind, col_ind)), shape=(nu, ni))
+        else:
+            matrix = sps.coo_array((vals, (row_ind, col_ind)), shape=(nu, ni))
         if layout == "csr":
             matrix = matrix.tocsr()
     elif type == "structure":
