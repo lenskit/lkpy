@@ -68,7 +68,7 @@ class BaseRec(Recommender, Predictor):
         matrix, users, items = sparse_ratings(ratings, type="spmatrix")
         uir = matrix.tocsr()
         uir.data *= self.weight
-        if getattr(self.delegate, "item_factors", None) is not None:
+        if getattr(self.delegate, "item_factors", None) is not None:  # pragma: no cover
             _logger.warn("implicit algorithm already trained, re-fit is usually a bug")
 
         _logger.info("training %s on %s matrix (%d nnz)", self.delegate, uir.shape, uir.nnz)
