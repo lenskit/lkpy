@@ -15,3 +15,5 @@ python:
       path: lenskit
     - method: pip
       path: lenskit-funksvd
+    - method: pip
+      path: lenskit-implicit
