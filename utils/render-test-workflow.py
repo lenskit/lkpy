@@ -423,15 +423,6 @@ def test_jobs() -> dict[str, GHJob]:
                 matrix={"python": PYTHONS, "platform": PLATFORMS},
             )
         ),
-        "funksvd": test_job(
-            JobOptions(
-                "funksvd",
-                "FunkSVD tests on Python ${{matrix.python}}",
-                packages=["lenskit-funksvd"],
-                matrix={"python": PYTHONS},
-                env="conda",
-            )
-        ),
         "nojit": test_job(
             JobOptions(
                 "nojit",
@@ -448,12 +439,38 @@ def test_jobs() -> dict[str, GHJob]:
                 dep_strategy="minimum",
             )
         ),
+        "funksvd": test_job(
+            JobOptions(
+                "funksvd",
+                "FunkSVD tests on Python ${{matrix.python}}",
+                packages=["lenskit-funksvd"],
+                matrix={"python": PYTHONS},
+                env="conda",
+            )
+        ),
         "funksvd-mindep": test_job(
             JobOptions(
                 "mindep-funksvd",
                 "Minimal dependency tests for FunkSVD",
                 dep_strategy="minimum",
                 packages=["lenskit-funksvd"],
+            )
+        ),
+        "implicit": test_job(
+            JobOptions(
+                "implicit",
+                "Implicit bridge tests on Python ${{matrix.python}}",
+                packages=["lenskit-implicit"],
+                matrix={"python": PYTHONS},
+                env="conda",
+            )
+        ),
+        "implicit-mindep": test_job(
+            JobOptions(
+                "mindep-implicit",
+                "Minimal dependency tests for Implicit",
+                dep_strategy="minimum",
+                packages=["lenskit-implicit"],
             )
         ),
         "eval-tests": test_eval_job(),

@@ -120,56 +120,6 @@ jobs:
         path: |
           test*.log
           coverage.xml
-  funksvd:
-    name: FunkSVD tests on Python ${{matrix.python}}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    defaults:
-      run:
-        shell: bash -el {0}
-    strategy:
-      fail-fast: false
-      matrix:
-        python:
-        - '3.10'
-        - '3.11'
-        - '3.12'
-    steps:
-    - name: 🛒 Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: 👢 Generate Conda environment file
-      run: |
-        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all requirements-test.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml
-    - id: setup
-      name: 📦 Set up Conda environment
-      uses: mamba-org/setup-micromamba@v1
-      with:
-        environment-file: ci-environment.yml
-        environment-name: lkpy
-        cache-environment: true
-        init-shell: bash
-    - name: 🍱 Install LensKit packages
-      run: |
-        pip install --no-deps -e lenskit -e lenskit-funksvd
-    - name: 🔍 Inspect environment
-      run: |
-        python -m lenskit.util.envcheck
-    - name: 🏃🏻‍➡️ Test LKPY
-      run: |
-        python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
-    - name: 📐 Coverage results
-      run: |
-        coverage xml
-        coverage report
-    - name: 📤 Upload test results
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-funksvd-py${{matrix.python}}
-        path: |
-          test*.log
-          coverage.xml
   nojit:
     name: Non-JIT test coverage
     runs-on: ubuntu-latest
@@ -267,6 +217,56 @@ jobs:
         path: |
           test*.log
           coverage.xml
+  funksvd:
+    name: FunkSVD tests on Python ${{matrix.python}}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash -el {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+        - '3.10'
+        - '3.11'
+        - '3.12'
+    steps:
+    - name: 🛒 Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: 👢 Generate Conda environment file
+      run: |
+        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all requirements-test.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml
+    - id: setup
+      name: 📦 Set up Conda environment
+      uses: mamba-org/setup-micromamba@v1
+      with:
+        environment-file: ci-environment.yml
+        environment-name: lkpy
+        cache-environment: true
+        init-shell: bash
+    - name: 🍱 Install LensKit packages
+      run: |
+        pip install --no-deps -e lenskit -e lenskit-funksvd
+    - name: 🔍 Inspect environment
+      run: |
+        python -m lenskit.util.envcheck
+    - name: 🏃🏻‍➡️ Test LKPY
+      run: |
+        python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
+    - name: 📐 Coverage results
+      run: |
+        coverage xml
+        coverage report
+    - name: 📤 Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-funksvd-py${{matrix.python}}
+        path: |
+          test*.log
+          coverage.xml
   funksvd-mindep:
     name: Minimal dependency tests for FunkSVD
     runs-on: ubuntu-latest
@@ -311,6 +311,103 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: test-mindep-funksvd
+        path: |
+          test*.log
+          coverage.xml
+  implicit:
+    name: Implicit bridge tests on Python ${{matrix.python}}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash -el {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+        - '3.10'
+        - '3.11'
+        - '3.12'
+    steps:
+    - name: 🛒 Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: 👢 Generate Conda environment file
+      run: |
+        pipx run ./utils/conda-tool.py --env -o ci-environment.yml -e all requirements-test.txt lenskit/pyproject.toml lenskit-implicit/pyproject.toml
+    - id: setup
+      name: 📦 Set up Conda environment
+      uses: mamba-org/setup-micromamba@v1
+      with:
+        environment-file: ci-environment.yml
+        environment-name: lkpy
+        cache-environment: true
+        init-shell: bash
+    - name: 🍱 Install LensKit packages
+      run: |
+        pip install --no-deps -e lenskit -e lenskit-implicit
+    - name: 🔍 Inspect environment
+      run: |
+        python -m lenskit.util.envcheck
+    - name: 🏃🏻‍➡️ Test LKPY
+      run: |
+        python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-implicit/lenskit lenskit-implicit/tests
+    - name: 📐 Coverage results
+      run: |
+        coverage xml
+        coverage report
+    - name: 📤 Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-implicit-py${{matrix.python}}
+        path: |
+          test*.log
+          coverage.xml
+  implicit-mindep:
+    name: Minimal dependency tests for Implicit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+    - name: 🛒 Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: 🐍 Set up Python
+      id: install-python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        cache: pip
+        cache-dependency-path: |
+          requirements*.txt
+          */pyproject.toml
+    - name: 🕶️ Set up uv
+      run: |
+        pip install -U 'uv>=0.1.15'
+    - name: 📦 Set up Python dependencies
+      id: install-deps
+      run: |
+        uv pip install --python $PYTHON -r requirements-test.txt -e lenskit -e lenskit-implicit --resolution=lowest-direct
+      shell: bash
+      env:
+        PYTHON: ${{steps.install-python.outputs.python-path}}
+        UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+        UV_INDEX_STRATEGY: unsafe-first-match
+    - name: 🔍 Inspect environment
+      run: |
+        python -m lenskit.util.envcheck
+    - name: 🏃🏻‍➡️ Test LKPY
+      run: |
+        python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-implicit/lenskit lenskit-implicit/tests
+    - name: 📐 Coverage results
+      run: |
+        coverage xml
+        coverage report
+    - name: 📤 Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-mindep-implicit
         path: |
           test*.log
           coverage.xml
@@ -419,10 +516,12 @@ jobs:
     needs:
     - conda
     - vanilla
-    - funksvd
     - nojit
     - mindep
+    - funksvd
     - funksvd-mindep
+    - implicit
+    - implicit-mindep
     - eval-tests
     - doc-tests
     steps:
