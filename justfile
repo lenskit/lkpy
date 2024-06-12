@@ -31,10 +31,16 @@ install-editable:
 install-dev:
     {{PIP}} install -r dev-requirements.txt -e {{ prepend('-e ', PACKAGES) }} --all-extras
 
-# set up a conda environment for development
+# create a conda environment file for development
 conda-env-file version="3.11":
     pipx run ./utils/conda-tool.py --env -o environment.yml -e all requirements-dev.txt \
         {{ append('/pyproject.toml', PACKAGES) }}
+
+# create a conda environment for development
+conda-env version="3.11" name="lkpy":
+    pipx run ./utils/conda-tool.py --env -n {{name}} -e all requirements-dev.txt \
+        {{ append('/pyproject.toml', PACKAGES) }}
+
 
 # run tests with default configuration
 test:
@@ -46,7 +52,7 @@ test-fast:
 
 # run tests matching a keyword query
 test-matching query:
-    python -m pytest -k {{query}}
+    python -m pytest -k "{{query}}"
 
 # build documentation
 docs:
