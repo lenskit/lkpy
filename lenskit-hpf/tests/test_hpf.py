@@ -4,11 +4,12 @@ import pickle
 import numpy as np
 import pandas as pd
 
-from pytest import mark
+from pytest import importorskip, mark
 
 import lenskit.util.test as lktu
-from lenskit import hpf
 from lenskit.algorithms import basic
+
+hpf = importorskip("lenskit.hpf")
 
 _log = logging.getLogger(__name__)
 
