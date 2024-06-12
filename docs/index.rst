@@ -35,15 +35,16 @@ Resources
    releases/index
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Running Experiments
+    :maxdepth: 2
+    :caption: Running Experiments
 
-   datasets
-   crossfold
-   batch
-   evaluation/index
-   documenting
-   parallel
+    data
+    datasets
+    crossfold
+    batch
+    evaluation/index
+    documenting
+    parallel
 
 .. toctree::
     :maxdepth: 1

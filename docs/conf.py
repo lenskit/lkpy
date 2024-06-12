@@ -81,6 +81,11 @@ templates_path = ["_templates"]
 # how do we want to set up documentation?
 autodoc_default_options = {"members": True, "member-order": "bysource", "show-inheritance": True}
 autodoc_typehints = "description"
+autodoc_type_aliases = {
+    "Iterable": "Iterable",
+    "ArrayLike": "ArrayLike",
+}
+
 todo_include_todos = True
 
 # Cross-linking and external references
@@ -97,6 +102,11 @@ intersphinx_mapping = {
     "torch": ("https://pytorch.org/docs/stable/", None),
     "implicit": ("https://benfred.github.io/implicit/", None),
 }
+
+bibtex_bibfiles = ["lenskit.bib"]
+jupyter_execute_notebooks = "off"
+
+# -- external links
 
 extlinks = {
     "issue": ("https://github.com/lenskit/lkpy/issues/%s", "🐞 %s"),
