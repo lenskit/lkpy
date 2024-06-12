@@ -473,6 +473,23 @@ def test_jobs() -> dict[str, GHJob]:
                 packages=["lenskit-implicit"],
             )
         ),
+        "hpf": test_job(
+            JobOptions(
+                "hpf",
+                "HPF bridge tests on Python ${{matrix.python}}",
+                packages=["lenskit-hpf"],
+                matrix={"python": PYTHONS},
+                env="vanilla",
+            )
+        ),
+        "hpf-mindep": test_job(
+            JobOptions(
+                "mindep-hpf",
+                "Minimal dependency tests for Implicit",
+                dep_strategy="minimum",
+                packages=["lenskit-hpf"],
+            )
+        ),
         "eval-tests": test_eval_job(),
         "doc-tests": test_doc_job(),
     }

@@ -411,6 +411,107 @@ jobs:
         path: |
           test*.log
           coverage.xml
+  hpf:
+    name: HPF bridge tests on Python ${{matrix.python}}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+        - '3.10'
+        - '3.11'
+        - '3.12'
+    steps:
+    - name: 🛒 Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: 🐍 Set up Python
+      id: install-python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{matrix.python}}
+        cache: pip
+        cache-dependency-path: |
+          requirements*.txt
+          */pyproject.toml
+    - name: 🕶️ Set up uv
+      run: |
+        pip install -U 'uv>=0.1.15'
+    - name: 📦 Set up Python dependencies
+      id: install-deps
+      run: |
+        uv pip install --python $PYTHON -r requirements-test.txt -e lenskit -e lenskit-hpf
+      shell: bash
+      env:
+        PYTHON: ${{steps.install-python.outputs.python-path}}
+        UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+        UV_INDEX_STRATEGY: unsafe-first-match
+    - name: 🔍 Inspect environment
+      run: |
+        python -m lenskit.util.envcheck
+    - name: 🏃🏻‍➡️ Test LKPY
+      run: |
+        python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-hpf/lenskit lenskit-hpf/tests
+    - name: 📐 Coverage results
+      run: |
+        coverage xml
+        coverage report
+    - name: 📤 Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-hpf-py${{matrix.python}}
+        path: |
+          test*.log
+          coverage.xml
+  hpf-mindep:
+    name: Minimal dependency tests for Implicit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+    - name: 🛒 Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: 🐍 Set up Python
+      id: install-python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        cache: pip
+        cache-dependency-path: |
+          requirements*.txt
+          */pyproject.toml
+    - name: 🕶️ Set up uv
+      run: |
+        pip install -U 'uv>=0.1.15'
+    - name: 📦 Set up Python dependencies
+      id: install-deps
+      run: |
+        uv pip install --python $PYTHON -r requirements-test.txt -e lenskit -e lenskit-hpf --resolution=lowest-direct
+      shell: bash
+      env:
+        PYTHON: ${{steps.install-python.outputs.python-path}}
+        UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+        UV_INDEX_STRATEGY: unsafe-first-match
+    - name: 🔍 Inspect environment
+      run: |
+        python -m lenskit.util.envcheck
+    - name: 🏃🏻‍➡️ Test LKPY
+      run: |
+        python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-hpf/lenskit lenskit-hpf/tests
+    - name: 📐 Coverage results
+      run: |
+        coverage xml
+        coverage report
+    - name: 📤 Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-mindep-hpf
+        path: |
+          test*.log
+          coverage.xml
   eval-tests:
     name: Evaluation-based tests
     runs-on: ubuntu-latest
@@ -521,6 +622,8 @@ jobs:
     - funksvd-mindep
     - implicit
     - implicit-mindep
+    - hpf
+    - hpf-mindep
     - eval-tests
     - doc-tests
     steps:
