@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lenskit-implicit"
 authors = [
-  { name = "Michael Ekstrand", email = "michaelekstrand@boisestate.edu" },
+  { name = "Michael Ekstrand", email = "mdekstrand@drexel.edu" },
 ]
 classifiers = [
   "License :: OSI Approved :: MIT License",
