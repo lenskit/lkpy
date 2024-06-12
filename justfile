@@ -1,4 +1,5 @@
 PIP := "uv pip"
+PACKAGES := "lenskit lenskit-funksvd lenskit-implicit lenskit-hpf"
 
 # list the tasks in this project (default)
 list-tasks:
@@ -12,26 +13,23 @@ clean:
 
 # build the modules and wheels
 build:
-    python -m build -n -o dist lenskit
-    python -m build -n -o dist lenskit-funksvd
+    for pkg in {{PACKAGES}}; do python -m build -n -o dist $pkg; done
 
 build-sdist:
-    python -m build -n -s -o dist lenskit
-    python -m build -n -s -o dist lenskit-funksvd
-
+    for pkg in {{PACKAGES}}; do python -m build -n -s -o dist $pkg; done
 
 # install the package
 [confirm("this installs package from a wheel, continue [y/N]?")]
 install:
-    {{PIP}} install .
+    {{PIP}} install {{PACKAGES}}
 
 # install the package (editable)
 install-editable:
-    {{PIP}} install -e .
+    {{PIP}} install {{ prepend('-e ', PACKAGES) }}
 
 # set up for development in non-conda environments
 install-dev:
-    {{PIP}} install -r dev-requirements.txt -e . --all-extras
+    {{PIP}} install -r dev-requirements.txt -e {{ prepend('-e ', PACKAGES) }} --all-extras
 
 # set up a conda environment for development
 setup-conda-env version="3.11" env="dev":
