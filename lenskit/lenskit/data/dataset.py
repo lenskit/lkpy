@@ -282,7 +282,7 @@ class Dataset:
         interactions, or it may be in a compressed sparse format.
 
         .. warning::
-            Client code **must not** perform in-place modifications on the table
+            Client code **must not** perform in-place modifications on the matrix
             returned from this method.  Whenever possible, it will be a shallow
             view on top of the underlying storage, and modifications may corrupt
             data for other code.
