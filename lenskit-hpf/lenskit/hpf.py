@@ -1,9 +1,9 @@
 import logging
 
+import hpfrec
 import pandas as pd
 
 from lenskit.algorithms.mf_common import MFPredictor
-import hpfrec
 
 _logger = logging.getLogger(__name__)
 
@@ -26,21 +26,23 @@ class HPF(MFPredictor):
         users = pd.Index(ratings.user.unique())
         items = pd.Index(ratings.item.unique())
 
-        if 'rating' in ratings.columns:
+        if "rating" in ratings.columns:
             count = ratings.rating.values.copy()
         else:
-            _logger.info('no ratings found, assuming 1.0')
+            _logger.info("no ratings found, assuming 1.0")
             count = 1.0
 
-        hpfdf = pd.DataFrame({
-            'UserId': users.get_indexer(ratings.user),
-            'ItemId': items.get_indexer(ratings.item),
-            'Count': count
-        })
+        hpfdf = pd.DataFrame(
+            {
+                "UserId": users.get_indexer(ratings.user),
+                "ItemId": items.get_indexer(ratings.item),
+                "Count": count,
+            }
+        )
 
         hpf = hpfrec.HPF(self.features, reindex=False, **self._kwargs)
 
-        _logger.info('fitting HPF model with %d features', self.features)
+        _logger.info("fitting HPF model with %d features", self.features)
         hpf.fit(hpfdf)
 
         self.user_index_ = users
