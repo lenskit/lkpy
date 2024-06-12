@@ -32,8 +32,9 @@ install-dev:
     {{PIP}} install -r dev-requirements.txt -e {{ prepend('-e ', PACKAGES) }} --all-extras
 
 # set up a conda environment for development
-setup-conda-env version="3.11" env="dev":
-    conda env create -n lkpy -f envs/lenskit-py{{version}}-{{env}}.yaml
+conda-env-file version="3.11":
+    pipx run ./utils/conda-tool.py --env -o environment.yml -e all requirements-dev.txt \
+        {{ append('/pyproject.toml', PACKAGES) }}
 
 # run tests with default configuration
 test:

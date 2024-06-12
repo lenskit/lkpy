@@ -69,6 +69,7 @@ ALL_VARIANTS = {
 
 class ParsedReq(NamedTuple):
     source: Path
+    name: str
     requirement: Optional[Requirement]
     conda: Optional[tuple[str, Optional[str]]]
     force_pip: bool
@@ -105,7 +106,11 @@ def main():
     init_logging()
 
     if options["--env"]:
-        specs = list(load_reqfiles(options["REQFILE"]))
+        specs = [
+            r
+            for r in load_reqfiles(options["REQFILE"])
+            if not re.match(r"lenskit($|-\w+)$", r.name)
+        ]
         env = make_env_object(specs, options["--python-version"])
         if options["--name"]:
             tmpfd, tmpf = mkstemp(suffix="-env.yml", prefix="lkpy-")
@@ -211,8 +216,10 @@ def parse_requirements(text: str | list[str], path: Path) -> Generator[ParsedReq
         # remove comments
         line = re.sub("#.*", "", line).strip()
 
+        name = None
         if line:
             req = Requirement(line)
+            name = req.name
 
         if req or c_str:
             pip = False
@@ -221,7 +228,10 @@ def parse_requirements(text: str | list[str], path: Path) -> Generator[ParsedReq
                 pip = True
             elif c_str is not None:
                 conda = parse_conda_spec(c_str)
-            res = ParsedReq(path, req, conda, pip)
+                if name is None:
+                    name = conda[0]
+            assert name is not None, "cannot find dependency name"
+            res = ParsedReq(path, name, req, conda, pip)
             _log.debug("%s: found %s", path, res)
             yield res
 
