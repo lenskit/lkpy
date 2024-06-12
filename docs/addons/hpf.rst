@@ -4,7 +4,7 @@ Hierarchical Poisson Factorization
 .. module:: lenskit_hpf
 
 This module provides a LensKit bridge to the hpfrec_ library implementing hierarchical Poisson
-factorization :cite:p:`Gopalan2013-ko`.
+factorization :cite:p:`gopalanScalableRecommendationPoisson2013a`.
 
 To install, run::
 

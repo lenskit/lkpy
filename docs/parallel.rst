@@ -6,7 +6,7 @@ Parallel Execution
 LensKit supports various forms of parallel execution, each with an environment
 variable controlling its :
 
-- :doc:`Batch operations <batch>` using :doc:`multi-process execution <parallel-model-ops>`.
+- :doc:`Batch operations <batch>` using :ref:`multi-process execution <parallel-model-ops>`.
 - Parallel model training.  For most models provided by LensKit, this is usually
   implemented using PyTorch JIT parallelism (:func:`torch.jit.fork`).
 - Parallel computation in the various backends (BLAS, MKL, Torch, etc.).
@@ -60,7 +60,7 @@ environment variables are:
 
 .. autofunction:: ensure_parallel_init
 
-.. _parallel-model-ops::
+.. _parallel-model-ops:
 
 Parallel Model Ops
 ~~~~~~~~~~~~~~~~~~
