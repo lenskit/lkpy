@@ -8,5 +8,5 @@ to implementations in other packages.
     :caption: External Algorithms
 
     Implicit wrappers <implicit>
-    Poisson factorization <https://lkpy.lenskit.org/projects/lenskit-hpf/>
+    Poisson factorization <hpf>
     TensorFlow algorithms <https://lkpy.lenskit.org/projects/lenskit-tf/>
