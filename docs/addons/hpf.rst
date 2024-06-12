@@ -7,7 +7,7 @@ This module provides a LensKit bridge to the hpfrec_ library implementing hierar
 factorization :cite:p:`Gopalan2013-ko`.
 
 To install, run::
-    
+
     pip install lenskit-hpf
 
 We do **not** provide a Conda package, because hpfrec_ is not packaged for Conda.  You can
@@ -18,8 +18,3 @@ itself with ``conda``.
 
 .. autoclass:: HPF
     :members:
-
-References
-----------
-
-.. bibliography::
