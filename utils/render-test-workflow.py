@@ -482,14 +482,6 @@ def test_jobs() -> dict[str, GHJob]:
                 env="vanilla",
             )
         ),
-        "hpf-mindep": test_job(
-            JobOptions(
-                "mindep-hpf",
-                "Minimal dependency tests for Implicit",
-                dep_strategy="minimum",
-                packages=["lenskit-hpf"],
-            )
-        ),
         "eval-tests": test_eval_job(),
         "doc-tests": test_doc_job(),
     }
