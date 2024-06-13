@@ -24,8 +24,14 @@ ACTION_FIELDS: TypeAlias = Literal["ratings", "timestamps"] | str
 class Dataset:
     """
     Representation of a data set for LensKit training, evaluation, etc. Data can
-    be accessed in a variety of formats (sharing storage whenever possible),
-    depending on the needs of a component.
+    be accessed in a variety of formats depending on the needs of a component.
+
+    .. note::
+        Zero-copy conversions are used whenever possible, so client code must not
+        modify returned data in-place.
+
+    .. todo::
+        Support for item and user content or metadata is not yet implemented.
     """
 
     @property
