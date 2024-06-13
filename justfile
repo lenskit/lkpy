@@ -41,7 +41,6 @@ conda-env version="3.11" name="lkpy":
     pipx run ./utils/conda-tool.py --env -n {{name}} -e all requirements-dev.txt \
         {{ append('/pyproject.toml', PACKAGES) }}
 
-
 # run tests with default configuration
 test:
     python -m pytest
@@ -61,6 +60,13 @@ docs:
 # preview documentation with live rebuild
 preview-docs:
     sphinx-autobuild --watch lenskit docs build/doc
+
+# update the environment file used to install documentation
+update-doc-env:
+    pipx run ./utils/conda-tool.py --env -o docs/environment.yml \
+        -e all requirements-doc.txt \
+        {{ append('/pyproject.toml', PACKAGES) }}
+
 
 # update source file headers
 update-headers:
