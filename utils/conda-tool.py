@@ -70,9 +70,9 @@ ALL_VARIANTS = {
 class ParsedReq(NamedTuple):
     source: Path
     name: str
-    requirement: Optional[Requirement]
-    conda: Optional[tuple[str, Optional[str]]]
-    force_pip: bool
+    requirement: Optional[Requirement] = None
+    conda: Optional[tuple[str, Optional[str]]] = None
+    force_pip: bool = False
 
     def conda_spec(self) -> str | None:
         name = None
@@ -144,6 +144,8 @@ def load_reqfiles(files: Iterable[Path | str]) -> Iterator[ParsedReq]:
 def load_requirements(file: Path) -> list[ParsedReq]:
     if file.name == "pyproject.toml":
         return load_req_toml(file)
+    elif re.match(r".*\.ya?ml$", file.name):
+        return load_conda_yml(file)
     else:
         return load_req_txt(file)
 
@@ -184,6 +186,17 @@ def array_lines(tbl: tomlkit.items.Array):
         if d.comment:
             text += str(d.comment)
         yield text
+
+
+def load_conda_yml(file: Path) -> list[ParsedReq]:
+    _log.info("loading Conda environment file %s", file)
+    with file.open("rt") as yf:
+        data = yaml.safe_load(yf)
+    deps: list[ParsedReq] = []
+    for dep in data["dependencies"]:
+        name, ver = parse_conda_spec(dep)
+        deps.append(ParsedReq(file, name, conda=(name, ver)))
+    return deps
 
 
 def load_req_txt(file: Path) -> list[ParsedReq]:

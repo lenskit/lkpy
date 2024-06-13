@@ -64,7 +64,7 @@ preview-docs:
 # update the environment file used to install documentation
 update-doc-env:
     pipx run ./utils/conda-tool.py --env -o docs/environment.yml \
-        -e all requirements-doc.txt \
+        -e all requirements-doc.txt docs/doc-dep-constraints.yml \
         {{ append('/pyproject.toml', PACKAGES) }}
 
 

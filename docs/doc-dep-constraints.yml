@@ -1,0 +1,3 @@
+dependencies:
+  - pytorch-cpu
+  - nomkl
