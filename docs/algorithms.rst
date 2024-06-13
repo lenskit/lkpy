@@ -39,7 +39,6 @@ Matrix Factorization
 
     als.BiasedMF
     als.ImplicitMF
-    funksvd.FunkSVD
 
 Add-On Packages
 ~~~~~~~~~~~~~~~
