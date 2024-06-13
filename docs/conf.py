@@ -10,17 +10,12 @@ from importlib.metadata import version
 
 sys.path.insert(0, os.path.abspath(".."))
 
-import sphinx_rtd_theme  # noqa: F401
-
-# -- Project information -----------------------------------------------------
-
 project = "LensKit"
 copyright = "2018–2024 Drexel University, Boise State University, and collaborators"
 author = "Michael D. Ekstrand"
 
 release = version("lenskit")
 version = ".".join(release.split(".")[:3])
-
 
 extensions = [
     "myst_nb",
@@ -36,21 +31,14 @@ extensions = [
     "sphinx_rtd_theme",
 ]
 
-# The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
-#
-# source_suffix = ['.rst', '.md']
+# set up our filenames
 source_suffix = ".rst"
-
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
-# This pattern also affects html_static_path and html_extra_path .
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+nb_execution_mode = "off"
 
-# The name of the Pygments (syntax highlighting) style to use.
+# layout and setup options
 pygments_style = "sphinx"
 highlight_language = "python3"
-
 
 html_theme = "sphinx_rtd_theme"
 html_theme_options = {
@@ -69,45 +57,12 @@ html_theme_options = {
 templates_path = ["_templates"]
 html_static_path = ["_static"]
 
-# Custom sidebar templates, must be a dictionary that maps document names
-# to template names.
-#
-# The default sidebars (for documents that don't match any pattern) are
-# defined by theme itself.  Builtin themes are using these templates by
-# default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
-# 'searchbox.html']``.
-#
-# html_sidebars = {}
+# how do we want to set up documentation?
+autodoc_default_options = {"members": True, "member-order": "bysource", "show-inheritance": True}
+autodoc_typehints = "description"
+todo_include_todos = True
 
-
-# -- Options for HTMLHelp output ---------------------------------------------
-
-# Output file base name for HTML help builder.
-htmlhelp_basename = "LensKitdoc"
-
-
-# -- Options for LaTeX output ------------------------------------------------
-
-latex_elements = {
-    # The paper size ('letterpaper' or 'a4paper').
-    #
-    # 'papersize': 'letterpaper',
-    # The font size ('10pt', '11pt' or '12pt').
-    #
-    # 'pointsize': '10pt',
-    # Additional stuff for the LaTeX preamble.
-    #
-    # 'preamble': '',
-    # Latex figure (float) alignment
-    #
-    # 'figure_align': 'htbp',
-}
-
-# -- Extension configuration -------------------------------------------------
-
-# -- Options for intersphinx extension ---------------------------------------
-
-# Example configuration for intersphinx: refer to the Python standard library.
+# Cross-linking and external references
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "pandas": ("http://pandas.pydata.org/pandas-docs/stable/", None),
@@ -119,18 +74,8 @@ intersphinx_mapping = {
     "progress_api": ("https://progress-api.readthedocs.io/en/latest/", None),
     "manylog": ("https://manylog.readthedocs.io/en/latest/", None),
     "torch": ("https://pytorch.org/docs/stable/", None),
-    "implicit": ("https://implicit.readthedocs.io/en/latest/", None),
+    "implicit": ("https://benfred.github.io/implicit/", None),
 }
-
-autodoc_default_options = {"members": True, "member-order": "bysource", "show-inheritance": True}
-autodoc_typehints = "description"
-
-todo_include_todos = True
-
-bibtex_bibfiles = ["lenskit.bib"]
-jupyter_execute_notebooks = "off"
-
-# -- external links
 
 extlinks = {
     "issue": ("https://github.com/lenskit/lkpy/issues/%s", "🐞 %s"),
@@ -138,14 +83,4 @@ extlinks = {
     "user": ("https://github.com/%s", "@%s"),
 }
 
-# -- Module Canonicalization ------------------------------------------------
-
-# cleanups = {
-#     'lenskit': ['Algorithm', 'Recommender', 'Predictor', 'CandidateSelector']
-# }
-
-# for module, objects in cleanups.items():
-#     mod = import_module(module)
-#     for name in objects:
-#         obj = getattr(mod, name)
-#         obj.__module__ = module
+bibtex_bibfiles = ["lenskit.bib"]
