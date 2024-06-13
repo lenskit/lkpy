@@ -2,5 +2,5 @@
 sphinx >= 4.2
 sphinxext-opengraph >= 0.5
 sphinxcontrib-bibtex >= 2.0
-sphinx_rtd_theme >= 0.5
+sphinx-book-theme ==1.*
 myst-nb >= 0.13

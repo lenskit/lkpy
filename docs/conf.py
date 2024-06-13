@@ -28,7 +28,7 @@ extensions = [
     "sphinx.ext.todo",
     "sphinxext.opengraph",
     "sphinxcontrib.bibtex",
-    "sphinx_rtd_theme",
+    "sphinx_book_theme",
 ]
 
 # set up our filenames
@@ -40,8 +40,16 @@ nb_execution_mode = "off"
 pygments_style = "sphinx"
 highlight_language = "python3"
 
-html_theme = "sphinx_rtd_theme"
+html_theme = "sphinx_book_theme"
+html_logo = "LKLogo2.png"
 html_theme_options = {
+    "repository_url": "https://github.com/lenskit/lkpy",
+    "path_to_docs": "docs",
+    "use_source_button": True,
+    "use_repository_button": True,
+    "use_issues_button": True,
+    "use_download_button": False,
+    "home_page_in_toc": True,
     # 'github_user': 'lenskit',
     # 'github_repo': 'lkpy',
     # 'travis_button': False,
