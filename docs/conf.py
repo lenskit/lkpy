@@ -30,6 +30,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx.ext.extlinks",
+    "sphinx.ext.todo",
     "sphinxext.opengraph",
     "sphinxcontrib.bibtex",
     "sphinx_rtd_theme",
@@ -123,6 +124,8 @@ intersphinx_mapping = {
 
 autodoc_default_options = {"members": True, "member-order": "bysource", "show-inheritance": True}
 autodoc_typehints = "description"
+
+todo_include_todos = True
 
 bibtex_bibfiles = ["lenskit.bib"]
 jupyter_execute_notebooks = "off"
