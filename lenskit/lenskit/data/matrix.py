@@ -59,17 +59,14 @@ class CSRStructure(NamedTuple):
 class RatingMatrix(NamedTuple, Generic[M]):
     """
     A rating matrix with associated indices.
-
-    Attributes:
-        matrix:
-            The rating matrix, with users on rows and items on columns.
-        users: mapping from user IDs to row numbers.
-        items: mapping from item IDs to column numbers.
     """
 
     matrix: M
+    "The rating matrix, with users on rows and items on columns."
     users: pd.Index[Any]
+    "Mapping from user IDs to row numbers."
     items: pd.Index[Any]
+    "Mapping from item IDs to column numbers."
 
 
 class DimStats(NamedTuple):

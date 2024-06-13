@@ -55,7 +55,7 @@ html_theme_options = {
 }
 
 templates_path = ["_templates"]
-html_static_path = ["_static"]
+# html_static_path = ["_static"]
 
 # how do we want to set up documentation?
 autodoc_default_options = {"members": True, "member-order": "bysource", "show-inheritance": True}

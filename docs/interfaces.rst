@@ -1,7 +1,7 @@
 Algorithm Interfaces
 ====================
 
-.. module:: lenskit
+.. module:: lenskit.algorithms
 
 LKPY's batch routines and utility support for managing algorithms expect
 algorithms to implement consistent interfaces.  This page describes those

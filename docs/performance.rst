@@ -33,6 +33,8 @@ and log warning messages if it detects problems.  During evaluation, it also mak
 best-effort attempt, through `threadpoolctl`_, to disable nested parallelism when running
 a parallel evaluation.
 
+.. _threadpoolctl: https://github.com/joblib/threadpoolctl
+
 Controlling Parallelism
 -----------------------
 

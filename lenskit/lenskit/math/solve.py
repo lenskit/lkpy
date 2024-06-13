@@ -20,8 +20,9 @@ def solve_cholesky(A: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     in an easier-to-use interface with error checking.
 
     Args:
-        A: the left-hand matrix :math:`A` y: the right-hand vector
-        :math:`\\mathbf{y}`
+        A:
+            the left-hand matrix :math:`A` y: the right-hand vector
+            :math:`\\mathbf{y}`
 
     Returns:
         the solution :math:`\\mathbf{x}`
