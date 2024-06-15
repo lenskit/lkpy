@@ -24,16 +24,16 @@ repos:
       - id: ruff-format
   - repo: local
     hooks:
-      - id: format-toml-files
-        name: format-toml
+      - id: format-toml
+        name: format toml files
         entry: taplo
         args: ["format"]
         files: \.toml$
         language: node
         additional_dependencies:
           - "@taplo/cli"
-      - id: format-yaml-files
-        name: format-yaml
+      - id: format-yaml
+        name: format yaml files
         files: \.ya?ml$
         exclude: conda-lock.yml
         entry: prettier
