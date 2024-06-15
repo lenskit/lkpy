@@ -17,6 +17,10 @@ repos:
     rev: v0.12.1
     hooks:
       - id: yamlfmt
+  - repo: https://github.com/mdekstrand/taplo-pre-commit
+    rev: f0b35e42c9428a9383ae7d3e104505782f95d8be
+    hooks:
+      - id: taplo-format
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
     rev: v0.4.9
@@ -26,13 +30,3 @@ repos:
         args: [--fix]
       # Run the formatter.
       - id: ruff-format
-  - repo: local
-    hooks:
-      - id: format-toml
-        name: format toml files
-        entry: taplo
-        args: ["format"]
-        files: \.toml$
-        language: node
-        additional_dependencies:
-          - "@taplo/cli"
