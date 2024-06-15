@@ -27,7 +27,13 @@ jobs:
         run: pre-commit install-hooks
 
       - name: ✅ Check that pre-commit is clean
-        run: pre-commit run --all-files
+        run: |
+          if pre-commit run --all-files; then
+            echo "::debug title=pre-commit::pre-commit checks passed"
+          else
+            git status -s |sed -Ee 's/^...(.*)/::error file=\1,title=pre-commit::pre-commit would modify this file/'
+            exit 1
+          fi
 
   lint:
     name: Annotate with lint failures
