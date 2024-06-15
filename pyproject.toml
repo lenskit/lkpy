@@ -28,9 +28,6 @@ known-first-party = ["lenskit"]
 [tool.ruff.lint.isort.sections]
 testing = ["pytest", "hypothesis"]
 
-[tool.mypy]
-exclude = "^docs/"
-
 [tool.pyright]
 typeCheckingMode = "basic"
 exclude = ["docs/*"]
