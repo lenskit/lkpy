@@ -4,10 +4,10 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from lenskit.algorithms import CandidateSelector
-
-import pandas as pd
 import numpy as np
+import pandas as pd
+
+from lenskit.algorithms import CandidateSelector
 
 
 def test_cs_rated_items_series():

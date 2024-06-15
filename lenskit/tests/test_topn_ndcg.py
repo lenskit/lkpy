@@ -9,7 +9,7 @@ import pandas as pd
 
 from pytest import approx, mark
 
-from lenskit.metrics.topn import _dcg, dcg, ndcg, _bulk_ndcg
+from lenskit.metrics.topn import _bulk_ndcg, _dcg, dcg, ndcg
 from lenskit.topn import RecListAnalysis
 from lenskit.util.test import demo_recs
 

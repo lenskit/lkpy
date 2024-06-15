@@ -5,14 +5,15 @@
 # SPDX-License-Identifier: MIT
 
 import logging
+
 import numpy as np
 import pandas as pd
 
 from pytest import approx
 
+from lenskit import topn
 from lenskit.metrics.topn import recall
 from lenskit.util.test import demo_recs
-from lenskit import topn
 
 _log = logging.getLogger(__name__)
 

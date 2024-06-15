@@ -9,9 +9,9 @@ import pandas as pd
 
 from pytest import approx
 
+from lenskit import topn
 from lenskit.topn import precision
 from lenskit.util.test import demo_recs
-from lenskit import topn
 
 
 def _test_prec(items, rel, **k):

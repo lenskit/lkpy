@@ -4,11 +4,12 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import numpy as np
-import pandas as pd
 import os.path
 
-from pytest import approx, raises, mark, skip
+import numpy as np
+import pandas as pd
+
+from pytest import approx, mark, raises, skip
 
 import lenskit.metrics.predict as pm
 import lenskit.util.test as lktu
@@ -168,9 +169,9 @@ def test_mae_series_two():
 @mark.eval
 @mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
 def test_batch_rmse():
-    import lenskit.crossfold as xf
-    import lenskit.batch as batch
     import lenskit.algorithms.bias as bs
+    import lenskit.batch as batch
+    import lenskit.crossfold as xf
 
     ratings = lktu.ml100k.ratings
     algo = bs.Bias(damping=5)
@@ -201,8 +202,8 @@ def test_batch_rmse():
 
 @mark.slow
 def test_global_metric():
-    import lenskit.crossfold as xf
     import lenskit.batch as batch
+    import lenskit.crossfold as xf
     from lenskit.algorithms.bias import Bias
 
     train, test = next(xf.sample_users(lktu.ml_test.ratings, 1, 200, xf.SampleFrac(0.5)))
@@ -220,8 +221,8 @@ def test_global_metric():
 
 @mark.slow
 def test_user_metric():
-    import lenskit.crossfold as xf
     import lenskit.batch as batch
+    import lenskit.crossfold as xf
     from lenskit.algorithms.bias import Bias
 
     train, test = next(xf.sample_users(lktu.ml_test.ratings, 1, 200, xf.SampleFrac(0.5)))

@@ -4,12 +4,11 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from lenskit.algorithms import basic
-
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 import lenskit.util.test as lktu
+from lenskit.algorithms import basic
 
 simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
