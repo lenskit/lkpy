@@ -3,7 +3,9 @@
 setuptools>=64
 setuptools_scm>=8
 build ==1.* # conda: python-build
-ruff >= 0.2
+ruff >=0.2
+pyright >=1.1
+pre-commit >=3.7
 copier ==9.*
 unbeheader ~= 1.3 # conda: @pip
 ipython >= 7
