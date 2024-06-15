@@ -18,7 +18,7 @@ repos:
     hooks:
       - id: yamlfmt
   - repo: https://github.com/mdekstrand/taplo-pre-commit
-    rev: f0b35e42c9428a9383ae7d3e104505782f95d8be
+    rev: v0.1.0
     hooks:
       - id: taplo-format
   - repo: https://github.com/astral-sh/ruff-pre-commit
