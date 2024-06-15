@@ -1,0 +1,4 @@
+overrides:
+  - files: .github/workflows/test.yml
+    options:
+      singleQuote: true
