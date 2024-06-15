@@ -13,6 +13,7 @@ exclude = [
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+unfixable = ["F401"]
 
 [tool.ruff.lint.isort]
 section-order = [
@@ -22,6 +23,9 @@ section-order = [
   "testing",
   "first-party",
   "local-folder",
+]
+known-first-party = [
+  "lenskit",
 ]
 
 [tool.ruff.lint.isort.sections]
