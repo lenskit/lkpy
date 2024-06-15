@@ -68,5 +68,3 @@ jobs:
           FMT_PASSED: ${{ steps.format.outputs.passed }}
           LINT_PASSED: ${{ steps.lint.outputs.passed }}
           LINT_REQUIRED: False
-
-

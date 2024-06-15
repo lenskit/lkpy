@@ -4,12 +4,7 @@
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-exclude = [
-  ".git",
-  "__pycache__",
-  "build",
-  "dist",
-]
+exclude = [".git", "__pycache__", "build", "dist"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
@@ -24,9 +19,7 @@ section-order = [
   "first-party",
   "local-folder",
 ]
-known-first-party = [
-  "lenskit",
-]
+known-first-party = ["lenskit"]
 
 [tool.ruff.lint.isort.sections]
 testing = ["pytest", "hypothesis"]
@@ -36,9 +29,7 @@ exclude = "^docs/"
 
 [tool.pyright]
 typeCheckingMode = "basic"
-exclude = [
-  "docs/*",
-]
+exclude = ["docs/*"]
 reportMissingImports = true
 reportMissingTypeStubs = false
 
@@ -50,9 +41,7 @@ log_file_format = "[%(levelname)7s] %(asctime)s [%(processName)s] %(name)s %(mes
 log_file_level = "DEBUG"
 addopts = "--import-mode=importlib --benchmark-skip"
 doctest_plus = true
-doctest_subpackage_requires = [
-  "lenskit-hpf/lenskit/* = hpfrec",
-]
+doctest_subpackage_requires = ["lenskit-hpf/lenskit/* = hpfrec"]
 filterwarnings = [
   "ignore:::pyarrow[.*]",
   "ignore:.*matrix subclass.*:PendingDeprecationWarning",

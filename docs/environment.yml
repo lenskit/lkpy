@@ -1,26 +1,26 @@
 channels:
-- conda-forge
-- pytorch
-- nodefaults
+  - conda-forge
+  - pytorch
+  - nodefaults
 dependencies:
-- pip
-- sphinx >=4.2
-- sphinxext-opengraph >=0.5
-- sphinxcontrib-bibtex >=2.0
-- sphinx-book-theme ==1.*
-- myst-nb >=0.13
-- pytorch-cpu
-- nomkl
-- pandas >=1.5,<3
-- numpy >=1.23
-- scipy >=1.9.0
-- pytorch >=2.1,<3
-- threadpoolctl >=3.0
-- scikit-learn >=1.1
-- numba >=0.56
-- implicit >=0.6.1
-- pip:
-  - seedbank>=0.2.0a2
-  - progress-api>=0.1.0a9
-  - manylog>=0.1.0a5
-  - hpfrec==0.2.*
+  - pip
+  - sphinx >=4.2
+  - sphinxext-opengraph >=0.5
+  - sphinxcontrib-bibtex >=2.0
+  - sphinx-book-theme ==1.*
+  - myst-nb >=0.13
+  - pytorch-cpu
+  - nomkl
+  - pandas >=1.5,<3
+  - numpy >=1.23
+  - scipy >=1.9.0
+  - pytorch >=2.1,<3
+  - threadpoolctl >=3.0
+  - scikit-learn >=1.1
+  - numba >=0.56
+  - implicit >=0.6.1
+  - pip:
+      - seedbank>=0.2.0a2
+      - progress-api>=0.1.0a9
+      - manylog>=0.1.0a5
+      - hpfrec==0.2.*
