@@ -201,13 +201,18 @@ class UserUser(Predictor):
 
         kn_sims = nbr_sims[nbr_mask]
         kn_idxs = nbr_idxs[nbr_mask]
-        _log.debug(
-            "user %s: %d candidate neighbors (of %d total), max sim %0.4f",
-            user,
-            len(kn_sims),
-            len(self.user_index_),
-            torch.max(kn_sims).item(),
-        )
+        if len(kn_sims) > 0:
+            _log.debug(
+                "user %s: %d candidate neighbors (of %d total), max sim %0.4f",
+                user,
+                len(kn_sims),
+                len(self.user_index_),
+                torch.max(kn_sims).item(),
+            )
+        else:
+            _log.warn("user %s: no candidate neighbors", user)
+            return pd.Series(index=items, dtype="float32")
+
         assert not torch.any(torch.isnan(kn_sims))
 
         iidxs = self.item_index_.get_indexer_for(items)
