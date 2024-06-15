@@ -11,14 +11,10 @@ Tests for matrix row utilities.
 import logging
 
 import numpy as np
-import pandas as pd
-import scipy.sparse as sps
 import torch
 
-import hypothesis.extra.numpy as nph
-import hypothesis.strategies as st
-from hypothesis import HealthCheck, assume, given, settings
-from pytest import approx, mark
+from hypothesis import HealthCheck, given, settings
+from pytest import approx
 
 from lenskit.data.matrix import normalize_sparse_rows, sparse_row_stats
 from lenskit.util.test import sparse_tensors

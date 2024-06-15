@@ -13,7 +13,7 @@ from pytest import approx
 
 from lenskit import topn
 from lenskit.metrics.topn import hit
-from lenskit.util.test import demo_recs
+from lenskit.util.test import demo_recs  # noqa: F401
 
 _log = logging.getLogger(__name__)
 

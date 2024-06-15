@@ -30,6 +30,7 @@ def test_implicit_als_train_rec():
     assert len(recs) == 20
 
     preds = algo.predict_for_user(100, items=[1, 377])
+    assert np.all(preds.notnull())
 
     _log.info("serializing implicit model")
     mod = pickle.dumps(algo)

@@ -203,9 +203,12 @@ def test_ii_warns_center_with_no_use_ratings():
 
 
 def test_ii_warns_wa_with_no_use_ratings():
-    "Test that item-item warns if you configure to ignore ratings but weighted=average."
+    "Test that item-item warns if you configure to ignore ratings but use weighted-average."
     with pytest.warns(ConfigWarning):
         algo = knn.ItemItem(5, use_ratings=False, center=False)
+        assert not algo.use_ratings
+        assert not algo.center
+        assert algo.aggregate == algo.AGG_WA
 
 
 @lktu.wantjit

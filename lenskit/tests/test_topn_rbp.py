@@ -9,14 +9,13 @@ import logging
 import numpy as np
 import pandas as pd
 
-import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import given
 from pytest import approx, mark
 
 from lenskit.metrics.topn import _bulk_rbp, rbp
 from lenskit.topn import RecListAnalysis
-from lenskit.util.test import demo_recs
+from lenskit.util.test import demo_recs  # noqa: F401
 
 _log = logging.getLogger(__name__)
 

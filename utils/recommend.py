@@ -33,8 +33,6 @@ import seedbank
 from docopt import docopt
 
 from lenskit import batch
-from lenskit.algorithms import Recommender
-from lenskit.algorithms.knn.item import ItemItem
 from lenskit.datasets import MovieLens
 
 _log = logging.getLogger("test-algo")

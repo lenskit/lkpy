@@ -15,18 +15,15 @@ from pytest import approx, mark
 from lenskit import batch, topn
 from lenskit import crossfold as xf
 from lenskit.algorithms import Recommender
-from lenskit.algorithms.basic import PopScore
 from lenskit.algorithms.knn.item import ItemItem
 from lenskit.algorithms.knn.user import UserUser
-from lenskit.algorithms.ranking import PlackettLuce
 from lenskit.metrics.topn import _dcg, precision, recall
-from lenskit.util.test import demo_recs, ml_test
+from lenskit.util.test import demo_recs, ml_test  # noqa: F401
 
 _log = logging.getLogger(__name__)
 
 
 def test_split_keys():
-    rla = topn.RecListAnalysis()
     recs, truth = topn._df_keys(
         ["algorithm", "user", "item", "rank", "score"], ["user", "item", "rating"]
     )

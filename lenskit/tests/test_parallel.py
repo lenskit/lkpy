@@ -13,7 +13,7 @@ import torch
 
 from pytest import approx, mark
 
-from lenskit.parallel import get_parallel_config, invoker
+from lenskit.parallel import invoker
 from lenskit.parallel.config import _resolve_parallel_config
 from lenskit.util.test import set_env_var
 

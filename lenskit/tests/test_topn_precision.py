@@ -11,7 +11,7 @@ from pytest import approx
 
 from lenskit import topn
 from lenskit.topn import precision
-from lenskit.util.test import demo_recs
+from lenskit.util.test import demo_recs  # noqa: F401
 
 
 def _test_prec(items, rel, **k):

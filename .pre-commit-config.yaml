@@ -19,8 +19,8 @@ repos:
     rev: v0.4.8
     hooks:
       # Run the linter.
-      # - id: ruff
-      #   args: [--fix]
+      - id: ruff
+        args: [--fix]
       # Run the formatter.
       - id: ruff-format
   - repo: local

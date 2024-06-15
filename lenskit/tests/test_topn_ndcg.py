@@ -11,7 +11,7 @@ from pytest import approx, mark
 
 from lenskit.metrics.topn import _bulk_ndcg, _dcg, dcg, ndcg
 from lenskit.topn import RecListAnalysis
-from lenskit.util.test import demo_recs
+from lenskit.util.test import demo_recs  # noqa: F401
 
 
 def test_dcg_empty():

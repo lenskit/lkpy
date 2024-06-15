@@ -380,7 +380,7 @@ def test_non_unique_index_partition_users():
             pass
 
 
-def test_sample_users():
+def test_sample_users_dup_index():
     """Sampling users when dataframe has non-unique indices"""
     ratings = lktu.ml_test.ratings
     ratings = ratings.set_index("user")  ##forces non-unique index
@@ -389,7 +389,7 @@ def test_sample_users():
             pass
 
 
-def test_sample_rows():
+def test_sample_rows_dup_index():
     """Sampling ratings when dataframe has non-unique indices"""
     ratings = lktu.ml_test.ratings
     ratings = ratings.set_index("user")  ##forces non-unique index
@@ -398,7 +398,7 @@ def test_sample_rows():
             pass
 
 
-def test_partition_users():
+def test_partition_users_dup_index():
     """Partitioning ratings when dataframe has non-unique indices"""
     ratings = lktu.ml_test.ratings
     ratings = ratings.set_index("user")  ##forces non-unique index
