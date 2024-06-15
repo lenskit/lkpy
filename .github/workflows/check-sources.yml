@@ -10,8 +10,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  pre-commit:
+    name: Check pre-commit hooks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Check out source code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Install pre-commit
+        run: pipx install pre-commit
+
+      - name: 🪝 Install pre-commit hooks
+        run: pre-commit install-hooks
+
+      - name: ✅ Check that pre-commit is clean
+        run: pre-commit run --all-files
+
   lint:
-    name: Check Source Code
+    name: Annotate with lint failures
     runs-on: ubuntu-latest
 
     steps:
@@ -21,50 +40,18 @@ jobs:
           fetch-depth: 0
 
       - name: 🐍 Set up Python
+        id: python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-          cache: "pip"
+          python-version: "3.10"
 
       - name: 🛠️ Install development tools and dependencies
         run: |
-          pip install -r requirements-dev.txt
-
-      - name: 🪮 Check source code formatting
-        id: format
-        run: |
-          if ruff format --diff */lenskit; then
-            echo passed=yes >>"$GITHUB_OUTPUT"
-          else
-            echo passed=no >>"$GITHUB_OUTPUT"
-            echo "::error::source code not formatted"
-          fi
+          $PYTHON -m pip install -U uv
+          uv pip install --python $PYTHON -r requirements-dev.txt
+        env:
+          PYTHON: ${{steps.python.outputs.python-path}}
 
       - name: 🐜 Check source code lint rules
         id: lint
-        run: |
-          if ruff check --output-format=github */lenskit; then
-            echo passed=yes >>"$GITHUB_OUTPUT"
-          else
-            echo passed=no >>"$GITHUB_OUTPUT"
-            echo "::error::source code lint check failed"
-          fi
-
-      - name: 🧾 Checking lint and format results
-        run: |
-          if [ "$FMT_PASSED" = no ]; then
-              echo "::error::format failed, failing build"
-              exit 1
-          fi
-          if [ "$LINT_PASSED" = no ]; then
-              if [ "$LINT_REQUIRED" = true ]; then
-                  echo "::error::lint failed, failing build"
-                  exit 2
-              else
-                  echo "::error::lint failed but non-mandatory"
-              fi
-          fi
-        env:
-          FMT_PASSED: ${{ steps.format.outputs.passed }}
-          LINT_PASSED: ${{ steps.lint.outputs.passed }}
-          LINT_REQUIRED: False
+        run: ruff check --output-format=github
