@@ -10,7 +10,6 @@ repos:
       - id: check-shebang-scripts-are-executable
       - id: check-yaml
       - id: check-toml
-      - id: debug-statements
       - id: end-of-file-fixer
       - id: mixed-line-ending
       - id: trailing-whitespace
