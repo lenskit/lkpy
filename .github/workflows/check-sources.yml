@@ -26,6 +26,10 @@ jobs:
       - name: 🪝 Install pre-commit hooks
         run: pre-commit install-hooks
 
+      # switch git branches so we don't trip the branch pre-commit check
+      - name: Switch branches
+        run: git checkout -b check-source HEAD
+
       - name: ✅ Check that pre-commit is clean
         run: |
           if pre-commit run --all-files; then
