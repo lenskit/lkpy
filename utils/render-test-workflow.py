@@ -34,7 +34,7 @@ PYTHONS = ["3.10", "3.11", "3.12"]
 PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
 PACKAGES = ["lenskit", "lenskit-funksvd", "lenskit-implicit"]
 WORKFLOW_HEADER = {
-    "name": "Test Suite",
+    "name": "Automatic Tests",
     "on": {
         "push": {
             "branches": ["main"],

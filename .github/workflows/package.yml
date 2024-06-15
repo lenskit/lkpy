@@ -1,4 +1,4 @@
-name: Package and Publish
+name: Distribution
 
 on:
   push:
