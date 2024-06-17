@@ -44,6 +44,14 @@ Users and items have two identifiers:
   appears as a ``user_num`` or ``item_num`` column.  It is the only
   representation supported by NumPy and PyTorch array formats.
 
+  User and item numbers are assigned based on sorted identifiers in the initial
+  data source, so reloading the same data set will yield the same numbers.
+  Loading a subset, however, is not guaranteed to result in the same numbers, as
+  the subset may be missing some users or items.
+
+  Methods that add additional users or items will assign numbers based on the
+  sorted identifiers that do not yet have numbers.
+
 Identifiers and numbers can be mapped to each other with the user and item
 *vocabularies* (:attr:`~Dataset.user_vocab` and :attr:`~Dataset.item_vocab`), as
 well as convenience methods.
