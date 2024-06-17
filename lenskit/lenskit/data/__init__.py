@@ -6,7 +6,7 @@
 
 from typing import Literal, TypeAlias
 
-from .dataset import Dataset  # noqa: F401
+from .dataset import Dataset, from_interactions_df  # noqa: F401
 from .matrix import RatingMatrix, sparse_ratings  # noqa: F401
 
 FeedbackType: TypeAlias = Literal["explicit", "implicit"]
