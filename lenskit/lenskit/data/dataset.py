@@ -6,13 +6,14 @@ LensKit dataset abstraction.
 from __future__ import annotations
 
 import logging
-from typing import Any, Collection, Iterable, Literal, Optional, TypeAlias, overload
+from collections.abc import Hashable
+from typing import Any, Collection, Iterable, Literal, Optional, TypeAlias, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as sps
 import torch
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 
 from .tables import NumpyUserItemTable, TorchUserItemTable
 
@@ -20,6 +21,8 @@ DF_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch"]
 MAT_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch", "scipy"]
 LAYOUT: TypeAlias = Literal["csr", "coo"]
 ACTION_FIELDS: TypeAlias = Literal["ratings", "timestamps"] | str
+EntityId: TypeAlias = Hashable
+K = TypeVar("K")
 
 _log = logging.getLogger(__name__)
 
@@ -106,8 +109,8 @@ class Dataset:
     @overload
     def user_id(self, users: int) -> Any: ...
     @overload
-    def user_id(self, users: ArrayLike) -> pd.Series[Any]: ...
-    def user_id(self, users: int | ArrayLike) -> Any:
+    def user_id(self, users: NDArray[np.integer]) -> pd.Series[Any]: ...
+    def user_id(self, users: int | NDArray[np.integer]) -> Any:
         """
         Look up the user ID for a given user number.  When passed a single
         number, it returns single identifier; when given an array of numbers, it
@@ -119,7 +122,7 @@ class Dataset:
         Returns:
             The user identifier(s) (from the original source data).
         """
-        pass
+        return _lookup_id(self.user_vocab, users)
 
     @overload
     def user_num(
@@ -153,13 +156,13 @@ class Dataset:
         Returns:
             The user numbers.
         """
-        pass
+        return _lookup_num(self.user_vocab, users, missing)
 
     @overload
     def item_id(self, items: int) -> Any: ...
     @overload
-    def item_id(self, items: ArrayLike) -> pd.Series[Any]: ...
-    def item_id(self, items: int | ArrayLike) -> Any:
+    def item_id(self, items: NDArray[np.integer]) -> pd.Series[Any]: ...
+    def item_id(self, items: int | NDArray[np.integer]) -> Any:
         """
         Look up the item ID for a given item number.  When passed a single
         number, it returns single identifier; when given an array of numbers, it
@@ -171,7 +174,7 @@ class Dataset:
         Returns:
             The item identifier(s) (from the original source data).
         """
-        pass
+        return _lookup_id(self.item_vocab, items)
 
     @overload
     def item_num(
@@ -205,7 +208,7 @@ class Dataset:
         Returns:
             The item numbers.
         """
-        pass
+        return _lookup_num(self.item_vocab, items, missing)
 
     @overload
     def interaction_log(
@@ -489,3 +492,39 @@ def _find_column(columns: Collection[str], acceptable: Iterable[str]) -> str | N
 def id_counts(items: ArrayLike) -> pd.Series[np.dtype[np.int64]]:
     ids, counts = np.unique(items, return_counts=True)
     return pd.Series(counts, index=ids)
+
+
+def _lookup_id(index: pd.Index, nums: int | NDArray[np.integer]) -> Any:
+    if np.isscalar(nums):
+        nums = cast(int, nums)  # make the type checker shut up
+        if nums < 0 or nums >= len(index):
+            raise IndexError(f"number {nums} not in range [0,{len(index)})")
+        return index[nums]
+    else:
+        sub = index[nums]
+        return pd.Series(sub, index=nums)  # type: ignore
+
+
+def _lookup_num(
+    index: pd.Index,
+    ids: EntityId | ArrayLike,
+    missing: Literal["error", "negative", "omit"] = "negative",
+) -> int | np.ndarray[int, np.dtype[np.int32]] | pd.Series[int]:
+    if np.isscalar(ids):
+        try:
+            return index.get_loc(cast(EntityId, ids))
+        except KeyError as e:
+            if missing == "negative":
+                return -1
+            else:
+                raise e
+    else:
+        locs = index.get_indexer(ids).astype("i4")
+        if missing == "error" and np.any(locs < 0):
+            raise KeyError("one or more IDs not in index")
+
+        if missing == "omit":
+            res = pd.Series(locs, index=ids)  # type: ignore
+            return res[res >= 0]
+
+        return locs
