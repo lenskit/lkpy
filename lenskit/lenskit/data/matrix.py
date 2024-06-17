@@ -56,6 +56,24 @@ class CSRStructure(NamedTuple):
         return self.colinds[sp:ep]
 
 
+class InteractionMatrix:
+    """
+    Internal helper class used by :class:`lenskit.data.Datset` to store
+    interactions in matrix format.
+    """
+
+    user_nums: np.ndarray[int, np.dtype[np.int32]]
+    "User (row) numbers."
+    user_ptrs: np.ndarray[int, np.dtype[np.int32]]
+    "User (row) offsets / pointers."
+    item_nums: np.ndarray[int, np.dtype[np.int32]]
+    "Item (column) numbers."
+    ratings: Optional[np.ndarray[int, np.dtype[np.float32]]]
+    "Rating values."
+    timestamps: Optional[np.ndarray[int, np.dtype[np.int64]]]
+    "Timestamps as 64-bit Unix timestamps."
+
+
 class RatingMatrix(NamedTuple, Generic[M]):
     """
     A rating matrix with associated indices.
