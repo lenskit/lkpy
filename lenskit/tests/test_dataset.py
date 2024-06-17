@@ -55,8 +55,8 @@ def test_user_id_single(ml_ds: Dataset):
 
 def test_user_id_many(ml_ds: Dataset):
     users = ml_ds.user_vocab
-    assert ml_ds.user_id([1, 5, 23]) == users[[1, 5, 23]]
-    assert ml_ds.user_id(np.array([1, 5, 23])) == users[[1, 5, 23]]
+    assert np.all(ml_ds.user_id([1, 5, 23]) == users[[1, 5, 23]])
+    assert np.all(ml_ds.user_id(np.array([1, 5, 23])) == users[[1, 5, 23]])
 
 
 def test_item_id_single(ml_ds: Dataset):
@@ -68,5 +68,29 @@ def test_item_id_single(ml_ds: Dataset):
 
 def test_item_id_many(ml_ds: Dataset):
     items = ml_ds.item_vocab
-    assert ml_ds.item_id([1, 5, 23]) == items[[1, 5, 23]]
-    assert ml_ds.item_id(np.array([1, 5, 23])) == items[[1, 5, 23]]
+    assert np.all(ml_ds.item_id([1, 5, 23]) == items[[1, 5, 23]])
+    assert np.all(ml_ds.item_id(np.array([1, 5, 23])) == items[[1, 5, 23]])
+
+
+def test_user_num_single(ml_ds: Dataset):
+    users = ml_ds.user_vocab
+    assert ml_ds.user_num(users[0]) == 0
+    assert ml_ds.user_num(users[50]) == 50
+
+
+def test_user_num_many(ml_ds: Dataset):
+    users = ml_ds.user_vocab
+    assert np.all(ml_ds.user_num(users[[1, 5, 23]]) == [1, 5, 23])
+    assert np.all(ml_ds.user_num(list(users[[1, 5, 23]])) == [1, 5, 23])
+
+
+def test_item_num_single(ml_ds: Dataset):
+    items = ml_ds.item_vocab
+    assert ml_ds.item_num(items[0]) == 0
+    assert ml_ds.item_num(items[50]) == 50
+
+
+def test_item_num_many(ml_ds: Dataset):
+    items = ml_ds.item_vocab
+    assert np.all(ml_ds.item_num(items[[1, 5, 23]]) == [1, 5, 23])
+    assert np.all(ml_ds.item_num(list(items[[1, 5, 23]])) == [1, 5, 23])
