@@ -510,6 +510,8 @@ def _lookup_num(
     ids: EntityId | ArrayLike,
     missing: Literal["error", "negative", "omit"] = "negative",
 ) -> int | np.ndarray[int, np.dtype[np.int32]] | pd.Series[int]:
+    if missing not in ["error", "negative", "omit"]:  # pragma nocover
+        raise ValueError(f"invalid missing mode {missing}")
     if np.isscalar(ids):
         try:
             return index.get_loc(cast(EntityId, ids))

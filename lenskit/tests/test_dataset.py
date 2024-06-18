@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from pyprojroot import here
 
-from pytest import fixture
+from pytest import fixture, raises
 
 from lenskit.data import Dataset, from_interactions_df
 
@@ -84,6 +84,37 @@ def test_user_num_many(ml_ds: Dataset):
     assert np.all(ml_ds.user_num(list(users[[1, 5, 23]])) == [1, 5, 23])
 
 
+def test_user_num_missing_error(ml_ds: Dataset):
+    with raises(KeyError):
+        ml_ds.user_num(-402, missing="error")
+
+
+def test_user_num_missing_negative(ml_ds: Dataset):
+    assert ml_ds.user_num(-402, missing="negative") == -1
+
+
+def test_user_num_missing_omit(ml_ds: Dataset):
+    user = ml_ds.user_vocab[5]
+    series = ml_ds.user_num([user, -402], missing="omit")
+    assert len(series) == 1
+    assert series.loc[user] == 5
+
+
+def test_user_num_missing_vector_negative(ml_ds: Dataset):
+    u1 = ml_ds.user_vocab[5]
+    u2 = ml_ds.user_vocab[100]
+    res = ml_ds.user_num([u1, -402, u2], missing="negative")
+    assert len(res) == 3
+    assert np.all(res == [5, -1, 100])
+
+
+def test_user_num_missing_vector_error(ml_ds: Dataset):
+    u1 = ml_ds.user_vocab[5]
+    u2 = ml_ds.user_vocab[100]
+    with raises(KeyError):
+        ml_ds.user_num([u1, -402, u2], missing="error")
+
+
 def test_item_num_single(ml_ds: Dataset):
     items = ml_ds.item_vocab
     assert ml_ds.item_num(items[0]) == 0
@@ -94,3 +125,8 @@ def test_item_num_many(ml_ds: Dataset):
     items = ml_ds.item_vocab
     assert np.all(ml_ds.item_num(items[[1, 5, 23]]) == [1, 5, 23])
     assert np.all(ml_ds.item_num(list(items[[1, 5, 23]])) == [1, 5, 23])
+
+
+def test_item_num_missing_error(ml_ds: Dataset):
+    with raises(KeyError):
+        ml_ds.item_num(-402, missing="error")
