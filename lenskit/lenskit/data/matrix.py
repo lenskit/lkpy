@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sps
 import torch
+from numpy.typing import ArrayLike
 from typing_extensions import Any, Generic, Literal, NamedTuple, Optional, TypeVar, overload
 
 _log = logging.getLogger(__name__)
@@ -54,6 +55,52 @@ class CSRStructure(NamedTuple):
     def row_cs(self, row: int) -> np.ndarray:
         sp, ep = self.extent(row)
         return self.colinds[sp:ep]
+
+
+class InteractionMatrix:
+    """
+    Internal helper class used by :class:`lenskit.data.Dataset` to store the
+    user-item interaction matrix.  The data is stored simultaneously in CSR and
+    COO format.
+    """
+
+    n_users: int
+    n_items: int
+
+    user_nums: np.ndarray[int, np.dtype[np.int32]]
+    "User (row) numbers."
+    user_ptrs: np.ndarray[int, np.dtype[np.int32]]
+    "User (row) offsets / pointers."
+    item_nums: np.ndarray[int, np.dtype[np.int32]]
+    "Item (column) numbers."
+    ratings: Optional[np.ndarray[int, np.dtype[np.float32]]]
+    "Rating values."
+    timestamps: Optional[np.ndarray[int, np.dtype[np.int64]]]
+    "Timestamps as 64-bit Unix timestamps."
+
+    def __init__(
+        self,
+        users: ArrayLike,
+        items: ArrayLike,
+        ratings: Optional[ArrayLike],
+        timestamps: Optional[ArrayLike],
+        user_counts: pd.Series,
+        n_items: int,
+    ):
+        self.user_nums = np.asarray(users, np.int32)
+        self.item_nums = np.asarray(items, np.int32)
+        if ratings is not None:
+            self.ratings = np.asarray(ratings, np.float32)
+        if timestamps is not None:
+            self.timestamps = np.asarray(timestamps, np.int64)
+
+        self.n_items = n_items
+        self.n_users = len(user_counts)
+        cp1 = np.zeros(self.n_users + 1, np.int32)
+        cp1[1:] = user_counts
+        self.user_ptrs = cp1.cumsum()
+        if self.user_ptrs[-1] != len(self.user_nums):
+            raise ValueError("mismatched counts and array sizes")
 
 
 class RatingMatrix(NamedTuple, Generic[M]):
