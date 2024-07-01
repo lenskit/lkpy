@@ -28,7 +28,6 @@ extensions = [
     "sphinx.ext.todo",
     "sphinxext.opengraph",
     "sphinxcontrib.bibtex",
-    "sphinx_book_theme",
 ]
 
 # set up our filenames
@@ -50,6 +49,12 @@ html_theme_options = {
     "use_issues_button": True,
     "use_download_button": False,
     "home_page_in_toc": True,
+    "switcher": {
+        "json_url": "https://lenskit-docs.netlify.app/versions.json",
+        "version_match": "2024.0dev",
+    },
+    # "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
+    "article_header_end": ["theme-switcher", "navbar-icon-links", "version-switcher"],
     # 'github_user': 'lenskit',
     # 'github_repo': 'lkpy',
     # 'travis_button': False,
