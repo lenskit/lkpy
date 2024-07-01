@@ -50,7 +50,7 @@ html_theme_options = {
     "use_download_button": False,
     "home_page_in_toc": True,
     "switcher": {
-        "json_url": "https://lenskit-docs.netlify.app/versions.json",
+        "json_url": "https://lkpy.lenskit.org/versions.json",
         "version_match": "2024.0dev",
     },
     # "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
