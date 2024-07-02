@@ -372,14 +372,14 @@ def job_check_changes() -> GHJob:
                 "run": script("""
                     if [[ -z "$PR_NUMBER" ]]; then
                         echo "not a PR, assuming changed"
-                        echo changed=true >>$GITHUB_OUTPUT
+                        echo changed=true >>"$GITHUB_OUTPUT"
                     else
                         if gh pr diff $PR_NUMBER --name-only |grep '^lenskit.*\\.py$'; then
                             echo "source code changed"
-                            echo changed=true >>$GITHUB_OUTPUT
+                            echo changed=true >>"$GITHUB_OUTPUT"
                         else
                             echo "source code unchanged"
-                            echo changed=false >>$GITHUB_OUTPUT
+                            echo changed=false >>"$GITHUB_OUTPUT"
                         fi
                     fi
                 """),
