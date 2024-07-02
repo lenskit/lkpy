@@ -19,7 +19,7 @@ def workflow():
             },
         },
         "concurrency": {
-            "group": "test-${{github.ref}}",
+            "group": "doc-${{github.ref}}",
             "cancel-in-progress": True,
         },
         "jobs": {

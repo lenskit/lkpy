@@ -8,7 +8,7 @@ defaults:
   run:
     shell: bash -el {0}
 concurrency:
-  group: test-${{github.ref}}
+  group: doc-${{github.ref}}
   cancel-in-progress: true
 jobs:
   build:
