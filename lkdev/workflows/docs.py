@@ -119,8 +119,8 @@ def job_publish_docs():
                 "name": "Check out doc site",
                 "uses": "actions/checkout@v4",
                 "with": {
-                    "repository": "git@github.com:lenskit/lenskit-docs.git",
-                    "ssh-key": "${{steps.decrypt.output.decrypt-identity}}",
+                    "repository": "lenskit/lenskit-docs",
+                    "ssh-key": "${{steps.decrypt.outputs.decrypt-identity}}",
                     "path": "doc-site",
                     "ref": "latest",
                 },
