@@ -13,8 +13,8 @@ concurrency:
 jobs:
   build:
     name: Build documentation
-    runs-on: ubuntu-lates
-    stages:
+    runs-on: ubuntu-latest
+    steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
         with:
@@ -39,3 +39,42 @@ jobs:
         with:
           name: lenskit-docs
           path: build/doc
+  publish:
+    name: Publish documentation
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    environment: docs
+    steps:
+      - id: decrypt
+        name: 🔓 Decrypt deployment key
+        run: |
+          tmpdir=$(mktemp -d lksite.XXXXXX)
+          echo "$AGE_DECRYPT" >$tmpdir/decrypt-identity
+          echo 'deploy-key<<EOK' >>$GITHUB_OUTPUT
+          age -d -i $tmpdir/decrypt-identity etc/doc-deploy-key.asc >>$GITHUB_OUTPUT
+          echo 'EOK' >>$GITHUB_OUTPUT
+          rm -rf $tmpdir
+        env:
+          AGE_DECRYPT: ${{ secrets.DOC_DEPLOY_DECRYPT_KEY }}
+      - name: Check out doc site
+        uses: actions/checkout@v4
+        with:
+          repository: lenskit/lenskit-docs
+          ssh-key: ${{steps.decrypt.output.decrypt-identity}}
+          path: doc-site
+          ref: latest
+      - name: 📥 Fetch documentation package
+        uses: actions/download-artifact@v4
+        with:
+          name: lenskit-docs
+          path: build/doc
+      - name: 🛻 Copy documentation content
+        run: |
+          rsync -av --delete --exclude=.git/ build/doc/ doc-site/
+          cd doc-site
+          git config user.name "LensKit Doc Bot"
+          git config user.email "docbot@lenskit.org"
+          git add .
+          git commit -m 'rebuild documentation'
+          git push

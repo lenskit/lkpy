@@ -22,15 +22,18 @@ def workflow():
             "group": "test-${{github.ref}}",
             "cancel-in-progress": True,
         },
-        "jobs": {"build": job_build_docs()},
+        "jobs": {
+            "build": job_build_docs(),
+            "publish": job_publish_docs(),
+        },
     }
 
 
 def job_build_docs():
     return {
         "name": "Build documentation",
-        "runs-on": "ubuntu-lates",
-        "stages": stages_setup() + stages_build_doc() + stages_package(),
+        "runs-on": "ubuntu-latest",
+        "steps": stages_setup() + stages_build_doc() + stages_package(),
     }
 
 
