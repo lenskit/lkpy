@@ -90,6 +90,7 @@ def job_publish_docs():
         "needs": ["build"],
         "environment": "docs",
         "steps": [
+            step_checkout(),
             {
                 "name": "📦 Install decryptor",
                 "run": "sudo apt install -y age",
@@ -98,6 +99,9 @@ def job_publish_docs():
                 "id": "decrypt",
                 "name": "🔓 Decrypt deployment key",
                 "run": script("""
+                    if [ -z "$AGE_DECRYPT" ]; then
+                        echo ::error::Age decryption key not available
+                    fi
                     tmpdir=$(mktemp -d lksite.XXXXXX)
                     echo "$AGE_DECRYPT" >$tmpdir/decrypt-identity
                     echo 'deploy-key<<EOK' >$tmpdir/out

@@ -46,11 +46,18 @@ jobs:
       - build
     environment: docs
     steps:
+      - name: 🛒 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: 📦 Install decryptor
         run: sudo apt install -y age
       - id: decrypt
         name: 🔓 Decrypt deployment key
         run: |
+          if [ -z "$AGE_DECRYPT" ]; then
+              echo ::error::Age decryption key not available
+          fi
           tmpdir=$(mktemp -d lksite.XXXXXX)
           echo "$AGE_DECRYPT" >$tmpdir/decrypt-identity
           echo 'deploy-key<<EOK' >$tmpdir/out
