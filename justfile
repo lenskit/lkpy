@@ -74,4 +74,5 @@ update-headers:
 
 # update GH workflows
 update-workflows:
-    python ./utils/render-test-workflow.py -o .github/workflows/test.yml
+    python -m lkbuild.ghactions --render test
+    -pre-commit run --files .github/workflows/*.yml

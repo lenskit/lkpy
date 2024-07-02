@@ -1,51 +1,32 @@
-# This file is part of LensKit.
-# Copyright (C) 2018-2023 Boise State University
-# Copyright (C) 2023-2024 Drexel University
-# Licensed under the MIT license, see LICENSE.md for details.
-# SPDX-License-Identifier: MIT
-
-"""
-Render workflows and project template infrastructure.
-
-Usage:
-    render-test-workflow.py [-v] [-o FILE]
-
-Options:
-    -v, --verbose           verbose logging
-    -o FILE, --output=FILE  write to FILE
-"""
-
-# pyright: strict
-from __future__ import annotations
-
-import logging
-import sys
 from dataclasses import dataclass, field
 from hashlib import blake2b
-from textwrap import dedent
-from typing import Any, Literal, NotRequired, Optional, TypedDict
+from typing import Any, Literal, Optional
 
-import yaml
-from docopt import docopt
+from ..ghactions import GHJob, GHStep, script
 
-_log = logging.getLogger("render-workflows")
 CODECOV_TOKEN = "5cdb6ef4-e80b-44ce-b88d-1402e4dfb781"
 PYTHONS = ["3.10", "3.11", "3.12"]
 PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
 PACKAGES = ["lenskit", "lenskit-funksvd", "lenskit-implicit"]
-WORKFLOW_HEADER = {
-    "name": "Automatic Tests",
-    "on": {
-        "push": {
-            "branches": ["main"],
+
+
+def workflow():
+    jobs: dict[str, GHJob] = test_jobs()
+    jobs["results"] = result_job(list(jobs.keys()))
+    return {
+        "name": "Automatic Tests",
+        "on": {
+            "push": {
+                "branches": ["main"],
+            },
+            "pull_request": {},
         },
-        "pull_request": {},
-    },
-    "concurrency": {
-        "group": "test-${{github.ref}}",
-        "cancel-in-progress": True,
-    },
-}
+        "concurrency": {
+            "group": "test-${{github.ref}}",
+            "cancel-in-progress": True,
+        },
+        "jobs": jobs,
+    }
 
 
 @dataclass
@@ -101,48 +82,6 @@ class JobOptions:
             return ["lenskit"] + self.packages
         else:
             return self.packages
-
-
-class script:
-    def __init__(self, source: str):
-        self.source = dedent(source).strip() + "\n"
-
-    @staticmethod
-    def presenter(dumper: yaml.Dumper, script: script):
-        return dumper.represent_scalar("tag:yaml.org,2002:str", script.source, style="|")  # type: ignore
-
-    @classmethod
-    def command(cls, args: list[str]):
-        return cls(" ".join(args))
-
-
-yaml.add_representer(script, script.presenter)
-
-GHStep = TypedDict(
-    "GHStep",
-    {
-        "id": NotRequired[str],
-        "name": NotRequired[str],
-        "uses": NotRequired[str],
-        "run": NotRequired[str | script],
-        "shell": NotRequired["str"],
-        "with": NotRequired[dict[str, str | int | bool | script]],
-        "env": NotRequired[dict[str, str | int]],
-    },
-)
-
-GHJob = TypedDict(
-    "GHJob",
-    {
-        "name": str,
-        "runs-on": str,
-        "timeout-minutes": NotRequired[int],
-        "strategy": NotRequired[dict[str, Any]],
-        "defaults": NotRequired[dict[str, Any]],
-        "needs": NotRequired[list[str]],
-        "steps": NotRequired[list[GHStep]],
-    },
-)
 
 
 def job_strategy(options: JobOptions) -> dict[str, Any]:
@@ -516,29 +455,3 @@ def result_job(deps: list[str]) -> GHJob:
             },
         ],
     }
-
-
-def main(options: dict[str, str | int | bool | None]):
-    init_logging(options)
-
-    jobs: dict[str, GHJob] = test_jobs()
-    jobs["results"] = result_job(list(jobs.keys()))
-
-    workflow = dict(WORKFLOW_HEADER) | {"jobs": jobs}
-
-    if options["--output"]:
-        _log.info("writing %s", options["--output"])
-        with open(options["--output"], "wt") as wf:
-            yaml.dump(workflow, wf, allow_unicode=True, sort_keys=False)
-    else:
-        yaml.dump(workflow, sys.stdout, allow_unicode=True, sort_keys=False)
-
-
-def init_logging(options: dict[str, str | int | bool | None]):
-    level = logging.DEBUG if options["--verbose"] else logging.INFO
-    logging.basicConfig(stream=sys.stderr, level=level)
-
-
-if __name__ == "__main__":
-    options = docopt(__doc__)
-    main(options)
