@@ -9,6 +9,7 @@ dependencies:
   - sphinxcontrib-bibtex >=2.0
   - sphinx-book-theme ==1.*
   - myst-nb >=0.13
+  - just
   - pytorch-cpu
   - nomkl
   - pandas <3,>=1.5
