@@ -96,11 +96,10 @@ def job_publish_docs():
                 "run": script("""
                     tmpdir=$(mktemp -d lksite.XXXXXX)
                     echo "$AGE_DECRYPT" >$tmpdir/decrypt-identity
-                    (
-                        echo 'deploy-key<<EOK'
-                        age -d -i $tmpdir/decrypt-identity etc/doc-deploy-key.asc
-                        echo 'EOK'
-                    ) >>$GITHUB_OUTPUT
+                    echo 'deploy-key<<EOK' >$tmpdir/out
+                    age -d -i $tmpdir/decrypt-identity etc/doc-deploy-key.asc >>$tmpdir/out
+                    echo 'EOK' >>$tmpdir/out
+                    cat $tmpdir/out >>$GITHUB_OUTPUT
                     rm -rf $tmpdir
                 """),
                 "env": {
