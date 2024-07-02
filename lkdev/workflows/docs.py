@@ -6,7 +6,7 @@ PYTHON_VERSION = "3.11"
 
 def workflow():
     return {
-        "name": "Automatic Tests",
+        "name": "Documentation",
         "on": {
             "push": {
                 "branches": ["main"],
