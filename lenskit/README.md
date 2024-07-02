@@ -55,7 +55,7 @@ contains other information on *developing* LensKit. User-facing documentation is
 at <https://lkpy.lenskit.org>.
 
 [conda-lock]: https://github.com/conda-incubator/conda-lock
-[lkbuild]: https://github.com/lenskit/lkbuild
+[lkdev]: https://github.com/lenskit/lkdev
 
 We recommend using an Anaconda environment for developing LensKit.  We provide a
 tool to automate setting up Conda environments from the LensKit dependencies; to

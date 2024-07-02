@@ -22,7 +22,7 @@ from typing import Any, NotRequired, TypedDict
 import yaml
 from docopt import docopt
 
-_log = logging.getLogger("lkbuild.ghactions")
+_log = logging.getLogger("lkdev.ghactions")
 
 
 class script:
@@ -80,7 +80,7 @@ def main():
 
 
 def render_workflow(name: str, options: dict[str, Any]):
-    mod_name = f"lkbuild.workflows.{name}"
+    mod_name = f"lkdev.workflows.{name}"
     _log.info("loading module %s", mod_name)
     mod = import_module(mod_name)
 

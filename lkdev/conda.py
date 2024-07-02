@@ -9,7 +9,7 @@
 Generate and manage Conda environments.
 
 Usage:
-    lkbuild.conda [-v] [-o FILE | -n NAME]
+    lkdev.conda [-v] [-o FILE | -n NAME]
         [--micromamba] [--mkl] [--cuda]
         [-p VER] [-e EXTRA]... REQFILE...
 

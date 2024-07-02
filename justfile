@@ -64,7 +64,7 @@ preview-docs:
 
 # update the environment file used to install documentation
 update-doc-env:
-    python -m lkbuild.conda -o docs/environment.yml \
+    python -m lkdev.conda -o docs/environment.yml \
         -e all requirements-doc.txt docs/doc-dep-constraints.yml \
         {{ append('/pyproject.toml', PACKAGES) }}
     -pre-commit run --files docs/environment.yml
@@ -75,5 +75,5 @@ update-headers:
 
 # update GH workflows
 update-workflows:
-    python -m lkbuild.ghactions --render test
+    python -m lkdev.ghactions --render test
     -pre-commit run --files .github/workflows/*.yml
