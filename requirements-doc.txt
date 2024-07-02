@@ -4,3 +4,4 @@ sphinxext-opengraph >= 0.5
 sphinxcontrib-bibtex >= 2.0
 sphinx-book-theme ==1.*
 myst-nb >= 0.13
+# conda: just

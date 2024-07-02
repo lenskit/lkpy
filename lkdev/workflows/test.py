@@ -3,12 +3,12 @@ from hashlib import blake2b
 from typing import Any, Literal, Optional
 
 from ..ghactions import GHJob, GHStep, script
+from ._common import PACKAGES, step_checkout
 
 CODECOV_TOKEN = "5cdb6ef4-e80b-44ce-b88d-1402e4dfb781"
 META_PYTHON = "3.11"
 PYTHONS = ["3.10", "3.11", "3.12"]
 PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
-PACKAGES = ["lenskit", "lenskit-funksvd", "lenskit-implicit"]
 
 
 def workflow():
@@ -96,14 +96,6 @@ def job_strategy(options: JobOptions) -> dict[str, Any]:
         }
     else:
         return {}
-
-
-def step_checkout(options: Optional[JobOptions] = None) -> GHStep:
-    return {
-        "name": "🛒 Checkout",
-        "uses": "actions/checkout@v4",
-        "with": {"fetch-depth": 0},
-    }
 
 
 def steps_setup_conda(options: JobOptions) -> list[GHStep]:
