@@ -298,7 +298,13 @@ def test_job(options: JobOptions) -> GHJob:
         }
 
     job.update(job_strategy(options))  # type: ignore
-    job["steps"] = test_job_steps(options)
+    job["steps"] = [
+        {
+            "name": "dump test",
+            "run": 'echo "$CHANGED"',
+            "env": {"CHANGED": "${{needs.check-changes-outputs.changed}}"},
+        }
+    ] + test_job_steps(options)
     return job
 
 
