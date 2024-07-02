@@ -288,7 +288,7 @@ def test_job(options: JobOptions) -> GHJob:
         "runs-on": options.vm_platform,
         "timeout-minutes": 30,
         "needs": ["check-changes"],
-        "if": "jobs.check-changes.outputs.changed",
+        "if": "${{jobs.check-changes.outputs.changed}}",
     }
     if options.env == "conda":
         job["defaults"] = {

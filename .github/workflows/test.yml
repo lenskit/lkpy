@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: jobs.check-changes.outputs.changed
+    if: ${{jobs.check-changes.outputs.changed}}
     defaults:
       run:
         shell: bash -el {0}
@@ -94,7 +94,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: jobs.check-changes.outputs.changed
+    if: ${{jobs.check-changes.outputs.changed}}
     strategy:
       fail-fast: false
       matrix:
@@ -155,7 +155,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: jobs.check-changes.outputs.changed
+    if: ${{jobs.check-changes.outputs.changed}}
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
@@ -208,7 +208,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: jobs.check-changes.outputs.changed
+    if: ${{jobs.check-changes.outputs.changed}}
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
@@ -258,7 +258,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: jobs.check-changes.outputs.changed
+    if: ${{jobs.check-changes.outputs.changed}}
     defaults:
       run:
         shell: bash -el {0}
@@ -316,7 +316,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: jobs.check-changes.outputs.changed
+    if: ${{jobs.check-changes.outputs.changed}}
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
@@ -366,7 +366,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: jobs.check-changes.outputs.changed
+    if: ${{jobs.check-changes.outputs.changed}}
     defaults:
       run:
         shell: bash -el {0}
@@ -424,7 +424,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: jobs.check-changes.outputs.changed
+    if: ${{jobs.check-changes.outputs.changed}}
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
@@ -474,7 +474,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: jobs.check-changes.outputs.changed
+    if: ${{jobs.check-changes.outputs.changed}}
     strategy:
       fail-fast: false
       matrix:
