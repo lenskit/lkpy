@@ -105,7 +105,7 @@ def step_checkout(options: Optional[JobOptions] = None) -> GHStep:
 
 
 def steps_setup_conda(options: JobOptions) -> list[GHStep]:
-    ctool = ["pipx run", "./utils/conda-tool.py", "--env", "-o", "ci-environment.yml"]
+    ctool = ["pipx run", "--spec .", "lk-conda", "-o", "ci-environment.yml"]
     if options.extras:
         for e in options.extras:
             ctool += ["-e", e]
