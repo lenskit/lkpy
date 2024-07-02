@@ -60,6 +60,8 @@ GHJob = TypedDict(
     {
         "name": str,
         "runs-on": str,
+        "if": NotRequired[str],
+        "outputs": NotRequired[dict[str, str]],
         "timeout-minutes": NotRequired[int],
         "strategy": NotRequired[dict[str, Any]],
         "defaults": NotRequired[dict[str, Any]],

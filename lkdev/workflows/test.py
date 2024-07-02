@@ -12,7 +12,8 @@ PACKAGES = ["lenskit", "lenskit-funksvd", "lenskit-implicit"]
 
 
 def workflow():
-    jobs: dict[str, GHJob] = jobs_test_matrix()
+    jobs = {"check-changes": job_check_changes()}
+    jobs.update(jobs_test_matrix())
     jobs["results"] = jobs_result(list(jobs.keys()))
     return {
         "name": "Automatic Tests",
@@ -286,6 +287,8 @@ def test_job(options: JobOptions) -> GHJob:
         "name": options.name,
         "runs-on": options.vm_platform,
         "timeout-minutes": 30,
+        "needs": ["check-changes"],
+        "if": "jobs.check-changes.outputs.changed",
     }
     if options.env == "conda":
         job["defaults"] = {
@@ -352,6 +355,28 @@ def test_doc_job() -> GHJob:
             },
         ]
         + steps_coverage(opts),
+    }
+
+
+def job_check_changes() -> GHJob:
+    return {
+        "name": "Check for changes",
+        "runs-on": "ubuntu-latest",
+        "outputs": {"changed": "${{steps.check-for-changes.outputs.changed}}"},
+        "steps": [
+            step_checkout(),
+            {
+                "id": "check-for-changes",
+                "run": script("""
+                    gh pr diff --name-only |grep '^lenskit.*\\.py$'
+                    if [ "$?" -eq 0 ]; then
+                        echo changed=true >>$GITHUB_OUTPUT
+                    else
+                        echo changed=false >>$GITHUB_OUTPUT
+                    fi
+                """),
+            },
+        ],
     }
 
 
