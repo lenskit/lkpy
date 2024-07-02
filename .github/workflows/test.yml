@@ -32,6 +32,7 @@ jobs:
                   echo changed=false >>"$GITHUB_OUTPUT"
               fi
           fi
+          cat $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.number }}
