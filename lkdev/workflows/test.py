@@ -373,8 +373,7 @@ def job_check_changes() -> GHJob:
                     if [[ -z "$PR_NUMBER" ]]; then
                         echo changed=true >>$GITHUB_OUTPUT
                     else
-                        gh pr diff $PR_NUMBER --name-only |grep '^lenskit.*\\.py$'
-                        if [ "$?" -eq 0 ]; then
+                        if gh pr diff $PR_NUMBER --name-only |grep '^lenskit.*\\.py$'; then
                             echo changed=true >>$GITHUB_OUTPUT
                         else
                             echo changed=false >>$GITHUB_OUTPUT
