@@ -119,7 +119,7 @@ def job_publish_docs():
                 "name": "Check out doc site",
                 "uses": "actions/checkout@v4",
                 "with": {
-                    "repository": "lenskit/lenskit-docs",
+                    "repository": "git@github.com:lenskit/lenskit-docs.git",
                     "ssh-key": "${{steps.decrypt.output.decrypt-identity}}",
                     "path": "doc-site",
                     "ref": "latest",
@@ -136,7 +136,8 @@ def job_publish_docs():
             {
                 "name": "🛻 Copy documentation content",
                 "run": script("""
-                    rsync -av --delete --exclude=.git/ build/doc/ doc-site/
+                    rsync -av --delete --exclude=.git/ --exclude=.buildinfo --exclude=.doctrees \\
+                        build/doc/ doc-site/
                     cd doc-site
                     git config user.name "LensKit Doc Bot"
                     git config user.email "docbot@lenskit.org"
