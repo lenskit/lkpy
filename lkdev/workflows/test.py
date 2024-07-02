@@ -324,8 +324,10 @@ def test_eval_job() -> GHJob:
             {
                 "name": "Run Eval Tests",
                 "run": script(f"""
+                    echo changed: $CHANGED
                     python -m pytest {cov} -m 'eval or realdata' --log-file test-eval.log */tests
                 """),
+                "env": {"CHANGED": "${{needs.check-changes.output.changed}}"},
             },
         ]
         + steps_coverage(opts),
