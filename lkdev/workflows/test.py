@@ -375,6 +375,7 @@ def job_check_changes() -> GHJob:
             step_checkout(),
             {
                 "id": "check-for-changes",
+                "name": "🔎 Check for changes",
                 "run": script("""
                     if [[ -z "$PR_NUMBER" ]]; then
                         echo "not a PR, assuming changed"
@@ -394,6 +395,11 @@ def job_check_changes() -> GHJob:
                     "GH_TOKEN": "${{ github.token }}",
                     "PR_NUMBER": "${{ github.event.number }}",
                 },
+            },
+            {
+                "name": "Inspect outputs",
+                "run": 'echo "$CHANGED"',
+                "env": {"CHANGED": "${{steps.check-for-changes.outputs.changed}}"},
             },
         ],
     }

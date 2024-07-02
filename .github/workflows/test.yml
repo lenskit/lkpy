@@ -19,6 +19,7 @@ jobs:
         with:
           fetch-depth: 0
       - id: check-for-changes
+        name: 🔎 Check for changes
         run: |
           if [[ -z "$PR_NUMBER" ]]; then
               echo "not a PR, assuming changed"
@@ -36,6 +37,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.number }}
+      - name: Inspect outputs
+        run: echo "$CHANGED"
+        env:
+          CHANGED: ${{steps.check-for-changes.outputs.changed}}
   conda:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}
