@@ -579,10 +579,7 @@ jobs:
           python -m lenskit.datasets.fetch ml-100k ml-20m
       - name: Run Eval Tests
         run: |
-          echo changed: $CHANGED
           python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit -m 'eval or realdata' --log-file test-eval.log */tests
-        env:
-          CHANGED: ${{needs.check-changes.output.changed}}
       - name: 📐 Coverage results
         run: |
           coverage xml
