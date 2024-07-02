@@ -377,6 +377,7 @@ def job_check_changes() -> GHJob:
                         echo changed=false >>$GITHUB_OUTPUT
                     fi
                 """),
+                "env": {"GH_TOKEN": "${{ github.token }}"},
             },
         ],
     }

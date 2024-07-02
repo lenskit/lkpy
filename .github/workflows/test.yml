@@ -26,6 +26,8 @@ jobs:
           else
               echo changed=false >>$GITHUB_OUTPUT
           fi
+        env:
+          GH_TOKEN: ${{ github.token }}
   conda:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}
