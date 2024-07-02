@@ -12,8 +12,8 @@ PACKAGES = ["lenskit", "lenskit-funksvd", "lenskit-implicit"]
 
 
 def workflow():
-    jobs: dict[str, GHJob] = test_jobs()
-    jobs["results"] = result_job(list(jobs.keys()))
+    jobs: dict[str, GHJob] = jobs_test_matrix()
+    jobs["results"] = jobs_result(list(jobs.keys()))
     return {
         "name": "Automatic Tests",
         "on": {
@@ -355,7 +355,7 @@ def test_doc_job() -> GHJob:
     }
 
 
-def test_jobs() -> dict[str, GHJob]:
+def jobs_test_matrix() -> dict[str, GHJob]:
     return {
         "conda": test_job(
             JobOptions(
@@ -436,7 +436,7 @@ def test_jobs() -> dict[str, GHJob]:
     }
 
 
-def result_job(deps: list[str]) -> GHJob:
+def jobs_result(deps: list[str]) -> GHJob:
     return {
         "name": "Test suite results",
         "runs-on": "ubuntu-latest",
