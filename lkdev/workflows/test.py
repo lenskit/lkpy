@@ -288,7 +288,7 @@ def test_job(options: JobOptions) -> GHJob:
         "runs-on": options.vm_platform,
         "timeout-minutes": 30,
         "needs": ["check-changes"],
-        "if": "needs.check-changes.outputs.changed",
+        "if": "needs.check-changes.outputs.changed == 'yes'",
     }
     if options.env == "conda":
         job["defaults"] = {
@@ -379,14 +379,14 @@ def job_check_changes() -> GHJob:
                 "run": script("""
                     if [[ -z "$PR_NUMBER" ]]; then
                         echo "not a PR, assuming changed"
-                        echo changed=true >>"$GITHUB_OUTPUT"
+                        echo changed=yes >>"$GITHUB_OUTPUT"
                     else
                         if gh pr diff $PR_NUMBER --name-only |grep '^lenskit.*\\.py$'; then
                             echo "source code changed"
-                            echo changed=true >>"$GITHUB_OUTPUT"
+                            echo changed=yes >>"$GITHUB_OUTPUT"
                         else
                             echo "source code unchanged"
-                            echo changed=false >>"$GITHUB_OUTPUT"
+                            echo changed=no >>"$GITHUB_OUTPUT"
                         fi
                     fi
                     cat $GITHUB_OUTPUT

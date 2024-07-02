@@ -23,14 +23,14 @@ jobs:
         run: |
           if [[ -z "$PR_NUMBER" ]]; then
               echo "not a PR, assuming changed"
-              echo changed=true >>"$GITHUB_OUTPUT"
+              echo changed=yes >>"$GITHUB_OUTPUT"
           else
               if gh pr diff $PR_NUMBER --name-only |grep '^lenskit.*\.py$'; then
                   echo "source code changed"
-                  echo changed=true >>"$GITHUB_OUTPUT"
+                  echo changed=yes >>"$GITHUB_OUTPUT"
               else
                   echo "source code unchanged"
-                  echo changed=false >>"$GITHUB_OUTPUT"
+                  echo changed=no >>"$GITHUB_OUTPUT"
               fi
           fi
           cat $GITHUB_OUTPUT
@@ -47,7 +47,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: needs.check-changes.outputs.changed
+    if: needs.check-changes.outputs.changed == 'yes'
     defaults:
       run:
         shell: bash -el {0}
@@ -113,7 +113,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: needs.check-changes.outputs.changed
+    if: needs.check-changes.outputs.changed == 'yes'
     strategy:
       fail-fast: false
       matrix:
@@ -178,7 +178,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: needs.check-changes.outputs.changed
+    if: needs.check-changes.outputs.changed == 'yes'
     steps:
       - name: dump test
         run: echo "$CHANGED"
@@ -235,7 +235,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: needs.check-changes.outputs.changed
+    if: needs.check-changes.outputs.changed == 'yes'
     steps:
       - name: dump test
         run: echo "$CHANGED"
@@ -289,7 +289,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: needs.check-changes.outputs.changed
+    if: needs.check-changes.outputs.changed == 'yes'
     defaults:
       run:
         shell: bash -el {0}
@@ -351,7 +351,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: needs.check-changes.outputs.changed
+    if: needs.check-changes.outputs.changed == 'yes'
     steps:
       - name: dump test
         run: echo "$CHANGED"
@@ -405,7 +405,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: needs.check-changes.outputs.changed
+    if: needs.check-changes.outputs.changed == 'yes'
     defaults:
       run:
         shell: bash -el {0}
@@ -467,7 +467,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: needs.check-changes.outputs.changed
+    if: needs.check-changes.outputs.changed == 'yes'
     steps:
       - name: dump test
         run: echo "$CHANGED"
@@ -521,7 +521,7 @@ jobs:
     timeout-minutes: 30
     needs:
       - check-changes
-    if: needs.check-changes.outputs.changed
+    if: needs.check-changes.outputs.changed == 'yes'
     strategy:
       fail-fast: false
       matrix:
