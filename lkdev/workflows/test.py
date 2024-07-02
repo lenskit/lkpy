@@ -5,6 +5,7 @@ from typing import Any, Literal, Optional
 from ..ghactions import GHJob, GHStep, script
 
 CODECOV_TOKEN = "5cdb6ef4-e80b-44ce-b88d-1402e4dfb781"
+META_PYTHON = "3.11"
 PYTHONS = ["3.10", "3.11", "3.12"]
 PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
 PACKAGES = ["lenskit", "lenskit-funksvd", "lenskit-implicit"]
@@ -105,21 +106,30 @@ def step_checkout(options: Optional[JobOptions] = None) -> GHStep:
 
 
 def steps_setup_conda(options: JobOptions) -> list[GHStep]:
-    ctool = ["pipx run --python 3.11 --spec .", "lk-conda", "-o", "ci-environment.yml"]
+    ctool = ["python -m lkdev.conda", "-o", "ci-environment.yml"]
     if options.extras:
         for e in options.extras:
             ctool += ["-e", e]
     else:
         ctool += ["-e", "all"]
     ctool += options.req_files + [f"{pkg}/pyproject.toml" for pkg in options.required_packages]
+    conda_prep = " ".join(ctool)
 
     pip = ["pip", "install", "--no-deps"]
     pip += [f"-e {pkg}" for pkg in options.required_packages]
 
     return [
         {
+            "name": "🐍 Setup bootstrap Python",
+            "uses": "actions/setup-python@v5",
+            "with": {"python-version": META_PYTHON},
+        },
+        {
             "name": "👢 Generate Conda environment file",
-            "run": script.command(ctool),
+            "run": script(f"""
+                pip install -e .
+                {conda_prep}
+            """),
         },
         {
             "id": "setup",
