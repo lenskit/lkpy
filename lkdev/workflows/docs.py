@@ -91,6 +91,10 @@ def job_publish_docs():
         "environment": "docs",
         "steps": [
             {
+                "name": "📦 Install decryptor",
+                "run": "sudo apt install -y age",
+            },
+            {
                 "id": "decrypt",
                 "name": "🔓 Decrypt deployment key",
                 "run": script("""
