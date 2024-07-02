@@ -23,6 +23,7 @@ dask-worker-space/
 .tox/
 .vagrant/
 .venv/
+.uv/
 scratch/
 
 # build outputs
