@@ -101,6 +101,7 @@ def job_publish_docs():
                 "run": script("""
                     if [ -z "$AGE_DECRYPT" ]; then
                         echo ::error::Age decryption key not available
+                        exit 1
                     fi
                     tmpdir=$(mktemp -d lksite.XXXXXX)
                     echo "$AGE_DECRYPT" >$tmpdir/decrypt-identity
