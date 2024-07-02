@@ -298,13 +298,7 @@ def test_job(options: JobOptions) -> GHJob:
         }
 
     job.update(job_strategy(options))  # type: ignore
-    job["steps"] = [
-        {
-            "name": "dump test",
-            "run": 'echo "$CHANGED"',
-            "env": {"CHANGED": "${{needs.check-changes-outputs.changed}}"},
-        }
-    ] + test_job_steps(options)
+    job["steps"] = test_job_steps(options)
     return job
 
 
@@ -322,7 +316,7 @@ def test_eval_job() -> GHJob:
         "runs-on": opts.vm_platform,
         "defaults": {"run": {"shell": "bash -el {0}"}},
         "needs": ["check-changes"],
-        "if": "needs.check-changes.outputs.changed",
+        "if": "needs.check-changes.outputs.changed == 'yes'",
         "steps": [step_checkout(opts)]
         + steps_setup_conda(opts)
         + steps_mldata(opts, ["ml-100k", "ml-20m"])
@@ -384,22 +378,20 @@ def job_check_changes() -> GHJob:
                         if gh pr diff $PR_NUMBER --name-only |grep '^lenskit.*\\.py$'; then
                             echo "source code changed"
                             echo changed=yes >>"$GITHUB_OUTPUT"
+                        elif gh pr view $PR_NUMBER --json body -t '{{.body}}' | grep 'tests: force'; then
+                            echo "test run forced from PR text"
+                            echo changed=yes >>"$GITHUB_OUTPUT"
                         else
                             echo "source code unchanged"
                             echo changed=no >>"$GITHUB_OUTPUT"
                         fi
                     fi
                     cat $GITHUB_OUTPUT
-                """),
+                """),  # noqa: E501
                 "env": {
                     "GH_TOKEN": "${{ github.token }}",
                     "PR_NUMBER": "${{ github.event.number }}",
                 },
-            },
-            {
-                "name": "Inspect outputs",
-                "run": 'echo "$CHANGED"',
-                "env": {"CHANGED": "${{steps.check-for-changes.outputs.changed}}"},
             },
         ],
     }
