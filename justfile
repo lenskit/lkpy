@@ -33,12 +33,13 @@ install-dev:
 
 # create a conda environment file for development
 conda-env-file version="3.11":
-    pipx run ./utils/conda-tool.py --env -o environment.yml -e all requirements-dev.txt \
+    pipx run --spec . lk-conda -o environment.yml -e all requirements-dev.txt \
+        pyproject.toml \
         {{ append('/pyproject.toml', PACKAGES) }}
 
 # create a conda environment for development
 conda-env version="3.11" name="lkpy":
-    pipx run ./utils/conda-tool.py --env -n {{name}} -e all requirements-dev.txt \
+    pipx run --spec . lk-conda -n {{name}} -e all requirements-dev.txt \
         {{ append('/pyproject.toml', PACKAGES) }}
 
 # run tests with default configuration
@@ -63,10 +64,10 @@ preview-docs:
 
 # update the environment file used to install documentation
 update-doc-env:
-    pipx run ./utils/conda-tool.py --env -o docs/environment.yml \
+    python -m lkbuild.conda -o docs/environment.yml \
         -e all requirements-doc.txt docs/doc-dep-constraints.yml \
         {{ append('/pyproject.toml', PACKAGES) }}
-
+    -pre-commit run --files docs/environment.yml
 
 # update source file headers
 update-headers:

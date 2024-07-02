@@ -9,9 +9,9 @@
 Generate and manage Conda environments.
 
 Usage:
-    conda-tool.py [-v] --env [-o FILE | -n NAME]
-        [--micromamba]
-        [-p VER] [--mkl] [--cuda] [-e EXTRA]... REQFILE...
+    lkbuild.conda [-v] [-o FILE | -n NAME]
+        [--micromamba] [--mkl] [--cuda]
+        [-p VER] [-e EXTRA]... REQFILE...
 
 Options:
     -v, --verbose   enable verbose logging
@@ -32,10 +32,6 @@ This tool is implemented as its own script, because it is used to
 bootstrap LensKit and therefore cannot depend on LensKit being installed.
 """
 
-# /// script
-# requires-python = ">= 3.10"
-# dependencies = ["tomlkit>=0.12", "pyyaml==6.*", "packaging>=24.0", "docopt>=0.6"]
-# ///
 # pyright: strict, reportPrivateUsage=false
 from __future__ import annotations
 
@@ -103,37 +99,32 @@ class ParsedReq(NamedTuple):
 
 
 def main():
-    init_logging()
-
-    if options["--env"]:
-        specs = [
-            r
-            for r in load_reqfiles(options["REQFILE"])
-            if not re.match(r"lenskit($|-\w+)$", r.name)
-        ]
-        env = make_env_object(specs, options["--python-version"])
-        if options["--name"]:
-            tmpfd, tmpf = mkstemp(suffix="-env.yml", prefix="lkpy-")
-            try:
-                _log.debug("saving environment to %s", tmpf)
-                with os.fdopen(tmpfd, "wt") as tf:
-                    yaml.safe_dump(env, tf)
-                _log.debug("creating environment")
-                conda = find_conda_executable()
-                sp.check_call([conda, "env", "create", "-n", options["--name"], "-f", tmpf])
-            finally:
-                os.unlink(tmpf)
-        elif options["--output"]:
-            _log.info("writing to file %s", options["--output"])
-            with open(options["--output"], "wt") as f:
-                yaml.safe_dump(env, f)
-        else:
-            yaml.safe_dump(env, sys.stdout)
-
-
-def init_logging():
+    global options
+    options = docopt(__doc__)
     level = logging.DEBUG if options["--verbose"] else logging.INFO
     logging.basicConfig(stream=sys.stderr, level=level)
+
+    specs = [
+        r for r in load_reqfiles(options["REQFILE"]) if not re.match(r"lenskit($|-\w+)$", r.name)
+    ]
+    env = make_env_object(specs, options["--python-version"])
+    if options["--name"]:
+        tmpfd, tmpf = mkstemp(suffix="-env.yml", prefix="lkpy-")
+        try:
+            _log.debug("saving environment to %s", tmpf)
+            with os.fdopen(tmpfd, "wt") as tf:
+                yaml.safe_dump(env, tf)
+            _log.debug("creating environment")
+            conda = find_conda_executable()
+            sp.check_call([conda, "env", "create", "-n", options["--name"], "-f", tmpf])
+        finally:
+            os.unlink(tmpf)
+    elif options["--output"]:
+        _log.info("writing to file %s", options["--output"])
+        with open(options["--output"], "wt") as f:
+            yaml.safe_dump(env, f)
+    else:
+        yaml.safe_dump(env, sys.stdout)
 
 
 def load_reqfiles(files: Iterable[Path | str]) -> Iterator[ParsedReq]:
@@ -303,5 +294,4 @@ def make_env_object(specs: list[ParsedReq], python: Optional[str] = None) -> dic
 
 
 if __name__ == "__main__":
-    options = docopt(__doc__)
     main()
