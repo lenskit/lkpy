@@ -370,14 +370,21 @@ def job_check_changes() -> GHJob:
             {
                 "id": "check-for-changes",
                 "run": script("""
-                    gh pr diff --name-only |grep '^lenskit.*\\.py$'
-                    if [ "$?" -eq 0 ]; then
+                    if [[ -z "$PR_NUMBER" ]]; then
                         echo changed=true >>$GITHUB_OUTPUT
                     else
-                        echo changed=false >>$GITHUB_OUTPUT
+                        gh pr diff $PR_NUMBER --name-only |grep '^lenskit.*\\.py$'
+                        if [ "$?" -eq 0 ]; then
+                            echo changed=true >>$GITHUB_OUTPUT
+                        else
+                            echo changed=false >>$GITHUB_OUTPUT
+                        fi
                     fi
                 """),
-                "env": {"GH_TOKEN": "${{ github.token }}"},
+                "env": {
+                    "GH_TOKEN": "${{ github.token }}",
+                    "PR_NUMBER": "${{ github.event.number }}",
+                },
             },
         ],
     }
