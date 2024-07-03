@@ -14,6 +14,7 @@ FILTER_PATHS = [
     "**pyroject.toml",
     "requirements*.txt",
     "data/**",
+    ".github/workflows/test.yml",
 ]
 
 
