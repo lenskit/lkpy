@@ -90,7 +90,7 @@ def job_publish_docs():
         "needs": ["build"],
         "environment": "docs",
         "steps": [
-            step_checkout(),
+            step_checkout(depth=1),
             {
                 "name": "Check out doc site",
                 "uses": "actions/checkout@v4",
