@@ -149,20 +149,29 @@ def job_publish_site():
                 },
             },
             {
-                "name": "Set up Deno",
+                "name": "🌳 Fix local git branches",
+                "run": script("""
+                    for branch in $(git branch -r --list 'origin/version/*'); do
+                        git branch -t ${branch##origin/} $branch
+                    done
+                    git branch -a
+                """),
+            },
+            {
+                "name": "🛸 Set up Deno",
                 "uses": "denoland/setup-deno@v1",
                 "with": {"deno-version": "~1.44"},
             },
-            {"name": "Set up Just", "uses": "extractions/setup-just@v2"},
+            {"name": "🧛🏼 Set up Just", "uses": "extractions/setup-just@v2"},
             {"name": "Build site content", "run": "just build"},
             {"name": "Setup Pages", "uses": "actions/configure-pages@v5"},
             {
-                "name": "Upload artifact",
+                "name": "📦 Upload artifact",
                 "uses": "actions/upload-pages-artifact@v3",
                 "with": {"path": "site"},
             },
             {
-                "name": "Deploy to GitHub Pages",
+                "name": "🕸️ Deploy to GitHub Pages",
                 "id": "deployment",
                 "uses": "actions/deploy-pages@v4",
             },
