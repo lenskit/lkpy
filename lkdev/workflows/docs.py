@@ -136,6 +136,7 @@ def job_publish_site():
         "name": "Publish documentation",
         "runs-on": "ubuntu-latest",
         "needs": ["archive"],
+        "if": 'github.event_name == "push" || github.event_name == "release"',
         "environment": {"name": "github-pages", "url": "${{ steps.deployment.outputs.page_url }}"},
         "steps": [
             {
