@@ -8,6 +8,8 @@ import os
 import sys
 from importlib.metadata import version
 
+from packaging.version import Version
+
 sys.path.insert(0, os.path.abspath(".."))
 
 project = "LensKit"
@@ -16,6 +18,7 @@ author = "Michael D. Ekstrand"
 
 release = version("lenskit")
 version = ".".join(release.split(".")[:3])
+_parsed_ver = Version(release)
 
 extensions = [
     "myst_nb",
@@ -41,6 +44,11 @@ highlight_language = "python3"
 
 html_theme = "sphinx_book_theme"
 html_logo = "LKLogo2.png"
+if _parsed_ver.is_devrelease:
+    html_baseurl = "https://lkpy.lenskit.org/latest/"
+else:
+    html_baseurl = "https://lkpy.lenskit.org/stable/"
+
 html_theme_options = {
     "repository_url": "https://github.com/lenskit/lkpy",
     "path_to_docs": "docs",
