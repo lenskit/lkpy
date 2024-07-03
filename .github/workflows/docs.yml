@@ -56,7 +56,7 @@ jobs:
           repository: lenskit/lenskit-docs
           ssh-key: ${{ secrets.DOC_DEPLOY_KEY }}
           path: doc-site
-          ref: latest
+          ref: version/latest
       - name: 📥 Fetch documentation package
         uses: actions/download-artifact@v4
         with:

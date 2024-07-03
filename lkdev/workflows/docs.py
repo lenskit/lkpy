@@ -98,7 +98,7 @@ def job_publish_docs():
                     "repository": "lenskit/lenskit-docs",
                     "ssh-key": "${{ secrets.DOC_DEPLOY_KEY }}",
                     "path": "doc-site",
-                    "ref": "latest",
+                    "ref": "version/latest",
                 },
             },
             {
