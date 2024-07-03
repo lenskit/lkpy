@@ -119,8 +119,16 @@ def job_publish_docs():
                     git config user.email "docbot@lenskit.org"
                     git add .
                     git commit -m 'rebuild documentation'
-                    git push
                 """),
+            },
+            {
+                "name": "🛫 Push documentation",
+                "run": "cd doc-site && git push",
+            },
+            {
+                "name": "🏃🏻‍➡️ Trigger publication workflow",
+                "run": "cd doc-site && gh workflow run publish.yml --ref main",
+                "env": {"GH_TOKEN": "${{secrets.LKBOT_TOKEN}}"},
             },
         ],
     }
