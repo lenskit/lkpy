@@ -144,6 +144,7 @@ def job_publish_site():
                 "with": {
                     "repository": "lenskit/lenskit-docs",
                     "ref": "main",
+                    "fetch-depth": 0,
                 },
             },
             {
