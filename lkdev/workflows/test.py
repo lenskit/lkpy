@@ -25,8 +25,8 @@ def workflow():
     return {
         "name": "Automatic Tests",
         "on": {
-            "push": {"branches": ["main"], "paths": FILTER_PATHS},
-            "pull_request": {"paths": FILTER_PATHS},
+            "push": {"branches": ["main"], "paths": list(FILTER_PATHS)},
+            "pull_request": {"paths": list(FILTER_PATHS)},
         },
         "concurrency": {
             "group": "test-${{github.ref}}",
