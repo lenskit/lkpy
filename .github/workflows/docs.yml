@@ -11,6 +11,10 @@ defaults:
 concurrency:
   group: doc-${{github.ref}}
   cancel-in-progress: true
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 jobs:
   build:
     name: Build documentation
@@ -27,6 +31,7 @@ jobs:
           environment-file: docs/environment.yml
           environment-name: lkpy
           init-shell: bash
+          cache-environment: true
       - id: install
         name: 🍱 Install LensKit packages
         run: |

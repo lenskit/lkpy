@@ -23,6 +23,11 @@ def workflow():
             "group": "doc-${{github.ref}}",
             "cancel-in-progress": True,
         },
+        "permissions": {
+            "contents": "read",
+            "pages": "write",
+            "id-token": "write",
+        },
         "jobs": {
             "build": job_build_docs(),
             "archive": job_archive_docs(),
@@ -52,6 +57,7 @@ def stages_setup():
                 "environment-file": "docs/environment.yml",
                 "environment-name": "lkpy",
                 "init-shell": "bash",
+                "cache-environment": True,
             },
         },
         {
