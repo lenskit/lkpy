@@ -12,6 +12,7 @@ def workflow():
                 "branches": ["main"],
             },
             "pull_request": {},
+            "workflow_dispatch": {},
         },
         "defaults": {
             "run": {
@@ -24,7 +25,8 @@ def workflow():
         },
         "jobs": {
             "build": job_build_docs(),
-            "publish": job_publish_docs(),
+            "archive": job_archive_docs(),
+            "publish": job_publish_site(),
         },
     }
 
@@ -83,9 +85,9 @@ def stages_package():
     ]
 
 
-def job_publish_docs():
+def job_archive_docs():
     return {
-        "name": "Publish documentation",
+        "name": "Archive documentation",
         "runs-on": "ubuntu-latest",
         "needs": ["build"],
         "environment": "docs",
@@ -125,10 +127,42 @@ def job_publish_docs():
                 "name": "🛫 Push documentation",
                 "run": "cd doc-site && git push",
             },
+        ],
+    }
+
+
+def job_publish_site():
+    return {
+        "name": "Publish documentation",
+        "runs-on": "ubuntu-latest",
+        "needs": ["archive"],
+        "environment": {"name": "github-pages", "url": "${{ steps.deployment.outputs.page_url }}"},
+        "steps": [
             {
-                "name": "🏃🏻‍➡️ Trigger publication workflow",
-                "run": "cd doc-site && gh workflow run publish.yml --ref main",
-                "env": {"GH_TOKEN": "${{secrets.LKBOT_TOKEN}}"},
+                "name": "Check out doc site",
+                "uses": "actions/checkout@v4",
+                "with": {
+                    "repository": "lenskit/lenskit-docs",
+                    "ref": "main",
+                },
+            },
+            {
+                "name": "Set up Deno",
+                "uses": "denoland/setup-deno@v1",
+                "with": {"deno-version": "~1.44"},
+            },
+            {"name": "Set up Just", "uses": "extractions/setup-just@v2"},
+            {"name": "Build site content", "run": "just build"},
+            {"name": "Setup Pages", "uses": "actions/configure-pages@v5"},
+            {
+                "name": "Upload artifact",
+                "uses": "actions/upload-pages-artifact@v3",
+                "with": {"path": "site"},
+            },
+            {
+                "name": "Deploy to GitHub Pages",
+                "id": "deployment",
+                "uses": "actions/deploy-pages@v4",
             },
         ],
     }

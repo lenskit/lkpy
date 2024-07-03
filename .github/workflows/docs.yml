@@ -4,6 +4,7 @@ name: Documentation
     branches:
       - main
   pull_request: {}
+  workflow_dispatch: {}
 defaults:
   run:
     shell: bash -el {0}
@@ -39,8 +40,8 @@ jobs:
         with:
           name: lenskit-docs
           path: build/doc
-  publish:
-    name: Publish documentation
+  archive:
+    name: Archive documentation
     runs-on: ubuntu-latest
     needs:
       - build
@@ -73,7 +74,34 @@ jobs:
           git commit -m 'rebuild documentation'
       - name: 🛫 Push documentation
         run: cd doc-site && git push
-      - name: 🏃🏻‍➡️ Trigger publication workflow
-        run: cd doc-site && gh workflow run publish.yml --ref main
-        env:
-          GH_TOKEN: ${{secrets.LKBOT_TOKEN}}
+  publish:
+    name: Publish documentation
+    runs-on: ubuntu-latest
+    needs:
+      - archive
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out doc site
+        uses: actions/checkout@v4
+        with:
+          repository: lenskit/lenskit-docs
+          ref: main
+      - name: Set up Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: ~1.44
+      - name: Set up Just
+        uses: extractions/setup-just@v2
+      - name: Build site content
+        run: just build
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
