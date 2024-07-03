@@ -3,50 +3,21 @@ name: Automatic Tests
   push:
     branches:
       - main
-  pull_request: {}
+    paths: &id001
+      - lenskit/**.py
+      - '**pyroject.toml'
+      - requirements*.txt
+      - data/**
+  pull_request:
+    paths: *id001
 concurrency:
   group: test-${{github.ref}}
   cancel-in-progress: true
 jobs:
-  check-changes:
-    name: Check for changes
-    runs-on: ubuntu-latest
-    outputs:
-      changed: ${{steps.check-for-changes.outputs.changed}}
-    steps:
-      - name: 🛒 Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - id: check-for-changes
-        name: 🔎 Check for changes
-        run: |
-          if [[ -z "$PR_NUMBER" ]]; then
-              echo "not a PR, assuming changed"
-              echo changed=yes >>"$GITHUB_OUTPUT"
-          else
-              if gh pr diff $PR_NUMBER --name-only |grep '^lenskit.*\.py$'; then
-                  echo "source code changed"
-                  echo changed=yes >>"$GITHUB_OUTPUT"
-              elif gh pr view $PR_NUMBER --json body -t '{{.body}}' | grep 'tests: force'; then
-                  echo "test run forced from PR text"
-                  echo changed=yes >>"$GITHUB_OUTPUT"
-              else
-                  echo "source code unchanged"
-                  echo changed=no >>"$GITHUB_OUTPUT"
-              fi
-          fi
-          cat $GITHUB_OUTPUT
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.number }}
   conda:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}
     timeout-minutes: 30
-    needs:
-      - check-changes
-    if: needs.check-changes.outputs.changed == 'yes'
     defaults:
       run:
         shell: bash -el {0}
@@ -106,9 +77,6 @@ jobs:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}
     timeout-minutes: 30
-    needs:
-      - check-changes
-    if: needs.check-changes.outputs.changed == 'yes'
     strategy:
       fail-fast: false
       matrix:
@@ -167,9 +135,6 @@ jobs:
     name: Non-JIT test coverage
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs:
-      - check-changes
-    if: needs.check-changes.outputs.changed == 'yes'
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
@@ -220,9 +185,6 @@ jobs:
     name: Minimal dependency tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs:
-      - check-changes
-    if: needs.check-changes.outputs.changed == 'yes'
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
@@ -270,9 +232,6 @@ jobs:
     name: FunkSVD tests on Python ${{matrix.python}}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs:
-      - check-changes
-    if: needs.check-changes.outputs.changed == 'yes'
     defaults:
       run:
         shell: bash -el {0}
@@ -328,9 +287,6 @@ jobs:
     name: Minimal dependency tests for FunkSVD
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs:
-      - check-changes
-    if: needs.check-changes.outputs.changed == 'yes'
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
@@ -378,9 +334,6 @@ jobs:
     name: Implicit bridge tests on Python ${{matrix.python}}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs:
-      - check-changes
-    if: needs.check-changes.outputs.changed == 'yes'
     defaults:
       run:
         shell: bash -el {0}
@@ -436,9 +389,6 @@ jobs:
     name: Minimal dependency tests for Implicit
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs:
-      - check-changes
-    if: needs.check-changes.outputs.changed == 'yes'
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
@@ -486,9 +436,6 @@ jobs:
     name: HPF bridge tests on Python ${{matrix.python}}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs:
-      - check-changes
-    if: needs.check-changes.outputs.changed == 'yes'
     strategy:
       fail-fast: false
       matrix:
@@ -545,9 +492,6 @@ jobs:
     defaults:
       run:
         shell: bash -el {0}
-    needs:
-      - check-changes
-    if: needs.check-changes.outputs.changed == 'yes'
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
@@ -654,7 +598,6 @@ jobs:
     name: Test suite results
     runs-on: ubuntu-latest
     needs:
-      - check-changes
       - conda
       - vanilla
       - nojit

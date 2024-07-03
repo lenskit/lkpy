@@ -9,19 +9,23 @@ CODECOV_TOKEN = "5cdb6ef4-e80b-44ce-b88d-1402e4dfb781"
 META_PYTHON = "3.11"
 PYTHONS = ["3.10", "3.11", "3.12"]
 PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
+FILTER_PATHS = [
+    "lenskit/**.py",
+    "**pyroject.toml",
+    "requirements*.txt",
+    "data/**",
+]
 
 
 def workflow():
-    jobs = {"check-changes": job_check_changes()}
+    jobs = {}
     jobs.update(jobs_test_matrix())
     jobs["results"] = jobs_result(list(jobs.keys()))
     return {
         "name": "Automatic Tests",
         "on": {
-            "push": {
-                "branches": ["main"],
-            },
-            "pull_request": {},
+            "push": {"branches": ["main"], "paths": FILTER_PATHS},
+            "pull_request": {"paths": FILTER_PATHS},
         },
         "concurrency": {
             "group": "test-${{github.ref}}",
@@ -279,8 +283,6 @@ def test_job(options: JobOptions) -> GHJob:
         "name": options.name,
         "runs-on": options.vm_platform,
         "timeout-minutes": 30,
-        "needs": ["check-changes"],
-        "if": "needs.check-changes.outputs.changed == 'yes'",
     }
     if options.env == "conda":
         job["defaults"] = {
@@ -307,8 +309,6 @@ def test_eval_job() -> GHJob:
         "name": opts.name,
         "runs-on": opts.vm_platform,
         "defaults": {"run": {"shell": "bash -el {0}"}},
-        "needs": ["check-changes"],
-        "if": "needs.check-changes.outputs.changed == 'yes'",
         "steps": [step_checkout(opts)]
         + steps_setup_conda(opts)
         + steps_mldata(opts, ["ml-100k", "ml-20m"])
@@ -349,43 +349,6 @@ def test_doc_job() -> GHJob:
             },
         ]
         + steps_coverage(opts),
-    }
-
-
-def job_check_changes() -> GHJob:
-    return {
-        "name": "Check for changes",
-        "runs-on": "ubuntu-latest",
-        "outputs": {"changed": "${{steps.check-for-changes.outputs.changed}}"},
-        "steps": [
-            step_checkout(),
-            {
-                "id": "check-for-changes",
-                "name": "🔎 Check for changes",
-                "run": script("""
-                    if [[ -z "$PR_NUMBER" ]]; then
-                        echo "not a PR, assuming changed"
-                        echo changed=yes >>"$GITHUB_OUTPUT"
-                    else
-                        if gh pr diff $PR_NUMBER --name-only |grep '^lenskit.*\\.py$'; then
-                            echo "source code changed"
-                            echo changed=yes >>"$GITHUB_OUTPUT"
-                        elif gh pr view $PR_NUMBER --json body -t '{{.body}}' | grep 'tests: force'; then
-                            echo "test run forced from PR text"
-                            echo changed=yes >>"$GITHUB_OUTPUT"
-                        else
-                            echo "source code unchanged"
-                            echo changed=no >>"$GITHUB_OUTPUT"
-                        fi
-                    fi
-                    cat $GITHUB_OUTPUT
-                """),  # noqa: E501
-                "env": {
-                    "GH_TOKEN": "${{ github.token }}",
-                    "PR_NUMBER": "${{ github.event.number }}",
-                },
-            },
-        ],
     }
 
 
