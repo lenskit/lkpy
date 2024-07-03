@@ -45,9 +45,9 @@ highlight_language = "python3"
 html_theme = "sphinx_book_theme"
 html_logo = "LKLogo2.png"
 if _parsed_ver.is_devrelease:
-    html_baseurl = "https://lkpy.lenskit.org/latest/"
+    html_baseurl = "https://lkpy.lenskit.org/en/latest/"
 else:
-    html_baseurl = "https://lkpy.lenskit.org/stable/"
+    html_baseurl = "https://lkpy.lenskit.org/en/stable/"
 
 html_theme_options = {
     "repository_url": "https://github.com/lenskit/lkpy",
