@@ -74,8 +74,8 @@ class Dataset:
         self._matrix = InteractionMatrix(
             uno,
             ino,
-            df.get("rating", None),
-            df.get("timestamp", None),
+            df["rating"] if "rating" in df.columns else None,
+            df["timestamp"] if "timestamp" in df.columns else None,
             self._user_counts,
             self.item_count,
         )
@@ -126,16 +126,16 @@ class Dataset:
 
     @overload
     def user_num(
-        self, users: Any, *, missing: Literal["error", "negative"] = "negative"
-    ) -> int: ...
-    @overload
-    def user_num(
         self, users: ArrayLike, *, missing: Literal["error", "negative"] = "negative"
     ) -> np.ndarray[int, np.dtype[np.int32]]: ...
     @overload
     def user_num(
         self, users: ArrayLike, *, missing: Literal["omit"]
     ) -> pd.Series[np.dtype[np.int32]]: ...
+    @overload
+    def user_num(
+        self, users: Any, *, missing: Literal["error", "negative"] = "negative"
+    ) -> int: ...
     def user_num(
         self, users: Any, *, missing: Literal["error", "negative", "omit"] = "negative"
     ) -> Any:
@@ -178,16 +178,16 @@ class Dataset:
 
     @overload
     def item_num(
-        self, items: Any, *, missing: Literal["error", "negative"] = "negative"
-    ) -> int: ...
-    @overload
-    def item_num(
         self, items: ArrayLike, *, missing: Literal["error", "negative"] = "negative"
     ) -> np.ndarray[int, np.dtype[np.int32]]: ...
     @overload
     def item_num(
         self, items: ArrayLike, *, missing: Literal["omit"]
     ) -> pd.Series[np.dtype[np.int32]]: ...
+    @overload
+    def item_num(
+        self, items: Any, *, missing: Literal["error", "negative"] = "negative"
+    ) -> int: ...
     def item_num(
         self, items: Any, *, missing: Literal["error", "negative", "omit"] = "negative"
     ) -> Any:
