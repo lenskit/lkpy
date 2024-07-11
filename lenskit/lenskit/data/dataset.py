@@ -437,6 +437,9 @@ def normalize_interactions_df(
     rating_col: Optional[str] = None,
     timestamp_col: Optional[str] = None,
 ) -> pd.DataFrame:
+    """
+    Normalize the column names and layout for an interaction data frame.
+    """
     _log.debug("normalizing data frame with columns %s", df.columns)
     if user_col is None:
         user_col = _find_column(
