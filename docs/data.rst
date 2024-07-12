@@ -9,8 +9,9 @@ the manual.
 
 
 .. versionchanged:: 2024.1
-    The :class:`Dataset` class was introduced and replaces the Pandas data frames
-    that were passed to algorithms in the past.
+    The new :class:`Dataset` class replaces the Pandas data frames
+    that were passed to algorithms in the past.  It also subsumes
+    the old support for producing sparse matrices from rating rames.
 
 .. _data-model:
 
@@ -54,6 +55,8 @@ Users and items have two identifiers:
 Identifiers and numbers can be mapped to each other with the user and item
 *vocabularies* (:attr:`~Dataset.user_vocab` and :attr:`~Dataset.item_vocab`), as
 well as convenience methods.
+
+.. autodata:: EntityId
 
 .. _dataset:
 
