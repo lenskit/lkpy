@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import Optional
+
 import numpy as np
 import torch
-from typing_extensions import (
-    NamedTuple,
-    Optional,
-)
 
 
-class TorchUserItemTable(NamedTuple):
+@dataclass
+class TorchUserItemTable:
     """
     Table of user-item interaction data represented as PyTorch tensors.
     """
@@ -21,17 +21,18 @@ class TorchUserItemTable(NamedTuple):
     """
     Item numbers (0-based contiguous integers, see :ref:`data-identifiers`).
     """
-    ratings: Optional[torch.Tensor]
+    ratings: Optional[torch.Tensor] = None
     """
     Ratings for the items.
     """
-    timestamps: Optional[torch.Tensor]
+    timestamps: Optional[torch.Tensor] = None
     """
     Timestamps for recorded user-item interactions.
     """
 
 
-class NumpyUserItemTable(NamedTuple):
+@dataclass
+class NumpyUserItemTable:
     """
     Table of user-item interaction data represented as NumPy arrays.
     """
@@ -44,11 +45,11 @@ class NumpyUserItemTable(NamedTuple):
     """
     Item numbers (0-based contiguous integers, see :ref:`data-identifiers`).
     """
-    ratings: Optional[np.ndarray[int, np.dtype[np.float32]]]
+    ratings: Optional[np.ndarray[int, np.dtype[np.float32]]] = None
     """
     Ratings for the items.
     """
-    timestamps: Optional[np.ndarray[int, np.dtype[np.int64]]]
+    timestamps: Optional[np.ndarray[int, np.dtype[np.int64]]] = None
     """
     Timestamps for recorded user-item interactions.
     """
