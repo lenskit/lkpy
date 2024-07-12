@@ -20,8 +20,8 @@ dependencies:
   - scikit-learn >=1.1
   - numba >=0.56
   - implicit >=0.6.1
+  - hpfrec ==0.2.*
   - pip:
       - seedbank>=0.2.0a2
       - progress-api>=0.1.0a9
       - manylog>=0.1.0a5
-      - hpfrec==0.2.*
