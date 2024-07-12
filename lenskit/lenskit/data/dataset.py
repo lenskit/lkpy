@@ -21,6 +21,7 @@ from .tables import NumpyUserItemTable, TorchUserItemTable
 
 DF_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch"]
 MAT_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch", "scipy"]
+MAT_AGG: TypeAlias = Literal["count", "sum", "mean", "first", "last"]
 LAYOUT: TypeAlias = Literal["csr", "coo"]
 ACTION_FIELDS: TypeAlias = Literal["ratings", "timestamps"] | str
 EntityId: TypeAlias = Hashable
@@ -277,7 +278,7 @@ class Dataset:
         *,
         layout: Literal["coo"] | None = None,
         field: str | None = None,
-        combine: Literal["count", "sum", "mean", "first", "last"] | None = None,
+        combine: MAT_AGG | None = None,
         original_ids: bool = False,
     ) -> pd.DataFrame: ...
     @overload
@@ -287,7 +288,7 @@ class Dataset:
         *,
         layout: Literal["csr", "coo"] | None = None,
         field: str | None = None,
-        combine: Literal["count", "sum", "mean", "first", "last"] | None = None,
+        combine: MAT_AGG | None = None,
     ) -> torch.Tensor: ...
     @overload
     def interaction_matrix(
@@ -297,7 +298,7 @@ class Dataset:
         layout: Literal["csr"] | None = None,
         legacy: bool = False,
         field: str | None = None,
-        combine: Literal["count", "sum", "mean", "first", "last"] | None = None,
+        combine: MAT_AGG | None = None,
     ) -> sps.csr_array: ...
     @overload
     def interaction_matrix(
@@ -307,7 +308,7 @@ class Dataset:
         layout: Literal["csr"] | None = None,
         legacy: Literal[True],
         field: str | None = None,
-        combine: Literal["count", "sum", "mean", "first", "last"] | None = None,
+        combine: MAT_AGG | None = None,
     ) -> sps.csr_matrix: ...
     @overload
     def interaction_matrix(
@@ -317,7 +318,7 @@ class Dataset:
         layout: Literal["coo"],
         legacy: bool = False,
         field: str | None = None,
-        combine: Literal["count", "sum", "mean", "first", "last"] | None = None,
+        combine: MAT_AGG | None = None,
     ) -> sps.coo_array: ...
     @overload
     def interaction_matrix(
@@ -327,7 +328,7 @@ class Dataset:
         layout: Literal["coo"],
         legacy: Literal[True],
         field: str | None = None,
-        combine: Literal["count", "sum", "mean", "first", "last"] | None = None,
+        combine: MAT_AGG | None = None,
     ) -> sps.coo_matrix: ...
     def interaction_matrix(
         self,
@@ -336,7 +337,7 @@ class Dataset:
         layout: str | None = None,
         legacy: bool = False,
         field: str | None = None,
-        combine: Literal["count", "sum", "mean", "first", "last"] | None = None,
+        combine: MAT_AGG | None = None,
         original_ids: bool = False,
     ) -> Any:
         """
@@ -358,8 +359,7 @@ class Dataset:
                 * ``"pandas"`` — returns a :class:`pandas.DataFrame`.
                 * ``"torch"`` — returns a sparse :class:`torch.Tensor` (see
                   :mod:`torch.sparse`).
-                * ``"scipy"`` — returns a sparse matrix from
-                  :mod:`scipy.sparse`.
+                * ``"scipy"`` — returns a sparse array from :mod:`scipy.sparse`.
                 * ``"structure"`` — returns a :class:`~matrix.CSRStructure`
                   containing only the user and item numbers in compressed sparse
                   row format.
