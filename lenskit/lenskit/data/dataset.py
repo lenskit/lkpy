@@ -14,7 +14,7 @@ import scipy.sparse as sps
 import torch
 from numpy.typing import ArrayLike
 
-from lenskit.data.matrix import InteractionMatrix
+from lenskit.data.matrix import CSRStructure, InteractionMatrix
 
 from . import EntityId
 from .tables import NumpyUserItemTable, TorchUserItemTable
@@ -28,6 +28,15 @@ ACTION_FIELDS: TypeAlias = Literal["ratings", "timestamps"] | str
 K = TypeVar("K")
 
 _log = logging.getLogger(__name__)
+
+
+class FieldError(KeyError):
+    """
+    The requested field does not exist.
+    """
+
+    def __init__(self, entity, field):
+        super().__init__(f"{entity}[{field}]")
 
 
 class Dataset:
@@ -388,9 +397,7 @@ class Dataset:
         format: Literal["structure"],
         *,
         layout: Literal["csr"] | None = None,
-        field: str | None = None,
-        combine: MAT_AGG | None = None,
-    ) -> sps.coo_matrix: ...
+    ) -> CSRStructure: ...
     def interaction_matrix(
         self,
         format: str,
@@ -431,6 +438,15 @@ class Dataset:
             field:
                 Which field to return in the matrix.  Common fields include
                 ``"rating"`` and ``"timestamp"``.
+
+                If unspecified (``None``), this will yield an implicit-feedback
+                indicator matrix, with 1s for observed items; the ``"pandas"``
+                format will only include user and item columns.
+
+                If the ``rating`` field is requested but is not defined in the
+                underlying data, then this is equivalent to ``"indicator"``,
+                except that the ``"pandas"`` format will include a ``"rating"``
+                column of all 1s.
             combine:
                 How to combine multiple observations for a single user-item
                 pair. Available methods are:
@@ -449,14 +465,41 @@ class Dataset:
             legacy:
                 ``True`` to return a legacy SciPy sparse matrix instead of
                 sparse array.
-            original_ids:
-                If ``True``, return user and item IDs as represented in the
-                original source data in columns named ``user_id`` and
-                ``item_id``, instead of the user and item numbers typically
-                returned.  Only applicable to the ``pandas`` format. See
-                :ref:`data-identifiers`.
         """
-        pass
+        match format:
+            case "structure":
+                if layout and layout != "csr":
+                    raise ValueError(f"unsupported layout {layout} for structure")
+                if field:
+                    raise ValueError("structure does not support fields")
+                return self._int_mat_structure()
+            case "pandas":
+                if layout and layout != "coo":
+                    raise ValueError(f"unsupported layout {layout} for Pandas")
+                return self._int_mat_pandas(field)
+            case _:
+                raise ValueError(f"unsupported format “{format}”")
+
+    def _int_mat_structure(self) -> CSRStructure:
+        return CSRStructure(self._matrix.user_ptrs, self._matrix.item_nums, self._matrix.shape)
+
+    def _int_mat_pandas(self, field: str | None) -> pd.DataFrame:
+        cols: dict[str, ArrayLike] = {
+            "user_num": self._matrix.user_nums,
+            "item_num": self._matrix.item_nums,
+        }
+        if field == "rating":
+            if self._matrix.ratings is not None:
+                cols["rating"] = self._matrix.ratings
+            else:
+                cols["rating"] = np.ones(self._matrix.n_obs)
+        elif field == "timestamp":
+            if self._matrix.timestamps is None:
+                raise FieldError("interaction", field)
+            cols["timestamp"] = self._matrix.timestamps
+        elif field:
+            raise FieldError("interaction", field)
+        return pd.DataFrame(cols)
 
 
 def from_interactions_df(

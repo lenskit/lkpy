@@ -61,9 +61,11 @@ class InteractionMatrix:
     """
     Internal helper class used by :class:`lenskit.data.Dataset` to store the
     user-item interaction matrix.  The data is stored simultaneously in CSR and
-    COO format.
+    COO format.  Most code has no need to interact with this class directly —
+    :class:`~lenskit.data.Dataset` methods provide data in a range of formats.
     """
 
+    n_obs: int
     n_users: int
     n_items: int
 
@@ -73,9 +75,9 @@ class InteractionMatrix:
     "User (row) offsets / pointers."
     item_nums: np.ndarray[int, np.dtype[np.int32]]
     "Item (column) numbers."
-    ratings: Optional[np.ndarray[int, np.dtype[np.float32]]]
+    ratings: Optional[np.ndarray[int, np.dtype[np.float32]]] = None
     "Rating values."
-    timestamps: Optional[np.ndarray[int, np.dtype[np.int64]]]
+    timestamps: Optional[np.ndarray[int, np.dtype[np.int64]]] = None
     "Timestamps as 64-bit Unix timestamps."
 
     def __init__(
@@ -94,6 +96,7 @@ class InteractionMatrix:
         if timestamps is not None:
             self.timestamps = np.asarray(timestamps, np.int64)
 
+        self.n_obs = len(self.user_nums)
         self.n_items = n_items
         self.n_users = len(user_counts)
         cp1 = np.zeros(self.n_users + 1, np.int32)
@@ -101,6 +104,13 @@ class InteractionMatrix:
         self.user_ptrs = cp1.cumsum()
         if self.user_ptrs[-1] != len(self.user_nums):
             raise ValueError("mismatched counts and array sizes")
+
+    @property
+    def shape(self) -> tuple[int, int]:
+        """
+        The shape of the interaction matrix (rows x columns).
+        """
+        return (self.n_users, self.n_items)
 
 
 class RatingMatrix(NamedTuple, Generic[M]):
