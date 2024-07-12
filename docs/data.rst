@@ -36,8 +36,7 @@ Users and items have two identifiers:
 
 * The *identifier* as presented in the original source table(s).  It appears in
   LensKit data frames as ``user_id`` and ``item_id`` columns.  Identifiers can
-  be most any *scalar* type (including strings); lists and tuples are likely to
-  cause problems.
+  be integers, strings, or byte arrays.
 * The *number* assigned by the dataset handling code.  This is a 0-based
   contiguous user or item number that is suitable for indexing into arrays or
   matrices, a common operation in recommendation models.  In data frames, this
