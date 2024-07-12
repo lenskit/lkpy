@@ -13,7 +13,9 @@ import os.path
 from contextlib import contextmanager
 
 import numpy as np
+import pandas as pd
 import scipy.sparse as sps
+from pyprojroot import here
 
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
@@ -24,11 +26,26 @@ from lenskit.algorithms.basic import PopScore
 from lenskit.algorithms.ranking import PlackettLuce
 from lenskit.batch import recommend
 from lenskit.crossfold import simple_test_pair
+from lenskit.data.dataset import from_interactions_df
 from lenskit.data.matrix import torch_sparse_from_scipy
 from lenskit.datasets import ML100K, MovieLens
 
 ml_test = MovieLens("data/ml-latest-small")
 ml100k = ML100K("data/ml-100k")
+
+
+@pytest.fixture(scope="module")
+def ml_ratings():
+    """
+    Fixture to load the test MovieLens ratings.
+    """
+    path = here("data/ml-latest-small")
+    yield pd.read_csv(path / "ratings.csv")
+
+
+@pytest.fixture
+def ml_ds(ml_ratings: pd.DataFrame):
+    return from_interactions_df(ml_ratings, item_col="movieId")
 
 
 @pytest.fixture(scope="session")
