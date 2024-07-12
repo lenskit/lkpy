@@ -11,7 +11,7 @@ PYTHONS = ["3.10", "3.11", "3.12"]
 PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
 FILTER_PATHS = [
     "lenskit/**.py",
-    "**pyroject.toml",
+    "**pyproject.toml",
     "requirements*.txt",
     "data/**",
     ".github/workflows/test.yml",
