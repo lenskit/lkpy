@@ -481,7 +481,7 @@ def normalize_interactions_df(
     kc = [c for c in known_columns if c in df.columns]
     oc = [c for c in df.columns if c not in known_columns]
     _log.debug("final columns: %s", kc, oc)
-    return df[kc + oc]
+    return df[kc + oc]  # type: ignore
 
 
 def _find_column(columns: Collection[str], acceptable: Iterable[str]) -> str | None:
