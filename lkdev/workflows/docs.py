@@ -96,6 +96,7 @@ def job_archive_docs():
         "name": "Archive documentation",
         "runs-on": "ubuntu-latest",
         "needs": ["build"],
+        "if": "github.event_name == 'push' || github.event_name == 'release'",
         "environment": "docs",
         "steps": [
             step_checkout(depth=1),
