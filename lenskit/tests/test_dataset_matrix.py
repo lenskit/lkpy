@@ -2,83 +2,148 @@
 Tests for the Dataset class.
 """
 
+from typing import cast
+
 import numpy as np
 import pandas as pd
+import scipy.sparse as sps
+import torch
 
 from lenskit.data import Dataset
-from lenskit.data.tables import NumpyUserItemTable, TorchUserItemTable
+from lenskit.data.matrix import CSRStructure
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 
-def test_pandas_log_defaults(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    int_df = ml_ds.interaction_log(format="pandas")
-    assert isinstance(int_df, pd.DataFrame)
-    # we should have exactly the 4 expected columns
-    assert len(int_df.columns) == 4
-    assert "user_num" in int_df.columns
-    assert "item_num" in int_df.columns
-    assert "rating" in int_df.columns
-    assert "timestamp" in int_df.columns
+def test_matrix_structure(ml_ratings: pd.DataFrame, ml_ds: Dataset):
+    log = ml_ds.interaction_matrix(format="structure")
+    assert isinstance(log, CSRStructure)
+    assert log.nnz == len(ml_ratings)
 
-    # the interact
-    int_df = int_df.sort_values(["user_num", "item_num"])
-    uids = ml_ds.user_id(int_df["user_num"])
-    iids = ml_ds.user_id(int_df["item_num"])
+    assert log.nrows == ml_ratings["user"].nunique()
+    assert log.ncols == ml_ratings["item"].nunique()
 
-    ml_df = ml_ratings.sort_values(["userId", "movieId"])
-    assert np.all(uids == ml_df["userId"])
-    assert np.all(iids == ml_df["movieId"])
-    assert np.all(int_df["rating"] == ml_df["rating"])
-    assert np.all(int_df["timestamp"] == ml_df["timestamp"])
+    # make sure we have the right # of ratings per user
+    user_counts = ml_ratings["user"].value_counts().reindex(ml_ds.user_vocab)
+    row_lens = np.diff(log.rowptrs)
+    assert np.all(row_lens == user_counts)
 
-    # and the total length
-    assert len(int_df) == len(ml_ratings)
+    # right # of ratings per item
+    items, counts = np.unique(log.colinds, return_counts=True)
+    item_counts = ml_ratings["item"].value_counts().reindex(ml_ds.item_vocab[items])
+    assert np.all(counts == item_counts)
+
+    ml_ratings = ml_ratings.sort_values(["userId", "movieId"])
+    # right item IDs
+    assert np.all(ml_ds.item_vocab[log.colinds] == ml_ratings["movieId"])
 
 
-def test_pandas_log_ids(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    int_df = ml_ds.interaction_log(format="pandas", original_ids=True)
-    assert isinstance(int_df, pd.DataFrame)
-    # we should have exactly the 4 expected columns
-    assert len(int_df.columns) == 4
-    assert "user_id" in int_df.columns
-    assert "item_id" in int_df.columns
-    assert "rating" in int_df.columns
-    assert "timestamp" in int_df.columns
+def test_matrix_scipy_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset):
+    log = ml_ds.interaction_matrix(format="scipy", layout="coo")
+    assert isinstance(log, sps.coo_array)
+    assert log.nnz == len(ml_ratings)
 
-    # the interact
-    int_df = int_df.sort_values(["user_id", "item_id"])
+    nrows, ncols = cast(tuple[int, int], log.shape)
+    assert nrows == ml_ratings["user"].nunique()
+    assert ncols == ml_ratings["item"].nunique()
 
-    ml_df = ml_ratings.sort_values(["userId", "movieId"])
-    assert np.all(int_df["user_id"] == ml_df["userId"])
-    assert np.all(int_df["item_id"] == ml_df["movieId"])
-    assert np.all(int_df["rating"] == ml_df["rating"])
-    assert np.all(int_df["timestamp"] == ml_df["timestamp"])
+    # make sure we have the right # of ratings per user
+    users, counts = np.unique(log.coords[0], return_counts=True)
+    user_counts = ml_ratings["user"].value_counts().reindex(ml_ds.user_vocab[users])
+    assert np.all(counts == user_counts)
 
-    # and the total length
-    assert len(int_df) == len(ml_ratings)
+    # right # of ratings per item
+    items, counts = np.unique(log.coords[1], return_counts=True)
+    item_counts = ml_ratings["item"].value_counts().reindex(ml_ds.item_vocab[items])
+    assert np.all(counts == item_counts)
 
+    ml_ratings = ml_ratings.sort_values(["userId", "movieId"])
+    # right item and user IDs
+    assert np.all(ml_ds.item_vocab[log.coords[0]] == ml_ratings["userId"])
+    assert np.all(ml_ds.item_vocab[log.coords[1]] == ml_ratings["movieId"])
 
-def test_numpy_log_defaults(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    log = ml_ds.interaction_log(format="numpy")
-    assert isinstance(log, NumpyUserItemTable)
-    assert log.ratings is not None
-    assert log.timestamps is not None
-
-    # and the total length
-    assert len(log.user_nums) == len(ml_ratings)
-    assert len(log.item_nums) == len(ml_ratings)
-    assert len(log.ratings) == len(ml_ratings)
-    assert len(log.timestamps) == len(ml_ratings)
+    # right rating values
+    assert np.all(log.data == ml_ratings["rating"])
 
 
-def test_torch_log_defaults(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    log = ml_ds.interaction_log(format="torch")
-    assert isinstance(log, TorchUserItemTable)
-    assert log.ratings is not None
-    assert log.timestamps is not None
+def test_matrix_scipy_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset):
+    log = ml_ds.interaction_matrix(format="scipy")
+    assert isinstance(log, sps.csr_array)
+    assert log.nnz == len(ml_ratings)
 
-    # and the total length
-    assert len(log.user_nums) == len(ml_ratings)
-    assert len(log.item_nums) == len(ml_ratings)
-    assert len(log.ratings) == len(ml_ratings)
-    assert len(log.timestamps) == len(ml_ratings)
+    nrows, ncols = cast(tuple[int, int], log.shape)
+    assert nrows == ml_ratings["user"].nunique()
+    assert ncols == ml_ratings["item"].nunique()
+
+    # make sure we have the right # of ratings per user
+    user_counts = ml_ratings["user"].value_counts().reindex(ml_ds.user_vocab)
+    row_lens = np.diff(log.indptr)
+    assert np.all(row_lens == user_counts)
+
+    # right # of ratings per item
+    items, counts = np.unique(log.indices, return_counts=True)
+    item_counts = ml_ratings["item"].value_counts().reindex(ml_ds.item_vocab[items])
+    assert np.all(counts == item_counts)
+
+    ml_ratings = ml_ratings.sort_values(["userId", "movieId"])
+    # right item IDs
+    assert np.all(ml_ds.item_vocab[log.indices] == ml_ratings["movieId"])
+
+    # right rating values
+    assert np.all(log.data == ml_ratings["rating"])
+
+
+def test_matrix_torch_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset):
+    log = ml_ds.interaction_matrix(format="torch")
+    assert isinstance(log, torch.Tensor)
+    assert log.is_sparse_csr
+    assert log.values().shape == torch.Size([len(ml_ratings)])
+
+    nrows, ncols = log.shape
+    assert nrows == ml_ratings["user"].nunique()
+    assert ncols == ml_ratings["item"].nunique()
+
+    # make sure we have the right # of ratings per user
+    user_counts = ml_ratings["user"].value_counts().reindex(ml_ds.user_vocab)
+    row_lens = np.diff(log.crow_indices())
+    assert np.all(row_lens == user_counts)
+
+    # right # of ratings per item
+    items, counts = np.unique(log.col_indices(), return_counts=True)
+    item_counts = ml_ratings["item"].value_counts().reindex(ml_ds.item_vocab[items])
+    assert np.all(counts == item_counts)
+
+    ml_ratings = ml_ratings.sort_values(["userId", "movieId"])
+    # right item IDs
+    assert np.all(ml_ds.item_vocab[log.col_indices().numpy()] == ml_ratings["movieId"])
+
+    # right rating values
+    assert np.all(log.values() == ml_ratings["rating"])
+
+
+def test_matrix_torch_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset):
+    log = ml_ds.interaction_matrix(format="torch", layout="coo")
+    assert isinstance(log, torch.Tensor)
+    assert log.is_sparse
+    assert log.values().shape == torch.Size([len(ml_ratings)])
+
+    nrows, ncols = cast(tuple[int, int], log.shape)
+    assert nrows == ml_ratings["user"].nunique()
+    assert ncols == ml_ratings["item"].nunique()
+
+    # make sure we have the right # of ratings per user
+    users, counts = np.unique(log.row_indices(), return_counts=True)
+    user_counts = ml_ratings["user"].value_counts().reindex(ml_ds.user_vocab[users])
+    assert np.all(counts == user_counts)
+
+    # right # of ratings per item
+    items, counts = np.unique(log.col_indices(), return_counts=True)
+    item_counts = ml_ratings["item"].value_counts().reindex(ml_ds.item_vocab[items])
+    assert np.all(counts == item_counts)
+
+    ml_ratings = ml_ratings.sort_values(["userId", "movieId"])
+    # right item and user IDs
+    assert np.all(ml_ds.item_vocab[log.row_indices().numpy()] == ml_ratings["userId"])
+    assert np.all(ml_ds.item_vocab[log.col_indices().numpy()] == ml_ratings["movieId"])
+
+    # right rating values
+    assert np.all(log.values() == ml_ratings["rating"])
