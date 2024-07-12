@@ -23,11 +23,11 @@ def test_pandas_log_defaults(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     # the interact
     int_df = int_df.sort_values(["user_num", "item_num"])
     uids = ml_ds.user_id(int_df["user_num"])
-    iids = ml_ds.user_id(int_df["item_num"])
+    iids = ml_ds.item_id(int_df["item_num"])
 
     ml_df = ml_ratings.sort_values(["userId", "movieId"])
-    assert np.all(uids == ml_df["userId"])
-    assert np.all(iids == ml_df["movieId"])
+    assert np.all(uids.values == ml_df["userId"])
+    assert np.all(iids.values == ml_df["movieId"])
     assert np.all(int_df["rating"] == ml_df["rating"])
     assert np.all(int_df["timestamp"] == ml_df["timestamp"])
 
@@ -53,6 +53,29 @@ def test_pandas_log_ids(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert np.all(int_df["item_id"] == ml_df["movieId"])
     assert np.all(int_df["rating"] == ml_df["rating"])
     assert np.all(int_df["timestamp"] == ml_df["timestamp"])
+
+    # and the total length
+    assert len(int_df) == len(ml_ratings)
+
+
+def test_pandas_log_no_ts(ml_ratings: pd.DataFrame, ml_ds: Dataset):
+    int_df = ml_ds.interaction_log(format="pandas", fields=["rating"])
+    assert isinstance(int_df, pd.DataFrame)
+    # we should have exactly the 4 expected columns
+    assert len(int_df.columns) == 3
+    assert "user_num" in int_df.columns
+    assert "item_num" in int_df.columns
+    assert "rating" in int_df.columns
+
+    # the interact
+    int_df = int_df.sort_values(["user_num", "item_num"])
+    uids = ml_ds.user_id(int_df["user_num"])
+    iids = ml_ds.item_id(int_df["item_num"])
+
+    ml_df = ml_ratings.sort_values(["userId", "movieId"])
+    assert np.all(uids.values == ml_df["userId"])
+    assert np.all(iids.values == ml_df["movieId"])
+    assert np.all(int_df["rating"] == ml_df["rating"])
 
     # and the total length
     assert len(int_df) == len(ml_ratings)

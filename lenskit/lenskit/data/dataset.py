@@ -6,7 +6,6 @@ LensKit dataset abstraction.
 from __future__ import annotations
 
 import logging
-from collections.abc import Hashable
 from typing import Any, Collection, Iterable, Literal, Optional, TypeAlias, TypeVar, cast, overload
 
 import numpy as np
@@ -17,6 +16,7 @@ from numpy.typing import ArrayLike
 
 from lenskit.data.matrix import InteractionMatrix
 
+from . import EntityId
 from .tables import NumpyUserItemTable, TorchUserItemTable
 
 DF_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch"]
@@ -24,7 +24,7 @@ MAT_FORMAT: TypeAlias = Literal["scipy", "torch", "pandas", "structure"]
 MAT_AGG: TypeAlias = Literal["count", "sum", "mean", "first", "last"]
 LAYOUT: TypeAlias = Literal["csr", "coo"]
 ACTION_FIELDS: TypeAlias = Literal["ratings", "timestamps"] | str
-EntityId: TypeAlias = Hashable
+
 K = TypeVar("K")
 
 _log = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ class Dataset:
         """
         Get the known item identifiers. This is represented as a Pandas
         :class:`~pd.Index` to enable items to be represented as contiguous item
-        numbers.
+        numbers.  See :ref:`data-identifiers` for more.
         """
         return self._item_counts.index
 
@@ -95,7 +95,7 @@ class Dataset:
         """
         Get the known user identifiers. This is represented as a Pandas
         :class:`~pd.Index` to enable users to also be represented as contiguous
-        user numbers.
+        user numbers.  See :ref:`data-identifiers` for more.
         """
         return self._user_counts.index
 
@@ -108,14 +108,14 @@ class Dataset:
         return len(self.user_vocab)
 
     @overload
-    def user_id(self, users: int) -> Any: ...
+    def user_id(self, users: int) -> EntityId: ...
     @overload
-    def user_id(self, users: ArrayLike) -> pd.Series[Any]: ...
-    def user_id(self, users: int | ArrayLike) -> Any:
+    def user_id(self, users: ArrayLike) -> pd.Series[EntityId]: ...
+    def user_id(self, users: int | ArrayLike) -> EntityId | pd.Series[EntityId]:
         """
         Look up the user ID for a given user number.  When passed a single
         number, it returns single identifier; when given an array of numbers, it
-        returns a series of identifiers.
+        returns a series of identifiers with original numbers on the index.
 
         Args:
             users: the user number(s) to look up.
@@ -127,16 +127,16 @@ class Dataset:
 
     @overload
     def user_num(
+        self, users: EntityId, *, missing: Literal["error", "negative"] = "negative"
+    ) -> int: ...
+    @overload
+    def user_num(
         self, users: ArrayLike, *, missing: Literal["error", "negative"] = "negative"
     ) -> np.ndarray[int, np.dtype[np.int32]]: ...
     @overload
     def user_num(
         self, users: ArrayLike, *, missing: Literal["omit"]
     ) -> pd.Series[np.dtype[np.int32]]: ...
-    @overload
-    def user_num(
-        self, users: Any, *, missing: Literal["error", "negative"] = "negative"
-    ) -> int: ...
     def user_num(
         self, users: Any, *, missing: Literal["error", "negative", "omit"] = "negative"
     ) -> Any:
@@ -160,10 +160,10 @@ class Dataset:
         return _lookup_num(self.user_vocab, users, missing)
 
     @overload
-    def item_id(self, items: int) -> Any: ...
+    def item_id(self, items: int) -> EntityId: ...
     @overload
-    def item_id(self, items: ArrayLike) -> pd.Series[Any]: ...
-    def item_id(self, items: int | ArrayLike) -> Any:
+    def item_id(self, items: ArrayLike) -> pd.Series[EntityId]: ...
+    def item_id(self, items: int | ArrayLike) -> EntityId | pd.Series[EntityId]:
         """
         Look up the item ID for a given item number.  When passed a single
         number, it returns single identifier; when given an array of numbers, it
@@ -179,16 +179,16 @@ class Dataset:
 
     @overload
     def item_num(
+        self, items: EntityId, *, missing: Literal["error", "negative"] = "negative"
+    ) -> int: ...
+    @overload
+    def item_num(
         self, items: ArrayLike, *, missing: Literal["error", "negative"] = "negative"
     ) -> np.ndarray[int, np.dtype[np.int32]]: ...
     @overload
     def item_num(
         self, items: ArrayLike, *, missing: Literal["omit"]
     ) -> pd.Series[np.dtype[np.int32]]: ...
-    @overload
-    def item_num(
-        self, items: Any, *, missing: Literal["error", "negative"] = "negative"
-    ) -> int: ...
     def item_num(
         self, items: Any, *, missing: Literal["error", "negative", "omit"] = "negative"
     ) -> Any:
@@ -229,7 +229,7 @@ class Dataset:
     ) -> TorchUserItemTable: ...
     def interaction_log(
         self,
-        format: DF_FORMAT,
+        format: str,
         *,
         fields: str | list[str] | None = "all",
         original_ids: bool = False,
@@ -258,7 +258,8 @@ class Dataset:
                 Which fields to include.  If set to ``"all"``, will include all
                 available fields in the resulting table; ``None`` includes no
                 fields besides the user and item.  Commonly-available fields
-                include ``"rating"`` and ``"timestamp"``.
+                include ``"rating"`` and ``"timestamp"``.  Missing fields will
+                be omitted in the result.
             original_ids:
                 If ``True``, return user and item IDs as represented in the
                 original source data in columns named ``user_id`` and
@@ -269,7 +270,58 @@ class Dataset:
         Returns:
             The user-item interaction log in the specified format.
         """
-        pass
+        if fields == "all":
+            fields = ["rating", "timestamp"]
+        elif isinstance(fields, str):
+            fields = [fields]
+        elif fields is None:
+            fields = []
+
+        match format:
+            case "pandas":
+                return self._int_log_pandas(fields, original_ids)
+            case "numpy":
+                return self._int_log_numpy(fields)
+            case "torch":
+                return self._int_log_torch(fields)
+            case _:
+                raise ValueError(f"unsupported format “{format}”")
+
+    def _int_log_pandas(self, fields: list[str], original_ids: bool):
+        cols: dict[str, ArrayLike]
+        if original_ids:
+            cols = {
+                "user_id": self._user_counts.index[self._matrix.user_nums],
+                "item_id": self._item_counts.index[self._matrix.item_nums],
+            }
+        else:
+            cols = {
+                "user_num": self._matrix.user_nums,
+                "item_num": self._matrix.item_nums,
+            }
+        if "rating" in fields and self._matrix.ratings is not None:
+            cols["rating"] = self._matrix.ratings
+        if "timestamp" in fields and self._matrix.timestamps is not None:
+            cols["timestamp"] = self._matrix.timestamps
+        return pd.DataFrame(cols)
+
+    def _int_log_numpy(self, fields: list[str]) -> NumpyUserItemTable:
+        tbl = NumpyUserItemTable(self._matrix.user_nums, self._matrix.item_nums)
+        if "rating" in fields:
+            tbl.ratings = self._matrix.ratings
+        if "timestamp" in fields:
+            tbl.timestamps = self._matrix.timestamps
+        return tbl
+
+    def _int_log_torch(self, fields: list[str]) -> TorchUserItemTable:
+        tbl = TorchUserItemTable(
+            torch.from_numpy(self._matrix.user_nums), torch.from_numpy(self._matrix.item_nums)
+        )
+        if "rating" in fields:
+            tbl.ratings = torch.from_numpy(self._matrix.ratings)
+        if "timestamp" in fields:
+            tbl.timestamps = torch.from_numpy(self._matrix.timestamps)
+        return tbl
 
     @overload
     def interaction_matrix(
@@ -341,12 +393,12 @@ class Dataset:
     ) -> sps.coo_matrix: ...
     def interaction_matrix(
         self,
-        format: MAT_FORMAT,
+        format: str,
         *,
         layout: str | None = None,
         legacy: bool = False,
         field: str | None = None,
-        combine: MAT_AGG | None = None,
+        combine: str | None = None,
         original_ids: bool = False,
     ) -> Any:
         """
@@ -536,7 +588,9 @@ def _lookup_num(
         raise ValueError(f"invalid missing mode {missing}")
     if np.isscalar(ids):
         try:
-            return index.get_loc(cast(EntityId, ids))
+            num = index.get_loc(cast(EntityId, ids))
+            assert isinstance(num, int)
+            return num
         except KeyError as e:
             if missing == "negative":
                 return -1
