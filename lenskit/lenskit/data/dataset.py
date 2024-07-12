@@ -20,7 +20,7 @@ from lenskit.data.matrix import InteractionMatrix
 from .tables import NumpyUserItemTable, TorchUserItemTable
 
 DF_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch"]
-MAT_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch", "scipy"]
+MAT_FORMAT: TypeAlias = Literal["scipy", "torch", "pandas", "structure"]
 MAT_AGG: TypeAlias = Literal["count", "sum", "mean", "first", "last"]
 LAYOUT: TypeAlias = Literal["csr", "coo"]
 ACTION_FIELDS: TypeAlias = Literal["ratings", "timestamps"] | str
@@ -330,6 +330,15 @@ class Dataset:
         field: str | None = None,
         combine: MAT_AGG | None = None,
     ) -> sps.coo_matrix: ...
+    @overload
+    def interaction_matrix(
+        self,
+        format: Literal["structure"],
+        *,
+        layout: Literal["csr"] | None = None,
+        field: str | None = None,
+        combine: MAT_AGG | None = None,
+    ) -> sps.coo_matrix: ...
     def interaction_matrix(
         self,
         format: MAT_FORMAT,
@@ -385,6 +394,9 @@ class Dataset:
                 The layout for a sparse matrix.  Can be either ``csr`` or
                 ``coo``, or ``None`` to use the default for the specified
                 format.  CSR is only supported by Torch and SciPy backends.
+            legacy:
+                ``True`` to return a legacy SciPy sparse matrix instead of
+                sparse array.
             original_ids:
                 If ``True``, return user and item IDs as represented in the
                 original source data in columns named ``user_id`` and
