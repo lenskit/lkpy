@@ -346,6 +346,10 @@ class Dataset:
         it is comparable to :meth:`interaction_log` but without repeated
         interactions, or it may be in a compressed sparse format.
 
+        .. todo::
+            Aggregate is currently ignored because repeated interactions are not
+            yet supported.
+
         .. warning::
             Client code **must not** perform in-place modifications on the matrix
             returned from this method.  Whenever possible, it will be a shallow
@@ -402,6 +406,9 @@ def from_interactions_df(
     """
     Create a dataset from a data frame of ratings or other user-item
     interactions.
+
+    .. todo::
+        Repeated interactions are not yet supported.
 
     Args:
         df:
