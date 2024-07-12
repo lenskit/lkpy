@@ -1,5 +1,7 @@
 PIP := "uv pip"
 PACKAGES := "lenskit lenskit-funksvd lenskit-implicit lenskit-hpf"
+python := "3.11"
+conda_env := "lkpy"
 
 # list the tasks in this project (default)
 list-tasks:
@@ -32,15 +34,18 @@ install-dev:
     {{PIP}} install -r dev-requirements.txt -e {{ prepend('-e ', PACKAGES) }} --all-extras
 
 # create a conda environment file for development
-conda-env-file version="3.11":
-    pipx run --spec . lk-conda -o environment.yml -e all requirements-dev.txt \
-        pyproject.toml \
-        {{ append('/pyproject.toml', PACKAGES) }}
+conda-dev-env-file *components=PACKAGES:
+    pipx run --no-cache --spec . lk-conda -o environment.yml \
+         -p {{python}} -e all requirements-dev.txt \
+        pyproject.toml {{ append('/pyproject.toml', components) }}
 
 # create a conda environment for development
-conda-env version="3.11" name="lkpy":
-    pipx run --spec . lk-conda -n {{name}} -e all requirements-dev.txt \
-        {{ append('/pyproject.toml', PACKAGES) }}
+conda-dev-env *components=PACKAGES: (conda-dev-env-file components)
+    conda env update --prune -n lkpy -f environment.yml
+    for pkg in {{components}}; do \
+        echo "installing $pkg"; \
+        pip install --no-deps -e $pkg; \
+    done
 
 # run tests with default configuration
 test:

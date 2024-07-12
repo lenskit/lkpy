@@ -65,10 +65,10 @@ create a dev environment, checkout LensKit, then run:
     conda activate lkpy
 
 That will create and activate an environment named `lkpy` with all the LensKit
-dependencies. You will also need to install LensKit in editable mode to do
-things like run the tests:
+dependencies. You will also need to install the LensKit packages you want to
+work on in editable mode to do things like run the tests:
 
-    pip install -e lenskit
+    pip install --no-deps -e lenskit
 
 Each LensKit subpackage you want to work on will also need to be installed.
 

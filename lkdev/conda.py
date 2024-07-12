@@ -26,7 +26,6 @@ Options:
     --micromamba    use micromamba
     --mkl           enable MKL BLAS
     --cuda          enable CUDA PyTorch
-    --env           write a Conda environment specification
 
 This tool is implemented as its own script, because it is used to
 bootstrap LensKit and therefore cannot depend on LensKit being installed.
