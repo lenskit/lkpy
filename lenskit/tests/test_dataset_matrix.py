@@ -186,7 +186,7 @@ def test_matrix_scipy_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
 
 def test_matrix_scipy_missing_rating(ml_ratings: pd.DataFrame):
-    ml_ds = from_interactions_df(ml_ratings[["userId", "movieId", "timestamp"]])
+    ml_ds = from_interactions_df(ml_ratings[["userId", "movieId", "timestamp"]], item_col="movieId")
     log = ml_ds.interaction_matrix(format="scipy", field="rating")
     assert isinstance(log, sps.csr_array)
     assert log.nnz == len(ml_ratings)
@@ -198,7 +198,7 @@ def test_matrix_scipy_missing_rating(ml_ratings: pd.DataFrame):
     _check_user_offset_counts(ml_ds, ml_ratings, log.indptr)
     _check_item_number_counts(ml_ds, ml_ratings, log.indices)
     _check_item_ids(ml_ds, ml_ratings, log.indices)
-    _check_ratings(ml_ds, ml_ratings, log.data)
+    assert np.allclose(log.data, 1.0)
 
 
 def test_matrix_torch_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset):

@@ -477,6 +477,8 @@ class Dataset:
                 if layout and layout != "coo":
                     raise ValueError(f"unsupported layout {layout} for Pandas")
                 return self._int_mat_pandas(field)
+            case "scipy":
+                return self._int_mat_scipy(field, layout, legacy)
             case _:
                 raise ValueError(f"unsupported format “{format}”")
 
@@ -500,6 +502,42 @@ class Dataset:
         elif field:
             raise FieldError("interaction", field)
         return pd.DataFrame(cols)
+
+    def _int_mat_scipy(self, field: str, layout: str | None, legacy: bool):
+        if field == "rating" and self._matrix.ratings is not None:
+            data = self._matrix.ratings
+        elif field is None or field == "rating":
+            data = np.ones(self._matrix.n_obs, dtype="f4")
+        elif field == "timestamp" and self._matrix.timestamps is not None:
+            data = self._matrix.timestamps
+        else:
+            raise FieldError("interaction", field)
+
+        shape = self._matrix.shape
+
+        if layout is None:
+            layout = "csr"
+        match layout:
+            case "csr":
+                if legacy:
+                    return sps.csr_matrix(
+                        (data, self._matrix.item_nums, self._matrix.user_ptrs), shape=shape
+                    )
+                else:
+                    return sps.csr_array(
+                        (data, self._matrix.item_nums, self._matrix.user_ptrs), shape=shape
+                    )
+            case "coo":
+                if legacy:
+                    return sps.coo_matrix(
+                        (data, (self._matrix.user_nums, self._matrix.item_nums)), shape=shape
+                    )
+                else:
+                    return sps.coo_array(
+                        (data, (self._matrix.user_nums, self._matrix.item_nums)), shape=shape
+                    )
+            case _:  # pragma nocover
+                raise ValueError(f"unsupported layout {layout}")
 
 
 def from_interactions_df(
