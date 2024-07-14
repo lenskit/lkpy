@@ -168,6 +168,21 @@ def test_matrix_scipy_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_ratings(ml_ds, ml_ratings, log.data)
 
 
+def test_matrix_scipy_timestamp(ml_ratings: pd.DataFrame, ml_ds: Dataset):
+    log = ml_ds.interaction_matrix(format="scipy", field="timestamp")
+    assert isinstance(log, sps.csr_array)
+    assert log.nnz == len(ml_ratings)
+
+    nrows, ncols = cast(tuple[int, int], log.shape)
+    assert nrows == ml_ratings["userId"].nunique()
+    assert ncols == ml_ratings["movieId"].nunique()
+
+    _check_user_offset_counts(ml_ds, ml_ratings, log.indptr)
+    _check_item_number_counts(ml_ds, ml_ratings, log.indices)
+    _check_item_ids(ml_ds, ml_ratings, log.indices)
+    _check_timestamp(ml_ds, ml_ratings, log.data)
+
+
 def test_matrix_scipy_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     log = ml_ds.interaction_matrix(format="scipy")
     assert isinstance(log, sps.csr_array)
