@@ -4,6 +4,8 @@ Tests for the Vocabulary class.
 
 from uuid import UUID
 
+import numpy as np
+
 import hypothesis.strategies as st
 from hypothesis import assume, given
 from pytest import raises
@@ -99,3 +101,40 @@ def test_lookup_bad_number(keys: set[int | str | UUID], num: int):
 
     with raises(IndexError):
         assert vocab.term(num)
+
+
+@given(
+    st.sets(st.integers()),
+    st.lists(st.integers()),
+)
+def test_lookup_many_nums(terms: set[int], lookup: list[int]):
+    klist = sorted(terms)
+    kpos = dict(zip(klist, range(len(klist))))
+
+    vocab = Vocabulary(terms)
+
+    nums = vocab.numbers(lookup, missing="negative")
+    assert len(nums) == len(lookup)
+    for n, k in zip(nums, lookup):
+        if n < 0:
+            assert k not in terms
+        else:
+            assert n == kpos[k]
+
+
+@given(
+    st.sets(st.integers()),
+    st.lists(st.integers()),
+)
+def test_lookup_many_terms(terms: set[int], lookup: list[int]):
+    lkarr = np.ndarray(lookup)
+    assume(np.all(lkarr >= 0))
+    assume(np.all(lkarr < len(terms)))
+    klist = sorted(terms)
+
+    vocab = Vocabulary(terms)
+
+    keys = vocab.terms(lookup)
+    assert len(keys) == len(lookup)
+    for k, n in zip(keys, lookup):
+        assert k == klist[n]

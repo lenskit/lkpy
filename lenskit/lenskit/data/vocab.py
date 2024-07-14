@@ -2,10 +2,12 @@
 Vocabularies of IDs, tags, etc.
 """
 
-from typing import Generic, Hashable, Iterable, Literal, TypeAlias, TypeVar
+# pyright: basic
+from typing import Generic, Hashable, Iterable, Literal, Sequence, TypeAlias, TypeVar
 
 import numpy as np
 import pandas as pd
+from numpy.typing import ArrayLike
 
 EntityId: TypeAlias = int | str | bytes
 "Allowable entity identifier types."
@@ -65,6 +67,17 @@ class Vocabulary(Generic[VT]):
                 return -1
             else:
                 raise e
+
+    def numbers(
+        self, terms: Sequence[VT] | ArrayLike, missing: Literal["error", "negative"] = "error"
+    ) -> np.ndarray[int, np.dtype[np.int32]]:
+        nums = np.require(self._index.get_indexer_for(terms), dtype=np.int32)
+        if missing == "error" and np.any(nums < 0):
+            raise KeyError()
+        return nums
+
+    def terms(self, nums: ArrayLike) -> np.ndarray:
+        return self._index.values[nums]
 
     def term(self, num: int) -> VT:
         "Look up the term at a particular numbrer.."
