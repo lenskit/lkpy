@@ -4,8 +4,6 @@ Tests for the Vocabulary class.
 
 from uuid import UUID
 
-import numpy as np
-
 import hypothesis.strategies as st
 from hypothesis import assume, given
 from pytest import raises
@@ -123,13 +121,12 @@ def test_lookup_many_nums(terms: set[int], lookup: list[int]):
 
 
 @given(
+    st.data(),
     st.sets(st.integers()),
-    st.lists(st.integers()),
 )
-def test_lookup_many_terms(terms: set[int], lookup: list[int]):
-    lkarr = np.ndarray(lookup)
-    assume(np.all(lkarr >= 0))
-    assume(np.all(lkarr < len(terms)))
+def test_lookup_many_terms(data, terms: set[int]):
+    assume(len(terms) > 0)
+    lookup = data.draw(st.lists(st.integers(min_value=0, max_value=len(terms) - 1)))
     klist = sorted(terms)
 
     vocab = Vocabulary(terms)
