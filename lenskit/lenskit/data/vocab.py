@@ -77,7 +77,7 @@ class Vocabulary(Generic[VT]):
         return nums
 
     def terms(self, nums: ArrayLike) -> np.ndarray:
-        return self._index.values[nums]
+        return self._index[nums]
 
     def term(self, num: int) -> VT:
         "Look up the term at a particular numbrer.."
