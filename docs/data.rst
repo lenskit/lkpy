@@ -56,7 +56,7 @@ Identifiers and numbers can be mapped to each other with the user and item
 *vocabularies* (:attr:`~Dataset.user_vocab` and :attr:`~Dataset.item_vocab`), as
 well as convenience methods.
 
-.. autodata:: EntityId
+.. autodata:: lenskit.data.vocab.EntityId
 
 .. _dataset:
 
