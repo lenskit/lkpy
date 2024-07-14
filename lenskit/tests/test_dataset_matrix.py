@@ -10,7 +10,7 @@ import scipy.sparse as sps
 import torch
 from numpy.typing import ArrayLike
 
-from pytest import raises
+from pytest import mark, raises
 
 from lenskit.data import Dataset
 from lenskit.data.dataset import FieldError, from_interactions_df
@@ -137,9 +137,12 @@ def test_matrix_pandas_missing_rating(ml_ratings: pd.DataFrame):
     assert np.all(log["rating"] == 1.0)
 
 
-def test_matrix_scipy_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    log = ml_ds.interaction_matrix(format="scipy", layout="coo", field="rating")
-    assert isinstance(log, sps.coo_array)
+@mark.parametrize("generation", ["modern", "legacy"])
+def test_matrix_scipy_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
+    log = ml_ds.interaction_matrix(
+        format="scipy", layout="coo", field="rating", legacy=generation == "legacy"
+    )
+    assert isinstance(log, sps.coo_array if generation == "modern" else sps.coo_matrix)
     assert log.nnz == len(ml_ratings)
 
     nrows, ncols = cast(tuple[int, int], log.shape)
@@ -153,9 +156,10 @@ def test_matrix_scipy_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_ratings(ml_ds, ml_ratings, log.data)
 
 
-def test_matrix_scipy_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    log = ml_ds.interaction_matrix(format="scipy", field="rating")
-    assert isinstance(log, sps.csr_array)
+@mark.parametrize("generation", ["modern", "legacy"])
+def test_matrix_scipy_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
+    log = ml_ds.interaction_matrix(format="scipy", field="rating", legacy=generation == "legacy")
+    assert isinstance(log, sps.csr_array if generation == "modern" else sps.csr_matrix)
     assert log.nnz == len(ml_ratings)
 
     nrows, ncols = cast(tuple[int, int], log.shape)
@@ -168,9 +172,10 @@ def test_matrix_scipy_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_ratings(ml_ds, ml_ratings, log.data)
 
 
-def test_matrix_scipy_timestamp(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    log = ml_ds.interaction_matrix(format="scipy", field="timestamp")
-    assert isinstance(log, sps.csr_array)
+@mark.parametrize("generation", ["modern", "legacy"])
+def test_matrix_scipy_timestamp(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
+    log = ml_ds.interaction_matrix(format="scipy", field="timestamp", legacy=generation == "legacy")
+    assert isinstance(log, sps.csr_array if generation == "modern" else sps.csr_matrix)
     assert log.nnz == len(ml_ratings)
 
     nrows, ncols = cast(tuple[int, int], log.shape)
@@ -183,9 +188,10 @@ def test_matrix_scipy_timestamp(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_timestamp(ml_ds, ml_ratings, log.data)
 
 
-def test_matrix_scipy_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    log = ml_ds.interaction_matrix(format="scipy")
-    assert isinstance(log, sps.csr_array)
+@mark.parametrize("generation", ["modern", "legacy"])
+def test_matrix_scipy_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
+    log = ml_ds.interaction_matrix(format="scipy", legacy=generation == "legacy")
+    assert isinstance(log, sps.csr_array if generation == "modern" else sps.csr_matrix)
     assert log.nnz == len(ml_ratings)
 
     nrows, ncols = cast(tuple[int, int], log.shape)
@@ -200,10 +206,11 @@ def test_matrix_scipy_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert np.all(log.data == 1.0)
 
 
-def test_matrix_scipy_missing_rating(ml_ratings: pd.DataFrame):
+@mark.parametrize("generation", ["modern", "legacy"])
+def test_matrix_scipy_missing_rating(ml_ratings: pd.DataFrame, generation):
     ml_ds = from_interactions_df(ml_ratings[["userId", "movieId", "timestamp"]], item_col="movieId")
-    log = ml_ds.interaction_matrix(format="scipy", field="rating")
-    assert isinstance(log, sps.csr_array)
+    log = ml_ds.interaction_matrix(format="scipy", field="rating", legacy=generation == "legacy")
+    assert isinstance(log, sps.csr_array if generation == "modern" else sps.csr_matrix)
     assert log.nnz == len(ml_ratings)
 
     nrows, ncols = cast(tuple[int, int], log.shape)
