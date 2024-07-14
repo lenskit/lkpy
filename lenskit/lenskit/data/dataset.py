@@ -479,6 +479,8 @@ class Dataset:
                 return self._int_mat_pandas(field)
             case "scipy":
                 return self._int_mat_scipy(field, layout, legacy)
+            case "torch":
+                return self._int_mat_torch(field, layout)
             case _:
                 raise ValueError(f"unsupported format “{format}”")
 
@@ -503,14 +505,14 @@ class Dataset:
             raise FieldError("interaction", field)
         return pd.DataFrame(cols)
 
-    def _int_mat_scipy(self, field: str, layout: str | None, legacy: bool):
+    def _int_mat_scipy(self, field: str | None, layout: str | None, legacy: bool):
         if field == "rating" and self._matrix.ratings is not None:
             data = self._matrix.ratings
         elif field is None or field == "rating":
             data = np.ones(self._matrix.n_obs, dtype="f4")
         elif field == "timestamp" and self._matrix.timestamps is not None:
             data = self._matrix.timestamps
-        else:
+        else:  # pragma nocover
             raise FieldError("interaction", field)
 
         shape = self._matrix.shape
@@ -536,6 +538,43 @@ class Dataset:
                     return sps.coo_array(
                         (data, (self._matrix.user_nums, self._matrix.item_nums)), shape=shape
                     )
+            case _:  # pragma nocover
+                raise ValueError(f"unsupported layout {layout}")
+
+    def _int_mat_torch(self, field: str | None, layout: str | None):
+        if field == "rating" and self._matrix.ratings is not None:
+            values = torch.from_numpy(self._matrix.ratings)
+        elif field is None or field == "rating":
+            values = torch.full([self._matrix.n_obs], 1.0, dtype=torch.float32)
+        elif field == "timestamp" and self._matrix.timestamps is not None:
+            values = torch.from_numpy(self._matrix.timestamps)
+        else:  # pragma nocover
+            raise FieldError("interaction", field)
+
+        shape = self._matrix.shape
+
+        if layout is None:
+            layout = "csr"
+        match layout:
+            case "csr":
+                return torch.sparse_csr_tensor(
+                    torch.from_numpy(self._matrix.user_ptrs),
+                    torch.from_numpy(self._matrix.item_nums),
+                    values,
+                    size=shape,
+                )
+            case "coo":
+                return torch.sparse_coo_tensor(
+                    torch.stack(
+                        [
+                            torch.from_numpy(self._matrix.user_nums),
+                            torch.from_numpy(self._matrix.item_nums),
+                        ],
+                        dim=0,
+                    ),
+                    values,
+                    size=shape,
+                ).coalesce()
             case _:  # pragma nocover
                 raise ValueError(f"unsupported layout {layout}")
 

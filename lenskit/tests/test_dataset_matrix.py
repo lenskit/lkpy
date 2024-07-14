@@ -236,7 +236,7 @@ def test_matrix_torch_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
     _check_item_ids(ml_ds, ml_ratings, log.col_indices())
-    _check_ratings(ml_ds, ml_ratings, log.values())
+    _check_ratings(ml_ds, ml_ratings, log.values().numpy())
 
 
 def test_matrix_torch_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset):
@@ -252,7 +252,7 @@ def test_matrix_torch_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
     _check_item_ids(ml_ds, ml_ratings, log.col_indices())
-    assert np.all(log.values() == 1.0)
+    assert np.all(log.values().numpy() == 1.0)
 
 
 def test_matrix_torch_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset):
@@ -265,8 +265,41 @@ def test_matrix_torch_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert nrows == ml_ratings["userId"].nunique()
     assert ncols == ml_ratings["movieId"].nunique()
 
-    _check_user_number_counts(ml_ds, ml_ratings, log.row_indices())
-    _check_user_ids(ml_ds, ml_ratings, log.row_indices())
+    _check_user_number_counts(ml_ds, ml_ratings, log.indices()[0, :])
+    _check_user_ids(ml_ds, ml_ratings, log.indices()[0, :])
+    _check_item_number_counts(ml_ds, ml_ratings, log.indices()[1, :])
+    _check_item_ids(ml_ds, ml_ratings, log.indices()[1, :])
+    _check_ratings(ml_ds, ml_ratings, log.values().numpy())
+
+
+def test_matrix_torch_missing_rating(ml_ratings: pd.DataFrame):
+    ml_ds = from_interactions_df(ml_ratings[["userId", "movieId", "timestamp"]], item_col="movieId")
+    log = ml_ds.interaction_matrix(format="torch", field="rating")
+    assert isinstance(log, torch.Tensor)
+    assert log.is_sparse_csr
+    assert log.values().shape == torch.Size([len(ml_ratings)])
+
+    nrows, ncols = cast(tuple[int, int], log.shape)
+    assert nrows == ml_ratings["userId"].nunique()
+    assert ncols == ml_ratings["movieId"].nunique()
+
+    _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
     _check_item_ids(ml_ds, ml_ratings, log.col_indices())
-    _check_ratings(ml_ds, ml_ratings, log.values())
+    assert np.allclose(log.values().numpy(), 1.0)
+
+
+def test_matrix_torch_timestamp(ml_ratings: pd.DataFrame, ml_ds: Dataset):
+    log = ml_ds.interaction_matrix(format="torch", field="timestamp")
+    assert isinstance(log, torch.Tensor)
+    assert log.is_sparse_csr
+    assert log.values().shape == torch.Size([len(ml_ratings)])
+
+    nrows, ncols = log.shape
+    assert nrows == ml_ratings["userId"].nunique()
+    assert ncols == ml_ratings["movieId"].nunique()
+
+    _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
+    _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
+    _check_item_ids(ml_ds, ml_ratings, log.col_indices())
+    _check_timestamp(ml_ds, ml_ratings, log.values().numpy())
