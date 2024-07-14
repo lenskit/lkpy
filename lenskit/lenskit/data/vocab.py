@@ -7,7 +7,7 @@ from typing import Generic, Hashable, Iterable, Literal, Sequence, TypeAlias, Ty
 
 import numpy as np
 import pandas as pd
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 
 EntityId: TypeAlias = int | str | bytes
 "Allowable entity identifier types."
@@ -76,8 +76,8 @@ class Vocabulary(Generic[VT]):
             raise KeyError()
         return nums
 
-    def terms(self, nums: ArrayLike) -> np.ndarray:
-        return self._index[nums]
+    def terms(self, nums: list[int] | NDArray[np.integer]) -> np.ndarray:
+        return self._index[nums].values
 
     def term(self, num: int) -> VT:
         "Look up the term at a particular numbrer.."
