@@ -71,17 +71,25 @@ class Vocabulary(Generic[VT]):
     def numbers(
         self, terms: Sequence[VT] | ArrayLike, missing: Literal["error", "negative"] = "error"
     ) -> np.ndarray[int, np.dtype[np.int32]]:
+        "Look up the numbers for an array of terms or IDs."
         nums = np.require(self._index.get_indexer_for(terms), dtype=np.int32)
         if missing == "error" and np.any(nums < 0):
             raise KeyError()
         return nums
 
-    def terms(self, nums: list[int] | NDArray[np.integer]) -> np.ndarray:
-        return self._index[nums].values
-
     def term(self, num: int) -> VT:
-        "Look up the term at a particular numbrer.."
+        """
+        Look up the term with a particular number.  Negative indexing is **not** supported.
+        """
+        if num < 0:
+            raise IndexError("negative numbers not supported")
         return self._index[num]
+
+    def terms(self, nums: list[int] | NDArray[np.integer]) -> np.ndarray:
+        "Look up the terms for an array of indices."
+        if np.any(nums < 0):
+            raise IndexError("negative numbers not supported")
+        return self._index[nums].values
 
     def __len__(self) -> int:
         return self.size
