@@ -632,7 +632,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: 🐍 Setup coverage
-        run: pipx install coverage
+        run: pipx install 'coverage[toml]'
       - name: 📥 Download test artifacts
         uses: actions/download-artifact@v4
         with:

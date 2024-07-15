@@ -442,7 +442,7 @@ def jobs_result(deps: list[str]) -> GHJob:
         "needs": deps,
         "steps": [
             step_checkout(),
-            {"name": "🐍 Setup coverage", "run": "pipx install coverage"},
+            {"name": "🐍 Setup coverage", "run": "pipx install 'coverage[toml]'"},
             {
                 "name": "📥 Download test artifacts",
                 "uses": "actions/download-artifact@v4",
