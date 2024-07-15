@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 git fetch --all || exit 2
 coverage json || exit 2
