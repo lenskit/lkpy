@@ -149,10 +149,10 @@ def test_matrix_scipy_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
     assert nrows == ml_ratings["userId"].nunique()
     assert ncols == ml_ratings["movieId"].nunique()
 
-    _check_user_number_counts(ml_ds, ml_ratings, log.coords[0])
-    _check_user_ids(ml_ds, ml_ratings, log.coords[0])
-    _check_item_number_counts(ml_ds, ml_ratings, log.coords[1])
-    _check_item_ids(ml_ds, ml_ratings, log.coords[1])
+    _check_user_number_counts(ml_ds, ml_ratings, log.row)
+    _check_user_ids(ml_ds, ml_ratings, log.row)
+    _check_item_number_counts(ml_ds, ml_ratings, log.col)
+    _check_item_ids(ml_ds, ml_ratings, log.col)
     _check_ratings(ml_ds, ml_ratings, log.data)
 
 
