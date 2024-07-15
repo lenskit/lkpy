@@ -19,31 +19,31 @@ from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 
 def _check_user_offset_counts(ml_ds: Dataset, ml_ratings: pd.DataFrame, offsets: ArrayLike):
-    user_counts = ml_ratings["userId"].value_counts().reindex(ml_ds.user_vocab)
+    user_counts = ml_ratings["userId"].value_counts().reindex(ml_ds.users.index)
     row_lens = np.diff(offsets)
     assert np.all(row_lens == user_counts)
 
 
 def _check_user_number_counts(ml_ds: Dataset, ml_ratings: pd.DataFrame, nums: ArrayLike):
     users, counts = np.unique(nums, return_counts=True)
-    user_counts = ml_ratings["userId"].value_counts().reindex(ml_ds.user_vocab[users])
+    user_counts = ml_ratings["userId"].value_counts().reindex(ml_ds.users.ids(users))
     assert np.all(counts == user_counts)
 
 
 def _check_item_number_counts(ml_ds: Dataset, ml_ratings: pd.DataFrame, nums: ArrayLike):
     items, counts = np.unique(nums, return_counts=True)
-    item_counts = ml_ratings["movieId"].value_counts().reindex(ml_ds.item_vocab[items])
+    item_counts = ml_ratings["movieId"].value_counts().reindex(ml_ds.items.ids(items))
     assert np.all(counts == item_counts)
 
 
 def _check_user_ids(ml_ds: Dataset, ml_ratings: pd.DataFrame, nums: ArrayLike):
     ml_ratings = ml_ratings.sort_values(["userId", "movieId"])
-    assert np.all(ml_ds.user_vocab[np.asarray(nums)] == ml_ratings["userId"])
+    assert np.all(ml_ds.users.ids(np.asarray(nums)) == ml_ratings["userId"])
 
 
 def _check_item_ids(ml_ds: Dataset, ml_ratings: pd.DataFrame, nums: ArrayLike):
     ml_ratings = ml_ratings.sort_values(["userId", "movieId"])
-    assert np.all(ml_ds.item_vocab[np.asarray(nums)] == ml_ratings["movieId"])
+    assert np.all(ml_ds.items.ids(np.asarray(nums)) == ml_ratings["movieId"])
 
 
 def _check_ratings(ml_ds: Dataset, ml_ratings: pd.DataFrame, rates: ArrayLike):
