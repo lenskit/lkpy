@@ -562,8 +562,3 @@ def _find_column(columns: Collection[str], acceptable: Iterable[str]) -> str | N
             return col
 
     return None
-
-
-def id_counts(items: ArrayLike) -> pd.Series[np.dtype[np.int64]]:
-    ids, counts = np.unique(items, return_counts=True)
-    return pd.Series(counts, index=ids)
