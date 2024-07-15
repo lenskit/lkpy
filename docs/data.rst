@@ -53,8 +53,8 @@ Users and items have two identifiers:
   sorted identifiers that do not yet have numbers.
 
 Identifiers and numbers can be mapped to each other with the user and item
-*vocabularies* (:attr:`~Dataset.user_vocab` and :attr:`~Dataset.item_vocab`), as
-well as convenience methods.
+*vocabularies* (:attr:`~Dataset.users` and :attr:`~Dataset.items`, see the
+:class:`~lenskit.data.vocab.Vocabulary` class).
 
 .. autodata:: lenskit.data.vocab.EntityId
 
@@ -68,6 +68,17 @@ for training, evaluation, etc. Trainable models and components expect a dataset
 instance to be passed to :meth:`~lenskit.algorithms.Recommender.fit`.
 
 .. autoclass:: Dataset
+
+Vocabularies
+~~~~~~~~~~~~
+
+LensKit uses *vocabularies* to record user/item IDs, tags, terms, etc. in a way
+that facilitates easy mapping to 0-based contiguous indexes for use in matrix
+and tensor data structures.
+
+.. module:: lenskit.data.vocab
+
+.. autoclass:: Vocabulary
 
 User-Item Data Tables
 ~~~~~~~~~~~~~~~~~~~~~
