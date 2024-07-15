@@ -78,6 +78,7 @@ jobs:
           name: test-conda-${{matrix.platform}}-py${{matrix.python}}
           path: |
             test*.log
+            .coverage
             coverage.xml
   vanilla:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
@@ -136,6 +137,7 @@ jobs:
           name: test-vanilla-${{matrix.platform}}-py${{matrix.python}}
           path: |
             test*.log
+            .coverage
             coverage.xml
   nojit:
     name: Non-JIT test coverage
@@ -186,6 +188,7 @@ jobs:
           name: test-nojit
           path: |
             test*.log
+            .coverage
             coverage.xml
   mindep:
     name: Minimal dependency tests
@@ -233,6 +236,7 @@ jobs:
           name: test-mindep
           path: |
             test*.log
+            .coverage
             coverage.xml
   funksvd:
     name: FunkSVD tests on Python ${{matrix.python}}
@@ -288,6 +292,7 @@ jobs:
           name: test-funksvd-py${{matrix.python}}
           path: |
             test*.log
+            .coverage
             coverage.xml
   funksvd-mindep:
     name: Minimal dependency tests for FunkSVD
@@ -335,6 +340,7 @@ jobs:
           name: test-mindep-funksvd
           path: |
             test*.log
+            .coverage
             coverage.xml
   implicit:
     name: Implicit bridge tests on Python ${{matrix.python}}
@@ -390,6 +396,7 @@ jobs:
           name: test-implicit-py${{matrix.python}}
           path: |
             test*.log
+            .coverage
             coverage.xml
   implicit-mindep:
     name: Minimal dependency tests for Implicit
@@ -437,6 +444,7 @@ jobs:
           name: test-mindep-implicit
           path: |
             test*.log
+            .coverage
             coverage.xml
   hpf:
     name: HPF bridge tests on Python ${{matrix.python}}
@@ -491,6 +499,7 @@ jobs:
           name: test-hpf-py${{matrix.python}}
           path: |
             test*.log
+            .coverage
             coverage.xml
   eval-tests:
     name: Evaluation-based tests
@@ -545,6 +554,7 @@ jobs:
           name: test-eval-tests
           path: |
             test*.log
+            .coverage
             coverage.xml
   doc-tests:
     name: Demos, examples, and docs
@@ -599,6 +609,7 @@ jobs:
           name: test-examples
           path: |
             test*.log
+            .coverage
             coverage.xml
   results:
     name: Test suite results
@@ -620,6 +631,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - name: 📥 Download test artifacts
         uses: actions/download-artifact@v4
         with:
@@ -627,9 +642,14 @@ jobs:
           path: test-logs
       - name: 📋 List log files
         run: ls -lR test-logs
-      - name: ✅ Upload coverage
-        uses: codecov/codecov-action@v3
+      - name: ⛙ Merge coverage reports
+        run: |
+          coverage combine test-logs/*/.coverage
+      - name: 📃 Produce coverage reports
+        run: |
+          coverage html -d lenskit-coverage
+          coverage report --format=markdown --fail-under=90% >>"$GITHUB_STEP_SUMMARY"
+      - name: 📤 Upload coverage report
+        uses: actions/upload-artifact@v4
         with:
-          directory: test-logs/
-        env:
-          CODECOV_TOKEN: 5cdb6ef4-e80b-44ce-b88d-1402e4dfb781
+          directory: lenskit-coverage/
