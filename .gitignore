@@ -7,6 +7,7 @@ emissions.csv
 intel_power_gadget_log.csv
 .coverage*
 coverage.xml
+coverage.json
 cov-reports/
 test-logs/
 htmlcov/
