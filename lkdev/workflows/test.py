@@ -248,6 +248,7 @@ def steps_coverage(options: JobOptions) -> list[GHStep]:
         {
             "name": "📐 Coverage results",
             "run": script("""
+                sqlite3 .coverage "update file set path = replace(path, '\\', '/')"
                 coverage xml
                 coverage report
             """),
