@@ -442,11 +442,7 @@ def jobs_result(deps: list[str]) -> GHJob:
         "needs": deps,
         "steps": [
             step_checkout(),
-            {
-                "name": "🐍 Setup Python",
-                "uses": "actions/setup-python@v5",
-                "with": {"python-version": META_PYTHON},
-            },
+            {"name": "🐍 Setup coverage", "run": "pipx install coverage"},
             {
                 "name": "📥 Download test artifacts",
                 "uses": "actions/download-artifact@v4",
