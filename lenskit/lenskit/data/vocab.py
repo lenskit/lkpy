@@ -91,5 +91,13 @@ class Vocabulary(Generic[VT]):
             raise IndexError("negative numbers not supported")
         return self._index[nums].values
 
+    def id(self, num: int) -> VT:
+        "Alias for :meth:`term`  for greater readability for entity ID vocabularies."
+        return self.term(num)
+
+    def ids(self, nums: list[int] | NDArray[np.integer]) -> np.ndarray:
+        "Alias for :meth:`terms` for greater readability for entity ID vocabularies."
+        return self.terms(nums)
+
     def __len__(self) -> int:
         return self.size
