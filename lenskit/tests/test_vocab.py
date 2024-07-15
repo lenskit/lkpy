@@ -98,7 +98,7 @@ def test_lookup_bad_number(keys: set[int | str | UUID], num: int):
     vocab = Vocabulary(keys)
 
     with raises(IndexError):
-        assert vocab.term(num)
+        vocab.term(num)
 
 
 @given(
