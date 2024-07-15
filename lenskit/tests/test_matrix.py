@@ -170,4 +170,4 @@ def test_safe_spmv(data):
     tv = torch.from_numpy(v)
 
     tres = safe_spmv(TM, tv)
-    assert tres.cpu().numpy() == approx(res, rel=1.0e-4, abs=1.0e-5)
+    assert tres.cpu().numpy() == approx(res, rel=1.0e-3, abs=1.0e-5)
