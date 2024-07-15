@@ -86,7 +86,7 @@ class InteractionMatrix:
         items: ArrayLike,
         ratings: Optional[ArrayLike],
         timestamps: Optional[ArrayLike],
-        user_counts: pd.Series,
+        n_users: int,
         n_items: int,
     ):
         self.user_nums = np.asarray(users, np.int32)
@@ -98,9 +98,10 @@ class InteractionMatrix:
 
         self.n_obs = len(self.user_nums)
         self.n_items = n_items
-        self.n_users = len(user_counts)
+        self.n_users = n_users
         cp1 = np.zeros(self.n_users + 1, np.int32)
-        cp1[1:] = user_counts
+        unos, ucts = np.unique(self.user_nums)
+        cp1[unos + 1] = ucts
         self.user_ptrs = cp1.cumsum()
         if self.user_ptrs[-1] != len(self.user_nums):
             raise ValueError("mismatched counts and array sizes")

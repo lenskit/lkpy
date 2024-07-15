@@ -6,7 +6,7 @@ LensKit dataset abstraction.
 from __future__ import annotations
 
 import logging
-from typing import Any, Collection, Iterable, Literal, Optional, TypeAlias, TypeVar, cast, overload
+from typing import Any, Collection, Iterable, Literal, Optional, TypeAlias, TypeVar, overload
 
 import numpy as np
 import pandas as pd
@@ -15,6 +15,7 @@ import torch
 from numpy.typing import ArrayLike
 
 from lenskit.data.matrix import CSRStructure, InteractionMatrix
+from lenskit.data.vocab import Vocabulary
 
 from . import EntityId
 from .tables import NumpyUserItemTable, TorchUserItemTable
@@ -52,11 +53,13 @@ class Dataset:
         Support for item and user content or metadata is not yet implemented.
     """
 
-    _user_counts: pd.Series[np.dtype[np.int64]]
-    _item_counts: pd.Series[np.dtype[np.int64]]
+    users: Vocabulary[EntityId]
+    "User ID vocabulary, to map between IDs and row numbers."
+    items: Vocabulary[EntityId]
+    "Item ID vocabulary, to map between IDs and column or row numbers."
     _matrix: InteractionMatrix
 
-    def __init__(self, users: pd.Series, items: pd.Series, interact_df: pd.DataFrame):
+    def __init__(self, users: Vocabulary, items: Vocabulary, interact_df: pd.DataFrame):
         """
         Construct a dataset.
 
@@ -64,13 +67,13 @@ class Dataset:
             Client code generally should not call this constructor.  Instead use the
             various ``from_`` and ``load_`` functions in :mod:`lenskit.data`.
         """
-        self._user_counts = users
-        self._item_counts = items
+        self.users = users
+        self.items = items
         self._init_structures(interact_df)
 
     def _init_structures(self, df: pd.DataFrame):
-        uno = self._user_counts.index.get_indexer(df["user_id"].values)
-        ino = self._item_counts.index.get_indexer(df["item_id"].values)
+        uno = self.users.numbers(df["user_id"])
+        ino = self.items.numbers(df["item_id"])
         assert np.all(uno >= 0)
         assert np.all(ino >= 0)
 
@@ -86,139 +89,17 @@ class Dataset:
             ino,
             df["rating"] if "rating" in df.columns else None,
             df["timestamp"] if "timestamp" in df.columns else None,
-            self._user_counts,
+            self.user_count,
             self.item_count,
         )
 
     @property
-    def item_vocab(self) -> pd.Index:
-        """
-        Get the known item identifiers. This is represented as a Pandas
-        :class:`~pd.Index` to enable items to be represented as contiguous item
-        numbers.  See :ref:`data-identifiers` for more.
-        """
-        return self._item_counts.index
-
-    @property
-    def user_vocab(self) -> pd.Index:
-        """
-        Get the known user identifiers. This is represented as a Pandas
-        :class:`~pd.Index` to enable users to also be represented as contiguous
-        user numbers.  See :ref:`data-identifiers` for more.
-        """
-        return self._user_counts.index
-
-    @property
     def item_count(self):
-        return len(self.item_vocab)
+        return self.items.size
 
     @property
     def user_count(self):
-        return len(self.user_vocab)
-
-    @overload
-    def user_id(self, users: int) -> EntityId: ...
-    @overload
-    def user_id(self, users: ArrayLike) -> pd.Series[EntityId]: ...
-    def user_id(self, users: int | ArrayLike) -> EntityId | pd.Series[EntityId]:
-        """
-        Look up the user ID for a given user number.  When passed a single
-        number, it returns single identifier; when given an array of numbers, it
-        returns a series of identifiers with original numbers on the index.
-
-        Args:
-            users: the user number(s) to look up.
-
-        Returns:
-            The user identifier(s) (from the original source data).
-        """
-        return _lookup_id(self.user_vocab, users)
-
-    @overload
-    def user_num(
-        self, users: EntityId, *, missing: Literal["error", "negative"] = "negative"
-    ) -> int: ...
-    @overload
-    def user_num(
-        self, users: ArrayLike, *, missing: Literal["error", "negative"] = "negative"
-    ) -> np.ndarray[int, np.dtype[np.int32]]: ...
-    @overload
-    def user_num(
-        self, users: ArrayLike, *, missing: Literal["omit"]
-    ) -> pd.Series[np.dtype[np.int32]]: ...
-    def user_num(
-        self, users: Any, *, missing: Literal["error", "negative", "omit"] = "negative"
-    ) -> Any:
-        """
-        Look up the user number for a given user identifier.  When passed a
-        single identifier, it returns single number; when given an array of
-        numbers, it returns a series of identifiers.
-
-        Args:
-            users:
-                the user identifiers(s) to look up, as used in the source data.
-            missing:
-                how to handle missing users (raise an error, return a negative
-                value, or omit the user).  ``"omit"`` is only supported for
-                arrays or lists of IDs, and returns a series index by the
-                known user IDs.
-
-        Returns:
-            The user numbers.
-        """
-        return _lookup_num(self.user_vocab, users, missing)
-
-    @overload
-    def item_id(self, items: int) -> EntityId: ...
-    @overload
-    def item_id(self, items: ArrayLike) -> pd.Series[EntityId]: ...
-    def item_id(self, items: int | ArrayLike) -> EntityId | pd.Series[EntityId]:
-        """
-        Look up the item ID for a given item number.  When passed a single
-        number, it returns single identifier; when given an array of numbers, it
-        returns a series of identifiers.
-
-        Args:
-            items: the item number(s) to look up.
-
-        Returns:
-            The item identifier(s) (from the original source data).
-        """
-        return _lookup_id(self.item_vocab, items)
-
-    @overload
-    def item_num(
-        self, items: EntityId, *, missing: Literal["error", "negative"] = "negative"
-    ) -> int: ...
-    @overload
-    def item_num(
-        self, items: ArrayLike, *, missing: Literal["error", "negative"] = "negative"
-    ) -> np.ndarray[int, np.dtype[np.int32]]: ...
-    @overload
-    def item_num(
-        self, items: ArrayLike, *, missing: Literal["omit"]
-    ) -> pd.Series[np.dtype[np.int32]]: ...
-    def item_num(
-        self, items: Any, *, missing: Literal["error", "negative", "omit"] = "negative"
-    ) -> Any:
-        """
-        Look up the item number for a given item identifier.  When passed a
-        single identifier, it returns single number; when given an array of
-        numbers, it returns a series of identifiers.
-
-        Args:
-            items:
-                the item identifiers(s) to look up, as used in the source data.
-            missing:
-                how to handle missing items (raise an error, return a negative
-                value, or omit the item). ``"omit"`` is only supported for
-                arrays or lists of IDs, and returns a series index by the
-                known item IDs.
-
-        Returns:
-            The item numbers.
-        """
-        return _lookup_num(self.item_vocab, items, missing)
+        return self.users.size
 
     @overload
     def interaction_log(
@@ -300,8 +181,8 @@ class Dataset:
         cols: dict[str, ArrayLike]
         if original_ids:
             cols = {
-                "user_id": self._user_counts.index[self._matrix.user_nums],
-                "item_id": self._item_counts.index[self._matrix.item_nums],
+                "user_id": self.users.terms(self._matrix.user_nums),
+                "item_id": self.items.terms(self._matrix.item_nums),
             }
         else:
             cols = {
@@ -615,8 +496,8 @@ def from_interactions_df(
         rating_col=rating_col,
         timestamp_col=timestamp_col,
     )
-    users = id_counts(df["user_id"])
-    items = id_counts(df["item_id"])
+    users = Vocabulary(df["user_id"])
+    items = Vocabulary(df["item_id"])
     return Dataset(users, items, df)
 
 
@@ -686,43 +567,3 @@ def _find_column(columns: Collection[str], acceptable: Iterable[str]) -> str | N
 def id_counts(items: ArrayLike) -> pd.Series[np.dtype[np.int64]]:
     ids, counts = np.unique(items, return_counts=True)
     return pd.Series(counts, index=ids)
-
-
-def _lookup_id(index: pd.Index, nums: int | ArrayLike) -> Any:
-    if np.isscalar(nums):
-        nums = cast(int, nums)  # make the type checker shut up
-        if nums < 0 or nums >= len(index):
-            raise IndexError(f"number {nums} not in range [0,{len(index)})")
-        return index[nums]
-    else:
-        sub = index[nums]
-        return pd.Series(sub, index=nums)  # type: ignore
-
-
-def _lookup_num(
-    index: pd.Index,
-    ids: EntityId | ArrayLike,
-    missing: Literal["error", "negative", "omit"] = "negative",
-) -> int | np.ndarray[int, np.dtype[np.int32]] | pd.Series[int]:
-    if missing not in ["error", "negative", "omit"]:  # pragma nocover
-        raise ValueError(f"invalid missing mode {missing}")
-    if np.isscalar(ids):
-        try:
-            num = index.get_loc(cast(EntityId, ids))
-            assert isinstance(num, int)
-            return num
-        except KeyError as e:
-            if missing == "negative":
-                return -1
-            else:
-                raise e
-    else:
-        locs = index.get_indexer(ids).astype("i4")
-        if missing == "error" and np.any(locs < 0):
-            raise KeyError("one or more IDs not in index")
-
-        if missing == "omit":
-            res = pd.Series(locs, index=ids)  # type: ignore
-            return res[res >= 0]
-
-        return locs

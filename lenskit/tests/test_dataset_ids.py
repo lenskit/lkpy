@@ -33,86 +33,79 @@ def test_from_ratings_names_upper(ml_ratings: pd.DataFrame):
 
 
 def test_user_id_single(ml_ds: Dataset):
-    users = ml_ds.user_vocab
-    assert ml_ds.user_id(0) == users[0]
-    assert ml_ds.user_id(ml_ds.user_count - 1) == users[-1]
-    assert ml_ds.user_id(50) == users[50]
+    users = ml_ds.users.index
+    assert ml_ds.users.id(0) == users[0]
+    assert ml_ds.users.id(ml_ds.user_count - 1) == users[-1]
+    assert ml_ds.users.id(50) == users[50]
 
 
 def test_user_id_many(ml_ds: Dataset):
-    users = ml_ds.user_vocab
-    assert np.all(ml_ds.user_id([1, 5, 23]) == users[[1, 5, 23]])
-    assert np.all(ml_ds.user_id(np.array([1, 5, 23])) == users[[1, 5, 23]])
+    users = ml_ds.users.index
+    assert np.all(ml_ds.users.ids([1, 5, 23]) == users[[1, 5, 23]])
+    assert np.all(ml_ds.users.ids(np.array([1, 5, 23])) == users[[1, 5, 23]])
 
 
 def test_item_id_single(ml_ds: Dataset):
-    items = ml_ds.item_vocab
-    assert ml_ds.item_id(0) == items[0]
-    assert ml_ds.item_id(ml_ds.item_count - 1) == items[-1]
-    assert ml_ds.item_id(50) == items[50]
+    items = ml_ds.items.index
+    assert ml_ds.items.id(0) == items[0]
+    assert ml_ds.items.id(ml_ds.item_count - 1) == items[-1]
+    assert ml_ds.items.id(50) == items[50]
 
 
 def test_item_id_many(ml_ds: Dataset):
-    items = ml_ds.item_vocab
-    assert np.all(ml_ds.item_id([1, 5, 23]) == items[[1, 5, 23]])
-    assert np.all(ml_ds.item_id(np.array([1, 5, 23])) == items[[1, 5, 23]])
+    items = ml_ds.items.index
+    assert np.all(ml_ds.items.ids([1, 5, 23]) == items[[1, 5, 23]])
+    assert np.all(ml_ds.items.ids(np.array([1, 5, 23])) == items[[1, 5, 23]])
 
 
 def test_user_num_single(ml_ds: Dataset):
-    users = ml_ds.user_vocab
-    assert ml_ds.user_num(users[0]) == 0
-    assert ml_ds.user_num(users[50]) == 50
+    users = ml_ds.users.index
+    assert ml_ds.users.number(users[0]) == 0
+    assert ml_ds.users.number(users[50]) == 50
 
 
 def test_user_num_many(ml_ds: Dataset):
-    users = ml_ds.user_vocab
-    assert np.all(ml_ds.user_num(users[[1, 5, 23]]) == [1, 5, 23])
-    assert np.all(ml_ds.user_num(list(users[[1, 5, 23]])) == [1, 5, 23])
+    users = ml_ds.users.index
+    assert np.all(ml_ds.users.numbers(users[[1, 5, 23]]) == [1, 5, 23])
+    assert np.all(ml_ds.users.numbers(list(users[[1, 5, 23]])) == [1, 5, 23])
 
 
 def test_user_num_missing_error(ml_ds: Dataset):
     with raises(KeyError):
-        ml_ds.user_num(-402, missing="error")
+        ml_ds.users.number(-402, missing="error")
 
 
 def test_user_num_missing_negative(ml_ds: Dataset):
-    assert ml_ds.user_num(-402, missing="negative") == -1
-
-
-def test_user_num_missing_omit(ml_ds: Dataset):
-    user = ml_ds.user_vocab[5]
-    series = ml_ds.user_num([user, -402], missing="omit")
-    assert len(series) == 1
-    assert series.loc[user] == 5
+    assert ml_ds.users.number(-402, missing="negative") == -1
 
 
 def test_user_num_missing_vector_negative(ml_ds: Dataset):
-    u1 = ml_ds.user_vocab[5]
-    u2 = ml_ds.user_vocab[100]
-    res = ml_ds.user_num([u1, -402, u2], missing="negative")
+    u1 = ml_ds.users.index[5]
+    u2 = ml_ds.users.index[100]
+    res = ml_ds.users.numbers([u1, -402, u2], missing="negative")
     assert len(res) == 3
     assert np.all(res == [5, -1, 100])
 
 
 def test_user_num_missing_vector_error(ml_ds: Dataset):
-    u1 = ml_ds.user_vocab[5]
-    u2 = ml_ds.user_vocab[100]
+    u1 = ml_ds.users.index[5]
+    u2 = ml_ds.users.index[100]
     with raises(KeyError):
-        ml_ds.user_num([u1, -402, u2], missing="error")
+        ml_ds.users.numbers([u1, -402, u2], missing="error")
 
 
 def test_item_num_single(ml_ds: Dataset):
-    items = ml_ds.item_vocab
-    assert ml_ds.item_num(items[0]) == 0
-    assert ml_ds.item_num(items[50]) == 50
+    items = ml_ds.items.index
+    assert ml_ds.items.number(items[0]) == 0
+    assert ml_ds.items.number(items[50]) == 50
 
 
 def test_item_num_many(ml_ds: Dataset):
-    items = ml_ds.item_vocab
-    assert np.all(ml_ds.item_num(items[[1, 5, 23]]) == [1, 5, 23])
-    assert np.all(ml_ds.item_num(list(items[[1, 5, 23]])) == [1, 5, 23])
+    items = ml_ds.items.index
+    assert np.all(ml_ds.items.numbers(items[[1, 5, 23]]) == [1, 5, 23])
+    assert np.all(ml_ds.items.numbers(list(items[[1, 5, 23]])) == [1, 5, 23])
 
 
 def test_item_num_missing_error(ml_ds: Dataset):
     with raises(KeyError):
-        ml_ds.item_num(-402, missing="error")
+        ml_ds.items.number(-402, missing="error")
