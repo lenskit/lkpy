@@ -462,6 +462,7 @@ def jobs_result(deps: list[str]) -> GHJob:
                     coverage combine test-logs/*/.coverage
                 """),
             },
+            {"name": "± Compute change in coverage", "run": "./utils/coverage-log.sh"},
             {
                 "name": "📃 Produce coverage reports",
                 "run": script("""
