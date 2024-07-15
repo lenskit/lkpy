@@ -259,6 +259,7 @@ def steps_coverage(options: JobOptions) -> list[GHStep]:
                 "name": options.test_artifact_name,
                 "path": script("""
                     test*.log
+                    .coverage
                     coverage.xml
                 """),
             },
@@ -442,6 +443,11 @@ def jobs_result(deps: list[str]) -> GHJob:
         "steps": [
             step_checkout(),
             {
+                "name": "🐍 Setup Python",
+                "uses": "actions/setup-python@v5",
+                "with": {"python-version": META_PYTHON},
+            },
+            {
                 "name": "📥 Download test artifacts",
                 "uses": "actions/download-artifact@v4",
                 "with": {
@@ -453,13 +459,26 @@ def jobs_result(deps: list[str]) -> GHJob:
                 "name": "📋 List log files",
                 "run": "ls -lR test-logs",
             },
+            # inspired by https://hynek.me/articles/ditch-codecov-python/
             {
-                "name": "✅ Upload coverage",
-                "uses": "codecov/codecov-action@v3",
+                "name": "⛙ Merge coverage reports",
+                "run": script("""
+                    coverage combine test-logs/*/.coverage
+                """),
+            },
+            {
+                "name": "📃 Produce coverage reports",
+                "run": script("""
+                    coverage html -d lenskit-coverage
+                    coverage report --format=markdown --fail-under=90% >>"$GITHUB_STEP_SUMMARY"
+                """),
+            },
+            {
+                "name": "📤 Upload coverage report",
+                "uses": "actions/upload-artifact@v4",
                 "with": {
-                    "directory": "test-logs/",
+                    "directory": "lenskit-coverage/",
                 },
-                "env": {"CODECOV_TOKEN": CODECOV_TOKEN},
             },
         ],
     }
