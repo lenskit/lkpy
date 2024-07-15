@@ -100,8 +100,7 @@ class InteractionMatrix:
         self.n_items = n_items
         self.n_users = n_users
         cp1 = np.zeros(self.n_users + 1, np.int32)
-        unos, ucts = np.unique(self.user_nums, return_counts=True)
-        cp1[unos + 1] = ucts
+        np.add.at(cp1[1:], self.user_nums, 1)
         self.user_ptrs = cp1.cumsum()
         if self.user_ptrs[-1] != len(self.user_nums):
             raise ValueError("mismatched counts and array sizes")
