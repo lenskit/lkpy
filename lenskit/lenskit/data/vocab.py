@@ -87,6 +87,7 @@ class Vocabulary(Generic[VT]):
 
     def terms(self, nums: list[int] | NDArray[np.integer]) -> np.ndarray:
         "Look up the terms for an array of indices."
+        nums = np.asarray(nums, dtype=np.int32)
         if np.any(nums < 0):
             raise IndexError("negative numbers not supported")
         return self._index[nums].values
@@ -98,6 +99,12 @@ class Vocabulary(Generic[VT]):
     def ids(self, nums: list[int] | NDArray[np.integer]) -> np.ndarray:
         "Alias for :meth:`terms` for greater readability for entity ID vocabularies."
         return self.terms(nums)
+
+    def add_terms(self, terms: list[VT] | ArrayLike):
+        arr = np.unique(terms)  # type: ignore
+        nums = self.numbers(arr, missing="negative")
+        fresh = arr[nums < 0]
+        self._index = pd.Index(np.concatenate([self._index.values, fresh]))
 
     def __len__(self) -> int:
         return self.size

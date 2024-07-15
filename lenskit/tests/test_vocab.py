@@ -135,3 +135,18 @@ def test_lookup_many_terms(data, terms: set[int]):
     assert len(keys) == len(lookup)
     for k, n in zip(keys, lookup):
         assert k == klist[n]
+
+
+@given(st.sets(st.integers()), st.lists(st.integers()))
+def test_add_terms(initial: set[int], new: list[int]):
+    ni = len(initial)
+    vocab = Vocabulary(initial)
+
+    fresh = set(t for t in new if t not in initial)
+    flist = sorted(fresh)
+
+    vocab.add_terms(new)
+    assert vocab.size == ni + len(fresh)
+
+    assert all(vocab.number(k) == i for (i, k) in enumerate(sorted(initial)))
+    assert all(vocab.number(k) == i + ni for (i, k) in enumerate(flist))
