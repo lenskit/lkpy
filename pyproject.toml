@@ -30,7 +30,7 @@ version_scheme = "release-branch-semver"
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-exclude = [".git", "__pycache__", "build", "dist"]
+exclude = [".git", "__pycache__", "build", "dist", "*/tests/*"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
