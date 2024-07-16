@@ -440,9 +440,10 @@ def jobs_result(deps: list[str]) -> GHJob:
     return {
         "name": "Test suite results",
         "runs-on": "ubuntu-latest",
-        "needs": deps,
+        # "needs": deps,
         "steps": [
             step_checkout(),
+            {"name": "list remotes", "run": "git remote list"},
             {"name": "🐍 Setup coverage", "run": "pipx install 'coverage[toml]'"},
             {
                 "name": "📥 Download test artifacts",
