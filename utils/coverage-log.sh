@@ -3,10 +3,10 @@
 git fetch --all || exit 2
 coverage json || exit 2
 
-if [[ -n $GITHUB_HEAD_REF ]]; then
+if [[ -n $GITHUB_BASE_REF ]]; then
     # PR run — save difference to output
-    git log --pretty=ref $GITHUB_HEAD_REF | while read commit msg; do
-        prev_data="$(git notes --ref=coverage show $log)"
+    git log --pretty=ref -- $GITHUB_BASE_REF | while read commit msg; do
+        prev_data="$(git notes --ref=coverage show $commit)"
         if [[ "$?" -eq 0 ]]; then
             break
         fi
