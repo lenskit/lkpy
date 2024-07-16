@@ -440,10 +440,16 @@ def jobs_result(deps: list[str]) -> GHJob:
     return {
         "name": "Test suite results",
         "runs-on": "ubuntu-latest",
-        # "needs": deps,
+        "needs": deps,
         "steps": [
             step_checkout(),
-            {"name": "list remotes", "run": "git remote"},
+            {
+                "name": "list remotes",
+                "run": script("""
+                    git remote add upstream https://github.com/lenskit/lkpy.git
+                    git fetch upstream
+                """),
+            },
             {"name": "🐍 Setup coverage", "run": "pipx install 'coverage[toml]'"},
             {
                 "name": "📥 Download test artifacts",

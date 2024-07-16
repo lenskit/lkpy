@@ -5,8 +5,8 @@ exec coverage json 2>@stderr >@stdout
 
 if {[info exists env(GITHUB_BASE_REF)]} {
     set base $env(GITHUB_BASE_REF)
-    puts "scanning git log for origin/$base"
-    set gitlog [exec git log --pretty=ref origin/$base 2>@stderr]
+    puts "scanning git log for upstream/$base"
+    set gitlog [exec git log --pretty=ref upstream/$base 2>@stderr]
     foreach {line commit notes} [regexp -all -inline -line {^([a-z0-9]+) \((.*)\)$} $gitlog] {
         try {
             set prev_data [exec git notes --ref=coverage show $commit 2>@stderr]
