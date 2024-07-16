@@ -443,7 +443,7 @@ def jobs_result(deps: list[str]) -> GHJob:
         # "needs": deps,
         "steps": [
             step_checkout(),
-            {"name": "list remotes", "run": "git remote list"},
+            {"name": "list remotes", "run": "git remote"},
             {"name": "🐍 Setup coverage", "run": "pipx install 'coverage[toml]'"},
             {
                 "name": "📥 Download test artifacts",
