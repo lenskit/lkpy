@@ -249,7 +249,6 @@ def steps_coverage(options: JobOptions) -> list[GHStep]:
             "name": "📐 Coverage results",
             "run": script("""
                 python utils/fix-coverage-paths.py
-                sqlite3 .coverage "update file set path = replace(path, '\\', '/')"
                 coverage xml
                 coverage report
             """),
@@ -469,7 +468,12 @@ def jobs_result(deps: list[str]) -> GHJob:
                 "name": "📃 Produce coverage reports",
                 "run": script("""
                     coverage html -d lenskit-coverage
+                    echo '<details>' >>"$GITHUB_STEP_SUMMARY"
+                    echo '<summary>Full Coverage Report</summary>' >>"$GITHUB_STEP_SUMMARY"
+                    echo '' >>"$GITHUB_STEP_SUMMARY"
                     coverage report --format=markdown --fail-under=90% >>"$GITHUB_STEP_SUMMARY"
+                    echo '' >>"$GITHUB_STEP_SUMMARY"
+                    echo '</details>' >>"$GITHUB_STEP_SUMMARY"
                 """),
             },
             {

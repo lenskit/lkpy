@@ -71,7 +71,6 @@ jobs:
       - name: 📐 Coverage results
         run: |
           python utils/fix-coverage-paths.py
-          sqlite3 .coverage "update file set path = replace(path, '\', '/')"
           coverage xml
           coverage report
       - name: 📤 Upload test results
@@ -132,7 +131,6 @@ jobs:
       - name: 📐 Coverage results
         run: |
           python utils/fix-coverage-paths.py
-          sqlite3 .coverage "update file set path = replace(path, '\', '/')"
           coverage xml
           coverage report
       - name: 📤 Upload test results
@@ -185,7 +183,6 @@ jobs:
       - name: 📐 Coverage results
         run: |
           python utils/fix-coverage-paths.py
-          sqlite3 .coverage "update file set path = replace(path, '\', '/')"
           coverage xml
           coverage report
       - name: 📤 Upload test results
@@ -235,7 +232,6 @@ jobs:
       - name: 📐 Coverage results
         run: |
           python utils/fix-coverage-paths.py
-          sqlite3 .coverage "update file set path = replace(path, '\', '/')"
           coverage xml
           coverage report
       - name: 📤 Upload test results
@@ -293,7 +289,6 @@ jobs:
       - name: 📐 Coverage results
         run: |
           python utils/fix-coverage-paths.py
-          sqlite3 .coverage "update file set path = replace(path, '\', '/')"
           coverage xml
           coverage report
       - name: 📤 Upload test results
@@ -343,7 +338,6 @@ jobs:
       - name: 📐 Coverage results
         run: |
           python utils/fix-coverage-paths.py
-          sqlite3 .coverage "update file set path = replace(path, '\', '/')"
           coverage xml
           coverage report
       - name: 📤 Upload test results
@@ -401,7 +395,6 @@ jobs:
       - name: 📐 Coverage results
         run: |
           python utils/fix-coverage-paths.py
-          sqlite3 .coverage "update file set path = replace(path, '\', '/')"
           coverage xml
           coverage report
       - name: 📤 Upload test results
@@ -451,7 +444,6 @@ jobs:
       - name: 📐 Coverage results
         run: |
           python utils/fix-coverage-paths.py
-          sqlite3 .coverage "update file set path = replace(path, '\', '/')"
           coverage xml
           coverage report
       - name: 📤 Upload test results
@@ -508,7 +500,6 @@ jobs:
       - name: 📐 Coverage results
         run: |
           python utils/fix-coverage-paths.py
-          sqlite3 .coverage "update file set path = replace(path, '\', '/')"
           coverage xml
           coverage report
       - name: 📤 Upload test results
@@ -565,7 +556,6 @@ jobs:
       - name: 📐 Coverage results
         run: |
           python utils/fix-coverage-paths.py
-          sqlite3 .coverage "update file set path = replace(path, '\', '/')"
           coverage xml
           coverage report
       - name: 📤 Upload test results
@@ -622,7 +612,6 @@ jobs:
       - name: 📐 Coverage results
         run: |
           python utils/fix-coverage-paths.py
-          sqlite3 .coverage "update file set path = replace(path, '\', '/')"
           coverage xml
           coverage report
       - name: 📤 Upload test results
@@ -670,7 +659,12 @@ jobs:
       - name: 📃 Produce coverage reports
         run: |
           coverage html -d lenskit-coverage
+          echo '<details>' >>"$GITHUB_STEP_SUMMARY"
+          echo '<summary>Full Coverage Report</summary>' >>"$GITHUB_STEP_SUMMARY"
+          echo '' >>"$GITHUB_STEP_SUMMARY"
           coverage report --format=markdown --fail-under=90% >>"$GITHUB_STEP_SUMMARY"
+          echo '' >>"$GITHUB_STEP_SUMMARY"
+          echo '</details>' >>"$GITHUB_STEP_SUMMARY"
       - name: 📤 Upload coverage report
         uses: actions/upload-artifact@v4
         with:
