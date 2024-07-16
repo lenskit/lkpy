@@ -655,7 +655,7 @@ jobs:
         run: |
           coverage combine test-logs/*/.coverage
       - name: ± Compute change in coverage
-        run: ./utils/coverage-log.sh
+        run: tclsh ./utils/coverage-log.tcl
       - name: 📃 Produce coverage reports
         run: |
           coverage html -d lenskit-coverage
