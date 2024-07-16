@@ -631,7 +631,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: list remotes
-        run: git remote list
+        run: git remote
       - name: 🐍 Setup coverage
         run: pipx install 'coverage[toml]'
       - name: 📥 Download test artifacts
