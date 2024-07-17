@@ -1,6 +1,7 @@
 #!/usr/bin/env tclsh
 
 exec git fetch --all 2>@stderr >@stdout
+exec git fetch upstream refs/notes/coverage:refs/notes/coverage 2>@stderr >@stdout
 exec coverage json 2>@stderr >@stdout
 
 if {[info exists env(GITHUB_BASE_REF)]} {
