@@ -28,7 +28,7 @@ if {[info exists env(GITHUB_BASE_REF)]} {
 
     set cov_change [expr {$cur_cov - $prev_cov}]
 
-    set sumh [open $env(GITHUB_JOB_SUMMARY) wa]
+    set sumh [open $env(GITHUB_STEP_SUMMARY) wa]
     puts $sumh "Coverage change **$cov_change** (from $prev_cov to $cur_cov).\n"
     close $sumh
 } elseif {[info exists env(GITHUB_EVENT_NAME)] && [info exists env(GITHUB_TOKEN)]} {
