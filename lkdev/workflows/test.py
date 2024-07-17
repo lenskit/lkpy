@@ -487,7 +487,7 @@ def jobs_result(deps: list[str]) -> GHJob:
                 "name": "📤 Upload coverage report",
                 "uses": "actions/upload-artifact@v4",
                 "with": {
-                    "directory": "lenskit-coverage/",
+                    "path": "lenskit-coverage/",
                 },
             },
         ],
