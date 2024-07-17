@@ -478,7 +478,7 @@ def jobs_result(deps: list[str]) -> GHJob:
                     echo '<details>' >>"$GITHUB_STEP_SUMMARY"
                     echo '<summary>Full Coverage Report</summary>' >>"$GITHUB_STEP_SUMMARY"
                     echo '' >>"$GITHUB_STEP_SUMMARY"
-                    coverage report --format=markdown --fail-under=90% >>"$GITHUB_STEP_SUMMARY"
+                    coverage report --format=markdown --fail-under=90 >>"$GITHUB_STEP_SUMMARY"
                     echo '' >>"$GITHUB_STEP_SUMMARY"
                     echo '</details>' >>"$GITHUB_STEP_SUMMARY"
                 """),
