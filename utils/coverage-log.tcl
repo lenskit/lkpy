@@ -1,11 +1,27 @@
 #!/usr/bin/env tclsh
 
+proc ev {name {var ""}} {
+    if {![info exists ::env($name)]} {
+        return 0
+    } else {
+        set val $::env($name)
+        if {$val eq ""} {
+            return 0
+        } else {
+            if {$var ne ""} {
+                upvar $var var
+                set var $val
+            }
+            return 1
+        }
+    }
+}
+
 exec git fetch --all 2>@stderr >@stdout
 exec git fetch upstream refs/notes/coverage:refs/notes/coverage 2>@stderr >@stdout
 exec coverage json 2>@stderr >@stdout
 
-if {[info exists env(GITHUB_BASE_REF)]} {
-    set base $env(GITHUB_BASE_REF)
+if {[ev GITHUB_BASE_REF base]} {
     puts "scanning git log for upstream/$base"
     set gitlog [exec git log --pretty=ref upstream/$base 2>@stderr]
     foreach {line commit notes} [regexp -all -inline -line {^([a-z0-9]+) \((.*)\)$} $gitlog] {
@@ -31,7 +47,7 @@ if {[info exists env(GITHUB_BASE_REF)]} {
     set sumh [open $env(GITHUB_STEP_SUMMARY) a]
     puts $sumh [format "Coverage change **%.2f%%** (from %.2f%% to %.2f%%).\n" $cov_change $prev_cov $cur_cov]
     close $sumh
-} elseif {[info exists env(GITHUB_EVENT_NAME)] && [info exists env(GITHUB_TOKEN)]} {
+} elseif {[ev GITHUB_EVENT_NAME] && [ev GITHUB_TOKEN]} {
     puts stderr "saving coverage data"
     set data [jq "{meta: .meta, totals: .totals}" coverage.json 2>@stderr]
     exec git notes --ref=coverage add -m $data HEAD 2>@stderr >@stdout
