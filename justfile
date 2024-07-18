@@ -9,9 +9,7 @@ list-tasks:
 
 # clean up build artifacts
 clean:
-    rm -rf build dist *.egg-info
-    # we don't have extension modules rn, but in case we do, remove them
-    rm -rvf lenskit/**/*.{c,so,dll}
+    rm -rf build dist *.egg-info */dist */build
 
 # build the modules and wheels
 build:
