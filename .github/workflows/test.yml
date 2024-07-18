@@ -8,6 +8,7 @@ name: Automatic Tests
       - '**pyproject.toml'
       - requirements*.txt
       - data/**
+      - scripts/coverage-log.tcl
       - .github/workflows/test.yml
   pull_request:
     paths:
@@ -15,6 +16,7 @@ name: Automatic Tests
       - '**pyproject.toml'
       - requirements*.txt
       - data/**
+      - scripts/coverage-log.tcl
       - .github/workflows/test.yml
 concurrency:
   group: test-${{github.ref}}
