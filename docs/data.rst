@@ -69,6 +69,13 @@ instance to be passed to :meth:`~lenskit.algorithms.Recommender.fit`.
 
 .. autoclass:: Dataset
 
+Creating Dataset
+~~~~~~~~~~~~~~~~
+
+Several functions create :class:`Dataset`s from different input data sources.
+
+.. autofunction:: from_interaction_df
+
 Vocabularies
 ~~~~~~~~~~~~
 
