@@ -5,7 +5,7 @@ Vocabularies of IDs, tags, etc.
 # pyright: basic
 from __future__ import annotations
 
-from typing import Generic, Hashable, Iterable, Literal, Sequence, TypeAlias, TypeVar
+from typing import Any, Generic, Hashable, Iterable, Literal, Sequence, TypeAlias, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -136,6 +136,9 @@ class Vocabulary(Generic[VT]):
         This method is useful for saving known vocabularies in model training.
         """
         return Vocabulary[VT](self._index)
+
+    def __eq__(self, other: Vocabulary[Any]) -> bool:  # noqa: F821
+        return bool(np.all(self.index == other.index))
 
     def __len__(self) -> int:
         return self.size
