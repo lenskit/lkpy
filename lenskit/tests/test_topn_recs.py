@@ -9,18 +9,20 @@ import pandas as pd
 
 from pytest import approx
 
+from lenskit.data.dataset import from_interactions_df
 import lenskit.util.test as lktu
 from lenskit.algorithms import basic, bias
 
 simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
 )
+simple_ds = from_interactions_df(simple_df)
 
 
 def test_topn_recommend():
     pred = basic.Memorized(simple_df)
     rec = basic.TopN(pred)
-    rec.fit(simple_df)
+    rec.fit(simple_ds)
 
     rec10 = rec.recommend(10, candidates=[1, 2])
     assert all(rec10.item == [2, 1])
@@ -52,7 +54,7 @@ def test_topn_big():
     user_items = ratings.set_index("user").item
 
     algo = basic.TopN(bias.Bias())
-    a2 = algo.fit(ratings)
+    a2 = algo.fit(from_interactions_df(ratings))
     assert a2 is algo
 
     # test 100 random users

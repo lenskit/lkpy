@@ -11,6 +11,9 @@ Algorithms to rank items based on scores.
 import logging
 
 import numpy as np
+from typing_extensions import override
+
+from lenskit.data.dataset import Dataset
 
 from ..util import derivable_rng
 from . import Predictor, Recommender
@@ -50,19 +53,20 @@ class TopN(Recommender, Predictor):
         self.predictor = predictor
         self.selector = selector if selector is not None else UnratedItemCandidateSelector()
 
-    def fit(self, ratings, **kwargs):
+    @override
+    def fit(self, data: Dataset, **kwargs):
         """
         Fit the recommender.
 
         Args:
-            ratings(pandas.DataFrame):
+            ratings:
                 The rating or interaction data.  Passed changed to the predictor and
                 candidate selector.
             args, kwargs:
                 Additional arguments for the predictor to use in its training process.
         """
-        self.predictor.fit(ratings, **kwargs)
-        self.selector.fit(ratings, **kwargs)
+        self.predictor.fit(data, **kwargs)
+        self.selector.fit(data, **kwargs)
         return self
 
     def fit_iters(self, ratings, **kwargs):
@@ -77,6 +81,7 @@ class TopN(Recommender, Predictor):
 
         self.predictor = pred
 
+    @override
     def recommend(self, user, n=None, candidates=None, ratings=None):
         if candidates is None:
             candidates = self.selector.candidates(user, ratings)
@@ -91,9 +96,11 @@ class TopN(Recommender, Predictor):
         scores.index.name = "item"
         return scores.reset_index()
 
+    @override
     def predict(self, pairs, ratings=None):
         return self.predictor.predict(pairs, ratings)
 
+    @override
     def predict_for_user(self, user, items, ratings=None):
         return self.predictor.predict_for_user(user, items, ratings)
 
@@ -128,12 +135,14 @@ class PlackettLuce(Recommender):
         self.selector = selector if selector is not None else UnratedItemCandidateSelector()
         self.rng_spec = rng_spec
 
-    def fit(self, ratings, **kwargs):
-        self.predictor.fit(ratings, **kwargs)
-        self.selector.fit(ratings, **kwargs)
+    @override
+    def fit(self, data: Dataset, **kwargs):
+        self.predictor.fit(data, **kwargs)
+        self.selector.fit(data, **kwargs)
         self.rng_ = derivable_rng(self.rng_spec)
         return self
 
+    @override
     def recommend(self, user, n=None, candidates=None, ratings=None):
         if candidates is None:
             candidates = self.selector.candidates(user, ratings)
