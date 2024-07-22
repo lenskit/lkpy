@@ -15,6 +15,9 @@ classes (:py:mod:`abc`) representing different algorithm capabilities.
 
 import inspect
 from abc import ABCMeta, abstractmethod
+from typing import Self
+
+from lenskit.data.dataset import Dataset
 
 __all__ = ["Algorithm", "Recommender", "Predictor", "CandidateSelector"]
 
@@ -39,15 +42,17 @@ class Algorithm(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def fit(self, ratings, **kwargs):
+    def fit(self, data: Dataset, **kwargs) -> Self:
         """
         Train a model using the specified ratings (or similar) data.
 
         Args:
-            ratings(pandas.DataFrame): The ratings data.
-            kwargs: Additional training data the algorithm may require.  Algorithms should
-                avoid using the same keyword arguments for different purposes, so that
-                they can be more easily hybridized.
+            data:
+                The training data.
+            kwargs:
+                Additional training data the algorithm may require.  Algorithms
+                should avoid using the same keyword arguments for different
+                purposes, so that they can be more easily hybridized.
 
         Returns:
             The algorithm object.
