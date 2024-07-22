@@ -33,9 +33,12 @@ class Vocabulary(Generic[VT]):
     identifiers.
     """
 
+    name: str | None
+    "The name of the vocabulary (e.g. “user”, “item”)."
     _index: pd.Index
 
-    def __init__(self, keys: pd.Index | Iterable[VT] | None = None):
+    def __init__(self, keys: pd.Index | Iterable[VT] | None = None, name: str | None = None):
+        self.name = name
         if keys is None:
             keys = pd.Index()
         elif isinstance(keys, pd.Index):
@@ -46,7 +49,7 @@ class Vocabulary(Generic[VT]):
         else:
             keys = pd.Index(np.unique(list(set(keys))))  # type: ignore
 
-        self._index = keys
+        self._index = keys.rename(name) if name is not None else keys
 
     @property
     def index(self) -> pd.Index:
@@ -120,7 +123,7 @@ class Vocabulary(Generic[VT]):
         arr = np.unique(terms)  # type: ignore
         nums = self.numbers(arr, missing="negative")
         fresh = arr[nums < 0]
-        self._index = pd.Index(np.concatenate([self._index.values, fresh]))
+        self._index = pd.Index(np.concatenate([self._index.values, fresh]), name=self.name)
 
     def copy(self) -> Vocabulary[VT]:
         """
