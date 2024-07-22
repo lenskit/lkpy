@@ -13,11 +13,14 @@ from collections.abc import Iterable, Sequence
 
 import numpy as np
 import pandas as pd
+from typing_extensions import override
 
 from lenskit.algorithms import CandidateSelector, Predictor, Recommender
 from lenskit.algorithms.bias import Bias  # noqa: F401
 from lenskit.algorithms.ranking import TopN  # noqa: F401
-from lenskit.data.matrix import CSRStructure, sparse_ratings
+from lenskit.data.dataset import Dataset
+from lenskit.data.matrix import CSRStructure
+from lenskit.data.vocab import Vocabulary
 from lenskit.util import derivable_rng
 
 _logger = logging.getLogger(__name__)
@@ -44,9 +47,11 @@ class PopScore(Predictor):
     def __init__(self, score_method="quantile"):
         self.score_method = score_method
 
-    def fit(self, ratings, **kwargs):
+    @override
+    def fit(self, data: Dataset, **kwargs):
         _logger.info("counting item popularity")
-        scores = ratings["item"].value_counts()
+        stats = data.item_stats()
+        scores = stats["count"]
         if self.score_method == "rank":
             _logger.info("ranking %d items", len(scores))
             scores = scores.rank().sort_index()
@@ -66,6 +71,7 @@ class PopScore(Predictor):
 
         return self
 
+    @override
     def predict_for_user(self, user, items, ratings=None):
         return self.item_scores_.reindex(items)
 
@@ -75,20 +81,25 @@ class PopScore(Predictor):
 
 class Memorized(Predictor):
     """
-    The memorized algorithm memorizes socres provided at construction time.
+    The memorized algorithm memorizes socres provided at construction time
+    (*not* training time).
     """
 
-    def __init__(self, scores):
+    scores: pd.DataFrame
+
+    def __init__(self, scores: pd.DataFrame):
         """
         Args:
-            scores(pandas.DataFrame): the scores to memorize.
+            scores: the scores to memorize.
         """
 
         self.scores = scores
 
+    @override
     def fit(self, *args, **kwargs):
         return self
 
+    @override
     def predict_for_user(self, user, items, ratings=None):
         uscores = self.scores[self.scores.user == user]
         urates = uscores.set_index("item").rating
@@ -116,12 +127,14 @@ class Fallback(Predictor):
         else:
             self.algorithms = [algorithms]
 
-    def fit(self, ratings, **kwargs):
+    @override
+    def fit(self, data: Dataset, **kwargs):
         for algo in self.algorithms:
-            algo.fit(ratings, **kwargs)
+            algo.fit(data, **kwargs)
 
         return self
 
+    @override
     def predict_for_user(self, user, items, ratings=None):
         remaining = pd.Index(items)
         preds = None
@@ -138,6 +151,7 @@ class Fallback(Predictor):
             if len(remaining) == 0:
                 break
 
+        assert preds is not None
         return preds.reindex(items)
 
     def __str__(self):
@@ -152,9 +166,11 @@ class EmptyCandidateSelector(CandidateSelector):
 
     dtype_ = np.int64
 
-    def fit(self, ratings, **kwarsg):
-        self.dtype_ = ratings["item"].dtype
+    @override
+    def fit(self, data: Dataset, **kwarsg):
+        self.dtype_ = data.items.index.dtype
 
+    @override
     def candidates(self, user, ratings=None):
         return np.array([], dtype=self.dtype_)
 
@@ -171,36 +187,37 @@ class UnratedItemCandidateSelector(CandidateSelector):
             Items rated by each known user, as positions in the ``items`` index.
     """
 
-    items_: pd.Index
-    users_: pd.Index
+    items_: Vocabulary
+    users_: Vocabulary
     user_items_: CSRStructure
 
-    def fit(self, ratings, **kwargs):
-        sparse = sparse_ratings(ratings, type="structure")
-        _logger.info("trained unrated candidate selector for %d ratings", sparse.matrix.nnz)
-        self.items_ = sparse.items
-        self.users_ = sparse.users
-        self.user_items_ = sparse.matrix
+    @override
+    def fit(self, data: Dataset, **kwargs):
+        sparse = data.interaction_matrix(format="structure")
+        _logger.info("trained unrated candidate selector for %d ratings", sparse.nnz)
+        self.items_ = data.items.copy()
+        self.users_ = data.users.copy()
+        self.user_items_ = sparse
 
         return self
 
     def candidates(self, user, ratings=None):
         if ratings is None:
             try:
-                uidx = self.users_.get_loc(user)
-                uis = self.user_items_.row_cs(uidx)
+                uno = self.users_.number(user)
+                uis = self.user_items_.row_cs(uno)
             except KeyError:
                 uis = None
         else:
-            uis = self.items_.get_indexer(self.rated_items(ratings))
+            uis = self.items_.numbers(self.rated_items(ratings))
             uis = uis[uis >= 0]
 
         if uis is not None:
             mask = np.full(len(self.items_), True)
             mask[uis] = False
-            return self.items_.values[mask]
+            return self.items_.index.values[mask]
         else:
-            return self.items_.values
+            return self.items_.index.values
 
 
 class AllItemsCandidateSelector(CandidateSelector):
@@ -244,14 +261,14 @@ class Random(Recommender):
             self.selector = UnratedItemCandidateSelector()
         # Get a Pandas-compatible RNG
         self.rng_source = derivable_rng(rng_spec)
-        self.items = None
+        self.items_ = None
 
-    def fit(self, ratings, **kwargs):
-        self.selector.fit(ratings, **kwargs)
-        items = pd.DataFrame(ratings["item"].unique(), columns=["item"])
-        self.items = items
+    @override
+    def fit(self, data: Dataset, **kwargs):
+        self.selector.fit(data, **kwargs)
         return self
 
+    @override
     def recommend(self, user, n=None, candidates=None, ratings=None):
         if candidates is None:
             candidates = self.selector.candidates(user, ratings)
@@ -272,10 +289,14 @@ class KnownRating(Predictor):
     The known rating algorithm memorizes ratings provided in the fit method.
     """
 
-    def fit(self, ratings, **kwargs):
-        self.ratings = ratings.set_index(["user", "item"]).sort_index()
+    ratings_: pd.DataFrame
+
+    def fit(self, data: Dataset, **kwargs):
+        self.ratings_ = (
+            data.interaction_matrix(format="pandas").set_index(["user", "item"]).sort_index()
+        )
         return self
 
     def predict_for_user(self, user, items, ratings=None):
-        uscores = self.ratings.xs(user, level="user", drop_level=True)
+        uscores = self.ratings_.xs(user, level="user", drop_level=True)
         return uscores.rating.reindex(items)
