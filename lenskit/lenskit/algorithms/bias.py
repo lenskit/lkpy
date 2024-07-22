@@ -10,7 +10,8 @@ import logging
 
 import numpy as np
 import pandas as pd
-from typing_extensions import override
+import torch
+from typing_extensions import overload, override
 
 from lenskit.data import Dataset
 
@@ -125,7 +126,11 @@ class Bias(Predictor):
 
         return self
 
-    def transform(self, ratings: pd.DataFrame, *, indexes: bool = False):
+    @overload
+    def transform(self, ratings: pd.DataFrame, *, indexes: bool = False) -> pd.DataFrame: ...
+    @overload
+    def transform(self, ratings: torch.Tensor) -> torch.Tensor: ...
+    def transform(self, ratings, *, indexes: bool = False):
         """
         Transform ratings by removing the bias term.  This method does *not*
         recompute user (or item) biases based on these ratings, but rather uses
@@ -144,20 +149,32 @@ class Bias(Predictor):
             A data frame with ``rating`` transformed by subtracting user-item
             bias prediction.
         """
-        rvps = ratings[["user", "item"]].copy()
-        rvps["rating"] = ratings["rating"] - self.mean_
-        if self.item_offsets_ is not None:
-            rvps = rvps.join(self.item_offsets_, on="item", how="left")
-            rvps["rating"] -= rvps["i_off"].fillna(0)
-            rvps = rvps.drop(columns="i_off")
-        if self.user_offsets_ is not None:
-            rvps = rvps.join(self.user_offsets_, on="user", how="left")
-            rvps["rating"] -= rvps["u_off"].fillna(0)
-            rvps = rvps.drop(columns="u_off")
-        if indexes:
-            rvps["uidx"] = self.user_offsets_.index.get_indexer(rvps["user"])
-            rvps["iidx"] = self.item_offsets_.index.get_indexer(rvps["item"])
-        return rvps
+        if isinstance(ratings, pd.DataFrame):
+            rvps = ratings[["user", "item"]].copy()
+            rvps["rating"] = ratings["rating"] - self.mean_
+            if self.item_offsets_ is not None:
+                rvps = rvps.join(self.item_offsets_, on="item", how="left")
+                rvps["rating"] -= rvps["i_off"].fillna(0)
+                rvps = rvps.drop(columns="i_off")
+            if self.user_offsets_ is not None:
+                rvps = rvps.join(self.user_offsets_, on="user", how="left")
+                rvps["rating"] -= rvps["u_off"].fillna(0)
+                rvps = rvps.drop(columns="u_off")
+            if indexes:
+                rvps["uidx"] = self.user_offsets_.index.get_indexer(rvps["user"])
+                rvps["iidx"] = self.item_offsets_.index.get_indexer(rvps["item"])
+            return rvps
+        elif isinstance(ratings, torch.Tensor):
+            if ratings.is_sparse_csr:
+                raise TypeError("only COO tensors are supported")
+            v2 = ratings.values() - self.mean_
+            if self.item_offsets_ is not None:
+                v2 -= torch.from_numpy(self.item_offsets_.values)[ratings.indices()[1, :]]
+            if self.user_offsets_ is not None:
+                v2 -= torch.from_numpy(self.user_offsets_.values)[ratings.indices()[0, :]]
+            return torch.sparse_coo_tensor(ratings.indices(), v2, size=ratings.size()).coalesce()
+        else:
+            raise TypeError("unsupported ratings type")
 
     def inverse_transform(self, ratings):
         """

@@ -11,11 +11,12 @@ import numpy as np
 import pandas as pd
 
 from pytest import approx, mark, raises
+import torch
 
 from lenskit import util as lku
 from lenskit.algorithms.bias import Bias
 from lenskit.data.dataset import from_interactions_df
-from lenskit.util.test import ml_test
+from lenskit.util.test import ml_test, ml_ds, ml_ratings  # noqa: F401
 
 _log = logging.getLogger(__name__)
 
@@ -239,6 +240,23 @@ def test_bias_transform():
     n2 = n2.join(algo.user_offsets_, on="user")
     nr = n2.rating - algo.mean_ - n2.i_off - n2.u_off
     assert normed["rating"].values == approx(nr.values)
+
+def test_bias_transform_tensor(ml_ratings, ml_ds):
+    algo = Bias()
+
+    algo.fit(ml_ds)
+
+    mat = ml_ds.interaction_matrix('torch', layout='coo')
+    normed = algo.transform(mat)
+    assert normed.is_sparse
+    assert normed.shape == mat.shape
+
+    recon = normed.clone()
+    recon.values().add_( algo.mean_)
+    recon.values().add_(torch.from_numpy(algo.item_offsets_.values)[recon.indices()[1,:]])
+    recon.values().add_(torch.from_numpy(algo.user_offsets_.values)[recon.indices()[0,:]])
+
+    assert recon.values().numpy() == approx(mat.values().numpy())
 
 
 def test_bias_transform_indexes():
