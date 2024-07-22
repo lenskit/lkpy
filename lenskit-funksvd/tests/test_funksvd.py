@@ -13,6 +13,7 @@ import pandas as pd
 
 from pytest import approx, mark
 
+from lenskit.data.dataset import from_interactions_df
 import lenskit.funksvd as svd
 import lenskit.util.test as lktu
 
@@ -21,12 +22,14 @@ _log = logging.getLogger(__name__)
 simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
 )
+simple_ds = from_interactions_df(simple_df)
 
 
 def test_fsvd_basic_build():
     algo = svd.FunkSVD(20, iterations=20)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
+    assert algo.bias is not None
     assert algo.bias.mean_ == approx(simple_df.rating.mean())
     assert algo.item_features_.shape == (3, 20)
     assert algo.user_features_.shape == (3, 20)
@@ -34,8 +37,9 @@ def test_fsvd_basic_build():
 
 def test_fsvd_clamp_build():
     algo = svd.FunkSVD(20, iterations=20, range=(1, 5))
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
+    assert algo.bias is not None
     assert algo.bias.mean_ == approx(simple_df.rating.mean())
     assert algo.item_features_.shape == (3, 20)
     assert algo.user_features_.shape == (3, 20)
@@ -43,8 +47,9 @@ def test_fsvd_clamp_build():
 
 def test_fsvd_predict_basic():
     algo = svd.FunkSVD(20, iterations=20)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
+    assert algo.bias is not None
     assert algo.bias.mean_ == approx(simple_df.rating.mean())
     assert algo.item_features_.shape == (3, 20)
     assert algo.user_features_.shape == (3, 20)
@@ -58,8 +63,9 @@ def test_fsvd_predict_basic():
 
 def test_fsvd_predict_clamp():
     algo = svd.FunkSVD(20, iterations=20, range=(1, 5))
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
+    assert algo.bias is not None
     assert algo.bias.mean_ == approx(simple_df.rating.mean())
     assert algo.item_features_.shape == (3, 20)
     assert algo.user_features_.shape == (3, 20)
@@ -74,7 +80,7 @@ def test_fsvd_predict_clamp():
 
 def test_fsvd_no_bias():
     algo = svd.FunkSVD(20, iterations=20, bias=None)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     assert algo.bias is None
     assert algo.item_features_.shape == (3, 20)
@@ -88,8 +94,9 @@ def test_fsvd_no_bias():
 
 def test_fsvd_predict_bad_item():
     algo = svd.FunkSVD(20, iterations=20)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
+    assert algo.bias is not None
     assert algo.bias.mean_ == approx(simple_df.rating.mean())
     assert algo.item_features_.shape == (3, 20)
     assert algo.user_features_.shape == (3, 20)
@@ -102,8 +109,9 @@ def test_fsvd_predict_bad_item():
 
 def test_fsvd_predict_bad_item_clamp():
     algo = svd.FunkSVD(20, iterations=20, range=(1, 5))
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
+    assert algo.bias is not None
     assert algo.bias.mean_ == approx(simple_df.rating.mean())
     assert algo.item_features_.shape == (3, 20)
     assert algo.user_features_.shape == (3, 20)
@@ -116,8 +124,9 @@ def test_fsvd_predict_bad_item_clamp():
 
 def test_fsvd_predict_bad_user():
     algo = svd.FunkSVD(20, iterations=20)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
+    assert algo.bias is not None
     assert algo.bias.mean_ == approx(simple_df.rating.mean())
     assert algo.item_features_.shape == (3, 20)
     assert algo.user_features_.shape == (3, 20)
@@ -134,8 +143,9 @@ def test_fsvd_save_load():
     ratings = lktu.ml_test.ratings
 
     original = svd.FunkSVD(20, iterations=20)
-    original.fit(ratings)
+    original.fit(from_interactions_df(ratings))
 
+    assert original.bias is not None
     assert original.bias.mean_ == approx(ratings.rating.mean())
     assert original.item_features_.shape == (ratings.item.nunique(), 20)
     assert original.user_features_.shape == (ratings.user.nunique(), 20)
@@ -149,8 +159,8 @@ def test_fsvd_save_load():
     assert np.all(algo.bias.item_offsets_ == original.bias.item_offsets_)
     assert np.all(algo.user_features_ == original.user_features_)
     assert np.all(algo.item_features_ == original.item_features_)
-    assert np.all(algo.item_index_ == original.item_index_)
-    assert np.all(algo.user_index_ == original.user_index_)
+    assert np.all(algo.items_.index == original.items_.index)
+    assert np.all(algo.users_.index == original.users_.index)
 
 
 @lktu.wantjit
@@ -159,7 +169,7 @@ def test_fsvd_train_binary():
     ratings = lktu.ml_test.ratings.drop(columns=["rating", "timestamp"])
 
     original = svd.FunkSVD(20, iterations=20, bias=False)
-    original.fit(ratings)
+    original.fit(from_interactions_df(ratings))
 
     assert original.bias is None
     assert original.item_features_.shape == (ratings.item.nunique(), 20)
@@ -171,7 +181,7 @@ def test_fsvd_train_binary():
 def test_fsvd_known_preds():
     algo = svd.FunkSVD(15, iterations=125, lrate=0.001)
     _log.info("training %s on ml data", algo)
-    algo.fit(lktu.ml_test.ratings)
+    algo.fit(from_interactions_df(lktu.ml_test.ratings))
 
     dir = Path(__file__).parent
     pred_file = dir / "funksvd-preds.csv"
@@ -211,7 +221,7 @@ def test_fsvd_batch_accuracy():
 
     def eval(train, test):
         _log.info("running training")
-        algo.fit(train)
+        algo.fit(from_interactions_df(train))
         _log.info("testing %d users", test.user.nunique())
         return batch.predict(algo, test)
 
