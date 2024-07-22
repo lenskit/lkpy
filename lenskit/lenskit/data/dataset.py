@@ -371,6 +371,9 @@ class Dataset:
             legacy:
                 ``True`` to return a legacy SciPy sparse matrix instead of
                 sparse array.
+            original_ids:
+                ``True`` to return user and item IDs instead of numbers in
+                ``pandas``-format matrix.
         """
         match format:
             case "structure":
@@ -382,7 +385,7 @@ class Dataset:
             case "pandas":
                 if layout and layout != "coo":
                     raise ValueError(f"unsupported layout {layout} for Pandas")
-                return self._int_mat_pandas(field)
+                return self._int_mat_pandas(field, original_ids)
             case "scipy":
                 return self._int_mat_scipy(field, layout, legacy)
             case "torch":
@@ -393,11 +396,18 @@ class Dataset:
     def _int_mat_structure(self) -> CSRStructure:
         return CSRStructure(self._matrix.user_ptrs, self._matrix.item_nums, self._matrix.shape)
 
-    def _int_mat_pandas(self, field: str | None) -> pd.DataFrame:
-        cols: dict[str, ArrayLike] = {
-            "user_num": self._matrix.user_nums,
-            "item_num": self._matrix.item_nums,
-        }
+    def _int_mat_pandas(self, field: str | None, original_ids: bool) -> pd.DataFrame:
+        cols: dict[str, ArrayLike]
+        if original_ids:
+            cols = {
+                "user_id": self.users.ids(self._matrix.user_nums),
+                "item_id": self.items.ids(self._matrix.item_nums),
+            }
+        else:
+            cols = {
+                "user_num": self._matrix.user_nums,
+                "item_num": self._matrix.item_nums,
+            }
         if field == "rating":
             if self._matrix.ratings is not None:
                 cols["rating"] = self._matrix.ratings
