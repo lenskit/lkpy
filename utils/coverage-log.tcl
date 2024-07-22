@@ -9,8 +9,8 @@ proc ev {name {var ""}} {
             return 0
         } else {
             if {$var ne ""} {
-                upvar $var var
-                set var $val
+                upvar $var vv
+                set vv $val
             }
             return 1
         }
