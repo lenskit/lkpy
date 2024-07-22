@@ -13,29 +13,34 @@ import torch
 
 from pytest import mark
 
+from lenskit.data.dataset import from_interactions_df
 import lenskit.util.test as lktu
 from lenskit.algorithms import Recommender, als
 
 _log = logging.getLogger(__name__)
 
 simple_df = pd.DataFrame({"item": [1, 1, 2, 3], "user": [10, 12, 10, 13]})
+simple_ds = from_interactions_df(simple_df)
 
 simple_dfr = simple_df.assign(rating=[4.0, 3.0, 5.0, 2.0])
-
+simple_dsr = from_interactions_df(simple_dfr)
 
 def test_als_basic_build():
     algo = als.ImplicitMF(20, epochs=10)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
-    assert set(algo.user_index_) == set([10, 12, 13])
-    assert set(algo.item_index_) == set([1, 2, 3])
+    assert algo.users_ is not None
+    assert algo.user_features_ is not None
+
+    assert set(algo.users_.ids()) == set([10, 12, 13])
+    assert set(algo.items_.ids()) == set([1, 2, 3])
     assert algo.user_features_.shape == (3, 20)
     assert algo.item_features_.shape == (3, 20)
 
 
 def test_als_predict_basic():
     algo = als.ImplicitMF(20, epochs=10)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     preds = algo.predict_for_user(10, [3])
 
@@ -48,7 +53,7 @@ def test_als_predict_basic():
 def test_als_predict_basic_for_new_ratings():
     """Test ImplicitMF ability to support new ratings"""
     algo = als.ImplicitMF(20, epochs=10)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     new_ratings = pd.Series([4.0, 5.0], index=[1, 2])  # items as index and ratings as values
 
@@ -69,7 +74,7 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
     i = 3
 
     algo = als.ImplicitMF(20, epochs=10, use_ratings=True)
-    algo.fit(simple_dfr)
+    algo.fit(simple_dsr)
 
     preds = algo.predict_for_user(u, [i])
 
@@ -96,20 +101,23 @@ def test_als_predict_for_new_users_with_new_ratings():
     items = np.random.choice(ratings.item.unique(), n_items)
 
     algo = als.ImplicitMF(20, epochs=10, use_ratings=False)
-    algo.fit(ratings)
+    algo.fit(from_interactions_df(ratings))
+    assert algo.users_ is not None
+    assert algo.user_features_ is not None
+
     _log.debug("Items: " + str(items))
 
     for u in users:
         _log.debug(f"user: {u}")
         preds = algo.predict_for_user(u, items)
-        upos = algo.user_index_.get_loc(u)
+        upos = algo.users_.number(u)
 
         # get the user's rating series
         user_data = ratings[ratings.user == u]
         new_ratings = user_data.set_index("item")["rating"].copy()
 
         nr_info = new_ratings.to_frame()
-        ifs = algo.item_features_[algo.item_index_.get_indexer_for(nr_info.index), :]
+        ifs = algo.item_features_[algo.items_.index.get_indexer_for(nr_info.index), :]
         fit_uv = algo.user_features_[upos, :]
         nr_info["fit_recon"] = ifs @ fit_uv
         nr_info["fit_sqerr"] = np.square(algo.weight + 1.0 - nr_info["fit_recon"])
@@ -129,7 +137,7 @@ def test_als_predict_for_new_users_with_new_ratings():
         _log.debug("new_preds: " + str(new_preds.values))
         _log.debug("------------")
 
-        diffs = np.abs(preds.values - new_preds.values)
+        diffs = np.abs(preds - new_preds)
         assert all(diffs <= 0.1)
 
 
@@ -151,14 +159,16 @@ def test_als_recs_topn_for_new_users_with_new_ratings(rng):
 
     algo = als.ImplicitMF(20, epochs=10, use_ratings=True)
     rec_algo = basic.TopN(algo)
-    rec_algo.fit(ratings)
+    rec_algo.fit(from_interactions_df(ratings))
+    assert algo.users_ is not None
+    assert algo.user_features_ is not None
     # _log.debug("Items: " + str(items))
 
     correlations = pd.Series(np.nan, index=users)
     for u in users:
         recs = rec_algo.recommend(u, 10)
         user_data = ratings[ratings.user == u]
-        upos = algo.user_index_.get_loc(u)
+        upos = algo.users_.number(u)
         _log.info("user %s: %s ratings", u, len(user_data))
 
         _log.debug("user_features from fit: " + str(algo.user_features_[upos, :]))
@@ -186,7 +196,7 @@ def test_als_recs_topn_for_new_users_with_new_ratings(rng):
 
 def test_als_predict_bad_item():
     algo = als.ImplicitMF(20, epochs=10)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     preds = algo.predict_for_user(10, [4])
     assert len(preds) == 1
@@ -196,7 +206,7 @@ def test_als_predict_bad_item():
 
 def test_als_predict_bad_user():
     algo = als.ImplicitMF(20, epochs=10)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     preds = algo.predict_for_user(50, [3])
     assert len(preds) == 1
@@ -211,18 +221,18 @@ def test_als_predict_no_user_features_basic():
     items = np.random.choice(ratings.item.unique(), 2)
 
     algo = als.ImplicitMF(5, epochs=10, use_ratings=True)
-    algo.fit(ratings)
+    algo.fit(from_interactions_df(ratings))
     preds = algo.predict_for_user(u, items)
 
     user_data = ratings[ratings.user == u]
     new_ratings = user_data.set_index("item")["rating"].copy()
 
     algo_no_user_features = als.ImplicitMF(5, epochs=10, save_user_features=False)
-    algo_no_user_features.fit(ratings)
+    algo_no_user_features.fit(from_interactions_df(ratings))
     preds_no_user_features = algo_no_user_features.predict_for_user(u, items, new_ratings)
 
     assert algo_no_user_features.user_features_ is None
-    diffs = np.abs(preds.values - preds_no_user_features.values)
+    diffs = np.abs(preds - preds_no_user_features)
     assert all(diffs <= 0.1)
 
 
@@ -230,10 +240,12 @@ def test_als_predict_no_user_features_basic():
 def test_als_train_large():
     algo = als.ImplicitMF(20, epochs=20, use_ratings=False)
     ratings = lktu.ml_test.ratings
-    algo.fit(ratings)
+    algo.fit(from_interactions_df(ratings))
 
-    assert len(algo.user_index_) == ratings.user.nunique()
-    assert len(algo.item_index_) == ratings.item.nunique()
+    assert algo.users_ is not None
+    assert algo.user_features_ is not None
+    assert len(algo.users_.index) == ratings.user.nunique()
+    assert len(algo.items_.index) == ratings.item.nunique()
     assert algo.user_features_.shape == (ratings.user.nunique(), 20)
     assert algo.item_features_.shape == (ratings.item.nunique(), 20)
 
@@ -242,7 +254,8 @@ def test_als_save_load(tmp_path):
     "Test saving and loading ALS models, and regularized training."
     algo = als.ImplicitMF(5, epochs=5, reg=(2, 1), use_ratings=False)
     ratings = lktu.ml_test.ratings
-    algo.fit(ratings)
+    algo.fit(from_interactions_df(ratings))
+    assert algo.users_ is not None
 
     fn = tmp_path / "model.bpk"
     with fn.open("wb") as pf:
@@ -253,8 +266,8 @@ def test_als_save_load(tmp_path):
 
     assert torch.all(restored.user_features_ == algo.user_features_)
     assert torch.all(restored.item_features_ == algo.item_features_)
-    assert np.all(restored.item_index_ == algo.item_index_)
-    assert np.all(restored.user_index_ == algo.user_index_)
+    assert np.all(restored.items_.index == algo.items_.index)
+    assert np.all(restored.users_.index == algo.users_.index)
 
 
 @lktu.wantjit
@@ -262,10 +275,12 @@ def test_als_train_large_noratings():
     algo = als.ImplicitMF(20, epochs=20)
     ratings = lktu.ml_test.ratings
     ratings = ratings.loc[:, ["user", "item"]]
-    algo.fit(ratings)
+    algo.fit(from_interactions_df(ratings))
 
-    assert len(algo.user_index_) == ratings.user.nunique()
-    assert len(algo.item_index_) == ratings.item.nunique()
+    assert algo.users_ is not None
+    assert algo.user_features_ is not None
+    assert len(algo.users_.index) == ratings.user.nunique()
+    assert len(algo.items_.index) == ratings.item.nunique()
     assert algo.user_features_.shape == (ratings.user.nunique(), 20)
     assert algo.item_features_.shape == (ratings.item.nunique(), 20)
 
@@ -274,10 +289,12 @@ def test_als_train_large_noratings():
 def test_als_train_large_ratings():
     algo = als.ImplicitMF(20, epochs=20, use_ratings=True)
     ratings = lktu.ml_test.ratings
-    algo.fit(ratings)
+    algo.fit(from_interactions_df(ratings))
 
-    assert len(algo.user_index_) == ratings.user.nunique()
-    assert len(algo.item_index_) == ratings.item.nunique()
+    assert algo.users_ is not None
+    assert algo.user_features_ is not None
+    assert len(algo.users_.index) == ratings.user.nunique()
+    assert len(algo.items_.index) == ratings.item.nunique()
     assert algo.user_features_.shape == (ratings.user.nunique(), 20)
     assert algo.item_features_.shape == (ratings.item.nunique(), 20)
 
@@ -296,7 +313,7 @@ def test_als_implicit_batch_accuracy():
         _log.info("training implicit MF")
         ials_algo = als.ImplicitMF(25, epochs=20)
         ials_algo = Recommender.adapt(ials_algo)
-        ials_algo.fit(train)
+        ials_algo.fit(from_interactions_df(train))
         users = test.user.unique()
         _log.info("testing %d users", len(users))
         lu_recs = batch.recommend(ials_algo, users, 100, n_jobs=2)

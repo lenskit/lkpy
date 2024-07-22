@@ -15,6 +15,8 @@ import numpy as np
 import pandas as pd
 import torch
 
+from lenskit.data.vocab import Vocabulary
+
 from . import Predictor
 
 _logger = logging.getLogger(__name__)
@@ -30,9 +32,9 @@ class MFPredictor(Predictor, Generic[M]):
     Common predictor for matrix factorization.
     """
 
-    user_index_: pd.Index
+    users_: Vocabulary
     "Users in the model (length=:math:`m`)."
-    item_index_: pd.Index
+    items_: Vocabulary
     "Items in the model (length=:math:`n`)."
     user_features_: M
     "The :math:`m \\times k` user-feature matrix."
@@ -47,12 +49,12 @@ class MFPredictor(Predictor, Generic[M]):
     @property
     def n_users(self):
         "The number of users."
-        return len(self.user_index_)
+        return self.users_.size
 
     @property
     def n_items(self):
         "The number of items."
-        return len(self.item_index_)
+        return self.items_.size
 
     def lookup_user(self, user) -> int:
         """
@@ -65,7 +67,7 @@ class MFPredictor(Predictor, Generic[M]):
             int: the user index.
         """
         try:
-            idx = self.user_index_.get_loc(user)
+            idx = self.users_.number(user)
             assert isinstance(idx, int)  # single user, single index
             return idx
         except KeyError:
@@ -81,7 +83,7 @@ class MFPredictor(Predictor, Generic[M]):
         Returns:
             numpy.ndarray: the item indices. Unknown items will have negative indices.
         """
-        return self.item_index_.get_indexer(items)
+        return self.items_.numbers(items, missing="negative")
 
     def score(self, user, items, u_features=None):
         """
