@@ -151,6 +151,9 @@ def test_matrix_scipy_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
 
     _check_user_number_counts(ml_ds, ml_ratings, log.row)
     _check_user_ids(ml_ds, ml_ratings, log.row)
+    # ensure users are sorted
+    assert np.all(np.diff(log.row) >= 0)
+
     _check_item_number_counts(ml_ds, ml_ratings, log.col)
     _check_item_ids(ml_ds, ml_ratings, log.col)
     _check_ratings(ml_ds, ml_ratings, log.data)

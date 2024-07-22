@@ -90,6 +90,7 @@ class InteractionMatrix:
         n_items: int,
     ):
         self.user_nums = np.asarray(users, np.int32)
+        assert np.all(np.diff(self.user_nums) >= 0), "matrix data not sorted"
         self.item_nums = np.asarray(items, np.int32)
         if ratings is not None:
             self.ratings = np.asarray(ratings, np.float32)

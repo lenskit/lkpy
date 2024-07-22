@@ -109,6 +109,23 @@ class Dataset:
     def user_count(self):
         return self.users.size
 
+    @property
+    def interaction_count(self):
+        """
+        Count the total number of interaction records.
+
+        .. note::
+            If the interaction records themselves reprsent counts, such as the
+            number of times a song was played, this returns the number of
+            *records*, not the total number of plays.
+        """
+        return self._matrix.n_obs
+
+    @property
+    def rating_count(self):
+        "Count the total number of ratings (excluding superseded ratings)."
+        return self._matrix.n_obs
+
     @overload
     def interaction_log(
         self,
@@ -552,8 +569,9 @@ def from_interactions_df(
         rating_col=rating_col,
         timestamp_col=timestamp_col,
     )
-    users = Vocabulary(df["user_id"])
-    items = Vocabulary(df["item_id"])
+    df = df.sort_values(["user_id", "item_id"])
+    users = Vocabulary(df["user_id"], "user")
+    items = Vocabulary(df["item_id"], "item")
     return Dataset(users, items, df)
 
 
