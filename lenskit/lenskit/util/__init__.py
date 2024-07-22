@@ -14,7 +14,6 @@ from textwrap import dedent
 
 from lenskit.algorithms import Algorithm
 
-from .log import log_to_notebook, log_to_stderr  # noqa: F401
 from .random import derivable_rng
 from .timing import Stopwatch  # noqa: F401
 
@@ -26,8 +25,6 @@ except ImportError:
 _log = logging.getLogger(__name__)
 
 __all__ = [
-    "log_to_stderr",
-    "log_to_notebook",
     "Stopwatch",
     "read_df_detect",
     "derivable_rng",
