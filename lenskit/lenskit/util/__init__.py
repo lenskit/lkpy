@@ -26,7 +26,6 @@ _log = logging.getLogger(__name__)
 
 __all__ = [
     "Stopwatch",
-    "read_df_detect",
     "derivable_rng",
     "clone",
     "clean_str",
