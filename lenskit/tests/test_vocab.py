@@ -6,6 +6,7 @@ from uuid import UUID
 
 import hypothesis.strategies as st
 from hypothesis import assume, given
+import numpy as np
 from pytest import raises
 
 from lenskit.data import Vocabulary
@@ -150,3 +151,14 @@ def test_add_terms(initial: set[int], new: list[int]):
 
     assert all(vocab.number(k) == i for (i, k) in enumerate(sorted(initial)))
     assert all(vocab.number(k) == i + ni for (i, k) in enumerate(flist))
+
+@given(st.one_of(st.sets(st.integers()), st.sets(st.emails())))
+def test_all_terms(initial: set[int] | set[str]):
+    ni = len(initial)
+    vocab = Vocabulary(initial)
+
+    tl = sorted(initial)
+
+    terms = vocab.terms()
+    assert isinstance(terms, np.ndarray)
+    assert all(terms == tl)
