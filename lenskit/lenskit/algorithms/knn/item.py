@@ -14,15 +14,17 @@ from __future__ import annotations
 import logging
 import warnings
 from sys import intern
-from typing import Callable, Literal, Optional, TypeAlias
 
 import numpy as np
 import pandas as pd
 import torch
+from typing_extensions import Callable, Literal, Optional, TypeAlias, override
 
 from lenskit import util
 from lenskit.data import FeedbackType
-from lenskit.data.matrix import normalize_sparse_rows, safe_spmv, sparse_ratings
+from lenskit.data.dataset import Dataset
+from lenskit.data.matrix import normalize_sparse_rows, safe_spmv
+from lenskit.data.vocab import EntityId, Vocabulary
 from lenskit.diagnostics import ConfigWarning, DataWarning
 from lenskit.parallel import ensure_parallel_init
 from lenskit.util.logging import pbh_update, progress_handle
@@ -109,16 +111,16 @@ class ItemItem(Predictor):
     aggregate: str
     use_ratings: bool
 
-    item_index_: pd.Index
-    "The index of item IDs."
+    items_: Vocabulary[EntityId]
+    "Vocabulary of item IDs."
     item_means_: torch.Tensor | None
     "Mean rating for each known item."
     item_counts_: torch.Tensor
     "Number of saved neighbors for each item."
     sim_matrix_: torch.Tensor
     "Similarity matrix (sparse CSR tensor)."
-    user_index_: pd.Index
-    "Index of user IDs."
+    users_: Vocabulary[EntityId]
+    "Vocabulary of user IDs."
     rating_matrix_: torch.Tensor
     "Normalized rating matrix to look up user ratings at prediction time."
 
@@ -191,7 +193,8 @@ class ItemItem(Predictor):
             )
             self.min_sim = float(f4i.smallest_normal)
 
-    def fit(self, ratings: pd.DataFrame, **kwargs):
+    @override
+    def fit(self, data: Dataset, **kwargs):
         """
         Train a model.
 
@@ -210,14 +213,14 @@ class ItemItem(Predictor):
 
         _log.debug("[%s] beginning fit, memory use %s", self._timer, util.max_memory())
 
-        init_rmat, users, items = sparse_ratings(ratings, type="torch")
-        n_items = len(items)
+        init_rmat = data.interaction_matrix("torch", field="rating" if self.use_ratings else None)
+        n_items = data.item_count
         _log.info(
             "[%s] made sparse matrix for %d items (%d ratings from %d users)",
             self._timer,
-            len(items),
+            n_items,
             len(init_rmat.values()),
-            len(users),
+            data.user_count,
         )
         _log.debug("[%s] made matrix, memory use %s", self._timer, util.max_memory())
 
@@ -252,11 +255,11 @@ class ItemItem(Predictor):
 
         _log.info("[%s] computed %d neighbor pairs", self._timer, len(smat.col_indices()))
 
-        self.item_index_ = items
+        self.items_ = data.items
         self.item_means_ = means
         self.item_counts_ = torch.diff(smat.crow_indices())
         self.sim_matrix_ = smat
-        self.user_index_ = users
+        self.users_ = data.users
         self.rating_matrix_ = init_rmat
         _log.debug("[%s] done, memory use %s", self._timer, util.max_memory())
 
@@ -272,17 +275,18 @@ class ItemItem(Predictor):
 
         return smat.to(torch.float32)
 
+    @override
     def predict_for_user(self, user, items, ratings=None):
         _log.debug("predicting %d items for user %s", len(items), user)
         if ratings is None:
-            if user not in self.user_index_:
+            upos = self.users_.number(user, missing=None)
+            if upos is None:
                 _log.debug("user %s missing, returning empty predictions", user)
                 return pd.Series(np.nan, index=items)
-            upos = self.user_index_.get_loc(user)
             row = self.rating_matrix_[upos]  # type: ignore
             ratings = pd.Series(
                 row.values().numpy(),
-                index=pd.Index(self.item_index_[row.indices()[0]]),
+                index=self.items_.ids(row.indices()[0].numpy()),
             )
 
         if not ratings.index.is_unique:
@@ -291,7 +295,7 @@ class ItemItem(Predictor):
 
         # set up rating array
         # get rated item positions & limit to in-model items
-        ri_pos = self.item_index_.get_indexer(ratings.index)
+        ri_pos = self.items_.numbers(ratings.index, missing="negative")
 
         ri_vals = torch.from_numpy(ratings.values[ri_pos >= 0]).to(torch.float64)
         ri_pos = torch.from_numpy(ri_pos[ri_pos >= 0])
@@ -316,7 +320,7 @@ class ItemItem(Predictor):
             assert self.item_means_ is not None
             sims += self.item_means_
 
-        results = pd.Series(sims.numpy(), index=self.item_index_)
+        results = pd.Series(sims.numpy(), index=self.items_.ids())
         results = results.reindex(items, fill_value=np.nan)
 
         _log.debug("user %s: predicted for %d of %d items", user, results.notna().sum(), len(items))
