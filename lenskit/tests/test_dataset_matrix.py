@@ -56,6 +56,13 @@ def _check_timestamp(ml_ds: Dataset, ml_ratings: pd.DataFrame, ts: ArrayLike):
     assert np.all(ts == ml_ratings["timestamp"])
 
 
+def test_internals(ml_ds: Dataset):
+    "Test internal matrix structures"
+    assert ml_ds._matrix.user_nums.dtype == np.int32
+    assert ml_ds._matrix.user_ptrs.dtype == np.int32
+    assert ml_ds._matrix.item_nums.dtype == np.int32
+
+
 def test_matrix_structure(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     log = ml_ds.interaction_matrix(format="structure")
     assert isinstance(log, CSRStructure)
@@ -164,6 +171,8 @@ def test_matrix_scipy_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
     assert nrows == ml_ratings["userId"].nunique()
     assert ncols == ml_ratings["movieId"].nunique()
 
+    assert log.row.dtype == np.int32
+    assert log.col.dtype == np.int32
     _check_user_number_counts(ml_ds, ml_ratings, log.row)
     _check_user_ids(ml_ds, ml_ratings, log.row)
     # ensure users are sorted
@@ -184,6 +193,8 @@ def test_matrix_scipy_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
     assert nrows == ml_ratings["userId"].nunique()
     assert ncols == ml_ratings["movieId"].nunique()
 
+    assert log.indptr.dtype == np.int32
+    assert log.indices.dtype == np.int32
     _check_user_offset_counts(ml_ds, ml_ratings, log.indptr)
     _check_item_number_counts(ml_ds, ml_ratings, log.indices)
     _check_item_ids(ml_ds, ml_ratings, log.indices)
@@ -255,6 +266,9 @@ def test_matrix_torch_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
     _check_item_ids(ml_ds, ml_ratings, log.col_indices())
     _check_ratings(ml_ds, ml_ratings, log.values().numpy())
+
+    assert log.crow_indices().dtype == torch.int32
+    assert log.col_indices().dtype == torch.int32
 
 
 def test_matrix_torch_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset):

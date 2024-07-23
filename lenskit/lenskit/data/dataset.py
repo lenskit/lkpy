@@ -481,14 +481,9 @@ class Dataset:
                     size=shape,
                 )
             case "coo":
+                indices = np.stack([self._matrix.user_nums, self._matrix.item_nums], dtype=np.int32)
                 return torch.sparse_coo_tensor(
-                    torch.stack(
-                        [
-                            torch.from_numpy(self._matrix.user_nums),
-                            torch.from_numpy(self._matrix.item_nums),
-                        ],
-                        dim=0,
-                    ),
+                    torch.from_numpy(indices),
                     values,
                     size=shape,
                 ).coalesce()
