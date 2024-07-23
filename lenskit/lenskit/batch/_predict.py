@@ -38,7 +38,9 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
     a list of item IDs. It should return a dictionary or a :py:class:`pandas.Series`
     mapping item IDs to predictions.
 
-    To use this function, provide a pre-fit algorithm::
+    To use this function, provide a pre-fit algorithm:
+
+    .. doctest-skip::
 
         >>> from lenskit.algorithms.bias import Bias
         >>> from lenskit.metrics.predict import rmse
