@@ -6,10 +6,12 @@ import pandas as pd
 from implicit.als import AlternatingLeastSquares
 from implicit.bpr import BayesianPersonalizedRanking
 from implicit.recommender_base import RecommenderBase
-from scipy.sparse import csr_array
+from scipy.sparse import csr_matrix
+from typing_extensions import override
 
 from lenskit.algorithms import Predictor, Recommender
-from lenskit.data import sparse_ratings
+from lenskit.data.dataset import Dataset
+from lenskit.data.vocab import EntityId, Vocabulary
 
 _logger = logging.getLogger(__name__)
 
@@ -47,15 +49,15 @@ class BaseRec(Recommender, Predictor):
     """
     The weight for positive examples (only used by some algorithms).
     """
-    matrix_: csr_array
+    matrix_: csr_matrix
     """
     The user-item rating matrix from training.
     """
-    user_index_: pd.Index
+    users_: Vocabulary[EntityId]
     """
     The user ID mapping from training.
     """
-    item_index_: pd.Index
+    items_: Vocabulary[EntityId]
     """
     The item ID mapping from training.
     """
@@ -64,10 +66,10 @@ class BaseRec(Recommender, Predictor):
         self.delegate = delegate
         self.weight = 1.0
 
-    def fit(self, ratings, **kwargs):
-        matrix, users, items = sparse_ratings(ratings, type="spmatrix")
-        uir = matrix.tocsr()
-        uir.data *= self.weight
+    @override
+    def fit(self, data: Dataset, **kwargs):
+        matrix = data.interaction_matrix("scipy", layout="csr", legacy=True)
+        uir = matrix * self.weight
         if getattr(self.delegate, "item_factors", None) is not None:  # pragma: no cover
             _logger.warn("implicit algorithm already trained, re-fit is usually a bug")
 
@@ -76,26 +78,29 @@ class BaseRec(Recommender, Predictor):
         self.delegate.fit(uir)
 
         self.matrix_ = matrix
-        self.user_index_ = users
-        self.item_index_ = items
+        self.users_ = data.users
+        self.items_ = data.items
 
         return self
 
-    def recommend(self, user, n=None, candidates=None, ratings=None):
-        try:
-            uid = self.user_index_.get_loc(user)
-        except KeyError:
+    @override
+    def recommend(self, user, n: int | None = None, candidates=None, ratings=None):
+        uid = self.users_.number(user, missing=None)
+        if uid is None:
+            _logger.debug("unknown user %s, cannot recommend", user)
             return pd.DataFrame({"item": []})
 
         matrix = self.matrix_[[uid], :]
 
         if candidates is None:
-            i_n = n if n is not None else len(self.item_index_)
-            recs, scores = self.delegate.recommend(uid, matrix, N=i_n)
+            i_n = n if n is not None else self.items_.size
+            _logger.debug("recommending for user %s with unlimited candidates", user)
+            recs, scores = self.delegate.recommend(uid, matrix, N=i_n)  # type: ignore
         else:
-            cands = self.item_index_.get_indexer(candidates)
+            cands = self.items_.numbers(candidates, missing="negative")
             cands = cands[cands >= 0]
-            recs, scores = self.delegate.recommend(uid, matrix, items=cands)
+            _logger.debug("recommending for user %s with %d candidates", user, len(cands))
+            recs, scores = self.delegate.recommend(uid, matrix, items=cands)  # type: ignore
 
         if n is not None:
             recs = recs[:n]
@@ -103,20 +108,19 @@ class BaseRec(Recommender, Predictor):
 
         rec_df = pd.DataFrame(
             {
-                "item_pos": recs,
+                "item": self.items_.ids(recs),
                 "score": scores,
             }
         )
-        rec_df["item"] = self.item_index_[rec_df.item_pos]
-        return rec_df.loc[:, ["item", "score"]]
+        return rec_df
 
+    @override
     def predict_for_user(self, user, items, ratings=None):
-        try:
-            uid = self.user_index_.get_loc(user)
-        except KeyError:
+        uid = self.users_.number(user, missing=None)
+        if uid is None:
             return pd.Series(np.nan, index=items)
 
-        iids = self.item_index_.get_indexer(items)
+        iids = self.items_.numbers(items, missing="negative")
         iids = iids[iids >= 0]
 
         ifs = self.delegate.item_factors[iids]
@@ -126,7 +130,7 @@ class BaseRec(Recommender, Predictor):
             ifs = ifs.to_numpy()
             uf = uf.to_numpy()
         scores = np.dot(ifs, uf.T)
-        scores = pd.Series(np.ravel(scores), index=self.item_index_[iids])
+        scores = pd.Series(np.ravel(scores), index=self.items_.ids(iids))
         return scores.reindex(items)
 
     def __getattr__(self, name):

@@ -6,6 +6,7 @@ import pandas as pd
 
 from pytest import mark
 
+from lenskit.data.dataset import from_interactions_df
 import lenskit.util.test as lktu
 from lenskit import util
 from lenskit.implicit import ALS, BPR
@@ -22,8 +23,9 @@ def test_implicit_als_train_rec():
     algo = ALS(25)
     assert algo.factors == 25
     ratings = lktu.ml_test.ratings
+    ds = from_interactions_df(ratings)
 
-    ret = algo.fit(ratings)
+    ret = algo.fit(ds)
     assert ret is algo
 
     recs = algo.recommend(100, n=20)
@@ -58,7 +60,7 @@ def test_implicit_als_batch_accuracy(n_jobs):
         _log.info("running training")
         train["rating"] = train.rating.astype(np.float_)
         algo = util.clone(algo_t)
-        algo.fit(train)
+        algo.fit(from_interactions_df(train))
         users = test.user.unique()
         _log.info("testing %d users", len(users))
         recs = batch.recommend(algo, users, 100, n_jobs=n_jobs)
@@ -84,7 +86,7 @@ def test_implicit_bpr_train_rec():
     assert algo.factors == 25
     ratings = lktu.ml_test.ratings
 
-    algo.fit(ratings)
+    algo.fit(from_interactions_df(ratings))
 
     recs = algo.recommend(100, n=20)
     assert len(recs) == 20
