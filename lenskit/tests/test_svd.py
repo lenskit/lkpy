@@ -12,6 +12,7 @@ import pandas as pd
 
 from pytest import approx, mark
 
+from lenskit.data.dataset import from_interactions_df
 import lenskit.util.test as lktu
 from lenskit.algorithms import svd
 from lenskit.util import clone
@@ -21,6 +22,7 @@ _log = logging.getLogger(__name__)
 simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
 )
+simple_ds = from_interactions_df(simple_df)
 
 need_skl = mark.skipif(not svd.SKL_AVAILABLE, reason="scikit-learn not installed")
 
@@ -28,7 +30,7 @@ need_skl = mark.skipif(not svd.SKL_AVAILABLE, reason="scikit-learn not installed
 @need_skl
 def test_svd_basic_build():
     algo = svd.BiasedSVD(2)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     assert algo.user_components_.shape == (3, 2)
 
@@ -38,7 +40,7 @@ def test_svd_predict_basic():
     _log.info("SVD input data:\n%s", simple_df)
     algo = svd.BiasedSVD(2, damping=0)
     _log.info("SVD bias: %s", algo.bias)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
     _log.info("user means:\n%s", str(algo.bias.user_offsets_))
     _log.info("item means:\n%s", str(algo.bias.item_offsets_))
     _log.info("user matrix:\n%s", str(algo.user_components_))
@@ -53,7 +55,7 @@ def test_svd_predict_basic():
 @need_skl
 def test_svd_predict_bad_item():
     algo = svd.BiasedSVD(2)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     preds = algo.predict_for_user(10, [4])
     assert len(preds) == 1
@@ -64,7 +66,7 @@ def test_svd_predict_bad_item():
 @need_skl
 def test_svd_predict_bad_user():
     algo = svd.BiasedSVD(2)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     preds = algo.predict_for_user(50, [3])
     assert len(preds) == 1
@@ -88,7 +90,7 @@ def test_svd_save_load():
     ratings = lktu.ml_test.ratings
 
     original = svd.BiasedSVD(20)
-    original.fit(ratings)
+    original.fit(from_interactions_df(ratings))
 
     mod = pickle.dumps(original)
     _log.info("serialized to %d bytes", len(mod))
@@ -117,7 +119,7 @@ def test_svd_batch_accuracy():
 
     def eval(train, test):
         _log.info("running training")
-        algo.fit(train)
+        algo.fit(from_interactions_df(train))
         _log.info("testing %d users", test.user.nunique())
         return batch.predict(algo, test)
 
