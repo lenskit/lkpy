@@ -59,10 +59,8 @@ def test_equal(keys: list[int | str | UUID]):
     v2 = Vocabulary(keys)
     assert v2 == vocab
 
-@given(
-        st.lists(st.integers()),
-        st.sets(st.integers())
-)
+
+@given(st.lists(st.integers()), st.sets(st.integers()))
 def test_not_equal(keys: list[int], oks: set[int]):
     uq = set(keys)
     assume(oks != uq)
@@ -71,19 +69,22 @@ def test_not_equal(keys: list[int], oks: set[int]):
     v2 = Vocabulary(oks)
     assert v2 != vocab
 
+
 @given(
     st.one_of(
         st.sets(st.integers()),
         st.sets(st.emails()),
         st.sets(st.uuids()),
     ),
-    st.lists(st.one_of(
-        st.integers(),
-        st.emails(),
-        st.uuids(),
-    )
-))
-def test_contains(keys: set[int] | set[str] | set[UUID], qs: set[int|str|UUID]):
+    st.lists(
+        st.one_of(
+            st.integers(),
+            st.emails(),
+            st.uuids(),
+        )
+    ),
+)
+def test_contains(keys: set[int] | set[str] | set[UUID], qs: set[int | str | UUID]):
     vocab = Vocabulary(keys)
 
     for qk in qs:
@@ -91,6 +92,7 @@ def test_contains(keys: set[int] | set[str] | set[UUID], qs: set[int|str|UUID]):
             assert qk in vocab
         else:
             assert qk not in vocab
+
 
 @given(
     st.one_of(
@@ -198,6 +200,7 @@ def test_add_terms(initial: set[int], new: list[int]):
 
     assert all(vocab.number(k) == i for (i, k) in enumerate(sorted(initial)))
     assert all(vocab.number(k) == i + ni for (i, k) in enumerate(flist))
+
 
 @given(st.one_of(st.sets(st.integers()), st.sets(st.emails())))
 def test_all_terms(initial: set[int] | set[str]):

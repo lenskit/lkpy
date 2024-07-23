@@ -48,19 +48,21 @@ def test_bias_full():
     assert algo.item_offsets_ is not None
     assert algo.item_offsets_.index.name == "item"
     assert set(algo.item_offsets_.index) == set([1, 2, 3])
-    exp_item = pd.Series([0, 1.5, -1.5], index=[1,2,3])
+    exp_item = pd.Series([0, 1.5, -1.5], index=[1, 2, 3])
     off, exp = algo.item_offsets_.align(exp_item)
-    df = pd.DataFrame({'computed': off, 'expected': exp}).join(simple_df.groupby('item')['rating'].mean())
-    _log.debug('item stats:\n%s', df)
+    df = pd.DataFrame({"computed": off, "expected": exp}).join(
+        simple_df.groupby("item")["rating"].mean()
+    )
+    _log.debug("item stats:\n%s", df)
     assert off.values == approx(exp.values)
 
     assert algo.user_offsets_ is not None
     assert algo.user_offsets_.index.name == "user"
     assert set(algo.user_offsets_.index) == set([10, 12, 13])
-    exp_user = pd.Series([0.25, -0.5, 0], index=[10,12,13])
+    exp_user = pd.Series([0.25, -0.5, 0], index=[10, 12, 13])
     off, exp = algo.user_offsets_.align(exp_user)
-    _log.debug('computed user offsets:\n%s', off)
-    _log.debug('expected user offsets:\n%s', exp)
+    _log.debug("computed user offsets:\n%s", off)
+    _log.debug("expected user offsets:\n%s", exp)
     assert off.values == approx(exp.values)
 
 
@@ -241,20 +243,21 @@ def test_bias_transform():
     nr = n2.rating - algo.mean_ - n2.i_off - n2.u_off
     assert normed["rating"].values == approx(nr.values)
 
+
 def test_bias_transform_tensor(ml_ratings, ml_ds):
     algo = Bias()
 
     algo.fit(ml_ds)
 
-    mat = ml_ds.interaction_matrix('torch', layout='coo')
+    mat = ml_ds.interaction_matrix("torch", layout="coo")
     normed = algo.transform(mat)
     assert normed.is_sparse
     assert normed.shape == mat.shape
 
     recon = normed.clone()
-    recon.values().add_( algo.mean_)
-    recon.values().add_(torch.from_numpy(algo.item_offsets_.values)[recon.indices()[1,:]])
-    recon.values().add_(torch.from_numpy(algo.user_offsets_.values)[recon.indices()[0,:]])
+    recon.values().add_(algo.mean_)
+    recon.values().add_(torch.from_numpy(algo.item_offsets_.values)[recon.indices()[1, :]])
+    recon.values().add_(torch.from_numpy(algo.user_offsets_.values)[recon.indices()[0, :]])
 
     assert recon.values().numpy() == approx(mat.values().numpy())
 

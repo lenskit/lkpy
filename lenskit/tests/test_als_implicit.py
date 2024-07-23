@@ -25,6 +25,7 @@ simple_ds = from_interactions_df(simple_df)
 simple_dfr = simple_df.assign(rating=[4.0, 3.0, 5.0, 2.0])
 simple_dsr = from_interactions_df(simple_dfr)
 
+
 def test_als_basic_build():
     algo = als.ImplicitMF(20, epochs=10)
     algo.fit(simple_ds)

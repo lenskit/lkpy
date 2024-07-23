@@ -27,7 +27,7 @@ from lenskit.algorithms.basic import Fallback
 from lenskit.algorithms.bias import Bias
 from lenskit.diagnostics import ConfigWarning, DataWarning
 from lenskit.util import clone
-from lenskit.util.test import ml_ratings, ml_ds # noqa: F401
+from lenskit.util.test import ml_ratings, ml_ds  # noqa: F401
 
 _log = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ def ml_subset(ml_ratings):
     "Fixture that returns a subset of the MovieLens database."
     icounts = ml_ratings.groupby("movieId").rating.count()
     top = icounts.nlargest(500)
-    top_rates = ml_ratings[ml_ratings['movieId'].isin(top.index)]
+    top_rates = ml_ratings[ml_ratings["movieId"].isin(top.index)]
     _log.info("top 500 items yield %d of %d ratings", len(top_rates), len(ml_ratings))
     return top_rates
 
@@ -105,7 +105,7 @@ def test_ii_train():
     assert np.all(algo.item_means_.numpy() == test_means.values.astype("f8"))
 
     # 6 is a neighbor of 7
-    six, seven = algo.items_.numbers([6,7])
+    six, seven = algo.items_.numbers([6, 7])
     _log.info("six: %d", six)
     _log.info("seven: %d", seven)
     _log.info("matrix: %s", algo.sim_matrix_)
@@ -118,7 +118,7 @@ def test_ii_train():
     denom = la.norm(six_v.values) * la.norm(seven_v.values)
     six_v, seven_v = six_v.align(seven_v, join="inner")
     num = six_v.dot(seven_v)
-    assert matrix[six, seven] == approx(num / denom, 0.01) # type: ignore
+    assert matrix[six, seven] == approx(num / denom, 0.01)  # type: ignore
 
     assert all(np.logical_not(np.isnan(algo.sim_matrix_.values().numpy())))
     assert all(algo.sim_matrix_.values() > 0)
@@ -148,7 +148,7 @@ def test_ii_train_unbounded():
     denom = la.norm(six_v.values) * la.norm(seven_v.values)
     six_v, seven_v = six_v.align(seven_v, join="inner")
     num = six_v.dot(seven_v)
-    assert matrix[six, seven] == approx(num / denom, 0.01) # type: ignore
+    assert matrix[six, seven] == approx(num / denom, 0.01)  # type: ignore
 
 
 def test_ii_simple_predict():
@@ -315,7 +315,7 @@ def test_ii_large_models(rng, ml_ratings, ml_ds):
         present = np.isin(b_cols, ub_cols)
         if not np.all(present):
             _log.error("missing items: %s", b_cols[~present])
-            _log.error("scores: %s", b_row.values()[~present]) # type: ignore
+            _log.error("scores: %s", b_row.values()[~present])  # type: ignore
             raise AssertionError(f"missing {np.sum(~present)} values from unbounded")
 
         # spot-check some similarities
@@ -371,7 +371,7 @@ def test_ii_implicit_large(rng, ml_ratings):
     algo = knn.ItemItem(NBRS, feedback="implicit")
     _log.info("agg: %s", algo.aggregate)
     algo = Recommender.adapt(algo)
-    algo.fit(from_interactions_df(ml_ratings[["userId", "movieId"]], item_col='movieId'))
+    algo.fit(from_interactions_df(ml_ratings[["userId", "movieId"]], item_col="movieId"))
     assert isinstance(algo, TopN)
 
     users = rng.choice(ml_ratings["userId"].unique(), NUSERS)
@@ -407,7 +407,7 @@ def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
     "Save and load a model"
     original = knn.ItemItem(30, save_nbrs=500)
     _log.info("building model")
-    original.fit(from_interactions_df(ml_subset, item_col='movieId'))
+    original.fit(from_interactions_df(ml_subset, item_col="movieId"))
 
     fn = tmp_path / "ii.mod"
     _log.info("saving model to %s", fn)
@@ -444,7 +444,7 @@ def test_ii_implicit_save_load(tmp_path, ml_subset):
     "Save and load a model"
     original = knn.ItemItem(30, save_nbrs=500, center=False, aggregate="sum")
     _log.info("building model")
-    original.fit(from_interactions_df(ml_subset.loc[:, ["userId", "movieId"]], item_col='movieId'))
+    original.fit(from_interactions_df(ml_subset.loc[:, ["userId", "movieId"]], item_col="movieId"))
 
     fn = tmp_path / "ii.mod"
     _log.info("saving model to %s", fn)
@@ -477,7 +477,7 @@ def test_ii_old_implicit(ml_ratings):
     algo = knn.ItemItem(20, save_nbrs=100, center=False, aggregate="sum")
     data = ml_ratings.loc[:, ["userId", "movieId"]]
 
-    algo.fit(from_interactions_df(data, item_col='movieId'))
+    algo.fit(from_interactions_df(data, item_col="movieId"))
     assert algo.item_counts_.sum() == algo.sim_matrix_.values().shape[0]
     assert all(algo.sim_matrix_.values() > 0)
     assert all(algo.item_counts_ <= 100)
@@ -490,7 +490,7 @@ def test_ii_old_implicit(ml_ratings):
 @mark.slow
 def test_ii_no_ratings(ml_ratings, ml_ds):
     a1 = knn.ItemItem(20, save_nbrs=100, center=False, aggregate="sum")
-    a1.fit(from_interactions_df(ml_ratings.loc[:, ["userId", "movieId"]], item_col='movieId'))
+    a1.fit(from_interactions_df(ml_ratings.loc[:, ["userId", "movieId"]], item_col="movieId"))
 
     algo = knn.ItemItem(20, save_nbrs=100, feedback="implicit")
 

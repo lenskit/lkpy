@@ -53,7 +53,6 @@ def test_als_no_bias():
     assert algo.users_ is not None
     assert algo.user_features_ is not None
 
-
     assert algo.bias is None
     assert set(algo.users_.ids()) == set([10, 12, 13])
     assert set(algo.items_.ids()) == set([1, 2, 3])
@@ -136,9 +135,7 @@ def test_als_predict_for_new_users_with_new_ratings():
 
         user_data = ratings[ratings.user == u]
 
-        _log.debug(
-            "user_features from fit: " + str(algo.user_features_[algo.users_.number(u), :])
-        )
+        _log.debug("user_features from fit: " + str(algo.user_features_[algo.users_.number(u), :]))
 
         new_ratings = pd.Series(
             user_data.rating.to_numpy(), index=user_data.item
@@ -204,9 +201,7 @@ def test_als_predict_no_user_features_basic():
 
     user_data = ratings[ratings.user == u]
 
-    _log.debug(
-        "user_features from fit: " + str(algo.user_features_[algo.users_.number(u), :])
-    )
+    _log.debug("user_features from fit: " + str(algo.user_features_[algo.users_.number(u), :]))
 
     new_ratings = pd.Series(
         user_data.rating.to_numpy(), index=user_data.item

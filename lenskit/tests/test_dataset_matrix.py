@@ -97,18 +97,19 @@ def test_matrix_pandas(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_item_ids(ml_ds, ml_ratings, log["item_num"])
     _check_ratings(ml_ds, ml_ratings, log["rating"])
 
+
 def test_matrix_pandas_orig_id(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     "Test that Pandas can return original IDs."
     log = ml_ds.interaction_matrix(format="pandas", field="rating", original_ids=True)
     assert isinstance(log, pd.DataFrame)
     assert len(log) == len(ml_ratings)
-    assert 'user_id' in log.columns
-    assert 'item_id' in log.columns
+    assert "user_id" in log.columns
+    assert "item_id" in log.columns
 
-    m2 = ml_ds.interaction_matrix(format="scipy", layout='coo')
+    m2 = ml_ds.interaction_matrix(format="scipy", layout="coo")
 
-    assert np.all(log['user_id'] == ml_ds.users.ids(m2.row))
-    assert np.all(log['item_id'] == ml_ds.items.ids(m2.col))
+    assert np.all(log["user_id"] == ml_ds.users.ids(m2.row))
+    assert np.all(log["item_id"] == ml_ds.items.ids(m2.col))
 
     _check_ratings(ml_ds, ml_ratings, log["rating"])
 

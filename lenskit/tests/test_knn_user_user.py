@@ -19,7 +19,7 @@ from lenskit.data.dataset import from_interactions_df
 import lenskit.util.test as lktu
 from lenskit.algorithms import Recommender
 from lenskit.util import clone
-from lenskit.util.test import ml_ratings, ml_ds # noqa: F401
+from lenskit.util.test import ml_ratings, ml_ds  # noqa: F401
 
 _log = logging.getLogger(__name__)
 
@@ -69,8 +69,8 @@ def test_uu_train(ml_ratings, ml_ds):
     # it should have computed correct means
     u_stats = ml_ds.user_stats()
     mlmeans = pd.Series(algo.user_means_.numpy(), index=algo.users_.ids(), name="mean")
-    mlmeans.index.name = 'userId'
-    umeans, mlmeans = u_stats['mean_rating'].align(mlmeans)
+    mlmeans.index.name = "userId"
+    umeans, mlmeans = u_stats["mean_rating"].align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
     # we should be able to reconstruct rating values
@@ -133,7 +133,7 @@ def test_uu_predict_too_few_blended(ml_ds):
 def test_uu_predict_live_ratings(ml_ratings):
     algo = knn.UserUser(30, min_nbrs=2)
     no4 = ml_ratings[ml_ratings.userId != 4]
-    algo.fit(from_interactions_df(no4, item_col='movieId'))
+    algo.fit(from_interactions_df(no4, item_col="movieId"))
 
     ratings = ml_ratings[ml_ratings.userId == 4].set_index("movieId").rating
 
@@ -160,9 +160,9 @@ def test_uu_save_load(tmp_path, ml_ratings, ml_ds):
     _log.info("checking model")
 
     # it should have computed correct means
-    umeans = ml_ds.user_stats()['mean_rating']
+    umeans = ml_ds.user_stats()["mean_rating"]
     mlmeans = pd.Series(algo.user_means_, index=algo.users_, name="mean")
-    mlmeans.index.name = 'userId'
+    mlmeans.index.name = "userId"
     umeans, mlmeans = umeans.align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
@@ -202,7 +202,7 @@ def test_uu_implicit(ml_ratings):
     algo = knn.UserUser(20, feedback="implicit")
     data = ml_ratings.loc[:, ["userId", "movieId"]]
 
-    algo.fit(from_interactions_df(data, item_col='movieId'))
+    algo.fit(from_interactions_df(data, item_col="movieId"))
     assert algo.user_means_ is None
 
     mat = algo.user_vectors_
@@ -220,7 +220,7 @@ def test_uu_save_load_implicit(tmp_path, ml_ratings):
     orig = knn.UserUser(20, feedback="implicit")
     data = ml_ratings.loc[:, ["userId", "movieId"]]
 
-    orig.fit(from_interactions_df(data, item_col='movieId'))
+    orig.fit(from_interactions_df(data, item_col="movieId"))
     ser = pickle.dumps(orig)
 
     algo = pickle.loads(ser)
