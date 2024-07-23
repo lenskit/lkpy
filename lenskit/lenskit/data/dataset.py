@@ -85,14 +85,14 @@ class Dataset:
         ino = self.items.numbers(df["item_id"])
         assert np.all(uno >= 0)
         assert np.all(ino >= 0)
+        if np.any(df.duplicated(subset=["user_id", "item_id"])):
+            raise RuntimeError("repeated ratings not yet supported")
 
         df = df.assign(user_num=uno, item_num=ino)
 
         _log.debug("sorting interaction table")
         df.sort_values(["user_num", "item_num"], ignore_index=True, inplace=True)
         _log.debug("rating data frame:\n%s", df)
-        if np.any(np.diff(df["item_num"]) == 0):  # pragma nocover
-            raise RuntimeError("repeated ratings not yet supported")
         self._matrix = InteractionMatrix(
             uno,
             ino,
