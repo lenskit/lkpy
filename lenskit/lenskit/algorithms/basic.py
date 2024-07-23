@@ -293,10 +293,12 @@ class KnownRating(Predictor):
 
     def fit(self, data: Dataset, **kwargs):
         self.ratings_ = (
-            data.interaction_matrix(format="pandas").set_index(["user", "item"]).sort_index()
+            data.interaction_matrix(format="pandas", field="rating", original_ids=True)
+            .set_index(["user_id", "item_id"])
+            .sort_index()
         )
         return self
 
     def predict_for_user(self, user, items, ratings=None):
-        uscores = self.ratings_.xs(user, level="user", drop_level=True)
+        uscores = self.ratings_.xs(user, level="user_id", drop_level=True)
         return uscores.rating.reindex(items)

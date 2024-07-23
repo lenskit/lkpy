@@ -7,12 +7,15 @@
 import numpy as np
 import pandas as pd
 
+from lenskit.data.dataset import Dataset, from_interactions_df
 import lenskit.util.test as lktu
 from lenskit.algorithms import basic
+from lenskit.util.test import ml_ratings, ml_ds  # noqa: F401
 
 simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
 )
+simple_ds = from_interactions_df(simple_df)
 
 
 def test_memorized():
@@ -66,12 +69,10 @@ def test_memorized_batch_keep_index():
     assert all(preds == [4.0, 5.0, 3.0])
 
 
-def test_random():
+def test_random(ml_ds: Dataset):
     # test case: no seed
     algo = basic.Random()
-    model = algo.fit(lktu.ml_test.ratings)
-    items = lktu.ml_test.ratings["item"].unique()
-    nitems = len(items)
+    model = algo.fit(ml_ds)
 
     assert model is not None
 
@@ -83,15 +84,13 @@ def test_random():
     assert set(recs1["item"]) != set(recs2["item"])
 
     recs_all = algo.recommend(2038)
-    assert len(recs_all) == nitems
-    assert set(items) == set(recs_all["item"])
+    assert len(recs_all) == ml_ds.item_count
+    assert set(ml_ds.items.ids()) == set(recs_all["item"])
 
 
-def test_random_derive_seed():
+def test_random_derive_seed(ml_ds: Dataset):
     algo = basic.Random(rng_spec="user")
-    model = algo.fit(lktu.ml_test.ratings)
-    items = lktu.ml_test.ratings["item"].unique()
-    nitems = len(items)
+    model = algo.fit(ml_ds)
 
     assert model is not None
 
@@ -103,16 +102,16 @@ def test_random_derive_seed():
     assert set(recs1["item"]) != set(recs2["item"])
 
     recs_all = algo.recommend(2038)
-    assert len(recs_all) == nitems
-    assert set(items) == set(recs_all["item"])
+    assert len(recs_all) == ml_ds.item_count
+    assert set(ml_ds.items.ids()) == set(recs_all["item"])
 
 
-def test_random_rec_from_candidates():
+def test_random_rec_from_candidates(ml_ds: Dataset):
     algo = basic.Random()
-    items = lktu.ml_test.ratings["item"].unique()
-    users = lktu.ml_test.ratings["user"].unique()
+    items = ml_ds.items.ids()
+    users = ml_ds.users.ids()
     user1, user2 = np.random.choice(users, size=2, replace=False)
-    algo.fit(lktu.ml_test.ratings)
+    algo.fit(ml_ds)
 
     # recommend from candidates
     candidates = np.random.choice(items, 500, replace=False)
@@ -124,7 +123,7 @@ def test_random_rec_from_candidates():
 
 def test_knownrating():
     algo = basic.KnownRating()
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     preds = algo.predict_for_user(10, [1, 2])
     assert set(preds.index) == set([1, 2])
@@ -138,7 +137,7 @@ def test_knownrating():
 
 def test_knownrating_batch_missing():
     algo = basic.KnownRating()
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     preds = algo.predict(pd.DataFrame({"user": [10, 12, 12], "item": [1, 1, 3]}))
     assert set(preds.index) == set([0, 1, 2])
