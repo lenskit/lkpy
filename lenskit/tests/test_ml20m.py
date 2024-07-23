@@ -16,6 +16,7 @@ import pytest
 from lenskit import batch
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import PopScore
+from lenskit.data.dataset import Dataset, from_interactions_df
 from lenskit.datasets import MovieLens
 
 _log = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ else:
 @pytest.fixture
 def ml20m():
     if _ml_20m:
-        return _ml_20m.ratings
+        return from_interactions_df(_ml_20m.ratings)
     else:
         pytest.skip("ML-20M not available")
 
@@ -38,8 +39,8 @@ def ml20m():
 @pytest.mark.slow
 @pytest.mark.realdata
 @pytest.mark.parametrize("n_jobs", [1, 2])
-def test_pop_recommend(ml20m, rng, n_jobs):
-    users = rng.choice(ml20m["user"].unique(), 10000, replace=False)
+def test_pop_recommend(ml20m: Dataset, rng, n_jobs):
+    users = rng.choice(ml20m.users.ids(), 10000, replace=False)
     algo = PopScore()
     algo = Recommender.adapt(algo)
     _log.info("training %s", algo)
