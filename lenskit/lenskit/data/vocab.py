@@ -138,7 +138,7 @@ class Vocabulary(Generic[VT]):
         return Vocabulary[VT](self._index)
 
     def __eq__(self, other: Vocabulary[Any]) -> bool:  # noqa: F821
-        return bool(np.all(self.index == other.index))
+        return self.size == other.size and bool(np.all(self.index == other.index))
 
     def __len__(self) -> int:
         return self.size
