@@ -17,11 +17,13 @@ import warnings
 import numpy as np
 import pandas as pd
 import torch
-from typing_extensions import Any, NamedTuple, Optional, Self
+from typing_extensions import NamedTuple, Optional, Self, override
 
 from lenskit import util
-from lenskit.data import FeedbackType, sparse_ratings
+from lenskit.data import FeedbackType
+from lenskit.data.dataset import Dataset
 from lenskit.data.matrix import normalize_sparse_rows, safe_spmv
+from lenskit.data.vocab import EntityId, Vocabulary
 from lenskit.diagnostics import DataWarning
 from lenskit.parallel.config import ensure_parallel_init
 
@@ -81,9 +83,9 @@ class UserUser(Predictor):
     aggregate: str
     use_ratings: bool
 
-    user_index_: pd.Index[Any]
+    users_: Vocabulary[EntityId]
     "The index of user IDs."
-    item_index_: pd.Index[Any]
+    items_: Vocabulary[EntityId]
     "The index of item IDs."
     user_means_: torch.Tensor | None
     "Mean rating for each known user."
@@ -126,7 +128,8 @@ class UserUser(Predictor):
         if self.aggregate not in [self.AGG_WA, self.AGG_SUM]:
             raise ValueError(f"invalid aggregate {self.aggregate}")
 
-    def fit(self, ratings: pd.DataFrame, **kwargs) -> Self:
+    @override
+    def fit(self, data: Dataset, **kwargs) -> Self:
         """
         "Train" a user-user CF model.  This memorizes the rating data in a format that is usable
         for future computations.
@@ -135,7 +138,8 @@ class UserUser(Predictor):
             ratings(pandas.DataFrame): (user, item, rating) data for collaborative filtering.
         """
         ensure_parallel_init()
-        rmat, users, items = sparse_ratings(ratings, type="torch")
+        rmat = data.interaction_matrix("torch", field="rating" if self.use_ratings else None)
+        assert rmat.is_sparse_csr
 
         if self.center:
             rmat, means = normalize_sparse_rows(rmat, "center")
@@ -152,12 +156,13 @@ class UserUser(Predictor):
 
         self.user_vectors_ = normed
         self.user_ratings_ = rmat.to_sparse_coo().coalesce()
-        self.user_index_ = users
+        self.users_ = data.users.copy()
         self.user_means_ = means
-        self.item_index_ = items
+        self.items_ = data.items.copy()
 
         return self
 
+    @override
     def predict_for_user(self, user, items, ratings=None):
         """
         Compute predictions for a user and items.
@@ -183,19 +188,19 @@ class UserUser(Predictor):
 
         uidx, ratings, umean = udata
         _log.debug("scoring %d items for user %s (idx %d)", len(items), user, uidx or -1)
-        assert ratings.shape == (len(self.item_index_),)  # ratings is a dense vector
+        assert ratings.shape == (len(self.items_),)  # ratings is a dense vector
 
         # now ratings has vbeen normalized to be a mean-centered unit vector
         # this means we can dot product to score neighbors
         # score the neighbors!
         nbr_sims = safe_spmv(self.user_vectors_, ratings)
-        assert nbr_sims.shape == (len(self.user_index_),)
+        assert nbr_sims.shape == (len(self.users_),)
         if uidx is not None:
             # zero out the self-similarity
             nbr_sims[uidx] = 0
 
         # get indices for these neighbors
-        nbr_idxs = torch.arange(len(self.user_index_), dtype=torch.int64)
+        nbr_idxs = torch.arange(len(self.users_), dtype=torch.int64)
 
         nbr_mask = nbr_sims >= self.min_sim
 
@@ -206,7 +211,7 @@ class UserUser(Predictor):
                 "user %s: %d candidate neighbors (of %d total), max sim %0.4f",
                 user,
                 len(kn_sims),
-                len(self.user_index_),
+                len(self.users_),
                 torch.max(kn_sims).item(),
             )
         else:
@@ -215,8 +220,8 @@ class UserUser(Predictor):
 
         assert not torch.any(torch.isnan(kn_sims))
 
-        iidxs = self.item_index_.get_indexer_for(items)
-        iidxs = torch.from_numpy(iidxs)
+        iidxs = self.items_.numbers(items, missing="negative")
+        iidxs = torch.from_numpy(iidxs).to(torch.int64)
 
         ki_mask = iidxs >= 0
         usable_iidxs = iidxs[ki_mask]
@@ -244,11 +249,7 @@ class UserUser(Predictor):
     def _get_user_data(self, user, ratings) -> Optional[UserRatings]:
         "Get a user's data for user-user CF"
 
-        try:
-            index = self.user_index_.get_loc(user)
-            assert isinstance(index, int)
-        except KeyError:
-            index = None
+        index = self.users_.number(user, missing=None)
 
         if ratings is None:
             if index is None:
@@ -272,7 +273,7 @@ class UserUser(Predictor):
                 umean = 0
             unorm = np.linalg.norm(ratings)
             ratings = ratings / unorm
-            ratings = ratings.reindex(self.item_index_, fill_value=0).values
+            ratings = ratings.reindex(self.items_, fill_value=0).values
             ratings = torch.from_numpy(np.require(ratings, "f4"))
             return UserRatings(index, ratings, umean)
 

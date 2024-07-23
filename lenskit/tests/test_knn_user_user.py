@@ -15,13 +15,13 @@ import torch
 from pytest import approx, fail, mark
 
 import lenskit.algorithms.knn.user as knn
+from lenskit.data.dataset import from_interactions_df
 import lenskit.util.test as lktu
 from lenskit.algorithms import Recommender
 from lenskit.util import clone
+from lenskit.util.test import ml_ratings, ml_ds # noqa: F401
 
 _log = logging.getLogger(__name__)
-
-ml_ratings = lktu.ml_test.ratings
 
 
 def test_uu_dft_config():
@@ -56,9 +56,9 @@ def test_uu_imp_clone():
     assert a2.__dict__ == algo.__dict__
 
 
-def test_uu_train():
+def test_uu_train(ml_ratings, ml_ds):
     algo = knn.UserUser(30)
-    ret = algo.fit(ml_ratings)
+    ret = algo.fit(ml_ds)
     assert ret is algo
 
     # we have data structures
@@ -67,41 +67,42 @@ def test_uu_train():
     assert algo.user_ratings_ is not None
 
     # it should have computed correct means
-    umeans = ml_ratings.groupby("user").rating.mean()
-    mlmeans = pd.Series(algo.user_means_.numpy(), index=algo.user_index_, name="mean")
-    umeans, mlmeans = umeans.align(mlmeans)
+    u_stats = ml_ds.user_stats()
+    mlmeans = pd.Series(algo.user_means_.numpy(), index=algo.users_.ids(), name="mean")
+    mlmeans.index.name = 'userId'
+    umeans, mlmeans = u_stats['mean_rating'].align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
     # we should be able to reconstruct rating values
-    uir = ml_ratings.set_index(["user", "item"]).rating
+    uir = ml_ratings.set_index(["userId", "movieId"]).rating
     rates = algo.user_ratings_.to_sparse_coo()
     ui_rbdf = pd.DataFrame(
         {
-            "user": algo.user_index_[rates.indices()[0]],
-            "item": algo.item_index_[rates.indices()[1]],
+            "userId": algo.users_.ids(rates.indices()[0]),
+            "movieId": algo.items_.ids(rates.indices()[1]),
             "nrating": rates.values(),
         }
-    ).set_index(["user", "item"])
+    ).set_index(["userId", "movieId"])
     ui_rbdf = ui_rbdf.join(mlmeans)
     ui_rbdf["rating"] = ui_rbdf["nrating"] + ui_rbdf["mean"]
     ui_rbdf["orig_rating"] = uir
     assert ui_rbdf.rating.values == approx(ui_rbdf.orig_rating.values)
 
 
-def test_uu_train_adapt():
+def test_uu_train_adapt(ml_ds):
     "Test training an adapted user-user (#129)."
     from lenskit.algorithms import Recommender
 
     uu = knn.UserUser(30)
     uu = Recommender.adapt(uu)
-    ret = uu.fit(ml_ratings)
+    ret = uu.fit(ml_ds)
     assert ret is uu
     assert isinstance(uu.predictor, knn.UserUser)
 
 
-def test_uu_predict_one():
+def test_uu_predict_one(ml_ds):
     algo = knn.UserUser(30)
-    algo.fit(ml_ratings)
+    algo.fit(ml_ds)
 
     preds = algo.predict_for_user(4, [1016])
     assert len(preds) == 1
@@ -109,9 +110,9 @@ def test_uu_predict_one():
     assert preds.values == approx([3.62221550680778])
 
 
-def test_uu_predict_too_few():
+def test_uu_predict_too_few(ml_ds):
     algo = knn.UserUser(30, min_nbrs=2)
-    algo.fit(ml_ratings)
+    algo.fit(ml_ds)
 
     preds = algo.predict_for_user(4, [2091])
     assert len(preds) == 1
@@ -119,9 +120,9 @@ def test_uu_predict_too_few():
     assert all(preds.isna())
 
 
-def test_uu_predict_too_few_blended():
+def test_uu_predict_too_few_blended(ml_ds):
     algo = knn.UserUser(30, min_nbrs=2)
-    algo.fit(ml_ratings)
+    algo.fit(ml_ds)
 
     preds = algo.predict_for_user(4, [1016, 2091])
     assert len(preds) == 2
@@ -129,12 +130,12 @@ def test_uu_predict_too_few_blended():
     assert preds.loc[1016] == approx(3.62221550680778)
 
 
-def test_uu_predict_live_ratings():
+def test_uu_predict_live_ratings(ml_ratings):
     algo = knn.UserUser(30, min_nbrs=2)
-    no4 = ml_ratings[ml_ratings.user != 4]
-    algo.fit(no4)
+    no4 = ml_ratings[ml_ratings.userId != 4]
+    algo.fit(from_interactions_df(no4, item_col='movieId'))
 
-    ratings = ml_ratings[ml_ratings.user == 4].set_index("item").rating
+    ratings = ml_ratings[ml_ratings.userId == 4].set_index("movieId").rating
 
     preds = algo.predict_for_user(20381, [1016, 2091], ratings)
     assert len(preds) == 2
@@ -142,10 +143,10 @@ def test_uu_predict_live_ratings():
     assert preds.loc[1016] == approx(3.62221550680778)
 
 
-def test_uu_save_load(tmp_path):
+def test_uu_save_load(tmp_path, ml_ratings, ml_ds):
     orig = knn.UserUser(30)
     _log.info("training model")
-    orig.fit(ml_ratings)
+    orig.fit(ml_ds)
 
     fn = tmp_path / "uu.model"
     _log.info("saving to %s", fn)
@@ -159,21 +160,22 @@ def test_uu_save_load(tmp_path):
     _log.info("checking model")
 
     # it should have computed correct means
-    umeans = ml_ratings.groupby("user").rating.mean()
-    mlmeans = pd.Series(algo.user_means_, index=algo.user_index_, name="mean")
+    umeans = ml_ds.user_stats()['mean_rating']
+    mlmeans = pd.Series(algo.user_means_, index=algo.users_, name="mean")
+    mlmeans.index.name = 'userId'
     umeans, mlmeans = umeans.align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
     # we should be able to reconstruct rating values
-    uir = ml_ratings.set_index(["user", "item"]).rating
+    uir = ml_ratings.set_index(["userId", "movieId"]).rating
     rates = algo.user_ratings_.to_sparse_coo()
     ui_rbdf = pd.DataFrame(
         {
-            "user": algo.user_index_[rates.indices()[0]],
-            "item": algo.item_index_[rates.indices()[1]],
+            "userId": algo.users_.ids(rates.indices()[0]),
+            "movieId": algo.items_.ids(rates.indices()[1]),
             "nrating": rates.values(),
         }
-    ).set_index(["user", "item"])
+    ).set_index(["userId", "movieId"])
     ui_rbdf = ui_rbdf.join(mlmeans)
     ui_rbdf["rating"] = ui_rbdf["nrating"] + ui_rbdf["mean"]
     ui_rbdf["orig_rating"] = uir
@@ -186,21 +188,21 @@ def test_uu_save_load(tmp_path):
     assert preds.values == approx([3.62221550680778])
 
 
-def test_uu_predict_unknown_empty():
+def test_uu_predict_unknown_empty(ml_ds):
     algo = knn.UserUser(30, min_nbrs=2)
-    algo.fit(ml_ratings)
+    algo.fit(ml_ds)
 
     preds = algo.predict_for_user(-28018, [1016, 2091])
     assert len(preds) == 2
     assert all(preds.isna())
 
 
-def test_uu_implicit():
+def test_uu_implicit(ml_ratings):
     "Train and use user-user on an implicit data set."
     algo = knn.UserUser(20, feedback="implicit")
-    data = ml_ratings.loc[:, ["user", "item"]]
+    data = ml_ratings.loc[:, ["userId", "movieId"]]
 
-    algo.fit(data)
+    algo.fit(from_interactions_df(data, item_col='movieId'))
     assert algo.user_means_ is None
 
     mat = algo.user_vectors_
@@ -213,19 +215,19 @@ def test_uu_implicit():
 
 
 @mark.slow
-def test_uu_save_load_implicit(tmp_path):
+def test_uu_save_load_implicit(tmp_path, ml_ratings):
     "Save and load user-user on an implicit data set."
     orig = knn.UserUser(20, feedback="implicit")
-    data = ml_ratings.loc[:, ["user", "item"]]
+    data = ml_ratings.loc[:, ["userId", "movieId"]]
 
-    orig.fit(data)
+    orig.fit(from_interactions_df(data, item_col='movieId'))
     ser = pickle.dumps(orig)
 
     algo = pickle.loads(ser)
 
     assert algo.user_means_ is None
-    assert all(algo.user_index_ == orig.user_index_)
-    assert all(algo.item_index_ == orig.item_index_)
+    assert algo.users_ == orig.users_
+    assert algo.items_ == orig.items_
 
 
 @mark.slow
@@ -234,7 +236,7 @@ def test_uu_known_preds():
 
     algo = knn.UserUser(30, min_sim=1.0e-6)
     _log.info("training %s on ml data", algo)
-    algo.fit(lktu.ml_test.ratings)
+    algo.fit(from_interactions_df(lktu.ml_test.ratings))
 
     dir = Path(__file__).parent
     pred_file = dir / "user-user-preds.csv"
@@ -266,7 +268,7 @@ def __batch_eval(job):
 
     algo, train, test = job
     _log.info("running training")
-    algo.fit(train)
+    algo.fit(from_interactions_df(train))
     _log.info("testing %d users", test.user.nunique())
     return batch.predict(algo, test)
 
@@ -312,7 +314,7 @@ def test_uu_implicit_batch_accuracy():
     for train, test in folds:
         _log.info("running training")
         rec_algo = Recommender.adapt(algo)
-        rec_algo.fit(train.loc[:, ["user", "item"]])
+        rec_algo.fit(from_interactions_df(train.loc[:, ["user", "item"]]))
         _log.info("testing %d users", test.user.nunique())
         recs = batch.recommend(rec_algo, test.user.unique(), 100, n_jobs=2)
         rec_lists.append(recs)
