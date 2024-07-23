@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 import logging
-from collections import namedtuple
+from typing import NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -13,22 +13,37 @@ import pandas as pd
 import pytest
 
 import lenskit.crossfold as xf
+from lenskit.data.dataset import Dataset, from_interactions_df
 import lenskit.util.test as lktu
 from lenskit import batch, topn
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import PopScore, TopN
 from lenskit.algorithms.bias import Bias
+from lenskit.util.test import ml_ratings, ml_ds  # noqa: F401
 
-MLB = namedtuple("MLB", ["ratings", "algo"])
 _log = logging.getLogger(__name__)
 
 
+class MLB(NamedTuple):
+    ratings: pd.DataFrame
+    data: Dataset
+    algo: TopN
+
+
 @pytest.fixture
-def mlb():
-    ratings = lktu.ml_test.ratings
+def mlb(ml_ratings, ml_ds) -> MLB:
     algo = TopN(Bias())
-    algo.fit(ratings)
-    return MLB(ratings, algo)
+    algo.fit(ml_ds)
+    return MLB(
+        ml_ratings.rename(
+            columns={
+                "userId": "user",
+                "movieId": "item",
+            }
+        ),
+        ml_ds,
+        algo,
+    )
 
 
 class MLFolds:
@@ -39,7 +54,7 @@ class MLFolds:
 
     def evaluate(self, algo, train, test, **kwargs):
         _log.info("running training")
-        algo.fit(train)
+        algo.fit(from_interactions_df(train))
         _log.info("testing %d users", test.user.nunique())
         recs = batch.recommend(algo, test.user.unique(), 100, **kwargs)
         return recs
@@ -60,12 +75,12 @@ class MLFolds:
 @pytest.fixture
 def ml_folds() -> MLFolds:
     if not lktu.ml100k.available:
-        raise pytest.skip("ML-100K not available")
+        pytest.skip("ML-100K not available")
     ratings = lktu.ml100k.ratings
     return MLFolds(ratings)
 
 
-def test_recommend_single(mlb):
+def test_recommend_single(mlb: MLB):
     res = batch.recommend(mlb.algo, [1], None, {1: [31]}, n_jobs=1)
 
     assert len(res) == 1
@@ -78,7 +93,7 @@ def test_recommend_single(mlb):
     assert res.score.iloc[0] == pytest.approx(expected)
 
 
-def test_recommend_user(mlb):
+def test_recommend_user(mlb: MLB):
     uid = 5
     items = mlb.ratings.item.unique()
 
@@ -96,7 +111,7 @@ def test_recommend_user(mlb):
     assert all(np.diff(res.score) <= 0)
 
 
-def test_recommend_two_users(mlb):
+def test_recommend_two_users(mlb: MLB):
     items = mlb.ratings.item.unique()
 
     def candidates(user):
@@ -115,7 +130,7 @@ def test_recommend_two_users(mlb):
     assert all(np.diff(res[res.user == 10]["rank"]) == 1)
 
 
-def test_recommend_no_cands(mlb):
+def test_recommend_no_cands(mlb: MLB):
     res = batch.recommend(mlb.algo, [5, 10], 10, n_jobs=1)
 
     assert len(res) == 20
