@@ -535,7 +535,7 @@ class Dataset:
             if self._matrix.timestamps is not None:
                 i64i = np.iinfo(np.int64)
                 times = np.full(self.item_count, i64i.max, dtype=np.int64)
-                np.minimum.at(sums, self._matrix.item_nums, self._matrix.timestamps)
+                np.minimum.at(times, self._matrix.item_nums, self._matrix.timestamps)
                 frame["first_time"] = times
 
             self._item_stats = frame
