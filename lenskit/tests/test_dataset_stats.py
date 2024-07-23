@@ -31,3 +31,19 @@ def test_item_stats(ml_ratings: pd.DataFrame, ml_ds: Dataset):
         df = stats[['first_time']].assign(expected=ts)
         bdf = df[bad]
         raise AssertionError(f'timestamps mismatch:\n{bdf}')
+
+
+def test_user_stats(ml_ratings: pd.DataFrame, ml_ds: Dataset):
+    stats = ml_ds.user_stats()
+    stats.info()
+
+    assert len(stats) == ml_ds.user_count
+    assert np.all(stats.index == ml_ds.users.index)
+
+    assert np.all(stats['count'] == ml_ratings['userId'].value_counts().reindex(ml_ds.users.index))
+    assert np.all(stats['user_count'] == ml_ratings['userId'].value_counts().reindex(ml_ds.users.index))
+    assert np.all(stats['rating_count'] == ml_ratings['userId'].value_counts().reindex(ml_ds.users.index))
+
+    assert stats['mean_rating'].values == approx(ml_ratings.groupby('userId')['rating'].mean().reindex(ml_ds.users.index).values)
+    assert np.all(stats['first_time'] == ml_ratings.groupby('userId')['timestamp'].min().reindex(ml_ds.users.index))
+    assert np.all(stats['last_time'] == ml_ratings.groupby('userId')['timestamp'].max().reindex(ml_ds.users.index))

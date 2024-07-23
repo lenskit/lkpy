@@ -66,6 +66,7 @@ class Dataset:
     "Item ID vocabulary, to map between IDs and column or row numbers."
     _matrix: InteractionMatrix
     _item_stats: pd.DataFrame | None = None
+    _user_stats: pd.DataFrame | None = None
 
     def __init__(self, users: Vocabulary, items: Vocabulary, interact_df: pd.DataFrame):
         """
@@ -541,6 +542,59 @@ class Dataset:
             self._item_stats = frame
 
         return self._item_stats
+
+    def user_stats(self) -> pd.DataFrame:
+        """
+        Get user statistics.
+
+        Returns:
+            A data frame indexed by user ID with the following columns:
+
+            * count — the number of interactions recorded for this user.
+            * item_count — the number of distinct items with which this user has
+              interacted.
+            * rating_count — the number of ratings for this user.  Only provided
+              if the dataset has explicit ratings; if there are repeated
+              ratings, this does **not** count superseded ratings.
+            * mean_rating — the mean of the user's reatings. Only provided if
+              the dataset has explicit ratings.
+            * first_time — the first time the user appears. Only provided if the
+              dataset has timestamps.
+            * last_time — the last time the user appears. Only provided if the
+              dataset has timestamps.
+
+            The index is the vocabulary, so ``iloc`` works with user numbers.
+        """
+
+        if self._user_stats is None:
+            counts = np.zeros(self.user_count, dtype=np.int32)
+            np.add.at(counts, self._matrix.user_nums, 1)
+            frame = pd.DataFrame(
+                {
+                    "count": counts,
+                    "user_count": counts,
+                },
+                index=self.users.index,
+            )
+
+            if self._matrix.ratings is not None:
+                sums = np.zeros(self.user_count, dtype=np.float64)
+                np.add.at(sums, self._matrix.user_nums, self._matrix.ratings)
+                frame["rating_count"] = counts
+                frame["mean_rating"] = sums / counts
+
+            if self._matrix.timestamps is not None:
+                i64i = np.iinfo(np.int64)
+                first = np.full(self.user_count, i64i.max, dtype=np.int64)
+                last = np.full(self.user_count, i64i.min, dtype=np.int64)
+                np.minimum.at(first, self._matrix.user_nums, self._matrix.timestamps)
+                np.maximum.at(last, self._matrix.user_nums, self._matrix.timestamps)
+                frame["first_time"] = first
+                frame["last_time"] = last
+
+            self._user_stats = frame
+
+        return self._user_stats
 
 
 def from_interactions_df(
