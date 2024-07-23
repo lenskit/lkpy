@@ -58,7 +58,7 @@ def demo_recs():
     users = test["user"].unique()
     algo = PopScore()
     algo = PlackettLuce(algo, rng_spec="user")
-    algo.fit(train)
+    algo.fit(from_interactions_df(train))
 
     recs = recommend(algo, users, 500)
     return train, test, recs

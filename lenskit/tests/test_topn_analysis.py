@@ -17,6 +17,7 @@ from lenskit import crossfold as xf
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.knn.item import ItemItem
 from lenskit.algorithms.knn.user import UserUser
+from lenskit.data.dataset import from_interactions_df
 from lenskit.metrics.topn import _dcg, precision, recall
 from lenskit.util.test import demo_recs, ml_test  # noqa: F401
 
@@ -216,7 +217,7 @@ def test_fill_users():
 
     splits = xf.sample_users(ml_test.ratings, 1, 50, xf.SampleN(5))
     train, test = next(splits)
-    algo.fit(train)
+    algo.fit(from_interactions_df(train))
 
     rec_users = test["user"].sample(50).unique()
     assert len(rec_users) < 50
@@ -251,11 +252,11 @@ def test_adv_fill_users():
     all_recs = {}
     all_test = {}
     for i, (train, test) in enumerate(splits):
-        a_uu.fit(train)
+        a_uu.fit(from_interactions_df(train))
         rec_users = test["user"].sample(50).unique()
         all_recs[(i + 1, "UU")] = batch.recommend(a_uu, rec_users, 25)
 
-        a_ii.fit(train)
+        a_ii.fit(from_interactions_df(train))
         rec_users = test["user"].sample(50).unique()
         all_recs[(i + 1, "II")] = batch.recommend(a_ii, rec_users, 25)
         all_test[i + 1] = test
