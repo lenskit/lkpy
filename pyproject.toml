@@ -30,11 +30,11 @@ relative_files = true
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-exclude = [".git", "__pycache__", "build", "dist", "*/tests/*"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 unfixable = ["F401"]
+exclude = [".git", "__pycache__", "build", "dist", "*/tests/*"]
 
 [tool.ruff.lint.per-file-ignores]
 # Importing PyTest fixtures triggers F811
