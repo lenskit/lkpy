@@ -15,7 +15,8 @@ classes (:py:mod:`abc`) representing different algorithm capabilities.
 
 import inspect
 from abc import ABCMeta, abstractmethod
-from typing import Self
+
+from typing_extensions import Self
 
 from lenskit.data.dataset import Dataset
 
