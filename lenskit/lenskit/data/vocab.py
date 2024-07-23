@@ -5,7 +5,7 @@ Vocabularies of IDs, tags, etc.
 # pyright: basic
 from __future__ import annotations
 
-from typing import Any, Generic, Hashable, Iterable, Literal, Sequence, TypeAlias, TypeVar
+from typing import Any, Generic, Hashable, Iterable, Literal, Sequence, TypeAlias, TypeVar, overload
 
 import numpy as np
 import pandas as pd
@@ -61,17 +61,21 @@ class Vocabulary(Generic[VT]):
         "Current vocabulary size."
         return len(self._index)
 
-    def number(self, term: VT, missing: Literal["error", "negative"] = "error") -> int:
+    @overload
+    def number(self, term: VT, missing: Literal["error"] = "error") -> int: ...
+    @overload
+    def number(self, term: VT, missing: Literal["none"] | None) -> int | None: ...
+    def number(self, term: VT, missing: Literal["error", "none"] | None = "error") -> int | None:
         "Look up the number for a vocabulary term."
         try:
             num = self._index.get_loc(term)
             assert isinstance(num, int)
             return num
         except KeyError as e:
-            if missing == "negative":
-                return -1
-            else:
+            if missing == "error":
                 raise e
+            else:
+                return None
 
     def numbers(
         self, terms: Sequence[VT] | ArrayLike, missing: Literal["error", "negative"] = "error"
@@ -145,3 +149,15 @@ class Vocabulary(Generic[VT]):
 
     def __len__(self) -> int:
         return self.size
+
+    def __str__(self) -> str:
+        if self.name:
+            return f"Vocabulary of {self.size} {self.name} terms"
+        else:
+            return f"Vocabulary of {self.size} terms"
+
+    def __repr__(self) -> str:
+        if self.name:
+            return f"<Vocabulary(name={self.name}, size={self.size})>"
+        else:
+            return f"<Vocabulary(size={self.size})>"

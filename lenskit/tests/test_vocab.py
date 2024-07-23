@@ -126,7 +126,7 @@ def test_lookup_bad_id(keys: set[int | str | UUID], key: int | str | UUID):
 
     vocab = Vocabulary(keys)
 
-    assert vocab.number(key, missing="negative") < 0
+    assert vocab.number(key, missing=None) is None
 
     with raises(KeyError):
         assert vocab.number(key, missing="error")
