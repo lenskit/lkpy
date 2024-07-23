@@ -140,5 +140,8 @@ class Vocabulary(Generic[VT]):
     def __eq__(self, other: Vocabulary[Any]) -> bool:  # noqa: F821
         return self.size == other.size and bool(np.all(self.index == other.index))
 
+    def __contains__(self, key: VT) -> bool:
+        return key in self._index
+
     def __len__(self) -> int:
         return self.size

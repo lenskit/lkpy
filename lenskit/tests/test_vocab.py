@@ -76,6 +76,27 @@ def test_not_equal(keys: list[int], oks: set[int]):
         st.sets(st.integers()),
         st.sets(st.emails()),
         st.sets(st.uuids()),
+    ),
+    st.lists(st.one_of(
+        st.integers(),
+        st.emails(),
+        st.uuids(),
+    )
+))
+def test_contains(keys: set[int] | set[str] | set[UUID], qs: set[int|str|UUID]):
+    vocab = Vocabulary(keys)
+
+    for qk in qs:
+        if qk in keys:
+            assert qk in vocab
+        else:
+            assert qk not in vocab
+
+@given(
+    st.one_of(
+        st.sets(st.integers()),
+        st.sets(st.emails()),
+        st.sets(st.uuids()),
     )
 )
 def test_lookup_id_index(keys: set[int | str | UUID]):
