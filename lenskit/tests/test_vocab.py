@@ -47,6 +47,32 @@ def test_create_nonunique(keys: list[int | str | UUID]):
 
 @given(
     st.one_of(
+        st.lists(st.integers()),
+        st.lists(st.emails()),
+        st.lists(st.uuids()),
+    )
+)
+def test_equal(keys: list[int | str | UUID]):
+    uq = set(keys)
+    vocab = Vocabulary(keys)
+
+    v2 = Vocabulary(keys)
+    assert v2 == vocab
+
+@given(
+        st.lists(st.integers()),
+        st.sets(st.integers())
+)
+def test_not_equal(keys: list[int], oks: set[int]):
+    uq = set(keys)
+    assume(oks != uq)
+
+    vocab = Vocabulary(keys)
+    v2 = Vocabulary(oks)
+    assert v2 != vocab
+
+@given(
+    st.one_of(
         st.sets(st.integers()),
         st.sets(st.emails()),
         st.sets(st.uuids()),
