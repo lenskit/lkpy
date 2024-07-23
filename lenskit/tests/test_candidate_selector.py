@@ -7,12 +7,14 @@
 import numpy as np
 import pandas as pd
 
+from lenskit.data.dataset import from_interactions_df
 import lenskit.util.test as lktu
 from lenskit.algorithms import basic
 
 simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
 )
+simple_ds = from_interactions_df(simple_df)
 
 
 def test_empty():
@@ -32,7 +34,7 @@ def test_all():
 
 def test_unrated_selector():
     sel = basic.UnratedItemCandidateSelector()
-    s2 = sel.fit(simple_df)
+    s2 = sel.fit(simple_ds)
     assert s2 is sel
 
     print(sel.items_)
@@ -46,7 +48,7 @@ def test_unrated_selector():
 
 def test_unrated_override():
     sel = basic.UnratedItemCandidateSelector()
-    sel.fit(simple_df)
+    sel.fit(simple_ds)
 
     assert set(sel.candidates(10, [2])) == set([1, 3])
 
@@ -58,7 +60,7 @@ def test_unrated_big():
     user_items = ratings.set_index("user").item
 
     sel = basic.UnratedItemCandidateSelector()
-    s2 = sel.fit(ratings)
+    s2 = sel.fit(from_interactions_df(ratings))
     assert s2 is sel
 
     # test 100 random users
