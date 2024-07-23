@@ -5,31 +5,39 @@
 # SPDX-License-Identifier: MIT
 
 import logging
-from collections import namedtuple
+from typing import NamedTuple
 
 import numpy as np
 import pandas as pd
 
 import pytest
 
+from lenskit.algorithms import Algorithm
 import lenskit.batch as lkb
+from lenskit.data.dataset import Dataset, from_interactions_df
 import lenskit.util.test as lktu
+from lenskit.util.test import ml_ratings, ml_ds # noqa: F401
 from lenskit.algorithms.bias import Bias
 
 _log = logging.getLogger(__name__)
 
-MLB = namedtuple("MLB", ["ratings", "algo"])
+class MLB(NamedTuple):
+    ratings: pd.DataFrame
+    data: Dataset
+    algo: Bias
 
 
 @pytest.fixture
-def mlb():
-    ratings = lktu.ml_test.ratings
+def mlb(ml_ratings, ml_ds) -> MLB:
     algo = Bias()
-    algo.fit(ratings)
-    return MLB(ratings, algo)
+    algo.fit(ml_ds)
+    return MLB(ml_ratings.rename(columns={
+        'userId': 'user',
+        'movieId': 'item',
+    }), ml_ds, algo)
 
 
-def test_predict_single(mlb):
+def test_predict_single(mlb: MLB):
     tf = pd.DataFrame({"user": [1], "item": [31]})
     res = lkb.predict(mlb.algo, tf, n_jobs=1)
 
@@ -42,7 +50,7 @@ def test_predict_single(mlb):
     assert res.prediction.iloc[0] == pytest.approx(expected)
 
 
-def test_predict_user(mlb):
+def test_predict_user(mlb: MLB):
     uid = 5
     urates = mlb.ratings[mlb.ratings.user == uid]
 
@@ -67,7 +75,7 @@ def test_predict_user(mlb):
     assert preds.prediction.values == pytest.approx(preds.rating.values)
 
 
-def test_predict_two_users(mlb):
+def test_predict_two_users(mlb: MLB):
     uids = [5, 10]
     tf = None
     # make sure we get both UIDs
@@ -86,7 +94,7 @@ def test_predict_two_users(mlb):
     assert preds.prediction.values == pytest.approx(preds.rating.values)
 
 
-def test_predict_include_rating(mlb):
+def test_predict_include_rating(mlb: MLB):
     uids = [5, 10]
     tf = None
     # make sure we get both UIDs
@@ -123,7 +131,7 @@ def test_bias_batch_predict(ncpus):
 
     def eval(train, test):
         _log.info("running training")
-        algo.fit(train)
+        algo.fit(from_interactions_df(train))
         _log.info("testing %d users", test.user.nunique())
         recs = batch.predict(algo, test, n_jobs=ncpus)
         return recs
