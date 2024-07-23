@@ -12,7 +12,6 @@ import pandas as pd
 
 import pytest
 
-from lenskit.algorithms import Algorithm
 import lenskit.batch as lkb
 from lenskit.data.dataset import Dataset, from_interactions_df
 import lenskit.util.test as lktu
