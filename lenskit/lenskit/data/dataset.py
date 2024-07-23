@@ -438,23 +438,11 @@ class Dataset:
             layout = "csr"
         match layout:
             case "csr":
-                if legacy:
-                    return sps.csr_matrix(
-                        (data, self._matrix.item_nums, self._matrix.user_ptrs), shape=shape
-                    )
-                else:
-                    return sps.csr_array(
-                        (data, self._matrix.item_nums, self._matrix.user_ptrs), shape=shape
-                    )
+                ctor = sps.csr_matrix if legacy else sps.csr_array
+                return ctor((data, self._matrix.item_nums, self._matrix.user_ptrs), shape=shape)
             case "coo":
-                if legacy:
-                    return sps.coo_matrix(
-                        (data, (self._matrix.user_nums, self._matrix.item_nums)), shape=shape
-                    )
-                else:
-                    return sps.coo_array(
-                        (data, (self._matrix.user_nums, self._matrix.item_nums)), shape=shape
-                    )
+                ctor = sps.coo_matrix if legacy else sps.coo_array
+                return ctor((data, (self._matrix.user_nums, self._matrix.item_nums)), shape=shape)
             case _:  # pragma nocover
                 raise ValueError(f"unsupported layout {layout}")
 
