@@ -262,21 +262,11 @@ class Dataset:
         self,
         format: Literal["scipy"],
         *,
-        layout: Literal["csr"] | None = None,
-        legacy: bool = False,
-        field: str | None = None,
-        combine: MAT_AGG | None = None,
-    ) -> sps.csr_array: ...
-    @overload
-    def interaction_matrix(
-        self,
-        format: Literal["scipy"],
-        *,
-        layout: Literal["csr"] | None = None,
+        layout: Literal["coo"],
         legacy: Literal[True],
         field: str | None = None,
         combine: MAT_AGG | None = None,
-    ) -> sps.csr_matrix: ...
+    ) -> sps.coo_matrix: ...
     @overload
     def interaction_matrix(
         self,
@@ -292,11 +282,21 @@ class Dataset:
         self,
         format: Literal["scipy"],
         *,
-        layout: Literal["coo"],
+        layout: Literal["csr"] | None = None,
         legacy: Literal[True],
         field: str | None = None,
         combine: MAT_AGG | None = None,
-    ) -> sps.coo_matrix: ...
+    ) -> sps.csr_matrix: ...
+    @overload
+    def interaction_matrix(
+        self,
+        format: Literal["scipy"],
+        *,
+        layout: Literal["csr"] | None = None,
+        legacy: bool = False,
+        field: str | None = None,
+        combine: MAT_AGG | None = None,
+    ) -> sps.csr_array: ...
     @overload
     def interaction_matrix(
         self,
