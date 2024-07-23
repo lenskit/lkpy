@@ -150,6 +150,9 @@ class Vocabulary(Generic[VT]):
     def __len__(self) -> int:
         return self.size
 
+    def __array__(self, dtype=None) -> np.ndarray:
+        return self._index.values.__array__(dtype)
+
     def __str__(self) -> str:
         if self.name:
             return f"Vocabulary of {self.size} {self.name} terms"
