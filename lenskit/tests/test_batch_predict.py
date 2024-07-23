@@ -16,10 +16,11 @@ from lenskit.algorithms import Algorithm
 import lenskit.batch as lkb
 from lenskit.data.dataset import Dataset, from_interactions_df
 import lenskit.util.test as lktu
-from lenskit.util.test import ml_ratings, ml_ds # noqa: F401
+from lenskit.util.test import ml_ratings, ml_ds  # noqa: F401
 from lenskit.algorithms.bias import Bias
 
 _log = logging.getLogger(__name__)
+
 
 class MLB(NamedTuple):
     ratings: pd.DataFrame
@@ -31,10 +32,16 @@ class MLB(NamedTuple):
 def mlb(ml_ratings, ml_ds) -> MLB:
     algo = Bias()
     algo.fit(ml_ds)
-    return MLB(ml_ratings.rename(columns={
-        'userId': 'user',
-        'movieId': 'item',
-    }), ml_ds, algo)
+    return MLB(
+        ml_ratings.rename(
+            columns={
+                "userId": "user",
+                "movieId": "item",
+            }
+        ),
+        ml_ds,
+        algo,
+    )
 
 
 def test_predict_single(mlb: MLB):
