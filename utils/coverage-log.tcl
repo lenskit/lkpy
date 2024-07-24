@@ -39,8 +39,8 @@ if {[ev GITHUB_BASE_REF base]} {
         exit 2
     }
 
-    set diff_lines [exec jq .total_num_lines diff-coverage.json]
-    set diff_bad [exec jq .total_num_violations diff-coverage.json]
+    set diff_lines [exec jq .total_num_lines diff-cover.json]
+    set diff_bad [exec jq .total_num_violations diff-cover.json]
     set diff_cov [eval {1.0 - ($diff_bad / $diff_lines)}]
 
     set prev_cov [exec jq .totals.percent_covered <<$prev_data 2>@stderr]
