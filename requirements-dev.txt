@@ -16,7 +16,6 @@ tomlkit>=0.12
 pyyaml==6.*
 packaging>=24.0
 tqdm >= 4
-diff-cover >=9.1
 pandas-stubs >=1.5,<3
 -r requirements-test.txt
 -r requirements-doc.txt
