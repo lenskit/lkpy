@@ -77,6 +77,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-conda-${{matrix.platform}}-py${{matrix.python}}
           path: |
@@ -97,7 +98,6 @@ jobs:
         platform:
           - ubuntu-latest
           - macos-latest
-          - windows-latest
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
@@ -137,6 +137,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-vanilla-${{matrix.platform}}-py${{matrix.python}}
           path: |
@@ -189,6 +190,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-nojit
           path: |
@@ -238,6 +240,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-mindep
           path: |
@@ -295,6 +298,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-funksvd-py${{matrix.python}}
           path: |
@@ -344,6 +348,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-mindep-funksvd
           path: |
@@ -401,6 +406,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-implicit-py${{matrix.python}}
           path: |
@@ -450,6 +456,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-mindep-implicit
           path: |
@@ -506,6 +513,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-hpf-py${{matrix.python}}
           path: |
@@ -562,6 +570,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-eval-tests
           path: |
@@ -618,6 +627,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-examples
           path: |
@@ -644,12 +654,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: list remotes
+      - name: Add upstream remote
         run: |
           git remote add upstream https://github.com/lenskit/lkpy.git
           git fetch upstream
-      - name: 🐍 Setup coverage
-        run: pipx install 'coverage[toml]'
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: 📦 Install reporting packages
+        run: python -m pip install -r requirements-reporting.txt
       - name: 📥 Download test artifacts
         uses: actions/download-artifact@v4
         with:
@@ -657,21 +671,29 @@ jobs:
           path: test-logs
       - name: 📋 List log files
         run: ls -lR test-logs
-      - name: ⛙ Merge coverage reports
+      - name: ⛙ Merge and report
         run: |
           coverage combine test-logs/*/.coverage
-      - name: ± Compute change in coverage
-        run: tclsh ./utils/coverage-log.tcl
-      - name: 📃 Produce coverage reports
-        run: |
+          coverage xml
           coverage html -d lenskit-coverage
-          echo '<details>' >>"$GITHUB_STEP_SUMMARY"
-          echo '<summary>Full Coverage Report</summary>' >>"$GITHUB_STEP_SUMMARY"
-          echo '' >>"$GITHUB_STEP_SUMMARY"
-          coverage report --format=markdown --fail-under=90 >>"$GITHUB_STEP_SUMMARY"
-          echo '' >>"$GITHUB_STEP_SUMMARY"
-          echo '</details>' >>"$GITHUB_STEP_SUMMARY"
+          coverage report --format=markdown >coverage.md
+      - name: Analyze diff coverage
+        if: github.event_name == 'pull_request'
+        run: |
+          diff-cover --json-report diff-cover.json --markdown-report diff-cover.md \
+              coverage.xml |tee diff-cover.txt
+      - name: ± Measure and report coverage
+        run: |
+          echo $PR_NUMBER > ./lenskit-coverage/pr-number
+          tclsh ./utils/coverage-log.tcl
+          cat lenskit-coverage/report.md >$GITHUB_STEP_SUMMARY
+        env:
+          PR_NUMBER: ${{ github.event.number }}
       - name: 📤 Upload coverage report
         uses: actions/upload-artifact@v4
+        if: always()
         with:
+          name: coverage-report
           path: lenskit-coverage/
+      - name: 🚫 Fail if coverage is too low
+        run: coverage report --fail-under=90
