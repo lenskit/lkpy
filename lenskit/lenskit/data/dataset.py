@@ -15,6 +15,7 @@ import torch
 from numpy.typing import ArrayLike
 from typing_extensions import (
     Any,
+    Callable,
     Collection,
     Iterable,
     Literal,
@@ -700,6 +701,56 @@ class MatrixDataset(Dataset):
         if "timestamp" in fields:
             tbl.timestamps = torch.from_numpy(self._matrix.timestamps)
         return tbl
+
+
+class LazyDataset(Dataset):
+    """
+    A data set with an underlying load function, that doesn't call the function
+    until data is actually needed.
+    """
+
+    _delegate: Dataset | None = None
+    _loader: Callable[[], Dataset]
+
+    def __init__(self, loader: Callable[[], Dataset]):
+        """
+        Construct a dataset.
+
+        .. note::
+            Client code generally should not call this constructor.  Instead use the
+            various ``from_`` and ``load_`` functions in :mod:`lenskit.data`.
+        """
+        self._loader = loader
+
+    def delegate(self) -> Dataset:
+        """
+        Get the delegate data set, loading it if necessary.
+        """
+        if self._delegate is None:
+            self._delegate = self._loader()
+        return self._delegate
+
+    @property
+    @override
+    def items(self) -> Vocabulary[EntityId]:
+        return self.delegate().items
+
+    @property
+    @override
+    def users(self) -> Vocabulary[EntityId]:
+        return self.delegate().users
+
+    @override
+    def count(self, what: str) -> int:
+        return self.delegate().count(what)
+
+    @override
+    def interaction_matrix(self, *args, **kwargs) -> Any:
+        return self.delegate().interaction_matrix(*args, **kwargs)
+
+    @override
+    def interaction_log(self, *args, **kwargs) -> Any:
+        return self.delegate().interaction_log(*args, **kwargs)
 
 
 def from_interactions_df(

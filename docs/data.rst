@@ -104,6 +104,14 @@ by a ratings matrix or implicit-feedback matrix.
 
 .. autoclass:: MatrixDataset
 
+Lazy Dataset
+------------
+
+The lazy data set takes a function that loads a data set (of any type), and
+lazily uses that function to load an underlying data set when needed.
+
+.. autoclass:: LazyDataset
+
 User-Item Data Tables
 ~~~~~~~~~~~~~~~~~~~~~
 
