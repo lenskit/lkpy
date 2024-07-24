@@ -499,6 +499,7 @@ def jobs_result(deps: list[str]) -> GHJob:
                     tclsh ./utils/coverage-log.tcl
                     cat lenskit-coverage/report.md >$GITHUB_STEP_SUMMARY
                 """),
+                "env": {"PR_NUMBER": "${{ github.event.number }}"},
             },
             {
                 "name": "📤 Upload coverage report",
