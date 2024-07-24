@@ -85,7 +85,7 @@ def load_movielens_df(path: str | Path) -> pd.DataFrame:
             file.
 
     Returns:
-        The ratings, with columns ``user_id``, ``item_id``, ``rating``, and
+        The ratings, with columns ``user``, ``item``, ``rating``, and
         ``timestamp``.
     """
     with _ml_detect_and_open(path) as ml:
@@ -158,10 +158,10 @@ def _load_ml_100k(ml: MLData) -> pd.DataFrame:
             data,
             sep="\t",
             header=None,
-            names=["user_id", "item_id", "rating", "timestamp"],
+            names=["user", "item", "rating", "timestamp"],
             dtype={
-                "user_id": np.int32,
-                "item_id": np.int32,
+                "user": np.int32,
+                "item": np.int32,
                 "rating": np.float32,
                 "timestamp": np.int32,
             },
@@ -174,11 +174,11 @@ def _load_ml_million(ml: MLData) -> pd.DataFrame:
             data,
             sep=":",
             header=None,
-            names=["user_id", "_ui", "item_id", "_ir", "rating", "_rt", "timestamp"],
+            names=["user", "_ui", "item", "_ir", "rating", "_rt", "timestamp"],
             usecols=[0, 2, 4, 6],
             dtype={
-                "user_id": np.int32,
-                "item_id": np.int32,
+                "user": np.int32,
+                "item": np.int32,
                 "rating": np.float32,
                 "timestamp": np.int32,
             },
@@ -195,4 +195,4 @@ def _load_ml_modern(ml: MLData) -> pd.DataFrame:
                 "rating": np.float32,
                 "timestamp": np.int64,
             },
-        ).rename(columns={"userId": "user_id", "movieId": "item_id"})
+        ).rename(columns={"userId": "user", "movieId": "item"})
