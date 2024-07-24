@@ -24,6 +24,7 @@ jobs:
             });
             if (!matchArtifact) {
               console.error('no report artifact found');
+              console.info('artifacts: %o', allArtifacts.data.artifacts);
               throw new Error('no report');
             }
             let download = await github.rest.actions.downloadArtifact({
