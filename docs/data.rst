@@ -65,7 +65,8 @@ Dataset Abstraction
 
 The LensKit :class:`Dataset` class is the standard LensKit interface to datasets
 for training, evaluation, etc. Trainable models and components expect a dataset
-instance to be passed to :meth:`~lenskit.algorithms.Recommender.fit`.
+instance to be passed to :meth:`~lenskit.algorithms.Recommender.fit`.  It is an
+abstract class with implementations covering various scenarios.
 
 .. autoclass:: Dataset
 
@@ -91,6 +92,17 @@ and tensor data structures.
 .. module:: lenskit.data.vocab
 
 .. autoclass:: Vocabulary
+
+Dataset implementations
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Matrix Dataset
+--------------
+
+The :class:`MatrixDataset` provides an in-memory dataset implementation backed
+by a ratings matrix or implicit-feedback matrix.
+
+.. autoclass:: MatrixDataset
 
 User-Item Data Tables
 ~~~~~~~~~~~~~~~~~~~~~
