@@ -26,12 +26,14 @@ from lenskit.algorithms.basic import PopScore
 from lenskit.algorithms.ranking import PlackettLuce
 from lenskit.batch import recommend
 from lenskit.crossfold import simple_test_pair
-from lenskit.data.dataset import from_interactions_df
+from lenskit.data.dataset import Dataset, LazyDataset, from_interactions_df
 from lenskit.data.matrix import torch_sparse_from_scipy
-from lenskit.datasets import ML100K, MovieLens
+from lenskit.data.movielens import load_movielens, load_movielens_df
 
-ml_test = MovieLens("data/ml-latest-small")
-ml100k = ML100K("data/ml-100k")
+ml_test_dir = here("data/ml-latest-small")
+ml_100k_dir = here("data/ml-100k")
+
+ml_test: Dataset = LazyDataset(lambda: load_movielens(ml_test_dir))
 
 
 @pytest.fixture(scope="module")
@@ -39,21 +41,20 @@ def ml_ratings():
     """
     Fixture to load the test MovieLens ratings.
     """
-    path = here("data/ml-latest-small")
-    yield pd.read_csv(path / "ratings.csv")
+    yield load_movielens_df(ml_test_dir)
 
 
 @pytest.fixture
 def ml_ds(ml_ratings: pd.DataFrame):
-    return from_interactions_df(ml_ratings, item_col="movieId")
+    yield from_interactions_df(ml_ratings)
 
 
 @pytest.fixture(scope="session")
-def demo_recs():
+def demo_recs(ml_ratings: pd.DataFrame):
     """
     A demo set of train, test, and recommendation data.
     """
-    train, test = simple_test_pair(ml_test.ratings, f_rates=0.5)
+    train, test = simple_test_pair(ml_ratings, f_rates=0.5)
 
     users = test["user"].unique()
     algo = PopScore()
