@@ -453,7 +453,7 @@ def jobs_result(deps: list[str]) -> GHJob:
             },
             {
                 "name": "📦 Install reporting packages",
-                "run": "python -m pip -r requirements-reporting.txt",
+                "run": "python -m pip install -r requirements-reporting.txt",
             },
             {
                 "name": "📥 Download test artifacts",
