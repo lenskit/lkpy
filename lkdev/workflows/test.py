@@ -257,6 +257,7 @@ def steps_coverage(options: JobOptions) -> list[GHStep]:
         {
             "name": "📤 Upload test results",
             "uses": "actions/upload-artifact@v4",
+            "if": "always()",
             "with": {
                 "name": options.test_artifact_name,
                 "path": script("""

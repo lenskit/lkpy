@@ -48,6 +48,7 @@ GHStep = TypedDict(
         "id": NotRequired[str],
         "name": NotRequired[str],
         "uses": NotRequired[str],
+        "if": NotRequired[str],
         "run": NotRequired[str | script],
         "shell": NotRequired["str"],
         "with": NotRequired[dict[str, str | int | bool | script]],
