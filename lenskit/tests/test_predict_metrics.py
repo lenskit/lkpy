@@ -176,7 +176,7 @@ def test_batch_rmse():
     algo = bs.Bias(damping=5)
 
     def eval(train, test):
-        algo.fit(train)
+        algo.fit(from_interactions_df(train))
         preds = batch.predict(algo, test)
         return preds.set_index(["user", "item"])
 
