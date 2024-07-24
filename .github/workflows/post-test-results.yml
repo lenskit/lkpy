@@ -11,29 +11,37 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.workflow_run.event == 'pull_request'
     steps:
-      - name: 'Wait for artifact to upload'
-        run: sleep 30
       - name: 'Download artifact'
         uses: actions/github-script@v6
         with:
           script: |
-            let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
-               owner: context.repo.owner,
-               repo: context.repo.repo,
-               run_id: context.payload.workflow_run.id,
-            });
-            let matchArtifact = allArtifacts.data.artifacts.find((artifact) => {
-              return artifact.name == "coverage-report"
-            });
-            if (!matchArtifact) {
-              console.error('no report artifact found');
-              console.info('artifacts: %o', allArtifacts.data.artifacts);
-              throw new Error('no report');
+            let artifact = null;
+            let attempts = 0;
+            while (!artifact) {
+              attempts += 1;
+              if (attempts > 5) {
+                console.error('too many attempts to find report artifact, abandoning');
+                throw new Error('cannot find report artifact')
+              }
+              console.info("attemping to find artifact for run %s", context.payload.workflow_run.id);
+              let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.payload.workflow_run.id,
+              });
+              artifact = allArtifacts.data.artifacts.find((artifact) => {
+                return artifact.name == "coverage-report"
+              });
+              if (!artifact) {
+                console.info('could not find artifact, waiting and trying again')
+                await new Promise((ok) => setTimeout(() => ok(), 15000));
+              }
             }
+
             let download = await github.rest.actions.downloadArtifact({
                owner: context.repo.owner,
                repo: context.repo.repo,
-               artifact_id: matchArtifact.id,
+               artifact_id: artifact.id,
                archive_format: 'zip',
             });
             let fs = require('fs');
