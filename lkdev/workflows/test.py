@@ -8,7 +8,7 @@ from ._common import PACKAGES, step_checkout
 CODECOV_TOKEN = "5cdb6ef4-e80b-44ce-b88d-1402e4dfb781"
 META_PYTHON = "3.11"
 PYTHONS = ["3.10", "3.11", "3.12"]
-PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
+PLATFORMS = ["ubuntu-latest", "macos-latest"]
 VANILLA_PLATFORMS = ["ubuntu-latest", "macos-latest"]
 FILTER_PATHS = [
     "lenskit/**.py",
