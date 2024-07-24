@@ -9,6 +9,7 @@ on:
 jobs:
   report-coverage:
     runs-on: ubuntu-latest
+    if: github.event.workflow_run.event == 'pull_request'
     steps:
       - name: 'Wait for artifact to upload'
         run: sleep 30
