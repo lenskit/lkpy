@@ -39,14 +39,45 @@ if {[ev GITHUB_BASE_REF base]} {
         exit 2
     }
 
+    set diff_lines [exec jq .total_num_lines diff-coverage.json]
+    set diff_bad [exec jq .total_num_violations diff-coverage.json]
+    set diff_cov [eval {1.0 - ($diff_bad / $diff_lines)}]
+
     set prev_cov [exec jq .totals.percent_covered <<$prev_data 2>@stderr]
     set cur_cov [exec jq .totals.percent_covered coverage.json 2>&stderr]
 
     set cov_change [expr {$cur_cov - $prev_cov}]
 
-    set sumh [open $env(GITHUB_STEP_SUMMARY) a]
-    puts $sumh [format "Coverage change **%.2f%%** (from %.2f%% to %.2f%%).\n" $cov_change $prev_cov $cur_cov]
-    close $sumh
+    # write the coverage report
+    set reph [open lenskit-coverage/report.md w]
+    puts $reph [format
+        "Covered **%.2f%%** of diff (coverage changed **%.2f%%** from %.2f%% to %.2f%%).\n"
+        $diff_cov $cov_change $prev_cov $cur_cov
+    ]
+
+    set dsh [open diff-cover.md r]
+    while {[gets $dsh line] >= 0} {
+        if {[regexp {^# Diff} $line]} {
+            # do nothing, first header
+        } elseif {[regexp {^## Diff: (.*)} $line -> label]} {
+            puts $reph "<details>"
+            puts $reph "<summary>$label</summary>\n"
+        } elseif {[regexp {^## lenskit/} $line]} {
+            # done
+            break
+        } else {
+            puts $reph $line
+        }
+    }
+    puts $reph "\n</details>"
+    close $dsh
+
+    puts $reph "<details>\n"
+    puts $reph "<summary>Source Coverage Report</summary>\n"
+    exec coverage report --format=markdown 2>@stderr >@$reph
+    puts $reph "\n</details>"
+
+    close $reph
 } elseif {[ev GITHUB_EVENT_NAME] && [ev GITHUB_TOKEN]} {
     puts stderr "saving coverage data"
     set data [jq "{meta: .meta, totals: .totals}" coverage.json 2>@stderr]

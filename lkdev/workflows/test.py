@@ -447,13 +447,14 @@ def jobs_result(deps: list[str]) -> GHJob:
         "steps": [
             step_checkout(),
             {
-                "name": "list remotes",
-                "run": script("""
-                    git remote add upstream https://github.com/lenskit/lkpy.git
-                    git fetch upstream
-                """),
+                "name": "🐍 Set up Python",
+                "uses": "actions/setup-python@v5",
+                "with": {"python-version": META_PYTHON},
             },
-            {"name": "🐍 Setup coverage", "run": "pipx install 'coverage[toml]'"},
+            {
+                "name": "📦 Install reporting packages",
+                "run": "python -m pip -r requirements-reporting.txt",
+            },
             {
                 "name": "📥 Download test artifacts",
                 "uses": "actions/download-artifact@v4",
@@ -468,30 +469,41 @@ def jobs_result(deps: list[str]) -> GHJob:
             },
             # inspired by https://hynek.me/articles/ditch-codecov-python/
             {
-                "name": "⛙ Merge coverage reports",
+                "name": "⛙ Merge and report",
                 "run": script("""
                     coverage combine test-logs/*/.coverage
+                    coverage xml
+                    coverage html -d lenskit-coverage
+                    coverage report --format=markdown >coverage.md
                 """),
             },
-            {"name": "± Compute change in coverage", "run": "tclsh ./utils/coverage-log.tcl"},
             {
-                "name": "📃 Produce coverage reports",
+                "name": "Analyze diff coverage",
+                "if": "github.event_name == 'pull_request'",
                 "run": script("""
-                    coverage html -d lenskit-coverage
-                    echo '<details>' >>"$GITHUB_STEP_SUMMARY"
-                    echo '<summary>Full Coverage Report</summary>' >>"$GITHUB_STEP_SUMMARY"
-                    echo '' >>"$GITHUB_STEP_SUMMARY"
-                    coverage report --format=markdown --fail-under=90 >>"$GITHUB_STEP_SUMMARY"
-                    echo '' >>"$GITHUB_STEP_SUMMARY"
-                    echo '</details>' >>"$GITHUB_STEP_SUMMARY"
+                    diff-cover --json-report diff-cover.json --markdown-report diff-cover.md \\
+                        coverage.xml |tee diff-cover.txt
+                """),
+            },
+            {
+                "name": "± Measure and report coverage",
+                "run": script("""
+                    tclsh ./utils/coverage-log.tcl
+                    cat lenskit-coverage/report.md >$GITHUB_STEP_SUMMARY
                 """),
             },
             {
                 "name": "📤 Upload coverage report",
                 "uses": "actions/upload-artifact@v4",
+                "if": "always()",
                 "with": {
+                    "name": "coverage-report",
                     "path": "lenskit-coverage/",
                 },
+            },
+            {
+                "name": "🚫 Fail if coverage is too low",
+                "run": "coverage report --fail-under=90",
             },
         ],
     }
