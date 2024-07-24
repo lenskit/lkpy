@@ -9,6 +9,7 @@ CODECOV_TOKEN = "5cdb6ef4-e80b-44ce-b88d-1402e4dfb781"
 META_PYTHON = "3.11"
 PYTHONS = ["3.10", "3.11", "3.12"]
 PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
+VANILLA_PLATFORMS = ["ubuntu-latest", "macos-latest"]
 FILTER_PATHS = [
     "lenskit/**.py",
     "**pyproject.toml",
@@ -371,7 +372,7 @@ def jobs_test_matrix() -> dict[str, GHJob]:
             JobOptions(
                 "vanilla",
                 "Vanilla Python ${{matrix.python}} on ${{matrix.platform}}",
-                matrix={"python": PYTHONS, "platform": PLATFORMS},
+                matrix={"python": PYTHONS, "platform": VANILLA_PLATFORMS},
             )
         ),
         "nojit": test_job(
