@@ -8,15 +8,15 @@ from __future__ import annotations
 
 import logging
 import math
-from typing import Optional
 
 import numpy as np
 import pandas as pd
 import torch
 from seedbank import SeedLike
+from typing_extensions import Optional, override
 
 from lenskit.algorithms.als.common import TrainingData
-from lenskit.data import sparse_ratings
+from lenskit.data.dataset import Dataset
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
 from lenskit.util.logging import pbh_update, progress_handle
@@ -104,8 +104,9 @@ class ImplicitMF(ALSBase):
     def logger(self):
         return _log
 
-    def fit(self, ratings, **kwargs):
-        super().fit(ratings, **kwargs)
+    @override
+    def fit(self, data: Dataset, **kwargs):
+        super().fit(data, **kwargs)
 
         # compute OtOr and save it on the model
         reg = self.reg[0] if isinstance(self.reg, tuple) else self.reg
@@ -113,20 +114,24 @@ class ImplicitMF(ALSBase):
 
         return self
 
-    def prepare_data(self, ratings: pd.DataFrame) -> TrainingData:
-        if not self.use_ratings:
-            ratings = ratings[["user", "item"]]
+    @override
+    def prepare_data(self, data: Dataset) -> TrainingData:
+        if self.use_ratings:
+            rmat = data.interaction_matrix("torch", field="rating")
+        else:
+            rmat = data.interaction_matrix("torch")
 
-        rmat, users, items = sparse_ratings(ratings, type="torch")
         rmat.values().multiply_(self.weight)
-        return TrainingData.create(users, items, rmat)
+        return TrainingData.create(data.users, data.items, rmat)
 
+    @override
     def initial_params(self, nrows: int, ncols: int) -> torch.Tensor:
         mat = self.rng.standard_normal((nrows, ncols)) * 0.01
         mat = torch.from_numpy(mat)
         mat.square_()
         return mat
 
+    @override
     def als_half_epoch(self, epoch: int, context: TrainContext) -> float:
         chunks = WorkChunks.create(context.nrows)
 
@@ -136,8 +141,9 @@ class ImplicitMF(ALSBase):
         ) as pbh:
             return _train_implicit_cholesky_fanout(context, OtOr, chunks, pbh)
 
+    @override
     def new_user_embedding(self, user, ratings: pd.Series) -> tuple[torch.Tensor, None]:
-        ri_idxes = self.item_index_.get_indexer_for(ratings.index)
+        ri_idxes = self.items_.numbers(ratings.index)
         ri_good = ri_idxes >= 0
         ri_it = ri_idxes[ri_good]
         if self.use_ratings:

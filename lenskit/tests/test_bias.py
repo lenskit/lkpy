@@ -11,16 +11,19 @@ import numpy as np
 import pandas as pd
 
 from pytest import approx, mark, raises
+import torch
 
 from lenskit import util as lku
 from lenskit.algorithms.bias import Bias
-from lenskit.util.test import ml_test
+from lenskit.data.dataset import from_interactions_df
+from lenskit.util.test import ml_test, ml_ds, ml_ratings  # noqa: F401
 
 _log = logging.getLogger(__name__)
 
 simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
 )
+simple_ds = from_interactions_df(simple_df)
 
 
 def test_bias_check_arguments():
@@ -39,23 +42,33 @@ def test_bias_check_arguments():
 
 def test_bias_full():
     algo = Bias()
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
     assert algo.mean_ == approx(3.5)
 
     assert algo.item_offsets_ is not None
     assert algo.item_offsets_.index.name == "item"
     assert set(algo.item_offsets_.index) == set([1, 2, 3])
-    assert algo.item_offsets_.loc[1:3].values == approx(np.array([0, 1.5, -1.5]))
+    exp_item = pd.Series([0, 1.5, -1.5], index=[1, 2, 3])
+    off, exp = algo.item_offsets_.align(exp_item)
+    df = pd.DataFrame({"computed": off, "expected": exp}).join(
+        simple_df.groupby("item")["rating"].mean()
+    )
+    _log.debug("item stats:\n%s", df)
+    assert off.values == approx(exp.values)
 
     assert algo.user_offsets_ is not None
     assert algo.user_offsets_.index.name == "user"
     assert set(algo.user_offsets_.index) == set([10, 12, 13])
-    assert algo.user_offsets_.loc[[10, 12, 13]].values == approx(np.array([0.25, -0.5, 0]))
+    exp_user = pd.Series([0.25, -0.5, 0], index=[10, 12, 13])
+    off, exp = algo.user_offsets_.align(exp_user)
+    _log.debug("computed user offsets:\n%s", off)
+    _log.debug("expected user offsets:\n%s", exp)
+    assert off.values == approx(exp.values)
 
 
 def test_bias_clone():
     algo = Bias()
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     params = algo.get_params()
     assert sorted(params.keys()) == ["damping", "items", "users"]
@@ -69,7 +82,7 @@ def test_bias_clone():
 
 def test_bias_clone_damping():
     algo = Bias(damping=(10, 5))
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     params = algo.get_params()
     assert sorted(params.keys()) == ["damping", "items", "users"]
@@ -85,7 +98,7 @@ def test_bias_clone_damping():
 
 def test_bias_global_only():
     algo = Bias(users=False, items=False)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
     assert algo.mean_ == approx(3.5)
     assert algo.item_offsets_ is None
     assert algo.user_offsets_ is None
@@ -93,7 +106,7 @@ def test_bias_global_only():
 
 def test_bias_no_user():
     algo = Bias(users=False)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
     assert algo.mean_ == approx(3.5)
 
     assert algo.item_offsets_ is not None
@@ -106,7 +119,7 @@ def test_bias_no_user():
 
 def test_bias_no_item():
     algo = Bias(items=False)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
     assert algo.mean_ == approx(3.5)
     assert algo.item_offsets_ is None
 
@@ -118,14 +131,14 @@ def test_bias_no_item():
 
 def test_bias_index_props():
     algo = Bias()
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
     assert all(np.sort(algo.user_index) == np.unique(simple_df["user"]))
     assert all(np.sort(algo.item_index) == np.unique(simple_df["item"]))
 
 
 def test_bias_global_predict():
     algo = Bias(items=False, users=False)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
     p = algo.predict_for_user(10, [1, 2, 3])
 
     assert len(p) == 3
@@ -135,7 +148,7 @@ def test_bias_global_predict():
 
 def test_bias_item_predict():
     algo = Bias(users=False)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
     p = algo.predict_for_user(10, [1, 2, 3])
 
     assert len(p) == 3
@@ -144,7 +157,7 @@ def test_bias_item_predict():
 
 def test_bias_user_predict():
     algo = Bias(items=False)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
     p = algo.predict_for_user(10, [1, 2, 3])
 
     assert len(p) == 3
@@ -158,7 +171,7 @@ def test_bias_user_predict():
 
 def test_bias_new_user_predict():
     algo = Bias()
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     ratings = pd.DataFrame({"item": [1, 2, 3], "rating": [1.5, 2.5, 3.5]})
     ratings = ratings.set_index("item").rating
@@ -174,7 +187,7 @@ def test_bias_new_user_predict():
 
 def test_bias_predict_unknown_item():
     algo = Bias()
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     p = algo.predict_for_user(10, [1, 3, 4])
 
@@ -186,7 +199,7 @@ def test_bias_predict_unknown_item():
 
 def test_bias_predict_unknown_user():
     algo = Bias()
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     p = algo.predict_for_user(15, [1, 3])
 
@@ -197,7 +210,7 @@ def test_bias_predict_unknown_user():
 def test_bias_train_ml_ratings():
     algo = Bias()
     ratings = ml_test.ratings
-    algo.fit(ratings)
+    algo.fit(from_interactions_df(ratings))
 
     assert algo.mean_ == approx(ratings.rating.mean())
     imeans_data = ratings.groupby("item").rating.mean()
@@ -218,7 +231,7 @@ def test_bias_transform():
     algo = Bias()
     ratings = ml_test.ratings
 
-    normed = algo.fit_transform(ratings)
+    normed = algo.fit_transform(from_interactions_df(ratings))
 
     assert all(normed["user"] == ratings["user"])
     assert all(normed["item"] == ratings["item"])
@@ -231,11 +244,29 @@ def test_bias_transform():
     assert normed["rating"].values == approx(nr.values)
 
 
+def test_bias_transform_tensor(ml_ratings, ml_ds):
+    algo = Bias()
+
+    algo.fit(ml_ds)
+
+    mat = ml_ds.interaction_matrix("torch", layout="coo")
+    normed = algo.transform(mat)
+    assert normed.is_sparse
+    assert normed.shape == mat.shape
+
+    recon = normed.clone()
+    recon.values().add_(algo.mean_)
+    recon.values().add_(torch.from_numpy(algo.item_offsets_.values)[recon.indices()[1, :]])
+    recon.values().add_(torch.from_numpy(algo.user_offsets_.values)[recon.indices()[0, :]])
+
+    assert recon.values().numpy() == approx(mat.values().numpy())
+
+
 def test_bias_transform_indexes():
     algo = Bias()
     ratings = ml_test.ratings
 
-    normed = algo.fit_transform(ratings, indexes=True)
+    normed = algo.fit_transform(from_interactions_df(ratings), indexes=True)
 
     assert all(normed["user"] == ratings["user"])
     assert all(normed["item"] == ratings["item"])
@@ -250,7 +281,7 @@ def test_bias_transform_disable(users, items):
     algo = Bias(users=users, items=items)
     ratings = ml_test.ratings
 
-    normed = algo.fit_transform(ratings)
+    normed = algo.fit_transform(from_interactions_df(ratings))
 
     assert all(normed["user"] == ratings["user"])
     assert all(normed["item"] == ratings["item"])
@@ -270,7 +301,7 @@ def test_bias_transform_disable(users, items):
 
 def test_bias_item_damp():
     algo = Bias(users=False, damping=5)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
     assert algo.mean_ == approx(3.5)
 
     assert algo.item_offsets_ is not None
@@ -283,7 +314,7 @@ def test_bias_item_damp():
 
 def test_bias_user_damp():
     algo = Bias(items=False, damping=5)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
     assert algo.mean_ == approx(3.5)
     assert algo.item_offsets_ is None
 
@@ -297,7 +328,7 @@ def test_bias_user_damp():
 
 def test_bias_damped():
     algo = Bias(damping=5)
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
     assert algo.mean_ == approx(3.5)
 
     assert algo.item_offsets_ is not None
@@ -315,7 +346,7 @@ def test_bias_damped():
 
 def test_bias_separate_damping():
     algo = Bias(damping=(5, 10))
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
     assert algo.mean_ == approx(3.5)
 
     assert algo.item_offsets_ is not None
@@ -335,7 +366,7 @@ def test_bias_separate_damping():
 
 def test_transform_user_with_user_bias():
     algo = Bias()
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     new_ratings = pd.Series([4.0, 5.0], index=[1, 2])  # items as index and ratings as values
 
@@ -349,7 +380,7 @@ def test_transform_user_with_user_bias():
 def test_transform_user_without_user_bias():
     user = 12
     algo = Bias()
-    algo.fit(simple_df)
+    algo.fit(simple_ds)
 
     new_ratings = pd.Series([-0.5, 1.5], index=[2, 3])  # items as index and ratings as values
 
@@ -367,7 +398,7 @@ def test_transform_user_without_user_bias():
 
 def test_bias_save():
     original = Bias(damping=5)
-    original.fit(simple_df)
+    original.fit(simple_ds)
     assert original.mean_ == approx(3.5)
 
     _log.info("saving baseline model")

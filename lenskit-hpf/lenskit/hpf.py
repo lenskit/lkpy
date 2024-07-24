@@ -1,9 +1,10 @@
 import logging
 
 import hpfrec
-import pandas as pd
+from typing_extensions import override
 
 from lenskit.algorithms.mf_common import MFPredictor
+from lenskit.data.dataset import Dataset
 
 _logger = logging.getLogger(__name__)
 
@@ -12,6 +13,9 @@ class HPF(MFPredictor):
     """
     Hierarchical Poisson factorization, provided by
     `hpfrec <https://hpfrec.readthedocs.io/en/latest/>`_.
+
+    .. todo::
+        Right now, this uses the 'rating' as a count. Actually use counts.
 
     Args:
         features(int): the number of features
@@ -22,31 +26,24 @@ class HPF(MFPredictor):
         self.features = features
         self._kwargs = kwargs
 
-    def fit(self, ratings, **kwargs):
-        users = pd.Index(ratings.user.unique())
-        items = pd.Index(ratings.item.unique())
-
-        if "rating" in ratings.columns:
-            count = ratings.rating.values.copy()
-        else:
-            _logger.info("no ratings found, assuming 1.0")
-            count = 1.0
-
-        hpfdf = pd.DataFrame(
-            {
-                "UserId": users.get_indexer(ratings.user),
-                "ItemId": items.get_indexer(ratings.item),
-                "Count": count,
+    @override
+    def fit(self, data: Dataset, **kwargs):
+        log = data.interaction_matrix("pandas", field="rating")
+        log = log.rename(
+            columns={
+                "user_num": "UserId",
+                "item_num": "ItemId",
+                "rating": "Count",
             }
         )
 
         hpf = hpfrec.HPF(self.features, reindex=False, **self._kwargs)
 
         _logger.info("fitting HPF model with %d features", self.features)
-        hpf.fit(hpfdf)
+        hpf.fit(log)
 
-        self.user_index_ = users
-        self.item_index_ = items
+        self.users_ = data.users
+        self.items_ = data.items
         self.user_features_ = hpf.Theta
         self.item_features_ = hpf.Beta
 

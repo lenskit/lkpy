@@ -64,6 +64,7 @@ however, documented here.
   is now :math:`10^{-6}`.
 * k-NN algorithms no longer support negative similarities; ``min_sim`` is clamped
   to be at least the smallest normal in 32-bit floating point (:math:`1.75 \times 10^{-38}`).
+* The :mod:`implicit` bridge algorithms no longer look at rating values when they are present.
 
 Bug Fixes
 ~~~~~~~~~

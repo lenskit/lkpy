@@ -10,6 +10,10 @@ import logging
 
 import numpy as np
 import pandas as pd
+from typing_extensions import Literal, override
+
+from lenskit.data.dataset import Dataset
+from lenskit.data.vocab import EntityId, Vocabulary
 
 try:
     from sklearn.decomposition import TruncatedSVD
@@ -18,7 +22,6 @@ try:
 except ImportError:
     SKL_AVAILABLE = False
 
-from ..data import sparse_ratings
 from ..util import Stopwatch
 from . import Predictor
 from .bias import Bias
@@ -37,50 +40,65 @@ class BiasedSVD(Predictor):
     example and for cases where you want to evaluate a pure SVD implementation.
     """
 
+    bias: Bias
     factorization: TruncatedSVD
+    users_: Vocabulary[EntityId]
+    items_: Vocabulary[EntityId]
 
-    def __init__(self, features, *, damping=5, bias=True, algorithm="randomized"):
+    def __init__(
+        self,
+        features,
+        *,
+        damping=5,
+        bias: bool | Bias = True,
+        algorithm: Literal["arpack", "randomized"] = "randomized",
+    ):
         if not SKL_AVAILABLE:
             raise ImportError("sklearn.decomposition")
         if bias is True:
             self.bias = Bias(damping=damping)
-        else:
+        elif bias:
             self.bias = bias
+        else:
+            raise ValueError("no bias configured")
         self.factorization = TruncatedSVD(features, algorithm=algorithm)
 
-    def fit(self, ratings, **kwargs):
+    @override
+    def fit(self, data: Dataset, **kwargs):
         timer = Stopwatch()
         _log.info("[%s] computing bias", timer)
-        self.bias.fit(ratings)
+        self.bias.fit(data)
 
         g_bias = self.bias.mean_
         u_bias = self.bias.user_offsets_
         i_bias = self.bias.item_offsets_
 
         _log.info("[%s] sparsifying and normalizing matrix", timer)
-        r_mat, users, items = sparse_ratings(
-            ratings, layout="coo", users=u_bias.index, items=i_bias.index
-        )
+        r_mat = data.interaction_matrix("scipy", field="rating", layout="coo", legacy=True)
         # copy the data and start subtracting
         r_mat.data = r_mat.data - g_bias
-        r_mat.data -= i_bias.values[r_mat.col]
-        r_mat.data -= u_bias.values[r_mat.row]
-        r_mat = r_mat.tocsr()
-        assert r_mat.shape == (len(u_bias), len(i_bias))
+        if i_bias is not None:
+            r_mat.data -= i_bias.values[r_mat.col]
+        if u_bias is not None:
+            r_mat.data -= u_bias.values[r_mat.row]
 
-        _log.info("[%s] training SVD (k=%d)", timer, self.factorization.n_components)
+        r_mat = r_mat.tocsr()
+
+        _log.info("[%s] training SVD (k=%d)", timer, self.factorization.n_components)  # type: ignore
         Xt = self.factorization.fit_transform(r_mat)
         self.user_components_ = Xt
+        self.users_ = data.users.copy()
+        self.items_ = data.items.copy()
         _log.info("finished model training in %s", timer)
 
     def predict_for_user(self, user, items, ratings=None):
         items = np.array(items)
-        if user not in self.bias.user_offsets_.index:
+        if user not in self.users_:
             return pd.Series(np.nan, index=items)
 
         # Get index for user & usable items
-        uidx = self.bias.user_offsets_.index.get_loc(user)
-        iidx = self.bias.item_offsets_.index.get_indexer(items)
+        uidx = self.users_.number(user)
+        iidx = self.items_.numbers(items, missing="negative")
         good_iidx = iidx[iidx >= 0]
 
         _log.debug("reverse-transforming user %s (idx=%d)", user, uidx)

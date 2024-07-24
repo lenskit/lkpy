@@ -6,6 +6,7 @@ from uuid import UUID
 
 import hypothesis.strategies as st
 from hypothesis import assume, given
+import numpy as np
 from pytest import raises
 
 from lenskit.data import Vocabulary
@@ -46,6 +47,55 @@ def test_create_nonunique(keys: list[int | str | UUID]):
 
 @given(
     st.one_of(
+        st.lists(st.integers()),
+        st.lists(st.emails()),
+        st.lists(st.uuids()),
+    )
+)
+def test_equal(keys: list[int | str | UUID]):
+    uq = set(keys)
+    vocab = Vocabulary(keys)
+
+    v2 = Vocabulary(keys)
+    assert v2 == vocab
+
+
+@given(st.lists(st.integers()), st.sets(st.integers()))
+def test_not_equal(keys: list[int], oks: set[int]):
+    uq = set(keys)
+    assume(oks != uq)
+
+    vocab = Vocabulary(keys)
+    v2 = Vocabulary(oks)
+    assert v2 != vocab
+
+
+@given(
+    st.one_of(
+        st.sets(st.integers()),
+        st.sets(st.emails()),
+        st.sets(st.uuids()),
+    ),
+    st.lists(
+        st.one_of(
+            st.integers(),
+            st.emails(),
+            st.uuids(),
+        )
+    ),
+)
+def test_contains(keys: set[int] | set[str] | set[UUID], qs: set[int | str | UUID]):
+    vocab = Vocabulary(keys)
+
+    for qk in qs:
+        if qk in keys:
+            assert qk in vocab
+        else:
+            assert qk not in vocab
+
+
+@given(
+    st.one_of(
         st.sets(st.integers()),
         st.sets(st.emails()),
         st.sets(st.uuids()),
@@ -78,7 +128,7 @@ def test_lookup_bad_id(keys: set[int | str | UUID], key: int | str | UUID):
 
     vocab = Vocabulary(keys)
 
-    assert vocab.number(key, missing="negative") < 0
+    assert vocab.number(key, missing=None) is None
 
     with raises(KeyError):
         assert vocab.number(key, missing="error")
@@ -150,3 +200,15 @@ def test_add_terms(initial: set[int], new: list[int]):
 
     assert all(vocab.number(k) == i for (i, k) in enumerate(sorted(initial)))
     assert all(vocab.number(k) == i + ni for (i, k) in enumerate(flist))
+
+
+@given(st.one_of(st.sets(st.integers()), st.sets(st.emails())))
+def test_all_terms(initial: set[int] | set[str]):
+    ni = len(initial)
+    vocab = Vocabulary(initial)
+
+    tl = sorted(initial)
+
+    terms = vocab.terms()
+    assert isinstance(terms, np.ndarray)
+    assert all(terms == tl)

@@ -17,6 +17,9 @@ import pytest
 from pytest import approx, fixture, mark
 
 import lenskit.algorithms.knn.item as knn
+from lenskit.algorithms.ranking import TopN
+from lenskit.data.dataset import from_interactions_df
+from lenskit.data.vocab import EntityId, Vocabulary
 import lenskit.util.test as lktu
 from lenskit import batch
 from lenskit.algorithms import Recommender
@@ -24,10 +27,10 @@ from lenskit.algorithms.basic import Fallback
 from lenskit.algorithms.bias import Bias
 from lenskit.diagnostics import ConfigWarning, DataWarning
 from lenskit.util import clone
+from lenskit.util.test import ml_ratings, ml_ds  # noqa: F401
 
 _log = logging.getLogger(__name__)
 
-ml_ratings = lktu.ml_test.ratings
 simple_ratings = pd.DataFrame.from_records(
     [
         (1, 6, 4.0),
@@ -47,18 +50,17 @@ simple_ratings = pd.DataFrame.from_records(
     ],
     columns=["user", "item", "rating"],
 )
+simple_ds = from_interactions_df(simple_ratings)
 
 
 @fixture(scope="module")
-def ml_subset():
+def ml_subset(ml_ratings):
     "Fixture that returns a subset of the MovieLens database."
-    ratings = lktu.ml_test.ratings
-    icounts = ratings.groupby("item").rating.count()
+    icounts = ml_ratings.groupby("movieId").rating.count()
     top = icounts.nlargest(500)
-    ratings = ratings.set_index("item")
-    top_rates = ratings.loc[top.index, :]
-    _log.info("top 500 items yield %d of %d ratings", len(top_rates), len(ratings))
-    return top_rates.reset_index()
+    top_rates = ml_ratings[ml_ratings["movieId"].isin(top.index)]
+    _log.info("top 500 items yield %d of %d ratings", len(top_rates), len(ml_ratings))
+    return top_rates
 
 
 def test_ii_dft_config():
@@ -92,19 +94,18 @@ def test_ii_imp_clone():
 
 def test_ii_train():
     algo = knn.ItemItem(30, save_nbrs=500)
-    algo.fit(simple_ratings)
+    algo.fit(simple_ds)
 
-    assert isinstance(algo.item_index_, pd.Index)
     assert isinstance(algo.item_means_, torch.Tensor)
     assert isinstance(algo.item_counts_, torch.Tensor)
     matrix = algo.sim_matrix_
 
     test_means = simple_ratings.groupby("item")["rating"].mean()
-    test_means = test_means.reindex(algo.item_index_)
+    test_means = test_means.reindex(algo.items_.ids())
     assert np.all(algo.item_means_.numpy() == test_means.values.astype("f8"))
 
     # 6 is a neighbor of 7
-    six, seven = algo.item_index_.get_indexer([6, 7])
+    six, seven = algo.items_.numbers([6, 7])
     _log.info("six: %d", six)
     _log.info("seven: %d", seven)
     _log.info("matrix: %s", algo.sim_matrix_)
@@ -117,7 +118,7 @@ def test_ii_train():
     denom = la.norm(six_v.values) * la.norm(seven_v.values)
     six_v, seven_v = six_v.align(seven_v, join="inner")
     num = six_v.dot(seven_v)
-    assert matrix[six, seven] == approx(num / denom, 0.01)
+    assert matrix[six, seven] == approx(num / denom, 0.01)  # type: ignore
 
     assert all(np.logical_not(np.isnan(algo.sim_matrix_.values().numpy())))
     assert all(algo.sim_matrix_.values() > 0)
@@ -127,7 +128,7 @@ def test_ii_train():
 
 def test_ii_train_unbounded():
     algo = knn.ItemItem(30)
-    algo.fit(simple_ratings)
+    algo.fit(simple_ds)
 
     assert all(np.logical_not(np.isnan(algo.sim_matrix_.values())))
     assert all(algo.sim_matrix_.values() > 0)
@@ -136,7 +137,7 @@ def test_ii_train_unbounded():
 
     # 6 is a neighbor of 7
     matrix = algo.sim_matrix_
-    six, seven = algo.item_index_.get_indexer([6, 7])
+    six, seven = algo.items_.numbers([6, 7])
     assert matrix[six, seven] > 0
 
     # and has the correct score
@@ -147,12 +148,12 @@ def test_ii_train_unbounded():
     denom = la.norm(six_v.values) * la.norm(seven_v.values)
     six_v, seven_v = six_v.align(seven_v, join="inner")
     num = six_v.dot(seven_v)
-    assert matrix[six, seven] == approx(num / denom, 0.01)
+    assert matrix[six, seven] == approx(num / denom, 0.01)  # type: ignore
 
 
 def test_ii_simple_predict():
     algo = knn.ItemItem(30, save_nbrs=500)
-    algo.fit(simple_ratings)
+    algo.fit(simple_ds)
 
     res = algo.predict_for_user(3, [6])
     _log.info("got predictions: %s", res)
@@ -164,7 +165,7 @@ def test_ii_simple_predict():
 
 def test_ii_simple_implicit_predict():
     algo = knn.ItemItem(30, center=False, aggregate="sum")
-    algo.fit(simple_ratings.loc[:, ["user", "item"]])
+    algo.fit(from_interactions_df(simple_ratings.loc[:, ["user", "item"]]))
 
     res = algo.predict_for_user(3, [6])
     assert res is not None
@@ -174,26 +175,12 @@ def test_ii_simple_implicit_predict():
     assert res.loc[6] > 0
 
 
-@mark.skip("currently broken")
-def test_ii_warn_duplicates():
-    extra = pd.DataFrame.from_records([(3, 7, 4.5)], columns=["user", "item", "rating"])
-    ratings = pd.concat([simple_ratings, extra])
-    algo = knn.ItemItem(5)
-    algo.fit(ratings)
-
-    try:
-        with pytest.warns(DataWarning):
-            algo.predict_for_user(3, [6])
-    except AssertionError:
-        pass  # this is fine
-
-
 def test_ii_warns_center():
     "Test that item-item warns if you center non-centerable data"
     data = simple_ratings.assign(rating=1)
     algo = knn.ItemItem(5)
     with pytest.warns(DataWarning):
-        algo.fit(data)
+        algo.fit(from_interactions_df(data))
 
 
 def test_ii_warns_center_with_no_use_ratings():
@@ -212,42 +199,6 @@ def test_ii_warns_wa_with_no_use_ratings():
 
 
 @lktu.wantjit
-@mark.skip("redundant with large_models")
-def test_ii_train_big():
-    "Simple tests for bounded models"
-    algo = knn.ItemItem(30, save_nbrs=500)
-    algo.fit(ml_ratings)
-
-    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values())))
-    assert all(algo.sim_matrix_.values() > 0)
-    # a little tolerance
-    assert all(algo.sim_matrix_.values() < 1 + 1.0e-6)
-
-    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
-
-    means = ml_ratings.groupby("item").rating.mean()
-    assert means[algo.item_index_].values == approx(algo.item_means_)
-
-
-@lktu.wantjit
-@mark.skip("redundant with large_models")
-def test_ii_train_big_unbounded():
-    "Simple tests for unbounded models"
-    algo = knn.ItemItem(30)
-    algo.fit(ml_ratings)
-
-    assert all(np.logical_not(np.isnan(algo.sim_matrix_.values())))
-    assert all(algo.sim_matrix_.values() > 0)
-    # a little tolerance
-    assert all(algo.sim_matrix_.values() < 1 + 1.0e-6)
-
-    assert algo.item_counts_.sum() == algo.sim_matrix_.nnz
-
-    means = ml_ratings.groupby("item").rating.mean()
-    assert means[algo.item_index_].values == approx(algo.item_means_)
-
-
-@lktu.wantjit
 @mark.slow
 @mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
 def test_ii_train_ml100k(tmp_path):
@@ -255,7 +206,7 @@ def test_ii_train_ml100k(tmp_path):
     ratings = lktu.ml100k.ratings
     algo = knn.ItemItem(30)
     _log.info("training model")
-    algo.fit(ratings)
+    algo.fit(from_interactions_df(ratings))
 
     _log.info("testing model")
 
@@ -268,7 +219,7 @@ def test_ii_train_ml100k(tmp_path):
     assert algo.item_counts_.sum() == len(algo.sim_matrix_.values())
 
     means = ratings.groupby("item").rating.mean()
-    assert means[algo.item_index_].values == approx(algo.item_means_)
+    assert means[algo.items_.ids()].values == approx(algo.item_means_)
 
     # save
     fn = tmp_path / "ii.mod"
@@ -290,16 +241,16 @@ def test_ii_train_ml100k(tmp_path):
 
 @lktu.wantjit
 @mark.slow
-def test_ii_large_models(rng):
+def test_ii_large_models(rng, ml_ratings, ml_ds):
     "Several tests of large trained I-I models"
     _log.info("training limited model")
     MODEL_SIZE = 100
     algo_lim = knn.ItemItem(30, save_nbrs=MODEL_SIZE)
-    algo_lim.fit(ml_ratings)
+    algo_lim.fit(ml_ds)
 
     _log.info("training unbounded model")
     algo_ub = knn.ItemItem(30)
-    algo_ub.fit(ml_ratings)
+    algo_ub.fit(ml_ds)
 
     _log.info("testing models")
     assert all(np.logical_not(np.isnan(algo_lim.sim_matrix_.values())))
@@ -307,18 +258,18 @@ def test_ii_large_models(rng):
     # a little tolerance
     assert algo_lim.sim_matrix_.values().max() <= 1
 
-    means = ml_ratings.groupby("item").rating.mean()
-    assert means[algo_lim.item_index_].values == approx(algo_lim.item_means_)
+    means = ml_ratings.groupby("movieId").rating.mean()
+    assert means[algo_lim.items_.ids()].values == approx(algo_lim.item_means_)
 
     assert all(np.logical_not(np.isnan(algo_ub.sim_matrix_.values())))
     assert algo_ub.sim_matrix_.values().min() > 0
     assert algo_ub.sim_matrix_.values().max() <= 1
 
-    means = ml_ratings.groupby("item").rating.mean()
-    assert means[algo_ub.item_index_].values == approx(algo_ub.item_means_)
+    means = ml_ratings.groupby("movieId").rating.mean()
+    assert means[algo_ub.items_.ids()].values == approx(algo_ub.item_means_)
 
     mc_rates = (
-        ml_ratings.set_index("item")
+        ml_ratings.set_index("movieId")
         .join(pd.DataFrame({"item_mean": means}))
         .assign(rating=lambda df: df.rating - df.item_mean)
     )
@@ -327,7 +278,7 @@ def test_ii_large_models(rng):
     mat_ub = algo_ub.sim_matrix_
 
     _log.info("make sure the similarity matrix is sorted")
-    for i in range(len(algo_lim.item_index_)):
+    for i in range(algo_lim.items_.size):
         sp = algo_lim.sim_matrix_.crow_indices()[i]
         ep = algo_lim.sim_matrix_.crow_indices()[i + 1]
         cols = algo_lim.sim_matrix_.col_indices()[sp:ep]
@@ -340,13 +291,13 @@ def test_ii_large_models(rng):
             raise AssertionError(f"{np.sum(diffs <= 0)} non-sorted indices")
 
     _log.info("checking a sample of neighborhoods")
-    items = algo_ub.item_index_.values
+    items = algo_ub.items_.ids()
     items = items[algo_ub.item_counts_.numpy() > 0]
     for i in rng.choice(items, 50):
-        ipos = algo_ub.item_index_.get_loc(i)
+        ipos = algo_ub.items_.number(i)
         _log.debug("checking item %d at position %d", i, ipos)
-        assert ipos == algo_lim.item_index_.get_loc(i)
-        irates = mc_rates.loc[[i], :].set_index("user").rating
+        assert ipos == algo_lim.items_.number(i)
+        irates = mc_rates.loc[[i], :].set_index("userId").rating
 
         ub_row = mat_ub[ipos]
         b_row = mat_lim[ipos]
@@ -364,14 +315,14 @@ def test_ii_large_models(rng):
         present = np.isin(b_cols, ub_cols)
         if not np.all(present):
             _log.error("missing items: %s", b_cols[~present])
-            _log.error("scores: %s", b_row.values()[~present])
+            _log.error("scores: %s", b_row.values()[~present])  # type: ignore
             raise AssertionError(f"missing {np.sum(~present)} values from unbounded")
 
         # spot-check some similarities
         _log.debug("checking equal similarities")
         for n in rng.choice(ub_cols, min(10, len(ub_cols))):
-            n_id = algo_ub.item_index_[n]
-            n_rates = mc_rates.loc[n_id, :].set_index("user").rating
+            n_id = algo_ub.items_.id(n)
+            n_rates = mc_rates.loc[n_id, :].set_index("userId").rating
             ir, nr = irates.align(n_rates, fill_value=0)
             cor = ir.corr(nr)
             assert mat_ub[ipos, n].item() == approx(cor, abs=1.0e-6)
@@ -384,8 +335,8 @@ def test_ii_large_models(rng):
             continue
 
         # row is truncated - check that truncation is correct
-        ub_nbrs = pd.Series(ub_row.values().numpy(), algo_ub.item_index_[ub_cols])
-        b_nbrs = pd.Series(b_row.values().numpy(), algo_lim.item_index_[b_cols])
+        ub_nbrs = pd.Series(ub_row.values().numpy(), algo_ub.items_.ids(ub_cols))
+        b_nbrs = pd.Series(b_row.values().numpy(), algo_lim.items_.ids(b_cols))
 
         assert len(ub_nbrs) >= len(b_nbrs)
         assert len(b_nbrs) <= MODEL_SIZE
@@ -411,7 +362,7 @@ def test_ii_large_models(rng):
 
 @lktu.wantjit
 @mark.slow
-def test_ii_implicit_large(rng):
+def test_ii_implicit_large(rng, ml_ratings):
     "Test that implicit-feedback mode works on full test data."
     _log.info("training model")
     NBRS = 5
@@ -420,22 +371,23 @@ def test_ii_implicit_large(rng):
     algo = knn.ItemItem(NBRS, feedback="implicit")
     _log.info("agg: %s", algo.aggregate)
     algo = Recommender.adapt(algo)
-    algo.fit(ml_ratings[["user", "item"]])
+    algo.fit(from_interactions_df(ml_ratings[["userId", "movieId"]], item_col="movieId"))
+    assert isinstance(algo, TopN)
 
-    users = rng.choice(ml_ratings["user"].unique(), NUSERS)
+    users = rng.choice(ml_ratings["userId"].unique(), NUSERS)
 
-    items: pd.Index = algo.predictor.item_index_
+    items: Vocabulary[EntityId] = algo.predictor.items_
     mat: torch.Tensor = algo.predictor.sim_matrix_.to_dense()
 
     for user in users:
         recs = algo.recommend(user, NRECS)
         _log.info("user %s recs\n%s", user, recs)
         assert len(recs) == NRECS
-        urates = ml_ratings[ml_ratings["user"] == user]
+        urates = ml_ratings[ml_ratings["userId"] == user]
 
-        smat = mat[torch.from_numpy(items.get_indexer_for(urates["item"].values)), :]
+        smat = mat[torch.from_numpy(items.numbers(urates["movieId"].values)), :]
         for row in recs.itertuples():
-            col = smat[:, items.get_loc(row.item)]
+            col = smat[:, items.number(row.item)]
             top, _is = torch.topk(col, NBRS)
             score = top.sum()
             try:
@@ -451,11 +403,11 @@ def test_ii_implicit_large(rng):
 
 
 @lktu.wantjit
-def test_ii_save_load(tmp_path, ml_subset):
+def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
     "Save and load a model"
     original = knn.ItemItem(30, save_nbrs=500)
     _log.info("building model")
-    original.fit(ml_subset)
+    original.fit(from_interactions_df(ml_subset, item_col="movieId"))
 
     fn = tmp_path / "ii.mod"
     _log.info("saving model to %s", fn)
@@ -483,8 +435,8 @@ def test_ii_save_load(tmp_path, ml_subset):
     o_mat = original.sim_matrix_
     assert all(r_mat.crow_indices() == o_mat.crow_indices())
 
-    means = ml_ratings.groupby("item").rating.mean()
-    assert means[algo.item_index_].values == approx(original.item_means_)
+    means = ml_ratings.groupby("movieId").rating.mean()
+    assert means[algo.items_.ids()].values == approx(original.item_means_)
 
 
 @lktu.wantjit
@@ -492,7 +444,7 @@ def test_ii_implicit_save_load(tmp_path, ml_subset):
     "Save and load a model"
     original = knn.ItemItem(30, save_nbrs=500, center=False, aggregate="sum")
     _log.info("building model")
-    original.fit(ml_subset.loc[:, ["user", "item"]])
+    original.fit(from_interactions_df(ml_subset.loc[:, ["userId", "movieId"]], item_col="movieId"))
 
     fn = tmp_path / "ii.mod"
     _log.info("saving model to %s", fn)
@@ -521,11 +473,11 @@ def test_ii_implicit_save_load(tmp_path, ml_subset):
 
 @lktu.wantjit
 @mark.slow
-def test_ii_old_implicit():
+def test_ii_old_implicit(ml_ratings):
     algo = knn.ItemItem(20, save_nbrs=100, center=False, aggregate="sum")
-    data = ml_ratings.loc[:, ["user", "item"]]
+    data = ml_ratings.loc[:, ["userId", "movieId"]]
 
-    algo.fit(data)
+    algo.fit(from_interactions_df(data, item_col="movieId"))
     assert algo.item_counts_.sum() == algo.sim_matrix_.values().shape[0]
     assert all(algo.sim_matrix_.values() > 0)
     assert all(algo.item_counts_ <= 100)
@@ -536,13 +488,13 @@ def test_ii_old_implicit():
 
 @lktu.wantjit
 @mark.slow
-def test_ii_no_ratings():
+def test_ii_no_ratings(ml_ratings, ml_ds):
     a1 = knn.ItemItem(20, save_nbrs=100, center=False, aggregate="sum")
-    a1.fit(ml_ratings.loc[:, ["user", "item"]])
+    a1.fit(from_interactions_df(ml_ratings.loc[:, ["userId", "movieId"]], item_col="movieId"))
 
     algo = knn.ItemItem(20, save_nbrs=100, feedback="implicit")
 
-    algo.fit(ml_ratings)
+    algo.fit(ml_ds)
     assert algo.item_counts_.sum().item() == algo.sim_matrix_.values().shape[0]
     assert all(algo.sim_matrix_.values() > 0)
     assert all(algo.item_counts_ <= 100)
@@ -552,27 +504,6 @@ def test_ii_no_ratings():
     p2 = algo.predict_for_user(50, [1, 2, 42])
     preds, p2 = preds.align(p2)
     assert preds.values == approx(p2.values, nan_ok=True)
-
-
-@mark.slow
-@pytest.mark.skip("fast/slow paths have been removed")
-def test_ii_implicit_fast_ident():
-    algo = knn.ItemItem(20, save_nbrs=100, center=False, aggregate="sum")
-    data = ml_ratings.loc[:, ["user", "item"]]
-
-    algo.fit(data)
-    assert algo.item_counts_.sum() == algo.sim_matrix_.values().shape
-    assert all(algo.sim_matrix_.values() > 0)
-    assert all(algo.item_counts_ <= 100)
-
-    preds = algo.predict_for_user(50, [1, 2, 42])
-    assert all(preds[preds.notna()] > 0)
-    assert np.isnan(preds.iloc[2])
-
-    algo.min_sim = -1  # force it to take the slow path for all predictions
-    p2 = algo.predict_for_user(50, [1, 2, 42])
-    assert preds.values[:2] == approx(p2.values[:2])
-    assert np.isnan(p2.iloc[2])
 
 
 @mark.slow
@@ -591,7 +522,7 @@ def test_ii_batch_accuracy():
 
     def eval(train, test):
         _log.info("running training")
-        algo.fit(train)
+        algo.fit(from_interactions_df(train))
         _log.info("testing %d users", test.user.nunique())
         return batch.predict(algo, test, n_jobs=1)
 
@@ -607,12 +538,12 @@ def test_ii_batch_accuracy():
 
 @lktu.wantjit
 @mark.slow
-def test_ii_known_preds():
+def test_ii_known_preds(ml_ds):
     from lenskit import batch
 
     algo = knn.ItemItem(20, min_sim=1.0e-6)
     _log.info("training %s on ml data", algo)
-    algo.fit(lktu.ml_test.ratings)
+    algo.fit(ml_ds)
     assert algo.center
     assert algo.item_means_ is not None
     _log.info("model means: %s", algo.item_means_)
@@ -664,7 +595,7 @@ def test_ii_batch_recommend(ncpus):
         _log.info("running training")
         algo = knn.ItemItem(30)
         algo = Recommender.adapt(algo)
-        algo.fit(train)
+        algo.fit(from_interactions_df(train))
         _log.info("testing %d users", test.user.nunique())
         recs = batch.recommend(algo, test.user.unique(), 100, n_jobs=ncpus)
         return recs
@@ -685,13 +616,3 @@ def test_ii_batch_recommend(ncpus):
     dcg = results.ndcg
     _log.info("nDCG for %d users is %f", len(dcg), dcg.mean())
     assert dcg.mean() > 0.03
-
-
-def _build_predict(ratings, fold):
-    algo = Fallback(knn.ItemItem(20), Bias(damping=5))
-    train = ratings[ratings["partition"] != fold]
-    algo.fit(train)
-
-    test = ratings[ratings["partition"] == fold]
-    preds = batch.predict(algo, test, n_jobs=1)
-    return preds

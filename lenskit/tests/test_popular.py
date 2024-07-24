@@ -9,6 +9,7 @@ import pickle
 import pandas as pd
 
 import lenskit.util.test as lktu
+from lenskit.util.test import ml_ratings, ml_ds  # noqa: F401
 from lenskit.algorithms import basic
 
 simple_df = pd.DataFrame(
@@ -16,24 +17,24 @@ simple_df = pd.DataFrame(
 )
 
 
-def test_popscore_quantile(rng):
+def test_popscore_quantile(rng, ml_ds):
     algo = basic.PopScore()
-    algo.fit(lktu.ml_test.ratings)
+    algo.fit(ml_ds)
 
     assert algo.item_scores_.max() == 1.0
 
-    counts = lktu.ml_test.ratings.groupby("item").user.count()
+    counts = ml_ds.item_stats()["count"]
     counts = counts.sort_values()
 
     winner = counts.index[-1]
     assert algo.item_scores_.loc[winner] == 1.0
 
 
-def test_popscore_rank(rng):
+def test_popscore_rank(rng, ml_ds):
     algo = basic.PopScore("rank")
-    algo.fit(lktu.ml_test.ratings)
+    algo.fit(ml_ds)
 
-    counts = lktu.ml_test.ratings.groupby("item").user.count()
+    counts = ml_ds.item_stats()["count"]
     counts = counts.sort_values()
 
     assert algo.item_scores_.max() == len(counts)
@@ -42,11 +43,11 @@ def test_popscore_rank(rng):
     assert algo.item_scores_.loc[winner] == len(counts)
 
 
-def test_popscore_counts(rng):
+def test_popscore_counts(rng, ml_ds):
     algo = basic.PopScore("count")
-    algo.fit(lktu.ml_test.ratings)
+    algo.fit(ml_ds)
 
-    counts = lktu.ml_test.ratings.groupby("item").user.count()
+    counts = ml_ds.item_stats()["count"]
 
     scores, counts = algo.item_scores_.align(counts)
     assert all(scores == counts)
@@ -56,9 +57,9 @@ def test_popscore_counts(rng):
     assert all(scores == counts.loc[items])
 
 
-def test_popscore_save_load():
+def test_popscore_save_load(ml_ds):
     original = basic.PopScore()
-    original.fit(lktu.ml_test.ratings)
+    original.fit(ml_ds)
 
     mod = pickle.dumps(original)
     algo = pickle.loads(mod)

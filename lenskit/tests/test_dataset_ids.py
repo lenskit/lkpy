@@ -76,7 +76,7 @@ def test_user_num_missing_error(ml_ds: Dataset):
 
 
 def test_user_num_missing_negative(ml_ds: Dataset):
-    assert ml_ds.users.number(-402, missing="negative") == -1
+    assert ml_ds.users.number(-402, missing=None) is None
 
 
 def test_user_num_missing_vector_negative(ml_ds: Dataset):

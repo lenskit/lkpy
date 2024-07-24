@@ -90,6 +90,7 @@ class InteractionMatrix:
         n_items: int,
     ):
         self.user_nums = np.asarray(users, np.int32)
+        assert np.all(np.diff(self.user_nums) >= 0), "matrix data not sorted"
         self.item_nums = np.asarray(items, np.int32)
         if ratings is not None:
             self.ratings = np.asarray(ratings, np.float32)
@@ -101,7 +102,7 @@ class InteractionMatrix:
         self.n_users = n_users
         cp1 = np.zeros(self.n_users + 1, np.int32)
         np.add.at(cp1[1:], self.user_nums, 1)
-        self.user_ptrs = cp1.cumsum()
+        self.user_ptrs = cp1.cumsum(dtype=np.int32)
         if self.user_ptrs[-1] != len(self.user_nums):
             raise ValueError("mismatched counts and array sizes")
 

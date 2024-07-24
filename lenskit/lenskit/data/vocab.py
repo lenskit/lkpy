@@ -3,7 +3,9 @@ Vocabularies of IDs, tags, etc.
 """
 
 # pyright: basic
-from typing import Generic, Hashable, Iterable, Literal, Sequence, TypeAlias, TypeVar
+from __future__ import annotations
+
+from typing import Any, Generic, Hashable, Iterable, Literal, Sequence, TypeAlias, TypeVar, overload
 
 import numpy as np
 import pandas as pd
@@ -31,9 +33,12 @@ class Vocabulary(Generic[VT]):
     identifiers.
     """
 
+    name: str | None
+    "The name of the vocabulary (e.g. “user”, “item”)."
     _index: pd.Index
 
-    def __init__(self, keys: pd.Index | Iterable[VT] | None = None):
+    def __init__(self, keys: pd.Index | Iterable[VT] | None = None, name: str | None = None):
+        self.name = name
         if keys is None:
             keys = pd.Index()
         elif isinstance(keys, pd.Index):
@@ -44,7 +49,7 @@ class Vocabulary(Generic[VT]):
         else:
             keys = pd.Index(np.unique(list(set(keys))))  # type: ignore
 
-        self._index = keys
+        self._index = keys.rename(name) if name is not None else keys
 
     @property
     def index(self) -> pd.Index:
@@ -56,17 +61,21 @@ class Vocabulary(Generic[VT]):
         "Current vocabulary size."
         return len(self._index)
 
-    def number(self, term: VT, missing: Literal["error", "negative"] = "error") -> int:
+    @overload
+    def number(self, term: VT, missing: Literal["error"] = "error") -> int: ...
+    @overload
+    def number(self, term: VT, missing: Literal["none"] | None) -> int | None: ...
+    def number(self, term: VT, missing: Literal["error", "none"] | None = "error") -> int | None:
         "Look up the number for a vocabulary term."
         try:
             num = self._index.get_loc(term)
             assert isinstance(num, int)
             return num
         except KeyError as e:
-            if missing == "negative":
-                return -1
-            else:
+            if missing == "error":
                 raise e
+            else:
+                return None
 
     def numbers(
         self, terms: Sequence[VT] | ArrayLike, missing: Literal["error", "negative"] = "error"
@@ -85,18 +94,32 @@ class Vocabulary(Generic[VT]):
             raise IndexError("negative numbers not supported")
         return self._index[num]
 
-    def terms(self, nums: list[int] | NDArray[np.integer] | pd.Series) -> np.ndarray:
-        "Look up the terms for an array of indices."
-        nums = np.asarray(nums, dtype=np.int32)
-        if np.any(nums < 0):
-            raise IndexError("negative numbers not supported")
-        return self._index[nums].values
+    def terms(self, nums: list[int] | NDArray[np.integer] | pd.Series | None = None) -> np.ndarray:
+        """
+        Get a list of terms, optionally for an array of term numbers.
+
+        Args:
+            nums:
+                The numbers (indices) for of terms to retrieve.  If ``None``,
+                returns all terms.
+
+        Returns:
+            The terms corresponding to the specified numbers, or the full array
+            of terms (in order) if ``nums=None``.
+        """
+        if nums is not None:
+            nums = np.asarray(nums, dtype=np.int32)
+            if np.any(nums < 0):
+                raise IndexError("negative numbers not supported")
+            return self._index[nums].values
+        else:
+            return self._index.values
 
     def id(self, num: int) -> VT:
         "Alias for :meth:`term`  for greater readability for entity ID vocabularies."
         return self.term(num)
 
-    def ids(self, nums: list[int] | NDArray[np.integer] | pd.Series) -> np.ndarray:
+    def ids(self, nums: list[int] | NDArray[np.integer] | pd.Series | None = None) -> np.ndarray:
         "Alias for :meth:`terms` for greater readability for entity ID vocabularies."
         return self.terms(nums)
 
@@ -104,7 +127,40 @@ class Vocabulary(Generic[VT]):
         arr = np.unique(terms)  # type: ignore
         nums = self.numbers(arr, missing="negative")
         fresh = arr[nums < 0]
-        self._index = pd.Index(np.concatenate([self._index.values, fresh]))
+        self._index = pd.Index(np.concatenate([self._index.values, fresh]), name=self.name)
+
+    def copy(self) -> Vocabulary[VT]:
+        """
+        Return a (cheap) copy of this vocabulary.  It retains the same mapping,
+        but will not be updated if the original vocabulary has new terms added.
+        However, since new terms are always added to the end, it will be
+        compatible with the original vocabulary for all terms recorded at the
+        time of the copy.
+
+        This method is useful for saving known vocabularies in model training.
+        """
+        return Vocabulary[VT](self._index)
+
+    def __eq__(self, other: Vocabulary[Any]) -> bool:  # noqa: F821
+        return self.size == other.size and bool(np.all(self.index == other.index))
+
+    def __contains__(self, key: VT) -> bool:
+        return key in self._index
 
     def __len__(self) -> int:
         return self.size
+
+    def __array__(self, dtype=None) -> np.ndarray:
+        return self._index.values.__array__(dtype)
+
+    def __str__(self) -> str:
+        if self.name:
+            return f"Vocabulary of {self.size} {self.name} terms"
+        else:
+            return f"Vocabulary of {self.size} terms"
+
+    def __repr__(self) -> str:
+        if self.name:
+            return f"<Vocabulary(name={self.name}, size={self.size})>"
+        else:
+            return f"<Vocabulary(size={self.size})>"

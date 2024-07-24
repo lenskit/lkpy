@@ -14,10 +14,12 @@ import pandas as pd
 import torch
 from progress_api import make_progress
 from seedbank import SeedLike, numpy_rng
-from typing_extensions import Iterator, NamedTuple, Optional, Self
+from typing_extensions import Iterator, NamedTuple, Optional, Self, override
 
 from lenskit import util
 from lenskit.algorithms.mf_common import MFPredictor
+from lenskit.data.dataset import Dataset
+from lenskit.data.vocab import EntityId, Vocabulary
 from lenskit.parallel.config import ensure_parallel_init
 
 
@@ -53,9 +55,9 @@ class TrainingData(NamedTuple):
     Data for training the ALS model.
     """
 
-    users: pd.Index
+    users: Vocabulary[EntityId]
     "User ID mapping."
-    items: pd.Index
+    items: Vocabulary[EntityId]
     "Item ID mapping."
     ui_rates: torch.Tensor
     "User-item rating matrix."
@@ -71,7 +73,9 @@ class TrainingData(NamedTuple):
         return len(self.items)
 
     @classmethod
-    def create(cls, users: pd.Index, items: pd.Index, ratings: torch.Tensor) -> TrainingData:
+    def create(
+        cls, users: Vocabulary[EntityId], items: Vocabulary[EntityId], ratings: torch.Tensor
+    ) -> TrainingData:
         assert ratings.shape == (len(users), len(items))
 
         transposed = ratings.transpose(0, 1).to_sparse_csr()
@@ -95,8 +99,8 @@ class ALSBase(MFPredictor[torch.Tensor]):
     rng: np.random.Generator
     save_user_features: bool
 
-    user_index_: pd.Index | None
-    item_index_: pd.Index
+    users_: Vocabulary | None
+    items_: Vocabulary
     user_features_: torch.Tensor | None
     item_features_: torch.Tensor
 
@@ -123,7 +127,8 @@ class ALSBase(MFPredictor[torch.Tensor]):
         self.rng = numpy_rng(rng_spec)
         self.save_user_features = save_user_features
 
-    def fit(self, ratings: pd.DataFrame, **kwargs):
+    @override
+    def fit(self, data: Dataset, **kwargs):
         """
         Run ALS to train a model.
 
@@ -136,7 +141,7 @@ class ALSBase(MFPredictor[torch.Tensor]):
         ensure_parallel_init()
         timer = util.Stopwatch()
 
-        for algo in self.fit_iters(ratings, timer=timer, **kwargs):
+        for algo in self.fit_iters(data, timer=timer, **kwargs):
             pass  # we just need to do the iterations
 
         if self.user_features_ is not None:
@@ -156,7 +161,7 @@ class ALSBase(MFPredictor[torch.Tensor]):
         return self
 
     def fit_iters(
-        self, ratings: pd.DataFrame, *, timer: util.Stopwatch | None = None, **kwargs
+        self, data: Dataset, *, timer: util.Stopwatch | None = None, **kwargs
     ) -> Iterator[Self]:
         """
         Run ALS to train a model, yielding after each iteration.
@@ -167,11 +172,11 @@ class ALSBase(MFPredictor[torch.Tensor]):
         if timer is None:
             timer = util.Stopwatch()
 
-        data = self.prepare_data(ratings)
-        self.user_index_ = data.users
-        self.item_index_ = data.items
+        train = self.prepare_data(data)
+        self.users_ = train.users
+        self.items_ = train.items
 
-        self.initialize_params(data)
+        self.initialize_params(train)
 
         if isinstance(self.reg, tuple):
             ureg, ireg = self.reg
@@ -181,10 +186,10 @@ class ALSBase(MFPredictor[torch.Tensor]):
         assert self.user_features_ is not None
         assert self.item_features_ is not None
         u_ctx = TrainContext.create(
-            "user", data.ui_rates, self.user_features_, self.item_features_, ureg
+            "user", train.ui_rates, self.user_features_, self.item_features_, ureg
         )
         i_ctx = TrainContext.create(
-            "item", data.iu_rates, self.item_features_, self.user_features_, ireg
+            "item", train.iu_rates, self.item_features_, self.user_features_, ireg
         )
 
         self.logger.info(
@@ -210,7 +215,7 @@ class ALSBase(MFPredictor[torch.Tensor]):
 
         if not self.save_user_features:
             self.user_features_ = None
-            self.user_index_ = None
+            self.user_ = None
 
         end = timer.elapsed()
         self.logger.info(
@@ -221,7 +226,7 @@ class ALSBase(MFPredictor[torch.Tensor]):
         )
 
     @abstractmethod
-    def prepare_data(self, ratings: pd.DataFrame) -> TrainingData:  # pragma: no cover
+    def prepare_data(self, data: Dataset) -> TrainingData:  # pragma: no cover
         """
         Prepare data for training this model.  This takes in the ratings, and is
         supposed to do two things:

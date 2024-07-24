@@ -9,6 +9,7 @@ import pandas as pd
 
 from pytest import approx, mark, raises
 
+from lenskit.data.dataset import from_interactions_df
 import lenskit.metrics.predict as pm
 import lenskit.util.test as lktu
 
@@ -175,7 +176,7 @@ def test_batch_rmse():
     algo = bs.Bias(damping=5)
 
     def eval(train, test):
-        algo.fit(train)
+        algo.fit(from_interactions_df(train))
         preds = batch.predict(algo, test)
         return preds.set_index(["user", "item"])
 
@@ -206,7 +207,7 @@ def test_global_metric():
 
     train, test = next(xf.sample_users(lktu.ml_test.ratings, 1, 200, xf.SampleFrac(0.5)))
     algo = Bias()
-    algo.fit(train)
+    algo.fit(from_interactions_df(train))
 
     preds = batch.predict(algo, test)
 
@@ -225,7 +226,7 @@ def test_user_metric():
 
     train, test = next(xf.sample_users(lktu.ml_test.ratings, 1, 200, xf.SampleFrac(0.5)))
     algo = Bias()
-    algo.fit(train)
+    algo.fit(from_interactions_df(train))
 
     preds = batch.predict(algo, test)
 

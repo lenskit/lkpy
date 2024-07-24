@@ -56,6 +56,13 @@ def _check_timestamp(ml_ds: Dataset, ml_ratings: pd.DataFrame, ts: ArrayLike):
     assert np.all(ts == ml_ratings["timestamp"])
 
 
+def test_internals(ml_ds: Dataset):
+    "Test internal matrix structures"
+    assert ml_ds._matrix.user_nums.dtype == np.int32
+    assert ml_ds._matrix.user_ptrs.dtype == np.int32
+    assert ml_ds._matrix.item_nums.dtype == np.int32
+
+
 def test_matrix_structure(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     log = ml_ds.interaction_matrix(format="structure")
     assert isinstance(log, CSRStructure)
@@ -88,6 +95,22 @@ def test_matrix_pandas(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_user_ids(ml_ds, ml_ratings, log["user_num"])
     _check_item_number_counts(ml_ds, ml_ratings, log["item_num"])
     _check_item_ids(ml_ds, ml_ratings, log["item_num"])
+    _check_ratings(ml_ds, ml_ratings, log["rating"])
+
+
+def test_matrix_pandas_orig_id(ml_ratings: pd.DataFrame, ml_ds: Dataset):
+    "Test that Pandas can return original IDs."
+    log = ml_ds.interaction_matrix(format="pandas", field="rating", original_ids=True)
+    assert isinstance(log, pd.DataFrame)
+    assert len(log) == len(ml_ratings)
+    assert "user_id" in log.columns
+    assert "item_id" in log.columns
+
+    m2 = ml_ds.interaction_matrix(format="scipy", layout="coo")
+
+    assert np.all(log["user_id"] == ml_ds.users.ids(m2.row))
+    assert np.all(log["item_id"] == ml_ds.items.ids(m2.col))
+
     _check_ratings(ml_ds, ml_ratings, log["rating"])
 
 
@@ -149,8 +172,13 @@ def test_matrix_scipy_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
     assert nrows == ml_ratings["userId"].nunique()
     assert ncols == ml_ratings["movieId"].nunique()
 
+    assert log.row.dtype == np.int32
+    assert log.col.dtype == np.int32
     _check_user_number_counts(ml_ds, ml_ratings, log.row)
     _check_user_ids(ml_ds, ml_ratings, log.row)
+    # ensure users are sorted
+    assert np.all(np.diff(log.row) >= 0)
+
     _check_item_number_counts(ml_ds, ml_ratings, log.col)
     _check_item_ids(ml_ds, ml_ratings, log.col)
     _check_ratings(ml_ds, ml_ratings, log.data)
@@ -166,6 +194,8 @@ def test_matrix_scipy_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
     assert nrows == ml_ratings["userId"].nunique()
     assert ncols == ml_ratings["movieId"].nunique()
 
+    assert log.indptr.dtype == np.int32
+    assert log.indices.dtype == np.int32
     _check_user_offset_counts(ml_ds, ml_ratings, log.indptr)
     _check_item_number_counts(ml_ds, ml_ratings, log.indices)
     _check_item_ids(ml_ds, ml_ratings, log.indices)
@@ -237,6 +267,9 @@ def test_matrix_torch_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
     _check_item_ids(ml_ds, ml_ratings, log.col_indices())
     _check_ratings(ml_ds, ml_ratings, log.values().numpy())
+
+    assert log.crow_indices().dtype == torch.int32
+    assert log.col_indices().dtype == torch.int32
 
 
 def test_matrix_torch_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset):

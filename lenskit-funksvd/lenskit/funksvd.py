@@ -13,13 +13,13 @@ import time
 
 import numba as n
 import numpy as np
-import pandas as pd
 from numba.experimental import jitclass
 from seedbank import numpy_rng
 
 from lenskit import util
 from lenskit.algorithms.bias import Bias
 from lenskit.algorithms.mf_common import MFPredictor
+from lenskit.data.dataset import Dataset
 
 _logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ _logger = logging.getLogger(__name__)
         ("item_count", n.int32),
         ("initial_value", n.double),
     ]
-)
+)  # type: ignore
 class Model:
     "Internal model class for training SGD MF."
 
@@ -66,7 +66,7 @@ def _fresh_model(nfeatures, nusers, nitems, init=0.1):
         ("rmin", n.double),
         ("rmax", n.double),
     ]
-)
+)  # type: ignore
 class _Params:
     def __init__(self, niters, lrate, reg, rmin, rmax):
         self.iter_count = niters
@@ -86,7 +86,7 @@ def make_params(niters, lrate, reg, range):
     return _Params(niters, lrate, reg, rmin, rmax)
 
 
-@jitclass([("est", n.double[:]), ("feature", n.int32), ("trail", n.double)])
+@jitclass([("est", n.double[:]), ("feature", n.int32), ("trail", n.double)])  # type: ignore
 class _FeatContext:
     def __init__(self, est, feature, trail):
         self.est = est
@@ -102,7 +102,7 @@ class _FeatContext:
         ("bias", n.double[:]),
         ("n_samples", n.uint64),
     ]
-)
+)  # type: ignore
 class Context:
     def __init__(self, users, items, ratings, bias):
         self.users = users
@@ -206,30 +206,39 @@ class FunkSVD(MFPredictor[np.ndarray]):
     you can extract from a trained model.
 
     Args:
-        features(int): the number of features to train
-        iterations(int): the number of iterations to train each feature
-        lrate(double): the learning rate
-        reg(double): the regularization factor
-        damping(double): damping factor for the underlying mean
-        bias(Predictor): the underlying bias model to fit.  If ``True``, then a
+        features: the number of features to train
+        iterations: the number of iterations to train each feature
+        lrate: the learning rate
+        reg: the regularization factor
+        damping: damping factor for the underlying mean
+        bias: the underlying bias model to fit.  If ``True``, then a
             :py:class:`.bias.Bias` model is fit with ``damping``.
-        range(tuple):
+        range:
             the ``(min, max)`` rating values to clamp ratings, or ``None`` to leave
             predictions unclamped.
         random_state:
             The random state for shuffling the data prior to training.
     """
 
+    features: int
+    iterations: int
+    lrate: float
+    reg: float
+    damping: float | tuple[float, float]
+    range: tuple[float, float] | None
+    bias: Bias | None
+    random: np.random.Generator
+
     def __init__(
         self,
-        features,
-        iterations=100,
+        features: int,
+        iterations: int = 100,
         *,
-        lrate=0.001,
-        reg=0.015,
-        damping=5,
-        range=None,
-        bias=True,
+        lrate: float = 0.001,
+        reg: float = 0.015,
+        damping: float | tuple[float, float] = 5,
+        range: tuple[float, float] | None = None,
+        bias: bool | Bias | None = True,
         random_state=None,
     ):
         self.features = features
@@ -246,7 +255,7 @@ class FunkSVD(MFPredictor[np.ndarray]):
             self.bias = bias
         self.random = numpy_rng(random_state)
 
-    def fit(self, ratings, **kwargs):
+    def fit(self, data: Dataset, **kwargs):
         """
         Train a FunkSVD model.
 
@@ -254,52 +263,47 @@ class FunkSVD(MFPredictor[np.ndarray]):
             ratings: the ratings data frame.
         """
         timer = util.Stopwatch()
-        if "rating" not in ratings:
-            _logger.warning("no rating column found, assuming rating values of 1.0")
-            ratings = ratings.assign(rating=1.0)
+        rate_df = data.interaction_matrix(format="pandas", layout="coo", field="rating")
 
         if self.bias:
             _logger.info("[%s] fitting bias model", timer)
-            self.bias.fit(ratings)
+            self.bias.fit(data)
 
-        _logger.info("[%s] preparing rating data for %d samples", timer, len(ratings))
+        _logger.info("[%s] preparing rating data for %d samples", timer, len(rate_df))
         _logger.debug("shuffling rating data")
-        shuf = np.arange(len(ratings), dtype=np.int_)
+        shuf = np.arange(len(rate_df), dtype=np.int_)
         self.random.shuffle(shuf)
-        ratings = ratings.iloc[shuf, :]
+        rate_df = rate_df.iloc[shuf, :]
 
-        _logger.debug("[%s] indexing users and items", timer)
-        uidx = pd.Index(ratings.user.unique())
-        iidx = pd.Index(ratings.item.unique())
-
-        users = uidx.get_indexer(ratings.user).astype(np.int32)
-        assert np.all(users >= 0)
-        items = iidx.get_indexer(ratings.item).astype(np.int32)
-        assert np.all(items >= 0)
+        users = np.array(rate_df["user_num"])
+        items = np.array(rate_df["item_num"])
+        ratings = np.array(rate_df["rating"], dtype=np.float_)
 
         _logger.debug("[%s] computing initial estimates", timer)
         if self.bias:
-            initial = pd.Series(self.bias.mean_, index=ratings.index, dtype=np.float_)
-            ibias, initial = _align_add_bias(self.bias.item_offsets_, iidx, ratings.item, initial)
-            ubias, initial = _align_add_bias(self.bias.user_offsets_, uidx, ratings.user, initial)
+            initial = np.full(len(users), self.bias.mean_, dtype=np.float_)
+            if self.bias.item_offsets_ is not None:
+                initial += self.bias.item_offsets_.values[items]
+            if self.bias.user_offsets_ is not None:
+                initial += self.bias.user_offsets_.values[users]
         else:
-            initial = pd.Series(0.0, index=ratings.index)
+            initial = np.zeros(len(users))
 
-        _logger.debug("have %d estimates for %d ratings", len(initial), len(ratings))
-        assert len(initial) == len(ratings)
+        _logger.debug("have %d estimates for %d ratings", len(initial), len(rate_df))
+        assert len(initial) == len(rate_df)
 
         _logger.debug("[%s] initializing data structures", timer)
-        context = Context(users, items, ratings.rating.astype(np.float_).values, initial.values)
+        context = Context(users, items, ratings, initial)
         params = make_params(self.iterations, self.lrate, self.reg, self.range)
 
-        model = _fresh_model(self.features, len(uidx), len(iidx))
+        model = _fresh_model(self.features, data.users.size, data.items.size)
 
         _logger.info("[%s] training biased MF model with %d features", timer, self.features)
         train(context, params, model, timer)
         _logger.info("finished model training in %s", timer)
 
-        self.user_index_ = uidx
-        self.item_index_ = iidx
+        self.users_ = data.users.copy()
+        self.items_ = data.items.copy()
         self.user_features_ = model.user_features
         self.item_features_ = model.item_features
 

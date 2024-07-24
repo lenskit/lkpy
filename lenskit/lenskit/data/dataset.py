@@ -50,6 +50,13 @@ class Dataset:
         modify returned data in-place.
 
     .. todo::
+        Support for advanced rating situations is not yet supported:
+
+        * repeated ratings
+        * mixed implicit & explicit feedback
+        * later actions removing earlier ratings
+
+    .. todo::
         Support for item and user content or metadata is not yet implemented.
     """
 
@@ -58,6 +65,8 @@ class Dataset:
     items: Vocabulary[EntityId]
     "Item ID vocabulary, to map between IDs and column or row numbers."
     _matrix: InteractionMatrix
+    _item_stats: pd.DataFrame | None = None
+    _user_stats: pd.DataFrame | None = None
 
     def __init__(self, users: Vocabulary, items: Vocabulary, interact_df: pd.DataFrame):
         """
@@ -76,14 +85,14 @@ class Dataset:
         ino = self.items.numbers(df["item_id"])
         assert np.all(uno >= 0)
         assert np.all(ino >= 0)
+        if np.any(df.duplicated(subset=["user_id", "item_id"])):
+            raise RuntimeError("repeated ratings not yet supported")
 
         df = df.assign(user_num=uno, item_num=ino)
 
         _log.debug("sorting interaction table")
         df.sort_values(["user_num", "item_num"], ignore_index=True, inplace=True)
         _log.debug("rating data frame:\n%s", df)
-        if np.any(np.diff(df["item_num"]) == 0):  # pragma nocover
-            raise RuntimeError("repeated ratings not yet supported")
         self._matrix = InteractionMatrix(
             uno,
             ino,
@@ -100,6 +109,23 @@ class Dataset:
     @property
     def user_count(self):
         return self.users.size
+
+    @property
+    def interaction_count(self):
+        """
+        Count the total number of interaction records.
+
+        .. note::
+            If the interaction records themselves reprsent counts, such as the
+            number of times a song was played, this returns the number of
+            *records*, not the total number of plays.
+        """
+        return self._matrix.n_obs
+
+    @property
+    def rating_count(self):
+        "Count the total number of ratings (excluding superseded ratings)."
+        return self._matrix.n_obs
 
     @overload
     def interaction_log(
@@ -237,21 +263,11 @@ class Dataset:
         self,
         format: Literal["scipy"],
         *,
-        layout: Literal["csr"] | None = None,
-        legacy: bool = False,
-        field: str | None = None,
-        combine: MAT_AGG | None = None,
-    ) -> sps.csr_array: ...
-    @overload
-    def interaction_matrix(
-        self,
-        format: Literal["scipy"],
-        *,
-        layout: Literal["csr"] | None = None,
+        layout: Literal["coo"],
         legacy: Literal[True],
         field: str | None = None,
         combine: MAT_AGG | None = None,
-    ) -> sps.csr_matrix: ...
+    ) -> sps.coo_matrix: ...
     @overload
     def interaction_matrix(
         self,
@@ -267,11 +283,21 @@ class Dataset:
         self,
         format: Literal["scipy"],
         *,
-        layout: Literal["coo"],
+        layout: Literal["csr"] | None = None,
         legacy: Literal[True],
         field: str | None = None,
         combine: MAT_AGG | None = None,
-    ) -> sps.coo_matrix: ...
+    ) -> sps.csr_matrix: ...
+    @overload
+    def interaction_matrix(
+        self,
+        format: Literal["scipy"],
+        *,
+        layout: Literal["csr"] | None = None,
+        legacy: bool = False,
+        field: str | None = None,
+        combine: MAT_AGG | None = None,
+    ) -> sps.csr_array: ...
     @overload
     def interaction_matrix(
         self,
@@ -346,6 +372,9 @@ class Dataset:
             legacy:
                 ``True`` to return a legacy SciPy sparse matrix instead of
                 sparse array.
+            original_ids:
+                ``True`` to return user and item IDs instead of numbers in
+                ``pandas``-format matrix.
         """
         match format:
             case "structure":
@@ -357,7 +386,7 @@ class Dataset:
             case "pandas":
                 if layout and layout != "coo":
                     raise ValueError(f"unsupported layout {layout} for Pandas")
-                return self._int_mat_pandas(field)
+                return self._int_mat_pandas(field, original_ids)
             case "scipy":
                 return self._int_mat_scipy(field, layout, legacy)
             case "torch":
@@ -368,11 +397,18 @@ class Dataset:
     def _int_mat_structure(self) -> CSRStructure:
         return CSRStructure(self._matrix.user_ptrs, self._matrix.item_nums, self._matrix.shape)
 
-    def _int_mat_pandas(self, field: str | None) -> pd.DataFrame:
-        cols: dict[str, ArrayLike] = {
-            "user_num": self._matrix.user_nums,
-            "item_num": self._matrix.item_nums,
-        }
+    def _int_mat_pandas(self, field: str | None, original_ids: bool) -> pd.DataFrame:
+        cols: dict[str, ArrayLike]
+        if original_ids:
+            cols = {
+                "user_id": self.users.ids(self._matrix.user_nums),
+                "item_id": self.items.ids(self._matrix.item_nums),
+            }
+        else:
+            cols = {
+                "user_num": self._matrix.user_nums,
+                "item_num": self._matrix.item_nums,
+            }
         if field == "rating":
             if self._matrix.ratings is not None:
                 cols["rating"] = self._matrix.ratings
@@ -402,23 +438,11 @@ class Dataset:
             layout = "csr"
         match layout:
             case "csr":
-                if legacy:
-                    return sps.csr_matrix(
-                        (data, self._matrix.item_nums, self._matrix.user_ptrs), shape=shape
-                    )
-                else:
-                    return sps.csr_array(
-                        (data, self._matrix.item_nums, self._matrix.user_ptrs), shape=shape
-                    )
+                ctor = sps.csr_matrix if legacy else sps.csr_array
+                return ctor((data, self._matrix.item_nums, self._matrix.user_ptrs), shape=shape)
             case "coo":
-                if legacy:
-                    return sps.coo_matrix(
-                        (data, (self._matrix.user_nums, self._matrix.item_nums)), shape=shape
-                    )
-                else:
-                    return sps.coo_array(
-                        (data, (self._matrix.user_nums, self._matrix.item_nums)), shape=shape
-                    )
+                ctor = sps.coo_matrix if legacy else sps.coo_array
+                return ctor((data, (self._matrix.user_nums, self._matrix.item_nums)), shape=shape)
             case _:  # pragma nocover
                 raise ValueError(f"unsupported layout {layout}")
 
@@ -445,19 +469,115 @@ class Dataset:
                     size=shape,
                 )
             case "coo":
+                indices = np.stack([self._matrix.user_nums, self._matrix.item_nums], dtype=np.int32)
                 return torch.sparse_coo_tensor(
-                    torch.stack(
-                        [
-                            torch.from_numpy(self._matrix.user_nums),
-                            torch.from_numpy(self._matrix.item_nums),
-                        ],
-                        dim=0,
-                    ),
+                    torch.from_numpy(indices),
                     values,
                     size=shape,
                 ).coalesce()
             case _:  # pragma nocover
                 raise ValueError(f"unsupported layout {layout}")
+
+    def item_stats(self) -> pd.DataFrame:
+        """
+        Get item statistics.
+
+        Returns:
+            A data frame indexed by item ID with the following columns:
+
+            * count — the number of interactions recorded for this item.
+            * user_count — the number of distinct users who have interacted with
+              or rated this item.
+            * rating_count — the number of ratings for this item.  Only provided
+              if the dataset has explicit ratings; if there are repeated
+              ratings, this does **not** count superseded ratings.
+            * mean_rating — the mean of the reatings. Only provided if the
+              dataset has explicit ratings.
+            * first_time — the first time the item appears. Only provided if the
+              dataset has timestamps.
+
+            The index is the vocabulary, so ``iloc`` works with item numbers.
+        """
+
+        if self._item_stats is None:
+            counts = np.zeros(self.item_count, dtype=np.int32)
+            np.add.at(counts, self._matrix.item_nums, 1)
+            frame = pd.DataFrame(
+                {
+                    "count": counts,
+                    "user_count": counts,
+                },
+                index=self.items.index,
+            )
+
+            if self._matrix.ratings is not None:
+                sums = np.zeros(self.item_count, dtype=np.float64)
+                np.add.at(sums, self._matrix.item_nums, self._matrix.ratings)
+                frame["rating_count"] = counts
+                frame["mean_rating"] = sums / counts
+
+            if self._matrix.timestamps is not None:
+                i64i = np.iinfo(np.int64)
+                times = np.full(self.item_count, i64i.max, dtype=np.int64)
+                np.minimum.at(times, self._matrix.item_nums, self._matrix.timestamps)
+                frame["first_time"] = times
+
+            self._item_stats = frame
+
+        return self._item_stats
+
+    def user_stats(self) -> pd.DataFrame:
+        """
+        Get user statistics.
+
+        Returns:
+            A data frame indexed by user ID with the following columns:
+
+            * count — the number of interactions recorded for this user.
+            * item_count — the number of distinct items with which this user has
+              interacted.
+            * rating_count — the number of ratings for this user.  Only provided
+              if the dataset has explicit ratings; if there are repeated
+              ratings, this does **not** count superseded ratings.
+            * mean_rating — the mean of the user's reatings. Only provided if
+              the dataset has explicit ratings.
+            * first_time — the first time the user appears. Only provided if the
+              dataset has timestamps.
+            * last_time — the last time the user appears. Only provided if the
+              dataset has timestamps.
+
+            The index is the vocabulary, so ``iloc`` works with user numbers.
+        """
+
+        if self._user_stats is None:
+            counts = np.zeros(self.user_count, dtype=np.int32)
+            np.add.at(counts, self._matrix.user_nums, 1)
+            frame = pd.DataFrame(
+                {
+                    "count": counts,
+                    "user_count": counts,
+                },
+                index=self.users.index,
+            )
+
+            if self._matrix.ratings is not None:
+                sums = np.zeros(self.user_count, dtype=np.float64)
+                np.add.at(sums, self._matrix.user_nums, self._matrix.ratings)
+                frame["rating_count"] = counts
+                frame["mean_rating"] = sums / counts
+
+            if self._matrix.timestamps is not None:
+                i64i = np.iinfo(np.int64)
+                first = np.full(self.user_count, i64i.max, dtype=np.int64)
+                last = np.full(self.user_count, i64i.min, dtype=np.int64)
+                np.minimum.at(first, self._matrix.user_nums, self._matrix.timestamps)
+                np.maximum.at(last, self._matrix.user_nums, self._matrix.timestamps)
+                frame["first_time"] = first
+                frame["last_time"] = last
+
+            self._user_stats = frame
+
+        return self._user_stats
 
 
 def from_interactions_df(
@@ -496,8 +616,9 @@ def from_interactions_df(
         rating_col=rating_col,
         timestamp_col=timestamp_col,
     )
-    users = Vocabulary(df["user_id"])
-    items = Vocabulary(df["item_id"])
+    df = df.sort_values(["user_id", "item_id"])
+    users = Vocabulary(df["user_id"], "user")
+    items = Vocabulary(df["item_id"], "item")
     return Dataset(users, items, df)
 
 

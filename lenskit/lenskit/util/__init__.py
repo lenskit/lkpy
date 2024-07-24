@@ -11,6 +11,7 @@ Miscellaneous utility functions.
 import logging
 from copy import deepcopy
 from textwrap import dedent
+from typing import Any, Protocol, TypeVar, runtime_checkable
 
 from lenskit.algorithms import Algorithm
 
@@ -31,8 +32,15 @@ __all__ = [
     "clean_str",
 ]
 
+A = TypeVar("A")
 
-def clone(algo):
+
+@runtime_checkable
+class ParamContainer(Protocol):
+    def get_params(self, deep=True) -> dict[str, Any]: ...
+
+
+def clone(algo: A) -> A:
     """
     Clone an algorithm, but not its fitted data.  This is like
     :func:`sklearn.base.clone`, but may not work on arbitrary SciKit estimators.
@@ -50,15 +58,15 @@ def clone(algo):
     True
     """
     _log.debug("cloning %s", algo)
-    if isinstance(algo, Algorithm) or hasattr(algo, "get_params"):
+    if isinstance(algo, Algorithm) or isinstance(algo, ParamContainer):
         params = algo.get_params(deep=False)
 
         sps = dict([(k, clone(v)) for (k, v) in params.items()])
         return algo.__class__(**sps)
     elif isinstance(algo, list):
-        return [clone(a) for a in algo]
+        return [clone(a) for a in algo]  # type: ignore
     elif isinstance(algo, tuple):
-        return tuple(clone(a) for a in algo)
+        return tuple(clone(a) for a in algo)  # type: ignore
     else:
         return deepcopy(algo)
 

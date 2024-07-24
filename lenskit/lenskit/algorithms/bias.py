@@ -4,9 +4,16 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+from __future__ import annotations
+
 import logging
 
+import numpy as np
 import pandas as pd
+import torch
+from typing_extensions import overload, override
+
+from lenskit.data import Dataset
 
 from . import Predictor
 
@@ -40,18 +47,22 @@ class Bias(Predictor):
     Args:
         items: whether to compute item biases
         users: whether to compute user biases
-        damping(number or tuple):
+        damping:
             Bayesian damping to apply to computed biases.  Either a number, to
             damp both user and item biases the same amount, or a (user,item) tuple
             providing separate damping values.
-
-    Attributes:
-        mean_(double): The global mean rating.
-        item_offsets_(pandas.Series): The item offsets (:math:`b_i` values)
-        user_offsets_(pandas.Series): The item offsets (:math:`b_u` values)
     """
 
-    def __init__(self, items=True, users=True, damping=0.0):
+    mean_: float
+    "The global mean rating."
+    item_offsets_: pd.Series | None
+    "The item offsets (:math:`b_i` values)."
+    user_offsets_: pd.Series | None
+    "The user offsets (:math:`b_u` values)."
+
+    def __init__(
+        self, items: bool = True, users: bool = True, damping: float | tuple[float, float] = 0.0
+    ):
         self.items = items
         self.users = users
         if isinstance(damping, tuple):
@@ -67,7 +78,8 @@ class Bias(Predictor):
         if self.item_damping < 0:
             raise ValueError("item damping must be non-negative")
 
-    def fit(self, ratings, **kwargs):
+    @override
+    def fit(self, data: Dataset, **kwargs):
         """
         Train the bias model on some rating data.
 
@@ -78,65 +90,91 @@ class Bias(Predictor):
         Returns:
             Bias: the fit bias object.
         """
-        _logger.info("building bias model for %d ratings", len(ratings))
-        self.mean_ = ratings.rating.mean()
+        _logger.info("building bias model for %d ratings", data.interaction_count)
+        ratings = data.interaction_matrix("scipy", layout="coo", field="rating")
+        nrows, ncols = ratings.shape
+
+        self.mean_ = float(np.mean(ratings.data))
         _logger.info("global mean: %.3f", self.mean_)
-        nrates = ratings.assign(rating=lambda df: df.rating - self.mean_)
+
+        centered = ratings.data - self.mean_
+        if np.allclose(centered, 0):
+            _logger.warn("mean-centered ratings are all 0, bias probably meaningless")
 
         if self.items:
-            group = nrates.groupby("item").rating
-            self.item_offsets_ = self._mean(group, self.item_damping)
-            self.item_offsets_.name = "i_off"
+            counts = np.full(ncols, self.item_damping)
+            sums = np.zeros(ncols)
+            np.add.at(counts, ratings.col, 1)
+            np.add.at(sums, ratings.col, centered)
+            means = sums / counts
+            self.item_offsets_ = pd.Series(means, index=data.items.index, name="i_off")
+            centered -= means[ratings.col]
             _logger.info("computed means for %d items", len(self.item_offsets_))
         else:
             self.item_offsets_ = None
 
         if self.users:
-            if self.item_offsets_ is not None:
-                nrates = nrates.join(pd.DataFrame(self.item_offsets_), on="item", how="inner")
-                nrates = nrates.assign(rating=lambda df: df.rating - df.i_off)
-
-            self.user_offsets_ = self._mean(nrates.groupby("user").rating, self.user_damping)
-            self.user_offsets_.name = "u_off"
+            counts = np.full(nrows, self.user_damping)
+            sums = np.zeros(nrows)
+            np.add.at(counts, ratings.row, 1)
+            np.add.at(sums, ratings.row, centered)
+            means = sums / counts
+            self.user_offsets_ = pd.Series(means, index=data.users.index, name="u_off")
             _logger.info("computed means for %d users", len(self.user_offsets_))
         else:
             self.user_offsets_ = None
 
         return self
 
-    def transform(self, ratings, *, indexes=False):
+    @overload
+    def transform(self, ratings: pd.DataFrame, *, indexes: bool = False) -> pd.DataFrame: ...
+    @overload
+    def transform(self, ratings: torch.Tensor) -> torch.Tensor: ...
+    def transform(self, ratings, *, indexes: bool = False):
         """
-        Transform ratings by removing the bias term.  This method does *not* recompute
-        user (or item) biases based on these ratings, but rather uses the biases that
-        were estimated with :meth:`fit`.
+        Transform ratings by removing the bias term.  This method does *not*
+        recompute user (or item) biases based on these ratings, but rather uses
+        the biases that were estimated with :meth:`fit`.
 
         Args:
-            ratings(pandas.DataFrame):
-                The ratings to transform.  Must contain at least ``user``, ``item``, and
-                ``rating`` columns.
-            indexes(bool):
-                if ``True``, the resulting frame will include ``uidx`` and ``iidx``
-                columns containing the 0-based user and item indexes for each rating.
+            ratings:
+                The ratings to transform.  Must contain at least ``user``,
+                ``item``, and ``rating`` columns.
+            indexes:
+                if ``True``, the resulting frame will include ``uidx`` and
+                ``iidx`` columns containing the 0-based user and item indexes
+                for each rating.
 
         Returns:
-            pandas.DataFrame:
-                A data frame with ``rating`` transformed by subtracting
-                user-item bias prediction.
+            A data frame with ``rating`` transformed by subtracting user-item
+            bias prediction.
         """
-        rvps = ratings[["user", "item"]].copy()
-        rvps["rating"] = ratings["rating"] - self.mean_
-        if self.item_offsets_ is not None:
-            rvps = rvps.join(self.item_offsets_, on="item", how="left")
-            rvps["rating"] -= rvps["i_off"].fillna(0)
-            rvps = rvps.drop(columns="i_off")
-        if self.user_offsets_ is not None:
-            rvps = rvps.join(self.user_offsets_, on="user", how="left")
-            rvps["rating"] -= rvps["u_off"].fillna(0)
-            rvps = rvps.drop(columns="u_off")
-        if indexes:
-            rvps["uidx"] = self.user_offsets_.index.get_indexer(rvps["user"])
-            rvps["iidx"] = self.item_offsets_.index.get_indexer(rvps["item"])
-        return rvps
+        if isinstance(ratings, pd.DataFrame):
+            rvps = ratings[["user", "item"]].copy()
+            rvps["rating"] = ratings["rating"] - self.mean_
+            if self.item_offsets_ is not None:
+                rvps = rvps.join(self.item_offsets_, on="item", how="left")
+                rvps["rating"] -= rvps["i_off"].fillna(0)
+                rvps = rvps.drop(columns="i_off")
+            if self.user_offsets_ is not None:
+                rvps = rvps.join(self.user_offsets_, on="user", how="left")
+                rvps["rating"] -= rvps["u_off"].fillna(0)
+                rvps = rvps.drop(columns="u_off")
+            if indexes:
+                rvps["uidx"] = self.user_offsets_.index.get_indexer(rvps["user"])
+                rvps["iidx"] = self.item_offsets_.index.get_indexer(rvps["item"])
+            return rvps
+        elif isinstance(ratings, torch.Tensor):
+            if ratings.is_sparse_csr:
+                raise TypeError("only COO tensors are supported")
+            v2 = ratings.values() - self.mean_
+            if self.item_offsets_ is not None:
+                v2 -= torch.from_numpy(self.item_offsets_.values)[ratings.indices()[1, :]]
+            if self.user_offsets_ is not None:
+                v2 -= torch.from_numpy(self.user_offsets_.values)[ratings.indices()[0, :]]
+            return torch.sparse_coo_tensor(ratings.indices(), v2, size=ratings.size()).coalesce()
+        else:
+            raise TypeError("unsupported ratings type")
 
     def inverse_transform(self, ratings):
         """
@@ -202,12 +240,18 @@ class Bias(Predictor):
 
         return ratings
 
-    def fit_transform(self, ratings, **kwargs):
+    def fit_transform(self, data: Dataset, **kwargs) -> pd.DataFrame:
         """
         Fit with ratings and return the training data transformed.
         """
-        self.fit(ratings)
-        return self.transform(ratings, **kwargs)
+        # FIXME: make this more efficient, don't rename things.
+        self.fit(data)
+        return self.transform(
+            data.interaction_matrix("pandas", field="rating", original_ids=True).rename(
+                columns={"user_id": "user", "item_id": "item"}
+            ),
+            **kwargs,
+        )
 
     def predict_for_user(self, user, items, ratings=None):
         """

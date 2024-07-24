@@ -38,14 +38,15 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
     a list of item IDs. It should return a dictionary or a :py:class:`pandas.Series`
     mapping item IDs to predictions.
 
-    To use this function, provide a pre-fit algorithm::
+    To use this function, provide a pre-fit algorithm:
 
         >>> from lenskit.algorithms.bias import Bias
         >>> from lenskit.metrics.predict import rmse
         >>> from lenskit import datasets
+        >>> from lenskit.data import from_interactions_df
         >>> ratings = datasets.MovieLens('data/ml-latest-small').ratings
         >>> bias = Bias()
-        >>> bias.fit(ratings[:-1000])
+        >>> bias.fit(from_interactions_df(ratings[:-1000]))
         <lenskit.algorithms.bias.Bias object at ...>
         >>> preds = predict(bias, ratings[-1000:])
         >>> preds.head()
@@ -56,7 +57,7 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
         99007   664  8636     4.0  1393891175    3.846268
         99008   664  8641     4.5  1393890852    3.710635
         >>> rmse(preds['prediction'], preds['rating'])
-        0.8326992222...
+        0.832699...
 
     Args:
         algo(lenskit.algorithms.Predictor):

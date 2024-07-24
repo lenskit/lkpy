@@ -15,23 +15,24 @@ import lenskit.util.test as lktu
 from lenskit import util as lku
 from lenskit.algorithms import basic
 from lenskit.algorithms.bias import Bias
+from lenskit.util.test import ml_ratings, ml_ds  # noqa: F401
 
 simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
 )
 
 
-def test_fallback_train_one():
+def test_fallback_train_one(ml_ratings, ml_ds):
     algo = basic.Fallback(Bias())
-    algo.fit(lktu.ml_test.ratings)
+    algo.fit(ml_ds)
     assert len(algo.algorithms) == 1
     assert isinstance(algo.algorithms[0], Bias)
-    assert algo.algorithms[0].mean_ == approx(lktu.ml_test.ratings.rating.mean())
+    assert algo.algorithms[0].mean_ == approx(ml_ratings.rating.mean())
 
 
-def test_fallback_train_one_pred_impossible():
+def test_fallback_train_one_pred_impossible(ml_ds):
     algo = basic.Fallback(basic.Memorized(simple_df))
-    algo.fit(lktu.ml_test.ratings)
+    algo.fit(ml_ds)
 
     preds = algo.predict_for_user(10, [1, 2])
     assert set(preds.index) == set([1, 2])
@@ -43,9 +44,9 @@ def test_fallback_train_one_pred_impossible():
     assert np.isnan(preds.loc[3])
 
 
-def test_fallback_list():
+def test_fallback_list(ml_ds):
     algo = basic.Fallback([basic.Memorized(simple_df), Bias()])
-    algo.fit(lktu.ml_test.ratings)
+    algo.fit(ml_ds)
     assert len(algo.algorithms) == 2
 
     params = algo.get_params()
@@ -60,9 +61,9 @@ def test_fallback_string():
     assert "Fallback" in str(algo)
 
 
-def test_fallback_clone():
+def test_fallback_clone(ml_ds):
     algo = basic.Fallback([basic.Memorized(simple_df), Bias()])
-    algo.fit(lktu.ml_test.ratings)
+    algo.fit(ml_ds)
     assert len(algo.algorithms) == 2
 
     clone = lku.clone(algo)
@@ -72,14 +73,14 @@ def test_fallback_clone():
         assert type(a2) == type(a1)
 
 
-def test_fallback_predict():
+def test_fallback_predict(ml_ratings, ml_ds):
     algo = basic.Fallback(basic.Memorized(simple_df), Bias())
-    algo.fit(lktu.ml_test.ratings)
+    algo.fit(ml_ds)
     assert len(algo.algorithms) == 2
 
     bias = algo.algorithms[1]
     assert isinstance(bias, Bias)
-    assert bias.mean_ == approx(lktu.ml_test.ratings.rating.mean())
+    assert bias.mean_ == approx(ml_ratings.rating.mean())
 
     def exp_val(user, item):
         v = bias.mean_
@@ -113,9 +114,9 @@ def test_fallback_predict():
     assert preds.loc[-23081] == approx(exp_val(10, None))
 
 
-def test_fallback_save_load(tmp_path):
+def test_fallback_save_load(tmp_path, ml_ds):
     original = basic.Fallback(basic.Memorized(simple_df), Bias())
-    original.fit(lktu.ml_test.ratings)
+    original.fit(ml_ds)
 
     fn = tmp_path / "fb.mod"
     with fn.open("wb") as pf:
