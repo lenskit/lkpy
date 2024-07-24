@@ -217,7 +217,7 @@ def steps_mldata(options: JobOptions, datasets: list[str]) -> list[GHStep]:
         {
             "name": "Download ML data",
             "run": script(f"""
-                python -m lenskit.datasets.fetch {ds_str}
+                python -m lenskit.data.fetch {ds_str}
             """),
         },
     ]

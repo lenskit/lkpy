@@ -11,7 +11,7 @@ the manual.
 .. versionchanged:: 2024.1
     The new :class:`Dataset` class replaces the Pandas data frames
     that were passed to algorithms in the past.  It also subsumes
-    the old support for producing sparse matrices from rating rames.
+    the old support for producing sparse matrices from rating frames.
 
 .. _data-model:
 
@@ -69,12 +69,17 @@ instance to be passed to :meth:`~lenskit.algorithms.Recommender.fit`.
 
 .. autoclass:: Dataset
 
-Creating Dataset
-~~~~~~~~~~~~~~~~
+Creating Datasets
+~~~~~~~~~~~~~~~~~
 
 Several functions create :class:`Dataset`s from different input data sources.
 
 .. autofunction:: from_interaction_df
+
+Loading Common Datasets
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autofunction:: load_movielens
 
 Vocabularies
 ~~~~~~~~~~~~

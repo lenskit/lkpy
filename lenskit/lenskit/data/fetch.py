@@ -11,7 +11,7 @@ from pathlib import Path
 from urllib.request import urlopen
 from zipfile import ZipFile
 
-_log = logging.getLogger("lenskit.datasets.fetch")
+_log = logging.getLogger("lenskit.data.fetch")
 
 ML_LOC = "http://files.grouplens.org/datasets/movielens/"
 ML_DATASETS = {
