@@ -90,7 +90,7 @@ if {[ev GITHUB_BASE_REF base]} {
     puts $reph "\n</details>"
 
     close $reph
-} elseif {[ev GITHUB_EVENT_NAME] && [ev GITHUB_TOKEN]} {
+} elseif {[ev GITHUB_EVENT_NAME] && [ev GH_TOKEN]} {
     puts stderr "saving coverage data"
     set data [jq "{meta: .meta, totals: .totals}" coverage.json 2>@stderr]
     exec git notes --ref=coverage add -m $data HEAD 2>@stderr >@stdout
@@ -109,4 +109,5 @@ if {[ev GITHUB_BASE_REF base]} {
     close $reph
 } else {
     puts stderr "don't know what to do"
+    exit 1
 }
