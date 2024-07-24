@@ -77,6 +77,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-conda-${{matrix.platform}}-py${{matrix.python}}
           path: |
@@ -137,6 +138,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-vanilla-${{matrix.platform}}-py${{matrix.python}}
           path: |
@@ -189,6 +191,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-nojit
           path: |
@@ -238,6 +241,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-mindep
           path: |
@@ -295,6 +299,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-funksvd-py${{matrix.python}}
           path: |
@@ -344,6 +349,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-mindep-funksvd
           path: |
@@ -401,6 +407,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-implicit-py${{matrix.python}}
           path: |
@@ -450,6 +457,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-mindep-implicit
           path: |
@@ -506,6 +514,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-hpf-py${{matrix.python}}
           path: |
@@ -562,6 +571,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-eval-tests
           path: |
@@ -618,6 +628,7 @@ jobs:
           coverage report
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: test-examples
           path: |
