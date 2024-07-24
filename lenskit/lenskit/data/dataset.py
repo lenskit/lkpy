@@ -6,13 +6,25 @@ LensKit dataset abstraction.
 from __future__ import annotations
 
 import logging
-from typing import Any, Collection, Iterable, Literal, Optional, TypeAlias, TypeVar, overload
+from abc import ABC, abstractmethod
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as sps
 import torch
 from numpy.typing import ArrayLike
+from typing_extensions import (
+    Any,
+    Callable,
+    Collection,
+    Iterable,
+    Literal,
+    Optional,
+    TypeAlias,
+    TypeVar,
+    overload,
+    override,
+)
 
 from lenskit.data.matrix import CSRStructure, InteractionMatrix
 from lenskit.data.vocab import Vocabulary
@@ -40,7 +52,7 @@ class FieldError(KeyError):
         super().__init__(f"{entity}[{field}]")
 
 
-class Dataset:
+class Dataset(ABC):
     """
     Representation of a data set for LensKit training, evaluation, etc. Data can
     be accessed in a variety of formats depending on the needs of a component.
@@ -60,74 +72,79 @@ class Dataset:
         Support for item and user content or metadata is not yet implemented.
     """
 
-    users: Vocabulary[EntityId]
-    "User ID vocabulary, to map between IDs and row numbers."
-    items: Vocabulary[EntityId]
-    "Item ID vocabulary, to map between IDs and column or row numbers."
-    _matrix: InteractionMatrix
     _item_stats: pd.DataFrame | None = None
     _user_stats: pd.DataFrame | None = None
 
-    def __init__(self, users: Vocabulary, items: Vocabulary, interact_df: pd.DataFrame):
+    @property
+    @abstractmethod
+    def items(self) -> Vocabulary[EntityId]:
         """
-        Construct a dataset.
+        The items known by this dataset.
+        """
+        ...
+
+    @property
+    @abstractmethod
+    def users(self) -> Vocabulary[EntityId]:
+        """
+        The users known by this dataset.
+        """
+        ...
+
+    @abstractmethod
+    def count(self, what: str) -> int:
+        """
+        Count entities in the dataset.
 
         .. note::
-            Client code generally should not call this constructor.  Instead use the
-            various ``from_`` and ``load_`` functions in :mod:`lenskit.data`.
+
+            The precise counts are subtle in the presence of repeated or
+            superseded interactions. See :meth:`interaction_count` and
+            :meth:`rating_count` for details on the ``"interactions"`` and
+            ``"ratings"`` counts.
+
+        Args:
+            what:
+                The type of entity to count.  Commonly-supported ones include:
+
+                * users
+                * items
+                * interactions
+                * ratings
         """
-        self.users = users
-        self.items = items
-        self._init_structures(interact_df)
-
-    def _init_structures(self, df: pd.DataFrame):
-        uno = self.users.numbers(df["user_id"])
-        ino = self.items.numbers(df["item_id"])
-        assert np.all(uno >= 0)
-        assert np.all(ino >= 0)
-        if np.any(df.duplicated(subset=["user_id", "item_id"])):
-            raise RuntimeError("repeated ratings not yet supported")
-
-        df = df.assign(user_num=uno, item_num=ino)
-
-        _log.debug("sorting interaction table")
-        df.sort_values(["user_num", "item_num"], ignore_index=True, inplace=True)
-        _log.debug("rating data frame:\n%s", df)
-        self._matrix = InteractionMatrix(
-            uno,
-            ino,
-            df["rating"] if "rating" in df.columns else None,
-            df["timestamp"] if "timestamp" in df.columns else None,
-            self.user_count,
-            self.item_count,
-        )
+        ...
 
     @property
-    def item_count(self):
-        return self.items.size
+    def item_count(self) -> int:
+        return self.count("items")
 
     @property
-    def user_count(self):
-        return self.users.size
+    def user_count(self) -> int:
+        return self.count("users")
 
     @property
-    def interaction_count(self):
+    def interaction_count(self) -> int:
         """
-        Count the total number of interaction records.
+        Count the total number of interaction records.  Equivalent to
+        ``count("interactions")``.
 
         .. note::
             If the interaction records themselves reprsent counts, such as the
             number of times a song was played, this returns the number of
             *records*, not the total number of plays.
         """
-        return self._matrix.n_obs
+        return self.count("interactions")
 
     @property
-    def rating_count(self):
-        "Count the total number of ratings (excluding superseded ratings)."
-        return self._matrix.n_obs
+    def rating_count(self) -> int:
+        """
+        Count the total number of ratings (excluding superseded ratings).
+        Equivalent to ``count("ratings")``.
+        """
+        return self.count("ratings")
 
     @overload
+    @abstractmethod
     def interaction_log(
         self,
         format: Literal["pandas"],
@@ -136,13 +153,16 @@ class Dataset:
         original_ids: bool = False,
     ) -> pd.DataFrame: ...
     @overload
+    @abstractmethod
     def interaction_log(
         self, format: Literal["numpy"], *, fields: str | list[str] | None = "all"
     ) -> NumpyUserItemTable: ...
     @overload
+    @abstractmethod
     def interaction_log(
         self, format: Literal["torch"], *, fields: str | list[str] | None = "all"
     ) -> TorchUserItemTable: ...
+    @abstractmethod
     def interaction_log(
         self,
         format: str,
@@ -186,60 +206,10 @@ class Dataset:
         Returns:
             The user-item interaction log in the specified format.
         """
-        if fields == "all":
-            fields = ["rating", "timestamp"]
-        elif isinstance(fields, str):
-            fields = [fields]
-        elif fields is None:
-            fields = []
-
-        match format:
-            case "pandas":
-                return self._int_log_pandas(fields, original_ids)
-            case "numpy":
-                return self._int_log_numpy(fields)
-            case "torch":
-                return self._int_log_torch(fields)
-            case _:
-                raise ValueError(f"unsupported format “{format}”")
-
-    def _int_log_pandas(self, fields: list[str], original_ids: bool):
-        cols: dict[str, ArrayLike]
-        if original_ids:
-            cols = {
-                "user_id": self.users.terms(self._matrix.user_nums),
-                "item_id": self.items.terms(self._matrix.item_nums),
-            }
-        else:
-            cols = {
-                "user_num": self._matrix.user_nums,
-                "item_num": self._matrix.item_nums,
-            }
-        if "rating" in fields and self._matrix.ratings is not None:
-            cols["rating"] = self._matrix.ratings
-        if "timestamp" in fields and self._matrix.timestamps is not None:
-            cols["timestamp"] = self._matrix.timestamps
-        return pd.DataFrame(cols)
-
-    def _int_log_numpy(self, fields: list[str]) -> NumpyUserItemTable:
-        tbl = NumpyUserItemTable(self._matrix.user_nums, self._matrix.item_nums)
-        if "rating" in fields:
-            tbl.ratings = self._matrix.ratings
-        if "timestamp" in fields:
-            tbl.timestamps = self._matrix.timestamps
-        return tbl
-
-    def _int_log_torch(self, fields: list[str]) -> TorchUserItemTable:
-        tbl = TorchUserItemTable(
-            torch.from_numpy(self._matrix.user_nums), torch.from_numpy(self._matrix.item_nums)
-        )
-        if "rating" in fields:
-            tbl.ratings = torch.from_numpy(self._matrix.ratings)
-        if "timestamp" in fields:
-            tbl.timestamps = torch.from_numpy(self._matrix.timestamps)
-        return tbl
+        ...
 
     @overload
+    @abstractmethod
     def interaction_matrix(
         self,
         format: Literal["pandas"],
@@ -250,6 +220,7 @@ class Dataset:
         original_ids: bool = False,
     ) -> pd.DataFrame: ...
     @overload
+    @abstractmethod
     def interaction_matrix(
         self,
         format: Literal["torch"],
@@ -259,6 +230,7 @@ class Dataset:
         combine: MAT_AGG | None = None,
     ) -> torch.Tensor: ...
     @overload
+    @abstractmethod
     def interaction_matrix(
         self,
         format: Literal["scipy"],
@@ -269,6 +241,7 @@ class Dataset:
         combine: MAT_AGG | None = None,
     ) -> sps.coo_matrix: ...
     @overload
+    @abstractmethod
     def interaction_matrix(
         self,
         format: Literal["scipy"],
@@ -279,6 +252,7 @@ class Dataset:
         combine: MAT_AGG | None = None,
     ) -> sps.coo_array: ...
     @overload
+    @abstractmethod
     def interaction_matrix(
         self,
         format: Literal["scipy"],
@@ -289,6 +263,7 @@ class Dataset:
         combine: MAT_AGG | None = None,
     ) -> sps.csr_matrix: ...
     @overload
+    @abstractmethod
     def interaction_matrix(
         self,
         format: Literal["scipy"],
@@ -299,12 +274,14 @@ class Dataset:
         combine: MAT_AGG | None = None,
     ) -> sps.csr_array: ...
     @overload
+    @abstractmethod
     def interaction_matrix(
         self,
         format: Literal["structure"],
         *,
         layout: Literal["csr"] | None = None,
     ) -> CSRStructure: ...
+    @abstractmethod
     def interaction_matrix(
         self,
         format: str,
@@ -376,6 +353,192 @@ class Dataset:
                 ``True`` to return user and item IDs instead of numbers in
                 ``pandas``-format matrix.
         """
+        ...
+
+    def item_stats(self) -> pd.DataFrame:
+        """
+        Get item statistics.
+
+        Returns:
+            A data frame indexed by item ID with the following columns:
+
+            * count — the number of interactions recorded for this item.
+            * user_count — the number of distinct users who have interacted with
+              or rated this item.
+            * rating_count — the number of ratings for this item.  Only provided
+              if the dataset has explicit ratings; if there are repeated
+              ratings, this does **not** count superseded ratings.
+            * mean_rating — the mean of the reatings. Only provided if the
+              dataset has explicit ratings.
+            * first_time — the first time the item appears. Only provided if the
+              dataset has timestamps.
+
+            The index is the vocabulary, so ``iloc`` works with item numbers.
+        """
+
+        if self._item_stats is None:
+            log = self.interaction_log("numpy")
+
+            counts = np.zeros(self.item_count, dtype=np.int32)
+            np.add.at(counts, log.item_nums, 1)
+            frame = pd.DataFrame(
+                {
+                    "count": counts,
+                    "user_count": counts,
+                },
+                index=self.items.index,
+            )
+
+            if log.ratings is not None:
+                sums = np.zeros(self.item_count, dtype=np.float64)
+                np.add.at(sums, log.item_nums, log.ratings)
+                frame["rating_count"] = counts
+                frame["mean_rating"] = sums / counts
+
+            if log.timestamps is not None:
+                i64i = np.iinfo(np.int64)
+                times = np.full(self.item_count, i64i.max, dtype=np.int64)
+                np.minimum.at(times, log.item_nums, log.timestamps)
+                frame["first_time"] = times
+
+            self._item_stats = frame
+
+        return self._item_stats
+
+    def user_stats(self) -> pd.DataFrame:
+        """
+        Get user statistics.
+
+        Returns:
+            A data frame indexed by user ID with the following columns:
+
+            * count — the number of interactions recorded for this user.
+            * item_count — the number of distinct items with which this user has
+              interacted.
+            * rating_count — the number of ratings for this user.  Only provided
+              if the dataset has explicit ratings; if there are repeated
+              ratings, this does **not** count superseded ratings.
+            * mean_rating — the mean of the user's reatings. Only provided if
+              the dataset has explicit ratings.
+            * first_time — the first time the user appears. Only provided if the
+              dataset has timestamps.
+            * last_time — the last time the user appears. Only provided if the
+              dataset has timestamps.
+
+            The index is the vocabulary, so ``iloc`` works with user numbers.
+        """
+
+        if self._user_stats is None:
+            log = self.interaction_log("numpy")
+
+            counts = np.zeros(self.user_count, dtype=np.int32)
+            np.add.at(counts, log.user_nums, 1)
+            frame = pd.DataFrame(
+                {
+                    "count": counts,
+                    "user_count": counts,
+                },
+                index=self.users.index,
+            )
+
+            if log.ratings is not None:
+                sums = np.zeros(self.user_count, dtype=np.float64)
+                np.add.at(sums, log.user_nums, log.ratings)
+                frame["rating_count"] = counts
+                frame["mean_rating"] = sums / counts
+
+            if log.timestamps is not None:
+                i64i = np.iinfo(np.int64)
+                first = np.full(self.user_count, i64i.max, dtype=np.int64)
+                last = np.full(self.user_count, i64i.min, dtype=np.int64)
+                np.minimum.at(first, log.user_nums, log.timestamps)
+                np.maximum.at(last, log.user_nums, log.timestamps)
+                frame["first_time"] = first
+                frame["last_time"] = last
+
+            self._user_stats = frame
+
+        return self._user_stats
+
+
+class MatrixDataset(Dataset):
+    """
+    Dataset implementaiton using an in-memory rating or implicit-feedback matrix.
+    """
+
+    _users: Vocabulary[EntityId]
+    "User ID vocabulary, to map between IDs and row numbers."
+    _items: Vocabulary[EntityId]
+    "Item ID vocabulary, to map between IDs and column or row numbers."
+    _matrix: InteractionMatrix
+
+    def __init__(self, users: Vocabulary, items: Vocabulary, interact_df: pd.DataFrame):
+        """
+        Construct a dataset.
+
+        .. note::
+            Client code generally should not call this constructor.  Instead use the
+            various ``from_`` and ``load_`` functions in :mod:`lenskit.data`.
+        """
+        self._users = users
+        self._items = items
+        self._init_structures(interact_df)
+
+    def _init_structures(self, df: pd.DataFrame):
+        uno = self.users.numbers(df["user_id"])
+        ino = self.items.numbers(df["item_id"])
+        assert np.all(uno >= 0)
+        assert np.all(ino >= 0)
+        if np.any(df.duplicated(subset=["user_id", "item_id"])):
+            raise RuntimeError("repeated ratings not yet supported")
+
+        df = df.assign(user_num=uno, item_num=ino)
+
+        _log.debug("sorting interaction table")
+        df.sort_values(["user_num", "item_num"], ignore_index=True, inplace=True)
+        _log.debug("rating data frame:\n%s", df)
+        self._matrix = InteractionMatrix(
+            uno,
+            ino,
+            df["rating"] if "rating" in df.columns else None,
+            df["timestamp"] if "timestamp" in df.columns else None,
+            self.user_count,
+            self.item_count,
+        )
+
+    @property
+    @override
+    def items(self) -> Vocabulary[EntityId]:
+        return self._items
+
+    @property
+    @override
+    def users(self) -> Vocabulary[EntityId]:
+        return self._users
+
+    @override
+    def count(self, what: str) -> int:
+        match what:
+            case "users":
+                return self._users.size
+            case "items":
+                return self._items.size
+            case "interactions" | "ratings":
+                return self._matrix.n_obs
+            case _:
+                raise KeyError(f"unknown entity type {what}")
+
+    @override
+    def interaction_matrix(
+        self,
+        format: str,
+        *,
+        layout: str | None = None,
+        legacy: bool = False,
+        field: str | None = None,
+        combine: str | None = None,
+        original_ids: bool = False,
+    ) -> Any:
         match format:
             case "structure":
                 if layout and layout != "csr":
@@ -478,106 +641,116 @@ class Dataset:
             case _:  # pragma nocover
                 raise ValueError(f"unsupported layout {layout}")
 
-    def item_stats(self) -> pd.DataFrame:
+    @override
+    def interaction_log(
+        self,
+        format: str,
+        *,
+        fields: str | list[str] | None = "all",
+        original_ids: bool = False,
+    ) -> Any:
+        if fields == "all":
+            fields = ["rating", "timestamp"]
+        elif isinstance(fields, str):
+            fields = [fields]
+        elif fields is None:
+            fields = []
+
+        match format:
+            case "pandas":
+                return self._int_log_pandas(fields, original_ids)
+            case "numpy":
+                return self._int_log_numpy(fields)
+            case "torch":
+                return self._int_log_torch(fields)
+            case _:
+                raise ValueError(f"unsupported format “{format}”")
+
+    def _int_log_pandas(self, fields: list[str], original_ids: bool):
+        cols: dict[str, ArrayLike]
+        if original_ids:
+            cols = {
+                "user_id": self.users.terms(self._matrix.user_nums),
+                "item_id": self.items.terms(self._matrix.item_nums),
+            }
+        else:
+            cols = {
+                "user_num": self._matrix.user_nums,
+                "item_num": self._matrix.item_nums,
+            }
+        if "rating" in fields and self._matrix.ratings is not None:
+            cols["rating"] = self._matrix.ratings
+        if "timestamp" in fields and self._matrix.timestamps is not None:
+            cols["timestamp"] = self._matrix.timestamps
+        return pd.DataFrame(cols)
+
+    def _int_log_numpy(self, fields: list[str]) -> NumpyUserItemTable:
+        tbl = NumpyUserItemTable(self._matrix.user_nums, self._matrix.item_nums)
+        if "rating" in fields:
+            tbl.ratings = self._matrix.ratings
+        if "timestamp" in fields:
+            tbl.timestamps = self._matrix.timestamps
+        return tbl
+
+    def _int_log_torch(self, fields: list[str]) -> TorchUserItemTable:
+        tbl = TorchUserItemTable(
+            torch.from_numpy(self._matrix.user_nums), torch.from_numpy(self._matrix.item_nums)
+        )
+        if "rating" in fields:
+            tbl.ratings = torch.from_numpy(self._matrix.ratings)
+        if "timestamp" in fields:
+            tbl.timestamps = torch.from_numpy(self._matrix.timestamps)
+        return tbl
+
+
+class LazyDataset(Dataset):
+    """
+    A data set with an underlying load function, that doesn't call the function
+    until data is actually needed.
+    """
+
+    _delegate: Dataset | None = None
+    _loader: Callable[[], Dataset]
+
+    def __init__(self, loader: Callable[[], Dataset]):
         """
-        Get item statistics.
+        Construct a dataset.
 
-        Returns:
-            A data frame indexed by item ID with the following columns:
-
-            * count — the number of interactions recorded for this item.
-            * user_count — the number of distinct users who have interacted with
-              or rated this item.
-            * rating_count — the number of ratings for this item.  Only provided
-              if the dataset has explicit ratings; if there are repeated
-              ratings, this does **not** count superseded ratings.
-            * mean_rating — the mean of the reatings. Only provided if the
-              dataset has explicit ratings.
-            * first_time — the first time the item appears. Only provided if the
-              dataset has timestamps.
-
-            The index is the vocabulary, so ``iloc`` works with item numbers.
+        .. note::
+            Client code generally should not call this constructor.  Instead use the
+            various ``from_`` and ``load_`` functions in :mod:`lenskit.data`.
         """
+        self._loader = loader
 
-        if self._item_stats is None:
-            counts = np.zeros(self.item_count, dtype=np.int32)
-            np.add.at(counts, self._matrix.item_nums, 1)
-            frame = pd.DataFrame(
-                {
-                    "count": counts,
-                    "user_count": counts,
-                },
-                index=self.items.index,
-            )
-
-            if self._matrix.ratings is not None:
-                sums = np.zeros(self.item_count, dtype=np.float64)
-                np.add.at(sums, self._matrix.item_nums, self._matrix.ratings)
-                frame["rating_count"] = counts
-                frame["mean_rating"] = sums / counts
-
-            if self._matrix.timestamps is not None:
-                i64i = np.iinfo(np.int64)
-                times = np.full(self.item_count, i64i.max, dtype=np.int64)
-                np.minimum.at(times, self._matrix.item_nums, self._matrix.timestamps)
-                frame["first_time"] = times
-
-            self._item_stats = frame
-
-        return self._item_stats
-
-    def user_stats(self) -> pd.DataFrame:
+    def delegate(self) -> Dataset:
         """
-        Get user statistics.
-
-        Returns:
-            A data frame indexed by user ID with the following columns:
-
-            * count — the number of interactions recorded for this user.
-            * item_count — the number of distinct items with which this user has
-              interacted.
-            * rating_count — the number of ratings for this user.  Only provided
-              if the dataset has explicit ratings; if there are repeated
-              ratings, this does **not** count superseded ratings.
-            * mean_rating — the mean of the user's reatings. Only provided if
-              the dataset has explicit ratings.
-            * first_time — the first time the user appears. Only provided if the
-              dataset has timestamps.
-            * last_time — the last time the user appears. Only provided if the
-              dataset has timestamps.
-
-            The index is the vocabulary, so ``iloc`` works with user numbers.
+        Get the delegate data set, loading it if necessary.
         """
+        if self._delegate is None:
+            self._delegate = self._loader()
+        return self._delegate
 
-        if self._user_stats is None:
-            counts = np.zeros(self.user_count, dtype=np.int32)
-            np.add.at(counts, self._matrix.user_nums, 1)
-            frame = pd.DataFrame(
-                {
-                    "count": counts,
-                    "user_count": counts,
-                },
-                index=self.users.index,
-            )
+    @property
+    @override
+    def items(self) -> Vocabulary[EntityId]:
+        return self.delegate().items
 
-            if self._matrix.ratings is not None:
-                sums = np.zeros(self.user_count, dtype=np.float64)
-                np.add.at(sums, self._matrix.user_nums, self._matrix.ratings)
-                frame["rating_count"] = counts
-                frame["mean_rating"] = sums / counts
+    @property
+    @override
+    def users(self) -> Vocabulary[EntityId]:
+        return self.delegate().users
 
-            if self._matrix.timestamps is not None:
-                i64i = np.iinfo(np.int64)
-                first = np.full(self.user_count, i64i.max, dtype=np.int64)
-                last = np.full(self.user_count, i64i.min, dtype=np.int64)
-                np.minimum.at(first, self._matrix.user_nums, self._matrix.timestamps)
-                np.maximum.at(last, self._matrix.user_nums, self._matrix.timestamps)
-                frame["first_time"] = first
-                frame["last_time"] = last
+    @override
+    def count(self, what: str) -> int:
+        return self.delegate().count(what)
 
-            self._user_stats = frame
+    @override
+    def interaction_matrix(self, *args, **kwargs) -> Any:
+        return self.delegate().interaction_matrix(*args, **kwargs)
 
-        return self._user_stats
+    @override
+    def interaction_log(self, *args, **kwargs) -> Any:
+        return self.delegate().interaction_log(*args, **kwargs)
 
 
 def from_interactions_df(
@@ -619,7 +792,7 @@ def from_interactions_df(
     df = df.sort_values(["user_id", "item_id"])
     users = Vocabulary(df["user_id"], "user")
     items = Vocabulary(df["item_id"], "item")
-    return Dataset(users, items, df)
+    return MatrixDataset(users, items, df)
 
 
 def normalize_interactions_df(
