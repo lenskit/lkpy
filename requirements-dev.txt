@@ -19,5 +19,6 @@ tqdm >= 4
 pandas-stubs >=1.5,<3
 -r requirements-test.txt
 -r requirements-doc.txt
+-r requirements-reporting.txt
 -r requirements-demo.txt
 # conda: just
