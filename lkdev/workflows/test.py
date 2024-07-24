@@ -495,7 +495,6 @@ def jobs_result(deps: list[str]) -> GHJob:
             {
                 "name": "± Measure and report coverage",
                 "run": script("""
-                    echo $PR_NUMBER > ./lenskit-coverage/pr-number
                     tclsh ./utils/coverage-log.tcl
                     cat lenskit-coverage/report.md >$GITHUB_STEP_SUMMARY
                 """),
