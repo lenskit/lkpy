@@ -11,7 +11,7 @@ the manual.
 .. versionchanged:: 2024.1
     The new :class:`Dataset` class replaces the Pandas data frames
     that were passed to algorithms in the past.  It also subsumes
-    the old support for producing sparse matrices from rating rames.
+    the old support for producing sparse matrices from rating frames.
 
 .. _data-model:
 
