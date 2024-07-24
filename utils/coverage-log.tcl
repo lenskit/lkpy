@@ -56,14 +56,14 @@ if {[ev GITHUB_BASE_REF base]} {
     set reph [open lenskit-coverage/report.md w]
     puts $reph "The GitHub 🤖 has run the tests on your PR.\n"
     if {$diff_cov eq "NA"} {
-        puts $reph [format
-            "Covered **no lines** of diff (coverage changed **%.2f%%** from %.2f%% to %.2f%%).\n"
-            $cov_change $prev_cov $cur_cov
+        puts $reph [format \
+            "Covered **no lines** of diff (coverage changed **%.2f%%** from %.2f%% to %.2f%%).\n" \
+            $cov_change $prev_cov $cur_cov \
         ]
     } else {
-        puts $reph [format
-            "Covered **%.2f%%** of diff (coverage changed **%.2f%%** from %.2f%% to %.2f%%).\n"
-            $diff_cov $cov_change $prev_cov $cur_cov
+        puts $reph [format \
+            "Covered **%.2f%%** of diff (coverage changed **%.2f%%** from %.2f%% to %.2f%%).\n" \
+            $diff_cov $cov_change $prev_cov $cur_cov \
         ]
     }
 
