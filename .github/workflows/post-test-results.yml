@@ -14,7 +14,6 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            console.log('payload: %o', context.payload)
             let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
                owner: context.repo.owner,
                repo: context.repo.repo,
@@ -23,6 +22,10 @@ jobs:
             let matchArtifact = allArtifacts.data.artifacts.find((artifact) => {
               return artifact.name == "coverage-report"
             });
+            if (!matchArtifact) {
+              console.error('no report artifact found');
+              throw new Error('no report');
+            }
             let download = await github.rest.actions.downloadArtifact({
                owner: context.repo.owner,
                repo: context.repo.repo,
