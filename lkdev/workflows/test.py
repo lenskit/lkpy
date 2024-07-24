@@ -447,6 +447,13 @@ def jobs_result(deps: list[str]) -> GHJob:
         "steps": [
             step_checkout(),
             {
+                "name": "Add upstream remote",
+                "run": script("""
+                    git remote add upstream https://github.com/lenskit/lkpy.git
+                    git fetch upstream
+                """),
+            },
+            {
                 "name": "🐍 Set up Python",
                 "uses": "actions/setup-python@v5",
                 "with": {"python-version": META_PYTHON},
