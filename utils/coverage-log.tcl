@@ -48,7 +48,7 @@ if {[ev GITHUB_BASE_REF base]} {
     }
 
     set prev_cov [exec jq .totals.percent_covered <<$prev_data 2>@stderr]
-    set cur_cov [exec jq .totals.percent_covered coverage.json 2>&stderr]
+    set cur_cov [exec jq .totals.percent_covered coverage.json 2>@stderr]
 
     set cov_change [expr {$cur_cov - $prev_cov}]
 
@@ -95,6 +95,18 @@ if {[ev GITHUB_BASE_REF base]} {
     set data [jq "{meta: .meta, totals: .totals}" coverage.json 2>@stderr]
     exec git notes --ref=coverage add -m $data HEAD 2>@stderr >@stdout
     exec git push origin refs/notes/coverage 2>@stderr >@stdout
+
+    set cov [exec jq .totals.percent_covered coverage.json 2>@stderr]
+
+    set reph [open lenskit-coverage/report.md w]
+    puts $reph [format "Covered **%.2f%%** of code.\n" $cov]
+
+    puts $reph "<details>\n"
+    puts $reph "<summary>Source Coverage Report</summary>\n"
+    exec coverage report --format=markdown 2>@stderr >@$reph
+    puts $reph "\n</details>"
+
+    close $reph
 } else {
     puts stderr "don't know what to do"
 }
