@@ -1,4 +1,4 @@
-name: Use the data
+name: Post test results
 
 on:
   workflow_run:
