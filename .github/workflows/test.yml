@@ -680,6 +680,7 @@ jobs:
               coverage.xml |tee diff-cover.txt
       - name: ± Measure and report coverage
         run: |
+          echo $PR_NUMBER > ./lenskit-coverage/pr-number
           tclsh ./utils/coverage-log.tcl
           cat lenskit-coverage/report.md >$GITHUB_STEP_SUMMARY
       - name: 📤 Upload coverage report
