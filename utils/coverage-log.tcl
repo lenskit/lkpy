@@ -41,7 +41,11 @@ if {[ev GITHUB_BASE_REF base]} {
 
     set diff_lines [exec jq .total_num_lines diff-cover.json]
     set diff_bad [exec jq .total_num_violations diff-cover.json]
-    set diff_cov [expr {1.0 - ($diff_bad / $diff_lines)}]
+    if {$diff_lines > 0} {
+        set diff_cov [expr {1.0 - ($diff_bad / $diff_lines)}]
+    } else {
+        set diff_cov NA
+    }
 
     set prev_cov [exec jq .totals.percent_covered <<$prev_data 2>@stderr]
     set cur_cov [exec jq .totals.percent_covered coverage.json 2>&stderr]
@@ -51,10 +55,17 @@ if {[ev GITHUB_BASE_REF base]} {
     # write the coverage report
     set reph [open lenskit-coverage/report.md w]
     puts $reph "The GitHub 🤖 has run the tests on your PR.\n"
-    puts $reph [format
-        "Covered **%.2f%%** of diff (coverage changed **%.2f%%** from %.2f%% to %.2f%%).\n"
-        $diff_cov $cov_change $prev_cov $cur_cov
-    ]
+    if {$diff_cov eq "NA"} {
+        puts $reph [format
+            "Covered **no lines** of diff (coverage changed **%.2f%%** from %.2f%% to %.2f%%).\n"
+            $cov_change $prev_cov $cur_cov
+        ]
+    } else {
+        puts $reph [format
+            "Covered **%.2f%%** of diff (coverage changed **%.2f%%** from %.2f%% to %.2f%%).\n"
+            $diff_cov $cov_change $prev_cov $cur_cov
+        ]
+    }
 
     set dsh [open diff-cover.md r]
     while {[gets $dsh line] >= 0} {
