@@ -92,7 +92,7 @@ class Bias(Predictor):
         """
         _logger.info("building bias model for %d ratings", data.interaction_count)
         ratings = data.interaction_matrix("scipy", layout="coo", field="rating")
-        nrows, ncols = ratings.shape
+        nrows, ncols = ratings.shape  # type: ignore
 
         self.mean_ = float(np.mean(ratings.data))
         _logger.info("global mean: %.3f", self.mean_)
