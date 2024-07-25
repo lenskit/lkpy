@@ -119,12 +119,3 @@ User-Item Data Tables
 
 .. autoclass:: NumpyUserItemTable
 .. autoclass:: TorchUserItemTable
-
-Building Ratings Matrices
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. module:: lenskit.data.matrix
-
-.. autofunction:: sparse_ratings
-.. autoclass:: RatingMatrix
-.. autoclass:: CSRStructure
