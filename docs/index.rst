@@ -39,7 +39,6 @@ Resources
     :caption: Running Experiments
 
     data
-    datasets
     crossfold
     batch
     evaluation/index
