@@ -26,7 +26,7 @@ from docopt import docopt
 
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.knn.item import ItemItem
-from lenskit.datasets import MovieLens
+from lenskit.data import load_movielens
 
 _log = logging.getLogger("train-model")
 
@@ -35,7 +35,7 @@ def main(args):
     logging.basicConfig(stream=sys.stderr, level=logging.INFO)
     data = args["--dataset"]
     _log.info("loading data %s", data)
-    ml = MovieLens(f"data/{data}")
+    ml = load_movielens(f"data/{data}")
 
     if args["--item-item"]:
         algo = ItemItem(20)
@@ -45,7 +45,7 @@ def main(args):
 
     algo = Recommender.adapt(algo)
     _log.info("training algorithm")
-    algo.fit(ml.ratings)
+    algo.fit(ml)
     _log.info("training complete")
 
     file = args["FILE"]
