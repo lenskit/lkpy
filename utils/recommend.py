@@ -33,7 +33,7 @@ import seedbank
 from docopt import docopt
 
 from lenskit import batch
-from lenskit.datasets import MovieLens
+from lenskit.data import load_movielens
 
 _log = logging.getLogger("test-algo")
 
@@ -44,7 +44,7 @@ def main(args):
 
     data = args["--dataset"]
     _log.info("loading data %s", data)
-    ml = MovieLens(f"data/{data}")
+    ml = load_movielens(f"data/{data}")
 
     _log.info("reading model from %s", args["MODEL"])
     with open(args["MODEL"], "rb") as f:
@@ -55,7 +55,7 @@ def main(args):
     if args["--random-users"]:
         n = int(args["--random-users"])
         _log.info("selecting %d random users", n)
-        users = rng.choice(ml.ratings["user"].unique(), n)
+        users = rng.choice(ml.users.ids(), n)
     else:
         _log.info("using %d specified users", len(args["USER"]))
         users = [int(u) for u in args["USER"]]

@@ -13,7 +13,8 @@ import torch
 
 from pytest import approx, mark
 
-from lenskit.data.dataset import from_interactions_df
+from lenskit.data.dataset import Dataset, from_interactions_df
+from lenskit.data.movielens import load_movielens_df
 import lenskit.util.test as lktu
 from lenskit import batch
 from lenskit.algorithms import als
@@ -116,14 +117,14 @@ def test_als_predict_for_new_users_with_new_ratings():
     n_users = 3
     n_items = 2
     new_u_id = -1
-    ratings = lktu.ml_test.ratings
 
     np.random.seed(45)
-    users = np.random.choice(ratings.user.unique(), n_users)
-    items = np.random.choice(ratings.item.unique(), n_items)
+    users = np.random.choice(lktu.ml_test.users.ids(), n_users)
+    items = np.random.choice(lktu.ml_test.items.ids(), n_items)
+    ratings = lktu.ml_test.interaction_log("pandas", original_ids=True)
 
     algo = als.BiasedMF(20, epochs=10)
-    algo.fit(from_interactions_df(ratings))
+    algo.fit(lktu.ml_test)
     _log.debug("Items: " + str(items))
     assert algo.bias is not None
     assert algo.users_ is not None
@@ -133,12 +134,12 @@ def test_als_predict_for_new_users_with_new_ratings():
         _log.debug(f"user: {u}")
         preds = algo.predict_for_user(u, items)
 
-        user_data = ratings[ratings.user == u]
+        user_data = ratings[ratings.user_id == u]
 
         _log.debug("user_features from fit: " + str(algo.user_features_[algo.users_.number(u), :]))
 
         new_ratings = pd.Series(
-            user_data.rating.to_numpy(), index=user_data.item
+            user_data.rating.to_numpy(), index=user_data.item_id
         )  # items as index and ratings as values
         new_preds = algo.predict_for_user(new_u_id, items, new_ratings)
 
@@ -178,33 +179,33 @@ def test_als_predict_no_user_features_basic():
     n_users = 1
     n_items = 2
     new_u_id = -1
-    ratings = lktu.ml_test.ratings
 
     np.random.seed(45)
-    u = np.random.choice(ratings.user.unique(), n_users)[0]
-    items = np.random.choice(ratings.item.unique(), n_items)
+    u = np.random.choice(lktu.ml_test.users.ids(), n_users)[0]
+    items = np.random.choice(lktu.ml_test.items.ids(), n_items)
 
     algo = als.BiasedMF(5, epochs=10)
-    algo.fit(from_interactions_df(ratings))
+    algo.fit(lktu.ml_test)
     _log.debug("Items: " + str(items))
     assert algo.bias is not None
     assert algo.users_ is not None
     assert algo.user_features_ is not None
 
     algo_no_user_features = als.BiasedMF(5, epochs=10, save_user_features=False)
-    algo_no_user_features.fit(from_interactions_df(ratings))
+    algo_no_user_features.fit(lktu.ml_test)
 
     assert algo_no_user_features.user_features_ is None
 
     _log.debug(f"user: {u}")
     preds = algo.predict_for_user(u, items)
 
-    user_data = ratings[ratings.user == u]
+    ratings = lktu.ml_test.interaction_log("pandas", original_ids=True)
+    user_data = ratings[ratings.user_id == u]
 
     _log.debug("user_features from fit: " + str(algo.user_features_[algo.users_.number(u), :]))
 
     new_ratings = pd.Series(
-        user_data.rating.to_numpy(), index=user_data.item
+        user_data.rating.to_numpy(), index=user_data.item_id
     )  # items as index and ratings as values
     new_preds = algo_no_user_features.predict_for_user(new_u_id, items, new_ratings)
 
@@ -216,23 +217,22 @@ def test_als_predict_no_user_features_basic():
 
 @lktu.wantjit
 @mark.slow
-def test_als_train_large():
+def test_als_train_large(ml_ratings):
     algo = als.BiasedMF(20, epochs=10)
-    ratings = lktu.ml_test.ratings
-    algo.fit(from_interactions_df(ratings))
+    algo.fit(lktu.ml_test)
 
     assert algo.bias is not None
     assert algo.users_ is not None
     assert algo.user_features_ is not None
 
-    assert algo.bias.mean_ == approx(ratings.rating.mean())
+    assert algo.bias.mean_ == approx(ml_ratings.rating.mean())
     assert algo.n_features == 20
-    assert algo.n_items == ratings.item.nunique()
-    assert algo.n_users == ratings.user.nunique()
+    assert algo.n_items == ml_ratings.item.nunique()
+    assert algo.n_users == ml_ratings.user.nunique()
 
-    icounts = ratings.groupby("item").rating.count()
-    isums = ratings.groupby("item").rating.sum()
-    is2 = isums - icounts * ratings.rating.mean()
+    icounts = ml_ratings.groupby("item").rating.count()
+    isums = ml_ratings.groupby("item").rating.sum()
+    is2 = isums - icounts * ml_ratings.rating.mean()
     imeans = is2 / (icounts + 5)
     ibias = pd.Series(algo.bias.item_offsets_, index=algo.items_.index)
     imeans, ibias = imeans.align(ibias)
@@ -240,13 +240,12 @@ def test_als_train_large():
 
 
 # don't use wantjit, use this to do a non-JIT test
-def test_als_save_load():
+def test_als_save_load(ml_ratings: pd.DataFrame):
     original = als.BiasedMF(5, epochs=5)
-    ratings = lktu.ml_test.ratings
-    original.fit(from_interactions_df(ratings))
+    original.fit(lktu.ml_test)
 
     assert original.bias is not None
-    assert original.bias.mean_ == approx(ratings.rating.mean())
+    assert original.bias.mean_ == approx(ml_ratings.rating.mean())
     assert original.users_ is not None
 
     mod = pickle.dumps(original)
@@ -268,12 +267,11 @@ def test_als_save_load():
 
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
-def test_als_batch_accuracy():
+def test_als_batch_accuracy(ml_100k):
     import lenskit.crossfold as xf
     import lenskit.metrics.predict as pm
 
-    ratings = lktu.ml100k.ratings
+    ratings = load_movielens_df(lktu.ml_100k_zip)
 
     algo = als.BiasedMF(25, epochs=20, damping=5)
 

@@ -26,7 +26,7 @@ import pandas as pd
 from docopt import docopt
 
 from lenskit.algorithms.knn.item import ItemItem
-from lenskit.datasets import MovieLens
+from lenskit.data import load_movielens
 
 _log = logging.getLogger("dump-iknn")
 
@@ -35,7 +35,7 @@ def main(args):
     logging.basicConfig(stream=sys.stderr, level=logging.INFO)
     data = args["--dataset"]
     _log.info("loading data %s", data)
-    ml = MovieLens(f"data/{data}")
+    ml = load_movielens(f"data/{data}")
 
     ii_args = {}
     if args["-n"]:
@@ -47,11 +47,11 @@ def main(args):
 
     algo = ItemItem(20, **ii_args)
     _log.info("training algorithm")
-    algo.fit(ml.ratings)
+    algo.fit(ml)
 
     i_outf = args["--item-output"]
     _log.info("saving items to %s", i_outf)
-    items = algo.item_index_
+    items = ml.items.ids()
     stats = pd.DataFrame(
         {"mean": algo.item_means_.numpy(), "nnbrs": algo.item_counts_.numpy()}, index=items
     )

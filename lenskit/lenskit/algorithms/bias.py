@@ -92,7 +92,7 @@ class Bias(Predictor):
         """
         _logger.info("building bias model for %d ratings", data.interaction_count)
         ratings = data.interaction_matrix("scipy", layout="coo", field="rating")
-        nrows, ncols = ratings.shape
+        nrows, ncols = ratings.shape  # type: ignore
 
         self.mean_ = float(np.mean(ratings.data))
         _logger.info("global mean: %.3f", self.mean_)
@@ -242,7 +242,7 @@ class Bias(Predictor):
 
     def fit_transform(self, data: Dataset, **kwargs) -> pd.DataFrame:
         """
-        Fit with ratings and return the training data transformed.
+        Fit with ratings and return the training data matrix transformed.
         """
         # FIXME: make this more efficient, don't rename things.
         self.fit(data)

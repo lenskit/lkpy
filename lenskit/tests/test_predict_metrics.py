@@ -166,13 +166,11 @@ def test_mae_series_two():
 
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
-def test_batch_rmse():
+def test_batch_rmse(ml_100k):
     import lenskit.algorithms.bias as bs
     import lenskit.batch as batch
     import lenskit.crossfold as xf
 
-    ratings = lktu.ml100k.ratings
     algo = bs.Bias(damping=5)
 
     def eval(train, test):
@@ -181,13 +179,13 @@ def test_batch_rmse():
         return preds.set_index(["user", "item"])
 
     results = pd.concat(
-        (eval(train, test) for (train, test) in xf.partition_users(ratings, 5, xf.SampleN(5)))
+        (eval(train, test) for (train, test) in xf.partition_users(ml_100k, 5, xf.SampleN(5)))
     )
 
     user_rmse = results.groupby("user").apply(lambda df: pm.rmse(df.prediction, df.rating))
 
     # we should have all users
-    users = ratings.user.unique()
+    users = ml_100k.user.unique()
     assert len(user_rmse) == len(users)
     missing = np.setdiff1d(users, user_rmse.index)
     assert len(missing) == 0
@@ -200,12 +198,12 @@ def test_batch_rmse():
 
 
 @mark.slow
-def test_global_metric():
+def test_global_metric(ml_ratings: pd.DataFrame):
     import lenskit.batch as batch
     import lenskit.crossfold as xf
     from lenskit.algorithms.bias import Bias
 
-    train, test = next(xf.sample_users(lktu.ml_test.ratings, 1, 200, xf.SampleFrac(0.5)))
+    train, test = next(xf.sample_users(ml_ratings, 1, 200, xf.SampleFrac(0.5)))
     algo = Bias()
     algo.fit(from_interactions_df(train))
 
@@ -219,12 +217,12 @@ def test_global_metric():
 
 
 @mark.slow
-def test_user_metric():
+def test_user_metric(ml_ratings: pd.DataFrame):
     import lenskit.batch as batch
     import lenskit.crossfold as xf
     from lenskit.algorithms.bias import Bias
 
-    train, test = next(xf.sample_users(lktu.ml_test.ratings, 1, 200, xf.SampleFrac(0.5)))
+    train, test = next(xf.sample_users(ml_ratings, 1, 200, xf.SampleFrac(0.5)))
     algo = Bias()
     algo.fit(from_interactions_df(train))
 

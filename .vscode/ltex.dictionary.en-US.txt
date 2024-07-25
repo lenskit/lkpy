@@ -9,3 +9,4 @@ lenskit
 invoker
 CUDA
 subpackages
+recomputation

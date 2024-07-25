@@ -56,9 +56,9 @@ simple_ds = from_interactions_df(simple_ratings)
 @fixture(scope="module")
 def ml_subset(ml_ratings):
     "Fixture that returns a subset of the MovieLens database."
-    icounts = ml_ratings.groupby("movieId").rating.count()
+    icounts = ml_ratings.groupby("item").rating.count()
     top = icounts.nlargest(500)
-    top_rates = ml_ratings[ml_ratings["movieId"].isin(top.index)]
+    top_rates = ml_ratings[ml_ratings["item"].isin(top.index)]
     _log.info("top 500 items yield %d of %d ratings", len(top_rates), len(ml_ratings))
     return top_rates
 
@@ -200,13 +200,11 @@ def test_ii_warns_wa_with_no_use_ratings():
 
 @lktu.wantjit
 @mark.slow
-@mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
-def test_ii_train_ml100k(tmp_path):
+def test_ii_train_ml100k(tmp_path, ml_100k):
     "Test an unbounded model on ML-100K"
-    ratings = lktu.ml100k.ratings
     algo = knn.ItemItem(30)
     _log.info("training model")
-    algo.fit(from_interactions_df(ratings))
+    algo.fit(from_interactions_df(ml_100k))
 
     _log.info("testing model")
 
@@ -218,7 +216,7 @@ def test_ii_train_ml100k(tmp_path):
 
     assert algo.item_counts_.sum() == len(algo.sim_matrix_.values())
 
-    means = ratings.groupby("item").rating.mean()
+    means = ml_100k.groupby("item").rating.mean()
     assert means[algo.items_.ids()].values == approx(algo.item_means_)
 
     # save
@@ -258,18 +256,18 @@ def test_ii_large_models(rng, ml_ratings, ml_ds):
     # a little tolerance
     assert algo_lim.sim_matrix_.values().max() <= 1
 
-    means = ml_ratings.groupby("movieId").rating.mean()
+    means = ml_ratings.groupby("item").rating.mean()
     assert means[algo_lim.items_.ids()].values == approx(algo_lim.item_means_)
 
     assert all(np.logical_not(np.isnan(algo_ub.sim_matrix_.values())))
     assert algo_ub.sim_matrix_.values().min() > 0
     assert algo_ub.sim_matrix_.values().max() <= 1
 
-    means = ml_ratings.groupby("movieId").rating.mean()
+    means = ml_ratings.groupby("item").rating.mean()
     assert means[algo_ub.items_.ids()].values == approx(algo_ub.item_means_)
 
     mc_rates = (
-        ml_ratings.set_index("movieId")
+        ml_ratings.set_index("item")
         .join(pd.DataFrame({"item_mean": means}))
         .assign(rating=lambda df: df.rating - df.item_mean)
     )
@@ -297,7 +295,7 @@ def test_ii_large_models(rng, ml_ratings, ml_ds):
         ipos = algo_ub.items_.number(i)
         _log.debug("checking item %d at position %d", i, ipos)
         assert ipos == algo_lim.items_.number(i)
-        irates = mc_rates.loc[[i], :].set_index("userId").rating
+        irates = mc_rates.loc[[i], :].set_index("user").rating
 
         ub_row = mat_ub[ipos]
         b_row = mat_lim[ipos]
@@ -322,7 +320,7 @@ def test_ii_large_models(rng, ml_ratings, ml_ds):
         _log.debug("checking equal similarities")
         for n in rng.choice(ub_cols, min(10, len(ub_cols))):
             n_id = algo_ub.items_.id(n)
-            n_rates = mc_rates.loc[n_id, :].set_index("userId").rating
+            n_rates = mc_rates.loc[n_id, :].set_index("user").rating
             ir, nr = irates.align(n_rates, fill_value=0)
             cor = ir.corr(nr)
             assert mat_ub[ipos, n].item() == approx(cor, abs=1.0e-6)
@@ -371,10 +369,10 @@ def test_ii_implicit_large(rng, ml_ratings):
     algo = knn.ItemItem(NBRS, feedback="implicit")
     _log.info("agg: %s", algo.aggregate)
     algo = Recommender.adapt(algo)
-    algo.fit(from_interactions_df(ml_ratings[["userId", "movieId"]], item_col="movieId"))
+    algo.fit(from_interactions_df(ml_ratings[["user", "item"]], item_col="item"))
     assert isinstance(algo, TopN)
 
-    users = rng.choice(ml_ratings["userId"].unique(), NUSERS)
+    users = rng.choice(ml_ratings["user"].unique(), NUSERS)
 
     items: Vocabulary[EntityId] = algo.predictor.items_
     mat: torch.Tensor = algo.predictor.sim_matrix_.to_dense()
@@ -383,9 +381,9 @@ def test_ii_implicit_large(rng, ml_ratings):
         recs = algo.recommend(user, NRECS)
         _log.info("user %s recs\n%s", user, recs)
         assert len(recs) == NRECS
-        urates = ml_ratings[ml_ratings["userId"] == user]
+        urates = ml_ratings[ml_ratings["user"] == user]
 
-        smat = mat[torch.from_numpy(items.numbers(urates["movieId"].values)), :]
+        smat = mat[torch.from_numpy(items.numbers(urates["item"].values)), :]
         for row in recs.itertuples():
             col = smat[:, items.number(row.item)]
             top, _is = torch.topk(col, NBRS)
@@ -407,7 +405,7 @@ def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
     "Save and load a model"
     original = knn.ItemItem(30, save_nbrs=500)
     _log.info("building model")
-    original.fit(from_interactions_df(ml_subset, item_col="movieId"))
+    original.fit(from_interactions_df(ml_subset, item_col="item"))
 
     fn = tmp_path / "ii.mod"
     _log.info("saving model to %s", fn)
@@ -435,7 +433,7 @@ def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
     o_mat = original.sim_matrix_
     assert all(r_mat.crow_indices() == o_mat.crow_indices())
 
-    means = ml_ratings.groupby("movieId").rating.mean()
+    means = ml_ratings.groupby("item").rating.mean()
     assert means[algo.items_.ids()].values == approx(original.item_means_)
 
 
@@ -444,7 +442,7 @@ def test_ii_implicit_save_load(tmp_path, ml_subset):
     "Save and load a model"
     original = knn.ItemItem(30, save_nbrs=500, center=False, aggregate="sum")
     _log.info("building model")
-    original.fit(from_interactions_df(ml_subset.loc[:, ["userId", "movieId"]], item_col="movieId"))
+    original.fit(from_interactions_df(ml_subset.loc[:, ["user", "item"]], item_col="item"))
 
     fn = tmp_path / "ii.mod"
     _log.info("saving model to %s", fn)
@@ -475,9 +473,9 @@ def test_ii_implicit_save_load(tmp_path, ml_subset):
 @mark.slow
 def test_ii_old_implicit(ml_ratings):
     algo = knn.ItemItem(20, save_nbrs=100, center=False, aggregate="sum")
-    data = ml_ratings.loc[:, ["userId", "movieId"]]
+    data = ml_ratings.loc[:, ["user", "item"]]
 
-    algo.fit(from_interactions_df(data, item_col="movieId"))
+    algo.fit(from_interactions_df(data, item_col="item"))
     assert algo.item_counts_.sum() == algo.sim_matrix_.values().shape[0]
     assert all(algo.sim_matrix_.values() > 0)
     assert all(algo.item_counts_ <= 100)
@@ -490,7 +488,7 @@ def test_ii_old_implicit(ml_ratings):
 @mark.slow
 def test_ii_no_ratings(ml_ratings, ml_ds):
     a1 = knn.ItemItem(20, save_nbrs=100, center=False, aggregate="sum")
-    a1.fit(from_interactions_df(ml_ratings.loc[:, ["userId", "movieId"]], item_col="movieId"))
+    a1.fit(from_interactions_df(ml_ratings.loc[:, ["user", "item"]], item_col="item"))
 
     algo = knn.ItemItem(20, save_nbrs=100, feedback="implicit")
 
@@ -508,14 +506,11 @@ def test_ii_no_ratings(ml_ratings, ml_ds):
 
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
-def test_ii_batch_accuracy():
+def test_ii_batch_accuracy(ml_100k):
     import lenskit.crossfold as xf
     import lenskit.metrics.predict as pm
     from lenskit import batch
     from lenskit.algorithms import basic, bias
-
-    ratings = lktu.ml100k.ratings
 
     ii_algo = knn.ItemItem(30)
     algo = basic.Fallback(ii_algo, bias.Bias())
@@ -527,7 +522,7 @@ def test_ii_batch_accuracy():
         return batch.predict(algo, test, n_jobs=1)
 
     preds = pd.concat(
-        (eval(train, test) for (train, test) in xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
+        (eval(train, test) for (train, test) in xf.partition_users(ml_100k, 5, xf.SampleFrac(0.2)))
     )
     mae = pm.mae(preds.prediction, preds.rating)
     assert mae == approx(0.70, abs=0.025)
@@ -583,13 +578,10 @@ def test_ii_known_preds(ml_ds):
 @lktu.wantjit
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml100k.available, reason="ML100K not available")
 @mark.parametrize("ncpus", [1, 2])
-def test_ii_batch_recommend(ncpus):
+def test_ii_batch_recommend(ml_100k, ncpus):
     import lenskit.crossfold as xf
     from lenskit import topn
-
-    ratings = lktu.ml100k.ratings
 
     def eval(train, test):
         _log.info("running training")
@@ -602,7 +594,7 @@ def test_ii_batch_recommend(ncpus):
 
     test_frames = []
     recs = []
-    for train, test in xf.partition_users(ratings, 5, xf.SampleFrac(0.2)):
+    for train, test in xf.partition_users(ml_100k, 5, xf.SampleFrac(0.2)):
         test_frames.append(test)
         recs.append(eval(train, test))
 

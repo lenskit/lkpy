@@ -31,6 +31,14 @@ Significant Changes
     * :py:class:`~lenskit.algorithms.als.ImplicitMF`
     * :py:class:`~lenskit.algorithms.als.BiasedMF`
 
+*   :class:`~lenskit.data.Dataset`.  LensKit now provides an abstraction for
+    training data instead of working with Pandas data frames directly, that
+    allows components to reduce code duplication and recomputation, access data
+    in multiple formats (Pandas, NumPy, and PyTorch), and provided standardized
+    structures like mappings of user or item IDs to array indices.  This also
+    supersedes the old bespoke dataset loading support, with functions like
+    :func:`~lenskit.data.load_movielens` to load standard datasets.
+
 *   Many LensKit components (batch running, model training, etc.) now report progress with
     :py:mod:`progress_api`, and can be connected to TQDM or Enlighten.
 

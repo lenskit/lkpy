@@ -19,13 +19,11 @@ simple_df = pd.DataFrame(
 
 
 @mark.slow
-def test_implicit_als_train_rec():
+def test_implicit_als_train_rec(ml_ds):
     algo = ALS(25)
     assert algo.factors == 25
-    ratings = lktu.ml_test.ratings
-    ds = from_interactions_df(ratings)
 
-    ret = algo.fit(ds)
+    ret = algo.fit(ml_ds)
     assert ret is algo
 
     recs = algo.recommend(100, n=20)
@@ -46,13 +44,10 @@ def test_implicit_als_train_rec():
 
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml100k.available, reason="ML100K not downloaded")
 @mark.parametrize("n_jobs", [1, None])
-def test_implicit_als_batch_accuracy(n_jobs):
+def test_implicit_als_batch_accuracy(ml_100k, n_jobs):
     import lenskit.crossfold as xf
     from lenskit import batch, topn
-
-    ratings = lktu.ml100k.ratings
 
     algo_t = ALS(25)
 
@@ -66,7 +61,7 @@ def test_implicit_als_batch_accuracy(n_jobs):
         recs = batch.recommend(algo, users, 100, n_jobs=n_jobs)
         return recs
 
-    folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
+    folds = list(xf.partition_users(ml_100k, 5, xf.SampleFrac(0.2)))
     test = pd.concat(f.test for f in folds)
 
     recs = pd.concat(eval(train, test) for (train, test) in folds)
@@ -81,12 +76,11 @@ def test_implicit_als_batch_accuracy(n_jobs):
 
 
 @mark.slow
-def test_implicit_bpr_train_rec():
+def test_implicit_bpr_train_rec(ml_ds):
     algo = BPR(25, use_gpu=False)
     assert algo.factors == 25
-    ratings = lktu.ml_test.ratings
 
-    algo.fit(from_interactions_df(ratings))
+    algo.fit(ml_ds)
 
     recs = algo.recommend(100, n=20)
     assert len(recs) == 20

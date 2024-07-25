@@ -7,7 +7,7 @@
 import numpy as np
 import pandas as pd
 
-from lenskit.data.dataset import from_interactions_df
+from lenskit.data.dataset import Dataset, from_interactions_df
 import lenskit.util.test as lktu
 from lenskit.algorithms import basic
 
@@ -53,14 +53,13 @@ def test_unrated_override():
     assert set(sel.candidates(10, [2])) == set([1, 3])
 
 
-def test_unrated_big():
-    ratings = lktu.ml_test.ratings
-    users = ratings.user.unique()
-    items = ratings.item.unique()
-    user_items = ratings.set_index("user").item
+def test_unrated_big(ml_ds: Dataset):
+    users = ml_ds.users.ids()
+    items = ml_ds.items.ids()
+    user_items = ml_ds.interaction_matrix("pandas", original_ids=True).set_index("user_id").item_id
 
     sel = basic.UnratedItemCandidateSelector()
-    s2 = sel.fit(from_interactions_df(ratings))
+    s2 = sel.fit(ml_ds)
     assert s2 is sel
 
     # test 100 random users

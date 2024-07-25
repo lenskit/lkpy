@@ -42,9 +42,9 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
 
         >>> from lenskit.algorithms.bias import Bias
         >>> from lenskit.metrics.predict import rmse
-        >>> from lenskit import datasets
         >>> from lenskit.data import from_interactions_df
-        >>> ratings = datasets.MovieLens('data/ml-latest-small').ratings
+        >>> from lenskit.data.movielens import load_movielens_df
+        >>> ratings = load_movielens_df('data/ml-latest-small')
         >>> bias = Bias()
         >>> bias.fit(from_interactions_df(ratings[:-1000]))
         <lenskit.algorithms.bias.Bias object at ...>

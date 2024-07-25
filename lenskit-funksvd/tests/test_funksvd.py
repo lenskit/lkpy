@@ -13,7 +13,7 @@ import pandas as pd
 
 from pytest import approx, mark
 
-from lenskit.data.dataset import from_interactions_df
+from lenskit.data.dataset import Dataset, from_interactions_df
 import lenskit.funksvd as svd
 import lenskit.util.test as lktu
 
@@ -139,16 +139,16 @@ def test_fsvd_predict_bad_user():
 
 @lktu.wantjit
 @mark.slow
-def test_fsvd_save_load():
-    ratings = lktu.ml_test.ratings
-
+def test_fsvd_save_load(ml_ds: Dataset):
     original = svd.FunkSVD(20, iterations=20)
-    original.fit(from_interactions_df(ratings))
+    original.fit(ml_ds)
 
     assert original.bias is not None
-    assert original.bias.mean_ == approx(ratings.rating.mean())
-    assert original.item_features_.shape == (ratings.item.nunique(), 20)
-    assert original.user_features_.shape == (ratings.user.nunique(), 20)
+    assert original.bias.mean_ == approx(
+        ml_ds.interaction_matrix("scipy", field="rating").data.mean()
+    )
+    assert original.item_features_.shape == (ml_ds.item_count, 20)
+    assert original.user_features_.shape == (ml_ds.user_count, 20)
 
     mod = pickle.dumps(original)
     _log.info("serialized to %d bytes", len(mod))
@@ -165,8 +165,8 @@ def test_fsvd_save_load():
 
 @lktu.wantjit
 @mark.slow
-def test_fsvd_train_binary():
-    ratings = lktu.ml_test.ratings.drop(columns=["rating", "timestamp"])
+def test_fsvd_train_binary(ml_ratings: pd.DataFrame):
+    ratings = ml_ratings.drop(columns=["rating", "timestamp"])
 
     original = svd.FunkSVD(20, iterations=20, bias=False)
     original.fit(from_interactions_df(ratings))
@@ -178,10 +178,10 @@ def test_fsvd_train_binary():
 
 @lktu.wantjit
 @mark.slow
-def test_fsvd_known_preds():
+def test_fsvd_known_preds(ml_ds: Dataset):
     algo = svd.FunkSVD(15, iterations=125, lrate=0.001)
     _log.info("training %s on ml data", algo)
-    algo.fit(from_interactions_df(lktu.ml_test.ratings))
+    algo.fit(ml_ds)
 
     dir = Path(__file__).parent
     pred_file = dir / "funksvd-preds.csv"
@@ -207,14 +207,11 @@ def test_fsvd_known_preds():
 @lktu.wantjit
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
-def test_fsvd_batch_accuracy():
+def test_fsvd_batch_accuracy(ml_100k: pd.DataFrame):
     import lenskit.crossfold as xf
     import lenskit.metrics.predict as pm
     from lenskit import batch
     from lenskit.algorithms import basic, bias
-
-    ratings = lktu.ml100k.ratings
 
     svd_algo = svd.FunkSVD(25, 125, damping=10)
     algo = basic.Fallback(svd_algo, bias.Bias(damping=10))
@@ -225,7 +222,7 @@ def test_fsvd_batch_accuracy():
         _log.info("testing %d users", test.user.nunique())
         return batch.predict(algo, test)
 
-    folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
+    folds = xf.partition_users(ml_100k, 5, xf.SampleFrac(0.2))
     preds = pd.concat(eval(train, test) for (train, test) in folds)
     mae = pm.mae(preds.prediction, preds.rating)
     assert mae == approx(0.74, abs=0.025)

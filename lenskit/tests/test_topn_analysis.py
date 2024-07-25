@@ -19,7 +19,7 @@ from lenskit.algorithms.knn.item import ItemItem
 from lenskit.algorithms.knn.user import UserUser
 from lenskit.data.dataset import from_interactions_df
 from lenskit.metrics.topn import _dcg, precision, recall
-from lenskit.util.test import demo_recs, ml_test  # noqa: F401
+from lenskit.util.test import demo_recs  # noqa: F401
 
 _log = logging.getLogger(__name__)
 
@@ -203,93 +203,6 @@ def test_java_equiv():
     umm["err"] = umm["ndcg"] - umm["Java.nDCG"]
     _log.info("merged: \n%s", umm)
     assert umm["err"].values == approx(0, abs=1.0e-6)
-
-
-@mark.skip("disabled for user-user")
-@mark.slow
-def test_fill_users():
-    rla = topn.RecListAnalysis()
-    rla.add_metric(topn.precision)
-    rla.add_metric(topn.recall)
-
-    algo = UserUser(20, min_nbrs=10)
-    algo = Recommender.adapt(algo)
-
-    splits = xf.sample_users(ml_test.ratings, 1, 50, xf.SampleN(5))
-    train, test = next(splits)
-    algo.fit(from_interactions_df(train))
-
-    rec_users = test["user"].sample(50).unique()
-    assert len(rec_users) < 50
-    recs = batch.recommend(algo, rec_users, 25)
-
-    scores = rla.compute(recs, test, include_missing=True)
-    assert len(scores) == test["user"].nunique()
-    assert scores["recall"].notna().sum() == len(rec_users)
-    assert all(scores["ntruth"] == 5)
-
-    mscores = rla.compute(recs, test)
-    assert len(mscores) < len(scores)
-
-    recall = scores.loc[scores["recall"].notna(), "recall"].copy()
-    recall, mrecall = recall.align(mscores["recall"])
-    assert all(recall == mrecall)
-
-
-@mark.skip("disabled for user-user")
-@mark.slow
-def test_adv_fill_users():
-    rla = topn.RecListAnalysis()
-    rla.add_metric(topn.precision)
-    rla.add_metric(topn.recall)
-
-    a_uu = UserUser(30, min_nbrs=10)
-    a_uu = Recommender.adapt(a_uu)
-    a_ii = ItemItem(20, min_nbrs=4)
-    a_ii = Recommender.adapt(a_ii)
-
-    splits = xf.sample_users(ml_test.ratings, 2, 50, xf.SampleN(5))
-    all_recs = {}
-    all_test = {}
-    for i, (train, test) in enumerate(splits):
-        a_uu.fit(from_interactions_df(train))
-        rec_users = test["user"].sample(50).unique()
-        all_recs[(i + 1, "UU")] = batch.recommend(a_uu, rec_users, 25)
-
-        a_ii.fit(from_interactions_df(train))
-        rec_users = test["user"].sample(50).unique()
-        all_recs[(i + 1, "II")] = batch.recommend(a_ii, rec_users, 25)
-        all_test[i + 1] = test
-
-    recs = pd.concat(all_recs, names=["part", "algo"])
-    recs.reset_index(["part", "algo"], inplace=True)
-    recs.reset_index(drop=True, inplace=True)
-
-    test = pd.concat(all_test, names=["part"])
-    test.reset_index(["part"], inplace=True)
-    test.reset_index(drop=True, inplace=True)
-
-    scores = rla.compute(recs, test, include_missing=True)
-    inames = scores.index.names
-    scores.sort_index(inplace=True)
-    assert len(scores) == 50 * 4
-    assert all(scores["ntruth"] == 5)
-    assert scores["recall"].isna().sum() > 0
-    _log.info("scores:\n%s", scores)
-
-    ucounts = scores.reset_index().groupby("algo")["user"].agg(["count", "nunique"])
-    assert all(ucounts["count"] == 100)
-    assert all(ucounts["nunique"] == 100)
-
-    mscores = rla.compute(recs, test)
-    mscores = mscores.reset_index().set_index(inames)
-    mscores.sort_index(inplace=True)
-    assert len(mscores) < len(scores)
-    _log.info("mscores:\n%s", mscores)
-
-    recall = scores.loc[scores["recall"].notna(), "recall"].copy()
-    recall, mrecall = recall.align(mscores["recall"])
-    assert all(recall == mrecall)
 
 
 @mark.parametrize("drop_rating", [False, True])

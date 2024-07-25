@@ -9,20 +9,10 @@ import logging
 import sys
 from pathlib import Path
 from urllib.request import urlopen
-from zipfile import ZipFile
 
 _log = logging.getLogger("lenskit.data.fetch")
 
 ML_LOC = "http://files.grouplens.org/datasets/movielens/"
-ML_DATASETS = {
-    "ml-100k": "ml-100k/u.data",
-    "ml-1m": "ml-1m/ratings.dat",
-    "ml-10m": "ml-10M100K/ratings.dat",
-    "ml-20m": "ml-20m/ratings.csv",
-    "ml-25m": "ml-25m/ratings.csv",
-    "ml-latest": "ml-latest/ratings.csv",
-    "ml-latest-small": "ml-latest-small/ratings.csv",
-}
 
 
 def fetch_ml(name: str, base_dir: Path):
@@ -41,15 +31,14 @@ def fetch_ml(name: str, base_dir: Path):
         name:
             The name of the dataset.
         base_dir:
-            The base directory into which data should be extracted.
+            The base directory into which data should be downloaded.
     """
     zipname = f"{name}.zip"
     zipfile = base_dir / zipname
     zipurl = ML_LOC + zipname
 
-    test_file = base_dir / ML_DATASETS[name]
-    if test_file.exists():
-        _log.info("%s already exists", test_file)
+    if zipfile.exists():
+        _log.info("%s already exists", zipfile)
         return
 
     _log.info("downloading data set %s", name)
@@ -60,10 +49,6 @@ def fetch_ml(name: str, base_dir: Path):
             _log.debug("received %d bytes", len(block))
             zf.write(block)
             block = res.read(8 * 1024 * 1024)
-
-    _log.info("unpacking data set")
-    with ZipFile(zipfile, "r") as zf:
-        zf.extractall(base_dir)
 
 
 def _fetch_main():
