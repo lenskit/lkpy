@@ -144,7 +144,9 @@ def test_fsvd_save_load(ml_ds: Dataset):
     original.fit(ml_ds)
 
     assert original.bias is not None
-    assert original.bias.mean_ == approx(ml_ds.interaction_matrix("scipy").data.mean())
+    assert original.bias.mean_ == approx(
+        ml_ds.interaction_matrix("scipy", field="rating").data.mean()
+    )
     assert original.item_features_.shape == (ml_ds.item_count, 20)
     assert original.user_features_.shape == (ml_ds.user_count, 20)
 
