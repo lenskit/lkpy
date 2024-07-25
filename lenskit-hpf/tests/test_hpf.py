@@ -20,10 +20,9 @@ simple_df = pd.DataFrame(
 
 
 @mark.slow
-def test_hpf_train_large(tmp_path):
+def test_hpf_train_large(tmp_path, ml_ratings):
     algo = hpf.HPF(20)
-    ratings = lktu.ml_test.ratings
-    ratings = ratings.assign(rating=ratings.rating + 0.5)
+    ratings = ml_ratings.assign(rating=ml_ratings.rating + 0.5)
     ds = from_interactions_df(ratings)
     algo.fit(ds)
 
@@ -51,9 +50,9 @@ def test_hpf_train_large(tmp_path):
 
 
 @mark.slow
-def test_hpf_train_binary(tmp_path):
+def test_hpf_train_binary(tmp_path, ml_ratings):
     algo = hpf.HPF(20)
-    ratings = lktu.ml_test.ratings.drop(columns=["timestamp", "rating"])
+    ratings = ml_ratings.drop(columns=["timestamp", "rating"])
     ds = from_interactions_df(ratings)
     algo.fit(ds)
 
