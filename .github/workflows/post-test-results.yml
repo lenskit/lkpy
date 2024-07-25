@@ -14,6 +14,7 @@ jobs:
       - name: 'Download artifact'
         uses: actions/github-script@v6
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             let artifact = null;
             let attempts = 0;
@@ -29,6 +30,7 @@ jobs:
                 repo: context.repo.repo,
                 run_id: context.payload.workflow_run.id,
               });
+              console.info("found %d artifacts", allArtifacts.length)
               artifact = allArtifacts.data.artifacts.find((artifact) => {
                 return artifact.name == "coverage-report"
               });
