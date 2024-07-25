@@ -19,40 +19,40 @@ from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 
 def _check_user_offset_counts(ml_ds: Dataset, ml_ratings: pd.DataFrame, offsets: ArrayLike):
-    user_counts = ml_ratings["userId"].value_counts().reindex(ml_ds.users.index)
+    user_counts = ml_ratings["user"].value_counts().reindex(ml_ds.users.index)
     row_lens = np.diff(offsets)
     assert np.all(row_lens == user_counts)
 
 
 def _check_user_number_counts(ml_ds: Dataset, ml_ratings: pd.DataFrame, nums: ArrayLike):
     users, counts = np.unique(nums, return_counts=True)
-    user_counts = ml_ratings["userId"].value_counts().reindex(ml_ds.users.ids(users))
+    user_counts = ml_ratings["user"].value_counts().reindex(ml_ds.users.ids(users))
     assert np.all(counts == user_counts)
 
 
 def _check_item_number_counts(ml_ds: Dataset, ml_ratings: pd.DataFrame, nums: ArrayLike):
     items, counts = np.unique(nums, return_counts=True)
-    item_counts = ml_ratings["movieId"].value_counts().reindex(ml_ds.items.ids(items))
+    item_counts = ml_ratings["item"].value_counts().reindex(ml_ds.items.ids(items))
     assert np.all(counts == item_counts)
 
 
 def _check_user_ids(ml_ds: Dataset, ml_ratings: pd.DataFrame, nums: ArrayLike):
-    ml_ratings = ml_ratings.sort_values(["userId", "movieId"])
-    assert np.all(ml_ds.users.ids(np.asarray(nums)) == ml_ratings["userId"])
+    ml_ratings = ml_ratings.sort_values(["user", "item"])
+    assert np.all(ml_ds.users.ids(np.asarray(nums)) == ml_ratings["user"])
 
 
 def _check_item_ids(ml_ds: Dataset, ml_ratings: pd.DataFrame, nums: ArrayLike):
-    ml_ratings = ml_ratings.sort_values(["userId", "movieId"])
-    assert np.all(ml_ds.items.ids(np.asarray(nums)) == ml_ratings["movieId"])
+    ml_ratings = ml_ratings.sort_values(["user", "item"])
+    assert np.all(ml_ds.items.ids(np.asarray(nums)) == ml_ratings["item"])
 
 
 def _check_ratings(ml_ds: Dataset, ml_ratings: pd.DataFrame, rates: ArrayLike):
-    ml_ratings = ml_ratings.sort_values(["userId", "movieId"])
+    ml_ratings = ml_ratings.sort_values(["user", "item"])
     assert np.all(rates == ml_ratings["rating"])
 
 
 def _check_timestamp(ml_ds: Dataset, ml_ratings: pd.DataFrame, ts: ArrayLike):
-    ml_ratings = ml_ratings.sort_values(["userId", "movieId"])
+    ml_ratings = ml_ratings.sort_values(["user", "item"])
     assert np.all(ts == ml_ratings["timestamp"])
 
 
@@ -68,8 +68,8 @@ def test_matrix_structure(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert isinstance(log, CSRStructure)
     assert log.nnz == len(ml_ratings)
 
-    assert log.nrows == ml_ratings["userId"].nunique()
-    assert log.ncols == ml_ratings["movieId"].nunique()
+    assert log.nrows == ml_ratings["user"].nunique()
+    assert log.ncols == ml_ratings["item"].nunique()
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.rowptrs)
     _check_item_number_counts(ml_ds, ml_ratings, log.colinds)
@@ -148,7 +148,7 @@ def test_matrix_pandas_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
 
 def test_matrix_pandas_missing_rating(ml_ratings: pd.DataFrame):
-    ml_ds = from_interactions_df(ml_ratings[["userId", "movieId", "timestamp"]], item_col="movieId")
+    ml_ds = from_interactions_df(ml_ratings[["user", "item", "timestamp"]], item_col="item")
     log = ml_ds.interaction_matrix(format="pandas", field="rating")
     assert isinstance(log, pd.DataFrame)
     assert len(log) == len(ml_ratings)
@@ -169,8 +169,8 @@ def test_matrix_scipy_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
     assert log.nnz == len(ml_ratings)
 
     nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["userId"].nunique()
-    assert ncols == ml_ratings["movieId"].nunique()
+    assert nrows == ml_ratings["user"].nunique()
+    assert ncols == ml_ratings["item"].nunique()
 
     assert log.row.dtype == np.int32
     assert log.col.dtype == np.int32
@@ -191,8 +191,8 @@ def test_matrix_scipy_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
     assert log.nnz == len(ml_ratings)
 
     nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["userId"].nunique()
-    assert ncols == ml_ratings["movieId"].nunique()
+    assert nrows == ml_ratings["user"].nunique()
+    assert ncols == ml_ratings["item"].nunique()
 
     assert log.indptr.dtype == np.int32
     assert log.indices.dtype == np.int32
@@ -209,8 +209,8 @@ def test_matrix_scipy_timestamp(ml_ratings: pd.DataFrame, ml_ds: Dataset, genera
     assert log.nnz == len(ml_ratings)
 
     nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["userId"].nunique()
-    assert ncols == ml_ratings["movieId"].nunique()
+    assert nrows == ml_ratings["user"].nunique()
+    assert ncols == ml_ratings["item"].nunique()
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.indptr)
     _check_item_number_counts(ml_ds, ml_ratings, log.indices)
@@ -225,8 +225,8 @@ def test_matrix_scipy_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset, genera
     assert log.nnz == len(ml_ratings)
 
     nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["userId"].nunique()
-    assert ncols == ml_ratings["movieId"].nunique()
+    assert nrows == ml_ratings["user"].nunique()
+    assert ncols == ml_ratings["item"].nunique()
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.indptr)
     _check_item_number_counts(ml_ds, ml_ratings, log.indices)
@@ -238,14 +238,14 @@ def test_matrix_scipy_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset, genera
 
 @mark.parametrize("generation", ["modern", "legacy"])
 def test_matrix_scipy_missing_rating(ml_ratings: pd.DataFrame, generation):
-    ml_ds = from_interactions_df(ml_ratings[["userId", "movieId", "timestamp"]], item_col="movieId")
+    ml_ds = from_interactions_df(ml_ratings[["user", "item", "timestamp"]], item_col="item")
     log = ml_ds.interaction_matrix(format="scipy", field="rating", legacy=generation == "legacy")
     assert isinstance(log, sps.csr_array if generation == "modern" else sps.csr_matrix)
     assert log.nnz == len(ml_ratings)
 
     nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["userId"].nunique()
-    assert ncols == ml_ratings["movieId"].nunique()
+    assert nrows == ml_ratings["user"].nunique()
+    assert ncols == ml_ratings["item"].nunique()
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.indptr)
     _check_item_number_counts(ml_ds, ml_ratings, log.indices)
@@ -260,8 +260,8 @@ def test_matrix_torch_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert log.values().shape == torch.Size([len(ml_ratings)])
 
     nrows, ncols = log.shape
-    assert nrows == ml_ratings["userId"].nunique()
-    assert ncols == ml_ratings["movieId"].nunique()
+    assert nrows == ml_ratings["user"].nunique()
+    assert ncols == ml_ratings["item"].nunique()
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
@@ -279,8 +279,8 @@ def test_matrix_torch_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert log.values().shape == torch.Size([len(ml_ratings)])
 
     nrows, ncols = log.shape
-    assert nrows == ml_ratings["userId"].nunique()
-    assert ncols == ml_ratings["movieId"].nunique()
+    assert nrows == ml_ratings["user"].nunique()
+    assert ncols == ml_ratings["item"].nunique()
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
@@ -295,8 +295,8 @@ def test_matrix_torch_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert log.values().shape == torch.Size([len(ml_ratings)])
 
     nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["userId"].nunique()
-    assert ncols == ml_ratings["movieId"].nunique()
+    assert nrows == ml_ratings["user"].nunique()
+    assert ncols == ml_ratings["item"].nunique()
 
     _check_user_number_counts(ml_ds, ml_ratings, log.indices()[0, :])
     _check_user_ids(ml_ds, ml_ratings, log.indices()[0, :])
@@ -306,15 +306,15 @@ def test_matrix_torch_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
 
 def test_matrix_torch_missing_rating(ml_ratings: pd.DataFrame):
-    ml_ds = from_interactions_df(ml_ratings[["userId", "movieId", "timestamp"]], item_col="movieId")
+    ml_ds = from_interactions_df(ml_ratings[["user", "item", "timestamp"]], item_col="item")
     log = ml_ds.interaction_matrix(format="torch", field="rating")
     assert isinstance(log, torch.Tensor)
     assert log.is_sparse_csr
     assert log.values().shape == torch.Size([len(ml_ratings)])
 
     nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["userId"].nunique()
-    assert ncols == ml_ratings["movieId"].nunique()
+    assert nrows == ml_ratings["user"].nunique()
+    assert ncols == ml_ratings["item"].nunique()
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
@@ -329,8 +329,8 @@ def test_matrix_torch_timestamp(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert log.values().shape == torch.Size([len(ml_ratings)])
 
     nrows, ncols = log.shape
-    assert nrows == ml_ratings["userId"].nunique()
-    assert ncols == ml_ratings["movieId"].nunique()
+    assert nrows == ml_ratings["user"].nunique()
+    assert ncols == ml_ratings["item"].nunique()
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())

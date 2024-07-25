@@ -19,7 +19,6 @@ from lenskit import batch, topn
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import PopScore, TopN
 from lenskit.algorithms.bias import Bias
-from lenskit.util.test import ml_ratings, ml_ds  # noqa: F401
 
 _log = logging.getLogger(__name__)
 
@@ -73,11 +72,8 @@ class MLFolds:
 
 
 @pytest.fixture
-def ml_folds() -> MLFolds:
-    if not lktu.ml100k.available:
-        pytest.skip("ML-100K not available")
-    ratings = lktu.ml100k.ratings
-    return MLFolds(ratings)
+def ml_folds(ml_100k) -> MLFolds:
+    return MLFolds(ml_100k)
 
 
 def test_recommend_single(mlb: MLB):
