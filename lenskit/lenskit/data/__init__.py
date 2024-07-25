@@ -12,5 +12,4 @@ FeedbackType: TypeAlias = Literal["explicit", "implicit"]
 "Types of feedback supported."
 
 from .dataset import Dataset, from_interactions_df  # noqa: F401, E402
-from .matrix import RatingMatrix, sparse_ratings  # noqa: F401, E402
 from .movielens import load_movielens  # noqa: F401, E402
