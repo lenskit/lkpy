@@ -556,7 +556,7 @@ jobs:
           path: |
             data
             !data/*.zip
-          key: test-mldata-000-2ee919d5c0eef34d5a4f40bcf0480c1bf0310417db6921e3a2575c48991f379c2f4ad179f8514390133795614a96fa5b4ece55906c68a90af07c09670b2c3c5b
+          key: test-mldata-001-2ee919d5c0eef34d5a4f40bcf0480c1bf0310417db6921e3a2575c48991f379c2f4ad179f8514390133795614a96fa5b4ece55906c68a90af07c09670b2c3c5b
       - name: Download ML data
         run: |
           python -m lenskit.data.fetch ml-100k ml-20m
@@ -613,7 +613,7 @@ jobs:
           path: |
             data
             !data/*.zip
-          key: test-mldata-000-cd26f1c44a6962b0936346b346a9b418a3ed04b01a2892269fccd24a6387e943dba6d5e64ab2f8feb1823475601d65c2e6ebbeeeca0c2c210f0d37c00aabf2e9
+          key: test-mldata-001-cd26f1c44a6962b0936346b346a9b418a3ed04b01a2892269fccd24a6387e943dba6d5e64ab2f8feb1823475601d65c2e6ebbeeeca0c2c210f0d37c00aabf2e9
       - name: Download ML data
         run: |
           python -m lenskit.data.fetch ml-100k ml-1m ml-10m ml-20m

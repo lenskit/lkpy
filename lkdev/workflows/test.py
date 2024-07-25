@@ -211,7 +211,7 @@ def steps_mldata(options: JobOptions, datasets: list[str]) -> list[GHStep]:
                         data
                         !data/*.zip
                     """),
-                "key": f"test-mldata-000-{ds_hash}",
+                "key": f"test-mldata-001-{ds_hash}",
             },
         },
         {
