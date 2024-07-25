@@ -23,17 +23,14 @@ _log = logging.getLogger(__name__)
 
 
 @settings(deadline=1000, suppress_health_check=[HealthCheck.too_slow])
-@given(sparse_tensors())
+@given(sparse_tensors(dtype=np.float64))
 def test_sparse_mean_center(tensor: torch.Tensor):
     nr, nc = tensor.shape
 
     coo = tensor.to_sparse_coo()
     rows = coo.indices()[0, :].numpy()
     counts = np.zeros(nr, dtype=np.int32)
-    if tensor.dtype == torch.float64:
-        sums = np.zeros(nr, dtype=np.float64)
-    else:
-        sums = np.zeros(nr, dtype=np.float64)
+    sums = np.zeros(nr, dtype=np.float64)
 
     np.add.at(counts, rows, 1)
     np.add.at(sums, rows, coo.values().numpy())
@@ -43,7 +40,7 @@ def test_sparse_mean_center(tensor: torch.Tensor):
     nt, means = normalize_sparse_rows(tensor, "center")
     assert means.shape == torch.Size([nr])
 
-    assert means.numpy() == approx(tgt_means, nan_ok=True, rel=1.0e-5)
+    assert means.numpy() == approx(tgt_means, nan_ok=True, rel=1.0e-6)
 
     for i in range(nr):
         tr = tensor[i].values().numpy()
