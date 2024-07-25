@@ -11,6 +11,7 @@ import pandas as pd
 
 from pytest import approx
 
+from lenskit.data.dataset import Dataset
 import lenskit.util.test as lktu
 from lenskit import util as lku
 from lenskit.algorithms import basic
@@ -85,8 +86,10 @@ def test_fallback_predict(ml_ratings, ml_ds):
     def exp_val(user, item):
         v = bias.mean_
         if user is not None:
+            assert bias.user_offsets_ is not None
             v += bias.user_offsets_.loc[user]
         if item is not None:
+            assert bias.item_offsets_ is not None
             v += bias.item_offsets_.loc[item]
         return v
 
@@ -114,7 +117,7 @@ def test_fallback_predict(ml_ratings, ml_ds):
     assert preds.loc[-23081] == approx(exp_val(10, None))
 
 
-def test_fallback_save_load(tmp_path, ml_ds):
+def test_fallback_save_load(tmp_path, ml_ratings: pd.DataFrame, ml_ds: Dataset):
     original = basic.Fallback(basic.Memorized(simple_df), Bias())
     original.fit(ml_ds)
 
@@ -125,7 +128,7 @@ def test_fallback_save_load(tmp_path, ml_ds):
         algo = pickle.load(pf)
 
     bias = algo.algorithms[1]
-    assert bias.mean_ == approx(lktu.ml_test.ratings.rating.mean())
+    assert bias.mean_ == approx(ml_ratings.rating.mean())
 
     def exp_val(user, item):
         v = bias.mean_
