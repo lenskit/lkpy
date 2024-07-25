@@ -10,6 +10,7 @@ Basic utility algorithms and combiners.
 
 import logging
 from collections.abc import Iterable, Sequence
+from typing import overload
 
 import numpy as np
 import pandas as pd
@@ -112,7 +113,13 @@ class Fallback(Predictor):
     missing values, and so forth.
     """
 
-    def __init__(self, algorithms, *others):
+    algorithms: list[Predictor]
+
+    @overload
+    def __init__(self, algorithms: Iterable[Predictor]): ...
+    @overload
+    def __init__(self, algorithms: Predictor, *others: Predictor): ...
+    def __init__(self, algorithms: Predictor | Iterable[Predictor], *others):
         """
         Args:
             algorithms: a list of component algorithms.  Each one will be trained.
@@ -120,12 +127,11 @@ class Fallback(Predictor):
                 additional algorithms, in which case ``algorithms`` is taken to be
                 a single algorithm.
         """
-        if others:
-            self.algorithms = [algorithms] + list(others)
-        elif isinstance(algorithms, Iterable) or isinstance(algorithms, Sequence):
-            self.algorithms = algorithms
+        if isinstance(algorithms, Iterable) or isinstance(algorithms, Sequence):
+            assert not others
+            self.algorithms = list(algorithms)
         else:
-            self.algorithms = [algorithms]
+            self.algorithms = [algorithms] + list(others)
 
     @override
     def fit(self, data: Dataset, **kwargs):
