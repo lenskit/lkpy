@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "format": 3,
+    "version": "7.6.0",
+    "timestamp": "2024-07-25T23:57:41.451626",
+    "branch_coverage": false,
+    "show_contexts": false
+  },
+  "totals": {
+    "covered_lines": 3319,
+    "num_statements": 3617,
+    "percent_covered": 91.76112800663533,
+    "percent_covered_display": "92",
+    "missing_lines": 298,
+    "excluded_lines": 63
+  }
+}
