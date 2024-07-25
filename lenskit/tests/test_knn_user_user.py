@@ -15,7 +15,8 @@ import torch
 from pytest import approx, fail, mark
 
 import lenskit.algorithms.knn.user as knn
-from lenskit.data.dataset import from_interactions_df
+from lenskit.algorithms.ranking import TopN
+from lenskit.data.dataset import Dataset, from_interactions_df
 import lenskit.util.test as lktu
 from lenskit.algorithms import Recommender
 from lenskit.util import clone
@@ -69,20 +70,20 @@ def test_uu_train(ml_ratings, ml_ds):
     # it should have computed correct means
     u_stats = ml_ds.user_stats()
     mlmeans = pd.Series(algo.user_means_.numpy(), index=algo.users_.ids(), name="mean")
-    mlmeans.index.name = "userId"
+    mlmeans.index.name = "user"
     umeans, mlmeans = u_stats["mean_rating"].align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
     # we should be able to reconstruct rating values
-    uir = ml_ratings.set_index(["userId", "movieId"]).rating
+    uir = ml_ratings.set_index(["user", "item"]).rating
     rates = algo.user_ratings_.to_sparse_coo()
     ui_rbdf = pd.DataFrame(
         {
-            "userId": algo.users_.ids(rates.indices()[0]),
-            "movieId": algo.items_.ids(rates.indices()[1]),
+            "user": algo.users_.ids(rates.indices()[0]),
+            "item": algo.items_.ids(rates.indices()[1]),
             "nrating": rates.values(),
         }
-    ).set_index(["userId", "movieId"])
+    ).set_index(["user", "item"])
     ui_rbdf = ui_rbdf.join(mlmeans)
     ui_rbdf["rating"] = ui_rbdf["nrating"] + ui_rbdf["mean"]
     ui_rbdf["orig_rating"] = uir
@@ -96,6 +97,7 @@ def test_uu_train_adapt(ml_ds):
     uu = knn.UserUser(30)
     uu = Recommender.adapt(uu)
     ret = uu.fit(ml_ds)
+    assert isinstance(uu, TopN)
     assert ret is uu
     assert isinstance(uu.predictor, knn.UserUser)
 
@@ -132,10 +134,10 @@ def test_uu_predict_too_few_blended(ml_ds):
 
 def test_uu_predict_live_ratings(ml_ratings):
     algo = knn.UserUser(30, min_nbrs=2)
-    no4 = ml_ratings[ml_ratings.userId != 4]
-    algo.fit(from_interactions_df(no4, item_col="movieId"))
+    no4 = ml_ratings[ml_ratings.user != 4]
+    algo.fit(from_interactions_df(no4, item_col="item"))
 
-    ratings = ml_ratings[ml_ratings.userId == 4].set_index("movieId").rating
+    ratings = ml_ratings[ml_ratings.user == 4].set_index("item").rating
 
     preds = algo.predict_for_user(20381, [1016, 2091], ratings)
     assert len(preds) == 2
@@ -162,20 +164,20 @@ def test_uu_save_load(tmp_path, ml_ratings, ml_ds):
     # it should have computed correct means
     umeans = ml_ds.user_stats()["mean_rating"]
     mlmeans = pd.Series(algo.user_means_, index=algo.users_, name="mean")
-    mlmeans.index.name = "userId"
+    mlmeans.index.name = "user"
     umeans, mlmeans = umeans.align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
     # we should be able to reconstruct rating values
-    uir = ml_ratings.set_index(["userId", "movieId"]).rating
+    uir = ml_ratings.set_index(["user", "item"]).rating
     rates = algo.user_ratings_.to_sparse_coo()
     ui_rbdf = pd.DataFrame(
         {
-            "userId": algo.users_.ids(rates.indices()[0]),
-            "movieId": algo.items_.ids(rates.indices()[1]),
+            "user": algo.users_.ids(rates.indices()[0]),
+            "item": algo.items_.ids(rates.indices()[1]),
             "nrating": rates.values(),
         }
-    ).set_index(["userId", "movieId"])
+    ).set_index(["user", "item"])
     ui_rbdf = ui_rbdf.join(mlmeans)
     ui_rbdf["rating"] = ui_rbdf["nrating"] + ui_rbdf["mean"]
     ui_rbdf["orig_rating"] = uir
@@ -200,9 +202,9 @@ def test_uu_predict_unknown_empty(ml_ds):
 def test_uu_implicit(ml_ratings):
     "Train and use user-user on an implicit data set."
     algo = knn.UserUser(20, feedback="implicit")
-    data = ml_ratings.loc[:, ["userId", "movieId"]]
+    data = ml_ratings.loc[:, ["user", "item"]]
 
-    algo.fit(from_interactions_df(data, item_col="movieId"))
+    algo.fit(from_interactions_df(data, item_col="item"))
     assert algo.user_means_ is None
 
     mat = algo.user_vectors_
@@ -218,9 +220,9 @@ def test_uu_implicit(ml_ratings):
 def test_uu_save_load_implicit(tmp_path, ml_ratings):
     "Save and load user-user on an implicit data set."
     orig = knn.UserUser(20, feedback="implicit")
-    data = ml_ratings.loc[:, ["userId", "movieId"]]
+    data = ml_ratings.loc[:, ["user", "item"]]
 
-    orig.fit(from_interactions_df(data, item_col="movieId"))
+    orig.fit(from_interactions_df(data, item_col="item"))
     ser = pickle.dumps(orig)
 
     algo = pickle.loads(ser)
@@ -231,12 +233,12 @@ def test_uu_save_load_implicit(tmp_path, ml_ratings):
 
 
 @mark.slow
-def test_uu_known_preds():
+def test_uu_known_preds(ml_ds: Dataset):
     from lenskit import batch
 
     algo = knn.UserUser(30, min_sim=1.0e-6)
     _log.info("training %s on ml data", algo)
-    algo.fit(from_interactions_df(lktu.ml_test.ratings))
+    algo.fit(ml_ds)
 
     dir = Path(__file__).parent
     pred_file = dir / "user-user-preds.csv"
@@ -275,18 +277,15 @@ def __batch_eval(job):
 
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
-def test_uu_batch_accuracy():
+def test_uu_batch_accuracy(ml_100k: pd.DataFrame):
     import lenskit.crossfold as xf
     import lenskit.metrics.predict as pm
     from lenskit.algorithms import basic, bias
 
-    ratings = lktu.ml100k.ratings
-
     uu_algo = knn.UserUser(30)
     algo = basic.Fallback(uu_algo, bias.Bias())
 
-    folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
+    folds = xf.partition_users(ml_100k, 5, xf.SampleFrac(0.2))
     preds = [__batch_eval((algo, train, test)) for (train, test) in folds]
     preds = pd.concat(preds)
     mae = pm.mae(preds.prediction, preds.rating)
@@ -298,16 +297,13 @@ def test_uu_batch_accuracy():
 
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
-def test_uu_implicit_batch_accuracy():
+def test_uu_implicit_batch_accuracy(ml_100k: pd.DataFrame):
     import lenskit.crossfold as xf
     from lenskit import batch, topn
 
-    ratings = lktu.ml100k.ratings
-
     algo = knn.UserUser(30, center=False, aggregate="sum")
 
-    folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
+    folds = list(xf.partition_users(ml_100k, 5, xf.SampleFrac(0.2)))
     all_test = pd.concat(f.test for f in folds)
 
     rec_lists = []
