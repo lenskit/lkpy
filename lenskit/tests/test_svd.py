@@ -12,7 +12,7 @@ import pandas as pd
 
 from pytest import approx, mark
 
-from lenskit.data.dataset import from_interactions_df
+from lenskit.data.dataset import Dataset, from_interactions_df
 import lenskit.util.test as lktu
 from lenskit.algorithms import svd
 from lenskit.util import clone
@@ -86,11 +86,9 @@ def test_svd_clone():
 
 @need_skl
 @mark.slow
-def test_svd_save_load():
-    ratings = lktu.ml_test.ratings
-
+def test_svd_save_load(ml_ds: Dataset):
     original = svd.BiasedSVD(20)
-    original.fit(from_interactions_df(ratings))
+    original.fit(ml_ds)
 
     mod = pickle.dumps(original)
     _log.info("serialized to %d bytes", len(mod))
@@ -105,14 +103,11 @@ def test_svd_save_load():
 @need_skl
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
-def test_svd_batch_accuracy():
+def test_svd_batch_accuracy(ml_100k: pd.DataFrame):
     import lenskit.crossfold as xf
     import lenskit.metrics.predict as pm
     from lenskit import batch
     from lenskit.algorithms import basic, bias
-
-    ratings = lktu.ml100k.ratings
 
     svd_algo = svd.BiasedSVD(25, damping=10)
     algo = basic.Fallback(svd_algo, bias.Bias(damping=10))
@@ -123,7 +118,7 @@ def test_svd_batch_accuracy():
         _log.info("testing %d users", test.user.nunique())
         return batch.predict(algo, test)
 
-    folds = xf.partition_users(ratings, 5, xf.SampleFrac(0.2))
+    folds = xf.partition_users(ml_100k, 5, xf.SampleFrac(0.2))
     preds = pd.concat(eval(train, test) for (train, test) in folds)
     mae = pm.mae(preds.prediction, preds.rating)
     assert mae == approx(0.74, abs=0.025)
