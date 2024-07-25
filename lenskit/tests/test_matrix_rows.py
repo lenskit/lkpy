@@ -16,40 +16,29 @@ import torch
 from hypothesis import HealthCheck, given, settings
 from pytest import approx
 
-from lenskit.data.matrix import normalize_sparse_rows, sparse_row_stats
+from lenskit.data.matrix import normalize_sparse_rows
 from lenskit.util.test import sparse_tensors
 
 _log = logging.getLogger(__name__)
 
 
-@settings(suppress_health_check=[HealthCheck.too_slow])
-@given(sparse_tensors())
-def test_sparse_stats(tensor):
-    nr, nc = tensor.shape
-    _log.debug("tensor: %d x %d", nr, nc)
-
-    stats = sparse_row_stats(tensor)
-    assert stats.means.shape == (nr,)
-    assert stats.counts.shape == (nr,)
-
-    assert np.sum(stats.counts.numpy()) == tensor.values().shape[0]
-
-    sums = tensor.sum(dim=1, keepdim=True)
-    sums = sums.to_dense().reshape(-1)
-    tots = stats.means * stats.counts
-    mask = stats.counts.numpy() > 0
-    assert tots.numpy()[mask] == approx(sums.numpy()[mask])
-
-
 @settings(deadline=1000, suppress_health_check=[HealthCheck.too_slow])
 @given(sparse_tensors())
-def test_sparse_mean_center(tensor):
+def test_sparse_mean_center(tensor: torch.Tensor):
     nr, nc = tensor.shape
 
-    stats = sparse_row_stats(tensor)
+    coo = tensor.to_sparse_coo()
+    rows = coo.indices()[0, :].numpy()
+    counts = np.zeros(nr, dtype=np.int32)
+    sums = np.zeros(nr, dtype=np.float32)
+    np.add.at(counts, rows, 1)
+    np.add.at(sums, rows, coo.values().numpy())
+    tgt_means = sums / counts
+    tgt_means = np.nan_to_num(tgt_means, nan=0)
     nt, means = normalize_sparse_rows(tensor, "center")
+    assert means.shape == torch.Size([nr])
 
-    assert means.numpy() == approx(stats.means.numpy(), nan_ok=True)
+    assert means.numpy() == approx(tgt_means, nan_ok=True)
 
     for i in range(nr):
         tr = tensor[i].values().numpy()

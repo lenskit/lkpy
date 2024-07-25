@@ -113,37 +113,6 @@ class InteractionMatrix:
         return (self.n_users, self.n_items)
 
 
-class DimStats(NamedTuple):
-    """
-    The statistics for a matrix along a dimension (e.g. rows or columns).
-    """
-
-    "The size along this dimension."
-    n: int
-    "The other dimension of the matrix."
-    n_other: int
-    "The number of stored entries for each element."
-    counts: t.Tensor
-    "The sum of entries for each element."
-    sums: t.Tensor
-    "The mean of stored entries for each element."
-    means: t.Tensor
-
-
-def sparse_row_stats(matrix: t.Tensor) -> DimStats:
-    if not matrix.is_sparse_csr:
-        raise TypeError("only sparse CSR matrice supported")
-
-    n, n_other = matrix.shape
-    counts = matrix.crow_indices().diff()
-    assert counts.shape == (n,), f"count shape {counts.shape} != {n}"
-    sums = matrix.sum(dim=1, keepdim=True).to_dense().reshape(n)
-    assert sums.shape == (n,), f"sum shape {sums.shape} != {n}"
-    means = sums / counts
-
-    return DimStats(n, n_other, counts, sums, means)
-
-
 @overload
 def normalize_sparse_rows(
     matrix: t.Tensor, method: Literal["center"], inplace: bool = False
@@ -168,13 +137,17 @@ def normalize_sparse_rows(
 
 
 def _nsr_mean_center(matrix: t.Tensor) -> tuple[t.Tensor, t.Tensor]:
-    stats = sparse_row_stats(matrix)
+    nr, _nc = matrix.shape
+    sums = matrix.sum(dim=1, keepdim=True).to_dense().reshape(nr)
+    counts = torch.diff(matrix.crow_indices())
+    assert sums.shape == counts.shape
+    means = torch.nan_to_num(sums / counts, 0)
     return t.sparse_csr_tensor(
         crow_indices=matrix.crow_indices(),
         col_indices=matrix.col_indices(),
-        values=matrix.values() - t.repeat_interleave(stats.means, stats.counts),
+        values=matrix.values() - t.repeat_interleave(means, counts),
         size=matrix.shape,
-    ), stats.means
+    ), means
 
 
 def _nsr_unit(matrix: t.Tensor) -> tuple[t.Tensor, t.Tensor]:
