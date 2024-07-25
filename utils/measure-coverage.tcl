@@ -42,7 +42,7 @@ if {[ev GITHUB_BASE_REF base]} {
     set diff_lines [exec jq .total_num_lines diff-cover.json]
     set diff_bad [exec jq .total_num_violations diff-cover.json]
     if {$diff_lines > 0} {
-        set diff_cov [expr {1.0 - ($diff_bad / $diff_lines)}]
+        set diff_cov [expr {100 - ($diff_bad / $diff_lines) * 100}]
     } else {
         set diff_cov NA
     }
