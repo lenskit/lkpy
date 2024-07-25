@@ -178,7 +178,7 @@ class EmptyCandidateSelector(CandidateSelector):
 
     @override
     def candidates(self, user, ratings=None):
-        return np.array([], dtype=self.dtype_)
+        return np.array([], dtype=self.dtype_)  # type: ignore
 
 
 class UnratedItemCandidateSelector(CandidateSelector):
