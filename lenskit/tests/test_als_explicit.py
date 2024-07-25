@@ -267,8 +267,7 @@ def test_als_save_load(ml_ratings: pd.DataFrame):
 
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml_100k_zip.exists(), reason="ML100K data not present")
-def test_als_batch_accuracy():
+def test_als_batch_accuracy(ml_100k):
     import lenskit.crossfold as xf
     import lenskit.metrics.predict as pm
 

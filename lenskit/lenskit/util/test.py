@@ -66,6 +66,17 @@ def ml_ds(ml_ratings: pd.DataFrame):
     yield from_interactions_df(ml_ratings)
 
 
+@pytest.fixture
+def ml_100k():
+    """
+    Fixture to load the MovieLens 100K dataset (currently as a data frame).  It skips
+    the test if the ML100K data is not available.
+    """
+    if not ml_100k_zip.exists():
+        pytest.skip("ML100K data not available")
+    yield load_movielens_df(ml_100k_zip)
+
+
 @pytest.fixture(scope="session")
 def demo_recs(ml_ratings: pd.DataFrame):
     """

@@ -15,7 +15,7 @@ from hypothesis import settings
 from pytest import fixture, skip
 
 from lenskit.parallel import ensure_parallel_init
-from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
+from lenskit.util.test import ml_100k, ml_ds, ml_ratings  # noqa: F401
 
 logging.getLogger("numba").setLevel(logging.INFO)
 

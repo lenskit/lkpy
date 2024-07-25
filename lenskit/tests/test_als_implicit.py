@@ -298,8 +298,7 @@ def test_als_train_large_ratings(ml_ds):
 
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml_100k_zip.exists(), reason="ML100K data not present")
-def test_als_implicit_batch_accuracy():
+def test_als_implicit_batch_accuracy(ml_100k):
     import lenskit.crossfold as xf
     from lenskit import batch, topn
 
