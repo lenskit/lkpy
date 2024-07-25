@@ -15,7 +15,7 @@ FILTER_PATHS = [
     "**pyproject.toml",
     "requirements*.txt",
     "data/**",
-    "scripts/coverage-log.tcl",
+    "utils/coverage-log.tcl",
     ".github/workflows/test.yml",
 ]
 
