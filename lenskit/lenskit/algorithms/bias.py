@@ -242,7 +242,7 @@ class Bias(Predictor):
 
     def fit_transform(self, data: Dataset, **kwargs) -> pd.DataFrame:
         """
-        Fit with ratings and return the training data transformed.
+        Fit with ratings and return the training data matrix transformed.
         """
         # FIXME: make this more efficient, don't rename things.
         self.fit(data)
