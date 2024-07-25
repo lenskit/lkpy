@@ -447,10 +447,12 @@ def jobs_result(deps: list[str]) -> GHJob:
         "steps": [
             step_checkout(),
             {
-                "name": "Add upstream remote",
+                "name": "Add upstream remote & author config",
                 "run": script("""
                     git remote add upstream https://github.com/lenskit/lkpy.git
                     git fetch upstream
+                    git config user.name "LensKit Bot"
+                    git config user.email lkbot@lenskit.org
                 """),
             },
             {
