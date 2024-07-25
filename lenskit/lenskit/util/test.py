@@ -39,13 +39,30 @@ ml_test: Dataset = LazyDataset(lambda: load_movielens(ml_test_dir))
 @pytest.fixture(scope="module")
 def ml_ratings():
     """
-    Fixture to load the test MovieLens ratings.
+    Fixture to load the test MovieLens ratings as a data frame. To use this,
+    just include it as a parameter in your test::
+
+        def test_thing_with_data(ml_ratings: pd.DataFrame):
+            ...
+
+    .. note::
+        This is imported in ``conftest.py`` so it is always available in LensKit tests.
     """
     yield load_movielens_df(ml_test_dir)
 
 
 @pytest.fixture
 def ml_ds(ml_ratings: pd.DataFrame):
+    """
+    Fixture to load the MovieLens test dataset.  To use this, just include it as
+    a parameter in your test::
+
+        def test_thing_with_data(ml_ds: Dataset):
+            ...
+
+    .. note::
+        This is imported in ``conftest.py`` so it is always available in LensKit tests.
+    """
     yield from_interactions_df(ml_ratings)
 
 
