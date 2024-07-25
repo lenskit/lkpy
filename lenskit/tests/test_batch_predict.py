@@ -122,16 +122,13 @@ def test_predict_include_rating(mlb: MLB):
     assert all(preds.rating.values == urv.loc[preds.index, :].rating.values)
 
 
-@pytest.mark.skipif(not lktu.ml100k.available, reason="ML-100K required")
 @pytest.mark.eval
 @pytest.mark.parametrize("ncpus", [None, 1, 2])
-def test_bias_batch_predict(ncpus):
+def test_bias_batch_predict(ml_100k, ncpus):
     import lenskit.crossfold as xf
     import lenskit.metrics.predict as pm
     from lenskit import batch
     from lenskit.algorithms import bias
-
-    ratings = lktu.ml100k.ratings
 
     algo = bias.Bias(damping=5)
 
@@ -143,7 +140,7 @@ def test_bias_batch_predict(ncpus):
         return recs
 
     preds = pd.concat(
-        (eval(train, test) for (train, test) in xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
+        (eval(train, test) for (train, test) in xf.partition_users(ml_100k, 5, xf.SampleFrac(0.2)))
     )
 
     _log.info("analyzing predictions")
