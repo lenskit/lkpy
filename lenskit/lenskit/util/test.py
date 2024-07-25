@@ -31,7 +31,7 @@ from lenskit.data.matrix import torch_sparse_from_scipy
 from lenskit.data.movielens import load_movielens, load_movielens_df
 
 ml_test_dir = here("data/ml-latest-small")
-ml_100k_dir = here("data/ml-100k")
+ml_100k_zip = here("data/ml-100k.zip")
 
 ml_test: Dataset = LazyDataset(lambda: load_movielens(ml_test_dir))
 
