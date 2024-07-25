@@ -9,7 +9,7 @@ import pandas as pd
 
 from pytest import approx
 
-from lenskit.data.dataset import from_interactions_df
+from lenskit.data.dataset import Dataset, from_interactions_df
 import lenskit.util.test as lktu
 from lenskit.algorithms import basic, bias
 
@@ -47,14 +47,13 @@ def test_topn_config():
     assert rs.startswith("TopN/")
 
 
-def test_topn_big():
-    ratings = lktu.ml_test.ratings
-    users = ratings.user.unique()
-    items = ratings.item.unique()
-    user_items = ratings.set_index("user").item
+def test_topn_big(ml_ds: Dataset):
+    users = ml_ds.users.ids()
+    items = ml_ds.items.ids()
+    user_items = ml_ds.interaction_matrix("pandas", original_ids=True).set_index("user_id").item_id
 
     algo = basic.TopN(bias.Bias())
-    a2 = algo.fit(from_interactions_df(ratings))
+    a2 = algo.fit(ml_ds)
     assert a2 is algo
 
     # test 100 random users
