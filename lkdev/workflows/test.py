@@ -15,7 +15,7 @@ FILTER_PATHS = [
     "**pyproject.toml",
     "requirements*.txt",
     "data/**",
-    "utils/coverage-log.tcl",
+    "utils/measure-coverage.tcl",
     ".github/workflows/test.yml",
 ]
 
@@ -496,7 +496,7 @@ def jobs_result(deps: list[str]) -> GHJob:
                 "name": "± Measure and report coverage",
                 "run": script("""
                     echo $PR_NUMBER > ./lenskit-coverage/pr-number
-                    tclsh ./utils/coverage-log.tcl
+                    tclsh ./utils/measure-coverage.tcl
                     cat lenskit-coverage/report.md >$GITHUB_STEP_SUMMARY
                 """),
                 "env": {

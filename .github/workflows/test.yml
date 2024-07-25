@@ -8,7 +8,7 @@ name: Automatic Tests
       - '**pyproject.toml'
       - requirements*.txt
       - data/**
-      - utils/coverage-log.tcl
+      - utils/measure-coverage.tcl
       - .github/workflows/test.yml
   pull_request:
     paths:
@@ -16,7 +16,7 @@ name: Automatic Tests
       - '**pyproject.toml'
       - requirements*.txt
       - data/**
-      - utils/coverage-log.tcl
+      - utils/measure-coverage.tcl
       - .github/workflows/test.yml
 concurrency:
   group: test-${{github.ref}}
@@ -685,7 +685,7 @@ jobs:
       - name: ± Measure and report coverage
         run: |
           echo $PR_NUMBER > ./lenskit-coverage/pr-number
-          tclsh ./utils/coverage-log.tcl
+          tclsh ./utils/measure-coverage.tcl
           cat lenskit-coverage/report.md >$GITHUB_STEP_SUMMARY
         env:
           PR_NUMBER: ${{ github.event.number }}
