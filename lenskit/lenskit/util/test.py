@@ -36,7 +36,7 @@ ml_100k_zip = here("data/ml-100k.zip")
 ml_test: Dataset = LazyDataset(lambda: load_movielens(ml_test_dir))
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def ml_ratings():
     """
     Fixture to load the test MovieLens ratings as a data frame. To use this,
@@ -51,7 +51,7 @@ def ml_ratings():
     yield load_movielens_df(ml_test_dir)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def ml_ds(ml_ratings: pd.DataFrame):
     """
     Fixture to load the MovieLens test dataset.  To use this, just include it as
