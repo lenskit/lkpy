@@ -17,21 +17,17 @@ from lenskit import batch
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import PopScore
 from lenskit.data.dataset import Dataset, from_interactions_df
-from lenskit.datasets import MovieLens
+from lenskit.data.movielens import load_movielens
 
 _log = logging.getLogger(__name__)
 
 _ml_path = Path("data/ml-20m")
-if _ml_path.exists():
-    _ml_20m = MovieLens(_ml_path)
-else:
-    _ml_20m = None
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def ml20m():
-    if _ml_20m:
-        return from_interactions_df(_ml_20m.ratings)
+    if _ml_path.exists():
+        return load_movielens(_ml_path)
     else:
         pytest.skip("ML-20M not available")
 
