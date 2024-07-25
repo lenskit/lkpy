@@ -267,12 +267,12 @@ def test_als_save_load(ml_ratings: pd.DataFrame):
 
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml_100k_dir.exists(), reason="ML100K data not present")
+@mark.skipif(not lktu.ml_100k_zip.exists(), reason="ML100K data not present")
 def test_als_batch_accuracy():
     import lenskit.crossfold as xf
     import lenskit.metrics.predict as pm
 
-    ratings = load_movielens_df(lktu.ml_100k_dir)
+    ratings = load_movielens_df(lktu.ml_100k_zip)
 
     algo = als.BiasedMF(25, epochs=20, damping=5)
 
