@@ -200,13 +200,11 @@ def test_ii_warns_wa_with_no_use_ratings():
 
 @lktu.wantjit
 @mark.slow
-@mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
-def test_ii_train_ml100k(tmp_path):
+def test_ii_train_ml100k(tmp_path, ml_100k):
     "Test an unbounded model on ML-100K"
-    ratings = lktu.ml100k.ratings
     algo = knn.ItemItem(30)
     _log.info("training model")
-    algo.fit(from_interactions_df(ratings))
+    algo.fit(from_interactions_df(ml_100k))
 
     _log.info("testing model")
 
@@ -218,7 +216,7 @@ def test_ii_train_ml100k(tmp_path):
 
     assert algo.item_counts_.sum() == len(algo.sim_matrix_.values())
 
-    means = ratings.groupby("item").rating.mean()
+    means = ml_100k.groupby("item").rating.mean()
     assert means[algo.items_.ids()].values == approx(algo.item_means_)
 
     # save
@@ -508,14 +506,11 @@ def test_ii_no_ratings(ml_ratings, ml_ds):
 
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml100k.available, reason="ML100K data not present")
-def test_ii_batch_accuracy():
+def test_ii_batch_accuracy(ml_100k):
     import lenskit.crossfold as xf
     import lenskit.metrics.predict as pm
     from lenskit import batch
     from lenskit.algorithms import basic, bias
-
-    ratings = lktu.ml100k.ratings
 
     ii_algo = knn.ItemItem(30)
     algo = basic.Fallback(ii_algo, bias.Bias())
@@ -527,7 +522,7 @@ def test_ii_batch_accuracy():
         return batch.predict(algo, test, n_jobs=1)
 
     preds = pd.concat(
-        (eval(train, test) for (train, test) in xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
+        (eval(train, test) for (train, test) in xf.partition_users(ml_100k, 5, xf.SampleFrac(0.2)))
     )
     mae = pm.mae(preds.prediction, preds.rating)
     assert mae == approx(0.70, abs=0.025)
@@ -583,13 +578,10 @@ def test_ii_known_preds(ml_ds):
 @lktu.wantjit
 @mark.slow
 @mark.eval
-@mark.skipif(not lktu.ml100k.available, reason="ML100K not available")
 @mark.parametrize("ncpus", [1, 2])
-def test_ii_batch_recommend(ncpus):
+def test_ii_batch_recommend(ml_100k, ncpus):
     import lenskit.crossfold as xf
     from lenskit import topn
-
-    ratings = lktu.ml100k.ratings
 
     def eval(train, test):
         _log.info("running training")
@@ -602,7 +594,7 @@ def test_ii_batch_recommend(ncpus):
 
     test_frames = []
     recs = []
-    for train, test in xf.partition_users(ratings, 5, xf.SampleFrac(0.2)):
+    for train, test in xf.partition_users(ml_100k, 5, xf.SampleFrac(0.2)):
         test_frames.append(test)
         recs.append(eval(train, test))
 
