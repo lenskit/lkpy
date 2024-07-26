@@ -431,7 +431,7 @@ def jobs_test_matrix() -> dict[str, GHJob]:
                 "HPF bridge tests on Python ${{matrix.python}}",
                 packages=["lenskit-hpf"],
                 matrix={"python": PYTHONS},
-                env="vanilla",
+                env="conda",
             )
         ),
         "eval-tests": test_eval_job(),
