@@ -1,4 +1,9 @@
 {
+  "files.exclude": {
+    "**/__pycache__": true,
+    ".hypothesis/": true,
+    ".*_cache/": true,
+  },
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.codeActionsOnSave": {
