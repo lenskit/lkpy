@@ -62,5 +62,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issue_number,
-              body: await fs.readFileSync('./report.md')
+              body: await fs.readFileSync('./report.md', {encoding: 'utf8'})
             });
