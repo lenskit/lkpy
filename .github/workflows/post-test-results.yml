@@ -32,7 +32,7 @@ jobs:
                 name: "coverage-report"
               });
               console.info("found %d artifacts", allArtifacts.data.artifacts.length)
-              artifact = allArtifacts[0];
+              artifact = allArtifacts.data.artifacts[0];
               if (!artifact) {
                 console.info('could not find artifact, waiting and trying again')
                 await new Promise((ok) => setTimeout(() => ok(), 15000));
