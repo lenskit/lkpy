@@ -50,6 +50,7 @@ Resources
     :caption: Algorithms
 
     interfaces
+    pipeline
     algorithms
     basic
     ranking
