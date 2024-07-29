@@ -127,6 +127,22 @@ class Pipeline:
                 The node or literal value to wire to this parameter.
         """
 
+    def alias(self, alias: str, node: Node[T] | str) -> None:
+        """
+        Create an alias for a node.  After aliasing, the node can be retrieved
+        from :meth:`node` using either its original name or its alias.
+
+        Args:
+            alias:
+                The alias to add to the node.
+            node:
+                The node (or node name) to alias.
+
+        Raises:
+            ValueError:
+                if the alias is already used as an alias or node name.
+        """
+
     def add_component(
         self, name: str, obj: Component[ND], **inputs: Node[Any] | object
     ) -> Node[ND]:
@@ -147,6 +163,18 @@ class Pipeline:
             The node representing this component in the pipeline.
         """
         return Node(name)
+
+    def replace_component(
+        self, name: str | Node[ND], obj: Component[ND], **inputs: Node[Any] | object
+    ) -> Node[ND]:
+        """
+        Replace a component in the graph.  The new component must have a type
+        that is compatible with the old component.  The old component's input
+        connections will be replaced (as the new component may have different
+        inputs), but any connections that use the old component to supply an
+        input will use the new component instead.
+        """
+        raise NotImplementedError()
 
     def use_first_of(self, name: str, *nodes: Node[T | None]) -> Node[T]:
         """
