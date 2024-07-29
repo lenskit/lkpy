@@ -153,8 +153,8 @@ class Pipeline:
         Create a new node whose value is the first defined (not ``None``) value
         of the specified nodes.  This is used for things like filling in optional
         pipeline inputs.  For example, if you want the pipeline to take candidate
-        items through an `items` input, but look them up from the user's history
-        and the training data if `items` is not supplied, you would do:
+        items through an ``items`` input, but look them up from the user's history
+        and the training data if ``items`` is not supplied, you would do:
 
         .. code:: python
 
