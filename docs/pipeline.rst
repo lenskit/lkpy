@@ -38,9 +38,15 @@ can write out the pipeline configuration yourself; the equivalent to
     # use the candidate selector we just configured.
     candidates = pipe.use_first_of('candidates', items, lookup_candidates)
     # score the candidate items using the specified scorer
-    scores = pipe.add_component('score', scorer, user=user, items=candidates)
+    score = pipe.add_component('score', scorer, user=user, items=candidates)
     # rank the items by score
-    recs = pipe.add_component('recommend', TopNRanker(50), items=scores)
+    recommend = pipe.add_component('recommend', TopNRanker(50), items=score)
+
+You can then run this pipeline to produce recommendations with:
+
+.. code:: python
+
+    user_recs = pipe.run(recommend, user=user_id)
 
 .. todo::
     Redo some of those types with user & item data, etc.
@@ -69,6 +75,99 @@ These functions make it easy to create common pipeline designs.
 
 .. autofunction:: topn_pipeline
 
+.. _pipeline-model:
+
+Pipeline Model
+~~~~~~~~~~~~~~
+
+A pipeline has a couple key concepts:
+
+* An **input** is data that needs to be provided to the pipeline when it is run,
+  such as the user to generate recommendations for.  Inputs have specified data
+  types, and it is an error to provide an input value of an unexpected type.
+* A **component** processes input data and produces an output.  It can be either
+  a Python function or object (anything that implements the :class:`Component`
+  protocol) that takes inputs as keyword arguments and returns an output.
+
+These are arranged in a directed acyclic graph, consisting of:
+
+* **Nodes** (represented by :class:`Node`), which correspond to either *inputs*
+  or *components*.
+* **Connections** from one node's input to another node's data (or to a fixed
+  data value).  This is how the pipeline knows which components depend on other
+  components and how to provide each component with the inputs it requires; see
+  :ref:`pipeline-connections` for details.
+
+Each node has a name that can be used to look up the node with
+:meth:`Pipeline.node` and appears in serialization and logging situations. Names
+must be unique within a pipeline.
+
+.. _pipeline-connections:
+
+Connections
+-----------
+
+Components declare their inputs as keyword arguments on their call signatures
+(either the function call signature, if it is a bare function, or the
+``__call__`` method if it is implemented by a class).  In a pipeline, these
+inputs can be connected to a source, which the pipeline will use to obtain a
+value for that parameter when running the pipeline.  Inputs can be connected to
+the following types:
+
+* A :class:`Node`, in which case the input will be provided from the
+  corresponding pipeline input or component return value.  Nodes are
+  returned by :meth:`create_input` or :meth:`add_component`, and can be
+  looked up after creation with :meth:`node`.
+* A Python object, in which case that value will be provided directly to
+  the component input argument.
+
+These input connections are specified via keyword arguments to the
+:meth:`Pipeline.add_component` or :meth:`Pipeline.connect` methods — specify the
+component's input name(s) and the node or data to which each input should be
+wired.
+
+.. note::
+
+    You cannot directly wire an input another component using only that
+    component's name; if you only have a name, pass it to :meth:`node`
+    to obtain the node.  This is because it would be impossible to
+    distinguish between a string component name and a string data value.
+
+.. note::
+
+    You do not usually need to call this method directly; when possible,
+    provide the wirings when calling :meth:`add_component`.
+
+.. _pipeline-execution:
+
+Execution
+---------
+
+Once configured, a pipeline can be run with :meth:`Pipeline.run`.  This
+method takes two types of inputs:
+
+*   Positional arguments specifying the node(s) to run and whose results should
+    be returned.  This is to allow partial runs of pipelines (e.g. to only score
+    items without ranking them), and to allow multiple return values to be
+    obtained (e.g. initial item scores and final rankings, which may have
+    altered scores).
+
+    If no components are specified, it is the same as specifying the last
+    component added to the pipeline.
+
+*   Keyword arguments specifying the values for the pipeline's inputs, as defined by
+    calls to :meth:`create_input`.
+
+Pipeline execution logically proceeds in the following steps:
+
+1.  Determine the full list of pipeline components that need to be run
+    in order to run the specified components.
+2.  Run those components in order, taking their inputs from pipeline
+    inputs or previous components as specified by the pipeline
+    connections and defaults.
+3.  Return the values of the specified components.  If a single
+    component is specified, its value is returned directly; if two or
+    more components are specified, their values are returned in a tuple.
 
 Pipeline Class
 ~~~~~~~~~~~~~~

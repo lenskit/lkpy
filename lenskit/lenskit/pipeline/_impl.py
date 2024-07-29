@@ -145,7 +145,8 @@ class Pipeline:
             obj:
                 The component itself.
             inputs:
-                The component's input wiring.  See :meth:`connect` for details.
+                The component's input wiring.  See :ref:`pipeline-connections`
+                for details.
 
         Returns:
             The node representing this component in the pipeline.
@@ -180,33 +181,7 @@ class Pipeline:
     def connect(self, obj: str | Node[Any], **inputs: Node[Any] | str | object):
         """
         Provide additional input connections for a component that has already
-        been added.
-
-        Each component takes zero or more inputs, declared as keyword arguments
-        in its call signature (either the function call signature, if it is a
-        bare function, or the ``__call__`` method if it is implemented by a
-        class).  In a pipeline, these inputs can be connected to a source, which
-        the pipeline will use to obtain a value for that parameter when running
-        the pipeline.  Inputs can be connected to the following types:
-
-        * A :class:`Node`, in which case the input will be provided from the
-          corresponding pipeline input or component return value.  Nodes are
-          returned by :meth:`create_input` or :meth:`add_component`, and can be
-          looked up after creation with :meth:`node`.
-        * A Python object, in which case that value will be provided directly to
-          the component input argument.
-
-        .. note::
-
-            You cannot directly wire an input another component using only that
-            component's name; if you only have a name, pass it to :meth:`node`
-            to obtain the node.  This is because it would be impossible to
-            distinguish between a string component name and a string data value.
-
-        .. note::
-
-            You do not usually need to call this method directly; when possible,
-            provide the wirings when calling :meth:`add_component`.
+        been added.  See :ref:`pipeline-connections` for details.
 
         Args:
             obj:
@@ -256,27 +231,8 @@ class Pipeline:
     def run(self, *nodes: str | Node[Any] | None, **kwargs: object) -> object:
         """
         Run the pipeline and obtain the return value(s) of one or more of its
-        components.
-
-        The positional arguments to this method are the nodes of the components
-        whose return value(s) are requested.  Components can be specified either
-        by name or by their :class:`Node`.  If no components are specified, the
-        last component added to the pipeline will be assumed to be the return
-        value.
-
-        The keyword arguments to this method are the pipeline inputs, as defined
-        by :meth:`create_input`.
-
-        Pipeline execution logically proceeds in the following steps:
-
-        1.  Determine the full list of pipeline components that need to be run
-            in order to run the specified components.
-        2.  Run those components in order, taking their inputs from pipeline
-            inputs or previous components as specified by the pipeline
-            connections and defaults.
-        3.  Return the values of the specified components.  If a single
-            component is specified, its value is returned directly; if two or
-            more components are specified, their values are returned in a tuple.
+        components.  See :ref:`pipeline-execution` for details of the pipeline
+        execution model.
 
         Args:
             nodes:
@@ -284,8 +240,17 @@ class Pipeline:
             kwargs:
                 The pipeline's inputs, as defined with :meth:`create_input`.
 
+        Returns:
+            The pipeline result.  If zero or one nodes are specified, the result
+            is returned as-is. If multiple nodes are specified, their results
+            are returned in a tuple.
+
         Raises:
-            ValueError: when one or more inputs are missing. TypeError: when one
-            or more inputs has an incompatible type.
+            ValueError:
+                when one or more required inputs are missing.
+            TypeError:
+                when one or more required inputs has an incompatible type.
+            other:
+                exceptions thrown by components are passed through.
         """
         pass
