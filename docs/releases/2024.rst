@@ -11,6 +11,8 @@ version number scheme to “:ref:`SemCalver`”.
 
 .. _SPEC0: https://scientific-python.org/specs/spec-0000/
 
+.. _2024.1:
+
 2024.1 (in progress)
 --------------------
 
