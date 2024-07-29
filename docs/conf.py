@@ -61,6 +61,7 @@ html_theme_options = {
         "json_url": "https://lkpy.lenskit.org/versions.json",
         "version_match": "2024.0dev",
     },
+    "show_version_warning_banner": True,
     # "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
     "article_header_end": ["theme-switcher", "navbar-icon-links", "version-switcher"],
     # 'github_user': 'lenskit',
