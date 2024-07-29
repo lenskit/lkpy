@@ -8,13 +8,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import (
-    Any,
-    Generic,
-    LiteralString,
-    TypeVar,
-    overload,
-)
+
+from typing_extensions import Any, Generic, LiteralString, TypeVar, overload
 
 from lenskit.data import Dataset
 
@@ -112,7 +107,7 @@ class Pipeline:
         if name in self._nodes:
             raise ValueError(f"pipeline already has node “{name}”")
 
-        node = Node[T](name, set(types))
+        node = Node[Any](name, set(types))
         self._nodes[name] = node
         return node
 

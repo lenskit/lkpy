@@ -24,6 +24,7 @@ def test_create_input():
     assert_type(src, Node[int | str])
     assert isinstance(src, Node)
     assert src.name == "user"
+    assert src.types == set([int, str])
 
     assert len(pipe.nodes) == 1
     assert pipe.node("user") is src
