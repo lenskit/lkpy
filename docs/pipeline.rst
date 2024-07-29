@@ -56,6 +56,12 @@ You can then run this pipeline to produce recommendations with:
     is middle ground between “give me a standard pipeline” and “make me do everything
     myself”.
 
+.. todo::
+    Rethink the “keyword inputs only” constraint in view of the limitation it
+    places on fallback or other compositional components — it's hard to specify
+    a component that implements fallback logic for an arbitrary number of
+    inputs.
+
 Pipeline components are not limited to looking things up from training data —
 they can query databases, load files, and any other operations.  A runtime
 pipeline can use some (especially the scorer) trained from training data, and
