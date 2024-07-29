@@ -4,7 +4,6 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-
 import numpy as np
 import torch
 
