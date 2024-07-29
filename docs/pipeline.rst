@@ -132,6 +132,16 @@ These input connections are specified via keyword arguments to the
 component's input name(s) and the node or data to which each input should be
 wired.
 
+You can also use :meth:`Pipeline.add_default` to specify default connections. For example,
+you can specify a default for ``user``::
+
+    pipe.add_default('user', user_history)
+
+With this default in place, if a component has an input named ``user`` and that
+input is not explicitly connected to a node, then the ``user_history`` node will
+be used to supply its value.  Judicious use of defaults can reduce the amount of
+code overhead needed to wire common pipelines.
+
 .. note::
 
     You cannot directly wire an input another component using only that
@@ -174,6 +184,44 @@ Pipeline execution logically proceeds in the following steps:
 3.  Return the values of the specified components.  If a single
     component is specified, its value is returned directly; if two or
     more components are specified, their values are returned in a tuple.
+
+.. _pipeline-names:
+
+Component Names
+---------------
+
+As noted above, each component (and pipeline input) has a *name* that is unique
+across the pipeline.  For consistency and clarity, we recommend naming
+components with a verb or kebab-case verb phrase that captures the action that component performs, such as:
+
+* ``recommend``
+* ``rerank``
+* ``score``
+* ``lookup-user-history``
+* ``embed-items``
+
+Component nodes can also have *aliases*, allowing them to be accessed by more
+than one name. Use :meth:`Pipeline.alias` to define these aliases.
+
+Various LensKit facilities recognize several standard component names that we
+recommend you use when applicable:
+
+* ``score`` — compute (usually personalized) scores for items for a given user.
+* ``rank`` — compute a (ranked) list of recommendations for a user.  If you are
+  configuring a pipeline with rerankers whose outputs are also rankings, this
+  name should usually be used for the last such ranker, and downstream
+  components (if any) transform that ranking into another layout; that way the
+  evaluation tools will operate on the last such ranking.
+* ``recommend`` — compute recommendations for a user.  This will often be an
+  alias for ``rank``, as in a top-*N* recommender, but may return other formats
+  such as grids or unordered slates.
+* ``predict-ratings`` — predict a user's ratings for the specified items.  When
+  present, this is usually an alias for ``score``, but in some pipelines it will
+  be a different component that transforms the scores into rating predictions.
+
+These component names replace the task-specific interfaces in pre-2024 LensKit;
+a ``Recommender`` is now just a pipeline with ``recommend`` and/or ``rank``
+components.
 
 Pipeline Class
 ~~~~~~~~~~~~~~
