@@ -146,6 +146,31 @@ class Pipeline:
         """
         return Node(name)
 
+    def use_first_of(self, name: str, *nodes: Node[T | None]) -> Node[T]:
+        """
+        Create a new node whose value is the first defined (not ``None``) value
+        of the specified nodes.  This is used for things like filling in optional
+        pipeline inputs.  For example, if you want the pipeline to take candidate
+        items through an `items` input, but look them up from the user's history
+        and the training data if `items` is not supplied, you would do:
+
+        .. code:: python
+
+            pipe = Pipeline()
+            # allow candidate items to be optionally specified
+            items = pipe.create_input('items', list[EntityId], None)
+            # find candidates from the training data (optional)
+            lookup_candidates = pipe.add_component(
+                'select-candidates',
+                UnratedTrainingItemsCandidateSelector(),
+                user=history,
+            )
+            # if the client provided items as a pipeline input, use those; otherwise
+            # use the candidate selector we just configured.
+            candidates = pipe.use_first_of('candidates', items, lookup_candidates)
+        """
+        raise NotImplementedError()
+
     def connect(self, obj: str | Node[Any], **inputs: Node[Any] | str | object):
         """
         Provide additional input connections for a component that has already
