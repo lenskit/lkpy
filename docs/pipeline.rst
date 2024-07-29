@@ -64,9 +64,9 @@ You can then run this pipeline to produce recommendations with:
 
 Pipeline components are not limited to looking things up from training data —
 they can query databases, load files, and any other operations.  A runtime
-pipeline can use some (especially the scorer) trained from training data, and
-other components that query a database or REST services for things like user
-history and candidate set lookup.
+pipeline can use some components (especially the scorer) trained from training
+data, and other components that query a database or REST services for things
+like user history and candidate set lookup.
 
 The LensKit pipeline design is heavily inspired by Haystack_ and by the pipeline
 abstraction Karl Higley created for POPROX_.
