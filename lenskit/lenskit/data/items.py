@@ -10,7 +10,7 @@ Primary item-list abstraction.
 
 from __future__ import annotations
 
-from typing import Literal, LiteralString, Sequence, TypeAlias, overload
+from typing import Literal, LiteralString, Sequence, TypeAlias, TypeVar, overload
 
 import numpy as np
 import pandas as pd
@@ -21,6 +21,7 @@ from lenskit.data.mtarray import MTArray, MTGenericArray
 from lenskit.data.vocab import EntityId, NPEntityId, Vocabulary
 
 Backend: TypeAlias = Literal["numpy", "torch"]
+EID = TypeVar("EID", bound=EntityId)
 
 
 class ItemList:
@@ -40,7 +41,7 @@ class ItemList:
         *,
         item_ids: NDArray[NPEntityId] | pd.Series[EntityId] | Sequence[EntityId] | None = None,
         item_nums: NDArray[np.int32] | pd.Series[int] | Sequence[int] | ArrayLike | None = None,
-        vocabulary: Vocabulary[EntityId] | None = None,
+        vocabulary: Vocabulary[EID] | None = None,
     ):
         self._vocab = vocabulary
         self._fields = {}
