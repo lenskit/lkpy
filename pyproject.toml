@@ -34,11 +34,11 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 unfixable = ["F401"]
-exclude = [".git", "__pycache__", "build", "dist", "*/tests/*"]
+exclude = [".git", "__pycache__", "build", "dist"]
 
 [tool.ruff.lint.per-file-ignores]
 # Importing PyTest fixtures triggers F811
-"*/tests/*.py" = ["F811"]
+"*/tests/*.py" = ["F811", "F401"]
 
 [tool.ruff.lint.isort]
 section-order = [
@@ -53,6 +53,7 @@ known-first-party = ["lenskit"]
 
 [tool.ruff.lint.isort.sections]
 testing = ["pytest", "hypothesis"]
+
 
 [tool.pyright]
 typeCheckingMode = "basic"
