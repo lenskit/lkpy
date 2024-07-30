@@ -8,7 +8,7 @@ import lenskit.util.test as lktu
 from lenskit.algorithms.basic import PopScore
 from lenskit.algorithms.bias import Bias
 from lenskit.algorithms.ranking import PlackettLuce
-from lenskit.util.test import ml_ratings, ml_ds  # noqa: F401
+from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 
 def test_plackett_luce_rec(ml_ds):

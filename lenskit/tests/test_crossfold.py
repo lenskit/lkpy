@@ -9,12 +9,11 @@ import itertools as it
 import math
 
 import numpy as np
-
 import pandas as pd
+
 import pytest
 
 import lenskit.crossfold as xf
-import lenskit.util.test as lktu
 
 
 def test_partition_rows(ml_ratings: pd.DataFrame):
@@ -228,7 +227,7 @@ def test_partition_users(ml_ratings: pd.DataFrame):
 
 
 def test_partition_may_skip_train(ml_ratings: pd.DataFrame):
-    """Partitioning when users may not have enough ml_ratings to be in the train set and test set."""
+    "Partitioning when users may not have enough ratings to be in the train and test sets."
     # make a data set where some users only have 1 rating
     ml_ratings = ml_ratings.sample(frac=0.1)
     users = ml_ratings.groupby("user")["rating"].count()

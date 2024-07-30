@@ -13,11 +13,11 @@ import torch
 
 from pytest import approx, mark
 
-from lenskit.data.dataset import Dataset, from_interactions_df
-from lenskit.data.movielens import load_movielens_df
 import lenskit.util.test as lktu
 from lenskit import batch
 from lenskit.algorithms import als
+from lenskit.data.dataset import Dataset, from_interactions_df
+from lenskit.data.movielens import load_movielens_df
 
 _log = logging.getLogger(__name__)
 

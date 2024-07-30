@@ -17,17 +17,17 @@ import pytest
 from pytest import approx, fixture, mark
 
 import lenskit.algorithms.knn.item as knn
-from lenskit.algorithms.ranking import TopN
-from lenskit.data.dataset import from_interactions_df
-from lenskit.data.vocab import EntityId, Vocabulary
 import lenskit.util.test as lktu
 from lenskit import batch
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import Fallback
 from lenskit.algorithms.bias import Bias
+from lenskit.algorithms.ranking import TopN
+from lenskit.data.dataset import from_interactions_df
+from lenskit.data.vocab import EntityId, Vocabulary
 from lenskit.diagnostics import ConfigWarning, DataWarning
 from lenskit.util import clone
-from lenskit.util.test import ml_ratings, ml_ds  # noqa: F401
+from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 _log = logging.getLogger(__name__)
 

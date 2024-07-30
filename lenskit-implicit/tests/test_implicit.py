@@ -12,9 +12,9 @@ import pandas as pd
 
 from pytest import mark
 
-from lenskit.data.dataset import from_interactions_df
 import lenskit.util.test as lktu
 from lenskit import util
+from lenskit.data.dataset import from_interactions_df
 from lenskit.implicit import ALS, BPR
 
 _log = logging.getLogger(__name__)

@@ -7,10 +7,10 @@
 import numpy as np
 import pandas as pd
 
-from lenskit.data.dataset import Dataset, from_interactions_df
 import lenskit.util.test as lktu
 from lenskit.algorithms import basic
-from lenskit.util.test import ml_ratings, ml_ds  # noqa: F401
+from lenskit.data.dataset import Dataset, from_interactions_df
+from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}

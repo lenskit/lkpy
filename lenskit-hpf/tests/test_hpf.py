@@ -12,9 +12,9 @@ import pandas as pd
 
 from pytest import importorskip, mark
 
-from lenskit.data.dataset import from_interactions_df
 import lenskit.util.test as lktu
 from lenskit.algorithms import basic
+from lenskit.data.dataset import from_interactions_df
 
 hpf = importorskip("lenskit.hpf")
 

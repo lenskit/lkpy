@@ -10,9 +10,10 @@ Tests for the Vocabulary class.
 
 from uuid import UUID
 
+import numpy as np
+
 import hypothesis.strategies as st
 from hypothesis import assume, given
-import numpy as np
 from pytest import raises
 
 from lenskit.data import Vocabulary
@@ -59,7 +60,6 @@ def test_create_nonunique(keys: list[int | str | UUID]):
     )
 )
 def test_equal(keys: list[int | str | UUID]):
-    uq = set(keys)
     vocab = Vocabulary(keys)
 
     v2 = Vocabulary(keys)
@@ -210,7 +210,6 @@ def test_add_terms(initial: set[int], new: list[int]):
 
 @given(st.one_of(st.sets(st.integers()), st.sets(st.emails())))
 def test_all_terms(initial: set[int] | set[str]):
-    ni = len(initial)
     vocab = Vocabulary(initial)
 
     tl = sorted(initial)

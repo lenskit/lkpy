@@ -4,11 +4,12 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from pathlib import Path
-from lenskit.data.movielens import load_movielens
 import functools
+from pathlib import Path
 
 from pytest import mark
+
+from lenskit.data.movielens import load_movielens
 
 ML_LATEST_DIR = Path("data/ml-latest-small")
 ML_100K_DIR = Path("data/ml-100k")

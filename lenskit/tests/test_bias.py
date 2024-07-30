@@ -9,9 +9,9 @@ import pickle
 
 import numpy as np
 import pandas as pd
+import torch
 
 from pytest import approx, mark, raises
-import torch
 
 from lenskit import util as lku
 from lenskit.algorithms.bias import Bias

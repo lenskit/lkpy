@@ -13,12 +13,12 @@ import pandas as pd
 import pytest
 
 import lenskit.crossfold as xf
-from lenskit.data.dataset import Dataset, from_interactions_df
 import lenskit.util.test as lktu
 from lenskit import batch, topn
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import PopScore, TopN
 from lenskit.algorithms.bias import Bias
+from lenskit.data.dataset import Dataset, from_interactions_df
 
 _log = logging.getLogger(__name__)
 

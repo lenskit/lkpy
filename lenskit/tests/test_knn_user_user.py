@@ -15,12 +15,12 @@ import torch
 from pytest import approx, fail, mark
 
 import lenskit.algorithms.knn.user as knn
-from lenskit.algorithms.ranking import TopN
-from lenskit.data.dataset import Dataset, from_interactions_df
 import lenskit.util.test as lktu
 from lenskit.algorithms import Recommender
+from lenskit.algorithms.ranking import TopN
+from lenskit.data.dataset import Dataset, from_interactions_df
 from lenskit.util import clone
-from lenskit.util.test import ml_ratings, ml_ds  # noqa: F401
+from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 _log = logging.getLogger(__name__)
 

@@ -13,9 +13,9 @@ import pandas as pd
 
 from pytest import approx, mark
 
-from lenskit.data.dataset import Dataset, from_interactions_df
 import lenskit.funksvd as svd
 import lenskit.util.test as lktu
+from lenskit.data.dataset import Dataset, from_interactions_df
 
 _log = logging.getLogger(__name__)
 
