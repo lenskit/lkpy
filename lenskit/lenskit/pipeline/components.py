@@ -6,6 +6,9 @@
 
 "Definition of the component interfaces."
 
+# pyright: strict
+from __future__ import annotations
+
 from typing_extensions import Any, Generic, Protocol, Self, TypeVar, runtime_checkable
 
 from lenskit.data.dataset import Dataset
@@ -82,7 +85,8 @@ class ConfigurableComponent(Generic[COut], Component[COut], Protocol):
 class TrainableComponent(Generic[COut], Component[COut], Protocol):
     """
     Interface for pipeline components that can learn parameters from training
-    data.
+    data, and expose those parameters for serialization as an alternative to
+    pickling (components also need to be picklable).
 
     .. note::
 
@@ -100,5 +104,32 @@ class TrainableComponent(Generic[COut], Component[COut], Protocol):
                 The training dataset.
         Returns:
             The component.
+        """
+        raise NotImplementedError()
+
+    def get_params(self) -> dict[str, object]:
+        """
+        Get the model's learned parameters for serialization.
+
+        LensKit components that learn parameters from training data should both
+        implement this method and work when pickled and unpickled.  Pickling is
+        sometimes used for convenience, but parameter / state dictionaries allow
+        serializing wtih tools like ``safetensors``.
+
+        Args:
+            include_caches:
+                Whether the parameter dictionary should include ephemeral
+                caching structures only used for runtime performance
+                optimizations.
+
+        Returns:
+            The model's parameters, as a dictionary from names to parameter data
+            (usually arrays, tensors, etc.).
+        """
+        raise NotImplementedError()
+
+    def load_params(self, params: dict[str, object]) -> None:
+        """
+        Reload model state from parameters saved via :meth:`get_params`.
         """
         raise NotImplementedError()

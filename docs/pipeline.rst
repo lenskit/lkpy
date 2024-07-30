@@ -3,6 +3,9 @@ Recommendation Pipelines
 
 .. module:: lenskit.pipeline
 
+.. todo::
+    None of this has been implemented yet.
+
 Since version :ref:`2024.1`, LensKit uses a flexible “pipeline” abstraction to
 wire together different components such as candidate selectors, personalized
 item scorers, and rankers to produce predictions, recommendations, or other
@@ -223,6 +226,63 @@ These component names replace the task-specific interfaces in pre-2024 LensKit;
 a ``Recommender`` is now just a pipeline with ``recommend`` and/or ``rank``
 components.
 
+.. _pipeline-serialization:
+
+Pipeline Serialization
+----------------------
+
+Pipelines are defined by the following:
+
+* The components and inputs (nodes)
+* The component input connections (edges)
+* The component configurations (see :class:`ConfigurableComponent`)
+* The components' learned parameters (see :class:`TrainableComponent`)
+
+.. todo::
+    Serialization support other than ``pickle`` is not yet implemented.
+
+LensKit supports serializing both pipeline descriptions (components,
+connections, and configurations) and pipeline parameters.  There are
+three ways to save a pipeline or part thereof:
+
+1.  Pickle the entire pipeline.  This is easy, and saves everything pipeline; it
+    has the usual downsides of pickling (arbitrary code execution, etc.).
+    LensKit uses pickling to share pipelines with worker processes for parallel
+    batch operations.
+2.  Save the pipeline configuration with :meth:`Pipeline.save_config`.  This saves
+    the components, their configurations, and their connections, but **not** any
+    learned parameter data.  A new pipeline can be constructed from such a
+    configuration can be reloaded with :meth:`Pipeline.from_config`.
+3.  Save the pipeline parameters with :meth:`Pipeline.save_params`.  This saves
+    the learned parameters but **not** the configuration or connections.  The
+    parameters can be reloaded into a compatible pipeline with
+    :meth:`Pipeline.load_params`; a compatible pipeline can be created by
+    running the pipeline setup code or using a saved pipeline configuration.
+
+These can be mixed and matched; if you pickle an untrained pipeline, you can
+unpickle it and use :meth:`~Pipeline.load_params` to infuse it with parameters.
+
+Component implementations need to support the configuration and/or parameter
+values, as needed, in addition to functioning correctly with pickle (no specific
+logic is usually needed for this).
+
+LensKit knows how to safely save the following object types from
+:meth:`Component.get_params`:
+
+*   :class:`torch.Tensor` (dense, CSR, and COO tensors).
+*   :class:`numpy.ndarray`.
+*   :class:`scipy.sparse.csr_array`, :class:`scipy.sparse.~coo_array`,
+    :class:`scipy.sparse.~csc_array`, and the corresponding ``*_matrix``
+    versions.
+
+Other objects (including Pandas dataframes) are serialized by pickling, and the
+pipeline will emit a warning (or fail, if ``allow_pickle=False`` is passed to
+:meth:`~Pipeline.save_params`).
+
+.. note::
+    The load/save parameter operations are modeled after PyTorch's
+    :meth:`~torch.nn.Module.state_dict` and the needs of ``safetensors``.
+
 Pipeline Class
 ~~~~~~~~~~~~~~
 
@@ -242,6 +302,9 @@ no training or configuration can simply be a Python function; more sophisticated
 components can implement the :class:`TrainableComponent` and/or
 :class:`ConfigurableComponent` protocols to support flexible model training and
 pipeline serialization.
+
+Components also need to be pickleable, as LensKit uses pickling for shared
+memory parallelism in its batch-inference code.
 
 .. note::
 
