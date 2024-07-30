@@ -22,7 +22,7 @@ EntityId: TypeAlias = int | str | bytes
 NPEntityId: TypeAlias = np.integer | np.str_ | np.bytes_
 "Allowable entity identifier types (NumPy version)"
 
-VT = TypeVar("VT", bound=Hashable, covariant=True)
+VT = TypeVar("VT", bound=Hashable)
 "Term type in a vocabulary."
 
 
