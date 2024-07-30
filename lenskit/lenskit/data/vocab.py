@@ -19,6 +19,8 @@ from numpy.typing import ArrayLike, NDArray
 
 EntityId: TypeAlias = int | str | bytes
 "Allowable entity identifier types."
+NPEntityId: TypeAlias = np.integer | np.str_ | np.bytes_
+"Allowable entity identifier types (NumPy version)"
 
 VT = TypeVar("VT", bound=Hashable)
 "Term type in a vocabulary."
@@ -100,7 +102,9 @@ class Vocabulary(Generic[VT]):
             raise IndexError("negative numbers not supported")
         return self._index[num]
 
-    def terms(self, nums: list[int] | NDArray[np.integer] | pd.Series | None = None) -> np.ndarray:
+    def terms(
+        self, nums: list[int] | NDArray[np.integer] | pd.Series | None = None
+    ) -> NDArray[NPEntityId]:
         """
         Get a list of terms, optionally for an array of term numbers.
 
@@ -125,7 +129,9 @@ class Vocabulary(Generic[VT]):
         "Alias for :meth:`term`  for greater readability for entity ID vocabularies."
         return self.term(num)
 
-    def ids(self, nums: list[int] | NDArray[np.integer] | pd.Series | None = None) -> np.ndarray:
+    def ids(
+        self, nums: list[int] | NDArray[np.integer] | pd.Series | None = None
+    ) -> NDArray[NPEntityId]:
         "Alias for :meth:`terms` for greater readability for entity ID vocabularies."
         return self.terms(nums)
 
