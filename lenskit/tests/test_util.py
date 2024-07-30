@@ -100,4 +100,4 @@ def test_last_memo():
 def test_clone_core_obj(obj):
     o2 = lku.clone(obj)
     assert o2 == obj
-    assert type(o2) == type(obj)
+    assert type(o2) == type(obj)  # noqa: E721

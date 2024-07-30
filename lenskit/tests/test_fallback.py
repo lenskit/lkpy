@@ -71,7 +71,7 @@ def test_fallback_clone(ml_ds):
     assert clone is not algo
     for a1, a2 in zip(algo.algorithms, clone.algorithms):
         assert a1 is not a2
-        assert type(a2) == type(a1)
+        assert type(a2) == type(a1)  # noqa: E721
 
 
 def test_fallback_predict(ml_ratings, ml_ds):
