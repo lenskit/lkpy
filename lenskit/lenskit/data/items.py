@@ -28,6 +28,16 @@ class ItemList:
     """
     Representation of a (usually ordered) list of items, possibly with scores
     and other associated data.
+
+    Args:
+        item_ids:
+            A list or array of item identifiers.
+        item_nums:
+            A list or array of item numbers.
+        vocabulary:
+            A vocabulary to translate between item IDs and numbers.
+        fields:
+            Additional fields, such as ``score`` or ``rating``.
     """
 
     _len: int
@@ -42,9 +52,9 @@ class ItemList:
         item_ids: NDArray[NPEntityId] | pd.Series[EntityId] | Sequence[EntityId] | None = None,
         item_nums: NDArray[np.int32] | pd.Series[int] | Sequence[int] | ArrayLike | None = None,
         vocabulary: Vocabulary[EID] | None = None,
+        **fields: NDArray[np.generic] | torch.Tensor | ArrayLike,
     ):
         self._vocab = vocabulary
-        self._fields = {}
 
         if item_ids is None and item_nums is None:
             self._ids = np.ndarray(0, dtype=np.int32)
@@ -56,6 +66,7 @@ class ItemList:
             if len(self._ids.shape) > 1:
                 raise TypeError("item lists must be 1-dimensional")
             self._len = len(item_ids)
+
         if item_nums is not None:
             self._numbers = MTArray(item_nums)
             if hasattr(self, "_len"):
@@ -66,6 +77,8 @@ class ItemList:
                     )
             else:
                 self._len = self._numbers.shape[0]
+
+        self._fields = {name: MTArray(data) for (name, data) in fields.items()}
 
     def clone(self) -> ItemList:
         """
@@ -95,6 +108,8 @@ class ItemList:
     def numbers(self, format: Literal["numpy"] = "numpy") -> NDArray[np.int32]: ...
     @overload
     def numbers(self, format: Literal["torch"]) -> torch.Tensor: ...
+    @overload
+    def numbers(self, format: LiteralString = "numpy") -> ArrayLike: ...
     def numbers(self, format: LiteralString = "numpy") -> ArrayLike:
         """
         Get the item numbers.
@@ -116,6 +131,33 @@ class ItemList:
             self._numbers = MTArray(self._vocab.numbers(self._ids))
 
         return self._numbers.to(format)
+
+    @overload
+    def scores(self, format: Literal["numpy"] = "numpy") -> NDArray[np.floating] | None: ...
+    @overload
+    def scores(self, format: Literal["torch"]) -> torch.Tensor | None: ...
+    @overload
+    def scores(self, format: LiteralString = "numpy") -> ArrayLike | None: ...
+    def scores(self, format: LiteralString = "numpy") -> ArrayLike | None:
+        """
+        Get the item scores (if available).
+        """
+        return self.field("scores", format)
+
+    @overload
+    def field(
+        self, name: str, format: Literal["numpy"] = "numpy"
+    ) -> NDArray[np.floating] | None: ...
+    @overload
+    def field(self, name: str, format: Literal["torch"]) -> torch.Tensor | None: ...
+    @overload
+    def field(self, name: str, format: LiteralString) -> ArrayLike | None: ...
+    def field(self, name: str, format: LiteralString = "numpy") -> ArrayLike | None:
+        val = self._fields.get(name, None)
+        if val is None:
+            return None
+        else:
+            return val.to(format)
 
     def __len__(self):
         return self._len
