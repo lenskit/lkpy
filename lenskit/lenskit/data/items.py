@@ -10,12 +10,20 @@ Primary item-list abstraction.
 
 from __future__ import annotations
 
-from typing import Any, Literal, LiteralString, Sequence, TypeAlias, TypeVar, cast, overload
-
 import numpy as np
 import pandas as pd
 import torch
 from numpy.typing import ArrayLike, NDArray
+from typing_extensions import (
+    Any,
+    Literal,
+    LiteralString,
+    Sequence,
+    TypeAlias,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from lenskit.data.checks import check_1d
 from lenskit.data.mtarray import MTArray, MTGenericArray

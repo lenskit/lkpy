@@ -7,11 +7,10 @@
 # pyright: basic
 from __future__ import annotations
 
-from typing import Generic, Literal, LiteralString, Sequence, TypeVar, overload
-
 import numpy as np
 import torch
 from numpy.typing import ArrayLike, NDArray
+from typing_extensions import Generic, Literal, LiteralString, Sequence, TypeVar, overload
 
 NPT = TypeVar("NPT", bound=np.generic)
 
