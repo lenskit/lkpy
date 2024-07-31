@@ -41,6 +41,11 @@ Significant Changes
     without round-tripping through Pandas and NumPy, and keep this transparent
     to client code).
 
+*   Where Pandas data frames are still used, the standard user and item columns
+    have been renamed to ``user_id`` and ``item_id`` respectively, with
+    ``user_num`` and ``item_num`` for 0-based user and item numbers.  This is to
+    remove ambiguity about how users and items are being referenced.
+
 *   **PyTorch**. LensKit now uses PyTorch to implement most of its algorithms,
     instead of Numba-accelerated NumPy code.  Algorithms using PyTorch are:
 
