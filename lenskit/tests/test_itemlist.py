@@ -217,3 +217,17 @@ def test_item_list_pickle_compact(ml_ds):
     assert len(il2) == len(il)
     assert np.all(il2.ids() == il.ids())
     assert np.all(il2.numbers() == il.numbers())
+
+
+def test_item_list_pickle_fields(ml_ds):
+    row = ml_ds.user_row(user_num=400)
+    data = pickle.dumps(row)
+    r2 = pickle.loads(data)
+
+    assert len(r2) == len(row)
+    assert np.all(r2.ids() == row.ids())
+    assert np.all(r2.numbers() == row.numbers())
+    assert r2.field("rating") is not None
+    assert np.all(r2.field("rating") == row.field("rating"))
+    assert r2.field("timestamp") is not None
+    assert np.all(r2.field("timestamp") == row.field("timestamp"))
