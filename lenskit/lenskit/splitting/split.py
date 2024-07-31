@@ -30,6 +30,13 @@ class TTSplit(NamedTuple):
     The test data.
     """
 
+    @property
+    def test_size(self) -> int:
+        """
+        Get the number of test pairs.
+        """
+        return sum(len(il) for il in self.test.values())
+
 
 def dict_to_df(data: dict[EntityId, ItemList]) -> pd.DataFrame:
     """

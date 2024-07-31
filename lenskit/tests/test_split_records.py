@@ -24,7 +24,7 @@ def test_crossfold_records(ml_ds: Dataset):
 
     for s in splits:
         # do we have all the data?
-        test_count = sum(len(il) for il in s.test.values())
+        test_count = s.test_size
         assert test_count + s.train.interaction_count == ml_ds.count("pairs")
         test_pairs = set((u, i) for (u, il) in s.test.items() for i in il.ids())
         tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
@@ -46,9 +46,10 @@ def test_crossfold_records(ml_ds: Dataset):
 
 
 def test_sample_records_once(ml_ds):
-    train, test = sample_records(ml_ds, size=1000)
+    split = sample_records(ml_ds, size=1000)
+    train, test = split
 
-    test_count = sum(len(il) for il in test.values())
+    test_count = split.test_size
     assert test_count == 1000
     assert test_count + train.interaction_count == ml_ds.count("pairs")
     test_pairs = set((u, i) for (u, il) in test.items() for i in il.ids())
@@ -67,7 +68,7 @@ def test_sample_records(ml_ds):
     assert len(splits) == 5
 
     for s in splits:
-        test_count = sum(len(il) for il in s.test.values())
+        test_count = s.test_size
         assert test_count == 1000
         assert test_count + s.train.interaction_count == ml_ds.count("pairs")
         test_pairs = set((u, i) for (u, il) in s.test.items() for i in il.ids())
@@ -94,7 +95,7 @@ def test_sample_rows_more_smaller_parts(ml_ds: Dataset):
     assert len(splits) == 10
 
     for s in splits:
-        test_count = sum(len(il) for il in s.test.values())
+        test_count = s.test_size
         assert test_count == 500
         assert test_count + s.train.interaction_count == ml_ds.count("pairs")
         test_pairs = set((u, i) for (u, il) in s.test.items() for i in il.ids())
@@ -121,7 +122,7 @@ def test_sample_non_disjoint(ml_ds: Dataset):
     assert len(splits) == 10
 
     for s in splits:
-        test_count = sum(len(il) for il in s.test.values())
+        test_count = s.test_size
         assert test_count == 1000
         assert test_count + s.train.interaction_count == ml_ds.count("pairs")
         test_pairs = set((u, i) for (u, il) in s.test.items() for i in il.ids())
@@ -152,7 +153,7 @@ def test_sample_oversize(ml_ds: Dataset):
     assert len(splits) == 50
 
     for s in splits:
-        test_count = sum(len(il) for il in s.test.values())
+        test_count = s.test_size
         assert test_count + s.train.interaction_count == ml_ds.count("pairs")
         test_pairs = set((u, i) for (u, il) in s.test.items() for i in il.ids())
         tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
