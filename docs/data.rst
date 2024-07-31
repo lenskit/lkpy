@@ -73,9 +73,9 @@ abstract class with implementations covering various scenarios.
 Creating Datasets
 ~~~~~~~~~~~~~~~~~
 
-Several functions create :class:`Dataset`s from different input data sources.
+Several functions can create a :class:`Dataset` from different input data sources.
 
-.. autofunction:: from_interaction_df
+.. autofunction:: from_interactions_df
 
 Loading Common Datasets
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -89,28 +89,18 @@ LensKit uses *vocabularies* to record user/item IDs, tags, terms, etc. in a way
 that facilitates easy mapping to 0-based contiguous indexes for use in matrix
 and tensor data structures.
 
-.. module:: lenskit.data.vocab
+.. module:: lenskit.data
 
 .. autoclass:: Vocabulary
 
-Dataset implementations
-~~~~~~~~~~~~~~~~~~~~~~~
 
-Matrix Dataset
---------------
+Item Lists
+~~~~~~~~~~
 
-The :class:`MatrixDataset` provides an in-memory dataset implementation backed
-by a ratings matrix or implicit-feedback matrix.
+LensKit uses *item lists* to represent collections of items that may be scored,
+ranked, etc.
 
-.. autoclass:: MatrixDataset
-
-Lazy Dataset
-------------
-
-The lazy data set takes a function that loads a data set (of any type), and
-lazily uses that function to load an underlying data set when needed.
-
-.. autoclass:: LazyDataset
+.. autoclass:: ItemList
 
 User-Item Data Tables
 ~~~~~~~~~~~~~~~~~~~~~
@@ -119,3 +109,26 @@ User-Item Data Tables
 
 .. autoclass:: NumpyUserItemTable
 .. autoclass:: TorchUserItemTable
+
+Dataset Implementations
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. module:: lenskit.data.dataset
+
+Matrix Dataset
+--------------
+
+The :class:`MatrixDataset` provides an in-memory dataset implementation backed
+by a ratings matrix or implicit-feedback matrix.
+
+.. autoclass:: MatrixDataset
+    :no-members:
+
+Lazy Dataset
+------------
+
+The lazy data set takes a function that loads a data set (of any type), and
+lazily uses that function to load an underlying data set when needed.
+
+.. autoclass:: LazyDataset
+    :members: delegate

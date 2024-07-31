@@ -469,7 +469,13 @@ class Dataset(ABC):
 
 class MatrixDataset(Dataset):
     """
-    Dataset implementaiton using an in-memory rating or implicit-feedback matrix.
+    Dataset implementation using an in-memory rating or implicit-feedback
+    matrix.
+
+    .. note::
+        Client code generally should not construct this class directly.  Instead
+        use the various ``from_`` and ``load_`` functions in
+        :mod:`lenskit.data`.
     """
 
     _users: Vocabulary[EntityId]
@@ -713,6 +719,10 @@ class LazyDataset(Dataset):
     """
     A data set with an underlying load function, that doesn't call the function
     until data is actually needed.
+
+    Args:
+        loader:
+            The function that will load the dataset when needed.
     """
 
     _delegate: Dataset | None = None
@@ -720,11 +730,7 @@ class LazyDataset(Dataset):
 
     def __init__(self, loader: Callable[[], Dataset]):
         """
-        Construct a dataset.
-
-        .. note::
-            Client code generally should not call this constructor.  Instead use the
-            various ``from_`` and ``load_`` functions in :mod:`lenskit.data`.
+        Construct a lazy dataset.
         """
         self._loader = loader
 
@@ -779,9 +785,11 @@ def from_interactions_df(
             The user-item interactions (e.g. ratings).  The dataset code takes
             ownership of this data frame and may modify it.
         user_col:
-            The name of the user ID column.
+            The name of the user ID column.  By default, looks for columns named
+            ``user``, ``user_id``, or ``userId``, with several case variants.
         item_col:
-            The name of the item ID column.
+            The name of the item ID column.  By default, looks for columns named
+            ``item``, ``item_id``, or ``itemId``, with several case variants.
         rating_col:
             The name of the rating column.
         timestamp_col:
