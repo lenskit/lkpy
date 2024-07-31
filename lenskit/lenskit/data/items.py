@@ -318,21 +318,30 @@ class ItemList:
         else:
             return val.to(format)
 
-    def to_df(self) -> pd.DataFrame:
+    def to_df(self, *, ids: bool = True, numbers: bool = True) -> pd.DataFrame:
         """
         Convert this item list to a Pandas data frame.  It has the following columns:
 
-        * ``item_id`` — the item IDs (if available)
-        * ``item_id`` — the item numbers (if available)
+        * ``item_id`` — the item IDs (if available and ``ids=True``)
+        * ``item_num`` — the item numbers (if available and ``numbers=True``)
         * ``score`` — the item scores
         * ``rank`` — the item ranks (if the list is ordered)
         * all other defined fields, using their field names
         """
         cols = {}
-        if self._ids is not None or self._vocab is not None:
+        if ids and self._ids is not None or self._vocab is not None:
             cols["item_id"] = self.ids()
-        if self._numbers is not None or self._vocab is not None:
+        if numbers and self._numbers is not None or self._vocab is not None:
             cols["item_num"] = self.numbers()
+        # we need to have numbers or ids, or it makes no sense
+        if "item_id" not in cols and "item_num" not in cols:
+            if ids and not numbers:
+                raise RuntimeError("item list has no vocabulary, cannot compute IDs")
+            elif numbers and not ids:
+                raise RuntimeError("item list has no vocabulary, cannot compute numbers")
+            else:
+                raise RuntimeError("cannot create item data frame without identifiers or numbers")
+
         if "score" in self._fields:
             cols["score"] = self.scores()
         if self.ordered:
