@@ -39,7 +39,7 @@ Resources
     :caption: Running Experiments
 
     data
-    crossfold
+    splitting
     batch
     evaluation/index
     documenting
