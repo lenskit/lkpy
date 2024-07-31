@@ -7,3 +7,5 @@
 """
 Splitting data for train-test evaluation.
 """
+
+from .split import TTSplit  # noqa: F401
