@@ -52,7 +52,7 @@ jobs:
       - name: 👢 Generate Conda environment file
         run: |
           pip install -e .
-          python -m lkdev.conda -o ci-environment.yml -e all requirements-test.txt lenskit/pyproject.toml
+          python -m lkdev.conda -o ci-environment.yml -p ${{matrix.python}} -e all requirements-test.txt lenskit/pyproject.toml
       - id: setup
         name: 📦 Set up Conda environment
         uses: mamba-org/setup-micromamba@v1
@@ -273,7 +273,7 @@ jobs:
       - name: 👢 Generate Conda environment file
         run: |
           pip install -e .
-          python -m lkdev.conda -o ci-environment.yml -e all requirements-test.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml
+          python -m lkdev.conda -o ci-environment.yml -p ${{matrix.python}} -e all requirements-test.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml
       - id: setup
         name: 📦 Set up Conda environment
         uses: mamba-org/setup-micromamba@v1
@@ -381,7 +381,7 @@ jobs:
       - name: 👢 Generate Conda environment file
         run: |
           pip install -e .
-          python -m lkdev.conda -o ci-environment.yml -e all requirements-test.txt lenskit/pyproject.toml lenskit-implicit/pyproject.toml
+          python -m lkdev.conda -o ci-environment.yml -p ${{matrix.python}} -e all requirements-test.txt lenskit/pyproject.toml lenskit-implicit/pyproject.toml
       - id: setup
         name: 📦 Set up Conda environment
         uses: mamba-org/setup-micromamba@v1
@@ -489,7 +489,7 @@ jobs:
       - name: 👢 Generate Conda environment file
         run: |
           pip install -e .
-          python -m lkdev.conda -o ci-environment.yml -e all requirements-test.txt lenskit/pyproject.toml lenskit-hpf/pyproject.toml
+          python -m lkdev.conda -o ci-environment.yml -p ${{matrix.python}} -e all requirements-test.txt lenskit/pyproject.toml lenskit-hpf/pyproject.toml
       - id: setup
         name: 📦 Set up Conda environment
         uses: mamba-org/setup-micromamba@v1
@@ -539,7 +539,7 @@ jobs:
       - name: 👢 Generate Conda environment file
         run: |
           pip install -e .
-          python -m lkdev.conda -o ci-environment.yml -e all requirements-test.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml lenskit-implicit/pyproject.toml
+          python -m lkdev.conda -o ci-environment.yml -p 3.10 -e all requirements-test.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml lenskit-implicit/pyproject.toml
       - id: setup
         name: 📦 Set up Conda environment
         uses: mamba-org/setup-micromamba@v1
@@ -596,7 +596,7 @@ jobs:
       - name: 👢 Generate Conda environment file
         run: |
           pip install -e .
-          python -m lkdev.conda -o ci-environment.yml -e all requirements-test.txt requirements-demo.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml lenskit-implicit/pyproject.toml
+          python -m lkdev.conda -o ci-environment.yml -p 3.10 -e all requirements-test.txt requirements-demo.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml lenskit-implicit/pyproject.toml
       - id: setup
         name: 📦 Set up Conda environment
         uses: mamba-org/setup-micromamba@v1

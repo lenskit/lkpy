@@ -112,7 +112,7 @@ def job_strategy(options: JobOptions) -> dict[str, Any]:
 
 
 def steps_setup_conda(options: JobOptions) -> list[GHStep]:
-    ctool = ["python -m lkdev.conda", "-o", "ci-environment.yml"]
+    ctool = ["python -m lkdev.conda", "-o", "ci-environment.yml", "-p", options.python_version]
     if options.extras:
         for e in options.extras:
             ctool += ["-e", e]
