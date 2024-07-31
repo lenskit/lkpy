@@ -37,6 +37,20 @@ class TTSplit(NamedTuple):
         """
         return sum(len(il) for il in self.test.values())
 
+    @property
+    def test_df(self) -> pd.DataFrame:
+        """
+        Get the test data as a data frame.
+        """
+        return dict_to_df(self.test)
+
+    @property
+    def train_df(self) -> pd.DataFrame:
+        """
+        Get the training data as a data frame.
+        """
+        return self.train.interaction_matrix("pandas", field="all")
+
 
 def dict_to_df(data: dict[EntityId, ItemList]) -> pd.DataFrame:
     """

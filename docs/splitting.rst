@@ -23,9 +23,8 @@ a user-based 5-fold cross-validation as was the default in the old LensKit:
     from lenskit.splitting import crossfold_users, SampleN, dict_to_df
     dataset = load_movielens('data/ml-20m.zip')
     for i, tp in enumerate(crossfold_users(ratings, 5, SampleN(5))):
-        train_df = tp.train.interaction_log('pandas', field='all', original_ids=True)
-        train_df.to_parquet(f'ml-20m.exp/train-{i}.parquet')
-        dict_to_df(tp.test).to_parquet(f'ml-20m.exp/test-{i}.parquet')
+        tp.train_df.to_parquet(f'ml-20m.exp/train-{i}.parquet')
+        tp.test_df.to_parquet(f'ml-20m.exp/test-{i}.parquet')
 
 Record-based Random Splitting
 -----------------------------
