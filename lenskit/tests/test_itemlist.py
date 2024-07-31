@@ -129,6 +129,38 @@ def test_scores():
     assert il.ranks() is None
 
 
+def test_scores_pandas_no_index():
+    data = np.random.randn(5)
+    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
+
+    scores = il.scores("pandas")
+    assert scores is not None
+    assert scores.shape == (5,)
+    assert np.all(scores == data)
+
+
+def test_scores_pandas_id_index():
+    data = np.random.randn(5)
+    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
+    scores = il.scores("pandas", index="ids")
+    assert scores is not None
+    assert scores.shape == (5,)
+    assert np.all(scores == data)
+    assert scores.index.name == "item_id"
+    assert np.all(scores.index.values == ITEMS)
+
+
+def test_scores_pandas_num_index():
+    data = np.random.randn(5)
+    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
+    scores = il.scores("pandas", index="numbers")
+    assert scores is not None
+    assert scores.shape == (5,)
+    assert np.all(scores == data)
+    assert scores.index.name == "item_num"
+    assert np.all(scores.index.values == np.arange(5))
+
+
 def test_ranks():
     il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, ordered=True)
     assert il.ordered

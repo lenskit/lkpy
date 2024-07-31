@@ -200,12 +200,16 @@ class ItemList:
     @overload
     def scores(self, format: Literal["torch"]) -> torch.Tensor | None: ...
     @overload
+    def scores(
+        self, format: Literal["pandas"], *, index: Literal["ids", "numbers"] | None = None
+    ) -> pd.Series | None: ...
+    @overload
     def scores(self, format: LiteralString = "numpy") -> ArrayLike | None: ...
-    def scores(self, format: LiteralString = "numpy") -> ArrayLike | None:
+    def scores(self, format: LiteralString = "numpy", **kwargs) -> ArrayLike | None:
         """
         Get the item scores (if available).
         """
-        return self.field("score", format)
+        return self.field("score", format, **kwargs)
 
     @overload
     def ranks(self, format: Literal["numpy"] = "numpy") -> NDArray[np.int32] | None: ...
@@ -240,11 +244,31 @@ class ItemList:
     @overload
     def field(self, name: str, format: Literal["torch"]) -> torch.Tensor | None: ...
     @overload
+    def field(
+        self,
+        name: str,
+        format: Literal["pandas"],
+        *,
+        index: Literal["ids", "numbers"] | None = None,
+    ) -> pd.Series | None: ...
+    @overload
     def field(self, name: str, format: LiteralString) -> ArrayLike | None: ...
-    def field(self, name: str, format: LiteralString = "numpy") -> ArrayLike | None:
+    def field(
+        self, name: str, format: LiteralString = "numpy", *, index: LiteralString | None = None
+    ) -> ArrayLike | None:
         val = self._fields.get(name, None)
         if val is None:
             return None
+        elif format == "pandas":
+            idx = None
+            vs = val.to("numpy")
+            if index == "ids":
+                idx = pd.Index(self.ids(), name="item_id")
+            elif index == "numbers":
+                idx = pd.Index(self.numbers(), name="item_num")
+            elif index:  # pragma: nocover
+                raise ValueError(f"unsupported Pandas index {index}")
+            return pd.Series(vs, index=idx)
         else:
             return val.to(format)
 
