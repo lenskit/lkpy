@@ -10,28 +10,33 @@ Per-user rating holdout methods for user-based data splitting.
 
 from typing import Protocol
 
+import numpy as np
 from seedbank import numpy_rng
+from seedbank.numpy import NPRNGSource
+
+from lenskit.data.items import ItemList
 
 
 class HoldoutMethod(Protocol):
     """
-    Holdout methods select test rows for a user (or item).  Partition methods
-    are callable; when called with a data frame, they return the test entries.
+    Holdout methods select test rows for a user (or occasionally an item).
+    Partition methods are callable; when called with a data frame, they return
+    the test entries.
     """
 
-    def __call__(self, udf):
+    def __call__(self, items: ItemList) -> ItemList:
         """
-        Subset a data frame.
+        Subset an item list (in the uncommon case of item-based holdouts, the
+        item list actually holds user IDs).
 
         Args:
-            udf(pandas.DataFrame):
-                The input data frame of rows for a user or item.
+            udf:
+                The item list from which holdout items should be selected.
 
         Returns:
-            pandas.DataFrame:
-                The data frame of test rows, a subset of ``udf``.
+            The list of test items.
         """
-        pass
+        raise NotImplementedError()
 
 
 class SampleN(HoldoutMethod):
@@ -39,16 +44,23 @@ class SampleN(HoldoutMethod):
     Randomly select a fixed number of test rows per user/item.
 
     Args:
-        n(int): the number of test items to select
+        n: the number of test items to select
         rng: the random number generator or seed
     """
 
-    def __init__(self, n, rng_spec=None):
+    n: int
+    rng: np.random.Generator
+
+    def __init__(self, n: int, rng_spec: NPRNGSource | None = None):
         self.n = n
         self.rng = numpy_rng(rng_spec)
 
-    def __call__(self, udf):
-        return udf.sample(n=self.n, random_state=self.rng)
+    def __call__(self, items: ItemList) -> ItemList:
+        if len(items) <= self.n:
+            return items
+
+        sel = self.rng.choice(len(items), self.n, replace=False)
+        return items[sel]
 
 
 class SampleFrac(HoldoutMethod):
@@ -56,32 +68,48 @@ class SampleFrac(HoldoutMethod):
     Randomly select a fraction of test rows per user/item.
 
     Args:
-        frac(float): the fraction items to select for testing.
+        frac: the fraction items to select for testing.
     """
 
-    def __init__(self, frac, rng_spec=None):
+    fraction: float
+    rng: np.random.Generator
+
+    def __init__(self, frac: float, rng_spec: NPRNGSource | None = None):
         self.fraction = frac
         self.rng = numpy_rng(rng_spec)
 
-    def __call__(self, udf):
-        return udf.sample(frac=self.fraction, random_state=self.rng)
+    def __call__(self, items: ItemList) -> ItemList:
+        n = round(len(items) * self.fraction)
+        sel = self.rng.choice(len(items), n, replace=False)
+        return items[sel]
 
 
 class LastN(HoldoutMethod):
     """
     Select a fixed number of test rows per user/item, based on ordering by a
-    column.
+    field.
 
     Args:
-        n(int): The number of test items to select.
+        n: The number of test items to select.
+        field: The field to order by.
     """
 
-    def __init__(self, n, col="timestamp"):
-        self.n = n
-        self.column = col
+    n: int
+    field: str
 
-    def __call__(self, udf):
-        return udf.sort_values(self.column).iloc[-self.n :]
+    def __init__(self, n: int, field: str = "timestamp"):
+        self.n = n
+        self.field = field
+
+    def __call__(self, items: ItemList) -> ItemList:
+        if len(items) <= self.n:
+            return items
+
+        col = items.field(self.field)
+        if col is None:
+            raise TypeError(f"item list does not have ordering field {self.field}")
+        ordered = np.argsort(col)
+        return items[ordered[-self.n :]]
 
 
 class LastFrac(HoldoutMethod):
@@ -92,10 +120,18 @@ class LastFrac(HoldoutMethod):
         frac(double): the fraction of items to select for testing.
     """
 
-    def __init__(self, frac, col="timestamp"):
-        self.fraction = frac
-        self.column = col
+    fraction: float
+    field: str
 
-    def __call__(self, udf):
-        n = round(len(udf) * self.fraction)
-        return udf.sort_values(self.column).iloc[-n:]
+    def __init__(self, frac: float, field: str = "timestamp"):
+        self.fraction = frac
+        self.field = field
+
+    def __call__(self, items: ItemList) -> ItemList:
+        n = round(len(items) * self.fraction)
+
+        col = items.field(self.field)
+        if col is None:
+            raise TypeError(f"item list does not have ordering field {self.field}")
+        ordered = np.argsort(col)
+        return items[ordered[-n:]]

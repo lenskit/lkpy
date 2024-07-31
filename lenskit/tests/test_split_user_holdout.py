@@ -13,92 +13,109 @@ import pandas as pd
 
 import pytest
 
-import lenskit.crossfold as xf
+from lenskit.data.dataset import Dataset
+from lenskit.splitting.holdout import LastFrac, LastN, SampleFrac, SampleN
 
 
-def test_sample_n(ml_ratings: pd.DataFrame):
-    users = np.random.choice(ml_ratings.user.unique(), 5, replace=False)
+def test_sample_n(ml_ds: Dataset):
+    users = np.random.choice(ml_ds.users.ids(), 5, replace=False)
 
-    s5 = xf.SampleN(5)
+    s5 = SampleN(5)
     for u in users:
-        udf = ml_ratings[ml_ratings.user == u]
-        tst = s5(udf)
-        trn = udf.loc[udf.index.difference(tst.index), :]
+        row = ml_ds.user_row(u)
+        assert row is not None
+        tst = s5(row)
+        mask = np.isin(row.ids(), tst.ids())
+        trn = row[~mask]
         assert len(tst) == 5
-        assert len(tst) + len(trn) == len(udf)
+        assert len(tst) + len(trn) == len(row)
 
-    s10 = xf.SampleN(10)
+    s10 = SampleN(10)
     for u in users:
-        udf = ml_ratings[ml_ratings.user == u]
-        tst = s10(udf)
-        trn = udf.loc[udf.index.difference(tst.index), :]
+        row = ml_ds.user_row(u)
+        assert row is not None
+        tst = s10(row)
+        mask = np.isin(row.ids(), tst.ids())
+        trn = row[~mask]
         assert len(tst) == 10
-        assert len(tst) + len(trn) == len(udf)
+        assert len(tst) + len(trn) == len(row)
 
 
-def test_sample_frac(ml_ratings: pd.DataFrame):
-    users = np.random.choice(ml_ratings.user.unique(), 5, replace=False)
+def test_sample_frac(ml_ds: Dataset):
+    users = np.random.choice(ml_ds.users.ids(), 5, replace=False)
 
-    samp = xf.SampleFrac(0.2)
+    samp = SampleFrac(0.2)
     for u in users:
-        udf = ml_ratings[ml_ratings.user == u]
-        tst = samp(udf)
-        trn = udf.loc[udf.index.difference(tst.index), :]
-        assert len(tst) + len(trn) == len(udf)
-        assert len(tst) >= math.floor(len(udf) * 0.2)
-        assert len(tst) <= math.ceil(len(udf) * 0.2)
+        row = ml_ds.user_row(u)
+        assert row is not None
+        tst = samp(row)
+        mask = np.isin(row.ids(), tst.ids())
+        trn = row[~mask]
+        assert len(tst) + len(trn) == len(row)
+        assert len(tst) >= math.floor(len(row) * 0.2)
+        assert len(tst) <= math.ceil(len(row) * 0.2)
 
-    samp = xf.SampleFrac(0.5)
+    samp = SampleFrac(0.5)
     for u in users:
-        udf = ml_ratings[ml_ratings.user == u]
-        tst = samp(udf)
-        trn = udf.loc[udf.index.difference(tst.index), :]
-        assert len(tst) + len(trn) == len(udf)
-        assert len(tst) >= math.floor(len(udf) * 0.5)
-        assert len(tst) <= math.ceil(len(udf) * 0.5)
+        row = ml_ds.user_row(u)
+        assert row is not None
+        tst = samp(row)
+        mask = np.isin(row.ids(), tst.ids())
+        trn = row[~mask]
+        assert len(tst) + len(trn) == len(row)
+        assert len(tst) >= math.floor(len(row) * 0.5)
+        assert len(tst) <= math.ceil(len(row) * 0.5)
 
 
-def test_last_n(ml_ratings: pd.DataFrame):
-    users = np.random.choice(ml_ratings.user.unique(), 5, replace=False)
+def test_last_n(ml_ds: Dataset):
+    users = np.random.choice(ml_ds.users.ids(), 5, replace=False)
 
-    samp = xf.LastN(5)
+    samp = LastN(5)
     for u in users:
-        udf = ml_ratings[ml_ratings.user == u]
-        tst = samp(udf)
-        trn = udf.loc[udf.index.difference(tst.index), :]
+        row = ml_ds.user_row(u)
+        assert row is not None
+        tst = samp(row)
+        mask = np.isin(row.ids(), tst.ids())
+        trn = row[~mask]
         assert len(tst) == 5
-        assert len(tst) + len(trn) == len(udf)
-        assert tst.timestamp.min() >= trn.timestamp.max()
+        assert len(tst) + len(trn) == len(row)
+        assert tst.field("timestamp").min() >= trn.field("timestamp").max()
 
-    samp = xf.LastN(7)
+    samp = LastN(7)
     for u in users:
-        udf = ml_ratings[ml_ratings.user == u]
-        tst = samp(udf)
-        trn = udf.loc[udf.index.difference(tst.index), :]
+        row = ml_ds.user_row(u)
+        assert row is not None
+        tst = samp(row)
+        mask = np.isin(row.ids(), tst.ids())
+        trn = row[~mask]
         assert len(tst) == 7
-        assert len(tst) + len(trn) == len(udf)
-        assert tst.timestamp.min() >= trn.timestamp.max()
+        assert len(tst) + len(trn) == len(row)
+        assert tst.field("timestamp").min() >= trn.field("timestamp").max()
 
 
-def test_last_frac(ml_ratings: pd.DataFrame):
-    users = np.random.choice(ml_ratings.user.unique(), 5, replace=False)
+def test_last_frac(ml_ds: Dataset):
+    users = np.random.choice(ml_ds.users.ids(), 5, replace=False)
 
-    samp = xf.LastFrac(0.2, "timestamp")
+    samp = LastFrac(0.2, "timestamp")
     for u in users:
-        udf = ml_ratings[ml_ratings.user == u]
-        tst = samp(udf)
-        trn = udf.loc[udf.index.difference(tst.index), :]
-        assert len(tst) + len(trn) == len(udf)
-        assert len(tst) >= math.floor(len(udf) * 0.2)
-        assert len(tst) <= math.ceil(len(udf) * 0.2)
-        assert tst.timestamp.min() >= trn.timestamp.max()
+        row = ml_ds.user_row(u)
+        assert row is not None
+        tst = samp(row)
+        mask = np.isin(row.ids(), tst.ids())
+        trn = row[~mask]
+        assert len(tst) + len(trn) == len(row)
+        assert len(tst) >= math.floor(len(row) * 0.2)
+        assert len(tst) <= math.ceil(len(row) * 0.2)
+        assert tst.field("timestamp").min() >= trn.field("timestamp").max()
 
-    samp = xf.LastFrac(0.5, "timestamp")
+    samp = LastFrac(0.5, "timestamp")
     for u in users:
-        udf = ml_ratings[ml_ratings.user == u]
-        tst = samp(udf)
-        trn = udf.loc[udf.index.difference(tst.index), :]
-        assert len(tst) + len(trn) == len(udf)
-        assert len(tst) >= math.floor(len(udf) * 0.5)
-        assert len(tst) <= math.ceil(len(udf) * 0.5)
-        assert tst.timestamp.min() >= trn.timestamp.max()
+        row = ml_ds.user_row(u)
+        assert row is not None
+        tst = samp(row)
+        mask = np.isin(row.ids(), tst.ids())
+        trn = row[~mask]
+        assert len(tst) + len(trn) == len(row)
+        assert len(tst) >= math.floor(len(row) * 0.5)
+        assert len(tst) <= math.ceil(len(row) * 0.5)
+        assert tst.field("timestamp").min() >= trn.field("timestamp").max()
