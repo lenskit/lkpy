@@ -44,6 +44,10 @@ class ItemList:
     An item list logically a list of rows, each of which is an item, like a
     :class:`~pandas.DataFrame` but supporting multiple array backends.
 
+    Item lists can be subset as an array (e.g. ``items[selector]``), where
+    integer indices (or arrays thereof), boolean arrays, and slices are allowed
+    as selectors.
+
     When an item list is pickled, it is pickled compactly but only for CPUs: the
     vocabulary is dropped (after ensuring both IDs and numbers are computed),
     and all arrays are pickled as NumPy arrays.  This makes item lists compact
@@ -73,6 +77,13 @@ class ItemList:
         * Both singular and plural forms are accepted for item IDs numbers, and
           scores in the keyword arguments.  Other field names should be
           singular.
+
+    .. todo::
+
+        Right now, selection / subsetting only happens on the CPU, and will move
+        data to the CPU for the subsetting operation.  There is no reason, in
+        principle, why we cannot subset on GPU.  Future revisions may add
+        support for this.
 
     Args:
         item_ids:
@@ -332,6 +343,33 @@ class ItemList:
 
     def __len__(self):
         return self._len
+
+    def __getitem__(
+        self,
+        sel: NDArray[np.bool_] | NDArray[np.integer] | Sequence[int] | torch.Tensor | int | slice,
+    ) -> ItemList:
+        """
+        Subset the item list.
+
+        Args:
+            sel:
+                The items to select. Can be either a Boolean array of the same
+                length as the list that is ``True`` to indicate selected items,
+                or an array of indices of the items to retain (in order in the
+                list, starting from 0).
+        """
+        if np.isscalar(sel):
+            sel = np.array([sel])
+        elif not isinstance(sel, slice):
+            sel = np.asarray(sel)
+
+        # sel is now a selection array, or it is a slice. numpy supports both.
+        iids = self._ids[sel] if self._ids is not None else None
+        nums = self._numbers.numpy()[sel] if self._numbers is not None else None
+        flds = {n: f.numpy()[sel] for (n, f) in self._fields.items()}
+        return ItemList(
+            item_ids=iids, item_nums=nums, vocabulary=self._vocab, ordered=self.ordered, **flds
+        )
 
     def __getstate__(self) -> dict[str, object]:
         state: dict[str, object] = {"ordered": self.ordered, "len": self._len}
