@@ -177,3 +177,25 @@ def test_numbers_alt_vocab():
     av = Vocabulary(["A", "B"] + ITEMS)
     nums = il.numbers(vocabulary=av)
     assert np.all(nums == np.arange(2, 7))
+
+
+def test_pandas_df():
+    data = np.random.randn(5)
+    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
+
+    df = il.to_df()
+    assert np.all(df["item_id"] == ITEMS)
+    assert np.all(df["item_num"] == np.arange(5))
+    assert np.all(df["score"] == data)
+    assert "rank" not in df.columns
+
+
+def test_pandas_df_ordered():
+    data = np.random.randn(5)
+    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data, ordered=True)
+
+    df = il.to_df()
+    assert np.all(df["item_id"] == ITEMS)
+    assert np.all(df["item_num"] == np.arange(5))
+    assert np.all(df["score"] == data)
+    assert np.all(df["rank"] == np.arange(1, 6))

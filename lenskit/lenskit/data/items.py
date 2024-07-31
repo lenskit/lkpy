@@ -290,5 +290,28 @@ class ItemList:
         else:
             return val.to(format)
 
+    def to_df(self) -> pd.DataFrame:
+        """
+        Convert this item list to a Pandas data frame.  It has the following columns:
+
+        * ``item_id`` — the item IDs (if available)
+        * ``item_id`` — the item numbers (if available)
+        * ``score`` — the item scores
+        * ``rank`` — the item ranks (if the list is ordered)
+        * all other defined fields, using their field names
+        """
+        cols = {}
+        if self._ids is not None or self._vocab is not None:
+            cols["item_id"] = self.ids()
+        if self._numbers is not None or self._vocab is not None:
+            cols["item_num"] = self.numbers()
+        if "score" in self._fields:
+            cols["score"] = self.scores()
+        if self.ordered:
+            cols["rank"] = self.ranks()
+        # add remaining fields
+        cols.update((k, v.numpy()) for (k, v) in self._fields.items() if k != "score")
+        return pd.DataFrame(cols)
+
     def __len__(self):
         return self._len

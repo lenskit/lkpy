@@ -352,6 +352,7 @@ def test_matrix_rows_by_id(rng: np.random.Generator, ml_ratings: pd.DataFrame, m
         row = ml_ds.user_row(user)
         assert row is not None
         urows = ml_ratings[ml_ratings["user"] == user].sort_values("item")
+        urows = urows.reset_index(drop=True)
         assert set(row.ids()) == set(urows["item"])
         assert np.all(row.numbers() == ml_ds.items.numbers(urows["item"]))
 
@@ -362,6 +363,10 @@ def test_matrix_rows_by_id(rng: np.random.Generator, ml_ratings: pd.DataFrame, m
         timestamps = row.field("timestamp")
         assert timestamps is not None
         assert np.all(timestamps == urows["timestamp"])
+
+        # we'll quick check additional fields on the item list here
+        df = row.to_df()
+        assert np.all(df["timestamp"] == urows["timestamp"])
 
 
 def test_matrix_rows_by_num(rng: np.random.Generator, ml_ratings: pd.DataFrame, ml_ds: Dataset):
