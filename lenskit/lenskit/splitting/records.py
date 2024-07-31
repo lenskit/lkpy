@@ -4,6 +4,7 @@ from typing import Iterator, overload
 import numpy as np
 import pandas as pd
 from seedbank import numpy_rng
+from seedbank.numpy import NPRNGSource
 
 from lenskit.data.dataset import Dataset, MatrixDataset
 
@@ -12,7 +13,9 @@ from .split import TTSplit, dict_from_df
 _log = logging.getLogger(__name__)
 
 
-def crossfold_records(data: Dataset, partitions: int, *, rng_spec=None) -> Iterator[TTSplit]:
+def crossfold_records(
+    data: Dataset, partitions: int, *, rng_spec: NPRNGSource | None = None
+) -> Iterator[TTSplit]:
     """
     Partition a dataset by **records** into cross-fold partitions.  This
     partitions the records (ratings, play counts, clicks, etc.) into *k*
@@ -54,14 +57,29 @@ def crossfold_records(data: Dataset, partitions: int, *, rng_spec=None) -> Itera
 
 @overload
 def sample_records(
-    data: Dataset, size: int, *, disjoint=True, rng_spec=None, repeats: None = None
+    data: Dataset,
+    size: int,
+    *,
+    disjoint: bool = True,
+    rng_spec: NPRNGSource | None = None,
+    repeats: None = None,
 ) -> TTSplit: ...
 @overload
 def sample_records(
-    data: Dataset, size: int, *, repeats: int, disjoint=True, rng_spec=None
+    data: Dataset,
+    size: int,
+    *,
+    repeats: int,
+    disjoint: bool = True,
+    rng_spec: NPRNGSource | None = None,
 ) -> Iterator[TTSplit]: ...
 def sample_records(
-    data: Dataset, size: int, *, repeats: int | None = None, disjoint=True, rng_spec=None
+    data: Dataset,
+    size: int,
+    *,
+    repeats: int | None = None,
+    disjoint: bool = True,
+    rng_spec: NPRNGSource | None = None,
 ) -> TTSplit | Iterator[TTSplit]:
     """
     Sample train-test a frame of ratings into train-test partitions.  This

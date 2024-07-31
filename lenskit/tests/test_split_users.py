@@ -13,181 +13,144 @@ import pandas as pd
 
 import pytest
 
-import lenskit.crossfold as xf
+from lenskit.data.dataset import Dataset, from_interactions_df
+from lenskit.splitting.holdout import SampleFrac, SampleN
+from lenskit.splitting.users import crossfold_users, sample_users
 
 
-def test_partition_users(ml_ratings: pd.DataFrame):
-    splits = xf.partition_users(ml_ratings, 5, xf.SampleN(5))
+def test_crossfold_users(ml_ds: Dataset):
+    splits = crossfold_users(ml_ds, 5, SampleN(5))
     splits = list(splits)
     assert len(splits) == 5
 
+    users = set()
     for s in splits:
-        ucounts = s.test.groupby("user").agg("count")
-        assert all(ucounts == 5)
-        assert all(s.test.index.union(s.train.index) == ml_ratings.index)
-        assert all(s.train["user"].isin(s.train["user"].unique()))
-        assert len(s.test) + len(s.train) == len(ml_ratings)
+        assert all(len(il) for il in s.test.values())
+        assert not any(u in users for u in s.test.keys())
+        users |= s.test.keys()
 
-    users = ft.reduce(lambda us1, us2: us1 | us2, (set(s.test.user) for s in splits))
-    assert len(users) == ml_ratings.user.nunique()
-    assert users == set(ml_ratings.user)
+        test_pairs = set((u, i) for (u, il) in s.test.items() for i in il.ids())
+        tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
+        train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
+        assert not test_pairs & train_pairs
+        assert s.test_size + s.train.count("pairs") == ml_ds.count("pairs")
+
+    assert users == set(ml_ds.users)
 
 
-def test_partition_may_skip_train(ml_ratings: pd.DataFrame):
+def test_crossfold_may_skip_train(ml_ratings: pd.DataFrame):
     "Partitioning when users may not have enough ratings to be in the train and test sets."
     # make a data set where some users only have 1 rating
     ml_ratings = ml_ratings.sample(frac=0.1)
-    users = ml_ratings.groupby("user")["rating"].count()
-    assert users.min() == 1.0  # we should have some small users!
-    users.name = "ur_count"
+    ucounts = ml_ratings.groupby("user")["rating"].count()
+    assert ucounts.min() == 1  # we should have some small users!
+    ucounts.name = "ur_count"
+    ml_ds = from_interactions_df(ml_ratings)
 
-    splits = xf.partition_users(ml_ratings, 5, xf.SampleN(1))
+    splits = crossfold_users(ml_ds, 5, SampleN(1))
     splits = list(splits)
     assert len(splits) == 5
 
     # now we go make sure we're missing some users! And don't have any NaN ml_ratings
     for train, test in splits:
-        # no null ml_ratings
-        assert all(train["rating"].notna())
-        # see if test users with 1 rating are missing from train
-        test = test.join(users, on="user")
-        assert all(~(test.loc[test["ur_count"] == 1, "user"].isin(train["user"].unique())))
-        # and users with more than one rating are in train
-        assert all(test.loc[test["ur_count"] > 1, "user"].isin(train["user"].unique()))
+        for u in ucounts[ucounts == 1].index:
+            if u in test:
+                row = train.user_row(u)
+                assert row is not None
+                assert len(row) == 0
 
 
-def test_partition_users_frac(ml_ratings: pd.DataFrame):
-    splits = xf.partition_users(ml_ratings, 5, xf.SampleFrac(0.2))
+def test_crossfold_users_frac(ml_ds: Dataset):
+    splits = crossfold_users(ml_ds, 5, SampleFrac(0.2))
     splits = list(splits)
     assert len(splits) == 5
-    ucounts = ml_ratings.groupby("user").item.count()
-    uss = ucounts * 0.2
+    ustats = ml_ds.user_stats()
+    uss = ustats["count"] * 0.2
 
     for s in splits:
-        tucs = s.test.groupby("user").item.count()
-        assert all(tucs >= uss.loc[tucs.index] - 1)
-        assert all(tucs <= uss.loc[tucs.index] + 1)
-        assert all(s.test.index.union(s.train.index) == ml_ratings.index)
-        assert len(s.test) + len(s.train) == len(ml_ratings)
-
-    # we have all users
-    users = ft.reduce(lambda us1, us2: us1 | us2, (set(s.test.user) for s in splits))
-    assert len(users) == ml_ratings.user.nunique()
-    assert users == set(ml_ratings.user)
+        assert all(len(il) >= uss.loc[u] - 1 for (u, il) in s.test.items())
+        assert all(len(il) <= uss.loc[u] + 1 for (u, il) in s.test.items())
+        assert s.test_size + s.train.count("pairs") == ml_ds.count("pairs")
 
 
-def test_sample_users(ml_ratings: pd.DataFrame):
-    splits = xf.sample_users(ml_ratings, 5, 100, xf.SampleN(5))
+def test_sample_users_single(ml_ds: Dataset):
+    split = sample_users(ml_ds, 100, SampleN(5))
+
+    assert len(split.test) == 100
+    assert split.test_size == 500
+
+    test_pairs = set((u, i) for (u, il) in split.test.items() for i in il.ids())
+    assert len(test_pairs) == split.test_size
+    tdf = split.train.interaction_matrix("pandas", field="rating", original_ids=True)
+    train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
+    assert len(train_pairs) == split.train.count("pairs")
+    assert len(test_pairs & train_pairs) == 0
+    assert split.test_size + split.train.count("pairs") == ml_ds.count("pairs")
+
+
+def test_sample_users(ml_ds: Dataset):
+    splits = sample_users(ml_ds, 100, SampleN(5), repeats=5)
     splits = list(splits)
     assert len(splits) == 5
 
+    aus = set()
     for s in splits:
-        ucounts = s.test.groupby("user").agg("count")
-        assert len(s.test) == 5 * 100
-        assert len(ucounts) == 100
-        assert all(ucounts == 5)
-        assert all(s.test.index.union(s.train.index) == ml_ratings.index)
-        assert len(s.test) + len(s.train) == len(ml_ratings)
+        assert len(s.test) == 100
+        assert s.test_size == 500
+        # users are disjoint
+        assert not any(u in aus for u in s.test.keys())
+        aus |= s.test.keys()
 
-    # no overlapping users
-    for s1, s2 in it.product(splits, splits):
-        if s1 is s2:
-            continue
-        us1 = s1.test.user.unique()
-        us2 = s2.test.user.unique()
-        assert len(np.intersect1d(us1, us2)) == 0
+        test_pairs = set((u, i) for (u, il) in s.test.items() for i in il.ids())
+        assert len(test_pairs) == s.test_size
+        tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
+        train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
+        assert len(train_pairs) == s.train.count("pairs")
+        assert len(test_pairs & train_pairs) == 0
+        assert s.test_size + s.train.count("pairs") == ml_ds.count("pairs")
 
 
-def test_sample_users_frac(ml_ratings: pd.DataFrame):
-    splits = xf.sample_users(ml_ratings, 5, 100, xf.SampleFrac(0.2))
+def test_sample_users_non_disjoint(ml_ds: Dataset):
+    splits = sample_users(ml_ds, 100, SampleN(5), repeats=5, disjoint=False)
     splits = list(splits)
     assert len(splits) == 5
-    ucounts = ml_ratings.groupby("user").item.count()
-    uss = ucounts * 0.2
+
+    aus = set()
 
     for s in splits:
-        tucs = s.test.groupby("user").item.count()
-        assert len(tucs) == 100
-        assert all(tucs >= uss.loc[tucs.index] - 1)
-        assert all(tucs <= uss.loc[tucs.index] + 1)
-        assert all(s.test.index.union(s.train.index) == ml_ratings.index)
-        assert len(s.test) + len(s.train) == len(ml_ratings)
+        assert len(s.test) == 100
+        assert s.test_size == 500
+        aus |= s.test.keys()
 
-    # no overlapping users
-    for s1, s2 in it.product(splits, splits):
-        if s1 is s2:
-            continue
-        us1 = s1.test.user.unique()
-        us2 = s2.test.user.unique()
-        assert len(np.intersect1d(us1, us2)) == 0
+        test_pairs = set((u, i) for (u, il) in s.test.items() for i in il.ids())
+        assert len(test_pairs) == s.test_size
+        tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
+        train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
+        assert len(train_pairs) == s.train.count("pairs")
+        assert len(test_pairs & train_pairs) == 0
+        assert s.test_size + s.train.count("pairs") == ml_ds.count("pairs")
+
+    # some user appears at least once
+    assert len(aus) < 500
 
 
 @pytest.mark.slow
-def test_sample_users_frac_oversize(ml_ratings: pd.DataFrame):
-    splits = xf.sample_users(ml_ratings, 20, 100, xf.SampleN(5))
+def test_sample_users_frac_oversize(ml_ds: Dataset):
+    splits = sample_users(ml_ds, 100, SampleN(5), repeats=20)
     splits = list(splits)
     assert len(splits) == 20
 
     for s in splits:
-        ucounts = s.test.groupby("user").agg("count")
-        assert len(ucounts) < 100
-        assert all(ucounts == 5)
-        assert all(s.test.index.union(s.train.index) == ml_ratings.index)
-        assert len(s.test) + len(s.train) == len(ml_ratings)
-
-    users = ft.reduce(lambda us1, us2: us1 | us2, (set(s.test.user) for s in splits))
-    assert len(users) == ml_ratings.user.nunique()
-    assert users == set(ml_ratings.user)
-    for s1, s2 in it.product(splits, splits):
-        if s1 is s2:
-            continue
-
-        us1 = s1.test.user.unique()
-        us2 = s2.test.user.unique()
-        assert len(np.intersect1d(us1, us2)) == 0
+        assert len(s.test) < 100
+        assert all(len(il) == 5 for il in s.test.values())
 
 
-def test_sample_users_frac_oversize_ndj(ml_ratings: pd.DataFrame):
-    splits = xf.sample_users(ml_ratings, 20, 100, xf.SampleN(5), disjoint=False)
+def test_sample_users_frac_oversize_ndj(ml_ds: Dataset):
+    splits = sample_users(ml_ds, 100, SampleN(5), repeats=20, disjoint=False)
     splits = list(splits)
     assert len(splits) == 20
 
     for s in splits:
-        ucounts = s.test.groupby("user").agg("count")
-        assert len(ucounts) == 100
-        assert len(s.test) == 5 * 100
-        assert all(ucounts == 5)
-        assert all(s.test.index.union(s.train.index) == ml_ratings.index)
-        assert len(s.test) + len(s.train) == len(ml_ratings)
-
-
-def test_non_unique_index_partition_users(ml_ratings: pd.DataFrame):
-    """Partitioning users when dataframe has non-unique indices"""
-    ml_ratings = ml_ratings.set_index("user")  ##forces non-unique index
-    with pytest.raises(ValueError):
-        for split in xf.partition_users(ml_ratings, 5, xf.SampleN(5)):
-            pass
-
-
-def test_sample_users_dup_index(ml_ratings: pd.DataFrame):
-    """Sampling users when dataframe has non-unique indices"""
-    ml_ratings = ml_ratings.set_index("user")  ##forces non-unique index
-    with pytest.raises(ValueError):
-        for split in xf.sample_users(ml_ratings, 5, 100, xf.SampleN(5)):
-            pass
-
-
-def test_sample_rows_dup_index(ml_ratings: pd.DataFrame):
-    """Sampling ml_ratings when dataframe has non-unique indices"""
-    ml_ratings = ml_ratings.set_index("user")  ##forces non-unique index
-    with pytest.raises(ValueError):
-        for split in xf.sample_rows(ml_ratings, partitions=5, size=1000):
-            pass
-
-
-def test_partition_users_dup_index(ml_ratings: pd.DataFrame):
-    """Partitioning ml_ratings when dataframe has non-unique indices"""
-    ml_ratings = ml_ratings.set_index("user")  ##forces non-unique index
-    with pytest.raises(ValueError):
-        for split in xf.partition_users(ml_ratings, 5, xf.SampleN(5)):
-            pass
+        assert len(s.test) == 100
+        assert s.test_size == 5 * 100
+        assert all([len(il) for il in s.test.values()])
