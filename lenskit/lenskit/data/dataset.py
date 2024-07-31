@@ -116,6 +116,7 @@ class Dataset(ABC):
 
                 * users
                 * items
+                * pairs (observed user-item pairs)
                 * interactions
                 * ratings
         """
@@ -338,6 +339,11 @@ class Dataset(ABC):
                 underlying data, then this is equivalent to ``"indicator"``,
                 except that the ``"pandas"`` format will include a ``"rating"``
                 column of all 1s.
+
+                The ``"pandas"`` format also supports the special field name
+                ``"all"`` to return a data frame with all available fields. When
+                ``field="all"``, a field named ``count`` (if defined) is
+                combined with the ``sum`` method, and other fields use ``last``.
             combine:
                 How to combine multiple observations for a single user-item
                 pair. Available methods are:
@@ -348,7 +354,8 @@ class Dataset(ABC):
                   field.
                 * ``"sum"`` — sum the field values.
                 * ``"first"``, ``"last"`` — take the first or last value seen
-                  (in timestamp order, if timestamps are defined).
+                  (in timestamp order, if timestamps are defined; otherwise,
+                  their order in the original input).
             layout:
                 The layout for a sparse matrix.  Can be either ``csr`` or
                 ``coo``, or ``None`` to use the default for the specified
@@ -488,8 +495,8 @@ class Dataset(ABC):
 
 class MatrixDataset(Dataset):
     """
-    Dataset implementation using an in-memory rating or implicit-feedback
-    matrix.
+    Dataset implementation using an in-memory rating or implicit-feedback matrix
+    (with no duplicate interactions).
 
     .. note::
         Client code generally should not construct this class directly.  Instead
@@ -554,7 +561,7 @@ class MatrixDataset(Dataset):
                 return self._users.size
             case "items":
                 return self._items.size
-            case "interactions" | "ratings":
+            case "pairs" | "interactions" | "ratings":
                 return self._matrix.n_obs
             case _:
                 raise KeyError(f"unknown entity type {what}")
@@ -603,16 +610,16 @@ class MatrixDataset(Dataset):
                 "user_num": self._matrix.user_nums,
                 "item_num": self._matrix.item_nums,
             }
-        if field == "rating":
+        if field == "all" or field == "rating":
             if self._matrix.ratings is not None:
                 cols["rating"] = self._matrix.ratings
             else:
                 cols["rating"] = np.ones(self._matrix.n_obs)
-        elif field == "timestamp":
+        elif field == "all" or field == "timestamp":
             if self._matrix.timestamps is None:
                 raise FieldError("interaction", field)
             cols["timestamp"] = self._matrix.timestamps
-        elif field:
+        elif field and field != "all":
             raise FieldError("interaction", field)
         return pd.DataFrame(cols)
 
