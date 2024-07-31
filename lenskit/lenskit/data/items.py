@@ -28,9 +28,10 @@ EID = TypeVar("EID", bound=EntityId)
 class ItemList:
     """
     Representation of a (usually ordered) list of items, possibly with scores
-    and other associated data.  Item lists are to be treated as **immutable** —
-    create a new list with modified data, do not do in-place modifications of
-    the list itself or the arrays or data frame it returns.
+    and other associated data; many components take and return item lists.  Item
+    lists are to be treated as **immutable** — create a new list with modified
+    data, do not do in-place modifications of the list itself or the arrays or
+    data frame it returns.
 
     An item list logically a list of rows, each of which is an item, like a
     :class:`~pandas.DataFrame` but supporting multiple array backends.
