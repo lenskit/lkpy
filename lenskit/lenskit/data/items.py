@@ -142,7 +142,7 @@ class ItemList:
 
         if item_ids is not None:
             self._ids = np.asarray(item_ids)
-            if not issubclass(self._ids.dtype.type, (np.integer, np.str_, np.bytes_)):
+            if not issubclass(self._ids.dtype.type, (np.integer, np.str_, np.bytes_, np.object_)):
                 raise TypeError(f"item IDs not integers or bytes (type: {self._ids.dtype})")
 
             check_1d(self._ids, label="item_ids")
@@ -164,6 +164,38 @@ class ItemList:
             if "score" in fields:  # pragma: nocover
                 raise ValueError("cannot specify both scores= and score=")
             self._fields["score"] = MTArray(scores)
+
+    @classmethod
+    def from_df(
+        cls, df: pd.DataFrame, *, vocabulary=Vocabulary[EntityId], keep_user: bool = False
+    ) -> ItemList:
+        """
+        Create a item list from a Pandas data frame.  The frame should have
+        ``item_num`` and/or ``item_id`` columns to identify the items; other
+        columns (e.g. ``score`` or ``rating``) are added as fields. If the data
+        frame has user columns (``user_id`` or ``user_num``), those are dropped
+        by default.
+
+        Args:
+            df:
+                The data frame to turn into an item list.
+            vocabulary:
+                The item vocabulary.
+            keep_user:
+                If ``True``, keeps user ID/number columns instead of dropping them.
+        """
+        ids = df["item_id"].values if "item_id" in df.columns else None
+        nums = df["item_num"].values if "item_num" in df.columns else None
+        if ids is None and nums is None:
+            raise TypeError("data frame must have at least one of item_id, item_num columns")
+
+        to_drop = ["item_id", "item_num"]
+        if not keep_user:
+            to_drop += ["user_id", "user_num"]
+        df = df.drop(columns=to_drop, errors="ignore")
+
+        fields = {f: df[f].values for f in df.columns}
+        return cls(item_ids=ids, item_nums=nums, vocabulary=vocabulary, **fields)  # type: ignore
 
     def clone(self) -> ItemList:
         """

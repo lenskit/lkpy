@@ -6,6 +6,7 @@
 import pickle
 
 import numpy as np
+import pandas as pd
 import torch
 
 from pytest import raises
@@ -273,3 +274,24 @@ def test_subset_slice(ml_ds):
     assert np.all(pos.ids() == row.ids()[5:10])
     assert np.all(pos.numbers() == row.numbers()[5:10])
     assert np.all(pos.field("rating") == row.field("rating")[5:10])
+
+
+def test_from_df():
+    df = pd.DataFrame({"item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5)})
+    il = ItemList.from_df(df, vocabulary=VOCAB)  # type: ignore
+    assert len(il) == 5
+    assert np.all(il.ids() == ITEMS)
+    assert np.all(il.numbers() == np.arange(5))
+    assert np.all(il.scores() == df["score"].values)
+
+
+def test_from_df_user():
+    df = pd.DataFrame(
+        {"user_id": 50, "item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5)}
+    )
+    il = ItemList.from_df(df, vocabulary=VOCAB)  # type: ignore
+    assert len(il) == 5
+    assert np.all(il.ids() == ITEMS)
+    assert np.all(il.numbers() == np.arange(5))
+    assert np.all(il.scores() == df["score"].values)
+    assert il.field("user_id") is None
