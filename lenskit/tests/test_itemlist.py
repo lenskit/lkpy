@@ -3,6 +3,7 @@
 # Copyright (C) 2023-2024 Drexel University
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
+import pickle
 
 import numpy as np
 import torch
@@ -199,3 +200,20 @@ def test_pandas_df_ordered():
     assert np.all(df["item_num"] == np.arange(5))
     assert np.all(df["score"] == data)
     assert np.all(df["rank"] == np.arange(1, 6))
+
+
+def test_item_list_pickle_compact(ml_ds):
+    nums = [1, 0, 308, 24, 72]
+    il = ItemList(item_nums=nums, vocabulary=ml_ds.items)
+    assert len(il) == 5
+    assert np.all(il.ids() == ml_ds.items.ids(nums))
+
+    # check that pickling isn't very big (we don't pickle the vocabulary)
+    data = pickle.dumps(il)
+    print(len(data))
+    assert len(data) <= 500
+
+    il2 = pickle.loads(data)
+    assert len(il2) == len(il)
+    assert np.all(il2.ids() == il.ids())
+    assert np.all(il2.numbers() == il.numbers())

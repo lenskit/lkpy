@@ -44,6 +44,15 @@ class ItemList:
     An item list logically a list of rows, each of which is an item, like a
     :class:`~pandas.DataFrame` but supporting multiple array backends.
 
+    When an item list is pickled, it is pickled compactly but only for CPUs: the
+    vocabulary is dropped (after ensuring both IDs and numbers are computed),
+    and all arrays are pickled as NumPy arrays.  This makes item lists compact
+    to serialize and transmit, but does mean that that serializing an item list
+    whose scores are still on the GPU will deserialize on the CPU in the
+    receiving process.  This is usually not a problem, because item lists are
+    typically used for small lists of items, not large data structures that need
+    to remain in shared memory.
+
     .. note::
 
         Naming for fields and accessor methods is tricky, because the usual
@@ -323,3 +332,27 @@ class ItemList:
 
     def __len__(self):
         return self._len
+
+    def __getstate__(self) -> dict[str, object]:
+        state: dict[str, object] = {"ordered": self.ordered, "len": self._len}
+        if self._ids is not None:
+            state["ids"] = self._ids
+        elif self._vocab is not None:
+            # compute the IDs so we can save them
+            state["ids"] = self.ids()
+
+        if self._numbers is not None:
+            state["numbers"] = self._numbers.numpy()
+        elif self._vocab is not None:
+            state["numbers"] = self.numbers()
+
+        state.update(("field_" + k, v.numpy()) for (k, v) in self._fields.items())
+        return state
+
+    def __setstate__(self, state: dict[str, Any]):
+        self.ordered = state["ordered"]
+        self._len = state["len"]
+        self._ids = state.get("ids", None)
+        if "numbers" in state:
+            self._numbers = MTArray(state["numbers"])
+        self._fields = {k[6:]: MTArray(v) for (k, v) in state.items() if k.startswith("field_")}
