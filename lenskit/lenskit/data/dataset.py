@@ -32,6 +32,7 @@ from typing_extensions import (
     override,
 )
 
+from lenskit.data.items import ItemList
 from lenskit.data.matrix import CSRStructure, InteractionMatrix
 from lenskit.data.vocab import Vocabulary
 
@@ -87,7 +88,7 @@ class Dataset(ABC):
         """
         The items known by this dataset.
         """
-        ...
+        raise NotImplementedError()
 
     @property
     @abstractmethod
@@ -95,7 +96,7 @@ class Dataset(ABC):
         """
         The users known by this dataset.
         """
-        ...
+        raise NotImplementedError()
 
     @abstractmethod
     def count(self, what: str) -> int:
@@ -118,7 +119,7 @@ class Dataset(ABC):
                 * interactions
                 * ratings
         """
-        ...
+        raise NotImplementedError()
 
     @property
     def item_count(self) -> int:
@@ -212,7 +213,7 @@ class Dataset(ABC):
         Returns:
             The user-item interaction log in the specified format.
         """
-        ...
+        raise NotImplementedError()
 
     @overload
     @abstractmethod
@@ -359,7 +360,25 @@ class Dataset(ABC):
                 ``True`` to return user and item IDs instead of numbers in
                 ``pandas``-format matrix.
         """
-        ...
+        raise NotImplementedError()
+
+    @abstractmethod
+    @overload
+    def user_row(self, user_id: EntityId) -> ItemList | None: ...
+    @abstractmethod
+    @overload
+    def user_row(self, *, user_num: int) -> ItemList: ...
+    @abstractmethod
+    def user_row(
+        self, user_id: EntityId | None = None, *, user_num: int | None = None
+    ) -> ItemList | None:
+        """
+        Get a user's row from the interaction matrix.  Available fields are
+        returned as fields. If the dataset has ratings, these are provided as a
+        ``rating`` field, **not** as the item scores.  The item list is unordered,
+        but items are returned in order by item number.
+        """
+        raise NotImplementedError()
 
     def item_stats(self) -> pd.DataFrame:
         """
@@ -714,6 +733,31 @@ class MatrixDataset(Dataset):
             tbl.timestamps = torch.from_numpy(self._matrix.timestamps)
         return tbl
 
+    @override
+    def user_row(
+        self, user_id: EntityId | None = None, *, user_num: int | None = None
+    ) -> ItemList | None:
+        if user_num is None:
+            if user_id is None:  # pragma: nocover
+                raise ValueError("most provide one of user_id and user_num")
+
+            user_num = self.users.number(user_id, "none")
+            if user_num is None:
+                return None
+
+        elif user_id is not None:  # pragma: nocover
+            raise ValueError("most provide one of user_id and user_num")
+
+        sp = self._matrix.user_ptrs[user_num]
+        ep = self._matrix.user_ptrs[user_num + 1]
+        inums = self._matrix.item_nums[sp:ep]
+        fields = {}
+        if self._matrix.ratings is not None:
+            fields["rating"] = self._matrix.ratings[sp:ep]
+        if self._matrix.timestamps is not None:
+            fields["timestamp"] = self._matrix.timestamps[sp:ep]
+        return ItemList(item_nums=inums, vocabulary=self.items, **fields)
+
 
 class LazyDataset(Dataset):
     """
@@ -763,6 +807,10 @@ class LazyDataset(Dataset):
     @override
     def interaction_log(self, *args, **kwargs) -> Any:
         return self.delegate().interaction_log(*args, **kwargs)
+
+    @override
+    def user_row(self, *args, **kwargs) -> ItemList | None:
+        return self.delegate().user_row(*args, **kwargs)
 
 
 def from_interactions_df(

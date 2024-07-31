@@ -19,7 +19,7 @@ from numpy.typing import ArrayLike
 from pytest import mark, raises
 
 from lenskit.data import Dataset
-from lenskit.data.dataset import FieldError, from_interactions_df
+from lenskit.data.dataset import FieldError, MatrixDataset, from_interactions_df
 from lenskit.data.matrix import CSRStructure
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
@@ -64,6 +64,7 @@ def _check_timestamp(ml_ds: Dataset, ml_ratings: pd.DataFrame, ts: ArrayLike):
 
 def test_internals(ml_ds: Dataset):
     "Test internal matrix structures"
+    assert isinstance(ml_ds, MatrixDataset)
     assert ml_ds._matrix.user_nums.dtype == np.int32
     assert ml_ds._matrix.user_ptrs.dtype == np.int32
     assert ml_ds._matrix.item_nums.dtype == np.int32
@@ -342,3 +343,41 @@ def test_matrix_torch_timestamp(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
     _check_item_ids(ml_ds, ml_ratings, log.col_indices())
     _check_timestamp(ml_ds, ml_ratings, log.values().numpy())
+
+
+def test_matrix_rows_by_id(rng: np.random.Generator, ml_ratings: pd.DataFrame, ml_ds: Dataset):
+    users = rng.choice(ml_ds.users.ids(), 50)
+
+    for user in users:
+        row = ml_ds.user_row(user)
+        assert row is not None
+        urows = ml_ratings[ml_ratings["user"] == user].sort_values("item")
+        assert set(row.ids()) == set(urows["item"])
+        assert np.all(row.numbers() == ml_ds.items.numbers(urows["item"]))
+
+        ratings = row.field("rating")
+        assert ratings is not None
+        assert np.all(ratings == urows["rating"])
+
+        timestamps = row.field("timestamp")
+        assert timestamps is not None
+        assert np.all(timestamps == urows["timestamp"])
+
+
+def test_matrix_rows_by_num(rng: np.random.Generator, ml_ratings: pd.DataFrame, ml_ds: Dataset):
+    users = rng.choice(ml_ds.user_count, 50)
+
+    for user in users:
+        row = ml_ds.user_row(user_num=user)
+        assert row is not None
+        urows = ml_ratings[ml_ratings["user"] == ml_ds.users.id(user)].sort_values("item")
+        assert set(row.ids()) == set(urows["item"])
+        assert np.all(row.numbers() == ml_ds.items.numbers(urows["item"]))
+
+        ratings = row.field("rating")
+        assert ratings is not None
+        assert np.all(ratings == urows["rating"])
+
+        timestamps = row.field("timestamp")
+        assert timestamps is not None
+        assert np.all(timestamps == urows["timestamp"])
