@@ -79,7 +79,7 @@ def test_last_n(ml_ds: Dataset):
         trn = row[~mask]
         assert len(tst) == 5
         assert len(tst) + len(trn) == len(row)
-        assert tst.field("timestamp").min() >= trn.field("timestamp").max()
+        assert tst.field("timestamp").min() >= trn.field("timestamp").max()  # type: ignore
 
     samp = LastN(7)
     for u in users:
@@ -90,7 +90,7 @@ def test_last_n(ml_ds: Dataset):
         trn = row[~mask]
         assert len(tst) == 7
         assert len(tst) + len(trn) == len(row)
-        assert tst.field("timestamp").min() >= trn.field("timestamp").max()
+        assert tst.field("timestamp").min() >= trn.field("timestamp").max()  # type: ignore
 
 
 def test_last_frac(ml_ds: Dataset):
@@ -106,7 +106,7 @@ def test_last_frac(ml_ds: Dataset):
         assert len(tst) + len(trn) == len(row)
         assert len(tst) >= math.floor(len(row) * 0.2)
         assert len(tst) <= math.ceil(len(row) * 0.2)
-        assert tst.field("timestamp").min() >= trn.field("timestamp").max()
+        assert tst.field("timestamp").min() >= trn.field("timestamp").max()  # type: ignore
 
     samp = LastFrac(0.5, "timestamp")
     for u in users:
@@ -118,4 +118,4 @@ def test_last_frac(ml_ds: Dataset):
         assert len(tst) + len(trn) == len(row)
         assert len(tst) >= math.floor(len(row) * 0.5)
         assert len(tst) <= math.ceil(len(row) * 0.5)
-        assert tst.field("timestamp").min() >= trn.field("timestamp").max()
+        assert tst.field("timestamp").min() >= trn.field("timestamp").max()  # type: ignore
