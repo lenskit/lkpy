@@ -89,8 +89,8 @@ def sample_records(
     We can loop over a sequence of train-test pairs::
 
         >>> from lenskit.data.movielens import load_movielens_df
-        >>> ratings = load_movielens_df('data/ml-latest-small')
-        >>> for train, test in sample_records(ratings, 1000, repeats=5):
+        >>> movielens = load_movielens('data/ml-latest-small')
+        >>> for train, test in sample_records(movielens, 1000, repeats=5):
         ...     print(sum(len(il) for il in test.values()))
         1000
         1000
@@ -100,7 +100,7 @@ def sample_records(
 
     Sometimes for testing, it is useful to just get a single pair::
 
-        >>> train, test = sample_records(ratings, 1000)
+        >>> train, test = sample_records(movielens, 1000)
         >>> sum(len(il) for il in test.values())
         1000
 
