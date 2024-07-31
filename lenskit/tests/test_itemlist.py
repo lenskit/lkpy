@@ -125,3 +125,15 @@ def test_scores():
     assert isinstance(st, torch.Tensor)
     assert st.shape == (5,)
     assert np.all(st.numpy() == data)
+
+    assert il.ranks() is None
+
+
+def test_ranks():
+    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, ordered=True)
+    assert il.ordered
+
+    ranks = il.ranks()
+    assert ranks is not None
+    assert ranks.shape == (5,)
+    assert np.all(ranks == np.arange(1, 6))

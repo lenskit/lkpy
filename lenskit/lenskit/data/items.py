@@ -10,13 +10,14 @@ Primary item-list abstraction.
 
 from __future__ import annotations
 
-from typing import Literal, LiteralString, Sequence, TypeAlias, TypeVar, overload
+from typing import Any, Literal, LiteralString, Sequence, TypeAlias, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
 import torch
 from numpy.typing import ArrayLike, NDArray
 
+from lenskit.data.checks import check_1d
 from lenskit.data.mtarray import MTArray, MTGenericArray
 from lenskit.data.vocab import EntityId, NPEntityId, Vocabulary
 
@@ -27,23 +28,61 @@ EID = TypeVar("EID", bound=EntityId)
 class ItemList:
     """
     Representation of a (usually ordered) list of items, possibly with scores
-    and other associated data.
+    and other associated data.  Item lists are to be treated as **immutable** —
+    create a new list with modified data, do not do in-place modifications of
+    the list itself or the arrays or data frame it returns.
+
+    An item list logically a list of rows, each of which is an item, like a
+    :class:`~pandas.DataFrame` but supporting multiple array backends.
+
+    .. note::
+
+        Naming for fields and accessor methods is tricky, because the usual
+        convention for a data frame is to use singular column names (e.g.
+        “item_id”, “score”) instead of plural (“item_ids”, “scores”) — the data
+        frame, like a database table, is a list of instances, and the column
+        names are best interpreted as naming attributes of individual instances.
+
+        However, when working with a list of e.g. item IDs, it is more natural —
+        at least to this author — to use plural names: ``item_ids``.  Since this
+        class is doing somewhat double-duty, representing a list of items along
+        with associated data, as well as a data frame of columns representing
+        items, the appropriate naming is not entirely clear.  The naming
+        convention in this class is therefore as follows:
+
+        * Field names are singular (``item_id``, ``score``).
+        * Named accessor methods are plural (:meth:`item_ids`, :meth:`scores`).
+        * Both singular and plural forms are accepted for item IDs numbers, and
+          scores in the keyword arguments.  Other field names should be
+          singular.
 
     Args:
         item_ids:
-            A list or array of item identifiers.
+            A list or array of item identifiers. ``item_id`` is accepted as an
+            alternate name.
         item_nums:
-            A list or array of item numbers.
+            A list or array of item numbers. ``item_num`` is accepted as an
+            alternate name.
         vocabulary:
             A vocabulary to translate between item IDs and numbers.
+        ordered:
+            Whether the list has a meaningful order.
+        scores:
+            An array of scores for the items.
         fields:
-            Additional fields, such as ``score`` or ``rating``.
+            Additional fields, such as ``score`` or ``rating``.  Field names
+            should generally be singular; the named keyword arguments and
+            accessor methods are plural for readability (“get the list of item
+            IDs”)
     """
 
+    ordered: bool
+    "Whether this list has a meaningful order."
     _len: int
     _ids: np.ndarray[int, np.dtype[NPEntityId]] | None = None
     _numbers: MTArray[np.int32] | None = None
     _vocab: Vocabulary[EntityId] | None = None
+    _ranks: MTArray[np.int32] | None = None
     _fields: dict[str, MTGenericArray]
 
     def __init__(
@@ -52,9 +91,20 @@ class ItemList:
         item_ids: NDArray[NPEntityId] | pd.Series[EntityId] | Sequence[EntityId] | None = None,
         item_nums: NDArray[np.int32] | pd.Series[int] | Sequence[int] | ArrayLike | None = None,
         vocabulary: Vocabulary[EID] | None = None,
+        ordered: bool = False,
+        scores: NDArray[np.generic] | torch.Tensor | ArrayLike | None = None,
         **fields: NDArray[np.generic] | torch.Tensor | ArrayLike,
     ):
+        self.ordered = ordered
         self._vocab = vocabulary
+
+        if item_ids is None and "item_id" in fields:
+            item_ids = np.asarray(cast(Any, fields["item_id"]))
+
+        if item_nums is None and "item_num" in fields:
+            item_nums = np.asarray(cast(Any, fields["item_num"]))
+            if not issubclass(item_nums.dtype.type, np.integer):
+                raise TypeError("item numbers not integers")
 
         if item_ids is None and item_nums is None:
             self._ids = np.ndarray(0, dtype=np.int32)
@@ -63,28 +113,40 @@ class ItemList:
 
         if item_ids is not None:
             self._ids = np.asarray(item_ids)
-            if len(self._ids.shape) > 1:
-                raise TypeError("item lists must be 1-dimensional")
+            if not issubclass(self._ids.dtype.type, (np.integer, np.str_, np.bytes_)):
+                raise TypeError(f"item IDs not integers or bytes (type: {self._ids.dtype})")
+
+            check_1d(self._ids, label="item_ids")
             self._len = len(item_ids)
 
         if item_nums is not None:
             self._numbers = MTArray(item_nums)
-            if hasattr(self, "_len"):
-                if self._numbers.shape != (self._len,):
-                    nl = self._numbers.shape[0]
-                    raise ValueError(
-                        f"item ID and number lists have different lengths ({self._len} != {nl})"
-                    )
-            else:
-                self._len = self._numbers.shape[0]
+            check_1d(self._numbers, getattr(self, "_len", None), label="item_nums")
+            self._len = self._numbers.shape[0]
 
-        self._fields = {name: MTArray(data) for (name, data) in fields.items()}
+        # convert fields and drop singular ID/number aliases
+        self._fields = {
+            name: check_1d(MTArray(data), self._len, label=name)
+            for (name, data) in fields.items()
+            if name not in ("item_id", "item_num")
+        }
+
+        if scores is not None:
+            if "score" in fields:  # pragma: nocover
+                raise ValueError("cannot specify both scores= and score=")
+            self._fields["score"] = MTArray(scores)
 
     def clone(self) -> ItemList:
         """
         Make a shallow copy of the item list.
         """
-        return ItemList(item_ids=self._ids, item_nums=self._numbers, vocabulary=self._vocab)
+        return ItemList(
+            item_ids=self._ids,
+            item_nums=self._numbers,
+            vocabulary=self._vocab,
+            ordered=self.ordered,
+            **self._fields,
+        )
 
     def ids(self) -> NDArray[NPEntityId]:
         """
@@ -142,7 +204,33 @@ class ItemList:
         """
         Get the item scores (if available).
         """
-        return self.field("scores", format)
+        return self.field("score", format)
+
+    @overload
+    def ranks(self, format: Literal["numpy"] = "numpy") -> NDArray[np.int32] | None: ...
+    @overload
+    def ranks(self, format: Literal["torch"]) -> torch.Tensor | None: ...
+    @overload
+    def ranks(self, format: LiteralString = "numpy") -> ArrayLike | None: ...
+    def ranks(self, format: LiteralString = "numpy") -> ArrayLike | None:
+        """
+        Get an array of ranks for the items in this list, if it is ordered.
+        Unordered lists have no ranks.  The ranks are based on the order in the
+        list, **not** on the score.
+
+        Item ranks start with **1**, for compatibility with common practice in
+        mathematically defining information retrieval metrics and operations.
+
+        Returns:
+            An array of item ranks, or ``None`` if the list is unordered.
+        """
+        if not self.ordered:
+            return None
+
+        if self._ranks is None:
+            self._ranks = MTArray(np.arange(1, self._len + 1, dtype=np.int32))
+
+        return self._ranks.to(format)
 
     @overload
     def field(
