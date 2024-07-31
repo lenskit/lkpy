@@ -169,3 +169,11 @@ def test_ranks():
     assert ranks is not None
     assert ranks.shape == (5,)
     assert np.all(ranks == np.arange(1, 6))
+
+
+def test_numbers_alt_vocab():
+    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB)
+
+    av = Vocabulary(["A", "B"] + ITEMS)
+    nums = il.numbers(vocabulary=av)
+    assert np.all(nums == np.arange(2, 7))

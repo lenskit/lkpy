@@ -168,25 +168,43 @@ class ItemList:
         return self._ids
 
     @overload
-    def numbers(self, format: Literal["numpy"] = "numpy") -> NDArray[np.int32]: ...
+    def numbers(
+        self, format: Literal["numpy"] = "numpy", *, vocabulary: Vocabulary[EID] | None = None
+    ) -> NDArray[np.int32]: ...
     @overload
-    def numbers(self, format: Literal["torch"]) -> torch.Tensor: ...
+    def numbers(
+        self, format: Literal["torch"], *, vocabulary: Vocabulary[EID] | None = None
+    ) -> torch.Tensor: ...
     @overload
-    def numbers(self, format: LiteralString = "numpy") -> ArrayLike: ...
-    def numbers(self, format: LiteralString = "numpy") -> ArrayLike:
+    def numbers(
+        self, format: LiteralString = "numpy", *, vocabulary: Vocabulary[EID] | None = None
+    ) -> ArrayLike: ...
+    def numbers(
+        self, format: LiteralString = "numpy", *, vocabulary: Vocabulary[EID] | None = None
+    ) -> ArrayLike:
         """
         Get the item numbers.
 
         Args:
             format:
                 The array format to use.
+            vocabulary:
+                A alternate vocabulary for mapping IDs to numbers.  If provided,
+                then the item list must have IDs (either stored, or through a
+                vocabulary).
 
         Returns:
             An array of item numbers.
 
         Raises:
-            RuntimeError: if the item list was not created with numbers or a :class:`Vocabulary`.
+            RuntimeError: if the item list was not created with numbers or a
+            :class:`Vocabulary`.
         """
+        if vocabulary is not None and vocabulary is not self._vocab:
+            # we need to translate vocabulary
+            ids = self.ids()
+            return vocabulary.numbers(ids)
+
         if self._numbers is None:
             if self._vocab is None:
                 raise RuntimeError("item numbers not available (no IDs or vocabulary provided)")
