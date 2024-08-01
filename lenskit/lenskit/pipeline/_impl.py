@@ -115,7 +115,6 @@ class Pipeline:
     _aliases: dict[str, Node[Any]]
     _defaults: dict[str, Node[Any] | Any]
     _components: dict[str, Component[Any]]
-    _closures: dict[str, set[str]]
 
     def __init__(self):
         self._nodes = {}
@@ -475,4 +474,4 @@ class Pipeline:
             raise ValueError(f"node {node} not in graph")
 
     def _clear_caches(self):
-        self._closures = {}
+        pass
