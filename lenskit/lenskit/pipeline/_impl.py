@@ -376,6 +376,9 @@ class Pipeline:
         components.  See :ref:`pipeline-execution` for details of the pipeline
         execution model.
 
+        .. todo::
+            Add cycle detection.
+
         Args:
             nodes:
                 The component(s) to run.
@@ -409,7 +412,6 @@ class Pipeline:
         # set up a stack of nodes to look at
         # we traverse the graph with this
         needed = list(reversed(ret))
-        seen = set(n.name for n in needed)
 
         while needed:
             node = needed[-1]
@@ -420,10 +422,11 @@ class Pipeline:
 
             match node:
                 case LiteralNode(name, value):
+                    # literal nodes are ready to put on the state
                     state[name] = value
                     needed.pop()
                 case ComponentNode(name, comp, inputs, wiring):
-                    # is the node fully wired?
+                    # check that (1) the node is fully wired, and (2) its inputs are all computed
                     ready = True
                     for k in inputs.keys():
                         try:
@@ -434,16 +437,20 @@ class Pipeline:
                         if wired.name not in state:
                             # input value not available, queue it up
                             ready = False
-                            if wired.name not in seen:
-                                seen.add(wired.name)
-                                needed.append(wired)
+                            # it is fine to queue the same node twice — it will
+                            # be quickly skipped the second time
+                            needed.append(wired)
 
-                    # if the node is ready to compute, let's do it!
-                    # otherwise, leave it on the stack to revisit when its inputs are done
                     if ready:
+                        _log.debug("running %s", node)
+                        # if the node is ready to compute (all inputs in state), we run it.
                         args = {n: state[wiring[n]] for n in inputs.keys()}
                         state[name] = comp(**args)
                         needed.pop()
+
+                    # fallthrough: the node is not ready, and we have pushed its
+                    # inputs onto the stack.  The inputs may be re-pushed, so this
+                    # will never be the last node on the stack at this point
 
                 case InputNode(name):
                     try:
