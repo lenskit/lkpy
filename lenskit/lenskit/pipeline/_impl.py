@@ -7,13 +7,19 @@
 # pyright: strict
 from __future__ import annotations
 
-from dataclasses import dataclass
+import logging
+import warnings
+from inspect import Signature, signature
+from typing import Callable, cast
 
 from typing_extensions import Any, Generic, LiteralString, TypeVar, overload
 
 from lenskit.data import Dataset
+from lenskit.pipeline.types import TypecheckWarning
 
 from .components import Component
+
+_log = logging.getLogger(__name__)
 
 # Nodes are (conceptually) immutable data containers, so Node[U] can be assigned
 # to Node[T] if U ≼ T.
@@ -27,16 +33,71 @@ T4 = TypeVar("T4")
 T5 = TypeVar("T5")
 
 
-@dataclass
 class Node(Generic[ND]):
     """
     Representation of a single node in a :class:`Pipeline`.
     """
 
+    __match_args__ = ("name",)
+
     name: str
     "The name of this node."
-    types: set[type] | None = None
-    "The set of valid data types of this node."
+    types: set[type] | None
+    "The set of valid data types of this node, or None for no typechecking."
+
+    def __init__(self, name: str, *, types: set[type] | None = None):
+        self.name = name
+        self.types = types
+
+    def __str__(self) -> str:
+        return f"<{self.__class__.__name__} {self.name}>"
+
+
+class InputNode(Node[ND], Generic[ND]):
+    """
+    An input node.
+    """
+
+
+class LiteralNode(Node[ND], Generic[ND]):
+    __match_args__ = ("name", "value")
+    value: ND
+    "The value associated with this node"
+
+    def __init__(self, name: str, value: ND, *, types: set[type] | None = None):
+        super().__init__(name, types=types)
+        self.value = value
+
+
+class ComponentNode(Node[ND], Generic[ND]):
+    __match_args__ = ("name", "component", "inputs", "connections")
+
+    component: Component[ND]
+    "The component associated with this node"
+
+    inputs: dict[str, type | None]
+    "The component's inputs."
+
+    connections: dict[str, str]
+    "The component's input connections."
+
+    def __init__(self, name: str, component: Component[ND]):
+        super().__init__(name)
+        self.component = component
+        self.connections = {}
+
+        sig = signature(component)
+        if sig.return_annotation == Signature.empty:
+            warnings.warn(
+                f"component {component} has no return type annotation", TypecheckWarning, 2
+            )
+        else:
+            self.types = set([sig.return_annotation])
+
+        self.inputs = {
+            param.name: None if param.annotation == Signature.empty else param.annotation
+            for param in sig.parameters.values()
+        }
 
 
 class Pipeline:
@@ -51,13 +112,17 @@ class Pipeline:
     """
 
     _nodes: dict[str, Node[Any]]
+    _aliases: dict[str, Node[Any]]
     _defaults: dict[str, Node[Any] | Any]
     _components: dict[str, Component[Any]]
+    _closures: dict[str, set[str]]
 
     def __init__(self):
         self._nodes = {}
+        self._aliases = {}
         self._defaults = {}
         self._components = {}
+        self._clear_caches()
 
     @property
     def nodes(self) -> list[Node[object]]:
@@ -66,13 +131,19 @@ class Pipeline:
         """
         return list(self._nodes.values())
 
-    def node(self, name: str) -> Node[object]:
+    @overload
+    def node(self, node: str) -> Node[object]: ...
+    @overload
+    def node(self, node: Node[T]) -> Node[T]: ...
+    def node(self, node: str | Node[Any]) -> Node[object]:
         """
-        Get the pipeline node with the specified name.
+        Get the pipeline node with the specified name.  If passed a node, it
+        returns the node or fails if the node is not a member of the pipeline.
 
         Args:
-            name:
-                The name of the pipeline node to look up.
+            node:
+                The name of the pipeline node to look up, or a node to check for
+                membership.
 
         Returns:
             The pipeline node, if it exists.
@@ -81,7 +152,15 @@ class Pipeline:
             KeyError:
                 The specified node does not exist.
         """
-        return self._nodes[name]
+        if isinstance(node, Node):
+            self._check_member_node(node)
+            return node
+        elif node in self._aliases:
+            return self._aliases[node]
+        elif node in self._nodes:
+            return self._nodes[node]
+        else:
+            raise KeyError(f"node {node}")
 
     def create_input(self, name: LiteralString, *types: type[T]) -> Node[T]:
         """
@@ -104,11 +183,11 @@ class Pipeline:
             ValueError:
                 a node with the specified ``name`` already exists.
         """
-        if name in self._nodes:
-            raise ValueError(f"pipeline already has node “{name}”")
+        self._check_available_name(name)
 
-        node = Node[Any](name, set(types))
+        node = InputNode[Any](name, types=set(types))
         self._nodes[name] = node
+        self._clear_caches()
         return node
 
     def set_default(self, name: LiteralString, node: Node[Any] | object) -> None:
@@ -126,8 +205,9 @@ class Pipeline:
             node:
                 The node or literal value to wire to this parameter.
         """
+        self._clear_caches()
 
-    def alias(self, alias: str, node: Node[T] | str) -> None:
+    def alias(self, alias: str, node: Node[Any] | str) -> None:
         """
         Create an alias for a node.  After aliasing, the node can be retrieved
         from :meth:`node` using either its original name or its alias.
@@ -142,9 +222,13 @@ class Pipeline:
             ValueError:
                 if the alias is already used as an alias or node name.
         """
+        node = self.node(node)
+        self._check_available_name(alias)
+        self._aliases[alias] = node
+        self._clear_caches()
 
     def add_component(
-        self, name: str, obj: Component[ND], **inputs: Node[Any] | object
+        self, name: str, obj: Component[ND] | Callable[..., ND], **inputs: Node[Any] | object
     ) -> Node[ND]:
         """
         Add a component and connect it into the graph.
@@ -162,10 +246,22 @@ class Pipeline:
         Returns:
             The node representing this component in the pipeline.
         """
-        return Node(name)
+        self._check_available_name(name)
+
+        node = ComponentNode(name, obj)
+        self._nodes[name] = node
+        self._components[name] = obj
+
+        self.connect(node, **inputs)
+
+        self._clear_caches()
+        return node
 
     def replace_component(
-        self, name: str | Node[ND], obj: Component[ND], **inputs: Node[Any] | object
+        self,
+        name: str | Node[ND],
+        obj: Component[ND] | Callable[..., ND],
+        **inputs: Node[Any] | object,
     ) -> Node[ND]:
         """
         Replace a component in the graph.  The new component must have a type
@@ -198,6 +294,14 @@ class Pipeline:
             # if the client provided items as a pipeline input, use those; otherwise
             # use the candidate selector we just configured.
             candidates = pipe.use_first_of('candidates', items, lookup_candidates)
+
+        .. note::
+
+            This method does *not* implement item-level fallbacks, only fallbacks at
+            the level of entire results.  That is, you can use it to use component A
+            as a fallback for B if B returns ``None``, but it will not use B to fill
+            in missing scores for individual items that A did not score.  A specific
+            itemwise fallback component is needed for such an operation.
         """
         raise NotImplementedError()
 
@@ -215,6 +319,22 @@ class Pipeline:
                 here with an input that the pipeline will provide to that
                 argument of the component when the pipeline is run.
         """
+        if isinstance(obj, Node):
+            node = obj
+        else:
+            node = self.node(obj)
+        if not isinstance(node, ComponentNode):
+            raise TypeError(f"only component nodes can be wired, not {node}")
+
+        for k, n in inputs.items():
+            if isinstance(n, Node):
+                n = cast(Node[Any], n)
+                self._check_member_node(n)
+                node.connections[k] = n.name
+            else:
+                raise NotImplementedError()
+
+        self._clear_caches()
 
     def train(self, data: Dataset) -> None:
         """
@@ -251,7 +371,7 @@ class Pipeline:
         /,
         **kwargs: object,
     ) -> tuple[T1, T2, T3, T4, T5]: ...
-    def run(self, *nodes: str | Node[Any] | None, **kwargs: object) -> object:
+    def run(self, *nodes: str | Node[Any], **kwargs: object) -> object:
         """
         Run the pipeline and obtain the return value(s) of one or more of its
         components.  See :ref:`pipeline-execution` for details of the pipeline
@@ -276,4 +396,83 @@ class Pipeline:
             other:
                 exceptions thrown by components are passed through.
         """
-        pass
+        state: dict[str, Any] = {}
+
+        ret: list[Node[Any]] | Node[Any] = [self.node(n) for n in nodes]
+        _log.debug(
+            "starting run of pipeline with %d nodes, want %s",
+            len(self._nodes),
+            [n.name for n in ret],
+        )
+        if not ret:
+            ret = [self._last_node()]
+
+        # set up a stack of nodes to look at
+        # we traverse the graph with this
+        needed = list(reversed(ret))
+        seen = set(n.name for n in needed)
+
+        while needed:
+            node = needed[-1]
+            if node.name in state:
+                # the node is computed, we're done
+                needed.pop()
+                continue
+
+            match node:
+                case LiteralNode(name, value):
+                    state[name] = value
+                    needed.pop()
+                case ComponentNode(name, comp, inputs, wiring):
+                    # is the node fully wired?
+                    ready = True
+                    for k in inputs.keys():
+                        try:
+                            wired = wiring[k]
+                        except KeyError:
+                            raise RuntimeError(f"input {k} for {node} not connected")
+                        wired = self.node(wired)
+                        if wired.name not in state:
+                            # input value not available, queue it up
+                            ready = False
+                            if wired.name not in seen:
+                                seen.add(wired.name)
+                                needed.append(wired)
+
+                    # if the node is ready to compute, let's do it!
+                    # otherwise, leave it on the stack to revisit when its inputs are done
+                    if ready:
+                        args = {n: state[wiring[n]] for n in inputs.keys()}
+                        state[name] = comp(**args)
+                        needed.pop()
+
+                case InputNode(name):
+                    try:
+                        state[name] = kwargs[name]
+                    except KeyError:
+                        raise RuntimeError(f"input {name} not specified")
+
+                case _:
+                    raise RuntimeError(f"invalid node {node}")
+
+        if len(ret) > 1:
+            return tuple(state[r.name] for r in ret)
+        else:
+            return state[ret[0].name]
+
+    def _last_node(self) -> Node[object]:
+        if not self._nodes:
+            raise RuntimeError("pipeline is empty")
+        return list(self._nodes.values())[-1]
+
+    def _check_available_name(self, name: str) -> None:
+        if name in self._nodes or name in self._aliases:
+            raise ValueError(f"pipeline already has node {name}")
+
+    def _check_member_node(self, node: Node[Any]) -> None:
+        nw = self._nodes.get(node.name)
+        if nw is not node:
+            raise ValueError(f"node {node} not in graph")
+
+    def _clear_caches(self):
+        self._closures = {}

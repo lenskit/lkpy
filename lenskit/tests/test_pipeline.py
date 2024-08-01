@@ -11,6 +11,7 @@ from uuid import UUID
 from pytest import fail, raises
 
 from lenskit.pipeline import Node, Pipeline
+from lenskit.pipeline._impl import InputNode
 
 
 def test_init_empty():
@@ -23,7 +24,7 @@ def test_create_input():
     pipe = Pipeline()
     src = pipe.create_input("user", int, str)
     assert_type(src, Node[int | str])
-    assert isinstance(src, Node)
+    assert isinstance(src, InputNode)
     assert src.name == "user"
     assert src.types == set([int, str])
 
@@ -40,13 +41,22 @@ def test_dup_input_fails():
         pipe.create_input("user", UUID)
 
 
-def test_dup_component():
+def test_dup_component_fails():
     "create an input node"
     pipe = Pipeline()
     pipe.create_input("user", int, str)
 
     with raises(ValueError, match="has node"):
         pipe.add_component("user", lambda x: x)  # type: ignore
+
+
+def test_dup_alias_fails():
+    "create an input node"
+    pipe = Pipeline()
+    n = pipe.create_input("user", int, str)
+
+    with raises(ValueError, match="has node"):
+        pipe.alias("user", n)  # type: ignore
 
 
 def test_alias():
@@ -63,6 +73,18 @@ def test_alias():
         pipe.create_input("person", bytes)
 
 
+def test_component_type():
+    pipe = Pipeline()
+    msg = pipe.create_input("msg", str)
+
+    def incr(msg: str) -> str:
+        return msg
+
+    node = pipe.add_component("return", incr, msg=msg)
+    assert node.name == "return"
+    assert node.types == set([str])
+
+
 def test_single_input():
     pipe = Pipeline()
     msg = pipe.create_input("msg", str)
@@ -77,6 +99,19 @@ def test_single_input():
 
     ret = pipe.run(node, msg="world")
     assert ret == "world"
+
+
+def test_single_input_typecheck():
+    pipe = Pipeline()
+    msg = pipe.create_input("msg", str)
+
+    def incr(msg: str) -> str:
+        return msg
+
+    node = pipe.add_component("return", incr, msg=msg)
+
+    with raises(TypeError):
+        pipe.run(node, msg=47)
 
 
 def test_chain():
@@ -144,6 +179,28 @@ def test_replace_component():
     assert pipe.run(a=1, b=7) == 9
     assert pipe.run(na, a=3, b=7) == 13
     assert pipe.run(nt, a=3, b=7) == 9
+    with raises(RuntimeError, match="not in pipeline"):
+        pipe.run(nd, a=3, b=7)
+
+
+def test_default_wiring():
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    pipe.set_default("y", b)
+
+    nd = pipe.add_component("double", double, x=a)
+    na = pipe.add_component("add", add, x=nd)
+
+    assert pipe.run(a=1, b=7) == 9
+    assert pipe.run(na, a=3, b=7) == 13
     with raises(RuntimeError, match="not in pipeline"):
         pipe.run(nd, a=3, b=7)
 
@@ -248,7 +305,7 @@ def test_fail_missing_input():
     nd = pipe.add_component("double", double, x=a)
     na = pipe.add_component("add", add, x=nd, y=b)
 
-    with raises(RuntimeError):
+    with raises(RuntimeError, match=r"input.*not specified"):
         pipe.run(na, a=3)
 
     # missing inputs only matter if they are required
