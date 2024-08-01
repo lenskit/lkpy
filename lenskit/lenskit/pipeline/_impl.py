@@ -16,7 +16,7 @@ from uuid import uuid4
 from typing_extensions import Any, Generic, LiteralString, TypeVar, overload
 
 from lenskit.data import Dataset
-from lenskit.pipeline.types import TypecheckWarning
+from lenskit.pipeline.types import TypecheckWarning, is_compatible_data
 
 from .components import Component
 
@@ -211,6 +211,9 @@ class Pipeline:
             node:
                 The node or literal value to wire to this parameter.
         """
+        if not isinstance(node, Node):
+            node = self.literal(node)
+        self._defaults[name] = node
         self._clear_caches()
 
     def alias(self, alias: str, node: Node[Any] | str) -> None:
@@ -455,7 +458,14 @@ class Pipeline:
                     if ready:
                         _log.debug("running %s", node)
                         # if the node is ready to compute (all inputs in state), we run it.
-                        args = {n: state[wiring[n]] for n in inputs.keys()}
+                        args = {}
+                        for n in inputs.keys():
+                            if n in wiring:
+                                args[n] = state[wiring[n]]
+                            elif n in self._defaults:
+                                args[n] = state[self._defaults[n].name]
+                            else:  # pragma: nocover
+                                raise AssertionError("missing input not caught earlier")
                         state[name] = comp(**args)
                         needed.pop()
 
@@ -463,12 +473,18 @@ class Pipeline:
                     # inputs onto the stack.  The inputs may be re-pushed, so this
                     # will never be the last node on the stack at this point
 
-                case InputNode(name):
+                case InputNode(name, types=types):
                     try:
-                        state[name] = kwargs[name]
+                        val = kwargs[name]
                     except KeyError:
                         raise RuntimeError(f"input {name} not specified")
 
+                    if types and not is_compatible_data(val, *types):
+                        raise TypeError(
+                            f"invalid data for input {name} (expected {types}, got {type(val)})"
+                        )
+                    state[name] = val
+                    needed.pop()
                 case _:
                     raise RuntimeError(f"invalid node {node}")
 

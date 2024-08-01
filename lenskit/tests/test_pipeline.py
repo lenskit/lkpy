@@ -201,8 +201,6 @@ def test_default_wiring():
 
     assert pipe.run(a=1, b=7) == 9
     assert pipe.run(na, a=3, b=7) == 13
-    with raises(RuntimeError, match="not in pipeline"):
-        pipe.run(nd, a=3, b=7)
 
 
 def test_run_by_name():
