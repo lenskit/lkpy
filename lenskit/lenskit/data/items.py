@@ -44,6 +44,10 @@ class ItemList:
     An item list logically a list of rows, each of which is an item, like a
     :class:`~pandas.DataFrame` but supporting multiple array backends.
 
+    Item lists can be subset as an array (e.g. ``items[selector]``), where
+    integer indices (or arrays thereof), boolean arrays, and slices are allowed
+    as selectors.
+
     When an item list is pickled, it is pickled compactly but only for CPUs: the
     vocabulary is dropped (after ensuring both IDs and numbers are computed),
     and all arrays are pickled as NumPy arrays.  This makes item lists compact
@@ -73,6 +77,13 @@ class ItemList:
         * Both singular and plural forms are accepted for item IDs numbers, and
           scores in the keyword arguments.  Other field names should be
           singular.
+
+    .. todo::
+
+        Right now, selection / subsetting only happens on the CPU, and will move
+        data to the CPU for the subsetting operation.  There is no reason, in
+        principle, why we cannot subset on GPU.  Future revisions may add
+        support for this.
 
     Args:
         item_ids:
@@ -131,7 +142,7 @@ class ItemList:
 
         if item_ids is not None:
             self._ids = np.asarray(item_ids)
-            if not issubclass(self._ids.dtype.type, (np.integer, np.str_, np.bytes_)):
+            if not issubclass(self._ids.dtype.type, (np.integer, np.str_, np.bytes_, np.object_)):
                 raise TypeError(f"item IDs not integers or bytes (type: {self._ids.dtype})")
 
             check_1d(self._ids, label="item_ids")
@@ -153,6 +164,38 @@ class ItemList:
             if "score" in fields:  # pragma: nocover
                 raise ValueError("cannot specify both scores= and score=")
             self._fields["score"] = MTArray(scores)
+
+    @classmethod
+    def from_df(
+        cls, df: pd.DataFrame, *, vocabulary=Vocabulary[EntityId], keep_user: bool = False
+    ) -> ItemList:
+        """
+        Create a item list from a Pandas data frame.  The frame should have
+        ``item_num`` and/or ``item_id`` columns to identify the items; other
+        columns (e.g. ``score`` or ``rating``) are added as fields. If the data
+        frame has user columns (``user_id`` or ``user_num``), those are dropped
+        by default.
+
+        Args:
+            df:
+                The data frame to turn into an item list.
+            vocabulary:
+                The item vocabulary.
+            keep_user:
+                If ``True``, keeps user ID/number columns instead of dropping them.
+        """
+        ids = df["item_id"].values if "item_id" in df.columns else None
+        nums = df["item_num"].values if "item_num" in df.columns else None
+        if ids is None and nums is None:
+            raise TypeError("data frame must have at least one of item_id, item_num columns")
+
+        to_drop = ["item_id", "item_num"]
+        if not keep_user:
+            to_drop += ["user_id", "user_num"]
+        df = df.drop(columns=to_drop, errors="ignore")
+
+        fields = {f: df[f].values for f in df.columns}
+        return cls(item_ids=ids, item_nums=nums, vocabulary=vocabulary, **fields)  # type: ignore
 
     def clone(self) -> ItemList:
         """
@@ -307,21 +350,30 @@ class ItemList:
         else:
             return val.to(format)
 
-    def to_df(self) -> pd.DataFrame:
+    def to_df(self, *, ids: bool = True, numbers: bool = True) -> pd.DataFrame:
         """
         Convert this item list to a Pandas data frame.  It has the following columns:
 
-        * ``item_id`` — the item IDs (if available)
-        * ``item_id`` — the item numbers (if available)
+        * ``item_id`` — the item IDs (if available and ``ids=True``)
+        * ``item_num`` — the item numbers (if available and ``numbers=True``)
         * ``score`` — the item scores
         * ``rank`` — the item ranks (if the list is ordered)
         * all other defined fields, using their field names
         """
         cols = {}
-        if self._ids is not None or self._vocab is not None:
+        if ids and self._ids is not None or self._vocab is not None:
             cols["item_id"] = self.ids()
-        if self._numbers is not None or self._vocab is not None:
+        if numbers and self._numbers is not None or self._vocab is not None:
             cols["item_num"] = self.numbers()
+        # we need to have numbers or ids, or it makes no sense
+        if "item_id" not in cols and "item_num" not in cols:
+            if ids and not numbers:
+                raise RuntimeError("item list has no vocabulary, cannot compute IDs")
+            elif numbers and not ids:
+                raise RuntimeError("item list has no vocabulary, cannot compute numbers")
+            else:
+                raise RuntimeError("cannot create item data frame without identifiers or numbers")
+
         if "score" in self._fields:
             cols["score"] = self.scores()
         if self.ordered:
@@ -332,6 +384,33 @@ class ItemList:
 
     def __len__(self):
         return self._len
+
+    def __getitem__(
+        self,
+        sel: NDArray[np.bool_] | NDArray[np.integer] | Sequence[int] | torch.Tensor | int | slice,
+    ) -> ItemList:
+        """
+        Subset the item list.
+
+        Args:
+            sel:
+                The items to select. Can be either a Boolean array of the same
+                length as the list that is ``True`` to indicate selected items,
+                or an array of indices of the items to retain (in order in the
+                list, starting from 0).
+        """
+        if np.isscalar(sel):
+            sel = np.array([sel])
+        elif not isinstance(sel, slice):
+            sel = np.asarray(sel)
+
+        # sel is now a selection array, or it is a slice. numpy supports both.
+        iids = self._ids[sel] if self._ids is not None else None
+        nums = self._numbers.numpy()[sel] if self._numbers is not None else None
+        flds = {n: f.numpy()[sel] for (n, f) in self._fields.items()}
+        return ItemList(
+            item_ids=iids, item_nums=nums, vocabulary=self._vocab, ordered=self.ordered, **flds
+        )
 
     def __getstate__(self) -> dict[str, object]:
         state: dict[str, object] = {"ordered": self.ordered, "len": self._len}
@@ -356,3 +435,6 @@ class ItemList:
         if "numbers" in state:
             self._numbers = MTArray(state["numbers"])
         self._fields = {k[6:]: MTArray(v) for (k, v) in state.items() if k.startswith("field_")}
+
+    def __str__(self) -> str:
+        return f"<ItemList of {self._len} items>"

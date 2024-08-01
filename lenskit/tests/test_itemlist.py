@@ -6,6 +6,7 @@
 import pickle
 
 import numpy as np
+import pandas as pd
 import torch
 
 from pytest import raises
@@ -231,3 +232,66 @@ def test_item_list_pickle_fields(ml_ds):
     assert np.all(r2.field("rating") == row.field("rating"))
     assert r2.field("timestamp") is not None
     assert np.all(r2.field("timestamp") == row.field("timestamp"))
+
+
+def test_subset_mask(ml_ds):
+    row = ml_ds.user_row(user_num=400)
+    ratings = row.field("rating")
+    assert ratings is not None
+
+    mask = ratings > 3.0
+    pos = row[mask]
+
+    assert len(pos) == np.sum(mask)
+    assert np.all(pos.ids() == row.ids()[mask])
+    assert np.all(pos.numbers() == row.numbers()[mask])
+    assert np.all(pos.field("rating") == row.field("rating")[mask])
+    assert np.all(pos.field("rating") > 3.0)
+
+
+def test_subset_idx(ml_ds):
+    row = ml_ds.user_row(user_num=400)
+    ratings = row.field("rating")
+    assert ratings is not None
+
+    ks = [0, 5, 15]
+    pos = row[ks]
+
+    assert len(pos) == 3
+    assert np.all(pos.ids() == row.ids()[ks])
+    assert np.all(pos.numbers() == row.numbers()[ks])
+    assert np.all(pos.field("rating") == row.field("rating")[ks])
+
+
+def test_subset_slice(ml_ds):
+    row = ml_ds.user_row(user_num=400)
+    ratings = row.field("rating")
+    assert ratings is not None
+
+    pos = row[5:10]
+
+    assert len(pos) == 5
+    assert np.all(pos.ids() == row.ids()[5:10])
+    assert np.all(pos.numbers() == row.numbers()[5:10])
+    assert np.all(pos.field("rating") == row.field("rating")[5:10])
+
+
+def test_from_df():
+    df = pd.DataFrame({"item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5)})
+    il = ItemList.from_df(df, vocabulary=VOCAB)  # type: ignore
+    assert len(il) == 5
+    assert np.all(il.ids() == ITEMS)
+    assert np.all(il.numbers() == np.arange(5))
+    assert np.all(il.scores() == df["score"].values)
+
+
+def test_from_df_user():
+    df = pd.DataFrame(
+        {"user_id": 50, "item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5)}
+    )
+    il = ItemList.from_df(df, vocabulary=VOCAB)  # type: ignore
+    assert len(il) == 5
+    assert np.all(il.ids() == ITEMS)
+    assert np.all(il.numbers() == np.arange(5))
+    assert np.all(il.scores() == df["score"].values)
+    assert il.field("user_id") is None

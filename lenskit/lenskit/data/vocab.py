@@ -11,7 +11,18 @@ Vocabularies of IDs, tags, etc.
 # pyright: basic
 from __future__ import annotations
 
-from typing import Any, Generic, Hashable, Iterable, Literal, Sequence, TypeAlias, TypeVar, overload
+from typing import (
+    Any,
+    Generic,
+    Hashable,
+    Iterable,
+    Iterator,
+    Literal,
+    Sequence,
+    TypeAlias,
+    TypeVar,
+    overload,
+)
 
 import numpy as np
 import pandas as pd
@@ -158,6 +169,9 @@ class Vocabulary(Generic[VT]):
 
     def __contains__(self, key: VT) -> bool:
         return key in self._index
+
+    def __iter__(self) -> Iterator[EntityId]:
+        return iter(self._index.values)
 
     def __len__(self) -> int:
         return self.size

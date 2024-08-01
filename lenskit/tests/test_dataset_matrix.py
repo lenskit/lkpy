@@ -372,12 +372,25 @@ def test_matrix_rows_by_id(rng: np.random.Generator, ml_ratings: pd.DataFrame, m
 def test_matrix_rows_by_num(rng: np.random.Generator, ml_ratings: pd.DataFrame, ml_ds: Dataset):
     users = rng.choice(ml_ds.user_count, 50)
 
+    rated = set(zip(ml_ratings["user"], ml_ratings["item"]))
+    rdf = ml_ds.interaction_matrix("pandas")
+    rnums = set(zip(rdf["user_num"], rdf["item_num"]))
+
+    dfi = ml_ratings.set_index(["user", "item"])
+
     for user in users:
+        uid = ml_ds.users.id(user)
         row = ml_ds.user_row(user_num=user)
         assert row is not None
         urows = ml_ratings[ml_ratings["user"] == ml_ds.users.id(user)].sort_values("item")
         assert set(row.ids()) == set(urows["item"])
+
         assert np.all(row.numbers() == ml_ds.items.numbers(urows["item"]))
+        assert all((user, ino) in rnums for ino in row.numbers())
+
+        assert np.all(row.ids() == ml_ds.items.ids(row.numbers()))
+        assert all((uid, item) in rated for item in row.ids())
+        assert all((uid, item) in dfi.index for item in row.ids())
 
         ratings = row.field("rating")
         assert ratings is not None
