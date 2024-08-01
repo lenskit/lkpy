@@ -437,11 +437,14 @@ class Pipeline:
                     # check that (1) the node is fully wired, and (2) its inputs are all computed
                     ready = True
                     for k in inputs.keys():
-                        try:
+                        if k in wiring:
                             wired = wiring[k]
-                        except KeyError:
+                        elif k in self._defaults:
+                            wired = self._defaults[k]
+                        else:
                             raise RuntimeError(f"input {k} for {node} not connected")
                         wired = self.node(wired)
+
                         if wired.name not in state:
                             # input value not available, queue it up
                             ready = False
