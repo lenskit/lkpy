@@ -333,7 +333,8 @@ def test_fallback_input():
     fb = pipe.use_first_of("fill-operand", b, nn)
     na = pipe.add_component("add", add, x=nd, y=fb)
 
-    assert pipe.run(na, a=3) == 0
+    # 3 * 2 + -3 = 3
+    assert pipe.run(na, a=3) == 3
 
 
 def test_fallback_only_run_if_needed():
