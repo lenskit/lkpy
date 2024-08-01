@@ -176,9 +176,13 @@ def test_replace_component():
 
     nt = pipe.replace_component("double", triple, x=a)
 
-    assert pipe.run(a=1, b=7) == 9
-    assert pipe.run(na, a=3, b=7) == 13
+    # run through the end
+    assert pipe.run(a=1, b=7) == 10
+    assert pipe.run(na, a=3, b=7) == 16
+    # run only the first component
     assert pipe.run(nt, a=3, b=7) == 9
+
+    # old node should be missing!
     with raises(RuntimeError, match="not in pipeline"):
         pipe.run(nd, a=3, b=7)
 

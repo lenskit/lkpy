@@ -279,7 +279,17 @@ class Pipeline:
         inputs), but any connections that use the old component to supply an
         input will use the new component instead.
         """
-        raise NotImplementedError()
+        if isinstance(name, Node):
+            name = name.name
+
+        node = ComponentNode(name, obj)
+        self._nodes[name] = node
+        self._components[name] = obj
+
+        self.connect(node, **inputs)
+
+        self._clear_caches()
+        return node
 
     def use_first_of(self, name: str, *nodes: Node[T | None]) -> Node[T]:
         """
@@ -424,6 +434,7 @@ class Pipeline:
         # we traverse the graph with this
         needed = list(reversed(ret))
 
+        # the main loop — keep resolving pipeline nodes until we're done
         while needed:
             node = needed[-1]
             if node.name in state:
@@ -456,7 +467,7 @@ class Pipeline:
                             needed.append(wired)
 
                     if ready:
-                        _log.debug("running %s", node)
+                        _log.debug("running %s (%s)", node, comp)
                         # if the node is ready to compute (all inputs in state), we run it.
                         args = {}
                         for n in inputs.keys():
@@ -485,6 +496,7 @@ class Pipeline:
                         )
                     state[name] = val
                     needed.pop()
+
                 case _:
                     raise RuntimeError(f"invalid node {node}")
 
@@ -505,7 +517,7 @@ class Pipeline:
     def _check_member_node(self, node: Node[Any]) -> None:
         nw = self._nodes.get(node.name)
         if nw is not node:
-            raise ValueError(f"node {node} not in graph")
+            raise RuntimeError(f"node {node} not in pipeline")
 
     def _clear_caches(self):
         pass
