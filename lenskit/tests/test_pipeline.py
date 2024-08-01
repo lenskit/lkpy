@@ -7,9 +7,10 @@
 # pyright: strict
 from typing import assert_type
 from uuid import UUID
-from lenskit.pipeline import Node, Pipeline
 
 from pytest import raises
+
+from lenskit.pipeline import Node, Pipeline
 
 
 def test_init_empty():
