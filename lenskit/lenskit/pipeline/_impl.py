@@ -11,6 +11,7 @@ import logging
 import warnings
 from inspect import Signature, signature
 from typing import Callable, cast
+from uuid import uuid4
 
 from typing_extensions import Any, Generic, LiteralString, TypeVar, overload
 
@@ -189,6 +190,12 @@ class Pipeline:
         self._clear_caches()
         return node
 
+    def literal(self, value: T) -> LiteralNode[T]:
+        name = str(uuid4())
+        node = LiteralNode(name, value, types=set([type(value)]))
+        self._nodes[name] = node
+        return node
+
     def set_default(self, name: LiteralString, node: Node[Any] | object) -> None:
         """
         Set the default wiring for a component input.  Components that declare
@@ -331,7 +338,8 @@ class Pipeline:
                 self._check_member_node(n)
                 node.connections[k] = n.name
             else:
-                raise NotImplementedError()
+                lit = self.literal(n)
+                node.connections[k] = lit.name
 
         self._clear_caches()
 
