@@ -8,7 +8,7 @@
 from typing import assert_type
 from uuid import UUID
 
-from pytest import raises
+from pytest import fail, raises
 
 from lenskit.pipeline import Node, Pipeline
 
@@ -38,3 +38,262 @@ def test_dup_input_fails():
 
     with raises(ValueError, match="has node"):
         pipe.create_input("user", UUID)
+
+
+def test_dup_component():
+    "create an input node"
+    pipe = Pipeline()
+    pipe.create_input("user", int, str)
+
+    with raises(ValueError, match="has node"):
+        pipe.add_component("user", lambda x: x)  # type: ignore
+
+
+def test_alias():
+    "alias a node"
+    pipe = Pipeline()
+    user = pipe.create_input("user", int, str)
+
+    pipe.alias("person", user)
+
+    assert pipe.node("person") is user
+
+    # aliases conflict as well
+    with raises(ValueError):
+        pipe.create_input("person", bytes)
+
+
+def test_single_input():
+    pipe = Pipeline()
+    msg = pipe.create_input("msg", str)
+
+    def incr(msg: str) -> str:
+        return msg
+
+    node = pipe.add_component("return", incr, msg=msg)
+
+    ret = pipe.run(node, msg="hello")
+    assert ret == "hello"
+
+    ret = pipe.run(node, msg="world")
+    assert ret == "world"
+
+
+def test_chain():
+    pipe = Pipeline()
+    x = pipe.create_input("x", int)
+
+    def incr(x: int) -> int:
+        return x + 1
+
+    def triple(x: int) -> int:
+        return x * 3
+
+    ni = pipe.add_component("incr", incr, x=x)
+    nt = pipe.add_component("triple", triple, x=ni)
+
+    # run default pipe
+    ret = pipe.run(x=1)
+    assert ret == 6
+
+    # run explicitly
+    assert pipe.run(nt, x=2) == 9
+
+    # run only first node
+    assert pipe.run(ni, x=10) == 11
+
+
+def test_simple_graph():
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    na = pipe.add_component("add", add, x=nd, y=b)
+
+    assert pipe.run(a=1, b=7) == 9
+    assert pipe.run(na, a=3, b=7) == 13
+    assert pipe.run(nd, a=3, b=7) == 6
+
+
+def test_replace_component():
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def triple(x: int) -> int:
+        return x * 3
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    na = pipe.add_component("add", add, x=nd, y=b)
+
+    nt = pipe.replace_component("double", triple, x=a)
+
+    assert pipe.run(a=1, b=7) == 9
+    assert pipe.run(na, a=3, b=7) == 13
+    assert pipe.run(nt, a=3, b=7) == 9
+    with raises(RuntimeError, match="not in pipeline"):
+        pipe.run(nd, a=3, b=7)
+
+
+def test_run_by_name():
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    pipe.add_component("add", add, x=nd, y=b)
+
+    assert pipe.run("double", a=1, b=7) == 2
+
+
+def test_invalid_type():
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    pipe.add_component("add", add, x=nd, y=b)
+
+    with raises(TypeError):
+        pipe.run(a=1, b="seven")
+
+
+def test_run_by_alias():
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    na = pipe.add_component("add", add, x=nd, y=b)
+
+    pipe.alias("result", na)
+
+    assert pipe.run("result", a=1, b=7) == 9
+
+
+def test_connect_literal():
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    na = pipe.add_component("add", add, x=nd, y=2)
+
+    assert pipe.run(na, a=3) == 8
+
+
+def test_connect_literal_explicit():
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    na = pipe.add_component("add", add, x=nd, y=pipe.literal(2))
+
+    assert pipe.run(na, a=3) == 8
+
+
+def test_fail_missing_input():
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    na = pipe.add_component("add", add, x=nd, y=b)
+
+    with raises(RuntimeError):
+        pipe.run(na, a=3)
+
+    # missing inputs only matter if they are required
+    assert pipe.run(nd, a=3) == 6
+
+
+def test_fallback_input():
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def negative(x: int) -> int:
+        return -x
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    nn = pipe.add_component("negate", negative, x=a)
+    fb = pipe.use_first_of("fill-operand", b, nn)
+    na = pipe.add_component("add", add, x=nd, y=fb)
+
+    assert pipe.run(na, a=3) == 0
+
+
+def test_fallback_only_run_if_needed():
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def negative(x: int) -> int:
+        fail("fallback component run when not needed")
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    nn = pipe.add_component("negate", negative, x=a)
+    fb = pipe.use_first_of("fill-operand", b, nn)
+    na = pipe.add_component("add", add, x=nd, y=fb)
+
+    assert pipe.run(na, a=3, b=8) == 14
