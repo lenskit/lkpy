@@ -324,7 +324,7 @@ memory parallelism in its batch-inference code.
     Is it clear to write these capabilities as separate protocols, or would it be
     better to write a single ``Component`` :class:`~abc.ABC`?
 
-.. autoclass:: Component
+.. autodata:: Component
 
 .. autoclass:: ConfigurableComponent
 
