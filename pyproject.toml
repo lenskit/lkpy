@@ -12,6 +12,7 @@ dependencies = [
   "pyyaml==6.*",
   "packaging>=24.0",
   "docopt>=0.6",
+  "typing_extensions==4.*",
 ]
 
 [project.scripts]

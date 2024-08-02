@@ -23,10 +23,10 @@ import logging
 import sys
 from importlib import import_module
 from textwrap import dedent
-from typing import Any, NotRequired, TypedDict
 
 import yaml
 from docopt import docopt
+from typing_extensions import Any, NotRequired, TypedDict
 
 _log = logging.getLogger("lkdev.ghactions")
 
