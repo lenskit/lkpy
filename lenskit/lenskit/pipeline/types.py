@@ -50,13 +50,14 @@ def is_compatible_type(typ: type, *targets: type) -> bool:
         if isinstance(target, (GenericAlias, _GenericAlias)):
             tcls = get_origin(target)
             # if we're matching a raw type against a generic, just check the origin
-            if isinstance(typ, type):
-                if issubclass(typ, tcls):  # type: ignore
-                    return True
-            elif isinstance(typ, GenericAlias):
+            if isinstance(typ, GenericAlias):
                 warnings.warn(f"cannot type-check generic type {typ}", TypecheckWarning)
                 cls = get_origin(typ)
-                if issubclass(cls, tcls):
+                if issubclass(cls, tcls):  # type: ignore
+                    return True
+            elif isinstance(typ, type):
+                print(typ, type(typ))
+                if issubclass(typ, tcls):  # type: ignore
                     return True
         elif typ == int and issubclass(target, (float, complex)):  # noqa: E721
             return True
