@@ -10,3 +10,8 @@ invoker
 CUDA
 subpackages
 recomputation
+Higley
+POPROX
+rankers
+Scikit-Learn
+unpickle
