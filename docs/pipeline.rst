@@ -329,3 +329,5 @@ memory parallelism in its batch-inference code.
 .. autoclass:: ConfigurableComponent
 
 .. autoclass:: TrainableComponent
+
+.. autoclass:: AutoConfig

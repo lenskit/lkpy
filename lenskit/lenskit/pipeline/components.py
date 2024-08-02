@@ -33,7 +33,8 @@ class ConfigurableComponent(Protocol):  # pragma: nocover
       :meth:`from_config`.
 
     A component must implement both of these methods to be considered
-    configurable.
+    configurable.  For most common cases, extending the :class:`AutoConfig`
+    class is sufficient to provide working implementations of these methods.
 
     .. note::
 
