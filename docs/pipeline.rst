@@ -291,7 +291,12 @@ Pipeline Class
 Pipeline Nodes
 ~~~~~~~~~~~~~~
 
+Pipeline nodes are represented by :class:`Node` objects.  For the purposes of
+client code, these should be considered opaque objects usable only to reference
+a node.
+
 .. autoclass:: Node
+    :members: name
 
 Component Interface
 ~~~~~~~~~~~~~~~~~~~
