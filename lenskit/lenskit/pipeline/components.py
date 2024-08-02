@@ -9,9 +9,10 @@
 # pyright: strict
 from __future__ import annotations
 
-from typing import Callable, TypeAlias
+import inspect
+from typing import Callable, ClassVar, TypeAlias
 
-from typing_extensions import Any, Generic, Protocol, Self, TypeVar, runtime_checkable
+from typing_extensions import Any, Generic, Protocol, Self, TypeVar, override, runtime_checkable
 
 from lenskit.data.dataset import Dataset
 
@@ -21,7 +22,7 @@ Component: TypeAlias = Callable[..., COut]
 
 
 @runtime_checkable
-class ConfigurableComponent(Generic[COut], Protocol):
+class ConfigurableComponent(Protocol):  # pragma: nocover
     """
     Interface for configurable pipeline components (those that have
     hyperparameters).  A configurable component supports two additional
@@ -44,21 +45,21 @@ class ConfigurableComponent(Generic[COut], Protocol):
     """
 
     @classmethod
-    def from_config(cls, cfg: dict[str, Any]) -> dict[str, object]:
+    def from_config(cls, cfg: dict[str, Any]) -> Self:
         """
         Reinstantiate this component from configuration values.
         """
-        ...
+        raise NotImplementedError()
 
     def get_config(self) -> dict[str, object]:
         """
         Get this component's configured hyperparameters.
         """
-        ...
+        raise NotImplementedError()
 
 
 @runtime_checkable
-class TrainableComponent(Generic[COut], Protocol):
+class TrainableComponent(Generic[COut], Protocol):  # pragma: nocover
     """
     Interface for pipeline components that can learn parameters from training
     data, and expose those parameters for serialization as an alternative to
@@ -108,3 +109,74 @@ class TrainableComponent(Generic[COut], Protocol):
         Reload model state from parameters saved via :meth:`get_params`.
         """
         raise NotImplementedError()
+
+
+class AutoConfig(ConfigurableComponent):
+    """
+    Mixin class providing automatic configuration support based on constructor
+    arguments.
+
+    This method provides implementations of :meth:`get_config` and
+    :meth:`from_config` that inspect the constructor arguments and instance
+    variables to automatically provide configuration support.  By default, all
+    constructor parameters will be considered configuration parameters, and
+    their values will be read from instance variables of the same name.
+    Subclasses can also define :data:`EXTRA_CONFIG_FIELDS` and
+    :data:`IGNORED_CONFIG_FIELDS` class variables to modify this behavior.
+    Missing attributes are silently ignored.
+
+    In the simple case, you can write a class like this and get config for free:
+
+    .. code:: python
+
+        class MyComponent(AutoConfig):
+            some_param: int
+
+            def __init__(self, some_param: int = 20):
+                self.some_param = some_param
+
+    For compatibility with pipeline serialization, all configuration data should
+    be JSON-compatible.
+    """
+
+    EXTRA_CONFIG_FIELDS: ClassVar[list[str]] = []
+    """
+    Names of instance variables that should be included in the configuration
+    dictionary even though they do not correspond to named constructor
+    arguments.
+
+    .. note::
+
+        This is rarely needed, and usually needs to be coupled with ``**kwargs``
+        in the constructor to make the resulting objects constructible.
+    """
+
+    IGNORED_CONFIG_FIELDS: ClassVar[list[str]] = []
+    """
+    Names of constructor parameters that should be excluded from the
+    configuration dictionary.
+    """
+
+    @override
+    def get_config(self) -> dict[str, object]:
+        """
+        Get the configuration by inspecting the constructor and instance
+        variables.
+        """
+        sig = inspect.signature(self.__class__)
+        names = list(sig.parameters.keys()) + self.EXTRA_CONFIG_FIELDS
+        params: dict[str, Any] = {}
+        for name in names:
+            if name not in self.IGNORED_CONFIG_FIELDS and hasattr(self, name):
+                params[name] = getattr(self, name)
+
+        return params
+
+    @override
+    @classmethod
+    def from_config(cls, cfg: dict[str, Any]) -> Self:
+        """
+        Create a class from the specified construction.  Configuration elements
+        are passed to the constructor as keywrod arguments.
+        """
+        return cls(**cfg)
