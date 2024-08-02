@@ -11,9 +11,8 @@ from inspect import Signature, signature
 
 from typing_extensions import Generic, TypeVar
 
-from lenskit.pipeline.types import TypecheckWarning
-
 from .components import Component
+from .types import TypecheckWarning
 
 # Nodes are (conceptually) immutable data containers, so Node[U] can be assigned
 # to Node[T] if U ≼ T.
