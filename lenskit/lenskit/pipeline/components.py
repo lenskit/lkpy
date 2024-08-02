@@ -9,46 +9,19 @@
 # pyright: strict
 from __future__ import annotations
 
+from typing import Callable, TypeAlias
+
 from typing_extensions import Any, Generic, Protocol, Self, TypeVar, runtime_checkable
 
 from lenskit.data.dataset import Dataset
 
 # COut is only return, so Component[U] can be assigned to Component[T] if U ≼ T.
 COut = TypeVar("COut", covariant=True)
-
-
-class Component(Protocol, Generic[COut]):
-    """
-    Interface (protocol) for pipeline components: functions from inputs to outputs.
-
-    Most components will implement additional component protocols, such as:
-
-    * :class:`ConfigurableComponent`
-    * :class:`TrainableComponent`
-
-    .. note::
-
-        This protocol is equivalent to ``Callable[..., COut]`` but is defined as a
-        protocol so we can define sub-protocols with additional methods.
-    """
-
-    def __call__(self, **kwargs: Any) -> COut:
-        """
-        Apply this component to its input data.
-
-        .. note::
-
-            The protocol definition allows arbitrary keyword arguments (and no
-            positional arguments), to work with Python's type system limitations
-            and the impossibility of manually writing :class:`~typing.ParamSpec`
-            declarations, but component implementations are expected to declare
-            specific input arguments with type annotations.
-        """
-        raise NotImplementedError()
+Component: TypeAlias = Callable[..., COut]
 
 
 @runtime_checkable
-class ConfigurableComponent(Generic[COut], Component[COut], Protocol):
+class ConfigurableComponent(Generic[COut], Protocol):
     """
     Interface for configurable pipeline components (those that have
     hyperparameters).  A configurable component supports two additional
@@ -67,8 +40,7 @@ class ConfigurableComponent(Generic[COut], Component[COut], Protocol):
 
     .. note::
 
-        This is a subtype of :class:`Component`, so implementations must also
-        implement ``__call__`` as specified there.
+        Implementations must also implement ``__call__``.
     """
 
     @classmethod
@@ -86,7 +58,7 @@ class ConfigurableComponent(Generic[COut], Component[COut], Protocol):
 
 
 @runtime_checkable
-class TrainableComponent(Generic[COut], Component[COut], Protocol):
+class TrainableComponent(Generic[COut], Protocol):
     """
     Interface for pipeline components that can learn parameters from training
     data, and expose those parameters for serialization as an alternative to
@@ -94,8 +66,7 @@ class TrainableComponent(Generic[COut], Component[COut], Protocol):
 
     .. note::
 
-        This is a subtype of :class:`Component`, so implementations must also
-        implement ``__call__`` as specified there.
+        Trainable components must also implement ``__call__``.
     """
 
     def train(self, data: Dataset) -> Self:

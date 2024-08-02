@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 # pyright: strict
+from typing import Any
 from uuid import UUID
 
 from typing_extensions import assert_type
@@ -483,5 +484,5 @@ class TestComponent:
     def get_params(self) -> dict[str, object]:
         return {"items": self.items}
 
-    def load_params(self, params: dict[str, object]) -> None:
+    def load_params(self, params: dict[str, Any]) -> None:
         self.items = params["items"]

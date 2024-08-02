@@ -12,7 +12,7 @@ LensKit pipeline abstraction.
 from __future__ import annotations
 
 import logging
-from typing import Callable, cast
+from typing import cast
 from uuid import uuid4
 
 from typing_extensions import Any, LiteralString, TypeVar, overload
@@ -184,7 +184,7 @@ class Pipeline:
         self._clear_caches()
 
     def add_component(
-        self, name: str, obj: Component[ND] | Callable[..., ND], **inputs: Node[Any] | object
+        self, name: str, obj: Component[ND], **inputs: Node[Any] | object
     ) -> Node[ND]:
         """
         Add a component and connect it into the graph.
@@ -216,7 +216,7 @@ class Pipeline:
     def replace_component(
         self,
         name: str | Node[ND],
-        obj: Component[ND] | Callable[..., ND],
+        obj: Component[ND],
         **inputs: Node[Any] | object,
     ) -> Node[ND]:
         """
