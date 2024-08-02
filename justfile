@@ -40,6 +40,7 @@ conda-dev-env-file *components=PACKAGES:
 # create a conda environment for development
 conda-dev-env *components=PACKAGES: (conda-dev-env-file components)
     conda env update --prune -n lkpy -f environment.yml
+    pip install --no-deps -e .
     for pkg in {{components}}; do \
         echo "installing $pkg"; \
         pip install --no-deps -e $pkg; \
