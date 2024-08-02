@@ -1,3 +1,9 @@
+# This file is part of LensKit.
+# Copyright (C) 2018-2023 Boise State University
+# Copyright (C) 2023-2024 Drexel University
+# Licensed under the MIT license, see LICENSE.md for details.
+# SPDX-License-Identifier: MIT
+
 # pyright: strict
 
 import warnings
@@ -45,14 +51,14 @@ class FallbackNode(Node[ND], Generic[ND]):
     Node for trying several nodes in turn.
     """
 
-    __match_args__ = ("name", "options")
+    __match_args__ = ("name", "alternatives")
 
-    options: list[Node[ND | None]]
+    alternatives: list[Node[ND | None]]
     "The nodes that can possibly fulfil this node."
 
-    def __init__(self, name: str, options: list[Node[ND | None]]):
+    def __init__(self, name: str, alternatives: list[Node[ND | None]]):
         super().__init__(name)
-        self.options = options
+        self.alternatives = alternatives
 
 
 class LiteralNode(Node[ND], Generic[ND]):

@@ -18,7 +18,6 @@ from uuid import uuid4
 from typing_extensions import Any, LiteralString, TypeVar, overload
 
 from lenskit.data import Dataset
-from lenskit.pipeline.types import is_compatible_data
 
 from .components import Component, ConfigurableComponent, TrainableComponent
 from .nodes import ND, ComponentNode, FallbackNode, InputNode, LiteralNode, Node
@@ -104,7 +103,7 @@ class Pipeline:
         else:
             raise KeyError(f"node {node}")
 
-    def create_input(self, name: LiteralString, *types: type[T]) -> Node[T]:
+    def create_input(self, name: LiteralString, *types: type[T] | None) -> Node[T]:
         """
         Create an input node for the pipeline.  Pipelines expect their inputs to
         be provided when they are run.
@@ -127,7 +126,7 @@ class Pipeline:
         """
         self._check_available_name(name)
 
-        node = InputNode[Any](name, types=set(types))
+        node = InputNode[Any](name, types=set((t if t is not None else type[None]) for t in types))
         self._nodes[name] = node
         self._clear_caches()
         return node
@@ -157,6 +156,12 @@ class Pipeline:
             node = self.literal(node)
         self._defaults[name] = node
         self._clear_caches()
+
+    def get_default(self, name: str) -> Node[Any] | None:
+        """
+        Get the default wiring for an input name.
+        """
+        return self._defaults.get(name, None)
 
     def alias(self, alias: str, node: Node[Any] | str) -> None:
         """
@@ -236,10 +241,12 @@ class Pipeline:
     def use_first_of(self, name: str, *nodes: Node[T | None]) -> Node[T]:
         """
         Create a new node whose value is the first defined (not ``None``) value
-        of the specified nodes.  This is used for things like filling in optional
-        pipeline inputs.  For example, if you want the pipeline to take candidate
-        items through an ``items`` input, but look them up from the user's history
-        and the training data if ``items`` is not supplied, you would do:
+        of the specified nodes.  If a node is an input node and its value is not
+        supplied, it is treated as ``None`` in this case instead of failing the
+        run. This method is used for things like filling in optional pipeline
+        inputs.  For example, if you want the pipeline to take candidate items
+        through an ``items`` input, but look them up from the user's history and
+        the training data if ``items`` is not supplied, you would do:
 
         .. code:: python
 
@@ -258,11 +265,23 @@ class Pipeline:
 
         .. note::
 
-            This method does *not* implement item-level fallbacks, only fallbacks at
-            the level of entire results.  That is, you can use it to use component A
-            as a fallback for B if B returns ``None``, but it will not use B to fill
-            in missing scores for individual items that A did not score.  A specific
-            itemwise fallback component is needed for such an operation.
+            This method does not distinguish between an input being unspecified and
+            explicitly specified as ``None``.
+
+        .. note::
+
+            This method does *not* implement item-level fallbacks, only
+            fallbacks at the level of entire results.  That is, you can use it
+            to use component A as a fallback for B if B returns ``None``, but it
+            will not use B to fill in missing scores for individual items that A
+            did not score.  A specific itemwise fallback component is needed for
+            such an operation.
+
+        Args:
+            name:
+                The name of the node.
+            nodes:
+                The nodes to try, in order, to satisfy this node.
         """
         node = FallbackNode(name, list(nodes))
         self._nodes[name] = node
@@ -364,119 +383,17 @@ class Pipeline:
             other:
                 exceptions thrown by components are passed through.
         """
-        state: dict[str, Any] = {}
+        from .runner import PipelineRunner
 
-        ret: list[Node[Any]] | Node[Any] = [self.node(n) for n in nodes]
-        _log.debug(
-            "starting run of pipeline with %d nodes, want %s",
-            len(self._nodes),
-            [n.name for n in ret],
-        )
-        if not ret:
-            ret = [self._last_node()]
+        runner = PipelineRunner(self, kwargs)
+        if not nodes:
+            nodes = (self._last_node(),)
+        results = [runner.run(self.node(n)) for n in nodes]
 
-        # set up a stack of nodes to look at (with their required/optional status)
-        # we traverse the graph with this
-        needed = [(r, True) for r in reversed(ret)]
-
-        # the main loop — keep resolving pipeline nodes until we're done
-        while needed:
-            node, required = needed[-1]
-            if node.name in state:
-                # the node is computed, we're done
-                needed.pop()
-                continue
-
-            _log.debug("processing node %s (required=%s)", node, required)
-
-            match node:
-                case LiteralNode(name, value):
-                    # literal nodes are ready to put on the state
-                    state[name] = value
-                    needed.pop()
-                case ComponentNode(name, comp, inputs, wiring):
-                    # check that (1) the node is fully wired, and (2) its inputs are all computed
-                    ready = True
-                    for k, it in inputs.items():
-                        if k in wiring:
-                            wired = wiring[k]
-                        elif k in self._defaults:
-                            wired = self._defaults[k]
-                        else:
-                            raise RuntimeError(f"input {k} for {node} not connected")
-                        wired = self.node(wired)
-
-                        if wired.name not in state:
-                            # input value not available, queue it up
-                            ready = False
-                            # it is fine to queue the same node twice — it will
-                            # be quickly skipped the second time
-                            if it is None:
-                                required = True
-                            else:
-                                required = not isinstance(None, it)
-                            _log.debug("%s: queueing input %s (type %s)", node, k, it)
-                            needed.append((wired, required))
-
-                    if ready:
-                        _log.debug("running %s (%s)", node, comp)
-                        # if the node is ready to compute (all inputs in state), we run it.
-                        args = {}
-                        for n in inputs.keys():
-                            if n in wiring:
-                                args[n] = state[wiring[n]]
-                            elif n in self._defaults:
-                                args[n] = state[self._defaults[n].name]
-                            else:  # pragma: nocover
-                                raise AssertionError("missing input not caught earlier")
-                        state[name] = comp(**args)
-                        needed.pop()
-
-                    # fallthrough: the node is not ready, and we have pushed its
-                    # inputs onto the stack.  The inputs may be re-pushed, so this
-                    # will never be the last node on the stack at this point
-
-                case InputNode(name, types=types):
-                    try:
-                        val = kwargs[name]
-                    except KeyError:
-                        if required:
-                            raise RuntimeError(f"input {name} not specified")
-                        else:
-                            val = None
-
-                    if required and types and not is_compatible_data(val, *types):
-                        raise TypeError(
-                            f"invalid data for input {name} (expected {types}, got {type(val)})"
-                        )
-                    state[name] = val
-                    needed.pop()
-
-                case FallbackNode(name, options):
-                    status = "failed"
-                    for opt in options:
-                        if opt.name not in state:
-                            # try to get this item
-                            needed.append((opt, False))
-                            status = "pending"
-                            break
-                        elif state[opt.name] is not None:
-                            # we have a value
-                            state[name] = state[opt.name]
-                            status = "fulfilled"
-                            needed.pop()
-                            break
-
-                    if status == "failed":
-                        raise RuntimeError(f"no alternative for {node} was fulfilled")
-
-                case _:
-                    raise RuntimeError(f"invalid node {node}")
-
-        if len(ret) > 1:
-            return tuple(state[r.name] for r in ret)
+        if len(results) > 1:
+            return tuple(results)
         else:
-            return state[ret[0].name]
+            return results[0]
 
     def _last_node(self) -> Node[object]:
         if not self._nodes:

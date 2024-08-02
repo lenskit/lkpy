@@ -101,6 +101,32 @@ def test_single_input():
     assert ret == "world"
 
 
+def test_single_input_required():
+    pipe = Pipeline()
+    msg = pipe.create_input("msg", str)
+
+    def incr(msg: str) -> str:
+        return msg
+
+    node = pipe.add_component("return", incr, msg=msg)
+
+    with raises(RuntimeError, match="not specified"):
+        pipe.run(node)
+
+
+def test_single_optional_input():
+    pipe = Pipeline()
+    msg = pipe.create_input("msg", str, None)
+
+    def fill(msg: str | None) -> str:
+        return msg if msg is not None else "undefined"
+
+    node = pipe.add_component("return", fill, msg=msg)
+
+    assert pipe.run(node) == "undefined"
+    assert pipe.run(node, msg="hello") == "hello"
+
+
 def test_single_input_typecheck():
     pipe = Pipeline()
     msg = pipe.create_input("msg", str)
