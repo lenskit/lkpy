@@ -17,8 +17,19 @@ class Prefixer(AutoConfig):
     def __init__(self, prefix: str = "hello"):
         self.prefix = prefix
 
-    def __call__(self, msg: str):
+    def __call__(self, msg: str) -> str:
         return self.prefix + msg
+
+
+class Question:
+    "test component that is not configurable but is a class"
+
+    def __call__(self, msg: str) -> str:
+        return msg + "?"
+
+
+def exclaim(msg: str) -> str:
+    return msg + "!"
 
 
 def test_auto_config_roundtrip():
@@ -65,3 +76,33 @@ def test_pipeline_clone():
     assert n2.component.prefix == comp.prefix
 
     assert p2.run(msg="HACKEM MUCHE") == "scroll named HACKEM MUCHE"
+
+
+def test_pipeline_clone_with_function():
+    comp = Prefixer("scroll named ")
+
+    pipe = Pipeline()
+    msg = pipe.create_input("msg", str)
+    pfx = pipe.add_component("prefix", comp, msg=msg)
+    pipe.add_component("exclaim", exclaim, msg=pfx)
+
+    assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH!"
+
+    p2 = pipe.clone()
+
+    assert p2.run(msg="HACKEM MUCHE") == "scroll named HACKEM MUCHE!"
+
+
+def test_pipeline_clone_with_nonconfig_class():
+    comp = Prefixer("scroll named ")
+
+    pipe = Pipeline()
+    msg = pipe.create_input("msg", str)
+    pfx = pipe.add_component("prefix", comp, msg=msg)
+    pipe.add_component("question", Question(), msg=pfx)
+
+    assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH?"
+
+    p2 = pipe.clone()
+
+    assert p2.run(msg="HACKEM MUCHE") == "scroll named HACKEM MUCHE?"
