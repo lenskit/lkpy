@@ -49,7 +49,7 @@ class PipelineRunner:
             return self.state[node.name]
         elif status == "in-progress":
             raise RuntimeError(f"pipeline cycle encountered at {node}")
-        elif status == "failed":
+        elif status == "failed":  # pragma: nocover
             raise RuntimeError(f"{node} previously failed")
 
         _log.debug("processing node %s", node)

@@ -426,3 +426,26 @@ def test_fallback_only_run_if_needed():
     na = pipe.add_component("add", add, x=nd, y=fb)
 
     assert pipe.run(na, a=3, b=8) == 14
+
+
+def test_fallback_fail_with_missing_options():
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def negative(x: int) -> int | None:
+        return None
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    nn = pipe.add_component("negate", negative, x=a)
+    fb = pipe.use_first_of("fill-operand", b, nn)
+    na = pipe.add_component("add", add, x=nd, y=fb)
+
+    with raises(RuntimeError, match="no alternative"):
+        pipe.run(na, a=3)
