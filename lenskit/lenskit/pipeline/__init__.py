@@ -12,6 +12,7 @@ LensKit pipeline abstraction.
 from __future__ import annotations
 
 import logging
+from types import FunctionType
 from typing import Literal, cast
 from uuid import uuid4
 
@@ -109,7 +110,7 @@ class Pipeline:
         else:
             raise KeyError(f"node {node}")
 
-    def create_input(self, name: LiteralString, *types: type[T] | None) -> Node[T]:
+    def create_input(self, name: str, *types: type[T] | None) -> Node[T]:
         """
         Create an input node for the pipeline.  Pipelines expect their inputs to
         be provided when they are run.
@@ -325,6 +326,59 @@ class Pipeline:
                 node.connections[k] = lit.name
 
         self._clear_caches()
+
+    def component_configs(self) -> dict[str, dict[str, Any]]:
+        """
+        Get the configurations for the components.  This is the configurations
+        only, it does not include pipeline inputs or wiring.
+        """
+        return {
+            name: comp.get_config()
+            for (name, comp) in self._components.items()
+            if isinstance(comp, ConfigurableComponent)
+        }
+
+    def clone(self, *, params: bool = False) -> Pipeline:
+        """
+        Clone the pipeline, optionally including trained parameters.
+
+        Args:
+            params:
+                Pass ``True`` to clone parameters as well as the configuration
+                and wiring.
+
+        Returns:
+            A new pipeline with the same components and wiring, but fresh
+            instances created by round-tripping the configuration.
+        """
+        if params:  # pragma: nocover
+            raise NotImplementedError()
+
+        clone = Pipeline()
+        for node in self.nodes:
+            match node:
+                case InputNode(name, types=types):
+                    if types is None:
+                        types = set[type]()
+                    clone.create_input(name, *types)
+                case LiteralNode(name, value):
+                    clone._nodes[name] = LiteralNode(name, value)
+                case FallbackNode(name, alts):
+                    clone.use_first_of(name, *alts)
+                case ComponentNode(name, comp, _inputs, wiring):
+                    if isinstance(comp, FunctionType):
+                        comp = comp
+                    elif isinstance(comp, ConfigurableComponent):
+                        comp = comp.__class__.from_config(comp.get_config())
+                    else:
+                        comp = comp.__class__()
+                    cn = clone.add_component(node.name, comp)  # type: ignore
+                    for wn, wt in wiring.items():
+                        clone.connect(cn, **{wn: clone.node(wt)})
+                case _:  # pragma: nocover
+                    raise RuntimeError(f"invalid node {node}")
+
+        return clone
 
     def train(self, data: Dataset) -> None:
         """

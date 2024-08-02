@@ -36,6 +36,9 @@ class ConfigurableComponent(Protocol):  # pragma: nocover
     configurable.  For most common cases, extending the :class:`AutoConfig`
     class is sufficient to provide working implementations of these methods.
 
+    If a component is *not* configurable, then it should either be a function or
+    a class that can be constructed with no arguments.
+
     .. note::
 
         Configuration data should be JSON-compatible (strings, numbers, etc.).
