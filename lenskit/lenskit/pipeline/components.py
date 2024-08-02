@@ -63,6 +63,10 @@ class ConfigurableComponent(Generic[COut], Component[COut], Protocol):
 
     .. note::
 
+        Configuration data should be JSON-compatible (strings, numbers, etc.).
+
+    .. note::
+
         This is a subtype of :class:`Component`, so implementations must also
         implement ``__call__`` as specified there.
     """
