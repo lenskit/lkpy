@@ -5,8 +5,9 @@
 # SPDX-License-Identifier: MIT
 
 # pyright: strict
-from typing import assert_type
 from uuid import UUID
+
+from typing_extensions import assert_type
 
 from pytest import fail, raises
 
