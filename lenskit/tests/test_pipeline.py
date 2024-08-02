@@ -11,8 +11,7 @@ from typing_extensions import assert_type
 
 from pytest import fail, raises
 
-from lenskit.pipeline import Node, Pipeline
-from lenskit.pipeline._impl import InputNode
+from lenskit.pipeline import InputNode, Node, Pipeline
 
 
 def test_init_empty():
