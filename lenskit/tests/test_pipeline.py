@@ -140,6 +140,31 @@ def test_single_input_typecheck():
         pipe.run(node, msg=47)
 
 
+def test_component_type_mismatch():
+    pipe = Pipeline()
+
+    def incr(msg: str) -> str:
+        return msg
+
+    node = pipe.add_component("return", incr, msg=47)
+    with raises(TypeError):
+        pipe.run(node)
+
+
+def test_component_unwired_input():
+    pipe = Pipeline()
+    msg = pipe.create_input("msg", str)
+
+    def ident(msg: str, m2: str | None) -> str:
+        if m2:
+            return msg + m2
+        else:
+            return msg
+
+    node = pipe.add_component("return", ident, msg=msg)
+    assert pipe.run(node, msg="hello") == "hello"
+
+
 def test_chain():
     pipe = Pipeline()
     x = pipe.create_input("x", int)
@@ -181,6 +206,24 @@ def test_simple_graph():
     assert pipe.run(a=1, b=7) == 9
     assert pipe.run(na, a=3, b=7) == 13
     assert pipe.run(nd, a=3, b=7) == 6
+
+
+def test_cycle():
+    pipe = Pipeline()
+    b = pipe.create_input("b", int)
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double)
+    na = pipe.add_component("add", add, x=nd, y=b)
+    pipe.connect(nd, x=na)
+
+    with raises(RuntimeError, match="cycle"):
+        pipe.run(a=1, b=7)
 
 
 def test_replace_component():

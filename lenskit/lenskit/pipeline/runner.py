@@ -58,6 +58,7 @@ class PipelineRunner:
             self._run_node(node, required)
             self.status[node.name] = "finished"
         except Exception as e:
+            _log.error("node %s failed with error %s", node, e)
             self.status[node.name] = "failed"
             raise e
 
@@ -73,7 +74,7 @@ class PipelineRunner:
                 self._run_component(name, comp, inputs, wiring)
             case FallbackNode(name, alts):
                 self._run_fallback(name, alts)
-            case _:
+            case _:  # pragma: nocover
                 raise RuntimeError(f"invalid node {node}")
 
     def _inject_input(self, name: str, types: set[type] | None, required: bool) -> None:
