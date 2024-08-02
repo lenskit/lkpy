@@ -915,7 +915,7 @@ def normalize_interactions_df(
     df = df.rename(columns=renames)
     kc = [c for c in known_columns if c in df.columns]
     oc = [c for c in df.columns if c not in known_columns]
-    _log.debug("final columns: %s", kc, oc)
+    _log.debug("final columns: %s", kc + oc)
     return df[kc + oc]  # type: ignore
 
 

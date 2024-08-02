@@ -325,6 +325,12 @@ class Pipeline:
         Trains the pipeline's trainable components (those implementing the
         :class:`TrainableComponent` interface) on some training data.
         """
+        for comp in self._components.values():
+            _log.debug("testing whether to train %s", comp)
+            if isinstance(comp, TrainableComponent):
+                comp = cast(TrainableComponent[Any], comp)
+                _log.info("training %s", comp)
+                comp.train(data)
 
     @overload
     def run(self, /, **kwargs: object) -> object: ...
