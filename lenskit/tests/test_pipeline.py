@@ -36,6 +36,23 @@ def test_create_input():
     assert pipe.node("user") is src
 
 
+def test_lookup_optional():
+    "lookup a node without failing"
+    pipe = Pipeline()
+    pipe.create_input("user", int, str)
+
+    assert pipe.node("item", missing="none") is None
+
+
+def test_lookup_missing():
+    "lookup a node without failing"
+    pipe = Pipeline()
+    pipe.create_input("user", int, str)
+
+    with raises(KeyError):
+        pipe.node("item")
+
+
 def test_dup_input_fails():
     "create an input node"
     pipe = Pipeline()

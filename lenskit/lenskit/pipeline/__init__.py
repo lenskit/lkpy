@@ -12,7 +12,7 @@ LensKit pipeline abstraction.
 from __future__ import annotations
 
 import logging
-from typing import cast
+from typing import Literal, cast
 from uuid import uuid4
 
 from typing_extensions import Any, LiteralString, TypeVar, overload
@@ -73,10 +73,14 @@ class Pipeline:
         return list(self._nodes.values())
 
     @overload
-    def node(self, node: str) -> Node[object]: ...
+    def node(self, node: str, *, missing: Literal["error"] = "error") -> Node[object]: ...
+    @overload
+    def node(self, node: str, *, missing: Literal["none"] | None) -> Node[object] | None: ...
     @overload
     def node(self, node: Node[T]) -> Node[T]: ...
-    def node(self, node: str | Node[Any]) -> Node[object]:
+    def node(
+        self, node: str | Node[Any], *, missing: Literal["error", "none"] | None = "error"
+    ) -> Node[object] | None:
         """
         Get the pipeline node with the specified name.  If passed a node, it
         returns the node or fails if the node is not a member of the pipeline.
@@ -100,6 +104,8 @@ class Pipeline:
             return self._aliases[node]
         elif node in self._nodes:
             return self._nodes[node]
+        elif missing == "none" or missing is None:
+            return None
         else:
             raise KeyError(f"node {node}")
 
