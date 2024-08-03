@@ -472,6 +472,25 @@ def test_fallback_fail_with_missing_options():
         pipe.run(na, a=3)
 
 
+def test_fallback_transitive():
+    "test that a fallback works if a dependency's dependency fails"
+    pipe = Pipeline()
+    ia = pipe.create_input("a", int)
+    ib = pipe.create_input("b", int)
+
+    def double(x: int) -> int:
+        return 2 * x
+
+    # two components, each with a different input
+    c1 = pipe.add_component("double-a", double, x=ia)
+    c2 = pipe.add_component("double-b", double, x=ib)
+    # use the first that succeeds
+    c = pipe.use_first_of("result", c1, c2)
+
+    # omitting the first input should result in the second component
+    assert pipe.run(c, b=17) == 34
+
+
 def test_train(ml_ds: Dataset):
     pipe = Pipeline()
     item = pipe.create_input("item", int)
