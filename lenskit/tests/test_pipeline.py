@@ -491,6 +491,25 @@ def test_fallback_transitive():
     assert pipe.run(c, b=17) == 34
 
 
+def test_fallback_transitive_deeper():
+    "deeper transitive fallback test"
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def negative(x: int) -> int:
+        return -x
+
+    def double(x: int) -> int:
+        return x * 2
+
+    nd = pipe.add_component("double", double, x=a)
+    nn = pipe.add_component("negate", negative, x=nd)
+    nr = pipe.use_first_of("fill-operand", nn, b)
+
+    assert pipe.run(nr, b=8) == 8
+
+
 def test_train(ml_ds: Dataset):
     pipe = Pipeline()
     item = pipe.create_input("item", int)
