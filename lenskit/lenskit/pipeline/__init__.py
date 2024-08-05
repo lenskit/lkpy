@@ -20,7 +20,12 @@ from typing_extensions import Any, LiteralString, TypeVar, overload
 
 from lenskit.data import Dataset
 
-from .components import Component, ConfigurableComponent, TrainableComponent
+from .components import (
+    AutoConfig,  # noqa: F401 # type: ignore
+    Component,
+    ConfigurableComponent,
+    TrainableComponent,
+)
 from .nodes import ND, ComponentNode, FallbackNode, InputNode, LiteralNode, Node
 
 __all__ = [
