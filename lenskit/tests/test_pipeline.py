@@ -553,7 +553,7 @@ def test_train(ml_ds: Dataset):
 
 
 class TestComponent:
-    items: Vocabulary[EntityId]
+    items: Vocabulary
 
     def __call__(self, *, item: int) -> bool:
         return self.items.number(item, "none") is not None

@@ -24,7 +24,7 @@ from lenskit import util
 from lenskit.data import FeedbackType
 from lenskit.data.dataset import Dataset
 from lenskit.data.matrix import normalize_sparse_rows, safe_spmv
-from lenskit.data.vocab import EntityId, Vocabulary
+from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import ConfigWarning, DataWarning
 from lenskit.parallel import ensure_parallel_init
 from lenskit.util.logging import pbh_update, progress_handle
@@ -111,7 +111,7 @@ class ItemItem(Predictor):
     aggregate: str
     use_ratings: bool
 
-    items_: Vocabulary[EntityId]
+    items_: Vocabulary
     "Vocabulary of item IDs."
     item_means_: torch.Tensor | None
     "Mean rating for each known item."
@@ -119,7 +119,7 @@ class ItemItem(Predictor):
     "Number of saved neighbors for each item."
     sim_matrix_: torch.Tensor
     "Similarity matrix (sparse CSR tensor)."
-    users_: Vocabulary[EntityId]
+    users_: Vocabulary
     "Vocabulary of user IDs."
     rating_matrix_: torch.Tensor
     "Normalized rating matrix to look up user ratings at prediction time."

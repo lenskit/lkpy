@@ -374,7 +374,7 @@ def test_ii_implicit_large(rng, ml_ratings):
 
     users = rng.choice(ml_ratings["user"].unique(), NUSERS)
 
-    items: Vocabulary[EntityId] = algo.predictor.items_
+    items: Vocabulary = algo.predictor.items_
     mat: torch.Tensor = algo.predictor.sim_matrix_.to_dense()
 
     for user in users:

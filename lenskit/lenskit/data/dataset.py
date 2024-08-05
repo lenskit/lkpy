@@ -32,12 +32,12 @@ from typing_extensions import (
     override,
 )
 
-from lenskit.data.items import ItemList
-from lenskit.data.matrix import CSRStructure, InteractionMatrix
-from lenskit.data.vocab import Vocabulary
+from lenskit.types import EntityId
 
-from . import EntityId
+from .items import ItemList
+from .matrix import CSRStructure, InteractionMatrix
 from .tables import NumpyUserItemTable, TorchUserItemTable
+from .vocab import Vocabulary
 
 DF_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch"]
 MAT_FORMAT: TypeAlias = Literal["scipy", "torch", "pandas", "structure"]
@@ -84,7 +84,7 @@ class Dataset(ABC):
 
     @property
     @abstractmethod
-    def items(self) -> Vocabulary[EntityId]:
+    def items(self) -> Vocabulary:
         """
         The items known by this dataset.
         """
@@ -92,7 +92,7 @@ class Dataset(ABC):
 
     @property
     @abstractmethod
-    def users(self) -> Vocabulary[EntityId]:
+    def users(self) -> Vocabulary:
         """
         The users known by this dataset.
         """
@@ -504,9 +504,9 @@ class MatrixDataset(Dataset):
         :mod:`lenskit.data`.
     """
 
-    _users: Vocabulary[EntityId]
+    _users: Vocabulary
     "User ID vocabulary, to map between IDs and row numbers."
-    _items: Vocabulary[EntityId]
+    _items: Vocabulary
     "Item ID vocabulary, to map between IDs and column or row numbers."
     _matrix: InteractionMatrix
 
@@ -546,12 +546,12 @@ class MatrixDataset(Dataset):
 
     @property
     @override
-    def items(self) -> Vocabulary[EntityId]:
+    def items(self) -> Vocabulary:
         return self._items
 
     @property
     @override
-    def users(self) -> Vocabulary[EntityId]:
+    def users(self) -> Vocabulary:
         return self._users
 
     @override
@@ -795,12 +795,12 @@ class LazyDataset(Dataset):
 
     @property
     @override
-    def items(self) -> Vocabulary[EntityId]:
+    def items(self) -> Vocabulary:
         return self.delegate().items
 
     @property
     @override
-    def users(self) -> Vocabulary[EntityId]:
+    def users(self) -> Vocabulary:
         return self.delegate().users
 
     @override

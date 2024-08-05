@@ -12,11 +12,8 @@ from lenskit.types import EntityId, NPEntityId  # noqa: F401
 FeedbackType: TypeAlias = Literal["explicit", "implicit"]
 "Types of feedback supported."
 
-from .vocab import Vocabulary  # noqa: F401, E402
-
-
-
 from .dataset import Dataset, from_interactions_df  # noqa: F401, E402
 from .items import ItemList  # noqa: F401, E402
 from .movielens import load_movielens  # noqa: F401, E402
 from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray  # noqa: F401, E402
+from .vocab import Vocabulary  # noqa: F401, E402

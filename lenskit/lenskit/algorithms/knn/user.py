@@ -23,7 +23,7 @@ from lenskit import util
 from lenskit.data import FeedbackType
 from lenskit.data.dataset import Dataset
 from lenskit.data.matrix import normalize_sparse_rows, safe_spmv
-from lenskit.data.vocab import EntityId, Vocabulary
+from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataWarning
 from lenskit.parallel.config import ensure_parallel_init
 
@@ -83,9 +83,9 @@ class UserUser(Predictor):
     aggregate: str
     use_ratings: bool
 
-    users_: Vocabulary[EntityId]
+    users_: Vocabulary
     "The index of user IDs."
-    items_: Vocabulary[EntityId]
+    items_: Vocabulary
     "The index of item IDs."
     user_means_: torch.Tensor | None
     "Mean rating for each known user."
