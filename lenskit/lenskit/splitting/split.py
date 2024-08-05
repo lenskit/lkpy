@@ -10,7 +10,7 @@ import pandas as pd
 
 from lenskit.data.dataset import Dataset
 from lenskit.data.items import ItemList
-from lenskit.data.vocab import EntityId
+from lenskit.types import EntityId
 
 SplitTable: TypeAlias = Literal["matrix"]
 

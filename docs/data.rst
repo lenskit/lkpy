@@ -110,11 +110,6 @@ ranked, etc.
 
 .. autoclass:: ItemList
 
-Utility Types
--------------
-
-.. autoclass:: UITuple
-
 User-Item Data Tables
 ~~~~~~~~~~~~~~~~~~~~~
 

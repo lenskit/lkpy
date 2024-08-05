@@ -10,9 +10,9 @@ from typing import Iterator, overload
 import numpy as np
 import pandas as pd
 from seedbank import numpy_rng
-from seedbank.numpy import NPRNGSource
 
 from lenskit.data.dataset import Dataset, MatrixDataset
+from lenskit.types import RandomSeed
 
 from .split import TTSplit, dict_from_df
 
@@ -20,7 +20,7 @@ _log = logging.getLogger(__name__)
 
 
 def crossfold_records(
-    data: Dataset, partitions: int, *, rng_spec: NPRNGSource | None = None
+    data: Dataset, partitions: int, *, rng_spec: RandomSeed | None = None
 ) -> Iterator[TTSplit]:
     """
     Partition a dataset by **records** into cross-fold partitions.  This
@@ -67,7 +67,7 @@ def sample_records(
     size: int,
     *,
     disjoint: bool = True,
-    rng_spec: NPRNGSource | None = None,
+    rng_spec: RandomSeed | None = None,
     repeats: None = None,
 ) -> TTSplit: ...
 @overload
@@ -77,7 +77,7 @@ def sample_records(
     *,
     repeats: int,
     disjoint: bool = True,
-    rng_spec: NPRNGSource | None = None,
+    rng_spec: RandomSeed | None = None,
 ) -> Iterator[TTSplit]: ...
 def sample_records(
     data: Dataset,
@@ -85,7 +85,7 @@ def sample_records(
     *,
     repeats: int | None = None,
     disjoint: bool = True,
-    rng_spec: NPRNGSource | None = None,
+    rng_spec: RandomSeed | None = None,
 ) -> TTSplit | Iterator[TTSplit]:
     """
     Sample train-test a frame of ratings into train-test partitions.  This
