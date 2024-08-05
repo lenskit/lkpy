@@ -144,4 +144,5 @@ The lazy data set takes a function that loads a data set (of any type), and
 lazily uses that function to load an underlying data set when needed.
 
 .. autoclass:: LazyDataset
+    :no-members:
     :members: delegate
