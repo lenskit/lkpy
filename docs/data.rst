@@ -91,11 +91,6 @@ and tensor data structures.
 
 .. autoclass:: Vocabulary
 
-Type-Specific Vocabularies
---------------------------
-
-.. autodata:: EntityVocab
-
 User and Item Data
 ~~~~~~~~~~~~~~~~~~
 

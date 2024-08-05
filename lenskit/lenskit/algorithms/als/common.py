@@ -18,7 +18,7 @@ from typing_extensions import Iterator, NamedTuple, Optional, Self, override
 
 from lenskit import util
 from lenskit.algorithms.mf_common import MFPredictor
-from lenskit.data import Dataset, EntityVocab, Vocabulary
+from lenskit.data import Dataset, Vocabulary
 from lenskit.parallel.config import ensure_parallel_init
 
 
@@ -54,9 +54,9 @@ class TrainingData(NamedTuple):
     Data for training the ALS model.
     """
 
-    users: EntityVocab
+    users: Vocabulary
     "User ID mapping."
-    items: EntityVocab
+    items: Vocabulary
     "Item ID mapping."
     ui_rates: torch.Tensor
     "User-item rating matrix."
@@ -72,7 +72,7 @@ class TrainingData(NamedTuple):
         return len(self.items)
 
     @classmethod
-    def create(cls, users: EntityVocab, items: EntityVocab, ratings: torch.Tensor) -> TrainingData:
+    def create(cls, users: Vocabulary, items: Vocabulary, ratings: torch.Tensor) -> TrainingData:
         assert ratings.shape == (len(users), len(items))
 
         transposed = ratings.transpose(0, 1).to_sparse_csr()

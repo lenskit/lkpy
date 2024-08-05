@@ -84,8 +84,7 @@ autodoc_default_options = {"members": True, "member-order": "bysource", "show-in
 autodoc_typehints = "description"
 autodoc_type_aliases = {
     "ArrayLike": "numpy.typing.ArrayLike",
-    "EntityVocab": "lenskit.data.EntityVocab",
-    "RandomSeed": "abc.ABC",
+    "RandomSeed": "lenskit.types.RandomSeed",
 }
 
 todo_include_todos = True
