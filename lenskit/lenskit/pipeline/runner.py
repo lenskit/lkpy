@@ -62,7 +62,13 @@ class PipelineRunner:
             self.status[node.name] = "failed"
             raise e
 
-        return self.state[node.name]
+        try:
+            return self.state[node.name]
+        except KeyError as e:
+            if required:
+                raise e
+            else:
+                return None
 
     def _run_node(self, node: Node[Any], required: bool) -> None:
         match node:
@@ -71,7 +77,7 @@ class PipelineRunner:
             case InputNode(name, types=types):
                 self._inject_input(name, types, required)
             case ComponentNode(name, comp, inputs, wiring):
-                self._run_component(name, comp, inputs, wiring)
+                self._run_component(name, comp, inputs, wiring, required)
             case FallbackNode(name, alts):
                 self._run_fallback(name, alts)
             case _:  # pragma: nocover
@@ -93,6 +99,7 @@ class PipelineRunner:
         comp: Component[Any],
         inputs: dict[str, type | None],
         wiring: dict[str, str],
+        required: bool,
     ) -> None:
         in_data = {}
         _log.debug("processing inputs for component %s", name)
@@ -106,11 +113,15 @@ class PipelineRunner:
             if snode is None:
                 ival = None
             else:
-                if itype:
-                    required = not is_compatible_data(None, itype)
+                if required and itype:
+                    ireq = not is_compatible_data(None, itype)
                 else:
-                    required = False
-                ival = self.run(snode, required=required)
+                    ireq = False
+                ival = self.run(snode, required=ireq)
+
+            # bail out if we're trying to satisfy a non-required dependency
+            if ival is None and itype and not is_compatible_data(None, itype) and not required:
+                return None
 
             if itype and not is_compatible_data(ival, itype):
                 raise TypeError(

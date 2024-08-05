@@ -257,23 +257,21 @@ class Pipeline:
 
         .. code:: python
 
-            pipe = Pipeline()
-            # allow candidate items to be optionally specified
-            items = pipe.create_input('items', list[EntityId], None)
-            # find candidates from the training data (optional)
-            lookup_candidates = pipe.add_component(
-                'select-candidates',
-                UnratedTrainingItemsCandidateSelector(),
+            pipe = Pipeline() # allow candidate items to be optionally specified
+            items = pipe.create_input('items', list[EntityId], None) # find
+            candidates from the training data (optional) lookup_candidates =
+            pipe.add_component(
+                'select-candidates', UnratedTrainingItemsCandidateSelector(),
                 user=history,
-            )
-            # if the client provided items as a pipeline input, use those; otherwise
-            # use the candidate selector we just configured.
-            candidates = pipe.use_first_of('candidates', items, lookup_candidates)
+            ) # if the client provided items as a pipeline input, use those;
+            otherwise # use the candidate selector we just configured.
+            candidates = pipe.use_first_of('candidates', items,
+            lookup_candidates)
 
         .. note::
 
-            This method does not distinguish between an input being unspecified and
-            explicitly specified as ``None``.
+            This method does not distinguish between an input being unspecified
+            and explicitly specified as ``None``.
 
         .. note::
 
@@ -283,6 +281,14 @@ class Pipeline:
             will not use B to fill in missing scores for individual items that A
             did not score.  A specific itemwise fallback component is needed for
             such an operation.
+
+        .. note::
+
+            If one of the fallback elements is a component ``A`` that depends on
+            another component or input ``B``, and ``B`` is missing or returns
+            ``None`` such that ``A`` would usually fail, then ``A`` will be
+            skipped and the fallback will move on to the next node. This works
+            with arbitrarily-deep transitive chains.
 
         Args:
             name:
