@@ -23,8 +23,7 @@ from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import Fallback
 from lenskit.algorithms.bias import Bias
 from lenskit.algorithms.ranking import TopN
-from lenskit.data.dataset import from_interactions_df
-from lenskit.data.vocab import EntityId, Vocabulary
+from lenskit.data import Vocabulary, from_interactions_df
 from lenskit.diagnostics import ConfigWarning, DataWarning
 from lenskit.util import clone
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
