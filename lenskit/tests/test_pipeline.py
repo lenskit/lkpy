@@ -121,6 +121,9 @@ def test_single_input():
     ret = pipe.run(node, msg="world")
     assert ret == "world"
 
+    # test that it runs with names
+    ret = pipe.run("return", msg="goodbye")
+
 
 def test_single_input_required():
     pipe = Pipeline()
@@ -424,7 +427,7 @@ def test_fallback_input():
     na = pipe.add_component("add", add, x=nd, y=fb)
 
     # 3 * 2 + -3 = 3
-    assert pipe.run(na, a=3) == 3
+    assert pipe.run(fb, na, a=3) == (-3, 3)
 
 
 def test_fallback_only_run_if_needed():
