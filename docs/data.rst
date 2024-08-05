@@ -56,7 +56,7 @@ Identifiers and numbers can be mapped to each other with the user and item
 *vocabularies* (:attr:`~Dataset.users` and :attr:`~Dataset.items`, see the
 :class:`~lenskit.data.vocab.Vocabulary` class).
 
-.. autodata:: lenskit.data.vocab.EntityId
+.. autodata:: EntityId
 
 .. _dataset:
 
@@ -91,6 +91,11 @@ and tensor data structures.
 
 .. autoclass:: Vocabulary
 
+Type-Specific Vocabularies
+--------------------------
+
+.. autodata:: EntityVocab
+
 User and Item Data
 ~~~~~~~~~~~~~~~~~~
 
@@ -98,7 +103,7 @@ The :mod:`lenskit.data` package also provides various classes for representing
 user and item data.
 
 Item Lists
-~~~~~~~~~~
+----------
 
 LensKit uses *item lists* to represent collections of items that may be scored,
 ranked, etc.
@@ -106,7 +111,7 @@ ranked, etc.
 .. autoclass:: ItemList
 
 Utility Types
-~~~~~~~~~~~~~
+-------------
 
 .. autoclass:: UITuple
 
