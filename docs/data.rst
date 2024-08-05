@@ -89,10 +89,13 @@ LensKit uses *vocabularies* to record user/item IDs, tags, terms, etc. in a way
 that facilitates easy mapping to 0-based contiguous indexes for use in matrix
 and tensor data structures.
 
-.. module:: lenskit.data
-
 .. autoclass:: Vocabulary
 
+User and Item Data
+~~~~~~~~~~~~~~~~~~
+
+The :mod:`lenskit.data` package also provides various classes for representing
+user and item data.
 
 Item Lists
 ~~~~~~~~~~
@@ -101,6 +104,11 @@ LensKit uses *item lists* to represent collections of items that may be scored,
 ranked, etc.
 
 .. autoclass:: ItemList
+
+Utility Types
+~~~~~~~~~~~~~
+
+.. autoclass:: UITuple
 
 User-Item Data Tables
 ~~~~~~~~~~~~~~~~~~~~~
