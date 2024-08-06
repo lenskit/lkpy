@@ -12,8 +12,7 @@ from typing_extensions import assert_type
 
 from pytest import fail, raises
 
-from lenskit.data.dataset import Dataset
-from lenskit.data.vocab import EntityId, Vocabulary
+from lenskit.data import Dataset, Vocabulary
 from lenskit.pipeline import InputNode, Node, Pipeline
 from lenskit.pipeline.components import TrainableComponent
 
@@ -553,7 +552,7 @@ def test_train(ml_ds: Dataset):
 
 
 class TestComponent:
-    items: Vocabulary[EntityId]
+    items: Vocabulary
 
     def __call__(self, *, item: int) -> bool:
         return self.items.number(item, "none") is not None

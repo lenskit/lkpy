@@ -11,33 +11,14 @@ Vocabularies of IDs, tags, etc.
 # pyright: basic
 from __future__ import annotations
 
-from typing import (
-    Any,
-    Generic,
-    Hashable,
-    Iterable,
-    Iterator,
-    Literal,
-    Sequence,
-    TypeAlias,
-    TypeVar,
-    overload,
-)
+from typing import Hashable, Iterable, Iterator, Literal, Sequence, overload
 
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike, NDArray
 
-EntityId: TypeAlias = int | str | bytes
-"Allowable entity identifier types."
-NPEntityId: TypeAlias = np.integer | np.str_ | np.bytes_
-"Allowable entity identifier types (NumPy version)"
 
-VT = TypeVar("VT", bound=Hashable)
-"Term type in a vocabulary."
-
-
-class Vocabulary(Generic[VT]):
+class Vocabulary:
     """
     Vocabularies of terms, tags, entity IDs, etc. for the LensKit data model.
 
@@ -56,7 +37,9 @@ class Vocabulary(Generic[VT]):
     "The name of the vocabulary (e.g. “user”, “item”)."
     _index: pd.Index
 
-    def __init__(self, keys: pd.Index | Iterable[VT] | None = None, name: str | None = None):
+    def __init__(
+        self, keys: pd.Index | ArrayLike | Iterable[Hashable] | None = None, name: str | None = None
+    ):
         self.name = name
         if keys is None:
             keys = pd.Index()
@@ -81,10 +64,12 @@ class Vocabulary(Generic[VT]):
         return len(self._index)
 
     @overload
-    def number(self, term: VT, missing: Literal["error"] = "error") -> int: ...
+    def number(self, term: object, missing: Literal["error"] = "error") -> int: ...
     @overload
-    def number(self, term: VT, missing: Literal["none"] | None) -> int | None: ...
-    def number(self, term: VT, missing: Literal["error", "none"] | None = "error") -> int | None:
+    def number(self, term: object, missing: Literal["none"] | None) -> int | None: ...
+    def number(
+        self, term: object, missing: Literal["error", "none"] | None = "error"
+    ) -> int | None:
         "Look up the number for a vocabulary term."
         try:
             num = self._index.get_loc(term)
@@ -97,7 +82,7 @@ class Vocabulary(Generic[VT]):
                 return None
 
     def numbers(
-        self, terms: Sequence[VT] | ArrayLike, missing: Literal["error", "negative"] = "error"
+        self, terms: Sequence[Hashable] | ArrayLike, missing: Literal["error", "negative"] = "error"
     ) -> np.ndarray[int, np.dtype[np.int32]]:
         "Look up the numbers for an array of terms or IDs."
         nums = np.require(self._index.get_indexer_for(terms), dtype=np.int32)
@@ -105,7 +90,7 @@ class Vocabulary(Generic[VT]):
             raise KeyError()
         return nums
 
-    def term(self, num: int) -> VT:
+    def term(self, num: int) -> object:
         """
         Look up the term with a particular number.  Negative indexing is **not** supported.
         """
@@ -115,7 +100,7 @@ class Vocabulary(Generic[VT]):
 
     def terms(
         self, nums: list[int] | NDArray[np.integer] | pd.Series | None = None
-    ) -> NDArray[NPEntityId]:
+    ) -> NDArray[np.generic]:
         """
         Get a list of terms, optionally for an array of term numbers.
 
@@ -136,23 +121,23 @@ class Vocabulary(Generic[VT]):
         else:
             return self._index.values
 
-    def id(self, num: int) -> VT:
+    def id(self, num: int) -> object:
         "Alias for :meth:`term`  for greater readability for entity ID vocabularies."
         return self.term(num)
 
     def ids(
         self, nums: list[int] | NDArray[np.integer] | pd.Series | None = None
-    ) -> NDArray[NPEntityId]:
+    ) -> NDArray[np.generic]:
         "Alias for :meth:`terms` for greater readability for entity ID vocabularies."
         return self.terms(nums)
 
-    def add_terms(self, terms: list[VT] | ArrayLike):
+    def add_terms(self, terms: list[Hashable] | ArrayLike):
         arr = np.unique(terms)  # type: ignore
         nums = self.numbers(arr, missing="negative")
         fresh = arr[nums < 0]
         self._index = pd.Index(np.concatenate([self._index.values, fresh]), name=self.name)
 
-    def copy(self) -> Vocabulary[VT]:
+    def copy(self) -> Vocabulary:
         """
         Return a (cheap) copy of this vocabulary.  It retains the same mapping,
         but will not be updated if the original vocabulary has new terms added.
@@ -162,15 +147,15 @@ class Vocabulary(Generic[VT]):
 
         This method is useful for saving known vocabularies in model training.
         """
-        return Vocabulary[VT](self._index)
+        return Vocabulary(self._index)
 
-    def __eq__(self, other: Vocabulary[Any]) -> bool:  # noqa: F821
+    def __eq__(self, other: Vocabulary) -> bool:  # noqa: F821
         return self.size == other.size and bool(np.all(self.index == other.index))
 
-    def __contains__(self, key: VT) -> bool:
+    def __contains__(self, key: object) -> bool:
         return key in self._index
 
-    def __iter__(self) -> Iterator[EntityId]:
+    def __iter__(self) -> Iterator[object]:
         return iter(self._index.values)
 
     def __len__(self) -> int:

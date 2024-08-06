@@ -13,7 +13,7 @@ import pandas as pd
 from typing_extensions import Literal, override
 
 from lenskit.data.dataset import Dataset
-from lenskit.data.vocab import EntityId, Vocabulary
+from lenskit.data.vocab import Vocabulary
 
 try:
     from sklearn.decomposition import TruncatedSVD
@@ -42,8 +42,8 @@ class BiasedSVD(Predictor):
 
     bias: Bias
     factorization: TruncatedSVD
-    users_: Vocabulary[EntityId]
-    items_: Vocabulary[EntityId]
+    users_: Vocabulary
+    items_: Vocabulary
 
     def __init__(
         self,

@@ -12,9 +12,9 @@ from typing import Protocol
 
 import numpy as np
 from seedbank import numpy_rng
-from seedbank.numpy import NPRNGSource
 
 from lenskit.data.items import ItemList
+from lenskit.types import RandomSeed
 
 
 class HoldoutMethod(Protocol):
@@ -51,7 +51,7 @@ class SampleN(HoldoutMethod):
     n: int
     rng: np.random.Generator
 
-    def __init__(self, n: int, rng_spec: NPRNGSource | None = None):
+    def __init__(self, n: int, rng_spec: RandomSeed | None = None):
         self.n = n
         self.rng = numpy_rng(rng_spec)
 
@@ -74,7 +74,7 @@ class SampleFrac(HoldoutMethod):
     fraction: float
     rng: np.random.Generator
 
-    def __init__(self, frac: float, rng_spec: NPRNGSource | None = None):
+    def __init__(self, frac: float, rng_spec: RandomSeed | None = None):
         self.fraction = frac
         self.rng = numpy_rng(rng_spec)
 

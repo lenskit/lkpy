@@ -23,8 +23,7 @@ from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import Fallback
 from lenskit.algorithms.bias import Bias
 from lenskit.algorithms.ranking import TopN
-from lenskit.data.dataset import from_interactions_df
-from lenskit.data.vocab import EntityId, Vocabulary
+from lenskit.data import Vocabulary, from_interactions_df
 from lenskit.diagnostics import ConfigWarning, DataWarning
 from lenskit.util import clone
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
@@ -374,7 +373,7 @@ def test_ii_implicit_large(rng, ml_ratings):
 
     users = rng.choice(ml_ratings["user"].unique(), NUSERS)
 
-    items: Vocabulary[EntityId] = algo.predictor.items_
+    items: Vocabulary = algo.predictor.items_
     mat: torch.Tensor = algo.predictor.sim_matrix_.to_dense()
 
     for user in users:

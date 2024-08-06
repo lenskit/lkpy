@@ -20,17 +20,17 @@ from typing_extensions import (
     LiteralString,
     Sequence,
     TypeAlias,
-    TypeVar,
     cast,
     overload,
 )
 
-from lenskit.data.checks import check_1d
-from lenskit.data.mtarray import MTArray, MTGenericArray
-from lenskit.data.vocab import EntityId, NPEntityId, Vocabulary
+from lenskit.types import EntityId, NPEntityId
+
+from .checks import check_1d
+from .mtarray import MTArray, MTGenericArray
+from .vocab import Vocabulary
 
 Backend: TypeAlias = Literal["numpy", "torch"]
-EID = TypeVar("EID", bound=EntityId)
 
 
 class ItemList:
@@ -110,7 +110,7 @@ class ItemList:
     _len: int
     _ids: np.ndarray[int, np.dtype[NPEntityId]] | None = None
     _numbers: MTArray[np.int32] | None = None
-    _vocab: Vocabulary[EntityId] | None = None
+    _vocab: Vocabulary | None = None
     _ranks: MTArray[np.int32] | None = None
     _fields: dict[str, MTGenericArray]
 
@@ -119,7 +119,7 @@ class ItemList:
         *,
         item_ids: NDArray[NPEntityId] | pd.Series[EntityId] | Sequence[EntityId] | None = None,
         item_nums: NDArray[np.int32] | pd.Series[int] | Sequence[int] | ArrayLike | None = None,
-        vocabulary: Vocabulary[EID] | None = None,
+        vocabulary: Vocabulary | None = None,
         ordered: bool = False,
         scores: NDArray[np.generic] | torch.Tensor | ArrayLike | None = None,
         **fields: NDArray[np.generic] | torch.Tensor | ArrayLike,
@@ -167,7 +167,7 @@ class ItemList:
 
     @classmethod
     def from_df(
-        cls, df: pd.DataFrame, *, vocabulary=Vocabulary[EntityId], keep_user: bool = False
+        cls, df: pd.DataFrame, *, vocabulary=Vocabulary, keep_user: bool = False
     ) -> ItemList:
         """
         Create a item list from a Pandas data frame.  The frame should have
@@ -223,24 +223,24 @@ class ItemList:
             if self._vocab is None:
                 raise RuntimeError("item IDs not available (no IDs or vocabulary provided)")
             assert self._numbers is not None
-            self._ids = self._vocab.ids(self._numbers.numpy())
+            self._ids = cast(NDArray[NPEntityId], self._vocab.ids(self._numbers.numpy()))
 
         return self._ids
 
     @overload
     def numbers(
-        self, format: Literal["numpy"] = "numpy", *, vocabulary: Vocabulary[EID] | None = None
+        self, format: Literal["numpy"] = "numpy", *, vocabulary: Vocabulary | None = None
     ) -> NDArray[np.int32]: ...
     @overload
     def numbers(
-        self, format: Literal["torch"], *, vocabulary: Vocabulary[EID] | None = None
+        self, format: Literal["torch"], *, vocabulary: Vocabulary | None = None
     ) -> torch.Tensor: ...
     @overload
     def numbers(
-        self, format: LiteralString = "numpy", *, vocabulary: Vocabulary[EID] | None = None
+        self, format: LiteralString = "numpy", *, vocabulary: Vocabulary | None = None
     ) -> ArrayLike: ...
     def numbers(
-        self, format: LiteralString = "numpy", *, vocabulary: Vocabulary[EID] | None = None
+        self, format: LiteralString = "numpy", *, vocabulary: Vocabulary | None = None
     ) -> ArrayLike:
         """
         Get the item numbers.

@@ -17,7 +17,7 @@ from typing_extensions import override
 
 from lenskit.algorithms import Predictor, Recommender
 from lenskit.data.dataset import Dataset
-from lenskit.data.vocab import EntityId, Vocabulary
+from lenskit.data.vocab import Vocabulary
 
 _logger = logging.getLogger(__name__)
 
@@ -59,11 +59,11 @@ class BaseRec(Recommender, Predictor):
     """
     The user-item rating matrix from training.
     """
-    users_: Vocabulary[EntityId]
+    users_: Vocabulary
     """
     The user ID mapping from training.
     """
-    items_: Vocabulary[EntityId]
+    items_: Vocabulary
     """
     The item ID mapping from training.
     """

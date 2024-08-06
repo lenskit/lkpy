@@ -4,16 +4,17 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+from __future__ import annotations
+
 import logging
 from typing import Iterable, Iterator, overload
 
 import numpy as np
 import pandas as pd
 from seedbank import numpy_rng
-from seedbank.numpy import NPRNGSource
 
 from lenskit.data.dataset import Dataset, MatrixDataset
-from lenskit.data.vocab import EntityId
+from lenskit.types import EntityId, RandomSeed
 
 from .holdout import HoldoutMethod
 from .split import TTSplit
@@ -22,7 +23,7 @@ _log = logging.getLogger(__name__)
 
 
 def crossfold_users(
-    data: Dataset, partitions: int, method: HoldoutMethod, *, rng_spec: NPRNGSource | None = None
+    data: Dataset, partitions: int, method: HoldoutMethod, *, rng_spec: RandomSeed | None = None
 ) -> Iterator[TTSplit]:
     """
     Partition a frame of ratings or other data into train-test partitions
@@ -80,7 +81,7 @@ def sample_users(
     *,
     repeats: int,
     disjoint: bool = True,
-    rng_spec: NPRNGSource | None = None,
+    rng_spec: RandomSeed | None = None,
 ) -> Iterator[TTSplit]: ...
 @overload
 def sample_users(
@@ -89,7 +90,7 @@ def sample_users(
     method: HoldoutMethod,
     *,
     disjoint: bool = True,
-    rng_spec: NPRNGSource | None = None,
+    rng_spec: RandomSeed | None = None,
     repeats: None = None,
 ) -> TTSplit: ...
 def sample_users(
@@ -99,7 +100,7 @@ def sample_users(
     *,
     repeats: int | None = None,
     disjoint: bool = True,
-    rng_spec: NPRNGSource | None = None,
+    rng_spec: RandomSeed | None = None,
 ) -> Iterator[TTSplit] | TTSplit:
     """
     Create train-test splits by sampling users.  When ``repeats`` is None,

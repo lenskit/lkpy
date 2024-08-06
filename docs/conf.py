@@ -83,8 +83,8 @@ templates_path = ["_templates"]
 autodoc_default_options = {"members": True, "member-order": "bysource", "show-inheritance": True}
 autodoc_typehints = "description"
 autodoc_type_aliases = {
-    "Iterable": "Iterable",
-    "ArrayLike": "ArrayLike",
+    "ArrayLike": "numpy.typing.ArrayLike",
+    "RandomSeed": "lenskit.types.RandomSeed",
 }
 
 todo_include_todos = True
@@ -95,7 +95,6 @@ intersphinx_mapping = {
     "pandas": ("http://pandas.pydata.org/pandas-docs/stable/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/", None),
-    "scikit": ("https://scikit-learn.org/stable/", None),
     "sklearn": ("https://scikit-learn.org/stable/", None),
     "seedbank": ("https://seedbank.lenskit.org/en/latest/", None),
     "progress_api": ("https://progress-api.readthedocs.io/en/latest/", None),
