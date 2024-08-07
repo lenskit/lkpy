@@ -1,0 +1,3 @@
+"""
+Basic Top-*N* ranking.
+"""
