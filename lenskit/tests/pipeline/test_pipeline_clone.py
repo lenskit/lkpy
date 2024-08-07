@@ -32,33 +32,6 @@ def exclaim(msg: str) -> str:
     return msg + "!"
 
 
-def test_auto_config_roundtrip():
-    comp = Prefixer("FOOBIE BLETCH")
-
-    cfg = comp.get_config()
-    assert "prefix" in cfg
-
-    c2 = Prefixer.from_config(cfg)
-    assert c2 is not comp
-    assert c2.prefix == comp.prefix
-
-
-def test_pipeline_config():
-    comp = Prefixer("scroll named ")
-
-    pipe = Pipeline()
-    msg = pipe.create_input("msg", str)
-    pipe.add_component("prefix", comp, msg=msg)
-
-    assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
-
-    config = pipe.component_configs()
-    print(json.dumps(config, indent=2))
-
-    assert "prefix" in config
-    assert config["prefix"]["prefix"] == "scroll named "
-
-
 def test_pipeline_clone():
     comp = Prefixer("scroll named ")
 
