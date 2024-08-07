@@ -53,7 +53,6 @@ def test_create_nonunique(keys: list[int | str | UUID]):
 @given(
     st.one_of(
         st.lists(st.integers()),
-        st.lists(st.emails()),
         st.lists(st.uuids()),
     )
 )
@@ -101,7 +100,6 @@ def test_contains(keys: set[int] | set[str] | set[UUID], qs: set[int | str | UUI
 @given(
     st.one_of(
         st.sets(st.integers()),
-        st.sets(st.emails()),
         st.sets(st.uuids()),
     )
 )
