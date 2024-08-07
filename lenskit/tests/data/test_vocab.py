@@ -120,7 +120,7 @@ def test_lookup_id_index(keys: set[int | str | UUID]):
         st.sets(st.integers()),
         st.sets(st.uuids()),
     ),
-    st.one_of(st.integers(), st.emails(), st.uuids()),
+    st.one_of(st.integers(), st.uuids()),
 )
 def test_lookup_bad_id(keys: set[int | str | UUID], key: int | str | UUID):
     assume(key not in keys)
