@@ -195,13 +195,14 @@ Component Names
 
 As noted above, each component (and pipeline input) has a *name* that is unique
 across the pipeline.  For consistency and clarity, we recommend naming
-components with a verb or kebab-case verb phrase that captures the action that component performs, such as:
+components with a noun or kebab-case noun phrase that describes the component
+itself, e.g.:
 
-* ``recommend``
-* ``rerank``
-* ``score``
-* ``lookup-user-history``
-* ``embed-items``
+* ``recommender``
+* ``reranker``
+* ``scorer``
+* ``user-history-resolver``
+* ``item-embedder``
 
 Component nodes can also have *aliases*, allowing them to be accessed by more
 than one name. Use :meth:`Pipeline.alias` to define these aliases.
@@ -209,21 +210,22 @@ than one name. Use :meth:`Pipeline.alias` to define these aliases.
 Various LensKit facilities recognize several standard component names that we
 recommend you use when applicable:
 
-* ``score`` — compute (usually personalized) scores for items for a given user.
-* ``rank`` — compute a (ranked) list of recommendations for a user.  If you are
-  configuring a pipeline with rerankers whose outputs are also rankings, this
-  name should usually be used for the last such ranker, and downstream
+* ``scorer`` — compute (usually personalized) scores for items for a given user.
+* ``ranker`` — compute a (ranked) list of recommendations for a user.  If you
+  are configuring a pipeline with rerankers whose outputs are also rankings,
+  this name should usually be used for the last such ranker, and downstream
   components (if any) transform that ranking into another layout; that way the
   evaluation tools will operate on the last such ranking.
-* ``recommend`` — compute recommendations for a user.  This will often be an
-  alias for ``rank``, as in a top-*N* recommender, but may return other formats
-  such as grids or unordered slates.
-* ``predict-ratings`` — predict a user's ratings for the specified items.  When
-  present, this is usually an alias for ``score``, but in some pipelines it will
-  be a different component that transforms the scores into rating predictions.
+* ``recommender`` — compute recommendations for a user.  This will often be an
+  alias for ``ranker``, as in a top-*N* recommender, but may return other
+  formats such as grids or unordered slates.
+* ``rating-predictor`` — predict a user's ratings for the specified items.  When
+  present, this is usually an alias for ``scorer``, but in some pipelines it
+  will be a different component that transforms the scores into rating
+  predictions.
 
 These component names replace the task-specific interfaces in pre-2024 LensKit;
-a ``Recommender`` is now just a pipeline with ``recommend`` and/or ``rank``
+a ``Recommender`` is now just a pipeline with ``recommender`` and/or ``ranker``
 components.
 
 .. _pipeline-serialization:
