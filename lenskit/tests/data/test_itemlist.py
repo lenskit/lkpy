@@ -308,3 +308,15 @@ def test_from_df_user():
     assert np.all(il.numbers() == np.arange(5))
     assert np.all(il.scores() == df["score"].values)
     assert il.field("user_id") is None
+
+
+def test_copy_ctor():
+    data = np.random.randn(5)
+    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
+    copy = ItemList(il)
+    assert copy is not il
+    assert len(copy) == len(il)
+
+    assert np.all(copy.ids() == il.ids())
+    assert np.all(copy.numbers() == il.numbers())
+    assert copy._vocab is il._vocab

@@ -86,6 +86,10 @@ class ItemList:
         support for this.
 
     Args:
+        source:
+            A source item list. If provided, its fields and data are used to
+            initialize any aspects of the item list that are not provided in
+            the other arguments.
         item_ids:
             A list or array of item identifiers. ``item_id`` is accepted as an
             alternate name.
@@ -116,17 +120,28 @@ class ItemList:
 
     def __init__(
         self,
+        source: ItemList | None = None,
         *,
         item_ids: NDArray[NPEntityId] | pd.Series[EntityId] | Sequence[EntityId] | None = None,
         item_nums: NDArray[np.int32] | pd.Series[int] | Sequence[int] | ArrayLike | None = None,
         vocabulary: Vocabulary | None = None,
-        ordered: bool = False,
+        ordered: bool | None = None,
         scores: NDArray[np.generic] | torch.Tensor | ArrayLike | None = None,
         **fields: NDArray[np.generic] | torch.Tensor | ArrayLike,
     ):
-        self.ordered = ordered
-        self._vocab = vocabulary
+        if source is not None:
+            self.__dict__.update(source.__dict__)
+            self._fields = dict(source._fields)
 
+        if ordered is not None:
+            self.ordered = ordered
+        elif source is None:
+            self.ordered = False
+
+        if vocabulary is not None:
+            self._vocab = vocabulary
+
+        # handle aliases for item ID/number columns
         if item_ids is None and "item_id" in fields:
             item_ids = np.asarray(cast(Any, fields["item_id"]))
 
@@ -135,7 +150,8 @@ class ItemList:
             if not issubclass(item_nums.dtype.type, np.integer):
                 raise TypeError("item numbers not integers")
 
-        if item_ids is None and item_nums is None:
+        # empty list
+        if item_ids is None and item_nums is None and source is None:
             self._ids = np.ndarray(0, dtype=np.int32)
             self._numbers = MTArray(np.ndarray(0, dtype=np.int32))
             self._len = 0
@@ -147,11 +163,17 @@ class ItemList:
 
             check_1d(self._ids, label="item_ids")
             self._len = len(item_ids)
+            # clear numbers if we got them from the source
+            if source is not None and source._numbers is not None:
+                del self._numbers
 
         if item_nums is not None:
             self._numbers = MTArray(item_nums)
             check_1d(self._numbers, getattr(self, "_len", None), label="item_nums")
             self._len = self._numbers.shape[0]
+            # clear IDs if we got them from the source
+            if source is not None and source._ids is not None:
+                del self._ids
 
         # convert fields and drop singular ID/number aliases
         self._fields = {
@@ -206,7 +228,7 @@ class ItemList:
             item_nums=self._numbers,
             vocabulary=self._vocab,
             ordered=self.ordered,
-            **self._fields,
+            **self._fields,  # type: ignore
         )
 
     def ids(self) -> NDArray[NPEntityId]:
@@ -409,7 +431,11 @@ class ItemList:
         nums = self._numbers.numpy()[sel] if self._numbers is not None else None
         flds = {n: f.numpy()[sel] for (n, f) in self._fields.items()}
         return ItemList(
-            item_ids=iids, item_nums=nums, vocabulary=self._vocab, ordered=self.ordered, **flds
+            item_ids=iids,
+            item_nums=nums,
+            vocabulary=self._vocab,
+            ordered=self.ordered,
+            **flds,  # type: ignore
         )
 
     def __getstate__(self) -> dict[str, object]:
