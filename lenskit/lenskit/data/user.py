@@ -21,8 +21,8 @@ class UserProfile(HasItemList):
     """
     Class representing a user's “profile” — their ID, history, and any other
     data known about them.  Data sources are encouraged to add additional fields
-    to user profile objects based on specific data needs, but components will
-    not know about them.
+    to user profile objects based on specific data needs so that aware
+    components can make use of them.
     """
 
     id: EntityId | None
