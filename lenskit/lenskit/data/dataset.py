@@ -37,6 +37,7 @@ from lenskit.types import EntityId
 from .items import ItemList
 from .matrix import CSRStructure, InteractionMatrix
 from .tables import NumpyUserItemTable, TorchUserItemTable
+from .user import UserProfile
 from .vocab import Vocabulary
 
 DF_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch"]
@@ -371,14 +372,14 @@ class Dataset(ABC):
 
     @abstractmethod
     @overload
-    def user_row(self, user_id: EntityId) -> ItemList | None: ...
+    def user_row(self, user_id: EntityId) -> UserProfile | None: ...
     @abstractmethod
     @overload
-    def user_row(self, *, user_num: int) -> ItemList: ...
+    def user_row(self, *, user_num: int) -> UserProfile: ...
     @abstractmethod
     def user_row(
         self, user_id: EntityId | None = None, *, user_num: int | None = None
-    ) -> ItemList | None:
+    ) -> UserProfile | None:
         """
         Get a user's row from the interaction matrix.  Available fields are
         returned as fields. If the dataset has ratings, these are provided as a
@@ -743,17 +744,17 @@ class MatrixDataset(Dataset):
     @override
     def user_row(
         self, user_id: EntityId | None = None, *, user_num: int | None = None
-    ) -> ItemList | None:
+    ) -> UserProfile | None:
         if user_num is None:
             if user_id is None:  # pragma: nocover
-                raise ValueError("most provide one of user_id and user_num")
+                raise ValueError("must provide one of user_id and user_num")
 
             user_num = self.users.number(user_id, "none")
             if user_num is None:
                 return None
 
         elif user_id is not None:  # pragma: nocover
-            raise ValueError("most provide one of user_id and user_num")
+            raise ValueError("must provide one of user_id and user_num")
 
         sp = self._matrix.user_ptrs[user_num]
         ep = self._matrix.user_ptrs[user_num + 1]
@@ -763,7 +764,9 @@ class MatrixDataset(Dataset):
             fields["rating"] = self._matrix.ratings[sp:ep]
         if self._matrix.timestamps is not None:
             fields["timestamp"] = self._matrix.timestamps[sp:ep]
-        return ItemList(item_nums=inums, vocabulary=self.items, **fields)
+        return UserProfile(
+            user_id, past_items=ItemList(item_nums=inums, vocabulary=self.items, **fields)
+        )
 
 
 class LazyDataset(Dataset):
@@ -816,7 +819,7 @@ class LazyDataset(Dataset):
         return self.delegate().interaction_log(*args, **kwargs)
 
     @override
-    def user_row(self, *args, **kwargs) -> ItemList | None:
+    def user_row(self, *args, **kwargs) -> UserProfile | None:
         return self.delegate().user_row(*args, **kwargs)
 
 

@@ -349,7 +349,9 @@ def test_matrix_rows_by_id(rng: np.random.Generator, ml_ratings: pd.DataFrame, m
     users = rng.choice(ml_ds.users.ids(), 50)
 
     for user in users:
-        row = ml_ds.user_row(user)
+        profile = ml_ds.user_row(user)
+        assert profile is not None
+        row = profile.item_list()
         assert row is not None
         urows = ml_ratings[ml_ratings["user"] == user].sort_values("item")
         urows = urows.reset_index(drop=True)
@@ -380,7 +382,10 @@ def test_matrix_rows_by_num(rng: np.random.Generator, ml_ratings: pd.DataFrame, 
 
     for user in users:
         uid = ml_ds.users.id(user)
-        row = ml_ds.user_row(user_num=user)
+        profile = ml_ds.user_row(user_num=user)
+        assert profile is not None
+        row = profile.item_list()
+        assert row is not None
         assert row is not None
         urows = ml_ratings[ml_ratings["user"] == ml_ds.users.id(user)].sort_values("item")
         assert set(row.ids()) == set(urows["item"])
