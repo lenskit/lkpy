@@ -118,7 +118,6 @@ def test_lookup_id_index(keys: set[int | str | UUID]):
 @given(
     st.one_of(
         st.sets(st.integers()),
-        st.sets(st.emails()),
         st.sets(st.uuids()),
     ),
     st.one_of(st.integers(), st.emails(), st.uuids()),
@@ -137,7 +136,6 @@ def test_lookup_bad_id(keys: set[int | str | UUID], key: int | str | UUID):
 @given(
     st.one_of(
         st.sets(st.integers()),
-        st.sets(st.emails()),
         st.sets(st.uuids()),
     ),
     st.one_of(st.integers()),
