@@ -89,7 +89,7 @@ def demo_recs(ml_ratings: pd.DataFrame):
     algo = PlackettLuce(algo, rng_spec="user")
     algo.fit(from_interactions_df(train))
 
-    recs = recommend(algo, users, 500)
+    recs = recommend(algo, users, 500, n_jobs=1)
     return train, test, recs
 
 
