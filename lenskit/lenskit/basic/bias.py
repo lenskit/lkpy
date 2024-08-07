@@ -12,19 +12,18 @@ from __future__ import annotations
 import logging
 
 import numpy as np
-import pandas as pd
-import torch
-from typing_extensions import Self, overload, override
+from typing_extensions import Self
 
-from lenskit.data import Dataset, UITuple
+from lenskit.data import Dataset
 from lenskit.data.items import ItemList
-from lenskit.data.vocab import EntityId
-from lenskit.pipeline import AutoConfig
+from lenskit.data.types import EntityId, UITuple
+from lenskit.data.vocab import Vocabulary
+from lenskit.pipeline import Component
 
 _logger = logging.getLogger(__name__)
 
 
-class Bias(AutoConfig):
+class Bias(Component):
     """
     A user-item bias rating prediction model.  This implements the following
     predictor function:
@@ -60,14 +59,18 @@ class Bias(AutoConfig):
             tuple providing separate damping values.
     """
 
+    users: bool
+    items: bool
     damping: UITuple[float]
     "The configured offset damping levels."
 
     mean_: float
     "The global mean rating."
-    item_offsets_: pd.Series | None
+    items_: Vocabulary | None = None
+    item_offsets_: np.ndarray[int, np.dtype[np.float64]] | None
     "The item offsets (:math:`b_i` values)."
-    user_offsets_: pd.Series | None
+    users_: Vocabulary | None = None
+    user_offsets_: np.ndarray[int, np.dtype[np.float64]] | None
     "The user offsets (:math:`b_u` values)."
 
     def __init__(
@@ -113,7 +116,8 @@ class Bias(AutoConfig):
             np.add.at(counts, ratings.col, 1)
             np.add.at(sums, ratings.col, centered)
             means = sums / counts
-            self.item_offsets_ = pd.Series(means, index=data.items.index, name="i_off")
+            self.items_ = data.items.copy()
+            self.item_offsets_ = means
             centered -= means[ratings.col]
             _logger.info("computed means for %d items", len(self.item_offsets_))
         else:
@@ -125,58 +129,73 @@ class Bias(AutoConfig):
             np.add.at(counts, ratings.row, 1)
             np.add.at(sums, ratings.row, centered)
             means = sums / counts
-            self.user_offsets_ = pd.Series(means, index=data.users.index, name="u_off")
+            self.users_ = data.users.copy()
+            self.user_offsets_ = means
             _logger.info("computed means for %d users", len(self.user_offsets_))
         else:
             self.user_offsets_ = None
 
         return self
 
-    def __call__(self, user: EntityId, items: ItemList) -> ItemList:
+    def __call__(self, user: EntityId | UserProfile | ItemList | None, items: ItemList) -> ItemList:
         """
         Compute predictions for a user and items.  Unknown users and items are
         assumed to have zero bias.
 
         Args:
             user:
-                the user ID
+                The user.  If the profile has an item list with ratings, those
+                ratings are used to compute a new bias instead of using their
+                recorded bias.
             items:
-                the items to predict
-            ratings:
-                the user's ratings (indexed by item id); if provided, will be
-                used to recompute the user's bias at prediction time.
-
+                The items to score.
         Returns:
-            scores for the items, indexed by item id.
+            Scores for `items`.
         """
-        idx = pd.Index(items)
-        preds = pd.Series(self.mean_, idx)
+        preds = np.full(len(items), self.mean_)
 
         if self.item_offsets_ is not None:
-            preds = preds + self.item_offsets_.reindex(idx, fill_value=0)
+            assert self.items_ is not None
+            idxes = items.numbers(vocabulary=self.items_, missing="negative")
+            mask = idxes >= 0
+            preds[mask] += self.item_offsets_[idxes[mask]]
+
+        if isinstance(user, ItemList):
+            ilist = user
+            uid = None
+        elif isinstance(user, UserProfile):
+            ilist = user.item_list()
+            uid = user.id
+        else:
+            ilist = None
+            uid = user
+
+        if ilist is not None:
+            ratings = ilist.field("rating")
+        else:
+            ratings = None
 
         if self.users and ratings is not None:
+            assert ilist is not None  # only way we can be here
+
             uoff = ratings - self.mean_
             if self.item_offsets_ is not None:
-                uoff = uoff - self.item_offsets_
+                idxes = ilist.numbers(vocabulary=self.items_, missing="negative")
+                found = idxes >= 0
+                uoff[found] -= self.item_offsets_[idxes[found]]
+
             umean = uoff.mean()
             preds = preds + umean
-        elif self.user_offsets_ is not None:
-            umean = self.user_offsets_.get(user, 0.0)
-            _logger.debug("using mean(user %s) = %.3f", user, umean)
-            preds = preds + umean
 
-        return preds
+        elif uid is not None and self.user_offsets_ is not None:
+            assert self.users_ is not None
+            uno = self.users_.number(uid, missing="none")
+            if uno is not None:
+                umean = self.user_offsets_[uno]
+                _logger.debug("using mean(user %s) = %.3f", user, umean)
+                preds += umean
 
-    @property
-    def user_index(self):
-        "Get the user index from this (fit) bias."
-        return self.user_offsets_.index
-
-    @property
-    def item_index(self):
-        "Get the item index from this (fit) bias."
-        return self.item_offsets_.index
+        return ItemList(items, scores=preds)
 
     def _mean(self, series, damping):
         if damping is not None and damping > 0:
@@ -185,4 +204,4 @@ class Bias(AutoConfig):
             return series.mean()
 
     def __str__(self):
-        return "Bias(ud={}, id={})".format(self.user_damping, self.item_damping)
+        return "Bias(ud={}, id={})".format(self.damping.user, self.damping.item)
