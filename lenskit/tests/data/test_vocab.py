@@ -200,7 +200,7 @@ def test_add_terms(initial: set[int], new: list[int]):
     assert all(vocab.number(k) == i + ni for (i, k) in enumerate(flist))
 
 
-@given(st.one_of(st.sets(st.integers()), st.sets(st.emails())))
+@given(st.one_of(st.sets(st.integers()), st.sets(st.uuids())))
 def test_all_terms(initial: set[int] | set[str]):
     vocab = Vocabulary(initial)
 
