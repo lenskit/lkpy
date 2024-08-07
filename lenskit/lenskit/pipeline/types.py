@@ -131,8 +131,10 @@ def type_string(typ: type | None) -> str:
         return "None"
     elif typ.__module__ == "builtins":
         return typ.__name__
-    else:
+    elif typ.__qualname__ == typ.__name__:
         return f"{typ.__module__}.{typ.__name__}"
+    else:
+        return f"{typ.__module__}:{typ.__qualname__}"
 
 
 def parse_type_string(tstr: str) -> type:
