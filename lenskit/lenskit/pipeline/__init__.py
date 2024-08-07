@@ -139,7 +139,7 @@ class Pipeline:
         """
         self._check_available_name(name)
 
-        node = InputNode[Any](name, types=set((t if t is not None else type[None]) for t in types))
+        node = InputNode[Any](name, types=set((t if t is not None else type(None)) for t in types))
         self._nodes[name] = node
         self._clear_caches()
         return node
