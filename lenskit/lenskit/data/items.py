@@ -251,18 +251,34 @@ class ItemList:
 
     @overload
     def numbers(
-        self, format: Literal["numpy"] = "numpy", *, vocabulary: Vocabulary | None = None
+        self,
+        format: Literal["numpy"] = "numpy",
+        *,
+        vocabulary: Vocabulary | None = None,
+        missing: Literal["error", "negative"] = "error",
     ) -> NDArray[np.int32]: ...
     @overload
     def numbers(
-        self, format: Literal["torch"], *, vocabulary: Vocabulary | None = None
+        self,
+        format: Literal["torch"],
+        *,
+        vocabulary: Vocabulary | None = None,
+        missing: Literal["error", "negative"] = "error",
     ) -> torch.Tensor: ...
     @overload
     def numbers(
-        self, format: LiteralString = "numpy", *, vocabulary: Vocabulary | None = None
+        self,
+        format: LiteralString = "numpy",
+        *,
+        vocabulary: Vocabulary | None = None,
+        missing: Literal["error", "negative"] = "error",
     ) -> ArrayLike: ...
     def numbers(
-        self, format: LiteralString = "numpy", *, vocabulary: Vocabulary | None = None
+        self,
+        format: LiteralString = "numpy",
+        *,
+        vocabulary: Vocabulary | None = None,
+        missing: Literal["error", "negative"] = "error",
     ) -> ArrayLike:
         """
         Get the item numbers.
@@ -285,14 +301,16 @@ class ItemList:
         if vocabulary is not None and vocabulary is not self._vocab:
             # we need to translate vocabulary
             ids = self.ids()
-            return vocabulary.numbers(ids)
+            return vocabulary.numbers(ids, missing=missing)
 
         if self._numbers is None:
             if self._vocab is None:
                 raise RuntimeError("item numbers not available (no IDs or vocabulary provided)")
             assert self._ids is not None
-            self._numbers = MTArray(self._vocab.numbers(self._ids))
+            self._numbers = MTArray(self._vocab.numbers(self._ids, missing="negative"))
 
+        if missing == "error" and np.any(self._numbers.to("numpy") < 0):
+            raise KeyError("item IDs")
         return self._numbers.to(format)
 
     @overload
