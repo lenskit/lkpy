@@ -105,6 +105,8 @@ ranked, etc.
 
 .. autoclass:: ItemList
 
+.. autoclass:: HasItemList
+
 User-Item Data Tables
 ~~~~~~~~~~~~~~~~~~~~~
 
