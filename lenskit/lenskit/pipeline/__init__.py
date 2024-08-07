@@ -27,6 +27,7 @@ from .components import (
     TrainableComponent,
 )
 from .nodes import ND, ComponentNode, FallbackNode, InputNode, LiteralNode, Node
+from .state import PipelineState
 
 __all__ = [
     "Pipeline",
@@ -460,17 +461,56 @@ class Pipeline:
             other:
                 exceptions thrown by components are passed through.
         """
-        from .runner import PipelineRunner
-
-        runner = PipelineRunner(self, kwargs)
         if not nodes:
             nodes = (self._last_node(),)
-        results = [runner.run(self.node(n)) for n in nodes]
+        state = self.run_all(*nodes, **kwargs)
+        results = [state[self.node(n).name] for n in nodes]
 
         if len(results) > 1:
             return tuple(results)
         else:
             return results[0]
+
+    def run_all(self, *nodes: str | Node[Any], **kwargs: object) -> PipelineState:
+        """
+        Run all nodes in the pipeline, or all nodes required to fulfill the
+        requested node, and return a mapping with the full pipeline state (the
+        data attached to each node). This is useful in cases where client code
+        needs to be able to inspect the data at arbitrary steps of the pipeline.
+        It differs from :meth:`run` in two ways:
+
+        1.  It returns the data from all nodes as a mapping (dictionary-like
+            object), not just the specified nodes as a tuple.
+        2.  If no nodes are specified, it runs *all* nodes instead of only the
+            last node.  This has the consequence of running nodes that are not
+            required to fulfill the last node (such scenarios typically result
+            from using :meth:`use_first_of`).
+
+        Args:
+            nodes:
+                The nodes to run, as positional arguments (if no nodes are
+                specified, this method runs all nodes).
+            kwargs:
+                The inputs.
+
+        Returns:
+            The full pipeline state, with :attr:`~PipelineState.default` set to
+            the last node specified (either the last node in `nodes`, or the
+            last node added to the pipeline).
+        """
+        from .runner import PipelineRunner
+
+        runner = PipelineRunner(self, kwargs)
+        node_list = [self.node(n) for n in nodes]
+        if not node_list:
+            node_list = self.nodes
+
+        last = None
+        for node in node_list:
+            runner.run(node)
+            last = node.name
+
+        return PipelineState(runner.state, {a: t.name for (a, t) in self._aliases.items()}, last)
 
     def _last_node(self) -> Node[object]:
         if not self._nodes:

@@ -353,6 +353,50 @@ def test_run_by_alias():
     assert pipe.run("result", a=1, b=7) == 9
 
 
+def test_run_all():
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    na = pipe.add_component("add", add, x=nd, y=b)
+
+    pipe.alias("result", na)
+
+    state = pipe.run_all(a=1, b=7)
+    assert state["double"] == 2
+    assert state["add"] == 9
+    assert state["result"] == 9
+
+
+def test_run_all_limit():
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    na = pipe.add_component("add", add, x=nd, y=b)
+
+    pipe.alias("result", na)
+
+    state = pipe.run_all("double", a=1, b=7)
+    assert state["double"] == 2
+    assert "add" not in state
+    assert "result" not in state
+
+
 def test_connect_literal():
     pipe = Pipeline()
     a = pipe.create_input("a", int)
