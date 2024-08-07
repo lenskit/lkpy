@@ -372,12 +372,12 @@ class Dataset(ABC):
 
     @abstractmethod
     @overload
-    def user_row(self, user_id: EntityId) -> UserProfile | None: ...
+    def user_profile(self, user_id: EntityId) -> UserProfile | None: ...
     @abstractmethod
     @overload
-    def user_row(self, *, user_num: int) -> UserProfile: ...
+    def user_profile(self, *, user_num: int) -> UserProfile: ...
     @abstractmethod
-    def user_row(
+    def user_profile(
         self, user_id: EntityId | None = None, *, user_num: int | None = None
     ) -> UserProfile | None:
         """
@@ -742,7 +742,7 @@ class MatrixDataset(Dataset):
         return tbl
 
     @override
-    def user_row(
+    def user_profile(
         self, user_id: EntityId | None = None, *, user_num: int | None = None
     ) -> UserProfile | None:
         if user_num is None:
@@ -819,8 +819,8 @@ class LazyDataset(Dataset):
         return self.delegate().interaction_log(*args, **kwargs)
 
     @override
-    def user_row(self, *args, **kwargs) -> UserProfile | None:
-        return self.delegate().user_row(*args, **kwargs)
+    def user_profile(self, *args, **kwargs) -> UserProfile | None:
+        return self.delegate().user_profile(*args, **kwargs)
 
 
 def from_interactions_df(

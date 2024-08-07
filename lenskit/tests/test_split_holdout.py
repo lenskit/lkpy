@@ -22,7 +22,7 @@ def test_sample_n(ml_ds: Dataset):
 
     s5 = SampleN(5)
     for u in users:
-        profile = ml_ds.user_row(u)
+        profile = ml_ds.user_profile(u)
         assert profile is not None
         row = profile.item_list()
         assert row is not None
@@ -34,7 +34,7 @@ def test_sample_n(ml_ds: Dataset):
 
     s10 = SampleN(10)
     for u in users:
-        profile = ml_ds.user_row(u)
+        profile = ml_ds.user_profile(u)
         assert profile is not None
         row = profile.item_list()
         assert row is not None
@@ -50,7 +50,7 @@ def test_sample_frac(ml_ds: Dataset):
 
     samp = SampleFrac(0.2)
     for u in users:
-        profile = ml_ds.user_row(u)
+        profile = ml_ds.user_profile(u)
         assert profile is not None
         row = profile.item_list()
         assert row is not None
@@ -63,7 +63,7 @@ def test_sample_frac(ml_ds: Dataset):
 
     samp = SampleFrac(0.5)
     for u in users:
-        profile = ml_ds.user_row(u)
+        profile = ml_ds.user_profile(u)
         assert profile is not None
         row = profile.item_list()
         assert row is not None
@@ -80,7 +80,7 @@ def test_last_n(ml_ds: Dataset):
 
     samp = LastN(5)
     for u in users:
-        profile = ml_ds.user_row(u)
+        profile = ml_ds.user_profile(u)
         assert profile is not None
         row = profile.item_list()
         assert row is not None
@@ -93,7 +93,7 @@ def test_last_n(ml_ds: Dataset):
 
     samp = LastN(7)
     for u in users:
-        profile = ml_ds.user_row(u)
+        profile = ml_ds.user_profile(u)
         assert profile is not None
         row = profile.item_list()
         assert row is not None
@@ -110,7 +110,7 @@ def test_last_frac(ml_ds: Dataset):
 
     samp = LastFrac(0.2, "timestamp")
     for u in users:
-        profile = ml_ds.user_row(u)
+        profile = ml_ds.user_profile(u)
         assert profile is not None
         row = profile.item_list()
         assert row is not None
@@ -124,7 +124,7 @@ def test_last_frac(ml_ds: Dataset):
 
     samp = LastFrac(0.5, "timestamp")
     for u in users:
-        profile = ml_ds.user_row(u)
+        profile = ml_ds.user_profile(u)
         assert profile is not None
         row = profile.item_list()
         assert row is not None

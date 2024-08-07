@@ -349,7 +349,7 @@ def test_matrix_rows_by_id(rng: np.random.Generator, ml_ratings: pd.DataFrame, m
     users = rng.choice(ml_ds.users.ids(), 50)
 
     for user in users:
-        profile = ml_ds.user_row(user)
+        profile = ml_ds.user_profile(user)
         assert profile is not None
         row = profile.item_list()
         assert row is not None
@@ -382,7 +382,7 @@ def test_matrix_rows_by_num(rng: np.random.Generator, ml_ratings: pd.DataFrame, 
 
     for user in users:
         uid = ml_ds.users.id(user)
-        profile = ml_ds.user_row(user_num=user)
+        profile = ml_ds.user_profile(user_num=user)
         assert profile is not None
         row = profile.item_list()
         assert row is not None

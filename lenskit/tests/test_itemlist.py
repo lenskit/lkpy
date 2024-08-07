@@ -223,7 +223,7 @@ def test_item_list_pickle_compact(ml_ds: Dataset):
 
 
 def test_item_list_pickle_fields(ml_ds: Dataset):
-    row = ml_ds.user_row(user_num=400).item_list()
+    row = ml_ds.user_profile(user_num=400).item_list()
     assert row is not None
     data = pickle.dumps(row)
     r2 = pickle.loads(data)
@@ -238,7 +238,7 @@ def test_item_list_pickle_fields(ml_ds: Dataset):
 
 
 def test_subset_mask(ml_ds: Dataset):
-    row = ml_ds.user_row(user_num=400).item_list()
+    row = ml_ds.user_profile(user_num=400).item_list()
     assert row is not None
     ratings = row.field("rating")
     assert ratings is not None
@@ -258,7 +258,7 @@ def test_subset_mask(ml_ds: Dataset):
 
 
 def test_subset_idx(ml_ds: Dataset):
-    row = ml_ds.user_row(user_num=400).item_list()
+    row = ml_ds.user_profile(user_num=400).item_list()
     assert row is not None
     ratings = row.field("rating")
     assert ratings is not None
@@ -275,7 +275,7 @@ def test_subset_idx(ml_ds: Dataset):
 
 
 def test_subset_slice(ml_ds: Dataset):
-    row = ml_ds.user_row(user_num=400).item_list()
+    row = ml_ds.user_profile(user_num=400).item_list()
     assert row is not None
     ratings = row.field("rating")
     assert ratings is not None
