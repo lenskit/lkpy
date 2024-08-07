@@ -7,8 +7,10 @@
 # pyright: basic
 from __future__ import annotations
 
+import re
 import warnings
-from types import GenericAlias
+from importlib import import_module
+from types import GenericAlias, NoneType
 from typing import Union, _GenericAlias, get_args, get_origin  # type: ignore
 
 import numpy as np
@@ -118,3 +120,36 @@ def is_compatible_data(obj: object, *targets: type) -> bool:
             return True
 
     return False
+
+
+def type_string(typ: type) -> str:
+    """
+    Compute a string representation of a type that is both resolvable and
+    human-readable.  Type parameterizations are lost.
+    """
+    if typ is None or typ is NoneType:
+        return "None"
+    elif typ.__module__ == "builtins":
+        return typ.__name__
+    else:
+        return f"{typ.__module__}.{typ.__name__}"
+
+
+def parse_type_string(tstr: str) -> type:
+    """
+    Compute a string representation of a type that is both resolvable and
+    human-readable.  Type parameterizations are lost.
+    """
+    if tstr == "None":
+        return NoneType
+    elif re.match(r"^\w+$", tstr):
+        return __builtins__[tstr]
+    else:
+        # separate last element from module
+        parts = re.match(r"(.*)\.(\w+)$", tstr)
+        if not parts:
+            raise ValueError(f"unparsable type string {tstr}")
+
+        mod_name, typ_name = parts.groups()
+        mod = import_module(mod_name)
+        return getattr(mod, typ_name)
