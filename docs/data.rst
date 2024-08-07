@@ -97,6 +97,11 @@ User and Item Data
 The :mod:`lenskit.data` package also provides various classes for representing
 user and item data.
 
+User Profiles
+-------------
+
+.. autoclass:: UserProfile
+
 Item Lists
 ----------
 
