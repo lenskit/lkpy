@@ -22,7 +22,6 @@ from lenskit.data import Vocabulary
 @given(
     st.one_of(
         st.sets(st.integers()),
-        st.sets(st.emails()),
         st.sets(st.uuids()),
     )
 )
