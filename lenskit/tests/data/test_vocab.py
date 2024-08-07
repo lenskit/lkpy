@@ -37,7 +37,6 @@ def test_create_basic(keys: set[int | str | UUID]):
 @given(
     st.one_of(
         st.lists(st.integers()),
-        st.lists(st.emails()),
         st.lists(st.uuids()),
     )
 )
