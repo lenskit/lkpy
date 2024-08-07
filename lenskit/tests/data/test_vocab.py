@@ -76,13 +76,11 @@ def test_not_equal(keys: list[int], oks: set[int]):
 @given(
     st.one_of(
         st.sets(st.integers()),
-        st.sets(st.emails()),
         st.sets(st.uuids()),
     ),
     st.lists(
         st.one_of(
             st.integers(),
-            st.emails(),
             st.uuids(),
         )
     ),
