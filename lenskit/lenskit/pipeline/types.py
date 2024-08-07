@@ -122,7 +122,7 @@ def is_compatible_data(obj: object, *targets: type) -> bool:
     return False
 
 
-def type_string(typ: type) -> str:
+def type_string(typ: type | None) -> str:
     """
     Compute a string representation of a type that is both resolvable and
     human-readable.  Type parameterizations are lost.

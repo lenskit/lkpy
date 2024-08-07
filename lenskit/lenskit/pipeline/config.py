@@ -26,13 +26,13 @@ class PipelineConfig(BaseModel):
 class PipelineInput(BaseModel):
     name: str
     "The name for this input."
-    types: Optional[list[str]]
+    types: Optional[set[str]]
     "The list of types for this input."
 
     @classmethod
     def from_node(cls, node: InputNode[Any]) -> Self:
         if node.types is not None:
-            types = [type_string(t) for t in node.types]
+            types = {type_string(t) for t in node.types}
         else:
             types = None
 
