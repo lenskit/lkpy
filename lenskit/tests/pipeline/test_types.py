@@ -127,3 +127,7 @@ def test_parse_string_int():
 
 def test_parse_string_class():
     assert parse_type_string("pathlib.Path") is Path
+
+
+def test_parse_string_mod_class():
+    assert parse_type_string("pathlib:Path") is Path

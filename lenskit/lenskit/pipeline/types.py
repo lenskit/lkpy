@@ -145,11 +145,14 @@ def parse_type_string(tstr: str) -> type:
     elif re.match(r"^\w+$", tstr):
         return __builtins__[tstr]
     else:
-        # separate last element from module
-        parts = re.match(r"(.*)\.(\w+)$", tstr)
-        if not parts:
-            raise ValueError(f"unparsable type string {tstr}")
+        if ":" in tstr:
+            mod_name, typ_name = tstr.split(":", 1)
+        else:
+            # separate last element from module
+            parts = re.match(r"(.*)\.(\w+)$", tstr)
+            if not parts:
+                raise ValueError(f"unparsable type string {tstr}")
+            mod_name, typ_name = parts.groups()
 
-        mod_name, typ_name = parts.groups()
         mod = import_module(mod_name)
         return getattr(mod, typ_name)
