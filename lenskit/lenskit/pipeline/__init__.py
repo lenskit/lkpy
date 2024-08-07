@@ -16,9 +16,10 @@ from types import FunctionType
 from typing import Literal, cast
 from uuid import uuid4
 
-from typing_extensions import Any, LiteralString, TypeVar, overload
+from typing_extensions import Any, LiteralString, Self, TypeVar, overload
 
 from lenskit.data import Dataset
+from lenskit.pipeline.types import parse_type_string
 
 from .components import (
     AutoConfig,  # noqa: F401 # type: ignore
@@ -26,6 +27,7 @@ from .components import (
     ConfigurableComponent,
     TrainableComponent,
 )
+from .config import PipelineConfig, PipelineInput
 from .nodes import ND, ComponentNode, FallbackNode, InputNode, LiteralNode, Node
 from .state import PipelineState
 
@@ -36,6 +38,7 @@ __all__ = [
     "Component",
     "ConfigurableComponent",
     "TrainableComponent",
+    "PipelineConfig",
 ]
 
 _log = logging.getLogger(__name__)
@@ -391,6 +394,35 @@ class Pipeline:
                     raise RuntimeError(f"invalid node {node}")
 
         return clone
+
+    def get_config(self) -> PipelineConfig:
+        """
+        Get this pipeline's configuration for serialization.  The configuration
+        consists of all inputs and components along with their configurations
+        and input connections.  It can be serialized to disk (in JSON, YAML, or
+        a similar format) to save a pipeline.
+
+        The configuration does **not** include any trained parameter values,
+        although the configuration may include things such as paths to
+        checkpoints to load such parameters, depending on the design of the
+        components in the pipeline.
+        """
+        inputs = [
+            PipelineInput.from_node(node) for node in self.nodes if isinstance(node, InputNode)
+        ]
+        return PipelineConfig(inputs=inputs)
+
+    @classmethod
+    def from_config(cls, config: object) -> Self:
+        cfg = PipelineConfig.model_validate(config)
+        pipe = cls()
+        for inpt in cfg.inputs:
+            types: list[type[Any] | None] = []
+            if inpt.types is not None:
+                types += [parse_type_string(t) for t in inpt.types]
+            pipe.create_input(inpt.name, *types)
+
+        return pipe
 
     def train(self, data: Dataset) -> None:
         """
