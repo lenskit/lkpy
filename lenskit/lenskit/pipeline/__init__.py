@@ -26,8 +26,9 @@ from .components import (
     Component,
     ConfigurableComponent,
     TrainableComponent,
+    instantiate_component,
 )
-from .config import PipelineConfig, PipelineInput
+from .config import PipelineComponent, PipelineConfig, PipelineInput
 from .nodes import ND, ComponentNode, FallbackNode, InputNode, LiteralNode, Node
 from .state import PipelineState
 
@@ -384,9 +385,9 @@ class Pipeline:
                     if isinstance(comp, FunctionType):
                         comp = comp
                     elif isinstance(comp, ConfigurableComponent):
-                        comp = comp.__class__.from_config(comp.get_config())
+                        comp = comp.__class__.from_config(comp.get_config())  # type: ignore
                     else:
-                        comp = comp.__class__()
+                        comp = comp.__class__()  # type: ignore
                     cn = clone.add_component(node.name, comp)  # type: ignore
                     for wn, wt in wiring.items():
                         clone.connect(cn, **{wn: clone.node(wt)})
@@ -407,10 +408,16 @@ class Pipeline:
         checkpoints to load such parameters, depending on the design of the
         components in the pipeline.
         """
-        inputs = [
-            PipelineInput.from_node(node) for node in self.nodes if isinstance(node, InputNode)
-        ]
-        return PipelineConfig(inputs=inputs)
+        return PipelineConfig(
+            inputs=[
+                PipelineInput.from_node(node) for node in self.nodes if isinstance(node, InputNode)
+            ],
+            components={
+                node.name: PipelineComponent.from_node(node)
+                for node in self.nodes
+                if isinstance(node, ComponentNode)
+            },
+        )
 
     @classmethod
     def from_config(cls, config: object) -> Self:
@@ -421,6 +428,15 @@ class Pipeline:
             if inpt.types is not None:
                 types += [parse_type_string(t) for t in inpt.types]
             pipe.create_input(inpt.name, *types)
+
+        for name, comp in cfg.components.items():
+            obj = instantiate_component(comp.code, comp.config)
+            pipe.add_component(name, obj)
+
+        # pass 2: wiring
+        for name, comp in cfg.components.items():
+            inputs = {n: pipe.node(t) for (n, t) in comp.inputs.items()}
+            pipe.connect(name, **inputs)
 
         return pipe
 
