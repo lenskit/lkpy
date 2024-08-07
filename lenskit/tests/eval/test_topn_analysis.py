@@ -212,6 +212,7 @@ def test_pr_bulk_match(demo_recs, drop_rating):
     if drop_rating:
         test = test[["user", "item"]]
 
+    _log.info("creating analysis")
     rla = topn.RecListAnalysis()
     rla.add_metric(precision)
     rla.add_metric(recall)
