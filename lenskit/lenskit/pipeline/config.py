@@ -33,8 +33,15 @@ class PipelineMeta(BaseModel):
     Pipeline metadata.
     """
 
-    name: str | None = Field(default=None)
-    version: str | None = Field(default=None)
+    name: str | None = None
+    "The pipeline name."
+    version: str | None = None
+    "The pipeline version."
+    hash: str | None = None
+    """
+    The pipeline configuration hash.  This is optional, particularly when
+    hand-crafting pipeline configuration files.
+    """
 
 
 class PipelineInput(BaseModel):

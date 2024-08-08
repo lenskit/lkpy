@@ -12,6 +12,8 @@ LensKit pipeline abstraction.
 from __future__ import annotations
 
 import logging
+import warnings
+from hashlib import sha256
 from types import FunctionType
 from typing import Literal, cast
 from uuid import uuid4
@@ -414,7 +416,7 @@ class Pipeline:
 
         return clone
 
-    def get_config(self) -> PipelineConfig:
+    def get_config(self, *, include_hash=True) -> PipelineConfig:
         """
         Get this pipeline's configuration for serialization.  The configuration
         consists of all inputs and components along with their configurations
@@ -432,6 +434,9 @@ class Pipeline:
             are present in the pipeline.
         """
         meta = PipelineMeta(name=self.name, version=self.version)
+        if include_hash:
+            meta.hash = self.config_hash()
+
         config = PipelineConfig(meta=meta)
         for node in self.nodes:
             match node:
@@ -449,6 +454,25 @@ class Pipeline:
                     raise RuntimeError(f"invalid node {node}")
 
         return config
+
+    def config_hash(self) -> str:
+        """
+        Get a hash of the pipeline's configuration to uniquely identify it for
+        logging, version control, or other purposes.
+
+        The precise algorithm to compute the hash is not guaranteed, except that
+        the same configuration with the same version of LensKit and its
+        dependencies will produce the same hash.  In LensKit 2024.1, the
+        configuration hash is computed by computing the JSON serialization of
+        the pipeline configuration *without* a hash returning the hex-encoded
+        SHA1 hash of that configuration.
+        """
+        # get the config *without* a hash
+        cfg = self.get_config(include_hash=False)
+        json = cfg.model_dump_json(exclude_none=True)
+        h = sha256()
+        h.update(json.encode())
+        return h.hexdigest()
 
     @classmethod
     def from_config(cls, config: object) -> Self:
@@ -487,6 +511,12 @@ class Pipeline:
                 pipe.connect(name, **inputs)
             elif not comp.code.startswith("@"):
                 raise RuntimeError(f"component {name} inputs must be dict, not list")
+
+        if cfg.meta.hash is not None:
+            h2 = pipe.config_hash()
+            if h2 != cfg.meta.hash:
+                _log.warn("loaded pipeline does not match hash")
+                warnings.warn("loaded pipeline config does not match hash")
 
         return pipe
 

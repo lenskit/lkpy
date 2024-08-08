@@ -2,6 +2,8 @@ from types import NoneType
 
 from typing_extensions import assert_type
 
+from pytest import fail, warns
+
 from lenskit.pipeline import InputNode, Node, Pipeline
 from lenskit.pipeline.components import AutoConfig
 from lenskit.pipeline.config import PipelineConfig
@@ -118,6 +120,10 @@ def test_configurable_component():
 
     assert p2.run("prefix", msg="HACKEM MUCHE") == "scroll named HACKEM MUCHE"
 
+    print("hash:", pipe.config_hash())
+    assert pipe.config_hash() is not None
+    assert p2.config_hash() == pipe.config_hash()
+
 
 def negative(x: int) -> int:
     return -x
@@ -150,3 +156,20 @@ def test_save_with_fallback():
 
     # 3 * 2 + -3 = 3
     assert p2.run("fill-operand", "add", a=3) == (-3, 3)
+
+
+def test_hash_validate():
+    pipe = Pipeline()
+    msg = pipe.create_input("msg", str)
+
+    pfx = Prefixer("scroll named ")
+    pipe.add_component("prefix", pfx, msg=msg)
+
+    cfg = pipe.get_config()
+    print("initial config:", cfg.model_dump_json(indent=2))
+    assert cfg.meta.hash is not None
+    cfg.components["prefix"].config["prefix"] = "scroll called "  # type: ignore
+    print("modified config:", cfg.model_dump_json(indent=2))
+
+    with warns(UserWarning):
+        Pipeline.from_config(cfg)
