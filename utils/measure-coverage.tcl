@@ -54,7 +54,7 @@ if {[ev GITHUB_BASE_REF base]} {
 
     # write the coverage report
     set reph [open lenskit-coverage/report.md w]
-    puts $reph "The GitHub 🤖 has run the tests on your PR.\n"
+    puts $reph "The LensKit 🤖 has run the tests on your PR.\n"
     if {$diff_cov eq "NA"} {
         puts $reph [format \
             "Covered **no lines** of diff (coverage changed **%.2f%%** from %.2f%% to %.2f%%).\n" \
