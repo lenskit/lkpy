@@ -547,7 +547,7 @@ class Pipeline:
         if cfg.meta.hash is not None:
             h2 = pipe.config_hash()
             if h2 != cfg.meta.hash:
-                _log.warn("loaded pipeline does not match hash")
+                _log.warning("loaded pipeline does not match hash")
                 warnings.warn("loaded pipeline config does not match hash", PipelineWarning)
 
         return pipe
