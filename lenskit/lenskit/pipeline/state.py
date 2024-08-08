@@ -8,6 +8,8 @@
 from collections.abc import Mapping
 from typing import Any, Iterator
 
+from .config import PipelineMeta
+
 
 class PipelineState(Mapping[str, Any]):
     """
@@ -27,21 +29,29 @@ class PipelineState(Mapping[str, Any]):
         default:
             The name of the default node (whose data should be returned by
             :attr:`default` ).
+        meta:
+            The metadata for the pipeline generating this state.
     """
 
     _state: dict[str, Any]
     _aliases: dict[str, str]
     _default: str | None = None
+    meta: PipelineMeta | None
+    """
+    Pipeline metadata.
+    """
 
     def __init__(
         self,
         state: dict[str, Any] | None = None,
         aliases: dict[str, str] | None = None,
         default: str | None = None,
+        meta: PipelineMeta | None = None,
     ) -> None:
         self._state = state if state is not None else {}
         self._aliases = aliases if aliases is not None else {}
         self._default = default
+        self.meta = meta
         if default is not None and default not in self:
             raise ValueError("default node is not in state or aliases")
 

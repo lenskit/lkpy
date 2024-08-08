@@ -354,7 +354,7 @@ def test_run_by_alias():
 
 
 def test_run_all():
-    pipe = Pipeline()
+    pipe = Pipeline("test", "7.2")
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -373,6 +373,11 @@ def test_run_all():
     assert state["double"] == 2
     assert state["add"] == 9
     assert state["result"] == 9
+
+    assert state.meta is not None
+    assert state.meta.name == "test"
+    assert state.meta.version == "7.2"
+    assert state.meta.hash == pipe.config_hash()
 
 
 def test_run_all_limit():

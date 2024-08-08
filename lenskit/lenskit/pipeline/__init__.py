@@ -116,6 +116,24 @@ class Pipeline:
         self._components = {}
         self._clear_caches()
 
+    def meta(self, *, include_hash: bool | None = None) -> PipelineMeta:
+        """
+        Get the metadata (name, version, hash, etc.) for this pipeline without
+        returning the whole config.
+
+        Args:
+            include_hash:
+                Whether to include a configuration hash in the metadata.  If
+                ``None``, it includes a hash if there are no :meth:`literal`
+                nodes in the pipeline.
+        """
+        meta = PipelineMeta(name=self.name, version=self.version)
+        if include_hash is None:
+            include_hash = not any(isinstance(n, LiteralNode) for n in self.nodes)
+        if include_hash:
+            meta.hash = self.config_hash()
+        return meta
+
     @property
     def nodes(self) -> list[Node[object]]:
         """
@@ -460,7 +478,7 @@ class Pipeline:
             inputs) cannot be serialized, and this method will fail if they
             are present in the pipeline.
         """
-        meta = PipelineMeta(name=self.name, version=self.version)
+        meta = self.meta(include_hash=False)
         config = PipelineConfig(meta=meta)
         for node in self.nodes:
             match node:
@@ -672,7 +690,12 @@ class Pipeline:
             runner.run(node)
             last = node.name
 
-        return PipelineState(runner.state, {a: t.name for (a, t) in self._aliases.items()}, last)
+        return PipelineState(
+            runner.state,
+            {a: t.name for (a, t) in self._aliases.items()},
+            default=last,
+            meta=self.meta(),
+        )
 
     def _last_node(self) -> Node[object]:
         if not self._nodes:
