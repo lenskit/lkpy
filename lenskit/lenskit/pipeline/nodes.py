@@ -95,7 +95,14 @@ class ComponentNode(Node[ND], Generic[ND]):
         else:
             self.types = set([sig.return_annotation])
 
-        self.inputs = {
-            param.name: None if param.annotation == Signature.empty else param.annotation
-            for param in sig.parameters.values()
-        }
+        self.inputs = {}
+        for param in sig.parameters.values():
+            if param.annotation == Signature.empty:
+                warnings.warn(
+                    f"parameter {param.name} of component {component} has no type annotation",
+                    TypecheckWarning,
+                    2,
+                )
+                self.inputs[param.name] = None
+            else:
+                self.inputs[param.name] = param.annotation
