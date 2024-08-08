@@ -27,6 +27,7 @@ class PipelineConfig(BaseModel):
     meta: PipelineMeta
     inputs: list[PipelineInput] = Field(default_factory=list)
     components: OrderedDict[str, PipelineComponent] = Field(default_factory=OrderedDict)
+    aliases: dict[str, str] = Field(default_factory=dict)
 
 
 class PipelineMeta(BaseModel):

@@ -173,3 +173,32 @@ def test_hash_validate():
 
     with warns(PipelineWarning):
         Pipeline.from_config(cfg)
+
+
+def test_alias_input():
+    "alias an input node"
+    pipe = Pipeline()
+    user = pipe.create_input("user", int, str)
+
+    pipe.alias("person", user)
+
+    cfg = pipe.get_config()
+
+    p2 = Pipeline.from_config(cfg)
+    assert p2.run("person", user=32) == 32
+
+
+def test_alias_node():
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    nd = pipe.add_component("double", double, x=a)
+    na = pipe.add_component("add", add, x=nd, y=b)
+    pipe.alias("result", na)
+
+    assert pipe.run("result", a=5, b=7) == 17
+
+    cfg = pipe.get_config()
+    p2 = Pipeline.from_config(cfg)
+    assert p2.run("result", a=5, b=7) == 17

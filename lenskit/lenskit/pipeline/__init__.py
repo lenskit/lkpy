@@ -477,6 +477,8 @@ class Pipeline:
                 case _:  # pragma: nocover
                     raise RuntimeError(f"invalid node {node}")
 
+        config.aliases = {a: t.name for (a, t) in self._aliases.items()}
+
         if include_hash:
             config.meta.hash = hash_config(config)
 
@@ -539,6 +541,10 @@ class Pipeline:
                 pipe.connect(name, **inputs)
             elif not comp.code.startswith("@"):
                 raise PipelineError(f"component {name} inputs must be dict, not list")
+
+        # pass 4: aliases
+        for n, t in cfg.aliases.items():
+            pipe.alias(n, t)
 
         if cfg.meta.hash is not None:
             h2 = pipe.config_hash()
