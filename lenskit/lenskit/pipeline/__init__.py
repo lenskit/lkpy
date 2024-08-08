@@ -493,7 +493,7 @@ class Pipeline:
         dependencies will produce the same hash.  In LensKit 2024.1, the
         configuration hash is computed by computing the JSON serialization of
         the pipeline configuration *without* a hash returning the hex-encoded
-        SHA1 hash of that configuration.
+        SHA256 hash of that configuration.
         """
         # get the config *without* a hash
         cfg = self.get_config(include_hash=False)
