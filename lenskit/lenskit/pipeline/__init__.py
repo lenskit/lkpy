@@ -484,6 +484,10 @@ class Pipeline:
                 types += [parse_type_string(t) for t in inpt.types]
             pipe.create_input(inpt.name, *types)
 
+        # we now add the components and other nodes in multiple passes to ensure
+        # that nodes are available before they are wired (since `connect` can
+        # introduce out-of-order dependencies).
+
         # pass 1: add components
         to_wire: list[PipelineComponent] = []
         for name, comp in cfg.components.items():
@@ -504,7 +508,7 @@ class Pipeline:
             elif comp.code.startswith("@"):
                 raise RuntimeError(f"unsupported meta-component {comp.code}")
 
-        # pass 2: wiring
+        # pass 3: wiring
         for name, comp in cfg.components.items():
             if isinstance(comp.inputs, dict):
                 inputs = {n: pipe.node(t) for (n, t) in comp.inputs.items()}
