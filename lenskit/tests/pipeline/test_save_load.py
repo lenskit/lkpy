@@ -4,7 +4,7 @@ from typing_extensions import assert_type
 
 from pytest import fail, warns
 
-from lenskit.pipeline import InputNode, Node, Pipeline
+from lenskit.pipeline import InputNode, Node, Pipeline, PipelineWarning
 from lenskit.pipeline.components import AutoConfig
 from lenskit.pipeline.config import PipelineConfig
 from lenskit.pipeline.nodes import ComponentNode
@@ -171,5 +171,5 @@ def test_hash_validate():
     cfg.components["prefix"].config["prefix"] = "scroll called "  # type: ignore
     print("modified config:", cfg.model_dump_json(indent=2))
 
-    with warns(UserWarning):
+    with warns(PipelineWarning):
         Pipeline.from_config(cfg)

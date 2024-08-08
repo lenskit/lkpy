@@ -55,6 +55,32 @@ T4 = TypeVar("T4")
 T5 = TypeVar("T5")
 
 
+class PipelineError(Exception):
+    """
+    Pipeline configuration errors.
+
+    .. note::
+
+        This exception is only to note problems with the pipeline configuration
+        and structure (e.g. circular dependencies).  Errors *running* the
+        pipeline are raised as-is.
+    """
+
+
+class PipelineWarning(Warning):
+    """
+    Pipeline configuration and setup warnings.  We also emit warnings to the
+    logger in many cases, but this allows critical ones to be visible even if
+    the client code has not enabled logging.
+
+    .. note::
+
+        This warning is only to note problems with the pipeline configuration
+        and structure (e.g. circular dependencies).  Errors *running* the
+        pipeline are raised as-is.
+    """
+
+
 class Pipeline:
     """
     LensKit recommendation pipeline.  This is the core abstraction for using
@@ -416,7 +442,7 @@ class Pipeline:
 
         return clone
 
-    def get_config(self, *, include_hash=True) -> PipelineConfig:
+    def get_config(self, *, include_hash: bool = True) -> PipelineConfig:
         """
         Get this pipeline's configuration for serialization.  The configuration
         consists of all inputs and components along with their configurations
@@ -520,7 +546,7 @@ class Pipeline:
             h2 = pipe.config_hash()
             if h2 != cfg.meta.hash:
                 _log.warn("loaded pipeline does not match hash")
-                warnings.warn("loaded pipeline config does not match hash")
+                warnings.warn("loaded pipeline config does not match hash", PipelineWarning)
 
         return pipe
 
