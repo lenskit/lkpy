@@ -20,11 +20,12 @@ class Prefixer(AutoConfig):
 
 def test_serialize_input():
     "serialize with one input node"
-    pipe = Pipeline()
+    pipe = Pipeline("test")
     pipe.create_input("user", int, str)
 
     cfg = pipe.get_config()
     print(cfg)
+    assert cfg.meta.name == "test"
     assert len(cfg.inputs) == 1
     assert cfg.inputs[0].name == "user"
     assert cfg.inputs[0].types == {"int", "str"}

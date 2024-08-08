@@ -28,7 +28,7 @@ from .components import (
     TrainableComponent,
     instantiate_component,
 )
-from .config import PipelineComponent, PipelineConfig, PipelineInput
+from .config import PipelineComponent, PipelineConfig, PipelineInput, PipelineMeta
 from .nodes import ND, ComponentNode, FallbackNode, InputNode, LiteralNode, Node
 from .state import PipelineState
 
@@ -62,14 +62,25 @@ class Pipeline:
 
     If you have a scoring model and just want to generate recommenations with a
     default setup and minimal configuration, see :func:`topn_pipeline`.
+
+    Args:
+        name:
+            A name for the pipeline.
+        version:
+            A numeric version for the pipeline.
     """
+
+    name: str | None = None
+    version: str | None = None
 
     _nodes: dict[str, Node[Any]]
     _aliases: dict[str, Node[Any]]
     _defaults: dict[str, Node[Any] | Any]
     _components: dict[str, Component[Any]]
 
-    def __init__(self):
+    def __init__(self, name: str | None = None, version: str | None = None):
+        self.name = name
+        self.version = version
         self._nodes = {}
         self._aliases = {}
         self._defaults = {}
@@ -420,7 +431,8 @@ class Pipeline:
             inputs) cannot be serialized, and this method will fail if they
             are present in the pipeline.
         """
-        config = PipelineConfig()
+        meta = PipelineMeta(name=self.name, version=self.version)
+        config = PipelineConfig(meta=meta)
         for node in self.nodes:
             match node:
                 case InputNode():

@@ -23,8 +23,18 @@ class PipelineConfig(BaseModel):
     not contain the
     """
 
+    meta: PipelineMeta
     inputs: list[PipelineInput] = Field(default_factory=list)
     components: OrderedDict[str, PipelineComponent] = Field(default_factory=OrderedDict)
+
+
+class PipelineMeta(BaseModel):
+    """
+    Pipeline metadata.
+    """
+
+    name: str | None = Field(default=None)
+    version: str | None = Field(default=None)
 
 
 class PipelineInput(BaseModel):
