@@ -86,7 +86,7 @@ if {[ev GITHUB_BASE_REF base]} {
 
     puts $reph "<details>\n"
     puts $reph "<summary>Source Coverage Report</summary>\n"
-    exec coverage report --format=markdown 2>@stderr >@$reph
+    exec coverage report --format=markdown --sort=cover 2>@stderr >@$reph
     puts $reph "\n</details>"
 
     close $reph
@@ -103,7 +103,7 @@ if {[ev GITHUB_BASE_REF base]} {
 
     puts $reph "<details>\n"
     puts $reph "<summary>Source Coverage Report</summary>\n"
-    exec coverage report --format=markdown 2>@stderr >@$reph
+    exec coverage report --format=markdown --sort=cover 2>@stderr >@$reph
     puts $reph "\n</details>"
 
     close $reph
