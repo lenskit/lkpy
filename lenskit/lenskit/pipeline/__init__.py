@@ -149,6 +149,13 @@ class Pipeline:
         return node
 
     def literal(self, value: T) -> LiteralNode[T]:
+        """
+        Create a literal node (a node with a fixed value).
+
+        .. note::
+            Literal nodes cannot be serialized witih :meth:`get_config` or
+            :meth:`save_config`.
+        """
         name = str(uuid4())
         node = LiteralNode(name, value, types=set([type(value)]))
         self._nodes[name] = node
@@ -407,6 +414,11 @@ class Pipeline:
         although the configuration may include things such as paths to
         checkpoints to load such parameters, depending on the design of the
         components in the pipeline.
+
+        .. note::
+            Literal nodes (from :meth:`literal`, or literal values wired to
+            inputs) cannot be serialized, and this method will fail if they
+            are present in the pipeline.
         """
         config = PipelineConfig()
         for node in self.nodes:
