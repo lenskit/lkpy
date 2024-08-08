@@ -12,30 +12,37 @@ LensKit pipeline abstraction.
 from __future__ import annotations
 
 import logging
+import warnings
 from types import FunctionType
 from typing import Literal, cast
 from uuid import uuid4
 
-from typing_extensions import Any, LiteralString, TypeVar, overload
+from typing_extensions import Any, LiteralString, Self, TypeVar, overload
 
 from lenskit.data import Dataset
+from lenskit.pipeline.types import parse_type_string
 
 from .components import (
     AutoConfig,  # noqa: F401 # type: ignore
     Component,
     ConfigurableComponent,
     TrainableComponent,
+    instantiate_component,
 )
+from .config import PipelineComponent, PipelineConfig, PipelineInput, PipelineMeta, hash_config
 from .nodes import ND, ComponentNode, FallbackNode, InputNode, LiteralNode, Node
 from .state import PipelineState
 
 __all__ = [
     "Pipeline",
+    "PipelineError",
+    "PipelineWarning",
     "Node",
     "topn_pipeline",
     "Component",
     "ConfigurableComponent",
     "TrainableComponent",
+    "PipelineConfig",
 ]
 
 _log = logging.getLogger(__name__)
@@ -49,6 +56,32 @@ T4 = TypeVar("T4")
 T5 = TypeVar("T5")
 
 
+class PipelineError(Exception):
+    """
+    Pipeline configuration errors.
+
+    .. note::
+
+        This exception is only to note problems with the pipeline configuration
+        and structure (e.g. circular dependencies).  Errors *running* the
+        pipeline are raised as-is.
+    """
+
+
+class PipelineWarning(Warning):
+    """
+    Pipeline configuration and setup warnings.  We also emit warnings to the
+    logger in many cases, but this allows critical ones to be visible even if
+    the client code has not enabled logging.
+
+    .. note::
+
+        This warning is only to note problems with the pipeline configuration
+        and structure (e.g. circular dependencies).  Errors *running* the
+        pipeline are raised as-is.
+    """
+
+
 class Pipeline:
     """
     LensKit recommendation pipeline.  This is the core abstraction for using
@@ -58,14 +91,25 @@ class Pipeline:
 
     If you have a scoring model and just want to generate recommenations with a
     default setup and minimal configuration, see :func:`topn_pipeline`.
+
+    Args:
+        name:
+            A name for the pipeline.
+        version:
+            A numeric version for the pipeline.
     """
+
+    name: str | None = None
+    version: str | None = None
 
     _nodes: dict[str, Node[Any]]
     _aliases: dict[str, Node[Any]]
     _defaults: dict[str, Node[Any] | Any]
     _components: dict[str, Component[Any]]
 
-    def __init__(self):
+    def __init__(self, name: str | None = None, version: str | None = None):
+        self.name = name
+        self.version = version
         self._nodes = {}
         self._aliases = {}
         self._defaults = {}
@@ -139,12 +183,19 @@ class Pipeline:
         """
         self._check_available_name(name)
 
-        node = InputNode[Any](name, types=set((t if t is not None else type[None]) for t in types))
+        node = InputNode[Any](name, types=set((t if t is not None else type(None)) for t in types))
         self._nodes[name] = node
         self._clear_caches()
         return node
 
     def literal(self, value: T) -> LiteralNode[T]:
+        """
+        Create a literal node (a node with a fixed value).
+
+        .. note::
+            Literal nodes cannot be serialized witih :meth:`get_config` or
+            :meth:`save_config`.
+        """
         name = str(uuid4())
         node = LiteralNode(name, value, types=set([type(value)]))
         self._nodes[name] = node
@@ -381,9 +432,9 @@ class Pipeline:
                     if isinstance(comp, FunctionType):
                         comp = comp
                     elif isinstance(comp, ConfigurableComponent):
-                        comp = comp.__class__.from_config(comp.get_config())
+                        comp = comp.__class__.from_config(comp.get_config())  # type: ignore
                     else:
-                        comp = comp.__class__()
+                        comp = comp.__class__()  # type: ignore
                     cn = clone.add_component(node.name, comp)  # type: ignore
                     for wn, wt in wiring.items():
                         clone.connect(cn, **{wn: clone.node(wt)})
@@ -391,6 +442,111 @@ class Pipeline:
                     raise RuntimeError(f"invalid node {node}")
 
         return clone
+
+    def get_config(self, *, include_hash: bool = True) -> PipelineConfig:
+        """
+        Get this pipeline's configuration for serialization.  The configuration
+        consists of all inputs and components along with their configurations
+        and input connections.  It can be serialized to disk (in JSON, YAML, or
+        a similar format) to save a pipeline.
+
+        The configuration does **not** include any trained parameter values,
+        although the configuration may include things such as paths to
+        checkpoints to load such parameters, depending on the design of the
+        components in the pipeline.
+
+        .. note::
+            Literal nodes (from :meth:`literal`, or literal values wired to
+            inputs) cannot be serialized, and this method will fail if they
+            are present in the pipeline.
+        """
+        meta = PipelineMeta(name=self.name, version=self.version)
+        config = PipelineConfig(meta=meta)
+        for node in self.nodes:
+            match node:
+                case InputNode():
+                    config.inputs.append(PipelineInput.from_node(node))
+                case LiteralNode():
+                    raise RuntimeError("literal nodes cannot be serialized to config")
+                case ComponentNode(name):
+                    config.components[name] = PipelineComponent.from_node(node)
+                case FallbackNode(name, alternatives):
+                    config.components[name] = PipelineComponent(
+                        code="@use-first-of", inputs=[n.name for n in alternatives]
+                    )
+                case _:  # pragma: nocover
+                    raise RuntimeError(f"invalid node {node}")
+
+        if include_hash:
+            config.meta.hash = hash_config(config)
+
+        return config
+
+    def config_hash(self) -> str:
+        """
+        Get a hash of the pipeline's configuration to uniquely identify it for
+        logging, version control, or other purposes.
+
+        The precise algorithm to compute the hash is not guaranteed, except that
+        the same configuration with the same version of LensKit and its
+        dependencies will produce the same hash.  In LensKit 2024.1, the
+        configuration hash is computed by computing the JSON serialization of
+        the pipeline configuration *without* a hash returning the hex-encoded
+        SHA256 hash of that configuration.
+        """
+        # get the config *without* a hash
+        cfg = self.get_config(include_hash=False)
+        return hash_config(cfg)
+
+    @classmethod
+    def from_config(cls, config: object) -> Self:
+        cfg = PipelineConfig.model_validate(config)
+        pipe = cls()
+        for inpt in cfg.inputs:
+            types: list[type[Any] | None] = []
+            if inpt.types is not None:
+                types += [parse_type_string(t) for t in inpt.types]
+            pipe.create_input(inpt.name, *types)
+
+        # we now add the components and other nodes in multiple passes to ensure
+        # that nodes are available before they are wired (since `connect` can
+        # introduce out-of-order dependencies).
+
+        # pass 1: add components
+        to_wire: list[PipelineComponent] = []
+        for name, comp in cfg.components.items():
+            if comp.code.startswith("@"):
+                # ignore special nodes in first pass
+                continue
+
+            obj = instantiate_component(comp.code, comp.config)
+            pipe.add_component(name, obj)
+            to_wire.append(comp)
+
+        # pass 2: add meta nodes
+        for name, comp in cfg.components.items():
+            if comp.code == "@use-first-of":
+                if not isinstance(comp.inputs, list):
+                    raise PipelineError("@use-first-of must have input list, not dict")
+                pipe.use_first_of(name, *[pipe.node(n) for n in comp.inputs])
+            elif comp.code.startswith("@"):
+                raise PipelineError(f"unsupported meta-component {comp.code}")
+
+        # pass 3: wiring
+        for name, comp in cfg.components.items():
+            if isinstance(comp.inputs, dict):
+                inputs = {n: pipe.node(t) for (n, t) in comp.inputs.items()}
+                pipe.connect(name, **inputs)
+            elif not comp.code.startswith("@"):
+                raise PipelineError(f"component {name} inputs must be dict, not list")
+
+        if cfg.meta.hash is not None:
+            h2 = pipe.config_hash()
+            if h2 != cfg.meta.hash:
+                _log.warning("loaded pipeline does not match hash")
+                warnings.warn("loaded pipeline config does not match hash", PipelineWarning)
+
+        return pipe
 
     def train(self, data: Dataset) -> None:
         """
@@ -524,7 +680,7 @@ class Pipeline:
     def _check_member_node(self, node: Node[Any]) -> None:
         nw = self._nodes.get(node.name)
         if nw is not node:
-            raise RuntimeError(f"node {node} not in pipeline")
+            raise PipelineError(f"node {node} not in pipeline")
 
     def _clear_caches(self):
         pass

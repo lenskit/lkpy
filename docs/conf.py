@@ -101,6 +101,7 @@ intersphinx_mapping = {
     "manylog": ("https://manylog.readthedocs.io/en/latest/", None),
     "torch": ("https://pytorch.org/docs/stable/", None),
     "implicit": ("https://benfred.github.io/implicit/", None),
+    "pydantic": ("https://docs.pydantic.dev/latest/", None),
 }
 
 bibtex_bibfiles = ["lenskit.bib"]

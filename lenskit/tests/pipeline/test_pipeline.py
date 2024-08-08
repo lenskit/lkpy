@@ -13,7 +13,7 @@ from typing_extensions import assert_type
 from pytest import fail, raises
 
 from lenskit.data import Dataset, Vocabulary
-from lenskit.pipeline import InputNode, Node, Pipeline
+from lenskit.pipeline import InputNode, Node, Pipeline, PipelineError
 from lenskit.pipeline.components import TrainableComponent
 
 
@@ -133,7 +133,7 @@ def test_single_input_required():
 
     node = pipe.add_component("return", incr, msg=msg)
 
-    with raises(RuntimeError, match="not specified"):
+    with raises(PipelineError, match="not specified"):
         pipe.run(node)
 
 
@@ -245,7 +245,7 @@ def test_cycle():
     na = pipe.add_component("add", add, x=nd, y=b)
     pipe.connect(nd, x=na)
 
-    with raises(RuntimeError, match="cycle"):
+    with raises(PipelineError, match="cycle"):
         pipe.run(a=1, b=7)
 
 
@@ -275,7 +275,7 @@ def test_replace_component():
     assert pipe.run(nt, a=3, b=7) == 9
 
     # old node should be missing!
-    with raises(RuntimeError, match="not in pipeline"):
+    with raises(PipelineError, match="not in pipeline"):
         pipe.run(nd, a=3, b=7)
 
 
@@ -443,7 +443,7 @@ def test_fail_missing_input():
     nd = pipe.add_component("double", double, x=a)
     na = pipe.add_component("add", add, x=nd, y=b)
 
-    with raises(RuntimeError, match=r"input.*not specified"):
+    with raises(PipelineError, match=r"input.*not specified"):
         pipe.run(na, a=3)
 
     # missing inputs only matter if they are required

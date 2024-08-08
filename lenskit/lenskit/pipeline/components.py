@@ -10,6 +10,8 @@
 from __future__ import annotations
 
 import inspect
+from importlib import import_module
+from types import FunctionType
 from typing import Callable, ClassVar, TypeAlias
 
 from typing_extensions import Any, Generic, Protocol, Self, TypeVar, override, runtime_checkable
@@ -184,3 +186,24 @@ class AutoConfig(ConfigurableComponent):
         are passed to the constructor as keywrod arguments.
         """
         return cls(**cfg)
+
+
+def instantiate_component(
+    comp: str | type | FunctionType, config: dict[str, Any] | None
+) -> Callable[..., object]:
+    if isinstance(comp, str):
+        mname, oname = comp.split(":", 1)
+        mod = import_module(mname)
+        comp = getattr(mod, oname)
+
+    # make the type checker happy
+    assert not isinstance(comp, str)
+
+    if isinstance(comp, FunctionType):
+        return comp
+    elif issubclass(comp, ConfigurableComponent):
+        if config is None:
+            config = {}
+        return comp.from_config(config)  # type: ignore
+    else:
+        return comp()  # type: ignore
