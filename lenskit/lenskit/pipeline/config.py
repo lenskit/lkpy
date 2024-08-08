@@ -5,6 +5,7 @@ Pydantic models for pipeline configuration and serialization support.
 # pyright: strict
 from __future__ import annotations
 
+from collections import OrderedDict
 from types import FunctionType
 
 from pydantic import BaseModel, Field
@@ -23,7 +24,7 @@ class PipelineConfig(BaseModel):
     """
 
     inputs: list[PipelineInput] = Field(default_factory=list)
-    components: dict[str, PipelineComponent] = Field(default_factory=dict)
+    components: OrderedDict[str, PipelineComponent] = Field(default_factory=OrderedDict)
 
 
 class PipelineInput(BaseModel):
@@ -55,9 +56,10 @@ class PipelineComponent(BaseModel):
     with its default constructor parameters.
     """
 
-    inputs: dict[str, str] = Field(default_factory=dict)
+    inputs: dict[str, str] | list[str] = Field(default_factory=dict)
     """
-    The component's input wirings, mapping input names to node names.
+    The component's input wirings, mapping input names to node names.  For
+    certain meta-nodes, it is specified as a list instead of a dict.
     """
 
     @classmethod

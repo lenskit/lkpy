@@ -4,6 +4,7 @@ from typing_extensions import assert_type
 
 from lenskit.pipeline import InputNode, Node, Pipeline
 from lenskit.pipeline.components import AutoConfig
+from lenskit.pipeline.config import PipelineConfig
 from lenskit.pipeline.nodes import ComponentNode
 
 
@@ -115,3 +116,36 @@ def test_configurable_component():
     assert r2.connections == {"msg": "msg"}
 
     assert p2.run("prefix", msg="HACKEM MUCHE") == "scroll named HACKEM MUCHE"
+
+
+def negative(x: int) -> int:
+    return -x
+
+
+def double(x: int) -> int:
+    return x * 2
+
+
+def add(x: int, y: int) -> int:
+    return x + y
+
+
+def test_save_with_fallback():
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    nd = pipe.add_component("double", double, x=a)
+    nn = pipe.add_component("negate", negative, x=a)
+    fb = pipe.use_first_of("fill-operand", b, nn)
+    pipe.add_component("add", add, x=nd, y=fb)
+
+    cfg = pipe.get_config()
+    json = cfg.model_dump_json(exclude_none=True)
+    print(json)
+    c2 = PipelineConfig.model_validate_json(json)
+
+    p2 = Pipeline.from_config(c2)
+
+    # 3 * 2 + -3 = 3
+    assert p2.run("fill-operand", "add", a=3) == (-3, 3)

@@ -417,8 +417,10 @@ class Pipeline:
                     raise RuntimeError("literal nodes cannot be serialized to config")
                 case ComponentNode(name):
                     config.components[name] = PipelineComponent.from_node(node)
-                case FallbackNode():
-                    raise NotImplementedError()
+                case FallbackNode(name, alternatives):
+                    config.components[name] = PipelineComponent(
+                        code="@use-first-of", inputs=[n.name for n in alternatives]
+                    )
                 case _:  # pragma: nocover
                     raise RuntimeError(f"invalid node {node}")
 
@@ -434,14 +436,33 @@ class Pipeline:
                 types += [parse_type_string(t) for t in inpt.types]
             pipe.create_input(inpt.name, *types)
 
+        # pass 1: add components
+        to_wire: list[PipelineComponent] = []
         for name, comp in cfg.components.items():
+            if comp.code.startswith("@"):
+                # ignore special nodes in first pass
+                continue
+
             obj = instantiate_component(comp.code, comp.config)
             pipe.add_component(name, obj)
+            to_wire.append(comp)
+
+        # pass 2: add meta nodes
+        for name, comp in cfg.components.items():
+            if comp.code == "@use-first-of":
+                if not isinstance(comp.inputs, list):
+                    raise RuntimeError("@use-first-of must have input list, not dict")
+                pipe.use_first_of(name, *[pipe.node(n) for n in comp.inputs])
+            elif comp.code.startswith("@"):
+                raise RuntimeError(f"unsupported meta-component {comp.code}")
 
         # pass 2: wiring
         for name, comp in cfg.components.items():
-            inputs = {n: pipe.node(t) for (n, t) in comp.inputs.items()}
-            pipe.connect(name, **inputs)
+            if isinstance(comp.inputs, dict):
+                inputs = {n: pipe.node(t) for (n, t) in comp.inputs.items()}
+                pipe.connect(name, **inputs)
+            elif not comp.code.startswith("@"):
+                raise RuntimeError(f"component {name} inputs must be dict, not list")
 
         return pipe
 
