@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import logging
 import warnings
-from hashlib import sha256
 from types import FunctionType
 from typing import Literal, cast
 from uuid import uuid4
@@ -30,7 +29,7 @@ from .components import (
     TrainableComponent,
     instantiate_component,
 )
-from .config import PipelineComponent, PipelineConfig, PipelineInput, PipelineMeta
+from .config import PipelineComponent, PipelineConfig, PipelineInput, PipelineMeta, hash_config
 from .nodes import ND, ComponentNode, FallbackNode, InputNode, LiteralNode, Node
 from .state import PipelineState
 
@@ -462,9 +461,6 @@ class Pipeline:
             are present in the pipeline.
         """
         meta = PipelineMeta(name=self.name, version=self.version)
-        if include_hash:
-            meta.hash = self.config_hash()
-
         config = PipelineConfig(meta=meta)
         for node in self.nodes:
             match node:
@@ -480,6 +476,9 @@ class Pipeline:
                     )
                 case _:  # pragma: nocover
                     raise RuntimeError(f"invalid node {node}")
+
+        if include_hash:
+            config.meta.hash = hash_config(config)
 
         return config
 
@@ -497,10 +496,7 @@ class Pipeline:
         """
         # get the config *without* a hash
         cfg = self.get_config(include_hash=False)
-        json = cfg.model_dump_json(exclude_none=True)
-        h = sha256()
-        h.update(json.encode())
-        return h.hexdigest()
+        return hash_config(cfg)
 
     @classmethod
     def from_config(cls, config: object) -> Self:

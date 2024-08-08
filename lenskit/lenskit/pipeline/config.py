@@ -6,6 +6,7 @@ Pydantic models for pipeline configuration and serialization support.
 from __future__ import annotations
 
 from collections import OrderedDict
+from hashlib import sha256
 from types import FunctionType
 
 from pydantic import BaseModel, Field
@@ -96,3 +97,13 @@ class PipelineComponent(BaseModel):
         config = comp.get_config() if isinstance(comp, ConfigurableComponent) else None
 
         return cls(code=code, config=config, inputs=node.connections)
+
+
+def hash_config(config: BaseModel) -> str:
+    """
+    Compute the hash of a configuration model.
+    """
+    json = config.model_dump_json(exclude_none=True)
+    h = sha256()
+    h.update(json.encode())
+    return h.hexdigest()
