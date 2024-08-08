@@ -22,7 +22,7 @@ class PipelineConfig(BaseModel):
     not contain the
     """
 
-    inputs: list[PipelineInput]
+    inputs: list[PipelineInput] = Field(default_factory=list)
     components: dict[str, PipelineComponent] = Field(default_factory=dict)
 
 

@@ -408,16 +408,21 @@ class Pipeline:
         checkpoints to load such parameters, depending on the design of the
         components in the pipeline.
         """
-        return PipelineConfig(
-            inputs=[
-                PipelineInput.from_node(node) for node in self.nodes if isinstance(node, InputNode)
-            ],
-            components={
-                node.name: PipelineComponent.from_node(node)
-                for node in self.nodes
-                if isinstance(node, ComponentNode)
-            },
-        )
+        config = PipelineConfig()
+        for node in self.nodes:
+            match node:
+                case InputNode():
+                    config.inputs.append(PipelineInput.from_node(node))
+                case LiteralNode():
+                    raise RuntimeError("literal nodes cannot be serialized to config")
+                case ComponentNode(name):
+                    config.components[name] = PipelineComponent.from_node(node)
+                case FallbackNode():
+                    raise NotImplementedError()
+                case _:  # pragma: nocover
+                    raise RuntimeError(f"invalid node {node}")
+
+        return config
 
     @classmethod
     def from_config(cls, config: object) -> Self:
