@@ -65,6 +65,10 @@ class PipelineComponent(BaseModel):
     """
     The path to the component's implementation, either a class or a function.
     This is a Python qualified path of the form ``module:name``.
+
+    Special nodes, like :class:`lenskit.pipeline.Pipeline.use_first_of`, are
+    serialized as components whose code is a magic name beginning with ``@``
+    (e.g. ``@use-first-of``).
     """
 
     config: dict[str, object] | None = Field(default=None)
