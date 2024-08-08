@@ -12,7 +12,7 @@ Pipeline runner logic.
 import logging
 from typing import Any, Literal, TypeAlias
 
-from . import Pipeline
+from . import Pipeline, PipelineError
 from .components import Component
 from .nodes import ComponentNode, FallbackNode, InputNode, LiteralNode, Node
 from .types import is_compatible_data
@@ -48,7 +48,7 @@ class PipelineRunner:
         if status == "finished":
             return self.state[node.name]
         elif status == "in-progress":
-            raise RuntimeError(f"pipeline cycle encountered at {node}")
+            raise PipelineError(f"pipeline cycle encountered at {node}")
         elif status == "failed":  # pragma: nocover
             raise RuntimeError(f"{node} previously failed")
 
@@ -81,12 +81,12 @@ class PipelineRunner:
             case FallbackNode(name, alts):
                 self._run_fallback(name, alts)
             case _:  # pragma: nocover
-                raise RuntimeError(f"invalid node {node}")
+                raise PipelineError(f"invalid node {node}")
 
     def _inject_input(self, name: str, types: set[type] | None, required: bool) -> None:
         val = self.inputs.get(name, None)
         if val is None and required and types and not is_compatible_data(None, *types):
-            raise RuntimeError(f"input {name} not specified")
+            raise PipelineError(f"input {name} not specified")
 
         if val is not None and types and not is_compatible_data(val, *types):
             raise TypeError(f"invalid data for input {name} (expected {types}, got {type(val)})")

@@ -36,6 +36,8 @@ from .state import PipelineState
 
 __all__ = [
     "Pipeline",
+    "PipelineError",
+    "PipelineWarning",
     "Node",
     "topn_pipeline",
     "Component",
@@ -529,10 +531,10 @@ class Pipeline:
         for name, comp in cfg.components.items():
             if comp.code == "@use-first-of":
                 if not isinstance(comp.inputs, list):
-                    raise RuntimeError("@use-first-of must have input list, not dict")
+                    raise PipelineError("@use-first-of must have input list, not dict")
                 pipe.use_first_of(name, *[pipe.node(n) for n in comp.inputs])
             elif comp.code.startswith("@"):
-                raise RuntimeError(f"unsupported meta-component {comp.code}")
+                raise PipelineError(f"unsupported meta-component {comp.code}")
 
         # pass 3: wiring
         for name, comp in cfg.components.items():
@@ -540,7 +542,7 @@ class Pipeline:
                 inputs = {n: pipe.node(t) for (n, t) in comp.inputs.items()}
                 pipe.connect(name, **inputs)
             elif not comp.code.startswith("@"):
-                raise RuntimeError(f"component {name} inputs must be dict, not list")
+                raise PipelineError(f"component {name} inputs must be dict, not list")
 
         if cfg.meta.hash is not None:
             h2 = pipe.config_hash()
@@ -682,7 +684,7 @@ class Pipeline:
     def _check_member_node(self, node: Node[Any]) -> None:
         nw = self._nodes.get(node.name)
         if nw is not node:
-            raise RuntimeError(f"node {node} not in pipeline")
+            raise PipelineError(f"node {node} not in pipeline")
 
     def _clear_caches(self):
         pass
