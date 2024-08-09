@@ -1,15 +1,14 @@
 Data Management
 ===============
 
-.. module:: lenskit.data
+.. py:currentmodule:: lenskit.data
 
 LensKit provides a unified data model for recommender systems data along with
 classes and utility functions for working with it, described in this section of
 the manual.
 
-
 .. versionchanged:: 2024.1
-    The new :class:`Dataset` class replaces the Pandas data frames
+    The new :class:`~lenskit.data.Dataset` class replaces the Pandas data frames
     that were passed to algorithms in the past.  It also subsumes
     the old support for producing sparse matrices from rating frames.
 
@@ -22,7 +21,7 @@ The LensKit data model consists of **users**, **items**, and **interactions**,
 with fields providing additional (optional) data about each of these entities.
 The simplest valid LensKit data set is simply a list of user and item
 identifiers indicating which items each user has interacted with.  These may be
-augumented with ratings, timestamps, or any other attributes.
+augmented with ratings, timestamps, or any other attributes.
 
 Data can be read from a range of sources, but ultimately resolves to a
 collection of tables (e.g. Pandas :class:`~pandas.DataFrame`) that record user,
@@ -37,7 +36,8 @@ Users and items have two identifiers:
 
 * The *identifier* as presented in the original source table(s).  It appears in
   LensKit data frames as ``user_id`` and ``item_id`` columns.  Identifiers can
-  be integers, strings, or byte arrays.
+  be integers, strings, or byte arrays, and are represented in LensKit by the
+  :data:`~lenskit.data.EntityId` type.
 * The *number* assigned by the dataset handling code.  This is a 0-based
   contiguous user or item number that is suitable for indexing into arrays or
   matrices, a common operation in recommendation models.  In data frames, this
@@ -54,9 +54,7 @@ Users and items have two identifiers:
 
 Identifiers and numbers can be mapped to each other with the user and item
 *vocabularies* (:attr:`~Dataset.users` and :attr:`~Dataset.items`, see the
-:class:`~lenskit.data.vocab.Vocabulary` class).
-
-.. autodata:: EntityId
+:class:`~Vocabulary` class).
 
 .. _dataset:
 
@@ -65,22 +63,31 @@ Dataset Abstraction
 
 The LensKit :class:`Dataset` class is the standard LensKit interface to datasets
 for training, evaluation, etc. Trainable models and components expect a dataset
-instance to be passed to :meth:`~lenskit.algorithms.Recommender.fit`.  It is an
-abstract class with implementations covering various scenarios.
+instance to be passed to :meth:`~lenskit.pipeline.Component.train`.
 
-.. autoclass:: Dataset
+Datasets provide several views of different aspsects of a dataset, documented in
+more detail in the :class:`reference documentation <Dataset>`.  These include:
+
+*   Sets of known user and item identifiers, through :class:`Vocabulary` objects
+    exposed through the :attr:`Dataset.users` and :attr:`Dataset.items`
+    properties.
 
 Creating Datasets
 ~~~~~~~~~~~~~~~~~
 
 Several functions can create a :class:`Dataset` from different input data sources.
 
-.. autofunction:: from_interactions_df
+.. autosummary::
+    from_interactions_df
 
 Loading Common Datasets
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autofunction:: load_movielens
+LensKit also provides support for loading several common data sets directly from
+their source files.
+
+.. autosummary::
+    load_movielens
 
 Vocabularies
 ~~~~~~~~~~~~

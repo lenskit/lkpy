@@ -19,6 +19,12 @@ If you use LensKit in published research, cite [LKPY]_.
 
 Throughout this documentation, we use the notation of :cite:t:`ekstrand:notation`.
 
+.. versionchanged:: 2024.1
+
+    The LensKit documentation is now split apart for easier readability, with
+    the `topical user guide <guide/index>`_ and `API reference <api/index>`_ in
+    separate sections.
+
 Resources
 ---------
 
