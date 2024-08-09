@@ -71,6 +71,7 @@ log_file_level = "DEBUG"
 addopts = "--import-mode=importlib --benchmark-skip"
 doctest_plus = true
 doctest_subpackage_requires = ["lenskit-hpf/lenskit/* = hpfrec"]
+consider_namespace_packages = true
 filterwarnings = [
   "ignore:::pyarrow[.*]",
   "ignore:.*matrix subclass.*:PendingDeprecationWarning",
