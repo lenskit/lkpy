@@ -106,6 +106,7 @@ class Pipeline:
     _aliases: dict[str, Node[Any]]
     _defaults: dict[str, Node[Any] | Any]
     _components: dict[str, Component[Any]]
+    _hash: str | None = None
 
     def __init__(self, name: str | None = None, version: str | None = None):
         self.name = name
@@ -217,6 +218,7 @@ class Pipeline:
         name = str(uuid4())
         node = LiteralNode(name, value, types=set([type(value)]))
         self._nodes[name] = node
+        self._clear_caches()
         return node
 
     def set_default(self, name: LiteralString, node: Node[Any] | object) -> None:
@@ -514,9 +516,11 @@ class Pipeline:
         the pipeline configuration *without* a hash returning the hex-encoded
         SHA256 hash of that configuration.
         """
-        # get the config *without* a hash
-        cfg = self.get_config(include_hash=False)
-        return hash_config(cfg)
+        if self._hash is None:
+            # get the config *without* a hash
+            cfg = self.get_config(include_hash=False)
+            self._hash = hash_config(cfg)
+        return self._hash
 
     @classmethod
     def from_config(cls, config: object) -> Self:
@@ -712,7 +716,8 @@ class Pipeline:
             raise PipelineError(f"node {node} not in pipeline")
 
     def _clear_caches(self):
-        pass
+        if "_hash" in self.__dict__:
+            del self._hash
 
 
 # remaining re-exports
