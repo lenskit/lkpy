@@ -26,20 +26,21 @@ Resources
 - `Source and issues on GitHub <https://github.com/lenskit/lkpy>`_
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Documentation Sections
+    :maxdepth: 1
+    :hidden:
 
-   api/index
+    guide/index
+    api/index
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
 
 Acknowledgements
-================
+----------------
 
 This material is based upon work supported by the National Science Foundation
 under Grant No. IIS 17-51278. Any opinions, findings, and conclusions or
