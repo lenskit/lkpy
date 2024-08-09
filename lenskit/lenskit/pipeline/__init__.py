@@ -125,8 +125,8 @@ class Pipeline:
         Args:
             include_hash:
                 Whether to include a configuration hash in the metadata.  If
-                ``None``, it includes a hash if there are no :meth:`literal`
-                nodes in the pipeline.
+                ``None`` (the default), the metadata includes a hash if there
+                are no :meth:`literal` nodes in the pipeline.
         """
         meta = PipelineMeta(name=self.name, version=self.version)
         if include_hash is None:
