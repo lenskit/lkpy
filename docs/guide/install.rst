@@ -1,4 +1,4 @@
-Install LensKit
+Installing LensKit
 ---------------
 
 To install the current release with Anaconda (recommended)::

@@ -31,6 +31,7 @@ Resources
 
     guide/index
     api/index
+    releases/index
 
 Indices and tables
 ------------------
