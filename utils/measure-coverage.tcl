@@ -56,16 +56,21 @@ if {[ev GITHUB_BASE_REF base]} {
     set reph [open lenskit-coverage/report.md w]
     puts $reph "The LensKit 🤖 has run the tests on your PR.\n"
     if {$diff_cov eq "NA"} {
-        puts $reph [format \
-            "Covered **no lines** of diff (coverage changed **%.2f%%** from %.2f%% to %.2f%%).\n" \
-            $cov_change $prev_cov $cur_cov \
-        ]
+        puts $reph [format "‼️ Tests covered **no lines** of diff.\n\n"]
+    } elseif {$diff_cov >= 90} {
+        puts $reph [format "✅ Tests covered **%.2f%%** of diff.\n\n" $diff_cov]
     } else {
-        puts $reph [format \
-            "Covered **%.2f%%** of diff (coverage changed **%.2f%%** from %.2f%% to %.2f%%).\n" \
-            $diff_cov $cov_change $prev_cov $cur_cov \
-        ]
+        puts $reph [format "🚨 Tests covered **%.2f%%** of diff.\n\n" $diff_cov]
     }
+
+    if {$cov_change > 0} {
+        set cov_icon "✅"
+        set cov_msg increased
+    } elseif {$cov_change < 0} {
+        set cov_icon "🚨"
+        set cov_msg "**decreased**"
+    }
+    puts $reph [format "%s Coverage %s %.2f%% from %.2f%% to %.2f%%.\n\n" $cov_change $prev_cov $cur_cov]
 
     set dsh [open diff-cover.md r]
     while {[gets $dsh line] >= 0} {
