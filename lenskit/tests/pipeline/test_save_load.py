@@ -1,3 +1,4 @@
+import logging
 from types import NoneType
 
 from typing_extensions import assert_type
@@ -8,6 +9,8 @@ from lenskit.pipeline import InputNode, Node, Pipeline, PipelineWarning
 from lenskit.pipeline.components import AutoConfig
 from lenskit.pipeline.config import PipelineConfig
 from lenskit.pipeline.nodes import ComponentNode
+
+_log = logging.getLogger(__name__)
 
 
 class Prefixer(AutoConfig):
@@ -123,6 +126,27 @@ def test_configurable_component():
     print("hash:", pipe.config_hash())
     assert pipe.config_hash() is not None
     assert p2.config_hash() == pipe.config_hash()
+
+
+def test_hashes_different():
+    p1 = Pipeline()
+    p2 = Pipeline()
+
+    a1 = p1.create_input("a", int)
+    a2 = p2.create_input("a", int)
+
+    # at this point the hashes should be the same
+    _log.info("p1 stage 1 hash: %s", p1.config_hash())
+    _log.info("p2 stage 1 hash: %s", p2.config_hash())
+    assert p1.config_hash() == p2.config_hash()
+
+    p1.add_component("proc", negative, x=a1)
+    p2.add_component("proc", double, x=a2)
+
+    # with different components, they should be different
+    _log.info("p1 stage 2 hash: %s", p1.config_hash())
+    _log.info("p2 stage 2 hash: %s", p2.config_hash())
+    assert p1.config_hash() != p2.config_hash()
 
 
 def negative(x: int) -> int:
