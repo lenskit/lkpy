@@ -649,9 +649,6 @@ class Pipeline:
         components.  See :ref:`pipeline-execution` for details of the pipeline
         execution model.
 
-        .. todo::
-            Add cycle detection.
-
         Args:
             nodes:
                 The component(s) to run.
@@ -664,6 +661,8 @@ class Pipeline:
             are returned in a tuple.
 
         Raises:
+            PipelineError:
+                when there is a pipeline configuration error (e.g. a cycle).
             ValueError:
                 when one or more required inputs are missing.
             TypeError:
