@@ -131,20 +131,16 @@ class Pipeline:
         self._anon_nodes = set()
         self._clear_caches()
 
-    def meta(self, *, include_hash: bool | None = None) -> PipelineMeta:
+    def meta(self, *, include_hash: bool = True) -> PipelineMeta:
         """
         Get the metadata (name, version, hash, etc.) for this pipeline without
         returning the whole config.
 
         Args:
             include_hash:
-                Whether to include a configuration hash in the metadata.  If
-                ``None`` (the default), the metadata includes a hash if there
-                are no :meth:`literal` nodes in the pipeline.
+                Whether to include a configuration hash in the metadata.
         """
         meta = PipelineMeta(name=self.name, version=self.version)
-        if include_hash is None:
-            include_hash = not any(isinstance(n, LiteralNode) for n in self.nodes)
         if include_hash:
             meta.hash = self.config_hash()
         return meta
