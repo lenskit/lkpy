@@ -12,11 +12,10 @@ LensKit pipeline abstraction.
 from __future__ import annotations
 
 import logging
-import re
 import warnings
 from types import FunctionType
 from typing import Literal, cast
-from uuid import UUID, uuid4
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from typing_extensions import Any, Self, TypeAlias, TypeVar, overload
 
@@ -63,6 +62,8 @@ T3 = TypeVar("T3")
 T4 = TypeVar("T4")
 T5 = TypeVar("T5")
 CloneMethod: TypeAlias = Literal["config", "pipeline-config"]
+
+NAMESPACE_LITERAL_DATA = uuid5(NAMESPACE_URL, "https://ns.lenskit.org/literal-data/")
 
 
 class PipelineError(Exception):
@@ -117,6 +118,8 @@ class Pipeline:
     _components: dict[str, Component[Any]]
     _hash: str | None = None
     _last: Node[Any] | None = None
+    _anon_nodes: set[str]
+    "Track generated node names."
 
     def __init__(self, name: str | None = None, version: str | None = None):
         self.name = name
@@ -125,6 +128,7 @@ class Pipeline:
         self._aliases = {}
         self._defaults = {}
         self._components = {}
+        self._anon_nodes = set()
         self._clear_caches()
 
     def meta(self, *, include_hash: bool | None = None) -> PipelineMeta:
@@ -153,13 +157,13 @@ class Pipeline:
         return list(self._nodes.values())
 
     @overload
-    def node(self, node: str | UUID, *, missing: Literal["error"] = "error") -> Node[object]: ...
+    def node(self, node: str, *, missing: Literal["error"] = "error") -> Node[object]: ...
     @overload
-    def node(self, node: str | UUID, *, missing: Literal["none"] | None) -> Node[object] | None: ...
+    def node(self, node: str, *, missing: Literal["none"] | None) -> Node[object] | None: ...
     @overload
     def node(self, node: Node[T]) -> Node[T]: ...
     def node(
-        self, node: str | UUID | Node[Any], *, missing: Literal["error", "none"] | None = "error"
+        self, node: str | Node[Any], *, missing: Literal["error", "none"] | None = "error"
     ) -> Node[object] | None:
         """
         Get the pipeline node with the specified name.  If passed a node, it
@@ -186,13 +190,6 @@ class Pipeline:
             return self._nodes[node]
         elif missing == "none" or missing is None:
             return None
-        elif isinstance(node, str) and re.match(r"^[a-fA-F0-9]+(?:-[a-fA-F0-9]+)+", node):
-            # convert string to UUID and try again
-            try:
-                node = UUID(node)
-            except ValueError:
-                raise KeyError(f"node {node}")
-            return self.node(node, missing=missing)
         else:
             raise KeyError(f"node {node}")
 
@@ -234,6 +231,7 @@ class Pipeline:
         """
         if name is None:
             name = str(uuid4())
+            self._anon_nodes.add(name)
         node = LiteralNode(name, value, types=set([type(value)]))
         self._nodes[name] = node
         self._clear_caches()
@@ -471,6 +469,7 @@ class Pipeline:
             raise NotImplementedError("only 'config' cloning is currently supported")
 
         clone = Pipeline()
+
         for node in self.nodes:
             match node:
                 case InputNode(name, types=types):
@@ -522,17 +521,43 @@ class Pipeline:
         meta = self.meta(include_hash=False)
         config = PipelineConfig(meta=meta)
 
+        # We map anonymous nodes to hash-based names for stability.  If we ever
+        # allow anonymous components, this will need to be adjusted to maintain
+        # component ordering, but it works for now since only literals can be
+        # anonymous. First handle the anonymous nodes, so we have that mapping:
+        remapped: dict[str, str] = {}
+        for an in self._anon_nodes:
+            node = self._nodes.get(an, None)
+            match node:
+                case None:
+                    # skip nodes that no longer exist
+                    continue
+                case LiteralNode(name, value):
+                    cfg = PipelineLiteral.represent(value)
+                    sname = str(uuid5(NAMESPACE_LITERAL_DATA, cfg.model_dump_json()))
+                    _log.debug("renamed anonymous node %s to %s", name, sname)
+                    remapped[name] = sname
+                    config.literals[sname] = cfg
+                case _:
+                    # the pipeline only generates anonymous literal nodes right now
+                    raise RuntimeError(f"unexpected anonymous node {node}")
+
+        # Now we go over all named nodes and add them to the config:
         for node in self.nodes:
+            if node.name in remapped:
+                continue
+
             match node:
                 case InputNode():
                     config.inputs.append(PipelineInput.from_node(node))
                 case LiteralNode(name, value):
                     config.literals[name] = PipelineLiteral.represent(value)
                 case ComponentNode(name):
-                    config.components[name] = PipelineComponent.from_node(node)
+                    config.components[name] = PipelineComponent.from_node(node, remapped)
                 case FallbackNode(name, alternatives):
                     config.components[name] = PipelineComponent(
-                        code="@use-first-of", inputs=[n.name for n in alternatives]
+                        code="@use-first-of",
+                        inputs=[remapped.get(n.name, n.name) for n in alternatives],
                     )
                 case _:  # pragma: nocover
                     raise RuntimeError(f"invalid node {node}")

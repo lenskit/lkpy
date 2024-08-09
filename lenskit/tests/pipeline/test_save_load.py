@@ -275,3 +275,16 @@ def test_literal_array():
     print(pipe.get_config().model_dump_json(indent=2))
     p2 = pipe.clone("pipeline-config")
     assert np.all(p2.run(a=5) == np.arange(5, 15))
+
+
+def test_stable_with_literals():
+    "test that two identical pipelines have the same hash, even with literals"
+    p1 = Pipeline("literal-add-array")
+    a = p1.create_input("a", int)
+    p1.add_component("add", add, x=np.arange(10), y=a)
+
+    p2 = Pipeline("literal-add-array")
+    a = p2.create_input("a", int)
+    p2.add_component("add", add, x=np.arange(10), y=a)
+
+    assert p1.config_hash() == p2.config_hash()

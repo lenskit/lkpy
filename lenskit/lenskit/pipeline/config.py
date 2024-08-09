@@ -97,7 +97,10 @@ class PipelineComponent(BaseModel):
     """
 
     @classmethod
-    def from_node(cls, node: ComponentNode[Any]) -> Self:
+    def from_node(cls, node: ComponentNode[Any], mapping: dict[str, str] | None = None) -> Self:
+        if mapping is None:
+            mapping = {}
+
         comp = node.component
         if isinstance(comp, FunctionType):
             ctype = comp
@@ -108,7 +111,11 @@ class PipelineComponent(BaseModel):
 
         config = comp.get_config() if isinstance(comp, ConfigurableComponent) else None
 
-        return cls(code=code, config=config, inputs=node.connections)
+        return cls(
+            code=code,
+            config=config,
+            inputs={n: mapping.get(t, t) for (n, t) in node.connections.items()},
+        )
 
 
 class PipelineLiteral(BaseModel):
