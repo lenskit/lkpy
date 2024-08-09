@@ -13,6 +13,7 @@ from lenskit.pipeline.nodes import ComponentNode
 _log = logging.getLogger(__name__)
 
 
+# region Test Components
 class Prefixer(AutoConfig):
     prefix: str
 
@@ -21,6 +22,29 @@ class Prefixer(AutoConfig):
 
     def __call__(self, msg: str) -> str:
         return self.prefix + msg
+
+
+def negative(x: int) -> int:
+    return -x
+
+
+def double(x: int) -> int:
+    return x * 2
+
+
+def add(x: int, y: int) -> int:
+    return x + y
+
+
+def msg_ident(msg: str) -> str:
+    return msg
+
+
+def msg_prefix(prefix: str, msg: str) -> str:
+    return prefix + msg
+
+
+# endregion
 
 
 def test_serialize_input():
@@ -64,10 +88,6 @@ def test_round_trip_optional_input():
     assert isinstance(i2, InputNode)
     assert i2.name == "user"
     assert i2.types == {int, str, NoneType}
-
-
-def msg_ident(msg: str) -> str:
-    return msg
 
 
 def test_config_single_node():
@@ -147,18 +167,6 @@ def test_hashes_different():
     _log.info("p1 stage 2 hash: %s", p1.config_hash())
     _log.info("p2 stage 2 hash: %s", p2.config_hash())
     assert p1.config_hash() != p2.config_hash()
-
-
-def negative(x: int) -> int:
-    return -x
-
-
-def double(x: int) -> int:
-    return x * 2
-
-
-def add(x: int, y: int) -> int:
-    return x + y
 
 
 def test_save_with_fallback():
