@@ -54,7 +54,7 @@ T2 = TypeVar("T2")
 T3 = TypeVar("T3")
 T4 = TypeVar("T4")
 T5 = TypeVar("T5")
-CloneMethod: TypeAlias = Literal["config"]
+CloneMethod: TypeAlias = Literal["config", "pipeline-config"]
 
 
 class PipelineError(Exception):
@@ -427,11 +427,16 @@ class Pipeline:
         Clone the pipeline, optionally including trained parameters.
 
         The ``how`` parameter controls how the pipeline is cloned, and what is
-        available in the clone pipeline.  Currently only ``"config"`` is
-        supported, which creates fresh component instances using the
-        configurations of the components in this pipeline.  When applied to a
-        trained pipeline, the clone does **not** have the original's learned
-        parameters.
+        available in the clone pipeline.  It can be one of the following values:
+
+        ``"config"``
+            Create fresh component instances using the configurations of the
+            components in this pipeline.  When applied to a trained pipeline,
+            the clone does **not** have the original's learned parameters. This
+            is the default clone method.
+        ``"pipeline-config"``
+            Round-trip the entire pipeline through :meth:`get_config` and
+            :meth:`from_config`.
 
         Args:
             how:
@@ -441,7 +446,10 @@ class Pipeline:
             A new pipeline with the same components and wiring, but fresh
             instances created by round-tripping the configuration.
         """
-        if how != "config":  # pragma: nocover
+        if how == "pipeline-config":
+            cfg = self.get_config()
+            return self.from_config(cfg)
+        elif how != "config":  # pragma: nocover
             raise NotImplementedError("only 'config' cloning is currently supported")
 
         clone = Pipeline()

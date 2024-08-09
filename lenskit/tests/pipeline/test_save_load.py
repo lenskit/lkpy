@@ -245,6 +245,5 @@ def test_alias_node():
 
     assert pipe.run("result", a=5, b=7) == 17
 
-    cfg = pipe.get_config()
-    p2 = Pipeline.from_config(cfg)
+    p2 = pipe.clone("pipeline-config")
     assert p2.run("result", a=5, b=7) == 17
