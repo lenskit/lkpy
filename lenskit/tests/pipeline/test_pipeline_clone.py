@@ -92,3 +92,16 @@ def test_clone_defaults():
     p2 = pipe.clone()
 
     assert p2.run(msg="hello") == "hello!"
+
+
+def test_clone_alias():
+    pipe = Pipeline()
+    msg = pipe.create_input("msg", str)
+    excl = pipe.add_component("exclaim", exclaim, msg=msg)
+    pipe.alias("return", excl)
+
+    assert pipe.run("return", msg="hello") == "hello!"
+
+    p2 = pipe.clone()
+
+    assert p2.run("return", msg="hello") == "hello!"
