@@ -14,10 +14,9 @@ from __future__ import annotations
 import logging
 import warnings
 from types import FunctionType
-from typing import Literal, cast
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
-from typing_extensions import Any, Self, TypeAlias, TypeVar, overload
+from typing_extensions import Any, Literal, Self, TypeAlias, TypeVar, cast, overload
 
 from lenskit.data import Dataset
 
