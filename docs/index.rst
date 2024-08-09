@@ -8,7 +8,7 @@ algorithms in a flexible fashion suitable for research and education.
 LensKit for Python (also known as LKPY) is the successor to the Java-based
 LensKit toolkit and a part of the LensKit project.
 
-If you use Lenskit in published research, cite [LKPY]_.
+If you use LensKit in published research, cite [LKPY]_.
 
 .. [LKPY]
     Michael D. Ekstrand. 2020.
