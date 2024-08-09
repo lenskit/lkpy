@@ -25,9 +25,15 @@ class PipelineConfig(BaseModel):
     """
 
     meta: PipelineMeta
+    "Pipeline metadata."
     inputs: list[PipelineInput] = Field(default_factory=list)
+    "Pipeline inputs."
+    defaults: dict[str, str] = Field(default_factory=dict)
+    "Default pipeline wirings."
     components: OrderedDict[str, PipelineComponent] = Field(default_factory=OrderedDict)
+    "Pipeline components, with their configurations and wiring."
     aliases: dict[str, str] = Field(default_factory=dict)
+    "Pipeline node aliases."
 
 
 class PipelineMeta(BaseModel):

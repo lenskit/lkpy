@@ -17,7 +17,7 @@ from types import FunctionType
 from typing import Literal, cast
 from uuid import uuid4
 
-from typing_extensions import Any, LiteralString, Self, TypeVar, overload
+from typing_extensions import Any, Self, TypeVar, overload
 
 from lenskit.data import Dataset
 from lenskit.pipeline.types import parse_type_string
@@ -104,7 +104,7 @@ class Pipeline:
 
     _nodes: dict[str, Node[Any]]
     _aliases: dict[str, Node[Any]]
-    _defaults: dict[str, Node[Any] | Any]
+    _defaults: dict[str, Node[Any]]
     _components: dict[str, Component[Any]]
     _hash: str | None = None
 
@@ -221,7 +221,7 @@ class Pipeline:
         self._clear_caches()
         return node
 
-    def set_default(self, name: LiteralString, node: Node[Any] | object) -> None:
+    def set_default(self, name: str, node: Node[Any] | object) -> None:
         """
         Set the default wiring for a component input.  Components that declare
         an input parameter with the specified ``name`` but no configured input
@@ -498,6 +498,7 @@ class Pipeline:
                     raise RuntimeError(f"invalid node {node}")
 
         config.aliases = {a: t.name for (a, t) in self._aliases.items()}
+        config.defaults = {n: t.name for (n, t) in self._defaults.items()}
 
         if include_hash:
             config.meta.hash = hash_config(config)
@@ -567,6 +568,10 @@ class Pipeline:
         # pass 4: aliases
         for n, t in cfg.aliases.items():
             pipe.alias(n, t)
+
+        # pass 5: defaults
+        for n, t in cfg.defaults.items():
+            pipe.set_default(n, pipe.node(t))
 
         if cfg.meta.hash is not None:
             h2 = pipe.config_hash()
