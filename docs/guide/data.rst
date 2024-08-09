@@ -12,6 +12,13 @@ the manual.
     that were passed to algorithms in the past.  It also subsumes
     the old support for producing sparse matrices from rating frames.
 
+Getting started with the dataset is fairly straightforward:
+
+>>> from lenskit.data import load_movielens
+>>> mlds = load_movielens('data/ml-latest-small')
+
+You can then access the data from
+
 .. _data-model:
 
 Data Model and Key Concepts
