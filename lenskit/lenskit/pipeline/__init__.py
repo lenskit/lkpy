@@ -17,7 +17,7 @@ from types import FunctionType
 from typing import Literal, cast
 from uuid import uuid4
 
-from typing_extensions import Any, Self, TypeVar, overload
+from typing_extensions import Any, Self, TypeAlias, TypeVar, overload
 
 from lenskit.data import Dataset
 from lenskit.pipeline.types import parse_type_string
@@ -54,6 +54,7 @@ T2 = TypeVar("T2")
 T3 = TypeVar("T3")
 T4 = TypeVar("T4")
 T5 = TypeVar("T5")
+CloneMethod: TypeAlias = Literal["config"]
 
 
 class PipelineError(Exception):
@@ -421,21 +422,27 @@ class Pipeline:
             if isinstance(comp, ConfigurableComponent)
         }
 
-    def clone(self, *, params: bool = False) -> Pipeline:
+    def clone(self, how: CloneMethod = "config") -> Pipeline:
         """
         Clone the pipeline, optionally including trained parameters.
 
+        The ``how`` parameter controls how the pipeline is cloned, and what is
+        available in the clone pipeline.  Currently only ``"config"`` is
+        supported, which creates fresh component instances using the
+        configurations of the components in this pipeline.  When applied to a
+        trained pipeline, the clone does **not** have the original's learned
+        parameters.
+
         Args:
-            params:
-                Pass ``True`` to clone parameters as well as the configuration
-                and wiring.
+            how:
+                The mechanism to use for cloning the pipeline.
 
         Returns:
             A new pipeline with the same components and wiring, but fresh
             instances created by round-tripping the configuration.
         """
-        if params:  # pragma: nocover
-            raise NotImplementedError()
+        if how != "config":  # pragma: nocover
+            raise NotImplementedError("only 'config' cloning is currently supported")
 
         clone = Pipeline()
         for node in self.nodes:
