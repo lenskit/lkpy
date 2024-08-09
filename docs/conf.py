@@ -105,7 +105,7 @@ intersphinx_mapping = {
 }
 
 bibtex_bibfiles = ["lenskit.bib"]
-jupyter_execute_notebooks = "off"
+nb_execution_mode = "off"
 
 # -- external links
 
