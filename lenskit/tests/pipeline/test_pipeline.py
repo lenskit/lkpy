@@ -8,13 +8,15 @@
 from typing import Any
 from uuid import UUID
 
+import numpy as np
 from typing_extensions import assert_type
 
-from pytest import fail, raises
+from pytest import fail, raises, warns
 
 from lenskit.data import Dataset, Vocabulary
 from lenskit.pipeline import InputNode, Node, Pipeline, PipelineError
 from lenskit.pipeline.components import TrainableComponent
+from lenskit.pipeline.types import TypecheckWarning
 
 
 def test_init_empty():
@@ -616,3 +618,24 @@ class TestComponent:
 
     def load_params(self, params: dict[str, Any]) -> None:
         self.items = params["items"]
+
+
+def test_pipeline_component_default():
+    """
+    Test that the last *component* is last.  It also exercises the warning logic
+    for missing component types.
+    """
+    pipe = Pipeline()
+    a = pipe.create_input("a", int)
+
+    def add(x, y):  # type: ignore
+        return x + y  # type: ignore
+
+    with warns(TypecheckWarning):
+        pipe.add_component("add", add, x=np.arange(10), y=a)  # type: ignore
+
+    # the component runs
+    assert np.all(pipe.run("add", a=5) == np.arange(5, 15))
+
+    # the component is the default
+    assert np.all(pipe.run(a=5) == np.arange(5, 15))

@@ -172,7 +172,7 @@ method takes two types of inputs:
     altered scores).
 
     If no components are specified, it is the same as specifying the last
-    component added to the pipeline.
+    component that was added to the pipeline.
 
 *   Keyword arguments specifying the values for the pipeline's inputs, as defined by
     calls to :meth:`create_input`.

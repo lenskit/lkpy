@@ -108,6 +108,7 @@ class Pipeline:
     _defaults: dict[str, Node[Any]]
     _components: dict[str, Component[Any]]
     _hash: str | None = None
+    _last: Node[Any] | None = None
 
     def __init__(self, name: str | None = None, version: str | None = None):
         self.name = name
@@ -296,6 +297,7 @@ class Pipeline:
         self.connect(node, **inputs)
 
         self._clear_caches()
+        self._last = node
         return node
 
     def replace_component(
@@ -671,7 +673,9 @@ class Pipeline:
                 exceptions thrown by components are passed through.
         """
         if not nodes:
-            nodes = (self._last_node(),)
+            if self._last is None:  # pragma: nocover
+                raise PipelineError("pipeline has no components")
+            nodes = (self._last,)
         state = self.run_all(*nodes, **kwargs)
         results = [state[self.node(n).name] for n in nodes]
 
@@ -725,11 +729,6 @@ class Pipeline:
             default=last,
             meta=self.meta(),
         )
-
-    def _last_node(self) -> Node[object]:
-        if not self._nodes:
-            raise RuntimeError("pipeline is empty")
-        return list(self._nodes.values())[-1]
 
     def _check_available_name(self, name: str) -> None:
         if name in self._nodes or name in self._aliases:
