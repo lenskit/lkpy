@@ -92,6 +92,7 @@ autodoc_type_aliases = {
     "ArrayLike": "numpy.typing.ArrayLike",
     "RandomSeed": "lenskit.types.RandomSeed",
 }
+autosummary_generate_overwrite = False
 
 todo_include_todos = True
 

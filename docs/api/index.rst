@@ -10,7 +10,6 @@ Core Abstractions
 .. autosummary::
     :toctree: .
     :caption: Core
-    :recursive:
 
     lenskit.data
     lenskit.diagnostics
