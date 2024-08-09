@@ -79,3 +79,16 @@ def test_pipeline_clone_with_nonconfig_class():
     p2 = pipe.clone()
 
     assert p2.run(msg="HACKEM MUCHE") == "scroll named HACKEM MUCHE?"
+
+
+def test_clone_defaults():
+    pipe = Pipeline()
+    msg = pipe.create_input("msg", str)
+    pipe.set_default("msg", msg)
+    pipe.add_component("return", exclaim)
+
+    assert pipe.run(msg="hello") == "hello!"
+
+    p2 = pipe.clone()
+
+    assert p2.run(msg="hello") == "hello!"

@@ -148,6 +148,20 @@ def test_configurable_component():
     assert p2.config_hash() == pipe.config_hash()
 
 
+def test_save_defaults():
+    pipe = Pipeline()
+    msg = pipe.create_input("msg", str)
+    pipe.set_default("msg", msg)
+    pipe.add_component("return", msg_ident)
+
+    assert pipe.run(msg="hello") == "hello"
+
+    cfg = pipe.get_config()
+    p2 = Pipeline.from_config(cfg)
+
+    assert p2.run(msg="hello") == "hello"
+
+
 def test_hashes_different():
     p1 = Pipeline()
     p2 = Pipeline()
