@@ -461,6 +461,12 @@ class Pipeline:
                 case _:  # pragma: nocover
                     raise RuntimeError(f"invalid node {node}")
 
+        for n, t in self._aliases.items():
+            clone.alias(n, t.name)
+
+        for n, t in self._defaults.items():
+            clone.set_default(n, clone.node(t.name))
+
         return clone
 
     def get_config(self, *, include_hash: bool = True) -> PipelineConfig:
