@@ -1,5 +1,5 @@
 # Additional requirements for the LensKit tests.
-pytest ==7.*
+pytest ==8.*
 pytest-doctestplus ==1.*
 pytest-cov >= 2.12
 pytest-benchmark ==4.*
