@@ -20,7 +20,6 @@ from uuid import NAMESPACE_URL, uuid4, uuid5
 from typing_extensions import Any, Self, TypeAlias, TypeVar, overload
 
 from lenskit.data import Dataset
-from lenskit.pipeline.types import parse_type_string
 
 from .components import (
     AutoConfig,  # noqa: F401 # type: ignore
@@ -39,6 +38,7 @@ from .config import (
 )
 from .nodes import ND, ComponentNode, FallbackNode, InputNode, LiteralNode, Node
 from .state import PipelineState
+from .types import parse_type_string
 
 __all__ = [
     "Pipeline",
