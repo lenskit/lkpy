@@ -12,10 +12,11 @@ LensKit pipeline abstraction.
 from __future__ import annotations
 
 import logging
+import re
 import warnings
 from types import FunctionType
 from typing import Literal, cast
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from typing_extensions import Any, Self, TypeAlias, TypeVar, overload
 
@@ -29,7 +30,14 @@ from .components import (
     TrainableComponent,
     instantiate_component,
 )
-from .config import PipelineComponent, PipelineConfig, PipelineInput, PipelineMeta, hash_config
+from .config import (
+    PipelineComponent,
+    PipelineConfig,
+    PipelineInput,
+    PipelineLiteral,
+    PipelineMeta,
+    hash_config,
+)
 from .nodes import ND, ComponentNode, FallbackNode, InputNode, LiteralNode, Node
 from .state import PipelineState
 
@@ -145,13 +153,13 @@ class Pipeline:
         return list(self._nodes.values())
 
     @overload
-    def node(self, node: str, *, missing: Literal["error"] = "error") -> Node[object]: ...
+    def node(self, node: str | UUID, *, missing: Literal["error"] = "error") -> Node[object]: ...
     @overload
-    def node(self, node: str, *, missing: Literal["none"] | None) -> Node[object] | None: ...
+    def node(self, node: str | UUID, *, missing: Literal["none"] | None) -> Node[object] | None: ...
     @overload
     def node(self, node: Node[T]) -> Node[T]: ...
     def node(
-        self, node: str | Node[Any], *, missing: Literal["error", "none"] | None = "error"
+        self, node: str | UUID | Node[Any], *, missing: Literal["error", "none"] | None = "error"
     ) -> Node[object] | None:
         """
         Get the pipeline node with the specified name.  If passed a node, it
@@ -178,6 +186,13 @@ class Pipeline:
             return self._nodes[node]
         elif missing == "none" or missing is None:
             return None
+        elif isinstance(node, str) and re.match(r"^[a-fA-F0-9]+(?:-[a-fA-F0-9]+)+", node):
+            # convert string to UUID and try again
+            try:
+                node = UUID(node)
+            except ValueError:
+                raise KeyError(f"node {node}")
+            return self.node(node, missing=missing)
         else:
             raise KeyError(f"node {node}")
 
@@ -209,7 +224,7 @@ class Pipeline:
         self._clear_caches()
         return node
 
-    def literal(self, value: T) -> LiteralNode[T]:
+    def literal(self, value: T, *, name: str | None = None) -> LiteralNode[T]:
         """
         Create a literal node (a node with a fixed value).
 
@@ -217,7 +232,8 @@ class Pipeline:
             Literal nodes cannot be serialized witih :meth:`get_config` or
             :meth:`save_config`.
         """
-        name = str(uuid4())
+        if name is None:
+            name = str(uuid4())
         node = LiteralNode(name, value, types=set([type(value)]))
         self._nodes[name] = node
         self._clear_caches()
@@ -505,12 +521,13 @@ class Pipeline:
         """
         meta = self.meta(include_hash=False)
         config = PipelineConfig(meta=meta)
+
         for node in self.nodes:
             match node:
                 case InputNode():
                     config.inputs.append(PipelineInput.from_node(node))
-                case LiteralNode():
-                    raise RuntimeError("literal nodes cannot be serialized to config")
+                case LiteralNode(name, value):
+                    config.literals[name] = PipelineLiteral.represent(value)
                 case ComponentNode(name):
                     config.components[name] = PipelineComponent.from_node(node)
                 case FallbackNode(name, alternatives):
@@ -533,12 +550,16 @@ class Pipeline:
         Get a hash of the pipeline's configuration to uniquely identify it for
         logging, version control, or other purposes.
 
-        The precise algorithm to compute the hash is not guaranteed, except that
-        the same configuration with the same version of LensKit and its
-        dependencies will produce the same hash.  In LensKit 2024.1, the
-        configuration hash is computed by computing the JSON serialization of
-        the pipeline configuration *without* a hash returning the hex-encoded
-        SHA256 hash of that configuration.
+        The hash format and algorithm are not guaranteed, but is stable within a
+        LensKit version.  For the same version of LensKit and component code,
+        the same configuration will produce the same hash, so long as there are
+        no literal nodes.  Literal nodes will *usually* hash consistently, but
+        since literals other than basic JSON values are hashed by pickling, hash
+        stability depends on the stability of the pickle bytestream.
+
+        In LensKit 2024.1, the configuration hash is computed by computing the
+        JSON serialization of the pipeline configuration *without* a hash
+        returning the hex-encoded SHA256 hash of that configuration.
         """
         if self._hash is None:
             # get the config *without* a hash
@@ -560,7 +581,11 @@ class Pipeline:
         # that nodes are available before they are wired (since `connect` can
         # introduce out-of-order dependencies).
 
-        # pass 1: add components
+        # pass 1: add literals
+        for name, data in cfg.literals.items():
+            pipe.literal(data.decode(), name=name)
+
+        # pass 2: add components
         to_wire: list[PipelineComponent] = []
         for name, comp in cfg.components.items():
             if comp.code.startswith("@"):
@@ -571,7 +596,7 @@ class Pipeline:
             pipe.add_component(name, obj)
             to_wire.append(comp)
 
-        # pass 2: add meta nodes
+        # pass 3: add meta nodes
         for name, comp in cfg.components.items():
             if comp.code == "@use-first-of":
                 if not isinstance(comp.inputs, list):
@@ -580,7 +605,7 @@ class Pipeline:
             elif comp.code.startswith("@"):
                 raise PipelineError(f"unsupported meta-component {comp.code}")
 
-        # pass 3: wiring
+        # pass 4: wiring
         for name, comp in cfg.components.items():
             if isinstance(comp.inputs, dict):
                 inputs = {n: pipe.node(t) for (n, t) in comp.inputs.items()}
@@ -588,11 +613,11 @@ class Pipeline:
             elif not comp.code.startswith("@"):
                 raise PipelineError(f"component {name} inputs must be dict, not list")
 
-        # pass 4: aliases
+        # pass 5: aliases
         for n, t in cfg.aliases.items():
             pipe.alias(n, t)
 
-        # pass 5: defaults
+        # pass 6: defaults
         for n, t in cfg.defaults.items():
             pipe.set_default(n, pipe.node(t))
 

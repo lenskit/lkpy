@@ -1,6 +1,7 @@
 import logging
 from types import NoneType
 
+import numpy as np
 from typing_extensions import assert_type
 
 from pytest import fail, warns
@@ -32,7 +33,7 @@ def double(x: int) -> int:
     return x * 2
 
 
-def add(x: int, y: int) -> int:
+def add(x: int | np.ndarray, y: int) -> int | np.ndarray:
     return x + y
 
 
@@ -222,7 +223,7 @@ def test_hash_validate():
 
 
 def test_alias_input():
-    "alias an input node"
+    "just an input node and an alias"
     pipe = Pipeline()
     user = pipe.create_input("user", int, str)
 
@@ -247,3 +248,30 @@ def test_alias_node():
 
     p2 = pipe.clone("pipeline-config")
     assert p2.run("result", a=5, b=7) == 17
+
+
+def test_literal():
+    pipe = Pipeline("literal-prefix")
+    msg = pipe.create_input("msg", str)
+
+    pipe.add_component("prefix", msg_prefix, prefix=pipe.literal("hello, "), msg=msg)
+
+    assert pipe.run(msg="HACKEM MUCHE") == "hello, HACKEM MUCHE"
+
+    print(pipe.get_config().model_dump_json(indent=2))
+    p2 = pipe.clone("pipeline-config")
+    assert p2.run(msg="FOOBIE BLETCH") == "hello, FOOBIE BLETCH"
+
+
+def test_literal_array():
+    pipe = Pipeline("literal-add-array")
+    a = pipe.create_input("a", int)
+
+    pipe.add_component("add", add, x=np.arange(10), y=a)
+
+    res = pipe.run(a=5)
+    assert np.all(res == np.arange(5, 15))
+
+    print(pipe.get_config().model_dump_json(indent=2))
+    p2 = pipe.clone("pipeline-config")
+    assert np.all(p2.run(a=5) == np.arange(5, 15))

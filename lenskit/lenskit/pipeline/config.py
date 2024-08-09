@@ -5,11 +5,14 @@ Pydantic models for pipeline configuration and serialization support.
 # pyright: strict
 from __future__ import annotations
 
+import base64
+import pickle
 from collections import OrderedDict
 from hashlib import sha256
 from types import FunctionType
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, JsonValue, ValidationError
 from typing_extensions import Any, Optional, Self
 
 from .components import ConfigurableComponent
@@ -34,6 +37,8 @@ class PipelineConfig(BaseModel):
     "Pipeline components, with their configurations and wiring."
     aliases: dict[str, str] = Field(default_factory=dict)
     "Pipeline node aliases."
+    literals: dict[str, PipelineLiteral] = Field(default_factory=dict)
+    "Literals"
 
 
 class PipelineMeta(BaseModel):
@@ -104,6 +109,33 @@ class PipelineComponent(BaseModel):
         config = comp.get_config() if isinstance(comp, ConfigurableComponent) else None
 
         return cls(code=code, config=config, inputs=node.connections)
+
+
+class PipelineLiteral(BaseModel):
+    """
+    Literal nodes represented in the pipeline.
+    """
+
+    encoding: Literal["json", "base85"]
+    value: JsonValue
+
+    @classmethod
+    def represent(cls, data: Any) -> Self:
+        try:
+            return cls(encoding="json", value=data)
+        except ValidationError:
+            # data is not basic JSON values, so let's pickle it
+            dbytes = pickle.dumps(data)
+            return cls(encoding="base85", value=base64.b85encode(dbytes).decode("ascii"))
+
+    def decode(self) -> Any:
+        "Decode the represented literal."
+        match self.encoding:
+            case "json":
+                return self.value
+            case "base85":
+                assert isinstance(self.value, str)
+                return pickle.loads(base64.b85decode(self.value))
 
 
 def hash_config(config: BaseModel) -> str:
