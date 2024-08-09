@@ -26,60 +26,10 @@ Resources
 - `Source and issues on GitHub <https://github.com/lenskit/lkpy>`_
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Overview
+   :maxdepth: 1
+   :caption: Documentation Sections
 
-   install
-   GettingStarted
-   examples
-   releases/index
-
-.. toctree::
-    :maxdepth: 2
-    :caption: Running Experiments
-
-    data
-    splitting
-    batch
-    evaluation/index
-    documenting
-    parallel
-
-.. toctree::
-    :maxdepth: 1
-    :caption: Algorithms
-
-    interfaces
-    pipeline
-    algorithms
-    basic
-    ranking
-    bias
-    knn
-    mf
-    addons/index
-
-.. toctree::
-    :maxdepth: 2
-    :caption: Tips and Tricks
-
-    performance
-    diagnostics
-    impl-tips
-
-.. toctree::
-    :maxdepth: 2
-    :caption: Configuration and Internals
-
-    util
-    internals
-
-.. toctree::
-    :maxdepth: 2
-    :caption: Links
-
-    references
-
+   api/index
 
 Indices and tables
 ==================
@@ -95,5 +45,3 @@ This material is based upon work supported by the National Science Foundation
 under Grant No. IIS 17-51278. Any opinions, findings, and conclusions or
 recommendations expressed in this material are those of the author(s) and do not
 necessarily reflect the views of the National Science Foundation.
-
-.. todolist::

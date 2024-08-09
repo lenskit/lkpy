@@ -42,7 +42,7 @@ nb_execution_mode = "off"
 pygments_style = "sphinx"
 highlight_language = "python3"
 
-html_theme = "sphinx_book_theme"
+html_theme = "pydata_sphinx_theme"
 html_logo = "LKLogo2.png"
 if _parsed_ver.is_devrelease:
     html_baseurl = "https://lkpy.lenskit.org/en/latest/"
