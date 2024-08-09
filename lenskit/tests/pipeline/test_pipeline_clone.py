@@ -105,3 +105,18 @@ def test_clone_alias():
     p2 = pipe.clone()
 
     assert p2.run("return", msg="hello") == "hello!"
+
+
+def test_clone_hash():
+    pipe = Pipeline()
+    msg = pipe.create_input("msg", str)
+    pipe.set_default("msg", msg)
+    excl = pipe.add_component("exclaim", exclaim)
+    pipe.alias("return", excl)
+
+    assert pipe.run("return", msg="hello") == "hello!"
+
+    p2 = pipe.clone()
+
+    assert p2.run("return", msg="hello") == "hello!"
+    assert p2.config_hash() == pipe.config_hash()
