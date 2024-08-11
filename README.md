@@ -61,7 +61,7 @@ We recommend using an Anaconda environment for developing LensKit.  We provide a
 tool to automate setting up Conda environments from the LensKit dependencies; to
 create a dev environment, checkout LensKit, then run:
 
-    pipx --spec . lk-conda -n lkpy pyproject.toml dev-requirements.txt
+    pipx run --spec . lk-conda -n lkpy pyproject.toml requirements-dev.txt
     conda activate lkpy
 
 That will create and activate an environment named `lkpy` with all the LensKit
