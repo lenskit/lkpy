@@ -94,6 +94,7 @@ autodoc_type_aliases = {
 }
 # autosummary_generate_overwrite = False
 
+nitpicky = True
 todo_include_todos = True
 
 # Cross-linking and external references
