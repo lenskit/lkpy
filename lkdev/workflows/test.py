@@ -356,8 +356,8 @@ def test_doc_job() -> GHJob:
             {
                 "name": "📕 Validate documentation examples",
                 "run": script(f"""
-                    python -m pytest {cov} --nbval-lax --log-file test-docs.log docs */lenskit
-                """),
+                    python -m pytest {cov} --nbval-lax --doctest-glob='*.rst' --log-file test-docs.log docs */lenskit
+                """),  # noqa: E501
             },
         ]
         + steps_coverage(opts),

@@ -620,7 +620,7 @@ jobs:
           python -m lenskit.data.fetch ml-100k ml-1m ml-10m ml-20m
       - name: 📕 Validate documentation examples
         run: |
-          python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --nbval-lax --log-file test-docs.log docs */lenskit
+          python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --nbval-lax --doctest-glob='*.rst' --log-file test-docs.log docs */lenskit
       - name: 📐 Coverage results
         run: |
           python utils/fix-coverage-paths.py
