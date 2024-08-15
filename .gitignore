@@ -25,6 +25,7 @@ dask-worker-space/
 .tox/
 .vagrant/
 .venv/
+.pixi/
 .uv/
 scratch/
 
@@ -46,6 +47,7 @@ lenskit/**/*.c
 conda-lock.yml
 *.lock
 *.lock.yml
+pixi.lock
 
 # Editor and OS cruft
 .DS_Store
@@ -56,3 +58,6 @@ conda-lock.yml
 
 # CPP configurations are per-environment
 .vscode/c_cpp_properties.json
+# pixi environments
+.pixi
+*.egg-info

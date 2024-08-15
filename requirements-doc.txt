@@ -1,7 +1,7 @@
 # Requirements for building the LensKit documentation.
-sphinx >= 4.2
-sphinxext-opengraph >= 0.5
-sphinxcontrib-bibtex >= 2.0
+sphinx >=4.2
+sphinxext-opengraph >=0.5
+sphinxcontrib-bibtex >=2.0
 pydata-sphinx-theme >=0.15.4
-myst-nb >= 0.13
+myst-nb >=0.13
 # conda: just
