@@ -539,7 +539,7 @@ jobs:
       - name: 👢 Generate Conda environment file
         run: |
           pip install -e .
-          python -m lkdev.conda -o ci-environment.yml -p 3.10 -e all requirements-test.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml lenskit-implicit/pyproject.toml
+          python -m lkdev.conda -o ci-environment.yml -p 3.10 -e all requirements-test.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml lenskit-implicit/pyproject.toml lenskit-hpf/pyproject.toml
       - id: setup
         name: 📦 Set up Conda environment
         uses: mamba-org/setup-micromamba@v1
@@ -550,7 +550,7 @@ jobs:
           init-shell: bash
       - name: 🍱 Install LensKit packages
         run: |
-          pip install --no-deps -e lenskit -e lenskit-funksvd -e lenskit-implicit
+          pip install --no-deps -e lenskit -e lenskit-funksvd -e lenskit-implicit -e lenskit-hpf
       - name: Cache ML data
         uses: actions/cache@v4
         with:
@@ -563,7 +563,7 @@ jobs:
           python -m lenskit.data.fetch ml-100k ml-20m
       - name: Run Eval Tests
         run: |
-          python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit -m 'eval or realdata' --log-file test-eval.log */tests
+          python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit -m 'eval or realdata' --log-file test-eval.log */tests
       - name: 📐 Coverage results
         run: |
           python utils/fix-coverage-paths.py
@@ -596,7 +596,7 @@ jobs:
       - name: 👢 Generate Conda environment file
         run: |
           pip install -e .
-          python -m lkdev.conda -o ci-environment.yml -p 3.10 -e all requirements-test.txt requirements-demo.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml lenskit-implicit/pyproject.toml
+          python -m lkdev.conda -o ci-environment.yml -p 3.10 -e all requirements-test.txt requirements-demo.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml lenskit-implicit/pyproject.toml lenskit-hpf/pyproject.toml
       - id: setup
         name: 📦 Set up Conda environment
         uses: mamba-org/setup-micromamba@v1
@@ -607,7 +607,7 @@ jobs:
           init-shell: bash
       - name: 🍱 Install LensKit packages
         run: |
-          pip install --no-deps -e lenskit -e lenskit-funksvd -e lenskit-implicit
+          pip install --no-deps -e lenskit -e lenskit-funksvd -e lenskit-implicit -e lenskit-hpf
       - name: Cache ML data
         uses: actions/cache@v4
         with:
@@ -620,7 +620,7 @@ jobs:
           python -m lenskit.data.fetch ml-100k ml-1m ml-10m ml-20m
       - name: 📕 Validate documentation examples
         run: |
-          python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --nbval-lax --doctest-glob='*.rst' --log-file test-docs.log docs */lenskit
+          python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit --nbval-lax --doctest-glob='*.rst' --log-file test-docs.log docs */lenskit
       - name: 📐 Coverage results
         run: |
           python utils/fix-coverage-paths.py
