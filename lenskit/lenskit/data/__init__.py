@@ -15,7 +15,7 @@ FeedbackType: TypeAlias = Literal["explicit", "implicit"]
 
 from .dataset import Dataset, from_interactions_df  # noqa: E402
 from .items import HasItemList, ItemList  # noqa: E402
-from .movielens import load_movielens  # noqa: E402
+from .movielens import load_movielens, load_movielens_df  # noqa: E402
 from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray  # noqa: E402
 from .user import UserProfile  # noqa: E402
 from .vocab import Vocabulary  # noqa: E402
@@ -28,6 +28,7 @@ __all__ = [
     "HasItemList",
     "ItemList",
     "load_movielens",
+    "load_movielens_df",
     "MTArray",
     "MTFloatArray",
     "MTGenericArray",

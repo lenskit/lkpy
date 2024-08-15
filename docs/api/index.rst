@@ -8,13 +8,16 @@ Core Abstractions
 ~~~~~~~~~~~~~~~~~
 
 .. autosummary::
-    :toctree: .
-    :caption: Core
-
     lenskit.data
     lenskit.diagnostics
     lenskit.pipeline
     lenskit.types
+
+.. toctree::
+    :caption: Core
+    :hidden:
+
+    data
 
 Components and Models
 ~~~~~~~~~~~~~~~~~~~~~
