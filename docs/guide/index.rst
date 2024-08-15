@@ -23,6 +23,7 @@ guide to how to use LensKit for research, education, and other purposes.
     :caption: Experiments
     :maxdepth: 1
 
+    splitting
     batch
     documenting
 

@@ -1,12 +1,12 @@
 Splitting Data
 ==============
 
-.. module:: lenskit.splitting
+.. py:currentmodule:: lenskit.splitting
 
-The LKPY `splitting` module splits data sets for offline evaluation using
-cross-validation and other strategies.  The various splitters are implemented as
-functions that operate on a :class:`~lenskit.data.Dataset` and return one or
-more train-test splits (as :class:`TTSplit` objects).
+The :mod:`~lenskit.splitting` module splits data sets for offline evaluation
+using cross-validation and other strategies.  The various splitters are
+implemented as functions that operate on a :class:`~lenskit.data.Dataset` and
+return one or more train-test splits (as :class:`TTSplit` objects).
 
 .. versionchanged:: 2024.1
     Data splitting was moved from ``lenskit.crossfold`` to the :mod:`lenskit.splitting`
@@ -14,7 +14,8 @@ more train-test splits (as :class:`TTSplit` objects).
 
 Experiment code should generally use these functions to prepare train-test files
 for training and evaluating algorithms.  For example, the following will perform
-a user-based 5-fold cross-validation as was the default in the old LensKit:
+a user-based 5-fold cross-validation as was the default in older versions of
+LensKit:
 
 .. code:: python
 
@@ -32,7 +33,12 @@ Record-based Random Splitting
 The simplest preparation methods sample or partition the records in the input
 data. A 5-fold :func:`crossfold_records` split will result in 5 splits, each of
 which extracts 20% of the user-item interaction records for testing and leaves
-80% for training.
+80% for training.  There are two record-based random splitting functions:
+
+* :func:`crossfold_records` partitions ratings or interactions into 5
+  equal-sized splits.
+* :func:`sample_records` produces 1 or more disjoint samples of the ratings for
+  testing.
 
 .. note::
 
@@ -41,10 +47,6 @@ which extracts 20% of the user-item interaction records for testing and leaves
     Specifically, they operate on the results of calling
     :meth:`~lenskit.data.Dataset.interaction_matrix` with ``format="pandas"``
     and ``field="all"``.
-
-.. autofunction:: crossfold_records
-
-.. autofunction:: sample_records
 
 User-based Splitting
 --------------------
@@ -63,30 +65,29 @@ The algorithm used by each is as follows:
     from each of that set's test users, along with all rows from each non-test
     user.
 
-.. autofunction:: crossfold_users
+As with record-based splitting, there are both cross-folding (partition all
+users into disjoint sets) and sampling (compute one or more disjoint sets of
+test users).
 
-.. autofunction:: sample_users
+* :func:`crossfold_users`
+* :func:`sample_users`
 
 Selecting user holdout rows
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-These functions each take a `method` to decide how select each user's test rows. The method
-is a function that takes an item list (containing just the user's rows) and returns the
-test rows.
+User-based splitting requires a mechanism to split a test user's interactions
+into the actual test data and the training or query data for that user.  The
+user-based splitting functions therefore take a :class:`holdout method
+<HoldoutMethod>` (the ``method`` parameter) to do that partitioning.  The method
+is just a callable that takes an item list of the user's interactions and
+returns the test interactions.
 
-We provide several holdout method factories:
+We provide several holdout implementations, implemented as classes that take
+the holdout's configuration (e.g. the number of test ratings per user) and
+return callable objects to do the holdout:
 
-.. autofunction:: SampleN
-.. autofunction:: SampleFrac
-.. autofunction:: LastN
-.. autofunction:: LastFrac
-
-Utility Classes
----------------
-
-.. autoclass:: lenskit.splitting.holdout.HoldoutMethod
-   :members:
-   :special-members: __call__
-
-.. autoclass:: TTSplit
-   :members:
+.. autosummary::
+    SampleN
+    SampleFrac
+    LastN
+    LastFrac
