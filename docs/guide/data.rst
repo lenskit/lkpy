@@ -14,11 +14,36 @@ the manual.
 
 Getting started with the dataset is fairly straightforward:
 
->>> from lenskit.data import load_movielens
->>> mlds = load_movielens('data/ml-latest-small')
-204
+    >>> from lenskit.data import load_movielens
+    >>> mlds = load_movielens('data/ml-latest-small')
+    >>> mlds.item_count
+    9066
 
-You can then access the data from
+You can then access the data from the various methods of the :class:`Dataset` class.
+For example, if you want to get the ratings as a data frame:
+
+    >>> mlds.interaction_matrix('pandas', field='rating')
+            user_num  item_num  rating
+    0              0        30     2.5
+    1              0       833     3.0
+    2              0       859     3.0
+    3              0       906     2.0
+    4              0       931     4.0
+    ...
+    [100004 rows x 3 columns]
+
+Or obtain item statistics:
+
+    >>> mlds.item_stats()
+            count  user_count  rating_count  mean_rating  first_time
+    item
+    1         247         247           247     3.872470   828212413
+    2         107         107           107     3.401869   828213150
+    3          59          59            59     3.161017   833955544
+    4          13          13            13     2.384615   834425135
+    5          56          56            56     3.267857   829491839
+    ...
+    [9066 rows x 5 columns]
 
 .. _data-model:
 
@@ -97,64 +122,15 @@ their source files.
 .. autosummary::
     load_movielens
 
-Vocabularies
-~~~~~~~~~~~~
-
-LensKit uses *vocabularies* to record user/item IDs, tags, terms, etc. in a way
-that facilitates easy mapping to 0-based contiguous indexes for use in matrix
-and tensor data structures.
-
-.. autoclass:: Vocabulary
-
-User and Item Data
-~~~~~~~~~~~~~~~~~~
-
-The :mod:`lenskit.data` package also provides various classes for representing
-user and item data.
-
-User Profiles
--------------
-
-.. autoclass:: UserProfile
-
-Item Lists
-----------
-
-LensKit uses *item lists* to represent collections of items that may be scored,
-ranked, etc.
-
-.. autoclass:: ItemList
-
-.. autoclass:: HasItemList
-
-User-Item Data Tables
-~~~~~~~~~~~~~~~~~~~~~
-
-.. module:: lenskit.data.tables
-
-.. autoclass:: NumpyUserItemTable
-.. autoclass:: TorchUserItemTable
-
 Dataset Implementations
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 .. module:: lenskit.data.dataset
 
-Matrix Dataset
---------------
+:class:`Dataset` itself is an abstract class that can be extended to provide new
+data set implementations (e.g. querying a database).  LensKit provides a few
+implementations.
 
-The :class:`MatrixDataset` provides an in-memory dataset implementation backed
-by a ratings matrix or implicit-feedback matrix.
-
-.. autoclass:: MatrixDataset
-    :no-members:
-
-Lazy Dataset
-------------
-
-The lazy data set takes a function that loads a data set (of any type), and
-lazily uses that function to load an underlying data set when needed.
-
-.. autoclass:: LazyDataset
-    :no-members:
-    :members: delegate
+.. autosummary::
+    dataset.MatrixDataset
+    dataset.LazyDataset
