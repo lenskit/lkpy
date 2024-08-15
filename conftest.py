@@ -59,7 +59,10 @@ def torch_device(request):
 
 @fixture(autouse=True)
 def log_test(request):
-    modname = request.module.__name__ if request.module else "<unknown>"
+    try:
+        modname = request.module.__name__ if request.module else "<unknown>"
+    except Exception:
+        modname = "<unknown>"
     funcname = request.function.__name__ if request.function else "<unknown>"
     _log.info("running test %s:%s", modname, funcname)
 

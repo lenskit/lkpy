@@ -1,17 +1,49 @@
 Data Management
 ===============
 
-.. module:: lenskit.data
+.. py:currentmodule:: lenskit.data
 
 LensKit provides a unified data model for recommender systems data along with
 classes and utility functions for working with it, described in this section of
 the manual.
 
-
 .. versionchanged:: 2024.1
-    The new :class:`Dataset` class replaces the Pandas data frames
+    The new :class:`~lenskit.data.Dataset` class replaces the Pandas data frames
     that were passed to algorithms in the past.  It also subsumes
     the old support for producing sparse matrices from rating frames.
+
+Getting started with the dataset is fairly straightforward:
+
+    >>> from lenskit.data import load_movielens
+    >>> mlds = load_movielens('data/ml-latest-small')
+    >>> mlds.item_count
+    9066
+
+You can then access the data from the various methods of the :class:`Dataset` class.
+For example, if you want to get the ratings as a data frame:
+
+    >>> mlds.interaction_matrix('pandas', field='rating')
+            user_num  item_num  rating
+    0              0        30     2.5
+    1              0       833     3.0
+    2              0       859     3.0
+    3              0       906     2.0
+    4              0       931     4.0
+    ...
+    [100004 rows x 3 columns]
+
+Or obtain item statistics:
+
+    >>> mlds.item_stats()
+            count  user_count  rating_count  mean_rating  first_time
+    item
+    1         247         247           247     3.872470   828212413
+    2         107         107           107     3.401869   828213150
+    3          59          59            59     3.161017   833955544
+    4          13          13            13     2.384615   834425135
+    5          56          56            56     3.267857   829491839
+    ...
+    [9066 rows x 5 columns]
 
 .. _data-model:
 
@@ -22,7 +54,7 @@ The LensKit data model consists of **users**, **items**, and **interactions**,
 with fields providing additional (optional) data about each of these entities.
 The simplest valid LensKit data set is simply a list of user and item
 identifiers indicating which items each user has interacted with.  These may be
-augumented with ratings, timestamps, or any other attributes.
+augmented with ratings, timestamps, or any other attributes.
 
 Data can be read from a range of sources, but ultimately resolves to a
 collection of tables (e.g. Pandas :class:`~pandas.DataFrame`) that record user,
@@ -37,7 +69,8 @@ Users and items have two identifiers:
 
 * The *identifier* as presented in the original source table(s).  It appears in
   LensKit data frames as ``user_id`` and ``item_id`` columns.  Identifiers can
-  be integers, strings, or byte arrays.
+  be integers, strings, or byte arrays, and are represented in LensKit by the
+  :data:`~lenskit.data.EntityId` type.
 * The *number* assigned by the dataset handling code.  This is a 0-based
   contiguous user or item number that is suitable for indexing into arrays or
   matrices, a common operation in recommendation models.  In data frames, this
@@ -54,9 +87,7 @@ Users and items have two identifiers:
 
 Identifiers and numbers can be mapped to each other with the user and item
 *vocabularies* (:attr:`~Dataset.users` and :attr:`~Dataset.items`, see the
-:class:`~lenskit.data.vocab.Vocabulary` class).
-
-.. autodata:: EntityId
+:class:`Vocabulary` class).
 
 .. _dataset:
 
@@ -65,81 +96,41 @@ Dataset Abstraction
 
 The LensKit :class:`Dataset` class is the standard LensKit interface to datasets
 for training, evaluation, etc. Trainable models and components expect a dataset
-instance to be passed to :meth:`~lenskit.algorithms.Recommender.fit`.  It is an
-abstract class with implementations covering various scenarios.
+instance to be passed to :meth:`~lenskit.pipeline.Component.train`.
 
-.. autoclass:: Dataset
+Datasets provide several views of different aspsects of a dataset, documented in
+more detail in the :class:`reference documentation <Dataset>`.  These include:
+
+*   Sets of known user and item identifiers, through :class:`Vocabulary` objects
+    exposed through the :attr:`Dataset.users` and :attr:`Dataset.items`
+    properties.
 
 Creating Datasets
 ~~~~~~~~~~~~~~~~~
 
 Several functions can create a :class:`Dataset` from different input data sources.
 
-.. autofunction:: from_interactions_df
+.. autosummary::
+    from_interactions_df
 
 Loading Common Datasets
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autofunction:: load_movielens
+LensKit also provides support for loading several common data sets directly from
+their source files.
 
-Vocabularies
-~~~~~~~~~~~~
-
-LensKit uses *vocabularies* to record user/item IDs, tags, terms, etc. in a way
-that facilitates easy mapping to 0-based contiguous indexes for use in matrix
-and tensor data structures.
-
-.. autoclass:: Vocabulary
-
-User and Item Data
-~~~~~~~~~~~~~~~~~~
-
-The :mod:`lenskit.data` package also provides various classes for representing
-user and item data.
-
-User Profiles
--------------
-
-.. autoclass:: UserProfile
-
-Item Lists
-----------
-
-LensKit uses *item lists* to represent collections of items that may be scored,
-ranked, etc.
-
-.. autoclass:: ItemList
-
-.. autoclass:: HasItemList
-
-User-Item Data Tables
-~~~~~~~~~~~~~~~~~~~~~
-
-.. module:: lenskit.data.tables
-
-.. autoclass:: NumpyUserItemTable
-.. autoclass:: TorchUserItemTable
+.. autosummary::
+    load_movielens
 
 Dataset Implementations
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 .. module:: lenskit.data.dataset
 
-Matrix Dataset
---------------
+:class:`Dataset` itself is an abstract class that can be extended to provide new
+data set implementations (e.g. querying a database).  LensKit provides a few
+implementations.
 
-The :class:`MatrixDataset` provides an in-memory dataset implementation backed
-by a ratings matrix or implicit-feedback matrix.
-
-.. autoclass:: MatrixDataset
-    :no-members:
-
-Lazy Dataset
-------------
-
-The lazy data set takes a function that loads a data set (of any type), and
-lazily uses that function to load an underlying data set when needed.
-
-.. autoclass:: LazyDataset
-    :no-members:
-    :members: delegate
+.. autosummary::
+    dataset.MatrixDataset
+    dataset.LazyDataset

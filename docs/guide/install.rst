@@ -1,4 +1,4 @@
-Install LensKit
+Installing LensKit
 ---------------
 
 To install the current release with Anaconda (recommended)::
@@ -17,9 +17,3 @@ To use the latest development version, install directly from GitHub::
 Then see `Getting Started`_.
 
 .. _`Getting Started`: GettingStarted.html
-
-.. note::
-    If you install MKL-based BLAS in Conda, LensKit will use it to optimize
-    several of its operations::
-
-        conda install -c conda-forge libblas=*=*mkl

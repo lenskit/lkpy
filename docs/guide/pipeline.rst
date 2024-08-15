@@ -1,10 +1,7 @@
 Recommendation Pipelines
 ========================
 
-.. module:: lenskit.pipeline
-
-.. todo::
-    None of this has been implemented yet.
+.. py:currentmodule:: lenskit.pipeline
 
 Since version :ref:`2024.1`, LensKit uses a flexible “pipeline” abstraction to
 wire together different components such as candidate selectors, personalized
@@ -12,9 +9,11 @@ item scorers, and rankers to produce predictions, recommendations, or other
 recommender system outputs.  This is a significant change from the LensKit 0.x
 design of monolithic and composable components based on the Scikit-Learn API,
 allowing new recommendation designs to be composed without writing new classes
-just for the composition.  It also makes recommender definition code more explicit
-by laying out the pipeline instead of burying composition logic in the definitions
-of different composition classes.
+just for the composition.  It also makes recommender definition code more
+explicit by laying out the pipeline instead of burying composition logic in the
+definitions of different composition classes.  The pipeline lives in the
+:mod:`lenskit.pipeline` module, and the primary entry point is the
+:class:`Pipeline` class.
 
 If all you want to do is build a standard top-N recommendation pipeline from an
 item scorer, see :func:`topn_pipeline`; this is the equivalent to
@@ -76,13 +75,6 @@ abstraction Karl Higley created for POPROX_.
 
 .. _Haystack: https://docs.haystack.deepset.ai/docs/pipelines
 .. _POPROX: https://ccri-poprox.github.io/poprox-researcher-manual/reference/recommender/poprox_recommender.pipeline.html
-
-Common Pipelines
-~~~~~~~~~~~~~~~~
-
-These functions make it easy to create common pipeline designs.
-
-.. autofunction:: topn_pipeline
 
 .. _pipeline-model:
 
@@ -285,21 +277,6 @@ pipeline will emit a warning (or fail, if ``allow_pickle=False`` is passed to
     The load/save parameter operations are modeled after PyTorch's
     :meth:`~torch.nn.Module.state_dict` and the needs of ``safetensors``.
 
-Pipeline Class
-~~~~~~~~~~~~~~
-
-.. autoclass:: Pipeline
-
-Pipeline Nodes
-~~~~~~~~~~~~~~
-
-Pipeline nodes are represented by :class:`Node` objects.  For the purposes of
-client code, these should be considered opaque objects usable only to reference
-a node.
-
-.. autoclass:: Node
-    :members: name
-
 Component Interface
 ~~~~~~~~~~~~~~~~~~~
 
@@ -325,11 +302,3 @@ memory parallelism in its batch-inference code.
 
     Is it clear to write these capabilities as separate protocols, or would it be
     better to write a single ``Component`` :class:`~abc.ABC`?
-
-.. autodata:: Component
-
-.. autoclass:: ConfigurableComponent
-
-.. autoclass:: TrainableComponent
-
-.. autoclass:: AutoConfig

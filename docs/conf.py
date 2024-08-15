@@ -34,7 +34,7 @@ extensions = [
 ]
 
 # set up our filenames
-source_suffix = ".rst"
+# source_suffix = {".rst": "restructuredtext"}
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 nb_execution_mode = "off"
 
@@ -42,7 +42,7 @@ nb_execution_mode = "off"
 pygments_style = "sphinx"
 highlight_language = "python3"
 
-html_theme = "sphinx_book_theme"
+html_theme = "pydata_sphinx_theme"
 html_logo = "LKLogo2.png"
 if _parsed_ver.is_devrelease:
     html_baseurl = "https://lkpy.lenskit.org/en/latest/"
@@ -50,21 +50,27 @@ else:
     html_baseurl = "https://lkpy.lenskit.org/en/stable/"
 
 html_theme_options = {
-    "repository_url": "https://github.com/lenskit/lkpy",
-    "path_to_docs": "docs",
-    "use_source_button": True,
-    "use_repository_button": True,
-    "use_issues_button": True,
-    "use_download_button": False,
-    "home_page_in_toc": True,
     "switcher": {
         "json_url": "https://lkpy.lenskit.org/versions.json",
         "version_match": "2024.0dev",
     },
     "show_version_warning_banner": True,
-    # "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
-    "article_header_end": ["theme-switcher", "navbar-icon-links", "version-switcher"],
-    # 'github_user': 'lenskit',
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/lenskit/lkpy",
+            "icon": "fa-brands fa-github",
+            "type": "fontawesome",
+        },
+        {
+            "name": "Mastodon",
+            "url": "https://recsys.social/@LensKit",
+            "icon": "fa-brands fa-mastodon",
+            "type": "fontawesome",
+        },
+    ],
+    "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
+    # "github_user": "lenskit",
     # 'github_repo': 'lkpy',
     # 'travis_button': False,
     # 'canonical_url': 'https://lkpy.lenskit.org/',
@@ -86,7 +92,9 @@ autodoc_type_aliases = {
     "ArrayLike": "numpy.typing.ArrayLike",
     "RandomSeed": "lenskit.types.RandomSeed",
 }
+# autosummary_generate_overwrite = False
 
+nitpicky = True
 todo_include_todos = True
 
 # Cross-linking and external references
@@ -105,7 +113,7 @@ intersphinx_mapping = {
 }
 
 bibtex_bibfiles = ["lenskit.bib"]
-jupyter_execute_notebooks = "off"
+nb_execution_mode = "off"
 
 # -- external links
 

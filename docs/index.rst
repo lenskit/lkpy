@@ -8,7 +8,7 @@ algorithms in a flexible fashion suitable for research and education.
 LensKit for Python (also known as LKPY) is the successor to the Java-based
 LensKit toolkit and a part of the LensKit project.
 
-If you use Lenskit in published research, cite [LKPY]_.
+If you use LensKit in published research, cite [LKPY]_.
 
 .. [LKPY]
     Michael D. Ekstrand. 2020.
@@ -19,6 +19,12 @@ If you use Lenskit in published research, cite [LKPY]_.
 
 Throughout this documentation, we use the notation of :cite:t:`ekstrand:notation`.
 
+.. versionchanged:: 2024.1
+
+    The LensKit documentation is now split apart for easier readability, with
+    the `topical user guide <guide/index>`_ and `API reference <api/index>`_ in
+    separate sections.
+
 Resources
 ---------
 
@@ -26,74 +32,18 @@ Resources
 - `Source and issues on GitHub <https://github.com/lenskit/lkpy>`_
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Overview
-
-   install
-   GettingStarted
-   examples
-   releases/index
-
-.. toctree::
-    :maxdepth: 2
-    :caption: Running Experiments
-
-    data
-    splitting
-    batch
-    evaluation/index
-    documenting
-    parallel
-
-.. toctree::
     :maxdepth: 1
-    :caption: Algorithms
+    :hidden:
 
-    interfaces
-    pipeline
-    algorithms
-    basic
-    ranking
-    bias
-    knn
-    mf
-    addons/index
-
-.. toctree::
-    :maxdepth: 2
-    :caption: Tips and Tricks
-
-    performance
-    diagnostics
-    impl-tips
-
-.. toctree::
-    :maxdepth: 2
-    :caption: Configuration and Internals
-
-    util
-    internals
-
-.. toctree::
-    :maxdepth: 2
-    :caption: Links
-
-    references
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+    guide/index
+    api/index
+    releases/index
+    catalogs
 
 Acknowledgements
-================
+----------------
 
 This material is based upon work supported by the National Science Foundation
 under Grant No. IIS 17-51278. Any opinions, findings, and conclusions or
 recommendations expressed in this material are those of the author(s) and do not
 necessarily reflect the views of the National Science Foundation.
-
-.. todolist::

@@ -10,6 +10,8 @@ Primary item-list abstraction.
 
 from __future__ import annotations
 
+from typing import overload
+
 import numpy as np
 import pandas as pd
 import torch
@@ -23,7 +25,6 @@ from typing_extensions import (
     Sequence,
     TypeAlias,
     cast,
-    overload,
     runtime_checkable,
 )
 
