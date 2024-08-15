@@ -25,3 +25,10 @@ guide to how to use LensKit for research, education, and other purposes.
 
     batch
     documenting
+
+.. toctree::
+    :caption: Tips and Help
+    :maxdepth: 1
+
+    performance
+    impl-tips
