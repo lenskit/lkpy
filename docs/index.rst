@@ -38,13 +38,7 @@ Resources
     guide/index
     api/index
     releases/index
-
-Indices and tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+    catalogs
 
 Acknowledgements
 ----------------
