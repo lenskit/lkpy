@@ -61,7 +61,7 @@ Users and items have two identifiers:
 
 Identifiers and numbers can be mapped to each other with the user and item
 *vocabularies* (:attr:`~Dataset.users` and :attr:`~Dataset.items`, see the
-:class:`~Vocabulary` class).
+:class:`Vocabulary` class).
 
 .. _dataset:
 

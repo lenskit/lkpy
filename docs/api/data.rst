@@ -1,7 +1,7 @@
 Data Abstractions
 =================
 
-.. module:: lenskit.data
+.. py:module:: lenskit.data
 
 The :mod:`lenskit.data` module provides the core data abstractions LensKit uses
 to represent recommender system inputs and outputs.
@@ -15,9 +15,9 @@ Data Sets
     :caption: Data Sets
 
     Dataset
-    from_interactions_df
-    load_movielens
-    load_movielens_df
+    ~lenskit.data.from_interactions_df
+    ~lenskit.data.load_movielens
+    ~lenskit.data.load_movielens_df
 
 
 Item Data
@@ -28,7 +28,7 @@ Item Data
     :nosignatures:
     :caption: Item Data
 
-    ItemList
+    ~lenskit.data.ItemList
 
 User Data
 ---------
@@ -38,7 +38,7 @@ User Data
     :nosignatures:
     :caption: User Data
 
-    UserProfile
+    ~lenskit.data.UserProfile
 
 Identifiers
 -----------
@@ -48,4 +48,4 @@ Identifiers
     :nosignatures:
     :caption: Identifiers
 
-    Vocabulary
+    ~lenskit.data.Vocabulary

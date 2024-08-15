@@ -18,6 +18,7 @@ Core Abstractions
     :hidden:
 
     data
+    pipeline
 
 Components and Models
 ~~~~~~~~~~~~~~~~~~~~~
