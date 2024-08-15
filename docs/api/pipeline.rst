@@ -1,5 +1,5 @@
-Recommendation Pipelines
-========================
+Pipeline API
+============
 
 .. py:module:: lenskit.pipeline
 

@@ -9,8 +9,8 @@ Core Abstractions
 
 .. autosummary::
     lenskit.data
-    lenskit.diagnostics
     lenskit.pipeline
+    lenskit.diagnostics
     lenskit.types
 
 .. toctree::
@@ -19,6 +19,7 @@ Core Abstractions
 
     data
     pipeline
+    diagnostics
 
 Components and Models
 ~~~~~~~~~~~~~~~~~~~~~
