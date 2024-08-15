@@ -1,7 +1,7 @@
 Recommendation Pipelines
 ========================
 
-.. py:currentmodule::
+.. py:currentmodule:: lenskit.pipeline
 
 Since version :ref:`2024.1`, LensKit uses a flexible “pipeline” abstraction to
 wire together different components such as candidate selectors, personalized

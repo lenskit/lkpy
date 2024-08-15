@@ -14,7 +14,7 @@ Data Sets
     :nosignatures:
     :caption: Data Sets
 
-    Dataset
+    ~lenskit.data.Dataset
     ~lenskit.data.from_interactions_df
     ~lenskit.data.load_movielens
     ~lenskit.data.load_movielens_df

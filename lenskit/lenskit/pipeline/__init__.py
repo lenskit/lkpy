@@ -40,6 +40,7 @@ from .state import PipelineState
 from .types import parse_type_string
 
 __all__ = [
+    "AutoConfig",
     "Pipeline",
     "PipelineError",
     "PipelineWarning",

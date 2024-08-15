@@ -4,7 +4,7 @@ Pipeline API
 .. py:module:: lenskit.pipeline
 
 This page documents the LensKit pipeline API, exposed in the
-:mod:`lenskit.pipeline` module
+:mod:`lenskit.pipeline` module.
 
 Pipeline Classes
 ----------------
@@ -12,9 +12,10 @@ Pipeline Classes
 .. autosummary::
     :toctree: .
     :nosignatures:
+    :caption: Data Sets
 
-    Pipeline
-    Node
+    ~lenskit.pipeline.Pipeline
+    ~lenskit.pipeline.Node
 
 Component Interface
 -------------------
@@ -26,9 +27,9 @@ LensKit components.
     :toctree: .
     :nosignatures:
 
-    ConfigurableComponent
-    TrainableComponent
-    AutoConfig
+    ~lenskit.pipeline.ConfigurableComponent
+    ~lenskit.pipeline.TrainableComponent
+    ~lenskit.pipeline.AutoConfig
 
 Standard Pipelines
 ------------------
@@ -37,4 +38,4 @@ Standard Pipelines
     :toctree: .
     :nosignatures:
 
-    topn_pipeline
+    ~lenskit.pipeline.topn_pipeline

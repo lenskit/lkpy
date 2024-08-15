@@ -6,7 +6,7 @@ Splitting Data
 The :mod:`~lenskit.splitting` module splits data sets for offline evaluation
 using cross-validation and other strategies.  The various splitters are
 implemented as functions that operate on a :class:`~lenskit.data.Dataset` and
-return one or more train-test splits (as :class:`TTSplit` objects).
+return one or more train-test splits (as :class:`.TTSplit` objects).
 
 .. versionchanged:: 2024.1
     Data splitting was moved from ``lenskit.crossfold`` to the :mod:`lenskit.splitting`
@@ -31,13 +31,13 @@ Record-based Random Splitting
 -----------------------------
 
 The simplest preparation methods sample or partition the records in the input
-data. A 5-fold :func:`crossfold_records` split will result in 5 splits, each of
+data. A 5-fold :func:`.crossfold_records` split will result in 5 splits, each of
 which extracts 20% of the user-item interaction records for testing and leaves
 80% for training.  There are two record-based random splitting functions:
 
-* :func:`crossfold_records` partitions ratings or interactions into 5
+* :func:`.crossfold_records` partitions ratings or interactions into 5
   equal-sized splits.
-* :func:`sample_records` produces 1 or more disjoint samples of the ratings for
+* :func:`.sample_records` produces 1 or more disjoint samples of the ratings for
   testing.
 
 .. note::
@@ -69,8 +69,8 @@ As with record-based splitting, there are both cross-folding (partition all
 users into disjoint sets) and sampling (compute one or more disjoint sets of
 test users).
 
-* :func:`crossfold_users`
-* :func:`sample_users`
+* :func:`.crossfold_users`
+* :func:`.sample_users`
 
 Selecting user holdout rows
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
