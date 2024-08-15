@@ -16,6 +16,7 @@ Getting started with the dataset is fairly straightforward:
 
 >>> from lenskit.data import load_movielens
 >>> mlds = load_movielens('data/ml-latest-small')
+204
 
 You can then access the data from
 

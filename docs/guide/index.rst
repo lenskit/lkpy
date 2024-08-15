@@ -18,3 +18,10 @@ guide to how to use LensKit for research, education, and other purposes.
 
     data
     pipeline
+
+.. toctree::
+    :caption: Experiments
+    :maxdepth: 1
+
+    batch
+    documenting
