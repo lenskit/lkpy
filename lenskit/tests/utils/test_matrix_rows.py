@@ -16,7 +16,7 @@ import torch
 from hypothesis import HealthCheck, given, settings
 from pytest import approx
 
-from lenskit.data.matrix import normalize_sparse_rows
+from lenskit.math.sparse import normalize_sparse_rows
 from lenskit.util.test import sparse_tensors
 
 _log = logging.getLogger(__name__)

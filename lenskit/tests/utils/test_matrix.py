@@ -12,7 +12,7 @@ import hypothesis.strategies as st
 from hypothesis import HealthCheck, assume, given, settings
 from pytest import approx
 
-from lenskit.data.matrix import safe_spmv, torch_sparse_from_scipy
+from lenskit.math.sparse import safe_spmv, torch_sparse_from_scipy
 from lenskit.util.test import coo_arrays
 
 

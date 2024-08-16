@@ -22,9 +22,9 @@ from typing_extensions import NamedTuple, Optional, Self, override
 from lenskit import util
 from lenskit.data import FeedbackType
 from lenskit.data.dataset import Dataset
-from lenskit.data.matrix import normalize_sparse_rows, safe_spmv
 from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataWarning
+from lenskit.math.sparse import normalize_sparse_rows, safe_spmv
 from lenskit.parallel.config import ensure_parallel_init
 
 from .. import Predictor
