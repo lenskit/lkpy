@@ -19,7 +19,8 @@ from numpy.typing import ArrayLike, NDArray
 
 from pytest import warns
 
-from lenskit.data.dataset import Dataset, MatrixDataset
+from lenskit.data import Dataset
+from lenskit.data.matrix import MatrixDataset
 from lenskit.pipeline.types import (
     TypecheckWarning,
     is_compatible_data,

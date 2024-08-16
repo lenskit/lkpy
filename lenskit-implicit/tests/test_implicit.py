@@ -14,7 +14,7 @@ from pytest import mark
 
 import lenskit.util.test as lktu
 from lenskit import util
-from lenskit.data.dataset import from_interactions_df
+from lenskit.data import from_interactions_df
 from lenskit.implicit import ALS, BPR
 
 _log = logging.getLogger(__name__)

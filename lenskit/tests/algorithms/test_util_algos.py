@@ -9,7 +9,7 @@ import pandas as pd
 
 import lenskit.util.test as lktu
 from lenskit.algorithms import basic
-from lenskit.data.dataset import Dataset, from_interactions_df
+from lenskit.data import Dataset, from_interactions_df
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 simple_df = pd.DataFrame(

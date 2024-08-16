@@ -18,7 +18,7 @@ import lenskit.algorithms.knn.user as knn
 import lenskit.util.test as lktu
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.ranking import TopN
-from lenskit.data.dataset import Dataset, from_interactions_df
+from lenskit.data import Dataset, from_interactions_df
 from lenskit.util import clone
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 

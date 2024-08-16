@@ -13,7 +13,7 @@ import pandas as pd
 
 import pytest
 
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset
 from lenskit.splitting.holdout import LastFrac, LastN, SampleFrac, SampleN
 
 

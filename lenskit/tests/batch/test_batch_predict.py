@@ -15,7 +15,7 @@ import pytest
 import lenskit.batch as lkb
 import lenskit.util.test as lktu
 from lenskit.algorithms.bias import Bias
-from lenskit.data.dataset import Dataset, from_interactions_df
+from lenskit.data import Dataset, from_interactions_df
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 _log = logging.getLogger(__name__)

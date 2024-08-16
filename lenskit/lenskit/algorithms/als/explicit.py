@@ -15,7 +15,7 @@ from seedbank import SeedLike
 from typing_extensions import Optional, cast, override
 
 from lenskit.algorithms.bias import Bias
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
 from lenskit.util.logging import pbh_update, progress_handle

@@ -13,7 +13,7 @@ import pandas as pd
 
 import pytest
 
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset
 from lenskit.splitting.records import crossfold_records, sample_records
 
 

@@ -15,8 +15,7 @@ from pytest import approx, mark
 
 import lenskit.util.test as lktu
 from lenskit.algorithms import Recommender, als
-from lenskit.data.dataset import Dataset, from_interactions_df
-from lenskit.data.movielens import load_movielens_df
+from lenskit.data import Dataset, from_interactions_df, load_movielens_df
 
 _log = logging.getLogger(__name__)
 

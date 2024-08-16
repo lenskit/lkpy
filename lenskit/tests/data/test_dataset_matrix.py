@@ -18,9 +18,8 @@ from numpy.typing import ArrayLike
 
 from pytest import mark, raises
 
-from lenskit.data import Dataset
-from lenskit.data.dataset import FieldError, MatrixDataset, from_interactions_df
-from lenskit.data.matrix import CSRStructure
+from lenskit.data import Dataset, FieldError, from_interactions_df
+from lenskit.data.matrix import CSRStructure, MatrixDataset
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 

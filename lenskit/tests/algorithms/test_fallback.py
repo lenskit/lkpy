@@ -15,7 +15,7 @@ import lenskit.util.test as lktu
 from lenskit import util as lku
 from lenskit.algorithms import basic
 from lenskit.algorithms.bias import Bias
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 simple_df = pd.DataFrame(

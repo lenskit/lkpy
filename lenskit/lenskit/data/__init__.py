@@ -6,15 +6,17 @@
 
 from __future__ import annotations
 
-from .dataset import Dataset, from_interactions_df  # noqa: E402
-from .items import ItemList  # noqa: E402
-from .movielens import load_movielens, load_movielens_df  # noqa: E402
-from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray  # noqa: E402
-from .types import EntityId, FeedbackType, NPEntityId  # noqa: F401
-from .vocab import Vocabulary  # noqa: E402
+from .convert import from_interactions_df
+from .dataset import Dataset, FieldError
+from .items import ItemList
+from .movielens import load_movielens, load_movielens_df
+from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray
+from .types import EntityId, FeedbackType, NPEntityId
+from .vocab import Vocabulary
 
 __all__ = [
     "Dataset",
+    "FieldError",
     "from_interactions_df",
     "EntityId",
     "NPEntityId",

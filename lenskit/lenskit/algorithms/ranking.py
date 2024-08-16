@@ -13,7 +13,7 @@ import logging
 import numpy as np
 from typing_extensions import override
 
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset
 
 from ..util import derivable_rng
 from . import Predictor, Recommender

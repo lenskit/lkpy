@@ -11,7 +11,7 @@ from pytest import approx, mark, raises
 
 import lenskit.metrics.predict as pm
 import lenskit.util.test as lktu
-from lenskit.data.dataset import from_interactions_df
+from lenskit.data import from_interactions_df
 
 
 def test_check_missing_empty():

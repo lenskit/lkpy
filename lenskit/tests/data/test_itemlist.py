@@ -12,8 +12,7 @@ import torch
 
 from pytest import raises
 
-from lenskit.data import ItemList
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset, ItemList
 from lenskit.data.vocab import Vocabulary
 
 ITEMS = ["a", "b", "c", "d", "e"]

@@ -16,8 +16,7 @@ import pytest
 from lenskit import batch
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.basic import PopScore
-from lenskit.data.dataset import Dataset, from_interactions_df
-from lenskit.data.movielens import load_movielens
+from lenskit.data import Dataset, from_interactions_df, load_movielens
 
 _log = logging.getLogger(__name__)
 

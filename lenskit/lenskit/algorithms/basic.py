@@ -19,7 +19,7 @@ from typing_extensions import override
 from lenskit.algorithms import CandidateSelector, Predictor, Recommender
 from lenskit.algorithms.bias import Bias  # noqa: F401
 from lenskit.algorithms.ranking import TopN  # noqa: F401
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset
 from lenskit.data.matrix import CSRStructure
 from lenskit.data.vocab import Vocabulary
 from lenskit.util import derivable_rng
