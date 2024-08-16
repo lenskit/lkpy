@@ -13,8 +13,9 @@ import numpy as np
 import pandas as pd
 from seedbank import numpy_rng
 
-from lenskit.data.dataset import Dataset, MatrixDataset
-from lenskit.types import EntityId, RandomSeed
+from lenskit.data import Dataset, EntityId
+from lenskit.data.matrix import MatrixDataset
+from lenskit.types import RandomSeed
 
 from .holdout import HoldoutMethod
 from .split import TTSplit

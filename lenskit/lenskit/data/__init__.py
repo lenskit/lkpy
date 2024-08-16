@@ -6,17 +6,11 @@
 
 from __future__ import annotations
 
-from typing_extensions import Literal, TypeAlias
-
-from lenskit.types import EntityId, NPEntityId  # noqa: F401
-
-FeedbackType: TypeAlias = Literal["explicit", "implicit"]
-"Types of feedback supported."
-
 from .dataset import Dataset, from_interactions_df  # noqa: E402
 from .items import ItemList  # noqa: E402
 from .movielens import load_movielens, load_movielens_df  # noqa: E402
 from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray  # noqa: E402
+from .types import EntityId, FeedbackType, NPEntityId  # noqa: F401
 from .vocab import Vocabulary  # noqa: E402
 
 __all__ = [
@@ -24,6 +18,7 @@ __all__ = [
     "from_interactions_df",
     "EntityId",
     "NPEntityId",
+    "FeedbackType",
     "ItemList",
     "load_movielens",
     "load_movielens_df",

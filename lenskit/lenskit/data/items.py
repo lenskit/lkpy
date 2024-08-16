@@ -25,10 +25,9 @@ from typing_extensions import (
     cast,
 )
 
-from lenskit.types import EntityId, NPEntityId
-
 from .checks import check_1d
 from .mtarray import MTArray, MTGenericArray
+from .types import EntityId, NPEntityId
 from .vocab import Vocabulary
 
 Backend: TypeAlias = Literal["numpy", "torch"]

@@ -13,7 +13,7 @@ from typing import Protocol
 import numpy as np
 from seedbank import numpy_rng
 
-from lenskit.data.items import ItemList
+from lenskit.data import ItemList
 from lenskit.types import RandomSeed
 
 

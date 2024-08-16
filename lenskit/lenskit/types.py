@@ -7,70 +7,9 @@
 # pyright: strict
 from __future__ import annotations
 
-import sys
-from typing import TYPE_CHECKING, Any, Generic, NamedTuple, TypeAlias, TypeVar, cast
+from typing import TypeAlias
 
 import numpy as np
 from seedbank import SeedLike
 
 RandomSeed: TypeAlias = SeedLike | np.random.Generator | np.random.RandomState
-
-EntityId: TypeAlias = int | str | bytes
-"Allowable entity identifier types."
-NPEntityId: TypeAlias = np.integer[Any] | np.str_ | np.bytes_ | np.object_
-"Allowable entity identifier types (NumPy version)"
-
-T = TypeVar("T")
-
-if TYPE_CHECKING or sys.version_info >= (3, 11):
-
-    class UITuple(NamedTuple, Generic[T]):
-        """
-        Tuple of (user, item) data, typically for configuration and similar
-        purposes.
-        """
-
-        user: T
-        "User data."
-        item: T
-        "Item data."
-
-        @classmethod
-        def create(cls, x: UITuple[T] | tuple[T, T] | T) -> UITuple[T]:
-            """
-            Create a user-item tuple from a tuple or data.  If a single value
-            is provided, it is used for both user and item.
-            """
-            if isinstance(x, UITuple):
-                return cast(UITuple[T], x)
-            elif isinstance(x, tuple):
-                u, i = cast(tuple[T, T], x)
-                return UITuple(u, i)
-            else:
-                return UITuple(x, x)
-else:
-
-    class UITuple(NamedTuple):
-        """
-        Tuple of (user, item) data, typically for configuration and similar
-        purposes.
-        """
-
-        user: Any
-        "User data."
-        item: Any
-        "Item data."
-
-        @classmethod
-        def create(cls, x: UITuple | tuple[Any, Any] | Any) -> UITuple:
-            """
-            Create a user-item tuple from a tuple or data.  If a single value
-            is provided, it is used for both user and item.
-            """
-            if isinstance(x, UITuple):
-                return x
-            elif isinstance(x, tuple):
-                u, i = x
-                return UITuple(u, i)
-            else:
-                return UITuple(x, x)

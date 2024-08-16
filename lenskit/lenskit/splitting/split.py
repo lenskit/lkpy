@@ -8,9 +8,7 @@ from typing import Literal, NamedTuple, TypeAlias
 
 import pandas as pd
 
-from lenskit.data.dataset import Dataset
-from lenskit.data.items import ItemList
-from lenskit.types import EntityId
+from lenskit.data import Dataset, EntityId, ItemList
 
 SplitTable: TypeAlias = Literal["matrix"]
 
