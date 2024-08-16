@@ -12,13 +12,20 @@ Data manipulation routines.
 from __future__ import annotations
 
 import logging
-import platform
+from typing import Any, NamedTuple, Optional, TypeVar
 
 import numpy as np
+import pandas as pd
 import scipy.sparse as sps
 import torch
 from numpy.typing import ArrayLike
-from typing_extensions import Literal, NamedTuple, Optional, TypeVar, overload
+from typing_extensions import override
+
+from .dataset import Dataset, FieldError
+from .items import ItemList
+from .tables import NumpyUserItemTable, TorchUserItemTable
+from .types import EntityId
+from .vocab import Vocabulary
 
 _log = logging.getLogger(__name__)
 
@@ -113,118 +120,274 @@ class InteractionMatrix:
         return (self.n_users, self.n_items)
 
 
-@overload
-def normalize_sparse_rows(
-    matrix: t.Tensor, method: Literal["center"], inplace: bool = False
-) -> tuple[t.Tensor, t.Tensor]: ...
-@overload
-def normalize_sparse_rows(
-    matrix: t.Tensor, method: Literal["unit"], inplace: bool = False
-) -> tuple[t.Tensor, t.Tensor]: ...
-def normalize_sparse_rows(
-    matrix: t.Tensor, method: str, inplace: bool = False
-) -> tuple[t.Tensor, t.Tensor]:
+class MatrixDataset(Dataset):
     """
-    Normalize the rows of a sparse matrix.
+    Dataset implementation using an in-memory rating or implicit-feedback matrix
+    (with no duplicate interactions).
+
+    .. note::
+        Client code generally should not construct this class directly.  Instead
+        use the various ``from_`` and ``load_`` functions in
+        :mod:`lenskit.data`.
     """
-    match method:
-        case "unit":
-            return _nsr_unit(matrix)
-        case "center":
-            return _nsr_mean_center(matrix)
-        case _:
-            raise ValueError(f"unsupported normalization method {method}")
 
+    _users: Vocabulary
+    "User ID vocabulary, to map between IDs and row numbers."
+    _items: Vocabulary
+    "Item ID vocabulary, to map between IDs and column or row numbers."
+    _matrix: InteractionMatrix
 
-def _nsr_mean_center(matrix: t.Tensor) -> tuple[t.Tensor, t.Tensor]:
-    nr, _nc = matrix.shape
-    sums = matrix.sum(dim=1, keepdim=True).to_dense().reshape(nr)
-    counts = torch.diff(matrix.crow_indices())
-    assert sums.shape == counts.shape
-    means = torch.nan_to_num(sums / counts, 0)
-    return t.sparse_csr_tensor(
-        crow_indices=matrix.crow_indices(),
-        col_indices=matrix.col_indices(),
-        values=matrix.values() - t.repeat_interleave(means, counts),
-        size=matrix.shape,
-    ), means
-
-
-def _nsr_unit(matrix: t.Tensor) -> tuple[t.Tensor, t.Tensor]:
-    sqmat = t.sparse_csr_tensor(
-        crow_indices=matrix.crow_indices(),
-        col_indices=matrix.col_indices(),
-        values=matrix.values().square(),
-    )
-    norms = sqmat.sum(dim=1, keepdim=True).to_dense().reshape(matrix.shape[0])
-    norms.sqrt_()
-    recip_norms = t.where(norms > 0, t.reciprocal(norms), 0.0)
-    return t.sparse_csr_tensor(
-        crow_indices=matrix.crow_indices(),
-        col_indices=matrix.col_indices(),
-        values=matrix.values() * t.repeat_interleave(recip_norms, matrix.crow_indices().diff()),
-        size=matrix.shape,
-    ), norms
-
-
-def torch_sparse_from_scipy(
-    M: sps.coo_array, layout: Literal["csr", "coo", "csc"] = "coo"
-) -> t.Tensor:
-    """
-    Convert a SciPy :class:`sps.coo_array` into a torch sparse tensor.
-    """
-    ris = t.from_numpy(M.row)
-    cis = t.from_numpy(M.col)
-    vs = t.from_numpy(M.data)
-    indices = t.stack([ris, cis])
-    assert indices.shape == (2, M.nnz)
-    T = t.sparse_coo_tensor(indices, vs, size=M.shape)
-    assert T.shape == M.shape
-
-    match layout:
-        case "csr":
-            return T.to_sparse_csr()
-        case "csc":
-            return T.to_sparse_csc()
-        case "coo":
-            return T.coalesce()
-        case _:
-            raise ValueError(f"invalid layout {layout}")
-
-
-if platform.machine() == "arm64":
-
-    @torch.jit.ignore  # type: ignore
-    def safe_spmv(matrix, vector):  # type: ignore
+    def __init__(self, users: Vocabulary, items: Vocabulary, interact_df: pd.DataFrame):
         """
-        Sparse matrix-vector multiplication working around PyTorch bugs.
+        Construct a dataset.
 
-        This is equivalent to :func:`torch.mv` for sparse CSR matrix
-        and dense vector, but it works around PyTorch bug 127491_ by
-        falling back to SciPy on ARM.
-
-        .. _127491: https://github.com/pytorch/pytorch/issues/127491
+        .. note::
+            Client code generally should not call this constructor.  Instead use the
+            various ``from_`` and ``load_`` functions in :mod:`lenskit.data`.
         """
-        assert matrix.is_sparse_csr
-        nr, nc = matrix.shape
-        M = sps.csr_array(
-            (matrix.values().numpy(), matrix.col_indices().numpy(), matrix.crow_indices().numpy()),
-            (nr, nc),
+        self._users = users
+        self._items = items
+        self._init_structures(interact_df)
+
+    def _init_structures(self, df: pd.DataFrame):
+        uno = self.users.numbers(df["user_id"])
+        ino = self.items.numbers(df["item_id"])
+        assert np.all(uno >= 0)
+        assert np.all(ino >= 0)
+        if np.any(df.duplicated(subset=["user_id", "item_id"])):
+            raise RuntimeError("repeated ratings not yet supported")
+
+        df = df.assign(user_num=uno, item_num=ino)
+
+        _log.debug("sorting interaction table")
+        df.sort_values(["user_num", "item_num"], ignore_index=True, inplace=True)
+        _log.debug("rating data frame:\n%s", df)
+        self._matrix = InteractionMatrix(
+            uno,
+            ino,
+            df["rating"] if "rating" in df.columns else None,
+            df["timestamp"] if "timestamp" in df.columns else None,
+            self.user_count,
+            self.item_count,
         )
-        v = vector.numpy()
-        return torch.from_numpy(M @ v)
 
-else:
+    @property
+    @override
+    def items(self) -> Vocabulary:
+        return self._items
 
-    def safe_spmv(matrix: torch.Tensor, vector: torch.Tensor) -> torch.Tensor:
-        """
-        Sparse matrix-vector multiplication working around PyTorch bugs.
+    @property
+    @override
+    def users(self) -> Vocabulary:
+        return self._users
 
-        This is equivalent to :func:`torch.mv` for sparse CSR matrix
-        and dense vector, but it works around PyTorch bug 127491_ by
-        falling back to SciPy on ARM.
+    @override
+    def count(self, what: str) -> int:
+        match what:
+            case "users":
+                return self._users.size
+            case "items":
+                return self._items.size
+            case "pairs" | "interactions" | "ratings":
+                return self._matrix.n_obs
+            case _:
+                raise KeyError(f"unknown entity type {what}")
 
-        .. _127491: https://github.com/pytorch/pytorch/issues/127491
-        """
-        assert matrix.is_sparse_csr
-        return torch.mv(matrix, vector)
+    @override
+    def interaction_matrix(
+        self,
+        format: str,
+        *,
+        layout: str | None = None,
+        legacy: bool = False,
+        field: str | None = None,
+        combine: str | None = None,
+        original_ids: bool = False,
+    ) -> Any:
+        match format:
+            case "structure":
+                if layout and layout != "csr":
+                    raise ValueError(f"unsupported layout {layout} for structure")
+                if field:
+                    raise ValueError("structure does not support fields")
+                return self._int_mat_structure()
+            case "pandas":
+                if layout and layout != "coo":
+                    raise ValueError(f"unsupported layout {layout} for Pandas")
+                return self._int_mat_pandas(field, original_ids)
+            case "scipy":
+                return self._int_mat_scipy(field, layout, legacy)
+            case "torch":
+                return self._int_mat_torch(field, layout)
+            case _:
+                raise ValueError(f"unsupported format “{format}”")
+
+    def _int_mat_structure(self) -> CSRStructure:
+        return CSRStructure(self._matrix.user_ptrs, self._matrix.item_nums, self._matrix.shape)
+
+    def _int_mat_pandas(self, field: str | None, original_ids: bool) -> pd.DataFrame:
+        cols: dict[str, ArrayLike]
+        if original_ids:
+            cols = {
+                "user_id": self.users.ids(self._matrix.user_nums),
+                "item_id": self.items.ids(self._matrix.item_nums),
+            }
+        else:
+            cols = {
+                "user_num": self._matrix.user_nums,
+                "item_num": self._matrix.item_nums,
+            }
+        if field == "all" or field == "rating":
+            if self._matrix.ratings is not None:
+                cols["rating"] = self._matrix.ratings
+            else:
+                cols["rating"] = np.ones(self._matrix.n_obs)
+        elif field == "all" or field == "timestamp":
+            if self._matrix.timestamps is None:
+                raise FieldError("interaction", field)
+            cols["timestamp"] = self._matrix.timestamps
+        elif field and field != "all":
+            raise FieldError("interaction", field)
+        return pd.DataFrame(cols)
+
+    def _int_mat_scipy(self, field: str | None, layout: str | None, legacy: bool):
+        if field == "rating" and self._matrix.ratings is not None:
+            data = self._matrix.ratings
+        elif field is None or field == "rating":
+            data = np.ones(self._matrix.n_obs, dtype="f4")
+        elif field == "timestamp" and self._matrix.timestamps is not None:
+            data = self._matrix.timestamps
+        else:  # pragma nocover
+            raise FieldError("interaction", field)
+
+        shape = self._matrix.shape
+
+        if layout is None:
+            layout = "csr"
+        match layout:
+            case "csr":
+                ctor = sps.csr_matrix if legacy else sps.csr_array
+                return ctor((data, self._matrix.item_nums, self._matrix.user_ptrs), shape=shape)
+            case "coo":
+                ctor = sps.coo_matrix if legacy else sps.coo_array
+                return ctor((data, (self._matrix.user_nums, self._matrix.item_nums)), shape=shape)
+            case _:  # pragma nocover
+                raise ValueError(f"unsupported layout {layout}")
+
+    def _int_mat_torch(self, field: str | None, layout: str | None):
+        if field == "rating" and self._matrix.ratings is not None:
+            values = torch.from_numpy(self._matrix.ratings)
+        elif field is None or field == "rating":
+            values = torch.full([self._matrix.n_obs], 1.0, dtype=torch.float32)
+        elif field == "timestamp" and self._matrix.timestamps is not None:
+            values = torch.from_numpy(self._matrix.timestamps)
+        else:  # pragma nocover
+            raise FieldError("interaction", field)
+
+        shape = self._matrix.shape
+
+        if layout is None:
+            layout = "csr"
+        match layout:
+            case "csr":
+                return torch.sparse_csr_tensor(
+                    torch.from_numpy(self._matrix.user_ptrs),
+                    torch.from_numpy(self._matrix.item_nums),
+                    values,
+                    size=shape,
+                )
+            case "coo":
+                indices = np.stack([self._matrix.user_nums, self._matrix.item_nums], dtype=np.int32)
+                return torch.sparse_coo_tensor(
+                    torch.from_numpy(indices),
+                    values,
+                    size=shape,
+                ).coalesce()
+            case _:  # pragma nocover
+                raise ValueError(f"unsupported layout {layout}")
+
+    @override
+    def interaction_log(
+        self,
+        format: str,
+        *,
+        fields: str | list[str] | None = "all",
+        original_ids: bool = False,
+    ) -> Any:
+        if fields == "all":
+            fields = ["rating", "timestamp"]
+        elif isinstance(fields, str):
+            fields = [fields]
+        elif fields is None:
+            fields = []
+
+        match format:
+            case "pandas":
+                return self._int_log_pandas(fields, original_ids)
+            case "numpy":
+                return self._int_log_numpy(fields)
+            case "torch":
+                return self._int_log_torch(fields)
+            case _:
+                raise ValueError(f"unsupported format “{format}”")
+
+    def _int_log_pandas(self, fields: list[str], original_ids: bool):
+        cols: dict[str, ArrayLike]
+        if original_ids:
+            cols = {
+                "user_id": self.users.terms(self._matrix.user_nums),
+                "item_id": self.items.terms(self._matrix.item_nums),
+            }
+        else:
+            cols = {
+                "user_num": self._matrix.user_nums,
+                "item_num": self._matrix.item_nums,
+            }
+        if "rating" in fields and self._matrix.ratings is not None:
+            cols["rating"] = self._matrix.ratings
+        if "timestamp" in fields and self._matrix.timestamps is not None:
+            cols["timestamp"] = self._matrix.timestamps
+        return pd.DataFrame(cols)
+
+    def _int_log_numpy(self, fields: list[str]) -> NumpyUserItemTable:
+        tbl = NumpyUserItemTable(self._matrix.user_nums, self._matrix.item_nums)
+        if "rating" in fields:
+            tbl.ratings = self._matrix.ratings
+        if "timestamp" in fields:
+            tbl.timestamps = self._matrix.timestamps
+        return tbl
+
+    def _int_log_torch(self, fields: list[str]) -> TorchUserItemTable:
+        tbl = TorchUserItemTable(
+            torch.from_numpy(self._matrix.user_nums), torch.from_numpy(self._matrix.item_nums)
+        )
+        if "rating" in fields:
+            tbl.ratings = torch.from_numpy(self._matrix.ratings)
+        if "timestamp" in fields:
+            tbl.timestamps = torch.from_numpy(self._matrix.timestamps)
+        return tbl
+
+    @override
+    def user_row(
+        self, user_id: EntityId | None = None, *, user_num: int | None = None
+    ) -> ItemList | None:
+        if user_num is None:
+            if user_id is None:  # pragma: nocover
+                raise ValueError("must provide one of user_id and user_num")
+
+            user_num = self.users.number(user_id, "none")
+            if user_num is None:
+                return None
+
+        elif user_id is not None:  # pragma: nocover
+            raise ValueError("must provide one of user_id and user_num")
+
+        sp = self._matrix.user_ptrs[user_num]
+        ep = self._matrix.user_ptrs[user_num + 1]
+        inums = self._matrix.item_nums[sp:ep]
+        fields = {}
+        if self._matrix.ratings is not None:
+            fields["rating"] = self._matrix.ratings[sp:ep]
+        if self._matrix.timestamps is not None:
+            fields["timestamp"] = self._matrix.timestamps[sp:ep]
+        return ItemList(item_nums=inums, vocabulary=self.items, **fields)

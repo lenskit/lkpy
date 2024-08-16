@@ -26,9 +26,10 @@ from lenskit.algorithms.basic import PopScore
 from lenskit.algorithms.ranking import PlackettLuce
 from lenskit.batch import recommend
 from lenskit.crossfold import simple_test_pair
-from lenskit.data.dataset import Dataset, LazyDataset, from_interactions_df
-from lenskit.data.matrix import torch_sparse_from_scipy
+from lenskit.data import Dataset, from_interactions_df
+from lenskit.data.lazy import LazyDataset
 from lenskit.data.movielens import load_movielens, load_movielens_df
+from lenskit.math.sparse import torch_sparse_from_scipy
 
 ml_test_dir = here("data/ml-latest-small")
 ml_100k_zip = here("data/ml-100k.zip")

@@ -13,8 +13,9 @@ import numpy as np
 import pandas as pd
 from seedbank import numpy_rng
 
-from lenskit.data.dataset import Dataset, MatrixDataset
-from lenskit.types import EntityId, RandomSeed
+from lenskit.data import Dataset, EntityId
+from lenskit.data.matrix import MatrixDataset
+from lenskit.types import RandomSeed
 
 from .holdout import HoldoutMethod
 from .split import TTSplit
@@ -162,9 +163,7 @@ def _make_split(
     test = {}
 
     for u in test_us:
-        profile = data.user_profile(u)
-        assert profile is not None
-        row = profile.item_list()
+        row = data.user_row(u)
         assert row is not None
         u_test = method(row)
         test[u] = u_test

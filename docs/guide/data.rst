@@ -125,12 +125,10 @@ their source files.
 Dataset Implementations
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. module:: lenskit.data.dataset
-
 :class:`Dataset` itself is an abstract class that can be extended to provide new
 data set implementations (e.g. querying a database).  LensKit provides a few
 implementations.
 
 .. autosummary::
-    dataset.MatrixDataset
-    dataset.LazyDataset
+    ~lenskit.data.matrix.MatrixDataset
+    ~lenskit.data.lazy.LazyDataset

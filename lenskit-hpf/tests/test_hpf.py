@@ -14,7 +14,7 @@ from pytest import importorskip, mark
 
 import lenskit.util.test as lktu
 from lenskit.algorithms import basic
-from lenskit.data.dataset import from_interactions_df
+from lenskit.data import from_interactions_df
 
 hpf = importorskip("lenskit.hpf")
 

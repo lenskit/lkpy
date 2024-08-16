@@ -19,7 +19,7 @@ from seedbank import numpy_rng
 from lenskit import util
 from lenskit.algorithms.bias import Bias
 from lenskit.algorithms.mf_common import MFPredictor
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset
 
 _logger = logging.getLogger(__name__)
 

@@ -18,7 +18,7 @@ from abc import ABCMeta, abstractmethod
 
 from typing_extensions import Self
 
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset
 
 __all__ = ["Algorithm", "Recommender", "Predictor", "CandidateSelector"]
 

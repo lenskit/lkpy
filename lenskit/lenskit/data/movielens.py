@@ -19,7 +19,8 @@ from zipfile import ZipFile
 import numpy as np
 import pandas as pd
 
-from lenskit.data.dataset import Dataset, from_interactions_df
+from .convert import from_interactions_df
+from .dataset import Dataset
 
 _log = logging.getLogger(__name__)
 

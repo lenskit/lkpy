@@ -13,7 +13,8 @@ import numpy as np
 import pandas as pd
 from seedbank import numpy_rng
 
-from lenskit.data.dataset import Dataset, MatrixDataset
+from lenskit.data import Dataset
+from lenskit.data.matrix import MatrixDataset
 from lenskit.types import RandomSeed
 
 from .split import TTSplit, dict_from_df

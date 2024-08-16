@@ -16,7 +16,7 @@ from scipy.sparse import csr_matrix
 from typing_extensions import override
 
 from lenskit.algorithms import Predictor, Recommender
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset
 from lenskit.data.vocab import Vocabulary
 
 _logger = logging.getLogger(__name__)

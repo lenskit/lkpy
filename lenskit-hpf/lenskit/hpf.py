@@ -10,7 +10,7 @@ import hpfrec
 from typing_extensions import override
 
 from lenskit.algorithms.mf_common import MFPredictor
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset
 
 _logger = logging.getLogger(__name__)
 

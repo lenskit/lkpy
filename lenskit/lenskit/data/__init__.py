@@ -6,26 +6,21 @@
 
 from __future__ import annotations
 
-from typing_extensions import Literal, TypeAlias
-
-from lenskit.types import EntityId, NPEntityId  # noqa: F401
-
-FeedbackType: TypeAlias = Literal["explicit", "implicit"]
-"Types of feedback supported."
-
-from .dataset import Dataset, from_interactions_df  # noqa: E402
-from .items import HasItemList, ItemList  # noqa: E402
-from .movielens import load_movielens, load_movielens_df  # noqa: E402
-from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray  # noqa: E402
-from .user import UserProfile  # noqa: E402
-from .vocab import Vocabulary  # noqa: E402
+from .convert import from_interactions_df
+from .dataset import Dataset, FieldError
+from .items import ItemList
+from .movielens import load_movielens, load_movielens_df
+from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray
+from .types import EntityId, FeedbackType, NPEntityId
+from .vocab import Vocabulary
 
 __all__ = [
     "Dataset",
+    "FieldError",
     "from_interactions_df",
     "EntityId",
     "NPEntityId",
-    "HasItemList",
+    "FeedbackType",
     "ItemList",
     "load_movielens",
     "load_movielens_df",
@@ -33,6 +28,5 @@ __all__ = [
     "MTFloatArray",
     "MTGenericArray",
     "MTIntArray",
-    "UserProfile",
     "Vocabulary",
 ]

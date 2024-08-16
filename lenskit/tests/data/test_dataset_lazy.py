@@ -13,8 +13,8 @@ import pandas as pd
 
 from pytest import approx
 
-from lenskit.data import Dataset
-from lenskit.data.dataset import LazyDataset, from_interactions_df
+from lenskit.data import Dataset, from_interactions_df
+from lenskit.data.lazy import LazyDataset
 from lenskit.data.tables import NumpyUserItemTable, TorchUserItemTable
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 

@@ -16,7 +16,7 @@ from typing import Callable, ClassVar, TypeAlias
 
 from typing_extensions import Any, Generic, Protocol, Self, TypeVar, override, runtime_checkable
 
-from lenskit.data.dataset import Dataset
+from lenskit.data import Dataset
 
 # COut is only return, so Component[U] can be assigned to Component[T] if U ≼ T.
 COut = TypeVar("COut", covariant=True)

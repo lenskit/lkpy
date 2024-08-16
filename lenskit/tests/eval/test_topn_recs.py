@@ -11,7 +11,7 @@ from pytest import approx
 
 import lenskit.util.test as lktu
 from lenskit.algorithms import basic, bias
-from lenskit.data.dataset import Dataset, from_interactions_df
+from lenskit.data import Dataset, from_interactions_df
 
 simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}

@@ -15,7 +15,7 @@ from pytest import approx, mark, raises
 
 from lenskit import util as lku
 from lenskit.algorithms.bias import Bias
-from lenskit.data.dataset import Dataset, from_interactions_df
+from lenskit.data import Dataset, from_interactions_df
 
 _log = logging.getLogger(__name__)
 

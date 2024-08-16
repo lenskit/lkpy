@@ -30,15 +30,6 @@ Item Data
 
     ~lenskit.data.ItemList
 
-User Data
----------
-
-.. autosummary::
-    :toctree: .
-    :nosignatures:
-    :caption: User Data
-
-    ~lenskit.data.UserProfile
 
 Identifiers
 -----------
