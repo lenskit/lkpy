@@ -17,7 +17,6 @@ from .dataset import Dataset, from_interactions_df  # noqa: E402
 from .items import ItemList  # noqa: E402
 from .movielens import load_movielens, load_movielens_df  # noqa: E402
 from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray  # noqa: E402
-from .user import UserProfile  # noqa: E402
 from .vocab import Vocabulary  # noqa: E402
 
 __all__ = [
@@ -32,6 +31,5 @@ __all__ = [
     "MTFloatArray",
     "MTGenericArray",
     "MTIntArray",
-    "UserProfile",
     "Vocabulary",
 ]
