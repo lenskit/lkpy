@@ -162,9 +162,7 @@ def _make_split(
     test = {}
 
     for u in test_us:
-        profile = data.user_profile(u)
-        assert profile is not None
-        row = profile.item_list()
+        row = data.user_row(u)
         assert row is not None
         u_test = method(row)
         test[u] = u_test

@@ -14,7 +14,7 @@ FeedbackType: TypeAlias = Literal["explicit", "implicit"]
 "Types of feedback supported."
 
 from .dataset import Dataset, from_interactions_df  # noqa: E402
-from .items import HasItemList, ItemList  # noqa: E402
+from .items import ItemList  # noqa: E402
 from .movielens import load_movielens, load_movielens_df  # noqa: E402
 from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray  # noqa: E402
 from .user import UserProfile  # noqa: E402
@@ -25,7 +25,6 @@ __all__ = [
     "from_interactions_df",
     "EntityId",
     "NPEntityId",
-    "HasItemList",
     "ItemList",
     "load_movielens",
     "load_movielens_df",

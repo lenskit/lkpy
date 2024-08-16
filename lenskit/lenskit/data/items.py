@@ -20,12 +20,9 @@ from typing_extensions import (
     Any,
     Literal,
     LiteralString,
-    Protocol,
-    Self,
     Sequence,
     TypeAlias,
     cast,
-    runtime_checkable,
 )
 
 from lenskit.types import EntityId, NPEntityId
@@ -386,10 +383,6 @@ class ItemList:
         cols.update((k, v.numpy()) for (k, v) in self._fields.items() if k != "score")
         return pd.DataFrame(cols)
 
-    def item_list(self) -> Self:
-        "Implement the :class:`HasItemList` protocol."
-        return self
-
     def __len__(self):
         return self._len
 
@@ -446,21 +439,3 @@ class ItemList:
 
     def __str__(self) -> str:
         return f"<ItemList of {self._len} items>"
-
-
-@runtime_checkable
-class HasItemList(Protocol):
-    """
-    Protocol for types that expose an :class:`ItemList` (including the
-    ``ItemList`` class itself).
-
-    The primary use of this class is to annotate component inputs, so that e.g.
-    a component that works on a user's history can take either a user history or
-    a raw ``ItemList``.
-    """
-
-    def item_list(self) -> ItemList | None:
-        """
-        Return the item list from this item, if available.
-        """
-        raise NotImplementedError()

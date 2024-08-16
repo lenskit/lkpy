@@ -37,7 +37,6 @@ from lenskit.types import EntityId
 from .items import ItemList
 from .matrix import CSRStructure, InteractionMatrix
 from .tables import NumpyUserItemTable, TorchUserItemTable
-from .user import UserProfile
 from .vocab import Vocabulary
 
 DF_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch"]
@@ -372,19 +371,29 @@ class Dataset(ABC):
 
     @abstractmethod
     @overload
-    def user_profile(self, user_id: EntityId) -> UserProfile | None: ...
+    def user_row(self, user_id: EntityId) -> ItemList | None: ...
     @abstractmethod
     @overload
-    def user_profile(self, *, user_num: int) -> UserProfile: ...
+    def user_row(self, *, user_num: int) -> ItemList: ...
     @abstractmethod
-    def user_profile(
+    def user_row(
         self, user_id: EntityId | None = None, *, user_num: int | None = None
-    ) -> UserProfile | None:
+    ) -> ItemList | None:
         """
         Get a user's row from the interaction matrix.  Available fields are
         returned as fields. If the dataset has ratings, these are provided as a
-        ``rating`` field, **not** as the item scores.  The item list is unordered,
-        but items are returned in order by item number.
+        ``rating`` field, **not** as the item scores.  The item list is
+        unordered, but items are returned in order by item number.
+
+        Args:
+            user_id:
+                The ID of the user to retrieve.
+            user_num:
+                The number of the user to retrieve.
+
+        Returns:
+            The user's interaction matrix row, or ``None`` if no user with that ID
+            exists.
         """
         raise NotImplementedError()
 
@@ -742,9 +751,9 @@ class MatrixDataset(Dataset):
         return tbl
 
     @override
-    def user_profile(
+    def user_row(
         self, user_id: EntityId | None = None, *, user_num: int | None = None
-    ) -> UserProfile | None:
+    ) -> ItemList | None:
         if user_num is None:
             if user_id is None:  # pragma: nocover
                 raise ValueError("must provide one of user_id and user_num")
@@ -764,9 +773,7 @@ class MatrixDataset(Dataset):
             fields["rating"] = self._matrix.ratings[sp:ep]
         if self._matrix.timestamps is not None:
             fields["timestamp"] = self._matrix.timestamps[sp:ep]
-        return UserProfile(
-            user_id, past_items=ItemList(item_nums=inums, vocabulary=self.items, **fields)
-        )
+        return ItemList(item_nums=inums, vocabulary=self.items, **fields)
 
 
 class LazyDataset(Dataset):
@@ -819,8 +826,8 @@ class LazyDataset(Dataset):
         return self.delegate().interaction_log(*args, **kwargs)
 
     @override
-    def user_profile(self, *args, **kwargs) -> UserProfile | None:
-        return self.delegate().user_profile(*args, **kwargs)
+    def user_row(self, *args, **kwargs) -> ItemList | None:
+        return self.delegate().user_row(*args, **kwargs)
 
 
 def from_interactions_df(

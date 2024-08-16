@@ -55,11 +55,9 @@ def test_crossfold_may_skip_train(ml_ratings: pd.DataFrame):
     for train, test in splits:
         for u in ucounts[ucounts == 1].index:
             if u in test:
-                row = train.user_profile(u)
+                row = train.user_row(u)
                 assert row is not None
-                items = row.item_list()
-                assert items is not None
-                assert len(items) == 0
+                assert len(row) == 0
 
 
 def test_crossfold_users_frac(ml_ds: Dataset):

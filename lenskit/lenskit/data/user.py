@@ -14,10 +14,10 @@ from typing_extensions import override
 
 from lenskit.types import EntityId
 
-from .items import HasItemList, ItemList
+from .items import ItemList
 
 
-class UserProfile(HasItemList):
+class UserProfile:
     """
     Class representing a user's “profile” — their ID, history, and any other
     data known about them.  Data sources are encouraged to add additional fields
