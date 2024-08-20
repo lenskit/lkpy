@@ -48,8 +48,8 @@ class Model:
 
 
 def _fresh_model(nfeatures, nusers, nitems, init=0.1):
-    umat = np.full([nusers, nfeatures], init, dtype=np.float_)
-    imat = np.full([nitems, nfeatures], init, dtype=np.float_)
+    umat = np.full([nusers, nfeatures], init, dtype=np.float32)
+    imat = np.full([nitems, nfeatures], init, dtype=np.float32)
     model = Model(umat, imat)
     model.initial_value = init
     assert model.feature_count == nfeatures
@@ -277,11 +277,11 @@ class FunkSVD(MFPredictor[np.ndarray]):
 
         users = np.array(rate_df["user_num"])
         items = np.array(rate_df["item_num"])
-        ratings = np.array(rate_df["rating"], dtype=np.float_)
+        ratings = np.array(rate_df["rating"], dtype=np.float32)
 
         _logger.debug("[%s] computing initial estimates", timer)
         if self.bias:
-            initial = np.full(len(users), self.bias.mean_, dtype=np.float_)
+            initial = np.full(len(users), self.bias.mean_, dtype=np.float32)
             if self.bias.item_offsets_ is not None:
                 initial += self.bias.item_offsets_.values[items]
             if self.bias.user_offsets_ is not None:

@@ -59,7 +59,7 @@ def test_implicit_als_batch_accuracy(ml_100k, n_jobs):
 
     def eval(train, test):
         _log.info("running training")
-        train["rating"] = train.rating.astype(np.float_)
+        train["rating"] = train.rating.astype(np.float32)
         algo = util.clone(algo_t)
         algo.fit(from_interactions_df(train))
         users = test.user.unique()
