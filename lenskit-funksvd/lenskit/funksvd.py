@@ -26,12 +26,12 @@ _logger = logging.getLogger(__name__)
 
 @jitclass(
     [
-        ("user_features", n.double[:, :]),
-        ("item_features", n.double[:, :]),
+        ("user_features", n.float64[:, :]),
+        ("item_features", n.float64[:, :]),
         ("feature_count", n.int32),
         ("user_count", n.int32),
         ("item_count", n.int32),
-        ("initial_value", n.double),
+        ("initial_value", n.float64),
     ]
 )  # type: ignore
 class Model:
@@ -48,8 +48,8 @@ class Model:
 
 
 def _fresh_model(nfeatures, nusers, nitems, init=0.1):
-    umat = np.full([nusers, nfeatures], init, dtype=np.float32)
-    imat = np.full([nitems, nfeatures], init, dtype=np.float32)
+    umat = np.full([nusers, nfeatures], init, dtype=np.float64)
+    imat = np.full([nitems, nfeatures], init, dtype=np.float64)
     model = Model(umat, imat)
     model.initial_value = init
     assert model.feature_count == nfeatures
@@ -61,10 +61,10 @@ def _fresh_model(nfeatures, nusers, nitems, init=0.1):
 @jitclass(
     [
         ("iter_count", n.int32),
-        ("lrate", n.double),
-        ("reg_term", n.double),
-        ("rmin", n.double),
-        ("rmax", n.double),
+        ("lrate", n.float64),
+        ("reg_term", n.float64),
+        ("rmin", n.float64),
+        ("rmax", n.float64),
     ]
 )  # type: ignore
 class _Params:
@@ -86,7 +86,7 @@ def make_params(niters, lrate, reg, range):
     return _Params(niters, lrate, reg, rmin, rmax)
 
 
-@jitclass([("est", n.double[:]), ("feature", n.int32), ("trail", n.double)])  # type: ignore
+@jitclass([("est", n.float64[:]), ("feature", n.int32), ("trail", n.float64)])  # type: ignore
 class _FeatContext:
     def __init__(self, est, feature, trail):
         self.est = est
@@ -98,8 +98,8 @@ class _FeatContext:
     [
         ("users", n.int32[:]),
         ("items", n.int32[:]),
-        ("ratings", n.double[:]),
-        ("bias", n.double[:]),
+        ("ratings", n.float64[:]),
+        ("bias", n.float64[:]),
         ("n_samples", n.uint64),
     ]
 )  # type: ignore
