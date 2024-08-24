@@ -277,11 +277,11 @@ class FunkSVD(MFPredictor[np.ndarray]):
 
         users = np.array(rate_df["user_num"])
         items = np.array(rate_df["item_num"])
-        ratings = np.array(rate_df["rating"], dtype=np.float32)
+        ratings = np.array(rate_df["rating"], dtype=np.float64)
 
         _logger.debug("[%s] computing initial estimates", timer)
         if self.bias:
-            initial = np.full(len(users), self.bias.mean_, dtype=np.float32)
+            initial = np.full(len(users), self.bias.mean_, dtype=np.float64)
             if self.bias.item_offsets_ is not None:
                 initial += self.bias.item_offsets_.values[items]
             if self.bias.user_offsets_ is not None:
