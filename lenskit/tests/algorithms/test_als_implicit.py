@@ -304,7 +304,7 @@ def test_als_implicit_batch_accuracy(ml_100k):
     ratings = load_movielens_df(lktu.ml_100k_zip)
 
     def eval(train, test):
-        train = train.astype({"rating": np.float_})
+        train = train.astype({"rating": np.float32})
         _log.info("training implicit MF")
         ials_algo = als.ImplicitMF(25, epochs=20)
         ials_algo = Recommender.adapt(ials_algo)
