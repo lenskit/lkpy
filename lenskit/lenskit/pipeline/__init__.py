@@ -20,36 +20,29 @@ from typing_extensions import Any, Literal, Self, TypeAlias, TypeVar, cast, over
 
 from lenskit.data import Dataset
 
-from .components import (
-    AutoConfig,  # noqa: F401 # type: ignore
+from . import config
+from .components import (  # type: ignore # noqa: F401
     Component,
     ConfigurableComponent,
+    PipelineComponent,
     TrainableComponent,
     instantiate_component,
 )
-from .config import (
-    PipelineComponent,
-    PipelineConfig,
-    PipelineInput,
-    PipelineLiteral,
-    PipelineMeta,
-    hash_config,
-)
+from .config import PipelineConfig
 from .nodes import ND, ComponentNode, FallbackNode, InputNode, LiteralNode, Node
 from .state import PipelineState
 from .types import parse_type_string
 
 __all__ = [
-    "AutoConfig",
     "Pipeline",
     "PipelineError",
     "PipelineWarning",
     "Node",
     "topn_pipeline",
-    "Component",
+    "PipelineComponent",
     "ConfigurableComponent",
-    "TrainableComponent",
     "PipelineConfig",
+    "Component",
 ]
 
 _log = logging.getLogger(__name__)
@@ -115,7 +108,7 @@ class Pipeline:
     _nodes: dict[str, Node[Any]]
     _aliases: dict[str, Node[Any]]
     _defaults: dict[str, Node[Any]]
-    _components: dict[str, Component[Any]]
+    _components: dict[str, PipelineComponent[Any]]
     _hash: str | None = None
     _last: Node[Any] | None = None
     _anon_nodes: set[str]
@@ -131,7 +124,7 @@ class Pipeline:
         self._anon_nodes = set()
         self._clear_caches()
 
-    def meta(self, *, include_hash: bool = True) -> PipelineMeta:
+    def meta(self, *, include_hash: bool = True) -> config.PipelineMeta:
         """
         Get the metadata (name, version, hash, etc.) for this pipeline without
         returning the whole config.
@@ -140,7 +133,7 @@ class Pipeline:
             include_hash:
                 Whether to include a configuration hash in the metadata.
         """
-        meta = PipelineMeta(name=self.name, version=self.version)
+        meta = config.PipelineMeta(name=self.name, version=self.version)
         if include_hash:
             meta.hash = self.config_hash()
         return meta
@@ -280,7 +273,7 @@ class Pipeline:
         self._clear_caches()
 
     def add_component(
-        self, name: str, obj: Component[ND], **inputs: Node[Any] | object
+        self, name: str, obj: PipelineComponent[ND], **inputs: Node[Any] | object
     ) -> Node[ND]:
         """
         Add a component and connect it into the graph.
@@ -313,7 +306,7 @@ class Pipeline:
     def replace_component(
         self,
         name: str | Node[ND],
-        obj: Component[ND],
+        obj: PipelineComponent[ND],
         **inputs: Node[Any] | object,
     ) -> Node[ND]:
         """
@@ -373,7 +366,6 @@ class Pipeline:
             such an operation.
 
         .. note::
-
             If one of the fallback elements is a component ``A`` that depends on
             another component or input ``B``, and ``B`` is missing or returns
             ``None`` such that ``A`` would usually fail, then ``A`` will be
@@ -515,7 +507,7 @@ class Pipeline:
             are present in the pipeline.
         """
         meta = self.meta(include_hash=False)
-        config = PipelineConfig(meta=meta)
+        cfg = PipelineConfig(meta=meta)
 
         # We map anonymous nodes to hash-based names for stability.  If we ever
         # allow anonymous components, this will need to be adjusted to maintain
@@ -529,11 +521,11 @@ class Pipeline:
                     # skip nodes that no longer exist
                     continue
                 case LiteralNode(name, value):
-                    cfg = PipelineLiteral.represent(value)
-                    sname = str(uuid5(NAMESPACE_LITERAL_DATA, cfg.model_dump_json()))
+                    lit = config.PipelineLiteral.represent(value)
+                    sname = str(uuid5(NAMESPACE_LITERAL_DATA, lit.model_dump_json()))
                     _log.debug("renamed anonymous node %s to %s", name, sname)
                     remapped[name] = sname
-                    config.literals[sname] = cfg
+                    cfg.literals[sname] = lit
                 case _:
                     # the pipeline only generates anonymous literal nodes right now
                     raise RuntimeError(f"unexpected anonymous node {node}")
@@ -545,26 +537,26 @@ class Pipeline:
 
             match node:
                 case InputNode():
-                    config.inputs.append(PipelineInput.from_node(node))
+                    cfg.inputs.append(config.PipelineInput.from_node(node))
                 case LiteralNode(name, value):
-                    config.literals[name] = PipelineLiteral.represent(value)
+                    cfg.literals[name] = config.PipelineLiteral.represent(value)
                 case ComponentNode(name):
-                    config.components[name] = PipelineComponent.from_node(node, remapped)
+                    cfg.components[name] = config.PipelineComponent.from_node(node, remapped)
                 case FallbackNode(name, alternatives):
-                    config.components[name] = PipelineComponent(
+                    cfg.components[name] = config.PipelineComponent(
                         code="@use-first-of",
                         inputs=[remapped.get(n.name, n.name) for n in alternatives],
                     )
                 case _:  # pragma: nocover
                     raise RuntimeError(f"invalid node {node}")
 
-        config.aliases = {a: t.name for (a, t) in self._aliases.items()}
-        config.defaults = {n: t.name for (n, t) in self._defaults.items()}
+        cfg.aliases = {a: t.name for (a, t) in self._aliases.items()}
+        cfg.defaults = {n: t.name for (n, t) in self._defaults.items()}
 
         if include_hash:
-            config.meta.hash = hash_config(config)
+            cfg.meta.hash = config.hash_config(cfg)
 
-        return config
+        return cfg
 
     def config_hash(self) -> str:
         """
@@ -585,7 +577,7 @@ class Pipeline:
         if self._hash is None:
             # get the config *without* a hash
             cfg = self.get_config(include_hash=False)
-            self._hash = hash_config(cfg)
+            self._hash = config.hash_config(cfg)
         return self._hash
 
     @classmethod
@@ -607,7 +599,7 @@ class Pipeline:
             pipe.literal(data.decode(), name=name)
 
         # pass 2: add components
-        to_wire: list[PipelineComponent] = []
+        to_wire: list[config.PipelineComponent] = []
         for name, comp in cfg.components.items():
             if comp.code.startswith("@"):
                 # ignore special nodes in first pass

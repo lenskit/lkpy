@@ -3,12 +3,11 @@
 # Copyright (C) 2023-2024 Drexel University
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
-
+# pyright: basic
 import json
 
 from lenskit.pipeline import Pipeline
 from lenskit.pipeline.components import AutoConfig
-from lenskit.pipeline.nodes import ComponentNode
 
 
 class Prefixer(AutoConfig):

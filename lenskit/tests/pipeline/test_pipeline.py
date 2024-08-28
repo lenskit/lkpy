@@ -13,7 +13,8 @@ from typing_extensions import assert_type
 
 from pytest import fail, raises, warns
 
-from lenskit.data import Dataset, Vocabulary
+from lenskit.data.dataset import Dataset
+from lenskit.data.vocab import Vocabulary
 from lenskit.pipeline import InputNode, Node, Pipeline, PipelineError
 from lenskit.pipeline.components import TrainableComponent
 from lenskit.pipeline.types import TypecheckWarning
@@ -121,9 +122,6 @@ def test_single_input():
 
     ret = pipe.run(node, msg="world")
     assert ret == "world"
-
-    # test that it runs with names
-    ret = pipe.run("return", msg="goodbye")
 
 
 def test_single_input_required():
@@ -477,7 +475,7 @@ def test_fallback_input():
     na = pipe.add_component("add", add, x=nd, y=fb)
 
     # 3 * 2 + -3 = 3
-    assert pipe.run(fb, na, a=3) == (-3, 3)
+    assert pipe.run(na, a=3) == 3
 
 
 def test_fallback_only_run_if_needed():

@@ -11,7 +11,7 @@ from inspect import Signature, signature
 
 from typing_extensions import Generic, TypeVar
 
-from .components import Component
+from .components import PipelineComponent
 from .types import TypecheckWarning
 
 # Nodes are (conceptually) immutable data containers, so Node[U] can be assigned
@@ -73,7 +73,7 @@ class LiteralNode(Node[ND], Generic[ND]):
 class ComponentNode(Node[ND], Generic[ND]):
     __match_args__ = ("name", "component", "inputs", "connections")
 
-    component: Component[ND]
+    component: PipelineComponent[ND]
     "The component associated with this node"
 
     inputs: dict[str, type | None]
@@ -82,7 +82,7 @@ class ComponentNode(Node[ND], Generic[ND]):
     connections: dict[str, str]
     "The component's input connections."
 
-    def __init__(self, name: str, component: Component[ND]):
+    def __init__(self, name: str, component: PipelineComponent[ND]):
         super().__init__(name)
         self.component = component
         self.connections = {}
