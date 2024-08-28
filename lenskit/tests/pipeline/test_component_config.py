@@ -3,7 +3,7 @@
 # Copyright (C) 2023-2024 Drexel University
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
-# pyright: basic
+
 import json
 
 from lenskit.pipeline import Pipeline
