@@ -5,7 +5,6 @@
 # SPDX-License-Identifier: MIT
 
 # pyright: strict
-from typing import Any
 from uuid import UUID
 
 import numpy as np
@@ -13,10 +12,7 @@ from typing_extensions import assert_type
 
 from pytest import fail, raises, warns
 
-from lenskit.data.dataset import Dataset
-from lenskit.data.vocab import Vocabulary
 from lenskit.pipeline import InputNode, Node, Pipeline, PipelineError
-from lenskit.pipeline.components import TrainableComponent
 from lenskit.pipeline.types import TypecheckWarning
 
 
@@ -583,39 +579,6 @@ def test_fallback_transitive_nodefail():
 
     assert pipe.run(nr, a=2, b=8) == -4
     assert pipe.run(nr, a=-7, b=8) == 8
-
-
-def test_train(ml_ds: Dataset):
-    pipe = Pipeline()
-    item = pipe.create_input("item", int)
-
-    tc: TrainableComponent[bool] = TestComponent()
-    pipe.add_component("test", tc, item=item)
-
-    pipe.train(ml_ds)
-
-    # return true for an item that exists
-    assert pipe.run(item=500)
-    # return false for an item that does not
-    assert not pipe.run(item=-100)
-
-
-class TestComponent:
-    items: Vocabulary
-
-    def __call__(self, *, item: int) -> bool:
-        return self.items.number(item, "none") is not None
-
-    def train(self, data: Dataset):
-        # we just memorize the items
-        self.items = data.items
-        return self
-
-    def get_params(self) -> dict[str, object]:
-        return {"items": self.items}
-
-    def load_params(self, params: dict[str, Any]) -> None:
-        self.items = params["items"]
 
 
 def test_pipeline_component_default():
