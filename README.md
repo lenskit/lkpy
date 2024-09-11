@@ -80,7 +80,7 @@ You can also use a standard virtual environment and vanilla Python to develop Le
 To do this, the easiest way is to use [uv][]:
 
     uv venv -p python3.11
-    uv pip install -r full-dev-requirements.txt
+    uv pip install -r requirements-full-dev.txt
 
 You can also use traditional Pip:
 

@@ -1,6 +1,6 @@
 # This requirements file sets up a *full* dev environment, including
 # editable copies of LensKit and all subpackages.
--r dev-requirements.txt
+-r requirements-dev.txt
 -e ./lenskit
 -e ./lenskit-funksvd
 -e ./lenskit-implicit
