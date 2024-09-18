@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 # workaround for annoying coverage.py bug with path handling
+import os
 import sqlite3
 
 if __name__ == "__main__":
@@ -14,3 +15,5 @@ if __name__ == "__main__":
         con.commit()
     finally:
         con.close()
+
+    os.rename(".coverage", "coverage.db")

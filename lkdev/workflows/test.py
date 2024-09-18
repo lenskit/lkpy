@@ -269,7 +269,7 @@ def steps_coverage(options: JobOptions) -> list[GHStep]:
                 "name": options.test_artifact_name,
                 "path": script("""
                     test*.log
-                    .coverage
+                    coverage.db
                     coverage.xml
                 """),
             },
@@ -486,7 +486,7 @@ def jobs_result(deps: list[str]) -> GHJob:
             {
                 "name": "⛙ Merge and report",
                 "run": script("""
-                    coverage combine test-logs/*/.coverage
+                    coverage combine --keep test-logs/*/coverage.db
                     coverage xml
                     coverage html -d lenskit-coverage
                     coverage report --format=markdown >coverage.md
