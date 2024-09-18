@@ -480,7 +480,7 @@ def jobs_result(deps: list[str]) -> GHJob:
             },
             {
                 "name": "📋 List log files",
-                "run": "ls -lR test-logs",
+                "run": "ls -laR test-logs",
             },
             # inspired by https://hynek.me/articles/ditch-codecov-python/
             {

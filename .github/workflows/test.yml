@@ -673,7 +673,7 @@ jobs:
           pattern: test-*
           path: test-logs
       - name: 📋 List log files
-        run: ls -lR test-logs
+        run: ls -laR test-logs
       - name: ⛙ Merge and report
         run: |
           coverage combine test-logs/*/.coverage
