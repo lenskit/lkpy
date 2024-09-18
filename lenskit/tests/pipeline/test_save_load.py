@@ -13,7 +13,7 @@ from typing_extensions import assert_type
 from pytest import fail, warns
 
 from lenskit.pipeline import InputNode, Node, Pipeline, PipelineWarning
-from lenskit.pipeline.components import AutoConfig
+from lenskit.pipeline.components import Component
 from lenskit.pipeline.config import PipelineConfig
 from lenskit.pipeline.nodes import ComponentNode
 
@@ -21,7 +21,7 @@ _log = logging.getLogger(__name__)
 
 
 # region Test Components
-class Prefixer(AutoConfig):
+class Prefixer(Component):
     prefix: str
 
     def __init__(self, prefix: str = "hello"):

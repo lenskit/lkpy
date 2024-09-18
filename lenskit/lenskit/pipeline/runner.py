@@ -13,7 +13,7 @@ import logging
 from typing import Any, Literal, TypeAlias
 
 from . import Pipeline, PipelineError
-from .components import PipelineComponent
+from .components import PipelineFunction
 from .nodes import ComponentNode, FallbackNode, InputNode, LiteralNode, Node
 from .types import is_compatible_data
 
@@ -96,7 +96,7 @@ class PipelineRunner:
     def _run_component(
         self,
         name: str,
-        comp: PipelineComponent[Any],
+        comp: PipelineFunction[Any],
         inputs: dict[str, type | None],
         wiring: dict[str, str],
         required: bool,

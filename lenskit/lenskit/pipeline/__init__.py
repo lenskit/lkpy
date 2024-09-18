@@ -23,9 +23,9 @@ from lenskit.data import Dataset
 from . import config
 from .components import (  # type: ignore # noqa: F401
     Component,
-    ConfigurableComponent,
-    PipelineComponent,
-    TrainableComponent,
+    Configurable,
+    PipelineFunction,
+    Trainable,
     instantiate_component,
 )
 from .config import PipelineConfig
@@ -38,11 +38,11 @@ __all__ = [
     "PipelineError",
     "PipelineWarning",
     "Node",
-    "topn_pipeline",
-    "PipelineComponent",
-    "ConfigurableComponent",
+    "PipelineFunction",
+    "Configurable",
     "PipelineConfig",
     "Component",
+    "topn_pipeline",
 ]
 
 _log = logging.getLogger(__name__)
@@ -108,7 +108,7 @@ class Pipeline:
     _nodes: dict[str, Node[Any]]
     _aliases: dict[str, Node[Any]]
     _defaults: dict[str, Node[Any]]
-    _components: dict[str, PipelineComponent[Any]]
+    _components: dict[str, PipelineFunction[Any]]
     _hash: str | None = None
     _last: Node[Any] | None = None
     _anon_nodes: set[str]
@@ -273,7 +273,7 @@ class Pipeline:
         self._clear_caches()
 
     def add_component(
-        self, name: str, obj: PipelineComponent[ND], **inputs: Node[Any] | object
+        self, name: str, obj: Component[ND] | PipelineFunction[ND], **inputs: Node[Any] | object
     ) -> Node[ND]:
         """
         Add a component and connect it into the graph.
@@ -306,7 +306,7 @@ class Pipeline:
     def replace_component(
         self,
         name: str | Node[ND],
-        obj: PipelineComponent[ND],
+        obj: Component[ND] | PipelineFunction[ND],
         **inputs: Node[Any] | object,
     ) -> Node[ND]:
         """
@@ -340,21 +340,23 @@ class Pipeline:
 
         .. code:: python
 
-            pipe = Pipeline() # allow candidate items to be optionally specified
-            items = pipe.create_input('items', list[EntityId], None) # find
-            candidates from the training data (optional) lookup_candidates =
-            pipe.add_component(
-                'select-candidates', UnratedTrainingItemsCandidateSelector(),
+            pipe = Pipeline()
+            # allow candidate items to be optionally specified
+            items = pipe.create_input('items', list[EntityId], None)
+            # find candidates from the training data (optional)
+            lookup_candidates = pipe.add_component(
+                'select-candidates',
+                UnratedTrainingItemsCandidateSelector(),
                 user=history,
-            ) # if the client provided items as a pipeline input, use those;
-            otherwise # use the candidate selector we just configured.
-            candidates = pipe.use_first_of('candidates', items,
-            lookup_candidates)
+            )
+            # if the client provided items as a pipeline input, use those; otherwise
+            # use the candidate selector we just configured.
+            candidates = pipe.use_first_of('candidates', items, lookup_candidates)
 
         .. note::
 
-            This method does not distinguish between an input being unspecified
-            and explicitly specified as ``None``.
+            This method does not distinguish between an input being unspecified and
+            explicitly specified as ``None``.
 
         .. note::
 
@@ -423,7 +425,7 @@ class Pipeline:
         return {
             name: comp.get_config()
             for (name, comp) in self._components.items()
-            if isinstance(comp, ConfigurableComponent)
+            if isinstance(comp, Configurable)
         }
 
     def clone(self, how: CloneMethod = "config") -> Pipeline:
@@ -471,7 +473,7 @@ class Pipeline:
                 case ComponentNode(name, comp, _inputs, wiring):
                     if isinstance(comp, FunctionType):
                         comp = comp
-                    elif isinstance(comp, ConfigurableComponent):
+                    elif isinstance(comp, Configurable):
                         comp = comp.__class__.from_config(comp.get_config())  # type: ignore
                     else:
                         comp = comp.__class__()  # type: ignore
@@ -649,8 +651,8 @@ class Pipeline:
         """
         for comp in self._components.values():
             _log.debug("testing whether to train %s", comp)
-            if isinstance(comp, TrainableComponent):
-                comp = cast(TrainableComponent[Any], comp)
+            if isinstance(comp, Trainable):
+                comp = cast(Trainable[Any], comp)
                 _log.info("training %s", comp)
                 comp.train(data)
 

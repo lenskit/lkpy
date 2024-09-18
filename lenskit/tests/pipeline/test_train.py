@@ -1,16 +1,22 @@
+# This file is part of LensKit.
+# Copyright (C) 2018-2023 Boise State University
+# Copyright (C) 2023-2024 Drexel University
+# Licensed under the MIT license, see LICENSE.md for details.
+# SPDX-License-Identifier: MIT
+
 from typing import Any
 
 from lenskit.data.dataset import Dataset
 from lenskit.data.vocab import Vocabulary
 from lenskit.pipeline import Pipeline
-from lenskit.pipeline.components import TrainableComponent
+from lenskit.pipeline.components import Trainable
 
 
 def test_train(ml_ds: Dataset):
     pipe = Pipeline()
     item = pipe.create_input("item", int)
 
-    tc: TrainableComponent[bool] = TestComponent()
+    tc: Trainable[bool] = TestComponent()
     pipe.add_component("test", tc, item=item)
 
     pipe.train(ml_ds)

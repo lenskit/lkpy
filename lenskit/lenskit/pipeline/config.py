@@ -21,7 +21,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, JsonValue, ValidationError
 from typing_extensions import Any, Optional, Self
 
-from .components import ConfigurableComponent
+from .components import Configurable
 from .nodes import ComponentNode, InputNode
 from .types import type_string
 
@@ -115,7 +115,7 @@ class PipelineComponent(BaseModel):
 
         code = f"{ctype.__module__}:{ctype.__qualname__}"
 
-        config = comp.get_config() if isinstance(comp, ConfigurableComponent) else None
+        config = comp.get_config() if isinstance(comp, Configurable) else None
 
         return cls(
             code=code,
