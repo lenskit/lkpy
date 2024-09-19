@@ -12,6 +12,7 @@ from ..ghactions import GHJob, GHStep, script
 from ._common import PACKAGES, step_checkout
 
 CODECOV_TOKEN = "5cdb6ef4-e80b-44ce-b88d-1402e4dfb781"
+PIXI_VERSION = "v0.30.0"
 META_PYTHON = "3.11"
 PYTHONS = ["3.10", "3.11", "3.12"]
 PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
@@ -27,9 +28,9 @@ FILTER_PATHS = [
 
 
 def workflow():
-    jobs = {}
+    jobs = {"lock-dependencies": job_dependencies()}
     jobs.update(jobs_test_matrix())
-    jobs["results"] = jobs_result(list(jobs.keys()))
+    jobs["results"] = job_result(list(jobs.keys()))
     return {
         "name": "Automatic Tests",
         "on": {
@@ -112,43 +113,27 @@ def job_strategy(options: JobOptions) -> dict[str, Any]:
 
 
 def steps_setup_conda(options: JobOptions) -> list[GHStep]:
-    ctool = ["python -m lkdev.conda", "-o", "ci-environment.yml", "-p", options.python_version]
+    env = "py" + options.python_version.replace(".", "")
     if options.extras:
-        for e in options.extras:
-            ctool += ["-e", e]
-    else:
-        ctool += ["-e", "all"]
-    ctool += options.req_files + [f"{pkg}/pyproject.toml" for pkg in options.required_packages]
-    conda_prep = " ".join(ctool)
-
-    pip = ["pip", "install", "--no-deps"]
-    pip += [f"-e {pkg}" for pkg in options.required_packages]
+        env += "-full"
+    env += "-test"
 
     return [
         {
-            "name": "🐍 Setup bootstrap Python",
-            "uses": "actions/setup-python@v5",
-            "with": {"python-version": META_PYTHON},
-        },
-        {
-            "name": "👢 Generate Conda environment file",
-            "run": script(f"""
-                pip install -e .
-                {conda_prep}
-            """),
-        },
-        {
-            "id": "setup",
-            "name": "📦 Set up Conda environment",
-            "uses": "mamba-org/setup-micromamba@v1",
+            "name": "📤 Download dependency lockfile",
+            "uses": "actions/download-artifact@v4",
             "with": {
-                "environment-file": "ci-environment.yml",
-                "environment-name": "lkpy",
-                "cache-environment": True,
-                "init-shell": "bash",
+                "name": "pixi-lock",
             },
         },
-        {"name": "🍱 Install LensKit packages", "run": script.command(pip)},
+        {
+            "uses": "prefix-dev/setup-pixi@v0.8.1",
+            "with": {
+                "pixi-version": PIXI_VERSION,
+                "activate-environment": True,
+                "environments": env,
+            },
+        },
     ]
 
 
@@ -298,11 +283,7 @@ def test_job(options: JobOptions) -> GHJob:
         "timeout-minutes": 30,
     }
     if options.env == "conda":
-        job["defaults"] = {
-            "run": {
-                "shell": "bash -el {0}",
-            },
-        }
+        job["needs"] = ["lock-dependencies"]
 
     job.update(job_strategy(options))  # type: ignore
     job["steps"] = test_job_steps(options)
@@ -362,6 +343,29 @@ def test_doc_job() -> GHJob:
             },
         ]
         + steps_coverage(opts),
+    }
+
+
+def job_dependencies() -> GHJob:
+    return {
+        "name": "Resolve dependency lock",
+        "runs-on": "ubuntu-latest",
+        "steps": [
+            step_checkout(),
+            {
+                "uses": "prefix-dev/setup-pixi@v0.8.1",
+                "with": {"pixi-version": PIXI_VERSION, "run-install": False},
+            },
+            {"name": "Lock dependencies", "run": script("pixi update")},
+            {
+                "name": "📤 Upload dependency lockfile",
+                "uses": "actions/upload-artifact@v4",
+                "with": {
+                    "name": "pixi-lock",
+                    "path": "pixi.lock",
+                },
+            },
+        ],
     }
 
 
@@ -446,7 +450,7 @@ def jobs_test_matrix() -> dict[str, GHJob]:
     }
 
 
-def jobs_result(deps: list[str]) -> GHJob:
+def job_result(deps: list[str]) -> GHJob:
     return {
         "name": "Test suite results",
         "runs-on": "ubuntu-latest",
