@@ -106,7 +106,7 @@ coverage = ">=5"
 
 [environments]
 doc = { features = ["py312", "doc"] }
-demo = { features = ["py310", "demo"] }
+demo = { features = ["py310", "demo", "test"] }
 report = { features = ["reporting"], no-default-feature = true }
 core-dev = { features = ["dev", "doc", "test", "demo"] }
 full-dev = { features = [

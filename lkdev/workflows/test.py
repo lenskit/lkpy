@@ -57,6 +57,7 @@ class JobOptions:
     pip_args: Optional[list[str]] = None
     dep_strategy: Literal["default", "minimum"] = "default"
     req_files: list[str] = field(default_factory=lambda: ["requirements-test.txt"])
+    pixi_env: str | None = None
     test_args: Optional[list[str]] = None
     test_env: Optional[dict[str, str | int]] = None
     packages: list[str] = field(default_factory=lambda: ["lenskit"])
@@ -113,10 +114,12 @@ def job_strategy(options: JobOptions) -> dict[str, Any]:
 
 
 def steps_setup_conda(options: JobOptions) -> list[GHStep]:
-    env = options.python_version
-    if not options.extras and options.packages == ["lenskit"]:
-        env = env + "-core"
-    env = env + "-test"
+    env = options.pixi_env
+    if not env:
+        env = options.python_version
+        if not options.extras and options.packages == ["lenskit"]:
+            env = env + "-core"
+        env = env + "-test"
 
     return [
         {
@@ -324,7 +327,7 @@ def test_doc_job() -> GHJob:
         "examples",
         "Demos, examples, and docs",
         env="conda",
-        req_files=["requirements-test.txt", "requirements-demo.txt"],
+        pixi_env="demo",
         packages=PACKAGES,
         python="py310",
     )
