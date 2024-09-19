@@ -297,7 +297,7 @@ def test_eval_job() -> GHJob:
         env="conda",
         req_files=["requirements-test.txt"],
         packages=PACKAGES,
-        python="py311",
+        python="py310",
     )
     cov = " ".join([f"--cov={pkg}/lenskit" for pkg in PACKAGES])
     return {
@@ -326,6 +326,7 @@ def test_doc_job() -> GHJob:
         env="conda",
         req_files=["requirements-test.txt", "requirements-demo.txt"],
         packages=PACKAGES,
+        python="py310",
     )
     cov = " ".join([f"--cov={pkg}/lenskit" for pkg in PACKAGES])
     return {
