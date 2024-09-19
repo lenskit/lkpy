@@ -256,9 +256,10 @@ def steps_coverage(options: JobOptions) -> list[GHStep]:
         {
             "name": "📐 Coverage results",
             "run": script("""
-                python utils/fix-coverage-paths.py
+                sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
                 coverage xml
                 coverage report
+                cp .coverage coverage.db
             """),
         },
         {
@@ -269,7 +270,7 @@ def steps_coverage(options: JobOptions) -> list[GHStep]:
                 "name": options.test_artifact_name,
                 "path": script("""
                     test*.log
-                    .coverage
+                    coverage.db
                     coverage.xml
                 """),
             },
@@ -480,13 +481,13 @@ def jobs_result(deps: list[str]) -> GHJob:
             },
             {
                 "name": "📋 List log files",
-                "run": "ls -lR test-logs",
+                "run": "ls -laR test-logs",
             },
             # inspired by https://hynek.me/articles/ditch-codecov-python/
             {
                 "name": "⛙ Merge and report",
                 "run": script("""
-                    coverage combine test-logs/*/.coverage
+                    coverage combine --keep test-logs/*/coverage.db
                     coverage xml
                     coverage html -d lenskit-coverage
                     coverage report --format=markdown >coverage.md

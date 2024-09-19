@@ -7,11 +7,10 @@
 import json
 
 from lenskit.pipeline import Pipeline
-from lenskit.pipeline.components import AutoConfig
-from lenskit.pipeline.nodes import ComponentNode
+from lenskit.pipeline.components import Component
 
 
-class Prefixer(AutoConfig):
+class Prefixer(Component):
     prefix: str
 
     def __init__(self, prefix: str = "hello"):

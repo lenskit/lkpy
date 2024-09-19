@@ -4,13 +4,11 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import pandas as pd
-
 from . import Pipeline
 from .components import Component
 
 
-def topn_pipeline(scorer: Component[pd.Series], *, predicts_ratings: bool = False) -> Pipeline:
+def topn_pipeline(scorer: Component, *, predicts_ratings: bool = False) -> Pipeline:
     """
     Create a pipeline that produces top-N recommendations using the specified
     scorer.  The scorer should have the following call signature::

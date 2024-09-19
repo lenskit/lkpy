@@ -72,9 +72,10 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
       - name: 📐 Coverage results
         run: |
-          python utils/fix-coverage-paths.py
+          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
+          cp .coverage coverage.db
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -82,7 +83,7 @@ jobs:
           name: test-conda-${{matrix.platform}}-py${{matrix.python}}
           path: |
             test*.log
-            .coverage
+            coverage.db
             coverage.xml
   vanilla:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
@@ -132,9 +133,10 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
       - name: 📐 Coverage results
         run: |
-          python utils/fix-coverage-paths.py
+          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
+          cp .coverage coverage.db
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -142,7 +144,7 @@ jobs:
           name: test-vanilla-${{matrix.platform}}-py${{matrix.python}}
           path: |
             test*.log
-            .coverage
+            coverage.db
             coverage.xml
   nojit:
     name: Non-JIT test coverage
@@ -185,9 +187,10 @@ jobs:
           PYTORCH_JIT: 0
       - name: 📐 Coverage results
         run: |
-          python utils/fix-coverage-paths.py
+          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
+          cp .coverage coverage.db
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -195,7 +198,7 @@ jobs:
           name: test-nojit
           path: |
             test*.log
-            .coverage
+            coverage.db
             coverage.xml
   mindep:
     name: Minimal dependency tests
@@ -235,9 +238,10 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
       - name: 📐 Coverage results
         run: |
-          python utils/fix-coverage-paths.py
+          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
+          cp .coverage coverage.db
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -245,7 +249,7 @@ jobs:
           name: test-mindep
           path: |
             test*.log
-            .coverage
+            coverage.db
             coverage.xml
   funksvd:
     name: FunkSVD tests on Python ${{matrix.python}}
@@ -293,9 +297,10 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
       - name: 📐 Coverage results
         run: |
-          python utils/fix-coverage-paths.py
+          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
+          cp .coverage coverage.db
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -303,7 +308,7 @@ jobs:
           name: test-funksvd-py${{matrix.python}}
           path: |
             test*.log
-            .coverage
+            coverage.db
             coverage.xml
   funksvd-mindep:
     name: Minimal dependency tests for FunkSVD
@@ -343,9 +348,10 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
       - name: 📐 Coverage results
         run: |
-          python utils/fix-coverage-paths.py
+          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
+          cp .coverage coverage.db
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -353,7 +359,7 @@ jobs:
           name: test-mindep-funksvd
           path: |
             test*.log
-            .coverage
+            coverage.db
             coverage.xml
   implicit:
     name: Implicit bridge tests on Python ${{matrix.python}}
@@ -401,9 +407,10 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-implicit/lenskit lenskit-implicit/tests
       - name: 📐 Coverage results
         run: |
-          python utils/fix-coverage-paths.py
+          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
+          cp .coverage coverage.db
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -411,7 +418,7 @@ jobs:
           name: test-implicit-py${{matrix.python}}
           path: |
             test*.log
-            .coverage
+            coverage.db
             coverage.xml
   implicit-mindep:
     name: Minimal dependency tests for Implicit
@@ -451,9 +458,10 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-implicit/lenskit lenskit-implicit/tests
       - name: 📐 Coverage results
         run: |
-          python utils/fix-coverage-paths.py
+          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
+          cp .coverage coverage.db
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -461,7 +469,7 @@ jobs:
           name: test-mindep-implicit
           path: |
             test*.log
-            .coverage
+            coverage.db
             coverage.xml
   hpf:
     name: HPF bridge tests on Python ${{matrix.python}}
@@ -509,9 +517,10 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-hpf/lenskit lenskit-hpf/tests
       - name: 📐 Coverage results
         run: |
-          python utils/fix-coverage-paths.py
+          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
+          cp .coverage coverage.db
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -519,7 +528,7 @@ jobs:
           name: test-hpf-py${{matrix.python}}
           path: |
             test*.log
-            .coverage
+            coverage.db
             coverage.xml
   eval-tests:
     name: Evaluation-based tests
@@ -566,9 +575,10 @@ jobs:
           python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit -m 'eval or realdata' --log-file test-eval.log */tests
       - name: 📐 Coverage results
         run: |
-          python utils/fix-coverage-paths.py
+          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
+          cp .coverage coverage.db
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -576,7 +586,7 @@ jobs:
           name: test-eval-tests
           path: |
             test*.log
-            .coverage
+            coverage.db
             coverage.xml
   doc-tests:
     name: Demos, examples, and docs
@@ -623,9 +633,10 @@ jobs:
           python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit --nbval-lax --doctest-glob='*.rst' --log-file test-docs.log docs */lenskit
       - name: 📐 Coverage results
         run: |
-          python utils/fix-coverage-paths.py
+          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
+          cp .coverage coverage.db
       - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -633,7 +644,7 @@ jobs:
           name: test-examples
           path: |
             test*.log
-            .coverage
+            coverage.db
             coverage.xml
   results:
     name: Test suite results
@@ -673,10 +684,10 @@ jobs:
           pattern: test-*
           path: test-logs
       - name: 📋 List log files
-        run: ls -lR test-logs
+        run: ls -laR test-logs
       - name: ⛙ Merge and report
         run: |
-          coverage combine test-logs/*/.coverage
+          coverage combine --keep test-logs/*/coverage.db
           coverage xml
           coverage html -d lenskit-coverage
           coverage report --format=markdown >coverage.md

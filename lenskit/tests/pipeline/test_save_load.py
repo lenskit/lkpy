@@ -1,3 +1,9 @@
+# This file is part of LensKit.
+# Copyright (C) 2018-2023 Boise State University
+# Copyright (C) 2023-2024 Drexel University
+# Licensed under the MIT license, see LICENSE.md for details.
+# SPDX-License-Identifier: MIT
+
 import logging
 from types import NoneType
 
@@ -7,7 +13,7 @@ from typing_extensions import assert_type
 from pytest import fail, warns
 
 from lenskit.pipeline import InputNode, Node, Pipeline, PipelineWarning
-from lenskit.pipeline.components import AutoConfig
+from lenskit.pipeline.components import Component
 from lenskit.pipeline.config import PipelineConfig
 from lenskit.pipeline.nodes import ComponentNode
 
@@ -15,7 +21,7 @@ _log = logging.getLogger(__name__)
 
 
 # region Test Components
-class Prefixer(AutoConfig):
+class Prefixer(Component):
     prefix: str
 
     def __init__(self, prefix: str = "hello"):
