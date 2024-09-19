@@ -103,7 +103,7 @@ coverage = ">=5"
 
 [environments]
 doc = ["py312", "doc"]
-demo = ["py310", "demo"]
+demo = { features = ["py310", "demo"], solve-group = "py310" }
 report = { features = ["reporting"], no-default-feature = true }
 core-dev = { features = ["dev", "doc", "test", "demo"] }
 full-dev = { features = [
@@ -126,13 +126,34 @@ py310-dev = { features = [
   "funksvd",
   "implicit",
   "hpf",
-] }
-py310-core-test = ["py310", "test"]
-py311-core-test = ["py311", "test"]
-py312-core-test = ["py312", "test"]
-py310-test = ["py310", "test", "sklearn", "funksvd", "implicit", "hpf"]
-py311-test = ["py311", "test", "sklearn", "funksvd", "implicit", "hpf"]
-py312-test = ["py312", "test", "sklearn", "funksvd", "implicit", "hpf"]
+], solve-group = "py310" }
+py310-core-test = { features = ["py310", "test"], solve-group = "py310" }
+py311-core-test = { features = ["py311", "test"], solve-group = "py311" }
+py312-core-test = { features = ["py312", "test"], solve-group = "py312" }
+py310-test = { features = [
+  "py310",
+  "test",
+  "sklearn",
+  "funksvd",
+  "implicit",
+  "hpf",
+], solve-group = "py310" }
+py311-test = { features = [
+  "py311",
+  "test",
+  "sklearn",
+  "funksvd",
+  "implicit",
+  "hpf",
+], solve-group = "py311" }
+py312-test = { features = [
+  "py312",
+  "test",
+  "sklearn",
+  "funksvd",
+  "implicit",
+  "hpf",
+], solve-group = "py312" }
 
 [target.osx-arm64.dependencies]
 # pytorch = { version = "~=2.1", channel = "pytorch" }
