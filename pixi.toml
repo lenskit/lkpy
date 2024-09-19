@@ -105,10 +105,12 @@ diff-cover = ">=9.1"
 coverage = ">=5"
 
 [environments]
-doc = ["py312", "doc"]
-demo = { features = ["py310", "demo"] }
-report = { features = ["reporting"], no-default-feature = true }
-core-dev = { features = ["dev", "doc", "test", "demo"] }
+doc = { features = ["py312", "doc"], solve-group = "py312" }
+demo = { features = ["py310", "demo"], solve-group = "py310" }
+report = { features = [
+  "reporting",
+], solve-group = "py312", no-default-feature = true }
+core-dev = { features = ["dev", "doc", "test", "demo"], solve-group = "py312" }
 full-dev = { features = [
   "dev",
   "doc",
@@ -118,7 +120,7 @@ full-dev = { features = [
   "funksvd",
   "implicit",
   "hpf",
-] }
+], solve-group = "py312" }
 py310-dev = { features = [
   "py310",
   "dev",
