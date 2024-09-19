@@ -303,7 +303,7 @@ def test_eval_job() -> GHJob:
     return {
         "name": opts.name,
         "runs-on": opts.vm_platform,
-        "defaults": {"run": {"shell": "bash -el {0}"}},
+        "needs": ["lock-dependencies"],
         "steps": [step_checkout(opts)]
         + steps_setup_conda(opts)
         + steps_mldata(opts, ["ml-100k", "ml-20m"])
@@ -331,7 +331,7 @@ def test_doc_job() -> GHJob:
     return {
         "name": opts.name,
         "runs-on": opts.vm_platform,
-        "defaults": {"run": {"shell": "bash -el {0}"}},
+        "needs": ["lock-dependencies"],
         "steps": [step_checkout(opts)]
         + steps_setup_conda(opts)
         + steps_mldata(opts, ["ml-100k", "ml-1m", "ml-10m", "ml-20m"])

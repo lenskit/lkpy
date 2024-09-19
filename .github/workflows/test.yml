@@ -509,9 +509,8 @@ jobs:
   eval-tests:
     name: Evaluation-based tests
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -el {0}
+    needs:
+      - lock-dependencies
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
@@ -557,9 +556,8 @@ jobs:
   doc-tests:
     name: Demos, examples, and docs
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -el {0}
+    needs:
+      - lock-dependencies
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
