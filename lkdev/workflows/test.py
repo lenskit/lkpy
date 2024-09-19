@@ -114,7 +114,7 @@ def job_strategy(options: JobOptions) -> dict[str, Any]:
 
 def steps_setup_conda(options: JobOptions) -> list[GHStep]:
     env = options.python_version
-    if not options.extras:
+    if not options.extras and not options.packages:
         env = env + "-core"
     env = env + "-test"
 
