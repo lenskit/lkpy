@@ -58,7 +58,7 @@ testing = ["pytest", "hypothesis"]
 
 [tool.pyright]
 typeCheckingMode = "basic"
-exclude = ["docs/*"]
+exclude = ["docs/*", ".pixi"]
 reportMissingImports = true
 reportMissingTypeStubs = false
 
