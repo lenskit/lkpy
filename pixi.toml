@@ -12,6 +12,9 @@ threadpoolctl = ">=3.0"
 pydantic = ">=2.8,<3"
 
 [pypi-dependencies]
+manylog = { git = "https://github.com/mdekstrand/manylog.git" }
+seedbank = ">=0.2.0a2"
+progress-api = ">=0.1.0a9"
 lenskit = { path = "lenskit", editable = true }
 
 [feature.py310.dependencies]
@@ -103,7 +106,7 @@ coverage = ">=5"
 
 [environments]
 doc = ["py312", "doc"]
-demo = { features = ["py310", "demo"], solve-group = "py310" }
+demo = { features = ["py310", "demo"] }
 report = { features = ["reporting"], no-default-feature = true }
 core-dev = { features = ["dev", "doc", "test", "demo"] }
 full-dev = { features = [
@@ -127,9 +130,9 @@ py310-dev = { features = [
   "implicit",
   "hpf",
 ], solve-group = "py310" }
-py310-core-test = { features = ["py310", "test"], solve-group = "py310" }
-py311-core-test = { features = ["py311", "test"], solve-group = "py311" }
-py312-core-test = { features = ["py312", "test"], solve-group = "py312" }
+py310-core-test = { features = ["py310", "test"] }
+py311-core-test = { features = ["py311", "test"] }
+py312-core-test = { features = ["py312", "test"] }
 py310-test = { features = [
   "py310",
   "test",
