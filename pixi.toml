@@ -127,12 +127,12 @@ py310-dev = { features = [
   "implicit",
   "hpf",
 ] }
-test-py310-core = ["py310", "test"]
-test-py311-core = ["py311", "test"]
-test-py312-core = ["py312", "test"]
-test-py310 = ["py310", "test", "sklearn", "funksvd", "implicit", "hpf"]
-test-py311 = ["py311", "test", "sklearn", "funksvd", "implicit", "hpf"]
-test-py312 = ["py312", "test", "sklearn", "funksvd", "implicit", "hpf"]
+py310-core-test = ["py310", "test"]
+py311-core-test = ["py311", "test"]
+py312-core-test = ["py312", "test"]
+py310-test = ["py310", "test", "sklearn", "funksvd", "implicit", "hpf"]
+py311-test = ["py311", "test", "sklearn", "funksvd", "implicit", "hpf"]
+py312-test = ["py312", "test", "sklearn", "funksvd", "implicit", "hpf"]
 
 [target.osx-arm64.dependencies]
 # pytorch = { version = "~=2.1", channel = "pytorch" }
