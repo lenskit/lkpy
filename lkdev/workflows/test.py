@@ -113,10 +113,10 @@ def job_strategy(options: JobOptions) -> dict[str, Any]:
 
 
 def steps_setup_conda(options: JobOptions) -> list[GHStep]:
-    env = "py" + options.python_version.replace(".", "")
+    env = options.python_version
     if options.extras:
-        env += "-full"
-    env += "-test"
+        env = env + "-full"
+    env = env + "-test"
 
     return [
         {
@@ -297,6 +297,7 @@ def test_eval_job() -> GHJob:
         env="conda",
         req_files=["requirements-test.txt"],
         packages=PACKAGES,
+        python="py311",
     )
     cov = " ".join([f"--cov={pkg}/lenskit" for pkg in PACKAGES])
     return {
@@ -370,12 +371,13 @@ def job_dependencies() -> GHJob:
 
 
 def jobs_test_matrix() -> dict[str, GHJob]:
+    CONDA_PYTHONS = ["py" + p.replace(".", "") for p in PYTHONS]
     return {
         "conda": test_job(
             JobOptions(
                 "conda",
                 "Conda Python ${{matrix.python}} on ${{matrix.platform}}",
-                matrix={"python": PYTHONS, "platform": PLATFORMS},
+                matrix={"python": CONDA_PYTHONS, "platform": PLATFORMS},
                 env="conda",
             )
         ),
@@ -407,7 +409,7 @@ def jobs_test_matrix() -> dict[str, GHJob]:
                 "funksvd",
                 "FunkSVD tests on Python ${{matrix.python}}",
                 packages=["lenskit-funksvd"],
-                matrix={"python": PYTHONS},
+                matrix={"python": CONDA_PYTHONS},
                 env="conda",
             )
         ),
@@ -424,7 +426,7 @@ def jobs_test_matrix() -> dict[str, GHJob]:
                 "implicit",
                 "Implicit bridge tests on Python ${{matrix.python}}",
                 packages=["lenskit-implicit"],
-                matrix={"python": PYTHONS},
+                matrix={"python": CONDA_PYTHONS},
                 env="conda",
             )
         ),
@@ -441,7 +443,7 @@ def jobs_test_matrix() -> dict[str, GHJob]:
                 "hpf",
                 "HPF bridge tests on Python ${{matrix.python}}",
                 packages=["lenskit-hpf"],
-                matrix={"python": PYTHONS},
+                matrix={"python": CONDA_PYTHONS},
                 env="conda",
             )
         ),
