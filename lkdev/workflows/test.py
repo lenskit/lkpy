@@ -256,7 +256,7 @@ def steps_coverage(options: JobOptions) -> list[GHStep]:
         {
             "name": "📐 Coverage results",
             "run": script("""
-                sqlite3 -echo <utils/coverage-path-fixup.sql
+                sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
                 coverage xml
                 coverage report
                 cp .coverage coverage.db
