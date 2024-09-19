@@ -140,6 +140,7 @@ py310-test = { features = [
   "funksvd",
   "implicit",
   "hpf",
+  "demo",
 ], solve-group = "py310" }
 py311-test = { features = [
   "py311",

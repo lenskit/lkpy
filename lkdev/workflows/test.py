@@ -327,7 +327,6 @@ def test_doc_job() -> GHJob:
         "examples",
         "Demos, examples, and docs",
         env="conda",
-        pixi_env="demo",
         packages=PACKAGES,
         python="py310",
     )
