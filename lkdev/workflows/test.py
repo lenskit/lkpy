@@ -244,7 +244,6 @@ def steps_coverage(options: JobOptions) -> list[GHStep]:
         {
             "name": "📐 Coverage results",
             "run": script("""
-                sqlite3 -echo .coverage "UPDATE file SET path = replace(path, '\', '/');"
                 coverage xml
                 coverage report
                 cp .coverage coverage.db
@@ -491,6 +490,15 @@ def job_result(deps: list[str]) -> GHJob:
             {
                 "name": "📋 List log files",
                 "run": "ls -laR test-logs",
+            },
+            {
+                "name": "🔧 Fix coverage databases",
+                "run": script("""
+                    for dbf in test-logs/*.coverage.db; do
+                        echo "fixing $dbf"
+                        sqlite3 -echo "$dbf" "UPDATE file SET path = replace(path, '\', '/');"
+                    done
+                """),
             },
             # inspired by https://hynek.me/articles/ditch-codecov-python/
             {

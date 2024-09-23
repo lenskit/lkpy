@@ -81,7 +81,6 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage "UPDATE file SET path = replace(path, '', '/');"
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -142,7 +141,6 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage "UPDATE file SET path = replace(path, '', '/');"
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -196,7 +194,6 @@ jobs:
           PYTORCH_JIT: 0
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage "UPDATE file SET path = replace(path, '', '/');"
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -247,7 +244,6 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage "UPDATE file SET path = replace(path, '', '/');"
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -295,7 +291,6 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage "UPDATE file SET path = replace(path, '', '/');"
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -346,7 +341,6 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage "UPDATE file SET path = replace(path, '', '/');"
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -394,7 +388,6 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-implicit/lenskit lenskit-implicit/tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage "UPDATE file SET path = replace(path, '', '/');"
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -445,7 +438,6 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-implicit/lenskit lenskit-implicit/tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage "UPDATE file SET path = replace(path, '', '/');"
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -493,7 +485,6 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-hpf/lenskit lenskit-hpf/tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage "UPDATE file SET path = replace(path, '', '/');"
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -540,7 +531,6 @@ jobs:
           python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit -m 'eval or realdata' --log-file test-eval.log */tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage "UPDATE file SET path = replace(path, '', '/');"
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -587,7 +577,6 @@ jobs:
           python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit --nbval-lax --doctest-glob='*.rst' --log-file test-docs.log docs */lenskit
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage "UPDATE file SET path = replace(path, '', '/');"
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -640,6 +629,12 @@ jobs:
           path: test-logs
       - name: 📋 List log files
         run: ls -laR test-logs
+      - name: 🔧 Fix coverage databases
+        run: |
+          for dbf in test-logs/*.coverage.db; do
+              echo "fixing $dbf"
+              sqlite3 -echo "$dbf" "UPDATE file SET path = replace(path, '', '/');"
+          done
       - name: ⛙ Merge and report
         run: |
           coverage combine --keep test-logs/*/coverage.db
