@@ -571,7 +571,7 @@ jobs:
         with:
           pixi-version: v0.30.0
           activate-environment: true
-          environments: demo
+          environments: py310-test
       - name: Cache ML data
         uses: actions/cache@v4
         with:
