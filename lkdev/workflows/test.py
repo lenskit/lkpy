@@ -357,10 +357,23 @@ def job_dependencies() -> GHJob:
         "steps": [
             step_checkout(),
             {
+                "name": "📆 Get current date",
+                "id": "build-time",
+                "run": "date +today=%Y-%m-%d >>$GITHUB_OUTPUT",
+            },
+            {
+                "name": "Cache lockfile",
+                "uses": "actions/cache",
+                "with": {
+                    "key": "pixi-lockfile-${{hashFiles('pixi.toml', '*/pyproject.toml')}}-${{steps.build-time.outputs.today}}",  # noqa: E501
+                    "path": "pixi.lock",
+                },
+            },
+            {
                 "uses": "prefix-dev/setup-pixi@v0.8.1",
                 "with": {"pixi-version": PIXI_VERSION, "run-install": False},
             },
-            {"name": "Lock dependencies", "run": script("pixi update")},
+            {"name": "Lock dependencies", "run": script("pixi list -e full-dev")},
             {
                 "name": "📤 Upload dependency lockfile",
                 "uses": "actions/upload-artifact@v4",
