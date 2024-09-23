@@ -363,7 +363,7 @@ def job_dependencies() -> GHJob:
             },
             {
                 "name": "Cache lockfile",
-                "uses": "actions/cache",
+                "uses": "actions/cache@v4",
                 "with": {
                     "key": "pixi-lockfile-${{hashFiles('pixi.toml', '*/pyproject.toml')}}-${{steps.build-time.outputs.today}}",  # noqa: E501
                     "path": "pixi.lock",

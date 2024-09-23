@@ -34,7 +34,7 @@ jobs:
         id: build-time
         run: date +today=%Y-%m-%d >>$GITHUB_OUTPUT
       - name: Cache lockfile
-        uses: actions/cache
+        uses: actions/cache@v4
         with:
           key: pixi-lockfile-${{hashFiles('pixi.toml', '*/pyproject.toml')}}-${{steps.build-time.outputs.today}}
           path: pixi.lock
