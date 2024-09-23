@@ -494,7 +494,7 @@ def job_result(deps: list[str]) -> GHJob:
             {
                 "name": "🔧 Fix coverage databases",
                 "run": script("""
-                    for dbf in test-logs/*.coverage.db; do
+                    for dbf in test-logs/*/coverage.db; do
                         echo "fixing $dbf"
                         sqlite3 -echo "$dbf" "UPDATE file SET path = replace(path, '\', '/');"
                     done

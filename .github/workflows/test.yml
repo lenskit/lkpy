@@ -631,7 +631,7 @@ jobs:
         run: ls -laR test-logs
       - name: 🔧 Fix coverage databases
         run: |
-          for dbf in test-logs/*.coverage.db; do
+          for dbf in test-logs/*/coverage.db; do
               echo "fixing $dbf"
               sqlite3 -echo "$dbf" "UPDATE file SET path = replace(path, '', '/');"
           done
