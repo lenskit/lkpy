@@ -639,7 +639,7 @@ jobs:
         run: |
           for dbf in test-logs/*/coverage.db; do
               echo "fixing $dbf"
-              sqlite3 -echo "$dbf" "UPDATE file SET path = replace(path, '', '/');"
+              sqlite3 -echo "$dbf" "UPDATE file SET path = replace(path, '\', '/');"
           done
       - name: ⛙ Merge and report
         run: |

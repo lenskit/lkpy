@@ -497,7 +497,7 @@ def job_result(deps: list[str]) -> GHJob:
                 "run": script("""
                     for dbf in test-logs/*/coverage.db; do
                         echo "fixing $dbf"
-                        sqlite3 -echo "$dbf" "UPDATE file SET path = replace(path, '\', '/');"
+                        sqlite3 -echo "$dbf" "UPDATE file SET path = replace(path, '\\', '/');"
                     done
                 """),
             },
