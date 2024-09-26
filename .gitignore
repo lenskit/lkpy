@@ -45,9 +45,8 @@ lenskit/**/*.c
 # environment locks that aren't committed
 /*env*.yml
 conda-lock.yml
-*.lock
+conda*.lock
 *.lock.yml
-pixi.lock
 
 # Editor and OS cruft
 .DS_Store

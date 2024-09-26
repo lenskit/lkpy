@@ -28,7 +28,7 @@ FILTER_PATHS = [
 
 
 def workflow():
-    jobs = {"lock-dependencies": job_dependencies()}
+    jobs = {}
     jobs.update(jobs_test_matrix())
     jobs["results"] = job_result(list(jobs.keys()))
     return {
@@ -122,13 +122,6 @@ def steps_setup_conda(options: JobOptions) -> list[GHStep]:
         env = env + "-test"
 
     return [
-        {
-            "name": "📤 Download dependency lockfile",
-            "uses": "actions/download-artifact@v4",
-            "with": {
-                "name": "pixi-lock",
-            },
-        },
         {
             "uses": "prefix-dev/setup-pixi@v0.8.1",
             "with": {
@@ -347,42 +340,6 @@ def test_doc_job() -> GHJob:
             },
         ]
         + steps_coverage(opts),
-    }
-
-
-def job_dependencies() -> GHJob:
-    return {
-        "name": "Resolve dependency lock",
-        "runs-on": "ubuntu-latest",
-        "steps": [
-            step_checkout(),
-            {
-                "name": "📆 Get current date",
-                "id": "build-time",
-                "run": "date +today=%Y-%m-%d >>$GITHUB_OUTPUT",
-            },
-            {
-                "name": "Cache lockfile",
-                "uses": "actions/cache@v4",
-                "with": {
-                    "key": "pixi-lockfile-${{hashFiles('pixi.toml', '*/pyproject.toml')}}-${{steps.build-time.outputs.today}}",  # noqa: E501
-                    "path": "pixi.lock",
-                },
-            },
-            {
-                "uses": "prefix-dev/setup-pixi@v0.8.1",
-                "with": {"pixi-version": PIXI_VERSION, "run-install": False},
-            },
-            {"name": "Lock dependencies", "run": script("pixi list -e full-dev")},
-            {
-                "name": "📤 Upload dependency lockfile",
-                "uses": "actions/upload-artifact@v4",
-                "with": {
-                    "name": "pixi-lock",
-                    "path": "pixi.lock",
-                },
-            },
-        ],
     }
 
 
