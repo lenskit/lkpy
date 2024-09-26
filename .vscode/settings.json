@@ -3,6 +3,7 @@
     "**/__pycache__": true,
     ".hypothesis/": true,
     ".*_cache/": true,
+    ".pixi/": true,
   },
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff",

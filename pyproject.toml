@@ -26,7 +26,7 @@ include = ["lkdev*"]
 version_scheme = "release-branch-semver"
 
 [tool.coverage.run]
-relative_files = true
+relative_files = "true"
 
 [tool.ruff]
 line-length = 100
@@ -58,7 +58,7 @@ testing = ["pytest", "hypothesis"]
 
 [tool.pyright]
 typeCheckingMode = "basic"
-exclude = ["docs/*"]
+exclude = ["docs/*", ".pixi"]
 reportMissingImports = true
 reportMissingTypeStubs = false
 

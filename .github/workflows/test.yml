@@ -26,16 +26,13 @@ jobs:
     name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}
     timeout-minutes: 30
-    defaults:
-      run:
-        shell: bash -el {0}
     strategy:
       fail-fast: false
       matrix:
         python:
-          - '3.10'
-          - '3.11'
-          - '3.12'
+          - py310
+          - py311
+          - py312
         platform:
           - ubuntu-latest
           - macos-latest
@@ -45,25 +42,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: 🐍 Setup bootstrap Python
-        uses: actions/setup-python@v5
+      - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          python-version: '3.11'
-      - name: 👢 Generate Conda environment file
-        run: |
-          pip install -e .
-          python -m lkdev.conda -o ci-environment.yml -p ${{matrix.python}} -e all requirements-test.txt lenskit/pyproject.toml
-      - id: setup
-        name: 📦 Set up Conda environment
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: ci-environment.yml
-          environment-name: lkpy
-          cache-environment: true
-          init-shell: bash
-      - name: 🍱 Install LensKit packages
-        run: |
-          pip install --no-deps -e lenskit
+          pixi-version: v0.30.0
+          activate-environment: true
+          environments: ${{matrix.python}}-core-test
+          write-cache: false
       - name: 🔍 Inspect environment
         run: |
           python -m lenskit.util.envcheck
@@ -72,7 +56,6 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -133,7 +116,6 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -187,7 +169,6 @@ jobs:
           PYTORCH_JIT: 0
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -238,7 +219,6 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -255,40 +235,24 @@ jobs:
     name: FunkSVD tests on Python ${{matrix.python}}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    defaults:
-      run:
-        shell: bash -el {0}
     strategy:
       fail-fast: false
       matrix:
         python:
-          - '3.10'
-          - '3.11'
-          - '3.12'
+          - py310
+          - py311
+          - py312
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: 🐍 Setup bootstrap Python
-        uses: actions/setup-python@v5
+      - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          python-version: '3.11'
-      - name: 👢 Generate Conda environment file
-        run: |
-          pip install -e .
-          python -m lkdev.conda -o ci-environment.yml -p ${{matrix.python}} -e all requirements-test.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml
-      - id: setup
-        name: 📦 Set up Conda environment
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: ci-environment.yml
-          environment-name: lkpy
-          cache-environment: true
-          init-shell: bash
-      - name: 🍱 Install LensKit packages
-        run: |
-          pip install --no-deps -e lenskit -e lenskit-funksvd
+          pixi-version: v0.30.0
+          activate-environment: true
+          environments: ${{matrix.python}}-test
+          write-cache: false
       - name: 🔍 Inspect environment
         run: |
           python -m lenskit.util.envcheck
@@ -297,7 +261,6 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -348,7 +311,6 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -365,40 +327,24 @@ jobs:
     name: Implicit bridge tests on Python ${{matrix.python}}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    defaults:
-      run:
-        shell: bash -el {0}
     strategy:
       fail-fast: false
       matrix:
         python:
-          - '3.10'
-          - '3.11'
-          - '3.12'
+          - py310
+          - py311
+          - py312
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: 🐍 Setup bootstrap Python
-        uses: actions/setup-python@v5
+      - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          python-version: '3.11'
-      - name: 👢 Generate Conda environment file
-        run: |
-          pip install -e .
-          python -m lkdev.conda -o ci-environment.yml -p ${{matrix.python}} -e all requirements-test.txt lenskit/pyproject.toml lenskit-implicit/pyproject.toml
-      - id: setup
-        name: 📦 Set up Conda environment
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: ci-environment.yml
-          environment-name: lkpy
-          cache-environment: true
-          init-shell: bash
-      - name: 🍱 Install LensKit packages
-        run: |
-          pip install --no-deps -e lenskit -e lenskit-implicit
+          pixi-version: v0.30.0
+          activate-environment: true
+          environments: ${{matrix.python}}-test
+          write-cache: false
       - name: 🔍 Inspect environment
         run: |
           python -m lenskit.util.envcheck
@@ -407,7 +353,6 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-implicit/lenskit lenskit-implicit/tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -458,7 +403,6 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-implicit/lenskit lenskit-implicit/tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -475,40 +419,24 @@ jobs:
     name: HPF bridge tests on Python ${{matrix.python}}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    defaults:
-      run:
-        shell: bash -el {0}
     strategy:
       fail-fast: false
       matrix:
         python:
-          - '3.10'
-          - '3.11'
-          - '3.12'
+          - py310
+          - py311
+          - py312
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: 🐍 Setup bootstrap Python
-        uses: actions/setup-python@v5
+      - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          python-version: '3.11'
-      - name: 👢 Generate Conda environment file
-        run: |
-          pip install -e .
-          python -m lkdev.conda -o ci-environment.yml -p ${{matrix.python}} -e all requirements-test.txt lenskit/pyproject.toml lenskit-hpf/pyproject.toml
-      - id: setup
-        name: 📦 Set up Conda environment
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: ci-environment.yml
-          environment-name: lkpy
-          cache-environment: true
-          init-shell: bash
-      - name: 🍱 Install LensKit packages
-        run: |
-          pip install --no-deps -e lenskit -e lenskit-hpf
+          pixi-version: v0.30.0
+          activate-environment: true
+          environments: ${{matrix.python}}-test
+          write-cache: false
       - name: 🔍 Inspect environment
         run: |
           python -m lenskit.util.envcheck
@@ -517,7 +445,6 @@ jobs:
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-hpf/lenskit lenskit-hpf/tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -533,33 +460,17 @@ jobs:
   eval-tests:
     name: Evaluation-based tests
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -el {0}
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: 🐍 Setup bootstrap Python
-        uses: actions/setup-python@v5
+      - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          python-version: '3.11'
-      - name: 👢 Generate Conda environment file
-        run: |
-          pip install -e .
-          python -m lkdev.conda -o ci-environment.yml -p 3.10 -e all requirements-test.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml lenskit-implicit/pyproject.toml lenskit-hpf/pyproject.toml
-      - id: setup
-        name: 📦 Set up Conda environment
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: ci-environment.yml
-          environment-name: lkpy
-          cache-environment: true
-          init-shell: bash
-      - name: 🍱 Install LensKit packages
-        run: |
-          pip install --no-deps -e lenskit -e lenskit-funksvd -e lenskit-implicit -e lenskit-hpf
+          pixi-version: v0.30.0
+          activate-environment: true
+          environments: py310-test
+          write-cache: false
       - name: Cache ML data
         uses: actions/cache@v4
         with:
@@ -575,7 +486,6 @@ jobs:
           python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit -m 'eval or realdata' --log-file test-eval.log */tests
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -591,33 +501,17 @@ jobs:
   doc-tests:
     name: Demos, examples, and docs
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -el {0}
     steps:
       - name: 🛒 Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: 🐍 Setup bootstrap Python
-        uses: actions/setup-python@v5
+      - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          python-version: '3.11'
-      - name: 👢 Generate Conda environment file
-        run: |
-          pip install -e .
-          python -m lkdev.conda -o ci-environment.yml -p 3.10 -e all requirements-test.txt requirements-demo.txt lenskit/pyproject.toml lenskit-funksvd/pyproject.toml lenskit-implicit/pyproject.toml lenskit-hpf/pyproject.toml
-      - id: setup
-        name: 📦 Set up Conda environment
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: ci-environment.yml
-          environment-name: lkpy
-          cache-environment: true
-          init-shell: bash
-      - name: 🍱 Install LensKit packages
-        run: |
-          pip install --no-deps -e lenskit -e lenskit-funksvd -e lenskit-implicit -e lenskit-hpf
+          pixi-version: v0.30.0
+          activate-environment: true
+          environments: py310-test
+          write-cache: false
       - name: Cache ML data
         uses: actions/cache@v4
         with:
@@ -633,7 +527,6 @@ jobs:
           python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit --nbval-lax --doctest-glob='*.rst' --log-file test-docs.log docs */lenskit
       - name: 📐 Coverage results
         run: |
-          sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
           coverage xml
           coverage report
           cp .coverage coverage.db
@@ -685,6 +578,12 @@ jobs:
           path: test-logs
       - name: 📋 List log files
         run: ls -laR test-logs
+      - name: 🔧 Fix coverage databases
+        run: |
+          for dbf in test-logs/*/coverage.db; do
+              echo "fixing $dbf"
+              sqlite3 -echo "$dbf" "UPDATE file SET path = replace(path, '\', '/');"
+          done
       - name: ⛙ Merge and report
         run: |
           coverage combine --keep test-logs/*/coverage.db

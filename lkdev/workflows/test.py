@@ -12,6 +12,7 @@ from ..ghactions import GHJob, GHStep, script
 from ._common import PACKAGES, step_checkout
 
 CODECOV_TOKEN = "5cdb6ef4-e80b-44ce-b88d-1402e4dfb781"
+PIXI_VERSION = "v0.30.0"
 META_PYTHON = "3.11"
 PYTHONS = ["3.10", "3.11", "3.12"]
 PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
@@ -29,7 +30,7 @@ FILTER_PATHS = [
 def workflow():
     jobs = {}
     jobs.update(jobs_test_matrix())
-    jobs["results"] = jobs_result(list(jobs.keys()))
+    jobs["results"] = job_result(list(jobs.keys()))
     return {
         "name": "Automatic Tests",
         "on": {
@@ -56,6 +57,7 @@ class JobOptions:
     pip_args: Optional[list[str]] = None
     dep_strategy: Literal["default", "minimum"] = "default"
     req_files: list[str] = field(default_factory=lambda: ["requirements-test.txt"])
+    pixi_env: str | None = None
     test_args: Optional[list[str]] = None
     test_env: Optional[dict[str, str | int]] = None
     packages: list[str] = field(default_factory=lambda: ["lenskit"])
@@ -112,43 +114,23 @@ def job_strategy(options: JobOptions) -> dict[str, Any]:
 
 
 def steps_setup_conda(options: JobOptions) -> list[GHStep]:
-    ctool = ["python -m lkdev.conda", "-o", "ci-environment.yml", "-p", options.python_version]
-    if options.extras:
-        for e in options.extras:
-            ctool += ["-e", e]
-    else:
-        ctool += ["-e", "all"]
-    ctool += options.req_files + [f"{pkg}/pyproject.toml" for pkg in options.required_packages]
-    conda_prep = " ".join(ctool)
-
-    pip = ["pip", "install", "--no-deps"]
-    pip += [f"-e {pkg}" for pkg in options.required_packages]
+    env = options.pixi_env
+    if not env:
+        env = options.python_version
+        if not options.extras and options.packages == ["lenskit"]:
+            env = env + "-core"
+        env = env + "-test"
 
     return [
         {
-            "name": "🐍 Setup bootstrap Python",
-            "uses": "actions/setup-python@v5",
-            "with": {"python-version": META_PYTHON},
-        },
-        {
-            "name": "👢 Generate Conda environment file",
-            "run": script(f"""
-                pip install -e .
-                {conda_prep}
-            """),
-        },
-        {
-            "id": "setup",
-            "name": "📦 Set up Conda environment",
-            "uses": "mamba-org/setup-micromamba@v1",
+            "uses": "prefix-dev/setup-pixi@v0.8.1",
             "with": {
-                "environment-file": "ci-environment.yml",
-                "environment-name": "lkpy",
-                "cache-environment": True,
-                "init-shell": "bash",
+                "pixi-version": PIXI_VERSION,
+                "activate-environment": True,
+                "environments": env,
+                "write-cache": False,
             },
         },
-        {"name": "🍱 Install LensKit packages", "run": script.command(pip)},
     ]
 
 
@@ -256,7 +238,6 @@ def steps_coverage(options: JobOptions) -> list[GHStep]:
         {
             "name": "📐 Coverage results",
             "run": script("""
-                sqlite3 -echo .coverage <utils/coverage-path-fixup.sql
                 coverage xml
                 coverage report
                 cp .coverage coverage.db
@@ -297,12 +278,6 @@ def test_job(options: JobOptions) -> GHJob:
         "runs-on": options.vm_platform,
         "timeout-minutes": 30,
     }
-    if options.env == "conda":
-        job["defaults"] = {
-            "run": {
-                "shell": "bash -el {0}",
-            },
-        }
 
     job.update(job_strategy(options))  # type: ignore
     job["steps"] = test_job_steps(options)
@@ -316,12 +291,12 @@ def test_eval_job() -> GHJob:
         env="conda",
         req_files=["requirements-test.txt"],
         packages=PACKAGES,
+        python="py310",
     )
     cov = " ".join([f"--cov={pkg}/lenskit" for pkg in PACKAGES])
     return {
         "name": opts.name,
         "runs-on": opts.vm_platform,
-        "defaults": {"run": {"shell": "bash -el {0}"}},
         "steps": [step_checkout(opts)]
         + steps_setup_conda(opts)
         + steps_mldata(opts, ["ml-100k", "ml-20m"])
@@ -342,14 +317,13 @@ def test_doc_job() -> GHJob:
         "examples",
         "Demos, examples, and docs",
         env="conda",
-        req_files=["requirements-test.txt", "requirements-demo.txt"],
         packages=PACKAGES,
+        python="py310",
     )
     cov = " ".join([f"--cov={pkg}/lenskit" for pkg in PACKAGES])
     return {
         "name": opts.name,
         "runs-on": opts.vm_platform,
-        "defaults": {"run": {"shell": "bash -el {0}"}},
         "steps": [step_checkout(opts)]
         + steps_setup_conda(opts)
         + steps_mldata(opts, ["ml-100k", "ml-1m", "ml-10m", "ml-20m"])
@@ -366,12 +340,13 @@ def test_doc_job() -> GHJob:
 
 
 def jobs_test_matrix() -> dict[str, GHJob]:
+    CONDA_PYTHONS = ["py" + p.replace(".", "") for p in PYTHONS]
     return {
         "conda": test_job(
             JobOptions(
                 "conda",
                 "Conda Python ${{matrix.python}} on ${{matrix.platform}}",
-                matrix={"python": PYTHONS, "platform": PLATFORMS},
+                matrix={"python": CONDA_PYTHONS, "platform": PLATFORMS},
                 env="conda",
             )
         ),
@@ -403,7 +378,7 @@ def jobs_test_matrix() -> dict[str, GHJob]:
                 "funksvd",
                 "FunkSVD tests on Python ${{matrix.python}}",
                 packages=["lenskit-funksvd"],
-                matrix={"python": PYTHONS},
+                matrix={"python": CONDA_PYTHONS},
                 env="conda",
             )
         ),
@@ -420,7 +395,7 @@ def jobs_test_matrix() -> dict[str, GHJob]:
                 "implicit",
                 "Implicit bridge tests on Python ${{matrix.python}}",
                 packages=["lenskit-implicit"],
-                matrix={"python": PYTHONS},
+                matrix={"python": CONDA_PYTHONS},
                 env="conda",
             )
         ),
@@ -437,7 +412,7 @@ def jobs_test_matrix() -> dict[str, GHJob]:
                 "hpf",
                 "HPF bridge tests on Python ${{matrix.python}}",
                 packages=["lenskit-hpf"],
-                matrix={"python": PYTHONS},
+                matrix={"python": CONDA_PYTHONS},
                 env="conda",
             )
         ),
@@ -446,7 +421,7 @@ def jobs_test_matrix() -> dict[str, GHJob]:
     }
 
 
-def jobs_result(deps: list[str]) -> GHJob:
+def job_result(deps: list[str]) -> GHJob:
     return {
         "name": "Test suite results",
         "runs-on": "ubuntu-latest",
@@ -482,6 +457,15 @@ def jobs_result(deps: list[str]) -> GHJob:
             {
                 "name": "📋 List log files",
                 "run": "ls -laR test-logs",
+            },
+            {
+                "name": "🔧 Fix coverage databases",
+                "run": script("""
+                    for dbf in test-logs/*/coverage.db; do
+                        echo "fixing $dbf"
+                        sqlite3 -echo "$dbf" "UPDATE file SET path = replace(path, '\\', '/');"
+                    done
+                """),
             },
             # inspired by https://hynek.me/articles/ditch-codecov-python/
             {
