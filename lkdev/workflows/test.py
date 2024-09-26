@@ -278,8 +278,6 @@ def test_job(options: JobOptions) -> GHJob:
         "runs-on": options.vm_platform,
         "timeout-minutes": 30,
     }
-    if options.env == "conda":
-        job["needs"] = ["lock-dependencies"]
 
     job.update(job_strategy(options))  # type: ignore
     job["steps"] = test_job_steps(options)
@@ -299,7 +297,6 @@ def test_eval_job() -> GHJob:
     return {
         "name": opts.name,
         "runs-on": opts.vm_platform,
-        "needs": ["lock-dependencies"],
         "steps": [step_checkout(opts)]
         + steps_setup_conda(opts)
         + steps_mldata(opts, ["ml-100k", "ml-20m"])
@@ -327,7 +324,6 @@ def test_doc_job() -> GHJob:
     return {
         "name": opts.name,
         "runs-on": opts.vm_platform,
-        "needs": ["lock-dependencies"],
         "steps": [step_checkout(opts)]
         + steps_setup_conda(opts)
         + steps_mldata(opts, ["ml-100k", "ml-1m", "ml-10m", "ml-20m"])
