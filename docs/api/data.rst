@@ -35,6 +35,15 @@ Item Data
 
     ~lenskit.data.ItemList
 
+Recommendation Queries
+----------------------
+
+.. autosummary::
+    :toctree: .
+    :nosignatures:
+    :caption: Recommendation Queries
+
+    ~lenskit.data.RecQuery
 
 Terms and Identifiers
 ---------------------

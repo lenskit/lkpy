@@ -11,7 +11,8 @@ from .dataset import Dataset, FieldError
 from .items import ItemList
 from .movielens import load_movielens, load_movielens_df
 from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray
-from .types import EntityId, FeedbackType, NPEntityId
+from .query import QueryInput, RecQuery
+from .types import EntityId, FeedbackType, NPEntityId, UITuple
 from .vocab import Vocabulary
 
 __all__ = [
@@ -20,6 +21,7 @@ __all__ = [
     "from_interactions_df",
     "EntityId",
     "NPEntityId",
+    "UITuple",
     "FeedbackType",
     "ItemList",
     "load_movielens",
@@ -29,4 +31,6 @@ __all__ = [
     "MTGenericArray",
     "MTIntArray",
     "Vocabulary",
+    "RecQuery",
+    "QueryInput",
 ]
