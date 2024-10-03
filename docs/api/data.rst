@@ -6,6 +6,11 @@ Data Abstractions
 The :mod:`lenskit.data` module provides the core data abstractions LensKit uses
 to represent recommender system inputs and outputs.
 
+.. toctree::
+    :maxdepth: 1
+
+    data-types
+
 Data Sets
 ---------
 
@@ -31,12 +36,16 @@ Item Data
     ~lenskit.data.ItemList
 
 
-Identifiers
------------
+Terms and Identifiers
+---------------------
 
 .. autosummary::
     :toctree: .
     :nosignatures:
-    :caption: Identifiers
+    :caption: Terms and Identifiers
 
     ~lenskit.data.Vocabulary
+
+See also:
+
+* :py:class:`lenskit.data.types.EntityId`
