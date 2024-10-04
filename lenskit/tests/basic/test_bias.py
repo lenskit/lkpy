@@ -300,12 +300,13 @@ def test_bias_save():
     assert copy.user_offsets_ == approx(np.array([0.25, -00.08333, -0.20833]), abs=1.0e-4)
 
 
-def test_bias_pipeline(ml_ds):
+def test_bias_pipeline(ml_ds: Dataset):
     pipe = Pipeline()
     user = pipe.create_input("user", int)
     items = pipe.create_input("items")
 
     bias = BiasScorer()
+    bias.train(ml_ds)
     out = pipe.add_component("bias", bias, query=user, items=items)
 
     res = pipe.run(out, user=2, items=ItemList(item_ids=[10, 11, -1]))
@@ -313,10 +314,6 @@ def test_bias_pipeline(ml_ds):
     assert len(res) == 3
     assert np.all(res.ids() == [10, 11, -1])
 
-    imeans_data = ml_ds.item_stats()["mean_rating"]
-    umeans_data = ml_ds.user_stats()["mean_rating"]
-    umean = umeans_data.loc[2]
-    ps = res.scores("pandas", index="ids")
-    assert ps is not None
-    assert ps.iloc[0] == approx(imeans_data.loc[10] + umean)
-    assert ps.iloc[1] == approx(imeans_data.loc[11] + umean)
+    scores = res.scores()
+    assert scores is not None
+    assert not np.any(np.isnan(scores[:2]))

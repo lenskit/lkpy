@@ -12,7 +12,6 @@ from __future__ import annotations
 import logging
 
 import numpy as np
-from typing_extensions import Self
 
 from lenskit.data import Dataset
 from lenskit.data.items import ItemList
@@ -89,7 +88,7 @@ class BiasScorer(Component):
         if self.damping.item < 0:
             raise ValueError("item damping must be non-negative")
 
-    def train(self, data: Dataset) -> Self:
+    def train(self, data: Dataset):
         """
         Train the bias model on some rating data.
 
@@ -135,8 +134,6 @@ class BiasScorer(Component):
             _logger.info("computed means for %d users", len(self.user_offsets_))
         else:
             self.user_offsets_ = None
-
-        return self
 
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         """
