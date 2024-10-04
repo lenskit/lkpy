@@ -7,6 +7,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TypeAlias
 
+import numpy as np
+from typing_extensions import assert_never
+
 from lenskit.data.items import ItemList
 
 from .types import EntityId
@@ -59,13 +62,15 @@ class RecQuery:
             return data
         elif isinstance(data, ItemList):
             return cls(user_items=data)
-        elif isinstance(data, EntityId):
+        elif isinstance(data, np.integer):
+            return cls(user_id=data.item())
+        elif isinstance(data, int | str | bytes):
             return cls(user_id=data)
-        else:
-            raise TypeError(f"invalid input of type {type(data)}")
+        else:  # pragma: nocover
+            assert_never(f"invalid type {type(data)}")
 
 
-QueryInput: TypeAlias = RecQuery | EntityId | ItemList | None
+QueryInput: TypeAlias = RecQuery | EntityId | ItemList | np.integer | None
 """
 Types that can be converted to a query by :meth:`RecQuery.create`.
 """
