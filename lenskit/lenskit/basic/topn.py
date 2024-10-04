@@ -2,10 +2,14 @@
 Basic Top-*N* ranking.
 """
 
+import logging
+
 import numpy as np
 
 from lenskit.data import ItemList
 from lenskit.pipeline import Component
+
+_log = logging.getLogger(__name__)
 
 
 class TopNRanker(Component):
@@ -43,6 +47,11 @@ class TopNRanker(Component):
         """
         if n is None:
             n = self.n
+
+        if n >= 0:
+            _log.debug("ranking top %d of %d items", n, len(items))
+        else:
+            _log.debug("ranking all of %d items", len(items))
 
         scores = items.scores("numpy")
         if scores is None:
