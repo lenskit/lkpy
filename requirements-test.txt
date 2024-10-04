@@ -4,6 +4,6 @@ pytest-doctestplus >=1.2.1,<2
 pytest-cov >=2.12
 pytest-benchmark ==4.*
 pytest-repeat >=0.9
-hypothesis >=6
+hypothesis >=6.16
 pyprojroot ==0.3.*
 # conda: sqlite
