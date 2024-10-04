@@ -3,12 +3,12 @@ import logging
 import pandas as pd
 
 from lenskit.data import Dataset, ItemList
-from lenskit.pipeline import AutoConfig
+from lenskit.pipeline import Component
 
 _log = logging.getLogger(__name__)
 
 
-class PopScore(AutoConfig):
+class PopScore(Component):
     """
     Score items by their popularity.  Use with :py:class:`TopN` to get a
     most-popular-items recommender.
