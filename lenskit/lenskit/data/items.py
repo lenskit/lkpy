@@ -432,6 +432,9 @@ class ItemList:
         """
         Subset the item list.
 
+        .. todo::
+            Support on-device masking.
+
         Args:
             sel:
                 The items to select. Can be either a Boolean array of the same
@@ -482,3 +485,8 @@ class ItemList:
 
     def __str__(self) -> str:
         return f"<ItemList of {self._len} items>"
+
+    def __repr__(self) -> str:
+        fnames = ", ".join(self._fields.keys())
+        nf = len(self._fields)
+        return f"<ItemList of {self._len} items with {nf} fields ({fnames})>"

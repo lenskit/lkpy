@@ -10,6 +10,9 @@ import numpy as np
 import pandas as pd
 import torch
 
+import hypothesis.extra.numpy as nph
+import hypothesis.strategies as st
+from hypothesis import given, settings
 from pytest import raises
 
 from lenskit.data import Dataset, ItemList
@@ -256,7 +259,7 @@ def test_subset_mask(ml_ds: Dataset):
     assert np.all(prf > 3.0)
 
 
-def test_subset_idx(ml_ds: Dataset):
+def test_subset_idx_list(ml_ds: Dataset):
     row = ml_ds.user_row(user_num=400)
     assert row is not None
     ratings = row.field("rating")
@@ -271,6 +274,44 @@ def test_subset_idx(ml_ds: Dataset):
     rf = row.field("rating")
     assert rf is not None
     assert np.all(pos.field("rating") == rf[ks])
+
+
+def test_subset_idx_array(ml_ds: Dataset):
+    row = ml_ds.user_row(user_num=400)
+    assert row is not None
+    ratings = row.field("rating")
+    assert ratings is not None
+
+    ks = np.array([0, 5, 15])
+    pos = row[ks]
+
+    assert len(pos) == 3
+    assert np.all(pos.ids() == row.ids()[ks])
+    assert np.all(pos.numbers() == row.numbers()[ks])
+    rf = row.field("rating")
+    assert rf is not None
+    assert np.all(pos.field("rating") == rf[ks])
+
+
+@given(st.data())
+def test_subset_index_array_stress(ml_ds: Dataset, data: st.DataObject):
+    uno = data.draw(st.integers(0, ml_ds.user_count - 1))
+    row = ml_ds.user_row(user_num=uno)
+    assert row is not None
+    ratings = row.field("rating")
+    assert ratings is not None
+
+    ks = data.draw(
+        nph.arrays(np.int32, st.integers(0, 1000), elements=st.integers(0, len(row) - 1))
+    )
+    found = row[ks]
+
+    assert len(found) == len(ks)
+    assert np.all(found.ids() == row.ids()[ks])
+    assert np.all(found.numbers() == row.numbers()[ks])
+    rf = row.field("rating")
+    assert rf is not None
+    assert np.all(found.field("rating") == rf[ks])
 
 
 def test_subset_slice(ml_ds: Dataset):
