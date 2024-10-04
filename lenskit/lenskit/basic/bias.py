@@ -16,7 +16,8 @@ from typing_extensions import Self
 
 from lenskit.data import Dataset
 from lenskit.data.items import ItemList
-from lenskit.data.types import EntityId, UITuple
+from lenskit.data.query import QueryInput, RecQuery
+from lenskit.data.types import UITuple
 from lenskit.data.vocab import Vocabulary
 from lenskit.pipeline import Component
 
@@ -137,21 +138,22 @@ class Bias(Component):
 
         return self
 
-    def __call__(self, user: EntityId | UserProfile | ItemList | None, items: ItemList) -> ItemList:
+    def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         """
         Compute predictions for a user and items.  Unknown users and items are
         assumed to have zero bias.
 
         Args:
-            user:
-                The user.  If the profile has an item list with ratings, those
-                ratings are used to compute a new bias instead of using their
-                recorded bias.
+            query:
+                The recommendation query.  If the query has an item list with
+                ratings, those ratings are used to compute a new bias instead of
+                using the user's recorded bias.
             items:
                 The items to score.
         Returns:
             Scores for `items`.
         """
+        query = RecQuery.create(query)
         preds = np.full(len(items), self.mean_)
 
         if self.item_offsets_ is not None:
@@ -160,39 +162,26 @@ class Bias(Component):
             mask = idxes >= 0
             preds[mask] += self.item_offsets_[idxes[mask]]
 
-        if isinstance(user, ItemList):
-            ilist = user
-            uid = None
-        elif isinstance(user, UserProfile):
-            ilist = user.item_list()
-            uid = user.id
-        else:
-            ilist = None
-            uid = user
-
-        if ilist is not None:
-            ratings = ilist.field("rating")
-        else:
-            ratings = None
+        ratings = query.user_items.field("rating") if query.user_items is not None else None
 
         if self.users and ratings is not None:
-            assert ilist is not None  # only way we can be here
+            assert query.user_items is not None  # only way we can be here
 
             uoff = ratings - self.mean_
             if self.item_offsets_ is not None:
-                idxes = ilist.numbers(vocabulary=self.items_, missing="negative")
+                idxes = query.user_items.numbers(vocabulary=self.items_, missing="negative")
                 found = idxes >= 0
                 uoff[found] -= self.item_offsets_[idxes[found]]
 
             umean = uoff.mean()
             preds = preds + umean
 
-        elif uid is not None and self.user_offsets_ is not None:
+        elif query.user_id is not None and self.user_offsets_ is not None:
             assert self.users_ is not None
-            uno = self.users_.number(uid, missing="none")
+            uno = self.users_.number(query.user_id, missing="none")
             if uno is not None:
                 umean = self.user_offsets_[uno]
-                _logger.debug("using mean(user %s) = %.3f", user, umean)
+                _logger.debug("using mean(user %s) = %.3f", query.user_id, umean)
                 preds += umean
 
         return ItemList(items, scores=preds)
