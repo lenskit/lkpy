@@ -39,7 +39,8 @@ class RecQuery:
     """
     The items from the user's interaction history, with ratings if available.  This
     list is *deduplicated*, like :meth:`~lenskit.data.Dataset.interaction_matrix`,
-    rather than a full interaction log.
+    rather than a full interaction log.  As with :meth:`~lenskit.data.Dataset.user_row`,
+    the rating is expected to be on a ``rating`` field, not ``score``.
     """
 
     @classmethod

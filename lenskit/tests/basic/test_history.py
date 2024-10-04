@@ -17,10 +17,9 @@ from hypothesis import given, settings
 
 import lenskit.util.test as lktu
 from lenskit.basic import PopScorer
-from lenskit.basic.history import UserTrainingHistoryLookup
+from lenskit.basic.history import KnownRatingScorer, UserTrainingHistoryLookup
 from lenskit.basic.topn import TopNRanker
-from lenskit.data.items import ItemList
-from lenskit.data.query import RecQuery
+from lenskit.data import Dataset, ItemList, RecQuery
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 _log = logging.getLogger(__name__)
@@ -58,7 +57,7 @@ def test_lookup_no_override(ml_ds):
     assert np.all(query.user_items.ids() == ds_row[:-2].ids())
 
 
-def test_lookup_items_only(ml_ds):
+def test_lookup_items_only(ml_ds: Dataset):
     "ensure history accepts item list"
     lookup = UserTrainingHistoryLookup()
     lookup.train(ml_ds)
@@ -72,3 +71,115 @@ def test_lookup_items_only(ml_ds):
     assert query.user_items is not None
     assert len(query.user_items) == len(ds_row) - 5
     assert np.all(query.user_items.ids() == ds_row[:-5].ids())
+
+
+def test_known_rating_defaults(ml_ds: Dataset):
+    algo = KnownRatingScorer()
+    algo.train(ml_ds)
+
+    # the first 2 of these are rated, the 3rd does not exist, and the other 2 are not rated
+    items = [50, 17, 210, 1172, 2455]
+    scored = algo(2, ItemList(item_ids=items))
+
+    assert len(scored) == len(items)
+    assert np.all(scored.ids() == items)
+
+    scores = scored.scores()
+    assert scores is not None
+    assert np.all(np.isnan(scores[-3:]))
+    assert not np.any(np.isnan(scores[:-3]))
+
+    row = ml_ds.user_row(2)
+    assert row is not None
+    udf = row.field("rating", "pandas", index="ids")
+    assert udf is not None
+    assert np.all(scores[~np.isnan(scores)] == udf.loc[[50, 17]].values)
+
+
+def test_known_indicator(ml_ds: Dataset):
+    algo = KnownRatingScorer(score="indicator")
+    algo.train(ml_ds)
+
+    # the first 2 of these are rated, the 3rd does not exist, and the other 2 are not rated
+    items = [50, 17, 210, 1172, 2455]
+    scored = algo(2, ItemList(item_ids=items))
+
+    assert len(scored) == len(items)
+    assert np.all(scored.ids() == items)
+
+    scores = scored.scores()
+    assert scores is not None
+    assert np.all(scores == [1, 1, 0, 0, 0])
+
+
+def test_known_query_ratings_none(ml_ds: Dataset):
+    algo = KnownRatingScorer(score="rating", source="query")
+    algo.train(ml_ds)
+
+    # the first 2 of these are rated, the 3rd does not exist, and the other 2 are not rated
+    items = [50, 17, 210, 1172, 2455]
+    scored = algo(2, ItemList(item_ids=items))
+
+    assert len(scored) == len(items)
+    assert np.all(scored.ids() == items)
+
+    # but no scores should be computed!
+    scores = scored.scores()
+    assert scores is not None
+    assert np.all(np.isnan(scores))
+
+
+def test_known_query_ratings(ml_ds: Dataset):
+    algo = KnownRatingScorer(score="rating", source="query")
+    algo.train(ml_ds)
+
+    # the first 2 of these are rated, the 3rd does not exist, and the other 2 are not rated
+    items = [50, 17, 210, 1172, 2455]
+    scored = algo(ml_ds.user_row(2), ItemList(item_ids=items))
+
+    assert len(scored) == len(items)
+    assert np.all(scored.ids() == items)
+
+    scores = scored.scores()
+    assert scores is not None
+    assert np.all(np.isnan(scores[-3:]))
+    assert not np.any(np.isnan(scores[:-3]))
+
+    row = ml_ds.user_row(2)
+    assert row is not None
+    udf = row.field("rating", "pandas", index="ids")
+    assert udf is not None
+    assert np.all(scores[~np.isnan(scores)] == udf.loc[[50, 17]].values)
+
+
+def test_known_query_indicator(ml_ds: Dataset):
+    algo = KnownRatingScorer(score="indicator", source="query")
+    algo.train(ml_ds)
+
+    # the first 2 of these are rated, the 3rd does not exist, and the other 2 are not rated
+    items = [50, 17, 210, 1172, 2455]
+    scored = algo(ml_ds.user_row(2), ItemList(item_ids=items))
+
+    assert len(scored) == len(items)
+    assert np.all(scored.ids() == items)
+
+    scores = scored.scores()
+    assert scores is not None
+    assert np.all(scores == [1, 1, 0, 0, 0])
+
+
+def test_known_query_default_indicator(ml_ds: Dataset):
+    algo = KnownRatingScorer(source="query")
+    algo.train(ml_ds)
+
+    # the first 2 of these are rated, the 3rd does not exist, and the other 2 are not rated
+    items = [50, 17, 210, 1172, 2455]
+    scored = algo(ItemList(ml_ds.user_row(2), rating=False), ItemList(item_ids=items))
+
+    assert len(scored) == len(items)
+    assert np.all(scored.ids() == items)
+
+    scores = scored.scores()
+    assert scores is not None
+    assert np.all(scores[:2] == [1, 1])
+    assert np.all(np.isnan(scores[2:]))
