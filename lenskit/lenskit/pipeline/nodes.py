@@ -72,7 +72,7 @@ class ComponentNode(Node[ND], Generic[ND]):
         self.component = component
         self.connections = {}
 
-        sig = signature(component)
+        sig = signature(component, eval_str=True)
         if sig.return_annotation == Signature.empty:
             warnings.warn(
                 f"component {component} has no return type annotation", TypecheckWarning, 2

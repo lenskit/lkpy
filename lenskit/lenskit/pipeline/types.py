@@ -93,7 +93,7 @@ def is_compatible_type(typ: type, *targets: type) -> bool:
                 print(typ, type(typ))
                 if issubclass(typ, tcls):  # type: ignore
                     return True
-        elif typ == int and issubclass(target, (float, complex)):  # noqa: E721
+        elif typ == int and isinstance(target, type) and issubclass(target, (float, complex)):  # noqa: E721
             return True
         elif typ == float and issubclass(target, complex):  # noqa: E721
             return True
@@ -146,7 +146,11 @@ def is_compatible_data(obj: object, *targets: type) -> bool:
                     TypecheckWarning,
                 )
                 return True
-        elif isinstance(obj, int) and issubclass(target, (float, complex)):  # noqa: E721
+        elif (
+            isinstance(obj, int)
+            and isinstance(target, type)
+            and issubclass(target, (float, complex))
+        ):  # noqa: E721
             return True
         elif isinstance(obj, float) and issubclass(target, complex):  # noqa: E721
             return True
