@@ -353,14 +353,58 @@ def test_from_df_user():
 
 def test_copy_ctor():
     data = np.random.randn(5)
-    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
+    extra = np.random.randn(5)
+
+    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data, extra=extra)
     copy = ItemList(il)
     assert copy is not il
     assert len(copy) == len(il)
 
     assert np.all(copy.ids() == il.ids())
     assert np.all(copy.numbers() == il.numbers())
+    assert np.all(copy.scores() == data)
     assert copy._vocab is il._vocab
+
+    x = copy.field("extra")
+    assert x is not None
+    assert np.all(x == extra)
+
+
+def test_copy_ctor_remove_scores():
+    data = np.random.randn(5)
+    extra = np.random.randn(5)
+
+    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data, extra=extra)
+    copy = ItemList(il, scores=False)
+    assert copy is not il
+    assert len(copy) == len(il)
+
+    assert np.all(copy.ids() == il.ids())
+    assert np.all(copy.numbers() == il.numbers())
+    assert copy.scores() is None
+    assert copy._vocab is il._vocab
+
+    x = copy.field("extra")
+    assert x is not None
+    assert np.all(x == extra)
+
+
+def test_copy_ctor_remove_extra():
+    data = np.random.randn(5)
+    extra = np.random.randn(5)
+
+    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data, extra=extra)
+    copy = ItemList(il, extra=False)
+    assert copy is not il
+    assert len(copy) == len(il)
+
+    assert np.all(copy.ids() == il.ids())
+    assert np.all(copy.numbers() == il.numbers())
+    assert np.all(copy.scores() == data)
+    assert copy._vocab is il._vocab
+
+    x = copy.field("extra")
+    assert x is None
 
 
 def test_from_vocab(ml_ds: Dataset):

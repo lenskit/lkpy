@@ -88,8 +88,8 @@ class ItemList:
     Args:
         source:
             A source item list. If provided, its fields and data are used to
-            initialize any aspects of the item list that are not provided in
-            the other arguments.
+            initialize any aspects of the item list that are not provided in the
+            other arguments.
         item_ids:
             A list or array of item identifiers. ``item_id`` is accepted as an
             alternate name.
@@ -101,12 +101,14 @@ class ItemList:
         ordered:
             Whether the list has a meaningful order.
         scores:
-            An array of scores for the items.
+            An array of scores for the items.  Pass the value ``False`` to
+            remove the scores when copying from a source list.
         fields:
             Additional fields, such as ``score`` or ``rating``.  Field names
             should generally be singular; the named keyword arguments and
             accessor methods are plural for readability (“get the list of item
-            IDs”)
+            IDs”).  Pass the value ``False`` to remove the field when copying
+            from a source list.
     """
 
     ordered: bool
@@ -126,12 +128,12 @@ class ItemList:
         item_nums: NDArray[np.int32] | pd.Series[int] | Sequence[int] | ArrayLike | None = None,
         vocabulary: Vocabulary | None = None,
         ordered: bool | None = None,
-        scores: NDArray[np.generic] | torch.Tensor | ArrayLike | None = None,
-        **fields: NDArray[np.generic] | torch.Tensor | ArrayLike,
+        scores: NDArray[np.generic] | torch.Tensor | ArrayLike | Literal[False] | None = None,
+        **fields: NDArray[np.generic] | torch.Tensor | ArrayLike | Literal[False],
     ):
         if source is not None:
             self.__dict__.update(source.__dict__)
-            self._fields = dict(source._fields)
+            fields = source._fields | fields
 
         if ordered is not None:
             self.ordered = ordered
@@ -179,10 +181,13 @@ class ItemList:
         self._fields = {
             name: check_1d(MTArray(data), self._len, label=name)
             for (name, data) in fields.items()
-            if name not in ("item_id", "item_num")
+            if name not in ("item_id", "item_num") and data is not False
         }
 
-        if scores is not None:
+        if scores is False:
+            if "score" in self._fields:
+                del self._fields["score"]
+        elif scores is not None:
             if "score" in fields:  # pragma: nocover
                 raise ValueError("cannot specify both scores= and score=")
             self._fields["score"] = MTArray(scores)
