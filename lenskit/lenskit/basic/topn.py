@@ -8,7 +8,7 @@ from lenskit.data import ItemList
 from lenskit.pipeline import Component
 
 
-class TopN(Component):
+class TopNRanker(Component):
     """
     Rank scored items by their score and take the top *N*.  The ranking length
     can be passed either at runtime or at component instantiation time, with the

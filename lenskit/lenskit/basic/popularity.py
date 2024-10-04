@@ -8,7 +8,7 @@ from lenskit.pipeline import Component
 _log = logging.getLogger(__name__)
 
 
-class PopScore(Component):
+class PopScorer(Component):
     """
     Score items by their popularity.  Use with :py:class:`TopN` to get a
     most-popular-items recommender.

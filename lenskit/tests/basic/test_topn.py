@@ -16,8 +16,8 @@ import hypothesis.strategies as st
 from hypothesis import given, settings
 
 import lenskit.util.test as lktu
-from lenskit.basic import PopScore
-from lenskit.basic.topn import TopN
+from lenskit.basic import PopScorer
+from lenskit.basic.topn import TopNRanker
 from lenskit.data.items import ItemList
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
@@ -34,7 +34,7 @@ def scored_lists(draw: st.DrawFn) -> ItemList:
 
 @given(scored_lists())
 def test_unlimited_ranking(items: ItemList):
-    topn = TopN()
+    topn = TopNRanker()
     ranked = topn(items=items)
 
     ids = items.ids()
@@ -68,7 +68,7 @@ def test_unlimited_ranking(items: ItemList):
 
 @given(st.integers(min_value=1, max_value=100), scored_lists())
 def test_configured_truncation(n, items: ItemList):
-    topn = TopN(n)
+    topn = TopNRanker(n)
     ranked = topn(items=items)
 
     ids = items.ids()
@@ -106,7 +106,7 @@ def test_configured_truncation(n, items: ItemList):
 
 @given(st.integers(min_value=1, max_value=100), scored_lists())
 def test_runtime_truncation(n, items: ItemList):
-    topn = TopN()
+    topn = TopNRanker()
     ranked = topn(items=items, n=n)
 
     ids = items.ids()

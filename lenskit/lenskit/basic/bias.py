@@ -24,7 +24,7 @@ from lenskit.pipeline import Component
 _logger = logging.getLogger(__name__)
 
 
-class Bias(Component):
+class BiasScorer(Component):
     """
     A user-item bias rating prediction model.  This implements the following
     predictor function:

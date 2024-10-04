@@ -2,7 +2,7 @@
 Various basic pipeline components.
 """
 
-from .bias import Bias
-from .popularity import PopScore
+from .bias import BiasScorer
+from .popularity import PopScorer
 
-__all__ = ["Bias", "PopScore"]
+__all__ = ["BiasScorer", "PopScorer"]

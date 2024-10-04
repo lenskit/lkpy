@@ -9,7 +9,7 @@ import pickle
 import pandas as pd
 
 import lenskit.util.test as lktu
-from lenskit.basic import PopScore
+from lenskit.basic import PopScorer
 from lenskit.data.items import ItemList
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
@@ -19,7 +19,7 @@ simple_df = pd.DataFrame(
 
 
 def test_popscore_quantile(rng, ml_ds):
-    pop = PopScore()
+    pop = PopScorer()
     pop.train(ml_ds)
 
     assert pop.item_scores_.max() == 1.0
@@ -32,7 +32,7 @@ def test_popscore_quantile(rng, ml_ds):
 
 
 def test_popscore_rank(rng, ml_ds):
-    pop = PopScore("rank")
+    pop = PopScorer("rank")
     pop.train(ml_ds)
 
     counts = ml_ds.item_stats()["count"]
@@ -45,7 +45,7 @@ def test_popscore_rank(rng, ml_ds):
 
 
 def test_popscore_counts(rng, ml_ds):
-    pop = PopScore("count")
+    pop = PopScorer("count")
     pop.train(ml_ds)
 
     counts = ml_ds.item_stats()["count"]
@@ -59,7 +59,7 @@ def test_popscore_counts(rng, ml_ds):
 
 
 def test_popscore_save_load(ml_ds):
-    original = PopScore()
+    original = PopScorer()
     original.train(ml_ds)
 
     mod = pickle.dumps(original)

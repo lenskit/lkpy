@@ -14,7 +14,7 @@ import torch
 from pytest import approx, mark, raises
 
 from lenskit import util as lku
-from lenskit.basic import Bias
+from lenskit.basic import BiasScorer
 from lenskit.data import Dataset, from_interactions_df
 from lenskit.data.items import ItemList
 
@@ -29,19 +29,19 @@ simple_ds = from_interactions_df(simple_df)
 def test_bias_check_arguments():
     # negative damping is not allowed
     with raises(ValueError):
-        Bias(damping=-1)
+        BiasScorer(damping=-1)
 
     # negative user damping not allowed
     with raises(ValueError):
-        Bias(damping=(-1, 5))
+        BiasScorer(damping=(-1, 5))
 
     # negative user damping not allowed
     with raises(ValueError):
-        Bias(damping=(5, -1))
+        BiasScorer(damping=(5, -1))
 
 
 def test_bias_full():
-    bias = Bias()
+    bias = BiasScorer()
     bias.train(simple_ds)
     assert bias.mean_ == approx(3.5)
 
@@ -69,13 +69,13 @@ def test_bias_full():
 
 
 def test_bias_clone():
-    bias = Bias()
+    bias = BiasScorer()
     bias.train(simple_ds)
 
     params = bias.get_config()
     assert sorted(params.keys()) == ["damping", "items", "users"]
 
-    a2 = Bias.from_config(params)
+    a2 = BiasScorer.from_config(params)
     assert a2 is not bias
     assert getattr(a2, "mean_", None) is None
     assert getattr(a2, "item_offsets_", None) is None
@@ -83,13 +83,13 @@ def test_bias_clone():
 
 
 def test_bias_clone_damping():
-    bias = Bias(damping=(10, 5))
+    bias = BiasScorer(damping=(10, 5))
     bias.train(simple_ds)
 
     params = bias.get_config()
     assert sorted(params.keys()) == ["damping", "items", "users"]
 
-    a2 = Bias.from_config(params)
+    a2 = BiasScorer.from_config(params)
     assert a2 is not bias
     assert a2.damping.user == 10
     assert a2.damping.item == 5
@@ -99,7 +99,7 @@ def test_bias_clone_damping():
 
 
 def test_bias_global_only():
-    bias = Bias(users=False, items=False)
+    bias = BiasScorer(users=False, items=False)
     bias.train(simple_ds)
     assert bias.mean_ == approx(3.5)
     assert bias.items_ is None
@@ -109,7 +109,7 @@ def test_bias_global_only():
 
 
 def test_bias_no_user():
-    bias = Bias(users=False)
+    bias = BiasScorer(users=False)
     bias.train(simple_ds)
     assert bias.mean_ == approx(3.5)
 
@@ -120,7 +120,7 @@ def test_bias_no_user():
 
 
 def test_bias_no_item():
-    bias = Bias(items=False)
+    bias = BiasScorer(items=False)
     bias.train(simple_ds)
     assert bias.mean_ == approx(3.5)
     assert bias.item_offsets_ is None
@@ -130,7 +130,7 @@ def test_bias_no_item():
 
 
 def test_bias_global_predict():
-    bias = Bias(items=False, users=False)
+    bias = BiasScorer(items=False, users=False)
     bias.train(simple_ds)
     p = bias(10, ItemList(item_ids=[1, 2, 3]))
 
@@ -139,7 +139,7 @@ def test_bias_global_predict():
 
 
 def test_bias_item_predict():
-    bias = Bias(users=False)
+    bias = BiasScorer(users=False)
     bias.train(simple_ds)
     assert bias.item_offsets_ is not None
 
@@ -150,7 +150,7 @@ def test_bias_item_predict():
 
 
 def test_bias_user_predict():
-    bias = Bias(items=False)
+    bias = BiasScorer(items=False)
     bias.train(simple_ds)
     p = bias(10, ItemList(item_ids=[1, 2, 3]))
 
@@ -164,7 +164,7 @@ def test_bias_user_predict():
 
 
 def test_bias_new_user_predict():
-    bias = Bias()
+    bias = BiasScorer()
     bias.train(simple_ds)
     assert bias.item_offsets_ is not None
 
@@ -182,7 +182,7 @@ def test_bias_new_user_predict():
 
 
 def test_bias_predict_unknown_item():
-    bias = Bias()
+    bias = BiasScorer()
     bias.train(simple_ds)
     assert bias.items_ is not None
     assert bias.item_offsets_ is not None
@@ -199,7 +199,7 @@ def test_bias_predict_unknown_item():
 
 
 def test_bias_predict_unknown_user():
-    bias = Bias()
+    bias = BiasScorer()
     bias.train(simple_ds)
     assert bias.items_ is not None
     assert bias.item_offsets_ is not None
@@ -212,7 +212,7 @@ def test_bias_predict_unknown_user():
 
 
 def test_bias_train_ml_ratings(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    bias = Bias()
+    bias = BiasScorer()
     bias.train(ml_ds)
     assert bias.items_ is not None
     assert bias.item_offsets_ is not None
@@ -235,7 +235,7 @@ def test_bias_train_ml_ratings(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
 
 def test_bias_item_damp():
-    bias = Bias(users=False, damping=5)
+    bias = BiasScorer(users=False, damping=5)
     bias.train(simple_ds)
     assert bias.mean_ == approx(3.5)
 
@@ -246,7 +246,7 @@ def test_bias_item_damp():
 
 
 def test_bias_user_damp():
-    bias = Bias(items=False, damping=5)
+    bias = BiasScorer(items=False, damping=5)
     bias.train(simple_ds)
     assert bias.mean_ == approx(3.5)
     assert bias.item_offsets_ is None
@@ -256,7 +256,7 @@ def test_bias_user_damp():
 
 
 def test_bias_damped():
-    bias = Bias(damping=5)
+    bias = BiasScorer(damping=5)
     bias.train(simple_ds)
     assert bias.mean_ == approx(3.5)
 
@@ -268,7 +268,7 @@ def test_bias_damped():
 
 
 def test_bias_separate_damping():
-    bias = Bias(damping=(5, 10))
+    bias = BiasScorer(damping=(5, 10))
     bias.train(simple_ds)
     assert bias.mean_ == approx(3.5)
 
@@ -280,7 +280,7 @@ def test_bias_separate_damping():
 
 
 def test_bias_save():
-    original = Bias(damping=5)
+    original = BiasScorer(damping=5)
     original.train(simple_ds)
     assert original.mean_ == approx(3.5)
 
