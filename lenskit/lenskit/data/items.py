@@ -219,6 +219,10 @@ class ItemList:
         fields = {f: df[f].values for f in df.columns}
         return cls(item_ids=ids, item_nums=nums, vocabulary=vocabulary, **fields)  # type: ignore
 
+    @classmethod
+    def from_vocabulary(cls, vocab: Vocabulary) -> ItemList:
+        return ItemList(item_ids=vocab.ids(), item_nums=np.arange(len(vocab)), vocabulary=vocab)
+
     def clone(self) -> ItemList:
         """
         Make a shallow copy of the item list.
@@ -230,6 +234,11 @@ class ItemList:
             ordered=self.ordered,
             **self._fields,  # type: ignore
         )
+
+    @property
+    def vocabulary(self) -> Vocabulary | None:
+        "Get the item list's vocabulary, if available."
+        return self._vocab
 
     def ids(self) -> NDArray[NPEntityId]:
         """

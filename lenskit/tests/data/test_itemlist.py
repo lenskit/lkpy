@@ -361,3 +361,12 @@ def test_copy_ctor():
     assert np.all(copy.ids() == il.ids())
     assert np.all(copy.numbers() == il.numbers())
     assert copy._vocab is il._vocab
+
+
+def test_from_vocab(ml_ds: Dataset):
+    items = ItemList.from_vocabulary(ml_ds.items)
+
+    assert len(items) == ml_ds.item_count
+    assert np.all(items.ids() == ml_ds.items.ids())
+    assert np.all(items.numbers() == np.arange(len(items)))
+    assert items.vocabulary is ml_ds.items
