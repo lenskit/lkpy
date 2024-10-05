@@ -29,9 +29,9 @@ from .components import (  # type: ignore # noqa: F401
     instantiate_component,
 )
 from .config import PipelineConfig
-from .nodes import ND, ComponentNode, FallbackNode, InputNode, LiteralNode, Node
+from .nodes import ND, ComponentNode, InputNode, LiteralNode, Node
 from .state import PipelineState
-from .types import parse_type_string
+from .types import Lazy, parse_type_string
 
 __all__ = [
     "Pipeline",
@@ -41,6 +41,7 @@ __all__ = [
     "PipelineFunction",
     "Configurable",
     "PipelineConfig",
+    "Lazy",
     "Component",
     "topn_pipeline",
 ]
@@ -328,63 +329,6 @@ class Pipeline:
         self._clear_caches()
         return node
 
-    def use_first_of(self, name: str, *nodes: Node[T | None]) -> Node[T]:
-        """
-        Create a new node whose value is the first defined (not ``None``) value
-        of the specified nodes.  If a node is an input node and its value is not
-        supplied, it is treated as ``None`` in this case instead of failing the
-        run. This method is used for things like filling in optional pipeline
-        inputs.  For example, if you want the pipeline to take candidate items
-        through an ``items`` input, but look them up from the user's history and
-        the training data if ``items`` is not supplied, you would do:
-
-        .. code:: python
-
-            pipe = Pipeline()
-            # allow candidate items to be optionally specified
-            items = pipe.create_input('items', list[EntityId], None)
-            # find candidates from the training data (optional)
-            lookup_candidates = pipe.add_component(
-                'select-candidates',
-                UnratedTrainingItemsCandidateSelector(),
-                user=history,
-            )
-            # if the client provided items as a pipeline input, use those; otherwise
-            # use the candidate selector we just configured.
-            candidates = pipe.use_first_of('candidates', items, lookup_candidates)
-
-        .. note::
-
-            This method does not distinguish between an input being unspecified and
-            explicitly specified as ``None``.
-
-        .. note::
-
-            This method does *not* implement item-level fallbacks, only
-            fallbacks at the level of entire results.  That is, you can use it
-            to use component A as a fallback for B if B returns ``None``, but it
-            will not use B to fill in missing scores for individual items that A
-            did not score.  A specific itemwise fallback component is needed for
-            such an operation.
-
-        .. note::
-            If one of the fallback elements is a component ``A`` that depends on
-            another component or input ``B``, and ``B`` is missing or returns
-            ``None`` such that ``A`` would usually fail, then ``A`` will be
-            skipped and the fallback will move on to the next node. This works
-            with arbitrarily-deep transitive chains.
-
-        Args:
-            name:
-                The name of the node.
-            nodes:
-                The nodes to try, in order, to satisfy this node.
-        """
-        node = FallbackNode(name, list(nodes))
-        self._nodes[name] = node
-        self._clear_caches()
-        return node
-
     def connect(self, obj: str | Node[Any], **inputs: Node[Any] | str | object):
         """
         Provide additional input connections for a component that has already
@@ -468,8 +412,6 @@ class Pipeline:
                     clone.create_input(name, *types)
                 case LiteralNode(name, value):
                     clone._nodes[name] = LiteralNode(name, value)
-                case FallbackNode(name, alts):
-                    clone.use_first_of(name, *alts)
                 case ComponentNode(name, comp, _inputs, wiring):
                     if isinstance(comp, FunctionType):
                         comp = comp
@@ -544,11 +486,6 @@ class Pipeline:
                     cfg.literals[name] = config.PipelineLiteral.represent(value)
                 case ComponentNode(name):
                     cfg.components[name] = config.PipelineComponent.from_node(node, remapped)
-                case FallbackNode(name, alternatives):
-                    cfg.components[name] = config.PipelineComponent(
-                        code="@use-first-of",
-                        inputs=[remapped.get(n.name, n.name) for n in alternatives],
-                    )
                 case _:  # pragma: nocover
                     raise RuntimeError(f"invalid node {node}")
 
@@ -611,16 +548,7 @@ class Pipeline:
             pipe.add_component(name, obj)
             to_wire.append(comp)
 
-        # pass 3: add meta nodes
-        for name, comp in cfg.components.items():
-            if comp.code == "@use-first-of":
-                if not isinstance(comp.inputs, list):
-                    raise PipelineError("@use-first-of must have input list, not dict")
-                pipe.use_first_of(name, *[pipe.node(n) for n in comp.inputs])
-            elif comp.code.startswith("@"):
-                raise PipelineError(f"unsupported meta-component {comp.code}")
-
-        # pass 4: wiring
+        # pass 3: wiring
         for name, comp in cfg.components.items():
             if isinstance(comp.inputs, dict):
                 inputs = {n: pipe.node(t) for (n, t) in comp.inputs.items()}
@@ -628,11 +556,11 @@ class Pipeline:
             elif not comp.code.startswith("@"):
                 raise PipelineError(f"component {name} inputs must be dict, not list")
 
-        # pass 5: aliases
+        # pass 4: aliases
         for n, t in cfg.aliases.items():
             pipe.alias(n, t)
 
-        # pass 6: defaults
+        # pass 5: defaults
         for n, t in cfg.defaults.items():
             pipe.set_default(n, pipe.node(t))
 

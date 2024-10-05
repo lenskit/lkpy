@@ -45,21 +45,6 @@ class InputNode(Node[ND], Generic[ND]):
     """
 
 
-class FallbackNode(Node[ND], Generic[ND]):
-    """
-    Node for trying several nodes in turn.
-    """
-
-    __match_args__ = ("name", "alternatives")
-
-    alternatives: list[Node[ND | None]]
-    "The nodes that can possibly fulfil this node."
-
-    def __init__(self, name: str, alternatives: list[Node[ND | None]]):
-        super().__init__(name)
-        self.alternatives = alternatives
-
-
 class LiteralNode(Node[ND], Generic[ND]):
     __match_args__ = ("name", "value")
     value: ND

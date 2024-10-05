@@ -10,14 +10,16 @@ Pipeline runner logic.
 
 # pyright: strict
 import logging
-from typing import Any, Literal, TypeAlias
+from dataclasses import dataclass
+from typing import Any, Generic, Literal, TypeAlias, TypeVar, get_args, get_origin
 
 from . import Pipeline, PipelineError
 from .components import PipelineFunction
-from .nodes import ComponentNode, FallbackNode, InputNode, LiteralNode, Node
-from .types import is_compatible_data
+from .nodes import ComponentNode, InputNode, LiteralNode, Node
+from .types import Lazy, is_compatible_data
 
 _log = logging.getLogger(__name__)
+T = TypeVar("T")
 State: TypeAlias = Literal["pending", "in-progress", "finished", "failed"]
 
 
@@ -78,8 +80,6 @@ class PipelineRunner:
                 self._inject_input(name, types, required)
             case ComponentNode(name, comp, inputs, wiring):
                 self._run_component(name, comp, inputs, wiring, required)
-            case FallbackNode(name, alts):
-                self._run_fallback(name, alts)
             case _:  # pragma: nocover
                 raise PipelineError(f"invalid node {node}")
 
@@ -104,11 +104,18 @@ class PipelineRunner:
         in_data = {}
         _log.debug("processing inputs for component %s", name)
         for iname, itype in inputs.items():
+            # look up the input wiring for this parameter input
             src = wiring.get(iname, None)
             if src is not None:
                 snode = self.pipe.node(src)
             else:
                 snode = self.pipe.get_default(iname)
+
+            # check if this is a lazy node
+            lazy = False
+            if itype is not None and get_origin(itype) == Lazy:
+                lazy = True
+                (itype,) = get_args(itype)
 
             if snode is None:
                 ival = None
@@ -117,13 +124,24 @@ class PipelineRunner:
                     ireq = not is_compatible_data(None, itype)
                 else:
                     ireq = False
-                ival = self.run(snode, required=ireq)
 
-            # bail out if we're trying to satisfy a non-required dependency
-            if ival is None and itype and not is_compatible_data(None, itype) and not required:
+                if lazy:
+                    ival = DeferredRun(self, iname, name, snode, required=ireq, data_type=itype)
+                else:
+                    ival = self.run(snode, required=ireq)
+
+            # bail out if we're failing to satisfy a dependency but it is not required
+            if (
+                ival is None
+                and itype
+                and not lazy
+                and not is_compatible_data(None, itype)
+                and not required
+            ):
                 return None
 
-            if itype and not is_compatible_data(ival, itype):
+            # check the data type before passing
+            if itype and not lazy and not is_compatible_data(ival, itype):
                 if ival is None:
                     raise TypeError(
                         f"no data available for required input ❬{iname}❭ on component ❬{name}❭"
@@ -137,12 +155,26 @@ class PipelineRunner:
         _log.debug("running component %s", name)
         self.state[name] = comp(**in_data)
 
-    def _run_fallback(self, name: str, alternatives: list[Node[Any]]) -> None:
-        for alt in alternatives:
-            val = self.run(alt, required=False)
-            if val is not None:
-                self.state[name] = val
-                return
 
-        # got this far, no alternatives
-        raise RuntimeError(f"no alternative for {name} returned data")
+@dataclass(eq=False)
+class DeferredRun(Generic[T]):
+    """
+    Implementation of :class:`Lazy` for deferred runs in a pipeline runner.
+    """
+
+    runner: PipelineRunner
+    iname: str
+    cname: str
+    node: Node[T]
+    required: bool
+    data_type: type | None
+
+    def get(self) -> T:
+        val = self.runner.run(self.node, required=self.required)
+
+        if self.data_type is not None and not is_compatible_data(val, self.data_type):
+            raise TypeError(
+                f"input ❬{self.iname}❭ on component ❬{self.cname}❭ has invalid type {type(val)} (expected {self.data_type})"  # noqa: E501
+            )
+
+        return val

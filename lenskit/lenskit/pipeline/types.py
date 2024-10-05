@@ -11,15 +11,47 @@ import re
 import warnings
 from importlib import import_module
 from types import GenericAlias, NoneType
-from typing import Union, _GenericAlias, get_args, get_origin  # type: ignore
+from typing import (  # type: ignore
+    Generic,
+    Protocol,
+    TypeVar,
+    Union,
+    _GenericAlias,
+    get_args,
+    get_origin,
+)
 
 import numpy as np
+
+T = TypeVar("T", covariant=True)
 
 
 class TypecheckWarning(UserWarning):
     "Warnings about type-checking logic."
 
     pass
+
+
+class Lazy(Protocol, Generic[T]):
+    """
+    Type for accepting lazy inputs from the pipeline runner.  If your function
+    may or may not need one of its inputs, declare the type with this to only
+    run it as needed:
+
+    .. code:: python
+
+        def my_component(input: str, backup: Lazy[str]) -> str:
+            if input == 'invalid':
+                return backup.get()
+            else:
+                return input
+    """
+
+    def get(self) -> T:
+        """
+        Get the value behind this lazy instance.
+        """
+        ...
 
 
 def is_compatible_type(typ: type, *targets: type) -> bool:
