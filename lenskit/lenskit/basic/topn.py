@@ -70,4 +70,4 @@ class TopNRanker(Component):
 
         # now we need to return in expected order
         result = items[order]
-        return result
+        return ItemList(result, ordered=True)

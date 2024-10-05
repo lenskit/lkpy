@@ -45,6 +45,7 @@ def test_unlimited_ranking(items: ItemList):
 
     assert isinstance(ranked, ItemList)
     assert len(ranked) <= len(items)
+    assert ranked.ordered
     # all valid items are included
     assert len(ranked) == np.sum(~invalid)
 
@@ -80,6 +81,7 @@ def test_configured_truncation(n, items: ItemList):
     val_items = items[~invalid]
 
     assert isinstance(ranked, ItemList)
+    assert ranked.ordered
     assert len(ranked) == min(n, len(val_items))
 
     # the scores match
@@ -118,6 +120,7 @@ def test_runtime_truncation(n, items: ItemList):
     val_items = items[~invalid]
 
     assert isinstance(ranked, ItemList)
+    assert ranked.ordered
     assert len(ranked) == min(n, len(val_items))
 
     # the scores match
