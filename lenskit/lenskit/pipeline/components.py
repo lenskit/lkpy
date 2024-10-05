@@ -71,7 +71,7 @@ class Trainable(Generic[COut], Protocol):  # pragma: nocover
         Trainable components must also implement ``__call__``.
     """
 
-    def train(self, data: Dataset) -> Self:
+    def train(self, data: Dataset) -> None:
         """
         Train the pipeline component to learn its parameters from a training
         dataset.
@@ -79,8 +79,6 @@ class Trainable(Generic[COut], Protocol):  # pragma: nocover
         Args:
             data:
                 The training dataset.
-        Returns:
-            The component.
         """
         raise NotImplementedError()
 

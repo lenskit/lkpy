@@ -650,11 +650,12 @@ class Pipeline:
         :class:`TrainableComponent` interface) on some training data.
         """
         for comp in self._components.values():
-            _log.debug("testing whether to train %s", comp)
-            if isinstance(comp, Trainable):
+            if hasattr(comp, "train"):
                 comp = cast(Trainable[Any], comp)
                 _log.info("training %s", comp)
                 comp.train(data)
+            else:
+                _log.debug("component %s does not need training", comp)
 
     @overload
     def run(self, /, **kwargs: object) -> object: ...
