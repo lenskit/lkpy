@@ -44,7 +44,7 @@ def topn_pipeline(scorer: Component, *, predicts_ratings: bool = False, n: int =
 
     n_score = pipe.add_component("scorer", scorer, query=lookup, items=candidates)
     if predicts_ratings:
-        pipe.alias("rating-preidictor", n_score)
+        pipe.alias("rating-predictor", n_score)
 
     _rank = pipe.add_component("ranker", TopNRanker(n=n), items=n_score, n=n_n)
 
