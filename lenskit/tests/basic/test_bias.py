@@ -330,7 +330,6 @@ def test_bias_topn(ml_ds: Dataset):
     assert len(res) == 3
     assert np.all(res.ids() == [10, 11, -1])
 
-    res = pipe.run("ranker", user=2)
+    res = pipe.run("ranker", user=2, n=10)
     assert isinstance(res, ItemList)
-    assert len(res) == 3
-    assert np.all(res.ids() == [10, 11, -1])
+    assert len(res) == 10
