@@ -36,9 +36,9 @@ def topn_pipeline(scorer: Component, *, predicts_ratings: bool = False, n: int =
     items = pipe.create_input("items", ItemList)
     n_n = pipe.create_input("n", int, None)
 
-    lookup = pipe.add_component("history-lookup", UserTrainingHistoryLookup, query=query)
+    lookup = pipe.add_component("history-lookup", UserTrainingHistoryLookup(), query=query)
     cand_sel = pipe.add_component(
-        "candidate-selector", UnratedTrainingItemsCandidateSelector, query=lookup
+        "candidate-selector", UnratedTrainingItemsCandidateSelector(), query=lookup
     )
     candidates = pipe.use_first_of("candidates", items, cand_sel)
 
