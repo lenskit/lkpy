@@ -191,6 +191,10 @@ class Component(Configurable, Generic[COut]):
 def instantiate_component(
     comp: str | type | FunctionType, config: dict[str, Any] | None
 ) -> Callable[..., object]:
+    """
+    Utility function to instantiate a component given its class, function, or
+    string representation.
+    """
     if isinstance(comp, str):
         mname, oname = comp.split(":", 1)
         mod = import_module(mname)

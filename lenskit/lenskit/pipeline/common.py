@@ -18,9 +18,9 @@ def topn_pipeline(scorer: Component, *, predicts_ratings: bool = False) -> Pipel
     Args:
         scorer:
             The scorer to use in the pipeline (it will added with the component
-            name ``score``, see :ref:`pipeline-names`).
+            name ``scorer``, see :ref:`pipeline-names`).
         predicts_ratings:
-            If ``True``, make ``predict-ratings`` an alias for ``score`` so that
+            If ``True``, make ``rating-predictor`` an alias for ``scorer`` so that
             evaluation components know this pipeline can predict ratings.
     """
     raise NotImplementedError()
