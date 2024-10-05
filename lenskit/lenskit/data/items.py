@@ -133,7 +133,9 @@ class ItemList:
     ):
         if source is not None:
             self.__dict__.update(source.__dict__)
-            fields = source._fields | fields
+            eff_fields = source._fields | fields
+        else:
+            eff_fields = fields
 
         if ordered is not None:
             self.ordered = ordered
@@ -180,7 +182,7 @@ class ItemList:
         # convert fields and drop singular ID/number aliases
         self._fields = {
             name: check_1d(MTArray(data), self._len, label=name)
-            for (name, data) in fields.items()
+            for (name, data) in eff_fields.items()
             if name not in ("item_id", "item_num") and data is not False
         }
 

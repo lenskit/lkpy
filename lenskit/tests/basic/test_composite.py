@@ -49,5 +49,5 @@ def test_fallback_fill_missing(ml_ds: Dataset):
     assert scores is not None
     assert not np.any(np.isnan(scored.scores()))
 
-    assert np.all(scores[:2] == known(2, ItemList(item_ids=items[:2])))
-    assert np.all(scores[2:] == bias(2, ItemList(item_ids=items[2:])))
+    assert scores[:2] == approx(known(2, ItemList(item_ids=items[:2])).scores())
+    assert scores[2:] == approx(bias(2, ItemList(item_ids=items[2:])).scores())
