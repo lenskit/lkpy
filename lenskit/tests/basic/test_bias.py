@@ -18,6 +18,7 @@ from lenskit.basic import BiasScorer
 from lenskit.data import Dataset, from_interactions_df
 from lenskit.data.items import ItemList
 from lenskit.pipeline import Pipeline
+from lenskit.pipeline.common import topn_pipeline
 
 _log = logging.getLogger(__name__)
 
@@ -317,3 +318,17 @@ def test_bias_pipeline(ml_ds: Dataset):
     scores = res.scores()
     assert scores is not None
     assert not np.any(np.isnan(scores[:2]))
+
+
+def test_bias_topn(ml_ds: Dataset):
+    pipe = topn_pipeline(BiasScorer())
+
+    res = pipe.run("rating-predictor", user=2, items=ItemList(item_ids=[10, 11, -1]))
+    assert isinstance(res, ItemList)
+    assert len(res) == 3
+    assert np.all(res.ids() == [10, 11, -1])
+
+    res = pipe.run("ranker", user=2)
+    assert isinstance(res, ItemList)
+    assert len(res) == 3
+    assert np.all(res.ids() == [10, 11, -1])
