@@ -1,7 +1,7 @@
 # pyright: strict
-from poprox_recommender.lkpipeline import Lazy, Pipeline
-
 from pytest import fail, raises
+
+from lenskit.pipeline import Lazy, Pipeline
 
 
 def fallback(first: int | None, second: Lazy[int]) -> int:
