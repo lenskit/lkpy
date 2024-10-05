@@ -19,8 +19,11 @@ from typing_extensions import Any, Protocol, Self, TypeVar, override, runtime_ch
 
 from lenskit.data.dataset import Dataset
 
-# COut is only return, so Component[U] can be assigned to Component[T] if U ≼ T.
+from .types import Lazy
+
 P = ParamSpec("P")
+T = TypeVar("T")
+# COut is only return, so Component[U] can be assigned to Component[T] if U ≼ T.
 COut = TypeVar("COut", covariant=True)
 PipelineFunction: TypeAlias = Callable[..., COut]
 
@@ -211,3 +214,10 @@ def instantiate_component(
         return comp.from_config(config)  # type: ignore
     else:
         return comp()  # type: ignore
+
+
+def fallback_on_none(input: T | None, fallback: Lazy[T]) -> T:
+    if input is not None:
+        return input
+    else:
+        return fallback.get()

@@ -101,7 +101,7 @@ def is_compatible_type(typ: type, *targets: type) -> bool:
     return False
 
 
-def is_compatible_data(obj: object, *targets: type) -> bool:
+def is_compatible_data(obj: object, *targets: type | TypeVar) -> bool:
     """
     Make a best-effort check whether a type is compatible with at least one
     target type. This function is limited by limitations of the Python type
@@ -131,6 +131,10 @@ def is_compatible_data(obj: object, *targets: type) -> bool:
         if get_origin(target) == Union:
             types = get_args(target)
             if is_compatible_data(obj, *types):
+                return True
+        elif isinstance(target, TypeVar):
+            # is this quite correct?
+            if target.__bound__ is None or isinstance(obj, target.__bound__):
                 return True
         elif isinstance(target, (GenericAlias, _GenericAlias)):
             tcls = get_origin(target)

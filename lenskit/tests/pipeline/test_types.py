@@ -12,6 +12,7 @@ import typing
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from types import NoneType
+from typing import TypeVar
 
 import numpy as np
 import pandas as pd
@@ -28,6 +29,9 @@ from lenskit.pipeline.types import (
     parse_type_string,
     type_string,
 )
+
+T = TypeVar("T")
+Tstr = TypeVar("Tstr", bound=str)
 
 
 def test_type_compat_identical():
@@ -100,6 +104,14 @@ def test_numpy_typecheck():
 
 def test_pandas_typecheck():
     assert is_compatible_data(pd.Series(["a", "b"]), ArrayLike)
+
+
+def test_compat_with_typevar():
+    assert is_compatible_data(100, T)
+
+
+def test_not_compat_with_typevar():
+    assert not is_compatible_data(100, Tstr)
 
 
 def test_type_string_none():

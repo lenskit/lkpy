@@ -26,6 +26,7 @@ from .components import (  # type: ignore # noqa: F401
     Configurable,
     PipelineFunction,
     Trainable,
+    fallback_on_none,
     instantiate_component,
 )
 from .config import PipelineConfig
@@ -698,6 +699,58 @@ class Pipeline:
             default=last,
             meta=self.meta(),
         )
+
+    def use_first_of(self, name: str, input: Node[T | None], fallback: Node[T]) -> Node[T]:
+        """
+        Ergonomic method to create a new node that returns the result of its
+        ``input`` if it is provided and not ``None``, and otherwise returns the
+        result of ``fallback``.  This method is used for things like filling in
+        optional pipeline inputs.  For example, if you want the pipeline to take
+        candidate items through an ``items`` input, but look them up from the
+        user's history and the training data if ``items`` is not supplied, you
+        would do:
+
+        .. code:: python
+
+            pipe = Pipeline()
+            # allow candidate items to be optionally specified
+            items = pipe.create_input('items', list[EntityId], None)
+            # find candidates from the training data (optional)
+            lookup_candidates = pipe.add_component(
+                'select-candidates', UnratedTrainingItemsCandidateSelector(),
+                user=history,
+            )
+            # if the client provided items as a pipeline input, use those; otherwise
+            # use the candidate selector we just configured.
+            candidates = pipe.use_first_of('candidates', items, lookup_candidates)
+
+        .. note::
+
+            This method does not distinguish between an input being unspecified
+            and explicitly specified as ``None``.
+
+        .. note::
+
+            This method does *not* implement item-level fallbacks, only
+            fallbacks at the level of entire results.  For item-level score
+            fallbacks, see :class:`~lenskit.basic.FallbackScorer`.
+
+        .. note::
+            If one of the fallback elements is a component ``A`` that depends on
+            another component or input ``B``, and ``B`` is missing or returns
+            ``None`` such that ``A`` would usually fail, then ``A`` will be
+            skipped and the fallback will move on to the next node. This works
+            with arbitrarily-deep transitive chains.
+
+        Args:
+            name:
+                The name of the node.
+            input:
+                The node to use, if it is available.
+            fallback:
+                The node to use if ``input`` does not provide a value.
+        """
+        return self.add_component(name, fallback_on_none, input=input, fallback=fallback)
 
     def _check_available_name(self, name: str) -> None:
         if name in self._nodes or name in self._aliases:

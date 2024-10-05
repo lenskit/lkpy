@@ -10,7 +10,7 @@ from uuid import UUID
 import numpy as np
 from typing_extensions import assert_type
 
-from pytest import fail, raises, warns
+from pytest import raises, warns
 
 from lenskit.pipeline import InputNode, Node, Pipeline, PipelineError
 from lenskit.pipeline.types import TypecheckWarning
