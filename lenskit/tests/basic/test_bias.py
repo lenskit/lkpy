@@ -321,7 +321,8 @@ def test_bias_pipeline(ml_ds: Dataset):
 
 
 def test_bias_topn(ml_ds: Dataset):
-    pipe = topn_pipeline(BiasScorer())
+    pipe = topn_pipeline(BiasScorer(), predicts_ratings=True)
+    print(pipe.get_config())
 
     res = pipe.run("rating-predictor", user=2, items=ItemList(item_ids=[10, 11, -1]))
     assert isinstance(res, ItemList)
