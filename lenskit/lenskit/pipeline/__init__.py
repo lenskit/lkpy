@@ -12,8 +12,9 @@ LensKit pipeline abstraction.
 from __future__ import annotations
 
 import logging
+import typing
 import warnings
-from types import FunctionType
+from types import FunctionType, UnionType
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from typing_extensions import Any, Literal, Self, TypeAlias, TypeVar, cast, overload
@@ -207,7 +208,16 @@ class Pipeline:
         """
         self._check_available_name(name)
 
-        node = InputNode[Any](name, types=set((t if t is not None else type(None)) for t in types))
+        rts: set[type[T | None]] = set()
+        for t in types:
+            if t is None:
+                rts.add(type(None))
+            elif isinstance(t, UnionType):
+                rts |= set(typing.get_args(t))
+            else:
+                rts.add(t)
+
+        node = InputNode[Any](name, types=rts)
         self._nodes[name] = node
         self._clear_caches()
         return node
