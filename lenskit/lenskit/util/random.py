@@ -8,8 +8,24 @@
 Utilities to manage randomness in LensKit and LensKit experiments.
 """
 
+from abc import abstractmethod
+from typing import Literal, Protocol, TypeAlias
+
 import numpy as np
 import seedbank
+from seedbank import RNGKey, SeedLike
+
+DerivableSeed: TypeAlias = SeedLike | Literal["user"] | tuple[SeedLike, Literal["user"]] | None
+
+
+class RNGFactory(Protocol):
+    """
+    Protocol for RNG factories that can do dynamic (e.g. per-user) seeding.
+    """
+
+    @abstractmethod
+    def __call__(self, *keys: RNGKey) -> np.random.Generator:
+        raise NotImplementedError()
 
 
 class FixedRNG:
@@ -18,7 +34,7 @@ class FixedRNG:
     def __init__(self, rng):
         self.rng = rng
 
-    def __call__(self, *keys) -> np.random.Generator:
+    def __call__(self, *keys: RNGKey) -> np.random.Generator:
         return self.rng
 
     def __str__(self):
@@ -31,7 +47,7 @@ class DerivingRNG:
     def __init__(self, seed):
         self.seed = seed
 
-    def __call__(self, *keys) -> np.random.Generator:
+    def __call__(self, *keys: RNGKey) -> np.random.Generator:
         seed = seedbank.derive_seed(*keys, base=self.seed)
         return seedbank.numpy_rng(seed)
 
@@ -39,7 +55,7 @@ class DerivingRNG:
         return "Derive({})".format(self.seed)
 
 
-def derivable_rng(spec):
+def derivable_rng(spec: DerivableSeed) -> RNGFactory:
     """
     Get a derivable RNG, for use cases where the code needs to be able to reproducibly derive
     sub-RNGs for different keys, such as user IDs.
