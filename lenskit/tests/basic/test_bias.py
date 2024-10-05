@@ -321,7 +321,22 @@ def test_bias_pipeline(ml_ds: Dataset):
 
 
 def test_bias_topn(ml_ds: Dataset):
-    pipe = topn_pipeline(BiasScorer(), predicts_ratings=True)
+    pipe = topn_pipeline(BiasScorer(), predicts_ratings=True, n=10)
+    print(pipe.get_config())
+    pipe.train(ml_ds)
+
+    res = pipe.run("rating-predictor", user=2, items=ItemList(item_ids=[10, 11, -1]))
+    assert isinstance(res, ItemList)
+    assert len(res) == 3
+    assert np.all(res.ids() == [10, 11, -1])
+
+    res = pipe.run("ranker", user=2, n=10)
+    assert isinstance(res, ItemList)
+    assert len(res) == 10
+
+
+def test_bias_topn_run_length(ml_ds: Dataset):
+    pipe = topn_pipeline(BiasScorer(), predicts_ratings=True, n=100)
     print(pipe.get_config())
     pipe.train(ml_ds)
 
