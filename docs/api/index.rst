@@ -33,6 +33,7 @@ them need to be installed separately.
     :recursive:
 
     lenskit.algorithms
+    lenskit.basic
     lenskit.funksvd
     lenskit.implicit
     lenskit.hpf
