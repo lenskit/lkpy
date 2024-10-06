@@ -14,7 +14,7 @@ from ._common import PACKAGES, step_checkout
 CODECOV_TOKEN = "5cdb6ef4-e80b-44ce-b88d-1402e4dfb781"
 PIXI_VERSION = "v0.30.0"
 META_PYTHON = "3.11"
-PYTHONS = ["3.10", "3.11", "3.12"]
+PYTHONS = ["3.11", "3.12"]
 PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
 VANILLA_PLATFORMS = ["ubuntu-latest", "macos-latest"]
 FILTER_PATHS = [
@@ -291,7 +291,7 @@ def test_eval_job() -> GHJob:
         env="conda",
         req_files=["requirements-test.txt"],
         packages=PACKAGES,
-        python="py310",
+        python="py311",
     )
     cov = " ".join([f"--cov={pkg}/lenskit" for pkg in PACKAGES])
     return {
@@ -318,7 +318,7 @@ def test_doc_job() -> GHJob:
         "Demos, examples, and docs",
         env="conda",
         packages=PACKAGES,
-        python="py310",
+        python="py311",
     )
     cov = " ".join([f"--cov={pkg}/lenskit" for pkg in PACKAGES])
     return {
