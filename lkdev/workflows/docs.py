@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 from ..ghactions import script
-from ._common import PACKAGES, step_checkout
+from ._common import step_checkout
 
 PYTHON_VERSION = "3.11"
 
@@ -19,11 +19,6 @@ def workflow():
             },
             "pull_request": {},
             "workflow_dispatch": {},
-        },
-        "defaults": {
-            "run": {
-                "shell": "bash -el {0}",
-            },
         },
         "concurrency": {
             "group": "doc-${{github.ref}}",
@@ -51,25 +46,16 @@ def job_build_docs():
 
 
 def stages_setup():
-    pip = ["pip install --no-deps"]
-    pip += [f"-e {pkg}" for pkg in PACKAGES]
     return [
         step_checkout(),
         {
-            "id": "setup-env",
-            "name": "📦 Set up Conda environment",
-            "uses": "mamba-org/setup-micromamba@v1",
+            "uses": "prefix-dev/setup-pixi@v0.8.1",
             "with": {
-                "environment-file": "docs/environment.yml",
-                "environment-name": "lkpy",
-                "init-shell": "bash",
-                "cache-environment": True,
+                "pixi-version": "latest",
+                "activate-environment": True,
+                "environments": "doc",
+                "cache-write": False,
             },
-        },
-        {
-            "id": "install",
-            "name": "🍱 Install LensKit packages",
-            "run": script.command(pip),
         },
     ]
 

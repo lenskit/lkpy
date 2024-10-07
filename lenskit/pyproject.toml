@@ -9,20 +9,19 @@ authors = [{ name = "Michael Ekstrand", email = "mdekstrand@drexel.edu" }]
 classifiers = [
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Operating System :: OS Independent",
   "Intended Audience :: Science/Research",
 ]
-requires-python = ">= 3.10"
+requires-python = ">= 3.11"
 readme = "README.md"
 license = { file = "LICENSE.md" }
 dynamic = ["version"]
 dependencies = [
-  "pandas >=1.5, <3",
-  "numpy >= 1.23",
-  "scipy >= 1.9.0",
+  "pandas ~=2.0",
+  "numpy >= 1.24",
+  "scipy >= 1.10.0",
   "torch ~=2.1",                                           # conda: pytorch>=2.1,<3
   "threadpoolctl >=3.0",
   "pydantic >=2.8,<3",

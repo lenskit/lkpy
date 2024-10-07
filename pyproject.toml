@@ -3,7 +3,7 @@
 name = "lkdev"
 description = "LensKit dev utilities"
 authors = [{ name = "Michael Ekstrand", email = "mdekstrand@drexel.edu" }]
-requires-python = ">= 3.10"
+requires-python = ">= 3.11"
 readme = "README.md"
 license = { file = "LICENSE.md" }
 dynamic = ["version"]
@@ -30,7 +30,7 @@ relative_files = "true"
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
