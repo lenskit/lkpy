@@ -17,9 +17,6 @@ seedbank = ">=0.2.0a2"
 progress-api = ">=0.1.0a9"
 lenskit = { path = "lenskit", editable = true }
 
-[feature.py310.dependencies]
-python = "=3.10"
-
 [feature.py311.dependencies]
 python = "=3.11"
 
@@ -107,7 +104,7 @@ coverage = ">=5"
 
 [environments]
 doc = { features = ["py312", "doc"] }
-demo = { features = ["py310", "demo", "test"] }
+demo = { features = ["py311", "demo", "test"] }
 report = { features = ["reporting"], no-default-feature = true }
 core-dev = { features = ["dev", "doc", "test", "demo"] }
 full-dev = { features = [
@@ -120,29 +117,8 @@ full-dev = { features = [
   "implicit",
   "hpf",
 ], solve-group = "py312" }
-py310-dev = { features = [
-  "py310",
-  "dev",
-  "doc",
-  "test",
-  "demo",
-  "sklearn",
-  "funksvd",
-  "implicit",
-  "hpf",
-], solve-group = "py310" }
-py310-core-test = { features = ["py310", "test"] }
 py311-core-test = { features = ["py311", "test"] }
 py312-core-test = { features = ["py312", "test"] }
-py310-test = { features = [
-  "py310",
-  "test",
-  "sklearn",
-  "funksvd",
-  "implicit",
-  "hpf",
-  "demo",
-], solve-group = "py310" }
 py311-test = { features = [
   "py311",
   "test",
