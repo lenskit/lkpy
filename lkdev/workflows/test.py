@@ -318,6 +318,7 @@ def test_doc_job() -> GHJob:
         env="conda",
         packages=PACKAGES,
         python="py311",
+        pixi_env="demo",
     )
     cov = " ".join([f"--cov={pkg}/lenskit" for pkg in PACKAGES])
     return {
