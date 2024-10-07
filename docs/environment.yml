@@ -3,6 +3,7 @@ channels:
   - pytorch
   - nodefaults
 dependencies:
+  - python=3.11
   - pip
   - sphinx >=4.2
   - sphinxext-opengraph >=0.5
