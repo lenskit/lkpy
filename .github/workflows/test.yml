@@ -46,7 +46,7 @@ jobs:
           pixi-version: latest
           activate-environment: true
           environments: ${{matrix.python}}-core-test
-          write-cache: false
+          cache-write: false
       - name: 🔍 Inspect environment
         run: |
           python -m lenskit.util.envcheck
@@ -249,7 +249,7 @@ jobs:
           pixi-version: latest
           activate-environment: true
           environments: ${{matrix.python}}-test
-          write-cache: false
+          cache-write: false
       - name: 🔍 Inspect environment
         run: |
           python -m lenskit.util.envcheck
@@ -340,7 +340,7 @@ jobs:
           pixi-version: latest
           activate-environment: true
           environments: ${{matrix.python}}-test
-          write-cache: false
+          cache-write: false
       - name: 🔍 Inspect environment
         run: |
           python -m lenskit.util.envcheck
@@ -431,7 +431,7 @@ jobs:
           pixi-version: latest
           activate-environment: true
           environments: ${{matrix.python}}-test
-          write-cache: false
+          cache-write: false
       - name: 🔍 Inspect environment
         run: |
           python -m lenskit.util.envcheck
@@ -465,7 +465,7 @@ jobs:
           pixi-version: latest
           activate-environment: true
           environments: py311-test
-          write-cache: false
+          cache-write: false
       - name: Cache ML data
         uses: actions/cache@v4
         with:
@@ -506,7 +506,7 @@ jobs:
           pixi-version: latest
           activate-environment: true
           environments: py311-test
-          write-cache: false
+          cache-write: false
       - name: Cache ML data
         uses: actions/cache@v4
         with:

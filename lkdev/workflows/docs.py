@@ -54,7 +54,7 @@ def stages_setup():
                 "pixi-version": "latest",
                 "activate-environment": True,
                 "environments": "doc",
-                "write-cache": False,
+                "cache-write": False,
             },
         },
     ]

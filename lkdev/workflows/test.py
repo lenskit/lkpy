@@ -127,7 +127,7 @@ def steps_setup_conda(options: JobOptions) -> list[GHStep]:
                 "pixi-version": "latest",
                 "activate-environment": True,
                 "environments": env,
-                "write-cache": False,
+                "cache-write": False,
             },
         },
     ]
