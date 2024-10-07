@@ -8,7 +8,6 @@ from ..ghactions import script
 from ._common import PACKAGES, step_checkout
 
 PYTHON_VERSION = "3.11"
-PIXI_VERSION = "0.30"
 
 
 def workflow():
@@ -54,7 +53,7 @@ def stages_setup():
         {
             "uses": "prefix-dev/setup-pixi@v0.8.1",
             "with": {
-                "pixi-version": PIXI_VERSION,
+                "pixi-version": "latest",
                 "activate-environment": True,
                 "environments": "doc",
                 "write-cache": False,
