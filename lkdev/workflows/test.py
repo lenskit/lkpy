@@ -12,7 +12,6 @@ from ..ghactions import GHJob, GHStep, script
 from ._common import PACKAGES, step_checkout
 
 CODECOV_TOKEN = "5cdb6ef4-e80b-44ce-b88d-1402e4dfb781"
-PIXI_VERSION = "v0.30.0"
 META_PYTHON = "3.11"
 PYTHONS = ["3.11", "3.12"]
 PLATFORMS = ["ubuntu-latest", "macos-latest", "windows-latest"]
@@ -125,7 +124,7 @@ def steps_setup_conda(options: JobOptions) -> list[GHStep]:
         {
             "uses": "prefix-dev/setup-pixi@v0.8.1",
             "with": {
-                "pixi-version": PIXI_VERSION,
+                "pixi-version": "latest",
                 "activate-environment": True,
                 "environments": env,
                 "write-cache": False,

@@ -43,7 +43,7 @@ jobs:
           fetch-depth: 0
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.30.0
+          pixi-version: latest
           activate-environment: true
           environments: ${{matrix.python}}-core-test
           write-cache: false
@@ -246,7 +246,7 @@ jobs:
           fetch-depth: 0
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.30.0
+          pixi-version: latest
           activate-environment: true
           environments: ${{matrix.python}}-test
           write-cache: false
@@ -337,7 +337,7 @@ jobs:
           fetch-depth: 0
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.30.0
+          pixi-version: latest
           activate-environment: true
           environments: ${{matrix.python}}-test
           write-cache: false
@@ -428,7 +428,7 @@ jobs:
           fetch-depth: 0
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.30.0
+          pixi-version: latest
           activate-environment: true
           environments: ${{matrix.python}}-test
           write-cache: false
@@ -462,7 +462,7 @@ jobs:
           fetch-depth: 0
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.30.0
+          pixi-version: latest
           activate-environment: true
           environments: py311-test
           write-cache: false
@@ -503,7 +503,7 @@ jobs:
           fetch-depth: 0
       - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          pixi-version: v0.30.0
+          pixi-version: latest
           activate-environment: true
           environments: py311-test
           write-cache: false
