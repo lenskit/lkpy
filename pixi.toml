@@ -103,7 +103,7 @@ diff-cover = ">=9.1"
 coverage = ">=5"
 
 [environments]
-doc = { features = ["py312", "doc"] }
+doc = { features = ["py312", "doc", "funksvd", "hpf", "implicit"] }
 demo = { features = ["py311", "demo", "test"] }
 report = { features = ["reporting"], no-default-feature = true }
 core-dev = { features = ["dev", "doc", "test", "demo"] }

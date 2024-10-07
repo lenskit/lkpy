@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 from ..ghactions import script
-from ._common import PACKAGES, step_checkout
+from ._common import step_checkout
 
 PYTHON_VERSION = "3.11"
 
@@ -46,8 +46,6 @@ def job_build_docs():
 
 
 def stages_setup():
-    pip = ["pip install --no-deps"]
-    pip += [f"-e {pkg}" for pkg in PACKAGES]
     return [
         step_checkout(),
         {
@@ -58,11 +56,6 @@ def stages_setup():
                 "environments": "doc",
                 "write-cache": False,
             },
-        },
-        {
-            "id": "install",
-            "name": "🍱 Install LensKit packages",
-            "run": script.command(pip),
         },
     ]
 

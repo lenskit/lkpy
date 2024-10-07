@@ -27,10 +27,6 @@ jobs:
           activate-environment: true
           environments: doc
           write-cache: false
-      - id: install
-        name: 🍱 Install LensKit packages
-        run: |
-          pip install --no-deps -e lenskit -e lenskit-funksvd -e lenskit-implicit -e lenskit-hpf
       - id: docs
         name: 📚 Build documentation site
         run: |
