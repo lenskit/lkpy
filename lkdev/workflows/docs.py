@@ -8,6 +8,7 @@ from ..ghactions import script
 from ._common import PACKAGES, step_checkout
 
 PYTHON_VERSION = "3.11"
+PIXI_VERSION = "0.30"
 
 
 def workflow():
@@ -19,11 +20,6 @@ def workflow():
             },
             "pull_request": {},
             "workflow_dispatch": {},
-        },
-        "defaults": {
-            "run": {
-                "shell": "bash -el {0}",
-            },
         },
         "concurrency": {
             "group": "doc-${{github.ref}}",
@@ -56,14 +52,12 @@ def stages_setup():
     return [
         step_checkout(),
         {
-            "id": "setup-env",
-            "name": "📦 Set up Conda environment",
-            "uses": "mamba-org/setup-micromamba@v1",
+            "uses": "prefix-dev/setup-pixi@v0.8.1",
             "with": {
-                "environment-file": "docs/environment.yml",
-                "environment-name": "lkpy",
-                "init-shell": "bash",
-                "cache-environment": True,
+                "pixi-version": PIXI_VERSION,
+                "activate-environment": True,
+                "environments": "doc",
+                "write-cache": False,
             },
         },
         {

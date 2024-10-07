@@ -5,9 +5,6 @@ name: Documentation
       - main
   pull_request: {}
   workflow_dispatch: {}
-defaults:
-  run:
-    shell: bash -el {0}
 concurrency:
   group: doc-${{github.ref}}
   cancel-in-progress: true
@@ -24,14 +21,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - id: setup-env
-        name: 📦 Set up Conda environment
-        uses: mamba-org/setup-micromamba@v1
+      - uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          environment-file: docs/environment.yml
-          environment-name: lkpy
-          init-shell: bash
-          cache-environment: true
+          pixi-version: '0.30'
+          activate-environment: true
+          environments: doc
+          write-cache: false
       - id: install
         name: 🍱 Install LensKit packages
         run: |
