@@ -70,8 +70,11 @@ pipeline can use some components (especially the scorer) trained from training
 data, and other components that query a database or REST services for things
 like user history and candidate set lookup.
 
-The LensKit pipeline design is heavily inspired by Haystack_ and by the pipeline
-abstraction Karl Higley created for POPROX_.
+.. note:: Acknowledgements
+
+    The LensKit pipeline design is heavily inspired by the pipeline abstraction
+    Karl Higley originally created for POPROX_ (available in the git history),
+    as well as by Haystack_.
 
 .. _Haystack: https://docs.haystack.deepset.ai/docs/pipelines
 .. _POPROX: https://ccri-poprox.github.io/poprox-researcher-manual/reference/recommender/poprox_recommender.pipeline.html
