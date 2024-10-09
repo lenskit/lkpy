@@ -2,7 +2,7 @@ PIP := "uv pip"
 PACKAGES := "lenskit lenskit-funksvd lenskit-implicit lenskit-hpf"
 python := "3.11"
 conda_env := "lkpy"
-DENO := "deno run --allow-read=. --allow-net=jsr.io"
+DENO := "deno run --allow-read=. --allow-write=.github/workflows --allow-net=jsr.io"
 
 # list the tasks in this project (default)
 list-tasks:
