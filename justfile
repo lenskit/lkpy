@@ -2,6 +2,7 @@ PIP := "uv pip"
 PACKAGES := "lenskit lenskit-funksvd lenskit-implicit lenskit-hpf"
 python := "3.11"
 conda_env := "lkpy"
+DENO := "deno run --allow-read=. --allow-net=jsr.io"
 
 # list the tasks in this project (default)
 list-tasks:
@@ -79,6 +80,7 @@ update-headers:
 
 # update GH workflows
 update-workflows:
-    python -m lkdev.ghactions --render test
-    python -m lkdev.ghactions --render docs
+    deno check workflows/*.ts
+    {{DENO}} workflows/render.ts --github -o .github/workflows/test.yaml workflows/test.ts
+    {{DENO}} workflows/render.ts --github -o .github/workflows/docs.yaml workflows/docs.ts
     -pre-commit run --files .github/workflows/*.yml
