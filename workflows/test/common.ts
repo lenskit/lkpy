@@ -1,5 +1,5 @@
 import { WorkflowJob, WorkflowStep } from "@lenskit/typeline/github";
-import { TestJobSpec, testPlatform } from "./spec.ts";
+import { packages, TestJobSpec, testPlatform } from "./spec.ts";
 import { script } from "../lib/script.ts";
 import { checkoutStep } from "../lib/checkout.ts";
 import { inspectStep } from "./environment.ts";
@@ -47,10 +47,10 @@ export function testSteps(options: TestJobSpec): WorkflowStep[] {
     if (options.test_args) {
         test_cmd += " " + options.test_args.join(" ");
     }
-    for (const pkg of options.packages ?? []) {
+    for (const pkg of packages(options) ?? []) {
         test_cmd += ` --cov=${pkg}/lenskit`;
     }
-    for (const pkg of options.packages ?? []) {
+    for (const pkg of packages(options) ?? []) {
         test_cmd += ` ${pkg}/tests`;
     }
 

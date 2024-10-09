@@ -6,7 +6,31 @@ import { script } from "./lib/script.ts";
 const build: WorkflowJob = {
     name: "Build documentation",
     "runs-on": "ubuntu-latest",
-    steps: [],
+    steps: [
+        checkoutStep(),
+        {
+            "uses": "prefix-dev/setup-pixi@v0.8.1",
+            "with": {
+                "pixi-version": "latest",
+                "activate-environment": true,
+                "environments": "doc",
+                "cache-write": false,
+            },
+        },
+        {
+            "id": "docs",
+            "name": "📚 Build documentation site",
+            "run": script("just docs"),
+        },
+        {
+            "name": "📤 Package documentation site",
+            "uses": "actions/upload-artifact@v4",
+            "with": {
+                "name": "lenskit-docs",
+                "path": "build/doc",
+            },
+        },
+    ],
 };
 
 const archive: WorkflowJob = {

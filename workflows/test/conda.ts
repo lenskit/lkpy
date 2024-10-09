@@ -5,7 +5,7 @@ import { pythonVersionString } from "./spec.ts";
 
 export interface CondaTestOpts extends TestJobSpec {
     install: "conda";
-    variant?: "core" | "test";
+    variant?: "core" | "full";
     pixi_env?: string;
 }
 
@@ -18,7 +18,7 @@ export function condaSetup(options: CondaTestOpts): WorkflowStep[] {
     if (!env) {
         const version = pythonVersionString(options);
         const variant = options.variant ?? "core";
-        env = `${version}-${variant}`;
+        env = `test-${version}-${variant}`;
     }
 
     return [

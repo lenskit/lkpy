@@ -81,6 +81,6 @@ update-headers:
 # update GH workflows
 update-workflows:
     deno check workflows/*.ts
-    {{DENO}} workflows/render.ts --github -o .github/workflows/test.yaml workflows/test.ts
-    {{DENO}} workflows/render.ts --github -o .github/workflows/docs.yaml workflows/docs.ts
+    {{DENO}} workflows/render.ts --github -o .github/workflows/test.yml workflows/test.ts
+    {{DENO}} workflows/render.ts --github -o .github/workflows/docs.yml workflows/docs.ts
     -pre-commit run --files .github/workflows/*.yml

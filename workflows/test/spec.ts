@@ -48,3 +48,7 @@ export function translatePythonVersion(ver: string, install: string): string {
         return ver;
     }
 }
+
+export function packages(spec: TestJobSpec): string[] {
+    return spec.packages ?? ["lenskit"];
+}

@@ -1,10 +1,13 @@
+# GENERATED FILE, do not edit
+# This file was generated with Typeline
+# generated from: workflows/test.ts
 name: Automatic Tests
 'on':
   push:
     branches:
       - main
     paths:
-      - lenskit/**.py
+      - lenskit*/**.py
       - '**pyproject.toml'
       - requirements*.txt
       - data/**
@@ -12,19 +15,19 @@ name: Automatic Tests
       - .github/workflows/test.yml
   pull_request:
     paths:
-      - lenskit/**.py
+      - lenskit*/**.py
       - '**pyproject.toml'
       - requirements*.txt
       - data/**
       - utils/measure-coverage.tcl
       - .github/workflows/test.yml
 concurrency:
-  group: test-${{github.ref}}
+  group: 'test-${{github.ref}}'
   cancel-in-progress: true
 jobs:
   conda:
-    name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
-    runs-on: ${{matrix.platform}}
+    name: 'Conda Python ${{matrix.python}} on ${{matrix.platform}}'
+    runs-on: '${{matrix.platform}}'
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -37,7 +40,7 @@ jobs:
           - macos-latest
           - windows-latest
     steps:
-      - name: 🛒 Checkout
+      - name: "🛒 Checkout"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -45,31 +48,31 @@ jobs:
         with:
           pixi-version: latest
           activate-environment: true
-          environments: ${{matrix.python}}-core-test
+          environments: 'test-${{matrix.python}}-core'
           cache-write: false
-      - name: 🔍 Inspect environment
+      - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
-      - name: 🏃🏻‍➡️ Test LKPY
+      - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
-      - name: 📐 Coverage results
+      - name: "📐 Coverage results"
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: 📤 Upload test results
+      - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-conda-${{matrix.platform}}-py${{matrix.python}}
+          name: 'test-conda-${{matrix.platform}}-py${{matrix.python}}'
           path: |
             test*.log
             coverage.db
             coverage.xml
   vanilla:
-    name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
-    runs-on: ${{matrix.platform}}
+    name: 'Vanilla Python ${{matrix.python}} on ${{matrix.platform}}'
+    runs-on: '${{matrix.platform}}'
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -81,47 +84,47 @@ jobs:
           - ubuntu-latest
           - macos-latest
     steps:
-      - name: 🛒 Checkout
+      - name: "🛒 Checkout"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: 🐍 Set up Python
+      - name: "🐍 Set up Python"
         id: install-python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{matrix.python}}
+          python-version: '${{matrix.python}}'
           cache: pip
           cache-dependency-path: |
             requirements*.txt
             */pyproject.toml
-      - name: 🕶️ Set up uv
+      - name: "🕶️ Set up uv"
         run: |
           pip install -U 'uv>=0.1.15'
-      - name: 📦 Set up Python dependencies
+      - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
           uv pip install --python $PYTHON -r requirements-test.txt -e lenskit
         shell: bash
         env:
-          PYTHON: ${{steps.install-python.outputs.python-path}}
-          UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+          PYTHON: '${{steps.install-python.outputs.python-path}}'
+          UV_EXTRA_INDEX_URL: 'https://download.pytorch.org/whl/cpu'
           UV_INDEX_STRATEGY: unsafe-first-match
-      - name: 🔍 Inspect environment
+      - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
-      - name: 🏃🏻‍➡️ Test LKPY
+      - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
-      - name: 📐 Coverage results
+      - name: "📐 Coverage results"
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: 📤 Upload test results
+      - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-vanilla-${{matrix.platform}}-py${{matrix.python}}
+          name: 'test-vanilla-${{matrix.platform}}-py${{matrix.python}}'
           path: |
             test*.log
             coverage.db
@@ -131,11 +134,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: 🛒 Checkout
+      - name: "🛒 Checkout"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: 🐍 Set up Python
+      - name: "🐍 Set up Python"
         id: install-python
         uses: actions/setup-python@v5
         with:
@@ -144,33 +147,33 @@ jobs:
           cache-dependency-path: |
             requirements*.txt
             */pyproject.toml
-      - name: 🕶️ Set up uv
+      - name: "🕶️ Set up uv"
         run: |
           pip install -U 'uv>=0.1.15'
-      - name: 📦 Set up Python dependencies
+      - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
           uv pip install --python $PYTHON -r requirements-test.txt -e lenskit -e lenskit-funksvd
         shell: bash
         env:
-          PYTHON: ${{steps.install-python.outputs.python-path}}
-          UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+          PYTHON: '${{steps.install-python.outputs.python-path}}'
+          UV_EXTRA_INDEX_URL: 'https://download.pytorch.org/whl/cpu'
           UV_INDEX_STRATEGY: unsafe-first-match
-      - name: 🔍 Inspect environment
+      - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
-      - name: 🏃🏻‍➡️ Test LKPY
+      - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 -m 'not slow' --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit lenskit/tests lenskit-funksvd/tests
         env:
           NUMBA_DISABLE_JIT: 1
           PYTORCH_JIT: 0
-      - name: 📐 Coverage results
+      - name: "📐 Coverage results"
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: 📤 Upload test results
+      - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -184,11 +187,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: 🛒 Checkout
+      - name: "🛒 Checkout"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: 🐍 Set up Python
+      - name: "🐍 Set up Python"
         id: install-python
         uses: actions/setup-python@v5
         with:
@@ -197,30 +200,30 @@ jobs:
           cache-dependency-path: |
             requirements*.txt
             */pyproject.toml
-      - name: 🕶️ Set up uv
+      - name: "🕶️ Set up uv"
         run: |
           pip install -U 'uv>=0.1.15'
-      - name: 📦 Set up Python dependencies
+      - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
           uv pip install --python $PYTHON -r requirements-test.txt -e lenskit --resolution=lowest-direct
         shell: bash
         env:
-          PYTHON: ${{steps.install-python.outputs.python-path}}
-          UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+          PYTHON: '${{steps.install-python.outputs.python-path}}'
+          UV_EXTRA_INDEX_URL: 'https://download.pytorch.org/whl/cpu'
           UV_INDEX_STRATEGY: unsafe-first-match
-      - name: 🔍 Inspect environment
+      - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
-      - name: 🏃🏻‍➡️ Test LKPY
+      - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
-      - name: 📐 Coverage results
+      - name: "📐 Coverage results"
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: 📤 Upload test results
+      - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -230,7 +233,7 @@ jobs:
             coverage.db
             coverage.xml
   funksvd:
-    name: FunkSVD tests on Python ${{matrix.python}}
+    name: 'FunkSVD tests on Python ${{matrix.python}}'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -240,7 +243,7 @@ jobs:
           - py311
           - py312
     steps:
-      - name: 🛒 Checkout
+      - name: "🛒 Checkout"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -248,24 +251,24 @@ jobs:
         with:
           pixi-version: latest
           activate-environment: true
-          environments: ${{matrix.python}}-test
+          environments: 'test-${{matrix.python}}-full'
           cache-write: false
-      - name: 🔍 Inspect environment
+      - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
-      - name: 🏃🏻‍➡️ Test LKPY
+      - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
-      - name: 📐 Coverage results
+      - name: "📐 Coverage results"
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: 📤 Upload test results
+      - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-funksvd-py${{matrix.python}}
+          name: 'test-funksvd-py${{matrix.python}}'
           path: |
             test*.log
             coverage.db
@@ -275,11 +278,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: 🛒 Checkout
+      - name: "🛒 Checkout"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: 🐍 Set up Python
+      - name: "🐍 Set up Python"
         id: install-python
         uses: actions/setup-python@v5
         with:
@@ -288,30 +291,30 @@ jobs:
           cache-dependency-path: |
             requirements*.txt
             */pyproject.toml
-      - name: 🕶️ Set up uv
+      - name: "🕶️ Set up uv"
         run: |
           pip install -U 'uv>=0.1.15'
-      - name: 📦 Set up Python dependencies
+      - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
           uv pip install --python $PYTHON -r requirements-test.txt -e lenskit -e lenskit-funksvd --resolution=lowest-direct
         shell: bash
         env:
-          PYTHON: ${{steps.install-python.outputs.python-path}}
-          UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+          PYTHON: '${{steps.install-python.outputs.python-path}}'
+          UV_EXTRA_INDEX_URL: 'https://download.pytorch.org/whl/cpu'
           UV_INDEX_STRATEGY: unsafe-first-match
-      - name: 🔍 Inspect environment
+      - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
-      - name: 🏃🏻‍➡️ Test LKPY
+      - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
-      - name: 📐 Coverage results
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit lenskit/tests lenskit-funksvd/tests
+      - name: "📐 Coverage results"
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: 📤 Upload test results
+      - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -321,7 +324,7 @@ jobs:
             coverage.db
             coverage.xml
   implicit:
-    name: Implicit bridge tests on Python ${{matrix.python}}
+    name: 'Implicit bridge tests on Python ${{matrix.python}}'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -331,7 +334,7 @@ jobs:
           - py311
           - py312
     steps:
-      - name: 🛒 Checkout
+      - name: "🛒 Checkout"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -339,24 +342,24 @@ jobs:
         with:
           pixi-version: latest
           activate-environment: true
-          environments: ${{matrix.python}}-test
+          environments: 'test-${{matrix.python}}-full'
           cache-write: false
-      - name: 🔍 Inspect environment
+      - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
-      - name: 🏃🏻‍➡️ Test LKPY
+      - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-implicit/lenskit lenskit-implicit/tests
-      - name: 📐 Coverage results
+      - name: "📐 Coverage results"
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: 📤 Upload test results
+      - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-implicit-py${{matrix.python}}
+          name: 'test-implicit-py${{matrix.python}}'
           path: |
             test*.log
             coverage.db
@@ -366,11 +369,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: 🛒 Checkout
+      - name: "🛒 Checkout"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: 🐍 Set up Python
+      - name: "🐍 Set up Python"
         id: install-python
         uses: actions/setup-python@v5
         with:
@@ -379,30 +382,30 @@ jobs:
           cache-dependency-path: |
             requirements*.txt
             */pyproject.toml
-      - name: 🕶️ Set up uv
+      - name: "🕶️ Set up uv"
         run: |
           pip install -U 'uv>=0.1.15'
-      - name: 📦 Set up Python dependencies
+      - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
           uv pip install --python $PYTHON -r requirements-test.txt -e lenskit -e lenskit-implicit --resolution=lowest-direct
         shell: bash
         env:
-          PYTHON: ${{steps.install-python.outputs.python-path}}
-          UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+          PYTHON: '${{steps.install-python.outputs.python-path}}'
+          UV_EXTRA_INDEX_URL: 'https://download.pytorch.org/whl/cpu'
           UV_INDEX_STRATEGY: unsafe-first-match
-      - name: 🔍 Inspect environment
+      - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
-      - name: 🏃🏻‍➡️ Test LKPY
+      - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-implicit/lenskit lenskit-implicit/tests
-      - name: 📐 Coverage results
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit --cov=lenskit-implicit/lenskit lenskit/tests lenskit-implicit/tests
+      - name: "📐 Coverage results"
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: 📤 Upload test results
+      - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -412,7 +415,7 @@ jobs:
             coverage.db
             coverage.xml
   hpf:
-    name: HPF bridge tests on Python ${{matrix.python}}
+    name: 'HPF bridge tests on Python ${{matrix.python}}'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -422,7 +425,7 @@ jobs:
           - py311
           - py312
     steps:
-      - name: 🛒 Checkout
+      - name: "🛒 Checkout"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -430,24 +433,24 @@ jobs:
         with:
           pixi-version: latest
           activate-environment: true
-          environments: ${{matrix.python}}-test
+          environments: 'test-${{matrix.python}}-full'
           cache-write: false
-      - name: 🔍 Inspect environment
+      - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
-      - name: 🏃🏻‍➡️ Test LKPY
+      - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-hpf/lenskit lenskit-hpf/tests
-      - name: 📐 Coverage results
+      - name: "📐 Coverage results"
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: 📤 Upload test results
+      - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-hpf-py${{matrix.python}}
+          name: 'test-hpf-py${{matrix.python}}'
           path: |
             test*.log
             coverage.db
@@ -456,7 +459,7 @@ jobs:
     name: Evaluation-based tests
     runs-on: ubuntu-latest
     steps:
-      - name: 🛒 Checkout
+      - name: "🛒 Checkout"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -464,7 +467,7 @@ jobs:
         with:
           pixi-version: latest
           activate-environment: true
-          environments: py311-test
+          environments: py311-full
           cache-write: false
       - name: Cache ML data
         uses: actions/cache@v4
@@ -472,19 +475,19 @@ jobs:
           path: |
             data
             !data/*.zip
-          key: test-mldata-001-2ee919d5c0eef34d5a4f40bcf0480c1bf0310417db6921e3a2575c48991f379c2f4ad179f8514390133795614a96fa5b4ece55906c68a90af07c09670b2c3c5b
+          key: test-mldata-001-ml-100k-ml-20m
       - name: Download ML data
         run: |
           python -m lenskit.data.fetch ml-100k ml-20m
       - name: Run Eval Tests
         run: |
           python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit -m 'eval or realdata' --log-file test-eval.log */tests
-      - name: 📐 Coverage results
+      - name: "📐 Coverage results"
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: 📤 Upload test results
+      - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -494,10 +497,10 @@ jobs:
             coverage.db
             coverage.xml
   doc-tests:
-    name: Demos, examples, and docs
+    name: 'Demos, examples, and docs'
     runs-on: ubuntu-latest
     steps:
-      - name: 🛒 Checkout
+      - name: "🛒 Checkout"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -505,7 +508,7 @@ jobs:
         with:
           pixi-version: latest
           activate-environment: true
-          environments: demo
+          environments: py311-full
           cache-write: false
       - name: Cache ML data
         uses: actions/cache@v4
@@ -513,19 +516,19 @@ jobs:
           path: |
             data
             !data/*.zip
-          key: test-mldata-001-cd26f1c44a6962b0936346b346a9b418a3ed04b01a2892269fccd24a6387e943dba6d5e64ab2f8feb1823475601d65c2e6ebbeeeca0c2c210f0d37c00aabf2e9
+          key: test-mldata-001-ml-100k-ml-1m-ml-10m-ml-20m
       - name: Download ML data
         run: |
           python -m lenskit.data.fetch ml-100k ml-1m ml-10m ml-20m
-      - name: 📕 Validate documentation examples
+      - name: "📕 Validate documentation examples"
         run: |
           python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit --nbval-lax --doctest-glob='*.rst' --log-file test-docs.log docs */lenskit
-      - name: 📐 Coverage results
+      - name: "📐 Coverage results"
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: 📤 Upload test results
+      - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -550,7 +553,7 @@ jobs:
       - eval-tests
       - doc-tests
     steps:
-      - name: 🛒 Checkout
+      - name: "🛒 Checkout"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -560,20 +563,20 @@ jobs:
           git fetch upstream
           git config user.name "LensKit Bot"
           git config user.email lkbot@lenskit.org
-      - name: 🐍 Set up Python
+      - name: "🐍 Set up Python"
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: 📦 Install reporting packages
+      - name: "📦 Install reporting packages"
         run: python -m pip install -r requirements-reporting.txt
-      - name: 📥 Download test artifacts
+      - name: "📥 Download test artifacts"
         uses: actions/download-artifact@v4
         with:
           pattern: test-*
           path: test-logs
-      - name: 📋 List log files
+      - name: "📋 List log files"
         run: ls -laR test-logs
-      - name: 🔧 Fix coverage databases
+      - name: "🔧 Fix coverage databases"
         run: |
           for dbf in test-logs/*/coverage.db; do
               echo "fixing $dbf"
@@ -596,13 +599,13 @@ jobs:
           tclsh ./utils/measure-coverage.tcl
           cat lenskit-coverage/report.md >$GITHUB_STEP_SUMMARY
         env:
-          PR_NUMBER: ${{ github.event.number }}
-          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
-      - name: 📤 Upload coverage report
+          PR_NUMBER: '${{ github.event.number }}'
+          GH_TOKEN: '${{secrets.GITHUB_TOKEN}}'
+      - name: "📤 Upload coverage report"
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage-report
           path: lenskit-coverage/
-      - name: 🚫 Fail if coverage is too low
+      - name: "🚫 Fail if coverage is too low"
         run: coverage report --fail-under=90
