@@ -117,9 +117,9 @@ full-dev = { features = [
   "implicit",
   "hpf",
 ], solve-group = "py312" }
-py311-core-test = { features = ["py311", "test"] }
-py312-core-test = { features = ["py312", "test"] }
-py311-test = { features = [
+test-py311-core = { features = ["py311", "test"] }
+test-py312-core = { features = ["py312", "test"] }
+test-py311-full = { features = [
   "py311",
   "test",
   "sklearn",
@@ -127,7 +127,7 @@ py311-test = { features = [
   "implicit",
   "hpf",
 ], solve-group = "py311" }
-py312-test = { features = [
+test-py312-full = { features = [
   "py312",
   "test",
   "sklearn",
