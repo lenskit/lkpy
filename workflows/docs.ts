@@ -8,6 +8,7 @@ const build: WorkflowJob = {
     "runs-on": "ubuntu-latest",
     steps: [],
 };
+
 const archive: WorkflowJob = {
     name: "Archive documentation",
     "runs-on": "ubuntu-latest",
@@ -51,6 +52,7 @@ const archive: WorkflowJob = {
         },
     ],
 };
+
 const publish: WorkflowJob = {
     name: "Publish documentation",
     "runs-on": "ubuntu-latest",
