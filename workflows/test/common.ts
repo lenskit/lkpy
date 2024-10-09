@@ -14,7 +14,7 @@ export function testJob(
     const strategy = options.matrix
         ? {
             "fail-fast": false,
-            "matrix": options.matrix,
+            matrix: options.matrix,
         }
         : undefined;
 
@@ -28,7 +28,7 @@ export function testJob(
     }
 
     return {
-        "name": options.name,
+        name: options.name,
         "runs-on": testPlatform(options),
         "timeout-minutes": 30,
         strategy,
@@ -55,8 +55,8 @@ export function testSteps(options: TestJobSpec): WorkflowStep[] {
     }
 
     return [{
-        "name": "🏃🏻‍➡️ Test LKPY",
-        "run": script(test_cmd),
+        name: "🏃🏻‍➡️ Test LKPY",
+        run: script(test_cmd),
         env: options.test_env,
     }, ...coverageSteps(options)];
 }
@@ -64,20 +64,20 @@ export function testSteps(options: TestJobSpec): WorkflowStep[] {
 export function coverageSteps(options: TestJobSpec): WorkflowStep[] {
     return [
         {
-            "name": "📐 Coverage results",
-            "run": script(`
+            name: "📐 Coverage results",
+            run: script(`
                 coverage xml
                 coverage report
                 cp .coverage coverage.db
             `),
         },
         {
-            "name": "📤 Upload test results",
-            "uses": "actions/upload-artifact@v4",
-            "if": "always()",
-            "with": {
-                "name": testArtifactName(options),
-                "path": script(`
+            name: "📤 Upload test results",
+            uses: "actions/upload-artifact@v4",
+            if: "always()",
+            with: {
+                name: testArtifactName(options),
+                path: script(`
                     test*.log
                     coverage.db
                     coverage.xml
