@@ -11,7 +11,7 @@ export function evalTestJob(): WorkflowJob {
     install: "conda",
     key: "eval-tests",
     name: "Evaluation-based tests",
-    pixi_env: "py311-full",
+    pixi_env: "test-py311-full",
     packages: PACKAGES,
   };
 
