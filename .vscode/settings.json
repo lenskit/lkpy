@@ -15,6 +15,9 @@
   "[jsonc]": {
     "editor.formatOnSave": true,
   },
+  "[typescript]": {
+    "editor.formatOnSave": true
+  },
   "[yaml]": {
     "editor.defaultFormatter": "redhat.vscode-yaml",
     "editor.formatOnSave": true,
