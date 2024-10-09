@@ -1,7 +1,6 @@
 {
   "imports": {
-    "@lenskit/typeline/cli": "file:///Users/mde48/src/typeline/cli.ts",
-    "@lenskit/typeline/github": "file:///Users/mde48/src/typeline/github/mod.ts",
+    "@lenskit/typeline": "jsr:@lenskit/typeline@^0.1.0-beta2",
     "@std/assert": "jsr:@std/assert@^1.0.6"
   }
 }
