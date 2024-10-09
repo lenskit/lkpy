@@ -1,7 +1,7 @@
 import { Workflow, WorkflowJob } from "@lenskit/typeline/github";
 
-import { checkoutStep } from "./helpers/checkout.ts";
-import { script } from "./helpers/script.ts";
+import { checkoutStep } from "./lib/checkout.ts";
+import { script } from "./lib/script.ts";
 
 const build: WorkflowJob = {
     name: "Build documentation",
