@@ -10,6 +10,8 @@ import {
     VANILLA_PLATFORMS,
 } from "./lib/defs.ts";
 import { testJob } from "./test/common.ts";
+import { evalTestJob } from "./test/test-eval.ts";
+import { docsTestJob } from "./test/test-docs.ts";
 
 const FILTER_PATHS = [
     "lenskit*/**.py",
@@ -82,6 +84,8 @@ const test_matrix = {
         packages: ["lenskit-hpf"],
         matrix: { "python": CONDA_PYTHONS },
     }),
+    "eval-tests": evalTestJob(),
+    "doc-tests": docsTestJob(),
 };
 
 export const results: WorkflowJob = {
