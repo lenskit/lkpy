@@ -35,8 +35,4 @@
   ],
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
-  "python.analysis.extraPaths": [
-    "lenskit",
-    "lenskit-funksvd"
-  ],
 }
