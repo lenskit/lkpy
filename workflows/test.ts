@@ -11,7 +11,7 @@ import {
 } from "./lib/defs.ts";
 import { testJob } from "./test/common.ts";
 import { evalTestJob } from "./test/test-eval.ts";
-import { docsTestJob } from "./test/test-docs.ts";
+import { exampleTestJob } from "./test/test-examples.ts";
 
 const FILTER_PATHS = [
   "lenskit*/**.py",
@@ -88,7 +88,7 @@ const test_matrix = {
     variant: "full",
   }),
   "eval-tests": evalTestJob(),
-  "doc-tests": docsTestJob(),
+  "doc-tests": exampleTestJob(),
 };
 
 export const results: WorkflowJob = {

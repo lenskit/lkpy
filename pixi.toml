@@ -102,13 +102,26 @@ pyprojroot = ">=0.3"
 [feature.reporting.dependencies]
 diff-cover = ">=9.1"
 coverage = ">=5"
+tk = "~=8.6"
 
 [environments]
-doc = { features = ["py312", "doc", "funksvd", "hpf", "implicit"] }
-demo = { features = ["py311", "demo", "test", "funksvd", "hpf", "implicit"] }
+doc = { features = [
+  "py312",
+  "doc",
+  "funksvd",
+  "hpf",
+  "implicit",
+], solve-group = "py312" }
+demo = { features = [
+  "py312",
+  "demo",
+  "funksvd",
+  "hpf",
+  "implicit",
+], solve-group = "py312" }
 report = { features = ["reporting"], no-default-feature = true }
-core-dev = { features = ["dev", "doc", "test", "demo"] }
-full-dev = { features = [
+dev-core = { features = ["dev", "doc", "test", "demo"] }
+dev-full = { features = [
   "dev",
   "doc",
   "test",
@@ -118,6 +131,16 @@ full-dev = { features = [
   "implicit",
   "hpf",
 ], solve-group = "py312" }
+dev-compat = { features = [
+  "dev",
+  "doc",
+  "test",
+  "demo",
+  "sklearn",
+  "funksvd",
+  "implicit",
+  "hpf",
+], solve-group = "py311" }
 test-py311-core = { features = ["py311", "test"] }
 test-py312-core = { features = ["py312", "test"] }
 test-py311-full = { features = [
@@ -136,8 +159,13 @@ test-py312-full = { features = [
   "implicit",
   "hpf",
 ], solve-group = "py312" }
+test-examples = { features = [
+  "demo",
+  "test",
+  "funksvd",
+  "hpf",
+  "implicit",
+], solve-group = "py311" }
 
 [target.osx-arm64.dependencies]
 # pytorch = { version = "~=2.1", channel = "pytorch" }
-
-[tasks]

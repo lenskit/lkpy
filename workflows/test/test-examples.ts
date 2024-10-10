@@ -6,12 +6,12 @@ import { coverageSteps } from "./common.ts";
 import { script } from "../lib/script.ts";
 import { PACKAGES } from "../lib/defs.ts";
 
-export function docsTestJob(): WorkflowJob {
+export function exampleTestJob(): WorkflowJob {
   const options: CondaTestOpts = {
     install: "conda",
     key: "examples",
     name: "Demos, examples, and docs",
-    pixi_env: "demo",
+    pixi_env: "test-examples",
     packages: PACKAGES,
   };
 
