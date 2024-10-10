@@ -508,7 +508,7 @@ jobs:
         with:
           pixi-version: latest
           activate-environment: true
-          environments: test-py311-full
+          environments: demo
           cache-write: false
       - name: Cache ML data
         uses: actions/cache@v4

@@ -11,7 +11,7 @@ export function docsTestJob(): WorkflowJob {
     install: "conda",
     key: "examples",
     name: "Demos, examples, and docs",
-    pixi_env: "test-py311-full",
+    pixi_env: "demo",
     packages: PACKAGES,
   };
 
