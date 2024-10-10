@@ -69,6 +69,9 @@ if {[ev GITHUB_BASE_REF base]} {
     } elseif {$cov_change < 0} {
         set cov_icon "🚨"
         set cov_msg "**decreased**"
+    } else {
+        set cov_icon "🟰"
+        set cov_msg "unchanged"
     }
     puts $reph [format "%s Coverage %s %.2f%% from %.2f%% to %.2f%%.\n\n" $cov_icon $cov_msg $cov_change $prev_cov $cur_cov]
 
