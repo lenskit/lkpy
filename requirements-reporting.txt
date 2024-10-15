@@ -1,3 +1,0 @@
-# requirements for reporting on the code
-diff-cover >=9.1
-coverage[toml] >=5
