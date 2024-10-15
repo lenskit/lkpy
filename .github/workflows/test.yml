@@ -93,17 +93,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '${{matrix.python}}'
-          cache: pip
-          cache-dependency-path: |
-            requirements*.txt
-            */pyproject.toml
       - name: "🕶️ Set up uv"
         run: |
           pip install -U 'uv>=0.1.15'
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON -r requirements-test.txt -e lenskit
+          uv pip install --python $PYTHON -e "lenskit[test]"
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -143,17 +139,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: pip
-          cache-dependency-path: |
-            requirements*.txt
-            */pyproject.toml
       - name: "🕶️ Set up uv"
         run: |
           pip install -U 'uv>=0.1.15'
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON -r requirements-test.txt -e lenskit -e lenskit-funksvd
+          uv pip install --python $PYTHON -e "lenskit[test]" -e "lenskit-funksvd"
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -196,17 +188,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: pip
-          cache-dependency-path: |
-            requirements*.txt
-            */pyproject.toml
       - name: "🕶️ Set up uv"
         run: |
           pip install -U 'uv>=0.1.15'
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON -r requirements-test.txt -e lenskit --resolution=lowest-direct
+          uv pip install --python $PYTHON -e "lenskit[test]" --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -287,17 +275,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: pip
-          cache-dependency-path: |
-            requirements*.txt
-            */pyproject.toml
       - name: "🕶️ Set up uv"
         run: |
           pip install -U 'uv>=0.1.15'
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON -r requirements-test.txt -e lenskit -e lenskit-funksvd --resolution=lowest-direct
+          uv pip install --python $PYTHON -e "lenskit[test]" -e "lenskit-funksvd" --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -378,17 +362,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: pip
-          cache-dependency-path: |
-            requirements*.txt
-            */pyproject.toml
       - name: "🕶️ Set up uv"
         run: |
           pip install -U 'uv>=0.1.15'
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON -r requirements-test.txt -e lenskit -e lenskit-implicit --resolution=lowest-direct
+          uv pip install --python $PYTHON -e "lenskit[test]" -e "lenskit-implicit" --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
