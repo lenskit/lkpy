@@ -51,7 +51,6 @@ hpfrec = "~=0.2.0"
 lenskit-hpf = { path = "lenskit-hpf", editable = true }
 
 [feature.test.dependencies]
-sqlite = "~=3.0"
 pytest = "~=8.2"
 pytest-doctestplus = ">=1.2.1,<2"
 pytest-cov = ">=2.12"
@@ -100,6 +99,7 @@ ipython = ">=7"
 pyprojroot = ">=0.3"
 
 [feature.reporting.dependencies]
+sqlite = "~=3.0"
 diff-cover = ">=9.1"
 coverage = ">=5"
 tk = "~=8.6"
