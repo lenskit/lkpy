@@ -107,7 +107,7 @@ export const results: WorkflowJob = {
     },
     {
       name: "🧚 Set up Pixi",
-      uses: "prefix-dev/setup-pixi@0.8.1",
+      uses: "prefix-dev/setup-pixi@v0.8.1",
       with: {
         "pixi-version": "latest",
         "activate-environment": true,
