@@ -4,7 +4,6 @@ import { checkoutStep } from "./lib/checkout.ts";
 import { script } from "./lib/script.ts";
 import {
   CONDA_PYTHONS,
-  META_PYTHON,
   PLATFORMS,
   PYTHONS,
   VANILLA_PLATFORMS,
