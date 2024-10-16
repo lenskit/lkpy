@@ -32,6 +32,16 @@ dependencies = [
 
 [project.optional-dependencies]
 sklearn = ["scikit-learn >= 1.1"]
+# test deps — keep synchronized with pixi.toml
+test = [
+  "pytest >=8.2,<9",
+  "pytest-doctestplus >=1.2.1,<2",
+  "pytest-cov >=2.12",
+  "pytest-benchmark ==4.*",
+  "pytest-repeat >=0.9",
+  "hypothesis >=6.16",
+  "pyprojroot ==0.3.*",
+]
 
 [project.urls]
 homepage = "https://lenskit.org"

@@ -93,17 +93,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '${{matrix.python}}'
-          cache: pip
-          cache-dependency-path: |
-            requirements*.txt
-            */pyproject.toml
       - name: "🕶️ Set up uv"
         run: |
           pip install -U 'uv>=0.1.15'
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON -r requirements-test.txt -e lenskit
+          uv pip install --python $PYTHON -e "lenskit[test]"
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -143,17 +139,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: pip
-          cache-dependency-path: |
-            requirements*.txt
-            */pyproject.toml
       - name: "🕶️ Set up uv"
         run: |
           pip install -U 'uv>=0.1.15'
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON -r requirements-test.txt -e lenskit -e lenskit-funksvd
+          uv pip install --python $PYTHON -e "lenskit[test]" -e "lenskit-funksvd"
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -196,17 +188,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: pip
-          cache-dependency-path: |
-            requirements*.txt
-            */pyproject.toml
       - name: "🕶️ Set up uv"
         run: |
           pip install -U 'uv>=0.1.15'
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON -r requirements-test.txt -e lenskit --resolution=lowest-direct
+          uv pip install --python $PYTHON -e "lenskit[test]" --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -287,17 +275,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: pip
-          cache-dependency-path: |
-            requirements*.txt
-            */pyproject.toml
       - name: "🕶️ Set up uv"
         run: |
           pip install -U 'uv>=0.1.15'
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON -r requirements-test.txt -e lenskit -e lenskit-funksvd --resolution=lowest-direct
+          uv pip install --python $PYTHON -e "lenskit[test]" -e "lenskit-funksvd" --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -378,17 +362,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: pip
-          cache-dependency-path: |
-            requirements*.txt
-            */pyproject.toml
       - name: "🕶️ Set up uv"
         run: |
           pip install -U 'uv>=0.1.15'
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON -r requirements-test.txt -e lenskit -e lenskit-implicit --resolution=lowest-direct
+          uv pip install --python $PYTHON -e "lenskit[test]" -e "lenskit-implicit" --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -563,12 +543,12 @@ jobs:
           git fetch upstream
           git config user.name "LensKit Bot"
           git config user.email lkbot@lenskit.org
-      - name: "🐍 Set up Python"
-        uses: actions/setup-python@v5
+      - name: "🧚 Set up Pixi"
+        uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          python-version: '3.11'
-      - name: "📦 Install reporting packages"
-        run: python -m pip install -r requirements-reporting.txt
+          pixi-version: latest
+          activate-environment: true
+          environments: report
       - name: "📥 Download test artifacts"
         uses: actions/download-artifact@v4
         with:

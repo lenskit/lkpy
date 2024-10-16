@@ -16,11 +16,11 @@ export function isVanillaSpec(spec: TestJobSpec): spec is VanillaTestOpts {
 
 export function vanillaSetup(options: VanillaTestOpts): WorkflowStep[] {
   let pip = "uv pip install --python $PYTHON";
-  for (const req of reqFiles(options)) {
-    pip += ` -r ${req}`;
-  }
-  for (const pkg of requiredPackages(options)) {
-    pip += ` -e ${pkg}`;
+  for (let pkg of requiredPackages(options)) {
+    if (pkg == "lenskit") {
+      pkg = "lenskit[test]";
+    }
+    pip += ` -e "${pkg}"`;
   }
   if (options.dep_strategy == "minimum") {
     pip += " --resolution=lowest-direct";
@@ -36,11 +36,6 @@ export function vanillaSetup(options: VanillaTestOpts): WorkflowStep[] {
       uses: "actions/setup-python@v5",
       with: {
         "python-version": pythonVersionString(options),
-        cache: "pip",
-        "cache-dependency-path": script(`
-                    requirements*.txt
-                    */pyproject.toml
-                `),
       },
     },
     {
@@ -59,10 +54,6 @@ export function vanillaSetup(options: VanillaTestOpts): WorkflowStep[] {
       },
     },
   ];
-}
-
-function reqFiles(options: VanillaTestOpts) {
-  return options.req_files ?? ["requirements-test.txt"];
 }
 
 function requiredPackages(options: VanillaTestOpts) {

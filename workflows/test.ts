@@ -4,7 +4,6 @@ import { checkoutStep } from "./lib/checkout.ts";
 import { script } from "./lib/script.ts";
 import {
   CONDA_PYTHONS,
-  META_PYTHON,
   PLATFORMS,
   PYTHONS,
   VANILLA_PLATFORMS,
@@ -107,13 +106,13 @@ export const results: WorkflowJob = {
             `),
     },
     {
-      name: "🐍 Set up Python",
-      uses: "actions/setup-python@v5",
-      with: { "python-version": META_PYTHON },
-    },
-    {
-      name: "📦 Install reporting packages",
-      run: "python -m pip install -r requirements-reporting.txt",
+      name: "🧚 Set up Pixi",
+      uses: "prefix-dev/setup-pixi@v0.8.1",
+      with: {
+        "pixi-version": "latest",
+        "activate-environment": true,
+        "environments": "report",
+      },
     },
     {
       name: "📥 Download test artifacts",

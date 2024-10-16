@@ -1,7 +1,0 @@
-# Additional requirements for the LensKit demos.
-notebook >= 6
-nbval >= 0.9
-matplotlib ~= 3.4
-nbformat >=5.2
-ipython >= 7
-pyprojroot >= 0.3
