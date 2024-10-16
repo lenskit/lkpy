@@ -78,22 +78,6 @@ $ pixi shell -e dev-full
 If you are on Windows, use `dev-core` instead of `dev-full`; some LensKit
 packages will be missing dependencies (specifically Implicit, HPF, and FunkSVD).
 
-### Developing with Standard Virtual Environments
-
-[uv]: https://github.com/astral-sh/uv
-
-You can also use a standard virtual environment and vanilla Python to develop LensKit.
-To do this, the easiest way is to use [uv][]:
-
-    uv venv -p python3.11
-    uv pip install -r requirements-full-dev.txt
-
-You can also use traditional Pip:
-
-    python -m venv .venv
-    . .venv/bin/activate
-    python -m pip install -r requirements-full-dev.txt
-
 ## Testing Changes
 
 You should always test your changes by running the LensKit test suite:
