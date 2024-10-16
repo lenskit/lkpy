@@ -87,9 +87,10 @@ class ItemList:
 
     Args:
         source:
-            A source item list. If provided, its fields and data are used to
-            initialize any aspects of the item list that are not provided in the
-            other arguments.
+            A source item list. If provided and an :class:`ItemList`, its fields
+            and data are used to initialize any aspects of the item list that
+            are not provided in the other arguments.  Otherwise, it is
+            interpreted as ``item_ids``.
         item_ids:
             A list or array of item identifiers. ``item_id`` is accepted as an
             alternate name.
@@ -122,7 +123,11 @@ class ItemList:
 
     def __init__(
         self,
-        source: ItemList | None = None,
+        source: ItemList
+        | NDArray[NPEntityId]
+        | pd.Series[EntityId]
+        | Sequence[EntityId]
+        | None = None,
         *,
         item_ids: NDArray[NPEntityId] | pd.Series[EntityId] | Sequence[EntityId] | None = None,
         item_nums: NDArray[np.int32] | pd.Series[int] | Sequence[int] | ArrayLike | None = None,
@@ -131,7 +136,7 @@ class ItemList:
         scores: NDArray[np.generic] | torch.Tensor | ArrayLike | Literal[False] | None = None,
         **fields: NDArray[np.generic] | torch.Tensor | ArrayLike | Literal[False],
     ):
-        if source is not None:
+        if isinstance(source, ItemList):
             self.__dict__.update(source.__dict__)
             eff_fields = source._fields | fields
         else:
@@ -148,6 +153,12 @@ class ItemList:
         # handle aliases for item ID/number columns
         if item_ids is None and "item_id" in fields:
             item_ids = np.asarray(cast(Any, fields["item_id"]))
+        if source is not None and not isinstance(source, ItemList):
+            if item_ids is None:
+                item_ids = source
+                source = None
+            else:
+                raise ValueError("cannot specify both item_ids & item ID source")
 
         if item_nums is None and "item_num" in fields:
             item_nums = np.asarray(cast(Any, fields["item_num"]))

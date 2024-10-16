@@ -41,6 +41,16 @@ def test_item_list():
         il.numbers()
 
 
+def test_item_list_ctor():
+    il = ItemList(["one", "two"])
+
+    assert len(il) == 2
+    assert il.ids().shape == (2,)
+
+    with raises(RuntimeError, match="item numbers not available"):
+        il.numbers()
+
+
 def test_item_list_alias():
     il = ItemList(item_id=["one", "two"])
 
