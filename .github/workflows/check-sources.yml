@@ -50,18 +50,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🐍 Set up Python
-        id: python
-        uses: actions/setup-python@v5
+      - name: 🧚 Set up Pixi
+        id: pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
         with:
-          python-version: "3.10"
-
-      - name: 🛠️ Install development tools and dependencies
-        run: |
-          $PYTHON -m pip install -U uv
-          uv pip install --python $PYTHON -r requirements-dev.txt
-        env:
-          PYTHON: ${{steps.python.outputs.python-path}}
+          pixi-version: latest
+          activate-environment: true
+          environments: dev-compat
 
       - name: 🐜 Check source code lint rules
         id: lint
