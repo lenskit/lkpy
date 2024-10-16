@@ -11,7 +11,7 @@ from pytest import approx, mark, raises
 
 import lenskit.metrics.predict as pm
 import lenskit.util.test as lktu
-from lenskit.data import from_interactions_df
+from lenskit.data import ItemList, from_interactions_df
 
 
 def test_check_missing_empty():
@@ -58,69 +58,50 @@ def test_check_missing_ignore():
 
 
 def test_rmse_one():
-    rmse = pm.rmse([1], [1])
+    rmse = pm.rmse(ItemList(["a"], scores=[1]), ItemList(["a"], rating=[1]))
     assert isinstance(rmse, float)
     assert rmse == approx(0)
 
-    rmse = pm.rmse([1], [2])
+    rmse = pm.rmse(ItemList(["a"], scores=[1]), ItemList(["a"], rating=[2]))
     assert rmse == approx(1)
 
-    rmse = pm.rmse([1], [0.5])
+    rmse = pm.rmse(ItemList(["a"], scores=[1]), ItemList(["a"], rating=[0.5]))
     assert rmse == approx(0.5)
 
 
 def test_rmse_two():
-    rmse = pm.rmse([1, 2], [1, 2])
+    rmse = pm.rmse(ItemList(["a", "b"], scores=[1, 2]), ItemList(["a", "b"], rating=[1, 2]))
     assert isinstance(rmse, float)
     assert rmse == approx(0)
 
-    rmse = pm.rmse([1, 1], [2, 2])
+    rmse = pm.rmse(ItemList(["a", "b"], scores=[1, 1]), ItemList(["a", "b"], rating=[2, 2]))
     assert rmse == approx(1)
 
-    rmse = pm.rmse([1, 3], [3, 1])
-    assert rmse == approx(2)
-
-    rmse = pm.rmse([1, 3], [3, 2])
-    assert rmse == approx(np.sqrt(5 / 2))
-
-
-def test_rmse_array_two():
-    rmse = pm.rmse(np.array([1, 2]), np.array([1, 2]))
-    assert isinstance(rmse, float)
-    assert rmse == approx(0)
-
-    rmse = pm.rmse(np.array([1, 1]), np.array([2, 2]))
-    assert rmse == approx(1)
-
-    rmse = pm.rmse(np.array([1, 3]), np.array([3, 1]))
+    rmse = pm.rmse(ItemList(["a", "b"], scores=[1, 3]), ItemList(["a", "b"], rating=[3, 1]))
     assert rmse == approx(2)
 
 
-def test_rmse_series_two():
-    rmse = pm.rmse(pd.Series([1, 2]), pd.Series([1, 2]))
-    assert isinstance(rmse, float)
-    assert rmse == approx(0)
-
-    rmse = pm.rmse(pd.Series([1, 1]), pd.Series([2, 2]))
-    assert rmse == approx(1)
-
-    rmse = pm.rmse(pd.Series([1, 3]), pd.Series([3, 1]))
-    assert rmse == approx(2)
-
-
-def test_rmse_series_subset_axis():
-    rmse = pm.rmse(pd.Series([1, 3], ["a", "c"]), pd.Series([3, 4, 1], ["a", "b", "c"]))
+def test_rmse_series_subset_items():
+    rmse = pm.rmse(
+        ItemList(scores=[1, 3], item_ids=["a", "c"]),
+        ItemList(rating=[3, 4, 1], item_ids=["a", "b", "c"]),
+    )
     assert rmse == approx(2)
 
 
 def test_rmse_series_missing_value_error():
     with raises(ValueError):
-        pm.rmse(pd.Series([1, 3], ["a", "d"]), pd.Series([3, 4, 1], ["a", "b", "c"]))
+        pm.rmse(
+            ItemList(scores=[1, 3], item_ids=["a", "d"]),
+            ItemList(rating=[3, 4, 1], item_ids=["a", "b", "c"]),
+        )
 
 
 def test_rmse_series_missing_value_ignore():
     rmse = pm.rmse(
-        pd.Series([1, 3], ["a", "d"]), pd.Series([3, 4, 1], ["a", "b", "c"]), missing="ignore"
+        ItemList(scores=[1, 3], item_ids=["a", "d"]),
+        ItemList(rating=[3, 4, 1], item_ids=["a", "b", "c"]),
+        missing="ignore",
     )
     assert rmse == approx(2)
 
