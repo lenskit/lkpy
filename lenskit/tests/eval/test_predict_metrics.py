@@ -107,42 +107,18 @@ def test_rmse_series_missing_value_ignore():
 
 
 def test_mae_two():
-    mae = pm.mae([1, 2], [1, 2])
+    mae = pm.mae(ItemList(["a", "b"], scores=[1, 2]), ItemList(["a", "b"], rating=[1, 2]))
     assert isinstance(mae, float)
     assert mae == approx(0)
 
-    mae = pm.mae([1, 1], [2, 2])
+    mae = pm.mae(ItemList(["a", "b"], scores=[1, 1]), ItemList(["a", "b"], rating=[2, 2]))
     assert mae == approx(1)
 
-    mae = pm.mae([1, 3], [3, 1])
+    mae = pm.mae(ItemList(["a", "b"], scores=[1, 3]), ItemList(["a", "b"], rating=[3, 1]))
     assert mae == approx(2)
 
-    mae = pm.mae([1, 3], [3, 2])
+    mae = pm.mae(ItemList(["a", "b"], scores=[1, 3]), ItemList(["a", "b"], rating=[3, 2]))
     assert mae == approx(1.5)
-
-
-def test_mae_array_two():
-    mae = pm.mae(np.array([1, 2]), np.array([1, 2]))
-    assert isinstance(mae, float)
-    assert mae == approx(0)
-
-    mae = pm.mae(np.array([1, 1]), np.array([2, 2]))
-    assert mae == approx(1)
-
-    mae = pm.mae(np.array([1, 3]), np.array([3, 1]))
-    assert mae == approx(2)
-
-
-def test_mae_series_two():
-    mae = pm.mae(pd.Series([1, 2]), pd.Series([1, 2]))
-    assert isinstance(mae, float)
-    assert mae == approx(0)
-
-    mae = pm.mae(pd.Series([1, 1]), pd.Series([2, 2]))
-    assert mae == approx(1)
-
-    mae = pm.mae(pd.Series([1, 3]), pd.Series([3, 1]))
-    assert mae == approx(2)
 
 
 @mark.slow

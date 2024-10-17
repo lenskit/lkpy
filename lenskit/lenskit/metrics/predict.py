@@ -15,10 +15,10 @@ import pandas as pd
 
 from lenskit.data import ItemList
 
-ErrorMode: TypeAlias = Literal["error", "ignore"]
+MissingDisposition: TypeAlias = Literal["error", "ignore"]
 
 
-def _check_missing(truth: pd.Series, missing: ErrorMode):
+def _check_missing(truth: pd.Series, missing: MissingDisposition):
     """
     Check for missing truth values.
 
@@ -34,7 +34,7 @@ def _check_missing(truth: pd.Series, missing: ErrorMode):
         raise ValueError("missing truth for {} predictions".format(nmissing))
 
 
-def rmse(predictions: ItemList, truth: ItemList, missing: ErrorMode = "error") -> float:
+def rmse(predictions: ItemList, truth: ItemList, missing: MissingDisposition = "error") -> float:
     """
     Compute RMSE (root mean squared error).  This is computed as:
 
@@ -75,43 +75,46 @@ def rmse(predictions: ItemList, truth: ItemList, missing: ErrorMode = "error") -
 
     diff = pred_s - rate_s
 
-    sqdiff = diff.apply(np.square)
+    sqdiff = np.square(diff)
     msq = sqdiff.mean()
     return np.sqrt(msq)
 
 
-def mae(predictions, truth, missing="error"):
+def mae(predictions: ItemList, truth: ItemList, missing: MissingDisposition = "error"):
     """
     Compute MAE (mean absolute error).  This is computed as:
 
     .. math::
         \\sum_{r_{ui} \\in R} \\left|r_{ui} - s(i|u)\\right|
 
-    When used with :func:`user_metric`, or on series grouped by user, it computes
-    a per-user MAE; when applied to an entire prediction frame, it computes global
-    MAE.  It does not do any fallbacks; if you want to compute MAE with fallback
-    predictions (e.g. usign a bias model when a collaborative filter cannot predict),
-    generate predictions with :class:`lenskit.algorithms.basic.Fallback`.
+    This computes *per-user* MAE. It does not do any fallbacks; if you want to
+    compute MAE with fallback predictions (e.g. usign a bias model when a
+    collaborative filter cannot predict), generate predictions with
+    :class:`~lenskit.basic.FallbackScorer`.
 
     Args:
-        predictions(pandas.Series): the predictions
-        truth(pandas.Series): the ground truth ratings from data
-        missing(string):
-            how to handle predictions without truth. Can be one of
-            ``'error'`` or ``'ignore'``.
+        predictions:
+            the predictions
+        truth:
+            the ground truth ratings from data
+        missing:
+            how to handle predictions without truth. Can be one of ``'error'``
+            or ``'ignore'``.
 
     Returns:
         double: the mean absolute approximation error
     """
 
-    # force into series
-    predictions = pd.Series(predictions)
-    truth = pd.Series(truth)
+    pred_s = predictions.scores("pandas", index="ids")
+    assert pred_s is not None, "predictions have no scores"
+    rate_s = truth.field("rating", "pandas", index="ids")
+    assert rate_s is not None, "truth has no ratings"
 
-    predictions, truth = predictions.align(truth, join="left")
-    _check_missing(truth, missing)
+    # realign
+    pred_s, rate_s = pred_s.align(rate_s, join="left")
+    _check_missing(rate_s, missing)
 
-    diff = predictions - truth
+    diff = pred_s - rate_s
 
-    adiff = diff.apply(np.abs)
+    adiff = np.abs(diff)
     return adiff.mean()
