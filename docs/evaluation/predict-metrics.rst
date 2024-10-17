@@ -25,19 +25,11 @@ following to compute per-user RMSE over some predictions::
 Metric Functions
 ----------------
 
-Prediction metric functions take two series, `predictions` and `truth`, and compute
-a prediction accuracy metric for them.
+Prediction metric functions take two item lists, `predictions` and `truth`, and
+compute a prediction accuracy metric for them.
 
 .. autofunction:: rmse
 .. autofunction:: mae
-
-Convenience Functions
----------------------
-
-These functions make it easier to compute global and per-user prediction metrics.
-
-.. autofunction:: user_metric
-.. autofunction:: global_metric
 
 
 Working with Missing Data
