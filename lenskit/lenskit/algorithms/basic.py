@@ -8,6 +8,7 @@
 Basic utility algorithms and combiners.
 """
 
+from datetime import datetime, timedelta
 import logging
 from collections.abc import Iterable, Sequence
 from typing import overload
@@ -41,7 +42,7 @@ class PopScore(Predictor):
             - ``'count'``
 
     Attributes:
-        item_pop_(pandas.Series):
+        item_scores_(pandas.Series):
             Item popularity scores.
     """
 
@@ -51,8 +52,13 @@ class PopScore(Predictor):
     @override
     def fit(self, data: Dataset, **kwargs):
         _logger.info("counting item popularity")
-        stats = data.item_stats()
-        scores = stats["count"]
+
+        counts = data.item_stats()["count"]
+        self.item_scores_ = self._fit_internal(counts, **kwargs)
+
+        return self
+
+    def _fit_internal(self, scores: pd.Series, **kwargs):
         if self.score_method == "rank":
             _logger.info("ranking %d items", len(scores))
             scores = scores.rank().sort_index()
@@ -68,9 +74,7 @@ class PopScore(Predictor):
         else:
             raise ValueError("invalid scoring method " + repr(self.score_method))
 
-        self.item_scores_ = scores
-
-        return self
+        return scores
 
     @override
     def predict_for_user(self, user, items, ratings=None):
@@ -78,6 +82,55 @@ class PopScore(Predictor):
 
     def __str__(self):
         return "PopScore({})".format(self.score_method)
+
+
+class TimeBoundedPopScore(PopScore):
+    """
+    Score items by their time-bounded popularity, i.e., the popularity in the
+    most recent `time_window` period.  Use with :py:class:`TopN` to get a
+    most-popular-recent-items recommender.
+
+    Args:
+        time_window(datetime.timedelta):
+            The time window for computing popularity scores.
+        score_type(str):
+            The method for computing popularity scores.  Can be one of the following:
+
+            - ``'quantile'`` (the default)
+            - ``'rank'``
+            - ``'count'``
+
+    Attributes:
+        item_scores_(pandas.Series):
+            Time-bounded item popularity scores.
+    """
+
+    def __init__(self, time_window: timedelta, score_method="quantile"):
+        super().__init__(score_method)
+
+        self.time_window = time_window
+        self.score_method = score_method
+
+    @override
+    def fit(self, data: Dataset, **kwargs):
+        _logger.info("counting time-bounded item popularity")
+
+        log = data.interaction_log("numpy")
+
+        counts = np.zeros(data.item_count, dtype=np.int32)
+        start_timestamp = (datetime.now() - self.time_window).timestamp()
+        item_nums = log.item_nums[log.timestamps is not None and log.timestamps > start_timestamp]
+        np.add.at(counts, item_nums, 1)
+
+        self.item_scores_ = super()._fit_internal(
+            pd.Series(counts, index=data.items.index), **kwargs
+        )
+
+        return self
+
+    @override
+    def __str__(self):
+        return "TimeBoundedPopScore({}, {})".format(self.time_window, self.score_method)
 
 
 class Memorized(Predictor):
