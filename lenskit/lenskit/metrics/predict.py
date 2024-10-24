@@ -8,7 +8,7 @@
 Prediction accuracy metrics.
 """
 
-from typing import Callable, Literal, TypeAlias
+from typing import Callable, Literal, Protocol, TypeAlias
 
 import numpy as np
 import pandas as pd
@@ -21,20 +21,18 @@ ScoreArray: TypeAlias = NDArray[np.floating] | pd.Series
 PredMetric: TypeAlias = Callable[[ScoreArray, ScoreArray], float]
 
 
-def _check_missing(truth: pd.Series, missing: MissingDisposition):
+class PredictMetric(Protocol):
     """
-    Check for missing truth values.
-
-    Args:
-        truth:
-            the series of truth values
-        missing:
-            what to do with missing values
+    Interface implemented by prediction metrics.
     """
-    nmissing = truth.isna().sum()
 
-    if missing == "error" and nmissing:
-        raise ValueError("missing truth for {} predictions".format(nmissing))
+    def __call__(
+        self,
+        predictions: ItemList | pd.DataFrame,
+        truth: ItemList | None = None,
+        missing_scores: MissingDisposition = "error",
+        missing_truth: MissingDisposition = "error",
+    ) -> float: ...
 
 
 def _score_predictions(
@@ -55,7 +53,12 @@ def _score_predictions(
         pred_s, rate_s = pred_s.align(rate_s, join="outer")
     else:
         assert truth is None, "truth must be None when predictions is a data frame"
-        pred_s = predictions["score"]
+        if "score" in predictions.columns:
+            pred_s = predictions["score"]
+        elif "prediction" in predictions.columns:
+            pred_s = predictions["prediction"]
+        else:
+            raise KeyError("predictions has neither “score” nor “prediction” columns")
         rate_s = predictions["rating"]
 
     pred_m = pred_s.isna()
@@ -167,3 +170,26 @@ def mae(
     """
 
     return _score_predictions(_mae, predictions, truth, missing_scores, missing_truth)
+
+
+def measure_user_predictions(
+    predictions: pd.DataFrame,
+    metric: PredictMetric,
+    missing_scores: MissingDisposition = "error",
+    missing_truth: MissingDisposition = "error",
+) -> pd.Series:
+    """
+    Compute per-user metrics for a set of predictions.
+
+    Args:
+        predictions:
+            A data frame of predictions.  Must have `user_id`, `item_id`,
+            `score`, and `rating` columns.
+        metric:
+            The metric to compute.  :fun:`rmse` and :fun:`mae` both implement
+            this interface.
+    """
+
+    return predictions.groupby("user_id").apply(
+        lambda df: metric(df, missing_scores=missing_scores, missing_truth=missing_truth)
+    )

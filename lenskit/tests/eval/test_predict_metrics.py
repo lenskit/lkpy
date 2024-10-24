@@ -14,49 +14,6 @@ import lenskit.util.test as lktu
 from lenskit.data import ItemList, from_interactions_df
 
 
-def test_check_missing_empty():
-    pm._check_missing(pd.Series([], dtype="float64"), "error")
-    # should pass
-    assert True
-
-
-def test_check_missing_has_values():
-    pm._check_missing(pd.Series([1, 3, 2]), "error")
-    # should pass
-    assert True
-
-
-def test_check_missing_nan_raises():
-    with raises(ValueError):
-        pm._check_missing(pd.Series([1, np.nan, 3]), "error")
-
-
-def test_check_missing_raises():
-    data = pd.Series([1, 7, 3], ["a", "b", "d"])
-    ref = pd.Series([3, 2, 4], ["b", "c", "d"])
-    ref, data = ref.align(data, join="left")
-    with raises(ValueError):
-        pm._check_missing(data, "error")
-
-
-def test_check_joined_ok():
-    data = pd.Series([1, 7, 3], ["a", "b", "d"])
-    ref = pd.Series([3, 2, 4], ["b", "c", "d"])
-    ref, data = ref.align(data, join="inner")
-    pm._check_missing(ref, "error")
-    # should get here
-    assert True
-
-
-def test_check_missing_ignore():
-    data = pd.Series([1, 7, 3], ["a", "b", "d"])
-    ref = pd.Series([3, 2, 4], ["b", "c", "d"])
-    ref, data = ref.align(data, join="left")
-    pm._check_missing(data, "ignore")
-    # should get here
-    assert True
-
-
 def test_rmse_one():
     rmse = pm.rmse(ItemList(["a"], scores=[1]), ItemList(["a"], rating=[1]))
     assert isinstance(rmse, float)
@@ -134,14 +91,16 @@ def test_batch_rmse(ml_100k):
 
     def eval(train, test):
         algo.fit(from_interactions_df(train))
-        preds = batch.predict(algo, test)
+        preds = batch.predict(algo, test, n_jobs=1)
         return preds.set_index(["user", "item"])
 
     results = pd.concat(
         (eval(train, test) for (train, test) in xf.partition_users(ml_100k, 5, xf.SampleN(5)))
     )
 
-    user_rmse = results.groupby("user").apply(lambda df: pm.rmse(df.prediction, df.rating))
+    results = results.reset_index().rename(columns={"user": "user_id", "item": "item_id"})
+    print(results)
+    user_rmse = pm.measure_user_predictions(results, pm.rmse)
 
     # we should have all users
     users = ml_100k.user.unique()
