@@ -8,6 +8,7 @@
 Prediction accuracy metrics.
 """
 
+import warnings
 from typing import Callable, Literal, Protocol, TypeAlias
 
 import numpy as np
@@ -189,6 +190,18 @@ def measure_user_predictions(
             The metric to compute.  :fun:`rmse` and :fun:`mae` both implement
             this interface.
     """
+
+    if "user_id" not in predictions.columns:
+        if "user_id" in predictions.index.names:
+            predictions = predictions.reset_index("user_id")
+        elif "user" in predictions.columns:
+            warnings.warn("predictions has legacy “user” column")
+            predictions = predictions.rename(columns={"user": "user_id"})
+        elif "user" in predictions.index.names:
+            warnings.warn("predictions has legacy “user” index name")
+            predictions = predictions.reset_index("user").rename(columns={"user": "user_id"})
+        else:
+            raise KeyError("predictions has no user_id column")
 
     return predictions.groupby("user_id").apply(
         lambda df: metric(df, missing_scores=missing_scores, missing_truth=missing_truth)

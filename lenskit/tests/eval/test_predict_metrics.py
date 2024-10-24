@@ -98,8 +98,6 @@ def test_batch_rmse(ml_100k):
         (eval(train, test) for (train, test) in xf.partition_users(ml_100k, 5, xf.SampleN(5)))
     )
 
-    results = results.reset_index().rename(columns={"user": "user_id", "item": "item_id"})
-    print(results)
     user_rmse = pm.measure_user_predictions(results, pm.rmse)
 
     # we should have all users
