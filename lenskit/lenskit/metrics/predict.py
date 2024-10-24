@@ -118,3 +118,44 @@ def mae(predictions: ItemList, truth: ItemList, missing: MissingDisposition = "e
 
     adiff = np.abs(diff)
     return adiff.mean()
+
+
+def global_rmse(data: pd.DataFrame) -> float:
+    """
+    Compute the global (micro-averaged) RMSE of rating predictions.  Expects a
+    data frame with ``score`` and ``rating`` columns.
+
+    Args:
+        data:
+            The input data, with ``score`` and ``rating`` columns.
+
+    Returns:
+        The global RMSE for the computed data.
+    """
+
+    scores = data["score"]
+    truth = data["rating"]
+
+    err = truth - scores
+    mse = np.mean(err * err)
+    return np.sqrt(mse)
+
+
+def global_mae(data: pd.DataFrame) -> float:
+    """
+    Compute the global (micro-averaged) MAE of rating predictions.  Expects a
+    data frame with ``score`` and ``rating`` columns.
+
+    Args:
+        data:
+            The input data, with ``score`` and ``rating`` columns.
+
+    Returns:
+        The global MAE for the computed data.
+    """
+
+    scores = data["score"]
+    truth = data["rating"]
+
+    err = truth - scores
+    return np.mean(np.abs(err)).item()
