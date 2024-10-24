@@ -8,14 +8,17 @@
 Prediction accuracy metrics.
 """
 
-from typing import Literal, TypeAlias
+from typing import Callable, Literal, TypeAlias
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
 from lenskit.data import ItemList
 
 MissingDisposition: TypeAlias = Literal["error", "ignore"]
+ScoreArray: TypeAlias = NDArray[np.floating] | pd.Series
+PredMetric: TypeAlias = Callable[[ScoreArray, ScoreArray], float]
 
 
 def _check_missing(truth: pd.Series, missing: MissingDisposition):
@@ -34,7 +37,60 @@ def _check_missing(truth: pd.Series, missing: MissingDisposition):
         raise ValueError("missing truth for {} predictions".format(nmissing))
 
 
-def rmse(predictions: ItemList, truth: ItemList, missing: MissingDisposition = "error") -> float:
+def _score_predictions(
+    metric: PredMetric,
+    predictions: ItemList | pd.DataFrame,
+    truth: ItemList | None = None,
+    missing_scores: MissingDisposition = "error",
+    missing_truth: MissingDisposition = "error",
+) -> float:
+    if isinstance(predictions, ItemList):
+        pred_s = predictions.scores("pandas", index="ids")
+        assert pred_s is not None, "item list does not have scores"
+        if truth is not None:
+            rate_s = truth.field("rating", "pandas", index="ids")
+        else:
+            rate_s = predictions.field("rating", "pandas", index="ids")
+        assert rate_s is not None, "no ratings provided"
+        pred_s, rate_s = pred_s.align(rate_s, join="outer")
+    else:
+        assert truth is None, "truth must be None when predictions is a data frame"
+        pred_s = predictions["score"]
+        rate_s = predictions["rating"]
+
+    pred_m = pred_s.isna()
+    rate_m = rate_s.isna()
+
+    if missing_scores == "error" and (nbad := np.sum(pred_m & ~rate_m)):
+        raise ValueError(f"missing scores for {nbad} truth items")
+
+    if missing_truth == "error" and (nbad := np.sum(rate_m & ~pred_m)):
+        raise ValueError(f"missing truth for {nbad} scored items")
+
+    keep = ~(pred_m | rate_m)
+
+    pred_s = pred_s[keep]
+    rate_s = rate_s[keep]
+
+    return metric(pred_s, rate_s)
+
+
+def _rmse(scores: ScoreArray, truth: ScoreArray) -> float:
+    err = truth - scores
+    return np.sqrt(np.mean(err * err)).item()
+
+
+def _mae(scores: ScoreArray, truth: ScoreArray) -> float:
+    err = truth - scores
+    return np.mean(np.abs(err)).item()
+
+
+def rmse(
+    predictions: ItemList | pd.DataFrame,
+    truth: ItemList | None = None,
+    missing_scores: MissingDisposition = "error",
+    missing_truth: MissingDisposition = "error",
+) -> float:
     """
     Compute RMSE (root mean squared error).  This is computed as:
 
@@ -52,35 +108,34 @@ def rmse(predictions: ItemList, truth: ItemList, missing: MissingDisposition = "
     cannot predict), generate predictions with
     :class:`~lenskit.basic.FallbackScorer`.
 
+    If ``predictions`` is a data frame with scores for multiple users, this
+    computes the global (micro-averaged) RMSE.  If it is a data frame or item
+    list with a single user's scores, it computes the RMSE for that user.
+
     Args:
         predictions:
-            item list with scored items.
+            Item list or data frame with scored items, optionally with ratings
+            (if ``truth=None``).
         truth:
-            ground truth ratings from data
-        missing:
-            how to handle predictions without truth.
+            Ground truth ratings from data.
+        missing_scores:
+            How to handle truth items without scores or predictions.
+        missing_truth:
+            How to handle predictions without truth.
 
     Returns:
         the root mean squared approximation error
     """
 
-    pred_s = predictions.scores("pandas", index="ids")
-    assert pred_s is not None, "predictions have no scores"
-    rate_s = truth.field("rating", "pandas", index="ids")
-    assert rate_s is not None, "truth has no ratings"
-
-    # realign
-    pred_s, rate_s = pred_s.align(rate_s, join="left")
-    _check_missing(rate_s, missing)
-
-    diff = pred_s - rate_s
-
-    sqdiff = np.square(diff)
-    msq = sqdiff.mean()
-    return np.sqrt(msq)
+    return _score_predictions(_rmse, predictions, truth, missing_scores, missing_truth)
 
 
-def mae(predictions: ItemList, truth: ItemList, missing: MissingDisposition = "error"):
+def mae(
+    predictions: ItemList | pd.DataFrame,
+    truth: ItemList | None = None,
+    missing_scores: MissingDisposition = "error",
+    missing_truth: MissingDisposition = "error",
+) -> float:
     """
     Compute MAE (mean absolute error).  This is computed as:
 
@@ -92,70 +147,23 @@ def mae(predictions: ItemList, truth: ItemList, missing: MissingDisposition = "e
     collaborative filter cannot predict), generate predictions with
     :class:`~lenskit.basic.FallbackScorer`.
 
+    If ``predictions`` is a data frame with scores for multiple users, this
+    computes the global (micro-averaged) MAE.  If it is a data frame or item
+    list with a single user's scores, it computes the MAE for that user.
+
     Args:
         predictions:
-            the predictions
+            Item list or data frame with scored items, optionally with ratings
+            (if ``truth=None``).
         truth:
-            the ground truth ratings from data
-        missing:
-            how to handle predictions without truth. Can be one of ``'error'``
-            or ``'ignore'``.
+            Ground truth ratings from data.
+        missing_scores:
+            How to handle truth items without scores or predictions.
+        missing_truth:
+            How to handle predictions without truth.
 
     Returns:
         double: the mean absolute approximation error
     """
 
-    pred_s = predictions.scores("pandas", index="ids")
-    assert pred_s is not None, "predictions have no scores"
-    rate_s = truth.field("rating", "pandas", index="ids")
-    assert rate_s is not None, "truth has no ratings"
-
-    # realign
-    pred_s, rate_s = pred_s.align(rate_s, join="left")
-    _check_missing(rate_s, missing)
-
-    diff = pred_s - rate_s
-
-    adiff = np.abs(diff)
-    return adiff.mean()
-
-
-def global_rmse(data: pd.DataFrame) -> float:
-    """
-    Compute the global (micro-averaged) RMSE of rating predictions.  Expects a
-    data frame with ``score`` and ``rating`` columns.
-
-    Args:
-        data:
-            The input data, with ``score`` and ``rating`` columns.
-
-    Returns:
-        The global RMSE for the computed data.
-    """
-
-    scores = data["score"]
-    truth = data["rating"]
-
-    err = truth - scores
-    mse = np.mean(err * err)
-    return np.sqrt(mse)
-
-
-def global_mae(data: pd.DataFrame) -> float:
-    """
-    Compute the global (micro-averaged) MAE of rating predictions.  Expects a
-    data frame with ``score`` and ``rating`` columns.
-
-    Args:
-        data:
-            The input data, with ``score`` and ``rating`` columns.
-
-    Returns:
-        The global MAE for the computed data.
-    """
-
-    scores = data["score"]
-    truth = data["rating"]
-
-    err = truth - scores
-    return np.mean(np.abs(err)).item()
+    return _score_predictions(_mae, predictions, truth, missing_scores, missing_truth)

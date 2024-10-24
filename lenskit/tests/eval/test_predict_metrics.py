@@ -85,6 +85,7 @@ def test_rmse_series_subset_items():
     rmse = pm.rmse(
         ItemList(scores=[1, 3], item_ids=["a", "c"]),
         ItemList(rating=[3, 4, 1], item_ids=["a", "b", "c"]),
+        missing_scores="ignore",
     )
     assert rmse == approx(2)
 
@@ -101,7 +102,8 @@ def test_rmse_series_missing_value_ignore():
     rmse = pm.rmse(
         ItemList(scores=[1, 3], item_ids=["a", "d"]),
         ItemList(rating=[3, 4, 1], item_ids=["a", "b", "c"]),
-        missing="ignore",
+        missing_scores="ignore",
+        missing_truth="ignore",
     )
     assert rmse == approx(2)
 
