@@ -56,7 +56,7 @@ def predict(algo, pairs, *, n_jobs=None, **kwargs):
         99006   664  8529     4.0  1393891173    3.573008
         99007   664  8636     4.0  1393891175    3.846268
         99008   664  8641     4.5  1393890852    3.710635
-        >>> rmse(preds['prediction'], preds['rating'])
+        >>> rmse(preds)
         0.832699...
 
     Args:
