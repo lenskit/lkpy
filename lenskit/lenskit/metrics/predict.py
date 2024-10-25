@@ -5,8 +5,11 @@
 # SPDX-License-Identifier: MIT
 
 """
-Prediction accuracy metrics.
+Prediction accuracy metrics.  See :ref:`eval-predict-accuracy` for an overview
+and instructions on using these metrics.
 """
+
+from __future__ import annotations
 
 import warnings
 from typing import Callable, Literal, Protocol, TypeAlias, overload

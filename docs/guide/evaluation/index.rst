@@ -17,13 +17,7 @@ function's documentation includes a mathematical definition of the metric.
 
 .. toctree::
    :caption: Evaluation Topics
+   :maxdepth: 1
 
-   predict-metrics
-   topn-metrics
-
-Saving and Loading Outputs
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-In our own experiments, we typically store the output of recommendation runs in
-LensKit experiments in CSV or Parquet files, along with whatever parameters are
-relevant from the configuration.
+   predictions
+   rankings
