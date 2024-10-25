@@ -9,7 +9,7 @@ Prediction accuracy metrics.
 """
 
 import warnings
-from typing import Callable, Literal, Protocol, TypeAlias
+from typing import Callable, Literal, Protocol, TypeAlias, overload
 
 import numpy as np
 import pandas as pd
@@ -89,6 +89,20 @@ def _mae(scores: ScoreArray, truth: ScoreArray) -> float:
     return np.mean(np.abs(err)).item()
 
 
+@overload
+def rmse(
+    predictions: ItemList,
+    truth: ItemList | None = None,
+    missing_scores: MissingDisposition = "error",
+    missing_truth: MissingDisposition = "error",
+) -> float: ...
+@overload
+def rmse(
+    predictions: pd.DataFrame,
+    *,
+    missing_scores: MissingDisposition = "error",
+    missing_truth: MissingDisposition = "error",
+) -> float: ...
 def rmse(
     predictions: ItemList | pd.DataFrame,
     truth: ItemList | None = None,
@@ -134,6 +148,20 @@ def rmse(
     return _score_predictions(_rmse, predictions, truth, missing_scores, missing_truth)
 
 
+@overload
+def mae(
+    predictions: ItemList,
+    truth: ItemList | None = None,
+    missing_scores: MissingDisposition = "error",
+    missing_truth: MissingDisposition = "error",
+) -> float: ...
+@overload
+def mae(
+    predictions: pd.DataFrame,
+    *,
+    missing_scores: MissingDisposition = "error",
+    missing_truth: MissingDisposition = "error",
+) -> float: ...
 def mae(
     predictions: ItemList | pd.DataFrame,
     truth: ItemList | None = None,
