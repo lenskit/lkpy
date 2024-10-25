@@ -286,8 +286,8 @@ def test_als_batch_accuracy(ml_100k):
     # _log.info("predictions:\n%s", preds.sort_values("abs_diff", ascending=False))
     # _log.info("diff summary:\n%s", preds.abs_diff.describe())
 
-    lu_mae = pm.mae(preds)
+    lu_mae = pm.mae(preds, missing_scores="ignore")
     assert lu_mae == approx(0.73, abs=0.045)
 
-    user_rmse = preds.groupby("user").apply(pm.rmse)
+    user_rmse = pm.measure_user_predictions(preds, pm.rmse, missing_scores="ignore")
     assert user_rmse.mean() == approx(0.94, abs=0.05)
