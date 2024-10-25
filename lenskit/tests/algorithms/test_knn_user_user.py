@@ -288,10 +288,10 @@ def test_uu_batch_accuracy(ml_100k: pd.DataFrame):
     folds = xf.partition_users(ml_100k, 5, xf.SampleFrac(0.2))
     preds = [__batch_eval((algo, train, test)) for (train, test) in folds]
     preds = pd.concat(preds)
-    mae = pm.mae(preds.prediction, preds.rating)
+    mae = pm.mae(preds)
     assert mae == approx(0.71, abs=0.05)
 
-    user_rmse = preds.groupby("user").apply(lambda df: pm.rmse(df.prediction, df.rating))
+    user_rmse = pm.measure_user_predictions(preds, pm.rmse)
     assert user_rmse.mean() == approx(0.91, abs=0.055)
 
 

@@ -144,6 +144,6 @@ def test_bias_batch_predict(ml_100k, ncpus):
     )
 
     _log.info("analyzing predictions")
-    rmse = pm.rmse(preds.prediction, preds.rating)
+    rmse = pm.rmse(preds)
     _log.info("RMSE is %f", rmse)
     assert rmse == pytest.approx(0.95, abs=0.1)
