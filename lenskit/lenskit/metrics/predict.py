@@ -27,6 +27,22 @@ class PredictMetric(Protocol):
     Interface implemented by prediction metrics.
     """
 
+    @overload
+    def __call__(
+        self,
+        predictions: ItemList,
+        truth: ItemList | None = None,
+        missing_scores: MissingDisposition = "error",
+        missing_truth: MissingDisposition = "error",
+    ) -> float: ...
+    @overload
+    def __call__(
+        self,
+        predictions: pd.DataFrame,
+        *,
+        missing_scores: MissingDisposition = "error",
+        missing_truth: MissingDisposition = "error",
+    ) -> float: ...
     def __call__(
         self,
         predictions: ItemList | pd.DataFrame,
