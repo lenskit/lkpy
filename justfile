@@ -11,6 +11,7 @@ list-tasks:
 # clean up build artifacts
 clean:
     rm -rf build dist *.egg-info */dist */build
+    git clean -xf docs
 
 # build the modules and wheels
 build:
@@ -65,7 +66,7 @@ docs:
 
 # preview documentation with live rebuild
 preview-docs:
-    sphinx-autobuild --watch lenskit docs build/doc
+    sphinx-autobuild --watch lenskit/lenskit docs build/doc
 
 # update the environment file used to install documentation
 update-doc-env:
