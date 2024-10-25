@@ -224,8 +224,8 @@ def test_fsvd_batch_accuracy(ml_100k: pd.DataFrame):
 
     folds = xf.partition_users(ml_100k, 5, xf.SampleFrac(0.2))
     preds = pd.concat(eval(train, test) for (train, test) in folds)
-    mae = pm.mae(preds.prediction, preds.rating)
+    mae = pm.mae(preds)
     assert mae == approx(0.74, abs=0.025)
 
-    user_rmse = preds.groupby("user").apply(lambda df: pm.rmse(df.prediction, df.rating))
+    user_rmse = pm.measure_user_predictions(preds, pm.rmse)
     assert user_rmse.mean() == approx(0.92, abs=0.05)
