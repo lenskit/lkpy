@@ -12576,30 +12576,6 @@ packages:
   - hypothesis>=6.16 ; extra == 'test'
   - pyprojroot==0.3.* ; extra == 'test'
   requires_python: '>=3.11'
-- kind: pypi
-  name: lenskit
-  version: 0.15.0.dev1352+g58e23233.d20241025
-  path: lenskit
-  sha256: a2b42c1afe1e1bc1edb1226bf5fc9b4052e0cfde92eb96486a1593f42e240b5b
-  requires_dist:
-  - pandas~=2.0
-  - numpy>=1.24
-  - scipy>=1.10.0
-  - torch~=2.1
-  - threadpoolctl>=3.0
-  - pydantic<3,>=2.8
-  - seedbank>=0.2.0a2
-  - progress-api>=0.1.0a9
-  - manylog @ git+https://github.com/mdekstrand/manylog.git
-  - scikit-learn>=1.1 ; extra == 'sklearn'
-  - pytest<9,>=8.2 ; extra == 'test'
-  - pytest-doctestplus<2,>=1.2.1 ; extra == 'test'
-  - pytest-cov>=2.12 ; extra == 'test'
-  - pytest-benchmark==4.* ; extra == 'test'
-  - pytest-repeat>=0.9 ; extra == 'test'
-  - hypothesis>=6.16 ; extra == 'test'
-  - pyprojroot==0.3.* ; extra == 'test'
-  requires_python: '>=3.11'
   editable: true
 - kind: pypi
   name: lenskit-funksvd
@@ -12611,15 +12587,6 @@ packages:
   - numba>=0.56
   requires_python: '>=3.11'
   editable: true
-- kind: pypi
-  name: lenskit-funksvd
-  version: 0.15.0.dev1353+g92277f68.d20241025
-  path: lenskit-funksvd
-  sha256: 2d7ce7c471c36feb16e87aa011bf5ce7c2a797e3424eeada8f805a8f0f06f8b8
-  requires_dist:
-  - lenskit
-  - numba>=0.56
-  requires_python: '>=3.11'
 - kind: pypi
   name: lenskit-hpf
   version: 0.15.0.dev1303+ga8fbb0f6
@@ -12640,15 +12607,6 @@ packages:
   - implicit>=0.6.1
   requires_python: '>=3.11'
   editable: true
-- kind: pypi
-  name: lenskit-implicit
-  version: 0.15.0.dev1353+g92277f68.d20241025
-  path: lenskit-implicit
-  sha256: ba1bf14d262a1bf0ba018fe98359cf801b7fec503fc9f11fbf10559e2da37b86
-  requires_dist:
-  - lenskit
-  - implicit>=0.6.1
-  requires_python: '>=3.11'
 - kind: conda
   name: lerc
   version: 4.0.0
