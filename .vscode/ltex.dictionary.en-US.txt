@@ -17,3 +17,4 @@ Scikit-Learn
 unpickle
 rerankers
 LKPY
+FunkSVD

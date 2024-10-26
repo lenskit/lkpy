@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools_scm>=8"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling ~=1.0", "hatch-vcs ~=0.4.0"]
+build-backend = "hatchling.build"
 
 [project]
 name = "lenskit-implicit"
@@ -23,9 +23,15 @@ documentation = "https://lkpy.lenskit.org"
 source = "https://github.com/lenskit/lkpy"
 
 # configure build tools
-[tool.setuptools.packages.find]
-include = ["lenskit*"]
+[tool.hatch.metadata]
+allow-direct-references = true
 
-[tool.setuptools_scm]
-version_scheme = "release-branch-semver"
-root = ".."
+[tool.hatch.build.targets.sdist]
+include = ["/lenskit", "LICENSE.md", "README.md"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["lenskit"]
+
+[tool.hatch.version]
+source = "vcs"
+raw-options = { root = "..", version_scheme = "release-branch-semver" }
