@@ -50,6 +50,9 @@ jobs:
           activate-environment: true
           environments: 'test-${{matrix.python}}-core'
           cache-write: false
+          log-level: vv
+          locked: false
+          frozen: true
       - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
@@ -99,7 +102,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON -e "lenskit[test]"
+          uv pip install --python $PYTHON "./lenskit[test]"
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -145,7 +148,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON -e "lenskit[test]" -e "lenskit-funksvd"
+          uv pip install --python $PYTHON "./lenskit[test]" "./lenskit-funksvd"
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -194,7 +197,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON -e "lenskit[test]" --resolution=lowest-direct
+          uv pip install --python $PYTHON "./lenskit[test]" --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -239,8 +242,11 @@ jobs:
         with:
           pixi-version: latest
           activate-environment: true
-          environments: 'test-${{matrix.python}}-full'
+          environments: 'test-${{matrix.python}}-funksvd'
           cache-write: false
+          log-level: vv
+          locked: false
+          frozen: true
       - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
@@ -281,7 +287,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON -e "lenskit[test]" -e "lenskit-funksvd" --resolution=lowest-direct
+          uv pip install --python $PYTHON "./lenskit[test]" "./lenskit-funksvd" --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -326,8 +332,11 @@ jobs:
         with:
           pixi-version: latest
           activate-environment: true
-          environments: 'test-${{matrix.python}}-full'
+          environments: 'test-${{matrix.python}}-implicit'
           cache-write: false
+          log-level: vv
+          locked: false
+          frozen: true
       - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
@@ -368,7 +377,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON -e "lenskit[test]" -e "lenskit-implicit" --resolution=lowest-direct
+          uv pip install --python $PYTHON "./lenskit[test]" "./lenskit-implicit" --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -413,8 +422,11 @@ jobs:
         with:
           pixi-version: latest
           activate-environment: true
-          environments: 'test-${{matrix.python}}-full'
+          environments: 'test-${{matrix.python}}-hpf'
           cache-write: false
+          log-level: vv
+          locked: false
+          frozen: true
       - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
@@ -449,6 +461,9 @@ jobs:
           activate-environment: true
           environments: test-py311-full
           cache-write: false
+          log-level: vv
+          locked: false
+          frozen: true
       - name: Cache ML data
         uses: actions/cache@v4
         with:
@@ -490,6 +505,9 @@ jobs:
           activate-environment: true
           environments: test-examples
           cache-write: false
+          log-level: vv
+          locked: false
+          frozen: true
       - name: Cache ML data
         uses: actions/cache@v4
         with:
@@ -543,12 +561,15 @@ jobs:
           git fetch upstream
           git config user.name "LensKit Bot"
           git config user.email lkbot@lenskit.org
-      - name: "🧚 Set up Pixi"
-        uses: prefix-dev/setup-pixi@v0.8.1
+      - uses: prefix-dev/setup-pixi@v0.8.1
         with:
           pixi-version: latest
           activate-environment: true
           environments: report
+          cache-write: false
+          log-level: vv
+          locked: false
+          frozen: true
       - name: "📥 Download test artifacts"
         uses: actions/download-artifact@v4
         with:

@@ -20,7 +20,7 @@ export function vanillaSetup(options: VanillaTestOpts): WorkflowStep[] {
     if (pkg == "lenskit") {
       pkg = "lenskit[test]";
     }
-    pip += ` -e "${pkg}"`;
+    pip += ` "./${pkg}"`;
   }
   if (options.dep_strategy == "minimum") {
     pip += " --resolution=lowest-direct";

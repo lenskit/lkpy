@@ -5,7 +5,7 @@ import { pythonVersionString } from "./spec.ts";
 
 export interface CondaTestOpts extends TestJobSpec {
   install: "conda";
-  variant?: "core" | "full";
+  variant?: "core" | string;
   pixi_env?: string;
 }
 
@@ -13,13 +13,14 @@ export function isCondaSpec(spec: TestJobSpec): spec is CondaTestOpts {
   return spec.install == "conda";
 }
 
-export function condaSetup(options: CondaTestOpts): WorkflowStep[] {
-  let env = options.pixi_env;
-  if (!env) {
+export function condaSetup(options: CondaTestOpts | string): WorkflowStep[] {
+  let env = typeof options == "string" ? options : options.pixi_env;
+  if (!env && typeof options != "string") {
     const version = pythonVersionString(options);
     const variant = options.variant ?? "core";
     env = `test-${version}-${variant}`;
   }
+  env ??= "default";
 
   return [
     {
@@ -29,6 +30,9 @@ export function condaSetup(options: CondaTestOpts): WorkflowStep[] {
         "activate-environment": true,
         "environments": env,
         "cache-write": false,
+        "log-level": "vv",
+        locked: false,
+        frozen: true,
       },
     },
   ];
