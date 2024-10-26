@@ -29,25 +29,6 @@ install:
 install-editable:
     {{PIP}} install {{ prepend('-e ', PACKAGES) }}
 
-# set up for development in non-conda environments
-install-dev:
-    {{PIP}} install -r dev-requirements.txt -e {{ prepend('-e ', PACKAGES) }} --all-extras
-
-# create a conda environment file for development
-conda-dev-env-file *components=PACKAGES:
-    pipx run --no-cache --spec . lk-conda -o environment.yml \
-         -p {{python}} -e all requirements-dev.txt \
-        pyproject.toml {{ append('/pyproject.toml', components) }}
-
-# create a conda environment for development
-conda-dev-env *components=PACKAGES: (conda-dev-env-file components)
-    conda env update --prune -n lkpy -f environment.yml
-    pip install --no-deps -e .
-    for pkg in {{components}}; do \
-        echo "installing $pkg"; \
-        pip install --no-deps -e $pkg; \
-    done
-
 # run tests with default configuration
 test:
     python -m pytest
@@ -67,13 +48,6 @@ docs:
 # preview documentation with live rebuild
 preview-docs:
     sphinx-autobuild --watch lenskit/lenskit docs build/doc
-
-# update the environment file used to install documentation
-update-doc-env:
-    python -m lkdev.conda -o docs/environment.yml \
-        -e all requirements-doc.txt docs/doc-dep-constraints.yml \
-        {{ append('/pyproject.toml', PACKAGES) }}
-    -pre-commit run --files docs/environment.yml
 
 # update source file headers
 update-headers:
