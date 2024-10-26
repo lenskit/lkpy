@@ -52,7 +52,6 @@ jobs:
           cache-write: false
           log-level: vv
           locked: false
-          frozen: true
       - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
