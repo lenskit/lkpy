@@ -30,6 +30,7 @@ jobs:
           activate-environment: true
           environments: doc
           cache-write: false
+          log-level: vv
           locked: false
           frozen: true
       - id: docs

@@ -30,6 +30,7 @@ export function condaSetup(options: CondaTestOpts | string): WorkflowStep[] {
         "activate-environment": true,
         "environments": env,
         "cache-write": false,
+        "log-level": "vv",
         locked: false,
         frozen: true,
       },

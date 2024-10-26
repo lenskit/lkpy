@@ -50,6 +50,7 @@ jobs:
           activate-environment: true
           environments: 'test-${{matrix.python}}-core'
           cache-write: false
+          log-level: vv
           locked: false
           frozen: true
       - name: "🔍 Inspect environment"
@@ -243,6 +244,7 @@ jobs:
           activate-environment: true
           environments: 'test-${{matrix.python}}-funksvd'
           cache-write: false
+          log-level: vv
           locked: false
           frozen: true
       - name: "🔍 Inspect environment"
@@ -332,6 +334,7 @@ jobs:
           activate-environment: true
           environments: 'test-${{matrix.python}}-implicit'
           cache-write: false
+          log-level: vv
           locked: false
           frozen: true
       - name: "🔍 Inspect environment"
@@ -421,6 +424,7 @@ jobs:
           activate-environment: true
           environments: 'test-${{matrix.python}}-hpf'
           cache-write: false
+          log-level: vv
           locked: false
           frozen: true
       - name: "🔍 Inspect environment"
@@ -457,6 +461,7 @@ jobs:
           activate-environment: true
           environments: test-py311-full
           cache-write: false
+          log-level: vv
           locked: false
           frozen: true
       - name: Cache ML data
@@ -500,6 +505,7 @@ jobs:
           activate-environment: true
           environments: test-examples
           cache-write: false
+          log-level: vv
           locked: false
           frozen: true
       - name: Cache ML data
@@ -561,6 +567,7 @@ jobs:
           activate-environment: true
           environments: report
           cache-write: false
+          log-level: vv
           locked: false
           frozen: true
       - name: "📥 Download test artifacts"
