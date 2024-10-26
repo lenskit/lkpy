@@ -570,6 +570,8 @@ jobs:
           log-level: vv
           locked: false
           frozen: true
+      - name: "🔨 Build _version.py"
+        run: pipx run build lenskit
       - name: "📥 Download test artifacts"
         uses: actions/download-artifact@v4
         with:
@@ -593,7 +595,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           diff-cover --json-report diff-cover.json --markdown-report diff-cover.md \
-              coverage.xml |tee diff-cover.txt
+            coverage.xml |tee diff-cover.txt
       - name: ± Measure and report coverage
         run: |
           echo $PR_NUMBER > ./lenskit-coverage/pr-number
