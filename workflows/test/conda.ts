@@ -29,6 +29,8 @@ export function condaSetup(options: CondaTestOpts): WorkflowStep[] {
         "activate-environment": true,
         "environments": env,
         "cache-write": false,
+        locked: false,
+        frozen: true,
       },
     },
   ];

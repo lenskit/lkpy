@@ -50,6 +50,8 @@ jobs:
           activate-environment: true
           environments: 'test-${{matrix.python}}-core'
           cache-write: false
+          locked: false
+          frozen: true
       - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
@@ -241,6 +243,8 @@ jobs:
           activate-environment: true
           environments: 'test-${{matrix.python}}-funksvd'
           cache-write: false
+          locked: false
+          frozen: true
       - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
@@ -328,6 +332,8 @@ jobs:
           activate-environment: true
           environments: 'test-${{matrix.python}}-implicit'
           cache-write: false
+          locked: false
+          frozen: true
       - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
@@ -415,6 +421,8 @@ jobs:
           activate-environment: true
           environments: 'test-${{matrix.python}}-hpf'
           cache-write: false
+          locked: false
+          frozen: true
       - name: "🔍 Inspect environment"
         run: |
           python -m lenskit.util.envcheck
@@ -449,6 +457,8 @@ jobs:
           activate-environment: true
           environments: test-py311-full
           cache-write: false
+          locked: false
+          frozen: true
       - name: Cache ML data
         uses: actions/cache@v4
         with:
@@ -490,6 +500,8 @@ jobs:
           activate-environment: true
           environments: test-examples
           cache-write: false
+          locked: false
+          frozen: true
       - name: Cache ML data
         uses: actions/cache@v4
         with:
