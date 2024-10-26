@@ -5,7 +5,7 @@ import { pythonVersionString } from "./spec.ts";
 
 export interface CondaTestOpts extends TestJobSpec {
   install: "conda";
-  variant?: "core" | "full";
+  variant?: "core" | string;
   pixi_env?: string;
 }
 

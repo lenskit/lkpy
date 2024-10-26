@@ -54,7 +54,7 @@ const test_matrix = {
     name: "FunkSVD tests on Python ${{matrix.python}}",
     packages: ["lenskit-funksvd"],
     matrix: { "python": CONDA_PYTHONS },
-    variant: "full",
+    variant: "funksvd",
   }),
   "funksvd-mindep": testJob({
     install: "vanilla",
@@ -69,7 +69,7 @@ const test_matrix = {
     name: "Implicit bridge tests on Python ${{matrix.python}}",
     packages: ["lenskit-implicit"],
     matrix: { "python": CONDA_PYTHONS },
-    variant: "full",
+    variant: "implicit",
   }),
   "implicit-mindep": testJob({
     install: "vanilla",
@@ -84,7 +84,7 @@ const test_matrix = {
     name: "HPF bridge tests on Python ${{matrix.python}}",
     packages: ["lenskit-hpf"],
     matrix: { "python": CONDA_PYTHONS },
-    variant: "full",
+    variant: "hpf",
   }),
   "eval-tests": evalTestJob(),
   "doc-tests": exampleTestJob(),

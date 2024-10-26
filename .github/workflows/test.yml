@@ -239,7 +239,7 @@ jobs:
         with:
           pixi-version: latest
           activate-environment: true
-          environments: 'test-${{matrix.python}}-full'
+          environments: 'test-${{matrix.python}}-funksvd'
           cache-write: false
       - name: "🔍 Inspect environment"
         run: |
@@ -326,7 +326,7 @@ jobs:
         with:
           pixi-version: latest
           activate-environment: true
-          environments: 'test-${{matrix.python}}-full'
+          environments: 'test-${{matrix.python}}-implicit'
           cache-write: false
       - name: "🔍 Inspect environment"
         run: |
@@ -413,7 +413,7 @@ jobs:
         with:
           pixi-version: latest
           activate-environment: true
-          environments: 'test-${{matrix.python}}-full'
+          environments: 'test-${{matrix.python}}-hpf'
           cache-write: false
       - name: "🔍 Inspect environment"
         run: |
