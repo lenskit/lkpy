@@ -119,14 +119,14 @@ doc = { features = [
   "funksvd",
   "hpf",
   "implicit",
-], solve-group = "py312" }
+], solve-group = "py312-nix" }
 demo = { features = [
   "py312",
   "demo",
   "funksvd",
   "hpf",
   "implicit",
-], solve-group = "py312" }
+], solve-group = "py312-nix" }
 report = { features = ["reporting"], no-default-feature = true }
 
 dev-core = { features = ["dev", "doc", "test", "demo", "edit-core"] }
@@ -140,7 +140,7 @@ dev-full = { features = [
   "implicit",
   "hpf",
   "edit-all",
-], solve-group = "py312" }
+], solve-group = "py312-nix" }
 dev-compat = { features = [
   "dev",
   "doc",
@@ -151,10 +151,44 @@ dev-compat = { features = [
   "implicit",
   "hpf",
   "edit-all",
-], solve-group = "py311" }
+], solve-group = "py311-nix" }
 
-test-py311-core = { features = ["py311", "test"] }
-test-py312-core = { features = ["py312", "test"] }
+test-py311-core = { features = ["py311", "test"], solve-group = "py311" }
+test-py312-core = { features = ["py312", "test"], solve-group = "py312" }
+
+test-py311-funksvd = { features = [
+  "py311",
+  "test",
+  "funksvd",
+], solve-group = "py311" }
+test-py312-funksvd = { features = [
+  "py312",
+  "test",
+  "funksvd",
+], solve-group = "py312" }
+
+test-py311-implicit = { features = [
+  "py311",
+  "test",
+  "implicit",
+], solve-group = "py311" }
+test-py312-implicit = { features = [
+  "py312",
+  "test",
+  "implicit",
+], solve-group = "py312" }
+
+test-py311-hpf = { features = [
+  "py311",
+  "test",
+  "hpf",
+], solve-group = "py311-nix" }
+test-py312-hpf = { features = [
+  "py312",
+  "test",
+  "hpf",
+], solve-group = "py312-nix" }
+
 test-py311-full = { features = [
   "py311",
   "test",
@@ -162,7 +196,7 @@ test-py311-full = { features = [
   "funksvd",
   "implicit",
   "hpf",
-], solve-group = "py311" }
+], solve-group = "py311-nix" }
 test-py312-full = { features = [
   "py312",
   "test",
@@ -170,14 +204,14 @@ test-py312-full = { features = [
   "funksvd",
   "implicit",
   "hpf",
-], solve-group = "py312" }
+], solve-group = "py312-nix" }
 test-examples = { features = [
   "demo",
   "test",
   "funksvd",
   "hpf",
   "implicit",
-], solve-group = "py311" }
+], solve-group = "py311-nix" }
 
 [target.osx-arm64.dependencies]
 # pytorch = { version = "~=2.1", channel = "pytorch" }
