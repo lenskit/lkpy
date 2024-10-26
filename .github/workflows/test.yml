@@ -58,7 +58,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
       - name: "📐 Coverage results"
         run: |
           coverage xml
@@ -113,7 +113,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
       - name: "📐 Coverage results"
         run: |
           coverage xml
@@ -159,7 +159,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest pytest --verbose --log-file=test.log --durations=25 -m 'not slow' --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit lenskit/tests lenskit-funksvd/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 -m 'not slow' --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit lenskit/tests lenskit-funksvd/tests
         env:
           NUMBA_DISABLE_JIT: 1
           PYTORCH_JIT: 0
@@ -208,7 +208,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
       - name: "📐 Coverage results"
         run: |
           coverage xml
@@ -252,7 +252,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
       - name: "📐 Coverage results"
         run: |
           coverage xml
@@ -298,7 +298,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit lenskit/tests lenskit-funksvd/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit lenskit/tests lenskit-funksvd/tests
       - name: "📐 Coverage results"
         run: |
           coverage xml
@@ -342,7 +342,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-implicit/lenskit lenskit-implicit/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-implicit/lenskit lenskit-implicit/tests
       - name: "📐 Coverage results"
         run: |
           coverage xml
@@ -388,7 +388,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit --cov=lenskit-implicit/lenskit lenskit/tests lenskit-implicit/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit --cov=lenskit-implicit/lenskit lenskit/tests lenskit-implicit/tests
       - name: "📐 Coverage results"
         run: |
           coverage xml
@@ -432,7 +432,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-hpf/lenskit lenskit-hpf/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-hpf/lenskit lenskit-hpf/tests
       - name: "📐 Coverage results"
         run: |
           coverage xml

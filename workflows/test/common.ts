@@ -43,7 +43,7 @@ export function testJob(
 
 export function testSteps(options: TestJobSpec): WorkflowStep[] {
   let test_cmd =
-    "python -m pytest pytest --verbose --log-file=test.log --durations=25";
+    "python -m pytest --verbose --log-file=test.log --durations=25";
   if (options.test_args) {
     test_cmd += " " + options.test_args.join(" ");
   }
