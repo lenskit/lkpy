@@ -69,7 +69,7 @@ That will create an environment named `lkpy` with all the LensKit dependencies.
 
 You should always test your changes by running the LensKit test suite:
 
-    python -m pytest
+    pytest */tests
 
 If you want to use your changes in a LensKit experiment, you can locally install
 your modified LensKit into your experiment's environment.  We recommend using
