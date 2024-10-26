@@ -28,7 +28,7 @@ Throughout this documentation, we use the notation of :cite:t:`ekstrand:notation
 Resources
 ---------
 
-- `Mailing list, etc. <https://lenskit.org/connect>`_
+- `Discussion and Announcements <https://github.com/orgs/lenskit/discussions>`_
 - `Source and issues on GitHub <https://github.com/lenskit/lkpy>`_
 
 .. toctree::
