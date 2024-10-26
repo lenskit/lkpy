@@ -25,9 +25,9 @@ export function evalTestJob(): WorkflowJob {
       ...mlDataSteps(["ml-100k", "ml-20m"]),
       {
         "name": "Run Eval Tests",
-        "run": script(`
-                    python -m pytest ${cov} -m 'eval or realdata' --log-file test-eval.log */tests
-                `),
+        "run": script(
+          `pytest ${cov} -m 'eval or realdata' --log-file test-eval.log */tests`,
+        ),
       },
       ...coverageSteps(options),
     ],
