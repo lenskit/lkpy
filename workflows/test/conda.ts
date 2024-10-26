@@ -13,13 +13,14 @@ export function isCondaSpec(spec: TestJobSpec): spec is CondaTestOpts {
   return spec.install == "conda";
 }
 
-export function condaSetup(options: CondaTestOpts): WorkflowStep[] {
-  let env = options.pixi_env;
-  if (!env) {
+export function condaSetup(options: CondaTestOpts | string): WorkflowStep[] {
+  let env = typeof options == "string" ? options : options.pixi_env;
+  if (!env && typeof options != "string") {
     const version = pythonVersionString(options);
     const variant = options.variant ?? "core";
     env = `test-${version}-${variant}`;
   }
+  env ??= "default";
 
   return [
     {

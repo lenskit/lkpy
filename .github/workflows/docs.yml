@@ -30,6 +30,8 @@ jobs:
           activate-environment: true
           environments: doc
           cache-write: false
+          locked: false
+          frozen: true
       - id: docs
         name: "📚 Build documentation site"
         run: |

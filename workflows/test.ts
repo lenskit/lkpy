@@ -11,6 +11,7 @@ import {
 import { testJob } from "./test/common.ts";
 import { evalTestJob } from "./test/test-eval.ts";
 import { exampleTestJob } from "./test/test-examples.ts";
+import { condaSetup } from "./test/conda.ts";
 
 const FILTER_PATHS = [
   "lenskit*/**.py",
@@ -105,15 +106,7 @@ export const results: WorkflowJob = {
                 git config user.email lkbot@lenskit.org
             `),
     },
-    {
-      name: "🧚 Set up Pixi",
-      uses: "prefix-dev/setup-pixi@v0.8.1",
-      with: {
-        "pixi-version": "latest",
-        "activate-environment": true,
-        "environments": "report",
-      },
-    },
+    ...condaSetup("report"),
     {
       name: "📥 Download test artifacts",
       uses: "actions/download-artifact@v4",

@@ -2,21 +2,14 @@ import { Workflow, WorkflowJob } from "@lenskit/typeline/github";
 
 import { checkoutStep } from "./lib/checkout.ts";
 import { script } from "./lib/script.ts";
+import { condaSetup } from "./test/conda.ts";
 
 const build: WorkflowJob = {
   name: "Build documentation",
   "runs-on": "ubuntu-latest",
   steps: [
     checkoutStep(),
-    {
-      uses: "prefix-dev/setup-pixi@v0.8.1",
-      with: {
-        "pixi-version": "latest",
-        "activate-environment": true,
-        environments: "doc",
-        "cache-write": false,
-      },
-    },
+    ...condaSetup("doc"),
     {
       id: "docs",
       name: "📚 Build documentation site",
