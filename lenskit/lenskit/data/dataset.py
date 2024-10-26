@@ -467,7 +467,7 @@ class Dataset(ABC):
             frame = pd.DataFrame(
                 {
                     "count": counts,
-                    "user_count": counts,
+                    "item_count": counts,
                 },
                 index=self.users.index,
             )

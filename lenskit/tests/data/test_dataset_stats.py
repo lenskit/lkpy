@@ -50,7 +50,7 @@ def test_user_stats(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert np.all(stats.index == ml_ds.users.index)
 
     assert np.all(stats["count"] == ml_ratings["user"].value_counts().reindex(ml_ds.users))
-    assert np.all(stats["user_count"] == ml_ratings["user"].value_counts().reindex(ml_ds.users))
+    assert np.all(stats["item_count"] == ml_ratings["user"].value_counts().reindex(ml_ds.users))
     assert np.all(stats["rating_count"] == ml_ratings["user"].value_counts().reindex(ml_ds.users))
 
     assert stats["mean_rating"].values == approx(
