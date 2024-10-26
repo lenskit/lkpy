@@ -104,7 +104,7 @@ correct modified version of LensKit until your changes make it in to a release.
 ## Resources
 
 - [Documentation](https://lkpy.lenskit.org)
-- [Mailing list, etc.](https://lenskit.org/connect)
+- [Discussion and Announcements](https://github.com/orgs/lenskit/discussions)
 
 ## Acknowledgements
 

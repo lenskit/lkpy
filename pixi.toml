@@ -68,8 +68,8 @@ myst-nb = ">=0.13"
 just = ">=1.2"
 
 [feature.dev.dependencies]
-setuptools = ">=64"
-setuptools_scm = ">=8"
+hatchling = "~=1.24"
+hatch-vcs = "~=0.4.0"
 python-build = "~=1.0"
 ruff = ">=0.2"
 pyright = ">=1.1"

@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 import logging
+import re
 from types import NoneType
 
 import numpy as np
@@ -107,7 +108,9 @@ def test_config_single_node():
     assert len(cfg.inputs) == 1
     assert len(cfg.components) == 1
 
-    assert cfg.components["return"].code == "lenskit.tests.pipeline.test_save_load:msg_ident"
+    assert re.match(
+        r"((lenskit\.)?tests\.)?pipeline\.test_save_load:msg_ident", cfg.components["return"].code
+    )
     assert cfg.components["return"].config is None
     assert cfg.components["return"].inputs == {"msg": "msg"}
 

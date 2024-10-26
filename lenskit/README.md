@@ -41,58 +41,6 @@ To use the latest development version, install directly from GitHub:
 
 Then see [Getting Started](https://lkpy.lenskit.org/en/latest/GettingStarted.html)
 
-## Developing
-
-[issues]: https://github.com/lenskit/lkpy/issues
-[workflow]: https://github.com/lenskit/lkpy/wiki/DevWorkflow
-
-To contribute to LensKit, clone or fork the repository, get to work, and submit
-a pull request.  We welcome contributions from anyone; if you are looking for a
-place to get started, see the [issue tracker][issues].
-
-Our development workflow is documented in [the wiki][workflow]; the wiki also
-contains other information on *developing* LensKit. User-facing documentation is
-at <https://lkpy.lenskit.org>.
-
-[conda-lock]: https://github.com/conda-incubator/conda-lock
-[lkdev]: https://github.com/lenskit/lkdev
-
-We recommend using an Anaconda environment for developing LensKit.  We provide a
-tool to automate setting up Conda environments from the LensKit dependencies; to
-create a dev environment, checkout LensKit, then run:
-
-    pipx ./utils/conda-tool.py --env -n lkpy pyproject.toml dev-requirements.txt
-
-That will create an environment named `lkpy` with all the LensKit dependencies.
-
-## Testing Changes
-
-You should always test your changes by running the LensKit test suite:
-
-    python -m pytest
-
-If you want to use your changes in a LensKit experiment, you can locally install
-your modified LensKit into your experiment's environment.  We recommend using
-separate environments for LensKit development and for each experiment; you will
-need to install the modified LensKit into your experiment's repository:
-
-    conda activate my-exp
-    conda install -c conda-forge
-    cd /path/to/lkpy
-    pip install -e . --no-deps
-
-You may need to first uninstall LensKit from your experiment repo; make sure that
-LensKit's dependencies are all still installed.
-
-Once you have pushed your code to a GitHub branch, you can use a Git repository as
-a Pip dependency in an `environment.yml` for your experiment, to keep using the
-correct modified version of LensKit until your changes make it in to a release.
-
-## Resources
-
-- [Documentation](https://lkpy.lenskit.org)
-- [Mailing list, etc.](https://lenskit.org/connect)
-
 ## Acknowledgements
 
 This material is based upon work supported by the National Science Foundation

@@ -25,9 +25,9 @@ export function exampleTestJob(): WorkflowJob {
       ...mlDataSteps(["ml-100k", "ml-1m", "ml-10m", "ml-20m"]),
       {
         "name": "📕 Validate documentation examples",
-        "run": script(`
-                    python -m pytest ${cov} --nbval-lax --doctest-glob='*.rst' --log-file test-docs.log docs */lenskit
-                `),
+        "run": script(
+          `pytest ${cov} --nbval-lax --doctest-glob='*.rst' --log-file test-docs.log docs */lenskit`,
+        ),
       },
       ...coverageSteps(options),
     ],

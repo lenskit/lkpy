@@ -476,7 +476,7 @@ jobs:
           python -m lenskit.data.fetch ml-100k ml-20m
       - name: Run Eval Tests
         run: |
-          python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit -m 'eval or realdata' --log-file test-eval.log */tests
+          pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit -m 'eval or realdata' --log-file test-eval.log */tests
       - name: "📐 Coverage results"
         run: |
           coverage xml
@@ -520,7 +520,7 @@ jobs:
           python -m lenskit.data.fetch ml-100k ml-1m ml-10m ml-20m
       - name: "📕 Validate documentation examples"
         run: |
-          python -m pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit --nbval-lax --doctest-glob='*.rst' --log-file test-docs.log docs */lenskit
+          pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit --nbval-lax --doctest-glob='*.rst' --log-file test-docs.log docs */lenskit
       - name: "📐 Coverage results"
         run: |
           coverage xml
@@ -570,6 +570,8 @@ jobs:
           log-level: vv
           locked: false
           frozen: true
+      - name: "🔨 Build _version.py"
+        run: pipx run build lenskit
       - name: "📥 Download test artifacts"
         uses: actions/download-artifact@v4
         with:
@@ -593,7 +595,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           diff-cover --json-report diff-cover.json --markdown-report diff-cover.md \
-              coverage.xml |tee diff-cover.txt
+            coverage.xml |tee diff-cover.txt
       - name: ± Measure and report coverage
         run: |
           echo $PR_NUMBER > ./lenskit-coverage/pr-number
