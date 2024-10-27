@@ -36,12 +36,13 @@ const test_matrix = {
     matrix: { "python": PYTHONS, "platform": VANILLA_PLATFORMS },
   }),
   nojit: testJob({
-    install: "vanilla",
+    install: "conda",
     key: "nojit",
     name: "Non-JIT test coverage",
     packages: ["lenskit", "lenskit-funksvd"],
     test_env: { "NUMBA_DISABLE_JIT": 1, "PYTORCH_JIT": 0 },
     test_args: ["-m", "'not slow'"],
+    variant: "funksvd",
   }),
   mindep: testJob({
     install: "vanilla",
