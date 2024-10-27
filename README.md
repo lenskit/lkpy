@@ -1,7 +1,9 @@
 # Python recommendation tools
 
-![Test Suite](https://github.com/lenskit/lkpy/workflows/Test%20Suite/badge.svg)
-[![codecov](https://codecov.io/gh/lenskit/lkpy/branch/master/graph/badge.svg)](https://codecov.io/gh/lenskit/lkpy)
+[![Automatic Tests](https://github.com/lenskit/lkpy/actions/workflows/test.yml/badge.svg)](https://github.com/lenskit/lkpy/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/lenskit/lkpy/graph/badge.svg?token=DaGn7NFM2P)](https://codecov.io/gh/lenskit/lkpy)
+[![PyPI - Version](https://img.shields.io/pypi/v/lenskit)](https://pypi.org/project/lenskit)
+![Conda Version](https://img.shields.io/conda/vn/conda-forge/lenskit)
 
 LensKit is a set of Python tools for experimenting with and studying recommender
 systems.  It provides support for training, running, and evaluating recommender
