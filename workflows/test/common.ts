@@ -65,23 +65,24 @@ export function coverageSteps(options: TestJobSpec): WorkflowStep[] {
   return [
     {
       name: "📐 Coverage results",
+      if: "${{ !canceled() }}",
       run: script(`
-                coverage xml
-                coverage report
-                cp .coverage coverage.db
-            `),
+        coverage xml
+        coverage report
+        cp .coverage coverage.db
+      `),
     },
     {
       name: "📤 Upload test results",
       uses: "actions/upload-artifact@v4",
-      if: "always()",
+      if: "${{ !canceled() }}",
       with: {
         name: testArtifactName(options),
         path: script(`
-                    test*.log
-                    coverage.db
-                    coverage.xml
-                `),
+          test*.log
+          coverage.db
+          coverage.xml
+        `),
       },
     },
   ];
