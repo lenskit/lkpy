@@ -1,4 +1,5 @@
 {
+  "deno.enable": true,
   "files.exclude": {
     "**/__pycache__": true,
     ".hypothesis/": true,
