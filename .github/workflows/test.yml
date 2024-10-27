@@ -570,8 +570,6 @@ jobs:
           log-level: vv
           locked: false
           frozen: true
-      - name: "🔨 Build _version.py"
-        run: pipx run build lenskit
       - name: "📥 Download test artifacts"
         uses: actions/download-artifact@v4
         with:

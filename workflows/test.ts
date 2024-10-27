@@ -107,7 +107,6 @@ export const results: WorkflowJob = {
       `),
     },
     ...condaSetup("report"),
-    { name: "🔨 Build _version.py", run: "pipx run build lenskit" },
     {
       name: "📥 Download test artifacts",
       uses: "actions/download-artifact@v4",
