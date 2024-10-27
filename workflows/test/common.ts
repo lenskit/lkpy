@@ -65,7 +65,7 @@ export function coverageSteps(options: TestJobSpec): WorkflowStep[] {
   return [
     {
       name: "📐 Coverage results",
-      if: "${{ !canceled() }}",
+      if: "${{ !cancelled() }}",
       run: script(`
         coverage xml
         coverage report
@@ -75,7 +75,7 @@ export function coverageSteps(options: TestJobSpec): WorkflowStep[] {
     {
       name: "📤 Upload test results",
       uses: "actions/upload-artifact@v4",
-      if: "${{ !canceled() }}",
+      if: "${{ !cancelled() }}",
       with: {
         name: testArtifactName(options),
         path: script(`

@@ -60,14 +60,14 @@ jobs:
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
       - name: "📐 Coverage results"
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
       - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         with:
           name: 'test-conda-${{matrix.platform}}-py${{matrix.python}}'
           path: |
@@ -116,14 +116,14 @@ jobs:
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
       - name: "📐 Coverage results"
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
       - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         with:
           name: 'test-vanilla-${{matrix.platform}}-py${{matrix.python}}'
           path: |
@@ -158,14 +158,14 @@ jobs:
           NUMBA_DISABLE_JIT: 1
           PYTORCH_JIT: 0
       - name: "📐 Coverage results"
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
       - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         with:
           name: test-nojit
           path: |
@@ -205,14 +205,14 @@ jobs:
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
       - name: "📐 Coverage results"
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
       - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         with:
           name: test-mindep
           path: |
@@ -250,14 +250,14 @@ jobs:
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
       - name: "📐 Coverage results"
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
       - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         with:
           name: 'test-funksvd-py${{matrix.python}}'
           path: |
@@ -297,14 +297,14 @@ jobs:
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit lenskit/tests lenskit-funksvd/tests
       - name: "📐 Coverage results"
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
       - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         with:
           name: test-mindep-funksvd
           path: |
@@ -342,14 +342,14 @@ jobs:
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-implicit/lenskit lenskit-implicit/tests
       - name: "📐 Coverage results"
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
       - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         with:
           name: 'test-implicit-py${{matrix.python}}'
           path: |
@@ -389,14 +389,14 @@ jobs:
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit --cov=lenskit-implicit/lenskit lenskit/tests lenskit-implicit/tests
       - name: "📐 Coverage results"
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
       - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         with:
           name: test-mindep-implicit
           path: |
@@ -434,14 +434,14 @@ jobs:
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-hpf/lenskit lenskit-hpf/tests
       - name: "📐 Coverage results"
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
       - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         with:
           name: 'test-hpf-py${{matrix.python}}'
           path: |
@@ -479,14 +479,14 @@ jobs:
         run: |
           pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit -m 'eval or realdata' --log-file test-eval.log */tests
       - name: "📐 Coverage results"
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
       - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         with:
           name: test-eval-tests
           path: |
@@ -524,14 +524,14 @@ jobs:
         run: |
           pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit --nbval-lax --doctest-glob='*.rst' --log-file test-docs.log docs */lenskit
       - name: "📐 Coverage results"
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
       - name: "📤 Upload test results"
         uses: actions/upload-artifact@v4
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         with:
           name: test-examples
           path: |
@@ -553,7 +553,7 @@ jobs:
       - hpf
       - eval-tests
       - doc-tests
-    if: '${{ !canceled() }}'
+    if: '${{ !cancelled() }}'
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v4
@@ -608,7 +608,7 @@ jobs:
           GH_TOKEN: '${{secrets.GITHUB_TOKEN}}'
       - name: "📤 Upload coverage report"
         uses: actions/upload-artifact@v4
-        if: '${{ !canceled() }}'
+        if: '${{ !cancelled() }}'
         with:
           name: coverage-report
           path: lenskit-coverage/

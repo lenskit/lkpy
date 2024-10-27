@@ -9,7 +9,7 @@ export function aggregateResultsJob(jobs: string[]): WorkflowJob {
     name: "Test suite results",
     "runs-on": "ubuntu-latest",
     needs: jobs,
-    if: "${{ !canceled() }}",
+    if: "${{ !cancelled() }}",
     steps: [
       checkoutStep(),
       {
@@ -76,7 +76,7 @@ export function aggregateResultsJob(jobs: string[]): WorkflowJob {
       {
         name: "📤 Upload coverage report",
         uses: "actions/upload-artifact@v4",
-        if: "${{ !canceled() }}",
+        if: "${{ !cancelled() }}",
         with: {
           name: "coverage-report",
           path: "lenskit-coverage/",
