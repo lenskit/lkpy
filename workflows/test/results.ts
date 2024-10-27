@@ -86,7 +86,7 @@ export function aggregateResultsJob(jobs: string[]): WorkflowJob {
         name: "📤 Upload coverage to CodeCov",
         uses: "codecov/codecov-action@v4.2.0",
         env: {
-          CODECOV_TOKEN: "${{ env.CODECOV_TOKEN }}",
+          CODECOV_TOKEN: "${{ vars.CODECOV_TOKEN }}",
         },
       },
       {
