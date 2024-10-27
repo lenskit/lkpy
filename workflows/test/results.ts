@@ -4,6 +4,8 @@ import { checkoutStep } from "../lib/checkout.ts";
 import { script } from "../lib/script.ts";
 import { condaSetup } from "./conda.ts";
 
+const CODECOV_TOKEN = "ab58c9cf-25b8-4283-a485-0b6382dc9a61";
+
 export function aggregateResultsJob(jobs: string[]): WorkflowJob {
   return {
     name: "Test suite results",
@@ -86,7 +88,7 @@ export function aggregateResultsJob(jobs: string[]): WorkflowJob {
         name: "📤 Upload coverage to CodeCov",
         uses: "codecov/codecov-action@v4.2.0",
         env: {
-          CODECOV_TOKEN: "${{ vars.CODECOV_TOKEN }}",
+          CODECOV_TOKEN: CODECOV_TOKEN,
         },
       },
       {
