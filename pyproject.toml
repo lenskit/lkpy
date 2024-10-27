@@ -1,5 +1,7 @@
 [tool.coverage.run]
 relative_files = "true"
+include = ["lenskit*/lenskit/"]
+omit = ["lenskit/lenskit/_version.py"]
 
 [tool.ruff]
 line-length = 100
