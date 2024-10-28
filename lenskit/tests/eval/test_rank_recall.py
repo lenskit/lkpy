@@ -11,6 +11,7 @@ import pandas as pd
 
 from pytest import approx
 
+from lenskit.data import ItemList
 from lenskit.metrics.ranking import recall
 from lenskit.util.test import demo_recs  # noqa: F401
 
@@ -18,9 +19,9 @@ _log = logging.getLogger(__name__)
 
 
 def _test_recall(items, rel, **kwargs):
-    recs = pd.DataFrame({"item": items})
-    truth = pd.DataFrame({"item": rel}).set_index("item")
-    return recall(recs, truth, **kwargs)
+    recs = ItemList(items, ordered=True)
+    truth = ItemList(rel)
+    return recall(**kwargs)(recs, truth)
 
 
 def test_recall_empty_zero():
@@ -30,7 +31,7 @@ def test_recall_empty_zero():
 
 def test_recall_norel_na():
     prec = _test_recall([1, 3], [])
-    assert prec is None
+    assert np.isnan(prec)
 
 
 def test_recall_simple_cases():
@@ -127,23 +128,3 @@ def test_recall_partial_rel():
 
     r = _test_recall(items, rel, k=10)
     assert r == approx(0.4)
-
-
-def test_recall_bulk_k(demo_recs):
-    "bulk and normal match"
-    train, test, recs = demo_recs
-    assert test["user"].value_counts().max() > 5
-
-    rla = topn.RecListAnalysis()
-    rla.add_metric(recall, name="rk", k=5)
-    rla.add_metric(recall)
-    # metric without the bulk capabilities
-    rla.add_metric(lambda *a, **k: recall(*a, **k), name="ind_rk", k=5)
-    rla.add_metric(lambda *a: recall(*a), name="ind_r")
-    res = rla.compute(recs, test)
-
-    print(res)
-    _log.info("recall mismatches:\n%s", res[res.recall != res.ind_r])
-
-    assert res.recall.values == approx(res.ind_r.values)
-    assert res.rk.values == approx(res.ind_rk.values)

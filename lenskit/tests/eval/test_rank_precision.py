@@ -9,19 +9,20 @@ import pandas as pd
 
 from pytest import approx
 
+from lenskit.data import ItemList
 from lenskit.metrics.ranking import precision
 from lenskit.util.test import demo_recs  # noqa: F401
 
 
 def _test_prec(items, rel, **k):
-    recs = pd.DataFrame({"item": items})
-    truth = pd.DataFrame({"item": rel}).set_index("item")
-    return precision(recs, truth, **k)
+    recs = ItemList(items, ordered=True)
+    truth = ItemList(rel)
+    return precision(**k)(recs, truth)
 
 
 def test_precision_empty_none():
     prec = _test_prec([], [1, 3])
-    assert prec is None
+    assert np.isnan(prec)
 
 
 def test_precision_simple_cases():
@@ -118,20 +119,3 @@ def test_prec_short_items():
 
     r = _test_prec(items, rel, k=5)
     assert r == approx(2 / 3)
-
-
-def test_recall_bulk_k(demo_recs):
-    "bulk and normal match"
-    train, test, recs = demo_recs
-    assert test["user"].value_counts().max() > 5
-
-    rla = topn.RecListAnalysis()
-    rla.add_metric(precision, name="pk", k=5)
-    rla.add_metric(precision)
-    # metric without the bulk capabilities
-    rla.add_metric(lambda *a, **k: precision(*a, **k), name="ind_pk", k=5)
-    rla.add_metric(lambda *a: precision(*a), name="ind_p")
-    res = rla.compute(recs, test)
-
-    assert res.precision.values == approx(res.ind_p.values)
-    assert res.pk.values == approx(res.ind_pk.values)
