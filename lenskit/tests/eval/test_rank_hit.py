@@ -11,16 +11,18 @@ import pandas as pd
 
 from pytest import approx
 
+from lenskit.data import ItemList
 from lenskit.metrics.ranking import hit
 from lenskit.util.test import demo_recs  # noqa: F401
 
 _log = logging.getLogger(__name__)
 
 
-def _test_hit(items, rel, **kwargs):
-    recs = pd.DataFrame({"item": items})
-    truth = pd.DataFrame({"item": rel}).set_index("item")
-    return hit(recs, truth, **kwargs)
+def _test_hit(items, rel, **kwargs) -> float:
+    recs = ItemList(items, ordered=True)
+    truth = ItemList(rel)
+    metric = hit(**kwargs)
+    return metric(recs, truth)
 
 
 def test_hit_empty_zero():
@@ -30,7 +32,7 @@ def test_hit_empty_zero():
 
 def test_hit_norel_na():
     hr = _test_hit([1, 3], [])
-    assert hr is None
+    assert np.isnan(hr)
 
 
 def test_hit_simple_cases():
@@ -123,23 +125,3 @@ def test_hit_partial_rel():
 
     r = _test_hit(items, rel, k=10)
     assert r == 1
-
-
-def test_hit_bulk_k(demo_recs):
-    "bulk and normal match"
-    train, test, recs = demo_recs
-    assert test["user"].value_counts().max() > 5
-
-    rla = topn.RecListAnalysis()
-    rla.add_metric(hit, name="hk", k=5)
-    rla.add_metric(hit)
-    # metric without the bulk capabilities
-    rla.add_metric(lambda *a, **k: hit(*a, **k), name="ind_hk", k=5)
-    rla.add_metric(lambda *a: hit(*a), name="ind_h")
-    res = rla.compute(recs, test)
-
-    print(res)
-    _log.info("recall mismatches:\n%s", res[res.hit != res.ind_h])
-
-    assert res.hit.values == approx(res.ind_h.values)
-    assert res.hk.values == approx(res.ind_hk.values)
