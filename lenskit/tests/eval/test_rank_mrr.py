@@ -9,14 +9,15 @@ import pandas as pd
 
 from pytest import approx, mark
 
+from lenskit.data import ItemList
 from lenskit.metrics.ranking import recip_rank
 from lenskit.util.test import demo_recs  # noqa: F401
 
 
 def _test_rr(items, rel, **kw):
-    recs = pd.DataFrame({"item": items})
-    truth = pd.DataFrame({"item": rel}).set_index("item")
-    return recip_rank(recs, truth, **kw)
+    recs = ItemList(items, ordered=True)
+    truth = ItemList(rel)
+    return recip_rank(**kw)(recs, truth)
 
 
 def test_mrr_empty_zero():
@@ -71,22 +72,3 @@ def test_mrr_k_trunc():
 def test_mrr_k_short():
     rr = _test_rr(np.arange(1, 5, 1, "u4"), [2], k=10)
     assert rr == approx(0.5)
-
-
-@mark.parametrize("drop_rating", [False, True])
-def test_mrr_bulk(demo_recs, drop_rating):
-    "bulk and normal match"
-    train, test, recs = demo_recs
-    if drop_rating:
-        test = test[["user", "item"]]
-
-    rla = RecListAnalysis()
-    rla.add_metric(recip_rank)
-    rla.add_metric(recip_rank, name="rr_k", k=10)
-    # metric without the bulk capabilities
-    rla.add_metric(lambda *a: recip_rank(*a), name="ind_rr")
-    rla.add_metric(lambda *a, **k: recip_rank(*a, **k), name="ind_rr_k", k=10)
-    res = rla.compute(recs, test)
-
-    assert all(res.recip_rank == res.ind_rr)
-    assert all(res.rr_k == res.ind_rr_k)
