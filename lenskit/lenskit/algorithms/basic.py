@@ -8,9 +8,9 @@
 Basic utility algorithms and combiners.
 """
 
-from datetime import datetime, timedelta
 import logging
 from collections.abc import Iterable, Sequence
+from datetime import datetime
 from typing import overload
 
 import numpy as np
@@ -105,10 +105,10 @@ class TimeBoundedPopScore(PopScore):
             Time-bounded item popularity scores.
     """
 
-    def __init__(self, time_window: timedelta, score_method="quantile"):
+    def __init__(self, cutoff: datetime, score_method="quantile"):
         super().__init__(score_method)
 
-        self.time_window = time_window
+        self.cutoff = cutoff
         self.score_method = score_method
 
     @override
@@ -117,20 +117,25 @@ class TimeBoundedPopScore(PopScore):
 
         log = data.interaction_log("numpy")
 
-        counts = np.zeros(data.item_count, dtype=np.int32)
-        start_timestamp = (datetime.now() - self.time_window).timestamp()
-        item_nums = log.item_nums[log.timestamps is not None and log.timestamps > start_timestamp]
-        np.add.at(counts, item_nums, 1)
+        item_scores = None
+        if log.timestamps is None:
+            _logger.warning("no timestamps in interaction log; falling back to PopScore")
+            item_scores = super().fit(data, **kwargs).item_scores_
+        else:
+            counts = np.zeros(data.item_count, dtype=np.int32)
+            start_timestamp = self.cutoff.timestamp()
+            item_nums = log.item_nums[log.timestamps > start_timestamp]
+            np.add.at(counts, item_nums, 1)
 
-        self.item_scores_ = super()._fit_internal(
-            pd.Series(counts, index=data.items.index), **kwargs
-        )
+            item_scores = super()._fit_internal(pd.Series(counts, index=data.items.index), **kwargs)
+
+        self.item_scores_ = item_scores
 
         return self
 
     @override
     def __str__(self):
-        return "TimeBoundedPopScore({}, {})".format(self.time_window, self.score_method)
+        return "TimeBoundedPopScore({}, {})".format(self.cutoff, self.score_method)
 
 
 class Memorized(Predictor):
