@@ -13,7 +13,7 @@ import hypothesis.strategies as st
 from hypothesis import given
 from pytest import approx, mark
 
-from lenskit.metrics.ranking import rbp
+from lenskit.metrics.ranking import RBP
 from lenskit.util.test import demo_recs  # noqa: F401
 
 _log = logging.getLogger(__name__)
@@ -23,21 +23,21 @@ def test_rbp_empty():
     recs = pd.DataFrame({"item": []})
     truth = pd.DataFrame({"item": [1, 2, 3], "rating": [3.0, 5.0, 4.0]})
     truth = truth.set_index("item")
-    assert rbp(recs, truth) == approx(0.0)
+    assert RBP(recs, truth) == approx(0.0)
 
 
 def test_rbp_no_match():
     recs = pd.DataFrame({"item": [4]})
     truth = pd.DataFrame({"item": [1, 2, 3], "rating": [3.0, 5.0, 4.0]})
     truth = truth.set_index("item")
-    assert rbp(recs, truth) == approx(0.0)
+    assert RBP(recs, truth) == approx(0.0)
 
 
 def test_rbp_one_match():
     recs = pd.DataFrame({"item": [1]})
     truth = pd.DataFrame({"item": [1, 2, 3], "rating": [3.0, 5.0, 4.0]})
     truth = truth.set_index("item")
-    assert rbp(recs, truth) == approx(0.5)
+    assert RBP(recs, truth) == approx(0.5)
 
 
 @given(st.lists(st.integers(1), min_size=1, max_size=100, unique=True), st.floats(0.05, 0.95))
@@ -46,7 +46,7 @@ def test_rbp_perfect(items, p):
     recs = pd.DataFrame({"item": items})
     truth = pd.DataFrame({"item": items, "rating": 1})
     truth = truth.set_index("item").sort_index()
-    assert rbp(recs, truth, patience=p) == approx(np.sum(p ** np.arange(n)) * (1 - p))
+    assert RBP(recs, truth, patience=p) == approx(np.sum(p ** np.arange(n)) * (1 - p))
 
 
 @given(st.lists(st.integers(1), min_size=1, max_size=100, unique=True), st.floats(0.05, 0.95))
@@ -54,7 +54,7 @@ def test_rbp_perfect_norm(items, p):
     recs = pd.DataFrame({"item": items})
     truth = pd.DataFrame({"item": items, "rating": 1})
     truth = truth.set_index("item").sort_index()
-    assert rbp(recs, truth, patience=p, normalize=True) == approx(1.0)
+    assert RBP(recs, truth, patience=p, normalize=True) == approx(1.0)
 
 
 @given(
@@ -68,7 +68,7 @@ def test_rbp_perfect_k(items, k, p):
     recs = pd.DataFrame({"item": items})
     truth = pd.DataFrame({"item": items, "rating": 1})
     truth = truth.set_index("item").sort_index()
-    assert rbp(recs, truth, k=k, patience=p) == approx(np.sum(p ** np.arange(eff_n)) * (1 - p))
+    assert RBP(recs, truth, k=k, patience=p) == approx(np.sum(p ** np.arange(eff_n)) * (1 - p))
 
 
 @given(
@@ -80,7 +80,7 @@ def test_rbp_perfect_k_norm(items, k, p):
     recs = pd.DataFrame({"item": items})
     truth = pd.DataFrame({"item": items, "rating": 1})
     truth = truth.set_index("item").sort_index()
-    assert rbp(recs, truth, k=k, patience=p, normalize=True) == approx(1.0)
+    assert RBP(recs, truth, k=k, patience=p, normalize=True) == approx(1.0)
 
 
 def test_rbp_missing():
@@ -88,7 +88,7 @@ def test_rbp_missing():
     truth = pd.DataFrame({"item": [1, 2, 3], "rating": [3.0, 5.0, 4.0]})
     truth = truth.set_index("item").sort_index()
     # (1 + 0.5) * 0.5
-    assert rbp(recs, truth) == approx(0.75)
+    assert RBP(recs, truth) == approx(0.75)
 
 
 def test_rbp_bulk_at_top():
@@ -129,11 +129,11 @@ def test_rbp_bulk_match(demo_recs, normalize):
     train, test, recs = demo_recs
 
     rla = RecListAnalysis()
-    rla.add_metric(rbp, normalize=normalize)
-    rla.add_metric(rbp, name="rbp_k", k=5, normalize=normalize)
+    rla.add_metric(RBP, normalize=normalize)
+    rla.add_metric(RBP, name="rbp_k", k=5, normalize=normalize)
     # metric without the bulk capabilities
-    rla.add_metric(lambda *a: rbp(*a, normalize=normalize), name="ind_rbp")
-    rla.add_metric(lambda *a, **k: rbp(*a, normalize=normalize, **k), name="ind_rbp_k", k=5)
+    rla.add_metric(lambda *a: RBP(*a, normalize=normalize), name="ind_rbp")
+    rla.add_metric(lambda *a, **k: RBP(*a, normalize=normalize, **k), name="ind_rbp_k", k=5)
     res = rla.compute(recs, test)
 
     res["diff"] = np.abs(res.rbp - res.ind_rbp)
