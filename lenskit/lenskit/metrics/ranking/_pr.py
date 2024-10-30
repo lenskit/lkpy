@@ -5,7 +5,7 @@ from lenskit.data.items import ItemList
 from ._base import RankingMetricBase
 
 
-class precision(RankingMetricBase):
+class Precision(RankingMetricBase):
     """
     Compute recommendation precision.  This is computed as:
 
@@ -27,7 +27,7 @@ class precision(RankingMetricBase):
         return ngood / nrecs
 
 
-class recall(RankingMetricBase):
+class Recall(RankingMetricBase):
     """
     Compute recommendation recall.  This is computed as:
 

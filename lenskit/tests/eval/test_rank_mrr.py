@@ -10,14 +10,14 @@ import pandas as pd
 from pytest import approx, mark
 
 from lenskit.data import ItemList
-from lenskit.metrics.ranking import recip_rank
+from lenskit.metrics.ranking import RecipRank
 from lenskit.util.test import demo_recs  # noqa: F401
 
 
 def _test_rr(items, rel, **kw):
     recs = ItemList(items, ordered=True)
     truth = ItemList(rel)
-    return recip_rank(**kw)(recs, truth)
+    return RecipRank(**kw)(recs, truth)
 
 
 def test_mrr_empty_zero():

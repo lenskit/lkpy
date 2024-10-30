@@ -12,7 +12,7 @@ import pandas as pd
 from pytest import approx
 
 from lenskit.data import ItemList
-from lenskit.metrics.ranking import hit
+from lenskit.metrics.ranking import Hit
 from lenskit.util.test import demo_recs  # noqa: F401
 
 _log = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ _log = logging.getLogger(__name__)
 def _test_hit(items, rel, **kwargs) -> float:
     recs = ItemList(items, ordered=True)
     truth = ItemList(rel)
-    metric = hit(**kwargs)
+    metric = Hit(**kwargs)
     return metric(recs, truth)
 
 

@@ -5,7 +5,7 @@ from lenskit.data import ItemList
 from ._base import RankingMetricBase
 
 
-class hit(RankingMetricBase):
+class Hit(RankingMetricBase):
     """
     Compute whether or not a list is a hit; any list with at least one
     relevant item in the first :math:`k` positions (:math:`L_{\\le k} \\cap

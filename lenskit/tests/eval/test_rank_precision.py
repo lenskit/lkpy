@@ -10,14 +10,14 @@ import pandas as pd
 from pytest import approx
 
 from lenskit.data import ItemList
-from lenskit.metrics.ranking import precision
+from lenskit.metrics.ranking import Precision
 from lenskit.util.test import demo_recs  # noqa: F401
 
 
 def _test_prec(items, rel, **k):
     recs = ItemList(items, ordered=True)
     truth = ItemList(rel)
-    return precision(**k)(recs, truth)
+    return Precision(**k)(recs, truth)
 
 
 def test_precision_empty_none():

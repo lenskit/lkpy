@@ -5,7 +5,7 @@ from lenskit.data import ItemList
 from ._base import RankingMetricBase
 
 
-class recip_rank(RankingMetricBase):
+class RecipRank(RankingMetricBase):
     """
     Compute the reciprocal rank :cite:p:`trec5-confusion` of the first relevant
     item in a list of recommendations.  Taking the mean of this metric over the

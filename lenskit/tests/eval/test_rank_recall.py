@@ -12,7 +12,7 @@ import pandas as pd
 from pytest import approx
 
 from lenskit.data import ItemList
-from lenskit.metrics.ranking import recall
+from lenskit.metrics.ranking import Recall
 from lenskit.util.test import demo_recs  # noqa: F401
 
 _log = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ _log = logging.getLogger(__name__)
 def _test_recall(items, rel, **kwargs):
     recs = ItemList(items, ordered=True)
     truth = ItemList(rel)
-    return recall(**kwargs)(recs, truth)
+    return Recall(**kwargs)(recs, truth)
 
 
 def test_recall_empty_zero():

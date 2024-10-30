@@ -4,18 +4,18 @@ LensKit ranking (and list) metrics.
 
 from ._base import RankingMetric, RankingMetricBase
 from ._dcg import NDCG
-from ._hit import hit
-from ._pr import precision, recall
+from ._hit import Hit
+from ._pr import Precision, Recall
 from ._rbp import RBP
-from ._recip import recip_rank
+from ._recip import RecipRank
 
 __all__ = [
     "RankingMetric",
     "RankingMetricBase",
-    "hit",
-    "precision",
-    "recall",
-    "recip_rank",
+    "Hit",
+    "Precision",
+    "Recall",
+    "RecipRank",
     "NDCG",
     "RBP",
 ]
