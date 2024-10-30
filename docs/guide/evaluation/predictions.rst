@@ -10,8 +10,8 @@ LensKit provides support for evaluating predictions for completeness and
 reproducing or comparing against historical research.
 
 The :py:mod:`lenskit.metrics.predict` module contains the prediction accuracy
-metrics, including :py:func:`rmse` and
-:py:func:`mae`.  They support both global
+metrics, including :py:func:`RMSE` and
+:py:func:`MAE`.  They support both global
 (micro-averaged) and per-user (macro-averaged) computation.
 
 .. versionchanged:: 2024.1
@@ -25,14 +25,14 @@ The following computes RMSE over a small subset of the ``ml-small`` ratings::
     from lenskit.datasets import MovieLens
     from lenskit.algorithms.bias import Bias
     from lenskit.batch import predict
-    from lenskit.metrics.predict import user_metric, rmse
+    from lenskit.metrics.predict import user_metric, RMSE
     ratings = MovieLens('ml-small').ratings.sample(frac=0.1)
     test = ratings.iloc[:1000]
     train = ratings.iloc[1000:]
     algo = Bias()
     algo.fit(train)
     preds = predict(algo, test)
-    measure_user_predictions(preds, rmse)
+    measure_user_predictions(preds, RMSE)
 
 Calling Metrics
 ---------------
@@ -56,7 +56,7 @@ helps automate this computation.  It takes a data frame (with a ``user_id`` or
 ``user`` column, along with the ``score`` and ``rating`` columns) and a metric
 and returns a series of per-user scores, indexed by user ID::
 
-    measure_user_predictions(preds, rmse)
+    measure_user_predictions(preds, RMSE)
 
 Missing Data
 ------------
@@ -83,7 +83,7 @@ confidence.
 If you want to skip missing predictions, pass ``missing_scores="ignore"`` to the
 metric function::
 
-    rmse(user_preds, user_ratings, missing_scores="ignore")
+    RMSE(user_preds, user_ratings, missing_scores="ignore")
 
 The corresponding ``missing_truth="ignore"`` will cause the metric to ignore
 predictions with no corresponding rating (this case is unlikely to produce
