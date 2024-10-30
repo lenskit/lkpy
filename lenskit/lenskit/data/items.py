@@ -112,7 +112,7 @@ class ItemList:
             from a source list.
     """
 
-    ordered: bool
+    ordered: bool = False
     "Whether this list has a meaningful order."
     _len: int
     _ids: np.ndarray[int, np.dtype[NPEntityId]] | None = None
@@ -172,7 +172,10 @@ class ItemList:
             self._len = 0
 
         if item_ids is not None:
-            self._ids = np.asarray(item_ids)
+            if len(item_ids):
+                self._ids = np.asarray(item_ids)
+            else:
+                self._ids = np.ndarray(0, dtype=np.int32)
             if not issubclass(self._ids.dtype.type, (np.integer, np.str_, np.bytes_, np.object_)):
                 raise TypeError(f"item IDs not integers or bytes (type: {self._ids.dtype})")
 
@@ -183,6 +186,8 @@ class ItemList:
                 del self._numbers
 
         if item_nums is not None:
+            if not len(item_nums):
+                item_nums = np.ndarray(0, dtype=np.int32)
             self._numbers = MTArray(item_nums)
             check_1d(self._numbers, getattr(self, "_len", None), label="item_nums")
             self._len = self._numbers.shape[0]

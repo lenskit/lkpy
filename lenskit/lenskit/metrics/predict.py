@@ -109,20 +109,20 @@ def _mae(scores: ScoreArray, truth: ScoreArray) -> float:
 
 
 @overload
-def rmse(
+def RMSE(
     predictions: ItemList,
     truth: ItemList | None = None,
     missing_scores: MissingDisposition = "error",
     missing_truth: MissingDisposition = "error",
 ) -> float: ...
 @overload
-def rmse(
+def RMSE(
     predictions: pd.DataFrame,
     *,
     missing_scores: MissingDisposition = "error",
     missing_truth: MissingDisposition = "error",
 ) -> float: ...
-def rmse(
+def RMSE(
     predictions: ItemList | pd.DataFrame,
     truth: ItemList | None = None,
     missing_scores: MissingDisposition = "error",
@@ -168,20 +168,20 @@ def rmse(
 
 
 @overload
-def mae(
+def MAE(
     predictions: ItemList,
     truth: ItemList | None = None,
     missing_scores: MissingDisposition = "error",
     missing_truth: MissingDisposition = "error",
 ) -> float: ...
 @overload
-def mae(
+def MAE(
     predictions: pd.DataFrame,
     *,
     missing_scores: MissingDisposition = "error",
     missing_truth: MissingDisposition = "error",
 ) -> float: ...
-def mae(
+def MAE(
     predictions: ItemList | pd.DataFrame,
     truth: ItemList | None = None,
     missing_scores: MissingDisposition = "error",

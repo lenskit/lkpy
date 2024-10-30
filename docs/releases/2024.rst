@@ -79,6 +79,12 @@ New Features (incremental)
 * Added RBP top-N metric (:pr:`334`).
 * Added command-line tool to fetch datasets (:pr:`347`).
 
+Evaluation Changes
+~~~~~~~~~~~~~~~~~~
+
+* The DCG metric has been removed, as it is basically never used and was not
+  useful as a part of the NDCG implementation.
+
 Model Behavior Changes
 ~~~~~~~~~~~~~~~~~~~~~~
 

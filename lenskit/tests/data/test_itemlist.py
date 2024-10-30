@@ -31,6 +31,27 @@ def test_empty():
     assert il.scores() is None
 
 
+def test_empty_ids():
+    il = ItemList(item_ids=[])
+    assert len(il) == 0
+    assert il.ids().shape == (0,)
+    assert il.scores() is None
+
+
+def test_empty_nums():
+    il = ItemList(item_nums=[])
+    assert len(il) == 0
+    assert il.numbers().shape == (0,)
+    assert il.scores() is None
+
+
+def test_empty_list():
+    il = ItemList([])
+    assert len(il) == 0
+    assert il.ids().shape == (0,)
+    assert il.scores() is None
+
+
 def test_item_list():
     il = ItemList(item_ids=["one", "two"])
 
