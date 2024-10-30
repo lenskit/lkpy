@@ -1,3 +1,7 @@
+import numpy as np
+
+from lenskit.data.items import ItemList
+
 from ._base import RankingMetricBase
 
 
@@ -23,13 +27,6 @@ class RBP(RankingMetricBase):
     data.
 
     Args:
-        recs:
-            The recommendation list.  This is expected to have a column ``item``
-            with the recommended item IDs; all other columns are ignored.
-        truth:
-            The user's test data. It is expected to be *indexed* by item ID. If
-            it has a ``rating`` column, that is used as the item gains;
-            otherwise, each item has gain 1. All other columns are ignored.
         k:
             The maximum recommendation list length.
         patience:
@@ -40,4 +37,31 @@ class RBP(RankingMetricBase):
             score by the maximum achievable with the test data (as in nDCG).
     """
 
-    pass
+    patience: float
+    normalize: bool
+
+    def __init__(self, k: int | None = None, *, patience: float = 0.5, normalize: bool = False):
+        super().__init__(k)
+        self.patience = patience
+        self.normalize = normalize
+
+    def __call__(self, recs: ItemList, test: ItemList) -> float:
+        recs = self.truncate(recs)
+        k = len(recs)
+
+        nrel = len(test)
+        if nrel == 0:
+            return np.nan
+
+        items = recs.ids()
+        good = np.isin(items, test.ids())
+        # γ^(r-1)
+        disc = np.power(self.patience, np.arange(k))
+        rbp = np.sum(disc[good])
+        if self.normalize:
+            # normalize by max achieveable RBP
+            max = np.sum(disc[: min(nrel, k)])
+            return rbp / max
+        else:
+            # standard RBP normalization
+            return rbp * (1 - self.patience)
