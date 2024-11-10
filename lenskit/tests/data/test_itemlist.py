@@ -368,6 +368,7 @@ def test_from_df():
     assert np.all(il.ids() == ITEMS)
     assert np.all(il.numbers() == np.arange(5))
     assert np.all(il.scores() == df["score"].values)
+    assert not il.ordered
 
 
 def test_from_df_user():
@@ -380,6 +381,24 @@ def test_from_df_user():
     assert np.all(il.numbers() == np.arange(5))
     assert np.all(il.scores() == df["score"].values)
     assert il.field("user_id") is None
+
+
+def test_from_df_ranked():
+    df = pd.DataFrame(
+        {
+            "item_id": ITEMS,
+            "item_num": np.arange(5),
+            "rank": np.arange(1, 6),
+            "score": np.random.randn(5),
+        }
+    )
+    il = ItemList.from_df(df, vocabulary=VOCAB)  # type: ignore
+    assert len(il) == 5
+    assert np.all(il.ids() == ITEMS)
+    assert np.all(il.numbers() == np.arange(5))
+    assert np.all(il.scores() == df["score"].values)
+    assert il.ordered
+    assert np.all(il.ranks() == np.arange(1, 6))
 
 
 def test_copy_ctor():

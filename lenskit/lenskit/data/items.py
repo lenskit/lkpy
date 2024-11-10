@@ -186,7 +186,7 @@ class ItemList:
                 del self._numbers
 
         if item_nums is not None:
-            if not len(item_nums):
+            if not len(item_nums):  # type: ignore
                 item_nums = np.ndarray(0, dtype=np.int32)
             self._numbers = MTArray(item_nums)
             check_1d(self._numbers, getattr(self, "_len", None), label="item_nums")
@@ -237,10 +237,30 @@ class ItemList:
         to_drop = ["item_id", "item_num"]
         if not keep_user:
             to_drop += ["user_id", "user_num"]
+
+        if "rank" in df.columns:
+            ranks = df["rank"]
+            to_drop += "rank"
+            if ranks.iloc[0] != 1:
+                raise ValueError("item ranks do not start with 1")
+            if np.any(np.diff(ranks) != 1):
+                raise ValueError("item ranks not consecutive")
+        else:
+            ranks = None
+
         df = df.drop(columns=to_drop, errors="ignore")
 
         fields = {f: df[f].values for f in df.columns}
-        return cls(item_ids=ids, item_nums=nums, vocabulary=vocabulary, **fields)  # type: ignore
+        items = cls(
+            item_ids=ids,  # type: ignore
+            item_nums=nums,  # type: ignore
+            vocabulary=vocabulary,  # type: ignore
+            ordered=ranks is not None,
+            **fields,  # type: ignore
+        )
+        if ranks is not None:
+            items._ranks = MTArray(np.require(ranks.values, np.int32))  # type: ignore
+        return items
 
     @classmethod
     def from_vocabulary(cls, vocab: Vocabulary) -> ItemList:
