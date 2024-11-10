@@ -14,10 +14,11 @@ import pandas as pd
 from seedbank import numpy_rng
 
 from lenskit.data import Dataset
+from lenskit.data.bulk import dict_from_df
 from lenskit.data.matrix import MatrixDataset
 from lenskit.types import RandomSeed
 
-from .split import TTSplit, dict_from_df
+from .split import TTSplit
 
 _log = logging.getLogger(__name__)
 

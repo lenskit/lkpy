@@ -10,5 +10,5 @@ Splitting data for train-test evaluation.
 
 from .holdout import LastFrac, LastN, SampleFrac, SampleN  # noqa: F401
 from .records import crossfold_records, sample_records  # noqa: F401
-from .split import TTSplit, dict_from_df, dict_to_df  # noqa: F401
+from .split import TTSplit  # noqa: F401
 from .users import crossfold_users, sample_users  # noqa: F401

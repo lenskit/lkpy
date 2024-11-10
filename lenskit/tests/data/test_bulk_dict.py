@@ -11,7 +11,7 @@ Test the data type utilities in splits.
 import numpy as np
 import pandas as pd
 
-from lenskit.splitting.split import dict_from_df
+from lenskit.data.bulk import dict_from_df
 
 
 def test_dict_from_df(rng, ml_ratings: pd.DataFrame):
