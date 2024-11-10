@@ -12,6 +12,7 @@ Basic data types used in data representations.
 from __future__ import annotations
 
 import sys
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Generic, Literal, NamedTuple, TypeAlias, TypeVar, cast
 
 import numpy as np
@@ -25,6 +26,20 @@ NPEntityId: TypeAlias = np.integer[Any] | np.str_ | np.bytes_ | np.object_
 "Allowable entity identifier types (NumPy version)"
 
 T = TypeVar("T")
+
+
+@dataclass
+class AliasedColumn:
+    name: str
+    "The column name."
+    compat_aliases: list[str] = field(default_factory=list)
+    "A list of aliases for the column."
+    warn: bool = False
+    "Whether to warn when using an alias."
+
+
+Column: TypeAlias = str | AliasedColumn
+
 
 if TYPE_CHECKING or sys.version_info >= (3, 11):
 
