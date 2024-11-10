@@ -11,7 +11,6 @@ and instructions on using these metrics.
 
 from __future__ import annotations
 
-import warnings
 from typing import Callable, Literal, Protocol, TypeAlias, overload
 
 import numpy as np
@@ -19,6 +18,7 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from lenskit.data import ItemList
+from lenskit.data.bulk import group_df
 
 MissingDisposition: TypeAlias = Literal["error", "ignore"]
 ScoreArray: TypeAlias = NDArray[np.floating] | pd.Series
@@ -238,18 +238,6 @@ def measure_user_predictions(
             this interface.
     """
 
-    if "user_id" not in predictions.columns:
-        if "user_id" in predictions.index.names:
-            predictions = predictions.reset_index("user_id")
-        elif "user" in predictions.columns:
-            warnings.warn("predictions has legacy “user” column")
-            predictions = predictions.rename(columns={"user": "user_id"})
-        elif "user" in predictions.index.names:
-            warnings.warn("predictions has legacy “user” index name")
-            predictions = predictions.reset_index("user").rename(columns={"user": "user_id"})
-        else:
-            raise KeyError("predictions has no user_id column")
-
-    return predictions.groupby("user_id").apply(
+    return group_df(predictions).apply(
         lambda df: metric(df, missing_scores=missing_scores, missing_truth=missing_truth)
     )
