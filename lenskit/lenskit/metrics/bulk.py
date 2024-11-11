@@ -140,8 +140,8 @@ class RunAnalysis:
             test = dict_from_df(test)
 
         columns = [m.label for m in self.metrics]
-        user_ids = []
-        rows = []
+        empty = np.full(len(columns), np.nan)
+        records = {}
 
         n = count_item_lists(outputs)
         _log.info("computing metrics for %d output lists", n)
@@ -149,14 +149,12 @@ class RunAnalysis:
             for uid, out in iter_item_lists(outputs):
                 list_test = test[uid]
                 if out is None:
-                    rows.append([None] for _i in range(len(columns)))
+                    records[uid] = empty
                 elif list_test is None:
                     _log.warning("list %s: no test items", uid)
                 else:
-                    row = [m.metric(out, list_test) for m in self.metrics]
-                    user_ids.append(uid)
-                    rows.append(row)
+                    records[uid] = np.array([m.metric(out, list_test) for m in self.metrics])
                 pb.update()
 
-        df = pd.DataFrame.from_records(rows, index=user_ids, columns=columns)
+        df = pd.DataFrame.from_dict(records, orient="index", columns=columns)
         return RunAnalysisResult(df, {m.label: m.default for m in self.metrics})
