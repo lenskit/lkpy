@@ -15,9 +15,9 @@ import pandas as pd
 from lenskit.data import ItemList
 
 from ._base import Metric, MetricFunction
-from .predict import PredictMetric
+from .predict import MAE, RMSE, PredictMetric
 
-__all__ = ["Metric", "MetricFunction"]
+__all__ = ["Metric", "MetricFunction", "RMSE", "MAE"]
 
 P = ParamSpec("P")
 
