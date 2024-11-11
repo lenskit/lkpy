@@ -16,6 +16,7 @@ from pytest import approx, mark
 import lenskit.funksvd as svd
 import lenskit.util.test as lktu
 from lenskit.data import Dataset, from_interactions_df
+from lenskit.metrics import call_metric
 
 _log = logging.getLogger(__name__)
 
@@ -224,7 +225,7 @@ def test_fsvd_batch_accuracy(ml_100k: pd.DataFrame):
 
     folds = xf.partition_users(ml_100k, 5, xf.SampleFrac(0.2))
     preds = pd.concat(eval(train, test) for (train, test) in folds)
-    mae = pm.MAE(preds)
+    mae = call_metric(pm.MAE, preds)
     assert mae == approx(0.74, abs=0.025)
 
     user_rmse = pm.measure_user_predictions(preds, pm.RMSE)

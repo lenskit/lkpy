@@ -19,6 +19,7 @@ import lenskit.util.test as lktu
 from lenskit.algorithms import Recommender
 from lenskit.algorithms.ranking import TopN
 from lenskit.data import Dataset, from_interactions_df
+from lenskit.metrics import call_metric
 from lenskit.util import clone
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
@@ -288,7 +289,7 @@ def test_uu_batch_accuracy(ml_100k: pd.DataFrame):
     folds = xf.partition_users(ml_100k, 5, xf.SampleFrac(0.2))
     preds = [__batch_eval((algo, train, test)) for (train, test) in folds]
     preds = pd.concat(preds)
-    mae = pm.MAE(preds)
+    mae = call_metric(pm.MAE, preds)
     assert mae == approx(0.71, abs=0.05)
 
     user_rmse = pm.measure_user_predictions(preds, pm.RMSE)

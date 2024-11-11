@@ -25,6 +25,7 @@ from lenskit.algorithms.bias import Bias
 from lenskit.algorithms.ranking import TopN
 from lenskit.data import Vocabulary, from_interactions_df
 from lenskit.diagnostics import ConfigWarning, DataWarning
+from lenskit.metrics import call_metric
 from lenskit.util import clone
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
@@ -523,7 +524,7 @@ def test_ii_batch_accuracy(ml_100k):
     preds = pd.concat(
         (eval(train, test) for (train, test) in xf.partition_users(ml_100k, 5, xf.SampleFrac(0.2)))
     )
-    mae = pm.MAE(preds)
+    mae = call_metric(pm.MAE, preds)
     assert mae == approx(0.70, abs=0.025)
 
     user_rmse = pm.measure_user_predictions(preds, pm.RMSE)

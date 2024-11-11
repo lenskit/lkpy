@@ -17,6 +17,7 @@ import lenskit.util.test as lktu
 from lenskit import batch
 from lenskit.algorithms import als
 from lenskit.data import from_interactions_df, load_movielens_df
+from lenskit.metrics import call_metric
 
 _log = logging.getLogger(__name__)
 
@@ -286,8 +287,8 @@ def test_als_batch_accuracy(ml_100k):
     # _log.info("predictions:\n%s", preds.sort_values("abs_diff", ascending=False))
     # _log.info("diff summary:\n%s", preds.abs_diff.describe())
 
-    lu_mae = pm.MAE(preds, missing_scores="ignore")
+    lu_mae = call_metric(pm.MAE, preds, missing_scores="ignore")
     assert lu_mae == approx(0.73, abs=0.045)
 
-    user_rmse = pm.measure_user_predictions(preds, pm.RMSE, missing_scores="ignore")
+    user_rmse = pm.measure_user_predictions(preds, pm.RMSE(missing_scores="ignore"))
     assert user_rmse.mean() == approx(0.94, abs=0.05)
