@@ -111,7 +111,7 @@ def _mae(scores: ScoreArray, truth: ScoreArray) -> float:
 @overload
 def RMSE(
     predictions: ItemList,
-    truth: ItemList | None = None,
+    test: ItemList | None = None,
     missing_scores: MissingDisposition = "error",
     missing_truth: MissingDisposition = "error",
 ) -> float: ...
@@ -124,7 +124,7 @@ def RMSE(
 ) -> float: ...
 def RMSE(
     predictions: ItemList | pd.DataFrame,
-    truth: ItemList | None = None,
+    test: ItemList | None = None,
     missing_scores: MissingDisposition = "error",
     missing_truth: MissingDisposition = "error",
 ) -> float:
@@ -164,7 +164,7 @@ def RMSE(
         the root mean squared approximation error
     """
 
-    return _score_predictions(_rmse, predictions, truth, missing_scores, missing_truth)
+    return _score_predictions(_rmse, predictions, test, missing_scores, missing_truth)
 
 
 @overload
@@ -218,6 +218,11 @@ def MAE(
     """
 
     return _score_predictions(_mae, predictions, truth, missing_scores, missing_truth)
+
+
+# explicitly set defaults — these cannot fill in missing values
+RMSE.default = None
+MAE.default = None
 
 
 def measure_user_predictions(

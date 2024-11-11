@@ -10,7 +10,7 @@ class Metric(Protocol):
     """
 
     @abstractmethod
-    def __call__(self, recs: ItemList, test: ItemList) -> float: ...
+    def __call__(self, output: ItemList, test: ItemList, /) -> float: ...
 
 
 @runtime_checkable
