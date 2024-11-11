@@ -1,3 +1,7 @@
+"""
+Basic set statistics.
+"""
+
 from lenskit.data.items import ItemList
 
 from ._base import MetricBase
