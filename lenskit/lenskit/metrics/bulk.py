@@ -130,7 +130,7 @@ class RunAnalysis:
 
     def add_metric(
         self,
-        metric: Metric,
+        metric: Metric | MetricFunction | type[Metric],
         label: str | None = None,
         mean_label: str | None = None,
         default: float | None = None,

@@ -9,37 +9,44 @@ import pandas as pd
 
 from pytest import approx, mark, raises
 
-import lenskit.metrics.predict as pm
-import lenskit.util.test as lktu
 from lenskit.data import ItemList, from_interactions_df
+from lenskit.metrics import call_metric
+from lenskit.metrics.predict import MAE, RMSE, measure_user_predictions
 
 
 def test_rmse_one():
-    rmse = pm.RMSE(ItemList(["a"], scores=[1]), ItemList(["a"], rating=[1]))
+    rmse = call_metric(RMSE, ItemList(["a"], scores=[1]), ItemList(["a"], rating=[1]))
     assert isinstance(rmse, float)
     assert rmse == approx(0)
 
-    rmse = pm.RMSE(ItemList(["a"], scores=[1]), ItemList(["a"], rating=[2]))
+    rmse = call_metric(RMSE, ItemList(["a"], scores=[1]), ItemList(["a"], rating=[2]))
     assert rmse == approx(1)
 
-    rmse = pm.RMSE(ItemList(["a"], scores=[1]), ItemList(["a"], rating=[0.5]))
+    rmse = call_metric(RMSE, ItemList(["a"], scores=[1]), ItemList(["a"], rating=[0.5]))
     assert rmse == approx(0.5)
 
 
 def test_rmse_two():
-    rmse = pm.RMSE(ItemList(["a", "b"], scores=[1, 2]), ItemList(["a", "b"], rating=[1, 2]))
+    rmse = call_metric(
+        RMSE, ItemList(["a", "b"], scores=[1, 2]), ItemList(["a", "b"], rating=[1, 2])
+    )
     assert isinstance(rmse, float)
     assert rmse == approx(0)
 
-    rmse = pm.RMSE(ItemList(["a", "b"], scores=[1, 1]), ItemList(["a", "b"], rating=[2, 2]))
+    rmse = call_metric(
+        RMSE, ItemList(["a", "b"], scores=[1, 1]), ItemList(["a", "b"], rating=[2, 2])
+    )
     assert rmse == approx(1)
 
-    rmse = pm.RMSE(ItemList(["a", "b"], scores=[1, 3]), ItemList(["a", "b"], rating=[3, 1]))
+    rmse = call_metric(
+        RMSE, ItemList(["a", "b"], scores=[1, 3]), ItemList(["a", "b"], rating=[3, 1])
+    )
     assert rmse == approx(2)
 
 
 def test_rmse_series_subset_items():
-    rmse = pm.RMSE(
+    rmse = call_metric(
+        RMSE,
         ItemList(scores=[1, 3], item_ids=["a", "c"]),
         ItemList(rating=[3, 4, 1], item_ids=["a", "b", "c"]),
         missing_scores="ignore",
@@ -49,14 +56,16 @@ def test_rmse_series_subset_items():
 
 def test_rmse_series_missing_value_error():
     with raises(ValueError):
-        pm.RMSE(
+        call_metric(
+            RMSE,
             ItemList(scores=[1, 3], item_ids=["a", "d"]),
             ItemList(rating=[3, 4, 1], item_ids=["a", "b", "c"]),
         )
 
 
 def test_rmse_series_missing_value_ignore():
-    rmse = pm.RMSE(
+    rmse = call_metric(
+        RMSE,
         ItemList(scores=[1, 3], item_ids=["a", "d"]),
         ItemList(rating=[3, 4, 1], item_ids=["a", "b", "c"]),
         missing_scores="ignore",
@@ -66,17 +75,17 @@ def test_rmse_series_missing_value_ignore():
 
 
 def test_mae_two():
-    mae = pm.MAE(ItemList(["a", "b"], scores=[1, 2]), ItemList(["a", "b"], rating=[1, 2]))
+    mae = call_metric(MAE, ItemList(["a", "b"], scores=[1, 2]), ItemList(["a", "b"], rating=[1, 2]))
     assert isinstance(mae, float)
     assert mae == approx(0)
 
-    mae = pm.MAE(ItemList(["a", "b"], scores=[1, 1]), ItemList(["a", "b"], rating=[2, 2]))
+    mae = call_metric(MAE, ItemList(["a", "b"], scores=[1, 1]), ItemList(["a", "b"], rating=[2, 2]))
     assert mae == approx(1)
 
-    mae = pm.MAE(ItemList(["a", "b"], scores=[1, 3]), ItemList(["a", "b"], rating=[3, 1]))
+    mae = call_metric(MAE, ItemList(["a", "b"], scores=[1, 3]), ItemList(["a", "b"], rating=[3, 1]))
     assert mae == approx(2)
 
-    mae = pm.MAE(ItemList(["a", "b"], scores=[1, 3]), ItemList(["a", "b"], rating=[3, 2]))
+    mae = call_metric(MAE, ItemList(["a", "b"], scores=[1, 3]), ItemList(["a", "b"], rating=[3, 2]))
     assert mae == approx(1.5)
 
 
@@ -98,7 +107,7 @@ def test_batch_rmse(ml_100k):
         (eval(train, test) for (train, test) in xf.partition_users(ml_100k, 5, xf.SampleN(5)))
     )
 
-    user_rmse = pm.measure_user_predictions(results, pm.RMSE)
+    user_rmse = measure_user_predictions(results, RMSE)
 
     # we should have all users
     users = ml_100k.user.unique()

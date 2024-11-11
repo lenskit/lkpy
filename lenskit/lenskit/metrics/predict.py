@@ -11,7 +11,7 @@ and instructions on using these metrics.
 
 from __future__ import annotations
 
-from typing import Callable, Literal, Protocol, TypeAlias, overload
+from typing import Callable, Literal, TypeAlias, overload
 
 import numpy as np
 import pandas as pd
@@ -20,38 +20,57 @@ from numpy.typing import NDArray
 from lenskit.data import ItemList
 from lenskit.data.bulk import group_df
 
+from ._base import Metric
+
 MissingDisposition: TypeAlias = Literal["error", "ignore"]
 ScoreArray: TypeAlias = NDArray[np.floating] | pd.Series
 PredMetric: TypeAlias = Callable[[ScoreArray, ScoreArray], float]
 
 
-class PredictMetric(Protocol):
+class PredictMetric(Metric):
     """
-    Interface implemented by prediction metrics.
+    Extension to the metric function interface for prediction metrics.
+
+    In addition to the general metric interface, predict metrics can be calledin
+    two additional ways:
+
+    - Suppling a single :class:`ItemList` with both ``scores`` and a ``rating``
+      field.
+    - Supplying a Pandas :class:`~pd.DataFrame` with ``score`` and ``rating``
+      columns. In this design, global (micro-averaged) RMSE can be computed in
+      stead of the per-user RMSE computed in the default configuration.
+
+    Args:
+        missing_scores:
+            The action to take when a test item has not been scored.  The
+            default throws an exception, avoiding situations where non-scored
+            items are silently excluded from overall statistics.
+        missing_truth:
+            The action to take when no test items are available for a scored
+            item. The default is to also to fail; if you are scoring a superset
+            of the test items for computational efficiency, set this to
+            ``"ignore"``.
     """
 
+    # predict metrics usually cannot fill in default values
+    default = None
+    missing_scores: MissingDisposition
+    missing_truth: MissingDisposition
+
+    def __init__(
+        self,
+        missing_scores: MissingDisposition = "error",
+        missing_truth: MissingDisposition = "error",
+    ):
+        self.missing_scores = missing_scores
+        self.missing_truth = missing_truth
+
     @overload
-    def __call__(
-        self,
-        predictions: ItemList,
-        truth: ItemList | None = None,
-        missing_scores: MissingDisposition = "error",
-        missing_truth: MissingDisposition = "error",
-    ) -> float: ...
+    def __call__(self, predictions: ItemList, truth: ItemList | None = None) -> float: ...
     @overload
+    def __call__(self, predictions: pd.DataFrame) -> float: ...
     def __call__(
-        self,
-        predictions: pd.DataFrame,
-        *,
-        missing_scores: MissingDisposition = "error",
-        missing_truth: MissingDisposition = "error",
-    ) -> float: ...
-    def __call__(
-        self,
-        predictions: ItemList | pd.DataFrame,
-        truth: ItemList | None = None,
-        missing_scores: MissingDisposition = "error",
-        missing_truth: MissingDisposition = "error",
+        self, predictions: ItemList | pd.DataFrame, truth: ItemList | None = None
     ) -> float: ...
 
 
@@ -108,128 +127,56 @@ def _mae(scores: ScoreArray, truth: ScoreArray) -> float:
     return np.mean(np.abs(err)).item()
 
 
-@overload
-def RMSE(
-    predictions: ItemList,
-    test: ItemList | None = None,
-    missing_scores: MissingDisposition = "error",
-    missing_truth: MissingDisposition = "error",
-) -> float: ...
-@overload
-def RMSE(
-    predictions: pd.DataFrame,
-    *,
-    missing_scores: MissingDisposition = "error",
-    missing_truth: MissingDisposition = "error",
-) -> float: ...
-def RMSE(
-    predictions: ItemList | pd.DataFrame,
-    test: ItemList | None = None,
-    missing_scores: MissingDisposition = "error",
-    missing_truth: MissingDisposition = "error",
-) -> float:
+class RMSE(PredictMetric):
     """
     Compute RMSE (root mean squared error).  This is computed as:
 
     .. math::
         \\sum_{r_{ui} \\in R} \\left(r_{ui} - s(i|u)\\right)^2
 
-    This computes *per-user* RMSE: given an :class:`ItemList` containing the
-    scores for items for a user, and another containing ratings (in the `rating`
-    field), it will compute the RMSE for that user's predictions. Alternatively,
-    the ground-truth ratings can be provided as a `rating` field on the scored
-    item list.
-
     This metric does not do any fallbacks; if you want to compute RMSE with
     fallback predictions (e.g. usign a bias model when a collaborative filter
     cannot predict), generate predictions with
     :class:`~lenskit.basic.FallbackScorer`.
-
-    If ``predictions`` is a data frame with scores for multiple users, this
-    computes the global (micro-averaged) RMSE.  If it is a data frame or item
-    list with a single user's scores, it computes the RMSE for that user.
-
-    Args:
-        predictions:
-            Item list or data frame with scored items, optionally with ratings
-            (if ``truth=None``).
-        truth:
-            Ground truth ratings from data.
-        missing_scores:
-            How to handle truth items without scores or predictions.
-        missing_truth:
-            How to handle predictions without truth.
-
-    Returns:
-        the root mean squared approximation error
     """
 
-    return _score_predictions(_rmse, predictions, test, missing_scores, missing_truth)
+    @property
+    def mean_label(self):
+        return "AvgUserRMSE"
+
+    @overload
+    def __call__(self, predictions: ItemList, test: ItemList | None = None) -> float: ...
+    @overload
+    def __call__(self, predictions: pd.DataFrame) -> float: ...
+    def __call__(self, predictions: ItemList | pd.DataFrame, test: ItemList | None = None) -> float:
+        return _score_predictions(_rmse, predictions, test, self.missing_scores, self.missing_truth)
 
 
-@overload
-def MAE(
-    predictions: ItemList,
-    truth: ItemList | None = None,
-    missing_scores: MissingDisposition = "error",
-    missing_truth: MissingDisposition = "error",
-) -> float: ...
-@overload
-def MAE(
-    predictions: pd.DataFrame,
-    *,
-    missing_scores: MissingDisposition = "error",
-    missing_truth: MissingDisposition = "error",
-) -> float: ...
-def MAE(
-    predictions: ItemList | pd.DataFrame,
-    truth: ItemList | None = None,
-    missing_scores: MissingDisposition = "error",
-    missing_truth: MissingDisposition = "error",
-) -> float:
+class MAE(PredictMetric):
     """
     Compute MAE (mean absolute error).  This is computed as:
 
     .. math::
         \\sum_{r_{ui} \\in R} \\left|r_{ui} - s(i|u)\\right|
 
-    This computes *per-user* MAE. It does not do any fallbacks; if you want to
-    compute MAE with fallback predictions (e.g. usign a bias model when a
-    collaborative filter cannot predict), generate predictions with
+    This metric does not do any fallbacks; if you want to compute MAE with
+    fallback predictions (e.g. usign a bias model when a collaborative filter
+    cannot predict), generate predictions with
     :class:`~lenskit.basic.FallbackScorer`.
-
-    If ``predictions`` is a data frame with scores for multiple users, this
-    computes the global (micro-averaged) MAE.  If it is a data frame or item
-    list with a single user's scores, it computes the MAE for that user.
-
-    Args:
-        predictions:
-            Item list or data frame with scored items, optionally with ratings
-            (if ``truth=None``).
-        truth:
-            Ground truth ratings from data.
-        missing_scores:
-            How to handle truth items without scores or predictions.
-        missing_truth:
-            How to handle predictions without truth.
-
-    Returns:
-        double: the mean absolute approximation error
     """
 
-    return _score_predictions(_mae, predictions, truth, missing_scores, missing_truth)
-
-
-# explicitly set defaults — these cannot fill in missing values
-RMSE.default = None
-MAE.default = None
+    @overload
+    def __call__(self, predictions: ItemList, truth: ItemList | None = None) -> float: ...
+    @overload
+    def __call__(self, predictions: pd.DataFrame) -> float: ...
+    def __call__(
+        self, predictions: ItemList | pd.DataFrame, truth: ItemList | None = None
+    ) -> float:
+        return _score_predictions(_mae, predictions, truth, self.missing_scores, self.missing_truth)
 
 
 def measure_user_predictions(
-    predictions: pd.DataFrame,
-    metric: PredictMetric,
-    missing_scores: MissingDisposition = "error",
-    missing_truth: MissingDisposition = "error",
+    predictions: pd.DataFrame, metric: PredictMetric | type[PredictMetric]
 ) -> pd.Series:
     """
     Compute per-user metrics for a set of predictions.
@@ -242,7 +189,7 @@ def measure_user_predictions(
             The metric to compute.  :fun:`rmse` and :fun:`mae` both implement
             this interface.
     """
+    if isinstance(metric, type):
+        metric = metric()
 
-    return group_df(predictions).apply(
-        lambda df: metric(df, missing_scores=missing_scores, missing_truth=missing_truth)
-    )
+    return group_df(predictions).apply(lambda df: metric(df))
