@@ -10,7 +10,6 @@ from ._rbp import RBP
 from ._recip import RecipRank
 
 __all__ = [
-    "RankingMetric",
     "RankingMetricBase",
     "Hit",
     "Precision",
