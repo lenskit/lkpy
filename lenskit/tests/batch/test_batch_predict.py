@@ -129,6 +129,7 @@ def test_bias_batch_predict(ml_100k, ncpus):
     import lenskit.metrics.predict as pm
     from lenskit import batch
     from lenskit.algorithms import bias
+    from lenskit.metrics import call_metric
 
     algo = bias.Bias(damping=5)
 
@@ -144,6 +145,6 @@ def test_bias_batch_predict(ml_100k, ncpus):
     )
 
     _log.info("analyzing predictions")
-    rmse = pm.RMSE(preds)
+    rmse = call_metric(pm.RMSE, preds)
     _log.info("RMSE is %f", rmse)
     assert rmse == pytest.approx(0.95, abs=0.1)
