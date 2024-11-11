@@ -18,6 +18,20 @@ class RecipRank(RankingMetricBase):
     :cite:t:`deshpande:iknn` call this the “reciprocal hit rate”.
     """
 
+    @property
+    def label(self):
+        if self.k is not None:
+            return f"RecipRank@{self.k}"
+        else:
+            return "RecipRank"
+
+    @property
+    def mean_label(self):
+        if self.k is not None:
+            return f"MRR@{self.k}"
+        else:
+            return "MRR"
+
     def __call__(self, recs: ItemList, test: ItemList) -> float:
         if len(test) == 0:
             return np.nan

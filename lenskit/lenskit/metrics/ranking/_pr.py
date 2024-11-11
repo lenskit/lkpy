@@ -16,6 +16,13 @@ class Precision(RankingMetricBase):
     ``len(recs)`` as the denominator.
     """
 
+    @property
+    def label(self):
+        if self.k is not None:
+            return f"Precision@{self.k}"
+        else:
+            return "Precision"
+
     def __call__(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)
         nrecs = len(recs)
@@ -34,6 +41,13 @@ class Recall(RankingMetricBase):
     .. math::
         \\frac{|L \\cap I_u^{\\mathrm{test}}|}{\\operatorname{min}\\{|I_u^{\\mathrm{test}}|, k\\}}
     """
+
+    @property
+    def label(self):
+        if self.k is not None:
+            return f"Recall@{self.k}"
+        else:
+            return "Recall"
 
     def __call__(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)

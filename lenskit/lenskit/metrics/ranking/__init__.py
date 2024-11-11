@@ -2,7 +2,7 @@
 LensKit ranking (and list) metrics.
 """
 
-from ._base import RankingMetric, RankingMetricBase
+from ._base import RankingMetricBase
 from ._dcg import NDCG
 from ._hit import Hit
 from ._pr import Precision, Recall

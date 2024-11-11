@@ -5,5 +5,9 @@
 # SPDX-License-Identifier: MIT
 
 """
-Metrics for evaluating recommendations.
+Metrics for evaluating recommender outputs.
 """
+
+from ._base import LabeledMetric, Metric, MetricBase
+
+__all__ = ["Metric", "LabeledMetric", "MetricBase"]

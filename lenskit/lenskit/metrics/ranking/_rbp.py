@@ -45,6 +45,13 @@ class RBP(RankingMetricBase):
         self.patience = patience
         self.normalize = normalize
 
+    @property
+    def label(self):
+        if self.k is not None:
+            return f"RBP@{self.k}"
+        else:
+            return "RBP"
+
     def __call__(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)
         k = len(recs)

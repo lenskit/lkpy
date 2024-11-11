@@ -1,19 +1,9 @@
-from abc import ABC, abstractmethod
-from typing import Protocol
-
 from lenskit.data import ItemList
 
-
-class RankingMetric(Protocol):
-    """
-    Protocol implemented by ranking metrics.
-    """
-
-    @abstractmethod
-    def __call__(self, recs: ItemList, test: ItemList) -> float: ...
+from .._base import MetricBase
 
 
-class RankingMetricBase(ABC, RankingMetric):
+class RankingMetricBase(MetricBase):
     """
     Base class for most ranking metrics, implementing a ``k`` parameter for
     truncation.

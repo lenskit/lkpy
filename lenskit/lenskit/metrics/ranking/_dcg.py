@@ -55,6 +55,13 @@ class NDCG(RankingMetricBase):
         self.discount = discount
         self.gain = gain
 
+    @property
+    def label(self):
+        if self.k is not None:
+            return f"NDCG@{self.k}"
+        else:
+            return "NDCG"
+
     def __call__(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)
         items = recs.ids()

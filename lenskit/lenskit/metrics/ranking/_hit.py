@@ -14,6 +14,20 @@ class Hit(RankingMetricBase):
     computes the *hit rate* :cite:p:`deshpande:iknn`.
     """
 
+    @property
+    def label(self):
+        if self.k is not None:
+            return f"Hit@{self.k}"
+        else:
+            return "Hit"
+
+    @property
+    def mean_label(self):
+        if self.k is not None:
+            return f"HitRate@{self.k}"
+        else:
+            return "HitRate"
+
     def __call__(self, recs: ItemList, test: ItemList) -> float:
         if len(test) == 0:
             return np.nan
