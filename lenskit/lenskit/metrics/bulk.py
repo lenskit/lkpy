@@ -11,7 +11,7 @@ from progress_api import make_progress
 from lenskit.data import EntityId, ItemList
 from lenskit.data.bulk import count_item_lists, dict_from_df, iter_item_lists
 
-from ._base import LabeledMetric, Metric
+from ._base import Metric, MetricFunction
 
 _log = logging.getLogger(__name__)
 ILSet: TypeAlias = Mapping[EntityId, ItemList | None] | pd.DataFrame
@@ -23,7 +23,7 @@ class MetricWrapper:
     Internal class for storing metrics.
     """
 
-    metric: Metric
+    metric: Metric | MetricFunction
     label: str
     mean_label: str
     default: float | None = None
@@ -76,10 +76,16 @@ class RunAnalysisResult:
 
 
 def _wrap_metric(
-    m: Metric, label: str | None = None, mean_label: str | None = None, default: float | None = None
+    m: Metric | MetricFunction | type[Metric],
+    label: str | None = None,
+    mean_label: str | None = None,
+    default: float | None = None,
 ) -> MetricWrapper:
+    if isinstance(m, type):
+        m = m()
+
     if label is None:
-        if isinstance(m, LabeledMetric):
+        if isinstance(m, Metric):
             wl = m.label
         else:
             wl = m.__name__  # type: ignore
@@ -89,21 +95,21 @@ def _wrap_metric(
     if mean_label is None:
         if label is not None:
             wml = label
-        elif isinstance(m, LabeledMetric):
+        elif isinstance(m, Metric):
             wml = m.mean_label
         else:
             wml = wl
 
     if default is None:
-        if hasattr(m, "default"):
-            default = getattr(m, "default")
+        if isinstance(m, Metric):
+            default = m.default
         else:
             default = 0.0
 
         if default is not None and not isinstance(default, (float, int, np.floating, np.integer)):
             raise TypeError(f"metric {m} has unsupported default {default}")
 
-    return MetricWrapper(m, wl, wml, default)
+    return MetricWrapper(m, wl, wml, default)  # type: ignore
 
 
 class RunAnalysis:

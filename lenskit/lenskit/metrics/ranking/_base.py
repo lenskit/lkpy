@@ -1,9 +1,9 @@
 from lenskit.data import ItemList
 
-from .._base import MetricBase
+from .._base import Metric
 
 
-class RankingMetricBase(MetricBase):
+class RankingMetricBase(Metric):
     """
     Base class for most ranking metrics, implementing a ``k`` parameter for
     truncation.

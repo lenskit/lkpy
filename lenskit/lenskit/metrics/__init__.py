@@ -8,6 +8,6 @@
 Metrics for evaluating recommender outputs.
 """
 
-from ._base import LabeledMetric, Metric, MetricBase
+from ._base import Metric, MetricFunction
 
-__all__ = ["Metric", "LabeledMetric", "MetricBase"]
+__all__ = ["Metric", "MetricFunction"]

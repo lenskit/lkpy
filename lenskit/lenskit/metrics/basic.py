@@ -4,10 +4,10 @@ Basic set statistics.
 
 from lenskit.data.items import ItemList
 
-from ._base import MetricBase
+from ._base import Metric
 
 
-class ListLength(MetricBase):
+class ListLength(Metric):
     """
     Report the length of the output (recommendation list or predictions).
     """
@@ -18,7 +18,7 @@ class ListLength(MetricBase):
         return len(recs)
 
 
-class TestItemCount(MetricBase):
+class TestItemCount(Metric):
     """
     Report the number of test items.
     """
