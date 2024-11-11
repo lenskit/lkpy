@@ -46,7 +46,10 @@ def call_metric(
     **kwargs: P.kwargs,
 ) -> float:
     """
-    Call a metric, instantiating it if necessary.
+    Call a metric, instantiating it if necessary.  This intended to be a quick
+    convenience when you just need to call a metric with its default settings
+    and don't want to mess around with object/class distinctions.  You usually
+    don't actually want to use it.
 
     Supports both the base :class:`Metric` protocol and the extensions in
     :class:`PredictMetric`.
