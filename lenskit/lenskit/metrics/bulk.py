@@ -55,13 +55,13 @@ class RunAnalysisResult:
             The mean metric value.
         ``median``:
             The median metric value.
-        ``sd``:
-            The standard deviation of the metric.
+        ``std``:
+            The (sample) standard deviation of the metric.
 
         Additional columns are added based on other options.
         """
         df = self.list_scores.fillna(self._defaults)
-        return pd.DataFrame({"mean": df.mean()})
+        return df.agg(["mean", "median", "std"]).T
 
 
 def _wrap_metric(

@@ -27,5 +27,6 @@ def test_recs(demo_recs):
 
     metrics = bms.compute(recs, test)
     stats = metrics.summary()
+    print(stats)
     for m in bms.metrics:
         assert stats.loc[m.label, "mean"] == approx(metrics.list_scores[m.label].mean())
