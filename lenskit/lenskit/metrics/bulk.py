@@ -26,7 +26,7 @@ class MetricWrapper:
     metric: Metric
     label: str
     mean_label: str
-    default: float
+    default: float | None = None
 
 
 class RunAnalysisResult:
@@ -34,22 +34,32 @@ class RunAnalysisResult:
     Results of a bulk metric computation.
     """
 
-    list_scores: pd.DataFrame
-    """
-    The metric scores for each list.  The row indices are list (user) IDs, and
-    there is one column for each metric.
-    """
-
+    _list_scores: pd.DataFrame
     _defaults: dict[str, float]
 
     def __init__(self, lscores: pd.DataFrame, defaults: dict[str, float]):
-        self.list_scores = lscores
+        self._list_scores = lscores
         self._defaults = defaults
+
+    def list_scores(self, *, fill_missing=True) -> pd.DataFrame:
+        """
+        Get the per-list scores of the results.  This is a data frame with one
+        row per list (with the list / user ID in the index), and one metric per
+        column.
+
+        Args:
+            fill_missing:
+                If ``True`` (the default), fills in missing values with each
+                metric's default value when available.  Pass ``False`` if you
+                want to do analyses that need to treat missing values
+                differently.
+        """
+        return self._list_scores.fillna(self._defaults)
 
     def summary(self) -> pd.DataFrame:
         """
-        Sumamry statistics for the per-list metrics.  Each metric is on its own row,
-        with columns reporting the following:
+        Sumamry statistics for the per-list metrics.  Each metric is on its own
+        row, with columns reporting the following:
 
         ``mean``:
             The mean metric value.
@@ -58,10 +68,11 @@ class RunAnalysisResult:
         ``std``:
             The (sample) standard deviation of the metric.
 
-        Additional columns are added based on other options.
+        Additional columns are added based on other options.  Missing metric
+        values are filled with their defaults before computing statistics.
         """
-        df = self.list_scores.fillna(self._defaults)
-        return df.agg(["mean", "median", "std"]).T
+        scores = self.list_scores(fill_missing=True)
+        return scores.agg(["mean", "median", "std"]).T
 
 
 def _wrap_metric(
@@ -84,10 +95,12 @@ def _wrap_metric(
             wml = wl
 
     if default is None:
-        default = getattr(m, "default", None)
-        if default is None:
+        if hasattr(m, "default"):
+            default = getattr(m, "default")
+        else:
             default = 0.0
-        elif not isinstance(default, (float, int, np.floating, np.integer)):
+
+        if default is not None and not isinstance(default, (float, int, np.floating, np.integer)):
             raise TypeError(f"metric {m} has unsupported default {default}")
 
     return MetricWrapper(m, wl, wml, default)
@@ -157,4 +170,6 @@ class RunAnalysis:
                 pb.update()
 
         df = pd.DataFrame.from_dict(records, orient="index", columns=columns)
-        return RunAnalysisResult(df, {m.label: m.default for m in self.metrics})
+        return RunAnalysisResult(
+            df, {m.label: m.default for m in self.metrics if m.default is not None}
+        )

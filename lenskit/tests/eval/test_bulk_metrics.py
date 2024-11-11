@@ -26,7 +26,8 @@ def test_recs(demo_recs):
     bms.add_metric(NDCG())
 
     metrics = bms.compute(recs, test)
+    scores = metrics.list_scores()
     stats = metrics.summary()
     print(stats)
     for m in bms.metrics:
-        assert stats.loc[m.label, "mean"] == approx(metrics.list_scores[m.label].mean())
+        assert stats.loc[m.label, "mean"] == approx(scores[m.label].mean())
