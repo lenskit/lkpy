@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TypeAlias
+from typing import Mapping, TypeAlias
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,7 @@ from lenskit.data.bulk import count_item_lists, dict_from_df, iter_item_lists
 from ._base import LabeledMetric, Metric
 
 _log = logging.getLogger(__name__)
-ILSet: TypeAlias = dict[EntityId, ItemList] | pd.DataFrame
+ILSet: TypeAlias = Mapping[EntityId, ItemList | None] | pd.DataFrame
 
 
 @dataclass(frozen=True)
@@ -147,10 +147,15 @@ class RunAnalysis:
         _log.info("computing metrics for %d output lists", n)
         with make_progress(_log, "lists", n) as pb:
             for uid, out in iter_item_lists(outputs):
-                u_t = test[uid]
-                row = [m.metric(out, u_t) for m in self.metrics]
-                user_ids.append(uid)
-                rows.append(row)
+                list_test = test[uid]
+                if out is None:
+                    rows.append([None] for _i in range(len(columns)))
+                elif list_test is None:
+                    _log.warning("list %s: no test items", uid)
+                else:
+                    row = [m.metric(out, list_test) for m in self.metrics]
+                    user_ids.append(uid)
+                    rows.append(row)
                 pb.update()
 
         df = pd.DataFrame.from_records(rows, index=user_ids, columns=columns)

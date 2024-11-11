@@ -8,6 +8,7 @@ Functions for working with bulk per-user data.
     user or other keys.
 """
 
+from collections.abc import Mapping
 from typing import Iterator, cast, overload
 
 import pandas as pd
@@ -23,19 +24,23 @@ from .schemas import (
 from .types import Column, EntityId
 
 
-def dict_to_df(data: dict[EntityId, ItemList], *, column: str = USER_COLUMN) -> pd.DataFrame:
+def dict_to_df(
+    data: Mapping[EntityId, ItemList | None], *, column: str = USER_COLUMN
+) -> pd.DataFrame:
     """
     Convert a dictionary mapping user IDs to item lists into a data frame.
+    Missing item lists are excluded.
 
     Args:
         data:
             The dictionary of data.
         column:
-            The column, to support dictionaries mapped by things other than user IDs.
+            The column, to support dictionaries mapped by things other than user
+            IDs.
     """
 
     df = pd.concat(
-        {u: il.to_df(numbers=False) for (u, il) in data.items()},
+        {u: il.to_df(numbers=False) for (u, il) in data.items() if il is not None},
         names=[column],
     )
     df = df.reset_index(column)
@@ -72,40 +77,42 @@ def group_df(df: pd.DataFrame, *, column: Column = USER_COMPAT_COLUMN, item_col=
 
 
 @overload
-def count_item_lists(data: dict[EntityId, ItemList]) -> int: ...
+def count_item_lists(data: Mapping[EntityId, ItemList | None]) -> int: ...
 @overload
 def count_item_lists(
-    data: pd.DataFrame | dict[EntityId, ItemList],
+    data: pd.DataFrame | Mapping[EntityId, ItemList | None],
     *,
     column: Column = USER_COMPAT_COLUMN,
 ) -> int: ...
 def count_item_lists(
-    data: pd.DataFrame | dict[EntityId, ItemList],
+    data: pd.DataFrame | Mapping[EntityId, ItemList | None],
     *,
     column: Column = USER_COMPAT_COLUMN,
 ) -> int:
-    if isinstance(data, dict):
-        return len(data)
-    else:
+    if isinstance(data, pd.DataFrame):
         data = normalize_columns(data, column)
         return data[column_name(column)].nunique()
+    else:
+        return len(data)
 
 
 @overload
-def iter_item_lists(data: dict[EntityId, ItemList]) -> Iterator[tuple[EntityId, ItemList]]: ...
+def iter_item_lists(
+    data: Mapping[EntityId, ItemList | None],
+) -> Iterator[tuple[EntityId, ItemList | None]]: ...
 @overload
 def iter_item_lists(
-    data: pd.DataFrame | dict[EntityId, ItemList],
+    data: pd.DataFrame | Mapping[EntityId, ItemList | None],
     *,
     column: Column = USER_COMPAT_COLUMN,
     item_col=ITEM_COMPAT_COLUMN,
-) -> Iterator[tuple[EntityId, ItemList]]: ...
+) -> Iterator[tuple[EntityId, ItemList | None]]: ...
 def iter_item_lists(
-    data: pd.DataFrame | dict[EntityId, ItemList],
+    data: pd.DataFrame | Mapping[EntityId, ItemList | None],
     *,
     column: Column = USER_COMPAT_COLUMN,
     item_col=ITEM_COMPAT_COLUMN,
-) -> Iterator[tuple[EntityId, ItemList]]:
+) -> Iterator[tuple[EntityId, ItemList | None]]:
     """
     Iterate over item lists identified by keys.  When the input is a data frame,
     the column names may be specified; the default options group by ``user_id``
@@ -116,8 +123,5 @@ def iter_item_lists(
         for key, df in group_df(data, column=column, item_col=item_col):
             yield cast(EntityId, key), ItemList.from_df(df)
 
-    elif isinstance(data, dict):
+    else:
         yield from data.items()
-
-    else:  # pragma: nocover
-        raise TypeError(f"unsupported data type {type(data)}")
