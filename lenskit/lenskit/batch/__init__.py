@@ -5,8 +5,13 @@
 # SPDX-License-Identifier: MIT
 
 """
-Batch-run predictors and recommenders for evaluation.
+Batch-run recommendation pipelines for evaluation.
 """
 
-from ._predict import predict  # noqa: F401
-from ._recommend import recommend  # noqa: F401
+from __future__ import annotations
+
+from ._predict import predict
+from ._recommend import recommend
+from ._runner import BatchPipelineRunner, ItemSource
+
+__all__ = ["BatchPipelineRunner", "ItemSource", "predict", "recommend"]
