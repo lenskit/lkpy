@@ -7,10 +7,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal, TypeAlias
+from typing import Any, Literal, Mapping, TypeAlias
 
-from lenskit.data.items import ItemList
+from lenskit.data import EntityId, ItemList
 from lenskit.pipeline import Pipeline
+
+from ._results import BatchResults
 
 ItemSource: TypeAlias = None | Literal["test-items"]
 """
@@ -22,13 +24,13 @@ Types of items that can be returned.
 class InvocationSpec:
     """
     Specification for a single pipeline invocation, to record one or more
-    pipeine component outputs for a test user.
+    pipeline component outputs for a test user.
     """
 
     name: str
     "A name for this invocation."
     components: dict[str, str]
-    "The components to measure and return, mapped to their output names."
+    "The names of pipeline components to measure and return, mapped to their output names."
     items: ItemSource = None
     "The target or candidate items (if any) to provide to the recommender."
     extra_inputs: dict[str, Any] = field(default_factory=dict)
@@ -84,5 +86,24 @@ class BatchPipelineRunner:
         """
         self.add_invocation(InvocationSpec("recommend", {component: output}, extra_inputs=extra))
 
-    def run(self, n_jobs: int | None = None) -> dict[str, ItemList]:
+    def run(
+        self,
+        test_data: Mapping[EntityId, ItemList],
+        n_jobs: int | None = None,  # noqa: F821
+    ) -> BatchResults:
+        """
+        Run the pipeline and return its results.
+
+        Args:
+            test_data:
+                A mapping of user IDs to the test data to run against.
+            n_jobs:
+                The number of parallel processes to use, or ``None`` for the
+                default (defined by :func:`lenskit.parallel.config.initialize`).
+
+        Returns:
+            The results, as a nested dictionary.  The outer dictionary maps
+            component output names to inner dictionaries of result data.  These
+            inner dictionaries map user IDs to
+        """
         pass
