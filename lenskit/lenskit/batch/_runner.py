@@ -18,6 +18,10 @@ ItemSource: TypeAlias = None | Literal["test-items"]
 """
 Types of items that can be returned.
 """
+TestData: TypeAlias = Mapping[EntityId, ItemList]
+"""
+Test data format.
+"""
 
 
 @dataclass
@@ -44,13 +48,18 @@ class BatchPipelineRunner:
     Argss:
         pipeline:
             The pipeline to evaluate.
+        n_jobs:
+            The number of parallel processes to use, or ``None`` for the
+            default (defined by :func:`lenskit.parallel.config.initialize`).
     """
 
     pipeline: Pipeline
+    n_jobs: int | None
     invocations: list[InvocationSpec]
 
-    def __init__(self, pipeline: Pipeline):
+    def __init__(self, pipeline: Pipeline, *, n_jobs: int | None = None):
         self.pipeline = pipeline
+        self.n_jobs = n_jobs
         self.invocations = []
 
     def add_invocation(self, inv: InvocationSpec):
@@ -88,8 +97,7 @@ class BatchPipelineRunner:
 
     def run(
         self,
-        test_data: Mapping[EntityId, ItemList],
-        n_jobs: int | None = None,  # noqa: F821
+        test_data: TestData,
     ) -> BatchResults:
         """
         Run the pipeline and return its results.
@@ -97,9 +105,6 @@ class BatchPipelineRunner:
         Args:
             test_data:
                 A mapping of user IDs to the test data to run against.
-            n_jobs:
-                The number of parallel processes to use, or ``None`` for the
-                default (defined by :func:`lenskit.parallel.config.initialize`).
 
         Returns:
             The results, as a nested dictionary.  The outer dictionary maps
