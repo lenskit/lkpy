@@ -15,9 +15,23 @@ import pandas as pd
 from lenskit.data import ItemList
 
 from ._base import Metric, MetricFunction
+from .bulk import RunAnalysis, RunAnalysisResult
 from .predict import MAE, RMSE, PredictMetric
+from .ranking import NDCG, RBP, Precision, Recall, RecipRank
 
-__all__ = ["Metric", "MetricFunction", "RMSE", "MAE"]
+__all__ = [
+    "Metric",
+    "MetricFunction",
+    "RunAnalysis",
+    "RunAnalysisResult",
+    "RMSE",
+    "MAE",
+    "NDCG",
+    "RBP",
+    "Precision",
+    "Recall",
+    "RecipRank",
+]
 
 P = ParamSpec("P")
 

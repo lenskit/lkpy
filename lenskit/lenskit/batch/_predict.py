@@ -3,16 +3,39 @@
 # Copyright (C) 2023-2024 Drexel University
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
 
 import logging
 import warnings
 
 import pandas as pd
 
-from .. import util
-from ..parallel import invoke_progress, invoker
+from lenskit import util
+from lenskit.algorithms import Algorithm
+from lenskit.data import EntityId
+from lenskit.data.items import ItemList
+from lenskit.parallel import invoke_progress, invoker
+from lenskit.pipeline import Pipeline
+
+from ._runner import BatchPipelineRunner, TestData
 
 _logger = logging.getLogger(__name__)
+
+
+def predict(
+    pipeline: Pipeline, test: TestData, *, n_jobs: int | None = None, **kwargs
+) -> dict[EntityId, ItemList]:
+    """
+    Convenience function to batch-generate rating predictions (or other per-item
+    scores) from a pipeline.
+    """
+    if isinstance(pipeline, Algorithm):
+        return legacy_predict(pipeline, test, n_jobs=n_jobs, **kwargs)  # type: ignore
+
+    runner = BatchPipelineRunner(n_jobs=n_jobs)
+    runner.predict()
+    outs = runner.run(pipeline, test)
+    return outs.output("predictions")  # type: ignore
 
 
 def _predict_user(model, req):
@@ -31,7 +54,7 @@ def _predict_user(model, req):
     return res
 
 
-def predict(algo, pairs, *, n_jobs=None, **kwargs):
+def legacy_predict(algo, pairs, *, n_jobs=None, **kwargs):
     """
     Generate predictions for user-item pairs.  The provided algorithm should be a
     :py:class:`algorithms.Predictor` or a function of two arguments: the user ID and

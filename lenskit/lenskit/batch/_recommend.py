@@ -3,18 +3,45 @@
 # Copyright (C) 2023-2024 Drexel University
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
+from __future__ import annotations
 
 import logging
 import warnings
+from typing import Sequence
 
 import numpy as np
 import pandas as pd
 
-from .. import util
-from ..algorithms import Recommender
-from ..parallel import invoke_progress, invoker
+from lenskit import util
+from lenskit.algorithms import Algorithm, Recommender
+from lenskit.data import EntityId, ItemList
+from lenskit.parallel import invoke_progress, invoker
+from lenskit.pipeline import Pipeline
+
+from ._runner import BatchPipelineRunner
 
 _logger = logging.getLogger(__name__)
+
+
+def recommend(
+    pipeline: Pipeline,
+    users: Sequence[EntityId],
+    n: int | None = None,
+    candidates=None,
+    *,
+    n_jobs: int | None = None,
+    **kwargs,
+) -> dict[EntityId, ItemList]:
+    """
+    Convenience function to batch-generate recommendations from a pipeline.
+    """
+    if isinstance(pipeline, Algorithm):
+        return legacy_recommend(pipeline, users, n, candidates, n_jobs=n_jobs, **kwargs)  # type: ignore
+
+    runner = BatchPipelineRunner(n_jobs=n_jobs)
+    runner.recommend(n=n)
+    outs = runner.run(pipeline, {u: ItemList() for u in users})
+    return outs.output("recommendations")  # type: ignore
 
 
 def _recommend_user(algo, req):
@@ -45,7 +72,7 @@ def __standard_cand_fun(candidates):
         return candidates
 
 
-def recommend(algo, users, n, candidates=None, *, n_jobs=None, **kwargs):
+def legacy_recommend(algo, users, n, candidates=None, *, n_jobs=None, **kwargs):
     """
     Batch-recommend for multiple users.  The provided algorithm should be a
     :py:class:`algorithms.Recommender`.
