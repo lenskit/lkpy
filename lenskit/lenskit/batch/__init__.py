@@ -13,6 +13,6 @@ from __future__ import annotations
 from ._predict import predict
 from ._recommend import recommend
 from ._results import BatchResults
-from ._runner import BatchPipelineRunner, ItemSource
+from ._runner import BatchPipelineRunner, InvocationSpec
 
-__all__ = ["BatchPipelineRunner", "BatchResults", "ItemSource", "predict", "recommend"]
+__all__ = ["BatchPipelineRunner", "BatchResults", "InvocationSpec", "predict", "recommend"]

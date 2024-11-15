@@ -48,12 +48,14 @@ can be used to evaluate the output of any recommender system implementation.
 
 .. autosummary::
 
+    lenskit.batch
     lenskit.metrics
 
 .. toctree::
     :caption: Evaluation
     :hidden:
 
+    batch
     metrics
 
 Implementation Helpers
