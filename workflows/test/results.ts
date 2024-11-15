@@ -64,27 +64,6 @@ export function aggregateResultsJob(jobs: string[]): WorkflowJob {
         `),
       },
       {
-        name: "± Measure and report coverage",
-        run: script(`
-          echo $PR_NUMBER > ./lenskit-coverage/pr-number
-          tclsh ./utils/measure-coverage.tcl
-          cat lenskit-coverage/report.md >$GITHUB_STEP_SUMMARY
-        `),
-        env: {
-          PR_NUMBER: "${{ github.event.number }}",
-          GH_TOKEN: "${{secrets.GITHUB_TOKEN}}",
-        },
-      },
-      {
-        name: "📤 Upload coverage report",
-        uses: "actions/upload-artifact@v4",
-        if: "${{ !cancelled() }}",
-        with: {
-          name: "coverage-report",
-          path: "lenskit-coverage/",
-        },
-      },
-      {
         name: "📤 Upload coverage to CodeCov",
         uses: "codecov/codecov-action@v4.2.0",
         env: {
