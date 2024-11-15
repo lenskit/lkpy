@@ -8,7 +8,7 @@ using cross-validation and other strategies.  The various splitters are
 implemented as functions that operate on a :class:`~lenskit.data.Dataset` and
 return one or more train-test splits (as :class:`.TTSplit` objects).
 
-.. versionchanged:: 2024.1
+.. versionchanged:: 2025.1
     Data splitting was moved from ``lenskit.crossfold`` to the :mod:`lenskit.splitting`
     module and functions were renamed and had their interfaces revised.
 

@@ -7,7 +7,7 @@ LensKit provides a unified data model for recommender systems data along with
 classes and utility functions for working with it, described in this section of
 the manual.
 
-.. versionchanged:: 2024.1
+.. versionchanged:: 2025.1
     The new :class:`~lenskit.data.Dataset` class replaces the Pandas data frames
     that were passed to algorithms in the past.  It also subsumes
     the old support for producing sparse matrices from rating frames.

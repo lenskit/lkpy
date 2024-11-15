@@ -14,7 +14,7 @@ Old Examples
 ------------
 
 These are examples of using LensKit 0.x in practice.  They have not been updated
-to LensKit 2024.1 and later.
+to LensKit 2025.1 and later.
 
 * Michael's `extended Book Gender paper`_ shows LensKit in use in an advanced experiment
 

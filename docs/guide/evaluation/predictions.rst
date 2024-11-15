@@ -14,7 +14,7 @@ metrics, including :py:func:`RMSE` and
 :py:func:`MAE`.  They support both global
 (micro-averaged) and per-user (macro-averaged) computation.
 
-.. versionchanged:: 2024.1
+.. versionchanged:: 2025.1
     The prediction accuracy metric interface has changed to use item lists.
 
 Example

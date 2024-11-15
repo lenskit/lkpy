@@ -18,7 +18,7 @@ All LensKit ranking metrics take `k` as a constructor argument to control the
 list of the length that is considered; this allows multiple measurements (e.g.
 HR@5 and HR@10) to be computed from a single set of rankings.
 
-.. versionchanged:: 2024.1
+.. versionchanged:: 2025.1
     The top-N accuracy metric interface has changed to use item lists, and to
     be simpler to implement.
 
