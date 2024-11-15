@@ -59,12 +59,8 @@ The environment variables and their defaults are:
 
     Workers have both the process and thread counts set to 1.
 
-The number of CPUs (``NCPUS``) is determined by the first of the following that is
-available:
-
-1. :func:`os.process_cpu_count`
-2. :func:`os.sched_getaffinity`
-3. :func:`os.cpu_count`
+The number of CPUs (``NCPUS``) is determined by the function
+:py:func:`effective_cpu_count`.
 
 .. _threadpoolctl: https://github.com/joblib/threadpoolctl
 

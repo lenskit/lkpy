@@ -8,7 +8,6 @@
 from __future__ import annotations
 
 import logging
-import multiprocessing as mp
 import os
 import warnings
 from dataclasses import dataclass
@@ -74,12 +73,12 @@ def initialize(
     try:
         torch.set_num_interop_threads(_config.threads)
     except RuntimeError as e:
-        _log.warn("failed to configure Pytorch interop threads: %s", e)
+        _log.warning("failed to configure Pytorch interop threads: %s", e)
         warnings.warn("failed to set interop threads", RuntimeWarning)
     try:
         torch.set_num_threads(_config.backend_threads)
     except RuntimeError as e:
-        _log.warn("failed to configure Pytorch intra-op threads: %s", e)
+        _log.warning("failed to configure Pytorch intra-op threads: %s", e)
         warnings.warn("failed to set intra-op threads", RuntimeWarning)
 
 
@@ -104,6 +103,28 @@ def get_parallel_config() -> ParallelConfig:
     return _config
 
 
+def effective_cpu_count() -> int:
+    """
+    Return the effective CPU count using the best available data.  Tries the following in order:
+
+    1.  :func:`os.process_cpu_count`
+    2.  :func:`os.sched_getaffinity`
+    3.  :func:`os.cpu_count`
+    """
+
+    if hasattr(os, "process_cpu_count"):
+        return os.process_cpu_count()  # type: ignore
+    elif hasattr(os, "sched_getaffinity"):
+        return len(os.sched_getaffinity())  # type: ignore
+    else:
+        ncpus = os.cpu_count()
+        if ncpus is not None:
+            return ncpus
+        else:
+            _log.warning("no CPU count available, assumping single CPU")
+            return 1
+
+
 def _resolve_parallel_config(
     processes: int | None = None,
     threads: int | None = None,
@@ -114,7 +135,7 @@ def _resolve_parallel_config(
     nthreads = os.environ.get("LK_NUM_THREADS", None)
     nbthreads = os.environ.get("LK_NUM_BACKEND_THREADS", None)
     cthreads = os.environ.get("LK_NUM_CHILD_THREADS", None)
-    ncpus = mp.cpu_count()
+    ncpus = effective_cpu_count()
 
     if processes is None and nprocs:
         processes = int(nprocs)
