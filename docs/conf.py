@@ -36,7 +36,12 @@ extensions = [
 
 # set up our filenames
 # source_suffix = {".rst": "restructuredtext"}
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "old/*",
+]
 nb_execution_mode = "off"
 
 # layout and setup options
