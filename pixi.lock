@@ -1032,7 +1032,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pycparser-2.22-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pydantic-2.9.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pydantic-core-2.23.4-py311h9e33e62_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.15.4-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.16.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.18.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pynacl-1.5.0-py311h9ecbd09_4.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.1.4-pyhd8ed1ab_0.conda
@@ -1085,6 +1085,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/spdlog-1.11.0-h9b3ece8_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-8.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-autobuild-2024.10.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-togglebutton-0.3.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-applehelp-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-bibtex-2.6.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-devhelp-2.0.0-pyhd8ed1ab_0.conda
@@ -1414,7 +1415,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pycparser-2.22-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pydantic-2.9.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pydantic-core-2.23.4-py311h481aa64_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.15.4-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.16.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.18.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pynacl-1.5.0-py311h460d6c5_4.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pyobjc-core-10.3.1-py311h09e6bbd_1.conda
@@ -1465,6 +1466,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/soupsieve-2.5-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-8.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-autobuild-2024.10.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-togglebutton-0.3.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-applehelp-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-bibtex-2.6.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-devhelp-2.0.0-pyhd8ed1ab_0.conda
@@ -1817,7 +1819,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pycparser-2.22-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pydantic-2.9.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pydantic-core-2.23.4-py312h12e396e_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.15.4-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.16.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.18.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pynacl-1.5.0-py312h66e93f0_4.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.1.4-pyhd8ed1ab_0.conda
@@ -1868,6 +1870,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/soupsieve-2.5-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-8.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-autobuild-2024.10.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-togglebutton-0.3.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-applehelp-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-bibtex-2.6.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-devhelp-2.0.0-pyhd8ed1ab_0.conda
@@ -2187,7 +2190,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pycparser-2.22-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pydantic-2.9.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pydantic-core-2.23.4-py312he431725_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.15.4-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.16.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.18.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pynacl-1.5.0-py312h024a12e_4.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pyobjc-core-10.3.1-py312hd24fc31_1.conda
@@ -2237,6 +2240,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/soupsieve-2.5-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-8.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-autobuild-2024.10.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-togglebutton-0.3.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-applehelp-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-bibtex-2.6.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-devhelp-2.0.0-pyhd8ed1ab_0.conda
@@ -2533,7 +2537,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pycparser-2.22-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pydantic-2.9.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/pydantic-core-2.23.4-py312h2615798_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.15.4-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.16.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.18.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/pynacl-1.5.0-py312hdb89ce9_4.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.1.4-pyhd8ed1ab_0.conda
@@ -2584,6 +2588,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/soupsieve-2.5-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-8.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-autobuild-2024.10.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-togglebutton-0.3.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-applehelp-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-bibtex-2.6.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-devhelp-2.0.0-pyhd8ed1ab_0.conda
@@ -2949,7 +2954,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pycparser-2.22-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pydantic-2.9.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pydantic-core-2.23.4-py312h12e396e_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.15.4-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.16.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.18.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pynacl-1.5.0-py312h66e93f0_4.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.1.4-pyhd8ed1ab_0.conda
@@ -3002,6 +3007,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/spdlog-1.11.0-h9b3ece8_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-8.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-autobuild-2024.10.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-togglebutton-0.3.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-applehelp-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-bibtex-2.6.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-devhelp-2.0.0-pyhd8ed1ab_0.conda
@@ -3331,7 +3337,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pycparser-2.22-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pydantic-2.9.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pydantic-core-2.23.4-py312he431725_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.15.4-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.16.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.18.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pynacl-1.5.0-py312h024a12e_4.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pyobjc-core-10.3.1-py312hd24fc31_1.conda
@@ -3382,6 +3388,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/soupsieve-2.5-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-8.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-autobuild-2024.10.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-togglebutton-0.3.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-applehelp-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-bibtex-2.6.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-devhelp-2.0.0-pyhd8ed1ab_0.conda
@@ -3596,7 +3603,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pycparser-2.22-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pydantic-2.9.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pydantic-core-2.23.4-py312h12e396e_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.15.4-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.16.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.18.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.1.4-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pysocks-1.7.1-pyha2e5f31_6.tar.bz2
@@ -3622,6 +3629,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/soupsieve-2.5-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/spdlog-1.11.0-h9b3ece8_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-8.0.2-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-togglebutton-0.3.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-applehelp-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-bibtex-2.6.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-devhelp-2.0.0-pyhd8ed1ab_0.conda
@@ -3791,7 +3799,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pycparser-2.22-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pydantic-2.9.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/pydantic-core-2.23.4-py312he431725_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.15.4-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.16.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.18.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.1.4-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pysocks-1.7.1-pyha2e5f31_6.tar.bz2
@@ -3816,6 +3824,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/snowballstemmer-2.2.0-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/soupsieve-2.5-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-8.0.2-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/sphinx-togglebutton-0.3.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-applehelp-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-bibtex-2.6.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sphinxcontrib-devhelp-2.0.0-pyhd8ed1ab_0.conda
@@ -12635,7 +12644,7 @@ packages:
   timestamp: 1727304687962
 - kind: pypi
   name: lenskit
-  version: 0.15.0.dev1369+g279756dd.d20241026
+  version: 0.15.0.dev1407+g3c45716a
   path: lenskit
   sha256: 81f6740798a8a424f07e1c11fb0d9eab063a9dd6fe1fffba7ee5d486b93f8628
   requires_dist:
@@ -12643,7 +12652,7 @@ packages:
   - numpy>=1.24
   - pandas~=2.0
   - progress-api>=0.1.0a9
-  - pydantic<3,>=2.8
+  - pydantic>=2.8,<3
   - scipy>=1.10.0
   - seedbank>=0.2.0a2
   - threadpoolctl>=3.0
@@ -12653,14 +12662,49 @@ packages:
   - pyprojroot==0.3.* ; extra == 'test'
   - pytest-benchmark==4.* ; extra == 'test'
   - pytest-cov>=2.12 ; extra == 'test'
-  - pytest-doctestplus<2,>=1.2.1 ; extra == 'test'
+  - pytest-doctestplus>=1.2.1,<2 ; extra == 'test'
   - pytest-repeat>=0.9 ; extra == 'test'
-  - pytest<9,>=8.2 ; extra == 'test'
+  - pytest>=8.2,<9 ; extra == 'test'
+  requires_python: '>=3.11'
+  editable: true
+- kind: pypi
+  name: lenskit
+  version: 0.15.0.dev1433+g03efb1bc
+  path: lenskit
+  sha256: 81f6740798a8a424f07e1c11fb0d9eab063a9dd6fe1fffba7ee5d486b93f8628
+  requires_dist:
+  - manylog @ git+https://github.com/mdekstrand/manylog.git
+  - numpy>=1.24
+  - pandas~=2.0
+  - progress-api>=0.1.0a9
+  - pydantic>=2.8,<3
+  - scipy>=1.10.0
+  - seedbank>=0.2.0a2
+  - threadpoolctl>=3.0
+  - torch~=2.1
+  - scikit-learn>=1.1 ; extra == 'sklearn'
+  - hypothesis>=6.16 ; extra == 'test'
+  - pyprojroot==0.3.* ; extra == 'test'
+  - pytest-benchmark==4.* ; extra == 'test'
+  - pytest-cov>=2.12 ; extra == 'test'
+  - pytest-doctestplus>=1.2.1,<2 ; extra == 'test'
+  - pytest-repeat>=0.9 ; extra == 'test'
+  - pytest>=8.2,<9 ; extra == 'test'
   requires_python: '>=3.11'
   editable: true
 - kind: pypi
   name: lenskit-funksvd
-  version: 0.15.0.dev1369+g279756dd.d20241026
+  version: 0.15.0.dev1407+g3c45716a
+  path: lenskit-funksvd
+  sha256: f205043df831d2a7a9345beb588a0da37221c75b40ca4e709082ca932b95ca76
+  requires_dist:
+  - lenskit
+  - numba>=0.56
+  requires_python: '>=3.11'
+  editable: true
+- kind: pypi
+  name: lenskit-funksvd
+  version: 0.15.0.dev1433+g03efb1bc
   path: lenskit-funksvd
   sha256: f205043df831d2a7a9345beb588a0da37221c75b40ca4e709082ca932b95ca76
   requires_dist:
@@ -12670,7 +12714,7 @@ packages:
   editable: true
 - kind: pypi
   name: lenskit-hpf
-  version: 0.15.0.dev1369+g279756dd.d20241026
+  version: 0.15.0.dev1407+g3c45716a
   path: lenskit-hpf
   sha256: d3288a8e16f88803ee3158c416e943898e781884db0fb1b2493b6e54066c71c1
   requires_dist:
@@ -12680,7 +12724,17 @@ packages:
   editable: true
 - kind: pypi
   name: lenskit-implicit
-  version: 0.15.0.dev1369+g279756dd.d20241026
+  version: 0.15.0.dev1407+g3c45716a
+  path: lenskit-implicit
+  sha256: 4b2641b5b3421e4f803dcf16cf5fce27c068957b4b25bc74c75f1cb6c910d301
+  requires_dist:
+  - implicit>=0.6.1
+  - lenskit
+  requires_python: '>=3.11'
+  editable: true
+- kind: pypi
+  name: lenskit-implicit
+  version: 0.15.0.dev1433+g03efb1bc
   path: lenskit-implicit
   sha256: 4b2641b5b3421e4f803dcf16cf5fce27c068957b4b25bc74c75f1cb6c910d301
   requires_dist:
@@ -19380,13 +19434,13 @@ packages:
   timestamp: 1726525575527
 - kind: conda
   name: pydata-sphinx-theme
-  version: 0.15.4
+  version: 0.16.0
   build: pyhd8ed1ab_0
   subdir: noarch
   noarch: python
-  url: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.15.4-pyhd8ed1ab_0.conda
-  sha256: 5ec877142ded763061e114e787a4e201c2fb3f0b1db2f04ace610a1187bb34ae
-  md5: c7c50dd5192caa58a05e6a4248a27acb
+  url: https://conda.anaconda.org/conda-forge/noarch/pydata-sphinx-theme-0.16.0-pyhd8ed1ab_0.conda
+  sha256: 745431f1f6dc5a4ac1fe2d5543c6f3fbe0acf9b77e08ef57471a70561ff9ecad
+  md5: 344261b0e77f5d2faaffb4eac225eeb7
   depends:
   - accessible-pygments
   - babel
@@ -19395,14 +19449,14 @@ packages:
   - packaging
   - pygments >=2.7
   - python >=3.9
-  - sphinx >=5.0
+  - sphinx >=6.1
   - typing_extensions
   license: BSD-3-Clause
   license_family: BSD
   purls:
   - pkg:pypi/pydata-sphinx-theme?source=hash-mapping
-  size: 1393462
-  timestamp: 1719344980505
+  size: 1526232
+  timestamp: 1729643324444
 - kind: conda
   name: pygments
   version: 2.18.0
@@ -21980,7 +22034,7 @@ packages:
   - coverage>=5 ; extra == 'test'
   - pyyaml ; extra == 'test'
   - toml ; extra == 'test'
-  - tensorflow<3,>=2 ; extra == 'tf'
+  - tensorflow>=2,<3 ; extra == 'tf'
   - torch ; extra == 'torch'
   requires_python: '>=3.10'
 - kind: conda
@@ -22320,6 +22374,25 @@ packages:
   - pkg:pypi/sphinx-autobuild?source=hash-mapping
   size: 17274
   timestamp: 1727921111461
+- kind: conda
+  name: sphinx-togglebutton
+  version: 0.3.2
+  build: pyhd8ed1ab_0
+  subdir: noarch
+  noarch: python
+  url: https://conda.anaconda.org/conda-forge/noarch/sphinx-togglebutton-0.3.2-pyhd8ed1ab_0.tar.bz2
+  sha256: 0dcee238aae6337fae5eaf1f9a29b0c51ed9834ae501fccb2cde0fed8dae1a88
+  md5: 382738101934261ea7931d1460e64868
+  depends:
+  - docutils
+  - python >=3.6
+  - sphinx
+  license: MIT
+  license_family: MIT
+  purls:
+  - pkg:pypi/sphinx-togglebutton?source=hash-mapping
+  size: 12268
+  timestamp: 1664390298824
 - kind: conda
   name: sphinxcontrib-applehelp
   version: 2.0.0

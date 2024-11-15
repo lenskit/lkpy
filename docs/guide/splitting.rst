@@ -8,7 +8,7 @@ using cross-validation and other strategies.  The various splitters are
 implemented as functions that operate on a :class:`~lenskit.data.Dataset` and
 return one or more train-test splits (as :class:`.TTSplit` objects).
 
-.. versionchanged:: 2024.1
+.. versionchanged:: 2025.1
     Data splitting was moved from ``lenskit.crossfold`` to the :mod:`lenskit.splitting`
     module and functions were renamed and had their interfaces revised.
 
@@ -87,7 +87,9 @@ the holdout's configuration (e.g. the number of test ratings per user) and
 return callable objects to do the holdout:
 
 .. autosummary::
-    SampleN
-    SampleFrac
-    LastN
-    LastFrac
+    :nosignatures:
+
+    ~lenskit.splitting.SampleN
+    ~lenskit.splitting.SampleFrac
+    ~lenskit.splitting.LastN
+    ~lenskit.splitting.LastFrac

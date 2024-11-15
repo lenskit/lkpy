@@ -1,5 +1,5 @@
 """
-Various basic pipeline components.
+Basic and baseline pipeline components.
 """
 
 from .bias import BiasScorer

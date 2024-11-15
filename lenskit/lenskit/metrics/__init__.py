@@ -17,11 +17,12 @@ from lenskit.data import ItemList
 from ._base import Metric, MetricFunction
 from .bulk import RunAnalysis, RunAnalysisResult
 from .predict import MAE, RMSE, PredictMetric
-from .ranking import NDCG, RBP, Precision, Recall, RecipRank
+from .ranking import NDCG, RBP, Precision, RankingMetricBase, Recall, RecipRank
 
 __all__ = [
     "Metric",
     "MetricFunction",
+    "RankingMetricBase",
     "RunAnalysis",
     "RunAnalysisResult",
     "RMSE",

@@ -520,7 +520,7 @@ class Pipeline:
         since literals other than basic JSON values are hashed by pickling, hash
         stability depends on the stability of the pickle bytestream.
 
-        In LensKit 2024.1, the configuration hash is computed by computing the
+        In LensKit 2025.1, the configuration hash is computed by computing the
         JSON serialization of the pipeline configuration *without* a hash and
         returning the hex-encoded SHA256 hash of that configuration.
         """

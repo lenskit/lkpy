@@ -41,7 +41,7 @@ class ImplicitMF(ALSBase):
     :math:`\\mathbb{1}^* + Rw`, where :math:`\\mathbb{1}^*` is an :math:`m
     \\times n` matrix of all 1s.
 
-    .. versionchanged:: 2024.1
+    .. versionchanged:: 2025.1
         ``ImplicitMF`` no longer supports multiple training methods. It always uses
         Cholesky decomposition now.
 

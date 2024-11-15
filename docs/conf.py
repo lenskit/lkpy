@@ -29,13 +29,19 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.extlinks",
     "sphinx.ext.todo",
+    "sphinx_togglebutton",
     "sphinxext.opengraph",
     "sphinxcontrib.bibtex",
 ]
 
 # set up our filenames
 # source_suffix = {".rst": "restructuredtext"}
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "old/*",
+]
 nb_execution_mode = "off"
 
 # layout and setup options
@@ -48,6 +54,9 @@ if _parsed_ver.is_devrelease:
     html_baseurl = "https://lkpy.lenskit.org/en/latest/"
 else:
     html_baseurl = "https://lkpy.lenskit.org/en/stable/"
+html_css_files = [
+    "css/custom.css",
+]
 
 html_theme_options = {
     "switcher": {
@@ -83,7 +92,7 @@ html_theme_options = {
 }
 
 templates_path = ["_templates"]
-# html_static_path = ["_static"]
+html_static_path = ["_static"]
 
 # how do we want to set up documentation?
 autodoc_default_options = {"members": True, "member-order": "bysource", "show-inheritance": True}

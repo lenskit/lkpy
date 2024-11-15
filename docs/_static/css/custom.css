@@ -1,0 +1,7 @@
+@import url(https://fonts.bunny.net/css?family=source-sans-3:400,400i,700,700i|source-code-pro:300,300i,400,400i,500,500i,700,700i);
+
+html {
+    --pst-font-family-base: "Source Sans 3", var(--pst-font-family-base-system);
+    --pst-font-family-header: "Source Sans 3", var(--pst-font-family-base-system);
+    --pst-font-family-monospace: "Source Code Pro", var(--pst-font-family-monospace-system);
+}

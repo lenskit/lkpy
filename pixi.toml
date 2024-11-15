@@ -63,9 +63,10 @@ pyprojroot = "=0.3"
 sphinx = ">=4.2"
 sphinxext-opengraph = ">=0.5"
 sphinxcontrib-bibtex = ">=2.0"
-pydata-sphinx-theme = ">=0.15.4"
+pydata-sphinx-theme = "~=0.16.0"
 myst-nb = ">=0.13"
 just = ">=1.2"
+sphinx-togglebutton = ">=0.3.2,<0.4"
 
 [feature.dev.dependencies]
 hatchling = "~=1.24"

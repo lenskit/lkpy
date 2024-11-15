@@ -1,24 +1,29 @@
-Parallel Execution
-------------------
+Parallel Processing
+===================
 
-.. py:module:: lenskit.parallel
+.. py:currentmodule:: lenskit.parallel
 
 LensKit supports various forms of parallel execution, each with an environment
-variable controlling its :
+variable controlling its:
 
 - :doc:`Batch operations <batch>` using :ref:`multi-process execution <parallel-model-ops>`.
 - Parallel model training.  For most models provided by LensKit, this is usually
   implemented using PyTorch JIT parallelism (:func:`torch.jit.fork`).
 - Parallel computation in the various backends (BLAS, MKL, Torch, etc.).
 
-Other models compatible with LensKit may use their own parallel processing logic.
+.. _parallel-config:
 
 Configuring Parallelism
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 LensKit provides 4 knobs for configuring parallelism, each of which has a
-corresponding environment variable and parameter to :py:func:`initialize`.  The
-environment variables are:
+corresponding environment variable and parameter to :py:func:`initialize` (the
+parameters take precedence over environment variables). Component
+implementations and support code that wants to make sure that parallelism is
+properly configured should call :py:func:`ensure_parallel_init` prior to
+performing any parallelizable computation.
+
+The environment variables and their defaults are:
 
 .. envvar:: LK_NUM_PROCS
 
@@ -54,18 +59,36 @@ environment variables are:
 
     Workers have both the process and thread counts set to 1.
 
+The number of CPUs (``NCPUS``) is determined by the function
+:py:func:`effective_cpu_count`.
+
 .. _threadpoolctl: https://github.com/joblib/threadpoolctl
 
-.. autofunction:: initialize
+.. parallel-protecting:
 
-.. autofunction:: ensure_parallel_init
+Protecting Scripts for Multiprocessing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Any scripts that use LensKit's process-based parallelism support, even
+indirectly, must be **import-protected**: that is, the script must not directly
+do its work when run, but should define functions and call a ``main`` function
+when run as a script, with a block like this at the end of the file::
+
+    def main():
+        # do the actual work
+
+    if __name__ == '__main__':
+        main()
+
+If you are using the batch functions from a Jupyter notebook, you should be fine
+— the Jupyter programs are appropriately protected.
 
 .. _parallel-model-ops:
 
 Parallel Model Ops
 ~~~~~~~~~~~~~~~~~~
 
-LensKit uses a custom API wrapping  :py:class:`multiprocessing.pool.Pool` to
+LensKit uses a custom API wrapping :py:class:`multiprocessing.pool.Pool` to
 parallelize batch operations (see :py:mod:`lenskit.batch`).
 
 The basic idea of this API is to create an *invoker* that has a model and a function,
@@ -81,26 +104,10 @@ LensKit users will generally not need to directly use parallel op invokers, but
 if you are implementing new batch operations with parallelism they are useful.
 They may also be useful for other kinds of analysis.
 
-.. autofunction:: invoker
-
-.. autoclass:: ModelOpInvoker
-    :members:
-
 Logging and Progress
 ~~~~~~~~~~~~~~~~~~~~
 
 Multi-process op invokers automatically set up logging and progress reporting to
 work across processes using the :py:mod:`manylog` package.  Op invokers can also
-report the progress of queued jobs to a :py:class:`progress_api.Progress`.
-
-.. autofunction:: invoke_progress
-
-Computing Work Chunks
-~~~~~~~~~~~~~~~~~~~~~
-
-.. py:module:: lenskit.parallel.chunking
-
-The :py:class:`WorkChunks` class provides support for dividing work into chunks for
-parallel processing, particularly for model training.
-
-.. autoclass:: WorkChunks
+report the progress of queued jobs to a :py:class:`progress_api.Progress`; use
+the :py:func:`invoke_progress` function to set up such a progress bar.

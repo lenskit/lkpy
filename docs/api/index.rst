@@ -47,14 +47,18 @@ support. The evaluation code is not directly linked to the rest of LensKit and
 can be used to evaluate the output of any recommender system implementation.
 
 .. autosummary::
-    :toctree: .
-    :caption: Evaluation
-    :recursive:
 
     lenskit.batch
     lenskit.metrics
-    lenskit.topn
     lenskit.splitting
+
+.. toctree::
+    :caption: Evaluation
+    :hidden:
+
+    batch
+    metrics
+    splitting
 
 Implementation Helpers
 ~~~~~~~~~~~~~~~~~~~~~~

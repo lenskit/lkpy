@@ -3,7 +3,7 @@ Recommendation Pipelines
 
 .. py:currentmodule:: lenskit.pipeline
 
-Since version :ref:`2024.1`, LensKit uses a flexible “pipeline” abstraction to
+Since version :ref:`2025.1`, LensKit uses a flexible “pipeline” abstraction to
 wire together different components such as candidate selectors, personalized
 item scorers, and rankers to produce predictions, recommendations, or other
 recommender system outputs.  This is a significant change from the LensKit 0.x

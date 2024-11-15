@@ -1,22 +1,22 @@
-2024 Releases
+2025 Releases
 =============
 
-The 2024 release series is **currently in development**.  No specific release
+The 2025 release series is **currently in development**.  No specific release
 date is set yet.
 
-2024 will bring breaking changes to several LensKit APIs to improve ergonomics,
+2025 will bring breaking changes to several LensKit APIs to improve ergonomics,
 correctness-by-default, and flexibility.  It also adopts SPEC0_, a standard for
 supported versions of scientific Python libraries, and changes the LensKit
 version number scheme to “:ref:`SemCalver`”.
 
 .. _SPEC0: https://scientific-python.org/specs/spec-0000/
 
-.. _2024.1:
+.. _2025.1:
 
-2024.1 (in progress)
+2025.1 (in progress)
 --------------------
 
-The first 2024 release is currently in-progress.
+The first 2025 release is currently in-progress.
 
 This document presents the highlights for this release. The full changelog for this release is available in the `Git history <https://github.com/lenskit/lkpy/compare/0.14.4...main>`_
 and `issue/PR milestone <https://github.com/lenskit/lkpy/milestone/14>`_.
@@ -24,7 +24,7 @@ and `issue/PR milestone <https://github.com/lenskit/lkpy/milestone/14>`_.
 Significant Changes
 ~~~~~~~~~~~~~~~~~~~
 
-2024.1 brings substantial changes to LensKit.
+2025.1 brings substantial changes to LensKit.
 
 *   :class:`~lenskit.data.Dataset`.  LensKit now provides an abstraction for
     training data instead of working with Pandas data frames directly, that

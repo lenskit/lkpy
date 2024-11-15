@@ -68,7 +68,7 @@ descent training of the same prediction model.
 .. note::
     FunkSVD must be installed separately from the lenskit-funksvd_ package.
 
-.. versionchanged:: 2024.1
+.. versionchanged:: 2025.1
     FunkSVD moved from ``lenskit.algorithms.funksvd`` to ``lenskit.funksvd`` and
     is provided by a separate PyPI package ``lenskit-funksvd``.
 

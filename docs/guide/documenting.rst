@@ -2,7 +2,7 @@ Documenting Experiments
 =======================
 
 .. todo::
-    This chapter needs to be rewritten for :ref:`2024.1`.
+    This chapter needs to be rewritten for :ref:`2025.1`.
 
 When publishing results — either formally, through a venue such as ACM Recsys,
 or informally in your organization, it's important to clearly and completely

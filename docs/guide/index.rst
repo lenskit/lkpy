@@ -29,6 +29,12 @@ guide to how to use LensKit for research, education, and other purposes.
     documenting
 
 .. toctree::
+    :caption: Support Code
+    :maxdepth: 1
+
+    parallelism
+
+.. toctree::
     :caption: Tips and Help
     :maxdepth: 1
 
