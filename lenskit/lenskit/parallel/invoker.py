@@ -13,7 +13,7 @@ from typing import Any, Callable, Generic, Iterable, Iterator, Optional, TypeAli
 
 from progress_api import Progress, make_progress
 
-from lenskit.parallel.config import ensure_parallel_init, get_parallel_config
+from .config import ensure_parallel_init, get_parallel_config
 
 M = TypeVar("M")
 A = TypeVar("A")
