@@ -32,9 +32,9 @@ def predict(
     if isinstance(pipeline, Algorithm):
         return legacy_predict(pipeline, test, n_jobs=n_jobs, **kwargs)  # type: ignore
 
-    runner = BatchPipelineRunner(pipeline, n_jobs=n_jobs)
+    runner = BatchPipelineRunner(n_jobs=n_jobs)
     runner.predict()
-    outs = runner.run(test)
+    outs = runner.run(pipeline, test)
     return outs.output("predictions")  # type: ignore
 
 

@@ -38,9 +38,9 @@ def recommend(
     if isinstance(pipeline, Algorithm):
         return legacy_recommend(pipeline, users, n, candidates, n_jobs=n_jobs, **kwargs)  # type: ignore
 
-    runner = BatchPipelineRunner(pipeline, n_jobs=n_jobs)
-    runner.recommend()
-    outs = runner.run({u: ItemList() for u in users})
+    runner = BatchPipelineRunner(n_jobs=n_jobs)
+    runner.recommend(n=n)
+    outs = runner.run(pipeline, {u: ItemList() for u in users})
     return outs.output("recommendations")  # type: ignore
 
 

@@ -5,25 +5,21 @@
 # SPDX-License-Identifier: MIT
 
 import logging
-from typing import NamedTuple
+from typing import Generator, NamedTuple
 
 import numpy as np
 import pandas as pd
 
-import pytest
+from pytest import approx, fixture, mark
 
-import lenskit.crossfold as xf
-import lenskit.util.test as lktu
-from lenskit import batch, topn
-from lenskit.algorithms import Recommender
-from lenskit.algorithms.basic import PopScore, TopN
-from lenskit.algorithms.bias import Bias
-from lenskit.basic import BiasScorer
-from lenskit.data import Dataset, from_interactions_df
+from lenskit.basic import BiasScorer, PopScorer
+from lenskit.batch import BatchPipelineRunner, predict, recommend
+from lenskit.data import Dataset, ItemList, from_interactions_df
 from lenskit.data.convert import normalize_interactions_df
-from lenskit.metrics import NDCG, RunAnalysis
+from lenskit.metrics import NDCG, RBP, RMSE, RunAnalysis
 from lenskit.pipeline import Pipeline, topn_pipeline
-from lenskit.splitting import SampleFrac, crossfold_users
+from lenskit.splitting import SampleN, TTSplit, sample_users
+from lenskit.util.test import ml_100k, ml_ds, ml_ratings  # noqa: F401
 
 _log = logging.getLogger(__name__)
 
@@ -34,7 +30,7 @@ class MLB(NamedTuple):
     pipeline: Pipeline
 
 
-@pytest.fixture
+@fixture
 def mlb(ml_ratings: pd.DataFrame, ml_ds: Dataset) -> MLB:
     bias = BiasScorer()
     pipeline = topn_pipeline(bias, predicts_ratings=True)
@@ -47,125 +43,97 @@ def mlb(ml_ratings: pd.DataFrame, ml_ds: Dataset) -> MLB:
     )
 
 
-class MLFolds:
-    def __init__(self, ds: Dataset):
-        self.data = ds
-        self.folds = list(crossfold_users(self.data, 5, SampleFrac(0.2)))
-        self.all_test = {}
-        for f in self.folds:
-            self.all_test.update(f.test)
-
-    def evaluate(self, algo, train, test, **kwargs):
-        _log.info("running training")
-        algo.fit(from_interactions_df(train))
-        _log.info("testing %d users", test.user.nunique())
-        recs = batch.recommend(algo, test.user.unique(), 100, **kwargs)
-        return recs
-
-    def eval_all(self, algo, **kwargs):
-        return pd.concat(self.evaluate(algo, train, test, **kwargs) for (train, test) in self.folds)
-
-    def check_positive_ndcg(self, recs):
-        _log.info("analyzing recommendations")
-        measure = RunAnalysis()
-        measure.add_metric(NDCG())
-
-        results = measure.compute(recs, self.test)
-
-        dcg = results.list_scores()["NDCG"]
-        _log.info("nDCG for %d users is %f (max=%f)", len(dcg), dcg.mean(), dcg.max())
-        assert dcg.mean() > 0
+@fixture
+def ml_split(ml_100k: pd.DataFrame) -> Generator[TTSplit, None, None]:
+    ds = from_interactions_df(ml_100k)
+    yield sample_users(ds, 200, SampleN(5))
 
 
-@pytest.fixture
-def ml_folds(ml_100k) -> MLFolds:
-    return MLFolds(ml_100k)
-
-
-def test_recommend_single(mlb: MLB):
-    runner = BatchRunner()
-    res = batch.recommend(mlb.algo, [1], None, {1: [31]}, n_jobs=1)
+def test_predict_single(mlb: MLB):
+    res = predict(mlb.pipeline, {1: ItemList([31])}, n_jobs=1)
 
     assert len(res) == 1
-    assert all(res["user"] == 1)
-    assert all(res["rank"] == 1)
-    assert set(res.columns) == set(["user", "rank", "item", "score"])
+    uid, result = next(iter(res.items()))
+    assert uid == 1
+    assert len(result) == 1
+    assert result.ids()[0] == 31
 
-    algo = mlb.algo.predictor
-    expected = algo.mean_ + algo.item_offsets_.loc[31] + algo.user_offsets_.loc[1]
-    assert res.score.iloc[0] == pytest.approx(expected)
+    preds = result.field("score")
+    assert preds is not None
+    assert preds >= 1 and preds <= 5
 
 
 def test_recommend_user(mlb: MLB):
-    uid = 5
-    items = mlb.ratings.item.unique()
+    user = 5
 
-    def candidates(user):
-        urs = mlb.ratings[mlb.ratings.user == user]
-        return np.setdiff1d(items, urs.item.unique())
+    results = recommend(mlb.pipeline, [user], n=10, n_jobs=1)
 
-    res = batch.recommend(mlb.algo, [5], 10, candidates, n_jobs=1)
+    assert len(results) == 1
+    uid, ranking = next(iter(results.items()))
+    assert uid == user
+    assert isinstance(ranking, ItemList)
+    assert ranking.ordered
+    assert len(ranking) == 10
 
-    assert len(res) == 10
-    assert set(res.columns) == set(["user", "rank", "item", "score"])
-    assert all(res["user"] == uid)
-    assert all(res["rank"] == np.arange(10) + 1)
     # they should be in decreasing order
-    assert all(np.diff(res.score) <= 0)
+    score = ranking.scores()
+    assert score is not None
+    assert all(np.diff(score) <= 0)
 
 
-def test_recommend_two_users(mlb: MLB):
-    items = mlb.ratings.item.unique()
+@mark.parametrize(("ncpus"), [None, 1, 2])
+@mark.eval
+def test_bias_batch(ml_split: TTSplit, ncpus: int | None):
+    algo = BiasScorer(damping=5)
+    pipeline = topn_pipeline(algo, predicts_ratings=True, n=20)
+    pipeline.train(ml_split.train)
 
-    def candidates(user):
-        urs = mlb.ratings[mlb.ratings.user == user]
-        return np.setdiff1d(items, urs.item.unique())
+    runner = BatchPipelineRunner(n_jobs=ncpus)
+    runner.recommend()
+    runner.predict()
 
-    res = batch.recommend(mlb.algo, [5, 10], 10, candidates, n_jobs=1)
+    results = runner.run(pipeline, ml_split.test)
 
-    assert len(res) == 20
-    assert set(res.user) == set([5, 10])
-    assert all(res.groupby("user").item.count() == 10)
-    assert all(res.groupby("user")["rank"].max() == 10)
-    assert all(np.diff(res[res.user == 5].score) <= 0)
-    assert all(np.diff(res[res.user == 5]["rank"]) == 1)
-    assert all(np.diff(res[res.user == 10].score) <= 0)
-    assert all(np.diff(res[res.user == 10]["rank"]) == 1)
+    preds = results.output("predictions")
 
+    pa = RunAnalysis()
+    pa.add_metric(RMSE())
+    pred_acc = pa.compute(preds, ml_split.test)
+    pas = pred_acc.summary()
+    print(pas)
+    assert pas.loc["RMSE", "mean"] == approx(0.949, rel=0.1)
 
-def test_recommend_no_cands(mlb: MLB):
-    res = batch.recommend(mlb.algo, [5, 10], 10, n_jobs=1)
+    recs = results.output("recommendations")
+    ra = RunAnalysis()
+    ra.add_metric(NDCG())
+    ra.add_metric(RBP())
+    rec_acc = ra.compute(recs, ml_split.test)
+    ras = rec_acc.summary()
+    print(ras)
 
-    assert len(res) == 20
-    assert set(res.user) == set([5, 10])
-    assert all(res.groupby("user").item.count() == 10)
-    assert all(res.groupby("user")["rank"].max() == 10)
-    assert all(np.diff(res[res.user == 5].score) <= 0)
-    assert all(np.diff(res[res.user == 5]["rank"]) == 1)
-    assert all(np.diff(res[res.user == 10].score) <= 0)
-    assert all(np.diff(res[res.user == 10]["rank"]) == 1)
-
-    idx_rates = mlb.ratings.set_index(["user", "item"])
-    merged = res.join(idx_rates, on=["user", "item"], how="inner")
-    assert len(merged) == 0
+    assert ras.loc["RBP", "mean"] > 0
+    assert ras.loc["NDCG", "mean"] > 0
 
 
-@pytest.mark.parametrize(("ncpus"), [None, 1, 2])
-@pytest.mark.eval
-def test_bias_batch_recommend(ml_folds: MLFolds, ncpus):
-    algo = Bias(damping=5)
-    algo = TopN(algo)
+@mark.parametrize("ncpus", [None, 1, 2])
+@mark.eval
+def test_pop_batch_recommend(ml_split: TTSplit, ncpus: int | None):
+    algo = PopScorer()
+    pipeline = topn_pipeline(algo, predicts_ratings=True, n=20)
+    pipeline.train(ml_split.train)
 
-    recs = ml_folds.eval_all(algo, n_jobs=ncpus)
+    runner = BatchPipelineRunner(n_jobs=ncpus)
+    runner.recommend()
 
-    ml_folds.check_positive_ndcg(recs)
+    results = runner.run(pipeline, ml_split.test)
 
+    recs = results.output("recommendations")
+    ra = RunAnalysis()
+    ra.add_metric(NDCG())
+    ra.add_metric(RBP())
+    rec_acc = ra.compute(recs, ml_split.test)
+    ras = rec_acc.summary()
+    print(ras)
 
-@pytest.mark.parametrize("ncpus", [None, 1, 2])
-@pytest.mark.eval
-def test_pop_batch_recommend(ml_folds: MLFolds, ncpus):
-    algo = PopScore()
-    algo = Recommender.adapt(algo)
-
-    recs = ml_folds.eval_all(algo, n_jobs=ncpus)
-    ml_folds.check_positive_ndcg(recs)
+    assert ras.loc["RBP", "mean"] > 0
+    assert ras.loc["NDCG", "mean"] > 0

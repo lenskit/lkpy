@@ -6,13 +6,18 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Literal, Mapping, TypeAlias
 
 from lenskit.data import EntityId, ItemList
+from lenskit.parallel import invoke_progress, invoker
 from lenskit.pipeline import Pipeline
+from lenskit.util import Stopwatch
 
 from ._results import BatchResults
+
+_log = logging.getLogger(__name__)
 
 ItemSource: TypeAlias = None | Literal["test-items"]
 """
@@ -53,12 +58,10 @@ class BatchPipelineRunner:
             default (defined by :func:`lenskit.parallel.config.initialize`).
     """
 
-    pipeline: Pipeline
     n_jobs: int | None
     invocations: list[InvocationSpec]
 
-    def __init__(self, pipeline: Pipeline, *, n_jobs: int | None = None):
-        self.pipeline = pipeline
+    def __init__(self, *, n_jobs: int | None = None):
         self.n_jobs = n_jobs
         self.invocations = []
 
@@ -97,6 +100,7 @@ class BatchPipelineRunner:
 
     def run(
         self,
+        pipeline: Pipeline,
         test_data: TestData,
     ) -> BatchResults:
         """
@@ -111,4 +115,51 @@ class BatchPipelineRunner:
             component output names to inner dictionaries of result data.  These
             inner dictionaries map user IDs to
         """
-        pass
+        n_users = len(test_data)
+        _log.info("running pipeline %s for %d queries", pipeline.name, n_users)
+        _log.info("pipeline configuration hash: %s", pipeline.config_hash())
+
+        with (
+            invoke_progress(_log, "querying", n_users, unit="query") as progress,
+            invoker(
+                (pipeline, self.invocations), _run_pipeline, n_jobs=self.n_jobs, progress=progress
+            ) as worker,
+        ):
+            # release our reference, will sometimes free the pipeline memory in this process
+            del pipeline
+            results = BatchResults()
+            timer = Stopwatch()
+            for user, outs in worker.map(test_data.items()):
+                for cn, cr in outs.items():
+                    results.add_result(cn, user, cr)
+            timer.stop()
+
+            rate = timer.elapsed() / n_users
+            _log.info("finished running for %d users in %s (%.1fms/user)", n_users, timer, rate)
+
+        return results
+
+
+def _run_pipeline(
+    ctx: tuple[Pipeline, list[InvocationSpec]], req: tuple[EntityId, ItemList]
+) -> tuple[EntityId, dict[str, object]]:
+    pipeline, invocations = ctx
+    user, test_items = req
+
+    result = {}
+
+    _log.debug("running pipeline %s for user %s", pipeline.name, user)
+    for inv in invocations:
+        inputs = {}
+        match inv.items:
+            case "test-items":
+                inputs["items"] = test_items
+
+        inputs.update(inv.extra_inputs)
+
+        nodes = inv.components.keys()
+        outs = pipeline.run_all(*nodes, **inputs)
+        for cname, oname in inv.components.items():
+            result[oname] = outs[cname]
+
+    return user, result
