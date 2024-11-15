@@ -42,6 +42,8 @@ def initialize(
     parallelism will call :func:`ensure_init`, which will call this function
     with its default arguments if it has not been called.
 
+    .. seealso:: :ref:`parallel-config`
+
     Args:
         processes:
             The number of processes to use for multiprocessing evaluations (see
