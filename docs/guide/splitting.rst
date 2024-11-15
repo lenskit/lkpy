@@ -87,7 +87,9 @@ the holdout's configuration (e.g. the number of test ratings per user) and
 return callable objects to do the holdout:
 
 .. autosummary::
-    SampleN
-    SampleFrac
-    LastN
-    LastFrac
+    :nosignatures:
+
+    ~lenskit.splitting.SampleN
+    ~lenskit.splitting.SampleFrac
+    ~lenskit.splitting.LastN
+    ~lenskit.splitting.LastFrac

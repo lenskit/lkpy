@@ -32,9 +32,11 @@ These metrics just look at the recommendation list and do not consider the rank
 positions of items within it.
 
 .. autosummary::
-    Hit
-    Precision
-    Recall
+    :nosignatures:
+
+    ~lenskit.metrics.Hit
+    ~lenskit.metrics.Precision
+    ~lenskit.metrics.Recall
 
 Ranked List Metrics
 -------------------
@@ -44,6 +46,8 @@ or may not be relevant; some also support different item utilities (e.g. ratings
 or graded relevance scores).
 
 .. autosummary::
-    RecipRank
-    RBP
-    NDCG
+    :nosignatures:
+
+    ~lenskit.metrics.RecipRank
+    ~lenskit.metrics.RBP
+    ~lenskit.metrics.NDCG
