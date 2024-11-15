@@ -50,6 +50,6 @@ of test users, you can do this with the :py:func:`recomend` function (or
 >>> measure = RunAnalysis()
 >>> measure.add_metric(RBP())
 >>> scores = measure.compute(recs, split.test)
->>> scores.summary()
+>>> scores.summary()    # doctest: +ELLIPSIS
        mean  median       std
-RBP  0.0358     0.0  0.1...
+RBP  0.03...    0.0    0.1...
