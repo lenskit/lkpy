@@ -115,7 +115,7 @@ def effective_cpu_count() -> int:
     if hasattr(os, "process_cpu_count"):
         return os.process_cpu_count()  # type: ignore
     elif hasattr(os, "sched_getaffinity"):
-        return len(os.sched_getaffinity())  # type: ignore
+        return len(os.sched_getaffinity(0))  # type: ignore
     else:
         ncpus = os.cpu_count()
         if ncpus is not None:
