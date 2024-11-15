@@ -16,7 +16,6 @@ const FILTER_PATHS = [
   "**pyproject.toml",
   "requirements*.txt",
   "data/**",
-  "utils/measure-coverage.tcl",
   ".github/workflows/test.yml",
 ];
 
