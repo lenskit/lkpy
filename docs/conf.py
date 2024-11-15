@@ -29,6 +29,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.extlinks",
     "sphinx.ext.todo",
+    "sphinx_togglebutton",
     "sphinxext.opengraph",
     "sphinxcontrib.bibtex",
 ]

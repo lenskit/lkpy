@@ -3,8 +3,9 @@ Batch Operations
 
 .. py:module:: lenskit.batch
 
-The :mod:`lenskit.batch` module provides support for applying pipelines to
-batches of test data, primarily for offline evaluation.
+The :py:mod:`lenskit.batch` module provides support for applying pipelines to
+batches of test data, primarily for offline evaluation.  See :ref:`batch` for
+usage instructions.
 
 .. autosummary::
     :toctree:
