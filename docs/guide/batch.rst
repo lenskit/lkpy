@@ -27,3 +27,29 @@ predictions at the same time, useful for evaluations and experiments.
 
     If you are using the batch functions from a Jupyter notebook, you should be fine - the
     Jupyter programs are appropriately protected.
+
+Quick-and-Dirty Runs
+--------------------
+
+If you have a pipeline and want to simply generate recommendations for a batch
+of test users, you can do this with the :py:func:`recomend` function (or
+:py:func:`predict` for rating predictions).  For example:
+
+>>> from lenskit.basic import PopScorer
+>>> from lenskit.pipeline import topn_pipeline
+>>> from lenskit.batch import recommend
+>>> from lenskit.data import load_movielens
+>>> from lenskit.splitting import sample_users, SampleN
+>>> from lenskit.metrics import RunAnalysis, RBP
+>>> data = load_movielens('data/ml-100k.zip')
+>>> split = sample_users(data, 150, SampleN(5))
+>>> model = PopScorer()
+>>> pop_pipe = topn_pipeline(model, n=20)
+>>> pop_pipe.train(split.train)
+>>> recs = recommend(pop_pipe, split.test.keys())
+>>> measure = RunAnalysis()
+>>> measure.add_metric(RBP())
+>>> scores = measure.compute(recs, split.test)
+>>> scores.summary()
+       mean  median       std
+RBP  0.0358     0.0  0.1...
