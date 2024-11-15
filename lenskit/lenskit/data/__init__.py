@@ -3,6 +3,9 @@
 # Copyright (C) 2023-2024 Drexel University
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
+"""
+Data abstractions and data set access.
+"""
 
 from __future__ import annotations
 
