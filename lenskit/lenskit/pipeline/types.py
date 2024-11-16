@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import warnings
 from importlib import import_module
-from types import GenericAlias, NoneType
+from types import GenericAlias, NoneType, UnionType
 from typing import (  # type: ignore
     Generic,
     Protocol,
@@ -128,7 +128,8 @@ def is_compatible_data(obj: object, *targets: type | TypeVar) -> bool:
         except TypeError:
             pass
 
-        if get_origin(target) == Union:
+        origin = get_origin(target)
+        if origin == UnionType or origin == Union:
             types = get_args(target)
             if is_compatible_data(obj, *types):
                 return True

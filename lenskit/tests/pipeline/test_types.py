@@ -12,7 +12,7 @@ import typing
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from types import NoneType
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -100,6 +100,14 @@ def test_numpy_typecheck():
     assert is_compatible_data(np.arange(10), NDArray[np.integer])
     # numpy types can be checked
     assert not is_compatible_data(np.arange(10), NDArray[np.float64])
+
+
+def test_numpy_scalar_typecheck():
+    assert is_compatible_data(np.int32(4270), np.integer[Any])
+
+
+def test_numpy_scalar_typecheck2():
+    assert is_compatible_data(np.int32(4270), np.integer[Any] | int)
 
 
 def test_pandas_typecheck():
