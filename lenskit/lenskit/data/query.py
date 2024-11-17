@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from typing import TypeAlias
 
 import numpy as np
-from typing_extensions import assert_never
 
 from lenskit.data.items import ItemList
 
@@ -68,7 +67,7 @@ class RecQuery:
         elif isinstance(data, int | str | bytes):
             return cls(user_id=data)
         else:  # pragma: nocover
-            assert_never(f"invalid type {type(data)}")
+            raise TypeError(f"invalid query input (type {type(data)})")
 
 
 QueryInput: TypeAlias = RecQuery | ID | ItemList | None
