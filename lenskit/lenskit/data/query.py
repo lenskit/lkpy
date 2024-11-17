@@ -71,7 +71,7 @@ class RecQuery:
             assert_never(f"invalid type {type(data)}")
 
 
-QueryInput: TypeAlias = RecQuery | EntityId | ItemList | np.integer | None
+QueryInput: TypeAlias = RecQuery | EntityId | ItemList | None
 """
 Types that can be converted to a query by :meth:`RecQuery.create`.
 """

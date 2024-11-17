@@ -20,7 +20,7 @@ import numpy as np
 FeedbackType: TypeAlias = Literal["explicit", "implicit"]
 "Types of feedback supported."
 
-EntityId: TypeAlias = int | str | bytes
+EntityId: TypeAlias = int | str | bytes | np.integer[Any] | np.string_
 "Allowable entity identifier types."
 NPEntityId: TypeAlias = np.integer[Any] | np.str_ | np.bytes_ | np.object_
 "Allowable entity identifier types (NumPy version)"
