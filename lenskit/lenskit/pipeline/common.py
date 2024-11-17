@@ -111,7 +111,7 @@ class RecPipelineBuilder:
                     "rating-predictor", self._predict_transform, query=query, items=rater
                 )
             else:
-                pipe.alias("rating-predictor", n_score)
+                pipe.alias("rating-predictor", rater)
 
         rank = pipe.add_component("ranker", self._ranker, items=n_score, n=n_n)
         pipe.alias("recommender", rank)
