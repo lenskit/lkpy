@@ -154,6 +154,8 @@ class ItemList:
             self.ordered = False
 
         if vocabulary is not None:
+            if not isinstance(vocabulary, Vocabulary):  # pragma: nocover
+                raise TypeError(f"expected Vocabulary, got {type(vocabulary)}")
             self._vocab = vocabulary
 
         # handle aliases for item ID/number columns
@@ -220,7 +222,7 @@ class ItemList:
 
     @classmethod
     def from_df(
-        cls, df: pd.DataFrame, *, vocabulary=Vocabulary, keep_user: bool = False
+        cls, df: pd.DataFrame, *, vocabulary: Vocabulary | None = None, keep_user: bool = False
     ) -> ItemList:
         """
         Create a item list from a Pandas data frame.  The frame should have
@@ -262,7 +264,7 @@ class ItemList:
         items = cls(
             item_ids=ids,  # type: ignore
             item_nums=nums,  # type: ignore
-            vocabulary=vocabulary,  # type: ignore
+            vocabulary=vocabulary,
             ordered=ranks is not None,
             **fields,  # type: ignore
         )
@@ -461,9 +463,9 @@ class ItemList:
         * all other defined fields, using their field names
         """
         cols = {}
-        if ids and self._ids is not None or self._vocab is not None:
+        if ids and (self._ids is not None or self._vocab is not None):
             cols["item_id"] = self.ids()
-        if numbers and self._numbers is not None or self._vocab is not None:
+        if numbers and (self._numbers is not None or self._vocab is not None):
             cols["item_num"] = self.numbers()
         # we need to have numbers or ids, or it makes no sense
         if "item_id" not in cols and "item_num" not in cols:

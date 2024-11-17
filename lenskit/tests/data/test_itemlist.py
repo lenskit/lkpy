@@ -238,6 +238,16 @@ def test_pandas_df_ordered():
     assert np.all(df["rank"] == np.arange(1, 6))
 
 
+def test_pandas_df_no_numbers():
+    data = np.random.randn(5)
+    il = ItemList(item_ids=ITEMS, vocabulary=VOCAB, scores=data, ordered=True)
+    df = il.to_df(numbers=False)
+    assert "item_id" in df.columns
+
+    # even with a vocabulary, we should have no numbers
+    assert "item_num" not in df.columns
+
+
 def test_item_list_pickle_compact(ml_ds: Dataset):
     nums = [1, 0, 308, 24, 72]
     il = ItemList(item_nums=nums, vocabulary=ml_ds.items)
