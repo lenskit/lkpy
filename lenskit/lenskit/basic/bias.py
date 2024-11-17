@@ -115,11 +115,15 @@ class BiasScorer(Component):
             sums = np.zeros(ncols)
             np.add.at(counts, ratings.col, 1)
             np.add.at(sums, ratings.col, centered)
-            means = sums / counts
+
+            # store 0 offsets
+            i_bias = np.zeros(ncols)
+            np.divide(sums, counts, out=i_bias, where=counts > 0)
+
             self.items_ = data.items.copy()
-            self.item_offsets_ = means
-            centered -= means[ratings.col]
-            _logger.info("computed means for %d items", len(self.item_offsets_))
+            self.item_offsets_ = i_bias
+            centered -= i_bias[ratings.col]
+            _logger.info("computed biases for %d items", len(self.item_offsets_))
         else:
             self.item_offsets_ = None
 
@@ -128,10 +132,13 @@ class BiasScorer(Component):
             sums = np.zeros(nrows)
             np.add.at(counts, ratings.row, 1)
             np.add.at(sums, ratings.row, centered)
-            means = sums / counts
+
+            u_bias = np.zeros(nrows)
+            np.divide(sums, counts, out=u_bias, where=counts > 0)
+
             self.users_ = data.users.copy()
-            self.user_offsets_ = means
-            _logger.info("computed means for %d users", len(self.user_offsets_))
+            self.user_offsets_ = u_bias
+            _logger.info("computed biases for %d users", len(self.user_offsets_))
         else:
             self.user_offsets_ = None
 
