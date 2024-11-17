@@ -59,8 +59,8 @@ And measure their results:
     >>> measure.add_metric(RBP())
     >>> scores = measure.compute(recs, split.test)
     >>> scores.summary()    # doctest: +ELLIPSIS
-        mean  median       std
-    RBP  0.03...    0.0    0.1...
+            mean    median     std
+    RBP  0.07...    0.0...  0.1...
 
 
 The :py:func:`predict` function works similarly, but for rating predictions;
