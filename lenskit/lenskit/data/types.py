@@ -39,7 +39,7 @@ ID: TypeAlias = CoreID | NPID
 "Allowable identifier types."
 IDArray: TypeAlias = np.ndarray[tuple[int], np.dtype[NPID]]
 "NumPy arrays of identifiers."
-IDSequence: TypeAlias = Sequence[ID] | IDArray | pd.Series[CoreID]
+IDSequence: TypeAlias = Sequence[ID] | IDArray | pd.Series
 "Sequences of identifiers."
 
 T = TypeVar("T")
