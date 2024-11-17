@@ -154,6 +154,8 @@ class ItemList:
             self.ordered = False
 
         if vocabulary is not None:
+            if not isinstance(vocabulary, Vocabulary):  # pragma: nocover
+                raise TypeError(f"expected Vocabulary, got {type(vocabulary)}")
             self._vocab = vocabulary
 
         # handle aliases for item ID/number columns
