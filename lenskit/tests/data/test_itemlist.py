@@ -420,6 +420,15 @@ def test_copy_ctor():
     assert np.all(x == extra)
 
 
+def test_copy_na_scores():
+    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB)
+    il2 = ItemList(il, scores=np.nan)
+
+    scores = il2.scores()
+    assert scores is not None
+    assert np.all(np.isnan(scores))
+
+
 def test_copy_ctor_remove_scores():
     data = np.random.randn(5)
     extra = np.random.randn(5)
