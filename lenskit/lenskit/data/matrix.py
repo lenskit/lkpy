@@ -24,7 +24,7 @@ from typing_extensions import override
 from .dataset import Dataset, FieldError
 from .items import ItemList
 from .tables import NumpyUserItemTable, TorchUserItemTable
-from .types import EntityId
+from .types import ID
 from .vocab import Vocabulary
 
 _log = logging.getLogger(__name__)
@@ -369,7 +369,7 @@ class MatrixDataset(Dataset):
 
     @override
     def user_row(
-        self, user_id: EntityId | None = None, *, user_num: int | None = None
+        self, user_id: ID | None = None, *, user_num: int | None = None
     ) -> ItemList | None:
         if user_num is None:
             if user_id is None:  # pragma: nocover

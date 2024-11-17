@@ -12,7 +12,7 @@ from typing_extensions import assert_never
 
 from lenskit.data.items import ItemList
 
-from .types import EntityId
+from .types import ID
 
 
 @dataclass
@@ -31,7 +31,7 @@ class RecQuery:
         to include context cues.
     """
 
-    user_id: EntityId | None = None
+    user_id: ID | None = None
     """
     The user's identifier.
     """
@@ -71,7 +71,7 @@ class RecQuery:
             assert_never(f"invalid type {type(data)}")
 
 
-QueryInput: TypeAlias = RecQuery | EntityId | ItemList | None
+QueryInput: TypeAlias = RecQuery | ID | ItemList | None
 """
 Types that can be converted to a query by :meth:`RecQuery.create`.
 """

@@ -21,12 +21,10 @@ from .schemas import (
     column_name,
     normalize_columns,
 )
-from .types import Column, EntityId
+from .types import ID, Column
 
 
-def dict_to_df(
-    data: Mapping[EntityId, ItemList | None], *, column: str = USER_COLUMN
-) -> pd.DataFrame:
+def dict_to_df(data: Mapping[ID, ItemList | None], *, column: str = USER_COLUMN) -> pd.DataFrame:
     """
     Convert a dictionary mapping user IDs to item lists into a data frame.
     Missing item lists are excluded.
@@ -50,7 +48,7 @@ def dict_to_df(
 
 def dict_from_df(
     df: pd.DataFrame, *, column: Column = USER_COMPAT_COLUMN, item_col: Column = ITEM_COMPAT_COLUMN
-) -> dict[EntityId, ItemList]:
+) -> dict[ID, ItemList]:
     """
     Convert a dictionary mapping user IDs to item lists into a data frame.
 
@@ -77,15 +75,15 @@ def group_df(df: pd.DataFrame, *, column: Column = USER_COMPAT_COLUMN, item_col=
 
 
 @overload
-def count_item_lists(data: Mapping[EntityId, ItemList | None]) -> int: ...
+def count_item_lists(data: Mapping[ID, ItemList | None]) -> int: ...
 @overload
 def count_item_lists(
-    data: pd.DataFrame | Mapping[EntityId, ItemList | None],
+    data: pd.DataFrame | Mapping[ID, ItemList | None],
     *,
     column: Column = USER_COMPAT_COLUMN,
 ) -> int: ...
 def count_item_lists(
-    data: pd.DataFrame | Mapping[EntityId, ItemList | None],
+    data: pd.DataFrame | Mapping[ID, ItemList | None],
     *,
     column: Column = USER_COMPAT_COLUMN,
 ) -> int:
@@ -98,21 +96,21 @@ def count_item_lists(
 
 @overload
 def iter_item_lists(
-    data: Mapping[EntityId, ItemList | None],
-) -> Iterator[tuple[EntityId, ItemList | None]]: ...
+    data: Mapping[ID, ItemList | None],
+) -> Iterator[tuple[ID, ItemList | None]]: ...
 @overload
 def iter_item_lists(
-    data: pd.DataFrame | Mapping[EntityId, ItemList | None],
+    data: pd.DataFrame | Mapping[ID, ItemList | None],
     *,
     column: Column = USER_COMPAT_COLUMN,
     item_col=ITEM_COMPAT_COLUMN,
-) -> Iterator[tuple[EntityId, ItemList | None]]: ...
+) -> Iterator[tuple[ID, ItemList | None]]: ...
 def iter_item_lists(
-    data: pd.DataFrame | Mapping[EntityId, ItemList | None],
+    data: pd.DataFrame | Mapping[ID, ItemList | None],
     *,
     column: Column = USER_COMPAT_COLUMN,
     item_col=ITEM_COMPAT_COLUMN,
-) -> Iterator[tuple[EntityId, ItemList | None]]:
+) -> Iterator[tuple[ID, ItemList | None]]:
     """
     Iterate over item lists identified by keys.  When the input is a data frame,
     the column names may be specified; the default options group by ``user_id``
@@ -121,7 +119,7 @@ def iter_item_lists(
     """
     if isinstance(data, pd.DataFrame):
         for key, df in group_df(data, column=column, item_col=item_col):
-            yield cast(EntityId, key), ItemList.from_df(df)
+            yield cast(ID, key), ItemList.from_df(df)
 
     else:
         yield from data.items()

@@ -27,7 +27,7 @@ from typing_extensions import (
 
 from .checks import check_1d
 from .mtarray import MTArray, MTGenericArray
-from .types import EntityId, NPEntityId
+from .types import NPID, IDArray, IDSequence
 from .vocab import Vocabulary
 
 Backend: TypeAlias = Literal["numpy", "torch"]
@@ -115,7 +115,7 @@ class ItemList:
     ordered: bool = False
     "Whether this list has a meaningful order."
     _len: int
-    _ids: np.ndarray[int, np.dtype[NPEntityId]] | None = None
+    _ids: IDArray | None = None
     _numbers: MTArray[np.int32] | None = None
     _vocab: Vocabulary | None = None
     _ranks: MTArray[np.int32] | None = None
@@ -123,13 +123,9 @@ class ItemList:
 
     def __init__(
         self,
-        source: ItemList
-        | NDArray[NPEntityId]
-        | pd.Series[EntityId]
-        | Sequence[EntityId]
-        | None = None,
+        source: ItemList | IDSequence | None = None,
         *,
-        item_ids: NDArray[NPEntityId] | pd.Series[EntityId] | Sequence[EntityId] | None = None,
+        item_ids: IDSequence | None = None,
         item_nums: NDArray[np.int32] | pd.Series[int] | Sequence[int] | ArrayLike | None = None,
         vocabulary: Vocabulary | None = None,
         ordered: bool | None = None,
@@ -293,7 +289,7 @@ class ItemList:
         "Get the item list's vocabulary, if available."
         return self._vocab
 
-    def ids(self) -> NDArray[NPEntityId]:
+    def ids(self) -> NDArray[NPID]:
         """
         Get the item IDs.
 
@@ -307,7 +303,7 @@ class ItemList:
             if self._vocab is None:
                 raise RuntimeError("item IDs not available (no IDs or vocabulary provided)")
             assert self._numbers is not None
-            self._ids = cast(NDArray[NPEntityId], self._vocab.ids(self._numbers.numpy()))
+            self._ids = cast(NDArray[NPID], self._vocab.ids(self._numbers.numpy()))
 
         return self._ids
 

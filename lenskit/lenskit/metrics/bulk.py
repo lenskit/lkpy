@@ -8,13 +8,13 @@ import numpy as np
 import pandas as pd
 from progress_api import make_progress
 
-from lenskit.data import EntityId, ItemList
+from lenskit.data import ID, ItemList
 from lenskit.data.bulk import count_item_lists, dict_from_df, iter_item_lists
 
 from ._base import Metric, MetricFunction
 
 _log = logging.getLogger(__name__)
-ILSet: TypeAlias = Mapping[EntityId, ItemList | None] | pd.DataFrame
+ILSet: TypeAlias = Mapping[ID, ItemList | None] | pd.DataFrame
 
 
 @dataclass(frozen=True)

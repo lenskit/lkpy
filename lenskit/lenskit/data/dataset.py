@@ -27,7 +27,7 @@ import torch
 
 from .items import ItemList
 from .tables import NumpyUserItemTable, TorchUserItemTable
-from .types import EntityId
+from .types import ID
 from .vocab import Vocabulary
 
 DF_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch"]
@@ -360,13 +360,13 @@ class Dataset(ABC):
 
     @abstractmethod
     @overload
-    def user_row(self, user_id: EntityId) -> ItemList | None: ...
+    def user_row(self, user_id: ID) -> ItemList | None: ...
     @abstractmethod
     @overload
     def user_row(self, *, user_num: int) -> ItemList: ...
     @abstractmethod
     def user_row(
-        self, user_id: EntityId | None = None, *, user_num: int | None = None
+        self, user_id: ID | None = None, *, user_num: int | None = None
     ) -> ItemList | None:
         """
         Get a user's row from the interaction matrix.  Available fields are

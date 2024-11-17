@@ -13,17 +13,34 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Generic, Literal, NamedTuple, TypeAlias, TypeVar, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Literal,
+    NamedTuple,
+    Sequence,
+    TypeAlias,
+    TypeVar,
+    cast,
+)
 
 import numpy as np
+import pandas as pd
 
 FeedbackType: TypeAlias = Literal["explicit", "implicit"]
 "Types of feedback supported."
 
-EntityId: TypeAlias = int | str | bytes | np.integer[Any] | np.string_
-"Allowable entity identifier types."
-NPEntityId: TypeAlias = np.integer[Any] | np.str_ | np.bytes_ | np.object_
-"Allowable entity identifier types (NumPy version)"
+CoreID: TypeAlias = int | str | bytes
+"Core (non-NumPy) identifier types."
+NPID: TypeAlias = np.integer[Any] | np.str_ | np.bytes_ | np.object_
+"NumPy entity identifier types."
+ID: TypeAlias = CoreID | NPID
+"Allowable identifier types."
+IDArray: TypeAlias = np.ndarray[tuple[int], np.dtype[NPID]]
+"NumPy arrays of identifiers."
+IDSequence: TypeAlias = Sequence[ID] | IDArray | pd.Series[CoreID]
+"Sequences of identifiers."
 
 T = TypeVar("T")
 

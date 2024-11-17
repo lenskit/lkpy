@@ -12,7 +12,7 @@ import pandas as pd
 
 from lenskit import util
 from lenskit.algorithms import Algorithm
-from lenskit.data import EntityId
+from lenskit.data import ID
 from lenskit.data.items import ItemList
 from lenskit.parallel import invoke_progress, invoker
 from lenskit.pipeline import Pipeline
@@ -24,7 +24,7 @@ _logger = logging.getLogger(__name__)
 
 def predict(
     pipeline: Pipeline, test: TestData, *, n_jobs: int | None = None, **kwargs
-) -> dict[EntityId, ItemList]:
+) -> dict[ID, ItemList]:
     """
     Convenience function to batch-generate rating predictions (or other per-item
     scores) from a pipeline.

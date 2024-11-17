@@ -19,7 +19,7 @@ from lenskit.basic.composite import FallbackScorer
 from lenskit.basic.history import KnownRatingScorer
 from lenskit.data import Dataset
 from lenskit.data.items import ItemList
-from lenskit.data.types import EntityId
+from lenskit.data.types import ID
 from lenskit.pipeline import Pipeline
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 

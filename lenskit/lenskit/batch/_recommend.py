@@ -14,7 +14,7 @@ import pandas as pd
 
 from lenskit import util
 from lenskit.algorithms import Algorithm, Recommender
-from lenskit.data import EntityId, ItemList
+from lenskit.data import ID, ItemList
 from lenskit.parallel import invoke_progress, invoker
 from lenskit.pipeline import Pipeline
 
@@ -25,13 +25,13 @@ _logger = logging.getLogger(__name__)
 
 def recommend(
     pipeline: Pipeline,
-    users: Sequence[EntityId],
+    users: Sequence[ID],
     n: int | None = None,
     candidates=None,
     *,
     n_jobs: int | None = None,
     **kwargs,
-) -> dict[EntityId, ItemList]:
+) -> dict[ID, ItemList]:
     """
     Convenience function to batch-generate recommendations from a pipeline.
     """

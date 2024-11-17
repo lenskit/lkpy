@@ -15,15 +15,15 @@ from .items import ItemList
 from .movielens import load_movielens, load_movielens_df
 from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray
 from .query import QueryInput, RecQuery
-from .types import EntityId, FeedbackType, NPEntityId, UITuple
+from .types import ID, NPID, FeedbackType, UITuple
 from .vocab import Vocabulary
 
 __all__ = [
     "Dataset",
     "FieldError",
     "from_interactions_df",
-    "EntityId",
-    "NPEntityId",
+    "ID",
+    "NPID",
     "UITuple",
     "FeedbackType",
     "ItemList",

@@ -10,7 +10,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Literal, Mapping, TypeAlias
 
-from lenskit.data import EntityId, ItemList
+from lenskit.data import ID, ItemList
 from lenskit.parallel import invoke_progress, invoker
 from lenskit.pipeline import Pipeline
 from lenskit.util import Stopwatch
@@ -23,7 +23,7 @@ ItemSource: TypeAlias = None | Literal["test-items"]
 """
 Types of items that can be returned.
 """
-TestData: TypeAlias = Mapping[EntityId, ItemList]
+TestData: TypeAlias = Mapping[ID, ItemList]
 """
 Test data format.
 """
@@ -141,8 +141,8 @@ class BatchPipelineRunner:
 
 
 def _run_pipeline(
-    ctx: tuple[Pipeline, list[InvocationSpec]], req: tuple[EntityId, ItemList]
-) -> tuple[EntityId, dict[str, object]]:
+    ctx: tuple[Pipeline, list[InvocationSpec]], req: tuple[ID, ItemList]
+) -> tuple[ID, dict[str, object]]:
     pipeline, invocations = ctx
     user, test_items = req
 

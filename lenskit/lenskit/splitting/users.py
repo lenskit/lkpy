@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from seedbank import numpy_rng
 
-from lenskit.data import Dataset, EntityId
+from lenskit.data import ID, Dataset
 from lenskit.data.matrix import MatrixDataset
 from lenskit.types import RandomSeed
 
@@ -156,7 +156,7 @@ def sample_users(
 
 
 def _make_split(
-    data: Dataset, df: pd.DataFrame, test_us: Iterable[EntityId], method: HoldoutMethod
+    data: Dataset, df: pd.DataFrame, test_us: Iterable[ID], method: HoldoutMethod
 ) -> TTSplit:
     # create the test sets for these users
     mask = pd.Series(True, index=df.index)

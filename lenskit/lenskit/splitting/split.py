@@ -8,7 +8,7 @@ from typing import Literal, NamedTuple, TypeAlias
 
 import pandas as pd
 
-from lenskit.data import Dataset, EntityId, ItemList
+from lenskit.data import ID, Dataset, ItemList
 from lenskit.data.bulk import dict_to_df
 
 SplitTable: TypeAlias = Literal["matrix"]
@@ -24,7 +24,7 @@ class TTSplit(NamedTuple):
     The training data.
     """
 
-    test: dict[EntityId, ItemList]
+    test: dict[ID, ItemList]
     """
     The test data.
     """

@@ -10,7 +10,7 @@ from lenskit.basic import (
     UserTrainingHistoryLookup,
 )
 from lenskit.basic.topn import TopNRanker
-from lenskit.data import EntityId, ItemList, RecQuery
+from lenskit.data import ID, ItemList, RecQuery
 
 from . import Pipeline
 from .components import Component
@@ -85,7 +85,7 @@ class RecPipelineBuilder:
         """
         pipe = Pipeline(name=name)
 
-        query = pipe.create_input("query", RecQuery, EntityId, ItemList)
+        query = pipe.create_input("query", RecQuery, ID, ItemList)
 
         items = pipe.create_input("items", ItemList)
         n_n = pipe.create_input("n", int, None)

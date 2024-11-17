@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from lenskit.data import EntityId
+from lenskit.data import ID
 
 
 class BatchResults:
@@ -10,7 +10,7 @@ class BatchResults:
     ``None``, if the pipeline produced no output for that user.
     """
 
-    _data: dict[str, dict[EntityId, object]]
+    _data: dict[str, dict[ID, object]]
 
     def __init__(self):
         """
@@ -25,7 +25,7 @@ class BatchResults:
         """
         return list(self._data.keys())
 
-    def output(self, name: str) -> dict[EntityId, object]:
+    def output(self, name: str) -> dict[ID, object]:
         """
         Get the item lists for a particular output component.
 
@@ -36,7 +36,7 @@ class BatchResults:
         """
         return self._data[name]
 
-    def add_result(self, name: str, user: EntityId, result: object):
+    def add_result(self, name: str, user: ID, result: object):
         """
         Add a single result for one of the outputs.
 
