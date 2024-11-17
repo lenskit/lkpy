@@ -101,3 +101,13 @@ def test_collection_from_dict_singleton_field():
     assert k.user_id == 72  # type: ignore
     assert len(il) == 1
     assert np.all(il.ids() == ["a"])
+
+
+def test_lookup_projected():
+    ilc = ItemListCollection.from_dict({72: ItemList(["a"])}, key="user_id")
+
+    usk = _create_key(("user_id", "seq"), 72, 100)
+    il = ilc.lookup_projected(usk)
+    assert il is not None
+    assert len(il) == 1
+    assert np.all(il.ids() == ["a"])

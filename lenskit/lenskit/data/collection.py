@@ -140,10 +140,10 @@ class ItemListCollection(Generic[K]):
             self._index[key] = len(self._lists) - 1
 
     @overload
-    def lookup(self, key: tuple) -> ItemList: ...
+    def lookup(self, key: tuple) -> ItemList | None: ...
     @overload
-    def lookup(self, *key: ID, **kwkey: ID) -> ItemList: ...
-    def lookup(self, *args, **kwargs) -> ItemList:
+    def lookup(self, *key: ID, **kwkey: ID) -> ItemList | None: ...
+    def lookup(self, *args, **kwargs) -> ItemList | None:
         """
         Look up a list by key.  If multiple lists have the same key, this
         returns the **last** (like a dictionary).
@@ -164,7 +164,28 @@ class ItemListCollection(Generic[K]):
         else:
             key = args[0]
 
-        return self._lists[self._index[key]][1]  # type: ignore
+        try:
+            return self._lists[self._index[key]][1]  # type: ignore
+        except KeyError:
+            return None
+
+    def lookup_projected(self, key: tuple) -> ItemList | None:
+        """
+        Look up an item list using a *projected* key.  A projected key is a key
+        that may have additional fields beyond those defined by this collection,
+        that are ignored for the purposes of lookup.
+
+        Args:
+            key:
+                The key.  Must be a named tuple (e.g. a key obtained from
+                another item list collection).
+
+        Returns:
+            The item list with the specified key, projected to this collection's
+            key fields, or ``None`` if no such list exists.
+        """
+        kp = project_key(key, self._key_class)
+        return self.lookup(kp)
 
     def __len__(self):
         return len(self._lists)
@@ -211,6 +232,9 @@ def project_key(key: tuple, target: type[K]) -> K:
     such as using a key consisting of a user ID and a sequence number to look up
     test data in a collection keyed only by user ID.
     """
+
+    if isinstance(key, target):
+        return key
 
     try:
         return target._make(getattr(key, f) for f in target._fields)  # type: ignore
