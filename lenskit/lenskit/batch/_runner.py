@@ -150,7 +150,7 @@ def _run_pipeline(
 
     _log.debug("running pipeline %s for user %s", pipeline.name, user)
     for inv in invocations:
-        inputs = {}
+        inputs: dict[str, Any] = {"query": user}
         match inv.items:
             case "test-items":
                 inputs["items"] = test_items
