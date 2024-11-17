@@ -133,7 +133,13 @@ class ItemList:
         item_nums: NDArray[np.int32] | pd.Series[int] | Sequence[int] | ArrayLike | None = None,
         vocabulary: Vocabulary | None = None,
         ordered: bool | None = None,
-        scores: NDArray[np.generic] | torch.Tensor | ArrayLike | Literal[False] | None = None,
+        scores: NDArray[np.generic]
+        | torch.Tensor
+        | ArrayLike
+        | Literal[False]
+        | np.floating
+        | float
+        | None = None,
         **fields: NDArray[np.generic] | torch.Tensor | ArrayLike | Literal[False],
     ):
         if isinstance(source, ItemList):
@@ -208,6 +214,8 @@ class ItemList:
         elif scores is not None:
             if "score" in fields:  # pragma: nocover
                 raise ValueError("cannot specify both scores= and score=")
+            if np.isscalar(scores):
+                scores = np.full(self._len, scores)
             self._fields["score"] = MTArray(scores)
 
     @classmethod
