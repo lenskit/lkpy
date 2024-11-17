@@ -45,6 +45,7 @@ __all__ = [
     "PipelineConfig",
     "Lazy",
     "Component",
+    "RecPipelineBuilder",
     "topn_pipeline",
 ]
 
@@ -777,4 +778,4 @@ class Pipeline:
 
 
 # remaining re-exports
-from .common import topn_pipeline  # type: ignore # noqa: E402
+from .common import RecPipelineBuilder, topn_pipeline  # type: ignore # noqa: E402
