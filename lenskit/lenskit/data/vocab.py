@@ -17,6 +17,8 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike, NDArray
 
+from .types import ID, IDArray, IDSequence
+
 
 class Vocabulary:
     """
@@ -38,7 +40,9 @@ class Vocabulary:
     _index: pd.Index
 
     def __init__(
-        self, keys: pd.Index | ArrayLike | Iterable[Hashable] | None = None, name: str | None = None
+        self,
+        keys: IDSequence | pd.Index | Iterable[ID] | None = None,
+        name: str | None = None,
     ):
         self.name = name
         if keys is None:
@@ -49,7 +53,7 @@ class Vocabulary:
         elif isinstance(keys, np.ndarray) or isinstance(keys, list) or isinstance(keys, pd.Series):
             keys = pd.Index(np.unique(keys))  # type: ignore
         else:
-            keys = pd.Index(np.unique(list(set(keys))))  # type: ignore
+            keys = pd.Index(set(keys))  # type: ignore
 
         self._index = keys.rename(name) if name is not None else keys
 
@@ -98,9 +102,7 @@ class Vocabulary:
             raise IndexError("negative numbers not supported")
         return self._index[num]
 
-    def terms(
-        self, nums: list[int] | NDArray[np.integer] | pd.Series | None = None
-    ) -> NDArray[np.generic]:
+    def terms(self, nums: list[int] | NDArray[np.integer] | pd.Series | None = None) -> IDArray:
         """
         Get a list of terms, optionally for an array of term numbers.
 
@@ -125,9 +127,7 @@ class Vocabulary:
         "Alias for :meth:`term`  for greater readability for entity ID vocabularies."
         return self.term(num)
 
-    def ids(
-        self, nums: list[int] | NDArray[np.integer] | pd.Series | None = None
-    ) -> NDArray[np.generic]:
+    def ids(self, nums: list[int] | NDArray[np.integer] | pd.Series | None = None) -> IDArray:
         "Alias for :meth:`terms` for greater readability for entity ID vocabularies."
         return self.terms(nums)
 

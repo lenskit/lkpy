@@ -27,7 +27,7 @@ from typing_extensions import (
 
 from .checks import check_1d
 from .mtarray import MTArray, MTGenericArray
-from .types import NPID, IDArray, IDSequence
+from .types import IDArray, IDSequence
 from .vocab import Vocabulary
 
 Backend: TypeAlias = Literal["numpy", "torch"]
@@ -289,7 +289,7 @@ class ItemList:
         "Get the item list's vocabulary, if available."
         return self._vocab
 
-    def ids(self) -> NDArray[NPID]:
+    def ids(self) -> IDArray:
         """
         Get the item IDs.
 
@@ -303,7 +303,7 @@ class ItemList:
             if self._vocab is None:
                 raise RuntimeError("item IDs not available (no IDs or vocabulary provided)")
             assert self._numbers is not None
-            self._ids = cast(NDArray[NPID], self._vocab.ids(self._numbers.numpy()))
+            self._ids = self._vocab.ids(self._numbers.numpy())
 
         return self._ids
 
