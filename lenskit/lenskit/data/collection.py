@@ -3,17 +3,19 @@ from __future__ import annotations
 import warnings
 from collections import namedtuple
 from collections.abc import Sequence
-from typing import Any, Generic, Mapping, NamedTuple, TypeAlias, TypeVar, overload
+from typing import Any, Generic, Iterator, Mapping, NamedTuple, TypeAlias, TypeVar, overload
+
+import pandas as pd
 
 from lenskit.diagnostics import DataWarning
 
 from .items import ItemList
-from .types import ID
+from .schemas import column_name, normalize_columns
+from .types import ID, Column
 
 K = TypeVar("K", bound=tuple)
 KeySchema: TypeAlias = type[K] | tuple[str, ...]
 GenericKey: TypeAlias = tuple[ID, ...]
-KEY_CACHE: dict[tuple[str, ...], type[tuple]] = {}
 
 
 class UserIDKey(NamedTuple):
@@ -24,6 +26,9 @@ class UserIDKey(NamedTuple):
     """
 
     user_id: ID
+
+
+KEY_CACHE: dict[tuple[str, ...], type[tuple]] = {("user_id",): UserIDKey}
 
 
 class ItemListCollection(Generic[K]):
@@ -122,6 +127,53 @@ class ItemListCollection(Generic[K]):
 
         return ilc
 
+    @classmethod
+    def from_df(cls, df: pd.DataFrame, key: type[K] | Sequence[Column] | Column, *others: Column):
+        """
+        Create an item list collection from a data frame.
+
+        Args:
+            df:
+                The data frame to convert.
+            key:
+                The key type or field(s).  Can be specified as a single column
+                name (or :class:`~lenskit.data.types.AliasedColumn`).
+            others:
+                Other columns to consider; primarily used to pass additional
+                aliased columns to normalize other clumnes like the item ID.
+        """
+        if isinstance(key, type):
+            fields = _key_fields(key)
+            columns = fields + others
+        else:
+            if isinstance(key, Column):
+                key = [key]
+            columns = list(key) + others  # type: ignore
+            fields = [column_name(c) for c in key]
+            key = _create_key_type(*fields)  # type: ignore
+
+        df = normalize_columns(df, *columns)
+        ilc = cls(key)  # type: ignore
+        for k, gdf in df.groupby(list(fields)):
+            ilc.add(ItemList.from_df(gdf), *k)
+
+        return ilc
+
+    def to_df(self) -> pd.DataFrame:
+        """
+        Convert this item list collection to a data frame.
+        """
+        fields = self._key_class._fields  # type: ignore
+        return (
+            pd.concat({k: il.to_df(numbers=False) for (k, il) in self._lists}, names=fields)
+            .reset_index(fields)
+            .reset_index(drop=True)
+        )
+
+    @property
+    def key_fields(self) -> tuple[str]:
+        return _key_fields(self._key_class)
+
     def add(self, list, *fields: ID):
         key = self._key_class(*fields)  # type: ignore
         self._lists.append((key, list))
@@ -176,6 +228,14 @@ class ItemListCollection(Generic[K]):
         kp = project_key(key, self._key_class)
         return self.lookup(kp)
 
+    def lists(self) -> Iterator[ItemList]:
+        "Iterate over item lists without keys."
+        return (il for (_k, il) in self._lists)
+
+    def keys(self) -> Iterator[K]:
+        "Iterate over keys."
+        return (k for (k, _il) in self._lists)
+
     def __len__(self):
         return len(self._lists)
 
@@ -184,6 +244,11 @@ class ItemListCollection(Generic[K]):
 
     def __getitem__(self, key: int) -> tuple[K, ItemList]:
         return self._lists[key]
+
+
+def _key_fields(kt: type[tuple]) -> tuple[str]:
+    "extract the fields from a key type"
+    return kt.fields  # type: ignore
 
 
 @overload
