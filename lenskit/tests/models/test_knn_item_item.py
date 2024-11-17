@@ -422,7 +422,6 @@ def test_ii_batch_accuracy(ml_100k):
 
     preds = dict_to_df(preds)
     test = dict_to_df(test)
-    preds = preds.join(test.set_index(["user_id", "item_id"])["rating"], on=["user_id", "item_id"])
 
     mae = call_metric(MAE, preds)
     assert mae == approx(0.70, abs=0.025)
