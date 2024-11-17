@@ -461,9 +461,9 @@ class ItemList:
         * all other defined fields, using their field names
         """
         cols = {}
-        if ids and self._ids is not None or self._vocab is not None:
+        if ids and (self._ids is not None or self._vocab is not None):
             cols["item_id"] = self.ids()
-        if numbers and self._numbers is not None or self._vocab is not None:
+        if numbers and (self._numbers is not None or self._vocab is not None):
             cols["item_num"] = self.numbers()
         # we need to have numbers or ids, or it makes no sense
         if "item_id" not in cols and "item_num" not in cols:
