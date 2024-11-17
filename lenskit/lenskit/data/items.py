@@ -222,7 +222,7 @@ class ItemList:
 
     @classmethod
     def from_df(
-        cls, df: pd.DataFrame, *, vocabulary=Vocabulary, keep_user: bool = False
+        cls, df: pd.DataFrame, *, vocabulary: Vocabulary | None = None, keep_user: bool = False
     ) -> ItemList:
         """
         Create a item list from a Pandas data frame.  The frame should have
@@ -264,7 +264,7 @@ class ItemList:
         items = cls(
             item_ids=ids,  # type: ignore
             item_nums=nums,  # type: ignore
-            vocabulary=vocabulary,  # type: ignore
+            vocabulary=vocabulary,
             ordered=ranks is not None,
             **fields,  # type: ignore
         )
