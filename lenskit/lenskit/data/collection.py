@@ -12,6 +12,7 @@ from .types import ID
 
 K = TypeVar("K", bound=tuple)
 KeySchema: TypeAlias = type[K] | tuple[str, ...]
+GenericKey: TypeAlias = tuple[ID, ...]
 KEY_CACHE: dict[tuple[str, ...], type[tuple]] = {}
 
 
@@ -23,18 +24,6 @@ class UserIDKey(NamedTuple):
     """
 
     user_id: ID
-
-
-class GenericKey(tuple):
-    """
-    A generic key.
-    """
-
-    _fields: tuple[str, ...]
-
-    def __init__(self, *values, fields: tuple[str, ...]):
-        super().__init__(*values)
-        self._fields = fields
 
 
 class ItemListCollection(Generic[K]):
@@ -94,17 +83,17 @@ class ItemListCollection(Generic[K]):
     @overload
     @classmethod
     def from_dict(
-        cls, data: Mapping[tuple[ID, ...] | ID, ItemList], key: type[K]
+        cls, data: Mapping[GenericKey | ID, ItemList], key: type[K]
     ) -> ItemListCollection[K]: ...
     @overload
     @classmethod
     def from_dict(
-        cls, data: Mapping[tuple[ID, ...] | ID, ItemList], key: Sequence[str] | str | None = None
-    ) -> ItemListCollection[tuple[ID, ...]]: ...
+        cls, data: Mapping[GenericKey | ID, ItemList], key: Sequence[str] | str | None = None
+    ) -> ItemListCollection[GenericKey]: ...
     @classmethod
     def from_dict(
         cls,
-        data: Mapping[tuple[ID, ...] | ID, ItemList],
+        data: Mapping[GenericKey | ID, ItemList],
         key: type[K] | Sequence[str] | str | None = None,
     ) -> ItemListCollection[Any]:
         """
@@ -197,7 +186,11 @@ class ItemListCollection(Generic[K]):
         return self._lists[key]
 
 
-def _create_key(kt: KeySchema[K], *values: ID) -> K:
+@overload
+def _create_key(kt: type[K], *values: ID) -> K: ...
+@overload
+def _create_key(kt: Sequence[str], *values: ID) -> GenericKey: ...
+def _create_key(kt: type[K] | Sequence[str], *values: ID) -> tuple[Any, ...]:
     if isinstance(kt, type):
         return kt(*values)  # type: ignore
     else:
@@ -205,7 +198,7 @@ def _create_key(kt: KeySchema[K], *values: ID) -> K:
         return kt(*values)  # type: ignore
 
 
-def _create_key_type(*fields: str) -> type[tuple[ID, ...]]:
+def _create_key_type(*fields: str) -> type[GenericKey]:
     """
     Create a new key
     """
