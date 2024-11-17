@@ -67,10 +67,10 @@ class BiasScorer(Component):
     mean_: float
     "The global mean rating."
     items_: Vocabulary | None = None
-    item_offsets_: np.ndarray[int, np.dtype[np.float64]] | None
+    item_biases_: np.ndarray[int, np.dtype[np.float64]] | None
     "The item offsets (:math:`b_i` values)."
     users_: Vocabulary | None = None
-    user_offsets_: np.ndarray[int, np.dtype[np.float64]] | None
+    user_biases_: np.ndarray[int, np.dtype[np.float64]] | None
     "The user offsets (:math:`b_u` values)."
 
     def __init__(
@@ -121,11 +121,11 @@ class BiasScorer(Component):
             np.divide(sums, counts, out=i_bias, where=counts > 0)
 
             self.items_ = data.items.copy()
-            self.item_offsets_ = i_bias
+            self.item_biases_ = i_bias
             centered -= i_bias[ratings.col]
-            _logger.info("computed biases for %d items", len(self.item_offsets_))
+            _logger.info("computed biases for %d items", len(self.item_biases_))
         else:
-            self.item_offsets_ = None
+            self.item_biases_ = None
 
         if self.users:
             counts = np.full(nrows, self.damping.user)
@@ -137,10 +137,10 @@ class BiasScorer(Component):
             np.divide(sums, counts, out=u_bias, where=counts > 0)
 
             self.users_ = data.users.copy()
-            self.user_offsets_ = u_bias
-            _logger.info("computed biases for %d users", len(self.user_offsets_))
+            self.user_biases_ = u_bias
+            _logger.info("computed biases for %d users", len(self.user_biases_))
         else:
-            self.user_offsets_ = None
+            self.user_biases_ = None
 
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         """
@@ -160,11 +160,11 @@ class BiasScorer(Component):
         query = RecQuery.create(query)
         preds = np.full(len(items), self.mean_)
 
-        if self.item_offsets_ is not None:
+        if self.item_biases_ is not None:
             assert self.items_ is not None
             idxes = items.numbers(vocabulary=self.items_, missing="negative")
             mask = idxes >= 0
-            preds[mask] += self.item_offsets_[idxes[mask]]
+            preds[mask] += self.item_biases_[idxes[mask]]
 
         ratings = query.user_items.field("rating") if query.user_items is not None else None
 
@@ -172,19 +172,19 @@ class BiasScorer(Component):
             assert query.user_items is not None  # only way we can be here
 
             uoff = ratings - self.mean_
-            if self.item_offsets_ is not None:
+            if self.item_biases_ is not None:
                 idxes = query.user_items.numbers(vocabulary=self.items_, missing="negative")
                 found = idxes >= 0
-                uoff[found] -= self.item_offsets_[idxes[found]]
+                uoff[found] -= self.item_biases_[idxes[found]]
 
             umean = uoff.mean()
             preds = preds + umean
 
-        elif query.user_id is not None and self.user_offsets_ is not None:
+        elif query.user_id is not None and self.user_biases_ is not None:
             assert self.users_ is not None
             uno = self.users_.number(query.user_id, missing="none")
             if uno is not None:
-                umean = self.user_offsets_[uno]
+                umean = self.user_biases_[uno]
                 _logger.debug("using mean(user %s) = %.3f", query.user_id, umean)
                 preds += umean
 
