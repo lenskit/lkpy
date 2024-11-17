@@ -80,8 +80,8 @@ def test_bias_clone():
     a2 = BiasScorer.from_config(params)
     assert a2 is not bias
     assert getattr(a2, "mean_", None) is None
-    assert getattr(a2, "item_offsets_", None) is None
-    assert getattr(a2, "user_offsets_", None) is None
+    assert getattr(a2, "item_biases_", None) is None
+    assert getattr(a2, "user_biases_", None) is None
 
 
 def test_bias_clone_damping():
@@ -96,8 +96,8 @@ def test_bias_clone_damping():
     assert a2.damping.user == 10
     assert a2.damping.item == 5
     assert getattr(a2, "mean_", None) is None
-    assert getattr(a2, "item_offsets_", None) is None
-    assert getattr(a2, "user_offsets_", None) is None
+    assert getattr(a2, "item_biases_", None) is None
+    assert getattr(a2, "user_biases_", None) is None
 
 
 def test_bias_global_only():
@@ -294,11 +294,11 @@ def test_bias_save():
 
     assert copy.mean_ == original.mean_
 
-    assert copy.item_offsets_ is not None
-    assert copy.item_offsets_ == approx(np.array([0, 0.25, -0.25]))
+    assert copy.item_biases_ is not None
+    assert copy.item_biases_ == approx(np.array([0, 0.25, -0.25]))
 
-    assert copy.user_offsets_ is not None
-    assert copy.user_offsets_ == approx(np.array([0.25, -00.08333, -0.20833]), abs=1.0e-4)
+    assert copy.user_biases_ is not None
+    assert copy.user_biases_ == approx(np.array([0.25, -00.08333, -0.20833]), abs=1.0e-4)
 
 
 def test_bias_pipeline(ml_ds: Dataset):
