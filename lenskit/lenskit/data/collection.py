@@ -187,8 +187,15 @@ class ItemListCollection(Generic[K]):
         """
         return self._key_class
 
-    def add(self, list, *fields: ID):
+    def add(self, list: ItemList, *fields: ID):
         key = self._key_class(*fields)  # type: ignore
+        self._add(key, list)
+
+    def add_from(self, other: ItemListCollection):
+        for key, list in other:
+            self._add(key, list)
+
+    def _add(self, key: K, list: ItemList):
         self._lists.append((key, list))
         if self._index is not None:
             self._index[key] = len(self._lists) - 1
