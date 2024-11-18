@@ -7,7 +7,7 @@ from lenskit.data.schemas import ITEM_COMPAT_COLUMN, USER_COMPAT_COLUMN
 from lenskit.metrics.basic import ListLength
 from lenskit.metrics.bulk import RunAnalysis
 from lenskit.metrics.predict import RMSE
-from lenskit.metrics.ranking import NDCG, Precision
+from lenskit.metrics.ranking import NDCG, RBP, Precision, RecipRank
 from lenskit.util.test import demo_recs, ml_ratings
 
 
@@ -34,11 +34,13 @@ def test_recs(demo_recs):
     bms.add_metric(ListLength())
     bms.add_metric(Precision())
     bms.add_metric(NDCG())
+    bms.add_metric(RBP)
+    bms.add_metric(RecipRank)
 
     recs = ItemListCollection.from_df(recs, USER_COMPAT_COLUMN, ITEM_COMPAT_COLUMN)
     test = ItemListCollection.from_df(test, USER_COMPAT_COLUMN, ITEM_COMPAT_COLUMN)
     metrics = bms.compute(recs, test)
-    scores = metrics.list_scores()
+    scores = metrics.list_metrics()
     stats = metrics.list_summary()
     print(stats)
     for m in bms.metrics:

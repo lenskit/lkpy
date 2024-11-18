@@ -429,7 +429,7 @@ def test_ii_batch_accuracy(ml_100k):
     pra.add_metric(RMSE())
 
     evres = pra.compute(preds, test)
-    metrics = evres.list_scores(fill_missing=False)
+    metrics = evres.list_metrics(fill_missing=False)
     assert not np.any(np.isnan(metrics["RMSE"]))
     assert metrics["RMSE"].mean() == approx(0.90, abs=0.05)
 

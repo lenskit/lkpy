@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TypeVar
+from typing import Callable, TypeVar
 
 import numpy as np
 import pandas as pd
 from progress_api import make_progress
 
-from lenskit.data import ItemListCollection
+from lenskit.data import ItemList, ItemListCollection
 
-from ._base import Metric, MetricFunction
+from ._base import GlobalMetric, ListMetric, Metric, MetricFunction
 
 _log = logging.getLogger(__name__)
 K1 = TypeVar("K1", bound=tuple)
@@ -25,8 +25,31 @@ class MetricWrapper:
 
     metric: Metric | MetricFunction
     label: str
-    mean_label: str
     default: float | None = None
+
+    @property
+    def is_listwise(self) -> bool:
+        "Check if this metric is listwise."
+        return isinstance(self.metric, (ListMetric, Callable))
+
+    @property
+    def is_global(self) -> bool:
+        "Check if this metric is global."
+        return isinstance(self, GlobalMetric)
+
+    def measure_list(self, list: ItemList, test: ItemList) -> float:
+        if isinstance(self.metric, ListMetric):
+            return self.metric.measure_list(list, test)
+        elif isinstance(self.metric, Callable):
+            return self.metric(list, test)
+        else:
+            raise TypeError(f"metric {self.metric} does not support list measurement")
+
+    def measure_run(self, run: ItemListCollection, test: ItemListCollection) -> float:
+        if isinstance(self.metric, GlobalMetric):
+            return self.metric.measure_run(run, test)
+        else:
+            raise TypeError(f"metric {self.metric} does not support global measurement")
 
 
 class RunAnalysisResult:
@@ -34,14 +57,24 @@ class RunAnalysisResult:
     Results of a bulk metric computation.
     """
 
-    _list_scores: pd.DataFrame
+    _list_metrics: pd.DataFrame
+    _global_metrics: pd.Series
     _defaults: dict[str, float]
 
-    def __init__(self, lscores: pd.DataFrame, defaults: dict[str, float]):
-        self._list_scores = lscores
+    def __init__(self, lmvs: pd.DataFrame, gmvs: pd.Series, defaults: dict[str, float]):
+        self._list_metrics = lmvs
+        self._global_metrics = gmvs
         self._defaults = defaults
 
-    def list_scores(self, *, fill_missing=True) -> pd.DataFrame:
+    def global_metrics(self) -> pd.Series:
+        """
+        Get the global metric scores.  This is only the results of
+        global metrics; it does not include aggregates of per-list metrics.  For
+        aggregates of per-list metrics, call :meth:`list_summary`.
+        """
+        return self._global_metrics
+
+    def list_metrics(self, *, fill_missing=True) -> pd.DataFrame:
         """
         Get the per-list scores of the results.  This is a data frame with one
         row per list (with the list / user ID in the index), and one metric per
@@ -54,7 +87,7 @@ class RunAnalysisResult:
                 want to do analyses that need to treat missing values
                 differently.
         """
-        return self._list_scores.fillna(self._defaults)
+        return self._list_metrics.fillna(self._defaults)
 
     def list_summary(self) -> pd.DataFrame:
         """
@@ -71,14 +104,13 @@ class RunAnalysisResult:
         Additional columns are added based on other options.  Missing metric
         values are filled with their defaults before computing statistics.
         """
-        scores = self.list_scores(fill_missing=True)
+        scores = self.list_metrics(fill_missing=True)
         return scores.agg(["mean", "median", "std"]).T
 
 
 def _wrap_metric(
     m: Metric | MetricFunction | type[Metric],
     label: str | None = None,
-    mean_label: str | None = None,
     default: float | None = None,
 ) -> MetricWrapper:
     if isinstance(m, type):
@@ -92,16 +124,8 @@ def _wrap_metric(
     else:
         wl = label
 
-    if mean_label is None:
-        if label is not None:
-            wml = label
-        elif isinstance(m, Metric):
-            wml = m.mean_label
-        else:
-            wml = wl
-
     if default is None:
-        if isinstance(m, Metric):
+        if isinstance(m, ListMetric):
             default = m.default
         else:
             default = 0.0
@@ -109,7 +133,7 @@ def _wrap_metric(
         if default is not None and not isinstance(default, (float, int, np.floating, np.integer)):
             raise TypeError(f"metric {m} has unsupported default {default}")
 
-    return MetricWrapper(m, wl, wml, default)  # type: ignore
+    return MetricWrapper(m, wl, default)  # type: ignore
 
 
 class RunAnalysis:
@@ -132,7 +156,6 @@ class RunAnalysis:
         self,
         metric: Metric | MetricFunction | type[Metric],
         label: str | None = None,
-        mean_label: str | None = None,
         default: float | None = None,
     ):
         """
@@ -144,24 +167,23 @@ class RunAnalysis:
             label:
                 The label to use for the metric's results.  If unset, obtains
                 from the metric.
-            mean_label:
-                The label to use for the overall aggregate (mean) of the
-                metric's results.  If unset, obtains from the metric.
             default:
                 The default value to use in aggregates when a user does not have
                 recommendations. If unset, obtains from the metric's ``default``
                 attribute (if specified), or 0.0.
         """
-        self.metrics.append(_wrap_metric(metric, label, mean_label, default))
+        self.metrics.append(_wrap_metric(metric, label, default))
 
     def compute(
         self, outputs: ItemListCollection[K1], test: ItemListCollection[K2]
     ) -> RunAnalysisResult:
         index = pd.MultiIndex.from_tuples(outputs.keys())
-        results = pd.DataFrame({m.label: np.nan for m in self.metrics}, index=index)
+        list_results = pd.DataFrame(
+            {m.label: np.nan for m in self.metrics if m.is_listwise}, index=index
+        )
 
         n = len(outputs)
-        _log.info("computing metrics for %d output lists", n)
+        _log.info("computing listwise metrics for %d output lists", n)
         with make_progress(_log, "lists", n) as pb:
             for i, (key, out) in enumerate(outputs):
                 list_test = test.lookup_projected(key)
@@ -170,9 +192,19 @@ class RunAnalysis:
                 elif list_test is None:
                     _log.warning("list %s: no test items", key)
                 else:
-                    results.iloc[i] = [m.metric(out, list_test) for m in self.metrics]
+                    list_results.iloc[i] = [
+                        m.measure_list(out, list_test) for m in self.metrics if m.is_listwise
+                    ]
                 pb.update()
 
+        _log.info("computing global metrics for %d output lists", n)
+        global_results = pd.Series(
+            {m.label: m.measure_run(outputs, test) for m in self.metrics if m.is_global},
+            dtype=np.float64,
+        )
+
         return RunAnalysisResult(
-            results, {m.label: m.default for m in self.metrics if m.default is not None}
+            list_results,
+            global_results,
+            {m.label: m.default for m in self.metrics if m.default is not None},
         )

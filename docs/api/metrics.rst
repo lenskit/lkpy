@@ -12,6 +12,8 @@ Base Interfaces
     :caption: Basic Interfaces
 
     ~lenskit.metrics.Metric
+    ~lenskit.metrics.ListMetric
+    ~lenskit.metrics.GlobalMetric
     ~lenskit.metrics.MetricFunction
     ~lenskit.metrics.RankingMetricBase
 
