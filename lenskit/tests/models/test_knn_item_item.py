@@ -420,10 +420,9 @@ def test_ii_batch_accuracy(ml_100k):
         recs.add_from(result.output("recommendations"))
         test.add_from(split.test)
 
-    preds = dict_to_df(preds)
-    test = dict_to_df(test)
+    pred_df = preds.to_df()
 
-    mae = call_metric(MAE, preds)
+    mae = call_metric(MAE, pred_df)
     assert mae == approx(0.70, abs=0.025)
 
     pra = RunAnalysis()
