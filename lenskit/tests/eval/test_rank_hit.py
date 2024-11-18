@@ -22,7 +22,7 @@ def _test_hit(items, rel, **kwargs) -> float:
     recs = ItemList(items, ordered=True)
     truth = ItemList(rel)
     metric = Hit(**kwargs)
-    return metric(recs, truth)
+    return metric.measure_list(recs, truth)
 
 
 def test_hit_empty_zero():

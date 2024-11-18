@@ -1,6 +1,8 @@
 from lenskit.data import ItemList
 
-from .._base import Metric
+from .._base import GlobalMetric, ListMetric, Metric
+
+__all__ = ["Metric", "ListMetric", "GlobalMetric", "RankingMetricBase"]
 
 
 class RankingMetricBase(Metric):

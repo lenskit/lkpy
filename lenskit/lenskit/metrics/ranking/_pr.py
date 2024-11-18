@@ -1,11 +1,13 @@
+from typing import override
+
 import numpy as np
 
 from lenskit.data.items import ItemList
 
-from ._base import RankingMetricBase
+from ._base import ListMetric, RankingMetricBase
 
 
-class Precision(RankingMetricBase):
+class Precision(ListMetric, RankingMetricBase):
     """
     Compute recommendation precision.  This is computed as:
 
@@ -23,7 +25,8 @@ class Precision(RankingMetricBase):
         else:
             return "Precision"
 
-    def __call__(self, recs: ItemList, test: ItemList) -> float:
+    @override
+    def measure_list(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)
         nrecs = len(recs)
         if nrecs == 0:
@@ -34,7 +37,7 @@ class Precision(RankingMetricBase):
         return ngood / nrecs
 
 
-class Recall(RankingMetricBase):
+class Recall(ListMetric, RankingMetricBase):
     """
     Compute recommendation recall.  This is computed as:
 
@@ -49,7 +52,8 @@ class Recall(RankingMetricBase):
         else:
             return "Recall"
 
-    def __call__(self, recs: ItemList, test: ItemList) -> float:
+    @override
+    def measure_list(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)
 
         items = recs.ids()

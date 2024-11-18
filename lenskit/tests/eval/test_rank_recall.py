@@ -21,7 +21,7 @@ _log = logging.getLogger(__name__)
 def _test_recall(items, rel, **kwargs):
     recs = ItemList(items, ordered=True)
     truth = ItemList(rel)
-    return Recall(**kwargs)(recs, truth)
+    return Recall(**kwargs).measure_list(recs, truth)
 
 
 def test_recall_empty_zero():

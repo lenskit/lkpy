@@ -1,11 +1,13 @@
+from typing import override
+
 import numpy as np
 
 from lenskit.data import ItemList
 
-from ._base import RankingMetricBase
+from ._base import ListMetric, RankingMetricBase
 
 
-class Hit(RankingMetricBase):
+class Hit(ListMetric, RankingMetricBase):
     """
     Compute whether or not a list is a hit; any list with at least one
     relevant item in the first :math:`k` positions (:math:`L_{\\le k} \\cap
@@ -21,14 +23,8 @@ class Hit(RankingMetricBase):
         else:
             return "Hit"
 
-    @property
-    def mean_label(self):
-        if self.k is not None:
-            return f"HitRate@{self.k}"
-        else:
-            return "HitRate"
-
-    def __call__(self, recs: ItemList, test: ItemList) -> float:
+    @override
+    def measure_list(self, recs: ItemList, test: ItemList) -> float:
         if len(test) == 0:
             return np.nan
 

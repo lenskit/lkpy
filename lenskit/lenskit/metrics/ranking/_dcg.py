@@ -1,16 +1,16 @@
-from typing import Callable, TypeAlias
+from typing import Callable, TypeAlias, override
 
 import numpy as np
 from numpy.typing import NDArray
 
 from lenskit.data import ItemList
 
-from ._base import RankingMetricBase
+from ._base import ListMetric, RankingMetricBase
 
 Discount: TypeAlias = Callable[[NDArray[np.number]], NDArray[np.float64]]
 
 
-class NDCG(RankingMetricBase):
+class NDCG(ListMetric, RankingMetricBase):
     """
     Compute the normalized discounted cumulative gain :cite:p:`ndcg`.
 
@@ -62,7 +62,8 @@ class NDCG(RankingMetricBase):
         else:
             return "NDCG"
 
-    def __call__(self, recs: ItemList, test: ItemList) -> float:
+    @override
+    def measure_list(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)
         items = recs.ids()
 

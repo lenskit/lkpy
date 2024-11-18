@@ -17,7 +17,7 @@ from lenskit.util.test import demo_recs  # noqa: F401
 def _test_prec(items, rel, **k):
     recs = ItemList(items, ordered=True)
     truth = ItemList(rel)
-    return Precision(**k)(recs, truth)
+    return Precision(**k).measure_list(recs, truth)
 
 
 def test_precision_empty_none():

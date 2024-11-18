@@ -1,11 +1,13 @@
+from typing import override
+
 import numpy as np
 
 from lenskit.data.items import ItemList
 
-from ._base import RankingMetricBase
+from ._base import ListMetric, RankingMetricBase
 
 
-class RBP(RankingMetricBase):
+class RBP(ListMetric, RankingMetricBase):
     """
     Evaluate recommendations with rank-biased precision :cite:p:`rbp` with a
     patience parameter :math:`\\gamma`.
@@ -52,7 +54,8 @@ class RBP(RankingMetricBase):
         else:
             return "RBP"
 
-    def __call__(self, recs: ItemList, test: ItemList) -> float:
+    @override
+    def measure_list(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)
         k = len(recs)
 

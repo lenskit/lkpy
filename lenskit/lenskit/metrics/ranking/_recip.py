@@ -1,11 +1,13 @@
+from typing import override
+
 import numpy as np
 
 from lenskit.data import ItemList
 
-from ._base import RankingMetricBase
+from ._base import ListMetric, RankingMetricBase
 
 
-class RecipRank(RankingMetricBase):
+class RecipRank(ListMetric, RankingMetricBase):
     """
     Compute the reciprocal rank :cite:p:`trec5-confusion` of the first relevant
     item in a list of recommendations.  Taking the mean of this metric over the
@@ -25,14 +27,8 @@ class RecipRank(RankingMetricBase):
         else:
             return "RecipRank"
 
-    @property
-    def mean_label(self):
-        if self.k is not None:
-            return f"MRR@{self.k}"
-        else:
-            return "MRR"
-
-    def __call__(self, recs: ItemList, test: ItemList) -> float:
+    @override
+    def measure_list(self, recs: ItemList, test: ItemList) -> float:
         if len(test) == 0:
             return np.nan
 

@@ -10,6 +10,7 @@ import pandas as pd
 from pytest import approx, mark
 
 from lenskit.data import ItemList
+from lenskit.metrics import call_metric
 from lenskit.metrics.ranking import NDCG
 from lenskit.metrics.ranking._dcg import array_dcg, fixed_dcg
 
@@ -68,26 +69,26 @@ def test_dcg_mult2():
 def test_ndcg_empty():
     recs = ItemList(ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
-    assert NDCG()(recs, truth) == approx(0.0)
+    assert call_metric(NDCG, recs, truth) == approx(0.0)
 
 
 def test_ndcg_no_match():
     recs = ItemList([4], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
-    assert NDCG()(recs, truth) == approx(0.0)
+    assert call_metric(NDCG, recs, truth) == approx(0.0)
 
 
 def test_ndcg_perfect():
     recs = ItemList([2, 3, 1], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
-    assert NDCG()(recs, truth) == approx(1.0)
+    assert call_metric(NDCG, recs, truth) == approx(1.0)
 
 
 def test_ndcg_perfect_k_short():
     recs = ItemList([2, 3, 1], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
-    assert NDCG(k=2)(recs, truth) == approx(1.0)
-    assert NDCG(k=2)(recs[:2], truth) == approx(1.0)
+    assert call_metric(NDCG, recs, truth, k=2) == approx(1.0)
+    assert call_metric(NDCG, recs[:2], truth, k=2) == approx(1.0)
 
 
 def test_ndcg_shorter_not_best():
@@ -95,26 +96,28 @@ def test_ndcg_shorter_not_best():
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
     b_ideal = fixed_dcg(3)
     r_ideal = array_dcg(np.array([5.0, 4.0, 3.0]))
-    assert NDCG()(recs, truth) == approx(fixed_dcg(2) / b_ideal)
-    assert NDCG(k=2)(recs, truth) == approx(1.0)
-    assert NDCG(gain="rating")(recs, truth) == approx(array_dcg(np.array([3.0, 5.0])) / r_ideal)
+    assert call_metric(NDCG, recs, truth) == approx(fixed_dcg(2) / b_ideal)
+    assert call_metric(NDCG, recs, truth, k=2) == approx(1.0)
+    assert call_metric(NDCG, recs, truth, gain="rating") == approx(
+        array_dcg(np.array([3.0, 5.0])) / r_ideal
+    )
 
 
 def test_ndcg_perfect_k():
     recs = ItemList([2, 3], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
-    assert NDCG(k=2)(recs, truth) == approx(1.0)
+    assert call_metric(NDCG, recs, truth, k=2) == approx(1.0)
 
 
 def test_ndcg_perfect_k_norate():
     recs = ItemList([1, 3], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
-    assert NDCG(k=2)(recs, truth) == approx(1.0)
+    assert call_metric(NDCG, recs, truth, k=2) == approx(1.0)
 
 
 def test_ndcg_almost_perfect_k_gain():
     recs = ItemList([1, 3], ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])
-    assert NDCG(k=2, gain="rating")(recs, truth) == approx(
+    assert call_metric(NDCG, recs, truth, k=2, gain="rating") == approx(
         array_dcg(np.array([3.0, 4.0])) / array_dcg(np.array([5.0, 4.0]))
     )
