@@ -438,7 +438,7 @@ def test_ii_batch_accuracy(ml_100k):
     rra.add_metric(RBP())
 
     evres = rra.compute(preds, test)
-    summary = evres.summary()
+    summary = evres.list_summary()
     assert summary.loc["RecipRank", "mean"] > 0
     assert summary.loc["RBP", "mean"] > 0
 

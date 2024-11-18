@@ -114,7 +114,7 @@ def test_batch_rmse(ml_100k):
     metrics = pa.compute(preds, split.test)
 
     umdf = metrics.list_scores(fill_missing=False)
-    mdf = metrics.summary()
+    mdf = metrics.list_summary()
 
     # we should have all users
     assert len(umdf) == len(split.test)

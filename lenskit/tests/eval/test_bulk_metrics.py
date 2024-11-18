@@ -22,7 +22,7 @@ def test_bulk_measure_function(ml_ratings: pd.DataFrame):
     truth = ItemListCollection.from_df(ml_ratings, USER_COMPAT_COLUMN, ITEM_COMPAT_COLUMN)
 
     metrics = bms.compute(data, truth)
-    stats = metrics.summary()
+    stats = metrics.list_summary()
     assert stats.loc["length", "mean"] == approx(ml_ratings["user"].value_counts().mean())
     assert stats.loc["RMSE", "mean"] == approx(0)
 
@@ -39,7 +39,7 @@ def test_recs(demo_recs):
     test = ItemListCollection.from_df(test, USER_COMPAT_COLUMN, ITEM_COMPAT_COLUMN)
     metrics = bms.compute(recs, test)
     scores = metrics.list_scores()
-    stats = metrics.summary()
+    stats = metrics.list_summary()
     print(stats)
     for m in bms.metrics:
         assert stats.loc[m.label, "mean"] == approx(scores[m.label].mean())

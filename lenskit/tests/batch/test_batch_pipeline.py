@@ -102,7 +102,7 @@ def test_bias_batch(ml_split: TTSplit, ncpus: int | None):
     pa = RunAnalysis()
     pa.add_metric(RMSE())
     pred_acc = pa.compute(preds, ml_split.test)
-    pas = pred_acc.summary()
+    pas = pred_acc.list_summary()
     print(pas)
     assert pas.loc["RMSE", "mean"] == approx(0.949, rel=0.1)
 
@@ -111,7 +111,7 @@ def test_bias_batch(ml_split: TTSplit, ncpus: int | None):
     ra.add_metric(NDCG())
     ra.add_metric(RBP())
     rec_acc = ra.compute(recs, ml_split.test)
-    ras = rec_acc.summary()
+    ras = rec_acc.list_summary()
     print(ras)
 
     assert ras.loc["RBP", "mean"] > 0
@@ -135,7 +135,7 @@ def test_pop_batch_recommend(ml_split: TTSplit, ncpus: int | None):
     ra.add_metric(NDCG())
     ra.add_metric(RBP())
     rec_acc = ra.compute(recs, ml_split.test)
-    ras = rec_acc.summary()
+    ras = rec_acc.list_summary()
     print(ras)
 
     assert ras.loc["RBP", "mean"] > 0

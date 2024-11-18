@@ -56,7 +56,7 @@ class RunAnalysisResult:
         """
         return self._list_scores.fillna(self._defaults)
 
-    def summary(self) -> pd.DataFrame:
+    def list_summary(self) -> pd.DataFrame:
         """
         Sumamry statistics for the per-list metrics.  Each metric is on its own
         row, with columns reporting the following:
