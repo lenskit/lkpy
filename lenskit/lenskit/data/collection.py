@@ -132,6 +132,11 @@ class ItemListCollection(Generic[K]):
         """
         Create an item list collection from a data frame.
 
+        .. note::
+
+            Keys with empty item lists will be silently excluded from the output
+            data.
+
         Args:
             df:
                 The data frame to convert.
@@ -172,7 +177,15 @@ class ItemListCollection(Generic[K]):
 
     @property
     def key_fields(self) -> tuple[str]:
+        "The names of the key fields."
         return _key_fields(self._key_class)
+
+    @property
+    def key_type(self) -> type[K]:
+        """
+        The type of collection keys.
+        """
+        return self._key_class
 
     def add(self, list, *fields: ID):
         key = self._key_class(*fields)  # type: ignore
