@@ -10,7 +10,7 @@ import pandas as pd
 from pytest import approx, mark, raises
 
 from lenskit.data import ItemList, from_interactions_df
-from lenskit.metrics import call_metric
+from lenskit.metrics import RunAnalysis, call_metric
 from lenskit.metrics.predict import MAE, RMSE, measure_user_predictions
 
 
@@ -92,31 +92,42 @@ def test_mae_two():
 @mark.slow
 @mark.eval
 def test_batch_rmse(ml_100k):
-    import lenskit.algorithms.bias as bs
-    import lenskit.batch as batch
-    import lenskit.crossfold as xf
+    from lenskit.basic import BiasScorer
+    from lenskit.batch import predict
+    from lenskit.pipeline import topn_pipeline
+    from lenskit.splitting import SampleN, sample_users
 
-    algo = bs.Bias(damping=5)
+    ds = from_interactions_df(ml_100k)
 
-    def eval(train, test):
-        algo.fit(from_interactions_df(train))
-        preds = batch.predict(algo, test, n_jobs=1)
-        return preds.set_index(["user", "item"])
+    bias = BiasScorer(damping=5)
+    pipe = topn_pipeline(bias, predicts_ratings=True)
 
-    results = pd.concat(
-        (eval(train, test) for (train, test) in xf.partition_users(ml_100k, 5, xf.SampleN(5)))
-    )
+    split = sample_users(ds, 5, SampleN(5))
+    pipe.train(split.train)
 
-    user_rmse = measure_user_predictions(results, RMSE)
+    preds = predict(pipe, split.test, n_jobs=1)
+
+    pa = RunAnalysis()
+    pa.add_metric(RMSE())
+    pa.add_metric(MAE())
+
+    metrics = pa.compute(preds, split.test)
+
+    umdf = metrics.list_scores(fill_missing=False)
+    mdf = metrics.summary()
 
     # we should have all users
-    users = ml_100k.user.unique()
-    assert len(user_rmse) == len(users)
-    missing = np.setdiff1d(users, user_rmse.index)
+    assert len(umdf) == len(split.test)
+    missing = set(umdf.index.tolist()) - set(split.test.keys())
     assert len(missing) == 0
 
     # we should not have any missing values
-    assert all(user_rmse.notna())
+    assert all(umdf["RMSE"].notna())
+    assert all(umdf["MAE"].notna())
 
     # we should have a reasonable mean
-    assert user_rmse.mean() == approx(0.93, abs=0.05)
+    assert umdf["RMSE"].mean() == approx(0.93, abs=0.05)
+    assert mdf.loc["RMSE", "mean"] == approx(0.93, abs=0.05)
+
+    assert umdf["MAE"].mean() == approx(0.76, abs=0.05)
+    assert mdf.loc["MAE", "mean"] == approx(0.76, abs=0.05)
