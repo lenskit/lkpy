@@ -1,5 +1,5 @@
-Data Management
-===============
+Datasets
+========
 
 .. py:currentmodule:: lenskit.data
 
@@ -70,7 +70,8 @@ Users and items have two identifiers:
 * The *identifier* as presented in the original source table(s).  It appears in
   LensKit data frames as ``user_id`` and ``item_id`` columns.  Identifiers can
   be integers, strings, or byte arrays, and are represented in LensKit by the
-  :data:`~lenskit.data.EntityId` type.
+  :data:`~lenskit.data.ID` type.
+
 * The *number* assigned by the dataset handling code.  This is a 0-based
   contiguous user or item number that is suitable for indexing into arrays or
   matrices, a common operation in recommendation models.  In data frames, this

@@ -17,6 +17,7 @@ guide to how to use LensKit for research, education, and other purposes.
     :maxdepth: 1
 
     data
+    item-lists
     pipeline
 
 .. toctree::

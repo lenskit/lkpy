@@ -18,3 +18,5 @@ unpickle
 rerankers
 LKPY
 FunkSVD
+RecSys
+PyArrow
