@@ -9,6 +9,7 @@ Data abstractions and data set access.
 
 from __future__ import annotations
 
+from .collection import ItemListCollection, UserIDKey
 from .convert import from_interactions_df
 from .dataset import Dataset, FieldError
 from .items import ItemList
@@ -27,6 +28,8 @@ __all__ = [
     "UITuple",
     "FeedbackType",
     "ItemList",
+    "ItemListCollection",
+    "UserIDKey",
     "load_movielens",
     "load_movielens_df",
     "MTArray",
