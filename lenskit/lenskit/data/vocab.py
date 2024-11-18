@@ -53,7 +53,7 @@ class Vocabulary:
         elif isinstance(keys, np.ndarray) or isinstance(keys, list) or isinstance(keys, pd.Series):
             keys = pd.Index(np.unique(keys))  # type: ignore
         else:
-            keys = pd.Index(set(keys))  # type: ignore
+            keys = pd.Index(sorted(set(keys)))  # type: ignore
 
         self._index = keys.rename(name) if name is not None else keys
 
