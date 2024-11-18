@@ -110,6 +110,7 @@ todo_include_todos = True
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "pandas": ("http://pandas.pydata.org/pandas-docs/stable/", None),
+    "pyarrow": ("https://arrow.apache.org/docs/python/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/", None),
     "sklearn": ("https://scikit-learn.org/stable/", None),
