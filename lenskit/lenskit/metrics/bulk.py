@@ -2,19 +2,16 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Mapping, TypeAlias
 
 import numpy as np
 import pandas as pd
 from progress_api import make_progress
 
-from lenskit.data import ID, ItemList
-from lenskit.data.bulk import count_item_lists, dict_from_df, iter_item_lists
+from lenskit.data import GenericKey, ItemListCollection
 
 from ._base import Metric, MetricFunction
 
 _log = logging.getLogger(__name__)
-ILSet: TypeAlias = Mapping[ID, ItemList | None] | pd.DataFrame
 
 
 @dataclass(frozen=True)
@@ -154,28 +151,25 @@ class RunAnalysis:
         """
         self.metrics.append(_wrap_metric(metric, label, mean_label, default))
 
-    def compute(self, outputs: ILSet, test: ILSet) -> RunAnalysisResult:
-        if isinstance(test, pd.DataFrame):
-            test = dict_from_df(test)
+    def compute(
+        self, outputs: ItemListCollection[GenericKey], test: ItemListCollection[GenericKey]
+    ) -> RunAnalysisResult:
+        index = pd.MultiIndex.from_tuples(outputs.keys())
+        results = pd.DataFrame({m.label: np.nan for m in self.metrics}, index=index)
 
-        columns = [m.label for m in self.metrics]
-        empty = np.full(len(columns), np.nan)
-        records = {}
-
-        n = count_item_lists(outputs)
+        n = len(outputs)
         _log.info("computing metrics for %d output lists", n)
         with make_progress(_log, "lists", n) as pb:
-            for uid, out in iter_item_lists(outputs):
-                list_test = test[uid]
+            for i, (key, out) in enumerate(outputs):
+                list_test = test.lookup_projected(key)
                 if out is None:
-                    records[uid] = empty
+                    pass
                 elif list_test is None:
-                    _log.warning("list %s: no test items", uid)
+                    _log.warning("list %s: no test items", key)
                 else:
-                    records[uid] = np.array([m.metric(out, list_test) for m in self.metrics])
+                    results.iloc[i] = [m.metric(out, list_test) for m in self.metrics]
                 pb.update()
 
-        df = pd.DataFrame.from_dict(records, orient="index", columns=columns)
         return RunAnalysisResult(
-            df, {m.label: m.default for m in self.metrics if m.default is not None}
+            results, {m.label: m.default for m in self.metrics if m.default is not None}
         )
