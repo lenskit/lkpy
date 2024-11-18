@@ -9,10 +9,11 @@ The :py:mod:`lenskit.metrics.ranking` module contains the core top-*N* ranking
 accuracy metrics (including rank-oblivious list metrics like precision, recall,
 and hit rate).
 
-Ranking metrics extend the :py:class:`RankingMetric` base class, and are
-callable objects that take the recommendation list and the test ratings, both as
-:py:class:`~lenskit.data.ItemList`, and return the score; most metrics require
-the recommendation item list to be :py:attr:`~lenskit.data.ItemList.ordered`.
+Ranking metrics extend the :py:class:`RankingMetricBase` base class in addition
+to :py:class:`ListMetric` and/or :py:class:`GlobalMetric`, return a score given
+a recommendation list and a test rating list, both as :py:class:`item lists
+<lenskit.data.ItemList>`; most metrics require the recommendation item list to
+be :py:attr:`~lenskit.data.ItemList.ordered`.
 
 All LensKit ranking metrics take `k` as a constructor argument to control the
 list of the length that is considered; this allows multiple measurements (e.g.
