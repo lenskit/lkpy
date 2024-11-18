@@ -53,7 +53,7 @@ def test_predict_single(mlb: MLB):
     res = predict(mlb.pipeline, {1: ItemList([31])}, n_jobs=1)
 
     assert len(res) == 1
-    uid, result = next(iter(res.items()))
+    uid, result = next(iter(res))
     assert uid == 1
     assert len(result) == 1
     assert result.ids()[0] == 31
@@ -69,7 +69,7 @@ def test_recommend_user(mlb: MLB):
     results = recommend(mlb.pipeline, [user], n=10, n_jobs=1)
 
     assert len(results) == 1
-    uid, ranking = next(iter(results.items()))
+    uid, ranking = next(iter(results))
     assert uid == user
     assert isinstance(ranking, ItemList)
     assert ranking.ordered
