@@ -14,7 +14,7 @@ from pytest import approx, fixture, mark
 
 from lenskit.basic import BiasScorer, PopScorer
 from lenskit.batch import BatchPipelineRunner, predict, recommend
-from lenskit.data import Dataset, ItemList, ItemListCollection, from_interactions_df
+from lenskit.data import Dataset, ItemList, UserIDKey, from_interactions_df
 from lenskit.data.convert import normalize_interactions_df
 from lenskit.metrics import NDCG, RBP, RMSE, RunAnalysis
 from lenskit.pipeline import Pipeline, topn_pipeline
@@ -54,7 +54,8 @@ def test_predict_single(mlb: MLB):
 
     assert len(res) == 1
     uid, result = next(iter(res))
-    assert uid == 1
+    assert isinstance(uid, UserIDKey)
+    assert uid.user_id == 1
     assert len(result) == 1
     assert result.ids()[0] == 31
 
@@ -71,7 +72,8 @@ def test_recommend_user(mlb: MLB):
     assert len(results) == 1
 
     uid, ranking = next(iter(results))
-    assert uid == user
+    assert isinstance(uid, UserIDKey)
+    assert uid.user_id == user
     assert isinstance(ranking, ItemList)
     assert ranking.ordered
     assert len(ranking) == 10
