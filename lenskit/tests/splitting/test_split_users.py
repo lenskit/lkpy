@@ -25,11 +25,11 @@ def test_crossfold_users(ml_ds: Dataset):
 
     users = set()
     for s in splits:
-        assert all(len(il) for il in s.test.values())
+        assert all(len(il) for il in s.test.lists())
         assert not any(u in users for u in s.test.keys())
-        users |= s.test.keys()
+        users |= set(k.user_id for k in s.test.keys())
 
-        test_pairs = set((u, i) for (u, il) in s.test.items() for i in il.ids())
+        test_pairs = set((u, i) for (u, il) in s.test for i in il.ids())
         tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
         train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
         assert not test_pairs & train_pairs
@@ -52,10 +52,10 @@ def test_crossfold_may_skip_train(ml_ratings: pd.DataFrame):
     assert len(splits) == 5
 
     # now we go make sure we're missing some users! And don't have any NaN ml_ratings
-    for train, test in splits:
+    for split in splits:
         for u in ucounts[ucounts == 1].index:
-            if u in test:
-                row = train.user_row(u)
+            if u in split.test:
+                row = split.train.user_row(u)
                 assert row is not None
                 assert len(row) == 0
 
@@ -68,8 +68,8 @@ def test_crossfold_users_frac(ml_ds: Dataset):
     uss = ustats["count"] * 0.2
 
     for s in splits:
-        assert all(len(il) >= uss.loc[u] - 1 for (u, il) in s.test.items())
-        assert all(len(il) <= uss.loc[u] + 1 for (u, il) in s.test.items())
+        assert all(len(il) >= uss.loc[u.user_id] - 1 for (u, il) in s.test)
+        assert all(len(il) <= uss.loc[u.user_id] + 1 for (u, il) in s.test)
         assert s.test_size + s.train.count("pairs") == ml_ds.count("pairs")
 
 
@@ -79,7 +79,7 @@ def test_sample_users_single(ml_ds: Dataset):
     assert len(split.test) == 100
     assert split.test_size == 500
 
-    test_pairs = set((u, i) for (u, il) in split.test.items() for i in il.ids())
+    test_pairs = set((u, i) for (u, il) in split.test for i in il.ids())
     assert len(test_pairs) == split.test_size
     tdf = split.train.interaction_matrix("pandas", field="rating", original_ids=True)
     train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
@@ -99,9 +99,9 @@ def test_sample_users(ml_ds: Dataset):
         assert s.test_size == 500
         # users are disjoint
         assert not any(u in aus for u in s.test.keys())
-        aus |= s.test.keys()
+        aus |= set(k.user_id for k in s.test.keys())
 
-        test_pairs = set((u, i) for (u, il) in s.test.items() for i in il.ids())
+        test_pairs = set((u, i) for (u, il) in s.test for i in il.ids())
         assert len(test_pairs) == s.test_size
         tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
         train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
@@ -120,9 +120,9 @@ def test_sample_users_non_disjoint(ml_ds: Dataset):
     for s in splits:
         assert len(s.test) == 100
         assert s.test_size == 500
-        aus |= s.test.keys()
+        aus |= set(k.user_id for k in s.test.keys())
 
-        test_pairs = set((u, i) for (u, il) in s.test.items() for i in il.ids())
+        test_pairs = set((u, i) for (u, il) in s.test for i in il.ids())
         assert len(test_pairs) == s.test_size
         tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
         train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
@@ -142,7 +142,7 @@ def test_sample_users_frac_oversize(ml_ds: Dataset):
 
     for s in splits:
         assert len(s.test) < 100
-        assert all(len(il) == 5 for il in s.test.values())
+        assert all(len(il) == 5 for il in s.test.lists())
 
 
 def test_sample_users_frac_oversize_ndj(ml_ds: Dataset):
@@ -153,4 +153,4 @@ def test_sample_users_frac_oversize_ndj(ml_ds: Dataset):
     for s in splits:
         assert len(s.test) == 100
         assert s.test_size == 5 * 100
-        assert all([len(il) for il in s.test.values()])
+        assert all([len(il) for il in s.test.lists()])

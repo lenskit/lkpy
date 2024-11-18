@@ -13,8 +13,7 @@ import numpy as np
 import pandas as pd
 from seedbank import numpy_rng
 
-from lenskit.data import Dataset
-from lenskit.data.bulk import dict_from_df
+from lenskit.data import Dataset, ItemListCollection, UserIDKey
 from lenskit.data.matrix import MatrixDataset
 from lenskit.types import RandomSeed
 
@@ -171,7 +170,7 @@ def _make_pair(
     mask = np.zeros(len(df), np.bool_)
     mask[test_is] = True
 
-    test = dict_from_df(df[mask])
+    test = ItemListCollection.from_df(df[mask], UserIDKey)
     train = MatrixDataset(data.users, data.items, df[~mask])
 
     return TTSplit(train, test)

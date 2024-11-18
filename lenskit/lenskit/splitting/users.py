@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from seedbank import numpy_rng
 
-from lenskit.data import ID, Dataset
+from lenskit.data import ID, Dataset, ItemListCollection, UserIDKey
 from lenskit.data.matrix import MatrixDataset
 from lenskit.types import RandomSeed
 
@@ -160,16 +160,16 @@ def _make_split(
 ) -> TTSplit:
     # create the test sets for these users
     mask = pd.Series(True, index=df.index)
-    test = {}
+    test = ItemListCollection(UserIDKey)
 
     for u in test_us:
         row = data.user_row(u)
         assert row is not None
         u_test = method(row)
-        test[u] = u_test
+        test.add(u_test, u)
         assert all((u, i) in mask.index for i in u_test.ids())
         mask.loc[[(u, i) for i in u_test.ids()]] = False  # type: ignore
-        assert np.sum(mask.loc[u]) == len(row) - len(u_test)
+        assert np.sum(mask.loc[u]) == len(row) - len(u_test)  # type: ignore
 
     train_df = df[mask]
     train = MatrixDataset(data.users, data.items, train_df.reset_index())

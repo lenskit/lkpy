@@ -4,19 +4,21 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from typing import Literal, NamedTuple, TypeAlias
+from dataclasses import dataclass
+from typing import Generic, Literal, TypeAlias, TypeVar
 
 import pandas as pd
 
-from lenskit.data import ID, Dataset, ItemList
-from lenskit.data.bulk import dict_to_df
+from lenskit.data import Dataset, ItemListCollection
 
 SplitTable: TypeAlias = Literal["matrix"]
+TK = TypeVar("TK", bound=tuple)
 
 
-class TTSplit(NamedTuple):
+@dataclass
+class TTSplit(Generic[TK]):
     """
-    A train-test pair from splitting.
+    A train-test set from splitting or other sources.
     """
 
     train: Dataset
@@ -24,7 +26,7 @@ class TTSplit(NamedTuple):
     The training data.
     """
 
-    test: dict[ID, ItemList]
+    test: ItemListCollection[TK]
     """
     The test data.
     """
@@ -34,14 +36,14 @@ class TTSplit(NamedTuple):
         """
         Get the number of test pairs.
         """
-        return sum(len(il) for il in self.test.values())
+        return sum(len(il) for il in self.test.lists())
 
     @property
     def test_df(self) -> pd.DataFrame:
         """
         Get the test data as a data frame.
         """
-        return dict_to_df(self.test)
+        return self.test.to_df()
 
     @property
     def train_df(self) -> pd.DataFrame:

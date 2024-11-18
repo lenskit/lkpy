@@ -26,7 +26,7 @@ def test_crossfold_records(ml_ds: Dataset):
         # do we have all the data?
         test_count = s.test_size
         assert test_count + s.train.interaction_count == ml_ds.count("pairs")
-        test_pairs = set((u, i) for (u, il) in s.test.items() for i in il.ids())
+        test_pairs = set((u, i) for (u, il) in s.test for i in il.ids())
         tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
         train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
 
@@ -40,20 +40,19 @@ def test_crossfold_records(ml_ds: Dataset):
         if s1 is s2:
             continue
 
-        p1 = set((u, i) for (u, il) in s1.test.items() for i in il.ids())
-        p2 = set((u, i) for (u, il) in s2.test.items() for i in il.ids())
+        p1 = set((u, i) for (u, il) in s1.test for i in il.ids())
+        p2 = set((u, i) for (u, il) in s2.test for i in il.ids())
         assert not (p1 & p2)
 
 
 def test_sample_records_once(ml_ds):
     split = sample_records(ml_ds, size=1000)
-    train, test = split
 
     test_count = split.test_size
     assert test_count == 1000
-    assert test_count + train.interaction_count == ml_ds.count("pairs")
-    test_pairs = set((u, i) for (u, il) in test.items() for i in il.ids())
-    tdf = train.interaction_matrix("pandas", field="rating", original_ids=True)
+    assert test_count + split.train.interaction_count == ml_ds.count("pairs")
+    test_pairs = set((u, i) for (u, il) in split.test for i in il.ids())
+    tdf = split.train.interaction_matrix("pandas", field="rating", original_ids=True)
     train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
 
     # no overlap
@@ -71,7 +70,7 @@ def test_sample_records(ml_ds):
         test_count = s.test_size
         assert test_count == 1000
         assert test_count + s.train.interaction_count == ml_ds.count("pairs")
-        test_pairs = set((u, i) for (u, il) in s.test.items() for i in il.ids())
+        test_pairs = set((u, i) for (u, il) in s.test for i in il.ids())
         tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
         train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
 
@@ -84,8 +83,8 @@ def test_sample_records(ml_ds):
         if s1 is s2:
             continue
 
-        p1 = set((u, i) for (u, il) in s1.test.items() for i in il.ids())
-        p2 = set((u, i) for (u, il) in s2.test.items() for i in il.ids())
+        p1 = set((u, i) for (u, il) in s1.test for i in il.ids())
+        p2 = set((u, i) for (u, il) in s2.test for i in il.ids())
         assert not (p1 & p2)
 
 
@@ -98,7 +97,7 @@ def test_sample_rows_more_smaller_parts(ml_ds: Dataset):
         test_count = s.test_size
         assert test_count == 500
         assert test_count + s.train.interaction_count == ml_ds.count("pairs")
-        test_pairs = set((u, i) for (u, il) in s.test.items() for i in il.ids())
+        test_pairs = set((u, i) for (u, il) in s.test for i in il.ids())
         tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
         train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
 
@@ -111,8 +110,8 @@ def test_sample_rows_more_smaller_parts(ml_ds: Dataset):
         if s1 is s2:
             continue
 
-        p1 = set((u, i) for (u, il) in s1.test.items() for i in il.ids())
-        p2 = set((u, i) for (u, il) in s2.test.items() for i in il.ids())
+        p1 = set((u, i) for (u, il) in s1.test for i in il.ids())
+        p2 = set((u, i) for (u, il) in s2.test for i in il.ids())
         assert not (p1 & p2)
 
 
@@ -125,7 +124,7 @@ def test_sample_non_disjoint(ml_ds: Dataset):
         test_count = s.test_size
         assert test_count == 1000
         assert test_count + s.train.interaction_count == ml_ds.count("pairs")
-        test_pairs = set((u, i) for (u, il) in s.test.items() for i in il.ids())
+        test_pairs = set((u, i) for (u, il) in s.test for i in il.ids())
         tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
         train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
 
@@ -137,8 +136,8 @@ def test_sample_non_disjoint(ml_ds: Dataset):
     # There are enough splits & items we should pick at least one duplicate
     ipairs = (
         (
-            set((u, i) for (u, il) in s1.test.items() for i in il.ids()),
-            set((u, i) for (u, il) in s2.test.items() for i in il.ids()),
+            set((u, i) for (u, il) in s1.test for i in il.ids()),
+            set((u, i) for (u, il) in s2.test for i in il.ids()),
         )
         for (s1, s2) in it.product(splits, splits)
     )
@@ -155,7 +154,7 @@ def test_sample_oversize(ml_ds: Dataset):
     for s in splits:
         test_count = s.test_size
         assert test_count + s.train.interaction_count == ml_ds.count("pairs")
-        test_pairs = set((u, i) for (u, il) in s.test.items() for i in il.ids())
+        test_pairs = set((u, i) for (u, il) in s.test for i in il.ids())
         tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
         train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
 
