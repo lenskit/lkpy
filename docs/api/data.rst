@@ -34,6 +34,9 @@ Item Data
     :caption: Item Data
 
     ~lenskit.data.ItemList
+    ~lenskit.data.ItemListCollection
+    ~lenskit.data.UserIDKey
+    ~lenskit.data.GenericKey
 
 Recommendation Queries
 ----------------------
