@@ -75,7 +75,7 @@ class NDCG(RankingMetricBase):
                 gains = gains.nlargest(n=self.k)
             else:
                 gains = gains.sort_values(ascending=False)
-            ideal = array_dcg(gains.values, self.discount)
+            ideal = array_dcg(np.require(gains.values, np.float32), self.discount)
         else:
             scores = np.zeros_like(items, dtype=np.float32)
             scores[np.isin(items, test.ids())] = 1.0
@@ -84,7 +84,7 @@ class NDCG(RankingMetricBase):
                 n = self.k
             ideal = fixed_dcg(n, self.discount)
 
-        realized = array_dcg(scores, self.discount)
+        realized = array_dcg(np.require(scores, np.float32), self.discount)
         return realized / ideal
 
 
