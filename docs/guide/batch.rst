@@ -49,9 +49,12 @@ Configure and train the model:
 
 Generate recommendations:
 
-    >>> recs = recommend(pop_pipe, split.test.keys())
-    >>> len(recs)
-    150
+    >>> recs = recommend(pop_pipe, split.test.keys(), n_jobs=1)
+    >>> recs.to_df()
+              user_id  item_id     score  rank
+    0 ...                                    1
+    ...
+    [3000 rows x 4 columns]
 
 And measure their results:
 

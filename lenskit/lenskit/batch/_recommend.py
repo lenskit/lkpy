@@ -14,7 +14,7 @@ import pandas as pd
 
 from lenskit import util
 from lenskit.algorithms import Algorithm, Recommender
-from lenskit.data import ID, ItemList
+from lenskit.data import ID, ItemListCollection, UserIDKey
 from lenskit.parallel import invoke_progress, invoker
 from lenskit.pipeline import Pipeline
 
@@ -25,13 +25,13 @@ _logger = logging.getLogger(__name__)
 
 def recommend(
     pipeline: Pipeline,
-    users: Sequence[ID],
+    users: Sequence[ID | UserIDKey],
     n: int | None = None,
     candidates=None,
     *,
     n_jobs: int | None = None,
     **kwargs,
-) -> dict[ID, ItemList]:
+) -> ItemListCollection[UserIDKey]:
     """
     Convenience function to batch-generate recommendations from a pipeline.
     """
@@ -41,7 +41,7 @@ def recommend(
     runner = BatchPipelineRunner(n_jobs=n_jobs)
     runner.recommend(n=n)
     outs = runner.run(pipeline, users)
-    return {k.user_id: il for (k, il) in outs.output("recommendations")}  # type: ignore
+    return outs.output("recommendations")
 
 
 def _recommend_user(algo, req):

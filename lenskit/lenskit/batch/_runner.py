@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Literal, Mapping, Sequence, TypeAlias
+from typing import Any, Iterable, Literal, Mapping, TypeAlias
 
 from lenskit.data import ID, GenericKey, ItemList, ItemListCollection, UserIDKey
 from lenskit.parallel import invoke_progress, invoker
@@ -99,23 +99,35 @@ class BatchPipelineRunner:
         pipeline: Pipeline,
         test_data: ItemListCollection[GenericKey]
         | Mapping[ID, ItemList]
-        | Sequence[ID | GenericKey],
+        | Iterable[ID | GenericKey],
     ) -> BatchResults:
         """
         Run the pipeline and return its results.
 
         Args:
             test_data:
-                A mapping of user IDs to the test data to run against.
+                The collection of test data, as an ItemListCollection, a mapping
+                of user IDs to test data, or as a sequence of item IDs for
+                recommendation.
 
         Returns:
             The results, as a nested dictionary.  The outer dictionary maps
             component output names to inner dictionaries of result data.  These
             inner dictionaries map user IDs to
         """
-        if isinstance(test_data, dict):
-            test_data = ItemListCollection.from_dict(test_data, "user_id")  # type: ignore
-        assert isinstance(test_data, ItemListCollection)
+        if isinstance(test_data, ItemListCollection):
+            test_iter = test_data
+            key_type = test_data.key_type
+            n_users = len(test_data)
+        elif isinstance(test_data, Mapping):
+            key_type = UserIDKey
+            test_iter = ((UserIDKey(k), v) for (k, v) in test_data.items())
+            n_users = len(test_data)
+        else:
+            key_type = UserIDKey
+            test_data = list(test_data)
+            test_iter = ((_ensure_key(k), None) for k in test_data)
+            n_users = len(test_data)
 
         n_users = len(test_data)
         _log.info("running pipeline %s for %d queries", pipeline.name, n_users)
@@ -129,9 +141,9 @@ class BatchPipelineRunner:
         ):
             # release our reference, will sometimes free the pipeline memory in this process
             del pipeline
-            results = BatchResults(test_data.key_type)
+            results = BatchResults(key_type)
             timer = Stopwatch()
-            for key, outs in worker.map(test_data):
+            for key, outs in worker.map(test_iter):
                 for cn, cr in outs.items():
                     results.add_result(cn, key, cr)
             timer.stop()
@@ -142,18 +154,19 @@ class BatchPipelineRunner:
         return results
 
 
+def _ensure_key(key: ID | tuple[ID, ...]):
+    if isinstance(key, tuple):
+        return key
+    else:
+        return UserIDKey(key)
+
+
 def _run_pipeline(
     ctx: tuple[Pipeline, list[InvocationSpec]],
     req: tuple[GenericKey, ItemList] | ID,
 ) -> tuple[GenericKey, dict[str, object]]:
     pipeline, invocations = ctx
-    if isinstance(req, tuple) and isinstance(req[1], ItemList):
-        key, test_items = req
-    elif isinstance(req, tuple):
-        key = req
-    else:
-        key = UserIDKey(req)
-        test_items = None
+    key, test_items = req
 
     result = {}
 

@@ -56,4 +56,7 @@ class BatchResults:
         if name not in self._data:
             self._data[name] = ItemListCollection(self._key_schema)
 
-        self._data[name].add(result, *key)
+        try:
+            self._data[name].add(result, *key)
+        except TypeError as e:
+            raise TypeError(f"invalid key {key} (for type {self._data[name].key_type})", e)

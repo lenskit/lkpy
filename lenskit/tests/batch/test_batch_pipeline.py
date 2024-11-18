@@ -14,7 +14,7 @@ from pytest import approx, fixture, mark
 
 from lenskit.basic import BiasScorer, PopScorer
 from lenskit.batch import BatchPipelineRunner, predict, recommend
-from lenskit.data import Dataset, ItemList, from_interactions_df
+from lenskit.data import Dataset, ItemList, ItemListCollection, from_interactions_df
 from lenskit.data.convert import normalize_interactions_df
 from lenskit.metrics import NDCG, RBP, RMSE, RunAnalysis
 from lenskit.pipeline import Pipeline, topn_pipeline
@@ -69,6 +69,7 @@ def test_recommend_user(mlb: MLB):
     results = recommend(mlb.pipeline, [user], n=10, n_jobs=1)
 
     assert len(results) == 1
+
     uid, ranking = next(iter(results))
     assert uid == user
     assert isinstance(ranking, ItemList)

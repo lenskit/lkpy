@@ -28,7 +28,7 @@ def predict(
     *,
     n_jobs: int | None = None,
     **kwargs,
-) -> dict[ID, ItemList]:
+) -> ItemListCollection[GenericKey]:
     """
     Convenience function to batch-generate rating predictions (or other per-item
     scores) from a pipeline.
