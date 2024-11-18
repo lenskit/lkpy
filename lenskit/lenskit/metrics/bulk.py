@@ -2,16 +2,19 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import TypeVar
 
 import numpy as np
 import pandas as pd
 from progress_api import make_progress
 
-from lenskit.data import GenericKey, ItemListCollection
+from lenskit.data import ItemListCollection
 
 from ._base import Metric, MetricFunction
 
 _log = logging.getLogger(__name__)
+K1 = TypeVar("K1", bound=tuple)
+K2 = TypeVar("K2", bound=tuple)
 
 
 @dataclass(frozen=True)
@@ -152,7 +155,7 @@ class RunAnalysis:
         self.metrics.append(_wrap_metric(metric, label, mean_label, default))
 
     def compute(
-        self, outputs: ItemListCollection[GenericKey], test: ItemListCollection[GenericKey]
+        self, outputs: ItemListCollection[K1], test: ItemListCollection[K2]
     ) -> RunAnalysisResult:
         index = pd.MultiIndex.from_tuples(outputs.keys())
         results = pd.DataFrame({m.label: np.nan for m in self.metrics}, index=index)
