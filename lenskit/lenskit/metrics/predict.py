@@ -12,11 +12,11 @@ and instructions on using these metrics.
 from __future__ import annotations
 
 import logging
-from typing import Callable, Literal, TypeAlias, override
 
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
+from typing_extensions import Callable, Literal, TypeAlias, override
 
 from lenskit.data import ItemList, ItemListCollection
 from lenskit.data.bulk import group_df

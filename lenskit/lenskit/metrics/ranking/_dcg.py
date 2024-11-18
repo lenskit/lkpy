@@ -1,7 +1,6 @@
-from typing import Callable, TypeAlias, override
-
 import numpy as np
 from numpy.typing import NDArray
+from typing_extensions import Callable, TypeAlias, override
 
 from lenskit.data import ItemList
 

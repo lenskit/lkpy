@@ -1,6 +1,5 @@
-from typing import override
-
 import numpy as np
+from typing_extensions import override
 
 from lenskit.data.items import ItemList
 
