@@ -71,7 +71,7 @@ Significant Changes
     package).  Classes and functions must be imported from appropriate
     subpackages.
 
-*   The ``Popular`` recommender has been removed in favor of :class:`~lenskit.algorithms.basic.PopScore`.
+*   The ``Popular`` recommender has been removed in favor of :class:`~lenskit.basic.PopScore`.
 
 New Features (incremental)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -82,8 +82,10 @@ New Features (incremental)
 Evaluation Changes
 ~~~~~~~~~~~~~~~~~~
 
-* The DCG metric has been removed, as it is basically never used and was not
-  useful as a part of the NDCG implementation.
+*  The DCG metric has been removed, as it is basically never used and was not
+   useful as a part of the NDCG implementation.
+
+*  Train-test split results are no longer tuples.
 
 Model Behavior Changes
 ~~~~~~~~~~~~~~~~~~~~~~
