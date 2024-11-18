@@ -153,7 +153,7 @@ class ItemListCollection(Generic[K]):
         else:
             if isinstance(key, Column):
                 key = [key]
-            columns = list(key) + others  # type: ignore
+            columns = tuple(key) + others
             fields = [column_name(c) for c in key]
             key = _create_key_type(*fields)  # type: ignore
 
