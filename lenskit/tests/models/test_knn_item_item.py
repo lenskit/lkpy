@@ -20,7 +20,7 @@ import lenskit.util.test as lktu
 from lenskit import batch
 from lenskit.basic import BiasScorer
 from lenskit.batch import BatchPipelineRunner
-from lenskit.data import ItemList, Vocabulary, from_interactions_df
+from lenskit.data import ItemList, ItemListCollection, UserIDKey, Vocabulary, from_interactions_df
 from lenskit.data.bulk import dict_to_df, iter_item_lists
 from lenskit.diagnostics import ConfigWarning, DataWarning
 from lenskit.knn.item import ItemItemScorer
@@ -403,9 +403,9 @@ def test_ii_batch_accuracy(ml_100k):
 
     pipe = builder.build()
 
-    preds = {}
-    recs = {}
-    test = {}
+    preds = ItemListCollection(UserIDKey)
+    recs = ItemListCollection(UserIDKey)
+    test = ItemListCollection(UserIDKey)
 
     for split in crossfold_users(ds, 5, SampleFrac(0.2)):
         _log.info("training on partition")
@@ -416,9 +416,9 @@ def test_ii_batch_accuracy(ml_100k):
         runner.recommend(n=10)
         runner.predict()
         result = runner.run(copy, split.test)
-        preds.update(result.output("predictions"))
-        recs.update(result.output("recommendations"))
-        test.update(split.test)
+        preds.add_from(result.output("predictions"))
+        recs.add_from(result.output("recommendations"))
+        test.add_from(split.test)
 
     preds = dict_to_df(preds)
     test = dict_to_df(test)
