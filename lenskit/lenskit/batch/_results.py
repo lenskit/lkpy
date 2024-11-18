@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from lenskit.data import ID
+from typing import Sequence
+
+from lenskit.data import GenericKey, ItemListCollection
 
 
 class BatchResults:
@@ -10,12 +12,14 @@ class BatchResults:
     ``None``, if the pipeline produced no output for that user.
     """
 
-    _data: dict[str, dict[ID, object]]
+    _key_schema: type[tuple] | Sequence[str]
+    _data: dict[str, ItemListCollection[GenericKey]]
 
-    def __init__(self):
+    def __init__(self, key: type[tuple] | Sequence[str]):
         """
         Construct a new set of batch results.
         """
+        self._key_schema = key
         self._data = {}
 
     @property
@@ -25,7 +29,7 @@ class BatchResults:
         """
         return list(self._data.keys())
 
-    def output(self, name: str) -> dict[ID, object]:
+    def output(self, name: str) -> ItemListCollection[GenericKey]:
         """
         Get the item lists for a particular output component.
 
@@ -36,7 +40,7 @@ class BatchResults:
         """
         return self._data[name]
 
-    def add_result(self, name: str, user: ID, result: object):
+    def add_result(self, name: str, key: GenericKey, result: object):
         """
         Add a single result for one of the outputs.
 
@@ -50,6 +54,6 @@ class BatchResults:
         """
 
         if name not in self._data:
-            self._data[name] = {}
+            self._data[name] = ItemListCollection(self._key_schema)
 
-        self._data[name][user] = result
+        self._data[name].add(result, *key)

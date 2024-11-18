@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Literal, Mapping, TypeAlias
+from typing import Any, Literal, Mapping, Sequence, TypeAlias
 
-from lenskit.data import ID, ItemList
+from lenskit.data import ID, GenericKey, ItemList, ItemListCollection, UserIDKey
 from lenskit.parallel import invoke_progress, invoker
 from lenskit.pipeline import Pipeline
 from lenskit.util import Stopwatch
@@ -22,10 +22,6 @@ _log = logging.getLogger(__name__)
 ItemSource: TypeAlias = None | Literal["test-items"]
 """
 Types of items that can be returned.
-"""
-TestData: TypeAlias = Mapping[ID, ItemList]
-"""
-Test data format.
 """
 
 
@@ -101,7 +97,9 @@ class BatchPipelineRunner:
     def run(
         self,
         pipeline: Pipeline,
-        test_data: TestData,
+        test_data: ItemListCollection[GenericKey]
+        | Mapping[ID, ItemList]
+        | Sequence[ID | GenericKey],
     ) -> BatchResults:
         """
         Run the pipeline and return its results.
@@ -115,6 +113,10 @@ class BatchPipelineRunner:
             component output names to inner dictionaries of result data.  These
             inner dictionaries map user IDs to
         """
+        if isinstance(test_data, dict):
+            test_data = ItemListCollection.from_dict(test_data, "user_id")  # type: ignore
+        assert isinstance(test_data, ItemListCollection)
+
         n_users = len(test_data)
         _log.info("running pipeline %s for %d queries", pipeline.name, n_users)
         _log.info("pipeline configuration hash: %s", pipeline.config_hash())
@@ -127,11 +129,11 @@ class BatchPipelineRunner:
         ):
             # release our reference, will sometimes free the pipeline memory in this process
             del pipeline
-            results = BatchResults()
+            results = BatchResults(test_data.key_type)
             timer = Stopwatch()
-            for user, outs in worker.map(test_data.items()):
+            for key, outs in worker.map(test_data):
                 for cn, cr in outs.items():
-                    results.add_result(cn, user, cr)
+                    results.add_result(cn, key, cr)
             timer.stop()
 
             rate = timer.elapsed() / n_users
@@ -141,16 +143,25 @@ class BatchPipelineRunner:
 
 
 def _run_pipeline(
-    ctx: tuple[Pipeline, list[InvocationSpec]], req: tuple[ID, ItemList]
-) -> tuple[ID, dict[str, object]]:
+    ctx: tuple[Pipeline, list[InvocationSpec]],
+    req: tuple[GenericKey, ItemList] | ID,
+) -> tuple[GenericKey, dict[str, object]]:
     pipeline, invocations = ctx
-    user, test_items = req
+    if isinstance(req, tuple) and isinstance(req[1], ItemList):
+        key, test_items = req
+    elif isinstance(req, tuple):
+        key = req
+    else:
+        key = UserIDKey(req)
+        test_items = None
 
     result = {}
 
-    _log.debug("running pipeline %s for user %s", pipeline.name, user)
+    _log.debug("running pipeline %s for request %s", pipeline.name, key)
     for inv in invocations:
-        inputs: dict[str, Any] = {"query": user}
+        inputs: dict[str, Any] = {}
+        if hasattr(key, "user_id"):
+            inputs["query"] = key.user_id  # type: ignore
         match inv.items:
             case "test-items":
                 inputs["items"] = test_items
@@ -162,4 +173,4 @@ def _run_pipeline(
         for cname, oname in inv.components.items():
             result[oname] = outs[cname]
 
-    return user, result
+    return key, result  # type: ignore

@@ -40,8 +40,8 @@ def recommend(
 
     runner = BatchPipelineRunner(n_jobs=n_jobs)
     runner.recommend(n=n)
-    outs = runner.run(pipeline, {u: ItemList() for u in users})
-    return outs.output("recommendations")  # type: ignore
+    outs = runner.run(pipeline, users)
+    return {k.user_id: il for (k, il) in outs.output("recommendations")}  # type: ignore
 
 
 def _recommend_user(algo, req):

@@ -7,23 +7,27 @@ from __future__ import annotations
 
 import logging
 import warnings
+from typing import Mapping
 
 import pandas as pd
 
 from lenskit import util
 from lenskit.algorithms import Algorithm
-from lenskit.data import ID
-from lenskit.data.items import ItemList
+from lenskit.data import ID, GenericKey, ItemList, ItemListCollection
 from lenskit.parallel import invoke_progress, invoker
 from lenskit.pipeline import Pipeline
 
-from ._runner import BatchPipelineRunner, TestData
+from ._runner import BatchPipelineRunner
 
 _logger = logging.getLogger(__name__)
 
 
 def predict(
-    pipeline: Pipeline, test: TestData, *, n_jobs: int | None = None, **kwargs
+    pipeline: Pipeline,
+    test: ItemListCollection[GenericKey] | Mapping[ID, ItemList],
+    *,
+    n_jobs: int | None = None,
+    **kwargs,
 ) -> dict[ID, ItemList]:
     """
     Convenience function to batch-generate rating predictions (or other per-item
