@@ -35,7 +35,7 @@ class MetricWrapper:
     @property
     def is_global(self) -> bool:
         "Check if this metric is global."
-        return isinstance(self, GlobalMetric)
+        return isinstance(self.metric, GlobalMetric)
 
     def measure_list(self, list: ItemList, test: ItemList) -> float:
         if isinstance(self.metric, ListMetric):
@@ -178,12 +178,13 @@ class RunAnalysis:
         self, outputs: ItemListCollection[K1], test: ItemListCollection[K2]
     ) -> RunAnalysisResult:
         index = pd.MultiIndex.from_tuples(outputs.keys())
-        list_results = pd.DataFrame(
-            {m.label: np.nan for m in self.metrics if m.is_listwise}, index=index
-        )
+
+        lms = [m for m in self.metrics if m.is_listwise]
+        gms = [m for m in self.metrics if m.is_global]
+        list_results = pd.DataFrame({m.label: np.nan for m in lms}, index=index)
 
         n = len(outputs)
-        _log.info("computing listwise metrics for %d output lists", n)
+        _log.info("computing %d listwise metrics for %d output lists", len(lms), n)
         with make_progress(_log, "lists", n) as pb:
             for i, (key, out) in enumerate(outputs):
                 list_test = test.lookup_projected(key)
@@ -192,12 +193,10 @@ class RunAnalysis:
                 elif list_test is None:
                     _log.warning("list %s: no test items", key)
                 else:
-                    list_results.iloc[i] = [
-                        m.measure_list(out, list_test) for m in self.metrics if m.is_listwise
-                    ]
+                    list_results.iloc[i] = [m.measure_list(out, list_test) for m in lms]
                 pb.update()
 
-        _log.info("computing global metrics for %d output lists", n)
+        _log.info("computing %d global metrics for %d output lists", len(gms), n)
         global_results = pd.Series(
             {m.label: m.measure_run(outputs, test) for m in self.metrics if m.is_global},
             dtype=np.float64,

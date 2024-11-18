@@ -131,3 +131,9 @@ def test_batch_rmse(ml_100k):
 
     assert umdf["MAE"].mean() == approx(0.76, abs=0.05)
     assert mdf.loc["MAE", "mean"] == approx(0.76, abs=0.05)
+
+    # we should have global metrics
+    gs = metrics.global_metrics()
+    print("global metrics:", gs)
+    assert gs["RMSE"] == approx(0.93, abs=0.05)
+    assert gs["MAE"] == approx(0.76, abs=0.05)

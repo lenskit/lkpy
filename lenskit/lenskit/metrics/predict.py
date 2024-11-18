@@ -11,16 +11,19 @@ and instructions on using these metrics.
 
 from __future__ import annotations
 
-from typing import Callable, Literal, TypeAlias, overload
+import logging
+from typing import Callable, Literal, TypeAlias, override
 
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
-from lenskit.data import ItemList
+from lenskit.data import ItemList, ItemListCollection
 from lenskit.data.bulk import group_df
 
-from ._base import Metric
+from ._base import GlobalMetric, ListMetric, Metric
+
+_log = logging.getLogger(__name__)
 
 MissingDisposition: TypeAlias = Literal["error", "ignore"]
 ScoreArray: TypeAlias = NDArray[np.floating] | pd.Series
@@ -31,14 +34,9 @@ class PredictMetric(Metric):
     """
     Extension to the metric function interface for prediction metrics.
 
-    In addition to the general metric interface, predict metrics can be calledin
-    two additional ways:
-
-    - Suppling a single :class:`ItemList` with both ``scores`` and a ``rating``
-      field.
-    - Supplying a Pandas :class:`~pd.DataFrame` with ``score`` and ``rating``
-      columns. In this design, global (micro-averaged) RMSE can be computed in
-      stead of the per-user RMSE computed in the default configuration.
+    In addition to the general metric interface, predict metrics can be called
+    with a single item list (or item list collection) that has both ``scores``
+    and a ``rating`` field.
 
     Args:
         missing_scores:
@@ -65,69 +63,38 @@ class PredictMetric(Metric):
         self.missing_scores = missing_scores
         self.missing_truth = missing_truth
 
-    @overload
-    def __call__(self, predictions: ItemList, truth: ItemList | None = None) -> float: ...
-    @overload
-    def __call__(self, predictions: pd.DataFrame) -> float: ...
-    def __call__(
-        self, predictions: ItemList | pd.DataFrame, truth: ItemList | None = None
-    ) -> float: ...
+    def align_scores(
+        self, predictions: ItemList, truth: ItemList | None = None
+    ) -> tuple[pd.Series[float], pd.Series[float]]:
+        """
+        Align prediction scores and rating values, applying the configured
+        missing dispositions.  The result is two Pandas series, predictions and
+        truth, that are aligned and checked for missing data in accordance with
+        the configured options.
+        """
+        if isinstance(predictions, ItemList):
+            pred_s = predictions.scores("pandas", index="ids")
+            assert pred_s is not None, "item list does not have scores"
+            if truth is not None:
+                rate_s = truth.field("rating", "pandas", index="ids")
+            else:
+                rate_s = predictions.field("rating", "pandas", index="ids")
+            assert rate_s is not None, "no ratings provided"
+            pred_s, rate_s = pred_s.align(rate_s, join="outer")
+
+        pred_m = pred_s.isna()
+        rate_m = rate_s.isna()
+
+        if self.missing_scores == "error" and (nbad := np.sum(pred_m & ~rate_m)):
+            raise ValueError(f"missing scores for {nbad} truth items")
+
+        if self.missing_truth == "error" and (nbad := np.sum(rate_m & ~pred_m)):
+            raise ValueError(f"missing truth for {nbad} scored items")
+
+        return pred_s, rate_s
 
 
-def _score_predictions(
-    metric: PredMetric,
-    predictions: ItemList | pd.DataFrame,
-    truth: ItemList | None = None,
-    missing_scores: MissingDisposition = "error",
-    missing_truth: MissingDisposition = "error",
-) -> float:
-    if isinstance(predictions, ItemList):
-        pred_s = predictions.scores("pandas", index="ids")
-        assert pred_s is not None, "item list does not have scores"
-        if truth is not None:
-            rate_s = truth.field("rating", "pandas", index="ids")
-        else:
-            rate_s = predictions.field("rating", "pandas", index="ids")
-        assert rate_s is not None, "no ratings provided"
-        pred_s, rate_s = pred_s.align(rate_s, join="outer")
-    else:
-        assert truth is None, "truth must be None when predictions is a data frame"
-        if "score" in predictions.columns:
-            pred_s = predictions["score"]
-        elif "prediction" in predictions.columns:
-            pred_s = predictions["prediction"]
-        else:
-            raise KeyError("predictions has neither “score” nor “prediction” columns")
-        rate_s = predictions["rating"]
-
-    pred_m = pred_s.isna()
-    rate_m = rate_s.isna()
-
-    if missing_scores == "error" and (nbad := np.sum(pred_m & ~rate_m)):
-        raise ValueError(f"missing scores for {nbad} truth items")
-
-    if missing_truth == "error" and (nbad := np.sum(rate_m & ~pred_m)):
-        raise ValueError(f"missing truth for {nbad} scored items")
-
-    keep = ~(pred_m | rate_m)
-
-    pred_s = pred_s[keep]
-    rate_s = rate_s[keep]
-
-    return metric(pred_s, rate_s)
-
-
-def _rmse(scores: ScoreArray, truth: ScoreArray) -> float:
-    err = truth - scores
-    return np.sqrt(np.mean(err * err)).item()
-
-
-def _mae(scores: ScoreArray, truth: ScoreArray) -> float:
-    err = truth - scores
-    return np.mean(np.abs(err)).item()
-
-
-class RMSE(PredictMetric):
+class RMSE(PredictMetric, ListMetric, GlobalMetric):
     """
     Compute RMSE (root mean squared error).  This is computed as:
 
@@ -140,19 +107,44 @@ class RMSE(PredictMetric):
     :class:`~lenskit.basic.FallbackScorer`.
     """
 
-    @property
-    def mean_label(self):
-        return "AvgUserRMSE"
+    @override
+    def measure_list(self, predictions: ItemList, test: ItemList | None = None, /) -> float:
+        ps, ts = self.align_scores(predictions, test)
+        err = ps - ts
+        err *= err
+        return np.sqrt(np.mean(err))
 
-    @overload
-    def __call__(self, predictions: ItemList, test: ItemList | None = None) -> float: ...
-    @overload
-    def __call__(self, predictions: pd.DataFrame) -> float: ...
-    def __call__(self, predictions: ItemList | pd.DataFrame, test: ItemList | None = None) -> float:
-        return _score_predictions(_rmse, predictions, test, self.missing_scores, self.missing_truth)
+    @override
+    def measure_run(
+        self, predictions: ItemListCollection, test: ItemListCollection | None = None, /
+    ) -> float:
+        sse = 0
+        n = 0
+        for key, plist in predictions:
+            if test is None:
+                tlist = None
+            else:
+                tlist = test.lookup_projected(key)
+                if tlist is None:
+                    _log.warning("missing truth for list %s", key)
+                    if self.missing_truth == "error":
+                        raise ValueError(f"missing truth for list {key}")
+                    else:
+                        continue
+
+            ps, ts = self.align_scores(plist, tlist)
+            err = ps - ts
+            err *= err
+            sse += np.sum(err)
+            n += np.sum(ps.notna() & ts.notna())
+
+        if n == 0:
+            return np.nan
+        else:
+            return np.sqrt(sse / n)
 
 
-class MAE(PredictMetric):
+class MAE(PredictMetric, ListMetric, GlobalMetric):
     """
     Compute MAE (mean absolute error).  This is computed as:
 
@@ -165,14 +157,39 @@ class MAE(PredictMetric):
     :class:`~lenskit.basic.FallbackScorer`.
     """
 
-    @overload
-    def __call__(self, predictions: ItemList, truth: ItemList | None = None) -> float: ...
-    @overload
-    def __call__(self, predictions: pd.DataFrame) -> float: ...
-    def __call__(
-        self, predictions: ItemList | pd.DataFrame, truth: ItemList | None = None
+    @override
+    def measure_list(self, predictions: ItemList, test: ItemList | None = None, /) -> float:
+        ps, ts = self.align_scores(predictions, test)
+        err = ps - ts
+        return np.mean(np.abs(err)).item()
+
+    @override
+    def measure_run(
+        self, predictions: ItemListCollection, test: ItemListCollection | None = None, /
     ) -> float:
-        return _score_predictions(_mae, predictions, truth, self.missing_scores, self.missing_truth)
+        sae = 0
+        n = 0
+        for key, plist in predictions:
+            if test is None:
+                tlist = None
+            else:
+                tlist = test.lookup_projected(key)
+                if tlist is None:
+                    _log.warning("missing truth for list %s", key)
+                    if self.missing_truth == "error":
+                        raise ValueError(f"missing truth for list {key}")
+                    else:
+                        continue
+
+            ps, ts = self.align_scores(plist, tlist)
+            err = ps - ts
+            sae += np.sum(np.abs(err))
+            n += np.sum(ps.notna() & ts.notna())
+
+        if n == 0:
+            return np.nan
+        else:
+            return sae / n
 
 
 def measure_user_predictions(

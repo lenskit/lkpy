@@ -8,15 +8,13 @@
 Metrics for evaluating recommender outputs.
 """
 
-from typing import Callable, ParamSpec, cast, overload
-
-import pandas as pd
+from typing import Callable, ParamSpec
 
 from lenskit.data import ItemList
 
-from ._base import Metric, MetricFunction
+from ._base import ListMetric, Metric, MetricFunction
 from .bulk import RunAnalysis, RunAnalysisResult
-from .predict import MAE, RMSE, PredictMetric
+from .predict import MAE, RMSE
 from .ranking import NDCG, RBP, Precision, RankingMetricBase, Recall, RecipRank
 
 __all__ = [
@@ -37,25 +35,9 @@ __all__ = [
 P = ParamSpec("P")
 
 
-@overload
 def call_metric(
-    metric: Metric | MetricFunction | Callable[P, Metric],
+    metric: ListMetric | MetricFunction | Callable[P, ListMetric],
     outs: ItemList,
-    test: ItemList,
-    *args: P.args,
-    **kwargs: P.kwargs,
-) -> float: ...
-@overload
-def call_metric(
-    metric: PredictMetric | Callable[P, PredictMetric],
-    outs: ItemList | pd.DataFrame,
-    test: ItemList | None = None,
-    *args: P.args,
-    **kwargs: P.kwargs,
-) -> float: ...
-def call_metric(
-    metric: Metric | MetricFunction | Callable[P, Metric],
-    outs: ItemList | pd.DataFrame,
     test: ItemList | None = None,
     *args: P.args,
     **kwargs: P.kwargs,
@@ -83,6 +65,9 @@ def call_metric(
     if isinstance(metric, type):
         metric = metric(*args, **kwargs)
 
-    metric = cast(Metric | MetricFunction, metric)
-
-    return metric(outs, test)  # type: ignore
+    if isinstance(metric, ListMetric):
+        return metric.measure_list(outs, test)  # type: ignore
+    elif isinstance(metric, Callable):
+        return metric(outs, test)  # type: ignore
+    else:  # pragma: nocover
+        raise TypeError(f"invalid metric {metric}")
