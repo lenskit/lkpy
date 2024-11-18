@@ -248,7 +248,7 @@ class ItemListCollection(Generic[K]):
 
 def _key_fields(kt: type[tuple]) -> tuple[str]:
     "extract the fields from a key type"
-    return kt.fields  # type: ignore
+    return kt._fields  # type: ignore
 
 
 @overload
