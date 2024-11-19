@@ -13,6 +13,7 @@ from typing import Callable, ParamSpec
 from lenskit.data import ItemList
 
 from ._base import ListMetric, Metric, MetricFunction
+from ._quick import quick_measure_model
 from .bulk import RunAnalysis, RunAnalysisResult
 from .predict import MAE, RMSE
 from .ranking import NDCG, RBP, Precision, RankingMetricBase, Recall, RecipRank
@@ -30,6 +31,7 @@ __all__ = [
     "Precision",
     "Recall",
     "RecipRank",
+    "quick_measure_model",
 ]
 
 P = ParamSpec("P")
