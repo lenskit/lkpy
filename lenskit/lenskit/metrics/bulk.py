@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from dataclasses import dataclass
 from typing import Callable, TypeVar
 
@@ -9,6 +10,7 @@ import pandas as pd
 from progress_api import make_progress
 
 from lenskit.data import ItemList, ItemListCollection
+from lenskit.diagnostics import DataWarning
 
 from ._base import GlobalMetric, ListMetric, Metric, MetricFunction
 
@@ -77,7 +79,7 @@ class RunAnalysisResult:
     def list_metrics(self, *, fill_missing=True) -> pd.DataFrame:
         """
         Get the per-list scores of the results.  This is a data frame with one
-        row per list (with the list / user ID in the index), and one metric per
+        row per list (with the list key on the inded), and one metric per
         column.
 
         Args:
@@ -106,6 +108,21 @@ class RunAnalysisResult:
         """
         scores = self.list_metrics(fill_missing=True)
         return scores.agg(["mean", "median", "std"]).T
+
+    def merge_from(self, other: RunAnalysisResult):
+        """
+        Merge another set of analysis results into this one.
+        """
+        for c in self._list_metrics.columns:
+            if c in other._list_metrics.columns:
+                warnings.warn(f"list metric {c} appears in both merged results", DataWarning)
+
+        for c in self._global_metrics.index:
+            if c in other._global_metrics.index:
+                warnings.warn(f"global metric {c} appears in both merged results", DataWarning)
+
+        self._list_metrics = self._list_metrics.join(other._list_metrics, how="outer")
+        self._global_metrics = pd.concat([self._global_metrics, other._global_metrics])
 
 
 def _wrap_metric(
