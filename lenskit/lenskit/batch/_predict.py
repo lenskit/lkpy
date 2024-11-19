@@ -65,27 +65,6 @@ def legacy_predict(algo, pairs, *, n_jobs=None, **kwargs):
     a list of item IDs. It should return a dictionary or a :py:class:`pandas.Series`
     mapping item IDs to predictions.
 
-    To use this function, provide a pre-fit algorithm:
-
-        >>> from lenskit.algorithms.bias import Bias
-        >>> from lenskit.metrics import call_metric, RMSE
-        >>> from lenskit.data import from_interactions_df
-        >>> from lenskit.data.movielens import load_movielens_df
-        >>> ratings = load_movielens_df('data/ml-latest-small')
-        >>> bias = Bias()
-        >>> bias.fit(from_interactions_df(ratings[:-1000]))
-        <lenskit.algorithms.bias.Bias object at ...>
-        >>> preds = predict(bias, ratings[-1000:])
-        >>> preds.head()
-               user  item  rating   timestamp  prediction
-        99004   664  8361     3.0  1393891425    3.288286
-        99005   664  8528     3.5  1393891047    3.559119
-        99006   664  8529     4.0  1393891173    3.573008
-        99007   664  8636     4.0  1393891175    3.846268
-        99008   664  8641     4.5  1393890852    3.710635
-        >>> call_metric(RMSE, preds)
-        0.832699...
-
     Args:
         algo(lenskit.algorithms.Predictor):
             A rating predictor function or algorithm.
