@@ -20,6 +20,8 @@ from typing_extensions import Callable, Literal, TypeAlias, override
 
 from lenskit.data import ItemList, ItemListCollection
 from lenskit.data.bulk import group_df
+from lenskit.data.schemas import ITEM_COMPAT_COLUMN, normalize_columns
+from lenskit.data.types import AliasedColumn
 
 from ._base import GlobalMetric, ListMetric, Metric
 
@@ -72,6 +74,12 @@ class PredictMetric(Metric):
         truth, that are aligned and checked for missing data in accordance with
         the configured options.
         """
+        if isinstance(predictions, pd.DataFrame):
+            df = normalize_columns(
+                predictions, ITEM_COMPAT_COLUMN, AliasedColumn("score", ["prediction"])
+            )
+            predictions = ItemList.from_df(df)
+
         if not isinstance(predictions, ItemList):  # pragma: nocover
             raise TypeError(f"predictions must be ItemList, not {type(predictions)}")
         if truth is not None and not isinstance(truth, ItemList):  # pragma: nocover
@@ -213,4 +221,4 @@ def measure_user_predictions(
     if isinstance(metric, type):
         metric = metric()
 
-    return group_df(predictions).apply(lambda df: metric(df))
+    return group_df(predictions).apply(lambda df: metric.measure_list(df))
