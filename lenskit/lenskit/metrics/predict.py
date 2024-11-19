@@ -72,15 +72,19 @@ class PredictMetric(Metric):
         truth, that are aligned and checked for missing data in accordance with
         the configured options.
         """
-        if isinstance(predictions, ItemList):
-            pred_s = predictions.scores("pandas", index="ids")
-            assert pred_s is not None, "item list does not have scores"
-            if truth is not None:
-                rate_s = truth.field("rating", "pandas", index="ids")
-            else:
-                rate_s = predictions.field("rating", "pandas", index="ids")
-            assert rate_s is not None, "no ratings provided"
-            pred_s, rate_s = pred_s.align(rate_s, join="outer")
+        if not isinstance(predictions, ItemList):  # pragma: nocover
+            raise TypeError(f"predictions must be ItemList, not {type(predictions)}")
+        if truth is not None and not isinstance(truth, ItemList):  # pragma: nocover
+            raise TypeError(f"truth must be ItemList, not {type(truth)}")
+
+        pred_s = predictions.scores("pandas", index="ids")
+        assert pred_s is not None, "item list does not have scores"
+        if truth is not None:
+            rate_s = truth.field("rating", "pandas", index="ids")
+        else:
+            rate_s = predictions.field("rating", "pandas", index="ids")
+        assert rate_s is not None, "no ratings provided"
+        pred_s, rate_s = pred_s.align(rate_s, join="outer")
 
         pred_m = pred_s.isna()
         rate_m = rate_s.isna()
