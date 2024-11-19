@@ -24,7 +24,7 @@ from lenskit.data import ItemList, ItemListCollection, UserIDKey, Vocabulary, fr
 from lenskit.data.bulk import dict_to_df, iter_item_lists
 from lenskit.diagnostics import ConfigWarning, DataWarning
 from lenskit.knn.item import ItemItemScorer
-from lenskit.metrics import MAE, RBP, RMSE, RecipRank, RunAnalysis, call_metric
+from lenskit.metrics import MAE, RBP, RMSE, RecipRank, RunAnalysis, call_metric, quick_measure_model
 from lenskit.pipeline import RecPipelineBuilder, topn_pipeline
 from lenskit.splitting import SampleFrac, crossfold_users
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
@@ -397,45 +397,15 @@ def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
 def test_ii_batch_accuracy(ml_100k):
     ds = from_interactions_df(ml_100k)
 
-    builder = RecPipelineBuilder()
-    builder.scorer(ItemItemScorer(30))
-    builder.predicts_ratings(fallback=BiasScorer())
+    results = quick_measure_model(ItemItemScorer(30), ds, predicts_ratings=True)
 
-    pipe = builder.build()
+    metrics = results.list_metrics(fill_missing=False)
+    summary = results.list_summary()
 
-    preds = ItemListCollection(UserIDKey)
-    recs = ItemListCollection(UserIDKey)
-    test = ItemListCollection(UserIDKey)
-
-    for split in crossfold_users(ds, 5, SampleFrac(0.2)):
-        _log.info("training on partition")
-        copy = pipe.clone()
-        copy.train(split.train)
-        _log.info("testing %d users", len(split.test))
-        runner = BatchPipelineRunner(n_jobs=1)
-        runner.recommend(n=10)
-        runner.predict()
-        result = runner.run(copy, split.test)
-        preds.add_from(result.output("predictions"))
-        recs.add_from(result.output("recommendations"))
-        test.add_from(split.test)
-
-    pra = RunAnalysis()
-    pra.add_metric(RMSE())
-    pra.add_metric(MAE())
-
-    evres = pra.compute(preds, test)
-    metrics = evres.list_metrics(fill_missing=False)
     assert not np.any(np.isnan(metrics["RMSE"]))
-    assert metrics["RMSE"].mean() == approx(0.90, abs=0.05)
-    assert evres.global_metrics()["MAE"] == approx(0.70, abs=0.025)
+    assert summary.loc["RMSE", "mean"] == approx(0.90, abs=0.05)
+    assert results.global_metrics()["MAE"] == approx(0.70, abs=0.025)
 
-    rra = RunAnalysis()
-    rra.add_metric(RecipRank())
-    rra.add_metric(RBP())
-
-    evres = rra.compute(preds, test)
-    summary = evres.list_summary()
     assert summary.loc["RecipRank", "mean"] > 0
     assert summary.loc["RBP", "mean"] > 0
 
