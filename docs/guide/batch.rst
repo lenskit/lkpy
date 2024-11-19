@@ -61,7 +61,7 @@ And measure their results:
     >>> measure = RunAnalysis()
     >>> measure.add_metric(RBP())
     >>> scores = measure.compute(recs, split.test)
-    >>> scores.summary()    # doctest: +ELLIPSIS
+    >>> scores.list_summary()    # doctest: +ELLIPSIS
             mean    median     std
     RBP  0.07...    0.0...  0.1...
 
