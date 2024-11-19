@@ -420,18 +420,15 @@ def test_ii_batch_accuracy(ml_100k):
         recs.add_from(result.output("recommendations"))
         test.add_from(split.test)
 
-    pred_df = preds.to_df()
-
-    mae = call_metric(MAE, pred_df)
-    assert mae == approx(0.70, abs=0.025)
-
     pra = RunAnalysis()
     pra.add_metric(RMSE())
+    pra.add_metric(MAE())
 
     evres = pra.compute(preds, test)
     metrics = evres.list_metrics(fill_missing=False)
     assert not np.any(np.isnan(metrics["RMSE"]))
     assert metrics["RMSE"].mean() == approx(0.90, abs=0.05)
+    assert evres.global_metrics()["MAE"] == approx(0.70, abs=0.025)
 
     rra = RunAnalysis()
     rra.add_metric(RecipRank())
