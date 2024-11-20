@@ -106,6 +106,7 @@ class BiasedMF(ALSBase):
             rmat = torch.sparse_coo_tensor(indices, values, size=rmat.size())
 
         rmat = rmat.to_sparse_csr()
+        assert not torch.any(torch.isnan(rmat.values()))
         return TrainingData.create(data.users, data.items, rmat)
 
     @override
@@ -187,6 +188,12 @@ def _train_solve_row(
     other: torch.Tensor,
     regI: torch.Tensor,
 ) -> torch.Tensor:
+    (nui,) = cols.shape
+    nf = other.shape[1]
+
+    if nui == 0:
+        return torch.zeros(nf)
+
     M = other[cols, :]
     MMT = M.T @ M
     # assert MMT.shape[0] == ctx.n_features
@@ -253,8 +260,13 @@ def _train_bias_row_cholesky(
     Returns:
         the user-feature vector (equivalent to V in the current Cholesky code)
     """
-    M = other[items, :]
+    (nui,) = items.shape
     nf = other.shape[1]
+
+    if nui == 0:
+        return torch.zeros(nf)
+
+    M = other[items, :]
     regI = torch.eye(nf, device=other.device) * reg
     MMT = M.T @ M
     A = MMT + regI * len(items)
