@@ -9,14 +9,12 @@ from __future__ import annotations
 import logging
 import math
 
-import numpy as np
-import pandas as pd
 import torch
 from seedbank import SeedLike
 from typing_extensions import Optional, override
 
 from lenskit.algorithms.als.common import TrainingData
-from lenskit.data import Dataset
+from lenskit.data import Dataset, ItemList
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
 from lenskit.util.logging import pbh_update, progress_handle
@@ -68,10 +66,12 @@ class ImplicitMF(ALSBase):
             Whether to use the `rating` column, if present.  Defaults to
             ``False``; when ``True``, the values from the ``rating`` column are
             used, and multipled by ``weight``; if ``False``, ImplicitMF treats
-            every rated user-item pair as having a rating of 1.
+            every rated user-item pair as having a rating of 1.\
+        save_user_feature:
+            Whether to save the user feature vector in the model, or recompute it at
+            scoring time.
         rng_spec:
             Random number generator or state (see :func:`~seedbank.numpy_rng`).
-        progress: a :func:`tqdm.tqdm`-compatible progress bar function
     """
 
     weight: float
@@ -87,15 +87,15 @@ class ImplicitMF(ALSBase):
         reg: float | tuple[float, float] = 0.1,
         weight: float = 40,
         use_ratings: bool = False,
-        rng_spec: Optional[SeedLike] = None,
         save_user_features: bool = True,
+        rng_spec: Optional[SeedLike] = None,
     ):
         super().__init__(
             features,
             epochs=epochs,
             reg=reg,
-            rng_spec=rng_spec,
             save_user_features=save_user_features,
+            rng_spec=rng_spec,
         )
         self.weight = weight
         self.use_ratings = use_ratings
@@ -105,14 +105,12 @@ class ImplicitMF(ALSBase):
         return _log
 
     @override
-    def fit(self, data: Dataset, **kwargs):
-        super().fit(data, **kwargs)
+    def train(self, data: Dataset):
+        super().train(data)
 
         # compute OtOr and save it on the model
         reg = self.reg[0] if isinstance(self.reg, tuple) else self.reg
         self.OtOr_ = _implicit_otor(self.item_features_, reg)
-
-        return self
 
     @override
     def prepare_data(self, data: Dataset) -> TrainingData:
@@ -142,17 +140,23 @@ class ImplicitMF(ALSBase):
             return _train_implicit_cholesky_fanout(context, OtOr, chunks, pbh)
 
     @override
-    def new_user_embedding(self, user, ratings: pd.Series) -> tuple[torch.Tensor, None]:
-        ri_idxes = self.items_.numbers(ratings.index)
+    def new_user_embedding(
+        self, user_num: int | None, user_items: ItemList
+    ) -> tuple[torch.Tensor, None]:
+        ri_idxes = user_items.numbers("torch", vocabulary=self.items_)
+
         ri_good = ri_idxes >= 0
         ri_it = ri_idxes[ri_good]
         if self.use_ratings:
-            ri_val = ratings.values[ri_good] * self.weight
+            ratings = user_items.field("rating", "torch")
+            if ratings is None:
+                raise ValueError("no ratings in user items")
+            ri_val = ratings[ri_good] * self.weight
         else:
-            ri_val = np.full(len(ri_good), self.weight)
+            ri_val = torch.full((len(ri_good),), self.weight)
 
-        ri_it = torch.from_numpy(ri_it)
-        ri_val = torch.from_numpy(ri_val).type(self.item_features_.dtype)
+        ri_it = ri_it
+        ri_val = ri_val.to(self.item_features_.dtype)
 
         u_feat = _train_implicit_row_cholesky(ri_it, ri_val, self.item_features_, self.OtOr_)
         return u_feat, None

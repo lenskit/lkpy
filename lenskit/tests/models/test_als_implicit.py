@@ -14,8 +14,10 @@ import torch
 from pytest import approx, mark
 
 import lenskit.util.test as lktu
-from lenskit.algorithms import Recommender, als
-from lenskit.data import Dataset, from_interactions_df, load_movielens_df
+from lenskit.als import ImplicitMF
+from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
+from lenskit.metrics import quick_measure_model
+from lenskit.pipeline import topn_pipeline
 
 _log = logging.getLogger(__name__)
 
@@ -27,8 +29,8 @@ simple_dsr = from_interactions_df(simple_dfr)
 
 
 def test_als_basic_build():
-    algo = als.ImplicitMF(20, epochs=10)
-    algo.fit(simple_ds)
+    algo = ImplicitMF(20, epochs=10)
+    algo.train(simple_ds)
 
     assert algo.users_ is not None
     assert algo.user_features_ is not None
@@ -40,12 +42,14 @@ def test_als_basic_build():
 
 
 def test_als_predict_basic():
-    algo = als.ImplicitMF(20, epochs=10)
-    algo.fit(simple_ds)
+    algo = ImplicitMF(20, epochs=10)
+    algo.train(simple_ds)
 
-    preds = algo.predict_for_user(10, [3])
+    preds = algo(query=10, items=ItemList([3]))
 
     assert len(preds) == 1
+    preds = preds.scores("pandas", index="ids")
+    assert preds is not None
     assert preds.index[0] == 3
     assert preds.loc[3] >= -0.1
     assert preds.loc[3] <= 5
@@ -53,14 +57,15 @@ def test_als_predict_basic():
 
 def test_als_predict_basic_for_new_ratings():
     """Test ImplicitMF ability to support new ratings"""
-    algo = als.ImplicitMF(20, epochs=10)
-    algo.fit(simple_ds)
+    algo = ImplicitMF(20, epochs=10)
+    algo.train(simple_ds)
 
-    new_ratings = pd.Series([4.0, 5.0], index=[1, 2])  # items as index and ratings as values
-
-    preds = algo.predict_for_user(15, [3], new_ratings)
+    query = RecQuery(15, ItemList([1, 2]))
+    preds = algo(query, ItemList([3]))
 
     assert len(preds) == 1
+    preds = preds.scores("pandas", index="ids")
+    assert preds is not None
     assert preds.index[0] == 3
     assert preds.loc[3] >= -0.1
     assert preds.loc[3] <= 5
@@ -74,19 +79,21 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
     u = 10
     i = 3
 
-    algo = als.ImplicitMF(20, epochs=10, use_ratings=True)
-    algo.fit(simple_dsr)
+    algo = ImplicitMF(20, epochs=10, use_ratings=True)
+    algo.train(simple_dsr)
 
-    preds = algo.predict_for_user(u, [i])
+    preds = algo(u, ItemList([i]))
+    preds = preds.scores("pandas", index="ids")
+    assert preds is not None
 
-    new_u_id = 1
-    new_ratings = pd.Series([4.0, 5.0], index=[1, 2])  # items as index and ratings as values
-
-    new_preds = algo.predict_for_user(new_u_id, [i], new_ratings)
+    query = RecQuery(1, ItemList([1, 2], rating=[4.0, 5.0]))
+    new_preds = algo(query, ItemList([i]))
+    new_preds = new_preds.scores("pandas", index="ids")
+    assert new_preds is not None
     assert abs(preds.loc[i] - new_preds.loc[i]) <= 0.1
 
 
-def test_als_predict_for_new_users_with_new_ratings(ml_ratings: pd.DataFrame, ml_ds: Dataset):
+def test_als_predict_for_new_users_with_new_ratings(rng: np.random.Generator, ml_ds: Dataset):
     """
     Test if ImplicitMF predictions using the same ratings for a new user
     is the same as a user in ml-latest-small dataset.
@@ -97,11 +104,11 @@ def test_als_predict_for_new_users_with_new_ratings(ml_ratings: pd.DataFrame, ml
     new_u_id = -1
 
     np.random.seed(45)
-    users = np.random.choice(ml_ds.users, n_users)
-    items = np.random.choice(ml_ds.items, n_items)
+    users = rng.choice(ml_ds.users.ids(), n_users)
+    items = ItemList(rng.choice(ml_ds.items.ids(), n_items))
 
-    algo = als.ImplicitMF(20, epochs=10, use_ratings=False)
-    algo.fit(ml_ds)
+    algo = ImplicitMF(20, epochs=10, use_ratings=False)
+    algo.train(ml_ds)
     assert algo.users_ is not None
     assert algo.user_features_ is not None
 
@@ -109,21 +116,23 @@ def test_als_predict_for_new_users_with_new_ratings(ml_ratings: pd.DataFrame, ml
 
     for u in users:
         _log.debug(f"user: {u}")
-        preds = algo.predict_for_user(u, items)
+        preds = algo(u, items)
+        preds = preds.scores("pandas", index="ids")
+        assert preds is not None
         upos = algo.users_.number(u)
 
         # get the user's rating series
-        user_data = ml_ratings[ml_ratings.user == u]
-        new_ratings = user_data.set_index("item")["rating"].copy()
+        user_data = ml_ds.user_row(u)
+        assert user_data is not None
 
-        nr_info = new_ratings.to_frame()
-        ifs = algo.item_features_[algo.items_.index.get_indexer_for(nr_info.index), :]
+        nr_info = user_data.to_df()
+        ifs = algo.item_features_[user_data.numbers(vocabulary=algo.items_), :]
         fit_uv = algo.user_features_[upos, :]
         nr_info["fit_recon"] = ifs @ fit_uv
         nr_info["fit_sqerr"] = np.square(algo.weight + 1.0 - nr_info["fit_recon"])
 
         _log.debug("user_features from fit:\n%s", fit_uv)
-        new_uv, _new_off = algo.new_user_embedding(new_u_id, new_ratings)
+        new_uv, _new_off = algo.new_user_embedding(new_u_id, user_data)
         nr_info["new_recon"] = ifs @ new_uv
         nr_info["new_sqerr"] = np.square(algo.weight + 1.0 - nr_info["new_recon"])
 
@@ -131,7 +140,10 @@ def test_als_predict_for_new_users_with_new_ratings(ml_ratings: pd.DataFrame, ml
 
         _log.debug("training data reconstruction:\n%s", nr_info)
 
-        new_preds = algo.predict_for_user(new_u_id, items, new_ratings)
+        query = RecQuery(-1, user_data)
+        new_preds = algo(query, items)
+        new_preds = new_preds.scores("pandas", index="ids")
+        assert new_preds is not None
 
         _log.debug("preds: " + str(preds.values))
         _log.debug("new_preds: " + str(new_preds.values))
@@ -154,38 +166,42 @@ def test_als_recs_topn_for_new_users_with_new_ratings(
     from lenskit.algorithms import basic
 
     n_users = 10
-    new_u_id = -1
 
-    users = rng.choice(ml_ds.users, n_users)
+    users = rng.choice(ml_ds.users.ids(), n_users).tolist()
 
-    algo = als.ImplicitMF(20, epochs=10, use_ratings=True)
-    rec_algo = basic.TopN(algo)
-    rec_algo.fit(ml_ds)
+    algo = ImplicitMF(20, epochs=10, use_ratings=True)
+    pipe = topn_pipeline(algo, n=10)
+    pipe.train(ml_ds)
     assert algo.users_ is not None
     assert algo.user_features_ is not None
     # _log.debug("Items: " + str(items))
 
     correlations = pd.Series(np.nan, index=users)
     for u in users:
-        recs = rec_algo.recommend(u, 10)
-        user_data = ml_ratings[ml_ratings.user == u]
+        recs = pipe.run("recommender", query=u)
+        assert isinstance(recs, ItemList)
+        user_data = ml_ds.user_row(u)
+        assert user_data is not None
         upos = algo.users_.number(u)
         _log.info("user %s: %s ratings", u, len(user_data))
 
         _log.debug("user_features from fit: " + str(algo.user_features_[upos, :]))
 
         # get the user's rating series
-        new_ratings = user_data.set_index("item")["rating"].copy()
-        new_recs = rec_algo.recommend(new_u_id, 10, ratings=new_ratings)
+        query = RecQuery(-1, user_data)
+
+        new_recs = pipe.run("recommender", query=query)
+        assert isinstance(new_recs, ItemList)
 
         # merge new & old recs
-        all_recs = pd.merge(
-            recs.rename(columns={"score": "old_score"}),
-            new_recs.rename(columns={"score": "new_score"}),
-            how="outer",
-        ).fillna(-np.inf)
+        old_scores = recs.scores("pandas", index="ids")
+        assert old_scores is not None
+        new_scores = new_recs.scores("pandas", index="ids")
+        assert new_scores is not None
 
-        tau = stats.kendalltau(all_recs.old_score, all_recs.new_score)
+        old_scores, new_scores = old_scores.align(new_scores, join="outer", fill_value=-np.nan)
+
+        tau = stats.kendalltau(old_scores, new_scores)
         _log.info("correlation for user %s: %f", u, tau.correlation)
         correlations.loc[u] = tau.correlation
 
@@ -196,40 +212,48 @@ def test_als_recs_topn_for_new_users_with_new_ratings(
 
 
 def test_als_predict_bad_item():
-    algo = als.ImplicitMF(20, epochs=10)
-    algo.fit(simple_ds)
+    algo = ImplicitMF(20, epochs=10)
+    algo.train(simple_ds)
 
-    preds = algo.predict_for_user(10, [4])
+    preds = algo(10, ItemList([4]))
     assert len(preds) == 1
+    preds = preds.scores("pandas", index="ids")
+    assert preds is not None
     assert preds.index[0] == 4
     assert np.isnan(preds.loc[4])
 
 
 def test_als_predict_bad_user():
-    algo = als.ImplicitMF(20, epochs=10)
-    algo.fit(simple_ds)
+    algo = ImplicitMF(20, epochs=10)
+    algo.train(simple_ds)
 
-    preds = algo.predict_for_user(50, [3])
+    preds = algo(50, ItemList([3]))
     assert len(preds) == 1
+    preds = preds.scores("pandas", index="ids")
+    assert preds is not None
     assert preds.index[0] == 3
     assert np.isnan(preds.loc[3])
 
 
 def test_als_predict_no_user_features_basic(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     np.random.seed(45)
-    u = np.random.choice(ml_ds.users, 1)[0]
-    items = np.random.choice(ml_ds.items, 2)
+    u = np.random.choice(ml_ds.users.ids(), 1)[0]
+    items = np.random.choice(ml_ds.items.ids(), 2)
 
-    algo = als.ImplicitMF(5, epochs=10)
-    algo.fit(ml_ds)
-    preds = algo.predict_for_user(u, items)
+    algo = ImplicitMF(5, epochs=10)
+    algo.train(ml_ds)
+    preds = algo(u, ItemList(items))
+    preds = preds.scores("pandas", index="ids")
+    assert preds is not None
 
-    user_data = ml_ratings[ml_ratings.user == u]
-    new_ratings = user_data.set_index("item")["rating"].copy()
+    user_data = ml_ds.user_row(u)
 
-    algo_no_user_features = als.ImplicitMF(5, epochs=10, save_user_features=False)
-    algo_no_user_features.fit(ml_ds)
-    preds_no_user_features = algo_no_user_features.predict_for_user(u, items, new_ratings)
+    algo_no_user_features = ImplicitMF(5, epochs=10, save_user_features=False)
+    algo_no_user_features.train(ml_ds)
+    query = RecQuery(u, user_data)
+    preds_no_user_features = algo_no_user_features(query, ItemList(items))
+    preds_no_user_features = preds_no_user_features.scores("pandas", index="ids")
+    assert preds_no_user_features is not None
 
     assert algo_no_user_features.user_features_ is None
     assert preds_no_user_features.values == approx(preds, abs=0.1)
@@ -239,8 +263,8 @@ def test_als_predict_no_user_features_basic(ml_ratings: pd.DataFrame, ml_ds: Dat
 
 @lktu.wantjit
 def test_als_train_large(ml_ds: Dataset):
-    algo = als.ImplicitMF(20, epochs=20, use_ratings=False)
-    algo.fit(ml_ds)
+    algo = ImplicitMF(20, epochs=20, use_ratings=False)
+    algo.train(ml_ds)
 
     assert algo.users_ is not None
     assert algo.user_features_ is not None
@@ -252,8 +276,8 @@ def test_als_train_large(ml_ds: Dataset):
 
 def test_als_save_load(tmp_path, ml_ds: Dataset):
     "Test saving and loading ALS models, and regularized training."
-    algo = als.ImplicitMF(5, epochs=5, reg=(2, 1), use_ratings=False)
-    algo.fit(ml_ds)
+    algo = ImplicitMF(5, epochs=5, reg=(2, 1), use_ratings=False)
+    algo.train(ml_ds)
     assert algo.users_ is not None
 
     fn = tmp_path / "model.bpk"
@@ -271,8 +295,8 @@ def test_als_save_load(tmp_path, ml_ds: Dataset):
 
 @lktu.wantjit
 def test_als_train_large_noratings(ml_ds: Dataset):
-    algo = als.ImplicitMF(20, epochs=20)
-    algo.fit(ml_ds)
+    algo = ImplicitMF(20, epochs=20)
+    algo.train(ml_ds)
 
     assert algo.users_ is not None
     assert algo.user_features_ is not None
@@ -284,8 +308,8 @@ def test_als_train_large_noratings(ml_ds: Dataset):
 
 @lktu.wantjit
 def test_als_train_large_ratings(ml_ds):
-    algo = als.ImplicitMF(20, epochs=20, use_ratings=True)
-    algo.fit(ml_ds)
+    algo = ImplicitMF(20, epochs=20, use_ratings=True)
+    algo.train(ml_ds)
 
     assert algo.users_ is not None
     assert algo.user_features_ is not None
@@ -298,29 +322,30 @@ def test_als_train_large_ratings(ml_ds):
 @mark.slow
 @mark.eval
 def test_als_implicit_batch_accuracy(ml_100k):
-    import lenskit.crossfold as xf
-    from lenskit import batch, topn
+    ds = from_interactions_df(ml_100k)
+    results = quick_measure_model(ImplicitMF(25, epochs=20), ds)
 
-    ratings = load_movielens_df(lktu.ml_100k_zip)
+    ndcg = results.list_summary().loc["NDCG", "mean"]
+    _log.info("nDCG for users is %.4f", ndcg)
+    assert ndcg > 0.22
 
-    def eval(train, test):
-        train = train.astype({"rating": np.float32})
-        _log.info("training implicit MF")
-        ials_algo = als.ImplicitMF(25, epochs=20)
-        ials_algo = Recommender.adapt(ials_algo)
-        ials_algo.fit(from_interactions_df(train))
-        users = test.user.unique()
-        _log.info("testing %d users", len(users))
-        lu_recs = batch.recommend(ials_algo, users, 100, n_jobs=2)
-        return lu_recs
 
-    folds = list(xf.partition_users(ratings, 5, xf.SampleFrac(0.2)))
-    test = pd.concat(te for (tr, te) in folds)
-    recs = pd.concat((eval(train, test) for (train, test) in folds), ignore_index=True)
+@mark.slow
+def test_als_match_orig(rng: np.random.Generator, ml_ds: Dataset):
+    from lenskit.algorithms import als
 
-    _log.info("analyzing recommendations")
-    rla = topn.RecListAnalysis()
-    rla.add_metric(topn.ndcg)
-    results = rla.compute(recs, test)
-    _log.info("nDCG for users is %.4f", results["ndcg"].mean())
-    assert results["ndcg"].mean() > 0.28
+    new = ImplicitMF(20, epochs=30, rng_spec=100)
+    new.train(ml_ds)
+
+    old = als.ImplicitMF(20, epochs=30, rng_spec=100)
+    old.fit(ml_ds)
+
+    for u in rng.choice(ml_ds.users.ids(), 50):
+        items = rng.choice(ml_ds.items.ids(), 100)
+        items = ItemList(items)
+
+        n_scores = new(query=u, items=items)
+        o_scores = old.predict_for_user(u, items.ids())
+
+        assert np.all(n_scores.ids() == o_scores.index.values)
+        assert n_scores.scores() == approx(o_scores.values)

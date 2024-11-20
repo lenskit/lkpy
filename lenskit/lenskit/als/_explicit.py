@@ -52,12 +52,7 @@ class BiasedMF(ALSBase):
 
     timer = None
 
-    features: int
-    epochs: int
-    reg: float | tuple[float, float]
     damping: UITuple[float]
-    rng: np.random.Generator
-    save_user_features: bool
 
     bias_: BiasModel
 
@@ -127,13 +122,7 @@ class BiasedMF(ALSBase):
 
         ri_val = ratings[mask].to(torch.float64)
 
-        # unpack regularization
-        if isinstance(self.reg, tuple):
-            ureg, ireg = self.reg
-        else:
-            ureg = self.reg
-
-        u_feat = _train_bias_row_cholesky(inums[mask], ri_val, self.item_features_, ureg)
+        u_feat = _train_bias_row_cholesky(inums[mask], ri_val, self.item_features_, self.reg.user)
         return u_feat, u_bias
 
     @override

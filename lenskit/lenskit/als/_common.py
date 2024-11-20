@@ -17,6 +17,7 @@ from typing_extensions import Iterator, NamedTuple, Optional, Self, override
 
 from lenskit import util
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
+from lenskit.data.types import UITuple
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component, Trainable
 
@@ -91,7 +92,7 @@ class ALSBase(ABC, Component, Trainable):
 
     features: int
     epochs: int
-    reg: float | tuple[float, float]
+    reg: UITuple[float]
     rng: np.random.Generator
     save_user_features: bool
 
@@ -113,13 +114,13 @@ class ALSBase(ABC, Component, Trainable):
         features: int,
         *,
         epochs: int = 10,
-        reg: float | tuple[float, float] = 0.1,
-        rng_spec: Optional[SeedLike] = None,
+        reg: UITuple[float] | float | tuple[float, float] = 0.1,
         save_user_features: bool = True,
+        rng_spec: Optional[SeedLike] = None,
     ):
         self.features = features
         self.epochs = epochs
-        self.reg = reg
+        self.reg = UITuple.create(reg)
         self.rng = numpy_rng(rng_spec)
         self.save_user_features = save_user_features
 
