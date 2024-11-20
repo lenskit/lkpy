@@ -67,10 +67,10 @@ class BiasScorer(Component):
     mean_: float
     "The global mean rating."
     items_: Vocabulary | None = None
-    item_biases_: np.ndarray[int, np.dtype[np.float64]] | None
+    item_biases_: np.ndarray[int, np.dtype[np.float32]] | None
     "The item offsets (:math:`b_i` values)."
     users_: Vocabulary | None = None
-    user_biases_: np.ndarray[int, np.dtype[np.float64]] | None
+    user_biases_: np.ndarray[int, np.dtype[np.float32]] | None
     "The user offsets (:math:`b_u` values)."
 
     def __init__(
@@ -108,7 +108,7 @@ class BiasScorer(Component):
 
         centered = ratings.data - self.mean_
         if np.allclose(centered, 0):
-            _logger.warn("mean-centered ratings are all 0, bias probably meaningless")
+            _logger.warning("mean-centered ratings are all 0, bias probably meaningless")
 
         if self.items:
             counts = np.full(ncols, self.damping.item)
@@ -117,7 +117,7 @@ class BiasScorer(Component):
             np.add.at(sums, ratings.col, centered)
 
             # store 0 offsets
-            i_bias = np.zeros(ncols)
+            i_bias = np.zeros(ncols, dtype=np.float32)
             np.divide(sums, counts, out=i_bias, where=counts > 0)
 
             self.items_ = data.items.copy()
@@ -133,7 +133,7 @@ class BiasScorer(Component):
             np.add.at(counts, ratings.row, 1)
             np.add.at(sums, ratings.row, centered)
 
-            u_bias = np.zeros(nrows)
+            u_bias = np.zeros(nrows, dtype=np.float32)
             np.divide(sums, counts, out=u_bias, where=counts > 0)
 
             self.users_ = data.users.copy()
