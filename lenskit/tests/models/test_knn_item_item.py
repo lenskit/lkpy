@@ -23,7 +23,7 @@ from lenskit.batch import BatchPipelineRunner
 from lenskit.data import ItemList, ItemListCollection, UserIDKey, Vocabulary, from_interactions_df
 from lenskit.data.bulk import dict_to_df, iter_item_lists
 from lenskit.diagnostics import ConfigWarning, DataWarning
-from lenskit.knn.item import ItemItemScorer
+from lenskit.knn.item import ItemKNNScorer
 from lenskit.metrics import MAE, RBP, RMSE, RecipRank, RunAnalysis, call_metric, quick_measure_model
 from lenskit.pipeline import RecPipelineBuilder, topn_pipeline
 from lenskit.splitting import SampleFrac, crossfold_users
@@ -64,7 +64,7 @@ def ml_subset(ml_ratings):
 
 
 def test_ii_train():
-    algo = ItemItemScorer(30, save_nbrs=500)
+    algo = ItemKNNScorer(30, save_nbrs=500)
     algo.train(simple_ds)
 
     assert isinstance(algo.item_means_, torch.Tensor)
@@ -98,7 +98,7 @@ def test_ii_train():
 
 
 def test_ii_train_unbounded():
-    algo = ItemItemScorer(30)
+    algo = ItemKNNScorer(30)
     algo.train(simple_ds)
 
     assert all(np.logical_not(np.isnan(algo.sim_matrix_.values())))
@@ -123,7 +123,7 @@ def test_ii_train_unbounded():
 
 
 def test_ii_simple_predict():
-    algo = ItemItemScorer(30, save_nbrs=500)
+    algo = ItemKNNScorer(30, save_nbrs=500)
     algo.train(simple_ds)
 
     res = algo(3, ItemList([6]))
@@ -135,7 +135,7 @@ def test_ii_simple_predict():
 
 
 def test_ii_simple_implicit_predict():
-    algo = ItemItemScorer(30, feedback="implicit")
+    algo = ItemKNNScorer(30, feedback="implicit")
     algo.train(from_interactions_df(simple_ratings.loc[:, ["user", "item"]]))
 
     res = algo(3, ItemList([6]))
@@ -149,7 +149,7 @@ def test_ii_simple_implicit_predict():
 def test_ii_warns_center():
     "Test that item-item warns if you center non-centerable data"
     data = simple_ratings.assign(rating=1)
-    algo = ItemItemScorer(5)
+    algo = ItemKNNScorer(5)
     with pytest.warns(DataWarning):
         algo.train(from_interactions_df(data))
 
@@ -158,7 +158,7 @@ def test_ii_warns_center():
 @mark.slow
 def test_ii_train_ml100k(tmp_path, ml_100k):
     "Test an unbounded model on ML-100K"
-    algo = ItemItemScorer(30)
+    algo = ItemKNNScorer(30)
     _log.info("training model")
     algo.train(from_interactions_df(ml_100k))
 
@@ -199,11 +199,11 @@ def test_ii_large_models(rng, ml_ratings, ml_ds):
     "Several tests of large trained I-I models"
     _log.info("training limited model")
     MODEL_SIZE = 100
-    algo_lim = ItemItemScorer(30, save_nbrs=MODEL_SIZE)
+    algo_lim = ItemKNNScorer(30, save_nbrs=MODEL_SIZE)
     algo_lim.train(ml_ds)
 
     _log.info("training unbounded model")
-    algo_ub = ItemItemScorer(30)
+    algo_ub = ItemKNNScorer(30)
     algo_ub.train(ml_ds)
 
     _log.info("testing models")
@@ -322,7 +322,7 @@ def test_ii_implicit_large(rng, ml_ratings):
     NBRS = 5
     NUSERS = 25
     NRECS = 50
-    algo = ItemItemScorer(NBRS, feedback="implicit")
+    algo = ItemKNNScorer(NBRS, feedback="implicit")
     pipe = topn_pipeline(algo)
     pipe.train(from_interactions_df(ml_ratings[["user", "item"]], item_col="item"))
 
@@ -358,7 +358,7 @@ def test_ii_implicit_large(rng, ml_ratings):
 @lktu.wantjit
 def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
     "Save and load a model"
-    original = ItemItemScorer(30, save_nbrs=500)
+    original = ItemKNNScorer(30, save_nbrs=500)
     _log.info("building model")
     original.train(from_interactions_df(ml_subset, item_col="item"))
 
@@ -397,7 +397,7 @@ def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
 def test_ii_batch_accuracy(ml_100k):
     ds = from_interactions_df(ml_100k)
 
-    results = quick_measure_model(ItemItemScorer(30), ds, predicts_ratings=True)
+    results = quick_measure_model(ItemKNNScorer(30), ds, predicts_ratings=True)
 
     metrics = results.list_metrics(fill_missing=False)
     summary = results.list_summary()
@@ -415,7 +415,7 @@ def test_ii_batch_accuracy(ml_100k):
 def test_ii_known_preds(ml_ds):
     from lenskit import batch
 
-    iknn = ItemItemScorer(20, min_sim=1.0e-6)
+    iknn = ItemKNNScorer(20, min_sim=1.0e-6)
     _log.info("training %s on ml data", iknn)
     iknn.train(ml_ds)
     _log.info("model means: %s", iknn.item_means_)

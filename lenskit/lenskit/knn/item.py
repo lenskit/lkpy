@@ -30,7 +30,7 @@ _log = logging.getLogger(__name__)
 MAX_BLOCKS = 1024
 
 
-class ItemItemScorer(Component, Trainable):
+class ItemKNNScorer(Component, Trainable):
     """
     Item-item nearest-neighbor collaborative filtering feedback. This item-item
     implementation is based on the description of item-based CF by
