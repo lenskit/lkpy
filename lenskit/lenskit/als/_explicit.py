@@ -17,6 +17,7 @@ from lenskit.basic import BiasScorer
 from lenskit.data import Dataset, ItemList
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
+from lenskit.stats import damped_mean
 from lenskit.util.logging import pbh_update, progress_handle
 
 from ._common import ALSBase, TrainContext, TrainingData
@@ -136,7 +137,7 @@ class BiasedMF(ALSBase):
             ratings = ratings - self.bias.mean_
             if self.bias.item_biases_ is not None:
                 ratings[mask] -= self.bias.item_biases_[inums[mask]]
-            u_offset = ratings.mean().item()
+            u_offset = damped_mean(ratings, self.bias.damping.user)
             ratings -= u_offset
 
         ri_val = ratings[mask].to(torch.float64)
