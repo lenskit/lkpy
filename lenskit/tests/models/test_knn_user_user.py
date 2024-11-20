@@ -19,7 +19,7 @@ from lenskit.algorithms import Recommender
 from lenskit.algorithms.ranking import TopN
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df
 from lenskit.data.bulk import dict_to_df, iter_item_lists
-from lenskit.knn import UserUserScorer
+from lenskit.knn import UserKNNScorer
 from lenskit.metrics import call_metric, quick_measure_model
 from lenskit.util import clone
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
@@ -28,7 +28,7 @@ _log = logging.getLogger(__name__)
 
 
 def test_uu_train(ml_ratings, ml_ds):
-    algo = UserUserScorer(30)
+    algo = UserKNNScorer(30)
     algo.train(ml_ds)
 
     # we have data structures
@@ -60,7 +60,7 @@ def test_uu_train(ml_ratings, ml_ds):
 
 
 def test_uu_predict_one(ml_ds):
-    algo = UserUserScorer(30)
+    algo = UserKNNScorer(30)
     algo.train(ml_ds)
 
     preds = algo(query=4, items=ItemList([1016]))
@@ -70,7 +70,7 @@ def test_uu_predict_one(ml_ds):
 
 
 def test_uu_predict_too_few(ml_ds):
-    algo = UserUserScorer(30, min_nbrs=2)
+    algo = UserKNNScorer(30, min_nbrs=2)
     algo.train(ml_ds)
 
     preds = algo(query=4, items=ItemList([2091]))
@@ -82,7 +82,7 @@ def test_uu_predict_too_few(ml_ds):
 
 
 def test_uu_predict_too_few_blended(ml_ds):
-    algo = UserUserScorer(30, min_nbrs=2)
+    algo = UserKNNScorer(30, min_nbrs=2)
     algo.train(ml_ds)
 
     preds = algo(query=4, items=ItemList([1016, 2091]))
@@ -94,7 +94,7 @@ def test_uu_predict_too_few_blended(ml_ds):
 
 
 def test_uu_predict_live_ratings(ml_ratings):
-    algo = UserUserScorer(30, min_nbrs=2)
+    algo = UserKNNScorer(30, min_nbrs=2)
     no4 = ml_ratings[ml_ratings.user != 4]
     no4 = from_interactions_df(no4, item_col="item")
     algo.train(no4)
@@ -116,7 +116,7 @@ def test_uu_predict_live_ratings(ml_ratings):
 
 
 def test_uu_save_load(tmp_path, ml_ratings, ml_ds):
-    orig = UserUserScorer(30)
+    orig = UserKNNScorer(30)
     _log.info("training model")
     orig.train(ml_ds)
 
@@ -161,7 +161,7 @@ def test_uu_save_load(tmp_path, ml_ratings, ml_ds):
 
 
 def test_uu_predict_unknown_empty(ml_ds):
-    algo = UserUserScorer(30, min_nbrs=2)
+    algo = UserKNNScorer(30, min_nbrs=2)
     algo.train(ml_ds)
 
     preds = algo(query=-28018, items=ItemList([1016, 2091]))
@@ -173,7 +173,7 @@ def test_uu_predict_unknown_empty(ml_ds):
 
 def test_uu_implicit(ml_ratings):
     "Train and use user-user on an implicit data set."
-    algo = UserUserScorer(20, feedback="implicit")
+    algo = UserKNNScorer(20, feedback="implicit")
     data = ml_ratings.loc[:, ["user", "item"]]
 
     algo.train(from_interactions_df(data, item_col="item"))
@@ -193,7 +193,7 @@ def test_uu_implicit(ml_ratings):
 @mark.slow
 def test_uu_save_load_implicit(tmp_path, ml_ratings):
     "Save and load user-user on an implicit data set."
-    orig = UserUserScorer(20, feedback="implicit")
+    orig = UserKNNScorer(20, feedback="implicit")
     data = ml_ratings.loc[:, ["user", "item"]]
 
     orig.train(from_interactions_df(data, item_col="item"))
@@ -210,7 +210,7 @@ def test_uu_save_load_implicit(tmp_path, ml_ratings):
 def test_uu_known_preds(ml_ds: Dataset):
     from lenskit import batch
 
-    uknn = UserUserScorer(30, min_sim=1.0e-6)
+    uknn = UserKNNScorer(30, min_sim=1.0e-6)
     _log.info("training %s on ml data", uknn)
     uknn.train(ml_ds)
 
@@ -257,7 +257,7 @@ def __batch_eval(job):
 @mark.eval
 def test_uu_batch_accuracy(ml_100k: pd.DataFrame):
     ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(UserUserScorer(30), ds, predicts_ratings=True)
+    results = quick_measure_model(UserKNNScorer(30), ds, predicts_ratings=True)
 
     summary = results.list_summary()
 
@@ -269,9 +269,7 @@ def test_uu_batch_accuracy(ml_100k: pd.DataFrame):
 @mark.eval
 def test_uu_implicit_batch_accuracy(ml_100k: pd.DataFrame):
     ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(
-        UserUserScorer(30, feedback="implicit"), ds, predicts_ratings=True
-    )
+    results = quick_measure_model(UserKNNScorer(30, feedback="implicit"), ds, predicts_ratings=True)
 
     summary = results.list_summary()
 

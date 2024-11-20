@@ -9,6 +9,6 @@ k-NN recommender models.
 """
 
 from .item import ItemItemScorer
-from .user import UserUserScorer
+from .user import UserKNNScorer
 
-__all__ = ["ItemItemScorer", "UserUserScorer"]
+__all__ = ["ItemItemScorer", "UserKNNScorer"]

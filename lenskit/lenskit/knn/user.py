@@ -30,7 +30,7 @@ from lenskit.pipeline import Component, Trainable
 _log = logging.getLogger(__name__)
 
 
-class UserUserScorer(Component, Trainable):
+class UserKNNScorer(Component, Trainable):
     """
     User-user nearest-neighbor collaborative filtering with ratings. This
     user-user implementation is not terribly configurable; it hard-codes design
