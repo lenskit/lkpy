@@ -399,7 +399,7 @@ class Dataset(ABC):
             * rating_count — the number of ratings for this item.  Only provided
               if the dataset has explicit ratings; if there are repeated
               ratings, this does **not** count superseded ratings.
-            * mean_rating — the mean of the reatings. Only provided if the
+            * mean_rating — the mean of the ratings. Only provided if the
               dataset has explicit ratings.
             * first_time — the first time the item appears. Only provided if the
               dataset has timestamps.
