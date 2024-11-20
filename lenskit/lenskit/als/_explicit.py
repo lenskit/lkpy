@@ -100,10 +100,10 @@ class BiasedMF(ALSBase):
             inos = indices[1, :]
             values = rmat.values() - self.bias.mean_
             if self.bias.item_biases_ is not None:
-                values -= torch.from_numpy(self.bias.item_biases_)[inos]
+                values.subtract_(torch.from_numpy(self.bias.item_biases_)[inos])
             if self.bias.user_biases_ is not None:
-                values -= torch.from_numpy(self.bias.user_biases_)[unos]
-            rmat = torch.sparse_coo_tensor(indices, values)
+                values.subtract_(torch.from_numpy(self.bias.user_biases_)[unos])
+            rmat = torch.sparse_coo_tensor(indices, values, size=rmat.size())
 
         rmat = rmat.to_sparse_csr()
         return TrainingData.create(data.users, data.items, rmat)
