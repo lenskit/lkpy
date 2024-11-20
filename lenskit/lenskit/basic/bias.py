@@ -11,12 +11,14 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Self, TypeAlias
+from typing import Self, TypeAlias, overload
 
 import numpy as np
+import torch
 
 from lenskit.data import ID, Dataset, ItemList, QueryInput, RecQuery, UITuple, Vocabulary
 from lenskit.pipeline import Component
+from lenskit.stats import damped_mean
 
 _logger = logging.getLogger(__name__)
 Damping: TypeAlias = float | UITuple[float] | tuple[float, float]
@@ -51,6 +53,9 @@ class BiasModel:
     users and items towards a mean instead of permitting them to take on extreme
     values based on few ratings.
     """
+
+    damping: UITuple[float]
+    "The mean damping terms."
 
     global_bias: float
     "The global bias term."
@@ -93,7 +98,7 @@ class BiasModel:
         g_bias = float(np.mean(ratings.data))
         _logger.info("global mean: %.3f", g_bias)
 
-        model = cls(g_bias)
+        model = cls(damping, g_bias)
 
         centered = ratings.data - g_bias
         if np.allclose(centered, 0):
@@ -129,9 +134,28 @@ class BiasModel:
 
         return model
 
+    @overload
     def compute_for_items(
-        self, items: ItemList, user_id: ID | None = None, user_items: ItemList | None = None
-    ) -> np.ndarray[tuple[int], np.dtype[np.float32]]:
+        self,
+        items: ItemList,
+        user_id: ID | None = None,
+        user_items: ItemList | None = None,
+    ) -> tuple[np.ndarray[tuple[int], np.dtype[np.float32]], float]: ...
+    @overload
+    def compute_for_items(
+        self,
+        items: ItemList,
+        *,
+        bias: float,
+    ) -> np.ndarray[tuple[int], np.dtype[np.float32]]: ...
+    def compute_for_items(
+        self,
+        items: ItemList,
+        user_id: ID | None = None,
+        user_items: ItemList | None = None,
+        *,
+        bias: float | None = None,
+    ):
         """
         Compute the personalized biases for a set of itemsm and optionally a
         user.  The user can be specified either by their identifier or by a list
@@ -146,6 +170,13 @@ class BiasModel:
                 The user's items, with ratings (takes precedence over ``user``
                 if both are supplied).  If the supplied list does not have a
                 ``rating`` field, it is ignored.
+            bias:
+                A pre-computed user bias.
+        Returns:
+            A tuple of the overall bias scores for the specified items and user,
+            and the user's bias (needed to de-normalize scores efficiently
+            later).  If a user bias is provided instead of user information,
+            only the composite bias scores are returned.
         """
         n = len(items)
         scores = np.full(n, self.global_bias, dtype=np.float32)
@@ -156,10 +187,14 @@ class BiasModel:
             mask = idxes >= 0
             scores[mask] += self.item_biases[idxes[mask]]
 
+        if bias is not None:
+            return scores + bias
+
         ratings = None
         if user_items is not None:
             ratings = user_items.field("rating")
 
+        user_bias = 0.0
         if self.users is not None:
             assert self.user_biases is not None
 
@@ -173,17 +208,34 @@ class BiasModel:
                     r_mask = r_idxes >= 0
                     uoff[r_mask] -= self.item_biases[r_idxes[r_mask]]
 
-                umean = uoff.mean()
-                scores += umean
+                user_bias = damped_mean(uoff, self.damping.user)
+                scores += user_bias
 
             elif user_id is not None:
                 uno = self.users.number(user_id, missing="none")
                 if uno is not None:
-                    umean = self.user_biases[uno]
-                    _logger.debug("using mean(user %s) = %.3f", user_id, umean)
-                    scores += umean
+                    user_bias = self.user_biases[uno]
+                    _logger.debug("using mean(user %s) = %.3f", user_id, user_bias)
+                    scores += user_bias
 
-        return scores
+        return scores, user_bias
+
+    def transform_matrix(self, matrix: torch.Tensor):
+        """
+        Transform a sparse ratings matrix by subtracting biases.
+        """
+        if not matrix.is_sparse:
+            raise TypeError("matrix is not sparse COO")
+
+        indices = matrix.indices()
+        unos = indices[0, :]
+        inos = indices[1, :]
+        values = matrix.values() - self.global_bias
+        if self.item_biases is not None:
+            values.subtract_(torch.from_numpy(self.item_biases)[inos])
+        if self.user_biases is not None:
+            values.subtract_(torch.from_numpy(self.user_biases)[unos])
+        return torch.sparse_coo_tensor(indices, values, size=matrix.size())
 
 
 class BiasScorer(Component):

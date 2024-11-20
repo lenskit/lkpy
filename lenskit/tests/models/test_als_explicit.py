@@ -31,11 +31,11 @@ def test_als_basic_build():
     algo = BiasedMF(20, epochs=10)
     algo.train(simple_ds)
 
-    assert algo.bias is not None
+    assert algo.bias_ is not None
     assert algo.users_ is not None
     assert algo.user_features_ is not None
 
-    assert algo.bias.mean_ == approx(simple_df.rating.mean())
+    assert algo.bias_.global_bias == approx(simple_df.rating.mean())
     assert set(algo.users_.ids()) == set([10, 12, 13])
     assert set(algo.items_.ids()) == set([1, 2, 3])
     assert algo.user_features_.shape == (3, 20)
@@ -46,31 +46,13 @@ def test_als_basic_build():
     assert len(algo.items_) == 3
 
 
-def test_als_no_bias():
-    algo = BiasedMF(20, epochs=10, bias=None)
-    algo.train(simple_ds)
-
-    assert algo.bias is None
-    assert algo.users_ is not None
-    assert algo.user_features_ is not None
-
-    assert algo.bias is None
-    assert set(algo.users_.ids()) == set([10, 12, 13])
-    assert set(algo.items_.ids()) == set([1, 2, 3])
-    assert algo.user_features_.shape == (3, 20)
-    assert algo.item_features_.shape == (3, 20)
-
-    preds = algo(query=10, items=ItemList([3]))
-    assert len(preds) == 1
-
-
 def test_als_predict_basic():
     algo = BiasedMF(20, epochs=10)
     algo.train(simple_ds)
 
-    assert algo.bias is not None
+    assert algo.bias_ is not None
 
-    assert algo.bias.mean_ == approx(simple_df.rating.mean())
+    assert algo.bias_.global_bias == approx(simple_df.rating.mean())
 
     preds = algo(query=10, items=ItemList([3]))
     assert len(preds) == 1
@@ -85,8 +67,8 @@ def test_als_predict_basic_for_new_ratings():
     algo = BiasedMF(20, epochs=10)
     algo.train(simple_ds)
 
-    assert algo.bias is not None
-    assert algo.bias.mean_ == approx(simple_df.rating.mean())
+    assert algo.bias_ is not None
+    assert algo.bias_.global_bias == approx(simple_df.rating.mean())
 
     query = RecQuery(15, ItemList(item_ids=[1, 2], rating=[4.0, 5.0]))
     preds = algo(query, items=ItemList([3]))
@@ -130,7 +112,7 @@ def test_als_predict_for_new_users_with_new_ratings(rng, ml_ds: Dataset):
     algo.train(ml_ds)
 
     _log.debug("Items: " + str(items))
-    assert algo.bias is not None
+    assert algo.bias_ is not None
     assert algo.users_ is not None
     assert algo.user_features_ is not None
 
@@ -157,8 +139,8 @@ def test_als_predict_bad_item():
     algo = BiasedMF(20, epochs=10)
     algo.train(simple_ds)
 
-    assert algo.bias is not None
-    assert algo.bias.mean_ == approx(simple_df.rating.mean())
+    assert algo.bias_ is not None
+    assert algo.bias_.global_bias == approx(simple_df.rating.mean())
 
     preds = algo(query=10, items=ItemList([4]))
     assert len(preds) == 1
@@ -172,8 +154,8 @@ def test_als_predict_bad_user():
     algo = BiasedMF(20, epochs=10)
     algo.train(simple_ds)
 
-    assert algo.bias is not None
-    assert algo.bias.mean_ == approx(simple_df.rating.mean())
+    assert algo.bias_ is not None
+    assert algo.bias_.global_bias == approx(simple_df.rating.mean())
 
     preds = algo(query=50, items=ItemList([3]))
     assert len(preds) == 1
@@ -192,7 +174,7 @@ def test_als_predict_no_user_features_basic(rng: np.random.Generator, ml_ds: Dat
     algo = BiasedMF(5, epochs=10)
     algo.train(ml_ds)
     _log.debug("Items: " + str(items))
-    assert algo.bias is not None
+    assert algo.bias_ is not None
     assert algo.users_ is not None
     assert algo.user_features_ is not None
 
@@ -223,11 +205,11 @@ def test_als_train_large(ml_ratings, ml_ds: Dataset):
     algo = BiasedMF(20, epochs=10)
     algo.train(ml_ds)
 
-    assert algo.bias is not None
+    assert algo.bias_ is not None
     assert algo.users_ is not None
     assert algo.user_features_ is not None
 
-    assert algo.bias.mean_ == approx(ml_ratings.rating.mean())
+    assert algo.bias_.global_bias == approx(ml_ratings.rating.mean())
     assert algo.features == 20
     assert len(algo.items_) == ml_ratings.item.nunique()
     assert len(algo.users_) == ml_ratings.user.nunique()
@@ -240,7 +222,7 @@ def test_als_train_large(ml_ratings, ml_ds: Dataset):
     isums = istats["mean_rating"] * icounts
     is2 = isums - icounts * gmean
     imeans = is2 / (icounts + 5)
-    ibias = pd.Series(algo.bias.item_biases_, index=algo.items_.index)
+    ibias = pd.Series(algo.bias_.item_biases, index=algo.items_.index)
     imeans, ibias = imeans.align(ibias)
     assert ibias.values == approx(imeans.values, rel=1.0e-3)
 
@@ -250,16 +232,16 @@ def test_als_save_load(ml_ds: Dataset):
     original = BiasedMF(5, epochs=5)
     original.train(ml_ds)
 
-    assert original.bias is not None
+    assert original.bias_ is not None
     assert original.users_ is not None
 
     mod = pickle.dumps(original)
     _log.info("serialized to %d bytes", len(mod))
 
     algo = pickle.loads(mod)
-    assert algo.bias.mean_ == original.bias.mean_
-    assert np.all(algo.bias.user_biases_ == original.bias.user_biases_)
-    assert np.all(algo.bias.item_biases_ == original.bias.item_biases_)
+    assert algo.bias_.global_bias == original.bias_.global_bias
+    assert np.all(algo.bias_.user_biases == original.bias_.user_biases)
+    assert np.all(algo.bias_.item_biases == original.bias_.item_biases)
     assert torch.all(algo.user_features_ == original.user_features_)
     assert torch.all(algo.item_features_ == original.item_features_)
     assert np.all(algo.items_.index == original.items_.index)
@@ -274,7 +256,7 @@ def test_als_save_load(ml_ds: Dataset):
 @mark.eval
 def test_als_batch_accuracy(ml_100k):
     ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(BiasedMF(25, epochs=20, damping=5), ds)
+    results = quick_measure_model(BiasedMF(25, epochs=20, damping=5), ds, predicts_ratings=True)
 
     assert results.global_metrics()["MAE"] == approx(0.73, abs=0.045)
     assert results.list_summary().loc["RMSE", "mean"] == approx(0.94, abs=0.05)

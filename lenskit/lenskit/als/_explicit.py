@@ -13,11 +13,11 @@ import torch
 from seedbank import SeedLike
 from typing_extensions import override
 
-from lenskit.basic import BiasScorer
+from lenskit.basic import BiasModel
 from lenskit.data import Dataset, ItemList
+from lenskit.data.types import UITuple
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
-from lenskit.stats import damped_mean
 from lenskit.util.logging import pbh_update, progress_handle
 
 from ._common import ALSBase, TrainContext, TrainingData
@@ -38,15 +38,14 @@ class BiasedMF(ALSBase):
 
     Args:
         features:
-            the number of features to train
+            The number of features to train.
         epochs:
-            the number of iterations to train
+            The number of iterations to train.
         reg:
-            the regularization factor; can also be a tuple ``(ureg, ireg)`` to
+            The regularization factor; can also be a tuple ``(ureg, ireg)`` to
             specify separate user and item regularization terms.
         damping:
-            damping factor for the underlying bias. bias: the bias model. If
-            ``True``, fits a :class:`Bias` with damping ``damping``.
+            Damping term for the bias model.
         rng_spec:
             Random number generator or state (see :func:`seedbank.numpy_rng`).
     """
@@ -56,9 +55,11 @@ class BiasedMF(ALSBase):
     features: int
     epochs: int
     reg: float | tuple[float, float]
-    bias: BiasScorer | None
+    damping: UITuple[float]
     rng: np.random.Generator
     save_user_features: bool
+
+    bias_: BiasModel
 
     def __init__(
         self,
@@ -66,8 +67,7 @@ class BiasedMF(ALSBase):
         *,
         epochs: int = 10,
         reg: float | tuple[float, float] = 0.1,
-        damping: float = 5,
-        bias: bool | BiasScorer | None = True,
+        damping: float | UITuple[float] | tuple[float, float] = 5.0,
         rng_spec: SeedLike | None = None,
         save_user_features: bool = True,
     ):
@@ -78,10 +78,7 @@ class BiasedMF(ALSBase):
             rng_spec=rng_spec,
             save_user_features=save_user_features,
         )
-        if bias is True:
-            self.bias = BiasScorer(damping=damping)
-        else:
-            self.bias = bias or None
+        self.damping = UITuple.create(damping)
 
     @property
     def logger(self):
@@ -92,18 +89,9 @@ class BiasedMF(ALSBase):
         # transform ratings using offsets
         rmat = data.interaction_matrix("torch", layout="coo", field="rating")
 
-        if self.bias is not None:
-            _log.info("[%s] normalizing ratings", self.timer)
-            self.bias.train(data)
-            indices = rmat.indices()
-            unos = indices[0, :]
-            inos = indices[1, :]
-            values = rmat.values() - self.bias.mean_
-            if self.bias.item_biases_ is not None:
-                values.subtract_(torch.from_numpy(self.bias.item_biases_)[inos])
-            if self.bias.user_biases_ is not None:
-                values.subtract_(torch.from_numpy(self.bias.user_biases_)[unos])
-            rmat = torch.sparse_coo_tensor(indices, values, size=rmat.size())
+        _log.info("[%s] normalizing ratings", self.timer)
+        self.bias_ = BiasModel.learn(data, self.damping)
+        rmat = self.bias_.transform_matrix(rmat)
 
         rmat = rmat.to_sparse_csr()
         assert not torch.any(torch.isnan(rmat.values()))
@@ -128,18 +116,14 @@ class BiasedMF(ALSBase):
     def new_user_embedding(
         self, user_num: int | None, items: ItemList
     ) -> tuple[torch.Tensor, float | None]:
-        u_offset = None
         inums = items.numbers("torch", vocabulary=self.items_, missing="negative")
         mask = inums >= 0
         ratings = items.field("rating", "torch")
         assert ratings is not None
 
-        if self.bias is not None:
-            ratings = ratings - self.bias.mean_
-            if self.bias.item_biases_ is not None:
-                ratings[mask] -= self.bias.item_biases_[inums[mask]]
-            u_offset = damped_mean(ratings, self.bias.damping.user)
-            ratings -= u_offset
+        biases, u_bias = self.bias_.compute_for_items(items, None, items)
+        biases = torch.from_numpy(biases)
+        ratings = ratings - biases
 
         ri_val = ratings[mask].to(torch.float64)
 
@@ -150,31 +134,26 @@ class BiasedMF(ALSBase):
             ureg = self.reg
 
         u_feat = _train_bias_row_cholesky(inums[mask], ri_val, self.item_features_, ureg)
-        return u_feat, u_offset
+        return u_feat, u_bias
 
     @override
     def finalize_scores(
-        self, user_num: int | None, items: ItemList, u_offset: float | None
+        self, user_num: int | None, items: ItemList, user_bias: float | None
     ) -> ItemList:
-        if self.bias is not None:
-            scores = items.scores()
-            assert scores is not None
+        scores = items.scores()
+        assert scores is not None
 
-            scores = scores + self.bias.mean_
+        if user_bias is None:
+            if user_num is not None and self.bias_.user_biases is not None:
+                user_bias = self.bias_.user_biases[user_num]
+            else:
+                user_bias = 0.0
+        assert user_bias is not None
 
-            if self.bias.item_biases_ is not None:
-                nums = items.numbers(vocabulary=self.items_, missing="negative")
-                good = nums >= 0
-                scores[good] += self.bias.item_biases_[nums[good]]
+        biases = self.bias_.compute_for_items(items, bias=user_bias)
+        scores = scores + biases
 
-            if u_offset is not None:
-                scores += u_offset
-            elif user_num is not None and self.bias.user_biases_ is not None:
-                scores += self.bias.user_biases_[user_num]
-
-            return ItemList(items, scores=scores)
-        else:
-            return items
+        return ItemList(items, scores=scores)
 
     def __str__(self):
         return "als.BiasedMF(features={}, regularization={})".format(self.features, self.reg)

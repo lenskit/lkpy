@@ -295,7 +295,7 @@ class ALSBase(ABC, Component, Trainable):
         ...
 
     def finalize_scores(
-        self, user_num: int | None, items: ItemList, u_offset: float | None
+        self, user_num: int | None, items: ItemList, user_bias: float | None
     ) -> ItemList:
         """
         Perform any final transformation of scores prior to returning them.
