@@ -33,6 +33,10 @@ class TestComponent:
     def __call__(self, *, item: int) -> bool:
         return self.items.number(item, "none") is not None
 
+    @property
+    def is_trained(self):
+        return hasattr(self, "items")
+
     def train(self, data: Dataset):
         # we just memorize the items
         self.items = data.items
