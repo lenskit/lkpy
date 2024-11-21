@@ -100,9 +100,14 @@ however, documented here.
   than it was with Numba, and is easier to maintain.
 * The default minimum similarity for :class:`~lenskit.algorithms.knn.UserUser`
   is now :math:`10^{-6}`.
-* k-NN algorithms no longer support negative similarities; ``min_sim`` is clamped
-  to be at least the smallest normal in 32-bit floating point (:math:`1.75 \times 10^{-38}`).
-* The :mod:`implicit` bridge algorithms no longer look at rating values when they are present.
+* k-NN algorithms no longer support negative similarities; ``min_sim`` is
+  clamped to be at least the smallest normal in 32-bit floating point
+  (:math:`1.75 \times 10^{-38}`).
+* The :mod:`implicit` bridge algorithms no longer look at rating values when
+  they are present.
+* Bias is no longer optional for :class:`~lenksit.als.BiasedMF` and
+  :class:`~lenskit.funksvd.FunkSVD`; both are inherently biased models, and
+  FunkSVD is not commonly used.
 
 Bug Fixes
 ~~~~~~~~~
