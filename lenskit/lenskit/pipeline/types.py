@@ -146,10 +146,7 @@ def is_compatible_data(obj: object, *targets: type | TypeVar) -> bool:
                 if issubclass(obj.dtype.type, dt):
                     return True
             elif isinstance(tcls, type) and isinstance(obj, tcls):
-                warnings.warn(
-                    f"cannot type-check object of type {type(obj)} against generic",
-                    TypecheckWarning,
-                )
+                # this has holes, but is as close an approximation as we can get
                 return True
         elif (
             isinstance(obj, int)
