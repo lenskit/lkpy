@@ -107,7 +107,9 @@ class RunAnalysisResult:
         values are filled with their defaults before computing statistics.
         """
         scores = self.list_metrics(fill_missing=True)
-        return scores.agg(["mean", "median", "std"]).T
+        df = scores.agg(["mean", "median", "std"]).T
+        df.index.name = "metric"
+        return df
 
     def merge_from(self, other: RunAnalysisResult):
         """
@@ -195,6 +197,7 @@ class RunAnalysis:
         self, outputs: ItemListCollection[K1], test: ItemListCollection[K2]
     ) -> RunAnalysisResult:
         index = pd.MultiIndex.from_tuples(outputs.keys())
+        index.names = list(outputs.key_fields)
 
         lms = [m for m in self.metrics if m.is_listwise]
         gms = [m for m in self.metrics if m.is_global]
