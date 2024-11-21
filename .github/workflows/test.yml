@@ -293,7 +293,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit lenskit/tests lenskit-funksvd/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |
@@ -385,7 +385,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit --cov=lenskit-implicit/lenskit lenskit/tests lenskit-implicit/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-implicit/lenskit lenskit-implicit/tests
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |

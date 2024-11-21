@@ -57,9 +57,9 @@ export function vanillaSetup(options: VanillaTestOpts): WorkflowStep[] {
 }
 
 function requiredPackages(options: VanillaTestOpts) {
-  const pkgs = options.packages ?? [];
+  let pkgs = options.packages ?? [];
   if (!pkgs.includes("lenskit")) {
-    pkgs.unshift("lenskit");
+    pkgs = ["lenskit", ...pkgs];
   }
   return pkgs;
 }
