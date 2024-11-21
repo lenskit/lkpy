@@ -96,6 +96,10 @@ class UserKNNScorer(Component, Trainable):
 
         self.feedback = feedback
 
+    @property
+    def is_trained(self) -> bool:
+        return hasattr(self, "users_")
+
     @override
     def train(self, data: Dataset) -> Self:
         """

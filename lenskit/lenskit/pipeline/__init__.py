@@ -584,14 +584,23 @@ class Pipeline:
 
         return pipe
 
-    def train(self, data: Dataset) -> None:
+    def train(self, data: Dataset, *, retrain: bool = True) -> None:
         """
         Trains the pipeline's trainable components (those implementing the
         :class:`TrainableComponent` interface) on some training data.
+
+        Args:
+            data:
+                The dataset to train on.
+            retrain:
+                Whether to re-train components that have already been trained.
         """
         for comp in self._components.values():
             if hasattr(comp, "train"):
-                comp = cast(Trainable[Any], comp)
+                comp = cast(Trainable, comp)
+                if comp.is_trained and not retrain:
+                    _log.debug("component %s already trained", comp)
+                    continue
                 _log.info("training %s", comp)
                 comp.train(data)
             else:

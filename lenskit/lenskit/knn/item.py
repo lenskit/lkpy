@@ -106,6 +106,10 @@ class ItemKNNScorer(Component, Trainable):
             )
             self.min_sim = float(f4i.smallest_normal)
 
+    @property
+    def is_trained(self) -> bool:
+        return hasattr(self, "items_")
+
     @override
     def train(self, data: Dataset):
         """

@@ -63,7 +63,7 @@ class Configurable(Protocol):  # pragma: nocover
 
 
 @runtime_checkable
-class Trainable(Generic[COut], Protocol):  # pragma: nocover
+class Trainable(Protocol):  # pragma: nocover
     """
     Interface for components that can learn parameters from training data, and
     expose those parameters for serialization as an alternative to pickling
@@ -74,6 +74,13 @@ class Trainable(Generic[COut], Protocol):  # pragma: nocover
         Trainable components must also implement ``__call__``.
     """
 
+    @property
+    def is_trained(self) -> bool:
+        """
+        Check if this model has already been trained.
+        """
+        raise NotImplementedError()
+
     def train(self, data: Dataset) -> None:
         """
         Train the pipeline component to learn its parameters from a training
@@ -82,6 +89,9 @@ class Trainable(Generic[COut], Protocol):  # pragma: nocover
         Args:
             data:
                 The training dataset.
+            retrain:
+                If ``True``, retrain the model even if it has already been
+                trained.
         """
         raise NotImplementedError()
 

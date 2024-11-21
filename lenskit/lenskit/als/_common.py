@@ -124,6 +124,10 @@ class ALSBase(ABC, Component, Trainable):
         self.rng = numpy_rng(rng_spec)
         self.save_user_features = save_user_features
 
+    @property
+    def is_trained(self) -> bool:
+        return hasattr(self, "item_features_")
+
     @override
     def train(self, data: Dataset):
         """
