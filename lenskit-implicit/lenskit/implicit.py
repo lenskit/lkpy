@@ -8,16 +8,14 @@ import inspect
 import logging
 
 import numpy as np
-import pandas as pd
 from implicit.als import AlternatingLeastSquares
 from implicit.bpr import BayesianPersonalizedRanking
 from implicit.recommender_base import RecommenderBase
 from scipy.sparse import csr_matrix
 from typing_extensions import override
 
-from lenskit.algorithms import Predictor, Recommender
-from lenskit.data import Dataset
-from lenskit.data.vocab import Vocabulary
+from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
+from lenskit.pipeline import Component, Trainable
 
 _logger = logging.getLogger(__name__)
 
@@ -28,23 +26,13 @@ __all__ = [
 ]
 
 
-class BaseRec(Recommender, Predictor):
+class BaseRec(Component, Trainable):
     """
     Base class for Implicit-backed recommenders.
 
     Args:
-        delegate(implicit.RecommenderBase):
+        delegate:
             The delegate algorithm.
-
-    Attributes:
-        delegate(implicit.RecommenderBase):
-            The :py:mod:`implicit` delegate algorithm.
-        matrix_(scipy.sparse.csr_matrix):
-            The user-item rating matrix.
-        user_index_(pandas.Index):
-            The user index.
-        item_index_(pandas.Index):
-            The item index.
     """
 
     delegate: RecommenderBase
@@ -55,6 +43,7 @@ class BaseRec(Recommender, Predictor):
     """
     The weight for positive examples (only used by some algorithms).
     """
+
     matrix_: csr_matrix
     """
     The user-item rating matrix from training.
@@ -72,12 +61,16 @@ class BaseRec(Recommender, Predictor):
         self.delegate = delegate
         self.weight = 1.0
 
+    @property
+    def is_trained(self):
+        return hasattr(self, "matrix_")
+
     @override
-    def fit(self, data: Dataset, **kwargs):
+    def train(self, data: Dataset):
         matrix = data.interaction_matrix("scipy", layout="csr", legacy=True)
         uir = matrix * self.weight
         if getattr(self.delegate, "item_factors", None) is not None:  # pragma: no cover
-            _logger.warn("implicit algorithm already trained, re-fit is usually a bug")
+            _logger.warning("implicit algorithm already trained, re-fit is usually a bug")
 
         _logger.info("training %s on %s matrix (%d nnz)", self.delegate, uir.shape, uir.nnz)
 
@@ -90,54 +83,32 @@ class BaseRec(Recommender, Predictor):
         return self
 
     @override
-    def recommend(self, user, n: int | None = None, candidates=None, ratings=None):
-        uid = self.users_.number(user, missing=None)
-        if uid is None:
-            _logger.debug("unknown user %s, cannot recommend", user)
-            return pd.DataFrame({"item": []})
+    def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
+        query = RecQuery.create(query)
 
-        matrix = self.matrix_[[uid], :]
+        user_num = None
+        if query.user_id is not None:
+            user_num = self.users_.number(query.user_id, missing=None)
 
-        if candidates is None:
-            i_n = n if n is not None else self.items_.size
-            _logger.debug("recommending for user %s with unlimited candidates", user)
-            recs, scores = self.delegate.recommend(uid, matrix, N=i_n)  # type: ignore
-        else:
-            cands = self.items_.numbers(candidates, missing="negative")
-            cands = cands[cands >= 0]
-            _logger.debug("recommending for user %s with %d candidates", user, len(cands))
-            recs, scores = self.delegate.recommend(uid, matrix, items=cands)  # type: ignore
+        if user_num is None:
+            return ItemList(items, scores=np.nan)
 
-        if n is not None:
-            recs = recs[:n]
-            scores = scores[:n]
+        inos = items.numbers(vocabulary=self.items_, missing="negative")
+        mask = inos >= 0
+        good_inos = inos[mask]
 
-        rec_df = pd.DataFrame(
-            {
-                "item": self.items_.ids(recs),
-                "score": scores,
-            }
-        )
-        return rec_df
+        ifs = self.delegate.item_factors[good_inos]
+        uf = self.delegate.user_factors[user_num]
 
-    @override
-    def predict_for_user(self, user, items, ratings=None):
-        uid = self.users_.number(user, missing=None)
-        if uid is None:
-            return pd.Series(np.nan, index=items)
-
-        iids = self.items_.numbers(items, missing="negative")
-        iids = iids[iids >= 0]
-
-        ifs = self.delegate.item_factors[iids]
-        uf = self.delegate.user_factors[uid]
         # convert back if these are on CUDA
         if hasattr(ifs, "to_numpy"):
             ifs = ifs.to_numpy()
             uf = uf.to_numpy()
-        scores = np.dot(ifs, uf.T)
-        scores = pd.Series(np.ravel(scores), index=self.items_.ids(iids))
-        return scores.reindex(items)
+
+        scores = np.full(len(items), np.nan)
+        scores[mask] = np.dot(ifs, uf.T)
+
+        return ItemList(items, scores=scores)
 
     def __getattr__(self, name):
         if "delegate" not in self.__dict__:

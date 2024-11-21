@@ -16,7 +16,7 @@ _log = logging.getLogger(__name__)
 
 
 def quick_measure_model(
-    model: Component, data: Dataset, *, predicts_ratings: bool = False
+    model: Component, data: Dataset, *, predicts_ratings: bool = False, n_jobs: int | None = 1
 ) -> RunAnalysisResult:
     """
     Do a quick-and-dirty model measurement with a default pipeline setup, split,
@@ -37,7 +37,7 @@ def quick_measure_model(
     _log.info("measuring %s on %d users", model, us_size)
 
     pipe.train(split.train)
-    runner = BatchPipelineRunner(n_jobs=1)
+    runner = BatchPipelineRunner(n_jobs=n_jobs)
     runner.recommend(n=20)
     if predicts_ratings:
         runner.predict()
