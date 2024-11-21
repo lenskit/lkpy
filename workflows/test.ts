@@ -47,6 +47,21 @@ const test_matrix = {
     name: "Minimal dependency tests",
     dep_strategy: "minimum",
   }),
+  sklearn: testJob({
+    install: "conda",
+    key: "sklearn",
+    name: "Scikit-Learn tests on Python ${{matrix.python}}",
+    packages: ["lenskit-sklearn"],
+    matrix: { "python": CONDA_PYTHONS },
+    variant: "sklearn",
+  }),
+  "sklearn-mindep": testJob({
+    install: "vanilla",
+    key: "mindep-sklearn",
+    name: "Minimal dependency tests for Scikit-Learn",
+    dep_strategy: "minimum",
+    packages: ["lenskit-sklearn"],
+  }),
   funksvd: testJob({
     install: "conda",
     key: "funksvd",
