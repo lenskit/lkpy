@@ -10,12 +10,12 @@ FunkSVD (biased MF).
 
 import logging
 import time
-from typing import override
 
 import numba as n
 import numpy as np
 from numba.experimental import jitclass
 from seedbank import numpy_rng
+from typing_extensions import override
 
 from lenskit import util
 from lenskit.basic import BiasModel
