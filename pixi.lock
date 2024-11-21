@@ -13306,12 +13306,22 @@ packages:
   editable: true
 - kind: pypi
   name: lenskit-sklearn
-  version: 0.15.0.dev1543+g27ba9db2.d20241121
+  version: 0.15.0.dev1549+g1caad4de.d20241121
   path: lenskit-sklearn
-  sha256: 72144a3f90a27a6e2625005a4cd2162f2328db3ad6578f1d37794d8e81ce50a1
+  sha256: 18fa24b689f2924274287e83045bc80a1171d46d2d43383cf4eb35e7f0ebccdd
   requires_dist:
   - lenskit
-  - scikit-learn>=1.1
+  - scikit-learn~=1.2
+  requires_python: '>=3.11'
+  editable: true
+- kind: pypi
+  name: lenskit-sklearn
+  version: 0.15.0.dev1550+g525fbe77
+  path: lenskit-sklearn
+  sha256: 18fa24b689f2924274287e83045bc80a1171d46d2d43383cf4eb35e7f0ebccdd
+  requires_dist:
+  - lenskit
+  - scikit-learn~=1.2
   requires_python: '>=3.11'
   editable: true
 - kind: conda
