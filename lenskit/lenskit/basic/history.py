@@ -25,6 +25,12 @@ class UserTrainingHistoryLookup(Component, Trainable):
     Look up a user's history from the training data.
     """
 
+    training_data_: Dataset
+
+    @property
+    def is_trained(self) -> bool:
+        return hasattr(self, "training_data_")
+
     @override
     def train(self, data: Dataset):
         # TODO: find a better data structure for this
@@ -62,6 +68,7 @@ class KnownRatingScorer(Component, Trainable):
 
     score: Literal["rating", "indicator"] | None
     source: Literal["training", "query"]
+
     users_: Vocabulary
     items_: Vocabulary
     matrix_ = csr_array | CSRStructure
@@ -74,6 +81,11 @@ class KnownRatingScorer(Component, Trainable):
         self.score = score
         self.source = source
 
+    @property
+    def is_trained(self) -> bool:
+        return hasattr(self, "matrix_")
+
+    @override
     def train(self, data: Dataset):
         if self.source == "query":
             return

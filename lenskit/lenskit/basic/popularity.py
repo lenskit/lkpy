@@ -1,14 +1,15 @@
 import logging
 
 import pandas as pd
+from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList
-from lenskit.pipeline import Component
+from lenskit.pipeline import Component, Trainable
 
 _log = logging.getLogger(__name__)
 
 
-class PopScorer(Component):
+class PopScorer(Component, Trainable):
     """
     Score items by their popularity.  Use with :py:class:`TopN` to get a
     most-popular-items recommender.
@@ -27,11 +28,17 @@ class PopScorer(Component):
     """
 
     score_method: str
+
     item_scores_: pd.Series
 
     def __init__(self, score_method: str = "quantile"):
         self.score_method = score_method
 
+    @property
+    def is_trained(self) -> bool:
+        return hasattr(self, "item_scores_")
+
+    @override
     def train(self, data: Dataset):
         _log.info("counting item popularity")
         stats = data.item_stats()

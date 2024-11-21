@@ -5,7 +5,7 @@ import logging
 import numpy as np
 from typing_extensions import override
 
-from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
+from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.pipeline import Component, Trainable
 
 _logger = logging.getLogger(__name__)
@@ -15,6 +15,12 @@ class TrainingCandidateSelectorBase(Component, Trainable):
     """
     Base class for candidate selectors using the training data.
     """
+
+    items_: Vocabulary
+
+    @property
+    def is_trained(self) -> bool:
+        return hasattr(self, "items_")
 
     @override
     def train(self, data: Dataset):

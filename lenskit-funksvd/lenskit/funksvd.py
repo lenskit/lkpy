@@ -254,6 +254,10 @@ class FunkSVD(Component, Trainable):
         self.range = range
         self.random = numpy_rng(rng)
 
+    @property
+    def is_trained(self) -> bool:
+        return hasattr(self, "item_features_")
+
     @override
     def train(self, data: Dataset):
         """

@@ -11,10 +11,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Self, TypeAlias, overload
 
 import numpy as np
 import torch
+from typing_extensions import Self, TypeAlias, overload, override
 
 from lenskit.data import ID, Dataset, ItemList, QueryInput, RecQuery, UITuple, Vocabulary
 from lenskit.pipeline import Component
@@ -276,6 +276,11 @@ class BiasScorer(Component):
         if self.damping.item < 0:
             raise ValueError("item damping must be non-negative")
 
+    @property
+    def is_trained(self) -> bool:
+        return hasattr(self, "bias_")
+
+    @override
     def train(self, data: Dataset):
         """
         Train the bias model on some rating data.
