@@ -11,10 +11,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Self, TypeAlias, overload, override
 
 import numpy as np
 import torch
+from typing_extensions import Self, TypeAlias, overload, override
 
 from lenskit.data import ID, Dataset, ItemList, QueryInput, RecQuery, UITuple, Vocabulary
 from lenskit.pipeline import Component
