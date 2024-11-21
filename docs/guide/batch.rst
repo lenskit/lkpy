@@ -63,6 +63,7 @@ And measure their results:
     >>> scores = measure.compute(recs, split.test)
     >>> scores.list_summary()    # doctest: +ELLIPSIS
             mean    median     std
+    metric
     RBP  0.07...    0.0...  0.1...
 
 
