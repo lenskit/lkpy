@@ -306,7 +306,7 @@ class BiasScorer(Component):
         """
         query = RecQuery.create(query)
 
-        scores = self.model_.compute_for_items(items, query.user_id, query.user_items)
+        scores, _bias = self.model_.compute_for_items(items, query.user_id, query.user_items)
         return ItemList(items, scores=scores)
 
     def __str__(self):
