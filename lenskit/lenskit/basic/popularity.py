@@ -1,7 +1,7 @@
 import logging
-from typing import override
 
 import pandas as pd
+from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList
 from lenskit.pipeline import Component, Trainable
