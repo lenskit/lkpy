@@ -26,6 +26,9 @@ python = "=3.12"
 [feature.sklearn.dependencies]
 scikit-learn = "~=1.1"
 
+[feature.sklearn.pypi-dependencies]
+lenskit-sklearn = { path = "lenskit-sklearn", editable = true }
+
 [feature.funksvd.dependencies]
 numba = ">=0.56"
 
@@ -146,6 +149,17 @@ dev-compat = { features = [
 
 test-py311-core = { features = ["py311", "test"], solve-group = "py311" }
 test-py312-core = { features = ["py312", "test"], solve-group = "py312" }
+
+test-py311-sklearn = { features = [
+  "py311",
+  "test",
+  "sklearn",
+], solve-group = "py311" }
+test-py312-sklearn = { features = [
+  "py312",
+  "test",
+  "sklearn",
+], solve-group = "py312" }
 
 test-py311-funksvd = { features = [
   "py311",

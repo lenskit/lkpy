@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling ~=1.0", "hatch-vcs ~=0.4.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lenskit-sklearn"
+authors = [{ name = "Michael Ekstrand", email = "mdekstrand@drexel.edu" }]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Science/Research",
+]
+readme = "README.md"
+license = { file = "LICENSE.md" }
+requires-python = ">= 3.11"
+dependencies = ["lenskit", "scikit-learn ~=1.2"]
+dynamic = ["version"]
+
+[project.urls]
+homepage = "https://lenskit.org"
+documentation = "https://lkpy.lenskit.org"
+source = "https://github.com/lenskit/lkpy"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.sdist]
+include = ["/lenskit", "LICENSE.md", "README.md"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["lenskit"]
+
+[tool.hatch.version]
+source = "vcs"
+raw-options = { root = "..", version_scheme = "release-branch-semver" }

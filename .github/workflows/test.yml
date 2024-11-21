@@ -217,6 +217,98 @@ jobs:
             test*.log
             coverage.db
             coverage.xml
+  sklearn:
+    name: 'Scikit-Learn tests on Python ${{matrix.python}}'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - py311
+          - py312
+    steps:
+      - name: "🛒 Checkout"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: latest
+          activate-environment: true
+          environments: 'test-${{matrix.python}}-sklearn'
+          cache-write: false
+          log-level: vv
+          locked: false
+          frozen: true
+      - name: "🔍 Inspect environment"
+        run: |
+          python -m lenskit.util.envcheck
+      - name: "🏃🏻‍➡️ Test LKPY"
+        run: |
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-sklearn/lenskit lenskit-sklearn/tests
+      - name: "📐 Coverage results"
+        if: '${{ !cancelled() }}'
+        run: |
+          coverage xml
+          coverage report
+          cp .coverage coverage.db
+      - name: "📤 Upload test results"
+        uses: actions/upload-artifact@v4
+        if: '${{ !cancelled() }}'
+        with:
+          name: 'test-sklearn-py${{matrix.python}}'
+          path: |
+            test*.log
+            coverage.db
+            coverage.xml
+  sklearn-mindep:
+    name: Minimal dependency tests for Scikit-Learn
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: "🛒 Checkout"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: "🐍 Set up Python"
+        id: install-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: "🕶️ Set up uv"
+        run: |
+          pip install -U 'uv>=0.1.15'
+      - name: "📦 Set up Python dependencies"
+        id: install-deps
+        run: |
+          uv pip install --python $PYTHON "./lenskit[test]" "./lenskit-sklearn" --resolution=lowest-direct
+        shell: bash
+        env:
+          PYTHON: '${{steps.install-python.outputs.python-path}}'
+          UV_EXTRA_INDEX_URL: 'https://download.pytorch.org/whl/cpu'
+          UV_INDEX_STRATEGY: unsafe-first-match
+      - name: "🔍 Inspect environment"
+        run: |
+          python -m lenskit.util.envcheck
+      - name: "🏃🏻‍➡️ Test LKPY"
+        run: |
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-sklearn/lenskit lenskit-sklearn/tests
+      - name: "📐 Coverage results"
+        if: '${{ !cancelled() }}'
+        run: |
+          coverage xml
+          coverage report
+          cp .coverage coverage.db
+      - name: "📤 Upload test results"
+        uses: actions/upload-artifact@v4
+        if: '${{ !cancelled() }}'
+        with:
+          name: test-mindep-sklearn
+          path: |
+            test*.log
+            coverage.db
+            coverage.xml
   funksvd:
     name: 'FunkSVD tests on Python ${{matrix.python}}'
     runs-on: ubuntu-latest
@@ -544,6 +636,8 @@ jobs:
       - vanilla
       - nojit
       - mindep
+      - sklearn
+      - sklearn-mindep
       - funksvd
       - funksvd-mindep
       - implicit
