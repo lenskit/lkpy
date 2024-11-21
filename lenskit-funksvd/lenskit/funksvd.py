@@ -10,6 +10,7 @@ FunkSVD (biased MF).
 
 import logging
 import time
+from typing import override
 
 import numba as n
 import numpy as np
@@ -17,9 +18,9 @@ from numba.experimental import jitclass
 from seedbank import numpy_rng
 
 from lenskit import util
-from lenskit.algorithms.bias import Bias
-from lenskit.algorithms.mf_common import MFPredictor
-from lenskit.data import Dataset
+from lenskit.basic import BiasModel
+from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, UITuple, Vocabulary
+from lenskit.pipeline import Component, Trainable
 
 _logger = logging.getLogger(__name__)
 
@@ -196,7 +197,7 @@ def _align_add_bias(bias, index, keys, series):
     return bias, series
 
 
-class FunkSVD(MFPredictor[np.ndarray]):
+class FunkSVD(Component, Trainable):
     """
     Algorithm class implementing FunkSVD matrix factorization.  FunkSVD is a regularized
     biased matrix factorization technique trained with featurewise stochastic gradient
@@ -216,18 +217,23 @@ class FunkSVD(MFPredictor[np.ndarray]):
         range:
             the ``(min, max)`` rating values to clamp ratings, or ``None`` to leave
             predictions unclamped.
-        random_state:
-            The random state for shuffling the data prior to training.
+        rng:
+            The random seed.
     """
 
     features: int
     iterations: int
     lrate: float
     reg: float
-    damping: float | tuple[float, float]
+    damping: UITuple[float]
     range: tuple[float, float] | None
-    bias: Bias | None
     random: np.random.Generator
+
+    bias_: BiasModel
+    users_: Vocabulary
+    user_features_: np.ndarray[tuple[int, int], np.dtype[np.float64]]
+    items_: Vocabulary
+    item_features_: np.ndarray[tuple[int, int], np.dtype[np.float64]]
 
     def __init__(
         self,
@@ -236,26 +242,20 @@ class FunkSVD(MFPredictor[np.ndarray]):
         *,
         lrate: float = 0.001,
         reg: float = 0.015,
-        damping: float | tuple[float, float] = 5,
+        damping: UITuple[float] | float | tuple[float, float] = 5.0,
         range: tuple[float, float] | None = None,
-        bias: bool | Bias | None = True,
-        random_state=None,
+        rng=None,
     ):
         self.features = features
         self.iterations = iterations
         self.lrate = lrate
         self.reg = reg
-        self.damping = damping
+        self.damping = UITuple.create(damping)
         self.range = range
-        if not bias:
-            bias = None
-        if bias is True:
-            self.bias = Bias(damping=damping)
-        else:
-            self.bias = bias
-        self.random = numpy_rng(random_state)
+        self.random = numpy_rng(rng)
 
-    def fit(self, data: Dataset, **kwargs):
+    @override
+    def train(self, data: Dataset):
         """
         Train a FunkSVD model.
 
@@ -265,9 +265,8 @@ class FunkSVD(MFPredictor[np.ndarray]):
         timer = util.Stopwatch()
         rate_df = data.interaction_matrix(format="pandas", layout="coo", field="rating")
 
-        if self.bias:
-            _logger.info("[%s] fitting bias model", timer)
-            self.bias.fit(data)
+        _logger.info("[%s] fitting bias model", timer)
+        self.bias_ = BiasModel.learn(data, damping=self.damping)
 
         _logger.info("[%s] preparing rating data for %d samples", timer, len(rate_df))
         _logger.debug("shuffling rating data")
@@ -280,14 +279,11 @@ class FunkSVD(MFPredictor[np.ndarray]):
         ratings = np.array(rate_df["rating"], dtype=np.float64)
 
         _logger.debug("[%s] computing initial estimates", timer)
-        if self.bias:
-            initial = np.full(len(users), self.bias.mean_, dtype=np.float64)
-            if self.bias.item_offsets_ is not None:
-                initial += self.bias.item_offsets_.values[items]
-            if self.bias.user_offsets_ is not None:
-                initial += self.bias.user_offsets_.values[users]
-        else:
-            initial = np.zeros(len(users))
+        initial = np.full(len(users), self.bias_.global_bias, dtype=np.float64)
+        if self.bias_.item_biases is not None:
+            initial += self.bias_.item_biases[items]
+        if self.bias_.user_biases is not None:
+            initial += self.bias_.user_biases[users]
 
         _logger.debug("have %d estimates for %d ratings", len(initial), len(rate_df))
         assert len(initial) == len(rate_df)
@@ -307,21 +303,29 @@ class FunkSVD(MFPredictor[np.ndarray]):
         self.user_features_ = model.user_features
         self.item_features_ = model.item_features
 
-        return self
+    @override
+    def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
+        query = RecQuery.create(query)
 
-    def predict_for_user(self, user, items, ratings=None):
-        # look up user index
-        # look up user index
-        preds = self.score_by_ids(user, items)
-        if self.bias is not None:
-            preds = self.bias.inverse_transform_user(user, preds)
+        user_id = query.user_id
+        if user_id is not None:
+            user_num = self.users_.number(user_id, missing=None)
+        if user_num is None:
+            _logger.debug("unknown user %s", query.user_id)
+            return ItemList(items, scores=np.nan)
 
-        # clamp if suitable
-        if self.range is not None:
-            rmin, rmax = self.range
-            preds = np.clip(preds, rmin, rmax)
+        u_feat = self.user_features_[user_num, :]
 
-        return preds
+        item_nums = items.numbers(vocabulary=self.items_, missing="negative")
+        item_mask = item_nums >= 0
+        i_feats = self.item_features_[item_nums[item_mask], :]
+
+        scores = np.full((len(items),), np.nan, dtype=np.float64)
+        scores[item_mask] = i_feats @ u_feat
+        biases, _ub = self.bias_.compute_for_items(items, user_id, query.user_items)
+        scores += biases
+
+        return ItemList(items, scores=scores)
 
     def __str__(self):
         return "FunkSVD(features={}, reg={})".format(self.features, self.reg)

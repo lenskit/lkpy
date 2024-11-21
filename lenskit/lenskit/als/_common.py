@@ -284,8 +284,6 @@ class ALSBase(ABC, Component, Trainable):
         results = ItemList(items, scores=scores)
         return self.finalize_scores(user_num, results, u_offset)
 
-        return scores
-
     @abstractmethod
     def new_user_embedding(
         self, user_num: int | None, items: ItemList
