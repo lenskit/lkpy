@@ -13,7 +13,9 @@ import pandas as pd
 from pytest import importorskip, mark
 
 from lenskit.algorithms import basic
-from lenskit.data import from_interactions_df
+from lenskit.data import ItemList, from_interactions_df
+from lenskit.metrics import quick_measure_model
+from lenskit.pipeline import topn_pipeline
 
 hpf = importorskip("lenskit.hpf")
 
@@ -31,8 +33,8 @@ def test_hpf_train_large(tmp_path, ml_ratings):
     ds = from_interactions_df(ratings)
     algo.train(ds)
 
-    assert algo.n_users == ratings.user.nunique()
-    assert algo.n_items == ratings.item.nunique()
+    assert algo.user_features_.shape[0] == ratings.user.nunique()
+    assert algo.item_features_.shape[0] == ratings.item.nunique()
 
     mfile = tmp_path / "hpf.dat"
     with mfile.open("wb") as mf:
@@ -41,17 +43,16 @@ def test_hpf_train_large(tmp_path, ml_ratings):
     with mfile.open("rb") as mf:
         a2 = pickle.load(mf)
 
-    assert a2.n_users == algo.n_users
-    assert a2.n_items == algo.n_items
+    assert np.all(a2.user_features_ == algo.user_features_)
+    assert np.all(a2.item_features_ == algo.item_features_)
 
-    csel = basic.UnratedItemCandidateSelector()
-    csel.fit(ds)
-    rec = basic.TopN(algo, csel)
+    pipe = topn_pipeline(algo)
+    pipe.train(ds, retrain=False)
 
     for u in np.random.choice(ratings.user.unique(), size=50, replace=False):
-        recs = rec.recommend(u, 50)
+        recs = pipe.run("recommender", query=u, n=50)
+        assert isinstance(recs, ItemList)
         assert len(recs) == 50
-        assert recs.item.nunique() == 50
 
 
 @mark.slow
@@ -59,10 +60,10 @@ def test_hpf_train_binary(tmp_path, ml_ratings):
     algo = hpf.HPF(20)
     ratings = ml_ratings.drop(columns=["timestamp", "rating"])
     ds = from_interactions_df(ratings)
-    algo.fit(ds)
+    algo.train(ds)
 
-    assert algo.n_users == ratings.user.nunique()
-    assert algo.n_items == ratings.item.nunique()
+    assert algo.user_features_.shape[0] == ratings.user.nunique()
+    assert algo.item_features_.shape[0] == ratings.item.nunique()
 
     mfile = tmp_path / "hpf.dat"
     with mfile.open("wb") as mf:
@@ -71,14 +72,13 @@ def test_hpf_train_binary(tmp_path, ml_ratings):
     with mfile.open("rb") as mf:
         a2 = pickle.load(mf)
 
-    assert a2.n_users == algo.n_users
-    assert a2.n_items == algo.n_items
+    assert np.all(a2.user_features_ == algo.user_features_)
+    assert np.all(a2.item_features_ == algo.item_features_)
 
-    csel = basic.UnratedItemCandidateSelector()
-    csel.fit(ds)
-    rec = basic.TopN(algo, csel)
+    pipe = topn_pipeline(algo)
+    pipe.train(ds, retrain=False)
 
     for u in np.random.choice(ratings.user.unique(), size=50, replace=False):
-        recs = rec.recommend(u, 50)
+        recs = pipe.run("recommender", query=u, n=50)
+        assert isinstance(recs, ItemList)
         assert len(recs) == 50
-        assert recs.item.nunique() == 50
