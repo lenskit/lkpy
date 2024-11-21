@@ -12,7 +12,6 @@ import pandas as pd
 
 from pytest import importorskip, mark
 
-import lenskit.util.test as lktu
 from lenskit.algorithms import basic
 from lenskit.data import from_interactions_df
 
@@ -30,7 +29,7 @@ def test_hpf_train_large(tmp_path, ml_ratings):
     algo = hpf.HPF(20)
     ratings = ml_ratings.assign(rating=ml_ratings.rating + 0.5)
     ds = from_interactions_df(ratings)
-    algo.fit(ds)
+    algo.train(ds)
 
     assert algo.n_users == ratings.user.nunique()
     assert algo.n_items == ratings.item.nunique()
