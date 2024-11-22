@@ -14,7 +14,7 @@ pydantic = ">=2.8,<3"
 [pypi-dependencies]
 manylog = { git = "https://github.com/mdekstrand/manylog.git" }
 seedbank = ">=0.2.0a2"
-progress-api = ">=0.1.0a9"
+progress-api = { git = "https://github.com/lenskit/progress-api.git" }
 lenskit = { path = "lenskit", editable = true }
 
 [feature.py311.dependencies]
@@ -102,6 +102,7 @@ nbformat = ">=5.2"
 ipython = ">=7"
 pyprojroot = ">=0.3"
 seaborn-base = ">=0.13.2,<0.14"
+ipywidgets = ">=8.1.5,<9"
 
 [feature.reporting.dependencies]
 sqlite = "~=3.0"

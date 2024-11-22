@@ -80,7 +80,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xz-5.2.6-h166bdaf_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/07/3b/44ea6266a6761e9eefaa37d98fabefa112328808ac41aa87b4bbb668af30/pyzmq-26.2.0-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -141,7 +141,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xz-5.2.6-h57fd34a_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/28/2f/78a766c8913ad62b28581777ac4ede50c6d9f249d39c2963e279524a1bbe/pyzmq-26.2.0-cp312-cp312-macosx_10_15_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -205,7 +205,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/yaml-0.2.5-h8ffe710_2.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/73/80/2708a4641f7d553a63bc934a3eb7214806b5b39d200133ca7f7afb0a53e8/msgpack-1.1.0-cp312-cp312-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/ce/2c/a6f4a20202a4d3c582ad93f95ee78d79bbdc26803495aec2912b17dbbb6c/pyzmq-26.2.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -293,6 +293,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/iniconfig-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipykernel-6.29.5-pyh3099207_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipython-8.28.0-pyh707e725_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/ipywidgets-8.1.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/isoduration-20.11.0-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/jedi-0.19.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jinja2-3.1.4-pyhd8ed1ab_0.conda
@@ -310,6 +311,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab-4.2.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_pygments-0.3.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_server-2.27.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_widgets-3.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/kernel-headers_linux-64-3.10.0-he073ed8_17.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/keyutils-1.6.1-h166bdaf_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/linux-64/kiwisolver-1.4.7-py312h68727a3_0.conda
@@ -463,7 +465,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tk-8.6.13-noxft_h4845f30_101.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tornado-6.4.1-py312h66e93f0_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/types-python-dateutil-2.9.0.20241003-pyhff2d567_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_0.conda
@@ -477,6 +479,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/webcolors-24.8.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/webencodings-0.5.1-pyhd8ed1ab_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/websocket-client-1.8.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/widgetsnbextension-4.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xcb-util-0.4.1-hb711507_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xcb-util-cursor-0.1.5-hb9d3cd8_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xcb-util-image-0.4.0-hb711507_2.conda
@@ -509,7 +512,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
@@ -572,6 +575,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/iniconfig-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipykernel-6.29.5-pyh57ce528_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipython-8.28.0-pyh707e725_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/ipywidgets-8.1.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/isoduration-20.11.0-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/jedi-0.19.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jinja2-3.1.4-pyhd8ed1ab_0.conda
@@ -589,6 +593,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab-4.2.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_pygments-0.3.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_server-2.27.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_widgets-3.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/kiwisolver-1.4.7-py312h6142ec9_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/krb5-1.21.3-h237132a_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/lcms2-2.16-ha0e7c42_0.conda
@@ -705,7 +710,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-h5083fa2_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tornado-6.4.1-py312h024a12e_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/types-python-dateutil-2.9.0.20241003-pyhff2d567_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_0.conda
@@ -718,6 +723,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/webcolors-24.8.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/webencodings-0.5.1-pyhd8ed1ab_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/websocket-client-1.8.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/widgetsnbextension-4.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xorg-libxau-1.0.11-hd74edd7_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xorg-libxdmcp-1.1.5-hd74edd7_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xz-5.2.6-h57fd34a_0.tar.bz2
@@ -728,7 +734,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
@@ -863,6 +869,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/iniconfig-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipykernel-6.29.5-pyh3099207_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipython-8.28.0-pyh707e725_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/ipywidgets-8.1.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/isoduration-20.11.0-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/jedi-0.19.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jinja2-3.1.4-pyhd8ed1ab_0.conda
@@ -883,6 +890,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab-4.2.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_pygments-0.3.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_server-2.27.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_widgets-3.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/just-1.36.0-h8fae777_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/kernel-headers_linux-64-3.10.0-he073ed8_17.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/keyutils-1.6.1-h166bdaf_0.tar.bz2
@@ -1112,7 +1120,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomlkit-0.13.2-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tornado-6.4.1-py311h9ecbd09_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.10.21.16-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/types-python-dateutil-2.9.0.20241003-pyhff2d567_0.conda
@@ -1134,6 +1142,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/websocket-client-1.8.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/websockets-13.1-py311h9ecbd09_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.44.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/widgetsnbextension-4.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xcb-util-0.4.1-hb711507_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xcb-util-cursor-0.1.5-hb9d3cd8_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xcb-util-image-0.4.0-hb711507_2.conda
@@ -1167,7 +1176,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/30/b6/daf3e2976932da4ed3579cff7a30a53d22ea9323ee4f0d8e43be60454897/colorclass-2.2.2-py2.py3-none-any.whl
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/a8/a1/ad7b84b91ab5a324e707f4c9761633e357820b011a01e34ce658c1dda7cc/msgpack-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
@@ -1278,6 +1287,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/iniconfig-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipykernel-6.29.5-pyh57ce528_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipython-8.28.0-pyh707e725_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/ipywidgets-8.1.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/isoduration-20.11.0-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/jedi-0.19.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jinja2-3.1.4-pyhd8ed1ab_0.conda
@@ -1298,6 +1308,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab-4.2.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_pygments-0.3.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_server-2.27.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_widgets-3.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/just-1.36.0-h3bba108_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/kiwisolver-1.4.7-py311h2c37856_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/krb5-1.21.3-h237132a_0.conda
@@ -1493,7 +1504,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomlkit-0.13.2-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tornado-6.4.1-py311h460d6c5_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.10.21.16-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/types-python-dateutil-2.9.0.20241003-pyhff2d567_0.conda
@@ -1514,6 +1525,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/websocket-client-1.8.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/websockets-13.1-py311h460d6c5_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.44.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/widgetsnbextension-4.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xorg-libxau-1.0.11-hd74edd7_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xorg-libxdmcp-1.1.5-hd74edd7_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xz-5.2.6-h57fd34a_0.tar.bz2
@@ -1526,7 +1538,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/30/b6/daf3e2976932da4ed3579cff7a30a53d22ea9323ee4f0d8e43be60454897/colorclass-2.2.2-py2.py3-none-any.whl
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/42/ae/d3adea9bb4a1342763556078b5765e666f8fdf242e00f3f6657380920972/msgpack-1.1.0-cp311-cp311-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
@@ -1659,6 +1671,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/iniconfig-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipykernel-6.29.5-pyh3099207_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipython-8.28.0-pyh707e725_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/ipywidgets-8.1.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/isoduration-20.11.0-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/jedi-0.19.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jinja2-3.1.4-pyhd8ed1ab_0.conda
@@ -1678,6 +1691,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab-4.2.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_pygments-0.3.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_server-2.27.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_widgets-3.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/just-1.36.0-h8fae777_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/keyutils-1.6.1-h166bdaf_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/linux-64/kiwisolver-1.4.7-py312h68727a3_0.conda
@@ -1900,7 +1914,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomlkit-0.13.2-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tornado-6.4.1-py312h66e93f0_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.10.21.16-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/types-python-dateutil-2.9.0.20241003-pyhff2d567_0.conda
@@ -1922,6 +1936,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/websocket-client-1.8.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/websockets-13.1-py312h66e93f0_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.44.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/widgetsnbextension-4.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xcb-util-0.4.1-hb711507_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xcb-util-cursor-0.1.5-hb9d3cd8_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xcb-util-image-0.4.0-hb711507_2.conda
@@ -1955,7 +1970,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/30/b6/daf3e2976932da4ed3579cff7a30a53d22ea9323ee4f0d8e43be60454897/colorclass-2.2.2-py2.py3-none-any.whl
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
@@ -2060,6 +2075,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/iniconfig-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipykernel-6.29.5-pyh57ce528_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipython-8.28.0-pyh707e725_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/ipywidgets-8.1.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/isoduration-20.11.0-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/jedi-0.19.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jinja2-3.1.4-pyhd8ed1ab_0.conda
@@ -2079,6 +2095,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab-4.2.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_pygments-0.3.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_server-2.27.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_widgets-3.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/just-1.36.0-h3bba108_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/kiwisolver-1.4.7-py312h6142ec9_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/krb5-1.21.3-h237132a_0.conda
@@ -2270,7 +2287,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomlkit-0.13.2-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tornado-6.4.1-py312h024a12e_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.10.21.16-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/types-python-dateutil-2.9.0.20241003-pyhff2d567_0.conda
@@ -2291,6 +2308,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/websocket-client-1.8.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/websockets-13.1-py312h024a12e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.44.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/widgetsnbextension-4.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xorg-libxau-1.0.11-hd74edd7_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xorg-libxdmcp-1.1.5-hd74edd7_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xz-5.2.6-h57fd34a_0.tar.bz2
@@ -2303,7 +2321,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/30/b6/daf3e2976932da4ed3579cff7a30a53d22ea9323ee4f0d8e43be60454897/colorclass-2.2.2-py2.py3-none-any.whl
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
@@ -2411,6 +2429,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/intel-openmp-2024.2.1-h57928b3_1083.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipykernel-6.29.5-pyh4bbf305_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipython-8.28.0-pyh7428d3b_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/ipywidgets-8.1.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/isoduration-20.11.0-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/jedi-0.19.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jinja2-3.1.4-pyhd8ed1ab_0.conda
@@ -2430,6 +2449,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab-4.2.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_pygments-0.3.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_server-2.27.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_widgets-3.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/just-1.36.0-h823019e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/kiwisolver-1.4.7-py312hd5eb7cc_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/krb5-1.21.3-hdf4eb48_0.conda
@@ -2620,7 +2640,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomlkit-0.13.2-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/tornado-6.4.1-py312h4389bb4_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.10.21.16-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/types-python-dateutil-2.9.0.20241003-pyhff2d567_0.conda
@@ -2645,6 +2665,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/websocket-client-1.8.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/websockets-13.1-py312h4389bb4_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.44.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/widgetsnbextension-4.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/win_inet_pton-1.1.0-pyh7428d3b_7.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/winpty-0.4.3-4.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/win-64/xorg-libxau-1.0.11-hcd874cb_0.conda
@@ -2659,7 +2680,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/30/b6/daf3e2976932da4ed3579cff7a30a53d22ea9323ee4f0d8e43be60454897/colorclass-2.2.2-py2.py3-none-any.whl
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/73/80/2708a4641f7d553a63bc934a3eb7214806b5b39d200133ca7f7afb0a53e8/msgpack-1.1.0-cp312-cp312-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
@@ -2792,6 +2813,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/iniconfig-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipykernel-6.29.5-pyh3099207_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipython-8.28.0-pyh707e725_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/ipywidgets-8.1.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/isoduration-20.11.0-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/jedi-0.19.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jinja2-3.1.4-pyhd8ed1ab_0.conda
@@ -2812,6 +2834,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab-4.2.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_pygments-0.3.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_server-2.27.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_widgets-3.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/just-1.36.0-h8fae777_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/kernel-headers_linux-64-3.10.0-he073ed8_17.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/keyutils-1.6.1-h166bdaf_0.tar.bz2
@@ -3041,7 +3064,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomlkit-0.13.2-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tornado-6.4.1-py312h66e93f0_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.10.21.16-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/types-python-dateutil-2.9.0.20241003-pyhff2d567_0.conda
@@ -3063,6 +3086,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/websocket-client-1.8.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/websockets-13.1-py312h66e93f0_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.44.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/widgetsnbextension-4.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xcb-util-0.4.1-hb711507_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xcb-util-cursor-0.1.5-hb9d3cd8_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xcb-util-image-0.4.0-hb711507_2.conda
@@ -3096,7 +3120,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/30/b6/daf3e2976932da4ed3579cff7a30a53d22ea9323ee4f0d8e43be60454897/colorclass-2.2.2-py2.py3-none-any.whl
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
@@ -3207,6 +3231,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/iniconfig-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipykernel-6.29.5-pyh57ce528_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipython-8.28.0-pyh707e725_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/ipywidgets-8.1.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/isoduration-20.11.0-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/jedi-0.19.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jinja2-3.1.4-pyhd8ed1ab_0.conda
@@ -3227,6 +3252,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab-4.2.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_pygments-0.3.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_server-2.27.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_widgets-3.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/just-1.36.0-h3bba108_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/kiwisolver-1.4.7-py312h6142ec9_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/krb5-1.21.3-h237132a_0.conda
@@ -3422,7 +3448,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomlkit-0.13.2-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tornado-6.4.1-py312h024a12e_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/trove-classifiers-2024.10.21.16-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/types-python-dateutil-2.9.0.20241003-pyhff2d567_0.conda
@@ -3443,6 +3469,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/websocket-client-1.8.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/websockets-13.1-py312h024a12e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.44.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/widgetsnbextension-4.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xorg-libxau-1.0.11-hd74edd7_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xorg-libxdmcp-1.1.5-hd74edd7_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xz-5.2.6-h57fd34a_0.tar.bz2
@@ -3455,7 +3482,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/30/b6/daf3e2976932da4ed3579cff7a30a53d22ea9323ee4f0d8e43be60454897/colorclass-2.2.2-py2.py3-none-any.whl
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
@@ -3661,7 +3688,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tk-8.6.13-noxft_h4845f30_101.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tornado-6.4.1-py312h66e93f0_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.12.2-pyha770c72_0.conda
@@ -3678,7 +3705,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
@@ -3854,7 +3881,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-h5083fa2_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tornado-6.4.1-py312h024a12e_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.12.2-pyha770c72_0.conda
@@ -3871,7 +3898,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
@@ -4054,6 +4081,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/iniconfig-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipykernel-6.29.5-pyh3099207_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipython-8.28.0-pyh707e725_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/ipywidgets-8.1.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/isoduration-20.11.0-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/jedi-0.19.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jinja2-3.1.4-pyhd8ed1ab_0.conda
@@ -4071,6 +4099,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab-4.2.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_pygments-0.3.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_server-2.27.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_widgets-3.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/kernel-headers_linux-64-3.10.0-he073ed8_17.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/keyutils-1.6.1-h166bdaf_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/linux-64/kiwisolver-1.4.7-py311hd18a35c_0.conda
@@ -4232,7 +4261,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/toml-0.10.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tornado-6.4.1-py311h9ecbd09_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/types-python-dateutil-2.9.0.20241003-pyhff2d567_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_0.conda
@@ -4247,6 +4276,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/webencodings-0.5.1-pyhd8ed1ab_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/websocket-client-1.8.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.44.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/widgetsnbextension-4.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xcb-util-0.4.1-hb711507_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xcb-util-cursor-0.1.5-hb9d3cd8_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xcb-util-image-0.4.0-hb711507_2.conda
@@ -4279,7 +4309,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/a8/a1/ad7b84b91ab5a324e707f4c9761633e357820b011a01e34ce658c1dda7cc/msgpack-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
@@ -4345,6 +4375,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/iniconfig-2.0.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipykernel-6.29.5-pyh57ce528_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ipython-8.28.0-pyh707e725_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/ipywidgets-8.1.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/isoduration-20.11.0-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/jedi-0.19.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jinja2-3.1.4-pyhd8ed1ab_0.conda
@@ -4362,6 +4393,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab-4.2.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_pygments-0.3.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_server-2.27.3-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_widgets-3.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/kiwisolver-1.4.7-py311h2c37856_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/krb5-1.21.3-h237132a_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/lcms2-2.16-ha0e7c42_0.conda
@@ -4486,7 +4518,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/toml-0.10.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tornado-6.4.1-py311h460d6c5_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/types-python-dateutil-2.9.0.20241003-pyhff2d567_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_0.conda
@@ -4500,6 +4532,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/webencodings-0.5.1-pyhd8ed1ab_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/websocket-client-1.8.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/wheel-0.44.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/widgetsnbextension-4.0.13-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xorg-libxau-1.0.11-hd74edd7_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xorg-libxdmcp-1.1.5-hd74edd7_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xz-5.2.6-h57fd34a_0.tar.bz2
@@ -4510,7 +4543,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/42/ae/d3adea9bb4a1342763556078b5765e666f8fdf242e00f3f6657380920972/msgpack-1.1.0-cp311-cp311-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
@@ -4619,7 +4652,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xz-5.2.6-h166bdaf_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/a8/a1/ad7b84b91ab5a324e707f4c9761633e357820b011a01e34ce658c1dda7cc/msgpack-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/ab/68/6fb6ae5551846ad5beca295b7bca32bf0a7ce19f135cb30e55fa2314e6b6/pyzmq-26.2.0-cp311-cp311-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -4703,7 +4736,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xz-5.2.6-h57fd34a_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/42/ae/d3adea9bb4a1342763556078b5765e666f8fdf242e00f3f6657380920972/msgpack-1.1.0-cp311-cp311-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/12/20/de7442172f77f7c96299a0ac70e7d4fb78cd51eca67aa2cf552b66c14196/pyzmq-26.2.0-cp311-cp311-macosx_10_15_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -4790,7 +4823,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/yaml-0.2.5-h8ffe710_2.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/aa/c4/5a582fc9a87991a3e6f6800e9bb2f3c82972912235eb9539954f3e9997c7/msgpack-1.1.0-cp311-cp311-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/3b/1b/0a540edd75a41df14ec416a9a500b9fec66e554aac920d4c58fbd5756776/pyzmq-26.2.0-cp311-cp311-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -4907,7 +4940,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tk-8.6.13-noxft_h4845f30_101.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/toml-0.10.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.12.2-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024b-hc8b5060_0.conda
@@ -4916,7 +4949,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-h3b0a872_6.conda
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/a8/a1/ad7b84b91ab5a324e707f4c9761633e357820b011a01e34ce658c1dda7cc/msgpack-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
@@ -5007,7 +5040,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-h5083fa2_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/toml-0.10.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.12.2-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024b-hc8b5060_0.conda
@@ -5016,7 +5049,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zeromq-4.3.5-h9f5b81c_6.conda
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/42/ae/d3adea9bb4a1342763556078b5765e666f8fdf242e00f3f6657380920972/msgpack-1.1.0-cp311-cp311-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
@@ -5129,7 +5162,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xz-5.2.6-h166bdaf_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/a8/a1/ad7b84b91ab5a324e707f4c9761633e357820b011a01e34ce658c1dda7cc/msgpack-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/ab/68/6fb6ae5551846ad5beca295b7bca32bf0a7ce19f135cb30e55fa2314e6b6/pyzmq-26.2.0-cp311-cp311-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -5217,7 +5250,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xz-5.2.6-h57fd34a_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/42/ae/d3adea9bb4a1342763556078b5765e666f8fdf242e00f3f6657380920972/msgpack-1.1.0-cp311-cp311-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/12/20/de7442172f77f7c96299a0ac70e7d4fb78cd51eca67aa2cf552b66c14196/pyzmq-26.2.0-cp311-cp311-macosx_10_15_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -5307,7 +5340,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/yaml-0.2.5-h8ffe710_2.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/aa/c4/5a582fc9a87991a3e6f6800e9bb2f3c82972912235eb9539954f3e9997c7/msgpack-1.1.0-cp311-cp311-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/3b/1b/0a540edd75a41df14ec416a9a500b9fec66e554aac920d4c58fbd5756776/pyzmq-26.2.0-cp311-cp311-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -5422,7 +5455,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-h3b0a872_6.conda
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/a8/a1/ad7b84b91ab5a324e707f4c9761633e357820b011a01e34ce658c1dda7cc/msgpack-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-hpf
@@ -5512,7 +5545,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zeromq-4.3.5-h9f5b81c_6.conda
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/42/ae/d3adea9bb4a1342763556078b5765e666f8fdf242e00f3f6657380920972/msgpack-1.1.0-cp311-cp311-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-hpf
@@ -5618,7 +5651,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tk-8.6.13-noxft_h4845f30_101.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/toml-0.10.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.12.2-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024b-hc8b5060_0.conda
@@ -5626,7 +5659,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xz-5.2.6-h166bdaf_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/a8/a1/ad7b84b91ab5a324e707f4c9761633e357820b011a01e34ce658c1dda7cc/msgpack-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/ab/68/6fb6ae5551846ad5beca295b7bca32bf0a7ce19f135cb30e55fa2314e6b6/pyzmq-26.2.0-cp311-cp311-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -5705,7 +5738,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-h5083fa2_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/toml-0.10.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.12.2-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024b-hc8b5060_0.conda
@@ -5713,7 +5746,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xz-5.2.6-h57fd34a_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/42/ae/d3adea9bb4a1342763556078b5765e666f8fdf242e00f3f6657380920972/msgpack-1.1.0-cp311-cp311-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/12/20/de7442172f77f7c96299a0ac70e7d4fb78cd51eca67aa2cf552b66c14196/pyzmq-26.2.0-cp311-cp311-macosx_10_15_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -5823,7 +5856,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xz-5.2.6-h166bdaf_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/a8/a1/ad7b84b91ab5a324e707f4c9761633e357820b011a01e34ce658c1dda7cc/msgpack-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/ab/68/6fb6ae5551846ad5beca295b7bca32bf0a7ce19f135cb30e55fa2314e6b6/pyzmq-26.2.0-cp311-cp311-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -5910,7 +5943,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xz-5.2.6-h57fd34a_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/42/ae/d3adea9bb4a1342763556078b5765e666f8fdf242e00f3f6657380920972/msgpack-1.1.0-cp311-cp311-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/12/20/de7442172f77f7c96299a0ac70e7d4fb78cd51eca67aa2cf552b66c14196/pyzmq-26.2.0-cp311-cp311-macosx_10_15_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -6000,7 +6033,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/yaml-0.2.5-h8ffe710_2.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/aa/c4/5a582fc9a87991a3e6f6800e9bb2f3c82972912235eb9539954f3e9997c7/msgpack-1.1.0-cp311-cp311-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/3b/1b/0a540edd75a41df14ec416a9a500b9fec66e554aac920d4c58fbd5756776/pyzmq-26.2.0-cp311-cp311-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -6108,7 +6141,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xz-5.2.6-h166bdaf_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/07/3b/44ea6266a6761e9eefaa37d98fabefa112328808ac41aa87b4bbb668af30/pyzmq-26.2.0-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -6192,7 +6225,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xz-5.2.6-h57fd34a_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/28/2f/78a766c8913ad62b28581777ac4ede50c6d9f249d39c2963e279524a1bbe/pyzmq-26.2.0-cp312-cp312-macosx_10_15_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -6279,7 +6312,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/yaml-0.2.5-h8ffe710_2.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/73/80/2708a4641f7d553a63bc934a3eb7214806b5b39d200133ca7f7afb0a53e8/msgpack-1.1.0-cp312-cp312-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/ce/2c/a6f4a20202a4d3c582ad93f95ee78d79bbdc26803495aec2912b17dbbb6c/pyzmq-26.2.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -6396,7 +6429,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tk-8.6.13-noxft_h4845f30_101.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/toml-0.10.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.12.2-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024b-hc8b5060_0.conda
@@ -6405,7 +6438,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-h3b0a872_6.conda
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
@@ -6496,7 +6529,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-h5083fa2_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/toml-0.10.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.12.2-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024b-hc8b5060_0.conda
@@ -6505,7 +6538,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zeromq-4.3.5-h9f5b81c_6.conda
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
@@ -6618,7 +6651,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xz-5.2.6-h166bdaf_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/07/3b/44ea6266a6761e9eefaa37d98fabefa112328808ac41aa87b4bbb668af30/pyzmq-26.2.0-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -6706,7 +6739,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xz-5.2.6-h57fd34a_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/28/2f/78a766c8913ad62b28581777ac4ede50c6d9f249d39c2963e279524a1bbe/pyzmq-26.2.0-cp312-cp312-macosx_10_15_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -6796,7 +6829,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/yaml-0.2.5-h8ffe710_2.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/73/80/2708a4641f7d553a63bc934a3eb7214806b5b39d200133ca7f7afb0a53e8/msgpack-1.1.0-cp312-cp312-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/ce/2c/a6f4a20202a4d3c582ad93f95ee78d79bbdc26803495aec2912b17dbbb6c/pyzmq-26.2.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -6911,7 +6944,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-h3b0a872_6.conda
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-hpf
@@ -7001,7 +7034,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zeromq-4.3.5-h9f5b81c_6.conda
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-hpf
@@ -7107,7 +7140,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tk-8.6.13-noxft_h4845f30_101.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/toml-0.10.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.12.2-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024b-hc8b5060_0.conda
@@ -7115,7 +7148,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xz-5.2.6-h166bdaf_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/07/3b/44ea6266a6761e9eefaa37d98fabefa112328808ac41aa87b4bbb668af30/pyzmq-26.2.0-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -7194,7 +7227,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-h5083fa2_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/toml-0.10.2-pyhd8ed1ab_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-2.0.2-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing-extensions-4.12.2-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.12.2-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024b-hc8b5060_0.conda
@@ -7202,7 +7235,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xz-5.2.6-h57fd34a_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/28/2f/78a766c8913ad62b28581777ac4ede50c6d9f249d39c2963e279524a1bbe/pyzmq-26.2.0-cp312-cp312-macosx_10_15_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -7312,7 +7345,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xz-5.2.6-h166bdaf_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/07/3b/44ea6266a6761e9eefaa37d98fabefa112328808ac41aa87b4bbb668af30/pyzmq-26.2.0-cp312-cp312-manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -7399,7 +7432,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xz-5.2.6-h57fd34a_0.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/28/2f/78a766c8913ad62b28581777ac4ede50c6d9f249d39c2963e279524a1bbe/pyzmq-26.2.0-cp312-cp312-macosx_10_15_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -7489,7 +7522,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/yaml-0.2.5-h8ffe710_2.tar.bz2
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/73/80/2708a4641f7d553a63bc934a3eb7214806b5b39d200133ca7f7afb0a53e8/msgpack-1.1.0-cp312-cp312-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
+      - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/ce/2c/a6f4a20202a4d3c582ad93f95ee78d79bbdc26803495aec2912b17dbbb6c/pyzmq-26.2.0-cp312-cp312-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
@@ -12361,6 +12394,28 @@ packages:
   size: 599622
   timestamp: 1727945272442
 - kind: conda
+  name: ipywidgets
+  version: 8.1.5
+  build: pyhd8ed1ab_0
+  subdir: noarch
+  noarch: python
+  url: https://conda.anaconda.org/conda-forge/noarch/ipywidgets-8.1.5-pyhd8ed1ab_0.conda
+  sha256: ae27447f300c85a184d5d4fa08674eaa93931c12275daca981eb986f5d7795b3
+  md5: a022d34163147d16b27de86dc53e93fc
+  depends:
+  - comm >=0.1.3
+  - ipython >=6.1.0
+  - jupyterlab_widgets >=3.0.13,<3.1.0
+  - python >=3.7
+  - traitlets >=4.3.1
+  - widgetsnbextension >=4.0.13,<4.1.0
+  license: BSD-3-Clause
+  license_family: BSD
+  purls:
+  - pkg:pypi/ipywidgets?source=hash-mapping
+  size: 113497
+  timestamp: 1724334989324
+- kind: conda
   name: isoduration
   version: 20.11.0
   build: pyhd8ed1ab_0
@@ -12895,6 +12950,25 @@ packages:
   size: 49355
   timestamp: 1721163412436
 - kind: conda
+  name: jupyterlab_widgets
+  version: 3.0.13
+  build: pyhd8ed1ab_0
+  subdir: noarch
+  noarch: python
+  url: https://conda.anaconda.org/conda-forge/noarch/jupyterlab_widgets-3.0.13-pyhd8ed1ab_0.conda
+  sha256: 0e7ec7936d766f39d5a0a8eafc63f5543f488883ad3645246bc22db6d632566e
+  md5: ccea946e6dce9f330fbf7fca97fe8de7
+  depends:
+  - python >=3.7
+  constrains:
+  - jupyterlab >=3,<5
+  license: BSD-3-Clause
+  license_family: BSD
+  purls:
+  - pkg:pypi/jupyterlab-widgets?source=hash-mapping
+  size: 186024
+  timestamp: 1724331451102
+- kind: conda
   name: just
   version: 1.36.0
   build: h3bba108_0
@@ -13261,31 +13335,6 @@ packages:
   requires_python: '>=3.11'
   editable: true
 - kind: pypi
-  name: lenskit
-  version: 0.15.0.dev1433+g03efb1bc
-  path: lenskit
-  sha256: 81f6740798a8a424f07e1c11fb0d9eab063a9dd6fe1fffba7ee5d486b93f8628
-  requires_dist:
-  - manylog @ git+https://github.com/mdekstrand/manylog.git
-  - numpy>=1.24
-  - pandas~=2.0
-  - progress-api>=0.1.0a9
-  - pydantic>=2.8,<3
-  - scipy>=1.10.0
-  - seedbank>=0.2.0a2
-  - threadpoolctl>=3.0
-  - torch~=2.1
-  - scikit-learn>=1.1 ; extra == 'sklearn'
-  - hypothesis>=6.16 ; extra == 'test'
-  - pyprojroot==0.3.* ; extra == 'test'
-  - pytest-benchmark==4.* ; extra == 'test'
-  - pytest-cov>=2.12 ; extra == 'test'
-  - pytest-doctestplus>=1.2.1,<2 ; extra == 'test'
-  - pytest-repeat>=0.9 ; extra == 'test'
-  - pytest>=8.2,<9 ; extra == 'test'
-  requires_python: '>=3.11'
-  editable: true
-- kind: pypi
   name: lenskit-funksvd
   version: 0.15.0.dev1407+g3c45716a
   path: lenskit-funksvd
@@ -13317,17 +13366,7 @@ packages:
   editable: true
 - kind: pypi
   name: lenskit-sklearn
-  version: 0.15.0.dev1549+g1caad4de.d20241121
-  path: lenskit-sklearn
-  sha256: 18fa24b689f2924274287e83045bc80a1171d46d2d43383cf4eb35e7f0ebccdd
-  requires_dist:
-  - lenskit
-  - scikit-learn~=1.2
-  requires_python: '>=3.11'
-  editable: true
-- kind: pypi
-  name: lenskit-sklearn
-  version: 0.15.0.dev1550+g525fbe77
+  version: 0.15.0.dev1561+g46813bfd
   path: lenskit-sklearn
   sha256: 18fa24b689f2924274287e83045bc80a1171d46d2d43383cf4eb35e7f0ebccdd
   requires_dist:
@@ -19191,9 +19230,8 @@ packages:
   timestamp: 1728420305558
 - kind: pypi
   name: progress-api
-  version: 0.1.0a9
-  url: https://files.pythonhosted.org/packages/b4/e3/3f0fcbe30ccbd25d31e64afa3162b9f8e43d8d9333cc640c13b35deb7e08/progress_api-0.1.0a9-py3-none-any.whl
-  sha256: 3bdcf4e4bf176b6c02ed6ba4179edc341ae6172a48061c743e858ae52d873968
+  version: 0.1.1.dev2+g7147712
+  url: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
   requires_dist:
   - setuptools>=64 ; extra == 'dev'
   - setuptools-scm>=8 ; extra == 'dev'
@@ -23839,21 +23877,21 @@ packages:
   timestamp: 1724956252424
 - kind: conda
   name: tqdm
-  version: 4.66.5
+  version: 4.67.0
   build: pyhd8ed1ab_0
   subdir: noarch
   noarch: python
-  url: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.66.5-pyhd8ed1ab_0.conda
-  sha256: f2384902cef72048b0e9bad5c03d7a843de02ba6bc8618a9ecab6ff81a131312
-  md5: c6e94fc2b2ec71ea33fe7c7da259acb4
+  url: https://conda.anaconda.org/conda-forge/noarch/tqdm-4.67.0-pyhd8ed1ab_0.conda
+  sha256: fb25b18cec1ebae56e7d7ebbd3e504f063b61a0fac17b1ca798fcaf205bdc874
+  md5: 196a9e6ab4e036ceafa516ea036619b0
   depends:
   - colorama
   - python >=3.7
   license: MPL-2.0 or MIT
   purls:
   - pkg:pypi/tqdm?source=hash-mapping
-  size: 89519
-  timestamp: 1722737568509
+  size: 89434
+  timestamp: 1730926216380
 - kind: conda
   name: traitlets
   version: 5.14.3
@@ -24640,6 +24678,23 @@ packages:
   - pkg:pypi/wheel?source=hash-mapping
   size: 58585
   timestamp: 1722797131787
+- kind: conda
+  name: widgetsnbextension
+  version: 4.0.13
+  build: pyhd8ed1ab_0
+  subdir: noarch
+  noarch: python
+  url: https://conda.anaconda.org/conda-forge/noarch/widgetsnbextension-4.0.13-pyhd8ed1ab_0.conda
+  sha256: d155adc10f8c96f76d4468dbe37b33b4334dadf5cd4a95841aa009ca9bced5fa
+  md5: 6372cd99502721bd7499f8d16b56268d
+  depends:
+  - python >=3.7
+  license: BSD-3-Clause
+  license_family: BSD
+  purls:
+  - pkg:pypi/widgetsnbextension?source=hash-mapping
+  size: 898656
+  timestamp: 1724331433259
 - kind: conda
   name: win_inet_pton
   version: 1.1.0
