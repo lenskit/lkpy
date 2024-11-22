@@ -114,6 +114,18 @@ def test_lookup_projected():
     assert np.all(il.ids() == ["a"])
 
 
+def test_add_from():
+    ilc = ItemListCollection(["model", "user_id"])
+
+    ilc1 = ItemListCollection.from_dict({72: ItemList(["a", "b"])}, key="user_id")
+    ilc.add_from(ilc1, model="foo")
+
+    assert len(ilc) == 1
+    il = ilc.lookup(("foo", 72))
+    assert il is not None
+    assert il.ids().tolist() == ["a", "b"]
+
+
 def test_from_df(rng, ml_ratings: pd.DataFrame):
     ml_ratings = ml_ratings.rename(columns={"user": "user_id", "item": "item_id"})
     ilc = ItemListCollection.from_df(ml_ratings, UserIDKey)

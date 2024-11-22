@@ -187,12 +187,36 @@ class ItemListCollection(Generic[K]):
         """
         return self._key_class
 
-    def add(self, list: ItemList, *fields: ID):
-        key = self._key_class(*fields)  # type: ignore
+    def add(self, list: ItemList, *fields: ID, **kwfields: ID):
+        """
+        Add a single item list to this list.
+
+        Args:
+            list:
+                The item list to add.
+            fields, kwfields:
+                The key fields for this list.
+        """
+        key = self._key_class(*fields, **kwfields)  # type: ignore
         self._add(key, list)
 
-    def add_from(self, other: ItemListCollection):
+    def add_from(self, other: ItemListCollection, **fields: ID):
+        """
+        Add all collection from another collection to this collection.  If field
+        values are supplied, they are used to supplement or overwrite the keys
+        in ``other``; a common use case is to add results from multiple
+        recommendation runs and save them a single field.
+
+        Args:
+            other:
+                The item list collection to incorporate into this one.
+            fields:
+                Additional key fields (must be specified by name).
+        """
         for key, list in other:
+            if fields:
+                fields = key._asdict() | fields
+                key = self._key_class(**fields)
             self._add(key, list)
 
     def _add(self, key: K, list: ItemList):
