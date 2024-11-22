@@ -191,7 +191,7 @@ class ALSBase(ABC, Component, Trainable):
         )
         start = timer.elapsed()
 
-        with make_progress(self.logger, "BiasedMF", self.epochs) as epb:
+        with make_progress(self.logger, "BiasedMF", self.epochs, unit="epoch") as epb:
             for epoch in range(self.epochs):
                 epoch = epoch + 1
 
