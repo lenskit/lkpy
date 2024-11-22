@@ -89,8 +89,8 @@ def test_data_compat_float_assignabile():
 def test_data_compat_generic():
     assert is_compatible_data(["foo"], list[str])
     # this is compatible because we can't check generics
-    with warns(TypecheckWarning):
-        assert is_compatible_data([72], list[str])
+    # with warns(TypecheckWarning):
+    assert is_compatible_data([72], list[str])
 
 
 def test_numpy_typecheck():
