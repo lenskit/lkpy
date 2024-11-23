@@ -2,3 +2,4 @@
 {"rule":"MISSING_GENITIVE","sentence":"^\\QPyTorch tensors, including those on CUDA devices, are shared.\\E$"}
 {"rule":"EN_A_VS_AN","sentence":"^\\QThis method returns an \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q containing the\nrecommended items.\\E$"}
 {"rule":"EN_A_VS_AN","sentence":"^\\QYou can optionally specify candidate items with an \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q\nparameter to \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q (it takes an \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q), or a list\nlength with \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q (you can also bake a default list length into the pipeline\nwhen you call \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q).\\E$"}
+{"rule":"POSSESSIVE_APOSTROPHE","sentence":"^\\QWhere older versions of LensKit used Pandas data frames and series as the primary\ndata structures for interfacing with components\\E$"}

@@ -167,6 +167,11 @@ class ItemListCollection(Generic[K]):
     def to_df(self) -> pd.DataFrame:
         """
         Convert this item list collection to a data frame.
+
+        .. warning::
+
+            If this item list collection has any keys with empty lists, those
+            lists will be excluded from the output.
         """
         fields = self._key_class._fields  # type: ignore
         return (

@@ -74,6 +74,80 @@ typical code patterns used in LensKit 0.14 and earlier.
     needing to extract them first.  It also automatically detects which version
     of the MovieLens data you are loading.
 
+Data Structures
+---------------
+
+Where older versions of LensKit used Pandas data frames and series as the
+primary data structures for interfacing with components, LensKit 2025 introduces
+new data abstractions specifically for handling recommender data, but that support
+conversion to and from data frames.  The core ones are:
+
+- :class:`~lenskit.data.ItemList` represents a list of items, optionally with
+  scores or other fields (e.g. ratings).  Item lists can convert between item
+  IDs and item numbers, using a vocabulary, and can be converted to and from
+  Pandas data frames.  Their fields (including the item numbers) can also be
+  retrieved in multiple formats, including NumPy arrays (the default), Pandas
+  :class:`~pandas.Series`, and PyTorch tensors.  Format conversions are
+  zero-copy whenever possible.
+
+- :class:`~lenskit.data.Vocabulary` represents a collection of item or user IDs
+  (or other ID-like things, such as tags), and supports bidirectional mapping
+  between such IDs and contiguous 0-based indices (numbers) for indexing into
+  arrays and matrices.  This was not used as a part of an API in LensKit before,
+  but was implemented internally by many components using the Pandas
+  :class:`~pandas.Index` data structure.  Vocabularies centralize that logic
+  (and use :class:`~pandas.Index` under the hood), so that we don't duplicate it
+  so much across the codebase and to enable multiple models trained on the same
+  data to share the same index.  If you are implementing a model component that
+  needs to store vectors or matrices of user or item data, consider using the
+  vocabulary to associate those with user and item IDs.
+
+- :class:`~lenskit.data.ItemListCollection` represents a collection of item
+  lists indexed by keys, such as the test items for users a test data split, or
+  the recommendation lists for users in an experiment.  It supports conversion
+  to and from Pandas data frames.  Future releases will support additional
+  formats, such as DuckDB.
+
+Motivation
+..........
+
+These data structures, and the data set abstraction, are something of a
+departure from one of the design principles originally set out for LensKit for
+Python :cite:p:`lkpy`; specifically, to use standard data structures for
+interchange between components.
+
+There are three primary reason for this change:
+
+* While Pandas data frames and series are widely used and supported by many
+  libraries, they are not self-documenting: a Python method returning a
+  :class:`~pandas.DataFrame` is not enough to know what columns in that data
+  frame.  Things are further complicated with Pandas indexes, requiring
+  elaborate discussions of exact data frame and series layouts in the
+  documentation.  This also sometimes resulted in bugs with incorrect layouts,
+  particularly if an index was incorrectly configured.  Dedicated abstractions
+  are more self-documenting, particularly in modern Python with type annotations
+  and good IDE support.
+
+* Many libraries work directly with arrays and sparse matrices instead of Pandas
+  data structures, requiring data conversion and translation that is often
+  repeated in different model components.  First-class support for multiple data
+  formats in a single abstraction reduces the work needed to implement a model
+  with PyTorch, Scikit-Learn, or any other library.
+
+* When chaining together multiple components, data always needed to be converted
+  to and from Pandas at the component interface boundary.  This meant that two
+  components both using PyTorch needed to convert to Pandas (possibly moving
+  from GPU to CPU) at the interface, and then convert back to PyTorch.  A
+  unified interface with lazy, zero-copy conversion means that two components
+  using the same compute support do not need to convert data in order to
+  interface, while still supporting composition with arbitrary components using
+  different compute layers.
+
+Since the new data structures, particularly :class:`ItemList`, are thin
+abstractions on top of arrays, these are hopefully still as easy (or easier) to
+use and integrate, and provide much easier support for implementing new
+components with your choice of support libraries.
+
 Configuring Recommenders
 ------------------------
 
