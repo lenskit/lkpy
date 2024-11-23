@@ -32,6 +32,7 @@ extensions = [
     "sphinx_togglebutton",
     "sphinxext.opengraph",
     "sphinxcontrib.bibtex",
+    "sphinxcontrib.mermaid",
 ]
 
 # set up our filenames

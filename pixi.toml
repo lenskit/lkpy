@@ -70,6 +70,7 @@ pydata-sphinx-theme = "~=0.16.0"
 myst-nb = ">=0.13"
 just = ">=1.2"
 sphinx-togglebutton = ">=0.3.2,<0.4"
+sphinxcontrib-mermaid = ">=1.0.0,<2"
 
 [feature.dev.dependencies]
 hatchling = "~=1.24"
