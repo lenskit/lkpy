@@ -4,3 +4,7 @@ Queries
 =======
 
 .. py:currentmodule:: lenskit.data
+
+.. todo::
+
+    Document queries.
