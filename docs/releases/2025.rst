@@ -7,7 +7,8 @@ date is set yet.
 2025 will bring breaking changes to several LensKit APIs to improve ergonomics,
 correctness-by-default, and flexibility.  It also adopts SPEC0_, a standard for
 supported versions of scientific Python libraries, and changes the LensKit
-version number scheme to “:ref:`SemCalver`”.
+version number scheme to “:ref:`SemCalver`”.  See :ref:`migrating` for
+information on how to upgrade your code.
 
 .. _SPEC0: https://scientific-python.org/specs/spec-0000/
 
@@ -18,54 +19,27 @@ version number scheme to “:ref:`SemCalver`”.
 
 The first 2025 release is currently in-progress.
 
-This document presents the highlights for this release. The full changelog for this release is available in the `Git history <https://github.com/lenskit/lkpy/compare/0.14.4...main>`_
-and `issue/PR milestone <https://github.com/lenskit/lkpy/milestone/14>`_.
+The changes in this release are too numerous and fundamental to fully document
+in traditional release notes.  See the following for release update documentation:
 
-Significant Changes
-~~~~~~~~~~~~~~~~~~~
+- :ref:`migrating` for conceptual changes and how to upgrade your code.
+- The notes below for *behavior* changes (e.g. new defaults, new metric
+  capabilities), and small bits not covered in the migration guide.
+- The full changelog in the `Git history
+  <https://github.com/lenskit/lkpy/compare/0.14.4...main>`_ and `issue/PR
+  milestone <https://github.com/lenskit/lkpy/milestone/14>`_.
 
-2025.1 brings substantial changes to LensKit.
+Breaking Changes
+~~~~~~~~~~~~~~~~
 
-*   :class:`~lenskit.data.Dataset`.  LensKit now provides an abstraction for
-    training data instead of working with Pandas data frames directly, that
-    allows components to reduce code duplication and recomputation, access data
-    in multiple formats (Pandas, NumPy, and PyTorch), and provided standardized
-    structures like mappings of user or item IDs to array indices.  This also
-    supersedes the old bespoke dataset loading support, with functions like
-    :func:`~lenskit.data.load_movielens` to load standard datasets.
-
-*   New classes like :class:`~lenskit.data.ItemList` for routing item data
-    instead of using Pandas data frames and series.  This makes component return
-    types more self-documenting (rather than requiring developers to remember
-    what is on the index, what the column names are, etc.), and facilitates more
-    efficient data transfer between components that do not use Pandas (e.g. data
-    passed between components using PyTorch can leave the data in tensors
-    without round-tripping through Pandas and NumPy, and keep this transparent
-    to client code).
-
-*   Data splitting for offline evaluation has been moved into
-    :mod:`lenskit.splitting`, updated to work with data sets and item lists
-    instead of raw data frames, and splitting functions have been renamed (e.g.
-    ``rows`` to ``records``) and had parameters updated for clarity and
-    consistency.
+LensKit 2025 has many breaking changes, with the migration guide
+(:ref:`migrating`) documenting the major ones.  Below are some smaller ones not
+covered by that document:
 
 *   Where Pandas data frames are still used, the standard user and item columns
     have been renamed to ``user_id`` and ``item_id`` respectively, with
     ``user_num`` and ``item_num`` for 0-based user and item numbers.  This is to
     remove ambiguity about how users and items are being referenced.
-
-*   **PyTorch**. LensKit now uses PyTorch to implement most of its algorithms,
-    instead of Numba-accelerated NumPy code.  Algorithms using PyTorch are:
-
-    * :py:class:`~lenskit.algorithms.knn.ItemItem`
-    * :py:class:`~lenskit.algorithms.als.ImplicitMF`
-    * :py:class:`~lenskit.algorithms.als.BiasedMF`
-
-*   Many LensKit components (batch running, model training, etc.) now report progress with
-    :py:mod:`progress_api`, and can be connected to TQDM or Enlighten.
-
-*   Algorithms refactored to more consistent package locations, without the
-    ``algorithms`` subpackage.
 
 *   LensKit no longer has top-level exports (and is now in fact a namespace
     package).  Classes and functions must be imported from appropriate
@@ -73,19 +47,16 @@ Significant Changes
 
 *   The ``Popular`` recommender has been removed in favor of :class:`~lenskit.basic.PopScore`.
 
+*   The DCG metric has been removed, as it is basically never used and was not
+    useful as a part of the NDCG implementation.
+
 New Features (incremental)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* Added RBP top-N metric (:pr:`334`).
-* Added command-line tool to fetch datasets (:pr:`347`).
-
-Evaluation Changes
-~~~~~~~~~~~~~~~~~~
-
-*  The DCG metric has been removed, as it is basically never used and was not
-   useful as a part of the NDCG implementation.
-
-*  Train-test split results are no longer tuples.
+*   Many LensKit components (batch running, model training, etc.) now report progress with
+    :py:mod:`progress_api`, and can be connected to TQDM or Enlighten.
+*   Added RBP top-N metric (:pr:`334`).
+*   Added command-line tool to fetch datasets (:pr:`347`).
 
 Model Behavior Changes
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -113,13 +84,12 @@ Bug Fixes
 ~~~~~~~~~
 
 * Fixed bug in NDCG list truncation (:issue:`309`, :pr:`312`).
-* :py:func:`lenskit.util.clone` now properly clones tuples (:pr:`358`).
-* Corrected documentation errors for :py:func:`~lenskit.metrics.topn.recall` and :py:func:`~lenskit.metrics.topn.hit` (:pr:`369` by :user:`lukas-wegmeth`).
+* Corrected documentation errors for :py:func:`~lenskit.metrics.recall` and :py:func:`~lenskit.metrics.hit` (:pr:`369` by :user:`lukas-wegmeth`).
 
 Dependencies and Maintenance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* Bumped minimum supported dependencies as per SPEC0_ (Python 3.10, NumPy 1.23, Pandas 1.5, SciPy 1.9).
+* Bumped minimum supported dependencies as per SPEC0_ (Python 3.11, NumPy 1.24, Pandas 2.0, SciPy 1.10).
 * Added support for Pandas 2 (:pr:`364`) and Python 3.12.
 * Improved Apple testing to include vanilla Python and Apple Silicon (:pr:`366`).
 * Updated build environment, dependency setup, taskrunning, and CI to more consistent and maintainable.
