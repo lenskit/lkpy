@@ -126,6 +126,8 @@ intersphinx_mapping = {
 bibtex_bibfiles = ["lenskit.bib"]
 nb_execution_mode = "off"
 
+mermaid_d3_zoom = True
+
 # -- external links
 
 extlinks = {

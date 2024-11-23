@@ -53,6 +53,7 @@ like user history and candidate set lookup.
 .. _Haystack: https://docs.haystack.deepset.ai/docs/pipelines
 .. _POPROX: https://ccri-poprox.github.io/poprox-researcher-manual/reference/recommender/poprox_recommender.pipeline.html
 
+.. _pipeline-construct:
 
 Constructing Pipelines
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -78,30 +79,7 @@ that class, do:
     pipe = builder.build('ALS')
 
 For maximum flexibility, you can directly construct and wire the pipeline
-yourself:
-
-.. code:: python
-
-    pipe = Pipeline()
-    # define an input parameter for the user ID (the 'query')
-    query = pipe.create_input('query', ID)
-    # allow candidate items to be optionally specified
-    items = pipe.create_input('items', ItemList, None)
-    # look up a user's history in the training data
-    history = pipe.add_component('lookup-user', LookupTrainingHistory(), query=query)
-    # find candidates from the training data
-    lookup_candidates = pipe.add_component(
-        'select-candidates',
-        UnratedTrainingItemsCandidateSelector(),
-        query=history,
-    )
-    # if the client provided items as a pipeline input, use those; otherwise
-    # use the candidate selector we just configured.
-    candidates = pipe.use_first_of('candidates', items, lookup_candidates)
-    # score the candidate items using the specified scorer
-    score = pipe.add_component('score', scorer, query=query, items=candidates)
-    # rank the items by score
-    recommend = pipe.add_component('recommend', TopNRanker(50), items=score)
+yourself; this is described in :ref:`standard-pipelines`.
 
 After any of these methods, you can run the pipeline to produce recommendations
 with:
@@ -109,20 +87,6 @@ with:
 .. code:: python
 
     user_recs = pipe.run(recommend, query=user_id)
-
-Standard Pipeline Layout
-------------------------
-
-The standard recommendation pipeline, produced by any of the above approaches,
-looks like this:
-
-.. mermaid:: std-topn-pipeline.mmd
-    :caption: Top-N recommendation pipeline.
-
-A pipeline configured for rating prediction, with a fallback predictor, looks like:
-
-.. mermaid:: std-pred-pipeline.mmd
-    :caption: Pipeline for top-N recommendation and rating prediction, with predictions falling back to a baseline scorer.
 
 .. _pipeline-model:
 
@@ -325,6 +289,53 @@ pipeline will emit a warning (or fail, if ``allow_pickle=False`` is passed to
 .. note::
     The load/save parameter operations are modeled after PyTorch's
     :meth:`~torch.nn.Module.state_dict` and the needs of ``safetensors``.
+
+.. _standard-pipelines:
+
+Standard Layouts
+~~~~~~~~~~~~~~~~
+
+The standard recommendation pipeline, produced by either of the approaches
+described above in :ref:`pipeline-construct`, looks like this:
+
+.. mermaid:: std-topn-pipeline.mmd
+    :caption: Top-N recommendation pipeline.
+
+The convenience methods are equivalent to the following pipeline code:
+
+.. code:: python
+
+    pipe = Pipeline()
+    # define an input parameter for the user ID (the 'query')
+    query = pipe.create_input('query', ID)
+    # allow candidate items to be optionally specified
+    items = pipe.create_input('items', ItemList, None)
+    # look up a user's history in the training data
+    history = pipe.add_component('history-lookup', LookupTrainingHistory(), query=query)
+    # find candidates from the training data
+    default_candidates = pipe.add_component(
+        'candidate-selector',
+        UnratedTrainingItemsCandidateSelector(),
+        query=history,
+    )
+    # if the client provided items as a pipeline input, use those; otherwise
+    # use the candidate selector we just configured.
+    candidates = pipe.use_first_of('candidates', items, default_candidates)
+    # score the candidate items using the specified scorer
+    score = pipe.add_component('scorer', scorer, query=query, items=candidates)
+    # rank the items by score
+    recommend = pipe.add_component('ranker', TopNRanker(50), items=score)
+    pipe.alias('recommender', recommend)
+
+
+If we want to also emit rating predictions, with fallback to a baseline model to
+predict ratings for items the primary scorer cannot score (e.g. they are not in
+an item neighborhood), we use the following pipeline (created by
+:class:`RecPipelineBuilder` when rating prediction is enabled):
+
+.. mermaid:: std-pred-pipeline.mmd
+    :caption: Pipeline for top-N recommendation and rating prediction, with predictions falling back to a baseline scorer.
+
 
 Component Interface
 ~~~~~~~~~~~~~~~~~~~

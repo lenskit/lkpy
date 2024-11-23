@@ -1,3 +1,7 @@
+---
+config:
+    fontFamily: '"Source Sans 3", Verdana, Helvetica, Arial, sans-serif'
+---
 flowchart LR
     subgraph input["Inputs"]
     QUERY[/"Query<br>(<tt>query: QueryInput</tt>)"/]
@@ -10,6 +14,7 @@ flowchart LR
     subgraph prep["Data Preparation"]
     HLOOK["History Lookup"]
     CSEL["Candidate Selector"]
+    CPICK(["Pick Cand. Source"])
     end
 
     subgraph rank["Scoring and Ranking"]
@@ -24,12 +29,13 @@ flowchart LR
 
     QUERY --> HLOOK
     HLOOK -- RecQuery --> CSEL
-    ITEMS --> CSEL
+    ITEMS --> CPICK
+    CSEL -.->|"ItemList<br>(if needed)"| CPICK
 
     HLOOK -- RecQuery --> SCORE
-    CSEL -- ItemList --> SCORE
+    CPICK -- ItemList --> SCORE
     HLOOK -- RecQuery --> FALLBACK
-    CSEL -- ItemList --> FALLBACK
+    CPICK -- ItemList --> FALLBACK
     SCORE -- ItemList --> FILL
     FALLBACK -- ItemList --> FILL
     SCORE -- ItemList --> RANK
