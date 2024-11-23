@@ -205,14 +205,15 @@ itself, e.g.:
 * ``recommender``
 * ``reranker``
 * ``scorer``
-* ``user-history-resolver``
+* ``history-lookup``
 * ``item-embedder``
 
 Component nodes can also have *aliases*, allowing them to be accessed by more
 than one name. Use :meth:`Pipeline.alias` to define these aliases.
 
-Various LensKit facilities recognize several standard component names that we
-recommend you use when applicable:
+Various LensKit facilities recognize several standard component names used by
+the standard pipeline builders, and we recommend you use them in your own
+pipelines when applicable:
 
 * ``scorer`` — compute (usually personalized) scores for items for a given user.
 * ``ranker`` — compute a (ranked) list of recommendations for a user.  If you
@@ -224,11 +225,10 @@ recommend you use when applicable:
   alias for ``ranker``, as in a top-*N* recommender, but may return other
   formats such as grids or unordered slates.
 * ``rating-predictor`` — predict a user's ratings for the specified items.  When
-  present, this is usually an alias for ``scorer``, but in some pipelines it
-  will be a different component that transforms the scores into rating
-  predictions.
+  present, this may be an alias for ``scorer``, or it may be another component
+  that fills in missing scores with a baseline prediction.
 
-These component names replace the task-specific interfaces in pre-2024 LensKit;
+These component names replace the task-specific interfaces in pre-2025 LensKit;
 a ``Recommender`` is now just a pipeline with ``recommender`` and/or ``ranker``
 components.
 
@@ -241,8 +241,8 @@ Pipelines are defined by the following:
 
 * The components and inputs (nodes)
 * The component input connections (edges)
-* The component configurations (see :class:`ConfigurableComponent`)
-* The components' learned parameters (see :class:`TrainableComponent`)
+* The component configurations (see :class:`Configurable` and :class:`Component`)
+* The components' learned parameters (see :class:`Trainable`)
 
 .. todo::
     Serialization support other than ``pickle`` is not yet implemented.
@@ -251,10 +251,10 @@ LensKit supports serializing both pipeline descriptions (components,
 connections, and configurations) and pipeline parameters.  There are
 three ways to save a pipeline or part thereof:
 
-1.  Pickle the entire pipeline.  This is easy, and saves everything pipeline; it
-    has the usual downsides of pickling (arbitrary code execution, etc.).
-    LensKit uses pickling to share pipelines with worker processes for parallel
-    batch operations.
+1.  Pickle the entire pipeline.  This is easy, and saves everything in the
+    pipeline; it has the usual downsides of pickling (arbitrary code execution,
+    etc.). LensKit uses pickling to share pipelines with worker processes for
+    parallel batch operations.
 2.  Save the pipeline configuration with :meth:`Pipeline.save_config`.  This saves
     the components, their configurations, and their connections, but **not** any
     learned parameter data.  A new pipeline can be constructed from such a
@@ -266,7 +266,7 @@ three ways to save a pipeline or part thereof:
     running the same pipeline setup code or using a saved pipeline
     configuration.
 
-These can be mixed and matched; if you pickle an untrained pipeline, you can
+These can be mixed and matched: if you pickle an untrained pipeline, you can
 unpickle it and use :meth:`~Pipeline.load_params` to infuse it with parameters.
 
 Component implementations need to support the configuration and/or parameter
@@ -274,12 +274,12 @@ values, as needed, in addition to functioning correctly with pickle (no specific
 logic is usually needed for this).
 
 LensKit knows how to safely save the following object types from
-:meth:`Component.get_params`:
+:meth:`Trainable.get_params`:
 
 *   :class:`torch.Tensor` (dense, CSR, and COO tensors).
 *   :class:`numpy.ndarray`.
-*   :class:`scipy.sparse.csr_array`, :class:`scipy.sparse.~coo_array`,
-    :class:`scipy.sparse.~csc_array`, and the corresponding ``*_matrix``
+*   :class:`scipy.sparse.csr_array`, :class:`~scipy.sparse.coo_array`,
+    :class:`~scipy.sparse.csc_array`, and the corresponding ``*_matrix``
     versions.
 
 Other objects (including Pandas dataframes) are serialized by pickling, and the
@@ -287,8 +287,11 @@ pipeline will emit a warning (or fail, if ``allow_pickle=False`` is passed to
 :meth:`~Pipeline.save_params`).
 
 .. note::
+
     The load/save parameter operations are modeled after PyTorch's
-    :meth:`~torch.nn.Module.state_dict` and the needs of ``safetensors``.
+    :meth:`~torch.nn.Module.state_dict` and the needs of safetensors_.
+
+.. _safetensors: https://huggingface.co/docs/safetensors/
 
 .. _standard-pipelines:
 
@@ -340,25 +343,12 @@ an item neighborhood), we use the following pipeline (created by
 Component Interface
 ~~~~~~~~~~~~~~~~~~~
 
-Pipeline components are callable objects that can optionally provide training
-and serialization capabilities.  In the simplest case, a component that requires
-no training or configuration can simply be a Python function; more sophisticated
-components can implement the :class:`TrainableComponent` and/or
-:class:`ConfigurableComponent` protocols to support flexible model training and
-pipeline serialization.
+Pipeline components are callable objects that can optionally provide
+configuration, training, and serialization capabilities.  In the simplest case,
+a component that requires no training or configuration can simply be a Python
+function; most components will extend the :class:`Component` base class to
+expose configuration capabilities, and implement the :class:`Trainable` protocol
+if they contain a model that needs to be trained.
 
-Components also need to be pickleable, as LensKit uses pickling for shared
-memory parallelism in its batch-inference code.
-
-.. note::
-
-    The component interfaces are simply protocol definitions (defined using
-    :class:`typing.Protocol` with :func:`~typing.runtime_checkable`), so
-    implementations can directly implement the specified methods and do not need
-    to explicitly inherit from the protocol classes, although they are free to
-    do so.
-
-.. todo::
-
-    Is it clear to write these capabilities as separate protocols, or would it be
-    better to write a single ``Component`` :class:`~abc.ABC`?
+Components also must be pickleable, as LensKit uses pickling for shared memory
+parallelism in its batch-inference code.
