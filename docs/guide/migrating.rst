@@ -18,6 +18,11 @@ The recommendation models and evaluation metrics retain their behavior from
 previous versions of LensKit, but their interfaces and the surrounding
 infrastructure are significantly different.
 
+The new changes will also enable new functionality that is planned for upcoming
+versions of LensKit, such as first-class content-based and hybrid models, and
+support for additional recommendation tasks such as session- or context-based
+recommendation.
+
 Change Highlights
 -----------------
 
