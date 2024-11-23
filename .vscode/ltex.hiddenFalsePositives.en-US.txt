@@ -1,2 +1,4 @@
 {"rule":"COMMA_COMPOUND_SENTENCE","sentence":"^\\QThis combination does mean that we may sometimes release a minor revision with the previous\nyear's major version number, if there are breaking changes in progress but not yet ready for\nrelease and we need to release new features or fixes for the current major version.\\E$"}
 {"rule":"MISSING_GENITIVE","sentence":"^\\QPyTorch tensors, including those on CUDA devices, are shared.\\E$"}
+{"rule":"EN_A_VS_AN","sentence":"^\\QThis method returns an \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q containing the\nrecommended items.\\E$"}
+{"rule":"EN_A_VS_AN","sentence":"^\\QYou can optionally specify candidate items with an \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q\nparameter to \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q (it takes an \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q), or a list\nlength with \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q (you can also bake a default list length into the pipeline\nwhen you call \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q).\\E$"}

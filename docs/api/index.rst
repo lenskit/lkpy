@@ -34,6 +34,9 @@ them need to be installed separately.
 
     lenskit.algorithms
     lenskit.basic
+    lenskit.knn
+    lenskit.als
+    lenskit.sklearn
     lenskit.funksvd
     lenskit.implicit
     lenskit.hpf

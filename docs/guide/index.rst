@@ -18,6 +18,7 @@ guide to how to use LensKit for research, education, and other purposes.
 
     data
     item-lists
+    queries
     pipeline
 
 .. toctree::
@@ -39,5 +40,6 @@ guide to how to use LensKit for research, education, and other purposes.
     :caption: Tips and Help
     :maxdepth: 1
 
+    migrating
     performance
     impl-tips

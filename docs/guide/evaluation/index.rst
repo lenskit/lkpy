@@ -1,3 +1,5 @@
+.. _evaluation:
+
 Evaluating Recommender Output
 =============================
 

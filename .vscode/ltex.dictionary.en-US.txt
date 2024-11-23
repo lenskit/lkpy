@@ -20,3 +20,5 @@ LKPY
 FunkSVD
 RecSys
 PyArrow
+Numba
+DuckDB

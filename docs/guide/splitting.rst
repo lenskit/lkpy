@@ -1,3 +1,5 @@
+.. _splitting:
+
 Splitting Data
 ==============
 
