@@ -121,18 +121,15 @@ class RecPipelineBuilder:
 
 def topn_pipeline(scorer: Component, *, predicts_ratings: bool = False, n: int = -1) -> Pipeline:
     """
-    Create a pipeline that produces top-N recommendations using the specified
-    scorer.  The scorer should have the following call signature::
-
-        def scorer(user: UserHistory, items: ItemList) -> pd.Series: ...
+    Create a pipeline that produces top-N recommendations using a scoring model.
 
     Args:
         scorer:
             The scorer to use in the pipeline (it will added with the component
             name ``scorer``, see :ref:`pipeline-names`).
         predicts_ratings:
-            If ``True``, make ``rating-predictor`` an alias for ``scorer`` so that
-            evaluation components know this pipeline can predict ratings.
+            If ``True``, make ``rating-predictor`` an alias for ``scorer`` so
+            that evaluation components know this pipeline can predict ratings.
         n:
             The recommendation list length to configure in the pipeline.
     """

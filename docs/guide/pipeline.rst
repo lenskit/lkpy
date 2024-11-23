@@ -18,39 +18,10 @@ definitions of different composition classes.  The pipeline lives in the
 :class:`Pipeline` class.
 
 If all you want to do is build a standard top-N recommendation pipeline from an
-item scorer, see :func:`topn_pipeline`; this is the equivalent to
-``Recommender.adapt`` in the old LensKit API.  If you want more flexibility, you
-can write out the pipeline configuration yourself; the equivalent to
-``topn_pipeline(scorer)`` is:
-
-.. code:: python
-
-    pipe = Pipeline()
-    # define an input parameter for the user ID
-    user = pipe.create_input('user', EntityId)
-    # allow candidate items to be optionally specified
-    items = pipe.create_input('items', list[EntityId], None)
-    # look up a user's history in the training data
-    history = pipe.add_component('lookup-user', LookupTrainingHistory(), user=user)
-    # find candidates from the training data
-    lookup_candidates = pipe.add_component(
-        'select-candidates',
-        UnratedTrainingItemsCandidateSelector(),
-        user=history,
-    )
-    # if the client provided items as a pipeline input, use those; otherwise
-    # use the candidate selector we just configured.
-    candidates = pipe.use_first_of('candidates', items, lookup_candidates)
-    # score the candidate items using the specified scorer
-    score = pipe.add_component('score', scorer, user=user, items=candidates)
-    # rank the items by score
-    recommend = pipe.add_component('recommend', TopNRanker(50), items=score)
-
-You can then run this pipeline to produce recommendations with:
-
-.. code:: python
-
-    user_recs = pipe.run(recommend, user=user_id)
+item scorer, see :func:`topn_pipeline`.  :class:`RecPipelineBuilder` provides
+some more flexibility in configuring a recommendation pipeline with a standard
+design, and you can always fully configure the pipeline yourself for maximum
+flexibility.
 
 .. todo::
     Redo some of those types with user & item data, etc.
@@ -72,7 +43,8 @@ pipeline can use some components (especially the scorer) trained from training
 data, and other components that query a database or REST services for things
 like user history and candidate set lookup.
 
-.. note:: Acknowledgements
+.. admonition:: Acknowledgements
+    :class: note
 
     The LensKit pipeline design is heavily inspired by the pipeline abstraction
     Karl Higley originally created for POPROX_ (available in the git history),
@@ -80,6 +52,77 @@ like user history and candidate set lookup.
 
 .. _Haystack: https://docs.haystack.deepset.ai/docs/pipelines
 .. _POPROX: https://ccri-poprox.github.io/poprox-researcher-manual/reference/recommender/poprox_recommender.pipeline.html
+
+
+Constructing Pipelines
+~~~~~~~~~~~~~~~~~~~~~~
+
+The simplest way to make a pipeline is to construct a ``topn_pipeline`` — the
+following will create a top-*N* recommendation pipeline using implicit-feedback
+matrix factorization:
+
+.. code:: python
+
+    als = ImplicitMF(50)
+    pipe = topn_pipeline(als)
+
+The :class:`RecPipelineBuilder` class provides a more flexible mechanism to
+create standard recommendation pipelines; to implement the same pipeline with
+that class, do:
+
+.. code:: python
+
+    als = ImplicitMF(50)
+    builder = RecPipelineBuilder()
+    builder.scorer(als)
+    pipe = builder.build('ALS')
+
+For maximum flexibility, you can directly construct and wire the pipeline
+yourself:
+
+.. code:: python
+
+    pipe = Pipeline()
+    # define an input parameter for the user ID (the 'query')
+    query = pipe.create_input('query', ID)
+    # allow candidate items to be optionally specified
+    items = pipe.create_input('items', ItemList, None)
+    # look up a user's history in the training data
+    history = pipe.add_component('lookup-user', LookupTrainingHistory(), query=query)
+    # find candidates from the training data
+    lookup_candidates = pipe.add_component(
+        'select-candidates',
+        UnratedTrainingItemsCandidateSelector(),
+        query=history,
+    )
+    # if the client provided items as a pipeline input, use those; otherwise
+    # use the candidate selector we just configured.
+    candidates = pipe.use_first_of('candidates', items, lookup_candidates)
+    # score the candidate items using the specified scorer
+    score = pipe.add_component('score', scorer, query=query, items=candidates)
+    # rank the items by score
+    recommend = pipe.add_component('recommend', TopNRanker(50), items=score)
+
+After any of these methods, you can run the pipeline to produce recommendations
+with:
+
+.. code:: python
+
+    user_recs = pipe.run(recommend, query=user_id)
+
+Standard Pipeline Layout
+------------------------
+
+The standard recommendation pipeline, produced by any of the above approaches,
+looks like this:
+
+.. mermaid:: std-topn-pipeline.mmd
+    :caption: Top-N recommendation pipeline.
+
+A pipeline configured for rating prediction, with a fallback predictor, looks like:
+
+.. mermaid:: std-pred-pipeline.mmd
+    :caption: Pipeline for top-N recommendation and rating prediction, with predictions falling back to a baseline scorer.
 
 .. _pipeline-model:
 
@@ -256,7 +299,8 @@ three ways to save a pipeline or part thereof:
     the learned parameters but **not** the configuration or connections.  The
     parameters can be reloaded into a compatible pipeline with
     :meth:`Pipeline.load_params`; a compatible pipeline can be created by
-    running the pipeline setup code or using a saved pipeline configuration.
+    running the same pipeline setup code or using a saved pipeline
+    configuration.
 
 These can be mixed and matched; if you pickle an untrained pipeline, you can
 unpickle it and use :meth:`~Pipeline.load_params` to infuse it with parameters.

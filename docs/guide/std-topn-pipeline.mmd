@@ -1,0 +1,33 @@
+flowchart LR
+    subgraph input["Inputs"]
+    QUERY[/"Query<br>(<tt>query: QueryInput</tt>)"/]
+    ITEMS[/"Candidate Items<br>(<tt>items: ItemList</tt>)"/]
+    N[/"List Length<br>(<tt>n: int</tt>)"/]
+    class ITEMS optional;
+    class N optional;
+    end
+
+    subgraph prep["Data Preparation"]
+    HLOOK["History Lookup"]
+    CSEL["Candidate Selector"]
+    end
+
+    subgraph rank["Scoring and Ranking"]
+    SCORE["Scorer"]
+    RANK["Top-K Ranker"]
+    end
+
+    RESULT[\"Recommendations<br>(ordered <tt>ItemList</tt>)"\]
+
+    QUERY --> HLOOK
+    HLOOK -- RecQuery --> CSEL
+    ITEMS --> CSEL
+
+    HLOOK -- RecQuery --> SCORE
+    CSEL -- ItemList --> SCORE
+    SCORE -- ItemList --> RANK
+    N --> RANK
+
+    RANK --> RESULT
+
+    classDef optional stroke-dasharray: 5 5;

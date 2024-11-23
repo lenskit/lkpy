@@ -39,6 +39,7 @@ __all__ = [
     "Pipeline",
     "PipelineError",
     "PipelineWarning",
+    "PipelineState",
     "Node",
     "PipelineFunction",
     "Configurable",

@@ -39,9 +39,9 @@ class Configurable(Protocol):  # pragma: nocover
       :meth:`from_config`.
 
     An object must implement both of these methods to be considered
-    configurable.  Components extending the :class:`Component` class
-    automatically have working versions of these methods if they define their
-    constructor parameters and fields appropriately.
+    configurable.  Components extending the :class:`Component` automatically
+    have working versions of these methods if they define their constructor
+    parameters and fields appropriately.
 
     .. note::
 
@@ -65,8 +65,9 @@ class Configurable(Protocol):  # pragma: nocover
 @runtime_checkable
 class Trainable(Protocol):  # pragma: nocover
     """
-    Interface for components that can learn parameters from training data, and
-    expose those parameters for serialization as an alternative to pickling
+    Interface for components that can learn parameters from training data. It
+    supports trainig, checking if a component has already been trained, and
+    exposing trained parameters for serialization as an alternative to pickling
     (components also need to be picklable).
 
     .. note::
