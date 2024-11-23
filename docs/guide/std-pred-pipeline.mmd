@@ -21,7 +21,8 @@ flowchart LR
     SCORE["Scorer"]
     FALLBACK["Baseline Scorer"]
     FILL["Fallback"]
-    RANK["Top-K Ranker"]
+    RANK["`Top-*N* Ranker`"]
+    class SCORE config;
     end
 
     RESULT[\"Recommendations<br>(ordered <tt>ItemList</tt>)"\]
@@ -45,3 +46,4 @@ flowchart LR
     FILL --> PREDS
 
     classDef optional stroke-dasharray: 5 5;
+    classDef config font-weight:bold,stroke-width:4px;
