@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 
 from lenskit import util
-from lenskit.algorithms import Algorithm, Recommender
 from lenskit.data import ID, ItemListCollection, UserIDKey
 from lenskit.parallel import invoke_progress, invoker
 from lenskit.pipeline import Pipeline

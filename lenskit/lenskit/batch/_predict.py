@@ -12,7 +12,6 @@ from typing import Mapping
 import pandas as pd
 
 from lenskit import util
-from lenskit.algorithms import Algorithm
 from lenskit.data import ID, GenericKey, ItemList, ItemListCollection
 from lenskit.parallel import invoke_progress, invoker
 from lenskit.pipeline import Pipeline
