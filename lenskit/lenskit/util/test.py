@@ -11,6 +11,7 @@ Test utilities for LKPY tests.
 import os
 import os.path
 from contextlib import contextmanager
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -26,7 +27,7 @@ from lenskit.algorithms.basic import PopScore
 from lenskit.algorithms.ranking import PlackettLuce
 from lenskit.batch import recommend
 from lenskit.crossfold import simple_test_pair
-from lenskit.data import Dataset, from_interactions_df
+from lenskit.data import Dataset, ItemList, from_interactions_df
 from lenskit.data.lazy import LazyDataset
 from lenskit.data.movielens import load_movielens, load_movielens_df
 from lenskit.math.sparse import torch_sparse_from_scipy
@@ -176,6 +177,33 @@ def sparse_tensors(draw, *, layout="csr", **kwargs):
 
     M: sps.coo_array = draw(coo_arrays(**kwargs))
     return torch_sparse_from_scipy(M, layout)  # type: ignore
+
+
+@st.composite
+def scored_lists(
+    draw: st.DrawFn,
+    *,
+    n: int | tuple[int, int] | st.SearchStrategy[int] = st.integers(0, 1000),
+    scores: st.SearchStrategy[float] | Literal["gaussian"] | None = None,
+) -> ItemList:
+    """
+    Hypothesis generator that produces scored lists.
+    """
+    if isinstance(n, st.SearchStrategy):
+        n = draw(n)
+    elif isinstance(n, tuple):
+        n = draw(st.integers(*n))
+
+    ids = np.arange(1, n + 1, dtype=np.int32)
+    if scores == "gaussian":
+        seed = draw(st.integers(0))
+        rng = np.random.default_rng(seed)
+        xs = np.exp(rng.normal(size=n))
+    else:
+        xs = draw(
+            nph.arrays(nph.floating_dtypes(endianness="=", sizes=[32, 64]), n, elements=scores)
+        )
+    return ItemList(item_ids=ids, scores=xs)
 
 
 jit_enabled = True
