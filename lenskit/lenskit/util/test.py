@@ -23,14 +23,14 @@ import hypothesis.strategies as st
 import pytest
 from hypothesis import assume
 
-from lenskit.algorithms.basic import PopScore
-from lenskit.algorithms.ranking import PlackettLuce
+from lenskit.basic import PopScorer, SoftmaxRanker
 from lenskit.batch import recommend
-from lenskit.crossfold import simple_test_pair
-from lenskit.data import Dataset, ItemList, from_interactions_df
+from lenskit.data import Dataset, ItemList, ItemListCollection, UserIDKey, from_interactions_df
 from lenskit.data.lazy import LazyDataset
 from lenskit.data.movielens import load_movielens, load_movielens_df
 from lenskit.math.sparse import torch_sparse_from_scipy
+from lenskit.pipeline import RecPipelineBuilder
+from lenskit.splitting import TTSplit, simple_test_pair
 
 ml_test_dir = here("data/ml-latest-small")
 ml_100k_zip = here("data/ml-100k.zip")
@@ -80,19 +80,20 @@ def ml_100k():
 
 
 @pytest.fixture(scope="session")
-def demo_recs(ml_ratings: pd.DataFrame):
+def demo_recs(rng, ml_ds: Dataset) -> tuple[TTSplit, ItemListCollection[UserIDKey]]:
     """
     A demo set of train, test, and recommendation data.
     """
-    train, test = simple_test_pair(ml_ratings, f_rates=0.5)
+    split = simple_test_pair(ml_ds, f_rates=0.5, rng=rng)
 
-    users = test["user"].unique()
-    algo = PopScore()
-    algo = PlackettLuce(algo, rng_spec="user")
-    algo.fit(from_interactions_df(train))
+    builder = RecPipelineBuilder()
+    builder.scorer(PopScorer())
+    builder.ranker(SoftmaxRanker(500))
+    pipe = builder.build()
+    pipe.train(split.train)
 
-    recs = recommend(algo, users, 500, n_jobs=1)
-    return train, test, recs
+    recs = recommend(pipe, list(split.test.keys()), 500, n_jobs=1, rng=rng)
+    return split, recs
 
 
 @contextmanager
