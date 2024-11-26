@@ -17,7 +17,7 @@ import torch
 from typing_extensions import Self, TypeAlias, overload, override
 
 from lenskit.data import ID, Dataset, ItemList, QueryInput, RecQuery, UITuple, Vocabulary
-from lenskit.pipeline import Component
+from lenskit.pipeline.components import Component
 from lenskit.stats import damped_mean
 
 _logger = logging.getLogger(__name__)

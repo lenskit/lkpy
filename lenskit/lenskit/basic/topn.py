@@ -7,7 +7,7 @@ import logging
 import numpy as np
 
 from lenskit.data import ItemList
-from lenskit.pipeline import Component
+from lenskit.pipeline.components import Component
 
 _log = logging.getLogger(__name__)
 

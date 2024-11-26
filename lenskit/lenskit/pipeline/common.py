@@ -4,11 +4,9 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from lenskit.basic import (
-    FallbackScorer,
-    UnratedTrainingItemsCandidateSelector,
-    UserTrainingHistoryLookup,
-)
+from lenskit.basic.candidates import UnratedTrainingItemsCandidateSelector
+from lenskit.basic.composite import FallbackScorer
+from lenskit.basic.history import UserTrainingHistoryLookup
 from lenskit.basic.topn import TopNRanker
 from lenskit.data import ID, ItemList, RecQuery
 
