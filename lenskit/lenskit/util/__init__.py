@@ -9,11 +9,8 @@ Miscellaneous utility functions.
 """
 
 import logging
-from copy import deepcopy
 from textwrap import dedent
 from typing import Any, Protocol, TypeVar, runtime_checkable
-
-from lenskit.algorithms import Algorithm
 
 from .random import derivable_rng
 from .timing import Stopwatch  # noqa: F401
@@ -28,7 +25,6 @@ _log = logging.getLogger(__name__)
 __all__ = [
     "Stopwatch",
     "derivable_rng",
-    "clone",
     "clean_str",
 ]
 
@@ -38,37 +34,6 @@ A = TypeVar("A")
 @runtime_checkable
 class ParamContainer(Protocol):
     def get_params(self, deep=True) -> dict[str, Any]: ...
-
-
-def clone(algo: A) -> A:
-    """
-    Clone an algorithm, but not its fitted data.  This is like
-    :func:`sklearn.base.clone`, but may not work on arbitrary SciKit estimators.
-    LensKit algorithms are compatible with SciKit clone, however, so feel free
-    to use that if you need more general capabilities.
-
-    This function is somewhat derived from the SciKit one.
-
-    >>> from lenskit.algorithms.bias import Bias
-    >>> orig = Bias()
-    >>> copy = clone(orig)
-    >>> copy is orig
-    False
-    >>> copy.damping == orig.damping
-    True
-    """
-    _log.debug("cloning %s", algo)
-    if isinstance(algo, Algorithm) or isinstance(algo, ParamContainer):
-        params = algo.get_params(deep=False)
-
-        sps = dict([(k, clone(v)) for (k, v) in params.items()])
-        return algo.__class__(**sps)
-    elif isinstance(algo, list):
-        return [clone(a) for a in algo]  # type: ignore
-    elif isinstance(algo, tuple):
-        return tuple(clone(a) for a in algo)  # type: ignore
-    else:
-        return deepcopy(algo)
 
 
 class LastMemo:
