@@ -36,34 +36,6 @@ class ParamContainer(Protocol):
     def get_params(self, deep=True) -> dict[str, Any]: ...
 
 
-class LastMemo:
-    def __init__(self, func, check_type="identity"):
-        self.function = func
-        self.check = check_type
-        self.memory = None
-        self.result = None
-
-    def __call__(self, arg):
-        if not self._arg_is_last(arg):
-            self.result = self.function(arg)
-            self.memory = arg
-
-        return self.result
-
-    def _arg_is_last(self, arg):
-        if self.check == "identity":
-            return arg is self.memory
-        elif self.check == "equality":
-            return arg == self.memory
-
-
-def last_memo(func=None, check_type="identity"):
-    if func is None:
-        return lambda f: LastMemo(f, check_type)
-    else:
-        return LastMemo(func, check_type)
-
-
 def cached(prop):
     """
     Decorator for property getters to cache the property value.

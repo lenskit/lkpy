@@ -64,20 +64,3 @@ def test_stopwatch_hours():
     s = str(w)
     p = re.compile(r"1h1m3.\d\ds")
     assert p.match(s)
-
-
-def test_last_memo():
-    history = []
-
-    def func(foo):
-        history.append(foo)
-
-    cache = lku.LastMemo(func)
-
-    cache("foo")
-    assert len(history) == 1
-    # string literals are interned
-    cache("foo")
-    assert len(history) == 1
-    cache("bar")
-    assert len(history) == 2
