@@ -28,7 +28,7 @@ def test_bulk_measure_function(ml_ratings: pd.DataFrame):
 
 
 def test_recs(demo_recs):
-    train, test, recs = demo_recs
+    split, recs = demo_recs
 
     bms = RunAnalysis()
     bms.add_metric(ListLength())
@@ -37,9 +37,7 @@ def test_recs(demo_recs):
     bms.add_metric(RBP)
     bms.add_metric(RecipRank)
 
-    recs = ItemListCollection.from_df(recs, USER_COMPAT_COLUMN, ITEM_COMPAT_COLUMN)
-    test = ItemListCollection.from_df(test, USER_COMPAT_COLUMN, ITEM_COMPAT_COLUMN)
-    metrics = bms.compute(recs, test)
+    metrics = bms.compute(recs, split.test)
     scores = metrics.list_metrics()
     stats = metrics.list_summary()
     print(stats)
