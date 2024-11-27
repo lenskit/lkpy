@@ -326,24 +326,3 @@ def test_als_implicit_batch_accuracy(ml_100k):
     ndcg = results.list_summary().loc["NDCG", "mean"]
     _log.info("nDCG for users is %.4f", ndcg)
     assert ndcg > 0.22
-
-
-@mark.slow
-def test_als_match_orig(rng: np.random.Generator, ml_ds: Dataset):
-    from lenskit.algorithms import als
-
-    new = ImplicitMF(20, epochs=30, rng_spec=100)
-    new.train(ml_ds)
-
-    old = als.ImplicitMF(20, epochs=30, rng_spec=100)
-    old.fit(ml_ds)
-
-    for u in rng.choice(ml_ds.users.ids(), 50):
-        items = rng.choice(ml_ds.items.ids(), 100)
-        items = ItemList(items)
-
-        n_scores = new(query=u, items=items)
-        o_scores = old.predict_for_user(u, items.ids())
-
-        assert np.all(n_scores.ids() == o_scores.index.values)
-        assert n_scores.scores() == approx(o_scores.values)
