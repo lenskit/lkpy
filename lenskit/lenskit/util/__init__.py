@@ -36,24 +36,6 @@ class ParamContainer(Protocol):
     def get_params(self, deep=True) -> dict[str, Any]: ...
 
 
-def cached(prop):
-    """
-    Decorator for property getters to cache the property value.
-    """
-    cache = "_cached_" + prop.__name__
-
-    def getter(self):
-        val = getattr(self, cache, None)
-        if val is None:
-            val = prop(self)
-            setattr(self, cache, val)
-        return val
-
-    getter.__doc__ = prop.__doc__
-
-    return property(getter)
-
-
 def no_progress(obj, **kwargs):
     return obj
 
