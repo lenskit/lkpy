@@ -32,7 +32,6 @@ them need to be installed separately.
     :caption: Components
     :recursive:
 
-    lenskit.algorithms
     lenskit.basic
     lenskit.knn
     lenskit.als
