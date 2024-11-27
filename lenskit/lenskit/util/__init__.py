@@ -36,10 +36,6 @@ class ParamContainer(Protocol):
     def get_params(self, deep=True) -> dict[str, Any]: ...
 
 
-def no_progress(obj, **kwargs):
-    return obj
-
-
 def max_memory():
     "Get the maximum memory use for this process"
     if resource:
