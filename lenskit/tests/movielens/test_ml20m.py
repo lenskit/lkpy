@@ -13,10 +13,10 @@ from pathlib import Path
 
 import pytest
 
-from lenskit import batch
-from lenskit.algorithms import Recommender
-from lenskit.algorithms.basic import PopScore
+from lenskit.basic import PopScorer
+from lenskit.batch import recommend
 from lenskit.data import Dataset, from_interactions_df, load_movielens
+from lenskit.pipeline import topn_pipeline
 
 _log = logging.getLogger(__name__)
 
@@ -36,11 +36,12 @@ def ml20m():
 @pytest.mark.parametrize("n_jobs", [1, 2])
 def test_pop_recommend(ml20m: Dataset, rng, n_jobs):
     users = rng.choice(ml20m.users.ids(), 10000, replace=False)
-    algo = PopScore()
-    algo = Recommender.adapt(algo)
-    _log.info("training %s", algo)
-    algo.fit(ml20m)
-    _log.info("recommending with %s", algo)
-    recs = batch.recommend(algo, users, 10, n_jobs=n_jobs)
+    scorer = PopScorer()
+    pipe = topn_pipeline(scorer)
 
-    assert recs["user"].nunique() == 10000
+    _log.info("training %s", pipe)
+    pipe.train(ml20m)
+    _log.info("recommending with %s", pipe)
+    recs = recommend(pipe, users, 10, n_jobs=n_jobs)
+
+    assert len(recs) == 10000
