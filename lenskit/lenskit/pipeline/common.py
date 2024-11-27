@@ -117,7 +117,9 @@ class RecPipelineBuilder:
         return pipe
 
 
-def topn_pipeline(scorer: Component, *, predicts_ratings: bool = False, n: int = -1) -> Pipeline:
+def topn_pipeline(
+    scorer: Component, *, predicts_ratings: bool = False, n: int = -1, name: str | None = None
+) -> Pipeline:
     """
     Create a pipeline that produces top-N recommendations using a scoring model.
 
@@ -130,6 +132,8 @@ def topn_pipeline(scorer: Component, *, predicts_ratings: bool = False, n: int =
             that evaluation components know this pipeline can predict ratings.
         n:
             The recommendation list length to configure in the pipeline.
+        name:
+            The pipeline name.
     """
     builder = RecPipelineBuilder()
     builder.scorer(scorer)
@@ -137,4 +141,4 @@ def topn_pipeline(scorer: Component, *, predicts_ratings: bool = False, n: int =
     if predicts_ratings:
         builder.predicts_ratings()
 
-    return builder.build()
+    return builder.build(name)

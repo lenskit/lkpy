@@ -15,7 +15,6 @@ from pytest import approx, mark
 from lenskit.data import Dataset, ItemList, from_interactions_df
 from lenskit.metrics import call_metric, quick_measure_model
 from lenskit.sklearn import svd
-from lenskit.util import clone
 
 _log = logging.getLogger(__name__)
 

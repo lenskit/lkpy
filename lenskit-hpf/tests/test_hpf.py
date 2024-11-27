@@ -12,7 +12,6 @@ import pandas as pd
 
 from pytest import importorskip, mark
 
-from lenskit.algorithms import basic
 from lenskit.data import ItemList, from_interactions_df
 from lenskit.metrics import quick_measure_model
 from lenskit.pipeline import topn_pipeline

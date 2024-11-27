@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 
 import lenskit.util.test as lktu
-from lenskit.algorithms import basic
 from lenskit.basic.candidates import (
     AllTrainingItemsCandidateSelector,
     UnratedTrainingItemsCandidateSelector,
