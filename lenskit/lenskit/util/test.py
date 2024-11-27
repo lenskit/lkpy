@@ -53,7 +53,7 @@ def ml_ratings():
     yield load_movielens_df(ml_test_dir)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def ml_ds(ml_ratings: pd.DataFrame):
     """
     Fixture to load the MovieLens test dataset.  To use this, just include it as
@@ -80,10 +80,11 @@ def ml_100k():
 
 
 @pytest.fixture(scope="session")
-def demo_recs(rng, ml_ds: Dataset) -> tuple[TTSplit, ItemListCollection[UserIDKey]]:
+def demo_recs(ml_ds: Dataset) -> tuple[TTSplit, ItemListCollection[UserIDKey]]:
     """
     A demo set of train, test, and recommendation data.
     """
+    rng = np.random.default_rng(42)
     split = simple_test_pair(ml_ds, f_rates=0.5, rng=rng)
 
     builder = RecPipelineBuilder()

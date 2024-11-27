@@ -19,7 +19,7 @@ from .users import crossfold_users, sample_users  # noqa: F401
 
 
 def simple_test_pair(
-    ratings: Dataset, n_users=1000, n_rates=5, f_rates=None, rng: np.random.Generator | None = None
+    ratings: Dataset, n_users=200, n_rates=5, f_rates=None, rng: np.random.Generator | None = None
 ) -> TTSplit:
     """
     Return a single, basic train-test pair for some ratings.  This is only intended

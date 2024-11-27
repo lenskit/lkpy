@@ -163,8 +163,6 @@ def test_als_recs_topn_for_new_users_with_new_ratings(
     """
     import scipy.stats as stats
 
-    from lenskit.algorithms import basic
-
     n_users = 10
 
     users = rng.choice(ml_ds.users.ids(), n_users).tolist()
