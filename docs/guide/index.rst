@@ -22,6 +22,12 @@ guide to how to use LensKit for research, education, and other purposes.
     pipeline
 
 .. toctree::
+    :caption: Components
+    :maxdepth: 1
+
+    conventions
+
+.. toctree::
     :caption: Experiments
     :maxdepth: 1
 
