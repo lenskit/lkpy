@@ -6,7 +6,6 @@
 
 import logging
 import os
-import struct
 import warnings
 
 import torch
@@ -16,6 +15,7 @@ from hypothesis import settings
 from pytest import fixture, skip
 
 from lenskit.parallel import ensure_parallel_init
+from lenskit.util.random import set_global_rng
 from lenskit.util.test import ml_100k, ml_ds, ml_ratings  # noqa: F401
 
 logging.getLogger("numba").setLevel(logging.INFO)
@@ -30,13 +30,15 @@ if "LK_TEST_FREE_RNG" in os.environ:
 @fixture
 def rng() -> Generator:
     if RNG_SEED is None:
-        seed = os.urandom(4)
-        (seed,) = struct.unpack("@i", seed)
-        if seed < 0:
-            seed = -seed
-        return default_rng(seed)
+        return default_rng()
     else:
         return default_rng(RNG_SEED)
+
+
+@fixture(autouse=True)
+def init_rng(request):
+    if RNG_SEED is not None:
+        set_global_rng(RNG_SEED)
 
 
 @fixture(scope="module", params=["cpu", "cuda"])
