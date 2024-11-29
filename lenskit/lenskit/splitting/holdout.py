@@ -11,10 +11,9 @@ Per-user rating holdout methods for user-based data splitting.
 from typing import Protocol
 
 import numpy as np
-from seedbank import numpy_rng
 
 from lenskit.data import ItemList
-from lenskit.types import RandomSeed
+from lenskit.types import RNGInput
 
 
 class HoldoutMethod(Protocol):
@@ -44,16 +43,18 @@ class SampleN(HoldoutMethod):
     Randomly select a fixed number of test rows per user/item.
 
     Args:
-        n: the number of test items to select
-        rng: the random number generator or seed
+        n:
+            The number of test items to select.
+        rng:
+            The random number generator or seed (see :ref:`rng`).
     """
 
     n: int
     rng: np.random.Generator
 
-    def __init__(self, n: int, rng_spec: RandomSeed | None = None):
+    def __init__(self, n: int, rng: RNGInput = None):
         self.n = n
-        self.rng = numpy_rng(rng_spec)
+        self.rng = np.random.default_rng(rng)
 
     def __call__(self, items: ItemList) -> ItemList:
         if len(items) <= self.n:
@@ -68,15 +69,18 @@ class SampleFrac(HoldoutMethod):
     Randomly select a fraction of test rows per user/item.
 
     Args:
-        frac: the fraction items to select for testing.
+        frac:
+            The fraction items to select for testing.
+        rng:
+            The random number generator or seed (see :ref:`rng`).
     """
 
     fraction: float
     rng: np.random.Generator
 
-    def __init__(self, frac: float, rng_spec: RandomSeed | None = None):
+    def __init__(self, frac: float, rng: RNGInput = None):
         self.fraction = frac
-        self.rng = numpy_rng(rng_spec)
+        self.rng = np.random.default_rng(rng)
 
     def __call__(self, items: ItemList) -> ItemList:
         n = round(len(items) * self.fraction)

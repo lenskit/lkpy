@@ -11,11 +11,10 @@ from typing import Iterable, Iterator, overload
 
 import numpy as np
 import pandas as pd
-from seedbank import numpy_rng
 
 from lenskit.data import ID, Dataset, ItemListCollection, UserIDKey
 from lenskit.data.matrix import MatrixDataset
-from lenskit.types import RandomSeed
+from lenskit.types import RNGInput
 
 from .holdout import HoldoutMethod
 from .split import TTSplit
@@ -24,7 +23,7 @@ _log = logging.getLogger(__name__)
 
 
 def crossfold_users(
-    data: Dataset, partitions: int, method: HoldoutMethod, *, rng_spec: RandomSeed | None = None
+    data: Dataset, partitions: int, method: HoldoutMethod, *, rng: RNGInput | None = None
 ) -> Iterator[TTSplit]:
     """
     Partition a frame of ratings or other data into train-test partitions
@@ -38,13 +37,13 @@ def crossfold_users(
             the number of partitions to produce
         method:
             The method for selecting test rows for each user.
-        rng_spec:
-            The RNG or seed (see :func:`seedbank.numpy_rng`).
+        rng:
+            The random number generator or seed (see :ref:`rng`).
 
     Returns
         The train-test pairs.
     """
-    rng = numpy_rng(rng_spec)
+    rng = np.random.default_rng(rng)
 
     users = data.users.ids()
     _log.info(
@@ -82,7 +81,7 @@ def sample_users(
     *,
     repeats: int,
     disjoint: bool = True,
-    rng_spec: RandomSeed | None = None,
+    rng: RNGInput = None,
 ) -> Iterator[TTSplit]: ...
 @overload
 def sample_users(
@@ -91,7 +90,7 @@ def sample_users(
     method: HoldoutMethod,
     *,
     disjoint: bool = True,
-    rng_spec: RandomSeed | None = None,
+    rng: RNGInput = None,
     repeats: None = None,
 ) -> TTSplit: ...
 def sample_users(
@@ -101,7 +100,7 @@ def sample_users(
     *,
     repeats: int | None = None,
     disjoint: bool = True,
-    rng_spec: RandomSeed | None = None,
+    rng: RNGInput = None,
 ) -> Iterator[TTSplit] | TTSplit:
     """
     Create train-test splits by sampling users.  When ``repeats`` is None,
@@ -118,14 +117,14 @@ def sample_users(
             The method for obtaining user test ratings.
         repeats:
             The number of samples to produce.
-        rng_spec:
-            The RNG or seed (see :func:`seedbank.numpy_rng`).
+        rng:
+            The random number generator or seed (see :ref:`rng`).
 
     Returns:
         The train-test pair(s).
     """
 
-    rng = numpy_rng(rng_spec)
+    rng = np.random.default_rng(rng)
 
     users = data.users.ids()
     unums = np.arange(len(users))
