@@ -7,6 +7,7 @@ from lenskit.batch import BatchPipelineRunner
 from lenskit.data import Dataset
 from lenskit.pipeline import Component, RecPipelineBuilder
 from lenskit.splitting import SampleFrac, sample_users
+from lenskit.types import RNGInput
 
 from .bulk import RunAnalysis, RunAnalysisResult
 from .predict import MAE, RMSE
@@ -16,7 +17,12 @@ _log = logging.getLogger(__name__)
 
 
 def quick_measure_model(
-    model: Component, data: Dataset, *, predicts_ratings: bool = False, n_jobs: int | None = 1
+    model: Component,
+    data: Dataset,
+    *,
+    predicts_ratings: bool = False,
+    n_jobs: int | None = 1,
+    rng: RNGInput = None,
 ) -> RunAnalysisResult:
     """
     Do a quick-and-dirty model measurement with a default pipeline setup, split,
@@ -33,7 +39,7 @@ def quick_measure_model(
 
     n_users = data.user_count
     us_size = n_users // 5
-    split = sample_users(data, us_size, SampleFrac(0.2))
+    split = sample_users(data, us_size, SampleFrac(0.2, rng=rng), rng=rng)
     _log.info("measuring %s on %d users", model, us_size)
 
     pipe.train(split.train)
