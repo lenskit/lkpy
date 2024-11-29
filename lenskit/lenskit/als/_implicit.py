@@ -9,13 +9,14 @@ from __future__ import annotations
 import logging
 import math
 
+import numpy as np
 import torch
-from seedbank import SeedLike
-from typing_extensions import Optional, override
+from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
+from lenskit.types import RNGInput
 from lenskit.util.logging import pbh_update, progress_handle
 
 from ._common import ALSBase, TrainContext, TrainingData
@@ -69,8 +70,8 @@ class ImplicitMF(ALSBase):
         save_user_feature:
             Whether to save the user feature vector in the model, or recompute it at
             scoring time.
-        rng_spec:
-            Random number generator or state (see :func:`~seedbank.numpy_rng`).
+        rng:
+            Random number seed or generator.
     """
 
     weight: float
@@ -87,14 +88,14 @@ class ImplicitMF(ALSBase):
         weight: float = 40,
         use_ratings: bool = False,
         save_user_features: bool = True,
-        rng_spec: Optional[SeedLike] = None,
+        rng: RNGInput = None,
     ):
         super().__init__(
             features,
             epochs=epochs,
             reg=reg,
             save_user_features=save_user_features,
-            rng_spec=rng_spec,
+            rng=rng,
         )
         self.weight = weight
         self.use_ratings = use_ratings
@@ -122,8 +123,8 @@ class ImplicitMF(ALSBase):
         return TrainingData.create(data.users, data.items, rmat)
 
     @override
-    def initial_params(self, nrows: int, ncols: int) -> torch.Tensor:
-        mat = self.rng.standard_normal((nrows, ncols)) * 0.01
+    def initial_params(self, nrows: int, ncols: int, rng: np.random.Generator) -> torch.Tensor:
+        mat = rng.standard_normal((nrows, ncols)) * 0.01
         mat = torch.from_numpy(mat)
         mat.square_()
         return mat

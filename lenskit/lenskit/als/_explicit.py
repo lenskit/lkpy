@@ -10,7 +10,6 @@ import logging
 
 import numpy as np
 import torch
-from seedbank import SeedLike
 from typing_extensions import override
 
 from lenskit.basic import BiasModel
@@ -18,6 +17,7 @@ from lenskit.data import Dataset, ItemList
 from lenskit.data.types import UITuple
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
+from lenskit.types import RNGInput
 from lenskit.util.logging import pbh_update, progress_handle
 
 from ._common import ALSBase, TrainContext, TrainingData
@@ -46,8 +46,8 @@ class BiasedMF(ALSBase):
             specify separate user and item regularization terms.
         damping:
             Damping term for the bias model.
-        rng_spec:
-            Random number generator or state (see :func:`seedbank.numpy_rng`).
+        rng:
+            Random number seed or generator.
     """
 
     timer = None
@@ -63,14 +63,14 @@ class BiasedMF(ALSBase):
         epochs: int = 10,
         reg: float | tuple[float, float] = 0.1,
         damping: float | UITuple[float] | tuple[float, float] = 5.0,
-        rng_spec: SeedLike | None = None,
+        rng: RNGInput = None,
         save_user_features: bool = True,
     ):
         super().__init__(
             features,
             epochs=epochs,
             reg=reg,
-            rng_spec=rng_spec,
+            rng=rng,
             save_user_features=save_user_features,
         )
         self.damping = UITuple.create(damping)
@@ -93,8 +93,8 @@ class BiasedMF(ALSBase):
         return TrainingData.create(data.users, data.items, rmat)
 
     @override
-    def initial_params(self, nrows: int, ncols: int) -> torch.Tensor:
-        mat = self.rng.standard_normal((nrows, ncols))
+    def initial_params(self, nrows: int, ncols: int, rng: np.random.Generator) -> torch.Tensor:
+        mat = rng.standard_normal((nrows, ncols))
         mat /= np.linalg.norm(mat, axis=1).reshape((nrows, 1))
         mat = torch.from_numpy(mat)
         return mat

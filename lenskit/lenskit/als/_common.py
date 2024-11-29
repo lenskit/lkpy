@@ -12,14 +12,14 @@ from abc import ABC, abstractmethod
 import numpy as np
 import torch
 from progress_api import make_progress
-from seedbank import SeedLike, numpy_rng
-from typing_extensions import Iterator, NamedTuple, Optional, Self, override
+from typing_extensions import Iterator, NamedTuple, Self, override
 
 from lenskit import util
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.types import UITuple
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component, Trainable
+from lenskit.types import RNGInput
 
 
 class TrainContext(NamedTuple):
@@ -93,7 +93,7 @@ class ALSBase(ABC, Component, Trainable):
     features: int
     epochs: int
     reg: UITuple[float]
-    rng: np.random.Generator
+    rng: RNGInput
     save_user_features: bool
 
     users_: Vocabulary | None
@@ -116,12 +116,12 @@ class ALSBase(ABC, Component, Trainable):
         epochs: int = 10,
         reg: UITuple[float] | float | tuple[float, float] = 0.1,
         save_user_features: bool = True,
-        rng_spec: Optional[SeedLike] = None,
+        rng: RNGInput = None,
     ):
         self.features = features
         self.epochs = epochs
         self.reg = UITuple.create(reg)
-        self.rng = numpy_rng(rng_spec)
+        self.rng = rng
         self.save_user_features = save_user_features
 
     @property
@@ -237,16 +237,19 @@ class ALSBase(ABC, Component, Trainable):
         """
         Initialize the model parameters at the beginning of training.
         """
+        rng = np.random.default_rng(self.rng)
         self.logger.debug("initializing item matrix")
-        self.item_features_ = self.initial_params(data.n_items, self.features)
+        self.item_features_ = self.initial_params(data.n_items, self.features, rng)
         self.logger.debug("|Q|: %f", torch.norm(self.item_features_, "fro"))
 
         self.logger.debug("initializing user matrix")
-        self.user_features_ = self.initial_params(data.n_users, self.features)
+        self.user_features_ = self.initial_params(data.n_users, self.features, rng)
         self.logger.debug("|P|: %f", torch.norm(self.user_features_, "fro"))
 
     @abstractmethod
-    def initial_params(self, nrows: int, ncols: int) -> torch.Tensor:  # pragma: no cover
+    def initial_params(
+        self, nrows: int, ncols: int, rng: np.random.Generator
+    ) -> torch.Tensor:  # pragma: no cover
         """
         Compute initial parameter values of the specified shape.
         """
