@@ -127,6 +127,8 @@ def derivable_rng(spec: DerivableSeed) -> RNGFactory:
     - A tuple of the form ``(seed, 'user')``, that will use ``seed`` as the
       basis and drive from it a new seed based on the user ID.
 
+    .. seealso:: :ref:`rng`
+
     Args:
         spec:
             The seed specification.

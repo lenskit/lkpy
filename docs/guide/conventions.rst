@@ -52,7 +52,7 @@ in the face of multiple recommendation requests, particularly when those
 requests are parallelized, resulting in nondeterministic arrival orders.
 
 To handle this, LensKit components that randomize responses at runtime (such as
-:class:`lenskit.basic.RandomSelector` and :class:`lenskit.basic.SoftmaxRanker`)
+:class:`~lenskit.basic.RandomSelector` and :class:`~lenskit.basic.SoftmaxRanker`)
 support *derivable RNGs*.  They are selected by passing the string ``'user'`` as
 the RNG seed, or a tuple of the form ``(seed, 'user')``.  When configured with
 such a seed, the component will deterministically derive a seed for each request

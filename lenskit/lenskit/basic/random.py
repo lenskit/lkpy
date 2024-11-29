@@ -15,9 +15,8 @@ class RandomSelector(Component):
             The number of items to select, or ``-1`` to randomly permute the
             items.
         rng:
-            Seed or RNG for generating recommendations.  Pass ``'user'`` to
-            deterministically derive per-user RNGS from the user IDs for
-            reproducibility (see :func:`derivable_rng`).
+            The random number generator or specification (see :ref:`rng`).  This
+            class supports derivable RNGs.
     """
 
     n: int
@@ -79,7 +78,8 @@ class SoftmaxRanker(Component):
         n:
             The number of items to return (-1 to return unlimited).
         rng:
-            The random number generator or specification (see :func:`derivable_rng`).
+            The random number generator or specification (see :ref:`rng`).  This
+            class supports derivable RNGs.
     """
 
     n: int

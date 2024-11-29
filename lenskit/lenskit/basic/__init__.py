@@ -7,7 +7,7 @@ from .candidates import AllTrainingItemsCandidateSelector, UnratedTrainingItemsC
 from .composite import FallbackScorer
 from .history import UserTrainingHistoryLookup
 from .popularity import PopScorer
-from .random import SoftmaxRanker
+from .random import RandomSelector, SoftmaxRanker
 from .topn import TopNRanker
 
 __all__ = [
@@ -15,6 +15,7 @@ __all__ = [
     "BiasScorer",
     "PopScorer",
     "TopNRanker",
+    "RandomSelector",
     "SoftmaxRanker",
     "UserTrainingHistoryLookup",
     "UnratedTrainingItemsCandidateSelector",
