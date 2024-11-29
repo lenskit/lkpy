@@ -69,17 +69,17 @@ The important things to document are the data splitting strategy, the target
 recommendation list length, and the candidate selection strategy (if something
 other than the default of all unrated items is used).
 
-If you use one of LensKit's built-in splitting strategies from :py:class:`~lenskit.crossfold`
+If you use one of LensKit's built-in splitting strategies from :py:class:`~lenskit.splitting`
 without modification, report:
 
 - The splitting function used.
 - The number of partitions or test samples.
 - The number of users per sample (when using
-  :py:class:`~lenskit.crossfold.sample_users`) or ratings per sample (when using
-  :py:class:`~lenskit.crossfold.sample_ratings`).
+  :py:class:`~lenskit.splitting.sample_users`) or records per sample (when using
+  :py:class:`~lenskit.splitting.sample_records`).
 - When using a user-based strategy (either
-  :py:class:`~lenskit.crossfold.partition_users` or
-  :py:class:`~lenskit.crossfold.sample_users`), the test rating selection
+  :py:class:`~lenskit.splitting.crossfold_users` or
+  :py:class:`~lenskit.splitting.sample_users`), the test rating selection
   strategy (class and parameters), e.g. ``SampleN(5)``.
 
 Any additional pre-processing (e.g. filtering ratings) should also be clearly
