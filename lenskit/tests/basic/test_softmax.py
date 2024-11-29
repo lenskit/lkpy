@@ -88,7 +88,7 @@ def test_configured_truncation(n, items: ItemList):
 
 @given(st.integers(min_value=1, max_value=100), scored_lists())
 def test_runtime_truncation(n, items: ItemList):
-    topn = SoftmaxRanker(rng_spec="user")
+    topn = SoftmaxRanker(rng="user")
     ranked = topn(items=items, n=n)
 
     ids = items.ids()

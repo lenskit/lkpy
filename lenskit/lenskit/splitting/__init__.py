@@ -27,8 +27,8 @@ def simple_test_pair(
     """
 
     if f_rates:
-        samp = SampleFrac(f_rates, rng_spec=rng)
+        samp = SampleFrac(f_rates, rng=rng)
     else:
-        samp = SampleN(n_rates, rng_spec=rng)
+        samp = SampleN(n_rates, rng=rng)
 
-    return sample_users(ratings, n_users, samp, rng_spec=rng)
+    return sample_users(ratings, n_users, samp, rng=rng)
