@@ -82,7 +82,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/07/3b/44ea6266a6761e9eefaa37d98fabefa112328808ac41aa87b4bbb668af30/pyzmq-26.2.0-cp312-cp312-manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_0.conda
@@ -143,7 +142,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/28/2f/78a766c8913ad62b28581777ac4ede50c6d9f249d39c2963e279524a1bbe/pyzmq-26.2.0-cp312-cp312-macosx_10_15_universal2.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_0.conda
@@ -207,7 +205,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/73/80/2708a4641f7d553a63bc934a3eb7214806b5b39d200133ca7f7afb0a53e8/msgpack-1.1.0-cp312-cp312-win_amd64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/ce/2c/a6f4a20202a4d3c582ad93f95ee78d79bbdc26803495aec2912b17dbbb6c/pyzmq-26.2.0-cp312-cp312-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
   demo:
     channels:
@@ -513,7 +510,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
       - pypi: lenskit-hpf
@@ -735,7 +731,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
       - pypi: lenskit-hpf
@@ -1178,7 +1173,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/a8/a1/ad7b84b91ab5a324e707f4c9761633e357820b011a01e34ce658c1dda7cc/msgpack-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
@@ -1541,7 +1535,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/42/ae/d3adea9bb4a1342763556078b5765e666f8fdf242e00f3f6657380920972/msgpack-1.1.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
@@ -1974,7 +1967,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
       osx-arm64:
@@ -2326,7 +2318,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
       win-64:
@@ -2686,7 +2677,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/73/80/2708a4641f7d553a63bc934a3eb7214806b5b39d200133ca7f7afb0a53e8/msgpack-1.1.0-cp312-cp312-win_amd64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
   dev-full:
@@ -3127,7 +3117,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
@@ -3490,7 +3479,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
@@ -3714,7 +3702,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
       - pypi: lenskit-hpf
@@ -3908,7 +3895,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
       - pypi: lenskit-hpf
@@ -4319,7 +4305,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/a8/a1/ad7b84b91ab5a324e707f4c9761633e357820b011a01e34ce658c1dda7cc/msgpack-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
       - pypi: lenskit-hpf
@@ -4553,7 +4538,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/42/ae/d3adea9bb4a1342763556078b5765e666f8fdf242e00f3f6657380920972/msgpack-1.1.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
       - pypi: lenskit-hpf
@@ -4663,7 +4647,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/a8/a1/ad7b84b91ab5a324e707f4c9761633e357820b011a01e34ce658c1dda7cc/msgpack-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/ab/68/6fb6ae5551846ad5beca295b7bca32bf0a7ce19f135cb30e55fa2314e6b6/pyzmq-26.2.0-cp311-cp311-manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_0.conda
@@ -4747,7 +4730,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/42/ae/d3adea9bb4a1342763556078b5765e666f8fdf242e00f3f6657380920972/msgpack-1.1.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/12/20/de7442172f77f7c96299a0ac70e7d4fb78cd51eca67aa2cf552b66c14196/pyzmq-26.2.0-cp311-cp311-macosx_10_15_universal2.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_0.conda
@@ -4834,7 +4816,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/aa/c4/5a582fc9a87991a3e6f6800e9bb2f3c82972912235eb9539954f3e9997c7/msgpack-1.1.0-cp311-cp311-win_amd64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/3b/1b/0a540edd75a41df14ec416a9a500b9fec66e554aac920d4c58fbd5756776/pyzmq-26.2.0-cp311-cp311-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
   test-py311-full:
     channels:
@@ -4959,7 +4940,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/a8/a1/ad7b84b91ab5a324e707f4c9761633e357820b011a01e34ce658c1dda7cc/msgpack-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
       - pypi: lenskit-hpf
@@ -5059,7 +5039,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/42/ae/d3adea9bb4a1342763556078b5765e666f8fdf242e00f3f6657380920972/msgpack-1.1.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
       - pypi: lenskit-hpf
@@ -5173,7 +5152,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/a8/a1/ad7b84b91ab5a324e707f4c9761633e357820b011a01e34ce658c1dda7cc/msgpack-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/ab/68/6fb6ae5551846ad5beca295b7bca32bf0a7ce19f135cb30e55fa2314e6b6/pyzmq-26.2.0-cp311-cp311-manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
       osx-arm64:
@@ -5261,7 +5239,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/42/ae/d3adea9bb4a1342763556078b5765e666f8fdf242e00f3f6657380920972/msgpack-1.1.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/12/20/de7442172f77f7c96299a0ac70e7d4fb78cd51eca67aa2cf552b66c14196/pyzmq-26.2.0-cp311-cp311-macosx_10_15_universal2.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
       win-64:
@@ -5351,7 +5328,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/aa/c4/5a582fc9a87991a3e6f6800e9bb2f3c82972912235eb9539954f3e9997c7/msgpack-1.1.0-cp311-cp311-win_amd64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/3b/1b/0a540edd75a41df14ec416a9a500b9fec66e554aac920d4c58fbd5756776/pyzmq-26.2.0-cp311-cp311-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
   test-py311-hpf:
@@ -5465,7 +5441,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/a8/a1/ad7b84b91ab5a324e707f4c9761633e357820b011a01e34ce658c1dda7cc/msgpack-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-hpf
       osx-arm64:
@@ -5555,7 +5530,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/42/ae/d3adea9bb4a1342763556078b5765e666f8fdf242e00f3f6657380920972/msgpack-1.1.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-hpf
   test-py311-implicit:
@@ -5670,7 +5644,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/a8/a1/ad7b84b91ab5a324e707f4c9761633e357820b011a01e34ce658c1dda7cc/msgpack-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/ab/68/6fb6ae5551846ad5beca295b7bca32bf0a7ce19f135cb30e55fa2314e6b6/pyzmq-26.2.0-cp311-cp311-manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-implicit
       osx-arm64:
@@ -5757,7 +5730,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/42/ae/d3adea9bb4a1342763556078b5765e666f8fdf242e00f3f6657380920972/msgpack-1.1.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/12/20/de7442172f77f7c96299a0ac70e7d4fb78cd51eca67aa2cf552b66c14196/pyzmq-26.2.0-cp311-cp311-macosx_10_15_universal2.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-implicit
   test-py311-sklearn:
@@ -5867,7 +5839,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/a8/a1/ad7b84b91ab5a324e707f4c9761633e357820b011a01e34ce658c1dda7cc/msgpack-1.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/ab/68/6fb6ae5551846ad5beca295b7bca32bf0a7ce19f135cb30e55fa2314e6b6/pyzmq-26.2.0-cp311-cp311-manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-sklearn
       osx-arm64:
@@ -5954,7 +5925,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/42/ae/d3adea9bb4a1342763556078b5765e666f8fdf242e00f3f6657380920972/msgpack-1.1.0-cp311-cp311-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/12/20/de7442172f77f7c96299a0ac70e7d4fb78cd51eca67aa2cf552b66c14196/pyzmq-26.2.0-cp311-cp311-macosx_10_15_universal2.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-sklearn
       win-64:
@@ -6044,7 +6014,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/aa/c4/5a582fc9a87991a3e6f6800e9bb2f3c82972912235eb9539954f3e9997c7/msgpack-1.1.0-cp311-cp311-win_amd64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/3b/1b/0a540edd75a41df14ec416a9a500b9fec66e554aac920d4c58fbd5756776/pyzmq-26.2.0-cp311-cp311-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-sklearn
   test-py312-core:
@@ -6152,7 +6121,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/07/3b/44ea6266a6761e9eefaa37d98fabefa112328808ac41aa87b4bbb668af30/pyzmq-26.2.0-cp312-cp312-manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_0.conda
@@ -6236,7 +6204,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/28/2f/78a766c8913ad62b28581777ac4ede50c6d9f249d39c2963e279524a1bbe/pyzmq-26.2.0-cp312-cp312-macosx_10_15_universal2.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_0.conda
@@ -6323,7 +6290,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/73/80/2708a4641f7d553a63bc934a3eb7214806b5b39d200133ca7f7afb0a53e8/msgpack-1.1.0-cp312-cp312-win_amd64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/ce/2c/a6f4a20202a4d3c582ad93f95ee78d79bbdc26803495aec2912b17dbbb6c/pyzmq-26.2.0-cp312-cp312-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
   test-py312-full:
     channels:
@@ -6448,7 +6414,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
       - pypi: lenskit-hpf
@@ -6548,7 +6513,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
       - pypi: lenskit-hpf
@@ -6662,7 +6626,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/07/3b/44ea6266a6761e9eefaa37d98fabefa112328808ac41aa87b4bbb668af30/pyzmq-26.2.0-cp312-cp312-manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
       osx-arm64:
@@ -6750,7 +6713,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/28/2f/78a766c8913ad62b28581777ac4ede50c6d9f249d39c2963e279524a1bbe/pyzmq-26.2.0-cp312-cp312-macosx_10_15_universal2.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
       win-64:
@@ -6840,7 +6802,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/73/80/2708a4641f7d553a63bc934a3eb7214806b5b39d200133ca7f7afb0a53e8/msgpack-1.1.0-cp312-cp312-win_amd64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/ce/2c/a6f4a20202a4d3c582ad93f95ee78d79bbdc26803495aec2912b17dbbb6c/pyzmq-26.2.0-cp312-cp312-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-funksvd
   test-py312-hpf:
@@ -6954,7 +6915,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-hpf
       osx-arm64:
@@ -7044,7 +7004,6 @@ environments:
       - pypi: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-hpf
   test-py312-implicit:
@@ -7159,7 +7118,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/07/3b/44ea6266a6761e9eefaa37d98fabefa112328808ac41aa87b4bbb668af30/pyzmq-26.2.0-cp312-cp312-manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-implicit
       osx-arm64:
@@ -7246,7 +7204,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/28/2f/78a766c8913ad62b28581777ac4ede50c6d9f249d39c2963e279524a1bbe/pyzmq-26.2.0-cp312-cp312-macosx_10_15_universal2.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-implicit
   test-py312-sklearn:
@@ -7356,7 +7313,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/f1/54/65af8de681fa8255402c80eda2a501ba467921d5a7a028c9c22a2c2eedb5/msgpack-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/07/3b/44ea6266a6761e9eefaa37d98fabefa112328808ac41aa87b4bbb668af30/pyzmq-26.2.0-cp312-cp312-manylinux_2_28_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-sklearn
       osx-arm64:
@@ -7443,7 +7399,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/28/51/da7f3ae4462e8bb98af0d5bdf2707f1b8c65a0d4f496e46b6afb06cbc286/msgpack-1.1.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/28/2f/78a766c8913ad62b28581777ac4ede50c6d9f249d39c2963e279524a1bbe/pyzmq-26.2.0-cp312-cp312-macosx_10_15_universal2.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-sklearn
       win-64:
@@ -7533,7 +7488,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/73/80/2708a4641f7d553a63bc934a3eb7214806b5b39d200133ca7f7afb0a53e8/msgpack-1.1.0-cp312-cp312-win_amd64.whl
       - pypi: git+https://github.com/lenskit/progress-api.git@7147712bac9fb6991b68d5ffd7819681fdfa3592
       - pypi: https://files.pythonhosted.org/packages/ce/2c/a6f4a20202a4d3c582ad93f95ee78d79bbdc26803495aec2912b17dbbb6c/pyzmq-26.2.0-cp312-cp312-win_amd64.whl
-      - pypi: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
       - pypi: lenskit
       - pypi: lenskit-sklearn
 packages:
@@ -13320,9 +13274,9 @@ packages:
   timestamp: 1727304687962
 - kind: pypi
   name: lenskit
-  version: 0.15.0.dev1407+g3c45716a
+  version: 0.15.0.dev1619+ge9d580c8.d20241129
   path: lenskit
-  sha256: 81f6740798a8a424f07e1c11fb0d9eab063a9dd6fe1fffba7ee5d486b93f8628
+  sha256: 8491b9b8e7673b2d30240c4921ffcf2cce1646c55cbe3cf73437937d25cf78e3
   requires_dist:
   - manylog @ git+https://github.com/mdekstrand/manylog.git
   - numpy>=1.24
@@ -13330,7 +13284,6 @@ packages:
   - progress-api>=0.1.0a9
   - pydantic>=2.8,<3
   - scipy>=1.10.0
-  - seedbank>=0.2.0a2
   - threadpoolctl>=3.0
   - torch~=2.1
   - scikit-learn>=1.1 ; extra == 'sklearn'
@@ -13345,7 +13298,7 @@ packages:
   editable: true
 - kind: pypi
   name: lenskit-funksvd
-  version: 0.15.0.dev1407+g3c45716a
+  version: 0.15.0.dev1612+gfcf221a4
   path: lenskit-funksvd
   sha256: f205043df831d2a7a9345beb588a0da37221c75b40ca4e709082ca932b95ca76
   requires_dist:
@@ -13355,7 +13308,7 @@ packages:
   editable: true
 - kind: pypi
   name: lenskit-hpf
-  version: 0.15.0.dev1407+g3c45716a
+  version: 0.15.0.dev1612+gfcf221a4
   path: lenskit-hpf
   sha256: d3288a8e16f88803ee3158c416e943898e781884db0fb1b2493b6e54066c71c1
   requires_dist:
@@ -13365,7 +13318,7 @@ packages:
   editable: true
 - kind: pypi
   name: lenskit-implicit
-  version: 0.15.0.dev1407+g3c45716a
+  version: 0.15.0.dev1612+gfcf221a4
   path: lenskit-implicit
   sha256: 4b2641b5b3421e4f803dcf16cf5fce27c068957b4b25bc74c75f1cb6c910d301
   requires_dist:
@@ -13375,7 +13328,7 @@ packages:
   editable: true
 - kind: pypi
   name: lenskit-sklearn
-  version: 0.15.0.dev1561+g46813bfd
+  version: 0.15.0.dev1612+gfcf221a4
   path: lenskit-sklearn
   sha256: 18fa24b689f2924274287e83045bc80a1171d46d2d43383cf4eb35e7f0ebccdd
   requires_dist:
@@ -16860,7 +16813,7 @@ packages:
   timestamp: 1608166099896
 - kind: pypi
   name: manylog
-  version: 0.2.0.dev3+g0592011
+  version: 0.1.0
   url: git+https://github.com/mdekstrand/manylog.git@0592011daa8acdbdbf9632466cb39cc50ab4756c
   requires_dist:
   - progress-api>=0.1.0a5
@@ -22717,40 +22670,6 @@ packages:
   - pkg:pypi/seaborn?source=hash-mapping
   size: 234550
   timestamp: 1714494767378
-- kind: pypi
-  name: seedbank
-  version: 0.2.0b2
-  url: https://files.pythonhosted.org/packages/71/6d/9fd049e8bb5e2b2906eaa8e1a113c97d172733442c02a08968dbd84bd810/seedbank-0.2.0b2-py3-none-any.whl
-  sha256: 85dcb81cad82c6be60719aa2becb89645a2c3548352405e218cc1f4e8fcbab87
-  requires_dist:
-  - numpy>=1.17
-  - typing-extensions~=4.8
-  - cupy-cuda11x ; extra == 'cuda11x'
-  - cupy ; extra == 'cupy'
-  - setuptools>=64 ; extra == 'dev'
-  - setuptools-scm>=8 ; extra == 'dev'
-  - wheel ; extra == 'dev'
-  - build==1.* ; extra == 'dev'
-  - ruff>=0.2 ; extra == 'dev'
-  - pyright ; extra == 'dev'
-  - copier==9.* ; extra == 'dev'
-  - unbeheader~=1.3 ; extra == 'dev'
-  - ipython ; extra == 'dev'
-  - pyproject2conda ; extra == 'dev'
-  - sphinx-autobuild ; extra == 'dev'
-  - sphinx>=4.2 ; extra == 'doc'
-  - sphinxext-opengraph>=0.5 ; extra == 'doc'
-  - furo ; extra == 'doc'
-  - numba ; extra == 'numba'
-  - pytest>=7 ; extra == 'test'
-  - pytest-doctestplus ; extra == 'test'
-  - pytest-cov>=2.12 ; extra == 'test'
-  - coverage>=5 ; extra == 'test'
-  - pyyaml ; extra == 'test'
-  - toml ; extra == 'test'
-  - tensorflow>=2,<3 ; extra == 'tf'
-  - torch ; extra == 'torch'
-  requires_python: '>=3.10'
 - kind: conda
   name: send2trash
   version: 1.8.3

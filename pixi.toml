@@ -13,7 +13,6 @@ pydantic = ">=2.8,<3"
 
 [pypi-dependencies]
 manylog = { git = "https://github.com/mdekstrand/manylog.git" }
-seedbank = ">=0.2.0a2"
 progress-api = { git = "https://github.com/lenskit/progress-api.git" }
 lenskit = { path = "lenskit", editable = true }
 
