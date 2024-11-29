@@ -14,7 +14,6 @@ from multiprocessing.managers import SharedMemoryManager
 from typing import Generic, Iterable, Iterator
 
 import manylog
-import seedbank
 from progress_api import Progress, null_progress
 
 from . import worker
@@ -38,7 +37,6 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         ctx = mp.get_context("spawn")
         _log.info("setting up process pool w/ %d workers", n_jobs)
         kid_tc = get_parallel_config().child_threads
-        seed = seedbank.root_seed()
         manylog.initialize()
 
         self.progress = progress or null_progress()
@@ -47,7 +45,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         prog_uuid = manylog.share_progress(self.progress)
 
         try:
-            cfg = worker.WorkerConfig(kid_tc, seed)
+            cfg = worker.WorkerConfig(kid_tc)
             job = worker.WorkerContext(func, model, prog_uuid)
             job = shm_serialize(job, self.manager)
             self.pool = ProcessPoolExecutor(n_jobs, ctx, worker.initalize, (cfg, job))
