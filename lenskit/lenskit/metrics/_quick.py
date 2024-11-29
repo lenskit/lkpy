@@ -2,11 +2,8 @@ from __future__ import annotations
 
 import logging
 
-from lenskit.basic import BiasScorer
-from lenskit.batch import BatchPipelineRunner
 from lenskit.data import Dataset
 from lenskit.pipeline import Component, RecPipelineBuilder
-from lenskit.splitting import SampleFrac, sample_users
 from lenskit.types import RNGInput
 
 from .bulk import RunAnalysis, RunAnalysisResult
@@ -29,6 +26,9 @@ def quick_measure_model(
     and metrics. This is mostly to make tests easy to write, you usually don't
     want to use it for actual recommender evaluation.
     """
+    from lenskit.basic import BiasScorer
+    from lenskit.batch import BatchPipelineRunner
+    from lenskit.splitting import SampleFrac, sample_users
 
     builder = RecPipelineBuilder()
     builder.scorer(model)
