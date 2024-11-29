@@ -14,20 +14,20 @@ class RandomSelector(Component):
         n:
             The number of items to select, or ``-1`` to randomly permute the
             items.
-        rng_spec:
-            Seed or random state for generating recommendations.  Pass
-            ``'user'`` to deterministically derive per-user RNGS from the user
-            IDs for reproducibility.
+        rng:
+            Seed or RNG for generating recommendations.  Pass ``'user'`` to
+            deterministically derive per-user RNGS from the user IDs for
+            reproducibility (see :func:`derivable_rng`).
     """
 
-    IGNORED_CONFIG_FIELDS = ["rng_spec"]
-
     n: int
+    rng: DerivableSeed
     _rng_factory: RNGFactory
 
-    def __init__(self, n: int = -1, rng_spec: DerivableSeed = None):
+    def __init__(self, n: int = -1, rng: DerivableSeed = None):
         self.n = n
-        self._rng_factory = derivable_rng(rng_spec)
+        self.rng = rng
+        self._rng_factory = derivable_rng(rng)
 
     def __call__(
         self, items: ItemList, query: QueryInput | None = None, n: int | None = None
@@ -46,8 +46,7 @@ class RandomSelector(Component):
             n = self.n
 
         query = RecQuery.create(query)
-        keys = [query.user_id] if query.user_id else []
-        rng = self._rng_factory(*keys)
+        rng = self._rng_factory(query)
 
         if n < 0:
             n = len(items)
@@ -75,23 +74,28 @@ class SoftmaxRanker(Component):
         Negative scores are clamped to (approximately) zero.
 
     .. _`Tim Vieiera`: https://timvieira.github.io/blog/post/2019/09/16/algorithms-for-sampling-without-replacement/
+
+    Args:
+        n:
+            The number of items to return (-1 to return unlimited).
+        rng:
+            The random number generator or specification (see :func:`derivable_rng`).
     """
 
     n: int
+    rng: DerivableSeed
     _rng_factory: RNGFactory
 
-    def __init__(self, n: int = -1, rng_spec: DerivableSeed = None):
+    def __init__(self, n: int = -1, rng: DerivableSeed = None):
         self.n = n
-        self._rng_factory = derivable_rng(rng_spec)
+        self.rng = rng
+        self._rng_factory = derivable_rng(rng)
 
     def __call__(
         self, items: ItemList, query: QueryInput | None = None, n: int | None = None
     ) -> ItemList:
-        if query is None:
-            rng = self._rng_factory()
-        else:
-            query = RecQuery.create(query)
-            rng = self._rng_factory(query.user_id)  # type: ignore
+        query = RecQuery.create(query)
+        rng = self._rng_factory(query)
 
         scores = items.scores()
         if scores is None:

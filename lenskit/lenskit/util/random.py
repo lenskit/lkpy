@@ -8,14 +8,63 @@
 Utilities to manage randomness in LensKit and LensKit experiments.
 """
 
+# pyright: strict
 from abc import abstractmethod
-from typing import Literal, Protocol, TypeAlias
+from hashlib import md5
+from uuid import UUID
 
 import numpy as np
 import seedbank
-from seedbank import RNGKey, SeedLike
+from numpy.random import Generator, SeedSequence, default_rng
+from typing_extensions import Any, Literal, Protocol, Sequence, TypeAlias, override
 
-DerivableSeed: TypeAlias = SeedLike | Literal["user"] | tuple[SeedLike, Literal["user"]] | None
+from lenskit.data import RecQuery
+from lenskit.types import SeedLike
+
+SeedDependency = Literal["user"]
+DerivableSeed: TypeAlias = SeedLike | SeedDependency | tuple[SeedLike, SeedDependency] | None
+
+
+def make_seed(
+    *keys: SeedSequence | int | str | bytes | UUID | Sequence[int] | np.integer[Any] | None,
+) -> SeedSequence:
+    """
+    Make an RNG seed from an input key, allowing strings as seed material.
+    """
+    seed: list[int] = []
+    for key in keys:
+        if key is None:
+            continue
+        elif isinstance(key, SeedSequence):
+            ent = key.entropy
+            if ent is None:
+                continue
+            elif isinstance(ent, int):
+                seed.append(ent)
+            else:
+                seed += ent
+        elif isinstance(key, np.integer):
+            seed.append(key.item())
+        elif isinstance(key, int):
+            seed.append(key)
+        elif isinstance(key, UUID):
+            seed.append(_bytes_seed(key.bytes))
+        elif isinstance(key, str):
+            seed.append(_bytes_seed(key.encode("utf8")))
+        elif isinstance(key, bytes):
+            seed.append(_bytes_seed(key))
+        elif isinstance(key, Sequence):  # type: ignore
+            seed += key
+        else:  # pragma: nocover
+            raise TypeError(f"invalid key input: {key}")
+
+    return SeedSequence(seed)
+
+
+def _bytes_seed(key: bytes) -> int:
+    digest = md5(key).digest
+    arr = np.asarray(digest).astype(np.int32)
+    return np.bitwise_xor.reduce(arr).item()
 
 
 class RNGFactory(Protocol):
@@ -24,32 +73,41 @@ class RNGFactory(Protocol):
     """
 
     @abstractmethod
-    def __call__(self, *keys: RNGKey) -> np.random.Generator:
+    def __call__(self, query: RecQuery | None) -> Generator:
         raise NotImplementedError()
 
 
-class FixedRNG:
+class FixedRNG(RNGFactory):
     "RNG provider that always provides the same RNG"
 
-    def __init__(self, rng):
+    rng: Generator
+
+    def __init__(self, rng: Generator):
         self.rng = rng
 
-    def __call__(self, *keys: RNGKey) -> np.random.Generator:
+    @override
+    def __call__(self, query: RecQuery | None = None) -> Generator:
         return self.rng
 
     def __str__(self):
         return "Fixed({})".format(self.rng)
 
 
-class DerivingRNG:
+class DerivingRNG(RNGFactory):
     "RNG provider that derives new RNGs from the key"
 
-    def __init__(self, seed):
+    seed: np.random.SeedSequence
+
+    def __init__(self, seed: np.random.SeedSequence):
         self.seed = seed
 
-    def __call__(self, *keys: RNGKey) -> np.random.Generator:
-        seed = seedbank.derive_seed(*keys, base=self.seed)
-        return seedbank.numpy_rng(seed)
+    @override
+    def __call__(self, query: RecQuery | None = None) -> Generator:
+        if query is None or query.user_id is None:
+            return np.random.default_rng(self.seed.spawn(1)[0])
+        else:
+            seed = make_seed(self.seed, query.user_id)  # type: ignore
+            return default_rng(seed)
 
     def __str__(self):
         return "Derive({})".format(self.seed)
@@ -57,23 +115,26 @@ class DerivingRNG:
 
 def derivable_rng(spec: DerivableSeed) -> RNGFactory:
     """
-    Get a derivable RNG, for use cases where the code needs to be able to reproducibly derive
-    sub-RNGs for different keys, such as user IDs.
+    RNGs that may be derivable from data in the query. These are for designs
+    that need to be able to reproducibly derive RNGs for different keys, like
+    user IDs (to make a “random” recommender produce the same sequence for the
+    same user).
+
+    Seed specifications may be any of the following:
+
+    - A seed (:type:`~lenskit.types.SeedLike`).
+    - The value ``'user'``, which will derive a seed from the query user ID.
+    - A tuple of the form ``(seed, 'user')``, that will use ``seed`` as the
+      basis and drive from it a new seed based on the user ID.
 
     Args:
         spec:
-            Any value supported by the `seed` parameter of :func:`seedbank.numpy_rng`, in addition
-            to the following values:
-
-            * the string ``'user'``
-            * a tuple of the form (``seed``, ``'user'``)
-
-            Either of these forms will cause the returned function to re-derive new RNGs.
+            The seed specification.
 
     Returns:
         function:
-            A function taking one (or more) key values, like :func:`derive_seed`, and
-            returning a random number generator.
+            A function taking one (or more) key values, like
+            :func:`derive_seed`, and returning a random number generator.
     """
 
     if spec == "user":
@@ -82,6 +143,6 @@ def derivable_rng(spec: DerivableSeed) -> RNGFactory:
         seed, key = spec
         if key != "user":
             raise ValueError("unrecognized key %s", key)
-        return DerivingRNG(seed)
+        return DerivingRNG(make_seed(seed))
     else:
-        return FixedRNG(seedbank.numpy_rng(spec))
+        return FixedRNG(default_rng(spec))
