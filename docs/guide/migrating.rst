@@ -42,6 +42,9 @@ fall into the following categories:
   used in models, however — TensorFlow and Jax models should work just fine in
   LensKit.
 
+  LensKit also uses SPEC 7 instead of SeedBank for configuring random number
+  generation support (see :ref:`rng`).
+
 - **Pipelines** — LensKit recommendation is now built around *pipelines* (see
   :ref:`pipeline`) consisting of individual *components*, such as scoring models
   and rankers.

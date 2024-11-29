@@ -44,6 +44,15 @@ splitting support <./splitting>`_.
     ecosystem, we use that with some lightweight helpers in the
     :mod:`lenskit.util.random` module instead of using SeedBank.
 
+When implementing a component that uses randomness in its training, we recommend
+deferring conversion of the provided RNG into an actual generator until
+model-training time, so that serializing an untrained pipeline or its
+configuration includes the original seed instead of the resulting generator.
+When using the RNG to create initial state for e.g. training a model with
+PyTorch, it can be useful to create that state in NumPy and then convert to a
+tensor, so that components are consistent in their random number generation
+behavior instead of having variation between NumPy and other backends.
+
 Derived Seeds
 -------------
 
