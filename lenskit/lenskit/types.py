@@ -7,9 +7,27 @@
 # pyright: strict
 from __future__ import annotations
 
-from typing import TypeAlias
+from typing import Any, Sequence, TypeAlias
 
 import numpy as np
-from seedbank import SeedLike
 
-RandomSeed: TypeAlias = SeedLike | np.random.Generator | np.random.RandomState
+SeedLike: TypeAlias = int | np.integer[Any] | Sequence[int] | np.random.SeedSequence
+"""
+Type for RNG seeds (see _SPEC0).
+
+.. _SPEC0: https://scientific-python.org/specs/spec-0007/
+"""
+
+RNGLike: TypeAlias = np.random.Generator | np.random.BitGenerator
+"""
+Type for random number generators as inputs (see _SPEC0).
+
+.. _SPEC0: https://scientific-python.org/specs/spec-0007/
+"""
+
+RNGInput: TypeAlias = SeedLike | RNGLike | None
+"""
+Type for RNG inputs (see _SPEC0).
+
+.. _SPEC0: https://scientific-python.org/specs/spec-0007/
+"""
