@@ -85,9 +85,9 @@ def make_seed(
 
 
 def _bytes_seed(key: bytes) -> int:
-    digest = md5(key).digest
-    arr = np.asarray(digest).astype(np.int32)
-    return np.bitwise_xor.reduce(arr).item()
+    digest = md5(key).digest()
+    arr = np.frombuffer(digest, np.int32)
+    return abs(np.bitwise_xor.reduce(arr).item())
 
 
 class RNGFactory(Protocol):
