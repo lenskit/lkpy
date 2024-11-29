@@ -97,10 +97,10 @@ def test_svd_save_load(ml_ds: Dataset):
 @need_skl
 @mark.slow
 @mark.eval
-def test_svd_batch_accuracy(ml_100k: pd.DataFrame):
+def test_svd_batch_accuracy(rng, ml_100k: pd.DataFrame):
     data = from_interactions_df(ml_100k)
     svd_algo = svd.BiasedSVD(25, damping=10)
-    results = quick_measure_model(svd_algo, data, predicts_ratings=True)
+    results = quick_measure_model(svd_algo, data, predicts_ratings=True, rng=rng)
 
-    assert results.global_metrics()["MAE"] == approx(0.74, abs=0.025)
+    assert results.global_metrics()["MAE"] == approx(0.71, abs=0.025)
     assert results.list_summary().loc["RMSE", "mean"] == approx(0.92, abs=0.05)

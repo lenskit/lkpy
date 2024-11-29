@@ -15,6 +15,7 @@ import pandas as pd
 from lenskit.data import ID, Dataset, ItemListCollection, UserIDKey
 from lenskit.data.matrix import MatrixDataset
 from lenskit.types import RNGInput
+from lenskit.util.random import random_generator
 
 from .holdout import HoldoutMethod
 from .split import TTSplit
@@ -43,7 +44,7 @@ def crossfold_users(
     Returns
         The train-test pairs.
     """
-    rng = np.random.default_rng(rng)
+    rng = random_generator(rng)
 
     users = data.users.ids()
     _log.info(
@@ -124,7 +125,7 @@ def sample_users(
         The train-test pair(s).
     """
 
-    rng = np.random.default_rng(rng)
+    rng = random_generator(rng)
 
     users = data.users.ids()
     unums = np.arange(len(users))

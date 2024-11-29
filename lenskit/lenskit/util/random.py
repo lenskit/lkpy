@@ -18,10 +18,34 @@ from numpy.random import Generator, SeedSequence, default_rng
 from typing_extensions import Any, Literal, Protocol, Sequence, TypeAlias, override
 
 from lenskit.data import RecQuery
-from lenskit.types import SeedLike
+from lenskit.types import RNGInput, SeedLike
 
 SeedDependency = Literal["user"]
 DerivableSeed: TypeAlias = SeedLike | SeedDependency | tuple[SeedLike, SeedDependency] | None
+
+_global_rng: Generator | None = None
+
+
+def set_global_rng(seed: RNGInput):
+    """
+    Set the global default RNG.
+    """
+    global _global_rng
+    _global_rng = default_rng(seed)
+
+
+def random_generator(seed: RNGInput = None) -> Generator:
+    """
+    Create a a random generator with the given seed, falling back to a global
+    generator if no seed is provided.  If no global generator has been
+    configured with :func:`set_global_rng`, it returns a fresh random RNG.
+    """
+
+    global _global_rng
+    if seed is None and _global_rng is not None:
+        return _global_rng
+    else:
+        return default_rng(seed)
 
 
 def make_seed(

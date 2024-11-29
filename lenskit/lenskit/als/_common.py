@@ -20,6 +20,7 @@ from lenskit.data.types import UITuple
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component, Trainable
 from lenskit.types import RNGInput
+from lenskit.util.random import random_generator
 
 
 class TrainContext(NamedTuple):
@@ -237,7 +238,7 @@ class ALSBase(ABC, Component, Trainable):
         """
         Initialize the model parameters at the beginning of training.
         """
-        rng = np.random.default_rng(self.rng)
+        rng = random_generator(self.rng)
         self.logger.debug("initializing item matrix")
         self.item_features_ = self.initial_params(data.n_items, self.features, rng)
         self.logger.debug("|Q|: %f", torch.norm(self.item_features_, "fro"))

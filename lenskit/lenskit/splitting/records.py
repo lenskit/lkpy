@@ -15,6 +15,7 @@ import pandas as pd
 from lenskit.data import Dataset, ItemListCollection, UserIDKey
 from lenskit.data.matrix import MatrixDataset
 from lenskit.types import RNGInput
+from lenskit.util.random import random_generator
 
 from .split import TTSplit
 
@@ -44,7 +45,7 @@ def crossfold_records(data: Dataset, partitions: int, *, rng: RNGInput = None) -
     """
 
     _log.info("partitioning %d ratings into %d partitions", data.count("pairs"), partitions)
-    rng = np.random.default_rng(rng)
+    rng = random_generator(rng)
 
     # get the full data list to split
     df = data.interaction_matrix(format="pandas", field="all", original_ids=True)
@@ -126,7 +127,7 @@ def sample_records(
         A train-test pair or iterator of such pairs (depending on ``repeats``).
     """
 
-    rng = np.random.default_rng(rng)
+    rng = random_generator(rng)
 
     # get the full data list to split
     df = data.interaction_matrix(format="pandas", field="all", original_ids=True)

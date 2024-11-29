@@ -14,6 +14,7 @@ import numpy as np
 
 from lenskit.data import ItemList
 from lenskit.types import RNGInput
+from lenskit.util.random import random_generator
 
 
 class HoldoutMethod(Protocol):
@@ -54,7 +55,7 @@ class SampleN(HoldoutMethod):
 
     def __init__(self, n: int, rng: RNGInput = None):
         self.n = n
-        self.rng = np.random.default_rng(rng)
+        self.rng = random_generator(rng)
 
     def __call__(self, items: ItemList) -> ItemList:
         if len(items) <= self.n:
@@ -80,7 +81,7 @@ class SampleFrac(HoldoutMethod):
 
     def __init__(self, frac: float, rng: RNGInput = None):
         self.fraction = frac
-        self.rng = np.random.default_rng(rng)
+        self.rng = random_generator(rng)
 
     def __call__(self, items: ItemList) -> ItemList:
         n = round(len(items) * self.fraction)

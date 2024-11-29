@@ -29,11 +29,11 @@ import logging
 import pickle
 import sys
 
-import numpy as np
 from docopt import docopt
 
 from lenskit import batch
 from lenskit.data import load_movielens
+from lenskit.util.random import random_generator
 
 _log = logging.getLogger("test-algo")
 
@@ -50,7 +50,7 @@ def main(args):
     with open(args["MODEL"], "rb") as f:
         algo = pickle.load(f)
 
-    rng = np.random.default_rng()
+    rng = random_generator()
 
     if args["--random-users"]:
         n = int(args["--random-users"])

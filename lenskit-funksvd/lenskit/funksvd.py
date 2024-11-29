@@ -21,6 +21,7 @@ from lenskit.basic import BiasModel
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, UITuple, Vocabulary
 from lenskit.pipeline import Component, Trainable
 from lenskit.types import RNGInput
+from lenskit.util.random import random_generator
 
 _logger = logging.getLogger(__name__)
 
@@ -275,7 +276,7 @@ class FunkSVD(Component, Trainable):
         _logger.info("[%s] preparing rating data for %d samples", timer, len(rate_df))
         _logger.debug("shuffling rating data")
         shuf = np.arange(len(rate_df), dtype=np.int_)
-        rng = np.random.default_rng(self.rng)
+        rng = random_generator(self.rng)
         rng.shuffle(shuf)
         rate_df = rate_df.iloc[shuf, :]
 
