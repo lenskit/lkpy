@@ -93,5 +93,5 @@ Dependencies and Maintenance
 * Added support for Pandas 2 (:pr:`364`) and Python 3.12.
 * Improved Apple testing to include vanilla Python and Apple Silicon (:pr:`366`).
 * Updated build environment, dependency setup, taskrunning, and CI to more consistent and maintainable.
-* Removed legacy random code in favor of :py:mod:`seedbank` (:pr:`351`).
+* Removed legacy random code and SeedBank usage in favor of SPEC 7 (see :ref:`rng`).
 * Code is now auto-formatted with Ruff.

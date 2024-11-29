@@ -14,7 +14,6 @@ from hashlib import md5
 from uuid import UUID
 
 import numpy as np
-import seedbank
 from numpy.random import Generator, SeedSequence, default_rng
 from typing_extensions import Any, Literal, Protocol, Sequence, TypeAlias, override
 
@@ -140,7 +139,7 @@ def derivable_rng(spec: DerivableSeed) -> RNGFactory:
     """
 
     if spec == "user":
-        return DerivingRNG(seedbank.derive_seed())
+        return DerivingRNG(SeedSequence())
     elif isinstance(spec, tuple):
         seed, key = spec
         if key != "user":

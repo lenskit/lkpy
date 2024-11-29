@@ -29,7 +29,7 @@ import logging
 import pickle
 import sys
 
-import seedbank
+import numpy as np
 from docopt import docopt
 
 from lenskit import batch
@@ -50,7 +50,7 @@ def main(args):
     with open(args["MODEL"], "rb") as f:
         algo = pickle.load(f)
 
-    rng = seedbank.numpy_rng()
+    rng = np.random.default_rng()
 
     if args["--random-users"]:
         n = int(args["--random-users"])

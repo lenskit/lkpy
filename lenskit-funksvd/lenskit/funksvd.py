@@ -14,13 +14,13 @@ import time
 import numba as n
 import numpy as np
 from numba.experimental import jitclass
-from seedbank import numpy_rng
 from typing_extensions import override
 
 from lenskit import util
 from lenskit.basic import BiasModel
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, UITuple, Vocabulary
 from lenskit.pipeline import Component, Trainable
+from lenskit.types import RNGInput
 
 _logger = logging.getLogger(__name__)
 
@@ -218,7 +218,7 @@ class FunkSVD(Component, Trainable):
             the ``(min, max)`` rating values to clamp ratings, or ``None`` to leave
             predictions unclamped.
         rng:
-            The random seed.
+            The random seed for shuffling the input data (see :ref:`rng`).
     """
 
     features: int
@@ -227,7 +227,7 @@ class FunkSVD(Component, Trainable):
     reg: float
     damping: UITuple[float]
     range: tuple[float, float] | None
-    random: np.random.Generator
+    rng: RNGInput
 
     bias_: BiasModel
     users_: Vocabulary
@@ -244,7 +244,7 @@ class FunkSVD(Component, Trainable):
         reg: float = 0.015,
         damping: UITuple[float] | float | tuple[float, float] = 5.0,
         range: tuple[float, float] | None = None,
-        rng=None,
+        rng: RNGInput = None,
     ):
         self.features = features
         self.iterations = iterations
@@ -252,7 +252,7 @@ class FunkSVD(Component, Trainable):
         self.reg = reg
         self.damping = UITuple.create(damping)
         self.range = range
-        self.random = numpy_rng(rng)
+        self.rng = rng
 
     @property
     def is_trained(self) -> bool:
@@ -275,7 +275,8 @@ class FunkSVD(Component, Trainable):
         _logger.info("[%s] preparing rating data for %d samples", timer, len(rate_df))
         _logger.debug("shuffling rating data")
         shuf = np.arange(len(rate_df), dtype=np.int_)
-        self.random.shuffle(shuf)
+        rng = np.random.default_rng(self.rng)
+        rng.shuffle(shuf)
         rate_df = rate_df.iloc[shuf, :]
 
         users = np.array(rate_df["user_num"])
