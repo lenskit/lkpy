@@ -24,4 +24,12 @@ just training time, should also support the value ``'user'`` for the ``rng``
 parameter, and if it is passed, derive a new seed for each user using
 :py:func:`lenskit.util.derivable_rng`.
 
+We recommend deferring conversion of the provided RNG into an actual generator
+until model-training time, so that serializing an untrained pipeline or its
+configuration includes the original seed, not the resulting generator.  When
+using the RNG to create initial state for e.g. training a model with PyTorch, it
+can be useful to create that state in NumPy and then convert to a tensor, so
+that components are consistent in their random number generation behavior
+instead of having variation between NumPy and other backends.
+
 .. _SPEC 7: https://scientific-python.org/specs/spec-0007/
