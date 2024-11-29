@@ -6,10 +6,11 @@
 
 import logging
 import os
+import struct
 import warnings
 
 import torch
-from seedbank import initialize, numpy_rng
+from numpy.random import Generator, default_rng
 
 from hypothesis import settings
 from pytest import fixture, skip
@@ -27,19 +28,15 @@ if "LK_TEST_FREE_RNG" in os.environ:
 
 
 @fixture
-def rng():
+def rng() -> Generator:
     if RNG_SEED is None:
-        return numpy_rng(os.urandom(4))
+        seed = os.urandom(4)
+        (seed,) = struct.unpack("@i", seed)
+        if seed < 0:
+            seed = -seed
+        return default_rng(seed)
     else:
-        return numpy_rng(RNG_SEED)
-
-
-@fixture(autouse=True)
-def init_rng(request):
-    if RNG_SEED is None:
-        initialize(os.urandom(4))
-    else:
-        initialize(RNG_SEED)
+        return default_rng(RNG_SEED)
 
 
 @fixture(scope="module", params=["cpu", "cuda"])
