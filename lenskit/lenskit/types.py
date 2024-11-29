@@ -3,6 +3,9 @@
 # Copyright (C) 2023-2024 Drexel University
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
+"""
+Types used across LensKit.
+"""
 
 # pyright: strict
 from __future__ import annotations
