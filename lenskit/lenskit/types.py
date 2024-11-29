@@ -16,21 +16,21 @@ import numpy as np
 
 SeedLike: TypeAlias = int | np.integer[Any] | Sequence[int] | np.random.SeedSequence
 """
-Type for RNG seeds (see _SPEC0).
+Type for RNG seeds (see `SPEC 7`_).
 
-.. _SPEC0: https://scientific-python.org/specs/spec-0007/
+.. _SPEC 7: https://scientific-python.org/specs/spec-0007/
 """
 
 RNGLike: TypeAlias = np.random.Generator | np.random.BitGenerator
 """
-Type for random number generators as inputs (see _SPEC0).
+Type for random number generators as inputs (see `SPEC 7`_).
 
-.. _SPEC0: https://scientific-python.org/specs/spec-0007/
+.. _SPEC 7: https://scientific-python.org/specs/spec-0007/
 """
 
 RNGInput: TypeAlias = SeedLike | RNGLike | None
 """
-Type for RNG inputs (see _SPEC0).
+Type for RNG inputs (see `SPEC 7`_).
 
-.. _SPEC0: https://scientific-python.org/specs/spec-0007/
+.. _SPEC 7: https://scientific-python.org/specs/spec-0007/
 """
