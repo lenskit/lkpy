@@ -7,12 +7,14 @@
 from __future__ import annotations
 
 import logging
-from typing import Iterable, Iterator, overload
+from typing import Iterator, overload
 
 import numpy as np
 import pandas as pd
+from numpy.typing import NDArray
 
-from lenskit.data import ID, Dataset, ItemListCollection, UserIDKey
+from lenskit.data import NPID, Dataset, ItemListCollection, UserIDKey
+from lenskit.logging import item_progress
 from lenskit.types import RNGInput
 from lenskit.util.random import random_generator
 
@@ -155,16 +157,18 @@ def sample_users(
 
 
 def _make_split(
-    data: Dataset, df: pd.DataFrame, test_us: Iterable[ID], method: HoldoutMethod
+    data: Dataset, df: pd.DataFrame, test_us: NDArray[NPID], method: HoldoutMethod
 ) -> TTSplit:
     # create the test sets for these users
     test = ItemListCollection(UserIDKey)
 
-    for u in test_us:
-        row = data.user_row(u)
-        assert row is not None
-        u_test = method(row)
-        test.add(u_test, u)
+    with item_progress("Splitting users", len(test_us)) as pb:
+        for u in test_us:
+            row = data.user_row(u)
+            assert row is not None
+            u_test = method(row)
+            test.add(u_test, u)
+            pb.update()
 
     split = TTSplit.from_src_and_test(data, test)
     assert split.train.interaction_count + split.test_size == len(df)
