@@ -50,3 +50,7 @@ def test_derivable_user(seed: int, uid1: str, uid2: str):
 
     assert v1a != v2
     assert v1a == v1b
+
+    vnone = drng(None).integers(1_000_000)
+    assert vnone != v1a
+    assert vnone != v2
