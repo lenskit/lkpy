@@ -356,7 +356,9 @@ class ItemList:
             RuntimeError: if the item list was not created with numbers or a
             :class:`Vocabulary`.
         """
-        if vocabulary is not None and vocabulary is not self._vocab:
+        if vocabulary is not None and (
+            self._vocab is None or not vocabulary.compatible_with_numbers_from(self._vocab)
+        ):
             # we need to translate vocabulary
             ids = self.ids()
             return vocabulary.numbers(ids, missing=missing)
