@@ -11,7 +11,8 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable, Literal, Mapping, TypeAlias
 
 from lenskit.data import ID, GenericKey, ItemList, ItemListCollection, UserIDKey
-from lenskit.parallel import invoke_progress, invoker
+from lenskit.logging import item_progress
+from lenskit.parallel import invoker
 from lenskit.pipeline import Pipeline
 from lenskit.util import Stopwatch
 
@@ -134,10 +135,8 @@ class BatchPipelineRunner:
         _log.info("pipeline configuration hash: %s", pipeline.config_hash())
 
         with (
-            invoke_progress(_log, "querying", n_users, unit="query") as progress,
-            invoker(
-                (pipeline, self.invocations), _run_pipeline, n_jobs=self.n_jobs, progress=progress
-            ) as worker,
+            item_progress("Recommending", n_users) as progress,
+            invoker((pipeline, self.invocations), _run_pipeline, n_jobs=self.n_jobs) as worker,
         ):
             # release our reference, will sometimes free the pipeline memory in this process
             del pipeline
@@ -146,6 +145,7 @@ class BatchPipelineRunner:
             for key, outs in worker.map(test_iter):
                 for cn, cr in outs.items():
                     results.add_result(cn, key, cr)
+                    progress.update()
             timer.stop()
 
             rate = timer.elapsed() / n_users
