@@ -179,7 +179,6 @@ class Vocabulary:
 
         h1 = self._hash(len(other))
         h2 = other._hash()
-        print(h1, h2)
         return h1 == h2
 
     def _hash(self, length: int | None = None) -> str:
