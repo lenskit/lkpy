@@ -11,6 +11,8 @@ from pathlib import Path
 
 import structlog
 
+from .processors import format_timestamp, remove_internal
+
 CORE_PROCESSORS = [structlog.processors.add_log_level, structlog.processors.MaybeTimeStamper()]
 
 
@@ -53,7 +55,11 @@ class LoggingConfig:
             logger_factory=structlog.stdlib.LoggerFactory(),
         )
         formatter = structlog.stdlib.ProcessorFormatter(
-            processors=[structlog.dev.ConsoleRenderer()],
+            processors=[
+                remove_internal,
+                format_timestamp,
+                structlog.dev.ConsoleRenderer(),
+            ],
             foreign_pre_chain=CORE_PROCESSORS,
         )
 
