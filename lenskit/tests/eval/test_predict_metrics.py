@@ -4,6 +4,8 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import logging
+
 import numpy as np
 import pandas as pd
 
@@ -12,6 +14,8 @@ from pytest import approx, mark, raises
 from lenskit.data import ItemList, from_interactions_df
 from lenskit.metrics import RunAnalysis, call_metric
 from lenskit.metrics.predict import MAE, RMSE, measure_user_predictions
+
+_log = logging.getLogger(__name__)
 
 
 def test_rmse_one():
@@ -102,7 +106,7 @@ def test_batch_rmse(ml_100k):
     bias = BiasScorer(damping=5)
     pipe = topn_pipeline(bias, predicts_ratings=True)
 
-    split = sample_users(ds, 5, SampleN(5))
+    split = sample_users(ds, 200, SampleN(5))
     pipe.train(split.train)
 
     preds = predict(pipe, split.test, n_jobs=1)
@@ -125,6 +129,10 @@ def test_batch_rmse(ml_100k):
     assert all(umdf["RMSE"].notna())
     assert all(umdf["MAE"].notna())
 
+    gs = metrics.global_metrics()
+    _log.info("list metrics:\n%s", mdf)
+    _log.info("global metrics:\n%s", gs)
+
     # we should have a reasonable mean
     assert umdf["RMSE"].mean() == approx(0.93, abs=0.05)
     assert mdf.loc["RMSE", "mean"] == approx(0.93, abs=0.05)
@@ -133,7 +141,5 @@ def test_batch_rmse(ml_100k):
     assert mdf.loc["MAE", "mean"] == approx(0.76, abs=0.05)
 
     # we should have global metrics
-    gs = metrics.global_metrics()
-    print("global metrics:", gs)
     assert gs["RMSE"] == approx(0.93, abs=0.05)
     assert gs["MAE"] == approx(0.76, abs=0.05)
