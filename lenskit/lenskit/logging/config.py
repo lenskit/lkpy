@@ -12,6 +12,7 @@ import structlog
 
 from ._console import ConsoleHandler
 from .processors import format_timestamp, remove_internal
+from .progress import set_progress_impl
 
 CORE_PROCESSORS = [structlog.processors.add_log_level, structlog.processors.MaybeTimeStamper()]
 
@@ -21,9 +22,9 @@ class LoggingConfig:
     Configuration for LensKit logging.
 
     This class is intended as a convenience for LensKit applications to set up a
-    useful logging configuration; if unconfigured, LensKit will emit its logging
-    messages directly to :mod:`structlog`, which you can configure in any way
-    you wish.
+    useful logging and progress reporting configuration; if unconfigured,
+    LensKit will emit its logging messages directly to :mod:`structlog`, which
+    you can configure in any way you wish.
     """
 
     level: int = logging.INFO
@@ -88,3 +89,5 @@ class LoggingConfig:
                 level = file_level
 
         root.setLevel(level)
+
+        set_progress_impl("rich")
