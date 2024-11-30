@@ -10,6 +10,7 @@ scipy = ">=1.9"
 pytorch = "~=2.1"
 threadpoolctl = ">=3.0"
 pydantic = ">=2.8,<3"
+rich = "~=13.9"
 structlog = ">=24.4.0,<25"
 
 [pypi-dependencies]
