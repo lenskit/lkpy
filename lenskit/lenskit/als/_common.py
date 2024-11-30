@@ -11,12 +11,12 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 import torch
-from progress_api import make_progress
 from typing_extensions import Iterator, NamedTuple, Self, override
 
 from lenskit import util
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.types import UITuple
+from lenskit.logging import item_progress
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component, Trainable
 from lenskit.types import RNGInput
@@ -192,7 +192,7 @@ class ALSBase(ABC, Component, Trainable):
         )
         start = timer.elapsed()
 
-        with make_progress(self.logger, "BiasedMF", self.epochs, unit="epoch") as epb:
+        with item_progress("Training ALS", self.epochs) as epb:
             for epoch in range(self.epochs):
                 epoch = epoch + 1
 
