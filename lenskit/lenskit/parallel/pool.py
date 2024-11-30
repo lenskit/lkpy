@@ -14,7 +14,6 @@ from multiprocessing.managers import SharedMemoryManager
 from typing import Generic, Iterable, Iterator
 
 import manylog
-from progress_api import Progress, null_progress
 
 from . import worker
 from .config import get_parallel_config
@@ -26,27 +25,22 @@ _log_listener: manylog.LogListener | None = None
 
 
 class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
-    progress: Progress
     manager: SharedMemoryManager
     pool: ProcessPoolExecutor
 
-    def __init__(
-        self, model: M, func: InvokeOp[M, A, R], n_jobs: int, progress: Progress | None = None
-    ):
+    def __init__(self, model: M, func: InvokeOp[M, A, R], n_jobs: int):
         _log.debug("persisting function")
         ctx = mp.get_context("spawn")
         _log.info("setting up process pool w/ %d workers", n_jobs)
         kid_tc = get_parallel_config().child_threads
         manylog.initialize()
 
-        self.progress = progress or null_progress()
         self.manager = SharedMemoryManager()
         self.manager.start()
-        prog_uuid = manylog.share_progress(self.progress)
 
         try:
             cfg = worker.WorkerConfig(kid_tc)
-            job = worker.WorkerContext(func, model, prog_uuid)
+            job = worker.WorkerContext(func, model)
             job = shm_serialize(job, self.manager)
             self.pool = ProcessPoolExecutor(n_jobs, ctx, worker.initalize, (cfg, job))
         except Exception as e:
@@ -61,7 +55,6 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         Yield the tasks, recording each as dispatched before it is yielded.
         """
         for task in tasks:
-            self.progress.update(1, "dispatched")
             yield task
 
     def shutdown(self):

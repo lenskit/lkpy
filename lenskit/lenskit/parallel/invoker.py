@@ -8,10 +8,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from logging import Logger
 from typing import Any, Callable, Generic, Iterable, Iterator, Optional, TypeAlias, TypeVar
-
-from progress_api import Progress, make_progress
 
 from .config import ensure_parallel_init, get_parallel_config
 
@@ -21,28 +18,10 @@ R = TypeVar("R")
 InvokeOp: TypeAlias = Callable[[M, A], R]
 
 
-def invoke_progress(
-    logger: str | Logger | None = None,
-    label: str | None = None,
-    total: int | None = None,
-    unit: str | None = None,
-) -> Progress:
-    """
-    Create a progress bar for parallel tasks.  It is populated with the
-    correct state of tasks for :func:`invoker`.
-
-    See :func:`make_progress` for details on parameter meanings.
-    """
-    return make_progress(
-        logger, label, total, outcomes="finished", states=["in-progress", "dispatched"], unit=unit
-    )
-
-
 def invoker(
     model: M,
     func: InvokeOp[M, A, R],
     n_jobs: Optional[int] = None,
-    progress: Progress | None = None,
 ) -> ModelOpInvoker[A, R]:
     """
     Get an appropriate invoker for performing operations on ``model``.
@@ -73,11 +52,11 @@ def invoker(
     if n_jobs == 1:
         from .sequential import InProcessOpInvoker
 
-        return InProcessOpInvoker(model, func, progress)
+        return InProcessOpInvoker(model, func)
     else:
         from .pool import ProcessPoolOpInvoker
 
-        return ProcessPoolOpInvoker(model, func, n_jobs, progress)
+        return ProcessPoolOpInvoker(model, func, n_jobs)
 
 
 class ModelOpInvoker(ABC, Generic[A, R]):
