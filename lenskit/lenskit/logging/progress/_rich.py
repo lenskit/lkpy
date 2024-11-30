@@ -42,6 +42,7 @@ class RichProgress(Progress):
         self._bar.update(self._task, advance=advance, **kwargs)  # type: ignore
 
     def finish(self):
+        self._bar.stop()
         _remove_bar(self)
 
 
