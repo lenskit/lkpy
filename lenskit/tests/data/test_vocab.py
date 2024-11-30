@@ -14,9 +14,10 @@ import numpy as np
 
 import hypothesis.strategies as st
 from hypothesis import assume, given
-from pytest import raises
+from pytest import raises, warns
 
 from lenskit.data import Vocabulary
+from lenskit.diagnostics import DataWarning
 
 
 @given(
@@ -209,3 +210,41 @@ def test_all_terms(initial: set[int] | set[str]):
     terms = vocab.terms()
     assert isinstance(terms, np.ndarray)
     assert all(terms == tl)
+
+
+@given(st.data())
+def test_is_compat(data: st.DataObject):
+    id_type = data.draw(st.sampled_from(["int", "email", "uuid"]))
+    match id_type:
+        case "int":
+            id_gen = st.integers(min_value=1, max_value=2_000_000_000)
+        case "email":
+            id_gen = st.emails()
+        case "uuid":
+            id_gen = st.uuids()
+
+    initial = data.draw(st.sets(id_gen, min_size=1))
+    more = data.draw(st.sets(id_gen, min_size=1))
+    assume(any(x not in initial for x in more))
+
+    def test_vocab():
+        vocab = Vocabulary(initial)
+        assert vocab.compatible_with_numbers_from(vocab)
+
+        v2 = Vocabulary(initial)
+        assert v2.compatible_with_numbers_from(vocab)
+        assert vocab.compatible_with_numbers_from(v2)
+
+        v2.add_terms(list(more))
+        assert v2.compatible_with_numbers_from(vocab)
+        assert not vocab.compatible_with_numbers_from(v2)
+
+        if id_type == "email":
+            copied = Vocabulary({s.encode().decode() for s in initial})
+            assert copied.compatible_with_numbers_from(vocab)
+
+    if id_type == "uuid":
+        with warns(DataWarning):
+            test_vocab()
+    else:
+        test_vocab()

@@ -11,11 +11,15 @@ Vocabularies of IDs, tags, etc.
 # pyright: basic
 from __future__ import annotations
 
+from hashlib import sha1
 from typing import Hashable, Iterable, Iterator, Literal, Sequence, overload
+from warnings import warn
 
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike, NDArray
+
+from lenskit.diagnostics import DataWarning
 
 from .types import ID, IDArray, IDSequence
 
@@ -38,6 +42,7 @@ class Vocabulary:
     name: str | None
     "The name of the vocabulary (e.g. “user”, “item”)."
     _index: pd.Index
+    _hashes: dict[int, str]
 
     def __init__(
         self,
@@ -56,6 +61,7 @@ class Vocabulary:
             keys = pd.Index(sorted(set(keys)))  # type: ignore
 
         self._index = keys.rename(name) if name is not None else keys
+        self._hashes = {}
 
     @property
     def index(self) -> pd.Index:
@@ -148,6 +154,51 @@ class Vocabulary:
         This method is useful for saving known vocabularies in model training.
         """
         return Vocabulary(self._index)
+
+    def compatible_with_numbers_from(self, other: Vocabulary) -> bool:
+        """
+        Check if this vocabulary is compatible with numbers from another
+        vocabulary.  They are compatible if the other vocabulary is no longer
+        than this vocabulary, and the common prefix has identical IDs.
+
+        Args:
+            other:
+                The other vocabulary.
+
+        Returns:
+            ``True`` the same IDs will produce the same numbers from both
+            vocabularies.
+        """
+        if self is other:
+            return True
+
+        if len(self) < len(other):
+            return False
+
+        h1 = self._hash(len(other))
+        h2 = other._hash()
+        return h1 == h2
+
+    def _hash(self, length: int | None = None) -> str:
+        if length is None or length > len(self._index):
+            length = len(self._index)
+
+        h = self._hashes.get(length, None)
+        if h is None:
+            hasher = sha1(usedforsecurity=False)
+            arr = self._index.values[:length]
+            if arr.dtype == np.object_:
+                # we have to hash each object
+                warn(f"slowly hashing IDs (dtype {arr.dtype})", DataWarning, 3)
+                for i in arr:
+                    hasher.update(repr(h).encode())
+            else:
+                hasher.update(memoryview(arr))
+
+            h = hasher.hexdigest()
+            self._hashes[length] = h
+
+        return h
 
     def __eq__(self, other: Vocabulary) -> bool:  # noqa: F821
         return self.size == other.size and bool(np.all(self.index == other.index))
