@@ -14,7 +14,7 @@ from numpy.typing import NDArray
 
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
-from hypothesis import assume, given
+from hypothesis import HealthCheck, assume, given, settings
 
 from lenskit.basic.random import RandomSelector
 from lenskit.data.items import ItemList
@@ -54,6 +54,7 @@ def test_runtime_truncation(n, items: ItemList):
     assert len(set(ranked.ids())) == len(ranked)
 
 
+@settings(suppress_health_check=[HealthCheck.too_slow])
 @given(
     st.integers(min_value=5, max_value=100),
     st.lists(st.emails(), min_size=5, unique=True),
