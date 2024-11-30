@@ -23,6 +23,11 @@ def set_progress_impl(name: str | None, *options: Any):
 
             _backend = partial(TQDMProgress, impl)
 
+        case "rich":
+            from ._rich import RichProgress
+
+            _backend = RichProgress
+
         case "none" | None:
             _backend = Progress
         case _:
