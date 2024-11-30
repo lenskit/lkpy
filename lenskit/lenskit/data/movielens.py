@@ -114,7 +114,7 @@ def _ml_detect_and_open(path: str | Path) -> MLData:
                 raise RuntimeError("invalid ML zip file")
 
             _log.debug("%s: base dir filename %s", loc, first.filename)
-            dsm = re.match(r"^(ml-\d+[MmKk])", first.filename)
+            dsm = re.match(r"^(ml-(?:\d+[MmKk]|latest|latest-small))", first.filename)
             if not dsm:
                 _log.error("%s: invalid directory name %s", loc, first.filename)
                 raise RuntimeError("invalid ML zip file")
