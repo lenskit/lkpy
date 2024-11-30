@@ -14,7 +14,6 @@ structlog = ">=24.4.0,<25"
 
 [pypi-dependencies]
 manylog = { git = "https://github.com/mdekstrand/manylog.git" }
-progress-api = { git = "https://github.com/lenskit/progress-api.git" }
 lenskit = { path = "lenskit", editable = true }
 
 [feature.py311.dependencies]
