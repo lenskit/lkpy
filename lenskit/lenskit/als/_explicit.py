@@ -15,10 +15,10 @@ from typing_extensions import override
 from lenskit.basic import BiasModel
 from lenskit.data import Dataset, ItemList
 from lenskit.data.types import UITuple
+from lenskit.logging.progress import item_progress_handle, pbh_update
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
 from lenskit.types import RNGInput
-from lenskit.util.logging import pbh_update, progress_handle
 
 from ._common import ALSBase, TrainContext, TrainingData
 
@@ -102,9 +102,7 @@ class BiasedMF(ALSBase):
     @override
     def als_half_epoch(self, epoch: int, context: TrainContext):
         chunks = WorkChunks.create(context.nrows)
-        with progress_handle(
-            _log, f"epoch {epoch} {context.label}s", total=context.nrows, unit="row"
-        ) as pbh:
+        with item_progress_handle(f"epoch {epoch} {context.label}s", total=context.nrows) as pbh:
             return _train_update_fanout(context, chunks, pbh)
 
     @override

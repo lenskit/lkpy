@@ -14,10 +14,10 @@ import torch
 from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList
+from lenskit.logging.progress import item_progress_handle, pbh_update
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
 from lenskit.types import RNGInput
-from lenskit.util.logging import pbh_update, progress_handle
 
 from ._common import ALSBase, TrainContext, TrainingData
 
@@ -134,9 +134,7 @@ class ImplicitMF(ALSBase):
         chunks = WorkChunks.create(context.nrows)
 
         OtOr = _implicit_otor(context.right, context.reg)
-        with progress_handle(
-            _log, f"epoch {epoch} {context.label}s", total=context.nrows, unit="row"
-        ) as pbh:
+        with item_progress_handle(f"epoch {epoch} {context.label}s", total=context.nrows) as pbh:
             return _train_implicit_cholesky_fanout(context, OtOr, chunks, pbh)
 
     @override
