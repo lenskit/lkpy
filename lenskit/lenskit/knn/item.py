@@ -21,10 +21,10 @@ from typing_extensions import Callable, Optional, TypeAlias, override
 from lenskit import util
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.diagnostics import DataWarning
+from lenskit.logging.progress import item_progress_handle, pbh_update
 from lenskit.math.sparse import normalize_sparse_rows, safe_spmv
 from lenskit.parallel import ensure_parallel_init
 from lenskit.pipeline import Component, Trainable
-from lenskit.util.logging import pbh_update, progress_handle
 
 _log = logging.getLogger(__name__)
 MAX_BLOCKS = 1024
@@ -188,7 +188,7 @@ class ItemKNNScorer(Component, Trainable):
 
         bs = max(self.block_size, nitems // MAX_BLOCKS)
         _log.debug("computing with effective block size %d", bs)
-        with progress_handle(_log, "items", nitems, leave=False) as pbh:
+        with item_progress_handle("items", nitems) as pbh:
             smat = _sim_blocks(rmat.to(torch.float64), self.min_sim, self.save_nbrs, bs, pbh)
 
         return smat.to(torch.float32)
