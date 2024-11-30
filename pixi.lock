@@ -13320,9 +13320,9 @@ packages:
   timestamp: 1727304687962
 - kind: pypi
   name: lenskit
-  version: 0.15.0.dev1632+gf5df0dc2
+  version: 0.15.0.dev1643+g0567867b
   path: lenskit
-  sha256: 8491b9b8e7673b2d30240c4921ffcf2cce1646c55cbe3cf73437937d25cf78e3
+  sha256: cac89d9c48f621342435257d66e719275d4877191b39753f02e6140fe8dfc5a4
   requires_dist:
   - manylog @ git+https://github.com/mdekstrand/manylog.git
   - numpy>=1.24
@@ -13330,6 +13330,7 @@ packages:
   - progress-api>=0.1.0a9
   - pydantic>=2.8,<3
   - scipy>=1.10.0
+  - structlog>=20
   - threadpoolctl>=3.0
   - torch~=2.1
   - scikit-learn>=1.1 ; extra == 'sklearn'
