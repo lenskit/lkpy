@@ -26,6 +26,9 @@ class TrainingCandidateSelectorBase(Component, Trainable):
     def train(self, data: Dataset):
         self.items_ = data.items.copy()
 
+    def __str__(self):
+        return self.__class__.__name__
+
 
 class AllTrainingItemsCandidateSelector(TrainingCandidateSelectorBase):
     """
