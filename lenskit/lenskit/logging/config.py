@@ -5,12 +5,12 @@ Logging pipeline configuration.
 from __future__ import annotations
 
 import logging
-import sys
 from os import PathLike
 from pathlib import Path
 
 import structlog
 
+from ._console import ConsoleHandler
 from .processors import format_timestamp, remove_internal
 
 CORE_PROCESSORS = [structlog.processors.add_log_level, structlog.processors.MaybeTimeStamper()]
@@ -64,11 +64,11 @@ class LoggingConfig:
         )
 
         level = self.level
-        err = logging.StreamHandler(stream=sys.stderr)
-        err.setFormatter(formatter)
-        err.setLevel(level)
+        term = ConsoleHandler()
+        term.setFormatter(formatter)
+        term.setLevel(level)
         root = logging.getLogger()
-        root.addHandler(err)
+        root.addHandler(term)
 
         if self.file:
             file_level = self.file_level if self.file_level is not None else self.level

@@ -8,6 +8,7 @@ from rich.live import Live
 from rich.progress import Progress as ProgressImpl
 from rich.progress import TaskID
 
+from .._console import console
 from ._base import Progress
 
 _pb_lock = Lock()
@@ -52,7 +53,7 @@ def _install_bar(bar: RichProgress):
         rbs = [b._bar for b in _active_bars.values()]
         group = Group(*rbs)
         if _progress_area is None:
-            _progress_area = Live(group)
+            _progress_area = Live(group, console=console)
             _progress_area.start()
         else:
             _progress_area.update(group)
