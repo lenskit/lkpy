@@ -4,7 +4,12 @@ Performance Tips
 LensKit strives to provide pretty good performance (in terms of computation speed), but
 sometimes it needs a little nudging.
 
+.. todo::
+
+    Update for 2025.1.
+
 .. note::
+
     If you are implementing an algorithm, see the `implementation tips`_ for information
     on good performance.
 
