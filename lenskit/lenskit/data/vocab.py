@@ -155,7 +155,7 @@ class Vocabulary:
         """
         return Vocabulary(self._index)
 
-    def compatible_with_numbers_from(self, other: Vocabulary) -> bool:
+    def compatible_with_numbers_from(self, other: Vocabulary | None) -> bool:
         """
         Check if this vocabulary is compatible with numbers from another
         vocabulary.  They are compatible if the other vocabulary is no longer
@@ -169,6 +169,8 @@ class Vocabulary:
             ``True`` the same IDs will produce the same numbers from both
             vocabularies.
         """
+        if other is None:
+            return False
         if self is other:
             return True
 
@@ -177,6 +179,7 @@ class Vocabulary:
 
         h1 = self._hash(len(other))
         h2 = other._hash()
+        print(h1, h2)
         return h1 == h2
 
     def _hash(self, length: int | None = None) -> str:
@@ -191,7 +194,7 @@ class Vocabulary:
                 # we have to hash each object
                 warn(f"slowly hashing IDs (dtype {arr.dtype})", DataWarning, 3)
                 for i in arr:
-                    hasher.update(repr(h).encode())
+                    hasher.update(repr(i).encode())
             else:
                 hasher.update(memoryview(arr))
 
