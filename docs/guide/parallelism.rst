@@ -105,11 +105,3 @@ PyTorch tensors, including those on CUDA devices, are shared.
 LensKit users will generally not need to directly use parallel op invokers, but
 if you are implementing new batch operations with parallelism they are useful.
 They may also be useful for other kinds of analysis.
-
-Logging and Progress
-~~~~~~~~~~~~~~~~~~~~
-
-Multi-process op invokers automatically set up logging and progress reporting to
-work across processes using the :py:mod:`manylog` package.  Op invokers can also
-report the progress of queued jobs to a :py:class:`progress_api.Progress`; use
-the :py:func:`invoke_progress` function to set up such a progress bar.
