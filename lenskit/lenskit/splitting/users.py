@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 
 from lenskit.data import ID, Dataset, ItemListCollection, UserIDKey
-from lenskit.data.matrix import MatrixDataset
 from lenskit.types import RNGInput
 from lenskit.util.random import random_generator
 
@@ -159,7 +158,6 @@ def _make_split(
     data: Dataset, df: pd.DataFrame, test_us: Iterable[ID], method: HoldoutMethod
 ) -> TTSplit:
     # create the test sets for these users
-    mask = pd.Series(True, index=df.index)
     test = ItemListCollection(UserIDKey)
 
     for u in test_us:
@@ -167,13 +165,7 @@ def _make_split(
         assert row is not None
         u_test = method(row)
         test.add(u_test, u)
-        assert all((u, i) in mask.index for i in u_test.ids())
-        mask.loc[[(u, i) for i in u_test.ids()]] = False  # type: ignore
-        assert np.sum(mask.loc[u]) == len(row) - len(u_test)  # type: ignore
 
-    train_df = df[mask]
-    train = MatrixDataset(data.users, data.items, train_df.reset_index())
-
-    split = TTSplit(train, test)
-    assert len(train_df) + split.test_size == len(df)
+    split = TTSplit.from_src_and_test(data, test)
+    assert split.train.interaction_count + split.test_size == len(df)
     return split
