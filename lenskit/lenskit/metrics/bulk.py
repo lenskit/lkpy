@@ -7,10 +7,10 @@ from typing import Callable, TypeVar
 
 import numpy as np
 import pandas as pd
-from progress_api import make_progress
 
 from lenskit.data import ItemList, ItemListCollection
 from lenskit.diagnostics import DataWarning
+from lenskit.logging import item_progress
 
 from ._base import GlobalMetric, ListMetric, Metric, MetricFunction
 
@@ -205,7 +205,7 @@ class RunAnalysis:
 
         n = len(outputs)
         _log.info("computing %d listwise metrics for %d output lists", len(lms), n)
-        with make_progress(_log, "lists", n) as pb:
+        with item_progress("lists", n) as pb:
             for i, (key, out) in enumerate(outputs):
                 list_test = test.lookup_projected(key)
                 if out is None:
