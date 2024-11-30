@@ -15,7 +15,9 @@ def set_progress_impl(name: str | None, *options: Any):
 
     match name:
         case "tqdm":
-            from ._tqdm import TQDMProgress, tqdm
+            from tqdm.autonotebook import tqdm
+
+            from ._tqdm import TQDMProgress
 
             impl = tqdm
             if options and options[0]:
