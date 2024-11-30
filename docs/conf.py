@@ -117,6 +117,7 @@ intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/", None),
     "sklearn": ("https://scikit-learn.org/stable/", None),
+    "structlog": ("https://www.structlog.org/en/stable/", None),
     "progress_api": ("https://progress-api.readthedocs.io/en/latest/", None),
     "manylog": ("https://manylog.readthedocs.io/en/latest/", None),
     "torch": ("https://pytorch.org/docs/stable/", None),
