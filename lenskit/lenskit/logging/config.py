@@ -76,8 +76,9 @@ class LoggingConfig:
             file = logging.FileHandler(self.file, mode="w")
             ffmt = structlog.stdlib.ProcessorFormatter(
                 processors=[
+                    remove_internal,
                     structlog.processors.ExceptionPrettyPrinter(),
-                    structlog.processors.LogfmtRenderer(),
+                    structlog.processors.JSONRenderer(),
                 ],
                 foreign_pre_chain=CORE_PROCESSORS,
             )
