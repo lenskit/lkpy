@@ -12871,40 +12871,15 @@ packages:
   timestamp: 1729655358674
 - kind: pypi
   name: lenskit
-  version: 0.14.1.dev1680+gf52087ad.d20241202
+  version: 2025.0.0a1.dev6+gf454d6a0.d20241202
   path: lenskit
-  sha256: e35bcc50da7158e9bdbd8e2af13b37defcd80f07f93bd4895d606a3031e328c2
+  sha256: 26409bc7e69c67db74c00142b1fabba83a3b4930762730a6c7418d8bb3c6428e
   requires_dist:
   - manylog @ git+https://github.com/mdekstrand/manylog.git
   - numpy>=1.24
   - pandas~=2.0
-  - pydantic>=2.8,<3
-  - rich~=13.9
-  - scipy>=1.10.0
-  - structlog>=23.2
-  - threadpoolctl>=3.0
-  - torch~=2.1
-  - scikit-learn>=1.1 ; extra == 'sklearn'
-  - hypothesis>=6.16 ; extra == 'test'
-  - pyprojroot==0.3.* ; extra == 'test'
-  - pytest-benchmark==4.* ; extra == 'test'
-  - pytest-cov>=2.12 ; extra == 'test'
-  - pytest-doctestplus>=1.2.1,<2 ; extra == 'test'
-  - pytest-repeat>=0.9 ; extra == 'test'
-  - pytest>=8.2,<9 ; extra == 'test'
-  requires_python: '>=3.11'
-  editable: true
-- kind: pypi
-  name: lenskit
-  version: 2025.0.0a2.dev0+gf52087ad.d20241202
-  path: lenskit
-  sha256: e35bcc50da7158e9bdbd8e2af13b37defcd80f07f93bd4895d606a3031e328c2
-  requires_dist:
-  - manylog @ git+https://github.com/mdekstrand/manylog.git
-  - numpy>=1.24
-  - pandas~=2.0
-  - pydantic>=2.8,<3
-  - rich~=13.9
+  - pydantic~=2.7
+  - rich~=13.5
   - scipy>=1.10.0
   - structlog>=23.2
   - threadpoolctl>=3.0
@@ -12921,17 +12896,7 @@ packages:
   editable: true
 - kind: pypi
   name: lenskit-funksvd
-  version: 0.14.1.dev1680+gf52087ad.d20241202
-  path: lenskit-funksvd
-  sha256: 5b1b6b387c9edf133e76fc58d19bdb611a5b8c3c80805aab04bad238b8e0c7b0
-  requires_dist:
-  - lenskit
-  - numba>=0.56
-  requires_python: '>=3.11'
-  editable: true
-- kind: pypi
-  name: lenskit-funksvd
-  version: 2025.0.0a2.dev0+gf52087ad.d20241202
+  version: 2025.0.0a1.dev6+gf454d6a0.d20241202
   path: lenskit-funksvd
   sha256: 5b1b6b387c9edf133e76fc58d19bdb611a5b8c3c80805aab04bad238b8e0c7b0
   requires_dist:
@@ -12941,17 +12906,7 @@ packages:
   editable: true
 - kind: pypi
   name: lenskit-hpf
-  version: 0.14.1.dev1680+gf52087ad.d20241202
-  path: lenskit-hpf
-  sha256: 7aa59cc6db83ac59ffc0f94f55528d2de77ed28614726118d8bb6f0e7ea8c90a
-  requires_dist:
-  - hpfrec==0.2.*
-  - lenskit
-  requires_python: '>=3.11'
-  editable: true
-- kind: pypi
-  name: lenskit-hpf
-  version: 2025.0.0a2.dev0+gf52087ad.d20241202
+  version: 2025.0.0a1.dev6+gf454d6a0.d20241202
   path: lenskit-hpf
   sha256: 7aa59cc6db83ac59ffc0f94f55528d2de77ed28614726118d8bb6f0e7ea8c90a
   requires_dist:
@@ -12961,17 +12916,7 @@ packages:
   editable: true
 - kind: pypi
   name: lenskit-implicit
-  version: 0.14.1.dev1680+gf52087ad.d20241202
-  path: lenskit-implicit
-  sha256: 53a9cdb3ac7adc4842489a42961102430effb9a4b4c750122305b82867e51329
-  requires_dist:
-  - implicit>=0.6.1
-  - lenskit
-  requires_python: '>=3.11'
-  editable: true
-- kind: pypi
-  name: lenskit-implicit
-  version: 2025.0.0a2.dev0+gf52087ad.d20241202
+  version: 2025.0.0a1.dev6+gf454d6a0.d20241202
   path: lenskit-implicit
   sha256: 53a9cdb3ac7adc4842489a42961102430effb9a4b4c750122305b82867e51329
   requires_dist:
@@ -12981,17 +12926,7 @@ packages:
   editable: true
 - kind: pypi
   name: lenskit-sklearn
-  version: 0.14.1.dev1680+gf52087ad.d20241202
-  path: lenskit-sklearn
-  sha256: c916806b4a76e5d8ec8736c75e83bdc58eff179d8cd61ebd3983af766c59a2dc
-  requires_dist:
-  - lenskit
-  - scikit-learn~=1.2
-  requires_python: '>=3.11'
-  editable: true
-- kind: pypi
-  name: lenskit-sklearn
-  version: 2025.0.0a2.dev0+gf52087ad.d20241202
+  version: 2025.0.0a1.dev6+gf454d6a0.d20241202
   path: lenskit-sklearn
   sha256: c916806b4a76e5d8ec8736c75e83bdc58eff179d8cd61ebd3983af766c59a2dc
   requires_dist:
