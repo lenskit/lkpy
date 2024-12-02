@@ -24,9 +24,9 @@ dependencies = [
   "numpy >= 1.24",
   "scipy >= 1.10.0",
   "torch ~=2.1",
-  "rich ~=13.9",
+  "rich ~=13.5",
   "threadpoolctl >=3.0",
-  "pydantic >=2.8,<3",
+  "pydantic ~=2.7",
   "manylog@git+https://github.com/mdekstrand/manylog.git",
 ]
 
