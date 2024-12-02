@@ -37,4 +37,4 @@ packages = ["lenskit"]
 
 [tool.hatch.version]
 source = "vcs"
-raw-options = { root = "..", version_scheme = "release-branch-semver" }
+raw-options = { root = "..", version_scheme = "guess-next-dev" }
