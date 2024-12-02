@@ -14,6 +14,7 @@ import { aggregateResultsJob } from "./test/results.ts";
 const FILTER_PATHS = [
   "lenskit*/**.py",
   "**pyproject.toml",
+  "pixi.*",
   "requirements*.txt",
   "data/**",
   ".github/workflows/test.yml",
