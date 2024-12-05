@@ -7,21 +7,22 @@
 # pyright: strict
 from __future__ import annotations
 
-import logging
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor
+from multiprocessing.context import SpawnContext, SpawnProcess
 from multiprocessing.managers import SharedMemoryManager
-from typing import Generic, Iterable, Iterator
 
-import manylog
+import structlog
+from typing_extensions import Any, Generic, Iterable, Iterator, override
+
+from lenskit.logging.worker import WorkerContext, WorkerLogConfig
 
 from . import worker
 from .config import get_parallel_config
 from .invoker import A, InvokeOp, M, ModelOpInvoker, R
 from .serialize import shm_serialize
 
-_log = logging.getLogger(__name__)
-_log_listener: manylog.LogListener | None = None
+_log = structlog.stdlib.get_logger(__name__)
 
 
 class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
@@ -33,14 +34,13 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         ctx = mp.get_context("spawn")
         _log.info("setting up process pool w/ %d workers", n_jobs)
         kid_tc = get_parallel_config().child_threads
-        manylog.initialize()
 
         self.manager = SharedMemoryManager()
         self.manager.start()
 
         try:
             cfg = worker.WorkerConfig(kid_tc)
-            job = worker.WorkerContext(func, model)
+            job = worker.WorkerData(func, model)
             job = shm_serialize(job, self.manager)
             self.pool = ProcessPoolExecutor(n_jobs, ctx, worker.initalize, (cfg, job))
         except Exception as e:
@@ -62,12 +62,23 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         self.manager.shutdown()
 
 
-def ensure_log_listener() -> str:
-    global _log_listener
-    if _log_listener is None:
-        _log_listener = manylog.LogListener()
-        _log_listener.start()
+class LenskitProcess(SpawnProcess):
+    "LensKit worker process implementation."
 
-    addr = _log_listener.address
-    assert addr is not None
-    return addr
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        # save the log config to pass to the process
+        self._log_config = WorkerLogConfig.current()
+
+    @override
+    def run(self):
+        log = _log.bind(pid=self.pid, pname=self.name)
+        with WorkerContext(self._log_config):
+            log.info("multiprocessing worker started")
+            super().run()
+
+
+class LenskitMPContext(SpawnContext):
+    "LensKit multiprocessing context."
+
+    Process = LenskitProcess

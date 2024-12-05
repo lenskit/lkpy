@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 import multiprocessing as mp
 import pickle
 from dataclasses import dataclass
@@ -20,7 +21,8 @@ import structlog
 import zmq
 from structlog.typing import EventDict
 
-from .config import CORE_PROCESSORS
+from .config import CORE_PROCESSORS, active_logging_config
+from .monitor import get_monitor
 
 _active_context: WorkerContext | None = None
 
@@ -28,12 +30,26 @@ _active_context: WorkerContext | None = None
 @dataclass
 class WorkerLogConfig:
     """
-    Configuration for logging workers.
+    Configuration for worker logging.
     """
 
     address: str
     level: int
     authkey: bytes | None = None
+
+    @classmethod
+    def current(cls):
+        """
+        Get the current worker logging configuration.
+        """
+
+        if _active_context is not None:
+            return _active_context.config
+        else:
+            mon = get_monitor()
+            cfg = active_logging_config()
+            level = cfg.effective_level if cfg is not None else logging.INFO
+            return cls(address=mon.log_address, level=level)
 
 
 class WorkerContext:

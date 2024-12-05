@@ -16,6 +16,15 @@ from .progress import set_progress_impl
 
 CORE_PROCESSORS = [structlog.processors.add_log_level, structlog.processors.MaybeTimeStamper()]
 
+_active_config: LoggingConfig | None = None
+
+
+def active_logging_config() -> LoggingConfig | None:
+    """
+    Get the currently-active logging configuration.
+    """
+    return _active_config
+
 
 class LoggingConfig:
     """
@@ -30,6 +39,13 @@ class LoggingConfig:
     level: int = logging.INFO
     file: Path | None = None
     file_level: int | None = None
+
+    @property
+    def effective_level(self) -> int:
+        if self.file_level is not None and self.file_level < self.level:
+            return self.file_level
+        else:
+            return self.level
 
     def set_verbose(self, verbose: bool = True):
         """
@@ -51,6 +67,8 @@ class LoggingConfig:
         """
         Apply the configuration.
         """
+        global _active_config
+
         structlog.configure(
             processors=CORE_PROCESSORS + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
             logger_factory=structlog.stdlib.LoggerFactory(),
@@ -92,3 +110,5 @@ class LoggingConfig:
         root.setLevel(level)
 
         set_progress_impl("rich")
+
+        _active_config = self
