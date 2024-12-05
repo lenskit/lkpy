@@ -208,6 +208,6 @@ class MonitorThread(threading.Thread):
             logger = structlog.get_logger(name)
             data = json.loads(data)
             method = getattr(logger, data["method"])
-            method(data["event"], **data["arguments"])
+            method(data["event"])
         else:
             _log.error("invalid log backend")
