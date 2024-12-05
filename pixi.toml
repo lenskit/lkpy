@@ -12,6 +12,7 @@ threadpoolctl = ">=3.0"
 pydantic = ">=2.8,<3"
 rich = "~=13.9"
 structlog = ">=24.4.0,<25"
+pyzmq = ">=22"
 
 [pypi-dependencies]
 lenskit = { path = "lenskit", editable = true }
