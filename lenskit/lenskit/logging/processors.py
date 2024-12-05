@@ -27,6 +27,8 @@ def format_timestamp(logger: Any, method: str, event_dict: EventDict) -> EventDi
 
     if "timestamp" in event_dict:
         stamp = datetime.fromtimestamp(event_dict["timestamp"])
-        return event_dict | {"timestamp": stamp.isoformat(timespec="seconds")}
+        event_dict = dict(event_dict)
+        event_dict["timestamp"] = stamp.isoformat(timespec="seconds")
+        return event_dict
     else:
         return event_dict
