@@ -27,7 +27,7 @@ dependencies = [
   "rich ~=13.5",
   "threadpoolctl >=3.0",
   "pydantic ~=2.7",
-  "pyzmq >=22",
+  "pyzmq >=24",
 ]
 
 [project.optional-dependencies]
