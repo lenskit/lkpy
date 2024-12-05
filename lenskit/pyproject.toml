@@ -27,7 +27,6 @@ dependencies = [
   "rich ~=13.5",
   "threadpoolctl >=3.0",
   "pydantic ~=2.7",
-  "manylog@git+https://github.com/mdekstrand/manylog.git",
 ]
 
 [project.optional-dependencies]
