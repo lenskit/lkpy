@@ -149,7 +149,7 @@ class MonitorThread(threading.Thread):
 
             self.poller = zmq.Poller()
             self.poller.register(signal, zmq.POLLIN)
-            self.poller.register(signal, zmq.POLLIN)
+            self.poller.register(self.log_sock, zmq.POLLIN)
 
             while self.state != MonitorState.SHUTDOWN:
                 self._pump_message()
