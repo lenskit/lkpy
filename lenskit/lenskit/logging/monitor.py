@@ -94,7 +94,7 @@ class Monitor:
         log = _log.bind()
         try:
             log.debug("requesting monitor shutdown")
-            self._signal.send_string("shutdown")
+            self._signal.send(b"shutdown")
             self._signal.close()
 
             log.debug("waiting for monitor thread to shut down")
@@ -135,7 +135,7 @@ class MonitorThread(threading.Thread):
     _authkey: bytes
 
     def __init__(self, monitor: Monitor, log_sock: zmq.Socket[bytes]):
-        super().__init__(name="LensKitMonitor")
+        super().__init__(name="LensKitMonitor", daemon=True)
         self.monitor = monitor
         self.log_sock = log_sock
         self._authkey = mp.current_process().authkey
@@ -173,10 +173,12 @@ class MonitorThread(threading.Thread):
             self.state = MonitorState.SHUTDOWN
 
     def _handle_signal(self):
-        sig_msg = self.signal.recv_string()
+        sig_msg = self.signal.recv()
         log = _log.bind(signal=sig_msg)
         match sig_msg:
-            case "shutdown":
+            case b"":
+                log.debug("stray empty message")
+            case b"shutdown":
                 log.debug("initiating shutdown")
                 self.state = MonitorState.DRAINING
             case _:
