@@ -14,12 +14,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from typing_extensions import Generic
+import structlog
 
 from .config import initialize as init_parallel
 from .invoker import A, InvokeOp, M, R
 from .serialize import ModelData, shm_deserialize
 
-_log = logging.getLogger(__name__)
+_log = structlog.get_logger(__name__)
 
 
 __work_context: WorkerData
@@ -38,6 +39,8 @@ class WorkerData(Generic[M, A, R]):
 
 def initalize(cfg: WorkerConfig, ctx: ModelData) -> None:
     global __work_context, __progress
+    proc = mp.current_process()
+    log = _log.bind(pid=proc.pid, pname=proc.name)
     init_parallel(processes=1, threads=1, backend_threads=cfg.threads, child_threads=1)
 
     warnings.filterwarnings("ignore", "Sparse CSR tensor support is in beta state", UserWarning)
@@ -45,10 +48,10 @@ def initalize(cfg: WorkerConfig, ctx: ModelData) -> None:
     try:
         __work_context = shm_deserialize(ctx)
     except Exception as e:
-        _log.error("deserialization failed: %s", e)
+        log.error("deserialization failed: %s", e)
         raise e
 
-    _log.debug("worker %d ready (process %s)", os.getpid(), mp.current_process())
+    log.debug("worker %d ready (process %s)", os.getpid(), mp.current_process())
 
 
 def worker(arg: Any) -> Any:
