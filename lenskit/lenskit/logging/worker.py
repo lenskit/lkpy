@@ -82,7 +82,7 @@ class WorkerContext:
         root.setLevel(self.config.level)
 
         structlog.configure(
-            CORE_PROCESSORS + [self._log_handler.send_structopt],
+            CORE_PROCESSORS + [self._log_handler.send_structlog],
             logger_factory=structlog.stdlib.LoggerFactory(),
         )
 
@@ -106,6 +106,7 @@ class ZMQLogHandler(Handler):
     key: bytes
 
     def __init__(self, zmq_context: zmq.Context, config: WorkerLogConfig):
+        super().__init__()
         self.config = config
         self._lock = Lock()
         self.socket = zmq_context.socket(zmq.PUSH)
@@ -140,11 +141,11 @@ class ZMQLogHandler(Handler):
     def shutdown(self):
         self.socket.close()
 
-    def send_structopt(self, logger, method, event_dict: EventDict):
+    def send_structlog(self, logger, method, event_dict: EventDict):
         key = self.config.authkey
         assert key is not None
         mb = blake2b(key=key)
-        engine = b"stdlib"
+        engine = b"structlog"
         mb.update(engine)
         name = logger.name.encode()
         mb.update(name)
