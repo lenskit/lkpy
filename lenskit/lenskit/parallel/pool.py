@@ -31,7 +31,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
 
     def __init__(self, model: M, func: InvokeOp[M, A, R], n_jobs: int):
         _log.debug("persisting function")
-        ctx = mp.get_context("spawn")
+        ctx = LenskitMPContext()
         _log.info("setting up process pool w/ %d workers", n_jobs)
         kid_tc = get_parallel_config().child_threads
 
