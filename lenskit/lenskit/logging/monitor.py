@@ -109,7 +109,7 @@ class Monitor:
     def _log_sock(self) -> tuple[str, zmq.Socket[bytes]]:
         sock = self.zmq.socket(zmq.PULL)
         if zmq.has("ipc"):
-            self._tmpdir = TemporaryDirectory(prefix="lenskit-monitor", ignore_cleanup_errors=True)
+            self._tmpdir = TemporaryDirectory(prefix="lenskit-monitor.", ignore_cleanup_errors=True)
             path = os.path.join(self._tmpdir.name, "log-messages.sock")
             addr = f"ipc://{path}"
             sock.bind(addr)
