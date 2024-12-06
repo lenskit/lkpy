@@ -32,8 +32,8 @@ class LoggingConfig:
 
     This class is intended as a convenience for LensKit applications to set up a
     useful logging and progress reporting configuration; if unconfigured,
-    LensKit will emit its logging messages directly to :mod:`structlog`, which
-    you can configure in any way you wish.
+    LensKit will emit its logging messages directly to :mod:`structlog` and/or
+    :mod:`logging`, which you can configure in any way you wish.
     """
 
     level: int = logging.INFO
@@ -69,24 +69,25 @@ class LoggingConfig:
         """
         global _active_config
 
+        root = logging.getLogger()
+        term = ConsoleHandler()
+        term.setLevel(self.level)
+
         structlog.configure(
             processors=CORE_PROCESSORS + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
+            wrapper_class=structlog.make_filtering_bound_logger(self.effective_level),
             logger_factory=structlog.stdlib.LoggerFactory(),
         )
         formatter = structlog.stdlib.ProcessorFormatter(
             processors=[
                 remove_internal,
                 format_timestamp,
-                structlog.dev.ConsoleRenderer(),
+                structlog.dev.ConsoleRenderer(colors=term.supports_color),
             ],
             foreign_pre_chain=CORE_PROCESSORS,
         )
 
-        level = self.level
-        term = ConsoleHandler()
         term.setFormatter(formatter)
-        term.setLevel(level)
-        root = logging.getLogger()
         root.addHandler(term)
 
         if self.file:
@@ -104,10 +105,7 @@ class LoggingConfig:
             file.setLevel(file_level)
             root.addHandler(file)
 
-            if file_level < level:
-                level = file_level
-
-        root.setLevel(level)
+        root.setLevel(self.effective_level)
 
         set_progress_impl("rich")
 

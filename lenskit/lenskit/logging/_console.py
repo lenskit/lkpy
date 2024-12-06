@@ -17,6 +17,10 @@ class ConsoleHandler(Handler):
 
     _decoder = AnsiDecoder()
 
+    @property
+    def supports_color(self) -> bool:
+        return console.is_terminal and not console.no_color
+
     def emit(self, record: LogRecord) -> None:
         try:
             fmt = self.format(record)
