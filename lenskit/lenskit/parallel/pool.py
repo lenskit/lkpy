@@ -7,7 +7,6 @@
 # pyright: strict
 from __future__ import annotations
 
-import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor
 from multiprocessing.context import SpawnContext, SpawnProcess
 from multiprocessing.managers import SharedMemoryManager
