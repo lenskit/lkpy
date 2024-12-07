@@ -3,16 +3,16 @@ from __future__ import annotations
 from threading import Lock
 from uuid import UUID, uuid4
 
+import structlog
 from rich.console import Group
 from rich.live import Live
 from rich.progress import Progress as ProgressImpl
 from rich.progress import TaskID
-import structlog
 
 from .._console import console
 from ._base import Progress
 
-_log = structlog.stdlib.get_logger('lenskit.logging.progress')
+_log = structlog.stdlib.get_logger("lenskit.logging.progress")
 _pb_lock = Lock()
 _progress_area: Live | None = None
 _active_bars: dict[UUID, RichProgress] = {}
@@ -55,7 +55,7 @@ class RichProgress(Progress):
 def _install_bar(bar: RichProgress):
     global _progress_area
 
-    bar.logger.debug('installing progress bar')
+    bar.logger.debug("installing progress bar")
 
     with _pb_lock:
         _active_bars[bar.uuid] = bar
@@ -69,12 +69,13 @@ def _install_bar(bar: RichProgress):
 
     _progress_area.refresh()
 
+
 def _remove_bar(bar: RichProgress):
     global _progress_area
     if bar.uuid not in _active_bars:
         return
 
-    bar.logger.debug('uninstalling progress bar')
+    bar.logger.debug("uninstalling progress bar")
 
     with _pb_lock:
         del _active_bars[bar.uuid]

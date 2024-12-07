@@ -6,15 +6,14 @@
 
 from __future__ import annotations
 
-import logging
 import multiprocessing as mp
 import os
 import warnings
 from dataclasses import dataclass
 from typing import Any
 
-from typing_extensions import Generic
 import structlog
+from typing_extensions import Generic
 
 from .config import initialize as init_parallel
 from .invoker import A, InvokeOp, M, R
