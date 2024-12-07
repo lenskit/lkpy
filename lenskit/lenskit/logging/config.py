@@ -10,7 +10,7 @@ from pathlib import Path
 
 import structlog
 
-from ._console import ConsoleHandler
+from ._console import ConsoleHandler, setup_console
 from .processors import format_timestamp, remove_internal
 from .progress import set_progress_impl
 
@@ -69,6 +69,7 @@ class LoggingConfig:
         """
         global _active_config
 
+        setup_console()
         root = logging.getLogger()
         term = ConsoleHandler()
         term.setLevel(self.level)

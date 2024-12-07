@@ -5,16 +5,14 @@ from uuid import UUID, uuid4
 
 import structlog
 from rich.console import Group
-from rich.live import Live
 from rich.progress import Progress as ProgressImpl
 from rich.progress import TaskID
 
-from .._console import console
+from .._console import console, get_live
 from ._base import Progress
 
 _log = structlog.stdlib.get_logger("lenskit.logging.progress")
 _pb_lock = Lock()
-_progress_area: Live | None = None
 _active_bars: dict[UUID, RichProgress] = {}
 
 
@@ -53,25 +51,23 @@ class RichProgress(Progress):
 
 
 def _install_bar(bar: RichProgress):
-    global _progress_area
-
     bar.logger.debug("installing progress bar")
+    live = get_live()
+    if live is None:
+        bar._bar.disable = True
+        return
 
     with _pb_lock:
         _active_bars[bar.uuid] = bar
         rbs = [b._bar for b in _active_bars.values()]
         group = Group(*rbs)
-        if _progress_area is None:
-            _progress_area = Live(group, console=console, transient=True)
-            _progress_area.start()
-        else:
-            _progress_area.update(group)
-
-    _progress_area.refresh()
+        live.update(group)
 
 
 def _remove_bar(bar: RichProgress):
-    global _progress_area
+    live = get_live()
+    if live is None:
+        return
     if bar.uuid not in _active_bars:
         return
 
@@ -80,9 +76,5 @@ def _remove_bar(bar: RichProgress):
     with _pb_lock:
         del _active_bars[bar.uuid]
 
-        assert _progress_area is not None
-        _progress_area.update(Group(*[b._bar for b in _active_bars.values()]))
-        _progress_area.refresh()
-        if not _active_bars:
-            _progress_area.stop()
-            _progress_area = None
+        live.update(Group(*[b._bar for b in _active_bars.values()]))
+        live.refresh()
