@@ -135,8 +135,8 @@ class BatchPipelineRunner:
         _log.info("pipeline configuration hash: %s", pipeline.config_hash())
 
         with (
-            item_progress("Recommending", n_users) as progress,
             invoker((pipeline, self.invocations), _run_pipeline, n_jobs=self.n_jobs) as worker,
+            item_progress("Recommending", n_users) as progress,
         ):
             # release our reference, will sometimes free the pipeline memory in this process
             del pipeline
