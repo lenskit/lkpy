@@ -5,7 +5,6 @@
 # SPDX-License-Identifier: MIT
 from typing import Literal
 
-from lenskit.basic.bias import BiasScorer
 from lenskit.basic.candidates import UnratedTrainingItemsCandidateSelector
 from lenskit.basic.composite import FallbackScorer
 from lenskit.basic.history import UserTrainingHistoryLookup
@@ -142,6 +141,8 @@ def topn_pipeline(
         name:
             The pipeline name.
     """
+    from lenskit.basic.bias import BiasScorer
+
     builder = RecPipelineBuilder()
     builder.scorer(scorer)
     builder.ranker(n=n)
