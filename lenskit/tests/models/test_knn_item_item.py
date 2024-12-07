@@ -63,6 +63,14 @@ def ml_subset(ml_ratings):
     return top_rates
 
 
+def test_ii_config():
+    model = ItemKNNScorer(30)
+    cfg = model.get_config()
+    print(cfg)
+    assert cfg["feedback"] == "explicit"
+    assert cfg["nnbrs"] == 30
+
+
 def test_ii_train():
     algo = ItemKNNScorer(30, save_nbrs=500)
     algo.train(simple_ds)
