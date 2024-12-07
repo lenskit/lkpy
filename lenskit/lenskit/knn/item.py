@@ -526,8 +526,3 @@ AggFun: TypeAlias = Callable[
     ],
     torch.Tensor,
 ]
-
-_predictors: dict[str, AggFun] = {
-    "weighted-average": _predict_weighted_average,
-    "sum": _predict_sum,
-}
