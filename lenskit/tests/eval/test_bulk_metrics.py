@@ -43,3 +43,26 @@ def test_recs(demo_recs):
     print(stats)
     for m in bms.metrics:
         assert stats.loc[m.label, "mean"] == approx(scores[m.label].mean())
+
+
+def test_recs_multi(demo_recs):
+    split, recs = demo_recs
+
+    il2 = ItemListCollection(["rep", "user_id"])
+    il2.add_from(recs, rep=1)
+    il2.add_from(recs, rep=2)
+
+    bms = RunAnalysis()
+    bms.add_metric(ListLength())
+    bms.add_metric(Precision())
+    bms.add_metric(NDCG())
+    bms.add_metric(RBP)
+    bms.add_metric(RecipRank)
+
+    metrics = bms.compute(il2, split.test)
+    scores = metrics.list_metrics()
+    stats = metrics.list_summary("rep")
+    print(stats)
+    for m in bms.metrics:
+        assert stats.loc[(1, m.label), "mean"] == approx(scores.loc[1, m.label].mean())
+        assert stats.loc[(2, m.label), "mean"] == approx(scores.loc[2, m.label].mean())
