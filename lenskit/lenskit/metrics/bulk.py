@@ -76,7 +76,7 @@ class RunAnalysisResult:
         """
         return self._global_metrics
 
-    def list_metrics(self, *, fill_missing=True) -> pd.DataFrame:
+    def list_metrics(self, fill_missing=True) -> pd.DataFrame:
         """
         Get the per-list scores of the results.  This is a data frame with one
         row per list (with the list key on the inded), and one metric per
@@ -91,7 +91,7 @@ class RunAnalysisResult:
         """
         return self._list_metrics.fillna(self._defaults)
 
-    def list_summary(self) -> pd.DataFrame:
+    def list_summary(self, *keys: str) -> pd.DataFrame:
         """
         Sumamry statistics for the per-list metrics.  Each metric is on its own
         row, with columns reporting the following:
@@ -105,10 +105,19 @@ class RunAnalysisResult:
 
         Additional columns are added based on other options.  Missing metric
         values are filled with their defaults before computing statistics.
+
+        Args:
+            keys:
+                Identifiers for different conditions that should be reported
+                separately (grouping keys for the final result).
         """
         scores = self.list_metrics(fill_missing=True)
-        df = scores.agg(["mean", "median", "std"]).T
-        df.index.name = "metric"
+        if keys:
+            df = scores.groupby(list(keys)).agg(["mean", "median", "std"]).stack(level=0)
+            assert isinstance(df, pd.DataFrame)
+        else:
+            df = scores.agg(["mean", "median", "std"]).T
+            df.index.name = "metric"
         return df
 
     def merge_from(self, other: RunAnalysisResult):
