@@ -71,8 +71,8 @@ class LenskitProcess(SpawnProcess):
 
     @override
     def run(self):
-        log = _log.bind(pid=self.pid, pname=self.name)
         with WorkerContext(self._log_config):
+            log = _log.bind(pid=self.pid, pname=self.name)
             log.info("multiprocessing worker started")
             super().run()
 
