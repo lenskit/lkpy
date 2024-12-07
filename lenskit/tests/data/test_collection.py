@@ -117,13 +117,16 @@ def test_lookup_projected():
 def test_add_from():
     ilc = ItemListCollection(["model", "user_id"])
 
-    ilc1 = ItemListCollection.from_dict({72: ItemList(["a", "b"])}, key="user_id")
+    ilc1 = ItemListCollection.from_dict({72: ItemList(["a", "b"]), 48: ItemList()}, key="user_id")
     ilc.add_from(ilc1, model="foo")
 
-    assert len(ilc) == 1
+    assert len(ilc) == 2
     il = ilc.lookup(("foo", 72))
     assert il is not None
     assert il.ids().tolist() == ["a", "b"]
+    il = ilc.lookup(("foo", 48))
+    assert il is not None
+    assert len(il) == 0
 
 
 def test_from_df(rng, ml_ratings: pd.DataFrame):

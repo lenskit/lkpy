@@ -220,8 +220,8 @@ class ItemListCollection(Generic[K]):
         """
         for key, list in other:
             if fields:
-                fields = key._asdict() | fields
-                key = self._key_class(**fields)
+                cf = key._asdict() | fields
+                key = self._key_class(**cf)
             self._add(key, list)
 
     def _add(self, key: K, list: ItemList):
