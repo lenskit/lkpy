@@ -61,7 +61,7 @@ class ItemKNNScorer(Component, Trainable):
     min_nbrs: int = 1
     min_sim: float
     save_nbrs: int | None = None
-    feeedback: FeedbackType
+    feedback: FeedbackType
     block_size: int
 
     items_: Vocabulary
@@ -94,7 +94,7 @@ class ItemKNNScorer(Component, Trainable):
         self.save_nbrs = save_nbrs
         self.block_size = block_size
 
-        self.feeedback = feedback
+        self.feedback = feedback
 
         if self.min_sim < 0:
             _log.warning("item-item does not currently support negative similarities")
@@ -127,10 +127,11 @@ class ItemKNNScorer(Component, Trainable):
         # 1. Normalize item vectors to be mean-centered and unit-normalized
         # 2. Compute similarities with pairwise dot products
         self._timer = util.Stopwatch()
+        _log.info("training IKNN for %d users in %s feedback mode", data.item_count, self.feedback)
 
         _log.debug("[%s] beginning fit, memory use %s", self._timer, util.max_memory())
 
-        field = "rating" if self.feeedback == "explicit" else None
+        field = "rating" if self.feedback == "explicit" else None
         init_rmat = data.interaction_matrix("torch", field=field)
         n_items = data.item_count
         _log.info(
@@ -145,7 +146,7 @@ class ItemKNNScorer(Component, Trainable):
         # we operate on *transposed* rating matrix: items on the rows
         rmat = init_rmat.transpose(0, 1).to_sparse_csr().to(torch.float64)
 
-        if self.feeedback == "explicit":
+        if self.feedback == "explicit":
             rmat, means = normalize_sparse_rows(rmat, "center")
             if np.allclose(rmat.values(), 0.0):
                 _log.warning("normalized ratings are zero, centering is not recommended")
@@ -220,7 +221,7 @@ class ItemKNNScorer(Component, Trainable):
         n_valid = len(ri_vpos)
         _log.debug("user %s: %d of %d rated items in model", query.user_id, n_valid, len(ratings))
 
-        if self.feeedback == "explicit":
+        if self.feedback == "explicit":
             ri_vals = ratings.field("rating", "torch")
             if ri_vals is None:
                 raise RuntimeError("explicit-feedback scorer must have ratings")
@@ -229,12 +230,12 @@ class ItemKNNScorer(Component, Trainable):
             ri_vals = torch.full((n_valid,), 1.0, dtype=torch.float64)
 
         # mean-center the rating array
-        if self.feeedback == "explicit":
+        if self.feedback == "explicit":
             assert self.item_means_ is not None
             ri_vals -= self.item_means_[ri_vpos]
 
         # now compute the predictions
-        if self.feeedback == "explicit":
+        if self.feedback == "explicit":
             sims = _predict_weighted_average(
                 self.sim_matrix_, (self.min_nbrs, self.nnbrs), ri_vals, ri_vpos
             )
@@ -526,8 +527,3 @@ AggFun: TypeAlias = Callable[
     ],
     torch.Tensor,
 ]
-
-_predictors: dict[str, AggFun] = {
-    "weighted-average": _predict_weighted_average,
-    "sum": _predict_sum,
-}
