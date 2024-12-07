@@ -50,7 +50,7 @@ def initalize(cfg: WorkerConfig, ctx: ModelData) -> None:
         log.error("deserialization failed: %s", e)
         raise e
 
-    log.debug("worker %d ready (process %s)", os.getpid(), mp.current_process())
+    log.debug("worker %d ready (process %s)", os.getpid(), mp.current_process().name)
 
 
 def worker(arg: Any) -> Any:

@@ -23,8 +23,10 @@ from structlog.typing import EventDict
 
 from .config import CORE_PROCESSORS, active_logging_config
 from .monitor import get_monitor
+from .processors import add_process_info
 
 _active_context: WorkerContext | None = None
+_log = structlog.stdlib.get_logger(__name__)
 
 
 @dataclass
@@ -82,9 +84,13 @@ class WorkerContext:
         root.setLevel(self.config.level)
 
         structlog.configure(
-            CORE_PROCESSORS + [self._log_handler.send_structlog],
+            [add_process_info]
+            + CORE_PROCESSORS
+            + [structlog.processors.ExceptionPrettyPrinter(), self._log_handler.send_structlog],
+            wrapper_class=structlog.make_filtering_bound_logger(self.config.level),
             logger_factory=structlog.stdlib.LoggerFactory(),
         )
+        _log.debug("log context activated")
 
     def shutdown(self):
         root = getLogger()
@@ -119,6 +125,7 @@ class ZMQLogHandler(Handler):
         # update messages for copyability
         if not hasattr(record, "message"):
             record.message = record.msg % record.args
+
         record.exc_info = None
         record.exc_text = None
         record.stack_info = None

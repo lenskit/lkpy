@@ -2,6 +2,7 @@
 LensKit logging processors.
 """
 
+import multiprocessing as mp
 from datetime import datetime
 from typing import Any
 
@@ -32,3 +33,17 @@ def format_timestamp(logger: Any, method: str, event_dict: EventDict) -> EventDi
         return event_dict
     else:
         return event_dict
+
+
+def add_process_info(logger: Any, method: str, event_dict: EventDict) -> EventDict:
+    """
+    Add process info if it does not exist.
+    """
+
+    proc = mp.current_process()
+    if "pid" not in event_dict:
+        event_dict["pid"] = proc.pid
+    if "pname" not in event_dict:
+        event_dict["pname"] = proc.name
+
+    return event_dict
