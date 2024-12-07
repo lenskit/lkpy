@@ -3,7 +3,9 @@
 # Copyright (C) 2023-2024 Drexel University
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
+from typing import Literal
 
+from lenskit.basic.bias import BiasScorer
 from lenskit.basic.candidates import UnratedTrainingItemsCandidateSelector
 from lenskit.basic.composite import FallbackScorer
 from lenskit.basic.history import UserTrainingHistoryLookup
@@ -118,7 +120,11 @@ class RecPipelineBuilder:
 
 
 def topn_pipeline(
-    scorer: Component, *, predicts_ratings: bool = False, n: int = -1, name: str | None = None
+    scorer: Component,
+    *,
+    predicts_ratings: bool | Literal["raw"] = False,
+    n: int = -1,
+    name: str | None = None,
 ) -> Pipeline:
     """
     Create a pipeline that produces top-N recommendations using a scoring model.
@@ -128,8 +134,9 @@ def topn_pipeline(
             The scorer to use in the pipeline (it will added with the component
             name ``scorer``, see :ref:`pipeline-names`).
         predicts_ratings:
-            If ``True``, make ``rating-predictor`` an alias for ``scorer`` so
-            that evaluation components know this pipeline can predict ratings.
+            If ``True``, make set up to predict ratings (``rating-predictor``),
+            using ``scorer`` with a fallback of :class:`BiasScorer`; if
+            ``"raw"``, use ``scorer`` directly with no fallback.
         n:
             The recommendation list length to configure in the pipeline.
         name:
@@ -138,7 +145,9 @@ def topn_pipeline(
     builder = RecPipelineBuilder()
     builder.scorer(scorer)
     builder.ranker(n=n)
-    if predicts_ratings:
+    if predicts_ratings == "raw":
         builder.predicts_ratings()
+    elif predicts_ratings:
+        builder.predicts_ratings(fallback=BiasScorer())
 
     return builder.build(name)
