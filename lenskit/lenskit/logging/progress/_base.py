@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from typing import Any
+
 
 class Progress:
     """
     Base class for progress reporting.  The default implementations do nothing.
     """
 
-    def __init__(self):
+    def __init__(self, *args: Any, **kwargs: Any):
         pass
 
     def update(self, advance: int = 0, **kwargs: float | int | str):
