@@ -6,7 +6,7 @@ class Progress:
     Base class for progress reporting.  The default implementations do nothing.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         pass
 
     def update(self, advance: int = 0, **kwargs: float | int | str):
