@@ -4,9 +4,20 @@ from threading import Lock
 from uuid import UUID, uuid4
 
 import structlog
+from humanize import metric
 from rich.console import Group
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    ProgressColumn,
+    SpinnerColumn,
+    TaskID,
+    TaskProgressColumn,
+    TextColumn,
+    TimeRemainingColumn,
+)
 from rich.progress import Progress as ProgressImpl
-from rich.progress import TaskID
+from rich.text import Text
 
 from .._console import console, get_live
 from ._base import Progress
@@ -36,7 +47,16 @@ class RichProgress(Progress):
 
         self.logger = _log.bind(label=label, uuid=str(self.uuid))
 
-        self._bar = ProgressImpl(console=console)
+        self._bar = ProgressImpl(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            MofNCompleteColumn(),
+            RateColumn(),
+            TaskProgressColumn(),
+            TimeRemainingColumn(),
+            console=console,
+        )
 
         _install_bar(self)
 
@@ -78,3 +98,16 @@ def _remove_bar(bar: RichProgress):
 
         live.update(Group(*[b._bar for b in _active_bars.values()]))
         live.refresh()
+
+
+class RateColumn(ProgressColumn):
+    def __init__(self):
+        super().__init__()
+
+    def render(self, task):
+        speed = task.finished_speed or task.speed
+        if speed is not None:
+            disp = metric(speed, "it/s")
+            return Text(disp, "progress.percentage")
+        else:
+            return Text("?", "progress.percentage")
