@@ -5,7 +5,6 @@ from threading import Lock
 from uuid import UUID, uuid4
 
 import structlog
-from humanize import metric
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -110,9 +109,12 @@ class RateColumn(ProgressColumn):
     def render(self, task: Task):
         speed = task.finished_speed or task.speed
         if speed is None:
-            return Text("?", "progress.percentage")
+            disp = "?"
+        elif speed > 1000:
+            disp = "{:d} it/s".format(int(speed))
         elif speed > 1:
-            disp = metric(speed, "it/s")
-            return Text(disp, "progress.percentage")
+            disp = "{:.3g} it/s".format(speed)
         else:
-            return Text("{:.1}s/it", "progress.percentage")
+            disp = "{:.3g} s/it"
+
+        return Text(disp, "progress.percentage")
