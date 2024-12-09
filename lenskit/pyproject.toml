@@ -26,7 +26,6 @@ dependencies = [
   "threadpoolctl >=3.0",
   "structlog >= 23.2",
   "rich ~=13.5",
-  "humanize ~=4.4",
   "pyzmq >=24",
   "pydantic ~=2.7",
 ]
