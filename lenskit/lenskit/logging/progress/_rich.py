@@ -1,3 +1,4 @@
+# pyright: strict
 from __future__ import annotations
 
 from threading import Lock
@@ -5,12 +6,12 @@ from uuid import UUID, uuid4
 
 import structlog
 from humanize import metric
-from rich.console import Group
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
     ProgressColumn,
     SpinnerColumn,
+    Task,
     TaskID,
     TaskProgressColumn,
     TextColumn,
@@ -18,12 +19,14 @@ from rich.progress import (
 )
 from rich.progress import Progress as ProgressImpl
 from rich.text import Text
+from typing_extensions import override
 
 from .._console import console, get_live
 from ._base import Progress
 
 _log = structlog.stdlib.get_logger("lenskit.logging.progress")
 _pb_lock = Lock()
+_progress: ProgressImpl | None = None
 _active_bars: dict[UUID, RichProgress] = {}
 
 
@@ -33,81 +36,83 @@ class RichProgress(Progress):
     """
 
     uuid: UUID
+    label: str
     total: int | None
     fields: dict[str, str | None]
     logger: structlog.stdlib.BoundLogger
-    _bar: ProgressImpl
-    _task: TaskID
+    _task: TaskID | None = None
 
     def __init__(self, label: str, total: int | None, fields: dict[str, str | None]):
         super().__init__()
         self.uuid = uuid4()
+        self.label = label
         self.total = total
         self.fields = fields
 
         self.logger = _log.bind(label=label, uuid=str(self.uuid))
 
-        self._bar = ProgressImpl(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            MofNCompleteColumn(),
-            RateColumn(),
-            TaskProgressColumn(),
-            TimeRemainingColumn(),
-            console=console,
-        )
-
-        _install_bar(self)
-
-        self._task = self._bar.add_task(label, total=total)
+        self._task = _install_bar(self)
 
     def update(self, advance: int = 1, **kwargs: float | int | str):
-        self._bar.update(self._task, advance=advance, **kwargs)  # type: ignore
+        if _progress is not None:
+            _progress.update(self._task, advance=advance, **kwargs)  # type: ignore
 
     def finish(self):
-        self._bar.stop()
         _remove_bar(self)
 
 
-def _install_bar(bar: RichProgress):
+def _install_bar(bar: RichProgress) -> TaskID | None:
+    global _progress
     bar.logger.debug("installing progress bar")
     live = get_live()
     if live is None:
-        bar._bar.disable = True
-        return
+        return None
 
     with _pb_lock:
+        if _progress is None:
+            _progress = ProgressImpl(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                MofNCompleteColumn(),
+                RateColumn(),
+                TaskProgressColumn(),
+                TimeRemainingColumn(),
+                console=console,
+            )
+            live.update(_progress)
+
         _active_bars[bar.uuid] = bar
-        rbs = [b._bar for b in _active_bars.values()]
-        group = Group(*rbs)
-        live.update(group)
+        return _progress.add_task(bar.label, total=bar.total)
 
 
 def _remove_bar(bar: RichProgress):
     live = get_live()
-    if live is None:
+    if live is None or _progress is None:
         return
     if bar.uuid not in _active_bars:
+        return
+    if bar._task is None:
         return
 
     bar.logger.debug("uninstalling progress bar")
 
     with _pb_lock:
+        _progress.remove_task(bar._task)
         del _active_bars[bar.uuid]
-
-        live.update(Group(*[b._bar for b in _active_bars.values()]))
-        live.refresh()
 
 
 class RateColumn(ProgressColumn):
     def __init__(self):
         super().__init__()
 
-    def render(self, task):
+    @override
+    def render(self, task: Task):
         speed = task.finished_speed or task.speed
-        if speed is not None:
+        if speed is None:
+            return Text("?", "progress.percentage")
+        elif speed > 1:
             disp = metric(speed, "it/s")
             return Text(disp, "progress.percentage")
         else:
-            return Text("?", "progress.percentage")
+            return Text("{:.1}s/it", "progress.percentage")
