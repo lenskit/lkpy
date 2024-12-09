@@ -9,10 +9,11 @@ numpy = ">=1.23, <2"
 scipy = ">=1.9"
 pytorch = "~=2.1"
 threadpoolctl = ">=3.0"
-pydantic = ">=2.8,<3"
-rich = "~=13.9"
 structlog = ">=24.4.0,<25"
+rich = "~=13.9"
+humanize = "~=4.4"
 pyzmq = ">=24"
+pydantic = ">=2.8,<3"
 
 [pypi-dependencies]
 lenskit = { path = "lenskit", editable = true }

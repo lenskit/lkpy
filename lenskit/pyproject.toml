@@ -20,14 +20,15 @@ license = { file = "LICENSE.md" }
 dynamic = ["version"]
 dependencies = [
   "pandas ~=2.0",
-  "structlog >= 23.2",
   "numpy >= 1.24",
   "scipy >= 1.10.0",
   "torch ~=2.1",
-  "rich ~=13.5",
   "threadpoolctl >=3.0",
-  "pydantic ~=2.7",
+  "structlog >= 23.2",
+  "rich ~=13.5",
+  "humanize ~=4.4",
   "pyzmq >=24",
+  "pydantic ~=2.7",
 ]
 
 [project.optional-dependencies]
