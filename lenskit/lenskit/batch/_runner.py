@@ -145,7 +145,7 @@ class BatchPipelineRunner:
             for key, outs in worker.map(test_iter):
                 for cn, cr in outs.items():
                     results.add_result(cn, key, cr)
-                    progress.update()
+                progress.update()
             timer.stop()
 
             rate = timer.elapsed() / n_users
