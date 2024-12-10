@@ -33,6 +33,7 @@ class MLVersion(Enum):
     ML_10M = "ml-10m"
     ML_20M = "ml-20m"
     ML_25M = "ml-25m"
+    ML_32M = "ml-32m"
     ML_LATEST_SMALL = "ml-latest-small"
     ML_LATEST = "ml-latest"
     ML_MODERN = "ml-modern"
