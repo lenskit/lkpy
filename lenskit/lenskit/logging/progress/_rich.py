@@ -115,6 +115,6 @@ class RateColumn(ProgressColumn):
         elif speed > 1:
             disp = "{:.3g} it/s".format(speed)
         else:
-            disp = "{:.3g} s/it"
+            disp = "{:.3g} s/it".format(1.0 / speed)
 
         return Text(disp, "progress.percentage")
