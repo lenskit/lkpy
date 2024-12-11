@@ -60,11 +60,13 @@ class TTSplit(Generic[TK]):
         Create a split by subtracting test data from a source dataset.
         """
         cols = list(test.key_fields) + ["item_id"]
-        df = src.interaction_matrix("pandas", field="all", original_ids=True).set_index(cols)
-        mask = pd.Series(True, index=df.index)
 
-        for key, items in test:
-            mask[[key + (i,) for i in items.ids() if (key + (i,)) in mask.index]] = False
+        test_df = test.to_df().set_index(cols)
+        mask = pd.Series(False, index=test_df.index)
+
+        df = src.interaction_matrix("pandas", field="all", original_ids=True).set_index(cols)
+
+        mask = mask.reindex(df.index, fill_value=True)
 
         train_df = df[mask]
         train = MatrixDataset(src.users, src.items, train_df.reset_index())
