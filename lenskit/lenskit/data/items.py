@@ -254,9 +254,7 @@ class ItemList:
         else:
             ranks = None
 
-        df = df.drop(columns=to_drop, errors="ignore")
-
-        fields = {f: df[f].values for f in df.columns}
+        fields = {f: df[f].values for f in df.columns if f not in to_drop}
         items = cls(
             item_ids=ids,  # type: ignore
             item_nums=nums,  # type: ignore
