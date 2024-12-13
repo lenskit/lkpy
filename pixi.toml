@@ -168,6 +168,11 @@ test-py312-sklearn = { features = [
   "test",
   "sklearn",
 ], solve-group = "py312" }
+test-py313-sklearn = { features = [
+  "py313",
+  "test",
+  "sklearn",
+], solve-group = "py313" }
 
 test-py311-funksvd = { features = [
   "py311",

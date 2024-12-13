@@ -327,7 +327,6 @@ jobs:
         python:
           - py311
           - py312
-          - py313
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v4
@@ -420,7 +419,6 @@ jobs:
         python:
           - py311
           - py312
-          - py313
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v4
@@ -513,7 +511,6 @@ jobs:
         python:
           - py311
           - py312
-          - py313
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v4
