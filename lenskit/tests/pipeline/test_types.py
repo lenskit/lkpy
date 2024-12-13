@@ -13,6 +13,7 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 from types import NoneType
 from typing import Any, TypeVar
+from uuid import UUID
 
 import numpy as np
 import pandas as pd
@@ -135,7 +136,7 @@ def test_type_string_generic():
 
 
 def test_type_string_class():
-    assert type_string(Path) == "pathlib.Path"
+    assert type_string(UUID) == "uuid.UUID"
 
 
 def test_parse_string_None():
