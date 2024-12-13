@@ -40,7 +40,7 @@ const test_matrix = {
     matrix: {
       python: PYTHONS,
       platform: VANILLA_PLATFORMS,
-      exclude: [{ python: "py313", platform: "macos-latest" }],
+      exclude: [{ python: "3.13", platform: "macos-latest" }],
     },
   }),
   nojit: testJob({

@@ -93,7 +93,7 @@ jobs:
           - ubuntu-latest
           - macos-latest
         exclude:
-          - python: py313
+          - python: '3.13'
             platform: macos-latest
     steps:
       - name: "🛒 Checkout"
