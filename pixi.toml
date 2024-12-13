@@ -44,7 +44,7 @@ lenskit-funksvd = { path = "lenskit-funksvd", editable = true }
 platforms = ["linux-64", "osx-arm64"]
 
 [feature.implicit.dependencies]
-implicit = ">=0.7.0"
+implicit = ">=0.7.1"
 
 [feature.implicit.pypi-dependencies]
 lenskit-implicit = { path = "lenskit-implicit", editable = true }
