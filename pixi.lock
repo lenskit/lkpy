@@ -11929,10 +11929,10 @@ packages:
   editable: true
 - pypi: lenskit-implicit
   name: lenskit-implicit
-  version: 2025.0.0a1.dev56+g114b5daf.d20241213
-  sha256: 53a9cdb3ac7adc4842489a42961102430effb9a4b4c750122305b82867e51329
+  version: 2025.0.0a1.dev63+g2a2ba8ae.d20241213
+  sha256: ac9e48c41794c46c34fb37dc70fd45fc397d9ff0f8a5b9ee7e8be89bb56064ac
   requires_dist:
-  - implicit>=0.6.1
+  - implicit>=0.7.0
   - lenskit
   requires_python: '>=3.11'
   editable: true
@@ -13354,16 +13354,6 @@ packages:
   - __osx >=11.0
   license: BSD-2-Clause
   license_family: BSD
-  size: 69263
-  timestamp: 1723817629767
-- conda: https://conda.anaconda.org/conda-forge/osx-arm64/libmpdec-4.0.0-h99b78c6_0.conda
-  sha256: f7917de9117d3a5fe12a39e185c7ce424f8d5010a6f97b4333e8a1dcb2889d16
-  md5: 7476305c35dd9acef48da8f754eedb40
-  depends:
-  - __osx >=11.0
-  license: BSD-2-Clause
-  license_family: BSD
-  purls: []
   size: 69263
   timestamp: 1723817629767
 - conda: https://conda.anaconda.org/conda-forge/win-64/libmpdec-4.0.0-h2466b09_0.conda
@@ -17840,17 +17830,6 @@ packages:
   license_family: BSD
   size: 6322
   timestamp: 1723823058879
-- conda: https://conda.anaconda.org/conda-forge/osx-arm64/python_abi-3.13-5_cp313.conda
-  build_number: 5
-  sha256: 4437198eae80310f40b23ae2f8a9e0a7e5c2b9ae411a8621eb03d87273666199
-  md5: b8e82d0a5c1664638f87f63cc5d241fb
-  constrains:
-  - python 3.13.* *_cp313
-  license: BSD-3-Clause
-  license_family: BSD
-  purls: []
-  size: 6322
-  timestamp: 1723823058879
 - conda: https://conda.anaconda.org/conda-forge/win-64/python_abi-3.11-5_cp311.conda
   build_number: 5
   sha256: 9b210e5807dd9c9ed71ff192a95f1872da597ddd10e7cefec93a922fe22e598a
@@ -18905,8 +18884,6 @@ packages:
   - python_abi 3.13.* *_cp313
   - scipy
   - threadpoolctl >=3.1.0
-  arch: x86_64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls:
@@ -18967,8 +18944,6 @@ packages:
   - python_abi 3.13.* *_cp313
   - scipy
   - threadpoolctl >=3.1.0
-  arch: arm64
-  platform: osx
   license: BSD-3-Clause
   license_family: BSD
   purls:
