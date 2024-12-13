@@ -25,7 +25,11 @@ const test_matrix = {
     install: "conda",
     key: "conda",
     name: "Conda Python ${{matrix.python}} on ${{matrix.platform}}",
-    matrix: { "python": CONDA_PYTHONS, "platform": PLATFORMS },
+    matrix: {
+      python: CONDA_PYTHONS,
+      platform: PLATFORMS,
+      exclude: [{ python: "py313", platform: "windows-latest" }],
+    },
   }),
   vanilla: testJob({
     install: "vanilla",

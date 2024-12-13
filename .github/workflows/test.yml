@@ -35,10 +35,14 @@ jobs:
         python:
           - py311
           - py312
+          - py313
         platform:
           - ubuntu-latest
           - macos-latest
           - windows-latest
+        exclude:
+          - python: py313
+            platform: windows-latest
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v4
@@ -84,6 +88,7 @@ jobs:
         python:
           - '3.11'
           - '3.12'
+          - '3.13'
         platform:
           - ubuntu-latest
           - macos-latest
@@ -229,6 +234,7 @@ jobs:
         python:
           - py311
           - py312
+          - py313
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v4
@@ -321,6 +327,7 @@ jobs:
         python:
           - py311
           - py312
+          - py313
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v4
@@ -413,6 +420,7 @@ jobs:
         python:
           - py311
           - py312
+          - py313
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v4
@@ -505,6 +513,7 @@ jobs:
         python:
           - py311
           - py312
+          - py313
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v4

@@ -97,11 +97,6 @@ function testArtifactName(options: TestJobSpec): string {
     if (options.matrix.python) {
       name += "-py${{matrix.python}}";
     }
-    for (const key of Object.keys(options.matrix)) {
-      if (key != "platform" && key != "python") {
-        name += "-${{matrix." + key + "}}";
-      }
-    }
   }
   return name;
 }
