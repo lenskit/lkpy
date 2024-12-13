@@ -8,6 +8,7 @@ import pickle
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import torch
 
 import hypothesis.extra.numpy as nph
@@ -246,6 +247,31 @@ def test_pandas_df_no_numbers():
 
     # even with a vocabulary, we should have no numbers
     assert "item_num" not in df.columns
+
+
+def test_arrow_table():
+    data = np.random.randn(5)
+    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
+
+    tbl = il.to_arrow(numbers=True)
+    assert isinstance(tbl, pa.Table)
+    assert tbl.num_columns == 3
+    assert np.all(tbl.column("item_id").to_numpy() == ITEMS)
+    assert np.all(tbl.column("item_num").to_numpy() == np.arange(5))
+    assert np.all(tbl.column("score").to_numpy() == data)
+
+
+def test_arrow_array():
+    data = np.random.randn(5)
+    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
+
+    tbl = il.to_arrow(numbers=True, type="array")
+    assert isinstance(tbl, pa.StructArray)
+    tbl = pa.Table.from_struct_array(tbl)
+    assert tbl.num_columns == 3
+    assert np.all(tbl.column("item_id").to_numpy() == ITEMS)
+    assert np.all(tbl.column("item_num").to_numpy() == np.arange(5))
+    assert np.all(tbl.column("score").to_numpy() == data)
 
 
 def test_item_list_pickle_compact(ml_ds: Dataset):

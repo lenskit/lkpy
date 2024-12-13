@@ -14,6 +14,7 @@ from typing import overload
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import torch
 from numpy.typing import ArrayLike, NDArray
 from typing_extensions import (
@@ -477,6 +478,58 @@ class ItemList:
         # add remaining fields
         cols.update((k, v.numpy()) for (k, v) in self._fields.items() if k != "score")
         return pd.DataFrame(cols)
+
+    @overload
+    def to_arrow(
+        self, *, ids: bool = True, numbers: bool = False, type: Literal["table"] = "table"
+    ) -> pa.Table: ...
+    @overload
+    def to_arrow(
+        self, *, ids: bool = True, numbers: bool = False, type: Literal["array"]
+    ) -> pa.StructArray: ...
+    def to_arrow(
+        self, *, ids: bool = True, numbers: bool = False, type: Literal["table", "array"] = "table"
+    ):
+        """
+        Convert the item list to a Pandas table.
+        """
+        arrays = []
+        names = []
+        if ids and (self._ids is not None or self._vocab is not None):
+            arrays.append(self.ids())
+            names.append("item_id")
+        if numbers and (self._numbers is not None or self._vocab is not None):
+            arrays.append(self.numbers())
+            names.append("item_num")
+        # we need to have numbers or ids, or it makes no sense
+        if "item_id" not in names and "item_num" not in names:
+            if ids and not numbers:
+                raise RuntimeError("item list has no vocabulary, cannot compute IDs")
+            elif numbers and not ids:
+                raise RuntimeError("item list has no vocabulary, cannot compute numbers")
+            else:
+                raise RuntimeError("cannot create item data frame without identifiers or numbers")
+
+        if "score" in self._fields:
+            arrays.append(self.scores())
+            names.append("score")
+        if self.ordered:
+            arrays.append(self.ranks())
+            names.append("rank")
+        # add remaining fields
+        for k, v in self._fields.items():
+            if k == "score":
+                continue
+
+            arrays.append(v.numpy())
+            names.append(k)
+
+        if type == "table":
+            return pa.Table.from_arrays(arrays, names)
+        elif type == "array":
+            return pa.RecordBatch.from_arrays(arrays, names).to_struct_array()
+        else:  # pragma: nocover
+            raise ValueError(f"unsupported target type {type}")
 
     def __len__(self):
         return self._len
