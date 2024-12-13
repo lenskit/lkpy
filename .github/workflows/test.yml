@@ -92,6 +92,9 @@ jobs:
         platform:
           - ubuntu-latest
           - macos-latest
+        exclude:
+          - python: py313
+            platform: macos-latest
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v4

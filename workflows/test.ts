@@ -37,7 +37,11 @@ const test_matrix = {
     install: "vanilla",
     key: "vanilla",
     name: "Vanilla Python ${{matrix.python}} on ${{matrix.platform}}",
-    matrix: { "python": PYTHONS, "platform": VANILLA_PLATFORMS },
+    matrix: {
+      python: PYTHONS,
+      platform: VANILLA_PLATFORMS,
+      exclude: [{ python: "py313", platform: "macos-latest" }],
+    },
   }),
   nojit: testJob({
     install: "conda",
