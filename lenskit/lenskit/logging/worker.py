@@ -24,6 +24,7 @@ from structlog.typing import EventDict
 from .config import CORE_PROCESSORS, active_logging_config
 from .monitor import get_monitor
 from .processors import add_process_info
+from .tasks import Task
 
 _active_context: WorkerContext | None = None
 _log = structlog.stdlib.get_logger(__name__)
@@ -99,8 +100,12 @@ class WorkerContext:
         self._log_handler.shutdown()
         self.zmq.term()
 
+    def send_task(self, task: Task):
+        self._log_handler.send_task(task)
+
     def __enter__(self):
         self.start()
+        return self
 
     def __exit__(self, *args):
         self.shutdown()
@@ -130,18 +135,9 @@ class ZMQLogHandler(Handler):
         record.exc_text = None
         record.stack_info = None
 
-        key = self.config.authkey
-        assert key is not None
-        mb = blake2b(key=key)
-        engine = b"stdlib"
-        mb.update(engine)
-        name = record.name.encode()
-        mb.update(name)
-        data = pickle.dumps(record, pickle.HIGHEST_PROTOCOL)
-        mb.update(data)
-
-        with self._lock:
-            self.socket.send_multipart([engine, name, data, mb.digest()])
+        self._send_message(
+            b"stdlib", record.name.encode(), pickle.dumps(record, pickle.HIGHEST_PROTOCOL)
+        )
 
         return record
 
@@ -149,17 +145,27 @@ class ZMQLogHandler(Handler):
         self.socket.close()
 
     def send_structlog(self, logger, method, event_dict: EventDict):
+        self._send_message(
+            b"structlog",
+            logger.name.encode(),
+            json.dumps({"method": method, "event": event_dict}).encode(),
+        )
+
+        raise structlog.DropEvent()
+
+    def send_task(self, task: Task):
+        _log.debug("sending updated task", task_id=task.task_id)
+        self._send_message(
+            b"lenskit.logging.tasks", str(task.task_id).encode(), task.model_dump_json().encode()
+        )
+
+    def _send_message(self, engine: bytes, name: bytes, data: bytes):
         key = self.config.authkey
         assert key is not None
         mb = blake2b(key=key)
-        engine = b"structlog"
         mb.update(engine)
-        name = logger.name.encode()
         mb.update(name)
-        data = json.dumps({"method": method, "event": event_dict}).encode()
         mb.update(data)
 
         with self._lock:
             self.socket.send_multipart([engine, name, data, mb.digest()])
-
-        raise structlog.DropEvent()

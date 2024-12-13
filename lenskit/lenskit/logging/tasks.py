@@ -112,7 +112,7 @@ class Task(BaseModel, extra="allow"):
     Peak PyTorch GPU memory usage in bytes.
     """
 
-    subtasks: list[Task] = Field(default_factory=list)
+    subtasks: dict[UUID, Task] = Field(default_factory=dict)
     """
     This task's subtasks.
     """
@@ -122,6 +122,22 @@ class Task(BaseModel, extra="allow"):
     _lock: Lock
     _initial_meter: ResourceMeasurement | None = None
     _final_meter: ResourceMeasurement | None = None
+
+    @staticmethod
+    def current() -> Task | None:
+        """
+        Get the currently-active task.
+        """
+        if _active_tasks:
+            return _active_tasks[-1]
+
+    @staticmethod
+    def root() -> Task | None:
+        """
+        Get the root task.
+        """
+        if _active_tasks:
+            return _active_tasks[0]
 
     def __init__(
         self,
@@ -133,10 +149,10 @@ class Task(BaseModel, extra="allow"):
         **data: Any,
     ):
         if isinstance(parent, Task):
-            parent = parent.task_id
+            data["parent_id"] = parent.task_id
         elif parent is None and _active_tasks:
-            parent = _active_tasks[-1].task_id
-        super().__init__(label=label, parent_id=parent, **data)
+            data["parent_id"] = _active_tasks[-1].task_id
+        super().__init__(label=label, **data)
         if reset_hwm is not None:
             self._reset_hwm = reset_hwm
         else:
@@ -193,6 +209,14 @@ class Task(BaseModel, extra="allow"):
         with self._lock:
             self._update_resources()
             self._save()
+
+    def add_subtask(self, task: Task):
+        """
+        Add or update a subtask.
+        """
+        self.subtasks[task.task_id] = task
+        if task.parent_id is None:
+            task.parent_id = self.task_id
 
     def _save(self):
         if self._save_file:

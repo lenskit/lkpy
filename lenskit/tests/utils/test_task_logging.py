@@ -12,17 +12,19 @@ def test_train_task(ml_ds: Dataset):
     with Task("train ImplicitMF", reset_hwm=True) as task:
         pipe.train(ml_ds)
 
+    print(task.model_dump_json(indent=2))
+
     assert task.status == TaskStatus.FINISHED
     assert task.cpu_time is not None and task.cpu_time > 0
     if task.peak_memory is not None:
         assert task.peak_memory > 0
 
-    print(task.model_dump_json(indent=2))
-
     users = ml_ds.users.ids()[:500]
     with Task("recommend", reset_hwm=True) as task:
         _recs = batch.recommend(pipe, users, n=20, n_jobs=2)  # type: ignore
 
+    print(task.model_dump_json(indent=2))
+
     assert task.status == TaskStatus.FINISHED
     assert len(task.subtasks) == 2
-    assert all(st.subprocess for st in task.subtasks)
+    assert all(st.subprocess for st in task.subtasks.values())

@@ -14,6 +14,7 @@ from multiprocessing.managers import SharedMemoryManager
 import structlog
 from typing_extensions import Any, Generic, Iterable, Iterator, override
 
+from lenskit.logging.tasks import Task
 from lenskit.logging.worker import WorkerContext, WorkerLogConfig
 
 from . import worker
@@ -29,9 +30,11 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
     pool: ProcessPoolExecutor
 
     def __init__(self, model: M, func: InvokeOp[M, A, R], n_jobs: int):
-        _log.debug("persisting function")
+        log = _log.bind(n_jobs=n_jobs)
+        log.debug("persisting function")
         ctx = LenskitMPContext()
-        _log.info("setting up process pool w/ %d workers", n_jobs)
+
+        log.debug("initializing shared memory")
         kid_tc = get_parallel_config().child_threads
 
         self.manager = SharedMemoryManager()
@@ -41,6 +44,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
             cfg = worker.WorkerConfig(kid_tc)
             job = worker.WorkerData(func, model)
             job = shm_serialize(job, self.manager)
+            log.info("setting up process pool")
             self.pool = ProcessPoolExecutor(n_jobs, ctx, worker.initalize, (cfg, job))
         except Exception as e:
             self.manager.shutdown()
@@ -57,8 +61,10 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
             yield task
 
     def shutdown(self):
+        _log.debug("shutting down process pool")
         self.pool.shutdown()
         self.manager.shutdown()
+        _log.debug("process pool shut down")
 
 
 class LenskitProcess(SpawnProcess):
@@ -71,10 +77,17 @@ class LenskitProcess(SpawnProcess):
 
     @override
     def run(self):
-        with WorkerContext(self._log_config):
+        with WorkerContext(self._log_config) as ctx:
             log = _log.bind(pid=self.pid, pname=self.name)
             log.info("multiprocessing worker started")
-            super().run()
+            task = None
+            try:
+                with Task("worker process", subprocess=True) as task:
+                    ctx.send_task(task)
+                    super().run()
+            finally:
+                if task is not None:
+                    ctx.send_task(task)
 
 
 class LenskitMPContext(SpawnContext):
