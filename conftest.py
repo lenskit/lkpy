@@ -8,6 +8,7 @@ import logging
 import os
 import warnings
 
+import structlog
 import torch
 from numpy.random import Generator, default_rng
 
@@ -20,11 +21,23 @@ from lenskit.util.test import ml_100k, ml_ds, ml_ratings  # noqa: F401
 
 logging.getLogger("numba").setLevel(logging.INFO)
 
-_log = logging.getLogger("lenskit.tests")
+_log = structlog.stdlib.get_logger("lenskit.tests")
 RNG_SEED = 42
 if "LK_TEST_FREE_RNG" in os.environ:
     warnings.warn("using nondeterministic RNG initialization")
     RNG_SEED = None
+
+structlog.configure(
+    [
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.MaybeTimeStamper(fmt="iso"),
+        structlog.processors.KeyValueRenderer(key_order=["timestamp", "event"]),
+    ],
+    wrapper_class=structlog.stdlib.BoundLogger,
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    cache_logger_on_first_use=True,
+)
 
 
 @fixture
