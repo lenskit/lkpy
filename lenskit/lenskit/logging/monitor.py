@@ -21,6 +21,8 @@ from tempfile import TemporaryDirectory
 import structlog
 import zmq
 
+from .tasks import Task
+
 SIGNAL_ADDR = "inproc://lenskit-monitor-signal"
 
 _log = structlog.stdlib.get_logger(__name__)
@@ -167,7 +169,10 @@ class MonitorThread(threading.Thread):
             self._handle_signal()
 
         if self.log_sock in ready:
-            self._handle_log_message()
+            try:
+                self._handle_log_message()
+            except Exception as e:
+                _log.error("error handling message: %s", e)
 
         if self.state == MonitorState.DRAINING and not ready:
             self.state = MonitorState.SHUTDOWN
@@ -211,5 +216,13 @@ class MonitorThread(threading.Thread):
             data = json.loads(data)
             method = getattr(logger, data["method"])
             method(**data["event"])
+        elif engine == "lenskit.logging.tasks":
+            task = Task.model_validate_json(data)
+            _log.debug("received subtask", task_id=str(task.task_id))
+            current = Task.current()
+            if current:
+                current.add_subtask(task)
+            else:
+                _log.debug("no active task for subtask reporting")
         else:
             _log.error("invalid log backend")
