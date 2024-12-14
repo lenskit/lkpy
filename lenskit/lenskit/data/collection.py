@@ -281,9 +281,9 @@ class ItemListCollection(Generic[K]):
 
     def _iter_record_batches(self, batch_size: int = 5000) -> Generator[pa.RecordBatch, None, None]:
         for batch in chunked(self._lists, batch_size):
-            keys = pa.RecordBatch.from_pylist([_key_dict(k) for (k, _il) in batch])
-            schema = pa.list_(pa.struct(self._list_schema))
-            rb = keys.add_column(
+            keys = pa.Table.from_pylist([_key_dict(k) for (k, _il) in batch])
+            schema = pa.list_(pa.struct(self._list_schema))  # type: ignore
+            tbl = keys.add_column(
                 keys.num_columns,
                 "items",
                 pa.array(
@@ -291,7 +291,7 @@ class ItemListCollection(Generic[K]):
                     schema,
                 ),
             )
-            yield rb
+            yield from tbl.to_batches()
 
     @property
     def key_fields(self) -> tuple[str]:
