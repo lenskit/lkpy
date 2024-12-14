@@ -469,7 +469,8 @@ def test_from_arrow_array():
     df = pd.DataFrame(
         {"item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5).astype(np.float32)}
     )
-    arr = pa.Table.from_pandas(df).to_struct_array()
+    arr = pa.Table.from_pandas(df)
+    arr = pa.chunked_array([rb.to_struct_array() for rb in arr.to_batches()])
     il = ItemList.from_arrow(arr, vocabulary=VOCAB)  # type: ignore
     assert len(il) == 5
     assert np.all(il.ids() == ITEMS)

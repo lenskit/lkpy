@@ -295,14 +295,14 @@ class ItemList:
                 The item vocabulary.
         """
         if isinstance(tbl, pa.Table):
-            tbl = tbl.to_struct_array()  # type: ignore
+            tbl = pa.chunked_array([rb.to_struct_array() for rb in tbl.to_batches()])  # type: ignore
 
         if isinstance(tbl, pa.ChunkedArray):
             tbl = tbl.combine_chunks()  # type: ignore
         assert isinstance(tbl, pa.StructArray)
         assert isinstance(tbl.type, pa.StructType)
 
-        names = tbl.type.names
+        names = tbl.type.names  # type: ignore
 
         ids = None
         nums = None
