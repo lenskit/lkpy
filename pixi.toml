@@ -4,9 +4,9 @@ channels = ["conda-forge", "pytorch", "nodefaults"]
 platforms = ["linux-64", "win-64", "osx-arm64"]
 
 [dependencies]
-pandas = ">=1.5, <3"
-numpy = ">=1.23, <2"
-scipy = ">=1.9"
+pandas = "~=2.0"
+numpy = ">=1.25"
+scipy = ">=1.11"
 pytorch = "~=2.1"
 threadpoolctl = ">=3.0"
 structlog = ">=24.4.0,<25"
@@ -22,6 +22,11 @@ python = "=3.11"
 
 [feature.py312.dependencies]
 python = "=3.12"
+
+[feature.py313]
+platforms = ["linux-64", "osx-arm64"]
+[feature.py313.dependencies]
+python = "=3.13"
 
 [feature.sklearn.dependencies]
 scikit-learn = "~=1.1"
@@ -39,7 +44,7 @@ lenskit-funksvd = { path = "lenskit-funksvd", editable = true }
 platforms = ["linux-64", "osx-arm64"]
 
 [feature.implicit.dependencies]
-implicit = ">=0.6.1"
+implicit = ">=0.7.2"
 
 [feature.implicit.pypi-dependencies]
 lenskit-implicit = { path = "lenskit-implicit", editable = true }
@@ -151,6 +156,7 @@ dev-compat = { features = [
 
 test-py311-core = { features = ["py311", "test"], solve-group = "py311" }
 test-py312-core = { features = ["py312", "test"], solve-group = "py312" }
+test-py313-core = { features = ["py313", "test"], solve-group = "py313" }
 
 test-py311-sklearn = { features = [
   "py311",
@@ -162,6 +168,11 @@ test-py312-sklearn = { features = [
   "test",
   "sklearn",
 ], solve-group = "py312" }
+test-py313-sklearn = { features = [
+  "py313",
+  "test",
+  "sklearn",
+], solve-group = "py313" }
 
 test-py311-funksvd = { features = [
   "py311",

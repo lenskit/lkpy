@@ -11,6 +11,8 @@ import { evalTestJob } from "./test/test-eval.ts";
 import { exampleTestJob } from "./test/test-examples.ts";
 import { aggregateResultsJob } from "./test/results.ts";
 
+const FULLDEP_CONDA_PYTHONS = ["py311", "py312"];
+
 const FILTER_PATHS = [
   "lenskit*/**.py",
   "**pyproject.toml",
@@ -25,13 +27,21 @@ const test_matrix = {
     install: "conda",
     key: "conda",
     name: "Conda Python ${{matrix.python}} on ${{matrix.platform}}",
-    matrix: { "python": CONDA_PYTHONS, "platform": PLATFORMS },
+    matrix: {
+      python: CONDA_PYTHONS,
+      platform: PLATFORMS,
+      exclude: [{ python: "py313", platform: "windows-latest" }],
+    },
   }),
   vanilla: testJob({
     install: "vanilla",
     key: "vanilla",
     name: "Vanilla Python ${{matrix.python}} on ${{matrix.platform}}",
-    matrix: { "python": PYTHONS, "platform": VANILLA_PLATFORMS },
+    matrix: {
+      python: PYTHONS,
+      platform: VANILLA_PLATFORMS,
+      exclude: [{ python: "3.13", platform: "macos-latest" }],
+    },
   }),
   nojit: testJob({
     install: "conda",
@@ -68,7 +78,7 @@ const test_matrix = {
     key: "funksvd",
     name: "FunkSVD tests on Python ${{matrix.python}}",
     packages: ["lenskit-funksvd"],
-    matrix: { "python": CONDA_PYTHONS },
+    matrix: { "python": FULLDEP_CONDA_PYTHONS },
     variant: "funksvd",
   }),
   "funksvd-mindep": testJob({
@@ -83,7 +93,7 @@ const test_matrix = {
     key: "implicit",
     name: "Implicit bridge tests on Python ${{matrix.python}}",
     packages: ["lenskit-implicit"],
-    matrix: { "python": CONDA_PYTHONS },
+    matrix: { "python": FULLDEP_CONDA_PYTHONS },
     variant: "implicit",
   }),
   "implicit-mindep": testJob({
@@ -98,7 +108,7 @@ const test_matrix = {
     key: "hpf",
     name: "HPF bridge tests on Python ${{matrix.python}}",
     packages: ["lenskit-hpf"],
-    matrix: { "python": CONDA_PYTHONS },
+    matrix: { "python": FULLDEP_CONDA_PYTHONS },
     variant: "hpf",
   }),
   "eval-tests": evalTestJob(),
