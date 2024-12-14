@@ -26,6 +26,7 @@ from typing_extensions import (
     cast,
 )
 
+from .arrow import tbl_to_structarray
 from .checks import check_1d
 from .mtarray import MTArray, MTGenericArray
 from .types import IDArray, IDSequence
@@ -295,7 +296,7 @@ class ItemList:
                 The item vocabulary.
         """
         if isinstance(tbl, pa.Table):
-            tbl = pa.chunked_array([rb.to_struct_array() for rb in tbl.to_batches()])  # type: ignore
+            tbl = tbl_to_structarray(tbl)
 
         if isinstance(tbl, pa.ChunkedArray):
             tbl = tbl.combine_chunks()  # type: ignore

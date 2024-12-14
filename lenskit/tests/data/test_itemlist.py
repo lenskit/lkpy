@@ -17,6 +17,7 @@ from hypothesis import given, settings
 from pytest import raises
 
 from lenskit.data import Dataset, ItemList
+from lenskit.data.arrow import tbl_to_structarray
 from lenskit.data.vocab import Vocabulary
 
 ITEMS = ["a", "b", "c", "d", "e"]
@@ -469,8 +470,7 @@ def test_from_arrow_array():
     df = pd.DataFrame(
         {"item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5).astype(np.float32)}
     )
-    arr = pa.Table.from_pandas(df)
-    arr = pa.chunked_array([rb.to_struct_array() for rb in arr.to_batches()])
+    arr = tbl_to_structarray(pa.Table.from_pandas(df))
     il = ItemList.from_arrow(arr, vocabulary=VOCAB)  # type: ignore
     assert len(il) == 5
     assert np.all(il.ids() == ITEMS)
