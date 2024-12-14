@@ -274,6 +274,13 @@ def test_arrow_array():
     assert np.all(tbl.column("score").to_numpy() == data)
 
 
+def test_empty_arrow():
+    il = ItemList()
+
+    arr = il.to_arrow()
+    assert arr.num_rows == 0
+
+
 def test_item_list_pickle_compact(ml_ds: Dataset):
     nums = [1, 0, 308, 24, 72]
     il = ItemList(item_nums=nums, vocabulary=ml_ds.items)

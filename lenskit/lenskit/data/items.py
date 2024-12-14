@@ -546,48 +546,86 @@ class ItemList:
 
     @overload
     def to_arrow(
-        self, *, ids: bool = True, numbers: bool = False, type: Literal["table"] = "table"
+        self,
+        *,
+        ids: bool = True,
+        numbers: bool = False,
+        type: Literal["table"] = "table",
+        columns: dict[str, pa.DataType] | None = None,
     ) -> pa.Table: ...
     @overload
     def to_arrow(
-        self, *, ids: bool = True, numbers: bool = False, type: Literal["array"]
+        self,
+        *,
+        ids: bool = True,
+        numbers: bool = False,
+        type: Literal["array"],
+        columns: dict[str, pa.DataType] | None = None,
     ) -> pa.StructArray: ...
     def to_arrow(
-        self, *, ids: bool = True, numbers: bool = False, type: Literal["table", "array"] = "table"
+        self,
+        *,
+        ids: bool = True,
+        numbers: bool = False,
+        type: Literal["table", "array"] = "table",
+        columns: dict[str, pa.DataType] | None = None,
     ):
         """
         Convert the item list to a Pandas table.
         """
         arrays = []
         names = []
-        if ids and (self._ids is not None or self._vocab is not None):
-            arrays.append(self.ids())
-            names.append("item_id")
-        if numbers and (self._numbers is not None or self._vocab is not None):
-            arrays.append(self.numbers())
-            names.append("item_num")
-        # we need to have numbers or ids, or it makes no sense
-        if "item_id" not in names and "item_num" not in names:
-            if ids and not numbers:
-                raise RuntimeError("item list has no vocabulary, cannot compute IDs")
-            elif numbers and not ids:
-                raise RuntimeError("item list has no vocabulary, cannot compute numbers")
+        if columns is not None and len(self) == 0:
+            arrays = [pa.array([], ft) for ft in columns.values()]
+            names = list(columns.keys())
+        else:
+            if (ids or (columns is not None and "item_id" in columns)) and (
+                self._ids is not None or self._vocab is not None
+            ):
+                arrays.append(self.ids())
+                names.append("item_id")
+            if (numbers or (columns is not None and "item_num" in columns)) and (
+                self._numbers is not None or self._vocab is not None
+            ):
+                arrays.append(self.numbers())
+                names.append("item_num")
+
+            # we need to have numbers or ids, or it makes no sense
+            if "item_id" not in names and "item_num" not in names:
+                if ids and not numbers:
+                    raise RuntimeError("item list has no vocabulary, cannot compute IDs")
+                elif numbers and not ids:
+                    raise RuntimeError("item list has no vocabulary, cannot compute numbers")
+                else:
+                    raise RuntimeError(
+                        "cannot create item data frame without identifiers or numbers"
+                    )
+
+            if columns is not None:
+                for fn, ft in columns.items():
+                    if fn in ("item_id", "item_num"):
+                        continue
+
+                    names.append(fn)
+                    col = self._fields.get(fn, None)
+                    if col is not None:
+                        arrays.append(col.numpy())
+                    else:
+                        arrays.append(pa.nulls(len(self), ft))
             else:
-                raise RuntimeError("cannot create item data frame without identifiers or numbers")
+                if "score" in self._fields:
+                    arrays.append(self.scores())
+                    names.append("score")
+                if self.ordered:
+                    arrays.append(self.ranks())
+                    names.append("rank")
+                # add remaining fields
+                for k, v in self._fields.items():
+                    if k == "score" or k == "rank":
+                        continue
 
-        if "score" in self._fields:
-            arrays.append(self.scores())
-            names.append("score")
-        if self.ordered:
-            arrays.append(self.ranks())
-            names.append("rank")
-        # add remaining fields
-        for k, v in self._fields.items():
-            if k == "score" or k == "rank":
-                continue
-
-            arrays.append(v.numpy())
-            names.append(k)
+                    arrays.append(v.numpy())
+                    names.append(k)
 
         if type == "table":
             return pa.Table.from_arrays(arrays, names)
@@ -601,11 +639,14 @@ class ItemList:
         Get the Arrow data types for this item list.
         """
         types: dict[str, pa.DataType] = {}
+        if len(self) == 0:
+            return types
+
         if ids:
             if self._ids is not None:
                 types["item_id"] = pa.from_numpy_dtype(self._ids.dtype)
             elif self._vocab is not None:
-                types["item_id"] = pa.from_numpy_dtype(self._vocab.index.dtype)
+                types["item_id"] = pa.from_numpy_dtype(self._vocab.ids().dtype)
 
         if numbers and (self._numbers is not None or self._vocab is not None):
             types["item_num"] = pa.int32()

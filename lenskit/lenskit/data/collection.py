@@ -87,6 +87,7 @@ class ItemListCollection(Generic[K]):
     _key_class: type[K]
     _lists: list[tuple[K, ItemList]]
     _index: dict[K, int] | None = None
+    _list_schema: dict[str, pa.DataType]
 
     def __init__(self, key: type[K] | Sequence[str], *, index: bool = True):
         """
@@ -100,6 +101,7 @@ class ItemListCollection(Generic[K]):
         self._lists = []
         if index:
             self._index = {}
+        self._list_schema = {}
 
     @overload
     @classmethod
@@ -280,11 +282,13 @@ class ItemListCollection(Generic[K]):
     def _iter_record_batches(self, batch_size: int = 5000) -> Generator[pa.RecordBatch, None, None]:
         for batch in it.batched(self._lists, batch_size):
             keys = pa.RecordBatch.from_pylist([_key_dict(k) for (k, _il) in batch])
-            _k1, il1 = batch[0]
-            schema = pa.list_(pa.struct(il1.arrow_types()))
+            schema = pa.list_(pa.struct(self._list_schema))
             rb = keys.append_column(
                 "items",
-                pa.array([il.to_arrow(type="array") for (_k, il) in batch], schema),
+                pa.array(
+                    [il.to_arrow(type="array", columns=self._list_schema) for (_k, il) in batch],
+                    schema,
+                ),
             )
             yield rb
 
@@ -336,6 +340,12 @@ class ItemListCollection(Generic[K]):
         self._lists.append((key, list))
         if self._index is not None:
             self._index[key] = len(self._lists) - 1
+        for fn, ft in list.arrow_types().items():
+            pft = self._list_schema.get(fn, None)
+            if pft is None:
+                self._list_schema[fn] = ft
+            elif not ft.equals(pft):
+                raise TypeError(f"incompatible item lists: field {fn} type {ft} != {pft}")
 
     @overload
     def lookup(self, key: tuple) -> ItemList | None: ...

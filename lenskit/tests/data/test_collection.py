@@ -196,3 +196,33 @@ def test_write_parquet(ml_ds: Dataset, tmpdir: Path):
     assert len(il1) == len(il2)
 
     assert sum(len(l1) for l1 in ilc2.lists()) == sum(len(l2) for l2 in ilc.lists())
+
+
+def test_write_parquet_with_empty(ml_ds: Dataset, tmpdir: Path):
+    ilc = ItemListCollection(["user_id"])
+    ilc.add(ItemList(), user_id=-1)
+    for user in ml_ds.users.ids():
+        if user % 348:
+            ilc.add(ml_ds.user_row(user), user_id=user)
+        else:
+            ilc.add(ItemList(), user_id=user)
+
+    _log.info("initial list:\n%s", ilc.to_df())
+
+    f = tmpdir / "items.parquet"
+    ilc.save_parquet(f)
+
+    assert f.exists()
+
+    ilc2 = ItemListCollection.load_parquet(f)
+    _log.info("loaded list:\n%s", ilc2.to_df())
+    assert len(ilc2) == len(ilc)
+    assert set(ilc2.keys()) == set(ilc.keys())
+
+    il1 = next(ilc.lists())
+    _log.info("first item (initial):\n%s", il1.to_df())
+    il2 = next(ilc2.lists())
+    _log.info("first item (loaded):\n%s", il2.to_df())
+    assert len(il1) == len(il2)
+
+    assert sum(len(l1) for l1 in ilc2.lists()) == sum(len(l2) for l2 in ilc.lists())
