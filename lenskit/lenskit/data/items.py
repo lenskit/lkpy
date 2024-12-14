@@ -307,7 +307,10 @@ class ItemList:
         assert isinstance(tbl, pa.StructArray)
         assert isinstance(tbl.type, pa.StructType)
 
-        names = tbl.type.names
+        if hasattr(tbl.type, "names"):
+            names = tbl.type.names
+        else:
+            names = [tbl.type.field(i).name for i in range(tbl.type.num_fields)]
 
         ids = None
         nums = None
