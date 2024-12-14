@@ -42,8 +42,9 @@ class ItemList:
     data, do not do in-place modifications of the list itself or the arrays or
     data frame it returns.
 
-    An item list logically a list of rows, each of which is an item, like a
-    :class:`~pandas.DataFrame` but supporting multiple array backends.
+    An item list logically a list of rows, each of which is an item with
+    multiple fields.  A designated field, ``score``, is available through the
+    :meth:`scores` method, and is always single-precision floating-point.
 
     Item lists can be subset as an array (e.g. ``items[selector]``), where
     integer indices (or arrays thereof), boolean arrays, and slices are allowed
@@ -200,22 +201,26 @@ class ItemList:
             if source is not None and source._ids is not None:
                 del self._ids
 
-        # convert fields and drop singular ID/number aliases
-        self._fields = {
-            name: check_1d(MTArray(data), self._len, label=name)
-            for (name, data) in eff_fields.items()
-            if name not in ("item_id", "item_num") and data is not False
-        }
+        if scores is not False:
+            if scores is None and "score" in eff_fields:
+                scores = np.require(eff_fields["score"], dtype=np.float32)
+            if scores is not None:
+                if "score" in eff_fields:  # pragma: nocover
+                    raise ValueError("cannot specify both scores= and score=")
 
-        if scores is False:
-            if "score" in self._fields:
-                del self._fields["score"]
-        elif scores is not None:
-            if "score" in fields:  # pragma: nocover
-                raise ValueError("cannot specify both scores= and score=")
-            if np.isscalar(scores):
-                scores = np.full(self._len, scores)
-            self._fields["score"] = MTArray(scores)
+                if np.isscalar(scores):
+                    scores = np.full(self._len, scores, dtype=np.float32)
+                else:
+                    scores = np.require(scores, np.float32)
+
+        # convert fields and drop singular ID/number aliases
+        self._fields = {}
+        if scores is not None:
+            self._fields["score"] = check_1d(MTArray(scores), self._len, label="score")
+
+        for name, data in eff_fields.items():
+            if name not in ("item_id", "item_num") and data is not False:
+                self._fields[name] = check_1d(MTArray(data), self._len, label=name)
 
     @classmethod
     def from_df(

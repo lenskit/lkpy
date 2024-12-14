@@ -157,7 +157,8 @@ def test_scores():
     scores = il.scores()
     assert scores is not None
     assert scores.shape == (5,)
-    assert np.all(scores == data)
+    assert np.all(scores == data.astype(np.float32))
+    assert scores.dtype == np.float32
 
     st = il.scores("torch")
     assert isinstance(st, torch.Tensor)
