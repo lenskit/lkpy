@@ -283,7 +283,7 @@ class ItemList:
     @classmethod
     def from_arrow(
         cls,
-        tbl: pa.StructArray | pa.Table,
+        tbl: pa.StructArray | pa.ChunkedArray | pa.Table,
         *,
         vocabulary: Vocabulary | None = None,
     ) -> ItemList:
@@ -308,7 +308,10 @@ class ItemList:
         assert isinstance(tbl, pa.StructArray)
         assert isinstance(tbl.type, pa.StructType)
 
-        names = tbl.type.names  # type: ignore
+        if hasattr(tbl.type, "names"):
+            names = tbl.type.names
+        else:
+            names = [tbl.type.field(i).name for i in range(tbl.type.num_fields)]
 
         ids = None
         nums = None
@@ -657,7 +660,7 @@ class ItemList:
         if type == "table":
             return pa.Table.from_arrays(arrays, names)
         elif type == "array":
-            return pa.RecordBatch.from_arrays(arrays, names).to_struct_array()
+            return pa.StructArray.from_arrays(arrays, names)
         else:  # pragma: nocover
             raise ValueError(f"unsupported target type {type}")
 
