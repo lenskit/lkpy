@@ -26,7 +26,7 @@ from typing_extensions import (
     cast,
 )
 
-from .arrow import tbl_to_structarray
+from .arrow import array_is_null, tbl_to_structarray
 from .checks import check_1d
 from .mtarray import MTArray, MTGenericArray
 from .types import IDArray, IDSequence
@@ -218,11 +218,16 @@ class ItemList:
 
         # convert fields and drop singular ID/number aliases
         self._fields = {}
-        if scores is not None:
+        if not array_is_null(scores):
+            assert scores is not None
             self._fields["score"] = check_1d(MTArray(scores), self._len, label="score")
 
         for name, data in eff_fields.items():
-            if name not in ("item_id", "item_num", "score") and data is not False:
+            if (
+                name not in ("item_id", "item_num", "score")
+                and data is not False
+                and not array_is_null(data)
+            ):
                 self._fields[name] = check_1d(MTArray(data), self._len, label=name)
 
     @classmethod

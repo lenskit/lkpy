@@ -2,6 +2,7 @@
 Apache Arrow utilities.
 """
 
+import numpy as np
 import pyarrow as pa
 
 
@@ -22,3 +23,12 @@ def tbl_to_structarray(tbl: pa.Table) -> pa.ChunkedArray | pa.StructArray:
             return rb_to_structarray(batches[0])
         else:
             return pa.chunked_array([rb_to_structarray(rb) for rb in batches])  # type: ignore
+
+
+def array_is_null(array: object) -> bool:
+    if array is None:
+        return True
+    if isinstance(array, pa.Array) and not np.any(array.is_valid()):
+        return True
+
+    return False
