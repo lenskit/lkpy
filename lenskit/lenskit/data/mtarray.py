@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pyarrow as pa
 import torch
 from numpy.typing import ArrayLike, NDArray
 from typing_extensions import Generic, Literal, LiteralString, Sequence, TypeVar, overload
@@ -35,9 +36,12 @@ class MTArray(Generic[NPT]):
     _shape: tuple[int, ...] | None = None
     _unknown: object = None
     _numpy: NDArray[NPT] | None = None
+    _arrow: pa.Array | pa.Tensor | None = None
     _torch: torch.Tensor | None = None
 
-    def __init__(self, array: NDArray[NPT] | torch.Tensor | Sequence | ArrayLike):
+    def __init__(
+        self, array: NDArray[NPT] | torch.Tensor | pa.Array | pa.Tensor | Sequence | ArrayLike
+    ):
         """
         Construct a new MTArray around an array.
         """
@@ -49,6 +53,11 @@ class MTArray(Generic[NPT]):
         else:
             # stash it in the common-format field for lazy conversion
             self._unknown = array
+            # save the shape for well-known types
+            if isinstance(array, pa.Array):
+                self._shape = (len(array),)
+            elif isinstance(array, (pa.Tensor, np.ndarray)):
+                self._shape = array.shape
 
     @property
     def shape(self) -> tuple[int, ...]:
@@ -76,12 +85,33 @@ class MTArray(Generic[NPT]):
                 The device on which the Torch tensor should reside.
         """
         if self._torch is None:
-            self._torch = torch.as_tensor(self._convertible())
+            try:
+                self._torch = torch.as_tensor(self._convertible())
+            except Exception:
+                # fallback to numpy is convertible is not convertible for some reason
+                self._torch = torch.as_tensor(self.numpy())
 
         if device:
             return self._torch.to(device)
         else:
             return self._torch
+
+    def arrow(self) -> pa.Array | pa.Tensor:
+        """
+        Get the array as an Arrow :class:`~pyarrow.Array`.
+        """
+        if self._arrow is None:
+            if isinstance(self._unknown, (pa.Array, pa.Tensor)):
+                self._arrow = self._unknown
+            else:
+                arr = self.numpy()
+                if len(arr.shape) == 1:  # type: ignore
+                    self._arrow = pa.array(arr)  # type: ignore
+                else:
+                    self._arrow = pa.Tensor.from_numpy(arr)  # type: ignore
+
+        assert self._arrow is not None
+        return self._arrow
 
     @overload
     def to(self, format: Literal["numpy"]) -> NDArray[NPT]: ...
