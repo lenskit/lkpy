@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any, Literal, Protocol, TypeVar, overload
 
 import numpy as np
+import pyarrow as pa
 from numpy.typing import NDArray
 
 
@@ -148,3 +149,12 @@ def check_type(
         raise TypeError(f"{label} has incorrect type {arr.dtype} (allowed: {types})")
     else:
         return False
+
+
+def array_is_null(array: object) -> bool:
+    if array is None:
+        return True
+    if isinstance(array, pa.Array) and not np.any(array.is_valid()):
+        return True
+
+    return False

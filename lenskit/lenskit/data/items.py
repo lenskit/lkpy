@@ -26,8 +26,7 @@ from typing_extensions import (
     cast,
 )
 
-from .arrow import array_is_null, tbl_to_structarray
-from .checks import check_1d
+from .checks import array_is_null, check_1d
 from .mtarray import MTArray, MTGenericArray
 from .types import IDArray, IDSequence
 from .vocab import Vocabulary
@@ -301,17 +300,14 @@ class ItemList:
                 The item vocabulary.
         """
         if isinstance(tbl, pa.Table):
-            tbl = tbl_to_structarray(tbl)
+            tbl = tbl.to_struct_array()
 
         if isinstance(tbl, pa.ChunkedArray):
             tbl = tbl.combine_chunks()  # type: ignore
         assert isinstance(tbl, pa.StructArray)
         assert isinstance(tbl.type, pa.StructType)
 
-        if hasattr(tbl.type, "names"):
-            names = tbl.type.names
-        else:
-            names = [tbl.type.field(i).name for i in range(tbl.type.num_fields)]
+        names = tbl.type.names
 
         ids = None
         nums = None

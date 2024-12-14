@@ -20,7 +20,7 @@ license = { file = "LICENSE.md" }
 dynamic = ["version"]
 dependencies = [
   "pandas ~=2.0",
-  "pyarrow >=11",
+  "pyarrow >=15",
   "numpy >=1.25",
   "scipy >=1.11",
   "torch ~=2.1",
