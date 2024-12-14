@@ -518,7 +518,7 @@ class ItemList:
             names.append("rank")
         # add remaining fields
         for k, v in self._fields.items():
-            if k == "score":
+            if k == "score" or k == "rank":
                 continue
 
             arrays.append(v.numpy())
@@ -530,6 +530,25 @@ class ItemList:
             return pa.RecordBatch.from_arrays(arrays, names).to_struct_array()
         else:  # pragma: nocover
             raise ValueError(f"unsupported target type {type}")
+
+    def arrow_types(self, *, ids: bool = True, numbers: bool = False) -> dict[str, pa.DataType]:
+        """
+        Get the Arrow data types for this item list.
+        """
+        types: dict[str, pa.DataType] = {}
+        if ids:
+            if self._ids is not None:
+                types["item_id"] = pa.from_numpy_dtype(self._ids.dtype)
+            elif self._vocab is not None:
+                types["item_id"] = pa.from_numpy_dtype(self._vocab.index.dtype)
+
+        if numbers and (self._numbers is not None or self._vocab is not None):
+            types["item_num"] = pa.int32()
+
+        for name, f in self._fields.items():
+            types[name] = pa.from_numpy_dtype(f.numpy().dtype)
+
+        return types
 
     def __len__(self):
         return self._len

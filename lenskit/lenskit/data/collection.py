@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from typing import Any, Generic, Iterator, Mapping, NamedTuple, TypeAlias, TypeVar, overload
 
 import pandas as pd
+import pyarrow as pa
 
 from lenskit.diagnostics import DataWarning
 
@@ -179,6 +180,18 @@ class ItemListCollection(Generic[K]):
             .reset_index(fields)
             .reset_index(drop=True)
         )
+
+    def to_table(self) -> pa.Table:
+        """
+        Convert this item list collection to a data frame.
+        """
+        keys = pa.Table.from_pylist([k._asdict() for (k, _il) in self._lists])
+        if self._lists:
+            schema = self._lists[0][1].arrow_types()
+            lists = pa.array(
+                [il.to_arrow(type="array") for (_k, il) in self._lists], pa.list_(pa.struct(schema))
+            )
+        return keys.add_column(keys.num_columns, "items", lists)
 
     @property
     def key_fields(self) -> tuple[str]:

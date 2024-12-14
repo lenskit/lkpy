@@ -154,3 +154,14 @@ def test_to_df():
     print(df)
     assert len(df) == 4
     assert df["user_id"].tolist() == [72, 82, 82, 82]
+
+
+def test_to_table():
+    ilc = ItemListCollection.from_dict(
+        {72: ItemList(["a"], scores=[1]), 82: ItemList(["a", "b", "c"], scores=[3, 4, 10])},
+        key="user_id",
+    )
+    tbl = ilc.to_table()
+    print(tbl)
+    assert tbl.num_rows == 2
+    assert np.all(tbl.column("user_id").to_numpy() == [72, 82])
