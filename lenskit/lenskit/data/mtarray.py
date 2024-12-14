@@ -118,17 +118,22 @@ class MTArray(Generic[NPT]):
     @overload
     def to(self, format: Literal["torch"], *, device: str | None) -> torch.Tensor: ...
     @overload
+    def to(self, format: Literal["arrow"]) -> pa.Array | pa.Tensor: ...
+    @overload
     def to(self, format: LiteralString, *, device: str | None = None) -> ArrayLike: ...
-    def to(self, format: str, *, device: str | None = None) -> ArrayLike:
+    def to(self, format: str, *, device: str | None = None) -> object:
         """
         Obtain the array in the specified format (dynamic version).
         """
-        if format == "numpy":
-            return self.numpy()
-        elif format == "torch":
-            return self.torch(device=device)
-        else:
-            raise RuntimeError(f"unsupported array format {format}")
+        match format:
+            case "numpy":
+                return self.numpy()
+            case "torch":
+                return self.torch(device=device)
+            case "arrow":
+                return self.arrow()
+            case _:
+                raise RuntimeError(f"unsupported array format {format}")
 
     def _convertible(self) -> object:
         """

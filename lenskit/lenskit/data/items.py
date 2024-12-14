@@ -398,6 +398,14 @@ class ItemList:
     @overload
     def numbers(
         self,
+        format: Literal["arrow"],
+        *,
+        vocabulary: Vocabulary | None = None,
+        missing: Literal["error", "negative"] = "error",
+    ) -> pa.Array[pa.Int32Scalar]: ...
+    @overload
+    def numbers(
+        self,
         format: LiteralString = "numpy",
         *,
         vocabulary: Vocabulary | None = None,
@@ -444,9 +452,11 @@ class ItemList:
         return self._numbers.to(format)
 
     @overload
-    def scores(self, format: Literal["numpy"] = "numpy") -> NDArray[np.floating] | None: ...
+    def scores(self, format: Literal["numpy"] = "numpy") -> NDArray[np.float32] | None: ...
     @overload
     def scores(self, format: Literal["torch"]) -> torch.Tensor | None: ...
+    @overload
+    def scores(self, format: Literal["arrow"]) -> pa.Array[pa.FloatScalar] | None: ...
     @overload
     def scores(
         self, format: Literal["pandas"], *, index: Literal["ids", "numbers"] | None = None
@@ -463,6 +473,8 @@ class ItemList:
     def ranks(self, format: Literal["numpy"] = "numpy") -> NDArray[np.int32] | None: ...
     @overload
     def ranks(self, format: Literal["torch"]) -> torch.Tensor | None: ...
+    @overload
+    def ranks(self, format: Literal["arrow"]) -> pa.Array[pa.Int32Scalar] | None: ...
     @overload
     def ranks(self, format: LiteralString = "numpy") -> ArrayLike | None: ...
     def ranks(self, format: LiteralString = "numpy") -> ArrayLike | None:
@@ -492,6 +504,8 @@ class ItemList:
     @overload
     def field(self, name: str, format: Literal["torch"]) -> torch.Tensor | None: ...
     @overload
+    def field(self, name: str, format: Literal["arrow"]) -> pa.Array | pa.Tensor | None: ...
+    @overload
     def field(
         self,
         name: str,
@@ -503,7 +517,7 @@ class ItemList:
     def field(self, name: str, format: LiteralString) -> ArrayLike | None: ...
     def field(
         self, name: str, format: LiteralString = "numpy", *, index: LiteralString | None = None
-    ) -> ArrayLike | None:
+    ) -> object:
         val = self._fields.get(name, None)
         if val is None:
             return None
@@ -595,7 +609,7 @@ class ItemList:
             if (numbers or (columns is not None and "item_num" in columns)) and (
                 self._numbers is not None or self._vocab is not None
             ):
-                arrays.append(self.numbers())
+                arrays.append(self.numbers("arrow"))
                 names.append("item_num")
 
             # we need to have numbers or ids, or it makes no sense
@@ -617,9 +631,9 @@ class ItemList:
                     names.append(fn)
                     col = self._fields.get(fn, None)
                     if col is not None:
-                        arrays.append(col.numpy())
+                        arrays.append(col.arrow())
                     else:
-                        arrays.append(pa.nulls(len(self), ft))
+                        arrays.append(pa.nulls(len(self), ft))  # type: ignore
             else:
                 if "score" in self._fields:
                     arrays.append(self.scores())
