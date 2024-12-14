@@ -6,7 +6,7 @@ import pyarrow as pa
 
 
 def rb_to_structarray(rb: pa.RecordBatch):
-    return pa.StructArray.from_arrays(rb.columns, rb.column_names)
+    return pa.StructArray.from_arrays(rb.columns, rb.schema.names)
 
 
 def tbl_to_structarray(tbl: pa.Table) -> pa.ChunkedArray | pa.StructArray:
