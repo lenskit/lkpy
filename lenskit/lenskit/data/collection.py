@@ -283,7 +283,8 @@ class ItemListCollection(Generic[K]):
         for batch in chunked(self._lists, batch_size):
             keys = pa.RecordBatch.from_pylist([_key_dict(k) for (k, _il) in batch])
             schema = pa.list_(pa.struct(self._list_schema))
-            rb = keys.append_column(
+            rb = keys.add_column(
+                keys.num_columns,
                 "items",
                 pa.array(
                     [il.to_arrow(type="array", columns=self._list_schema) for (_k, il) in batch],
