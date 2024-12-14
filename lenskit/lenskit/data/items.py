@@ -201,11 +201,14 @@ class ItemList:
             if source is not None and source._ids is not None:
                 del self._ids
 
-        if scores is not False:
+        if scores is False:  # check 'is False' to distinguish from None
+            scores = None
+        else:
             if scores is None and "score" in eff_fields:
                 scores = np.require(eff_fields["score"], dtype=np.float32)
+
             if scores is not None:
-                if "score" in eff_fields:  # pragma: nocover
+                if "score" in fields:  # pragma: nocover
                     raise ValueError("cannot specify both scores= and score=")
 
                 if np.isscalar(scores):
