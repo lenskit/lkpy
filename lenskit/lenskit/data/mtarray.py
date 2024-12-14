@@ -116,8 +116,14 @@ class MTArray(Generic[NPT]):
         else:
             raise RuntimeError("cannot find array data")
 
-    def __array__(self) -> NDArray[NPT]:
-        return self.numpy()
+    def __array__(self, dtype=None, copy=None) -> NDArray[NPT]:
+        arr = self.numpy()
+        if dtype is not None:
+            arr = np.require(arr, dtype)
+        if copy:
+            return arr.copy()
+        else:
+            return arr
 
 
 MTFloatArray = MTArray[np.floating]

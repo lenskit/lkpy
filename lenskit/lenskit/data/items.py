@@ -206,8 +206,7 @@ class ItemList:
         else:
             if scores is None and "score" in eff_fields:
                 scores = np.require(eff_fields["score"], dtype=np.float32)
-
-            if scores is not None:
+            elif scores is not None:
                 if "score" in fields:  # pragma: nocover
                     raise ValueError("cannot specify both scores= and score=")
 
@@ -222,7 +221,7 @@ class ItemList:
             self._fields["score"] = check_1d(MTArray(scores), self._len, label="score")
 
         for name, data in eff_fields.items():
-            if name not in ("item_id", "item_num") and data is not False:
+            if name not in ("item_id", "item_num", "score") and data is not False:
                 self._fields[name] = check_1d(MTArray(data), self._len, label=name)
 
     @classmethod

@@ -151,7 +151,7 @@ def test_item_id_list_vocab():
 
 
 def test_scores():
-    data = np.random.randn(5)
+    data = np.random.randn(5).astype(np.float32)
     il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
 
     scores = il.scores()
@@ -169,7 +169,7 @@ def test_scores():
 
 
 def test_scores_pandas_no_index():
-    data = np.random.randn(5)
+    data = np.random.randn(5).astype(np.float32)
     il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
 
     scores = il.scores("pandas")
@@ -179,7 +179,7 @@ def test_scores_pandas_no_index():
 
 
 def test_scores_pandas_id_index():
-    data = np.random.randn(5)
+    data = np.random.randn(5).astype(np.float32)
     il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
     scores = il.scores("pandas", index="ids")
     assert scores is not None
@@ -190,7 +190,7 @@ def test_scores_pandas_id_index():
 
 
 def test_scores_pandas_num_index():
-    data = np.random.randn(5)
+    data = np.random.randn(5).astype(np.float32)
     il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
     scores = il.scores("pandas", index="numbers")
     assert scores is not None
@@ -219,7 +219,7 @@ def test_numbers_alt_vocab():
 
 
 def test_pandas_df():
-    data = np.random.randn(5)
+    data = np.random.randn(5).astype(np.float32)
     il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
 
     df = il.to_df()
@@ -230,7 +230,7 @@ def test_pandas_df():
 
 
 def test_pandas_df_ordered():
-    data = np.random.randn(5)
+    data = np.random.randn(5).astype(np.float32)
     il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data, ordered=True)
 
     df = il.to_df()
@@ -241,7 +241,7 @@ def test_pandas_df_ordered():
 
 
 def test_pandas_df_no_numbers():
-    data = np.random.randn(5)
+    data = np.random.randn(5).astype(np.float32)
     il = ItemList(item_ids=ITEMS, vocabulary=VOCAB, scores=data, ordered=True)
     df = il.to_df(numbers=False)
     assert "item_id" in df.columns
@@ -251,7 +251,7 @@ def test_pandas_df_no_numbers():
 
 
 def test_arrow_table():
-    data = np.random.randn(5)
+    data = np.random.randn(5).astype(np.float32)
     il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
 
     tbl = il.to_arrow(numbers=True)
@@ -263,7 +263,7 @@ def test_arrow_table():
 
 
 def test_arrow_array():
-    data = np.random.randn(5)
+    data = np.random.randn(5).astype(np.float32)
     il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
 
     tbl = il.to_arrow(numbers=True, type="array")
@@ -406,7 +406,9 @@ def test_subset_slice(ml_ds: Dataset):
 
 
 def test_from_df():
-    df = pd.DataFrame({"item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5)})
+    df = pd.DataFrame(
+        {"item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5).astype(np.float32)}
+    )
     il = ItemList.from_df(df, vocabulary=VOCAB)  # type: ignore
     assert len(il) == 5
     assert np.all(il.ids() == ITEMS)
@@ -417,7 +419,12 @@ def test_from_df():
 
 def test_from_df_user():
     df = pd.DataFrame(
-        {"user_id": 50, "item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5)}
+        {
+            "user_id": 50,
+            "item_id": ITEMS,
+            "item_num": np.arange(5),
+            "score": np.random.randn(5).astype(np.float32),
+        }
     )
     il = ItemList.from_df(df, vocabulary=VOCAB)  # type: ignore
     assert len(il) == 5
@@ -433,7 +440,7 @@ def test_from_df_ranked():
             "item_id": ITEMS,
             "item_num": np.arange(5),
             "rank": np.arange(1, 6),
-            "score": np.random.randn(5),
+            "score": np.random.randn(5).astype(np.float32),
         }
     )
     il = ItemList.from_df(df, vocabulary=VOCAB)  # type: ignore
@@ -446,7 +453,9 @@ def test_from_df_ranked():
 
 
 def test_from_arrow_table():
-    df = pd.DataFrame({"item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5)})
+    df = pd.DataFrame(
+        {"item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5).astype(np.float32)}
+    )
     arr = pa.Table.from_pandas(df)
     il = ItemList.from_arrow(arr, vocabulary=VOCAB)  # type: ignore
     assert len(il) == 5
@@ -457,7 +466,9 @@ def test_from_arrow_table():
 
 
 def test_from_arrow_array():
-    df = pd.DataFrame({"item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5)})
+    df = pd.DataFrame(
+        {"item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5).astype(np.float32)}
+    )
     arr = pa.Table.from_pandas(df).to_struct_array()
     il = ItemList.from_arrow(arr, vocabulary=VOCAB)  # type: ignore
     assert len(il) == 5
@@ -468,8 +479,8 @@ def test_from_arrow_array():
 
 
 def test_copy_ctor():
-    data = np.random.randn(5)
-    extra = np.random.randn(5)
+    data = np.random.randn(5).astype(np.float32)
+    extra = np.random.randn(5).astype(np.float32)
 
     il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data, extra=extra)
     copy = ItemList(il)
@@ -496,8 +507,8 @@ def test_copy_na_scores():
 
 
 def test_copy_ctor_remove_scores():
-    data = np.random.randn(5)
-    extra = np.random.randn(5)
+    data = np.random.randn(5).astype(np.float32)
+    extra = np.random.randn(5).astype(np.float32)
 
     il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data, extra=extra)
     copy = ItemList(il, scores=False)
@@ -515,8 +526,8 @@ def test_copy_ctor_remove_scores():
 
 
 def test_copy_ctor_remove_extra():
-    data = np.random.randn(5)
-    extra = np.random.randn(5)
+    data = np.random.randn(5).astype(np.float32)
+    extra = np.random.randn(5).astype(np.float32)
 
     il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data, extra=extra)
     copy = ItemList(il, extra=False)
