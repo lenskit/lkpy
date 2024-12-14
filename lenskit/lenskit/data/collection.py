@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import itertools as it
 import warnings
 from collections import namedtuple
 from collections.abc import Sequence
@@ -21,6 +20,7 @@ from typing import (
 
 import pandas as pd
 import pyarrow as pa
+from more_itertools import chunked
 from pyarrow.parquet import ParquetDataset, ParquetWriter
 
 from lenskit.diagnostics import DataWarning
@@ -280,7 +280,7 @@ class ItemListCollection(Generic[K]):
         return ilc
 
     def _iter_record_batches(self, batch_size: int = 5000) -> Generator[pa.RecordBatch, None, None]:
-        for batch in it.batched(self._lists, batch_size):
+        for batch in chunked(self._lists, batch_size):
             keys = pa.RecordBatch.from_pylist([_key_dict(k) for (k, _il) in batch])
             schema = pa.list_(pa.struct(self._list_schema))
             rb = keys.append_column(

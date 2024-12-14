@@ -24,6 +24,7 @@ dependencies = [
   "numpy >= 1.24",
   "scipy >= 1.10.0",
   "torch ~=2.1",
+  "more-itertools >=9.0",
   "threadpoolctl >=3.0",
   "structlog >= 23.2",
   "rich ~=13.5",
