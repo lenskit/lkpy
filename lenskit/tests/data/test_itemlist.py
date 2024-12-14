@@ -437,6 +437,28 @@ def test_from_df_ranked():
     assert np.all(il.ranks() == np.arange(1, 6))
 
 
+def test_from_arrow_table():
+    df = pd.DataFrame({"item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5)})
+    arr = pa.Table.from_pandas(df)
+    il = ItemList.from_arrow(arr, vocabulary=VOCAB)  # type: ignore
+    assert len(il) == 5
+    assert np.all(il.ids() == ITEMS)
+    assert np.all(il.numbers() == np.arange(5))
+    assert np.all(il.scores() == df["score"].values)
+    assert not il.ordered
+
+
+def test_from_arrow_array():
+    df = pd.DataFrame({"item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5)})
+    arr = pa.Table.from_pandas(df).to_struct_array()
+    il = ItemList.from_arrow(arr, vocabulary=VOCAB)  # type: ignore
+    assert len(il) == 5
+    assert np.all(il.ids() == ITEMS)
+    assert np.all(il.numbers() == np.arange(5))
+    assert np.all(il.scores() == df["score"].values)
+    assert not il.ordered
+
+
 def test_copy_ctor():
     data = np.random.randn(5)
     extra = np.random.randn(5)

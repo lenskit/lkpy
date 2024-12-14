@@ -268,6 +268,71 @@ class ItemList:
         return items
 
     @classmethod
+    def from_arrow(
+        cls,
+        tbl: pa.StructArray | pa.Table,
+        *,
+        vocabulary: Vocabulary | None = None,
+    ) -> ItemList:
+        """
+        Create a item list from a Pandas table or structured array.  The table
+        should have ``item_num`` and/or ``item_id`` columns to identify the
+        items; other columns (e.g. ``score`` or ``rating``) are added as fields.
+        If the data frame has user columns (``user_id`` or ``user_num``), those
+        are dropped by default.
+
+        Args:
+            tbl:
+                The Arrow table or array to convert to an item list.
+            vocabulary:
+                The item vocabulary.
+        """
+        if isinstance(tbl, pa.Table):
+            tbl = tbl.to_struct_array()  # type: ignore
+
+        if isinstance(tbl, pa.ChunkedArray):
+            tbl = tbl.combine_chunks()  # type: ignore
+        assert isinstance(tbl, pa.StructArray)
+        assert isinstance(tbl.type, pa.StructType)
+
+        names = tbl.type.names
+
+        ids = None
+        nums = None
+        if "item_id" in names:
+            ids = tbl.field("item_id")
+        if "item_num" in names:
+            nums = tbl.field("item_num")
+
+        if ids is None and nums is None:
+            raise TypeError("data table must have at least one of item_id, item_num columns")
+
+        to_drop = ["item_id", "item_num"]
+
+        if "rank" in names:
+            ranks = tbl.field("rank").to_numpy()
+            to_drop.append("rank")
+            if ranks[0] != 1:
+                raise ValueError("item ranks do not start with 1")
+            if np.any(np.diff(ranks) != 1):
+                raise ValueError("item ranks not consecutive")
+        else:
+            ranks = None
+
+        fields = {c: tbl.field(c).to_numpy() for c in names if c not in to_drop}
+        items = cls(
+            item_ids=ids,  # type: ignore
+            item_nums=nums,  # type: ignore
+            vocabulary=vocabulary,
+            ordered=ranks is not None,
+            **fields,  # type: ignore
+        )
+        if ranks is not None:
+            items._ranks = MTArray(np.require(ranks, np.int32))  # type: ignore
+        assert len(items) == len(tbl)
+        return items
+
+    @classmethod
     def from_vocabulary(cls, vocab: Vocabulary) -> ItemList:
         return ItemList(item_ids=vocab.ids(), item_nums=np.arange(len(vocab)), vocabulary=vocab)
 

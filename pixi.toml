@@ -5,6 +5,7 @@ platforms = ["linux-64", "win-64", "osx-arm64"]
 
 [dependencies]
 pandas = ">=1.5, <3"
+pyarrow = ">=11"
 numpy = ">=1.23, <2"
 scipy = ">=1.9"
 pytorch = "~=2.1"
@@ -88,6 +89,7 @@ pyyaml = "~=6.0"
 packaging = ">=24.0"
 tqdm = ">=4"
 pandas-stubs = ">=1.5,<3"
+pyarrow-stubs = ">=11"
 just = ">=1.2"
 deno = "~=1.46"
 

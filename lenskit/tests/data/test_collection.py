@@ -1,4 +1,6 @@
+import logging
 import pickle
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -7,6 +9,9 @@ from pytest import raises
 
 from lenskit.data import ItemList
 from lenskit.data.collection import ItemListCollection, UserIDKey, _create_key, project_key
+from lenskit.data.dataset import Dataset
+
+_log = logging.getLogger(__name__)
 
 
 def test_generic_key():
@@ -156,12 +161,38 @@ def test_to_df():
     assert df["user_id"].tolist() == [72, 82, 82, 82]
 
 
-def test_to_table():
+def test_to_arrow():
     ilc = ItemListCollection.from_dict(
         {72: ItemList(["a"], scores=[1]), 82: ItemList(["a", "b", "c"], scores=[3, 4, 10])},
         key="user_id",
     )
-    tbl = ilc.to_table()
+    tbl = ilc.to_arrow()
     print(tbl)
     assert tbl.num_rows == 2
     assert np.all(tbl.column("user_id").to_numpy() == [72, 82])
+
+
+def test_write_parquet(ml_ds: Dataset, tmpdir: Path):
+    ilc = ItemListCollection(["user_id"])
+    for user in ml_ds.users.ids():
+        ilc.add(ml_ds.user_row(user), user_id=user)
+
+    _log.info("initial list:\n%s", ilc.to_df())
+
+    f = tmpdir / "items.parquet"
+    ilc.save_parquet(f)
+
+    assert f.exists()
+
+    ilc2 = ItemListCollection.load_parquet(f)
+    _log.info("loaded list:\n%s", ilc2.to_df())
+    assert len(ilc2) == len(ilc)
+    assert set(ilc2.keys()) == set(ilc.keys())
+
+    il1 = next(ilc.lists())
+    _log.info("first item (initial):\n%s", il1.to_df())
+    il2 = next(ilc2.lists())
+    _log.info("first item (loaded):\n%s", il2.to_df())
+    assert len(il1) == len(il2)
+
+    assert sum(len(l1) for l1 in ilc2.lists()) == sum(len(l2) for l2 in ilc.lists())

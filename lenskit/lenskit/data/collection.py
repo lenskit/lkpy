@@ -1,12 +1,27 @@
 from __future__ import annotations
 
+import itertools as it
 import warnings
 from collections import namedtuple
 from collections.abc import Sequence
-from typing import Any, Generic, Iterator, Mapping, NamedTuple, TypeAlias, TypeVar, overload
+from os import PathLike
+from pathlib import Path
+from typing import (
+    Any,
+    Generator,
+    Generic,
+    Iterator,
+    Literal,
+    Mapping,
+    NamedTuple,
+    TypeAlias,
+    TypeVar,
+    overload,
+)
 
 import pandas as pd
 import pyarrow as pa
+from pyarrow.parquet import ParquetDataset, ParquetWriter
 
 from lenskit.diagnostics import DataWarning
 
@@ -181,17 +196,97 @@ class ItemListCollection(Generic[K]):
             .reset_index(drop=True)
         )
 
-    def to_table(self) -> pa.Table:
+    def to_arrow(self, *, batch_size: int = 5000) -> pa.Table:
         """
-        Convert this item list collection to a data frame.
+        Convert this item list collection to an Arrow table.
+
+        The resulting table has one row per item list, with the item list
+        contents an ``items`` column of a structured list type.  This preserves
+        empty item lists for higher-fidelity data storage.
+
+        Args:
+            batch_size:
+                The Arrow record batch size.
         """
-        keys = pa.Table.from_pylist([k._asdict() for (k, _il) in self._lists])
-        if self._lists:
-            schema = self._lists[0][1].arrow_types()
-            lists = pa.array(
-                [il.to_arrow(type="array") for (_k, il) in self._lists], pa.list_(pa.struct(schema))
+        return pa.Table.from_batches(self._iter_record_batches())
+
+    def save_parquet(
+        self,
+        path: PathLike[str],
+        *,
+        layout: Literal["native", "flat"] = "native",
+        batch_size: int = 5000,
+        compression: Literal["zstd", "gzip", "snappy", "lz4"] | None = "zstd",
+    ) -> None:
+        """
+        Save this item list collection to a Parquet file.  This supports two
+        types of Parquet files: “native” collections store one row per list,
+        with the item list contents in a repeated structure column named
+        ``items``; this layout fully preserves the item list collection,
+        including empty item lists.  The “flat” layout is easier to work with in
+        software such as Pandas, but cannot store empty item lists.
+
+        Args:
+            layout:
+                The table layout to use.
+            batch_size:
+                The Arrow record batch size.
+            compression:
+                The compression scheme to use.
+        """
+        if layout == "flat":
+            self.to_df().to_parquet(path, compression=compression)
+            return
+
+        writer = None
+        try:
+            for batch in self._iter_record_batches(batch_size):
+                if writer is None:
+                    writer = ParquetWriter(Path(path), batch.schema, compression=compression)
+                writer.write_batch(batch)
+        finally:
+            if writer is not None:
+                writer.close()
+
+    @classmethod
+    def load_parquet(cls, path: PathLike[str] | list[PathLike[str]]) -> ItemListCollection:
+        """
+        Load this item list from a Parquet file using the native layout.
+
+        .. note::
+
+            To load item list collections in the flat layout, use Pandas and
+            :meth:`from_df`.
+
+        Args:
+            path:
+                Path to the Parquet file to load.
+        """
+        if isinstance(path, list):
+            path = [Path(p) for p in path]
+        else:
+            path = Path(path)
+        dataset = ParquetDataset(path)  # type: ignore
+        table = dataset.read()
+        keys = table.drop("items")
+        lists = table.column("items")
+        ilc = ItemListCollection(keys.schema.names)
+        for i, key in enumerate(keys.to_pylist()):
+            il_data = lists[i].values
+            ilc.add(ItemList.from_arrow(il_data), **key)
+
+        return ilc
+
+    def _iter_record_batches(self, batch_size: int = 5000) -> Generator[pa.RecordBatch, None, None]:
+        for batch in it.batched(self._lists, batch_size):
+            keys = pa.RecordBatch.from_pylist([_key_dict(k) for (k, _il) in batch])
+            _k1, il1 = batch[0]
+            schema = pa.list_(pa.struct(il1.arrow_types()))
+            rb = keys.append_column(
+                "items",
+                pa.array([il.to_arrow(type="array") for (_k, il) in batch], schema),
             )
-        return keys.add_column(keys.num_columns, "items", lists)
+            yield rb
 
     @property
     def key_fields(self) -> tuple[str]:
@@ -311,6 +406,10 @@ class ItemListCollection(Generic[K]):
 def _key_fields(kt: type[tuple]) -> tuple[str]:
     "extract the fields from a key type"
     return kt._fields  # type: ignore
+
+
+def _key_dict(kt: tuple[ID, ...]) -> Mapping[str, Any]:
+    return kt._asdict()  # type: ignore
 
 
 @overload
