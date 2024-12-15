@@ -18,11 +18,11 @@ import pandas as pd
 from numpy.typing import NDArray
 from typing_extensions import Callable, Literal, TypeAlias, override
 
-from lenskit.data import ItemList, ItemListCollection
+from lenskit.data import ItemList
 from lenskit.data.schemas import ITEM_COMPAT_COLUMN, normalize_columns
 from lenskit.data.types import AliasedColumn
 
-from ._base import GlobalMetric, ListMetric, Metric
+from ._base import DecomposedMetric, ListMetric, Metric
 
 _log = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ class PredictMetric(Metric):
         return pred_s, rate_s
 
 
-class RMSE(PredictMetric, ListMetric, GlobalMetric):
+class RMSE(PredictMetric, ListMetric, DecomposedMetric):
     """
     Compute RMSE (root mean squared error).  This is computed as:
 
@@ -126,36 +126,29 @@ class RMSE(PredictMetric, ListMetric, GlobalMetric):
         return np.sqrt(np.mean(err))
 
     @override
-    def measure_run(
-        self, predictions: ItemListCollection, test: ItemListCollection | None = None, /
-    ) -> float:
-        sse = 0
-        n = 0
-        for key, plist in predictions:
-            if test is None:
-                tlist = None
-            else:
-                tlist = test.lookup_projected(key)
-                if tlist is None:
-                    _log.warning("missing truth for list %s", key)
-                    if self.missing_truth == "error":
-                        raise ValueError(f"missing truth for list {key}")
-                    else:
-                        continue
+    def compute_list_data(self, output, test):
+        ps, ts = self.align_scores(output, test)
+        err = ps - ts
+        err *= err
+        return np.sum(err), len(err)
 
-            ps, ts = self.align_scores(plist, tlist)
-            err = ps - ts
-            err *= err
-            sse += np.sum(err)
-            n += np.sum(ps.notna() & ts.notna())
+    @override
+    def extract_list_metric(self, metric):
+        tot, n = metric
+        return np.sqrt(tot / n)
 
-        if n == 0:
-            return np.nan
-        else:
-            return np.sqrt(sse / n)
+    @override
+    def global_aggregate(self, values):
+        tot_sqerr = 0.0
+        tot_n = 0.0
+        for t, n in values:
+            tot_sqerr += t
+            tot_n += n
+
+        return np.sqrt(tot_sqerr / tot_n)
 
 
-class MAE(PredictMetric, ListMetric, GlobalMetric):
+class MAE(PredictMetric, ListMetric, DecomposedMetric):
     """
     Compute MAE (mean absolute error).  This is computed as:
 
@@ -175,29 +168,22 @@ class MAE(PredictMetric, ListMetric, GlobalMetric):
         return np.mean(np.abs(err)).item()
 
     @override
-    def measure_run(
-        self, predictions: ItemListCollection, test: ItemListCollection | None = None, /
-    ) -> float:
-        sae = 0
-        n = 0
-        for key, plist in predictions:
-            if test is None:
-                tlist = None
-            else:
-                tlist = test.lookup_projected(key)
-                if tlist is None:
-                    _log.warning("missing truth for list %s", key)
-                    if self.missing_truth == "error":
-                        raise ValueError(f"missing truth for list {key}")
-                    else:
-                        continue
+    def compute_list_data(self, output, test):
+        ps, ts = self.align_scores(output, test)
+        err = ps - ts
+        return np.sum(np.abs(err)), len(err)
 
-            ps, ts = self.align_scores(plist, tlist)
-            err = ps - ts
-            sae += np.sum(np.abs(err))
-            n += np.sum(ps.notna() & ts.notna())
+    @override
+    def extract_list_metric(self, metric):
+        tot, n = metric
+        return tot / n
 
-        if n == 0:
-            return np.nan
-        else:
-            return sae / n
+    @override
+    def global_aggregate(self, values):
+        tot_err = 0.0
+        tot_n = 0.0
+        for t, n in values:
+            tot_err += t
+            tot_n += n
+
+        return tot_err / tot_n

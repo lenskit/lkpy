@@ -76,3 +76,37 @@ class GlobalMetric(Metric):
         Individual metric classes need to implement this method.
         """
         raise NotImplementedError()
+
+
+class DecomposedMetric(Metric):
+    """
+    Base class for metrics that measure entire runs through flexible
+    aggregations of per-list intermediate measurements.  They can optionally
+    extract individual-list metrics from the per-list measurements.
+    """
+
+    @abstractmethod
+    def compute_list_data(self, output: ItemList, test: ItemList, /) -> object:
+        """
+        Compute measurements for a single list.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def extract_list_metric(self, metric: object, /) -> float | None:
+        """
+        Extract a single-list metric from the per-list measurement result (if
+        applicable).
+
+        Returns:
+            The per-list metric, or ``None`` if this metric does not compute
+            per-list metrics.
+        """
+        return None
+
+    @abstractmethod
+    def global_aggregate(self, values: list[object], /) -> float:
+        """
+        Aggregate list metrics to compute a global value.
+        """
+        raise NotImplementedError()

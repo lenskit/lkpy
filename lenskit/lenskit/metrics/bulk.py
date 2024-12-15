@@ -12,7 +12,7 @@ from lenskit.data import ItemList, ItemListCollection
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import item_progress
 
-from ._base import GlobalMetric, ListMetric, Metric, MetricFunction
+from ._base import DecomposedMetric, GlobalMetric, ListMetric, Metric, MetricFunction
 
 _log = logging.getLogger(__name__)
 K1 = TypeVar("K1", bound=tuple)
@@ -38,6 +38,11 @@ class MetricWrapper:
     def is_global(self) -> bool:
         "Check if this metric is global."
         return isinstance(self.metric, GlobalMetric)
+
+    @property
+    def is_decomposed(self) -> bool:
+        "Check if this metric is decomposed."
+        return isinstance(self.metric, DecomposedMetric)
 
     def measure_list(self, list: ItemList, test: ItemList) -> float:
         if isinstance(self.metric, ListMetric):
@@ -208,9 +213,10 @@ class RunAnalysis:
         index = pd.MultiIndex.from_tuples(outputs.keys())
         index.names = list(outputs.key_fields)
 
-        lms = [m for m in self.metrics if m.is_listwise]
+        lms = [m for m in self.metrics if m.is_listwise or m.is_decomposed]
         gms = [m for m in self.metrics if m.is_global]
         list_results = pd.DataFrame({m.label: np.nan for m in lms}, index=index)
+        list_intermediates = {m.label: [] for m in self.metrics if m.is_decomposed}
 
         n = len(outputs)
         _log.info("computing %d listwise metrics for %d output lists", len(lms), n)
@@ -222,12 +228,31 @@ class RunAnalysis:
                 elif list_test is None:
                     _log.warning("list %s: no test items", key)
                 else:
-                    list_results.iloc[i] = [m.measure_list(out, list_test) for m in lms]
+                    l_row: list[float | None] = []
+                    for m in lms:
+                        mv = None
+                        if m.is_decomposed:
+                            assert isinstance(m.metric, DecomposedMetric)
+                            val = m.metric.compute_list_data(out, list_test)
+                            list_intermediates[m.label].append(val)
+                            mv = m.metric.extract_list_metric(val)
+                        if mv is None and m.is_listwise:
+                            mv = m.measure_list(out, list_test)
+                        l_row.append(mv)
+                    list_results.iloc[i] = l_row  # type: ignore
                 pb.update()
 
         _log.info("computing %d global metrics for %d output lists", len(gms), n)
         global_results = pd.Series(
-            {m.label: m.measure_run(outputs, test) for m in self.metrics if m.is_global},
+            {
+                m.label: (
+                    m.metric.global_aggregate(list_intermediates[m.label])
+                    if m.is_decomposed
+                    else m.measure_run(outputs, test)
+                )
+                for m in self.metrics
+                if m.is_global or m.is_decomposed
+            },
             dtype=np.float64,
         )
 
