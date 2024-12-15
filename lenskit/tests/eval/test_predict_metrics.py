@@ -13,7 +13,7 @@ from pytest import approx, mark, raises
 
 from lenskit.data import ItemList, from_interactions_df
 from lenskit.metrics import RunAnalysis, call_metric
-from lenskit.metrics.predict import MAE, RMSE, measure_user_predictions
+from lenskit.metrics.predict import MAE, RMSE
 
 _log = logging.getLogger(__name__)
 

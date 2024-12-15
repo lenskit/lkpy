@@ -25,19 +25,22 @@ The following computes RMSE over a small subset of the ``ml-small`` ratings::
     from lenskit.datasets import MovieLens
     from lenskit.algorithms.bias import Bias
     from lenskit.batch import predict
-    from lenskit.metrics.predict import user_metric, RMSE
+    from lenskit.metrics import RunAnalysis
+    from lenskit.metrics.predict import RMSE
     ratings = MovieLens('ml-small').ratings.sample(frac=0.1)
     test = ratings.iloc[:1000]
     train = ratings.iloc[1000:]
     algo = Bias()
     algo.fit(train)
     preds = predict(algo, test)
-    measure_user_predictions(preds, RMSE)
+    pra = RunAnalysis()
+    pra.add_metric(RMSE())
+    results = pra.compute(preds, test)
 
 Calling Metrics
 ---------------
 
-There are three ways to call a prediction accuracy metric:
+There are two ways to directly call a prediction accuracy metric:
 
 * Pass two item lists, the first containing predicted ratings (as the list's
   :py:meth:`~lenskit.data.ItemLists.scores`) and the second containing
@@ -45,18 +48,8 @@ There are three ways to call a prediction accuracy metric:
 
 * Pass a single item list with scores and a ``rating`` field.
 
-* Pass a single data frame with both ``score`` and ``rating`` columns
-  (``prediction`` is accepted as an alias for ``score``).
-
-When computing globally-averaged prediction accuracy, it's best to use the data
-frame option.
-
-If you want per-user metrics, the :py:func:`measure_user_predictions` function
-helps automate this computation.  It takes a data frame (with a ``user_id`` or
-``user`` column, along with the ``score`` and ``rating`` columns) and a metric
-and returns a series of per-user scores, indexed by user ID::
-
-    measure_user_predictions(preds, RMSE)
+For evaluation, you will usually want to use :class:`~lenskit.metrics.RunAnalysis`,
+which takes care of calling the prediction metric for you.
 
 Missing Data
 ------------
@@ -89,6 +82,3 @@ The corresponding ``missing_truth="ignore"`` will cause the metric to ignore
 predictions with no corresponding rating (this case is unlikely to produce
 unhelpful eval results, but may indicate a misconfiguration in how you determine
 the items to score).
-
-:py:func:`measure_user_predictions` also accepts these options, and passes
-them through to the underlying metric.

@@ -19,7 +19,6 @@ from numpy.typing import NDArray
 from typing_extensions import Callable, Literal, TypeAlias, override
 
 from lenskit.data import ItemList, ItemListCollection
-from lenskit.data.bulk import group_df
 from lenskit.data.schemas import ITEM_COMPAT_COLUMN, normalize_columns
 from lenskit.data.types import AliasedColumn
 
@@ -202,23 +201,3 @@ class MAE(PredictMetric, ListMetric, GlobalMetric):
             return np.nan
         else:
             return sae / n
-
-
-def measure_user_predictions(
-    predictions: pd.DataFrame, metric: PredictMetric | type[PredictMetric]
-) -> pd.Series:
-    """
-    Compute per-user metrics for a set of predictions.
-
-    Args:
-        predictions:
-            A data frame of predictions.  Must have `user_id`, `item_id`,
-            `score`, and `rating` columns.
-        metric:
-            The metric to compute.  :fun:`rmse` and :fun:`mae` both implement
-            this interface.
-    """
-    if isinstance(metric, type):
-        metric = metric()
-
-    return group_df(predictions).apply(lambda df: metric.measure_list(df))
