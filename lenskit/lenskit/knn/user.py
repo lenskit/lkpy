@@ -292,15 +292,9 @@ def score_items_with_neighbors(
     nbr_rates = nbr_rates[:, items.numpy()]
 
     nbr_t = nbr_rates.transpose().tocsr()
-    nbr_t = torch.sparse_csr_tensor(
-        crow_indices=torch.from_numpy(nbr_t.indptr),
-        col_indices=torch.from_numpy(nbr_t.indices),
-        values=torch.from_numpy(nbr_t.data),
-        size=nbr_t.shape,
-    )
 
     # count nbrs for each item
-    counts = np.diff(nbr_t.crow_indices())
+    counts = np.diff(nbr_t.indptr)
     assert counts.shape == items.shape
 
     log.debug(
@@ -332,11 +326,10 @@ def score_items_with_neighbors(
 
     bads = np.argwhere(exc_mask)[:, 0]
     for badi in bads:
-        col = nbr_t[badi]
-        assert col.shape == nbr_rates.shape[:1]
+        s, e = nbr_t.indptr[badi : (badi + 2)]
 
-        bi_users = col.indices()[0]
-        bi_rates = col.values()
+        bi_users = nbr_t.indices[s:e]
+        bi_rates = torch.from_numpy(nbr_t.data[s:e])
         bi_sims = nbr_sims[bi_users]
 
         tk_vs, tk_is = torch.topk(bi_sims, max_nbrs)
