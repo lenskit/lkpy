@@ -100,6 +100,17 @@ def torch_sparse_from_scipy(
             raise ValueError(f"invalid layout {layout}")
 
 
+def torch_sparse_to_scipy(M: torch.Tensor) -> sps.csr_array | sps.coo_array:
+    if M.is_sparse:
+        return sps.coo_array((M.values().numpy(), M.indices().numpy()), shape=M.shape)
+    elif M.is_sparse_csr:
+        return sps.csr_array(
+            (M.values().numpy(), M.col_indices().numpy(), M.crow_indices().numpy()), shape=M.shape
+        )
+    else:
+        raise TypeError("unsupported tensor type")
+
+
 if platform.machine() == "arm64":
 
     @torch.jit.ignore  # type: ignore

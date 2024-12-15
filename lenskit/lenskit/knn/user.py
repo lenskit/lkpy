@@ -17,13 +17,14 @@ import numpy as np
 import pandas as pd
 import structlog
 import torch
+from scipy.sparse import csr_array
 from typing_extensions import NamedTuple, Optional, Self, override
 
 from lenskit import util
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery
 from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataWarning
-from lenskit.math.sparse import normalize_sparse_rows, safe_spmv
+from lenskit.math.sparse import normalize_sparse_rows, safe_spmv, torch_sparse_to_scipy
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component, Trainable
 
@@ -73,7 +74,7 @@ class UserKNNScorer(Component, Trainable):
     "Mean rating for each known user."
     user_vectors_: torch.Tensor
     "Normalized rating matrix (CSR) to find neighbors at prediction time."
-    user_ratings_: torch.Tensor
+    user_ratings_: csr_array
     "Centered but un-normalized rating matrix (COO) to find neighbor ratings."
 
     def __init__(
@@ -129,7 +130,7 @@ class UserKNNScorer(Component, Trainable):
         normed, _norms = normalize_sparse_rows(rmat, "unit")
 
         self.user_vectors_ = normed
-        self.user_ratings_ = rmat.to_sparse_coo()
+        self.user_ratings_ = torch_sparse_to_scipy(rmat).tocsr()
         self.users_ = data.users.copy()
         self.user_means_ = means
         self.items_ = data.items.copy()
@@ -211,7 +212,7 @@ class UserKNNScorer(Component, Trainable):
 
         scores += umean
 
-        results = pd.Series(scores.numpy(), index=items.ids()[ki_mask.numpy()], name="prediction")
+        results = pd.Series(scores, index=items.ids()[ki_mask.numpy()], name="prediction")
         results = results.reindex(items.ids())
 
         log.debug(
@@ -278,38 +279,28 @@ def score_items_with_neighbors(
     items: torch.Tensor,
     nbr_rows: torch.Tensor,
     nbr_sims: torch.Tensor,
-    ratings: torch.Tensor,
+    ratings: csr_array,
     max_nbrs: int,
     min_nbrs: int,
     average: bool,
-) -> torch.Tensor:
+) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
     # select a sub-matrix for further manipulation
     (ni,) = items.shape
     (nrow, ncol) = ratings.shape
     # do matrix surgery
-    r_map = torch.full((nrow,), -1, dtype=torch.int32)
-    r_map[nbr_rows] = torch.arange(0, len(nbr_rows), dtype=torch.int32)
-    c_map = torch.full((ncol,), -1, dtype=torch.int32)
-    c_map[items] = torch.arange(0, len(items), dtype=torch.int32)
+    nbr_rates = ratings[nbr_rows.numpy(), :]
+    nbr_rates = nbr_rates[:, items.numpy()]
 
-    indices = ratings.indices()
-    # remap indices and transpose
-    new_indices = torch.empty_like(indices)
-    new_indices[0, :] = r_map[indices[0]]
-    new_indices[1, :] = c_map[indices[1]]
-    mask = torch.logical_and(new_indices[0] >= 0, new_indices[1] >= 0)
-
-    nbr_rates = torch.sparse_coo_tensor(
-        new_indices[:, mask],
-        ratings.values()[mask],
-        size=(len(nbr_rows), ni),
+    nbr_t = nbr_rates.transpose().tocsr()
+    nbr_t = torch.sparse_csr_tensor(
+        crow_indices=torch.from_numpy(nbr_t.indptr),
+        col_indices=torch.from_numpy(nbr_t.indices),
+        values=torch.from_numpy(nbr_t.data),
+        size=nbr_t.shape,
     )
-    nbr_rates = nbr_rates.coalesce()
-    nbr_t = nbr_rates.transpose(0, 1)
-    nbr_t = nbr_t.to_sparse_csr()
 
     # count nbrs for each item
-    counts = nbr_t.crow_indices().diff()
+    counts = np.diff(nbr_t.crow_indices())
     assert counts.shape == items.shape
 
     log.debug(
@@ -320,24 +311,15 @@ def score_items_with_neighbors(
 
     # fast-path items with small neighborhoods
     fp_mask = counts <= max_nbrs
-    r_mask = fp_mask[nbr_rates.indices()[1]]
-    nbr_fp = torch.sparse_coo_tensor(
-        indices=nbr_rates.indices()[:, r_mask],
-        values=nbr_rates.values()[r_mask],
-        size=nbr_rates.shape,
-    ).coalesce()
-    results = torch.mv(nbr_fp.transpose(0, 1), nbr_sims)
+    results = np.full(ni, np.nan)
+    nbr_fp = nbr_rates[:, fp_mask]
+    results[fp_mask] = nbr_fp.T @ nbr_sims
 
     if average:
-        nnz = len(nbr_fp.values())
-        nbr_fp_ones = torch.sparse_coo_tensor(
-            indices=nbr_fp.indices(),
-            values=torch.ones(nnz),
-            size=nbr_rates.shape,
-        )
-        tot_sims = torch.mv(nbr_fp_ones.transpose(0, 1), nbr_sims)
-        assert torch.all(torch.isfinite(tot_sims))
-        results /= tot_sims
+        nbr_fp_ones = csr_array((np.ones(nbr_fp.nnz), nbr_fp.indices, nbr_fp.indptr), nbr_fp.shape)
+        tot_sims = nbr_fp_ones.T @ nbr_sims
+        assert np.all(np.isfinite(tot_sims))
+        results[fp_mask] /= tot_sims
 
     # clear out too-small neighborhoods
     results[counts < min_nbrs] = torch.nan
@@ -348,7 +330,7 @@ def score_items_with_neighbors(
     if n_bad:
         log.debug("scoring %d slow-path items", n_bad)
 
-    bads = torch.argwhere(exc_mask)[:, 0]
+    bads = np.argwhere(exc_mask)[:, 0]
     for badi in bads:
         col = nbr_t[badi]
         assert col.shape == nbr_rates.shape[:1]
