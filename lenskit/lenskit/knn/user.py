@@ -138,7 +138,7 @@ class UserKNNScorer(Component, Trainable):
         return self
 
     @override
-    def __call__(self, query: QueryInput, items: ItemList):
+    def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         """
         Compute predictions for a user and items.
 
