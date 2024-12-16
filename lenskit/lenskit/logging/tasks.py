@@ -15,8 +15,6 @@ from uuid import UUID, uuid4
 import structlog
 from pydantic import BaseModel, Field
 
-from lenskit.logging.monitor import get_monitor
-
 from .resource import ResourceMeasurement, reset_linux_hwm
 
 _log = structlog.stdlib.get_logger(__name__)
@@ -187,6 +185,8 @@ class Task(BaseModel, extra="allow"):
         self._save()
         _active_tasks.append(self)
         if self._save_file:
+            from lenskit.logging.monitor import get_monitor
+
             mon = get_monitor()
             self._refresh_id = mon.add_refreshable(self)
 
@@ -203,6 +203,8 @@ class Task(BaseModel, extra="allow"):
 
         with self._lock:
             if self._refresh_id is not None:
+                from lenskit.logging.monitor import get_monitor
+
                 mon = get_monitor()
                 mon.remove_refreshable(self._refresh_id)
 
