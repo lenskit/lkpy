@@ -117,5 +117,5 @@ class LoggingConfig:
 
 def log_warning(message, category, filename, lineno, file=None, line=None):
     log = structlog.stdlib.get_logger()
-    log.bind(file=filename, lineno=line, category=category.__name__)
+    log = log.bind(file=filename, lineno=line, category=category.__name__)
     log.warning(f"{category.__name__}: {message}")
