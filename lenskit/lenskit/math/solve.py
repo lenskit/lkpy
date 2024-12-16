@@ -34,6 +34,8 @@ def solve_cholesky(A: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     if A.shape != (n, n):  # pragma: no cover
         raise TypeError("A must be n⨉n")
 
-    L = torch.linalg.cholesky(A)
+    L, info = torch.linalg.cholesky_ex(A)
+    if info:
+        raise RuntimeError("cholesky solve failed")
     y = y.reshape(1, n, 1)
     return torch.cholesky_solve(y, L).reshape(n)

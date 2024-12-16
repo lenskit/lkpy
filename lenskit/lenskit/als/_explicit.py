@@ -164,7 +164,7 @@ def _train_solve_row(
     MMT = M.T @ M
     # assert MMT.shape[0] == ctx.n_features
     # assert MMT.shape[1] == ctx.n_features
-    A = MMT + regI * len(cols)
+    A = MMT + regI * nui
     V = M.T @ vals
     # and solve
     return solve_cholesky(A, V)
