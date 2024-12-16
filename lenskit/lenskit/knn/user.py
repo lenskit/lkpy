@@ -181,14 +181,14 @@ class UserKNNScorer(Component, Trainable):
         kn_sims = nbr_sims[nbr_mask]
         kn_idxs = nbr_idxs[nbr_mask]
         if len(kn_sims) > 0:
-            _log.debug(
+            log.debug(
                 "found %d candidate neighbors (of %d total), max sim %0.4f",
                 len(kn_sims),
                 len(self.users_),
                 torch.max(kn_sims).item(),
             )
         else:
-            log.warning("no candidate neighbors found", query.user_id)
+            log.warning("no candidate neighbors found")
             return ItemList(items, scores=np.nan)
 
         assert not torch.any(torch.isnan(kn_sims))
