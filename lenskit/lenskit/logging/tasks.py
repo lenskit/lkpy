@@ -15,6 +15,8 @@ from uuid import UUID, uuid4
 import structlog
 from pydantic import BaseModel, Field
 
+from lenskit.logging.monitor import get_monitor
+
 from .resource import ResourceMeasurement, reset_linux_hwm
 
 _log = structlog.stdlib.get_logger(__name__)
@@ -122,6 +124,7 @@ class Task(BaseModel, extra="allow"):
     _lock: Lock
     _initial_meter: ResourceMeasurement | None = None
     _final_meter: ResourceMeasurement | None = None
+    _refresh_id: UUID | None = None
 
     @staticmethod
     def current() -> Task | None:
@@ -183,6 +186,9 @@ class Task(BaseModel, extra="allow"):
         _log.debug("beginning task", task_id=self.task_id)
         self._save()
         _active_tasks.append(self)
+        if self._save_file:
+            mon = get_monitor()
+            self._refresh_id = mon.add_refreshable(self)
 
     def finish(self, status: TaskStatus = TaskStatus.FINISHED):
         """
@@ -196,6 +202,10 @@ class Task(BaseModel, extra="allow"):
             _active_tasks.pop()
 
         with self._lock:
+            if self._refresh_id is not None:
+                mon = get_monitor()
+                mon.remove_refreshable(self._refresh_id)
+
             self._final_meter = self._update_resources()
             self.finish_time = self._final_meter.wall_time
             self.status = status
@@ -209,6 +219,12 @@ class Task(BaseModel, extra="allow"):
         with self._lock:
             self._update_resources()
             self._save()
+
+    def monitor_refresh(self):
+        """
+        Refresh method called by the monitor backend.
+        """
+        self.update()
 
     def add_subtask(self, task: Task):
         """
@@ -254,3 +270,6 @@ class Task(BaseModel, extra="allow"):
             log.error("task failed: %s", exc_value)
 
         self.finish(status)
+
+    def __str__(self):
+        return f"<Task {self.task_id}: {self.label}>"

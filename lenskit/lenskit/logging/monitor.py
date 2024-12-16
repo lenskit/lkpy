@@ -14,9 +14,12 @@ import multiprocessing as mp
 import os.path
 import pickle
 import threading
+import time
 from enum import Enum
 from hashlib import blake2b
 from tempfile import TemporaryDirectory
+from typing import Protocol, runtime_checkable
+from uuid import UUID, uuid4
 
 import structlog
 import zmq
@@ -24,10 +27,20 @@ import zmq
 from .tasks import Task
 
 SIGNAL_ADDR = "inproc://lenskit-monitor-signal"
+REFRESH_INTERVAL = 5
 
 _log = structlog.stdlib.get_logger(__name__)
 _monitor_lock = threading.Lock()
 _monitor_instance: Monitor | None = None
+
+
+@runtime_checkable
+class MonitorRefreshable(Protocol):
+    def monitor_refresh(self):
+        """
+        Refresh this object in response to monitor refresh timeouts.
+        """
+        ...
 
 
 def get_monitor() -> Monitor:
@@ -78,6 +91,8 @@ class Monitor:
     _signal: zmq.Socket[bytes]
     log_address: str
     _tmpdir: TemporaryDirectory | None = None
+    refreshables: dict[UUID, MonitorRefreshable]
+    lock: threading.Lock
 
     def __init__(self):
         self.zmq = zmq.Context()
@@ -90,7 +105,22 @@ class Monitor:
 
         self._signal = self.zmq.socket(zmq.REQ)
         self._signal.connect(SIGNAL_ADDR)
+
+        self.lock = threading.Lock()
+        self.refreshables = {}
+
         _log.bind(address=addr).info("monitor ready")
+
+    def add_refreshable(self, obj: MonitorRefreshable) -> UUID:
+        uuid = uuid4()
+        with self.lock:
+            self.refreshables[uuid] = obj
+        return uuid
+
+    def remove_refreshable(self, uuid: UUID):
+        with self.lock:
+            if uuid in self.refreshables:
+                del self.refreshables[uuid]
 
     def shutdown(self):
         log = _log.bind()
@@ -135,12 +165,14 @@ class MonitorThread(threading.Thread):
     log_sock: zmq.Socket[bytes]
     poller: zmq.Poller
     _authkey: bytes
+    last_refresh: float
 
     def __init__(self, monitor: Monitor, log_sock: zmq.Socket[bytes]):
         super().__init__(name="LensKitMonitor", daemon=True)
         self.monitor = monitor
         self.log_sock = log_sock
         self._authkey = mp.current_process().authkey
+        self.last_refresh = time.perf_counter()
 
     def run(self) -> None:
         self.state = MonitorState.ACTIVE
@@ -153,29 +185,43 @@ class MonitorThread(threading.Thread):
             self.poller.register(signal, zmq.POLLIN)
             self.poller.register(self.log_sock, zmq.POLLIN)
 
-            while self.state != MonitorState.SHUTDOWN:
-                self._pump_message()
+            self._pump_messages()
 
             del self.poller
 
-    def _pump_message(self):
-        timeout = None
-        if self.state == MonitorState.DRAINING:
-            timeout = 0
+    def _pump_messages(self):
+        timeout = 0
+        last_refresh = time.perf_counter()
 
-        ready = dict(self.poller.poll(timeout))
+        while self.state != MonitorState.SHUTDOWN:
+            # don't wait while draining
+            if self.state == MonitorState.DRAINING:
+                timeout = 0
 
-        if self.signal in ready:
-            self._handle_signal()
+            ready = dict(self.poller.poll(timeout))
 
-        if self.log_sock in ready:
-            try:
-                self._handle_log_message()
-            except Exception as e:
-                _log.error("error handling message: %s", e)
+            if self.signal in ready:
+                self._handle_signal()
 
-        if self.state == MonitorState.DRAINING and not ready:
-            self.state = MonitorState.SHUTDOWN
+            if self.log_sock in ready:
+                try:
+                    self._handle_log_message()
+                except Exception as e:
+                    _log.error("error handling message: %s", e)
+
+            if not ready:
+                if self.state == MonitorState.DRAINING:
+                    self.state = MonitorState.SHUTDOWN
+
+                elif self.state == MonitorState.ACTIVE:
+                    # nothing to do — check if we need a refresh
+                    now = time.perf_counter()
+                    left = max(int((REFRESH_INTERVAL - now + last_refresh) * 1000), 0)
+                    if left < 20:
+                        self._do_refresh()
+                        timeout = REFRESH_INTERVAL * 1000
+                    else:
+                        timeout = left
 
     def _handle_signal(self):
         sig_msg = self.signal.recv()
@@ -226,3 +272,13 @@ class MonitorThread(threading.Thread):
                 _log.debug("no active task for subtask reporting")
         else:
             _log.error("invalid log backend")
+
+    def _do_refresh(self):
+        with self.monitor.lock:
+            objs = list(self.monitor.refreshables.values())
+
+        for obj in objs:
+            try:
+                obj.monitor_refresh()
+            except Exception as e:
+                _log.warning("failed to refresh %s: %s", obj, e)
