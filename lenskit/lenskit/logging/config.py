@@ -5,6 +5,7 @@ Logging pipeline configuration.
 from __future__ import annotations
 
 import logging
+import warnings
 from os import PathLike
 from pathlib import Path
 
@@ -109,5 +110,12 @@ class LoggingConfig:
         root.setLevel(self.effective_level)
 
         set_progress_impl("rich")
+        warnings.showwarning = log_warning
 
         _active_config = self
+
+
+def log_warning(message, category, filename, lineno, file=None, line=None):
+    log = structlog.stdlib.get_logger()
+    log.bind(file=filename, lineno=line, category=category.__name__)
+    log.warning(f"{category}: {message}")
