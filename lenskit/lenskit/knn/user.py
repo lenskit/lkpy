@@ -11,23 +11,24 @@ User-based k-NN collaborative filtering.
 # pyright: basic
 from __future__ import annotations
 
-import logging
 import warnings
 
 import numpy as np
 import pandas as pd
+import structlog
 import torch
+from scipy.sparse import csr_array
 from typing_extensions import NamedTuple, Optional, Self, override
 
 from lenskit import util
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery
 from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataWarning
-from lenskit.math.sparse import normalize_sparse_rows, safe_spmv
+from lenskit.math.sparse import normalize_sparse_rows, safe_spmv, torch_sparse_to_scipy
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component, Trainable
 
-_log = logging.getLogger(__name__)
+_log = structlog.stdlib.get_logger(__name__)
 
 
 class UserKNNScorer(Component, Trainable):
@@ -73,7 +74,7 @@ class UserKNNScorer(Component, Trainable):
     "Mean rating for each known user."
     user_vectors_: torch.Tensor
     "Normalized rating matrix (CSR) to find neighbors at prediction time."
-    user_ratings_: torch.Tensor
+    user_ratings_: csr_array
     "Centered but un-normalized rating matrix (COO) to find neighbor ratings."
 
     def __init__(
@@ -129,7 +130,7 @@ class UserKNNScorer(Component, Trainable):
         normed, _norms = normalize_sparse_rows(rmat, "unit")
 
         self.user_vectors_ = normed
-        self.user_ratings_ = rmat.to_sparse_coo().coalesce()
+        self.user_ratings_ = torch_sparse_to_scipy(rmat).tocsr()
         self.users_ = data.users.copy()
         self.user_means_ = means
         self.items_ = data.items.copy()
@@ -153,14 +154,14 @@ class UserKNNScorer(Component, Trainable):
         """
         query = RecQuery.create(query)
         watch = util.Stopwatch()
+        log = _log.bind(user_id=query.user_id, n_items=len(items))
 
         udata = self._get_user_data(query)
         if udata is None:
-            _log.debug("user %s has no ratings, skipping", query.user_id)
+            log.debug("user has no ratings, skipping")
             return ItemList(items, scores=np.nan)
 
         uidx, ratings, umean = udata
-        _log.debug("scoring %d items for user %s (idx %d)", len(items), query.user_id, uidx or -1)
         assert ratings.shape == (len(self.items_),)  # ratings is a dense vector
 
         # now ratings has vbeen normalized to be a mean-centered unit vector
@@ -181,14 +182,13 @@ class UserKNNScorer(Component, Trainable):
         kn_idxs = nbr_idxs[nbr_mask]
         if len(kn_sims) > 0:
             _log.debug(
-                "user %s: %d candidate neighbors (of %d total), max sim %0.4f",
-                query.user_id,
+                "found %d candidate neighbors (of %d total), max sim %0.4f",
                 len(kn_sims),
                 len(self.users_),
                 torch.max(kn_sims).item(),
             )
         else:
-            _log.warning("user %s: no candidate neighbors", query.user_id)
+            log.warning("no candidate neighbors found", query.user_id)
             return ItemList(items, scores=np.nan)
 
         assert not torch.any(torch.isnan(kn_sims))
@@ -200,6 +200,7 @@ class UserKNNScorer(Component, Trainable):
         usable_iidxs = iidxs[ki_mask]
 
         scores = score_items_with_neighbors(
+            log,
             usable_iidxs,
             kn_idxs,
             kn_sims,
@@ -211,14 +212,12 @@ class UserKNNScorer(Component, Trainable):
 
         scores += umean
 
-        results = pd.Series(scores.numpy(), index=items.ids()[ki_mask.numpy()], name="prediction")
+        results = pd.Series(scores, index=items.ids()[ki_mask.numpy()], name="prediction")
         results = results.reindex(items.ids())
 
-        _log.debug(
-            "scored %d of %d items for %s in %s",
+        log.debug(
+            "scored %d items in %s",
             results.notna().sum(),
-            len(items),
-            query.user_id,
             watch,
         )
         return ItemList(items, scores=results.values)  # type: ignore
@@ -276,72 +275,61 @@ class UserRatings(NamedTuple):
 
 
 def score_items_with_neighbors(
+    log: structlog.stdlib.BoundLogger,
     items: torch.Tensor,
     nbr_rows: torch.Tensor,
     nbr_sims: torch.Tensor,
-    ratings: torch.Tensor,
+    ratings: csr_array,
     max_nbrs: int,
     min_nbrs: int,
     average: bool,
-) -> torch.Tensor:
+) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
     # select a sub-matrix for further manipulation
     (ni,) = items.shape
-    nbr_rates = ratings.index_select(0, nbr_rows)
-    nbr_rates = nbr_rates.index_select(1, items)
-    nbr_rates = nbr_rates.coalesce()
-    assert nbr_rates.shape == (
-        len(nbr_rows),
-        ni,
-    ), f"nbr rates has shape {nbr_rates.shape} (expected {len(nbr_rows)}, {ni})"
-    nbr_t = nbr_rates.transpose(0, 1).to_sparse_csr()
+    (nrow, ncol) = ratings.shape
+    # do matrix surgery
+    nbr_rates = ratings[nbr_rows.numpy(), :]
+    nbr_rates = nbr_rates[:, items.numpy()]
+
+    nbr_t = nbr_rates.transpose().tocsr()
 
     # count nbrs for each item
-    counts = nbr_t.crow_indices().diff()
+    counts = np.diff(nbr_t.indptr)
     assert counts.shape == items.shape
 
-    _log.debug(
-        "scoring %d items, max count %d, nbr shape %s",
-        ni,
-        torch.max(counts).item(),
-        nbr_rates.shape,
+    log.debug(
+        "scoring items",
+        max_count=np.max(counts),
+        nbr_shape=nbr_rates.shape,
     )
 
     # fast-path items with small neighborhoods
     fp_mask = counts <= max_nbrs
-    r_mask = fp_mask[nbr_rates.indices()[1]]
-    nbr_fp = torch.sparse_coo_tensor(
-        indices=nbr_rates.indices()[:, r_mask],
-        values=nbr_rates.values()[r_mask],
-        size=nbr_rates.shape,
-    ).coalesce()
-    results = torch.mv(nbr_fp.transpose(0, 1), nbr_sims)
+    results = np.full(ni, np.nan)
+    nbr_fp = nbr_rates[:, fp_mask]
+    results[fp_mask] = nbr_fp.T @ nbr_sims
 
     if average:
-        nnz = len(nbr_fp.values())
-        nbr_fp_ones = torch.sparse_coo_tensor(
-            indices=nbr_fp.indices(),
-            values=torch.ones(nnz),
-            size=nbr_rates.shape,
-        )
-        tot_sims = torch.mv(nbr_fp_ones.transpose(0, 1), nbr_sims)
-        assert torch.all(torch.isfinite(tot_sims))
-        results /= tot_sims
+        nbr_fp_ones = csr_array((np.ones(nbr_fp.nnz), nbr_fp.indices, nbr_fp.indptr), nbr_fp.shape)
+        tot_sims = nbr_fp_ones.T @ nbr_sims
+        assert np.all(np.isfinite(tot_sims))
+        results[fp_mask] /= tot_sims
 
     # clear out too-small neighborhoods
     results[counts < min_nbrs] = torch.nan
 
     # deal with too-large items
     exc_mask = counts > max_nbrs
-    if torch.any(exc_mask):
-        _log.debug("scoring %d slow-path items", torch.sum(exc_mask))
+    n_bad = np.sum(exc_mask)
+    if n_bad:
+        log.debug("scoring %d slow-path items", n_bad)
 
-    bads = torch.argwhere(exc_mask)[:, 0]
+    bads = np.argwhere(exc_mask)[:, 0]
     for badi in bads:
-        col = nbr_t[badi]
-        assert col.shape == nbr_rates.shape[:1]
+        s, e = nbr_t.indptr[badi : (badi + 2)]
 
-        bi_users = col.indices()[0]
-        bi_rates = col.values()
+        bi_users = nbr_t.indices[s:e]
+        bi_rates = torch.from_numpy(nbr_t.data[s:e])
         bi_sims = nbr_sims[bi_users]
 
         tk_vs, tk_is = torch.topk(bi_sims, max_nbrs)

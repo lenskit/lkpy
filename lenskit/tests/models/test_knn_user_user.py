@@ -42,12 +42,12 @@ def test_uu_train(ml_ratings, ml_ds):
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(["user", "item"]).rating
-    rates = algo.user_ratings_.to_sparse_coo()
+    rates = algo.user_ratings_.tocoo()
     ui_rbdf = pd.DataFrame(
         {
-            "user": algo.users_.ids(rates.indices()[0]),
-            "item": algo.items_.ids(rates.indices()[1]),
-            "nrating": rates.values(),
+            "user": algo.users_.ids(rates.row),
+            "item": algo.items_.ids(rates.col),
+            "nrating": rates.data,
         }
     ).set_index(["user", "item"])
     ui_rbdf = ui_rbdf.join(mlmeans)
@@ -137,12 +137,12 @@ def test_uu_save_load(tmp_path, ml_ratings, ml_ds):
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(["user", "item"]).rating
-    rates = algo.user_ratings_.to_sparse_coo()
+    rates = algo.user_ratings_.tocoo()
     ui_rbdf = pd.DataFrame(
         {
-            "user": algo.users_.ids(rates.indices()[0]),
-            "item": algo.items_.ids(rates.indices()[1]),
-            "nrating": rates.values(),
+            "user": algo.users_.ids(rates.row),
+            "item": algo.items_.ids(rates.col),
+            "nrating": rates.data,
         }
     ).set_index(["user", "item"])
     ui_rbdf = ui_rbdf.join(mlmeans)
