@@ -118,4 +118,4 @@ class LoggingConfig:
 def log_warning(message, category, filename, lineno, file=None, line=None):
     log = structlog.stdlib.get_logger("lenskit")
     log = log.bind(category=category.__name__, file=filename, lineno=lineno)
-    log.warning(message)
+    log.warning(str(message))
