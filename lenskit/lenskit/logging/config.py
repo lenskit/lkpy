@@ -116,6 +116,6 @@ class LoggingConfig:
 
 
 def log_warning(message, category, filename, lineno, file=None, line=None):
-    log = structlog.stdlib.get_logger()
-    log = log.bind(file=filename, lineno=line, category=category.__name__)
-    log.warning(f"{category.__name__}: {message}")
+    log = structlog.stdlib.get_logger("lenskit")
+    log = log.bind(category=category.__name__, file=filename, lineno=lineno)
+    log.warning(message)

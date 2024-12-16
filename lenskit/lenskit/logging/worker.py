@@ -12,6 +12,7 @@ import json
 import logging
 import multiprocessing as mp
 import pickle
+import warnings
 from dataclasses import dataclass
 from hashlib import blake2b
 from logging import Handler, LogRecord, getLogger
@@ -21,7 +22,7 @@ import structlog
 import zmq
 from structlog.typing import EventDict
 
-from .config import CORE_PROCESSORS, active_logging_config
+from .config import CORE_PROCESSORS, active_logging_config, log_warning
 from .monitor import get_monitor
 from .processors import add_process_info
 from .tasks import Task
@@ -91,6 +92,7 @@ class WorkerContext:
             wrapper_class=structlog.make_filtering_bound_logger(self.config.level),
             logger_factory=structlog.stdlib.LoggerFactory(),
         )
+        warnings.showwarning = log_warning
         _log.debug("log context activated")
 
     def shutdown(self):
