@@ -409,7 +409,7 @@ class ItemListCollection(Generic[K]):
     def __len__(self):
         return len(self._lists)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[tuple[K, ItemList]]:
         return iter(self._lists)
 
     def __getitem__(self, key: int) -> tuple[K, ItemList]:
