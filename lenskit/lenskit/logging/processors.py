@@ -1,11 +1,12 @@
 """
-LensKit logging processors.
+LensKit logging processors and converters.
 """
 
 import multiprocessing as mp
 from datetime import datetime
 from typing import Any
 
+import structlog
 from structlog.typing import EventDict
 
 
@@ -47,3 +48,9 @@ def add_process_info(logger: Any, method: str, event_dict: EventDict) -> EventDi
         event_dict["pname"] = proc.name
 
     return event_dict
+
+
+def log_warning(message, category, filename, lineno, file=None, line=None):
+    log = structlog.stdlib.get_logger("lenskit")
+    log = log.bind(category=category.__name__, file=filename, lineno=lineno)
+    log.warning(str(message))
