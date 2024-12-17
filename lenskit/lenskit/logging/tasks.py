@@ -164,12 +164,24 @@ class Task(BaseModel, extra="allow"):
         if file:
             self._save_file = Path(file)
 
-    def save_to_file(self, path: PathLike[str]):
+    def save_to_file(self, path: PathLike[str], monitor: bool = True):
         """
         Save this task to a file, and re-save it when finished.
         """
         self._save_file = Path(path)
         self._save()
+
+        # add to monitor if it isn't already
+        if (
+            monitor
+            and self._initial_meter is not None
+            and self._refresh_id is None
+            and self._final_meter is None
+        ):
+            from lenskit.logging.monitor import get_monitor
+
+            mon = get_monitor()
+            self._refresh_id = mon.add_refreshable(self)
 
     def start(self):
         """
