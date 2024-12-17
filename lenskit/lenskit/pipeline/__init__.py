@@ -43,6 +43,7 @@ __all__ = [
     "Node",
     "PipelineFunction",
     "Configurable",
+    "Trainable",
     "PipelineConfig",
     "Lazy",
     "Component",
