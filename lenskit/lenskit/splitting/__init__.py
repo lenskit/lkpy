@@ -12,10 +12,24 @@ import numpy as np
 
 from lenskit.data import Dataset
 
-from .holdout import LastFrac, LastN, SampleFrac, SampleN  # noqa: F401
-from .records import crossfold_records, sample_records  # noqa: F401
-from .split import TTSplit  # noqa: F401
-from .users import crossfold_users, sample_users  # noqa: F401
+from .holdout import HoldoutMethod, LastFrac, LastN, SampleFrac, SampleN
+from .records import crossfold_records, sample_records
+from .split import TTSplit
+from .users import crossfold_users, sample_users
+
+__all__ = [
+    "TTSplit",
+    "HoldoutMethod",
+    "LastFrac",
+    "LastN",
+    "SampleFrac",
+    "SampleN",
+    "crossfold_records",
+    "sample_records",
+    "crossfold_users",
+    "sample_users",
+    "simple_test_pair",
+]
 
 
 def simple_test_pair(
