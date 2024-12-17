@@ -11,6 +11,7 @@ Core Abstractions
     lenskit.data
     lenskit.pipeline
     lenskit.diagnostics
+    lenskit.operations
     lenskit.types
 
 .. toctree::
@@ -19,6 +20,7 @@ Core Abstractions
 
     data
     pipeline
+    operations
     diagnostics
 
 Components and Models

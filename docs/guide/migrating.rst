@@ -193,11 +193,13 @@ optionally the user's current historical ratings.
 
 In LensKit 2025, you invoke the *pipeline* to obtain recommendations.  In a
 standard recommendation pipeline, the recommendations are produced by a
-component called ``recommender``; you can obtain them with:
+component called ``recommender``; you can obtain them with the
+:func:`~lenskit.recommend` function:
 
 .. code:: python
 
-    recs = pipeline.run('recommender', query=user_id)
+    from lenskit import recommend
+    recs = recommend(pipe, user_id)
 
 This method returns an :py:class:`~lenskit.data.ItemList` containing the
 recommended items. You can optionally specify candidate items with an ``items=``
