@@ -322,7 +322,7 @@ def test_bias_topn(ml_ds: Dataset):
     assert len(res) == 3
     assert np.all(res.ids() == [10, 11, -1])
 
-    recs = recommend(pipe, 2, n=1)
+    recs = recommend(pipe, 2, n=10)
     assert isinstance(recs, ItemList)
     assert len(recs) == 10
 
