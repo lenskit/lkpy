@@ -20,6 +20,7 @@ Core Abstractions
 
     data
     pipeline
+    operations
     diagnostics
 
 Components and Models

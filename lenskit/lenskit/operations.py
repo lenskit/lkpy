@@ -86,8 +86,11 @@ def predict(
     component: str = "rating-predictor",
 ) -> ItemList:
     """
-    Predict ratings for items.  This is exactly like :func:`score`, except it defaults
-    to the ``'rating-predictor'`` component.
+    Predict ratings for items.  This is exactly like :func:`score`, except it
+    defaults to the ``'rating-predictor'`` component.  In a standard pipeline,
+    the rating predictor may have additional configuration such as fallbacks or
+    transformations to ensure every item is scored and the scores are valid
+    rating predictions; the scorer typically returns raw scores.
     """
 
     return score(pipeline, query, items, component=component)
