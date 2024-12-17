@@ -91,6 +91,7 @@ class WorkerContext:
             + [structlog.processors.ExceptionPrettyPrinter(), self._log_handler.send_structlog],
             wrapper_class=structlog.make_filtering_bound_logger(self.config.level),
             logger_factory=structlog.stdlib.LoggerFactory(),
+            cache_logger_on_first_use=False,
         )
         warnings.showwarning = log_warning
         _log.debug("log context activated")
