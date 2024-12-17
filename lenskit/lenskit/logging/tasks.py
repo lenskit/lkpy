@@ -208,7 +208,7 @@ class Task(BaseModel, extra="allow"):
                 mon = get_monitor()
                 mon.remove_refreshable(self._refresh_id)
 
-            self._final_meter = self._update_resources()
+            self._final_meter = self.update_resources()
             self.finish_time = self._final_meter.wall_time
             self.status = status
             log.debug("finished task", time=self.duration, cpu=self.cpu_time)
@@ -219,7 +219,7 @@ class Task(BaseModel, extra="allow"):
         Update the task's resource measurements and save the file (if one is set).
         """
         with self._lock:
-            self._update_resources()
+            self.update_resources()
             self._save()
 
     def monitor_refresh(self):
@@ -241,7 +241,7 @@ class Task(BaseModel, extra="allow"):
             with self._save_file.open("w") as f:
                 print(self.model_dump_json(), file=f)
 
-    def _update_resources(self) -> ResourceMeasurement:
+    def update_resources(self) -> ResourceMeasurement:
         """
         Update the resource measurements.  Returns the current measurement.
         """
