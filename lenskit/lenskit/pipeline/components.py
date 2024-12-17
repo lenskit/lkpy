@@ -66,13 +66,18 @@ class Configurable(Protocol):  # pragma: nocover
 class Trainable(Protocol):  # pragma: nocover
     """
     Interface for components that can learn parameters from training data. It
-    supports trainig, checking if a component has already been trained, and
-    exposing trained parameters for serialization as an alternative to pickling
-    (components also need to be picklable).
+    supports trainingand checking if a component has already been trained.
+    Trained components need to be picklable.
 
     .. note::
 
         Trainable components must also implement ``__call__``.
+
+    .. note::
+
+        A future LensKit version will add support for extracting model
+        parameters a la Pytorch's ``state_dict``, but this capability was not
+        ready for 2025.1.
     """
 
     @property
@@ -96,14 +101,22 @@ class Trainable(Protocol):  # pragma: nocover
         """
         raise NotImplementedError()
 
+
+@runtime_checkable
+class ParameterContainer(Protocol):  # pragma: nocover
     def get_params(self) -> dict[str, object]:
         """
-        Get the model's learned parameters for serialization.
+        Protocol for components with parameters that can be extracted, saved,
+        and re-loaded.
 
         LensKit components that learn parameters from training data should both
         implement this method and work when pickled and unpickled.  Pickling is
         sometimes used for convenience, but parameter / state dictionaries allow
         serializing wtih tools like ``safetensors``.
+
+        .. todo::
+
+            This protocol is not yet used for anything.
 
         Args:
             include_caches:
