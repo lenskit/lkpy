@@ -21,16 +21,16 @@ from torch.multiprocessing.reductions import reduce_storage, reduce_tensor
 _log = logging.getLogger(__name__)
 
 
-class ModelData(NamedTuple):
+class SHMData(NamedTuple):
     """
-    Serialized model data (with shared memory handles).
+    Serialized data (with shared memory handles).
     """
 
     pickle: bytes
     buffers: list[tuple[SharedMemory | None, int]]
 
 
-class ModelPickler(pickle.Pickler):
+class SHMPickler(pickle.Pickler):
     manager: SharedMemoryManager | None
     buffers: list[tuple[SharedMemory | None, int]]
 
@@ -91,21 +91,21 @@ class ModelPickler(pickle.Pickler):
         return NotImplemented
 
 
-def shm_serialize(obj: Any, manager: SharedMemoryManager | None = None) -> ModelData:
+def shm_serialize(obj: Any, manager: SharedMemoryManager | None = None) -> SHMData:
     """
     Serialize an object for processing in a subclass with shared memory when
     feasible (including CUDA).
     """
     out = io.BytesIO()
-    pkl = ModelPickler(out, pickle.HIGHEST_PROTOCOL, manager)
+    pkl = SHMPickler(out, pickle.HIGHEST_PROTOCOL, manager)
     pkl.dump(obj)
 
     data = out.getvalue()
     _log.debug("serialized model into %s pickle bytes", len(data))
-    return ModelData(bytes(data), pkl.buffers)
+    return SHMData(bytes(data), pkl.buffers)
 
 
-def shm_deserialize(data: ModelData) -> Any:
+def shm_deserialize(data: SHMData) -> Any:
     """
     Deserialize SHM-pickled data.
     """

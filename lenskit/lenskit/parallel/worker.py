@@ -16,7 +16,7 @@ import structlog
 from typing_extensions import Generic
 
 from .invoker import A, InvokeOp, M, R
-from .serialize import ModelData, shm_deserialize
+from .serialize import SHMData, shm_deserialize
 
 _log = structlog.get_logger(__name__)
 
@@ -29,7 +29,7 @@ class WorkerData(Generic[M, A, R]):
     model: M
 
 
-def initalize(ctx: ModelData) -> None:
+def initalize(ctx: SHMData) -> None:
     global __work_context, __progress
     proc = mp.current_process()
     log = _log.bind(pid=proc.pid, pname=proc.name)
