@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 
-from lenskit.algorithms import basic
+from lenskit.basic import popularity
 from lenskit.data import from_interactions_df
 
 ts = datetime(year=2024, month=1, day=1)
@@ -28,40 +28,40 @@ simple_ds = from_interactions_df(simple_df)
 
 
 def test_time_bounded_pop_score_quantile_one_day_window():
-    algo = basic.TimeBoundedPopScore(one_day_ago)
-    algo.fit(simple_ds)
+    algo = popularity.TimeBoundedPopScore(one_day_ago)
+    algo.train(simple_ds)
     assert algo.item_scores_.equals(pd.Series([1.0, 0.0, 0.0], index=[1, 2, 3]))
 
 
 def test_time_bounded_pop_score_quantile_two_day_window():
-    algo = basic.TimeBoundedPopScore(two_days_ago)
-    algo.fit(simple_ds)
+    algo = popularity.TimeBoundedPopScore(two_days_ago)
+    algo.train(simple_ds)
     assert algo.item_scores_.equals(pd.Series([0.25, 1.0, 0.5], index=[1, 2, 3]))
 
 
 def test_time_bounded_pop_score_fallbacks_to_pop_score_for_dataset_without_timestamps():
     ds = from_interactions_df(simple_df.drop(columns=["timestamp"]))
 
-    algo = basic.TimeBoundedPopScore(one_day_ago)
-    algo.fit(ds)
+    algo = popularity.TimeBoundedPopScore(one_day_ago)
+    algo.train(ds)
     assert algo.item_scores_.equals(pd.Series([0.25, 1.0, 0.5], index=[1, 2, 3]))
 
 
 def test_time_bounded_pop_score_rank():
-    algo = basic.TimeBoundedPopScore(two_days_ago, "rank")
-    algo.fit(simple_ds)
+    algo = popularity.TimeBoundedPopScore(two_days_ago, "rank")
+    algo.train(simple_ds)
     assert algo.item_scores_.equals(pd.Series([1.5, 3.0, 1.5], index=[1, 2, 3]))
 
 
 def test_time_bounded_pop_score_counts():
-    algo = basic.TimeBoundedPopScore(two_days_ago, "count")
-    algo.fit(simple_ds)
+    algo = popularity.TimeBoundedPopScore(two_days_ago, "count")
+    algo.train(simple_ds)
     assert algo.item_scores_.equals(pd.Series([1, 2, 1], index=[1, 2, 3], dtype=np.int32))
 
 
 def test_time_bounded_pop_score_save_load():
-    original = basic.TimeBoundedPopScore(one_day_ago)
-    original.fit(simple_ds)
+    original = popularity.TimeBoundedPopScore(one_day_ago)
+    original.train(simple_ds)
 
     mod = pickle.dumps(original)
     algo = pickle.loads(mod)
