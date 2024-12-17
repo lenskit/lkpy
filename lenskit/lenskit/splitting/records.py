@@ -22,7 +22,9 @@ from .split import TTSplit
 _log = logging.getLogger(__name__)
 
 
-def crossfold_records(data: Dataset, partitions: int, *, rng: RNGInput = None) -> Iterator[TTSplit]:
+def crossfold_records(
+    data: Dataset, partitions: int, *, test_only: bool = False, rng: RNGInput = None
+) -> Iterator[TTSplit]:
     """
     Partition a dataset by **records** into cross-fold partitions.  This
     partitions the records (ratings, play counts, clicks, etc.) into *k*
@@ -37,6 +39,9 @@ def crossfold_records(data: Dataset, partitions: int, *, rng: RNGInput = None) -
             Ratings or other data you wish to partition.
         partitions:
             The number of partitions to produce.
+        test_only:
+            If ``True``, returns splits with empty training sets (useful when
+            you just want to save the test data).
         rng:
             The random number generator or seed (see :ref:`rng`).
 
@@ -58,7 +63,7 @@ def crossfold_records(data: Dataset, partitions: int, *, rng: RNGInput = None) -
 
     # convert each partition into a split
     for ts in test_sets:
-        yield _make_pair(data, df, ts)
+        yield _make_pair(data, df, ts, test_only=test_only)
 
 
 @overload
@@ -67,6 +72,7 @@ def sample_records(
     size: int,
     *,
     disjoint: bool = True,
+    test_only: bool = False,
     rng: RNGInput = None,
     repeats: None = None,
 ) -> TTSplit: ...
@@ -77,6 +83,7 @@ def sample_records(
     *,
     repeats: int,
     disjoint: bool = True,
+    test_only: bool = False,
     rng: RNGInput = None,
 ) -> Iterator[TTSplit]: ...
 def sample_records(
@@ -85,6 +92,7 @@ def sample_records(
     *,
     repeats: int | None = None,
     disjoint: bool = True,
+    test_only: bool = False,
     rng: RNGInput = None,
 ) -> TTSplit | Iterator[TTSplit]:
     """
@@ -120,6 +128,9 @@ def sample_records(
             _single_ train-test pair instead of an iterator or list.
         disjoint:
             If ``True``, force test samples to be disjoint.
+        test_only:
+            If ``True``, returns splits with empty training sets (useful when
+            you just want to save the test data).
         rng:
             The random number generator or seed (see :ref:`rng`).
 
@@ -157,17 +168,24 @@ def sample_records(
 
     # since this func is both generator and return depending on args,
     # we can't use yield — need to return a generator expression
-    return (_make_pair(data, df, test_is) for test_is in ips)
+    return (_make_pair(data, df, test_is, test_only=test_only) for test_is in ips)
 
 
 def _make_pair(
-    data: Dataset, df: pd.DataFrame, test_is: np.ndarray[int, np.dtype[np.int32]]
+    data: Dataset,
+    df: pd.DataFrame,
+    test_is: np.ndarray[int, np.dtype[np.int32]],
+    *,
+    test_only: bool = False,
 ) -> TTSplit:
     mask = np.zeros(len(df), np.bool_)
     mask[test_is] = True
 
     test = ItemListCollection.from_df(df[mask], UserIDKey)
-    train = MatrixDataset(data.users, data.items, df[~mask])
+    if test_only:
+        train = MatrixDataset(data.users, data.items, df.loc[:0])
+    else:
+        train = MatrixDataset(data.users, data.items, df[~mask])
 
     return TTSplit(train, test)
 

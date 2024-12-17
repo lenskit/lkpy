@@ -88,6 +88,17 @@ def test_sample_records(ml_ds):
         assert not (p1 & p2)
 
 
+def test_sample_records_test_only(ml_ds):
+    splits = sample_records(ml_ds, size=1000, repeats=1, test_only=True)
+    splits = list(splits)
+    assert len(splits) == 1
+
+    for s in splits:
+        test_count = s.test_size
+        assert test_count == 1000
+        assert s.train.interaction_count == 0
+
+
 def test_sample_rows_more_smaller_parts(ml_ds: Dataset):
     splits = sample_records(ml_ds, 500, repeats=10)
     splits = list(splits)
