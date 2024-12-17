@@ -117,9 +117,9 @@ class Task(BaseModel, extra="allow"):
     This task's subtasks.
     """
 
-    _reset_hwm: bool
+    _reset_hwm: bool = False
     _save_file: Path | None = None
-    _lock: Lock
+    _lock: Lock = None  # type: ignore
     _initial_meter: ResourceMeasurement | None = None
     _final_meter: ResourceMeasurement | None = None
     _refresh_id: UUID | None = None
@@ -178,11 +178,23 @@ class Task(BaseModel, extra="allow"):
         if self._reset_hwm:
             reset_linux_hwm()
 
+        log = _log.bind(task_id=self.task_id)
         self._initial_meter = ResourceMeasurement.current()
         self.start_time = self._initial_meter.wall_time
         self.status = TaskStatus.RUNNING
-        _log.debug("beginning task", task_id=self.task_id)
+        log.debug("beginning task")
         self._save()
+
+        if self.parent_id:
+            cur = self.current()
+            if cur is not None:
+                if cur.task_id == self.parent_id:
+                    cur.add_subtask(self)
+                else:
+                    log.warn("active task is not parent")
+            else:
+                log.debug("have a task but no parent")
+
         _active_tasks.append(self)
         if self._save_file:
             from lenskit.logging.monitor import get_monitor
