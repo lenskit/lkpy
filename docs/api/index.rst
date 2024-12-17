@@ -11,6 +11,7 @@ Core Abstractions
     lenskit.data
     lenskit.pipeline
     lenskit.diagnostics
+    lenskit.operations
     lenskit.types
 
 .. toctree::
