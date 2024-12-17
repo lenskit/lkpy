@@ -28,7 +28,7 @@ def active_logging_config() -> LoggingConfig | None:
     return _active_config
 
 
-class LoggingConfig:
+class LoggingConfig:  # pragma: nocover
     """
     Configuration for LensKit logging.
 
