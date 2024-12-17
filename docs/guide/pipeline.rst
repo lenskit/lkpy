@@ -257,7 +257,7 @@ two ways to save a pipeline or part thereof:
     learned parameter data.  A new pipeline can be constructed from such a
     configuration can be reloaded with :meth:`Pipeline.from_config`.
 
-.. comment::
+..
 
     3.  Save the pipeline parameters with :meth:`Pipeline.save_params`.  This saves
         the learned parameters but **not** the configuration or connections.  The
