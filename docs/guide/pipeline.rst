@@ -86,7 +86,14 @@ with:
 
 .. code:: python
 
-    user_recs = pipe.run(recommend, query=user_id)
+    user_recs = pipe.run('recommender', query=user_id)
+
+This is also exposed with a convenience function:
+
+.. code:: python
+
+    from lenskit import recommend
+    user_recs = recommend(pipe, user_id)
 
 .. _pipeline-model:
 
