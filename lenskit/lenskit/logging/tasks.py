@@ -244,6 +244,8 @@ class Task(BaseModel, extra="allow"):
     def update_resources(self) -> ResourceMeasurement:
         """
         Update the resource measurements.  Returns the current measurement.
+
+        This method is called by :meth:`update`, with an exclusive lock held.
         """
         assert self._initial_meter is not None
         now = ResourceMeasurement.current()
