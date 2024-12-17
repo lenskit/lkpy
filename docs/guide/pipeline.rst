@@ -244,12 +244,9 @@ Pipelines are defined by the following:
 * The component configurations (see :class:`Configurable` and :class:`Component`)
 * The components' learned parameters (see :class:`Trainable`)
 
-.. todo::
-    Serialization support other than ``pickle`` is not yet implemented.
-
 LensKit supports serializing both pipeline descriptions (components,
 connections, and configurations) and pipeline parameters.  There are
-three ways to save a pipeline or part thereof:
+two ways to save a pipeline or part thereof:
 
 1.  Pickle the entire pipeline.  This is easy, and saves everything in the
     pipeline; it has the usual downsides of pickling (arbitrary code execution,
@@ -259,39 +256,42 @@ three ways to save a pipeline or part thereof:
     the components, their configurations, and their connections, but **not** any
     learned parameter data.  A new pipeline can be constructed from such a
     configuration can be reloaded with :meth:`Pipeline.from_config`.
-3.  Save the pipeline parameters with :meth:`Pipeline.save_params`.  This saves
-    the learned parameters but **not** the configuration or connections.  The
-    parameters can be reloaded into a compatible pipeline with
-    :meth:`Pipeline.load_params`; a compatible pipeline can be created by
-    running the same pipeline setup code or using a saved pipeline
-    configuration.
 
-These can be mixed and matched: if you pickle an untrained pipeline, you can
-unpickle it and use :meth:`~Pipeline.load_params` to infuse it with parameters.
+.. comment::
 
-Component implementations need to support the configuration and/or parameter
-values, as needed, in addition to functioning correctly with pickle (no specific
-logic is usually needed for this).
+    3.  Save the pipeline parameters with :meth:`Pipeline.save_params`.  This saves
+        the learned parameters but **not** the configuration or connections.  The
+        parameters can be reloaded into a compatible pipeline with
+        :meth:`Pipeline.load_params`; a compatible pipeline can be created by
+        running the same pipeline setup code or using a saved pipeline
+        configuration.
 
-LensKit knows how to safely save the following object types from
-:meth:`Trainable.get_params`:
+    These can be mixed and matched: if you pickle an untrained pipeline, you can
+    unpickle it and use :meth:`~Pipeline.load_params` to infuse it with parameters.
 
-*   :class:`torch.Tensor` (dense, CSR, and COO tensors).
-*   :class:`numpy.ndarray`.
-*   :class:`scipy.sparse.csr_array`, :class:`~scipy.sparse.coo_array`,
-    :class:`~scipy.sparse.csc_array`, and the corresponding ``*_matrix``
-    versions.
+    Component implementations need to support the configuration and/or parameter
+    values, as needed, in addition to functioning correctly with pickle (no specific
+    logic is usually needed for this).
 
-Other objects (including Pandas dataframes) are serialized by pickling, and the
-pipeline will emit a warning (or fail, if ``allow_pickle=False`` is passed to
-:meth:`~Pipeline.save_params`).
+    LensKit knows how to safely save the following object types from
+    :meth:`Trainable.get_params`:
 
-.. note::
+    *   :class:`torch.Tensor` (dense, CSR, and COO tensors).
+    *   :class:`numpy.ndarray`.
+    *   :class:`scipy.sparse.csr_array`, :class:`~scipy.sparse.coo_array`,
+        :class:`~scipy.sparse.csc_array`, and the corresponding ``*_matrix``
+        versions.
 
-    The load/save parameter operations are modeled after PyTorch's
-    :meth:`~torch.nn.Module.state_dict` and the needs of safetensors_.
+    Other objects (including Pandas dataframes) are serialized by pickling, and the
+    pipeline will emit a warning (or fail, if ``allow_pickle=False`` is passed to
+    :meth:`~Pipeline.save_params`).
 
-.. _safetensors: https://huggingface.co/docs/safetensors/
+    .. note::
+
+        The load/save parameter operations are modeled after PyTorch's
+        :meth:`~torch.nn.Module.state_dict` and the needs of safetensors_.
+
+    .. _safetensors: https://huggingface.co/docs/safetensors/
 
 .. _standard-pipelines:
 
