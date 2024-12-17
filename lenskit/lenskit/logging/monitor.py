@@ -277,6 +277,8 @@ class MonitorThread(threading.Thread):
         with self.monitor.lock:
             objs = list(self.monitor.refreshables.values())
 
+        objs.reverse()
+
         for obj in objs:
             try:
                 obj.monitor_refresh()
