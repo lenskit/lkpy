@@ -110,6 +110,17 @@ def test_sample_users(ml_ds: Dataset):
         assert s.test_size + s.train.count("pairs") == ml_ds.count("pairs")
 
 
+def test_sample_test_only(ml_ds: Dataset):
+    splits = sample_users(ml_ds, 100, SampleN(5), repeats=1, test_only=True)
+    splits = list(splits)
+    assert len(splits) == 1
+
+    for s in splits:
+        assert len(s.test) == 100
+        assert s.test_size == 500
+        assert s.train.interaction_count == 0
+
+
 def test_sample_users_non_disjoint(ml_ds: Dataset):
     splits = sample_users(ml_ds, 100, SampleN(5), repeats=5, disjoint=False)
     splits = list(splits)

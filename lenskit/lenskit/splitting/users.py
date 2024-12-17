@@ -14,6 +14,7 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from lenskit.data import NPID, Dataset, ItemListCollection, UserIDKey
+from lenskit.data.matrix import MatrixDataset
 from lenskit.logging import item_progress
 from lenskit.types import RNGInput
 from lenskit.util.random import random_generator
@@ -25,7 +26,12 @@ _log = logging.getLogger(__name__)
 
 
 def crossfold_users(
-    data: Dataset, partitions: int, method: HoldoutMethod, *, rng: RNGInput | None = None
+    data: Dataset,
+    partitions: int,
+    method: HoldoutMethod,
+    *,
+    test_only: bool = False,
+    rng: RNGInput | None = None,
 ) -> Iterator[TTSplit]:
     """
     Partition a frame of ratings or other data into train-test partitions
@@ -39,6 +45,8 @@ def crossfold_users(
             the number of partitions to produce
         method:
             The method for selecting test rows for each user.
+        test_only:
+            If ``True``, returns splits with only testing data.
         rng:
             The random number generator or seed (see :ref:`rng`).
 
@@ -72,7 +80,7 @@ def crossfold_users(
         test_us = users[ts]
         _log.info("fold %d: selecting test ratings", i)
 
-        yield _make_split(data, df, test_us, method)
+        yield _make_split(data, df, test_us, method, test_only=test_only)
 
 
 @overload
@@ -83,6 +91,7 @@ def sample_users(
     *,
     repeats: int,
     disjoint: bool = True,
+    test_only: bool = False,
     rng: RNGInput = None,
 ) -> Iterator[TTSplit]: ...
 @overload
@@ -93,6 +102,7 @@ def sample_users(
     *,
     disjoint: bool = True,
     rng: RNGInput = None,
+    test_only: bool = False,
     repeats: None = None,
 ) -> TTSplit: ...
 def sample_users(
@@ -102,6 +112,7 @@ def sample_users(
     *,
     repeats: int | None = None,
     disjoint: bool = True,
+    test_only: bool = False,
     rng: RNGInput = None,
 ) -> Iterator[TTSplit] | TTSplit:
     """
@@ -119,6 +130,9 @@ def sample_users(
             The method for obtaining user test ratings.
         repeats:
             The number of samples to produce.
+        test_only:
+            If ``True``, returns splits with empty training sets (useful when
+            you just want to save the test data).
         rng:
             The random number generator or seed (see :ref:`rng`).
 
@@ -153,11 +167,16 @@ def sample_users(
     else:
         test_usets = [rng.choice(len(users), size, replace=False) for _i in range(repeats)]
 
-    return (_make_split(data, rate_df, users[us], method) for us in test_usets)
+    return (_make_split(data, rate_df, users[us], method, test_only=test_only) for us in test_usets)
 
 
 def _make_split(
-    data: Dataset, df: pd.DataFrame, test_us: NDArray[NPID], method: HoldoutMethod
+    data: Dataset,
+    df: pd.DataFrame,
+    test_us: NDArray[NPID],
+    method: HoldoutMethod,
+    *,
+    test_only: bool = False,
 ) -> TTSplit:
     # create the test sets for these users
     test = ItemListCollection(UserIDKey)
@@ -170,6 +189,12 @@ def _make_split(
             test.add(u_test, u)
             pb.update()
 
-    split = TTSplit.from_src_and_test(data, test)
-    assert split.train.interaction_count + split.test_size == len(df)
-    return split
+    if test_only:
+        return TTSplit(
+            MatrixDataset(data.users, data.items, pd.DataFrame({"user_id": [], "item_id": []})),
+            test,
+        )
+    else:
+        split = TTSplit.from_src_and_test(data, test)
+        assert split.train.interaction_count + split.test_size == len(df)
+        return split
