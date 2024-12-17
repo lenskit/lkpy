@@ -636,6 +636,10 @@ class ItemList:
                         continue
 
                     names.append(fn)
+                    if fn == "rank" and self.ordered:
+                        arrays.append(self.ranks("arrow"))
+                        continue
+
                     col = self._fields.get(fn, None)
                     if col is not None:
                         arrays.append(col.arrow())
