@@ -105,6 +105,8 @@ autodoc_type_aliases = {
     "RNGInput": "lenskit.types.RNGInput",
 }
 # autosummary_generate_overwrite = False
+autosummary_imported_members = False
+autosummary_ignore_module_all = True
 
 nitpicky = True
 todo_include_todos = True
