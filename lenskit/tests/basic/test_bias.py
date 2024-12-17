@@ -17,6 +17,7 @@ from lenskit import util as lku
 from lenskit.basic import BiasModel, BiasScorer
 from lenskit.data import Dataset, from_interactions_df
 from lenskit.data.items import ItemList
+from lenskit.operations import predict, recommend
 from lenskit.pipeline import Pipeline
 from lenskit.pipeline.common import topn_pipeline
 
@@ -316,14 +317,14 @@ def test_bias_topn(ml_ds: Dataset):
     print(pipe.get_config())
     pipe.train(ml_ds)
 
-    res = pipe.run("rating-predictor", user=2, items=ItemList(item_ids=[10, 11, -1]))
+    res = predict(pipe, 2, ItemList(item_ids=[10, 11, -1]))
     assert isinstance(res, ItemList)
     assert len(res) == 3
     assert np.all(res.ids() == [10, 11, -1])
 
-    res = pipe.run("ranker", user=2, n=10)
-    assert isinstance(res, ItemList)
-    assert len(res) == 10
+    recs = recommend(pipe, 2, n=1)
+    assert isinstance(recs, ItemList)
+    assert len(recs) == 10
 
 
 def test_bias_topn_run_length(ml_ds: Dataset):
@@ -331,11 +332,11 @@ def test_bias_topn_run_length(ml_ds: Dataset):
     print(pipe.get_config())
     pipe.train(ml_ds)
 
-    res = pipe.run("rating-predictor", user=2, items=ItemList(item_ids=[10, 11, -1]))
+    res = predict(pipe, 2, items=ItemList(item_ids=[10, 11, -1]))
     assert isinstance(res, ItemList)
     assert len(res) == 3
     assert np.all(res.ids() == [10, 11, -1])
 
-    res = pipe.run("ranker", user=2, n=10)
+    res = recommend(pipe, 2, n=10)
     assert isinstance(res, ItemList)
     assert len(res) == 10
