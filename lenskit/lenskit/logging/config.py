@@ -63,6 +63,13 @@ class LoggingConfig:  # pragma: nocover
     def set_verbose(self, verbose: bool = True):
         """
         Enable verbose logging.
+
+        .. note::
+
+            It is better to only call this method if your application's
+            ``verbose`` option is provided, rather than passing your verbose
+            option to it, to allow the ``LK_LOG_LEVEL`` environment variable to
+            apply in the absence of a configuration option.
         """
         if verbose:
             self.level = logging.DEBUG
