@@ -5,14 +5,15 @@ Logging pipeline configuration.
 from __future__ import annotations
 
 import logging
+import os
+import re
 import warnings
-from os import PathLike
 from pathlib import Path
 
 import structlog
 
 from ._console import ConsoleHandler, setup_console
-from .processors import format_timestamp, remove_internal
+from .processors import format_timestamp, log_warning, remove_internal
 from .progress import set_progress_impl
 
 CORE_PROCESSORS = [structlog.processors.add_log_level, structlog.processors.MaybeTimeStamper()]
@@ -27,7 +28,7 @@ def active_logging_config() -> LoggingConfig | None:
     return _active_config
 
 
-class LoggingConfig:
+class LoggingConfig:  # pragma: nocover
     """
     Configuration for LensKit logging.
 
@@ -41,6 +42,17 @@ class LoggingConfig:
     file: Path | None = None
     file_level: int | None = None
 
+    def __init__(self):
+        # initialize configuration from environment variables
+        if ev_level := _env_level("LK_LOG_LEVEL"):
+            self.level = ev_level
+
+        if ev_file := os.environ.get("LK_LOG_FILE", None):
+            self.file = Path(ev_file)
+
+        if ev_level := _env_level("LK_LOG_FILE_LEVEL"):
+            self.file_level = ev_level
+
     @property
     def effective_level(self) -> int:
         if self.file_level is not None and self.file_level < self.level:
@@ -51,13 +63,20 @@ class LoggingConfig:
     def set_verbose(self, verbose: bool = True):
         """
         Enable verbose logging.
+
+        .. note::
+
+            It is better to only call this method if your application's
+            ``verbose`` option is provided, rather than passing your verbose
+            option to it, to allow the ``LK_LOG_LEVEL`` environment variable to
+            apply in the absence of a configuration option.
         """
         if verbose:
             self.level = logging.DEBUG
         else:
             self.level = logging.INFO
 
-    def log_file(self, path: PathLike[str], level: int | None = None):
+    def log_file(self, path: os.PathLike[str], level: int | None = None):
         """
         Configure a log file.
         """
@@ -115,7 +134,14 @@ class LoggingConfig:
         _active_config = self
 
 
-def log_warning(message, category, filename, lineno, file=None, line=None):
-    log = structlog.stdlib.get_logger("lenskit")
-    log = log.bind(category=category.__name__, file=filename, lineno=lineno)
-    log.warning(str(message))
+def _env_level(name: str) -> int | None:
+    ev_level = os.environ.get(name, None)
+    if ev_level:
+        ev_level = ev_level.strip().upper()
+        lmap = logging.getLevelNamesMapping()
+        if re.match(r"^\d+$", ev_level):
+            return int(ev_level)
+        elif ev_level in lmap:
+            return lmap[ev_level]
+        else:
+            warnings.warn(f"{name} set to invalid value {ev_level}")
