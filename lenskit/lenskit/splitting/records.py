@@ -183,7 +183,7 @@ def _make_pair(
 
     test = ItemListCollection.from_df(df[mask], UserIDKey)
     if test_only:
-        train = MatrixDataset(data.users, data.items, df.loc[:0])
+        train = MatrixDataset(data.users, data.items, df.iloc[:0])
     else:
         train = MatrixDataset(data.users, data.items, df[~mask])
 
