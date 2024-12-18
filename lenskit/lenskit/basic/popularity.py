@@ -1,9 +1,9 @@
-from datetime import datetime
 import logging
-from typing_extensions import override
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
+from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList
 from lenskit.pipeline import Component
@@ -58,7 +58,7 @@ class PopScorer(Component):
             scores = scores.sort_index()
         else:
             raise ValueError("invalid scoring method " + repr(self.score_method))
-        
+
         return scores
 
     def __call__(self, items: ItemList) -> ItemList:
@@ -112,7 +112,10 @@ class TimeBoundedPopScore(PopScorer):
             item_nums = log.item_nums[log.timestamps > start_timestamp]
             np.add.at(counts, item_nums, 1)
 
-            item_scores = super()._train_internal(pd.Series(counts, index=data.items.index), **kwargs)
+            item_scores = super()._train_internal(
+                pd.Series(counts, index=data.items.index),
+                **kwargs,
+            )
 
         self.item_scores_ = item_scores
 

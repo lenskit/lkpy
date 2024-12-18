@@ -12,6 +12,7 @@ import pandas as pd
 
 from lenskit.basic import popularity
 from lenskit.data import from_interactions_df
+from lenskit.data.items import ItemList
 
 ts = datetime(year=2024, month=1, day=1)
 one_day_ago = ts - timedelta(days=1)
@@ -31,6 +32,15 @@ def test_time_bounded_pop_score_quantile_one_day_window():
     algo = popularity.TimeBoundedPopScore(one_day_ago)
     algo.train(simple_ds)
     assert algo.item_scores_.equals(pd.Series([1.0, 0.0, 0.0], index=[1, 2, 3]))
+
+
+def test_time_bounded_pop_score_quantile_one_day_window_call_interface():
+    algo = popularity.TimeBoundedPopScore(one_day_ago)
+    algo.train(simple_ds)
+    p = algo(ItemList(item_ids=[1, 2, 3]))
+
+    assert len(p) == 3
+    assert (p.scores() == [1.0, 0.0, 0.0]).all()
 
 
 def test_time_bounded_pop_score_quantile_two_day_window():
