@@ -10,6 +10,7 @@ from pytest import raises
 from lenskit.data import ItemList
 from lenskit.data.collection import ItemListCollection, UserIDKey, _create_key, project_key
 from lenskit.data.dataset import Dataset
+from lenskit.util.test import demo_recs
 
 _log = logging.getLogger(__name__)
 
@@ -226,3 +227,20 @@ def test_write_parquet_with_empty(ml_ds: Dataset, tmpdir: Path):
     assert len(il1) == len(il2)
 
     assert sum(len(l1) for l1 in ilc2.lists()) == sum(len(l2) for l2 in ilc.lists())
+
+
+def test_write_recs_parquet(demo_recs, tmpdir: Path):
+    split, recs = demo_recs
+
+    test_f = tmpdir / "test.parquet"
+    rec_f = tmpdir / "recs.parquet"
+
+    split.test.save_parquet(test_f)
+    recs.save_parquet(rec_f)
+
+    t2 = ItemListCollection.load_parquet(test_f)
+    assert list(t2.keys()) == list(split.test.keys())
+
+    r2 = ItemListCollection.load_parquet(rec_f)
+    assert list(r2.keys()) == list(recs.keys())
+    assert all(il.ordered for il in r2.lists())
