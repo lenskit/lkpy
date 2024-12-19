@@ -11,7 +11,7 @@ class Progress:
     def __init__(self, *args: Any, **kwargs: Any):
         pass
 
-    def update(self, advance: int = 0, **kwargs: float | int | str):
+    def update(self, advance: int = 1, **kwargs: float | int | str):
         """
         Update the progress bar.
         """
