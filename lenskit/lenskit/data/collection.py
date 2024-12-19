@@ -341,8 +341,6 @@ class ItemListCollection(Generic[K]):
         self._lists.append((key, list))
         if self._index is not None:
             self._index[key] = len(self._lists) - 1
-        if list.ordered and "rank" not in self._list_schema:
-            self._list_schema["rank"] = pa.int32()
         for fn, ft in list.arrow_types().items():
             pft = self._list_schema.get(fn, None)
             if pft is None:

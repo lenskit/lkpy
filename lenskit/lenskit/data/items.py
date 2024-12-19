@@ -684,6 +684,9 @@ class ItemList:
         if numbers and (self._numbers is not None or self._vocab is not None):
             types["item_num"] = pa.int32()
 
+        if self.ordered:
+            types["rank"] = pa.int32()
+
         for name, f in self._fields.items():
             types[name] = pa.from_numpy_dtype(f.numpy().dtype)
 
