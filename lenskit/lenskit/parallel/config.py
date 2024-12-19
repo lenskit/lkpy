@@ -107,6 +107,16 @@ def get_parallel_config() -> ParallelConfig:
     return _config
 
 
+def subprocess_config() -> ParallelConfig:
+    """
+    Get a parallel configuration for a subprocess.
+    """
+    cfg = get_parallel_config()
+    return ParallelConfig(
+        processes=1, threads=1, backend_threads=cfg.child_threads, child_threads=1
+    )
+
+
 def effective_cpu_count() -> int:
     """
     Return the effective CPU count using the best available data.  Tries the following in order:
