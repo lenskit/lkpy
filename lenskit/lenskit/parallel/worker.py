@@ -15,19 +15,12 @@ from typing import Any
 import structlog
 from typing_extensions import Generic
 
-from .config import initialize as init_parallel
 from .invoker import A, InvokeOp, M, R
 from .serialize import ModelData, shm_deserialize
 
 _log = structlog.get_logger(__name__)
 
-
 __work_context: WorkerData
-
-
-@dataclass(frozen=True)
-class WorkerConfig:
-    threads: int
 
 
 @dataclass(frozen=True)
@@ -36,11 +29,10 @@ class WorkerData(Generic[M, A, R]):
     model: M
 
 
-def initalize(cfg: WorkerConfig, ctx: ModelData) -> None:
+def initalize(ctx: ModelData) -> None:
     global __work_context, __progress
     proc = mp.current_process()
     log = _log.bind(pid=proc.pid, pname=proc.name)
-    init_parallel(processes=1, threads=1, backend_threads=cfg.threads, child_threads=1)
 
     warnings.filterwarnings("ignore", "Sparse CSR tensor support is in beta state", UserWarning)
 

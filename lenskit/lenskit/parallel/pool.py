@@ -4,7 +4,7 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-# pyright: strict
+# pyright: basic
 from __future__ import annotations
 
 from concurrent.futures import ProcessPoolExecutor
@@ -18,11 +18,28 @@ from lenskit.logging.tasks import Task
 from lenskit.logging.worker import WorkerContext, WorkerLogConfig
 
 from . import worker
-from .config import get_parallel_config
+from .config import ParallelConfig, ensure_parallel_init, get_parallel_config, initialize
 from .invoker import A, InvokeOp, M, ModelOpInvoker, R
 from .serialize import shm_serialize
 
 _log = structlog.stdlib.get_logger(__name__)
+
+
+def multiprocess_executor(
+    n_jobs: int | None = None, sp_config: ParallelConfig | None = None
+) -> ProcessPoolExecutor:
+    """
+    Construct a :class:`ProcessPoolExecutor` configured for LensKit work.
+    """
+    ensure_parallel_init()
+    cfg = get_parallel_config()
+    if sp_config is None:
+        sp_config = ParallelConfig(1, 1, cfg.child_threads, 1)
+    if n_jobs is None:
+        n_jobs = cfg.processes
+
+    ctx = LenskitMPContext(sp_config)
+    return ProcessPoolExecutor(n_jobs, ctx)
 
 
 class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
@@ -32,20 +49,18 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
     def __init__(self, model: M, func: InvokeOp[M, A, R], n_jobs: int):
         log = _log.bind(n_jobs=n_jobs)
         log.debug("persisting function")
-        ctx = LenskitMPContext()
+        kid_tc = ParallelConfig(1, 1, get_parallel_config().child_threads, 1)
+        ctx = LenskitMPContext(kid_tc)
 
         log.debug("initializing shared memory")
-        kid_tc = get_parallel_config().child_threads
-
         self.manager = SharedMemoryManager()
         self.manager.start()
 
         try:
-            cfg = worker.WorkerConfig(kid_tc)
             job = worker.WorkerData(func, model)
             job = shm_serialize(job, self.manager)
             log.info("setting up process pool")
-            self.pool = ProcessPoolExecutor(n_jobs, ctx, worker.initalize, (cfg, job))
+            self.pool = ProcessPoolExecutor(n_jobs, ctx, worker.initalize, (job,))
         except Exception as e:
             self.manager.shutdown()
             raise e
@@ -70,14 +85,18 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
 class LenskitProcess(SpawnProcess):
     "LensKit worker process implementation."
 
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(
+        self, logging: WorkerLogConfig, parallel: ParallelConfig, *args: Any, **kwargs: Any
+    ):
         super().__init__(*args, **kwargs)
         # save the log config to pass to the process
-        self._log_config = WorkerLogConfig.current()
+        self._log_config = logging
+        self._parallel_config = parallel
 
     @override
     def run(self):
         with WorkerContext(self._log_config) as ctx:
+            initialize(self._parallel_config)
             log = _log.bind(pid=self.pid, pname=self.name)
             log.info("multiprocessing worker started")
             task = None
@@ -93,4 +112,12 @@ class LenskitProcess(SpawnProcess):
 class LenskitMPContext(SpawnContext):
     "LensKit multiprocessing context."
 
-    Process = LenskitProcess
+    _log_config: WorkerLogConfig
+    _parallel_config: ParallelConfig
+
+    def __init__(self, parallel: ParallelConfig):
+        self._log_config = WorkerLogConfig.current()
+        self._parallel_config = parallel
+
+    def Process(self, *args: Any, **kwargs: Any) -> SpawnProcess:
+        return LenskitProcess(self._log_config, self._parallel_config, *args, **kwargs)

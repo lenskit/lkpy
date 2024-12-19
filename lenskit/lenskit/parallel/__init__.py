@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from .config import ensure_parallel_init, get_parallel_config, initialize
 from .invoker import ModelOpInvoker, invoker
+from .pool import multiprocess_executor
 
 __all__ = [
     "initialize",
@@ -19,4 +20,5 @@ __all__ = [
     "ensure_parallel_init",
     "invoker",
     "ModelOpInvoker",
+    "multiprocess_executor",
 ]
