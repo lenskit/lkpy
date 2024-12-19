@@ -10,7 +10,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Generic, Iterable, Iterator, Optional, TypeAlias, TypeVar
 
-from .config import ensure_parallel_init, get_parallel_config
+from .config import ParallelConfig, ensure_parallel_init, get_parallel_config
 
 M = TypeVar("M")
 A = TypeVar("A")
@@ -22,24 +22,22 @@ def invoker(
     model: M,
     func: InvokeOp[M, A, R],
     n_jobs: Optional[int] = None,
+    *,
+    worker_parallel: ParallelConfig | None = None,
 ) -> ModelOpInvoker[A, R]:
     """
     Get an appropriate invoker for performing operations on ``model``.
 
     Args:
-        model: The model object on which to perform operations.
-        func: The function to call.  The function must be pickleable.
+        model:
+            The model object on which to perform operations.
+        func:
+            The function to call.  The function must be pickleable.
         n_jobs:
             The number of processes to use for parallel operations.  If ``None``, will
             call :func:`proc_count` with a maximum default process count of 4.
-        progress:
-            A progress bar to use to report status. It should have the following states:
-
-            * dispatched
-            * in-progress
-            * finished
-
-            One can be created with :func:`invoke_progress`
+        worker_parallel:
+            A parallel configuration for subprocess workers.
 
     Returns:
         ModelOpInvoker:
@@ -56,7 +54,7 @@ def invoker(
     else:
         from .pool import ProcessPoolOpInvoker
 
-        return ProcessPoolOpInvoker(model, func, n_jobs)
+        return ProcessPoolOpInvoker(model, func, n_jobs, worker_parallel=worker_parallel)
 
 
 class ModelOpInvoker(ABC, Generic[A, R]):

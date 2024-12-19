@@ -46,11 +46,18 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
     manager: SharedMemoryManager
     pool: ProcessPoolExecutor
 
-    def __init__(self, model: M, func: InvokeOp[M, A, R], n_jobs: int):
+    def __init__(
+        self,
+        model: M,
+        func: InvokeOp[M, A, R],
+        n_jobs: int,
+        worker_parallel: ParallelConfig | None = None,
+    ):
         log = _log.bind(n_jobs=n_jobs)
         log.debug("persisting function")
-        kid_tc = ParallelConfig(1, 1, get_parallel_config().child_threads, 1)
-        ctx = LenskitMPContext(kid_tc)
+        if worker_parallel is None:
+            worker_parallel = ParallelConfig(1, 1, get_parallel_config().child_threads, 1)
+        ctx = LenskitMPContext(worker_parallel)
 
         log.debug("initializing shared memory")
         self.manager = SharedMemoryManager()
