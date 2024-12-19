@@ -10,6 +10,7 @@ Primary item-list abstraction.
 
 from __future__ import annotations
 
+import warnings
 from typing import overload
 
 import numpy as np
@@ -25,6 +26,8 @@ from typing_extensions import (
     TypeAlias,
     cast,
 )
+
+from lenskit.diagnostics import DataWarning
 
 from .checks import array_is_null, check_1d
 from .mtarray import MTArray, MTGenericArray
@@ -608,57 +611,25 @@ class ItemList:
             arrays = [pa.array([], ft) for ft in columns.values()]
             names = list(columns.keys())
         else:
-            if (ids or (columns is not None and "item_id" in columns)) and (
-                self._ids is not None or self._vocab is not None
-            ):
-                arrays.append(self.ids())
-                names.append("item_id")
-            if (numbers or (columns is not None and "item_num" in columns)) and (
-                self._numbers is not None or self._vocab is not None
-            ):
-                arrays.append(self.numbers("arrow"))
-                names.append("item_num")
+            if columns is None:
+                columns = self.arrow_types(ids=ids, numbers=numbers)
 
-            # we need to have numbers or ids, or it makes no sense
-            if "item_id" not in names and "item_num" not in names:
-                if ids and not numbers:
-                    raise RuntimeError("item list has no vocabulary, cannot compute IDs")
-                elif numbers and not ids:
-                    raise RuntimeError("item list has no vocabulary, cannot compute numbers")
-                else:
-                    raise RuntimeError(
-                        "cannot create item data frame without identifiers or numbers"
-                    )
-
-            if columns is not None:
-                for fn, ft in columns.items():
-                    if fn in ("item_id", "item_num"):
-                        continue
-
-                    names.append(fn)
-                    if fn == "rank" and self.ordered:
+            for c_name, c_type in columns.items():
+                names.append(c_name)
+                if c_name == "item_id":
+                    arrays.append(pa.array(self.ids()))
+                elif c_name == "item_num":
+                    arrays.append(self.numbers("arrow"))
+                elif c_name == "rank":
+                    if self.ordered:
                         arrays.append(self.ranks("arrow"))
-                        continue
-
-                    col = self._fields.get(fn, None)
-                    if col is not None:
-                        arrays.append(col.arrow())
                     else:
-                        arrays.append(pa.nulls(len(self), ft))  # type: ignore
-            else:
-                if "score" in self._fields:
-                    arrays.append(self.scores())
-                    names.append("score")
-                if self.ordered:
-                    arrays.append(self.ranks())
-                    names.append("rank")
-                # add remaining fields
-                for k, v in self._fields.items():
-                    if k == "score" or k == "rank":
-                        continue
-
-                    arrays.append(v.numpy())
-                    names.append(k)
+                        warnings.warn("requested rank column for unordered list", DataWarning)
+                        arrays.append(pa.nulls(len(self), c_type))
+                elif fld := self._fields.get(c_name, None):
+                    arrays.append(fld.arrow())
+                else:
+                    warnings.warn(f"unknown field {c_name}", DataWarning)
 
         if type == "table":
             return pa.Table.from_arrays(arrays, names)
@@ -677,9 +648,9 @@ class ItemList:
 
         if ids:
             if self._ids is not None:
-                types["item_id"] = pa.from_numpy_dtype(self._ids.dtype)
+                types["item_id"] = _arrow_type(self._ids.dtype)
             elif self._vocab is not None:
-                types["item_id"] = pa.from_numpy_dtype(self._vocab.ids().dtype)
+                types["item_id"] = _arrow_type(self._vocab.ids().dtype)
 
         if numbers and (self._numbers is not None or self._vocab is not None):
             types["item_num"] = pa.int32()
@@ -688,7 +659,7 @@ class ItemList:
             types["rank"] = pa.int32()
 
         for name, f in self._fields.items():
-            types[name] = pa.from_numpy_dtype(f.numpy().dtype)
+            types[name] = _arrow_type(f.numpy().dtype)
 
         return types
 
@@ -760,3 +731,10 @@ class ItemList:
         fnames = ", ".join(self._fields.keys())
         nf = len(self._fields)
         return f"<ItemList of {self._len} items with {nf} fields ({fnames})>"
+
+
+def _arrow_type(dtype: np.dtype) -> pa.DataType:
+    if dtype == np.object_:
+        return pa.utf8()
+    else:
+        return pa.from_numpy_dtype(dtype)
