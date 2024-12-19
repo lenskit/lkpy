@@ -149,7 +149,12 @@ class BatchPipelineRunner:
             timer.stop()
 
             rate = timer.elapsed() / n_users
-            _log.info("finished running for %d users in %s (%.1fms/user)", n_users, timer, rate)
+            _log.info(
+                "finished running for %d users in %s (%.1fms/user)",
+                n_users,
+                timer.elapsed() * 1000,
+                rate,
+            )
 
         return results
 
