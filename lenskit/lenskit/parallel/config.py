@@ -29,6 +29,7 @@ class ParallelConfig:
 
 
 def initialize(
+    config: ParallelConfig | None = None,
     *,
     processes: int | None = None,
     threads: int | None = None,
@@ -66,7 +67,10 @@ def initialize(
     # our parallel computation doesn't work with FD sharing
     torch.multiprocessing.set_sharing_strategy("file_system")
 
-    _config = _resolve_parallel_config(processes, threads, backend_threads, child_threads)
+    if config is None:
+        _config = _resolve_parallel_config(processes, threads, backend_threads, child_threads)
+    else:
+        _config = config
     _log.debug("configuring for parallelism: %s", _config)
 
     threadpool_limits(_config.backend_threads, "blas")
