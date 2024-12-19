@@ -34,7 +34,7 @@ from .mtarray import MTArray, MTGenericArray
 from .types import IDArray, IDSequence
 from .vocab import Vocabulary
 
-Backend: TypeAlias = Literal["numpy", "torch"]
+Backend: TypeAlias = Literal["numpy", "torch", "arrow"]
 
 
 class ItemList:
