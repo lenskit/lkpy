@@ -186,7 +186,9 @@ class ItemList:
             else:
                 self._ids = np.ndarray(0, dtype=np.int32)
             if not issubclass(self._ids.dtype.type, (np.integer, np.str_, np.bytes_, np.object_)):
-                raise TypeError(f"item IDs not integers or bytes (type: {self._ids.dtype})")
+                raise TypeError(
+                    f"item IDs not integers, strings, or objects (type: {self._ids.dtype})"
+                )
 
             check_1d(self._ids, label="item_ids")
             self._len = len(item_ids)
@@ -218,15 +220,28 @@ class ItemList:
                 else:
                     scores = np.require(scores, np.float32)
 
+        if "rank" in fields:
+            if ordered is False:
+                warnings.warn(
+                    "ranks provided but ordered=False, dropping ranks", DataWarning, stacklevel=2
+                )
+            else:
+                self._ranks = check_1d(
+                    MTArray(np.require(fields["rank"], np.int32)), self._len, label="ranks"
+                )
+                if self._len and self._ranks.numpy()[0] != 1:
+                    warnings.warn("ranks do not begin with 1", DataWarning, stacklevel=2)
+                self.ordered = True
+
         # convert fields and drop singular ID/number aliases
         self._fields = {}
         if not array_is_null(scores):
             assert scores is not None
-            self._fields["score"] = check_1d(MTArray(scores), self._len, label="score")
+            self._fields["score"] = check_1d(MTArray(scores), self._len, label="scores")
 
         for name, data in eff_fields.items():
             if (
-                name not in ("item_id", "item_num", "score")
+                name not in ("item_id", "item_num", "score", "rank")
                 and data is not False
                 and not array_is_null(data)
             ):
@@ -260,26 +275,16 @@ class ItemList:
         if not keep_user:
             to_drop += ["user_id", "user_num"]
 
-        if "rank" in df.columns:
-            ranks = df["rank"]
-            to_drop += "rank"
-            if ranks.iloc[0] != 1:
-                raise ValueError("item ranks do not start with 1")
-            if np.any(np.diff(ranks) != 1):
-                raise ValueError("item ranks not consecutive")
-        else:
-            ranks = None
-
         fields = {f: df[f].values for f in df.columns if f not in to_drop}
+
         items = cls(
             item_ids=ids,  # type: ignore
             item_nums=nums,  # type: ignore
             vocabulary=vocabulary,
-            ordered=ranks is not None,
+            ordered="rank" in fields,
             **fields,  # type: ignore
         )
-        if ranks is not None:
-            items._ranks = MTArray(np.require(ranks.values, np.int32))  # type: ignore
+
         return items
 
     @classmethod

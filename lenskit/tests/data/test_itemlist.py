@@ -14,10 +14,11 @@ import torch
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import given, settings
-from pytest import raises
+from pytest import raises, warns
 
 from lenskit.data import Dataset, ItemList
 from lenskit.data.vocab import Vocabulary
+from lenskit.diagnostics import DataWarning
 
 ITEMS = ["a", "b", "c", "d", "e"]
 VOCAB = Vocabulary(ITEMS)
@@ -166,6 +167,44 @@ def test_scores():
     assert np.all(st.numpy() == data)
 
     assert il.ranks() is None
+
+
+def test_rank_field():
+    data = np.random.randn(5).astype(np.float32)
+    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data, rank=np.arange(5) + 1)
+    assert il.ordered
+    assert np.all(il.ranks() == np.arange(5) + 1)
+
+
+def test_torch_rank_field():
+    data = np.random.randn(5).astype(np.float32)
+    il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data, rank=torch.arange(5) + 1)
+    assert il.ordered
+    assert np.all(il.ranks() == np.arange(5) + 1)
+
+
+def test_ordered_mismatch():
+    data = np.random.randn(5).astype(np.float32)
+    with warns(DataWarning, match="ordered=False"):
+        il = ItemList(
+            item_nums=np.arange(5),
+            ordered=False,
+            vocabulary=VOCAB,
+            scores=data,
+            rank=np.arange(5) + 1,
+        )
+    assert not il.ordered
+    assert il.ranks() is None
+
+
+def test_rank_not_one():
+    data = np.random.randn(5).astype(np.float32)
+    with warns(DataWarning, match="begin with 1"):
+        il = ItemList(
+            item_nums=np.arange(5), vocabulary=VOCAB, scores=data, rank=np.arange(2, 11, 2)
+        )
+    assert il.ordered
+    assert np.all(il.ranks() == np.arange(2, 11, 2))
 
 
 def test_scores_pandas_no_index():
