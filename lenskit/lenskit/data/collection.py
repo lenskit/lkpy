@@ -279,7 +279,11 @@ class ItemListCollection(Generic[K]):
 
         return ilc
 
-    def _iter_record_batches(self, batch_size: int = 5000) -> Generator[pa.RecordBatch, None, None]:
+    def _iter_record_batches(
+        self, batch_size: int = 5000, columns: dict[str, pa.DataType] | None = None
+    ) -> Generator[pa.RecordBatch, None, None]:
+        if columns is None:
+            columns = self._list_schema
         for batch in chunked(self._lists, batch_size):
             keys = pa.Table.from_pylist([_key_dict(k) for (k, _il) in batch])
             schema = pa.list_(pa.struct(self._list_schema))  # type: ignore
@@ -287,7 +291,7 @@ class ItemListCollection(Generic[K]):
                 keys.num_columns,
                 "items",
                 pa.array(
-                    [il.to_arrow(type="array", columns=self._list_schema) for (_k, il) in batch],
+                    [il.to_arrow(type="array", columns=columns) for (_k, il) in batch],
                     schema,
                 ),
             )
