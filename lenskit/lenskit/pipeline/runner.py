@@ -12,7 +12,9 @@ Pipeline runner logic.
 from dataclasses import dataclass
 from typing import Any, Generic, Literal, TypeAlias, TypeVar, get_args, get_origin
 
-from lenskit.logging import TracingLogger, get_logger
+import structlog
+
+from lenskit.logging import get_logger, trace
 
 from . import Pipeline, PipelineError
 from .components import PipelineFunction
@@ -32,7 +34,7 @@ class PipelineRunner:
     recursion fails.
     """
 
-    log: TracingLogger
+    log: structlog.stdlib.BoundLogger
     pipe: Pipeline
     inputs: dict[str, Any]
     status: dict[str, State]
@@ -57,7 +59,7 @@ class PipelineRunner:
         elif status == "failed":  # pragma: nocover
             raise RuntimeError(f"{node} previously failed")
 
-        self.log.trace("processing node %s", node)
+        trace(self.log, "processing node %s", node)
         self.status[node.name] = "in-progress"
         try:
             self._run_node(node, required)
@@ -106,7 +108,7 @@ class PipelineRunner:
     ) -> None:
         in_data = {}
         log = self.log.bind(component=name)
-        log.trace("processing inputs")
+        trace(log, "processing inputs")
         for iname, itype in inputs.items():
             # look up the input wiring for this parameter input
             src = wiring.get(iname, None)
@@ -156,7 +158,7 @@ class PipelineRunner:
 
             in_data[iname] = ival
 
-        log.trace("running component")
+        trace(log, "running component")
         self.state[name] = comp(**in_data)
 
 
