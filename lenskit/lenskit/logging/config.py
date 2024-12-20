@@ -77,6 +77,11 @@ class LoggingConfig:  # pragma: nocover
             ``verbose`` option is provided, rather than passing your verbose
             option to it, to allow the ``LK_LOG_LEVEL`` environment variable to
             apply in the absence of a configuration option.
+
+        Args:
+            verbose:
+                The level of verbosity.  Values of ``True`` or ``1`` turn on
+                ``DEBUG``-level logs, and ``2`` or greater turns on tracing.
         """
         if isinstance(verbose, int) and verbose > 1:
             self.level = LVL_TRACE

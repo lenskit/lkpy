@@ -9,7 +9,6 @@ import structlog
 from .config import LoggingConfig
 from .progress import Progress, item_progress, set_progress_impl
 from .tasks import Task
-from .tracing import TracingLogger
 
 __all__ = [
     "LoggingConfig",
@@ -18,13 +17,18 @@ __all__ = [
     "set_progress_impl",
     "Task",
     "get_logger",
-    "TracingLogger",
+    "trace",
 ]
 
+get_logger = structlog.stdlib.get_logger
 
-def get_logger(name: str | None = None, **kw: Any) -> TracingLogger:
+
+def trace(logger: structlog.stdlib.BoundLogger, *args: Any, **kwargs: Any):
     """
-    Get a logger.  This is a wrapper around :func:`structlog.get_logger` with
-    the LensKit tracing logger type annotation.
+    Emit a trace-level message, if LensKit tracing is enabled.  Trace-level
+    messages are more fine-grained than debug-level messages, and you usually
+    don't want them.
     """
-    return structlog.get_logger(name, **kw)
+    meth = getattr(logger, "trace", None)
+    if meth is not None:
+        meth(*args, **kwargs)
