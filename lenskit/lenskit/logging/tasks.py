@@ -9,16 +9,23 @@ from enum import Enum
 from os import PathLike
 from pathlib import Path
 from threading import Lock
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID, uuid4
 
 import structlog
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator, Field
 
 from .resource import ResourceMeasurement, reset_linux_hwm
 
 _log = structlog.stdlib.get_logger(__name__)
 _active_tasks: list[Task] = []
+
+
+def _dict_extract_values(data: object) -> Any:
+    if isinstance(data, dict):
+        return list(data.values())  # type: ignore
+    else:
+        return data
 
 
 class TaskStatus(str, Enum):
@@ -112,7 +119,9 @@ class Task(BaseModel, extra="allow"):
     Peak PyTorch GPU memory usage in bytes.
     """
 
-    subtasks: dict[UUID, Task] = Field(default_factory=dict)
+    subtasks: Annotated[
+        list[Task], Field(default_factory=list), BeforeValidator(_dict_extract_values)
+    ]
     """
     This task's subtasks.
     """
@@ -123,6 +132,7 @@ class Task(BaseModel, extra="allow"):
     _initial_meter: ResourceMeasurement | None = None
     _final_meter: ResourceMeasurement | None = None
     _refresh_id: UUID | None = None
+    _subtask_index: dict[UUID, Task] | None = None
 
     @staticmethod
     def current() -> Task | None:
@@ -256,9 +266,15 @@ class Task(BaseModel, extra="allow"):
         """
         Add or update a subtask.
         """
-        self.subtasks[task.task_id] = task
-        if task.parent_id is None:
-            task.parent_id = self.task_id
+        with self._lock:
+            if self._subtask_index is None:
+                self._subtask_index = {t.task_id: t for t in self.subtasks}
+            self._subtask_index[task.task_id] = task
+
+            if task.parent_id is None:
+                task.parent_id = self.task_id
+
+            self.subtasks = list(self._subtask_index.values())
 
     def _save(self):
         if self._save_file:
