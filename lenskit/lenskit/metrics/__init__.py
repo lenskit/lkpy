@@ -16,7 +16,7 @@ from ._base import GlobalMetric, ListMetric, Metric, MetricFunction
 from ._quick import quick_measure_model
 from .bulk import RunAnalysis, RunAnalysisResult
 from .predict import MAE, RMSE
-from .ranking import NDCG, RBP, Precision, RankingMetricBase, Recall, RecipRank
+from .ranking import NDCG, RBP, Hit, Precision, RankingMetricBase, Recall, RecipRank
 
 __all__ = [
     "Metric",
@@ -30,6 +30,7 @@ __all__ = [
     "MAE",
     "NDCG",
     "RBP",
+    "Hit",
     "Precision",
     "Recall",
     "RecipRank",
