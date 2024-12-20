@@ -207,7 +207,7 @@ class MonitorThread(threading.Thread):
                 try:
                     self._handle_log_message()
                 except Exception as e:
-                    _log.error("error handling message", exception=e)
+                    _log.error("error handling message", exc_info=e)
 
             if not ready:
                 if self.state == MonitorState.DRAINING:
