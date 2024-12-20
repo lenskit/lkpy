@@ -299,5 +299,8 @@ class Task(BaseModel, extra="allow"):
 
         self.finish(status)
 
+    def __reduce__(self):
+        return self.__class__.model_validate, (self.model_dump(),)
+
     def __str__(self):
         return f"<Task {self.task_id}: {self.label}>"

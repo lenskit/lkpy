@@ -8,7 +8,6 @@ ignore it.
 from __future__ import annotations
 
 import copy
-import json
 import logging
 import multiprocessing as mp
 import pickle
@@ -53,7 +52,9 @@ class WorkerLogConfig:
             mon = get_monitor()
             cfg = active_logging_config()
             level = cfg.effective_level if cfg is not None else logging.INFO
-            return cls(address=mon.log_address, level=level)
+            return cls(
+                address=mon.log_address, level=level, authkey=bytes(mp.current_process().authkey)
+            )
 
 
 class WorkerContext:
@@ -118,6 +119,7 @@ class ZMQLogHandler(Handler):
     _lock: Lock
     socket: zmq.Socket[bytes]
     key: bytes
+    _render = structlog.processors.JSONRenderer()
 
     def __init__(self, zmq_context: zmq.Context, config: WorkerLogConfig):
         super().__init__()
@@ -148,11 +150,10 @@ class ZMQLogHandler(Handler):
         self.socket.close()
 
     def send_structlog(self, logger, method, event_dict: EventDict):
-        self._send_message(
-            b"structlog",
-            logger.name.encode(),
-            json.dumps({"method": method, "event": event_dict}).encode(),
-        )
+        x = self._render(logger, method, {"method": method, "event": event_dict})
+        if isinstance(x, str):
+            x = x.encode()
+        self._send_message(b"structlog", logger.name.encode(), x)
 
         raise structlog.DropEvent()
 
