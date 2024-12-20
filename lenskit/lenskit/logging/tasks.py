@@ -13,7 +13,7 @@ from typing import Annotated, Any
 from uuid import UUID, uuid4
 
 import structlog
-from pydantic import BaseModel, BeforeValidator, Field
+from pydantic import BaseModel, BeforeValidator, Field, SerializeAsAny
 
 from .resource import ResourceMeasurement, reset_linux_hwm
 
@@ -74,7 +74,7 @@ class Task(BaseModel, extra="allow"):
     """
     The task ID.
     """
-    parent_id: UUID | None = Field(default=None, frozen=True)
+    parent_id: UUID | None = None
     """
     The parent task ID.
     """
@@ -119,7 +119,7 @@ class Task(BaseModel, extra="allow"):
     Peak PyTorch GPU memory usage in bytes.
     """
 
-    subtasks: Annotated[list[Task], BeforeValidator(_dict_extract_values)] = Field(
+    subtasks: Annotated[list[SerializeAsAny[Task]], BeforeValidator(_dict_extract_values)] = Field(
         default_factory=list
     )
     """
