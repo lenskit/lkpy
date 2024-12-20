@@ -27,7 +27,8 @@ class ConsoleHandler(Handler):
     def emit(self, record: LogRecord) -> None:
         try:
             fmt = self.format(record)
-            console.print(*self._decoder.decode(fmt))
+            print(fmt)
+            # console.print(*self._decoder.decode(fmt))
         except Exception:
             self.handleError(record)
 
