@@ -284,9 +284,10 @@ class ItemListCollection(Generic[K]):
     ) -> Generator[pa.RecordBatch, None, None]:
         if columns is None:
             columns = self._list_schema
+
         for batch in chunked(self._lists, batch_size):
             keys = pa.Table.from_pylist([_key_dict(k) for (k, _il) in batch])
-            schema = pa.list_(pa.struct(self._list_schema))  # type: ignore
+            schema = pa.list_(pa.struct(columns))  # type: ignore
             tbl = keys.add_column(
                 keys.num_columns,
                 "items",
