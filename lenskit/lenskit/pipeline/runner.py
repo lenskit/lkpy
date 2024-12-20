@@ -9,16 +9,17 @@ Pipeline runner logic.
 """
 
 # pyright: strict
-import logging
 from dataclasses import dataclass
 from typing import Any, Generic, Literal, TypeAlias, TypeVar, get_args, get_origin
+
+from lenskit.logging import TracingLogger, get_logger
 
 from . import Pipeline, PipelineError
 from .components import PipelineFunction
 from .nodes import ComponentNode, InputNode, LiteralNode, Node
 from .types import Lazy, is_compatible_data
 
-_log = logging.getLogger(__name__)
+_log = get_logger(__name__)
 T = TypeVar("T")
 State: TypeAlias = Literal["pending", "in-progress", "finished", "failed"]
 
@@ -31,12 +32,14 @@ class PipelineRunner:
     recursion fails.
     """
 
+    log: TracingLogger
     pipe: Pipeline
     inputs: dict[str, Any]
     status: dict[str, State]
     state: dict[str, Any]
 
     def __init__(self, pipe: Pipeline, inputs: dict[str, Any]):
+        self.log = _log.bind(pipeline=pipe.name)
         self.pipe = pipe
         self.inputs = inputs
         self.status = {n.name: "pending" for n in pipe.nodes}
@@ -54,7 +57,7 @@ class PipelineRunner:
         elif status == "failed":  # pragma: nocover
             raise RuntimeError(f"{node} previously failed")
 
-        _log.debug("processing node %s", node)
+        self.log.trace("processing node %s", node)
         self.status[node.name] = "in-progress"
         try:
             self._run_node(node, required)
@@ -102,7 +105,8 @@ class PipelineRunner:
         required: bool,
     ) -> None:
         in_data = {}
-        _log.debug("processing inputs for component %s", name)
+        log = self.log.bind(component=name)
+        log.trace("processing inputs")
         for iname, itype in inputs.items():
             # look up the input wiring for this parameter input
             src = wiring.get(iname, None)
@@ -152,7 +156,7 @@ class PipelineRunner:
 
             in_data[iname] = ival
 
-        _log.debug("running component %s", name)
+        log.trace("running component")
         self.state[name] = comp(**in_data)
 
 
