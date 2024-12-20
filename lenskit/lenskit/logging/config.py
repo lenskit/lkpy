@@ -15,8 +15,14 @@ import structlog
 from ._console import ConsoleHandler, setup_console
 from .processors import format_timestamp, log_warning, remove_internal
 from .progress import set_progress_impl
+from .tracing import lenskit_filtering_logger
 
-CORE_PROCESSORS = [structlog.processors.add_log_level, structlog.processors.MaybeTimeStamper()]
+LVL_TRACE = 5
+CORE_PROCESSORS = [
+    structlog.processors.add_log_level,
+    structlog.stdlib.add_logger_name,
+    structlog.processors.MaybeTimeStamper(),
+]
 
 _active_config: LoggingConfig | None = None
 
@@ -60,7 +66,7 @@ class LoggingConfig:  # pragma: nocover
         else:
             return self.level
 
-    def set_verbose(self, verbose: bool = True):
+    def set_verbose(self, verbose: bool | int = True):
         """
         Enable verbose logging.
 
@@ -71,6 +77,8 @@ class LoggingConfig:  # pragma: nocover
             option to it, to allow the ``LK_LOG_LEVEL`` environment variable to
             apply in the absence of a configuration option.
         """
+        if isinstance(verbose, int) and verbose > 1:
+            self.level = LVL_TRACE
         if verbose:
             self.level = logging.DEBUG
         else:
@@ -94,9 +102,10 @@ class LoggingConfig:  # pragma: nocover
         term = ConsoleHandler()
         term.setLevel(self.level)
 
+        eff_lvl = self.effective_level
         structlog.configure(
             processors=CORE_PROCESSORS + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
-            wrapper_class=structlog.make_filtering_bound_logger(self.effective_level),
+            wrapper_class=lenskit_filtering_logger(eff_lvl),
             logger_factory=structlog.stdlib.LoggerFactory(),
         )
         formatter = structlog.stdlib.ProcessorFormatter(
@@ -141,6 +150,8 @@ def _env_level(name: str) -> int | None:
         lmap = logging.getLevelNamesMapping()
         if re.match(r"^\d+$", ev_level):
             return int(ev_level)
+        elif ev_level == "TRACE":
+            return LVL_TRACE
         elif ev_level in lmap:
             return lmap[ev_level]
         else:
