@@ -119,9 +119,9 @@ class Task(BaseModel, extra="allow"):
     Peak PyTorch GPU memory usage in bytes.
     """
 
-    subtasks: Annotated[
-        list[Task], Field(default_factory=list), BeforeValidator(_dict_extract_values)
-    ]
+    subtasks: Annotated[list[Task], BeforeValidator(_dict_extract_values)] = Field(
+        default_factory=list
+    )
     """
     This task's subtasks.
     """
@@ -266,6 +266,7 @@ class Task(BaseModel, extra="allow"):
         """
         Add or update a subtask.
         """
+        _log.debug("adding subtask", task=task.model_dump())
         with self._lock:
             if self._subtask_index is None:
                 self._subtask_index = {t.task_id: t for t in self.subtasks}

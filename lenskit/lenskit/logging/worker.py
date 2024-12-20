@@ -25,6 +25,7 @@ from .config import CORE_PROCESSORS, active_logging_config, log_warning
 from .monitor import get_monitor
 from .processors import add_process_info
 from .tasks import Task
+from .tracing import lenskit_filtering_logger
 
 _active_context: WorkerContext | None = None
 _log = structlog.stdlib.get_logger(__name__)
@@ -90,7 +91,7 @@ class WorkerContext:
             [add_process_info]
             + CORE_PROCESSORS
             + [structlog.processors.ExceptionPrettyPrinter(), self._log_handler.send_structlog],
-            wrapper_class=structlog.make_filtering_bound_logger(self.config.level),
+            wrapper_class=lenskit_filtering_logger(self.config.level),
             logger_factory=structlog.stdlib.LoggerFactory(),
             cache_logger_on_first_use=False,
         )

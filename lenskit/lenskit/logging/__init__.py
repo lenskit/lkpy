@@ -11,7 +11,15 @@ from .progress import Progress, item_progress, set_progress_impl
 from .tasks import Task
 from .tracing import TracingLogger
 
-__all__ = ["LoggingConfig", "Progress", "item_progress", "set_progress_impl", "Task"]
+__all__ = [
+    "LoggingConfig",
+    "Progress",
+    "item_progress",
+    "set_progress_impl",
+    "Task",
+    "get_logger",
+    "TracingLogger",
+]
 
 
 def get_logger(name: str | None = None, **kw: Any) -> TracingLogger:
