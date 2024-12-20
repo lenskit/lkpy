@@ -27,4 +27,4 @@ def test_train_task(ml_ds: Dataset):
 
     assert task.status == TaskStatus.FINISHED
     assert len(task.subtasks) == 2
-    assert all(st.subprocess for st in task.subtasks.values())
+    assert all(st.subprocess for st in task.subtasks)
