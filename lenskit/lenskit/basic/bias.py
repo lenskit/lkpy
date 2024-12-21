@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import torch
-from typing_extensions import Self, TypeAlias, overload, override
+from typing_extensions import Self, TypeAlias, overload
 
 from lenskit.data import ID, Dataset, ItemList, QueryInput, RecQuery, UITuple, Vocabulary
 from lenskit.pipeline.components import Component
@@ -288,7 +288,6 @@ class BiasScorer(Component):
     def is_trained(self) -> bool:
         return hasattr(self, "bias_")
 
-    @override
     def train(self, data: Dataset):
         """
         Train the bias model on some rating data.
