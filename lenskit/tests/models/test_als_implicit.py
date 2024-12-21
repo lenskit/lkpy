@@ -14,7 +14,7 @@ import torch
 from pytest import approx, mark
 
 import lenskit.util.test as lktu
-from lenskit.als import BiasedMFScorer
+from lenskit.als import ImplicitMFScorer
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
 from lenskit.metrics import quick_measure_model
 from lenskit.pipeline import topn_pipeline
@@ -29,7 +29,7 @@ simple_dsr = from_interactions_df(simple_dfr)
 
 
 def test_als_basic_build():
-    algo = BiasedMFScorer(20, epochs=10)
+    algo = ImplicitMFScorer(20, epochs=10)
     algo.train(simple_ds)
 
     assert algo.users_ is not None
@@ -42,7 +42,7 @@ def test_als_basic_build():
 
 
 def test_als_predict_basic():
-    algo = BiasedMFScorer(20, epochs=10)
+    algo = ImplicitMFScorer(20, epochs=10)
     algo.train(simple_ds)
 
     preds = algo(query=10, items=ItemList([3]))
@@ -57,7 +57,7 @@ def test_als_predict_basic():
 
 def test_als_predict_basic_for_new_ratings():
     """Test ImplicitMF ability to support new ratings"""
-    algo = BiasedMFScorer(20, epochs=10)
+    algo = ImplicitMFScorer(20, epochs=10)
     algo.train(simple_ds)
 
     query = RecQuery(15, ItemList([1, 2]))
@@ -79,7 +79,7 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
     u = 10
     i = 3
 
-    algo = BiasedMFScorer(20, epochs=10, use_ratings=True)
+    algo = ImplicitMFScorer(20, epochs=10, use_ratings=True)
     algo.train(simple_dsr)
 
     preds = algo(u, ItemList([i]))
@@ -107,7 +107,7 @@ def test_als_predict_for_new_users_with_new_ratings(rng: np.random.Generator, ml
     users = rng.choice(ml_ds.users.ids(), n_users)
     items = ItemList(rng.choice(ml_ds.items.ids(), n_items))
 
-    algo = BiasedMFScorer(20, epochs=10, use_ratings=False)
+    algo = ImplicitMFScorer(20, epochs=10, use_ratings=False)
     algo.train(ml_ds)
     assert algo.users_ is not None
     assert algo.user_features_ is not None
@@ -167,7 +167,7 @@ def test_als_recs_topn_for_new_users_with_new_ratings(
 
     users = rng.choice(ml_ds.users.ids(), n_users).tolist()
 
-    algo = BiasedMFScorer(20, epochs=10, use_ratings=True)
+    algo = ImplicitMFScorer(20, epochs=10, use_ratings=True)
     pipe = topn_pipeline(algo, n=10)
     pipe.train(ml_ds)
     assert algo.users_ is not None
@@ -210,7 +210,7 @@ def test_als_recs_topn_for_new_users_with_new_ratings(
 
 
 def test_als_predict_bad_item():
-    algo = BiasedMFScorer(20, epochs=10)
+    algo = ImplicitMFScorer(20, epochs=10)
     algo.train(simple_ds)
 
     preds = algo(10, ItemList([4]))
@@ -222,7 +222,7 @@ def test_als_predict_bad_item():
 
 
 def test_als_predict_bad_user():
-    algo = BiasedMFScorer(20, epochs=10)
+    algo = ImplicitMFScorer(20, epochs=10)
     algo.train(simple_ds)
 
     preds = algo(50, ItemList([3]))
@@ -238,7 +238,7 @@ def test_als_predict_no_user_features_basic(ml_ratings: pd.DataFrame, ml_ds: Dat
     u = np.random.choice(ml_ds.users.ids(), 1)[0]
     items = np.random.choice(ml_ds.items.ids(), 2)
 
-    algo = BiasedMFScorer(5, epochs=10)
+    algo = ImplicitMFScorer(5, epochs=10)
     algo.train(ml_ds)
     preds = algo(u, ItemList(items))
     preds = preds.scores("pandas", index="ids")
@@ -246,7 +246,7 @@ def test_als_predict_no_user_features_basic(ml_ratings: pd.DataFrame, ml_ds: Dat
 
     user_data = ml_ds.user_row(u)
 
-    algo_no_user_features = BiasedMFScorer(5, epochs=10, save_user_features=False)
+    algo_no_user_features = ImplicitMFScorer(5, epochs=10, save_user_features=False)
     algo_no_user_features.train(ml_ds)
     query = RecQuery(u, user_data)
     preds_no_user_features = algo_no_user_features(query, ItemList(items))
@@ -261,7 +261,7 @@ def test_als_predict_no_user_features_basic(ml_ratings: pd.DataFrame, ml_ds: Dat
 
 @lktu.wantjit
 def test_als_train_large(ml_ds: Dataset):
-    algo = BiasedMFScorer(20, epochs=20, use_ratings=False)
+    algo = ImplicitMFScorer(20, epochs=20, use_ratings=False)
     algo.train(ml_ds)
 
     assert algo.users_ is not None
@@ -274,7 +274,7 @@ def test_als_train_large(ml_ds: Dataset):
 
 def test_als_save_load(tmp_path, ml_ds: Dataset):
     "Test saving and loading ALS models, and regularized training."
-    algo = BiasedMFScorer(5, epochs=5, reg=(2, 1), use_ratings=False)
+    algo = ImplicitMFScorer(5, epochs=5, reg=(2, 1), use_ratings=False)
     algo.train(ml_ds)
     assert algo.users_ is not None
 
@@ -293,7 +293,7 @@ def test_als_save_load(tmp_path, ml_ds: Dataset):
 
 @lktu.wantjit
 def test_als_train_large_noratings(ml_ds: Dataset):
-    algo = BiasedMFScorer(20, epochs=20)
+    algo = ImplicitMFScorer(20, epochs=20)
     algo.train(ml_ds)
 
     assert algo.users_ is not None
@@ -306,7 +306,7 @@ def test_als_train_large_noratings(ml_ds: Dataset):
 
 @lktu.wantjit
 def test_als_train_large_ratings(ml_ds):
-    algo = BiasedMFScorer(20, epochs=20, use_ratings=True)
+    algo = ImplicitMFScorer(20, epochs=20, use_ratings=True)
     algo.train(ml_ds)
 
     assert algo.users_ is not None
@@ -321,7 +321,7 @@ def test_als_train_large_ratings(ml_ds):
 @mark.eval
 def test_als_implicit_batch_accuracy(ml_100k):
     ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(BiasedMFScorer(25, epochs=20), ds)
+    results = quick_measure_model(ImplicitMFScorer(25, epochs=20), ds)
 
     ndcg = results.list_summary().loc["NDCG", "mean"]
     _log.info("nDCG for users is %.4f", ndcg)
