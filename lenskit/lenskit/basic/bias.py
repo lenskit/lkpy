@@ -254,6 +254,8 @@ class BiasScorer(Component):
             tuple providing separate damping values.
     """
 
+    IGNORED_CONFIG_FIELDS = ["user_damping", "item_damping"]
+
     users: bool
     items: bool
     damping: UITuple[float]
@@ -266,10 +268,16 @@ class BiasScorer(Component):
         items: bool = True,
         users: bool = True,
         damping: float | UITuple[float] | tuple[float, float] = 0.0,
+        *,
+        user_damping: float | None = None,
+        item_damping: float | None = None,
     ):
         self.items = items
         self.users = users
         self.damping = UITuple.create(damping)
+
+        if user_damping is not None or item_damping is not None:
+            self.damping = UITuple(user=user_damping or 0.0, item=item_damping or 0.0)
 
         if self.damping.user < 0:
             raise ValueError("user damping must be non-negative")
