@@ -14,7 +14,7 @@ import torch
 from pytest import approx, mark
 
 import lenskit.util.test as lktu
-from lenskit.als import BiasedMF
+from lenskit.als import BiasedMFScorer
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
 from lenskit.metrics import quick_measure_model
 from lenskit.util.test import ml_ds  # noqa: F401
@@ -28,7 +28,7 @@ simple_ds = from_interactions_df(simple_df)
 
 
 def test_als_basic_build():
-    algo = BiasedMF(20, epochs=10)
+    algo = BiasedMFScorer(20, epochs=10)
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -47,7 +47,7 @@ def test_als_basic_build():
 
 
 def test_als_predict_basic():
-    algo = BiasedMF(20, epochs=10)
+    algo = BiasedMFScorer(20, epochs=10)
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -64,7 +64,7 @@ def test_als_predict_basic():
 
 
 def test_als_predict_basic_for_new_ratings():
-    algo = BiasedMF(20, epochs=10)
+    algo = BiasedMFScorer(20, epochs=10)
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -85,7 +85,7 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
     u = 10
     i = 3
 
-    algo = BiasedMF(20, epochs=10)
+    algo = BiasedMFScorer(20, epochs=10)
     algo.train(simple_ds)
 
     preds = algo(query=u, items=ItemList([i]))
@@ -108,7 +108,7 @@ def test_als_predict_for_new_users_with_new_ratings(rng, ml_ds: Dataset):
     users = rng.choice(ml_ds.users.ids(), n_users)
     items = rng.choice(ml_ds.items.ids(), n_items)
 
-    algo = BiasedMF(20, epochs=10)
+    algo = BiasedMFScorer(20, epochs=10)
     algo.train(ml_ds)
 
     _log.debug("Items: " + str(items))
@@ -136,7 +136,7 @@ def test_als_predict_for_new_users_with_new_ratings(rng, ml_ds: Dataset):
 
 
 def test_als_predict_bad_item():
-    algo = BiasedMF(20, epochs=10)
+    algo = BiasedMFScorer(20, epochs=10)
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -151,7 +151,7 @@ def test_als_predict_bad_item():
 
 
 def test_als_predict_bad_user():
-    algo = BiasedMF(20, epochs=10)
+    algo = BiasedMFScorer(20, epochs=10)
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -171,14 +171,14 @@ def test_als_predict_no_user_features_basic(rng: np.random.Generator, ml_ds: Dat
     u = rng.choice(ml_ds.users.ids(), 1).item()
     items = rng.choice(ml_ds.items.ids(), n_items)
 
-    algo = BiasedMF(5, epochs=10)
+    algo = BiasedMFScorer(5, epochs=10)
     algo.train(ml_ds)
     _log.debug("Items: " + str(items))
     assert algo.bias_ is not None
     assert algo.users_ is not None
     assert algo.user_features_ is not None
 
-    algo_no_user_features = BiasedMF(5, epochs=10, save_user_features=False)
+    algo_no_user_features = BiasedMFScorer(5, epochs=10, save_user_features=False)
     algo_no_user_features.train(ml_ds)
 
     assert algo_no_user_features.user_features_ is None
@@ -202,7 +202,7 @@ def test_als_predict_no_user_features_basic(rng: np.random.Generator, ml_ds: Dat
 @lktu.wantjit
 @mark.slow
 def test_als_train_large(ml_ratings, ml_ds: Dataset):
-    algo = BiasedMF(20, epochs=10)
+    algo = BiasedMFScorer(20, epochs=10)
     algo.train(ml_ds)
 
     assert algo.bias_ is not None
@@ -229,7 +229,7 @@ def test_als_train_large(ml_ratings, ml_ds: Dataset):
 
 # don't use wantjit, use this to do a non-JIT test
 def test_als_save_load(ml_ds: Dataset):
-    original = BiasedMF(5, epochs=5)
+    original = BiasedMFScorer(5, epochs=5)
     original.train(ml_ds)
 
     assert original.bias_ is not None
@@ -256,7 +256,9 @@ def test_als_save_load(ml_ds: Dataset):
 @mark.eval
 def test_als_batch_accuracy(ml_100k):
     ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(BiasedMF(25, epochs=20, damping=5), ds, predicts_ratings=True)
+    results = quick_measure_model(
+        BiasedMFScorer(25, epochs=20, damping=5), ds, predicts_ratings=True
+    )
 
     assert results.global_metrics()["MAE"] == approx(0.73, abs=0.045)
     assert results.list_summary().loc["RMSE", "mean"] == approx(0.94, abs=0.05)

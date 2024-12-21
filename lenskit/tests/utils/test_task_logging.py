@@ -1,12 +1,12 @@
 from lenskit import batch
-from lenskit.als import ImplicitMF
+from lenskit.als import BiasedMFScorer
 from lenskit.data import Dataset
 from lenskit.logging.tasks import Task, TaskStatus
 from lenskit.pipeline import topn_pipeline
 
 
 def test_train_task(ml_ds: Dataset):
-    info = ImplicitMF(50, epochs=5)
+    info = BiasedMFScorer(50, epochs=5)
     pipe = topn_pipeline(info)
 
     with Task("train ImplicitMF", reset_hwm=True) as task:

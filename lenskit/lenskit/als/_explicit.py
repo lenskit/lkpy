@@ -25,7 +25,7 @@ from ._common import ALSBase, TrainContext, TrainingData
 _log = logging.getLogger(__name__)
 
 
-class BiasedMF(ALSBase):
+class BiasedMFScorer(ALSBase):
     """
     Biased matrix factorization trained with alternating least squares
     :cite:p:`zhouLargeScaleParallelCollaborative2008`.  This is a
@@ -143,7 +143,7 @@ class BiasedMF(ALSBase):
         return ItemList(items, scores=scores)
 
     def __str__(self):
-        return "als.BiasedMF(features={}, regularization={})".format(self.features, self.reg)
+        return "als.BiasedMFScorer(features={}, regularization={})".format(self.features, self.reg)
 
 
 @torch.jit.script

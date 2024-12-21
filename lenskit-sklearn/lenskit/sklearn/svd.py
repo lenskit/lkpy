@@ -36,7 +36,7 @@ class BiasedSVD(Component, Trainable):
     computing the bias, then computing the SVD of the bias residuals.
 
     You'll generally want one of the iterative SVD implementations such as
-    :class:`lennskit.algorithms.als.BiasedMF`; this is here primarily as an
+    :class:`lennskit.algorithms.als.BiasedMFScorer`; this is here primarily as an
     example and for cases where you want to evaluate a pure SVD implementation.
     """
 

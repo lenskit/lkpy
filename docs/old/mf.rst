@@ -31,11 +31,11 @@ LensKit provides alternating least squares implementations of matrix factorizati
 for explicit feedback data.  These implementations are parallelized with Numba, and perform
 best with the MKL from Conda.
 
-.. autoclass:: BiasedMF
+.. autoclass:: BiasedMFScorer
     :show-inheritance:
     :members:
 
-.. autoclass:: ImplicitMF
+.. autoclass:: ImplicitMFScorer
     :show-inheritance:
     :members:
 

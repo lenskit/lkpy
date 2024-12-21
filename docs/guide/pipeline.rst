@@ -64,7 +64,7 @@ matrix factorization:
 
 .. code:: python
 
-    als = ImplicitMF(50)
+    als = ImplicitMFScorer(50)
     pipe = topn_pipeline(als)
 
 The :class:`RecPipelineBuilder` class provides a more flexible mechanism to
@@ -73,7 +73,7 @@ that class, do:
 
 .. code:: python
 
-    als = ImplicitMF(50)
+    als = ImplicitMFScorer(50)
     builder = RecPipelineBuilder()
     builder.scorer(als)
     pipe = builder.build('ALS')
