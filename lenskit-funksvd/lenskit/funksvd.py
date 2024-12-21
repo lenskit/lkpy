@@ -198,7 +198,7 @@ def _align_add_bias(bias, index, keys, series):
     return bias, series
 
 
-class FunkSVD(Component, Trainable):
+class FunkSVDScorer(Component, Trainable):
     """
     Algorithm class implementing FunkSVD matrix factorization.  FunkSVD is a regularized
     biased matrix factorization technique trained with featurewise stochastic gradient

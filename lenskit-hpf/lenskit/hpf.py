@@ -16,7 +16,7 @@ from lenskit.pipeline import Component, Trainable
 _logger = logging.getLogger(__name__)
 
 
-class HPF(Component, Trainable):
+class HPFScorer(Component, Trainable):
     """
     Hierarchical Poisson factorization, provided by
     `hpfrec <https://hpfrec.readthedocs.io/en/latest/>`_.

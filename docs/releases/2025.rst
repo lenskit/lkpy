@@ -77,7 +77,7 @@ however, documented here.
   (:math:`1.75 \times 10^{-38}`).
 * The :mod:`implicit` bridge algorithms no longer look at rating values when
   they are present.
-* Bias is no longer optional for :class:`~lenksit.als.BiasedMF` and
+* Bias is no longer optional for :class:`~lenksit.als.BiasedMFScorer` and
   :class:`~lenskit.funksvd.FunkSVD`; both are inherently biased models, and
   FunkSVD is not commonly used.
 

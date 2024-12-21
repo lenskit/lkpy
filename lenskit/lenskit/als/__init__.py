@@ -9,7 +9,7 @@ LensKit ALS implementations.
 """
 
 from ._common import ALSBase
-from ._explicit import BiasedMF
-from ._implicit import ImplicitMF
+from ._explicit import BiasedMFScorer
+from ._implicit import ImplicitMFScorer
 
-__all__ = ["ALSBase", "BiasedMF", "ImplicitMF"]
+__all__ = ["ALSBase", "BiasedMFScorer", "ImplicitMFScorer"]

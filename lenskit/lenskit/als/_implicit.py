@@ -24,13 +24,13 @@ from ._common import ALSBase, TrainContext, TrainingData
 _log = logging.getLogger(__name__)
 
 
-class ImplicitMF(ALSBase):
+class ImplicitMFScorer(ALSBase):
     """
     Implicit matrix factorization trained with alternating least squares
-    :cite:p:`hu:implicit-mf`.  This algorithm outputs
-    'predictions', but they are not on a meaningful scale.  If its input data
-    contains ``rating`` values, these will be used as the 'confidence' values;
-    otherwise, confidence will be 1 for every rated item.
+    :cite:p:`hu:implicit-mf`.  This algorithm outputs 'predictions', but they
+    are not on a meaningful scale.  If its input data contains ``rating``
+    values, these will be used as the 'confidence' values; otherwise, confidence
+    will be 1 for every rated item.
 
     See the base class :class:`.MFPredictor` for documentation on the estimated
     parameters you can extract from a trained model.
@@ -40,7 +40,7 @@ class ImplicitMF(ALSBase):
     \\times n` matrix of all 1s.
 
     .. versionchanged:: 2025.1
-        ``ImplicitMF`` no longer supports multiple training methods. It always uses
+        ``ImplicitMFScorer`` no longer supports multiple training methods. It always uses
         Cholesky decomposition now.
 
     .. versionchanged:: 0.14
@@ -68,8 +68,8 @@ class ImplicitMF(ALSBase):
             used, and multipled by ``weight``; if ``False``, ImplicitMF treats
             every rated user-item pair as having a rating of 1.\
         save_user_feature:
-            Whether to save the user feature vector in the model, or recompute it at
-            scoring time.
+            Whether to save the user feature vector in the model, or recompute
+            it at scoring time.
         rng:
             Random number seed or generator.
     """
@@ -160,7 +160,7 @@ class ImplicitMF(ALSBase):
         return u_feat, None
 
     def __str__(self):
-        return "als.ImplicitMF(features={}, reg={}, w={})".format(
+        return "als.ImplicitMFScorer(features={}, reg={}, w={})".format(
             self.features, self.reg, self.weight
         )
 

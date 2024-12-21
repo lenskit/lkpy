@@ -31,11 +31,11 @@ LensKit provides alternating least squares implementations of matrix factorizati
 for explicit feedback data.  These implementations are parallelized with Numba, and perform
 best with the MKL from Conda.
 
-.. autoclass:: BiasedMF
+.. autoclass:: BiasedMFScorer
     :show-inheritance:
     :members:
 
-.. autoclass:: ImplicitMF
+.. autoclass:: ImplicitMFScorer
     :show-inheritance:
     :members:
 
@@ -47,7 +47,7 @@ SciKit SVD
 This code implements a traditional SVD using scikit-learn.  It requires ``scikit-learn`` to
 be installed in order to function.
 
-.. autoclass:: BiasedSVD
+.. autoclass:: BiasedSVDScorer
     :show-inheritance:
     :members:
 
