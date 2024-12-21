@@ -154,6 +154,19 @@ def test_ii_simple_implicit_predict():
     assert np.all(res.scores() > 0)
 
 
+def test_ii_simple_predict_unknown():
+    algo = ItemKNNScorer(30, save_nbrs=500)
+    algo.train(simple_ds)
+
+    res = algo(3, ItemList([6, 100]))
+    _log.info("got predictions: %s", res)
+    assert res is not None
+    assert len(res) == 2
+    assert res.ids().tolist() == [6, 100]
+    assert not np.isnan(res.scores()[0])
+    assert np.isnan(res.scores()[1])
+
+
 def test_ii_warns_center():
     "Test that item-item warns if you center non-centerable data"
     data = simple_ratings.assign(rating=1)
