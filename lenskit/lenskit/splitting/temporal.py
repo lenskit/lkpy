@@ -1,4 +1,5 @@
 import datetime as dt
+from typing import Sequence, overload
 
 import numpy as np
 
@@ -8,9 +9,19 @@ from lenskit.data.collection import ItemListCollection
 from .split import TTSplit
 
 
-def split_global_time(data: Dataset, time: str | dt.datetime) -> TTSplit:
-    if isinstance(time, str):
-        time = dt.datetime.fromisoformat(time)
+@overload
+def split_global_time(data: Dataset, time: str | dt.datetime) -> TTSplit: ...
+@overload
+def split_global_time(data: Dataset, time: Sequence[str | dt.datetime]) -> list[TTSplit]: ...
+def split_global_time(
+    data: Dataset, time: str | dt.datetime | Sequence[str | dt.datetime]
+) -> TTSplit | list[TTSplit]:
+    if isinstance(time, (str, int, float, dt.datetime)):
+        times = [_make_time(time)]
+        rv = "single"
+    else:
+        times = [_make_time(t) for t in time]
+        rv = "sequence"
 
     matrix = data.interaction_log("pandas", fields="all", original_ids=True)
     if "timestamp" not in matrix:
@@ -20,13 +31,33 @@ def split_global_time(data: Dataset, time: str | dt.datetime) -> TTSplit:
     ts_col = np.asarray(ts_col)
 
     if np.isdtype(ts_col.dtype, "numeric"):
-        mask = ts_col >= time.timestamp()
+        times = [t.timestamp() for t in times]
+
+    results = []
+    for i, t in enumerate(times):
+        mask = ts_col >= t
+
+        train = matrix[~mask]
+        if i + 1 < len(times):
+            test = matrix[mask & (ts_col < times[i + 1])]
+        else:
+            test = matrix[mask]
+
+        train_ds = from_interactions_df(train)
+        test_ilc = ItemListCollection.from_df(test, ["user_id"])
+        results.append(TTSplit(train_ds, test_ilc))
+
+    if rv == "sequence":
+        return results
     else:
-        mask = ts_col >= time
+        assert len(results) == 1
+        return results[0]
 
-    train = matrix[~mask]
-    test = matrix[mask]
 
-    train_ds = from_interactions_df(train)
-    test_ilc = ItemListCollection.from_df(test, ["user_id"])
-    return TTSplit(train_ds, test_ilc)
+def _make_time(t: int | float | str | dt.datetime) -> dt.datetime:
+    if isinstance(t, (int, float)):
+        return dt.datetime.fromtimestamp(t)
+    elif isinstance(t, str):
+        return dt.datetime.fromisoformat(t)
+    else:
+        return t
