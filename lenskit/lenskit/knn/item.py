@@ -247,7 +247,7 @@ class ItemKNNScorer(Component, Trainable):
         scores = torch.full((len(items),), np.nan, dtype=sims.dtype)
         out_nums = items.numbers("torch", vocabulary=self.items_, missing="negative")
         out_good = out_nums >= 0
-        scores[out_good] = sims[out_nums]
+        scores[out_good] = sims[out_nums[out_nums >= 0]]
         results = ItemList(items, scores=scores)
 
         _log.debug(
