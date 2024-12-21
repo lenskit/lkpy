@@ -29,7 +29,7 @@ except ImportError:
 _log = logging.getLogger(__name__)
 
 
-class BiasedSVD(Component, Trainable):
+class BiasedSVDScorer(Component, Trainable):
     """
     Biased matrix factorization for implicit feedback using SciKit-Learn's SVD
     solver (:class:`sklearn.decomposition.TruncatedSVD`).  It operates by first

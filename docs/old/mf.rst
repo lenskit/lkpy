@@ -47,7 +47,7 @@ SciKit SVD
 This code implements a traditional SVD using scikit-learn.  It requires ``scikit-learn`` to
 be installed in order to function.
 
-.. autoclass:: BiasedSVD
+.. autoclass:: BiasedSVDScorer
     :show-inheritance:
     :members:
 
