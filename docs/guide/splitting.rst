@@ -29,6 +29,15 @@ LensKit:
         tp.train_df.to_parquet(f'ml-20m.exp/train-{i}.parquet')
         tp.test_df.to_parquet(f'ml-20m.exp/test-{i}.parquet')
 
+
+Temporal Splitting
+------------------
+
+Global temporal splitting partitions data into train/test splits based on a
+partitioning timestamp.  The :func:`.split_global_time` function takes a data
+set and a partition timestamp and splits the data.  It can also take a list of
+partition timestamps for multiple splits, e.g. for train/valid/test split.
+
 Record-based Random Splitting
 -----------------------------
 
