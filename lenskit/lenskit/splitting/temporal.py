@@ -30,7 +30,7 @@ def split_global_time(
     ts_col = matrix["timestamp"]
     ts_col = np.asarray(ts_col)
 
-    if np.isdtype(ts_col.dtype, "numeric"):
+    if ts_col.dtype.kind in ("i", "u", "f"):
         times = [t.timestamp() for t in times]
 
     results = []
