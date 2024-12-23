@@ -47,6 +47,7 @@ Recommendation Queries
     :caption: Recommendation Queries
 
     ~lenskit.data.RecQuery
+    ~lenskit.data.QueryInput
 
 Terms and Identifiers
 ---------------------
