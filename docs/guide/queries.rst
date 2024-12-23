@@ -42,7 +42,7 @@ pass it to :meth:`~RecQuery.create` to upgrade to a query.
 Invoking Recommenders
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. py:currentclass:: lenskit.operations
+.. py:currentmodule:: lenskit.operations
 
 LensKit provides three *operation* functions to ease calling the recommender for
 common operations, like top-*N* recommendation and rating prediction:
@@ -59,6 +59,8 @@ These functions take a pipeline and a query input and return the results:
 
 Processing Queries
 ~~~~~~~~~~~~~~~~~~
+
+.. py:currentmodule:: lenskit.data
 
 When writing a component that uses a query but works on user ID and/or user
 history arguments, it should have a ``query`` parameter of type ``QueryInput``,
