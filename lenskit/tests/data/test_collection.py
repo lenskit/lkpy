@@ -1,15 +1,17 @@
 import logging
 import pickle
+import warnings
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from pytest import raises
+from pytest import mark, raises, warns
 
 from lenskit.data import ItemList
 from lenskit.data.collection import ItemListCollection, UserIDKey, _create_key, project_key
 from lenskit.data.dataset import Dataset
+from lenskit.diagnostics import DataWarning
 from lenskit.util.test import demo_recs
 
 _log = logging.getLogger(__name__)
@@ -162,6 +164,22 @@ def test_to_df():
     assert df["user_id"].tolist() == [72, 82, 82, 82]
 
 
+def test_to_df_warn_empty():
+    ilc = ItemListCollection.from_dict(
+        {
+            72: ItemList(["a"], scores=[1]),
+            40: ItemList(),
+            82: ItemList(["a", "b", "c"], scores=[3, 4, 10]),
+        },
+        key="user_id",
+    )
+    with warns(DataWarning, match="dropped"):
+        df = ilc.to_df()
+    print(df)
+    assert len(df) == 4
+    assert df["user_id"].tolist() == [72, 82, 82, 82]
+
+
 def test_to_arrow():
     ilc = ItemListCollection.from_dict(
         {72: ItemList(["a"], scores=[1]), 82: ItemList(["a", "b", "c"], scores=[3, 4, 10])},
@@ -173,7 +191,7 @@ def test_to_arrow():
     assert np.all(tbl.column("user_id").to_numpy() == [72, 82])
 
 
-def test_write_parquet(ml_ds: Dataset, tmpdir: Path):
+def test_save_parquet(ml_ds: Dataset, tmpdir: Path):
     ilc = ItemListCollection(["user_id"])
     for user in ml_ds.users.ids():
         ilc.add(ml_ds.user_row(user), user_id=user)
@@ -199,7 +217,8 @@ def test_write_parquet(ml_ds: Dataset, tmpdir: Path):
     assert sum(len(l1) for l1 in ilc2.lists()) == sum(len(l2) for l2 in ilc.lists())
 
 
-def test_write_parquet_with_empty(ml_ds: Dataset, tmpdir: Path):
+@mark.filterwarnings("ignore:.*dropped.*:lenskit.diagnostics.DataWarning")
+def test_save_parquet_with_empty(ml_ds: Dataset, tmpdir: Path):
     ilc = ItemListCollection(["user_id"])
     ilc.add(ItemList(), user_id=-1)
     for user in ml_ds.users.ids():

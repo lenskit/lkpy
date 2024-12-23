@@ -16,6 +16,7 @@ guide to how to use LensKit for research, education, and other purposes.
     :caption: Fundamentals
     :maxdepth: 1
 
+    principles
     data
     item-lists
     queries

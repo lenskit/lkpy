@@ -16,6 +16,23 @@ def split_global_time(data: Dataset, time: Sequence[str | dt.datetime]) -> list[
 def split_global_time(
     data: Dataset, time: str | dt.datetime | Sequence[str | dt.datetime]
 ) -> TTSplit | list[TTSplit]:
+    """
+    Global temporal train-test split.  This splits a data set into train/test
+    pairs using a single global timestamp.  When given multiple timestamps, it
+    will return multiple splits, where split :math:`i` has training data from
+    before :math:`t_i` and testing data on or after :math:`t_i` and before
+    :math:`t_{i+1}` (the last split has no upper bound on the testing data).
+
+    Args:
+        data:
+            The dataset to split.
+        time:
+            Time or sequence of times at which to split.  Strings must be in ISO
+            format.
+
+    Returns:
+        The data splits.
+    """
     if isinstance(time, (str, int, float, dt.datetime)):
         times = [_make_time(time)]
         rv = "single"

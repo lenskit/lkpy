@@ -192,6 +192,12 @@ class ItemListCollection(Generic[K]):
             lists will be excluded from the output.
         """
         fields = self._key_class._fields  # type: ignore
+        if any(len(il) == 0 for il in self.lists()):
+            warnings.warn(
+                "item list collection has empty lists, they will be dropped",
+                DataWarning,
+                stacklevel=2,
+            )
         return (
             pd.concat({k: il.to_df(numbers=False) for (k, il) in self._lists}, names=fields)
             .reset_index(fields)
