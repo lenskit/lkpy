@@ -12,10 +12,6 @@ item ID or number), and Torch tensors.
 Item lists are used to represent a user's history, the candidate items for
 scoring and/or ranking, recommendation results, test data, etc.
 
-.. todo::
-
-    Write more tutorial / user manual documentation for the item lists.
-
 .. _item-list-convert:
 
 Data Conversion
@@ -39,7 +35,22 @@ Collections
 
 On top of the :class:`~lenskit.data.ItemList` we build the idea of an item list
 *collection* (`~lenskit.data.ItemListCollection`).  An item list collection is a
-list or dictionary of item lists, identified by keys (e.g. the user ID )
+list or dictionary of item lists, identified by keys (e.g. the user ID).
+
+You can convert an item list collection from a data frame with
+:meth:`~ItemListCollection.from_df`:
+
+.. code:: python
+
+    ilc = ItemListCollection.from_df(df, UserIDKey)
+
+The :meth:`ItemListCollection.to_df` goes the other way, converting to a Pandas
+data frame.
+
+If you want to save or load an item list to a disk file, however, we recommend
+using :meth:`~ItemListCollection.save_parquet` and
+:meth:`~ItemListCollection.load_parquet` — they use a Parquet schema with one
+row per list that can correctly save and load empty item lists.
 
 Motivation
 ~~~~~~~~~~
