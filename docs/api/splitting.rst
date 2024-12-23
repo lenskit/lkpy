@@ -14,6 +14,15 @@ Output Types
 
     ~lenskit.splitting.TTSplit
 
+Temporal Splitting
+------------------
+
+.. autosummary::
+    :toctree:
+    :nosignatures:
+
+    ~lenskit.splitting.split_global_time
+
 User-Based Splitting
 --------------------
 
