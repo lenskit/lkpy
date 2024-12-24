@@ -24,40 +24,40 @@ from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 
 def _check_user_offset_counts(ml_ds: Dataset, ml_ratings: pd.DataFrame, offsets: ArrayLike):
-    user_counts = ml_ratings["user"].value_counts().reindex(ml_ds.users.index)
+    user_counts = ml_ratings["user_id"].value_counts().reindex(ml_ds.users.index)
     row_lens = np.diff(offsets)
     assert np.all(row_lens == user_counts)
 
 
 def _check_user_number_counts(ml_ds: Dataset, ml_ratings: pd.DataFrame, nums: ArrayLike):
     users, counts = np.unique(nums, return_counts=True)
-    user_counts = ml_ratings["user"].value_counts().reindex(ml_ds.users.ids(users))
+    user_counts = ml_ratings["user_id"].value_counts().reindex(ml_ds.users.ids(users))
     assert np.all(counts == user_counts)
 
 
 def _check_item_number_counts(ml_ds: Dataset, ml_ratings: pd.DataFrame, nums: ArrayLike):
     items, counts = np.unique(nums, return_counts=True)
-    item_counts = ml_ratings["item"].value_counts().reindex(ml_ds.items.ids(items))
+    item_counts = ml_ratings["item_id"].value_counts().reindex(ml_ds.items.ids(items))
     assert np.all(counts == item_counts)
 
 
 def _check_user_ids(ml_ds: Dataset, ml_ratings: pd.DataFrame, nums: ArrayLike):
-    ml_ratings = ml_ratings.sort_values(["user", "item"])
-    assert np.all(ml_ds.users.ids(np.asarray(nums)) == ml_ratings["user"])
+    ml_ratings = ml_ratings.sort_values(["user_id", "item_id"])
+    assert np.all(ml_ds.users.ids(np.asarray(nums)) == ml_ratings["user_id"])
 
 
 def _check_item_ids(ml_ds: Dataset, ml_ratings: pd.DataFrame, nums: ArrayLike):
-    ml_ratings = ml_ratings.sort_values(["user", "item"])
-    assert np.all(ml_ds.items.ids(np.asarray(nums)) == ml_ratings["item"])
+    ml_ratings = ml_ratings.sort_values(["user_id", "item_id"])
+    assert np.all(ml_ds.items.ids(np.asarray(nums)) == ml_ratings["item_id"])
 
 
 def _check_ratings(ml_ds: Dataset, ml_ratings: pd.DataFrame, rates: ArrayLike):
-    ml_ratings = ml_ratings.sort_values(["user", "item"])
+    ml_ratings = ml_ratings.sort_values(["user_id", "item_id"])
     assert np.all(rates == ml_ratings["rating"])
 
 
 def _check_timestamp(ml_ds: Dataset, ml_ratings: pd.DataFrame, ts: ArrayLike):
-    ml_ratings = ml_ratings.sort_values(["user", "item"])
+    ml_ratings = ml_ratings.sort_values(["user_id", "item_id"])
     assert np.all(ts == ml_ratings["timestamp"])
 
 
@@ -74,8 +74,8 @@ def test_matrix_structure(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert isinstance(log, CSRStructure)
     assert log.nnz == len(ml_ratings)
 
-    assert log.nrows == ml_ratings["user"].nunique()
-    assert log.ncols == ml_ratings["item"].nunique()
+    assert log.nrows == ml_ratings["user_id"].nunique()
+    assert log.ncols == ml_ratings["item_id"].nunique()
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.rowptrs)
     _check_item_number_counts(ml_ds, ml_ratings, log.colinds)
@@ -175,8 +175,8 @@ def test_matrix_scipy_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
     assert log.nnz == len(ml_ratings)
 
     nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["user"].nunique()
-    assert ncols == ml_ratings["item"].nunique()
+    assert nrows == ml_ratings["user_id"].nunique()
+    assert ncols == ml_ratings["item_id"].nunique()
 
     assert log.row.dtype == np.int32
     assert log.col.dtype == np.int32
@@ -197,8 +197,8 @@ def test_matrix_scipy_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
     assert log.nnz == len(ml_ratings)
 
     nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["user"].nunique()
-    assert ncols == ml_ratings["item"].nunique()
+    assert nrows == ml_ratings["user_id"].nunique()
+    assert ncols == ml_ratings["item_id"].nunique()
 
     assert log.indptr.dtype == np.int32
     assert log.indices.dtype == np.int32
@@ -215,8 +215,8 @@ def test_matrix_scipy_timestamp(ml_ratings: pd.DataFrame, ml_ds: Dataset, genera
     assert log.nnz == len(ml_ratings)
 
     nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["user"].nunique()
-    assert ncols == ml_ratings["item"].nunique()
+    assert nrows == ml_ratings["user_id"].nunique()
+    assert ncols == ml_ratings["item_id"].nunique()
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.indptr)
     _check_item_number_counts(ml_ds, ml_ratings, log.indices)
@@ -231,8 +231,8 @@ def test_matrix_scipy_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset, genera
     assert log.nnz == len(ml_ratings)
 
     nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["user"].nunique()
-    assert ncols == ml_ratings["item"].nunique()
+    assert nrows == ml_ratings["user_id"].nunique()
+    assert ncols == ml_ratings["item_id"].nunique()
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.indptr)
     _check_item_number_counts(ml_ds, ml_ratings, log.indices)
@@ -250,8 +250,8 @@ def test_matrix_scipy_missing_rating(ml_ratings: pd.DataFrame, generation):
     assert log.nnz == len(ml_ratings)
 
     nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["user"].nunique()
-    assert ncols == ml_ratings["item"].nunique()
+    assert nrows == ml_ratings["user_id"].nunique()
+    assert ncols == ml_ratings["item_id"].nunique()
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.indptr)
     _check_item_number_counts(ml_ds, ml_ratings, log.indices)
@@ -266,8 +266,8 @@ def test_matrix_torch_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert log.values().shape == torch.Size([len(ml_ratings)])
 
     nrows, ncols = log.shape
-    assert nrows == ml_ratings["user"].nunique()
-    assert ncols == ml_ratings["item"].nunique()
+    assert nrows == ml_ratings["user_id"].nunique()
+    assert ncols == ml_ratings["item_id"].nunique()
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
@@ -285,8 +285,8 @@ def test_matrix_torch_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert log.values().shape == torch.Size([len(ml_ratings)])
 
     nrows, ncols = log.shape
-    assert nrows == ml_ratings["user"].nunique()
-    assert ncols == ml_ratings["item"].nunique()
+    assert nrows == ml_ratings["user_id"].nunique()
+    assert ncols == ml_ratings["item_id"].nunique()
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
@@ -301,8 +301,8 @@ def test_matrix_torch_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert log.values().shape == torch.Size([len(ml_ratings)])
 
     nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["user"].nunique()
-    assert ncols == ml_ratings["item"].nunique()
+    assert nrows == ml_ratings["user_id"].nunique()
+    assert ncols == ml_ratings["item_id"].nunique()
 
     _check_user_number_counts(ml_ds, ml_ratings, log.indices()[0, :])
     _check_user_ids(ml_ds, ml_ratings, log.indices()[0, :])
@@ -319,8 +319,8 @@ def test_matrix_torch_missing_rating(ml_ratings: pd.DataFrame):
     assert log.values().shape == torch.Size([len(ml_ratings)])
 
     nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["user"].nunique()
-    assert ncols == ml_ratings["item"].nunique()
+    assert nrows == ml_ratings["user_id"].nunique()
+    assert ncols == ml_ratings["item_id"].nunique()
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
@@ -335,8 +335,8 @@ def test_matrix_torch_timestamp(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert log.values().shape == torch.Size([len(ml_ratings)])
 
     nrows, ncols = log.shape
-    assert nrows == ml_ratings["user"].nunique()
-    assert ncols == ml_ratings["item"].nunique()
+    assert nrows == ml_ratings["user_id"].nunique()
+    assert ncols == ml_ratings["item_id"].nunique()
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
@@ -350,10 +350,10 @@ def test_matrix_rows_by_id(rng: np.random.Generator, ml_ratings: pd.DataFrame, m
     for user in users:
         row = ml_ds.user_row(user)
         assert row is not None
-        urows = ml_ratings[ml_ratings["user"] == user].sort_values("item")
+        urows = ml_ratings[ml_ratings["user_id"] == user].sort_values("item")
         urows = urows.reset_index(drop=True)
-        assert set(row.ids()) == set(urows["item"])
-        assert np.all(row.numbers() == ml_ds.items.numbers(urows["item"]))
+        assert set(row.ids()) == set(urows["item_id"])
+        assert np.all(row.numbers() == ml_ds.items.numbers(urows["item_id"]))
 
         ratings = row.field("rating")
         assert ratings is not None
@@ -371,21 +371,21 @@ def test_matrix_rows_by_id(rng: np.random.Generator, ml_ratings: pd.DataFrame, m
 def test_matrix_rows_by_num(rng: np.random.Generator, ml_ratings: pd.DataFrame, ml_ds: Dataset):
     users = rng.choice(ml_ds.user_count, 50)
 
-    rated = set(zip(ml_ratings["user"], ml_ratings["item"]))
+    rated = set(zip(ml_ratings["user_id"], ml_ratings["item_id"]))
     rdf = ml_ds.interaction_matrix("pandas")
     rnums = set(zip(rdf["user_num"], rdf["item_num"]))
 
-    dfi = ml_ratings.set_index(["user", "item"])
+    dfi = ml_ratings.set_index(["user_id", "item_id"])
 
     for user in users:
         uid = ml_ds.users.id(user)
         row = ml_ds.user_row(user_num=user)
         assert row is not None
         assert row is not None
-        urows = ml_ratings[ml_ratings["user"] == ml_ds.users.id(user)].sort_values("item")
-        assert set(row.ids()) == set(urows["item"])
+        urows = ml_ratings[ml_ratings["user_id"] == ml_ds.users.id(user)].sort_values("item")
+        assert set(row.ids()) == set(urows["item_id"])
 
-        assert np.all(row.numbers() == ml_ds.items.numbers(urows["item"]))
+        assert np.all(row.numbers() == ml_ds.items.numbers(urows["item_id"]))
         assert all((user, ino) in rnums for ino in row.numbers())
 
         assert np.all(row.ids() == ml_ds.items.ids(row.numbers()))

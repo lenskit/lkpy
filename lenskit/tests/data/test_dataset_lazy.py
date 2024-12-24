@@ -29,9 +29,11 @@ def test_item_stats(ml_ratings: pd.DataFrame):
     assert len(stats) == ml_ds.item_count
     assert np.all(stats.index == ml_ds.items.index)
 
-    assert np.all(stats["count"] == ml_ratings["item"].value_counts().reindex(ml_ds.items))
-    assert np.all(stats["user_count"] == ml_ratings["item"].value_counts().reindex(ml_ds.items))
-    assert np.all(stats["rating_count"] == ml_ratings["item"].value_counts().reindex(ml_ds.items))
+    assert np.all(stats["count"] == ml_ratings["item_id"].value_counts().reindex(ml_ds.items))
+    assert np.all(stats["user_count"] == ml_ratings["item_id"].value_counts().reindex(ml_ds.items))
+    assert np.all(
+        stats["rating_count"] == ml_ratings["item_id"].value_counts().reindex(ml_ds.items)
+    )
 
     assert stats["mean_rating"].values == approx(
         ml_ratings.groupby("item")["rating"].mean().reindex(ml_ds.items).values
@@ -54,9 +56,11 @@ def test_user_stats(ml_ratings: pd.DataFrame):
     assert len(stats) == ml_ds.user_count
     assert np.all(stats.index == ml_ds.users.index)
 
-    assert np.all(stats["count"] == ml_ratings["user"].value_counts().reindex(ml_ds.users))
-    assert np.all(stats["item_count"] == ml_ratings["user"].value_counts().reindex(ml_ds.users))
-    assert np.all(stats["rating_count"] == ml_ratings["user"].value_counts().reindex(ml_ds.users))
+    assert np.all(stats["count"] == ml_ratings["user_id"].value_counts().reindex(ml_ds.users))
+    assert np.all(stats["item_count"] == ml_ratings["user_id"].value_counts().reindex(ml_ds.users))
+    assert np.all(
+        stats["rating_count"] == ml_ratings["user_id"].value_counts().reindex(ml_ds.users)
+    )
 
     assert stats["mean_rating"].values == approx(
         ml_ratings.groupby("user")["rating"].mean().reindex(ml_ds.users).values

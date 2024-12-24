@@ -23,7 +23,7 @@ def test_bulk_measure_function(ml_ratings: pd.DataFrame):
 
     metrics = bms.compute(data, truth)
     stats = metrics.list_summary()
-    assert stats.loc["length", "mean"] == approx(ml_ratings["user"].value_counts().mean())
+    assert stats.loc["length", "mean"] == approx(ml_ratings["user_id"].value_counts().mean())
     assert stats.loc["RMSE", "mean"] == approx(0)
 
 

@@ -347,7 +347,7 @@ def test_ii_implicit_large(rng, ml_ratings):
     pipe = topn_pipeline(algo)
     pipe.train(from_interactions_df(ml_ratings[["user", "item"]], item_col="item"))
 
-    users = rng.choice(ml_ratings["user"].unique(), NUSERS)
+    users = rng.choice(ml_ratings["user_id"].unique(), NUSERS)
 
     items: Vocabulary = algo.items_
     mat: torch.Tensor = algo.sim_matrix_.to_dense()
@@ -357,7 +357,7 @@ def test_ii_implicit_large(rng, ml_ratings):
         _log.info("user %s recs\n%s", user, recs)
         assert isinstance(recs, ItemList)
         assert len(recs) == NRECS
-        urates = ml_ratings[ml_ratings["user"] == user]
+        urates = ml_ratings[ml_ratings["user_id"] == user]
 
         smat = mat[torch.from_numpy(items.numbers(urates["item"].values)), :]
         for row in recs.to_df().itertuples():
