@@ -44,7 +44,7 @@ def test_hpf_train_large(tmp_path, ml_ratings):
     pipe = topn_pipeline(algo)
     pipe.train(ds, retrain=False)
 
-    for u in np.random.choice(ratings.user.unique(), size=50, replace=False):
+    for u in np.random.choice(ratings.user_id.unique(), size=50, replace=False):
         recs = pipe.run("recommender", query=u, n=50)
         assert isinstance(recs, ItemList)
         assert len(recs) == 50
@@ -73,7 +73,7 @@ def test_hpf_train_binary(tmp_path, ml_ratings):
     pipe = topn_pipeline(algo)
     pipe.train(ds, retrain=False)
 
-    for u in np.random.choice(ratings.user.unique(), size=50, replace=False):
+    for u in np.random.choice(ratings.user_id.unique(), size=50, replace=False):
         recs = pipe.run("recommender", query=u, n=50)
         assert isinstance(recs, ItemList)
         assert len(recs) == 50
