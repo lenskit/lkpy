@@ -20,10 +20,6 @@ hpf = importorskip("lenskit.hpf")
 
 _log = logging.getLogger(__name__)
 
-simple_df = pd.DataFrame(
-    {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
-)
-
 
 @mark.slow
 def test_hpf_train_large(tmp_path, ml_ratings):
@@ -32,8 +28,8 @@ def test_hpf_train_large(tmp_path, ml_ratings):
     ds = from_interactions_df(ratings)
     algo.train(ds)
 
-    assert algo.user_features_.shape[0] == ratings.user.nunique()
-    assert algo.item_features_.shape[0] == ratings.item.nunique()
+    assert algo.user_features_.shape[0] == ratings.user_id.nunique()
+    assert algo.item_features_.shape[0] == ratings.item_id.nunique()
 
     mfile = tmp_path / "hpf.dat"
     with mfile.open("wb") as mf:
@@ -61,8 +57,8 @@ def test_hpf_train_binary(tmp_path, ml_ratings):
     ds = from_interactions_df(ratings)
     algo.train(ds)
 
-    assert algo.user_features_.shape[0] == ratings.user.nunique()
-    assert algo.item_features_.shape[0] == ratings.item.nunique()
+    assert algo.user_features_.shape[0] == ratings.user_id.nunique()
+    assert algo.item_features_.shape[0] == ratings.item_id.nunique()
 
     mfile = tmp_path / "hpf.dat"
     with mfile.open("wb") as mf:
