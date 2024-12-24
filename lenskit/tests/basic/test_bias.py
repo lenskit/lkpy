@@ -225,7 +225,7 @@ def test_bias_train_ml_ratings(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     ares, data = pd.Series(imeans_algo, index=bm.items.ids()).align(imeans_data)
     assert ares.values == approx(data.values)
 
-    urates = ml_ratings.set_index("user").loc[2].set_index("item").rating
+    urates = ml_ratings.set_index("user_id").loc[2].set_index("item_id").rating
     umean = (urates - imeans_data[urates.index]).mean()
     p = bias(2, ItemList(item_ids=[10, 11, -1]))
     assert len(p) == 3

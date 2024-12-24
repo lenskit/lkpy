@@ -154,7 +154,9 @@ def test_matrix_pandas_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
 
 def test_matrix_pandas_missing_rating(ml_ratings: pd.DataFrame):
-    ml_ds = from_interactions_df(ml_ratings[["user", "item", "timestamp"]], item_col="item")
+    ml_ds = from_interactions_df(
+        ml_ratings[["user_id", "item_id", "timestamp"]], item_col="item_id"
+    )
     log = ml_ds.interaction_matrix(format="pandas", field="rating")
     assert isinstance(log, pd.DataFrame)
     assert len(log) == len(ml_ratings)
@@ -244,7 +246,7 @@ def test_matrix_scipy_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset, genera
 
 @mark.parametrize("generation", ["modern", "legacy"])
 def test_matrix_scipy_missing_rating(ml_ratings: pd.DataFrame, generation):
-    ml_ds = from_interactions_df(ml_ratings[["user", "item", "timestamp"]], item_col="item")
+    ml_ds = from_interactions_df(ml_ratings[["user_id", "item_id", "timestamp"]])
     log = ml_ds.interaction_matrix(format="scipy", field="rating", legacy=generation == "legacy")
     assert isinstance(log, sps.csr_array if generation == "modern" else sps.csr_matrix)
     assert log.nnz == len(ml_ratings)
@@ -312,7 +314,7 @@ def test_matrix_torch_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
 
 def test_matrix_torch_missing_rating(ml_ratings: pd.DataFrame):
-    ml_ds = from_interactions_df(ml_ratings[["user", "item", "timestamp"]], item_col="item")
+    ml_ds = from_interactions_df(ml_ratings[["user_id", "item_id", "timestamp"]])
     log = ml_ds.interaction_matrix(format="torch", field="rating")
     assert isinstance(log, torch.Tensor)
     assert log.is_sparse_csr
@@ -350,7 +352,7 @@ def test_matrix_rows_by_id(rng: np.random.Generator, ml_ratings: pd.DataFrame, m
     for user in users:
         row = ml_ds.user_row(user)
         assert row is not None
-        urows = ml_ratings[ml_ratings["user_id"] == user].sort_values("item")
+        urows = ml_ratings[ml_ratings["user_id"] == user].sort_values("item_id")
         urows = urows.reset_index(drop=True)
         assert set(row.ids()) == set(urows["item_id"])
         assert np.all(row.numbers() == ml_ds.items.numbers(urows["item_id"]))
@@ -382,7 +384,7 @@ def test_matrix_rows_by_num(rng: np.random.Generator, ml_ratings: pd.DataFrame, 
         row = ml_ds.user_row(user_num=user)
         assert row is not None
         assert row is not None
-        urows = ml_ratings[ml_ratings["user_id"] == ml_ds.users.id(user)].sort_values("item")
+        urows = ml_ratings[ml_ratings["user_id"] == ml_ds.users.id(user)].sort_values("item_id")
         assert set(row.ids()) == set(urows["item_id"])
 
         assert np.all(row.numbers() == ml_ds.items.numbers(urows["item_id"]))

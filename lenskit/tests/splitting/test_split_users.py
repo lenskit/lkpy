@@ -42,7 +42,7 @@ def test_crossfold_may_skip_train(ml_ratings: pd.DataFrame):
     "Partitioning when users may not have enough ratings to be in the train and test sets."
     # make a data set where some users only have 1 rating
     ml_ratings = ml_ratings.sample(frac=0.1)
-    ucounts = ml_ratings.groupby("user")["rating"].count()
+    ucounts = ml_ratings.groupby("user_id")["rating"].count()
     assert ucounts.min() == 1  # we should have some small users!
     ucounts.name = "ur_count"
     ml_ds = from_interactions_df(ml_ratings)

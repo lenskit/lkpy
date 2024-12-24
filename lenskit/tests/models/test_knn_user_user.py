@@ -36,20 +36,20 @@ def test_uu_train(ml_ratings, ml_ds):
     # it should have computed correct means
     u_stats = ml_ds.user_stats()
     mlmeans = pd.Series(algo.user_means_.numpy(), index=algo.users_.ids(), name="mean")
-    mlmeans.index.name = "user"
+    mlmeans.index.name = "user_id"
     umeans, mlmeans = u_stats["mean_rating"].align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
     # we should be able to reconstruct rating values
-    uir = ml_ratings.set_index(["user", "item"]).rating
+    uir = ml_ratings.set_index(["user_id", "item_id"]).rating
     rates = algo.user_ratings_.tocoo()
     ui_rbdf = pd.DataFrame(
         {
-            "user": algo.users_.ids(rates.row),
-            "item": algo.items_.ids(rates.col),
+            "user_id": algo.users_.ids(rates.row),
+            "item_id": algo.items_.ids(rates.col),
             "nrating": rates.data,
         }
-    ).set_index(["user", "item"])
+    ).set_index(["user_id", "item_id"])
     ui_rbdf = ui_rbdf.join(mlmeans)
     ui_rbdf["rating"] = ui_rbdf["nrating"] + ui_rbdf["mean"]
     ui_rbdf["orig_rating"] = uir
@@ -92,13 +92,11 @@ def test_uu_predict_too_few_blended(ml_ds):
 
 def test_uu_predict_live_ratings(ml_ratings):
     algo = UserKNNScorer(30, min_nbrs=2)
-    no4 = ml_ratings[ml_ratings.user != 4]
-    no4 = from_interactions_df(no4, item_col="item")
+    no4 = ml_ratings[ml_ratings.user_id != 4]
+    no4 = from_interactions_df(no4)
     algo.train(no4)
 
-    ratings = ItemList.from_df(
-        ml_ratings[ml_ratings.user == 4][["item", "rating"]].rename(columns={"item": "item_id"})
-    )
+    ratings = ItemList.from_df(ml_ratings[ml_ratings.user_id == 4][["item_id", "rating"]])
 
     query = RecQuery(20381, ratings)
     preds = algo(
@@ -131,20 +129,20 @@ def test_uu_save_load(tmp_path, ml_ratings, ml_ds):
     # it should have computed correct means
     umeans = ml_ds.user_stats()["mean_rating"]
     mlmeans = pd.Series(algo.user_means_, index=algo.users_, name="mean")
-    mlmeans.index.name = "user"
+    mlmeans.index.name = "user_id"
     umeans, mlmeans = umeans.align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
     # we should be able to reconstruct rating values
-    uir = ml_ratings.set_index(["user", "item"]).rating
+    uir = ml_ratings.set_index(["user_id", "item_id"]).rating
     rates = algo.user_ratings_.tocoo()
     ui_rbdf = pd.DataFrame(
         {
-            "user": algo.users_.ids(rates.row),
-            "item": algo.items_.ids(rates.col),
+            "user_id": algo.users_.ids(rates.row),
+            "item_id": algo.items_.ids(rates.col),
             "nrating": rates.data,
         }
-    ).set_index(["user", "item"])
+    ).set_index(["user_id", "item_id"])
     ui_rbdf = ui_rbdf.join(mlmeans)
     ui_rbdf["rating"] = ui_rbdf["nrating"] + ui_rbdf["mean"]
     ui_rbdf["orig_rating"] = uir
@@ -171,9 +169,9 @@ def test_uu_predict_unknown_empty(ml_ds):
 def test_uu_implicit(ml_ratings):
     "Train and use user-user on an implicit data set."
     algo = UserKNNScorer(20, feedback="implicit")
-    data = ml_ratings.loc[:, ["user", "item"]]
+    data = ml_ratings.loc[:, ["user_id", "item_id"]]
 
-    algo.train(from_interactions_df(data, item_col="item"))
+    algo.train(from_interactions_df(data))
     assert algo.user_means_ is None
 
     mat = algo.user_vectors_
@@ -191,9 +189,9 @@ def test_uu_implicit(ml_ratings):
 def test_uu_save_load_implicit(tmp_path, ml_ratings):
     "Save and load user-user on an implicit data set."
     orig = UserKNNScorer(20, feedback="implicit")
-    data = ml_ratings.loc[:, ["user", "item"]]
+    data = ml_ratings.loc[:, ["user_id", "item_id"]]
 
-    orig.train(from_interactions_df(data, item_col="item"))
+    orig.train(from_interactions_df(data))
     ser = pickle.dumps(orig)
 
     algo = pickle.loads(ser)

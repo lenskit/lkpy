@@ -56,9 +56,9 @@ simple_ds = from_interactions_df(simple_ratings)
 @fixture(scope="module")
 def ml_subset(ml_ratings):
     "Fixture that returns a subset of the MovieLens database."
-    icounts = ml_ratings.groupby("item").rating.count()
+    icounts = ml_ratings.groupby("item_id").rating.count()
     top = icounts.nlargest(500)
-    top_rates = ml_ratings[ml_ratings["item"].isin(top.index)]
+    top_rates = ml_ratings[ml_ratings["item_id"].isin(top.index)]
     _log.info("top 500 items yield %d of %d ratings", len(top_rates), len(ml_ratings))
     return top_rates
 
@@ -193,7 +193,7 @@ def test_ii_train_ml100k(tmp_path, ml_100k):
 
     assert algo.item_counts_.sum() == len(algo.sim_matrix_.values())
 
-    means = ml_100k.groupby("item").rating.mean()
+    means = ml_100k.groupby("item_id").rating.mean()
     assert means[algo.items_.ids()].values == approx(algo.item_means_)
 
     # save
@@ -233,18 +233,18 @@ def test_ii_large_models(rng, ml_ratings, ml_ds):
     # a little tolerance
     assert algo_lim.sim_matrix_.values().max() <= 1
 
-    means = ml_ratings.groupby("item").rating.mean()
+    means = ml_ratings.groupby("item_id").rating.mean()
     assert means[algo_lim.items_.ids()].values == approx(algo_lim.item_means_)
 
     assert all(np.logical_not(np.isnan(algo_ub.sim_matrix_.values())))
     assert algo_ub.sim_matrix_.values().min() > 0
     assert algo_ub.sim_matrix_.values().max() <= 1
 
-    means = ml_ratings.groupby("item").rating.mean()
+    means = ml_ratings.groupby("item_id").rating.mean()
     assert means[algo_ub.items_.ids()].values == approx(algo_ub.item_means_)
 
     mc_rates = (
-        ml_ratings.set_index("item")
+        ml_ratings.set_index("item_id")
         .join(pd.DataFrame({"item_mean": means}))
         .assign(rating=lambda df: df.rating - df.item_mean)
     )
@@ -272,7 +272,7 @@ def test_ii_large_models(rng, ml_ratings, ml_ds):
         ipos = algo_ub.items_.number(i)
         _log.debug("checking item %d at position %d", i, ipos)
         assert ipos == algo_lim.items_.number(i)
-        irates = mc_rates.loc[[i], :].set_index("user").rating
+        irates = mc_rates.loc[[i], :].set_index("user_id").rating
 
         ub_row = mat_ub[ipos]
         b_row = mat_lim[ipos]
@@ -297,7 +297,7 @@ def test_ii_large_models(rng, ml_ratings, ml_ds):
         _log.debug("checking equal similarities")
         for n in rng.choice(ub_cols, min(10, len(ub_cols))):
             n_id = algo_ub.items_.id(n)
-            n_rates = mc_rates.loc[n_id, :].set_index("user").rating
+            n_rates = mc_rates.loc[n_id, :].set_index("user_id").rating
             ir, nr = irates.align(n_rates, fill_value=0)
             cor = ir.corr(nr)
             assert mat_ub[ipos, n].item() == approx(cor, abs=1.0e-6)
@@ -345,7 +345,7 @@ def test_ii_implicit_large(rng, ml_ratings):
     NRECS = 50
     algo = ItemKNNScorer(NBRS, feedback="implicit")
     pipe = topn_pipeline(algo)
-    pipe.train(from_interactions_df(ml_ratings[["user", "item"]], item_col="item"))
+    pipe.train(from_interactions_df(ml_ratings[["user_id", "item_id"]], item_col="item_id"))
 
     users = rng.choice(ml_ratings["user_id"].unique(), NUSERS)
 
@@ -359,7 +359,7 @@ def test_ii_implicit_large(rng, ml_ratings):
         assert len(recs) == NRECS
         urates = ml_ratings[ml_ratings["user_id"] == user]
 
-        smat = mat[torch.from_numpy(items.numbers(urates["item"].values)), :]
+        smat = mat[torch.from_numpy(items.numbers(urates["item_id"].values)), :]
         for row in recs.to_df().itertuples():
             col = smat[:, items.number(row.item_id)]
             top, _is = torch.topk(col, NBRS)
@@ -381,7 +381,7 @@ def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
     "Save and load a model"
     original = ItemKNNScorer(30, save_nbrs=500)
     _log.info("building model")
-    original.train(from_interactions_df(ml_subset, item_col="item"))
+    original.train(from_interactions_df(ml_subset, item_col="item_id"))
 
     fn = tmp_path / "ii.mod"
     _log.info("saving model to %s", fn)
@@ -409,7 +409,7 @@ def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
     o_mat = original.sim_matrix_
     assert all(r_mat.crow_indices() == o_mat.crow_indices())
 
-    means = ml_ratings.groupby("item").rating.mean()
+    means = ml_ratings.groupby("item_id").rating.mean()
     assert means[algo.items_.ids()].values == approx(original.item_means_)
 
 

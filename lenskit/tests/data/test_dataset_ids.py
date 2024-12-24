@@ -25,7 +25,7 @@ def test_from_ratings_default_names(ml_ratings: pd.DataFrame):
 
 
 def test_from_ratings_nosuffix(ml_ratings: pd.DataFrame):
-    ratings = ml_ratings.rename(columns={"user_id": "user_id", "item": "item"})
+    ratings = ml_ratings.rename(columns={"user_id": "user", "item_id": "item"})
     ds = from_interactions_df(ratings)
     assert ds.item_count == ratings["item"].nunique()
     assert ds.user_count == ratings["user"].nunique()

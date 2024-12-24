@@ -22,7 +22,7 @@ import structlog
 from .convert import from_interactions_df
 from .dataset import Dataset
 
-_log = structlog.stdlib.get_logger
+_log = structlog.stdlib.get_logger(__name__)
 
 LOC: TypeAlias = Path | tuple[ZipFile, str]
 
