@@ -1,3 +1,4 @@
+import inspect
 import pickle
 from typing import ClassVar, Literal
 
@@ -47,34 +48,46 @@ class BasicComponentTests:
             assert c2 == c1
 
 
-class ScorerTests:
+class TrainingTests:
+    """
+    Common tests for component training.
+    """
+
+    component: type[Component]
+
+    @fixture
+    def trained_model(self, ml_ds: Dataset):
+        model = self.component()
+        if isinstance(model, Trainable):
+            model.train(ml_ds)
+        yield model
+
+    def test_basic_trained(self, ml_ds: Dataset, trained_model: Component):
+        assert isinstance(trained_model, self.component)
+        if isinstance(trained_model, Trainable):
+            assert trained_model.is_trained
+
+
+class ScorerTests(TrainingTests):
     """
     Common tests for scorer components.  Many of these just test that the component
     runs, not that it produces correct output.
     """
 
     component: type[Component]
-    train_configs = []
     can_score: ClassVar[Literal["some", "known", "all"]] = "known"
     "What can this scorer score?"
 
-    @fixture
-    def trained_model(self, ml_ds: Dataset):
-        model = self.component()
-        assert isinstance(model, Trainable)
-        model.train(ml_ds)
-        yield model
-
-    def test_basic_trained(self, ml_ds: Dataset, trained_model: Component):
-        assert isinstance(trained_model, self.component)
-        assert isinstance(trained_model, Trainable)
-        assert trained_model.is_trained
+    def invoke_scorer(self, inst: Component, **kwargs):
+        sig = inspect.signature(inst)
+        args = {n: v for (n, v) in kwargs.items() if n in sig.parameters}
+        return inst(**args)
 
     def test_score_known(self, rng: np.random.Generator, ml_ds: Dataset, trained_model: Component):
         for u in rng.choice(ml_ds.users.ids(), 100):
             item_nums = rng.choice(ml_ds.item_count, 100)
             items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
-            scored = trained_model(query=u, items=items)
+            scored = self.invoke_scorer(trained_model, query=u, items=items)
             assert isinstance(scored, ItemList)
             assert np.all(scored.numbers() == item_nums)
             assert np.all(scored.ids() == items.ids())
@@ -92,10 +105,10 @@ class ScorerTests:
         for u in rng.choice(ml_ds.users.ids(), 100):
             item_nums = rng.choice(ml_ds.item_count, 100)
             items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
-            scored = trained_model(query=u, items=items)
+            scored = self.invoke_scorer(trained_model, query=u, items=items)
             assert isinstance(scored, ItemList)
 
-            s2 = tm2(query=u, items=items)
+            s2 = self.invoke_scorer(tm2, query=u, items=items)
             assert isinstance(s2, ItemList)
 
             assert np.all(scored.numbers() == item_nums)
@@ -114,7 +127,7 @@ class ScorerTests:
         item_nums = rng.choice(ml_ds.item_count, 100)
         items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
 
-        scored = trained_model(query=-1348, items=items)
+        scored = self.invoke_scorer(trained_model, query=-1348, items=items)
         scores = scored.scores("pandas", index="ids")
         assert scores is not None
         if self.can_score == "all":
@@ -129,7 +142,7 @@ class ScorerTests:
         item_ids.append(-318)
         items = ItemList(item_ids)
 
-        scored = trained_model(query=ml_ds.users.id(0), items=items)
+        scored = self.invoke_scorer(trained_model, query=ml_ds.users.id(0), items=items)
         scores = scored.scores("pandas", index="ids")
         assert scores is not None
         if self.can_score == "all":
@@ -144,7 +157,7 @@ class ScorerTests:
         item_nums = rng.choice(ml_ds.item_count, 100)
         items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
         q = RecQuery()
-        scored = trained_model(query=q, items=items)
+        scored = self.invoke_scorer(trained_model, query=q, items=items)
         assert np.all(scored.numbers() == item_nums)
         assert np.all(scored.ids() == items.ids())
         scores = scored.scores()
@@ -160,7 +173,7 @@ class ScorerTests:
         item_nums = rng.choice(ml_ds.item_count, 100)
         items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
         q = RecQuery(user_id=u, user_items=u_row)
-        scored = trained_model(query=q, items=items)
+        scored = self.invoke_scorer(trained_model, query=q, items=items)
         assert np.all(scored.numbers() == item_nums)
         assert np.all(scored.ids() == items.ids())
         scores = scored.scores()
@@ -176,7 +189,7 @@ class ScorerTests:
         item_nums = rng.choice(ml_ds.item_count, 100)
         items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
         q = RecQuery(user_items=u_row)
-        scored = trained_model(query=q, items=items)
+        scored = self.invoke_scorer(trained_model, query=q, items=items)
         assert np.all(scored.numbers() == item_nums)
         assert np.all(scored.ids() == items.ids())
         scores = scored.scores()
@@ -189,7 +202,7 @@ class ScorerTests:
         u = rng.choice(ml_ds.users.ids())
 
         items = ItemList()
-        scored = trained_model(query=u, items=items)
+        scored = self.invoke_scorer(trained_model, query=u, items=items)
         assert len(scored) == 0
         scores = scored.scores()
         assert scores is not None
