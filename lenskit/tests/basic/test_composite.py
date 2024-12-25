@@ -4,6 +4,7 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import logging
 import pickle
 from typing import Any
 
@@ -20,8 +21,12 @@ from lenskit.basic.history import KnownRatingScorer
 from lenskit.data import Dataset
 from lenskit.data.items import ItemList
 from lenskit.data.types import ID
+from lenskit.operations import predict, score
 from lenskit.pipeline import Pipeline
+from lenskit.pipeline.common import RecPipelineBuilder
 from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
+
+_log = logging.getLogger(__name__)
 
 
 def test_fallback_fill_missing(ml_ds: Dataset):
@@ -51,3 +56,29 @@ def test_fallback_fill_missing(ml_ds: Dataset):
 
     assert scores[:2] == approx(known(2, ItemList(item_ids=items[:2])).scores())
     assert scores[2:] == approx(bias(2, ItemList(item_ids=items[2:])).scores())
+
+
+def test_fallback_double_bias(rng: np.random.Generator, ml_ds: Dataset):
+    builder = RecPipelineBuilder()
+    builder.scorer(BiasScorer(damping=50))
+    builder.predicts_ratings(fallback=BiasScorer(damping=0))
+    pipe = builder.build("double-bias")
+
+    _log.info("pipeline configuration: %s", pipe.get_config().model_dump_json(indent=2))
+
+    pipe.train(ml_ds)
+
+    for user in rng.choice(ml_ds.users.ids(), 100):
+        items = rng.choice(ml_ds.items.ids(), 500)
+        scores = score(pipe, user, items)
+        scores = scores.scores()
+        assert scores is not None
+        assert not np.any(np.isnan(scores))
+
+        preds = predict(pipe, user, items)
+
+        preds = preds.scores()
+        assert preds is not None
+        assert not np.any(np.isnan(preds))
+
+        assert scores == approx(preds)

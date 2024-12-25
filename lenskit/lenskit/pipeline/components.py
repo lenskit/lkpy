@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import inspect
+import json
 from abc import abstractmethod
 from importlib import import_module
 from types import FunctionType
@@ -213,6 +214,10 @@ class Component(Configurable, Generic[COut]):
             the typechecker on the ``__call__`` signature definition.
         """
         ...
+
+    def __repr__(self) -> str:
+        params = json.dumps(self.get_config(), indent=2)
+        return f"<{self.__class__.__name__} {params}>"
 
 
 def instantiate_component(

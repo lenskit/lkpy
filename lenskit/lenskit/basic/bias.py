@@ -286,7 +286,7 @@ class BiasScorer(Component):
 
     @property
     def is_trained(self) -> bool:
-        return hasattr(self, "bias_")
+        return hasattr(self, "model_")
 
     def train(self, data: Dataset):
         """
