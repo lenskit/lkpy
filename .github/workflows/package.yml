@@ -33,6 +33,7 @@ jobs:
         run: |
           python -m build -o dist lenskit
           python -m build -o dist lenskit-funksvd
+          python -m build -o dist lenskit-sklearn
           python -m build -o dist lenskit-implicit
           python -m build -o dist lenskit-hpf
 
