@@ -11,7 +11,15 @@ from contextlib import contextmanager
 import pytest
 
 from ._arrays import coo_arrays, scored_lists, sparse_arrays, sparse_tensors
-from ._movielens import demo_recs, ml_100k, ml_100k_zip, ml_ds, ml_ratings, ml_test_dir
+from ._movielens import (
+    demo_recs,
+    ml_100k,
+    ml_100k_zip,
+    ml_ds,
+    ml_ds_unchecked,
+    ml_ratings,
+    ml_test_dir,
+)
 
 __all__ = [
     "coo_arrays",
@@ -21,6 +29,7 @@ __all__ = [
     "ml_100k",
     "ml_100k_zip",
     "ml_ds",
+    "ml_ds_unchecked",
     "ml_ratings",
     "ml_test_dir",
     "demo_recs",
