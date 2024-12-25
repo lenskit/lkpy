@@ -8,7 +8,7 @@ from lenskit.metrics.basic import ListLength
 from lenskit.metrics.bulk import RunAnalysis
 from lenskit.metrics.predict import RMSE
 from lenskit.metrics.ranking import NDCG, RBP, Precision, RecipRank
-from lenskit.util.test import demo_recs, ml_ratings
+from lenskit.testing import demo_recs, ml_ratings
 
 
 def test_bulk_measure_function(ml_ratings: pd.DataFrame):

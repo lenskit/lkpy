@@ -12,7 +12,7 @@ import hypothesis.strategies as st
 from hypothesis import assume, given, settings
 
 from lenskit.parallel.serialize import shm_deserialize, shm_serialize
-from lenskit.util.test import sparse_tensors
+from lenskit.testing import sparse_tensors
 
 
 @given(st.lists(st.one_of(st.integers(), st.floats(allow_nan=False, allow_infinity=False))))

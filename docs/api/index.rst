@@ -78,4 +78,5 @@ and may be useful in building new models and components for LensKit.
     lenskit.logging
     lenskit.math
     lenskit.parallel
+    lenskit.testing
     lenskit.util

@@ -16,7 +16,7 @@ from pytest import approx
 from lenskit.data import Dataset, from_interactions_df
 from lenskit.data.lazy import LazyDataset
 from lenskit.data.tables import NumpyUserItemTable, TorchUserItemTable
-from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
+from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
 
 # re-running the stat tests are a good exercise of the lazy dataset code
 

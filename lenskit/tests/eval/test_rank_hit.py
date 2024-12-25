@@ -13,7 +13,7 @@ from pytest import approx
 
 from lenskit.data import ItemList
 from lenskit.metrics.ranking import Hit
-from lenskit.util.test import demo_recs  # noqa: F401
+from lenskit.testing import demo_recs  # noqa: F401
 
 _log = logging.getLogger(__name__)
 

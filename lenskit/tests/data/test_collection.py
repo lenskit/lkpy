@@ -12,7 +12,7 @@ from lenskit.data import ItemList
 from lenskit.data.collection import ItemListCollection, UserIDKey, _create_key, project_key
 from lenskit.data.dataset import Dataset
 from lenskit.diagnostics import DataWarning
-from lenskit.util.test import demo_recs
+from lenskit.testing import demo_recs
 
 _log = logging.getLogger(__name__)
 

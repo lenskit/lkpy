@@ -13,7 +13,7 @@ import pandas as pd
 
 from lenskit.data import Dataset
 from lenskit.data.tables import NumpyUserItemTable, TorchUserItemTable
-from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
+from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
 
 
 def test_pandas_log_defaults(ml_ratings: pd.DataFrame, ml_ds: Dataset):

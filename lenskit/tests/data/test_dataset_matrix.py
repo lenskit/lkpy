@@ -20,7 +20,7 @@ from pytest import mark, raises
 
 from lenskit.data import Dataset, FieldError, from_interactions_df
 from lenskit.data.matrix import CSRStructure, MatrixDataset
-from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
+from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
 
 
 def _check_user_offset_counts(ml_ds: Dataset, ml_ratings: pd.DataFrame, offsets: ArrayLike):

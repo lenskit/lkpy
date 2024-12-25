@@ -408,7 +408,8 @@ def test_subset_idx_array(ml_ds: Dataset):
 
 
 @given(st.data())
-def test_subset_index_array_stress(ml_ds: Dataset, data: st.DataObject):
+def test_subset_index_array_stress(ml_ds_unchecked: Dataset, data: st.DataObject):
+    ml_ds = ml_ds_unchecked
     uno = data.draw(st.integers(0, ml_ds.user_count - 1))
     row = ml_ds.user_row(user_num=uno)
     assert row is not None

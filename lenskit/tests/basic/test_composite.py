@@ -13,8 +13,6 @@ import pandas as pd
 
 from pytest import approx
 
-import lenskit.util.test as lktu
-from lenskit import util as lku
 from lenskit.basic import BiasScorer
 from lenskit.basic.composite import FallbackScorer
 from lenskit.basic.history import KnownRatingScorer
@@ -24,7 +22,6 @@ from lenskit.data.types import ID
 from lenskit.operations import predict, score
 from lenskit.pipeline import Pipeline
 from lenskit.pipeline.common import RecPipelineBuilder
-from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 _log = logging.getLogger(__name__)
 
