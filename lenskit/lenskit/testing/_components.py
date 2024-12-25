@@ -1,4 +1,5 @@
 import inspect
+import os
 import pickle
 from typing import ClassVar, Literal
 
@@ -8,6 +9,8 @@ from pytest import approx, fixture, skip
 
 from lenskit.data import Dataset, ItemList, RecQuery
 from lenskit.pipeline import Component, Trainable
+
+retrain = os.environ.get("LK_TEST_RETRAIN")
 
 
 class BasicComponentTests:
@@ -55,7 +58,7 @@ class TrainingTests:
 
     component: type[Component]
 
-    @fixture
+    @fixture(scope="function" if retrain else "class")
     def trained_model(self, ml_ds: Dataset):
         model = self.component()
         if isinstance(model, Trainable):
