@@ -25,7 +25,7 @@ ml_test: Dataset = LazyDataset(lambda: load_movielens(ml_test_dir))
 
 
 @pytest.fixture(scope="session")
-def ml_ratings() -> Generator[pd.DataFrame]:
+def ml_ratings() -> Generator[pd.DataFrame, None, None]:
     """
     Fixture to load the test MovieLens ratings as a data frame. To use this,
     just include it as a parameter in your test::
@@ -40,7 +40,7 @@ def ml_ratings() -> Generator[pd.DataFrame]:
 
 
 @pytest.fixture(scope="session")
-def ml_ds(ml_ratings: pd.DataFrame) -> Generator[Dataset]:
+def ml_ds(ml_ratings: pd.DataFrame) -> Generator[Dataset, None, None]:
     """
     Fixture to load the MovieLens test dataset.  To use this, just include it as
     a parameter in your test::
@@ -55,7 +55,7 @@ def ml_ds(ml_ratings: pd.DataFrame) -> Generator[Dataset]:
 
 
 @pytest.fixture
-def ml_100k() -> Generator[pd.DataFrame]:
+def ml_100k() -> Generator[pd.DataFrame, None, None]:
     """
     Fixture to load the MovieLens 100K dataset (currently as a data frame).  It skips
     the test if the ML100K data is not available.
