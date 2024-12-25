@@ -36,7 +36,7 @@ def test_iter_df(ml_ratings: pd.DataFrame):
         counts[key] = len(il)
 
     counts = pd.Series(counts)
-    in_counts = ml_ratings.value_counts("user")
+    in_counts = ml_ratings.value_counts("user_id")
     assert len(counts) == len(in_counts)
     counts, in_counts = counts.align(in_counts, join="outer")
     assert np.all(counts == in_counts)

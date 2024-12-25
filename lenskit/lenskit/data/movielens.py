@@ -8,7 +8,6 @@
 Code to import MovieLens data sets into LensKit.
 """
 
-import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
@@ -18,11 +17,12 @@ from zipfile import ZipFile
 
 import numpy as np
 import pandas as pd
+import structlog
 
 from .convert import from_interactions_df
 from .dataset import Dataset
 
-_log = logging.getLogger(__name__)
+_log = structlog.stdlib.get_logger(__name__)
 
 LOC: TypeAlias = Path | tuple[ZipFile, str]
 
@@ -105,50 +105,52 @@ def _ml_detect_and_open(path: str | Path) -> MLData:
     ds: MLVersion
 
     if loc.is_file() and loc.suffix == ".zip":
-        _log.debug("opening zip file at %s", loc)
+        log = _log.bind(zipfile=str(loc))
+        log.debug("opening zip file")
         zf = ZipFile(loc, "r")
         try:
             infos = zf.infolist()
             first = infos[0]
             if not first.is_dir:
-                _log.error("%s: first entry is not directory")
+                log.error("first entry is not directory")
                 raise RuntimeError("invalid ML zip file")
 
-            _log.debug("%s: base dir filename %s", loc, first.filename)
+            log.debug("base dir filename %s", first.filename)
             dsm = re.match(r"^(ml-(?:\d+[MmKk]|latest|latest-small))", first.filename)
             if not dsm:
-                _log.error("%s: invalid directory name %s", loc, first.filename)
+                log.error("invalid directory name %s", first.filename)
                 raise RuntimeError("invalid ML zip file")
 
             ds = MLVersion(dsm.group(1).lower())
-            _log.debug("%s: found ML data set %s", loc, ds)
+            log.debug("found ML data set %s", ds)
             return MLData(ds, zf, first.filename)
         except Exception as e:  # pragma nocover
             zf.close()
             raise e
     else:
-        _log.debug("loading from directory %s", loc)
+        log = _log.bind(dir=str(loc))
+        log.debug("loading from directory")
         dsm = re.match(r"^(ml-\d+[MmKk])", loc.name)
         if dsm:
             ds = MLVersion(dsm.group(1))
-            _log.debug("%s: inferred data set %s from dir name", loc, ds)
+            _log.debug("inferred data set %s from dir name", ds)
         else:
-            _log.debug("%s: checking contents for data type", loc)
+            _log.debug("checking contents for data type")
             if (loc / "u.data").exists():
-                _log.debug("%s: found u.data, interpreting as 100K")
+                _log.debug("found u.data, interpreting as 100K")
                 ds = MLVersion.ML_100K
             elif (loc / "ratings.dat").exists():
                 if (loc / "tags.dat").exists():
-                    _log.debug("%s: found ratings.dat and tags.dat, interpreting as 10M", loc)
+                    _log.debug("found ratings.dat and tags.dat, interpreting as 10M")
                     ds = MLVersion.ML_10M
                 else:
-                    _log.debug("%s: found ratings.dat but no tags, interpreting as 1M", loc)
+                    _log.debug("found ratings.dat but no tags, interpreting as 1M")
                     ds = MLVersion.ML_1M
             elif (loc / "ratings.csv").exists():
-                _log.debug("%s: found ratings.csv, interpreting as modern (20M and later)", loc)
+                _log.debug("found ratings.csv, interpreting as modern (20M and later)")
                 ds = MLVersion.ML_MODERN
             else:
-                _log.error("%s: could not detect MovieLens data", loc)
+                _log.error("could not detect MovieLens data")
                 raise RuntimeError("invalid ML directory")
 
         return MLData(ds, loc)
@@ -160,10 +162,10 @@ def _load_ml_100k(ml: MLData) -> pd.DataFrame:
             data,
             sep="\t",
             header=None,
-            names=["user", "item", "rating", "timestamp"],
+            names=["user_id", "item_id", "rating", "timestamp"],
             dtype={
-                "user": np.int32,
-                "item": np.int32,
+                "user_id": np.int32,
+                "item_id": np.int32,
                 "rating": np.float32,
                 "timestamp": np.int32,
             },
@@ -176,11 +178,11 @@ def _load_ml_million(ml: MLData) -> pd.DataFrame:
             data,
             sep=":",
             header=None,
-            names=["user", "_ui", "item", "_ir", "rating", "_rt", "timestamp"],
+            names=["user_id", "_ui", "item_id", "_ir", "rating", "_rt", "timestamp"],
             usecols=[0, 2, 4, 6],
             dtype={
-                "user": np.int32,
-                "item": np.int32,
+                "user_id": np.int32,
+                "item_id": np.int32,
                 "rating": np.float32,
                 "timestamp": np.int32,
             },
@@ -197,4 +199,4 @@ def _load_ml_modern(ml: MLData) -> pd.DataFrame:
                 "rating": np.float32,
                 "timestamp": np.int64,
             },
-        ).rename(columns={"userId": "user", "movieId": "item"})
+        ).rename(columns={"userId": "user_id", "movieId": "item_id"})

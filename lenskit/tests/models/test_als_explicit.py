@@ -211,8 +211,8 @@ def test_als_train_large(ml_ratings, ml_ds: Dataset):
 
     assert algo.bias_.global_bias == approx(ml_ratings.rating.mean())
     assert algo.features == 20
-    assert len(algo.items_) == ml_ratings.item.nunique()
-    assert len(algo.users_) == ml_ratings.user.nunique()
+    assert len(algo.items_) == ml_ratings["item_id"].nunique()
+    assert len(algo.users_) == ml_ratings["user_id"].nunique()
 
     ratings = ml_ds.interaction_matrix(format="pandas", field="all")
     gmean = ratings["rating"].mean()

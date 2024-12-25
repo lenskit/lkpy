@@ -18,21 +18,21 @@ from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 
 def test_from_ratings_default_names(ml_ratings: pd.DataFrame):
-    ratings = ml_ratings.rename(columns={"user": "user_id", "item": "item_id"})
+    ratings = ml_ratings
     ds = from_interactions_df(ratings)
     assert ds.item_count == ratings["item_id"].nunique()
     assert ds.user_count == ratings["user_id"].nunique()
 
 
 def test_from_ratings_nosuffix(ml_ratings: pd.DataFrame):
-    ratings = ml_ratings.rename(columns={"user": "user", "item": "item"})
+    ratings = ml_ratings.rename(columns={"user_id": "user", "item_id": "item"})
     ds = from_interactions_df(ratings)
     assert ds.item_count == ratings["item"].nunique()
     assert ds.user_count == ratings["user"].nunique()
 
 
 def test_from_ratings_names_upper(ml_ratings: pd.DataFrame):
-    ratings = ml_ratings.rename(columns={"user": "USER", "item": "ITEM"})
+    ratings = ml_ratings.rename(columns={"user_id": "USER", "item_id": "ITEM"})
     ds = from_interactions_df(ratings)
     assert ds.item_count == ratings["ITEM"].nunique()
     assert ds.user_count == ratings["USER"].nunique()

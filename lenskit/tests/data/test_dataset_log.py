@@ -31,9 +31,9 @@ def test_pandas_log_defaults(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     uids = ml_ds.users.ids(int_df["user_num"])
     iids = ml_ds.items.ids(int_df["item_num"])
 
-    ml_df = ml_ratings.sort_values(["user", "item"])
-    assert np.all(uids == ml_df["user"])
-    assert np.all(iids == ml_df["item"])
+    ml_df = ml_ratings.sort_values(["user_id", "item_id"])
+    assert np.all(uids == ml_df["user_id"])
+    assert np.all(iids == ml_df["item_id"])
     assert np.all(int_df["rating"] == ml_df["rating"])
     assert np.all(int_df["timestamp"] == ml_df["timestamp"])
 
@@ -54,9 +54,9 @@ def test_pandas_log_ids(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     # the interact
     int_df = int_df.sort_values(["user_id", "item_id"])
 
-    ml_df = ml_ratings.sort_values(["user", "item"])
-    assert np.all(int_df["user_id"] == ml_df["user"])
-    assert np.all(int_df["item_id"] == ml_df["item"])
+    ml_df = ml_ratings.sort_values(["user_id", "item_id"])
+    assert np.all(int_df["user_id"] == ml_df["user_id"])
+    assert np.all(int_df["item_id"] == ml_df["item_id"])
     assert np.all(int_df["rating"] == ml_df["rating"])
     assert np.all(int_df["timestamp"] == ml_df["timestamp"])
 
@@ -78,9 +78,9 @@ def test_pandas_log_no_ts(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     uids = ml_ds.users.ids(int_df["user_num"])
     iids = ml_ds.items.ids(int_df["item_num"])
 
-    ml_df = ml_ratings.sort_values(["user", "item"])
-    assert np.all(uids == ml_df["user"])
-    assert np.all(iids == ml_df["item"])
+    ml_df = ml_ratings.sort_values(["user_id", "item_id"])
+    assert np.all(uids == ml_df["user_id"])
+    assert np.all(iids == ml_df["item_id"])
     assert np.all(int_df["rating"] == ml_df["rating"])
 
     # and the total length
