@@ -79,7 +79,7 @@ if TYPE_CHECKING or sys.version_info >= (3, 11):
             """
             if isinstance(x, UITuple):
                 return cast(UITuple[T], x)
-            elif isinstance(x, tuple):
+            elif isinstance(x, (tuple, list)):
                 u, i = cast(tuple[T, T], x)
                 return UITuple(u, i)
             else:
