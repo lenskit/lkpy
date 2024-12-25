@@ -119,7 +119,12 @@ class ImplicitMFScorer(ALSBase):
         else:
             rmat = data.interaction_matrix("torch")
 
-        rmat.values().multiply_(self.weight)
+        rmat = torch.sparse_csr_tensor(
+            crow_indices=rmat.crow_indices(),
+            col_indices=rmat.col_indices(),
+            values=rmat.values() * self.weight,
+            size=rmat.shape,
+        )
         return TrainingData.create(data.users, data.items, rmat)
 
     @override
@@ -153,7 +158,6 @@ class ImplicitMFScorer(ALSBase):
         else:
             ri_val = torch.full((len(ri_good),), self.weight)
 
-        ri_it = ri_it
         ri_val = ri_val.to(self.item_features_.dtype)
 
         u_feat = _train_implicit_row_cholesky(ri_it, ri_val, self.item_features_, self.OtOr_)
