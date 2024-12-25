@@ -52,7 +52,7 @@ simple_ratings = pd.DataFrame.from_records(
 simple_ds = from_interactions_df(simple_ratings)
 
 
-@fixture(scope="module")
+@fixture
 def ml_subset(ml_ratings):
     "Fixture that returns a subset of the MovieLens database."
     icounts = ml_ratings.groupby("item_id").rating.count()
