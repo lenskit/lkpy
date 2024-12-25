@@ -309,10 +309,10 @@ class Task(BaseModel, extra="allow"):
             status = TaskStatus.FINISHED
         elif issubclass(exc_type, KeyboardInterrupt):
             status = TaskStatus.CANCELLED
-            log.error("task cancelled")
+            log.debug("task cancelled")
         else:
             status = TaskStatus.FAILED
-            log.error("task failed: %s", exc_value)
+            log.debug("task failed: %s", exc_value)
 
         self.finish(status)
 
