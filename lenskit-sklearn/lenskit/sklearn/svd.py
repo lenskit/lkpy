@@ -53,7 +53,7 @@ class BiasedSVDScorer(Component, Trainable):
 
     def __init__(
         self,
-        features: int,
+        features: int = 50,
         *,
         damping: UITuple[float] | float | tuple[float, float] = 5,
         algorithm: Literal["arpack", "randomized"] = "randomized",

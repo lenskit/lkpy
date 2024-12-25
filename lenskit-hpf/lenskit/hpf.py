@@ -39,7 +39,7 @@ class HPFScorer(Component, Trainable):
     items_: Vocabulary
     item_features_: np.ndarray[tuple[int, int], np.dtype[np.float64]]
 
-    def __init__(self, features: int, **kwargs):
+    def __init__(self, features: int = 50, **kwargs):
         self.features = features
         self._kwargs = kwargs
 

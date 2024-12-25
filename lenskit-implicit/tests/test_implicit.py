@@ -15,8 +15,17 @@ from lenskit import util
 from lenskit.data import ItemList, from_interactions_df
 from lenskit.implicit import ALS, BPR
 from lenskit.metrics import quick_measure_model
+from lenskit.testing import BasicComponentTests, ScorerTests
 
 _log = logging.getLogger(__name__)
+
+
+class TestImplicitALS(BasicComponentTests, ScorerTests):
+    component = ALS
+
+
+class TestImplicitBPR(BasicComponentTests, ScorerTests):
+    component = BPR
 
 
 @mark.slow

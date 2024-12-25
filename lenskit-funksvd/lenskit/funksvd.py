@@ -238,7 +238,7 @@ class FunkSVDScorer(Component, Trainable):
 
     def __init__(
         self,
-        features: int,
+        features: int = 50,
         iterations: int = 100,
         *,
         lrate: float = 0.001,
