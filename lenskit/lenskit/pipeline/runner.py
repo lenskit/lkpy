@@ -59,7 +59,7 @@ class PipelineRunner:
         elif status == "failed":  # pragma: nocover
             raise RuntimeError(f"{node} previously failed")
 
-        trace(self.log, "processing node %s", node)
+        trace(self.log, "processing node", node=node.name)
         self.status[node.name] = "in-progress"
         try:
             self._run_node(node, required)
@@ -96,6 +96,7 @@ class PipelineRunner:
         if val is not None and types and not is_compatible_data(val, *types):
             raise TypeError(f"invalid data for input {name} (expected {types}, got {type(val)})")
 
+        trace(self.log, "injecting input", name=name, value=val)
         self.state[name] = val
 
     def _run_component(
@@ -107,7 +108,7 @@ class PipelineRunner:
         required: bool,
     ) -> None:
         in_data = {}
-        log = self.log.bind(component=name)
+        log = self.log.bind(node=name)
         trace(log, "processing inputs")
         for iname, itype in inputs.items():
             # look up the input wiring for this parameter input
@@ -158,7 +159,7 @@ class PipelineRunner:
 
             in_data[iname] = ival
 
-        trace(log, "running component")
+        trace(log, "running component", component=comp)
         self.state[name] = comp(**in_data)
 
 
