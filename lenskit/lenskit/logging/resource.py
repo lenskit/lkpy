@@ -30,6 +30,9 @@ class ResourceMeasurement:
     system_time: float
 
     max_rss: int | None = None
+    """
+    Maximum RSS usage (in bytes).
+    """
     max_gpu: int | None = None
 
     @classmethod
@@ -47,7 +50,7 @@ class ResourceMeasurement:
             ru = resource.getrusage(resource.RUSAGE_SELF)
             user = ru.ru_utime
             system = ru.ru_stime
-            rss = ru.ru_maxrss
+            rss = ru.ru_maxrss * 1024
         except ImportError:
             ts = os.times()
             user = ts.user
