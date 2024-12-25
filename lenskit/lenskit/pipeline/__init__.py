@@ -11,12 +11,12 @@ LensKit pipeline abstraction.
 # pyright: strict
 from __future__ import annotations
 
-import logging
 import typing
 import warnings
 from types import FunctionType, UnionType
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
+import structlog
 from typing_extensions import Any, Literal, Self, TypeAlias, TypeVar, cast, overload
 
 from lenskit.data import Dataset
@@ -51,7 +51,7 @@ __all__ = [
     "topn_pipeline",
 ]
 
-_log = logging.getLogger(__name__)
+_log = structlog.stdlib.get_logger(__name__)
 
 # common type var for quick use
 T = TypeVar("T")
@@ -707,6 +707,7 @@ class Pipeline:
 
         runner = PipelineRunner(self, kwargs)
         node_list = [self.node(n) for n in nodes]
+        _log.debug("running pipeline", name=self.name, nodes=[n.name for n in node_list])
         if not node_list:
             node_list = self.nodes
 

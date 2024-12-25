@@ -58,7 +58,7 @@ class RecPipelineBuilder:
         self._selector = sel
 
     def predicts_ratings(
-        self, transform: Component | None = None, *, fallback: Component | None = None
+        self, *, transform: Component | None = None, fallback: Component | None = None
     ):
         """
         Specify that this pipeline will predict ratings, optionally providing a

@@ -2,6 +2,7 @@
 Logging, progress, and resource records.
 """
 
+import os
 from typing import Any
 
 import structlog
@@ -21,6 +22,7 @@ __all__ = [
 ]
 
 get_logger = structlog.stdlib.get_logger
+_trace_debug = os.environ.get("LK_TRACE", "no").lower() == "debug"
 
 
 def trace(logger: structlog.stdlib.BoundLogger, *args: Any, **kwargs: Any):
@@ -32,3 +34,5 @@ def trace(logger: structlog.stdlib.BoundLogger, *args: Any, **kwargs: Any):
     meth = getattr(logger, "trace", None)
     if meth is not None:
         meth(*args, **kwargs)
+    elif _trace_debug:
+        logger.debug(*args, **kwargs)
