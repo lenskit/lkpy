@@ -7,13 +7,12 @@
 import numpy as np
 import pandas as pd
 
-import lenskit.util.test as lktu
 from lenskit.basic.candidates import (
     AllTrainingItemsCandidateSelector,
     UnratedTrainingItemsCandidateSelector,
 )
 from lenskit.data import Dataset, from_interactions_df
-from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
+from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
 
 
 def test_all(ml_ds: Dataset):

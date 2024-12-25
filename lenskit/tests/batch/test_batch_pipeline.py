@@ -19,7 +19,7 @@ from lenskit.data.convert import normalize_interactions_df
 from lenskit.metrics import NDCG, RBP, RMSE, RunAnalysis
 from lenskit.pipeline import Pipeline, topn_pipeline
 from lenskit.splitting import SampleN, TTSplit, sample_users
-from lenskit.util.test import ml_100k, ml_ds, ml_ratings  # noqa: F401
+from lenskit.testing import ml_100k, ml_ds, ml_ratings  # noqa: F401
 
 _log = logging.getLogger(__name__)
 

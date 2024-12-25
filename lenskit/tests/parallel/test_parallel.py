@@ -15,7 +15,7 @@ from pytest import approx, mark
 
 from lenskit.parallel import invoker
 from lenskit.parallel.config import _resolve_parallel_config
-from lenskit.util.test import set_env_var
+from lenskit.testing import set_env_var
 
 _log = logging.getLogger(__name__)
 

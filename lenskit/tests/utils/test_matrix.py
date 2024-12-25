@@ -13,7 +13,7 @@ from hypothesis import HealthCheck, assume, given, settings
 from pytest import approx
 
 from lenskit.math.sparse import safe_spmv, torch_sparse_from_scipy
-from lenskit.util.test import coo_arrays
+from lenskit.testing import coo_arrays
 
 
 @settings(deadline=1000, suppress_health_check=[HealthCheck.too_slow])

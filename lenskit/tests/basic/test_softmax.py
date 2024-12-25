@@ -16,10 +16,9 @@ import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import given, settings
 
-import lenskit.util.test as lktu
 from lenskit.basic import PopScorer, SoftmaxRanker
 from lenskit.data.items import ItemList
-from lenskit.util.test import ml_ds, ml_ratings, scored_lists  # noqa: F401
+from lenskit.testing import scored_lists
 
 _log = logging.getLogger(__name__)
 

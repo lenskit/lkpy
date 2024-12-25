@@ -17,7 +17,7 @@ from lenskit.data import Dataset, ItemList, from_interactions_df
 from lenskit.data.bulk import dict_to_df, iter_item_lists
 from lenskit.funksvd import FunkSVDScorer
 from lenskit.metrics import call_metric, quick_measure_model
-from lenskit.util.test import ml_100k, ml_ds, wantjit  # noqa: F401
+from lenskit.testing import ml_100k, ml_ds, wantjit  # noqa: F401
 
 _log = logging.getLogger(__name__)
 

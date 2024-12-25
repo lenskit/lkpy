@@ -14,12 +14,10 @@ import torch
 
 from pytest import approx, fail, mark
 
-import lenskit.util.test as lktu
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df
 from lenskit.data.bulk import dict_to_df, iter_item_lists
 from lenskit.knn import UserKNNScorer
 from lenskit.metrics import call_metric, quick_measure_model
-from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 _log = logging.getLogger(__name__)
 

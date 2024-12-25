@@ -16,7 +16,6 @@ from scipy import linalg as la
 import pytest
 from pytest import approx, fixture, mark
 
-import lenskit.util.test as lktu
 from lenskit import batch
 from lenskit.basic import BiasScorer
 from lenskit.batch import BatchPipelineRunner
@@ -27,7 +26,7 @@ from lenskit.knn.item import ItemKNNScorer
 from lenskit.metrics import MAE, RBP, RMSE, RecipRank, RunAnalysis, call_metric, quick_measure_model
 from lenskit.pipeline import RecPipelineBuilder, topn_pipeline
 from lenskit.splitting import SampleFrac, crossfold_users
-from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
+from lenskit.testing import wantjit
 
 _log = logging.getLogger(__name__)
 
@@ -175,7 +174,7 @@ def test_ii_warns_center():
         algo.train(from_interactions_df(data))
 
 
-@lktu.wantjit
+@wantjit
 @mark.slow
 def test_ii_train_ml100k(tmp_path, ml_100k):
     "Test an unbounded model on ML-100K"
@@ -214,7 +213,7 @@ def test_ii_train_ml100k(tmp_path, ml_100k):
     assert all(r_mat.values() == o_mat.values())
 
 
-@lktu.wantjit
+@wantjit
 @mark.slow
 def test_ii_large_models(rng, ml_ratings, ml_ds):
     "Several tests of large trained I-I models"
@@ -335,7 +334,7 @@ def test_ii_large_models(rng, ml_ratings, ml_ds):
                 raise AssertionError(f"missing {np.sum(missing)} unbounded values")
 
 
-@lktu.wantjit
+@wantjit
 @mark.slow
 def test_ii_implicit_large(rng, ml_ratings):
     "Test that implicit-feedback mode works on full test data."
@@ -376,7 +375,7 @@ def test_ii_implicit_large(rng, ml_ratings):
                 raise e
 
 
-@lktu.wantjit
+@wantjit
 def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
     "Save and load a model"
     original = ItemKNNScorer(30, save_nbrs=500)
@@ -431,7 +430,7 @@ def test_ii_batch_accuracy(ml_100k):
     assert summary.loc["RBP", "mean"] > 0
 
 
-@lktu.wantjit
+@wantjit
 @mark.slow
 def test_ii_known_preds(ml_ds):
     from lenskit import batch

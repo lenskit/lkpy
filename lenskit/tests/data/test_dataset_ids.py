@@ -14,7 +14,7 @@ import pandas as pd
 from pytest import raises
 
 from lenskit.data import Dataset, from_interactions_df
-from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
+from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
 
 
 def test_from_ratings_default_names(ml_ratings: pd.DataFrame):

@@ -13,11 +13,11 @@ import torch
 
 from pytest import approx, mark
 
-import lenskit.util.test as lktu
 from lenskit.als import ImplicitMFScorer
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
 from lenskit.metrics import quick_measure_model
 from lenskit.pipeline import topn_pipeline
+from lenskit.testing import wantjit
 
 _log = logging.getLogger(__name__)
 
@@ -259,7 +259,7 @@ def test_als_predict_no_user_features_basic(ml_ratings: pd.DataFrame, ml_ds: Dat
     assert all(diffs <= 0.1)
 
 
-@lktu.wantjit
+@wantjit
 def test_als_train_large(ml_ds: Dataset):
     algo = ImplicitMFScorer(20, epochs=20, use_ratings=False)
     algo.train(ml_ds)
@@ -291,7 +291,7 @@ def test_als_save_load(tmp_path, ml_ds: Dataset):
     assert np.all(restored.users_.index == algo.users_.index)
 
 
-@lktu.wantjit
+@wantjit
 def test_als_train_large_noratings(ml_ds: Dataset):
     algo = ImplicitMFScorer(20, epochs=20)
     algo.train(ml_ds)
@@ -304,7 +304,7 @@ def test_als_train_large_noratings(ml_ds: Dataset):
     assert algo.item_features_.shape == (ml_ds.item_count, 20)
 
 
-@lktu.wantjit
+@wantjit
 def test_als_train_large_ratings(ml_ds):
     algo = ImplicitMFScorer(20, epochs=20, use_ratings=True)
     algo.train(ml_ds)

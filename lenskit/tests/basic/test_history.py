@@ -15,12 +15,10 @@ import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import given, settings
 
-import lenskit.util.test as lktu
 from lenskit.basic import PopScorer
 from lenskit.basic.history import KnownRatingScorer, UserTrainingHistoryLookup
 from lenskit.basic.topn import TopNRanker
 from lenskit.data import Dataset, ItemList, RecQuery
-from lenskit.util.test import ml_ds, ml_ratings  # noqa: F401
 
 _log = logging.getLogger(__name__)
 

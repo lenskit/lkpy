@@ -11,7 +11,6 @@ import numpy as np
 
 from pytest import approx, mark
 
-import lenskit.util.test as lktu
 from lenskit import util
 from lenskit.data import ItemList, from_interactions_df
 from lenskit.implicit import ALS, BPR

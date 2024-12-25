@@ -13,11 +13,10 @@ import torch
 
 from pytest import approx, mark
 
-import lenskit.util.test as lktu
 from lenskit.als import BiasedMFScorer
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
 from lenskit.metrics import quick_measure_model
-from lenskit.util.test import ml_ds  # noqa: F401
+from lenskit.testing import wantjit  # noqa: F401
 
 _log = logging.getLogger(__name__)
 
@@ -199,7 +198,7 @@ def test_als_predict_no_user_features_basic(rng: np.random.Generator, ml_ds: Dat
     assert new_preds.scores() == approx(preds.scores(), rel=9e-1)
 
 
-@lktu.wantjit
+@wantjit
 @mark.slow
 def test_als_train_large(ml_ratings, ml_ds: Dataset):
     algo = BiasedMFScorer(20, epochs=10)
