@@ -81,7 +81,7 @@ class ImplicitMFScorer(ALSBase):
 
     def __init__(
         self,
-        features: int,
+        features: int = 50,
         *,
         epochs: int = 20,
         reg: float | tuple[float, float] = 0.1,

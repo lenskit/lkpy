@@ -58,7 +58,7 @@ class BiasedMFScorer(ALSBase):
 
     def __init__(
         self,
-        features: int,
+        features: int = 50,
         *,
         epochs: int = 10,
         reg: float | tuple[float, float] = 0.1,

@@ -79,7 +79,7 @@ class ItemKNNScorer(Component, Trainable):
 
     def __init__(
         self,
-        nnbrs: int,
+        nnbrs: int = 20,
         min_nbrs: int = 1,
         min_sim: float = 1.0e-6,
         save_nbrs: int | None = None,

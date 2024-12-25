@@ -17,7 +17,7 @@ from lenskit.als import ImplicitMFScorer
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
 from lenskit.metrics import quick_measure_model
 from lenskit.pipeline import topn_pipeline
-from lenskit.testing import wantjit
+from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
 
 _log = logging.getLogger(__name__)
 
@@ -26,6 +26,10 @@ simple_ds = from_interactions_df(simple_df)
 
 simple_dfr = simple_df.assign(rating=[4.0, 3.0, 5.0, 2.0])
 simple_dsr = from_interactions_df(simple_dfr)
+
+
+class TestImplicitALS(BasicComponentTests, ScorerTests):
+    component = ImplicitMFScorer
 
 
 def test_als_basic_build():
