@@ -82,6 +82,8 @@ if TYPE_CHECKING or sys.version_info >= (3, 11):
             elif isinstance(x, (tuple, list)):
                 u, i = cast(tuple[T, T], x)
                 return UITuple(u, i)
+            elif isinstance(x, dict):
+                return UITuple(x["user"], x["item"])
             else:
                 return UITuple(x, x)
 else:
