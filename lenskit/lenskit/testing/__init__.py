@@ -11,6 +11,7 @@ from contextlib import contextmanager
 import pytest
 
 from ._arrays import coo_arrays, scored_lists, sparse_arrays, sparse_tensors
+from ._components import BasicComponentTests, ScorerTests
 from ._movielens import (
     demo_recs,
     ml_100k,
@@ -36,6 +37,8 @@ __all__ = [
     "wantjit",
     "jit_enabled",
     "set_env_var",
+    "BasicComponentTests",
+    "ScorerTests",
 ]
 
 jit_enabled = True
