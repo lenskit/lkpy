@@ -202,7 +202,10 @@ class ItemKNNScorer(Component, Trainable):
         ratings = query.user_items
         if ratings is None:
             if query.user_id is None:
-                raise ValueError("cannot recommend without without either user ID or items")
+                warnings.warn(
+                    "cannot recommend without without either user ID or items", DataWarning
+                )
+                return ItemList(items, scores=np.nan)
 
             upos = self.users_.number(query.user_id, missing=None)
             if upos is None:
