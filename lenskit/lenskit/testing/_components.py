@@ -7,7 +7,7 @@ import numpy as np
 
 from pytest import approx, fixture, skip
 
-from lenskit.data import Dataset, ItemList, RecQuery
+from lenskit.data import Dataset, ItemList, MatrixDataset, RecQuery
 from lenskit.pipeline import Component, Trainable
 
 retrain = os.environ.get("LK_TEST_RETRAIN")
@@ -209,3 +209,31 @@ class ScorerTests(TrainingTests):
         assert len(scored) == 0
         scores = scored.scores()
         assert scores is not None
+
+    def test_train_score_items_missing_data(self, rng: np.random.Generator, ml_ds: Dataset):
+        "train and score when some entities are missing data"
+        drop_i = rng.choice(ml_ds.items.ids(), 20)
+        drop_u = rng.choice(ml_ds.users.ids(), 5)
+
+        df = ml_ds.interaction_log("pandas", fields="all", original_ids=True)
+        df = df[~(df["user_id"].isin(drop_u))]
+        df = df[~(df["item_id"].isin(drop_i))]
+        ds = MatrixDataset(ml_ds.users, ml_ds.items, df)
+
+        model = self.component()
+        assert isinstance(model, Trainable)
+        model.train(ds)
+
+        good_u = rng.choice(ml_ds.users.ids(), 10, replace=False)
+        for u in set(good_u) | set(drop_u):
+            items = rng.choice(ml_ds.items.ids(), 50, replace=False)
+            items = np.unique(np.concat([items, rng.choice(drop_i, 5)]))
+            items = ItemList(items, vocabulary=ds.items)
+
+            scored = self.invoke_scorer(model, query=u, items=items)
+            assert len(scored) == len(items)
+            assert np.all(scored.numbers() == items.numbers())
+            assert np.all(scored.ids() == items.ids())
+
+            scores = scored.scores()
+            assert scores is not None
