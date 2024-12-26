@@ -61,10 +61,13 @@ class TrainingTests:
     needs_jit: ClassVar[bool] = True
     component: type[Component]
 
-    @fixture(scope="function" if retrain else "class")
-    def trained_model(self, ml_ds: Dataset):
+    def maybe_skip_nojit(self):
         if self.needs_jit and not jit_enabled:
             skip("JIT is disabled")
+
+    @fixture(scope="function" if retrain else "class")
+    def trained_model(self, ml_ds: Dataset):
+        self.maybe_skip_nojit()
 
         model = self.component()
         if isinstance(model, Trainable):
@@ -218,6 +221,7 @@ class ScorerTests(TrainingTests):
 
     def test_train_score_items_missing_data(self, rng: np.random.Generator, ml_ds: Dataset):
         "train and score when some entities are missing data"
+        self.maybe_skip_nojit()
         drop_i = rng.choice(ml_ds.items.ids(), 20)
         drop_u = rng.choice(ml_ds.users.ids(), 5)
 
