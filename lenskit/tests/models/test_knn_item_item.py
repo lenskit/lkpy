@@ -63,6 +63,7 @@ def ml_subset(ml_ratings):
 
 
 class TestItemKNN(BasicComponentTests, ScorerTests):
+    can_score = "some"
     component = ItemKNNScorer
 
 

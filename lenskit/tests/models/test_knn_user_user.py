@@ -24,6 +24,7 @@ _log = logging.getLogger(__name__)
 
 
 class TestUserKNN(BasicComponentTests, ScorerTests):
+    can_score = "some"
     component = UserKNNScorer
 
 
