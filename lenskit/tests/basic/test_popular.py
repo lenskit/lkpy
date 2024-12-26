@@ -18,6 +18,7 @@ simple_df = pd.DataFrame(
 
 
 class TestPopScore(BasicComponentTests, ScorerTests):
+    needs_jit = False
     component = PopScorer
 
 
