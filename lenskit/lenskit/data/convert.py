@@ -25,6 +25,7 @@ import pandas as pd
 
 from .dataset import Dataset
 from .matrix import MatrixDataset
+from .types import ID, IDSequence
 from .vocab import Vocabulary
 
 DF_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch"]
@@ -40,10 +41,12 @@ _log = logging.getLogger(__name__)
 def from_interactions_df(
     df: pd.DataFrame,
     *,
-    user_col: Optional[str] = None,
-    item_col: Optional[str] = None,
-    rating_col: Optional[str] = None,
-    timestamp_col: Optional[str] = None,
+    user_col: str | None = None,
+    item_col: str | None = None,
+    rating_col: str | None = None,
+    timestamp_col: str | None = None,
+    users: IDSequence | pd.Index | Iterable[ID] | Vocabulary | None = None,
+    items: IDSequence | pd.Index | Iterable[ID] | Vocabulary | None = None,
 ) -> Dataset:
     """
     Create a dataset from a data frame of ratings or other user-item
@@ -66,6 +69,10 @@ def from_interactions_df(
             The name of the rating column.
         timestamp_col:
             The name of the timestamp column.
+        user_ids:
+            A vocabulary of user IDs.  The data frame is subset to this set of IDs.
+        item_ids:
+            A vocabulary of item IDs.  The data frame is subset to this set of IDs.
     """
     _log.info("creating data set from %d x %d data frame", len(df.columns), len(df))
     df = normalize_interactions_df(
@@ -75,9 +82,25 @@ def from_interactions_df(
         rating_col=rating_col,
         timestamp_col=timestamp_col,
     )
+
+    if users is not None:
+        if not isinstance(users, Vocabulary):
+            users = Vocabulary(users, "user")
+        df = df[df["user_id"].isin(users.index)]
+
+    if items is not None:
+        if not isinstance(items, Vocabulary):
+            items = Vocabulary(items, "item")
+        df = df[df["item_id"].isin(items.index)]
+
     df = df.sort_values(["user_id", "item_id"])
-    users = Vocabulary(df["user_id"], "user")
-    items = Vocabulary(df["item_id"], "item")
+
+    if users is None:
+        users = Vocabulary(df["user_id"], "user")
+
+    if items is None:
+        items = Vocabulary(df["item_id"], "item")
+
     return MatrixDataset(users, items, df)
 
 
