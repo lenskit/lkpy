@@ -88,7 +88,7 @@ class ScorerTests(TrainingTests):
 
     def test_score_known(self, rng: np.random.Generator, ml_ds: Dataset, trained_model: Component):
         for u in rng.choice(ml_ds.users.ids(), 100):
-            item_nums = rng.choice(ml_ds.item_count, 100)
+            item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
             items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
             scored = self.invoke_scorer(trained_model, query=u, items=items)
             assert isinstance(scored, ItemList)
@@ -106,7 +106,7 @@ class ScorerTests(TrainingTests):
         tm2 = pickle.loads(data)
 
         for u in rng.choice(ml_ds.users.ids(), 100):
-            item_nums = rng.choice(ml_ds.item_count, 100)
+            item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
             items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
             scored = self.invoke_scorer(trained_model, query=u, items=items)
             assert isinstance(scored, ItemList)
@@ -127,7 +127,7 @@ class ScorerTests(TrainingTests):
         self, rng: np.random.Generator, ml_ds: Dataset, trained_model: Component
     ):
         "score with an unknown user ID"
-        item_nums = rng.choice(ml_ds.item_count, 100)
+        item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
         items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
 
         scored = self.invoke_scorer(trained_model, query=-1348, items=items)
@@ -140,7 +140,7 @@ class ScorerTests(TrainingTests):
         self, rng: np.random.Generator, ml_ds: Dataset, trained_model: Component
     ):
         "score with one target item unknown"
-        item_nums = rng.choice(ml_ds.item_count, 100)
+        item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
         item_ids = ml_ds.items.ids(item_nums).tolist()
         item_ids.append(-318)
         items = ItemList(item_ids)
@@ -157,7 +157,7 @@ class ScorerTests(TrainingTests):
         self, rng: np.random.Generator, ml_ds: Dataset, trained_model: Component
     ):
         "score with an empty query"
-        item_nums = rng.choice(ml_ds.item_count, 100)
+        item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
         items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
         q = RecQuery()
         scored = self.invoke_scorer(trained_model, query=q, items=items)
@@ -173,7 +173,7 @@ class ScorerTests(TrainingTests):
         u = rng.choice(ml_ds.users.ids())
         u_row = ml_ds.user_row(u)
 
-        item_nums = rng.choice(ml_ds.item_count, 100)
+        item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
         items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
         q = RecQuery(user_id=u, user_items=u_row)
         scored = self.invoke_scorer(trained_model, query=q, items=items)
@@ -189,7 +189,7 @@ class ScorerTests(TrainingTests):
         u = rng.choice(ml_ds.users.ids())
         u_row = ml_ds.user_row(u)
 
-        item_nums = rng.choice(ml_ds.item_count, 100)
+        item_nums = rng.choice(ml_ds.item_count, 100, replace=False)
         items = ItemList(item_nums=item_nums, vocabulary=ml_ds.items)
         q = RecQuery(user_items=u_row)
         scored = self.invoke_scorer(trained_model, query=q, items=items)
