@@ -15,6 +15,7 @@ from pytest import approx, mark
 from lenskit.data import Dataset, ItemList, from_interactions_df
 from lenskit.metrics import call_metric, quick_measure_model
 from lenskit.sklearn import svd
+from lenskit.testing import BasicComponentTests, ScorerTests
 
 _log = logging.getLogger(__name__)
 
@@ -24,6 +25,10 @@ simple_df = pd.DataFrame(
 simple_ds = from_interactions_df(simple_df)
 
 need_skl = mark.skipif(not svd.SKL_AVAILABLE, reason="scikit-learn not installed")
+
+
+class TestBiasedSVD(BasicComponentTests, ScorerTests):
+    component = svd.BiasedSVDScorer
 
 
 @need_skl

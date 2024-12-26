@@ -18,9 +18,13 @@ from hypothesis import given, settings
 
 from lenskit.basic import PopScorer, SoftmaxRanker
 from lenskit.data.items import ItemList
-from lenskit.testing import scored_lists
+from lenskit.testing import BasicComponentTests, ScorerTests, scored_lists
 
 _log = logging.getLogger(__name__)
+
+
+class TestSoftmax(BasicComponentTests):
+    component = SoftmaxRanker
 
 
 @given(scored_lists())

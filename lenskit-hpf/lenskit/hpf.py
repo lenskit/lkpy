@@ -39,7 +39,7 @@ class HPFScorer(Component, Trainable):
     items_: Vocabulary
     item_features_: np.ndarray[tuple[int, int], np.dtype[np.float64]]
 
-    def __init__(self, features: int, **kwargs):
+    def __init__(self, features: int = 50, **kwargs):
         self.features = features
         self._kwargs = kwargs
 
@@ -78,6 +78,7 @@ class HPFScorer(Component, Trainable):
         query = RecQuery.create(query)
 
         user_id = query.user_id
+        user_num = None
         if user_id is not None:
             user_num = self.users_.number(user_id, missing=None)
         if user_num is None:

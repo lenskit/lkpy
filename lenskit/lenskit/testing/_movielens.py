@@ -2,6 +2,7 @@
 MovieLens test fixtures and data marks.
 """
 
+import os
 from typing import Generator
 
 import numpy as np
@@ -25,6 +26,8 @@ ml_test_dir = here("data/ml-latest-small")
 ml_100k_zip = here("data/ml-100k.zip")
 
 ml_test: Dataset = LazyDataset(lambda: load_movielens(ml_test_dir))
+
+retrain = os.environ.get("LK_TEST_RETRAIN")
 
 
 @pytest.fixture(scope="session")
@@ -52,7 +55,7 @@ def ml_ds_unchecked(ml_ratings: pd.DataFrame) -> Generator[Dataset, None, None]:
     yield from_interactions_df(ml_ratings)
 
 
-@pytest.fixture()
+@pytest.fixture(scope="function" if retrain else "module")
 def ml_ds(ml_ds_unchecked: Dataset) -> Generator[Dataset, None, None]:
     """
     Fixture to load the MovieLens test dataset.  To use this, just include it as

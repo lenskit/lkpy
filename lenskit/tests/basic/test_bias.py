@@ -20,6 +20,7 @@ from lenskit.data.items import ItemList
 from lenskit.operations import predict, recommend
 from lenskit.pipeline import Pipeline
 from lenskit.pipeline.common import topn_pipeline
+from lenskit.testing import BasicComponentTests, ScorerTests
 
 _log = logging.getLogger(__name__)
 
@@ -27,6 +28,13 @@ simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
 )
 simple_ds = from_interactions_df(simple_df)
+
+
+class TestBias(BasicComponentTests, ScorerTests):
+    component = BiasScorer
+    needs_jit = False
+    configs = [{"damping": 10}, {"damping": (5, 25)}]
+    can_score = "all"
 
 
 def test_bias_check_arguments():

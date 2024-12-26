@@ -79,7 +79,7 @@ class UserKNNScorer(Component, Trainable):
 
     def __init__(
         self,
-        nnbrs: int,
+        nnbrs: int = 20,
         min_nbrs: int = 1,
         min_sim: float = 1.0e-6,
         feedback: FeedbackType = "explicit",
@@ -155,6 +155,9 @@ class UserKNNScorer(Component, Trainable):
         query = RecQuery.create(query)
         watch = util.Stopwatch()
         log = _log.bind(user_id=query.user_id, n_items=len(items))
+        if len(items) == 0:
+            log.debug("no candidate items, skipping")
+            return ItemList(items, scores=np.nan)
 
         udata = self._get_user_data(query)
         if udata is None:

@@ -13,6 +13,8 @@ from .collection import GenericKey, ItemListCollection, UserIDKey
 from .convert import from_interactions_df
 from .dataset import Dataset, FieldError
 from .items import ItemList
+from .lazy import LazyDataset
+from .matrix import MatrixDataset
 from .movielens import load_movielens, load_movielens_df
 from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray
 from .query import QueryInput, RecQuery
@@ -23,6 +25,8 @@ __all__ = [
     "Dataset",
     "FieldError",
     "from_interactions_df",
+    "LazyDataset",
+    "MatrixDataset",
     "ID",
     "NPID",
     "UITuple",

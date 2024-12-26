@@ -16,7 +16,7 @@ from pytest import approx, mark
 from lenskit.als import BiasedMFScorer
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
 from lenskit.metrics import quick_measure_model
-from lenskit.testing import wantjit  # noqa: F401
+from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
 
 _log = logging.getLogger(__name__)
 
@@ -24,6 +24,10 @@ simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
 )
 simple_ds = from_interactions_df(simple_df)
+
+
+class TestExplicitALS(BasicComponentTests, ScorerTests):
+    component = BiasedMFScorer
 
 
 def test_als_basic_build():

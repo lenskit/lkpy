@@ -18,8 +18,14 @@ from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df
 from lenskit.data.bulk import dict_to_df, iter_item_lists
 from lenskit.knn import UserKNNScorer
 from lenskit.metrics import call_metric, quick_measure_model
+from lenskit.testing import BasicComponentTests, ScorerTests
 
 _log = logging.getLogger(__name__)
+
+
+class TestUserKNN(BasicComponentTests, ScorerTests):
+    can_score = "some"
+    component = UserKNNScorer
 
 
 def test_uu_train(ml_ratings, ml_ds):

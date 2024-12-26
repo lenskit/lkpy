@@ -10,10 +10,16 @@ import pandas as pd
 
 from lenskit.basic import PopScorer
 from lenskit.data.items import ItemList
+from lenskit.testing import BasicComponentTests, ScorerTests
 
 simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
 )
+
+
+class TestPopScore(BasicComponentTests, ScorerTests):
+    needs_jit = False
+    component = PopScorer
 
 
 def test_popscore_quantile(rng, ml_ds):

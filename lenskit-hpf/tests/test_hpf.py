@@ -15,10 +15,15 @@ from pytest import importorskip, mark
 from lenskit.data import ItemList, from_interactions_df
 from lenskit.metrics import quick_measure_model
 from lenskit.pipeline import topn_pipeline
+from lenskit.testing import BasicComponentTests, ScorerTests
 
 hpf = importorskip("lenskit.hpf")
 
 _log = logging.getLogger(__name__)
+
+
+class TestHPF(BasicComponentTests, ScorerTests):
+    component = hpf.HPFScorer
 
 
 @mark.slow

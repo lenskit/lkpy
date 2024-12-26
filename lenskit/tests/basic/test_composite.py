@@ -22,8 +22,13 @@ from lenskit.data.types import ID
 from lenskit.operations import predict, score
 from lenskit.pipeline import Pipeline
 from lenskit.pipeline.common import RecPipelineBuilder
+from lenskit.testing import BasicComponentTests
 
 _log = logging.getLogger(__name__)
+
+
+class TestFallbackScorer(BasicComponentTests):
+    component = FallbackScorer
 
 
 def test_fallback_fill_missing(ml_ds: Dataset):

@@ -238,7 +238,7 @@ class FunkSVDScorer(Component, Trainable):
 
     def __init__(
         self,
-        features: int,
+        features: int = 50,
         iterations: int = 100,
         *,
         lrate: float = 0.001,
@@ -314,6 +314,7 @@ class FunkSVDScorer(Component, Trainable):
         query = RecQuery.create(query)
 
         user_id = query.user_id
+        user_num = None
         if user_id is not None:
             user_num = self.users_.number(user_id, missing=None)
         if user_num is None:

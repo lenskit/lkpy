@@ -17,7 +17,7 @@ from lenskit.data import Dataset, ItemList, from_interactions_df
 from lenskit.data.bulk import dict_to_df, iter_item_lists
 from lenskit.funksvd import FunkSVDScorer
 from lenskit.metrics import call_metric, quick_measure_model
-from lenskit.testing import ml_100k, ml_ds, wantjit  # noqa: F401
+from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
 
 _log = logging.getLogger(__name__)
 
@@ -25,6 +25,10 @@ simple_df = pd.DataFrame(
     {"item": [1, 1, 2, 3], "user": [10, 12, 10, 13], "rating": [4.0, 3.0, 5.0, 2.0]}
 )
 simple_ds = from_interactions_df(simple_df)
+
+
+class TestFunkSVD(BasicComponentTests, ScorerTests):
+    component = FunkSVDScorer
 
 
 def test_fsvd_basic_build():

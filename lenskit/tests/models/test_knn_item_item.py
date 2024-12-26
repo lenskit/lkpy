@@ -26,7 +26,7 @@ from lenskit.knn.item import ItemKNNScorer
 from lenskit.metrics import MAE, RBP, RMSE, RecipRank, RunAnalysis, call_metric, quick_measure_model
 from lenskit.pipeline import RecPipelineBuilder, topn_pipeline
 from lenskit.splitting import SampleFrac, crossfold_users
-from lenskit.testing import wantjit
+from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
 
 _log = logging.getLogger(__name__)
 
@@ -60,6 +60,11 @@ def ml_subset(ml_ratings):
     top_rates = ml_ratings[ml_ratings["item_id"].isin(top.index)]
     _log.info("top 500 items yield %d of %d ratings", len(top_rates), len(ml_ratings))
     return top_rates
+
+
+class TestItemKNN(BasicComponentTests, ScorerTests):
+    can_score = "some"
+    component = ItemKNNScorer
 
 
 def test_ii_config():
