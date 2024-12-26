@@ -227,7 +227,7 @@ class ScorerTests(TrainingTests):
         good_u = rng.choice(ml_ds.users.ids(), 10, replace=False)
         for u in set(good_u) | set(drop_u):
             items = rng.choice(ml_ds.items.ids(), 50, replace=False)
-            items = np.unique(np.concat([items, rng.choice(drop_i, 5)]))
+            items = np.unique(np.concatenate([items, rng.choice(drop_i, 5)]))
             items = ItemList(items, vocabulary=ds.items)
 
             scored = self.invoke_scorer(model, query=u, items=items)
