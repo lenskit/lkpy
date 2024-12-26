@@ -10,6 +10,8 @@ from pytest import approx, fixture, skip
 from lenskit.data import Dataset, ItemList, MatrixDataset, RecQuery
 from lenskit.pipeline import Component, Trainable
 
+from ._markers import jit_enabled
+
 retrain = os.environ.get("LK_TEST_RETRAIN")
 
 
@@ -56,10 +58,14 @@ class TrainingTests:
     Common tests for component training.
     """
 
+    needs_jit: ClassVar[bool] = True
     component: type[Component]
 
     @fixture(scope="function" if retrain else "class")
     def trained_model(self, ml_ds: Dataset):
+        if self.needs_jit and not jit_enabled:
+            skip("JIT is disabled")
+
         model = self.component()
         if isinstance(model, Trainable):
             model.train(ml_ds)

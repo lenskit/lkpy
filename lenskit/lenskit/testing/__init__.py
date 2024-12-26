@@ -8,10 +8,9 @@ including in derived packages.  It relies on PyTest and Hypothesis.
 import os
 from contextlib import contextmanager
 
-import pytest
-
 from ._arrays import coo_arrays, scored_lists, sparse_arrays, sparse_tensors
 from ._components import BasicComponentTests, ScorerTests
+from ._markers import jit_enabled, wantjit
 from ._movielens import (
     demo_recs,
     ml_100k,
@@ -40,14 +39,6 @@ __all__ = [
     "BasicComponentTests",
     "ScorerTests",
 ]
-
-jit_enabled = True
-if "NUMBA_DISABLE_JIT" in os.environ:
-    jit_enabled = False
-if os.environ.get("PYTORCH_JIT", None) == "0":
-    jit_enabled = False
-
-wantjit = pytest.mark.skipif(not jit_enabled, reason="JIT required")
 
 
 @contextmanager
