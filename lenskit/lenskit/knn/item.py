@@ -16,6 +16,7 @@ import warnings
 
 import numpy as np
 import torch
+from scipy.sparse import coo_array, csr_array
 from typing_extensions import Callable, Optional, TypeAlias, override
 
 from lenskit import util
@@ -215,52 +216,115 @@ class ItemKNNScorer(Component, Trainable):
                 item_nums=row.indices()[0], rating=row.values(), vocabulary=self.items_
             )
 
-        with torch.inference_mode():
-            # set up rating array
-            # get rated item positions & limit to in-model items
-            ri_pos = ratings.numbers(format="torch", vocabulary=self.items_, missing="negative")
-            ri_mask = ri_pos >= 0
-            ri_vpos = ri_pos[ri_mask]
-            n_valid = len(ri_vpos)
-            _log.debug(
-                "user %s: %d of %d rated items in model", query.user_id, n_valid, len(ratings)
+        # set up rating array
+        # get rated item positions & limit to in-model items
+        ri_pos = ratings.numbers(format="torch", vocabulary=self.items_, missing="negative")
+        ri_mask = ri_pos >= 0
+        ri_vpos = ri_pos[ri_mask]
+        n_valid = len(ri_vpos)
+        _log.debug("user %s: %d of %d rated items in model", query.user_id, n_valid, len(ratings))
+
+        if self.feedback == "explicit":
+            ri_vals = ratings.field("rating", "torch")
+            if ri_vals is None:
+                raise RuntimeError("explicit-feedback scorer must have ratings")
+            ri_vals = ri_vals[ri_mask].to(torch.float64)
+        else:
+            ri_vals = torch.full((n_valid,), 1.0, dtype=torch.float64)
+
+        # mean-center the rating array
+        if self.feedback == "explicit":
+            assert self.item_means_ is not None
+            ri_vals -= self.item_means_[ri_vpos]
+
+        model = csr_array(
+            (
+                self.sim_matrix_.values().numpy(),
+                self.sim_matrix_.col_indices().numpy(),
+                self.sim_matrix_.crow_indices().numpy(),
+            ),
+            shape=self.sim_matrix_.shape,
+        )
+
+        model = model[ri_vpos, :]
+
+        tgt_inums = items.numbers(vocabulary=self.items_, missing="negative")
+        tgt_mask = tgt_inums >= 0
+
+        ti_mask = np.zeros(len(self.items_), dtype=np.bool_)
+        ti_mask[tgt_inums[tgt_mask]] = True
+        model = model[:, ti_mask]
+        model = model.tocsc()
+
+        sizes = np.diff(model.indptr)
+        scorable = sizes >= self.min_nbrs
+        fast = sizes <= self.nnbrs
+        tgt_fast = tgt_mask.copy()
+        tgt_fast[tgt_mask] = scorable & fast
+
+        tgt_slow = tgt_mask.copy()
+        tgt_slow[tgt_mask] = ~fast
+
+        # ri_map = np.full(model.shape[1], -1, dtype=np.int32)
+        # ri_map[ri_vpos] = np.arange(ri_n, dtype=np.int32)
+        # ti_map = np.full(model.shape[1], -1, dtype=np.int32)
+        # ti_map[tgt_inums[tgt_mask]] = np.arange(tgt_n, dtype=np.int32)
+
+        # mask = ri_map[model.row] >= 0
+        # mask &= ti_map[model.col] >= 0
+        # model = csr_array(
+        #     (model.data[mask], (ti_map[model.col[mask]], ri_map[model.row[mask]])),
+        #     shape=(tgt_n, ri_n),
+        # )
+
+        scores = np.full(np.sum(tgt_mask).item(), np.nan, dtype=np.float32)
+        scores[tgt_fast] = model.T[scorable & fast, :] @ ri_vals
+
+        slow_mat = model.T[~fast, :]
+        assert isinstance(slow_mat, csr_array)
+        rows = np.repeat(np.arange(slow_mat.shape[0], dtype=np.int32), np.diff(slow_mat.indptr))
+        order = np.lexsort([-slow_mat.data, rows])
+        ranks = np.arange(len(order), dtype=np.int32)
+        # compute per-row ranks
+        ranks = ranks[order] - rows
+
+        s_mask = ranks < self.nnbrs
+        slow_trimmed = coo_array(
+            (slow_mat.data[s_mask], (rows[s_mask], slow_mat.indices[s_mask])), shape=slow_mat.shape
+        )
+        scores[tgt_slow] = slow_trimmed @ ri_vals
+
+        _log.debug(
+            "user %s: predicted for %d of %d items",
+            query.user_id,
+            int(np.isfinite(scores).sum()),
+            len(items),
+        )
+
+        return ItemList(items, scores=scores)
+
+        # now compute the predictions
+        if self.feedback == "explicit":
+            sims = _predict_weighted_average(
+                self.sim_matrix_, (self.min_nbrs, self.nnbrs), ri_vals, ri_vpos
             )
+            sims += self.item_means_
+        else:
+            sims = _predict_sum(self.sim_matrix_, (self.min_nbrs, self.nnbrs), ri_vals, ri_vpos)
 
-            if self.feedback == "explicit":
-                ri_vals = ratings.field("rating", "torch")
-                if ri_vals is None:
-                    raise RuntimeError("explicit-feedback scorer must have ratings")
-                ri_vals = ri_vals[ri_mask].to(torch.float64)
-            else:
-                ri_vals = torch.full((n_valid,), 1.0, dtype=torch.float64)
+        # and prepare the output
+        scores = torch.full((len(items),), np.nan, dtype=sims.dtype)
+        out_nums = items.numbers("torch", vocabulary=self.items_, missing="negative")
+        out_good = out_nums >= 0
+        scores[out_good] = sims[out_nums[out_nums >= 0]]
+        results = ItemList(items, scores=scores)
 
-            # mean-center the rating array
-            if self.feedback == "explicit":
-                assert self.item_means_ is not None
-                ri_vals -= self.item_means_[ri_vpos]
-
-            # now compute the predictions
-            if self.feedback == "explicit":
-                sims = _predict_weighted_average(
-                    self.sim_matrix_, (self.min_nbrs, self.nnbrs), ri_vals, ri_vpos
-                )
-                sims += self.item_means_
-            else:
-                sims = _predict_sum(self.sim_matrix_, (self.min_nbrs, self.nnbrs), ri_vals, ri_vpos)
-
-            # and prepare the output
-            scores = torch.full((len(items),), np.nan, dtype=sims.dtype)
-            out_nums = items.numbers("torch", vocabulary=self.items_, missing="negative")
-            out_good = out_nums >= 0
-            scores[out_good] = sims[out_nums[out_nums >= 0]]
-            results = ItemList(items, scores=scores)
-
-            _log.debug(
-                "user %s: predicted for %d of %d items",
-                query.user_id,
-                int(torch.isfinite(scores).sum()),
-                len(items),
-            )
+        _log.debug(
+            "user %s: predicted for %d of %d items",
+            query.user_id,
+            int(torch.isfinite(scores).sum()),
+            len(items),
+        )
 
         return results
 
