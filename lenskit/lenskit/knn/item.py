@@ -131,58 +131,57 @@ class ItemKNNScorer(Component, Trainable):
 
         _log.debug("[%s] beginning fit, memory use %s", self._timer, util.max_memory())
 
-        field = "rating" if self.feedback == "explicit" else None
-        init_rmat = data.interaction_matrix("torch", field=field)
-        n_items = data.item_count
-        _log.info(
-            "[%s] made sparse matrix for %d items (%d ratings from %d users)",
-            self._timer,
-            n_items,
-            len(init_rmat.values()),
-            data.user_count,
-        )
-        _log.debug("[%s] made matrix, memory use %s", self._timer, util.max_memory())
+        with torch.inference_mode():
+            field = "rating" if self.feedback == "explicit" else None
+            init_rmat = data.interaction_matrix("torch", field=field)
+            n_items = data.item_count
+            _log.info(
+                "[%s] made sparse matrix for %d items (%d ratings from %d users)",
+                self._timer,
+                n_items,
+                len(init_rmat.values()),
+                data.user_count,
+            )
+            _log.debug("[%s] made matrix, memory use %s", self._timer, util.max_memory())
 
-        # we operate on *transposed* rating matrix: items on the rows
-        rmat = init_rmat.transpose(0, 1).to_sparse_csr().to(torch.float64)
+            # we operate on *transposed* rating matrix: items on the rows
+            rmat = init_rmat.transpose(0, 1).to_sparse_csr().to(torch.float64)
 
-        if self.feedback == "explicit":
-            rmat, means = normalize_sparse_rows(rmat, "center")
-            if np.allclose(rmat.values(), 0.0):
-                _log.warning("normalized ratings are zero, centering is not recommended")
-                warnings.warn(
-                    "Ratings seem to have the same value, centering is not recommended.",
-                    DataWarning,
-                )
-        else:
-            means = None
-        _log.debug("[%s] centered, memory use %s", self._timer, util.max_memory())
+            if self.feedback == "explicit":
+                rmat, means = normalize_sparse_rows(rmat, "center")
+                if np.allclose(rmat.values(), 0.0):
+                    _log.warning("normalized ratings are zero, centering is not recommended")
+                    warnings.warn(
+                        "Ratings seem to have the same value, centering is not recommended.",
+                        DataWarning,
+                    )
+            else:
+                means = None
+            _log.debug("[%s] centered, memory use %s", self._timer, util.max_memory())
 
-        rmat, _norms = normalize_sparse_rows(rmat, "unit")
-        _log.debug("[%s] normalized, memory use %s", self._timer, util.max_memory())
+            rmat, _norms = normalize_sparse_rows(rmat, "unit")
+            _log.debug("[%s] normalized, memory use %s", self._timer, util.max_memory())
 
-        _log.info("[%s] computing similarity matrix", self._timer)
-        smat = self._compute_similarities(rmat)
-        _log.debug("[%s] computed, memory use %s", self._timer, util.max_memory())
+            _log.info("[%s] computing similarity matrix", self._timer)
+            smat = self._compute_similarities(rmat)
+            _log.debug("[%s] computed, memory use %s", self._timer, util.max_memory())
 
-        _log.info(
-            "[%s] got neighborhoods for %d of %d items",
-            self._timer,
-            np.sum(np.diff(smat.crow_indices()) > 0),
-            n_items,
-        )
+            _log.info(
+                "[%s] got neighborhoods for %d of %d items",
+                self._timer,
+                np.sum(np.diff(smat.crow_indices()) > 0),
+                n_items,
+            )
 
-        _log.info("[%s] computed %d neighbor pairs", self._timer, len(smat.col_indices()))
+            _log.info("[%s] computed %d neighbor pairs", self._timer, len(smat.col_indices()))
 
-        self.items_ = data.items
-        self.item_means_ = means
-        self.item_counts_ = torch.diff(smat.crow_indices())
-        self.sim_matrix_ = smat
-        self.users_ = data.users
-        self.rating_matrix_ = init_rmat
-        _log.debug("[%s] done, memory use %s", self._timer, util.max_memory())
-
-        return self
+            self.items_ = data.items
+            self.item_means_ = means
+            self.item_counts_ = torch.diff(smat.crow_indices())
+            self.sim_matrix_ = smat
+            self.users_ = data.users
+            self.rating_matrix_ = init_rmat
+            _log.debug("[%s] done, memory use %s", self._timer, util.max_memory())
 
     def _compute_similarities(self, rmat: torch.Tensor):
         nitems, nusers = rmat.shape
@@ -216,49 +215,52 @@ class ItemKNNScorer(Component, Trainable):
                 item_nums=row.indices()[0], rating=row.values(), vocabulary=self.items_
             )
 
-        # set up rating array
-        # get rated item positions & limit to in-model items
-        ri_pos = ratings.numbers(format="torch", vocabulary=self.items_, missing="negative")
-        ri_mask = ri_pos >= 0
-        ri_vpos = ri_pos[ri_mask]
-        n_valid = len(ri_vpos)
-        _log.debug("user %s: %d of %d rated items in model", query.user_id, n_valid, len(ratings))
-
-        if self.feedback == "explicit":
-            ri_vals = ratings.field("rating", "torch")
-            if ri_vals is None:
-                raise RuntimeError("explicit-feedback scorer must have ratings")
-            ri_vals = ri_vals[ri_mask].to(torch.float64)
-        else:
-            ri_vals = torch.full((n_valid,), 1.0, dtype=torch.float64)
-
-        # mean-center the rating array
-        if self.feedback == "explicit":
-            assert self.item_means_ is not None
-            ri_vals -= self.item_means_[ri_vpos]
-
-        # now compute the predictions
-        if self.feedback == "explicit":
-            sims = _predict_weighted_average(
-                self.sim_matrix_, (self.min_nbrs, self.nnbrs), ri_vals, ri_vpos
+        with torch.inference_mode():
+            # set up rating array
+            # get rated item positions & limit to in-model items
+            ri_pos = ratings.numbers(format="torch", vocabulary=self.items_, missing="negative")
+            ri_mask = ri_pos >= 0
+            ri_vpos = ri_pos[ri_mask]
+            n_valid = len(ri_vpos)
+            _log.debug(
+                "user %s: %d of %d rated items in model", query.user_id, n_valid, len(ratings)
             )
-            sims += self.item_means_
-        else:
-            sims = _predict_sum(self.sim_matrix_, (self.min_nbrs, self.nnbrs), ri_vals, ri_vpos)
 
-        # and prepare the output
-        scores = torch.full((len(items),), np.nan, dtype=sims.dtype)
-        out_nums = items.numbers("torch", vocabulary=self.items_, missing="negative")
-        out_good = out_nums >= 0
-        scores[out_good] = sims[out_nums[out_nums >= 0]]
-        results = ItemList(items, scores=scores)
+            if self.feedback == "explicit":
+                ri_vals = ratings.field("rating", "torch")
+                if ri_vals is None:
+                    raise RuntimeError("explicit-feedback scorer must have ratings")
+                ri_vals = ri_vals[ri_mask].to(torch.float64)
+            else:
+                ri_vals = torch.full((n_valid,), 1.0, dtype=torch.float64)
 
-        _log.debug(
-            "user %s: predicted for %d of %d items",
-            query.user_id,
-            int(torch.isfinite(scores).sum()),
-            len(items),
-        )
+            # mean-center the rating array
+            if self.feedback == "explicit":
+                assert self.item_means_ is not None
+                ri_vals -= self.item_means_[ri_vpos]
+
+            # now compute the predictions
+            if self.feedback == "explicit":
+                sims = _predict_weighted_average(
+                    self.sim_matrix_, (self.min_nbrs, self.nnbrs), ri_vals, ri_vpos
+                )
+                sims += self.item_means_
+            else:
+                sims = _predict_sum(self.sim_matrix_, (self.min_nbrs, self.nnbrs), ri_vals, ri_vpos)
+
+            # and prepare the output
+            scores = torch.full((len(items),), np.nan, dtype=sims.dtype)
+            out_nums = items.numbers("torch", vocabulary=self.items_, missing="negative")
+            out_good = out_nums >= 0
+            scores[out_good] = sims[out_nums[out_nums >= 0]]
+            results = ItemList(items, scores=scores)
+
+            _log.debug(
+                "user %s: predicted for %d of %d items",
+                query.user_id,
+                int(torch.isfinite(scores).sum()),
+                len(items),
+            )
 
         return results
 
