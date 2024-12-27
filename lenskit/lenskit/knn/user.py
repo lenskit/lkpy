@@ -328,12 +328,12 @@ def score_items_with_neighbors(
     # first max_neighbors in a row.  This can be done with a little bit of
     # jiggery-pokery.
 
-    # step 1: create a list of column indexes
-    cols = np.repeat(np.arange(len(is_scorable), dtype=np.int32), counts)
+    # step 1: create a list of column start indices
+    starts = np.repeat(nbr_rates.indptr[:-1], counts)
     # step 2: create a ranking from start to end
     ranks = np.arange(nbr_rates.nnz, dtype=np.int32)
-    # step 3: subtract the column numbers — this will give us numbers within rows
-    ranks -= cols
+    # step 3: subtract the column starts — this will give us numbers within rows
+    ranks -= starts
     rmask = ranks >= max_nbrs
     # step 4: zero out rating values for everything past max_nbrs
     nbr_rates.data[rmask] = 0
