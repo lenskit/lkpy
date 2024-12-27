@@ -315,6 +315,7 @@ def score_items_with_neighbors(
     # get the ratings for requested scorable items
     nbr_rates = nbr_rates[:, is_scorable]
     assert isinstance(nbr_rates, csc_array)
+    nbr_rates.sort_indices()
     counts = counts[is_scorable]
 
     log.debug(
