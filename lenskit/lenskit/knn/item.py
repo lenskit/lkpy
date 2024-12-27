@@ -182,14 +182,15 @@ class ItemKNNScorer(Component, Trainable):
         _log.info("[%s] computed %d neighbor pairs", self._timer, len(smat.col_indices()))
 
         self.items_ = data.items
-        self.item_means_ = means
-        self.item_counts_ = torch.diff(smat.crow_indices())
-        self.sim_matrix_ = smat
+        self.item_means_ = means.numpy() if means is not None else None
+        self.item_counts_ = torch.diff(smat.crow_indices()).numpy()
+        self.sim_matrix_ = csr_array(
+            (smat.values(), smat.col_indices(), smat.crow_indices()), smat.shape
+        )
         self.users_ = data.users
-        self.rating_matrix_ = init_rmat
         _log.debug("[%s] done, memory use %s", self._timer, util.max_memory())
 
-    def _compute_similarities(self, rmat: torch.Tensor):
+    def _compute_similarities(self, rmat: torch.Tensor) -> torch.Tensor:
         nitems, nusers = rmat.shape
 
         bs = max(self.block_size, nitems // MAX_BLOCKS)
@@ -229,27 +230,20 @@ class ItemKNNScorer(Component, Trainable):
             ri_vals = np.full(n_valid, 1.0, dtype=np.float32)
 
         # mean-center the rating array
-        if self.feedback == "explicit":
-            assert self.item_means_ is not None
-            ri_vals -= self.item_means_[ri_valid_nums].numpy()
+        if self.item_means_ is not None:
+            ri_vals -= self.item_means_[ri_valid_nums]
 
         # convert target item information
         ti_nums = items.numbers(vocabulary=self.items_, missing="negative")
         ti_mask = ti_nums >= 0
         ti_valid_nums = ti_nums[ti_mask]
 
-        model = csr_array(
-            (
-                self.sim_matrix_.values().numpy(),
-                self.sim_matrix_.col_indices().numpy(),
-                self.sim_matrix_.crow_indices().numpy(),
-            ),
-            shape=self.sim_matrix_.shape,
-        )
-
         # subset the model to rated and target items
+        model = self.sim_matrix_
         model = model[ri_valid_nums, :]
+        assert isinstance(model, csr_array)
         model = model[:, ti_valid_nums]
+        assert isinstance(model, csr_array)
         # convert to CSC so we can count neighbors per target item.
         model = model.tocsc()
 
@@ -282,12 +276,7 @@ class ItemKNNScorer(Component, Trainable):
             ti_slow_mask = ti_mask.copy()
             ti_slow_mask[ti_mask] = ~fast
 
-            slow_mat = torch.sparse_csr_tensor(
-                crow_indices=slow_mat.indptr,
-                col_indices=slow_mat.indices,
-                values=slow_mat.data,
-                size=slow_mat.shape,
-            ).to_dense()
+            slow_mat = torch.from_numpy(slow_mat.toarray())
             slow_trimmed, slow_inds = torch.topk(slow_mat, self.nnbrs)
             assert slow_trimmed.shape == (n_slow, self.nnbrs)
             if self.feedback == "explicit":
@@ -299,8 +288,8 @@ class ItemKNNScorer(Component, Trainable):
                 scores[ti_slow_mask] = torch.sum(slow_trimmed, axis=1).numpy()
 
         # re-add the mean ratings in implicit feedback
-        if self.feedback == "explicit":
-            scores[ti_mask] += self.item_means_[ti_valid_nums].numpy()
+        if self.item_means_ is not None:
+            scores[ti_mask] += self.item_means_[ti_valid_nums]
 
         _log.debug(
             "user %s: predicted for %d of %d items",
