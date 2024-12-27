@@ -214,10 +214,10 @@ class ItemKNNScorer(Component, Trainable):
 
         # set up rating array
         # get rated item positions & limit to in-model items
-        ri_pos = ratings.numbers(format="torch", vocabulary=self.items_, missing="negative")
-        ri_mask = ri_pos >= 0
-        ri_vpos = ri_pos[ri_mask]
-        n_valid = len(ri_vpos)
+        ri_nums = ratings.numbers(format="torch", vocabulary=self.items_, missing="negative")
+        ri_mask = ri_nums >= 0
+        ri_valid_nums = ri_nums[ri_mask]
+        n_valid = len(ri_valid_nums)
         _log.debug("user %s: %d of %d rated items in model", query.user_id, n_valid, len(ratings))
 
         if self.feedback == "explicit":
@@ -231,7 +231,12 @@ class ItemKNNScorer(Component, Trainable):
         # mean-center the rating array
         if self.feedback == "explicit":
             assert self.item_means_ is not None
-            ri_vals -= self.item_means_[ri_vpos].numpy()
+            ri_vals -= self.item_means_[ri_valid_nums].numpy()
+
+        # convert target item information
+        ti_nums = items.numbers(vocabulary=self.items_, missing="negative")
+        ti_mask = ti_nums >= 0
+        ti_valid_nums = ti_nums[ti_mask]
 
         model = csr_array(
             (
@@ -242,37 +247,41 @@ class ItemKNNScorer(Component, Trainable):
             shape=self.sim_matrix_.shape,
         )
 
-        model = model[ri_vpos, :]
-
-        tgt_inums = items.numbers(vocabulary=self.items_, missing="negative")
-        tgt_mask = tgt_inums >= 0
-
-        ti_mask = np.zeros(len(self.items_), dtype=np.bool_)
-        ti_mask[tgt_inums[tgt_mask]] = True
-        model = model[:, ti_mask]
+        # subset the model to rated and target items
+        model = model[ri_valid_nums, :]
+        model = model[:, ti_valid_nums]
+        # convert to CSC so we can count neighbors per target item.
         model = model.tocsc()
 
+        # count neighborhood sizes
         sizes = np.diff(model.indptr)
+        # which neighborhoods are usable? (at least min neighbors)
         scorable = sizes >= self.min_nbrs
-        fast = sizes <= self.nnbrs
-        tgt_fast = tgt_mask.copy()
-        tgt_fast[tgt_mask] = scorable & fast
 
-        tgt_slow = tgt_mask.copy()
-        tgt_slow[tgt_mask] = ~fast
+        # fast-path neighborhoods that fit within max neighbors
+        fast = sizes <= self.nnbrs
+        ti_fast_mask = ti_mask.copy()
+        ti_fast_mask[ti_mask] = scorable & fast
 
         scores = np.full(len(items), np.nan, dtype=np.float32)
         fast_mod = model[:, scorable & fast]
         if self.feedback == "explicit":
-            scores[tgt_fast] = ri_vals @ fast_mod
-            scores[tgt_fast] /= fast_mod.sum(axis=0)
+            scores[ti_fast_mask] = ri_vals @ fast_mod
+            scores[ti_fast_mask] /= fast_mod.sum(axis=0)
         else:
-            scores[tgt_fast] = fast_mod.sum(axis=0)
+            scores[ti_fast_mask] = fast_mod.sum(axis=0)
 
+        # slow path: neighborhoods that we need to truncate. we will convert to
+        # PyTorch, make a dense matrix (this is usually small enough to be
+        # usable), and use the Torch topk function.
         slow_mat = model.T[~fast, :]
         assert isinstance(slow_mat, csr_array)
         n_slow, _ = slow_mat.shape
         if n_slow:
+            # mask for the slow items.
+            ti_slow_mask = ti_mask.copy()
+            ti_slow_mask[ti_mask] = ~fast
+
             slow_mat = torch.sparse_csr_tensor(
                 crow_indices=slow_mat.indptr,
                 col_indices=slow_mat.indices,
@@ -282,15 +291,16 @@ class ItemKNNScorer(Component, Trainable):
             slow_trimmed, slow_inds = torch.topk(slow_mat, self.nnbrs)
             assert slow_trimmed.shape == (n_slow, self.nnbrs)
             if self.feedback == "explicit":
-                scores[tgt_slow] = torch.sum(
+                scores[ti_slow_mask] = torch.sum(
                     slow_trimmed * torch.from_numpy(ri_vals)[slow_inds], axis=1
                 ).numpy()
-                scores[tgt_slow] /= torch.sum(slow_trimmed, axis=1).numpy()
+                scores[ti_slow_mask] /= torch.sum(slow_trimmed, axis=1).numpy()
             else:
-                scores[tgt_slow] = torch.sum(slow_trimmed, axis=1).numpy()
+                scores[ti_slow_mask] = torch.sum(slow_trimmed, axis=1).numpy()
 
+        # re-add the mean ratings in implicit feedback
         if self.feedback == "explicit":
-            scores[tgt_mask] += self.item_means_[ti_mask].numpy()
+            scores[ti_mask] += self.item_means_[ti_valid_nums].numpy()
 
         _log.debug(
             "user %s: predicted for %d of %d items",

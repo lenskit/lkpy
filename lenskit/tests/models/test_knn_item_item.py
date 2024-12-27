@@ -25,6 +25,7 @@ from lenskit.data.bulk import dict_to_df, iter_item_lists
 from lenskit.diagnostics import ConfigWarning, DataWarning
 from lenskit.knn.item import ItemKNNScorer
 from lenskit.metrics import MAE, RBP, RMSE, RecipRank, RunAnalysis, call_metric, quick_measure_model
+from lenskit.operations import score
 from lenskit.pipeline import RecPipelineBuilder, topn_pipeline
 from lenskit.splitting import SampleFrac, crossfold_users
 from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
@@ -456,8 +457,9 @@ def test_ii_known_preds(ml_ds):
     from lenskit import batch
 
     iknn = ItemKNNScorer(20, min_sim=1.0e-6)
+    pipe = topn_pipeline(iknn)
     _log.info("training %s on ml data", iknn)
-    iknn.train(ml_ds)
+    pipe.train(ml_ds)
     _log.info("model means: %s", iknn.item_means_)
 
     dir = Path(__file__).parent
@@ -466,7 +468,7 @@ def test_ii_known_preds(ml_ds):
     known_preds = pd.read_csv(str(pred_file))
 
     preds = {
-        user: iknn(user, ItemList(kps, prediction=False))
+        user: score(pipe, query=user, items=ItemList(kps, prediction=False))
         for (user, kps) in iter_item_lists(known_preds)
     }
     preds = dict_to_df(preds)
