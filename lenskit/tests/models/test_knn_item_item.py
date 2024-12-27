@@ -18,6 +18,7 @@ from pytest import approx, fixture, mark
 
 from lenskit import batch
 from lenskit.basic import BiasScorer
+from lenskit.basic.history import UserTrainingHistoryLookup
 from lenskit.batch import BatchPipelineRunner
 from lenskit.data import ItemList, ItemListCollection, UserIDKey, Vocabulary, from_interactions_df
 from lenskit.data.bulk import dict_to_df, iter_item_lists
@@ -27,6 +28,7 @@ from lenskit.metrics import MAE, RBP, RMSE, RecipRank, RunAnalysis, call_metric,
 from lenskit.pipeline import RecPipelineBuilder, topn_pipeline
 from lenskit.splitting import SampleFrac, crossfold_users
 from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
+from lenskit.util.torch import inference_mode
 
 _log = logging.getLogger(__name__)
 
@@ -135,10 +137,13 @@ def test_ii_train_unbounded():
 
 
 def test_ii_simple_predict():
+    history = UserTrainingHistoryLookup()
+    history.train(simple_ds)
     algo = ItemKNNScorer(30, save_nbrs=500)
     algo.train(simple_ds)
 
-    res = algo(3, ItemList([6]))
+    q = history(3)
+    res = algo(q, ItemList([6]))
     _log.info("got predictions: %s", res)
     assert res is not None
     assert len(res) == 1
@@ -147,10 +152,13 @@ def test_ii_simple_predict():
 
 
 def test_ii_simple_implicit_predict():
+    history = UserTrainingHistoryLookup()
+    history.train(simple_ds)
     algo = ItemKNNScorer(30, feedback="implicit")
     algo.train(from_interactions_df(simple_ratings.loc[:, ["user", "item"]]))
 
-    res = algo(3, ItemList([6]))
+    q = history(3)
+    res = algo(q, ItemList([6]))
     assert res is not None
     assert len(res) == 1
     assert 6 in res.ids()
@@ -159,10 +167,13 @@ def test_ii_simple_implicit_predict():
 
 
 def test_ii_simple_predict_unknown():
+    history = UserTrainingHistoryLookup()
+    history.train(simple_ds)
     algo = ItemKNNScorer(30, save_nbrs=500)
     algo.train(simple_ds)
 
-    res = algo(3, ItemList([6, 100]))
+    q = history(3)
+    res = algo(q, ItemList([6, 100]))
     _log.info("got predictions: %s", res)
     assert res is not None
     assert len(res) == 2
@@ -181,6 +192,7 @@ def test_ii_warns_center():
 
 @wantjit
 @mark.slow
+@inference_mode
 def test_ii_train_ml100k(tmp_path, ml_100k):
     "Test an unbounded model on ML-100K"
     algo = ItemKNNScorer(30)
@@ -220,6 +232,7 @@ def test_ii_train_ml100k(tmp_path, ml_100k):
 
 @wantjit
 @mark.slow
+@inference_mode
 def test_ii_large_models(rng, ml_ratings, ml_ds):
     "Several tests of large trained I-I models"
     _log.info("training limited model")
@@ -341,6 +354,7 @@ def test_ii_large_models(rng, ml_ratings, ml_ds):
 
 @wantjit
 @mark.slow
+@inference_mode
 def test_ii_implicit_large(rng, ml_ratings):
     "Test that implicit-feedback mode works on full test data."
     _log.info("training model")
@@ -381,6 +395,7 @@ def test_ii_implicit_large(rng, ml_ratings):
 
 
 @wantjit
+@inference_mode
 def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
     "Save and load a model"
     original = ItemKNNScorer(30, save_nbrs=500)
