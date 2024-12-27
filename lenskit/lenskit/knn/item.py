@@ -218,7 +218,7 @@ class ItemKNNScorer(Component, Trainable):
         ri_mask = ri_nums >= 0
         ri_valid_nums = ri_nums[ri_mask]
         n_valid = len(ri_valid_nums)
-        trace.debug("user %s: %d of %d rated items in model", query.user_id, n_valid, len(ratings))
+        trace(log, "%d of %d rated items in model", n_valid, len(ratings))
 
         if self.feedback == "explicit":
             ri_vals = ratings.field("rating", "numpy")
