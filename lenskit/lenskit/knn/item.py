@@ -11,10 +11,10 @@ Item-based k-NN collaborative filtering.
 # pyright: basic
 from __future__ import annotations
 
-import logging
 import warnings
 
 import numpy as np
+import structlog
 import torch
 from scipy.sparse import csr_array
 from typing_extensions import Optional, override
@@ -22,13 +22,14 @@ from typing_extensions import Optional, override
 from lenskit import util
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.diagnostics import DataWarning
+from lenskit.logging import trace
 from lenskit.logging.progress import item_progress_handle, pbh_update
 from lenskit.math.sparse import normalize_sparse_rows, safe_spmv
 from lenskit.parallel import ensure_parallel_init
 from lenskit.pipeline import Component, Trainable
 from lenskit.util.torch import inference_mode
 
-_log = logging.getLogger(__name__)
+_log = structlog.stdlib.get_logger(__name__)
 MAX_BLOCKS = 1024
 
 
@@ -130,25 +131,22 @@ class ItemKNNScorer(Component, Trainable):
                 (user,item,rating) data for computing item similarities.
         """
         ensure_parallel_init()
+        log = _log.bind(n_items=data.item_count, feedback=self.feedback)
         # Training proceeds in 2 steps:
         # 1. Normalize item vectors to be mean-centered and unit-normalized
         # 2. Compute similarities with pairwise dot products
         self._timer = util.Stopwatch()
-        _log.info("training IKNN for %d users in %s feedback mode", data.item_count, self.feedback)
-
-        _log.debug("[%s] beginning fit, memory use %s", self._timer, util.max_memory())
+        log.info("begining IKNN training")
 
         field = "rating" if self.feedback == "explicit" else None
         init_rmat = data.interaction_matrix("torch", field=field)
         n_items = data.item_count
-        _log.info(
-            "[%s] made sparse matrix for %d items (%d ratings from %d users)",
+        log.info(
+            "[%s] made sparse matrix",
             self._timer,
-            n_items,
-            len(init_rmat.values()),
-            data.user_count,
+            n_ratings=len(init_rmat.values()),
+            n_users=data.user_count,
         )
-        _log.debug("[%s] made matrix, memory use %s", self._timer, util.max_memory())
 
         # we operate on *transposed* rating matrix: items on the rows
         rmat = init_rmat.transpose(0, 1).to_sparse_csr().to(torch.float64)
@@ -156,30 +154,30 @@ class ItemKNNScorer(Component, Trainable):
         if self.feedback == "explicit":
             rmat, means = normalize_sparse_rows(rmat, "center")
             if np.allclose(rmat.values(), 0.0):
-                _log.warning("normalized ratings are zero, centering is not recommended")
+                log.warning("normalized ratings are zero, centering is not recommended")
                 warnings.warn(
                     "Ratings seem to have the same value, centering is not recommended.",
                     DataWarning,
                 )
         else:
             means = None
-        _log.debug("[%s] centered, memory use %s", self._timer, util.max_memory())
+        log.debug("[%s] centered, memory use %s", self._timer, util.max_memory())
 
         rmat, _norms = normalize_sparse_rows(rmat, "unit")
-        _log.debug("[%s] normalized, memory use %s", self._timer, util.max_memory())
+        log.debug("[%s] normalized, memory use %s", self._timer, util.max_memory())
 
-        _log.info("[%s] computing similarity matrix", self._timer)
+        log.info("[%s] computing similarity matrix", self._timer)
         smat = self._compute_similarities(rmat)
-        _log.debug("[%s] computed, memory use %s", self._timer, util.max_memory())
+        log.debug("[%s] computed, memory use %s", self._timer, util.max_memory())
 
-        _log.info(
+        log.info(
             "[%s] got neighborhoods for %d of %d items",
             self._timer,
             np.sum(np.diff(smat.crow_indices()) > 0),
             n_items,
         )
 
-        _log.info("[%s] computed %d neighbor pairs", self._timer, len(smat.col_indices()))
+        log.info("[%s] computed %d neighbor pairs", self._timer, len(smat.col_indices()))
 
         self.items_ = data.items
         self.item_means_ = means.numpy() if means is not None else None
@@ -188,7 +186,7 @@ class ItemKNNScorer(Component, Trainable):
             (smat.values(), smat.col_indices(), smat.crow_indices()), smat.shape
         )
         self.users_ = data.users
-        _log.debug("[%s] done, memory use %s", self._timer, util.max_memory())
+        log.debug("[%s] done, memory use %s", self._timer, util.max_memory())
 
     def _compute_similarities(self, rmat: torch.Tensor) -> torch.Tensor:
         nitems, nusers = rmat.shape
@@ -204,13 +202,14 @@ class ItemKNNScorer(Component, Trainable):
     @inference_mode
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         query = RecQuery.create(query)
-        _log.debug("predicting %d items for user %s", len(items), query.user_id)
+        log = _log.bind(user_id=query.user_id, n_items=len(items))
+        trace(log, "beginning prediction")
 
         ratings = query.user_items
         if ratings is None or len(ratings) == 0:
             if ratings is None:
                 warnings.warn("no user history, did you omit a history component?", DataWarning)
-            _log.debug("user has no history, returning")
+            log.debug("user has no history, returning")
             return ItemList(items, scores=np.nan)
 
         # set up rating array
@@ -219,7 +218,7 @@ class ItemKNNScorer(Component, Trainable):
         ri_mask = ri_nums >= 0
         ri_valid_nums = ri_nums[ri_mask]
         n_valid = len(ri_valid_nums)
-        _log.debug("user %s: %d of %d rated items in model", query.user_id, n_valid, len(ratings))
+        trace(log, "%d of %d rated items in model", n_valid, len(ratings))
 
         if self.feedback == "explicit":
             ri_vals = ratings.field("rating", "numpy")
@@ -280,9 +279,9 @@ class ItemKNNScorer(Component, Trainable):
             slow_trimmed, slow_inds = torch.topk(slow_mat, self.nnbrs)
             assert slow_trimmed.shape == (n_slow, self.nnbrs)
             if self.feedback == "explicit":
-                scores[ti_slow_mask] = torch.sum(
-                    slow_trimmed * torch.from_numpy(ri_vals)[slow_inds], axis=1
-                ).numpy()
+                svals = torch.from_numpy(ri_vals)[slow_inds]
+                assert svals.shape == slow_trimmed.shape
+                scores[ti_slow_mask] = torch.sum(slow_trimmed * svals, axis=1).numpy()
                 scores[ti_slow_mask] /= torch.sum(slow_trimmed, axis=1).numpy()
             else:
                 scores[ti_slow_mask] = torch.sum(slow_trimmed, axis=1).numpy()
@@ -291,23 +290,15 @@ class ItemKNNScorer(Component, Trainable):
         if self.item_means_ is not None:
             scores[ti_mask] += self.item_means_[ti_valid_nums]
 
-        _log.debug(
-            "user %s: predicted for %d of %d items",
-            query.user_id,
+        log.debug(
+            "scored %d items",
             int(np.isfinite(scores).sum()),
-            len(items),
         )
 
         return ItemList(items, scores=scores)
 
     def __str__(self):
         return "ItemItem(nnbrs={}, msize={})".format(self.nnbrs, self.save_nbrs)
-
-
-@torch.jit.ignore  # type: ignore
-def _msg(level, msg):
-    # type: (int, str) -> None
-    _log.log(level, msg)
 
 
 @torch.jit.script

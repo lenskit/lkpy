@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 import structlog
 import torch
-from scipy.sparse import csr_array
+from scipy.sparse import csc_array
 from typing_extensions import NamedTuple, Optional, Self, override
 
 from lenskit import util
@@ -36,6 +36,12 @@ class UserKNNScorer(Component, Trainable):
     User-user nearest-neighbor collaborative filtering with ratings. This
     user-user implementation is not terribly configurable; it hard-codes design
     decisions found to work well in the previous Java-based LensKit code.
+
+    .. note::
+
+        This component must be used with queries containing the user's history,
+        either directly in the input or by wiring its query input to the output of a
+        user history component (e.g., :class:`~lenskit.basic.UserTrainingHistoryLookup`).
 
     Args:
         nnbrs:
@@ -74,7 +80,7 @@ class UserKNNScorer(Component, Trainable):
     "Mean rating for each known user."
     user_vectors_: torch.Tensor
     "Normalized rating matrix (CSR) to find neighbors at prediction time."
-    user_ratings_: csr_array
+    user_ratings_: csc_array
     "Centered but un-normalized rating matrix (COO) to find neighbor ratings."
 
     def __init__(
@@ -130,7 +136,7 @@ class UserKNNScorer(Component, Trainable):
         normed, _norms = normalize_sparse_rows(rmat, "unit")
 
         self.user_vectors_ = normed
-        self.user_ratings_ = torch_sparse_to_scipy(rmat).tocsr()
+        self.user_ratings_ = torch_sparse_to_scipy(rmat).tocsc()
         self.users_ = data.users.copy()
         self.user_means_ = means
         self.items_ = data.items.copy()
@@ -282,64 +288,67 @@ def score_items_with_neighbors(
     items: torch.Tensor,
     nbr_rows: torch.Tensor,
     nbr_sims: torch.Tensor,
-    ratings: csr_array,
+    ratings: csc_array,
     max_nbrs: int,
     min_nbrs: int,
     average: bool,
 ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
     # select a sub-matrix for further manipulation
+    items = items.numpy()
     (ni,) = items.shape
     (nrow, ncol) = ratings.shape
-    # do matrix surgery
-    nbr_rates = ratings[nbr_rows.numpy(), :]
-    nbr_rates = nbr_rates[:, items.numpy()]
 
-    nbr_t = nbr_rates.transpose().tocsr()
+    # sort neighbors by similarity
+    nbr_order = np.argsort(-nbr_sims)
+    nbr_rows = nbr_rows[nbr_order].numpy()
+    nbr_sims = nbr_sims[nbr_order].numpy()
 
-    # count nbrs for each item
-    counts = np.diff(nbr_t.indptr)
-    assert counts.shape == items.shape
+    # get the rating rows for our neighbors
+    nbr_rates = ratings[nbr_rows, :]
+
+    # which items are scorable?
+    counts = np.diff(nbr_rates.indptr)
+    min_nbr_mask = counts >= min_nbrs
+    is_nbr_mask = min_nbr_mask[items]
+    is_scorable = items[is_nbr_mask]
+
+    # get the ratings for requested scorable items
+    nbr_rates = nbr_rates[:, is_scorable]
+    assert isinstance(nbr_rates, csc_array)
+    nbr_rates.sort_indices()
+    counts = counts[is_scorable]
 
     log.debug(
         "scoring items",
-        max_count=np.max(counts),
+        max_count=np.max(counts) if len(counts) else 0,
         nbr_shape=nbr_rates.shape,
     )
 
-    # fast-path items with small neighborhoods
-    fp_mask = counts <= max_nbrs
+    # Now, for our next trick - we have a CSC matrix, whose rows (users) are
+    # sorted by decreasing similarity.  So we can *zero* any entries past the
+    # first max_neighbors in a row.  This can be done with a little bit of
+    # jiggery-pokery.
+
+    # step 1: create a list of column start indices
+    starts = np.repeat(nbr_rates.indptr[:-1], counts)
+    # step 2: create a ranking from start to end
+    ranks = np.arange(nbr_rates.nnz, dtype=np.int32)
+    # step 3: subtract the column starts — this will give us numbers within rows
+    ranks -= starts
+    rmask = ranks >= max_nbrs
+    # step 4: zero out rating values for everything past max_nbrs
+    nbr_rates.data[rmask] = 0
+
+    # now we can just do a matrix-vector multiply to compute the scores
     results = np.full(ni, np.nan)
-    nbr_fp = nbr_rates[:, fp_mask]
-    results[fp_mask] = nbr_fp.T @ nbr_sims
+    results[is_nbr_mask] = nbr_rates.T @ nbr_sims
 
     if average:
-        nbr_fp_ones = csr_array((np.ones(nbr_fp.nnz), nbr_fp.indices, nbr_fp.indptr), nbr_fp.shape)
-        tot_sims = nbr_fp_ones.T @ nbr_sims
+        nbr_ones = csc_array(
+            (np.where(rmask, 0, 1), nbr_rates.indices, nbr_rates.indptr), nbr_rates.shape
+        )
+        tot_sims = nbr_ones.T @ nbr_sims
         assert np.all(np.isfinite(tot_sims))
-        results[fp_mask] /= tot_sims
-
-    # clear out too-small neighborhoods
-    results[counts < min_nbrs] = torch.nan
-
-    # deal with too-large items
-    exc_mask = counts > max_nbrs
-    n_bad = np.sum(exc_mask)
-    if n_bad:
-        log.debug("scoring %d slow-path items", n_bad)
-
-    bads = np.argwhere(exc_mask)[:, 0]
-    for badi in bads:
-        s, e = nbr_t.indptr[badi : (badi + 2)]
-
-        bi_users = nbr_t.indices[s:e]
-        bi_rates = torch.from_numpy(nbr_t.data[s:e])
-        bi_sims = nbr_sims[bi_users]
-
-        tk_vs, tk_is = torch.topk(bi_sims, max_nbrs)
-        sum = torch.sum(tk_vs)
-        if average:
-            results[badi] = torch.dot(tk_vs, bi_rates[tk_is]) / sum
-        else:
-            results[badi] = sum
+        results[is_nbr_mask] /= tot_sims
 
     return results
