@@ -280,9 +280,9 @@ class ItemKNNScorer(Component, Trainable):
             slow_trimmed, slow_inds = torch.topk(slow_mat, self.nnbrs)
             assert slow_trimmed.shape == (n_slow, self.nnbrs)
             if self.feedback == "explicit":
-                scores[ti_slow_mask] = torch.sum(
-                    slow_trimmed * torch.from_numpy(ri_vals)[slow_inds], axis=1
-                ).numpy()
+                svals = torch.from_numpy(ri_vals)[slow_inds]
+                assert svals.shape == slow_trimmed.shape
+                scores[ti_slow_mask] = torch.sum(slow_trimmed * svals, axis=1).numpy()
                 scores[ti_slow_mask] /= torch.sum(slow_trimmed, axis=1).numpy()
             else:
                 scores[ti_slow_mask] = torch.sum(slow_trimmed, axis=1).numpy()
