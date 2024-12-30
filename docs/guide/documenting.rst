@@ -44,7 +44,7 @@ You need to clearly report the algorithms that you have used along with their
 hyperparameters.
 
 The algorithm name should be the name of the class that you used (e.g.
-:py:class:`~lenskit.algorithms.knn.ItemItem`). The hyperparameters are the
+:py:class:`~lenskit.knn.ItemKNNScorer`). The hyperparameters are the
 options specified to the constructor, except for options that only affect
 algorithn peformance but not behavior.
 
@@ -59,7 +59,7 @@ For example:
 +------------+-------------------------------------------------------------------------------+
 
 If you use a top-N implementation other than the default
-:py:class:`~lenskit.algorithms.basic.TopN`, or reconfigure its candidate
+:py:class:`~lenskit.basic.TopNRanker`, or reconfigure its candidate
 selector, also clearly document that.
 
 Reporting Experimental Setup

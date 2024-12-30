@@ -17,25 +17,6 @@ metrics, including :py:func:`RMSE` and
 .. versionchanged:: 2025.1
     The prediction accuracy metric interface has changed to use item lists.
 
-Example
--------
-
-The following computes RMSE over a small subset of the ``ml-small`` ratings::
-
-    from lenskit.datasets import MovieLens
-    from lenskit.algorithms.bias import Bias
-    from lenskit.batch import predict
-    from lenskit.metrics import RunAnalysis
-    from lenskit.metrics.predict import RMSE
-    ratings = MovieLens('ml-small').ratings.sample(frac=0.1)
-    test = ratings.iloc[:1000]
-    train = ratings.iloc[1000:]
-    algo = Bias()
-    algo.fit(train)
-    preds = predict(algo, test)
-    pra = RunAnalysis()
-    pra.add_metric(RMSE())
-    results = pra.compute(preds, test)
 
 Calling Metrics
 ---------------
