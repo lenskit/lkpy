@@ -35,6 +35,15 @@ def active_logging_config() -> LoggingConfig | None:
     return _active_config
 
 
+def basic_logging(level: int = logging.INFO):
+    """
+    Simple one-function logging configuration for notebooks and similar.
+    """
+    cfg = LoggingConfig()
+    cfg.level = level
+    cfg.apply()
+
+
 class LoggingConfig:  # pragma: nocover
     """
     Configuration for LensKit logging.
@@ -145,6 +154,7 @@ class LoggingConfig:  # pragma: nocover
 
         set_progress_impl("rich")
         warnings.showwarning = log_warning
+        warnings.filterwarnings("ignore", message=r"Sparse CSR tensor support is in beta state")
 
         _active_config = self
 
