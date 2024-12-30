@@ -27,6 +27,7 @@ guide to how to use LensKit for research, education, and other purposes.
     :maxdepth: 1
 
     conventions
+    models
 
 .. toctree::
     :caption: Experiments
