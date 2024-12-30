@@ -43,6 +43,9 @@ Calling :meth:`LoggingConfig.apply` configures both Python standard library
 warnings to the log system, and generally makes sure that LensKit and other code
 emitting logs (including your code) will send them to useful places.
 
+For setup with even less code, but less flexibility, you can use the
+:func:`basic_logging` function.
+
 Environment Variables and Defaults
 ----------------------------------
 

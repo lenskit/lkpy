@@ -7,12 +7,13 @@ from typing import Any
 
 import structlog
 
-from .config import LoggingConfig
+from .config import LoggingConfig, basic_logging
 from .progress import Progress, item_progress, set_progress_impl
 from .tasks import Task
 
 __all__ = [
     "LoggingConfig",
+    "basic_logging",
     "Progress",
     "item_progress",
     "set_progress_impl",
