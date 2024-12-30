@@ -31,13 +31,14 @@ _log = logging.getLogger(__name__)
 
 class BiasedSVDScorer(Component, Trainable):
     """
-    Biased matrix factorization for implicit feedback using SciKit-Learn's SVD
-    solver (:class:`sklearn.decomposition.TruncatedSVD`).  It operates by first
+    Biased matrix factorization for explicit feedback using SciKit-Learn's
+    :class:`~sklearn.decomposition.TruncatedSVD`.  It operates by first
     computing the bias, then computing the SVD of the bias residuals.
 
     You'll generally want one of the iterative SVD implementations such as
-    :class:`lennskit.algorithms.als.BiasedMFScorer`; this is here primarily as an
-    example and for cases where you want to evaluate a pure SVD implementation.
+    :class:`lennskit.algorithms.als.BiasedMFScorer`; this is here primarily as
+    an example and for cases where you want to evaluate a pure SVD
+    implementation.
     """
 
     features: int

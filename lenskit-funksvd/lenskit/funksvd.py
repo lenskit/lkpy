@@ -200,24 +200,35 @@ def _align_add_bias(bias, index, keys, series):
 
 class FunkSVDScorer(Component, Trainable):
     """
-    Algorithm class implementing FunkSVD matrix factorization.  FunkSVD is a regularized
-    biased matrix factorization technique trained with featurewise stochastic gradient
-    descent.
+    FunkSVD explicit-feedback matrix factoriation.  FunkSVD is a regularized
+    biased matrix factorization technique trained with featurewise stochastic
+    gradient descent.
 
-    See the base class :class:`.MFPredictor` for documentation on the estimated parameters
-    you can extract from a trained model.
+    See the base class :class:`.MFPredictor` for documentation on the estimated
+    parameters you can extract from a trained model.
+
+    .. deprecated:: LKPY
+
+        This scorer is kept around for historical comparability, but ALS
+        :class:`~lenskit.als.BiasedMF` is usually a better option.
 
     Args:
-        features: the number of features to train
-        iterations: the number of iterations to train each feature
-        lrate: the learning rate
-        reg: the regularization factor
-        damping: damping factor for the underlying mean
-        bias: the underlying bias model to fit.  If ``True``, then a
-            :py:class:`.bias.Bias` model is fit with ``damping``.
+        features:
+            the number of features to train
+        iterations:
+            the number of iterations to train each feature
+        lrate:
+            the learning rate
+        reg:
+            the regularization factor
+        damping:
+            damping factor for the underlying mean
+        bias:
+            the underlying bias model to fit.  If ``True``, then a
+            :py:class:`lenskit.basic.BiasModel` model is fit with ``damping``.
         range:
-            the ``(min, max)`` rating values to clamp ratings, or ``None`` to leave
-            predictions unclamped.
+            the ``(min, max)`` rating values to clamp ratings, or ``None`` to
+            leave predictions unclamped.
         rng:
             The random seed for shuffling the input data (see :ref:`rng`).
     """
