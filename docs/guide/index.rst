@@ -28,6 +28,8 @@ guide to how to use LensKit for research, education, and other purposes.
 
     conventions
     scorers
+    rankers
+    other-components
 
 .. toctree::
     :caption: Experiments
