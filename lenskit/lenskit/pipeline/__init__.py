@@ -106,6 +106,9 @@ class Pipeline:
             A name for the pipeline.
         version:
             A numeric version for the pipeline.
+
+    Stability:
+        Caller
     """
 
     name: str | None = None
@@ -723,7 +726,7 @@ class Pipeline:
             meta=self.meta(),
         )
 
-    def use_first_of(self, name: str, input: Node[T | None], fallback: Node[T]) -> Node[T]:
+    def use_first_of(self, name: str, primary: Node[T | None], fallback: Node[T]) -> Node[T]:
         """
         Ergonomic method to create a new node that returns the result of its
         ``input`` if it is provided and not ``None``, and otherwise returns the
@@ -768,12 +771,12 @@ class Pipeline:
         Args:
             name:
                 The name of the node.
-            input:
-                The node to use, if it is available.
+            primary:
+                The node to use as the primary input, if it is available.
             fallback:
-                The node to use if ``input`` does not provide a value.
+                The node to use if the primary input does not provide a value.
         """
-        return self.add_component(name, fallback_on_none, input=input, fallback=fallback)
+        return self.add_component(name, fallback_on_none, primary=primary, fallback=fallback)
 
     def _check_available_name(self, name: str) -> None:
         if name in self._nodes or name in self._aliases:

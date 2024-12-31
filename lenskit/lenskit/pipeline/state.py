@@ -20,6 +20,9 @@ class PipelineState(Mapping[str, Any]):
 
     Client code will generally not construct this class directly.
 
+    Stability:
+        Calller
+
     Args:
         state:
             The pipeline state to wrap.  The state object stores a reference to

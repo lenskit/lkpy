@@ -32,6 +32,9 @@ class PipelineRunner:
 
     This class operates recursively; pipelines should never be so deep that
     recursion fails.
+
+    Stability:
+        Internal
     """
 
     log: structlog.stdlib.BoundLogger
@@ -167,6 +170,9 @@ class PipelineRunner:
 class DeferredRun(Generic[T]):
     """
     Implementation of :class:`Lazy` for deferred runs in a pipeline runner.
+
+    Stability:
+        Internal
     """
 
     runner: PipelineRunner

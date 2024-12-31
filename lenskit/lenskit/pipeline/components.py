@@ -47,6 +47,9 @@ class Configurable(Protocol):  # pragma: nocover
     .. note::
 
         Configuration data should be JSON-compatible (strings, numbers, etc.).
+
+    Stability:
+        Full
     """
 
     @classmethod
@@ -79,6 +82,9 @@ class Trainable(Protocol):  # pragma: nocover
         A future LensKit version will add support for extracting model
         parameters a la Pytorch's ``state_dict``, but this capability was not
         ready for 2025.1.
+
+    Stability:
+        Full
     """
 
     @property
@@ -105,6 +111,17 @@ class Trainable(Protocol):  # pragma: nocover
 
 @runtime_checkable
 class ParameterContainer(Protocol):  # pragma: nocover
+    """
+    Future protocol for components with learned parameters.
+
+    .. important::
+
+        This protocol is not yet used.
+
+    Stability:
+        Experimental
+    """
+
     def get_params(self) -> dict[str, object]:
         """
         Protocol for components with parameters that can be extracted, saved,
@@ -154,6 +171,9 @@ class Component(Configurable, Generic[COut]):
 
     To work as components, derived classes also need to implement a ``__call__``
     method to perform their operations.
+
+    Stability:
+        Full
     """
 
     EXTRA_CONFIG_FIELDS: ClassVar[list[str]] = []
@@ -226,6 +246,9 @@ def instantiate_component(
     """
     Utility function to instantiate a component given its class, function, or
     string representation.
+
+    Stability:
+        Internal
     """
     if isinstance(comp, str):
         mname, oname = comp.split(":", 1)
@@ -245,8 +268,14 @@ def instantiate_component(
         return comp()  # type: ignore
 
 
-def fallback_on_none(input: T | None, fallback: Lazy[T]) -> T:
-    if input is not None:
-        return input
+def fallback_on_none(primary: T | None, fallback: Lazy[T]) -> T:
+    """
+    Fallback to a second component if the primary input is `None`.
+
+    Stability:
+        Caller
+    """
+    if primary is not None:
+        return primary
     else:
         return fallback.get()

@@ -45,6 +45,9 @@ class Lazy(Protocol, Generic[T]):
                 return backup.get()
             else:
                 return input
+
+    Stability:
+        Caller
     """
 
     def get(self) -> T:
@@ -62,6 +65,9 @@ def is_compatible_type(typ: type, *targets: type) -> bool:
     written to be over-accepting instead of over-restrictive, so it can be used
     to reject clearly incompatible types without rejecting combinations it
     cannot properly check.
+
+    Stability:
+        Internal
 
     Args:
         typ:
@@ -109,6 +115,9 @@ def is_compatible_data(obj: object, *targets: type | TypeVar) -> bool:
     written to be over-accepting instead of over-restrictive, so it can be used
     to reject clearly incompatible types without rejecting combinations it
     cannot properly check.
+
+    Stability:
+        Internal
 
     Args:
         typ:
@@ -164,6 +173,9 @@ def type_string(typ: type | None) -> str:
     """
     Compute a string representation of a type that is both resolvable and
     human-readable.  Type parameterizations are lost.
+
+    Stability:
+        Internal
     """
     if typ is None or typ is NoneType:
         return "None"
@@ -179,6 +191,9 @@ def parse_type_string(tstr: str) -> type:
     """
     Compute a string representation of a type that is both resolvable and
     human-readable.  Type parameterizations are lost.
+
+    Stability:
+        Internal
     """
     if tstr == "None":
         return NoneType
