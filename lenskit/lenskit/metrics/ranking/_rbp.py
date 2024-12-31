@@ -36,6 +36,9 @@ class RBP(ListMetric, RankingMetricBase):
         normalize:
             Whether to normalize the RBP scores; if ``True``, divides the RBP
             score by the maximum achievable with the test data (as in nDCG).
+
+    Stability:
+        Caller
     """
 
     patience: float

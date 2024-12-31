@@ -23,6 +23,9 @@ K2 = TypeVar("K2", bound=tuple)
 class MetricWrapper:
     """
     Internal class for storing metrics.
+
+    Stability:
+        Internal
     """
 
     metric: Metric | MetricFunction
@@ -62,6 +65,9 @@ class MetricWrapper:
 class RunAnalysisResult:
     """
     Results of a bulk metric computation.
+
+    Stability:
+        Caller
     """
 
     _list_metrics: pd.DataFrame
@@ -177,6 +183,9 @@ class RunAnalysis:
         metrics:
             A list of metrics; you can also add them with :meth:`add_metric`,
             which provides more flexibility.
+
+    Stability:
+        Caller
     """
 
     metrics: list[MetricWrapper]
