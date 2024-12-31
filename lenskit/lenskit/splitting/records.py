@@ -34,6 +34,9 @@ def crossfold_records(
     repeated interactions, this splitter only supports operating on the
     dataset's interaction matrix.
 
+    Stability:
+        Caller
+
     Args:
         data:
             Ratings or other data you wish to partition.
@@ -117,6 +120,9 @@ def sample_records(
         >>> split = sample_records(movielens, 1000)
         >>> sum(len(il) for il in split.test.lists())
         1000
+
+    Stability:
+        Caller
 
     Args:
         data:

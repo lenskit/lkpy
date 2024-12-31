@@ -21,6 +21,9 @@ TK = TypeVar("TK", bound=tuple)
 class TTSplit(Generic[TK]):
     """
     A train-test set from splitting or other sources.
+
+    Stability:
+        Caller
     """
 
     train: Dataset

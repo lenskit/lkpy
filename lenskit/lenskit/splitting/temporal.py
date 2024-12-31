@@ -23,6 +23,9 @@ def split_global_time(
     before :math:`t_i` and testing data on or after :math:`t_i` and before
     :math:`t_{i+1}` (the last split has no upper bound on the testing data).
 
+    Stability:
+        Caller
+
     Args:
         data:
             The dataset to split.
