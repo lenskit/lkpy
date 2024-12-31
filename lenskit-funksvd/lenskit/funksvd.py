@@ -212,6 +212,9 @@ class FunkSVDScorer(Component, Trainable):
         This scorer is kept around for historical comparability, but ALS
         :class:`~lenskit.als.BiasedMF` is usually a better option.
 
+    Stability:
+        Caller
+
     Args:
         features:
             the number of features to train

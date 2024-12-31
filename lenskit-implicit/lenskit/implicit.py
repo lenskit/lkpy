@@ -30,6 +30,9 @@ class BaseRec(Component, Trainable):
     """
     Base class for Implicit-backed recommenders.
 
+    Stability:
+        Caller
+
     Args:
         delegate:
             The delegate algorithm.
@@ -132,6 +135,9 @@ class BaseRec(Component, Trainable):
 class ALS(BaseRec):
     """
     LensKit interface to :py:mod:`implicit.cpu.als` (or GPU version).
+
+    Stability:
+        Caller
     """
 
     def __init__(self, *args, weight=40.0, **kwargs):
@@ -148,6 +154,9 @@ class ALS(BaseRec):
 class BPR(BaseRec):
     """
     LensKit interface to :py:mod:`implicit.cpu.bpr` (or GPU version).
+
+    Stability:
+        Caller
     """
 
     def __init__(self, *args, **kwargs):

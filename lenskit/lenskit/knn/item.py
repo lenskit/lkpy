@@ -48,6 +48,9 @@ class ItemKNNScorer(Component, Trainable):
         either directly in the input or by wiring its query input to the output of a
         user history component (e.g., :class:`~lenskit.basic.UserTrainingHistoryLookup`).
 
+    Stability:
+        Caller
+
     Args:
         nnbrs:
             The maximum number of neighbors for scoring each item (``None`` for

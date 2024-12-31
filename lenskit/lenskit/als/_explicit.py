@@ -36,6 +36,9 @@ class BiasedMFScorer(ALSBase):
     See the base class :class:`ALSBase` for documentation on the estimated
     parameters you can extract from a trained model.
 
+    Stability:
+        Caller
+
     Args:
         features:
             The number of features to train.

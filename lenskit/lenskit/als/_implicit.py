@@ -52,6 +52,9 @@ class ImplicitMFScorer(ALSBase):
         In 0.13, we added an option to control whether or not the rating column is used; it
         initially defaulted to ``True``, but with a warning.  In 0.14 it defaults to ``False``.
 
+    Stability:
+        Caller
+
     Args:
         features:
             The number of features to train

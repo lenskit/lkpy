@@ -24,6 +24,9 @@ class HPFScorer(Component, Trainable):
     .. todo::
         Right now, this uses the 'rating' as a count. Actually use counts.
 
+    Stability:
+        Caller
+
     Args:
         features:
             the number of features

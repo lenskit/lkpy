@@ -43,6 +43,9 @@ class UserKNNScorer(Component, Trainable):
         either directly in the input or by wiring its query input to the output of a
         user history component (e.g., :class:`~lenskit.basic.UserTrainingHistoryLookup`).
 
+    Stability:
+        Caller
+
     Args:
         nnbrs:
             the maximum number of neighbors for scoring each item (``None`` for

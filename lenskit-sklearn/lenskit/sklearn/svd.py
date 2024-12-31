@@ -39,6 +39,9 @@ class BiasedSVDScorer(Component, Trainable):
     :class:`lennskit.algorithms.als.BiasedMFScorer`; this is here primarily as
     an example and for cases where you want to evaluate a pure SVD
     implementation.
+
+    Stability:
+        Caller
     """
 
     features: int
