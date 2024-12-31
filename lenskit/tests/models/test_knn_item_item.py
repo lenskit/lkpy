@@ -22,12 +22,12 @@ from lenskit.basic import BiasScorer
 from lenskit.basic.history import UserTrainingHistoryLookup
 from lenskit.batch import BatchPipelineRunner
 from lenskit.data import ItemList, ItemListCollection, UserIDKey, Vocabulary, from_interactions_df
-from lenskit.data.bulk import dict_to_df, iter_item_lists
 from lenskit.diagnostics import ConfigWarning, DataWarning
 from lenskit.knn.item import ItemKNNScorer
 from lenskit.metrics import MAE, RBP, RMSE, RecipRank, RunAnalysis, call_metric, quick_measure_model
 from lenskit.operations import score
 from lenskit.pipeline import RecPipelineBuilder, topn_pipeline
+from lenskit.pipeline.common import predict_pipeline
 from lenskit.splitting import SampleFrac, crossfold_users
 from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
 from lenskit.util.torch import inference_mode
@@ -458,7 +458,7 @@ def test_ii_known_preds(ml_ds):
     from lenskit import batch
 
     iknn = ItemKNNScorer(20, min_sim=1.0e-6)
-    pipe = topn_pipeline(iknn)
+    pipe = predict_pipeline(iknn, fallback=False)  # noqa: F821
     _log.info("training %s on ml data", iknn)
     pipe.train(ml_ds)
     _log.info("model means: %s", iknn.item_means_)
@@ -467,12 +467,10 @@ def test_ii_known_preds(ml_ds):
     pred_file = dir / "item-item-preds.csv"
     _log.info("reading known predictions from %s", pred_file)
     known_preds = pd.read_csv(str(pred_file))
+    known = ItemListCollection.from_df(known_preds, UserIDKey)
 
-    preds = {
-        user: score(pipe, query=user, items=ItemList(kps, prediction=False))
-        for (user, kps) in iter_item_lists(known_preds)
-    }
-    preds = dict_to_df(preds)
+    preds = batch.predict(pipe, known, n_jobs=1)
+    preds = preds.to_df().drop(columns=["prediction"], errors="ignore")
 
     merged = pd.merge(known_preds.rename(columns={"prediction": "expected"}), preds)
     assert len(merged) == len(preds)

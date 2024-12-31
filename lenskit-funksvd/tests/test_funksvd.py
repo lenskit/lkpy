@@ -13,10 +13,11 @@ import pandas as pd
 
 from pytest import approx, mark
 
-from lenskit.data import Dataset, ItemList, from_interactions_df
-from lenskit.data.bulk import dict_to_df, iter_item_lists
+from lenskit import batch
+from lenskit.data import Dataset, ItemList, ItemListCollection, UserIDKey, from_interactions_df
 from lenskit.funksvd import FunkSVDScorer
 from lenskit.metrics import call_metric, quick_measure_model
+from lenskit.pipeline.common import predict_pipeline
 from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
 
 _log = logging.getLogger(__name__)
@@ -169,15 +170,17 @@ def test_fsvd_save_load(ml_ds: Dataset):
 def test_fsvd_known_preds(ml_ds: Dataset):
     algo = FunkSVDScorer(15, iterations=125, lrate=0.001)
     _log.info("training %s on ml data", algo)
-    algo.train(ml_ds)
+    pipe = predict_pipeline(algo, fallback=False)
+    pipe.train(ml_ds)
 
     dir = Path(__file__).parent
     pred_file = dir / "funksvd-preds.csv"
     _log.info("reading known predictions from %s", pred_file)
     known_preds = pd.read_csv(str(pred_file))
+    known = ItemListCollection.from_df(known_preds, UserIDKey)
 
-    preds = {u: algo(u, il) for (u, il) in iter_item_lists(known_preds)}
-    preds = dict_to_df(preds)
+    preds = batch.predict(pipe, known, n_jobs=1)
+    preds = preds.to_df().drop(columns=["prediction"], errors="ignore")
 
     known_preds.rename(columns={"prediction": "expected"}, inplace=True)
     merged = pd.merge(known_preds, preds)
