@@ -2,6 +2,8 @@
 Top-level LensKit functions for recommender operations.
 """
 
+from __future__ import annotations
+
 from lenskit.data import ItemList, QueryInput
 from lenskit.data.types import IDSequence
 from lenskit.pipeline import Pipeline
@@ -20,6 +22,8 @@ def recommend(
     pipeline component (the ``'recommender'`` by default) and returns the
     resulting item list.
 
+    Stability:
+        full
     Args:
         pipeline:
             The pipeline to run.
@@ -32,6 +36,9 @@ def recommend(
             candidate selector.
         component:
             The name of the component implementing the recommender.
+
+    Returns:
+        The recommended items as an ordered item list.
     """
 
     node = pipeline.node(component)
@@ -56,6 +63,8 @@ def score(
     pipeline component (the ``'scorer'`` by default) and returns the resulting
     item list.
 
+    Stability:
+        Full
     Args:
         pipeline:
             The pipeline to run.
@@ -66,6 +75,8 @@ def score(
             candidate selector.
         component:
             The name of the component implementing the scorer.
+    Returns:
+        The items with scores in the ``score`` field.
     """
 
     node = pipeline.node(component)
@@ -91,6 +102,9 @@ def predict(
     the rating predictor may have additional configuration such as fallbacks or
     transformations to ensure every item is scored and the scores are valid
     rating predictions; the scorer typically returns raw scores.
+
+    Stability:
+        Full
     """
 
     return score(pipeline, query, items, component=component)

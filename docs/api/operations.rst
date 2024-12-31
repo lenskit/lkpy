@@ -15,6 +15,8 @@ can directly import them:
 
     from lenskit import recommend, score
 
+.. stability:: full
+
 Recommending
 ~~~~~~~~~~~~
 
