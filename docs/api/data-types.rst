@@ -7,10 +7,12 @@ Basic Data Types
 Entity Identifiers
 ~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: EntityId
+.. autodata:: ID
+.. autodata:: CoreID
+.. autodata:: NPID
 
-.. autoclass:: NPEntityId
-
+.. autodata:: IDArray
+.. autodata:: IDSequence
 
 Containers
 ~~~~~~~~~~

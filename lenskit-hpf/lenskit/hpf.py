@@ -28,7 +28,7 @@ class HPFScorer(Component, Trainable):
         features:
             the number of features
         kwargs:
-            additional arguments to pass to :py:class:`hpfrec.HPF`.
+            additional arguments to pass to :class:`hpfrec.HPF`.
     """
 
     features: int
