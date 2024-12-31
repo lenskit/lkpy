@@ -4,13 +4,13 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import os
 import sys
 from importlib.metadata import version
+from pathlib import Path
 
 from packaging.version import Version
 
-sys.path.insert(0, os.path.abspath(".."))
+sys.path.append(str((Path(__file__).parent / "_ext").resolve()))
 
 project = "LensKit"
 copyright = "2018–2024 Drexel University, Boise State University, and collaborators"
@@ -33,12 +33,14 @@ extensions = [
     "sphinxext.opengraph",
     "sphinxcontrib.bibtex",
     "sphinxcontrib.mermaid",
+    "lk_stability",
 ]
 
 # set up our filenames
 # source_suffix = {".rst": "restructuredtext"}
 exclude_patterns = [
     "_build",
+    "_ext",
     "Thumbs.db",
     ".DS_Store",
     "old/*",
@@ -103,10 +105,14 @@ autodoc_type_aliases = {
     "SeedLike": "lenskit.types.SeedLike",
     "RNGLike": "lenskit.types.RNGLike",
     "RNGInput": "lenskit.types.RNGInput",
+    "IDSequence": "lenskit.data.types.IDSequence",
 }
 # autosummary_generate_overwrite = False
 autosummary_imported_members = False
 autosummary_ignore_module_all = True
+
+# customize doc parsing
+napoleon_custom_sections = [("Stability", "returns_style")]
 
 nitpicky = True
 todo_include_todos = True
