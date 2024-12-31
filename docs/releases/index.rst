@@ -61,6 +61,10 @@ with an API:
     this is mostly relevant for classes and sometimes methods, not individual
     functions.
 
+.. important::
+
+    Stability guarantees do not take effect until :ref:`2025.1` is released.
+
 There are four stability levels for LensKit classes, functions, etc.:
 
 .. glossary::
