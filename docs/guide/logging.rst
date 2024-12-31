@@ -84,6 +84,12 @@ When writing LensKit code that needs to emit log messages, use LensKit's
 warnings and errors when logging has not been configured).  The resulting logger
 can be used like any other Structlog or standard library logger.
 
+Structlog loggers are *lazy*, resolving their configurations when they are
+*bound* with variables. When emitting many log messages in a loop or function,
+we recommend calling :meth:`structlog.typing.BindableLogger.bind` to get a bound
+logger with the configuration resolved, which will be much faster for repeated
+fine-grained logging messages.
+
 Progress Reporting
 ~~~~~~~~~~~~~~~~~~
 
