@@ -21,6 +21,9 @@ class LazyDataset(Dataset):
     Args:
         loader:
             The function that will load the dataset when needed.
+
+    Stability:
+        Caller
     """
 
     _delegate: Dataset | None = None

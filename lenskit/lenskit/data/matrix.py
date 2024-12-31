@@ -37,6 +37,9 @@ class CSRStructure(NamedTuple):
     """
     Representation of the compressed sparse row structure of a sparse matrix,
     without any data values.
+
+    Stability:
+        Caller
     """
 
     rowptrs: np.ndarray
@@ -69,6 +72,9 @@ class InteractionMatrix:
     user-item interaction matrix.  The data is stored simultaneously in CSR and
     COO format.  Most code has no need to interact with this class directly —
     :class:`~lenskit.data.Dataset` methods provide data in a range of formats.
+
+    Stability:
+        Internal
     """
 
     n_obs: int
@@ -129,6 +135,9 @@ class MatrixDataset(Dataset):
         Client code generally should not construct this class directly.  Instead
         use the various ``from_`` and ``load_`` functions in
         :mod:`lenskit.data`.
+
+    Stability:
+        Internal
     """
 
     _users: Vocabulary

@@ -58,6 +58,9 @@ def check_1d(
     *   If ``error="return"``, it will return ``True`` or ``False`` depending on
         whether the size is correct.
 
+    Stability:
+        Caller
+
     Args:
         arr:
             The array to check.
@@ -122,6 +125,9 @@ def check_type(
         if the array shape is incorrect, and return the array otherwise.
     *   If ``error="return"``, it will return ``True`` or ``False`` depending on
         whether the size is correct.
+
+    Stability:
+        Caller
 
     Args:
         arr:

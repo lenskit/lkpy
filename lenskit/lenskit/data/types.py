@@ -36,6 +36,13 @@ T = TypeVar("T")
 
 @dataclass
 class AliasedColumn:
+    """
+    A data frame column with possible aliases.
+
+    Stability:
+        Testing
+    """
+
     name: str
     "The column name."
     compat_aliases: list[str] = field(default_factory=list)
@@ -56,6 +63,9 @@ class UITuple(NamedTuple, Generic[T]):
     """
     Tuple of (user, item) data, typically for configuration and similar
     purposes.
+
+    Stability:
+        Caller
     """
 
     user: T

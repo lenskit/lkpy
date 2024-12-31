@@ -66,6 +66,8 @@ class Dataset(ABC):
 
     .. todo::
         Support for item and user content or metadata is not yet implemented.
+
+    .. stability:: caller
     """
 
     _item_stats: pd.DataFrame | None = None

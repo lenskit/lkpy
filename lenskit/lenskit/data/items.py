@@ -115,6 +115,9 @@ class ItemList:
             accessor methods are plural for readability (“get the list of item
             IDs”).  Pass the value ``False`` to remove the field when copying
             from a source list.
+
+    Stability:
+        Caller
     """
 
     ordered: bool = False

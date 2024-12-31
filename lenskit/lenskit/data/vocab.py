@@ -37,6 +37,9 @@ class Vocabulary:
     ability to add additional vocabulary terms after the vocabulary has been
     created.  New terms do not change the index positions of previously-known
     identifiers.
+
+    Stability:
+        Caller
     """
 
     name: str | None
