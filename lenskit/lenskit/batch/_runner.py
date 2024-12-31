@@ -47,6 +47,9 @@ class BatchPipelineRunner:
     """
     Apply a pipeline to a collection of test users.
 
+    Stability:
+        Caller
+
     Argss:
         pipeline:
             The pipeline to evaluate.

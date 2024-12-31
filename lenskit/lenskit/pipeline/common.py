@@ -131,6 +131,9 @@ def topn_pipeline(
     """
     Create a pipeline that produces top-N recommendations using a scoring model.
 
+    Stability:
+        Caller
+
     Args:
         scorer:
             The scorer to use in the pipeline (it will added with the component
