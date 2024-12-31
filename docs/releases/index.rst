@@ -69,7 +69,7 @@ There are four stability levels for LensKit classes, functions, etc.:
 
 .. glossary::
 
-    Full
+    Full stability
         For code at the full stability level, we will avoid breaking changes for
         both callers and (where applicable) implementers until the next annual major
         version bump.  Any methods added to a full-stability base class in a minor
@@ -79,18 +79,19 @@ There are four stability levels for LensKit classes, functions, etc.:
         added by implementors, so exercise care when adding public (non-underscore)
         methods to subclasses.
 
-    Caller
+    Caller stability
         For code at the caller stability level, we will avoid breaking changes for
         callers until the next major version bump, but may change the code in ways
         that break subclasses or interface re-implementations.
 
-    Testing
+    Testing stability
         Testing-level interfaces are generally stable but may have breaking changes
         in minor releases.  Such changes will be clearly documented in the release
         notes.  This stability level is for code we want people to be able to start
         using freely, but may need to change as we gain experience with the interface.
 
-    Internal / Experimental
+    Internal stability
+    Experimental stability
         Internal and experimental interfaces may change at any time, and breaking
         changes will not necessarily be highlighted as such in the release notes.
 
