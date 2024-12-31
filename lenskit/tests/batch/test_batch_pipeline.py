@@ -13,7 +13,7 @@ import pandas as pd
 from pytest import approx, fixture, mark
 
 from lenskit.basic import BiasScorer, PopScorer
-from lenskit.batch import BatchPipelineRunner, predict, recommend
+from lenskit.batch import BatchPipelineRunner, predict, recommend, score
 from lenskit.data import Dataset, ItemList, UserIDKey, from_interactions_df
 from lenskit.data.convert import normalize_interactions_df
 from lenskit.metrics import NDCG, RBP, RMSE, RunAnalysis
@@ -51,6 +51,21 @@ def ml_split(ml_100k: pd.DataFrame) -> Generator[TTSplit, None, None]:
 
 def test_predict_single(mlb: MLB):
     res = predict(mlb.pipeline, {1: ItemList([31])}, n_jobs=1)
+
+    assert len(res) == 1
+    uid, result = next(iter(res))
+    assert isinstance(uid, UserIDKey)
+    assert uid.user_id == 1
+    assert len(result) == 1
+    assert result.ids()[0] == 31
+
+    preds = result.field("score")
+    assert preds is not None
+    assert preds >= 1 and preds <= 5
+
+
+def test_score_single(mlb: MLB):
+    res = score(mlb.pipeline, {1: ItemList([31])}, n_jobs=1)
 
     assert len(res) == 1
     uid, result = next(iter(res))

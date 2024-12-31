@@ -14,10 +14,17 @@ import torch
 
 from pytest import approx, fail, mark
 
-from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df
-from lenskit.data.bulk import dict_to_df, iter_item_lists
+from lenskit.data import (
+    Dataset,
+    ItemList,
+    ItemListCollection,
+    RecQuery,
+    UserIDKey,
+    from_interactions_df,
+)
 from lenskit.knn import UserKNNScorer
 from lenskit.metrics import call_metric, quick_measure_model
+from lenskit.pipeline.common import predict_pipeline, topn_pipeline
 from lenskit.testing import BasicComponentTests, ScorerTests
 
 _log = logging.getLogger(__name__)
@@ -210,20 +217,19 @@ def test_uu_known_preds(ml_ds: Dataset):
     from lenskit import batch
 
     uknn = UserKNNScorer(30, min_sim=1.0e-6)
+    pipe = predict_pipeline(uknn, fallback=False)
     _log.info("training %s on ml data", uknn)
-    uknn.train(ml_ds)
+    pipe.train(ml_ds)
 
     dir = Path(__file__).parent
     pred_file = dir / "user-user-preds.csv"
     _log.info("reading known predictions from %s", pred_file)
     known_preds = pd.read_csv(str(pred_file))
     _log.info("generating %d known predictions", len(known_preds))
+    known = ItemListCollection.from_df(known_preds, UserIDKey)
 
-    preds = {
-        user: uknn(user, ItemList(kps, prediction=False))
-        for (user, kps) in iter_item_lists(known_preds)
-    }
-    preds = dict_to_df(preds)
+    preds = batch.predict(pipe, known, n_jobs=1)
+    preds = preds.to_df().drop(columns=["prediction"], errors="ignore")
 
     merged = pd.merge(known_preds.rename(columns={"prediction": "expected"}), preds)
     assert len(merged) == len(preds)
