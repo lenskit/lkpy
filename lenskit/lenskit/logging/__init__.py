@@ -7,7 +7,7 @@ from typing import Any
 
 import structlog
 
-from ._proxy import LenskitProxyLogger
+from ._proxy import get_logger
 from .config import LoggingConfig, basic_logging
 from .progress import Progress, item_progress, set_progress_impl
 from .tasks import Task
@@ -24,16 +24,6 @@ __all__ = [
 ]
 
 _trace_debug = os.environ.get("LK_TRACE", "no").lower() == "debug"
-
-
-def get_logger(name) -> structlog.stdlib.BoundLogger:
-    """
-    Get a logger.  This works like :func:`structlog.stdlib.get_logger`, except
-    the returned proxy logger is quiet (only WARN and higher messages) if
-    structlog has not been configured. LensKit code should use this instead of
-    obtaining loggers from Structlog directly.
-    """
-    return LenskitProxyLogger(None, logger_factory_args=[name])  # type: ignore
 
 
 def trace(logger: structlog.stdlib.BoundLogger, *args: Any, **kwargs: Any):

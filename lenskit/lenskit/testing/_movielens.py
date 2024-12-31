@@ -7,7 +7,6 @@ from typing import Generator
 
 import numpy as np
 import pandas as pd
-import structlog
 from pyprojroot import here
 
 import pytest
@@ -17,10 +16,11 @@ from lenskit.batch import recommend
 from lenskit.data import Dataset, ItemListCollection, UserIDKey, from_interactions_df
 from lenskit.data.lazy import LazyDataset
 from lenskit.data.movielens import load_movielens, load_movielens_df
+from lenskit.logging import get_logger
 from lenskit.pipeline import RecPipelineBuilder
 from lenskit.splitting import TTSplit, simple_test_pair
 
-_log = structlog.stdlib.get_logger("lenskit.testing")
+_log = get_logger("lenskit.testing")
 
 ml_test_dir = here("data/ml-latest-small")
 ml_100k_zip = here("data/ml-100k.zip")

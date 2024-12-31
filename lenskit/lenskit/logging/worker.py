@@ -21,6 +21,7 @@ import structlog
 import zmq
 from structlog.typing import EventDict
 
+from ._proxy import get_logger
 from .config import CORE_PROCESSORS, active_logging_config, log_warning
 from .monitor import get_monitor
 from .processors import add_process_info
@@ -28,7 +29,7 @@ from .tasks import Task
 from .tracing import lenskit_filtering_logger
 
 _active_context: WorkerContext | None = None
-_log = structlog.stdlib.get_logger(__name__)
+_log = get_logger(__name__)
 
 
 @dataclass

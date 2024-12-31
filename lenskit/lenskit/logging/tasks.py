@@ -12,12 +12,12 @@ from threading import Lock
 from typing import Annotated, Any
 from uuid import UUID, uuid4
 
-import structlog
 from pydantic import BaseModel, BeforeValidator, Field, SerializeAsAny
 
+from ._proxy import get_logger
 from .resource import ResourceMeasurement, reset_linux_hwm
 
-_log = structlog.stdlib.get_logger(__name__)
+_log = get_logger(__name__)
 _active_tasks: list[Task] = []
 
 

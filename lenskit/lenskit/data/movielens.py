@@ -17,12 +17,13 @@ from zipfile import ZipFile
 
 import numpy as np
 import pandas as pd
-import structlog
+
+from lenskit.logging import get_logger
 
 from .convert import from_interactions_df
 from .dataset import Dataset
 
-_log = structlog.stdlib.get_logger(__name__)
+_log = get_logger(__name__)
 
 LOC: TypeAlias = Path | tuple[ZipFile, str]
 

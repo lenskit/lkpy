@@ -24,6 +24,7 @@ from uuid import UUID, uuid4
 import structlog
 import zmq
 
+from ._proxy import get_logger
 from .tasks import Task
 
 SIGNAL_ADDR = "inproc://lenskit-monitor-signal"
@@ -258,7 +259,7 @@ class MonitorThread(threading.Thread):
             logger = logging.getLogger(name)
             logger.handle(rec)
         elif engine == "structlog":
-            logger = structlog.get_logger(name)
+            logger = get_logger(name)
             data = json.loads(data)
             method = getattr(logger, data["method"])
             method(**data["event"])
