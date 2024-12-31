@@ -158,3 +158,54 @@ def topn_pipeline(
         builder.predicts_ratings(fallback=BiasScorer())
 
     return builder.build(name)
+
+
+def predict_pipeline(
+    scorer: Component,
+    *,
+    fallback: bool | Component = True,
+    n: int = -1,
+    name: str | None = None,
+) -> Pipeline:
+    """
+    Create a pipeline that predicts ratings, but does **not** include any
+    ranking capabilities.  Mostly userful for testing and historical purposes.
+    The resulting pipeline **must** be called with an item list.
+
+    Stability:
+        Caller
+
+    Args:
+        scorer:
+            The scorer to use in the pipeline (it will added with the component
+            name ``scorer``, see :ref:`pipeline-names`).
+        fallback:
+            Whether to use a fallback predictor when the scorer cannot score.
+            When configured, the `scorer` node is the scorer, and the
+            `rating-predictor` node applies the fallback.
+        n:
+            The recommendation list length to configure in the pipeline.
+        name:
+            The pipeline name.
+    """
+    from lenskit.basic.bias import BiasScorer
+
+    pipe = Pipeline(name=name)
+
+    query = pipe.create_input("query", RecQuery, ID, ItemList)
+    items = pipe.create_input("items", ItemList)
+
+    lookup = pipe.add_component("history-lookup", UserTrainingHistoryLookup(), query=query)
+
+    score = pipe.add_component("scorer", scorer, query=lookup, items=items)
+
+    if fallback is True:
+        fallback = BiasScorer()
+
+    if fallback is False:
+        pipe.alias("rating-predictor", score)
+    else:
+        backup = pipe.add_component("fallback-predictor", fallback, query=lookup, items=items)
+        pipe.add_component("rating-predictor", FallbackScorer(), primary=score, fallback=backup)
+
+    return pipe
