@@ -11,19 +11,8 @@ Basic data types used in data representations.
 # pyright: strict
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass, field
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Literal,
-    NamedTuple,
-    Sequence,
-    TypeAlias,
-    TypeVar,
-    cast,
-)
+from typing import Any, Generic, Literal, NamedTuple, Sequence, TypeAlias, TypedDict, TypeVar, cast
 
 import numpy as np
 import pandas as pd
@@ -58,57 +47,34 @@ class AliasedColumn:
 Column: TypeAlias = str | AliasedColumn
 
 
-if TYPE_CHECKING or sys.version_info >= (3, 11):
+class UIDict(TypedDict, Generic[T]):
+    user: T
+    item: T
 
-    class UITuple(NamedTuple, Generic[T]):
+
+class UITuple(NamedTuple, Generic[T]):
+    """
+    Tuple of (user, item) data, typically for configuration and similar
+    purposes.
+    """
+
+    user: T
+    "User data."
+    item: T
+    "Item data."
+
+    @classmethod
+    def create(cls, x: UITuple[T] | tuple[T, T] | UIDict[T] | T) -> UITuple[T]:
         """
-        Tuple of (user, item) data, typically for configuration and similar
-        purposes.
+        Create a user-item tuple from a tuple or data.  If a single value
+        is provided, it is used for both user and item.
         """
-
-        user: T
-        "User data."
-        item: T
-        "Item data."
-
-        @classmethod
-        def create(cls, x: UITuple[T] | tuple[T, T] | T) -> UITuple[T]:
-            """
-            Create a user-item tuple from a tuple or data.  If a single value
-            is provided, it is used for both user and item.
-            """
-            if isinstance(x, UITuple):
-                return cast(UITuple[T], x)
-            elif isinstance(x, (tuple, list)):
-                u, i = cast(tuple[T, T], x)
-                return UITuple(u, i)
-            elif isinstance(x, dict):
-                return UITuple(x["user"], x["item"])
-            else:
-                return UITuple(x, x)
-else:
-
-    class UITuple(NamedTuple):
-        """
-        Tuple of (user, item) data, typically for configuration and similar
-        purposes.
-        """
-
-        user: Any
-        "User data."
-        item: Any
-        "Item data."
-
-        @classmethod
-        def create(cls, x: UITuple | tuple[Any, Any] | Any) -> UITuple:
-            """
-            Create a user-item tuple from a tuple or data.  If a single value
-            is provided, it is used for both user and item.
-            """
-            if isinstance(x, UITuple):
-                return x
-            elif isinstance(x, tuple):
-                u, i = x
-                return UITuple(u, i)
-            else:
-                return UITuple(x, x)
+        if isinstance(x, UITuple):
+            return cast(UITuple[T], x)
+        elif isinstance(x, (tuple, list)):
+            u, i = cast(tuple[T, T], x)
+            return UITuple(u, i)
+        elif isinstance(x, dict):
+            return UITuple(x["user"], x["item"])
+        else:
+            return UITuple(x, x)
