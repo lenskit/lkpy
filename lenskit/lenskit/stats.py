@@ -11,11 +11,22 @@ from lenskit.diagnostics import DataWarning
 
 
 def damped_mean(xs: ArrayLike, damping: float | None) -> float:
+    r"""
+    Compute a mean with Bayesian damping.  It compute the formula:
+
+    .. math::
+
+        \begin{align*}
+        \bar{x} & = \frac{\sum_i x_i}{n} \\
+        \tilde{x} & = \frac{\sum_i (x_i - \bar{x})}{n + \gamma}
+        \end{align*}
+    """
     xs = np.asarray(xs)
+    mean = np.mean(xs)
     if damping is not None and damping > 0:
-        return xs.sum().item() / (np.sum(np.isfinite(xs)).item() + damping)
+        return np.sum(xs - mean) / (np.sum(np.isfinite(xs)).item() + damping)
     else:
-        return xs.mean().item()
+        return mean.item()
 
 
 def gini(xs: ArrayLike) -> float:
@@ -29,6 +40,9 @@ def gini(xs: ArrayLike) -> float:
 
     .. _Olivia Guest's implementation: https://github.com/oliviaguest/gini
     .. _StatsDirect reference: https://www.statsdirect.com/help/default.htm#nonparametric_methods/gini.htm
+
+    Stability:
+        Caller
 
     Args:
         xs:
