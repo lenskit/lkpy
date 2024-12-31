@@ -68,9 +68,9 @@ class BatchPipelineRunner:
     def add_invocation(self, inv: InvocationSpec):
         self.invocations.append(inv)
 
-    def predict(self, component: str = "rating-predictor", *, output: str = "predictions"):
+    def score(self, component: str = "scorer", *, output: str = "scores"):
         """
-        Request the batch run to generate test item scores or rating predictins.
+        Request the batch run to generate test item scores.
 
         Args:
             component:
@@ -78,7 +78,20 @@ class BatchPipelineRunner:
             output:
                 The name of the results in the output dictionary.
         """
-        self.add_invocation(InvocationSpec("predict-ratings", {component: output}, "test-items"))
+        self.add_invocation(InvocationSpec("score", {component: output}, "test-items"))
+
+    def predict(self, component: str = "rating-predictor", *, output: str = "predictions"):
+        """
+        Request the batch run to generate test item rating predictions.  It is identical
+        to :meth:`score` but with different defaults.
+
+        Args:
+            component:
+                The name of the rating predictor component to run.
+            output:
+                The name of the results in the output dictionary.
+        """
+        return self.score(component, output=output)
 
     def recommend(
         self, component: str = "recommender", *, output: str = "recommendations", **extra: Any
