@@ -44,6 +44,58 @@ fixes for the current major version.  This will typically happen early in the
 year (except for important bug fixes that need to be backported to previous
 stable versions).
 
+.. _stability-levels:
+
+Stability Levels
+----------------
+
+SemCalVer guarantees are made in accordance with an API's *stability level*, to
+clearly document what users can expect and to give sufficient flexibility to
+evolve experimental or in-progress APIs.
+
+Stability levels are defined with respect to two different types of interaction
+with an API:
+
+-   The *caller* that calls the function, instantiates the class, etc.
+-   An *implementer* that implements an interface, subclasses a class, etc.;
+    this is mostly relevant for classes and sometimes methods, not individual
+    functions.
+
+There are four stability levels for LensKit classes, functions, etc.:
+
+.. glossary::
+
+    Full
+        For code at the full stability level, we will avoid breaking changes for
+        both callers and (where applicable) implementers until the next annual major
+        version bump.  Any methods added to a full-stability base class in a minor
+        version will have implementations that work in terms of the
+        previously-defined abstract methods. Full stability does **not** guarantee
+        that minor versions will not add new methods that may conflict with methods
+        added by implementors, so exercise care when adding public (non-underscore)
+        methods to subclasses.
+
+    Caller
+        For code at the caller stability level, we will avoid breaking changes for
+        callers until the next major version bump, but may change the code in ways
+        that break subclasses or interface re-implementations.
+
+    Testing
+        Testing-level interfaces are generally stable but may have breaking changes
+        in minor releases.  Such changes will be clearly documented in the release
+        notes.  This stability level is for code we want people to be able to start
+        using freely, but may need to change as we gain experience with the interface.
+
+    Internal / Experimental
+        Internal and experimental interfaces may change at any time, and breaking
+        changes will not necessarily be highlighted as such in the release notes.
+
+.. note::
+
+    If a class or function does not specify a stability level, assume the
+    internal/experimental level.
+
+
 .. _dep-policy:
 
 Dependency Versioning
