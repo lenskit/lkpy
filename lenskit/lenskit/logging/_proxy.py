@@ -24,7 +24,7 @@ class LenskitProxyLogger(BoundLoggerLazyProxy):
     """
 
     def bind(self, **new_values: Any):
-        if structlog.is_configured:
+        if structlog.is_configured():
             self._wrapper_class = None
         else:
             self._wrapper_class = _fallback_wrapper
