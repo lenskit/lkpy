@@ -14,6 +14,9 @@ class RankingMetricBase(Metric):
         k:
             Specify the length cutoff for rankings. Rankings longer than this
             will be truncated prior to measurement.
+
+    Stability:
+        Caller
     """
 
     k: int | None = None

@@ -31,6 +31,9 @@ _active_config: LoggingConfig | None = None
 def active_logging_config() -> LoggingConfig | None:
     """
     Get the currently-active logging configuration.
+
+    Stability:
+        Internal
     """
     return _active_config
 
@@ -38,6 +41,9 @@ def active_logging_config() -> LoggingConfig | None:
 def basic_logging(level: int = logging.INFO):
     """
     Simple one-function logging configuration for notebooks and similar.
+
+    Stability:
+        Caller
     """
     cfg = LoggingConfig()
     cfg.level = level
@@ -52,6 +58,9 @@ class LoggingConfig:  # pragma: nocover
     useful logging and progress reporting configuration; if unconfigured,
     LensKit will emit its logging messages directly to :mod:`structlog` and/or
     :mod:`logging`, which you can configure in any way you wish.
+
+    Stability:
+        Caller
     """
 
     level: int = logging.INFO

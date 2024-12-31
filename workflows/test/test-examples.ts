@@ -26,7 +26,7 @@ export function exampleTestJob(): WorkflowJob {
       {
         "name": "📕 Validate documentation examples",
         "run": script(
-          `pytest ${cov} --nbval-lax --doctest-glob='*.rst' --log-file test-docs.log docs */lenskit`,
+          `pytest ${cov} --nbval-lax --doctest-glob='*.rst' --ignore='docs/_ext' --log-file test-docs.log docs */lenskit`,
         ),
       },
       ...coverageSteps(options),

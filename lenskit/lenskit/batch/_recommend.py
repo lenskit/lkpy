@@ -27,6 +27,9 @@ def recommend(
 ) -> ItemListCollection[UserIDKey]:
     """
     Convenience function to batch-generate recommendations from a pipeline.
+
+    Stability:
+        Caller
     """
 
     runner = BatchPipelineRunner(n_jobs=n_jobs)

@@ -41,6 +41,12 @@ class MLVersion(Enum):
 
 @dataclass
 class MLData:
+    """
+    Internal class representing an open ML data set.
+
+    .. stability:: internal
+    """
+
     version: MLVersion
     source: Path | ZipFile
     prefix: str = ""
@@ -64,6 +70,9 @@ def load_movielens(path: str | Path) -> Dataset:
     Load a MovieLens dataset.  The appropriate MovieLens format is detected
     based on the file contents.
 
+    Stability:
+        Caller
+
     Args:
         path:
             The path to the dataset, either as an unpacked directory or a zip
@@ -81,13 +90,16 @@ def load_movielens_df(path: str | Path) -> pd.DataFrame:
     Load the ratings from a MovieLens dataset as a raw data frame.  The
     appropriate MovieLens format is detected based on the file contents.
 
+    Stability:
+        Caller
+
     Args:
         path:
             The path to the dataset, either as an unpacked directory or a zip
             file.
 
     Returns:
-        The ratings, with columns ``user``, ``item``, ``rating``, and
+        The ratings, with columns ``user_id``, ``item_id``, ``rating``, and
         ``timestamp``.
     """
     with _ml_detect_and_open(path) as ml:

@@ -10,6 +10,9 @@ class RandomSelector(Component):
     """
     Randomly select items from a candidate list.
 
+    Stability:
+        Caller
+
     Args:
         n:
             The number of items to select, or ``-1`` to randomly permute the
@@ -73,6 +76,9 @@ class SoftmaxRanker(Component):
         Negative scores are clamped to (approximately) zero.
 
     .. _`Tim Vieiera`: https://timvieira.github.io/blog/post/2019/09/16/algorithms-for-sampling-without-replacement/
+
+    Stability:
+        Caller
 
     Args:
         n:

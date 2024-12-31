@@ -22,6 +22,9 @@ ND = TypeVar("ND", covariant=True)
 class Node(Generic[ND]):
     """
     Representation of a single node in a :class:`Pipeline`.
+
+    Stability:
+        Caller
     """
 
     __match_args__ = ("name",)
@@ -42,10 +45,20 @@ class Node(Generic[ND]):
 class InputNode(Node[ND], Generic[ND]):
     """
     An input node.
+
+    Stability:
+        Internal
     """
 
 
 class LiteralNode(Node[ND], Generic[ND]):
+    """
+    A node storing a literal value.
+
+    Stability:
+        Internal
+    """
+
     __match_args__ = ("name", "value")
     value: ND
     "The value associated with this node"
@@ -56,6 +69,13 @@ class LiteralNode(Node[ND], Generic[ND]):
 
 
 class ComponentNode(Node[ND], Generic[ND]):
+    """
+    A node storing a component.
+
+    Stability:
+        Internal
+    """
+
     __match_args__ = ("name", "component", "inputs", "connections")
 
     component: PipelineFunction[ND]

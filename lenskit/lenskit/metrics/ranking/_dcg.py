@@ -42,6 +42,9 @@ class NDCG(ListMetric, RankingMetricBase):
             default), all items present in the test data have a gain of 1.  If set
             to a string, it is the name of a field (e.g. ``'rating'``).  In all
             cases, items not present in the truth data have a gain of 0.
+
+    Stability:
+        Caller
     """
 
     discount: Discount

@@ -17,6 +17,9 @@ class RecipRank(ListMetric, RankingMetricBase):
     in :math:`L` are relevant; then the reciprocal rank is :math:`1 / \\kappa`.
     If no elements are relevant, the reciprocal rank is therefore 0.
     :cite:t:`deshpande:iknn` call this the “reciprocal hit rate”.
+
+    Stability:
+        Caller
     """
 
     @property

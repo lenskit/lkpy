@@ -89,6 +89,9 @@ class TrainingData(NamedTuple):
 class ALSBase(ABC, Component, Trainable):
     """
     Base class for ALS models.
+
+    Stability:
+        Caller
     """
 
     features: int

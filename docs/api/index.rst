@@ -75,6 +75,7 @@ and may be useful in building new models and components for LensKit.
     :caption: Implementation Helpers
     :recursive:
 
+    lenskit.stats
     lenskit.logging
     lenskit.math
     lenskit.parallel

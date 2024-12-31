@@ -28,6 +28,9 @@ class RecQuery:
     .. todo::
         When LensKit supports context-aware recommendation, this should be extended
         to include context cues.
+
+    Stability:
+        Caller
     """
 
     user_id: ID | None = None

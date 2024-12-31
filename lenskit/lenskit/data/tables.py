@@ -17,6 +17,9 @@ import torch
 class TorchUserItemTable:
     """
     Table of user-item interaction data represented as PyTorch tensors.
+
+    Stability:
+        Caller
     """
 
     user_nums: torch.Tensor
@@ -41,6 +44,9 @@ class TorchUserItemTable:
 class NumpyUserItemTable:
     """
     Table of user-item interaction data represented as NumPy arrays.
+
+    Stability:
+        Caller
     """
 
     user_nums: np.ndarray[int, np.dtype[np.int32]]

@@ -25,6 +25,9 @@ def quick_measure_model(
     Do a quick-and-dirty model measurement with a default pipeline setup, split,
     and metrics. This is mostly to make tests easy to write, you usually don't
     want to use it for actual recommender evaluation.
+
+    Stability:
+        Caller
     """
     from lenskit.basic import BiasScorer
     from lenskit.batch import BatchPipelineRunner

@@ -2,20 +2,14 @@
 LensKit statistical computations.
 """
 
+from __future__ import annotations
+
 import warnings
 
 import numpy as np
 from numpy.typing import ArrayLike
 
 from lenskit.diagnostics import DataWarning
-
-
-def damped_mean(xs: ArrayLike, damping: float | None) -> float:
-    xs = np.asarray(xs)
-    if damping is not None and damping > 0:
-        return xs.sum().item() / (np.sum(np.isfinite(xs)).item() + damping)
-    else:
-        return xs.mean().item()
 
 
 def gini(xs: ArrayLike) -> float:
@@ -29,6 +23,9 @@ def gini(xs: ArrayLike) -> float:
 
     .. _Olivia Guest's implementation: https://github.com/oliviaguest/gini
     .. _StatsDirect reference: https://www.statsdirect.com/help/default.htm#nonparametric_methods/gini.htm
+
+    Stability:
+        Caller
 
     Args:
         xs:

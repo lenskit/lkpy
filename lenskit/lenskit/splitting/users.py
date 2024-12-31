@@ -38,6 +38,9 @@ def crossfold_users(
     user-by-user. This function does not care what kind of data is in `data`, so
     long as it is a Pandas DataFrame (or equivalent) and has a `user` column.
 
+    Stability:
+        Caller
+
     Args:
         data:
             a data frame containing ratings or other data you wish to partition.
@@ -120,6 +123,9 @@ def sample_users(
     returns a single train-test split; otherwise, it returns an iterator over
     multiple splits. If ``repeats=1``, this function returns an iterator that
     yields a single train-test pair.
+
+    Stability:
+        Caller
 
     Args:
         data:

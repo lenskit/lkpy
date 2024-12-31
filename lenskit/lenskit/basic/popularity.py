@@ -16,6 +16,9 @@ class PopScorer(Component, Trainable):
     Score items by their popularity.  Use with :py:class:`TopN` to get a
     most-popular-items recommender.
 
+    Stability:
+        Caller
+
     Args:
         score_type:
             The method for computing popularity scores.  Can be one of the following:

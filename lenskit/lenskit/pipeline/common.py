@@ -21,6 +21,9 @@ class RecPipelineBuilder:
 
     This is a convenience class; you can always directly assemble a
     :class:`Pipeline` if this class's behavior is inadquate.
+
+    Stability:
+        Caller
     """
 
     _selector: Component
@@ -127,6 +130,9 @@ def topn_pipeline(
 ) -> Pipeline:
     """
     Create a pipeline that produces top-N recommendations using a scoring model.
+
+    Stability:
+        Caller
 
     Args:
         scorer:

@@ -55,6 +55,8 @@ def from_interactions_df(
     .. todo::
         Repeated interactions are not yet supported.
 
+    Stability:
+        Caller
     Args:
         df:
             The user-item interactions (e.g. ratings).  The dataset code takes
@@ -73,6 +75,8 @@ def from_interactions_df(
             A vocabulary of user IDs.  The data frame is subset to this set of IDs.
         item_ids:
             A vocabulary of item IDs.  The data frame is subset to this set of IDs.
+    Returns:
+        The initiated data set.
     """
     _log.info("creating data set from %d x %d data frame", len(df.columns), len(df))
     df = normalize_interactions_df(

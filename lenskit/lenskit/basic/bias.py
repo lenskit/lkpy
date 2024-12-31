@@ -18,7 +18,6 @@ from typing_extensions import Self, TypeAlias, overload
 
 from lenskit.data import ID, Dataset, ItemList, QueryInput, RecQuery, UITuple, Vocabulary
 from lenskit.pipeline.components import Component
-from lenskit.stats import damped_mean
 
 _logger = logging.getLogger(__name__)
 Damping: TypeAlias = float | UITuple[float] | tuple[float, float]
@@ -52,6 +51,9 @@ class BiasModel:
     ratings to assume *a priori* for each user or item, damping low-information
     users and items towards a mean instead of permitting them to take on extreme
     values based on few ratings.
+
+    Stability:
+        Caller
     """
 
     damping: UITuple[float]
@@ -208,7 +210,7 @@ class BiasModel:
                     r_mask = r_idxes >= 0
                     uoff[r_mask] -= self.item_biases[r_idxes[r_mask]]
 
-                user_bias = damped_mean(uoff, self.damping.user)
+                user_bias = np.sum(uoff) / (np.sum(np.isfinite(uoff)) + self.damping.user)
                 scores += user_bias
 
             elif user_id is not None:
@@ -252,6 +254,9 @@ class BiasScorer(Component):
             Bayesian damping to apply to computed biases.  Either a number, to
             damp both user and item biases the same amount, or a (user,item)
             tuple providing separate damping values.
+
+    Stability:
+        Caller
     """
 
     IGNORED_CONFIG_FIELDS = ["user_damping", "item_damping"]

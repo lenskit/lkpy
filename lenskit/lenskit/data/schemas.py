@@ -27,6 +27,9 @@ def column_name(col: Column) -> str:
 def normalize_columns(df: pd.DataFrame, *columns: Column) -> pd.DataFrame:
     """
     Resolve column aliases to columns, pulling them out of the index if necessary.
+
+    Stability:
+        Caller
     """
 
     for column in columns:

@@ -13,6 +13,9 @@ class Hit(ListMetric, RankingMetricBase):
     I_u^{\\mathrm{test}} \\ne \\emptyset`) is scored as 1, and lists with no
     relevant items as 0.  When averaged over the recommendation lists, this
     computes the *hit rate* :cite:p:`deshpande:iknn`.
+
+    Stability:
+        Caller
     """
 
     @property

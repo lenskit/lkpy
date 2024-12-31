@@ -49,6 +49,9 @@ class PredictMetric(Metric):
             item. The default is to also to fail; if you are scoring a superset
             of the test items for computational efficiency, set this to
             ``"ignore"``.
+
+    Stability:
+        Caller
     """
 
     # predict metrics usually cannot fill in default values
@@ -116,6 +119,9 @@ class RMSE(PredictMetric, ListMetric, DecomposedMetric):
     fallback predictions (e.g. usign a bias model when a collaborative filter
     cannot predict), generate predictions with
     :class:`~lenskit.basic.FallbackScorer`.
+
+    Stability:
+        Caller
     """
 
     @override
@@ -159,6 +165,9 @@ class MAE(PredictMetric, ListMetric, DecomposedMetric):
     fallback predictions (e.g. usign a bias model when a collaborative filter
     cannot predict), generate predictions with
     :class:`~lenskit.basic.FallbackScorer`.
+
+    Stability:
+        Caller
     """
 
     @override

@@ -30,7 +30,10 @@ class PipelineConfig(BaseModel):
     """
     Root type for serialized pipeline configuration.  A pipeline config contains
     the full configuration, components, and wiring for the pipeline, but does
-    not contain the
+    not contain the learned parameters.
+
+    Stability:
+        Full
     """
 
     meta: PipelineMeta
@@ -50,6 +53,9 @@ class PipelineConfig(BaseModel):
 class PipelineMeta(BaseModel):
     """
     Pipeline metadata.
+
+    Stability:
+        Full
     """
 
     name: str | None = None
@@ -64,6 +70,13 @@ class PipelineMeta(BaseModel):
 
 
 class PipelineInput(BaseModel):
+    """
+    Spcification of a pipeline input.
+
+    Stability:
+        Full
+    """
+
     name: str
     "The name for this input."
     types: Optional[set[str]]
@@ -80,6 +93,10 @@ class PipelineInput(BaseModel):
 
 
 class PipelineComponent(BaseModel):
+    """
+    Specification of a pipeline component.
+    """
+
     code: str
     """
     The path to the component's implementation, either a class or a function.
@@ -123,6 +140,9 @@ class PipelineComponent(BaseModel):
 class PipelineLiteral(BaseModel):
     """
     Literal nodes represented in the pipeline.
+
+    Stability:
+        Full
     """
 
     encoding: Literal["json", "base85"]
@@ -150,6 +170,9 @@ class PipelineLiteral(BaseModel):
 def hash_config(config: BaseModel) -> str:
     """
     Compute the hash of a configuration model.
+
+    Stability:
+        Internal
     """
     json = config.model_dump_json(exclude_none=True)
     h = sha256()

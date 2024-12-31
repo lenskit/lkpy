@@ -10,6 +10,9 @@ from ._base import Metric
 class ListLength(Metric):
     """
     Report the length of the output (recommendation list or predictions).
+
+    Stability:
+        Caller
     """
 
     label = "N"  # type: ignore
@@ -21,6 +24,9 @@ class ListLength(Metric):
 class TestItemCount(Metric):
     """
     Report the number of test items.
+
+    Stability:
+        Caller
     """
 
     label = "TestItemCount"  # type: ignore

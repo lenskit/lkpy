@@ -13,6 +13,9 @@ _logger = logging.getLogger(__name__)
 class FallbackScorer(Component):
     """
     Scoring component that fills in missing scores using a fallback.
+
+    Stability:
+        Caller
     """
 
     def __call__(self, scores: ItemList, backup: ItemList) -> ItemList:

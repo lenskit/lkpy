@@ -20,6 +20,9 @@ class Metric(ABC):
     properties of this class on an arbitrary class in order to implement a
     metric with all available behavior such as labeling and defaults; you must
     actually extend this class.  This requirement may be relaxed in the future.
+
+    Stability:
+        Full
     """
 
     @property
@@ -42,6 +45,9 @@ class ListMetric(Metric):
     metrics.
 
     For prediction metrics, this is *macro-averaging*.
+
+    Stability:
+        Full
     """
 
     default: ClassVar[float | None] = 0.0
@@ -66,6 +72,9 @@ class GlobalMetric(Metric):
     Base class for metrics that measure entire runs at a time.
 
     For prediction metrics, this is *micro-averaging*.
+
+    Stability:
+        Full
     """
 
     @abstractmethod
@@ -83,6 +92,9 @@ class DecomposedMetric(Metric):
     Base class for metrics that measure entire runs through flexible
     aggregations of per-list intermediate measurements.  They can optionally
     extract individual-list metrics from the per-list measurements.
+
+    Stability:
+        Full
     """
 
     @abstractmethod

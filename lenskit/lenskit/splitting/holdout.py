@@ -22,6 +22,9 @@ class HoldoutMethod(Protocol):
     Holdout methods select test rows for a user (or occasionally an item).
     Partition methods are callable; when called with a data frame, they return
     the test entries.
+
+    Stability:
+        Caller
     """
 
     def __call__(self, items: ItemList) -> ItemList:
@@ -42,6 +45,9 @@ class HoldoutMethod(Protocol):
 class SampleN(HoldoutMethod):
     """
     Randomly select a fixed number of test rows per user/item.
+
+    Stability:
+        Caller
 
     Args:
         n:
@@ -69,6 +75,9 @@ class SampleFrac(HoldoutMethod):
     """
     Randomly select a fraction of test rows per user/item.
 
+    Stability:
+        Caller
+
     Args:
         frac:
             The fraction items to select for testing.
@@ -93,6 +102,9 @@ class LastN(HoldoutMethod):
     """
     Select a fixed number of test rows per user/item, based on ordering by a
     field.
+
+    Stability:
+        Caller
 
     Args:
         n: The number of test items to select.
@@ -120,6 +132,9 @@ class LastN(HoldoutMethod):
 class LastFrac(HoldoutMethod):
     """
     Select a fraction of test rows per user/item.
+
+    Stability:
+        Caller
 
     Args:
         frac(double): the fraction of items to select for testing.

@@ -31,6 +31,9 @@ class MTArray(Generic[NPT]):
         whether the different arrays share storage, and modifying one format may
         or may not modify another.  For example, PyTorch and NumPy usually share
         storage when both are on CPU, but a GPU tensor and CPU ndarray do not.
+
+    Stability:
+        Internal
     """
 
     _shape: tuple[int, ...] | None = None

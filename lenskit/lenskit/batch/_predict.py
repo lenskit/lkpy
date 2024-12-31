@@ -26,6 +26,9 @@ def predict(
     """
     Convenience function to batch-generate rating predictions (or other per-item
     scores) from a pipeline.
+
+    Stability:
+        Caller
     """
 
     runner = BatchPipelineRunner(n_jobs=n_jobs)

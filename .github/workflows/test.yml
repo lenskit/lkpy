@@ -623,7 +623,7 @@ jobs:
           python -m lenskit.data.fetch ml-100k ml-1m ml-10m ml-20m
       - name: "📕 Validate documentation examples"
         run: |
-          pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit --nbval-lax --doctest-glob='*.rst' --log-file test-docs.log docs */lenskit
+          pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit --nbval-lax --doctest-glob='*.rst' --ignore='docs/_ext' --log-file test-docs.log docs */lenskit
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |

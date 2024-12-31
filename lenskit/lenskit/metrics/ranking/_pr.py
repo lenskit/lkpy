@@ -15,6 +15,9 @@ class Precision(ListMetric, RankingMetricBase):
 
     In the uncommon case that ``k`` is specified and ``len(recs) < k``, this metric uses
     ``len(recs)`` as the denominator.
+
+    Stability:
+        Caller
     """
 
     @property
