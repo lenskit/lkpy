@@ -23,6 +23,9 @@ _logger = logging.getLogger(__name__)
 class UserTrainingHistoryLookup(Component, Trainable):
     """
     Look up a user's history from the training data.
+
+    Stability:
+        Caller
     """
 
     training_data_: Dataset
@@ -57,6 +60,9 @@ class UserTrainingHistoryLookup(Component, Trainable):
 class KnownRatingScorer(Component, Trainable):
     """
     Score items by returning their values from the training data.
+
+    Stability:
+        Caller
 
     Args:
         score:

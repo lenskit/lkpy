@@ -14,6 +14,9 @@ _logger = logging.getLogger(__name__)
 class TrainingCandidateSelectorBase(Component, Trainable):
     """
     Base class for candidate selectors using the training data.
+
+    Stability:
+        Caller
     """
 
     items_: Vocabulary
@@ -33,6 +36,9 @@ class TrainingCandidateSelectorBase(Component, Trainable):
 class AllTrainingItemsCandidateSelector(TrainingCandidateSelectorBase):
     """
     Candidate selector that selects all known items from the training data.
+
+    Stability:
+        Caller
     """
 
     def __call__(self) -> ItemList:
@@ -48,6 +54,9 @@ class UnratedTrainingItemsCandidateSelector(TrainingCandidateSelectorBase):
     In order to look up the user's history in the training data, this needs to
     be combined with a component like
     :class:`~.history.UserTrainingHistoryLookup`.
+
+    Stability:
+        Caller
     """
 
     def __call__(self, query: QueryInput) -> ItemList:

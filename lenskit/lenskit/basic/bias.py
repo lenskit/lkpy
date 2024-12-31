@@ -52,6 +52,9 @@ class BiasModel:
     ratings to assume *a priori* for each user or item, damping low-information
     users and items towards a mean instead of permitting them to take on extreme
     values based on few ratings.
+
+    Stability:
+        Caller
     """
 
     damping: UITuple[float]
@@ -252,6 +255,9 @@ class BiasScorer(Component):
             Bayesian damping to apply to computed biases.  Either a number, to
             damp both user and item biases the same amount, or a (user,item)
             tuple providing separate damping values.
+
+    Stability:
+        Caller
     """
 
     IGNORED_CONFIG_FIELDS = ["user_damping", "item_damping"]

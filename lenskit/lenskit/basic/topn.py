@@ -18,6 +18,9 @@ class TopNRanker(Component):
     can be passed either at runtime or at component instantiation time, with the
     latter taking precedence.
 
+    Stability:
+        Caller
+
     Args:
         n:
             The desired ranking length.  If negative, then scored items are
