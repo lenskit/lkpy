@@ -20,6 +20,17 @@ def damped_mean(xs: ArrayLike, damping: float | None) -> float:
         \bar{x} & = \frac{\sum_i x_i}{n} \\
         \tilde{x} & = \frac{\sum_i (x_i - \bar{x})}{n + \gamma}
         \end{align*}
+
+    Stability:
+        Caller
+    Args:
+        xs:
+            The array of values.
+        damping:
+            The Bayesian damping term :math:`\gamma`.
+
+    Returns:
+        The damped mean :math:`\tilde{x}`.
     """
     xs = np.asarray(xs)
     mean = np.mean(xs)
