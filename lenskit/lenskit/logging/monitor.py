@@ -21,7 +21,6 @@ from tempfile import TemporaryDirectory
 from typing import Protocol, runtime_checkable
 from uuid import UUID, uuid4
 
-import structlog
 import zmq
 
 from ._proxy import get_logger
@@ -30,7 +29,7 @@ from .tasks import Task
 SIGNAL_ADDR = "inproc://lenskit-monitor-signal"
 REFRESH_INTERVAL = 5
 
-_log = structlog.stdlib.get_logger(__name__)
+_log = get_logger(__name__)
 _monitor_lock = threading.Lock()
 _monitor_instance: Monitor | None = None
 
