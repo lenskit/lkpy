@@ -36,6 +36,7 @@ Classical Collaborative Filters
     lenskit.als.ImplicitMFScorer
     lenskit.sklearn.svd.BiasedSVDScorer
     lenskit.funksvd.FunkSVDScorer
+    lenskit.hpf.HPFScorer
 
 
 Utility Scorers
