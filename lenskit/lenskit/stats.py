@@ -12,36 +12,6 @@ from numpy.typing import ArrayLike
 from lenskit.diagnostics import DataWarning
 
 
-def damped_mean(xs: ArrayLike, damping: float | None) -> float:
-    r"""
-    Compute a mean with Bayesian damping.  It compute the formula:
-
-    .. math::
-
-        \begin{align*}
-        \bar{x} & = \frac{\sum_i x_i}{n} \\
-        \tilde{x} & = \frac{\sum_i (x_i - \bar{x})}{n + \gamma}
-        \end{align*}
-
-    Stability:
-        Caller
-    Args:
-        xs:
-            The array of values.
-        damping:
-            The Bayesian damping term :math:`\gamma`.
-
-    Returns:
-        The damped mean :math:`\tilde{x}`.
-    """
-    xs = np.asarray(xs)
-    mean = np.mean(xs)
-    if damping is not None and damping > 0:
-        return np.sum(xs - mean) / (np.sum(np.isfinite(xs)).item() + damping)
-    else:
-        return mean.item()
-
-
 def gini(xs: ArrayLike) -> float:
     """
     Compute the Gini coefficient of an array of values.
