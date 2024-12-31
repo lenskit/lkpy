@@ -24,11 +24,12 @@ from lenskit import util
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery
 from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataWarning
+from lenskit.logging import get_logger
 from lenskit.math.sparse import normalize_sparse_rows, safe_spmv, torch_sparse_to_scipy
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component, Trainable
 
-_log = structlog.stdlib.get_logger(__name__)
+_log = get_logger(__name__)
 
 
 class UserKNNScorer(Component, Trainable):

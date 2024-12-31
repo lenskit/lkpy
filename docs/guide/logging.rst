@@ -9,6 +9,7 @@ LensKit provides support code for logging and progress reporting.  This code
 lives in the :py:mod:`lenskit.logging` package and provides several
 capabilities:
 
+-   Logger acquisition functions with useful defaults.
 -   Backend-independent progress reporting, with colorful progress bars (via
     Rich_) on terminals.
 -   Easy logging configuration for recommender scripts, supporting log files and
@@ -73,6 +74,21 @@ are run by other tools like DVC.
     The level for messages going to the log file.  Defaults to the console log
     level; this allows you to send ``DEBUG`` messages to the file while only
     ``INFO`` messages go to the console.
+
+Emitting Log Messages
+~~~~~~~~~~~~~~~~~~~~~
+
+When writing LensKit code that needs to emit log messages, use LensKit's
+:func:`~lenskit.logging.get_logger` function.  This wraps Structopt's
+``get_logger`` in a proxy that has more useful LensKit defaults (only emitting
+warnings and errors when logging has not been configured).  The resulting logger
+can be used like any other Structlog or standard library logger.
+
+Structlog loggers are *lazy*, resolving their configurations when they are
+*bound* with variables. When emitting many log messages in a loop or function,
+we recommend calling :meth:`structlog.typing.BindableLogger.bind` to get a bound
+logger with the configuration resolved, which will be much faster for repeated
+fine-grained logging messages.
 
 Progress Reporting
 ~~~~~~~~~~~~~~~~~~

@@ -12,13 +12,14 @@ import warnings
 from dataclasses import dataclass
 from typing import Any
 
-import structlog
 from typing_extensions import Generic
+
+from lenskit.logging import get_logger
 
 from .invoker import A, InvokeOp, M, R
 from .serialize import SHMData, shm_deserialize
 
-_log = structlog.get_logger(__name__)
+_log = get_logger(__name__)
 
 __work_context: WorkerData
 

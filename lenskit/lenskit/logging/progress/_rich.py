@@ -21,9 +21,10 @@ from rich.text import Text
 from typing_extensions import override
 
 from .._console import console, get_live
+from .._proxy import get_logger
 from ._base import Progress
 
-_log = structlog.stdlib.get_logger("lenskit.logging.progress")
+_log = get_logger("lenskit.logging.progress")
 _pb_lock = Lock()
 _progress: ProgressImpl | None = None
 _active_bars: dict[UUID, RichProgress] = {}

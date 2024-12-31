@@ -16,10 +16,10 @@ import warnings
 from types import FunctionType, UnionType
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
-import structlog
 from typing_extensions import Any, Literal, Self, TypeAlias, TypeVar, cast, overload
 
 from lenskit.data import Dataset
+from lenskit.logging import get_logger
 
 from . import config
 from .components import (  # type: ignore # noqa: F401
@@ -51,7 +51,7 @@ __all__ = [
     "topn_pipeline",
 ]
 
-_log = structlog.stdlib.get_logger(__name__)
+_log = get_logger(__name__)
 
 # common type var for quick use
 T = TypeVar("T")

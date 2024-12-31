@@ -14,7 +14,6 @@ from __future__ import annotations
 import warnings
 
 import numpy as np
-import structlog
 import torch
 from scipy.sparse import csr_array
 from typing_extensions import Optional, override
@@ -22,14 +21,14 @@ from typing_extensions import Optional, override
 from lenskit import util
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.diagnostics import DataWarning
-from lenskit.logging import trace
+from lenskit.logging import get_logger, trace
 from lenskit.logging.progress import item_progress_handle, pbh_update
 from lenskit.math.sparse import normalize_sparse_rows, safe_spmv
 from lenskit.parallel import ensure_parallel_init
 from lenskit.pipeline import Component, Trainable
 from lenskit.util.torch import inference_mode
 
-_log = structlog.stdlib.get_logger(__name__)
+_log = get_logger(__name__)
 MAX_BLOCKS = 1024
 
 

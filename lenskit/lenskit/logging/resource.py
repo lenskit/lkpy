@@ -10,10 +10,11 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-import structlog
 import torch
 
-_log = structlog.get_logger(__name__)
+from ._proxy import get_logger
+
+_log = get_logger(__name__)
 
 
 @dataclass

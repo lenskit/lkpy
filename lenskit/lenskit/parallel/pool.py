@@ -11,10 +11,9 @@ from concurrent.futures import ProcessPoolExecutor
 from multiprocessing.context import SpawnContext, SpawnProcess
 from multiprocessing.managers import SharedMemoryManager
 
-import structlog
 from typing_extensions import Any, Generic, Iterable, Iterator, override
 
-from lenskit.logging.tasks import Task
+from lenskit.logging import Task, get_logger
 from lenskit.logging.worker import WorkerContext, WorkerLogConfig
 
 from . import worker
@@ -22,7 +21,7 @@ from .config import ParallelConfig, ensure_parallel_init, get_parallel_config, i
 from .invoker import A, InvokeOp, M, ModelOpInvoker, R
 from .serialize import shm_serialize
 
-_log = structlog.stdlib.get_logger(__name__)
+_log = get_logger(__name__)
 
 
 def multiprocess_executor(
