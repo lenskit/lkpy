@@ -58,6 +58,9 @@ class Task(BaseModel, extra="allow"):
         The notion of the “active task” does not yet support multi-threaded
         tasks.
 
+    Stability:
+        Caller
+
     Args:
         file:
             A file to save the task when it is finished.

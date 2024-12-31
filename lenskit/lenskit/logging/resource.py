@@ -22,6 +22,9 @@ class ResourceMeasurement:
     Single measurement of resources.  Two measurements can be subtracted to
     compute the time resources consumed in an interval (memory resources are
     left unchanged).
+
+    Stability:
+        Internal
     """
 
     wall_time: float
