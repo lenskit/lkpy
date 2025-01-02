@@ -54,6 +54,7 @@ class PipelineRunner:
         """
         Run the pipleline to obtain the results of a node.
         """
+        log = _log.bind(node=node.name)
         status = self.status[node.name]
         if status == "finished":
             return self.state[node.name]
@@ -62,13 +63,13 @@ class PipelineRunner:
         elif status == "failed":  # pragma: nocover
             raise RuntimeError(f"{node} previously failed")
 
-        trace(self.log, "processing node", node=node.name)
+        trace(log, "processing node")
         self.status[node.name] = "in-progress"
         try:
             self._run_node(node, required)
             self.status[node.name] = "finished"
         except Exception as e:
-            _log.error("node %s failed with error %s", node, e)
+            log.error("failed to run node", exc_info=e)
             self.status[node.name] = "failed"
             raise e
 
