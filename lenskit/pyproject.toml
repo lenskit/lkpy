@@ -66,3 +66,12 @@ raw-options = { root = "..", version_scheme = "guess-next-dev" }
 
 [tool.hatch.build.hooks.vcs]
 version-file = "lenskit/_version.py"
+
+# override where UV gets pytorch
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
