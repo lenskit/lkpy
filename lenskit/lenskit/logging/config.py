@@ -90,7 +90,7 @@ class LoggingConfig:  # pragma: nocover
         else:
             return self.level
 
-    def term_json(self, flag: bool = True):
+    def set_term_json(self, flag: bool = True):
         """
         Configure logging to stream JSON lines to the stderr (useful for web services).
         """
@@ -119,7 +119,7 @@ class LoggingConfig:  # pragma: nocover
         else:
             self.level = logging.INFO
 
-    def log_file(
+    def set_log_file(
         self, path: os.PathLike[str], level: int | None = None, format: LogFormat = "json"
     ):
         """
