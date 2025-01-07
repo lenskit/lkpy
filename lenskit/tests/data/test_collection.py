@@ -248,6 +248,18 @@ def test_save_parquet_with_empty(ml_ds: Dataset, tmpdir: Path):
     assert sum(len(l1) for l1 in ilc2.lists()) == sum(len(l2) for l2 in ilc.lists())
 
 
+def test_save_parquet_with_mkdir(tmpdir: Path):
+    ilc = ItemListCollection(["user_id"])
+
+    f = tmpdir / "subdir" / "items.parquet"
+    ilc.save_parquet(f, mkdir=True)
+    assert (tmpdir / "subdir").exists()
+
+    f_no_mkdir = tmpdir / "no_mkdir" / "items.parquet"
+    ilc.save_parquet(f_no_mkdir, mkdir=False)
+    assert not (tmpdir / "no_mkdir").exists()
+
+
 def test_write_recs_parquet(demo_recs, tmpdir: Path):
     split, recs = demo_recs
 
