@@ -225,6 +225,7 @@ class ItemListCollection(Generic[K]):
         layout: Literal["native", "flat"] = "native",
         batch_size: int = 5000,
         compression: Literal["zstd", "gzip", "snappy", "lz4"] | None = "zstd",
+        mkdir: bool = True,
     ) -> None:
         """
         Save this item list collection to a Parquet file.  This supports two
@@ -241,7 +242,12 @@ class ItemListCollection(Generic[K]):
                 The Arrow record batch size.
             compression:
                 The compression scheme to use.
+            mkdir:
+                Whether to create the parent directories if they don't exist.
         """
+        if mkdir:
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
+
         if layout == "flat":
             self.to_df().to_parquet(path, compression=compression)
             return
