@@ -8,6 +8,7 @@ repos:
       - id: check-json
         exclude: \.vscode/.*\.json$
       - id: check-merge-conflict
+        exclude: (data/.*/README\.md|\.rst)$
       - id: check-shebang-scripts-are-executable
       - id: check-yaml
       - id: check-toml
