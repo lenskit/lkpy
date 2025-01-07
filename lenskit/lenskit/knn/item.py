@@ -241,7 +241,7 @@ class ItemKNNScorer(Component, Trainable):
 
         # subset the model to rated and target items
         model = self.sim_matrix_
-        model = model[ri_valid_nums, :]
+        model = model[ri_valid_nums.numpy(), :]
         assert isinstance(model, csr_array)
         model = model[:, ti_valid_nums]
         assert isinstance(model, csr_array)
