@@ -1,3 +1,4 @@
+# dev tool configuration
 [tool.coverage.run]
 relative_files = "true"
 include = ["lenskit*/lenskit/"]

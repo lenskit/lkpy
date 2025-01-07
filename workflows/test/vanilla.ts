@@ -49,8 +49,6 @@ export function vanillaSetup(options: VanillaTestOpts): WorkflowStep[] {
       shell: "bash",
       env: {
         PYTHON: "${{steps.install-python.outputs.python-path}}",
-        UV_EXTRA_INDEX_URL: "https://download.pytorch.org/whl/cpu",
-        UV_INDEX_STRATEGY: "unsafe-first-match",
       },
     },
   ];

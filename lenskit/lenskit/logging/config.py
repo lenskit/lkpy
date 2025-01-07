@@ -7,8 +7,10 @@ from __future__ import annotations
 import logging
 import os
 import re
+import sys
 import warnings
 from pathlib import Path
+from typing import Literal, TypeAlias
 
 import structlog
 
@@ -24,6 +26,7 @@ CORE_PROCESSORS = [
     structlog.stdlib.PositionalArgumentsFormatter(),
     structlog.processors.MaybeTimeStamper(),
 ]
+LogFormat: TypeAlias = Literal["json", "logfmt", "text"]
 
 _active_config: LoggingConfig | None = None
 
@@ -64,8 +67,10 @@ class LoggingConfig:  # pragma: nocover
     """
 
     level: int = logging.INFO
+    stream_json: bool = False
     file: Path | None = None
     file_level: int | None = None
+    file_format: LogFormat = "json"
 
     def __init__(self):
         # initialize configuration from environment variables
@@ -84,6 +89,12 @@ class LoggingConfig:  # pragma: nocover
             return self.file_level
         else:
             return self.level
+
+    def set_term_json(self, flag: bool = True):
+        """
+        Configure logging to stream JSON lines to the stderr (useful for web services).
+        """
+        self.stream_json = flag
 
     def set_verbose(self, verbose: bool | int = True):
         """
@@ -108,12 +119,15 @@ class LoggingConfig:  # pragma: nocover
         else:
             self.level = logging.INFO
 
-    def log_file(self, path: os.PathLike[str], level: int | None = None):
+    def set_log_file(
+        self, path: os.PathLike[str], level: int | None = None, format: LogFormat = "json"
+    ):
         """
         Configure a log file.
         """
         self.file = Path(path)
         self.file_level = level
+        self.file_format = format
 
     def apply(self):
         """
@@ -123,8 +137,15 @@ class LoggingConfig:  # pragma: nocover
 
         setup_console()
         root = logging.getLogger()
-        term = ConsoleHandler()
-        term.setLevel(self.level)
+
+        if self.stream_json:
+            term = logging.StreamHandler(sys.stderr)
+            term.setLevel(self.level)
+            proc_fmt = structlog.processors.JSONRenderer()
+        else:
+            term = ConsoleHandler()
+            term.setLevel(self.level)
+            proc_fmt = structlog.dev.ConsoleRenderer(colors=term.supports_color)
 
         eff_lvl = self.effective_level
         structlog.configure(
@@ -136,7 +157,7 @@ class LoggingConfig:  # pragma: nocover
             processors=[
                 remove_internal,
                 format_timestamp,
-                structlog.dev.ConsoleRenderer(colors=term.supports_color),
+                proc_fmt,
             ],
             foreign_pre_chain=CORE_PROCESSORS,
         )
@@ -147,11 +168,19 @@ class LoggingConfig:  # pragma: nocover
         if self.file:
             file_level = self.file_level if self.file_level is not None else self.level
             file = logging.FileHandler(self.file, mode="w")
+
+            if self.file_format == "json":
+                proc_fmt = structlog.processors.JSONRenderer()
+            elif self.file_format == "logfmt":
+                proc_fmt = structlog.processors.LogfmtRenderer(key_order=["event", "timestamp"])
+            else:
+                proc_fmt = structlog.processors.KeyValueRenderer(key_order=["event", "timestamp"])
+
             ffmt = structlog.stdlib.ProcessorFormatter(
                 processors=[
                     remove_internal,
                     structlog.processors.ExceptionPrettyPrinter(),
-                    structlog.processors.JSONRenderer(),
+                    proc_fmt,
                 ],
                 foreign_pre_chain=CORE_PROCESSORS,
             )
