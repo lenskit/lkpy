@@ -228,6 +228,7 @@ test-py312-full = { features = [
 ], solve-group = "py312-nix" }
 test-examples = { features = [
   "demo",
+  "doc",
   "test",
   "funksvd",
   "hpf",
