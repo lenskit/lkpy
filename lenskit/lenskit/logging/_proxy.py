@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Any
 
 import structlog
@@ -13,7 +14,20 @@ def get_logger(name: str) -> structlog.stdlib.BoundLogger:
     the returned proxy logger is quiet (only WARN and higher messages) if
     structlog has not been configured. LensKit code should use this instead of
     obtaining loggers from Structlog directly.
+
+    It also suppresses private module name components of the logger name, so
+    e.g. ``lenskit.pipeline._impl`` becomes ``lenskit.pipeline`.
+
+    Params:
+        name:
+            The logger name.
+    Returns:
+        A lazy proxy logger.  The returned logger is type-compatible with
+        :class:`structlib.stdlib.BoundLogger`, but is actually an instance of an
+        internal proxy that provies more sensible defaults and handles LensKit's
+        TRACE-level logging support.
     """
+    name = re.sub(r"\._.*", "", name)
     return LenskitProxyLogger(None, logger_factory_args=[name])  # type: ignore
 
 
