@@ -15,7 +15,6 @@ from lenskit.logging import get_logger
 from . import config
 from .components import (  # type: ignore # noqa: F401
     Component,
-    Configurable,
     PipelineFunction,
     Trainable,
     fallback_on_none,
@@ -333,9 +332,9 @@ class Pipeline:
         only, it does not include pipeline inputs or wiring.
         """
         return {
-            name: comp.get_config()
+            name: comp.dump_config()
             for (name, comp) in self._components.items()
-            if isinstance(comp, Configurable)
+            if isinstance(comp, Component)
         }
 
     def clone(self, how: CloneMethod = "config") -> Pipeline:
@@ -381,8 +380,8 @@ class Pipeline:
                 case ComponentNode(name, comp, _inputs, wiring):
                     if isinstance(comp, FunctionType):
                         comp = comp
-                    elif isinstance(comp, Configurable):
-                        comp = comp.__class__.from_config(comp.get_config())  # type: ignore
+                    elif isinstance(comp, Component):
+                        comp = comp.__class__(comp.config)  # type: ignore
                     else:
                         comp = comp.__class__()  # type: ignore
                     cn = clone.add_component(node.name, comp)  # type: ignore

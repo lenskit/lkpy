@@ -16,12 +16,12 @@ import pickle
 from collections import OrderedDict
 from hashlib import sha256
 from types import FunctionType
-from typing import Literal
+from typing import Literal, Mapping
 
 from pydantic import BaseModel, Field, JsonValue, ValidationError
 from typing_extensions import Any, Optional, Self
 
-from .components import Configurable
+from .components import Component
 from .nodes import ComponentNode, InputNode
 from .types import type_string
 
@@ -103,7 +103,7 @@ class PipelineComponent(BaseModel):
     This is a Python qualified path of the form ``module:name``.
     """
 
-    config: dict[str, object] | None = Field(default=None)
+    config: Mapping[str, JsonValue] | None = Field(default=None)
     """
     The component configuration.  If not provided, the component will be created
     with its default constructor parameters.
@@ -128,7 +128,7 @@ class PipelineComponent(BaseModel):
 
         code = f"{ctype.__module__}:{ctype.__qualname__}"
 
-        config = comp.get_config() if isinstance(comp, Configurable) else None
+        config = comp.dump_config() if isinstance(comp, Component) else None
 
         return cls(
             code=code,

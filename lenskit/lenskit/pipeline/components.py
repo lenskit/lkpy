@@ -9,14 +9,24 @@
 # pyright: strict
 from __future__ import annotations
 
-import inspect
 import json
 from abc import abstractmethod
 from importlib import import_module
 from types import FunctionType
-from typing import Callable, ClassVar, Generic, ParamSpec, TypeAlias
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Generic,
+    Mapping,
+    ParamSpec,
+    Protocol,
+    TypeAlias,
+    TypeVar,
+    runtime_checkable,
+)
 
-from typing_extensions import Any, Protocol, Self, TypeVar, override, runtime_checkable
+from pydantic import JsonValue, TypeAdapter
 
 from lenskit.data.dataset import Dataset
 
@@ -27,43 +37,6 @@ T = TypeVar("T")
 # COut is only return, so Component[U] can be assigned to Component[T] if U ≼ T.
 COut = TypeVar("COut", covariant=True)
 PipelineFunction: TypeAlias = Callable[..., COut]
-
-
-@runtime_checkable
-class Configurable(Protocol):  # pragma: nocover
-    """
-    Interface for configurable objects such as pipeline components with settings
-    or hyperparameters.  A configurable object supports two operations:
-
-    * saving its configuration with :meth:`get_config`.
-    * creating a new instance from a saved configuration with the class method
-      :meth:`from_config`.
-
-    An object must implement both of these methods to be considered
-    configurable.  Components extending the :class:`Component` automatically
-    have working versions of these methods if they define their constructor
-    parameters and fields appropriately.
-
-    .. note::
-
-        Configuration data should be JSON-compatible (strings, numbers, etc.).
-
-    Stability:
-        Full
-    """
-
-    @classmethod
-    def from_config(cls, cfg: dict[str, Any]) -> Self:
-        """
-        Reinstantiate this component from configuration values.
-        """
-        raise NotImplementedError()
-
-    def get_config(self) -> dict[str, object]:
-        """
-        Get this component's configured hyperparameters.
-        """
-        raise NotImplementedError()
 
 
 @runtime_checkable
@@ -155,68 +128,82 @@ class ParameterContainer(Protocol):  # pragma: nocover
         raise NotImplementedError()
 
 
-class Component(Configurable, Generic[COut]):
+class Component(Generic[COut]):
     """
     Base class for pipeline component objects.  Any component that is not just a
     function should extend this class.
 
-    Components are :class:`Configurable`.  The base class provides default
-    implementations of :meth:`get_config` and :meth:`from_config` that inspect
-    the constructor arguments and instance variables to automatically provide
-    configuration support.  By default, all constructor parameters will be
-    considered configuration parameters, and their values will be read from
-    instance variables of the same name. Components can also define
-    :data:`EXTRA_CONFIG_FIELDS` and :data:`IGNORED_CONFIG_FIELDS` class
-    variables to modify this behavior. Missing attributes are silently ignored.
+    Pipeline components support configuration (e.g., hyperparameters or random
+    seeds) through Pydantic models or Python dataclasses; see
+    :ref:`component-config` for further details.  If the pipeline's
+    configuration class is ``C``, it has the following:
+
+    1. The class variable CONFIG_CLASS stores C.
+    2. The configuration is exposed through an instance variable ``config``.
+    3. The constructor accepts the configuration object as its first parameter,
+       also named ``config``, and saves this in the member variable.
+
+    The base class constructor handles 2 and 3, and can handle 1 if you pass the
+    configuration class as a ``config`` arugment in the class definition::
+
+        class MyComponent(Component, config_class=MyComponentConfig):
+            pass
+
+    If the pipeline uses no configuration, then ``CONFIG_CLASS`` should be
+    ``None`` (or the component should be a plain function instead).  This is the
+    default if no configuration is specified.
 
     To work as components, derived classes also need to implement a ``__call__``
     method to perform their operations.
+
+    Args:
+        config:
+            The configuration object.  If ``None``, the configuration class will
+            be instantiated with ``kwargs``.
 
     Stability:
         Full
     """
 
-    EXTRA_CONFIG_FIELDS: ClassVar[list[str]] = []
-    """
-    Names of instance variables that should be included in the configuration
-    dictionary even though they do not correspond to named constructor
-    arguments.
+    CONFIG_CLASS: ClassVar[type[object] | None] = None
+    config: object | None
 
-    .. note::
+    def __init_subclass__(cls, /, config_class: type[object] | None = None, **kwargs: Any):
+        super().__init_subclass__(**kwargs)
+        cls.CONFIG_CLASS = config_class  # type: ignore
 
-        This is rarely needed, and usually needs to be coupled with ``**kwargs``
-        in the constructor to make the resulting objects constructible.
-    """
+    def __init__(self, config: object | None = None, **kwargs: Any):
+        if config is None:
+            config = self.validate_config(kwargs)
+        elif kwargs:
+            raise RuntimeError("cannot supply both a configuration object and kwargs")
 
-    IGNORED_CONFIG_FIELDS: ClassVar[list[str]] = []
-    """
-    Names of constructor parameters that should be excluded from the
-    configuration dictionary.
-    """
+        self.config = config
 
-    @override
-    def get_config(self) -> dict[str, object]:
+    def dump_config(self) -> dict[str, JsonValue]:
         """
-        Get the configuration by inspecting the constructor and instance
-        variables.
+        Dump the configuration to JSON-serializable format.
         """
-        sig = inspect.signature(self.__class__)
-        names = list(sig.parameters.keys()) + self.EXTRA_CONFIG_FIELDS
-        params: dict[str, Any] = {}
-        for name in names:
-            if name not in self.IGNORED_CONFIG_FIELDS and hasattr(self, name):
-                params[name] = getattr(self, name)
+        if self.CONFIG_CLASS:
+            return TypeAdapter(self.CONFIG_CLASS).dump_python(self.config, mode="json")
+        else:
+            return {}
 
-        return params
-
-    @override
     @classmethod
-    def from_config(cls, cfg: dict[str, Any]) -> Self:
+    def validate_config(cls, data: Mapping[str, JsonValue] | None = None) -> object | None:
         """
-        Create a class from the specified construction.  Configuration elements
-        are passed to the constructor as keywrod arguments.
+        Validate and return a configuration object for this component.
         """
-        return cls(**cfg)
+        if data is None:
+            data = {}
+        if cls.CONFIG_CLASS:
+            return TypeAdapter(cls.CONFIG_CLASS).validate_python(data)
+        elif data:
+            raise RuntimeError(
+                "supplied configuration options but {} has no config class".format(cls.__name__)
+            )
+        else:
+            return None
 
     @abstractmethod
     def __call__(self, **kwargs: Any) -> COut:
@@ -260,10 +247,11 @@ def instantiate_component(
 
     if isinstance(comp, FunctionType):
         return comp
-    elif issubclass(comp, Configurable):
-        if config is None:
-            config = {}
-        return comp.from_config(config)  # type: ignore
+    elif issubclass(comp, Component):
+        if comp.CONFIG_CLASS is not None:
+            return comp(TypeAdapter(comp.CONFIG_CLASS).validate_python(config))
+        else:
+            return comp()
     else:
         return comp()  # type: ignore
 
