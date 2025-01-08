@@ -12,7 +12,6 @@ Core Abstractions
     lenskit.pipeline
     lenskit.diagnostics
     lenskit.operations
-    lenskit.types
 
 .. toctree::
     :caption: Core
@@ -75,6 +74,7 @@ and may be useful in building new models and components for LensKit.
     :caption: Implementation Helpers
     :recursive:
 
+    lenskit.types
     lenskit.stats
     lenskit.logging
     lenskit.math
