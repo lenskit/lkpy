@@ -31,7 +31,6 @@ LensKit components.
 
     ~lenskit.pipeline.Component
     ~lenskit.pipeline.Trainable
-    ~lenskit.pipeline.Configurable
 
 Standard Pipelines
 ------------------
