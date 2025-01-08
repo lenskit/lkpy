@@ -26,7 +26,7 @@ from .nodes import ND, ComponentNode, InputNode, LiteralNode, Node
 from .state import PipelineState
 from .types import parse_type_string
 
-_log = get_logger("lenskit.pipeline")
+_log = get_logger(__name__)
 
 # common type var for quick use
 T = TypeVar("T")
