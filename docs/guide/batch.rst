@@ -39,7 +39,7 @@ For an example, let's start with importing things to run a quick batch:
 Load and split some data:
 
     >>> data = load_movielens('data/ml-100k.zip')
-    >>> split = sample_users(data, 150, SampleN(5))
+    >>> split = sample_users(data, 150, SampleN(5, rng=1024), rng=42)
 
 Configure and train the model:
 
@@ -62,9 +62,9 @@ And measure their results:
     >>> measure.add_metric(RBP())
     >>> scores = measure.compute(recs, split.test)
     >>> scores.list_summary()    # doctest: +ELLIPSIS
-            mean    median     std
+              mean    median     std
     metric
-    RBP  0.07...    0.0...  0.1...
+    RBP    0.09...    0.0...  0.1...
 
 
 The :py:func:`predict` function works similarly, but for rating predictions;

@@ -241,7 +241,7 @@ class Component:
         ...
 
     def __repr__(self) -> str:
-        params = json.dumps(self.dump_config(), indent=2)
+        params = json.dumps(self.dump_config(), indent=4)
         return f"<{self.__class__.__name__} {params}>"
 
 

@@ -123,9 +123,9 @@ value for that parameter when running the pipeline.  Inputs can be connected to
 the following types:
 
 * A :class:`Node`, in which case the input will be provided from the
-  corresponding pipeline input or component return value.  Nodes are
-  returned by :meth:`create_input` or :meth:`add_component`, and can be
-  looked up after creation with :meth:`node`.
+  corresponding pipeline input or component return value.  Nodes are returned by
+  :meth:`~Pipeline.create_input` or :meth:`~Pipeline.add_component`, and can be
+  looked up after creation with :meth:`~Pipeline.node`.
 * A Python object, in which case that value will be provided directly to
   the component input argument.
 
@@ -148,9 +148,9 @@ wired.
 .. note::
 
     You cannot directly wire an input another component using only that
-    component's name; if you only have a name, pass it to :meth:`node`
-    to obtain the node.  This is because it would be impossible to
-    distinguish between a string component name and a string data value.
+    component's name; if you only have a name, pass it to :meth:`Pipeline.node`
+    to obtain the node.  This is because it would be impossible to distinguish
+    between a string component name and a string data value.
 
 .. _pipeline-execution:
 
@@ -158,7 +158,7 @@ Execution
 ---------
 
 Once configured, a pipeline can be run with :meth:`Pipeline.run`, or with one of
-the operation functions (see :ref:`recommenderops`; these functions call
+the operation functions (see :ref:`recommender-ops`; these functions call
 :meth:`~Pipeline.run` under the hood).
 
 The :meth:`~Pipeline.run` method takes two types of inputs:
@@ -173,7 +173,7 @@ The :meth:`~Pipeline.run` method takes two types of inputs:
     component that was added to the pipeline.
 
 *   Keyword arguments specifying the values for the pipeline's inputs, as defined by
-    calls to :meth:`create_input`.
+    calls to :meth:`Pipeline.create_input`.
 
 Pipeline execution logically proceeds in the following steps:
 
@@ -246,7 +246,7 @@ two ways to save a pipeline or part thereof:
     pipeline; it has the usual downsides of pickling (arbitrary code execution,
     etc.). LensKit uses pickling to share pipelines with worker processes for
     parallel batch operations.
-2.  Save the pipeline configuration with :meth:`Pipeline.save_config`.  This saves
+2.  Save the pipeline configuration with :meth:`Pipeline.get_config`.  This saves
     the components, their configurations, and their connections, but **not** any
     learned parameter data.  A new pipeline can be constructed from such a
     configuration can be reloaded with :meth:`Pipeline.from_config`.
@@ -355,7 +355,67 @@ Configuring Components
 
 Unlike components in some other machine learning packages, LensKit components
 carry their configuration in a separate *configuration object* that can be
-serialized to and from JSON-like data structures.  This configuration object's
-class can be either a Python dataclass (see :mod:`dataclasses`) or a Pydantic
-model class (see :mod:`pydantic.BaseModel`); in both cases, they are serialized
-and validated with Pydantic.
+serialized to and from JSON-like data structures.
+
+To support configuration, all a component needs to do is (1) extend
+:class:`Component`, and (2) declare an instance variable whose type is the
+configuration object type.  This configuration object's class can be either a
+Python dataclass (see :mod:`dataclasses`) or a Pydantic model class (see
+:class:`pydantic.BaseModel`); in both cases, they are serialized and validated
+with Pydantic.  :class:`Component.__init__` will take care of storing the
+configuration object if one is provided, or instantiating the configuration
+class with defaults or from keyword arguments.  In most cases, you don't need
+to define a constructor for a component.
+
+.. _component-impl:
+
+Implementing Components
+-----------------------
+
+Implementing a component therefore consists of a few steps:
+
+1.  Defining the configuration class.
+2.  Defining the component class, with its `config` attribute declaration.
+3.  Defining a `__call__` method for the component class that performs the
+    component's actual computation.
+4.  If the component supports training, implementing the :class:`Trainable`
+    protocol by defining a :meth:`Trainable.train` method.
+
+A simple example component that computes a linear weighted blend of the scores
+from two other components could look like this:
+
+.. literalinclude:: examples/blendcomp.py
+
+This component can be instantiated with its defaults:
+
+.. testsetup::
+
+    from blendcomp import LinearBlendScorer, LinearBlendConfig
+
+
+.. doctest::
+
+    >>> LinearBlendScorer()
+    <LinearBlendScorer {
+        "mix_weight": 0.5
+    }>
+
+You an instantiate it with its configuration class:
+
+.. doctest::
+
+    >>> LinearBlendScorer(LinearBlendConfig(mix_weight=0.2))
+    <LinearBlendScorer {
+        "mix_weight": 0.2
+    }>
+
+Finally, you can directly pass configuration parameters to the component constructor:
+
+.. doctest::
+
+    >>> LinearBlendScorer(mix_weight=0.7)
+    <LinearBlendScorer {
+        "mix_weight": 0.7
+    }>
+
+See :ref:`conventions` for more conventions for component design.

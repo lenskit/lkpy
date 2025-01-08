@@ -4,8 +4,10 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import doctest
 import sys
 from importlib.metadata import version
+from os import fspath
 from pathlib import Path
 
 from packaging.version import Version
@@ -25,6 +27,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
+    "sphinx.ext.doctest",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx.ext.extlinks",
@@ -133,6 +136,10 @@ intersphinx_mapping = {
 
 bibtex_bibfiles = ["lenskit.bib"]
 nb_execution_mode = "off"
+doctest_path = [fspath((Path(__file__).parent / "guide" / "examples").resolve())]
+doctest_default_flags = (
+    doctest.ELLIPSIS | doctest.IGNORE_EXCEPTION_DETAIL | doctest.NORMALIZE_WHITESPACE
+)
 
 mermaid_d3_zoom = True
 
