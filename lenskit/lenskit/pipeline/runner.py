@@ -14,9 +14,10 @@ from typing import Any, Generic, Literal, TypeAlias, TypeVar, get_args, get_orig
 
 import structlog
 
+from lenskit.diagnostics import PipelineError
 from lenskit.logging import get_logger, trace
 
-from . import Pipeline, PipelineError
+from ._impl import Pipeline
 from .components import PipelineFunction
 from .nodes import ComponentNode, InputNode, LiteralNode, Node
 from .types import Lazy, is_compatible_data

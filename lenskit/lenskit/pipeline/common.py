@@ -5,13 +5,9 @@
 # SPDX-License-Identifier: MIT
 from typing import Literal
 
-from lenskit.basic.candidates import UnratedTrainingItemsCandidateSelector
-from lenskit.basic.composite import FallbackScorer
-from lenskit.basic.history import UserTrainingHistoryLookup
-from lenskit.basic.topn import TopNRanker
 from lenskit.data import ID, ItemList, RecQuery
 
-from . import Pipeline
+from ._impl import Pipeline
 from .components import Component
 
 
@@ -34,6 +30,9 @@ class RecPipelineBuilder:
     _fallback: Component | None = None
 
     def __init__(self):
+        from lenskit.basic.candidates import UnratedTrainingItemsCandidateSelector
+        from lenskit.basic.topn import TopNRanker
+
         self._selector = UnratedTrainingItemsCandidateSelector()
         self._ranker = TopNRanker()
 
@@ -48,6 +47,8 @@ class RecPipelineBuilder:
         Specify the ranker to use.  If ``None``, sets up a :class:`TopNRanker`
         with ``n=n``.
         """
+        from lenskit.basic.topn import TopNRanker
+
         if rank is None:
             self._ranker = TopNRanker(n=n)
         else:
@@ -85,6 +86,9 @@ class RecPipelineBuilder:
         """
         Build the specified pipeline.
         """
+        from lenskit.basic.composite import FallbackScorer
+        from lenskit.basic.history import UserTrainingHistoryLookup
+
         pipe = Pipeline(name=name)
 
         query = pipe.create_input("query", RecQuery, ID, ItemList)
@@ -189,6 +193,8 @@ def predict_pipeline(
             The pipeline name.
     """
     from lenskit.basic.bias import BiasScorer
+    from lenskit.basic.composite import FallbackScorer
+    from lenskit.basic.history import UserTrainingHistoryLookup
 
     pipe = Pipeline(name=name)
 

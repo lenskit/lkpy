@@ -42,3 +42,12 @@ Standard Pipelines
 
     ~lenskit.pipeline.RecPipelineBuilder
     ~lenskit.pipeline.topn_pipeline
+
+Serialized Configurations
+-------------------------
+
+.. autosummary::
+    :toctree: .
+    :nosignatures:
+
+    ~lenskit.pipeline.PipelineConfig

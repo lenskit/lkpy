@@ -23,3 +23,29 @@ class ConfigWarning(UserWarning):
     """
 
     pass
+
+
+class PipelineError(Exception):
+    """
+    Pipeline configuration errors.
+
+    .. note::
+
+        This exception is only to note problems with the pipeline configuration
+        and structure (e.g. circular dependencies).  Errors *running* the
+        pipeline are raised as-is.
+    """
+
+
+class PipelineWarning(Warning):
+    """
+    Pipeline configuration and setup warnings.  We also emit warnings to the
+    logger in many cases, but this allows critical ones to be visible even if
+    the client code has not enabled logging.
+
+    .. note::
+
+        This warning is only to note problems with the pipeline configuration
+        and structure (e.g. circular dependencies).  Errors *running* the
+        pipeline are raised as-is.
+    """
