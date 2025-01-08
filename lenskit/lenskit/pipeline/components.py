@@ -145,7 +145,7 @@ class Component:
        also named ``config``, and saves this in the member variable.
 
     The base class constructor handles both of these, so long as you declare the
-    type of the ``config`` member:
+    type of the ``config`` member::
 
         class MyComponent(Component):
             config: MyComponentConfig
