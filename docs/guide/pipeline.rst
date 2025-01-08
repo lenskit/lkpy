@@ -23,20 +23,6 @@ some more flexibility in configuring a recommendation pipeline with a standard
 design, and you can always fully configure the pipeline yourself for maximum
 flexibility.
 
-.. todo::
-    Redo some of those types with user & item data, etc.
-
-.. todo::
-    Provide utility functions to make more common wiring operations easy so there
-    is middle ground between “give me a standard pipeline” and “make me do everything
-    myself”.
-
-.. todo::
-    Rethink the “keyword inputs only” constraint in view of the limitation it
-    places on fallback or other compositional components — it's hard to specify
-    a component that implements fallback logic for an arbitrary number of
-    inputs.
-
 Pipeline components are not limited to looking things up from training data —
 they can query databases, load files, and any other operations.  A runtime
 pipeline can use some components (especially the scorer) trained from training
@@ -107,7 +93,9 @@ A pipeline has a couple key concepts:
   types, and it is an error to provide an input value of an unexpected type.
 * A **component** processes input data and produces an output.  It can be either
   a Python function or object (anything that implements the :class:`Component`
-  protocol) that takes inputs as keyword arguments and returns an output.
+  protocol) that takes zero or more inputs as keyword arguments and returns an
+  output.  The pipeline will supply these inputs either from pipeline inputs
+  or from the outputs of other components.
 
 These are arranged in a directed acyclic graph, consisting of:
 
@@ -146,15 +134,16 @@ These input connections are specified via keyword arguments to the
 component's input name(s) and the node or data to which each input should be
 wired.
 
-You can also use :meth:`Pipeline.add_default` to specify default connections. For example,
-you can specify a default for ``user``::
+..
+    You can also use :meth:`Pipeline.add_default` to specify default connections. For example,
+    you can specify a default for ``user``::
 
-    pipe.add_default('user', user_history)
+        pipe.add_default('user', user_history)
 
-With this default in place, if a component has an input named ``user`` and that
-input is not explicitly connected to a node, then the ``user_history`` node will
-be used to supply its value.  Judicious use of defaults can reduce the amount of
-code overhead needed to wire common pipelines.
+    With this default in place, if a component has an input named ``user`` and that
+    input is not explicitly connected to a node, then the ``user_history`` node will
+    be used to supply its value.  Judicious use of defaults can reduce the amount of
+    code overhead needed to wire common pipelines.
 
 .. note::
 
@@ -163,18 +152,16 @@ code overhead needed to wire common pipelines.
     to obtain the node.  This is because it would be impossible to
     distinguish between a string component name and a string data value.
 
-.. note::
-
-    You do not usually need to call this method directly; when possible,
-    provide the wirings when calling :meth:`add_component`.
-
 .. _pipeline-execution:
 
 Execution
 ---------
 
-Once configured, a pipeline can be run with :meth:`Pipeline.run`.  This
-method takes two types of inputs:
+Once configured, a pipeline can be run with :meth:`Pipeline.run`, or with one of
+the operation functions (see :ref:`recommenderops`; these functions call
+:meth:`~Pipeline.run` under the hood).
+
+The :meth:`~Pipeline.run` method takes two types of inputs:
 
 *   Positional arguments specifying the node(s) to run and whose results should
     be returned.  This is to allow partial runs of pipelines (e.g. to only score
@@ -248,7 +235,7 @@ Pipelines are defined by the following:
 
 * The components and inputs (nodes)
 * The component input connections (edges)
-* The component configurations (see :class:`Configurable` and :class:`Component`)
+* The component configurations (see :class:`Component`)
 * The components' learned parameters (see :class:`Trainable`)
 
 LensKit supports serializing both pipeline descriptions (components,
@@ -265,7 +252,6 @@ two ways to save a pipeline or part thereof:
     configuration can be reloaded with :meth:`Pipeline.from_config`.
 
 ..
-
     3.  Save the pipeline parameters with :meth:`Pipeline.save_params`.  This saves
         the learned parameters but **not** the configuration or connections.  The
         parameters can be reloaded into a compatible pipeline with
@@ -353,9 +339,23 @@ Component Interface
 Pipeline components are callable objects that can optionally provide
 configuration, training, and serialization capabilities.  In the simplest case,
 a component that requires no training or configuration can simply be a Python
-function; most components will extend the :class:`Component` base class to
-expose configuration capabilities, and implement the :class:`Trainable` protocol
-if they contain a model that needs to be trained.
+function.
+
+Most components will extend the :class:`Component` base class to expose
+configuration capabilities, and implement the :class:`Trainable` protocol if
+they contain a model that needs to be trained.
 
 Components also must be pickleable, as LensKit uses pickling for shared memory
 parallelism in its batch-inference code.
+
+.. _component-config:
+
+Configuring Components
+----------------------
+
+Unlike components in some other machine learning packages, LensKit components
+carry their configuration in a separate *configuration object* that can be
+serialized to and from JSON-like data structures.  This configuration object's
+class can be either a Python dataclass (see :mod:`dataclasses`) or a Pydantic
+model class (see :mod:`pydantic.BaseModel`); in both cases, they are serialized
+and validated with Pydantic.
