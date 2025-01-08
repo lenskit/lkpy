@@ -13,10 +13,10 @@ from typing_extensions import assert_type
 
 from pytest import fail, warns
 
-from lenskit.pipeline import InputNode, Node, Pipeline, PipelineWarning
+from lenskit.pipeline import Pipeline, PipelineWarning
 from lenskit.pipeline.components import Component
 from lenskit.pipeline.config import PipelineConfig
-from lenskit.pipeline.nodes import ComponentNode
+from lenskit.pipeline.nodes import ComponentNode, InputNode
 
 _log = logging.getLogger(__name__)
 

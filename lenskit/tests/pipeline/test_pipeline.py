@@ -12,7 +12,8 @@ from typing_extensions import assert_type
 
 from pytest import raises, warns
 
-from lenskit.pipeline import InputNode, Node, Pipeline, PipelineError
+from lenskit.pipeline import Pipeline, PipelineError
+from lenskit.pipeline.nodes import InputNode, Node
 from lenskit.pipeline.types import TypecheckWarning
 
 
