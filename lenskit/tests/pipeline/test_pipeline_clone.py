@@ -18,7 +18,6 @@ class PrefixConfig:
 
 
 class Prefixer(Component):
-    CONFIG_CLASS = PrefixConfig
     config: PrefixConfig
 
     def __call__(self, msg: str) -> str:

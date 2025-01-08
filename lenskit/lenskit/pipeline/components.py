@@ -9,19 +9,21 @@
 # pyright: strict
 from __future__ import annotations
 
+import inspect
 import json
+import warnings
 from abc import abstractmethod
 from importlib import import_module
 from types import FunctionType
 from typing import (
     Any,
     Callable,
-    ClassVar,
     Mapping,
     ParamSpec,
     Protocol,
     TypeAlias,
     TypeVar,
+    get_origin,
     runtime_checkable,
 )
 
@@ -165,13 +167,7 @@ class Component:
         Full
     """
 
-    CONFIG_CLASS: ClassVar[type | None] = None
     config: Any
-
-    def __init_subclass__(cls, /, config_class: type[Cfg] | None = None, **kwargs: Any):
-        super().__init_subclass__(**kwargs)
-        if config_class is not None:
-            cls.CONFIG_CLASS = config_class  # type: ignore
 
     def __init__(self, config: object | None = None, **kwargs: Any):
         if config is None:
@@ -181,12 +177,26 @@ class Component:
 
         self.config = config
 
+    @classmethod
+    def _config_class(cls) -> type | None:
+        annots = inspect.get_annotations(cls, eval_str=True)
+        ct = annots.get("config", None)
+        if ct is None:
+            return None
+
+        if isinstance(ct, type):
+            return ct
+        else:
+            warnings.warn("config attribute is not annotated with a plain type")
+            return get_origin(ct)
+
     def dump_config(self) -> dict[str, JsonValue]:
         """
         Dump the configuration to JSON-serializable format.
         """
-        if self.CONFIG_CLASS:
-            return TypeAdapter(self.CONFIG_CLASS).dump_python(self.config, mode="json")
+        cfg_cls = self._config_class()
+        if cfg_cls:
+            return TypeAdapter(cfg_cls).dump_python(self.config, mode="json")
         else:
             return {}
 
@@ -197,8 +207,9 @@ class Component:
         """
         if data is None:
             data = {}
-        if cls.CONFIG_CLASS:
-            return TypeAdapter(cls.CONFIG_CLASS).validate_python(data)
+        cfg_cls = cls._config_class()
+        if cfg_cls:
+            return TypeAdapter(cfg_cls).validate_python(data)
         elif data:
             raise RuntimeError(
                 "supplied configuration options but {} has no config class".format(cls.__name__)

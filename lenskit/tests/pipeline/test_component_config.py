@@ -5,10 +5,12 @@
 # SPDX-License-Identifier: MIT
 
 # pyright: strict
+from __future__ import annotations
+
 import json
 from dataclasses import dataclass
 
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 from pytest import mark
@@ -19,33 +21,33 @@ from lenskit.pipeline.components import Component
 
 @dataclass
 class PrefixConfigDC:
-    prefix: str
+    prefix: str = "UNDEFINED"
 
 
 class PrefixConfigM(BaseModel):
-    prefix: str
+    prefix: str = "UNDEFINED"
 
 
 @pydantic_dataclass
 class PrefixConfigPYDC:
-    prefix: str
+    prefix: str = "UNDEFINED"
 
 
-class PrefixerDC(Component, config_class=PrefixConfigDC):
+class PrefixerDC(Component):
     config: PrefixConfigDC
 
     def __call__(self, msg: str) -> str:
         return self.config.prefix + msg
 
 
-class PrefixerM(Component, config_class=PrefixConfigM):
+class PrefixerM(Component):
     config: PrefixConfigM
 
     def __call__(self, msg: str) -> str:
         return self.config.prefix + msg
 
 
-class PrefixerPYDC(Component, config_class=PrefixConfigPYDC):
+class PrefixerPYDC(Component):
     config: PrefixConfigPYDC
 
     def __call__(self, msg: str) -> str:
@@ -53,24 +55,33 @@ class PrefixerPYDC(Component, config_class=PrefixConfigPYDC):
 
 
 @mark.parametrize("prefixer", [PrefixerDC, PrefixerM, PrefixerPYDC])
-def test_auto_config_roundtrip(prefixer):
+def test_config_setup(prefixer: type[Component]):
+    ccls = prefixer._config_class()  # type: ignore
+    assert ccls is not None
+
+    comp = prefixer()
+    assert isinstance(comp.config, ccls)
+
+
+@mark.parametrize("prefixer", [PrefixerDC, PrefixerM, PrefixerPYDC])
+def test_auto_config_roundtrip(prefixer: type[Component]):
     comp = prefixer(prefix="FOOBIE BLETCH")
 
     cfg = comp.config
-    cfg_data = TypeAdapter(prefixer.CONFIG_CLASS).dump_python(cfg)
+    cfg_data = comp.dump_config()
     assert "prefix" in cfg_data
 
     c2 = prefixer(cfg)
     assert c2 is not comp
     assert c2.config.prefix == comp.config.prefix
 
-    c3 = prefixer(TypeAdapter(prefixer.CONFIG_CLASS).validate_python(cfg_data))
+    c3 = prefixer(prefixer.validate_config(cfg_data))
     assert c3 is not comp
     assert c3.config.prefix == comp.config.prefix
 
 
 @mark.parametrize("prefixer", [PrefixerDC, PrefixerM, PrefixerPYDC])
-def test_pipeline_config(prefixer):
+def test_pipeline_config(prefixer: type[Component]):
     comp = prefixer(prefix="scroll named ")
 
     pipe = Pipeline()
@@ -87,7 +98,7 @@ def test_pipeline_config(prefixer):
 
 
 @mark.parametrize("prefixer", [PrefixerDC, PrefixerM, PrefixerPYDC])
-def test_pipeline_config_roundtrip(prefixer):
+def test_pipeline_config_roundtrip(prefixer: type[Component]):
     comp = prefixer(prefix="scroll named ")
 
     pipe = Pipeline()
