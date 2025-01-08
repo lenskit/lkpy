@@ -168,6 +168,12 @@ class Component:
     """
 
     config: Any
+    """
+    The component configuration object.  Component classes that support
+    configuration **must** redefine this attribute with their specific
+    configuration class type, which can be a Python dataclass or a Pydantic
+    model class.
+    """
 
     def __init__(self, config: object | None = None, **kwargs: Any):
         if config is None:

@@ -4,7 +4,6 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-# pyright: strict
 from __future__ import annotations
 
 import json
@@ -47,6 +46,11 @@ class PrefixerM(Component):
         return self.config.prefix + msg
 
 
+# make sure it works with sub-sub-classes
+class PrefixerM2(PrefixerM):
+    config: PrefixConfigM
+
+
 class PrefixerPYDC(Component):
     config: PrefixConfigPYDC
 
@@ -54,7 +58,7 @@ class PrefixerPYDC(Component):
         return self.config.prefix + msg
 
 
-@mark.parametrize("prefixer", [PrefixerDC, PrefixerM, PrefixerPYDC])
+@mark.parametrize("prefixer", [PrefixerDC, PrefixerM, PrefixerPYDC, PrefixerM2])
 def test_config_setup(prefixer: type[Component]):
     ccls = prefixer._config_class()  # type: ignore
     assert ccls is not None
