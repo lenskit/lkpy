@@ -8,7 +8,7 @@ from structlog._config import BoundLoggerLazyProxy
 _fallback_wrapper = structlog.make_filtering_bound_logger(logging.WARNING)
 
 
-def get_logger(name: str) -> structlog.stdlib.BoundLogger:
+def get_logger(name: str, *, remove_private: bool = True) -> structlog.stdlib.BoundLogger:
     """
     Get a logger.  This works like :func:`structlog.stdlib.get_logger`, except
     the returned proxy logger is quiet (only WARN and higher messages) if
@@ -21,13 +21,17 @@ def get_logger(name: str) -> structlog.stdlib.BoundLogger:
     Params:
         name:
             The logger name.
+        remove_private:
+            Set to ``False`` to keep private module components of the logger
+            name instead of removing them.
     Returns:
         A lazy proxy logger.  The returned logger is type-compatible with
         :class:`structlib.stdlib.BoundLogger`, but is actually an instance of an
         internal proxy that provies more sensible defaults and handles LensKit's
         TRACE-level logging support.
     """
-    name = re.sub(r"\._.*", "", name)
+    if remove_private:
+        name = re.sub(r"\._.*", "", name)
     return LenskitProxyLogger(None, logger_factory_args=[name])  # type: ignore
 
 
