@@ -17,7 +17,6 @@ from typing import (
     Any,
     Callable,
     ClassVar,
-    Generic,
     Mapping,
     ParamSpec,
     Protocol,
@@ -34,6 +33,7 @@ from .types import Lazy
 
 P = ParamSpec("P")
 T = TypeVar("T")
+Cfg = TypeVar("Cfg")
 # COut is only return, so Component[U] can be assigned to Component[T] if U ≼ T.
 COut = TypeVar("COut", covariant=True)
 PipelineFunction: TypeAlias = Callable[..., COut]
@@ -128,7 +128,7 @@ class ParameterContainer(Protocol):  # pragma: nocover
         raise NotImplementedError()
 
 
-class Component(Generic[COut]):
+class Component:
     """
     Base class for pipeline component objects.  Any component that is not just a
     function should extend this class.
@@ -138,20 +138,20 @@ class Component(Generic[COut]):
     :ref:`component-config` for further details.  If the pipeline's
     configuration class is ``C``, it has the following:
 
-    1. The class variable CONFIG_CLASS stores C.
-    2. The configuration is exposed through an instance variable ``config``.
-    3. The constructor accepts the configuration object as its first parameter,
+    1. The configuration is exposed through an instance variable ``config``.
+    2. The constructor accepts the configuration object as its first parameter,
        also named ``config``, and saves this in the member variable.
 
-    The base class constructor handles 2 and 3, and can handle 1 if you pass the
-    configuration class as a ``config`` arugment in the class definition::
+    The base class constructor handles both of these, so long as you declare the
+    type of the ``config`` member:
 
-        class MyComponent(Component, config_class=MyComponentConfig):
-            pass
+        class MyComponent(Component):
+            config: MyComponentConfig
 
-    If the pipeline uses no configuration, then ``CONFIG_CLASS`` should be
-    ``None`` (or the component should be a plain function instead).  This is the
-    default if no configuration is specified.
+            ...
+
+    If you do not declare a ``config`` attribute, the base class will assume the
+    pipeline uses no configuration.
 
     To work as components, derived classes also need to implement a ``__call__``
     method to perform their operations.
@@ -165,10 +165,10 @@ class Component(Generic[COut]):
         Full
     """
 
-    CONFIG_CLASS: ClassVar[type[object] | None] = None
-    config: object | None
+    CONFIG_CLASS: ClassVar[type | None] = None
+    config: Any
 
-    def __init_subclass__(cls, /, config_class: type[object] | None = None, **kwargs: Any):
+    def __init_subclass__(cls, /, config_class: type[Cfg] | None = None, **kwargs: Any):
         super().__init_subclass__(**kwargs)
         if config_class is not None:
             cls.CONFIG_CLASS = config_class  # type: ignore
@@ -207,7 +207,7 @@ class Component(Generic[COut]):
             return None
 
     @abstractmethod
-    def __call__(self, **kwargs: Any) -> COut:
+    def __call__(self, **kwargs: Any) -> Any:
         """
         Run the pipeline's operation and produce a result.  This is the key
         method for components to implement.
@@ -224,7 +224,7 @@ class Component(Generic[COut]):
         ...
 
     def __repr__(self) -> str:
-        params = json.dumps(self.get_config(), indent=2)
+        params = json.dumps(self.dump_config(), indent=2)
         return f"<{self.__class__.__name__} {params}>"
 
 
@@ -249,10 +249,8 @@ def instantiate_component(
     if isinstance(comp, FunctionType):
         return comp
     elif issubclass(comp, Component):
-        if comp.CONFIG_CLASS is not None:
-            return comp(TypeAdapter(comp.CONFIG_CLASS).validate_python(config))
-        else:
-            return comp()
+        cfg = comp.validate_config(config)
+        return comp(cfg)
     else:
         return comp()  # type: ignore
 

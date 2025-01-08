@@ -4,6 +4,7 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+# pyright: strict
 import json
 from dataclasses import dataclass
 
