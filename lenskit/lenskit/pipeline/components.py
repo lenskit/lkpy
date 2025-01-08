@@ -170,7 +170,8 @@ class Component(Generic[COut]):
 
     def __init_subclass__(cls, /, config_class: type[object] | None = None, **kwargs: Any):
         super().__init_subclass__(**kwargs)
-        cls.CONFIG_CLASS = config_class  # type: ignore
+        if config_class is not None:
+            cls.CONFIG_CLASS = config_class  # type: ignore
 
     def __init__(self, config: object | None = None, **kwargs: Any):
         if config is None:

@@ -5,20 +5,24 @@
 # SPDX-License-Identifier: MIT
 
 import json
+from dataclasses import dataclass
 
 from lenskit.pipeline import Pipeline
 from lenskit.pipeline.components import Component
 from lenskit.pipeline.nodes import ComponentNode
 
 
-class Prefixer(Component):
+@dataclass
+class PrefixConfig:
     prefix: str
 
-    def __init__(self, prefix: str = "hello"):
-        self.prefix = prefix
+
+class Prefixer(Component):
+    CONFIG_CLASS = PrefixConfig
+    config: PrefixConfig
 
     def __call__(self, msg: str) -> str:
-        return self.prefix + msg
+        return self.config.prefix + msg
 
 
 class Question:
@@ -33,7 +37,7 @@ def exclaim(msg: str) -> str:
 
 
 def test_pipeline_clone():
-    comp = Prefixer("scroll named ")
+    comp = Prefixer(PrefixConfig("scroll named "))
 
     pipe = Pipeline()
     msg = pipe.create_input("msg", str)
@@ -46,13 +50,13 @@ def test_pipeline_clone():
     assert isinstance(n2, ComponentNode)
     assert isinstance(n2.component, Prefixer)
     assert n2.component is not comp
-    assert n2.component.prefix == comp.prefix
+    assert n2.component.config.prefix == comp.config.prefix
 
     assert p2.run(msg="HACKEM MUCHE") == "scroll named HACKEM MUCHE"
 
 
 def test_pipeline_clone_with_function():
-    comp = Prefixer("scroll named ")
+    comp = Prefixer(prefix="scroll named ")
 
     pipe = Pipeline()
     msg = pipe.create_input("msg", str)
@@ -67,7 +71,7 @@ def test_pipeline_clone_with_function():
 
 
 def test_pipeline_clone_with_nonconfig_class():
-    comp = Prefixer("scroll named ")
+    comp = Prefixer(prefix="scroll named ")
 
     pipe = Pipeline()
     msg = pipe.create_input("msg", str)
