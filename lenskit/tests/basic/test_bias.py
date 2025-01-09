@@ -33,7 +33,7 @@ simple_ds = from_interactions_df(simple_df)
 class TestBias(BasicComponentTests, ScorerTests):
     component = BiasScorer
     needs_jit = False
-    configs = [{"damping": 10}, {"damping": (5, 25)}]
+    configs = [{"damping": 10}, {"damping": {"user": 5, "item": 25}}]
     can_score = "all"
 
 
@@ -82,30 +82,31 @@ def test_bias_clone():
     bias = BiasScorer()
     bias.train(simple_ds)
 
-    params = bias.get_config()
-    assert sorted(params.keys()) == ["damping", "items", "users"]
+    params = bias.dump_config()
+    assert sorted(params.keys()) == ["damping", "entities"]
 
-    a2 = BiasScorer.from_config(params)
+    a2 = BiasScorer(BiasScorer.validate_config(params))
     assert a2 is not bias
     assert getattr(a2, "model_", None) is None
 
 
 def test_bias_clone_damping():
-    bias = BiasScorer(damping=(10, 5))
+    bias = BiasScorer(damping={"user": 10, "item": 5})
     bias.train(simple_ds)
 
-    params = bias.get_config()
-    assert sorted(params.keys()) == ["damping", "items", "users"]
+    params = bias.dump_config()
+    assert sorted(params.keys()) == ["damping", "entities"]
 
-    a2 = BiasScorer.from_config(params)
+    a2 = BiasScorer(BiasScorer.validate_config(params))
     assert a2 is not bias
-    assert a2.damping.user == 10
-    assert a2.damping.item == 5
+    assert isinstance(a2.config.damping, dict)
+    assert a2.config.damping["user"] == 10
+    assert a2.config.damping["item"] == 5
     assert getattr(a2, "model_", None) is None
 
 
 def test_bias_global_only():
-    bias = BiasModel.learn(simple_ds, users=False, items=False)
+    bias = BiasModel.learn(simple_ds, entities=[])
     assert bias.global_bias == approx(3.5)
     assert bias.items is None
     assert bias.item_biases is None
@@ -114,7 +115,7 @@ def test_bias_global_only():
 
 
 def test_bias_no_user():
-    bias = BiasModel.learn(simple_ds, users=False)
+    bias = BiasModel.learn(simple_ds, entities={"item"})
     assert bias.global_bias == approx(3.5)
 
     assert bias.item_biases is not None
@@ -124,7 +125,7 @@ def test_bias_no_user():
 
 
 def test_bias_no_item():
-    bias = BiasModel.learn(simple_ds, items=False)
+    bias = BiasModel.learn(simple_ds, entities={"user"})
     assert bias.global_bias == approx(3.5)
     assert bias.item_biases is None
 
@@ -133,7 +134,7 @@ def test_bias_no_item():
 
 
 def test_bias_global_predict():
-    bias = BiasScorer(items=False, users=False)
+    bias = BiasScorer(entities=[])
     bias.train(simple_ds)
 
     p = bias(10, ItemList(item_ids=[1, 2, 3]))
@@ -143,7 +144,7 @@ def test_bias_global_predict():
 
 
 def test_bias_item_predict():
-    bias = BiasScorer(users=False)
+    bias = BiasScorer(entities={"item"})
     bias.train(simple_ds)
     assert bias.model_.item_biases is not None
 
@@ -154,7 +155,7 @@ def test_bias_item_predict():
 
 
 def test_bias_user_predict():
-    bias = BiasScorer(items=False)
+    bias = BiasScorer(entities={"user"})
     bias.train(simple_ds)
     bm = bias.model_
     p = bias(10, ItemList(item_ids=[1, 2, 3]))
@@ -245,7 +246,7 @@ def test_bias_train_ml_ratings(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
 
 def test_bias_item_damp():
-    bias = BiasModel.learn(simple_ds, users=False, damping=5)
+    bias = BiasModel.learn(simple_ds, entities={"item"}, damping=5)
     assert bias.global_bias == approx(3.5)
 
     assert bias.item_biases is not None
@@ -255,7 +256,7 @@ def test_bias_item_damp():
 
 
 def test_bias_user_damp():
-    bias = BiasModel.learn(simple_ds, items=False, damping=5)
+    bias = BiasModel.learn(simple_ds, entities={"user"}, damping=5)
     assert bias.global_bias == approx(3.5)
     assert bias.item_biases is None
 
