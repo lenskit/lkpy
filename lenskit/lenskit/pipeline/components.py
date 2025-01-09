@@ -179,7 +179,10 @@ class Component:
         super().__init_subclass__(**kwargs)
         cctype = cls._config_class()
         if not cctype:
-            warnings.warn("component class {} does not define a config attribute".format(cctype))
+            warnings.warn(
+                "component class {} does not define a config attribute".format(cls.__qualname__),
+                stacklevel=2,
+            )
 
     def __init__(self, config: object | None = None, **kwargs: Any):
         if config is None:
