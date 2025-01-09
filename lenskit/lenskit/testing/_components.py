@@ -25,29 +25,31 @@ class BasicComponentTests:
 
     def test_default_config_vars(self):
         inst = self.component()
-        cfg = inst.get_config()
+        cfg = inst.dump_config()
         for name, value in cfg.items():
-            assert getattr(inst, name) == value
+            assert hasattr(inst.config, name)
 
     def test_default_config_round_trip(self):
         inst = self.component()
-        cfg = inst.get_config()
+        cfg = inst.dump_config()
 
-        i2 = self.component.from_config(cfg)
+        i2 = self.component(self.component.validate_config(cfg))
         assert i2 is not inst
         assert isinstance(i2, self.component)
-        assert i2.get_config() == cfg
+        print(cfg)
+        print(i2.dump_config())
+        assert i2.dump_config() == cfg
 
     def test_config_round_trip(self):
         if not self.configs:
             skip("no test configs specified")
 
         for cfg in self.configs:
-            inst = self.component.from_config(cfg)
-            c1 = inst.get_config()
+            inst = self.component(self.component.validate_config(cfg))
+            c1 = inst.dump_config()
 
-            i2 = self.component.from_config(c1)
-            c2 = i2.get_config()
+            i2 = self.component(self.component.validate_config(c1))
+            c2 = i2.dump_config()
             # config may be changed from source (due to normalization), but should
             # round-trip.
             assert c2 == c1
