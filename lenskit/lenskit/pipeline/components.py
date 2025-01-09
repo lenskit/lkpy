@@ -167,7 +167,7 @@ class Component:
         Full
     """
 
-    config: Any
+    config: Any = None
     """
     The component configuration object.  Component classes that support
     configuration **must** redefine this attribute with their specific
@@ -177,8 +177,8 @@ class Component:
 
     def __init_subclass__(cls, **kwargs: Any):
         super().__init_subclass__(**kwargs)
-        cctype = cls._config_class()
-        if not cctype:
+        annots = inspect.get_annotations(cls)
+        if annots.get("config", None) == Any:
             warnings.warn(
                 "component class {} does not define a config attribute".format(cls.__qualname__),
                 stacklevel=2,
