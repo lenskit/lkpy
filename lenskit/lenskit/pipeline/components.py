@@ -176,7 +176,7 @@ class Component:
     """
 
     def __init_subclass__(cls, **kwargs: Any):
-        super().__init__(**kwargs)
+        super().__init_subclass__(**kwargs)
         cctype = cls._config_class()
         if not cctype:
             warnings.warn("component class {} does not define a config attribute".format(cctype))
