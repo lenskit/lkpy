@@ -175,6 +175,12 @@ class Component:
     model class.
     """
 
+    def __init_subclass__(cls, **kwargs: Any):
+        super().__init__(**kwargs)
+        cctype = cls._config_class()
+        if not cctype:
+            warnings.warn("component class {} does not define a config attribute".format(cctype))
+
     def __init__(self, config: object | None = None, **kwargs: Any):
         if config is None:
             config = self.validate_config(kwargs)
@@ -187,7 +193,7 @@ class Component:
     def _config_class(cls) -> type | None:
         annots = inspect.get_annotations(cls, eval_str=True)
         ct = annots.get("config", None)
-        if ct is None:
+        if ct is None or ct == Any:
             return None
 
         if isinstance(ct, type):
