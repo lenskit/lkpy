@@ -36,7 +36,7 @@ def test_unlimited_selection(items: ItemList):
 
 @given(st.integers(min_value=1, max_value=100), scored_lists())
 def test_configured_truncation(n, items: ItemList):
-    rsel = RandomSelector(n)
+    rsel = RandomSelector(n=n)
     ranked = rsel(items=items)
 
     assert len(ranked) == min(n, len(items))

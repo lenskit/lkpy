@@ -5,7 +5,7 @@ Basic Top-*N* ranking.
 import logging
 
 import numpy as np
-from pydantic import BaseModel, PositiveInt
+from pydantic import BaseModel
 
 from lenskit.data import ItemList
 from lenskit.pipeline.components import Component
@@ -18,7 +18,7 @@ class TopNConfig(BaseModel):
     Configuration for top-N ranking.
     """
 
-    n: PositiveInt | None = None
+    n: int | None = None
     """
     The number of items to return. -1 or ``None`` to return all scored items.
     """
