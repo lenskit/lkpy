@@ -386,6 +386,8 @@ to define a constructor for a component.
         class.
     -   Using Pydantic models provides consistent serialization of component
         configurations to and from configuration files.
+    -   The base class can provide well-defined and complete string
+        representations for free to all component implementations.
 
 .. _component-impl:
 
