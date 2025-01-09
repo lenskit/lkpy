@@ -11,9 +11,11 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
 import torch
+from pydantic import BaseModel, NonNegativeFloat
 from typing_extensions import Self, TypeAlias, overload
 
 from lenskit.data import ID, Dataset, ItemList, QueryInput, RecQuery, UITuple, Vocabulary
@@ -238,6 +240,28 @@ class BiasModel:
         if self.user_biases is not None:
             values.subtract_(torch.from_numpy(self.user_biases)[unos])
         return torch.sparse_coo_tensor(indices, values, size=matrix.size())
+
+
+class BiasConfig(BaseModel):
+    """
+    Configuration for :class:`BiasScorer`.
+    """
+
+    entities: set[Literal["user", "item"]] = set(["user", "item"])
+    """
+    The entities to compute biases for, in addition to global bais.  Defaults to
+    users and items.
+    """
+    damping: NonNegativeFloat | dict[Literal["user", "item"], NonNegativeFloat] = 0.0
+
+    def entity_damping(self, entity: Literal["user", "item"]) -> float:
+        """
+        Get the damping for a particular entity type.
+        """
+        if isinstance(self.damping, dict):
+            return self.damping.get(entity, 0.0)
+        else:
+            return self.damping
 
 
 class BiasScorer(Component):
