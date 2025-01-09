@@ -367,6 +367,26 @@ configuration object if one is provided, or instantiating the configuration
 class with defaults or from keyword arguments.  In most cases, you don't need
 to define a constructor for a component.
 
+.. admonition:: Motivation
+    :class: note
+
+    Splitting configuration off into a separate configuration model class,
+    instead of making them attributes and constructor parameters for the
+    component class itself, is for a few reasons:
+
+    -   Pydantic validation ensures that hyperparameters are of correct types
+        (and ranges, if you use more sophisticated Pydantic validations),
+        without needing to write as much manual input validation code in each
+        component.
+    -   Declaring parameters as attributes, as keyword parameters to the
+        constructor, and saving them in the attributes is a lot of duplication
+        that increases opportunity for errors.
+    -   It's slightly easier to document configuration parameters, and keep them
+        separate from other potential inputs, when they are in a configuration
+        class.
+    -   Using Pydantic models provides consistent serialization of component
+        configurations to and from configuration files.
+
 .. _component-impl:
 
 Implementing Components
