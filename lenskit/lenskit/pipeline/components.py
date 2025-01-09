@@ -190,6 +190,10 @@ class Component:
         elif kwargs:
             raise RuntimeError("cannot supply both a configuration object and kwargs")
 
+        cfg_cls = self._config_class()
+        if cfg_cls and not isinstance(config, cfg_cls):
+            raise TypeError(f"invalid configuration type {type(config)}")
+
         self.config = config
 
     @classmethod
