@@ -19,6 +19,7 @@ class TrainingCandidateSelectorBase(Component, Trainable):
         Caller
     """
 
+    config: None
     items_: Vocabulary
 
     @property
@@ -41,6 +42,8 @@ class AllTrainingItemsCandidateSelector(TrainingCandidateSelectorBase):
         Caller
     """
 
+    config: None
+
     def __call__(self) -> ItemList:
         return ItemList.from_vocabulary(self.items_)
 
@@ -58,6 +61,8 @@ class UnratedTrainingItemsCandidateSelector(TrainingCandidateSelectorBase):
     Stability:
         Caller
     """
+
+    config: None
 
     def __call__(self, query: QueryInput) -> ItemList:
         query = RecQuery.create(query)
