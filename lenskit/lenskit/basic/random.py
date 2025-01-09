@@ -1,5 +1,5 @@
 import numpy as np
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel
 
 from lenskit.data import ItemList
 from lenskit.data.query import QueryInput, RecQuery
@@ -17,13 +17,6 @@ class RandomConfig(BaseModel, arbitrary_types_allowed=True):
     """
     Random number generator configuration.
     """
-
-    @field_serializer("rng")
-    def serialize_rng(self, rng: DerivableSeed, _info):
-        if isinstance(rng, np.random.SeedSequence):
-            return rng.entropy
-        else:
-            return rng
 
 
 class RandomSelector(Component):
