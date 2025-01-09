@@ -33,7 +33,7 @@ from lenskit.pipeline import Component, Trainable
 _log = get_logger(__name__)
 
 
-class UserKNNConfig(BaseModel):
+class UserKNNConfig(BaseModel, extra="forbid"):
     "Configuration for :class:`ItemKNNScorer`."
 
     k: PositiveInt = 20

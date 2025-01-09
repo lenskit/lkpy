@@ -33,7 +33,7 @@ _log = get_logger(__name__)
 MAX_BLOCKS = 1024
 
 
-class ItemKNNConfig(BaseModel):
+class ItemKNNConfig(BaseModel, extra="forbid"):
     "Configuration for :class:`ItemKNNScorer`."
 
     k: PositiveInt = 20
