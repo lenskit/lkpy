@@ -72,15 +72,15 @@ class TestItemKNN(BasicComponentTests, ScorerTests):
 
 
 def test_ii_config():
-    model = ItemKNNScorer(30)
-    cfg = model.get_config()
+    model = ItemKNNScorer(k=30)
+    cfg = model.dump_config()
     print(cfg)
     assert cfg["feedback"] == "explicit"
-    assert cfg["nnbrs"] == 30
+    assert cfg["k"] == 30
 
 
 def test_ii_train():
-    algo = ItemKNNScorer(30, save_nbrs=500)
+    algo = ItemKNNScorer(k=30, save_nbrs=500)
     algo.train(simple_ds)
 
     assert isinstance(algo.item_means_, np.ndarray)
@@ -114,7 +114,7 @@ def test_ii_train():
 
 
 def test_ii_train_unbounded():
-    algo = ItemKNNScorer(30)
+    algo = ItemKNNScorer(k=30)
     algo.train(simple_ds)
 
     assert all(np.logical_not(np.isnan(algo.sim_matrix_.data)))
@@ -141,7 +141,7 @@ def test_ii_train_unbounded():
 def test_ii_simple_predict():
     history = UserTrainingHistoryLookup()
     history.train(simple_ds)
-    algo = ItemKNNScorer(30, save_nbrs=500)
+    algo = ItemKNNScorer(k=30, save_nbrs=500)
     algo.train(simple_ds)
 
     q = history(3)
@@ -156,7 +156,7 @@ def test_ii_simple_predict():
 def test_ii_simple_implicit_predict():
     history = UserTrainingHistoryLookup()
     history.train(simple_ds)
-    algo = ItemKNNScorer(30, feedback="implicit")
+    algo = ItemKNNScorer(k=30, feedback="implicit")
     algo.train(from_interactions_df(simple_ratings.loc[:, ["user", "item"]]))
 
     q = history(3)
@@ -171,7 +171,7 @@ def test_ii_simple_implicit_predict():
 def test_ii_simple_predict_unknown():
     history = UserTrainingHistoryLookup()
     history.train(simple_ds)
-    algo = ItemKNNScorer(30, save_nbrs=500)
+    algo = ItemKNNScorer(k=30, save_nbrs=500)
     algo.train(simple_ds)
 
     q = history(3)
@@ -187,7 +187,7 @@ def test_ii_simple_predict_unknown():
 def test_ii_warns_center():
     "Test that item-item warns if you center non-centerable data"
     data = simple_ratings.assign(rating=1)
-    algo = ItemKNNScorer(5)
+    algo = ItemKNNScorer(k=5)
     with pytest.warns(DataWarning):
         algo.train(from_interactions_df(data))
 
@@ -197,7 +197,7 @@ def test_ii_warns_center():
 @inference_mode
 def test_ii_train_ml100k(tmp_path, ml_100k):
     "Test an unbounded model on ML-100K"
-    algo = ItemKNNScorer(30)
+    algo = ItemKNNScorer(k=30)
     _log.info("training model")
     algo.train(from_interactions_df(ml_100k))
 
@@ -239,11 +239,11 @@ def test_ii_large_models(rng, ml_ratings, ml_ds):
     "Several tests of large trained I-I models"
     _log.info("training limited model")
     MODEL_SIZE = 100
-    algo_lim = ItemKNNScorer(30, save_nbrs=MODEL_SIZE)
+    algo_lim = ItemKNNScorer(k=30, save_nbrs=MODEL_SIZE)
     algo_lim.train(ml_ds)
 
     _log.info("training unbounded model")
-    algo_ub = ItemKNNScorer(30)
+    algo_ub = ItemKNNScorer(k=30)
     algo_ub.train(ml_ds)
 
     _log.info("testing models")
@@ -363,7 +363,7 @@ def test_ii_implicit_large(rng, ml_ratings):
     NBRS = 5
     NUSERS = 25
     NRECS = 50
-    algo = ItemKNNScorer(NBRS, feedback="implicit")
+    algo = ItemKNNScorer(k=NBRS, feedback="implicit")
     pipe = topn_pipeline(algo)
     pipe.train(from_interactions_df(ml_ratings[["user_id", "item_id"]], item_col="item_id"))
 
@@ -400,7 +400,7 @@ def test_ii_implicit_large(rng, ml_ratings):
 @inference_mode
 def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
     "Save and load a model"
-    original = ItemKNNScorer(30, save_nbrs=500)
+    original = ItemKNNScorer(k=30, save_nbrs=500)
     _log.info("building model")
     original.train(from_interactions_df(ml_subset, item_col="item_id"))
 
@@ -439,7 +439,7 @@ def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
 def test_ii_batch_accuracy(ml_100k):
     ds = from_interactions_df(ml_100k)
 
-    results = quick_measure_model(ItemKNNScorer(30), ds, predicts_ratings=True)
+    results = quick_measure_model(ItemKNNScorer(k=30), ds, predicts_ratings=True)
 
     metrics = results.list_metrics(fill_missing=False)
     summary = results.list_summary()
@@ -457,7 +457,7 @@ def test_ii_batch_accuracy(ml_100k):
 def test_ii_known_preds(ml_ds):
     from lenskit import batch
 
-    iknn = ItemKNNScorer(20, min_sim=1.0e-6)
+    iknn = ItemKNNScorer(k=20, min_sim=1.0e-6)
     pipe = predict_pipeline(iknn, fallback=False)  # noqa: F821
     _log.info("training %s on ml data", iknn)
     pipe.train(ml_ds)
