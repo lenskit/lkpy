@@ -21,7 +21,7 @@ from typing_extensions import Any, Literal, Protocol, Sequence, TypeAlias, overr
 
 from lenskit.data import RecQuery
 
-SeedLike: TypeAlias = int | np.integer[Any] | Sequence[int] | np.random.SeedSequence
+SeedLike: TypeAlias = int | Sequence[int] | np.random.SeedSequence
 """
 Type for RNG seeds (see `SPEC 7`_).
 

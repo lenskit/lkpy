@@ -6,21 +6,65 @@
 
 from __future__ import annotations
 
-import logging
 from abc import ABC, abstractmethod
+from typing import Any, Literal, TypeAlias
 
 import numpy as np
+import structlog
 import torch
+from pydantic import BaseModel
 from typing_extensions import Iterator, NamedTuple, Self, override
 
 from lenskit import util
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
-from lenskit.data.types import UITuple
+from lenskit.data.types import UIPair
 from lenskit.logging import item_progress
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component, Trainable
-from lenskit.types import RNGInput
-from lenskit.util.random import random_generator
+from lenskit.util.random import ConfiguredSeed, RNGInput, RNGLike, random_generator
+
+EntityClass: TypeAlias = Literal["user", "item"]
+
+
+class ALSConfig(BaseModel, arbitrary_types_allowed=True):
+    """
+    Configuration for ALS scorers.
+    """
+
+    features: int = 50
+    """
+    The numer of latent features to learn.
+    """
+    epochs: int = 10
+    """
+    The number of epochs to train.
+    """
+    regularization: float | UIPair[float] = 0.1
+    """
+    L2 regularization strength.
+    """
+    rng: ConfiguredSeed = None
+    """
+    Random number seed.
+    """
+    save_user_features: bool = True
+    """
+    Whether to retain user feature values after training.
+    """
+
+    @property
+    def user_reg(self) -> float:
+        if isinstance(self.regularization, UIPair):
+            return self.regularization.user
+        else:
+            return self.regularization
+
+    @property
+    def item_reg(self) -> float:
+        if isinstance(self.regularization, UIPair):
+            return self.regularization.item
+        else:
+            return self.regularization
 
 
 class TrainContext(NamedTuple):
@@ -94,39 +138,23 @@ class ALSBase(ABC, Component, Trainable):
         Caller
     """
 
-    features: int
-    epochs: int
-    reg: UITuple[float]
-    rng: RNGInput
-    save_user_features: bool
+    config: ALSConfig
+    rng: RNGLike | None = None
 
     users_: Vocabulary | None
     items_: Vocabulary
     user_features_: torch.Tensor | None
     item_features_: torch.Tensor
 
-    @property
-    @abstractmethod
-    def logger(self) -> logging.Logger:  # pragma: no cover
-        """
-        Overridden in implementation to provide the logger.
-        """
-        ...
+    logger: structlog.stdlib.BoundLogger
 
-    def __init__(
-        self,
-        features: int,
-        *,
-        epochs: int = 10,
-        reg: UITuple[float] | float | tuple[float, float] = 0.1,
-        save_user_features: bool = True,
-        rng: RNGInput = None,
-    ):
-        self.features = features
-        self.epochs = epochs
-        self.reg = UITuple.create(reg)
-        self.rng = rng
-        self.save_user_features = save_user_features
+    def __init__(self, config: ALSConfig | None = None, *, rng: RNGInput = None, **kwargs: Any):
+        # hadle non-configurable RNG
+        if isinstance(rng, (np.random.Generator, np.random.BitGenerator)):
+            self.rng = rng
+        else:
+            kwargs = kwargs | {"rng": rng}
+        super().__init__(config, **kwargs)
 
     @property
     def is_trained(self) -> bool:
@@ -143,7 +171,7 @@ class ALSBase(ABC, Component, Trainable):
         ensure_parallel_init()
         timer = util.Stopwatch()
 
-        for algo in self.fit_iters(data, timer=timer):
+        for algo in self.fit_iters(data):
             pass  # we just need to do the iterations
 
         if self.user_features_ is not None:
@@ -152,23 +180,25 @@ class ALSBase(ABC, Component, Trainable):
                 timer,
                 torch.norm(self.user_features_, "fro"),
                 torch.norm(self.item_features_, "fro"),
+                features=self.config.features,
             )
         else:
             self.logger.info(
                 "trained model in %s (|Q|=%f)",
                 timer,
                 torch.norm(self.item_features_, "fro"),
+                features=self.config.features,
             )
 
-    def fit_iters(self, data: Dataset, *, timer: util.Stopwatch | None = None) -> Iterator[Self]:
+    def fit_iters(self, data: Dataset) -> Iterator[Self]:
         """
         Run ALS to train a model, yielding after each iteration.
 
         Args:
             ratings: the ratings data frame.
         """
-        if timer is None:
-            timer = util.Stopwatch()
+
+        log = self.logger = self.logger.bind(features=self.config.features)
 
         train = self.prepare_data(data)
         self.users_ = train.users
@@ -176,52 +206,37 @@ class ALSBase(ABC, Component, Trainable):
 
         self.initialize_params(train)
 
-        if isinstance(self.reg, tuple):
-            ureg, ireg = self.reg
-        else:
-            ureg = ireg = self.reg
+        reg = UIPair.normalize(self.config.regularization)
 
         assert self.user_features_ is not None
         assert self.item_features_ is not None
         u_ctx = TrainContext.create(
-            "user", train.ui_rates, self.user_features_, self.item_features_, ureg
+            "user", train.ui_rates, self.user_features_, self.item_features_, reg.user
         )
         i_ctx = TrainContext.create(
-            "item", train.iu_rates, self.item_features_, self.user_features_, ireg
+            "item", train.iu_rates, self.item_features_, self.user_features_, reg.item
         )
 
-        self.logger.info(
-            "[%s] training biased MF model with ALS for %d features", timer, self.features
-        )
-        start = timer.elapsed()
+        log.info("beginning ALS model training")
 
-        with item_progress("Training ALS", self.epochs) as epb:
-            for epoch in range(self.epochs):
+        with item_progress("Training ALS", self.config.epochs) as epb:
+            for epoch in range(self.config.epochs):
+                log = log.bind(epoch=epoch)
                 epoch = epoch + 1
 
                 du = self.als_half_epoch(epoch, u_ctx)
-                self.logger.debug("[%s] finished user epoch %d", timer, epoch)
+                log.debug("finished user epoch")
 
                 di = self.als_half_epoch(epoch, i_ctx)
-                self.logger.debug("[%s] finished item epoch %d", timer, epoch)
+                log.debug("finished item epoch")
 
-                self.logger.info(
-                    "[%s] finished epoch %d (|ΔP|=%.3f, |ΔQ|=%.3f)", timer, epoch, du, di
-                )
+                log.info("finished epoch (|ΔP|=%.3f, |ΔQ|=%.3f)", du, di)
                 epb.update()
                 yield self
 
-        if not self.save_user_features:
+        if not self.config.save_user_features:
             self.user_features_ = None
             self.user_ = None
-
-        end = timer.elapsed()
-        self.logger.info(
-            "[%s] trained %d epochs (%.1fs/epoch)",
-            timer,
-            self.epochs,
-            (end - start) / self.epochs,
-        )
 
     @abstractmethod
     def prepare_data(self, data: Dataset) -> TrainingData:  # pragma: no cover
@@ -241,13 +256,13 @@ class ALSBase(ABC, Component, Trainable):
         """
         Initialize the model parameters at the beginning of training.
         """
-        rng = random_generator(self.rng)
+        rng = random_generator(self.rng or self.config.rng)
         self.logger.debug("initializing item matrix")
-        self.item_features_ = self.initial_params(data.n_items, self.features, rng)
+        self.item_features_ = self.initial_params(data.n_items, self.config.features, rng)
         self.logger.debug("|Q|: %f", torch.norm(self.item_features_, "fro"))
 
         self.logger.debug("initializing user matrix")
-        self.user_features_ = self.initial_params(data.n_users, self.features, rng)
+        self.user_features_ = self.initial_params(data.n_users, self.config.features, rng)
         self.logger.debug("|P|: %f", torch.norm(self.user_features_, "fro"))
 
     @abstractmethod
