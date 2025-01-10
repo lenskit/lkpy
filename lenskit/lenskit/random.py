@@ -11,12 +11,10 @@ Utilities to manage randomness in LensKit and LensKit experiments.
 # pyright: strict
 from abc import abstractmethod
 from hashlib import md5
-from typing import Annotated
 from uuid import UUID
 
 import numpy as np
 from numpy.random import Generator, SeedSequence, default_rng
-from pydantic import BeforeValidator, PlainSerializer
 from typing_extensions import Any, Literal, Protocol, Sequence, TypeAlias, override
 
 from lenskit.data import RecQuery
@@ -42,62 +40,17 @@ Type for RNG inputs (see `SPEC 7`_).
 .. _SPEC 7: https://scientific-python.org/specs/spec-0007/
 """
 
+ConfiguredSeed: TypeAlias = int | Sequence[int] | None
+"""
+Random number seed that can be configured.
+"""
+
 SeedDependency = Literal["user"]
 
 _global_rng: Generator | None = None
 
 
-def validate_seed(seed: Any):
-    return seed
-
-
-def serialize_seed(seed: Any) -> int | Sequence[int] | None:
-    if seed is None:
-        return None
-    elif isinstance(seed, np.random.SeedSequence):
-        return seed.entropy
-    elif isinstance(seed, Sequence):
-        return seed
-    else:
-        return int(seed)
-
-
-ConfiguredSeed = Annotated[
-    SeedLike | None,
-    BeforeValidator(validate_seed, json_schema_input_type=int | Sequence[int] | None),
-    PlainSerializer(serialize_seed),
-]
-
-
-def validate_derivable_seed(seed: Any):
-    return seed
-
-
-def serialize_derivable_seed(seed: Any) -> Any:
-    if isinstance(seed, tuple):
-        seed, dep = seed
-        return (serialize_seed(seed), dep)
-    elif seed is None:
-        return None
-    elif isinstance(seed, np.random.SeedSequence):
-        return seed.entropy
-    elif isinstance(seed, Sequence):
-        return seed
-    else:
-        return int(seed)
-
-
-DerivableSeed: TypeAlias = Annotated[
-    SeedLike | SeedDependency | tuple[SeedLike, SeedDependency] | None,
-    BeforeValidator(
-        validate_derivable_seed,
-        json_schema_input_type=int
-        | Sequence[int]
-        | None
-        | tuple[int | Sequence[int] | None, SeedDependency],
-    ),
-    PlainSerializer(serialize_derivable_seed),
-]
+DerivableSeed: TypeAlias = ConfiguredSeed | SeedDependency | tuple[ConfiguredSeed, SeedDependency]
 
 
 def set_global_rng(seed: RNGInput):
