@@ -33,6 +33,8 @@ def test_arg_topk(xs, k):
 
     top_xs = xs[positions]
 
+    sort_xs = np.sort(-xs[~np.isnan(xs)])
+
     # we have the correct number of positions
     if k >= 0:
         assert len(positions) == min(k, np.sum(~np.isnan(xs)))
@@ -56,3 +58,9 @@ def test_arg_topk(xs, k):
     # the values are sorted
     if len(top_xs) > 1:
         assert np.all(top_xs[:-1] >= top_xs[1:])
+
+    # the min matches the underlying sort
+    if k > 1:
+        assert top_xs[-1] == -sort_xs[min(k - 1, len(sort_xs) - 1)]
+    elif np.all(np.isfinite(sort_xs)):
+        assert np.all(top_xs == -sort_xs)
