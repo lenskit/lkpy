@@ -89,8 +89,6 @@ def test_configured_truncation(n, items: ItemList):
     assert src_s is not None
     src_s = src_s[src_s.notna()]
 
-    rem_s = src_s[src_s.index.difference(rank_s.index)]
-
     # make sure the scores were preserved properly
     rank_s, src_s = rank_s.align(src_s, "left")
     assert not np.any(np.isnan(src_s))
@@ -100,8 +98,9 @@ def test_configured_truncation(n, items: ItemList):
     assert np.all(rank_s.diff()) >= 0
 
     # make sure it's the largest
-    if len(rem_s) > 0:
-        assert np.all(rank_s >= np.max(rem_s))
+    omitted = ~np.isin(items.ids(), ranked.ids())
+    if np.any(omitted) and np.any(~np.isnan(scores[omitted])):
+        assert np.all(rank_s >= np.nanmax(scores[omitted]))
 
 
 @given(st.integers(min_value=1, max_value=100), scored_lists())
@@ -128,8 +127,6 @@ def test_runtime_truncation(n, items: ItemList):
     assert src_s is not None
     src_s = src_s[src_s.notna()]
 
-    rem_s = src_s[src_s.index.difference(rank_s.index)]
-
     # make sure the scores were preserved properly
     rank_s, src_s = rank_s.align(src_s, "left")
     assert not np.any(np.isnan(src_s))
@@ -139,5 +136,6 @@ def test_runtime_truncation(n, items: ItemList):
     assert np.all(rank_s.diff()) >= 0
 
     # make sure it's the largest
-    if len(rem_s) > 0:
-        assert np.all(rank_s >= np.max(rem_s))
+    omitted = ~np.isin(items.ids(), ranked.ids())
+    if np.any(omitted) and np.any(~np.isnan(scores[omitted])):
+        assert np.all(rank_s >= np.nanmax(scores[omitted]))
