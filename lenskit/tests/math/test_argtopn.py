@@ -50,7 +50,7 @@ def test_arg_topn(xs, k):
 
     # we have the largest values
     if len(positions) < k:
-        omitted = np.ones(len(xs), dtype=np.bool)
+        omitted = np.ones(len(xs), dtype="bool")
         omitted[positions] = False
         if not np.all(np.isnan(xs[omitted])):
             assert np.all(top_xs >= np.nanmax(xs[omitted]))
