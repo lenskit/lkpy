@@ -4,10 +4,9 @@ Basic Top-*N* ranking.
 
 import logging
 
-import numpy as np
-
 from lenskit.data import ItemList
 from lenskit.pipeline.components import Component
+from lenskit.stats import argtopk
 
 _log = logging.getLogger(__name__)
 
@@ -60,18 +59,7 @@ class TopNRanker(Component):
         if scores is None:
             raise RuntimeError("input item list has no scores")
 
-        # find and filter out invalid scores
-        v_mask = ~np.isnan(scores)
-        items = items[v_mask]
-
-        vscores = -scores[v_mask]
-        if n >= 0 and n < len(vscores):
-            parts = np.argpartition(vscores, n)
-            top_scores = vscores[parts[:n]]
-            top_sort = np.argsort(top_scores)
-            order = parts[top_sort]
-        else:
-            order = np.argsort(vscores)
+        order = argtopk(scores, n)
 
         # now we need to return in expected order
         result = items[order]
