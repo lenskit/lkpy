@@ -119,7 +119,7 @@ class SoftmaxRanker(Component):
         if n < 0 or n > N:
             n = N
 
-        keys = -np.log(rng.uniform(0, 1, N))
+        keys = np.log(rng.uniform(0, 1, N))
         keys /= np.maximum(scores[valid_mask], 1.0e-10)
 
         picked = argtopn(keys, n)
