@@ -54,6 +54,26 @@ class AliasedColumn:
 Column: TypeAlias = str | AliasedColumn
 
 
+@dataclass(frozen=True)
+class UIPair(Generic[T]):
+    """
+    A user-item pair of values.
+    """
+
+    user: T
+    item: T
+
+    @classmethod
+    def normalize(cls, value: T | UIPair[T] | tuple[T, T]) -> UIPair[T]:
+        if isinstance(value, UIPair):
+            return cast(UIPair[T], value)
+        elif isinstance(value, tuple):
+            user, item = cast(tuple[T, T], value)
+            return cls(user=user, item=item)
+        else:
+            return UITuple(user=value, item=value)  # type: ignore
+
+
 class UIDict(TypedDict, Generic[T]):
     user: T
     item: T
