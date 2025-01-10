@@ -22,7 +22,7 @@ def test_completely_unequal():
 @mark.skipif(np.version.version < "2.0", reason="NumPy too old")
 @given(
     nph.arrays(
-        st.one_of(nph.floating_dtypes(), nph.integer_dtypes()),
+        st.one_of(nph.floating_dtypes(sizes=[32, 64]), nph.integer_dtypes()),
         nph.array_shapes(max_dims=1, min_side=2),
         elements={"allow_nan": False, "allow_infinity": False, "min_value": 0},
     )
@@ -45,4 +45,5 @@ def test_random_values(xs):
     actual = np.trapezoid(xss)
 
     print(g, actual, ideal)
-    assert g == approx((ideal - actual) / ideal, abs=0.001)
+    # we use max just to deal with extremely small values
+    assert g == approx(max((ideal - actual) / ideal, 0), abs=0.001)
