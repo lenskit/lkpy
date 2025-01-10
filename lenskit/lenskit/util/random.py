@@ -20,19 +20,64 @@ from pydantic import BeforeValidator, PlainSerializer
 from typing_extensions import Any, Literal, Protocol, Sequence, TypeAlias, override
 
 from lenskit.data import RecQuery
-from lenskit.types import RNGInput, SeedLike
+
+SeedLike: TypeAlias = int | np.integer[Any] | Sequence[int] | np.random.SeedSequence
+"""
+Type for RNG seeds (see `SPEC 7`_).
+
+.. _SPEC 7: https://scientific-python.org/specs/spec-0007/
+"""
+
+RNGLike: TypeAlias = np.random.Generator | np.random.BitGenerator
+"""
+Type for random number generators as inputs (see `SPEC 7`_).
+
+.. _SPEC 7: https://scientific-python.org/specs/spec-0007/
+"""
+
+RNGInput: TypeAlias = SeedLike | RNGLike | None
+"""
+Type for RNG inputs (see `SPEC 7`_).
+
+.. _SPEC 7: https://scientific-python.org/specs/spec-0007/
+"""
 
 SeedDependency = Literal["user"]
 
 _global_rng: Generator | None = None
 
 
+def validate_seed(seed: Any):
+    return seed
+
+
+def serialize_seed(seed: Any) -> int | Sequence[int] | None:
+    if seed is None:
+        return None
+    elif isinstance(seed, np.random.SeedSequence):
+        return seed.entropy
+    elif isinstance(seed, Sequence):
+        return seed
+    else:
+        return int(seed)
+
+
+ConfiguredSeed = Annotated[
+    SeedLike | None,
+    BeforeValidator(validate_seed, json_schema_input_type=int | Sequence[int] | None),
+    PlainSerializer(serialize_seed),
+]
+
+
 def validate_derivable_seed(seed: Any):
     return seed
 
 
-def serialize_derivable_seed(seed: Any) -> int | Sequence[int] | None:
-    if seed is None:
+def serialize_derivable_seed(seed: Any) -> Any:
+    if isinstance(seed, tuple):
+        seed, dep = seed
+        return (serialize_seed(seed), dep)
+    elif seed is None:
         return None
     elif isinstance(seed, np.random.SeedSequence):
         return seed.entropy
@@ -44,7 +89,13 @@ def serialize_derivable_seed(seed: Any) -> int | Sequence[int] | None:
 
 DerivableSeed: TypeAlias = Annotated[
     SeedLike | SeedDependency | tuple[SeedLike, SeedDependency] | None,
-    BeforeValidator(validate_derivable_seed, json_schema_input_type=int | Sequence[int] | None),
+    BeforeValidator(
+        validate_derivable_seed,
+        json_schema_input_type=int
+        | Sequence[int]
+        | None
+        | tuple[int | Sequence[int] | None, SeedDependency],
+    ),
     PlainSerializer(serialize_derivable_seed),
 ]
 
@@ -168,7 +219,7 @@ def derivable_rng(spec: DerivableSeed) -> RNGFactory:
 
     Seed specifications may be any of the following:
 
-    - A seed (:type:`~lenskit.types.SeedLike`).
+    - A seed (:type:`~lenskit.util.random.SeedLike`).
     - The value ``'user'``, which will derive a seed from the query user ID.
     - A tuple of the form ``(seed, 'user')``, that will use ``seed`` as the
       basis and drive from it a new seed based on the user ID.

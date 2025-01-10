@@ -105,9 +105,9 @@ autodoc_default_options = {"members": True, "member-order": "bysource", "show-in
 autodoc_typehints = "description"
 autodoc_type_aliases = {
     "ArrayLike": "numpy.typing.ArrayLike",
-    "SeedLike": "lenskit.types.SeedLike",
-    "RNGLike": "lenskit.types.RNGLike",
-    "RNGInput": "lenskit.types.RNGInput",
+    "SeedLike": "lenskit.util.random.SeedLike",
+    "RNGLike": "lenskit.util.random.RNGLike",
+    "RNGInput": "lenskit.util.random.RNGInput",
     "IDSequence": "lenskit.data.types.IDSequence",
 }
 # autosummary_generate_overwrite = False

@@ -20,8 +20,7 @@ from lenskit import util
 from lenskit.basic import BiasModel
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, UITuple, Vocabulary
 from lenskit.pipeline import Component, Trainable
-from lenskit.types import RNGInput
-from lenskit.util.random import random_generator
+from lenskit.util.random import RNGInput, random_generator
 
 _logger = logging.getLogger(__name__)
 
