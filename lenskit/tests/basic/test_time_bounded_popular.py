@@ -31,7 +31,7 @@ simple_ds = from_interactions_df(simple_df)
 def test_time_bounded_pop_score_quantile_one_day_window():
     algo = popularity.TimeBoundedPopScore(cutoff=one_day_ago)
     algo.train(simple_ds)
-    assert algo.item_scores_.equals(pd.Series([1.0, 0.0, 0.0], index=[1, 2, 3]))
+    assert np.all(algo.item_scores_ == [1.0, 0.0, 0.0])
 
 
 def test_time_bounded_pop_score_quantile_one_day_window_call_interface():
@@ -46,7 +46,7 @@ def test_time_bounded_pop_score_quantile_one_day_window_call_interface():
 def test_time_bounded_pop_score_quantile_two_day_window():
     algo = popularity.TimeBoundedPopScore(cutoff=two_days_ago)
     algo.train(simple_ds)
-    assert algo.item_scores_.equals(pd.Series([0.25, 1.0, 0.5], index=[1, 2, 3]))
+    assert np.all(algo.item_scores_ == pd.Series([0.25, 1.0, 0.5], index=[1, 2, 3]))
 
 
 def test_time_bounded_pop_score_fallbacks_to_pop_score_for_dataset_without_timestamps():
@@ -54,19 +54,19 @@ def test_time_bounded_pop_score_fallbacks_to_pop_score_for_dataset_without_times
 
     algo = popularity.TimeBoundedPopScore(cutoff=one_day_ago)
     algo.train(ds)
-    assert algo.item_scores_.equals(pd.Series([0.25, 1.0, 0.5], index=[1, 2, 3]))
+    assert np.all(algo.item_scores_ == pd.Series([0.25, 1.0, 0.5], index=[1, 2, 3]))
 
 
 def test_time_bounded_pop_score_rank():
     algo = popularity.TimeBoundedPopScore(cutoff=two_days_ago, score="rank")
     algo.train(simple_ds)
-    assert algo.item_scores_.equals(pd.Series([1.5, 3.0, 1.5], index=[1, 2, 3]))
+    assert np.all(algo.item_scores_ == pd.Series([1.5, 3.0, 1.5], index=[1, 2, 3]))
 
 
 def test_time_bounded_pop_score_counts():
     algo = popularity.TimeBoundedPopScore(cutoff=two_days_ago, score="count")
     algo.train(simple_ds)
-    assert algo.item_scores_.equals(pd.Series([1, 2, 1], index=[1, 2, 3], dtype=np.int32))
+    assert np.all(algo.item_scores_ == pd.Series([1, 2, 1], index=[1, 2, 3], dtype=np.int32))
 
 
 def test_time_bounded_pop_score_save_load():

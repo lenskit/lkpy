@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 from typing import Literal
@@ -7,7 +9,7 @@ import pandas as pd
 from pydantic import BaseModel
 from typing_extensions import override
 
-from lenskit.data import Dataset, ItemList
+from lenskit.data import Dataset, ItemList, Vocabulary
 from lenskit.pipeline import Component, Trainable
 
 _log = logging.getLogger(__name__)
@@ -40,7 +42,8 @@ class PopScorer(Component, Trainable):
 
     config: PopConfig
 
-    item_scores_: pd.Series
+    items_: Vocabulary
+    item_scores_: np.ndarray[int, np.dtype[np.float32]]
 
     @property
     def is_trained(self) -> bool:
@@ -49,13 +52,14 @@ class PopScorer(Component, Trainable):
     @override
     def train(self, data: Dataset):
         _log.info("counting item popularity")
+        self.items_ = data.items.copy()
         stats = data.item_stats()
-        scores = stats["count"]
-        self.item_scores_ = self._train_internal(scores)
+        scores = stats["count"].reindex(self.items_.ids())
+        self.item_scores_ = np.require(
+            self._train_internal(scores).reindex(self.items_.ids()).values, np.float32
+        )
 
-        return self
-
-    def _train_internal(self, scores: pd.Series):
+    def _train_internal(self, scores: pd.Series) -> pd.Series:
         if self.config.score == "rank":
             _log.info("ranking %d items", len(scores))
             scores = scores.rank().sort_index()
@@ -74,7 +78,10 @@ class PopScorer(Component, Trainable):
         return scores
 
     def __call__(self, items: ItemList) -> ItemList:
-        scores = self.item_scores_.reindex(items.ids())
+        inums = items.numbers(vocabulary=self.items_, missing="negative")
+        mask = inums >= 0
+        scores = np.full(len(items), np.nan, np.float32)
+        scores[mask] = self.item_scores_[inums[mask]]
         return ItemList(items, scores=scores)
 
 
@@ -107,7 +114,8 @@ class TimeBoundedPopScore(PopScorer):
         item_scores = None
         if log.timestamps is None:
             _log.warning("no timestamps in interaction log; falling back to PopScorer")
-            item_scores = super().train(data, **kwargs).item_scores_
+            super().train(data, **kwargs)
+            return
         else:
             counts = np.zeros(data.item_count, dtype=np.int32)
             start_timestamp = self.config.cutoff.timestamp()
@@ -119,6 +127,5 @@ class TimeBoundedPopScore(PopScorer):
                 **kwargs,
             )
 
-        self.item_scores_ = item_scores
-
-        return self
+        self.items_ = data.items.copy()
+        self.item_scores_ = np.require(item_scores.reindex(self.items_.ids()).values, np.float32)

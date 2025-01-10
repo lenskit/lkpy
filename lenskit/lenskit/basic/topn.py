@@ -4,11 +4,11 @@ Basic Top-*N* ranking.
 
 import logging
 
-import numpy as np
 from pydantic import BaseModel
 
 from lenskit.data import ItemList
 from lenskit.pipeline.components import Component
+from lenskit.stats import argtopn
 
 _log = logging.getLogger(__name__)
 
@@ -65,16 +65,7 @@ class TopNRanker(Component):
         if scores is None:
             raise RuntimeError("input item list has no scores")
 
-        # find and filter out invalid scores
-        v_mask = ~np.isnan(scores)
-        items = items[v_mask]
-
-        # order remaining scores
-        order = np.argsort(scores[v_mask])
-        if n >= 0 and n < len(order):
-            order = order[: -(n + 1) : -1]
-        else:
-            order = order[::-1]
+        order = argtopn(scores, n)
 
         # now we need to return in expected order
         result = items[order]

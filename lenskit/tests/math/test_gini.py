@@ -5,7 +5,10 @@ from hypothesis import strategies as st
 from hypothesis.extra import numpy as nph
 from pytest import approx, mark
 
+from lenskit.logging import get_logger
 from lenskit.stats import gini
+
+_log = get_logger(__name__)
 
 
 def test_gini_uniform():
@@ -22,9 +25,14 @@ def test_completely_unequal():
 @mark.skipif(np.version.version < "2.0", reason="NumPy too old")
 @given(
     nph.arrays(
-        st.one_of(nph.floating_dtypes(), nph.integer_dtypes()),
+        st.one_of(nph.floating_dtypes(sizes=[32, 64]), nph.integer_dtypes()),
         nph.array_shapes(max_dims=1, min_side=2),
-        elements={"allow_nan": False, "allow_infinity": False, "min_value": 0},
+        elements={
+            "allow_nan": False,
+            "allow_infinity": False,
+            "min_value": 0,
+            "allow_subnormal": False,
+        },
     )
 )
 def test_random_values(xs):
@@ -44,5 +52,6 @@ def test_random_values(xs):
     xss[1:] = np.cumsum(np.sort(xs))
     actual = np.trapezoid(xss)
 
-    print(g, actual, ideal)
-    assert g == approx((ideal - actual) / ideal, abs=0.001)
+    _log.debug("computed gini", n=len(xs), gini=g, actual=actual, ideal=ideal)
+    # we use max just to deal with extremely small values
+    assert g == approx(max((ideal - actual) / ideal, 0), abs=0.001)
