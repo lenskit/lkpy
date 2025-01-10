@@ -64,12 +64,14 @@ class TopNRanker(Component):
         v_mask = ~np.isnan(scores)
         items = items[v_mask]
 
-        # order remaining scores
-        order = np.argsort(scores[v_mask])
-        if n >= 0 and n < len(order):
-            order = order[: -(n + 1) : -1]
+        vscores = -scores[v_mask]
+        if n >= 0 and n < len(vscores):
+            parts = np.argpartition(vscores, n)
+            top_scores = vscores[parts[:n]]
+            top_sort = np.argsort(top_scores)
+            order = parts[top_sort]
         else:
-            order = order[::-1]
+            order = np.argsort(vscores)
 
         # now we need to return in expected order
         result = items[order]
