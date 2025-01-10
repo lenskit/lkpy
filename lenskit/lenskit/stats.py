@@ -42,7 +42,6 @@ def gini(xs: ArrayLike) -> float:
         )
 
     n = len(xs)
-    # we don't actually need to sort — argsort will assign ranks to values
     xs = np.sort(xs)
     ranks = np.arange(1, n + 1, dtype=np.float64)
     ranks *= 2
@@ -53,7 +52,7 @@ def gini(xs: ArrayLike) -> float:
         warnings.warn(
             "Gini coefficient is not defined for non-positive totals", DataWarning, stacklevel=2
         )
-    return num / denom
+    return max(num / denom, 0)
 
 
 def argtopk(xs: ArrayLike, k: int) -> np.ndarray[int, np.dtype[np.int64]]:
