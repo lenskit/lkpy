@@ -6,19 +6,18 @@
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Literal, Mapping, TypeAlias
 
 from lenskit.data import ID, GenericKey, ItemList, ItemListCollection, UserIDKey
-from lenskit.logging import item_progress
+from lenskit.logging import get_logger, item_progress
 from lenskit.parallel import invoker
 from lenskit.pipeline import Pipeline
 from lenskit.util import Stopwatch
 
 from ._results import BatchResults
 
-_log = logging.getLogger(__name__)
+_log = get_logger(__name__)
 
 ItemSource: TypeAlias = None | Literal["test-items"]
 """
@@ -147,8 +146,10 @@ class BatchPipelineRunner:
             n_users = len(test_data)
 
         n_users = len(test_data)
-        _log.info("running pipeline %s for %d queries", pipeline.name, n_users)
-        _log.info("pipeline configuration hash: %s", pipeline.config_hash())
+        log = _log.bind(
+            name=pipeline.name, hash=pipeline.config_hash(), n_queries=n_users, n_jobs=self.n_jobs
+        )
+        log.info("beginning batch run")
 
         with (
             invoker((pipeline, self.invocations), _run_pipeline, n_jobs=self.n_jobs) as worker,
@@ -165,12 +166,7 @@ class BatchPipelineRunner:
             timer.stop()
 
             rate = timer.elapsed() / n_users
-            _log.info(
-                "finished running for %d users in %s (%.1fms/user)",
-                n_users,
-                timer.elapsed() * 1000,
-                rate,
-            )
+            log.info("finished running in %s (%.1fms/user)", timer, rate)
 
         return results
 
@@ -191,7 +187,7 @@ def _run_pipeline(
 
     result = {}
 
-    _log.debug("running pipeline %s for request %s", pipeline.name, key)
+    _log.debug("running pipeline", name=pipeline.name, key=key)
     for inv in invocations:
         inputs: dict[str, Any] = {}
         if hasattr(key, "user_id"):
