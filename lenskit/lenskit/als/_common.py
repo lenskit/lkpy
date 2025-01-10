@@ -26,7 +26,7 @@ from lenskit.random import ConfiguredSeed, RNGInput, RNGLike, random_generator
 EntityClass: TypeAlias = Literal["user", "item"]
 
 
-class ALSConfig(BaseModel, arbitrary_types_allowed=True):
+class ALSConfig(BaseModel):
     """
     Configuration for ALS scorers.
     """
@@ -152,7 +152,7 @@ class ALSBase(ABC, Component, Trainable):
         # hadle non-configurable RNG
         if isinstance(rng, (np.random.Generator, np.random.BitGenerator)):
             self.rng = rng
-        else:
+        elif rng is not None:
             kwargs = kwargs | {"rng": rng}
         super().__init__(config, **kwargs)
 
@@ -326,3 +326,6 @@ class ALSBase(ABC, Component, Trainable):
         Perform any final transformation of scores prior to returning them.
         """
         return items
+
+    def __getstate__(self):
+        return {k: v for (k, v) in self.__dict__.items() if k != "logger"}

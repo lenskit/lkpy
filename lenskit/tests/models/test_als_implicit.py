@@ -278,7 +278,9 @@ def test_als_train_large(ml_ds: Dataset):
 
 def test_als_save_load(tmp_path, ml_ds: Dataset):
     "Test saving and loading ALS models, and regularized training."
-    algo = ImplicitMFScorer(features=5, epochs=5, regularization=(2, 1), use_ratings=False)
+    algo = ImplicitMFScorer(
+        features=5, epochs=5, regularization={"user": 2, "item": 1}, use_ratings=False
+    )
     algo.train(ml_ds)
     assert algo.users_ is not None
 
