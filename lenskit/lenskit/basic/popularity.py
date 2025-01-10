@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 
@@ -5,7 +7,7 @@ import numpy as np
 import pandas as pd
 from typing_extensions import override
 
-from lenskit.data import Dataset, ItemList
+from lenskit.data import Dataset, ItemList, Vocabulary
 from lenskit.pipeline import Component, Trainable
 
 _log = logging.getLogger(__name__)
@@ -34,7 +36,8 @@ class PopScorer(Component, Trainable):
 
     score_method: str
 
-    item_scores_: pd.Series
+    items_: Vocabulary
+    item_scores_: np.ndarray[int, np.dtype[np.float32]]
 
     def __init__(self, score_method: str = "quantile"):
         self.score_method = score_method
@@ -46,9 +49,12 @@ class PopScorer(Component, Trainable):
     @override
     def train(self, data: Dataset):
         _log.info("counting item popularity")
+        self.items_ = data.items.copy()
         stats = data.item_stats()
-        scores = stats["count"]
-        self.item_scores_ = self._train_internal(scores)
+        scores = stats["count"].reindex(self.items_.ids())
+        self.item_scores_ = np.require(
+            self._train_internal(scores).reindex(self.items_.ids()).values, np.float32
+        )
 
         return self
 
@@ -71,7 +77,10 @@ class PopScorer(Component, Trainable):
         return scores
 
     def __call__(self, items: ItemList) -> ItemList:
-        scores = self.item_scores_.reindex(items.ids())
+        inums = items.numbers(vocabulary=self.items_, missing="negative")
+        mask = inums >= 0
+        scores = np.full(len(items), np.nan, np.float32)
+        scores[mask] = self.item_scores_[inums[mask]]
         return ItemList(items, scores=scores)
 
     def __str__(self):
