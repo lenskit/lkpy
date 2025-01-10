@@ -3,7 +3,7 @@ import numpy as np
 from lenskit.data import ItemList
 from lenskit.data.query import QueryInput, RecQuery
 from lenskit.pipeline import Component
-from lenskit.stats import argtopk
+from lenskit.stats import argtopn
 from lenskit.util.random import DerivableSeed, RNGFactory, derivable_rng
 
 
@@ -122,5 +122,5 @@ class SoftmaxRanker(Component):
         keys = -np.log(rng.uniform(0, 1, N))
         keys /= np.maximum(scores[valid_mask], 1.0e-10)
 
-        picked = argtopk(keys, n)
+        picked = argtopn(keys, n)
         return ItemList(valid_items[picked], ordered=True)

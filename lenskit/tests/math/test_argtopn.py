@@ -4,17 +4,17 @@ import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import given, settings
 
-from lenskit.stats import argtopk
+from lenskit.stats import argtopn
 
 
-def test_simple_topk():
-    positions = argtopk([1.0, 0.0], 1)
+def test_simple_topn():
+    positions = argtopn([1.0, 0.0], 1)
     assert len(positions) == 1
     assert positions[0] == 0
 
 
-def test_simple_topk_rev():
-    positions = argtopk([0.0, 1.0], 1)
+def test_simple_topn_rev():
+    positions = argtopn([0.0, 1.0], 1)
     assert len(positions) == 1
     assert positions[0] == 1
 
@@ -22,8 +22,8 @@ def test_simple_topk_rev():
 @given(
     nph.arrays(nph.floating_dtypes(endianness="="), st.integers(0, 5000)), st.integers(min_value=-1)
 )
-def test_arg_topk(xs, k):
-    positions = argtopk(xs, k)
+def test_arg_topn(xs, k):
+    positions = argtopn(xs, k)
     if k >= 0:
         assert len(positions) <= k
     assert positions.dtype == np.int64

@@ -6,7 +6,7 @@ import logging
 
 from lenskit.data import ItemList
 from lenskit.pipeline.components import Component
-from lenskit.stats import argtopk
+from lenskit.stats import argtopn
 
 _log = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class TopNRanker(Component):
         if scores is None:
             raise RuntimeError("input item list has no scores")
 
-        order = argtopk(scores, n)
+        order = argtopn(scores, n)
 
         # now we need to return in expected order
         result = items[order]

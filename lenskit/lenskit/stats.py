@@ -55,13 +55,13 @@ def gini(xs: ArrayLike) -> float:
     return max(num / denom, 0)
 
 
-def argtopk(xs: ArrayLike, k: int) -> np.ndarray[int, np.dtype[np.int64]]:
+def argtopn(xs: ArrayLike, n: int) -> np.ndarray[int, np.dtype[np.int64]]:
     """
-    Compute the ordered positions of the top *k* elements.  Similar to
+    Compute the ordered positions of the top *n* elements.  Similar to
     :func:`torch.topk`, but works with NumPy arrays and only returns the
     indices.
     """
-    if k == 0:
+    if n == 0:
         return np.empty(0, np.int64)
 
     xs = np.asarray(xs)
@@ -72,12 +72,12 @@ def argtopk(xs: ArrayLike, k: int) -> np.ndarray[int, np.dtype[np.int64]]:
         mask = ~invalid
         vxs = xs[mask]
         remap = np.arange(N)[mask]
-        res = argtopk(vxs, k)
+        res = argtopn(vxs, n)
         return remap[res]
 
-    if k >= 0 and k < N:
-        parts = np.argpartition(-xs, k)
-        top_scores = xs[parts[:k]]
+    if n >= 0 and n < N:
+        parts = np.argpartition(-xs, n)
+        top_scores = xs[parts[:n]]
         top_sort = np.argsort(-top_scores)
         order = parts[top_sort]
     else:
