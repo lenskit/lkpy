@@ -42,11 +42,11 @@ splitting support <./splitting>`_.
 
     Now that `SPEC 7`_ has standardized RNG seeding across the scientific Python
     ecosystem, we use that with some lightweight helpers in the
-    :mod:`lenskit.util.random` module instead of using SeedBank.
+    :mod:`lenskit.random` module instead of using SeedBank.
 
 LensKit extends SPEC 7 with a global RNG that components can use as a fallback,
 to make it easier to configure system-wide generation for things like tests.
-This is configured with :func:`~lenskit.util.random.set_global_rng`.
+This is configured with :func:`~lenskit.random.set_global_rng`.
 
 When implementing a component that uses randomness in its training, we recommend
 deferring conversion of the provided RNG into an actual generator until
@@ -56,7 +56,7 @@ When using the RNG to create initial state for e.g. training a model with
 PyTorch, it can be useful to create that state in NumPy and then convert to a
 tensor, so that components are consistent in their random number generation
 behavior instead of having variation between NumPy and other backends.
-Components can use the :func:`~lenskit.util.random_generator` function to
+Components can use the :func:`~lenskit.random_generator` function to
 convert seed material or a generator into a NumPy generator, falling back to the
 global RNG if one is specified.
 

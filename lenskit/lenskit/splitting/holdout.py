@@ -13,7 +13,7 @@ from typing import Protocol
 import numpy as np
 
 from lenskit.data import ItemList
-from lenskit.util.random import RNGInput, random_generator
+from lenskit.random import RNGInput, random_generator
 
 
 class HoldoutMethod(Protocol):

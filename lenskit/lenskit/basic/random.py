@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from lenskit.data import ItemList
 from lenskit.data.query import QueryInput, RecQuery
 from lenskit.pipeline import Component
-from lenskit.util.random import DerivableSeed, RNGFactory, derivable_rng
+from lenskit.random import DerivableSeed, RNGFactory, derivable_rng
 
 
 class RandomConfig(BaseModel, arbitrary_types_allowed=True):

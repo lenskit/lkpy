@@ -14,7 +14,7 @@ import pandas as pd
 
 from lenskit.data import Dataset, ItemListCollection, UserIDKey
 from lenskit.data.matrix import MatrixDataset
-from lenskit.util.random import RNGInput, random_generator
+from lenskit.random import RNGInput, random_generator
 
 from .split import TTSplit
 

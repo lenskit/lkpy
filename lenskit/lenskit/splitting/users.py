@@ -16,7 +16,7 @@ from numpy.typing import NDArray
 from lenskit.data import NPID, Dataset, ItemListCollection, UserIDKey
 from lenskit.data.matrix import MatrixDataset
 from lenskit.logging import item_progress
-from lenskit.util.random import RNGInput, random_generator
+from lenskit.random import RNGInput, random_generator
 
 from .holdout import HoldoutMethod
 from .split import TTSplit

@@ -21,7 +21,7 @@ from lenskit.data.types import UIPair
 from lenskit.logging import item_progress
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component, Trainable
-from lenskit.util.random import ConfiguredSeed, RNGInput, RNGLike, random_generator
+from lenskit.random import ConfiguredSeed, RNGInput, RNGLike, random_generator
 
 EntityClass: TypeAlias = Literal["user", "item"]
 
