@@ -32,7 +32,7 @@ def test_popscore_quantile(rng, ml_ds):
     counts = counts.sort_values()
 
     winner = counts.index[-1]
-    assert pop.item_scores_.loc[winner] == 1.0
+    assert pop.item_scores_[ml_ds.items.number(winner)] == 1.0
 
 
 def test_popscore_rank(rng, ml_ds):
@@ -45,7 +45,7 @@ def test_popscore_rank(rng, ml_ds):
     assert pop.item_scores_.max() == len(counts)
 
     winner = counts.index[-1]
-    assert pop.item_scores_.loc[winner] == len(counts)
+    assert pop.item_scores_[ml_ds.items.number(winner)] == len(counts)
 
 
 def test_popscore_counts(rng, ml_ds):
@@ -54,7 +54,7 @@ def test_popscore_counts(rng, ml_ds):
 
     counts = ml_ds.item_stats()["count"]
 
-    scores, counts = pop.item_scores_.align(counts)
+    scores, counts = pd.Series(pop.item_scores_, index=pop.items_.ids()).align(counts)
     assert all(scores == counts)
 
     items = rng.choice(counts.index, 100)

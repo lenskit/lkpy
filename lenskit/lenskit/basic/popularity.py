@@ -56,9 +56,7 @@ class PopScorer(Component, Trainable):
             self._train_internal(scores).reindex(self.items_.ids()).values, np.float32
         )
 
-        return self
-
-    def _train_internal(self, scores: pd.Series):
+    def _train_internal(self, scores: pd.Series) -> pd.Series:
         if self.score_method == "rank":
             _log.info("ranking %d items", len(scores))
             scores = scores.rank().sort_index()
@@ -123,7 +121,8 @@ class TimeBoundedPopScore(PopScorer):
         item_scores = None
         if log.timestamps is None:
             _log.warning("no timestamps in interaction log; falling back to PopScorer")
-            item_scores = super().train(data, **kwargs).item_scores_
+            super().train(data, **kwargs)
+            return
         else:
             counts = np.zeros(data.item_count, dtype=np.int32)
             start_timestamp = self.cutoff.timestamp()
@@ -135,9 +134,8 @@ class TimeBoundedPopScore(PopScorer):
                 **kwargs,
             )
 
-        self.item_scores_ = item_scores
-
-        return self
+        self.items_ = data.items.copy()
+        self.item_scores_ = np.require(item_scores.reindex(self.items_.ids()).values, np.float32)
 
     @override
     def __str__(self):
