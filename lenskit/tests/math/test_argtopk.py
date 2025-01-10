@@ -2,9 +2,21 @@ import numpy as np
 
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
-from hypothesis import given
+from hypothesis import given, settings
 
 from lenskit.stats import argtopk
+
+
+def test_simple_topk():
+    positions = argtopk([1.0, 0.0], 1)
+    assert len(positions) == 1
+    assert positions[0] == 0
+
+
+def test_simple_topk_rev():
+    positions = argtopk([0.0, 1.0], 1)
+    assert len(positions) == 1
+    assert positions[0] == 1
 
 
 @given(
@@ -39,7 +51,7 @@ def test_arg_topk(xs, k):
         omitted = np.ones(len(xs), dtype=np.bool)
         omitted[positions] = False
         if not np.all(np.isnan(xs[omitted])):
-            assert np.min(top_xs) >= np.nanmax(xs[omitted])
+            assert np.all(top_xs >= np.nanmax(xs[omitted]))
 
     # the values are sorted
     if len(top_xs) > 1:

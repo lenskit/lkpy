@@ -61,25 +61,26 @@ def argtopk(xs: ArrayLike, k: int) -> np.ndarray[int, np.dtype[np.int64]]:
     :func:`torch.topk`, but works with NumPy arrays and only returns the
     indices.
     """
+    if k == 0:
+        return np.empty(0, np.int64)
+
     xs = np.asarray(xs)
 
-    n = len(xs)
+    N = len(xs)
     invalid = np.isnan(xs)
     if np.any(invalid):
         mask = ~invalid
         vxs = xs[mask]
-        remap = np.arange(n)[mask]
+        remap = np.arange(N)[mask]
         res = argtopk(vxs, k)
         return remap[res]
 
-    if k >= 0 and k < n:
-        parts = np.argpartition(xs, k)
-        assert not np.any(np.isnan(xs[parts]))
+    if k >= 0 and k < N:
+        parts = np.argpartition(-xs, k)
         top_scores = xs[parts[:k]]
-        top_sort = np.argsort(top_scores)
+        top_sort = np.argsort(-top_scores)
         order = parts[top_sort]
-        assert not np.any(np.isnan(xs[order]))
     else:
-        order = np.argsort(xs)
+        order = np.argsort(-xs)
 
-    return order[::-1]
+    return order
