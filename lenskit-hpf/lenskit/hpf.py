@@ -8,7 +8,7 @@ import logging
 
 import hpfrec
 import numpy as np
-from pydantic import BaseModel
+from pydantic import BaseModel, JsonValue
 from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
@@ -18,6 +18,7 @@ _logger = logging.getLogger(__name__)
 
 
 class HPFConfig(BaseModel, extra="allow"):
+    __pydantic_extra__: dict[str, JsonValue]
     features: int = 50
 
 
@@ -61,9 +62,9 @@ class HPFScorer(Component[ItemList], Trainable):
             }
         )
 
-        hpf = hpfrec.HPF(self.config.features, reindex=False, **self.config.__pydantic_extra__)
+        hpf = hpfrec.HPF(self.config.features, reindex=False, **self.config.__pydantic_extra__)  # type: ignore
 
-        _logger.info("fitting HPF model with %d features", self.features)
+        _logger.info("fitting HPF model with %d features", self.config.features)
         hpf.fit(log)
 
         self.users_ = data.users
