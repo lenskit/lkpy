@@ -55,6 +55,17 @@ New Features (incremental)
 *   Added RBP top-N metric (:pr:`334`).
 *   Added command-line tool to fetch datasets (:pr:`347`).
 
+Metric Behavior Changes
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. important::
+
+    Some LensKit metric default has been changed; this results in values
+    different from those computed by previous versions, either more correct or
+    more consistent with common practice.
+
+*   The :class:`~lenskit.metrics.NDCG` metric now defaults to *ignore* rating values.
+
 Model Behavior Changes
 ~~~~~~~~~~~~~~~~~~~~~~
 
