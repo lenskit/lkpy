@@ -21,7 +21,6 @@ from lenskit import util
 from lenskit.basic import BiasModel, Damping
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.pipeline import Component
-from lenskit.random import ConfiguredSeed, random_generator
 from lenskit.training import Trainable, TrainingOptions
 
 _logger = logging.getLogger(__name__)
@@ -53,10 +52,6 @@ class FunkSVDConfig(BaseModel):
     range: tuple[float, float] | None = None
     """
     Min/max range of ratings to clamp output.
-    """
-    rng: ConfiguredSeed = None
-    """
-    RNG seed.
     """
 
 
@@ -278,7 +273,7 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
         _logger.info("[%s] preparing rating data for %d samples", timer, len(rate_df))
         _logger.debug("shuffling rating data")
         shuf = np.arange(len(rate_df), dtype=np.int_)
-        rng = random_generator(self.config.rng)
+        rng = options.random_generator()
         rng.shuffle(shuf)
         rate_df = rate_df.iloc[shuf, :]
 
