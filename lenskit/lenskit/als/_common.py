@@ -144,15 +144,18 @@ class ALSBase(ABC, Component[ItemList], Trainable):
     logger: structlog.stdlib.BoundLogger
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()) -> bool:
         """
         Run ALS to train a model.
 
         Args:
             ratings: the ratings data frame.
+
+        Returns:
+            ``True`` if the model was trained.
         """
         if hasattr(self, "item_features_") and not options.retrain:
-            return
+            return False
 
         ensure_parallel_init()
         timer = util.Stopwatch()
@@ -175,6 +178,8 @@ class ALSBase(ABC, Component[ItemList], Trainable):
                 torch.norm(self.item_features_, "fro"),
                 features=self.config.features,
             )
+
+        return True
 
     def fit_iters(self, data: Dataset, options: TrainingOptions) -> Iterator[Self]:
         """
