@@ -231,7 +231,7 @@ def _align_add_bias(bias, index, keys, series):
     return bias, series
 
 
-class FunkSVDScorer(Trainable, Component):
+class FunkSVDScorer(Trainable, Component[ItemList]):
     """
     FunkSVD explicit-feedback matrix factoriation.  FunkSVD is a regularized
     biased matrix factorization technique trained with featurewise stochastic

@@ -38,7 +38,7 @@ class BiasedSVDConfig:
     n_iter: int = 5
 
 
-class BiasedSVDScorer(Component, Trainable):
+class BiasedSVDScorer(Component[ItemList], Trainable):
     """
     Biased matrix factorization for explicit feedback using SciKit-Learn's
     :class:`~sklearn.decomposition.TruncatedSVD`.  It operates by first

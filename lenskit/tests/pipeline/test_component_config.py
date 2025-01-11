@@ -32,14 +32,14 @@ class PrefixConfigPYDC:
     prefix: str = "UNDEFINED"
 
 
-class PrefixerDC(Component):
+class PrefixerDC(Component[str]):
     config: PrefixConfigDC
 
     def __call__(self, msg: str) -> str:
         return self.config.prefix + msg
 
 
-class PrefixerM(Component):
+class PrefixerM(Component[str]):
     config: PrefixConfigM
 
     def __call__(self, msg: str) -> str:
@@ -51,7 +51,7 @@ class PrefixerM2(PrefixerM):
     config: PrefixConfigM
 
 
-class PrefixerPYDC(Component):
+class PrefixerPYDC(Component[str]):
     config: PrefixConfigPYDC
 
     def __call__(self, msg: str) -> str:

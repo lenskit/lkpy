@@ -79,7 +79,7 @@ class ItemKNNConfig(BaseModel, extra="forbid"):
         return self.feedback == "explicit"
 
 
-class ItemKNNScorer(Component, Trainable):
+class ItemKNNScorer(Component[ItemList], Trainable):
     """
     Item-item nearest-neighbor collaborative filtering feedback. This item-item
     implementation is based on the description of item-based CF by

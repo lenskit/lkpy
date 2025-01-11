@@ -34,7 +34,7 @@ class ImplicitALSConfig(ImplicitConfig, extra="allow"):
     weight: float = 40.0
 
 
-class BaseRec(Component, Trainable):
+class BaseRec(Component[ItemList], Trainable):
     """
     Base class for Implicit-backed recommenders.
 

@@ -14,7 +14,7 @@ class LinearBlendConfig(BaseModel):
     """
 
 
-class LinearBlendScorer(Component):
+class LinearBlendScorer(Component[ItemList]):
     r"""
     Score items with a linear blend of two other scores.
 

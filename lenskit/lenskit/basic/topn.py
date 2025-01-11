@@ -24,7 +24,7 @@ class TopNConfig(BaseModel):
     """
 
 
-class TopNRanker(Component):
+class TopNRanker(Component[ItemList]):
     """
     Rank scored items by their score and take the top *N*.  The ranking length
     can be passed either at runtime or at component instantiation time, with the

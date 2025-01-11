@@ -69,7 +69,7 @@ class UserKNNConfig(BaseModel, extra="forbid"):
         return self.feedback == "explicit"
 
 
-class UserKNNScorer(Component, Trainable):
+class UserKNNScorer(Component[ItemList], Trainable):
     """
     User-user nearest-neighbor collaborative filtering with ratings. This
     user-user implementation is not terribly configurable; it hard-codes design

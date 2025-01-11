@@ -11,7 +11,7 @@ from lenskit.pipeline import Component, Trainable
 _logger = logging.getLogger(__name__)
 
 
-class TrainingCandidateSelectorBase(Component, Trainable):
+class TrainingCandidateSelectorBase(Component[ItemList], Trainable):
     """
     Base class for candidate selectors using the training data.
 

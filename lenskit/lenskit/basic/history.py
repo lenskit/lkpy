@@ -20,7 +20,7 @@ from lenskit.pipeline import Component, Trainable
 _logger = logging.getLogger(__name__)
 
 
-class UserTrainingHistoryLookup(Component, Trainable):
+class UserTrainingHistoryLookup(Component[ItemList], Trainable):
     """
     Look up a user's history from the training data.
 
@@ -57,7 +57,7 @@ class UserTrainingHistoryLookup(Component, Trainable):
         return self.__class__.__name__
 
 
-class KnownRatingScorer(Component, Trainable):
+class KnownRatingScorer(Component[ItemList], Trainable):
     """
     Score items by returning their values from the training data.
 

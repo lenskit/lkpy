@@ -28,7 +28,7 @@ class PrefixConfig:
     prefix: str
 
 
-class Prefixer(Component):
+class Prefixer(Component[str]):
     config: PrefixConfig
 
     def __call__(self, msg: str) -> str:

@@ -10,7 +10,7 @@ from lenskit.pipeline import Component
 _logger = logging.getLogger(__name__)
 
 
-class FallbackScorer(Component):
+class FallbackScorer(Component[ItemList]):
     """
     Scoring component that fills in missing scores using a fallback.
 

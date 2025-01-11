@@ -130,7 +130,7 @@ class TrainingData(NamedTuple):
         return self._replace(ui_rates=self.ui_rates.to(device), iu_rates=self.iu_rates.to(device))
 
 
-class ALSBase(ABC, Component, Trainable):
+class ALSBase(ABC, Component[ItemList], Trainable):
     """
     Base class for ALS models.
 

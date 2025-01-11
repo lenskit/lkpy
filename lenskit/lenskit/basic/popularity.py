@@ -27,7 +27,7 @@ class PopConfig(BaseModel):
     """
 
 
-class PopScorer(Component, Trainable):
+class PopScorer(Component[ItemList], Trainable):
     """
     Score items by their popularity.  Use with :py:class:`TopN` to get a
     most-popular-items recommender.

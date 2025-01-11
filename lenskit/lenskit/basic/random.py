@@ -20,7 +20,7 @@ class RandomConfig(BaseModel, arbitrary_types_allowed=True):
     """
 
 
-class RandomSelector(Component):
+class RandomSelector(Component[ItemList]):
     """
     Randomly select items from a candidate list.
 
@@ -74,7 +74,7 @@ class RandomSelector(Component):
             return items[np.zeros(0, dtype=np.int32)]
 
 
-class SoftmaxRanker(Component):
+class SoftmaxRanker(Component[ItemList]):
     """
     Stochastic top-N ranking with softmax sampling.
 

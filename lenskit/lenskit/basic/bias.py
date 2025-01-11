@@ -270,7 +270,7 @@ class BiasConfig(BaseModel, extra="forbid"):
         return entity_damping(self.damping, entity)
 
 
-class BiasScorer(Component):
+class BiasScorer(Component[ItemList]):
     """
     A user-item bias rating prediction model.  This component uses
     :class:`BiasModel` to predict ratings for users and items.
