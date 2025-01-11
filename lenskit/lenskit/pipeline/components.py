@@ -30,8 +30,6 @@ from typing import (
 
 from pydantic import JsonValue, TypeAdapter
 
-from lenskit.data.dataset import Dataset
-
 from .types import Lazy
 
 P = ParamSpec("P")
@@ -39,49 +37,6 @@ T = TypeVar("T")
 # COut is only return, so Component[U] can be assigned to Component[T] if U ≼ T.
 COut = TypeVar("COut", covariant=True)
 PipelineFunction: TypeAlias = Callable[..., COut]
-
-
-@runtime_checkable
-class Trainable(Protocol):  # pragma: nocover
-    """
-    Interface for components that can learn parameters from training data. It
-    supports trainingand checking if a component has already been trained.
-    Trained components need to be picklable.
-
-    .. note::
-
-        Trainable components must also implement ``__call__``.
-
-    .. note::
-
-        A future LensKit version will add support for extracting model
-        parameters a la Pytorch's ``state_dict``, but this capability was not
-        ready for 2025.1.
-
-    Stability:
-        Full
-    """
-
-    @property
-    def is_trained(self) -> bool:
-        """
-        Check if this model has already been trained.
-        """
-        raise NotImplementedError()
-
-    def train(self, data: Dataset) -> None:
-        """
-        Train the pipeline component to learn its parameters from a training
-        dataset.
-
-        Args:
-            data:
-                The training dataset.
-            retrain:
-                If ``True``, retrain the model even if it has already been
-                trained.
-        """
-        raise NotImplementedError()
 
 
 @runtime_checkable

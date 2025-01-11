@@ -15,7 +15,8 @@ from typing_extensions import override
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
 from lenskit.data.matrix import CSRStructure
 from lenskit.data.vocab import Vocabulary
-from lenskit.pipeline import Component, Trainable
+from lenskit.pipeline import Component
+from lenskit.training import Trainable, TrainingOptions
 
 _logger = logging.getLogger(__name__)
 
@@ -30,13 +31,12 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
 
     training_data_: Dataset
 
-    @property
-    def is_trained(self) -> bool:
-        return hasattr(self, "training_data_")
-
     @override
-    def train(self, data: Dataset):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         # TODO: find a better data structure for this
+        if hasattr(self, "training_data_") and not options.retrain:
+            return
+
         self.training_data_ = data
 
     def __call__(self, query: QueryInput) -> RecQuery:
@@ -52,9 +52,6 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
             query.user_items = self.training_data_.user_row(query.user_id)
 
         return query
-
-    def __str__(self):
-        return self.__class__.__name__
 
 
 class KnownRatingScorer(Component[ItemList], Trainable):
@@ -90,12 +87,11 @@ class KnownRatingScorer(Component[ItemList], Trainable):
         self.score = score
         self.source = source
 
-    @property
-    def is_trained(self) -> bool:
-        return hasattr(self, "matrix_")
-
     @override
-    def train(self, data: Dataset):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
+        if hasattr(self, "matrix_") and not options.retrain:
+            return
+
         if self.source == "query":
             return
 
@@ -125,6 +121,7 @@ class KnownRatingScorer(Component[ItemList], Trainable):
                 assert self.score != "indicator"
                 # get the user's row as a sparse array
                 uarr = self.matrix_[[urow]]
+                assert isinstance(uarr, csr_array)
                 # create a series
                 scores = pd.Series(uarr.data, index=self.items_.ids(uarr.indices))
             elif isinstance(self.matrix_, CSRStructure):
@@ -136,7 +133,4 @@ class KnownRatingScorer(Component[ItemList], Trainable):
         scores = scores.reindex(
             items.ids(), fill_value=0.0 if self.score == "indicator" else np.nan
         )
-        return ItemList(items, scores=scores.values)
-
-    def __str__(self):
-        return self.__class__.__name__
+        return ItemList(items, scores=scores.values)  # type: ignore

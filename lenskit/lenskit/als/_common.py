@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Literal, TypeAlias
+from typing import Literal, TypeAlias
 
 import numpy as np
 import structlog
@@ -20,8 +20,8 @@ from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.types import UIPair
 from lenskit.logging import item_progress
 from lenskit.parallel.config import ensure_parallel_init
-from lenskit.pipeline import Component, Trainable
-from lenskit.random import ConfiguredSeed, RNGInput, RNGLike, random_generator
+from lenskit.pipeline import Component
+from lenskit.training import Trainable, TrainingOptions
 
 EntityClass: TypeAlias = Literal["user", "item"]
 
@@ -42,10 +42,6 @@ class ALSConfig(BaseModel):
     regularization: float | UIPair[float] = 0.1
     """
     L2 regularization strength.
-    """
-    rng: ConfiguredSeed = None
-    """
-    Random number seed.
     """
     save_user_features: bool = True
     """
@@ -139,7 +135,6 @@ class ALSBase(ABC, Component[ItemList], Trainable):
     """
 
     config: ALSConfig
-    rng: RNGLike | None = None
 
     users_: Vocabulary | None
     items_: Vocabulary
@@ -148,30 +143,24 @@ class ALSBase(ABC, Component[ItemList], Trainable):
 
     logger: structlog.stdlib.BoundLogger
 
-    def __init__(self, config: ALSConfig | None = None, *, rng: RNGInput = None, **kwargs: Any):
-        # hadle non-configurable RNG
-        if isinstance(rng, (np.random.Generator, np.random.BitGenerator)):
-            self.rng = rng
-        elif rng is not None:
-            kwargs = kwargs | {"rng": rng}
-        super().__init__(config, **kwargs)
-
-    @property
-    def is_trained(self) -> bool:
-        return hasattr(self, "item_features_")
-
     @override
-    def train(self, data: Dataset):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()) -> bool:
         """
         Run ALS to train a model.
 
         Args:
             ratings: the ratings data frame.
+
+        Returns:
+            ``True`` if the model was trained.
         """
+        if hasattr(self, "item_features_") and not options.retrain:
+            return False
+
         ensure_parallel_init()
         timer = util.Stopwatch()
 
-        for algo in self.fit_iters(data):
+        for algo in self.fit_iters(data, options):
             pass  # we just need to do the iterations
 
         if self.user_features_ is not None:
@@ -190,7 +179,9 @@ class ALSBase(ABC, Component[ItemList], Trainable):
                 features=self.config.features,
             )
 
-    def fit_iters(self, data: Dataset) -> Iterator[Self]:
+        return True
+
+    def fit_iters(self, data: Dataset, options: TrainingOptions) -> Iterator[Self]:
         """
         Run ALS to train a model, yielding after each iteration.
 
@@ -199,12 +190,13 @@ class ALSBase(ABC, Component[ItemList], Trainable):
         """
 
         log = self.logger = self.logger.bind(features=self.config.features)
+        rng = options.random_generator()
 
         train = self.prepare_data(data)
         self.users_ = train.users
         self.items_ = train.items
 
-        self.initialize_params(train)
+        self.initialize_params(train, rng)
 
         assert self.user_features_ is not None
         assert self.item_features_ is not None
@@ -250,11 +242,10 @@ class ALSBase(ABC, Component[ItemList], Trainable):
         """
         ...
 
-    def initialize_params(self, data: TrainingData):
+    def initialize_params(self, data: TrainingData, rng: np.random.Generator):
         """
         Initialize the model parameters at the beginning of training.
         """
-        rng = random_generator(self.rng or self.config.rng)
         self.logger.debug("initializing item matrix")
         self.item_features_ = self.initial_params(data.n_items, self.config.features, rng)
         self.logger.debug("|Q|: %f", torch.norm(self.item_features_, "fro"))

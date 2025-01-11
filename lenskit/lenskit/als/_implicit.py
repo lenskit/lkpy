@@ -17,6 +17,7 @@ from lenskit.logging import get_logger
 from lenskit.logging.progress import item_progress_handle, pbh_update
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
+from lenskit.training import TrainingOptions
 
 from ._common import ALSBase, ALSConfig, TrainContext, TrainingData
 
@@ -71,12 +72,12 @@ class ImplicitMFScorer(ALSBase):
     OtOr_: torch.Tensor
 
     @override
-    def train(self, data: Dataset):
-        super().train(data)
-
-        # compute OtOr and save it on the model
-        reg = self.config.user_reg
-        self.OtOr_ = _implicit_otor(self.item_features_, reg)
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
+        if super().train(data, options):
+            # compute OtOr and save it on the model
+            reg = self.config.user_reg
+            self.OtOr_ = _implicit_otor(self.item_features_, reg)
+            return True
 
     @override
     def prepare_data(self, data: Dataset) -> TrainingData:

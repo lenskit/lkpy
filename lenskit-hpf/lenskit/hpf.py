@@ -12,7 +12,8 @@ from pydantic import BaseModel, JsonValue
 from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
-from lenskit.pipeline import Component, Trainable
+from lenskit.pipeline import Component
+from lenskit.training import Trainable, TrainingOptions
 
 _logger = logging.getLogger(__name__)
 
@@ -47,12 +48,11 @@ class HPFScorer(Component[ItemList], Trainable):
     items_: Vocabulary
     item_features_: np.ndarray[tuple[int, int], np.dtype[np.float64]]
 
-    @property
-    def is_trained(self) -> bool:
-        return hasattr(self, "item_features_")
-
     @override
-    def train(self, data: Dataset):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
+        if hasattr(self, "item_features_") and not options.retrain:
+            return
+
         log = data.interaction_matrix("pandas", field="rating")
         log = log.rename(
             columns={

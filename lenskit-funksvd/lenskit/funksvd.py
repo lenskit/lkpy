@@ -20,8 +20,8 @@ from typing_extensions import override
 from lenskit import util
 from lenskit.basic import BiasModel, Damping
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
-from lenskit.pipeline import Component, Trainable
-from lenskit.random import ConfiguredSeed, random_generator
+from lenskit.pipeline import Component
+from lenskit.training import Trainable, TrainingOptions
 
 _logger = logging.getLogger(__name__)
 
@@ -52,10 +52,6 @@ class FunkSVDConfig(BaseModel):
     range: tuple[float, float] | None = None
     """
     Min/max range of ratings to clamp output.
-    """
-    rng: ConfiguredSeed = None
-    """
-    RNG seed.
     """
 
 
@@ -257,18 +253,17 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
     items_: Vocabulary
     item_features_: np.ndarray[tuple[int, int], np.dtype[np.float64]]
 
-    @property
-    def is_trained(self) -> bool:
-        return hasattr(self, "item_features_")
-
     @override
-    def train(self, data: Dataset):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         Train a FunkSVD model.
 
         Args:
             ratings: the ratings data frame.
         """
+        if hasattr(self, "item_features_") and not options.retrain:
+            return
+
         timer = util.Stopwatch()
         rate_df = data.interaction_matrix(format="pandas", layout="coo", field="rating")
 
@@ -278,7 +273,7 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
         _logger.info("[%s] preparing rating data for %d samples", timer, len(rate_df))
         _logger.debug("shuffling rating data")
         shuf = np.arange(len(rate_df), dtype=np.int_)
-        rng = random_generator(self.config.rng)
+        rng = options.random_generator()
         rng.shuffle(shuf)
         rate_df = rate_df.iloc[shuf, :]
 

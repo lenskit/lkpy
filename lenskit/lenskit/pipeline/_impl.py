@@ -3,20 +3,22 @@ from __future__ import annotations
 
 import typing
 import warnings
+from dataclasses import replace
 from types import FunctionType, UnionType
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
+from numpy.random import BitGenerator, Generator, SeedSequence
 from typing_extensions import Any, Literal, Self, TypeAlias, TypeVar, cast, overload
 
 from lenskit.data import Dataset
 from lenskit.diagnostics import PipelineError, PipelineWarning
 from lenskit.logging import get_logger
+from lenskit.training import Trainable, TrainingOptions
 
 from . import config
 from .components import (  # type: ignore # noqa: F401
     Component,
     PipelineFunction,
-    Trainable,
     fallback_on_none,
     instantiate_component,
 )
@@ -48,6 +50,9 @@ class Pipeline:
 
     If you have a scoring model and just want to generate recommenations with a
     default setup and minimal configuration, see :func:`topn_pipeline`.
+
+    Pipelines are also :class:`~lenskit.training.Trainable`, and train all
+    trainable components.
 
     Args:
         name:
@@ -555,27 +560,47 @@ class Pipeline:
 
         return pipe
 
-    def train(self, data: Dataset, *, retrain: bool = True) -> None:
+    def train(self, data: Dataset, options: TrainingOptions | None = None) -> None:
         """
         Trains the pipeline's trainable components (those implementing the
         :class:`TrainableComponent` interface) on some training data.
 
+        .. admonition:: Random Number Generation
+            :class: note
+
+            If :attr:`TrainingOptions.rng` is set and is not a generator or bit
+            generator (i.e. it is a seed), then this method wraps the seed in a
+            :class:`~numpy.random.SeedSequence` and calls
+            :class:`~numpy.random.SeedSequence.spawn()` to generate a distinct
+            seed for each component in the pipeline.
+
         Args:
             data:
                 The dataset to train on.
-            retrain:
-                Whether to re-train components that have already been trained.
+            options:
+                The training options.  If ``None``, default options are used.
         """
-        for comp in self._components.values():
-            if hasattr(comp, "train"):
-                comp = cast(Trainable, comp)
-                if comp.is_trained and not retrain:
-                    _log.debug("component %s already trained", comp)
-                    continue
-                _log.info("training %s", comp)
-                comp.train(data)
+        log = _log.bind(pipeline=self.name)
+        if options is None:
+            options = TrainingOptions()
+
+        if isinstance(options.rng, SeedSequence):
+            seed = options.rng
+        elif options.rng is None or isinstance(options.rng, (Generator, BitGenerator)):
+            seed = None
+        else:
+            seed = SeedSequence(options.rng)
+
+        log.info("training pipeline components")
+        for name, comp in self._components.items():
+            clog = log.bind(name=name, component=comp)
+            if isinstance(comp, Trainable):
+                # spawn new seed if needed
+                c_opts = options if seed is None else replace(options, rng=seed.spawn(1)[0])
+                clog.info("training component")
+                comp.train(data, c_opts)
             else:
-                _log.debug("component %s does not need training", comp)
+                clog.debug("training not required")
 
     @overload
     def run(self, /, **kwargs: object) -> object: ...

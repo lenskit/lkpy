@@ -19,7 +19,7 @@ import structlog
 import torch
 from pydantic import BaseModel, PositiveFloat, PositiveInt, field_validator
 from scipy.sparse import csc_array
-from typing_extensions import NamedTuple, Optional, Self, override
+from typing_extensions import NamedTuple, Optional, override
 
 from lenskit import util
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery
@@ -28,7 +28,8 @@ from lenskit.diagnostics import DataWarning
 from lenskit.logging import get_logger
 from lenskit.math.sparse import normalize_sparse_rows, safe_spmv, torch_sparse_to_scipy
 from lenskit.parallel.config import ensure_parallel_init
-from lenskit.pipeline import Component, Trainable
+from lenskit.pipeline import Component
+from lenskit.training import Trainable, TrainingOptions
 
 _log = get_logger(__name__)
 
@@ -98,12 +99,8 @@ class UserKNNScorer(Component[ItemList], Trainable):
     user_ratings_: csc_array
     "Centered but un-normalized rating matrix (COO) to find neighbor ratings."
 
-    @property
-    def is_trained(self) -> bool:
-        return hasattr(self, "users_")
-
     @override
-    def train(self, data: Dataset) -> Self:
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         "Train" a user-user CF model.  This memorizes the rating data in a format that is usable
         for future computations.
@@ -111,6 +108,9 @@ class UserKNNScorer(Component[ItemList], Trainable):
         Args:
             ratings(pandas.DataFrame): (user, item, rating) data for collaborative filtering.
         """
+        if hasattr(self, "user_ratings_") and not options.retrain:
+            return
+
         ensure_parallel_init()
         rmat = data.interaction_matrix("torch", field="rating" if self.config.explicit else None)
         assert rmat.is_sparse_csr
@@ -133,8 +133,6 @@ class UserKNNScorer(Component[ItemList], Trainable):
         self.users_ = data.users.copy()
         self.user_means_ = means
         self.items_ = data.items.copy()
-
-        return self
 
     @override
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
