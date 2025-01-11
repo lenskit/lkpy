@@ -41,10 +41,6 @@ covered by that document:
     ``user_num`` and ``item_num`` for 0-based user and item numbers.  This is to
     remove ambiguity about how users and items are being referenced.
 
-*   LensKit no longer has top-level exports (and is now in fact a namespace
-    package).  Classes and functions must be imported from appropriate
-    subpackages.
-
 *   The ``Popular`` recommender has been removed in favor of :class:`~lenskit.basic.PopScore`.
 
 *   The DCG metric has been removed, as it is basically never used and was not
