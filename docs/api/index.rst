@@ -12,6 +12,7 @@ Core Abstractions
     lenskit.pipeline
     lenskit.diagnostics
     lenskit.operations
+    lenskit.training
 
 .. toctree::
     :caption: Core
@@ -21,6 +22,7 @@ Core Abstractions
     pipeline
     operations
     diagnostics
+    training
 
 Components and Models
 ~~~~~~~~~~~~~~~~~~~~~
