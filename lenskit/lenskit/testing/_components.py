@@ -1,6 +1,7 @@
 import inspect
 import os
 import pickle
+from time import perf_counter
 from typing import ClassVar, Literal
 
 import numpy as np
@@ -81,6 +82,24 @@ class TrainingTests:
         if isinstance(model, Trainable):
             model.train(ml_ds, TrainingOptions())
         yield model
+
+    def test_skip_retrain(self, ml_ds: Dataset):
+        model = self.component()
+        if not isinstance(model, Trainable):
+            skip(f"component {model.__class__.__name__} is not trainable")
+
+        model.train(ml_ds, TrainingOptions())
+        v1_data = pickle.dumps(model)
+
+        # train again
+        t1 = perf_counter()
+        model.train(ml_ds, TrainingOptions(retrain=False))
+        t2 = perf_counter()
+        # that should be very fast
+        assert t2 - t1 < 0.001
+        # the model shouldn't have changed
+        v2_data = pickle.dumps(model)
+        assert v2_data == v1_data
 
 
 class ScorerTests(TrainingTests):
