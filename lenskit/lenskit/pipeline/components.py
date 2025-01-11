@@ -198,16 +198,17 @@ class Component:
 
     @classmethod
     def _config_class(cls) -> type | None:
-        annots = inspect.get_annotations(cls, eval_str=True)
-        ct = annots.get("config", None)
-        if ct is None or ct == Any:
-            return None
+        for base in cls.__mro__:
+            annots = inspect.get_annotations(base, eval_str=True)
+            ct = annots.get("config", None)
+            if ct == Any:
+                return None
 
-        if isinstance(ct, type):
-            return ct
-        else:
-            warnings.warn("config attribute is not annotated with a plain type")
-            return get_origin(ct)
+            if isinstance(ct, type):
+                return ct
+            elif ct is not None:
+                warnings.warn("config attribute is not annotated with a plain type")
+                return get_origin(ct)
 
     def dump_config(self) -> dict[str, JsonValue]:
         """
