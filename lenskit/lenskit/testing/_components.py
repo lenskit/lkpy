@@ -23,6 +23,11 @@ class BasicComponentTests:
         inst = self.component()
         assert inst is not None
 
+        if self.component._config_class() is not None:
+            assert inst.config is not None
+        else:
+            assert inst.config is None
+
     def test_default_config_vars(self):
         inst = self.component()
         cfg = inst.dump_config()
