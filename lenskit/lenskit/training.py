@@ -22,7 +22,7 @@ from lenskit.data.dataset import Dataset
 from lenskit.random import RNGInput, random_generator
 
 
-@dataclass
+@dataclass(frozen=True)
 class TrainingOptions:
     """
     Options and context settings that govern model training.
@@ -48,15 +48,17 @@ class TrainingOptions:
     that into a NumPy :class:`~numpy.random.Generator`.
     """
 
-    _generator: np.random.Generator | None = None
-
     def random_generator(self) -> np.random.Generator:
         """
         Obtain a random generator from the configured RNG or seed.
+
+        .. note::
+
+            Each call to this method will return a fresh generator from the same
+            seed.  Components should call it once at the beginning of their
+            training procesess.
         """
-        if self._generator is None:
-            self._generator = random_generator(self.rng)
-        return self._generator
+        return random_generator(self.rng)
 
 
 @runtime_checkable
