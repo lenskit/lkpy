@@ -18,7 +18,7 @@ from .matrix import MatrixDataset
 from .movielens import load_movielens, load_movielens_df
 from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray
 from .query import QueryInput, RecQuery
-from .types import ID, NPID, FeedbackType, UITuple
+from .types import ID, NPID, FeedbackType
 from .vocab import Vocabulary
 
 __all__ = [
@@ -29,7 +29,6 @@ __all__ = [
     "MatrixDataset",
     "ID",
     "NPID",
-    "UITuple",
     "FeedbackType",
     "ItemList",
     "ItemListCollection",
