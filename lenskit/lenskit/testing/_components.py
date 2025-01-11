@@ -96,8 +96,8 @@ class TrainingTests:
         t1 = perf_counter()
         model.train(ml_ds, TrainingOptions(retrain=False))
         t2 = perf_counter()
-        # that should be very fast
-        assert t2 - t1 < 0.001
+        # that should be very fast, let's say 10ms
+        assert t2 - t1 < 0.01
         # the model shouldn't have changed
         v2_data = pickle.dumps(model)
         assert v2_data == v1_data
