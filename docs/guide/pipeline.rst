@@ -342,8 +342,9 @@ a component that requires no training or configuration can simply be a Python
 function.
 
 Most components will extend the :class:`Component` base class to expose
-configuration capabilities, and implement the :class:`Trainable` protocol if
-they contain a model that needs to be trained.
+configuration capabilities, and implement the
+:class:`lenskit.training.Trainable` protocol if they contain a model that needs
+to be trained.
 
 Components also must be pickleable, as LensKit uses pickling for shared memory
 parallelism in its batch-inference code.
