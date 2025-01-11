@@ -1,8 +1,7 @@
 2025 Releases
 =============
 
-The 2025 release series is **currently in development**.  No specific release
-date is set yet.
+The 2025 release series is **currently in development** for release in January 2025.
 
 2025 will bring breaking changes to several LensKit APIs to improve ergonomics,
 correctness-by-default, and flexibility.  It also adopts SPEC0_, a standard for

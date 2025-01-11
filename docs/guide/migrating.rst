@@ -64,6 +64,12 @@ fall into the following categories:
   also directly supports “global” metrics that are computed over an entire run
   instead of one list at a time.
 
+.. important::
+
+    The default options of some metrics, particularly
+    :class:`~lenskit.metrics.NDCG`, has changed, resulting in different values
+    than previous versions of LensKit.
+
 Loading Data
 ------------
 
