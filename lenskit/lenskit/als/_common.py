@@ -206,15 +206,13 @@ class ALSBase(ABC, Component, Trainable):
 
         self.initialize_params(train)
 
-        reg = UIPair.normalize(self.config.regularization)
-
         assert self.user_features_ is not None
         assert self.item_features_ is not None
         u_ctx = TrainContext.create(
-            "user", train.ui_rates, self.user_features_, self.item_features_, reg.user
+            "user", train.ui_rates, self.user_features_, self.item_features_, self.config.user_reg
         )
         i_ctx = TrainContext.create(
-            "item", train.iu_rates, self.item_features_, self.user_features_, reg.item
+            "item", train.iu_rates, self.item_features_, self.user_features_, self.config.item_reg
         )
 
         log.info("beginning ALS model training")
