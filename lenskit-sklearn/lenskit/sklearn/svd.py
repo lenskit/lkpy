@@ -90,7 +90,7 @@ class BiasedSVDScorer(Component[ItemList], Trainable):
             self.config.features, algorithm=self.config.algorithm, n_iter=self.config.n_iter
         )
         _log.info("[%s] training SVD (k=%d)", timer, self.factorization_.n_components)  # type: ignore
-        Xt = self.factorization_.fit_transform(r_mat)
+        Xt = self.factorization_.fit_transform(r_mat)  # type: ignore
         self.user_components_ = Xt
         self.users_ = data.users.copy()
         self.items_ = data.items.copy()
