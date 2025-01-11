@@ -12,7 +12,7 @@ Basic data types used in data representations.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Generic, Literal, Sequence, TypeAlias, TypeVar, cast
+from typing import Any, Generic, Literal, Sequence, TypeAlias, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -62,13 +62,3 @@ class UIPair(Generic[T]):
 
     user: T
     item: T
-
-    @classmethod
-    def normalize(cls, value: T | UIPair[T] | tuple[T, T]) -> UIPair[T]:
-        if isinstance(value, UIPair):
-            return cast(UIPair[T], value)
-        elif isinstance(value, tuple):
-            user, item = cast(tuple[T, T], value)
-            return cls(user=user, item=item)
-        else:
-            return UIPair(user=value, item=value)
