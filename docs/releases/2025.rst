@@ -64,7 +64,8 @@ Metric Behavior Changes
     different from those computed by previous versions, either more correct or
     more consistent with common practice.
 
-*   The :class:`~lenskit.metrics.NDCG` metric now defaults to *ignore* rating values.
+*   The :class:`~lenskit.metrics.NDCG` metric now defaults to *ignore* rating
+    values.
 
 Model Behavior Changes
 ~~~~~~~~~~~~~~~~~~~~~~
