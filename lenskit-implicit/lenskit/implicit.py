@@ -64,7 +64,7 @@ class BaseRec(Component[ItemList], Trainable):
     """
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         if hasattr(self, "delegate") and not options.retrain:
             return
 
