@@ -14,15 +14,49 @@ import time
 import numba as n
 import numpy as np
 from numba.experimental import jitclass
+from pydantic import BaseModel
 from typing_extensions import override
 
 from lenskit import util
-from lenskit.basic import BiasModel
-from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, UITuple, Vocabulary
+from lenskit.basic import BiasModel, Damping
+from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.pipeline import Component, Trainable
-from lenskit.random import RNGInput, random_generator
+from lenskit.random import ConfiguredSeed, random_generator
 
 _logger = logging.getLogger(__name__)
+
+
+class FunkSVDConfig(BaseModel):
+    "Configuration for :class:`FunkSVDScorer`."
+
+    features: int = 50
+    """
+    Number of latent features.
+    """
+    epochs: int = 100
+    """
+    Number of training epochs (per feature).
+    """
+    learning_rate: float = 0.001
+    """
+    Gradient descent learning rate.
+    """
+    regularization: float = 0.015
+    """
+    Parameter regularization.
+    """
+    damping: Damping = 5.0
+    """
+    Bias damping term.
+    """
+    range: tuple[float, float] | None = None
+    """
+    Min/max range of ratings to clamp output.
+    """
+    rng: ConfiguredSeed = None
+    """
+    RNG seed.
+    """
 
 
 @jitclass(
@@ -197,7 +231,7 @@ def _align_add_bias(bias, index, keys, series):
     return bias, series
 
 
-class FunkSVDScorer(Component, Trainable):
+class FunkSVDScorer(Trainable, Component):
     """
     FunkSVD explicit-feedback matrix factoriation.  FunkSVD is a regularized
     biased matrix factorization technique trained with featurewise stochastic
@@ -213,60 +247,15 @@ class FunkSVDScorer(Component, Trainable):
 
     Stability:
         Caller
-
-    Args:
-        features:
-            the number of features to train
-        iterations:
-            the number of iterations to train each feature
-        lrate:
-            the learning rate
-        reg:
-            the regularization factor
-        damping:
-            damping factor for the underlying mean
-        bias:
-            the underlying bias model to fit.  If ``True``, then a
-            :py:class:`lenskit.basic.BiasModel` model is fit with ``damping``.
-        range:
-            the ``(min, max)`` rating values to clamp ratings, or ``None`` to
-            leave predictions unclamped.
-        rng:
-            The random seed for shuffling the input data (see :ref:`rng`).
     """
 
-    features: int
-    iterations: int
-    lrate: float
-    reg: float
-    damping: UITuple[float]
-    range: tuple[float, float] | None
-    rng: RNGInput
+    config: FunkSVDConfig
 
     bias_: BiasModel
     users_: Vocabulary
     user_features_: np.ndarray[tuple[int, int], np.dtype[np.float64]]
     items_: Vocabulary
     item_features_: np.ndarray[tuple[int, int], np.dtype[np.float64]]
-
-    def __init__(
-        self,
-        features: int = 50,
-        iterations: int = 100,
-        *,
-        lrate: float = 0.001,
-        reg: float = 0.015,
-        damping: UITuple[float] | float | tuple[float, float] = 5.0,
-        range: tuple[float, float] | None = None,
-        rng: RNGInput = None,
-    ):
-        self.features = features
-        self.iterations = iterations
-        self.lrate = lrate
-        self.reg = reg
-        self.damping = UITuple.create(damping)
-        self.range = range
-        self.rng = rng
 
     @property
     def is_trained(self) -> bool:
@@ -284,12 +273,12 @@ class FunkSVDScorer(Component, Trainable):
         rate_df = data.interaction_matrix(format="pandas", layout="coo", field="rating")
 
         _logger.info("[%s] fitting bias model", timer)
-        self.bias_ = BiasModel.learn(data, damping=self.damping)
+        self.bias_ = BiasModel.learn(data, damping=self.config.damping)
 
         _logger.info("[%s] preparing rating data for %d samples", timer, len(rate_df))
         _logger.debug("shuffling rating data")
         shuf = np.arange(len(rate_df), dtype=np.int_)
-        rng = random_generator(self.rng)
+        rng = random_generator(self.config.rng)
         rng.shuffle(shuf)
         rate_df = rate_df.iloc[shuf, :]
 
@@ -309,11 +298,16 @@ class FunkSVDScorer(Component, Trainable):
 
         _logger.debug("[%s] initializing data structures", timer)
         context = Context(users, items, ratings, initial)
-        params = make_params(self.iterations, self.lrate, self.reg, self.range)
+        params = make_params(
+            self.config.epochs,
+            self.config.learning_rate,
+            self.config.regularization,
+            self.config.range,
+        )
 
-        model = _fresh_model(self.features, data.users.size, data.items.size)
+        model = _fresh_model(self.config.features, data.users.size, data.items.size)
 
-        _logger.info("[%s] training biased MF model with %d features", timer, self.features)
+        _logger.info("[%s] training biased MF model with %d features", timer, self.config.features)
         train(context, params, model, timer)
         _logger.info("finished model training in %s", timer)
 
@@ -346,6 +340,3 @@ class FunkSVDScorer(Component, Trainable):
         scores += biases
 
         return ItemList(items, scores=scores)
-
-    def __str__(self):
-        return "FunkSVD(features={}, reg={})".format(self.features, self.reg)
