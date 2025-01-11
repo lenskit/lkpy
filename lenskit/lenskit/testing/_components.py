@@ -8,7 +8,8 @@ import numpy as np
 from pytest import approx, fixture, skip
 
 from lenskit.data import Dataset, ItemList, MatrixDataset, RecQuery
-from lenskit.pipeline import Component, Trainable
+from lenskit.pipeline import Component
+from lenskit.training import Trainable, TrainingOptions
 
 from ._markers import jit_enabled
 
@@ -78,13 +79,8 @@ class TrainingTests:
 
         model = self.component()
         if isinstance(model, Trainable):
-            model.train(ml_ds)
+            model.train(ml_ds, TrainingOptions())
         yield model
-
-    def test_basic_trained(self, ml_ds: Dataset, trained_model: Component):
-        assert isinstance(trained_model, self.component)
-        if isinstance(trained_model, Trainable):
-            assert trained_model.is_trained
 
 
 class ScorerTests(TrainingTests):
@@ -239,7 +235,7 @@ class ScorerTests(TrainingTests):
 
         model = self.component()
         assert isinstance(model, Trainable)
-        model.train(ds)
+        model.train(ds, TrainingOptions())
 
         good_u = rng.choice(ml_ds.users.ids(), 10, replace=False)
         for u in set(good_u) | set(drop_u):
