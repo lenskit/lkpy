@@ -9,7 +9,7 @@ from typing import Any
 from lenskit.data.dataset import Dataset
 from lenskit.data.vocab import Vocabulary
 from lenskit.pipeline import Pipeline
-from lenskit.pipeline.components import Trainable
+from lenskit.training import Trainable, TrainingOptions
 
 
 def test_train(ml_ds: Dataset):
@@ -33,11 +33,7 @@ class TestComponent:
     def __call__(self, *, item: int) -> bool:
         return self.items.number(item, "none") is not None
 
-    @property
-    def is_trained(self) -> bool:
-        return hasattr(self, "items")
-
-    def train(self, data: Dataset):
+    def train(self, data: Dataset, options: TrainingOptions):
         # we just memorize the items
         self.items = data.items
 

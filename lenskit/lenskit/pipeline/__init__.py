@@ -17,7 +17,6 @@ from .common import RecPipelineBuilder, topn_pipeline
 from .components import (
     Component,
     PipelineFunction,
-    Trainable,
 )
 from .config import PipelineConfig
 from .nodes import Node
@@ -32,7 +31,6 @@ __all__ = [
     "PipelineState",
     "Node",
     "PipelineFunction",
-    "Trainable",
     "PipelineConfig",
     "Lazy",
     "Component",
