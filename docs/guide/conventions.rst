@@ -34,10 +34,13 @@ parameter; if seed material is supplied, that seed should be considered part of
 the configuration (see the source code in :mod:`lenskit.basic.random` for
 examples).
 
-Components that use randomization at **training time** should obtain their
-generator or seed from the :attr:`~lenskit.training.TrainingOptions`.  This
-makes it easy to configure a seed for the training process without needing
-to configure each component.
+Components that use randomization at **training time** (e.g. to shuffle data or
+to initialize parameter values) should obtain their generator or seed from the
+:attr:`~lenskit.training.TrainingOptions`.  This makes it easy to configure a
+seed for the training process without needing to configure each component.  For
+consistent configurability, it's best for components using other frameworks such
+as PyTorch to use NumPy to initialize the parameter values and then convert the
+initial values to the appropriate compute backend.
 
 Other LensKit code, such as the `data splitting support <./splitting>`_, follow
 SPEC 7 directly by accepting an ``rng`` keyword parameter.
