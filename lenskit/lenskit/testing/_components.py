@@ -84,6 +84,7 @@ class TrainingTests:
         yield model
 
     def test_skip_retrain(self, ml_ds: Dataset):
+        self.maybe_skip_nojit()
         model = self.component()
         if not isinstance(model, Trainable):
             skip(f"component {model.__class__.__name__} is not trainable")
