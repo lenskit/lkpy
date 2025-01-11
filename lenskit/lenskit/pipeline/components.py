@@ -206,7 +206,7 @@ class Component:
 
             if isinstance(ct, type):
                 return ct
-            elif ct is not None:
+            elif ct is not None:  # pragma: nocover
                 warnings.warn("config attribute is not annotated with a plain type")
                 return get_origin(ct)
 
@@ -230,7 +230,7 @@ class Component:
         cfg_cls = cls._config_class()
         if cfg_cls:
             return TypeAdapter(cfg_cls).validate_python(data)
-        elif data:
+        elif data:  # pragma: nocover
             raise RuntimeError(
                 "supplied configuration options but {} has no config class".format(cls.__name__)
             )
@@ -238,7 +238,7 @@ class Component:
             return None
 
     @abstractmethod
-    def __call__(self, **kwargs: Any) -> Any:
+    def __call__(self, **kwargs: Any) -> Any:  # pragma: nocover
         """
         Run the pipeline's operation and produce a result.  This is the key
         method for components to implement.
@@ -282,7 +282,7 @@ def instantiate_component(
     elif issubclass(comp, Component):
         cfg = comp.validate_config(config)
         return comp(cfg)
-    else:
+    else:  # pragma: nocover
         return comp()  # type: ignore
 
 
