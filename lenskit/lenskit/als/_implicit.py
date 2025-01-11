@@ -72,7 +72,7 @@ class ImplicitMFScorer(ALSBase):
     OtOr_: torch.Tensor
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         super().train(data, options)
 
         # compute OtOr and save it on the model

@@ -32,7 +32,7 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
     training_data_: Dataset
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         # TODO: find a better data structure for this
         if hasattr(self, "training_data_") and not options.retrain:
             return
@@ -91,7 +91,7 @@ class KnownRatingScorer(Component[ItemList], Trainable):
         self.source = source
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         if hasattr(self, "matrix_") and not options.retrain:
             return
 

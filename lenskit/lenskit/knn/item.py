@@ -114,7 +114,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
 
     @override
     @inference_mode
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         Train a model.
 

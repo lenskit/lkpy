@@ -100,7 +100,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
     "Centered but un-normalized rating matrix (COO) to find neighbor ratings."
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         "Train" a user-user CF model.  This memorizes the rating data in a format that is usable
         for future computations.

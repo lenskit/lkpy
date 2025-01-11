@@ -27,7 +27,7 @@ class TrainingCandidateSelectorBase(Component[ItemList], Trainable):
     """
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         if hasattr(self, "items_") and not options.retrain:
             return
 

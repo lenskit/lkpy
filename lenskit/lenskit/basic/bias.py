@@ -289,7 +289,7 @@ class BiasScorer(Component[ItemList], Trainable):
     config: BiasConfig
     model_: BiasModel
 
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         Train the bias model on some rating data.
 

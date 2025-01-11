@@ -47,7 +47,7 @@ class PopScorer(Component[ItemList], Trainable):
     item_scores_: np.ndarray[int, np.dtype[np.float32]]
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         if hasattr(self, "item_scores_") and not options.retrain:
             return
 
@@ -106,7 +106,7 @@ class TimeBoundedPopScore(PopScorer):
     config: TimeBoundedPopConfig
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         if hasattr(self, "item_scores_") and not options.retrain:
             return
 

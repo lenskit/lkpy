@@ -158,7 +158,7 @@ class ALSBase(ABC, Component[ItemList], Trainable):
         super().__init__(config, **kwargs)
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         Run ALS to train a model.
 
