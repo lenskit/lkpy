@@ -24,19 +24,29 @@ Random Seeds
 
 .. _SPEC 7: https://scientific-python.org/specs/spec-0007/
 
-LensKit components follow `SPEC 7`_ for specifying random number seeds.
-Components that use randomization (either at runtime, or to set initial
-conditions for training) have a constructor parameter `rng` that takes either a
-:class:`~numpy.random.Generator` or seed material.  If you want reproducible
-stochastic pipelines, configure the random seeds for your components.
+LensKit components follow `SPEC 7`_ for specifying random number seeds.  If you
+want reproducible stochastic pipelines, configure the random seeds for your
+components and/or training process.
 
-This convention is also followed for other LensKit code, such as the `data
-splitting support <./splitting>`_.
+Components that use randomization at **inference time** take either seed
+material or a :class:`~numpy.random.Generator` as an ``rng`` constructor
+parameter; if seed material is supplied, that seed should be considered part of
+the configuration (see the source code in :mod:`lenskit.basic.random` for
+examples).
+
+Components that use randomization at **training time** should obtain their
+generator or seed from the :attr:`~lenskit.training.TrainingOptions`.  This
+makes it easy to configure a seed for the training process without needing
+to configure each component.
+
+Other LensKit code, such as the `data splitting support <./splitting>`_, follow
+SPEC 7 directly by accepting an ``rng`` keyword parameter.
 
 .. important::
 
-    If you specify random seeds, we strongly recommend specifying seeds instead of
-    generators, so that the seed can be included in serialized configurations.
+    If you specify random seeds for component configurations, we strongly
+    recommend specifying seeds instead of generators, so that the seed can be
+    included in serialized configurations.
 
 .. versionchanged:: 2025.1
 
@@ -46,19 +56,10 @@ splitting support <./splitting>`_.
 
 LensKit extends SPEC 7 with a global RNG that components can use as a fallback,
 to make it easier to configure system-wide generation for things like tests.
-This is configured with :func:`~lenskit.random.set_global_rng`.
-
-When implementing a component that uses randomness in its training, we recommend
-deferring conversion of the provided RNG into an actual generator until
-model-training time, so that serializing an untrained pipeline or its
-configuration includes the original seed instead of the resulting generator.
-When using the RNG to create initial state for e.g. training a model with
-PyTorch, it can be useful to create that state in NumPy and then convert to a
-tensor, so that components are consistent in their random number generation
-behavior instead of having variation between NumPy and other backends.
-Components can use the :func:`~lenskit.random_generator` function to
-convert seed material or a generator into a NumPy generator, falling back to the
-global RNG if one is specified.
+This is configured with :func:`~lenskit.random.set_global_rng`. Components can
+use the :func:`~lenskit.random_generator` function to convert seed material or a
+generator into a NumPy generator, falling back to the global RNG if one is
+specified.
 
 Derived Seeds
 -------------
