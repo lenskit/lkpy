@@ -63,7 +63,7 @@ class BiasedSVDScorer(Component[ItemList], Trainable):
     user_components_: NDArray[np.float64]
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions):
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         if hasattr(self, "factorization_") and not options.retrain:
             return
 
