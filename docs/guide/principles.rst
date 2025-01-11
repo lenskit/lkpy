@@ -1,3 +1,5 @@
+.. _principles:
+
 Design Goals and Principles
 ===========================
 

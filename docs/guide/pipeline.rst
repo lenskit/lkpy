@@ -441,3 +441,41 @@ Finally, you can directly pass configuration parameters to the component constru
     }>
 
 See :ref:`conventions` for more conventions for component design.
+
+POPROX and Other Integrators
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+One of LensKit's :ref:`design principles <principles>` is “use the pieces you
+want”.  That extends to the pipeline code — while the pipeline components
+included with LensKit use LensKit's data structures like
+:class:`~lenskit.data.ItemList` and :class:`~lenskit.data.RecQuery`, the
+pipeline itself is fully generic.  Components can accept and return any types,
+and the pipeline code makes no assumptions about the kinds of data routed
+through the pipeline, the structure of the pipeline, or the presence or absence
+of any particular components.  The only aspects of component interface or
+behavior defined by the pipeline are that:
+
+-   Pipeline objects are callable, and accept their inputs as keyword parameters.
+-   Configurable components extend the :class:`Component` interface and use
+    Pydantic models to house their configurable options (with its requirements,
+    such as defining a ``config`` attribute to store the configuration).
+-   Components can be constructed with either zero arguments or a single
+    configuration model argument.
+
+The exception to this is training support — :meth:`Pipeline.train` takes a
+LensKit dataset and trains components implementing the
+:class:`~lenskit.training.Trainable` protocol.  But it is entirely possible to
+handle model training outside of the pipeline and ignore LensKit ``train``
+method.  You can also use the method, but with a different input data object; it
+will fail static typechecking, but :meth:`Pipeline.train` doesn't actually care
+what the type of its first argument is, and will pass it as-is to the component
+``train()`` methods.
+
+One example of an integrator that uses the pipeline without the rest of
+LensKit's data structures is _POPROX: the POPROX recommender design uses its own
+data structures, like a Pydantic-backed ``ArticleSet``, instead of
+:class:`~lenskit.data.ItemList` and friends, and expects components to be
+pre-trained by other code.  It still uses the LensKit pipeline to wire these
+components together.
+
+.. _POPROX: https://docs.poprox.ai/reference/recommender/pipeline.html
