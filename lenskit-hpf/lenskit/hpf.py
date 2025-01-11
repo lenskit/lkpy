@@ -8,12 +8,17 @@ import logging
 
 import hpfrec
 import numpy as np
-from typing_extensions import Any, override
+from pydantic import BaseModel
+from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.pipeline import Component, Trainable
 
 _logger = logging.getLogger(__name__)
+
+
+class HPFConfig(BaseModel, extra="allow"):
+    features: int = 50
 
 
 class HPFScorer(Component[ItemList], Trainable):
@@ -34,20 +39,12 @@ class HPFScorer(Component[ItemList], Trainable):
             additional arguments to pass to :class:`hpfrec.HPF`.
     """
 
-    features: int
-    _kwargs: dict[str, Any]
+    config: HPFConfig
 
     users_: Vocabulary
     user_features_: np.ndarray[tuple[int, int], np.dtype[np.float64]]
     items_: Vocabulary
     item_features_: np.ndarray[tuple[int, int], np.dtype[np.float64]]
-
-    def __init__(self, features: int = 50, **kwargs):
-        self.features = features
-        self._kwargs = kwargs
-
-    def get_config(self):
-        return {"features": self.features} | self._kwargs
 
     @property
     def is_trained(self) -> bool:
@@ -64,7 +61,7 @@ class HPFScorer(Component[ItemList], Trainable):
             }
         )
 
-        hpf = hpfrec.HPF(self.features, reindex=False, **self._kwargs)
+        hpf = hpfrec.HPF(self.config.features, reindex=False, **self.config.__pydantic_extra__)
 
         _logger.info("fitting HPF model with %d features", self.features)
         hpf.fit(log)

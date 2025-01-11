@@ -28,7 +28,7 @@ class TestHPF(BasicComponentTests, ScorerTests):
 
 @mark.slow
 def test_hpf_train_large(tmp_path, ml_ratings):
-    algo = hpf.HPFScorer(20)
+    algo = hpf.HPFScorer(features=20)
     ratings = ml_ratings.assign(rating=ml_ratings.rating + 0.5)
     ds = from_interactions_df(ratings)
     algo.train(ds)
@@ -57,7 +57,7 @@ def test_hpf_train_large(tmp_path, ml_ratings):
 
 @mark.slow
 def test_hpf_train_binary(tmp_path, ml_ratings):
-    algo = hpf.HPFScorer(20)
+    algo = hpf.HPFScorer(features=20)
     ratings = ml_ratings.drop(columns=["timestamp", "rating"])
     ds = from_interactions_df(ratings)
     algo.train(ds)
