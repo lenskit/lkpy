@@ -12,11 +12,11 @@ from __future__ import annotations
 import logging
 from collections.abc import Container
 from dataclasses import dataclass
-from typing import Literal
+from typing import Annotated, Literal
 
 import numpy as np
 import torch
-from pydantic import BaseModel, NonNegativeFloat
+from pydantic import BaseModel, NonNegativeFloat, PlainSerializer
 from typing_extensions import Self, TypeAlias, overload
 
 from lenskit.data import ID, Dataset, ItemList, QueryInput, RecQuery, Vocabulary
@@ -256,7 +256,9 @@ class BiasConfig(BaseModel, extra="forbid"):
     Configuration for :class:`BiasScorer`.
     """
 
-    entities: set[Literal["user", "item"]] = {"user", "item"}
+    entities: Annotated[
+        set[Literal["user", "item"]], PlainSerializer(lambda s: sorted(s), return_type=list[str])
+    ] = {"user", "item"}
     """
     The entities to compute biases for, in addition to global bais.  Defaults to
     users and items.
