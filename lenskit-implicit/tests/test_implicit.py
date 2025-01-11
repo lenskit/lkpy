@@ -30,8 +30,8 @@ class TestImplicitBPR(BasicComponentTests, ScorerTests):
 
 @mark.slow
 def test_implicit_als_train_rec(ml_ds):
-    algo = ALS(25)
-    assert algo.factors == 25
+    algo = ALS(factors=25)
+    assert algo.config.factors == 25
 
     ret = algo.train(ml_ds)
     assert ret is algo
@@ -55,7 +55,7 @@ def test_implicit_als_train_rec(ml_ds):
 @mark.parametrize("n_jobs", [1, None])
 def test_implicit_als_batch_accuracy(ml_100k, n_jobs):
     ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(ALS(25), ds, n_jobs=n_jobs)
+    results = quick_measure_model(ALS(factors=25), ds, n_jobs=n_jobs)
 
     ndcg = results.list_summary().loc["NDCG", "mean"]
     _log.info("nDCG for %d users is %.4f", len(results.list_metrics()), ndcg)
@@ -64,8 +64,8 @@ def test_implicit_als_batch_accuracy(ml_100k, n_jobs):
 
 @mark.slow
 def test_implicit_bpr_train_rec(ml_ds):
-    algo = BPR(25, use_gpu=False)
-    assert algo.factors == 25
+    algo = BPR(factors=25, use_gpu=False)
+    assert algo.config.factors == 25
 
     algo.train(ml_ds)
 
@@ -89,7 +89,7 @@ def test_implicit_bpr_train_rec(ml_ds):
 @mark.parametrize("n_jobs", [1, None])
 def test_implicit_bpr_batch_accuracy(ml_100k, n_jobs):
     ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(BPR(25), ds, n_jobs=n_jobs)
+    results = quick_measure_model(BPR(factors=25), ds, n_jobs=n_jobs)
 
     ndcg = results.list_summary().loc["NDCG", "mean"]
     _log.info("nDCG for %d users is %.4f", len(results.list_metrics()), ndcg)
@@ -98,7 +98,7 @@ def test_implicit_bpr_batch_accuracy(ml_100k, n_jobs):
 
 def test_implicit_pickle_untrained(tmp_path):
     mf = tmp_path / "bpr.dat"
-    algo = BPR(25, use_gpu=False)
+    algo = BPR(factors=25, use_gpu=False)
 
     with mf.open("wb") as f:
         pickle.dump(algo, f)
@@ -107,4 +107,4 @@ def test_implicit_pickle_untrained(tmp_path):
         a2 = pickle.load(f)
 
     assert a2 is not algo
-    assert a2.factors == 25
+    assert a2.config.factors == 25

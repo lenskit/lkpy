@@ -4,13 +4,13 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import inspect
 import logging
 
 import numpy as np
 from implicit.als import AlternatingLeastSquares
 from implicit.bpr import BayesianPersonalizedRanking
 from implicit.recommender_base import RecommenderBase
+from pydantic import BaseModel, JsonValue
 from scipy.sparse import csr_matrix
 from typing_extensions import override
 
@@ -26,26 +26,28 @@ __all__ = [
 ]
 
 
+class ImplicitConfig(BaseModel, extra="allow"):
+    __pydantic_extra__: dict[str, JsonValue]
+
+
+class ImplicitALSConfig(ImplicitConfig, extra="allow"):
+    weight: float = 40.0
+
+
 class BaseRec(Component, Trainable):
     """
     Base class for Implicit-backed recommenders.
 
     Stability:
         Caller
-
-    Args:
-        delegate:
-            The delegate algorithm.
     """
 
+    config: ImplicitConfig
     delegate: RecommenderBase
     """
     The delegate algorithm from :mod:`implicit`.
     """
-    weight: float
-    """
-    The weight for positive examples (only used by some algorithms).
-    """
+    weight: float = 1.0
 
     matrix_: csr_matrix
     """
@@ -60,10 +62,6 @@ class BaseRec(Component, Trainable):
     The item ID mapping from training.
     """
 
-    def __init__(self, delegate: RecommenderBase):
-        self.delegate = delegate
-        self.weight = 1.0
-
     @property
     def is_trained(self):
         return hasattr(self, "matrix_")
@@ -72,9 +70,8 @@ class BaseRec(Component, Trainable):
     def train(self, data: Dataset):
         matrix = data.interaction_matrix("scipy", layout="csr", legacy=True)
         uir = matrix * self.weight
-        if getattr(self.delegate, "item_factors", None) is not None:  # pragma: no cover
-            _logger.warning("implicit algorithm already trained, re-fit is usually a bug")
 
+        self.delegate = self._construct()
         _logger.info("training %s on %s matrix (%d nnz)", self.delegate, uir.shape, uir.nnz)
 
         self.delegate.fit(uir)
@@ -84,6 +81,9 @@ class BaseRec(Component, Trainable):
         self.items_ = data.items
 
         return self
+
+    def _construct(self) -> RecommenderBase:
+        raise NotImplementedError("implicit constructor not implemented")
 
     @override
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
@@ -113,24 +113,6 @@ class BaseRec(Component, Trainable):
 
         return ItemList(items, scores=scores)
 
-    def __getattr__(self, name):
-        if "delegate" not in self.__dict__:
-            raise AttributeError()
-        dd = self.delegate.__dict__
-        if name in dd:
-            return dd[name]
-        else:
-            raise AttributeError()
-
-    def get_params(self, deep=True):
-        dd = self.delegate.__dict__
-        sig = inspect.signature(self.delegate.__class__)
-        names = list(sig.parameters.keys())
-        return dict([(k, dd.get(k)) for k in names])
-
-    def __str__(self):
-        return "Implicit({})".format(self.delegate)
-
 
 class ALS(BaseRec):
     """
@@ -140,15 +122,14 @@ class ALS(BaseRec):
         Caller
     """
 
-    def __init__(self, *args, weight=40.0, **kwargs):
-        """
-        Construct an ALS recommender.  The arguments are passed as-is to
-        :py:class:`implicit.als.AlternatingLeastSquares`.  The `weight`
-        parameter controls the confidence weight for positive examples.
-        """
+    config: ImplicitALSConfig
 
-        super().__init__(AlternatingLeastSquares(*args, **kwargs))
-        self.weight = weight
+    @property
+    def weight(self):
+        return self.config.weight
+
+    def _construct(self):
+        return AlternatingLeastSquares(**self.config.__pydantic_extra__)  # type: ignore
 
 
 class BPR(BaseRec):
@@ -159,9 +140,5 @@ class BPR(BaseRec):
         Caller
     """
 
-    def __init__(self, *args, **kwargs):
-        """
-        Construct a BPR recommender.  The arguments are passed as-is to
-        :py:class:`implicit.als.BayesianPersonalizedRanking`.
-        """
-        super().__init__(BayesianPersonalizedRanking(*args, **kwargs))
+    def _construct(self):
+        return BayesianPersonalizedRanking(**self.config.__pydantic_extra__)  # type: ignore
