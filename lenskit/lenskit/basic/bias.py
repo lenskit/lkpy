@@ -21,6 +21,7 @@ from typing_extensions import Self, TypeAlias, overload
 
 from lenskit.data import ID, Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.pipeline.components import Component
+from lenskit.training import Trainable, TrainingOptions
 
 _logger = logging.getLogger(__name__)
 BiasEntity: TypeAlias = Literal["user", "item"]
@@ -272,7 +273,7 @@ class BiasConfig(BaseModel, extra="forbid"):
         return entity_damping(self.damping, entity)
 
 
-class BiasScorer(Component[ItemList]):
+class BiasScorer(Component[ItemList], Trainable):
     """
     A user-item bias rating prediction model.  This component uses
     :class:`BiasModel` to predict ratings for users and items.
@@ -288,11 +289,7 @@ class BiasScorer(Component[ItemList]):
     config: BiasConfig
     model_: BiasModel
 
-    @property
-    def is_trained(self) -> bool:
-        return hasattr(self, "model_")
-
-    def train(self, data: Dataset):
+    def train(self, data: Dataset, options: TrainingOptions):
         """
         Train the bias model on some rating data.
 
@@ -303,6 +300,9 @@ class BiasScorer(Component[ItemList]):
         Returns:
             The trained bias object.
         """
+        if hasattr(self, "model_") and not options.retrain:
+            return
+
         self.model_ = BiasModel.learn(data, self.config.damping, entities=self.config.entities)
 
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:

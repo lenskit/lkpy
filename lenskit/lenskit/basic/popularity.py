@@ -10,7 +10,8 @@ from pydantic import BaseModel
 from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, Vocabulary
-from lenskit.pipeline import Component, Trainable
+from lenskit.pipeline import Component
+from lenskit.training import Trainable, TrainingOptions
 
 _log = logging.getLogger(__name__)
 
@@ -45,12 +46,11 @@ class PopScorer(Component[ItemList], Trainable):
     items_: Vocabulary
     item_scores_: np.ndarray[int, np.dtype[np.float32]]
 
-    @property
-    def is_trained(self) -> bool:
-        return hasattr(self, "item_scores_")
-
     @override
-    def train(self, data: Dataset):
+    def train(self, data: Dataset, options: TrainingOptions):
+        if hasattr(self, "item_scores_") and not options.retrain:
+            return
+
         _log.info("counting item popularity")
         self.items_ = data.items.copy()
         stats = data.item_stats()
@@ -106,15 +106,17 @@ class TimeBoundedPopScore(PopScorer):
     config: TimeBoundedPopConfig
 
     @override
-    def train(self, data: Dataset, **kwargs):
-        _log.info("counting time-bounded item popularity")
+    def train(self, data: Dataset, options: TrainingOptions):
+        if hasattr(self, "item_scores_") and not options.retrain:
+            return
 
+        _log.info("counting time-bounded item popularity")
         log = data.interaction_log("numpy")
 
         item_scores = None
         if log.timestamps is None:
             _log.warning("no timestamps in interaction log; falling back to PopScorer")
-            super().train(data, **kwargs)
+            super().train(data, options)
             return
         else:
             counts = np.zeros(data.item_count, dtype=np.int32)
@@ -124,7 +126,6 @@ class TimeBoundedPopScore(PopScorer):
 
             item_scores = super()._train_internal(
                 pd.Series(counts, index=data.items.index),
-                **kwargs,
             )
 
         self.items_ = data.items.copy()

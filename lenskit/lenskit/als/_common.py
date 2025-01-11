@@ -20,8 +20,9 @@ from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.types import UIPair
 from lenskit.logging import item_progress
 from lenskit.parallel.config import ensure_parallel_init
-from lenskit.pipeline import Component, Trainable
+from lenskit.pipeline import Component
 from lenskit.random import ConfiguredSeed, RNGInput, RNGLike, random_generator
+from lenskit.training import Trainable, TrainingOptions
 
 EntityClass: TypeAlias = Literal["user", "item"]
 
@@ -156,18 +157,17 @@ class ALSBase(ABC, Component[ItemList], Trainable):
             kwargs = kwargs | {"rng": rng}
         super().__init__(config, **kwargs)
 
-    @property
-    def is_trained(self) -> bool:
-        return hasattr(self, "item_features_")
-
     @override
-    def train(self, data: Dataset):
+    def train(self, data: Dataset, options: TrainingOptions):
         """
         Run ALS to train a model.
 
         Args:
             ratings: the ratings data frame.
         """
+        if hasattr(self, "item_features_") and not options.retrain:
+            return
+
         ensure_parallel_init()
         timer = util.Stopwatch()
 

@@ -26,7 +26,8 @@ from lenskit.logging import get_logger, trace
 from lenskit.logging.progress import item_progress_handle, pbh_update
 from lenskit.math.sparse import normalize_sparse_rows, safe_spmv
 from lenskit.parallel import ensure_parallel_init
-from lenskit.pipeline import Component, Trainable
+from lenskit.pipeline import Component
+from lenskit.training import Trainable, TrainingOptions
 from lenskit.util.torch import inference_mode
 
 _log = get_logger(__name__)
@@ -111,13 +112,9 @@ class ItemKNNScorer(Component[ItemList], Trainable):
     users_: Vocabulary
     "Vocabulary of user IDs."
 
-    @property
-    def is_trained(self) -> bool:
-        return hasattr(self, "items_")
-
     @override
     @inference_mode
-    def train(self, data: Dataset):
+    def train(self, data: Dataset, options: TrainingOptions):
         """
         Train a model.
 
@@ -128,6 +125,9 @@ class ItemKNNScorer(Component[ItemList], Trainable):
             ratings:
                 (user,item,rating) data for computing item similarities.
         """
+        if hasattr(self, "items_") and not options.retrain:
+            return
+
         ensure_parallel_init()
         log = _log.bind(n_items=data.item_count, feedback=self.config.feedback)
         # Training proceeds in 2 steps:
