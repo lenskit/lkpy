@@ -15,7 +15,8 @@ from scipy.sparse import csr_matrix
 from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
-from lenskit.pipeline import Component, Trainable
+from lenskit.pipeline import Component
+from lenskit.training import Trainable, TrainingOptions
 
 _logger = logging.getLogger(__name__)
 
@@ -62,12 +63,11 @@ class BaseRec(Component[ItemList], Trainable):
     The item ID mapping from training.
     """
 
-    @property
-    def is_trained(self):
-        return hasattr(self, "matrix_")
-
     @override
-    def train(self, data: Dataset):
+    def train(self, data: Dataset, options: TrainingOptions):
+        if hasattr(self, "delegate") and not options.retrain:
+            return
+
         matrix = data.interaction_matrix("scipy", layout="csr", legacy=True)
         uir = matrix * self.weight
 
@@ -100,8 +100,8 @@ class BaseRec(Component[ItemList], Trainable):
         mask = inos >= 0
         good_inos = inos[mask]
 
-        ifs = self.delegate.item_factors[good_inos]
-        uf = self.delegate.user_factors[user_num]
+        ifs = self.delegate.item_factors[good_inos]  # type: ignore
+        uf = self.delegate.user_factors[user_num]  # type: ignore
 
         # convert back if these are on CUDA
         if hasattr(ifs, "to_numpy"):

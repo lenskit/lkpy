@@ -16,7 +16,8 @@ from typing_extensions import Literal, override
 from lenskit.basic import BiasModel, Damping
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
 from lenskit.data.vocab import Vocabulary
-from lenskit.pipeline import Component, Trainable
+from lenskit.pipeline import Component
+from lenskit.training import Trainable, TrainingOptions
 from lenskit.util import Stopwatch
 
 try:
@@ -61,12 +62,11 @@ class BiasedSVDScorer(Component[ItemList], Trainable):
     items_: Vocabulary
     user_components_: NDArray[np.float64]
 
-    @property
-    def is_trained(self):
-        return hasattr(self, "factorization_")
-
     @override
-    def train(self, data: Dataset):
+    def train(self, data: Dataset, options: TrainingOptions):
+        if hasattr(self, "factorization_") and not options.retrain:
+            return
+
         timer = Stopwatch()
         _log.info("[%s] computing bias", timer)
         self.bias_ = BiasModel.learn(data, self.config.damping)
