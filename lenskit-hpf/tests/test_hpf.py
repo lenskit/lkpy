@@ -16,6 +16,7 @@ from lenskit.data import ItemList, from_interactions_df
 from lenskit.metrics import quick_measure_model
 from lenskit.pipeline import topn_pipeline
 from lenskit.testing import BasicComponentTests, ScorerTests
+from lenskit.training import TrainingOptions
 
 hpf = importorskip("lenskit.hpf")
 
@@ -47,7 +48,7 @@ def test_hpf_train_large(tmp_path, ml_ratings):
     assert np.all(a2.item_features_ == algo.item_features_)
 
     pipe = topn_pipeline(algo)
-    pipe.train(ds, retrain=False)
+    pipe.train(ds, TrainingOptions(retrain=False))
 
     for u in np.random.choice(ratings.user_id.unique(), size=50, replace=False):
         recs = pipe.run("recommender", query=u, n=50)
@@ -76,7 +77,7 @@ def test_hpf_train_binary(tmp_path, ml_ratings):
     assert np.all(a2.item_features_ == algo.item_features_)
 
     pipe = topn_pipeline(algo)
-    pipe.train(ds, retrain=False)
+    pipe.train(ds, TrainingOptions(retrain=False))
 
     for u in np.random.choice(ratings.user_id.unique(), size=50, replace=False):
         recs = pipe.run("recommender", query=u, n=50)
