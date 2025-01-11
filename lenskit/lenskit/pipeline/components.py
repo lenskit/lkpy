@@ -18,6 +18,7 @@ from types import FunctionType
 from typing import (
     Any,
     Callable,
+    Generic,
     Mapping,
     ParamSpec,
     Protocol,
@@ -35,7 +36,6 @@ from .types import Lazy
 
 P = ParamSpec("P")
 T = TypeVar("T")
-Cfg = TypeVar("Cfg")
 # COut is only return, so Component[U] can be assigned to Component[T] if U ≼ T.
 COut = TypeVar("COut", covariant=True)
 PipelineFunction: TypeAlias = Callable[..., COut]
@@ -130,7 +130,7 @@ class ParameterContainer(Protocol):  # pragma: nocover
         raise NotImplementedError()
 
 
-class Component:
+class Component(Generic[COut]):
     """
     Base class for pipeline component objects.  Any component that is not just a
     function should extend this class.
@@ -260,7 +260,7 @@ class Component:
 
 
 def instantiate_component(
-    comp: str | type | FunctionType, config: dict[str, Any] | None
+    comp: str | type | FunctionType, config: Mapping[str, Any] | None
 ) -> Callable[..., object]:
     """
     Utility function to instantiate a component given its class, function, or
@@ -281,7 +281,7 @@ def instantiate_component(
         return comp
     elif issubclass(comp, Component):
         cfg = comp.validate_config(config)
-        return comp(cfg)
+        return comp(cfg)  # type: ignore
     else:  # pragma: nocover
         return comp()  # type: ignore
 

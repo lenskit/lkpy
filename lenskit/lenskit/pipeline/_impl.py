@@ -65,7 +65,7 @@ class Pipeline:
     _nodes: dict[str, Node[Any]]
     _aliases: dict[str, Node[Any]]
     _defaults: dict[str, Node[Any]]
-    _components: dict[str, PipelineFunction[Any]]
+    _components: dict[str, PipelineFunction[Any] | Component[Any]]
     _hash: str | None = None
     _last: Node[Any] | None = None
     _anon_nodes: set[str]
