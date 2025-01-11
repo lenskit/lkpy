@@ -53,9 +53,6 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
 
         return query
 
-    def __str__(self):
-        return self.__class__.__name__
-
 
 class KnownRatingScorer(Component[ItemList], Trainable):
     """
@@ -137,6 +134,3 @@ class KnownRatingScorer(Component[ItemList], Trainable):
             items.ids(), fill_value=0.0 if self.score == "indicator" else np.nan
         )
         return ItemList(items, scores=scores.values)  # type: ignore
-
-    def __str__(self):
-        return self.__class__.__name__
