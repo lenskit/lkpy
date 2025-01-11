@@ -6,23 +6,25 @@
 
 from __future__ import annotations
 
-import logging
-
 import numpy as np
 import torch
 from typing_extensions import override
 
-from lenskit.basic import BiasModel
+from lenskit.basic import BiasModel, Damping
 from lenskit.data import Dataset, ItemList
-from lenskit.data.types import UITuple
+from lenskit.logging import get_logger
 from lenskit.logging.progress import item_progress_handle, pbh_update
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
-from lenskit.types import RNGInput
 
-from ._common import ALSBase, TrainContext, TrainingData
+from ._common import ALSBase, ALSConfig, TrainContext, TrainingData
 
-_log = logging.getLogger(__name__)
+
+class BiasedMFConfig(ALSConfig):
+    damping: Damping = 5.0
+    """
+    Damping for the bias model.
+    """
 
 
 class BiasedMFScorer(ALSBase):
@@ -38,57 +40,20 @@ class BiasedMFScorer(ALSBase):
 
     Stability:
         Caller
-
-    Args:
-        features:
-            The number of features to train.
-        epochs:
-            The number of iterations to train.
-        reg:
-            The regularization factor; can also be a tuple ``(ureg, ireg)`` to
-            specify separate user and item regularization terms.
-        damping:
-            Damping term for the bias model.
-        rng:
-            Random number seed or generator.
     """
 
-    timer = None
-
-    damping: UITuple[float]
-
+    config: BiasedMFConfig
     bias_: BiasModel
 
-    def __init__(
-        self,
-        features: int = 50,
-        *,
-        epochs: int = 10,
-        reg: float | tuple[float, float] = 0.1,
-        damping: float | UITuple[float] | tuple[float, float] = 5.0,
-        rng: RNGInput = None,
-        save_user_features: bool = True,
-    ):
-        super().__init__(
-            features,
-            epochs=epochs,
-            reg=reg,
-            rng=rng,
-            save_user_features=save_user_features,
-        )
-        self.damping = UITuple.create(damping)
-
-    @property
-    def logger(self):
-        return _log
+    logger = get_logger(__name__, variant="biased")
 
     @override
     def prepare_data(self, data: Dataset):
         # transform ratings using offsets
         rmat = data.interaction_matrix("torch", layout="coo", field="rating")
 
-        _log.info("[%s] normalizing ratings", self.timer)
-        self.bias_ = BiasModel.learn(data, self.damping)
+        self.logger.info("normalizing ratings")
+        self.bias_ = BiasModel.learn(data, damping=self.config.damping)
         rmat = self.bias_.transform_matrix(rmat)
 
         rmat = rmat.to_sparse_csr()
@@ -123,7 +88,9 @@ class BiasedMFScorer(ALSBase):
 
         ri_val = ratings[mask].to(torch.float64)
 
-        u_feat = _train_bias_row_cholesky(inums[mask], ri_val, self.item_features_, self.reg.user)
+        u_feat = _train_bias_row_cholesky(
+            inums[mask], ri_val, self.item_features_, self.config.user_reg
+        )
         return u_feat, u_bias
 
     @override
@@ -144,9 +111,6 @@ class BiasedMFScorer(ALSBase):
         scores = scores + biases
 
         return ItemList(items, scores=scores)
-
-    def __str__(self):
-        return "als.BiasedMFScorer(features={}, regularization={})".format(self.features, self.reg)
 
 
 @torch.jit.script

@@ -4,7 +4,7 @@ import logging
 
 from lenskit.data import Dataset
 from lenskit.pipeline import Component, RecPipelineBuilder
-from lenskit.types import RNGInput
+from lenskit.random import RNGInput
 
 from .bulk import RunAnalysis, RunAnalysisResult
 from .predict import MAE, RMSE

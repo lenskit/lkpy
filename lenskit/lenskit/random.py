@@ -18,12 +18,39 @@ from numpy.random import Generator, SeedSequence, default_rng
 from typing_extensions import Any, Literal, Protocol, Sequence, TypeAlias, override
 
 from lenskit.data import RecQuery
-from lenskit.types import RNGInput, SeedLike
+
+SeedLike: TypeAlias = int | Sequence[int] | np.random.SeedSequence
+"""
+Type for RNG seeds (see `SPEC 7`_).
+
+.. _SPEC 7: https://scientific-python.org/specs/spec-0007/
+"""
+
+RNGLike: TypeAlias = np.random.Generator | np.random.BitGenerator
+"""
+Type for random number generators as inputs (see `SPEC 7`_).
+
+.. _SPEC 7: https://scientific-python.org/specs/spec-0007/
+"""
+
+RNGInput: TypeAlias = SeedLike | RNGLike | None
+"""
+Type for RNG inputs (see `SPEC 7`_).
+
+.. _SPEC 7: https://scientific-python.org/specs/spec-0007/
+"""
+
+ConfiguredSeed: TypeAlias = int | Sequence[int] | None
+"""
+Random number seed that can be configured.
+"""
 
 SeedDependency = Literal["user"]
-DerivableSeed: TypeAlias = SeedLike | SeedDependency | tuple[SeedLike, SeedDependency] | None
 
 _global_rng: Generator | None = None
+
+
+DerivableSeed: TypeAlias = ConfiguredSeed | SeedDependency | tuple[ConfiguredSeed, SeedDependency]
 
 
 def set_global_rng(seed: RNGInput):
@@ -145,7 +172,7 @@ def derivable_rng(spec: DerivableSeed) -> RNGFactory:
 
     Seed specifications may be any of the following:
 
-    - A seed (:type:`~lenskit.types.SeedLike`).
+    - A seed (:type:`~lenskit.random.SeedLike`).
     - The value ``'user'``, which will derive a seed from the query user ID.
     - A tuple of the form ``(seed, 'user')``, that will use ``seed`` as the
       basis and drive from it a new seed based on the user ID.

@@ -22,3 +22,6 @@ RecSys
 PyArrow
 Numba
 DuckDB
+ItemList
+Pydantic
+dataclass

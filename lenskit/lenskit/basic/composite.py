@@ -18,6 +18,8 @@ class FallbackScorer(Component):
         Caller
     """
 
+    config: None
+
     def __call__(self, scores: ItemList, backup: ItemList) -> ItemList:
         s = scores.scores()
         if s is None:

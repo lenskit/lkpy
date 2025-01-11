@@ -24,9 +24,15 @@ export function exampleTestJob(): WorkflowJob {
       ...condaSetup(options),
       ...mlDataSteps(["ml-100k", "ml-1m", "ml-10m", "ml-20m"]),
       {
-        "name": "📕 Validate documentation examples",
+        "name": "📕 Validate code examples",
         "run": script(
-          `pytest ${cov} --nbval-lax --doctest-glob='*.rst' --ignore='docs/_ext' --log-file test-docs.log docs */lenskit`,
+          `sphinx-build -b doctest docs build/doc`,
+        ),
+      },
+      {
+        "name": "📕 Validate example notebooks",
+        "run": script(
+          `pytest ${cov} --nbval-lax --log-file test-notebooks.log docs`,
         ),
       },
       ...coverageSteps(options),

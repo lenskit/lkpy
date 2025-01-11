@@ -71,6 +71,11 @@ New code should use :py:func:`lenskit.data.from_interactions_df` to convert a Pa
 data frame into a :py:func:`~lenskit.data.Dataset`, or one of the standard loaders
 such as :py:func:`lenskit.data.load_movielens`.
 
+While most LensKit data frame code still recognizes the legacy ``user`` and
+``item`` columns from LensKit 0.14 and earlier, data frames of LensKit data
+should use the column names ``user_id`` and ``item_id`` instead, to
+unambiguously distinguish them from user and item numbers.
+
 Additional dataset construction support and possible implementations (e.g.
 database-backed datasets) are coming, but this is the migration path for the
 typical code patterns used in LensKit 0.14 and earlier.
@@ -180,9 +185,17 @@ them for very different ways of turning scoring models into full recommenders.
 .. note::
 
     Since 2025, we no longer use the term “algorithm” in LensKit, as it is
-    ambiguous and promotes confusion about very different things.  Instead we
+    ambiguous and promotes confusion about very different things.  Instead, we
     have “pipelines” consisting of ”components”, some of which may be ”models”
     (for scoring, ranking, etc.).
+
+Configuration Components
+........................
+
+Individual components now use Pydantic_ models to represent their configuration
+(e.g. hyperparameters).  This is to reduce redundancy, improve documentation,
+enable consistent serialization, and validate parameter values in a consistent
+and automated fashion.  See :ref:`component-config` for details.
 
 Obtaining Recommendations
 -------------------------

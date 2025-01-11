@@ -4,7 +4,7 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from lenskit.data.query import RecQuery
-from lenskit.util.random import derivable_rng, make_seed
+from lenskit.random import derivable_rng, make_seed
 
 
 @given(

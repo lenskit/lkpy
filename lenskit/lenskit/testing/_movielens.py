@@ -113,7 +113,7 @@ def demo_recs() -> tuple[TTSplit, ItemListCollection[UserIDKey]]:
 
     builder = RecPipelineBuilder()
     builder.scorer(PopScorer())
-    builder.ranker(SoftmaxRanker(500))
+    builder.ranker(SoftmaxRanker(n=500))
     pipe = builder.build()
     pipe.train(split.train)
 

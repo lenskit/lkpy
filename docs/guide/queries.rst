@@ -39,6 +39,8 @@ You can also pass a raw user identifier or item list to the pipeline, as the key
 recommendation operations and most components accept a :class:`QueryInput` and
 pass it to :meth:`~RecQuery.create` to upgrade to a query.
 
+.. _recommender-ops:
+
 Invoking Recommenders
 ~~~~~~~~~~~~~~~~~~~~~
 

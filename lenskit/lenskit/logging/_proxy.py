@@ -8,7 +8,9 @@ from structlog._config import BoundLoggerLazyProxy
 _fallback_wrapper = structlog.make_filtering_bound_logger(logging.WARNING)
 
 
-def get_logger(name: str, *, remove_private: bool = True) -> structlog.stdlib.BoundLogger:
+def get_logger(
+    name: str, *, remove_private: bool = True, **init_als: Any
+) -> structlog.stdlib.BoundLogger:
     """
     Get a logger.  This works like :func:`structlog.stdlib.get_logger`, except
     the returned proxy logger is quiet (only WARN and higher messages) if
@@ -24,6 +26,8 @@ def get_logger(name: str, *, remove_private: bool = True) -> structlog.stdlib.Bo
         remove_private:
             Set to ``False`` to keep private module components of the logger
             name instead of removing them.
+        init_vals:
+            Initial values to bind into the logger when crated.
     Returns:
         A lazy proxy logger.  The returned logger is type-compatible with
         :class:`structlib.stdlib.BoundLogger`, but is actually an instance of an
@@ -32,7 +36,7 @@ def get_logger(name: str, *, remove_private: bool = True) -> structlog.stdlib.Bo
     """
     if remove_private:
         name = re.sub(r"\._.*", "", name)
-    return LenskitProxyLogger(None, logger_factory_args=[name])  # type: ignore
+    return LenskitProxyLogger(None, logger_factory_args=[name], initial_values=init_als)  # type: ignore
 
 
 class LenskitProxyLogger(BoundLoggerLazyProxy):

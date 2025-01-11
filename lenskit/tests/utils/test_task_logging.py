@@ -6,7 +6,7 @@ from lenskit.pipeline import topn_pipeline
 
 
 def test_train_task(ml_ds: Dataset):
-    info = BiasedMFScorer(50, epochs=5)
+    info = BiasedMFScorer(features=50, epochs=5)
     pipe = topn_pipeline(info)
 
     with Task("train ImplicitMF", reset_hwm=True) as task:

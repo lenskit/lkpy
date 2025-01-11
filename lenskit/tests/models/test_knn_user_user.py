@@ -36,7 +36,7 @@ class TestUserKNN(BasicComponentTests, ScorerTests):
 
 
 def test_uu_train(ml_ratings, ml_ds):
-    algo = UserKNNScorer(30)
+    algo = UserKNNScorer(k=30)
     algo.train(ml_ds)
 
     # we have data structures
@@ -68,7 +68,7 @@ def test_uu_train(ml_ratings, ml_ds):
 
 
 def test_uu_predict_one(ml_ds):
-    algo = UserKNNScorer(30)
+    algo = UserKNNScorer(k=30)
     algo.train(ml_ds)
 
     preds = algo(query=4, items=ItemList([1016]))
@@ -78,7 +78,7 @@ def test_uu_predict_one(ml_ds):
 
 
 def test_uu_predict_too_few(ml_ds):
-    algo = UserKNNScorer(30, min_nbrs=2)
+    algo = UserKNNScorer(k=30, min_nbrs=2)
     algo.train(ml_ds)
 
     preds = algo(query=4, items=ItemList([2091]))
@@ -90,7 +90,7 @@ def test_uu_predict_too_few(ml_ds):
 
 
 def test_uu_predict_too_few_blended(ml_ds):
-    algo = UserKNNScorer(30, min_nbrs=2)
+    algo = UserKNNScorer(k=30, min_nbrs=2)
     algo.train(ml_ds)
 
     preds = algo(query=4, items=ItemList([1016, 2091]))
@@ -102,7 +102,7 @@ def test_uu_predict_too_few_blended(ml_ds):
 
 
 def test_uu_predict_live_ratings(ml_ratings):
-    algo = UserKNNScorer(30, min_nbrs=2)
+    algo = UserKNNScorer(k=30, min_nbrs=2)
     no4 = ml_ratings[ml_ratings.user_id != 4]
     no4 = from_interactions_df(no4)
     algo.train(no4)
@@ -122,7 +122,7 @@ def test_uu_predict_live_ratings(ml_ratings):
 
 
 def test_uu_save_load(tmp_path, ml_ratings, ml_ds):
-    orig = UserKNNScorer(30)
+    orig = UserKNNScorer(k=30)
     _log.info("training model")
     orig.train(ml_ds)
 
@@ -167,7 +167,7 @@ def test_uu_save_load(tmp_path, ml_ratings, ml_ds):
 
 
 def test_uu_predict_unknown_empty(ml_ds):
-    algo = UserKNNScorer(30, min_nbrs=2)
+    algo = UserKNNScorer(k=30, min_nbrs=2)
     algo.train(ml_ds)
 
     preds = algo(query=-28018, items=ItemList([1016, 2091]))
@@ -179,7 +179,7 @@ def test_uu_predict_unknown_empty(ml_ds):
 
 def test_uu_implicit(ml_ratings):
     "Train and use user-user on an implicit data set."
-    algo = UserKNNScorer(20, feedback="implicit")
+    algo = UserKNNScorer(k=20, feedback="implicit")
     data = ml_ratings.loc[:, ["user_id", "item_id"]]
 
     algo.train(from_interactions_df(data))
@@ -199,7 +199,7 @@ def test_uu_implicit(ml_ratings):
 @mark.slow
 def test_uu_save_load_implicit(tmp_path, ml_ratings):
     "Save and load user-user on an implicit data set."
-    orig = UserKNNScorer(20, feedback="implicit")
+    orig = UserKNNScorer(k=20, feedback="implicit")
     data = ml_ratings.loc[:, ["user_id", "item_id"]]
 
     orig.train(from_interactions_df(data))
@@ -216,7 +216,7 @@ def test_uu_save_load_implicit(tmp_path, ml_ratings):
 def test_uu_known_preds(ml_ds: Dataset):
     from lenskit import batch
 
-    uknn = UserKNNScorer(30, min_sim=1.0e-6)
+    uknn = UserKNNScorer(k=30, min_sim=1.0e-6)
     pipe = predict_pipeline(uknn, fallback=False)
     _log.info("training %s on ml data", uknn)
     pipe.train(ml_ds)
@@ -262,7 +262,7 @@ def __batch_eval(job):
 @mark.eval
 def test_uu_batch_accuracy(ml_100k: pd.DataFrame):
     ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(UserKNNScorer(30), ds, predicts_ratings=True)
+    results = quick_measure_model(UserKNNScorer(k=30), ds, predicts_ratings=True)
 
     summary = results.list_summary()
 
@@ -274,7 +274,9 @@ def test_uu_batch_accuracy(ml_100k: pd.DataFrame):
 @mark.eval
 def test_uu_implicit_batch_accuracy(ml_100k: pd.DataFrame):
     ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(UserKNNScorer(30, feedback="implicit"), ds, predicts_ratings=True)
+    results = quick_measure_model(
+        UserKNNScorer(k=30, feedback="implicit"), ds, predicts_ratings=True
+    )
 
     summary = results.list_summary()
 

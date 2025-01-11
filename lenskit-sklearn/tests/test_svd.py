@@ -33,7 +33,7 @@ class TestBiasedSVD(BasicComponentTests, ScorerTests):
 
 @need_skl
 def test_svd_basic_build():
-    algo = svd.BiasedSVDScorer(2)
+    algo = svd.BiasedSVDScorer(features=2)
     algo.train(simple_ds)
 
     assert algo.user_components_.shape == (3, 2)
@@ -42,7 +42,7 @@ def test_svd_basic_build():
 @need_skl
 def test_svd_predict_basic():
     _log.info("SVD input data:\n%s", simple_df)
-    algo = svd.BiasedSVDScorer(2, damping=0)
+    algo = svd.BiasedSVDScorer(features=2, damping=0)
     algo.train(simple_ds)
     _log.info("user means:\n%s", str(algo.bias_.user_biases))
     _log.info("item means:\n%s", str(algo.bias_.item_biases))
@@ -59,7 +59,7 @@ def test_svd_predict_basic():
 
 @need_skl
 def test_svd_predict_bad_item():
-    algo = svd.BiasedSVDScorer(2)
+    algo = svd.BiasedSVDScorer(features=2)
     algo.train(simple_ds)
 
     preds = algo(10, ItemList([4]))
@@ -72,7 +72,7 @@ def test_svd_predict_bad_item():
 
 @need_skl
 def test_svd_predict_bad_user():
-    algo = svd.BiasedSVDScorer(2)
+    algo = svd.BiasedSVDScorer(features=2)
     algo.train(simple_ds)
 
     preds = algo(50, ItemList([3]))
@@ -86,7 +86,7 @@ def test_svd_predict_bad_user():
 @need_skl
 @mark.slow
 def test_svd_save_load(ml_ds: Dataset):
-    original = svd.BiasedSVDScorer(20)
+    original = svd.BiasedSVDScorer(features=20)
     original.train(ml_ds)
 
     mod = pickle.dumps(original)
@@ -104,7 +104,7 @@ def test_svd_save_load(ml_ds: Dataset):
 @mark.eval
 def test_svd_batch_accuracy(rng, ml_100k: pd.DataFrame):
     data = from_interactions_df(ml_100k)
-    svd_algo = svd.BiasedSVDScorer(25, damping=10)
+    svd_algo = svd.BiasedSVDScorer(features=25, damping=10)
     results = quick_measure_model(svd_algo, data, predicts_ratings=True, rng=rng)
 
     assert results.global_metrics()["MAE"] == approx(0.71, abs=0.025)

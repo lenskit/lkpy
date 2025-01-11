@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 import structlog
 import torch
+from pydantic import BaseModel, PositiveFloat, PositiveInt, field_validator
 from scipy.sparse import csc_array
 from typing_extensions import NamedTuple, Optional, Self, override
 
@@ -30,6 +31,42 @@ from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component, Trainable
 
 _log = get_logger(__name__)
+
+
+class UserKNNConfig(BaseModel, extra="forbid"):
+    "Configuration for :class:`ItemKNNScorer`."
+
+    k: PositiveInt = 20
+    """
+    The maximum number of neighbors for scoring each item.
+    """
+    min_nbrs: PositiveInt = 1
+    """
+    The minimum number of neighbors for scoring each item.
+    """
+    min_sim: PositiveFloat = 1.0e-6
+    """
+    Minimum similarity threshold for considering a neighbor.  Must be positive;
+    if less than the smallest 32-bit normal (:math:`1.175 \\times 10^{-38}`), is
+    clamped to that value.
+    """
+    feedback: FeedbackType = "explicit"
+    """
+    The type of input data to use (explicit or implicit).  This affects data
+    pre-processing and aggregation.
+    """
+
+    @field_validator("min_sim", mode="after")
+    @staticmethod
+    def clamp_min_sim(sim) -> float:
+        return max(sim, float(np.finfo(np.float64).smallest_normal))
+
+    @property
+    def explicit(self) -> bool:
+        """
+        Query whether this is in explicit-feedback mode.
+        """
+        return self.feedback == "explicit"
 
 
 class UserKNNScorer(Component, Trainable):
@@ -46,35 +83,9 @@ class UserKNNScorer(Component, Trainable):
 
     Stability:
         Caller
-
-    Args:
-        nnbrs:
-            the maximum number of neighbors for scoring each item (``None`` for
-            unlimited).
-        min_nbrs:
-            The minimum number of neighbors for scoring each item.
-        min_sim:
-            Minimum similarity threshold for considering a neighbor.  Must be
-            positive; if less than the smallest 32-bit normal (:math:`1.175
-            \\times 10^{-38}`), is clamped to that value.
-        feedback:
-            Control how feedback should be interpreted.  Specifies defaults for
-            the other settings, which can be overridden individually; can be one
-            of the following values:
-
-            ``explicit``
-                Configure for explicit-feedback mode: use rating values, and
-                predict using weighted averages.  This is the default setting.
-
-            ``implicit``
-                Configure for implicit-feedback mode: ignore rating values, and
-                predict using the sums of similarities.
     """
 
-    nnbrs: int
-    min_nbrs: int
-    min_sim: float
-    feedback: FeedbackType
+    config: UserKNNConfig
 
     users_: Vocabulary
     "The index of user IDs."
@@ -86,26 +97,6 @@ class UserKNNScorer(Component, Trainable):
     "Normalized rating matrix (CSR) to find neighbors at prediction time."
     user_ratings_: csc_array
     "Centered but un-normalized rating matrix (COO) to find neighbor ratings."
-
-    def __init__(
-        self,
-        nnbrs: int = 20,
-        min_nbrs: int = 1,
-        min_sim: float = 1.0e-6,
-        feedback: FeedbackType = "explicit",
-    ):
-        self.nnbrs = nnbrs
-        self.min_nbrs = min_nbrs
-        if min_sim < 0:
-            raise ValueError("minimum similarity must be positive")
-        elif min_sim == 0:
-            f4i = np.finfo("f4")
-            self.min_sim = float(f4i.smallest_normal)
-            _log.warning("minimum similarity %e is too low, using %e", min_sim, self.min_sim)
-        else:
-            self.min_sim = min_sim
-
-        self.feedback = feedback
 
     @property
     def is_trained(self) -> bool:
@@ -121,12 +112,10 @@ class UserKNNScorer(Component, Trainable):
             ratings(pandas.DataFrame): (user, item, rating) data for collaborative filtering.
         """
         ensure_parallel_init()
-        rmat = data.interaction_matrix(
-            "torch", field="rating" if self.feedback == "explicit" else None
-        )
+        rmat = data.interaction_matrix("torch", field="rating" if self.config.explicit else None)
         assert rmat.is_sparse_csr
 
-        if self.feedback == "explicit":
+        if self.config.explicit:
             rmat, means = normalize_sparse_rows(rmat, "center")
             if np.allclose(rmat.values(), 0.0):
                 _log.warning("normalized ratings are zero, centering is not recommended")
@@ -189,7 +178,7 @@ class UserKNNScorer(Component, Trainable):
         # get indices for these neighbors
         nbr_idxs = torch.arange(len(self.users_), dtype=torch.int64)
 
-        nbr_mask = nbr_sims >= self.min_sim
+        nbr_mask = nbr_sims >= self.config.min_sim
 
         kn_sims = nbr_sims[nbr_mask]
         kn_idxs = nbr_idxs[nbr_mask]
@@ -218,9 +207,9 @@ class UserKNNScorer(Component, Trainable):
             kn_idxs,
             kn_sims,
             self.user_ratings_,
-            self.nnbrs,
-            self.min_nbrs,
-            self.feedback == "explicit",
+            self.config.k,
+            self.config.min_nbrs,
+            self.config.explicit,
         )
 
         scores += umean
@@ -247,7 +236,7 @@ class UserKNNScorer(Component, Trainable):
 
             assert index >= 0
             row = self.user_vectors_[index].to_dense()
-            if self.feedback == "explicit":
+            if self.config.explicit:
                 assert self.user_means_ is not None
                 umean = self.user_means_[index].item()
             else:
@@ -259,7 +248,7 @@ class UserKNNScorer(Component, Trainable):
             ui_nos = query.user_items.numbers("torch", missing="negative", vocabulary=self.items_)
             ui_mask = ui_nos >= 0
 
-            if self.feedback == "explicit":
+            if self.config.explicit:
                 urv = query.user_items.field("rating", "torch")
                 if urv is None:
                     _log.warning("user %s has items but no ratings", query.user_id)
@@ -272,9 +261,6 @@ class UserKNNScorer(Component, Trainable):
                 ratings[ui_nos[ui_mask]] = 1.0
 
             return UserRatings(index, ratings, umean)
-
-    def __str__(self):
-        return "UserUser(nnbrs={}, min_sim={})".format(self.nnbrs, self.min_sim)
 
 
 class UserRatings(NamedTuple):

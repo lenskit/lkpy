@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import logging
 import math
 
 import numpy as np
@@ -14,14 +13,23 @@ import torch
 from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList
+from lenskit.logging import get_logger
 from lenskit.logging.progress import item_progress_handle, pbh_update
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
-from lenskit.types import RNGInput
 
-from ._common import ALSBase, TrainContext, TrainingData
+from ._common import ALSBase, ALSConfig, TrainContext, TrainingData
 
-_log = logging.getLogger(__name__)
+
+class ImplicitMFConfig(ALSConfig):
+    weight: float = 40
+    """
+    The confidence weight for positive examples.
+    """
+    use_ratings: bool = False
+    """
+    If ``True``, use rating values instead of just presence or absence.
+    """
 
 
 class ImplicitMFScorer(ALSBase):
@@ -54,70 +62,25 @@ class ImplicitMFScorer(ALSBase):
 
     Stability:
         Caller
-
-    Args:
-        features:
-            The number of features to train
-        epochs:
-            The number of iterations to train
-        reg:
-            The regularization factor
-        weight:
-            The scaling weight for positive samples (:math:`\\alpha` in
-            :cite:p:`hu:implicit-mf`).
-        use_ratings:
-            Whether to use the `rating` column, if present.  Defaults to
-            ``False``; when ``True``, the values from the ``rating`` column are
-            used, and multipled by ``weight``; if ``False``, ImplicitMF treats
-            every rated user-item pair as having a rating of 1.\
-        save_user_feature:
-            Whether to save the user feature vector in the model, or recompute
-            it at scoring time.
-        rng:
-            Random number seed or generator.
     """
 
-    weight: float
-    use_ratings: bool
+    logger = get_logger(__name__, variant="implicit")
+
+    config: ImplicitMFConfig
 
     OtOr_: torch.Tensor
-
-    def __init__(
-        self,
-        features: int = 50,
-        *,
-        epochs: int = 20,
-        reg: float | tuple[float, float] = 0.1,
-        weight: float = 40,
-        use_ratings: bool = False,
-        save_user_features: bool = True,
-        rng: RNGInput = None,
-    ):
-        super().__init__(
-            features,
-            epochs=epochs,
-            reg=reg,
-            save_user_features=save_user_features,
-            rng=rng,
-        )
-        self.weight = weight
-        self.use_ratings = use_ratings
-
-    @property
-    def logger(self):
-        return _log
 
     @override
     def train(self, data: Dataset):
         super().train(data)
 
         # compute OtOr and save it on the model
-        reg = self.reg[0] if isinstance(self.reg, tuple) else self.reg
+        reg = self.config.user_reg
         self.OtOr_ = _implicit_otor(self.item_features_, reg)
 
     @override
     def prepare_data(self, data: Dataset) -> TrainingData:
-        if self.use_ratings:
+        if self.config.use_ratings:
             rmat = data.interaction_matrix("torch", field="rating")
         else:
             rmat = data.interaction_matrix("torch")
@@ -125,7 +88,7 @@ class ImplicitMFScorer(ALSBase):
         rmat = torch.sparse_csr_tensor(
             crow_indices=rmat.crow_indices(),
             col_indices=rmat.col_indices(),
-            values=rmat.values() * self.weight,
+            values=rmat.values() * self.config.weight,
             size=rmat.shape,
         )
         return TrainingData.create(data.users, data.items, rmat)
@@ -153,23 +116,49 @@ class ImplicitMFScorer(ALSBase):
 
         ri_good = ri_idxes >= 0
         ri_it = ri_idxes[ri_good]
-        if self.use_ratings:
+        if self.config.use_ratings:
             ratings = user_items.field("rating", "torch")
             if ratings is None:
                 raise ValueError("no ratings in user items")
-            ri_val = ratings[ri_good] * self.weight
+            ri_val = ratings[ri_good] * self.config.weight
         else:
-            ri_val = torch.full((len(ri_good),), self.weight)
+            ri_val = torch.full((len(ri_good),), self.config.weight)
 
         ri_val = ri_val.to(self.item_features_.dtype)
 
-        u_feat = _train_implicit_row_cholesky(ri_it, ri_val, self.item_features_, self.OtOr_)
+        u_feat = self._train_new_row(ri_it, ri_val, self.item_features_, self.OtOr_)
         return u_feat, None
 
-    def __str__(self):
-        return "als.ImplicitMFScorer(features={}, reg={}, w={})".format(
-            self.features, self.reg, self.weight
-        )
+    def _train_new_row(
+        self, items: torch.Tensor, ratings: torch.Tensor, i_embeds: torch.Tensor, OtOr: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Train a single user row with new rating data.
+
+        Args:
+            items: the item IDs the user has rated
+            ratings: the user's ratings for those items (when rating values are used)
+            other: the item-feature matrix
+            OtOr: the pre-computed regularization and background matrix.
+
+        Returns:
+            The user-feature vector.
+        """
+        self.logger.debug("learning new user row", n_items=len(items))
+
+        # we can optimize by only considering the nonzero entries of Cu-I
+        # this means we only need the corresponding matrix columns
+        M = i_embeds[items, :]
+        # Compute M^T (C_u-I) M, restricted to these nonzero entries
+        MMT = (M.T * ratings) @ M
+        # Build the matrix for solving
+        A = OtOr + MMT
+        # Compute RHS - only used columns (p_ui != 0) values needed
+        y = i_embeds.T[:, items] @ (ratings + 1.0)
+        # and solve
+        x = solve_cholesky(A, y)
+
+        return x
 
 
 @torch.jit.script
@@ -181,38 +170,6 @@ def _implicit_otor(other: torch.Tensor, reg: float) -> torch.Tensor:
     OtO = Ot @ other
     OtO += regmat
     return OtO
-
-
-def _train_implicit_row_cholesky(
-    items: torch.Tensor, ratings: torch.Tensor, i_embeds: torch.Tensor, OtOr: torch.Tensor
-) -> torch.Tensor:
-    """
-    Train a single user row with new rating data.
-
-    Args:
-        items: the item IDs the user has rated
-        ratings: the user's ratings for those items (when rating values are used)
-        other: the item-feature matrix
-        OtOr: the pre-computed regularization and background matrix.
-
-    Returns:
-        The user-feature vector.
-    """
-    _log.debug("learning new user row with %d items", len(items))
-
-    # we can optimize by only considering the nonzero entries of Cu-I
-    # this means we only need the corresponding matrix columns
-    M = i_embeds[items, :]
-    # Compute M^T (C_u-I) M, restricted to these nonzero entries
-    MMT = (M.T * ratings) @ M
-    # Build the matrix for solving
-    A = OtOr + MMT
-    # Compute RHS - only used columns (p_ui != 0) values needed
-    y = i_embeds.T[:, items] @ (ratings + 1.0)
-    # and solve
-    x = solve_cholesky(A, y)
-
-    return x
 
 
 def _train_implicit_cholesky_rows(

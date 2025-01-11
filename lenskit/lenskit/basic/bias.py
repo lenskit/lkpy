@@ -10,17 +10,21 @@ Bias scoring model.
 from __future__ import annotations
 
 import logging
+from collections.abc import Container
 from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
 import torch
+from pydantic import BaseModel, NonNegativeFloat
 from typing_extensions import Self, TypeAlias, overload
 
-from lenskit.data import ID, Dataset, ItemList, QueryInput, RecQuery, UITuple, Vocabulary
+from lenskit.data import ID, Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.pipeline.components import Component
 
 _logger = logging.getLogger(__name__)
-Damping: TypeAlias = float | UITuple[float] | tuple[float, float]
+BiasEntity: TypeAlias = Literal["user", "item"]
+Damping: TypeAlias = float | dict[BiasEntity, float]
 
 
 @dataclass
@@ -56,7 +60,7 @@ class BiasModel:
         Caller
     """
 
-    damping: UITuple[float]
+    damping: Damping
     "The mean damping terms."
 
     global_bias: float
@@ -74,7 +78,11 @@ class BiasModel:
 
     @classmethod
     def learn(
-        cls, data: Dataset, damping: Damping = 0.0, *, items: bool = True, users: bool = True
+        cls,
+        data: Dataset,
+        damping: Damping | tuple[float, float] = 0.0,
+        *,
+        entities: Container[BiasEntity] = frozenset({"user", "item"}),
     ) -> Self:
         """
         Learn a bias model and its parameters from a dataset.
@@ -91,8 +99,9 @@ class BiasModel:
             users:
                 Whether to compute user biases
         """
-        damping = UITuple.create(damping)
 
+        if isinstance(damping, tuple):
+            damping = {"user": damping[0], "item": damping[1]}
         _logger.info("building bias model for %d ratings", data.interaction_count)
         ratings = data.interaction_matrix("scipy", layout="coo", field="rating")
         nrows, ncols = ratings.shape  # type: ignore
@@ -106,8 +115,8 @@ class BiasModel:
         if np.allclose(centered, 0):
             _logger.warning("mean-centered ratings are all 0, bias probably meaningless")
 
-        if items:
-            counts = np.full(ncols, damping.item)
+        if "item" in entities:
+            counts = np.full(ncols, entity_damping(damping, "item"))
             sums = np.zeros(ncols)
             np.add.at(counts, ratings.col, 1)
             np.add.at(sums, ratings.col, centered)
@@ -121,8 +130,8 @@ class BiasModel:
             centered -= i_bias[ratings.col]
             _logger.info("computed biases for %d items", len(i_bias))
 
-        if users:
-            counts = np.full(nrows, damping.user)
+        if "user" in entities:
+            counts = np.full(nrows, entity_damping(damping, "user"))
             sums = np.zeros(nrows)
             np.add.at(counts, ratings.row, 1)
             np.add.at(sums, ratings.row, centered)
@@ -210,7 +219,9 @@ class BiasModel:
                     r_mask = r_idxes >= 0
                     uoff[r_mask] -= self.item_biases[r_idxes[r_mask]]
 
-                user_bias = np.sum(uoff) / (np.sum(np.isfinite(uoff)) + self.damping.user)
+                user_bias = np.sum(uoff) / (
+                    np.sum(np.isfinite(uoff)) + entity_damping(self.damping, "user")
+                )
                 scores += user_bias
 
             elif user_id is not None:
@@ -240,54 +251,40 @@ class BiasModel:
         return torch.sparse_coo_tensor(indices, values, size=matrix.size())
 
 
+class BiasConfig(BaseModel, extra="forbid"):
+    """
+    Configuration for :class:`BiasScorer`.
+    """
+
+    entities: set[Literal["user", "item"]] = {"user", "item"}
+    """
+    The entities to compute biases for, in addition to global bais.  Defaults to
+    users and items.
+    """
+    damping: NonNegativeFloat | dict[Literal["user", "item"], NonNegativeFloat] = 0.0
+
+    def entity_damping(self, entity: Literal["user", "item"]) -> float:
+        """
+        Look up the damping for a particular entity type.
+        """
+        return entity_damping(self.damping, entity)
+
+
 class BiasScorer(Component):
     """
     A user-item bias rating prediction model.  This component uses
     :class:`BiasModel` to predict ratings for users and items.
 
     Args:
-        items:
-            Whether to compute item biases.
-        users:
-            Whether to compute user biases.
-        damping:
-            Bayesian damping to apply to computed biases.  Either a number, to
-            damp both user and item biases the same amount, or a (user,item)
-            tuple providing separate damping values.
+        config:
+            The component configuration.
 
     Stability:
         Caller
     """
 
-    IGNORED_CONFIG_FIELDS = ["user_damping", "item_damping"]
-
-    users: bool
-    items: bool
-    damping: UITuple[float]
-    "The configured offset damping levels."
-
+    config: BiasConfig
     model_: BiasModel
-
-    def __init__(
-        self,
-        items: bool = True,
-        users: bool = True,
-        damping: float | UITuple[float] | tuple[float, float] = 0.0,
-        *,
-        user_damping: float | None = None,
-        item_damping: float | None = None,
-    ):
-        self.items = items
-        self.users = users
-        self.damping = UITuple.create(damping)
-
-        if user_damping is not None or item_damping is not None:
-            self.damping = UITuple(user=user_damping or 0.0, item=item_damping or 0.0)
-
-        if self.damping.user < 0:
-            raise ValueError("user damping must be non-negative")
-        if self.damping.item < 0:
-            raise ValueError("item damping must be non-negative")
 
     @property
     def is_trained(self) -> bool:
@@ -304,7 +301,7 @@ class BiasScorer(Component):
         Returns:
             The trained bias object.
         """
-        self.model_ = BiasModel.learn(data, self.damping, users=self.users, items=self.items)
+        self.model_ = BiasModel.learn(data, self.config.damping, entities=self.config.entities)
 
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         """
@@ -326,5 +323,12 @@ class BiasScorer(Component):
         scores, _bias = self.model_.compute_for_items(items, query.user_id, query.user_items)
         return ItemList(items, scores=scores)
 
-    def __str__(self):
-        return "Bias(ud={}, id={})".format(self.damping.user, self.damping.item)
+
+def entity_damping(damping: Damping, entity: BiasEntity) -> float:
+    """
+    Look up the damping for a particular entity type.
+    """
+    if isinstance(damping, dict):
+        return damping.get(entity, 0.0)
+    else:
+        return damping

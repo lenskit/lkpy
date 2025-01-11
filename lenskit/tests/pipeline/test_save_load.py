@@ -6,6 +6,7 @@
 
 import logging
 import re
+from dataclasses import dataclass
 from types import NoneType
 
 import numpy as np
@@ -22,14 +23,16 @@ _log = logging.getLogger(__name__)
 
 
 # region Test Components
-class Prefixer(Component):
+@dataclass
+class PrefixConfig:
     prefix: str
 
-    def __init__(self, prefix: str = "hello"):
-        self.prefix = prefix
+
+class Prefixer(Component):
+    config: PrefixConfig
 
     def __call__(self, msg: str) -> str:
-        return self.prefix + msg
+        return self.config.prefix + msg
 
 
 def negative(x: int) -> int:
@@ -137,7 +140,7 @@ def test_configurable_component():
     pipe = Pipeline()
     msg = pipe.create_input("msg", str)
 
-    pfx = Prefixer("scroll named ")
+    pfx = Prefixer(prefix="scroll named ")
     pipe.add_component("prefix", pfx, msg=msg)
 
     cfg = pipe.get_config()
@@ -218,7 +221,7 @@ def test_hash_validate():
     pipe = Pipeline()
     msg = pipe.create_input("msg", str)
 
-    pfx = Prefixer("scroll named ")
+    pfx = Prefixer(prefix="scroll named ")
     pipe.add_component("prefix", pfx, msg=msg)
 
     cfg = pipe.get_config()

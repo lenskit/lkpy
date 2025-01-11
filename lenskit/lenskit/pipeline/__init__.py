@@ -16,7 +16,6 @@ from ._impl import CloneMethod, Pipeline
 from .common import RecPipelineBuilder, topn_pipeline
 from .components import (
     Component,
-    Configurable,
     PipelineFunction,
     Trainable,
 )
@@ -33,7 +32,6 @@ __all__ = [
     "PipelineState",
     "Node",
     "PipelineFunction",
-    "Configurable",
     "Trainable",
     "PipelineConfig",
     "Lazy",

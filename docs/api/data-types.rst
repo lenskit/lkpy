@@ -17,4 +17,4 @@ Entity Identifiers
 Containers
 ~~~~~~~~~~
 
-.. autoclass:: UITuple
+.. autoclass:: UIPair

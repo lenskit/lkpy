@@ -2,7 +2,7 @@
 Basic and baseline pipeline components.
 """
 
-from .bias import BiasModel, BiasScorer
+from .bias import BiasModel, BiasScorer, Damping
 from .candidates import AllTrainingItemsCandidateSelector, UnratedTrainingItemsCandidateSelector
 from .composite import FallbackScorer
 from .history import UserTrainingHistoryLookup
@@ -13,6 +13,7 @@ from .topn import TopNRanker
 __all__ = [
     "BiasModel",
     "BiasScorer",
+    "Damping",
     "PopScorer",
     "TopNRanker",
     "RandomSelector",

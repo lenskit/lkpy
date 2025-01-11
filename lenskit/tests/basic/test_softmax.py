@@ -61,7 +61,7 @@ def test_unlimited_ranking(items: ItemList):
 
 @given(st.integers(min_value=1, max_value=100), scored_lists())
 def test_configured_truncation(n, items: ItemList):
-    topn = SoftmaxRanker(n)
+    topn = SoftmaxRanker(n=n)
     ranked = topn(items=items)
 
     ids = items.ids()

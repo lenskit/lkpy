@@ -7,13 +7,14 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
 from typing_extensions import Literal, override
 
-from lenskit.basic import BiasModel
-from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, UITuple
+from lenskit.basic import BiasModel, Damping
+from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
 from lenskit.data.vocab import Vocabulary
 from lenskit.pipeline import Component, Trainable
 from lenskit.util import Stopwatch
@@ -27,6 +28,14 @@ except ImportError:
 
 
 _log = logging.getLogger(__name__)
+
+
+@dataclass
+class BiasedSVDConfig:
+    features: int = 50
+    damping: Damping = 5
+    algorithm: Literal["arpack", "randomized"] = "randomized"
+    n_iter: int = 5
 
 
 class BiasedSVDScorer(Component, Trainable):
@@ -44,29 +53,13 @@ class BiasedSVDScorer(Component, Trainable):
         Caller
     """
 
-    features: int
-    damping: UITuple[float]
-    algorithm: Literal["arpack", "randomized"]
-    n_iter: int
+    config: BiasedSVDConfig
 
     bias_: BiasModel
     factorization_: TruncatedSVD
     users_: Vocabulary
     items_: Vocabulary
     user_components_: NDArray[np.float64]
-
-    def __init__(
-        self,
-        features: int = 50,
-        *,
-        damping: UITuple[float] | float | tuple[float, float] = 5,
-        algorithm: Literal["arpack", "randomized"] = "randomized",
-        n_iter: int = 5,
-    ):
-        self.features = features
-        self.damping = UITuple.create(damping)
-        self.algorithm = algorithm
-        self.n_iter = n_iter
 
     @property
     def is_trained(self):
@@ -76,7 +69,7 @@ class BiasedSVDScorer(Component, Trainable):
     def train(self, data: Dataset):
         timer = Stopwatch()
         _log.info("[%s] computing bias", timer)
-        self.bias_ = BiasModel.learn(data, self.damping)
+        self.bias_ = BiasModel.learn(data, self.config.damping)
 
         g_bias = self.bias_.global_bias
         u_bias = self.bias_.user_biases
@@ -94,7 +87,7 @@ class BiasedSVDScorer(Component, Trainable):
         r_mat = r_mat.tocsr()
 
         self.factorization_ = TruncatedSVD(
-            self.features, algorithm=self.algorithm, n_iter=self.n_iter
+            self.config.features, algorithm=self.config.algorithm, n_iter=self.config.n_iter
         )
         _log.info("[%s] training SVD (k=%d)", timer, self.factorization_.n_components)  # type: ignore
         Xt = self.factorization_.fit_transform(r_mat)
@@ -131,6 +124,3 @@ class BiasedSVDScorer(Component, Trainable):
         scores += biases
 
         return ItemList(items, scores=scores)
-
-    def __str__(self):
-        return f"BiasedSVD({self.features})"

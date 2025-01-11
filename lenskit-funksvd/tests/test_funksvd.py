@@ -16,7 +16,7 @@ from pytest import approx, mark
 from lenskit import batch
 from lenskit.data import Dataset, ItemList, ItemListCollection, UserIDKey, from_interactions_df
 from lenskit.funksvd import FunkSVDScorer
-from lenskit.metrics import call_metric, quick_measure_model
+from lenskit.metrics import quick_measure_model
 from lenskit.pipeline.common import predict_pipeline
 from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
 
@@ -33,7 +33,9 @@ class TestFunkSVD(BasicComponentTests, ScorerTests):
 
 
 def test_fsvd_basic_build():
-    algo = FunkSVDScorer(20, iterations=20)
+    algo = FunkSVDScorer(features=20, epochs=20)
+    assert algo.config is not None
+    assert algo.config.features == 20
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -43,7 +45,7 @@ def test_fsvd_basic_build():
 
 
 def test_fsvd_clamp_build():
-    algo = FunkSVDScorer(20, iterations=20, range=(1, 5))
+    algo = FunkSVDScorer(features=20, epochs=20, range=(1, 5))
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -53,7 +55,7 @@ def test_fsvd_clamp_build():
 
 
 def test_fsvd_predict_basic():
-    algo = FunkSVDScorer(20, iterations=20)
+    algo = FunkSVDScorer(features=20, epochs=20)
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -71,7 +73,7 @@ def test_fsvd_predict_basic():
 
 
 def test_fsvd_predict_clamp():
-    algo = FunkSVDScorer(20, iterations=20, range=(1, 5))
+    algo = FunkSVDScorer(features=20, epochs=20, range=(1, 5))
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -89,7 +91,7 @@ def test_fsvd_predict_clamp():
 
 
 def test_fsvd_predict_bad_item():
-    algo = FunkSVDScorer(20, iterations=20)
+    algo = FunkSVDScorer(features=20, epochs=20)
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -106,7 +108,7 @@ def test_fsvd_predict_bad_item():
 
 
 def test_fsvd_predict_bad_item_clamp():
-    algo = FunkSVDScorer(20, iterations=20, range=(1, 5))
+    algo = FunkSVDScorer(features=20, epochs=20, range=(1, 5))
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -123,7 +125,7 @@ def test_fsvd_predict_bad_item_clamp():
 
 
 def test_fsvd_predict_bad_user():
-    algo = FunkSVDScorer(20, iterations=20)
+    algo = FunkSVDScorer(features=20, epochs=20)
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -142,7 +144,7 @@ def test_fsvd_predict_bad_user():
 @wantjit
 @mark.slow
 def test_fsvd_save_load(ml_ds: Dataset):
-    original = FunkSVDScorer(20, iterations=20)
+    original = FunkSVDScorer(features=20, epochs=20)
     original.train(ml_ds)
 
     assert original.bias_ is not None
@@ -168,7 +170,7 @@ def test_fsvd_save_load(ml_ds: Dataset):
 @wantjit
 @mark.slow
 def test_fsvd_known_preds(ml_ds: Dataset):
-    algo = FunkSVDScorer(15, iterations=125, lrate=0.001)
+    algo = FunkSVDScorer(features=15, epochs=125, lrate=0.001)
     _log.info("training %s on ml data", algo)
     pipe = predict_pipeline(algo, fallback=False)
     pipe.train(ml_ds)
@@ -202,7 +204,9 @@ def test_fsvd_known_preds(ml_ds: Dataset):
 @mark.eval
 def test_fsvd_batch_accuracy(ml_100k: pd.DataFrame):
     ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(FunkSVDScorer(25, 125, damping=10), ds, predicts_ratings=True)
+    results = quick_measure_model(
+        FunkSVDScorer(features=25, epochs=125, damping=10), ds, predicts_ratings=True
+    )
 
     assert results.global_metrics().loc["MAE"] == approx(0.74, abs=0.025)
     assert results.list_summary().loc["RMSE", "mean"] == approx(0.92, abs=0.05)

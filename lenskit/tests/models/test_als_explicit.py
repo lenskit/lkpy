@@ -31,7 +31,7 @@ class TestExplicitALS(BasicComponentTests, ScorerTests):
 
 
 def test_als_basic_build():
-    algo = BiasedMFScorer(20, epochs=10)
+    algo = BiasedMFScorer(features=20, epochs=10)
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -44,13 +44,13 @@ def test_als_basic_build():
     assert algo.user_features_.shape == (3, 20)
     assert algo.item_features_.shape == (3, 20)
 
-    assert algo.features == 20
+    assert algo.config.features == 20
     assert len(algo.users_) == 3
     assert len(algo.items_) == 3
 
 
 def test_als_predict_basic():
-    algo = BiasedMFScorer(20, epochs=10)
+    algo = BiasedMFScorer(features=20, epochs=10)
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -67,7 +67,7 @@ def test_als_predict_basic():
 
 
 def test_als_predict_basic_for_new_ratings():
-    algo = BiasedMFScorer(20, epochs=10)
+    algo = BiasedMFScorer(features=20, epochs=10)
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -88,7 +88,7 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
     u = 10
     i = 3
 
-    algo = BiasedMFScorer(20, epochs=10)
+    algo = BiasedMFScorer(features=20, epochs=10)
     algo.train(simple_ds)
 
     preds = algo(query=u, items=ItemList([i]))
@@ -111,7 +111,7 @@ def test_als_predict_for_new_users_with_new_ratings(rng, ml_ds: Dataset):
     users = rng.choice(ml_ds.users.ids(), n_users)
     items = rng.choice(ml_ds.items.ids(), n_items)
 
-    algo = BiasedMFScorer(20, epochs=10)
+    algo = BiasedMFScorer(features=20, epochs=10)
     algo.train(ml_ds)
 
     _log.debug("Items: " + str(items))
@@ -139,7 +139,7 @@ def test_als_predict_for_new_users_with_new_ratings(rng, ml_ds: Dataset):
 
 
 def test_als_predict_bad_item():
-    algo = BiasedMFScorer(20, epochs=10)
+    algo = BiasedMFScorer(features=20, epochs=10)
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -154,7 +154,7 @@ def test_als_predict_bad_item():
 
 
 def test_als_predict_bad_user():
-    algo = BiasedMFScorer(20, epochs=10)
+    algo = BiasedMFScorer(features=20, epochs=10)
     algo.train(simple_ds)
 
     assert algo.bias_ is not None
@@ -174,14 +174,14 @@ def test_als_predict_no_user_features_basic(rng: np.random.Generator, ml_ds: Dat
     u = rng.choice(ml_ds.users.ids(), 1).item()
     items = rng.choice(ml_ds.items.ids(), n_items)
 
-    algo = BiasedMFScorer(5, epochs=10)
+    algo = BiasedMFScorer(features=5, epochs=10)
     algo.train(ml_ds)
     _log.debug("Items: " + str(items))
     assert algo.bias_ is not None
     assert algo.users_ is not None
     assert algo.user_features_ is not None
 
-    algo_no_user_features = BiasedMFScorer(5, epochs=10, save_user_features=False)
+    algo_no_user_features = BiasedMFScorer(features=5, epochs=10, save_user_features=False)
     algo_no_user_features.train(ml_ds)
 
     assert algo_no_user_features.user_features_ is None
@@ -205,7 +205,7 @@ def test_als_predict_no_user_features_basic(rng: np.random.Generator, ml_ds: Dat
 @wantjit
 @mark.slow
 def test_als_train_large(ml_ratings, ml_ds: Dataset):
-    algo = BiasedMFScorer(20, epochs=10)
+    algo = BiasedMFScorer(features=20, epochs=10)
     algo.train(ml_ds)
 
     assert algo.bias_ is not None
@@ -213,7 +213,7 @@ def test_als_train_large(ml_ratings, ml_ds: Dataset):
     assert algo.user_features_ is not None
 
     assert algo.bias_.global_bias == approx(ml_ratings.rating.mean())
-    assert algo.features == 20
+    assert algo.config.features == 20
     assert len(algo.items_) == ml_ratings["item_id"].nunique()
     assert len(algo.users_) == ml_ratings["user_id"].nunique()
 
@@ -232,7 +232,7 @@ def test_als_train_large(ml_ratings, ml_ds: Dataset):
 
 # don't use wantjit, use this to do a non-JIT test
 def test_als_save_load(ml_ds: Dataset):
-    original = BiasedMFScorer(5, epochs=5)
+    original = BiasedMFScorer(features=5, epochs=5)
     original.train(ml_ds)
 
     assert original.bias_ is not None
@@ -260,7 +260,7 @@ def test_als_save_load(ml_ds: Dataset):
 def test_als_batch_accuracy(ml_100k):
     ds = from_interactions_df(ml_100k)
     results = quick_measure_model(
-        BiasedMFScorer(25, epochs=20, damping=5), ds, predicts_ratings=True
+        BiasedMFScorer(features=25, epochs=20, damping=5), ds, predicts_ratings=True
     )
 
     assert results.global_metrics()["MAE"] == approx(0.73, abs=0.045)

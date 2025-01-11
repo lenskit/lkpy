@@ -1,10 +1,23 @@
 import numpy as np
+from pydantic import BaseModel
 
 from lenskit.data import ItemList
 from lenskit.data.query import QueryInput, RecQuery
 from lenskit.pipeline import Component
+from lenskit.random import DerivableSeed, RNGFactory, derivable_rng
 from lenskit.stats import argtopn
-from lenskit.util.random import DerivableSeed, RNGFactory, derivable_rng
+
+
+class RandomConfig(BaseModel, arbitrary_types_allowed=True):
+    n: int | None = None
+    """
+    The number of items to select. -1 or ``None`` to return all scored items.
+    """
+
+    rng: DerivableSeed = None
+    """
+    Random number generator configuration.
+    """
 
 
 class RandomSelector(Component):
@@ -23,14 +36,12 @@ class RandomSelector(Component):
             class supports derivable RNGs.
     """
 
-    n: int
-    rng: DerivableSeed
+    config: RandomConfig
     _rng_factory: RNGFactory
 
-    def __init__(self, n: int = -1, rng: DerivableSeed = None):
-        self.n = n
-        self.rng = rng
-        self._rng_factory = derivable_rng(rng)
+    def __init__(self, config: RandomConfig | None = None, **kwargs):
+        super().__init__(config, **kwargs)
+        self._rng_factory = derivable_rng(self.config.rng)
 
     def __call__(
         self, items: ItemList, query: QueryInput | None = None, n: int | None = None
@@ -46,7 +57,7 @@ class RandomSelector(Component):
                 The number of items to select, overriding the configured value.
         """
         if n is None:
-            n = self.n
+            n = self.config.n or -1
 
         query = RecQuery.create(query)
         rng = self._rng_factory(query)
@@ -89,14 +100,12 @@ class SoftmaxRanker(Component):
             class supports derivable RNGs.
     """
 
-    n: int
-    rng: DerivableSeed
+    config: RandomConfig
     _rng_factory: RNGFactory
 
-    def __init__(self, n: int = -1, rng: DerivableSeed = None):
-        self.n = n
-        self.rng = rng
-        self._rng_factory = derivable_rng(rng)
+    def __init__(self, config: RandomConfig | None = None, **kwargs):
+        super().__init__(config, **kwargs)
+        self._rng_factory = derivable_rng(self.config.rng)
 
     def __call__(
         self, items: ItemList, query: QueryInput | None = None, n: int | None = None
@@ -115,7 +124,8 @@ class SoftmaxRanker(Component):
             return ItemList(item_ids=[], scores=[], ordered=True)
 
         if n is None or n < 0:
-            n = self.n
+            n = self.config.n or -1
+
         if n < 0 or n > N:
             n = N
 

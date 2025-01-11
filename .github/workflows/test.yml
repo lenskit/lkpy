@@ -611,9 +611,12 @@ jobs:
       - name: Download ML data
         run: |
           python -m lenskit.data.fetch ml-100k ml-1m ml-10m ml-20m
-      - name: "📕 Validate documentation examples"
+      - name: "📕 Validate code examples"
         run: |
-          pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit --nbval-lax --doctest-glob='*.rst' --ignore='docs/_ext' --log-file test-docs.log docs */lenskit
+          sphinx-build -b doctest docs build/doc
+      - name: "📕 Validate example notebooks"
+        run: |
+          pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit --nbval-lax --log-file test-notebooks.log docs
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |

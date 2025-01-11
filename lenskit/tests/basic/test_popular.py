@@ -36,7 +36,7 @@ def test_popscore_quantile(rng, ml_ds):
 
 
 def test_popscore_rank(rng, ml_ds):
-    pop = PopScorer("rank")
+    pop = PopScorer(score="rank")
     pop.train(ml_ds)
 
     counts = ml_ds.item_stats()["count"]
@@ -49,7 +49,7 @@ def test_popscore_rank(rng, ml_ds):
 
 
 def test_popscore_counts(rng, ml_ds):
-    pop = PopScorer("count")
+    pop = PopScorer(score="count")
     pop.train(ml_ds)
 
     counts = ml_ds.item_stats()["count"]

@@ -15,6 +15,7 @@ import warnings
 
 import numpy as np
 import torch
+from pydantic import BaseModel, PositiveFloat, PositiveInt, field_validator
 from scipy.sparse import csr_array
 from typing_extensions import Optional, override
 
@@ -30,6 +31,52 @@ from lenskit.util.torch import inference_mode
 
 _log = get_logger(__name__)
 MAX_BLOCKS = 1024
+
+
+class ItemKNNConfig(BaseModel, extra="forbid"):
+    "Configuration for :class:`ItemKNNScorer`."
+
+    k: PositiveInt = 20
+    """
+    The maximum number of neighbors for scoring each item.
+    """
+    min_nbrs: PositiveInt = 1
+    """
+    The minimum number of neighbors for scoring each item.
+    """
+    min_sim: PositiveFloat = 1.0e-6
+    """
+    Minimum similarity threshold for considering a neighbor.  Must be positive;
+    if less than the smallest 32-bit normal (:math:`1.175 \\times 10^{-38}`), is
+    clamped to that value.
+    """
+    save_nbrs: PositiveInt | None = None
+    """
+    The number of neighbors to save per item in the trained model (``None`` for
+    unlimited).
+    """
+    feedback: FeedbackType = "explicit"
+    """
+    The type of input data to use (explicit or implicit).  This affects data
+    pre-processing and aggregation.
+    """
+    block_size: int = 250
+    """
+    The block size for computing item similarity blocks in parallel.  Only
+    affects performance, not behavior.
+    """
+
+    @field_validator("min_sim", mode="after")
+    @staticmethod
+    def clamp_min_sim(sim) -> float:
+        return max(sim, float(np.finfo(np.float64).smallest_normal))
+
+    @property
+    def explicit(self) -> bool:
+        """
+        Query whether this is in explicit-feedback mode.
+        """
+        return self.feedback == "explicit"
 
 
 class ItemKNNScorer(Component, Trainable):
@@ -49,31 +96,9 @@ class ItemKNNScorer(Component, Trainable):
 
     Stability:
         Caller
-
-    Args:
-        nnbrs:
-            The maximum number of neighbors for scoring each item (``None`` for
-            unlimited)
-        min_nbrs:
-            The minimum number of neighbors for scoring each item
-        min_sim:
-            Minimum similarity threshold for considering a neighbor.  Must be
-            positive; if less than the smallest 32-bit normal (:math:`1.175
-            \\times 10^{-38}`), is clamped to that value.
-        save_nbrs:
-            The number of neighbors to save per item in the trained model
-            (``None`` for unlimited)
-        feedback:
-            The type of input data to use (explicit or implicit).  This affects
-            data pre-processing and aggregation.
     """
 
-    nnbrs: int
-    min_nbrs: int = 1
-    min_sim: float
-    save_nbrs: int | None = None
-    feedback: FeedbackType
-    block_size: int
+    config: ItemKNNConfig
 
     items_: Vocabulary
     "Vocabulary of item IDs."
@@ -85,35 +110,6 @@ class ItemKNNScorer(Component, Trainable):
     "Similarity matrix (sparse CSR tensor)."
     users_: Vocabulary
     "Vocabulary of user IDs."
-
-    def __init__(
-        self,
-        nnbrs: int = 20,
-        min_nbrs: int = 1,
-        min_sim: float = 1.0e-6,
-        save_nbrs: int | None = None,
-        feedback: FeedbackType = "explicit",
-        block_size: int = 250,
-    ):
-        self.nnbrs = nnbrs
-        self.min_nbrs = min_nbrs
-        if self.min_nbrs is not None and self.min_nbrs < 1:
-            self.min_nbrs = 1
-        self.min_sim = min_sim
-        self.save_nbrs = save_nbrs
-        self.block_size = block_size
-
-        self.feedback = feedback
-
-        if self.min_sim < 0:
-            _log.warning("item-item does not currently support negative similarities")
-            warnings.warn("item-item does not currently support negative similarities")
-        elif self.min_sim == 0:
-            f4i = np.finfo("f4")
-            _log.warning(
-                "minimum similarity %e is too low, using %e", self.min_sim, f4i.smallest_normal
-            )
-            self.min_sim = float(f4i.smallest_normal)
 
     @property
     def is_trained(self) -> bool:
@@ -133,14 +129,14 @@ class ItemKNNScorer(Component, Trainable):
                 (user,item,rating) data for computing item similarities.
         """
         ensure_parallel_init()
-        log = _log.bind(n_items=data.item_count, feedback=self.feedback)
+        log = _log.bind(n_items=data.item_count, feedback=self.config.feedback)
         # Training proceeds in 2 steps:
         # 1. Normalize item vectors to be mean-centered and unit-normalized
         # 2. Compute similarities with pairwise dot products
         self._timer = util.Stopwatch()
         log.info("begining IKNN training")
 
-        field = "rating" if self.feedback == "explicit" else None
+        field = "rating" if self.config.explicit else None
         init_rmat = data.interaction_matrix("torch", field=field)
         n_items = data.item_count
         log.info(
@@ -153,7 +149,7 @@ class ItemKNNScorer(Component, Trainable):
         # we operate on *transposed* rating matrix: items on the rows
         rmat = init_rmat.transpose(0, 1).to_sparse_csr().to(torch.float64)
 
-        if self.feedback == "explicit":
+        if self.config.explicit:
             rmat, means = normalize_sparse_rows(rmat, "center")
             if np.allclose(rmat.values(), 0.0):
                 log.warning("normalized ratings are zero, centering is not recommended")
@@ -193,10 +189,12 @@ class ItemKNNScorer(Component, Trainable):
     def _compute_similarities(self, rmat: torch.Tensor) -> torch.Tensor:
         nitems, nusers = rmat.shape
 
-        bs = max(self.block_size, nitems // MAX_BLOCKS)
+        bs = max(self.config.block_size, nitems // MAX_BLOCKS)
         _log.debug("computing with effective block size %d", bs)
         with item_progress_handle("items", nitems) as pbh:
-            smat = _sim_blocks(rmat.to(torch.float64), self.min_sim, self.save_nbrs, bs, pbh)
+            smat = _sim_blocks(
+                rmat.to(torch.float64), self.config.min_sim, self.config.save_nbrs, bs, pbh
+            )
 
         return smat.to(torch.float32)
 
@@ -222,7 +220,7 @@ class ItemKNNScorer(Component, Trainable):
         n_valid = len(ri_valid_nums)
         trace(log, "%d of %d rated items in model", n_valid, len(ratings))
 
-        if self.feedback == "explicit":
+        if self.config.explicit:
             ri_vals = ratings.field("rating", "numpy")
             if ri_vals is None:
                 raise RuntimeError("explicit-feedback scorer must have ratings")
@@ -251,16 +249,16 @@ class ItemKNNScorer(Component, Trainable):
         # count neighborhood sizes
         sizes = np.diff(model.indptr)
         # which neighborhoods are usable? (at least min neighbors)
-        scorable = sizes >= self.min_nbrs
+        scorable = sizes >= self.config.min_nbrs
 
         # fast-path neighborhoods that fit within max neighbors
-        fast = sizes <= self.nnbrs
+        fast = sizes <= self.config.k
         ti_fast_mask = ti_mask.copy()
         ti_fast_mask[ti_mask] = scorable & fast
 
         scores = np.full(len(items), np.nan, dtype=np.float32)
         fast_mod = model[:, scorable & fast]
-        if self.feedback == "explicit":
+        if self.config.explicit:
             scores[ti_fast_mask] = ri_vals @ fast_mod
             scores[ti_fast_mask] /= fast_mod.sum(axis=0)
         else:
@@ -278,9 +276,9 @@ class ItemKNNScorer(Component, Trainable):
             ti_slow_mask[ti_mask] = ~fast
 
             slow_mat = torch.from_numpy(slow_mat.toarray())
-            slow_trimmed, slow_inds = torch.topk(slow_mat, self.nnbrs)
-            assert slow_trimmed.shape == (n_slow, self.nnbrs)
-            if self.feedback == "explicit":
+            slow_trimmed, slow_inds = torch.topk(slow_mat, self.config.k)
+            assert slow_trimmed.shape == (n_slow, self.config.k)
+            if self.config.explicit:
                 svals = torch.from_numpy(ri_vals)[slow_inds]
                 assert svals.shape == slow_trimmed.shape
                 scores[ti_slow_mask] = torch.sum(slow_trimmed * svals, axis=1).numpy()
@@ -298,9 +296,6 @@ class ItemKNNScorer(Component, Trainable):
         )
 
         return ItemList(items, scores=scores)
-
-    def __str__(self):
-        return "ItemItem(nnbrs={}, msize={})".format(self.nnbrs, self.save_nbrs)
 
 
 @torch.jit.script

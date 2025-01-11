@@ -4,35 +4,89 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+from __future__ import annotations
+
 import json
+from dataclasses import dataclass
+
+from pydantic import BaseModel
+from pydantic.dataclasses import dataclass as pydantic_dataclass
+
+from pytest import mark
 
 from lenskit.pipeline import Pipeline
 from lenskit.pipeline.components import Component
 
 
-class Prefixer(Component):
-    prefix: str
+@dataclass
+class PrefixConfigDC:
+    prefix: str = "UNDEFINED"
 
-    def __init__(self, prefix: str = "hello"):
-        self.prefix = prefix
+
+class PrefixConfigM(BaseModel):
+    prefix: str = "UNDEFINED"
+
+
+@pydantic_dataclass
+class PrefixConfigPYDC:
+    prefix: str = "UNDEFINED"
+
+
+class PrefixerDC(Component):
+    config: PrefixConfigDC
 
     def __call__(self, msg: str) -> str:
-        return self.prefix + msg
+        return self.config.prefix + msg
 
 
-def test_auto_config_roundtrip():
-    comp = Prefixer("FOOBIE BLETCH")
+class PrefixerM(Component):
+    config: PrefixConfigM
 
-    cfg = comp.get_config()
-    assert "prefix" in cfg
+    def __call__(self, msg: str) -> str:
+        return self.config.prefix + msg
 
-    c2 = Prefixer.from_config(cfg)
+
+# make sure it works with sub-sub-classes
+class PrefixerM2(PrefixerM):
+    config: PrefixConfigM
+
+
+class PrefixerPYDC(Component):
+    config: PrefixConfigPYDC
+
+    def __call__(self, msg: str) -> str:
+        return self.config.prefix + msg
+
+
+@mark.parametrize("prefixer", [PrefixerDC, PrefixerM, PrefixerPYDC, PrefixerM2])
+def test_config_setup(prefixer: type[Component]):
+    ccls = prefixer._config_class()  # type: ignore
+    assert ccls is not None
+
+    comp = prefixer()
+    assert isinstance(comp.config, ccls)
+
+
+@mark.parametrize("prefixer", [PrefixerDC, PrefixerM, PrefixerPYDC])
+def test_auto_config_roundtrip(prefixer: type[Component]):
+    comp = prefixer(prefix="FOOBIE BLETCH")
+
+    cfg = comp.config
+    cfg_data = comp.dump_config()
+    assert "prefix" in cfg_data
+
+    c2 = prefixer(cfg)
     assert c2 is not comp
-    assert c2.prefix == comp.prefix
+    assert c2.config.prefix == comp.config.prefix
+
+    c3 = prefixer(prefixer.validate_config(cfg_data))
+    assert c3 is not comp
+    assert c3.config.prefix == comp.config.prefix
 
 
-def test_pipeline_config():
-    comp = Prefixer("scroll named ")
+@mark.parametrize("prefixer", [PrefixerDC, PrefixerM, PrefixerPYDC])
+def test_pipeline_config(prefixer: type[Component]):
+    comp = prefixer(prefix="scroll named ")
 
     pipe = Pipeline()
     msg = pipe.create_input("msg", str)
@@ -45,3 +99,21 @@ def test_pipeline_config():
 
     assert "prefix" in config
     assert config["prefix"]["prefix"] == "scroll named "
+
+
+@mark.parametrize("prefixer", [PrefixerDC, PrefixerM, PrefixerPYDC])
+def test_pipeline_config_roundtrip(prefixer: type[Component]):
+    comp = prefixer(prefix="scroll named ")
+
+    pipe = Pipeline()
+    msg = pipe.create_input("msg", str)
+    pipe.add_component("prefix", comp, msg=msg)
+
+    assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
+
+    config = pipe.get_config()
+    print(config.model_dump_json(indent=2))
+
+    p2 = Pipeline.from_config(config)
+    assert p2.node("prefix", missing="none") is not None
+    assert p2.run(msg="READ ME") == "scroll named READ ME"
