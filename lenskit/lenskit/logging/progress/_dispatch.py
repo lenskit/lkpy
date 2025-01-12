@@ -36,7 +36,9 @@ def set_progress_impl(name: str | None, *options: Any):
             raise ValueError(f"unknown progress backend {name}")
 
 
-def item_progress(label: str, total: int, fields: dict[str, str | None] | None = None) -> Progress:
+def item_progress(
+    label: str, total: int | None = None, fields: dict[str, str | None] | None = None
+) -> Progress:
     """
     Create a progress bar for distinct, counted items.
 

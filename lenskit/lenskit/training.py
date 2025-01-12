@@ -10,16 +10,18 @@ Interfaces and support for model training.
 # pyright: strict
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import (
-    Protocol,
-    runtime_checkable,
-)
+from typing import Protocol, runtime_checkable
 
 import numpy as np
 
 from lenskit.data.dataset import Dataset
+from lenskit.logging import get_logger, item_progress
 from lenskit.random import RNGInput, random_generator
+
+_log = get_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -92,5 +94,80 @@ class Trainable(Protocol):  # pragma: nocover
                 The training dataset.
             options:
                 The training options.
+        """
+        raise NotImplementedError()
+
+
+class IterativeTraining(ABC, Trainable):
+    """
+    Base class for components that support iterative training.  This both
+    automates the :meth:`Trainable.train` method for iterative training in terms
+    of initialization, epoch, and finalization methods, and exposes those
+    methods to client code that may wish to directly control the iterative
+    training process.
+
+    Stability:
+        Full
+    """
+
+    trained_epochs: int = 0
+    """
+    The number of epochs for which this model has been trained.
+    """
+
+    @property
+    def expected_training_epochs(self) -> int | None:
+        """
+        Get the number of training epochs expected to run.  The default
+        implementation looks for an ``epochs`` attribute on the configuration
+        object (``self.config``).
+        """
+        cfg = getattr(self, "config", None)
+        if cfg:
+            return getattr(cfg, "epochs", None)
+
+    def train(self, data: Dataset, options: TrainingOptions) -> None:
+        """
+        Implementation of :meth:`Trainable.train` that uses the training loop.
+        It also uses the :attr:`trained_epochs` attribute to detect if the model
+        has already been trained for the purposes of honoring
+        :attr:`TrainingOptions.retrain`, and updates that attribute as model
+        training progresses.
+        """
+        if self.trained_epochs > 0 and not options.retrain:
+            return
+
+        self.trained_epochs = 0
+        log = _log.bind(
+            model=f"{self.__class__.__module__.__qualname__}.{self.__class__.__qualname__}"
+        )
+        log.info("training model")
+        n = self.expected_training_epochs
+        log.debug("creating training loop")
+        loop = self.training_loop(data, options)
+        log.debug("beginning training iterations")
+        with item_progress("Training iterations", total=n) as pb:
+            for i, metrics in enumerate(loop, 1):
+                metrics = metrics or {}
+                log.info("finished epoch", epoch=i, **metrics)
+                self.trained_epochs += 1
+                pb.update()
+
+    @abstractmethod
+    def training_loop(
+        self, data: Dataset, options: TrainingOptions
+    ) -> Iterator[dict[str, float] | None]:
+        """
+        Training loop implementation, to be supplied by the derived class.  This
+        method should return a iterator that, when iterated, will perform each
+        training epoch; when training is complete, it should finalize the model
+        and signal iteration completion.
+
+        Each epoch can yield metrics, such as training or validation loss, to be
+        logged with structured logging and can be used by calling code to do
+        other analysis.
+
+        See :ref:`iterative-training` for more details on writing iterative
+        training loops.
         """
         raise NotImplementedError()
