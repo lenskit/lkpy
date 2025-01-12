@@ -7,21 +7,20 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Generator
 from typing import Literal, TypeAlias
 
 import numpy as np
 import structlog
 import torch
 from pydantic import BaseModel
-from typing_extensions import Iterator, NamedTuple, Self, override
+from typing_extensions import NamedTuple, override
 
-from lenskit import util
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.types import UIPair
-from lenskit.logging import item_progress
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component
-from lenskit.training import Trainable, TrainingOptions
+from lenskit.training import IterativeTraining, TrainingOptions
 
 EntityClass: TypeAlias = Literal["user", "item"]
 
@@ -126,7 +125,7 @@ class TrainingData(NamedTuple):
         return self._replace(ui_rates=self.ui_rates.to(device), iu_rates=self.iu_rates.to(device))
 
 
-class ALSBase(ABC, Component[ItemList], Trainable):
+class ALSBase(IterativeTraining, Component[ItemList], ABC):
     """
     Base class for ALS models.
 
@@ -144,7 +143,9 @@ class ALSBase(ABC, Component[ItemList], Trainable):
     logger: structlog.stdlib.BoundLogger
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()) -> bool:
+    def training_loop(
+        self, data: Dataset, options: TrainingOptions
+    ) -> Generator[dict[str, float], None, None]:
         """
         Run ALS to train a model.
 
@@ -154,42 +155,8 @@ class ALSBase(ABC, Component[ItemList], Trainable):
         Returns:
             ``True`` if the model was trained.
         """
-        if hasattr(self, "item_features_") and not options.retrain:
-            return False
-
         ensure_parallel_init()
-        timer = util.Stopwatch()
 
-        for algo in self.fit_iters(data, options):
-            pass  # we just need to do the iterations
-
-        if self.user_features_ is not None:
-            self.logger.info(
-                "trained model in %s (|P|=%f, |Q|=%f)",
-                timer,
-                torch.norm(self.user_features_, "fro"),
-                torch.norm(self.item_features_, "fro"),
-                features=self.config.features,
-            )
-        else:
-            self.logger.info(
-                "trained model in %s (|Q|=%f)",
-                timer,
-                torch.norm(self.item_features_, "fro"),
-                features=self.config.features,
-            )
-
-        return True
-
-    def fit_iters(self, data: Dataset, options: TrainingOptions) -> Iterator[Self]:
-        """
-        Run ALS to train a model, yielding after each iteration.
-
-        Args:
-            ratings: the ratings data frame.
-        """
-
-        log = self.logger = self.logger.bind(features=self.config.features)
         rng = options.random_generator()
 
         train = self.prepare_data(data)
@@ -197,6 +164,24 @@ class ALSBase(ABC, Component[ItemList], Trainable):
         self.items_ = train.items
 
         self.initialize_params(train, rng)
+
+        return self._training_loop_generator(train)
+
+        for algo in self.fit_iters(data, options):
+            pass  # we just need to do the iterations
+
+        return True
+
+    def _training_loop_generator(
+        self, train: TrainingData
+    ) -> Generator[dict[str, float], None, None]:
+        """
+        Run ALS to train a model, yielding after each iteration.
+
+        Args:
+            ratings: the ratings data frame.
+        """
+        log = self.logger = self.logger.bind(features=self.config.features)
 
         assert self.user_features_ is not None
         assert self.item_features_ is not None
@@ -207,26 +192,25 @@ class ALSBase(ABC, Component[ItemList], Trainable):
             "item", train.iu_rates, self.item_features_, self.user_features_, self.config.item_reg
         )
 
-        log.info("beginning ALS model training")
+        for epoch in range(self.config.epochs):
+            log = log.bind(epoch=epoch)
+            epoch = epoch + 1
 
-        with item_progress("Training ALS", self.config.epochs) as epb:
-            for epoch in range(self.config.epochs):
-                log = log.bind(epoch=epoch)
-                epoch = epoch + 1
+            du = self.als_half_epoch(epoch, u_ctx)
+            log.debug("finished user epoch")
 
-                du = self.als_half_epoch(epoch, u_ctx)
-                log.debug("finished user epoch")
+            di = self.als_half_epoch(epoch, i_ctx)
+            log.debug("finished item epoch")
 
-                di = self.als_half_epoch(epoch, i_ctx)
-                log.debug("finished item epoch")
-
-                log.info("finished epoch (|ΔP|=%.3f, |ΔQ|=%.3f)", du, di)
-                epb.update()
-                yield self
+            log.debug("finished epoch (|ΔP|=%.3f, |ΔQ|=%.3f)", du, di)
+            yield {"deltaP": du, "deltaQ": di}
 
         if not self.config.save_user_features:
             self.user_features_ = None
             self.user_ = None
+
+        log.debug("finalizing model training")
+        self.finalize_training()
 
     @abstractmethod
     def prepare_data(self, data: Dataset) -> TrainingData:  # pragma: no cover
@@ -269,6 +253,9 @@ class ALSBase(ABC, Component[ItemList], Trainable):
         Run one half of an ALS training epoch.
         """
         ...
+
+    def finalize_training(self):
+        pass
 
     @override
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:

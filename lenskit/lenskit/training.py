@@ -126,7 +126,7 @@ class IterativeTraining(ABC, Trainable):
         if cfg:
             return getattr(cfg, "epochs", None)
 
-    def train(self, data: Dataset, options: TrainingOptions) -> None:
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()) -> None:
         """
         Implementation of :meth:`Trainable.train` that uses the training loop.
         It also uses the :attr:`trained_epochs` attribute to detect if the model
@@ -152,6 +152,8 @@ class IterativeTraining(ABC, Trainable):
                 log.info("finished epoch", epoch=i, **metrics)
                 self.trained_epochs += 1
                 pb.update()
+
+        log.info("model training finished", epochs=self.trained_epochs)
 
     @abstractmethod
     def training_loop(
