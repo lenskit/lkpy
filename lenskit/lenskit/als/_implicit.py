@@ -17,7 +17,6 @@ from lenskit.logging import get_logger
 from lenskit.logging.progress import item_progress_handle, pbh_update
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
-from lenskit.training import TrainingOptions
 
 from ._common import ALSBase, ALSConfig, TrainContext, TrainingData
 
@@ -72,14 +71,6 @@ class ImplicitMFScorer(ALSBase):
     OtOr_: torch.Tensor
 
     @override
-    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
-        if super().train(data, options):
-            # compute OtOr and save it on the model
-            reg = self.config.user_reg
-            self.OtOr_ = _implicit_otor(self.item_features_, reg)
-            return True
-
-    @override
     def prepare_data(self, data: Dataset) -> TrainingData:
         if self.config.use_ratings:
             rmat = data.interaction_matrix("torch", field="rating")
@@ -108,6 +99,12 @@ class ImplicitMFScorer(ALSBase):
         OtOr = _implicit_otor(context.right, context.reg)
         with item_progress_handle(f"epoch {epoch} {context.label}s", total=context.nrows) as pbh:
             return _train_implicit_cholesky_fanout(context, OtOr, chunks, pbh)
+
+    def finalize_training(self):
+        # compute OtOr and save it on the model
+        reg = self.config.user_reg
+        self.OtOr_ = _implicit_otor(self.item_features_, reg)
+        return True
 
     @override
     def new_user_embedding(
