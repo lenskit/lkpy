@@ -138,9 +138,7 @@ class IterativeTraining(ABC, Trainable):
             return
 
         self.trained_epochs = 0
-        log = _log.bind(
-            model=f"{self.__class__.__module__.__qualname__}.{self.__class__.__qualname__}"
-        )
+        log = _log.bind(model=f"{self.__class__.__module__}.{self.__class__.__qualname__}")
         log.info("training model")
         n = self.expected_training_epochs
         log.debug("creating training loop")
