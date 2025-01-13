@@ -37,7 +37,7 @@ def multiprocess_executor(
     if n_jobs is None:
         n_jobs = cfg.processes
 
-    ctx = LenskitMPContext(sp_config)
+    ctx = LensKitMPContext(sp_config)
     return ProcessPoolExecutor(n_jobs, ctx)
 
 
@@ -56,7 +56,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         log.debug("persisting function")
         if worker_parallel is None:
             worker_parallel = ParallelConfig(1, 1, get_parallel_config().child_threads, 1)
-        ctx = LenskitMPContext(worker_parallel)
+        ctx = LensKitMPContext(worker_parallel)
 
         log.debug("initializing shared memory")
         self.manager = SharedMemoryManager()
@@ -88,7 +88,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         _log.debug("process pool shut down")
 
 
-class LenskitProcess(SpawnProcess):
+class LensKitProcess(SpawnProcess):
     "LensKit worker process implementation."
 
     def __init__(
@@ -115,7 +115,7 @@ class LenskitProcess(SpawnProcess):
                     ctx.send_task(task)
 
 
-class LenskitMPContext(SpawnContext):
+class LensKitMPContext(SpawnContext):
     "LensKit multiprocessing context."
 
     _log_config: WorkerLogConfig
@@ -126,4 +126,4 @@ class LenskitMPContext(SpawnContext):
         self._parallel_config = parallel
 
     def Process(self, *args: Any, **kwargs: Any) -> SpawnProcess:
-        return LenskitProcess(self._log_config, self._parallel_config, *args, **kwargs)
+        return LensKitProcess(self._log_config, self._parallel_config, *args, **kwargs)

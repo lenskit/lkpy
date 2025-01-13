@@ -36,10 +36,10 @@ def get_logger(
     """
     if remove_private:
         name = re.sub(r"\._.*", "", name)
-    return LenskitProxyLogger(None, logger_factory_args=[name], initial_values=init_als)  # type: ignore
+    return LensKitProxyLogger(None, logger_factory_args=[name], initial_values=init_als)  # type: ignore
 
 
-class LenskitProxyLogger(BoundLoggerLazyProxy):
+class LensKitProxyLogger(BoundLoggerLazyProxy):
     """
     Lazy proxy logger for LensKit.  This is based on Structlog's lazy proxy,
     with using a filtering logger by default when structlog is not configured.
