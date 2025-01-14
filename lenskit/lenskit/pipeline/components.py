@@ -153,11 +153,16 @@ class Component(Generic[COut]):
         self.config = config
 
     @classmethod
-    def _config_class(cls) -> type | None:
+    def _config_class(cls, return_any: bool = False) -> type | None:
         hints = get_type_hints(cls)
         ct = hints.get("config", None)
-        if ct is None or ct == Any:
+        if ct is None:
             return None
+        elif ct == Any:
+            if return_any:
+                return ct
+            else:
+                return None
         elif isinstance(ct, type):
             return ct
         else:
