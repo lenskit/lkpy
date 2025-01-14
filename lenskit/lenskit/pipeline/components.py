@@ -25,6 +25,7 @@ from typing import (
     TypeAlias,
     TypeVar,
     get_origin,
+    get_type_hints,
     runtime_checkable,
 )
 
@@ -153,17 +154,15 @@ class Component(Generic[COut]):
 
     @classmethod
     def _config_class(cls) -> type | None:
-        for base in cls.__mro__:
-            annots = inspect.get_annotations(base, eval_str=True)
-            ct = annots.get("config", None)
-            if ct == Any:
-                return None
-
-            if isinstance(ct, type):
-                return ct
-            elif ct is not None:  # pragma: nocover
-                warnings.warn("config attribute is not annotated with a plain type")
-                return get_origin(ct)
+        hints = get_type_hints(cls)
+        ct = hints.get("config", None)
+        if ct is None or ct == Any:
+            return None
+        elif isinstance(ct, type):
+            return ct
+        else:
+            warnings.warn("config attribute is not annotated with a plain type")
+            return get_origin(ct)
 
     def dump_config(self) -> dict[str, JsonValue]:
         """
