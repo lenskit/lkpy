@@ -13947,8 +13947,8 @@ packages:
   timestamp: 1729655358674
 - pypi: lenskit
   name: lenskit
-  version: 2025.0.0a3.dev5+g24871ccc
-  sha256: e41346462653e72649ef39d552f9ec310b673988064a8fa5fdeb294dfc44a605
+  version: 2025.0.0a6.dev5+g8ec18189
+  sha256: a2c1fcaea27a57c3bbe88e49d4b3d6d655dec1def5e5b066bc21ba82d225b6fc
   requires_dist:
   - more-itertools>=9.0
   - numpy>=1.25
@@ -13961,32 +13961,7 @@ packages:
   - structlog>=23.2
   - threadpoolctl>=3.0
   - torch~=2.1
-  - scikit-learn>=1.1 ; extra == 'sklearn'
-  - hypothesis>=6.16 ; extra == 'test'
-  - pyprojroot==0.3.* ; extra == 'test'
-  - pytest-benchmark==4.* ; extra == 'test'
-  - pytest-cov>=2.12 ; extra == 'test'
-  - pytest-doctestplus>=1.2.1,<2 ; extra == 'test'
-  - pytest-repeat>=0.9 ; extra == 'test'
-  - pytest>=8.2,<9 ; extra == 'test'
-  requires_python: '>=3.11'
-  editable: true
-- pypi: lenskit
-  name: lenskit
-  version: 2025.0.0a4.dev21+g67a0be45.d20250108
-  sha256: e41346462653e72649ef39d552f9ec310b673988064a8fa5fdeb294dfc44a605
-  requires_dist:
-  - more-itertools>=9.0
-  - numpy>=1.25
-  - pandas~=2.0
-  - pyarrow>=15
-  - pydantic~=2.7
-  - pyzmq>=24
-  - rich~=13.5
-  - scipy>=1.11
-  - structlog>=23.2
-  - threadpoolctl>=3.0
-  - torch~=2.1
+  - typing-extensions~=4.12
   - scikit-learn>=1.1 ; extra == 'sklearn'
   - hypothesis>=6.16 ; extra == 'test'
   - pyprojroot==0.3.* ; extra == 'test'
@@ -13999,7 +13974,7 @@ packages:
   editable: true
 - pypi: lenskit-funksvd
   name: lenskit-funksvd
-  version: 2025.0.0a1.dev63+g2a2ba8ae.d20241213
+  version: 2025.0.0a6.dev5+g8ec18189
   sha256: 5b1b6b387c9edf133e76fc58d19bdb611a5b8c3c80805aab04bad238b8e0c7b0
   requires_dist:
   - lenskit
@@ -14008,7 +13983,7 @@ packages:
   editable: true
 - pypi: lenskit-hpf
   name: lenskit-hpf
-  version: 2025.0.0a1.dev63+g2a2ba8ae.d20241213
+  version: 2025.0.0a6.dev5+g8ec18189
   sha256: 7aa59cc6db83ac59ffc0f94f55528d2de77ed28614726118d8bb6f0e7ea8c90a
   requires_dist:
   - hpfrec==0.2.*
@@ -14017,7 +13992,7 @@ packages:
   editable: true
 - pypi: lenskit-implicit
   name: lenskit-implicit
-  version: 2025.0.0a1.dev90+g694b3124
+  version: 2025.0.0a6.dev5+g8ec18189
   sha256: f5a4e1dd74dfecf00c2247d1835fb22c43dd9f1e836eee6984ac67fe464ce688
   requires_dist:
   - implicit>=0.7.2
@@ -14026,7 +14001,7 @@ packages:
   editable: true
 - pypi: lenskit-sklearn
   name: lenskit-sklearn
-  version: 2025.0.0a1.dev63+g2a2ba8ae.d20241213
+  version: 2025.0.0a6.dev5+g8ec18189
   sha256: c916806b4a76e5d8ec8736c75e83bdc58eff179d8cd61ebd3983af766c59a2dc
   requires_dist:
   - lenskit
