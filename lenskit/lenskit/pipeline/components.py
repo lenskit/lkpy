@@ -169,9 +169,9 @@ class Component(ABC, Generic[COut, CArgs]):
     def _config_class(cls, return_any: bool = False) -> type | None:
         hints = get_type_hints(cls)
         ct = hints.get("config", None)
-        if ct is None or ct == NoneType:
+        if ct == NoneType:
             return None
-        elif ct == Any:
+        elif ct is None or ct == Any:
             if return_any:
                 return ct
             else:
