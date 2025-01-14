@@ -19,6 +19,7 @@ readme = "README.md"
 license = { file = "LICENSE.md" }
 dynamic = ["version"]
 dependencies = [
+  "typing-extensions ~=4.12",
   "pandas ~=2.0",
   "pyarrow >=15",
   "numpy >=1.25",
