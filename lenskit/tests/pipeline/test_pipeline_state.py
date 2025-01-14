@@ -4,6 +4,7 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+# pyright: strict
 from pytest import raises
 
 from lenskit.pipeline import PipelineState

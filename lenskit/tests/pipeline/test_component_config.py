@@ -14,7 +14,7 @@ from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 from pytest import mark
 
-from lenskit.pipeline import Pipeline
+from lenskit.pipeline import PipelineBuilder
 from lenskit.pipeline.components import Component
 
 
@@ -88,10 +88,11 @@ def test_auto_config_roundtrip(prefixer: type[Component]):
 def test_pipeline_config(prefixer: type[Component]):
     comp = prefixer(prefix="scroll named ")
 
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
     pipe.add_component("prefix", comp, msg=msg)
 
+    pipe = pipe.build()
     assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
 
     config = pipe.component_configs()
@@ -105,15 +106,15 @@ def test_pipeline_config(prefixer: type[Component]):
 def test_pipeline_config_roundtrip(prefixer: type[Component]):
     comp = prefixer(prefix="scroll named ")
 
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
     pipe.add_component("prefix", comp, msg=msg)
 
-    assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
+    assert pipe.build().run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
 
     config = pipe.get_config()
     print(config.model_dump_json(indent=2))
 
-    p2 = Pipeline.from_config(config)
+    p2 = PipelineBuilder.from_config(config)
     assert p2.node("prefix", missing="none") is not None
-    assert p2.run(msg="READ ME") == "scroll named READ ME"
+    assert p2.build().run(msg="READ ME") == "scroll named READ ME"

@@ -4,10 +4,10 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import json
+# pyright: strict
 from dataclasses import dataclass
 
-from lenskit.pipeline import Pipeline
+from lenskit.pipeline import PipelineBuilder
 from lenskit.pipeline.components import Component
 from lenskit.pipeline.nodes import ComponentNode
 
@@ -38,10 +38,11 @@ def exclaim(msg: str) -> str:
 def test_pipeline_clone():
     comp = Prefixer(PrefixConfig("scroll named "))
 
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
     pipe.add_component("prefix", comp, msg=msg)
 
+    pipe = pipe.build()
     assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
 
     p2 = pipe.clone()
@@ -57,11 +58,12 @@ def test_pipeline_clone():
 def test_pipeline_clone_with_function():
     comp = Prefixer(prefix="scroll named ")
 
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
     pfx = pipe.add_component("prefix", comp, msg=msg)
     pipe.add_component("exclaim", exclaim, msg=pfx)
 
+    pipe = pipe.build()
     assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH!"
 
     p2 = pipe.clone()
@@ -72,11 +74,12 @@ def test_pipeline_clone_with_function():
 def test_pipeline_clone_with_nonconfig_class():
     comp = Prefixer(prefix="scroll named ")
 
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
     pfx = pipe.add_component("prefix", comp, msg=msg)
     pipe.add_component("question", Question(), msg=pfx)
 
+    pipe = pipe.build()
     assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH?"
 
     p2 = pipe.clone()
@@ -85,11 +88,12 @@ def test_pipeline_clone_with_nonconfig_class():
 
 
 def test_clone_defaults():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
     pipe.set_default("msg", msg)
     pipe.add_component("return", exclaim)
 
+    pipe = pipe.build()
     assert pipe.run(msg="hello") == "hello!"
 
     p2 = pipe.clone()
@@ -98,11 +102,12 @@ def test_clone_defaults():
 
 
 def test_clone_alias():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
     excl = pipe.add_component("exclaim", exclaim, msg=msg)
     pipe.alias("return", excl)
 
+    pipe = pipe.build()
     assert pipe.run("return", msg="hello") == "hello!"
 
     p2 = pipe.clone()
@@ -111,12 +116,13 @@ def test_clone_alias():
 
 
 def test_clone_hash():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
     pipe.set_default("msg", msg)
     excl = pipe.add_component("exclaim", exclaim)
     pipe.alias("return", excl)
 
+    pipe = pipe.build()
     assert pipe.run("return", msg="hello") == "hello!"
 
     p2 = pipe.clone()
