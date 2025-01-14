@@ -134,16 +134,16 @@ These input connections are specified via keyword arguments to the
 component's input name(s) and the node or data to which each input should be
 wired.
 
-..
-    You can also use :meth:`Pipeline.add_default` to specify default connections. For example,
-    you can specify a default for ``user``::
 
-        pipe.add_default('user', user_history)
+You can also use :meth:`Pipeline.set_default` to specify default connections.
+For example, you can specify a default for inputs named ``user``::
 
-    With this default in place, if a component has an input named ``user`` and that
-    input is not explicitly connected to a node, then the ``user_history`` node will
-    be used to supply its value.  Judicious use of defaults can reduce the amount of
-    code overhead needed to wire common pipelines.
+    pipe.set_default('user', user_history)
+
+With this default in place, if a component has an input named ``user`` and that
+input is not explicitly connected to a node, then the ``user_history`` node will
+be used to supply its value.  Judicious use of defaults can reduce the amount of
+code overhead needed to wire common pipelines.
 
 .. note::
 
