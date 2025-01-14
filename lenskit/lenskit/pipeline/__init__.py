@@ -13,6 +13,7 @@ from __future__ import annotations
 from lenskit.diagnostics import PipelineError, PipelineWarning
 
 from ._impl import CloneMethod, Pipeline
+from .builder import PipelineBuilder
 from .common import RecPipelineBuilder, topn_pipeline
 from .components import (
     Component,
@@ -25,6 +26,7 @@ from .types import Lazy
 
 __all__ = [
     "Pipeline",
+    "PipelineBuilder",
     "CloneMethod",
     "PipelineError",
     "PipelineWarning",
