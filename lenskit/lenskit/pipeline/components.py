@@ -14,7 +14,7 @@ import warnings
 from abc import ABC, abstractmethod
 from importlib import import_module
 from inspect import isabstract
-from types import FunctionType
+from types import FunctionType, NoneType
 
 from pydantic import JsonValue, TypeAdapter
 from typing_extensions import (
@@ -169,7 +169,7 @@ class Component(ABC, Generic[COut, CArgs]):
     def _config_class(cls, return_any: bool = False) -> type | None:
         hints = get_type_hints(cls)
         ct = hints.get("config", None)
-        if ct is None:
+        if ct is None or ct == NoneType:
             return None
         elif ct == Any:
             if return_any:
