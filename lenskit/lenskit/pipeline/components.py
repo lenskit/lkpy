@@ -15,7 +15,9 @@ from abc import ABC, abstractmethod
 from importlib import import_module
 from inspect import isabstract
 from types import FunctionType
-from typing import (
+
+from pydantic import JsonValue, TypeAdapter
+from typing_extensions import (
     Any,
     Callable,
     Generic,
@@ -29,14 +31,22 @@ from typing import (
     runtime_checkable,
 )
 
-from pydantic import JsonValue, TypeAdapter
-
 from .types import Lazy
 
 P = ParamSpec("P")
 T = TypeVar("T")
+CArgs = ParamSpec("CArgs", default=...)
+"""
+Argument type for a component.  It is difficult to actually specify this, but
+using this default parameter spec allows :class:`Component` subclasses to
+typecheck by declaring the base class :meth:`~Component.__call__` to have
+unknown parameters.
+"""
 # COut is only return, so Component[U] can be assigned to Component[T] if U ≼ T.
-COut = TypeVar("COut", covariant=True)
+COut = TypeVar("COut", covariant=True, default=Any)
+"""
+Return type for a component.
+"""
 PipelineFunction: TypeAlias = Callable[..., COut]
 
 
@@ -86,7 +96,7 @@ class ParameterContainer(Protocol):  # pragma: nocover
         raise NotImplementedError()
 
 
-class Component(ABC, Generic[COut]):
+class Component(ABC, Generic[COut, CArgs]):
     """
     Base class for pipeline component objects.  Any component that is not just a
     function should extend this class.
@@ -178,7 +188,7 @@ class Component(ABC, Generic[COut]):
         """
         cfg_cls = self._config_class()
         if cfg_cls:
-            return TypeAdapter(cfg_cls).dump_python(self.config, mode="json")
+            return TypeAdapter(cfg_cls).dump_python(self.config, mode="json")  # type: ignore
         else:
             return {}
 
@@ -191,7 +201,7 @@ class Component(ABC, Generic[COut]):
             data = {}
         cfg_cls = cls._config_class()
         if cfg_cls:
-            return TypeAdapter(cfg_cls).validate_python(data)
+            return TypeAdapter(cfg_cls).validate_python(data)  # type: ignore
         elif data:  # pragma: nocover
             raise RuntimeError(
                 "supplied configuration options but {} has no config class".format(cls.__name__)
@@ -200,19 +210,10 @@ class Component(ABC, Generic[COut]):
             return None
 
     @abstractmethod
-    def __call__(self, **kwargs: Any) -> Any:  # pragma: nocover
+    def __call__(self, *args: CArgs.args, **kwargs: CArgs.kwargs) -> COut:  # pragma: nocover
         """
         Run the pipeline's operation and produce a result.  This is the key
         method for components to implement.
-
-        .. note::
-
-            Due to limitations of Python's type model, derived classes will have
-            a type error overriding this method when using strict type checking,
-            because it is very cumbersome (if not impossible) to propagate
-            parameter names and types through to a base class.  The solution is
-            to either use basic type checking for implementations, or to disable
-            the typechecker on the ``__call__`` signature definition.
         """
         ...
 
