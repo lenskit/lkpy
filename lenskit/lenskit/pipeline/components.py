@@ -9,11 +9,11 @@
 # pyright: strict
 from __future__ import annotations
 
-import inspect
 import json
 import warnings
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from importlib import import_module
+from inspect import isabstract
 from types import FunctionType
 from typing import (
     Any,
@@ -86,7 +86,7 @@ class ParameterContainer(Protocol):  # pragma: nocover
         raise NotImplementedError()
 
 
-class Component(Generic[COut]):
+class Component(ABC, Generic[COut]):
     """
     Base class for pipeline component objects.  Any component that is not just a
     function should extend this class.
@@ -133,12 +133,15 @@ class Component(Generic[COut]):
 
     def __init_subclass__(cls, **kwargs: Any):
         super().__init_subclass__(**kwargs)
-        annots = inspect.get_annotations(cls)
-        if annots.get("config", None) == Any:
-            warnings.warn(
-                "component class {} does not define a config attribute".format(cls.__qualname__),
-                stacklevel=2,
-            )
+        if not isabstract(cls):
+            ct = cls._config_class(return_any=True)
+            if ct == Any:
+                warnings.warn(
+                    "component class {} does not define a config attribute".format(
+                        cls.__qualname__
+                    ),
+                    stacklevel=2,
+                )
 
     def __init__(self, config: object | None = None, **kwargs: Any):
         if config is None:
