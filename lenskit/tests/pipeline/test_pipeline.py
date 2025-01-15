@@ -436,7 +436,7 @@ def test_run_all():
     assert state.meta is not None
     assert state.meta.name == "test"
     assert state.meta.version == "7.2"
-    assert state.meta.hash == pipe.config_hash()
+    assert state.meta.hash == pipe.config_hash
 
 
 def test_run_all_limit():

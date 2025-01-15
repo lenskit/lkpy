@@ -1,6 +1,7 @@
 # pyright: strict
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import replace
 from uuid import NAMESPACE_URL, uuid5
 
@@ -59,9 +60,14 @@ class Pipeline:
     _default: Node[Any] | None = None
     _hash: str | None = None
 
-    def __init__(self, config: config.PipelineConfig, nodes: dict[str, Node[Any]]):
+    def __init__(self, config: config.PipelineConfig, nodes: Iterable[Node[Any]]):
+        self._nodes = {}
+        for node in nodes:
+            if isinstance(node, ComponentInstanceNode):
+                raise RuntimeError("pipeline is not fully instantiated")
+            self._nodes[node.name] = node
+
         self._config = config
-        self._nodes = dict(nodes)
         self._aliases = {a: self.node(t) for (a, t) in config.aliases.items()}
         if config.default:
             self._default = self.node(config.default)

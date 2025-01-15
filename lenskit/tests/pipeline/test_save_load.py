@@ -17,7 +17,7 @@ from pytest import fail, warns
 from lenskit.pipeline import PipelineBuilder, PipelineWarning
 from lenskit.pipeline.components import Component
 from lenskit.pipeline.config import PipelineConfig
-from lenskit.pipeline.nodes import ComponentNode, InputNode
+from lenskit.pipeline.nodes import ComponentInstanceNode, ComponentNode, InputNode
 
 _log = logging.getLogger(__name__)
 
@@ -129,7 +129,7 @@ def test_round_trip_single_node():
     p2 = PipelineBuilder.from_config(cfg)
     assert len(p2.nodes()) == 2
     r2 = p2.node("return")
-    assert isinstance(r2, ComponentNode)
+    assert isinstance(r2, ComponentInstanceNode)
     assert r2.component is msg_ident
     assert r2.connections == {"msg": "msg"}
 
@@ -150,7 +150,7 @@ def test_configurable_component():
     p2 = PipelineBuilder.from_config(cfg)
     assert len(p2.nodes()) == 2
     r2 = p2.node("prefix")
-    assert isinstance(r2, ComponentNode)
+    assert isinstance(r2, ComponentInstanceNode)
     assert isinstance(r2.component, Prefixer)
     assert r2.component is not pfx
     assert r2.connections == {"msg": "msg"}

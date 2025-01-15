@@ -156,7 +156,7 @@ class PipelineBuilder:
         else:
             raise KeyError(f"node {node}")
 
-    def create_input(self, name: str, *types: type[T] | None) -> Node[T]:
+    def create_input(self, name: str, *types: type[T] | UnionType | None) -> Node[T]:
         """
         Create an input node for the pipeline.  Pipelines expect their inputs to
         be provided when they are run.
@@ -638,7 +638,7 @@ class PipelineBuilder:
         Build the pipeline.
         """
         config = self.build_config()
-        return Pipeline(config, self._nodes)
+        return Pipeline(config, self._nodes.values())
 
     def _instantiate(self, node: Node[ND]) -> Node[ND]:
         match node:
