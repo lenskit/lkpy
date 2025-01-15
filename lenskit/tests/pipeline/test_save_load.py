@@ -292,7 +292,7 @@ def test_literal_array():
     a = pipe.create_input("a", int)
 
     pipe.add_component("add", add, x=np.arange(10), y=a)
-    pipe.default_component("prefix")
+    pipe.default_component("add")
 
     pipe = pipe.build()
     res = pipe.run(a=5)
