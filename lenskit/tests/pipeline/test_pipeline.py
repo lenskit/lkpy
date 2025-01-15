@@ -222,7 +222,6 @@ def test_simple_graph():
     pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
-    pipe.default_component("b")
 
     def double(x: int) -> int:
         return x * 2
@@ -232,6 +231,7 @@ def test_simple_graph():
 
     nd = pipe.add_component("double", double, x=a)
     na = pipe.add_component("add", add, x=nd, y=b)
+    pipe.default_component("add")
 
     pipe = pipe.build()
     assert pipe.run(a=1, b=7) == 9
