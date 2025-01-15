@@ -35,6 +35,7 @@ from .types import Lazy
 
 P = ParamSpec("P")
 T = TypeVar("T")
+CFG = TypeVar("CFG", contravariant=True)
 CArgs = ParamSpec("CArgs", default=...)
 """
 Argument type for a component.  It is difficult to actually specify this, but
@@ -48,6 +49,21 @@ COut = TypeVar("COut", covariant=True, default=Any)
 Return type for a component.
 """
 PipelineFunction: TypeAlias = Callable[..., COut]
+"""
+Pure-function interface for pipeline functions.
+"""
+
+
+class ComponentConstructor(ABC, Generic[CFG, COut]):
+    """
+    Protocol for component constructors.
+    """
+
+    def __call__(self, config: CFG | None = None) -> Component[COut]: ...
+
+    def __isinstance__(self, obj: Any) -> bool:
+        # FIXME: implement a more rigorous check for this
+        return isinstance(obj, type) and issubclass(obj, Component)
 
 
 @runtime_checkable

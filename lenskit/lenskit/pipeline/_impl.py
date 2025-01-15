@@ -35,8 +35,8 @@ T3 = TypeVar("T3")
 T4 = TypeVar("T4")
 T5 = TypeVar("T5")
 
-CloneMethod: TypeAlias = Literal["config", "pipeline-config"]
 NAMESPACE_LITERAL_DATA = uuid5(NAMESPACE_URL, "https://ns.lenskit.org/literal-data/")
+CloneMethod: TypeAlias = Literal["config", "pipeline-config"]
 
 
 class Pipeline:
@@ -46,7 +46,7 @@ class Pipeline:
     way.  It allows you to wire together components in (mostly) abitrary graphs,
     train them on data, and serialize pipelines to disk for use elsewhere.
 
-    Pipelines cannot be directly instantiated; they must be built with a
+    Pipelines should not be directly instantiated; they must be built with a
     :class:`~lenskit.pipeline.PipelineBuilder` class, or loaded from a
     configuration with :meth:`from_config`. If you have a scoring model and just
     want to generate recommenations with a default setup and minimal
@@ -56,19 +56,11 @@ class Pipeline:
     Pipelines are also :class:`~lenskit.training.Trainable`, and train all
     trainable components.
 
-    Args:
-        name:
-            A name for the pipeline.
-        version:
-            A numeric version for the pipeline.
-
     Stability:
         Caller
     """
 
-    name: str | None = None
-    version: str | None = None
-
+    _config: config.PipelineConfig
     _nodes: dict[str, Node[Any]]
     _aliases: dict[str, Node[Any]]
     _defaults: dict[str, Node[Any]]
@@ -78,29 +70,27 @@ class Pipeline:
     _anon_nodes: set[str]
     "Track generated node names."
 
-    def __init__(self, name: str | None = None, version: str | None = None):
-        self.name = name
-        self.version = version
-        self._nodes = {}
-        self._aliases = {}
-        self._defaults = {}
-        self._components = {}
-        self._anon_nodes = set()
-        self._clear_caches()
+    def __init__(self, config: config.PipelineConfig, nodes: dict[str, Node[Any]]):
+        self._config = config
+        self._nodes = dict(nodes)
+        self._aliases = {a: self.node(t) for (a, t) in config.aliases.items()}
+        self._defaults = {n: self.node(t) for (n, t) in config.defaults.items()}
 
-    def meta(self, *, include_hash: bool = True) -> config.PipelineMeta:
+    @property
+    def name(self) -> str | None:
+        return self._config.meta.name
+
+    @property
+    def version(self) -> str | None:
+        return self._config.meta.version
+
+    @property
+    def meta(self) -> config.PipelineMeta:
         """
         Get the metadata (name, version, hash, etc.) for this pipeline without
         returning the whole config.
-
-        Args:
-            include_hash:
-                Whether to include a configuration hash in the metadata.
         """
-        meta = config.PipelineMeta(name=self.name, version=self.version)
-        if include_hash:
-            meta.hash = self.config_hash()
-        return meta
+        return self._config.meta
 
     @property
     def nodes(self) -> list[Node[object]]:

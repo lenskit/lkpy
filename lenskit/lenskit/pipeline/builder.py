@@ -7,32 +7,38 @@ from __future__ import annotations
 
 import typing
 import warnings
-from dataclasses import replace
-from types import FunctionType, UnionType
+from types import UnionType
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
-from numpy.random import BitGenerator, Generator, SeedSequence
-from typing_extensions import Any, Literal, Self, TypeAlias, TypeVar, cast, overload
+from typing_extensions import Any, Literal, Self, TypeVar, cast, overload
 
-from lenskit.data import Dataset
 from lenskit.diagnostics import PipelineError, PipelineWarning
 from lenskit.logging import get_logger
-from lenskit.training import Trainable, TrainingOptions
 
 from . import config
 from ._impl import Pipeline
 from .components import (  # type: ignore # noqa: F401
     Component,
+    ComponentConstructor,
     PipelineFunction,
     fallback_on_none,
     instantiate_component,
 )
 from .config import PipelineConfig
-from .nodes import ND, ComponentNode, InputNode, LiteralNode, Node
+from .nodes import (
+    ND,
+    ComponentConstructorNode,
+    ComponentInstanceNode,
+    ComponentNode,
+    InputNode,
+    LiteralNode,
+    Node,
+)
 from .types import parse_type_string
 
 _log = get_logger(__name__)
 
+CFG = TypeVar("CFG")
 # common type var for quick use
 T = TypeVar("T")
 T1 = TypeVar("T1")
@@ -41,7 +47,6 @@ T3 = TypeVar("T3")
 T4 = TypeVar("T4")
 T5 = TypeVar("T5")
 
-CloneMethod: TypeAlias = Literal["config", "pipeline-config"]
 NAMESPACE_LITERAL_DATA = uuid5(NAMESPACE_URL, "https://ns.lenskit.org/literal-data/")
 
 
@@ -81,7 +86,6 @@ class PipelineBuilder:
     _aliases: dict[str, Node[Any]]
     _defaults: dict[str, Node[Any]]
     _components: dict[str, PipelineFunction[Any] | Component[Any]]
-    _hash: str | None = None
     _last: Node[Any] | None = None
     _anon_nodes: set[str]
     "Track generated node names."
@@ -94,7 +98,6 @@ class PipelineBuilder:
         self._defaults = {}
         self._components = {}
         self._anon_nodes = set()
-        self._clear_caches()
 
     def meta(self, *, include_hash: bool = True) -> config.PipelineMeta:
         """
@@ -188,7 +191,6 @@ class PipelineBuilder:
 
         node = InputNode[Any](name, types=rts)
         self._nodes[name] = node
-        self._clear_caches()
         return node
 
     def literal(self, value: T, *, name: str | None = None) -> LiteralNode[T]:
@@ -204,7 +206,6 @@ class PipelineBuilder:
             self._anon_nodes.add(name)
         node = LiteralNode(name, value, types=set([type(value)]))
         self._nodes[name] = node
-        self._clear_caches()
         return node
 
     def set_default(self, name: str, node: Node[Any] | object) -> None:
@@ -225,7 +226,6 @@ class PipelineBuilder:
         if not isinstance(node, Node):
             node = self.literal(node)
         self._defaults[name] = node
-        self._clear_caches()
 
     def get_default(self, name: str) -> Node[Any] | None:
         """
@@ -251,10 +251,31 @@ class PipelineBuilder:
         node = self.node(node)
         self._check_available_name(alias)
         self._aliases[alias] = node
-        self._clear_caches()
 
+    @overload
     def add_component(
-        self, name: str, obj: Component[ND] | PipelineFunction[ND], **inputs: Node[Any] | object
+        self,
+        name: str,
+        cls: ComponentConstructor[CFG, ND],
+        config: CFG = None,
+        /,
+        **inputs: Node[Any],
+    ) -> Node[ND]: ...
+    @overload
+    def add_component(
+        self,
+        name: str,
+        instance: Component[ND] | PipelineFunction[ND],
+        /,
+        **inputs: Node[Any] | object,
+    ) -> Node[ND]: ...
+    def add_component(
+        self,
+        name: str,
+        comp: ComponentConstructor[CFG, ND] | Component[ND] | PipelineFunction[ND],
+        config: CFG | None = None,
+        /,
+        **inputs: Node[Any] | object,
     ) -> Node[ND]:
         """
         Add a component and connect it into the graph.
@@ -263,8 +284,12 @@ class PipelineBuilder:
             name:
                 The name of the component in the pipeline.  The name must be
                 unique in the pipeline (among both components and inputs).
-            obj:
-                The component itself.
+            cls:
+                A component class.
+            config:
+                The configuration object for the component class.
+            instance:
+                A raw function or pre-instantiated component.
             inputs:
                 The component's input wiring.  See :ref:`pipeline-connections`
                 for details.
@@ -274,20 +299,41 @@ class PipelineBuilder:
         """
         self._check_available_name(name)
 
-        node = ComponentNode(name, obj)
+        if isinstance(comp, ComponentConstructor):
+            node = ComponentConstructorNode(name, comp, config)
+        else:
+            node = ComponentInstanceNode(name, comp)
+
         self._nodes[name] = node
-        self._components[name] = obj
 
         self.connect(node, **inputs)
 
-        self._clear_caches()
         self._last = node
         return node
 
+    @overload
     def replace_component(
         self,
         name: str | Node[ND],
-        obj: Component[ND] | PipelineFunction[ND],
+        cls: ComponentConstructor[CFG, ND],
+        config: CFG = None,
+        /,
+        **inputs: Node[Any],
+    ) -> Node[ND]: ...
+    @overload
+    def replace_component(
+        self,
+        name: str | Node[ND],
+        instance: Component[ND] | PipelineFunction[ND],
+        /,
+        **inputs: Node[Any] | object,
+    ) -> Node[ND]: ...
+    def replace_component(
+        self,
+        name: str | Node[ND],
+        comp: ComponentConstructor[CFG, ND] | Component[ND] | PipelineFunction[ND],
+        config: CFG | None = None,
+        /,
         **inputs: Node[Any] | object,
     ) -> Node[ND]:
         """
@@ -300,13 +346,15 @@ class PipelineBuilder:
         if isinstance(name, Node):
             name = name.name
 
-        node = ComponentNode(name, obj)
+        if isinstance(comp, ComponentConstructor):
+            node = ComponentConstructorNode(name, comp, config)
+        else:
+            node = ComponentInstanceNode(name, comp)
+
         self._nodes[name] = node
-        self._components[name] = obj
 
         self.connect(node, **inputs)
 
-        self._clear_caches()
         return node
 
     def connect(self, obj: str | Node[Any], **inputs: Node[Any] | str | object):
@@ -339,8 +387,6 @@ class PipelineBuilder:
                 lit = self.literal(n)
                 node.connections[k] = lit.name
 
-        self._clear_caches()
-
     def component_configs(self) -> dict[str, dict[str, Any]]:
         """
         Get the configurations for the components.  This is the configurations
@@ -352,35 +398,12 @@ class PipelineBuilder:
             if isinstance(comp, Component)
         }
 
-    def clone(self, how: CloneMethod = "config") -> Pipeline:
+    def clone(self) -> PipelineBuilder:
         """
-        Clone the pipeline, optionally including trained parameters.
-
-        The ``how`` parameter controls how the pipeline is cloned, and what is
-        available in the clone pipeline.  It can be one of the following values:
-
-        ``"config"``
-            Create fresh component instances using the configurations of the
-            components in this pipeline.  When applied to a trained pipeline,
-            the clone does **not** have the original's learned parameters. This
-            is the default clone method.
-        ``"pipeline-config"``
-            Round-trip the entire pipeline through :meth:`get_config` and
-            :meth:`from_config`.
-
-        Args:
-            how:
-                The mechanism to use for cloning the pipeline.
-
-        Returns:
-            A new pipeline with the same components and wiring, but fresh
-            instances created by round-tripping the configuration.
+        Clone the pipeline builder.  The resulting builder starts as a copy of
+        this builder, and any subsequent modifications only the copy to which
+        they are applied.
         """
-        if how == "pipeline-config":
-            cfg = self.get_config()
-            return self.from_config(cfg)
-        elif how != "config":  # pragma: nocover
-            raise NotImplementedError("only 'config' cloning is currently supported")
 
         clone = PipelineBuilder()
 
@@ -392,21 +415,24 @@ class PipelineBuilder:
                     clone.create_input(name, *types)
                 case LiteralNode(name, value):
                     clone._nodes[name] = LiteralNode(name, value)
-                case ComponentNode(name, comp, _inputs, wiring):
-                    if isinstance(comp, FunctionType):
-                        comp = comp
-                    elif isinstance(comp, Component):
-                        comp = comp.__class__(comp.config)  # type: ignore
-                    else:
-                        comp = comp.__class__()  # type: ignore
-                    cn = clone.add_component(node.name, comp)  # type: ignore
-                    for wn, wt in wiring.items():
-                        clone.connect(cn, **{wn: clone.node(wt)})
+                case ComponentConstructorNode(name, comp, config):
+                    cn = clone.add_component(name, comp, config)
+                case ComponentInstanceNode(name, comp):
+                    cn = clone.add_component(name, comp)
                 case _:  # pragma: nocover
                     raise RuntimeError(f"invalid node {node}")
 
         for n, t in self._aliases.items():
             clone.alias(n, t.name)
+
+        for node in self.nodes:
+            match node:
+                case ComponentNode(name, connections=wiring):
+                    cn = clone.node(name)
+                    for wn, wt in wiring.items():
+                        clone.connect(cn, **{wn: clone.node(wt)})
+                case _:
+                    pass
 
         for n, t in self._defaults.items():
             clone.set_default(n, clone.node(t.name))
@@ -502,7 +528,7 @@ class PipelineBuilder:
     @classmethod
     def from_config(cls, config: object) -> Self:
         """
-        Reconstruct a pipeline from a serialized configuration.
+        Reconstruct a pipeline builder from a serialized configuration.
 
         Args:
             config:
@@ -570,48 +596,6 @@ class PipelineBuilder:
 
         return pipe
 
-    def train(self, data: Dataset, options: TrainingOptions | None = None) -> None:
-        """
-        Trains the pipeline's trainable components (those implementing the
-        :class:`TrainableComponent` interface) on some training data.
-
-        .. admonition:: Random Number Generation
-            :class: note
-
-            If :attr:`TrainingOptions.rng` is set and is not a generator or bit
-            generator (i.e. it is a seed), then this method wraps the seed in a
-            :class:`~numpy.random.SeedSequence` and calls
-            :class:`~numpy.random.SeedSequence.spawn()` to generate a distinct
-            seed for each component in the pipeline.
-
-        Args:
-            data:
-                The dataset to train on.
-            options:
-                The training options.  If ``None``, default options are used.
-        """
-        log = _log.bind(pipeline=self.name)
-        if options is None:
-            options = TrainingOptions()
-
-        if isinstance(options.rng, SeedSequence):
-            seed = options.rng
-        elif options.rng is None or isinstance(options.rng, (Generator, BitGenerator)):
-            seed = None
-        else:
-            seed = SeedSequence(options.rng)
-
-        log.info("training pipeline components")
-        for name, comp in self._components.items():
-            clog = log.bind(name=name, component=comp)
-            if isinstance(comp, Trainable):
-                # spawn new seed if needed
-                c_opts = options if seed is None else replace(options, rng=seed.spawn(1)[0])
-                clog.info("training component")
-                comp.train(data, c_opts)
-            else:
-                clog.debug("training not required")
-
     def use_first_of(self, name: str, primary: Node[T | None], fallback: Node[T]) -> Node[T]:
         """
         Ergonomic method to create a new node that returns the result of its
@@ -668,7 +652,17 @@ class PipelineBuilder:
         """
         Build the pipeline.
         """
-        return self  # type: ignore
+        config = self.get_config()
+        return Pipeline(config, self._nodes)
+
+    def _instantiate(self, node: Node[ND]) -> Node[ND]:
+        match node:
+            case ComponentConstructorNode(name, constructor, config, connections=cxns):
+                _log.debug("instantiating component", component=constructor)
+                instance = constructor(config)
+                return ComponentInstanceNode(name, instance, cxns)
+            case _:
+                return node
 
     def _check_available_name(self, name: str) -> None:
         if name in self._nodes or name in self._aliases:
@@ -678,7 +672,3 @@ class PipelineBuilder:
         nw = self._nodes.get(node.name)
         if nw is not node:
             raise PipelineError(f"node {node} not in pipeline")
-
-    def _clear_caches(self):
-        if "_hash" in self.__dict__:
-            del self._hash

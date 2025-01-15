@@ -8,15 +8,17 @@
 
 import warnings
 from inspect import Signature, signature
+from typing import Any, Callable
 
 from typing_extensions import Generic, TypeVar
 
-from .components import PipelineFunction
+from .components import Component, ComponentConstructor, PipelineFunction
 from .types import TypecheckWarning
 
 # Nodes are (conceptually) immutable data containers, so Node[U] can be assigned
 # to Node[T] if U ≼ T.
 ND = TypeVar("ND", covariant=True)
+CFG = TypeVar("CFG", contravariant=True, bound=object)
 
 
 class Node(Generic[ND]):
@@ -70,16 +72,14 @@ class LiteralNode(Node[ND], Generic[ND]):
 
 class ComponentNode(Node[ND], Generic[ND]):
     """
-    A node storing a component.
+    A node storing a component.  This is an abstract node class; see subclasses
+    :class:`ComponentConstructorNode` and `ComponentInstanceNode`.
 
     Stability:
         Internal
     """
 
-    __match_args__ = ("name", "component", "inputs", "connections")
-
-    component: PipelineFunction[ND]
-    "The component associated with this node"
+    __match_args__ = ("name", "inputs", "connections")
 
     inputs: dict[str, type | None]
     "The component's inputs."
@@ -87,11 +87,11 @@ class ComponentNode(Node[ND], Generic[ND]):
     connections: dict[str, str]
     "The component's input connections."
 
-    def __init__(self, name: str, component: PipelineFunction[ND]):
+    def __init__(self, name: str):
         super().__init__(name)
-        self.component = component
         self.connections = {}
 
+    def _setup_signature(self, component: Callable[..., ND]):
         sig = signature(component, eval_str=True)
         if sig.return_annotation == Signature.empty:
             warnings.warn(
@@ -111,3 +111,30 @@ class ComponentNode(Node[ND], Generic[ND]):
                 self.inputs[param.name] = None
             else:
                 self.inputs[param.name] = param.annotation
+
+
+class ComponentConstructorNode(ComponentNode[ND], Generic[ND]):
+    __match_args__ = ("name", "constructor", "config", "inputs", "connections")
+    constructor: ComponentConstructor[Any, ND]
+    config: object | None
+
+    def __init__(self, name: str, constructor: ComponentConstructor[CFG, ND], config: CFG):
+        self.constructor = constructor
+        self.config = config
+
+
+class ComponentInstanceNode(ComponentNode[ND], Generic[ND]):
+    __match_args__ = ("name", "component", "inputs", "connections")
+
+    component: Component[ND] | PipelineFunction[ND]
+
+    def __init__(
+        self,
+        name: str,
+        component: Component[ND] | PipelineFunction[ND],
+        connections: dict[str, str] | None = None,
+    ):
+        super().__init__(name)
+        self.component = component
+        self._setup_signature(component)
+        self.connections = connections or {}

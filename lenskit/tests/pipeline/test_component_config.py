@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from typing import Any
 
 from pydantic import BaseModel
 from pydantic.dataclasses import dataclass as pydantic_dataclass
@@ -15,7 +16,7 @@ from pydantic.dataclasses import dataclass as pydantic_dataclass
 from pytest import mark
 
 from lenskit.pipeline import PipelineBuilder
-from lenskit.pipeline.components import Component
+from lenskit.pipeline.components import Component, ComponentConstructor
 
 
 @dataclass
@@ -85,12 +86,10 @@ def test_auto_config_roundtrip(prefixer: type[Component]):
 
 
 @mark.parametrize("prefixer", [PrefixerDC, PrefixerM, PrefixerPYDC])
-def test_pipeline_config(prefixer: type[Component]):
-    comp = prefixer(prefix="scroll named ")
-
+def test_pipeline_config(prefixer: ComponentConstructor[Any, str]):
     pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
-    pipe.add_component("prefix", comp, msg=msg)
+    pipe.add_component("prefix", prefixer, {"prefix": "scroll named "}, msg=msg)
 
     pipe = pipe.build()
     assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
