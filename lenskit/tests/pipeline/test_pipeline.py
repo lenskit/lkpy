@@ -204,6 +204,7 @@ def test_chain():
 
     ni = pipe.add_component("incr", incr, x=x)
     nt = pipe.add_component("triple", triple, x=ni)
+    pipe.default_component(nt)
 
     pipe = pipe.build()
     # run default pipe

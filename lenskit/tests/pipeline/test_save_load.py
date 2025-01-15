@@ -163,11 +163,12 @@ def test_configurable_component():
     assert p2.config_hash == pipe.config_hash
 
 
-def test_save_defaults():
+def test_save_with_defaults():
     pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
     pipe.default_connection("msg", msg)
     pipe.add_component("return", msg_ident)
+    pipe.default_component("return")
 
     cfg = pipe.build_config()
 
