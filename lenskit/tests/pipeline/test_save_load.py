@@ -158,8 +158,8 @@ def test_configurable_component():
     p2 = p2.build()
     assert p2.run("prefix", msg="HACKEM MUCHE") == "scroll named HACKEM MUCHE"
 
-    print("hash:", pipe.config_hash())
-    assert pipe.config_hash() is not None
+    print("hash:", pipe.config_hash)
+    assert pipe.config_hash is not None
     assert p2.config_hash == pipe.config_hash
 
 
@@ -276,6 +276,7 @@ def test_literal():
     msg = pipe.create_input("msg", str)
 
     pipe.add_component("prefix", msg_prefix, prefix=pipe.literal("hello, "), msg=msg)
+    pipe.default_component("prefix")
 
     pipe = pipe.build()
     assert pipe.run(msg="HACKEM MUCHE") == "hello, HACKEM MUCHE"
@@ -290,6 +291,7 @@ def test_literal_array():
     a = pipe.create_input("a", int)
 
     pipe.add_component("add", add, x=np.arange(10), y=a)
+    pipe.default_component("prefix")
 
     pipe = pipe.build()
     res = pipe.run(a=5)

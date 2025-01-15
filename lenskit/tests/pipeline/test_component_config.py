@@ -109,6 +109,7 @@ def test_pipeline_config_roundtrip(prefixer: type[Component]):
     pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
     pipe.add_component("prefix", comp, msg=msg)
+    pipe.default_component("prefix")
 
     assert pipe.build().run("prefix", msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
 

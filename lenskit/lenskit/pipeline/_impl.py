@@ -203,6 +203,9 @@ class Pipeline:
                 case _:
                     pass
 
+        if self._default:
+            clone.default_component(self._default.name)
+
         return clone.build()
 
     @property

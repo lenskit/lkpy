@@ -221,6 +221,7 @@ def test_simple_graph():
     pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
+    pipe.default_component("b")
 
     def double(x: int) -> int:
         return x * 2
@@ -303,6 +304,7 @@ def test_default_wiring():
 
     nd = pipe.add_component("double", double, x=a)
     na = pipe.add_component("add", add, x=nd)
+    pipe.default_component(na)
 
     pipe = pipe.build()
     assert pipe.run(a=1, b=7) == 9
@@ -385,7 +387,7 @@ def test_invalid_type():
 
     pipe = pipe.build()
     with raises(TypeError):
-        pipe.run(a=1, b="seven")
+        pipe.run("add", a=1, b="seven")
 
 
 def test_run_by_alias():
