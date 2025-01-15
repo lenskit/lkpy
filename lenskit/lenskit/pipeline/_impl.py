@@ -1,14 +1,13 @@
 # pyright: strict
 from __future__ import annotations
 
-import typing
 import warnings
 from dataclasses import replace
-from types import FunctionType, UnionType
-from uuid import NAMESPACE_URL, uuid4, uuid5
+from types import FunctionType
+from uuid import NAMESPACE_URL, uuid5
 
 from numpy.random import BitGenerator, Generator, SeedSequence
-from typing_extensions import Any, Literal, Self, TypeAlias, TypeVar, cast, overload
+from typing_extensions import Any, Literal, Self, TypeAlias, TypeVar, overload
 
 from lenskit.data import Dataset
 from lenskit.diagnostics import PipelineError, PipelineWarning
@@ -19,11 +18,10 @@ from . import config
 from .components import (  # type: ignore # noqa: F401
     Component,
     PipelineFunction,
-    fallback_on_none,
     instantiate_component,
 )
 from .config import PipelineConfig
-from .nodes import ND, ComponentNode, InputNode, LiteralNode, Node
+from .nodes import ComponentNode, InputNode, LiteralNode, Node
 from .state import PipelineState
 from .types import parse_type_string
 
@@ -48,8 +46,12 @@ class Pipeline:
     way.  It allows you to wire together components in (mostly) abitrary graphs,
     train them on data, and serialize pipelines to disk for use elsewhere.
 
-    If you have a scoring model and just want to generate recommenations with a
-    default setup and minimal configuration, see :func:`topn_pipeline`.
+    Pipelines cannot be directly instantiated; they must be built with a
+    :class:`~lenskit.pipeline.PipelineBuilder` class, or loaded from a
+    configuration with :meth:`from_config`. If you have a scoring model and just
+    want to generate recommenations with a default setup and minimal
+    configuration, see :func:`~lenskit.pipeline.topn_pipeline` or
+    :class:`~lenskit.pipeline.RecPipelineBuilder`.
 
     Pipelines are also :class:`~lenskit.training.Trainable`, and train all
     trainable components.
@@ -143,193 +145,6 @@ class Pipeline:
             return None
         else:
             raise KeyError(f"node {node}")
-
-    def create_input(self, name: str, *types: type[T] | None) -> Node[T]:
-        """
-        Create an input node for the pipeline.  Pipelines expect their inputs to
-        be provided when they are run.
-
-        Args:
-            name:
-                The name of the input.  The name must be unique in the pipeline
-                (among both components and inputs).
-            types:
-                The allowable types of the input; input data can be of any
-                specified type.  If ``None`` is among the allowed types, the
-                input can be omitted.
-
-        Returns:
-            A pipeline node representing this input.
-
-        Raises:
-            ValueError:
-                a node with the specified ``name`` already exists.
-        """
-        self._check_available_name(name)
-
-        rts: set[type[T | None]] = set()
-        for t in types:
-            if t is None:
-                rts.add(type(None))
-            elif isinstance(t, UnionType):
-                rts |= set(typing.get_args(t))
-            else:
-                rts.add(t)
-
-        node = InputNode[Any](name, types=rts)
-        self._nodes[name] = node
-        self._clear_caches()
-        return node
-
-    def literal(self, value: T, *, name: str | None = None) -> LiteralNode[T]:
-        """
-        Create a literal node (a node with a fixed value).
-
-        .. note::
-            Literal nodes cannot be serialized witih :meth:`get_config` or
-            :meth:`save_config`.
-        """
-        if name is None:
-            name = str(uuid4())
-            self._anon_nodes.add(name)
-        node = LiteralNode(name, value, types=set([type(value)]))
-        self._nodes[name] = node
-        self._clear_caches()
-        return node
-
-    def set_default(self, name: str, node: Node[Any] | object) -> None:
-        """
-        Set the default wiring for a component input.  Components that declare
-        an input parameter with the specified ``name`` but no configured input
-        will be wired to this node.
-
-        This is intended to be used for things like wiring up `user` parameters
-        to semi-automatically receive the target user's identity and history.
-
-        Args:
-            name:
-                The name of the parameter to set a default for.
-            node:
-                The node or literal value to wire to this parameter.
-        """
-        if not isinstance(node, Node):
-            node = self.literal(node)
-        self._defaults[name] = node
-        self._clear_caches()
-
-    def get_default(self, name: str) -> Node[Any] | None:
-        """
-        Get the default wiring for an input name.
-        """
-        return self._defaults.get(name, None)
-
-    def alias(self, alias: str, node: Node[Any] | str) -> None:
-        """
-        Create an alias for a node.  After aliasing, the node can be retrieved
-        from :meth:`node` using either its original name or its alias.
-
-        Args:
-            alias:
-                The alias to add to the node.
-            node:
-                The node (or node name) to alias.
-
-        Raises:
-            ValueError:
-                if the alias is already used as an alias or node name.
-        """
-        node = self.node(node)
-        self._check_available_name(alias)
-        self._aliases[alias] = node
-        self._clear_caches()
-
-    def add_component(
-        self, name: str, obj: Component[ND] | PipelineFunction[ND], **inputs: Node[Any] | object
-    ) -> Node[ND]:
-        """
-        Add a component and connect it into the graph.
-
-        Args:
-            name:
-                The name of the component in the pipeline.  The name must be
-                unique in the pipeline (among both components and inputs).
-            obj:
-                The component itself.
-            inputs:
-                The component's input wiring.  See :ref:`pipeline-connections`
-                for details.
-
-        Returns:
-            The node representing this component in the pipeline.
-        """
-        self._check_available_name(name)
-
-        node = ComponentNode(name, obj)
-        self._nodes[name] = node
-        self._components[name] = obj
-
-        self.connect(node, **inputs)
-
-        self._clear_caches()
-        self._last = node
-        return node
-
-    def replace_component(
-        self,
-        name: str | Node[ND],
-        obj: Component[ND] | PipelineFunction[ND],
-        **inputs: Node[Any] | object,
-    ) -> Node[ND]:
-        """
-        Replace a component in the graph.  The new component must have a type
-        that is compatible with the old component.  The old component's input
-        connections will be replaced (as the new component may have different
-        inputs), but any connections that use the old component to supply an
-        input will use the new component instead.
-        """
-        if isinstance(name, Node):
-            name = name.name
-
-        node = ComponentNode(name, obj)
-        self._nodes[name] = node
-        self._components[name] = obj
-
-        self.connect(node, **inputs)
-
-        self._clear_caches()
-        return node
-
-    def connect(self, obj: str | Node[Any], **inputs: Node[Any] | str | object):
-        """
-        Provide additional input connections for a component that has already
-        been added.  See :ref:`pipeline-connections` for details.
-
-        Args:
-            obj:
-                The name or node of the component to wire.
-            inputs:
-                The component's input wiring.  For each keyword argument in the
-                component's function signature, that argument can be provided
-                here with an input that the pipeline will provide to that
-                argument of the component when the pipeline is run.
-        """
-        if isinstance(obj, Node):
-            node = obj
-        else:
-            node = self.node(obj)
-        if not isinstance(node, ComponentNode):
-            raise TypeError(f"only component nodes can be wired, not {node}")
-
-        for k, n in inputs.items():
-            if isinstance(n, Node):
-                n = cast(Node[Any], n)
-                self._check_member_node(n)
-                node.connections[k] = n.name
-            else:
-                lit = self.literal(n)
-                node.connections[k] = lit.name
-
-        self._clear_caches()
 
     def component_configs(self) -> dict[str, dict[str, Any]]:
         """
@@ -716,58 +531,6 @@ class Pipeline:
             default=last,
             meta=self.meta(),
         )
-
-    def use_first_of(self, name: str, primary: Node[T | None], fallback: Node[T]) -> Node[T]:
-        """
-        Ergonomic method to create a new node that returns the result of its
-        ``input`` if it is provided and not ``None``, and otherwise returns the
-        result of ``fallback``.  This method is used for things like filling in
-        optional pipeline inputs.  For example, if you want the pipeline to take
-        candidate items through an ``items`` input, but look them up from the
-        user's history and the training data if ``items`` is not supplied, you
-        would do:
-
-        .. code:: python
-
-            pipe = Pipeline()
-            # allow candidate items to be optionally specified
-            items = pipe.create_input('items', list[EntityId], None)
-            # find candidates from the training data (optional)
-            lookup_candidates = pipe.add_component(
-                'select-candidates', UnratedTrainingItemsCandidateSelector(),
-                user=history,
-            )
-            # if the client provided items as a pipeline input, use those; otherwise
-            # use the candidate selector we just configured.
-            candidates = pipe.use_first_of('candidates', items, lookup_candidates)
-
-        .. note::
-
-            This method does not distinguish between an input being unspecified
-            and explicitly specified as ``None``.
-
-        .. note::
-
-            This method does *not* implement item-level fallbacks, only
-            fallbacks at the level of entire results.  For item-level score
-            fallbacks, see :class:`~lenskit.basic.FallbackScorer`.
-
-        .. note::
-            If one of the fallback elements is a component ``A`` that depends on
-            another component or input ``B``, and ``B`` is missing or returns
-            ``None`` such that ``A`` would usually fail, then ``A`` will be
-            skipped and the fallback will move on to the next node. This works
-            with arbitrarily-deep transitive chains.
-
-        Args:
-            name:
-                The name of the node.
-            primary:
-                The node to use as the primary input, if it is available.
-            fallback:
-                The node to use if the primary input does not provide a value.
-        """
-        return self.add_component(name, fallback_on_none, primary=primary, fallback=fallback)
 
     def _check_available_name(self, name: str) -> None:
         if name in self._nodes or name in self._aliases:
