@@ -63,7 +63,7 @@ def test_serialize_input():
     pipe = PipelineBuilder("test")
     pipe.create_input("user", int, str)
 
-    cfg = pipe.get_config()
+    cfg = pipe.build_config()
     print(cfg)
     assert cfg.meta.name == "test"
     assert len(cfg.inputs) == 1
@@ -76,7 +76,7 @@ def test_round_trip_input():
     pipe = PipelineBuilder()
     pipe.create_input("user", int, str)
 
-    cfg = pipe.get_config()
+    cfg = pipe.build_config()
     print(cfg)
 
     p2 = PipelineBuilder.from_config(cfg)
@@ -91,7 +91,7 @@ def test_round_trip_optional_input():
     pipe = PipelineBuilder()
     pipe.create_input("user", int, str, None)
 
-    cfg = pipe.get_config()
+    cfg = pipe.build_config()
     assert cfg.inputs[0].types == {"int", "str", "None"}
 
     p2 = PipelineBuilder.from_config(cfg)
@@ -107,7 +107,7 @@ def test_config_single_node():
 
     pipe.add_component("return", msg_ident, msg=msg)
 
-    cfg = pipe.get_config()
+    cfg = pipe.build_config()
     assert len(cfg.inputs) == 1
     assert len(cfg.components) == 1
 
@@ -124,10 +124,10 @@ def test_round_trip_single_node():
 
     pipe.add_component("return", msg_ident, msg=msg)
 
-    cfg = pipe.get_config()
+    cfg = pipe.build_config()
 
     p2 = PipelineBuilder.from_config(cfg)
-    assert len(p2.nodes) == 2
+    assert len(p2.nodes()) == 2
     r2 = p2.node("return")
     assert isinstance(r2, ComponentNode)
     assert r2.component is msg_ident
@@ -144,11 +144,11 @@ def test_configurable_component():
     pfx = Prefixer(prefix="scroll named ")
     pipe.add_component("prefix", pfx, msg=msg)
 
-    cfg = pipe.get_config()
+    cfg = pipe.build_config()
     assert cfg.components["prefix"].config == {"prefix": "scroll named "}
 
     p2 = PipelineBuilder.from_config(cfg)
-    assert len(p2.nodes) == 2
+    assert len(p2.nodes()) == 2
     r2 = p2.node("prefix")
     assert isinstance(r2, ComponentNode)
     assert isinstance(r2.component, Prefixer)
@@ -160,16 +160,16 @@ def test_configurable_component():
 
     print("hash:", pipe.config_hash())
     assert pipe.config_hash() is not None
-    assert p2.config_hash() == pipe.config_hash()
+    assert p2.config_hash == pipe.config_hash
 
 
 def test_save_defaults():
     pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
-    pipe.set_default("msg", msg)
+    pipe.default_connection("msg", msg)
     pipe.add_component("return", msg_ident)
 
-    cfg = pipe.get_config()
+    cfg = pipe.build_config()
 
     pipe = pipe.build()
     assert pipe.run(msg="hello") == "hello"
@@ -199,7 +199,7 @@ def test_hashes_different():
     _log.info("p1 stage 2 hash: %s", p1.config_hash())
     _log.info("p2 stage 2 hash: %s", p2.config_hash())
     assert p1.config_hash() != p2.config_hash()
-    assert p1.build().config_hash() != p2.build().config_hash()
+    assert p1.build().config_hash != p2.build().config_hash
 
 
 def test_save_with_fallback():
@@ -212,7 +212,7 @@ def test_save_with_fallback():
     fb = pipe.use_first_of("fill-operand", b, nn)
     pipe.add_component("add", add, x=nd, y=fb)
 
-    cfg = pipe.get_config()
+    cfg = pipe.build_config()
     json = cfg.model_dump_json(exclude_none=True)
     print(json)
     c2 = PipelineConfig.model_validate_json(json)
@@ -221,7 +221,7 @@ def test_save_with_fallback():
 
     p2 = p2.build()
     # 3 * 2 + -3 = 3
-    assert p2.run("fill-operand", "add", a=3) == (-3, 3)
+    assert p2.run(("fill-operand", "add"), a=3) == (-3, 3)
 
 
 def test_hash_validate():
@@ -231,7 +231,7 @@ def test_hash_validate():
     pfx = Prefixer(prefix="scroll named ")
     pipe.add_component("prefix", pfx, msg=msg)
 
-    cfg = pipe.get_config()
+    cfg = pipe.build_config()
     print("initial config:", cfg.model_dump_json(indent=2))
     assert cfg.meta.hash is not None
     cfg.components["prefix"].config["prefix"] = "scroll called "  # type: ignore
@@ -248,7 +248,7 @@ def test_alias_input():
 
     pipe.alias("person", user)
 
-    cfg = pipe.get_config()
+    cfg = pipe.build_config()
 
     p2 = PipelineBuilder.from_config(cfg)
     p2 = p2.build()
@@ -280,7 +280,7 @@ def test_literal():
     pipe = pipe.build()
     assert pipe.run(msg="HACKEM MUCHE") == "hello, HACKEM MUCHE"
 
-    print(pipe.get_config().model_dump_json(indent=2))
+    print(pipe.config.model_dump_json(indent=2))
     p2 = pipe.clone("pipeline-config")
     assert p2.run(msg="FOOBIE BLETCH") == "hello, FOOBIE BLETCH"
 
@@ -295,7 +295,7 @@ def test_literal_array():
     res = pipe.run(a=5)
     assert np.all(res == np.arange(5, 15))
 
-    print(pipe.get_config().model_dump_json(indent=2))
+    print(pipe.config.model_dump_json(indent=2))
     p2 = pipe.clone("pipeline-config")
     assert np.all(p2.run(a=5) == np.arange(5, 15))
 
@@ -311,4 +311,4 @@ def test_stable_with_literals():
     p2.add_component("add", add, x=np.arange(10), y=a)
 
     assert p1.config_hash() == p2.config_hash()
-    assert p1.build().config_hash() == p2.build().config_hash()
+    assert p1.build().config_hash == p2.build().config_hash

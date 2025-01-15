@@ -84,9 +84,9 @@ class PipelineBuilder:
 
     _nodes: dict[str, Node[Any]]
     _aliases: dict[str, Node[Any]]
-    _defaults: dict[str, Node[Any]]
+    _default_connections: dict[str, Node[Any]]
     _components: dict[str, PipelineFunction[Any] | Component[Any]]
-    _last: Node[Any] | None = None
+    _default: str | None = None
     _anon_nodes: set[str]
     "Track generated node names."
 
@@ -95,7 +95,7 @@ class PipelineBuilder:
         self.version = version
         self._nodes = {}
         self._aliases = {}
-        self._defaults = {}
+        self._default_connections = {}
         self._components = {}
         self._anon_nodes = set()
 
@@ -113,7 +113,6 @@ class PipelineBuilder:
             meta.hash = self.config_hash()
         return meta
 
-    @property
     def nodes(self) -> list[Node[object]]:
         """
         Get the nodes in the pipeline graph.
@@ -208,7 +207,7 @@ class PipelineBuilder:
         self._nodes[name] = node
         return node
 
-    def set_default(self, name: str, node: Node[Any] | object) -> None:
+    def default_connection(self, name: str, node: Node[Any] | object) -> None:
         """
         Set the default wiring for a component input.  Components that declare
         an input parameter with the specified ``name`` but no configured input
@@ -216,6 +215,12 @@ class PipelineBuilder:
 
         This is intended to be used for things like wiring up `user` parameters
         to semi-automatically receive the target user's identity and history.
+
+        .. important::
+
+            Defaults are a feature of the builder only, and are resolved in
+            :meth:`build`.  They are not included in serialized configuration or
+            resulting pipeline.
 
         Args:
             name:
@@ -225,13 +230,15 @@ class PipelineBuilder:
         """
         if not isinstance(node, Node):
             node = self.literal(node)
-        self._defaults[name] = node
+        self._default_connections[name] = node
 
-    def get_default(self, name: str) -> Node[Any] | None:
+    def default_component(self, node: str | Node[Any]) -> None:
         """
-        Get the default wiring for an input name.
+        Set the default node for the pipeline.  If :meth:`Pipeline.run` is
+        called without a node, then it will run this node (and all of its
+        dependencies).
         """
-        return self._defaults.get(name, None)
+        self._default = node.name if isinstance(node, Node) else node
 
     def alias(self, alias: str, node: Node[Any] | str) -> None:
         """
@@ -299,16 +306,11 @@ class PipelineBuilder:
         """
         self._check_available_name(name)
 
-        if isinstance(comp, ComponentConstructor):
-            node = ComponentConstructorNode(name, comp, config)
-        else:
-            node = ComponentInstanceNode(name, comp)
-
+        node = ComponentNode[ND].create(name, comp, config)
         self._nodes[name] = node
 
         self.connect(node, **inputs)
 
-        self._last = node
         return node
 
     @overload
@@ -346,11 +348,7 @@ class PipelineBuilder:
         if isinstance(name, Node):
             name = name.name
 
-        if isinstance(comp, ComponentConstructor):
-            node = ComponentConstructorNode(name, comp, config)
-        else:
-            node = ComponentInstanceNode(name, comp)
-
+        node = ComponentNode[ND].create(name, comp, config)
         self._nodes[name] = node
 
         self.connect(node, **inputs)
@@ -387,17 +385,6 @@ class PipelineBuilder:
                 lit = self.literal(n)
                 node.connections[k] = lit.name
 
-    def component_configs(self) -> dict[str, dict[str, Any]]:
-        """
-        Get the configurations for the components.  This is the configurations
-        only, it does not include pipeline inputs or wiring.
-        """
-        return {
-            name: comp.dump_config()
-            for (name, comp) in self._components.items()
-            if isinstance(comp, Component)
-        }
-
     def clone(self) -> PipelineBuilder:
         """
         Clone the pipeline builder.  The resulting builder starts as a copy of
@@ -407,7 +394,7 @@ class PipelineBuilder:
 
         clone = PipelineBuilder()
 
-        for node in self.nodes:
+        for node in self.nodes():
             match node:
                 case InputNode(name, types=types):
                     if types is None:
@@ -425,21 +412,20 @@ class PipelineBuilder:
         for n, t in self._aliases.items():
             clone.alias(n, t.name)
 
-        for node in self.nodes:
+        for node in self.nodes():
             match node:
                 case ComponentNode(name, connections=wiring):
                     cn = clone.node(name)
-                    for wn, wt in wiring.items():
-                        clone.connect(cn, **{wn: clone.node(wt)})
+                    clone.connect(cn, **{wn: clone.node(wt) for (wn, wt) in wiring.items()})
                 case _:
                     pass
 
-        for n, t in self._defaults.items():
-            clone.set_default(n, clone.node(t.name))
+        for n, t in self._default_connections.items():
+            clone.default_connection(n, clone.node(t.name))
 
         return clone
 
-    def get_config(self, *, include_hash: bool = True) -> PipelineConfig:
+    def build_config(self, *, include_hash: bool = True) -> PipelineConfig:
         """
         Get this pipeline's configuration for serialization.  The configuration
         consists of all inputs and components along with their configurations
@@ -481,7 +467,7 @@ class PipelineBuilder:
                     raise RuntimeError(f"unexpected anonymous node {node}")
 
         # Now we go over all named nodes and add them to the config:
-        for node in self.nodes:
+        for node in self.nodes():
             if node.name in remapped:
                 continue
 
@@ -496,7 +482,9 @@ class PipelineBuilder:
                     raise RuntimeError(f"invalid node {node}")
 
         cfg.aliases = {a: t.name for (a, t) in self._aliases.items()}
-        cfg.defaults = {n: t.name for (n, t) in self._defaults.items()}
+
+        if self._default:
+            cfg.default = self._default
 
         if include_hash:
             cfg.meta.hash = config.hash_config(cfg)
@@ -508,22 +496,21 @@ class PipelineBuilder:
         Get a hash of the pipeline's configuration to uniquely identify it for
         logging, version control, or other purposes.
 
-        The hash format and algorithm are not guaranteed, but is stable within a
-        LensKit version.  For the same version of LensKit and component code,
-        the same configuration will produce the same hash, so long as there are
-        no literal nodes.  Literal nodes will *usually* hash consistently, but
-        since literals other than basic JSON values are hashed by pickling, hash
-        stability depends on the stability of the pickle bytestream.
+        The hash format and algorithm are not guaranteed, but hashes are stable
+        within a LensKit version.  For the same version of LensKit and component
+        code, the same configuration will produce the same hash, so long as
+        there are no literal nodes.  Literal nodes will *usually* hash
+        consistently, but since literals other than basic JSON values are hashed
+        by pickling, hash stability depends on the stability of the pickle
+        bytestream.
 
         In LensKit 2025.1, the configuration hash is computed by computing the
         JSON serialization of the pipeline configuration *without* a hash and
         returning the hex-encoded SHA256 hash of that configuration.
         """
-        if self._hash is None:
-            # get the config *without* a hash
-            cfg = self.get_config(include_hash=False)
-            self._hash = config.hash_config(cfg)
-        return self._hash
+
+        cfg = self.build_config(include_hash=False)
+        return config.hash_config(cfg)
 
     @classmethod
     def from_config(cls, config: object) -> Self:
@@ -583,10 +570,6 @@ class PipelineBuilder:
         # pass 4: aliases
         for n, t in cfg.aliases.items():
             pipe.alias(n, t)
-
-        # pass 5: defaults
-        for n, t in cfg.defaults.items():
-            pipe.set_default(n, pipe.node(t))
 
         if cfg.meta.hash is not None:
             h2 = pipe.config_hash()
@@ -652,7 +635,7 @@ class PipelineBuilder:
         """
         Build the pipeline.
         """
-        config = self.get_config()
+        config = self.build_config()
         return Pipeline(config, self._nodes)
 
     def _instantiate(self, node: Node[ND]) -> Node[ND]:

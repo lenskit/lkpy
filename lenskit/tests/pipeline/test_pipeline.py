@@ -19,7 +19,7 @@ from lenskit.pipeline.types import TypecheckWarning
 
 def test_init_empty():
     pipe = PipelineBuilder()
-    assert len(pipe.nodes) == 0
+    assert len(pipe.nodes()) == 0
 
 
 def test_create_input():
@@ -31,7 +31,7 @@ def test_create_input():
     assert src.name == "user"
     assert src.types == set([int, str])
 
-    assert len(pipe.nodes) == 1
+    assert len(pipe.nodes()) == 1
     assert pipe.node("user") is src
 
 
@@ -271,6 +271,7 @@ def test_replace_component():
 
     nd = pipe.add_component("double", double, x=a)
     na = pipe.add_component("add", add, x=nd, y=b)
+    pipe.default_component(na)
 
     nt = pipe.replace_component("double", triple, x=a)
 
@@ -298,7 +299,7 @@ def test_default_wiring():
     def add(x: int, y: int) -> int:
         return x + y
 
-    pipe.set_default("y", b)
+    pipe.default_connection("y", b)
 
     nd = pipe.add_component("double", double, x=a)
     na = pipe.add_component("add", add, x=nd)
@@ -324,6 +325,48 @@ def test_run_by_name():
 
     pipe = pipe.build()
     assert pipe.run("double", a=1, b=7) == 2
+
+
+def test_run_tuple_name():
+    pipe = PipelineBuilder()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    pipe.add_component("add", add, x=nd, y=b)
+
+    pipe = pipe.build()
+    res = pipe.run(("double",), a=1, b=7)
+    assert isinstance(res, tuple)
+    assert res[0] == 2
+
+
+def test_run_tuple_pair():
+    pipe = PipelineBuilder()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    pipe.add_component("add", add, x=nd, y=b)
+
+    pipe = pipe.build()
+    res = pipe.run(("double", "add"), a=1, b=7)
+    assert isinstance(res, tuple)
+    d, a = res
+    assert d == 2
+    assert a == 9
 
 
 def test_invalid_type():
@@ -475,8 +518,7 @@ def test_fail_missing_input():
 
 def test_pipeline_component_default():
     """
-    Test that the last *component* is last.  It also exercises the warning logic
-    for missing component types.
+    Test that the default component is run correctly.
     """
     pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
@@ -486,6 +528,10 @@ def test_pipeline_component_default():
 
     with warns(TypecheckWarning):
         pipe.add_component("add", add, x=np.arange(10), y=a)  # type: ignore
+    pipe.default_component("add")
+
+    cfg = pipe.build_config()
+    assert cfg.default == "add"
 
     pipe = pipe.build()
     # the component runs

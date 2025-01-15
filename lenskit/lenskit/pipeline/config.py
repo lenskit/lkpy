@@ -18,11 +18,11 @@ from hashlib import sha256
 from types import FunctionType
 from typing import Literal, Mapping
 
-from pydantic import BaseModel, Field, JsonValue, ValidationError
+from pydantic import BaseModel, Field, JsonValue, TypeAdapter, ValidationError
 from typing_extensions import Any, Optional, Self
 
 from .components import Component
-from .nodes import ComponentNode, InputNode
+from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
 from .types import type_string
 
 
@@ -40,12 +40,12 @@ class PipelineConfig(BaseModel):
     "Pipeline metadata."
     inputs: list[PipelineInput] = Field(default_factory=list)
     "Pipeline inputs."
-    defaults: dict[str, str] = Field(default_factory=dict)
-    "Default pipeline wirings."
     components: OrderedDict[str, PipelineComponent] = Field(default_factory=OrderedDict)
     "Pipeline components, with their configurations and wiring."
     aliases: dict[str, str] = Field(default_factory=dict)
     "Pipeline node aliases."
+    default: str | None = None
+    "The default node for running this pipeline."
     literals: dict[str, PipelineLiteral] = Field(default_factory=dict)
     "Literals"
 
@@ -120,15 +120,21 @@ class PipelineComponent(BaseModel):
         if mapping is None:
             mapping = {}
 
-        comp = node.component
-        if isinstance(comp, FunctionType):
-            ctype = comp
-        else:
-            ctype = comp.__class__
+        match node:
+            case ComponentInstanceNode(_name, comp):
+                config = None
+                if isinstance(comp, FunctionType):
+                    ctype = comp
+                else:
+                    ctype = comp.__class__
+                    if isinstance(comp, Component):
+                        config = comp.dump_config()
+            case ComponentConstructorNode(_name, ctype, config):
+                config = TypeAdapter[Any](ctype.config_class()).dump_python(config, mode="json")
+            case _:
+                raise TypeError("unexpected node type")
 
         code = f"{ctype.__module__}:{ctype.__qualname__}"
-
-        config = comp.dump_config() if isinstance(comp, Component) else None
 
         return cls(
             code=code,

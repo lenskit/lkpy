@@ -61,7 +61,7 @@ class PrefixerPYDC(Component[str]):
 
 @mark.parametrize("prefixer", [PrefixerDC, PrefixerM, PrefixerPYDC, PrefixerM2])
 def test_config_setup(prefixer: type[Component]):
-    ccls = prefixer._config_class()  # type: ignore
+    ccls = prefixer.config_class()  # type: ignore
     assert ccls is not None
 
     comp = prefixer()
@@ -92,13 +92,14 @@ def test_pipeline_config(prefixer: ComponentConstructor[Any, str]):
     pipe.add_component("prefix", prefixer, {"prefix": "scroll named "}, msg=msg)
 
     pipe = pipe.build()
-    assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
+    assert pipe.run("prefix", msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
 
-    config = pipe.component_configs()
+    config = pipe.config.components
     print(json.dumps(config, indent=2))
 
     assert "prefix" in config
-    assert config["prefix"]["prefix"] == "scroll named "
+    assert config["prefix"].config
+    assert config["prefix"].config["prefix"] == "scroll named "
 
 
 @mark.parametrize("prefixer", [PrefixerDC, PrefixerM, PrefixerPYDC])
@@ -109,9 +110,9 @@ def test_pipeline_config_roundtrip(prefixer: type[Component]):
     msg = pipe.create_input("msg", str)
     pipe.add_component("prefix", comp, msg=msg)
 
-    assert pipe.build().run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
+    assert pipe.build().run("prefix", msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
 
-    config = pipe.get_config()
+    config = pipe.build_config()
     print(config.model_dump_json(indent=2))
 
     p2 = PipelineBuilder.from_config(config)

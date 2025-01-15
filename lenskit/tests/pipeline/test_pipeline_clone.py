@@ -41,6 +41,7 @@ def test_pipeline_clone():
     pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
     pipe.add_component("prefix", comp, msg=msg)
+    pipe.default_component("prefix")
 
     pipe = pipe.build()
     assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
@@ -62,6 +63,7 @@ def test_pipeline_clone_with_function():
     msg = pipe.create_input("msg", str)
     pfx = pipe.add_component("prefix", comp, msg=msg)
     pipe.add_component("exclaim", exclaim, msg=pfx)
+    pipe.default_component("prefix")
 
     pipe = pipe.build()
     assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH!"
@@ -78,6 +80,7 @@ def test_pipeline_clone_with_nonconfig_class():
     msg = pipe.create_input("msg", str)
     pfx = pipe.add_component("prefix", comp, msg=msg)
     pipe.add_component("question", Question(), msg=pfx)
+    pipe.default_component("prefix")
 
     pipe = pipe.build()
     assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH?"
@@ -90,8 +93,9 @@ def test_pipeline_clone_with_nonconfig_class():
 def test_clone_defaults():
     pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
-    pipe.set_default("msg", msg)
+    pipe.default_connection("msg", msg)
     pipe.add_component("return", exclaim)
+    pipe.default_component("prefix")
 
     pipe = pipe.build()
     assert pipe.run(msg="hello") == "hello!"
@@ -118,7 +122,7 @@ def test_clone_alias():
 def test_clone_hash():
     pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
-    pipe.set_default("msg", msg)
+    pipe.default_connection("msg", msg)
     excl = pipe.add_component("exclaim", exclaim)
     pipe.alias("return", excl)
 
@@ -128,4 +132,4 @@ def test_clone_hash():
     p2 = pipe.clone()
 
     assert p2.run("return", msg="hello") == "hello!"
-    assert p2.config_hash() == pipe.config_hash()
+    assert p2.config_hash == pipe.config_hash

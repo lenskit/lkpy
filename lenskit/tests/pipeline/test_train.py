@@ -18,6 +18,7 @@ def test_train(ml_ds: Dataset):
 
     tc: Trainable = TestComponent()
     pipe.add_component("test", tc, item=item)
+    pipe.default_component("test")
 
     pipe = pipe.build()
     pipe.train(ml_ds)

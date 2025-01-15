@@ -19,7 +19,7 @@ from lenskit.logging import get_logger, trace
 
 from ._impl import Pipeline
 from .components import PipelineFunction
-from .nodes import ComponentNode, InputNode, LiteralNode, Node
+from .nodes import ComponentInstanceNode, InputNode, LiteralNode, Node
 from .types import Lazy, is_compatible_data
 
 _log = get_logger(__name__)
@@ -48,7 +48,7 @@ class PipelineRunner:
         self.log = _log.bind(pipeline=pipe.name)
         self.pipe = pipe
         self.inputs = inputs
-        self.status = {n.name: "pending" for n in pipe.nodes}
+        self.status = {n.name: "pending" for n in pipe.nodes()}
         self.state = {}
 
     def run(self, node: Node[Any], *, required: bool = True) -> Any:
@@ -88,7 +88,7 @@ class PipelineRunner:
                 self.state[name] = value
             case InputNode(name, types=types):
                 self._inject_input(name, types, required)
-            case ComponentNode(name, comp, inputs, wiring):
+            case ComponentInstanceNode(name, comp, inputs, wiring):
                 self._run_component(name, comp, inputs, wiring, required)
             case _:  # pragma: nocover
                 raise PipelineError(f"invalid node {node}")

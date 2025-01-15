@@ -5,10 +5,11 @@
 # SPDX-License-Identifier: MIT
 
 # pyright: strict
+from __future__ import annotations
 
 import warnings
 from inspect import Signature, signature
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 from typing_extensions import Generic, TypeVar
 
@@ -91,6 +92,18 @@ class ComponentNode(Node[ND], Generic[ND]):
         super().__init__(name)
         self.connections = {}
 
+    @staticmethod
+    def create(
+        name: str,
+        comp: ComponentConstructor[CFG, ND] | Component[ND] | PipelineFunction[ND],
+        config: CFG | None = None,
+    ) -> ComponentNode[ND]:
+        if isinstance(comp, ComponentConstructor):
+            comp = cast(ComponentConstructor[CFG, ND], comp)
+            return ComponentConstructorNode(name, comp, config)
+        else:
+            return ComponentInstanceNode(name, comp)
+
     def _setup_signature(self, component: Callable[..., ND]):
         sig = signature(component, eval_str=True)
         if sig.return_annotation == Signature.empty:
@@ -118,7 +131,7 @@ class ComponentConstructorNode(ComponentNode[ND], Generic[ND]):
     constructor: ComponentConstructor[Any, ND]
     config: object | None
 
-    def __init__(self, name: str, constructor: ComponentConstructor[CFG, ND], config: CFG):
+    def __init__(self, name: str, constructor: ComponentConstructor[CFG, ND], config: CFG | None):
         self.constructor = constructor
         self.config = config
 

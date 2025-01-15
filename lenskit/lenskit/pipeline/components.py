@@ -35,7 +35,7 @@ from .types import Lazy
 
 P = ParamSpec("P")
 T = TypeVar("T")
-CFG = TypeVar("CFG", contravariant=True)
+CFG = TypeVar("CFG")
 CArgs = ParamSpec("CArgs", default=...)
 """
 Argument type for a component.  It is difficult to actually specify this, but
@@ -60,6 +60,8 @@ class ComponentConstructor(ABC, Generic[CFG, COut]):
     """
 
     def __call__(self, config: CFG | None = None) -> Component[COut]: ...
+
+    def config_class(self) -> type[CFG] | None: ...
 
     def __isinstance__(self, obj: Any) -> bool:
         # FIXME: implement a more rigorous check for this
@@ -160,7 +162,7 @@ class Component(ABC, Generic[COut, CArgs]):
     def __init_subclass__(cls, **kwargs: Any):
         super().__init_subclass__(**kwargs)
         if not isabstract(cls):
-            ct = cls._config_class(return_any=True)
+            ct = cls.config_class(return_any=True)
             if ct == Any:
                 warnings.warn(
                     "component class {} does not define a config attribute".format(
@@ -175,14 +177,14 @@ class Component(ABC, Generic[COut, CArgs]):
         elif kwargs:
             raise RuntimeError("cannot supply both a configuration object and kwargs")
 
-        cfg_cls = self._config_class()
+        cfg_cls = self.config_class()
         if cfg_cls and not isinstance(config, cfg_cls):
             raise TypeError(f"invalid configuration type {type(config)}")
 
         self.config = config
 
     @classmethod
-    def _config_class(cls, return_any: bool = False) -> type | None:
+    def config_class(cls, return_any: bool = False) -> type | None:
         hints = get_type_hints(cls)
         ct = hints.get("config", None)
         if ct == NoneType:
@@ -202,7 +204,7 @@ class Component(ABC, Generic[COut, CArgs]):
         """
         Dump the configuration to JSON-serializable format.
         """
-        cfg_cls = self._config_class()
+        cfg_cls = self.config_class()
         if cfg_cls:
             return TypeAdapter(cfg_cls).dump_python(self.config, mode="json")  # type: ignore
         else:
@@ -215,7 +217,7 @@ class Component(ABC, Generic[COut, CArgs]):
         """
         if data is None:
             data = {}
-        cfg_cls = cls._config_class()
+        cfg_cls = cls.config_class()
         if cfg_cls:
             return TypeAdapter(cfg_cls).validate_python(data)  # type: ignore
         elif data:  # pragma: nocover
