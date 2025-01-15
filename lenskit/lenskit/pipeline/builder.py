@@ -533,12 +533,12 @@ class PipelineBuilder:
                 not have a matching hash.
         """
         cfg = PipelineConfig.model_validate(config)
-        pipe = cls()
+        builder = cls()
         for inpt in cfg.inputs:
             types: list[type[Any] | None] = []
             if inpt.types is not None:
                 types += [parse_type_string(t) for t in inpt.types]
-            pipe.create_input(inpt.name, *types)
+            builder.create_input(inpt.name, *types)
 
         # we now add the components and other nodes in multiple passes to ensure
         # that nodes are available before they are wired (since `connect` can
@@ -546,7 +546,7 @@ class PipelineBuilder:
 
         # pass 1: add literals
         for name, data in cfg.literals.items():
-            pipe.literal(data.decode(), name=name)
+            builder.literal(data.decode(), name=name)
 
         # pass 2: add components
         to_wire: list[config.PipelineComponent] = []
@@ -556,28 +556,30 @@ class PipelineBuilder:
                 continue
 
             obj = instantiate_component(comp.code, comp.config)
-            pipe.add_component(name, obj)
+            builder.add_component(name, obj)
             to_wire.append(comp)
 
         # pass 3: wiring
         for name, comp in cfg.components.items():
             if isinstance(comp.inputs, dict):
-                inputs = {n: pipe.node(t) for (n, t) in comp.inputs.items()}
-                pipe.connect(name, **inputs)
+                inputs = {n: builder.node(t) for (n, t) in comp.inputs.items()}
+                builder.connect(name, **inputs)
             elif not comp.code.startswith("@"):
                 raise PipelineError(f"component {name} inputs must be dict, not list")
 
         # pass 4: aliases
         for n, t in cfg.aliases.items():
-            pipe.alias(n, t)
+            builder.alias(n, t)
+
+        builder._default = cfg.default
 
         if cfg.meta.hash is not None:
-            h2 = pipe.config_hash()
+            h2 = builder.config_hash()
             if h2 != cfg.meta.hash:
                 _log.warning("loaded pipeline does not match hash")
                 warnings.warn("loaded pipeline config does not match hash", PipelineWarning)
 
-        return pipe
+        return builder
 
     def use_first_of(self, name: str, primary: Node[T | None], fallback: Node[T]) -> Node[T]:
         """
