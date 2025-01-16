@@ -268,6 +268,8 @@ def instantiate_component(
 
 def component_inputs(
     component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
+    *,
+    warn_on_missing: bool = True,
 ) -> dict[str, type | None]:
     if isinstance(component, FunctionType):
         function = component
@@ -287,11 +289,12 @@ def component_inputs(
         if pt := types.get(param.name, None):
             inputs[param.name] = pt
         else:
-            warnings.warn(
-                f"parameter {param.name} of component {component} has no type annotation",
-                TypecheckWarning,
-                2,
-            )
+            if warn_on_missing:
+                warnings.warn(
+                    f"parameter {param.name} of component {component} has no type annotation",
+                    TypecheckWarning,
+                    2,
+                )
             inputs[param.name] = None
 
     return inputs

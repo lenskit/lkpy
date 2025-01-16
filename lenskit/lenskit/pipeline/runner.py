@@ -114,7 +114,7 @@ class PipelineRunner:
         in_data = {}
         log = self.log.bind(node=name)
         trace(log, "processing inputs")
-        inputs = component_inputs(comp)
+        inputs = component_inputs(comp, warn_on_missing=False)
         for iname, itype in inputs.items():
             ilog = log.bind(input_name=iname, input_type=itype)
             trace(ilog, "resolving input")
