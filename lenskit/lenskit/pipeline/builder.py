@@ -472,7 +472,9 @@ class PipelineBuilder:
         edges = deepcopy(self._edges)
         for node in self._nodes.values():
             if isinstance(node, ComponentNode):
-                c_ins = edges[node.name]
+                c_ins = edges.get(node.name, None)
+                if c_ins is None:
+                    edges[node.name] = c_ins = {}
                 for iname in node.inputs.keys():
                     if iname not in c_ins and iname in self._default_connections:
                         c_ins[iname] = self._default_connections[iname]
