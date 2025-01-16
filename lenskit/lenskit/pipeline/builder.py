@@ -486,12 +486,12 @@ class PipelineBuilder:
                     cfg.literals[name] = config.PipelineLiteral.represent(value)
                 case ComponentNode(name):
                     c_cfg = config.PipelineComponent.from_node(node)
-                    c_cfg.inputs = edges.get(name, {}).copy()
+                    c_cfg.inputs = dict(sorted(edges.get(name, {}).items(), key=lambda kv: kv[0]))
                     cfg.components[name] = c_cfg
                 case _:  # pragma: nocover
                     raise RuntimeError(f"invalid node {node}")
 
-        cfg.aliases = {a: t.name for (a, t) in self._aliases.items()}
+        cfg.aliases = {a: t.name for (a, t) in sorted(self._aliases.items(), key=lambda kv: kv[0])}
 
         if self._default:
             cfg.default = self._default
@@ -584,7 +584,9 @@ class PipelineBuilder:
             h2 = builder.config_hash()
             if h2 != cfg.meta.hash:
                 _log.warning("loaded pipeline does not match hash")
-                warnings.warn("loaded pipeline config does not match hash", PipelineWarning)
+                warnings.warn(
+                    "loaded pipeline config does not match hash", PipelineWarning, stacklevel=2
+                )
 
         return builder
 
