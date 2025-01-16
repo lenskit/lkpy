@@ -95,7 +95,7 @@ def test_clone_defaults():
     msg = pipe.create_input("msg", str)
     pipe.default_connection("msg", msg)
     pipe.add_component("return", exclaim)
-    pipe.default_component("prefix")
+    pipe.default_component("return")
 
     pipe = pipe.build()
     assert pipe.run(msg="hello") == "hello!"
