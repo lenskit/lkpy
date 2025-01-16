@@ -34,7 +34,7 @@ from .nodes import (
     LiteralNode,
     Node,
 )
-from .types import parse_type_string
+from .types import TypecheckWarning, parse_type_string
 
 _log = get_logger(__name__)
 
@@ -307,6 +307,8 @@ class PipelineBuilder:
         self._check_available_name(name)
 
         node = ComponentNode[ND].create(name, comp, config)
+        if node.types is None:
+            warnings.warn(f"cannot determine return type of component {comp}", TypecheckWarning)
         self._nodes[name] = node
 
         self.connect(node, **inputs)
