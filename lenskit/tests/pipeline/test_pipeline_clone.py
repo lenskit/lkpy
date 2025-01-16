@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from lenskit.pipeline import PipelineBuilder
 from lenskit.pipeline.components import Component
-from lenskit.pipeline.nodes import ComponentNode
+from lenskit.pipeline.nodes import ComponentInstanceNode, ComponentNode
 
 
 @dataclass
@@ -36,19 +36,18 @@ def exclaim(msg: str) -> str:
 
 
 def test_pipeline_clone():
-    comp = Prefixer(PrefixConfig("scroll named "))
-
     pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
-    pipe.add_component("prefix", comp, msg=msg)
+    pipe.add_component("prefix", Prefixer, PrefixConfig(prefix="scroll named "), msg=msg)
     pipe.default_component("prefix")
 
     pipe = pipe.build()
     assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
+    comp = pipe.node("prefix").component  # type: ignore
 
     p2 = pipe.clone()
     n2 = p2.node("prefix")
-    assert isinstance(n2, ComponentNode)
+    assert isinstance(n2, ComponentInstanceNode)
     assert isinstance(n2.component, Prefixer)
     assert n2.component is not comp
     assert n2.component.config.prefix == comp.config.prefix

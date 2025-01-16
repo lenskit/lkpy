@@ -10,13 +10,14 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 from pytest import mark
 
 from lenskit.pipeline import PipelineBuilder
 from lenskit.pipeline.components import Component, ComponentConstructor
+from lenskit.pipeline.nodes import ComponentConstructorNode
 
 
 @dataclass
@@ -89,13 +90,16 @@ def test_auto_config_roundtrip(prefixer: type[Component]):
 def test_pipeline_config(prefixer: ComponentConstructor[Any, str]):
     pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
-    pipe.add_component("prefix", prefixer, {"prefix": "scroll named "}, msg=msg)
+    pn = pipe.add_component("prefix", prefixer, {"prefix": "scroll named "}, msg=msg)
+    assert isinstance(pn, ComponentConstructorNode)
+    assert pn.constructor == prefixer
+    assert getattr(pn.config, "prefix") == "scroll named "
 
     pipe = pipe.build()
     assert pipe.run("prefix", msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
 
     config = pipe.config.components
-    print(json.dumps(config, indent=2))
+    print(TypeAdapter(dict).dump_json(config, indent=2))
 
     assert "prefix" in config
     assert config["prefix"].config

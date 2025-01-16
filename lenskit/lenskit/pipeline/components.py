@@ -54,7 +54,8 @@ Pure-function interface for pipeline functions.
 """
 
 
-class ComponentConstructor(ABC, Generic[CFG, COut]):
+@runtime_checkable
+class ComponentConstructor(Protocol, Generic[CFG, COut]):
     """
     Protocol for component constructors.
     """
@@ -63,9 +64,7 @@ class ComponentConstructor(ABC, Generic[CFG, COut]):
 
     def config_class(self) -> type[CFG] | None: ...
 
-    def __isinstance__(self, obj: Any) -> bool:
-        # FIXME: implement a more rigorous check for this
-        return isinstance(obj, type) and issubclass(obj, Component)
+    def validate_config(self, data: Any = None) -> CFG | None: ...
 
 
 @runtime_checkable

@@ -645,7 +645,7 @@ class PipelineBuilder:
         Build the pipeline.
         """
         config = self.build_config()
-        return Pipeline(config, self._nodes.values())
+        return Pipeline(config, [self._instantiate(n) for n in self._nodes.values()])
 
     def _instantiate(self, node: Node[ND]) -> Node[ND]:
         match node:

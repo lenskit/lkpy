@@ -8,11 +8,19 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from collections.abc import Mapping
 from typing import Any, cast
 
+from pydantic import JsonValue
 from typing_extensions import Generic, TypeVar
 
-from .components import Component, ComponentConstructor, PipelineFunction, component_inputs
+from .components import (
+    Component,
+    ComponentConstructor,
+    PipelineFunction,
+    component_inputs,
+    component_return_type,
+)
 
 # Nodes are (conceptually) immutable data containers, so Node[U] can be assigned
 # to Node[T] if U ≼ T.
@@ -91,13 +99,13 @@ class ComponentNode(Node[ND], Generic[ND]):
     def create(
         name: str,
         comp: ComponentConstructor[CFG, ND] | Component[ND] | PipelineFunction[ND],
-        config: CFG | None = None,
+        config: CFG | Mapping[str, JsonValue] | None = None,
     ) -> ComponentNode[ND]:
-        if isinstance(comp, ComponentConstructor):
-            comp = cast(ComponentConstructor[CFG, ND], comp)
-            return ComponentConstructorNode(name, comp, config)
+        if isinstance(comp, Component) or not isinstance(comp, ComponentConstructor):
+            return ComponentInstanceNode(name, comp)  # type: ignore
         else:
-            return ComponentInstanceNode(name, comp)
+            comp = cast(ComponentConstructor[CFG, ND], comp)
+            return ComponentConstructorNode(name, comp, comp.validate_config(config))
 
     @property
     @abstractmethod
@@ -111,8 +119,11 @@ class ComponentConstructorNode(ComponentNode[ND], Generic[ND]):
     config: object | None
 
     def __init__(self, name: str, constructor: ComponentConstructor[CFG, ND], config: CFG | None):
+        super().__init__(name)
         self.constructor = constructor
         self.config = config
+        if rt := component_return_type(constructor):
+            self.types = {rt}
 
     @property
     def inputs(self):
@@ -133,6 +144,8 @@ class ComponentInstanceNode(ComponentNode[ND], Generic[ND]):
         super().__init__(name)
         self.component = component
         self.connections = connections or {}
+        if rt := component_return_type(component):
+            self.types = {rt}
 
     @property
     def inputs(self):
