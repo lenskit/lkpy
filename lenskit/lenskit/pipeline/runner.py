@@ -88,8 +88,8 @@ class PipelineRunner:
                 self.state[name] = value
             case InputNode(name, types=types):
                 self._inject_input(name, types, required)
-            case ComponentInstanceNode(name, comp, wiring):
-                self._run_component(name, comp, wiring, required)
+            case ComponentInstanceNode(name, comp):
+                self._run_component(name, comp, required)
             case _:  # pragma: nocover
                 raise PipelineError(f"invalid node {node}")
 
@@ -108,13 +108,13 @@ class PipelineRunner:
         self,
         name: str,
         comp: PipelineFunction[Any],
-        wiring: dict[str, str],
         required: bool,
     ) -> None:
         in_data = {}
         log = self.log.bind(node=name)
         trace(log, "processing inputs")
         inputs = component_inputs(comp, warn_on_missing=False)
+        wiring = self.pipe.node_input_connections(name)
         for iname, itype in inputs.items():
             ilog = log.bind(input_name=iname, input_type=itype)
             trace(ilog, "resolving input")

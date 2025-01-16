@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import replace
+from typing import Mapping
 from uuid import NAMESPACE_URL, uuid5
 
 from numpy.random import BitGenerator, Generator, SeedSequence
@@ -14,14 +15,10 @@ from lenskit.logging import get_logger
 from lenskit.training import Trainable, TrainingOptions
 
 from . import config
-from .components import Component
 from .config import PipelineConfig
 from .nodes import (
     ComponentConstructorNode,
     ComponentInstanceNode,
-    ComponentNode,
-    InputNode,
-    LiteralNode,
     Node,
 )
 from .state import PipelineState
@@ -63,16 +60,22 @@ class Pipeline:
 
     _config: config.PipelineConfig
     _nodes: dict[str, Node[Any]]
+    _edges: dict[str, dict[str, str]]
     _aliases: dict[str, Node[Any]]
     _default: Node[Any] | None = None
     _hash: str | None = None
 
-    def __init__(self, config: config.PipelineConfig, nodes: Iterable[Node[Any]]):
+    def __init__(
+        self,
+        config: config.PipelineConfig,
+        nodes: Iterable[Node[Any]],
+    ):
         self._nodes = {}
         for node in nodes:
             if isinstance(node, ComponentConstructorNode):
                 raise RuntimeError("pipeline is not fully instantiated")
             self._nodes[node.name] = node
+        self._edges = {name: cc.inputs for (name, cc) in config.components.items()}
 
         self._config = config
         self._aliases = {}
@@ -157,71 +160,23 @@ class Pipeline:
         else:
             raise KeyError(node)
 
-    def clone(self, how: CloneMethod = "config") -> Pipeline:
+    def node_input_connections(self, node: str | Node[Any]) -> Mapping[str, Node[Any]]:
         """
-        Clone the pipeline, optionally including trained parameters.
+        Get the input wirings for a node.
+        """
+        node = self.node(node)
+        edges = self._edges.get(node.name, {})
+        return {name: self.node(src) for (name, src) in edges.items()}
 
-        The ``how`` parameter controls how the pipeline is cloned, and what is
-        available in the clone pipeline.  It can be one of the following values:
-
-        ``"config"``
-            Create fresh component instances using the configurations of the
-            components in this pipeline.  When applied to a trained pipeline,
-            the clone does **not** have the original's learned parameters. This
-            is the default clone method.
-        ``"pipeline-config"``
-            Round-trip the entire pipeline through :meth:`get_config` and
-            :meth:`from_config`.
-
-        Args:
-            how:
-                The mechanism to use for cloning the pipeline.
+    def clone(self) -> Pipeline:
+        """
+        Clone the pipeline, **without** its trained parameters.
 
         Returns:
             A new pipeline with the same components and wiring, but fresh
             instances created by round-tripping the configuration.
         """
-        from .builder import PipelineBuilder
-
-        if how == "pipeline-config":
-            return self.from_config(self._config)
-        elif how != "config":  # pragma: nocover
-            raise NotImplementedError("only 'config' cloning is currently supported")
-
-        clone = PipelineBuilder()
-
-        for node in self.nodes():
-            match node:
-                case InputNode(name, types=types):
-                    if types is None:
-                        types = set[type]()
-                    clone.create_input(name, *types)
-                case LiteralNode(name, value):
-                    clone.literal(value, name=name)
-                case ComponentInstanceNode(name, comp):
-                    config = None
-                    if isinstance(comp, Component):
-                        config = comp.config
-                        comp = comp.__class__  # type: ignore
-                    clone.add_component(name, comp, config)  # type: ignore
-                case _:  # pragma: nocover
-                    raise RuntimeError(f"invalid node {node}")
-
-        for n, t in self._aliases.items():
-            clone.alias(n, t.name)
-
-        for node in self.nodes():
-            match node:
-                case ComponentNode(name, connections=cxns):
-                    cn = clone.node(name)
-                    clone.connect(cn, **{wt: clone.node(wn) for (wt, wn) in cxns.items()})
-                case _:
-                    pass
-
-        if self._default:
-            clone.default_component(self._default.name)
-
-        return clone.build()
+        return self.from_config(self._config)
 
     @property
     def config_hash(self) -> str:

@@ -131,7 +131,7 @@ def test_round_trip_single_node():
     r2 = p2.node("return")
     assert isinstance(r2, ComponentInstanceNode)
     assert r2.component is msg_ident
-    assert r2.connections == {"msg": "msg"}
+    assert p2._edges["return"] == {"msg": "msg"}
 
     p2 = p2.build()
     assert p2.run("return", msg="foo") == "foo"
@@ -153,7 +153,7 @@ def test_configurable_component():
     assert isinstance(r2, ComponentInstanceNode)
     assert isinstance(r2.component, Prefixer)
     assert r2.component is not pfx
-    assert r2.connections == {"msg": "msg"}
+    assert p2._edges["prefix"] == {"msg": "msg"}
 
     p2 = p2.build()
     assert p2.run("prefix", msg="HACKEM MUCHE") == "scroll named HACKEM MUCHE"
@@ -268,7 +268,7 @@ def test_alias_node():
     pipe = pipe.build()
     assert pipe.run("result", a=5, b=7) == 17
 
-    p2 = pipe.clone("pipeline-config")
+    p2 = pipe.clone()
     assert p2.run("result", a=5, b=7) == 17
 
 
@@ -283,7 +283,7 @@ def test_literal():
     assert pipe.run(msg="HACKEM MUCHE") == "hello, HACKEM MUCHE"
 
     print(pipe.config.model_dump_json(indent=2))
-    p2 = pipe.clone("pipeline-config")
+    p2 = pipe.clone()
     assert p2.run(msg="FOOBIE BLETCH") == "hello, FOOBIE BLETCH"
 
 
@@ -294,12 +294,12 @@ def test_literal_array():
     pipe.add_component("add", add, x=np.arange(10), y=a)
     pipe.default_component("add")
 
+    print("pipeline:", pipe.build_config().model_dump_json(indent=2))
     pipe = pipe.build()
     res = pipe.run(a=5)
     assert np.all(res == np.arange(5, 15))
 
-    print(pipe.config.model_dump_json(indent=2))
-    p2 = pipe.clone("pipeline-config")
+    p2 = pipe.clone()
     assert np.all(p2.run(a=5) == np.arange(5, 15))
 
 

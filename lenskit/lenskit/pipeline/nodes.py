@@ -86,14 +86,8 @@ class ComponentNode(Node[ND], Generic[ND]):
         Internal
     """
 
-    __match_args__ = ("name", "connections")
-
-    connections: dict[str, str]
-    "The component's input connections."
-
     def __init__(self, name: str):
         super().__init__(name)
-        self.connections = {}
 
     @staticmethod
     def create(
@@ -118,7 +112,7 @@ class ComponentNode(Node[ND], Generic[ND]):
 
 
 class ComponentConstructorNode(ComponentNode[ND], Generic[ND]):
-    __match_args__ = ("name", "constructor", "config", "connections")
+    __match_args__ = ("name", "constructor", "config")
     constructor: ComponentConstructor[Any, ND]
     config: object | None
 
@@ -135,7 +129,7 @@ class ComponentConstructorNode(ComponentNode[ND], Generic[ND]):
 
 
 class ComponentInstanceNode(ComponentNode[ND], Generic[ND]):
-    __match_args__ = ("name", "component", "connections")
+    __match_args__ = ("name", "component")
 
     component: Component[ND] | PipelineFunction[ND]
 
@@ -143,11 +137,9 @@ class ComponentInstanceNode(ComponentNode[ND], Generic[ND]):
         self,
         name: str,
         component: Component[ND] | PipelineFunction[ND],
-        connections: dict[str, str] | None = None,
     ):
         super().__init__(name)
         self.component = component
-        self.connections = connections or {}
         if rt := component_return_type(component):
             self.types = {rt}
 

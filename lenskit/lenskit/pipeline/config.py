@@ -109,17 +109,14 @@ class PipelineComponent(BaseModel):
     with its default constructor parameters.
     """
 
-    inputs: dict[str, str] | list[str] = Field(default_factory=dict)
+    inputs: dict[str, str] = Field(default_factory=dict)
     """
     The component's input wirings, mapping input names to node names.  For
     certain meta-nodes, it is specified as a list instead of a dict.
     """
 
     @classmethod
-    def from_node(cls, node: ComponentNode[Any], mapping: dict[str, str] | None = None) -> Self:
-        if mapping is None:
-            mapping = {}
-
+    def from_node(cls, node: ComponentNode[Any]) -> Self:
         match node:
             case ComponentInstanceNode(_name, comp):
                 config = None
@@ -136,11 +133,7 @@ class PipelineComponent(BaseModel):
 
         code = f"{ctype.__module__}:{ctype.__qualname__}"
 
-        return cls(
-            code=code,
-            config=config,
-            inputs={n: mapping.get(t, t) for (n, t) in node.connections.items()},
-        )
+        return cls(code=code, config=config)
 
 
 class PipelineLiteral(BaseModel):

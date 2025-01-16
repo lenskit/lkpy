@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import typing
 import warnings
+from copy import deepcopy
 from types import UnionType
-from uuid import NAMESPACE_URL, uuid4, uuid5
+from uuid import NAMESPACE_URL, uuid5
 
 from typing_extensions import Any, Literal, Self, TypeVar, cast, overload
 
@@ -83,21 +84,20 @@ class PipelineBuilder:
     """
 
     _nodes: dict[str, Node[Any]]
+    _edges: dict[str, dict[str, str]]
     _aliases: dict[str, Node[Any]]
     _default_connections: dict[str, str]
     _components: dict[str, PipelineFunction[Any] | Component[Any]]
     _default: str | None = None
-    _anon_nodes: set[str]
-    "Track generated node names."
 
     def __init__(self, name: str | None = None, version: str | None = None):
         self.name = name
         self.version = version
         self._nodes = {}
+        self._edges = {}
         self._aliases = {}
         self._default_connections = {}
         self._components = {}
-        self._anon_nodes = set()
 
     def meta(self, *, include_hash: bool = True) -> config.PipelineMeta:
         """
@@ -201,8 +201,8 @@ class PipelineBuilder:
             :meth:`save_config`.
         """
         if name is None:
-            name = str(uuid4())
-            self._anon_nodes.add(name)
+            lit = config.PipelineLiteral.represent(value)
+            name = str(uuid5(NAMESPACE_LITERAL_DATA, lit.model_dump_json()))
         node = LiteralNode(name, value, types=set([type(value)]))
         self._nodes[name] = node
         return node
@@ -378,14 +378,18 @@ class PipelineBuilder:
         if not isinstance(node, ComponentNode):
             raise TypeError(f"only component nodes can be wired, not {node}")
 
+        edges = self._edges.get(node.name, None)
+        if edges is None:
+            self._edges[node.name] = edges = {}
+
         for k, n in inputs.items():
             if isinstance(n, Node):
                 n = cast(Node[Any], n)
                 self._check_member_node(n)
-                node.connections[k] = n.name
+                edges[k] = n.name
             else:
                 lit = self.literal(n)
-                node.connections[k] = lit.name
+                edges[k] = lit.name
 
     def clone(self) -> PipelineBuilder:
         """
@@ -416,7 +420,8 @@ class PipelineBuilder:
 
         for node in self.nodes():
             match node:
-                case ComponentNode(name, connections=wiring):
+                case ComponentNode(name):
+                    wiring = self._edges.get(name, {})
                     cn = clone.node(name)
                     clone.connect(cn, **{wn: clone.node(wt) for (wn, wt) in wiring.items()})
                 case _:
@@ -447,46 +452,25 @@ class PipelineBuilder:
         meta = self.meta(include_hash=False)
         cfg = PipelineConfig(meta=meta)
 
-        # FIXME: don't mutate
+        edges = deepcopy(self._edges)
         for node in self._nodes.values():
             if isinstance(node, ComponentNode):
+                c_ins = edges[node.name]
                 for iname in node.inputs.keys():
-                    if iname not in node.connections and iname in self._default_connections:
-                        node.connections[iname] = self._default_connections[iname]
-
-        # We map anonymous nodes to hash-based names for stability.  If we ever
-        # allow anonymous components, this will need to be adjusted to maintain
-        # component ordering, but it works for now since only literals can be
-        # anonymous. First handle the anonymous nodes, so we have that mapping:
-        remapped: dict[str, str] = {}
-        for an in self._anon_nodes:
-            node = self._nodes.get(an, None)
-            match node:
-                case None:
-                    # skip nodes that no longer exist
-                    continue
-                case LiteralNode(name, value):
-                    lit = config.PipelineLiteral.represent(value)
-                    sname = str(uuid5(NAMESPACE_LITERAL_DATA, lit.model_dump_json()))
-                    _log.debug("renamed anonymous node %s to %s", name, sname)
-                    remapped[name] = sname
-                    cfg.literals[sname] = lit
-                case _:
-                    # the pipeline only generates anonymous literal nodes right now
-                    raise RuntimeError(f"unexpected anonymous node {node}")
+                    if iname not in c_ins and iname in self._default_connections:
+                        c_ins[iname] = self._default_connections[iname]
 
         # Now we go over all named nodes and add them to the config:
         for node in self.nodes():
-            if node.name in remapped:
-                continue
-
             match node:
                 case InputNode():
                     cfg.inputs.append(config.PipelineInput.from_node(node))
                 case LiteralNode(name, value):
                     cfg.literals[name] = config.PipelineLiteral.represent(value)
                 case ComponentNode(name):
-                    cfg.components[name] = config.PipelineComponent.from_node(node, remapped)
+                    c_cfg = config.PipelineComponent.from_node(node)
+                    c_cfg.inputs = edges.get(name, {}).copy()
+                    cfg.components[name] = c_cfg
                 case _:  # pragma: nocover
                     raise RuntimeError(f"invalid node {node}")
 
@@ -570,11 +554,8 @@ class PipelineBuilder:
 
         # pass 3: wiring
         for name, comp in cfg.components.items():
-            if isinstance(comp.inputs, dict):
-                inputs = {n: builder.node(t) for (n, t) in comp.inputs.items()}
-                builder.connect(name, **inputs)
-            elif not comp.code.startswith("@"):
-                raise PipelineError(f"component {name} inputs must be dict, not list")
+            inputs = {n: builder.node(t) for (n, t) in comp.inputs.items()}
+            builder.connect(name, **inputs)
 
         # pass 4: aliases
         for n, t in cfg.aliases.items():
@@ -651,10 +632,10 @@ class PipelineBuilder:
 
     def _instantiate(self, node: Node[ND]) -> Node[ND]:
         match node:
-            case ComponentConstructorNode(name, constructor, config, connections=cxns):
+            case ComponentConstructorNode(name, constructor, config):
                 _log.debug("instantiating component", component=constructor)
                 instance = constructor(config)
-                return ComponentInstanceNode(name, instance, cxns)
+                return ComponentInstanceNode(name, instance)
             case _:
                 return node
 
