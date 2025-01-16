@@ -171,6 +171,9 @@ you can do a couple of things:
     :class:`PipelineConfig` that can be serialized and reloaded from JSON, YAML,
     or similar formats.
 
+Building a pipeline resolves default connections, instantiates components from their
+configurations, and checks for cycles.
+
 .. _pipeline-execution:
 
 Execution
