@@ -6,11 +6,11 @@
 
 from pytest import fail, raises
 
-from lenskit.pipeline import Pipeline
+from lenskit.pipeline import PipelineBuilder
 
 
 def test_fallback_input():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -28,12 +28,13 @@ def test_fallback_input():
     fb = pipe.use_first_of("fill-operand", b, nn)
     na = pipe.add_component("add", add, x=nd, y=fb)
 
+    pipe = pipe.build()
     # 3 * 2 + -3 = 3
     assert pipe.run(na, a=3) == 3
 
 
 def test_fallback_only_run_if_needed():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -51,11 +52,12 @@ def test_fallback_only_run_if_needed():
     fb = pipe.use_first_of("fill-operand", b, nn)
     na = pipe.add_component("add", add, x=nd, y=fb)
 
+    pipe = pipe.build()
     assert pipe.run(na, a=3, b=8) == 14
 
 
 def test_fallback_fail_with_missing_options():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -73,13 +75,14 @@ def test_fallback_fail_with_missing_options():
     fb = pipe.use_first_of("fill-operand", b, nn)
     na = pipe.add_component("add", add, x=nd, y=fb)
 
+    pipe = pipe.build()
     with raises(TypeError, match="no data available"):
         pipe.run(na, a=3)
 
 
 def test_fallback_transitive():
     "test that a fallback works if a dependency's dependency fails"
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     ia = pipe.create_input("a", int)
     ib = pipe.create_input("b", int)
 
@@ -92,13 +95,14 @@ def test_fallback_transitive():
     # use the first that succeeds
     c = pipe.use_first_of("result", c1, c2)
 
+    pipe = pipe.build()
     # omitting the first input should result in the second component
     assert pipe.run(c, b=17) == 34
 
 
 def test_fallback_transitive_deeper():
     "deeper transitive fallback test"
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -112,12 +116,13 @@ def test_fallback_transitive_deeper():
     nn = pipe.add_component("negate", negative, x=nd)
     nr = pipe.use_first_of("fill-operand", nn, b)
 
+    pipe = pipe.build()
     assert pipe.run(nr, b=8) == 8
 
 
 def test_fallback_transitive_nodefail():
     "deeper transitive fallback test"
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -135,5 +140,6 @@ def test_fallback_transitive_nodefail():
     nn = pipe.add_component("negate", negative, x=nd)
     nr = pipe.use_first_of("fill-operand", nn, b)
 
+    pipe = pipe.build()
     assert pipe.run(nr, a=2, b=8) == -4
     assert pipe.run(nr, a=-7, b=8) == 8

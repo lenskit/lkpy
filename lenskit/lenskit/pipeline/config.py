@@ -18,11 +18,11 @@ from hashlib import sha256
 from types import FunctionType
 from typing import Literal, Mapping
 
-from pydantic import BaseModel, Field, JsonValue, ValidationError
+from pydantic import BaseModel, Field, JsonValue, TypeAdapter, ValidationError
 from typing_extensions import Any, Optional, Self
 
 from .components import Component
-from .nodes import ComponentNode, InputNode
+from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
 from .types import type_string
 
 
@@ -40,12 +40,12 @@ class PipelineConfig(BaseModel):
     "Pipeline metadata."
     inputs: list[PipelineInput] = Field(default_factory=list)
     "Pipeline inputs."
-    defaults: dict[str, str] = Field(default_factory=dict)
-    "Default pipeline wirings."
     components: OrderedDict[str, PipelineComponent] = Field(default_factory=OrderedDict)
     "Pipeline components, with their configurations and wiring."
     aliases: dict[str, str] = Field(default_factory=dict)
     "Pipeline node aliases."
+    default: str | None = None
+    "The default node for running this pipeline."
     literals: dict[str, PipelineLiteral] = Field(default_factory=dict)
     "Literals"
 
@@ -109,32 +109,31 @@ class PipelineComponent(BaseModel):
     with its default constructor parameters.
     """
 
-    inputs: dict[str, str] | list[str] = Field(default_factory=dict)
+    inputs: dict[str, str] = Field(default_factory=dict)
     """
     The component's input wirings, mapping input names to node names.  For
     certain meta-nodes, it is specified as a list instead of a dict.
     """
 
     @classmethod
-    def from_node(cls, node: ComponentNode[Any], mapping: dict[str, str] | None = None) -> Self:
-        if mapping is None:
-            mapping = {}
-
-        comp = node.component
-        if isinstance(comp, FunctionType):
-            ctype = comp
-        else:
-            ctype = comp.__class__
+    def from_node(cls, node: ComponentNode[Any]) -> Self:
+        match node:
+            case ComponentInstanceNode(_name, comp):
+                config = None
+                if isinstance(comp, FunctionType):
+                    ctype = comp
+                else:
+                    ctype = comp.__class__
+                    if isinstance(comp, Component):
+                        config = comp.dump_config()
+            case ComponentConstructorNode(_name, ctype, config):
+                config = TypeAdapter[Any](ctype.config_class()).dump_python(config, mode="json")
+            case _:
+                raise TypeError("unexpected node type")
 
         code = f"{ctype.__module__}:{ctype.__qualname__}"
 
-        config = comp.dump_config() if isinstance(comp, Component) else None
-
-        return cls(
-            code=code,
-            config=config,
-            inputs={n: mapping.get(t, t) for (n, t) in node.connections.items()},
-        )
+        return cls(code=code, config=config)
 
 
 class PipelineLiteral(BaseModel):

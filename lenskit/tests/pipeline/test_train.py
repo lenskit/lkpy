@@ -8,17 +8,19 @@ from typing import Any
 
 from lenskit.data.dataset import Dataset
 from lenskit.data.vocab import Vocabulary
-from lenskit.pipeline import Pipeline
+from lenskit.pipeline import PipelineBuilder
 from lenskit.training import Trainable, TrainingOptions
 
 
 def test_train(ml_ds: Dataset):
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     item = pipe.create_input("item", int)
 
     tc: Trainable = TestComponent()
     pipe.add_component("test", tc, item=item)
+    pipe.default_component("test")
 
+    pipe = pipe.build()
     pipe.train(ml_ds)
 
     # return true for an item that exists

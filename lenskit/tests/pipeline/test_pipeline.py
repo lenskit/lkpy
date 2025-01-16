@@ -10,34 +10,34 @@ from uuid import UUID
 import numpy as np
 from typing_extensions import assert_type
 
-from pytest import raises, warns
+from pytest import mark, raises, warns
 
-from lenskit.pipeline import Pipeline, PipelineError
+from lenskit.pipeline import PipelineBuilder, PipelineError
 from lenskit.pipeline.nodes import InputNode, Node
 from lenskit.pipeline.types import TypecheckWarning
 
 
 def test_init_empty():
-    pipe = Pipeline()
-    assert len(pipe.nodes) == 0
+    pipe = PipelineBuilder()
+    assert len(pipe.nodes()) == 0
 
 
 def test_create_input():
     "create an input node"
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     src = pipe.create_input("user", int, str)
     assert_type(src, Node[int | str])
     assert isinstance(src, InputNode)
     assert src.name == "user"
     assert src.types == set([int, str])
 
-    assert len(pipe.nodes) == 1
+    assert len(pipe.nodes()) == 1
     assert pipe.node("user") is src
 
 
 def test_lookup_optional():
     "lookup a node without failing"
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     pipe.create_input("user", int, str)
 
     assert pipe.node("item", missing="none") is None
@@ -45,7 +45,7 @@ def test_lookup_optional():
 
 def test_lookup_missing():
     "lookup a node without failing"
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     pipe.create_input("user", int, str)
 
     with raises(KeyError):
@@ -54,7 +54,7 @@ def test_lookup_missing():
 
 def test_dup_input_fails():
     "create an input node"
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     pipe.create_input("user", int, str)
 
     with raises(ValueError, match="has node"):
@@ -63,7 +63,7 @@ def test_dup_input_fails():
 
 def test_dup_component_fails():
     "create an input node"
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     pipe.create_input("user", int, str)
 
     with raises(ValueError, match="has node"):
@@ -72,7 +72,7 @@ def test_dup_component_fails():
 
 def test_dup_alias_fails():
     "create an input node"
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     n = pipe.create_input("user", int, str)
 
     with raises(ValueError, match="has node"):
@@ -81,7 +81,7 @@ def test_dup_alias_fails():
 
 def test_alias():
     "alias a node"
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     user = pipe.create_input("user", int, str)
 
     pipe.alias("person", user)
@@ -94,7 +94,7 @@ def test_alias():
 
 
 def test_component_type():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
 
     def incr(msg: str) -> str:
@@ -106,13 +106,15 @@ def test_component_type():
 
 
 def test_single_input():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
 
     def incr(msg: str) -> str:
         return msg
 
     node = pipe.add_component("return", incr, msg=msg)
+
+    pipe = pipe.build()
 
     ret = pipe.run(node, msg="hello")
     assert ret == "hello"
@@ -122,7 +124,7 @@ def test_single_input():
 
 
 def test_single_input_required():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
 
     def incr(msg: str) -> str:
@@ -130,12 +132,13 @@ def test_single_input_required():
 
     node = pipe.add_component("return", incr, msg=msg)
 
+    pipe = pipe.build()
     with raises(PipelineError, match="not specified"):
         pipe.run(node)
 
 
 def test_single_optional_input():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str, None)
 
     def fill(msg: str | None) -> str:
@@ -143,12 +146,13 @@ def test_single_optional_input():
 
     node = pipe.add_component("return", fill, msg=msg)
 
+    pipe = pipe.build()
     assert pipe.run(node) == "undefined"
     assert pipe.run(node, msg="hello") == "hello"
 
 
 def test_single_input_typecheck():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
 
     def incr(msg: str) -> str:
@@ -156,23 +160,25 @@ def test_single_input_typecheck():
 
     node = pipe.add_component("return", incr, msg=msg)
 
+    pipe = pipe.build()
     with raises(TypeError):
         pipe.run(node, msg=47)
 
 
 def test_component_type_mismatch():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
 
     def incr(msg: str) -> str:
         return msg
 
     node = pipe.add_component("return", incr, msg=47)
+    pipe = pipe.build()
     with raises(TypeError):
         pipe.run(node)
 
 
 def test_component_unwired_input():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
 
     def ident(msg: str, m2: str | None) -> str:
@@ -182,11 +188,12 @@ def test_component_unwired_input():
             return msg
 
     node = pipe.add_component("return", ident, msg=msg)
+    pipe = pipe.build()
     assert pipe.run(node, msg="hello") == "hello"
 
 
 def test_chain():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     x = pipe.create_input("x", int)
 
     def incr(x: int) -> int:
@@ -197,7 +204,9 @@ def test_chain():
 
     ni = pipe.add_component("incr", incr, x=x)
     nt = pipe.add_component("triple", triple, x=ni)
+    pipe.default_component(nt)
 
+    pipe = pipe.build()
     # run default pipe
     ret = pipe.run(x=1)
     assert ret == 6
@@ -210,7 +219,7 @@ def test_chain():
 
 
 def test_simple_graph():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -222,14 +231,16 @@ def test_simple_graph():
 
     nd = pipe.add_component("double", double, x=a)
     na = pipe.add_component("add", add, x=nd, y=b)
+    pipe.default_component("add")
 
+    pipe = pipe.build()
     assert pipe.run(a=1, b=7) == 9
     assert pipe.run(na, a=3, b=7) == 13
     assert pipe.run(nd, a=3, b=7) == 6
 
 
 def test_cycle():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     b = pipe.create_input("b", int)
 
     def double(x: int) -> int:
@@ -243,11 +254,11 @@ def test_cycle():
     pipe.connect(nd, x=na)
 
     with raises(PipelineError, match="cycle"):
-        pipe.run(a=1, b=7)
+        pipe.build()
 
 
 def test_replace_component():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -262,8 +273,11 @@ def test_replace_component():
 
     nd = pipe.add_component("double", double, x=a)
     na = pipe.add_component("add", add, x=nd, y=b)
+    pipe.default_component(na)
 
     nt = pipe.replace_component("double", triple, x=a)
+
+    pipe = pipe.build()
 
     # run through the end
     assert pipe.run(a=1, b=7) == 10
@@ -277,7 +291,7 @@ def test_replace_component():
 
 
 def test_default_wiring():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -287,17 +301,19 @@ def test_default_wiring():
     def add(x: int, y: int) -> int:
         return x + y
 
-    pipe.set_default("y", b)
+    pipe.default_connection("y", b)
 
     nd = pipe.add_component("double", double, x=a)
     na = pipe.add_component("add", add, x=nd)
+    pipe.default_component(na)
 
+    pipe = pipe.build()
     assert pipe.run(a=1, b=7) == 9
     assert pipe.run(na, a=3, b=7) == 13
 
 
 def test_run_by_name():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -310,11 +326,12 @@ def test_run_by_name():
     nd = pipe.add_component("double", double, x=a)
     pipe.add_component("add", add, x=nd, y=b)
 
+    pipe = pipe.build()
     assert pipe.run("double", a=1, b=7) == 2
 
 
-def test_invalid_type():
-    pipe = Pipeline()
+def test_run_tuple_name():
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -327,12 +344,55 @@ def test_invalid_type():
     nd = pipe.add_component("double", double, x=a)
     pipe.add_component("add", add, x=nd, y=b)
 
+    pipe = pipe.build()
+    res = pipe.run(("double",), a=1, b=7)
+    assert isinstance(res, tuple)
+    assert res[0] == 2
+
+
+def test_run_tuple_pair():
+    pipe = PipelineBuilder()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    pipe.add_component("add", add, x=nd, y=b)
+
+    pipe = pipe.build()
+    res = pipe.run(("double", "add"), a=1, b=7)
+    assert isinstance(res, tuple)
+    d, a = res
+    assert d == 2
+    assert a == 9
+
+
+def test_invalid_type():
+    pipe = PipelineBuilder()
+    a = pipe.create_input("a", int)
+    b = pipe.create_input("b", int)
+
+    def double(x: int) -> int:
+        return x * 2
+
+    def add(x: int, y: int) -> int:
+        return x + y
+
+    nd = pipe.add_component("double", double, x=a)
+    pipe.add_component("add", add, x=nd, y=b)
+
+    pipe = pipe.build()
     with raises(TypeError):
-        pipe.run(a=1, b="seven")
+        pipe.run("add", a=1, b="seven")
 
 
 def test_run_by_alias():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -347,11 +407,12 @@ def test_run_by_alias():
 
     pipe.alias("result", na)
 
+    pipe = pipe.build()
     assert pipe.run("result", a=1, b=7) == 9
 
 
 def test_run_all():
-    pipe = Pipeline("test", "7.2")
+    pipe = PipelineBuilder("test", "7.2")
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -366,6 +427,7 @@ def test_run_all():
 
     pipe.alias("result", na)
 
+    pipe = pipe.build()
     state = pipe.run_all(a=1, b=7)
     assert state["double"] == 2
     assert state["add"] == 9
@@ -374,11 +436,11 @@ def test_run_all():
     assert state.meta is not None
     assert state.meta.name == "test"
     assert state.meta.version == "7.2"
-    assert state.meta.hash == pipe.config_hash()
+    assert state.meta.hash == pipe.config_hash
 
 
 def test_run_all_limit():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -393,6 +455,7 @@ def test_run_all_limit():
 
     pipe.alias("result", na)
 
+    pipe = pipe.build()
     state = pipe.run_all("double", a=1, b=7)
     assert state["double"] == 2
     assert "add" not in state
@@ -400,7 +463,7 @@ def test_run_all_limit():
 
 
 def test_connect_literal():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
 
     def double(x: int) -> int:
@@ -412,11 +475,12 @@ def test_connect_literal():
     nd = pipe.add_component("double", double, x=a)
     na = pipe.add_component("add", add, x=nd, y=2)
 
+    pipe = pipe.build()
     assert pipe.run(na, a=3) == 8
 
 
 def test_connect_literal_explicit():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
 
     def double(x: int) -> int:
@@ -428,11 +492,12 @@ def test_connect_literal_explicit():
     nd = pipe.add_component("double", double, x=a)
     na = pipe.add_component("add", add, x=nd, y=pipe.literal(2))
 
+    pipe = pipe.build()
     assert pipe.run(na, a=3) == 8
 
 
 def test_fail_missing_input():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -445,6 +510,8 @@ def test_fail_missing_input():
     nd = pipe.add_component("double", double, x=a)
     na = pipe.add_component("add", add, x=nd, y=b)
 
+    pipe = pipe.build()
+
     with raises(PipelineError, match=r"input.*not specified"):
         pipe.run(na, a=3)
 
@@ -454,10 +521,9 @@ def test_fail_missing_input():
 
 def test_pipeline_component_default():
     """
-    Test that the last *component* is last.  It also exercises the warning logic
-    for missing component types.
+    Test that the default component is run correctly.
     """
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
 
     def add(x, y):  # type: ignore
@@ -465,7 +531,12 @@ def test_pipeline_component_default():
 
     with warns(TypecheckWarning):
         pipe.add_component("add", add, x=np.arange(10), y=a)  # type: ignore
+    pipe.default_component("add")
 
+    cfg = pipe.build_config()
+    assert cfg.default == "add"
+
+    pipe = pipe.build()
     # the component runs
     assert np.all(pipe.run("add", a=5) == np.arange(5, 15))
 

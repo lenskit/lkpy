@@ -7,7 +7,7 @@
 # pyright: strict
 from pytest import fail, raises
 
-from lenskit.pipeline import Lazy, Pipeline
+from lenskit.pipeline import Lazy, PipelineBuilder
 
 
 def fallback(first: int | None, second: Lazy[int]) -> int:
@@ -18,7 +18,7 @@ def fallback(first: int | None, second: Lazy[int]) -> int:
 
 
 def test_lazy_input():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -36,12 +36,13 @@ def test_lazy_input():
     fb = pipe.add_component("fill-operand", fallback, first=b, second=nn)
     na = pipe.add_component("add", add, x=nd, y=fb)
 
+    pipe = pipe.build()
     # 3 * 2 + -3 = 3
     assert pipe.run(na, a=3) == 3
 
 
 def test_lazy_only_run_if_needed():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -59,11 +60,12 @@ def test_lazy_only_run_if_needed():
     fb = pipe.add_component("fill-operand", fallback, first=b, second=nn)
     na = pipe.add_component("add", add, x=nd, y=fb)
 
+    pipe = pipe.build()
     assert pipe.run(na, a=3, b=8) == 14
 
 
 def test_lazy_fail_with_missing_options():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -81,13 +83,14 @@ def test_lazy_fail_with_missing_options():
     fb = pipe.add_component("fill-operand", fallback, first=b, second=nn)
     na = pipe.add_component("add", add, x=nd, y=fb)
 
+    pipe = pipe.build()
     with raises(TypeError):
         pipe.run(na, a=3)
 
 
 def test_lazy_transitive():
     "test that a fallback works if a dependency's dependency fails"
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     ia = pipe.create_input("a", int)
     ib = pipe.create_input("b", int)
 
@@ -100,13 +103,14 @@ def test_lazy_transitive():
     # use the first that succeeds
     c = pipe.add_component("fill-operand", fallback, first=c1, second=c2)
 
+    pipe = pipe.build()
     # omitting the first input should result in the second component
     assert pipe.run(c, b=17) == 34
 
 
 def test_lazy_transitive_deeper():
     "deeper transitive fallback test"
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -120,12 +124,13 @@ def test_lazy_transitive_deeper():
     nn = pipe.add_component("negate", negative, x=nd)
     nr = pipe.add_component("fill-operand", fallback, first=nn, second=b)
 
+    pipe = pipe.build()
     assert pipe.run(nr, b=8) == 8
 
 
 def test_lazy_transitive_nodefail():
     "deeper transitive fallback test"
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     a = pipe.create_input("a", int)
     b = pipe.create_input("b", int)
 
@@ -143,5 +148,6 @@ def test_lazy_transitive_nodefail():
     nn = pipe.add_component("negate", negative, x=nd)
     nr = pipe.add_component("fill-operand", fallback, first=nn, second=b)
 
+    pipe = pipe.build()
     assert pipe.run(nr, a=2, b=8) == -4
     assert pipe.run(nr, a=-7, b=8) == 8

@@ -5,18 +5,27 @@
 # SPDX-License-Identifier: MIT
 
 # pyright: strict
+from __future__ import annotations
 
-import warnings
-from inspect import Signature, signature
+from abc import abstractmethod
+from collections.abc import Mapping
+from typing import Any, cast
 
+from pydantic import JsonValue
 from typing_extensions import Generic, TypeVar
 
-from .components import PipelineFunction
-from .types import TypecheckWarning
+from .components import (
+    Component,
+    ComponentConstructor,
+    PipelineFunction,
+    component_inputs,
+    component_return_type,
+)
 
 # Nodes are (conceptually) immutable data containers, so Node[U] can be assigned
 # to Node[T] if U ≼ T.
 ND = TypeVar("ND", covariant=True)
+CFG = TypeVar("CFG", contravariant=True, bound=object)
 
 
 class Node(Generic[ND]):
@@ -70,44 +79,70 @@ class LiteralNode(Node[ND], Generic[ND]):
 
 class ComponentNode(Node[ND], Generic[ND]):
     """
-    A node storing a component.
+    A node storing a component.  This is an abstract node class; see subclasses
+    :class:`ComponentConstructorNode` and `ComponentInstanceNode`.
 
     Stability:
         Internal
     """
 
-    __match_args__ = ("name", "component", "inputs", "connections")
+    def __init__(self, name: str):
+        super().__init__(name)
 
-    component: PipelineFunction[ND]
-    "The component associated with this node"
+    @staticmethod
+    def create(
+        name: str,
+        comp: ComponentConstructor[CFG, ND] | Component[ND] | PipelineFunction[ND],
+        config: CFG | Mapping[str, JsonValue] | None = None,
+    ) -> ComponentNode[ND]:
+        if isinstance(comp, Component):
+            return ComponentInstanceNode(name, cast(Component[ND], comp))
+        elif isinstance(comp, ComponentConstructor):
+            comp = cast(ComponentConstructor[CFG, ND], comp)
+            return ComponentConstructorNode(name, comp, comp.validate_config(config))
+        elif isinstance(comp, type):
+            return ComponentConstructorNode(name, comp, None)  # type: ignore
+        else:
+            return ComponentInstanceNode(name, comp)
 
-    inputs: dict[str, type | None]
-    "The component's inputs."
+    @property
+    @abstractmethod
+    def inputs(self) -> dict[str, type | None]:  # pragma: nocover
+        raise NotImplementedError()
 
-    connections: dict[str, str]
-    "The component's input connections."
 
-    def __init__(self, name: str, component: PipelineFunction[ND]):
+class ComponentConstructorNode(ComponentNode[ND], Generic[ND]):
+    __match_args__ = ("name", "constructor", "config")
+    constructor: ComponentConstructor[Any, ND]
+    config: object | None
+
+    def __init__(self, name: str, constructor: ComponentConstructor[CFG, ND], config: CFG | None):
+        super().__init__(name)
+        self.constructor = constructor
+        self.config = config
+        if rt := component_return_type(constructor):
+            self.types = {rt}
+
+    @property
+    def inputs(self):
+        return component_inputs(self.constructor)
+
+
+class ComponentInstanceNode(ComponentNode[ND], Generic[ND]):
+    __match_args__ = ("name", "component")
+
+    component: Component[ND] | PipelineFunction[ND]
+
+    def __init__(
+        self,
+        name: str,
+        component: Component[ND] | PipelineFunction[ND],
+    ):
         super().__init__(name)
         self.component = component
-        self.connections = {}
+        if rt := component_return_type(component):
+            self.types = {rt}
 
-        sig = signature(component, eval_str=True)
-        if sig.return_annotation == Signature.empty:
-            warnings.warn(
-                f"component {component} has no return type annotation", TypecheckWarning, 2
-            )
-        else:
-            self.types = set([sig.return_annotation])
-
-        self.inputs = {}
-        for param in sig.parameters.values():
-            if param.annotation == Signature.empty:
-                warnings.warn(
-                    f"parameter {param.name} of component {component} has no type annotation",
-                    TypecheckWarning,
-                    2,
-                )
-                self.inputs[param.name] = None
-            else:
-                self.inputs[param.name] = param.annotation
+    @property
+    def inputs(self):
+        return component_inputs(self.component)

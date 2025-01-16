@@ -20,8 +20,7 @@ from lenskit.data import Dataset
 from lenskit.data.items import ItemList
 from lenskit.data.types import ID
 from lenskit.operations import predict, score
-from lenskit.pipeline import Pipeline
-from lenskit.pipeline.common import RecPipelineBuilder
+from lenskit.pipeline import Pipeline, PipelineBuilder, RecPipelineBuilder
 from lenskit.testing import BasicComponentTests
 
 _log = logging.getLogger(__name__)
@@ -32,7 +31,7 @@ class TestFallbackScorer(BasicComponentTests):
 
 
 def test_fallback_fill_missing(ml_ds: Dataset):
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     user = pipe.create_input("user", int)
     items = pipe.create_input("items")
 
@@ -44,6 +43,7 @@ def test_fallback_fill_missing(ml_ds: Dataset):
     fallback = FallbackScorer()
     score = pipe.add_component("mix", fallback, scores=s1, backup=s2)
 
+    pipe = pipe.build()
     pipe.train(ml_ds)
 
     # the first 2 of these are rated, the 3rd does not exist, and the other 2 are not rated
@@ -66,7 +66,7 @@ def test_fallback_double_bias(rng: np.random.Generator, ml_ds: Dataset):
     builder.predicts_ratings(fallback=BiasScorer(damping=0))
     pipe = builder.build("double-bias")
 
-    _log.info("pipeline configuration: %s", pipe.get_config().model_dump_json(indent=2))
+    _log.info("pipeline configuration: %s", pipe.config.model_dump_json(indent=2))
 
     pipe.train(ml_ds)
 

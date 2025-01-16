@@ -13,7 +13,7 @@ import json
 import warnings
 from abc import ABC, abstractmethod
 from importlib import import_module
-from inspect import isabstract
+from inspect import isabstract, signature
 from types import FunctionType, NoneType
 
 from pydantic import JsonValue, TypeAdapter
@@ -31,10 +31,11 @@ from typing_extensions import (
     runtime_checkable,
 )
 
-from .types import Lazy
+from .types import Lazy, TypecheckWarning
 
 P = ParamSpec("P")
 T = TypeVar("T")
+CFG = TypeVar("CFG")
 CArgs = ParamSpec("CArgs", default=...)
 """
 Argument type for a component.  It is difficult to actually specify this, but
@@ -48,6 +49,22 @@ COut = TypeVar("COut", covariant=True, default=Any)
 Return type for a component.
 """
 PipelineFunction: TypeAlias = Callable[..., COut]
+"""
+Pure-function interface for pipeline functions.
+"""
+
+
+@runtime_checkable
+class ComponentConstructor(Protocol, Generic[CFG, COut]):
+    """
+    Protocol for component constructors.
+    """
+
+    def __call__(self, config: CFG | None = None) -> Component[COut]: ...
+
+    def config_class(self) -> type[CFG] | None: ...
+
+    def validate_config(self, data: Any = None) -> CFG | None: ...
 
 
 @runtime_checkable
@@ -144,7 +161,7 @@ class Component(ABC, Generic[COut, CArgs]):
     def __init_subclass__(cls, **kwargs: Any):
         super().__init_subclass__(**kwargs)
         if not isabstract(cls):
-            ct = cls._config_class(return_any=True)
+            ct = cls.config_class(return_any=True)
             if ct == Any:
                 warnings.warn(
                     "component class {} does not define a config attribute".format(
@@ -159,14 +176,14 @@ class Component(ABC, Generic[COut, CArgs]):
         elif kwargs:
             raise RuntimeError("cannot supply both a configuration object and kwargs")
 
-        cfg_cls = self._config_class()
+        cfg_cls = self.config_class()
         if cfg_cls and not isinstance(config, cfg_cls):
             raise TypeError(f"invalid configuration type {type(config)}")
 
         self.config = config
 
     @classmethod
-    def _config_class(cls, return_any: bool = False) -> type | None:
+    def config_class(cls, return_any: bool = False) -> type | None:
         hints = get_type_hints(cls)
         ct = hints.get("config", None)
         if ct == NoneType:
@@ -186,7 +203,7 @@ class Component(ABC, Generic[COut, CArgs]):
         """
         Dump the configuration to JSON-serializable format.
         """
-        cfg_cls = self._config_class()
+        cfg_cls = self.config_class()
         if cfg_cls:
             return TypeAdapter(cfg_cls).dump_python(self.config, mode="json")  # type: ignore
         else:
@@ -199,7 +216,7 @@ class Component(ABC, Generic[COut, CArgs]):
         """
         if data is None:
             data = {}
-        cfg_cls = cls._config_class()
+        cfg_cls = cls.config_class()
         if cfg_cls:
             return TypeAdapter(cfg_cls).validate_python(data)  # type: ignore
         elif data:  # pragma: nocover
@@ -247,6 +264,54 @@ def instantiate_component(
         return comp(cfg)  # type: ignore
     else:  # pragma: nocover
         return comp()  # type: ignore
+
+
+def component_inputs(
+    component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
+    *,
+    warn_on_missing: bool = True,
+) -> dict[str, type | None]:
+    if isinstance(component, FunctionType):
+        function = component
+    elif hasattr(component, "__call__"):
+        function = getattr(component, "__call__")
+    else:
+        raise TypeError("invalid component " + repr(component))
+
+    types = get_type_hints(function)
+    sig = signature(function)
+
+    inputs: dict[str, type | None] = {}
+    for param in sig.parameters.values():
+        if param.name == "self":
+            continue
+
+        if pt := types.get(param.name, None):
+            inputs[param.name] = pt
+        else:
+            if warn_on_missing:
+                warnings.warn(
+                    f"parameter {param.name} of component {component} has no type annotation",
+                    TypecheckWarning,
+                    2,
+                )
+            inputs[param.name] = None
+
+    return inputs
+
+
+def component_return_type(
+    component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
+) -> type | None:
+    if isinstance(component, FunctionType):
+        function = component
+    elif hasattr(component, "__call__"):
+        function = getattr(component, "__call__")
+    else:
+        raise TypeError("invalid component " + repr(component))
+
+    types = get_type_hints(function)
+    return types.get("return", None)
 
 
 def fallback_on_none(primary: T | None, fallback: Lazy[T]) -> T:

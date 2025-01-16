@@ -4,12 +4,14 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import json
+# pyright: strict
 from dataclasses import dataclass
+from typing import Literal
 
-from lenskit.pipeline import Pipeline
-from lenskit.pipeline.components import Component
-from lenskit.pipeline.nodes import ComponentNode
+from pytest import mark
+
+from lenskit.pipeline import Component, Pipeline, PipelineBuilder
+from lenskit.pipeline.nodes import ComponentInstanceNode
 
 
 @dataclass
@@ -35,91 +37,113 @@ def exclaim(msg: str) -> str:
     return msg + "!"
 
 
-def test_pipeline_clone():
-    comp = Prefixer(PrefixConfig("scroll named "))
+def _clone(builder: PipelineBuilder, pipe: Pipeline, what: Literal["pipe", "builder"]) -> Pipeline:
+    match what:
+        case "pipe":
+            return pipe.clone()
+        case "builder":
+            return builder.clone().build()
 
-    pipe = Pipeline()
-    msg = pipe.create_input("msg", str)
-    pipe.add_component("prefix", comp, msg=msg)
 
+@mark.parametrize("what", ["pipe", "builder"])
+def test_pipeline_clone(what: Literal["pipe", "builder"]):
+    builder = PipelineBuilder()
+    msg = builder.create_input("msg", str)
+    builder.add_component("prefix", Prefixer, PrefixConfig(prefix="scroll named "), msg=msg)
+    builder.default_component("prefix")
+
+    pipe = builder.build()
     assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
+    comp = pipe.node("prefix").component  # type: ignore
 
-    p2 = pipe.clone()
+    p2 = _clone(builder, pipe, what)
     n2 = p2.node("prefix")
-    assert isinstance(n2, ComponentNode)
+    assert isinstance(n2, ComponentInstanceNode)
     assert isinstance(n2.component, Prefixer)
     assert n2.component is not comp
-    assert n2.component.config.prefix == comp.config.prefix
+    assert n2.component.config.prefix == comp.config.prefix  # type: ignore
 
     assert p2.run(msg="HACKEM MUCHE") == "scroll named HACKEM MUCHE"
 
 
-def test_pipeline_clone_with_function():
+@mark.parametrize("what", ["pipe", "builder"])
+def test_pipeline_clone_with_function(what: Literal["pipe", "builder"]):
     comp = Prefixer(prefix="scroll named ")
 
-    pipe = Pipeline()
-    msg = pipe.create_input("msg", str)
-    pfx = pipe.add_component("prefix", comp, msg=msg)
-    pipe.add_component("exclaim", exclaim, msg=pfx)
+    builder = PipelineBuilder()
+    msg = builder.create_input("msg", str)
+    pfx = builder.add_component("prefix", comp, msg=msg)
+    builder.add_component("exclaim", exclaim, msg=pfx)
+    builder.default_component("exclaim")
 
+    pipe = builder.build()
     assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH!"
 
-    p2 = pipe.clone()
+    p2 = _clone(builder, pipe, what)
 
     assert p2.run(msg="HACKEM MUCHE") == "scroll named HACKEM MUCHE!"
 
 
-def test_pipeline_clone_with_nonconfig_class():
+@mark.parametrize("what", ["pipe", "builder"])
+def test_pipeline_clone_with_nonconfig_class(what: Literal["pipe", "builder"]):
     comp = Prefixer(prefix="scroll named ")
 
-    pipe = Pipeline()
-    msg = pipe.create_input("msg", str)
-    pfx = pipe.add_component("prefix", comp, msg=msg)
-    pipe.add_component("question", Question(), msg=pfx)
+    builder = PipelineBuilder()
+    msg = builder.create_input("msg", str)
+    pfx = builder.add_component("prefix", comp, msg=msg)
+    builder.add_component("question", Question(), msg=pfx)
+    builder.default_component("question")
 
+    pipe = builder.build()
     assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH?"
 
-    p2 = pipe.clone()
+    p2 = _clone(builder, pipe, what)
 
     assert p2.run(msg="HACKEM MUCHE") == "scroll named HACKEM MUCHE?"
 
 
-def test_clone_defaults():
-    pipe = Pipeline()
-    msg = pipe.create_input("msg", str)
-    pipe.set_default("msg", msg)
-    pipe.add_component("return", exclaim)
+@mark.parametrize("what", ["pipe", "builder"])
+def test_clone_defaults(what: Literal["pipe", "builder"]):
+    builder = PipelineBuilder()
+    msg = builder.create_input("msg", str)
+    builder.default_connection("msg", msg)
+    builder.add_component("return", exclaim)
+    builder.default_component("return")
 
+    pipe = builder.build()
     assert pipe.run(msg="hello") == "hello!"
 
-    p2 = pipe.clone()
+    p2 = _clone(builder, pipe, what)
 
     assert p2.run(msg="hello") == "hello!"
 
 
-def test_clone_alias():
-    pipe = Pipeline()
-    msg = pipe.create_input("msg", str)
-    excl = pipe.add_component("exclaim", exclaim, msg=msg)
-    pipe.alias("return", excl)
+@mark.parametrize("what", ["pipe", "builder"])
+def test_clone_alias(what: Literal["pipe", "builder"]):
+    builder = PipelineBuilder()
+    msg = builder.create_input("msg", str)
+    excl = builder.add_component("exclaim", exclaim, msg=msg)
+    builder.alias("return", excl)
 
+    pipe = builder.build()
     assert pipe.run("return", msg="hello") == "hello!"
 
-    p2 = pipe.clone()
+    p2 = _clone(builder, pipe, what)
 
     assert p2.run("return", msg="hello") == "hello!"
 
 
 def test_clone_hash():
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
-    pipe.set_default("msg", msg)
+    pipe.default_connection("msg", msg)
     excl = pipe.add_component("exclaim", exclaim)
     pipe.alias("return", excl)
 
+    pipe = pipe.build()
     assert pipe.run("return", msg="hello") == "hello!"
 
     p2 = pipe.clone()
 
     assert p2.run("return", msg="hello") == "hello!"
-    assert p2.config_hash() == pipe.config_hash()
+    assert p2.config_hash == pipe.config_hash

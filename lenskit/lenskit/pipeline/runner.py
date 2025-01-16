@@ -18,8 +18,8 @@ from lenskit.diagnostics import PipelineError
 from lenskit.logging import get_logger, trace
 
 from ._impl import Pipeline
-from .components import PipelineFunction
-from .nodes import ComponentNode, InputNode, LiteralNode, Node
+from .components import PipelineFunction, component_inputs
+from .nodes import ComponentInstanceNode, InputNode, LiteralNode, Node
 from .types import Lazy, is_compatible_data
 
 _log = get_logger(__name__)
@@ -48,7 +48,7 @@ class PipelineRunner:
         self.log = _log.bind(pipeline=pipe.name)
         self.pipe = pipe
         self.inputs = inputs
-        self.status = {n.name: "pending" for n in pipe.nodes}
+        self.status = {n.name: "pending" for n in pipe.nodes()}
         self.state = {}
 
     def run(self, node: Node[Any], *, required: bool = True) -> Any:
@@ -88,8 +88,8 @@ class PipelineRunner:
                 self.state[name] = value
             case InputNode(name, types=types):
                 self._inject_input(name, types, required)
-            case ComponentNode(name, comp, inputs, wiring):
-                self._run_component(name, comp, inputs, wiring, required)
+            case ComponentInstanceNode(name, comp):
+                self._run_component(name, comp, required)
             case _:  # pragma: nocover
                 raise PipelineError(f"invalid node {node}")
 
@@ -108,20 +108,21 @@ class PipelineRunner:
         self,
         name: str,
         comp: PipelineFunction[Any],
-        inputs: dict[str, type | None],
-        wiring: dict[str, str],
         required: bool,
     ) -> None:
         in_data = {}
         log = self.log.bind(node=name)
         trace(log, "processing inputs")
+        inputs = component_inputs(comp, warn_on_missing=False)
+        wiring = self.pipe.node_input_connections(name)
         for iname, itype in inputs.items():
+            ilog = log.bind(input_name=iname, input_type=itype)
+            trace(ilog, "resolving input")
             # look up the input wiring for this parameter input
-            src = wiring.get(iname, None)
-            if src is not None:
+            snode = None
+            if src := wiring.get(iname, None):
+                trace(ilog, "resolving from wiring")
                 snode = self.pipe.node(src)
-            else:
-                snode = self.pipe.get_default(iname)
 
             # check if this is a lazy node
             lazy = False

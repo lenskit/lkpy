@@ -15,6 +15,7 @@ Pipeline Classes
     :caption: Data Sets
 
     ~lenskit.pipeline.Pipeline
+    ~lenskit.pipeline.PipelineBuilder
     ~lenskit.pipeline.PipelineState
     ~lenskit.pipeline.Node
     ~lenskit.pipeline.Lazy

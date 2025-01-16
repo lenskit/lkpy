@@ -8,14 +8,16 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 from pytest import mark
 
-from lenskit.pipeline import Pipeline
-from lenskit.pipeline.components import Component
+from lenskit.pipeline import PipelineBuilder
+from lenskit.pipeline.components import Component, ComponentConstructor
+from lenskit.pipeline.nodes import ComponentConstructorNode
 
 
 @dataclass
@@ -60,7 +62,7 @@ class PrefixerPYDC(Component[str]):
 
 @mark.parametrize("prefixer", [PrefixerDC, PrefixerM, PrefixerPYDC, PrefixerM2])
 def test_config_setup(prefixer: type[Component]):
-    ccls = prefixer._config_class()  # type: ignore
+    ccls = prefixer.config_class()  # type: ignore
     assert ccls is not None
 
     comp = prefixer()
@@ -85,35 +87,39 @@ def test_auto_config_roundtrip(prefixer: type[Component]):
 
 
 @mark.parametrize("prefixer", [PrefixerDC, PrefixerM, PrefixerPYDC])
-def test_pipeline_config(prefixer: type[Component]):
-    comp = prefixer(prefix="scroll named ")
-
-    pipe = Pipeline()
+def test_pipeline_config(prefixer: ComponentConstructor[Any, str]):
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
-    pipe.add_component("prefix", comp, msg=msg)
+    pn = pipe.add_component("prefix", prefixer, {"prefix": "scroll named "}, msg=msg)
+    assert isinstance(pn, ComponentConstructorNode)
+    assert pn.constructor == prefixer
+    assert getattr(pn.config, "prefix") == "scroll named "
 
-    assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
+    pipe = pipe.build()
+    assert pipe.run("prefix", msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
 
-    config = pipe.component_configs()
-    print(json.dumps(config, indent=2))
+    config = pipe.config.components
+    print(TypeAdapter(dict).dump_json(config, indent=2))
 
     assert "prefix" in config
-    assert config["prefix"]["prefix"] == "scroll named "
+    assert config["prefix"].config
+    assert config["prefix"].config["prefix"] == "scroll named "
 
 
 @mark.parametrize("prefixer", [PrefixerDC, PrefixerM, PrefixerPYDC])
 def test_pipeline_config_roundtrip(prefixer: type[Component]):
     comp = prefixer(prefix="scroll named ")
 
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     msg = pipe.create_input("msg", str)
     pipe.add_component("prefix", comp, msg=msg)
+    pipe.default_component("prefix")
 
-    assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
+    assert pipe.build().run("prefix", msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH"
 
-    config = pipe.get_config()
+    config = pipe.build_config()
     print(config.model_dump_json(indent=2))
 
-    p2 = Pipeline.from_config(config)
+    p2 = PipelineBuilder.from_config(config)
     assert p2.node("prefix", missing="none") is not None
-    assert p2.run(msg="READ ME") == "scroll named READ ME"
+    assert p2.build().run(msg="READ ME") == "scroll named READ ME"
