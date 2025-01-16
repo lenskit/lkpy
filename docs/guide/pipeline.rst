@@ -65,7 +65,10 @@ that class, do:
     pipe = builder.build('ALS')
 
 For maximum flexibility, you can directly construct and wire the pipeline
-yourself; this is described in :ref:`standard-pipelines`.
+yourself; this is described in :ref:`standard-pipelines`.  Pipelines are built
+with a :class:`PipelineBuilder`, which sets up the nodes and connections, checks
+for things like cycles, and instantiates the components to make a pipeline that
+can be trained and used.
 
 After any of these methods, you can run the pipeline to produce recommendations
 with:
@@ -107,8 +110,8 @@ These are arranged in a directed acyclic graph, consisting of:
   :ref:`pipeline-connections` for details.
 
 Each node has a name that can be used to look up the node with
-:meth:`Pipeline.node` and appears in serialization and logging situations. Names
-must be unique within a pipeline.
+:meth:`Pipeline.node` (or :meth:`PipelineBuilder.node`) and appears in
+serialization and logging situations. Names must be unique within a pipeline.
 
 .. _pipeline-connections:
 
@@ -124,21 +127,21 @@ the following types:
 
 * A :class:`Node`, in which case the input will be provided from the
   corresponding pipeline input or component return value.  Nodes are returned by
-  :meth:`~Pipeline.create_input` or :meth:`~Pipeline.add_component`, and can be
-  looked up after creation with :meth:`~Pipeline.node`.
+  :meth:`~PipelineBuilder.create_input` or :meth:`~PipelineBuilder.add_component`, and can be
+  looked up after creation with :meth:`~PipelineBuilder.node`.
 * A Python object, in which case that value will be provided directly to
   the component input argument.
 
 These input connections are specified via keyword arguments to the
-:meth:`Pipeline.add_component` or :meth:`Pipeline.connect` methods — specify the
-component's input name(s) and the node or data to which each input should be
-wired.
+:meth:`PipelineBuilder.add_component` or :meth:`PipelineBuilder.connect` methods
+— specify the component's input name(s) and the node or data to which each input
+should be wired.
 
 
-You can also use :meth:`Pipeline.set_default` to specify default connections.
-For example, you can specify a default for inputs named ``user``::
+You can also use :meth:`PipelineBuilder.default_conection` to specify default
+connections. For example, you can specify a default for inputs named ``user``::
 
-    pipe.set_default('user', user_history)
+    pipe.default_connection('user', user_history)
 
 With this default in place, if a component has an input named ``user`` and that
 input is not explicitly connected to a node, then the ``user_history`` node will
@@ -148,9 +151,25 @@ code overhead needed to wire common pipelines.
 .. note::
 
     You cannot directly wire an input another component using only that
-    component's name; if you only have a name, pass it to :meth:`Pipeline.node`
-    to obtain the node.  This is because it would be impossible to distinguish
-    between a string component name and a string data value.
+    component's name; if you only have a name, pass it to
+    :meth:`PipelineBuilder.node` to obtain the node.  This is because it would
+    be impossible to distinguish between a string component name and a string
+    data value.
+
+.. _pipeline-building:
+
+Building the Pipeline
+---------------------
+
+Once you have set up the pipeline with the various methods to :class:`PipelineBuilder`,
+you can do a couple of things:
+
+-   Call :class:`PipelineBuilder.build` to build a usable :class:`Pipeline`.
+    The pipeline can then be trained, run, etc.
+
+-   Call :class:`PipelineBuilder.build_config` to build a
+    :class:`PipelineConfig` that can be serialized and reloaded from JSON, YAML,
+    or similar formats.
 
 .. _pipeline-execution:
 
@@ -298,7 +317,7 @@ The convenience methods are equivalent to the following pipeline code:
 
 .. code:: python
 
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     # define an input parameter for the user ID (the 'query')
     query = pipe.create_input('query', ID)
     # allow candidate items to be optionally specified
@@ -319,6 +338,8 @@ The convenience methods are equivalent to the following pipeline code:
     # rank the items by score
     recommend = pipe.add_component('ranker', TopNRanker(50), items=score)
     pipe.alias('recommender', recommend)
+    pipe.default_component('recommender')
+    pipe = pipe.build()
 
 
 If we want to also emit rating predictions, with fallback to a baseline model to
