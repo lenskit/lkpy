@@ -445,6 +445,8 @@ class PipelineBuilder:
         for n, t in self._default_connections.items():
             clone.default_connection(n, clone.node(t))
 
+        clone._default = self._default
+
         return clone
 
     def build_config(self, *, include_hash: bool = True) -> PipelineConfig:
