@@ -5,12 +5,12 @@ from lenskit.pipeline.components import Component, component_inputs, component_r
 
 
 @dataclass
-class TestConfig:
+class XConfig:
     suffix: str = ""
 
 
-class TestComp(Component):
-    config: TestConfig
+class XComp(Component):
+    config: XConfig
 
     def __call__(self, msg: str) -> str:
         return msg + self.config.suffix
@@ -39,13 +39,13 @@ def test_single_function_input():
 
 
 def test_component_class_input():
-    inputs = component_inputs(TestComp)
+    inputs = component_inputs(XComp)
     assert len(inputs) == 1
     assert inputs["msg"] is str
 
 
 def test_component_object_input():
-    inputs = component_inputs(TestComp())
+    inputs = component_inputs(XComp())
     assert len(inputs) == 1
     assert inputs["msg"] is str
 
@@ -80,12 +80,12 @@ def test_function_return():
 
 
 def test_class_return():
-    rt = component_return_type(TestComp)
+    rt = component_return_type(XComp)
     assert rt is str
 
 
 def test_instance_return():
-    rt = component_return_type(TestComp())
+    rt = component_return_type(XComp())
     assert rt is str
 
 
