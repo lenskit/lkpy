@@ -399,7 +399,6 @@ class PipelineBuilder:
 
         # Check for cycles
         graph = {n: set(w.values()) for (n, w) in self._edges.items()}
-        print(graph)
         ts = TopologicalSorter(graph)
         try:
             ts.prepare()
