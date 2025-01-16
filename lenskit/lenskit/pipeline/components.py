@@ -13,7 +13,7 @@ import json
 import warnings
 from abc import ABC, abstractmethod
 from importlib import import_module
-from inspect import isabstract
+from inspect import isabstract, signature
 from types import FunctionType, NoneType
 
 from pydantic import JsonValue, TypeAdapter
@@ -31,7 +31,7 @@ from typing_extensions import (
     runtime_checkable,
 )
 
-from .types import Lazy
+from .types import Lazy, TypecheckWarning
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -265,6 +265,46 @@ def instantiate_component(
         return comp(cfg)  # type: ignore
     else:  # pragma: nocover
         return comp()  # type: ignore
+
+
+def component_inputs(
+    component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
+) -> dict[str, type | None]:
+    if isinstance(component, (Component, type)):
+        function = component.__call__
+    else:
+        function = component
+
+    types = get_type_hints(function)
+    sig = signature(function)
+
+    inputs: dict[str, type | None] = {}
+    for param in sig.parameters.values():
+        if param.name == "self":
+            continue
+
+        if pt := types.get(param.name, None):
+            inputs[param.name] = pt
+        else:
+            warnings.warn(
+                f"parameter {param.name} of component {component} has no type annotation",
+                TypecheckWarning,
+                2,
+            )
+            inputs[param.name] = None
+
+    return inputs
+
+
+def component_return_type(
+    component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
+) -> type | None:
+    if isinstance(component, (Component, type)):
+        types = get_type_hints(component.__call__)
+    else:
+        types = get_type_hints(component)
+    print(types)
+    return types.get("return", None)
 
 
 def fallback_on_none(primary: T | None, fallback: Lazy[T]) -> T:

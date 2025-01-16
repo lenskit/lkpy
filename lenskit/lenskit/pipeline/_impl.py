@@ -16,7 +16,14 @@ from lenskit.training import Trainable, TrainingOptions
 from . import config
 from .components import Component
 from .config import PipelineConfig
-from .nodes import ComponentInstanceNode, ComponentNode, InputNode, LiteralNode, Node
+from .nodes import (
+    ComponentConstructorNode,
+    ComponentInstanceNode,
+    ComponentNode,
+    InputNode,
+    LiteralNode,
+    Node,
+)
 from .state import PipelineState
 
 _log = get_logger(__name__)
@@ -63,12 +70,14 @@ class Pipeline:
     def __init__(self, config: config.PipelineConfig, nodes: Iterable[Node[Any]]):
         self._nodes = {}
         for node in nodes:
-            if isinstance(node, ComponentInstanceNode):
+            if isinstance(node, ComponentConstructorNode):
                 raise RuntimeError("pipeline is not fully instantiated")
             self._nodes[node.name] = node
 
         self._config = config
-        self._aliases = {a: self.node(t) for (a, t) in config.aliases.items()}
+        self._aliases = {}
+        for a, t in config.aliases.items():
+            self._aliases[a] = self.node(t)
         if config.default:
             self._default = self.node(config.default)
 
@@ -146,7 +155,7 @@ class Pipeline:
         elif missing == "none" or missing is None:
             return None
         else:
-            raise KeyError(f"node {node}")
+            raise KeyError(node)
 
     def clone(self, how: CloneMethod = "config") -> Pipeline:
         """

@@ -7,14 +7,12 @@
 # pyright: strict
 from __future__ import annotations
 
-import warnings
-from inspect import Signature, signature
-from typing import Any, Callable, cast
+from abc import abstractmethod
+from typing import Any, cast
 
 from typing_extensions import Generic, TypeVar
 
-from .components import Component, ComponentConstructor, PipelineFunction
-from .types import TypecheckWarning
+from .components import Component, ComponentConstructor, PipelineFunction, component_inputs
 
 # Nodes are (conceptually) immutable data containers, so Node[U] can be assigned
 # to Node[T] if U ≼ T.
@@ -80,10 +78,7 @@ class ComponentNode(Node[ND], Generic[ND]):
         Internal
     """
 
-    __match_args__ = ("name", "inputs", "connections")
-
-    inputs: dict[str, type | None]
-    "The component's inputs."
+    __match_args__ = ("name", "connections")
 
     connections: dict[str, str]
     "The component's input connections."
@@ -104,30 +99,14 @@ class ComponentNode(Node[ND], Generic[ND]):
         else:
             return ComponentInstanceNode(name, comp)
 
-    def _setup_signature(self, component: Callable[..., ND]):
-        sig = signature(component, eval_str=True)
-        if sig.return_annotation == Signature.empty:
-            warnings.warn(
-                f"component {component} has no return type annotation", TypecheckWarning, 2
-            )
-        else:
-            self.types = set([sig.return_annotation])
-
-        self.inputs = {}
-        for param in sig.parameters.values():
-            if param.annotation == Signature.empty:
-                warnings.warn(
-                    f"parameter {param.name} of component {component} has no type annotation",
-                    TypecheckWarning,
-                    2,
-                )
-                self.inputs[param.name] = None
-            else:
-                self.inputs[param.name] = param.annotation
+    @property
+    @abstractmethod
+    def inputs(self) -> dict[str, type | None]:  # pragma: nocover
+        raise NotImplementedError()
 
 
 class ComponentConstructorNode(ComponentNode[ND], Generic[ND]):
-    __match_args__ = ("name", "constructor", "config", "inputs", "connections")
+    __match_args__ = ("name", "constructor", "config", "connections")
     constructor: ComponentConstructor[Any, ND]
     config: object | None
 
@@ -135,9 +114,13 @@ class ComponentConstructorNode(ComponentNode[ND], Generic[ND]):
         self.constructor = constructor
         self.config = config
 
+    @property
+    def inputs(self):
+        return component_inputs(self.constructor)
+
 
 class ComponentInstanceNode(ComponentNode[ND], Generic[ND]):
-    __match_args__ = ("name", "component", "inputs", "connections")
+    __match_args__ = ("name", "component", "connections")
 
     component: Component[ND] | PipelineFunction[ND]
 
@@ -149,5 +132,8 @@ class ComponentInstanceNode(ComponentNode[ND], Generic[ND]):
     ):
         super().__init__(name)
         self.component = component
-        self._setup_signature(component)
         self.connections = connections or {}
+
+    @property
+    def inputs(self):
+        return component_inputs(self.component)

@@ -18,7 +18,7 @@ from lenskit.diagnostics import PipelineError
 from lenskit.logging import get_logger, trace
 
 from ._impl import Pipeline
-from .components import PipelineFunction
+from .components import PipelineFunction, component_inputs
 from .nodes import ComponentInstanceNode, InputNode, LiteralNode, Node
 from .types import Lazy, is_compatible_data
 
@@ -88,8 +88,8 @@ class PipelineRunner:
                 self.state[name] = value
             case InputNode(name, types=types):
                 self._inject_input(name, types, required)
-            case ComponentInstanceNode(name, comp, inputs, wiring):
-                self._run_component(name, comp, inputs, wiring, required)
+            case ComponentInstanceNode(name, comp, wiring):
+                self._run_component(name, comp, wiring, required)
             case _:  # pragma: nocover
                 raise PipelineError(f"invalid node {node}")
 
@@ -108,20 +108,18 @@ class PipelineRunner:
         self,
         name: str,
         comp: PipelineFunction[Any],
-        inputs: dict[str, type | None],
         wiring: dict[str, str],
         required: bool,
     ) -> None:
         in_data = {}
         log = self.log.bind(node=name)
         trace(log, "processing inputs")
+        inputs = component_inputs(comp)
         for iname, itype in inputs.items():
             # look up the input wiring for this parameter input
-            src = wiring.get(iname, None)
-            if src is not None:
+            snode = None
+            if src := wiring.get(iname, None):
                 snode = self.pipe.node(src)
-            else:
-                snode = self.pipe.get_default(iname)
 
             # check if this is a lazy node
             lazy = False
