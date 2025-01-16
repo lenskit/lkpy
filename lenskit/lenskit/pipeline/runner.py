@@ -116,9 +116,12 @@ class PipelineRunner:
         trace(log, "processing inputs")
         inputs = component_inputs(comp)
         for iname, itype in inputs.items():
+            ilog = log.bind(input_name=iname, input_type=itype)
+            trace(ilog, "resolving input")
             # look up the input wiring for this parameter input
             snode = None
             if src := wiring.get(iname, None):
+                trace(ilog, "resolving from wiring")
                 snode = self.pipe.node(src)
 
             # check if this is a lazy node
