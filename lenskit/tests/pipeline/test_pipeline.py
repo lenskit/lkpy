@@ -239,7 +239,6 @@ def test_simple_graph():
     assert pipe.run(nd, a=3, b=7) == 6
 
 
-@mark.xfail(reason="cycle detection not yet implemented")
 def test_cycle():
     pipe = PipelineBuilder()
     b = pipe.create_input("b", int)

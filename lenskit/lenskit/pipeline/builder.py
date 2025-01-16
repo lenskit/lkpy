@@ -8,6 +8,7 @@ from __future__ import annotations
 import typing
 import warnings
 from copy import deepcopy
+from graphlib import CycleError, TopologicalSorter
 from types import UnionType
 from uuid import NAMESPACE_URL, uuid5
 
@@ -391,6 +392,20 @@ class PipelineBuilder:
                 lit = self.literal(n)
                 edges[k] = lit.name
 
+    def validate(self):
+        """
+        Check the built pipeline for errors.
+        """
+
+        # Check for cycles
+        graph = {n: set(w.values()) for (n, w) in self._edges.items()}
+        print(graph)
+        ts = TopologicalSorter(graph)
+        try:
+            ts.prepare()
+        except CycleError as e:
+            raise PipelineError("pipeline has cycles") from e
+
     def clone(self) -> PipelineBuilder:
         """
         Clone the pipeline builder.  The resulting builder starts as a copy of
@@ -449,6 +464,8 @@ class PipelineBuilder:
             inputs) cannot be serialized, and this method will fail if they
             are present in the pipeline.
         """
+        self.validate()
+
         meta = self.meta(include_hash=False)
         cfg = PipelineConfig(meta=meta)
 
