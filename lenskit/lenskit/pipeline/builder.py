@@ -84,7 +84,7 @@ class PipelineBuilder:
 
     _nodes: dict[str, Node[Any]]
     _aliases: dict[str, Node[Any]]
-    _default_connections: dict[str, Node[Any]]
+    _default_connections: dict[str, str]
     _components: dict[str, PipelineFunction[Any] | Component[Any]]
     _default: str | None = None
     _anon_nodes: set[str]
@@ -230,7 +230,7 @@ class PipelineBuilder:
         """
         if not isinstance(node, Node):
             node = self.literal(node)
-        self._default_connections[name] = node
+        self._default_connections[name] = node.name
 
     def default_component(self, node: str | Node[Any]) -> None:
         """
@@ -421,7 +421,7 @@ class PipelineBuilder:
                     pass
 
         for n, t in self._default_connections.items():
-            clone.default_connection(n, clone.node(t.name))
+            clone.default_connection(n, clone.node(t))
 
         return clone
 
@@ -444,6 +444,13 @@ class PipelineBuilder:
         """
         meta = self.meta(include_hash=False)
         cfg = PipelineConfig(meta=meta)
+
+        # FIXME: don't mutate
+        for node in self._nodes.values():
+            if isinstance(node, ComponentNode):
+                for iname in node.inputs.keys():
+                    if iname not in node.connections and iname in self._default_connections:
+                        node.connections[iname] = self._default_connections[iname]
 
         # We map anonymous nodes to hash-based names for stability.  If we ever
         # allow anonymous components, this will need to be adjusted to maintain
