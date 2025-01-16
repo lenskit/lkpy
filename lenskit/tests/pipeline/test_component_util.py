@@ -16,6 +16,11 @@ class TestComp(Component):
         return msg + self.config.suffix
 
 
+class CallObj:
+    def __call__(self, q: str) -> bytes:
+        return q.encode()
+
+
 def test_empty_input():
     def func() -> int:
         return 9
@@ -54,6 +59,18 @@ def test_component_unknown_input():
     assert inputs["x"] is None
 
 
+def test_callable_object_input():
+    inputs = component_inputs(CallObj())
+    assert len(inputs) == 1
+    assert inputs["q"] is str
+
+
+def test_callable_class_input():
+    inputs = component_inputs(CallObj)
+    assert len(inputs) == 1
+    assert inputs["q"] is str
+
+
 def test_function_return():
     def func(x: int) -> int:
         return x + 5
@@ -78,3 +95,13 @@ def test_unknown_return():
 
     rt = component_return_type(func)
     assert rt is None
+
+
+def test_callable_object_return():
+    rt = component_return_type(CallObj())
+    assert rt is bytes
+
+
+def test_callable_class_return():
+    rt = component_return_type(CallObj)
+    assert rt is bytes

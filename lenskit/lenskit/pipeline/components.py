@@ -270,10 +270,12 @@ def instantiate_component(
 def component_inputs(
     component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
 ) -> dict[str, type | None]:
-    if isinstance(component, (Component, type)):
-        function = component.__call__
-    else:
+    if isinstance(component, FunctionType):
         function = component
+    elif hasattr(component, "__call__"):
+        function = getattr(component, "__call__")
+    else:
+        raise TypeError("invalid component " + repr(component))
 
     types = get_type_hints(function)
     sig = signature(function)
@@ -299,11 +301,14 @@ def component_inputs(
 def component_return_type(
     component: Component[COut] | ComponentConstructor[Any, COut] | PipelineFunction[COut],
 ) -> type | None:
-    if isinstance(component, (Component, type)):
-        types = get_type_hints(component.__call__)
+    if isinstance(component, FunctionType):
+        function = component
+    elif hasattr(component, "__call__"):
+        function = getattr(component, "__call__")
     else:
-        types = get_type_hints(component)
-    print(types)
+        raise TypeError("invalid component " + repr(component))
+
+    types = get_type_hints(function)
     return types.get("return", None)
 
 
