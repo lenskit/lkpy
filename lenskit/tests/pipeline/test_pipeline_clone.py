@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from lenskit.pipeline import PipelineBuilder
 from lenskit.pipeline.components import Component
-from lenskit.pipeline.nodes import ComponentInstanceNode, ComponentNode
+from lenskit.pipeline.nodes import ComponentInstanceNode
 
 
 @dataclass
@@ -50,7 +50,7 @@ def test_pipeline_clone():
     assert isinstance(n2, ComponentInstanceNode)
     assert isinstance(n2.component, Prefixer)
     assert n2.component is not comp
-    assert n2.component.config.prefix == comp.config.prefix
+    assert n2.component.config.prefix == comp.config.prefix  # type: ignore
 
     assert p2.run(msg="HACKEM MUCHE") == "scroll named HACKEM MUCHE"
 
@@ -62,7 +62,7 @@ def test_pipeline_clone_with_function():
     msg = pipe.create_input("msg", str)
     pfx = pipe.add_component("prefix", comp, msg=msg)
     pipe.add_component("exclaim", exclaim, msg=pfx)
-    pipe.default_component("prefix")
+    pipe.default_component("exclaim")
 
     pipe = pipe.build()
     assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH!"
@@ -79,7 +79,7 @@ def test_pipeline_clone_with_nonconfig_class():
     msg = pipe.create_input("msg", str)
     pfx = pipe.add_component("prefix", comp, msg=msg)
     pipe.add_component("question", Question(), msg=pfx)
-    pipe.default_component("prefix")
+    pipe.default_component("question")
 
     pipe = pipe.build()
     assert pipe.run(msg="FOOBIE BLETCH") == "scroll named FOOBIE BLETCH?"

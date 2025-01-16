@@ -101,11 +101,15 @@ class ComponentNode(Node[ND], Generic[ND]):
         comp: ComponentConstructor[CFG, ND] | Component[ND] | PipelineFunction[ND],
         config: CFG | Mapping[str, JsonValue] | None = None,
     ) -> ComponentNode[ND]:
-        if isinstance(comp, Component) or not isinstance(comp, ComponentConstructor):
-            return ComponentInstanceNode(name, comp)  # type: ignore
-        else:
+        if isinstance(comp, Component):
+            return ComponentInstanceNode(name, cast(Component[ND], comp))
+        elif isinstance(comp, ComponentConstructor):
             comp = cast(ComponentConstructor[CFG, ND], comp)
             return ComponentConstructorNode(name, comp, comp.validate_config(config))
+        elif isinstance(comp, type):
+            return ComponentConstructorNode(name, comp, None)  # type: ignore
+        else:
+            return ComponentInstanceNode(name, comp)
 
     @property
     @abstractmethod
