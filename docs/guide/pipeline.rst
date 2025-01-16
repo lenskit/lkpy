@@ -326,11 +326,11 @@ The convenience methods are equivalent to the following pipeline code:
     # allow candidate items to be optionally specified
     items = pipe.create_input('items', ItemList, None)
     # look up a user's history in the training data
-    history = pipe.add_component('history-lookup', LookupTrainingHistory(), query=query)
+    history = pipe.add_component('history-lookup', LookupTrainingHistory, query=query)
     # find candidates from the training data
     default_candidates = pipe.add_component(
         'candidate-selector',
-        UnratedTrainingItemsCandidateSelector(),
+        UnratedTrainingItemsCandidateSelector,
         query=history,
     )
     # if the client provided items as a pipeline input, use those; otherwise
@@ -339,7 +339,7 @@ The convenience methods are equivalent to the following pipeline code:
     # score the candidate items using the specified scorer
     score = pipe.add_component('scorer', scorer, query=query, items=candidates)
     # rank the items by score
-    recommend = pipe.add_component('ranker', TopNRanker(50), items=score)
+    recommend = pipe.add_component('ranker', TopNRanker, {'n': 50}, items=score)
     pipe.alias('recommender', recommend)
     pipe.default_component('recommender')
     pipe = pipe.build()
@@ -463,6 +463,32 @@ Finally, you can directly pass configuration parameters to the component constru
     }>
 
 See :ref:`conventions` for more conventions for component design.
+
+Adding Components to the Pipeline
+---------------------------------
+
+You can add components to the pipeline in two ways:
+
+*   Instantiate the component with its configuration options and pass it to
+    :meth:`PipelineBuilder.add_component`::
+
+        builder.add_component('component-name', MyComponent(option='value'))
+
+    When you convert the pipeline into
+    a configuration or clone it, the component will be re-instantiated from its
+    configuration.
+
+*   Pass the component class and configuration separately to
+    :meth:`PipelineBuilder.add_component`::
+
+        builder.add_component('component-name', MyComponent, MyConfig(option='value'))
+
+    Alternatively::
+
+        builder.add_component('component-name', MyComponent, {'option': 'value'}))
+
+When you use the second approach, :meth:`PipelineBuilder.build` instantiates the
+component from the provided configuration.
 
 POPROX and Other Integrators
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
