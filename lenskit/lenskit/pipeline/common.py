@@ -8,6 +8,7 @@ from typing import Literal
 from lenskit.data import ID, ItemList, RecQuery
 
 from ._impl import Pipeline
+from .builder import PipelineBuilder
 from .components import Component
 
 
@@ -89,7 +90,7 @@ class RecPipelineBuilder:
         from lenskit.basic.composite import FallbackScorer
         from lenskit.basic.history import UserTrainingHistoryLookup
 
-        pipe = Pipeline(name=name)
+        pipe = PipelineBuilder(name=name)
 
         query = pipe.create_input("query", RecQuery, ID, ItemList)
 
@@ -121,8 +122,9 @@ class RecPipelineBuilder:
 
         rank = pipe.add_component("ranker", self._ranker, items=n_score, n=n_n)
         pipe.alias("recommender", rank)
+        pipe.default_component("recommender")
 
-        return pipe
+        return pipe.build()
 
 
 def topn_pipeline(
@@ -196,7 +198,7 @@ def predict_pipeline(
     from lenskit.basic.composite import FallbackScorer
     from lenskit.basic.history import UserTrainingHistoryLookup
 
-    pipe = Pipeline(name=name)
+    pipe = PipelineBuilder(name=name)
 
     query = pipe.create_input("query", RecQuery, ID, ItemList)
     items = pipe.create_input("items", ItemList)
@@ -214,4 +216,6 @@ def predict_pipeline(
         backup = pipe.add_component("fallback-predictor", fallback, query=lookup, items=items)
         pipe.add_component("rating-predictor", FallbackScorer(), primary=score, fallback=backup)
 
-    return pipe
+    pipe.default_component("rating-predictor")
+
+    return pipe.build()
