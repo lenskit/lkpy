@@ -29,6 +29,7 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
         Caller
     """
 
+    config: None
     training_data_: Dataset
 
     @override
@@ -72,6 +73,7 @@ class KnownRatingScorer(Component[ItemList], Trainable):
             in the query as the source of score data.
     """
 
+    config: None
     score: Literal["rating", "indicator"] | None
     source: Literal["training", "query"]
 
