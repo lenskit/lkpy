@@ -160,7 +160,7 @@ def test_configurable_component():
 
     print("hash:", pipe.config_hash)
     assert pipe.config_hash is not None
-    assert p2.config_hash == pipe.config_hash
+    assert p2.config_hash == pipe.config_hash()
 
 
 def test_save_with_defaults():
