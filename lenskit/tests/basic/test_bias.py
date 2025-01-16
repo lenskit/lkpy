@@ -18,8 +18,7 @@ from lenskit.basic import BiasModel, BiasScorer
 from lenskit.data import Dataset, from_interactions_df
 from lenskit.data.items import ItemList
 from lenskit.operations import predict, recommend
-from lenskit.pipeline import Pipeline
-from lenskit.pipeline.common import topn_pipeline
+from lenskit.pipeline import Pipeline, PipelineBuilder, topn_pipeline
 from lenskit.testing import BasicComponentTests, ScorerTests
 
 _log = logging.getLogger(__name__)
@@ -303,7 +302,7 @@ def test_bias_save():
 
 
 def test_bias_pipeline(ml_ds: Dataset):
-    pipe = Pipeline()
+    pipe = PipelineBuilder()
     user = pipe.create_input("user", int)
     items = pipe.create_input("items")
 
@@ -311,6 +310,7 @@ def test_bias_pipeline(ml_ds: Dataset):
     bias.train(ml_ds)
     out = pipe.add_component("bias", bias, query=user, items=items)
 
+    pipe = pipe.build()
     res = pipe.run(out, user=2, items=ItemList(item_ids=[10, 11, -1]))
 
     assert len(res) == 3
@@ -323,7 +323,7 @@ def test_bias_pipeline(ml_ds: Dataset):
 
 def test_bias_topn(ml_ds: Dataset):
     pipe = topn_pipeline(BiasScorer(), predicts_ratings=True, n=10)
-    print(pipe.get_config())
+    print(pipe.config)
     pipe.train(ml_ds)
 
     res = predict(pipe, 2, ItemList(item_ids=[10, 11, -1]))
@@ -338,7 +338,7 @@ def test_bias_topn(ml_ds: Dataset):
 
 def test_bias_topn_run_length(ml_ds: Dataset):
     pipe = topn_pipeline(BiasScorer(), predicts_ratings=True, n=100)
-    print(pipe.get_config())
+    print(pipe.config)
     pipe.train(ml_ds)
 
     res = predict(pipe, 2, items=ItemList(item_ids=[10, 11, -1]))
