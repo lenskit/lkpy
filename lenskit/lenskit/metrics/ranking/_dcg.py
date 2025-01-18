@@ -91,6 +91,75 @@ class NDCG(ListMetric, RankingMetricBase):
         return realized / ideal
 
 
+class DCG(ListMetric, RankingMetricBase):
+    """
+    Compute the _unnormalized_ discounted cumulative gain :cite:p:`ndcg`.
+
+    Discounted cumultative gain is computed as:
+
+    .. math::
+        \\begin{align*}
+        \\mathrm{DCG}(L,u) & = \\sum_{i=1}^{|L|} \\frac{r_{ui}}{d(i)}
+        \\end{align*}
+
+    Unrated items are assumed to have a utility of 0; if no rating values are
+    provided in the truth frame, item ratings are assumed to be 1.
+
+    This metric does *not* normalize by ideal DCG. For that, use :class:`NDCG`.
+    See :cite:t:`jeunenNormalisedDiscountedCumulative2024` for an argument for
+    using the unnormalized version.
+
+    Args:
+        k:
+            The maximum recommendation list length to consider (longer lists are
+            truncated).
+        discount:
+            The discount function to use.  The default, base-2 logarithm, is the
+            original function used by :cite:t:`ndcg`.
+        gain:
+            The field on the test data to use for gain values.  If ``None`` (the
+            default), all items present in the test data have a gain of 1.  If set
+            to a string, it is the name of a field (e.g. ``'rating'``).  In all
+            cases, items not present in the truth data have a gain of 0.
+
+    Stability:
+        Caller
+    """
+
+    discount: Discount
+    gain: str | None
+
+    def __init__(
+        self, k: int | None = None, *, discount: Discount = np.log2, gain: str | None = None
+    ):
+        super().__init__(k=k)
+        self.discount = discount
+        self.gain = gain
+
+    @property
+    def label(self):
+        if self.k is not None:
+            return f"DCG@{self.k}"
+        else:
+            return "DCG"
+
+    @override
+    def measure_list(self, recs: ItemList, test: ItemList) -> float:
+        recs = self.truncate(recs)
+        items = recs.ids()
+
+        if self.gain:
+            gains = test.field(self.gain, "pandas", index="ids")
+            if gains is None:
+                raise KeyError(f"test items have no field {self.gain}")
+            scores = gains.reindex(items, fill_value=0).values
+        else:
+            scores = np.zeros_like(items, dtype=np.float32)
+            scores[np.isin(items, test.ids())] = 1.0
+
+        return array_dcg(np.require(scores, np.float32), self.discount)
+
+
 def array_dcg(scores: NDArray[np.number], discount: Discount = np.log2):
     """
     Compute the Discounted Cumulative Gain of a series of recommended items with rating scores.
