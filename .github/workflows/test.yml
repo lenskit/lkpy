@@ -38,6 +38,7 @@ jobs:
           - py313
         platform:
           - ubuntu-latest
+          - ubuntu-24.04-arm
           - macos-latest
           - windows-latest
         exclude:
@@ -91,7 +92,9 @@ jobs:
           - '3.13'
         platform:
           - ubuntu-latest
+          - ubuntu-24.04-arm
           - macos-latest
+          - windows-latest
         exclude:
           - python: '3.13'
             platform: macos-latest
