@@ -30,7 +30,6 @@ const test_matrix = {
     matrix: {
       python: CONDA_PYTHONS,
       platform: PLATFORMS,
-      exclude: [{ python: "py313", platform: "windows-latest" }],
     },
   }),
   vanilla: testJob({
