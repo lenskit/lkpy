@@ -146,7 +146,7 @@ class Monitor:
             addr = f"ipc://{path}"
             sock.bind(addr)
         else:
-            port = sock.bind_to_random_port("127.0.0.1")
+            port = sock.bind_to_random_port("tcp://127.0.0.1")
             addr = f"tcp://127.0.0.1:{port}"
         log = _log.bind(address=addr)
         log.debug("bound listener socket")
