@@ -38,11 +38,9 @@ jobs:
           - py313
         platform:
           - ubuntu-latest
+          - ubuntu-24.04-arm
           - macos-latest
           - windows-latest
-        exclude:
-          - python: py313
-            platform: windows-latest
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v4
@@ -91,10 +89,16 @@ jobs:
           - '3.13'
         platform:
           - ubuntu-latest
+          - ubuntu-24.04-arm
           - macos-latest
+          - windows-latest
         exclude:
           - python: '3.13'
             platform: macos-latest
+          - python: '3.13'
+            platform: windows-latest
+          - python: '3.13'
+            platform: ubuntu-24.04-arm
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v4
