@@ -1,7 +1,7 @@
 [project]
 name = "lenskit"
 channels = ["conda-forge", "pytorch", "nodefaults"]
-platforms = ["linux-64", "win-64", "osx-arm64"]
+platforms = ["linux-64", "win-64", "osx-arm64", "linux-aarch64"]
 
 [dependencies]
 typing-extensions = "~=4.12"
@@ -79,6 +79,9 @@ myst-nb = ">=0.13"
 just = ">=1.2"
 sphinx-togglebutton = ">=0.3.2,<0.4"
 sphinxcontrib-mermaid = ">=1.0.0,<2"
+
+[feature.dev]
+platforms = ["linux-64", "osx-arm64"]
 
 [feature.dev.dependencies]
 hatchling = "~=1.24"
