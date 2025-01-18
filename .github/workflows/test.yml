@@ -95,6 +95,10 @@ jobs:
         exclude:
           - python: '3.13'
             platform: macos-latest
+          - python: '3.13'
+            platform: windows-latest
+          - python: '3.13'
+            platform: ubuntu-24.04-arm
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v4

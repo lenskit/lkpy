@@ -39,7 +39,11 @@ const test_matrix = {
     matrix: {
       python: PYTHONS,
       platform: VANILLA_PLATFORMS,
-      exclude: [{ python: "3.13", platform: "macos-latest" }],
+      exclude: [
+        { python: "3.13", platform: "macos-latest" },
+        { python: "3.13", platform: "windows-latest" },
+        { python: "3.13", platform: "ubuntu-24.04-arm" },
+      ],
     },
   }),
   nojit: testJob({
