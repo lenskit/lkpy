@@ -41,9 +41,6 @@ jobs:
           - ubuntu-24.04-arm
           - macos-latest
           - windows-latest
-        exclude:
-          - python: py313
-            platform: windows-latest
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v4
