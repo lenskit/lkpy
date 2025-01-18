@@ -11668,8 +11668,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -11995,8 +11993,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -12139,8 +12135,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -12201,8 +12195,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -12353,8 +12345,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -12444,8 +12434,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -12933,8 +12921,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -12964,8 +12950,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/win-64/ca-certificates-2024.12.14-h56e8100_0.conda
   sha256: 424d82db36cd26234bc4772426170efd60e888c2aed0099a257a95e131683a5e
   md5: cb2eaeb88549ddb27af533eccf9a45c1
-  arch: x86_64
-  platform: win
   license: ISC
   purls: []
   size: 157422
@@ -13477,8 +13461,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: APACHE
   purls:
@@ -14853,8 +14835,6 @@ packages:
 - conda: https://conda.anaconda.org/conda-forge/win-64/intel-openmp-2024.2.1-h57928b3_1083.conda
   sha256: 0fd2b0b84c854029041b0ede8f4c2369242ee92acc0092f8407b1fe9238a8209
   md5: 2d89243bfb53652c182a7c73182cce4f
-  arch: x86_64
-  platform: win
   license: LicenseRef-IntelSimplifiedSoftwareOct2022
   license_family: Proprietary
   purls: []
@@ -15574,8 +15554,8 @@ packages:
   timestamp: 1729655345825
 - pypi: lenskit
   name: lenskit
-  version: 2025.0.0a7.dev6+g48a4fecb.d20250118
-  sha256: a2c1fcaea27a57c3bbe88e49d4b3d6d655dec1def5e5b066bc21ba82d225b6fc
+  version: 2025.0.0a7.dev14+gdfe18c8f.d20250118
+  sha256: c6f525419b5d5f59d260dc703983346c0500497e4f369fa1e8e920c78b2161b9
   requires_dist:
   - more-itertools>=9.0
   - numpy>=1.25
@@ -15601,7 +15581,7 @@ packages:
   editable: true
 - pypi: lenskit-funksvd
   name: lenskit-funksvd
-  version: 2025.0.0a6.dev5+g8ec18189
+  version: 2025.0.0a1.dev63+g2a2ba8ae.d20241213
   sha256: 5b1b6b387c9edf133e76fc58d19bdb611a5b8c3c80805aab04bad238b8e0c7b0
   requires_dist:
   - lenskit
@@ -15610,7 +15590,7 @@ packages:
   editable: true
 - pypi: lenskit-hpf
   name: lenskit-hpf
-  version: 2025.0.0a6.dev5+g8ec18189
+  version: 2025.0.0a1.dev63+g2a2ba8ae.d20241213
   sha256: 7aa59cc6db83ac59ffc0f94f55528d2de77ed28614726118d8bb6f0e7ea8c90a
   requires_dist:
   - hpfrec==0.2.*
@@ -15619,7 +15599,7 @@ packages:
   editable: true
 - pypi: lenskit-implicit
   name: lenskit-implicit
-  version: 2025.0.0a6.dev5+g8ec18189
+  version: 2025.0.0a1.dev90+g694b3124
   sha256: f5a4e1dd74dfecf00c2247d1835fb22c43dd9f1e836eee6984ac67fe464ce688
   requires_dist:
   - implicit>=0.7.2
@@ -15629,15 +15609,6 @@ packages:
 - pypi: lenskit-sklearn
   name: lenskit-sklearn
   version: 2025.0.0a1.dev63+g2a2ba8ae.d20241213
-  sha256: c916806b4a76e5d8ec8736c75e83bdc58eff179d8cd61ebd3983af766c59a2dc
-  requires_dist:
-  - lenskit
-  - scikit-learn~=1.2
-  requires_python: '>=3.11'
-  editable: true
-- pypi: lenskit-sklearn
-  name: lenskit-sklearn
-  version: 2025.0.0a6.dev5+g8ec18189
   sha256: c916806b4a76e5d8ec8736c75e83bdc58eff179d8cd61ebd3983af766c59a2dc
   requires_dist:
   - lenskit
@@ -15718,8 +15689,6 @@ packages:
   constrains:
   - abseil-cpp =20240722.0
   - libabseil-static =20240722.0=cxx17*
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -15963,8 +15932,6 @@ packages:
   - parquet-cpp <0.0a0
   - apache-arrow-proc =*=cpu
   - arrow-cpp <0.0a0
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: APACHE
   purls: []
@@ -16046,8 +16013,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.3,<15
   - vc14_runtime >=14.42.34433
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: APACHE
   purls: []
@@ -16141,8 +16106,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.3,<15
   - vc14_runtime >=14.42.34433
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: APACHE
   purls: []
@@ -16254,8 +16217,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.3,<15
   - vc14_runtime >=14.42.34433
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: APACHE
   purls: []
@@ -16336,8 +16297,6 @@ packages:
   - liblapack 3.9.0 26_win64_mkl
   - blas * mkl
   - libcblas 3.9.0 26_win64_mkl
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -16535,8 +16494,6 @@ packages:
   - liblapacke 3.9.0 26_win64_mkl
   - liblapack 3.9.0 26_win64_mkl
   - blas * mkl
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -17225,8 +17182,6 @@ packages:
   - vc14_runtime >=14.29.30139
   constrains:
   - libgoogle-cloud 2.33.0 *_1
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -17313,8 +17268,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -17401,8 +17354,6 @@ packages:
   - vc14_runtime >=14.29.30139
   constrains:
   - grpc-cpp =1.67.1
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: APACHE
   purls: []
@@ -17452,8 +17403,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -17584,8 +17533,6 @@ packages:
   - liblapacke 3.9.0 26_win64_mkl
   - blas * mkl
   - libcblas 3.9.0 26_win64_mkl
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -17958,8 +17905,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.3,<15
   - vc14_runtime >=14.42.34433
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: APACHE
   purls: []
@@ -18078,8 +18023,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -18158,8 +18101,6 @@ packages:
   - vc14_runtime >=14.29.30139
   constrains:
   - re2 2024.07.02.*
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -18251,8 +18192,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: Unlicense
   purls: []
   size: 897200
@@ -18591,8 +18530,6 @@ packages:
   - pytorch-cpu ==2.5.1
   - pytorch 2.5.1 cpu_mkl_*_109
   - pytorch-gpu ==99999999
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -18711,8 +18648,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls: []
@@ -18748,8 +18683,6 @@ packages:
   constrains:
   - pthreads-win32 <0.0a0
   - msys2-conda-epoch <0.0a0
-  arch: x86_64
-  platform: win
   license: MIT AND BSD-3-Clause-Clear
   purls: []
   size: 35794
@@ -19692,8 +19625,6 @@ packages:
   depends:
   - intel-openmp 2024.*
   - tbb 2021.*
-  arch: x86_64
-  platform: win
   license: LicenseRef-IntelSimplifiedSoftwareOct2022
   license_family: Proprietary
   purls: []
@@ -20615,8 +20546,6 @@ packages:
   - vc14_runtime >=14.29.30139
   constrains:
   - numpy-base <0a0
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls:
@@ -20721,8 +20650,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -20811,8 +20738,6 @@ packages:
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
   - zstd >=1.5.6,<1.6.0a0
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: Apache
   purls: []
@@ -21153,8 +21078,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls:
@@ -21806,8 +21729,6 @@ packages:
   - pyarrow-core 19.0.0 *_0_*
   - python >=3.13,<3.14.0a0
   - python_abi 3.13.* *_cp313
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: APACHE
   purls: []
@@ -22047,8 +21968,6 @@ packages:
   constrains:
   - apache-arrow-proc =*=cpu
   - numpy >=1.21,<3
-  arch: x86_64
-  platform: win
   license: Apache-2.0
   license_family: APACHE
   purls:
@@ -22395,8 +22314,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: MIT
   license_family: MIT
   purls:
@@ -23117,8 +23034,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: Python-2.0
   purls: []
   size: 16778758
@@ -23668,8 +23583,6 @@ packages:
   constrains:
   - pytorch-cpu ==2.5.1
   - pytorch-gpu ==99999999
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls:
@@ -24045,8 +23958,6 @@ packages:
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
   - zeromq >=4.3.5,<4.3.6.0a0
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls:
@@ -24171,8 +24082,6 @@ packages:
   md5: 10980cbe103147435a40288db9f49847
   depends:
   - libre2-11 2024.07.02 h4eb7d71_2
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls: []
@@ -24589,8 +24498,6 @@ packages:
   - python_abi 3.13.* *_cp313
   - scipy
   - threadpoolctl >=3.1.0
-  arch: aarch64
-  platform: linux
   license: BSD-3-Clause
   license_family: BSD
   purls:
@@ -24708,8 +24615,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls:
@@ -24980,8 +24885,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: BSD-3-Clause
   license_family: BSD
   purls:
@@ -25119,8 +25022,6 @@ packages:
   - ucrt >=10.0.20348.0
   - vc >=14.2,<15
   - vc14_runtime >=14.29.30139
-  arch: x86_64
-  platform: win
   license: BSL-1.0
   purls: []
   size: 2102215
