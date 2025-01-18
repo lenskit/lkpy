@@ -106,6 +106,8 @@ class DCG(ListMetric, RankingMetricBase):
     provided in the truth frame, item ratings are assumed to be 1.
 
     This metric does *not* normalize by ideal DCG. For that, use :class:`NDCG`.
+    See :cite:t:`jeunenNormalisedDiscountedCumulative2024` for an argument for
+    using the unnormalized version.
 
     Args:
         k:
