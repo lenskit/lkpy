@@ -49,14 +49,15 @@ Recommendation Queries
     ~lenskit.data.RecQuery
     ~lenskit.data.QueryInput
 
-Terms and Identifiers
----------------------
+Schemas and Identifiers
+-----------------------
 
 .. autosummary::
     :toctree: .
     :nosignatures:
     :caption: Terms and Identifiers
 
+    lenskit.data.schema
     ~lenskit.data.Vocabulary
 
 See also:
