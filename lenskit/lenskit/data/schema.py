@@ -21,9 +21,21 @@ from pydantic import BaseModel
 
 class AttrLayout(Enum):
     SCALAR = "scalar"
+    """
+    Scalar (non-list, non-vector) attribute value.
+    """
     LIST = "list"
+    """
+    Homogenous, variable-length list of attribute values.
+    """
     VECTOR = "vector"
+    """
+    Homogenous, fixed-length vector of numeric attribute values.
+    """
     SPARSE = "sparse"
+    """
+    Homogenous, fixed-length sparse vector of numeric attribute values.
+    """
 
 
 class DataSchema(BaseModel):
@@ -32,9 +44,16 @@ class DataSchema(BaseModel):
     """
 
     entities: dict[str, EntitySchema] = {}
+    """
+    Entity classes defined for this dataset.
+    """
+    relationships: dict[str, RelationshipSchema] = {}
+    """
+    Relationship classes defined for this dataset.
+    """
 
 
-class EntitySchema:
+class EntitySchema(BaseModel):
     """
     Entity class definitions in the dataset schema.
     """
@@ -49,7 +68,7 @@ class EntitySchema:
     """
 
 
-class RelationshipSchema:
+class RelationshipSchema(BaseModel):
     """
     Relationship class definitions in the dataset schema.
     """
