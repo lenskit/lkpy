@@ -79,7 +79,7 @@ such as users or items.  An entity is defined by its class and identifier, and
 nothing else is directly recorded about the entity itself — the interesting data
 resides in its attributes and relationships.
 
-Entity identifiers can be integers, strings, or UUIDs.
+Entity identifiers can be integers or strings.
 
 Every data set has the entity class ``item`` for the items that may be
 recommended.  Most datasets also have the class ``user``.  Session-aware
@@ -170,6 +170,9 @@ relationship class that has been declared to represent interactions, so that
 client and model code knows to treat it as interaction data.  Most data sets
 define a single interaction class, but can define more than one.
 
+-   Interactions should always involve the ``item`` entity class, without an
+    alias, preferably as the last entity class in the relationship definition.
+
 -   Interactions usually have timestamps (although this is not strictly
     required).  Timestamps can be either integers (treated as UNIX timestamps)
     or Arrow timestamp types.
@@ -200,6 +203,9 @@ records:
 
         Define what happens when ``count`` is NULL.
 
+The order of entity classes in an interaction type is mildly meaningful: it is
+convention for the last entity class to be the item, and for “interactor” (e.g.,
+user or session) to be first.
 
 .. _data-schema:
 

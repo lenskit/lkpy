@@ -9,6 +9,7 @@ Data abstractions and data set access.
 
 from __future__ import annotations
 
+from .builder import DatasetBuilder
 from .collection import GenericKey, ItemListCollection, UserIDKey
 from .convert import from_interactions_df
 from .dataset import Dataset, FieldError
@@ -23,6 +24,7 @@ from .vocab import Vocabulary
 
 __all__ = [
     "Dataset",
+    "DatasetBuilder",
     "FieldError",
     "from_interactions_df",
     "LazyDataset",

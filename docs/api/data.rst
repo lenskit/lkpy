@@ -20,6 +20,7 @@ Data Sets
     :caption: Data Sets
 
     ~lenskit.data.Dataset
+    ~lenskit.data.DatasetBuilder
     ~lenskit.data.from_interactions_df
     ~lenskit.data.load_movielens
     ~lenskit.data.load_movielens_df
