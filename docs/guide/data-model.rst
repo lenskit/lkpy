@@ -102,7 +102,7 @@ with entity or relationship *classes*, and have types that must be consistent
 across the class (each entity or relationship class has a schema defining its
 attributes and their types).
 
-Attributes come in several forms:
+Attributes come in several forms (called a *layout*):
 
 -   **Scalar** attributes store a single value for each entity or relationship
     instance.  The value can be any type supported by NumPy or Apache Arrow.
@@ -224,3 +224,10 @@ Data may be internally broken into sub-tables for efficiency (e.g., for very
 sparse attributes), but this is the logical view. Internally, relationships use
 entity numbers instead of entity IDs to record the entities involved in a
 relationship record.
+
+As of LensKit 2025.1, the native format for storing a dataset on disk (used by
+:meth:`~lenskit.data.Dataset.save` and :meth:`~lenskit.data.Dataset.load`) is a
+directory with a ``schema.json`` file containing the serialized logical schema
+and a Parquet file ``<class>.parquet`` for each entity or relationship class
+containing the identifiers and attribute values. For entity classes,
+``<class>.parquet`` contains both the entity IDS and entity numbers.
