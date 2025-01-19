@@ -18,6 +18,7 @@ guide to how to use LensKit for research, education, and other purposes.
 
     principles
     data
+    data-model
     item-lists
     queries
     pipeline

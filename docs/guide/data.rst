@@ -1,4 +1,5 @@
 .. _datasets:
+.. _data-api:
 
 Datasets
 ========
