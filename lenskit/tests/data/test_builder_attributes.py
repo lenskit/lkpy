@@ -154,10 +154,10 @@ def test_item_initial_list_df():
     assert len(arr) == len(items)
 
 
-def test_item_vector(rng: np.random.Generator, ml_df: pd.DataFrame):
+def test_item_vector(rng: np.random.Generator, ml_ratings: pd.DataFrame):
     dsb = DatasetBuilder()
 
-    item_ids = ml_df["item"].unique()
+    item_ids = ml_ratings["item"].unique()
     dsb.add_entities("item", item_ids)
 
     items = rng.choice(item_ids, 500, replace=False)
@@ -186,10 +186,10 @@ def test_item_vector(rng: np.random.Generator, ml_df: pd.DataFrame):
     assert set(arr.index) == set(items)
 
 
-def test_item_vector_names(rng: np.random.Generator, ml_df: pd.DataFrame):
+def test_item_vector_names(rng: np.random.Generator, ml_ratings: pd.DataFrame):
     dsb = DatasetBuilder()
 
-    item_ids = ml_df["item"].unique()
+    item_ids = ml_ratings["item"].unique()
     dsb.add_entities("item", item_ids)
 
     items = rng.choice(item_ids, 500, replace=False)
@@ -218,7 +218,7 @@ def test_item_vector_names(rng: np.random.Generator, ml_df: pd.DataFrame):
     assert set(arr.index) == set(items)
 
 
-def test_item_sparse_attribute(rng: np.random.Generator, ml_df: pd.DataFrame):
+def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFrame):
     dsb = DatasetBuilder()
 
     movies = pd.read_csv(ml_test_dir / "movies.csv")
