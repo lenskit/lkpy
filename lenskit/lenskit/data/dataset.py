@@ -121,6 +121,15 @@ class Dataset(ABC):
     def user_count(self) -> int:
         return self.count("users")
 
+    def entities(self, name: str) -> Vocabulary:
+        match name:
+            case "item":
+                return self.items
+            case "user":
+                return self.users
+            case _:
+                raise KeyError(name)
+
     @property
     def interaction_count(self) -> int:
         """

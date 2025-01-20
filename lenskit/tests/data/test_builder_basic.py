@@ -29,6 +29,7 @@ def test_add_entity_ids():
     dsb.add_entities("item", ["a", "b", "x", "y", "z"])
     icls = dsb.entity_classes()["item"]
     assert icls.id_type == "str"
+    assert dsb.entity_id_type("item") == pa.string()
 
     ds = dsb.build()
     assert ds.item_count == 5
@@ -45,6 +46,7 @@ def test_add_new_entity_ids():
 
     ucls = ecs["user"]
     assert ucls.id_type == "str"
+    assert dsb.entity_id_type("user") == pa.string()
 
     ds = dsb.build()
     assert ds.item_count == 0

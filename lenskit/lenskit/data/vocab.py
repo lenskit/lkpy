@@ -54,7 +54,7 @@ class Vocabulary:
     ):
         self.name = name
         if keys is None:
-            keys = pd.Index()
+            keys = pd.Index([], dtype=np.int64)
         elif isinstance(keys, pd.Index):
             if not pd.unique:
                 raise ValueError("vocabulary index must be unique")

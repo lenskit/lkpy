@@ -12,10 +12,12 @@ import structlog
 from numpy.typing import ArrayLike, NDArray
 from scipy.sparse import sparray
 
+from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataError, DataWarning  # noqa: F401
 from lenskit.logging import get_logger
 
 from .dataset import Dataset
+from .matrix import MatrixDataset
 from .schema import DataSchema, EntitySchema, RelationshipSchema, check_name
 from .types import ID, NPID, CoreID, IDSequence  # noqa: F401
 
@@ -77,6 +79,16 @@ class DatasetBuilder:
             return 0
         else:
             return tbl.num_rows
+
+    def entity_id_type(self, name: str) -> pa.DataType:
+        """
+        Get the PyArrow data type for an entity classes's identifiers.
+        """
+        tbl = self._tables[name]
+        if tbl is None:
+            raise ValueError(f"entity class {name} has no entities")
+
+        return tbl.field(_id_name(name)).type
 
     def add_entity_class(self, name: str) -> None:
         if name in self._tables:
@@ -272,7 +284,21 @@ class DatasetBuilder:
     ) -> None: ...
 
     def build(self) -> Dataset:
-        raise NotImplementedError()
+        item_tbl = self._tables["item"]
+        if item_tbl is not None:
+            items = pd.Index(np.asarray(item_tbl.column("item_id")), name="item_id")
+            items = Vocabulary(items, name="item")
+        else:
+            items = Vocabulary(name="item")
+
+        user_tbl = self._tables.get("user", None)
+        if user_tbl is not None:
+            users = pd.Index(np.asarray(user_tbl.column("user_id")), name="user_id")
+            users = Vocabulary(users, name="user")
+        else:
+            users = Vocabulary(name="user")
+
+        return MatrixDataset(users, items, pd.DataFrame({"user_id": [], "item_id": []}))
 
 
 def _id_name(name: str) -> str:
