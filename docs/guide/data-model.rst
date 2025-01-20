@@ -106,8 +106,7 @@ Attributes come in several forms (called a *layout*):
 
 -   **Scalar** attributes store a single value for each entity or relationship
     instance.  The value can be any type supported by NumPy or Apache Arrow.
-    Attribute values may be missing, unless the schema specifies that the
-    attribute is required.
+    Attribute values may be missing.
 
 -   **List** attributes store zero or more values for each entity or
     relationship instance.  List elements must have the same type.

@@ -38,7 +38,7 @@ class AttrLayout(Enum):
     """
 
 
-class DataSchema(BaseModel):
+class DataSchema(BaseModel, extra="forbid"):
     """
     Description of the entities and layout of a dataset.
     """
@@ -53,7 +53,7 @@ class DataSchema(BaseModel):
     """
 
 
-class EntitySchema(BaseModel):
+class EntitySchema(BaseModel, extra="forbid"):
     """
     Entity class definitions in the dataset schema.
     """
@@ -68,7 +68,7 @@ class EntitySchema(BaseModel):
     """
 
 
-class RelationshipSchema(BaseModel):
+class RelationshipSchema(BaseModel, extra="forbid"):
     """
     Relationship class definitions in the dataset schema.
     """
@@ -89,11 +89,7 @@ class RelationshipSchema(BaseModel):
     """
 
 
-class ColumnSpec(BaseModel):
-    required: bool = False
-    """
-    Whether the attribute is required to have a value.
-    """
+class ColumnSpec(BaseModel, extra="forbid"):
     layout: AttrLayout = AttrLayout.SCALAR
     """
     The attribute layout (whether and how multiple values are supported).
