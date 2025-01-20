@@ -264,17 +264,41 @@ def test_add_auto_entities():
     assert rsc.entity_class_names == ["user", "item"]
 
 
-def test_add_ratings(ml_df: pd.DataFrame):
+def test_add_ratings(ml_ratings: pd.DataFrame):
     dsb = DatasetBuilder()
-    dsb.add_interactions("rating", ml_df, entities=["user", "item"])
+    dsb.add_interactions("rating", ml_ratings, entities=["user", "item"], missing="insert")
 
     rsc = dsb.relationship_classes()["rating"]
     assert rsc.entity_class_names == ["user", "item"]
 
     db = dsb.build()
-    assert db.user_count == ml_df["user"].nunique()
-    assert db.item_count == ml_df["item"].nunique()
-    assert db.interaction_count == len(ml_df)
+    assert db.user_count == ml_ratings["user_id"].nunique()
+    assert db.item_count == ml_ratings["item_id"].nunique()
+    assert db.interaction_count == len(ml_ratings)
 
-    assert db.interaction_log("pandas")["rating"].mean() == approx(ml_df["rating"].mean())
-    assert db.interaction_log("pandas")["timestamp"].max() == ml_df["timestamp"].max()
+    ldf = db.interaction_log("pandas", original_ids=True)
+    assert "rating" in ldf.columns
+    assert ldf["rating"].mean() == approx(ml_ratings["rating"].mean())
+    assert ldf["timestamp"].max() == ml_ratings["timestamp"].max()
+
+
+def test_add_ratings_batched(ml_ratings: pd.DataFrame):
+    dsb = DatasetBuilder()
+
+    for bstart in range(0, len(ml_ratings), 1000):
+        bend = min(len(ml_ratings), bstart + 1000)
+        df = ml_ratings.iloc[bstart:bend]
+        dsb.add_interactions("rating", df, entities=["user", "item"], missing="insert")
+
+    rsc = dsb.relationship_classes()["rating"]
+    assert rsc.entity_class_names == ["user", "item"]
+
+    db = dsb.build()
+    assert db.user_count == ml_ratings["user_id"].nunique()
+    assert db.item_count == ml_ratings["item_id"].nunique()
+    assert db.interaction_count == len(ml_ratings)
+
+    ldf = db.interaction_log("pandas", original_ids=True)
+    assert "rating" in ldf.columns
+    assert ldf["rating"].mean() == approx(ml_ratings["rating"].mean())
+    assert ldf["timestamp"].max() == ml_ratings["timestamp"].max()

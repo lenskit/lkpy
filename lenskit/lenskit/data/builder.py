@@ -258,7 +258,7 @@ class DatasetBuilder:
             if missing == "insert":
                 log.debug("ensuring all entities exist")
                 self.add_entities(e_type, pc.unique(ids), duplicates="update")
-            e_tbl = self._tables[e_type]
+            e_tbl = self._tables.get(e_type, None)
             if e_tbl is None:
                 raise DataError(f"no entities of class {e_type}")
 
