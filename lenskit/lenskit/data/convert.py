@@ -21,10 +21,11 @@ from typing import (
     TypeVar,
 )
 
+import numpy as np
 import pandas as pd
 
+from .builder import DatasetBuilder
 from .dataset import Dataset
-from .matrix import MatrixDataset
 from .types import ID, IDSequence
 from .vocab import Vocabulary
 
@@ -87,25 +88,28 @@ def from_interactions_df(
         timestamp_col=timestamp_col,
     )
 
-    if users is not None:
-        if not isinstance(users, Vocabulary):
-            users = Vocabulary(users, "user")
-        df = df[df["user_id"].isin(users.index)]
+    dsb = DatasetBuilder()
 
-    if items is not None:
-        if not isinstance(items, Vocabulary):
-            items = Vocabulary(items, "item")
-        df = df[df["item_id"].isin(items.index)]
+    if users is None and items is None:
+        missing = "insert"
+    else:
+        missing = "filter"
 
-    df = df.sort_values(["user_id", "item_id"])
+        if users is None:
+            users = df["user_id"].unique()
+        else:
+            users = np.asarray(users)
+        dsb.add_entities("user", users)
 
-    if users is None:
-        users = Vocabulary(df["user_id"], "user")
+        if items is None:
+            items = df["item_id"].unique()
+        else:
+            items = np.asarray(items)
+        dsb.add_entities("item", items)
 
-    if items is None:
-        items = Vocabulary(df["item_id"], "item")
+    dsb.add_interactions("rating", df, missing=missing, allow_repeats=False, default=True)
 
-    return MatrixDataset(users, items, df)
+    return dsb.build()
 
 
 def normalize_interactions_df(
