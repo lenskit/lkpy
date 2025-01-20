@@ -19,7 +19,7 @@ from numpy.typing import NDArray
 from typing_extensions import Callable, Literal, TypeAlias, override
 
 from lenskit.data import ItemList
-from lenskit.data.schemas import ITEM_COMPAT_COLUMN, normalize_columns
+from lenskit.data.adapt import ITEM_COMPAT_COLUMN, normalize_columns
 from lenskit.data.types import AliasedColumn
 
 from ._base import DecomposedMetric, ListMetric, Metric
