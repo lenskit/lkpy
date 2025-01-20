@@ -98,3 +98,17 @@ def test_add_entities_upcast_new():
 
     ds = dsb.build()
     assert ds.users.ids().dtype == np.int64
+
+
+def test_reject_invalid_entity_id_type():
+    dsb = DatasetBuilder()
+
+    with raises(TypeError):
+        dsb.add_entities("item", np.random.randn(10))  # type: ignore
+
+
+def test_reject_duplicate_ids():
+    dsb = DatasetBuilder()
+
+    with raises(DataError):
+        dsb.add_entities("item", ["a", "b", "a"])
