@@ -30,7 +30,12 @@ ID: TypeAlias = CoreID | NPID
 IDArray: TypeAlias = np.ndarray[tuple[int], np.dtype[NPID]]
 "NumPy arrays of identifiers."
 IDSequence: TypeAlias = (
-    Sequence[ID] | IDArray | pa.StringArray | "pa.IntegerArray[Any]" | "pd.Series[CoreID]"
+    Sequence[ID]
+    | IDArray
+    | pa.StringArray
+    | "pa.IntegerArray[Any]"
+    | "pa.ChunkedArray[Any]"
+    | "pd.Series[CoreID]"
 )
 "Sequences of identifiers."
 

@@ -1,6 +1,7 @@
 # pyright: basic
 from __future__ import annotations
 
+import warnings
 from collections.abc import Mapping, Sequence
 from typing import Any, Literal, TypeAlias, TypeVar, overload
 
@@ -13,12 +14,12 @@ from numpy.typing import ArrayLike, NDArray
 from scipy.sparse import sparray
 
 from lenskit.data.vocab import Vocabulary
-from lenskit.diagnostics import DataError, DataWarning  # noqa: F401
+from lenskit.diagnostics import DataError, DataWarning
 from lenskit.logging import get_logger
 
 from .dataset import Dataset
 from .matrix import MatrixDataset
-from .schema import DataSchema, EntitySchema, RelationshipSchema, check_name
+from .schema import AllowableTroolean, DataSchema, EntitySchema, RelationshipSchema, check_name
 from .types import ID, NPID, CoreID, IDSequence  # noqa: F401
 
 _log = get_logger(__name__)
@@ -101,7 +102,11 @@ class DatasetBuilder:
         self._tables[name] = None
 
     def add_relationship_class(
-        self, name: str, entities: RelationshipEntities, allow_repeats: bool = True
+        self,
+        name: str,
+        entities: RelationshipEntities,
+        allow_repeats: bool = True,
+        interaction: bool = False,
     ) -> None:
         if name in self._tables:
             raise ValueError(f"class name “{name}” already in use")
@@ -115,14 +120,18 @@ class DatasetBuilder:
         else:
             e_dict = {e: None for e in entities}
 
-        self.schema.relationships[name] = RelationshipSchema(entities=e_dict)
+        self.schema.relationships[name] = RelationshipSchema(
+            entities=e_dict,
+            interaction=interaction,
+            repeats=AllowableTroolean.ALLOWED if allow_repeats else AllowableTroolean.FORBIDDEN,
+        )
         self._tables[name] = None
 
     @overload
     def add_entities(
         self,
         cls: str,
-        ids: IDSequence | pd.Series[CoreID],
+        ids: IDSequence | pa.Array[Any] | pa.ChunkedArray[Any],
         /,
         *,
         duplicates: DuplicateAction = "error",
@@ -134,7 +143,7 @@ class DatasetBuilder:
     def add_entities(
         self,
         cls: str,
-        source: IDSequence | TableInput,
+        source: IDSequence | pa.Array[Any] | pa.ChunkedArray[Any] | TableInput,
         *,
         duplicates: DuplicateAction = "error",
     ) -> None:
@@ -215,7 +224,78 @@ class DatasetBuilder:
         allow_repeats: bool = True,
         interaction: bool | Literal["default"] = False,
     ) -> None:
-        raise NotImplementedError()
+        if isinstance(data, pd.DataFrame):
+            table = pa.Table.from_pandas(data)
+        elif isinstance(data, dict):
+            table = pa.table(data)  # type: ignore
+        else:
+            table = data
+
+        log = self._log.bind(class_name=cls, count=table.num_rows)
+
+        rc_def = self.schema.relationships.get(cls, None)
+        if rc_def is None:
+            if entities is None:
+                warnings.warn(
+                    f"relationship class {cls} unknown and no entities specified,"
+                    " inferring from columns",
+                    DataWarning,
+                )
+                entities = [c[:-3] for c in table.column_names if c.endswith("_id")]
+            self.add_relationship_class(
+                cls, entities, allow_repeats=allow_repeats, interaction=bool(interaction)
+            )
+            if interaction == "default":
+                self.schema.default_interaction = cls
+            rc_def = self.schema.relationships[cls]
+
+        link_id_cols = set()
+        link_nums = {}
+        link_mask = None
+        for alias, e_type in rc_def.entities.items():
+            e_type = e_type or alias
+            ids = table.column(_id_name(alias))
+            if missing == "insert":
+                log.debug("ensuring all entities exist")
+                self.add_entities(e_type, pc.unique(ids), duplicates="update")
+            e_tbl = self._tables[e_type]
+            if e_tbl is None:
+                raise DataError(f"no entities of class {e_type}")
+
+            e_ids = e_tbl.column(_id_name(e_type))
+            e_nums = pc.index_in(ids, e_ids)
+            e_valid = e_nums.is_valid()
+            if not pc.all(e_valid).as_py():
+                if missing == "error":
+                    n_bad = len(e_nums) - pc.sum(e_valid).as_py()  # type: ignore
+                    raise DataError(f"{n_bad} unknown IDs for entity class {e_type}")
+                assert missing == "filter"
+                if link_mask is None:
+                    link_mask = e_valid
+                else:
+                    link_mask = pc.and_(link_mask, e_valid)
+            link_nums[_num_name(alias)] = e_nums
+            link_id_cols.add(_id_name(alias))
+
+        new_table = pa.table(link_nums)
+        if link_mask is not None:
+            log.debug("filtering links to known entities")
+            new_table = new_table.filter(link_mask)
+        log.debug("adding %d new rows", new_table.num_rows)
+
+        cur_table = self._tables[cls]
+        if cur_table is not None:
+            schema = pa.unify_schemas(
+                [cur_table.schema, new_table.schema], promote_options="permissive"
+            )
+            batches = [b.cast(schema) for b in cur_table.to_batches()]
+            batches += [b.cast(schema) for b in new_table.to_batches()]
+            new_table = pa.Table.from_batches(batches)
+
+        log.debug(
+            "saving new relationship table", total_rows=new_table.num_rows, schema=new_table.schema
+        )
+        self._tables[cls] = new_table
 
     def add_interactions(
         self,
@@ -227,7 +307,14 @@ class DatasetBuilder:
         allow_repeats: bool = True,
         default: bool = False,
     ) -> None:
-        raise NotImplementedError()
+        self.add_relationships(
+            cls,
+            data,
+            entities=entities,
+            missing=missing,
+            allow_repeats=allow_repeats,
+            interaction="default" if default else True,
+        )
 
     @overload
     def add_scalar_attribute(
@@ -298,8 +385,29 @@ class DatasetBuilder:
         else:
             users = Vocabulary(name="user")
 
-        return MatrixDataset(users, items, pd.DataFrame({"user_id": [], "item_id": []}))
+        idf = pd.DataFrame({"user_id": [], "item_id": []})
+        for name, rc in self.schema.relationships.items():
+            if not rc.interaction:
+                continue
+
+            tbl = self._tables[name]
+            assert tbl is not None
+            idf = tbl.to_pandas()
+            for alias, e_type in rc.entities.items():
+                e_type = e_type or alias
+                e_tbl = self._tables[e_type]
+                ids = pc.take(e_tbl.column(_id_name(e_type)), pa.array(idf[_num_name(alias)]))
+                idf[_id_name(alias)] = np.asarray(ids)
+                del idf[_num_name(alias)]
+
+            break
+
+        return MatrixDataset(users, items, idf)
 
 
 def _id_name(name: str) -> str:
     return f"{name}_id"
+
+
+def _num_name(name: str) -> str:
+    return f"{name}_num"

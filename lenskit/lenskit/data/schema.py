@@ -113,6 +113,14 @@ class DataSchema(BaseModel, extra="forbid"):
     """
 
     name: str | None = None
+    """
+    The dataset name.
+    """
+
+    default_interaction: Name | None = None
+    """
+    The default interaction type.
+    """
 
     entities: dict[Name, EntitySchema] = {}
     """

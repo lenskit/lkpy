@@ -27,6 +27,7 @@ def test_add_interactions_insert_ids_df():
 
     rcs = dsb.relationship_classes()
     assert set(rcs.keys()) == {"click"}
+    print(dsb.schema.model_dump_json(indent=2))
 
     ucls = ecs["user"]
     assert ucls.id_type == "str"
@@ -40,9 +41,9 @@ def test_add_interactions_insert_ids_df():
     istats = ds.item_stats()
     assert np.all(istats["user_count"] == 2)
 
-    log = ds.interaction_log()
+    log = ds.interaction_log("pandas", original_ids=True)
     assert isinstance(log, pd.DataFrame)
-    assert log.columns == ["user_id", "item_id"]
+    assert all(log.columns == ["user_id", "item_id"])
     assert len(log) == 6
 
     mat = ds.interaction_matrix("structure")
@@ -83,9 +84,9 @@ def test_add_interactions_table():
     istats = ds.item_stats()
     assert np.all(istats["user_count"] == 2)
 
-    log = ds.interaction_log()
+    log = ds.interaction_log("pandas", original_ids=True)
     assert isinstance(log, pd.DataFrame)
-    assert log.columns == ["user_id", "item_id"]
+    assert all(log.columns == ["user_id", "item_id"])
     assert len(log) == 6
 
     mat = ds.interaction_matrix("structure")
@@ -99,7 +100,7 @@ def test_add_interactions_error_bad_ids():
     dsb.add_entities("item", ["z", "x", "y"])
 
     # fail with missing entities
-    with raises(DataError, match="missing"):
+    with raises(DataError, match="unknown"):
         dsb.add_interactions(
             "click",
             pd.DataFrame(
@@ -131,9 +132,9 @@ def test_add_interactions_error_bad_ids():
     assert np.all(ds.users.ids() == ["a", "b", "c"])
     assert np.all(ds.items.ids() == ["x", "y", "z"])
 
-    log = ds.interaction_log()
+    log = ds.interaction_log("pandas", original_ids=True)
     assert isinstance(log, pd.DataFrame)
-    assert log.columns == ["user_id", "item_id"]
+    assert all(log.columns == ["user_id", "item_id"])
     assert len(log) == 6
 
     mat = ds.interaction_matrix("structure")
@@ -168,9 +169,9 @@ def test_add_interactions_filter_bad_ids():
     assert np.all(ds.users.ids() == ["a", "b", "c"])
     assert np.all(ds.items.ids() == ["x", "y", "z"])
 
-    log = ds.interaction_log()
+    log = ds.interaction_log("pandas", original_ids=True)
     assert isinstance(log, pd.DataFrame)
-    assert log.columns == ["user_id", "item_id"]
+    assert all(log.columns == ["user_id", "item_id"])
     assert len(log) == 5
 
     mat = ds.interaction_matrix("structure")
@@ -179,7 +180,7 @@ def test_add_interactions_filter_bad_ids():
 
     assert len(ds.user_row("a")) == 2
     assert len(ds.user_row("b")) == 1
-    assert len(ds.user_row("c")) == 3
+    assert len(ds.user_row("c")) == 2
 
 
 def test_add_repeated_interactions():
@@ -204,9 +205,9 @@ def test_add_repeated_interactions():
     assert np.all(ds.users.ids() == ["a", "b", "c"])
     assert np.all(ds.items.ids() == ["x", "y", "z"])
 
-    log = ds.interaction_log()
+    log = ds.interaction_log("pandas", original_ids=True)
     assert isinstance(log, pd.DataFrame)
-    assert log.columns == ["user_id", "item_id"]
+    assert all(log.columns == ["user_id", "item_id"])
     assert len(log) == 7
 
     mat = ds.interaction_matrix("structure")
@@ -226,7 +227,7 @@ def test_add_repeated_interactions():
 
 def test_add_interactions_forbidden_repeat():
     dsb = DatasetBuilder()
-    dsb.add_relationship_class("click", "user", "item", allow_repeats=False)
+    dsb.add_relationship_class("click", ["user", "item"], allow_repeats=False)
 
     with raises(DataError, match="repeated"):
         dsb.add_interactions(
@@ -275,5 +276,5 @@ def test_add_ratings(ml_df: pd.DataFrame):
     assert db.item_count == ml_df["item"].nunique()
     assert db.interaction_count == len(ml_df)
 
-    assert db.interaction_log()["rating"].mean() == approx(ml_df["rating"].mean())
-    assert db.interaction_log()["timestamp"].max() == ml_df["timestamp"].max()
+    assert db.interaction_log("pandas")["rating"].mean() == approx(ml_df["rating"].mean())
+    assert db.interaction_log("pandas")["timestamp"].max() == ml_df["timestamp"].max()
