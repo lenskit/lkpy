@@ -13,10 +13,25 @@ configuration files.  See :ref:`data-model` for details.
 # pyright: strict
 from __future__ import annotations
 
+import re
 from enum import Enum
-from typing import Any, Literal, OrderedDict
+from typing import Annotated, Any, Literal, TypeAlias
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, StringConstraints, model_validator
+
+NAME_PATTERN = re.compile(r"^[\w_]+$")
+Name: TypeAlias = Annotated[str, StringConstraints(pattern=NAME_PATTERN)]
+
+
+def check_name(name: str) -> None:
+    """
+    Check if a name is valid.
+
+    Raises:
+        ValueError: when the name is invalid.
+    """
+    if not NAME_PATTERN.match(name):
+        raise ValueError(f"invalid name “{name}”")
 
 
 class AllowableTroolean(Enum):
@@ -97,11 +112,13 @@ class DataSchema(BaseModel, extra="forbid"):
     Description of the entities and layout of a dataset.
     """
 
-    entities: dict[str, EntitySchema] = {}
+    name: str | None = None
+
+    entities: dict[Name, EntitySchema] = {}
     """
     Entity classes defined for this dataset.
     """
-    relationships: dict[str, RelationshipSchema] = {}
+    relationships: dict[Name, RelationshipSchema] = {}
     """
     Relationship classes defined for this dataset.
     """
@@ -116,7 +133,7 @@ class EntitySchema(BaseModel, extra="forbid"):
     """
     The data type for identifiers in this entity class.
     """
-    attributes: dict[str, ColumnSpec] = {}
+    attributes: dict[Name, ColumnSpec] = {}
     """
     Entity attribute definitions.
     """
@@ -127,7 +144,7 @@ class RelationshipSchema(BaseModel, extra="forbid"):
     Relationship class definitions in the dataset schema.
     """
 
-    entities: OrderedDict[str, str | None]
+    entities: dict[Name, Name | None]
     """
     Define the entity classes participating in the relationship.  For aliased
     entity classes (necessary for self-relationships), the key is the alias, and
@@ -141,7 +158,7 @@ class RelationshipSchema(BaseModel, extra="forbid"):
     """
     Whether this relationship supports repeated interactions.
     """
-    attributes: dict[str, ColumnSpec] = {}
+    attributes: dict[Name, ColumnSpec] = {}
     """
     Relationship attribute definitions.
     """

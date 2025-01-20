@@ -67,6 +67,24 @@ def test_item_scalar_array():
     assert df == items["title"]
 
 
+def test_item_insert_with_scalar_df():
+    dsb = DatasetBuilder()
+
+    items = pd.read_csv(ml_test_dir / "movies.csv")
+    items = items.rename(columns={"movieId": "item_id"})
+
+    dsb.add_entities("item", items.index.values)
+    dsb.add_scalar_attribute("item", "title", items["item_id"], items["title"])
+    sa = dsb.schema.entities["item"].attributes["title"]
+    assert sa.layout == "scalar"
+
+    ds = dsb.build()
+
+    df = ds.entities("item").attribute("title").series()
+    assert isinstance(df, pd.Series)
+    assert df == items["title"]
+
+
 def test_item_list_series():
     dsb = DatasetBuilder()
 
