@@ -62,8 +62,8 @@ class LazyDataset(Dataset):
         return self.delegate().interaction_matrix(*args, **kwargs)
 
     @override
-    def interaction_log(self, *args, **kwargs) -> Any:
-        return self.delegate().interaction_log(*args, **kwargs)
+    def interaction_table(self, *args, **kwargs) -> Any:
+        return self.delegate().interaction_table(*args, **kwargs)
 
     @override
     def user_row(self, *args, **kwargs) -> ItemList | None:

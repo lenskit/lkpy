@@ -42,7 +42,7 @@ def test_add_interactions_insert_ids_df():
     istats = ds.item_stats()
     assert np.all(istats["user_count"] == 2)
 
-    log = ds.interaction_log(format="pandas", original_ids=True)
+    log = ds.interaction_table(format="pandas", original_ids=True)
     assert isinstance(log, pd.DataFrame)
     assert all(log.columns == ["user_id", "item_id"])
     assert len(log) == 6
@@ -85,7 +85,7 @@ def test_add_interactions_table():
     istats = ds.item_stats()
     assert np.all(istats["user_count"] == 2)
 
-    log = ds.interaction_log(format="pandas", original_ids=True)
+    log = ds.interaction_table(format="pandas", original_ids=True)
     assert isinstance(log, pd.DataFrame)
     assert all(log.columns == ["user_id", "item_id"])
     assert len(log) == 6
@@ -133,7 +133,7 @@ def test_add_interactions_error_bad_ids():
     assert np.all(ds.users.ids() == ["a", "b", "c"])
     assert np.all(ds.items.ids() == ["x", "y", "z"])
 
-    log = ds.interaction_log(format="pandas", original_ids=True)
+    log = ds.interaction_table(format="pandas", original_ids=True)
     assert isinstance(log, pd.DataFrame)
     assert all(log.columns == ["user_id", "item_id"])
     assert len(log) == 6
@@ -170,7 +170,7 @@ def test_add_interactions_filter_bad_ids():
     assert np.all(ds.users.ids() == ["a", "b", "c"])
     assert np.all(ds.items.ids() == ["x", "y", "z"])
 
-    log = ds.interaction_log(format="pandas", original_ids=True)
+    log = ds.interaction_table(format="pandas", original_ids=True)
     assert isinstance(log, pd.DataFrame)
     assert all(log.columns == ["user_id", "item_id"])
     assert len(log) == 5
@@ -206,7 +206,7 @@ def test_add_repeated_interactions():
     assert np.all(ds.users.ids() == ["a", "b", "c"])
     assert np.all(ds.items.ids() == ["x", "y", "z"])
 
-    log = ds.interaction_log(format="pandas", original_ids=True)
+    log = ds.interaction_table(format="pandas", original_ids=True)
     assert isinstance(log, pd.DataFrame)
     assert all(log.columns == ["user_id", "item_id"])
     assert len(log) == 7
@@ -277,7 +277,7 @@ def test_add_ratings(ml_ratings: pd.DataFrame):
     assert db.item_count == ml_ratings["item_id"].nunique()
     assert db.interaction_count == len(ml_ratings)
 
-    ldf = db.interaction_log(format="pandas", original_ids=True)
+    ldf = db.interaction_table(format="pandas", original_ids=True)
     assert "rating" in ldf.columns
     assert ldf["rating"].mean() == approx(ml_ratings["rating"].mean())
     assert ldf["timestamp"].max() == ml_ratings["timestamp"].max()
@@ -299,7 +299,7 @@ def test_add_ratings_batched(ml_ratings: pd.DataFrame):
     assert db.item_count == ml_ratings["item_id"].nunique()
     assert db.interaction_count == len(ml_ratings)
 
-    ldf = db.interaction_log(format="pandas", original_ids=True)
+    ldf = db.interaction_table(format="pandas", original_ids=True)
     assert "rating" in ldf.columns
     assert ldf["rating"].mean() == approx(ml_ratings["rating"].mean())
     assert ldf["timestamp"].max() == ml_ratings["timestamp"].max()

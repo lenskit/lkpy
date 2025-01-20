@@ -242,7 +242,7 @@ class Dataset:
 
     @overload
     @abstractmethod
-    def interaction_log(
+    def interaction_table(
         self,
         *,
         format: Literal["pandas"],
@@ -251,16 +251,16 @@ class Dataset:
     ) -> pd.DataFrame: ...
     @overload
     @abstractmethod
-    def interaction_log(
+    def interaction_table(
         self, *, format: Literal["numpy"], fields: str | list[str] | None = "all"
     ) -> NumpyUserItemTable: ...
     @overload
     @abstractmethod
-    def interaction_log(
+    def interaction_table(
         self, *, format: Literal["torch"], fields: str | list[str] | None = "all"
     ) -> TorchUserItemTable: ...
     @abstractmethod
-    def interaction_log(
+    def interaction_table(
         self,
         *,
         format: str,
@@ -508,7 +508,7 @@ class Dataset:
         """
 
         if self._item_stats is None:
-            log = self.interaction_log(format="numpy")
+            log = self.interaction_table(format="numpy")
 
             counts = np.zeros(self.item_count, dtype=np.int32)
             np.add.at(counts, log.item_nums, 1)
@@ -560,7 +560,7 @@ class Dataset:
         """
 
         if self._user_stats is None:
-            log = self.interaction_log(format="numpy")
+            log = self.interaction_table(format="numpy")
 
             counts = np.zeros(self.user_count, dtype=np.int32)
             np.add.at(counts, log.user_nums, 1)

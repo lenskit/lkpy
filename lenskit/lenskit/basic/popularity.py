@@ -111,7 +111,7 @@ class TimeBoundedPopScore(PopScorer):
             return
 
         _log.info("counting time-bounded item popularity")
-        log = data.interaction_log(format="numpy")
+        log = data.interaction_table(format="numpy")
 
         item_scores = None
         if log.timestamps is None:

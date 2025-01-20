@@ -316,7 +316,7 @@ class MatrixDataset(Dataset):
                 raise ValueError(f"unsupported layout {layout}")
 
     @override
-    def interaction_log(
+    def interaction_table(
         self,
         format: str,
         *,

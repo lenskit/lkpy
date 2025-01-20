@@ -248,7 +248,7 @@ class ScorerTests(TrainingTests):
         drop_i = rng.choice(ml_ds.items.ids(), 20)
         drop_u = rng.choice(ml_ds.users.ids(), 5)
 
-        df = ml_ds.interaction_log(format="pandas", fields="all", original_ids=True)
+        df = ml_ds.interaction_table(format="pandas", fields="all", original_ids=True)
         df = df[~(df["user_id"].isin(drop_u))]
         df = df[~(df["item_id"].isin(drop_i))]
         ds = MatrixDataset(ml_ds.users, ml_ds.items, df)
