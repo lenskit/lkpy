@@ -73,9 +73,9 @@ class ImplicitMFScorer(ALSBase):
     @override
     def prepare_data(self, data: Dataset) -> TrainingData:
         if self.config.use_ratings:
-            rmat = data.interaction_matrix("torch", field="rating")
+            rmat = data.interaction_matrix(format="torch", field="rating")
         else:
-            rmat = data.interaction_matrix("torch")
+            rmat = data.interaction_matrix(format="torch")
 
         rmat = torch.sparse_csr_tensor(
             crow_indices=rmat.crow_indices(),

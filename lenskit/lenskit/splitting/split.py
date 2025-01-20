@@ -55,7 +55,7 @@ class TTSplit(Generic[TK]):
         """
         Get the training data as a data frame.
         """
-        return self.train.interaction_matrix("pandas", field="all")
+        return self.train.interaction_matrix(format="pandas", field="all")
 
     @classmethod
     def from_src_and_test(cls, src: Dataset, test: ItemListCollection[TK]) -> TTSplit[TK]:
@@ -67,7 +67,7 @@ class TTSplit(Generic[TK]):
         test_df = test.to_df().set_index(cols)
         mask = pd.Series(False, index=test_df.index)
 
-        df = src.interaction_matrix("pandas", field="all", original_ids=True).set_index(cols)
+        df = src.interaction_matrix(format="pandas", field="all", original_ids=True).set_index(cols)
 
         mask = mask.reindex(df.index, fill_value=True)
 

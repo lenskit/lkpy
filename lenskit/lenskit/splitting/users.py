@@ -72,7 +72,7 @@ def crossfold_users(
     test_sets = np.array_split(rows, partitions)
 
     # get the whole test DF
-    df = data.interaction_matrix("pandas", field="all", original_ids=True).set_index(
+    df = data.interaction_matrix(format="pandas", field="all", original_ids=True).set_index(
         ["user_id", "item_id"]
     )
 
@@ -158,7 +158,7 @@ def sample_users(
     _log.info("sampling %d users (n=%d)", len(users), size)
 
     # get the whole test DF
-    rate_df = data.interaction_matrix("pandas", field="all", original_ids=True).set_index(
+    rate_df = data.interaction_matrix(format="pandas", field="all", original_ids=True).set_index(
         ["user_id", "item_id"]
     )
 

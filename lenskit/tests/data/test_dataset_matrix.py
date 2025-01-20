@@ -374,7 +374,7 @@ def test_matrix_rows_by_num(rng: np.random.Generator, ml_ratings: pd.DataFrame, 
     users = rng.choice(ml_ds.user_count, 50)
 
     rated = set(zip(ml_ratings["user_id"], ml_ratings["item_id"]))
-    rdf = ml_ds.interaction_matrix("pandas")
+    rdf = ml_ds.interaction_matrix(format="pandas")
     rnums = set(zip(rdf["user_num"], rdf["item_num"]))
 
     dfi = ml_ratings.set_index(["user_id", "item_id"])

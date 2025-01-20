@@ -34,7 +34,7 @@ def test_add_entity_ids():
     ds = dsb.build()
     assert ds.item_count == 5
     assert np.all(ds.items.ids() == ["a", "b", "x", "y", "z"])
-    assert np.all(ds.entities("item").ids() == ["a", "b", "x", "y", "z"])
+    assert np.all(np.asarray(ds.entities("item").ids()) == ["a", "b", "x", "y", "z"])
 
 
 def test_add_new_entity_ids():
@@ -84,7 +84,7 @@ def test_add_entities_upcast_existing():
     assert dsb.entity_id_type("item") == pa.int64()
 
     ds = dsb.build()
-    assert ds.users.ids().dtype == np.int64
+    assert ds.items.ids().dtype == np.int64
 
 
 def test_add_entities_upcast_new():
@@ -97,7 +97,7 @@ def test_add_entities_upcast_new():
     assert dsb.entity_id_type("item") == pa.int64()
 
     ds = dsb.build()
-    assert ds.users.ids().dtype == np.int64
+    assert ds.items.ids().dtype == np.int64
 
 
 def test_reject_invalid_entity_id_type():

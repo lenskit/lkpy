@@ -100,9 +100,9 @@ class KnownRatingScorer(Component[ItemList], Trainable):
         self.users_ = data.users
         self.items_ = data.items
         if self.score == "indicator":
-            self.matrix_ = data.interaction_matrix("structure")
+            self.matrix_ = data.interaction_matrix(format="structure")
         else:
-            self.matrix_ = data.interaction_matrix("scipy", field="rating")
+            self.matrix_ = data.interaction_matrix(format="scipy", field="rating")
 
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         query = RecQuery.create(query)

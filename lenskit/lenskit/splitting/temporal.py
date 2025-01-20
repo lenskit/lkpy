@@ -43,7 +43,7 @@ def split_global_time(
         times = [_make_time(t) for t in time]
         rv = "sequence"
 
-    matrix = data.interaction_log("pandas", fields="all", original_ids=True)
+    matrix = data.interaction_log(format="pandas", fields="all", original_ids=True)
     if "timestamp" not in matrix:
         raise RuntimeError("temporal split requires timestamp")
 

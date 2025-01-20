@@ -30,7 +30,7 @@ def test_crossfold_users(ml_ds: Dataset):
         users |= set(k.user_id for k in s.test.keys())
 
         test_pairs = set((u, i) for (u, il) in s.test for i in il.ids())
-        tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
+        tdf = s.train.interaction_matrix(format="pandas", field="rating", original_ids=True)
         train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
         assert not test_pairs & train_pairs
         assert s.test_size + s.train.count("pairs") == ml_ds.count("pairs")
@@ -81,7 +81,7 @@ def test_sample_users_single(ml_ds: Dataset):
 
     test_pairs = set((u, i) for (u, il) in split.test for i in il.ids())
     assert len(test_pairs) == split.test_size
-    tdf = split.train.interaction_matrix("pandas", field="rating", original_ids=True)
+    tdf = split.train.interaction_matrix(format="pandas", field="rating", original_ids=True)
     train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
     assert len(train_pairs) == split.train.count("pairs")
     assert len(test_pairs & train_pairs) == 0
@@ -103,7 +103,7 @@ def test_sample_users(ml_ds: Dataset):
 
         test_pairs = set((u, i) for (u, il) in s.test for i in il.ids())
         assert len(test_pairs) == s.test_size
-        tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
+        tdf = s.train.interaction_matrix(format="pandas", field="rating", original_ids=True)
         train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
         assert len(train_pairs) == s.train.count("pairs")
         assert len(test_pairs & train_pairs) == 0
@@ -135,7 +135,7 @@ def test_sample_users_non_disjoint(ml_ds: Dataset):
 
         test_pairs = set((u, i) for (u, il) in s.test for i in il.ids())
         assert len(test_pairs) == s.test_size
-        tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
+        tdf = s.train.interaction_matrix(format="pandas", field="rating", original_ids=True)
         train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
         assert len(train_pairs) == s.train.count("pairs")
         assert len(test_pairs & train_pairs) == 0

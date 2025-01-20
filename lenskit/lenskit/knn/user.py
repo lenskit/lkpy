@@ -112,7 +112,9 @@ class UserKNNScorer(Component[ItemList], Trainable):
             return
 
         ensure_parallel_init()
-        rmat = data.interaction_matrix("torch", field="rating" if self.config.explicit else None)
+        rmat = data.interaction_matrix(
+            format="torch", field="rating" if self.config.explicit else None
+        )
         assert rmat.is_sparse_csr
 
         if self.config.explicit:

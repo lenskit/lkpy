@@ -13,13 +13,20 @@ import structlog
 from numpy.typing import ArrayLike, NDArray
 from scipy.sparse import sparray
 
-from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataError, DataWarning
 from lenskit.logging import get_logger
 
+from .container import DataContainer
 from .dataset import Dataset
-from .matrix import MatrixDataset
-from .schema import AllowableTroolean, DataSchema, EntitySchema, RelationshipSchema, check_name
+from .schema import (
+    AllowableTroolean,
+    DataSchema,
+    EntitySchema,
+    RelationshipSchema,
+    check_name,
+    id_col_name,
+    num_col_name,
+)
 from .types import ID, NPID, CoreID, IDSequence  # noqa: F401
 
 _log = get_logger(__name__)
@@ -89,7 +96,7 @@ class DatasetBuilder:
         if tbl is None:
             raise ValueError(f"entity class {name} has no entities")
 
-        return tbl.field(_id_name(name)).type
+        return tbl.field(id_col_name(name)).type
 
     def add_entity_class(self, name: str) -> None:
         if name in self._tables:
@@ -155,7 +162,7 @@ class DatasetBuilder:
         if cls not in self.schema.entities:
             self.add_entity_class(cls)
 
-        id_name = _id_name(cls)
+        id_name = id_col_name(cls)
         log = self._log.bind(class_name=cls)
 
         # we have a sequence of IDs
@@ -254,7 +261,7 @@ class DatasetBuilder:
         link_mask = None
         for alias, e_type in rc_def.entities.items():
             e_type = e_type or alias
-            ids = table.column(_id_name(alias))
+            ids = table.column(id_col_name(alias))
             if missing == "insert":
                 log.debug("ensuring all entities exist")
                 self.add_entities(e_type, pc.unique(ids), duplicates="update")
@@ -262,7 +269,7 @@ class DatasetBuilder:
             if e_tbl is None:
                 raise DataError(f"no entities of class {e_type}")
 
-            e_ids = e_tbl.column(_id_name(e_type))
+            e_ids = e_tbl.column(id_col_name(e_type))
             e_nums = pc.index_in(ids, e_ids)
             e_valid = e_nums.is_valid()
             if not pc.all(e_valid).as_py():
@@ -274,8 +281,8 @@ class DatasetBuilder:
                     link_mask = e_valid
                 else:
                     link_mask = pc.and_(link_mask, e_valid)
-            link_nums[_num_name(alias)] = e_nums
-            link_id_cols.add(_id_name(alias))
+            link_nums[num_col_name(alias)] = e_nums
+            link_id_cols.add(id_col_name(alias))
 
         new_table = pa.table(link_nums)
 
@@ -287,6 +294,9 @@ class DatasetBuilder:
             log.debug("filtering links to known entities")
             new_table = new_table.filter(link_mask)
         log.debug("adding %d new rows", new_table.num_rows)
+
+        if "count" in new_table.column_names:
+            raise NotImplementedError("count attributes are not yet implemented")
 
         cur_table = self._tables[cls]
         if cur_table is not None:
@@ -389,43 +399,12 @@ class DatasetBuilder:
     ) -> None: ...
 
     def build(self) -> Dataset:
-        item_tbl = self._tables["item"]
-        if item_tbl is not None:
-            items = pd.Index(np.asarray(item_tbl.column("item_id")), name="item_id")
-            items = Vocabulary(items, name="item")
-        else:
-            items = Vocabulary(name="item")
+        tables = {}
+        for n, t in self._tables.items():
+            if t is None:
+                tables[n] = pa.table({id_col_name(n): pa.array([], type=pa.int64())})
+            else:
+                tables[n] = t
 
-        user_tbl = self._tables.get("user", None)
-        if user_tbl is not None:
-            users = pd.Index(np.asarray(user_tbl.column("user_id")), name="user_id")
-            users = Vocabulary(users, name="user")
-        else:
-            users = Vocabulary(name="user")
-
-        idf = pd.DataFrame({"user_id": [], "item_id": []})
-        for name, rc in self.schema.relationships.items():
-            if not rc.interaction:
-                continue
-
-            tbl = self._tables[name]
-            assert tbl is not None
-            idf = tbl.to_pandas()
-            for alias, e_type in rc.entities.items():
-                e_type = e_type or alias
-                e_tbl = self._tables[e_type]
-                ids = pc.take(e_tbl.column(_id_name(e_type)), pa.array(idf[_num_name(alias)]))
-                idf[_id_name(alias)] = np.asarray(ids)
-                del idf[_num_name(alias)]
-
-            break
-
-        return MatrixDataset(users, items, idf)
-
-
-def _id_name(name: str) -> str:
-    return f"{name}_id"
-
-
-def _num_name(name: str) -> str:
-    return f"{name}_num"
+        container = DataContainer(self.schema.model_copy(), tables)
+        return Dataset(container)

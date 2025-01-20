@@ -11,7 +11,9 @@ LensKit dataset abstraction.
 # pyright: basic
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+import functools
+from abc import abstractmethod
+from collections.abc import Callable
 from typing import (
     Any,
     Literal,
@@ -22,13 +24,23 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
+
+# import pyarrow.compute as pc
 import scipy.sparse as sps
 import torch
 
+from lenskit.diagnostics import DataError
+from lenskit.logging import get_logger
+
+from .container import DataContainer
 from .items import ItemList
+from .schema import DataSchema, EntitySchema, RelationshipSchema, id_col_name
 from .tables import NumpyUserItemTable, TorchUserItemTable
-from .types import ID
+from .types import ID, IDArray
 from .vocab import Vocabulary
+
+_log = get_logger(__name__)
 
 DF_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch"]
 MAT_FORMAT: TypeAlias = Literal["scipy", "torch", "pandas", "structure"]
@@ -37,6 +49,19 @@ LAYOUT: TypeAlias = Literal["csr", "coo"]
 ACTION_FIELDS: TypeAlias = Literal["ratings", "timestamps"] | str
 
 K = TypeVar("K")
+
+
+def _uses_data(func):
+    """
+    Decorator to make sure the data is loaded.
+    """
+
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        self._ensure_loaded()
+        return func(self, *args, **kwargs)
+
+    return wrapper
 
 
 class FieldError(KeyError):
@@ -48,16 +73,22 @@ class FieldError(KeyError):
         super().__init__(f"{entity}[{field}]")
 
 
-class Dataset(ABC):
+class Dataset:
     """
     Representation of a data set for LensKit training, evaluation, etc. Data can
     be accessed in a variety of formats depending on the needs of a component.
+    See :ref:`data-model` for details of the LensKit data model.
+
+    Dataset objects should not be directly constructed; instead, use a
+    :class:`DatasetBuilder`, :meth:`load`, or :func:`from_interactions_df`.
 
     .. note::
-        Zero-copy conversions are used whenever possible, so client code must not
-        modify returned data in-place.
+
+        Zero-copy conversions are used whenever possible, so client code **must
+        not** modify returned data in-place.
 
     .. todo::
+
         Support for advanced rating situations is not yet supported:
 
         * repeated ratings
@@ -65,83 +96,141 @@ class Dataset(ABC):
         * later actions removing earlier ratings
 
     .. todo::
+
         Support for item and user content or metadata is not yet implemented.
+
+    Args:
+        data:
+            The container for this dataset's data, or a function that will
+            return such a container to create a lazy-loaded dataset.
 
     .. stability:: caller
     """
 
-    _item_stats: pd.DataFrame | None = None
-    _user_stats: pd.DataFrame | None = None
+    _data: DataContainer
+    _data_thunk: Callable[[], DataContainer]
+    _vocabularies: dict[str, Vocabulary]
+
+    def __init__(self, data: DataContainer | Callable[[], DataContainer]):
+        if isinstance(data, DataContainer):
+            self._data = data
+            self._init_caches()
+        else:
+            self._data_thunk = data
+
+    def _ensure_loaded(self):
+        if not hasattr(self, "_data"):
+            _log.debug("lazy-loading dataset")
+            self._data = self._data_thunk()
+            del self._data_thunk
+            self._init_caches()
+
+    def _init_caches(self):
+        "Initialize internal caches for this dataset."
+
+        self._vocabularies = {}
+        for name in self._data.schema.entities:
+            tbl = self._data.tables[name]
+            id_name = id_col_name(name)
+            ids = tbl.column(id_name)
+            self._vocabularies[name] = Vocabulary(
+                pd.Index(np.asarray(ids), name=id_name), name=name
+            )
 
     @property
-    @abstractmethod
+    @_uses_data
+    def schema(self) -> DataSchema:
+        """
+        Get the schema of this dataset.
+        """
+        return self._data.schema
+
+    @property
+    @_uses_data
     def items(self) -> Vocabulary:
         """
         The items known by this dataset.
         """
-        raise NotImplementedError()
+        return self._vocabularies["item"]
 
     @property
-    @abstractmethod
+    @_uses_data
     def users(self) -> Vocabulary:
         """
         The users known by this dataset.
         """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def count(self, what: str) -> int:
-        """
-        Count entities in the dataset.
-
-        .. note::
-
-            The precise counts are subtle in the presence of repeated or
-            superseded interactions. See :meth:`interaction_count` and
-            :meth:`rating_count` for details on the ``"interactions"`` and
-            ``"ratings"`` counts.
-
-        Args:
-            what:
-                The type of entity to count.  Commonly-supported ones include:
-
-                * users
-                * items
-                * pairs (observed user-item pairs)
-                * interactions
-                * ratings
-        """
-        raise NotImplementedError()
+        return self._vocabularies["user"]
 
     @property
     def item_count(self) -> int:
-        return self.count("items")
+        return len(self.items)
 
     @property
     def user_count(self) -> int:
-        return self.count("users")
+        return len(self.users)
 
-    def entities(self, name: str) -> Vocabulary:
-        match name:
-            case "item":
-                return self.items
-            case "user":
-                return self.users
-            case _:
-                raise KeyError(name)
+    @_uses_data
+    def entities(self, name: str) -> EntitySet:
+        """
+        Get the entities of a particular type / class.
+        """
+        schema = self._data.schema.entities.get(name, None)
+        if schema is None:
+            raise DataError(f"entity class {name} not defined")
+        return EntitySet(name, schema, self._vocabularies[name], self._data.tables[name])
+
+    @_uses_data
+    def relationships(self, name: str) -> RelationshipSet:
+        """
+        Get the relationship records of a particular type / class.
+        """
+        schema = self._data.schema.relationships.get(name, None)
+        if schema is None:
+            raise DataError(f"entity class {name} not defined")
+
+        return RelationshipSet(
+            self,
+            name,
+            schema,
+            self._data.tables[name],
+        )
+
+    @_uses_data
+    def interactions(self, name: str | None = None) -> RelationshipSet:
+        """
+        Get the interaction records of a particular class.  If no class is
+        specified, returns the default interaction class.
+        """
+        if name is None:
+            name = self.default_interaction_class()
+        rels = self.relationships(name)
+        if not rels.is_interaction:
+            raise DataError(f"relationship class {name} is not an interaction class")
+        return rels
+
+    def default_interaction_class(self) -> str:
+        schema = self.schema
+        if schema.default_interaction:
+            return schema.default_interaction
+
+        i_classes = [name for (name, rs) in schema.relationships.items() if rs.interaction]
+        if len(i_classes) == 1:
+            return i_classes[0]
+        else:
+            raise RuntimeError("no default interaction class specified")
 
     @property
     def interaction_count(self) -> int:
         """
-        Count the total number of interaction records.  Equivalent to
-        ``count("interactions")``.
+        Count the total number of interactions of the default class, taking
+        into account any ``count`` attribute.
 
         .. note::
-            If the interaction records themselves reprsent counts, such as the
+            If the interaction records themselves represent counts, such as the
             number of times a song was played, this returns the number of
             *records*, not the total number of plays.
         """
-        return self.count("interactions")
+        return self.interactions().count()
 
     @property
     def rating_count(self) -> int:
@@ -155,26 +244,26 @@ class Dataset(ABC):
     @abstractmethod
     def interaction_log(
         self,
-        format: Literal["pandas"],
         *,
+        format: Literal["pandas"],
         fields: str | list[str] | None = "all",
         original_ids: bool = False,
     ) -> pd.DataFrame: ...
     @overload
     @abstractmethod
     def interaction_log(
-        self, format: Literal["numpy"], *, fields: str | list[str] | None = "all"
+        self, *, format: Literal["numpy"], fields: str | list[str] | None = "all"
     ) -> NumpyUserItemTable: ...
     @overload
     @abstractmethod
     def interaction_log(
-        self, format: Literal["torch"], *, fields: str | list[str] | None = "all"
+        self, *, format: Literal["torch"], fields: str | list[str] | None = "all"
     ) -> TorchUserItemTable: ...
     @abstractmethod
     def interaction_log(
         self,
-        format: str,
         *,
+        format: str,
         fields: str | list[str] | None = "all",
         original_ids: bool = False,
     ) -> Any:
@@ -220,8 +309,8 @@ class Dataset(ABC):
     @abstractmethod
     def interaction_matrix(
         self,
-        format: Literal["pandas"],
         *,
+        format: Literal["pandas"],
         layout: Literal["coo"] | None = None,
         field: str | None = None,
         combine: MAT_AGG | None = None,
@@ -231,8 +320,8 @@ class Dataset(ABC):
     @abstractmethod
     def interaction_matrix(
         self,
-        format: Literal["torch"],
         *,
+        format: Literal["torch"],
         layout: Literal["csr", "coo"] | None = None,
         field: str | None = None,
         combine: MAT_AGG | None = None,
@@ -241,8 +330,8 @@ class Dataset(ABC):
     @abstractmethod
     def interaction_matrix(
         self,
-        format: Literal["scipy"],
         *,
+        format: Literal["scipy"],
         layout: Literal["coo"],
         legacy: Literal[True],
         field: str | None = None,
@@ -252,8 +341,8 @@ class Dataset(ABC):
     @abstractmethod
     def interaction_matrix(
         self,
-        format: Literal["scipy"],
         *,
+        format: Literal["scipy"],
         layout: Literal["coo"],
         legacy: bool = False,
         field: str | None = None,
@@ -263,8 +352,8 @@ class Dataset(ABC):
     @abstractmethod
     def interaction_matrix(
         self,
-        format: Literal["scipy"],
         *,
+        format: Literal["scipy"],
         layout: Literal["csr"] | None = None,
         legacy: Literal[True],
         field: str | None = None,
@@ -274,8 +363,8 @@ class Dataset(ABC):
     @abstractmethod
     def interaction_matrix(
         self,
-        format: Literal["scipy"],
         *,
+        format: Literal["scipy"],
         layout: Literal["csr"] | None = None,
         legacy: bool = False,
         field: str | None = None,
@@ -285,15 +374,15 @@ class Dataset(ABC):
     @abstractmethod
     def interaction_matrix(
         self,
-        format: Literal["structure"],
         *,
+        format: Literal["structure"],
         layout: Literal["csr"] | None = None,
     ) -> CSRStructure: ...
     @abstractmethod
     def interaction_matrix(
         self,
-        format: str,
         *,
+        format: str,
         layout: str | None = None,
         legacy: bool = False,
         field: str | None = None,
@@ -399,7 +488,7 @@ class Dataset(ABC):
 
     def item_stats(self) -> pd.DataFrame:
         """
-        Get item statistics.
+        Get item statistics from the default interaction class.
 
         Returns:
             A data frame indexed by item ID with the following columns:
@@ -419,7 +508,7 @@ class Dataset(ABC):
         """
 
         if self._item_stats is None:
-            log = self.interaction_log("numpy")
+            log = self.interaction_log(format="numpy")
 
             counts = np.zeros(self.item_count, dtype=np.int32)
             np.add.at(counts, log.item_nums, 1)
@@ -449,7 +538,7 @@ class Dataset(ABC):
 
     def user_stats(self) -> pd.DataFrame:
         """
-        Get user statistics.
+        Get user statistics from the default interaction class.
 
         Returns:
             A data frame indexed by user ID with the following columns:
@@ -471,7 +560,7 @@ class Dataset(ABC):
         """
 
         if self._user_stats is None:
-            log = self.interaction_log("numpy")
+            log = self.interaction_log(format="numpy")
 
             counts = np.zeros(self.user_count, dtype=np.int32)
             np.add.at(counts, log.user_nums, 1)
@@ -501,6 +590,95 @@ class Dataset(ABC):
             self._user_stats = frame
 
         return self._user_stats
+
+
+class EntitySet:
+    """
+    Representation of a set of entities from the dataset.  Obtained from
+    :meth:`Dataset.entities`.
+    """
+
+    name: str
+    """
+    The name of the entity class for these entities.
+    """
+    schema: EntitySchema
+    vocabulary: Vocabulary
+    """
+    The identifier vocabulary for this schema.
+    """
+    table: pa.Table
+    """
+    The Arrow table of entity information.
+    """
+
+    def __init__(self, name: str, schema: EntitySchema, vocabulary: Vocabulary, table: pa.Table):
+        self.name = name
+        self.schema = schema
+        self.vocabulary = vocabulary
+        self.table = table
+
+    def count(self) -> int:
+        """
+        Return the number of entities in this entity set.
+        """
+        return self.table.num_rows
+
+    def ids(self) -> IDArray:
+        """
+        Get the identifiers of the entities in this set.  This is returned
+        directly as PyArrow array instead of NumPy.
+        """
+        return self.vocabulary.ids()
+
+    def numbers(self) -> np.ndarray[int, np.dtype[np.int32]]:
+        """
+        Get the numbers (from the vocabulary) for the entities in this set.
+        """
+        return np.arange(self.count(), dtype=np.int32)
+
+    def __len__(self):
+        return self.count()
+
+
+class RelationshipSet:
+    """
+    Representation for a set of relationship records.
+    """
+
+    dataset: Dataset
+    """
+    The dataset for these relationships.
+    """
+
+    name: str
+    """
+    The name of the relationship class for these relationships.
+    """
+    schema: RelationshipSchema
+
+    table: pa.Table
+    """
+    The Arrow table of relationship information.
+    """
+
+    def __init__(
+        self,
+        ds: Dataset,
+        name: str,
+        schema: RelationshipSchema,
+        table: pa.Table,
+    ):
+        self.dataset = ds
+        self.name = name
+        self.schema = schema
+        self.table = table
+
+    def is_interaction(self) -> bool:
+        """
+        Query whether these relationships represent interactions.
+        """
+        return self.schema.interaction
 
 
 from .matrix import CSRStructure  # noqa: E402

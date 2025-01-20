@@ -70,7 +70,9 @@ def ml_ds(ml_ds_unchecked: Dataset) -> Generator[Dataset, None, None]:
     log = _log.bind()
 
     ds = ml_ds_unchecked
-    old_rates = ds.interaction_matrix("pandas", field="rating", original_ids=True).copy(deep=True)
+    old_rates = ds.interaction_matrix(format="pandas", field="rating", original_ids=True).copy(
+        deep=True
+    )
     old_ustats = ds.user_stats().copy(deep=True)
     old_istats = ds.item_stats().copy(deep=True)
 
@@ -79,7 +81,7 @@ def ml_ds(ml_ds_unchecked: Dataset) -> Generator[Dataset, None, None]:
     ustats = ds.user_stats()
     istats = ds.item_stats()
 
-    rates = ds.interaction_matrix("pandas", field="rating", original_ids=True)
+    rates = ds.interaction_matrix(format="pandas", field="rating", original_ids=True)
     assert rates["rating"].values == pytest.approx(old_rates["rating"].values)
 
     for col in old_ustats.columns:

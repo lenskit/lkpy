@@ -23,6 +23,14 @@ NAME_PATTERN = re.compile(r"^[\w_]+$")
 Name: TypeAlias = Annotated[str, StringConstraints(pattern=NAME_PATTERN)]
 
 
+def id_col_name(name: str) -> str:
+    return f"{name}_id"
+
+
+def num_col_name(name: str) -> str:
+    return f"{name}_num"
+
+
 def check_name(name: str) -> None:
     """
     Check if a name is valid.

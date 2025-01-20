@@ -53,7 +53,7 @@ class HPFScorer(Component[ItemList], Trainable):
         if hasattr(self, "item_features_") and not options.retrain:
             return
 
-        log = data.interaction_matrix("pandas", field="rating")
+        log = data.interaction_matrix(format="pandas", field="rating")
         log = log.rename(
             columns={
                 "user_num": "UserId",

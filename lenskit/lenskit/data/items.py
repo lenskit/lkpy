@@ -23,7 +23,6 @@ from typing_extensions import (
     Literal,
     LiteralString,
     Sequence,
-    TypeAlias,
     cast,
 )
 
@@ -33,8 +32,6 @@ from .checks import array_is_null, check_1d
 from .mtarray import MTArray, MTGenericArray
 from .types import IDArray, IDSequence
 from .vocab import Vocabulary
-
-Backend: TypeAlias = Literal["numpy", "torch", "arrow"]
 
 
 class ItemList:
