@@ -63,7 +63,7 @@ def test_add_duplicate_entities_forbidden():
         dsb.add_entities("item", ["d", "b", "e"])
 
 
-def test_add_duplicate_entities_forbidden():
+def test_add_duplicate_entities_overwrite():
     dsb = DatasetBuilder()
 
     dsb.add_entities("item", ["a", "b", "c"])
