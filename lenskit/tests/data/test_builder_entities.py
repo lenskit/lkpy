@@ -72,3 +72,29 @@ def test_add_duplicate_entities_overwrite():
     ds = dsb.build()
     assert ds.item_count == 5
     assert set(ds.items.ids()) == {"a", "b", "c", "d", "e"}
+
+
+def test_add_entities_upcast_existing():
+    dsb = DatasetBuilder()
+
+    dsb.add_entities("item", np.arange(10, dtype="i4"))
+    assert dsb.entity_id_type("item") == pa.int32()
+
+    dsb.add_entities("item", np.arange(100, 110, dtype="i8"))
+    assert dsb.entity_id_type("item") == pa.int64()
+
+    ds = dsb.build()
+    assert ds.users.ids().dtype == np.int64
+
+
+def test_add_entities_upcast_new():
+    dsb = DatasetBuilder()
+
+    dsb.add_entities("item", np.arange(10, dtype="i8"))
+    assert dsb.entity_id_type("item") == pa.int64()
+
+    dsb.add_entities("item", np.arange(100, 110, dtype="i4"))
+    assert dsb.entity_id_type("item") == pa.int64()
+
+    ds = dsb.build()
+    assert ds.users.ids().dtype == np.int64
