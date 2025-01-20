@@ -11,6 +11,7 @@ from numpy.typing import ArrayLike
 from scipy.sparse import sparray
 
 from .dataset import Dataset
+from .schema import DataSchema, EntitySchema, RelationshipSchema
 from .types import ID, NPID, CoreID
 
 NPT = TypeVar("NPT", bound=np.generic)
@@ -31,6 +32,28 @@ class DatasetBuilder:
     """
     Construct data sets from data and tables.
     """
+
+    schema: DataSchema
+    """
+    The data schema assembled so far.  Do not modify this schema directly.
+    """
+
+    def entity_classes(self) -> dict[str, EntitySchema]:
+        pass
+
+    def relationship_classes(self) -> dict[str, RelationshipSchema]:
+        pass
+
+    def record_count(self, class_name: str) -> int:
+        pass
+
+    def add_entity_class(self, name: str) -> None:
+        pass
+
+    def add_relationship_class(
+        self, name: str, *entities: str, duplicates_allowed: bool = True
+    ) -> None:
+        pass
 
     @overload
     def add_entities(

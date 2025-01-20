@@ -132,6 +132,17 @@ Attribute names can be freely chosen, subject to a few lightweight restrictions:
     entity or relationship).  We recommend avoiding all attribute names of the
     form ``$FOO_<ident>``.
 
+Unsupported Features
+--------------------
+
+In the initial release of the new LensKit data model (in :ref:`2025.1`), not all
+possible attribute and entity or relationship class combinations are supported.
+In particular, relationships can only have scalar attributes.  We intend to
+relax this restriction in the future, with more time to determine an ergonomic
+API for accessing such data.
+
+All attribute formats are supported for entities.
+
 .. _data-relationships:
 
 Relationships
@@ -211,7 +222,10 @@ user or session) to be first.
 Schemas
 ~~~~~~~
 
-A data *schema* (:class:`~lenskit.data.DataSchema`) defines the
+A data *schema* (:class:`~lenskit.data.DataSchema`) defines the layout of the
+tables, entity types, and relationship types.  Client code will rarely need to
+create or work with the schema directly; it is created and maintained by the
+:class:`~lenskit.data.DatasetBuilder`.
 
 .. _data-internal:
 

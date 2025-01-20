@@ -75,9 +75,9 @@ class RelationshipSchema(BaseModel, extra="forbid"):
 
     entities: OrderedDict[str, str | None]
     """
-    Define the entities participating in the relationship.  If specified as a
-    mapping, defines the aliases for the entities used to determine their column
-    names (necessary for self-relationships).
+    Define the entity classes participating in the relationship.  For aliased
+    entity classes (necessary for self-relationships), the key is the alias, and
+    the value is the original entity class name.
     """
     interaction: bool = False
     """
