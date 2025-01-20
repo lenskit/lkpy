@@ -1,0 +1,279 @@
+# pyright: basic
+import numpy as np
+import pandas as pd
+import pyarrow as pa
+from docutils import DataError
+
+from pytest import approx, raises, warns
+
+from lenskit.data import DatasetBuilder
+from lenskit.diagnostics import DataError, DataWarning
+
+
+def test_add_interactions_insert_ids_df():
+    dsb = DatasetBuilder()
+
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {"user_id": ["a", "a", "b", "c", "c", "c"], "item_id": ["x", "y", "z", "x", "y", "z"]}
+        ),
+        entities=["user", "item"],
+        missing="insert",
+    )
+
+    ecs = dsb.entity_classes()
+    assert set(ecs.keys()) == {"user", "item"}
+
+    rcs = dsb.relationship_classes()
+    assert set(rcs.keys()) == {"click"}
+
+    ucls = ecs["user"]
+    assert ucls.id_type == "str"
+
+    ds = dsb.build()
+    assert ds.user_count == 3
+    assert ds.item_count == 3
+    assert np.all(ds.users.ids() == ["a", "b", "c"])
+    assert np.all(ds.items.ids() == ["x", "y", "z"])
+
+    istats = ds.item_stats()
+    assert np.all(istats["user_count"] == 2)
+
+    log = ds.interaction_log()
+    assert isinstance(log, pd.DataFrame)
+    assert log.columns == ["user_id", "item_id"]
+    assert len(log) == 6
+
+    mat = ds.interaction_matrix("structure")
+    assert mat.nnz == 6
+    assert np.all(mat.rowptrs == [0, 2, 3, 6])
+
+
+def test_add_interactions_table():
+    dsb = DatasetBuilder()
+
+    dsb.add_interactions(
+        "click",
+        pa.table(
+            {
+                "user_id": ["a", "a", "b", "c", "c", "c"],
+                "item_id": ["x", "y", "z", "x", "y", "z"],
+            }
+        ),
+        entities=["user", "item"],
+        missing="insert",
+    )
+
+    ecs = dsb.entity_classes()
+    assert set(ecs.keys()) == {"user", "item"}
+
+    rcs = dsb.relationship_classes()
+    assert set(rcs.keys()) == {"click"}
+
+    ucls = ecs["user"]
+    assert ucls.id_type == "str"
+
+    ds = dsb.build()
+    assert ds.user_count == 3
+    assert ds.item_count == 3
+    assert np.all(ds.users.ids() == ["a", "b", "c"])
+    assert np.all(ds.items.ids() == ["x", "y", "z"])
+
+    istats = ds.item_stats()
+    assert np.all(istats["user_count"] == 2)
+
+    log = ds.interaction_log()
+    assert isinstance(log, pd.DataFrame)
+    assert log.columns == ["user_id", "item_id"]
+    assert len(log) == 6
+
+    mat = ds.interaction_matrix("structure")
+    assert mat.nnz == 6
+    assert np.all(mat.rowptrs == [0, 2, 3, 6])
+
+
+def test_add_interactions_error_bad_ids():
+    dsb = DatasetBuilder()
+    dsb.add_entities("user", ["a", "b", "c"])
+    dsb.add_entities("item", ["z", "x", "y"])
+
+    # fail with missing entities
+    with raises(DataError, match="missing"):
+        dsb.add_interactions(
+            "click",
+            pd.DataFrame(
+                {
+                    "user_id": ["a", "a", "b", "c", "c", "c"],
+                    "item_id": ["x", "y", "z", "x", "y", "w"],
+                }
+            ),
+            entities=["user", "item"],
+            missing="error",
+        )
+
+    # but using the correct ones passes
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {
+                "user_id": ["a", "a", "b", "c", "c", "c"],
+                "item_id": ["x", "y", "z", "x", "y", "z"],
+            }
+        ),
+        entities=["user", "item"],
+        missing="error",
+    )
+
+    ds = dsb.build()
+    assert ds.user_count == 3
+    assert ds.item_count == 3
+    assert np.all(ds.users.ids() == ["a", "b", "c"])
+    assert np.all(ds.items.ids() == ["x", "y", "z"])
+
+    log = ds.interaction_log()
+    assert isinstance(log, pd.DataFrame)
+    assert log.columns == ["user_id", "item_id"]
+    assert len(log) == 6
+
+    mat = ds.interaction_matrix("structure")
+    assert mat.nnz == 6
+    assert np.all(mat.rowptrs == [0, 2, 3, 6])
+
+    assert len(ds.user_row("a")) == 2
+    assert len(ds.user_row("b")) == 1
+    assert len(ds.user_row("c")) == 3
+
+
+def test_add_interactions_filter_bad_ids():
+    dsb = DatasetBuilder()
+    dsb.add_entities("user", ["a", "b", "c"])
+    dsb.add_entities("item", ["z", "x", "y"])
+
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {
+                "user_id": ["a", "a", "b", "c", "c", "c"],
+                "item_id": ["x", "y", "z", "x", "w", "z"],
+            }
+        ),
+        entities=["user", "item"],
+        missing="filter",
+    )
+
+    ds = dsb.build()
+    assert ds.user_count == 3
+    assert ds.item_count == 3
+    assert np.all(ds.users.ids() == ["a", "b", "c"])
+    assert np.all(ds.items.ids() == ["x", "y", "z"])
+
+    log = ds.interaction_log()
+    assert isinstance(log, pd.DataFrame)
+    assert log.columns == ["user_id", "item_id"]
+    assert len(log) == 5
+
+    mat = ds.interaction_matrix("structure")
+    assert mat.nnz == 5
+    assert np.all(mat.rowptrs == [0, 2, 3, 5])
+
+    assert len(ds.user_row("a")) == 2
+    assert len(ds.user_row("b")) == 1
+    assert len(ds.user_row("c")) == 3
+
+
+def test_add_repeated_interactions():
+    dsb = DatasetBuilder()
+
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {
+                "user_id": ["a", "a", "b", "c", "c", "c", "b"],
+                "item_id": ["x", "y", "z", "x", "y", "z", "z"],
+                "timestamp": np.arange(1, 8) * 10,
+            }
+        ),
+        entities=["user", "item"],
+        missing="insert",
+    )
+
+    ds = dsb.build()
+    assert ds.user_count == 3
+    assert ds.item_count == 3
+    assert np.all(ds.users.ids() == ["a", "b", "c"])
+    assert np.all(ds.items.ids() == ["x", "y", "z"])
+
+    log = ds.interaction_log()
+    assert isinstance(log, pd.DataFrame)
+    assert log.columns == ["user_id", "item_id"]
+    assert len(log) == 7
+
+    mat = ds.interaction_matrix("structure")
+    assert mat.nnz == 6
+    assert np.all(mat.rowptrs == [0, 2, 3, 5])
+
+    mat = ds.interaction_matrix("scipy", field="timestamp", combine="last")
+    assert mat[1, 1] == 70
+
+    mat = ds.interaction_matrix("scipy", field="timestamp", combine="first")
+    assert mat[1, 1] == 30
+
+    assert len(ds.user_row("a")) == 2
+    assert len(ds.user_row("b")) == 1
+    assert len(ds.user_row("c")) == 3
+
+
+def test_add_interactions_forbidden_repeat():
+    dsb = DatasetBuilder()
+    dsb.add_relationship_class("click", "user", "item", allow_repeats=False)
+
+    with raises(DataError, match="repeated"):
+        dsb.add_interactions(
+            "click",
+            pd.DataFrame(
+                {
+                    "user_id": ["a", "a", "b", "c", "c", "c", "b"],
+                    "item_id": ["x", "y", "z", "x", "y", "z", "z"],
+                    "timestamp": np.arange(1, 8) * 10,
+                }
+            ),
+            missing="insert",
+        )
+
+
+def test_add_auto_entities():
+    dsb = DatasetBuilder()
+
+    with warns(DataWarning, match="specified"):
+        dsb.add_interactions(
+            "click",
+            pd.DataFrame(
+                {
+                    "user_id": ["a", "a", "b", "c", "c", "c", "b"],
+                    "item_id": ["x", "y", "z", "x", "y", "z", "z"],
+                    "timestamp": np.arange(1, 8) * 10,
+                }
+            ),
+            missing="insert",
+        )
+
+    rsc = dsb.relationship_classes()["click"]
+    assert rsc.repeats == "present"
+    assert rsc.entity_class_names == ["user", "item"]
+
+
+def test_add_ratings(ml_df: pd.DataFrame):
+    dsb = DatasetBuilder()
+    dsb.add_interactions("rating", ml_df, entities=["user", "item"])
+
+    rsc = dsb.relationship_classes()["rating"]
+    assert rsc.entity_class_names == ["user", "item"]
+
+    db = dsb.build()
+    assert db.user_count == ml_df["user"].nunique()
+    assert db.item_count == ml_df["item"].nunique()
+    assert db.interaction_count == len(ml_df)
+
+    assert db.interaction_log()["rating"].mean() == approx(ml_df["rating"].mean())
+    assert db.interaction_log()["timestamp"].max() == ml_df["timestamp"].max()

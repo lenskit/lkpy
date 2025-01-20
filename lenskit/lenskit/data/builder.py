@@ -7,25 +7,26 @@ from typing import Any, Literal, TypeAlias, TypeVar, overload
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from scipy.sparse import sparray
 
 from .dataset import Dataset
 from .schema import DataSchema, EntitySchema, RelationshipSchema
-from .types import ID, NPID, CoreID
+from .types import ID, NPID, CoreID, IDSequence
 
 NPT = TypeVar("NPT", bound=np.generic)
 NPArray1D: TypeAlias = np.ndarray[type[int], np.dtype[NPT]]
+
+TableInput: TypeAlias = pd.DataFrame | pa.Table | dict[str, NDArray[Any]]
 
 DuplicateAction: TypeAlias = Literal["update", "error", "overwrite"]
 """
 Action to take on duplicate entities.
 """
-MissingEntityAction: TypeAlias = Literal["add", "filter", "error"]
+MissingEntityAction: TypeAlias = Literal["insert", "filter", "error"]
 """
 Action to take when a relationship references a missing entity.
 """
-IDArray: TypeAlias = Sequence[ID] | NPArray1D[NPID] | pa.IntegerArray[Any] | pa.StringArray
 
 
 class DatasetBuilder:
@@ -50,23 +51,21 @@ class DatasetBuilder:
     def add_entity_class(self, name: str) -> None:
         pass
 
-    def add_relationship_class(
-        self, name: str, *entities: str, duplicates_allowed: bool = True
-    ) -> None:
+    def add_relationship_class(self, name: str, *entities: str, allow_repeats: bool = True) -> None:
         pass
 
     @overload
     def add_entities(
         self,
         cls: str,
-        ids: IDArray | pd.Series[CoreID],
+        ids: IDSequence | pd.Series[CoreID],
         /,
         *,
         duplicates: DuplicateAction = "error",
     ) -> None: ...
     @overload
     def add_entities(
-        self, cls: str, frame: pa.Table | pd.DataFrame, /, *, duplicates: DuplicateAction = "error"
+        self, cls: str, frame: TableInput, /, *, duplicates: DuplicateAction = "error"
     ) -> None: ...
     def add_entities(
         self,
@@ -83,70 +82,67 @@ class DatasetBuilder:
     ) -> None:
         pass
 
-    @overload
     def add_relationships(
         self,
         cls: str,
-        data: pd.DataFrame | pa.Table,
+        data: TableInput,
         *,
         entities: Sequence[str] | None = None,
         missing: MissingEntityAction = "error",
+        allow_repeats: bool = True,
+        interaction: bool | Literal["default"] = False,
     ) -> None: ...
-    @overload
-    def add_relationships(
+
+    def add_interactions(
         self,
         cls: str,
-        *ids: IDArray,
-        entities: Sequence[str] | None = None,
-        missing: MissingEntityAction = "error",
-    ) -> None: ...
-    @overload
-    def add_relationships(
-        self,
-        cls: str,
-        entities: dict[str, IDArray],
-        attributes: dict[str, ArrayLike],
+        data: TableInput,
         *,
-        missing: MissingEntityAction = "error",
-    ) -> None: ...
-    def add_relationships(
-        self,
-        cls: str,
-        *args: Any,
-        missing: MissingEntityAction = "error",
         entities: Sequence[str] | None = None,
-        **kwargs: Any,
+        missing: MissingEntityAction = "error",
+        allow_repeats: bool = True,
+        default: bool = False,
     ) -> None: ...
 
     @overload
     def add_scalar_attribute(
-        self, cls: str, name: str, data: pd.Series[Any] | pd.DataFrame | pa.Table, /
+        self, cls: str, name: str, data: pd.Series[Any] | TableInput, /
     ) -> None: ...
     @overload
     def add_scalar_attribute(
-        self, cls: str, name: str, entities: IDArray | tuple[IDArray, ...], values: ArrayLike, /
+        self,
+        cls: str,
+        name: str,
+        entities: IDSequence | tuple[IDSequence, ...],
+        values: ArrayLike,
+        /,
     ) -> None: ...
     def add_scalar_attribute(
         self,
         cls: str,
         name: str,
-        entities: IDArray | tuple[IDArray, ...] | pd.Series[Any] | pd.DataFrame | pa.Table,
+        entities: IDSequence | tuple[IDSequence, ...] | pd.Series[Any] | TableInput,
         values: ArrayLike | None = None,
     ) -> None: ...
 
     @overload
     def add_list_attribute(
-        self, cls: str, name: str, data: pd.Series[Any] | pd.DataFrame | pa.Table, /
+        self, cls: str, name: str, data: pd.Series[Any] | TableInput, /
     ) -> None: ...
     @overload
     def add_list_attribute(
-        self, cls: str, name: str, entities: IDArray | tuple[IDArray, ...], values: ArrayLike, /
+        self,
+        cls: str,
+        name: str,
+        entities: IDSequence | tuple[IDSequence, ...],
+        values: ArrayLike,
+        /,
     ) -> None: ...
     def add_list_attribute(
         self,
         cls: str,
         name: str,
-        entities: IDArray | tuple[IDArray, ...] | pd.Series[Any] | pd.DataFrame | pa.Table,
+        entities: IDSequence | tuple[IDSequence, ...] | pd.Series[Any] | TableInput,
         values: ArrayLike | None = None,
     ) -> None: ...
 
@@ -154,7 +150,7 @@ class DatasetBuilder:
         self,
         cls: str,
         name: str,
-        entities: IDArray | tuple[IDArray, ...],
+        entities: IDSequence | tuple[IDSequence, ...],
         values: ArrayLike | sparray,
         /,
         dims: ArrayLike | pd.Index[Any] | Sequence[Any] | None = None,

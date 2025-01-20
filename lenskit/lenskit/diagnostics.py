@@ -17,9 +17,17 @@ class DataWarning(UserWarning):
     pass
 
 
+class DataError(Exception):
+    """
+    Error raised for detectable problesms with input data.
+    """
+
+    pass
+
+
 class ConfigWarning(UserWarning):
     """
-    Warning raised for detectable problems with algorithm configurations.
+    Warning raised for detectable problems with component configurations.
     """
 
     pass
