@@ -14,7 +14,7 @@ configuration files.  See :ref:`data-model` for details.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
+from typing import Literal, OrderedDict
 
 from pydantic import BaseModel
 
@@ -62,7 +62,7 @@ class EntitySchema(BaseModel, extra="forbid"):
     """
     The data type for identifiers in this entity class.
     """
-    attributes: list[str] | dict[str, ColumnSpec] = {}
+    attributes: dict[str, ColumnSpec] = {}
     """
     Entity attribute definitions.
     """
@@ -73,7 +73,7 @@ class RelationshipSchema(BaseModel, extra="forbid"):
     Relationship class definitions in the dataset schema.
     """
 
-    entities: list[str] | dict[str, str | None]
+    entities: OrderedDict[str, str | None]
     """
     Define the entities participating in the relationship.  If specified as a
     mapping, defines the aliases for the entities used to determine their column
@@ -83,7 +83,7 @@ class RelationshipSchema(BaseModel, extra="forbid"):
     """
     Whether this relationship class records interactions.
     """
-    attributes: list[str] | dict[str, ColumnSpec] = {}
+    attributes: dict[str, ColumnSpec] = {}
     """
     Relationship attribute definitions.
     """
