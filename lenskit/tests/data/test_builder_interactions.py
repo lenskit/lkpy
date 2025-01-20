@@ -7,6 +7,7 @@ from docutils import DataError
 from pytest import approx, raises, warns
 
 from lenskit.data import DatasetBuilder
+from lenskit.data.schema import AllowableTroolean
 from lenskit.diagnostics import DataError, DataWarning
 
 
@@ -260,7 +261,7 @@ def test_add_auto_entities():
         )
 
     rsc = dsb.relationship_classes()["click"]
-    assert rsc.repeats == "present"
+    assert rsc.repeats == AllowableTroolean.PRESENT
     assert rsc.entity_class_names == ["user", "item"]
 
 

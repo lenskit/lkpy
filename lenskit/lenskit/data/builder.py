@@ -292,6 +292,19 @@ class DatasetBuilder:
             batches += [b.cast(schema) for b in new_table.to_batches()]
             new_table = pa.Table.from_batches(batches)
 
+        if not rc_def.repeats.is_present:
+            _log.debug("checking for repeated interactions")
+            # we have to bounce to pandas for multi-column duplicate detection
+            ndf = new_table.select(list(link_nums.keys())).to_pandas()
+            dupes = ndf.duplicated()
+            if np.any(dupes):
+                if rc_def.repeats.is_allowed:
+                    rc_def.repeats = AllowableTroolean.PRESENT
+                else:
+                    raise DataError(
+                        f"repeated interactions not allowed for relationship class {cls}"
+                    )
+
         log.debug(
             "saving new relationship table", total_rows=new_table.num_rows, schema=new_table.schema
         )
