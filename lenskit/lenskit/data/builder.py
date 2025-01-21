@@ -254,6 +254,7 @@ class DatasetBuilder:
         missing: MissingEntityAction = "error",
         allow_repeats: bool = True,
         interaction: bool | Literal["default"] = False,
+        _warning_parent: int = 0,
     ) -> None:
         if isinstance(data, pd.DataFrame):
             table = pa.Table.from_pandas(data)
@@ -271,7 +272,7 @@ class DatasetBuilder:
                     f"relationship class {cls} unknown and no entities specified,"
                     " inferring from columns",
                     DataWarning,
-                    stacklevel=2,
+                    stacklevel=2 + _warning_parent,
                 )
                 entities = [c[:-3] for c in table.column_names if c.endswith("_id")]
             self.add_relationship_class(
@@ -362,6 +363,7 @@ class DatasetBuilder:
             missing=missing,
             allow_repeats=allow_repeats,
             interaction="default" if default else True,
+            _warning_parent=1,
         )
 
     def filter_interactions(
