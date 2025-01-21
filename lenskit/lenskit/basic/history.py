@@ -13,6 +13,7 @@ from scipy.sparse import csr_array
 from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
+from lenskit.data.dataset import MatrixRelationshipSet
 from lenskit.data.matrix import CSRStructure
 from lenskit.data.vocab import Vocabulary
 from lenskit.pipeline import Component
@@ -30,15 +31,20 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
     """
 
     config: None
-    training_data_: Dataset
+
+    users: Vocabulary
+    items: Vocabulary
+    interactions: MatrixRelationshipSet
 
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         # TODO: find a better data structure for this
-        if hasattr(self, "training_data_") and not options.retrain:
+        if hasattr(self, "interaction_matrix") and not options.retrain:
             return
 
-        self.training_data_ = data
+        self.users = data.users
+        self.items = data.items
+        self.interactions = data.interactions().matrix()
 
     def __call__(self, query: QueryInput) -> RecQuery:
         """
@@ -50,7 +56,7 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
             return query
 
         if query.user_items is None:
-            query.user_items = self.training_data_.user_row(query.user_id)
+            query.user_items = self.interactions.row_items(query.user_id)
 
         return query
 

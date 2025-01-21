@@ -631,11 +631,10 @@ class RelationshipSet:
     For two-entity relationships without duplicates (including relationships
     formed by coalescing repeated relationships or interactions),
     :class:`MatrixRelationshipSet` extends this with additional capabilities.
-    """
 
-    dataset: Dataset
-    """
-    The dataset for these relationships.
+    Relationship sets can be pickled or serialized, and will not save the entire
+    dataset with them.  They are therefore safe to save as component elements
+    during training processes.
     """
 
     name: str
@@ -649,6 +648,7 @@ class RelationshipSet:
     The Arrow table of relationship information.
     """
 
+    _vocabularies: dict[str, Vocabulary]
     _link_cols: list[str]
 
     def __init__(
@@ -658,10 +658,11 @@ class RelationshipSet:
         schema: RelationshipSchema,
         table: pa.Table,
     ):
-        self.dataset = ds
         self.name = name
         self.schema = schema
         self._table = table
+
+        self._vocabularies = {e: ds.entities(e).vocabulary for e in schema.entities}
         self._link_cols = [num_col_name(e) for e in schema.entities]
 
     @property
@@ -699,9 +700,7 @@ class RelationshipSet:
             id_cols = {}
             for e in self.schema.entity_class_names:
                 id_cols[id_col_name(e)] = pa.array(
-                    self.dataset.entities(e).vocabulary.ids(
-                        table.column(num_col_name(e)).to_numpy()
-                    )
+                    self._vocabularies[e].ids(table.column(num_col_name(e)).to_numpy())
                 )
             id_tbl = pa.table(id_cols)
             cols = id_tbl.column_names
