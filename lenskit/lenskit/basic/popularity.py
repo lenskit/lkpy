@@ -111,22 +111,19 @@ class TimeBoundedPopScore(PopScorer):
             return
 
         _log.info("counting time-bounded item popularity")
-        log = data.interaction_table(format="pandas")
+        log = data.interaction_table(format="pandas", original_ids=True)
 
         item_scores = None
-        if "timestamps" not in log.columns:
+        if "timestamp" not in log.columns:
             _log.warning("no timestamps in interaction log; falling back to PopScorer")
             super().train(data, options)
             return
         else:
-            counts = np.zeros(data.item_count, dtype=np.int32)
             start_timestamp = self.config.cutoff.timestamp()
-            item_nums = log["item_num"][log["timestamp"] > start_timestamp]
-            np.add.at(counts, item_nums, 1)
+            item_ids = log["item_id"][log["timestamp"] > start_timestamp]
+            counts = item_ids.value_counts().reindex(data.items.index, fill_value=0)
 
-            item_scores = super()._train_internal(
-                pd.Series(counts, index=data.items.index),
-            )
+            item_scores = super()._train_internal(counts)
 
         self.items_ = data.items.copy()
         self.item_scores_ = np.require(item_scores.reindex(self.items_.ids()).values, np.float32)
