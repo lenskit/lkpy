@@ -176,14 +176,3 @@ their source files.
 
 .. autosummary::
     load_movielens
-
-Dataset Implementations
-~~~~~~~~~~~~~~~~~~~~~~~
-
-:class:`Dataset` itself is an abstract class that can be extended to provide new
-data set implementations (e.g. querying a database).  LensKit provides a few
-implementations.
-
-.. autosummary::
-    ~lenskit.data.matrix.MatrixDataset
-    ~lenskit.data.lazy.LazyDataset
