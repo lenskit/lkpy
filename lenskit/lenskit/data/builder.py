@@ -375,8 +375,8 @@ class DatasetBuilder:
     def filter_interactions(
         self,
         cls: str,
-        min_time: int | dt.datetime | None = None,
-        max_time: int | dt.datetime | None = None,
+        min_time: int | float | dt.datetime | None = None,
+        max_time: int | float | dt.datetime | None = None,
         remove: pa.Table | dict[str, ArrayLike] | pd.DataFrame | None = None,
     ):
         """

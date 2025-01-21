@@ -3,8 +3,7 @@ from typing import Sequence, overload
 
 import numpy as np
 
-from lenskit.data import Dataset, from_interactions_df
-from lenskit.data.collection import ItemListCollection
+from lenskit.data import Dataset, DatasetBuilder, ItemListCollection
 
 from .split import TTSplit
 
@@ -43,7 +42,8 @@ def split_global_time(
         times = [_make_time(t) for t in time]
         rv = "sequence"
 
-    matrix = data.interaction_table(format="pandas", fields="all", original_ids=True)
+    iname = data.default_interaction_class()
+    matrix = data.interactions().pandas(ids=True)
     if "timestamp" not in matrix:
         raise RuntimeError("temporal split requires timestamp")
 
@@ -56,14 +56,15 @@ def split_global_time(
     results = []
     for i, t in enumerate(times):
         mask = ts_col >= t
+        train_build = DatasetBuilder(data)
+        train_build.filter_interactions(iname, max_time=t)
 
-        train = matrix[~mask]
         if i + 1 < len(times):
             test = matrix[mask & (ts_col < times[i + 1])]
         else:
             test = matrix[mask]
 
-        train_ds = from_interactions_df(train)
+        train_ds = train_build.build()
         test_ilc = ItemListCollection.from_df(test, ["user_id"])
         results.append(TTSplit(train_ds, test_ilc))
 
