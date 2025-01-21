@@ -713,12 +713,12 @@ class MatrixRelationshipSet(RelationshipSet):
 
         # compute the row pointers
         n_rows = len(self._row_vocab)
-        row_ptrs = np.zeros(n_rows, dtype=np.int32())
-        row_sizes = pc.value_counts(table.column(e_cols[0]))
-        rsz_nums = row_sizes.field("values")
-        rsz_counts = row_sizes.field("counts").cast(pa.int32())
-        row_ptrs[np.asarray(rsz_nums)] = rsz_counts
-        self._row_ptrs = row_ptrs
+        row_sizes = np.zeros(n_rows + 1, dtype=np.int32())
+        rsz_struct = pc.value_counts(table.column(e_cols[0]))
+        rsz_nums = rsz_struct.field("values")
+        rsz_counts = rsz_struct.field("counts").cast(pa.int32())
+        row_sizes[np.asarray(rsz_nums) + 1] = rsz_counts
+        self._row_ptrs = np.cumsum(row_sizes)
 
     @override
     def matrix(
