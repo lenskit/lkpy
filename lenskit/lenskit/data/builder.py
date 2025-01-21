@@ -409,6 +409,9 @@ class DatasetBuilder:
     ) -> None: ...
 
     def build(self) -> Dataset:
+        return Dataset(self.build_container())
+
+    def build_container(self) -> DataContainer:
         tables = {}
         for n, t in self._tables.items():
             if t is None:
@@ -416,5 +419,4 @@ class DatasetBuilder:
             else:
                 tables[n] = t
 
-        container = DataContainer(self.schema.model_copy(), tables)
-        return Dataset(container)
+        return DataContainer(self.schema.model_copy(), tables)

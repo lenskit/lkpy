@@ -101,11 +101,11 @@ class Dataset:
     """
 
     _data: DataContainer
-    _data_thunk: Callable[[], DataContainer]
+    _data_thunk: Callable[[], DataContainer | Dataset]
     _entities: dict[str, EntitySet]
     _relationships: dict[str, RelationshipSet]
 
-    def __init__(self, data: DataContainer | Callable[[], DataContainer]):
+    def __init__(self, data: DataContainer | Callable[[], DataContainer | Dataset]):
         if isinstance(data, DataContainer):
             self._data = data
             self._init_caches()
@@ -115,9 +115,18 @@ class Dataset:
     def _ensure_loaded(self):
         if not hasattr(self, "_data"):
             _log.debug("lazy-loading dataset")
-            self._data = self._data_thunk()
+            data = self._data_thunk()
             del self._data_thunk
-            self._init_caches()
+            if isinstance(data, DataContainer):
+                self._data = data
+                self._init_caches()
+            elif isinstance(data, Dataset):
+                data._ensure_loaded()
+                self._data = data._data
+                self._entities = data._entities
+                self._relationships = data._relationships
+            else:  # pragma: nocover
+                raise TypeError("invalid thunk return: " + str(type(data)))
 
     def _init_caches(self):
         "Initialize internal caches for this dataset."

@@ -14,7 +14,6 @@ import pandas as pd
 from pytest import approx
 
 from lenskit.data import Dataset, from_interactions_df
-from lenskit.data.lazy import LazyDataset
 from lenskit.data.tables import NumpyUserItemTable, TorchUserItemTable
 from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
 
@@ -22,7 +21,7 @@ from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
 
 
 def test_item_stats(ml_ratings: pd.DataFrame):
-    ml_ds = LazyDataset(lambda: from_interactions_df(ml_ratings, item_col="item"))
+    ml_ds = Dataset(lambda: from_interactions_df(ml_ratings, item_col="item"))
     stats = ml_ds.item_stats()
     stats.info()
 
@@ -49,7 +48,7 @@ def test_item_stats(ml_ratings: pd.DataFrame):
 
 
 def test_user_stats(ml_ratings: pd.DataFrame):
-    ml_ds = LazyDataset(lambda: from_interactions_df(ml_ratings, item_col="item"))
+    ml_ds = Dataset(lambda: from_interactions_df(ml_ratings, item_col="item"))
     stats = ml_ds.user_stats()
     stats.info()
 
