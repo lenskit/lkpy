@@ -427,6 +427,10 @@ class Dataset:
             case "torch":
                 return iset.torch(attribute=field, layout=layout)
             case "structure":
+                if layout != "csr":
+                    raise ValueError(f"unsupported layout {layout} for CSR structure")
+                if field is not None:
+                    raise ValueError("structure does not support fields")
                 return iset.csr_structure()
             case _:
                 raise ValueError(f"unknown matrix format {format}")
@@ -641,10 +645,13 @@ class RelationshipSet:
 
         if attributes is not None:
             if isinstance(attributes, str):
-                cols = cols + [attributes]
+                attr_cols = [attributes]
             else:
-                cols = cols + attributes
-            table = table.select(cols)
+                attr_cols = attributes
+            for ac in attr_cols:
+                if ac not in table.column_names:
+                    raise FieldError(self.name, ac)
+            table = table.select(cols + attr_cols)
 
         return table
 
@@ -718,7 +725,7 @@ class MatrixRelationshipSet(RelationshipSet):
         rsz_nums = rsz_struct.field("values")
         rsz_counts = rsz_struct.field("counts").cast(pa.int32())
         row_sizes[np.asarray(rsz_nums) + 1] = rsz_counts
-        self._row_ptrs = np.cumsum(row_sizes)
+        self._row_ptrs = np.cumsum(row_sizes, dtype=np.int32)
 
     @override
     def matrix(
@@ -840,11 +847,13 @@ class MatrixRelationshipSet(RelationshipSet):
                 col_indices=colinds,
                 values=values,
                 size=(n_rows, n_cols),
-            ).coalesce()
+            )
         elif layout == "coo":
-            rowinds = torch.tensor(self._table.column(num_col_name(self.row_type)))
-            indices = torch.stack((colinds, rowinds))
-            return torch.sparse_coo_tensor(indices=indices, values=values, size=(n_rows, n_cols))
+            rowinds = torch.tensor(self._table.column(num_col_name(self.row_type)).to_numpy())
+            indices = torch.stack((rowinds, colinds))
+            return torch.sparse_coo_tensor(
+                indices=indices, values=values, size=(n_rows, n_cols)
+            ).coalesce()
 
     def row_table(self, id: ID | None = None, *, number: int | None = None) -> pa.Table | None:
         """
@@ -859,7 +868,7 @@ class MatrixRelationshipSet(RelationshipSet):
                 return None
 
         row_start = self._row_ptrs[number]
-        row_end = self._row_ptrs[number]
+        row_end = self._row_ptrs[number + 1]
 
         tbl = self._table.slice(row_start, row_end - row_start)
         tbl = tbl.drop_columns(num_col_name(self.row_type))
@@ -870,14 +879,14 @@ class MatrixRelationshipSet(RelationshipSet):
         Get a single row of this interaction matrix as an item list.  Only valid
         when the column entity class is ``item''.
         """
-        if self._col_vocab.name != "item":
+        if self.col_type != "item":
             raise RuntimeError("row_items() only valid for item-column matrices")
 
         tbl = self.row_table(id=id, number=number)
         if tbl is None:
             return None
 
-        return ItemList.from_arrow(tbl)
+        return ItemList.from_arrow(tbl, vocabulary=self._col_vocab)
 
     def row_stats(self):
         if self._row_stats is None:

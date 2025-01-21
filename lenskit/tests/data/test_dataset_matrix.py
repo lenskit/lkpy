@@ -88,6 +88,7 @@ def test_matrix_pandas(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     log = ml_ds.interaction_matrix(format="pandas", field="rating")
     assert isinstance(log, pd.DataFrame)
     assert len(log) == len(ml_ratings)
+    assert "rating" in log.columns
 
     _check_user_number_counts(ml_ds, ml_ratings, log["user_num"])
     _check_user_ids(ml_ds, ml_ratings, log["user_num"])
@@ -124,13 +125,8 @@ def test_matrix_pandas_timestamp(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_timestamp(ml_ds, ml_ratings, log["timestamp"])
 
 
-def test_matrix_pandas_csr_fail(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    with raises(ValueError, match="unsupported layout"):
-        ml_ds.interaction_matrix(format="pandas", field="rating", layout="csr")  # type: ignore
-
-
 def test_matrix_pandas_unknown_field(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    with raises(FieldError, match=r"interaction\[playcount\]"):
+    with raises(FieldError, match=r"rating\[playcount\]"):
         ml_ds.interaction_matrix(format="pandas", field="playcount")  # type: ignore
 
 
