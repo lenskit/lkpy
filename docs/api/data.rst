@@ -23,6 +23,7 @@ Data Sets
     ~lenskit.data.EntitySet
     ~lenskit.data.RelationshipSet
     ~lenskit.data.MatrixRelationshipSet
+    ~lenskit.data.CSRStructure
 
 Building Data Sets
 ------------------
