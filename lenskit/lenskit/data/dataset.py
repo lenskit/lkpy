@@ -235,23 +235,10 @@ class Dataset:
     @property
     def interaction_count(self) -> int:
         """
-        Count the total number of interactions of the default class, taking
-        into account any ``count`` attribute.
-
-        .. note::
-            If the interaction records themselves represent counts, such as the
-            number of times a song was played, this returns the number of
-            *records*, not the total number of plays.
+        Count the total number of interactions of the default class, taking into
+        account any ``count`` attribute.
         """
         return self.interactions().count()
-
-    @property
-    def rating_count(self) -> int:
-        """
-        Count the total number of ratings (excluding superseded ratings).
-        Equivalent to ``count("ratings")``.
-        """
-        return self.count("ratings")
 
     @overload
     @abstractmethod
