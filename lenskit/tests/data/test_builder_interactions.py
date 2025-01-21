@@ -40,10 +40,12 @@ def test_add_interactions_insert_ids_df():
     assert np.all(ds.items.ids() == ["x", "y", "z"])
 
     istats = ds.item_stats()
+    print(istats)
     assert np.all(istats["user_count"] == 2)
 
     log = ds.interaction_table(format="pandas", original_ids=True)
     assert isinstance(log, pd.DataFrame)
+    print(log)
     assert all(log.columns == ["user_id", "item_id"])
     assert len(log) == 6
 

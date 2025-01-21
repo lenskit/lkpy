@@ -145,21 +145,6 @@ def test_matrix_pandas_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_item_ids(ml_ds, ml_ratings, log["item_num"])
 
 
-def test_matrix_pandas_missing_rating(ml_ratings: pd.DataFrame):
-    ml_ds = from_interactions_df(
-        ml_ratings[["user_id", "item_id", "timestamp"]], item_col="item_id"
-    )
-    log = ml_ds.interaction_matrix(format="pandas", field="rating")
-    assert isinstance(log, pd.DataFrame)
-    assert len(log) == len(ml_ratings)
-
-    _check_user_number_counts(ml_ds, ml_ratings, log["user_num"])
-    _check_user_ids(ml_ds, ml_ratings, log["user_num"])
-    _check_item_number_counts(ml_ds, ml_ratings, log["item_num"])
-    _check_item_ids(ml_ds, ml_ratings, log["item_num"])
-    assert np.all(log["rating"] == 1.0)
-
-
 @mark.parametrize("generation", ["modern", "legacy"])
 def test_matrix_scipy_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
     log = ml_ds.interaction_matrix(
@@ -236,23 +221,6 @@ def test_matrix_scipy_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset, genera
     assert np.all(log.data == 1.0)
 
 
-@mark.parametrize("generation", ["modern", "legacy"])
-def test_matrix_scipy_missing_rating(ml_ratings: pd.DataFrame, generation):
-    ml_ds = from_interactions_df(ml_ratings[["user_id", "item_id", "timestamp"]])
-    log = ml_ds.interaction_matrix(format="scipy", field="rating", legacy=generation == "legacy")
-    assert isinstance(log, sps.csr_array if generation == "modern" else sps.csr_matrix)
-    assert log.nnz == len(ml_ratings)
-
-    nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["user_id"].nunique()
-    assert ncols == ml_ratings["item_id"].nunique()
-
-    _check_user_offset_counts(ml_ds, ml_ratings, log.indptr)
-    _check_item_number_counts(ml_ds, ml_ratings, log.indices)
-    _check_item_ids(ml_ds, ml_ratings, log.indices)
-    assert np.allclose(log.data, 1.0)
-
-
 def test_matrix_torch_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     log = ml_ds.interaction_matrix(format="torch", field="rating")
     assert isinstance(log, torch.Tensor)
@@ -303,23 +271,6 @@ def test_matrix_torch_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_item_number_counts(ml_ds, ml_ratings, log.indices()[1, :])
     _check_item_ids(ml_ds, ml_ratings, log.indices()[1, :])
     _check_ratings(ml_ds, ml_ratings, log.values().numpy())
-
-
-def test_matrix_torch_missing_rating(ml_ratings: pd.DataFrame):
-    ml_ds = from_interactions_df(ml_ratings[["user_id", "item_id", "timestamp"]])
-    log = ml_ds.interaction_matrix(format="torch", field="rating")
-    assert isinstance(log, torch.Tensor)
-    assert log.is_sparse_csr
-    assert log.values().shape == torch.Size([len(ml_ratings)])
-
-    nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["user_id"].nunique()
-    assert ncols == ml_ratings["item_id"].nunique()
-
-    _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
-    _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
-    _check_item_ids(ml_ds, ml_ratings, log.col_indices())
-    assert np.allclose(log.values().numpy(), 1.0)
 
 
 def test_matrix_torch_timestamp(ml_ratings: pd.DataFrame, ml_ds: Dataset):

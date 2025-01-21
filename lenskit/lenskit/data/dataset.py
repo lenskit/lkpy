@@ -406,12 +406,9 @@ class Dataset:
 
                 If unspecified (``None``), this will yield an implicit-feedback
                 indicator matrix, with 1s for observed items, except for the
-                ``"pandas"`` format, which will return all attributes.
-
-                If the ``rating`` field is requested but is not defined in the
-                underlying data, then this is equivalent to ``"indicator"``,
-                except that the ``"pandas"`` format will include a ``"rating"``
-                column of all 1s.
+                ``"pandas"`` format, which will return all attributes.  Specify
+                an empty list to return a Pandas data frame with only the user
+                and item attributes.
             layout:
                 The layout for a sparse matrix.  Can be either ``csr`` or
                 ``coo``, or ``None`` to use the default for the specified
@@ -429,6 +426,10 @@ class Dataset:
                 return iset.scipy(attribute=field, layout=layout, legacy=legacy)
             case "torch":
                 return iset.torch(attribute=field, layout=layout)
+            case "structure":
+                return iset.csr_structure()
+            case _:
+                raise ValueError(f"unknown matrix format {format}")
 
     @abstractmethod
     @overload
@@ -619,6 +620,7 @@ class RelationshipSet:
                 just the number columns.
         """
         table = self._table
+        cols = self._link_cols
 
         if ids:
             id_cols = {}
@@ -629,15 +631,15 @@ class RelationshipSet:
                     )
                 )
             id_tbl = pa.table(id_cols)
+            cols = id_tbl.column_names
             for col in table.column_names:
                 if col in self._link_cols:
                     continue
 
                 id_tbl = id_tbl.append_column(col, table.column(col))
-                table = id_tbl
+            table = id_tbl
 
         if attributes is not None:
-            cols = self._link_cols
             if isinstance(attributes, str):
                 cols = cols + [attributes]
             else:
@@ -657,7 +659,8 @@ class RelationshipSet:
                 If ``True``, include ID columns for the entities, instead of
                 just the number columns.
         """
-        return self.arrow(attributes=attributes, ids=ids).to_pandas()
+        tbl = self.arrow(attributes=attributes, ids=ids)
+        return tbl.to_pandas()
 
     def matrix(
         self, *, combine: MAT_AGG | Mapping[str, MAT_AGG] | None = None
@@ -883,7 +886,7 @@ class MatrixRelationshipSet(RelationshipSet):
 
     def col_stats(self):
         if self._col_stats is None:
-            self._col_stats = self._compute_stats(self.col_type, self.row_type, self._row_vocab)
+            self._col_stats = self._compute_stats(self.col_type, self.row_type, self._col_vocab)
         return self._col_stats
 
     def _compute_stats(
@@ -908,7 +911,7 @@ class MatrixRelationshipSet(RelationshipSet):
         stats = stats.rename(
             columns={
                 o_col + "_count": "record_count",
-                o_col + "_count_distinct": o_col + "_count",
+                o_col + "_count_distinct": other_type + "_count",
                 "rating_mean": "mean_rating",
                 "first_time_min": "first_time",
                 "last_time_max": "last_time",
