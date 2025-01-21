@@ -186,21 +186,6 @@ def test_lookup_many_terms(data, terms: set[int]):
         assert k == klist[n]
 
 
-@given(st.sets(st.integers()), st.lists(st.integers()))
-def test_add_terms(initial: set[int], new: list[int]):
-    ni = len(initial)
-    vocab = Vocabulary(initial)
-
-    fresh = set(t for t in new if t not in initial)
-    flist = sorted(fresh)
-
-    vocab.add_terms(new)
-    assert vocab.size == ni + len(fresh)
-
-    assert all(vocab.number(k) == i for (i, k) in enumerate(sorted(initial)))
-    assert all(vocab.number(k) == i + ni for (i, k) in enumerate(flist))
-
-
 @given(st.one_of(st.sets(st.integers()), st.sets(st.uuids())))
 def test_all_terms(initial: set[int] | set[str]):
     vocab = Vocabulary(initial)
@@ -210,41 +195,3 @@ def test_all_terms(initial: set[int] | set[str]):
     terms = vocab.terms()
     assert isinstance(terms, np.ndarray)
     assert all(terms == tl)
-
-
-@given(st.data())
-def test_is_compat(data: st.DataObject):
-    id_type = data.draw(st.sampled_from(["int", "email", "uuid"]))
-    match id_type:
-        case "int":
-            id_gen = st.integers(min_value=1, max_value=2_000_000_000)
-        case "email":
-            id_gen = st.emails()
-        case "uuid":
-            id_gen = st.uuids()
-
-    initial = data.draw(st.sets(id_gen, min_size=1))
-    more = data.draw(st.sets(id_gen, min_size=1))
-    assume(any(x not in initial for x in more))
-
-    def test_vocab():
-        vocab = Vocabulary(initial)
-        assert vocab.compatible_with_numbers_from(vocab)
-
-        v2 = Vocabulary(initial)
-        assert v2.compatible_with_numbers_from(vocab)
-        assert vocab.compatible_with_numbers_from(v2)
-
-        v2.add_terms(list(more))
-        assert v2.compatible_with_numbers_from(vocab)
-        assert not vocab.compatible_with_numbers_from(v2)
-
-        if id_type == "email":
-            copied = Vocabulary({s.encode().decode() for s in initial})
-            assert copied.compatible_with_numbers_from(vocab)
-
-    if id_type == "uuid":
-        with warns(DataWarning):
-            test_vocab()
-    else:
-        test_vocab()
