@@ -5,16 +5,16 @@ from numpy.random import Generator
 from lenskit.data import Dataset
 
 
-def test_all_entities(rng: Generator, ml_df: pd.DataFrame, ml_ds: Dataset):
-    assert len(ml_ds.entities("item")) == ml_df["item_id"].nunique()
-    assert len(ml_ds.entities("user")) == ml_df["item_id"].nunique()
+def test_all_entities(rng: Generator, ml_ratings: pd.DataFrame, ml_ds: Dataset):
+    assert len(ml_ds.entities("item")) == ml_ratings["item_id"].nunique()
+    assert len(ml_ds.entities("user")) == ml_ratings["item_id"].nunique()
 
-    assert np.all(ml_ds.entities("item").ids() == np.unique(ml_df["item_id"]))
+    assert np.all(ml_ds.entities("item").ids() == np.unique(ml_ratings["item_id"]))
     assert np.all(ml_ds.entities("item").numbers() == np.arange(ml_ds.item_count))
 
 
-def test_entity_subset_ids(rng: Generator, ml_df: pd.DataFrame, ml_ds: Dataset):
-    item_ids = rng.choice(ml_df["item_id"].unique(), 20, replace=False)
+def test_entity_subset_ids(rng: Generator, ml_ratings: pd.DataFrame, ml_ds: Dataset):
+    item_ids = rng.choice(ml_ratings["item_id"].unique(), 20, replace=False)
 
     ents = ml_ds.entities("item").select(ids=item_ids)
     assert len(ents) == len(item_ids)
@@ -22,8 +22,8 @@ def test_entity_subset_ids(rng: Generator, ml_df: pd.DataFrame, ml_ds: Dataset):
     assert np.all(ents.numbers() == ml_ds.items.numbers(item_ids))
 
 
-def test_entity_subset_numbers(rng: Generator, ml_df: pd.DataFrame, ml_ds: Dataset):
-    inos = rng.choice(ml_df["item_id"].nunique(), 20, replace=False)
+def test_entity_subset_numbers(rng: Generator, ml_ratings: pd.DataFrame, ml_ds: Dataset):
+    inos = rng.choice(ml_ratings["item_id"].nunique(), 20, replace=False)
 
     ents = ml_ds.entities("item").select(numbers=inos)
     assert len(ents) == len(inos)
@@ -31,9 +31,9 @@ def test_entity_subset_numbers(rng: Generator, ml_df: pd.DataFrame, ml_ds: Datas
     assert np.all(ents.ids() == ml_ds.items.ids(inos))
 
 
-def test_entity_subset_subset_numbers(rng: Generator, ml_df: pd.DataFrame, ml_ds: Dataset):
+def test_entity_subset_subset_numbers(rng: Generator, ml_ratings: pd.DataFrame, ml_ds: Dataset):
     "Test that subsetting a subset works."
-    inos = rng.choice(ml_df["item_id"].nunique(), 100, replace=False)
+    inos = rng.choice(ml_ratings["item_id"].nunique(), 100, replace=False)
 
     ents = ml_ds.entities("item").select(numbers=inos)
     assert len(ents) == len(inos)

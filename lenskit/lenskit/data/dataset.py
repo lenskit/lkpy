@@ -31,7 +31,7 @@ from lenskit.logging import get_logger
 from .container import DataContainer
 from .items import ItemList
 from .schema import DataSchema, EntitySchema, RelationshipSchema, id_col_name, num_col_name
-from .types import ID, IDArray
+from .types import ID, IDArray, IDSequence
 from .vocab import Vocabulary
 
 _log = get_logger(__name__)
@@ -518,43 +518,105 @@ class EntitySet:
     """
     The Arrow table of entity information.
     """
+    _selected: pa.Int32Array | None = None
 
-    def __init__(self, name: str, schema: EntitySchema, vocabulary: Vocabulary, table: pa.Table):
+    def __init__(
+        self,
+        name: str,
+        schema: EntitySchema,
+        vocabulary: Vocabulary,
+        table: pa.Table,
+        _sel: pa.Int32Array | None = None,
+    ):
         self.name = name
         self.schema = schema
         self.vocabulary = vocabulary
         self._table = table
+        self._selected = _sel
 
     def count(self) -> int:
         """
         Return the number of entities in this entity set.
         """
-        return self._table.num_rows
+        if self._selected is not None:
+            return len(self._selected)
+        else:
+            return self._table.num_rows
 
     def ids(self) -> IDArray:
         """
         Get the identifiers of the entities in this set.  This is returned
         directly as PyArrow array instead of NumPy.
         """
-        return self.vocabulary.ids()
+        if self._selected is not None:
+            return self.vocabulary.ids(self._selected.to_numpy())
+        else:
+            return self.vocabulary.ids()
 
     def numbers(self) -> np.ndarray[int, np.dtype[np.int32]]:
         """
         Get the numbers (from the vocabulary) for the entities in this set.
         """
-        return np.arange(self.count(), dtype=np.int32)
+        if self._selected is not None:
+            return self._selected.to_numpy()
+        else:
+            return np.arange(self.count(), dtype=np.int32)
 
     def arrow(self) -> pa.Table:
         """
         Get these entities and their attributes as a PyArrow table.
         """
-        return self._table
+        if self._selected is not None:
+            return self._table.take(self._selected)
+        else:
+            return self._table
 
     def pandas(self) -> pd.DataFrame:
         """
         Get the entities and their attributes as a Pandas data frame.
         """
-        return self._table.to_pandas()
+        return self.arrow().to_pandas()
+
+    @overload
+    def select(self, *, ids: IDSequence | None = None) -> EntitySet: ...
+    @overload
+    def select(
+        self,
+        *,
+        numbers: np.ndarray[int, np.dtype[np.integer[Any]]] | pa.IntegerArray[Any] | None = None,
+    ) -> EntitySet: ...
+    def select(
+        self,
+        *,
+        ids: IDSequence | None = None,
+        numbers: np.ndarray[int, np.dtype[np.integer[Any]]] | pa.IntegerArray[Any] | None = None,
+    ) -> EntitySet:
+        """
+        Select a subset of the entities in this set.
+
+        .. note::
+
+            The vocabulary is unchanged, so numbers in the resulting set will be
+            entity numbers in the dataset's vocabulary.  They are not rearranged
+            to be relative to this entity set.
+
+        Args:
+            ids:
+                The entity identifiers to select.
+            numbers:
+                The entity numbers to select.
+
+        Returns:
+            The entity subset.
+        """
+        if numbers is not None and ids is None:
+            picked = pa.array(numbers).cast(pa.int32())
+        elif ids is not None and numbers is None:
+            picked = pa.array(self.vocabulary.numbers(ids)).cast(pa.int32())
+        else:
+            raise ValueError("specify exactly one of ids and numbers")
+
+        return EntitySet(self.name, self.schema, self.vocabulary, self._table, picked)
 
     def __len__(self):
         return self.count()
