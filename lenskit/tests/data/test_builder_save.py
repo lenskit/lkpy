@@ -27,7 +27,7 @@ def test_save_load_ml(ml_ratings: pd.DataFrame, tmpdir: Path):
 
     schema_path = ds_path / "schema.json"
     assert schema_path.exists()
-    schema = DataSchema.model_validate_json(schema_path.read_text())
+    schema = DataSchema.model_validate_json(schema_path.read_text("utf8"))
     assert schema == dsb.schema
 
     assert (ds_path / "item.parquet").exists()

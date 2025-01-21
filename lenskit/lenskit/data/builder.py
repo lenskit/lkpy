@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Mapping, Sequence
+from os import PathLike
 from typing import Any, Literal, TypeAlias, TypeVar, overload
 
 import numpy as np
@@ -60,10 +61,15 @@ class DatasetBuilder:
     _log: structlog.stdlib.BoundLogger
     _tables: dict[str, pa.Table | None]
 
-    def __init__(self, name: str | None = None):
-        self.schema = DataSchema(name=name, entities={"item": EntitySchema()})
+    def __init__(self, name: str | DataContainer | None = None):
+        if isinstance(name, DataContainer):
+            self.schema = name.schema
+            self._tables = {n: t for (n, t) in name.tables.items()}
+        else:
+            self.schema = DataSchema(name=name, entities={"item": EntitySchema()})
+            self._tables = {"item": None}
+
         self._log = _log.bind(ds_name=name)
-        self._tables = {"item": None}
 
     @property
     def name(self) -> str | None:
@@ -420,3 +426,15 @@ class DatasetBuilder:
                 tables[n] = t
 
         return DataContainer(self.schema.model_copy(), tables)
+
+    def save(self, path: str | PathLike[str]):
+        """
+        Save the dataset to disk in the LensKit native format.
+
+        Args:
+            path:
+                The path where the dataset will be saved (will be created as a
+                directory)
+        """
+        container = self.build_container()
+        container.save(path)

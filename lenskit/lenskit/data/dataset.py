@@ -14,6 +14,7 @@ from __future__ import annotations
 import functools
 from abc import abstractmethod
 from collections.abc import Callable, Mapping
+from os import PathLike
 
 import numpy as np
 import pandas as pd
@@ -111,6 +112,11 @@ class Dataset:
             self._init_caches()
         else:
             self._data_thunk = data
+
+    @classmethod
+    def load(cls, path: str | PathLike[str]) -> Dataset:
+        container = DataContainer.load(path)
+        return cls(container)
 
     def _ensure_loaded(self):
         if not hasattr(self, "_data"):
