@@ -5,20 +5,29 @@ Components that look up user history from the training data.
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_array
 from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
-from lenskit.data.matrix import CSRStructure
-from lenskit.data.vocab import Vocabulary
+from lenskit.data.dataset import MatrixRelationshipSet
+from lenskit.diagnostics import DataError
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
 
 _logger = logging.getLogger(__name__)
+
+
+@dataclass
+class LookupConfig:
+    interaction_class: str | None = None
+    """
+    The name of the interaction class to use.  Leave ``None`` to use the
+    dataset's default interaction class.
+    """
 
 
 class UserTrainingHistoryLookup(Component[ItemList], Trainable):
@@ -29,16 +38,21 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
         Caller
     """
 
-    config: None
-    training_data_: Dataset
+    config: LookupConfig
+
+    interactions: MatrixRelationshipSet
 
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         # TODO: find a better data structure for this
-        if hasattr(self, "training_data_") and not options.retrain:
+        if hasattr(self, "interactions") and not options.retrain:
             return
 
-        self.training_data_ = data
+        self.interactions = data.interactions(self.config.interaction_class).matrix()
+        if self.interactions.row_type != "user":  # pragma: nocover
+            raise DataError("interactions must have user rows")
+        if self.interactions.col_type != "item":  # pragma: nocover
+            raise DataError("interactions must have item columns")
 
     def __call__(self, query: QueryInput) -> RecQuery:
         """
@@ -50,9 +64,24 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
             return query
 
         if query.user_items is None:
-            query.user_items = self.training_data_.user_row(query.user_id)
+            query.user_items = self.interactions.row_items(query.user_id)
 
         return query
+
+
+@dataclass
+class KnownRatingConfig(LookupConfig):
+    score: Literal["rating", "indicator"] | None = None
+    """
+    The field name to use to score items, or ``"indicator"`` to score with 0/1
+    based on presence in the training data.  The default, ``None``, uses ratings
+    if available, and otherwise scores with ` for interacted items and leaves
+    un-interacted items unscored.
+    """
+    source: Literal["training", "query"] = "training"
+    """
+    Whether to get the known ratings from the training data or from the query.
+    """
 
 
 class KnownRatingScorer(Component[ItemList], Trainable):
@@ -61,78 +90,49 @@ class KnownRatingScorer(Component[ItemList], Trainable):
 
     Stability:
         Caller
-
-    Args:
-        score:
-            Whether to score items with their rating values, or a 0/1 indicator
-            of their presence in the training data.  The default (``None``) uses
-            ratings if available, and otherwise scores with 1 for interacted
-            items and leaves non-interacted items unscored.
-        source:
-            Whether to use the training data or the user's history represented
-            in the query as the source of score data.
     """
 
-    config: None
-    score: Literal["rating", "indicator"] | None
-    source: Literal["training", "query"]
-
-    users_: Vocabulary
-    items_: Vocabulary
-    matrix_ = csr_array | CSRStructure
-
-    def __init__(
-        self,
-        score: Literal["rating", "indicator"] | None = None,
-        source: Literal["training", "query"] = "training",
-    ):
-        self.score = score
-        self.source = source
+    config: KnownRatingConfig
+    interactions: MatrixRelationshipSet
 
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
-        if hasattr(self, "matrix_") and not options.retrain:
+        if hasattr(self, "interactions") and not options.retrain:
             return
 
-        if self.source == "query":
+        if self.config.source == "query":
             return
 
-        self.users_ = data.users
-        self.items_ = data.items
-        if self.score == "indicator":
-            self.matrix_ = data.interaction_matrix(format="structure")
-        else:
-            self.matrix_ = data.interaction_matrix(format="scipy", field="rating")
+        self.interactions = data.interactions(self.config.interaction_class).matrix()
 
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         query = RecQuery.create(query)
 
         # figure out what scores we start with
-        scores = None
-        if self.source == "query" and query.user_items is not None:
-            if self.score != "indicator":
-                scores = query.user_items.field("rating", "pandas", index="ids")
-            if scores is None:
-                scores = pd.Series(1.0, index=query.user_items.ids())
+        ilist = None
+        if self.config.source == "query" and query.user_items is not None:
+            ilist = query.user_items
 
         elif (
-            self.source == "training" and query.user_id is not None and query.user_id in self.users_
+            self.config.source == "training"
+            and query.user_id is not None
+            and query.user_id in self.interactions.row_vocabulary
         ):
-            urow = self.users_.number(query.user_id)
-            if isinstance(self.matrix_, csr_array):
-                assert self.score != "indicator"
-                # get the user's row as a sparse array
-                uarr = self.matrix_[[urow]]
-                assert isinstance(uarr, csr_array)
-                # create a series
-                scores = pd.Series(uarr.data, index=self.items_.ids(uarr.indices))
-            elif isinstance(self.matrix_, CSRStructure):
-                scores = pd.Series(1.0, index=self.items_.ids(self.matrix_.row_cs(urow)))
+            ilist = self.interactions.row_items(query.user_id)
+
+        if ilist is None:
+            scores = None
+        elif self.config.score == "indicator":
+            scores = pd.Series(1.0, index=ilist.ids())
+        else:
+            scores = ilist.field("rating", format="pandas", index="ids")
+            if scores is None and self.config.score is None:
+                scores = pd.Series(1.0, index=ilist.ids())
 
         if scores is None:
             scores = pd.Series(np.nan, index=items.ids())
 
         scores = scores.reindex(
-            items.ids(), fill_value=0.0 if self.score == "indicator" else np.nan
+            items.ids(), fill_value=0.0 if self.config.score == "indicator" else np.nan
         )
         return ItemList(items, scores=scores.values)  # type: ignore
