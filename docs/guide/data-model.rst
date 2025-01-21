@@ -139,9 +139,10 @@ In the initial release of the new LensKit data model (in :ref:`2025.1`), not all
 possible attribute and entity or relationship class combinations are supported.
 In particular, relationships can only have scalar attributes.  We intend to
 relax this restriction in the future, with more time to determine an ergonomic
-API for accessing such data.
+API for accessing such data.  All attribute formats are supported for entities.
 
-All attribute formats are supported for entities.
+Repeated relationships are also not yet fully supported. Support is planned for
+LensKit 2025.2.
 
 .. _data-relationships:
 

@@ -13,30 +13,23 @@ from __future__ import annotations
 
 import functools
 from abc import abstractmethod
-from collections.abc import Callable
-from typing import (
-    Any,
-    Literal,
-    TypeAlias,
-    TypeVar,
-    overload,
-)
+from collections.abc import Callable, Mapping
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-
-# import pyarrow.compute as pc
+import pyarrow.compute as pc
 import scipy.sparse as sps
 import torch
+from numpy.typing import NDArray
+from typing_extensions import Any, Literal, TypeAlias, TypeVar, overload, override
 
 from lenskit.diagnostics import DataError
 from lenskit.logging import get_logger
 
 from .container import DataContainer
 from .items import ItemList
-from .schema import DataSchema, EntitySchema, RelationshipSchema, id_col_name
-from .tables import NumpyUserItemTable, TorchUserItemTable
+from .schema import DataSchema, EntitySchema, RelationshipSchema, id_col_name, num_col_name
 from .types import ID, IDArray
 from .vocab import Vocabulary
 
@@ -109,7 +102,8 @@ class Dataset:
 
     _data: DataContainer
     _data_thunk: Callable[[], DataContainer]
-    _vocabularies: dict[str, Vocabulary]
+    _entities: dict[str, EntitySet]
+    _relationships: dict[str, RelationshipSet]
 
     def __init__(self, data: DataContainer | Callable[[], DataContainer]):
         if isinstance(data, DataContainer):
@@ -129,13 +123,20 @@ class Dataset:
         "Initialize internal caches for this dataset."
 
         self._vocabularies = {}
-        for name in self._data.schema.entities:
+        for name, schema in self._data.schema.entities.items():
             tbl = self._data.tables[name]
             id_name = id_col_name(name)
             ids = tbl.column(id_name)
-            self._vocabularies[name] = Vocabulary(
-                pd.Index(np.asarray(ids), name=id_name), name=name
-            )
+            index = pd.Index(np.asarray(ids), name=id_name)
+            vocab = Vocabulary(index, name=name)
+            self._entities[name] = EntitySet(name, schema, vocab, tbl)
+
+        for name, schema in self._data.schema.relationships.items():
+            tbl = self._data.tables[name]
+            if not schema.repeats.is_present and len(schema.entities) == 2:
+                self._relationships[name] = MatrixRelationshipSet(self, name, schema, tbl)
+            else:
+                raise NotImplementedError("complex relationships not yet implemented")
 
     @property
     @_uses_data
@@ -174,26 +175,21 @@ class Dataset:
         """
         Get the entities of a particular type / class.
         """
-        schema = self._data.schema.entities.get(name, None)
-        if schema is None:
-            raise DataError(f"entity class {name} not defined")
-        return EntitySet(name, schema, self._vocabularies[name], self._data.tables[name])
+        eset = self._entities.get(name, None)
+        if eset is None:
+            raise DataError(f"entity class {name} is not defined")
+        return eset
 
     @_uses_data
     def relationships(self, name: str) -> RelationshipSet:
         """
         Get the relationship records of a particular type / class.
         """
-        schema = self._data.schema.relationships.get(name, None)
-        if schema is None:
-            raise DataError(f"entity class {name} not defined")
+        rset = self._relationships.get(name, None)
+        if rset is None:
+            raise DataError(f"relationship class {name} is not defined")
 
-        return RelationshipSet(
-            self,
-            name,
-            schema,
-            self._data.tables[name],
-        )
+        return rset
 
     @_uses_data
     def interactions(self, name: str | None = None) -> RelationshipSet:
@@ -246,25 +242,26 @@ class Dataset:
         self,
         *,
         format: Literal["pandas"],
-        fields: str | list[str] | None = "all",
+        fields: str | list[str] | None = None,
         original_ids: bool = False,
     ) -> pd.DataFrame: ...
     @overload
     @abstractmethod
     def interaction_table(
-        self, *, format: Literal["numpy"], fields: str | list[str] | None = "all"
-    ) -> NumpyUserItemTable: ...
+        self, *, format: Literal["numpy"], fields: str | list[str] | None = None
+    ) -> dict[str, NDArray[Any]]: ...
     @overload
     @abstractmethod
     def interaction_table(
-        self, *, format: Literal["torch"], fields: str | list[str] | None = "all"
-    ) -> TorchUserItemTable: ...
+        self, *, format: Literal["arrow"], fields: str | list[str] | None = None
+    ) -> pa.Table: ...
     @abstractmethod
+    @_uses_data
     def interaction_table(
         self,
         *,
         format: str,
-        fields: str | list[str] | None = "all",
+        fields: str | list[str] | None = None,
         original_ids: bool = False,
     ) -> Any:
         """
@@ -272,6 +269,9 @@ class Dataset:
         table is not in a specified order.  Interactions may be repeated (e.g.
         the same user may listen to a song multiple times).  For a non-repeated
         “ratings matrix” view of the data, see :meth:`interaction_matrix`.
+
+        This is a convenince wrapper on top of :meth:`interactions` and the
+        methods of :class:`RelationshipSet`.
 
         .. warning::
             Client code **must not** perform in-place modifications on the table
@@ -285,25 +285,31 @@ class Dataset:
 
                 * ``"pandas"`` — returns a :class:`pandas.DataFrame`.  The index
                   is not meaningful.
-                * ``"numpy"`` — returns a :class:`~tables.NumpyUserItemTable`.
-                * ``"torch"`` — returns a :class:`~tables.TorchUserItemTable`.
+                * ``"arrow"`` — returns a PyArrow :class:`~pa.Table`.  The index
+                  is not meaningful.
+                * ``"numpy"`` — returns a dictionary mapping names to arrays.
             fields:
-                Which fields to include.  If set to ``"all"``, will include all
-                available fields in the resulting table; ``None`` includes no
-                fields besides the user and item.  Commonly-available fields
-                include ``"rating"`` and ``"timestamp"``.  Missing fields will
-                be omitted in the result.
+                Which fields (attributes) to include, or ``None`` to include all
+                fields. Commonly-available fields include ``"rating"`` and
+                ``"timestamp"``.
             original_ids:
                 If ``True``, return user and item IDs as represented in the
                 original source data in columns named ``user_id`` and
                 ``item_id``, instead of the user and item numbers typically
-                returned.  Only applicable to the ``pandas`` format. See
-                :ref:`data-identifiers`.
+                returned.
 
         Returns:
             The user-item interaction log in the specified format.
         """
-        raise NotImplementedError()
+        iset = self.interactions()
+        if format == "pandas":
+            return iset.pandas(attributes=fields, ids=original_ids)
+        else:
+            table = iset.arrow(attributes=fields, ids=original_ids)
+            if format == "numpy":
+                return {c: table.column(c).to_numpy() for c in table.column_names}
+            else:
+                return table
 
     @overload
     @abstractmethod
@@ -311,9 +317,7 @@ class Dataset:
         self,
         *,
         format: Literal["pandas"],
-        layout: Literal["coo"] | None = None,
         field: str | None = None,
-        combine: MAT_AGG | None = None,
         original_ids: bool = False,
     ) -> pd.DataFrame: ...
     @overload
@@ -322,9 +326,8 @@ class Dataset:
         self,
         *,
         format: Literal["torch"],
-        layout: Literal["csr", "coo"] | None = None,
+        layout: Literal["csr", "coo"] = "csr",
         field: str | None = None,
-        combine: MAT_AGG | None = None,
     ) -> torch.Tensor: ...
     @overload
     @abstractmethod
@@ -333,20 +336,7 @@ class Dataset:
         *,
         format: Literal["scipy"],
         layout: Literal["coo"],
-        legacy: Literal[True],
         field: str | None = None,
-        combine: MAT_AGG | None = None,
-    ) -> sps.coo_matrix: ...
-    @overload
-    @abstractmethod
-    def interaction_matrix(
-        self,
-        *,
-        format: Literal["scipy"],
-        layout: Literal["coo"],
-        legacy: bool = False,
-        field: str | None = None,
-        combine: MAT_AGG | None = None,
     ) -> sps.coo_array: ...
     @overload
     @abstractmethod
@@ -354,21 +344,8 @@ class Dataset:
         self,
         *,
         format: Literal["scipy"],
-        layout: Literal["csr"] | None = None,
-        legacy: Literal[True],
+        layout: Literal["csr"] = "csr",
         field: str | None = None,
-        combine: MAT_AGG | None = None,
-    ) -> sps.csr_matrix: ...
-    @overload
-    @abstractmethod
-    def interaction_matrix(
-        self,
-        *,
-        format: Literal["scipy"],
-        layout: Literal["csr"] | None = None,
-        legacy: bool = False,
-        field: str | None = None,
-        combine: MAT_AGG | None = None,
     ) -> sps.csr_array: ...
     @overload
     @abstractmethod
@@ -376,34 +353,36 @@ class Dataset:
         self,
         *,
         format: Literal["structure"],
-        layout: Literal["csr"] | None = None,
+        layout: Literal["csr"] = "csr",
     ) -> CSRStructure: ...
     @abstractmethod
+    @_uses_data
     def interaction_matrix(
         self,
         *,
         format: str,
-        layout: str | None = None,
-        legacy: bool = False,
+        layout: LAYOUT = "csr",
         field: str | None = None,
-        combine: str | None = None,
         original_ids: bool = False,
     ) -> Any:
         """
-        Get the user-item interactions as “ratings” matrix.  Interactions are
-        not repeated.  The matrix may be in “coordinate” format, in which case
-        it is comparable to :meth:`interaction_log` but without repeated
-        interactions, or it may be in a compressed sparse format.
+        Get the user-item interactions as “ratings” matrix from the default
+        interaction class.  Interactions are not repeated, and are coalesced
+        with the default coalescing strategy for each attribute.
 
-        .. todo::
-            Aggregate is currently ignored because repeated interactions are not
-            yet supported.
+        The matrix may be returned in “coordinate” format, in which case it is
+        comparable to :meth:`interaction_table` but without repeated
+        interactions, or it may be in a compressed sparse row format.
+
+        This is a convenince wrapper on top of :meth:`interactions` and the
+        methods of :class:`MatrixRelationshipSet`.
 
         .. warning::
-            Client code **must not** perform in-place modifications on the matrix
-            returned from this method.  Whenever possible, it will be a shallow
-            view on top of the underlying storage, and modifications may corrupt
-            data for other code.
+
+            Client code **must not** perform in-place modifications on the
+            matrix returned from this method.  Whenever possible, it will be a
+            shallow view on top of the underlying storage, and modifications may
+            corrupt data for other code.
 
         Args:
             format:
@@ -421,42 +400,30 @@ class Dataset:
                 ``"rating"`` and ``"timestamp"``.
 
                 If unspecified (``None``), this will yield an implicit-feedback
-                indicator matrix, with 1s for observed items; the ``"pandas"``
-                format will only include user and item columns.
+                indicator matrix, with 1s for observed items, except for the
+                ``"pandas"`` format, which will return all attributes.
 
                 If the ``rating`` field is requested but is not defined in the
                 underlying data, then this is equivalent to ``"indicator"``,
                 except that the ``"pandas"`` format will include a ``"rating"``
                 column of all 1s.
-
-                The ``"pandas"`` format also supports the special field name
-                ``"all"`` to return a data frame with all available fields. When
-                ``field="all"``, a field named ``count`` (if defined) is
-                combined with the ``sum`` method, and other fields use ``last``.
-            combine:
-                How to combine multiple observations for a single user-item
-                pair. Available methods are:
-
-                * ``"count"`` — count the user-item interactions. Only valid
-                  when ``field=None``; if the underlying data defines a
-                  ``count`` field, then this is equivalent to ``"sum"`` on that
-                  field.
-                * ``"sum"`` — sum the field values.
-                * ``"first"``, ``"last"`` — take the first or last value seen
-                  (in timestamp order, if timestamps are defined; otherwise,
-                  their order in the original input).
             layout:
                 The layout for a sparse matrix.  Can be either ``csr`` or
                 ``coo``, or ``None`` to use the default for the specified
-                format.  CSR is only supported by Torch and SciPy backends.
-            legacy:
-                ``True`` to return a legacy SciPy sparse matrix instead of
-                sparse array.
+                format.  Ignored for the Pandas format.
             original_ids:
-                ``True`` to return user and item IDs instead of numbers in
+                ``True`` to return user and item IDs instead of numbers in a
                 ``pandas``-format matrix.
         """
-        raise NotImplementedError()
+        iset = self.interactions().matrix()
+
+        match format:
+            case "pandas":
+                return iset.pandas(attributes=[field] if field else None, ids=original_ids)
+            case "scipy":
+                return iset.scipy(attribute=field, layout=layout)
+            case "torch":
+                return iset.torch(attribute=field, layout=layout)
 
     @abstractmethod
     @overload
@@ -469,10 +436,12 @@ class Dataset:
         self, user_id: ID | None = None, *, user_num: int | None = None
     ) -> ItemList | None:
         """
-        Get a user's row from the interaction matrix.  Available fields are
-        returned as fields. If the dataset has ratings, these are provided as a
-        ``rating`` field, **not** as the item scores.  The item list is
-        unordered, but items are returned in order by item number.
+        Get a user's row from the interaction matrix for the default interaction
+        class, using :ref:`default coalsecing <coalescing-defaults>` for
+        repeated interactions.  Available fields are returned as fields. If the
+        dataset has ratings, these are provided as a ``rating`` field, **not**
+        as the item scores.  The item list is unordered, but items are returned
+        in order by item number.
 
         Args:
             user_id:
@@ -481,8 +450,8 @@ class Dataset:
                 The number of the user to retrieve.
 
         Returns:
-            The user's interaction matrix row, or ``None`` if no user with that ID
-            exists.
+            The user's interaction matrix row, or ``None`` if no user with that
+            ID exists.
         """
         raise NotImplementedError()
 
@@ -607,7 +576,7 @@ class EntitySet:
     """
     The identifier vocabulary for this schema.
     """
-    table: pa.Table
+    _table: pa.Table
     """
     The Arrow table of entity information.
     """
@@ -616,13 +585,13 @@ class EntitySet:
         self.name = name
         self.schema = schema
         self.vocabulary = vocabulary
-        self.table = table
+        self._table = table
 
     def count(self) -> int:
         """
         Return the number of entities in this entity set.
         """
-        return self.table.num_rows
+        return self._table.num_rows
 
     def ids(self) -> IDArray:
         """
@@ -637,13 +606,31 @@ class EntitySet:
         """
         return np.arange(self.count(), dtype=np.int32)
 
+    def arrow(self) -> pa.Table:
+        """
+        Get these entities and their attributes as a PyArrow table.
+        """
+        return self._table
+
+    def pandas(self) -> pd.DataFrame:
+        """
+        Get the entities and their attributes as a Pandas data frame.
+        """
+        return self._table.to_pandas()
+
     def __len__(self):
         return self.count()
 
 
 class RelationshipSet:
     """
-    Representation for a set of relationship records.
+    Representation for a set of relationship records.  This is the class for
+    accessing general relationships, with arbitrarily many entity classes
+    involved and repeated relationships allowed.
+
+    For two-entity relationships without duplicates (including relationships
+    formed by coalescing repeated relationships or interactions),
+    :class:`MatrixRelationshipSet` extends this with additional capabilities.
     """
 
     dataset: Dataset
@@ -657,10 +644,12 @@ class RelationshipSet:
     """
     schema: RelationshipSchema
 
-    table: pa.Table
+    _table: pa.Table
     """
     The Arrow table of relationship information.
     """
+
+    _link_cols: list[str]
 
     def __init__(
         self,
@@ -672,13 +661,271 @@ class RelationshipSet:
         self.dataset = ds
         self.name = name
         self.schema = schema
-        self.table = table
+        self._table = table
+        self._link_cols = [num_col_name(e) for e in schema.entities]
 
     def is_interaction(self) -> bool:
         """
         Query whether these relationships represent interactions.
         """
         return self.schema.interaction
+
+    def count(self):
+        if "count" in self._table.column_names:
+            raise NotImplementedError()
+
+        return self._table.num_rows
+
+    def arrow(self, *, attributes: str | list[str] | None, ids=False) -> pa.Table:
+        """
+        Get these relationships and their attributes as a PyArrow table.
+
+        Args:
+            attributes:
+                The attributes to select.
+            ids:
+                If ``True``, include ID columns for the entities, instead of
+                just the number columns.
+        """
+        if ids:
+            raise NotImplementedError()
+
+        table = self._table
+        if attributes is not None:
+            cols = self._link_cols
+            if isinstance(attributes, str):
+                cols = cols + [attributes]
+            else:
+                cols = cols + attributes
+            table = table.select(cols)
+
+        return table
+
+    def pandas(self, *, attributes: str | list[str] | None, ids=False) -> pd.DataFrame:
+        """
+        Get these relationship and their attributes as a PyArrow table.
+
+        Args:
+            attributes:
+                The attributes to include in the resulting table.
+            ids:
+                If ``True``, include ID columns for the entities, instead of
+                just the number columns.
+        """
+        return self.arrow(attributes=attributes, ids=ids).to_pandas()
+
+    def matrix(
+        self, *, combine: MAT_AGG | Mapping[str, MAT_AGG] | None = None
+    ) -> MatrixRelationshipSet:
+        """
+        Convert this relationship set into a matrix, coalescing duplicate
+        observations.
+
+        Args:
+            combine:
+                The method for combining attribute values for repeated
+                relationships or interactions.  Can either be a single strategy
+                or a mapping from attribute names to combination strategies.
+        """
+        raise NotImplementedError()
+
+
+class MatrixRelationshipSet(RelationshipSet):
+    """
+    Two-entity relationships without duplicates, accessible in matrix form.
+    """
+
+    _row_ptrs: np.ndarray[int, np.dtype[np.int32]]
+    _row_vocab: Vocabulary
+    _row_type: str
+    _col_vocab: Vocabulary
+    _col_type: str
+
+    def __init__(
+        self,
+        ds: Dataset,
+        name: str,
+        schema: RelationshipSchema,
+        table: pa.Table,
+    ):
+        super().__init__(ds, name, schema, table)
+        # order the table to compute the sparse matrix
+        entities = list(schema.entities.keys())
+        row, col = entities
+        self._row_type = row
+        self._row_vocab = ds.entities(row).vocabulary
+        self._col_type = col
+        self._col_vocab = ds.entities(col).vocabulary
+
+        e_cols = [num_col_name(e) for e in entities]
+        table = table.sort_by([(c, "ascending") for c in e_cols])
+
+        # compute the row pointers
+        n_rows = len(self._row_vocab)
+        row_ptrs = np.zeros(n_rows, dtype=np.int32())
+        row_sizes = pc.value_counts(table.column(e_cols[0]))
+        rsz_nums = row_sizes.field("values")
+        rsz_counts = row_sizes.field("counts").cast(pa.int32())
+        row_ptrs[np.asarray(rsz_nums)] = rsz_counts
+        self._row_ptrs = row_ptrs
+
+    @override
+    def matrix(
+        self, *, combine: MAT_AGG | dict[str, MAT_AGG] | None = None
+    ) -> MatrixRelationshipSet:
+        # already a matrix relationship set
+        return self
+
+    def csr_structure(self) -> CSRStructure:
+        """
+        Get the compressed sparse row structure of this relationship matrix.
+        """
+        n_rows = len(self._row_vocab)
+        n_cols = len(self._col_vocab)
+
+        colinds = self._table.column(num_col_name(self._col_type)).to_numpy()
+        return CSRStructure(self._row_ptrs, colinds, (n_rows, n_cols))
+
+    @overload
+    def scipy(
+        self, attribute: str | None = None, *, layout: Literal["coo"], legacy: Literal[True]
+    ) -> sps.coo_matrix: ...
+    @overload
+    def scipy(
+        self,
+        attribute: str | None = None,
+        *,
+        layout: Literal["coo"],
+        legacy: Literal[False] = False,
+    ) -> sps.coo_array: ...
+    @overload
+    def scipy(
+        self, attribute: str | None = None, *, layout: Literal["csr"] = "csr", legacy: Literal[True]
+    ) -> sps.csr_matrix: ...
+    @overload
+    def scipy(
+        self,
+        attribute: str | None = None,
+        *,
+        layout: Literal["csr"] = "csr",
+        legacy: Literal[False] = False,
+    ) -> sps.csr_array: ...
+    @overload
+    def scipy(
+        self, attribute: str | None = None, *, layout: LAYOUT = "csr", legacy: bool = False
+    ) -> sps.sparray | sps.spmatrix: ...
+    def scipy(
+        self, attribute: str | None = None, *, layout: LAYOUT = "csr", legacy: bool = False
+    ) -> sps.sparray | sps.spmatrix:
+        """
+        Get this relationship matrix as a SciPy sparse matrix.
+
+        Args:
+            attribute:
+                The attribute to return, or ``None`` to return an indicator-only
+                sparse matrix (all observed values are 1).
+            layout:
+                The matrix layout to return.
+
+        Returns:
+            The sparse matrix.
+        """
+        n_rows = len(self._row_vocab)
+        n_cols = len(self._col_vocab)
+        nnz = self._table.num_rows
+
+        colinds = self._table.column(num_col_name(self._col_type)).to_numpy()
+        if attribute is None:
+            values = np.ones(nnz, dtype=np.float32)
+        else:
+            values = self._table.column(attribute).to_numpy()
+
+        if layout == "csr":
+            if legacy:
+                return sps.csr_matrix((values, colinds, self._row_ptrs), shape=(n_rows, n_cols))
+            else:
+                return sps.csr_array((values, colinds, self._row_ptrs), shape=(n_rows, n_cols))
+        elif layout == "coo":
+            rowinds = self._table.column(num_col_name(self._row_type))
+            if legacy:
+                return sps.coo_matrix((values, (rowinds, colinds)), shape=(n_rows, n_cols))
+            else:
+                return sps.coo_array((values, (rowinds, colinds)), shape=(n_rows, n_cols))
+
+    @overload
+    def torch(
+        self, attribute: str | None = None, *, layout: Literal["csr"] = "csr"
+    ) -> torch.Tensor: ...
+    @overload
+    def torch(self, attribute: str | None = None, *, layout: Literal["coo"]) -> torch.Tensor: ...
+    def torch(self, attribute: str | None = None, *, layout: LAYOUT = "csr") -> torch.Tensor:
+        """
+        Get this relationship matrix as a PyTorch sparse tensor.
+
+        Args:
+            attribute:
+                The attribute to return, or ``None`` to return an indicator-only
+                sparse matrix (all observed values are 1).
+            layout:
+                The matrix layout to return.
+
+        Returns:
+            The sparse matrix.
+        """
+        n_rows = len(self._row_vocab)
+        n_cols = len(self._col_vocab)
+        nnz = self._table.num_rows
+
+        colinds = torch.tensor(self._table.column(num_col_name(self._col_type)))
+        if attribute is None:
+            values = torch.ones(nnz, dtype=torch.float32)
+        else:
+            values = torch.tensor(self._table.column(attribute))
+
+        if layout == "csr":
+            return torch.sparse_csr_tensor(
+                crow_indices=torch.tensor(self._row_ptrs),
+                col_indices=colinds,
+                values=values,
+                size=(n_rows, n_cols),
+            ).coalesce()
+        elif layout == "coo":
+            rowinds = torch.tensor(self._table.column(num_col_name(self._row_type)))
+            indices = torch.stack((colinds, rowinds))
+            return torch.sparse_coo_tensor(indices=indices, values=values, size=(n_rows, n_cols))
+
+    def row_table(self, id: ID | None = None, *, number: int | None = None) -> pa.Table | None:
+        """
+        Get a single row of this interaction matrix as a table.
+        """
+        if number is None and id is None:  # pragma: noover
+            raise ValueError("must provide one of id and number")
+
+        if number is None:
+            number = self._row_vocab.number(id, "none")
+            if number is None:
+                return None
+
+        row_start = self._row_ptrs[number]
+        row_end = self._row_ptrs[number]
+
+        tbl = self._table.slice(row_start, row_end - row_start)
+        tbl = tbl.drop_columns(num_col_name(self._row_type))
+        return tbl
+
+    def row_items(self, id: ID | None = None, *, number: int | None = None) -> ItemList | None:
+        """
+        Get a single row of this interaction matrix as an item list.  Only valid
+        when the column entity class is ``item''.
+        """
+        if self._col_vocab.name != "item":
+            raise RuntimeError("row_items() only valid for item-column matrices")
+
+        tbl = self.row_table(id=id, number=number)
+        if tbl is None:
+            return None
+
+        return ItemList.from_arrow(tbl)
 
 
 from .matrix import CSRStructure  # noqa: E402

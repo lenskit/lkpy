@@ -126,6 +126,15 @@ class DatasetBuilder:
             e_dict = dict(entities.items())
         else:
             e_dict = {e: None for e in entities}
+        enames = list(e_dict.keys())
+        if interaction and enames[-1] != "item":
+            warnings.warn(
+                "the last entity class for relationship class {} is {}, exepected item".format(
+                    name, enames[-1]
+                ),
+                DataWarning,
+                stacklevel=2,
+            )
 
         self.schema.relationships[name] = RelationshipSchema(
             entities=e_dict,
@@ -247,6 +256,7 @@ class DatasetBuilder:
                     f"relationship class {cls} unknown and no entities specified,"
                     " inferring from columns",
                     DataWarning,
+                    stacklevel=2,
                 )
                 entities = [c[:-3] for c in table.column_names if c.endswith("_id")]
             self.add_relationship_class(
