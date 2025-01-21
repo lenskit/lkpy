@@ -38,15 +38,15 @@ For example, if you want to get the ratings as a data frame:
 Or obtain item statistics:
 
     >>> mlds.item_stats()
-            count  user_count  rating_count  mean_rating  first_time
-    item
-    1         247         247           247     3.872470   828212413
-    2         107         107           107     3.401869   828213150
-    3          59          59            59     3.161017   833955544
-    4          13          13            13     2.384615   834425135
-    5          56          56            56     3.267857   829491839
+            record_count  user_count  rating_count  ...  count  first_time   last_time
+    item                                            ...
+    1                247         247           247  ...    247   828212413  1475783711
+    2                107         107           107  ...    107   828213150  1470073353
+    3                 59          59            59  ...     59   833955544  1471385241
+    4                 13          13            13  ...     13   834425135  1090908852
+    5                 56          56            56  ...     56   829491839  1471385747
     ...
-    [9066 rows x 5 columns]
+    [9066 rows x 7 columns]
 
 .. _data-model:
 
