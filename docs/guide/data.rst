@@ -53,11 +53,12 @@ Or obtain item statistics:
 Data Model and Key Concepts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The LensKit data model consists of **users**, **items**, and **interactions**,
-with fields providing additional (optional) data about each of these entities.
-The simplest valid LensKit data set is simply a list of user and item
-identifiers indicating which items each user has interacted with.  These may be
-augmented with ratings, timestamps, or any other attributes.
+The LensKit data model, detailed in :ref:`data-model` consists of **entities**
+(often *users* and *items*) and **interactions**, with attributes providing
+additional (optional) data about each of these entities. The simplest valid
+LensKit data set is simply a list of user and item identifiers indicating which
+items each user has interacted with.  These may be augmented with ratings,
+timestamps, or any other attributes.
 
 Data can be read from a range of sources, but ultimately resolves to a
 collection of tables (e.g. Pandas :class:`~pandas.DataFrame`) that record user,
@@ -81,13 +82,15 @@ Users and items have two identifiers:
   appears as a ``user_num`` or ``item_num`` column.  It is the only
   representation supported by NumPy and PyTorch array formats.
 
-  User and item numbers are assigned based on sorted identifiers in the initial
-  data source, so reloading the same data set will yield the same numbers.
-  Loading a subset, however, is not guaranteed to result in the same numbers, as
-  the subset may be missing some users or items.
+  User and item numbers are assigned based on identifiers in the initial data
+  source.  Adding all entities at once, or using one of the standard loaders,
+  will sort the identifiers before assigning numbers, so reloading the same data
+  set will yield the same numbers. Loading a subset, however, is not guaranteed
+  to result in the same numbers, as the subset may be missing some users or
+  items.
 
-  Methods that add additional users or items will assign numbers based on the
-  sorted identifiers that do not yet have numbers.
+  Adding additional users or items to a data set builder will assign numbers
+  based on the sorted identifiers that do not yet have numbers.
 
 Identifiers and numbers can be mapped to each other with the user and item
 *vocabularies* (:attr:`~Dataset.users` and :attr:`~Dataset.items`, see the
