@@ -9,9 +9,9 @@ from dataclasses import dataclass
 from typing import Generic, Literal, TypeAlias, TypeVar
 
 import pandas as pd
+import pyarrow as pa
 
-from lenskit.data import Dataset, ItemListCollection
-from lenskit.data.matrix import MatrixDataset
+from lenskit.data import Dataset, DatasetBuilder, ItemListCollection
 
 SplitTable: TypeAlias = Literal["matrix"]
 TK = TypeVar("TK", bound=tuple)
@@ -62,16 +62,20 @@ class TTSplit(Generic[TK]):
         """
         Create a split by subtracting test data from a source dataset.
         """
-        cols = list(test.key_fields) + ["item_id"]
+        test_df = test.to_df()
 
-        test_df = test.to_df().set_index(cols)
-        mask = pd.Series(False, index=test_df.index)
+        iname = src.default_interaction_class()
+        train_build = DatasetBuilder(src)
+        train_build.filter_interactions(
+            iname,
+            remove=pa.table(
+                {
+                    "user_num": pa.array(src.users.numbers(test_df["user_id"])),
+                    "item_num": pa.array(src.items.numbers(test_df["item_id"])),
+                }
+            ),
+        )
 
-        df = src.interaction_matrix(format="pandas", field="all", original_ids=True).set_index(cols)
-
-        mask = mask.reindex(df.index, fill_value=True)
-
-        train_df = df[mask]
-        train = MatrixDataset(src.users, src.items, train_df.reset_index())
+        train = train_build.build()
 
         return cls(train, test)

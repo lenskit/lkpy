@@ -8,7 +8,8 @@ import numpy as np
 
 from pytest import approx, fixture, skip
 
-from lenskit.data import Dataset, ItemList, MatrixDataset, RecQuery
+from lenskit.data import Dataset, ItemList, RecQuery
+from lenskit.data.builder import DatasetBuilder
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
 
@@ -248,10 +249,15 @@ class ScorerTests(TrainingTests):
         drop_i = rng.choice(ml_ds.items.ids(), 20)
         drop_u = rng.choice(ml_ds.users.ids(), 5)
 
-        df = ml_ds.interaction_table(format="pandas", fields="all", original_ids=True)
+        dsb = DatasetBuilder(ml_ds)
+        df = ml_ds.interactions().pandas(ids=True)
         df = df[~(df["user_id"].isin(drop_u))]
         df = df[~(df["item_id"].isin(drop_i))]
-        ds = MatrixDataset(ml_ds.users, ml_ds.items, df)
+
+        iname = ml_ds.default_interaction_class()
+        dsb.clear_relationships(iname)
+        dsb.add_relationships(iname, df)
+        ds = dsb.build()
 
         model = self.component()
         assert isinstance(model, Trainable)

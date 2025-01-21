@@ -14,8 +14,6 @@ from .builder import DatasetBuilder
 from .collection import GenericKey, ItemListCollection, UserIDKey
 from .dataset import Dataset, EntitySet, FieldError, MatrixRelationshipSet, RelationshipSet
 from .items import ItemList
-from .lazy import LazyDataset
-from .matrix import MatrixDataset
 from .movielens import load_movielens, load_movielens_df
 from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray
 from .query import QueryInput, RecQuery
@@ -30,8 +28,6 @@ __all__ = [
     "DatasetBuilder",
     "FieldError",
     "from_interactions_df",
-    "LazyDataset",
-    "MatrixDataset",
     "ID",
     "NPID",
     "FeedbackType",

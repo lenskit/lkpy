@@ -19,7 +19,7 @@ from numpy.typing import ArrayLike
 from pytest import mark, raises
 
 from lenskit.data import Dataset, FieldError, from_interactions_df
-from lenskit.data.matrix import CSRStructure, MatrixDataset
+from lenskit.data.matrix import CSRStructure
 from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
 
 

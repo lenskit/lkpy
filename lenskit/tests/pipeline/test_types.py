@@ -21,8 +21,7 @@ from numpy.typing import ArrayLike, NDArray
 
 from pytest import warns
 
-from lenskit.data import Dataset
-from lenskit.data.matrix import MatrixDataset
+from lenskit.data import Dataset, MatrixRelationshipSet, RelationshipSet
 from lenskit.pipeline.types import (
     TypecheckWarning,
     is_compatible_data,
@@ -41,7 +40,7 @@ def test_type_compat_identical():
 
 
 def test_type_compat_subclass():
-    assert is_compatible_type(MatrixDataset, Dataset)
+    assert is_compatible_type(MatrixRelationshipSet, RelationshipSet)
 
 
 def test_type_compat_assignable():
