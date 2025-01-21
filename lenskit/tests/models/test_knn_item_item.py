@@ -51,7 +51,7 @@ simple_ratings = pd.DataFrame.from_records(
         (1, 9, 3.0),
         (3, 9, 4.0),
     ],
-    columns=["user", "item", "rating"],
+    columns=["user_id", "item_id", "rating"],
 )
 simple_ds = from_interactions_df(simple_ratings)
 
@@ -87,7 +87,7 @@ def test_ii_train():
     assert isinstance(algo.item_counts_, np.ndarray)
     matrix = algo.sim_matrix_
 
-    test_means = simple_ratings.groupby("item")["rating"].mean()
+    test_means = simple_ratings.groupby("item_id")["rating"].mean()
     test_means = test_means.reindex(algo.items_.ids())
     assert np.all(algo.item_means_ == test_means.values.astype("f8"))
 

@@ -137,7 +137,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         log.info("begining IKNN training")
 
         field = "rating" if self.config.explicit else None
-        init_rmat = data.interaction_matrix(format="torch", field=field)
+        init_rmat = data.interactions().matrix().torch(field)
         n_items = data.item_count
         log.info(
             "[%s] made sparse matrix",
