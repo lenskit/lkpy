@@ -217,7 +217,7 @@ def test_als_train_large(ml_ratings, ml_ds: Dataset):
     assert len(algo.items_) == ml_ratings["item_id"].nunique()
     assert len(algo.users_) == ml_ratings["user_id"].nunique()
 
-    ratings = ml_ds.interaction_matrix(format="pandas", field="all")
+    ratings = ml_ds.interaction_matrix(format="pandas")
     gmean = ratings["rating"].mean()
 
     istats = ml_ds.item_stats()

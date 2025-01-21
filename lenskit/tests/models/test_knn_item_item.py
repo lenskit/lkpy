@@ -157,7 +157,7 @@ def test_ii_simple_implicit_predict():
     history = UserTrainingHistoryLookup()
     history.train(simple_ds)
     algo = ItemKNNScorer(k=30, feedback="implicit")
-    algo.train(from_interactions_df(simple_ratings.loc[:, ["user", "item"]]))
+    algo.train(from_interactions_df(simple_ratings.loc[:, ["user_id", "item_id"]]))
 
     q = history(3)
     res = algo(q, ItemList([6]))
