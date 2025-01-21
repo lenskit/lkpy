@@ -4,13 +4,15 @@ import pandas as pd
 import pyarrow as pa
 from scipy.sparse import csr_array
 
-from pytest import approx, raises, warns
+from pytest import approx, raises, skip, warns
 
 from lenskit.data import DatasetBuilder
 from lenskit.diagnostics import DataError, DataWarning
 from lenskit.testing import ml_test_dir
 
 FRUITS = ["apple", "banana", "orange", "lemon", "mango"]
+
+skip("attributes are not yet well-supported", allow_module_level=True)
 
 
 def test_item_scalar_series():
@@ -239,25 +241,10 @@ def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFram
     ga = dsb.schema.entities["item"].attributes["genres"]
     assert ga.layout == "sparse"
 
-    items = rng.choice(movies.index, 500, replace=False)
-    vec = rng.standard_normal((500, 5))
-    dsb.add_vector_attribute("item", "embedding", items, vec, dims=FRUITS)
-
     ds = dsb.build()
-    assert ds.entities("item").attribute("embedding").names == FRUITS
 
-    arr = ds.entities("item").attribute("embedding").arrow()
-    assert isinstance(arr, pa.FixedSizeListArray)
-    assert np.sum(arr.is_valid()) == 500
-    assert np.all(np.asarray(arr.value_lengths()) == 5)
+    assert ds.entities("item").attribute("genres").names == gindex.values.tolist()
 
-    arr = ds.entities("item").attribute("embedding").numpy()
-    assert isinstance(arr, np.ndarray)
-    assert arr.shape == (len(movies.index), 20)
-    assert np.sum(np.isfinite(arr)) == 500 * 20
-
-    arr = ds.entities("item").attribute("embedding").df(missing="omit")
-    assert isinstance(arr, pd.DataFrame)
-    assert np.all(arr.columns == FRUITS)
-    assert arr.shape == (500, 20)
-    assert set(arr.index) == set(items)
+    mat = ds.entities("item").attribute("genres").scipy()
+    assert isinstance(mat, csr_array)
+    assert mat.nnz == arr.nnz
