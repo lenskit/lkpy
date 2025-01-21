@@ -946,6 +946,7 @@ class MatrixRelationshipSet(RelationshipSet):
         stats[id_col] = stat_vocab.ids(stats[s_col])
         del stats[s_col]
         stats.set_index(id_col, inplace=True)
+        stats = stats.reindex(stat_vocab.index)
 
         return stats
 
