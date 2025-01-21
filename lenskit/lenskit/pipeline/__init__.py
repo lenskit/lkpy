@@ -14,7 +14,7 @@ from lenskit.diagnostics import PipelineError, PipelineWarning
 
 from ._impl import CloneMethod, Pipeline
 from .builder import PipelineBuilder
-from .common import RecPipelineBuilder, topn_pipeline
+from .common import RecPipelineBuilder, predict_pipeline, topn_pipeline
 from .components import (
     Component,
     PipelineFunction,
@@ -38,4 +38,5 @@ __all__ = [
     "Component",
     "RecPipelineBuilder",
     "topn_pipeline",
+    "predict_pipeline",
 ]

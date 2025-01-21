@@ -41,6 +41,7 @@ Standard Pipelines
 
     RecPipelineBuilder
     topn_pipeline
+    predict_pipeline
 
 Serialized Configurations
 -------------------------
