@@ -7,7 +7,7 @@ Most recommendation pipelines are built around a *scoring model* that scores
 items for a recommendation query (e.g., user).  Standard top-*N* recommendation
 uses these scores to rank items, and they can be used as inputs into other
 techniques such as samplers and rerankers.  Scorers are almost always
-:class:`~lenskit.pipeline.Trainable`, and by convention are named ``XYZScorer``.
+:class:`~lenskit.training.Trainable`, and by convention are named ``XYZScorer``.
 They typically take two inputs, the query (`query`) and the list of items to
 score (`items`).
 
