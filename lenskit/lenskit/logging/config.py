@@ -43,6 +43,18 @@ def active_logging_config() -> LoggingConfig | None:
 
 def basic_logging(level: int = logging.INFO):
     """
+    Simple one-function logging configuration for simple command lines.
+
+    Stability:
+        Caller
+    """
+    cfg = LoggingConfig()
+    cfg.level = level
+    cfg.apply()
+
+
+def notebook_logging(level: int = logging.INFO):
+    """
     Simple one-function logging configuration for notebooks and similar.
 
     Stability:
@@ -50,6 +62,7 @@ def basic_logging(level: int = logging.INFO):
     """
     cfg = LoggingConfig()
     cfg.level = level
+    cfg.set_stream_mode("simple")
     cfg.apply()
 
 
@@ -67,7 +80,7 @@ class LoggingConfig:  # pragma: nocover
     """
 
     level: int = logging.INFO
-    stream_json: bool = False
+    stream: Literal["full", "simple", "json"] = "full"
     file: Path | None = None
     file_level: int | None = None
     file_format: LogFormat = "json"
@@ -90,11 +103,11 @@ class LoggingConfig:  # pragma: nocover
         else:
             return self.level
 
-    def set_term_json(self, flag: bool = True):
+    def set_stream_mode(self, mode: Literal["full", "simple", "json"]):
         """
-        Configure logging to stream JSON lines to the stderr (useful for web services).
+        Configure the standard error stream mode.
         """
-        self.stream_json = flag
+        self.stream = mode
 
     def set_verbose(self, verbose: bool | int = True):
         """
@@ -135,17 +148,21 @@ class LoggingConfig:  # pragma: nocover
         """
         global _active_config
 
-        setup_console()
+        if self.stream == "full":
+            setup_console()
+
         root = logging.getLogger()
 
-        if self.stream_json:
+        if self.stream == "json":
             term = logging.StreamHandler(sys.stderr)
             term.setLevel(self.level)
             proc_fmt = structlog.processors.JSONRenderer()
         else:
             term = ConsoleHandler()
             term.setLevel(self.level)
-            proc_fmt = structlog.dev.ConsoleRenderer(colors=term.supports_color)
+            proc_fmt = structlog.dev.ConsoleRenderer(
+                colors=self.stream == "full" and term.supports_color
+            )
 
         eff_lvl = self.effective_level
         structlog.configure(
@@ -190,7 +207,9 @@ class LoggingConfig:  # pragma: nocover
 
         root.setLevel(self.effective_level)
 
-        set_progress_impl("rich")
+        if self.stream == "full":
+            set_progress_impl("rich")
+
         warnings.showwarning = log_warning
         warnings.filterwarnings("ignore", message=r"Sparse CSR tensor support is in beta state")
 
