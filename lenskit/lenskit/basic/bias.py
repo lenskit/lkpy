@@ -223,6 +223,8 @@ class BiasModel:
                 user_bias = np.sum(uoff) / (
                     np.sum(np.isfinite(uoff)) + entity_damping(self.damping, "user")
                 )
+                if np.isnan(user_bias):
+                    user_bias = 0
                 scores += user_bias
 
             elif user_id is not None:
