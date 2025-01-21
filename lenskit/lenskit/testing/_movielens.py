@@ -14,7 +14,6 @@ import pytest
 from lenskit.basic import PopScorer, SoftmaxRanker
 from lenskit.batch import recommend
 from lenskit.data import Dataset, ItemListCollection, UserIDKey, from_interactions_df
-from lenskit.data.lazy import LazyDataset
 from lenskit.data.movielens import load_movielens, load_movielens_df
 from lenskit.logging import get_logger
 from lenskit.pipeline import RecPipelineBuilder
@@ -25,7 +24,7 @@ _log = get_logger("lenskit.testing")
 ml_test_dir = here("data/ml-latest-small")
 ml_100k_zip = here("data/ml-100k.zip")
 
-ml_test: Dataset = LazyDataset(lambda: load_movielens(ml_test_dir))
+ml_test: Dataset = Dataset(lambda: load_movielens(ml_test_dir))
 
 retrain = os.environ.get("LK_TEST_RETRAIN")
 
