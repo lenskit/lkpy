@@ -61,14 +61,6 @@ def _check_timestamp(ml_ds: Dataset, ml_ratings: pd.DataFrame, ts: ArrayLike):
     assert np.all(ts == ml_ratings["timestamp"])
 
 
-def test_internals(ml_ds: Dataset):
-    "Test internal matrix structures"
-    assert isinstance(ml_ds, MatrixDataset)
-    assert ml_ds._matrix.user_nums.dtype == np.int32
-    assert ml_ds._matrix.user_ptrs.dtype == np.int32
-    assert ml_ds._matrix.item_nums.dtype == np.int32
-
-
 def test_matrix_structure(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     log = ml_ds.interaction_matrix(format="structure")
     assert isinstance(log, CSRStructure)

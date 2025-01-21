@@ -310,8 +310,10 @@ class Dataset:
             table = iset.arrow(attributes=fields, ids=original_ids)
             if format == "numpy":
                 return {c: table.column(c).to_numpy() for c in table.column_names}
-            else:
+            elif format == "arrow":
                 return table
+            else:
+                raise ValueError(f"unsupported format {format}")
 
     @overload
     @abstractmethod
@@ -464,105 +466,30 @@ class Dataset:
         Get item statistics from the default interaction class.
 
         Returns:
-            A data frame indexed by item ID with the following columns:
-
-            * count — the number of interactions recorded for this item.
-            * user_count — the number of distinct users who have interacted with
-              or rated this item.
-            * rating_count — the number of ratings for this item.  Only provided
-              if the dataset has explicit ratings; if there are repeated
-              ratings, this does **not** count superseded ratings.
-            * mean_rating — the mean of the ratings. Only provided if the
-              dataset has explicit ratings.
-            * first_time — the first time the item appears. Only provided if the
-              dataset has timestamps.
+            A data frame indexed by item ID with the interaction statistics. See
+            :ref:`interaction-stats` for a description of the columns returned.
 
             The index is the vocabulary, so ``iloc`` works with item numbers.
         """
-
-        if self._item_stats is None:
-            log = self.interaction_table(format="numpy")
-
-            counts = np.zeros(self.item_count, dtype=np.int32)
-            np.add.at(counts, log.item_nums, 1)
-            frame = pd.DataFrame(
-                {
-                    "count": counts,
-                    "user_count": counts,
-                },
-                index=self.items.index,
-            )
-
-            if log.ratings is not None:
-                sums = np.zeros(self.item_count, dtype=np.float64)
-                np.add.at(sums, log.item_nums, log.ratings)
-                frame["rating_count"] = counts
-                frame["mean_rating"] = sums / counts
-
-            if log.timestamps is not None:
-                i64i = np.iinfo(np.int64)
-                times = np.full(self.item_count, i64i.max, dtype=np.int64)
-                np.minimum.at(times, log.item_nums, log.timestamps)
-                frame["first_time"] = times
-
-            self._item_stats = frame
-
-        return self._item_stats
+        iset = self.interactions().matrix()
+        if iset.col_type != "item":
+            raise RuntimeError("default interactions do not have item columns")
+        return iset.col_stats()
 
     def user_stats(self) -> pd.DataFrame:
         """
         Get user statistics from the default interaction class.
 
         Returns:
-            A data frame indexed by user ID with the following columns:
-
-            * count — the number of interactions recorded for this user.
-            * item_count — the number of distinct items with which this user has
-              interacted.
-            * rating_count — the number of ratings for this user.  Only provided
-              if the dataset has explicit ratings; if there are repeated
-              ratings, this does **not** count superseded ratings.
-            * mean_rating — the mean of the user's reatings. Only provided if
-              the dataset has explicit ratings.
-            * first_time — the first time the user appears. Only provided if the
-              dataset has timestamps.
-            * last_time — the last time the user appears. Only provided if the
-              dataset has timestamps.
+            A data frame indexed by user ID with the interaction statistics. See
+            :ref:`interaction-stats` for a description of the columns returned.
 
             The index is the vocabulary, so ``iloc`` works with user numbers.
         """
-
-        if self._user_stats is None:
-            log = self.interaction_table(format="numpy")
-
-            counts = np.zeros(self.user_count, dtype=np.int32)
-            np.add.at(counts, log.user_nums, 1)
-            frame = pd.DataFrame(
-                {
-                    "count": counts,
-                    "item_count": counts,
-                },
-                index=self.users.index,
-            )
-
-            if log.ratings is not None:
-                sums = np.zeros(self.user_count, dtype=np.float64)
-                np.add.at(sums, log.user_nums, log.ratings)
-                frame["rating_count"] = counts
-                frame["mean_rating"] = sums / counts
-
-            if log.timestamps is not None:
-                i64i = np.iinfo(np.int64)
-                first = np.full(self.user_count, i64i.max, dtype=np.int64)
-                last = np.full(self.user_count, i64i.min, dtype=np.int64)
-                np.minimum.at(first, log.user_nums, log.timestamps)
-                np.maximum.at(last, log.user_nums, log.timestamps)
-                frame["first_time"] = first
-                frame["last_time"] = last
-
-            self._user_stats = frame
-
-        return self._user_stats
+        iset = self.interactions().matrix()
+        if iset.row_type != "user":
+            raise RuntimeError("default interactions do not have user columns")
+        return iset.row_stats()
 
 
 class EntitySet:
@@ -696,8 +623,10 @@ class RelationshipSet:
         if ids:
             id_cols = {}
             for e in self.schema.entity_class_names:
-                id_cols[id_col_name] = self.dataset.entities(e).vocabulary.ids(
-                    table.column(num_col_name(e)).to_numpy()
+                id_cols[id_col_name(e)] = pa.array(
+                    self.dataset.entities(e).vocabulary.ids(
+                        table.column(num_col_name(e)).to_numpy()
+                    )
                 )
             id_tbl = pa.table(id_cols)
             for col in table.column_names:
@@ -753,9 +682,12 @@ class MatrixRelationshipSet(RelationshipSet):
 
     _row_ptrs: np.ndarray[int, np.dtype[np.int32]]
     _row_vocab: Vocabulary
-    _row_type: str
+    row_type: str
+    _row_stats: pd.DataFrame | None = None
+
     _col_vocab: Vocabulary
-    _col_type: str
+    col_type: str
+    _col_stats: pd.DataFrame | None = None
 
     def __init__(
         self,
@@ -768,9 +700,9 @@ class MatrixRelationshipSet(RelationshipSet):
         # order the table to compute the sparse matrix
         entities = list(schema.entities.keys())
         row, col = entities
-        self._row_type = row
+        self.row_type = row
         self._row_vocab = ds.entities(row).vocabulary
-        self._col_type = col
+        self.col_type = col
         self._col_vocab = ds.entities(col).vocabulary
 
         e_cols = [num_col_name(e) for e in entities]
@@ -799,7 +731,7 @@ class MatrixRelationshipSet(RelationshipSet):
         n_rows = len(self._row_vocab)
         n_cols = len(self._col_vocab)
 
-        colinds = self._table.column(num_col_name(self._col_type)).to_numpy()
+        colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
         return CSRStructure(self._row_ptrs, colinds, (n_rows, n_cols))
 
     @overload
@@ -850,7 +782,7 @@ class MatrixRelationshipSet(RelationshipSet):
         n_cols = len(self._col_vocab)
         nnz = self._table.num_rows
 
-        colinds = self._table.column(num_col_name(self._col_type)).to_numpy()
+        colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
         if attribute is None:
             values = np.ones(nnz, dtype=np.float32)
         else:
@@ -862,7 +794,7 @@ class MatrixRelationshipSet(RelationshipSet):
             else:
                 return sps.csr_array((values, colinds, self._row_ptrs), shape=(n_rows, n_cols))
         elif layout == "coo":
-            rowinds = self._table.column(num_col_name(self._row_type))
+            rowinds = self._table.column(num_col_name(self.row_type))
             if legacy:
                 return sps.coo_matrix((values, (rowinds, colinds)), shape=(n_rows, n_cols))
             else:
@@ -892,11 +824,12 @@ class MatrixRelationshipSet(RelationshipSet):
         n_cols = len(self._col_vocab)
         nnz = self._table.num_rows
 
-        colinds = torch.tensor(self._table.column(num_col_name(self._col_type)))
+        colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
+        colinds = torch.tensor(colinds)
         if attribute is None:
             values = torch.ones(nnz, dtype=torch.float32)
         else:
-            values = torch.tensor(self._table.column(attribute))
+            values = torch.tensor(self._table.column(attribute).to_numpy())
 
         if layout == "csr":
             return torch.sparse_csr_tensor(
@@ -906,7 +839,7 @@ class MatrixRelationshipSet(RelationshipSet):
                 size=(n_rows, n_cols),
             ).coalesce()
         elif layout == "coo":
-            rowinds = torch.tensor(self._table.column(num_col_name(self._row_type)))
+            rowinds = torch.tensor(self._table.column(num_col_name(self.row_type)))
             indices = torch.stack((colinds, rowinds))
             return torch.sparse_coo_tensor(indices=indices, values=values, size=(n_rows, n_cols))
 
@@ -926,7 +859,7 @@ class MatrixRelationshipSet(RelationshipSet):
         row_end = self._row_ptrs[number]
 
         tbl = self._table.slice(row_start, row_end - row_start)
-        tbl = tbl.drop_columns(num_col_name(self._row_type))
+        tbl = tbl.drop_columns(num_col_name(self.row_type))
         return tbl
 
     def row_items(self, id: ID | None = None, *, number: int | None = None) -> ItemList | None:
@@ -942,6 +875,64 @@ class MatrixRelationshipSet(RelationshipSet):
             return None
 
         return ItemList.from_arrow(tbl)
+
+    def row_stats(self):
+        if self._row_stats is None:
+            self._row_stats = self._compute_stats(self.row_type, self.col_type, self._row_vocab)
+        return self._row_stats
+
+    def col_stats(self):
+        if self._col_stats is None:
+            self._col_stats = self._compute_stats(self.col_type, self.row_type, self._row_vocab)
+        return self._col_stats
+
+    def _compute_stats(
+        self, stat_type: str, other_type: str, stat_vocab: Vocabulary
+    ) -> pd.DataFrame:
+        s_col = num_col_name(stat_type)
+        group = self._table.group_by(s_col)
+        o_col = num_col_name(other_type)
+        aggs = [(o_col, "count"), (o_col, "count_distinct")]
+        if "count" in self._table.column_names:
+            aggs.append(("count", "sum"))
+        if "rating" in self._table.column_names:
+            aggs += [("rating", "count"), ("rating", "mean")]
+        if "first_time" in self._table.column_names:
+            aggs.append(("first_time", "min"))
+        if "last_time" in self._table.column_names:
+            aggs.append(("last_time", "max"))
+        if "timestamp" in self._table.column_names:
+            aggs += [("timestamp", "min"), ("timestamp", "max")]
+
+        stats = group.aggregate(aggs).to_pandas()
+        stats = stats.rename(
+            columns={
+                o_col + "_count": "record_count",
+                o_col + "_count_distinct": o_col + "_count",
+                "rating_mean": "mean_rating",
+                "first_time_min": "first_time",
+                "last_time_max": "last_time",
+            }
+        )
+        if "timestamp" in self._table.column_names:
+            if "first_time" in self._table.columns:
+                stats["first_time"] = np.minimum(stats["first_time"], stats["timestamp_min"])
+            else:
+                stats["first_time"] = stats["timestamp_min"]
+            del stats["timestamp_min"]
+
+            if "last_time" in self._table.columns:
+                stats["last_time"] = np.maximum(stats["last_time"], stats["timestamp_max"])
+            else:
+                stats["last_time"] = stats["timestamp_max"]
+            del stats["timestamp_max"]
+
+        id_col = id_col_name(stat_type)
+        stats[id_col] = stat_vocab.ids(stats[s_col])
+        del stats[s_col]
+        stats.set_index(id_col, inplace=True)
+
+        return stats
 
 
 from .matrix import CSRStructure  # noqa: E402

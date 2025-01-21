@@ -108,13 +108,64 @@ more detail in the :class:`reference documentation <Dataset>`.  These include:
 *   Sets of known user and item identifiers, through :class:`Vocabulary` objects
     exposed through the :attr:`Dataset.users` and :attr:`Dataset.items`
     properties.
+*   Access to the entities and relationships (including interactions) defined in
+    the dataset.
+
+Analyzing Interactions
+~~~~~~~~~~~~~~~~~~~~~~
+
+:class:`Dataset` allows client code to obtain *interactions* between entities
+(such as users rating items), or other inter-entity relationships, in a variety
+of formats (including Pandas data frames and SciPy or PyTorch sparse matrices).
+The :class:`RelationshipSet` and :class:`MatrixRelationshipSet` classes provide
+the primary interfaces to these capabilities.
+
+.. _interaction-stats:
+
+Interaction Statistics
+----------------------
+
+Datasets also provide cached access to various statistics of the entities
+involved in an interaction class.  These are currently exposed through
+:meth:`MatrixRelationshipSet.row_stats` and
+:meth:`~MatrixRelationshipSet.col_stats`; for convenience, the statistics from
+the default interaction class are available on :meth:`Dataset.user_stats` and
+:meth:`Dataset.item_stats`.
+
+These statistics include:
+
+``count``
+    The total number of relationships for the entity.
+``record_count``
+    The number of relationship or interaction records for the entity.  This is
+    equal to ``count``, unless the relationship type has a ``count`` attribute,
+    in which case this attribute is the number of records and ``count`` is the
+    total number of interactions.
+``<other>_count``
+    The number of distinct entities of type <other> this entity has interacted
+    with.  For example, the user statistics of a normal user-item interaction
+    type will have an ``item_count`` column.
+``rating_count``
+    The number of explicit rating values (only defined if the interaction type
+    has a ``rating`` attribute).
+``mean_rating``
+    The mean rating provided by or for this entity (only defined if the interaction
+    type has a ``rating`` attribute).
+``first_time``
+    The first recorded timestamp for this entity's interactions (only defined if
+    the interaction type has a ``timestamp`` attribute).
+``last_time``
+    The last recorded timestamp for this entity's interactions (only defined if
+    the interaction type has a ``timestamp`` attribute).
 
 Creating Datasets
 ~~~~~~~~~~~~~~~~~
 
-Several functions can create a :class:`Dataset` from different input data sources.
+Several functions and classes can create a :class:`Dataset` from different input
+data sources.
 
 .. autosummary::
+    DatasetBuilder
     from_interactions_df
 
 Loading Common Datasets

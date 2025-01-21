@@ -89,25 +89,12 @@ def test_pandas_log_no_ts(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
 def test_numpy_log_defaults(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     log = ml_ds.interaction_table(format="numpy")
-    assert isinstance(log, NumpyUserItemTable)
-    assert log.ratings is not None
-    assert log.timestamps is not None
+    assert isinstance(log, dict)
+    assert log["rating"] is not None
+    assert log["timestamp"] is not None
 
     # and the total length
-    assert len(log.user_nums) == len(ml_ratings)
-    assert len(log.item_nums) == len(ml_ratings)
-    assert len(log.ratings) == len(ml_ratings)
-    assert len(log.timestamps) == len(ml_ratings)
-
-
-def test_torch_log_defaults(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    log = ml_ds.interaction_table(format="torch")
-    assert isinstance(log, TorchUserItemTable)
-    assert log.ratings is not None
-    assert log.timestamps is not None
-
-    # and the total length
-    assert len(log.user_nums) == len(ml_ratings)
-    assert len(log.item_nums) == len(ml_ratings)
-    assert len(log.ratings) == len(ml_ratings)
-    assert len(log.timestamps) == len(ml_ratings)
+    assert len(log["user_num"]) == len(ml_ratings)
+    assert len(log["item_num"]) == len(ml_ratings)
+    assert len(log["rating"]) == len(ml_ratings)
+    assert len(log["timestamp"]) == len(ml_ratings)
