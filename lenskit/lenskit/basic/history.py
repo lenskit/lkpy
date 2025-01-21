@@ -43,18 +43,14 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
 
     config: LookupConfig
 
-    users: Vocabulary
-    items: Vocabulary
     interactions: MatrixRelationshipSet
 
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         # TODO: find a better data structure for this
-        if hasattr(self, "interaction_matrix") and not options.retrain:
+        if hasattr(self, "interactions") and not options.retrain:
             return
 
-        self.users = data.users
-        self.items = data.items
         self.interactions = data.interactions(self.config.interaction_class).matrix()
         if self.interactions.row_type != "user":  # pragma: nocover
             raise DataError("interactions must have user rows")
