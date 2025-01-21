@@ -11,7 +11,6 @@ from typing import Iterator, overload
 
 import numpy as np
 import pandas as pd
-import pyarrow as pa
 from numpy.typing import NDArray
 
 from lenskit.data import NPID, Dataset, DatasetBuilder, ItemListCollection, UserIDKey
@@ -195,13 +194,7 @@ def _make_split(
     if test_only:
         train_build.clear_relationships(iname)
     else:
-        test_tbl = test.to_df()
-        test_tbl = pa.table(
-            {
-                "user_num": pa.array(data.users.numbers(test_tbl["user_id"])),
-                "item_num": pa.array(data.items.numbers(test_tbl["item_id"])),
-            }
-        )
+        test_tbl = test.to_df()[["user_id", "item_id"]]
         train_build.filter_interactions(iname, remove=test_tbl)
 
     return TTSplit(train_build.build(), test)
