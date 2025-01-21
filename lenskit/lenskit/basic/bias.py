@@ -126,7 +126,7 @@ class BiasModel:
             i_bias = np.zeros(ncols, dtype=np.float32)
             np.divide(sums, counts, out=i_bias, where=counts > 0)
 
-            model.items = data.items.copy()
+            model.items = data.items
             model.item_biases = i_bias
             centered -= i_bias[ratings.col]
             _logger.info("computed biases for %d items", len(i_bias))
@@ -140,7 +140,7 @@ class BiasModel:
             u_bias = np.zeros(nrows, dtype=np.float32)
             np.divide(sums, counts, out=u_bias, where=counts > 0)
 
-            model.users = data.users.copy()
+            model.users = data.users
             model.user_biases = u_bias
             _logger.info("computed biases for %d users", len(u_bias))
 

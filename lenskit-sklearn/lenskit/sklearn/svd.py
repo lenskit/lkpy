@@ -92,8 +92,8 @@ class BiasedSVDScorer(Component[ItemList], Trainable):
         _log.info("[%s] training SVD (k=%d)", timer, self.factorization_.n_components)  # type: ignore
         Xt = self.factorization_.fit_transform(r_mat)  # type: ignore
         self.user_components_ = Xt
-        self.users_ = data.users.copy()
-        self.items_ = data.items.copy()
+        self.users_ = data.users
+        self.items_ = data.items
         _log.info("finished model training in %s", timer)
 
     @override

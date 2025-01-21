@@ -52,7 +52,7 @@ class PopScorer(Component[ItemList], Trainable):
             return
 
         _log.info("counting item popularity")
-        self.items_ = data.items.copy()
+        self.items_ = data.items
         stats = data.item_stats()
         scores = stats["count"].reindex(self.items_.ids())
         self.item_scores_ = np.require(
@@ -125,5 +125,5 @@ class TimeBoundedPopScore(PopScorer):
 
             item_scores = super()._train_internal(counts)
 
-        self.items_ = data.items.copy()
+        self.items_ = data.items
         self.item_scores_ = np.require(item_scores.reindex(self.items_.ids()).values, np.float32)

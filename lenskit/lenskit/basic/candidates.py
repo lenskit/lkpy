@@ -31,7 +31,7 @@ class TrainingCandidateSelectorBase(Component[ItemList], Trainable):
         if hasattr(self, "items_") and not options.retrain:
             return
 
-        self.items_ = data.items.copy()
+        self.items_ = data.items
 
 
 class AllTrainingItemsCandidateSelector(TrainingCandidateSelectorBase):

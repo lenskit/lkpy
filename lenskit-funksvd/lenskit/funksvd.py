@@ -306,8 +306,8 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
         train(context, params, model, timer)
         _logger.info("finished model training in %s", timer)
 
-        self.users_ = data.users.copy()
-        self.items_ = data.items.copy()
+        self.users_ = data.users
+        self.items_ = data.items
         self.user_features_ = model.user_features
         self.item_features_ = model.item_features
 

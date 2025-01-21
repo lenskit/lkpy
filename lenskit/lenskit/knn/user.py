@@ -132,9 +132,9 @@ class UserKNNScorer(Component[ItemList], Trainable):
 
         self.user_vectors_ = normed
         self.user_ratings_ = torch_sparse_to_scipy(rmat).tocsc()
-        self.users_ = data.users.copy()
+        self.users_ = data.users
         self.user_means_ = means
-        self.items_ = data.items.copy()
+        self.items_ = data.items
 
     @override
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
