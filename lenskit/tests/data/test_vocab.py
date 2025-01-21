@@ -8,6 +8,7 @@
 Tests for the Vocabulary class.
 """
 
+import pickle
 from uuid import UUID
 
 import numpy as np
@@ -195,3 +196,16 @@ def test_all_terms(initial: set[int] | set[str]):
     terms = vocab.terms()
     assert isinstance(terms, np.ndarray)
     assert all(terms == tl)
+
+
+@given(st.one_of(st.lists(st.integers()), st.lists(st.uuids()), st.lists(st.emails())))
+def test_pickle(initial: list[int | str | UUID]):
+    vocab = Vocabulary(initial, reorder=True)
+
+    blob = pickle.dumps(vocab)
+    v2 = pickle.loads(blob)
+
+    assert v2 is not vocab
+    assert len(v2) == len(vocab)
+    assert np.all(v2.ids() == vocab.ids())
+    assert v2 == vocab
