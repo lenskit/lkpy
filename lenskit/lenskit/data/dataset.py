@@ -423,7 +423,7 @@ class Dataset:
 
         match format:
             case "pandas":
-                return iset.pandas(attributes=[field] if field else None, ids=original_ids)
+                return iset.pandas(attributes=field, ids=original_ids)
             case "scipy":
                 return iset.scipy(attribute=field, layout=layout, legacy=legacy)
             case "torch":
