@@ -5,6 +5,7 @@ Components that look up user history from the training data.
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
@@ -22,6 +23,15 @@ from lenskit.training import Trainable, TrainingOptions
 _logger = logging.getLogger(__name__)
 
 
+@dataclass
+class LookupConfig:
+    interaction_class: str | None = None
+    """
+    The name of the interaction class to use.  Leave ``None`` to use the
+    dataset's default interaction class.
+    """
+
+
 class UserTrainingHistoryLookup(Component[ItemList], Trainable):
     """
     Look up a user's history from the training data.
@@ -30,7 +40,7 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
         Caller
     """
 
-    config: None
+    config: LookupConfig
 
     users: Vocabulary
     items: Vocabulary
@@ -44,7 +54,7 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
 
         self.users = data.users
         self.items = data.items
-        self.interactions = data.interactions().matrix()
+        self.interactions = data.interactions(self.config.interaction_class).matrix()
 
     def __call__(self, query: QueryInput) -> RecQuery:
         """
