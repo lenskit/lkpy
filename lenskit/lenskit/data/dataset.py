@@ -921,11 +921,14 @@ class MatrixRelationshipSet(RelationshipSet):
             columns={
                 o_col + "_count": "record_count",
                 o_col + "_count_distinct": other_type + "_count",
+                "count_sum": "count",
                 "rating_mean": "mean_rating",
                 "first_time_min": "first_time",
                 "last_time_max": "last_time",
             }
         )
+        if "count" not in stats.columns:
+            stats["count"] = stats["record_count"]
         if "timestamp" in self._table.column_names:
             if "first_time" in self._table.columns:
                 stats["first_time"] = np.minimum(stats["first_time"], stats["timestamp_min"])
