@@ -14,7 +14,7 @@ import torch
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import given, settings
-from pytest import raises, warns
+from pytest import mark, raises, warns
 
 from lenskit.data import Dataset, ItemList
 from lenskit.data.vocab import Vocabulary
@@ -255,6 +255,45 @@ def test_numbers_alt_vocab():
     av = Vocabulary(["A", "B"] + ITEMS)
     nums = il.numbers(vocabulary=av)
     assert np.all(nums == np.arange(2, 7))
+
+
+@mark.parametrize("src", ["ids", "numbers"])
+def test_numbers_numpy(src):
+    match src:
+        case "ids":
+            il = ItemList(item_ids=ITEMS, vocabulary=VOCAB)
+        case "numbers":
+            il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB)
+
+    nums = il.numbers(format="numpy")
+    assert isinstance(nums, np.ndarray)
+    assert np.all(nums == np.arange(5))
+
+
+@mark.parametrize("src", ["ids", "numbers"])
+def test_numbers_torch(src):
+    match src:
+        case "ids":
+            il = ItemList(item_ids=ITEMS, vocabulary=VOCAB)
+        case "numbers":
+            il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB)
+
+    nums = il.numbers(format="torch")
+    assert torch.is_tensor(nums)
+    assert torch.all(nums == torch.arange(5))
+
+
+@mark.parametrize("src", ["ids", "numbers"])
+def test_numbers_arrow(src):
+    match src:
+        case "ids":
+            il = ItemList(item_ids=ITEMS, vocabulary=VOCAB)
+        case "numbers":
+            il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB)
+
+    nums = il.numbers(format="arrow")
+    assert isinstance(nums, pa.Int32Array)
+    assert np.all(nums.to_numpy() == np.arange(5))
 
 
 def test_pandas_df():

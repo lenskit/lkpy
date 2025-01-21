@@ -199,6 +199,12 @@ class ItemList:
         if item_nums is not None:
             if not len(item_nums):  # type: ignore
                 item_nums = np.ndarray(0, dtype=np.int32)
+            if isinstance(item_nums, np.ndarray):
+                item_nums = np.require(item_nums, dtype=np.int32)
+            elif isinstance(item_nums, pa.Array):
+                item_nums = item_nums.cast(pa.int32())
+            elif torch.is_tensor(item_nums):
+                item_nums = item_nums.to(torch.int32)
             self._numbers = MTArray(item_nums)
             check_1d(self._numbers, getattr(self, "_len", None), label="item_nums")
             self._len = self._numbers.shape[0]
