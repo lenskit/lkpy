@@ -444,7 +444,8 @@ class ItemList:
         if vocabulary is not None and vocabulary is not self._vocab:
             # we need to translate vocabulary
             ids = self.ids()
-            return vocabulary.numbers(ids, missing=missing)
+            mta = MTArray(vocabulary.numbers(ids, missing=missing))
+            return mta.to(format)
 
         if self._numbers is None:
             if self._vocab is None:
@@ -452,7 +453,7 @@ class ItemList:
             assert self._ids is not None
             self._numbers = MTArray(self._vocab.numbers(self._ids, missing="negative"))
 
-        if missing == "error" and np.any(self._numbers.to("numpy") < 0):
+        if missing == "error" and np.any(self._numbers.numpy() < 0):
             raise KeyError("item IDs")
         return self._numbers.to(format)
 
