@@ -384,7 +384,10 @@ class DatasetBuilder:
             max_time:
                 The maximum interaction time to keep (exclusive).
             remove:
-                Combinations of entity numbers or IDs to remove.
+                Combinations of entity numbers or IDs to remove.  The entities
+                are filtered using an anti-join with this table, so providing a
+                single column of entity IDs or numbers will remove all
+                interactions associated with the listed entities.
         """
         tbl = self._tables[cls]
         if tbl is None:  # pragma: nocover
