@@ -12,6 +12,10 @@ def test_all_entities(rng: Generator, ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert np.all(ml_ds.entities("item").ids() == np.unique(ml_ratings["item_id"]))
     assert np.all(ml_ds.entities("item").numbers() == np.arange(ml_ds.item_count))
 
+    df = ml_ds.entities("item").pandas()
+    assert len(df) == ml_ratings["item_id"].nunique()
+    assert np.all(df["item_id"] == ml_ds.items.ids())
+
 
 def test_entity_subset_ids(rng: Generator, ml_ratings: pd.DataFrame, ml_ds: Dataset):
     item_ids = rng.choice(ml_ratings["item_id"].unique(), 20, replace=False)
@@ -20,6 +24,9 @@ def test_entity_subset_ids(rng: Generator, ml_ratings: pd.DataFrame, ml_ds: Data
     assert len(ents) == len(item_ids)
     assert np.all(ents.ids() == item_ids)
     assert np.all(ents.numbers() == ml_ds.items.numbers(item_ids))
+
+    df = ents.pandas()
+    assert np.all(df["item_id"] == item_ids)
 
 
 def test_entity_subset_numbers(rng: Generator, ml_ratings: pd.DataFrame, ml_ds: Dataset):
