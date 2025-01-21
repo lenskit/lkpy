@@ -214,7 +214,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
 
         # set up rating array
         # get rated item positions & limit to in-model items
-        ri_nums = ratings.numbers(format="torch", vocabulary=self.items_, missing="negative")
+        ri_nums = ratings.numbers(format="numpy", vocabulary=self.items_, missing="negative")
         ri_mask = ri_nums >= 0
         ri_valid_nums = ri_nums[ri_mask]
         n_valid = len(ri_valid_nums)
@@ -239,7 +239,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
 
         # subset the model to rated and target items
         model = self.sim_matrix_
-        model = model[ri_valid_nums.numpy(), :]
+        model = model[ri_valid_nums, :]
         assert isinstance(model, csr_array)
         model = model[:, ti_valid_nums]
         assert isinstance(model, csr_array)
