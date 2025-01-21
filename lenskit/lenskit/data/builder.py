@@ -1,6 +1,7 @@
 # pyright: basic
 from __future__ import annotations
 
+import datetime as dt
 import warnings
 from collections.abc import Mapping, Sequence
 from os import PathLike
@@ -61,9 +62,21 @@ class DatasetBuilder:
     _log: structlog.stdlib.BoundLogger
     _tables: dict[str, pa.Table | None]
 
-    def __init__(self, name: str | DataContainer | None = None):
+    def __init__(self, name: str | DataContainer | Dataset | None = None):
+        """
+        Create a new dataset builder.
+
+        Args:
+            name:
+                The dataset name. Can also be a data container or a dataset,
+                which will initialize this builder with its contents to extend
+                or modify.
+        """
+        if isinstance(name, Dataset):
+            name._ensure_loaded()
+            name = name._data
         if isinstance(name, DataContainer):
-            self.schema = name.schema
+            self.schema = name.schema.model_copy()
             self._tables = {n: t for (n, t) in name.tables.items()}
         else:
             self.schema = DataSchema(name=name, entities={"item": EntitySchema()})
@@ -147,7 +160,7 @@ class DatasetBuilder:
             interaction=interaction,
             repeats=AllowableTroolean.ALLOWED if allow_repeats else AllowableTroolean.FORBIDDEN,
         )
-        self._tables[name] = None
+        self._tables[name] = _empty_rel_table(enames)
 
     @overload
     def add_entities(
@@ -202,8 +215,7 @@ class DatasetBuilder:
         id_type: pa.DataType = id_field.type
 
         # de-duplicate and sort the IDs
-        ids = pc.unique(ids)
-        ids = pc.take(ids, pc.sort_indices(ids))
+        ids = pc.unique(ids).sort()
 
         n = len(ids)
         if n < len(source):
@@ -360,6 +372,57 @@ class DatasetBuilder:
             interaction="default" if default else True,
         )
 
+    def filter_interactions(
+        self,
+        cls: str,
+        min_time: int | dt.datetime | None = None,
+        max_time: int | dt.datetime | None = None,
+        remove: pa.Table | dict[str, ArrayLike] | pd.DataFrame | None = None,
+    ):
+        """
+        Filter interactions based on timestamp or to remove particular entities.
+
+        Args:
+            cls:
+                The interaction class to filter.
+            min_time:
+                The minimum interaction time to keep (inclusive).
+            max_time:
+                The maximum interaction time to keep (exclusive).
+            remove:
+                Combinations of entity numbers (**not** IDs) to remove.
+        """
+        tbl = self._tables[cls]
+        if tbl is None:
+            raise ValueError(f"interaction class {cls} is empty")
+
+        mask = None
+        if min_time is not None:
+            if "timestamp" not in tbl.column_names:
+                raise RuntimeError("timestamp column required to filter by timestamp")
+            mask = pc.greater_equal(tbl.column("timestamp"), min_time)
+        if max_time is not None:
+            if "timestamp" not in tbl.column_names:
+                raise RuntimeError("timestamp column required to filter by timestamp")
+            mask2 = pc.less(tbl.column("timestamp"), max_time)
+            if mask is None:
+                mask = mask2
+            else:
+                mask = pc.and_(mask, mask2)
+
+        if mask is not None:
+            tbl = tbl.filter(mask)
+
+        if remove is not None:
+            remove = pa.table(remove)  # type: ignore
+            assert isinstance(remove, pa.Table)
+            tbl = tbl.join(remove, remove.column_names, join_type="left anti")
+
+        self._tables[cls] = tbl
+
+    def clear_relationships(self, cls: str):
+        self._tables[cls] = _empty_rel_table(self.schema.relationships[cls].entity_class_names)
+
     @overload
     def add_scalar_attribute(
         self, cls: str, name: str, data: pd.Series[Any] | TableInput, /
@@ -438,3 +501,7 @@ class DatasetBuilder:
         """
         container = self.build_container()
         container.save(path)
+
+
+def _empty_rel_table(types: list[str]) -> pa.Table:
+    return pa.table({num_col_name(t): pa.array([], pa.int32()) for t in types})

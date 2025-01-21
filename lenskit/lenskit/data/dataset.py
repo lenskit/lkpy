@@ -670,7 +670,7 @@ class RelationshipSet:
 
         return table
 
-    def pandas(self, *, attributes: str | list[str] | None, ids=False) -> pd.DataFrame:
+    def pandas(self, *, attributes: str | list[str] | None = None, ids=False) -> pd.DataFrame:
         """
         Get these relationship and their attributes as a PyArrow table.
 
