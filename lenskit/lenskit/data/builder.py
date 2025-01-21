@@ -182,9 +182,9 @@ class DatasetBuilder:
         *,
         duplicates: DuplicateAction = "error",
     ) -> None:
-        if isinstance(source, pd.DataFrame):
+        if isinstance(source, pd.DataFrame):  # pragma: nocover
             raise NotImplementedError()
-        if isinstance(source, pa.Table):
+        if isinstance(source, pa.Table):  # pragma: nocover
             raise NotImplementedError()
 
         if cls not in self.schema.entities:
@@ -291,7 +291,7 @@ class DatasetBuilder:
                 log.debug("ensuring all entities exist")
                 self.add_entities(e_type, pc.unique(ids), duplicates="update")
             e_tbl = self._tables.get(e_type, None)
-            if e_tbl is None:
+            if e_tbl is None:  # pragma: nocover
                 raise DataError(f"no entities of class {e_type}")
 
             e_ids = e_tbl.column(id_col_name(e_type))
@@ -320,7 +320,7 @@ class DatasetBuilder:
             new_table = new_table.filter(link_mask)
         log.debug("adding %d new rows", new_table.num_rows)
 
-        if "count" in new_table.column_names:
+        if "count" in new_table.column_names:  # pragma: nocover
             raise NotImplementedError("count attributes are not yet implemented")
 
         cur_table = self._tables[cls]
@@ -385,18 +385,23 @@ class DatasetBuilder:
                 Combinations of entity numbers (**not** IDs) to remove.
         """
         tbl = self._tables[cls]
-        if tbl is None:
+        if tbl is None:  # pragma: nocover
             raise ValueError(f"interaction class {cls} is empty")
+
+        if min_time is not None or max_time is not None:
+            if "timestamp" not in tbl.column_names:
+                raise RuntimeError("timestamp column required to filter by timestamp")
+            schema = tbl.schema
+            ts_field = schema.field("timestamp")
 
         mask = None
         if min_time is not None:
-            if "timestamp" not in tbl.column_names:
-                raise RuntimeError("timestamp column required to filter by timestamp")
+            min_time = _conform_time(min_time, ts_field.type)
             mask = pc.greater_equal(tbl.column("timestamp"), min_time)
         if max_time is not None:
-            if "timestamp" not in tbl.column_names:
-                raise RuntimeError("timestamp column required to filter by timestamp")
+            max_time = _conform_time(max_time, ts_field.type)
             mask2 = pc.less(tbl.column("timestamp"), max_time)
+
             if mask is None:
                 mask = mask2
             else:
@@ -497,3 +502,16 @@ class DatasetBuilder:
 
 def _empty_rel_table(types: list[str]) -> pa.Table:
     return pa.table({num_col_name(t): pa.array([], pa.int32()) for t in types})
+
+
+def _conform_time(time: int | float | str | dt.datetime, col_type: pa.DataType):
+    if isinstance(time, str):
+        time = dt.datetime.fromisoformat(time)
+
+    if pa.types.is_timestamp(col_type):
+        if not isinstance(time, dt.datetime):
+            return dt.datetime.fromtimestamp(time)
+    elif isinstance(time, dt.datetime):
+        return time.timestamp()
+
+    return time

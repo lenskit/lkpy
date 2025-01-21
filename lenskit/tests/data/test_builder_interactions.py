@@ -1,11 +1,13 @@
 # pyright: basic
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 
 from pytest import approx, mark, raises, warns
 
-from lenskit.data import DatasetBuilder
+from lenskit.data import Dataset, DatasetBuilder
 from lenskit.data.schema import AllowableTroolean
 from lenskit.diagnostics import DataError, DataWarning
 
