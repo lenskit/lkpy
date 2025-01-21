@@ -613,10 +613,10 @@ class EntitySet:
             picked = pa.array(numbers).cast(pa.int32())
         elif ids is not None and numbers is None:
             picked = pa.array(self.vocabulary.numbers(ids)).cast(pa.int32())
-        else:
+        else:  # pragma: nocover
             raise ValueError("specify exactly one of ids and numbers")
 
-        return EntitySet(self.name, self.schema, self.vocabulary, self._table, picked)
+        return EntitySet(self.name, self.schema, self.vocabulary, self._table, picked)  # type: ignore
 
     def __len__(self):
         return self.count()
@@ -664,6 +664,7 @@ class RelationshipSet:
         self._table = table
         self._link_cols = [num_col_name(e) for e in schema.entities]
 
+    @property
     def is_interaction(self) -> bool:
         """
         Query whether these relationships represent interactions.
@@ -675,7 +676,7 @@ class RelationshipSet:
         return [c for c in self._table.column_names if c not in self._link_cols]
 
     def count(self):
-        if "count" in self._table.column_names:
+        if "count" in self._table.column_names:  # pragma: nocover
             raise NotImplementedError()
 
         return self._table.num_rows
@@ -739,7 +740,7 @@ class RelationshipSet:
 
     def matrix(
         self, *, combine: MAT_AGG | Mapping[str, MAT_AGG] | None = None
-    ) -> MatrixRelationshipSet:
+    ) -> MatrixRelationshipSet:  # pragma: nocover
         """
         Convert this relationship set into a matrix, coalescing duplicate
         observations.
