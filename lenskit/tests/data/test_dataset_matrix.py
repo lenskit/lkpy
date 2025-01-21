@@ -166,7 +166,8 @@ def test_matrix_scipy_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
 
 
 @mark.parametrize("generation", ["modern", "legacy"])
-def test_matrix_scipy_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
+def test_matrix_scipy_csr(ml_ratings: pd.DataFrame, generation):
+    ml_ds = from_interactions_df(ml_ratings.sample(frac=1.0, replace=False))
     log = ml_ds.interaction_matrix(format="scipy", field="rating", legacy=generation == "legacy")
     assert isinstance(log, sps.csr_array if generation == "modern" else sps.csr_matrix)
     assert log.nnz == len(ml_ratings)

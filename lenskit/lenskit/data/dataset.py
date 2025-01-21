@@ -676,7 +676,7 @@ class RelationshipSet:
 
         return self._table.num_rows
 
-    def arrow(self, *, attributes: str | list[str] | None, ids=False) -> pa.Table:
+    def arrow(self, *, attributes: str | list[str] | None = None, ids=False) -> pa.Table:
         """
         Get these relationships and their attributes as a PyArrow table.
 
@@ -790,6 +790,7 @@ class MatrixRelationshipSet(RelationshipSet):
         rsz_counts = rsz_struct.field("counts").cast(pa.int32())
         row_sizes[np.asarray(rsz_nums) + 1] = rsz_counts
         self._row_ptrs = np.cumsum(row_sizes, dtype=np.int32)
+        self._table = table
 
     @override
     def matrix(

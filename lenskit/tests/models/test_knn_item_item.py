@@ -98,9 +98,9 @@ def test_ii_train():
     _log.info("matrix: %s", algo.sim_matrix_)
     assert matrix[six, seven] > 0
     # and has the correct score
-    six_v = simple_ratings[simple_ratings.item == 6].set_index("user").rating
+    six_v = simple_ratings[simple_ratings["item_id"] == 6].set_index("user_id").rating
     six_v = six_v - six_v.mean()
-    seven_v = simple_ratings[simple_ratings.item == 7].set_index("user").rating
+    seven_v = simple_ratings[simple_ratings["item_id"] == 7].set_index("user_id").rating
     seven_v = seven_v - seven_v.mean()
     denom = la.norm(six_v.values) * la.norm(seven_v.values)
     six_v, seven_v = six_v.align(seven_v, join="inner")
@@ -128,9 +128,9 @@ def test_ii_train_unbounded():
     assert matrix[six, seven] > 0
 
     # and has the correct score
-    six_v = simple_ratings[simple_ratings.item == 6].set_index("user").rating
+    six_v = simple_ratings[simple_ratings["item_id"] == 6].set_index("user_id").rating
     six_v = six_v - six_v.mean()
-    seven_v = simple_ratings[simple_ratings.item == 7].set_index("user").rating
+    seven_v = simple_ratings[simple_ratings["item_id"] == 7].set_index("user_id").rating
     seven_v = seven_v - seven_v.mean()
     denom = la.norm(six_v.values) * la.norm(seven_v.values)
     six_v, seven_v = six_v.align(seven_v, join="inner")
