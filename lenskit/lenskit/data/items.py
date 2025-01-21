@@ -306,27 +306,19 @@ class ItemList:
             vocabulary:
                 The item vocabulary.
         """
-        if isinstance(tbl, pa.Table):
-            tbl = tbl.to_struct_array()
+        if not isinstance(tbl, pa.Table):
+            tbl = pa.Table.from_struct_array(tbl)
 
-        if isinstance(tbl, pa.ChunkedArray):
-            tbl = tbl.combine_chunks()  # type: ignore
-        assert isinstance(tbl, pa.StructArray)
-        assert isinstance(tbl.type, pa.StructType)
+        names = tbl.column_names
 
-        if hasattr(tbl.type, "names"):
-            names = tbl.type.names  # type: ignore
-        else:
-            names = [tbl.type.field(i).name for i in range(tbl.type.num_fields)]
-
-        ids = tbl.field("item_id") if "item_id" in names else None
-        nums = tbl.field("item_num") if "item_num" in names else None
+        ids = tbl.column("item_id") if "item_id" in names else None
+        nums = tbl.column("item_num") if "item_num" in names else None
         if ids is None and nums is None:
             raise TypeError("data table must have at least one of item_id, item_num columns")
 
         to_drop = ["item_id", "item_num"]
 
-        fields = {c: tbl.field(c).to_numpy() for c in names if c not in to_drop}
+        fields = {c: tbl.column(c).to_numpy() for c in names if c not in to_drop}
         items = cls(
             item_ids=ids,  # type: ignore
             item_nums=nums,  # type: ignore
