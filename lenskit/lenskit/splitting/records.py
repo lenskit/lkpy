@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from lenskit.data import Dataset, ItemListCollection, UserIDKey
-from lenskit.data.matrix import MatrixDataset
+from lenskit.data.builder import DatasetBuilder
 from lenskit.random import RNGInput, random_generator
 
 from .split import TTSplit
@@ -51,11 +51,11 @@ def crossfold_records(
         iterator: an iterator of train-test pairs
     """
 
-    _log.info("partitioning %d ratings into %d partitions", data.count("pairs"), partitions)
+    _log.info("partitioning %d ratings into %d partitions", data.interactions().count(), partitions)
     rng = random_generator(rng)
 
     # get the full data list to split
-    df = data.interaction_matrix(format="pandas", field="all", original_ids=True)
+    df = data.interactions().pandas(ids=True)
     n = len(df)
     rows = np.arange(n)
 
@@ -146,7 +146,7 @@ def sample_records(
     rng = random_generator(rng)
 
     # get the full data list to split
-    df = data.interaction_matrix(format="pandas", field="all", original_ids=True)
+    df = data.interactions().pandas(ids=True)
     n = len(df)
 
     if repeats is None:
@@ -187,10 +187,12 @@ def _make_pair(
     mask[test_is] = True
 
     test = ItemListCollection.from_df(df[mask], UserIDKey)
-    if test_only:
-        train = MatrixDataset(data.users, data.items, df.iloc[:0])
-    else:
-        train = MatrixDataset(data.users, data.items, df[~mask])
+    train_build = DatasetBuilder(data)
+    iname = data.default_interaction_class()
+    train_build.clear_relationships(iname)
+    if not test_only:
+        train_build.add_interactions(iname, df[~mask])
+    train = train_build.build()
 
     return TTSplit(train, test)
 
