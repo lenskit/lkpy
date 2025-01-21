@@ -122,7 +122,9 @@ class Dataset:
     def _init_caches(self):
         "Initialize internal caches for this dataset."
 
-        self._vocabularies = {}
+        self._entities = {}
+        self._relationships = {}
+
         for name, schema in self._data.schema.entities.items():
             tbl = self._data.tables[name]
             id_name = id_col_name(name)
@@ -152,7 +154,7 @@ class Dataset:
         """
         The items known by this dataset.
         """
-        return self._vocabularies["item"]
+        return self.entities("item").vocabulary
 
     @property
     @_uses_data
@@ -160,7 +162,7 @@ class Dataset:
         """
         The users known by this dataset.
         """
-        return self._vocabularies["user"]
+        return self.entities("user").vocabulary
 
     @property
     def item_count(self) -> int:
@@ -364,6 +366,7 @@ class Dataset:
         layout: LAYOUT = "csr",
         field: str | None = None,
         original_ids: bool = False,
+        legacy: bool = False,
     ) -> Any:
         """
         Get the user-item interactions as “ratings” matrix from the default
@@ -421,7 +424,7 @@ class Dataset:
             case "pandas":
                 return iset.pandas(attributes=[field] if field else None, ids=original_ids)
             case "scipy":
-                return iset.scipy(attribute=field, layout=layout)
+                return iset.scipy(attribute=field, layout=layout, legacy=legacy)
             case "torch":
                 return iset.torch(attribute=field, layout=layout)
 
@@ -453,7 +456,8 @@ class Dataset:
             The user's interaction matrix row, or ``None`` if no user with that
             ID exists.
         """
-        raise NotImplementedError()
+        iset = self.interactions().matrix()
+        return iset.row_items(id=user_id, number=user_num)
 
     def item_stats(self) -> pd.DataFrame:
         """
@@ -687,10 +691,22 @@ class RelationshipSet:
                 If ``True``, include ID columns for the entities, instead of
                 just the number columns.
         """
-        if ids:
-            raise NotImplementedError()
-
         table = self._table
+
+        if ids:
+            id_cols = {}
+            for e in self.schema.entity_class_names:
+                id_cols[id_col_name] = self.dataset.entities(e).vocabulary.ids(
+                    table.column(num_col_name(e)).to_numpy()
+                )
+            id_tbl = pa.table(id_cols)
+            for col in table.column_names:
+                if col in self._link_cols:
+                    continue
+
+                id_tbl = id_tbl.append_column(col, table.column(col))
+                table = id_tbl
+
         if attributes is not None:
             cols = self._link_cols
             if isinstance(attributes, str):
