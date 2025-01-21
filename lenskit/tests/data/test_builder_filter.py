@@ -113,3 +113,83 @@ def test_filter_ratings_min_max_time(
     ds = dsb.build()
     assert ds.interactions().pandas()["timestamp"].min() >= q1.compare
     assert ds.interactions().pandas()["timestamp"].max() < q2.compare
+
+
+def test_filter_ratings_nums_df(rng, ml_ds: Dataset):
+    dsb = DatasetBuilder(ml_ds)
+
+    rates = ml_ds.interactions().pandas(attributes=[])
+    samp = rates.sample(1000, replace=False, random_state=rng, ignore_index=True)
+
+    dsb.filter_interactions("rating", remove=samp)
+
+    ds = dsb.build()
+    assert ds.interaction_count == ml_ds.interaction_count - 1000
+
+    orig_istats = ml_ds.item_stats()
+    new_istats = ds.item_stats()
+    si_counts = samp["item_num"].value_counts()
+    si_counts = pd.Series(si_counts.values, index=ml_ds.items.ids(si_counts.index.values))
+    si_counts = si_counts.reindex(new_istats.index, fill_value=0)
+
+    assert np.all(new_istats["count"] == orig_istats["count"] - si_counts)
+
+
+def test_filter_ratings_nums_tbl(rng, ml_ds: Dataset):
+    dsb = DatasetBuilder(ml_ds)
+
+    rates = ml_ds.interactions().pandas(attributes=[])
+    samp_df = rates.sample(1000, replace=False, random_state=rng, ignore_index=True)
+    samp = pa.Table.from_pandas(samp_df, preserve_index=False)
+
+    dsb.filter_interactions("rating", remove=samp)
+
+    ds = dsb.build()
+    assert ds.interaction_count == ml_ds.interaction_count - 1000
+
+    orig_istats = ml_ds.item_stats()
+    new_istats = ds.item_stats()
+    si_counts = samp_df["item_num"].value_counts()
+    si_counts = pd.Series(si_counts.values, index=ml_ds.items.ids(si_counts.index.values))
+    si_counts = si_counts.reindex(new_istats.index, fill_value=0)
+
+    assert np.all(new_istats["count"] == orig_istats["count"] - si_counts)
+
+
+def test_filter_ratings_ids_df(rng, ml_ds: Dataset):
+    dsb = DatasetBuilder(ml_ds)
+
+    rates = ml_ds.interactions().pandas(attributes=[], ids=True)
+    samp = rates.sample(1000, replace=False, random_state=rng, ignore_index=True)
+
+    dsb.filter_interactions("rating", remove=samp)
+
+    ds = dsb.build()
+    assert ds.interaction_count == ml_ds.interaction_count - 1000
+
+    orig_istats = ml_ds.item_stats()
+    new_istats = ds.item_stats()
+    si_counts = samp["item_id"].value_counts()
+    si_counts = si_counts.reindex(new_istats.index, fill_value=0)
+
+    assert np.all(new_istats["count"] == orig_istats["count"] - si_counts)
+
+
+def test_filter_ratings_ids_tbl(rng, ml_ds: Dataset):
+    dsb = DatasetBuilder(ml_ds)
+
+    rates = ml_ds.interactions().pandas(attributes=[], ids=True)
+    samp_df = rates.sample(1000, replace=False, random_state=rng, ignore_index=True)
+    samp = pa.Table.from_pandas(samp_df, preserve_index=False)
+
+    dsb.filter_interactions("rating", remove=samp)
+
+    ds = dsb.build()
+    assert ds.interaction_count == ml_ds.interaction_count - 1000
+
+    orig_istats = ml_ds.item_stats()
+    new_istats = ds.item_stats()
+    si_counts = samp_df["item_id"].value_counts()
+    si_counts = si_counts.reindex(new_istats.index, fill_value=0)
+
+    assert np.all(new_istats["count"] == orig_istats["count"] - si_counts)

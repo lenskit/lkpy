@@ -384,7 +384,7 @@ class DatasetBuilder:
             max_time:
                 The maximum interaction time to keep (exclusive).
             remove:
-                Combinations of entity numbers (**not** IDs) to remove.
+                Combinations of entity numbers or IDs to remove.
         """
         tbl = self._tables[cls]
         if tbl is None:  # pragma: nocover
@@ -413,8 +413,28 @@ class DatasetBuilder:
             tbl = tbl.filter(mask)
 
         if remove is not None:
-            remove = pa.table(remove)  # type: ignore
+            if isinstance(remove, pd.DataFrame):
+                remove = pa.Table.from_pandas(remove, preserve_index=False)
+            else:
+                remove = pa.table(remove)  # type: ignore
             assert isinstance(remove, pa.Table)
+            rtbl_cols = {}
+            for cname in remove.column_names:
+                if cname.endswith("_id"):
+                    ent = cname[:-3]
+                    num_col = num_col_name(ent)
+                    etbl = self._tables[ent]
+                    assert etbl is not None
+                    col = remove.column(cname)
+                    id_col = etbl.column(cname)
+                    nums = pc.index_in(col, id_col)
+                    rtbl_cols[num_col] = nums
+                elif cname.endswith("_num"):
+                    rtbl_cols[cname] = remove.column(cname)
+                else:  # pragma: nocover
+                    raise ValueError(f"invalid removal column {cname}")
+
+            remove = pa.table(rtbl_cols)
             tbl = tbl.join(remove, remove.column_names, join_type="left anti")
 
         self._tables[cls] = tbl

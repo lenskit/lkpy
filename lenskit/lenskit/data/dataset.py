@@ -1016,7 +1016,9 @@ class MatrixRelationshipSet(RelationshipSet):
         stats[id_col] = stat_vocab.ids(stats[s_col])
         del stats[s_col]
         stats.set_index(id_col, inplace=True)
-        stats = stats.reindex(stat_vocab.index)
+        stats = stats.reindex(stat_vocab.index, fill_value=0)
+        if "mean_rating" in stats.columns:
+            stats.loc[stats["rating_count"] == 0, "mean_rating"] = np.nan
 
         return stats
 
