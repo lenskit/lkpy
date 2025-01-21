@@ -15,6 +15,7 @@ from typing import Hashable, Iterable, Iterator, Literal, Sequence, overload
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 from numpy.typing import ArrayLike, NDArray
 
 from .types import ID, IDArray, IDSequence
@@ -22,17 +23,25 @@ from .types import ID, IDArray, IDSequence
 
 class Vocabulary:
     """
-    Vocabularies of terms, tags, entity IDs, etc. for the LensKit data model.
+    Vocabularies of entity identifiers for the LensKit data model.
 
     This class supports bidirectional mappings between key-like data and
     congiguous nonnegative integer indices.  Its key use is to facilitate the
-    user and item ID vocabularies in :class:`~lenskit.data.Dataset`, but it can
-    also be used for things like item tags.
+    entitie ID vocabularies in :class:`~lenskit.data.Dataset`, but it can also
+    be used for things like item tags.
 
-    It is currently a wrapper around :class:`pandas.Index`, but supports the
-    ability to add additional vocabulary terms after the vocabulary has been
-    created.  New terms do not change the index positions of previously-known
-    identifiers.
+    It is currently a wrapper around :class:`pandas.Index`, but this fact is not
+    part of the stable public API.
+
+    Args:
+        keys:
+            The IDs to put in the vocabulary.
+        name:
+            The vocabulary name.
+        reorder:
+            If ``True`` (the default), sort and deduplicate the IDs.  If
+            ``False``, use the IDs as-is, in which case they must already be
+            unique and sorted.
 
     Stability:
         Caller
@@ -46,18 +55,28 @@ class Vocabulary:
         self,
         keys: IDSequence | pd.Index | Iterable[ID] | None = None,
         name: str | None = None,
+        *,
+        reorder: bool = True,
     ):
         self.name = name
         if keys is None:
             keys = pd.Index([], dtype=np.int64)
         elif isinstance(keys, pd.Index):
-            if not pd.unique:
-                raise ValueError("vocabulary index must be unique")
+            pass
         elif isinstance(keys, np.ndarray) or isinstance(keys, list) or isinstance(keys, pd.Series):
-            keys = pd.Index(np.unique(keys))  # type: ignore
+            if reorder:
+                keys = np.unique(keys)  # type: ignore
+            keys = pd.Index(keys)  # type: ignore
+        elif isinstance(keys, (pa.Array, pa.ChunkedArray)):
+            keys = keys.drop_null()
+            if reorder:
+                keys = keys.unique().sort()
+            keys = pd.Index(keys.to_numpy())
         else:
             keys = pd.Index(sorted(set(keys)))  # type: ignore
 
+        if not keys.is_unique:
+            raise ValueError("IDs must be unique")
         self._index = keys.rename(name) if name is not None else keys
 
     @property
@@ -138,7 +157,7 @@ class Vocabulary:
         if self is other:
             return True
 
-        if self.name == other.name:
+        if self.name == other.name and len(self) == len(other):
             return np.all(self.index == other.index).item()
 
         return False

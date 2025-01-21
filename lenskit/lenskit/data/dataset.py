@@ -144,8 +144,7 @@ class Dataset:
             tbl = self._data.tables[name]
             id_name = id_col_name(name)
             ids = tbl.column(id_name)
-            index = pd.Index(np.asarray(ids), name=id_name)
-            vocab = Vocabulary(index, name=name)
+            vocab = Vocabulary(ids, name=name, reorder=False)
             self._entities[name] = EntitySet(name, schema, vocab, tbl)
 
         for name, schema in self._data.schema.relationships.items():
