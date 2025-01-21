@@ -164,7 +164,9 @@ def from_interactions_df(
             items = np.asarray(items)
         dsb.add_entities("item", items)
 
-    dsb.add_interactions("rating", df, missing=missing, allow_repeats=False, default=True)
+    dsb.add_interactions(
+        "rating", df, entities=["user", "item"], missing=missing, allow_repeats=False, default=True
+    )
 
     return dsb.build()
 
