@@ -269,6 +269,10 @@ def test_numbers_numpy(src):
     assert isinstance(nums, np.ndarray)
     assert np.all(nums == np.arange(5))
 
+    nums = il.numbers(format="numpy", vocabulary=Vocabulary(ITEMS))
+    assert isinstance(nums, np.ndarray)
+    assert np.all(nums == np.arange(5))
+
 
 @mark.parametrize("src", ["ids", "numbers"])
 def test_numbers_torch(src):
@@ -282,6 +286,10 @@ def test_numbers_torch(src):
     assert torch.is_tensor(nums)
     assert torch.all(nums == torch.arange(5))
 
+    nums = il.numbers(format="torch", vocabulary=Vocabulary(ITEMS))
+    assert torch.is_tensor(nums)
+    assert torch.all(nums == torch.arange(5))
+
 
 @mark.parametrize("src", ["ids", "numbers"])
 def test_numbers_arrow(src):
@@ -292,6 +300,10 @@ def test_numbers_arrow(src):
             il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB)
 
     nums = il.numbers(format="arrow")
+    assert isinstance(nums, pa.Int32Array)
+    assert np.all(nums.to_numpy() == np.arange(5))
+
+    nums = il.numbers(format="arrow", vocabulary=Vocabulary(ITEMS))
     assert isinstance(nums, pa.Int32Array)
     assert np.all(nums.to_numpy() == np.arange(5))
 
