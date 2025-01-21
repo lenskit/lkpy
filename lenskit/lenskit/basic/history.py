@@ -17,6 +17,7 @@ from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
 from lenskit.data.dataset import MatrixRelationshipSet
 from lenskit.data.matrix import CSRStructure
 from lenskit.data.vocab import Vocabulary
+from lenskit.diagnostics import DataError
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
 
@@ -55,6 +56,10 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
         self.users = data.users
         self.items = data.items
         self.interactions = data.interactions(self.config.interaction_class).matrix()
+        if self.interactions.row_type != "user":  # pragma: nocover
+            raise DataError("interactions must have user rows")
+        if self.interactions.col_type != "item":  # pragma: nocover
+            raise DataError("interactions must have item columns")
 
     def __call__(self, query: QueryInput) -> RecQuery:
         """
