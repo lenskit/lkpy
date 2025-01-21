@@ -30,6 +30,10 @@ class Vocabulary:
     entitie ID vocabularies in :class:`~lenskit.data.Dataset`, but it can also
     be used for things like item tags.
 
+    IDs in a vocabulary must be unique.  Constructing a vocabulary with
+    ``reorder=True`` ensures uniqueness (and sorts the IDs), but does not
+    preserve the order of IDs in the original input.
+
     It is currently a wrapper around :class:`pandas.Index`, but this fact is not
     part of the stable public API.
 
@@ -39,9 +43,9 @@ class Vocabulary:
         name:
             The vocabulary name.
         reorder:
-            If ``True`` (the default), sort and deduplicate the IDs.  If
-            ``False``, use the IDs as-is, in which case they must already be
-            unique and sorted.
+            If ``True``, sort and deduplicate the IDs.  If ``False`` (the
+            default), use the IDs as-is (assigning each to their position in the
+            input sequence).
 
     Stability:
         Caller

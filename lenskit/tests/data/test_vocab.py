@@ -27,7 +27,7 @@ from lenskit.diagnostics import DataWarning
     )
 )
 def test_create_basic(keys: set[int | str | UUID]):
-    vocab = Vocabulary(keys)
+    vocab = Vocabulary(keys, reorder=True)
     assert vocab.size == len(keys)
     assert len(vocab) == len(keys)
 
@@ -43,7 +43,7 @@ def test_create_basic(keys: set[int | str | UUID]):
 )
 def test_create_nonunique(keys: list[int | str | UUID]):
     uq = set(keys)
-    vocab = Vocabulary(keys)
+    vocab = Vocabulary(keys, reorder=True)
     assert vocab.size == len(uq)
     assert len(vocab) == len(uq)
 
@@ -58,9 +58,9 @@ def test_create_nonunique(keys: list[int | str | UUID]):
     )
 )
 def test_equal(keys: list[int | str | UUID]):
-    vocab = Vocabulary(keys)
+    vocab = Vocabulary(keys, reorder=True)
 
-    v2 = Vocabulary(keys)
+    v2 = Vocabulary(keys, reorder=True)
     assert v2 == vocab
 
 
@@ -69,8 +69,8 @@ def test_not_equal(keys: list[int], oks: set[int]):
     uq = set(keys)
     assume(oks != uq)
 
-    vocab = Vocabulary(keys)
-    v2 = Vocabulary(oks)
+    vocab = Vocabulary(keys, reorder=True)
+    v2 = Vocabulary(oks, reorder=True)
     assert v2 != vocab
 
 
@@ -87,7 +87,7 @@ def test_not_equal(keys: list[int], oks: set[int]):
     ),
 )
 def test_contains(keys: set[int] | set[str] | set[UUID], qs: set[int | str | UUID]):
-    vocab = Vocabulary(keys)
+    vocab = Vocabulary(keys, reorder=True)
 
     for qk in qs:
         if qk in keys:
@@ -105,7 +105,7 @@ def test_contains(keys: set[int] | set[str] | set[UUID], qs: set[int | str | UUI
 def test_lookup_id_index(keys: set[int | str | UUID]):
     klist = sorted(keys)
 
-    vocab = Vocabulary(keys)
+    vocab = Vocabulary(keys, reorder=True)
     assert vocab.size == len(klist)
     assert len(vocab) == len(klist)
 
@@ -126,7 +126,7 @@ def test_lookup_id_index(keys: set[int | str | UUID]):
 def test_lookup_bad_id(keys: set[int | str | UUID], key: int | str | UUID):
     assume(key not in keys)
 
-    vocab = Vocabulary(keys)
+    vocab = Vocabulary(keys, reorder=True)
 
     assert vocab.number(key, missing=None) is None
 
@@ -144,7 +144,7 @@ def test_lookup_bad_id(keys: set[int | str | UUID], key: int | str | UUID):
 def test_lookup_bad_number(keys: set[int | str | UUID], num: int):
     assume(num < 0 or num >= len(keys))
 
-    vocab = Vocabulary(keys)
+    vocab = Vocabulary(keys, reorder=True)
 
     with raises(IndexError):
         vocab.term(num)
