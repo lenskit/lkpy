@@ -6,6 +6,7 @@ import numpy as np
 
 from lenskit.data.items import ItemList
 from lenskit.pipeline import Component
+from lenskit.pipeline.types import Lazy
 
 _logger = logging.getLogger(__name__)
 
@@ -20,19 +21,19 @@ class FallbackScorer(Component[ItemList]):
 
     config: None
 
-    def __call__(self, scores: ItemList, backup: ItemList) -> ItemList:
-        s = scores.scores()
+    def __call__(self, primary: ItemList, backup: Lazy[ItemList]) -> ItemList:
+        s = primary.scores()
         if s is None:
-            return backup
+            return backup.get()
 
         s = s.copy()
         missing = np.isnan(s)
         if not np.any(missing):
-            return scores
+            return primary
 
-        bs = backup.scores("pandas", index="ids")
+        bs = backup.get().scores("pandas", index="ids")
         if bs is None:
-            return scores
+            return primary
 
-        s[missing] = bs.reindex(scores.ids()[missing]).values
-        return ItemList(scores, scores=s)
+        s[missing] = bs.reindex(primary.ids()[missing]).values
+        return ItemList(primary, scores=s)

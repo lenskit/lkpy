@@ -41,7 +41,7 @@ def test_fallback_fill_missing(ml_ds: Dataset):
     s2 = pipe.add_component("bias", bias, query=user, items=items)
 
     fallback = FallbackScorer()
-    score = pipe.add_component("mix", fallback, scores=s1, backup=s2)
+    score = pipe.add_component("mix", fallback, primary=s1, backup=s2)
 
     pipe = pipe.build()
     pipe.train(ml_ds)

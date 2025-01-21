@@ -108,7 +108,7 @@ class RecPipelineBuilder:
                     "fallback-predictor", self._fallback, query=lookup, items=candidates
                 )
                 rater = pipe.add_component(
-                    "rating-merger", FallbackScorer(), scores=n_score, backup=fb
+                    "rating-merger", FallbackScorer(), primary=n_score, backup=fb
                 )
             else:
                 rater = n_score
@@ -214,7 +214,7 @@ def predict_pipeline(
         pipe.alias("rating-predictor", score)
     else:
         backup = pipe.add_component("fallback-predictor", fallback, query=lookup, items=items)
-        pipe.add_component("rating-predictor", FallbackScorer(), primary=score, fallback=backup)
+        pipe.add_component("rating-predictor", FallbackScorer(), primary=score, backup=backup)
 
     pipe.default_component("rating-predictor")
 
