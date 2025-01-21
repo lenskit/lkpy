@@ -25,7 +25,7 @@ Getting started with the dataset is fairly straightforward:
 You can then access the data from the various methods of the :class:`Dataset` class.
 For example, if you want to get the ratings as a data frame:
 
-    >>> mlds.interaction_matrix('pandas', field='rating')
+    >>> mlds.interaction_matrix(format='pandas', field='rating')
             user_num  item_num  rating
     0              0        30     2.5
     1              0       833     3.0
