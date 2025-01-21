@@ -630,11 +630,10 @@ class RelationshipSet:
     For two-entity relationships without duplicates (including relationships
     formed by coalescing repeated relationships or interactions),
     :class:`MatrixRelationshipSet` extends this with additional capabilities.
-    """
 
-    dataset: Dataset
-    """
-    The dataset for these relationships.
+    Relationship sets can be pickled or serialized, and will not save the entire
+    dataset with them.  They are therefore safe to save as component elements
+    during training processes.
     """
 
     name: str
@@ -648,6 +647,7 @@ class RelationshipSet:
     The Arrow table of relationship information.
     """
 
+    _vocabularies: dict[str, Vocabulary]
     _link_cols: list[str]
 
     def __init__(
@@ -657,10 +657,11 @@ class RelationshipSet:
         schema: RelationshipSchema,
         table: pa.Table,
     ):
-        self.dataset = ds
         self.name = name
         self.schema = schema
         self._table = table
+
+        self._vocabularies = {e: ds.entities(e).vocabulary for e in schema.entities}
         self._link_cols = [num_col_name(e) for e in schema.entities]
 
     @property
@@ -698,9 +699,7 @@ class RelationshipSet:
             id_cols = {}
             for e in self.schema.entity_class_names:
                 id_cols[id_col_name(e)] = pa.array(
-                    self.dataset.entities(e).vocabulary.ids(
-                        table.column(num_col_name(e)).to_numpy()
-                    )
+                    self._vocabularies[e].ids(table.column(num_col_name(e)).to_numpy())
                 )
             id_tbl = pa.table(id_cols)
             cols = id_tbl.column_names
@@ -759,11 +758,11 @@ class MatrixRelationshipSet(RelationshipSet):
     """
 
     _row_ptrs: np.ndarray[int, np.dtype[np.int32]]
-    _row_vocab: Vocabulary
+    row_vocabulary: Vocabulary
     row_type: str
     _row_stats: pd.DataFrame | None = None
 
-    _col_vocab: Vocabulary
+    col_vocabulary: Vocabulary
     col_type: str
     _col_stats: pd.DataFrame | None = None
 
@@ -779,15 +778,15 @@ class MatrixRelationshipSet(RelationshipSet):
         entities = list(schema.entities.keys())
         row, col = entities
         self.row_type = row
-        self._row_vocab = ds.entities(row).vocabulary
+        self.row_vocabulary = ds.entities(row).vocabulary
         self.col_type = col
-        self._col_vocab = ds.entities(col).vocabulary
+        self.col_vocabulary = ds.entities(col).vocabulary
 
         e_cols = [num_col_name(e) for e in entities]
         table = table.sort_by([(c, "ascending") for c in e_cols])
 
         # compute the row pointers
-        n_rows = len(self._row_vocab)
+        n_rows = len(self.row_vocabulary)
         row_sizes = np.zeros(n_rows + 1, dtype=np.int32())
         rsz_struct = pc.value_counts(table.column(e_cols[0]))
         rsz_nums = rsz_struct.field("values")
@@ -807,8 +806,8 @@ class MatrixRelationshipSet(RelationshipSet):
         """
         Get the compressed sparse row structure of this relationship matrix.
         """
-        n_rows = len(self._row_vocab)
-        n_cols = len(self._col_vocab)
+        n_rows = len(self.row_vocabulary)
+        n_cols = len(self.col_vocabulary)
 
         colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
         return CSRStructure(self._row_ptrs, colinds, (n_rows, n_cols))
@@ -857,8 +856,8 @@ class MatrixRelationshipSet(RelationshipSet):
         Returns:
             The sparse matrix.
         """
-        n_rows = len(self._row_vocab)
-        n_cols = len(self._col_vocab)
+        n_rows = len(self.row_vocabulary)
+        n_cols = len(self.col_vocabulary)
         nnz = self._table.num_rows
 
         colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
@@ -899,8 +898,8 @@ class MatrixRelationshipSet(RelationshipSet):
         Returns:
             The sparse matrix.
         """
-        n_rows = len(self._row_vocab)
-        n_cols = len(self._col_vocab)
+        n_rows = len(self.row_vocabulary)
+        n_cols = len(self.col_vocabulary)
         nnz = self._table.num_rows
 
         colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
@@ -932,7 +931,7 @@ class MatrixRelationshipSet(RelationshipSet):
             raise ValueError("must provide one of id and number")
 
         if number is None:
-            number = self._row_vocab.number(id, "none")
+            number = self.row_vocabulary.number(id, "none")
             if number is None:
                 return None
 
@@ -955,16 +954,16 @@ class MatrixRelationshipSet(RelationshipSet):
         if tbl is None:
             return None
 
-        return ItemList.from_arrow(tbl, vocabulary=self._col_vocab)
+        return ItemList.from_arrow(tbl, vocabulary=self.col_vocabulary)
 
     def row_stats(self):
         if self._row_stats is None:
-            self._row_stats = self._compute_stats(self.row_type, self.col_type, self._row_vocab)
+            self._row_stats = self._compute_stats(self.row_type, self.col_type, self.row_vocabulary)
         return self._row_stats
 
     def col_stats(self):
         if self._col_stats is None:
-            self._col_stats = self._compute_stats(self.col_type, self.row_type, self._col_vocab)
+            self._col_stats = self._compute_stats(self.col_type, self.row_type, self.col_vocabulary)
         return self._col_stats
 
     def _compute_stats(

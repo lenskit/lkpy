@@ -71,6 +71,27 @@ def test_lookup_items_only(ml_ds: Dataset):
     assert np.all(query.user_items.ids() == ds_row[:-5].ids())
 
 
+def test_lookup_pickle(ml_ds: Dataset):
+    "ensure we can correctly pickle a history component"
+    lookup = UserTrainingHistoryLookup()
+    lookup.train(ml_ds)
+
+    blob = pickle.dumps(lookup)
+    l2 = pickle.loads(blob)
+    assert isinstance(l2, UserTrainingHistoryLookup)
+
+    assert l2.interactions.count() == lookup.interactions.count()
+
+    ds_row = ml_ds.user_row(user_id=100)
+    l_row = lookup(100)
+    l2_row = l2(100)
+
+    assert l_row.user_id == 100
+    assert np.all(l_row.user_items.ids() == ds_row.ids())
+    assert l2_row.user_id == 100
+    assert np.all(l2_row.user_items.ids() == ds_row.ids())
+
+
 def test_known_rating_defaults(ml_ds: Dataset):
     algo = KnownRatingScorer()
     algo.train(ml_ds)
