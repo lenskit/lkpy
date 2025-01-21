@@ -2,7 +2,6 @@
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-from docutils import DataError
 
 from pytest import approx, mark, raises, warns
 
