@@ -211,7 +211,7 @@ class DatasetBuilder:
         else:
             raise TypeError(f"invalid ID type {ids.type}")
 
-        id_field = schema.field_by_name(id_name)
+        id_field = schema.field(id_name)
         id_type: pa.DataType = id_field.type
 
         # de-duplicate and sort the IDs
