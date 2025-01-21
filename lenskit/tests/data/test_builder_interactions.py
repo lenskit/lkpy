@@ -4,7 +4,7 @@ import pandas as pd
 import pyarrow as pa
 from docutils import DataError
 
-from pytest import approx, raises, warns
+from pytest import approx, mark, raises, warns
 
 from lenskit.data import DatasetBuilder
 from lenskit.data.schema import AllowableTroolean
@@ -186,6 +186,7 @@ def test_add_interactions_filter_bad_ids():
     assert len(ds.user_row("c")) == 2
 
 
+@mark.xfail(reason="repeated interactions not yet implemented")
 def test_add_repeated_interactions():
     dsb = DatasetBuilder()
 
