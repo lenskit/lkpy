@@ -237,14 +237,11 @@ class DatasetBuilder:
             raise DataError(f"found {n_dupes} duplicate IDs, but re-inserts not allowed")
 
         log.debug("adding %d new IDs", len(fresh_ids))
+        new_tbl = pa.table({id_name: fresh_ids})
         if table is None:
-            table = pa.table({id_name: fresh_ids})
+            table = new_tbl
         else:
-            new_batch = pa.record_batch({id_name: fresh_ids})
-            new_batch = new_batch.cast(schema)
-            batches = table.to_batches()
-            batches.append(new_batch)
-            table = pa.Table.from_batches(batches)
+            table = pa.concat_tables([table, new_tbl], promote_options="permissive")
 
         self._tables[cls] = table
 
@@ -328,12 +325,7 @@ class DatasetBuilder:
 
         cur_table = self._tables[cls]
         if cur_table is not None:
-            schema = pa.unify_schemas(
-                [cur_table.schema, new_table.schema], promote_options="permissive"
-            )
-            batches = [b.cast(schema) for b in cur_table.to_batches()]
-            batches += [b.cast(schema) for b in new_table.to_batches()]
-            new_table = pa.Table.from_batches(batches)
+            new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
 
         if not rc_def.repeats.is_present:
             _log.debug("checking for repeated interactions")
