@@ -505,6 +505,18 @@ def test_from_arrow_table():
     assert not il.ordered
 
 
+def test_from_empty_arrow():
+    tbl = pa.table(
+        {"item_num": pa.array([], type=pa.int32()), "score": pa.array([], type=pa.float32())}
+    )
+    print(tbl)
+    il = ItemList.from_arrow(tbl, vocabulary=VOCAB)
+    assert len(il) == 0
+    scores = il.scores()
+    assert scores is not None
+    assert len(scores) == 0
+
+
 def test_from_arrow_array():
     df = pd.DataFrame(
         {"item_id": ITEMS, "item_num": np.arange(5), "score": np.random.randn(5).astype(np.float32)}

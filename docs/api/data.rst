@@ -20,6 +20,20 @@ Data Sets
     :caption: Data Sets
 
     ~lenskit.data.Dataset
+    ~lenskit.data.EntitySet
+    ~lenskit.data.RelationshipSet
+    ~lenskit.data.MatrixRelationshipSet
+    ~lenskit.data.CSRStructure
+
+Building Data Sets
+------------------
+
+.. autosummary::
+    :toctree: .
+    :nosignatures:
+    :caption: Data Build and Import
+
+    ~lenskit.data.DatasetBuilder
     ~lenskit.data.from_interactions_df
     ~lenskit.data.load_movielens
     ~lenskit.data.load_movielens_df
@@ -49,14 +63,15 @@ Recommendation Queries
     ~lenskit.data.RecQuery
     ~lenskit.data.QueryInput
 
-Terms and Identifiers
----------------------
+Schemas and Identifiers
+-----------------------
 
 .. autosummary::
     :toctree: .
     :nosignatures:
     :caption: Terms and Identifiers
 
+    lenskit.data.schema
     ~lenskit.data.Vocabulary
 
 See also:

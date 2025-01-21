@@ -9,12 +9,12 @@ Data abstractions and data set access.
 
 from __future__ import annotations
 
+from .adapt import from_interactions_df
+from .builder import DatasetBuilder
 from .collection import GenericKey, ItemListCollection, UserIDKey
-from .convert import from_interactions_df
-from .dataset import Dataset, FieldError
+from .dataset import Dataset, EntitySet, FieldError, MatrixRelationshipSet, RelationshipSet
 from .items import ItemList
-from .lazy import LazyDataset
-from .matrix import MatrixDataset
+from .matrix import CSRStructure
 from .movielens import load_movielens, load_movielens_df
 from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray
 from .query import QueryInput, RecQuery
@@ -23,10 +23,13 @@ from .vocab import Vocabulary
 
 __all__ = [
     "Dataset",
+    "EntitySet",
+    "RelationshipSet",
+    "MatrixRelationshipSet",
+    "DatasetBuilder",
     "FieldError",
+    "CSRStructure",
     "from_interactions_df",
-    "LazyDataset",
-    "MatrixDataset",
     "ID",
     "NPID",
     "FeedbackType",

@@ -19,8 +19,8 @@ one_day_ago = ts - timedelta(days=1)
 two_days_ago = ts - timedelta(days=2)
 simple_df = pd.DataFrame(
     {
-        "item": [1, 2, 2, 3],
-        "user": [10, 12, 10, 13],
+        "item_id": [1, 2, 2, 3],
+        "user_id": [10, 12, 10, 13],
         "rating": [4.0, 3.0, 5.0, 2.0],
         "timestamp": [i.timestamp() for i in [ts, one_day_ago, one_day_ago, one_day_ago]],
     }

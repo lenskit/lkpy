@@ -20,7 +20,7 @@ import pandas as pd
 
 from lenskit.logging import get_logger
 
-from .convert import from_interactions_df
+from .adapt import from_interactions_df
 from .dataset import Dataset
 
 _log = get_logger(__name__)

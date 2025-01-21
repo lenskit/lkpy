@@ -68,7 +68,7 @@ class BaseRec(Component[ItemList], Trainable):
         if hasattr(self, "delegate") and not options.retrain:
             return
 
-        matrix = data.interaction_matrix("scipy", layout="csr", legacy=True)
+        matrix = data.interaction_matrix(format="scipy", layout="csr", legacy=True)
         uir = matrix * self.weight
 
         self.delegate = self._construct()

@@ -23,7 +23,6 @@ from typing_extensions import (
     Literal,
     LiteralString,
     Sequence,
-    TypeAlias,
     cast,
 )
 
@@ -33,8 +32,6 @@ from .checks import array_is_null, check_1d
 from .mtarray import MTArray, MTGenericArray
 from .types import IDArray, IDSequence
 from .vocab import Vocabulary
-
-Backend: TypeAlias = Literal["numpy", "torch", "arrow"]
 
 
 class ItemList:
@@ -310,7 +307,10 @@ class ItemList:
                 The item vocabulary.
         """
         if isinstance(tbl, pa.Table):
-            tbl = tbl.to_struct_array()
+            if tbl.num_rows:
+                tbl = tbl.to_struct_array()
+            else:
+                tbl = pa.array([], pa.struct(tbl.schema))
 
         if isinstance(tbl, pa.ChunkedArray):
             tbl = tbl.combine_chunks()  # type: ignore
@@ -336,7 +336,7 @@ class ItemList:
             vocabulary=vocabulary,
             **fields,  # type: ignore
         )
-        assert len(items) == len(tbl)
+        assert len(items) == len(tbl), f"built list of {len(items)}, expected {len(tbl)}"
         return items
 
     @classmethod

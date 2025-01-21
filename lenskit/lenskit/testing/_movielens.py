@@ -14,7 +14,6 @@ import pytest
 from lenskit.basic import PopScorer, SoftmaxRanker
 from lenskit.batch import recommend
 from lenskit.data import Dataset, ItemListCollection, UserIDKey, from_interactions_df
-from lenskit.data.lazy import LazyDataset
 from lenskit.data.movielens import load_movielens, load_movielens_df
 from lenskit.logging import get_logger
 from lenskit.pipeline import RecPipelineBuilder
@@ -25,7 +24,7 @@ _log = get_logger("lenskit.testing")
 ml_test_dir = here("data/ml-latest-small")
 ml_100k_zip = here("data/ml-100k.zip")
 
-ml_test: Dataset = LazyDataset(lambda: load_movielens(ml_test_dir))
+ml_test: Dataset = Dataset(lambda: load_movielens(ml_test_dir))
 
 retrain = os.environ.get("LK_TEST_RETRAIN")
 
@@ -70,7 +69,9 @@ def ml_ds(ml_ds_unchecked: Dataset) -> Generator[Dataset, None, None]:
     log = _log.bind()
 
     ds = ml_ds_unchecked
-    old_rates = ds.interaction_matrix("pandas", field="rating", original_ids=True).copy(deep=True)
+    old_rates = ds.interaction_matrix(format="pandas", field="rating", original_ids=True).copy(
+        deep=True
+    )
     old_ustats = ds.user_stats().copy(deep=True)
     old_istats = ds.item_stats().copy(deep=True)
 
@@ -79,7 +80,7 @@ def ml_ds(ml_ds_unchecked: Dataset) -> Generator[Dataset, None, None]:
     ustats = ds.user_stats()
     istats = ds.item_stats()
 
-    rates = ds.interaction_matrix("pandas", field="rating", original_ids=True)
+    rates = ds.interaction_matrix(format="pandas", field="rating", original_ids=True)
     assert rates["rating"].values == pytest.approx(old_rates["rating"].values)
 
     for col in old_ustats.columns:

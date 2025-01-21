@@ -25,15 +25,15 @@ def test_crossfold_records(ml_ds: Dataset):
     for s in splits:
         # do we have all the data?
         test_count = s.test_size
-        assert test_count + s.train.interaction_count == ml_ds.count("pairs")
+        assert test_count + s.train.interaction_count == ml_ds.interactions().count()
         test_pairs = set((u, i) for (u, il) in s.test for i in il.ids())
-        tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
+        tdf = s.train.interaction_matrix(format="pandas", field="rating", original_ids=True)
         train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
 
         # no overlap
         assert not (test_pairs & train_pairs)
         # union is complete
-        assert len(test_pairs | train_pairs) == ml_ds.count("pairs")
+        assert len(test_pairs | train_pairs) == ml_ds.interactions().count()
 
     # the test sets are pairwise disjoint
     for s1, s2 in it.product(splits, splits):
@@ -50,15 +50,15 @@ def test_sample_records_once(ml_ds):
 
     test_count = split.test_size
     assert test_count == 1000
-    assert test_count + split.train.interaction_count == ml_ds.count("pairs")
+    assert test_count + split.train.interaction_count == ml_ds.interactions().count()
     test_pairs = set((u, i) for (u, il) in split.test for i in il.ids())
-    tdf = split.train.interaction_matrix("pandas", field="rating", original_ids=True)
+    tdf = split.train.interaction_matrix(format="pandas", field="rating", original_ids=True)
     train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
 
     # no overlap
     assert not (test_pairs & train_pairs)
     # union is complete
-    assert len(test_pairs | train_pairs) == ml_ds.count("pairs")
+    assert len(test_pairs | train_pairs) == ml_ds.interactions().count()
 
 
 def test_sample_records(ml_ds):
@@ -69,15 +69,15 @@ def test_sample_records(ml_ds):
     for s in splits:
         test_count = s.test_size
         assert test_count == 1000
-        assert test_count + s.train.interaction_count == ml_ds.count("pairs")
+        assert test_count + s.train.interaction_count == ml_ds.interactions().count()
         test_pairs = set((u, i) for (u, il) in s.test for i in il.ids())
-        tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
+        tdf = s.train.interaction_matrix(format="pandas", field="rating", original_ids=True)
         train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
 
         # no overlap
         assert not (test_pairs & train_pairs)
         # union is complete
-        assert len(test_pairs | train_pairs) == ml_ds.count("pairs")
+        assert len(test_pairs | train_pairs) == ml_ds.interactions().count()
 
     for s1, s2 in it.product(splits, splits):
         if s1 is s2:
@@ -107,15 +107,15 @@ def test_sample_rows_more_smaller_parts(ml_ds: Dataset):
     for s in splits:
         test_count = s.test_size
         assert test_count == 500
-        assert test_count + s.train.interaction_count == ml_ds.count("pairs")
+        assert test_count + s.train.interaction_count == ml_ds.interactions().count()
         test_pairs = set((u, i) for (u, il) in s.test for i in il.ids())
-        tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
+        tdf = s.train.interaction_matrix(format="pandas", field="rating", original_ids=True)
         train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
 
         # no overlap
         assert not (test_pairs & train_pairs)
         # union is complete
-        assert len(test_pairs | train_pairs) == ml_ds.count("pairs")
+        assert len(test_pairs | train_pairs) == ml_ds.interactions().count()
 
     for s1, s2 in it.product(splits, splits):
         if s1 is s2:
@@ -134,15 +134,15 @@ def test_sample_non_disjoint(ml_ds: Dataset):
     for s in splits:
         test_count = s.test_size
         assert test_count == 1000
-        assert test_count + s.train.interaction_count == ml_ds.count("pairs")
+        assert test_count + s.train.interaction_count == ml_ds.interactions().count()
         test_pairs = set((u, i) for (u, il) in s.test for i in il.ids())
-        tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
+        tdf = s.train.interaction_matrix(format="pandas", field="rating", original_ids=True)
         train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
 
         # no overlap
         assert not (test_pairs & train_pairs)
         # union is complete
-        assert len(test_pairs | train_pairs) == ml_ds.count("pairs")
+        assert len(test_pairs | train_pairs) == ml_ds.interactions().count()
 
     # There are enough splits & items we should pick at least one duplicate
     ipairs = (
@@ -164,12 +164,12 @@ def test_sample_oversize(ml_ds: Dataset):
 
     for s in splits:
         test_count = s.test_size
-        assert test_count + s.train.interaction_count == ml_ds.count("pairs")
+        assert test_count + s.train.interaction_count == ml_ds.interactions().count()
         test_pairs = set((u, i) for (u, il) in s.test for i in il.ids())
-        tdf = s.train.interaction_matrix("pandas", field="rating", original_ids=True)
+        tdf = s.train.interaction_matrix(format="pandas", field="rating", original_ids=True)
         train_pairs = set(zip(tdf["user_id"], tdf["item_id"]))
 
         # no overlap
         assert not (test_pairs & train_pairs)
         # union is complete
-        assert len(test_pairs | train_pairs) == ml_ds.count("pairs")
+        assert len(test_pairs | train_pairs) == ml_ds.interactions().count()

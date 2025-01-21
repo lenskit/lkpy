@@ -50,7 +50,7 @@ class BiasedMFScorer(ALSBase):
     @override
     def prepare_data(self, data: Dataset):
         # transform ratings using offsets
-        rmat = data.interaction_matrix("torch", layout="coo", field="rating")
+        rmat = data.interaction_matrix(format="torch", layout="coo", field="rating")
 
         self.logger.info("normalizing ratings")
         self.bias_ = BiasModel.learn(data, damping=self.config.damping)

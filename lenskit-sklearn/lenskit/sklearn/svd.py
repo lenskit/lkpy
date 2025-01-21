@@ -76,7 +76,7 @@ class BiasedSVDScorer(Component[ItemList], Trainable):
         i_bias = self.bias_.item_biases
 
         _log.info("[%s] sparsifying and normalizing matrix", timer)
-        r_mat = data.interaction_matrix("scipy", field="rating", layout="coo", legacy=True)
+        r_mat = data.interaction_matrix(format="scipy", field="rating", layout="coo", legacy=True)
         # copy the data and start subtracting
         r_mat.data = r_mat.data - g_bias
         if i_bias is not None:

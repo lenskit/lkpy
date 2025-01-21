@@ -51,7 +51,7 @@ simple_ratings = pd.DataFrame.from_records(
         (1, 9, 3.0),
         (3, 9, 4.0),
     ],
-    columns=["user", "item", "rating"],
+    columns=["user_id", "item_id", "rating"],
 )
 simple_ds = from_interactions_df(simple_ratings)
 
@@ -87,7 +87,7 @@ def test_ii_train():
     assert isinstance(algo.item_counts_, np.ndarray)
     matrix = algo.sim_matrix_
 
-    test_means = simple_ratings.groupby("item")["rating"].mean()
+    test_means = simple_ratings.groupby("item_id")["rating"].mean()
     test_means = test_means.reindex(algo.items_.ids())
     assert np.all(algo.item_means_ == test_means.values.astype("f8"))
 
@@ -98,9 +98,9 @@ def test_ii_train():
     _log.info("matrix: %s", algo.sim_matrix_)
     assert matrix[six, seven] > 0
     # and has the correct score
-    six_v = simple_ratings[simple_ratings.item == 6].set_index("user").rating
+    six_v = simple_ratings[simple_ratings["item_id"] == 6].set_index("user_id").rating
     six_v = six_v - six_v.mean()
-    seven_v = simple_ratings[simple_ratings.item == 7].set_index("user").rating
+    seven_v = simple_ratings[simple_ratings["item_id"] == 7].set_index("user_id").rating
     seven_v = seven_v - seven_v.mean()
     denom = la.norm(six_v.values) * la.norm(seven_v.values)
     six_v, seven_v = six_v.align(seven_v, join="inner")
@@ -128,9 +128,9 @@ def test_ii_train_unbounded():
     assert matrix[six, seven] > 0
 
     # and has the correct score
-    six_v = simple_ratings[simple_ratings.item == 6].set_index("user").rating
+    six_v = simple_ratings[simple_ratings["item_id"] == 6].set_index("user_id").rating
     six_v = six_v - six_v.mean()
-    seven_v = simple_ratings[simple_ratings.item == 7].set_index("user").rating
+    seven_v = simple_ratings[simple_ratings["item_id"] == 7].set_index("user_id").rating
     seven_v = seven_v - seven_v.mean()
     denom = la.norm(six_v.values) * la.norm(seven_v.values)
     six_v, seven_v = six_v.align(seven_v, join="inner")
@@ -157,7 +157,7 @@ def test_ii_simple_implicit_predict():
     history = UserTrainingHistoryLookup()
     history.train(simple_ds)
     algo = ItemKNNScorer(k=30, feedback="implicit")
-    algo.train(from_interactions_df(simple_ratings.loc[:, ["user", "item"]]))
+    algo.train(from_interactions_df(simple_ratings.loc[:, ["user_id", "item_id"]]))
 
     q = history(3)
     res = algo(q, ItemList([6]))

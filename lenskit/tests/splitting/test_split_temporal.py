@@ -14,7 +14,7 @@ def test_temporal_split(ml_ds: Dataset):
     n_test = sum(len(il) for il in split.test.lists())
     assert n_test + split.train.interaction_count == ml_ds.interaction_count
 
-    assert np.all(split.train.interaction_log("pandas")["timestamp"] < point.timestamp())
+    assert np.all(split.train.interaction_table(format="pandas")["timestamp"] < point.timestamp())
     for u, il in split.test:
         ts = il.field("timestamp")
         assert ts is not None
@@ -32,8 +32,8 @@ def test_multi_split(ml_ds: Dataset):
     assert n_test + test.train.interaction_count == ml_ds.interaction_count
     assert n_test + n_valid + valid.train.interaction_count == ml_ds.interaction_count
 
-    assert np.all(valid.train.interaction_log("pandas")["timestamp"] < p1.timestamp())
-    assert np.all(test.train.interaction_log("pandas")["timestamp"] < p2.timestamp())
+    assert np.all(valid.train.interaction_table(format="pandas")["timestamp"] < p1.timestamp())
+    assert np.all(test.train.interaction_table(format="pandas")["timestamp"] < p2.timestamp())
     for u, il in test.test:
         ts = il.field("timestamp")
         assert ts is not None

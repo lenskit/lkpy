@@ -88,11 +88,13 @@ class MTArray(Generic[NPT]):
                 The device on which the Torch tensor should reside.
         """
         if self._torch is None:
-            try:
-                self._torch = torch.as_tensor(self._convertible())
-            except Exception:
-                # fallback to numpy is convertible is not convertible for some reason
-                self._torch = torch.as_tensor(self.numpy())
+            if torch.is_tensor(self._unknown):
+                self._torch = self._unknown
+            else:
+                # Make sure we have a writeable array for Torch. Client code
+                # still shouldn't write to it.
+                arr = np.require(self.numpy(), requirements="W")
+                return torch.tensor(arr)
 
         if device:
             return self._torch.to(device)

@@ -25,8 +25,8 @@ from pyarrow.parquet import ParquetDataset, ParquetWriter
 
 from lenskit.diagnostics import DataWarning
 
+from .adapt import column_name, normalize_columns
 from .items import ItemList
-from .schemas import column_name, normalize_columns
 from .types import ID, Column
 
 K = TypeVar("K", bound=tuple)

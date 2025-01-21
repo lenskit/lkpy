@@ -104,7 +104,7 @@ class BiasModel:
         if isinstance(damping, tuple):
             damping = {"user": damping[0], "item": damping[1]}
         _logger.info("building bias model for %d ratings", data.interaction_count)
-        ratings = data.interaction_matrix("scipy", layout="coo", field="rating")
+        ratings = data.interaction_matrix(format="scipy", layout="coo", field="rating")
         nrows, ncols = ratings.shape  # type: ignore
 
         g_bias = float(np.mean(ratings.data))

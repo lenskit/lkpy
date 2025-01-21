@@ -16,6 +16,7 @@ from typing import Any, Generic, Literal, Sequence, TypeAlias, TypeVar
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 
 FeedbackType: TypeAlias = Literal["explicit", "implicit"]
 "Types of feedback supported."
@@ -28,7 +29,14 @@ ID: TypeAlias = CoreID | NPID
 "Allowable identifier types."
 IDArray: TypeAlias = np.ndarray[tuple[int], np.dtype[NPID]]
 "NumPy arrays of identifiers."
-IDSequence: TypeAlias = Sequence[ID] | IDArray | "pd.Series[CoreID]"
+IDSequence: TypeAlias = (
+    Sequence[ID]
+    | IDArray
+    | pa.StringArray
+    | "pa.IntegerArray[Any]"
+    | "pa.ChunkedArray[Any]"
+    | "pd.Series[CoreID]"
+)
 "Sequences of identifiers."
 
 T = TypeVar("T")

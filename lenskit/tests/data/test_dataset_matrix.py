@@ -19,7 +19,7 @@ from numpy.typing import ArrayLike
 from pytest import mark, raises
 
 from lenskit.data import Dataset, FieldError, from_interactions_df
-from lenskit.data.matrix import CSRStructure, MatrixDataset
+from lenskit.data.matrix import CSRStructure
 from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
 
 
@@ -61,14 +61,6 @@ def _check_timestamp(ml_ds: Dataset, ml_ratings: pd.DataFrame, ts: ArrayLike):
     assert np.all(ts == ml_ratings["timestamp"])
 
 
-def test_internals(ml_ds: Dataset):
-    "Test internal matrix structures"
-    assert isinstance(ml_ds, MatrixDataset)
-    assert ml_ds._matrix.user_nums.dtype == np.int32
-    assert ml_ds._matrix.user_ptrs.dtype == np.int32
-    assert ml_ds._matrix.item_nums.dtype == np.int32
-
-
 def test_matrix_structure(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     log = ml_ds.interaction_matrix(format="structure")
     assert isinstance(log, CSRStructure)
@@ -96,6 +88,7 @@ def test_matrix_pandas(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     log = ml_ds.interaction_matrix(format="pandas", field="rating")
     assert isinstance(log, pd.DataFrame)
     assert len(log) == len(ml_ratings)
+    assert "rating" in log.columns
 
     _check_user_number_counts(ml_ds, ml_ratings, log["user_num"])
     _check_user_ids(ml_ds, ml_ratings, log["user_num"])
@@ -132,13 +125,8 @@ def test_matrix_pandas_timestamp(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_timestamp(ml_ds, ml_ratings, log["timestamp"])
 
 
-def test_matrix_pandas_csr_fail(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    with raises(ValueError, match="unsupported layout"):
-        ml_ds.interaction_matrix(format="pandas", field="rating", layout="csr")  # type: ignore
-
-
 def test_matrix_pandas_unknown_field(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    with raises(FieldError, match=r"interaction\[playcount\]"):
+    with raises(FieldError, match=r"rating\[playcount\]"):
         ml_ds.interaction_matrix(format="pandas", field="playcount")  # type: ignore
 
 
@@ -151,21 +139,6 @@ def test_matrix_pandas_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_user_ids(ml_ds, ml_ratings, log["user_num"])
     _check_item_number_counts(ml_ds, ml_ratings, log["item_num"])
     _check_item_ids(ml_ds, ml_ratings, log["item_num"])
-
-
-def test_matrix_pandas_missing_rating(ml_ratings: pd.DataFrame):
-    ml_ds = from_interactions_df(
-        ml_ratings[["user_id", "item_id", "timestamp"]], item_col="item_id"
-    )
-    log = ml_ds.interaction_matrix(format="pandas", field="rating")
-    assert isinstance(log, pd.DataFrame)
-    assert len(log) == len(ml_ratings)
-
-    _check_user_number_counts(ml_ds, ml_ratings, log["user_num"])
-    _check_user_ids(ml_ds, ml_ratings, log["user_num"])
-    _check_item_number_counts(ml_ds, ml_ratings, log["item_num"])
-    _check_item_ids(ml_ds, ml_ratings, log["item_num"])
-    assert np.all(log["rating"] == 1.0)
 
 
 @mark.parametrize("generation", ["modern", "legacy"])
@@ -193,7 +166,8 @@ def test_matrix_scipy_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
 
 
 @mark.parametrize("generation", ["modern", "legacy"])
-def test_matrix_scipy_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
+def test_matrix_scipy_csr(ml_ratings: pd.DataFrame, generation):
+    ml_ds = from_interactions_df(ml_ratings.sample(frac=1.0, replace=False))
     log = ml_ds.interaction_matrix(format="scipy", field="rating", legacy=generation == "legacy")
     assert isinstance(log, sps.csr_array if generation == "modern" else sps.csr_matrix)
     assert log.nnz == len(ml_ratings)
@@ -242,23 +216,6 @@ def test_matrix_scipy_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset, genera
 
     # right rating values
     assert np.all(log.data == 1.0)
-
-
-@mark.parametrize("generation", ["modern", "legacy"])
-def test_matrix_scipy_missing_rating(ml_ratings: pd.DataFrame, generation):
-    ml_ds = from_interactions_df(ml_ratings[["user_id", "item_id", "timestamp"]])
-    log = ml_ds.interaction_matrix(format="scipy", field="rating", legacy=generation == "legacy")
-    assert isinstance(log, sps.csr_array if generation == "modern" else sps.csr_matrix)
-    assert log.nnz == len(ml_ratings)
-
-    nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["user_id"].nunique()
-    assert ncols == ml_ratings["item_id"].nunique()
-
-    _check_user_offset_counts(ml_ds, ml_ratings, log.indptr)
-    _check_item_number_counts(ml_ds, ml_ratings, log.indices)
-    _check_item_ids(ml_ds, ml_ratings, log.indices)
-    assert np.allclose(log.data, 1.0)
 
 
 def test_matrix_torch_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset):
@@ -313,23 +270,6 @@ def test_matrix_torch_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     _check_ratings(ml_ds, ml_ratings, log.values().numpy())
 
 
-def test_matrix_torch_missing_rating(ml_ratings: pd.DataFrame):
-    ml_ds = from_interactions_df(ml_ratings[["user_id", "item_id", "timestamp"]])
-    log = ml_ds.interaction_matrix(format="torch", field="rating")
-    assert isinstance(log, torch.Tensor)
-    assert log.is_sparse_csr
-    assert log.values().shape == torch.Size([len(ml_ratings)])
-
-    nrows, ncols = cast(tuple[int, int], log.shape)
-    assert nrows == ml_ratings["user_id"].nunique()
-    assert ncols == ml_ratings["item_id"].nunique()
-
-    _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
-    _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
-    _check_item_ids(ml_ds, ml_ratings, log.col_indices())
-    assert np.allclose(log.values().numpy(), 1.0)
-
-
 def test_matrix_torch_timestamp(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     log = ml_ds.interaction_matrix(format="torch", field="timestamp")
     assert isinstance(log, torch.Tensor)
@@ -374,7 +314,7 @@ def test_matrix_rows_by_num(rng: np.random.Generator, ml_ratings: pd.DataFrame, 
     users = rng.choice(ml_ds.user_count, 50)
 
     rated = set(zip(ml_ratings["user_id"], ml_ratings["item_id"]))
-    rdf = ml_ds.interaction_matrix("pandas")
+    rdf = ml_ds.interaction_matrix(format="pandas")
     rnums = set(zip(rdf["user_num"], rdf["item_num"]))
 
     dfi = ml_ratings.set_index(["user_id", "item_id"])

@@ -13,8 +13,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
-from lenskit.data import NPID, Dataset, ItemListCollection, UserIDKey
-from lenskit.data.matrix import MatrixDataset
+from lenskit.data import NPID, Dataset, DatasetBuilder, ItemListCollection, UserIDKey
 from lenskit.logging import item_progress
 from lenskit.random import RNGInput, random_generator
 
@@ -60,7 +59,7 @@ def crossfold_users(
     users = data.users.ids()
     _log.info(
         "partitioning %d rows for %d users into %d partitions",
-        data.count("pairs"),
+        data.interactions().count(),
         len(users),
         partitions,
     )
@@ -72,9 +71,7 @@ def crossfold_users(
     test_sets = np.array_split(rows, partitions)
 
     # get the whole test DF
-    df = data.interaction_matrix("pandas", field="all", original_ids=True).set_index(
-        ["user_id", "item_id"]
-    )
+    df = data.interaction_matrix(format="pandas", original_ids=True)
 
     # convert each partition into a split
     for i, ts in enumerate(test_sets):
@@ -158,9 +155,7 @@ def sample_users(
     _log.info("sampling %d users (n=%d)", len(users), size)
 
     # get the whole test DF
-    rate_df = data.interaction_matrix("pandas", field="all", original_ids=True).set_index(
-        ["user_id", "item_id"]
-    )
+    rate_df = data.interactions().pandas(ids=True)
 
     if repeats is None:
         test_us = rng.choice(users, size, replace=False)
@@ -194,12 +189,12 @@ def _make_split(
             test.add(u_test, u)
             pb.update()
 
+    train_build = DatasetBuilder(data)
+    iname = data.default_interaction_class()
     if test_only:
-        return TTSplit(
-            MatrixDataset(data.users, data.items, pd.DataFrame({"user_id": [], "item_id": []})),
-            test,
-        )
+        train_build.clear_relationships(iname)
     else:
-        split = TTSplit.from_src_and_test(data, test)
-        assert split.train.interaction_count + split.test_size == len(df)
-        return split
+        test_tbl = test.to_df()[["user_id", "item_id"]]
+        train_build.filter_interactions(iname, remove=test_tbl)
+
+    return TTSplit(train_build.build(), test)

@@ -17,7 +17,7 @@ from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
 
 
 def test_pandas_log_defaults(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    int_df = ml_ds.interaction_log(format="pandas")
+    int_df = ml_ds.interaction_table(format="pandas")
     assert isinstance(int_df, pd.DataFrame)
     # we should have exactly the 4 expected columns
     assert len(int_df.columns) == 4
@@ -42,7 +42,7 @@ def test_pandas_log_defaults(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
 
 def test_pandas_log_ids(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    int_df = ml_ds.interaction_log(format="pandas", original_ids=True)
+    int_df = ml_ds.interaction_table(format="pandas", original_ids=True)
     assert isinstance(int_df, pd.DataFrame)
     # we should have exactly the 4 expected columns
     assert len(int_df.columns) == 4
@@ -65,7 +65,7 @@ def test_pandas_log_ids(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
 
 def test_pandas_log_no_ts(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    int_df = ml_ds.interaction_log(format="pandas", fields=["rating"])
+    int_df = ml_ds.interaction_table(format="pandas", fields=["rating"])
     assert isinstance(int_df, pd.DataFrame)
     # we should have exactly the 4 expected columns
     assert len(int_df.columns) == 3
@@ -88,26 +88,13 @@ def test_pandas_log_no_ts(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
 
 def test_numpy_log_defaults(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    log = ml_ds.interaction_log(format="numpy")
-    assert isinstance(log, NumpyUserItemTable)
-    assert log.ratings is not None
-    assert log.timestamps is not None
+    log = ml_ds.interaction_table(format="numpy")
+    assert isinstance(log, dict)
+    assert log["rating"] is not None
+    assert log["timestamp"] is not None
 
     # and the total length
-    assert len(log.user_nums) == len(ml_ratings)
-    assert len(log.item_nums) == len(ml_ratings)
-    assert len(log.ratings) == len(ml_ratings)
-    assert len(log.timestamps) == len(ml_ratings)
-
-
-def test_torch_log_defaults(ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    log = ml_ds.interaction_log(format="torch")
-    assert isinstance(log, TorchUserItemTable)
-    assert log.ratings is not None
-    assert log.timestamps is not None
-
-    # and the total length
-    assert len(log.user_nums) == len(ml_ratings)
-    assert len(log.item_nums) == len(ml_ratings)
-    assert len(log.ratings) == len(ml_ratings)
-    assert len(log.timestamps) == len(ml_ratings)
+    assert len(log["user_num"]) == len(ml_ratings)
+    assert len(log["item_num"]) == len(ml_ratings)
+    assert len(log["rating"]) == len(ml_ratings)
+    assert len(log["timestamp"]) == len(ml_ratings)

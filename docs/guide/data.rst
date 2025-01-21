@@ -1,4 +1,5 @@
 .. _datasets:
+.. _data-api:
 
 Datasets
 ========
@@ -24,7 +25,7 @@ Getting started with the dataset is fairly straightforward:
 You can then access the data from the various methods of the :class:`Dataset` class.
 For example, if you want to get the ratings as a data frame:
 
-    >>> mlds.interaction_matrix('pandas', field='rating')
+    >>> mlds.interaction_matrix(format='pandas', field='rating')
             user_num  item_num  rating
     0              0        30     2.5
     1              0       833     3.0
@@ -37,15 +38,15 @@ For example, if you want to get the ratings as a data frame:
 Or obtain item statistics:
 
     >>> mlds.item_stats()
-            count  user_count  rating_count  mean_rating  first_time
-    item
-    1         247         247           247     3.872470   828212413
-    2         107         107           107     3.401869   828213150
-    3          59          59            59     3.161017   833955544
-    4          13          13            13     2.384615   834425135
-    5          56          56            56     3.267857   829491839
+            record_count  user_count  rating_count  ...  count  first_time   last_time
+    item                                            ...
+    1                247         247           247  ...    247   828212413  1475783711
+    2                107         107           107  ...    107   828213150  1470073353
+    3                 59          59            59  ...     59   833955544  1471385241
+    4                 13          13            13  ...     13   834425135  1090908852
+    5                 56          56            56  ...     56   829491839  1471385747
     ...
-    [9066 rows x 5 columns]
+    [9066 rows x 7 columns]
 
 .. _data-model:
 
@@ -107,13 +108,64 @@ more detail in the :class:`reference documentation <Dataset>`.  These include:
 *   Sets of known user and item identifiers, through :class:`Vocabulary` objects
     exposed through the :attr:`Dataset.users` and :attr:`Dataset.items`
     properties.
+*   Access to the entities and relationships (including interactions) defined in
+    the dataset.
+
+Analyzing Interactions
+~~~~~~~~~~~~~~~~~~~~~~
+
+:class:`Dataset` allows client code to obtain *interactions* between entities
+(such as users rating items), or other inter-entity relationships, in a variety
+of formats (including Pandas data frames and SciPy or PyTorch sparse matrices).
+The :class:`RelationshipSet` and :class:`MatrixRelationshipSet` classes provide
+the primary interfaces to these capabilities.
+
+.. _interaction-stats:
+
+Interaction Statistics
+----------------------
+
+Datasets also provide cached access to various statistics of the entities
+involved in an interaction class.  These are currently exposed through
+:meth:`MatrixRelationshipSet.row_stats` and
+:meth:`~MatrixRelationshipSet.col_stats`; for convenience, the statistics from
+the default interaction class are available on :meth:`Dataset.user_stats` and
+:meth:`Dataset.item_stats`.
+
+These statistics include:
+
+``count``
+    The total number of relationships for the entity.
+``record_count``
+    The number of relationship or interaction records for the entity.  This is
+    equal to ``count``, unless the relationship type has a ``count`` attribute,
+    in which case this attribute is the number of records and ``count`` is the
+    total number of interactions.
+``<other>_count``
+    The number of distinct entities of type <other> this entity has interacted
+    with.  For example, the user statistics of a normal user-item interaction
+    type will have an ``item_count`` column.
+``rating_count``
+    The number of explicit rating values (only defined if the interaction type
+    has a ``rating`` attribute).
+``mean_rating``
+    The mean rating provided by or for this entity (only defined if the interaction
+    type has a ``rating`` attribute).
+``first_time``
+    The first recorded timestamp for this entity's interactions (only defined if
+    the interaction type has a ``timestamp`` attribute).
+``last_time``
+    The last recorded timestamp for this entity's interactions (only defined if
+    the interaction type has a ``timestamp`` attribute).
 
 Creating Datasets
 ~~~~~~~~~~~~~~~~~
 
-Several functions can create a :class:`Dataset` from different input data sources.
+Several functions and classes can create a :class:`Dataset` from different input
+data sources.
 
 .. autosummary::
+    DatasetBuilder
     from_interactions_df
 
 Loading Common Datasets
@@ -124,14 +176,3 @@ their source files.
 
 .. autosummary::
     load_movielens
-
-Dataset Implementations
-~~~~~~~~~~~~~~~~~~~~~~~
-
-:class:`Dataset` itself is an abstract class that can be extended to provide new
-data set implementations (e.g. querying a database).  LensKit provides a few
-implementations.
-
-.. autosummary::
-    ~lenskit.data.matrix.MatrixDataset
-    ~lenskit.data.lazy.LazyDataset

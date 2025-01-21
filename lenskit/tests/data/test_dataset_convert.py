@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from lenskit.data.convert import from_interactions_df
+from lenskit.data.adapt import from_interactions_df
 
 
 def test_item_subset(rng: np.random.Generator, ml_ratings: pd.DataFrame):
@@ -12,7 +12,7 @@ def test_item_subset(rng: np.random.Generator, ml_ratings: pd.DataFrame):
     assert ds.item_count == len(items)
     assert np.all(ds.items.ids() == np.sort(items))
 
-    log = ds.interaction_log("pandas", original_ids=True)
+    log = ds.interaction_table(format="pandas", original_ids=True)
     assert np.all(log["item_id"].isin(items))
 
 
@@ -24,5 +24,5 @@ def test_user_subset(rng: np.random.Generator, ml_ratings: pd.DataFrame):
     assert ds.user_count == len(users)
     assert np.all(ds.users.ids() == np.sort(users))
 
-    log = ds.interaction_log("pandas", original_ids=True)
+    log = ds.interaction_table(format="pandas", original_ids=True)
     assert np.all(log["user_id"].isin(users))

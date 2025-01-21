@@ -3,7 +3,7 @@ import pandas as pd  # noqa: 401
 from pytest import approx
 
 from lenskit.data import ItemListCollection
-from lenskit.data.schemas import ITEM_COMPAT_COLUMN, USER_COMPAT_COLUMN
+from lenskit.data.adapt import ITEM_COMPAT_COLUMN, USER_COMPAT_COLUMN
 from lenskit.metrics.basic import ListLength
 from lenskit.metrics.bulk import RunAnalysis
 from lenskit.metrics.predict import RMSE
