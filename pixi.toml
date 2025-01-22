@@ -112,7 +112,6 @@ nbformat = ">=5.2"
 ipython = ">=7"
 pyprojroot = ">=0.3"
 seaborn-base = ">=0.13.2,<0.14"
-ipywidgets = ">=8.1.5,<9"
 
 [feature.reporting.dependencies]
 sqlite = "~=3.0"
