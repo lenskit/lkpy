@@ -467,6 +467,9 @@ class DatasetBuilder:
         entities: IDSequence | tuple[IDSequence, ...] | pd.Series[Any] | TableInput,
         values: ArrayLike | None = None,
     ) -> None:
+        if name in self.schema.entities[cls].attributes:  # pragma: nocover
+            raise NotImplementedError("updating or replacing existing attributes not supported")
+
         id_col = id_col_name(cls)
 
         if values is None:
@@ -519,6 +522,9 @@ class DatasetBuilder:
         entities: IDSequence | tuple[IDSequence, ...] | pd.Series[Any] | TableInput,
         values: ArrayLike | None = None,
     ) -> None:
+        if name in self.schema.entities[cls].attributes:  # pragma: nocover
+            raise NotImplementedError("updating or replacing existing attributes not supported")
+
         id_col = id_col_name(cls)
 
         if values is None:
@@ -596,6 +602,9 @@ class DatasetBuilder:
             dim_names:
                 The names for the dimensions of the array.
         """
+        if name in self.schema.entities[cls].attributes:  # pragma: nocover
+            raise NotImplementedError("updating or replacing existing attributes not supported")
+
         e_tbl = self._tables[cls]
         if e_tbl is None:
             raise DataError(f"no entities of class {cls}")
