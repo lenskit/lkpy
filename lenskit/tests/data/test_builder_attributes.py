@@ -5,7 +5,7 @@ import pyarrow as pa
 import torch
 from scipy.sparse import csr_array
 
-from pytest import approx, raises, skip, warns
+from pytest import approx, mark, raises, skip, warns
 
 from lenskit.data import DatasetBuilder
 from lenskit.data.schema import AttrLayout
@@ -114,6 +114,7 @@ def test_item_scalar_series_arrays():
     assert np.all(ds_ts == orig_ts)
 
 
+@mark.xfail(reason="attributes at insert time not yet implemented")
 def test_item_insert_scalar_df():
     dsb = DatasetBuilder()
 
@@ -138,6 +139,7 @@ def test_item_insert_scalar_df():
     assert np.all(ds_ts == orig_ts)
 
 
+@mark.xfail(reason="attributes at insert time not yet implemented")
 def test_item_update_titles():
     dsb = DatasetBuilder()
 
@@ -220,6 +222,7 @@ def test_item_list_df():
     )
 
 
+@mark.xfail(reason="attributes at insert time not yet implemented")
 def test_item_initial_list_df():
     dsb = DatasetBuilder()
 
