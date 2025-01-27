@@ -542,7 +542,7 @@ class DatasetBuilder:
 
         val_array: pa.Array = pa.array(values)  # type: ignore
         if not pa.types.is_list(val_array.type):
-            raise DataError("attribute data did not resolve to list")
+            raise TypeError("attribute data did not resolve to list")
 
         if isinstance(val_array, pa.ChunkedArray):  # pragma: nocover
             val_array = val_array.combine_chunks()
@@ -570,10 +570,86 @@ class DatasetBuilder:
         cls: str,
         name: str,
         entities: IDSequence | tuple[IDSequence, ...],
-        values: ArrayLike | sparray,
+        values: pa.Array[Any] | pa.ChunkedArray[Any] | np.ndarray[tuple[int, int], Any] | sparray,
         /,
-        dims: ArrayLike | pd.Index[Any] | Sequence[Any] | None = None,
-    ) -> None: ...
+        dim_names: ArrayLike | pd.Index[Any] | Sequence[Any] | None = None,
+    ) -> None:
+        """
+        Add a vector attribute to a set of entities.
+
+        .. warning::
+
+            The vector is stored densely, even for entities for which it is not
+            set. High-dimensional vectors can therefore take up a lot of space.
+
+        Args:
+            cls:
+                The entity class name.
+            name:
+                The attribute name.
+            entities:
+                The entity IDs to which the attribute should be attached.
+            values:
+                The attribute values, as a fixed-length list array or a
+                two-dimensional NumPy array.
+            dim_names:
+                The names for the dimensions of the array.
+        """
+        e_tbl = self._tables[cls]
+        if e_tbl is None:
+            raise DataError(f"no entities of class {cls}")
+        nums = self._resolve_entity_ids(cls, entities, e_tbl)
+        if not np.all(nums.is_valid()):
+            n_bad = nums.is_valid().sum().as_py()
+            raise DataError(f"{n_bad} unknown entity IDs")
+
+        tbl_mask = np.zeros(e_tbl.num_rows, dtype=np.bool_)
+        tbl_mask[nums.to_numpy()] = True
+        tbl_mask = pa.array(tbl_mask)
+
+        if isinstance(values, pa.ChunkedArray):
+            if not pa.types.is_fixed_size_list(values.type):
+                raise TypeError("attribute data must be fixed-size list")
+
+            matrix = None
+            start = 0
+            for chunk in values.chunks:
+                assert isinstance(chunk, pa.FixedSizeListArray)
+                cnp = chunk.values.to_numpy()
+                if matrix is None:
+                    matrix = np.full((e_tbl.num_rows, chunk.type.list_size), np.nan, cnp.dtype)
+                end = start + len(chunk)
+                matrix[nums[start:end], :] = cnp.reshape((end - start, chunk.type.list_size))
+                start = end
+
+        elif isinstance(values, pa.Array):
+            if not pa.types.is_fixed_size_list(values.type):
+                raise TypeError("attribute data must be fixed-size list")
+            assert isinstance(values, pa.FixedSizeListArray)
+            vnp = values.values.to_numpy()
+            matrix = np.full((e_tbl.num_rows, values.type.list_size), np.nan, vnp.dtype)
+            matrix[nums] = vnp.reshape((len(nums), values.type.list_size))
+
+        else:
+            if len(values.shape) != 2:
+                raise TypeError("values must be 2D array")
+            nrow, ncol = values.shape
+            if nrow != len(entities):
+                raise ValueError("entity list and value row count must match")
+            matrix = np.full((e_tbl.num_rows, ncol), np.nan, values.dtype)
+            matrix[nums] = values
+
+        assert matrix is not None
+
+        tbl_mask = np.ones(e_tbl.num_rows, dtype=np.bool_)
+        tbl_mask[nums.to_numpy()] = False
+        tbl_mask = pa.array(tbl_mask)
+        val_col = pa.FixedSizeListArray.from_arrays(
+            pa.array(matrix.ravel()), matrix.shape[1], mask=tbl_mask
+        )
+
+        self._tables[cls] = e_tbl.append_column(name, val_col)
+        self.schema.entities[cls].attributes[name] = ColumnSpec(layout=AttrLayout.VECTOR)
 
     def build(self) -> Dataset:
         return Dataset(self.build_container())

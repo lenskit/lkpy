@@ -4,9 +4,12 @@ Data attribute accessors.
 
 from __future__ import annotations
 
+from typing import Literal
+
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+import pyarrow.compute as pc
 import torch
 from numpy.typing import NDArray
 from typing_extensions import Any
@@ -24,6 +27,8 @@ def attr_set(
             return ScalarAttributeSet(name, spec, table, vocab, rows)
         case AttrLayout.LIST:
             return ListAttributeSet(name, spec, table, vocab, rows)
+        case AttrLayout.VECTOR:
+            return VectorAttributeSet(name, spec, table, vocab, rows)
         case _:
             raise ValueError(f"unsupported layout {spec.layout}")
 
@@ -78,6 +83,17 @@ class AttributeSet:
             return self._selected.to_numpy()
 
     @property
+    def names(self) -> list[str] | None:
+        """
+        Get the names attached to this attribute's dimensions.
+
+        .. note::
+
+            Only applicable to vector and sparse attributes.
+        """
+        return None
+
+    @property
     def is_scalar(self) -> bool:
         """
         Query whether this attribute is scalar.
@@ -105,7 +121,9 @@ class AttributeSet:
         """
         return self._spec.layout == AttrLayout.SPARSE
 
-    def pandas(self) -> pd.Series | pd.DataFrame:  # pragma: nocover
+    def pandas(
+        self, *, missing: Literal["null", "omit"] = "null"
+    ) -> pd.Series | pd.DataFrame:  # pragma: nocover
         raise NotImplementedError()
 
     def numpy(self) -> NDArray[Any]:
@@ -123,10 +141,48 @@ class AttributeSet:
 
 
 class ScalarAttributeSet(AttributeSet):
-    def pandas(self) -> pd.Series[Any]:
-        return pd.Series(self.numpy(), index=self.ids())
+    def pandas(self, *, missing: Literal["null", "omit"] = "null") -> pd.Series[Any]:
+        arr = self.arrow()
+        mask = arr.is_valid()
+        if missing == "null" and pc.all(mask).as_py():
+            return pd.Series(arr.to_numpy(zero_copy_only=False), index=self.ids())
+        else:
+            mask = mask.to_numpy(zero_copy_only=False)
+            return pd.Series(arr.drop_null().to_numpy(zero_copy_only=False), index=self.ids()[mask])
 
 
 class ListAttributeSet(AttributeSet):
-    def pandas(self) -> pd.Series[Any]:
-        return pd.Series(self.numpy(), index=self.ids())
+    def pandas(self, *, missing: Literal["null", "omit"] = "null") -> pd.Series[Any]:
+        arr = self.arrow()
+        mask = arr.is_valid()
+        if missing == "null" and pc.all(mask).as_py():
+            return pd.Series(arr.to_numpy(zero_copy_only=False), index=self.ids())
+        else:
+            mask = mask.to_numpy(zero_copy_only=False)
+            return pd.Series(arr.drop_null().to_numpy(zero_copy_only=False), index=self.ids()[mask])
+
+
+class VectorAttributeSet(AttributeSet):
+    def numpy(self) -> np.ndarray[tuple[int, int], Any]:
+        arr = self.arrow()
+        if isinstance(arr, pa.ChunkedArray):
+            arr = arr.combine_chunks()
+        assert isinstance(arr, pa.FixedSizeListArray)
+        mat = arr.values.to_numpy().reshape((len(arr), arr.type.list_size))
+        return mat
+
+    def pandas(self, *, missing: Literal["null", "omit"] = "null") -> pd.DataFrame:
+        arr = self.arrow()
+        if isinstance(arr, pa.ChunkedArray):
+            arr = arr.combine_chunks()
+        assert isinstance(arr, pa.FixedSizeListArray)
+
+        ids = self.ids()
+
+        mask = arr.is_valid()
+        if missing == "omit" and not pc.all(mask).as_py():
+            arr = arr.drop_null()
+            ids = ids[mask.to_numpy(zero_copy_only=False)]
+
+        mat = arr.values.to_numpy().reshape((len(arr), arr.type.list_size))
+        return pd.DataFrame(mat, index=ids)
