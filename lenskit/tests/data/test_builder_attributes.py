@@ -282,33 +282,35 @@ def test_item_vector(rng: np.random.Generator, ml_ratings: pd.DataFrame):
 def test_item_vector_names(rng: np.random.Generator, ml_ratings: pd.DataFrame):
     dsb = DatasetBuilder()
 
-    item_ids = ml_ratings["item"].unique()
+    item_ids = ml_ratings["item_id"].unique()
     dsb.add_entities("item", item_ids)
 
     items = rng.choice(item_ids, 500, replace=False)
     vec = rng.standard_normal((500, 5))
-    dsb.add_vector_attribute("item", "embedding", items, vec, dims=FRUITS)
+    dsb.add_vector_attribute("item", "embedding", items, vec, dim_names=FRUITS)
     va = dsb.schema.entities["item"].attributes["embedding"]
     assert va.layout == AttrLayout.VECTOR
 
     ds = dsb.build()
-    assert ds.entities("item").attribute("genres").is_vector
+    assert ds.entities("item").attribute("embedding").is_vector
     assert ds.entities("item").attribute("embedding").names == FRUITS
 
     arr = ds.entities("item").attribute("embedding").arrow()
-    assert pa.types.is_fixed_size_list(arr.type)
-    assert np.sum(arr.is_valid()) == 500
-    assert np.all(np.asarray(arr.value_lengths()) == 5)
+    if isinstance(arr, pa.ChunkedArray):
+        arr = arr.combine_chunks()
+    assert isinstance(arr, pa.FixedSizeListArray)
+    assert np.sum(np.asarray(arr.is_valid())) == 500
+    assert np.all(np.asarray(arr.value_lengths().drop_null()) == 5)
 
     arr = ds.entities("item").attribute("embedding").numpy()
     assert isinstance(arr, np.ndarray)
-    assert arr.shape == (len(item_ids), 20)
-    assert np.sum(np.isfinite(arr)) == 500 * 20
+    assert arr.shape == (len(item_ids), 5)
+    assert np.sum(np.isfinite(arr)) == 500 * 5
 
-    arr = ds.entities("item").attribute("embedding").df(missing="omit")
+    arr = ds.entities("item").attribute("embedding").pandas(missing="omit")
     assert isinstance(arr, pd.DataFrame)
     assert np.all(arr.columns == FRUITS)
-    assert arr.shape == (500, 20)
+    assert arr.shape == (500, 5)
     assert set(arr.index) == set(items)
 
 

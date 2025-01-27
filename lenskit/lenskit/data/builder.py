@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 import warnings
 from collections.abc import Mapping, Sequence
 from os import PathLike
@@ -648,7 +649,12 @@ class DatasetBuilder:
             pa.array(matrix.ravel()), matrix.shape[1], mask=tbl_mask
         )
 
-        self._tables[cls] = e_tbl.append_column(name, val_col)
+        field = pa.field(name, val_col.type, nullable=True)
+        if dim_names is not None:
+            field = field.with_metadata(
+                {"lenskit:names": json.dumps(np.asarray(dim_names).tolist())}
+            )
+        self._tables[cls] = e_tbl.append_column(field, val_col)
         self.schema.entities[cls].attributes[name] = ColumnSpec(layout=AttrLayout.VECTOR)
 
     def build(self) -> Dataset:

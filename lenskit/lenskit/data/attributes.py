@@ -4,6 +4,7 @@ Data attribute accessors.
 
 from __future__ import annotations
 
+import json
 from typing import Literal
 
 import numpy as np
@@ -163,6 +164,19 @@ class ListAttributeSet(AttributeSet):
 
 
 class VectorAttributeSet(AttributeSet):
+    _names: list[str] | None = None
+
+    @property
+    def names(self) -> list[str] | None:
+        if self._names is None:
+            field = self._table.field(self.name)
+            meta = field.metadata
+            nstr = meta.get(b"lenskit:names", None) if meta else None
+            if nstr is not None:
+                self._names = json.loads(nstr)
+
+        return self._names
+
     def numpy(self) -> np.ndarray[tuple[int, int], Any]:
         arr = self.arrow()
         if isinstance(arr, pa.ChunkedArray):
@@ -185,4 +199,4 @@ class VectorAttributeSet(AttributeSet):
             ids = ids[mask.to_numpy(zero_copy_only=False)]
 
         mat = arr.values.to_numpy().reshape((len(arr), arr.type.list_size))
-        return pd.DataFrame(mat, index=ids)
+        return pd.DataFrame(mat, index=ids, columns=self.names)
