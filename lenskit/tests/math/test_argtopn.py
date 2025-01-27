@@ -60,7 +60,7 @@ def test_arg_topn(xs, k):
         assert np.all(top_xs[:-1] >= top_xs[1:])
 
     # the min matches the underlying sort
-    if k > 1:
+    if k >= 1:
         assert top_xs[-1] == -sort_xs[min(k - 1, len(sort_xs) - 1)]
     elif np.all(np.isfinite(sort_xs)):
         assert np.all(top_xs == -sort_xs)
