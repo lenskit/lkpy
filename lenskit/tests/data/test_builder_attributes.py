@@ -26,6 +26,7 @@ def test_item_scalar_series():
 
     ds = dsb.build()
 
+    assert ds.entities("item").attribute("genres").is_scalar
     df = ds.entities("item").attribute("title")
     assert isinstance(df, pd.Series)
     assert df == items["title"]
@@ -44,6 +45,7 @@ def test_item_scalar_df():
 
     ds = dsb.build()
 
+    assert ds.entities("item").attribute("genres").is_scalar
     df = ds.entities("item").attribute("title")
     assert isinstance(df, pd.Series)
     assert df == items["title"]
@@ -62,6 +64,7 @@ def test_item_scalar_array():
 
     ds = dsb.build()
 
+    assert ds.entities("item").attribute("genres").is_scalar
     df = ds.entities("item").attribute("title").series()
     assert isinstance(df, pd.Series)
     assert df == items["title"]
@@ -80,6 +83,7 @@ def test_item_insert_with_scalar_df():
 
     ds = dsb.build()
 
+    assert ds.entities("item").attribute("genres").is_scalar
     df = ds.entities("item").attribute("title").series()
     assert isinstance(df, pd.Series)
     assert df == items["title"]
@@ -100,6 +104,7 @@ def test_item_list_series():
 
     ds = dsb.build()
 
+    assert ds.entities("item").attribute("genres").is_scalar
     arr = ds.entities("item").attribute("genres").arrow()
     assert isinstance(arr, pa.ListArray)
     assert len(arr) == len(genres)
@@ -126,7 +131,7 @@ def test_item_list_df():
     assert va.layout == "list"
 
     ds = dsb.build()
-
+    assert ds.entities("item").attribute("genres").is_list
     arr = ds.entities("item").attribute("genres").arrow()
     assert isinstance(arr, pa.ListArray)
     assert len(arr) == len(items)
@@ -144,6 +149,8 @@ def test_item_initial_list_df():
     assert va.layout == "list"
 
     ds = dsb.build()
+
+    assert ds.entities("item").attribute("genres").is_list
 
     arr = ds.entities("item").attribute("title").arrow()
     assert isinstance(arr, pa.StringArray)
@@ -167,6 +174,7 @@ def test_item_vector(rng: np.random.Generator, ml_ratings: pd.DataFrame):
     assert va.layout == "vector"
 
     ds = dsb.build()
+    assert ds.entities("item").attribute("genres").is_vector
     assert ds.entities("item").attribute("embedding").names is None
 
     arr = ds.entities("item").attribute("embedding").arrow()
@@ -242,7 +250,6 @@ def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFram
 
     ds = dsb.build()
 
-    assert ds.entities("item").attribute("genres").is_vector
     assert ds.entities("item").attribute("genres").is_sparse
     assert ds.entities("item").attribute("genres").names == gindex.values.tolist()
 
