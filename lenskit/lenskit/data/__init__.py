@@ -10,6 +10,7 @@ Data abstractions and data set access.
 from __future__ import annotations
 
 from .adapt import from_interactions_df
+from .attributes import AttributeSet
 from .builder import DatasetBuilder
 from .collection import GenericKey, ItemListCollection, UserIDKey
 from .dataset import Dataset, EntitySet, FieldError, MatrixRelationshipSet, RelationshipSet
@@ -26,6 +27,7 @@ __all__ = [
     "EntitySet",
     "RelationshipSet",
     "MatrixRelationshipSet",
+    "AttributeSet",
     "DatasetBuilder",
     "FieldError",
     "CSRStructure",
