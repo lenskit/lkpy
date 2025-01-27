@@ -295,8 +295,7 @@ class DatasetBuilder:
             if e_tbl is None:  # pragma: nocover
                 raise DataError(f"no entities of class {e_type}")
 
-            e_ids = e_tbl.column(id_col_name(e_type))
-            e_nums = pc.index_in(ids, e_ids)
+            e_nums = self._resolve_entity_ids(e_type, ids)
             e_valid = e_nums.is_valid()
             if not pc.all(e_valid).as_py():
                 if missing == "error":
@@ -523,6 +522,14 @@ class DatasetBuilder:
         """
         container = self.build_container()
         container.save(path)
+
+    def _resolve_entity_ids(self, cls: str, ids: IDSequence) -> pa.Int32Array:
+        tgt_ids: pa.Array = pa.array(ids)  # type: ignore
+        e_tbl = self._tables[cls]
+        assert e_tbl is not None
+        e_ids = e_tbl.column(id_col_name(cls))
+        e_nums = pc.index_in(tgt_ids, e_ids)
+        return e_nums
 
 
 def _empty_rel_table(types: list[str]) -> pa.Table:
