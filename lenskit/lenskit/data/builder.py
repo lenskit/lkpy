@@ -466,18 +466,26 @@ class DatasetBuilder:
         entities: IDSequence | tuple[IDSequence, ...] | pd.Series[Any] | TableInput,
         values: ArrayLike | None = None,
     ) -> None:
+        id_col = id_col_name(cls)
+
         if values is None:
             if isinstance(entities, pd.Series):
                 # it is a series, use the index
                 values = entities.values
                 entities = entities.index.values
+            elif isinstance(entities, pd.DataFrame):
+                values = entities[name].values
+                if id_col in entities.columns:
+                    entities = entities[id_col].values
+                else:
+                    entities = entities.index.values
 
         e_tbl = self._tables[cls]
         if e_tbl is None:
             raise DataError(f"no entities of class {cls}")
         nums = self._resolve_entity_ids(cls, entities, e_tbl)
         if not np.all(nums.is_valid()):
-            n_bad = np.sum(nums.is_valid())
+            n_bad = nums.is_valid().sum().as_py()
             raise DataError(f"{n_bad} unknown entity IDs")
 
         val_array: pa.Array = pa.array(values)  # type: ignore
@@ -510,7 +518,52 @@ class DatasetBuilder:
         entities: IDSequence | tuple[IDSequence, ...] | pd.Series[Any] | TableInput,
         values: ArrayLike | None = None,
     ) -> None:
-        raise NotImplementedError()
+        id_col = id_col_name(cls)
+
+        if values is None:
+            if isinstance(entities, pd.Series):
+                # it is a series, use the index
+                values = entities.values
+                entities = entities.index.values
+            elif isinstance(entities, pd.DataFrame):
+                values = entities[name].values
+                if id_col in entities.columns:
+                    entities = entities[id_col].values
+                else:
+                    entities = entities.index.values
+
+        e_tbl = self._tables[cls]
+        if e_tbl is None:
+            raise DataError(f"no entities of class {cls}")
+        nums = self._resolve_entity_ids(cls, entities, e_tbl)
+        if not np.all(nums.is_valid()):
+            n_bad = nums.is_valid().sum().as_py()
+            raise DataError(f"{n_bad} unknown entity IDs")
+
+        val_array: pa.Array = pa.array(values)  # type: ignore
+        if not pa.types.is_list(val_array.type):
+            raise DataError("attribute data did not resolve to list")
+
+        if isinstance(val_array, pa.ChunkedArray):  # pragma: nocover
+            val_array = val_array.combine_chunks()
+        assert isinstance(val_array, pa.ListArray)
+
+        nums = nums.to_numpy()
+        tbl_valid = np.zeros(e_tbl.num_rows, dtype=np.bool_)
+        tbl_valid[nums] = True
+        tbl_valid = pa.array(tbl_valid)
+
+        # we have to do surgery on the offsets and values
+        lengths = np.zeros(e_tbl.num_rows + 1, dtype=np.int32)
+        lengths[nums + 1] = val_array.value_lengths().fill_null(0).to_numpy()
+        offsets = np.cumsum(lengths, dtype=np.int32)
+
+        val_col = pa.ListArray.from_arrays(
+            pa.array(offsets), val_array.values, mask=pc.invert(tbl_valid)
+        )
+
+        self._tables[cls] = e_tbl.append_column(name, val_col)
+        self.schema.entities[cls].attributes[name] = ColumnSpec(layout=AttrLayout.LIST)
 
     def add_vector_attribute(
         self,

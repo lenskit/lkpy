@@ -33,8 +33,8 @@ def test_item_scalar_series():
     ds_ts, orig_ts = df["title"].align(items["title"])
     assert np.all(ds_ts == orig_ts)
 
-    assert ds.entities("item").attribute("genres").is_scalar
-    df = ds.entities("item").attribute("title")
+    assert ds.entities("item").attribute("title").is_scalar
+    df = ds.entities("item").attribute("title").pandas()
     assert isinstance(df, pd.Series)
     assert np.all(df == items["title"])
 
@@ -45,7 +45,7 @@ def test_item_scalar_df():
     items = pd.read_csv(ml_test_dir / "movies.csv")
     items = items.rename(columns={"movieId": "item_id"})
 
-    dsb.add_entities("item", items.index.values)
+    dsb.add_entities("item", items["item_id"].values)
     dsb.add_scalar_attribute("item", "title", items[["item_id", "title"]])
     sa = dsb.schema.entities["item"].attributes["title"]
     assert sa.layout == AttrLayout.SCALAR
@@ -54,13 +54,14 @@ def test_item_scalar_df():
 
     df = ds.entities("item").pandas().set_index("item_id")
     assert "title" in df.columns
-    ds_ts, orig_ts = df["title"].align(items["title"])
+    ds_ts, orig_ts = df["title"].align(items.set_index("item_id")["title"])
     assert np.all(ds_ts == orig_ts)
 
-    assert ds.entities("item").attribute("genres").is_scalar
-    df = ds.entities("item").attribute("title")
+    assert ds.entities("item").attribute("title").is_scalar
+    df = ds.entities("item").attribute("title").pandas()
     assert isinstance(df, pd.Series)
-    assert df == items["title"]
+    ds_ts, orig_ts = df.align(items.set_index("item_id")["title"])
+    assert np.all(ds_ts == orig_ts)
 
 
 def test_item_scalar_array():
@@ -69,7 +70,7 @@ def test_item_scalar_array():
     items = pd.read_csv(ml_test_dir / "movies.csv")
     items = items.rename(columns={"movieId": "item_id"})
 
-    dsb.add_entities("item", items.index.values)
+    dsb.add_entities("item", items["item_id"].values)
     dsb.add_scalar_attribute("item", "title", items["item_id"], items["title"])
     sa = dsb.schema.entities["item"].attributes["title"]
     assert sa.layout == AttrLayout.SCALAR
@@ -78,22 +79,23 @@ def test_item_scalar_array():
 
     df = ds.entities("item").pandas().set_index("item_id")
     assert "title" in df.columns
-    ds_ts, orig_ts = df["title"].align(items["title"])
+    ds_ts, orig_ts = df["title"].align(items.set_index("item_id")["title"])
     assert np.all(ds_ts == orig_ts)
 
-    assert ds.entities("item").attribute("genres").is_scalar
-    df = ds.entities("item").attribute("title").series()
+    assert ds.entities("item").attribute("title").is_scalar
+    df = ds.entities("item").attribute("title").pandas()
     assert isinstance(df, pd.Series)
-    assert df == items["title"]
+    ds_ts, orig_ts = df.align(items.set_index("item_id")["title"])
+    assert np.all(ds_ts == orig_ts)
 
 
-def test_item_insert_with_scalar_df():
+def test_item_scalar_series_arrays():
     dsb = DatasetBuilder()
 
     items = pd.read_csv(ml_test_dir / "movies.csv")
     items = items.rename(columns={"movieId": "item_id"})
 
-    dsb.add_entities("item", items.index.values)
+    dsb.add_entities("item", items["item_id"].values)
     dsb.add_scalar_attribute("item", "title", items["item_id"], items["title"])
     sa = dsb.schema.entities["item"].attributes["title"]
     assert sa.layout == AttrLayout.SCALAR
@@ -102,13 +104,38 @@ def test_item_insert_with_scalar_df():
 
     df = ds.entities("item").pandas().set_index("item_id")
     assert "title" in df.columns
-    ds_ts, orig_ts = df["title"].align(items["title"])
+    ds_ts, orig_ts = df["title"].align(items.set_index("item_id")["title"])
     assert np.all(ds_ts == orig_ts)
 
-    assert ds.entities("item").attribute("genres").is_scalar
-    df = ds.entities("item").attribute("title").series()
+    assert ds.entities("item").attribute("title").is_scalar
+    df = ds.entities("item").attribute("title").pandas()
     assert isinstance(df, pd.Series)
-    assert df == items["title"]
+    ds_ts, orig_ts = df.align(items.set_index("item_id")["title"])
+    assert np.all(ds_ts == orig_ts)
+
+
+def test_item_insert_scalar_df():
+    dsb = DatasetBuilder()
+
+    items = pd.read_csv(ml_test_dir / "movies.csv")
+    items = items.rename(columns={"movieId": "item_id"})
+
+    dsb.add_entities("item", items[["item_id", "title"]])
+    sa = dsb.schema.entities["item"].attributes["title"]
+    assert sa.layout == AttrLayout.SCALAR
+
+    ds = dsb.build()
+
+    df = ds.entities("item").pandas().set_index("item_id")
+    assert "title" in df.columns
+    ds_ts, orig_ts = df["title"].align(items.set_index("item_id")["title"])
+    assert np.all(ds_ts == orig_ts)
+
+    assert ds.entities("item").attribute("title").is_scalar
+    df = ds.entities("item").attribute("title").pandas()
+    assert isinstance(df, pd.Series)
+    ds_ts, orig_ts = df.align(items.set_index("item_id")["title"])
+    assert np.all(ds_ts == orig_ts)
 
 
 def test_item_update_titles():
@@ -124,7 +151,7 @@ def test_item_update_titles():
     )
 
     ds = dsb.build()
-    df = ds.entities("item").attribute("title").series()
+    df = ds.entities("item").attribute("title").pandas()
     assert df.loc[1, "title"] == "Toy Story (1995)"
     assert df.loc[2, "title"] == "Board Game Adventure"
     assert df.loc[110, "title"] == "Briarheart"
@@ -137,6 +164,7 @@ def test_item_list_series():
     items = items.rename(columns={"movieId": "item_id"}).set_index("item_id")
 
     genres = items["genres"].str.split("|")
+    g_counts = genres.apply(len)
 
     dsb.add_entities("item", items.index.values)
     dsb.add_list_attribute("item", "genres", genres)
@@ -145,17 +173,24 @@ def test_item_list_series():
 
     ds = dsb.build()
 
-    assert ds.entities("item").attribute("genres").is_scalar
+    assert ds.entities("item").attribute("genres").is_list
     arr = ds.entities("item").attribute("genres").arrow()
+    if isinstance(arr, pa.ChunkedArray):
+        arr = arr.combine_chunks()
     assert isinstance(arr, pa.ListArray)
     assert len(arr) == len(genres)
-    assert np.all(arr.is_valid())
+    assert np.all(
+        arr.value_lengths().fill_null(0).to_numpy()
+        == g_counts.reindex(ds.entities("item").ids()).values
+    )
 
-    gs = ds.entities("item").attribute("genres").series()
+    gs = ds.entities("item").attribute("genres").pandas()
     assert np.all(gs.index == ds.items.ids())
-    gs, gs2 = gs.align(genres, how="outer")
+    gs, gs2 = gs.align(genres, join="outer")
     assert np.all(gs.notnull())
     assert np.all(gs2.notnull())
+    gs = gs.apply(lambda gl: ",".join(sorted(gl)))
+    gs2 = gs2.apply(lambda gl: ",".join(sorted(gl)))
     assert np.all(gs == gs2)
 
 
@@ -165,8 +200,9 @@ def test_item_list_df():
     items = pd.read_csv(ml_test_dir / "movies.csv")
     items = items.rename(columns={"movieId": "item_id"})
     items["genres"] = items["genres"].str.split("|")
+    g_counts = items.set_index("item_id")["genres"].apply(len)
 
-    dsb.add_entities("item", items.index.values)
+    dsb.add_entities("item", items["item_id"].values)
     dsb.add_list_attribute("item", "genres", items[["item_id", "genres"]])
     va = dsb.schema.entities["item"].attributes["genres"]
     assert va.layout == AttrLayout.LIST
@@ -174,8 +210,14 @@ def test_item_list_df():
     ds = dsb.build()
     assert ds.entities("item").attribute("genres").is_list
     arr = ds.entities("item").attribute("genres").arrow()
+    if isinstance(arr, pa.ChunkedArray):
+        arr = arr.combine_chunks()
     assert isinstance(arr, pa.ListArray)
     assert len(arr) == len(items)
+    assert np.all(
+        arr.value_lengths().fill_null(0).to_numpy()
+        == g_counts.reindex(ds.entities("item").ids()).values
+    )
 
 
 def test_item_initial_list_df():
