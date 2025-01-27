@@ -126,6 +126,7 @@ doc = { features = [
   "funksvd",
   "hpf",
   "implicit",
+  "sklearn",
 ], solve-group = "py312-nix" }
 demo = { features = [
   "py312",
