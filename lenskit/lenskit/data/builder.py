@@ -14,7 +14,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import structlog
 from numpy.typing import ArrayLike, NDArray
-from scipy.sparse import sparray
+from scipy.sparse import csr_array, sparray
 
 from lenskit.diagnostics import DataError, DataWarning
 from lenskit.logging import get_logger
@@ -604,15 +604,35 @@ class DatasetBuilder:
             n_bad = nums.is_valid().sum().as_py()
             raise DataError(f"{n_bad} unknown entity IDs")
 
-        tbl_mask = np.zeros(e_tbl.num_rows, dtype=np.bool_)
-        tbl_mask[nums.to_numpy()] = True
-        tbl_mask = pa.array(tbl_mask)
+        tbl_mask = np.ones(e_tbl.num_rows, dtype=np.bool_)
+        tbl_mask[nums.to_numpy()] = False
 
-        if isinstance(values, pa.ChunkedArray):
+        vec_col = None
+        matrix = None
+
+        metadata = {}
+        if dim_names is not None:
+            metadata["lenskit:names"] = json.dumps(np.asarray(dim_names).tolist())
+
+        if isinstance(values, sparray):
+            csr: csr_array = values.tocsr()  # type: ignore
+
+            rlen = np.zeros(e_tbl.num_rows + 1, csr.dtype)
+            rlen[nums.to_numpy() + 1] = np.diff(csr.indptr)
+            rowptr = np.cumsum(rlen, dtype=np.int32)
+
+            obs_struct = pa.StructArray.from_arrays(
+                [pa.array(csr.indices), pa.array(csr.data)], ["index", "value"]
+            )
+            vec_col = pa.ListArray.from_arrays(
+                pa.array(rowptr), obs_struct, mask=pa.array(tbl_mask)
+            )
+            metadata["lenskit:ncol"] = str(csr.shape[1])  # type: ignore
+
+        elif isinstance(values, pa.ChunkedArray):
             if not pa.types.is_fixed_size_list(values.type):
                 raise TypeError("attribute data must be fixed-size list")
 
-            matrix = None
             start = 0
             for chunk in values.chunks:
                 assert isinstance(chunk, pa.FixedSizeListArray)
@@ -640,22 +660,19 @@ class DatasetBuilder:
             matrix = np.full((e_tbl.num_rows, ncol), np.nan, values.dtype)
             matrix[nums] = values
 
-        assert matrix is not None
+        if vec_col is None:
+            assert matrix is not None
 
-        tbl_mask = np.ones(e_tbl.num_rows, dtype=np.bool_)
-        tbl_mask[nums.to_numpy()] = False
-        tbl_mask = pa.array(tbl_mask)
-        val_col = pa.FixedSizeListArray.from_arrays(
-            pa.array(matrix.ravel()), matrix.shape[1], mask=tbl_mask
-        )
-
-        field = pa.field(name, val_col.type, nullable=True)
-        if dim_names is not None:
-            field = field.with_metadata(
-                {"lenskit:names": json.dumps(np.asarray(dim_names).tolist())}
+            tbl_mask = pa.array(tbl_mask)
+            vec_col = pa.FixedSizeListArray.from_arrays(
+                pa.array(matrix.ravel()), matrix.shape[1], mask=tbl_mask
             )
-        self._tables[cls] = e_tbl.append_column(field, val_col)
-        self.schema.entities[cls].attributes[name] = ColumnSpec(layout=AttrLayout.VECTOR)
+            self.schema.entities[cls].attributes[name] = ColumnSpec(layout=AttrLayout.VECTOR)
+        else:
+            self.schema.entities[cls].attributes[name] = ColumnSpec(layout=AttrLayout.SPARSE)
+
+        field = pa.field(name, vec_col.type, nullable=True, metadata=metadata)
+        self._tables[cls] = e_tbl.append_column(field, vec_col)
 
     def build(self) -> Dataset:
         return Dataset(self.build_container())

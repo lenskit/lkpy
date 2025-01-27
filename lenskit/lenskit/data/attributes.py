@@ -13,6 +13,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import torch
 from numpy.typing import NDArray
+from scipy.sparse import csr_array
 from typing_extensions import Any
 
 from .schema import AttrLayout, ColumnSpec
@@ -30,6 +31,8 @@ def attr_set(
             return ListAttributeSet(name, spec, table, vocab, rows)
         case AttrLayout.VECTOR:
             return VectorAttributeSet(name, spec, table, vocab, rows)
+        case AttrLayout.SPARSE:
+            return SparseAttributeSet(name, spec, table, vocab, rows)
         case _:
             raise ValueError(f"unsupported layout {spec.layout}")
 
@@ -137,6 +140,13 @@ class AttributeSet:
 
         return col
 
+    def scipy(self) -> NDArray[Any] | csr_array:
+        """
+        Get this attribute as a SciPy sparse array (if it is sparse), or a NumPy
+        array if it is dense.
+        """
+        return self.numpy()
+
     def torch(self) -> torch.Tensor:
         return torch.from_numpy(self.numpy())
 
@@ -200,3 +210,50 @@ class VectorAttributeSet(AttributeSet):
 
         mat = arr.values.to_numpy().reshape((len(arr), arr.type.list_size))
         return pd.DataFrame(mat, index=ids, columns=self.names)
+
+
+class SparseAttributeSet(AttributeSet):
+    _names: list[str] | None = None
+
+    @property
+    def names(self) -> list[str] | None:
+        if self._names is None:
+            field = self._table.field(self.name)
+            meta = field.metadata
+            nstr = meta.get(b"lenskit:names", None) if meta else None
+            if nstr is not None:
+                self._names = json.loads(nstr)
+
+        return self._names
+
+    def numpy(self) -> np.ndarray[tuple[int, int], Any]:
+        raise NotImplementedError("sparse attributes cannot be retrieved as numpy")
+
+    def scipy(self) -> csr_array:
+        col = self.arrow()
+        if isinstance(col, pa.ChunkedArray):
+            col = col.combine_chunks()
+        assert isinstance(col, pa.ListArray)
+
+        rowptr = col.offsets.to_numpy()
+        entries = col.values
+        assert isinstance(entries, pa.StructArray)
+        indices = entries.field("index").to_numpy(zero_copy_only=False)
+        values = entries.field("value").to_numpy(zero_copy_only=False)
+
+        field = self._table.field(self.name)
+        meta = field.metadata
+        assert meta is not None
+        ncol = meta[b"lenskit:ncol"]
+        ncol = int(ncol)
+
+        return csr_array((values, indices, rowptr), shape=(len(col), ncol))
+
+    def torch(self) -> torch.Tensor:
+        csr = self.scipy()
+        return torch.sparse_csr_tensor(
+            crow_indices=np.require(csr.indptr, requirements="W"),
+            col_indices=np.require(csr.indices, requirements="W"),
+            values=np.require(csr.data, requirements="W"),
+            size=csr.shape,
+        )

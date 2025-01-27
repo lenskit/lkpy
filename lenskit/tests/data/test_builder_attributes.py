@@ -330,7 +330,7 @@ def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFram
     ig_vals = np.ones(len(ig_rows), np.int32)
 
     arr = csr_array((ig_vals, (ig_rows, ig_cols)))
-    dsb.add_vector_attribute("item", "genres", movies.index, arr)
+    dsb.add_vector_attribute("item", "genres", movies.index, arr, dim_names=gindex)
 
     ga = dsb.schema.entities["item"].attributes["genres"]
     assert ga.layout == AttrLayout.SPARSE
@@ -349,7 +349,7 @@ def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFram
     assert isinstance(tensor, torch.Tensor)
     assert tensor.is_sparse_csr
     assert len(tensor.values()) == arr.nnz
-    assert np.all(tensor.crow_indices() == arr.indptr)
+    assert np.all(tensor.crow_indices().numpy() == arr.indptr)
 
-    arr = ds.entities("item").attribute("embedding").arrow()
+    arr = ds.entities("item").attribute("genres").arrow()
     assert pa.types.is_list(arr.type)
