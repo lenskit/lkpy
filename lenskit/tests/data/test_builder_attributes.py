@@ -12,8 +12,6 @@ from lenskit.testing import ml_test_dir
 
 FRUITS = ["apple", "banana", "orange", "lemon", "mango"]
 
-skip("attributes are not yet well-supported", allow_module_level=True)
-
 
 def test_item_scalar_series():
     dsb = DatasetBuilder()
@@ -201,10 +199,11 @@ def test_item_vector_names(rng: np.random.Generator, ml_ratings: pd.DataFrame):
     assert va.layout == "vector"
 
     ds = dsb.build()
+    assert ds.entities("item").attribute("genres").is_vector
     assert ds.entities("item").attribute("embedding").names == FRUITS
 
     arr = ds.entities("item").attribute("embedding").arrow()
-    assert isinstance(arr, pa.FixedSizeListArray)
+    assert pa.types.is_fixed_size_list(arr.type)
     assert np.sum(arr.is_valid()) == 500
     assert np.all(np.asarray(arr.value_lengths()) == 5)
 
@@ -243,8 +242,13 @@ def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFram
 
     ds = dsb.build()
 
+    assert ds.entities("item").attribute("genres").is_vector
+    assert ds.entities("item").attribute("genres").is_sparse
     assert ds.entities("item").attribute("genres").names == gindex.values.tolist()
 
     mat = ds.entities("item").attribute("genres").scipy()
     assert isinstance(mat, csr_array)
     assert mat.nnz == arr.nnz
+
+    arr = ds.entities("item").attribute("embedding").arrow()
+    assert pa.types.is_list(arr.type)
