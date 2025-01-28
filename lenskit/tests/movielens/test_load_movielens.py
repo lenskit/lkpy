@@ -238,7 +238,7 @@ def test_32m_zip():
     assert gdf.columns[-1] == "zombies"
 
 
-@mark.skidf(not ML_32M_ZIP.exists(), reason="ml-32m does not exist")
+@mark.skipif(not ML_32M_ZIP.exists(), reason="ml-32m does not exist")
 def test_32m_zip_df():
     ds = load_movielens_df(ML_32M_ZIP)
     assert ds["item_id"].nunique() >= 50_000
