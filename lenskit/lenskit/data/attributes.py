@@ -33,7 +33,7 @@ def attr_set(
             return VectorAttributeSet(name, spec, table, vocab, rows)
         case AttrLayout.SPARSE:
             return SparseAttributeSet(name, spec, table, vocab, rows)
-        case _:
+        case _:  # pragma: nocover
             raise ValueError(f"unsupported layout {spec.layout}")
 
 
