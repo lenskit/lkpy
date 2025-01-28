@@ -485,10 +485,11 @@ class DatasetBuilder:
                     entities = entities.index.values
 
         e_tbl = self._tables[cls]
-        if e_tbl is None:
+        if e_tbl is None:  # pragma: nocover
             raise DataError(f"no entities of class {cls}")
+
         nums = self._resolve_entity_ids(cls, entities, e_tbl)
-        if not np.all(nums.is_valid()):
+        if not np.all(nums.is_valid()):  # pragma: nocover
             n_bad = nums.is_valid().sum().as_py()
             raise DataError(f"{n_bad} unknown entity IDs")
 
@@ -540,10 +541,10 @@ class DatasetBuilder:
                     entities = entities.index.values
 
         e_tbl = self._tables[cls]
-        if e_tbl is None:
+        if e_tbl is None:  # pragma: nocover
             raise DataError(f"no entities of class {cls}")
         nums = self._resolve_entity_ids(cls, entities, e_tbl)
-        if not np.all(nums.is_valid()):
+        if not np.all(nums.is_valid()):  # pragma: nocover
             n_bad = nums.is_valid().sum().as_py()
             raise DataError(f"{n_bad} unknown entity IDs")
 
@@ -606,10 +607,10 @@ class DatasetBuilder:
             raise NotImplementedError("updating or replacing existing attributes not supported")
 
         e_tbl = self._tables[cls]
-        if e_tbl is None:
+        if e_tbl is None:  # pragma: nocover
             raise DataError(f"no entities of class {cls}")
         nums = self._resolve_entity_ids(cls, entities, e_tbl)
-        if not np.all(nums.is_valid()):
+        if not np.all(nums.is_valid()):  # pragma: nocover
             n_bad = nums.is_valid().sum().as_py()
             raise DataError(f"{n_bad} unknown entity IDs")
 
@@ -712,7 +713,7 @@ class DatasetBuilder:
         self, cls: str, ids: IDSequence, table: pa.Table | None = None
     ) -> pa.Int32Array:
         tgt_ids: pa.Array = pa.array(ids)  # type: ignore
-        if table is None:
+        if table is None:  # pragma: nocover
             table = self._tables[cls]
         assert table is not None
         e_ids = table.column(id_col_name(cls))
