@@ -226,7 +226,7 @@ def test_als_train_large(ml_ratings, ml_ds: Dataset):
     is2 = isums - icounts * gmean
     imeans = is2 / (icounts + 5)
     ibias = pd.Series(algo.bias_.item_biases, index=algo.items_.index)
-    imeans, ibias = imeans.align(ibias)
+    imeans, ibias = imeans.align(ibias, fill_value=0.0)
     assert ibias.values == approx(imeans.values, rel=1.0e-3)
 
 
