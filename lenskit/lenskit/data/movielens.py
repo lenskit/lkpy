@@ -380,7 +380,7 @@ class MLModernLoader(MLData):
                 return None
         else:
             name = self.prefix + "genome-tags.csv"
-            if name not in self.source.filelist:
+            if name not in self.source.namelist():
                 return None
 
         with self.open_file("genome-tags.csv") as data:
