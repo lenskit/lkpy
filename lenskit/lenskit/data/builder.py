@@ -82,10 +82,14 @@ class DatasetBuilder:
         if isinstance(name, DataContainer):
             self.schema = name.schema.model_copy()
             self._tables = {n: t for (n, t) in name.tables.items()}
+            self._indexes = {
+                n: pd.Index(name.tables[n].column(id_col_name(n)).to_numpy(zero_copy_only=False))
+                for n in name.schema.entities.keys()
+            }
         else:
             self.schema = DataSchema(name=name, entities={"item": EntitySchema()})
             self._tables = {"item": None}
-        self._indexes = {}
+            self._indexes = {}
 
         self._log = _log.bind(ds_name=name)
 
@@ -263,7 +267,7 @@ class DatasetBuilder:
         _warning_parent: int = 0,
     ) -> None:
         if isinstance(data, pd.DataFrame):
-            table = pa.Table.from_pandas(data)
+            table = pa.Table.from_pandas(data, preserve_index=False)
         elif isinstance(data, dict):
             table = pa.table(data)  # type: ignore
         else:

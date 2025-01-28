@@ -230,7 +230,9 @@ def test_bias_train_ml_ratings(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert bm.global_bias == approx(ml_ratings.rating.mean())
     imeans_data = ml_ds.item_stats()["mean_rating"]
     imeans_algo = bm.item_biases + bm.global_bias
-    ares, data = pd.Series(imeans_algo, index=bm.items.ids()).align(imeans_data)
+    ares, data = pd.Series(imeans_algo, index=bm.items.ids()).align(
+        imeans_data, fill_value=bm.global_bias
+    )
     assert ares.values == approx(data.values)
 
     urates = ml_ratings.set_index("user_id").loc[2].set_index("item_id").rating
