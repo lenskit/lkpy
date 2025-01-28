@@ -3,6 +3,12 @@
 # Copyright (C) 2023-2024 Drexel University
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
+"""
+Singular value decomposition for explicit feedback.
+
+This module contains a truncated SVD explicit-feedback scorer built on
+:class:`sklearn.decomposition.TruncatedSVD`.
+"""
 
 from __future__ import annotations
 
