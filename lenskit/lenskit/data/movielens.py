@@ -101,16 +101,24 @@ class ML100KLoader(MLData):
     def dataset(self) -> Dataset:
         dsb = DatasetBuilder()
 
-        movies = self.movies_df()
+        genres = self.genres().tolist()
+        movies = self.movies_df(genres)
         movies = movies.drop(columns=["misc"])
 
         dsb.add_entities("item", movies["item_id"])
         dsb.add_scalar_attribute("item", "title", movies["item_id"], movies["title"])
+        # TODO: add movie genres
 
         ratings = self.ratings_df()
         dsb.add_interactions(
             "rating", ratings, entities=["user", "item"], missing="insert", default=True
         )
+
+        users = self.users_df().set_index("user_id")
+        dsb.add_entities("user", users.index.values, duplicates="update")
+        for c in users.columns:
+            self._logger.debug("adding user column %s", c)
+            dsb.add_scalar_attribute("user", c, users[c])
 
         return dsb.build()
 
@@ -120,8 +128,9 @@ class ML100KLoader(MLData):
             df = pd.read_csv(data, sep="|", names=["name", "number"])
             return df.set_index("number").sort_index()["name"]
 
-    def movies_df(self) -> pd.DataFrame:
-        genres = self.genres().tolist()
+    def movies_df(self, genres: list[str] | None = None) -> pd.DataFrame:
+        if genres is None:
+            genres = self.genres().tolist()
         self._logger.debug("reading ML100K movie info")
         with self.open_file("u.item") as data:
             return pd.read_csv(
@@ -131,6 +140,20 @@ class ML100KLoader(MLData):
                 names=["item_id", "title", "date", "misc", "IMDB"] + genres,
                 dtype={
                     "item_id": np.int32,
+                },
+                encoding="latin1",
+            )
+
+    def users_df(self) -> pd.DataFrame:
+        self._logger.debug("reading ML100K user info")
+        with self.open_file("u.user") as data:
+            return pd.read_csv(
+                data,
+                sep=r"\|",
+                header=None,
+                names=["user_id", "age", "gender", "occupation", "zip_code"],
+                dtype={
+                    "user_id": np.int32,
                 },
                 encoding="latin1",
             )

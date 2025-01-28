@@ -41,6 +41,10 @@ def test_100k_zip():
     title_s = titles.pandas()
     assert title_s.loc[1] == "Toy Story (1995)"
 
+    genders = ds.entities("user").attribute("gender").pandas()
+    # only binary gender is recorded
+    assert set(genders) == {"M", "F"}
+
 
 @mark.skipif(not ML_100K_ZIP.exists(), reason="ml-100k does not exist")
 def test_100k_df():
@@ -61,6 +65,10 @@ def test_1m_zip():
     titles = ds.entities("item").attribute("title")
     title_s = titles.pandas()
     assert title_s.loc[1] == "Toy Story (1995)"
+
+    genders = ds.entities("user").attribute("gender").pandas()
+    # only binary gender is recorded
+    assert set(genders) == {"M", "F"}
 
 
 @mark.skipif(not ML_1M_ZIP.exists(), reason="ml-1m does not exist")
