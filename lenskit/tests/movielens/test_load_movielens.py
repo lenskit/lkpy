@@ -28,6 +28,19 @@ def test_latest_small_dir():
     assert ds.user_count < 1000
     assert ds.interaction_count >= 100_000
 
+    titles = ds.entities("item").attribute("title")
+    title_s = titles.pandas()
+    assert title_s.loc[1] == "Toy Story (1995)"
+
+    genres = ds.entities("item").attribute("genres").pandas()
+    # Cry, The Beloved Country is drama
+    assert genres.loc[40] == ["Drama"]
+
+    assert "tag_counts" in ds.entities("item").attributes
+    tags = ds.entities("item").attribute("tag_counts")
+    assert tags.is_sparse
+    assert tags.scipy().data.sum() >= 1200
+
 
 @mark.skipif(not ML_100K_ZIP.exists(), reason="ml-100k does not exist")
 def test_100k_zip():
@@ -124,6 +137,15 @@ def test_20m_zip():
     title_s = titles.pandas()
     assert title_s.loc[1] == "Toy Story (1995)"
 
+    genres = ds.entities("item").attribute("genres").pandas()
+    # Cry, The Beloved Country is drama
+    assert genres.loc[40] == ["Drama"]
+
+    assert "tag_counts" in ds.entities("item").attributes
+    tags = ds.entities("item").attribute("tag_counts")
+    assert tags.is_sparse
+    assert tags.scipy().data.sum() >= 100_000
+
 
 @mark.skipif(not ML_20M_ZIP.exists(), reason="ml-20m does not exist")
 def test_20m_df():
@@ -144,6 +166,15 @@ def test_25m_zip():
     title_s = titles.pandas()
     assert title_s.loc[1] == "Toy Story (1995)"
 
+    genres = ds.entities("item").attribute("genres").pandas()
+    # Cry, The Beloved Country is drama
+    assert genres.loc[40] == ["Drama"]
+
+    assert "tag_counts" in ds.entities("item").attributes
+    tags = ds.entities("item").attribute("tag_counts")
+    assert tags.is_sparse
+    assert tags.scipy().data.sum() >= 200_000
+
 
 @mark.skipif(not ML_25M_ZIP.exists(), reason="ml-25m does not exist")
 def test_25m_df():
@@ -163,6 +194,15 @@ def test_32m_zip():
     titles = ds.entities("item").attribute("title")
     title_s = titles.pandas()
     assert title_s.loc[1] == "Toy Story (1995)"
+
+    genres = ds.entities("item").attribute("genres").pandas()
+    # Cry, The Beloved Country is drama
+    assert genres.loc[40] == ["Drama"]
+
+    assert "tag_counts" in ds.entities("item").attributes
+    tags = ds.entities("item").attribute("tag_counts")
+    assert tags.is_sparse
+    assert tags.scipy().data.sum() >= 200_000
 
 
 @mark.skidf(not ML_32M_ZIP.exists(), reason="ml-32m does not exist")

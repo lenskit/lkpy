@@ -313,6 +313,59 @@ class MLModernLoader(MLData):
     Loader for modern MovieLens data sets (20M and later).
     """
 
+    def dataset(self) -> Dataset:
+        dsb = DatasetBuilder()
+
+        movies = self.movies_df()
+
+        dsb.add_entities("item", movies["item_id"])
+        dsb.add_scalar_attribute("item", "title", movies["item_id"], movies["title"])
+        genres = movies["genres"].str.split("|", regex=False)
+        dsb.add_list_attribute("item", "genres", movies["item_id"], genres)
+
+        ratings = self.ratings_df()
+        dsb.add_interactions(
+            "rating", ratings, entities=["user", "item"], missing="insert", default=True
+        )
+
+        tags = self.tagging_df()
+        # we add them as a sparse vector attribute of counts
+        tag_names = np.unique(tags["tag"])
+        tag_idx = pd.Index(tag_names)
+        tags["tag_num"] = tag_idx.get_indexer_for(tags["tag"])
+        tag_counts = tags.groupby(["item_id", "tag_num"])["tag"].count().reset_index(name="count")
+        tag_items = np.unique(tags["item_id"])
+        item_idx = pd.Index(tag_items)
+        icol = item_idx.get_indexer_for(tag_counts["item_id"])
+        tag_matrix = coo_array((tag_counts["count"], (icol, tag_counts["tag_num"])))
+        dsb.add_vector_attribute("item", "tag_counts", tag_items, tag_matrix)
+
+        return dsb.build()
+
+    def movies_df(self):
+        self._logger.debug("reading modern movies CSV")
+        with self.open_file("movies.csv") as data:
+            df = pd.read_csv(
+                data,
+                dtype={
+                    "movieId": np.int32,
+                },
+            ).rename(columns={"movieId": "item_id"})
+            return df
+
+    def tagging_df(self):
+        self._logger.debug("reading modern movies CSV")
+        with self.open_file("tags.csv") as data:
+            df = pd.read_csv(
+                data,
+                dtype={
+                    "userId": np.int32,
+                    "movieId": np.int32,
+                },
+            ).rename(columns={"userId": "user_id", "movieId": "item_id"})
+            df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
+            return df
+
     def ratings_df(self):
         self._logger.debug("reading modern ratings CSV")
         with self.open_file("ratings.csv") as data:
