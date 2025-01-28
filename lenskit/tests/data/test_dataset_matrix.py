@@ -58,6 +58,8 @@ def _check_ratings(ml_ds: Dataset, ml_ratings: pd.DataFrame, rates: ArrayLike):
 
 def _check_timestamp(ml_ds: Dataset, ml_ratings: pd.DataFrame, ts: ArrayLike):
     ml_ratings = ml_ratings.sort_values(["user_id", "item_id"])
+    if ts.dtype.kind == "i":
+        ts = pd.to_datetime(ts, unit="s")
     assert np.all(ts == ml_ratings["timestamp"])
 
 
@@ -67,7 +69,8 @@ def test_matrix_structure(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert log.nnz == len(ml_ratings)
 
     assert log.nrows == ml_ratings["user_id"].nunique()
-    assert log.ncols == ml_ratings["item_id"].nunique()
+    assert log.ncols >= ml_ratings["item_id"].nunique()
+    assert log.ncols == ml_ds.item_count
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.rowptrs)
     _check_item_number_counts(ml_ds, ml_ratings, log.colinds)
@@ -151,7 +154,8 @@ def test_matrix_scipy_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset, generation):
 
     nrows, ncols = cast(tuple[int, int], log.shape)
     assert nrows == ml_ratings["user_id"].nunique()
-    assert ncols == ml_ratings["item_id"].nunique()
+    assert ncols >= ml_ratings["item_id"].nunique()
+    assert ncols == ml_ds.item_count
 
     assert log.row.dtype == np.int32
     assert log.col.dtype == np.int32
@@ -174,7 +178,8 @@ def test_matrix_scipy_csr(ml_ratings: pd.DataFrame, generation):
 
     nrows, ncols = cast(tuple[int, int], log.shape)
     assert nrows == ml_ratings["user_id"].nunique()
-    assert ncols == ml_ratings["item_id"].nunique()
+    assert ncols >= ml_ratings["item_id"].nunique()
+    assert ncols == ml_ds.item_count
 
     assert log.indptr.dtype == np.int32
     assert log.indices.dtype == np.int32
@@ -192,7 +197,8 @@ def test_matrix_scipy_timestamp(ml_ratings: pd.DataFrame, ml_ds: Dataset, genera
 
     nrows, ncols = cast(tuple[int, int], log.shape)
     assert nrows == ml_ratings["user_id"].nunique()
-    assert ncols == ml_ratings["item_id"].nunique()
+    assert ncols >= ml_ratings["item_id"].nunique()
+    assert ncols == ml_ds.item_count
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.indptr)
     _check_item_number_counts(ml_ds, ml_ratings, log.indices)
@@ -208,7 +214,8 @@ def test_matrix_scipy_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset, genera
 
     nrows, ncols = cast(tuple[int, int], log.shape)
     assert nrows == ml_ratings["user_id"].nunique()
-    assert ncols == ml_ratings["item_id"].nunique()
+    assert ncols >= ml_ratings["item_id"].nunique()
+    assert ncols == ml_ds.item_count
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.indptr)
     _check_item_number_counts(ml_ds, ml_ratings, log.indices)
@@ -226,7 +233,8 @@ def test_matrix_torch_csr(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
     nrows, ncols = log.shape
     assert nrows == ml_ratings["user_id"].nunique()
-    assert ncols == ml_ratings["item_id"].nunique()
+    assert ncols >= ml_ratings["item_id"].nunique()
+    assert ncols == ml_ds.item_count
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
@@ -245,7 +253,8 @@ def test_matrix_torch_indicator(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
     nrows, ncols = log.shape
     assert nrows == ml_ratings["user_id"].nunique()
-    assert ncols == ml_ratings["item_id"].nunique()
+    assert ncols >= ml_ratings["item_id"].nunique()
+    assert ncols == ml_ds.item_count
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())
@@ -261,7 +270,8 @@ def test_matrix_torch_coo(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
     nrows, ncols = cast(tuple[int, int], log.shape)
     assert nrows == ml_ratings["user_id"].nunique()
-    assert ncols == ml_ratings["item_id"].nunique()
+    assert ncols >= ml_ratings["item_id"].nunique()
+    assert ncols == ml_ds.item_count
 
     _check_user_number_counts(ml_ds, ml_ratings, log.indices()[0, :])
     _check_user_ids(ml_ds, ml_ratings, log.indices()[0, :])
@@ -278,7 +288,8 @@ def test_matrix_torch_timestamp(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
     nrows, ncols = log.shape
     assert nrows == ml_ratings["user_id"].nunique()
-    assert ncols == ml_ratings["item_id"].nunique()
+    assert ncols >= ml_ratings["item_id"].nunique()
+    assert ncols == ml_ds.item_count
 
     _check_user_offset_counts(ml_ds, ml_ratings, log.crow_indices())
     _check_item_number_counts(ml_ds, ml_ratings, log.col_indices())

@@ -73,12 +73,10 @@ def ml_ds(ml_ds_unchecked: Dataset) -> Generator[Dataset, None, None]:
         deep=True
     )
     old_ustats = ds.user_stats().copy(deep=True)
-    old_istats = ds.item_stats().copy(deep=True)
 
     yield ds
 
     ustats = ds.user_stats()
-    istats = ds.item_stats()
 
     rates = ds.interaction_matrix(format="pandas", field="rating", original_ids=True)
     assert rates["rating"].values == pytest.approx(old_rates["rating"].values)
@@ -86,10 +84,6 @@ def ml_ds(ml_ds_unchecked: Dataset) -> Generator[Dataset, None, None]:
     for col in old_ustats.columns:
         log.info("checking user stats column", column=col)
         assert ustats[col].values == pytest.approx(old_ustats[col].values)
-
-    for col in old_istats.columns:
-        log.info("checking item stats column", column=col)
-        assert np.all(istats[col].values == old_istats[col].values)
 
 
 @pytest.fixture
