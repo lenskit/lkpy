@@ -341,9 +341,14 @@ class MLModernLoader(MLData):
         dsb.add_vector_attribute("item", "tag_counts", tag_items, tag_matrix)
 
         genome = self.genome_df()
-        dsb.add_vector_attribute(
-            "item", "tag_genome", genome.index.values, genome.to_numpy(), dim_names=genome.columns
-        )
+        if genome is not None:
+            dsb.add_vector_attribute(
+                "item",
+                "tag_genome",
+                genome.index.values,
+                genome.to_numpy(),
+                dim_names=genome.columns,
+            )
 
         return dsb.build()
 
@@ -370,8 +375,13 @@ class MLModernLoader(MLData):
             return df
 
     def genome_df(self):
-        if self.version == "ml-latest-small":
-            return None
+        if isinstance(self.source, Path):
+            if not (self.source / "genome-tags.csv").exists():
+                return None
+        else:
+            name = self.prefix + "genome-tags.csv"
+            if name not in self.source.filelist:
+                return None
 
         with self.open_file("genome-tags.csv") as data:
             tags = pd.read_csv(
