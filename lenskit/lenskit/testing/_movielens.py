@@ -89,7 +89,7 @@ def ml_ds(ml_ds_unchecked: Dataset) -> Generator[Dataset, None, None]:
 
     for col in old_istats.columns:
         log.info("checking item stats column", column=col)
-        assert istats[col].values == pytest.approx(old_istats[col].values)
+        assert np.all(istats[col].values == old_istats[col].values)
 
 
 @pytest.fixture
