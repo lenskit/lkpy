@@ -37,6 +37,10 @@ def test_100k_zip():
     assert ds.user_count < 1000
     assert ds.interaction_count >= 100_000
 
+    titles = ds.entities("item").attribute("title")
+    title_s = titles.pandas()
+    assert title_s.loc[1] == "Toy Story (1995)"
+
 
 @mark.skipif(not ML_100K_ZIP.exists(), reason="ml-100k does not exist")
 def test_100k_df():
@@ -54,6 +58,10 @@ def test_1m_zip():
     assert ds.user_count >= 500
     assert ds.interaction_count >= 1_000_000
 
+    titles = ds.entities("item").attribute("title")
+    title_s = titles.pandas()
+    assert title_s.loc[1] == "Toy Story (1995)"
+
 
 @mark.skipif(not ML_1M_ZIP.exists(), reason="ml-1m does not exist")
 def test_1m_df():
@@ -69,6 +77,10 @@ def test_10m_zip():
     assert ds.item_count >= 10_000
     assert ds.user_count >= 69_000
     assert ds.interaction_count >= 10_000_000
+
+    titles = ds.entities("item").attribute("title")
+    title_s = titles.pandas()
+    assert title_s.loc[1] == "Toy Story (1995)"
 
 
 @mark.skipif(not ML_10M_ZIP.exists(), reason="ml-10m does not exist")
@@ -86,6 +98,10 @@ def test_20m_zip():
     assert ds.user_count >= 130_000
     assert ds.interaction_count >= 20_000_000
 
+    titles = ds.entities("item").attribute("title")
+    title_s = titles.pandas()
+    assert title_s.loc[1] == "Toy Story (1995)"
+
 
 @mark.skipif(not ML_20M_ZIP.exists(), reason="ml-20m does not exist")
 def test_20m_df():
@@ -102,6 +118,10 @@ def test_25m_zip():
     assert ds.user_count >= 160_000
     assert ds.interaction_count >= 25_000_000
 
+    titles = ds.entities("item").attribute("title")
+    title_s = titles.pandas()
+    assert title_s.loc[1] == "Toy Story (1995)"
+
 
 @mark.skipif(not ML_25M_ZIP.exists(), reason="ml-25m does not exist")
 def test_25m_df():
@@ -117,6 +137,10 @@ def test_32m_zip():
     assert ds.item_count >= 50_000
     assert ds.user_count >= 200_000
     assert ds.interaction_count >= 32_000_000
+
+    titles = ds.entities("item").attribute("title")
+    title_s = titles.pandas()
+    assert title_s.loc[1] == "Toy Story (1995)"
 
 
 @mark.skidf(not ML_32M_ZIP.exists(), reason="ml-32m does not exist")
