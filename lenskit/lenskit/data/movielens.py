@@ -12,17 +12,17 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
 from pathlib import Path
 from typing import TypeAlias
 from zipfile import ZipFile
 
 import numpy as np
 import pandas as pd
+import structlog
 
 from lenskit.logging import get_logger
 
-from .adapt import from_interactions_df
+from .builder import DatasetBuilder
 from .dataset import Dataset
 
 _log = get_logger(__name__)
@@ -30,7 +30,6 @@ _log = get_logger(__name__)
 LOC: TypeAlias = Path | tuple[ZipFile, str]
 
 
-@dataclass
 class MLData:
     """
     Internal class representing an open ML data set.
@@ -41,6 +40,20 @@ class MLData:
     version: str
     source: Path | ZipFile
     prefix: str = ""
+
+    _logger: structlog.stdlib.BoundLogger
+
+    def __init__(self, version: str, source: Path | ZipFile, prefix: str = ""):
+        self.version = version
+        self.source = source
+        self.prefix = prefix
+
+        log = _log.bind(version=version)
+        if isinstance(source, ZipFile):
+            log = log.bind(source=source.filename)
+        else:
+            log = log.bind(source=str(source))
+        self._logger = log
 
     @staticmethod
     def version_impl(version: str) -> Callable[..., MLData]:
@@ -60,11 +73,18 @@ class MLData:
         if isinstance(self.source, ZipFile):
             self.source.close()
 
-    def open_file(self, name: str):
+    def open_file(self, name: str, encoding: str = "utf8"):
         if isinstance(self.source, Path):
-            return open(self.source / (self.prefix + name), "r")
+            return open(self.source / (self.prefix + name), "rb")
         else:
+            self._logger.debug("opening zip file")
             return self.source.open(self.prefix + name)
+
+    def dataset(self) -> Dataset:
+        """
+        Load the full dataset.
+        """
+        raise NotImplementedError()
 
     def ratings_df(self) -> pd.DataFrame:
         """
@@ -78,7 +98,45 @@ class ML100KLoader(MLData):
     Loader for the ML100K data set.
     """
 
+    def dataset(self) -> Dataset:
+        dsb = DatasetBuilder()
+
+        movies = self.movies_df()
+        movies = movies.drop(columns=["misc"])
+
+        dsb.add_entities("item", movies["item_id"])
+        dsb.add_scalar_attribute("item", "title", movies["item_id"], movies["title"])
+
+        ratings = self.ratings_df()
+        dsb.add_interactions(
+            "rating", ratings, entities=["user", "item"], missing="insert", default=True
+        )
+
+        return dsb.build()
+
+    def genres(self) -> pd.Series:
+        self._logger.debug("reading ML100K genre list")
+        with self.open_file("u.genre") as data:
+            df = pd.read_csv(data, sep="|", names=["name", "number"])
+            return df.set_index("number").sort_index()["name"]
+
+    def movies_df(self) -> pd.DataFrame:
+        genres = self.genres().tolist()
+        self._logger.debug("reading ML100K movie info")
+        with self.open_file("u.item") as data:
+            return pd.read_csv(
+                data,
+                sep=r"\|",
+                header=None,
+                names=["item_id", "title", "date", "misc", "IMDB"] + genres,
+                dtype={
+                    "item_id": np.int32,
+                },
+                encoding="latin1",
+            )
+
     def ratings_df(self) -> pd.DataFrame:
+        self._logger.debug("reading ML100K ratings TSV")
         with self.open_file("u.data") as data:
             return pd.read_csv(
                 data,
@@ -100,6 +158,7 @@ class MLMLoader(MLData):
     """
 
     def ratings_df(self):
+        self._logger.debug("reading ML10?M ratings file")
         with self.open_file("ratings.dat") as data:
             return pd.read_csv(
                 data,
@@ -122,6 +181,7 @@ class MLModernLoader(MLData):
     """
 
     def ratings_df(self):
+        self._logger.debug("reading modern ratings CSV")
         with self.open_file("ratings.csv") as data:
             return pd.read_csv(
                 data,
@@ -150,8 +210,8 @@ def load_movielens(path: str | Path) -> Dataset:
     Returns:
         The dataset.
     """
-    df = load_movielens_df(path)
-    return from_interactions_df(df)
+    with _ml_detect_and_open(path) as ml:
+        return ml.dataset()
 
 
 def load_movielens_df(path: str | Path) -> pd.DataFrame:
