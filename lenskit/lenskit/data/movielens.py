@@ -180,6 +180,74 @@ class MLMLoader(MLData):
     Loader for the ML 1M and 10M data sets.
     """
 
+    def dataset(self) -> Dataset:
+        dsb = DatasetBuilder()
+
+        movies = self.movies_df()
+
+        dsb.add_entities("item", movies["item_id"])
+        dsb.add_scalar_attribute("item", "title", movies["item_id"], movies["title"])
+        genres = movies["genres"].str.split("|", regex=False)
+        dsb.add_list_attribute("item", "genres", movies["item_id"], genres)
+
+        ratings = self.ratings_df()
+        dsb.add_interactions(
+            "rating", ratings, entities=["user", "item"], missing="insert", default=True
+        )
+
+        users = self.users_df()
+        if users is not None:
+            users = users.set_index("user_id")
+            dsb.add_entities("user", users.index.values, duplicates="update")
+            for c in users.columns:
+                self._logger.debug("adding user column %s", c)
+                dsb.add_scalar_attribute("user", c, users[c])
+
+        return dsb.build()
+
+    def movies_df(self):
+        self._logger.debug("reading ML10?M movies file")
+        with self.open_file("movies.dat") as data:
+            return pd.read_csv(
+                data,
+                sep=":",
+                header=None,
+                names=["item_id", "_it", "title", "_tg", "genres"],
+                usecols=[0, 2, 4],
+                dtype={
+                    "item_id": np.int32,
+                },
+                encoding="latin1",
+            )
+
+    def users_df(self):
+        if self.version != "ml-1m":
+            return None
+
+        self._logger.debug("reading ML1M users file")
+        with self.open_file("users.dat") as data:
+            return pd.read_csv(
+                data,
+                sep=":",
+                header=None,
+                names=[
+                    "user_id",
+                    "_ug",
+                    "gender",
+                    "_ga",
+                    "age",
+                    "_ao",
+                    "occupation",
+                    "_az",
+                    "zip_code",
+                ],
+                usecols=[0, 2, 4, 6, 8],
+                dtype={
+                    "user_id": np.int32,
+                },
+                encoding="latin1",
+            )
+
     def ratings_df(self):
         self._logger.debug("reading ML10?M ratings file")
         with self.open_file("ratings.dat") as data:
