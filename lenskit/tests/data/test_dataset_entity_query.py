@@ -53,7 +53,7 @@ def test_entity_subset_subset_numbers(rng: Generator, ml_ratings: pd.DataFrame, 
 
 
 def test_entity_drop_null_attributes(rng: Generator, ml_ds: Dataset):
-    attr = ml_ds.entities("item").attribute("tag_count")
+    attr = ml_ds.entities("item").attribute("tag_counts")
     a2 = attr.drop_null()
 
     assert len(a2) < len(attr)
