@@ -60,8 +60,10 @@ def test_filter_ratings_min_time(
     ml_ratings: pd.DataFrame,
 ):
     dsb = DatasetBuilder()
-    if ts_fmt == "timestamp":
-        ml_ratings = ml_ratings.assign(timestamp=pd.to_datetime(ml_ratings["timestamp"], unit="s"))
+    if ts_fmt == "int":
+        ml_ratings = ml_ratings.assign(
+            timestamp=(ml_ratings["timestamp"] - pd.Timestamp("1970-01-01")) // pd.Timedelta("1s")
+        )
     dsb.add_interactions(
         "rating", ml_ratings, entities=["user", "item"], missing="insert", default=True
     )
@@ -81,8 +83,10 @@ def test_filter_ratings_max_time(
     ml_ratings: pd.DataFrame,
 ):
     dsb = DatasetBuilder()
-    if ts_fmt == "timestamp":
-        ml_ratings = ml_ratings.assign(timestamp=pd.to_datetime(ml_ratings["timestamp"], unit="s"))
+    if ts_fmt == "int":
+        ml_ratings = ml_ratings.assign(
+            timestamp=(ml_ratings["timestamp"] - pd.Timestamp("1970-01-01")) // pd.Timedelta("1s")
+        )
     dsb.add_interactions(
         "rating", ml_ratings, entities=["user", "item"], missing="insert", default=True
     )
@@ -102,8 +106,10 @@ def test_filter_ratings_min_max_time(
     ml_ratings: pd.DataFrame,
 ):
     dsb = DatasetBuilder()
-    if ts_fmt == "timestamp":
-        ml_ratings = ml_ratings.assign(timestamp=pd.to_datetime(ml_ratings["timestamp"], unit="s"))
+    if ts_fmt == "int":
+        ml_ratings = ml_ratings.assign(
+            timestamp=(ml_ratings["timestamp"] - pd.Timestamp("1970-01-01")) // pd.Timedelta("1s")
+        )
     dsb.add_interactions(
         "rating", ml_ratings, entities=["user", "item"], missing="insert", default=True
     )
