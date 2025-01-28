@@ -28,6 +28,7 @@ from typing_extensions import Any, Literal, TypeAlias, TypeVar, overload, overri
 from lenskit.diagnostics import DataError
 from lenskit.logging import get_logger
 
+from .attributes import AttributeSet, attr_set
 from .container import DataContainer
 from .items import ItemList
 from .schema import DataSchema, EntitySchema, RelationshipSchema, id_col_name, num_col_name
@@ -575,6 +576,14 @@ class EntitySet:
         Get the entities and their attributes as a Pandas data frame.
         """
         return self.arrow().to_pandas()
+
+    def attribute(self, name: str) -> AttributeSet:
+        """
+        Get values of an attribute for the entites in this entity set.
+        """
+        spec = self.schema.attributes[name]
+
+        return attr_set(name, spec, self._table, self.vocabulary, self._selected)
 
     @overload
     def select(self, *, ids: IDSequence | None = None) -> EntitySet: ...

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 import warnings
 from collections.abc import Mapping, Sequence
 from os import PathLike
@@ -13,7 +14,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import structlog
 from numpy.typing import ArrayLike, NDArray
-from scipy.sparse import sparray
+from scipy.sparse import csr_array, sparray
 
 from lenskit.diagnostics import DataError, DataWarning
 from lenskit.logging import get_logger
@@ -22,6 +23,8 @@ from .container import DataContainer
 from .dataset import Dataset
 from .schema import (
     AllowableTroolean,
+    AttrLayout,
+    ColumnSpec,
     DataSchema,
     EntitySchema,
     RelationshipSchema,
@@ -295,8 +298,7 @@ class DatasetBuilder:
             if e_tbl is None:  # pragma: nocover
                 raise DataError(f"no entities of class {e_type}")
 
-            e_ids = e_tbl.column(id_col_name(e_type))
-            e_nums = pc.index_in(ids, e_ids)
+            e_nums = self._resolve_entity_ids(e_type, ids, e_tbl)
             e_valid = e_nums.is_valid()
             if not pc.all(e_valid).as_py():
                 if missing == "error":
@@ -465,7 +467,41 @@ class DatasetBuilder:
         entities: IDSequence | tuple[IDSequence, ...] | pd.Series[Any] | TableInput,
         values: ArrayLike | None = None,
     ) -> None:
-        raise NotImplementedError()
+        if name in self.schema.entities[cls].attributes:  # pragma: nocover
+            raise NotImplementedError("updating or replacing existing attributes not supported")
+
+        id_col = id_col_name(cls)
+
+        if values is None:
+            if isinstance(entities, pd.Series):
+                # it is a series, use the index
+                values = entities.values
+                entities = entities.index.values
+            elif isinstance(entities, pd.DataFrame):
+                values = entities[name].values
+                if id_col in entities.columns:
+                    entities = entities[id_col].values
+                else:
+                    entities = entities.index.values
+
+        e_tbl = self._tables[cls]
+        if e_tbl is None:  # pragma: nocover
+            raise DataError(f"no entities of class {cls}")
+
+        nums = self._resolve_entity_ids(cls, entities, e_tbl)
+        if not np.all(nums.is_valid()):  # pragma: nocover
+            n_bad = nums.is_valid().sum().as_py()
+            raise DataError(f"{n_bad} unknown entity IDs")
+
+        val_array: pa.Array = pa.array(values)  # type: ignore
+        tbl_mask = np.zeros(e_tbl.num_rows, dtype=np.bool_)
+        tbl_mask[nums.to_numpy()] = True
+        tbl_mask = pa.array(tbl_mask)
+        val_col = pa.nulls(e_tbl.num_rows, val_array.type)
+        val_col = pc.replace_with_mask(val_col, tbl_mask, val_array)
+
+        self._tables[cls] = e_tbl.append_column(name, val_col)
+        self.schema.entities[cls].attributes[name] = ColumnSpec(layout=AttrLayout.SCALAR)
 
     @overload
     def add_list_attribute(
@@ -487,17 +523,166 @@ class DatasetBuilder:
         entities: IDSequence | tuple[IDSequence, ...] | pd.Series[Any] | TableInput,
         values: ArrayLike | None = None,
     ) -> None:
-        raise NotImplementedError()
+        if name in self.schema.entities[cls].attributes:  # pragma: nocover
+            raise NotImplementedError("updating or replacing existing attributes not supported")
+
+        id_col = id_col_name(cls)
+
+        if values is None:
+            if isinstance(entities, pd.Series):
+                # it is a series, use the index
+                values = entities.values
+                entities = entities.index.values
+            elif isinstance(entities, pd.DataFrame):
+                values = entities[name].values
+                if id_col in entities.columns:
+                    entities = entities[id_col].values
+                else:
+                    entities = entities.index.values
+
+        e_tbl = self._tables[cls]
+        if e_tbl is None:  # pragma: nocover
+            raise DataError(f"no entities of class {cls}")
+        nums = self._resolve_entity_ids(cls, entities, e_tbl)
+        if not np.all(nums.is_valid()):  # pragma: nocover
+            n_bad = nums.is_valid().sum().as_py()
+            raise DataError(f"{n_bad} unknown entity IDs")
+
+        val_array: pa.Array = pa.array(values)  # type: ignore
+        if not pa.types.is_list(val_array.type):
+            raise TypeError("attribute data did not resolve to list")
+
+        if isinstance(val_array, pa.ChunkedArray):  # pragma: nocover
+            val_array = val_array.combine_chunks()
+        assert isinstance(val_array, pa.ListArray)
+
+        nums = nums.to_numpy()
+        tbl_valid = np.zeros(e_tbl.num_rows, dtype=np.bool_)
+        tbl_valid[nums] = True
+        tbl_valid = pa.array(tbl_valid)
+
+        # we have to do surgery on the offsets and values
+        lengths = np.zeros(e_tbl.num_rows + 1, dtype=np.int32)
+        lengths[nums + 1] = val_array.value_lengths().fill_null(0).to_numpy()
+        offsets = np.cumsum(lengths, dtype=np.int32)
+
+        val_col = pa.ListArray.from_arrays(
+            pa.array(offsets), val_array.values, mask=pc.invert(tbl_valid)
+        )
+
+        self._tables[cls] = e_tbl.append_column(name, val_col)
+        self.schema.entities[cls].attributes[name] = ColumnSpec(layout=AttrLayout.LIST)
 
     def add_vector_attribute(
         self,
         cls: str,
         name: str,
         entities: IDSequence | tuple[IDSequence, ...],
-        values: ArrayLike | sparray,
+        values: pa.Array[Any] | pa.ChunkedArray[Any] | np.ndarray[tuple[int, int], Any] | sparray,
         /,
-        dims: ArrayLike | pd.Index[Any] | Sequence[Any] | None = None,
-    ) -> None: ...
+        dim_names: ArrayLike | pd.Index[Any] | Sequence[Any] | None = None,
+    ) -> None:
+        """
+        Add a vector attribute to a set of entities.
+
+        .. warning::
+
+            The vector is stored densely, even for entities for which it is not
+            set. High-dimensional vectors can therefore take up a lot of space.
+
+        Args:
+            cls:
+                The entity class name.
+            name:
+                The attribute name.
+            entities:
+                The entity IDs to which the attribute should be attached.
+            values:
+                The attribute values, as a fixed-length list array or a
+                two-dimensional NumPy array.
+            dim_names:
+                The names for the dimensions of the array.
+        """
+        if name in self.schema.entities[cls].attributes:  # pragma: nocover
+            raise NotImplementedError("updating or replacing existing attributes not supported")
+
+        e_tbl = self._tables[cls]
+        if e_tbl is None:  # pragma: nocover
+            raise DataError(f"no entities of class {cls}")
+        nums = self._resolve_entity_ids(cls, entities, e_tbl)
+        if not np.all(nums.is_valid()):  # pragma: nocover
+            n_bad = nums.is_valid().sum().as_py()
+            raise DataError(f"{n_bad} unknown entity IDs")
+
+        tbl_mask = np.ones(e_tbl.num_rows, dtype=np.bool_)
+        tbl_mask[nums.to_numpy()] = False
+
+        vec_col = None
+        matrix = None
+
+        metadata = {}
+        if dim_names is not None:
+            metadata["lenskit:names"] = json.dumps(np.asarray(dim_names).tolist())
+
+        if isinstance(values, sparray):
+            csr: csr_array = values.tocsr()  # type: ignore
+
+            rlen = np.zeros(e_tbl.num_rows + 1, csr.dtype)
+            rlen[nums.to_numpy() + 1] = np.diff(csr.indptr)
+            rowptr = np.cumsum(rlen, dtype=np.int32)
+
+            obs_struct = pa.StructArray.from_arrays(
+                [pa.array(csr.indices), pa.array(csr.data)], ["index", "value"]
+            )
+            vec_col = pa.ListArray.from_arrays(
+                pa.array(rowptr), obs_struct, mask=pa.array(tbl_mask)
+            )
+            metadata["lenskit:ncol"] = str(csr.shape[1])  # type: ignore
+
+        elif isinstance(values, pa.ChunkedArray):
+            if not pa.types.is_fixed_size_list(values.type):
+                raise TypeError("attribute data must be fixed-size list")
+
+            start = 0
+            for chunk in values.chunks:
+                assert isinstance(chunk, pa.FixedSizeListArray)
+                cnp = chunk.values.to_numpy()
+                if matrix is None:
+                    matrix = np.full((e_tbl.num_rows, chunk.type.list_size), np.nan, cnp.dtype)
+                end = start + len(chunk)
+                matrix[nums[start:end], :] = cnp.reshape((end - start, chunk.type.list_size))
+                start = end
+
+        elif isinstance(values, pa.Array):
+            if not pa.types.is_fixed_size_list(values.type):
+                raise TypeError("attribute data must be fixed-size list")
+            assert isinstance(values, pa.FixedSizeListArray)
+            vnp = values.values.to_numpy()
+            matrix = np.full((e_tbl.num_rows, values.type.list_size), np.nan, vnp.dtype)
+            matrix[nums] = vnp.reshape((len(nums), values.type.list_size))
+
+        else:
+            if len(values.shape) != 2:
+                raise TypeError("values must be 2D array")
+            nrow, ncol = values.shape
+            if nrow != len(entities):
+                raise ValueError("entity list and value row count must match")
+            matrix = np.full((e_tbl.num_rows, ncol), np.nan, values.dtype)
+            matrix[nums] = values
+
+        if vec_col is None:
+            assert matrix is not None
+
+            tbl_mask = pa.array(tbl_mask)
+            vec_col = pa.FixedSizeListArray.from_arrays(
+                pa.array(matrix.ravel()), matrix.shape[1], mask=tbl_mask
+            )
+            self.schema.entities[cls].attributes[name] = ColumnSpec(layout=AttrLayout.VECTOR)
+        else:
+            self.schema.entities[cls].attributes[name] = ColumnSpec(layout=AttrLayout.SPARSE)
+
+        field = pa.field(name, vec_col.type, nullable=True, metadata=metadata)
+        self._tables[cls] = e_tbl.append_column(field, vec_col)
 
     def build(self) -> Dataset:
         return Dataset(self.build_container())
@@ -523,6 +708,17 @@ class DatasetBuilder:
         """
         container = self.build_container()
         container.save(path)
+
+    def _resolve_entity_ids(
+        self, cls: str, ids: IDSequence, table: pa.Table | None = None
+    ) -> pa.Int32Array:
+        tgt_ids: pa.Array = pa.array(ids)  # type: ignore
+        if table is None:  # pragma: nocover
+            table = self._tables[cls]
+        assert table is not None
+        e_ids = table.column(id_col_name(cls))
+        e_nums = pc.index_in(tgt_ids, e_ids)
+        return e_nums
 
 
 def _empty_rel_table(types: list[str]) -> pa.Table:
