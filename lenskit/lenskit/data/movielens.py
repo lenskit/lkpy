@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
+from io import TextIOWrapper
 from pathlib import Path
 from typing import TypeAlias
 from zipfile import ZipFile
@@ -19,6 +20,7 @@ from zipfile import ZipFile
 import numpy as np
 import pandas as pd
 import structlog
+from scipy.sparse import coo_array
 
 from lenskit.logging import get_logger
 
@@ -161,7 +163,7 @@ class ML100KLoader(MLData):
     def ratings_df(self) -> pd.DataFrame:
         self._logger.debug("reading ML100K ratings TSV")
         with self.open_file("u.data") as data:
-            return pd.read_csv(
+            df = pd.read_csv(
                 data,
                 sep="\t",
                 header=None,
@@ -173,6 +175,8 @@ class ML100KLoader(MLData):
                     "timestamp": np.int32,
                 },
             )
+            df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
+            return df
 
 
 class MLMLoader(MLData):
@@ -202,6 +206,21 @@ class MLMLoader(MLData):
             for c in users.columns:
                 self._logger.debug("adding user column %s", c)
                 dsb.add_scalar_attribute("user", c, users[c])
+
+        tags = self.tagging_df()
+        if tags is not None:
+            # we add them as a sparse vector attribute of counts
+            tag_names = np.unique(tags["tag"])
+            tag_idx = pd.Index(tag_names)
+            tags["tag_num"] = tag_idx.get_indexer_for(tags["tag"])
+            tag_counts = (
+                tags.groupby(["item_id", "tag_num"])["tag"].count().reset_index(name="count")
+            )
+            tag_items = np.unique(tags["item_id"])
+            item_idx = pd.Index(tag_items)
+            icol = item_idx.get_indexer_for(tag_counts["item_id"])
+            tag_matrix = coo_array((tag_counts["count"], (icol, tag_counts["tag_num"])))
+            dsb.add_vector_attribute("item", "tag_counts", tag_items, tag_matrix)
 
         return dsb.build()
 
@@ -251,7 +270,7 @@ class MLMLoader(MLData):
     def ratings_df(self):
         self._logger.debug("reading ML10?M ratings file")
         with self.open_file("ratings.dat") as data:
-            return pd.read_csv(
+            df = pd.read_csv(
                 data,
                 sep=":",
                 header=None,
@@ -264,6 +283,29 @@ class MLMLoader(MLData):
                     "timestamp": np.int32,
                 },
             )
+            df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
+            return df
+
+    def tagging_df(self):
+        if self.version != "ml-10m":
+            return None
+
+        self._logger.debug("reading ML10M tags file")
+        # this is slow but the data is a mess
+        lpat = re.compile(r"^(\d+)::(\d+)::(.*)::(\d+)$")
+        lines = []
+        with self.open_file("tags.dat") as data:
+            for i, line in enumerate(TextIOWrapper(data, "latin1"), 1):
+                m = lpat.match(line)
+                if not m:
+                    self._logger.warn("invalid line", line=i)
+                    continue
+
+                lines.append((int(m[1]), int(m[2]), m[3], int(m[4])))
+
+        df = pd.DataFrame.from_records(lines, columns=["user_id", "item_id", "tag", "timestamp"])
+        df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
+        return df
 
 
 class MLModernLoader(MLData):
@@ -274,7 +316,7 @@ class MLModernLoader(MLData):
     def ratings_df(self):
         self._logger.debug("reading modern ratings CSV")
         with self.open_file("ratings.csv") as data:
-            return pd.read_csv(
+            df = pd.read_csv(
                 data,
                 dtype={
                     "userId": np.int32,
@@ -283,6 +325,8 @@ class MLModernLoader(MLData):
                     "timestamp": np.int64,
                 },
             ).rename(columns={"userId": "user_id", "movieId": "item_id"})
+            df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
+            return df
 
 
 def load_movielens(path: str | Path) -> Dataset:

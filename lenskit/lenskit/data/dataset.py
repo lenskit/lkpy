@@ -534,6 +534,10 @@ class EntitySet:
         self._table = table
         self._selected = _sel
 
+    @property
+    def attributes(self) -> list[str]:
+        return list(self.schema.attributes.keys())
+
     def count(self) -> int:
         """
         Return the number of entities in this entity set.

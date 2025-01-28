@@ -66,6 +66,7 @@ def test_1m_zip():
     title_s = titles.pandas()
     assert title_s.loc[1] == "Toy Story (1995)"
 
+    assert "genres" in ds.entities("item").attributes
     genres = ds.entities("item").attribute("genres").pandas()
     # Cry, The Beloved Country is drama
     assert genres.loc[40] == ["Drama"]
@@ -97,6 +98,11 @@ def test_10m_zip():
     genres = ds.entities("item").attribute("genres").pandas()
     # Cry, The Beloved Country is drama
     assert genres.loc[40] == ["Drama"]
+
+    assert "tag_counts" in ds.entities("item").attributes
+    tags = ds.entities("item").attribute("tag_counts")
+    assert tags.is_sparse
+    assert tags.scipy().data.sum() >= 95_000
 
 
 @mark.skipif(not ML_10M_ZIP.exists(), reason="ml-10m does not exist")
