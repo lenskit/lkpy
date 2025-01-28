@@ -146,6 +146,17 @@ def test_20m_zip():
     assert tags.is_sparse
     assert tags.scipy().data.sum() >= 100_000
 
+    assert "tag_genome" in ds.entities("item").attributes
+    ga = ds.entities("item").attribute("tag_genome")
+    assert ga.is_vector
+    assert ga.names is not None
+    assert ga.names[0] == "007"
+    gdf = ga.pandas(missing="omit")
+    assert len(gdf) >= 10_000
+    assert len(gdf) < 20_000
+    assert gdf.columns[0] == "007"
+    assert gdf.columns[-1] == "zombies"
+
 
 @mark.skipif(not ML_20M_ZIP.exists(), reason="ml-20m does not exist")
 def test_20m_df():
@@ -175,6 +186,17 @@ def test_25m_zip():
     assert tags.is_sparse
     assert tags.scipy().data.sum() >= 200_000
 
+    assert "tag_genome" in ds.entities("item").attributes
+    ga = ds.entities("item").attribute("tag_genome")
+    assert ga.is_vector
+    assert ga.names is not None
+    assert ga.names[0] == "007"
+    gdf = ga.pandas(missing="omit")
+    assert len(gdf) >= 10_000
+    assert len(gdf) < 20_000
+    assert gdf.columns[0] == "007"
+    assert gdf.columns[-1] == "zombies"
+
 
 @mark.skipif(not ML_25M_ZIP.exists(), reason="ml-25m does not exist")
 def test_25m_df():
@@ -203,6 +225,17 @@ def test_32m_zip():
     tags = ds.entities("item").attribute("tag_counts")
     assert tags.is_sparse
     assert tags.scipy().data.sum() >= 200_000
+
+    assert "tag_genome" in ds.entities("item").attributes
+    ga = ds.entities("item").attribute("tag_genome")
+    assert ga.is_vector
+    assert ga.names is not None
+    assert ga.names[0] == "007"
+    gdf = ga.pandas(missing="omit")
+    assert len(gdf) >= 10_000
+    assert len(gdf) < 20_000
+    assert gdf.columns[0] == "007"
+    assert gdf.columns[-1] == "zombies"
 
 
 @mark.skidf(not ML_32M_ZIP.exists(), reason="ml-32m does not exist")

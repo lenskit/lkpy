@@ -340,6 +340,11 @@ class MLModernLoader(MLData):
         tag_matrix = coo_array((tag_counts["count"], (icol, tag_counts["tag_num"])))
         dsb.add_vector_attribute("item", "tag_counts", tag_items, tag_matrix)
 
+        genome = self.genome_df()
+        dsb.add_vector_attribute(
+            "item", "tag_genome", genome.index.values, genome.to_numpy(), dim_names=genome.columns
+        )
+
         return dsb.build()
 
     def movies_df(self):
@@ -358,13 +363,30 @@ class MLModernLoader(MLData):
         with self.open_file("tags.csv") as data:
             df = pd.read_csv(
                 data,
-                dtype={
-                    "userId": np.int32,
-                    "movieId": np.int32,
-                },
+                dtype={"userId": np.int32, "movieId": np.int32, "tag": "string"},
             ).rename(columns={"userId": "user_id", "movieId": "item_id"})
             df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
+            df = df[df["tag"].notnull()]
             return df
+
+    def genome_df(self):
+        if self.version == "ml-latest-small":
+            return None
+
+        with self.open_file("genome-tags.csv") as data:
+            tags = pd.read_csv(
+                data,
+                dtype={"tagId": np.int32, "tag": "string"},
+            )
+        with self.open_file("genome-scores.csv") as data:
+            scores = pd.read_csv(
+                data, dtype={"movieId": np.int32, "tagId": np.int32, "relevance": np.float32}
+            ).rename(columns={"movieId": "item_id"})
+
+        tag_names = tags.set_index("tagId")["tag"].to_dict()
+        df = pd.pivot(scores, columns="tagId", index="item_id", values="relevance")
+        df = df.rename(columns=tag_names)
+        return df
 
     def ratings_df(self):
         self._logger.debug("reading modern ratings CSV")
