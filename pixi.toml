@@ -78,6 +78,9 @@ just = ">=1.2"
 sphinx-togglebutton = ">=0.3.2,<0.4"
 sphinxcontrib-mermaid = ">=1.0.0,<2"
 
+[feature.trim.target.linux-64.dependencies]
+nomkl = "*"
+
 [feature.dev]
 platforms = ["linux-64", "osx-arm64"]
 
@@ -127,7 +130,8 @@ doc = { features = [
   "hpf",
   "implicit",
   "sklearn",
-], solve-group = "py312-nix" }
+  "trim",
+] }
 demo = { features = [
   "py312",
   "demo",
