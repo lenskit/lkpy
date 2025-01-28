@@ -3,6 +3,14 @@
 # Copyright (C) 2023-2024 Drexel University
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
+"""
+Hierarchical Poisson factorization from ``hpfrec``.
+
+.. note::
+
+    This package is not included in the base ``lenskit`` distribution. Install
+    ``lenskit-hpf`` from PyPI or Conda to get it.
+"""
 
 import logging
 
