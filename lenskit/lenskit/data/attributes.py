@@ -150,6 +150,28 @@ class AttributeSet:
     def torch(self) -> torch.Tensor:
         return torch.from_numpy(self.numpy())
 
+    def drop_null(self):
+        """
+        Subset this attribute set to only entities for which it is defined.
+        """
+        col = self._table.column(self.name)
+        valid = col.is_valid().combine_chunks()
+        if self._selected is not None:
+            valid = valid.take(self._selected)
+            selected = self._selected.filter(valid)
+        else:
+            selected = np.arange(len(self._vocab), dtype=np.int32)
+            selected = pa.array(selected)
+            selected = selected.filter(valid)
+
+        return self.__class__(self.name, self._spec, self._table, self._vocab, selected)
+
+    def __len__(self):
+        if self._selected is not None:
+            return len(self._selected)
+        else:
+            return len(self._vocab)
+
 
 class ScalarAttributeSet(AttributeSet):
     def pandas(self, *, missing: Literal["null", "omit"] = "null") -> pd.Series[Any]:
