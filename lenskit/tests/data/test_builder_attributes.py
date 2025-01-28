@@ -317,6 +317,48 @@ def test_item_vector_names(rng: np.random.Generator, ml_ratings: pd.DataFrame):
     assert set(arr.index) == set(items)
 
 
+def test_item_vector_attr_subset(rng: np.random.Generator, ml_ratings: pd.DataFrame):
+    dsb = DatasetBuilder()
+
+    item_ids = ml_ratings["item_id"].unique()
+    dsb.add_entities("item", item_ids)
+
+    items = rng.choice(item_ids, 500, replace=False)
+    vec = rng.standard_normal((500, 5))
+    dsb.add_vector_attribute("item", "embedding", items, vec, dim_names=FRUITS)
+    va = dsb.schema.entities["item"].attributes["embedding"]
+    assert va.layout == AttrLayout.VECTOR
+
+    ds = dsb.build()
+
+    query_items = set(rng.choice(items, 100, replace=False))
+    query_items |= set(rng.choice(item_ids, 50, replace=False))
+    query_items = np.array(list(query_items))
+    q_known = np.isin(query_items, items)
+
+    subset = ds.entities("item").select(ids=query_items)
+    assert len(subset) == len(query_items)
+
+    ss_attrs = subset.attribute("embedding")
+    assert ss_attrs.is_vector
+    assert ss_attrs.names == FRUITS
+
+    assert np.all(ss_attrs.ids() == query_items)
+    assert np.all(ss_attrs.numbers() == ds.items.numbers(query_items))
+
+    arr = ss_attrs.arrow()
+    if isinstance(arr, pa.ChunkedArray):
+        arr = arr.combine_chunks()
+    assert isinstance(arr, pa.FixedSizeListArray)
+    assert len(arr) == len(query_items)
+    assert np.all(arr.is_valid().to_numpy(zero_copy_only=False) == q_known)
+
+    df = ss_attrs.pandas(missing="omit")
+    assert isinstance(df, pd.DataFrame)
+    assert np.all(df.columns == FRUITS)
+    assert df.shape == (np.sum(q_known), 5)
+
+
 def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFrame):
     dsb = DatasetBuilder()
 
