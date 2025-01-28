@@ -64,6 +64,7 @@ class DatasetBuilder:
 
     _log: structlog.stdlib.BoundLogger
     _tables: dict[str, pa.Table | None]
+    _indexes: dict[str, pd.Index]
 
     def __init__(self, name: str | DataContainer | Dataset | None = None):
         """
@@ -84,6 +85,7 @@ class DatasetBuilder:
         else:
             self.schema = DataSchema(name=name, entities={"item": EntitySchema()})
             self._tables = {"item": None}
+        self._indexes = {}
 
         self._log = _log.bind(ds_name=name)
 
@@ -247,6 +249,7 @@ class DatasetBuilder:
             table = pa.concat_tables([table, new_tbl], promote_options="permissive")
 
         self._tables[cls] = table
+        self._indexes[cls] = pd.Index(table.column(id_name).to_numpy(zero_copy_only=False))
 
     def add_relationships(
         self,
@@ -712,13 +715,12 @@ class DatasetBuilder:
     def _resolve_entity_ids(
         self, cls: str, ids: IDSequence, table: pa.Table | None = None
     ) -> pa.Int32Array:
-        tgt_ids: pa.Array = pa.array(ids)  # type: ignore
-        if table is None:  # pragma: nocover
-            table = self._tables[cls]
-        assert table is not None
-        e_ids = table.column(id_col_name(cls))
-        e_nums = pc.index_in(tgt_ids, e_ids)
-        return e_nums
+        tgt_ids = np.array(ids)  # type: ignore
+        index = self._indexes.get(cls, None)
+        if index is None:
+            return pa.nulls(len(tgt_ids), type=pa.int32())
+        nums = np.require(index.get_indexer_for(tgt_ids), np.int32)
+        return pc.if_else(nums >= 0, nums, None)
 
 
 def _empty_rel_table(types: list[str]) -> pa.Table:
