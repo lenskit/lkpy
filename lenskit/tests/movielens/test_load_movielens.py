@@ -43,6 +43,7 @@ def test_latest_small_dir():
 
 
 @mark.skipif(not ML_100K_ZIP.exists(), reason="ml-100k does not exist")
+@mark.realdata
 def test_100k_zip():
     ds = load_movielens(ML_100K_ZIP)
     assert ds.item_count >= 100
@@ -60,6 +61,7 @@ def test_100k_zip():
 
 
 @mark.skipif(not ML_100K_ZIP.exists(), reason="ml-100k does not exist")
+@mark.realdata
 def test_100k_df():
     ds = load_movielens_df(ML_100K_ZIP)
     assert ds["item_id"].nunique() >= 100
@@ -69,6 +71,7 @@ def test_100k_df():
 
 
 @mark.skipif(not ML_1M_ZIP.exists(), reason="ml-1m does not exist")
+@mark.realdata
 def test_1m_zip():
     ds = load_movielens(ML_1M_ZIP)
     assert ds.item_count >= 500
@@ -90,6 +93,7 @@ def test_1m_zip():
 
 
 @mark.skipif(not ML_1M_ZIP.exists(), reason="ml-1m does not exist")
+@mark.realdata
 def test_1m_df():
     ds = load_movielens_df(ML_1M_ZIP)
     assert ds["item_id"].nunique() >= 500
@@ -98,6 +102,7 @@ def test_1m_df():
 
 
 @mark.skipif(not ML_10M_ZIP.exists(), reason="ml-10m does not exist")
+@mark.realdata
 def test_10m_zip():
     ds = load_movielens(ML_10M_ZIP)
     assert ds.item_count >= 10_000
@@ -119,6 +124,7 @@ def test_10m_zip():
 
 
 @mark.skipif(not ML_10M_ZIP.exists(), reason="ml-10m does not exist")
+@mark.realdata
 def test_10m_df():
     ds = load_movielens_df(ML_10M_ZIP)
     assert ds["item_id"].nunique() >= 10_000
@@ -127,6 +133,7 @@ def test_10m_df():
 
 
 @mark.skipif(not ML_20M_ZIP.exists(), reason="ml-20m does not exist")
+@mark.realdata
 def test_20m_zip():
     ds = load_movielens(ML_20M_ZIP)
     assert ds.item_count >= 25_000
@@ -159,6 +166,7 @@ def test_20m_zip():
 
 
 @mark.skipif(not ML_20M_ZIP.exists(), reason="ml-20m does not exist")
+@mark.realdata
 def test_20m_df():
     ds = load_movielens_df(ML_20M_ZIP)
     assert ds["item_id"].nunique() >= 25_000
@@ -167,6 +175,7 @@ def test_20m_df():
 
 
 @mark.skipif(not ML_25M_ZIP.exists(), reason="ml-25m does not exist")
+@mark.realdata
 def test_25m_zip():
     ds = load_movielens(ML_25M_ZIP)
     assert ds.item_count >= 50_000
@@ -199,6 +208,7 @@ def test_25m_zip():
 
 
 @mark.skipif(not ML_25M_ZIP.exists(), reason="ml-25m does not exist")
+@mark.realdata
 def test_25m_df():
     ds = load_movielens_df(ML_25M_ZIP)
     assert ds["item_id"].nunique() >= 50_000
@@ -207,6 +217,7 @@ def test_25m_df():
 
 
 @mark.skipif(not ML_32M_ZIP.exists(), reason="ml-32m does not exist")
+@mark.realdata
 def test_32m_zip():
     ds = load_movielens(ML_32M_ZIP)
     assert ds.item_count >= 50_000
@@ -239,6 +250,7 @@ def test_32m_zip():
 
 
 @mark.skipif(not ML_32M_ZIP.exists(), reason="ml-32m does not exist")
+@mark.realdata
 def test_32m_zip_df():
     ds = load_movielens_df(ML_32M_ZIP)
     assert ds["item_id"].nunique() >= 50_000
