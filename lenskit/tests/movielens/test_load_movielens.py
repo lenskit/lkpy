@@ -7,7 +7,7 @@
 import functools
 from pathlib import Path
 
-from pytest import mark
+from pytest import mark, raises
 
 from lenskit.data.movielens import load_movielens, load_movielens_df
 
@@ -256,3 +256,8 @@ def test_32m_zip_df():
     assert ds["item_id"].nunique() >= 50_000
     assert ds["user_id"].nunique() >= 200_000
     assert len(ds) >= 32_000_000
+
+
+def test_bad_dir():
+    with raises(RuntimeError, match="invalid.*directory"):
+        load_movielens("test")

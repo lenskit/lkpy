@@ -65,7 +65,7 @@ class MLData:
             return MLMLoader
         elif re.match(r"^ml-(\d+m|latest(-small)?)$", version, re.IGNORECASE):
             return MLModernLoader
-        else:
+        else:  # pragma: nocover
             raise ValueError(f"unknown ML version {version}")
 
     def __enter__(self):
@@ -82,13 +82,13 @@ class MLData:
             self._logger.debug("opening zip file")
             return self.source.open(self.prefix + name)
 
-    def dataset(self) -> Dataset:
+    def dataset(self) -> Dataset:  # pragma: nocover
         """
         Load the full dataset.
         """
         raise NotImplementedError()
 
-    def ratings_df(self) -> pd.DataFrame:
+    def ratings_df(self) -> pd.DataFrame:  # pragma: nocover
         """
         Load the ratings data frame.
         """
@@ -297,7 +297,7 @@ class MLMLoader(MLData):
         with self.open_file("tags.dat") as data:
             for i, line in enumerate(TextIOWrapper(data, "latin1"), 1):
                 m = lpat.match(line)
-                if not m:
+                if not m:  # pragma: nocover
                     self._logger.warn("invalid line", line=i)
                     continue
 
@@ -467,13 +467,13 @@ def _ml_detect_and_open(path: str | Path) -> MLData:
         try:
             infos = zf.infolist()
             first = infos[0]
-            if not first.is_dir:
+            if not first.is_dir:  # pragma: nocover
                 log.error("first entry is not directory")
                 raise RuntimeError("invalid ML zip file")
 
             log.debug("base dir filename %s", first.filename)
             dsm = re.match(r"^(ml-(?:\d+[MmKk]|latest|latest-small))", first.filename)
-            if not dsm:
+            if not dsm:  # pragma: nocover
                 log.error("invalid directory name %s", first.filename)
                 raise RuntimeError("invalid ML zip file")
 
@@ -490,7 +490,7 @@ def _ml_detect_and_open(path: str | Path) -> MLData:
         dsm = re.match(r"^(ml-\d+[MmKk])", loc.name)
         if dsm:
             version = dsm.group(1)
-            ctor = MLData.version_impl(dsm.group(1))
+            ctor = MLData.version_impl(dsm.group(1).lower())
             _log.debug("inferred data set %s from dir name", version)
         else:
             _log.debug("checking contents for data type")
