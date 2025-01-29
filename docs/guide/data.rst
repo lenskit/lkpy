@@ -46,7 +46,7 @@ Or obtain item statistics:
     4                 13          13  ...  1996-06-10 16:45:35  2004-07-27 06:14:12
     5                 56          56  ...  1996-04-14 14:23:59  2016-08-16 22:15:47
     ...
-    [9066 rows x 7 columns]
+    [9125 rows x 7 columns]
 
 .. _data-model:
 
