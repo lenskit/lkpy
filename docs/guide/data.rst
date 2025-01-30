@@ -20,7 +20,7 @@ Getting started with the dataset is fairly straightforward:
     >>> from lenskit.data import load_movielens
     >>> mlds = load_movielens('data/ml-latest-small')
     >>> mlds.item_count
-    9066
+    9125
 
 You can then access the data from the various methods of the :class:`Dataset` class.
 For example, if you want to get the ratings as a data frame:
@@ -38,15 +38,15 @@ For example, if you want to get the ratings as a data frame:
 Or obtain item statistics:
 
     >>> mlds.item_stats()
-            record_count  user_count  rating_count  ...  count  first_time   last_time
-    item                                            ...
-    1                247         247           247  ...    247   828212413  1475783711
-    2                107         107           107  ...    107   828213150  1470073353
-    3                 59          59            59  ...     59   833955544  1471385241
-    4                 13          13            13  ...     13   834425135  1090908852
-    5                 56          56            56  ...     56   829491839  1471385747
+            record_count  user_count  ...           first_time            last_time
+    item                              ...
+    1                247         247  ...  1996-03-30 19:00:13  2016-10-06 19:55:11
+    2                107         107  ...  1996-03-30 19:12:30  2016-08-01 17:42:33
+    3                 59          59  ...  1996-06-05 06:19:04  2016-08-16 22:07:21
+    4                 13          13  ...  1996-06-10 16:45:35  2004-07-27 06:14:12
+    5                 56          56  ...  1996-04-14 14:23:59  2016-08-16 22:15:47
     ...
-    [9066 rows x 7 columns]
+    [9125 rows x 7 columns]
 
 .. _data-model:
 

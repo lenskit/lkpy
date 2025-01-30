@@ -214,8 +214,8 @@ def test_als_train_large(ml_ratings, ml_ds: Dataset):
 
     assert algo.bias_.global_bias == approx(ml_ratings.rating.mean())
     assert algo.config.features == 20
-    assert len(algo.items_) == ml_ratings["item_id"].nunique()
-    assert len(algo.users_) == ml_ratings["user_id"].nunique()
+    assert len(algo.items_) == ml_ds.item_count
+    assert len(algo.users_) == ml_ds.user_count
 
     ratings = ml_ds.interaction_matrix(format="pandas")
     gmean = ratings["rating"].mean()
@@ -226,7 +226,7 @@ def test_als_train_large(ml_ratings, ml_ds: Dataset):
     is2 = isums - icounts * gmean
     imeans = is2 / (icounts + 5)
     ibias = pd.Series(algo.bias_.item_biases, index=algo.items_.index)
-    imeans, ibias = imeans.align(ibias)
+    imeans, ibias = imeans.align(ibias, fill_value=0.0)
     assert ibias.values == approx(imeans.values, rel=1.0e-3)
 
 

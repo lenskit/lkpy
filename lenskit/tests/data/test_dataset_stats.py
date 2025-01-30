@@ -25,18 +25,25 @@ def test_item_stats(ml_ratings: pd.DataFrame, ml_ds: Dataset):
     assert len(stats) == ml_ds.item_count
     assert np.all(stats.index == ml_ds.items.index)
 
-    assert np.all(stats["count"] == ml_ratings["item_id"].value_counts().reindex(ml_ds.items))
-    assert np.all(stats["user_count"] == ml_ratings["item_id"].value_counts().reindex(ml_ds.items))
     assert np.all(
-        stats["rating_count"] == ml_ratings["item_id"].value_counts().reindex(ml_ds.items)
+        stats["count"] == ml_ratings["item_id"].value_counts().reindex(ml_ds.items, fill_value=0)
+    )
+    assert np.all(
+        stats["user_count"]
+        == ml_ratings["item_id"].value_counts().reindex(ml_ds.items, fill_value=0)
+    )
+    assert np.all(
+        stats["rating_count"]
+        == ml_ratings["item_id"].value_counts().reindex(ml_ds.items, fill_value=0)
     )
 
     assert stats["mean_rating"].values == approx(
-        ml_ratings.groupby("item_id")["rating"].mean().reindex(ml_ds.items).values
+        ml_ratings.groupby("item_id")["rating"].mean().reindex(ml_ds.items).values, nan_ok=True
     )
 
     ts = ml_ratings.groupby("item_id")["timestamp"].min().reindex(ml_ds.items)
     bad = stats["first_time"] != ts
+    bad &= stats["first_time"].isnull() != ts.isnull()
     nbad = np.sum(bad)
     if nbad:
         df = stats[["first_time"]].assign(expected=ts)

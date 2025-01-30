@@ -13,7 +13,7 @@ import pytest
 
 from lenskit.basic import PopScorer, SoftmaxRanker
 from lenskit.batch import recommend
-from lenskit.data import Dataset, ItemListCollection, UserIDKey, from_interactions_df
+from lenskit.data import Dataset, ItemListCollection, UserIDKey
 from lenskit.data.movielens import load_movielens, load_movielens_df
 from lenskit.logging import get_logger
 from lenskit.pipeline import RecPipelineBuilder
@@ -45,13 +45,13 @@ def ml_ratings() -> Generator[pd.DataFrame, None, None]:
 
 
 @pytest.fixture(scope="session")
-def ml_ds_unchecked(ml_ratings: pd.DataFrame) -> Generator[Dataset, None, None]:
+def ml_ds_unchecked() -> Generator[Dataset, None, None]:
     """
     Fixture to load the MovieLens dataset, without checking for modifications.
 
     Usually use :func:`ml_ds` instead.
     """
-    yield from_interactions_df(ml_ratings)
+    yield load_movielens(ml_test_dir)
 
 
 @pytest.fixture(scope="function" if retrain else "module")
@@ -73,12 +73,10 @@ def ml_ds(ml_ds_unchecked: Dataset) -> Generator[Dataset, None, None]:
         deep=True
     )
     old_ustats = ds.user_stats().copy(deep=True)
-    old_istats = ds.item_stats().copy(deep=True)
 
     yield ds
 
     ustats = ds.user_stats()
-    istats = ds.item_stats()
 
     rates = ds.interaction_matrix(format="pandas", field="rating", original_ids=True)
     assert rates["rating"].values == pytest.approx(old_rates["rating"].values)
@@ -86,10 +84,6 @@ def ml_ds(ml_ds_unchecked: Dataset) -> Generator[Dataset, None, None]:
     for col in old_ustats.columns:
         log.info("checking user stats column", column=col)
         assert ustats[col].values == pytest.approx(old_ustats[col].values)
-
-    for col in old_istats.columns:
-        log.info("checking item stats column", column=col)
-        assert istats[col].values == pytest.approx(old_istats[col].values)
 
 
 @pytest.fixture

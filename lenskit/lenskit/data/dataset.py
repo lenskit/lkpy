@@ -534,6 +534,10 @@ class EntitySet:
         self._table = table
         self._selected = _sel
 
+    @property
+    def attributes(self) -> list[str]:
+        return list(self.schema.attributes.keys())
+
     def count(self) -> int:
         """
         Return the number of entities in this entity set.
@@ -915,6 +919,10 @@ class MatrixRelationshipSet(RelationshipSet):
         colinds = torch.tensor(colinds)
         if attribute is None:
             values = torch.ones(nnz, dtype=torch.float32)
+        elif pa.types.is_timestamp(self._table.field(attribute).type):
+            vals = self._table.column(attribute)
+            vals = vals.cast(pa.timestamp("s")).cast(pa.int64())
+            values = torch.tensor(vals.to_numpy())
         else:
             values = torch.tensor(self._table.column(attribute).to_numpy())
 
@@ -1026,6 +1034,10 @@ class MatrixRelationshipSet(RelationshipSet):
         stats = stats.reindex(stat_vocab.index, fill_value=0)
         if "mean_rating" in stats.columns:
             stats.loc[stats["rating_count"] == 0, "mean_rating"] = np.nan
+        if "first_time" in stats.columns:
+            stats.loc[stats["count"] == 0, "first_time"] = pd.NaT
+        if "last_time" in stats.columns:
+            stats.loc[stats["count"] == 0, "last_time"] = pd.NaT
 
         return stats
 

@@ -256,7 +256,7 @@ class ScorerTests(TrainingTests):
 
         iname = ml_ds.default_interaction_class()
         dsb.clear_relationships(iname)
-        dsb.add_relationships(iname, df)
+        dsb.add_relationships(iname, df, entities=["user", "item"])
         ds = dsb.build()
 
         model = self.component()

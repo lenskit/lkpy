@@ -566,10 +566,10 @@ jobs:
           path: |
             data
             !data/*.zip
-          key: test-mldata-001-ml-100k-ml-20m
+          key: test-mldata-001-ml-100k-ml-20m-ml-1m-ml-10m
       - name: Download ML data
         run: |
-          python -m lenskit.data.fetch ml-100k ml-20m
+          python -m lenskit.data.fetch ml-100k ml-20m ml-1m ml-10m
       - name: Run Eval Tests
         run: |
           pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit -m 'eval or realdata' --log-file test-eval.log */tests

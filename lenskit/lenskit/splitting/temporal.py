@@ -1,11 +1,12 @@
 import datetime as dt
 from typing import Sequence, overload
 
-import numpy as np
-
 from lenskit.data import Dataset, DatasetBuilder, ItemListCollection
+from lenskit.logging import get_logger
 
 from .split import TTSplit
+
+_log = get_logger(__name__)
 
 
 @overload
@@ -35,12 +36,14 @@ def split_global_time(
     Returns:
         The data splits.
     """
+    log = _log.bind(n_records=data.interaction_count)
     if isinstance(time, (str, int, float, dt.datetime)):
         times = [_make_time(time)]
         rv = "single"
     else:
         times = [_make_time(t) for t in time]
         rv = "sequence"
+        log = log.bind(n_splits=len(times))
 
     iname = data.default_interaction_class()
     matrix = data.interactions().pandas(ids=True)
@@ -48,24 +51,33 @@ def split_global_time(
         raise RuntimeError("temporal split requires timestamp")
 
     ts_col = matrix["timestamp"]
-    ts_col = np.asarray(ts_col)
+    # ts_col = np.asarray(ts_col)
 
     if ts_col.dtype.kind in ("i", "u", "f"):
+        log.debug("converting query timestamps")
         times = [t.timestamp() for t in times]
 
     results = []
     for i, t in enumerate(times):
+        tlog = log.bind(number=i, test_start=t)
+        tlog.debug("creating initial split")
         mask = ts_col >= t
         train_build = DatasetBuilder(data)
         train_build.filter_interactions(iname, max_time=t)
 
         if i + 1 < len(times):
-            test = matrix[mask & (ts_col < times[i + 1])]
+            t2 = times[i + 1]
+            tlog = tlog.bind(test_end=t2)
+            tlog.debug("filtering test data for upper bound")
+            test = matrix[mask & (ts_col < t2)]
         else:
             test = matrix[mask]
 
+        tlog.debug("building training data set")
         train_ds = train_build.build()
+        tlog.debug("building testing item lists")
         test_ilc = ItemListCollection.from_df(test, ["user_id"])
+        tlog.debug("built split with %d train interactions", train_ds.interaction_count)
         results.append(TTSplit(train_ds, test_ilc))
 
     if rv == "sequence":

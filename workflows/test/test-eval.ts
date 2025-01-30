@@ -22,7 +22,7 @@ export function evalTestJob(): WorkflowJob {
     steps: [
       checkoutStep(),
       ...condaSetup(options),
-      ...mlDataSteps(["ml-100k", "ml-20m"]),
+      ...mlDataSteps(["ml-100k", "ml-20m", "ml-1m", "ml-10m"]),
       {
         "name": "Run Eval Tests",
         "run": script(

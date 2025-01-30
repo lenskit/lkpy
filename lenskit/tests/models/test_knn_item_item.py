@@ -253,14 +253,16 @@ def test_ii_large_models(rng, ml_ratings, ml_ds):
     assert algo_lim.sim_matrix_.data.max() <= 1
 
     means = ml_ratings.groupby("item_id").rating.mean()
-    assert means[algo_lim.items_.ids()].values == approx(algo_lim.item_means_)
+    means = means.reindex(algo_ub.items_.ids(), fill_value=0.0)
+    assert means.values == approx(algo_lim.item_means_)
 
     assert all(np.logical_not(np.isnan(algo_ub.sim_matrix_.data)))
     assert algo_ub.sim_matrix_.data.min() > 0
     assert algo_ub.sim_matrix_.data.max() <= 1
 
     means = ml_ratings.groupby("item_id").rating.mean()
-    assert means[algo_ub.items_.ids()].values == approx(algo_ub.item_means_)
+    means = means.reindex(algo_ub.items_.ids(), fill_value=0.0)
+    assert means.values == approx(algo_ub.item_means_)
 
     mc_rates = (
         ml_ratings.set_index("item_id")

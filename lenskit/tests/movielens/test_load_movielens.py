@@ -7,23 +7,20 @@
 import functools
 from pathlib import Path
 
-from pytest import mark
+from pytest import mark, raises
 
-from lenskit.data.movielens import load_movielens
+from lenskit.data.movielens import load_movielens, load_movielens_df
 
 ML_LATEST_DIR = Path("data/ml-latest-small")
-ML_100K_DIR = Path("data/ml-100k")
-ML_1M_DIR = Path("data/ml-1m")
-ML_10M_DIR = Path("data/ml-10m")
-ML_20M_DIR = Path("data/ml-20m")
 
 ML_100K_ZIP = Path("data/ml-100k.zip")
 ML_1M_ZIP = Path("data/ml-1m.zip")
 ML_10M_ZIP = Path("data/ml-10m.zip")
 ML_20M_ZIP = Path("data/ml-20m.zip")
+ML_25M_ZIP = Path("data/ml-25m.zip")
+ML_32M_ZIP = Path("data/ml-32m.zip")
 
 
-@mark.skipif(not ML_LATEST_DIR.exists(), reason="ml-latest-small does not exist")
 def test_latest_small_dir():
     ds = load_movielens(ML_LATEST_DIR)
     assert ds.item_count >= 100
@@ -31,41 +28,22 @@ def test_latest_small_dir():
     assert ds.user_count < 1000
     assert ds.interaction_count >= 100_000
 
+    titles = ds.entities("item").attribute("title")
+    title_s = titles.pandas()
+    assert title_s.loc[1] == "Toy Story (1995)"
 
-@mark.skipif(not ML_100K_DIR.exists(), reason="ml-100k does not exist")
-def test_100k_dir():
-    ds = load_movielens(ML_100K_DIR)
-    assert ds.item_count >= 100
-    assert ds.user_count >= 100
-    assert ds.user_count < 1000
-    assert ds.interaction_count >= 100_000
+    genres = ds.entities("item").attribute("genres").pandas()
+    # Cry, The Beloved Country is drama
+    assert genres.loc[40] == ["Drama"]
 
-
-@mark.skipif(not ML_1M_DIR.exists(), reason="ml-1m does not exist")
-def test_1m_dir():
-    ds = load_movielens(ML_1M_DIR)
-    assert ds.item_count >= 500
-    assert ds.user_count >= 500
-    assert ds.interaction_count >= 1_000_000
-
-
-@mark.skipif(not ML_10M_DIR.exists(), reason="ml-10m does not exist")
-def test_10m_dir():
-    ds = load_movielens(ML_10M_DIR)
-    assert ds.item_count >= 100
-    assert ds.user_count >= 100
-    assert ds.interaction_count >= 10_000_000
-
-
-@mark.skipif(not ML_20M_DIR.exists(), reason="ml-20m does not exist")
-def test_20m_dir():
-    ds = load_movielens(ML_20M_DIR)
-    assert ds.item_count >= 100
-    assert ds.user_count >= 100
-    assert ds.interaction_count >= 20_000_000
+    assert "tag_counts" in ds.entities("item").attributes
+    tags = ds.entities("item").attribute("tag_counts")
+    assert tags.is_sparse
+    assert tags.scipy().data.sum() >= 1200
 
 
 @mark.skipif(not ML_100K_ZIP.exists(), reason="ml-100k does not exist")
+@mark.realdata
 def test_100k_zip():
     ds = load_movielens(ML_100K_ZIP)
     assert ds.item_count >= 100
@@ -73,26 +51,213 @@ def test_100k_zip():
     assert ds.user_count < 1000
     assert ds.interaction_count >= 100_000
 
+    titles = ds.entities("item").attribute("title")
+    title_s = titles.pandas()
+    assert title_s.loc[1] == "Toy Story (1995)"
+
+    genders = ds.entities("user").attribute("gender").pandas()
+    # only binary gender is recorded
+    assert set(genders) == {"M", "F"}
+
+
+@mark.skipif(not ML_100K_ZIP.exists(), reason="ml-100k does not exist")
+@mark.realdata
+def test_100k_df():
+    ds = load_movielens_df(ML_100K_ZIP)
+    assert ds["item_id"].nunique() >= 100
+    assert ds["user_id"].nunique() >= 100
+    assert ds["user_id"].nunique() < 1000
+    assert len(ds) >= 100_000
+
 
 @mark.skipif(not ML_1M_ZIP.exists(), reason="ml-1m does not exist")
+@mark.realdata
 def test_1m_zip():
     ds = load_movielens(ML_1M_ZIP)
     assert ds.item_count >= 500
     assert ds.user_count >= 500
     assert ds.interaction_count >= 1_000_000
 
+    titles = ds.entities("item").attribute("title")
+    title_s = titles.pandas()
+    assert title_s.loc[1] == "Toy Story (1995)"
+
+    assert "genres" in ds.entities("item").attributes
+    genres = ds.entities("item").attribute("genres").pandas()
+    # Cry, The Beloved Country is drama
+    assert genres.loc[40] == ["Drama"]
+
+    genders = ds.entities("user").attribute("gender").pandas()
+    # only binary gender is recorded
+    assert set(genders) == {"M", "F"}
+
+
+@mark.skipif(not ML_1M_ZIP.exists(), reason="ml-1m does not exist")
+@mark.realdata
+def test_1m_df():
+    ds = load_movielens_df(ML_1M_ZIP)
+    assert ds["item_id"].nunique() >= 500
+    assert ds["user_id"].nunique() >= 500
+    assert len(ds) >= 1_000_000
+
 
 @mark.skipif(not ML_10M_ZIP.exists(), reason="ml-10m does not exist")
+@mark.realdata
 def test_10m_zip():
     ds = load_movielens(ML_10M_ZIP)
-    assert ds.item_count >= 100
-    assert ds.user_count >= 100
+    assert ds.item_count >= 10_000
+    assert ds.user_count >= 69_000
     assert ds.interaction_count >= 10_000_000
+
+    titles = ds.entities("item").attribute("title")
+    title_s = titles.pandas()
+    assert title_s.loc[1] == "Toy Story (1995)"
+
+    genres = ds.entities("item").attribute("genres").pandas()
+    # Cry, The Beloved Country is drama
+    assert genres.loc[40] == ["Drama"]
+
+    assert "tag_counts" in ds.entities("item").attributes
+    tags = ds.entities("item").attribute("tag_counts")
+    assert tags.is_sparse
+    assert tags.scipy().data.sum() >= 95_000
+
+
+@mark.skipif(not ML_10M_ZIP.exists(), reason="ml-10m does not exist")
+@mark.realdata
+def test_10m_df():
+    ds = load_movielens_df(ML_10M_ZIP)
+    assert ds["item_id"].nunique() >= 10_000
+    assert ds["user_id"].nunique() >= 69_000
+    assert len(ds) >= 10_000_000
 
 
 @mark.skipif(not ML_20M_ZIP.exists(), reason="ml-20m does not exist")
+@mark.realdata
 def test_20m_zip():
     ds = load_movielens(ML_20M_ZIP)
-    assert ds.item_count >= 100
-    assert ds.user_count >= 100
+    assert ds.item_count >= 25_000
+    assert ds.user_count >= 130_000
     assert ds.interaction_count >= 20_000_000
+
+    titles = ds.entities("item").attribute("title")
+    title_s = titles.pandas()
+    assert title_s.loc[1] == "Toy Story (1995)"
+
+    genres = ds.entities("item").attribute("genres").pandas()
+    # Cry, The Beloved Country is drama
+    assert genres.loc[40] == ["Drama"]
+
+    assert "tag_counts" in ds.entities("item").attributes
+    tags = ds.entities("item").attribute("tag_counts")
+    assert tags.is_sparse
+    assert tags.scipy().data.sum() >= 100_000
+
+    assert "tag_genome" in ds.entities("item").attributes
+    ga = ds.entities("item").attribute("tag_genome")
+    assert ga.is_vector
+    assert ga.names is not None
+    assert ga.names[0] == "007"
+    gdf = ga.pandas(missing="omit")
+    assert len(gdf) >= 10_000
+    assert len(gdf) < 20_000
+    assert gdf.columns[0] == "007"
+    assert gdf.columns[-1] == "zombies"
+
+
+@mark.skipif(not ML_20M_ZIP.exists(), reason="ml-20m does not exist")
+@mark.realdata
+def test_20m_df():
+    ds = load_movielens_df(ML_20M_ZIP)
+    assert ds["item_id"].nunique() >= 25_000
+    assert ds["user_id"].nunique() >= 130_000
+    assert len(ds) >= 20_000_000
+
+
+@mark.skipif(not ML_25M_ZIP.exists(), reason="ml-25m does not exist")
+@mark.realdata
+def test_25m_zip():
+    ds = load_movielens(ML_25M_ZIP)
+    assert ds.item_count >= 50_000
+    assert ds.user_count >= 160_000
+    assert ds.interaction_count >= 25_000_000
+
+    titles = ds.entities("item").attribute("title")
+    title_s = titles.pandas()
+    assert title_s.loc[1] == "Toy Story (1995)"
+
+    genres = ds.entities("item").attribute("genres").pandas()
+    # Cry, The Beloved Country is drama
+    assert genres.loc[40] == ["Drama"]
+
+    assert "tag_counts" in ds.entities("item").attributes
+    tags = ds.entities("item").attribute("tag_counts")
+    assert tags.is_sparse
+    assert tags.scipy().data.sum() >= 200_000
+
+    assert "tag_genome" in ds.entities("item").attributes
+    ga = ds.entities("item").attribute("tag_genome")
+    assert ga.is_vector
+    assert ga.names is not None
+    assert ga.names[0] == "007"
+    gdf = ga.pandas(missing="omit")
+    assert len(gdf) >= 10_000
+    assert len(gdf) < 20_000
+    assert gdf.columns[0] == "007"
+    assert gdf.columns[-1] == "zombies"
+
+
+@mark.skipif(not ML_25M_ZIP.exists(), reason="ml-25m does not exist")
+@mark.realdata
+def test_25m_df():
+    ds = load_movielens_df(ML_25M_ZIP)
+    assert ds["item_id"].nunique() >= 50_000
+    assert ds["user_id"].nunique() >= 160_000
+    assert len(ds) >= 25_000_000
+
+
+@mark.skipif(not ML_32M_ZIP.exists(), reason="ml-32m does not exist")
+@mark.realdata
+def test_32m_zip():
+    ds = load_movielens(ML_32M_ZIP)
+    assert ds.item_count >= 50_000
+    assert ds.user_count >= 200_000
+    assert ds.interaction_count >= 32_000_000
+
+    titles = ds.entities("item").attribute("title")
+    title_s = titles.pandas()
+    assert title_s.loc[1] == "Toy Story (1995)"
+
+    genres = ds.entities("item").attribute("genres").pandas()
+    # Cry, The Beloved Country is drama
+    assert genres.loc[40] == ["Drama"]
+
+    assert "tag_counts" in ds.entities("item").attributes
+    tags = ds.entities("item").attribute("tag_counts")
+    assert tags.is_sparse
+    assert tags.scipy().data.sum() >= 200_000
+
+    # assert "tag_genome" in ds.entities("item").attributes
+    # ga = ds.entities("item").attribute("tag_genome")
+    # assert ga.is_vector
+    # assert ga.names is not None
+    # assert ga.names[0] == "007"
+    # gdf = ga.pandas(missing="omit")
+    # assert len(gdf) >= 10_000
+    # assert len(gdf) < 20_000
+    # assert gdf.columns[0] == "007"
+    # assert gdf.columns[-1] == "zombies"
+
+
+@mark.skipif(not ML_32M_ZIP.exists(), reason="ml-32m does not exist")
+@mark.realdata
+def test_32m_zip_df():
+    ds = load_movielens_df(ML_32M_ZIP)
+    assert ds["item_id"].nunique() >= 50_000
+    assert ds["user_id"].nunique() >= 200_000
+    assert len(ds) >= 32_000_000
+
+
+def test_bad_dir():
+    with raises(RuntimeError, match="invalid.*directory"):
+        load_movielens("test")

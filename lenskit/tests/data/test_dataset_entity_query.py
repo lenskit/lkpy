@@ -6,14 +6,19 @@ from lenskit.data import Dataset
 
 
 def test_all_entities(rng: Generator, ml_ratings: pd.DataFrame, ml_ds: Dataset):
-    assert len(ml_ds.entities("item")) == ml_ratings["item_id"].nunique()
+    assert len(ml_ds.entities("item")) == ml_ds.item_count
+    assert len(ml_ds.entities("item")) >= ml_ratings["item_id"].nunique()
     assert len(ml_ds.entities("user")) == ml_ratings["user_id"].nunique()
 
-    assert np.all(ml_ds.entities("item").ids() == np.unique(ml_ratings["item_id"]))
+    stats = ml_ds.item_stats()
+
+    assert np.all(
+        ml_ds.entities("item").ids()[stats["count"] > 0] == np.unique(ml_ratings["item_id"])
+    )
     assert np.all(ml_ds.entities("item").numbers() == np.arange(ml_ds.item_count))
 
     df = ml_ds.entities("item").pandas()
-    assert len(df) == ml_ratings["item_id"].nunique()
+    assert len(df) >= ml_ratings["item_id"].nunique()
     assert np.all(df["item_id"] == ml_ds.items.ids())
 
 
@@ -50,3 +55,14 @@ def test_entity_subset_subset_numbers(rng: Generator, ml_ratings: pd.DataFrame, 
     assert len(e2) == 20
     assert np.all(e2.ids() == ml_ds.items.ids(iss2))
     assert np.all(e2.numbers() == iss2)
+
+
+def test_entity_drop_null_attributes(rng: Generator, ml_ds: Dataset):
+    attr = ml_ds.entities("item").attribute("tag_counts")
+    a2 = attr.drop_null()
+
+    assert len(a2) < len(attr)
+
+    mat = a2.scipy()
+    assert np.all(np.diff(mat.indptr) >= 1)
+    assert mat.data.sum() > 1000
