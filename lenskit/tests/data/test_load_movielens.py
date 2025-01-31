@@ -9,6 +9,7 @@ from pathlib import Path
 
 from pytest import mark, raises
 
+from lenskit.data.dataset import Dataset
 from lenskit.data.movielens import load_movielens, load_movielens_df
 
 ML_LATEST_DIR = Path("data/ml-latest-small")
@@ -163,6 +164,32 @@ def test_20m_zip():
     assert len(gdf) < 20_000
     assert gdf.columns[0] == "007"
     assert gdf.columns[-1] == "zombies"
+
+
+@mark.skipif(not ML_20M_ZIP.exists(), reason="ml-20m does not exist")
+@mark.realdata
+def test_ml20m_save(tmpdir: Path):
+    ds = load_movielens(ML_20M_ZIP)
+
+    path = tmpdir / "ml-20m"
+    ds.save(path)
+
+    assert path.exists()
+    assert (path / "schema.json").exists()
+
+    ds2 = Dataset.load(path)
+    assert ds2.user_count == ds.user_count
+    assert ds2.item_count == ds.item_count
+    assert ds2.interaction_count == ds.interaction_count
+
+    assert "title" in ds.entities("item").attributes
+    assert ds.entities("item").attribute("genres").is_scalar
+    assert "genres" in ds.entities("item").attributes
+    assert ds.entities("item").attribute("genres").is_list
+    assert "tag_counts" in ds.entities("item").attributes
+    assert ds.entities("item").attribute("genres").is_sparse
+    assert "tag_genome" in ds.entities("item").attributes
+    assert ds.entities("item").attribute("genres").is_vector
 
 
 @mark.skipif(not ML_20M_ZIP.exists(), reason="ml-20m does not exist")
