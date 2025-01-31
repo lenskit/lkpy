@@ -189,3 +189,8 @@ class ColumnSpec(BaseModel, extra="forbid"):
     """
     The attribute layout (whether and how multiple values are supported).
     """
+
+    vector_size: int | None = None
+    """
+    The dimensionality of the vector, for sparse and vector columns.
+    """

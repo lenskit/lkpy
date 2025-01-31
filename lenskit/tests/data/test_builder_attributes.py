@@ -258,6 +258,17 @@ def test_item_vector(rng: np.random.Generator, ml_ratings: pd.DataFrame):
     dsb.add_vector_attribute("item", "embedding", items, vec)
     va = dsb.schema.entities["item"].attributes["embedding"]
     assert va.layout == AttrLayout.VECTOR
+    assert va.vector_size == 20
+
+    tbl = dsb._tables["item"]
+    assert tbl is not None
+    col = tbl.column("embedding")
+    assert len(col) == tbl.num_rows
+    valid = col.is_valid().to_numpy(zero_copy_only=False)
+    assert np.sum(valid) == 500
+    col = col.combine_chunks()
+    lens = col.value_lengths().fill_null(0).to_numpy()
+    assert np.all(lens[valid] == 20)
 
     ds = dsb.build()
     assert ds.entities("item").attribute("embedding").is_vector
@@ -274,6 +285,14 @@ def test_item_vector(rng: np.random.Generator, ml_ratings: pd.DataFrame):
     assert isinstance(arr, np.ndarray)
     assert arr.shape == (len(item_ids), 20)
     assert np.sum(np.isfinite(arr)) == 500 * 20
+
+    lim = ds.entities("item").attribute("embedding").drop_null()
+    idx = pd.Index(lim.ids())
+    v2 = lim.numpy()
+    for i, id in enumerate(items):
+        i2 = idx.get_loc(id)
+        print(id, i, i2)
+        assert np.all(vec[i, :] == v2[i2, :])
 
     arr = ds.entities("item").attribute("embedding").pandas(missing="omit")
     assert isinstance(arr, pd.DataFrame)

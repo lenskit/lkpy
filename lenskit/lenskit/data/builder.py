@@ -6,7 +6,7 @@ import json
 import warnings
 from collections.abc import Mapping, Sequence
 from os import PathLike
-from typing import Any, Literal, TypeAlias, TypeVar, overload
+from typing import Any, Literal, TypeAlias, TypeVar, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -621,75 +621,111 @@ class DatasetBuilder:
             n_bad = nums.is_valid().sum().as_py()
             raise DataError(f"{n_bad} unknown entity IDs")
 
-        tbl_mask = np.ones(e_tbl.num_rows, dtype=np.bool_)
-        tbl_mask[nums.to_numpy()] = False
-
-        vec_col = None
-        matrix = None
+        tbl_valid = np.zeros(e_tbl.num_rows, dtype=np.bool_)
+        tbl_valid[nums.to_numpy()] = True
 
         metadata = {}
         if dim_names is not None:
             metadata["lenskit:names"] = json.dumps(np.asarray(dim_names).tolist())
 
         if isinstance(values, sparray):
-            csr: csr_array = values.tocsr()  # type: ignore
-
-            rlen = np.zeros(e_tbl.num_rows + 1, csr.dtype)
-            rlen[nums.to_numpy() + 1] = np.diff(csr.indptr)
-            rowptr = np.cumsum(rlen, dtype=np.int32)
-
-            obs_struct = pa.StructArray.from_arrays(
-                [pa.array(csr.indices), pa.array(csr.data)], ["index", "value"]
+            vec_col = self._add_sparse_vector_attribute(cls, name, values, nums, e_tbl, tbl_valid)
+        elif isinstance(values, np.ndarray):
+            vec_col = self._add_dense_vector_attribute_numpy(
+                cls, name, values, nums, e_tbl, tbl_valid
             )
-            vec_col = pa.ListArray.from_arrays(
-                pa.array(rowptr), obs_struct, mask=pa.array(tbl_mask)
-            )
-            metadata["lenskit:ncol"] = str(csr.shape[1])  # type: ignore
-
-        elif isinstance(values, pa.ChunkedArray):
-            if not pa.types.is_fixed_size_list(values.type):
-                raise TypeError("attribute data must be fixed-size list")
-
-            start = 0
-            for chunk in values.chunks:
-                assert isinstance(chunk, pa.FixedSizeListArray)
-                cnp = chunk.values.to_numpy()
-                if matrix is None:
-                    matrix = np.full((e_tbl.num_rows, chunk.type.list_size), np.nan, cnp.dtype)
-                end = start + len(chunk)
-                matrix[nums[start:end], :] = cnp.reshape((end - start, chunk.type.list_size))
-                start = end
-
-        elif isinstance(values, pa.Array):
-            if not pa.types.is_fixed_size_list(values.type):
-                raise TypeError("attribute data must be fixed-size list")
-            assert isinstance(values, pa.FixedSizeListArray)
-            vnp = values.values.to_numpy()
-            matrix = np.full((e_tbl.num_rows, values.type.list_size), np.nan, vnp.dtype)
-            matrix[nums] = vnp.reshape((len(nums), values.type.list_size))
-
         else:
-            if len(values.shape) != 2:
-                raise TypeError("values must be 2D array")
-            nrow, ncol = values.shape
-            if nrow != len(entities):
-                raise ValueError("entity list and value row count must match")
-            matrix = np.full((e_tbl.num_rows, ncol), np.nan, values.dtype)
-            matrix[nums] = values
-
-        if vec_col is None:
-            assert matrix is not None
-
-            tbl_mask = pa.array(tbl_mask)
-            vec_col = pa.FixedSizeListArray.from_arrays(
-                pa.array(matrix.ravel()), matrix.shape[1], mask=tbl_mask
-            )
-            self.schema.entities[cls].attributes[name] = ColumnSpec(layout=AttrLayout.VECTOR)
-        else:
-            self.schema.entities[cls].attributes[name] = ColumnSpec(layout=AttrLayout.SPARSE)
+            vec_col = self._add_dense_vector_attribute(cls, name, values, nums, e_tbl, tbl_valid)
 
         field = pa.field(name, vec_col.type, nullable=True, metadata=metadata)
         self._tables[cls] = e_tbl.append_column(field, vec_col)
+
+    def _add_sparse_vector_attribute(
+        self,
+        cls: str,
+        name: str,
+        values: sparray,
+        rows: pa.Int32Array,
+        table: pa.Table,
+        valid: NDArray[np.bool_],
+    ):
+        csr: csr_array = values.tocsr()  # type: ignore
+        nrow, ncol = cast(tuple[int, int], csr.shape)
+
+        rlen = np.zeros(table.num_rows + 1, csr.dtype)
+        rlen[rows.to_numpy() + 1] = np.diff(csr.indptr)
+        rowptr = np.cumsum(rlen, dtype=np.int32)
+
+        obs_struct = pa.StructArray.from_arrays(
+            [pa.array(csr.indices), pa.array(csr.data)], ["index", "value"]
+        )
+        vec_col = pa.ListArray.from_arrays(pa.array(rowptr), obs_struct, mask=pc.invert(valid))
+        self.schema.entities[cls].attributes[name] = ColumnSpec(
+            layout=AttrLayout.SPARSE, vector_size=ncol
+        )
+        return vec_col
+
+    def _add_dense_vector_attribute(
+        self,
+        cls: str,
+        name: str,
+        values: pa.Array[Any] | pa.ChunkedArray[Any],
+        rows: pa.Int32Array,
+        table: pa.Table,
+        valid: NDArray[np.bool_],
+    ):
+        if isinstance(values, pa.ChunkedArray):
+            values = values.combine_chunks()
+        if not pa.types.is_fixed_size_list(values.type):
+            raise TypeError("attribute data must be fixed-size list")
+        assert isinstance(values, pa.FixedSizeListArray)
+        v_valid = values.is_valid().to_numpy(zero_copy_only=False)
+
+        # no nulls: use as-is
+        if np.all(valid) and np.all(v_valid):
+            return values
+
+        # find the rows where we have a valid column value
+        c_valid = valid.copy()
+        c_valid[rows] &= v_valid
+
+        # nulls: we actually need a list array for sparsity + storage
+        size = values.type.list_size
+
+        sizes = np.zeros(table.num_rows + 1, dtype=np.int32)
+        sizes[1:][c_valid] = size
+        offsets = np.cumsum(sizes, dtype=np.int32)
+        assert offsets[-1] == size * np.sum(c_valid)
+
+        # we need to reo-rder to match the order in the original table
+        ipos = np.argsort(rows)
+        if np.any(np.diff(ipos) < 0):
+            values = values.take(ipos)
+
+        vfilt = values.filter(v_valid)
+        assert len(vfilt) == np.sum(c_valid)
+
+        col = pa.ListArray.from_arrays(pa.array(offsets), vfilt.values, mask=pa.array(~c_valid))
+        assert np.all(col.is_valid().to_numpy(zero_copy_only=False) == c_valid)
+        self.schema.entities[cls].attributes[name] = ColumnSpec(
+            layout=AttrLayout.VECTOR, vector_size=size
+        )
+        return col
+
+    def _add_dense_vector_attribute_numpy(
+        self,
+        cls: str,
+        name: str,
+        values: NDArray[Any],
+        rows: pa.Int32Array,
+        table: pa.Table,
+        valid: NDArray[np.bool_],
+    ):
+        if len(values.shape) != 2:
+            raise TypeError("values must be 2D array")
+        nrow, ncol = values.shape
+        arr = pa.FixedSizeListArray.from_arrays(values.ravel(), ncol)
+        return self._add_dense_vector_attribute(cls, name, arr, rows, table, valid)
 
     def build(self) -> Dataset:
         return Dataset(self.build_container())
