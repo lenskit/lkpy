@@ -49,6 +49,10 @@ docs:
 preview-docs:
     sphinx-autobuild --watch lenskit/lenskit docs build/doc
 
+# update the BibTeX file (likely only works on Michael's laptop)
+update-bibtex:
+    curl -o docs/lenskit.bib 'http://127.0.0.1:23119/better-bibtex/export/collection?/4/9JMHQD9K.bibtex'
+
 # update source file headers
 update-headers:
     unbehead
