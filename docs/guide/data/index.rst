@@ -179,3 +179,29 @@ their source files.
 
 .. autosummary::
     load_movielens
+
+Saving Datasets
+~~~~~~~~~~~~~~~
+
+LensKit has a native dataset format to which datasets can be saved and loaded.
+This format fully represents the internal data structures.  See the following
+methods to use it:
+
+.. autosummary::
+    Dataset.save
+    Dataset.load
+    DatasetBuilder.save
+
+.. admonitition:: Compatibility
+    :class: note
+
+    The LensKit native dataset format code maintains the following Compatibility
+    guarantees:
+
+    -   LensKit can read datasets saved with any earlier minor version in the
+        same major-version series (e.g. 2025.2 can read from 2025.1).
+    -   LensKit can usually read datasets saved with a later minor version, but
+        this is not fully guaranteed.
+    -   LensKit will read datasets saved with any prior version on a best-effort
+        basis.  We may in the future upgrade this to guarantee full backwards
+        compatibility for reading older dataset versions.

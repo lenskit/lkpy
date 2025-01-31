@@ -82,18 +82,6 @@ class Dataset:
         Zero-copy conversions are used whenever possible, so client code **must
         not** modify returned data in-place.
 
-    .. todo::
-
-        Support for advanced rating situations is not yet supported:
-
-        * repeated ratings
-        * mixed implicit & explicit feedback
-        * later actions removing earlier ratings
-
-    .. todo::
-
-        Support for item and user content or metadata is not yet implemented.
-
     Args:
         data:
             The container for this dataset's data, or a function that will
@@ -116,8 +104,29 @@ class Dataset:
 
     @classmethod
     def load(cls, path: str | PathLike[str]) -> Dataset:
+        """
+        Load a dataset in the LensKit native format.
+
+        Args:
+            path:
+                The path to the dataset to load.
+
+        Returns:
+            The loaded dataset.
+        """
         container = DataContainer.load(path)
         return cls(container)
+
+    def save(self, path: str | PathLike[str]):
+        """
+        Save the data set in the LensKit native format.
+
+        Args:
+            path:
+                The path in which to save the data set (will be created as a
+                directory).
+        """
+        self._data.save(path)
 
     def _ensure_loaded(self):
         if not hasattr(self, "_data"):

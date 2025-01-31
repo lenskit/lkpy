@@ -196,6 +196,32 @@ def test_item_list_series():
     assert np.all(gs == gs2)
 
 
+def test_item_list_random():
+    dsb = DatasetBuilder()
+
+    items = pd.read_csv(ml_test_dir / "movies.csv")
+    items = items.rename(columns={"movieId": "item_id"}).set_index("item_id")
+
+    genres = items["genres"].str.split("|")
+
+    genres = genres.sample(n=200)
+
+    dsb.add_entities("item", items.index.values)
+    dsb.add_list_attribute("item", "genres", genres.index.values, genres.tolist())
+
+    va = dsb.schema.entities["item"].attributes["genres"]
+    assert va.layout == AttrLayout.LIST
+
+    ds = dsb.build()
+
+    assert ds.entities("item").attribute("genres").is_list
+
+    gs = ds.entities("item").attribute("genres").pandas()
+
+    gcomp, gscomp = genres.align(gs, "left")
+    assert np.all(gcomp.apply(len) == gscomp.apply(len))
+
+
 def test_item_list_df():
     dsb = DatasetBuilder()
 
@@ -258,10 +284,21 @@ def test_item_vector(rng: np.random.Generator, ml_ratings: pd.DataFrame):
     dsb.add_vector_attribute("item", "embedding", items, vec)
     va = dsb.schema.entities["item"].attributes["embedding"]
     assert va.layout == AttrLayout.VECTOR
+    assert va.vector_size == 20
+
+    tbl = dsb._tables["item"]
+    assert tbl is not None
+    col = tbl.column("embedding")
+    assert len(col) == tbl.num_rows
+    valid = col.is_valid().to_numpy(zero_copy_only=False)
+    assert np.sum(valid) == 500
+    col = col.combine_chunks()
+    lens = col.value_lengths().fill_null(0).to_numpy()
+    assert np.all(lens[valid] == 20)
 
     ds = dsb.build()
     assert ds.entities("item").attribute("embedding").is_vector
-    assert ds.entities("item").attribute("embedding").names is None
+    assert ds.entities("item").attribute("embedding").dim_names is None
 
     arr = ds.entities("item").attribute("embedding").arrow()
     if isinstance(arr, pa.ChunkedArray):
@@ -274,6 +311,14 @@ def test_item_vector(rng: np.random.Generator, ml_ratings: pd.DataFrame):
     assert isinstance(arr, np.ndarray)
     assert arr.shape == (len(item_ids), 20)
     assert np.sum(np.isfinite(arr)) == 500 * 20
+
+    lim = ds.entities("item").attribute("embedding").drop_null()
+    idx = pd.Index(lim.ids())
+    v2 = lim.numpy()
+    for i, id in enumerate(items):
+        i2 = idx.get_loc(id)
+        print(id, i, i2)
+        assert np.all(vec[i, :] == v2[i2, :])
 
     arr = ds.entities("item").attribute("embedding").pandas(missing="omit")
     assert isinstance(arr, pd.DataFrame)
@@ -296,7 +341,7 @@ def test_item_vector_names(rng: np.random.Generator, ml_ratings: pd.DataFrame):
 
     ds = dsb.build()
     assert ds.entities("item").attribute("embedding").is_vector
-    assert ds.entities("item").attribute("embedding").names == FRUITS
+    assert ds.entities("item").attribute("embedding").dim_names == FRUITS
 
     arr = ds.entities("item").attribute("embedding").arrow()
     if isinstance(arr, pa.ChunkedArray):
@@ -341,7 +386,7 @@ def test_item_vector_attr_subset(rng: np.random.Generator, ml_ratings: pd.DataFr
 
     ss_attrs = subset.attribute("embedding")
     assert ss_attrs.is_vector
-    assert ss_attrs.names == FRUITS
+    assert ss_attrs.dim_names == FRUITS
 
     assert np.all(ss_attrs.ids() == query_items)
     assert np.all(ss_attrs.numbers() == ds.items.numbers(query_items))
@@ -367,15 +412,19 @@ def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFram
 
     dsb.add_entities("item", movies.index)
 
-    genres = movies["genres"].str.split("|").reset_index().explode("genres", ignore_index=True)
+    genre_lists = movies["genres"].str.split("|")
+    genres = genre_lists.reset_index().explode("genres", ignore_index=True)
     gindex = pd.Index(np.unique(genres["genres"]))
 
-    ig_rows = movies.index.get_indexer_for(genres["item_id"])
+    ids = movies.index.values.copy()
+    rng.shuffle(ids)
+    idx2 = pd.Index(ids)
+    ig_rows = idx2.get_indexer_for(genres["item_id"])
     ig_cols = gindex.get_indexer_for(genres["genres"])
     ig_vals = np.ones(len(ig_rows), np.int32)
 
     arr = csr_array((ig_vals, (ig_rows, ig_cols)))
-    dsb.add_vector_attribute("item", "genres", movies.index, arr, dim_names=gindex)
+    dsb.add_vector_attribute("item", "genres", idx2, arr, dim_names=gindex)
 
     ga = dsb.schema.entities["item"].attributes["genres"]
     assert ga.layout == AttrLayout.SPARSE
@@ -383,18 +432,28 @@ def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFram
     ds = dsb.build()
 
     assert ds.entities("item").attribute("genres").is_sparse
-    assert ds.entities("item").attribute("genres").names == gindex.values.tolist()
+    assert ds.entities("item").attribute("genres").dim_names == gindex.values.tolist()
 
     mat = ds.entities("item").attribute("genres").scipy()
     assert isinstance(mat, csr_array)
     assert mat.nnz == arr.nnz
-    assert np.all(mat.indptr == arr.indptr)
+
+    m2 = ds.entities("item").select(ids=idx2.values).attribute("genres").scipy()
+    assert isinstance(mat, csr_array)
+    assert np.all(m2.indptr == arr.indptr)
 
     tensor = ds.entities("item").attribute("genres").torch()
     assert isinstance(tensor, torch.Tensor)
     assert tensor.is_sparse_csr
     assert len(tensor.values()) == arr.nnz
-    assert np.all(tensor.crow_indices().numpy() == arr.indptr)
 
     arr = ds.entities("item").attribute("genres").arrow()
     assert pa.types.is_list(arr.type)
+
+    for movie in rng.choice(movies.index.values, 50, replace=False):
+        row = ds.items.number(movie)
+        start = mat.indptr[row]
+        end = mat.indptr[row + 1]
+        cols = mat.indices[start:end]
+        mgs = gindex[cols].tolist()
+        assert mgs == genre_lists.loc[movie]

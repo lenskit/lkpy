@@ -49,6 +49,9 @@ class AttributeSet:
     """
 
     name: str
+    """
+    The name of the attribute.
+    """
     _spec: ColumnSpec
     _table: pa.Table
     _vocab: Vocabulary
@@ -87,7 +90,7 @@ class AttributeSet:
             return self._selected.to_numpy()
 
     @property
-    def names(self) -> list[str] | None:
+    def dim_names(self) -> list[str] | None:
         """
         Get the names attached to this attribute's dimensions.
 
@@ -131,9 +134,19 @@ class AttributeSet:
         raise NotImplementedError()
 
     def numpy(self) -> NDArray[Any]:
+        """
+        Get the attribute values as a NumPy array.
+
+        .. note::
+            Undefined attribute values may have undefined contents; they will
+            _usually_ be ``NaN`` or similar, but this is not fully guaranteed.
+        """
         return self.arrow().to_numpy()
 
     def arrow(self) -> pa.Array[Any] | pa.ChunkedArray[Any]:
+        """
+        Get the attribute values as an Arrow array.
+        """
         col = self._table.column(self.name)
         if self._selected is not None:
             col = col.take(self._selected)
@@ -197,9 +210,10 @@ class ListAttributeSet(AttributeSet):
 
 class VectorAttributeSet(AttributeSet):
     _names: list[str] | None = None
+    _size: int | None = None
 
     @property
-    def names(self) -> list[str] | None:
+    def dim_names(self) -> list[str] | None:
         if self._names is None:
             field = self._table.field(self.name)
             meta = field.metadata
@@ -209,12 +223,53 @@ class VectorAttributeSet(AttributeSet):
 
         return self._names
 
+    @property
+    def vector_size(self) -> int:
+        assert self._spec.vector_size is not None, "vector column has no size"
+        return self._spec.vector_size
+
+    def arrow(self) -> pa.Array[Any] | pa.ChunkedArray[Any]:
+        """
+        Get the attribute values as an Arrow array.
+        """
+
+        col = self._table.column(self.name)
+        if self._selected is not None:
+            col = col.take(self._selected)
+
+        if pa.types.is_fixed_size_list(col.type):
+            return col
+        elif pc.all(col.is_valid()).as_py():
+            if isinstance(col, pa.ChunkedArray):
+                return pa.chunked_array(
+                    [
+                        pa.FixedSizeListArray.from_arrays(c.values, self.vector_size)
+                        for c in col.chunks
+                    ]
+                )
+            elif isinstance(col, pa.ListArray):
+                return pa.FixedSizeListArray.from_arrays(col.values, self.vector_size)
+            else:  # pragma: nocover
+                raise TypeError("unexpected array type")
+        else:
+            # now things get tricky.
+            if isinstance(col, pa.ChunkedArray):
+                col = col.combine_chunks()
+            assert isinstance(col, pa.ListArray)
+            fixed = pa.FixedSizeListArray.from_arrays(col.values, self.vector_size)
+            mat = pa.nulls(len(col), type=fixed.type)
+            valid = col.is_valid()
+            assert pc.all(pc.equal(col.value_lengths().filter(valid), self.vector_size)).as_py()
+            col = _replace_vectors(mat, valid, fixed)
+
+        return col
+
     def numpy(self) -> np.ndarray[tuple[int, int], Any]:
         arr = self.arrow()
         if isinstance(arr, pa.ChunkedArray):
             arr = arr.combine_chunks()
         assert isinstance(arr, pa.FixedSizeListArray)
-        mat = arr.values.to_numpy().reshape((len(arr), arr.type.list_size))
+        mat = arr.values.to_numpy(zero_copy_only=False).reshape((len(arr), arr.type.list_size))
         return mat
 
     def pandas(self, *, missing: Literal["null", "omit"] = "null") -> pd.DataFrame:
@@ -231,14 +286,14 @@ class VectorAttributeSet(AttributeSet):
             ids = ids[mask.to_numpy(zero_copy_only=False)]
 
         mat = arr.values.to_numpy().reshape((len(arr), arr.type.list_size))
-        return pd.DataFrame(mat, index=ids, columns=self.names)
+        return pd.DataFrame(mat, index=ids, columns=self.dim_names)
 
 
 class SparseAttributeSet(AttributeSet):
     _names: list[str] | None = None
 
     @property
-    def names(self) -> list[str] | None:
+    def dim_names(self) -> list[str] | None:
         if self._names is None:
             field = self._table.field(self.name)
             meta = field.metadata
@@ -266,8 +321,8 @@ class SparseAttributeSet(AttributeSet):
         field = self._table.field(self.name)
         meta = field.metadata
         assert meta is not None
-        ncol = meta[b"lenskit:ncol"]
-        ncol = int(ncol)
+        ncol = self._spec.vector_size
+        assert ncol is not None, "sparse vector has no size"
 
         return csr_array((values, indices, rowptr), shape=(len(col), ncol))
 
@@ -279,3 +334,18 @@ class SparseAttributeSet(AttributeSet):
             values=np.require(csr.data, requirements="W"),
             size=csr.shape,
         )
+
+
+def _replace_vectors(
+    arr: pa.FixedSizeListArray, mask: pa.BooleanArray, values: pa.FixedSizeListArray
+):
+    size = arr.type.list_size
+    assert values.type.list_size == size
+    assert pc.all(values.is_valid()).as_py()
+    in_valid = arr.is_valid()
+    out_valid = pc.or_(in_valid, mask)
+
+    value_mask = np.repeat(np.asarray(mask), size)
+    value_mask = pa.array(value_mask)
+    new_vals = pc.replace_with_mask(arr.values, value_mask, values.values)
+    return pa.FixedSizeListArray.from_arrays(new_vals, size, mask=pc.invert(out_valid))
