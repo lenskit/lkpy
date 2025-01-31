@@ -298,7 +298,7 @@ def test_item_vector(rng: np.random.Generator, ml_ratings: pd.DataFrame):
 
     ds = dsb.build()
     assert ds.entities("item").attribute("embedding").is_vector
-    assert ds.entities("item").attribute("embedding").names is None
+    assert ds.entities("item").attribute("embedding").dim_names is None
 
     arr = ds.entities("item").attribute("embedding").arrow()
     if isinstance(arr, pa.ChunkedArray):
@@ -335,13 +335,13 @@ def test_item_vector_names(rng: np.random.Generator, ml_ratings: pd.DataFrame):
 
     items = rng.choice(item_ids, 500, replace=False)
     vec = rng.standard_normal((500, 5))
-    dsb.add_vector_attribute("item", "embedding", items, vec, names=FRUITS)
+    dsb.add_vector_attribute("item", "embedding", items, vec, dim_names=FRUITS)
     va = dsb.schema.entities["item"].attributes["embedding"]
     assert va.layout == AttrLayout.VECTOR
 
     ds = dsb.build()
     assert ds.entities("item").attribute("embedding").is_vector
-    assert ds.entities("item").attribute("embedding").names == FRUITS
+    assert ds.entities("item").attribute("embedding").dim_names == FRUITS
 
     arr = ds.entities("item").attribute("embedding").arrow()
     if isinstance(arr, pa.ChunkedArray):
@@ -370,7 +370,7 @@ def test_item_vector_attr_subset(rng: np.random.Generator, ml_ratings: pd.DataFr
 
     items = rng.choice(item_ids, 500, replace=False)
     vec = rng.standard_normal((500, 5))
-    dsb.add_vector_attribute("item", "embedding", items, vec, names=FRUITS)
+    dsb.add_vector_attribute("item", "embedding", items, vec, dim_names=FRUITS)
     va = dsb.schema.entities["item"].attributes["embedding"]
     assert va.layout == AttrLayout.VECTOR
 
@@ -386,7 +386,7 @@ def test_item_vector_attr_subset(rng: np.random.Generator, ml_ratings: pd.DataFr
 
     ss_attrs = subset.attribute("embedding")
     assert ss_attrs.is_vector
-    assert ss_attrs.names == FRUITS
+    assert ss_attrs.dim_names == FRUITS
 
     assert np.all(ss_attrs.ids() == query_items)
     assert np.all(ss_attrs.numbers() == ds.items.numbers(query_items))
@@ -424,7 +424,7 @@ def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFram
     ig_vals = np.ones(len(ig_rows), np.int32)
 
     arr = csr_array((ig_vals, (ig_rows, ig_cols)))
-    dsb.add_vector_attribute("item", "genres", idx2, arr, names=gindex)
+    dsb.add_vector_attribute("item", "genres", idx2, arr, dim_names=gindex)
 
     ga = dsb.schema.entities["item"].attributes["genres"]
     assert ga.layout == AttrLayout.SPARSE
@@ -432,7 +432,7 @@ def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFram
     ds = dsb.build()
 
     assert ds.entities("item").attribute("genres").is_sparse
-    assert ds.entities("item").attribute("genres").names == gindex.values.tolist()
+    assert ds.entities("item").attribute("genres").dim_names == gindex.values.tolist()
 
     mat = ds.entities("item").attribute("genres").scipy()
     assert isinstance(mat, csr_array)

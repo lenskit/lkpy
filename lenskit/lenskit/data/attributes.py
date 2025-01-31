@@ -90,7 +90,7 @@ class AttributeSet:
             return self._selected.to_numpy()
 
     @property
-    def names(self) -> list[str] | None:
+    def dim_names(self) -> list[str] | None:
         """
         Get the names attached to this attribute's dimensions.
 
@@ -213,7 +213,7 @@ class VectorAttributeSet(AttributeSet):
     _size: int | None = None
 
     @property
-    def names(self) -> list[str] | None:
+    def dim_names(self) -> list[str] | None:
         if self._names is None:
             field = self._table.field(self.name)
             meta = field.metadata
@@ -286,14 +286,14 @@ class VectorAttributeSet(AttributeSet):
             ids = ids[mask.to_numpy(zero_copy_only=False)]
 
         mat = arr.values.to_numpy().reshape((len(arr), arr.type.list_size))
-        return pd.DataFrame(mat, index=ids, columns=self.names)
+        return pd.DataFrame(mat, index=ids, columns=self.dim_names)
 
 
 class SparseAttributeSet(AttributeSet):
     _names: list[str] | None = None
 
     @property
-    def names(self) -> list[str] | None:
+    def dim_names(self) -> list[str] | None:
         if self._names is None:
             field = self._table.field(self.name)
             meta = field.metadata

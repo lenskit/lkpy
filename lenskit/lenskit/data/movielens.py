@@ -347,7 +347,7 @@ class MLModernLoader(MLData):
                 "tag_genome",
                 genome.index.values,
                 genome.to_numpy(),
-                names=genome.columns,
+                dim_names=genome.columns,
             )
 
         return dsb.build()

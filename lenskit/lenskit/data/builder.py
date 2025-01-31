@@ -578,7 +578,7 @@ class DatasetBuilder:
         entities: IDSequence | tuple[IDSequence, ...],
         values: pa.Array[Any] | pa.ChunkedArray[Any] | np.ndarray[tuple[int, int], Any] | sparray,
         /,
-        names: ArrayLike | pd.Index[Any] | Sequence[Any] | None = None,
+        dim_names: ArrayLike | pd.Index[Any] | Sequence[Any] | None = None,
     ) -> None:
         """
         Add a vector attribute to a set of entities.
@@ -598,7 +598,7 @@ class DatasetBuilder:
             values:
                 The attribute values, as a fixed-length list array or a
                 two-dimensional NumPy array.
-            names:
+            dim_names:
                 The names for the dimensions of the array.
         """
         if name in self.schema.entities[cls].attributes:  # pragma: nocover
@@ -616,8 +616,8 @@ class DatasetBuilder:
         tbl_valid[nums.to_numpy()] = True
 
         metadata = {}
-        if names is not None:
-            metadata["lenskit:names"] = json.dumps(np.asarray(names).tolist())
+        if dim_names is not None:
+            metadata["lenskit:names"] = json.dumps(np.asarray(dim_names).tolist())
 
         if isinstance(values, sparray):
             vec_col = self._add_sparse_vector_attribute(cls, name, values, nums, e_tbl, tbl_valid)

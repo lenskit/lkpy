@@ -157,8 +157,8 @@ def test_20m_zip():
     assert "tag_genome" in ds.entities("item").attributes
     ga = ds.entities("item").attribute("tag_genome")
     assert ga.is_vector
-    assert ga.names is not None
-    assert ga.names[0] == "007"
+    assert ga.dim_names is not None
+    assert ga.dim_names[0] == "007"
     gdf = ga.pandas(missing="omit")
     assert len(gdf) >= 10_000
     assert len(gdf) < 20_000
@@ -225,8 +225,8 @@ def test_25m_zip():
     assert "tag_genome" in ds.entities("item").attributes
     ga = ds.entities("item").attribute("tag_genome")
     assert ga.is_vector
-    assert ga.names is not None
-    assert ga.names[0] == "007"
+    assert ga.dim_names is not None
+    assert ga.dim_names[0] == "007"
     gdf = ga.pandas(missing="omit")
     assert len(gdf) >= 10_000
     assert len(gdf) < 20_000
