@@ -335,7 +335,7 @@ def test_item_vector_names(rng: np.random.Generator, ml_ratings: pd.DataFrame):
 
     items = rng.choice(item_ids, 500, replace=False)
     vec = rng.standard_normal((500, 5))
-    dsb.add_vector_attribute("item", "embedding", items, vec, dim_names=FRUITS)
+    dsb.add_vector_attribute("item", "embedding", items, vec, names=FRUITS)
     va = dsb.schema.entities["item"].attributes["embedding"]
     assert va.layout == AttrLayout.VECTOR
 
@@ -370,7 +370,7 @@ def test_item_vector_attr_subset(rng: np.random.Generator, ml_ratings: pd.DataFr
 
     items = rng.choice(item_ids, 500, replace=False)
     vec = rng.standard_normal((500, 5))
-    dsb.add_vector_attribute("item", "embedding", items, vec, dim_names=FRUITS)
+    dsb.add_vector_attribute("item", "embedding", items, vec, names=FRUITS)
     va = dsb.schema.entities["item"].attributes["embedding"]
     assert va.layout == AttrLayout.VECTOR
 
@@ -424,7 +424,7 @@ def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFram
     ig_vals = np.ones(len(ig_rows), np.int32)
 
     arr = csr_array((ig_vals, (ig_rows, ig_cols)))
-    dsb.add_vector_attribute("item", "genres", idx2, arr, dim_names=gindex)
+    dsb.add_vector_attribute("item", "genres", idx2, arr, names=gindex)
 
     ga = dsb.schema.entities["item"].attributes["genres"]
     assert ga.layout == AttrLayout.SPARSE

@@ -49,6 +49,9 @@ class AttributeSet:
     """
 
     name: str
+    """
+    The name of the attribute.
+    """
     _spec: ColumnSpec
     _table: pa.Table
     _vocab: Vocabulary
