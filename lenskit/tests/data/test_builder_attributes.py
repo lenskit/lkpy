@@ -196,6 +196,32 @@ def test_item_list_series():
     assert np.all(gs == gs2)
 
 
+def test_item_list_random():
+    dsb = DatasetBuilder()
+
+    items = pd.read_csv(ml_test_dir / "movies.csv")
+    items = items.rename(columns={"movieId": "item_id"}).set_index("item_id")
+
+    genres = items["genres"].str.split("|")
+
+    genres = genres.sample(n=200)
+
+    dsb.add_entities("item", items.index.values)
+    dsb.add_list_attribute("item", "genres", genres.index.values, genres.tolist())
+
+    va = dsb.schema.entities["item"].attributes["genres"]
+    assert va.layout == AttrLayout.LIST
+
+    ds = dsb.build()
+
+    assert ds.entities("item").attribute("genres").is_list
+
+    gs = ds.entities("item").attribute("genres").pandas()
+
+    gcomp, gscomp = genres.align(gs, "left")
+    assert np.all(gcomp.apply(len) == gscomp.apply(len))
+
+
 def test_item_list_df():
     dsb = DatasetBuilder()
 
