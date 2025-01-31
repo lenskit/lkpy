@@ -50,3 +50,7 @@ documentation for details on these.
 
 Ratings have two attributes: ``rating`` and ``timestamp``.  The timestamps
 are parsed into Arrow/NumPy/Pandas timestamps.
+
+.. todo::
+
+    A future version of LensKit will likely introduce tags as first-class entities.
