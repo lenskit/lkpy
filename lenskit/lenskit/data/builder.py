@@ -564,18 +564,9 @@ class DatasetBuilder:
         assert isinstance(val_array, pa.ListArray)
 
         nums = nums.to_numpy()
-        tbl_valid = np.zeros(e_tbl.num_rows, dtype=np.bool_)
-        tbl_valid[nums] = True
-        tbl_valid = pa.array(tbl_valid)
 
         # we have to do surgery on the offsets and values
-        lengths = np.zeros(e_tbl.num_rows + 1, dtype=np.int32)
-        lengths[nums + 1] = val_array.value_lengths().fill_null(0).to_numpy()
-        offsets = np.cumsum(lengths, dtype=np.int32)
-
-        val_col = pa.ListArray.from_arrays(
-            pa.array(offsets), val_array.values, mask=pc.invert(tbl_valid)
-        )
+        val_col = _expand_and_align_list_array(e_tbl.num_rows, nums, val_array)
 
         self._tables[cls] = e_tbl.append_column(name, val_col)
         self.schema.entities[cls].attributes[name] = ColumnSpec(layout=AttrLayout.LIST)
@@ -650,16 +641,15 @@ class DatasetBuilder:
         valid: NDArray[np.bool_],
     ):
         csr: csr_array = values.tocsr()  # type: ignore
-        nrow, ncol = cast(tuple[int, int], csr.shape)
+        csr.sort_indices()
+        _nrow, ncol = cast(tuple[int, int], csr.shape)
 
-        rlen = np.zeros(table.num_rows + 1, csr.dtype)
-        rlen[rows.to_numpy() + 1] = np.diff(csr.indptr)
-        rowptr = np.cumsum(rlen, dtype=np.int32)
-
+        offsets = pa.array(np.require(csr.indptr, dtype=np.int32))
         obs_struct = pa.StructArray.from_arrays(
             [pa.array(csr.indices), pa.array(csr.data)], ["index", "value"]
         )
-        vec_col = pa.ListArray.from_arrays(pa.array(rowptr), obs_struct, mask=pc.invert(valid))
+        vec_col = pa.ListArray.from_arrays(offsets, obs_struct)
+        vec_col = _expand_and_align_list_array(table.num_rows, rows.to_numpy(), vec_col)
         self.schema.entities[cls].attributes[name] = ColumnSpec(
             layout=AttrLayout.SPARSE, vector_size=ncol
         )
@@ -691,21 +681,26 @@ class DatasetBuilder:
 
         # nulls: we actually need a list array for sparsity + storage
         size = values.type.list_size
+        values = values.cast(pa.list_(values.type.value_type))
+        col = _expand_and_align_list_array(table.num_rows, rows.to_numpy(), values)
 
-        sizes = np.zeros(table.num_rows + 1, dtype=np.int32)
-        sizes[1:][c_valid] = size
-        offsets = np.cumsum(sizes, dtype=np.int32)
-        assert offsets[-1] == size * np.sum(c_valid)
+        # sizes = np.zeros(table.num_rows + 1, dtype=np.int32)
+        # sizes[1:][c_valid] = size
+        # offsets = np.cumsum(sizes, dtype=np.int32)
+        # assert offsets[-1] == size * np.sum(c_valid)
 
-        # we need to reo-rder to match the order in the original table
-        ipos = np.argsort(rows)
-        if np.any(np.diff(ipos) < 0):
-            values = values.take(ipos)
+        # # We need to reorder to match the order in the original table.  The
+        # # argsort gives give us the order in which we need to consult rows in
+        # # the matrix, but realigned to match the order in the table, not the
+        # # order in the source vector.
+        # ipos = np.argsort(rows)
+        # if np.any(np.diff(ipos) < 0):
+        #     values = values.take(ipos)
 
-        vfilt = values.filter(v_valid)
-        assert len(vfilt) == np.sum(c_valid)
+        # vfilt = values.filter(v_valid)
+        # assert len(vfilt) == np.sum(c_valid)
 
-        col = pa.ListArray.from_arrays(pa.array(offsets), vfilt.values, mask=pa.array(~c_valid))
+        # col = pa.ListArray.from_arrays(pa.array(offsets), vfilt.values, mask=pa.array(~c_valid))
         assert np.all(col.is_valid().to_numpy(zero_copy_only=False) == c_valid)
         self.schema.entities[cls].attributes[name] = ColumnSpec(
             layout=AttrLayout.VECTOR, vector_size=size
@@ -761,6 +756,41 @@ class DatasetBuilder:
             return pa.nulls(len(tgt_ids), type=pa.int32())
         nums = np.require(index.get_indexer_for(tgt_ids), np.int32)
         return pc.if_else(nums >= 0, nums, None)
+
+
+def _expand_and_align_list_array(
+    out_len: int, rows: np.ndarray[int, np.dtype[np.int32]], lists: pa.ListArray
+) -> pa.ListArray:
+    """
+    Expand a list array, so that its lists are on the specified rows of the
+    output array, with other entries null.
+    """
+    assert pc.count_distinct(rows).as_py() == len(rows)
+    assert len(lists) == len(rows)
+    # only valid inputs
+    valid = lists.is_valid().to_numpy(zero_copy_only=False)
+    if not np.all(valid):
+        rows = rows[valid]
+        lists = lists.drop_null()
+
+    # reorder input to align with the output
+    order = np.argsort(rows)
+    if np.any(np.diff(order) < 0):
+        lists = lists.take(order)
+        rows = rows[order]
+
+    # now we do surgery — put the lengths into place, and
+    sizes = np.zeros(out_len + 1, dtype=np.int32)
+    sizes[rows + 1] = lists.value_lengths().to_numpy()
+    offsets = np.cumsum(sizes, dtype=np.int32)
+    offsets = pa.array(offsets)
+
+    mask = np.ones(out_len, dtype=np.bool_)
+    mask[rows] = False
+    mask = pa.array(mask)
+
+    # we can now construct the array — these offsets point into the source array
+    return pa.ListArray.from_arrays(offsets, lists.values, mask=mask)
 
 
 def _empty_rel_table(types: list[str]) -> pa.Table:

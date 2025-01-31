@@ -386,15 +386,19 @@ def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFram
 
     dsb.add_entities("item", movies.index)
 
-    genres = movies["genres"].str.split("|").reset_index().explode("genres", ignore_index=True)
+    genre_lists = movies["genres"].str.split("|")
+    genres = genre_lists.reset_index().explode("genres", ignore_index=True)
     gindex = pd.Index(np.unique(genres["genres"]))
 
-    ig_rows = movies.index.get_indexer_for(genres["item_id"])
+    ids = movies.index.values.copy()
+    rng.shuffle(ids)
+    idx2 = pd.Index(ids)
+    ig_rows = idx2.get_indexer_for(genres["item_id"])
     ig_cols = gindex.get_indexer_for(genres["genres"])
     ig_vals = np.ones(len(ig_rows), np.int32)
 
     arr = csr_array((ig_vals, (ig_rows, ig_cols)))
-    dsb.add_vector_attribute("item", "genres", movies.index, arr, dim_names=gindex)
+    dsb.add_vector_attribute("item", "genres", idx2, arr, dim_names=gindex)
 
     ga = dsb.schema.entities["item"].attributes["genres"]
     assert ga.layout == AttrLayout.SPARSE
@@ -407,13 +411,23 @@ def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFram
     mat = ds.entities("item").attribute("genres").scipy()
     assert isinstance(mat, csr_array)
     assert mat.nnz == arr.nnz
-    assert np.all(mat.indptr == arr.indptr)
+
+    m2 = ds.entities("item").select(ids=idx2.values).attribute("genres").scipy()
+    assert isinstance(mat, csr_array)
+    assert np.all(m2.indptr == arr.indptr)
 
     tensor = ds.entities("item").attribute("genres").torch()
     assert isinstance(tensor, torch.Tensor)
     assert tensor.is_sparse_csr
     assert len(tensor.values()) == arr.nnz
-    assert np.all(tensor.crow_indices().numpy() == arr.indptr)
 
     arr = ds.entities("item").attribute("genres").arrow()
     assert pa.types.is_list(arr.type)
+
+    for movie in rng.choice(movies.index.values, 50, replace=False):
+        row = ds.items.number(movie)
+        start = mat.indptr[row]
+        end = mat.indptr[row + 1]
+        cols = mat.indices[start:end]
+        mgs = gindex[cols].tolist()
+        assert mgs == genre_lists.loc[movie]
