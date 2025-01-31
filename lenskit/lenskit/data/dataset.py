@@ -82,18 +82,6 @@ class Dataset:
         Zero-copy conversions are used whenever possible, so client code **must
         not** modify returned data in-place.
 
-    .. todo::
-
-        Support for advanced rating situations is not yet supported:
-
-        * repeated ratings
-        * mixed implicit & explicit feedback
-        * later actions removing earlier ratings
-
-    .. todo::
-
-        Support for item and user content or metadata is not yet implemented.
-
     Args:
         data:
             The container for this dataset's data, or a function that will

@@ -110,9 +110,6 @@ def from_interactions_df(
     Create a dataset from a data frame of ratings or other user-item
     interactions.
 
-    .. todo::
-        Repeated interactions are not yet supported.
-
     Stability:
         Caller
     Args:
