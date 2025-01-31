@@ -101,7 +101,7 @@ class ML100KLoader(MLData):
     """
 
     def dataset(self) -> Dataset:
-        dsb = DatasetBuilder()
+        dsb = DatasetBuilder(self.version)
 
         genres = self.genres().tolist()
         movies = self.movies_df(genres)
@@ -185,7 +185,7 @@ class MLMLoader(MLData):
     """
 
     def dataset(self) -> Dataset:
-        dsb = DatasetBuilder()
+        dsb = DatasetBuilder(self.version)
 
         movies = self.movies_df()
 
@@ -314,7 +314,7 @@ class MLModernLoader(MLData):
     """
 
     def dataset(self) -> Dataset:
-        dsb = DatasetBuilder()
+        dsb = DatasetBuilder(self.version)
 
         movies = self.movies_df()
 
