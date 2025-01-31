@@ -17,11 +17,17 @@ guide to how to use LensKit for research, education, and other purposes.
     :maxdepth: 1
 
     principles
-    data
-    data-model
-    item-lists
     queries
     pipeline
+
+.. toctree::
+    :caption: Data
+    :maxdepth: 1
+
+    data/index
+    data/model
+    data/item-lists
+    data/datasets
 
 .. toctree::
     :caption: Components
