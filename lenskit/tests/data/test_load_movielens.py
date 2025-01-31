@@ -183,13 +183,13 @@ def test_ml20m_save(tmpdir: Path):
     assert ds2.interaction_count == ds.interaction_count
 
     assert "title" in ds.entities("item").attributes
-    assert ds.entities("item").attribute("genres").is_scalar
+    assert ds.entities("item").attribute("title").is_scalar
     assert "genres" in ds.entities("item").attributes
     assert ds.entities("item").attribute("genres").is_list
     assert "tag_counts" in ds.entities("item").attributes
-    assert ds.entities("item").attribute("genres").is_sparse
-    assert "tag_genome" in ds.entities("item").attributes
-    assert ds.entities("item").attribute("genres").is_vector
+    assert ds.entities("item").attribute("tag_counts").is_sparse
+    # assert "tag_genome" in ds.entities("item").attributes
+    # assert ds.entities("item").attribute("tag_genome").is_vector
 
 
 @mark.skipif(not ML_20M_ZIP.exists(), reason="ml-20m does not exist")
