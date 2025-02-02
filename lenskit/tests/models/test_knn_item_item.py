@@ -76,7 +76,7 @@ def test_ii_config():
     cfg = model.dump_config()
     print(cfg)
     assert cfg["feedback"] == "explicit"
-    assert cfg["k"] == 30
+    assert cfg["max_nbrs"] == 30
 
 
 def test_ii_train():
