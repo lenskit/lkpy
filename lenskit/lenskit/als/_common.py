@@ -13,7 +13,7 @@ from typing import Literal, TypeAlias
 import numpy as np
 import structlog
 import torch
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 from typing_extensions import NamedTuple, override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
@@ -30,9 +30,12 @@ class ALSConfig(BaseModel):
     Configuration for ALS scorers.
     """
 
-    features: int = 50
+    embedding_size: int = Field(
+        default=50, validation_alias=AliasChoices("embedding_size", "features")
+    )
     """
-    The numer of latent features to learn.
+    The dimension of user and item embeddings (number of latent features to
+    learn).
     """
     epochs: int = 10
     """
@@ -186,7 +189,7 @@ class ALSBase(IterativeTraining, Component[ItemList], ABC):
         Args:
             ratings: the ratings data frame.
         """
-        log = self.logger = self.logger.bind(features=self.config.features)
+        log = self.logger = self.logger.bind(features=self.config.embedding_size)
 
         assert self.user_features_ is not None
         assert self.item_features_ is not None
@@ -236,11 +239,11 @@ class ALSBase(IterativeTraining, Component[ItemList], ABC):
         Initialize the model parameters at the beginning of training.
         """
         self.logger.debug("initializing item matrix")
-        self.item_features_ = self.initial_params(data.n_items, self.config.features, rng)
+        self.item_features_ = self.initial_params(data.n_items, self.config.embedding_size, rng)
         self.logger.debug("|Q|: %f", torch.norm(self.item_features_, "fro"))
 
         self.logger.debug("initializing user matrix")
-        self.user_features_ = self.initial_params(data.n_users, self.config.features, rng)
+        self.user_features_ = self.initial_params(data.n_users, self.config.embedding_size, rng)
         self.logger.debug("|P|: %f", torch.norm(self.user_features_, "fro"))
 
     @abstractmethod
