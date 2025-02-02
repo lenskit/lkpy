@@ -189,6 +189,7 @@ the pipeline, you will call :py:meth:`~lenskit.pipeline.Pipeline.train`::
 
 See :ref:`pipeline` for more details on pipelines and how you can reconfigure
 them for very different ways of turning scoring models into full recommenders.
+This replaces the old ``fit`` method on algorithm objects.
 
 .. note::
 
@@ -196,6 +197,8 @@ them for very different ways of turning scoring models into full recommenders.
     ambiguous and promotes confusion about very different things.  Instead, we
     have “pipelines” consisting of ”components”, some of which may be ”models”
     (for scoring, ranking, etc.).
+
+.. _migrate-component-config:
 
 Configuration Components
 ........................
@@ -233,11 +236,6 @@ when you call :py:func:`~lenskit.pipeline.topn_pipeline`).
     The input specifying the user identifier is now called a ``query``, in order
     to support recommendation tasks beyond simple user-based recommendation such
     as context-based or session-based recommendation.
-
-.. note::
-
-    We are considering adding a more ergonomic interface to obtain
-    recommendations from pipelines.
 
 Batch Inference
 ---------------
@@ -282,3 +280,39 @@ functionality.  See :ref:`evaluation` for details on metrics and analysis.
 
 :py:mod:`lenskit.metrics.RunAnalysis` replaces the old ``RecListAnalysis``, and
 provides better defaults (e.g. how users without recommendations are handled).
+
+Model Configuration Changes
+---------------------------
+
+In line with the new component configuration framework (see
+:ref:`migrate-component-config`) and to make configuration more consistent
+between models, we have changed several configuration options and defaults.
+
+These changes for the most popular models are below:
+
+Cross-Model Standardization
+...........................
+
+*   All configuration options must be named, no positional options are accepted.
+*   Any model that uses training epochs now uses the configuration option
+    ``epochs`` (was previously ``iterations`` on some models).
+*   Latent-feature models use the configuration option ``embedding_size`` to
+    declare the embedding size.
+
+ALS
+...
+
+The ALS models have the following configuration changes:
+
+*   ``epochs`` and ``embedding_size`` as noted above.  ``features`` is accepted
+    as an input alias for ``embedding_size``.
+*   ``save_user_embeddings`` is now ``user_embeddings``, with three options:
+    ``True``, ``False``, and ``"prefer"``.
+
+k-NN
+....
+
+The k-NN models have the following changes:
+
+*   Max neighbors is now called ``max_nbrs`` instead of ``nnbrs`` (``k`` is
+    accepted as an input alias).
