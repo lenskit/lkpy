@@ -8,7 +8,7 @@
 k-NN recommender models.
 """
 
-from .item import ItemKNNScorer
-from .user import UserKNNScorer
+from .item import ItemKNNConfig, ItemKNNScorer
+from .user import UserKNNConfig, UserKNNScorer
 
-__all__ = ["ItemKNNScorer", "UserKNNScorer"]
+__all__ = ["ItemKNNScorer", "ItemKNNConfig", "UserKNNScorer", "UserKNNConfig"]
