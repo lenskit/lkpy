@@ -36,7 +36,9 @@ class BiasedMFScorer(ALSBase):
     minimize the regularized squared reconstruction error of the ratings matrix.
 
     See the base class :class:`ALSBase` for documentation on the estimated
-    parameters you can extract from a trained model.
+    parameters you can extract from a trained model. See
+    :class:`BiasedMFConfig` and :class:`ALSConfig` for the configuration
+    options for this component.
 
     Stability:
         Caller

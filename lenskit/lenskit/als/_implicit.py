@@ -40,12 +40,14 @@ class ImplicitMFScorer(ALSBase):
     values, these will be used as the 'confidence' values; otherwise, confidence
     will be 1 for every rated item.
 
-    See the base class :class:`.MFPredictor` for documentation on the estimated
-    parameters you can extract from a trained model.
-
     With weight :math:`w`, this function decomposes the matrix
     :math:`\\mathbb{1}^* + Rw`, where :math:`\\mathbb{1}^*` is an :math:`m
     \\times n` matrix of all 1s.
+
+    See the base class :class:`ALSBase` for documentation on the estimated
+    parameters you can extract from a trained model. See
+    :class:`ImplicitMFConfig` and :class:`ALSConfig` for the configuration
+    options for this component.
 
     .. versionchanged:: 2025.1
         ``ImplicitMFScorer`` no longer supports multiple training methods. It always uses
