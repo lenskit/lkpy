@@ -15,7 +15,7 @@ import warnings
 
 import numpy as np
 import torch
-from pydantic import BaseModel, PositiveFloat, PositiveInt, field_validator
+from pydantic import AliasChoices, BaseModel, Field, PositiveFloat, PositiveInt, field_validator
 from scipy.sparse import csr_array
 from typing_extensions import Optional, override
 
@@ -37,7 +37,7 @@ MAX_BLOCKS = 1024
 class ItemKNNConfig(BaseModel, extra="forbid"):
     "Configuration for :class:`ItemKNNScorer`."
 
-    k: PositiveInt = 20
+    max_nbrs: PositiveInt = Field(20, validation_alias=AliasChoices("max_nbrs", "k"))
     """
     The maximum number of neighbors for scoring each item.
     """
@@ -252,7 +252,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         scorable = sizes >= self.config.min_nbrs
 
         # fast-path neighborhoods that fit within max neighbors
-        fast = sizes <= self.config.k
+        fast = sizes <= self.config.max_nbrs
         ti_fast_mask = ti_mask.copy()
         ti_fast_mask[ti_mask] = scorable & fast
 
@@ -276,8 +276,8 @@ class ItemKNNScorer(Component[ItemList], Trainable):
             ti_slow_mask[ti_mask] = ~fast
 
             slow_mat = torch.from_numpy(slow_mat.toarray())
-            slow_trimmed, slow_inds = torch.topk(slow_mat, self.config.k)
-            assert slow_trimmed.shape == (n_slow, self.config.k)
+            slow_trimmed, slow_inds = torch.topk(slow_mat, self.config.max_nbrs)
+            assert slow_trimmed.shape == (n_slow, self.config.max_nbrs)
             if self.config.explicit:
                 svals = torch.from_numpy(ri_vals)[slow_inds]
                 assert svals.shape == slow_trimmed.shape

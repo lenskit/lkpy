@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 import structlog
 import torch
-from pydantic import BaseModel, PositiveFloat, PositiveInt, field_validator
+from pydantic import AliasChoices, BaseModel, Field, PositiveFloat, PositiveInt, field_validator
 from scipy.sparse import csc_array
 from typing_extensions import NamedTuple, Optional, override
 
@@ -37,7 +37,7 @@ _log = get_logger(__name__)
 class UserKNNConfig(BaseModel, extra="forbid"):
     "Configuration for :class:`ItemKNNScorer`."
 
-    k: PositiveInt = 20
+    max_nbrs: PositiveInt = Field(20, validation_alias=AliasChoices("max_nbrs", "k"))
     """
     The maximum number of neighbors for scoring each item.
     """
@@ -207,7 +207,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
             kn_idxs,
             kn_sims,
             self.user_ratings_,
-            self.config.k,
+            self.config.max_nbrs,
             self.config.min_nbrs,
             self.config.explicit,
         )
