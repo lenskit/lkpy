@@ -13,7 +13,7 @@ from typing import Literal, TypeAlias
 import numpy as np
 import structlog
 import torch
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 from typing_extensions import NamedTuple, override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
@@ -30,9 +30,12 @@ class ALSConfig(BaseModel):
     Configuration for ALS scorers.
     """
 
-    features: int = 50
+    embedding_size: int = Field(
+        default=50, validation_alias=AliasChoices("embedding_size", "features")
+    )
     """
-    The numer of latent features to learn.
+    The dimension of user and item embeddings (number of latent features to
+    learn).
     """
     epochs: int = 10
     """
@@ -42,9 +45,14 @@ class ALSConfig(BaseModel):
     """
     L2 regularization strength.
     """
-    save_user_features: bool = True
+    user_embeddings: bool | Literal["prefer"] = True
     """
-    Whether to retain user feature values after training.
+    Whether to retain user embeddings after training.  If ``True``, they are
+    retained, but are ignored if the query has historical items; if ``False``,
+    they are not. If set to ``"prefer"``, then the user embeddings from training
+    time are used even if the query has a user history.  This makes inference
+    faster when histories only consist of the user's items from the training
+    set.
     """
 
     @property
@@ -181,7 +189,7 @@ class ALSBase(IterativeTraining, Component[ItemList], ABC):
         Args:
             ratings: the ratings data frame.
         """
-        log = self.logger = self.logger.bind(features=self.config.features)
+        log = self.logger = self.logger.bind(features=self.config.embedding_size)
 
         assert self.user_features_ is not None
         assert self.item_features_ is not None
@@ -205,7 +213,7 @@ class ALSBase(IterativeTraining, Component[ItemList], ABC):
             log.debug("finished epoch (|ΔP|=%.3f, |ΔQ|=%.3f)", du, di)
             yield {"deltaP": du, "deltaQ": di}
 
-        if not self.config.save_user_features:
+        if not self.config.user_embeddings:
             self.user_features_ = None
             self.user_ = None
 
@@ -231,11 +239,11 @@ class ALSBase(IterativeTraining, Component[ItemList], ABC):
         Initialize the model parameters at the beginning of training.
         """
         self.logger.debug("initializing item matrix")
-        self.item_features_ = self.initial_params(data.n_items, self.config.features, rng)
+        self.item_features_ = self.initial_params(data.n_items, self.config.embedding_size, rng)
         self.logger.debug("|Q|: %f", torch.norm(self.item_features_, "fro"))
 
         self.logger.debug("initializing user matrix")
-        self.user_features_ = self.initial_params(data.n_users, self.config.features, rng)
+        self.user_features_ = self.initial_params(data.n_users, self.config.embedding_size, rng)
         self.logger.debug("|P|: %f", torch.norm(self.user_features_, "fro"))
 
     @abstractmethod
@@ -268,7 +276,11 @@ class ALSBase(IterativeTraining, Component[ItemList], ABC):
 
         u_offset = None
         u_feat = None
-        if query.user_items is not None and len(query.user_items) > 0:
+        if (
+            query.user_items is not None
+            and len(query.user_items) > 0
+            and self.config.user_embeddings != "prefer"
+        ):
             u_feat, u_offset = self.new_user_embedding(user_num, query.user_items)
 
         if u_feat is None:

@@ -44,7 +44,7 @@ def test_als_basic_build():
     assert algo.user_features_.shape == (3, 20)
     assert algo.item_features_.shape == (3, 20)
 
-    assert algo.config.features == 20
+    assert algo.config.embedding_size == 20
     assert len(algo.users_) == 3
     assert len(algo.items_) == 3
 
@@ -181,7 +181,7 @@ def test_als_predict_no_user_features_basic(rng: np.random.Generator, ml_ds: Dat
     assert algo.users_ is not None
     assert algo.user_features_ is not None
 
-    algo_no_user_features = BiasedMFScorer(features=5, epochs=10, save_user_features=False)
+    algo_no_user_features = BiasedMFScorer(features=5, epochs=10, user_embeddings=False)
     algo_no_user_features.train(ml_ds)
 
     assert algo_no_user_features.user_features_ is None
@@ -213,7 +213,7 @@ def test_als_train_large(ml_ratings, ml_ds: Dataset):
     assert algo.user_features_ is not None
 
     assert algo.bias_.global_bias == approx(ml_ratings.rating.mean())
-    assert algo.config.features == 20
+    assert algo.config.embedding_size == 20
     assert len(algo.items_) == ml_ds.item_count
     assert len(algo.users_) == ml_ds.user_count
 

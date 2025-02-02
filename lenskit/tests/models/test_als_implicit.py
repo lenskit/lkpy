@@ -250,7 +250,7 @@ def test_als_predict_no_user_features_basic(ml_ratings: pd.DataFrame, ml_ds: Dat
 
     user_data = ml_ds.user_row(u)
 
-    algo_no_user_features = ImplicitMFScorer(features=5, epochs=10, save_user_features=False)
+    algo_no_user_features = ImplicitMFScorer(features=5, epochs=10, user_embeddings=False)
     algo_no_user_features.train(ml_ds)
     query = RecQuery(u, user_data)
     preds_no_user_features = algo_no_user_features(query, ItemList(items))

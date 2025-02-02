@@ -17,6 +17,7 @@ from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
+from pydantic import AliasChoices, Field
 from typing_extensions import Literal, override
 
 from lenskit.basic import BiasModel, Damping
@@ -39,7 +40,14 @@ _log = logging.getLogger(__name__)
 
 @dataclass
 class BiasedSVDConfig:
-    features: int = 50
+    embedding_size: int = Field(
+        default=50, validation_alias=AliasChoices("embedding_size", "features")
+    )
+    """
+    The dimension of user and item embeddings (number of latent features to
+    learn).
+    """
+
     damping: Damping = 5
     algorithm: Literal["arpack", "randomized"] = "randomized"
     n_iter: int = 5
@@ -93,7 +101,7 @@ class BiasedSVDScorer(Component[ItemList], Trainable):
         r_mat = r_mat.tocsr()
 
         self.factorization_ = TruncatedSVD(
-            self.config.features, algorithm=self.config.algorithm, n_iter=self.config.n_iter
+            self.config.embedding_size, algorithm=self.config.algorithm, n_iter=self.config.n_iter
         )
         _log.info("[%s] training SVD (k=%d)", timer, self.factorization_.n_components)  # type: ignore
         Xt = self.factorization_.fit_transform(r_mat)  # type: ignore

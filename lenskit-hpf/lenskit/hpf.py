@@ -16,7 +16,7 @@ import logging
 
 import hpfrec
 import numpy as np
-from pydantic import BaseModel, JsonValue
+from pydantic import AliasChoices, BaseModel, Field, JsonValue
 from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
@@ -28,7 +28,13 @@ _logger = logging.getLogger(__name__)
 
 class HPFConfig(BaseModel, extra="allow"):
     __pydantic_extra__: dict[str, JsonValue]
-    features: int = 50
+    embedding_size: int = Field(
+        default=50, validation_alias=AliasChoices("embedding_size", "features")
+    )
+    """
+    The dimension of user and item embeddings (number of latent features to
+    learn).
+    """
 
 
 class HPFScorer(Component[ItemList], Trainable):
@@ -73,9 +79,11 @@ class HPFScorer(Component[ItemList], Trainable):
             }
         )[["UserId", "ItemId", "Count"]]
 
-        hpf = hpfrec.HPF(self.config.features, reindex=False, **self.config.__pydantic_extra__)  # type: ignore
+        hpf = hpfrec.HPF(
+            self.config.embedding_size, reindex=False, **self.config.__pydantic_extra__
+        )  # type: ignore
 
-        _logger.info("fitting HPF model with %d features", self.config.features)
+        _logger.info("fitting HPF model with %d features", self.config.embedding_size)
         hpf.fit(log)
 
         self.users_ = data.users
