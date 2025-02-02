@@ -42,9 +42,14 @@ class ALSConfig(BaseModel):
     """
     L2 regularization strength.
     """
-    save_user_features: bool = True
+    user_embeddings: bool | Literal["prefer"] = True
     """
-    Whether to retain user feature values after training.
+    Whether to retain user embeddings after training.  If ``True``, they are
+    retained, but are ignored if the query has historical items; if ``False``,
+    they are not. If set to ``"prefer"``, then the user embeddings from training
+    time are used even if the query has a user history.  This makes inference
+    faster when histories only consist of the user's items from the training
+    set.
     """
 
     @property
@@ -205,7 +210,7 @@ class ALSBase(IterativeTraining, Component[ItemList], ABC):
             log.debug("finished epoch (|ΔP|=%.3f, |ΔQ|=%.3f)", du, di)
             yield {"deltaP": du, "deltaQ": di}
 
-        if not self.config.save_user_features:
+        if not self.config.user_embeddings:
             self.user_features_ = None
             self.user_ = None
 
@@ -268,7 +273,11 @@ class ALSBase(IterativeTraining, Component[ItemList], ABC):
 
         u_offset = None
         u_feat = None
-        if query.user_items is not None and len(query.user_items) > 0:
+        if (
+            query.user_items is not None
+            and len(query.user_items) > 0
+            and self.config.user_embeddings != "prefer"
+        ):
             u_feat, u_offset = self.new_user_embedding(user_num, query.user_items)
 
         if u_feat is None:
