@@ -10,11 +10,19 @@ _log = get_logger(__name__)
 
 
 @overload
-def split_global_time(data: Dataset, time: str | dt.datetime) -> TTSplit: ...
-@overload
-def split_global_time(data: Dataset, time: Sequence[str | dt.datetime]) -> list[TTSplit]: ...
 def split_global_time(
-    data: Dataset, time: str | dt.datetime | Sequence[str | dt.datetime]
+    data: Dataset, time: str | dt.datetime, end: str | dt.datetime | None = None
+) -> TTSplit: ...
+@overload
+def split_global_time(
+    data: Dataset,
+    time: Sequence[str | dt.datetime],
+    end: str | dt.datetime | None = None,
+) -> list[TTSplit]: ...
+def split_global_time(
+    data: Dataset,
+    time: str | dt.datetime | Sequence[str | dt.datetime],
+    end: str | dt.datetime | None = None,
 ) -> TTSplit | list[TTSplit]:
     """
     Global temporal train-test split.  This splits a data set into train/test
@@ -32,6 +40,8 @@ def split_global_time(
         time:
             Time or sequence of times at which to split.  Strings must be in ISO
             format.
+        end:
+            A final cutoff time for the testing data.
 
     Returns:
         The data splits.
@@ -65,13 +75,16 @@ def split_global_time(
         train_build = DatasetBuilder(data)
         train_build.filter_interactions(iname, max_time=t)
 
+        t2 = end
         if i + 1 < len(times):
             t2 = times[i + 1]
+
+        if t2 is None:
+            test = matrix[mask]
+        else:
             tlog = tlog.bind(test_end=t2)
             tlog.debug("filtering test data for upper bound")
             test = matrix[mask & (ts_col < t2)]
-        else:
-            test = matrix[mask]
 
         tlog.debug("building training data set")
         train_ds = train_build.build()
