@@ -10,6 +10,7 @@ Interfaces and support for model training.
 # pyright: strict
 from __future__ import annotations
 
+import os
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -61,6 +62,33 @@ class TrainingOptions:
             training procesess.
         """
         return random_generator(self.rng)
+
+    @property
+    def configured_device(self, *, gpu_default: bool = False) -> str:
+        """
+        Get the configured device, consulting environment variables and defaults
+        if necessary.  It looks for a device in the following order:
+
+        1. The :attr:`device`, if specified on this object.
+        2. The :envvar:`LK_DEVICE` environment variable.
+        3. If CUDA is enabled and ``gpu_default`` is ``True``, return `"cuda"`
+        4. The CPU.
+
+        Args:
+            gpu_default:
+                Whether a CUDA GPU should be preferred if it is available and no
+                device has been specified.
+        """
+        import torch
+
+        if self.device is not None:
+            return self.device
+        elif dev := os.environ.get("LK_DEVICE", None):
+            return dev
+        elif gpu_default and torch.cuda.is_available():
+            return "cuda"
+        else:
+            return "cpu"
 
 
 @runtime_checkable
