@@ -14,6 +14,7 @@ import os
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass
+from time import perf_counter
 from typing import Protocol, runtime_checkable
 
 import numpy as np
@@ -172,10 +173,14 @@ class IterativeTraining(ABC, Trainable):
         loop = self.training_loop(data, options)
         log.debug("beginning training iterations")
         with item_progress("Training iterations", total=n) as pb:
+            start = perf_counter()
             for i, metrics in enumerate(loop, 1):
                 metrics = metrics or {}
-                log.info("finished epoch", epoch=i, **metrics)
+                now = perf_counter()
+                elapsed = now - start
+                log.info("finished epoch", time="{:.1}s".format(elapsed), epoch=i, **metrics)
                 self.trained_epochs += 1
+                start = now
                 pb.update()
 
         log.info("model training finished", epochs=self.trained_epochs)
