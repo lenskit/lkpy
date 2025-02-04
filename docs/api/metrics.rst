@@ -42,6 +42,16 @@ Top-N Accuracy
     ~lenskit.metrics.Recall
     ~lenskit.metrics.RecipRank
 
+List and Item Properties
+------------------------
+
+.. autosummary::
+    :toctree:
+    :nosignatures:
+    :caption: List and Item Properties
+
+    ~lenskit.metrics.MeanPopRank
+
 Prediction Accuracy
 -------------------
 
