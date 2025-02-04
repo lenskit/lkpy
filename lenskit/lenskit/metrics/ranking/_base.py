@@ -27,6 +27,17 @@ class RankingMetricBase(Metric):
             raise ValueError("k must be positive or None")
         self.k = k
 
+    @property
+    def label(self):
+        """
+        Default name — class name, optionally @K.
+        """
+        name = self.__class__.__name__
+        if self.k is not None:
+            return f"{name}@{self.k}"
+        else:
+            return name
+
     def truncate(self, items: ItemList):
         """
         Truncate an item list if it is longer than :attr:`k`.

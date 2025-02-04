@@ -61,13 +61,6 @@ class MeanPopRank(ListMetric, RankingMetricBase):
         ranks /= len(pos)
         self.item_ranks = ranks.reindex(counts.index, fill_value=0)
 
-    @property
-    def label(self):
-        if self.k is not None:
-            return f"MinPopRank@{self.k}"
-        else:
-            return "MinPopRank"
-
     @override
     def measure_list(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)

@@ -19,6 +19,14 @@ def test_mpr_empty_none(ml_ds: Dataset):
     assert np.isnan(mpr)
 
 
+def test_mpr_label(ml_ds: Dataset):
+    mpr = MeanPopRank(ml_ds)
+    assert mpr.label == "MeanPopRank"
+
+    mpr = MeanPopRank(ml_ds, 10)
+    assert mpr.label == "MeanPopRank@10"
+
+
 def test_mpr_single_max(ml_ds: Dataset):
     items = ml_ds.item_stats().sort_values("count", ascending=False)
     mpr = _test_mpr(ml_ds, [items.index[0]], [1, 3])
