@@ -63,7 +63,6 @@ class TrainingOptions:
         """
         return random_generator(self.rng)
 
-    @property
     def configured_device(self, *, gpu_default: bool = False) -> str:
         """
         Get the configured device, consulting environment variables and defaults
