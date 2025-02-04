@@ -53,3 +53,15 @@ or graded relevance scores).
     ~lenskit.metrics.RBP
     ~lenskit.metrics.NDCG
     ~lenskit.metrics.DCG
+
+Beyond Accuracy
+---------------
+
+These metrics measure **non-accuracy** properties of recommendation lists, such
+as popularity/obscurity or diversity.
+
+
+.. autosummary::
+    :nosignatures:
+
+    ~lenskit.metrics.MeanPopRank
