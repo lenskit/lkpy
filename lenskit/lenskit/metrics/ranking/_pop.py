@@ -31,6 +31,10 @@ class MeanPopRank(ListMetric, RankingMetricBase):
     .. math::
         \mathcal{M}(L) = \frac{1}{|L|} \sum_{i \in L} q_i
 
+    This metric is based on the ``obscurity'' metric of
+    :cite:t:`ekstrandSturgeonCoolKids2017` and the popularity-based item novelty
+    metric of :cite:t:`vargasRankRelevanceNovelty2011`.
+
     Stability:
         Caller
     """
