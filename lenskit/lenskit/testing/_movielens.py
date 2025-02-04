@@ -3,7 +3,7 @@ MovieLens test fixtures and data marks.
 """
 
 import os
-from typing import Generator
+from typing import Generator, NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -21,12 +21,18 @@ from lenskit.splitting import TTSplit, simple_test_pair
 
 _log = get_logger("lenskit.testing")
 
+
 ml_test_dir = here("data/ml-latest-small")
 ml_100k_zip = here("data/ml-100k.zip")
 
 ml_test: Dataset = Dataset(lambda: load_movielens(ml_test_dir))
 
 retrain = os.environ.get("LK_TEST_RETRAIN")
+
+
+class DemoRecs(NamedTuple):
+    split: TTSplit
+    recommendations: ItemListCollection[UserIDKey]
 
 
 @pytest.fixture(scope="session")
@@ -98,7 +104,7 @@ def ml_100k() -> Generator[pd.DataFrame, None, None]:
 
 
 @pytest.fixture(scope="session")
-def demo_recs() -> tuple[TTSplit, ItemListCollection[UserIDKey]]:
+def demo_recs() -> DemoRecs:
     """
     A demo set of train, test, and recommendation data.
     """
@@ -113,4 +119,4 @@ def demo_recs() -> tuple[TTSplit, ItemListCollection[UserIDKey]]:
     pipe.train(split.train)
 
     recs = recommend(pipe, list(split.test.keys()), 500, n_jobs=1, rng=rng)
-    return split, recs
+    return DemoRecs(split, recs)
