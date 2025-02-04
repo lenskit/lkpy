@@ -178,7 +178,7 @@ class IterativeTraining(ABC, Trainable):
                 metrics = metrics or {}
                 now = perf_counter()
                 elapsed = now - start
-                log.info("finished epoch", time="{:.1}s".format(elapsed), epoch=i, **metrics)
+                log.info("finished epoch", time="{:.1f}s".format(elapsed), epoch=i, **metrics)
                 self.trained_epochs += 1
                 start = now
                 pb.update()
