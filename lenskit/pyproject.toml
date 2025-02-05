@@ -54,6 +54,9 @@ homepage = "https://lenskit.org"
 documentation = "https://lkpy.lenskit.org"
 source = "https://github.com/lenskit/lkpy"
 
+[project.scripts]
+lenskit = "lenskit.cli:lenskit"
+
 # configure build tools
 [tool.hatch.metadata]
 allow-direct-references = true
