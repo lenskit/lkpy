@@ -9,42 +9,50 @@ from typing import TextIO
 import pyarrow.compute as pc
 from humanize import metric, naturalsize
 from prettytable import PrettyTable, TableStyle
+from structlog.stdlib import BoundLogger
+
+from lenskit.logging import get_logger
 
 from .container import DataContainer
 from .dataset import Dataset
+
+_log = get_logger(__name__)
 
 
 def save_stats(data: Dataset | DataContainer, out: str | Path | PathLike[str] | TextIO):
     """
     Save dataset statistics to a file or output stream.
     """
-
     if isinstance(data, Dataset):
         data = data._data
 
+    log = _log.bind()
+
     if hasattr(out, "write"):
-        _write_stats(data, out)  # type: ignore
+        _write_stats(data, out, log)  # type: ignore
     else:
+        log = log.bind(file=str(out))
         with open(out, "wt") as stats:  # type: ignore
-            _write_stats(data, stats)
+            _write_stats(data, stats, log)
 
 
-def _write_stats(data: DataContainer, out: TextIO):
+def _write_stats(data: DataContainer, out: TextIO, log: BoundLogger):
     if data.schema.name:
         print("# Summary of", data.schema.name, file=out)
     else:
         print("# Summary of Unnamed Data", file=out)
     print(file=out)
 
-    _write_entities(data, out)
-    _write_relationships(data, out)
+    _write_entities(data, out, log)
+    _write_relationships(data, out, log)
 
     print("## Data Tables\n", file=out)
     print(table_stats(data), file=out)
 
 
-def _write_entities(data: DataContainer, out: TextIO):
+def _write_entities(data: DataContainer, out: TextIO, log: BoundLogger):
     print("## Entities\n", file=out)
+    log.debug("summarizing entities")
     for name, schema in data.schema.entities.items():
         print(
             "- {} ({}, {} attributes)".format(
@@ -55,11 +63,13 @@ def _write_entities(data: DataContainer, out: TextIO):
     print(file=out)
 
     for name in data.schema.entities.keys():
-        _write_entity_info(data, name, out)
+        _write_entity_info(data, name, out, log)
 
 
-def _write_entity_info(data: DataContainer, name: str, out: TextIO):
+def _write_entity_info(data: DataContainer, name: str, out: TextIO, log: BoundLogger):
     tbl = data.tables[name]
+    log = log.bind(entity=name)
+    log.debug("describing entity")
     print(f"### Entity `{name}`\n", file=out)
     print("- {:,d} instances\n".format(tbl.num_rows), file=out)
 
@@ -76,8 +86,9 @@ def _write_entity_info(data: DataContainer, name: str, out: TextIO):
     print(file=out)
 
 
-def _write_relationships(data: DataContainer, out: TextIO):
+def _write_relationships(data: DataContainer, out: TextIO, log: BoundLogger):
     print("## Relationships\n", file=out)
+    log.debug("summarizing relationships")
     for name, schema in data.schema.relationships.items():
         print(
             "- {} ({}, {} attributes{})".format(
@@ -91,11 +102,13 @@ def _write_relationships(data: DataContainer, out: TextIO):
     print(file=out)
 
     for name in data.schema.relationships.keys():
-        _write_relationship_info(data, name, out)
+        _write_relationship_info(data, name, out, log)
 
 
-def _write_relationship_info(data: DataContainer, name: str, out: TextIO):
+def _write_relationship_info(data: DataContainer, name: str, out: TextIO, log: BoundLogger):
     tbl = data.tables[name]
+    log = log.bind(relationship=name)
+    log.debug("describing relationship")
     print(f"### Relationship `{name}`\n", file=out)
     print("- {:,d} records\n".format(tbl.num_rows), file=out)
 
@@ -108,7 +121,7 @@ def _write_relationship_info(data: DataContainer, name: str, out: TextIO):
     pt.custom_format["Unique Count"] = lambda _, v: "{:,d}".format(v)
     for e_name, e_cls in data.schema.relationships[name].entities.items():
         e_cls = e_cls or e_name
-        e_col = tbl.column(e_name)
+        e_col = tbl.column(e_name + "_num")
         pt.add_row([e_name, e_cls, pc.count_distinct(e_col).as_py()])
 
     print("#### Attributes\n", file=out)
