@@ -4,6 +4,7 @@ from numpy.random import Generator, SeedSequence
 
 from hypothesis import assume, given
 from hypothesis import strategies as st
+from pytest import skip
 
 from lenskit.data.query import RecQuery
 from lenskit.random import derivable_rng, load_seed, make_seed
@@ -65,6 +66,11 @@ def test_load_seed_json():
 
 
 def test_load_seed_yaml():
+    try:
+        import yaml
+    except ImportError:
+        skip("pyyaml not installed")
+
     file = Path(__file__).parent / "config.yaml"
     seed = load_seed(file, "random_seed")
     assert seed.entropy == [20250205]
