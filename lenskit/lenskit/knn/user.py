@@ -254,6 +254,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
                     _log.warning("user %s has items but no ratings", query.user_id)
                     return None
 
+                urv = urv.to(torch.float32)
                 umean = urv.mean().item()
                 ratings[ui_nos[ui_mask]] = urv[ui_mask] - umean
             else:
