@@ -26,7 +26,7 @@ def fetch(source: str | None, dest: Path | None, name: str, force: bool):
     match source:
         case None:
             _log.error("no data source specified")
-            raise RuntimeError("no data source")
+            raise click.UsageError("no data source specified")
         case "movielens":
             fetch_movielens(name, dest, force)
         case _:

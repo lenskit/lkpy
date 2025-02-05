@@ -21,7 +21,7 @@ def convert(format: str | None, src: Path, dst: Path):
     match format:
         case None:
             _log.error("no data format specified")
-            raise RuntimeError("no data format")
+            raise click.UsageError("no data format specified")
         case "movielens":
             data = convert_movielens(src)
         case _:
