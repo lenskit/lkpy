@@ -6,6 +6,7 @@ from os import PathLike
 from pathlib import Path
 from typing import TextIO
 
+import pyarrow as pa
 import pyarrow.compute as pc
 from humanize import metric, naturalsize
 from prettytable import PrettyTable, TableStyle
@@ -15,6 +16,7 @@ from lenskit.logging import get_logger
 
 from .container import DataContainer
 from .dataset import Dataset
+from .schema import AttrLayout, ColumnSpec
 
 _log = get_logger(__name__)
 
@@ -73,17 +75,11 @@ def _write_entity_info(data: DataContainer, name: str, out: TextIO, log: BoundLo
     print(f"### Entity `{name}`\n", file=out)
     print("- {:,d} instances\n".format(tbl.num_rows), file=out)
 
-    pt = PrettyTable()
-    pt.set_style(TableStyle.MARKDOWN)
-    pt.field_names = ["Name", "Layout", "Count"]
-    pt.align["Name"] = "l"
-    pt.align["Count"] = "r"
-    pt.custom_format["Count"] = lambda _, v: "{:,d}".format(v)
-    for a_name, a_schema in data.schema.entities[name].attributes.items():
-        pt.add_row([a_name, a_schema.layout, tbl.num_rows])
-
-    print(pt, file=out)
-    print(file=out)
+    attributes = data.schema.entities[name].attributes
+    if attributes:
+        print("#### Attributes\n", file=out)
+        print(_attr_table(tbl, attributes), file=out)
+        print(file=out)
 
 
 def _write_relationships(data: DataContainer, out: TextIO, log: BoundLogger):
@@ -123,19 +119,50 @@ def _write_relationship_info(data: DataContainer, name: str, out: TextIO, log: B
         e_cls = e_cls or e_name
         e_col = tbl.column(e_name + "_num")
         pt.add_row([e_name, e_cls, pc.count_distinct(e_col).as_py()])
-
-    print("#### Attributes\n", file=out)
-    pt = PrettyTable()
-    pt.set_style(TableStyle.MARKDOWN)
-    pt.field_names = ["Name", "Layout", "Count"]
-    pt.align["Name"] = "l"
-    pt.align["Count"] = "r"
-    pt.custom_format["Count"] = lambda _, v: "{:,d}".format(v)
-    for a_name, a_schema in data.schema.relationships[name].attributes.items():
-        pt.add_row([a_name, a_schema.layout, tbl.num_rows])
-
     print(pt, file=out)
     print(file=out)
+
+    attributes = data.schema.relationships[name].attributes
+    if attributes:
+        print("#### Attributes\n", file=out)
+        print(_attr_table(tbl, attributes), file=out)
+        print(file=out)
+
+
+def _attr_table(tbl: pa.Table, attributes: dict[str, ColumnSpec]):
+    pt = PrettyTable()
+    pt.set_style(TableStyle.MARKDOWN)
+    pt.field_names = ["Name", "Layout", "Type", "Dimension", "Count", "Size"]
+    pt.align["Name"] = "l"
+    pt.align["Dimension"] = "r"
+    pt.align["Count"] = "r"
+    pt.custom_format["Count"] = lambda _, v: "{:,d}".format(v)
+    pt.align["Size"] = "r"
+    pt.custom_format["Size"] = lambda _, v: naturalsize(v, binary=True)
+    for a_name, a_schema in attributes.items():
+        field = tbl.field(a_name)
+        col = tbl.column(a_name)
+        vtype = field.type
+        dim = "-"
+        match a_schema.layout:
+            case AttrLayout.LIST:
+                assert isinstance(vtype, pa.ListType)
+                vtype = vtype.value_type
+            case AttrLayout.VECTOR:
+                assert isinstance(vtype, (pa.ListType, pa.FixedSizeListType))
+                vtype = vtype.value_type
+                dim = "{:,d}".format(a_schema.vector_size)
+            case AttrLayout.SPARSE:
+                assert isinstance(vtype, pa.ListType)
+                assert isinstance(vtype.value_type, pa.StructType)
+                vtype = vtype.value_type.field("value").type
+                dim = "{:,d}".format(a_schema.vector_size)
+
+        pt.add_row(
+            [a_name, a_schema.layout.value, vtype, dim, tbl.num_rows - col.null_count, col.nbytes]
+        )
+
+    return pt
 
 
 def table_stats(data: DataContainer) -> PrettyTable:
