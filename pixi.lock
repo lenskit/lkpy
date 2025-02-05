@@ -15728,10 +15728,10 @@ packages:
   timestamp: 1729655345825
 - pypi: lenskit
   name: lenskit
-  version: 2025.1.1b6.dev9+ge8178155.d20250205
-  sha256: 4edd96212760dbb3251595fe6ce7d025275812b43696561e9adc16386c3611cd
+  version: 2025.1.1b6.dev13+gb5003acd.d20250205
+  sha256: 7cce20e33dcf081aeffff13eb9bff8cc075d79f756172aad7e62f7e72d6cec43
   requires_dist:
-  - humanize~=4.0
+  - humanize~=4.2
   - more-itertools>=9.0
   - numpy>=1.25
   - pandas~=2.0
