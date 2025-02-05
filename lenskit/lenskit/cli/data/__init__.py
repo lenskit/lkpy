@@ -2,6 +2,7 @@ import click
 
 from .convert import convert
 from .describe import describe
+from .fetch import fetch
 
 
 @click.group
@@ -14,3 +15,4 @@ def data():
 
 data.add_command(convert)
 data.add_command(describe)
+data.add_command(fetch)
