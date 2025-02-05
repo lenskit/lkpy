@@ -67,6 +67,7 @@ pytest-benchmark = "=4"
 pytest-repeat = ">=0.9"
 hypothesis = ">=6.16"
 pyprojroot = "=0.3"
+pyyaml = "~=6.0"
 
 [feature.doc.dependencies]
 sphinx = ">=4.2"

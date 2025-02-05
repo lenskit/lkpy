@@ -1,10 +1,13 @@
+from pathlib import Path
+
 from numpy.random import Generator, SeedSequence
 
 from hypothesis import assume, given
 from hypothesis import strategies as st
+from pytest import skip
 
 from lenskit.data.query import RecQuery
-from lenskit.random import derivable_rng, make_seed
+from lenskit.random import derivable_rng, load_seed, make_seed
 
 
 @given(
@@ -54,3 +57,26 @@ def test_derivable_user(seed: int, uid1: str, uid2: str):
     vnone = drng(None).integers(1_000_000)
     assert vnone != v1a
     assert vnone != v2
+
+
+def test_load_seed_json():
+    file = Path(__file__).parent / "config.json"
+    seed = load_seed(file)
+    assert seed.entropy == [20250205]
+
+
+def test_load_seed_yaml():
+    try:
+        import yaml
+    except ImportError:
+        skip("pyyaml not installed")
+
+    file = Path(__file__).parent / "config.yaml"
+    seed = load_seed(file, "random_seed")
+    assert seed.entropy == [20250205]
+
+
+def test_load_seed_toml():
+    file = Path(__file__).parent / "config.toml"
+    seed = load_seed(file, "rng.seed")
+    assert seed.entropy == [20250201]

@@ -9,8 +9,10 @@ Utilities to manage randomness in LensKit and LensKit experiments.
 """
 
 # pyright: strict
+import os
 from abc import abstractmethod
 from hashlib import md5
+from pathlib import Path
 from uuid import UUID
 
 import numpy as np
@@ -51,6 +53,46 @@ _global_rng: Generator | None = None
 
 
 DerivableSeed: TypeAlias = ConfiguredSeed | SeedDependency | tuple[ConfiguredSeed, SeedDependency]
+
+
+def load_seed(file: Path | os.PathLike[str] | str, key: str = "random.seed") -> SeedSequence:
+    """
+    Load a seed from a configuration file.
+
+    Args:
+        file:
+            The path to the configuration file.
+        key:
+            The path within the configuration object to the random seed.
+    """
+    data: Any
+    file = Path(file)
+
+    with file.open("rb") as f:
+        match file.suffix:
+            case ".toml":
+                import tomllib
+
+                data = tomllib.load(f)
+            case ".yaml":
+                import yaml
+
+                data = yaml.load(f, yaml.SafeLoader)
+            case ".json":
+                import json
+
+                data = json.load(f)
+            case _:
+                raise ValueError(f"unsupported config file {file.name}")
+
+    parts = key.split(".")
+    for part in parts:
+        if isinstance(data, dict):
+            data = data[part]
+        else:
+            raise TypeError(f"unsupported data type {type(data)}")
+
+    return make_seed(data)
 
 
 def set_global_rng(seed: RNGInput):
