@@ -79,7 +79,7 @@ class MLData:
         if isinstance(self.source, Path):
             return open(self.source / (self.prefix + name), "rb")
         else:
-            self._logger.debug("opening zip file")
+            self._logger.debug("opening zip archive member")
             return self.source.open(self.prefix + name)
 
     def dataset(self) -> Dataset:  # pragma: nocover
