@@ -266,7 +266,7 @@ class BiasConfig(BaseModel, extra="forbid"):
     The entities to compute biases for, in addition to global bais.  Defaults to
     users and items.
     """
-    damping: NonNegativeFloat | dict[Literal["user", "item"], NonNegativeFloat] = 0
+    damping: NonNegativeFloat | dict[Literal["user", "item"], NonNegativeFloat] = 0.0
 
     def entity_damping(self, entity: Literal["user", "item"]) -> float:
         """
