@@ -192,7 +192,7 @@ class MLMLoader(MLData):
         dsb.add_entities("item", movies["item_id"])
         dsb.add_scalar_attribute("item", "title", movies["item_id"], movies["title"])
         genres = movies["genres"].str.split("|", regex=False)
-        dsb.add_list_attribute("item", "genres", movies["item_id"], genres)
+        dsb.add_list_attribute("item", "genres", movies["item_id"], genres, dictionary=True)
 
         ratings = self.ratings_df()
         dsb.add_interactions(
