@@ -324,6 +324,8 @@ class DatasetBuilder:
         for col in table.column_names:
             if col not in link_id_cols:
                 new_table = new_table.append_column(col, table.column(col))
+                if col not in rc_def.attributes:
+                    rc_def.attributes[col] = ColumnSpec()
 
         if link_mask is not None:
             log.debug("filtering links to known entities")

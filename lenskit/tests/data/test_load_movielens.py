@@ -42,6 +42,10 @@ def test_latest_small_dir():
     assert tags.is_sparse
     assert tags.scipy().data.sum() >= 1200
 
+    ratings = ds.interactions()
+    assert ratings.attribute_names == ["rating", "timestamp"]
+    assert set(ds.schema.relationships["rating"].attributes.keys()) == {"rating", "timestamp"}
+
 
 @mark.skipif(not ML_100K_ZIP.exists(), reason="ml-100k does not exist")
 @mark.realdata
