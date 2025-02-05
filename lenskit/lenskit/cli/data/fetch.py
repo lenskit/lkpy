@@ -2,6 +2,7 @@ from pathlib import Path
 from urllib.request import urlopen
 
 import click
+from humanize import naturalsize
 
 from lenskit.logging import get_logger
 
@@ -11,9 +12,10 @@ ML_LOC = "http://files.grouplens.org/datasets/movielens/"
 
 @click.command("fetch")
 @click.option("--movielens", "source", flag_value="movielens", help="fetch MovieLens data")
+@click.option("--force", is_flag=True, help="overwrite existing file")
 @click.option("-D", "--data-dir", "dest", type=Path, help="directory for downloaded data")
 @click.argument("name")
-def fetch(format: str | None, dest: Path | None, name: str):
+def fetch(source: str | None, dest: Path | None, name: str, force: bool):
     """
     Convert data into the LensKit native format.
     """
@@ -21,17 +23,17 @@ def fetch(format: str | None, dest: Path | None, name: str):
     if dest is None:
         dest = Path()
 
-    match format:
+    match source:
         case None:
             _log.error("no data source specified")
             raise RuntimeError("no data source")
         case "movielens":
-            fetch_movielens(name, dest)
+            fetch_movielens(name, dest, force)
         case _:
-            raise ValueError(f"unknown data format {format}")
+            raise ValueError(f"unknown data format {source}")
 
 
-def fetch_movielens(name: str, base_dir: Path):
+def fetch_movielens(name: str, base_dir: Path, force: bool):
     """
     Fetch a MovieLens dataset.  The followings names are recognized:
 
@@ -53,11 +55,19 @@ def fetch_movielens(name: str, base_dir: Path):
     zipfile = base_dir / zipname
     zipurl = ML_LOC + zipname
 
-    if zipfile.exists():
-        _log.info("%s already exists", zipfile)
-        return
+    log = _log.bind(source="movielens", name=name, dest=str(zipfile))
 
-    _log.info("downloading MovieLens data set %s", name)
+    if zipfile.exists():
+        if force:
+            log.warning("output file already exists, ovewriting")
+        else:
+            log.info("output file already exists")
+            return
+
+    log.debug("ensuring parent directory exists")
+    base_dir.mkdir(exist_ok=True, parents=True)
+
+    log.info("downloading MovieLens data set")
     with zipfile.open("wb") as zf:
         res = urlopen(zipurl)
         block = res.read(8 * 1024 * 1024)
@@ -65,3 +75,5 @@ def fetch_movielens(name: str, base_dir: Path):
             _log.debug("received %d bytes", len(block))
             zf.write(block)
             block = res.read(8 * 1024 * 1024)
+
+    log.info("downloaded %s", naturalsize(zipfile.stat().st_size, binary=True))
