@@ -81,6 +81,11 @@ def _write_entity_info(data: DataContainer, name: str, out: TextIO, log: BoundLo
         print(_attr_table(tbl, attributes), file=out)
         print(file=out)
 
+    print("#### Schema\n", file=out)
+    print("```", file=out)
+    print(tbl.schema.to_string(), file=out)
+    print("```\n", file=out)
+
 
 def _write_relationships(data: DataContainer, out: TextIO, log: BoundLogger):
     print("## Relationships\n", file=out)
