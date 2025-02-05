@@ -26,6 +26,8 @@ class DataContainer:
         """
         Save the data to disk.
         """
+        from .summary import save_stats
+
         path = Path(path)
         log = _log.bind(name=self.schema.name, path=str(path))
         log.info("saving dataset")
@@ -44,6 +46,9 @@ class DataContainer:
         for name, table in self.tables.items():
             log.debug("writing table", table=name, rows=table.num_rows)
             write_table(table, path / f"{name}.parquet", compression="zstd")
+
+        log.debug("writing summary file")
+        save_stats(self, path / "summary.md")
 
     @classmethod
     def load(cls, path: str | PathLike[str]):
