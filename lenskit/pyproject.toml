@@ -30,6 +30,7 @@ dependencies = [
   "structlog >=23.2",
   "rich ~=13.5",
   "pyzmq >=24",
+  "click ~=8.1",
   "pydantic ~=2.7",
   "humanize ~=4.2",
   "prettytable ~=3.14",
