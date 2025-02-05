@@ -1,6 +1,7 @@
 import click
 
 from .convert import convert
+from .describe import describe
 
 
 @click.group
@@ -12,3 +13,4 @@ def data():
 
 
 data.add_command(convert)
+data.add_command(describe)
