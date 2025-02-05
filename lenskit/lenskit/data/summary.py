@@ -68,7 +68,7 @@ def _write_entity_info(data: DataContainer, name: str, out: TextIO):
     pt.field_names = ["Name", "Layout", "Count"]
     pt.align["Name"] = "l"
     pt.align["Count"] = "r"
-    pt.int_format = "{:,d}"
+    pt.int_format = ","
     for a_name, a_schema in data.schema.entities[name].attributes.items():
         pt.add_row([a_name, a_schema.layout, tbl.num_rows])
 
@@ -103,7 +103,7 @@ def _write_relationship_info(data: DataContainer, name: str, out: TextIO):
     pt = PrettyTable()
     pt.set_style(TableStyle.MARKDOWN)
     pt.field_names = ["Name", "Class", "Unique Count"]
-    pt.int_format = "{:,d}"
+    pt.int_format = ","
     pt.align["Name"] = "l"
     pt.align["Unique Count"] = "r"
     for e_name, e_cls in data.schema.relationships[name].entities.items():
@@ -117,7 +117,7 @@ def _write_relationship_info(data: DataContainer, name: str, out: TextIO):
     pt.field_names = ["Name", "Layout", "Count"]
     pt.align["Name"] = "l"
     pt.align["Count"] = "r"
-    pt.int_format = "{:,d}"
+    pt.int_format = ","
     for a_name, a_schema in data.schema.relationships[name].attributes.items():
         pt.add_row([a_name, a_schema.layout, tbl.num_rows])
 
