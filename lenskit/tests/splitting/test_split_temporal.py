@@ -2,8 +2,10 @@ import datetime as dt
 
 import numpy as np
 
+from pytest import approx
+
 from lenskit.data import Dataset
-from lenskit.splitting import split_global_time
+from lenskit.splitting import split_global_time, split_temporal_fraction
 
 
 def test_temporal_split(ml_ds: Dataset):
@@ -19,6 +21,17 @@ def test_temporal_split(ml_ds: Dataset):
         ts = il.field("timestamp", format="pandas")
         assert ts is not None
         assert np.all(ts >= point)
+
+
+def test_temporal_split_fraction(ml_ds: Dataset):
+    split = split_temporal_fraction(ml_ds, 0.2)
+
+    n_test = sum(len(il) for il in split.test.lists())
+    assert n_test + split.train.interaction_count == ml_ds.interaction_count
+    assert n_test / ml_ds.interaction_count == approx(0.2, abs=0.01)
+
+    point = min(il.field("timestamp").min() for il in split.test.lists())
+    assert np.all(split.train.interaction_table(format="pandas")["timestamp"] < point)
 
 
 def test_multi_split(ml_ds: Dataset):

@@ -14,6 +14,7 @@ from lenskit.data import ItemList
 
 from ._base import GlobalMetric, ListMetric, Metric, MetricFunction
 from ._quick import quick_measure_model
+from .basic import ListLength, TestItemCount
 from .bulk import RunAnalysis, RunAnalysisResult
 from .predict import MAE, RMSE
 from .ranking import NDCG, RBP, Hit, Precision, RankingMetricBase, Recall, RecipRank
@@ -26,6 +27,8 @@ __all__ = [
     "RankingMetricBase",
     "RunAnalysis",
     "RunAnalysisResult",
+    "ListLength",
+    "TestItemCount",
     "RMSE",
     "MAE",
     "NDCG",

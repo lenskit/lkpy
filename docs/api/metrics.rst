@@ -28,6 +28,18 @@ Bulk Analysis
     ~lenskit.metrics.RunAnalysis
     ~lenskit.metrics.RunAnalysisResult
 
+Basic Statistics
+----------------
+
+.. autosummary::
+    :toctree:
+    :nosignatures:
+    :caption: Basic Statistics
+
+    ~lenskit.metrics.ListLength
+    ~lenskit.metrics.TestItemCount
+
+
 Top-N Accuracy
 --------------
 

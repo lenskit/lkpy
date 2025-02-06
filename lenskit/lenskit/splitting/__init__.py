@@ -15,7 +15,7 @@ from lenskit.data import Dataset
 from .holdout import HoldoutMethod, LastFrac, LastN, SampleFrac, SampleN
 from .records import crossfold_records, sample_records
 from .split import TTSplit
-from .temporal import split_global_time
+from .temporal import split_global_time, split_temporal_fraction
 from .users import crossfold_users, sample_users
 
 __all__ = [
@@ -26,6 +26,7 @@ __all__ = [
     "SampleFrac",
     "SampleN",
     "split_global_time",
+    "split_temporal_fraction",
     "crossfold_records",
     "sample_records",
     "crossfold_users",
