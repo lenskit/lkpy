@@ -264,10 +264,20 @@ def test_uu_batch_accuracy(ml_100k: pd.DataFrame):
 @mark.eval
 def test_uu_implicit_batch_accuracy(ml_100k: pd.DataFrame):
     ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(
-        UserKNNScorer(k=30, feedback="implicit"), ds, predicts_ratings=True
-    )
+    results = quick_measure_model(UserKNNScorer(k=30, feedback="implicit"), ds)
 
     summary = results.list_summary()
 
     assert summary.loc["NDCG", "mean"] >= 0.03
+
+
+@mark.slow
+def test_uu_double_ratings(ml_ratings: pd.DataFrame):
+    ml_ratings = ml_ratings.astype({"rating": "f8"})
+    ds = from_interactions_df(ml_ratings)
+    results = quick_measure_model(
+        UserKNNScorer(k=30, feedback="explicit"), ds, predicts_ratings=True
+    )
+
+    summary = results.list_summary()
+    assert summary.loc["NDCG", "mean"] > 0
