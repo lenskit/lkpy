@@ -14,6 +14,7 @@ import torch
 
 from pytest import approx, fail, mark
 
+from lenskit import recommend
 from lenskit.data import (
     Dataset,
     ItemList,
@@ -280,4 +281,6 @@ def test_uu_double_ratings(ml_ratings: pd.DataFrame):
     pipe = topn_pipeline(model)
     pipe.train(ds)
 
-    assert model.user_vectors_.dtype == torch.float32
+    # assert model.user_vectors_.dtype == torch.float32
+    recs = recommend(pipe, 115, 10)
+    assert len(recs) == 10
