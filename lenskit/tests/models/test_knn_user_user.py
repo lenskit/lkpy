@@ -248,16 +248,6 @@ def test_uu_known_preds(ml_ds: Dataset):
         fail(f"{len(bad)} erroneous predictions")
 
 
-def __batch_eval(job):
-    from lenskit import batch
-
-    algo, train, test = job
-    _log.info("running training")
-    algo.train(from_interactions_df(train))
-    _log.info("testing %d users", test.user.nunique())
-    return batch.predict(algo, test)
-
-
 @mark.slow
 @mark.eval
 def test_uu_batch_accuracy(ml_100k: pd.DataFrame):
