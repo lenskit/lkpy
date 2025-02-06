@@ -141,7 +141,10 @@ class RMSE(PredictMetric, ListMetric, DecomposedMetric):
     @override
     def extract_list_metric(self, metric):
         tot, n = metric
-        return np.sqrt(tot / n)
+        if n > 0:
+            return np.sqrt(tot / n)
+        else:
+            return np.nan
 
     @override
     def global_aggregate(self, values):
@@ -151,7 +154,10 @@ class RMSE(PredictMetric, ListMetric, DecomposedMetric):
             tot_sqerr += t
             tot_n += n
 
-        return np.sqrt(tot_sqerr / tot_n)
+        if tot_n > 0:
+            return np.sqrt(tot_sqerr / tot_n)
+        else:
+            return np.nan
 
 
 class MAE(PredictMetric, ListMetric, DecomposedMetric):
@@ -185,7 +191,10 @@ class MAE(PredictMetric, ListMetric, DecomposedMetric):
     @override
     def extract_list_metric(self, metric):
         tot, n = metric
-        return tot / n
+        if n > 0:
+            return np.sqrt(tot / n)
+        else:
+            return np.nan
 
     @override
     def global_aggregate(self, values):
@@ -195,4 +204,7 @@ class MAE(PredictMetric, ListMetric, DecomposedMetric):
             tot_err += t
             tot_n += n
 
-        return tot_err / tot_n
+        if n > 0:
+            return np.sqrt(tot_err / tot_n)
+        else:
+            return np.nan
