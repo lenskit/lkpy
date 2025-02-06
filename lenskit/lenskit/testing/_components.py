@@ -289,7 +289,7 @@ class ScorerTests(TrainingTests):
         split = split_temporal_fraction(ml_ds, 0.2)
         model = self.component()
         pipe = topn_pipeline(model)
-        pipe.train(ml_ds)
+        pipe.train(split.train)
 
         recs = batch.recommend(pipe, split.test)
         assert len(recs) == len(split.test)
@@ -302,7 +302,7 @@ class ScorerTests(TrainingTests):
         split = split_temporal_fraction(ml_ds, 0.3)
         model = self.component()
         pipe = topn_pipeline(model)
-        pipe.train(ml_ds)
+        pipe.train(split.train)
 
         recs = batch.recommend(pipe, split.test)
         assert len(recs) == len(split.test)
