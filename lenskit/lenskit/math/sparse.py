@@ -12,7 +12,6 @@ Sparse matrix utility functions.
 from __future__ import annotations
 
 import logging
-import platform
 from typing import Literal, overload
 
 import scipy.sparse as sps
@@ -111,39 +110,15 @@ def torch_sparse_to_scipy(M: torch.Tensor) -> sps.csr_array | sps.coo_array:
         raise TypeError("unsupported tensor type")
 
 
-if platform.machine() == "arm64":
+def safe_spmv(matrix: torch.Tensor, vector: torch.Tensor) -> torch.Tensor:
+    """
+    Sparse matrix-vector multiplication working around PyTorch bugs.
 
-    @torch.jit.ignore  # type: ignore
-    def safe_spmv(matrix, vector):  # type: ignore
-        """
-        Sparse matrix-vector multiplication working around PyTorch bugs.
+    This is equivalent to :func:`torch.mv` for sparse CSR matrix
+    and dense vector, but it works around PyTorch bug 127491_ by
+    falling back to SciPy on ARM.
 
-        This is equivalent to :func:`torch.mv` for sparse CSR matrix
-        and dense vector, but it works around PyTorch bug 127491_ by
-        falling back to SciPy on ARM.
-
-        .. _127491: https://github.com/pytorch/pytorch/issues/127491
-        """
-        assert matrix.is_sparse_csr
-        nr, nc = matrix.shape
-        M = sps.csr_array(
-            (matrix.values().numpy(), matrix.col_indices().numpy(), matrix.crow_indices().numpy()),
-            (nr, nc),
-        )
-        v = vector.numpy()
-        return torch.from_numpy(M @ v)
-
-else:
-
-    def safe_spmv(matrix: torch.Tensor, vector: torch.Tensor) -> torch.Tensor:
-        """
-        Sparse matrix-vector multiplication working around PyTorch bugs.
-
-        This is equivalent to :func:`torch.mv` for sparse CSR matrix
-        and dense vector, but it works around PyTorch bug 127491_ by
-        falling back to SciPy on ARM.
-
-        .. _127491: https://github.com/pytorch/pytorch/issues/127491
-        """
-        assert matrix.is_sparse_csr
-        return torch.mv(matrix, vector)
+    .. _127491: https://github.com/pytorch/pytorch/issues/127491
+    """
+    assert matrix.is_sparse_csr
+    return torch.mv(matrix, vector)
