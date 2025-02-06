@@ -19,7 +19,7 @@ export function mlDataSteps(datasets: string[]): WorkflowStep[] {
     {
       name: "Download ML data",
       run: script(`
-                coverage run -m lenskit data fetch -D data --movielens ${ds_str}
+                coverage run --source=lenskit/lenskit -m lenskit data fetch -D data --movielens ${ds_str}
             `),
     },
   ];
