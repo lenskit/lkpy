@@ -192,7 +192,7 @@ class MAE(PredictMetric, ListMetric, DecomposedMetric):
     def extract_list_metric(self, metric):
         tot, n = metric
         if n > 0:
-            return np.sqrt(tot / n)
+            return tot / n
         else:
             return np.nan
 
@@ -205,6 +205,6 @@ class MAE(PredictMetric, ListMetric, DecomposedMetric):
             tot_n += n
 
         if n > 0:
-            return np.sqrt(tot_err / tot_n)
+            return tot_err / tot_n
         else:
             return np.nan
