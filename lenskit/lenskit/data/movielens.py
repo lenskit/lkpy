@@ -79,7 +79,7 @@ class MLData:
         if isinstance(self.source, Path):
             return open(self.source / (self.prefix + name), "rb")
         else:
-            self._logger.debug("opening zip file")
+            self._logger.debug("opening zip archive member")
             return self.source.open(self.prefix + name)
 
     def dataset(self) -> Dataset:  # pragma: nocover
@@ -192,7 +192,7 @@ class MLMLoader(MLData):
         dsb.add_entities("item", movies["item_id"])
         dsb.add_scalar_attribute("item", "title", movies["item_id"], movies["title"])
         genres = movies["genres"].str.split("|", regex=False)
-        dsb.add_list_attribute("item", "genres", movies["item_id"], genres)
+        dsb.add_list_attribute("item", "genres", movies["item_id"], genres, dictionary=True)
 
         ratings = self.ratings_df()
         dsb.add_interactions(
@@ -484,33 +484,40 @@ def _ml_detect_and_open(path: str | Path) -> MLData:
         except Exception as e:  # pragma nocover
             zf.close()
             raise e
-    else:
+    elif loc.is_dir():
         log = _log.bind(dir=str(loc))
         log.debug("loading from directory")
         dsm = re.match(r"^(ml-\d+[MmKk])", loc.name)
         if dsm:
             version = dsm.group(1)
             ctor = MLData.version_impl(dsm.group(1).lower())
-            _log.debug("inferred data set %s from dir name", version)
+            log.debug("inferred data set %s from dir name", version)
         else:
-            _log.debug("checking contents for data type")
+            log.debug("checking contents for data type")
             if (loc / "u.data").exists():
-                _log.debug("found u.data, interpreting as 100K")
+                log.debug("found u.data, interpreting as 100K")
                 ctor = ML100KLoader
             elif (loc / "ratings.dat").exists():
                 if (loc / "tags.dat").exists():
-                    _log.debug("found ratings.dat and tags.dat, interpreting as 10M")
+                    log.debug("found ratings.dat and tags.dat, interpreting as 10M")
                     version = "ml-10m"
                 else:
-                    _log.debug("found ratings.dat but no tags, interpreting as 1M")
+                    log.debug("found ratings.dat but no tags, interpreting as 1M")
                     version = "ml-1m"
                 ctor = MLMLoader
             elif (loc / "ratings.csv").exists():
-                _log.debug("found ratings.csv, interpreting as modern (20M and later)")
+                log.debug("found ratings.csv, interpreting as modern (20M and later)")
                 version = "ml-modern"
                 ctor = MLModernLoader
             else:
-                _log.error("could not detect MovieLens data")
+                log.error("could not detect MovieLens data")
                 raise RuntimeError("invalid ML directory")
 
         return ctor(version, loc)
+
+    elif loc.exists():  # pragma: nocover
+        _log.error("invalid MovieLens data location", path=path)
+        raise RuntimeError("not a directory or zip file")
+    else:  # pragma: nocover
+        _log.error("MovieLens data not found", path=path)
+        raise FileNotFoundError(path)

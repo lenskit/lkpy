@@ -458,7 +458,13 @@ class DatasetBuilder:
 
     @overload
     def add_scalar_attribute(
-        self, cls: str, name: str, data: pd.Series[Any] | TableInput, /
+        self,
+        cls: str,
+        name: str,
+        data: pd.Series[Any] | TableInput,
+        /,
+        *,
+        dictionary: bool = False,
     ) -> None: ...
     @overload
     def add_scalar_attribute(
@@ -468,6 +474,8 @@ class DatasetBuilder:
         entities: IDSequence | tuple[IDSequence, ...],
         values: ArrayLike,
         /,
+        *,
+        dictionary: bool = False,
     ) -> None: ...
     def add_scalar_attribute(
         self,
@@ -475,6 +483,8 @@ class DatasetBuilder:
         name: str,
         entities: IDSequence | tuple[IDSequence, ...] | pd.Series[Any] | TableInput,
         values: ArrayLike | None = None,
+        *,
+        dictionary: bool = False,
     ) -> None:
         if name in self.schema.entities[cls].attributes:  # pragma: nocover
             raise NotImplementedError("updating or replacing existing attributes not supported")
@@ -508,13 +518,21 @@ class DatasetBuilder:
         tbl_mask = pa.array(tbl_mask)
         val_col = pa.nulls(e_tbl.num_rows, val_array.type)
         val_col = pc.replace_with_mask(val_col, tbl_mask, val_array)
+        if dictionary:
+            val_col = pc.dictionary_encode(val_col)
 
         self._tables[cls] = e_tbl.append_column(name, val_col)
         self.schema.entities[cls].attributes[name] = ColumnSpec(layout=AttrLayout.SCALAR)
 
     @overload
     def add_list_attribute(
-        self, cls: str, name: str, data: pd.Series[Any] | TableInput, /
+        self,
+        cls: str,
+        name: str,
+        data: pd.Series[Any] | TableInput,
+        /,
+        *,
+        dictionary: bool = False,
     ) -> None: ...
     @overload
     def add_list_attribute(
@@ -524,6 +542,8 @@ class DatasetBuilder:
         entities: IDSequence | tuple[IDSequence, ...],
         values: ArrayLike,
         /,
+        *,
+        dictionary: bool = False,
     ) -> None: ...
     def add_list_attribute(
         self,
@@ -531,6 +551,8 @@ class DatasetBuilder:
         name: str,
         entities: IDSequence | tuple[IDSequence, ...] | pd.Series[Any] | TableInput,
         values: ArrayLike | None = None,
+        *,
+        dictionary: bool = False,
     ) -> None:
         if name in self.schema.entities[cls].attributes:  # pragma: nocover
             raise NotImplementedError("updating or replacing existing attributes not supported")
@@ -564,6 +586,11 @@ class DatasetBuilder:
         if isinstance(val_array, pa.ChunkedArray):  # pragma: nocover
             val_array = val_array.combine_chunks()
         assert isinstance(val_array, pa.ListArray)
+
+        if dictionary:
+            val_array = pa.ListArray.from_arrays(
+                val_array.offsets, pc.dictionary_encode(val_array.values)
+            )
 
         nums = nums.to_numpy()
 

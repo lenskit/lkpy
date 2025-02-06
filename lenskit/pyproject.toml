@@ -30,6 +30,7 @@ dependencies = [
   "structlog >=23.2",
   "rich ~=13.5",
   "pyzmq >=24",
+  "click ~=8.1",
   "pydantic ~=2.7",
   "humanize ~=4.2",
   "prettytable ~=3.14",
@@ -52,6 +53,9 @@ test = [
 homepage = "https://lenskit.org"
 documentation = "https://lkpy.lenskit.org"
 source = "https://github.com/lenskit/lkpy"
+
+[project.scripts]
+lenskit = "lenskit.cli:lenskit"
 
 # configure build tools
 [tool.hatch.metadata]

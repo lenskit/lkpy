@@ -13,13 +13,13 @@ export function mlDataSteps(datasets: string[]): WorkflowStep[] {
                         data
                         !data/*.zip
                     `),
-        key: `test-mldata-001-${ds_key}`,
+        key: `test-mldata-002-${ds_key}`,
       },
     },
     {
       name: "Download ML data",
       run: script(`
-                python -m lenskit.data.fetch ${ds_str}
+                coverage run --source=lenskit/lenskit -m lenskit data fetch -D data --movielens ${ds_str}
             `),
     },
   ];

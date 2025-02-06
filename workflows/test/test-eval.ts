@@ -26,7 +26,7 @@ export function evalTestJob(): WorkflowJob {
       {
         "name": "Run Eval Tests",
         "run": script(
-          `pytest ${cov} -m 'eval or realdata' --log-file test-eval.log */tests`,
+          `pytest --cov-append ${cov} -m 'eval or realdata' --log-file test-eval.log */tests`,
         ),
       },
       ...coverageSteps(options),
