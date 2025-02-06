@@ -11,18 +11,20 @@ _log = get_logger(__name__)
 
 @overload
 def split_global_time(
-    data: Dataset, time: str | dt.datetime, end: str | dt.datetime | None = None
+    data: Dataset,
+    time: int | float | str | dt.datetime,
+    end: int | float | str | dt.datetime | None = None,
 ) -> TTSplit: ...
 @overload
 def split_global_time(
     data: Dataset,
-    time: Sequence[str | dt.datetime],
-    end: str | dt.datetime | None = None,
+    time: Sequence[int | float | str | dt.datetime],
+    end: int | float | str | dt.datetime | None = None,
 ) -> list[TTSplit]: ...
 def split_global_time(
     data: Dataset,
-    time: str | dt.datetime | Sequence[str | dt.datetime],
-    end: str | dt.datetime | None = None,
+    time: int | float | str | dt.datetime | Sequence[int | float | str | dt.datetime],
+    end: int | float | str | dt.datetime | None = None,
 ) -> TTSplit | list[TTSplit]:
     """
     Global temporal train-test split.  This splits a data set into train/test
@@ -98,6 +100,21 @@ def split_global_time(
     else:
         assert len(results) == 1
         return results[0]
+
+
+def split_temporal_fraction(data: Dataset, test_fraction: float) -> TTSplit:
+    """
+    Do a global temporal split of a data set based on a test set size.
+
+    Args:
+        data:
+            The dataset to split.
+        test_fraction:
+            The fraction of the interactions to put in the testing data.
+    """
+    df = data.interaction_table(format="pandas")
+    point = df["timestamp"].quantile(1 - test_fraction)
+    return split_global_time(data, point)
 
 
 def _make_time(t: int | float | str | dt.datetime) -> dt.datetime:
