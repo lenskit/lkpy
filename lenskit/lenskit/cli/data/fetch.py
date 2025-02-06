@@ -14,8 +14,8 @@ ML_LOC = "http://files.grouplens.org/datasets/movielens/"
 @click.option("--movielens", "source", flag_value="movielens", help="fetch MovieLens data")
 @click.option("--force", is_flag=True, help="overwrite existing file")
 @click.option("-D", "--data-dir", "dest", type=Path, help="directory for downloaded data")
-@click.argument("name")
-def fetch(source: str | None, dest: Path | None, name: str, force: bool):
+@click.argument("name", nargs=-1)
+def fetch(source: str | None, dest: Path | None, name: list[str], force: bool):
     """
     Convert data into the LensKit native format.
     """
@@ -28,7 +28,8 @@ def fetch(source: str | None, dest: Path | None, name: str, force: bool):
             _log.error("no data source specified")
             raise click.UsageError("no data source specified")
         case "movielens":
-            fetch_movielens(name, dest, force)
+            for n in name:
+                fetch_movielens(n, dest, force)
         case _:
             raise ValueError(f"unknown data format {source}")
 
