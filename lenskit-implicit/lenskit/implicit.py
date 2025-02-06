@@ -101,7 +101,7 @@ class BaseRec(Component[ItemList], Trainable):
         if query.user_id is not None:
             user_num = self.users_.number(query.user_id, missing=None)
 
-        if user_num is None:
+        if user_num is None or not len(items):
             return ItemList(items, scores=np.nan)
 
         inos = items.numbers(vocabulary=self.items_, missing="negative")
@@ -117,7 +117,7 @@ class BaseRec(Component[ItemList], Trainable):
             uf = uf.to_numpy()
 
         scores = np.full(len(items), np.nan)
-        scores[mask] = np.dot(ifs, uf.T)
+        scores[mask] = np.dot(ifs, uf.T).reshape(-1)
 
         return ItemList(items, scores=scores)
 

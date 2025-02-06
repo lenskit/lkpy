@@ -67,24 +67,18 @@ class HPFScorer(Component[ItemList], Trainable):
         if hasattr(self, "item_features_") and not options.retrain:
             return
 
-        log = data.interactions().pandas()
-        if "rating" not in log.columns:
-            log["rating"] = 1.0
-
-        log = log.rename(
-            columns={
-                "user_num": "UserId",
-                "item_num": "ItemId",
-                "rating": "Count",
-            }
-        )[["UserId", "ItemId", "Count"]]
+        interacts = data.interactions().matrix()
+        if "rating" in interacts.attribute_names:
+            matrix = interacts.scipy("rating", layout="coo")
+        else:
+            matrix = interacts.scipy(layout="coo")
 
         hpf = hpfrec.HPF(
             self.config.embedding_size, reindex=False, **self.config.__pydantic_extra__
         )  # type: ignore
 
         _logger.info("fitting HPF model with %d features", self.config.embedding_size)
-        hpf.fit(log)
+        hpf.fit(matrix)
 
         self.users_ = data.users
         self.items_ = data.items
