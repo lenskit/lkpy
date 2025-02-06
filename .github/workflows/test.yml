@@ -569,10 +569,10 @@ jobs:
           key: test-mldata-002-ml-100k-ml-20m-ml-1m-ml-10m
       - name: Download ML data
         run: |
-          lenskit data fetch --movielens ml-100k ml-20m ml-1m ml-10m
+          coverage run -m lenskit data fetch --movielens ml-100k ml-20m ml-1m ml-10m
       - name: Run Eval Tests
         run: |
-          pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit -m 'eval or realdata' --log-file test-eval.log */tests
+          pytest --cov-append --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit -m 'eval or realdata' --log-file test-eval.log */tests
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |
@@ -614,7 +614,7 @@ jobs:
           key: test-mldata-002-ml-100k-ml-1m-ml-10m-ml-20m
       - name: Download ML data
         run: |
-          lenskit data fetch --movielens ml-100k ml-1m ml-10m ml-20m
+          coverage run -m lenskit data fetch --movielens ml-100k ml-1m ml-10m ml-20m
       - name: "📕 Validate code examples"
         run: |
           sphinx-build -b doctest docs build/doc
