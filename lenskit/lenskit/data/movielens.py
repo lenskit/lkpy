@@ -484,7 +484,7 @@ def _ml_detect_and_open(path: str | Path) -> MLData:
         except Exception as e:  # pragma nocover
             zf.close()
             raise e
-    else:
+    elif loc.is_dir():
         log = _log.bind(dir=str(loc))
         log.debug("loading from directory")
         dsm = re.match(r"^(ml-\d+[MmKk])", loc.name)
@@ -514,3 +514,6 @@ def _ml_detect_and_open(path: str | Path) -> MLData:
                 raise RuntimeError("invalid ML directory")
 
         return ctor(version, loc)
+
+    else:  # pragma: nocover
+        raise FileNotFoundError(f"data not found: {path}")
