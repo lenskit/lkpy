@@ -5,12 +5,15 @@ from time import perf_counter
 from typing import ClassVar, Literal
 
 import numpy as np
+import pandas as pd
 
-from pytest import approx, fixture, skip
+from pytest import approx, fixture, mark, skip
 
-from lenskit.data import Dataset, ItemList, RecQuery
+from lenskit import batch
+from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df
 from lenskit.data.builder import DatasetBuilder
-from lenskit.pipeline import Component
+from lenskit.pipeline import Component, topn_pipeline
+from lenskit.splitting import split_temporal_fraction
 from lenskit.training import Trainable, TrainingOptions
 
 from ._markers import jit_enabled
@@ -276,3 +279,30 @@ class ScorerTests(TrainingTests):
 
             scores = scored.scores()
             assert scores is not None
+
+    @mark.slow
+    def test_train_recommend(self, ml_ds: Dataset):
+        """
+        Test that a full train-recommend pipeline works.
+        """
+        self.maybe_skip_nojit()
+        split = split_temporal_fraction(ml_ds, 0.2)
+        model = self.component()
+        pipe = topn_pipeline(model)
+        pipe.train(ml_ds)
+
+        recs = batch.recommend(pipe, split.test)
+        assert len(recs) == len(split.test)
+
+    @mark.slow
+    def test_run_with_doubles(self, ml_ratings: pd.DataFrame):
+        self.maybe_skip_nojit()
+        ml_ratings = ml_ratings.astype({"rating": "f8"})
+        ml_ds = from_interactions_df(ml_ratings)
+        split = split_temporal_fraction(ml_ds, 0.3)
+        model = self.component()
+        pipe = topn_pipeline(model)
+        pipe.train(ml_ds)
+
+        recs = batch.recommend(pipe, split.test)
+        assert len(recs) == len(split.test)
