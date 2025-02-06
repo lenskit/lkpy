@@ -15735,8 +15735,8 @@ packages:
   timestamp: 1729655345825
 - pypi: lenskit
   name: lenskit
-  version: 2025.1.1b6.dev30+gf3d55712
-  sha256: 1bc7a3ba41abcbfed354e5a0aa78c74b218bcc8891108c2044fd500bccdbc64b
+  version: 2025.1.1b8.dev6+g73b68478.d20250206
+  sha256: 9d8c8063f8a63cef4a457468b9b13fd60b4fa9fad99917203a80e93b291e198c
   requires_dist:
   - click~=8.1
   - humanize~=4.2
@@ -15751,7 +15751,7 @@ packages:
   - scipy>=1.11
   - structlog>=23.2
   - threadpoolctl>=3.0
-  - torch~=2.1
+  - torch~=2.4
   - typing-extensions~=4.12
   - scikit-learn>=1.1 ; extra == 'sklearn'
   - hypothesis>=6.16 ; extra == 'test'
@@ -15765,7 +15765,7 @@ packages:
   editable: true
 - pypi: lenskit-funksvd
   name: lenskit-funksvd
-  version: 2025.1.0b2.dev0+g1aac67ba.d20250122
+  version: 2025.1.1b8.dev3+g5a71ce4d.d20250206
   sha256: 5b1b6b387c9edf133e76fc58d19bdb611a5b8c3c80805aab04bad238b8e0c7b0
   requires_dist:
   - lenskit
@@ -15774,7 +15774,7 @@ packages:
   editable: true
 - pypi: lenskit-hpf
   name: lenskit-hpf
-  version: 2025.1.0b2.dev0+g1aac67ba.d20250122
+  version: 2025.1.1b8.dev3+g5a71ce4d.d20250206
   sha256: 7aa59cc6db83ac59ffc0f94f55528d2de77ed28614726118d8bb6f0e7ea8c90a
   requires_dist:
   - hpfrec==0.2.*
@@ -15783,7 +15783,7 @@ packages:
   editable: true
 - pypi: lenskit-implicit
   name: lenskit-implicit
-  version: 2025.1.0b2.dev0+g1aac67ba.d20250122
+  version: 2025.1.1b8.dev3+g5a71ce4d.d20250206
   sha256: f5a4e1dd74dfecf00c2247d1835fb22c43dd9f1e836eee6984ac67fe464ce688
   requires_dist:
   - implicit>=0.7.2
@@ -15792,7 +15792,7 @@ packages:
   editable: true
 - pypi: lenskit-sklearn
   name: lenskit-sklearn
-  version: 2025.1.0b2.dev0+g1aac67ba.d20250122
+  version: 2025.1.1b8.dev3+g5a71ce4d.d20250206
   sha256: c916806b4a76e5d8ec8736c75e83bdc58eff179d8cd61ebd3983af766c59a2dc
   requires_dist:
   - lenskit
