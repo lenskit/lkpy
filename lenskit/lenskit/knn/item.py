@@ -24,7 +24,7 @@ from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery, 
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import get_logger, trace
 from lenskit.logging.progress import item_progress_handle, pbh_update
-from lenskit.math.sparse import normalize_sparse_rows, safe_spmv
+from lenskit.math.sparse import normalize_sparse_rows
 from lenskit.parallel import ensure_parallel_init
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
@@ -309,7 +309,7 @@ def _sim_row(
     # _item_dbg(item, f"comparing item with {row.indices().shape[1]} users")
     # _item_dbg(item, f"row norm {torch.linalg.vector_norm(row.values()).item()}")
     row = row.to_dense()
-    sim = safe_spmv(matrix, row.to(torch.float64))
+    sim = torch.mv(matrix, row.to(torch.float64))
     sim[item] = 0
 
     mask = sim >= min_sim

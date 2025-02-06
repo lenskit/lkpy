@@ -108,17 +108,3 @@ def torch_sparse_to_scipy(M: torch.Tensor) -> sps.csr_array | sps.coo_array:
         )
     else:
         raise TypeError("unsupported tensor type")
-
-
-def safe_spmv(matrix: torch.Tensor, vector: torch.Tensor) -> torch.Tensor:
-    """
-    Sparse matrix-vector multiplication working around PyTorch bugs.
-
-    This is equivalent to :func:`torch.mv` for sparse CSR matrix
-    and dense vector, but it works around PyTorch bug 127491_ by
-    falling back to SciPy on ARM.
-
-    .. _127491: https://github.com/pytorch/pytorch/issues/127491
-    """
-    assert matrix.is_sparse_csr
-    return torch.mv(matrix, vector)

@@ -26,7 +26,7 @@ from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery
 from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import get_logger
-from lenskit.math.sparse import normalize_sparse_rows, safe_spmv, torch_sparse_to_scipy
+from lenskit.math.sparse import normalize_sparse_rows, torch_sparse_to_scipy
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
@@ -170,7 +170,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
         # now ratings has vbeen normalized to be a mean-centered unit vector
         # this means we can dot product to score neighbors
         # score the neighbors!
-        nbr_sims = safe_spmv(self.user_vectors_, ratings)
+        nbr_sims = torch.mv(self.user_vectors_, ratings)
         assert nbr_sims.shape == (len(self.users_),)
         if uidx is not None:
             # zero out the self-similarity
