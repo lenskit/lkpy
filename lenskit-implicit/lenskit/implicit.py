@@ -117,7 +117,7 @@ class BaseRec(Component[ItemList], Trainable):
             uf = uf.to_numpy()
 
         scores = np.full(len(items), np.nan)
-        scores[mask] = np.dot(ifs, uf.T)
+        scores[mask] = np.dot(ifs, uf.T).reshape(-1)
 
         return ItemList(items, scores=scores)
 
