@@ -129,6 +129,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
             means = None
 
         normed, _norms = normalize_sparse_rows(rmat, "unit")
+        normed = normed.to(torch.float32)
 
         self.user_vectors_ = normed
         self.user_ratings_ = torch_sparse_to_scipy(rmat).tocsc()

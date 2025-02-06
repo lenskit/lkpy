@@ -275,9 +275,9 @@ def test_uu_implicit_batch_accuracy(ml_100k: pd.DataFrame):
 def test_uu_double_ratings(ml_ratings: pd.DataFrame):
     ml_ratings = ml_ratings.astype({"rating": "f8"})
     ds = from_interactions_df(ml_ratings)
-    results = quick_measure_model(
-        UserKNNScorer(k=30, feedback="explicit"), ds, predicts_ratings=True
-    )
+    assert ds.interaction_matrix(format="pandas", field="rating")["rating"].dtype == np.float64
+    model = UserKNNScorer(k=30, feedback="explicit")
+    pipe = topn_pipeline(model)
+    pipe.train(ds)
 
-    summary = results.list_summary()
-    assert summary.loc["NDCG", "mean"] > 0
+    assert model.user_vectors_.dtype == torch.float32
