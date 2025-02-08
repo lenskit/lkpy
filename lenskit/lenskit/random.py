@@ -9,17 +9,21 @@ Utilities to manage randomness in LensKit and LensKit experiments.
 """
 
 # pyright: strict
+from __future__ import annotations
+
 import os
 from abc import abstractmethod
 from hashlib import md5
 from pathlib import Path
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 import numpy as np
 from numpy.random import Generator, SeedSequence, default_rng
 from typing_extensions import Any, Literal, Protocol, Sequence, TypeAlias, override
 
-from lenskit.data import RecQuery
+if TYPE_CHECKING:  # avoid circular import
+    from lenskit.data import RecQuery
 
 SeedLike: TypeAlias = int | Sequence[int] | np.random.SeedSequence
 """

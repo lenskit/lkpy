@@ -27,6 +27,7 @@ from typing_extensions import Any, Literal, TypeAlias, TypeVar, overload, overri
 
 from lenskit.diagnostics import DataError
 from lenskit.logging import get_logger
+from lenskit.random import random_generator
 
 from .attributes import AttributeSet, attr_set
 from .container import DataContainer
@@ -817,6 +818,14 @@ class MatrixRelationshipSet(RelationshipSet):
         self._row_ptrs = np.cumsum(row_sizes, dtype=np.int32)
         self._table = table
 
+    @property
+    def n_rows(self):
+        return len(self.col_vocabulary)
+
+    @property
+    def n_cols(self) -> int:
+        return len(self.col_vocabulary)
+
     @override
     def matrix(
         self, *, combine: MAT_AGG | dict[str, MAT_AGG] | None = None
@@ -878,8 +887,8 @@ class MatrixRelationshipSet(RelationshipSet):
         Returns:
             The sparse matrix.
         """
-        n_rows = len(self.row_vocabulary)
-        n_cols = len(self.col_vocabulary)
+        n_rows = self.n_rows
+        n_cols = self.n_cols
         nnz = self._table.num_rows
 
         colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
@@ -920,8 +929,8 @@ class MatrixRelationshipSet(RelationshipSet):
         Returns:
             The sparse matrix.
         """
-        n_rows = len(self.row_vocabulary)
-        n_cols = len(self.col_vocabulary)
+        n_rows = self.n_rows
+        n_cols = self.n_cols
         nnz = self._table.num_rows
 
         colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
@@ -948,6 +957,37 @@ class MatrixRelationshipSet(RelationshipSet):
             return torch.sparse_coo_tensor(
                 indices=indices, values=values, size=(n_rows, n_cols)
             ).coalesce()
+
+    def negative_items(
+        self,
+        users: np.ndarray[int, np.dtype[np.int32]],
+        *,
+        verify: bool = True,
+        max_attempts: int = 10,
+        rng: np.random.Generator | None = None,
+    ) -> NDArray[np.int32]:
+        """
+        Sample negative items for an array of users.
+
+        Args:
+            users:
+                The user numbers.  Duplicates are allowed, and negative items
+                are sampled independently for each item. Must be a 1D array or
+                tensor.
+            verify:
+                Whether to verify that the negative items are actually negative.
+                Unverified sampling is much faster but can return false
+                negatives.
+            max_attempts:
+                When verification is on, the maximum attempts before giving up
+                and returning a possible false negative.
+            rng:
+                A random number generator to use.
+        """
+        rng = random_generator(rng)
+        items = rng.choice(self.n_cols, size=len(users), replace=True)
+        items = np.require(items, "i4")
+        return items
 
     def row_table(self, id: ID | None = None, *, number: int | None = None) -> pa.Table | None:
         """
