@@ -15,7 +15,7 @@ from .builder import DatasetBuilder
 from .collection import GenericKey, ItemListCollection, UserIDKey
 from .dataset import Dataset, EntitySet, FieldError, MatrixRelationshipSet, RelationshipSet
 from .items import ItemList
-from .matrix import CSRStructure
+from .matrix import COOStructure, CSRStructure
 from .movielens import load_movielens, load_movielens_df
 from .mtarray import MTArray, MTFloatArray, MTGenericArray, MTIntArray
 from .query import QueryInput, RecQuery
@@ -31,6 +31,7 @@ __all__ = [
     "DatasetBuilder",
     "FieldError",
     "CSRStructure",
+    "COOStructure",
     "from_interactions_df",
     "ID",
     "NPID",

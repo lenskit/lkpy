@@ -857,6 +857,17 @@ class MatrixRelationshipSet(RelationshipSet):
         colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
         return CSRStructure(self._row_ptrs, colinds, (n_rows, n_cols))
 
+    def coo_structure(self) -> COOStructure:
+        """
+        Get the compressed sparse row structure of this relationship matrix.
+        """
+        n_rows = len(self.row_vocabulary)
+        n_cols = len(self.col_vocabulary)
+
+        rowinds = self._table.column(num_col_name(self.row_type)).to_numpy()
+        colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
+        return COOStructure(rowinds, colinds, (n_rows, n_cols))
+
     @overload
     def scipy(
         self, attribute: str | None = None, *, layout: Literal["coo"], legacy: Literal[True]
@@ -1151,4 +1162,4 @@ class MatrixRelationshipSet(RelationshipSet):
         return stats
 
 
-from .matrix import CSRStructure  # noqa: E402
+from .matrix import COOStructure, CSRStructure  # noqa: E402
