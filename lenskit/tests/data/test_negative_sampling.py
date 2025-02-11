@@ -1,5 +1,7 @@
 import numpy as np
 
+from pytest import mark
+
 from lenskit.data import Dataset
 from lenskit.logging import get_logger
 
@@ -44,3 +46,29 @@ def test_negative_unverified(rng: np.random.Generator, ml_ds: Dataset):
 
     assert np.all(negatives >= 0)
     assert np.all(negatives < ml_ds.item_count)
+
+
+@mark.benchmark()
+def test_negative_unverified_bench(rng: np.random.Generator, ml_ds: Dataset, benchmark):
+    matrix = ml_ds.interactions().matrix()
+
+    users = rng.choice(ml_ds.user_count, 500, replace=True)
+    users = np.require(users, "i4")
+
+    def sample():
+        _items = matrix.sample_negatives(users, verify=False, rng=rng)
+
+    benchmark(sample)
+
+
+@mark.benchmark()
+def test_negative_verified_bench(rng: np.random.Generator, ml_ds: Dataset, benchmark):
+    matrix = ml_ds.interactions().matrix()
+
+    users = rng.choice(ml_ds.user_count, 500, replace=True)
+    users = np.require(users, "i4")
+
+    def sample():
+        _items = matrix.sample_negatives(users, rng=rng)
+
+    benchmark(sample)
