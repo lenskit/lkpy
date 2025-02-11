@@ -12,6 +12,7 @@ LensKit dataset abstraction.
 from __future__ import annotations
 
 import functools
+import warnings
 from abc import abstractmethod
 from collections.abc import Callable, Mapping
 from os import PathLike
@@ -25,7 +26,7 @@ import torch
 from numpy.typing import NDArray
 from typing_extensions import Any, Literal, TypeAlias, TypeVar, overload, override
 
-from lenskit.diagnostics import DataError
+from lenskit.diagnostics import DataError, DataWarning
 from lenskit.logging import get_logger
 from lenskit.random import random_generator
 
@@ -789,6 +790,8 @@ class MatrixRelationshipSet(RelationshipSet):
     col_type: str
     _col_stats: pd.DataFrame | None = None
 
+    rc_index: pd.MultiIndex
+
     def __init__(
         self,
         ds: Dataset,
@@ -800,6 +803,9 @@ class MatrixRelationshipSet(RelationshipSet):
         # order the table to compute the sparse matrix
         entities = list(schema.entities.keys())
         row, col = entities
+        row_col_name = num_col_name(row)
+        col_col_name = num_col_name(col)
+
         self.row_type = row
         self.row_vocabulary = ds.entities(row).vocabulary
         self.col_type = col
@@ -817,6 +823,15 @@ class MatrixRelationshipSet(RelationshipSet):
         row_sizes[np.asarray(rsz_nums) + 1] = rsz_counts
         self._row_ptrs = np.cumsum(row_sizes, dtype=np.int32)
         self._table = table
+
+        # make the index
+        self.rc_index = pd.MultiIndex.from_arrays(
+            [
+                self._table.column(row_col_name).to_numpy(),
+                self._table.column(col_col_name).to_numpy(),
+            ],
+            names=[row_col_name, col_col_name],
+        )
 
     @property
     def n_rows(self):
@@ -958,21 +973,23 @@ class MatrixRelationshipSet(RelationshipSet):
                 indices=indices, values=values, size=(n_rows, n_cols)
             ).coalesce()
 
-    def negative_items(
+    def sample_negatives(
         self,
-        users: np.ndarray[int, np.dtype[np.int32]],
+        rows: np.ndarray[int, np.dtype[np.int32]],
         *,
         verify: bool = True,
         max_attempts: int = 10,
         rng: np.random.Generator | None = None,
     ) -> NDArray[np.int32]:
         """
-        Sample negative items for an array of users.
+        Sample negative columns (columns with no observation recorded) for an
+        array of rows. On a normal interaction matrix, this samples negative
+        items for users.
 
         Args:
-            users:
-                The user numbers.  Duplicates are allowed, and negative items
-                are sampled independently for each item. Must be a 1D array or
+            rows:
+                The row numbers.  Duplicates are allowed, and negative columns
+                are sampled independently for each row. Must be a 1D array or
                 tensor.
             verify:
                 Whether to verify that the negative items are actually negative.
@@ -985,9 +1002,32 @@ class MatrixRelationshipSet(RelationshipSet):
                 A random number generator to use.
         """
         rng = random_generator(rng)
-        items = rng.choice(self.n_cols, size=len(users), replace=True)
-        items = np.require(items, "i4")
-        return items
+
+        _log.debug("samping negatives", nrows=len(rows))
+        columns = rng.choice(self.n_cols, size=len(rows), replace=True)
+        columns = np.require(columns, "i4")
+
+        if verify:
+            non_neg = self._check_negatives(rows, columns)
+            _log.debug("checking negatives", nrows=len(rows), npos=np.sum(non_neg).item())
+            if np.any(non_neg):
+                if max_attempts > 0:
+                    columns[non_neg] = self.sample_negatives(
+                        rows[non_neg], verify=True, rng=rng, max_attempts=max_attempts - 1
+                    )
+                else:
+                    warnings.warn(
+                        "failed to find verified negatives for {} users".format(np.sum(non_neg)),
+                        DataWarning,
+                    )
+
+        return columns
+
+    def _check_negatives(
+        self, rows: NDArray[np.int32], columns: NDArray[np.int32]
+    ) -> NDArray[np.bool]:
+        locs = self.rc_index.get_indexer_for([rows, columns])
+        return locs >= 0
 
     def row_table(self, id: ID | None = None, *, number: int | None = None) -> pa.Table | None:
         """
