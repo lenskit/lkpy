@@ -790,7 +790,7 @@ class MatrixRelationshipSet(RelationshipSet):
     col_type: str
     _col_stats: pd.DataFrame | None = None
 
-    rc_index: pd.MultiIndex
+    rc_index: pd.Index
 
     def __init__(
         self,
@@ -825,12 +825,11 @@ class MatrixRelationshipSet(RelationshipSet):
         self._table = table
 
         # make the index
-        self.rc_index = pd.MultiIndex.from_arrays(
-            [
+        self.rc_index = pd.Index(
+            self._rc_combined_nums(
                 self._table.column(row_col_name).to_numpy(),
                 self._table.column(col_col_name).to_numpy(),
-            ],
-            names=[row_col_name, col_col_name],
+            )
         )
 
     @property
@@ -1026,8 +1025,14 @@ class MatrixRelationshipSet(RelationshipSet):
     def _check_negatives(
         self, rows: NDArray[np.int32], columns: NDArray[np.int32]
     ) -> NDArray[np.bool]:
-        locs = self.rc_index.get_indexer_for([rows, columns])
+        nums = self._rc_combined_nums(rows, columns)
+        locs = self.rc_index.get_indexer_for(nums)
         return locs >= 0
+
+    def _rc_combined_nums(self, rows: NDArray[np.int32], columns: NDArray[np.int32]):
+        rnums = rows.astype(np.uint64)
+        cnums = columns.astype(np.uint64)
+        return (rnums << 32) + cnums
 
     def row_table(self, id: ID | None = None, *, number: int | None = None) -> pa.Table | None:
         """
