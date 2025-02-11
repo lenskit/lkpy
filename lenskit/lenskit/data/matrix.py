@@ -63,8 +63,8 @@ class COOStructure(NamedTuple):
         Caller
     """
 
-    rowinds: np.ndarray
-    colinds: np.ndarray
+    row_numbers: np.ndarray
+    col_numbers: np.ndarray
     shape: tuple[int, int]
 
     @property
@@ -77,4 +77,4 @@ class COOStructure(NamedTuple):
 
     @property
     def nnz(self):
-        return self.rowinds[self.nrows]
+        return self.row_numbers[self.nrows]
