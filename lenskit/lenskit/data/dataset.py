@@ -834,7 +834,7 @@ class MatrixRelationshipSet(RelationshipSet):
 
     @property
     def n_rows(self):
-        return len(self.col_vocabulary)
+        return len(self.row_vocabulary)
 
     @property
     def n_cols(self) -> int:
