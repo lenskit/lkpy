@@ -976,6 +976,7 @@ class MatrixRelationshipSet(RelationshipSet):
         self,
         rows: np.ndarray[int, np.dtype[np.int32]],
         *,
+        weighting: Literal["uniform", "popularity"] = "uniform",
         verify: bool = True,
         max_attempts: int = 10,
         rng: np.random.Generator | None = None,
@@ -990,6 +991,10 @@ class MatrixRelationshipSet(RelationshipSet):
                 The row numbers.  Duplicates are allowed, and negative columns
                 are sampled independently for each row. Must be a 1D array or
                 tensor.
+            weighting:
+                The weighting for sampled negatives; ``uniform`` samples them
+                uniformly at random, while ``popularity`` samples them
+                proportional to their popularity (number of occurrences).
             verify:
                 Whether to verify that the negative items are actually negative.
                 Unverified sampling is much faster but can return false
@@ -1003,7 +1008,13 @@ class MatrixRelationshipSet(RelationshipSet):
         rng = random_generator(rng)
 
         _log.debug("samping negatives", nrows=len(rows))
-        columns = rng.choice(self.n_cols, size=len(rows), replace=True)
+        match weighting:
+            case "uniform":
+                columns = rng.choice(self.n_cols, size=len(rows), replace=True)
+            case "popularity":
+                ccol = self._table.column(num_col_name(self.col_type)).to_numpy()
+                trows = rng.choice(self._table.num_rows, size=len(rows), replace=True)
+                columns = ccol[trows]
         columns = np.require(columns, "i4")
 
         if verify:
@@ -1012,7 +1023,11 @@ class MatrixRelationshipSet(RelationshipSet):
             if np.any(non_neg):
                 if max_attempts > 0:
                     columns[non_neg] = self.sample_negatives(
-                        rows[non_neg], verify=True, rng=rng, max_attempts=max_attempts - 1
+                        rows[non_neg],
+                        verify=True,
+                        rng=rng,
+                        max_attempts=max_attempts - 1,
+                        weighting=weighting,
                     )
                 else:
                     warnings.warn(
