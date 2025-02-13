@@ -65,6 +65,9 @@ class WorkerContext:
     of logging, etc.
 
     Only one worker context can be active, regardless of how many threads are active.
+
+    Stability:
+        internal
     """
 
     config: WorkerLogConfig
@@ -77,6 +80,9 @@ class WorkerContext:
             self.config.authkey = mp.current_process().authkey
 
     def start(self):
+        """
+        Start the logging context.
+        """
         global _active_context
         if _active_context is not None:
             raise RuntimeError("worker context already active")
