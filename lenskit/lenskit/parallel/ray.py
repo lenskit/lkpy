@@ -135,7 +135,9 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         _log.debug("persisting to Ray cluster")
         self.model_ref = ray.put(model)
         self.function = func
-        self.action = ray_invoke_worker.options(num_cpus=inference_worker_cpus(), lk_process=1)
+        self.action = ray_invoke_worker.options(
+            num_cpus=inference_worker_cpus(), resources={LK_PROCESS_SLOT: 1}
+        )
 
     def map(self, tasks: Iterable[A]) -> Iterator[R]:
         for args in itertools.batched(tasks, 200):
