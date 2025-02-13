@@ -181,3 +181,8 @@ class ZMQLogHandler(Handler):
 
         with self._lock:
             self.socket.send_multipart([engine, name, data, mb.digest()])
+
+
+def send_task(task: Task):
+    assert _active_context is not None
+    _active_context.send_task(task)

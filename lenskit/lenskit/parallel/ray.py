@@ -25,8 +25,8 @@ from lenskit.logging.worker import WorkerContext, WorkerLogConfig
 from .config import (
     ParallelConfig,
     effective_cpu_count,
+    ensure_parallel_init,
     get_parallel_config,
-    initialize,
     subprocess_config,
 )
 from .invoker import A, InvokeOp, M, ModelOpInvoker, R
@@ -39,7 +39,6 @@ else:
 
 LK_PROCESS_SLOT = "lk_process"
 _worker_parallel: ParallelConfig
-_worker_log: WorkerContext
 _log = get_logger(__name__)
 
 
@@ -99,19 +98,10 @@ def init_cluster(
     wc = WorkerLogConfig.current()
     env["LK_LOG_CONFIG"] = base64.encodebytes(pickle.dumps(wc)).decode()
 
-    runtime = ray.runtime_env.RuntimeEnv(env_vars=env, worker_process_setup_hook=_setup_ray_worker)
+    runtime = ray.runtime_env.RuntimeEnv(env_vars=env)
 
     _log.info("starting Ray cluster")
     ray.init(num_cpus=num_cpus, resources=resources, runtime_env=runtime, **kwargs)
-
-
-def _setup_ray_worker():
-    global _worker_log
-    initialize()
-    log_cfg = pickle.loads(base64.decodebytes(os.environb[b"LK_LOG_CONFIG"]))
-
-    _worker_log = WorkerContext(log_cfg)
-    _worker_log.start()
 
 
 def inference_worker_cpus() -> int:
@@ -150,12 +140,13 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
 
 @ray.remote
 def ray_invoke_worker(func: Callable[[M, A], R], model: M, args: list[A]) -> list[R]:
-    global _worker_log
-
-    try:
-        with Task("cluster worker", subprocess=True) as task:
-            result = [func(model, arg) for arg in args]
-    finally:
-        _worker_log.send_task(task)
+    log_cfg = pickle.loads(base64.decodebytes(os.environb[b"LK_LOG_CONFIG"]))
+    ensure_parallel_init()
+    with WorkerContext(log_cfg) as ctx:
+        try:
+            with Task("cluster worker", subprocess=True) as task:
+                result = [func(model, arg) for arg in args]
+        finally:
+            ctx.send_task(task)
 
     return result
