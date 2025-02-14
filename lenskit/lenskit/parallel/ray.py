@@ -138,15 +138,17 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         del self.model_ref
 
 
-@ray.remote
-def ray_invoke_worker(func: Callable[[M, A], R], model: M, args: list[A]) -> list[R]:
-    log_cfg = pickle.loads(base64.decodebytes(os.environb[b"LK_LOG_CONFIG"]))
-    ensure_parallel_init()
-    with WorkerContext(log_cfg) as ctx:
-        try:
-            with Task("cluster worker", subprocess=True) as task:
-                result = [func(model, arg) for arg in args]
-        finally:
-            ctx.send_task(task)
+if RAY_AVAILABLE:
 
-    return result
+    @ray.remote
+    def ray_invoke_worker(func: Callable[[M, A], R], model: M, args: list[A]) -> list[R]:
+        log_cfg = pickle.loads(base64.decodebytes(os.environb[b"LK_LOG_CONFIG"]))
+        ensure_parallel_init()
+        with WorkerContext(log_cfg) as ctx:
+            try:
+                with Task("cluster worker", subprocess=True) as task:
+                    result = [func(model, arg) for arg in args]
+            finally:
+                ctx.send_task(task)
+
+        return result
