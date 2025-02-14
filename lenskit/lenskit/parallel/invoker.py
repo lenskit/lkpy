@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, Iterable, Iterator, Optional, TypeAlias, TypeVar
+from typing import Any, Callable, Generic, Iterable, Iterator, Literal, TypeAlias, TypeVar
 
 from .config import ParallelConfig, ensure_parallel_init, get_parallel_config
 
@@ -21,7 +21,7 @@ InvokeOp: TypeAlias = Callable[[M, A], R]
 def invoker(
     model: M,
     func: InvokeOp[M, A, R],
-    n_jobs: Optional[int] = None,
+    n_jobs: int | None | Literal["ray"] = None,
     *,
     worker_parallel: ParallelConfig | None = None,
 ) -> ModelOpInvoker[A, R]:
@@ -34,18 +34,32 @@ def invoker(
         func:
             The function to call.  The function must be pickleable.
         n_jobs:
-            The number of processes to use for parallel operations.  If ``None``, will
-            call :func:`proc_count` with a maximum default process count of 4.
+            The number of processes to use for parallel operations.  If
+            ``None``, will call :func:`proc_count` with a maximum default
+            process count of 4.  If ``ray`` (experimental), uses the Ray
+            cluster.
         worker_parallel:
             A parallel configuration for subprocess workers.
 
     Returns:
         ModelOpInvoker:
             An invoker to perform operations on the model.
+
+    Stability:
+        caller
     """
     ensure_parallel_init()
     if n_jobs is None:
         n_jobs = get_parallel_config().processes
+
+    if n_jobs == "ray":
+        from .ray import RAY_SUPPORTED, RayOpInvoker, ensure_cluster
+
+        if not RAY_SUPPORTED:
+            raise RuntimeError("ray backend not available")
+
+        ensure_cluster()
+        return RayOpInvoker(model, func)
 
     if n_jobs == 1:
         from .sequential import InProcessOpInvoker
@@ -55,6 +69,11 @@ def invoker(
         from .pool import ProcessPoolOpInvoker
 
         return ProcessPoolOpInvoker(model, func, n_jobs, worker_parallel=worker_parallel)
+
+
+def set_backend(name: str):
+    global _backend
+    _backend = name
 
 
 class ModelOpInvoker(ABC, Generic[A, R]):

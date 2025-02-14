@@ -22,10 +22,34 @@ _log = logging.getLogger(__name__)
 
 @dataclass
 class ParallelConfig:
+    """
+    Parallel processing configuration.
+    """
+
     processes: int
     threads: int
     backend_threads: int
     child_threads: int
+
+    @property
+    def total_threads(self) -> int:
+        """
+        Get the total number of threads for this worker (training threads times
+        backend threads).
+        """
+        return self.threads * self.backend_threads
+
+    def env_vars(self) -> dict[str, str]:
+        """
+        Get this parallel configuration as a set of environment variables.  The
+        set also includes ``OMP_NUM_THREADS`` to configure OMP early.
+        """
+        return {
+            "LK_NUM_PROCS": str(self.processes),
+            "LK_NUM_THREADS": str(self.threads),
+            "LK_NUM_BACKEND_THREADS": str(self.backend_threads),
+            "LK_NUM_CHILD_THREADS": str(self.child_threads),
+        }
 
 
 def initialize(

@@ -53,7 +53,6 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         worker_parallel: ParallelConfig | None = None,
     ):
         log = _log.bind(n_jobs=n_jobs)
-        log.debug("persisting function")
         if worker_parallel is None:
             worker_parallel = ParallelConfig(1, 1, get_parallel_config().child_threads, 1)
         ctx = LensKitMPContext(worker_parallel)
@@ -63,6 +62,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         self.manager.start()
 
         try:
+            log.debug("persisting function")
             job = worker.WorkerData(func, model)
             job = shm_serialize(job, self.manager)
             log.info("setting up process pool")

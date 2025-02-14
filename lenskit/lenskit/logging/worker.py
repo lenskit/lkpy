@@ -65,6 +65,9 @@ class WorkerContext:
     of logging, etc.
 
     Only one worker context can be active, regardless of how many threads are active.
+
+    Stability:
+        internal
     """
 
     config: WorkerLogConfig
@@ -77,6 +80,9 @@ class WorkerContext:
             self.config.authkey = mp.current_process().authkey
 
     def start(self):
+        """
+        Start the logging context.
+        """
         global _active_context
         if _active_context is not None:
             raise RuntimeError("worker context already active")
@@ -175,3 +181,8 @@ class ZMQLogHandler(Handler):
 
         with self._lock:
             self.socket.send_multipart([engine, name, data, mb.digest()])
+
+
+def send_task(task: Task):
+    assert _active_context is not None
+    _active_context.send_task(task)

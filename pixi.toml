@@ -72,6 +72,12 @@ hypothesis = ">=6.16"
 pyprojroot = "=0.3"
 pyyaml = "~=6.0"
 
+[feature.ray]
+platforms = ["osx-arm64", "linux-64", "win-64"]
+
+[feature.ray.dependencies]
+ray-default = "~=2.40"
+
 [feature.doc.dependencies]
 sphinx = ">=4.2"
 sphinxext-opengraph = ">=0.5"
@@ -151,6 +157,7 @@ dev-full = { features = [
   "dev",
   "doc",
   "test",
+  "ray",
   "demo",
   "sklearn",
   "funksvd",
@@ -224,6 +231,7 @@ test-py312-hpf = { features = [
 test-py311-full = { features = [
   "py311",
   "test",
+  "ray",
   "sklearn",
   "funksvd",
   "implicit",
@@ -232,6 +240,7 @@ test-py311-full = { features = [
 test-py312-full = { features = [
   "py312",
   "test",
+  "ray",
   "sklearn",
   "funksvd",
   "implicit",
