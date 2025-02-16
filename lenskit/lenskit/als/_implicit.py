@@ -13,7 +13,6 @@ import torch
 from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList
-from lenskit.logging import get_logger
 from lenskit.logging.progress import item_progress_handle, pbh_update
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
@@ -65,8 +64,6 @@ class ImplicitMFScorer(ALSBase):
     Stability:
         Caller
     """
-
-    logger = get_logger(__name__, variant="implicit")
 
     config: ImplicitMFConfig
 

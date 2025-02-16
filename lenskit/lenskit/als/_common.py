@@ -18,11 +18,13 @@ from typing_extensions import NamedTuple, override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.types import UIPair
+from lenskit.logging import get_logger
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component
 from lenskit.training import IterativeTraining, TrainingOptions
 
 EntityClass: TypeAlias = Literal["user", "item"]
+_log = get_logger(__name__)
 
 
 class ALSConfig(BaseModel):
@@ -148,7 +150,9 @@ class ALSBase(IterativeTraining, Component[ItemList], ABC):
     user_features_: torch.Tensor | None
     item_features_: torch.Tensor
 
-    logger: structlog.stdlib.BoundLogger
+    @property
+    def logger(self) -> structlog.stdlib.BoundLogger:
+        return _log.bind(scorer=self.__class__.__name__, size=self.config.embedding_size)
 
     @override
     def training_loop(
@@ -189,7 +193,7 @@ class ALSBase(IterativeTraining, Component[ItemList], ABC):
         Args:
             ratings: the ratings data frame.
         """
-        log = self.logger = self.logger.bind(features=self.config.embedding_size)
+        log = self.logger
 
         assert self.user_features_ is not None
         assert self.item_features_ is not None
@@ -274,6 +278,8 @@ class ALSBase(IterativeTraining, Component[ItemList], ABC):
         if user_id is not None and self.users_ is not None:
             user_num = self.users_.number(user_id, missing=None)
 
+        log = self.logger.bind(user=user_id)
+
         u_offset = None
         u_feat = None
         if (
@@ -281,10 +287,12 @@ class ALSBase(IterativeTraining, Component[ItemList], ABC):
             and len(query.user_items) > 0
             and self.config.user_embeddings != "prefer"
         ):
+            log.debug("training user embedding")
             u_feat, u_offset = self.new_user_embedding(user_num, query.user_items)
 
         if u_feat is None:
             if user_num is None or self.user_features_ is None:
+                log.debug("cannot find user embedding")
                 return ItemList(items, scores=np.nan)
             u_feat = self.user_features_[user_num, :]
 
@@ -294,6 +302,7 @@ class ALSBase(IterativeTraining, Component[ItemList], ABC):
 
         scores = torch.full((len(items),), np.nan, dtype=torch.float64)
         scores[item_mask] = i_feats @ u_feat
+        log.debug("scored %d items", torch.sum(item_mask).item())
 
         results = ItemList(items, scores=scores)
         return self.finalize_scores(user_num, results, u_offset)
@@ -314,6 +323,3 @@ class ALSBase(IterativeTraining, Component[ItemList], ABC):
         Perform any final transformation of scores prior to returning them.
         """
         return items
-
-    def __getstate__(self):
-        return {k: v for (k, v) in self.__dict__.items() if k != "logger"}
