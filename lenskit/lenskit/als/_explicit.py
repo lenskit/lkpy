@@ -12,7 +12,6 @@ from typing_extensions import override
 
 from lenskit.basic import BiasModel, Damping
 from lenskit.data import Dataset, ItemList
-from lenskit.logging import get_logger
 from lenskit.logging.progress import item_progress_handle, pbh_update
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
@@ -46,8 +45,6 @@ class BiasedMFScorer(ALSBase):
 
     config: BiasedMFConfig
     bias_: BiasModel
-
-    logger = get_logger(__name__, variant="biased")
 
     @override
     def prepare_data(self, data: Dataset):

@@ -191,7 +191,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
                 torch.max(kn_sims).item(),
             )
         else:
-            log.warning("no candidate neighbors found")
+            log.debug("no candidate neighbors found, cannot score")
             return ItemList(items, scores=np.nan)
 
         assert not torch.any(torch.isnan(kn_sims))
