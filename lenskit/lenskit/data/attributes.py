@@ -217,6 +217,9 @@ class VectorAttributeSet(AttributeSet):
         if self._names is None:
             field = self._table.field(self.name)
             meta = field.metadata
+            if meta is None:
+                return None
+
             nstr = meta.get(b"lenskit:names", None) if meta else None
             if nstr is not None:
                 self._names = json.loads(nstr)
@@ -297,6 +300,9 @@ class SparseAttributeSet(AttributeSet):
         if self._names is None:
             field = self._table.field(self.name)
             meta = field.metadata
+            if meta is None:
+                return None
+
             nstr = meta.get(b"lenskit:names", None) if meta else None
             if nstr is not None:
                 self._names = json.loads(nstr)
@@ -318,9 +324,6 @@ class SparseAttributeSet(AttributeSet):
         indices = entries.field("index").to_numpy(zero_copy_only=False)
         values = entries.field("value").to_numpy(zero_copy_only=False)
 
-        field = self._table.field(self.name)
-        meta = field.metadata
-        assert meta is not None
         ncol = self._spec.vector_size
         assert ncol is not None, "sparse vector has no size"
 
