@@ -64,7 +64,7 @@ And measure their results:
     >>> scores.list_summary()    # doctest: +ELLIPSIS
               mean    median     std
     metric
-    RBP    0.09...    0.0...  0.1...
+    RBP    0.06...    0.02... 0.07..
 
 
 The :py:func:`predict` function works similarly, but for rating predictions;
