@@ -27,12 +27,25 @@ class RBP(ListMetric, RankingMetricBase):
     metric will be normalized by the maximum achievable with the provided test
     data.
 
+    :cite:t:`rbp` provide an extended discussion on choosing the patience
+    parameter :math:`\\gamma`.  This metric defaults to :math:`\\gamma=0.85`, to
+    provide a relatively shallow curve and reward good items on the first few
+    pages of results (in a 10-per-page setting).  Recommendation systems data
+    has no pooling, so the variance of this estimator may be high as they note
+    in the paper; however, RBP with high patience should be no worse than nDCG
+    (and perhaps even better) in this regard.
+
+    .. warning::
+
+        The additional normalization is experimental, and should not yet be used
+        for published research results.
+
     Args:
         k:
             The maximum recommendation list length.
         patience:
             The patience parameter :math:`\\gamma`, the probability that the
-            user continues browsing at each point.
+            user continues browsing at each point.  The default is 0.85.
         normalize:
             Whether to normalize the RBP scores; if ``True``, divides the RBP
             score by the maximum achievable with the test data (as in nDCG).
@@ -44,7 +57,7 @@ class RBP(ListMetric, RankingMetricBase):
     patience: float
     normalize: bool
 
-    def __init__(self, k: int | None = None, *, patience: float = 0.5, normalize: bool = False):
+    def __init__(self, k: int | None = None, *, patience: float = 0.85, normalize: bool = False):
         super().__init__(k)
         self.patience = patience
         self.normalize = normalize

@@ -36,7 +36,7 @@ def test_rbp_no_match():
 def test_rbp_one_match():
     recs = ItemList([1], ordered=True)
     truth = ItemList([1, 2, 3])
-    assert call_metric(RBP, recs, truth) == approx(0.5)
+    assert call_metric(RBP, recs, truth) == approx(0.15)
 
 
 @given(st.lists(st.integers(1), min_size=1, max_size=100, unique=True), st.floats(0.05, 0.95))
@@ -84,4 +84,4 @@ def test_rbp_missing():
     recs = ItemList([1, 2], ordered=True)
     truth = ItemList([1, 2, 3])
     # (1 + 0.5) * 0.5
-    assert call_metric(RBP, recs, truth) == approx(0.75)
+    assert call_metric(RBP(patience=0.5), recs, truth) == approx(0.75)
