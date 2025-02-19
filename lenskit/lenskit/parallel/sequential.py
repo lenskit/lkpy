@@ -18,7 +18,7 @@ class InProcessOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
     function: InvokeOp[M, A, R]
 
     def __init__(self, model: M, func: InvokeOp[M, A, R]):
-        _log.info("setting up in-process worker")
+        _log.debug("setting up in-process worker")
         self.model = model
         self.function = func
 

@@ -229,7 +229,7 @@ class RunAnalysis:
 
         n = len(outputs)
         _log.info("computing %d listwise metrics for %d output lists", len(lms), n)
-        with item_progress("lists", n) as pb:
+        with item_progress("Measuring", n) as pb:
             for i, (key, out) in enumerate(outputs):
                 list_test = test.lookup_projected(key)
                 if out is None:
