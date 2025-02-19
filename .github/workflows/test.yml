@@ -101,7 +101,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON "./lenskit[test]"
+          uv pip install --python $PYTHON ".[test]"
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -188,7 +188,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON "./lenskit[test]" --resolution=lowest-direct
+          uv pip install --python $PYTHON ".[test]" --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -279,7 +279,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON "./lenskit[test,sklearn]" --resolution=lowest-direct
+          uv pip install --python $PYTHON ".[test,sklearn]" --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -369,7 +369,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON "./lenskit[test,funksvd]" --resolution=lowest-direct
+          uv pip install --python $PYTHON ".[test,funksvd]" --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -459,7 +459,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON "./lenskit[test,implicit]" --resolution=lowest-direct
+          uv pip install --python $PYTHON ".[test,implicit]" --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'

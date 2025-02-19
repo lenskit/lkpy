@@ -23,7 +23,7 @@ export function vanillaSetup(options: VanillaTestOpts): WorkflowStep[] {
   }
   const exstr = extras.join(",");
 
-  pip += ` "./lenskit[${exstr}]"`;
+  pip += ` ".[${exstr}]"`;
 
   if (options.dep_strategy == "minimum") {
     pip += " --resolution=lowest-direct";
