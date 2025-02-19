@@ -13,15 +13,6 @@ import { aggregateResultsJob } from "./test/results.ts";
 
 const FULLDEP_CONDA_PYTHONS = ["py311", "py312"];
 
-const FILTER_PATHS = [
-  "lenskit*/**.py",
-  "**pyproject.toml",
-  "pixi.*",
-  "requirements*.txt",
-  "data/**",
-  ".github/workflows/test.yml",
-];
-
 const test_matrix = {
   conda: testJob({
     install: "conda",
@@ -121,8 +112,8 @@ const test_matrix = {
 export const workflow: Workflow = {
   name: "Automatic Tests",
   on: {
-    push: { "branches": ["main"], "paths": FILTER_PATHS },
-    pull_request: { "paths": FILTER_PATHS },
+    push: { "branches": ["main"] },
+    pull_request: {},
   },
   concurrency: {
     group: "test-${{github.ref}}",
