@@ -1,5 +1,4 @@
 PIP := "uv pip"
-PACKAGES := "lenskit lenskit-funksvd lenskit-implicit lenskit-hpf"
 python := "3.11"
 conda_env := "lkpy"
 DENO := "deno run --allow-read=. --allow-write=.github/workflows --allow-net=jsr.io"
@@ -15,19 +14,19 @@ clean:
 
 # build the modules and wheels
 build:
-    for pkg in {{PACKAGES}}; do python -m build -n -o dist $pkg; done
+    python -m build -n -o dist
 
 build-sdist:
-    for pkg in {{PACKAGES}}; do python -m build -n -s -o dist $pkg; done
+    python -m build -n -s -o dist
 
 # install the package
 [confirm("this installs package from a wheel, continue [y/N]?")]
 install:
-    {{PIP}} install {{PACKAGES}}
+    {{PIP}} install .
 
 # install the package (editable)
 install-editable:
-    {{PIP}} install {{ prepend('-e ', PACKAGES) }}
+    {{PIP}} install -e  .
 
 # run tests with default configuration
 test:

@@ -5,11 +5,6 @@
 # SPDX-License-Identifier: MIT
 """
 Bridges to recommendation models from :mod:`implicit`.
-
-.. note::
-
-    This package is not included in the base ``lenskit`` distribution. Install
-    ``lenskit-implicit`` from PyPI or Conda to get it.
 """
 
 import logging
