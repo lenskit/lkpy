@@ -938,9 +938,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstandard-0.23.0-py312hef9b889_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
-      - pypi: lenskit-hpf
-      - pypi: lenskit-implicit
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/anyio-4.7.0-pyhd8ed1ab_0.conda
@@ -1211,9 +1208,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstandard-0.23.0-py312h15fbf35_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
-      - pypi: lenskit-hpf
-      - pypi: lenskit-implicit
   dev-compat:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -1641,10 +1635,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/30/b6/daf3e2976932da4ed3579cff7a30a53d22ea9323ee4f0d8e43be60454897/colorclass-2.2.2-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
-      - pypi: lenskit-funksvd
-      - pypi: lenskit-hpf
-      - pypi: lenskit-implicit
-      - pypi: lenskit-sklearn
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/accessible-pygments-0.0.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/alabaster-1.0.0-pyhd8ed1ab_1.conda
@@ -1991,10 +1981,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/30/b6/daf3e2976932da4ed3579cff7a30a53d22ea9323ee4f0d8e43be60454897/colorclass-2.2.2-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
-      - pypi: lenskit-funksvd
-      - pypi: lenskit-hpf
-      - pypi: lenskit-implicit
-      - pypi: lenskit-sklearn
   dev-core:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -3205,10 +3191,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/30/b6/daf3e2976932da4ed3579cff7a30a53d22ea9323ee4f0d8e43be60454897/colorclass-2.2.2-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
-      - pypi: lenskit-funksvd
-      - pypi: lenskit-hpf
-      - pypi: lenskit-implicit
-      - pypi: lenskit-sklearn
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/accessible-pygments-0.0.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/aiohappyeyeballs-2.4.6-pyhd8ed1ab_0.conda
@@ -3586,10 +3568,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/30/b6/daf3e2976932da4ed3579cff7a30a53d22ea9323ee4f0d8e43be60454897/colorclass-2.2.2-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/13/dd/a49dc5a9146f081e69657f03542b71907ca10c9e594450ca45237a6e0691/unbeheader-1.4.0-py3-none-any.whl
       - pypi: lenskit
-      - pypi: lenskit-funksvd
-      - pypi: lenskit-hpf
-      - pypi: lenskit-implicit
-      - pypi: lenskit-sklearn
   doc:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -3858,10 +3836,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstandard-0.23.0-py312hef9b889_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
-      - pypi: lenskit-hpf
-      - pypi: lenskit-implicit
-      - pypi: lenskit-sklearn
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/accessible-pygments-0.0.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/alabaster-1.0.0-pyhd8ed1ab_1.conda
@@ -4107,10 +4081,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstandard-0.23.0-py312h15fbf35_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
-      - pypi: lenskit-hpf
-      - pypi: lenskit-implicit
-      - pypi: lenskit-sklearn
   report:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -4622,9 +4592,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstandard-0.23.0-py311hbc35293_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
-      - pypi: lenskit-hpf
-      - pypi: lenskit-implicit
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/accessible-pygments-0.0.5-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/alabaster-1.0.0-pyhd8ed1ab_1.conda
@@ -4933,9 +4900,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstandard-0.23.0-py311ha60cc69_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
-      - pypi: lenskit-hpf
-      - pypi: lenskit-implicit
   test-py311-core:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -5858,10 +5822,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstandard-0.23.0-py311hbc35293_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
-      - pypi: lenskit-hpf
-      - pypi: lenskit-implicit
-      - pypi: lenskit-sklearn
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/aiohappyeyeballs-2.4.6-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/aiohttp-3.10.5-py311h460d6c5_1.conda
@@ -6089,10 +6049,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstandard-0.23.0-py311ha60cc69_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
-      - pypi: lenskit-hpf
-      - pypi: lenskit-implicit
-      - pypi: lenskit-sklearn
   test-py311-funksvd:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -6278,7 +6234,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-h3b0a872_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
       linux-aarch64:
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/_openmp_mutex-4.5-2_gnu.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
@@ -6455,7 +6410,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/zeromq-4.3.5-h5efb499_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/zstd-1.5.6-h02f22dd_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
@@ -6622,7 +6576,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zeromq-4.3.5-hc1bb282_7.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
@@ -6776,7 +6729,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zeromq-4.3.5-ha9f60a1_7.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.6-h0ea2cb4_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
   test-py311-hpf:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -6961,7 +6913,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-h3b0a872_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: lenskit
-      - pypi: lenskit-hpf
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
@@ -7126,7 +7077,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zeromq-4.3.5-hc1bb282_7.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: lenskit
-      - pypi: lenskit-hpf
   test-py311-implicit:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -7316,7 +7266,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-h3b0a872_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: lenskit
-      - pypi: lenskit-implicit
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
@@ -7482,7 +7431,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zeromq-4.3.5-hc1bb282_7.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: lenskit
-      - pypi: lenskit-implicit
   test-py311-sklearn:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -7667,7 +7615,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-h3b0a872_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: lenskit
-      - pypi: lenskit-sklearn
       linux-aarch64:
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/_openmp_mutex-4.5-2_gnu.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
@@ -7843,7 +7790,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/zeromq-4.3.5-h5efb499_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/zstd-1.5.6-h02f22dd_0.conda
       - pypi: lenskit
-      - pypi: lenskit-sklearn
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
@@ -8009,7 +7955,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zeromq-4.3.5-hc1bb282_7.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: lenskit
-      - pypi: lenskit-sklearn
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
@@ -8163,7 +8108,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zeromq-4.3.5-ha9f60a1_7.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.6-h0ea2cb4_0.conda
       - pypi: lenskit
-      - pypi: lenskit-sklearn
   test-py312-core:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -9086,10 +9030,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstandard-0.23.0-py312hef9b889_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
-      - pypi: lenskit-hpf
-      - pypi: lenskit-implicit
-      - pypi: lenskit-sklearn
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/aiohappyeyeballs-2.4.6-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/aiohttp-3.10.5-py312h024a12e_1.conda
@@ -9317,10 +9257,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstandard-0.23.0-py312h15fbf35_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
-      - pypi: lenskit-hpf
-      - pypi: lenskit-implicit
-      - pypi: lenskit-sklearn
   test-py312-funksvd:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -9506,7 +9442,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-h3b0a872_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
       linux-aarch64:
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/_openmp_mutex-4.5-2_gnu.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
@@ -9683,7 +9618,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/zeromq-4.3.5-h5efb499_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/zstd-1.5.6-h02f22dd_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
@@ -9850,7 +9784,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zeromq-4.3.5-hc1bb282_7.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
@@ -10004,7 +9937,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zeromq-4.3.5-ha9f60a1_7.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.6-h0ea2cb4_0.conda
       - pypi: lenskit
-      - pypi: lenskit-funksvd
   test-py312-hpf:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -10189,7 +10121,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-h3b0a872_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: lenskit
-      - pypi: lenskit-hpf
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
@@ -10354,7 +10285,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zeromq-4.3.5-hc1bb282_7.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: lenskit
-      - pypi: lenskit-hpf
   test-py312-implicit:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -10544,7 +10474,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-h3b0a872_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: lenskit
-      - pypi: lenskit-implicit
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
@@ -10710,7 +10639,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zeromq-4.3.5-hc1bb282_7.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: lenskit
-      - pypi: lenskit-implicit
   test-py312-sklearn:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -10895,7 +10823,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-h3b0a872_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: lenskit
-      - pypi: lenskit-sklearn
       linux-aarch64:
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/_openmp_mutex-4.5-2_gnu.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
@@ -11071,7 +10998,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/zeromq-4.3.5-h5efb499_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/zstd-1.5.6-h02f22dd_0.conda
       - pypi: lenskit
-      - pypi: lenskit-sklearn
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
@@ -11237,7 +11163,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zeromq-4.3.5-hc1bb282_7.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: lenskit
-      - pypi: lenskit-sklearn
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
@@ -11391,7 +11316,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zeromq-4.3.5-ha9f60a1_7.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.6-h0ea2cb4_0.conda
       - pypi: lenskit
-      - pypi: lenskit-sklearn
   test-py313-core:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
@@ -12234,7 +12158,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-h3b0a872_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: lenskit
-      - pypi: lenskit-sklearn
       linux-aarch64:
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/_openmp_mutex-4.5-2_gnu.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
@@ -12408,7 +12331,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/zeromq-4.3.5-h5efb499_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/zstd-1.5.6-h02f22dd_0.conda
       - pypi: lenskit
-      - pypi: lenskit-sklearn
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
@@ -12574,7 +12496,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zeromq-4.3.5-hc1bb282_7.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.6-hb46c0d2_0.conda
       - pypi: lenskit
-      - pypi: lenskit-sklearn
       win-64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/annotated-types-0.7.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
@@ -12723,7 +12644,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/zeromq-4.3.5-ha9f60a1_7.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.6-h0ea2cb4_0.conda
       - pypi: lenskit
-      - pypi: lenskit-sklearn
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_libgcc_mutex-0.1-conda_forge.tar.bz2
   sha256: fe51de6107f9edc7aa4f786a70f4a883943bc9d39b3bb7307c04c41410990726
@@ -17406,40 +17326,35 @@ packages:
   - pytest>=8.2,<9 ; extra == 'test'
   requires_python: '>=3.11'
   editable: true
-- pypi: lenskit-funksvd
-  name: lenskit-funksvd
-  version: 2025.0.0a6.dev5+g8ec18189.d20250114
-  sha256: 5b1b6b387c9edf133e76fc58d19bdb611a5b8c3c80805aab04bad238b8e0c7b0
+- pypi: lenskit
+  name: lenskit
+  version: 2025.1.1b11
+  sha256: 0c20b8736be57438aa6ead0007e1c6afad9268e8dfd39540b161b776d28051f9
   requires_dist:
-  - lenskit
-  - numba>=0.56
-  requires_python: '>=3.11'
-  editable: true
-- pypi: lenskit-hpf
-  name: lenskit-hpf
-  version: 2025.0.0a6.dev5+g8ec18189.d20250114
-  sha256: 7aa59cc6db83ac59ffc0f94f55528d2de77ed28614726118d8bb6f0e7ea8c90a
-  requires_dist:
-  - hpfrec==0.2.*
-  - lenskit
-  requires_python: '>=3.11'
-  editable: true
-- pypi: lenskit-implicit
-  name: lenskit-implicit
-  version: 2025.0.0a6.dev5+g8ec18189.d20250114
-  sha256: f5a4e1dd74dfecf00c2247d1835fb22c43dd9f1e836eee6984ac67fe464ce688
-  requires_dist:
-  - implicit>=0.7.2
-  - lenskit
-  requires_python: '>=3.11'
-  editable: true
-- pypi: lenskit-sklearn
-  name: lenskit-sklearn
-  version: 2025.0.0a6.dev5+g8ec18189.d20250114
-  sha256: c916806b4a76e5d8ec8736c75e83bdc58eff179d8cd61ebd3983af766c59a2dc
-  requires_dist:
-  - lenskit
-  - scikit-learn~=1.2
+  - click~=8.1
+  - humanize~=4.2
+  - more-itertools>=9.0
+  - numpy>=1.25
+  - pandas~=2.0
+  - prettytable~=3.14
+  - pyarrow>=15
+  - pydantic~=2.7
+  - pyzmq>=24
+  - rich~=13.5
+  - scipy>=1.11
+  - structlog>=23.2
+  - threadpoolctl>=3.0
+  - torch~=2.4
+  - typing-extensions~=4.12
+  - ipywidgets~=8.0 ; extra == 'notebook'
+  - ray~=2.42 ; extra == 'ray'
+  - hypothesis>=6.16 ; extra == 'test'
+  - pyprojroot==0.3.* ; extra == 'test'
+  - pytest-benchmark==4.* ; extra == 'test'
+  - pytest-cov>=2.12 ; extra == 'test'
+  - pytest-doctestplus>=1.2.1,<2 ; extra == 'test'
+  - pytest-repeat>=0.9 ; extra == 'test'
+  - pytest>=8.2,<9 ; extra == 'test'
   requires_python: '>=3.11'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/linux-64/lerc-4.0.0-h27087fc_0.tar.bz2
