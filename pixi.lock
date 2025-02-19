@@ -17377,7 +17377,7 @@ packages:
   timestamp: 1729655345825
 - pypi: lenskit
   name: lenskit
-  version: 2025.1.1b11.dev1+g3f39d953.d20250219
+  version: 2025.1.1b11
   sha256: 0c20b8736be57438aa6ead0007e1c6afad9268e8dfd39540b161b776d28051f9
   requires_dist:
   - click~=8.1
@@ -17408,37 +17408,37 @@ packages:
   editable: true
 - pypi: lenskit-funksvd
   name: lenskit-funksvd
-  version: 2025.0.0a6.dev5+g8ec18189.d20250114
-  sha256: 5b1b6b387c9edf133e76fc58d19bdb611a5b8c3c80805aab04bad238b8e0c7b0
+  version: 2025.1.1b12.dev8+gc12ec409.d20250219
+  sha256: 27fca95a4f5f106f424009dd53dcc41ce60f4fae4d1949f5756777b5ff854293
   requires_dist:
-  - lenskit
+  - lenskit>=2025.1.1b11,<2025.1.1b13
   - numba>=0.56
   requires_python: '>=3.11'
   editable: true
 - pypi: lenskit-hpf
   name: lenskit-hpf
-  version: 2025.0.0a6.dev5+g8ec18189.d20250114
-  sha256: 7aa59cc6db83ac59ffc0f94f55528d2de77ed28614726118d8bb6f0e7ea8c90a
+  version: 2025.1.1b12.dev8+gc12ec409.d20250219
+  sha256: 39bb84f16432fd9319b4e31006438521de2772f1db2a5aae09966bfabaaf7a0d
   requires_dist:
   - hpfrec==0.2.*
-  - lenskit
+  - lenskit>=2025.1.1b11,<2025.1.1b13
   requires_python: '>=3.11'
   editable: true
 - pypi: lenskit-implicit
   name: lenskit-implicit
-  version: 2025.0.0a6.dev5+g8ec18189.d20250114
-  sha256: f5a4e1dd74dfecf00c2247d1835fb22c43dd9f1e836eee6984ac67fe464ce688
+  version: 2025.1.1b12.dev8+gc12ec409.d20250219
+  sha256: 6f06e48dac055ba15ff41b249239d8d8b41982fa261d6dd0558f880e2f8ec1bb
   requires_dist:
   - implicit>=0.7.2
-  - lenskit
+  - lenskit>=2025.1.1b11,<2025.1.1b13
   requires_python: '>=3.11'
   editable: true
 - pypi: lenskit-sklearn
   name: lenskit-sklearn
-  version: 2025.0.0a6.dev5+g8ec18189.d20250114
-  sha256: c916806b4a76e5d8ec8736c75e83bdc58eff179d8cd61ebd3983af766c59a2dc
+  version: 2025.1.1b12.dev8+gc12ec409.d20250219
+  sha256: 7fbbcd9ca0fce0f1bc35c048651cfedb3a156138007320e3e645a3b7ad5c376a
   requires_dist:
-  - lenskit
+  - lenskit>=2025.1.1b11,<2025.1.1b13
   - scikit-learn~=1.2
   requires_python: '>=3.11'
   editable: true
