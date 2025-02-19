@@ -64,17 +64,17 @@ lenskit = "lenskit.cli:lenskit"
 allow-direct-references = true
 
 [tool.hatch.build.targets.sdist]
-include = ["/lenskit", "LICENSE.md", "README.md"]
+include = ["src/lenskit", "LICENSE.md", "README.md"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["lenskit"]
 
 [tool.hatch.version]
 source = "vcs"
-raw-options = { root = "..", version_scheme = "guess-next-dev" }
+raw-options = { version_scheme = "guess-next-dev" }
 
 [tool.hatch.build.hooks.vcs]
-version-file = "lenskit/_version.py"
+version-file = "src/lenskit/_version.py"
 
 # override where UV gets pytorch for CI installs
 [[tool.uv.index]]
@@ -88,8 +88,8 @@ torch = [{ index = "pytorch-cpu" }]
 # dev tool configuration
 [tool.coverage.run]
 relative_files = "true"
-include = ["lenskit*/lenskit/"]
-omit = ["lenskit/lenskit/_version.py"]
+include = ["src/lenskit/"]
+omit = ["src/lenskit/_version.py"]
 
 [tool.ruff]
 line-length = 100
@@ -132,7 +132,7 @@ log_file_format = "[%(levelname)7s] %(asctime)s [%(processName)s] %(name)s %(mes
 log_file_level = "DEBUG"
 addopts = "--import-mode=importlib --benchmark-skip"
 doctest_plus = true
-doctest_subpackage_requires = ["lenskit-hpf/lenskit/* = hpfrec"]
+doctest_subpackage_requires = ["src/lenskit/hpf.py = hpfrec"]
 consider_namespace_packages = true
 filterwarnings = [
   "ignore:::pyarrow[.*]",
