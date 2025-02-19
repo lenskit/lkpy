@@ -6,21 +6,7 @@ name: Automatic Tests
   push:
     branches:
       - main
-    paths:
-      - lenskit*/**.py
-      - '**pyproject.toml'
-      - pixi.*
-      - requirements*.txt
-      - data/**
-      - .github/workflows/test.yml
-  pull_request:
-    paths:
-      - lenskit*/**.py
-      - '**pyproject.toml'
-      - pixi.*
-      - requirements*.txt
-      - data/**
-      - .github/workflows/test.yml
+  pull_request: {}
 concurrency:
   group: 'test-${{github.ref}}'
   cancel-in-progress: true
