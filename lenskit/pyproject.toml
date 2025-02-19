@@ -37,6 +37,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+notebook = ["ipywidgets ~=8.0"]
 ray = ["ray ~=2.42"]
 # test deps — keep synchronized with pixi.toml
 test = [

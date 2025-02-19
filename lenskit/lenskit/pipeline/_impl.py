@@ -263,7 +263,7 @@ class Pipeline:
                     if isinstance(comp, Trainable):
                         # spawn new seed if needed
                         c_opts = options if seed is None else replace(options, rng=seed.spawn(1)[0])
-                        clog.info("training component")
+                        clog.debug("training component")
                         comp.train(data, c_opts)
                     else:
                         clog.debug("training not required")

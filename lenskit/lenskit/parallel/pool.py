@@ -65,7 +65,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
             log.debug("persisting function")
             job = worker.WorkerData(func, model)
             job = shm_serialize(job, self.manager)
-            log.info("setting up process pool")
+            log.debug("setting up process pool")
             self.pool = ProcessPoolExecutor(n_jobs, ctx, worker.initalize, (job,))
         except Exception as e:
             self.manager.shutdown()
