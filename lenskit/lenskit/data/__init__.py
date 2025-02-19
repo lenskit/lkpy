@@ -9,11 +9,13 @@ Data abstractions and data set access.
 
 from __future__ import annotations
 
+from lenskit.diagnostics import FieldError
+
 from .adapt import from_interactions_df
 from .attributes import AttributeSet
 from .builder import DatasetBuilder
 from .collection import GenericKey, ItemListCollection, UserIDKey
-from .dataset import Dataset, EntitySet, FieldError, MatrixRelationshipSet, RelationshipSet
+from .dataset import Dataset, EntitySet, MatrixRelationshipSet, RelationshipSet
 from .items import ItemList
 from .matrix import COOStructure, CSRStructure
 from .movielens import load_movielens, load_movielens_df
