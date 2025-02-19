@@ -71,7 +71,7 @@ allow-direct-references = true
 include = ["src/lenskit", "LICENSE.md", "README.md"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["lenskit"]
+packages = ["src/lenskit"]
 
 [tool.hatch.version]
 source = "vcs"

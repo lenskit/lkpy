@@ -17274,43 +17274,8 @@ packages:
   timestamp: 1729655345825
 - pypi: .
   name: lenskit
-  version: 2025.1.1b12.dev19+gbe8d4078
-  sha256: 7aed151bfcae967ca94a3715d6e48c1063e62c42c1730d3dcfacfbe8696e4585
-  requires_dist:
-  - click~=8.1
-  - humanize~=4.2
-  - more-itertools>=9.0
-  - numpy>=1.25
-  - pandas~=2.0
-  - prettytable~=3.14
-  - pyarrow>=15
-  - pydantic~=2.7
-  - pyzmq>=24
-  - rich~=13.5
-  - scipy>=1.11
-  - structlog>=23.2
-  - threadpoolctl>=3.0
-  - torch~=2.4
-  - typing-extensions~=4.12
-  - numba>=0.56 ; extra == 'funksvd'
-  - hpfrec==0.2.* ; extra == 'hpf'
-  - implicit>=0.7.2 ; extra == 'implicit'
-  - ipywidgets~=8.0 ; extra == 'notebook'
-  - ray~=2.42 ; extra == 'ray'
-  - scikit-learn~=1.2 ; extra == 'sklearn'
-  - hypothesis>=6.16 ; extra == 'test'
-  - pyprojroot==0.3.* ; extra == 'test'
-  - pytest-benchmark==4.* ; extra == 'test'
-  - pytest-cov>=2.12 ; extra == 'test'
-  - pytest-doctestplus>=1.2.1,<2 ; extra == 'test'
-  - pytest-repeat>=0.9 ; extra == 'test'
-  - pytest>=8.2,<9 ; extra == 'test'
-  requires_python: '>=3.11'
-  editable: true
-- pypi: .
-  name: lenskit
-  version: 2025.1.1b12.dev19+gbe8d4078.d20250219
-  sha256: 7aed151bfcae967ca94a3715d6e48c1063e62c42c1730d3dcfacfbe8696e4585
+  version: 2025.1.1b12.dev21+g801d0bc7.d20250219
+  sha256: 8c5842e3958ee62c336c65ac1c2e511ef29bbf3cb05f3b763ea62a6161103118
   requires_dist:
   - click~=8.1
   - humanize~=4.2
