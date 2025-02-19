@@ -115,7 +115,7 @@ def test_batch_rmse(ml_100k):
     pa.add_metric(RMSE())
     pa.add_metric(MAE())
 
-    metrics = pa.compute(preds, split.test)
+    metrics = pa.measure(preds, split.test)
 
     umdf = metrics.list_metrics(fill_missing=False)
     mdf = metrics.list_summary()

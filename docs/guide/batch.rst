@@ -58,9 +58,9 @@ Generate recommendations:
 
 And measure their results:
 
-    >>> measure = RunAnalysis()
-    >>> measure.add_metric(RBP())
-    >>> scores = measure.compute(recs, split.test)
+    >>> ra = RunAnalysis()
+    >>> ra.add_metric(RBP())
+    >>> scores = ra.measure(recs, split.test)
     >>> scores.list_summary()    # doctest: +ELLIPSIS
               mean    median     std
     metric
