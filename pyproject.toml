@@ -106,7 +106,7 @@ exclude = [".git", "__pycache__", "build", "dist"]
 
 [tool.ruff.lint.per-file-ignores]
 # Importing PyTest fixtures triggers F811
-"*/tests/*.py" = ["F811", "F401"]
+"tests/*.py" = ["F811", "F401"]
 
 [tool.ruff.lint.isort]
 section-order = [
