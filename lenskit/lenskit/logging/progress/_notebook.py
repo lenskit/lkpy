@@ -7,6 +7,7 @@ from __future__ import annotations
 from time import perf_counter
 
 import ipywidgets as widgets
+from humanize import metric
 from IPython.display import display
 
 from ._base import Progress
@@ -20,6 +21,7 @@ class JupyterProgress(Progress):
     """
 
     widget: widgets.IntProgress
+    text: widgets.Label
     box: widgets.HBox
     total: int | None
     current: int
@@ -44,6 +46,12 @@ class JupyterProgress(Progress):
         if label:
             pieces.append(widgets.Label(value=label))
         pieces.append(self.widget)
+
+        self.text = widgets.Label()
+        if total:
+            self.text.value = "0 / {}".format(metric(total))
+        pieces.append(self.text)
+
         self.box = widgets.HBox(pieces)
         display(self.box)
 
@@ -60,6 +68,14 @@ class JupyterProgress(Progress):
         now = perf_counter()
         if now - self._last_update >= 0.1 or (self.total and self.current >= self.total):
             self.widget.value = self.current
+            if self.total:
+                txt = "{} / {}".format(metric(self.current), metric(self.total))
+            else:
+                txt = "{} / ?".format(metric(self.current))
+            if self._field_format:
+                txt += " ({})".format(self._field_format.format(**kwargs))
+            self.text.value = txt
+
             self._last_update = now
         # if self._field_format:
         #     self.tqdm.set_postfix_str(self._field_format.format(kwargs))
