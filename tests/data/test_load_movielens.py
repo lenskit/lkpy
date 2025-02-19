@@ -291,4 +291,4 @@ def test_32m_zip_df():
 
 def test_bad_dir():
     with raises(RuntimeError, match="invalid.*directory"):
-        load_movielens("lenskit/tests")
+        load_movielens("tests")
