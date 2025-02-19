@@ -19,6 +19,7 @@ pydantic = ">=2.8,<3"
 humanize = "~=4.2"
 prettytable = "~=3.14"
 more-itertools = ">=9.0"
+ipywidgets = "~=8.0"
 
 [pypi-dependencies]
 lenskit = { path = "lenskit", editable = true }

@@ -1,3 +1,4 @@
+import warnings
 from functools import partial
 from typing import Any, Callable, Literal, overload
 
@@ -10,18 +11,30 @@ _backend: Callable[..., Progress] = Progress
 def set_progress_impl(name: Literal["tqdm"], impl: Callable[..., Any] | None = None, /): ...
 @overload
 def set_progress_impl(name: Literal["rich"]): ...
+@overload
+def set_progress_impl(name: Literal["notebook"]): ...
 def set_progress_impl(name: str | None, *options: Any):
     global _backend
 
     match name:
-        case "tqdm":
-            from tqdm.autonotebook import tqdm
+        case "notebook":
+            try:
+                from ._notebook import JupyterProgress
 
+                _backend = JupyterProgress
+            except ImportError:
+                warnings.warn("notebook progress backend needs ipywidgets")
+                _backend = Progress
+
+        case "tqdm":
             from ._tqdm import TQDMProgress
 
-            impl = tqdm
             if options and options[0]:
                 impl = options[0]
+            else:
+                from tqdm.autonotebook import tqdm
+
+                impl = tqdm
 
             _backend = partial(TQDMProgress, impl)
 
