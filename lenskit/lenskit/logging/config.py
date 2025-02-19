@@ -62,7 +62,7 @@ def notebook_logging(level: int = logging.INFO):
     """
     cfg = LoggingConfig()
     cfg.level = level
-    # cfg.set_stream_mode("simple")
+    cfg.progress_backend = "notebook"
     cfg.apply()
 
 
@@ -81,6 +81,7 @@ class LoggingConfig:  # pragma: nocover
 
     level: int = logging.INFO
     stream: Literal["full", "simple", "json"] = "full"
+    progress_backend: Literal["notebook", "rich"] | None = None
     file: Path | None = None
     file_level: int | None = None
     file_format: LogFormat = "json"
@@ -215,7 +216,9 @@ class LoggingConfig:  # pragma: nocover
 
         root.setLevel(self.effective_level)
 
-        if self.stream == "full":
+        if self.progress_backend is not None:
+            set_progress_impl(self.progress_backend)
+        elif self.stream == "full":
             set_progress_impl("rich")
 
         warnings.showwarning = log_warning
