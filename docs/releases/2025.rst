@@ -50,7 +50,7 @@ New Features (incremental)
 
 *   Many LensKit components (batch running, model training, etc.) now report
     progress the progress API in :mod:`lenskit.logging.progress`, and can be
-    connected to TQDM or Rich.
+    connected to Jupyter or Rich.
 *   Added RBP top-N metric (:pr:`334`).
 *   Added command-line tool to fetch datasets (:pr:`347`).
 
