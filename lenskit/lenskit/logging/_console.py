@@ -22,13 +22,12 @@ class ConsoleHandler(Handler):
 
     @property
     def supports_color(self) -> bool:
-        return console.is_terminal and not console.no_color
+        return (console.is_terminal or console.is_jupyter) and not console.no_color
 
     def emit(self, record: LogRecord) -> None:
         try:
             fmt = self.format(record)
-            print(fmt)
-            # console.print(*self._decoder.decode(fmt))
+            console.print(self._decoder.decode_line(fmt))
         except Exception:
             self.handleError(record)
 

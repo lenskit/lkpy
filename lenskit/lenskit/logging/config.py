@@ -14,7 +14,7 @@ from typing import Literal, TypeAlias
 
 import structlog
 
-from ._console import ConsoleHandler, setup_console
+from ._console import ConsoleHandler, console, setup_console
 from .processors import format_timestamp, log_warning, remove_internal
 from .progress import set_progress_impl
 from .tracing import lenskit_filtering_logger
@@ -62,7 +62,7 @@ def notebook_logging(level: int = logging.INFO):
     """
     cfg = LoggingConfig()
     cfg.level = level
-    cfg.set_stream_mode("simple")
+    # cfg.set_stream_mode("simple")
     cfg.apply()
 
 
@@ -108,6 +108,8 @@ class LoggingConfig:  # pragma: nocover
         Configure the standard error stream mode.
         """
         self.stream = mode
+        if mode == "full":
+            self.force_console = True
 
     def set_verbose(self, verbose: bool | int = True):
         """
@@ -157,6 +159,12 @@ class LoggingConfig:  # pragma: nocover
             term = logging.StreamHandler(sys.stderr)
             term.setLevel(self.level)
             proc_fmt = structlog.processors.JSONRenderer()
+        elif console.is_jupyter:
+            term = logging.StreamHandler(sys.stdout)
+            term.setLevel(self.level)
+            proc_fmt = structlog.dev.ConsoleRenderer(
+                colors=self.stream == "full" and not console.no_color
+            )
         else:
             term = ConsoleHandler()
             term.setLevel(self.level)
