@@ -95,6 +95,9 @@ class DatasetBuilder:
 
     @property
     def name(self) -> str | None:
+        """
+        Get the dataset name.
+        """
         return self.schema.name
 
     def entity_classes(self) -> dict[str, EntitySchema]:
@@ -110,6 +113,9 @@ class DatasetBuilder:
         return self.schema.relationships
 
     def record_count(self, class_name: str) -> int:
+        """
+        Get the number of records for the specified entity or relationship class.
+        """
         tbl = self._tables[class_name]
         if tbl is None:
             return 0
@@ -127,6 +133,13 @@ class DatasetBuilder:
         return tbl.field(id_col_name(name)).type
 
     def add_entity_class(self, name: str) -> None:
+        """
+        Add an entity class to the dataset.
+
+        Args:
+            name:
+                The name of the entity class.
+        """
         if name in self._tables:
             raise ValueError(f"class name “{name}” already in use")
 
@@ -143,6 +156,30 @@ class DatasetBuilder:
         allow_repeats: bool = True,
         interaction: bool = False,
     ) -> None:
+        """
+        Add a relationship class to the dataset.  This usually doesn't need to
+        be called; :meth:`add_relationships` and :meth:`add_interactions` will
+        automatically add the relationship class if needed.
+
+        .. note::
+
+            The order of entity classes in ``entities`` matters, as the
+            relationship matrix logic
+            (:meth:`lenskit.data.RelationshipSet.matrix`) will default to using
+            the first and last entity classes as the rows and columns of the
+            matrix.
+
+        Args:
+            name:
+                The name of the relationship class.
+            entities:
+                The entity classes participating in the relationship class.
+            allow_repeats:
+                Whether repeated records for the same combination of entities
+                are allowed.
+            interaction:
+                Whether this is an interaction relationship.
+        """
         if name in self._tables:
             raise ValueError(f"class name “{name}” already in use")
 
@@ -193,6 +230,20 @@ class DatasetBuilder:
         *,
         duplicates: DuplicateAction = "error",
     ) -> None:
+        """
+        Add entities to the data set.
+
+        Args:
+            cls:
+                The name of the entity class (e.g. ``"item"``).
+            source:
+                The input data, as an array or list of entity IDs.
+
+                .. note::
+                    Data frame support will be added in a future version.
+            duplicates:
+                How to handle duplicate entity IDs.
+        """
         if isinstance(source, pd.DataFrame):  # pragma: nocover
             raise NotImplementedError()
         if isinstance(source, pa.Table):  # pragma: nocover
@@ -268,6 +319,35 @@ class DatasetBuilder:
         interaction: bool | Literal["default"] = False,
         _warning_parent: int = 0,
     ) -> None:
+        """
+        Add relationship records to the data set.
+
+        This method adds relationship records, provided as a Pandas data frame
+        or an Arrow table, to the data set being built.  The relationships can
+        be of a new class (in which case it will be created), or new
+        relationship records for an existing class.
+
+        For each entity ``E`` participating in the relationship, the table must
+        have a column named ``E_id`` storing the entity IDs.
+
+        Args:
+            cls:
+                The name of the interaction class (e.g. ``rating``,
+                ``purchase``).
+            data:
+                The interaction data.
+            entities:
+                The entity classes involved in this interaction class.
+            missing:
+                What to do when interactions reference nonexisting entities; can
+                be ``"error"`` or ``"insert"``.
+            allow_repeats:
+                Whether repeated interactions are allowed.
+            interaction:
+                Whether this is an interaction relationship or not; can be
+                ``"default"`` to indicate this is the default interaction
+                relationship.
+        """
         if isinstance(data, pd.DataFrame):
             table = pa.Table.from_pandas(data, preserve_index=False)
         elif isinstance(data, dict):
@@ -369,6 +449,40 @@ class DatasetBuilder:
         allow_repeats: bool = True,
         default: bool = False,
     ) -> None:
+        """
+        Add a interaction records to the data set.
+
+        This method adds new interaction records, provided as a Pandas data
+        frame or an Arrow table, to the data set being built.  The interactions
+        can be of a new class (in which case it will be created), or new
+        interactions for an existing class.
+
+        For each entity ``E`` participating in the interaction, the table must
+        have a column named ``E_id`` storing the entity IDs.
+
+        Interactions should usually have user as the first entity and item as
+        the last; the default interaction matrix logic uses the first and last
+        entities as the rows and columns, respectively, of the interaction
+        matrix.
+
+
+        Args:
+            cls:
+                The name of the interaction class (e.g. ``rating``,
+                ``purchase``).
+            data:
+                The interaction data.
+            entities:
+                The entity classes involved in this interaction class.
+            missing:
+                What to do when interactions reference nonexisting entities; can
+                be ``"error"`` or ``"insert"``.
+            allow_repeats:
+                Whether repeated interactions are allowed.
+            default:
+                If ``True``, set this as the default interaction class (if the
+                dataset has more than one interaction class).
+        """
         self.add_relationships(
             cls,
             data,
@@ -456,6 +570,9 @@ class DatasetBuilder:
         self._tables[cls] = tbl
 
     def clear_relationships(self, cls: str):
+        """
+        Remove all records for a specified relationship class.
+        """
         self._tables[cls] = _empty_rel_table(self.schema.relationships[cls].entity_class_names)
 
     @overload
@@ -488,6 +605,25 @@ class DatasetBuilder:
         *,
         dictionary: bool = False,
     ) -> None:
+        """
+        Add a scalar attribute to an entity class.
+
+        Args:
+            cls:
+                The entity class name.
+            name:
+                The attribute name.
+            entities:
+                The IDs for the entities whose attribute should be set.
+            values:
+                The attribute values.
+            data:
+                A Pandas datatframe or Arrow table storing entity IDs and
+                attribute values.
+            dictionary:
+                ``True`` to dictionary-encode the attribute values (saves space
+                for string categorical values).
+        """
         if name in self.schema.entities[cls].attributes:  # pragma: nocover
             raise NotImplementedError("updating or replacing existing attributes not supported")
 
@@ -556,6 +692,25 @@ class DatasetBuilder:
         *,
         dictionary: bool = False,
     ) -> None:
+        """
+        Add a list attribute to an entity class.
+
+        Args:
+            cls:
+                The entity class name.
+            name:
+                The attribute name.
+            entities:
+                The IDs for the entities whose attribute should be set.
+            values:
+                The attribute values (an array or list of lists)
+            data:
+                A Pandas datatframe or Arrow table storing entity IDs and
+                attribute values.
+            dictionary:
+                ``True`` to dictionary-encode the attribute values (saves space
+                for string categorical values).
+        """
         if name in self.schema.entities[cls].attributes:  # pragma: nocover
             raise NotImplementedError("updating or replacing existing attributes not supported")
 
@@ -616,8 +771,9 @@ class DatasetBuilder:
 
         .. warning::
 
-            The vector is stored densely, even for entities for which it is not
-            set. High-dimensional vectors can therefore take up a lot of space.
+            Dense vector attributes are stored densely, even for entities for
+            which it is not set. High-dimensional vectors can therefore take up
+            a lot of space.
 
         Args:
             cls:
@@ -628,7 +784,8 @@ class DatasetBuilder:
                 The entity IDs to which the attribute should be attached.
             values:
                 The attribute values, as a fixed-length list array or a
-                two-dimensional NumPy array.
+                two-dimensional NumPy array (for dense vector attributes) or a
+                SciPy sparse array (for sparse vector attributes).
             dim_names:
                 The names for the dimensions of the array.
         """
@@ -754,9 +911,15 @@ class DatasetBuilder:
         return self._add_dense_vector_attribute(cls, name, arr, rows, table, valid)
 
     def build(self) -> Dataset:
+        """
+        Build the dataset.
+        """
         return Dataset(self.build_container())
 
     def build_container(self) -> DataContainer:
+        """
+        Build a data container (backing store for a dataset).
+        """
         tables = {}
         for n, t in self._tables.items():
             if t is None:
@@ -773,7 +936,7 @@ class DatasetBuilder:
         Args:
             path:
                 The path where the dataset will be saved (will be created as a
-                directory)
+                directory).
         """
         container = self.build_container()
         container.save(path)
