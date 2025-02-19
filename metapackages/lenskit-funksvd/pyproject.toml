@@ -18,7 +18,7 @@ requires-python = ">= 3.11"
 readme = "README.md"
 license = { file = "LICENSE.md" }
 version = "2025.1.1rc1"
-dependencies = ["lenskit[funksvd]>=2025.1.1b10"]
+dependencies = ["lenskit[funksvd]>=2025.1.1b12"]
 
 [project.urls]
 homepage = "https://lenskit.org"
