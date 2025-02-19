@@ -57,7 +57,7 @@ class JupyterProgress(Progress):
 
         if fields:
             self._field_format = ", ".join(
-                [f"{name}: {fs or None}" for (name, fs) in fields.items()]
+                [f"{name}: {field_format(name, fs)}" for (name, fs) in fields.items()]
             )
 
     def update(self, advance: int = 1, **kwargs: float | int | str):
@@ -69,7 +69,10 @@ class JupyterProgress(Progress):
         if now - self._last_update >= 0.1 or (self.total and self.current >= self.total):
             self.widget.value = self.current
             if self.total:
-                txt = "{} / {}".format(metric(self.current), metric(self.total))
+                if self.total >= 1000:
+                    txt = "{} / {}".format(metric(self.current), metric(self.total))
+                else:
+                    txt = "{} / {}".format(self.current, self.total)
             else:
                 txt = "{} / ?".format(metric(self.current))
             if self._field_format:
@@ -92,3 +95,10 @@ class JupyterProgress(Progress):
 
     def __exit__(self, *args):
         self.finish()
+
+
+def field_format(name, fs):
+    if fs:
+        return "{%s:%s}" % (name, fs)
+    else:
+        return "{%s}" % (name,)
