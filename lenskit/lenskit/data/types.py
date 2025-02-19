@@ -41,6 +41,11 @@ IDSequence: TypeAlias = (
 
 T = TypeVar("T")
 
+DF_FORMAT: TypeAlias = Literal["numpy", "pandas", "torch"]
+MAT_FORMAT: TypeAlias = Literal["scipy", "torch", "pandas", "structure"]
+MAT_AGG: TypeAlias = Literal["count", "sum", "mean", "first", "last"]
+LAYOUT: TypeAlias = Literal["csr", "coo"]
+
 
 @dataclass
 class AliasedColumn:

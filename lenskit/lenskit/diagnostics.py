@@ -25,6 +25,15 @@ class DataError(Exception):
     pass
 
 
+class FieldError(KeyError):
+    """
+    The requested field does not exist.
+    """
+
+    def __init__(self, entity, field):
+        super().__init__(f"{entity}[{field}]")
+
+
 class ConfigWarning(UserWarning):
     """
     Warning raised for detectable problems with component configurations.
