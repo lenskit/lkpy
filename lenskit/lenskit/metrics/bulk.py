@@ -219,6 +219,20 @@ class RunAnalysis:
     def compute(
         self, outputs: ItemListCollection[K1], test: ItemListCollection[K2]
     ) -> RunAnalysisResult:
+        """
+        Deprecated alias for :meth:`measure`.
+
+        .. deprecated:: 2025.1.1
+            Use :meth:`measure` instead.
+        """
+        return self.measure(outputs, test)
+
+    def measure(
+        self, outputs: ItemListCollection[K1], test: ItemListCollection[K2]
+    ) -> RunAnalysisResult:
+        """
+        Measure a set of outputs against a set of dest data.
+        """
         index = pd.MultiIndex.from_tuples(outputs.keys())
         index.names = list(outputs.key_fields)
 

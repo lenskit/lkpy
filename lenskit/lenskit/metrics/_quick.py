@@ -60,13 +60,13 @@ def quick_measure_model(
     rra.add_metric(Hit())
     rra.add_metric(Recall())
 
-    result = rra.compute(outs.output("recommendations"), split.test)
+    result = rra.measure(outs.output("recommendations"), split.test)
 
     if predicts_ratings:
         pra = RunAnalysis()
         pra.add_metric(RMSE())
         pra.add_metric(MAE())
-        pr = pra.compute(outs.output("predictions"), split.test)
+        pr = pra.measure(outs.output("predictions"), split.test)
         result.merge_from(pr)
 
     return result
