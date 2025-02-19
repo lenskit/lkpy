@@ -46,7 +46,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |
@@ -110,7 +110,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |
@@ -149,7 +149,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 -m 'not slow' --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit lenskit/tests lenskit-funksvd/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 -m 'not slow' --cov=src/lenskit tests
         env:
           NUMBA_DISABLE_JIT: 1
           PYTORCH_JIT: 0
@@ -197,7 +197,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit/lenskit lenskit/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |
@@ -243,7 +243,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-sklearn/lenskit lenskit-sklearn/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/sklearn
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |
@@ -279,7 +279,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON "./lenskit[test]" "./lenskit-sklearn" --resolution=lowest-direct
+          uv pip install --python $PYTHON "./lenskit[test,sklearn]" --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -288,7 +288,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-sklearn/lenskit lenskit-sklearn/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/sklearn
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |
@@ -333,7 +333,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/funksvd
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |
@@ -369,7 +369,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON "./lenskit[test]" "./lenskit-funksvd" --resolution=lowest-direct
+          uv pip install --python $PYTHON "./lenskit[test,funksvd]" --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -378,7 +378,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-funksvd/lenskit lenskit-funksvd/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/funksvd
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |
@@ -423,7 +423,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-implicit/lenskit lenskit-implicit/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/implicit
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |
@@ -459,7 +459,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON "./lenskit[test]" "./lenskit-implicit" --resolution=lowest-direct
+          uv pip install --python $PYTHON "./lenskit[test,implicit]" --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -468,7 +468,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-implicit/lenskit lenskit-implicit/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/implicit
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |
@@ -513,7 +513,7 @@ jobs:
           python -m lenskit.util.envcheck
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=lenskit-hpf/lenskit lenskit-hpf/tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/hpf
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |
@@ -558,7 +558,7 @@ jobs:
           coverage run --source=lenskit/lenskit -m lenskit data fetch -D data --movielens ml-100k ml-20m ml-1m ml-10m
       - name: Run Eval Tests
         run: |
-          pytest --cov-append --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit -m 'eval or realdata' --log-file test-eval.log */tests
+          pytest --cov-append --cov=src/lenskit -m 'eval or realdata' --log-file test-eval.log tests
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |
@@ -606,7 +606,7 @@ jobs:
           sphinx-build -b doctest docs build/doc
       - name: "📕 Validate example notebooks"
         run: |
-          pytest --cov=lenskit/lenskit --cov=lenskit-funksvd/lenskit --cov=lenskit-implicit/lenskit --cov=lenskit-hpf/lenskit --nbval-lax --log-file test-notebooks.log docs
+          pytest --cov=src/lenskit --nbval-lax --log-file test-notebooks.log docs
       - name: "📐 Coverage results"
         if: '${{ !cancelled() }}'
         run: |

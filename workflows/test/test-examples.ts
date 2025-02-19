@@ -4,7 +4,6 @@ import { condaSetup, CondaTestOpts } from "./conda.ts";
 import { mlDataSteps } from "./data.ts";
 import { coverageSteps } from "./common.ts";
 import { script } from "../lib/script.ts";
-import { PACKAGES } from "../lib/defs.ts";
 
 export function exampleTestJob(): WorkflowJob {
   const options: CondaTestOpts = {
@@ -12,10 +11,8 @@ export function exampleTestJob(): WorkflowJob {
     key: "examples",
     name: "Demos, examples, and docs",
     pixi_env: "test-examples",
-    packages: PACKAGES,
   };
 
-  const cov = PACKAGES.map((pkg) => `--cov=${pkg}/lenskit`).join(" ");
   return {
     name: options.name,
     "runs-on": "ubuntu-latest",
@@ -32,7 +29,7 @@ export function exampleTestJob(): WorkflowJob {
       {
         "name": "📕 Validate example notebooks",
         "run": script(
-          `pytest ${cov} --nbval-lax --log-file test-notebooks.log docs`,
+          `pytest --cov=src/lenskit --nbval-lax --log-file test-notebooks.log docs`,
         ),
       },
       ...coverageSteps(options),

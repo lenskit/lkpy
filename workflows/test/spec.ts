@@ -11,7 +11,7 @@ export interface TestJobSpec {
     exclude?: Record<string, string>[];
   };
   python?: string;
-  packages?: string[];
+  tests?: string[];
   test_args?: string[];
   test_env?: Record<string, string | number>;
 }
@@ -51,8 +51,4 @@ export function translatePythonVersion(ver: string, install: string): string {
   } else {
     return ver;
   }
-}
-
-export function packages(spec: TestJobSpec): string[] {
-  return spec.packages ?? ["lenskit"];
 }
