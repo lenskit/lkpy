@@ -14,7 +14,7 @@ classifiers = [
 readme = "README.md"
 license = { file = "LICENSE.md" }
 requires-python = ">= 3.11"
-dependencies = ["lenskit>=2015.1.1b11,<2015.1.1b13", "implicit >=0.7.2"]
+dependencies = ["lenskit>=2025.1.1b11,<2025.1.1b13", "implicit >=0.7.2"]
 dynamic = ["version"]
 
 [project.urls]
