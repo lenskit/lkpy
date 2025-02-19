@@ -11,6 +11,7 @@ from humanize import metric
 from IPython.display import display
 
 from ._base import Progress
+from ._formats import field_format
 
 __all__ = ["JupyterProgress"]
 
@@ -95,10 +96,3 @@ class JupyterProgress(Progress):
 
     def __exit__(self, *args):
         self.finish()
-
-
-def field_format(name, fs):
-    if fs:
-        return "{%s:%s}" % (name, fs)
-    else:
-        return "{%s}" % (name,)

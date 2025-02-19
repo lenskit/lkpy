@@ -23,6 +23,7 @@ from typing_extensions import override
 from .._console import console, get_live
 from .._proxy import get_logger
 from ._base import Progress
+from ._formats import field_format
 
 _log = get_logger("lenskit.logging.progress")
 _pb_lock = Lock()
@@ -38,8 +39,8 @@ class RichProgress(Progress):
     uuid: UUID
     label: str
     total: int | None
-    fields: dict[str, str | None]
     logger: structlog.stdlib.BoundLogger
+    _field_format: str | None = None
     _task: TaskID | None = None
 
     def __init__(self, label: str, total: int | None, fields: dict[str, str | None]):
@@ -47,15 +48,25 @@ class RichProgress(Progress):
         self.uuid = uuid4()
         self.label = label
         self.total = total
-        self.fields = fields
 
         self.logger = _log.bind(label=label, uuid=str(self.uuid))
 
         self._task = _install_bar(self)
 
+        if fields:
+            self._field_format = ", ".join(
+                [
+                    f"[json.key]{name}[/json.key]: {field_format(name, fs)}"
+                    for (name, fs) in fields.items()
+                ]
+            )
+
     def update(self, advance: int = 1, **kwargs: float | int | str):
+        extra = ""
+        if self._field_format:
+            extra = self._field_format.format(**kwargs)
         if _progress is not None:
-            _progress.update(self._task, advance=advance, **kwargs)  # type: ignore
+            _progress.update(self._task, advance=advance, extra=extra)  # type: ignore
 
     def finish(self):
         _remove_bar(self)
@@ -78,12 +89,13 @@ def _install_bar(bar: RichProgress) -> TaskID | None:
                 RateColumn(),
                 TaskProgressColumn(),
                 TimeRemainingColumn(),
+                TextColumn("{task.fields[extra]}"),
                 console=console,
             )
             live.update(_progress)
 
         _active_bars[bar.uuid] = bar
-        return _progress.add_task(bar.label, total=bar.total)
+        return _progress.add_task(bar.label, total=bar.total, extra="")
 
 
 def _remove_bar(bar: RichProgress):
