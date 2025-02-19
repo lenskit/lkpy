@@ -31,7 +31,7 @@ jobs:
 
       - name: Build distribution
         run: |
-          python -m build -o dist lenskit
+          python -m build -o dist
           python -m build -o dist -s metapackages/lenskit-funksvd
           python -m build -o dist -s metapackages/lenskit-sklearn
           python -m build -o dist -s metapackages/lenskit-implicit
