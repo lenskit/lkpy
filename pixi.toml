@@ -22,7 +22,7 @@ more-itertools = ">=9.0"
 ipywidgets = "~=8.0"
 
 [pypi-dependencies]
-lenskit = { path = "lenskit", editable = true }
+lenskit = { path = ".", editable = true }
 
 [feature.py311.dependencies]
 python = "=3.11"
