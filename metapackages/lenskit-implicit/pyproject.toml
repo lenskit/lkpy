@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling ~=1.0", "hatch-vcs ~=0.4.0"]
+requires = ["hatchling ~=1.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -14,24 +14,10 @@ classifiers = [
 readme = "README.md"
 license = { file = "LICENSE.md" }
 requires-python = ">= 3.11"
-dependencies = ["lenskit", "implicit >=0.7.2"]
-dynamic = ["version"]
+version = "2025.1.1rc1"
+dependencies = ["lenskit[implicit]>=2025.1.1b10"]
 
 [project.urls]
 homepage = "https://lenskit.org"
 documentation = "https://lkpy.lenskit.org"
 source = "https://github.com/lenskit/lkpy"
-
-# configure build tools
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[tool.hatch.build.targets.sdist]
-include = ["/lenskit", "LICENSE.md", "README.md"]
-
-[tool.hatch.build.targets.wheel]
-packages = ["lenskit"]
-
-[tool.hatch.version]
-source = "vcs"
-raw-options = { root = "..", version_scheme = "guess-next-dev" }

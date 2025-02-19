@@ -1,5 +1,8 @@
 # LensKit wrapper for implicit
 
+> [!NOTE]
+> This package is deprecated — install `lenskit[implicit]` instead.
+
 The `lenskit-implicit` package provides [LensKit][] wrappers for the
 implicit-feedback matrix factorization algorithms found in Ben Frederickson's
 [implicit][] package.
