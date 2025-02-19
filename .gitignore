@@ -40,7 +40,8 @@ dist/
 *.lib
 *.o
 *.obj
-lenskit/**/*.c
+src/lenskit/**/*.c
+src/lenskit/_version.py
 
 # environment locks that aren't committed
 /*env*.yml
@@ -59,4 +60,3 @@ conda*.lock
 .vscode/c_cpp_properties.json
 # pixi environments
 .pixi
-*.egg-info
