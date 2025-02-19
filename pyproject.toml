@@ -38,6 +38,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+sklearn = ["scikit-learn ~=1.2"]
+funksvd = ["numba >= 0.56"]
+hpf = ["hpfrec==0.2.*"]
+implicit = ["implicit >=0.7.2"]
 notebook = ["ipywidgets ~=8.0"]
 ray = ["ray ~=2.42"]
 # test deps — keep synchronized with pixi.toml
