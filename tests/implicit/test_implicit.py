@@ -9,28 +9,27 @@ import pickle
 
 import numpy as np
 
-from pytest import approx, mark
+from pytest import approx, importorskip, mark
 
-from lenskit import util
 from lenskit.data import ItemList, from_interactions_df
-from lenskit.implicit import ALS, BPR
 from lenskit.metrics import quick_measure_model
 from lenskit.testing import BasicComponentTests, ScorerTests
 
+imp = importorskip("lenskit.implicit")
 _log = logging.getLogger(__name__)
 
 
 class TestImplicitALS(BasicComponentTests, ScorerTests):
-    component = ALS
+    component = imp.ALS
 
 
 class TestImplicitBPR(BasicComponentTests, ScorerTests):
-    component = BPR
+    component = imp.BPR
 
 
 @mark.slow
 def test_implicit_als_train_rec(ml_ds):
-    algo = ALS(factors=25)
+    algo = imp.ALS(factors=25)
     assert algo.config.factors == 25
 
     ret = algo.train(ml_ds)
@@ -55,7 +54,7 @@ def test_implicit_als_train_rec(ml_ds):
 @mark.parametrize("n_jobs", [1, None])
 def test_implicit_als_batch_accuracy(ml_100k, n_jobs):
     ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(ALS(factors=25), ds, n_jobs=n_jobs)
+    results = quick_measure_model(imp.ALS(factors=25), ds, n_jobs=n_jobs)
 
     ndcg = results.list_summary().loc["NDCG", "mean"]
     _log.info("nDCG for %d users is %.4f", len(results.list_metrics()), ndcg)
@@ -64,7 +63,7 @@ def test_implicit_als_batch_accuracy(ml_100k, n_jobs):
 
 @mark.slow
 def test_implicit_bpr_train_rec(ml_ds):
-    algo = BPR(factors=25, use_gpu=False)
+    algo = imp.BPR(factors=25, use_gpu=False)
     assert algo.config.factors == 25
 
     algo.train(ml_ds)
@@ -89,7 +88,7 @@ def test_implicit_bpr_train_rec(ml_ds):
 @mark.parametrize("n_jobs", [1, None])
 def test_implicit_bpr_batch_accuracy(ml_100k, n_jobs):
     ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(BPR(factors=25), ds, n_jobs=n_jobs)
+    results = quick_measure_model(imp.BPR(factors=25), ds, n_jobs=n_jobs)
 
     ndcg = results.list_summary().loc["NDCG", "mean"]
     _log.info("nDCG for %d users is %.4f", len(results.list_metrics()), ndcg)
@@ -98,7 +97,7 @@ def test_implicit_bpr_batch_accuracy(ml_100k, n_jobs):
 
 def test_implicit_pickle_untrained(tmp_path):
     mf = tmp_path / "bpr.dat"
-    algo = BPR(factors=25, use_gpu=False)
+    algo = imp.BPR(factors=25, use_gpu=False)
 
     with mf.open("wb") as f:
         pickle.dump(algo, f)

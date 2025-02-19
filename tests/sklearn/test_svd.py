@@ -10,12 +10,13 @@ import pickle
 import numpy as np
 import pandas as pd
 
-from pytest import approx, mark
+from pytest import approx, importorskip, mark
 
 from lenskit.data import Dataset, ItemList, from_interactions_df
-from lenskit.metrics import call_metric, quick_measure_model
-from lenskit.sklearn import svd
+from lenskit.metrics import quick_measure_model
 from lenskit.testing import BasicComponentTests, ScorerTests
+
+svd = importorskip("lenskit.sklearn.svd")
 
 _log = logging.getLogger(__name__)
 
@@ -24,14 +25,11 @@ simple_df = pd.DataFrame(
 )
 simple_ds = from_interactions_df(simple_df)
 
-need_skl = mark.skipif(not svd.SKL_AVAILABLE, reason="scikit-learn not installed")
-
 
 class TestBiasedSVD(BasicComponentTests, ScorerTests):
     component = svd.BiasedSVDScorer
 
 
-@need_skl
 def test_svd_basic_build():
     algo = svd.BiasedSVDScorer(features=2)
     algo.train(simple_ds)
@@ -39,7 +37,6 @@ def test_svd_basic_build():
     assert algo.user_components_.shape == (3, 2)
 
 
-@need_skl
 def test_svd_predict_basic():
     _log.info("SVD input data:\n%s", simple_df)
     algo = svd.BiasedSVDScorer(features=2, damping=0)
@@ -57,7 +54,6 @@ def test_svd_predict_basic():
     assert preds.loc[3] <= 5
 
 
-@need_skl
 def test_svd_predict_bad_item():
     algo = svd.BiasedSVDScorer(features=2)
     algo.train(simple_ds)
@@ -70,7 +66,6 @@ def test_svd_predict_bad_item():
     assert np.isnan(preds.loc[4])
 
 
-@need_skl
 def test_svd_predict_bad_user():
     algo = svd.BiasedSVDScorer(features=2)
     algo.train(simple_ds)
@@ -83,7 +78,6 @@ def test_svd_predict_bad_user():
     assert np.isnan(preds.loc[3])
 
 
-@need_skl
 @mark.slow
 def test_svd_save_load(ml_ds: Dataset):
     original = svd.BiasedSVDScorer(features=20)
@@ -99,7 +93,6 @@ def test_svd_save_load(ml_ds: Dataset):
     assert np.all(algo.user_components_ == original.user_components_)
 
 
-@need_skl
 @mark.slow
 @mark.eval
 def test_svd_batch_accuracy(rng, ml_100k: pd.DataFrame):

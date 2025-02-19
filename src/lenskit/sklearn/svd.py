@@ -18,6 +18,7 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 from pydantic import AliasChoices, Field
+from sklearn.decomposition import TruncatedSVD
 from typing_extensions import Literal, override
 
 from lenskit.basic import BiasModel, Damping
@@ -26,14 +27,6 @@ from lenskit.data.vocab import Vocabulary
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
 from lenskit.util import Stopwatch
-
-try:
-    from sklearn.decomposition import TruncatedSVD
-
-    SKL_AVAILABLE = True
-except ImportError:
-    SKL_AVAILABLE = False
-
 
 _log = logging.getLogger(__name__)
 
