@@ -1,3 +1,4 @@
+import sys
 from io import StringIO
 from pathlib import Path
 
@@ -15,8 +16,9 @@ _log = get_logger(__name__)
 
 @click.command("describe")
 @click.option("--movielens", "format", flag_value="movielens", help="describe MovieLens data")
+@click.option("--markdown", is_flag=True, help="output raw Markdown")
 @click.argument("path", type=Path)
-def describe(format: str | None, path: Path):
+def describe(format: str | None, markdown: bool, path: Path):
     """
     Describe a data set.
     """
@@ -34,9 +36,13 @@ def describe(format: str | None, path: Path):
             raise ValueError(f"unknown data format {format}")
 
     console = Console()
-    out = StringIO()
-    save_stats(data, out)
-    console.print(Markdown(out.getvalue()), width=min(console.width, 80))
+
+    if markdown:
+        save_stats(data, sys.stdout)
+    else:
+        out = StringIO()
+        save_stats(data, out)
+        console.print(Markdown(out.getvalue()), width=min(console.width, 80))
 
 
 def convert_movielens(source: Path) -> Dataset:

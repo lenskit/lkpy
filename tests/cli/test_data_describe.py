@@ -18,3 +18,17 @@ def test_data_describe_ml():
     print(summary)
     assert "Summary of ml-latest-small" in summary
     assert "tag_counts" in summary
+
+
+def test_data_describe_ml_markdown():
+    runner = CliRunner()
+    result = runner.invoke(
+        lenskit, ["data", "describe", "--movielens", "--markdown", fspath(ml_test_dir)]
+    )
+
+    assert result.exit_code == 0
+
+    summary = result.output
+    print(summary)
+    assert "# Summary of ml-latest-small" in summary
+    assert "tag_counts" in summary
