@@ -1,8 +1,99 @@
+[build-system]
+requires = ["hatchling ~=1.0", "hatch-vcs ~=0.4.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lenskit"
+description = "Toolkit for recommender systems research, teaching, and more."
+authors = [{ name = "Michael Ekstrand", email = "mdekstrand@drexel.edu" }]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Science/Research",
+]
+requires-python = ">= 3.11"
+readme = "README.md"
+license = { file = "LICENSE.md" }
+dynamic = ["version"]
+dependencies = [
+  "typing-extensions ~=4.12",
+  "pandas ~=2.0",
+  "pyarrow >=15",
+  "numpy >=1.25",
+  "scipy >=1.11",
+  "torch ~=2.4",
+  "more-itertools >=9.0",
+  "threadpoolctl >=3.0",
+  "structlog >=23.2",
+  "rich ~=13.5",
+  "pyzmq >=24",
+  "click ~=8.1",
+  "pydantic ~=2.7",
+  "humanize ~=4.2",
+  "prettytable ~=3.14",
+]
+
+[project.optional-dependencies]
+sklearn = ["scikit-learn ~=1.2"]
+funksvd = ["numba >= 0.56"]
+hpf = ["hpfrec==0.2.*"]
+implicit = ["implicit >=0.7.2"]
+notebook = ["ipywidgets ~=8.0"]
+ray = ["ray ~=2.42"]
+# test deps — keep synchronized with pixi.toml
+test = [
+  "pytest >=8.2,<9",
+  "pytest-doctestplus >=1.2.1,<2",
+  "pytest-cov >=2.12",
+  "pytest-benchmark ==4.*",
+  "pytest-repeat >=0.9",
+  "hypothesis >=6.16",
+  "pyprojroot ==0.3.*",
+]
+
+[project.urls]
+homepage = "https://lenskit.org"
+documentation = "https://lkpy.lenskit.org"
+source = "https://github.com/lenskit/lkpy"
+
+[project.scripts]
+lenskit = "lenskit.cli:lenskit"
+
+# configure build tools
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.sdist]
+include = ["src/lenskit", "LICENSE.md", "README.md"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lenskit"]
+
+[tool.hatch.version]
+source = "vcs"
+raw-options = { version_scheme = "guess-next-dev" }
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/lenskit/_version.py"
+
+# override where UV gets pytorch for CI installs
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
 # dev tool configuration
 [tool.coverage.run]
 relative_files = "true"
-include = ["lenskit*/lenskit/"]
-omit = ["lenskit/lenskit/_version.py"]
+include = ["src/lenskit/"]
+omit = ["src/lenskit/_version.py"]
 
 [tool.ruff]
 line-length = 100
@@ -15,7 +106,7 @@ exclude = [".git", "__pycache__", "build", "dist"]
 
 [tool.ruff.lint.per-file-ignores]
 # Importing PyTest fixtures triggers F811
-"*/tests/*.py" = ["F811", "F401"]
+"tests/*.py" = ["F811", "F401"]
 
 [tool.ruff.lint.isort]
 section-order = [
@@ -31,7 +122,6 @@ known-first-party = ["lenskit"]
 [tool.ruff.lint.isort.sections]
 testing = ["pytest", "hypothesis"]
 
-
 [tool.pyright]
 typeCheckingMode = "basic"
 exclude = ["docs/*", ".pixi", ".venv"]
@@ -46,7 +136,7 @@ log_file_format = "[%(levelname)7s] %(asctime)s [%(processName)s] %(name)s %(mes
 log_file_level = "DEBUG"
 addopts = "--import-mode=importlib --benchmark-skip"
 doctest_plus = true
-doctest_subpackage_requires = ["lenskit-hpf/lenskit/* = hpfrec"]
+doctest_subpackage_requires = ["src/lenskit/hpf.py = hpfrec"]
 consider_namespace_packages = true
 filterwarnings = [
   "ignore:::pyarrow[.*]",

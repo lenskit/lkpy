@@ -5,6 +5,7 @@ import { script } from "../lib/script.ts";
 
 export interface VanillaTestOpts extends TestJobSpec {
   install: "vanilla";
+  extras?: string[];
   req_files?: string[];
   dep_strategy?: "minimum" | "default";
   pip_args?: string[];
@@ -16,12 +17,14 @@ export function isVanillaSpec(spec: TestJobSpec): spec is VanillaTestOpts {
 
 export function vanillaSetup(options: VanillaTestOpts): WorkflowStep[] {
   let pip = "uv pip install --python $PYTHON";
-  for (let pkg of requiredPackages(options)) {
-    if (pkg == "lenskit") {
-      pkg = "lenskit[test]";
-    }
-    pip += ` "./${pkg}"`;
+  const extras = ["test"];
+  if (options.extras) {
+    extras.push(...options.extras);
   }
+  const exstr = extras.join(",");
+
+  pip += ` ".[${exstr}]"`;
+
   if (options.dep_strategy == "minimum") {
     pip += " --resolution=lowest-direct";
   }
@@ -52,12 +55,4 @@ export function vanillaSetup(options: VanillaTestOpts): WorkflowStep[] {
       },
     },
   ];
-}
-
-function requiredPackages(options: VanillaTestOpts) {
-  let pkgs = options.packages ?? [];
-  if (!pkgs.includes("lenskit")) {
-    pkgs = ["lenskit", ...pkgs];
-  }
-  return pkgs;
 }
