@@ -115,6 +115,13 @@ class Dataset:
         """
         self._data.save(path)
 
+    @property
+    def name(self) -> str | None:
+        """
+        Get the dataset's name.
+        """
+        return self.schema.name
+
     def _ensure_loaded(self):
         if not hasattr(self, "_data"):
             _log.debug("lazy-loading dataset")

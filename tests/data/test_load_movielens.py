@@ -4,13 +4,14 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import functools
 from pathlib import Path
+from shutil import copytree
 
 from pytest import mark, raises
 
 from lenskit.data.dataset import Dataset
 from lenskit.data.movielens import load_movielens, load_movielens_df
+from lenskit.testing import ml_test_dir
 
 ML_LATEST_DIR = Path("data/ml-latest-small")
 
@@ -28,6 +29,8 @@ def test_latest_small_dir():
     assert ds.user_count >= 100
     assert ds.user_count < 1000
     assert ds.interaction_count >= 100_000
+
+    assert ds.name == "ml-latest-small"
 
     titles = ds.entities("item").attribute("title")
     title_s = titles.pandas()
@@ -47,10 +50,24 @@ def test_latest_small_dir():
     assert set(ds.schema.relationships["rating"].attributes.keys()) == {"rating", "timestamp"}
 
 
+def test_ml_modern(tmpdir: Path):
+    tgt = tmpdir / "ml-football"
+    copytree(ml_test_dir, tgt)
+
+    ds = load_movielens(tgt)
+    assert ds.item_count >= 100
+    assert ds.user_count >= 100
+    assert ds.user_count < 1000
+    assert ds.interaction_count >= 100_000
+
+    assert ds.name == "ml-modern"
+
+
 @mark.skipif(not ML_100K_ZIP.exists(), reason="ml-100k does not exist")
 @mark.realdata
 def test_100k_zip():
     ds = load_movielens(ML_100K_ZIP)
+    assert ds.name == "ml-100k"
     assert ds.item_count >= 100
     assert ds.user_count >= 100
     assert ds.user_count < 1000
@@ -79,6 +96,7 @@ def test_100k_df():
 @mark.realdata
 def test_1m_zip():
     ds = load_movielens(ML_1M_ZIP)
+    assert ds.name == "ml-1m"
     assert ds.item_count >= 500
     assert ds.user_count >= 500
     assert ds.interaction_count >= 1_000_000
@@ -110,6 +128,7 @@ def test_1m_df():
 @mark.realdata
 def test_10m_zip():
     ds = load_movielens(ML_10M_ZIP)
+    assert ds.name == "ml-10m"
     assert ds.item_count >= 10_000
     assert ds.user_count >= 69_000
     assert ds.interaction_count >= 10_000_000
@@ -141,6 +160,7 @@ def test_10m_df():
 @mark.realdata
 def test_20m_zip():
     ds = load_movielens(ML_20M_ZIP)
+    assert ds.name == "ml-20m"
     assert ds.item_count >= 25_000
     assert ds.user_count >= 130_000
     assert ds.interaction_count >= 20_000_000
@@ -209,6 +229,7 @@ def test_20m_df():
 @mark.realdata
 def test_25m_zip():
     ds = load_movielens(ML_25M_ZIP)
+    assert ds.name == "ml-25m"
     assert ds.item_count >= 50_000
     assert ds.user_count >= 160_000
     assert ds.interaction_count >= 25_000_000
@@ -251,6 +272,7 @@ def test_25m_df():
 @mark.realdata
 def test_32m_zip():
     ds = load_movielens(ML_32M_ZIP)
+    assert ds.name == "ml-32m"
     assert ds.item_count >= 50_000
     assert ds.user_count >= 200_000
     assert ds.interaction_count >= 32_000_000

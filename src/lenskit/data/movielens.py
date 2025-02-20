@@ -487,7 +487,7 @@ def _ml_detect_and_open(path: str | Path) -> MLData:
     elif loc.is_dir():
         log = _log.bind(dir=str(loc))
         log.debug("loading from directory")
-        dsm = re.match(r"^(ml-\d+[MmKk])", loc.name)
+        dsm = re.match(r"^(ml-(?:\d+[MmKk]|latest(?:-small)?))", loc.name)
         if dsm:
             version = dsm.group(1)
             ctor = MLData.version_impl(dsm.group(1).lower())
