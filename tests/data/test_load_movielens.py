@@ -4,13 +4,14 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import functools
 from pathlib import Path
+from shutil import copytree
 
 from pytest import mark, raises
 
 from lenskit.data.dataset import Dataset
 from lenskit.data.movielens import load_movielens, load_movielens_df
+from lenskit.testing import ml_test_dir
 
 ML_LATEST_DIR = Path("data/ml-latest-small")
 
@@ -47,6 +48,19 @@ def test_latest_small_dir():
     ratings = ds.interactions()
     assert ratings.attribute_names == ["rating", "timestamp"]
     assert set(ds.schema.relationships["rating"].attributes.keys()) == {"rating", "timestamp"}
+
+
+def test_ml_modern(tmpdir: Path):
+    tgt = tmpdir / "ml-football"
+    copytree(ml_test_dir, tgt)
+
+    ds = load_movielens(tgt)
+    assert ds.item_count >= 100
+    assert ds.user_count >= 100
+    assert ds.user_count < 1000
+    assert ds.interaction_count >= 100_000
+
+    assert ds.name == "ml-modern"
 
 
 @mark.skipif(not ML_100K_ZIP.exists(), reason="ml-100k does not exist")
