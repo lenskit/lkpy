@@ -86,3 +86,24 @@ user, and different items for other users, regardless of the order in which
 those users are processed.
 
 .. seealso:: :func:`lenskit.util.derivable_rng`
+
+.. _config-conventions:
+
+Configuration Conventions
+-------------------------
+
+We strive for consistency in configuration across LensKit components.  To that end,
+there are a few common configuration option or hyperparameter names we use, and
+encourage you to use these in your own components unless you have a compelling reason
+not to.
+
+``embedding_size``
+    The dimensionality of embeddings or a latent feature space (e.g., the dimension
+    in matrix factorization or dimensionality reduction).
+``epochs``
+    The number of training epochs for an iterative method (this option name is
+    required by :ref:`iterative-training`).
+``learning_rate``
+    The learning rate for an iterative method.
+``reg``
+    The regularization weight for regularized models.

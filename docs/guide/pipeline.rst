@@ -389,6 +389,8 @@ configuration object if one is provided, or instantiating the configuration
 class with defaults or from keyword arguments.  In most cases, you don't need
 to define a constructor for a component.
 
+See :ref:`config-conventions` for standard configuration option names.
+
 .. admonition:: Motivation
     :class: note
 
@@ -423,7 +425,8 @@ Implementing a component therefore consists of a few steps:
 3.  Defining a `__call__` method for the component class that performs the
     component's actual computation.
 4.  If the component supports training, implementing the :class:`Trainable`
-    protocol by defining a :meth:`Trainable.train` method.
+    protocol by defining a :meth:`Trainable.train` method, or implement
+    :ref:`iterative-training`.
 
 A simple example component that computes a linear weighted blend of the scores
 from two other components could look like this:
