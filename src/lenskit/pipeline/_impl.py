@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import replace
-from typing import Mapping
+from typing import TYPE_CHECKING, Mapping
 from uuid import NAMESPACE_URL, uuid5
 
 from numpy.random import BitGenerator, Generator, SeedSequence
@@ -19,9 +19,15 @@ from .config import PipelineConfig
 from .nodes import (
     ComponentConstructorNode,
     ComponentInstanceNode,
+    ComponentNode,
+    InputNode,
+    LiteralNode,
     Node,
 )
 from .state import PipelineState
+
+if TYPE_CHECKING:
+    from .builder import PipelineBuilder
 
 _log = get_logger(__name__)
 
@@ -223,6 +229,56 @@ class Pipeline:
         config = PipelineConfig.model_validate(config)
         builder = PipelineBuilder.from_config(config)
         return builder.build()
+
+    def modify(self) -> PipelineBuilder:
+        """
+        Create a pipeline builder from this pipeline in order to modify it.
+
+        Pipelines cannot be modified in-place, but this method sets up a new
+        builder that will create a modified copy of the pipeline.  Unmodified
+        component instances are reused as-is.
+
+        .. note::
+
+            Since default connections are applied in
+            :meth:`~lenskit.pipeline.PipelineBuilder.build`, the modifying
+            builder does not have default connections.
+        """
+        from .builder import PipelineBuilder
+
+        builder = PipelineBuilder()
+
+        for node in self.nodes():
+            match node:
+                case InputNode(name, types=types):
+                    if types is None:
+                        types = set[type]()
+                    builder.create_input(name, *types)
+                case LiteralNode(name, value):
+                    builder.literal(value, name=name)
+                case ComponentConstructorNode(name, comp, config):
+                    cn = builder.add_component(name, comp, config)
+                case ComponentInstanceNode(name, comp):
+                    cn = builder.add_component(name, comp)
+                case _:  # pragma: nocover
+                    raise RuntimeError(f"invalid node {node}")
+
+        for n, t in self._aliases.items():
+            builder.alias(n, t.name)
+
+        for node in self.nodes():
+            match node:
+                case ComponentNode(name):
+                    wiring = self._edges.get(name, {})
+                    cn = builder.node(name)
+                    builder.connect(cn, **{wn: builder.node(wt) for (wn, wt) in wiring.items()})
+                case _:
+                    pass
+
+        if self.config.default:
+            builder.default_component(self.config.default)
+
+        return builder
 
     def train(self, data: Dataset, options: TrainingOptions | None = None) -> None:
         """
