@@ -14,11 +14,11 @@ Pipeline Classes
     :nosignatures:
     :caption: Data Sets
 
-    Pipeline
-    PipelineBuilder
-    PipelineState
-    Node
-    Lazy
+    ~lenskit.pipeline.Pipeline
+    ~lenskit.pipeline.PipelineBuilder
+    ~lenskit.pipeline.PipelineState
+    ~lenskit.pipeline.Node
+    ~lenskit.pipeline.Lazy
 
 Component Interface
 -------------------
@@ -30,7 +30,7 @@ LensKit components.
     :toctree: .
     :nosignatures:
 
-    Component
+    ~lenskit.pipeline.Component
 
 Standard Pipelines
 ------------------
@@ -39,9 +39,9 @@ Standard Pipelines
     :toctree: .
     :nosignatures:
 
-    RecPipelineBuilder
-    topn_pipeline
-    predict_pipeline
+    ~lenskit.pipeline.RecPipelineBuilder
+    ~lenskit.pipeline.topn_pipeline
+    ~lenskit.pipeline.predict_pipeline
 
 Serialized Configurations
 -------------------------
@@ -50,4 +50,4 @@ Serialized Configurations
     :toctree: .
     :nosignatures:
 
-    PipelineConfig
+    ~lenskit.pipeline.PipelineConfig

@@ -17,7 +17,7 @@ from ._quick import quick_measure_model
 from .basic import ListLength, TestItemCount
 from .bulk import RunAnalysis, RunAnalysisResult
 from .predict import MAE, RMSE
-from .ranking import NDCG, RBP, Hit, Precision, RankingMetricBase, Recall, RecipRank
+from .ranking import NDCG, RBP, Hit, MeanPopRank, Precision, RankingMetricBase, Recall, RecipRank
 
 __all__ = [
     "Metric",
@@ -37,6 +37,7 @@ __all__ = [
     "Precision",
     "Recall",
     "RecipRank",
+    "MeanPopRank",
     "quick_measure_model",
 ]
 
