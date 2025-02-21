@@ -370,6 +370,9 @@ to be trained.
 Components also must be pickleable, as LensKit uses pickling for shared memory
 parallelism in its batch-inference code.
 
+See :ref:`component-impl` for more information on implementing your own
+components.
+
 .. _component-config:
 
 Configuring Components
