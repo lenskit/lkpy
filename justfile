@@ -46,7 +46,7 @@ docs:
 
 # preview documentation with live rebuild
 preview-docs:
-    sphinx-autobuild --watch lenskit/lenskit docs build/doc
+    sphinx-autobuild --watch src docs build/doc
 
 # update the BibTeX file (likely only works on Michael's laptop)
 update-bibtex:
