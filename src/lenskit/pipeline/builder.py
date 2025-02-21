@@ -88,7 +88,6 @@ class PipelineBuilder:
     _edges: dict[str, dict[str, str]]
     _aliases: dict[str, Node[Any]]
     _default_connections: dict[str, str]
-    _components: dict[str, PipelineFunction[Any] | Component[Any]]
     _default: str | None = None
 
     def __init__(self, name: str | None = None, version: str | None = None):
@@ -98,7 +97,22 @@ class PipelineBuilder:
         self._edges = {}
         self._aliases = {}
         self._default_connections = {}
-        self._components = {}
+
+    @classmethod
+    def from_pipeline(cls, pipeline: Pipeline) -> PipelineBuilder:
+        """
+        Create a builder initialized with a pipeline's internal state.  See
+        :meth:`Pipeline.modify` for details — that is the main entry point, and
+        this method exists to be the implementation of that method.
+        """
+        builder = cls()
+        builder._nodes = {n.name: n for n in pipeline.nodes()}
+        builder._aliases = {a: builder.node(t) for (a, t) in pipeline.config.aliases.items()}
+        for name, spec in pipeline.config.components.items():
+            builder._edges[name] = spec.inputs
+        builder._default = pipeline.config.default
+
+        return builder
 
     def meta(self, *, include_hash: bool = True) -> config.PipelineMeta:
         """
@@ -400,6 +414,19 @@ class PipelineBuilder:
             else:
                 lit = self.literal(n)
                 edges[k] = lit.name
+
+    def clear_inputs(self, node: str | Node[Any]):
+        """
+        Remove input wirings for a node.
+
+        Args:
+            node:
+                The node whose input wiring should be removed.
+        """
+        if isinstance(node, Node):
+            node = node.name
+
+        self._edges[node] = {}
 
     def validate(self):
         """
