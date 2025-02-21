@@ -264,8 +264,7 @@ two ways to save a pipeline or part thereof:
     pipeline; it has the usual downsides of pickling (arbitrary code execution,
     etc.). LensKit uses pickling to share pipelines with worker processes for
     parallel batch operations.
-2.  Save the pipeline configuration (:attr:`Pipeline.config`, using
-    :meth:`~pydantic.BaseModel.model_dump_json`).  This saves the components,
+2.  Save the pipeline configuration (:attr:`Pipeline.config`, using :func:`~pydantic.BaseModel.model_dump_json`).  This saves the components,
     their configurations, and their connections, but **not** any learned
     parameter data.  A new pipeline can be constructed from such a configuration
     can be reloaded with :meth:`Pipeline.from_config`.
@@ -307,8 +306,8 @@ two ways to save a pipeline or part thereof:
 
 .. _standard-pipelines:
 
-Standard Layouts
-~~~~~~~~~~~~~~~~
+Standard Pipelines
+~~~~~~~~~~~~~~~~~~
 
 The standard recommendation pipeline, produced by either of the approaches
 described above in :ref:`pipeline-construct`, looks like this:
@@ -441,6 +440,20 @@ You can add components to the pipeline in two ways:
 
 When you use the second approach, :meth:`PipelineBuilder.build` instantiates the
 component from the provided configuration.
+
+Modifying Pipelines
+~~~~~~~~~~~~~~~~~~~
+
+Pipelines, once constructed, are immutable (and modifying the pipeline, its
+configuration, or its internal data structures is undefined behavior).  However,
+you can create a new pipeline from an existing one with added or changed
+components.  To do this:
+
+1.  Create a builder from the pipeline with :meth:`Pipeline.modify`, which
+    returns a :class:`PipelineBuilder`.
+2.  Add new components, or replace existing ones with
+    :meth:`PipelineBuilder.replace_component`.
+3.  Build the modified pipeline with :meth:`PipelineBuilder.build`.
 
 POPROX and Other Integrators
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

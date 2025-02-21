@@ -343,10 +343,19 @@ class PipelineBuilder:
     ) -> Node[ND]:
         """
         Replace a component in the graph.  The new component must have a type
-        that is compatible with the old component.  The old component's input
-        connections will be replaced (as the new component may have different
-        inputs), but any connections that use the old component to supply an
-        input will use the new component instead.
+        that is compatible with the old component.  Both input and output connections
+        are retained, except for those overridden with with keyword arguments.
+
+        Args:
+            name:
+                The name or node to replace.
+            comp:
+                The component or constructor to use instead of the current node's
+                component.
+            config:
+                A configuration for the component (if passed as a class or constructor).
+            inputs:
+                New input wiring(s) for the new component.
         """
         if isinstance(name, Node):
             name = name.name
