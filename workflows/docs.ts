@@ -109,10 +109,11 @@ const publish: WorkflowJob = {
     {
       name: "🕸️ Deploy to Netlify",
       id: "deployment",
-      run: "just deploy",
+      uses: "netlify/actions/cli@master",
+      with: { args: "deploy --dir=site --prod" },
       env: {
-        NETLIFY_AUTH_TOKEN: "${secrets.NETLIFY_AUTH_TOKEN}",
-        NETLIFY_SITE_ID: "${vars.NETLIFY_SITE_ID}",
+        NETLIFY_AUTH_TOKEN: "${{secrets.NETLIFY_AUTH_TOKEN}}",
+        NETLIFY_SITE_ID: "${{vars.NETLIFY_SITE_ID}}",
       },
     },
   ],
