@@ -76,8 +76,8 @@ const publish: WorkflowJob = {
   needs: ["archive"],
   if: "github.event_name == 'push' || github.event_name == 'release'",
   environment: {
-    name: "github-pages",
-    url: "${{ steps.deployment.outputs.page_url }}",
+    name: "docs",
+    url: "https://lkpy.lenskit.org",
   },
   steps: [
     {
@@ -107,14 +107,13 @@ const publish: WorkflowJob = {
     { name: "Build site content", run: "just build" },
     { name: "Setup Pages", uses: "actions/configure-pages@v5" },
     {
-      name: "📦 Upload artifact",
-      uses: "actions/upload-pages-artifact@v3",
-      with: { path: "site" },
-    },
-    {
-      name: "🕸️ Deploy to GitHub Pages",
+      name: "🕸️ Deploy to Netlify",
       id: "deployment",
-      uses: "actions/deploy-pages@v4",
+      run: "just deploy",
+      env: {
+        NETLIFY_AUTH_TOKEN: "${secrets.NETLIFY_AUTH_TOKEN}",
+        NETLIFY_SITE_ID: "${vars.NETLIFY_SITE_ID}",
+      },
     },
   ],
 };
