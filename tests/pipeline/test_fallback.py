@@ -6,6 +6,7 @@
 
 from pytest import fail, raises
 
+from lenskit.diagnostics import PipelineError
 from lenskit.pipeline import PipelineBuilder
 
 
@@ -76,7 +77,7 @@ def test_fallback_fail_with_missing_options():
     na = pipe.add_component("add", add, x=nd, y=fb)
 
     pipe = pipe.build()
-    with raises(TypeError, match="no data available"):
+    with raises(PipelineError, match="no data available"):
         pipe.run(na, a=3)
 
 

@@ -156,7 +156,7 @@ class PipelineRunner:
             # check the data type before passing
             if itype and not lazy and not is_compatible_data(ival, itype):
                 if ival is None:
-                    raise TypeError(
+                    raise PipelineError(
                         f"no data available for required input ❬{iname}❭ on component ❬{name}❭"
                     )
                 raise TypeError(

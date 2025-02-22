@@ -19,9 +19,6 @@ from .config import PipelineConfig
 from .nodes import (
     ComponentConstructorNode,
     ComponentInstanceNode,
-    ComponentNode,
-    InputNode,
-    LiteralNode,
     Node,
 )
 from .state import PipelineState
@@ -246,39 +243,7 @@ class Pipeline:
         """
         from .builder import PipelineBuilder
 
-        builder = PipelineBuilder()
-
-        for node in self.nodes():
-            match node:
-                case InputNode(name, types=types):
-                    if types is None:
-                        types = set[type]()
-                    builder.create_input(name, *types)
-                case LiteralNode(name, value):
-                    builder.literal(value, name=name)
-                case ComponentConstructorNode(name, comp, config):
-                    cn = builder.add_component(name, comp, config)
-                case ComponentInstanceNode(name, comp):
-                    cn = builder.add_component(name, comp)
-                case _:  # pragma: nocover
-                    raise RuntimeError(f"invalid node {node}")
-
-        for n, t in self._aliases.items():
-            builder.alias(n, t.name)
-
-        for node in self.nodes():
-            match node:
-                case ComponentNode(name):
-                    wiring = self._edges.get(name, {})
-                    cn = builder.node(name)
-                    builder.connect(cn, **{wn: builder.node(wt) for (wn, wt) in wiring.items()})
-                case _:
-                    pass
-
-        if self.config.default:
-            builder.default_component(self.config.default)
-
-        return builder
+        return PipelineBuilder.from_pipeline(self)
 
     def train(self, data: Dataset, options: TrainingOptions | None = None) -> None:
         """

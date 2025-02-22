@@ -7,6 +7,8 @@ The components shipped with LensKit follow certain conventions to make their
 configuration and operation consistent and predictable. We encourage you to
 follow these conventions in your own code as well.
 
+.. _list-length:
+
 List Length
 ~~~~~~~~~~~
 
@@ -16,6 +18,32 @@ runtime parameter (input), both named ``n`` and type ``int | None``.  This
 allows list length to be baked into a pipeline configuration, and also allows
 that length to be specified or overridden at runtime.  If both lengths are
 specified, the runtime length takes precedence.
+
+See :class:`lenskit.basic.TopNRanker` or :class:`lenskit.basic.SoftmaxRanker`
+for examples.
+
+
+.. _config-conventions:
+
+Configuration Conventions
+-------------------------
+
+We strive for consistency in configuration across LensKit components.  To that end,
+there are a few common configuration option or hyperparameter names we use, and
+encourage you to use these in your own components unless you have a compelling reason
+not to.
+
+``embedding_size``
+    The dimensionality of embeddings or a latent feature space (e.g., the dimension
+    in matrix factorization or dimensionality reduction).
+``epochs``
+    The number of training epochs for an iterative method (this option name is
+    required by :ref:`iterative-training`).
+``learning_rate``
+    The learning rate for an iterative method.
+``reg``
+    The regularization weight for regularized models.
+
 
 .. _rng:
 

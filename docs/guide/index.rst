@@ -37,6 +37,7 @@ guide to how to use LensKit for research, education, and other purposes.
     scorers
     rankers
     other-components
+    implementing
 
 .. toctree::
     :caption: Experiments

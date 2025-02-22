@@ -37,7 +37,6 @@ like user history and candidate set lookup.
     as well as by Haystack_.
 
 .. _Haystack: https://docs.haystack.deepset.ai/docs/pipelines
-.. _POPROX: https://ccri-poprox.github.io/poprox-researcher-manual/reference/recommender/poprox_recommender.pipeline.html
 
 .. _pipeline-construct:
 
@@ -138,7 +137,7 @@ These input connections are specified via keyword arguments to the
 should be wired.
 
 
-You can also use :meth:`PipelineBuilder.default_conection` to specify default
+You can also use :meth:`PipelineBuilder.default_connection` to specify default
 connections. For example, you can specify a default for inputs named ``user``::
 
     pipe.default_connection('user', user_history)
@@ -192,7 +191,7 @@ The :meth:`~Pipeline.run` method takes two types of inputs:
     altered scores).
 
 *   Keyword arguments specifying the values for the pipeline's inputs, as defined by
-    calls to :meth:`Pipeline.create_input`.
+    calls to :meth:`PipelineBuilder.create_input`.
 
 Pipeline execution logically proceeds in the following steps:
 
@@ -222,7 +221,7 @@ itself, e.g.:
 * ``item-embedder``
 
 Component nodes can also have *aliases*, allowing them to be accessed by more
-than one name. Use :meth:`Pipeline.alias` to define these aliases.
+than one name. Use :meth:`PipelineBuilder.alias` to define these aliases.
 
 Various LensKit facilities recognize several standard component names used by
 the standard pipeline builders, and we recommend you use them in your own
@@ -255,7 +254,7 @@ Pipelines are defined by the following:
 * The components and inputs (nodes)
 * The component input connections (edges)
 * The component configurations (see :class:`Component`)
-* The components' learned parameters (see :class:`Trainable`)
+* The components' learned parameters (see :class:`~lenskit.training.Trainable`)
 
 LensKit supports serializing both pipeline descriptions (components,
 connections, and configurations) and pipeline parameters.  There are
@@ -265,10 +264,10 @@ two ways to save a pipeline or part thereof:
     pipeline; it has the usual downsides of pickling (arbitrary code execution,
     etc.). LensKit uses pickling to share pipelines with worker processes for
     parallel batch operations.
-2.  Save the pipeline configuration with :meth:`Pipeline.get_config`.  This saves
-    the components, their configurations, and their connections, but **not** any
-    learned parameter data.  A new pipeline can be constructed from such a
-    configuration can be reloaded with :meth:`Pipeline.from_config`.
+2.  Save the pipeline configuration (:attr:`Pipeline.config`, using :func:`~pydantic.BaseModel.model_dump_json`).  This saves the components,
+    their configurations, and their connections, but **not** any learned
+    parameter data.  A new pipeline can be constructed from such a configuration
+    can be reloaded with :meth:`Pipeline.from_config`.
 
 ..
     3.  Save the pipeline parameters with :meth:`Pipeline.save_params`.  This saves
@@ -307,8 +306,8 @@ two ways to save a pipeline or part thereof:
 
 .. _standard-pipelines:
 
-Standard Layouts
-~~~~~~~~~~~~~~~~
+Standard Pipelines
+~~~~~~~~~~~~~~~~~~
 
 The standard recommendation pipeline, produced by either of the approaches
 described above in :ref:`pipeline-construct`, looks like this:
@@ -370,6 +369,9 @@ to be trained.
 Components also must be pickleable, as LensKit uses pickling for shared memory
 parallelism in its batch-inference code.
 
+See :ref:`component-impl` for more information on implementing your own
+components.
+
 .. _component-config:
 
 Configuring Components
@@ -388,6 +390,8 @@ with Pydantic.  :class:`Component.__init__` will take care of storing the
 configuration object if one is provided, or instantiating the configuration
 class with defaults or from keyword arguments.  In most cases, you don't need
 to define a constructor for a component.
+
+See :ref:`config-conventions` for standard configuration option names.
 
 .. admonition:: Motivation
     :class: note
@@ -410,59 +414,6 @@ to define a constructor for a component.
         configurations to and from configuration files.
     -   The base class can provide well-defined and complete string
         representations for free to all component implementations.
-
-.. _component-impl:
-
-Implementing Components
------------------------
-
-Implementing a component therefore consists of a few steps:
-
-1.  Defining the configuration class.
-2.  Defining the component class, with its `config` attribute declaration.
-3.  Defining a `__call__` method for the component class that performs the
-    component's actual computation.
-4.  If the component supports training, implementing the :class:`Trainable`
-    protocol by defining a :meth:`Trainable.train` method.
-
-A simple example component that computes a linear weighted blend of the scores
-from two other components could look like this:
-
-.. literalinclude:: examples/blendcomp.py
-
-This component can be instantiated with its defaults:
-
-.. testsetup::
-
-    from blendcomp import LinearBlendScorer, LinearBlendConfig
-
-
-.. doctest::
-
-    >>> LinearBlendScorer()
-    <LinearBlendScorer {
-        "mix_weight": 0.5
-    }>
-
-You an instantiate it with its configuration class:
-
-.. doctest::
-
-    >>> LinearBlendScorer(LinearBlendConfig(mix_weight=0.2))
-    <LinearBlendScorer {
-        "mix_weight": 0.2
-    }>
-
-Finally, you can directly pass configuration parameters to the component constructor:
-
-.. doctest::
-
-    >>> LinearBlendScorer(mix_weight=0.7)
-    <LinearBlendScorer {
-        "mix_weight": 0.7
-    }>
-
-See :ref:`conventions` for more conventions for component design.
 
 Adding Components to the Pipeline
 ---------------------------------
@@ -489,6 +440,20 @@ You can add components to the pipeline in two ways:
 
 When you use the second approach, :meth:`PipelineBuilder.build` instantiates the
 component from the provided configuration.
+
+Modifying Pipelines
+~~~~~~~~~~~~~~~~~~~
+
+Pipelines, once constructed, are immutable (and modifying the pipeline, its
+configuration, or its internal data structures is undefined behavior).  However,
+you can create a new pipeline from an existing one with added or changed
+components.  To do this:
+
+1.  Create a builder from the pipeline with :meth:`Pipeline.modify`, which
+    returns a :class:`PipelineBuilder`.
+2.  Add new components, or replace existing ones with
+    :meth:`PipelineBuilder.replace_component`.
+3.  Build the modified pipeline with :meth:`PipelineBuilder.build`.
 
 POPROX and Other Integrators
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
