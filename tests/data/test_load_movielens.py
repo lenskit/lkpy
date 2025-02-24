@@ -125,6 +125,7 @@ def test_1m_df():
 
 
 @mark.skipif(not ML_10M_ZIP.exists(), reason="ml-10m does not exist")
+@mark.slow
 @mark.realdata
 def test_10m_zip():
     ds = load_movielens(ML_10M_ZIP)
@@ -148,6 +149,7 @@ def test_10m_zip():
 
 
 @mark.skipif(not ML_10M_ZIP.exists(), reason="ml-10m does not exist")
+@mark.slow
 @mark.realdata
 def test_10m_df():
     ds = load_movielens_df(ML_10M_ZIP)
@@ -157,6 +159,7 @@ def test_10m_df():
 
 
 @mark.skipif(not ML_20M_ZIP.exists(), reason="ml-20m does not exist")
+@mark.slow
 @mark.realdata
 def test_20m_zip():
     ds = load_movielens(ML_20M_ZIP)
@@ -191,6 +194,7 @@ def test_20m_zip():
 
 
 @mark.skipif(not ML_20M_ZIP.exists(), reason="ml-20m does not exist")
+@mark.slow
 @mark.realdata
 def test_ml20m_save(tmpdir: Path):
     ds = load_movielens(ML_20M_ZIP)
@@ -217,6 +221,7 @@ def test_ml20m_save(tmpdir: Path):
 
 
 @mark.skipif(not ML_20M_ZIP.exists(), reason="ml-20m does not exist")
+@mark.slow
 @mark.realdata
 def test_20m_df():
     ds = load_movielens_df(ML_20M_ZIP)
@@ -226,6 +231,7 @@ def test_20m_df():
 
 
 @mark.skipif(not ML_25M_ZIP.exists(), reason="ml-25m does not exist")
+@mark.slow
 @mark.realdata
 def test_25m_zip():
     ds = load_movielens(ML_25M_ZIP)
@@ -260,6 +266,7 @@ def test_25m_zip():
 
 
 @mark.skipif(not ML_25M_ZIP.exists(), reason="ml-25m does not exist")
+@mark.slow
 @mark.realdata
 def test_25m_df():
     ds = load_movielens_df(ML_25M_ZIP)
@@ -269,6 +276,7 @@ def test_25m_df():
 
 
 @mark.skipif(not ML_32M_ZIP.exists(), reason="ml-32m does not exist")
+@mark.slow
 @mark.realdata
 def test_32m_zip():
     ds = load_movielens(ML_32M_ZIP)
@@ -303,6 +311,7 @@ def test_32m_zip():
 
 
 @mark.skipif(not ML_32M_ZIP.exists(), reason="ml-32m does not exist")
+@mark.slow
 @mark.realdata
 def test_32m_zip_df():
     ds = load_movielens_df(ML_32M_ZIP)

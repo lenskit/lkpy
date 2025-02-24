@@ -268,34 +268,71 @@ class ItemListCollection(Generic[K]):
             if writer is not None:
                 writer.close()
 
+    @overload
     @classmethod
-    def load_parquet(cls, path: PathLike[str] | list[PathLike[str]]) -> ItemListCollection:
+    def load_parquet(
+        cls,
+        path: PathLike[str] | list[PathLike[str]],
+        *,
+        layout: Literal["native"] = "native",
+    ) -> ItemListCollection: ...
+    @overload
+    @classmethod
+    def load_parquet(
+        cls,
+        path: PathLike[str] | list[PathLike[str]],
+        key: type[K] | Sequence[Column] | Column,
+        *,
+        layout: Literal["flat"],
+    ) -> ItemListCollection: ...
+    @classmethod
+    def load_parquet(
+        cls,
+        path: PathLike[str] | list[PathLike[str]],
+        key: type[K] | Sequence[Column] | Column | None = None,
+        *,
+        layout: Literal["native", "flat"] = "native",
+    ) -> ItemListCollection:
         """
-        Load this item list from a Parquet file using the native layout.
-
-        .. note::
-
-            To load item list collections in the flat layout, use Pandas and
-            :meth:`from_df`.
+        Load this item list from a Parquet file.
 
         Args:
             path:
                 Path to the Parquet file to load.
+            key:
+                The key to use (only when loading tabular layout).
+            layout:
+                The layout to use, either LensKit native layout or a flat tabular layout.
         """
         if isinstance(path, list):
             path = [Path(p) for p in path]
         else:
             path = Path(path)
         dataset = ParquetDataset(path)  # type: ignore
-        table = dataset.read()
-        keys = table.drop("items")
-        lists = table.column("items")
-        ilc = ItemListCollection(keys.schema.names)
-        for i, key in enumerate(keys.to_pylist()):
-            il_data = lists[i].values
-            ilc.add(ItemList.from_arrow(il_data), **key)
 
-        return ilc
+        if layout == "native":
+            if key is not None:
+                raise ValueError("cannot specify key in native format")
+
+            table = dataset.read()
+            keys = table.drop("items")
+            lists = table.column("items")
+            ilc = ItemListCollection(keys.schema.names)
+            for i, key in enumerate(keys.to_pylist()):
+                il_data = lists[i].values
+                ilc.add(ItemList.from_arrow(il_data), **key)
+
+            return ilc
+        elif layout == "flat":
+            tbl = dataset.read_pandas()
+
+            if key is None:
+                warnings.warn("no key specified, inferring from _id columns", DataWarning)
+                key = [n for n in tbl.column_names if n.endswith("_id") and n != "item_id"]
+
+            return cls.from_df(tbl.to_pandas(), key)
+        else:  # pragma: nocover
+            raise ValueError(f"unsupported layout {layout}")
 
     def _iter_record_batches(
         self, batch_size: int = 5000, columns: dict[str, pa.DataType] | None = None

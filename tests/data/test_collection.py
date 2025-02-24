@@ -197,7 +197,8 @@ def test_to_arrow():
     assert np.all(tbl.column("user_id").to_numpy() == [72, 82])
 
 
-def test_save_parquet(ml_ds: Dataset, tmpdir: Path):
+@mark.parametrize("layout", ["native", "flat"])
+def test_save_parquet(ml_ds: Dataset, tmpdir: Path, layout):
     ilc = ItemListCollection(["user_id"])
     for user in ml_ds.users.ids():
         ilc.add(ml_ds.user_row(user), user_id=user)
@@ -205,11 +206,11 @@ def test_save_parquet(ml_ds: Dataset, tmpdir: Path):
     _log.info("initial list:\n%s", ilc.to_df())
 
     f = tmpdir / "items.parquet"
-    ilc.save_parquet(f)
+    ilc.save_parquet(f, layout=layout)
 
     assert f.exists()
 
-    ilc2 = ItemListCollection.load_parquet(f)
+    ilc2 = ItemListCollection.load_parquet(f, layout=layout)
     _log.info("loaded list:\n%s", ilc2.to_df())
     assert len(ilc2) == len(ilc)
     assert set(ilc2.keys()) == set(ilc.keys())
