@@ -1,13 +1,6 @@
-# This file is part of LensKit.
-# Copyright (C) 2018-2023 Boise State University
-# Copyright (C) 2023-2025 Drexel University
-# Licensed under the MIT license, see LICENSE.md for details.
-# SPDX-License-Identifier: MIT
-
 from __future__ import annotations
 
 import warnings
-from collections import namedtuple
 from collections.abc import Sequence
 from os import PathLike
 from pathlib import Path
@@ -18,9 +11,6 @@ from typing import (
     Iterator,
     Literal,
     Mapping,
-    NamedTuple,
-    TypeAlias,
-    TypeVar,
     overload,
 )
 
@@ -31,26 +21,10 @@ from pyarrow.parquet import ParquetDataset, ParquetWriter
 
 from lenskit.diagnostics import DataWarning
 
-from .adapt import column_name, normalize_columns
-from .items import ItemList
-from .types import ID, Column
-
-K = TypeVar("K", bound=tuple)
-KeySchema: TypeAlias = type[K] | tuple[str, ...]
-GenericKey: TypeAlias = tuple[ID, ...]
-
-
-class UserIDKey(NamedTuple):
-    """
-    Key type for user IDs.  This is used for :class:`item list collections
-    <ItemListCollection>` that are keyed by user ID, a common setup for
-    recommendation runs and
-    """
-
-    user_id: ID
-
-
-KEY_CACHE: dict[tuple[str, ...], type[tuple]] = {("user_id",): UserIDKey}
+from ..adapt import column_name, normalize_columns
+from ..items import ItemList
+from ..types import ID, Column
+from ._keys import GenericKey, K, create_key_type, key_dict, key_fields, project_key
 
 
 class ItemListCollection(Generic[K]):
@@ -102,7 +76,7 @@ class ItemListCollection(Generic[K]):
         if isinstance(key, type):
             self._key_class = key
         else:
-            self._key_class = _create_key_type(*key)  # type: ignore
+            self._key_class = create_key_type(*key)  # type: ignore
 
         self._lists = []
         if index:
@@ -172,14 +146,14 @@ class ItemListCollection(Generic[K]):
                 aliased columns to normalize other clumnes like the item ID.
         """
         if isinstance(key, type):
-            fields = _key_fields(key)
+            fields = key_fields(key)
             columns = fields + others
         else:
             if isinstance(key, Column):
                 key = [key]
             columns = tuple(key) + others
             fields = [column_name(c) for c in key]
-            key = _create_key_type(*fields)  # type: ignore
+            key = create_key_type(*fields)  # type: ignore
 
         df = normalize_columns(df, *columns)
         ilc = cls(key)  # type: ignore
@@ -341,7 +315,7 @@ class ItemListCollection(Generic[K]):
             columns = self._list_schema
 
         for batch in chunked(self._lists, batch_size):
-            keys = pa.Table.from_pylist([_key_dict(k) for (k, _il) in batch])
+            keys = pa.Table.from_pylist([key_dict(k) for (k, _il) in batch])
             schema = pa.list_(pa.struct(columns))  # type: ignore
             tbl = keys.add_column(
                 keys.num_columns,
@@ -356,7 +330,7 @@ class ItemListCollection(Generic[K]):
     @property
     def key_fields(self) -> tuple[str]:
         "The names of the key fields."
-        return _key_fields(self._key_class)
+        return key_fields(self._key_class)
 
     @property
     def key_type(self) -> type[K]:
@@ -472,61 +446,3 @@ class ItemListCollection(Generic[K]):
 
     def __getitem__(self, key: int) -> tuple[K, ItemList]:
         return self._lists[key]
-
-
-def _key_fields(kt: type[tuple]) -> tuple[str]:
-    "extract the fields from a key type"
-    return kt._fields  # type: ignore
-
-
-def _key_dict(kt: tuple[ID, ...]) -> Mapping[str, Any]:
-    return kt._asdict()  # type: ignore
-
-
-@overload
-def _create_key(kt: type[K], *values: ID) -> K: ...
-@overload
-def _create_key(kt: Sequence[str], *values: ID) -> GenericKey: ...
-def _create_key(kt: type[K] | Sequence[str], *values: ID) -> tuple[Any, ...]:
-    if isinstance(kt, type):
-        return kt(*values)  # type: ignore
-    else:
-        kt = _create_key_type(*kt)  # type: ignore
-        return kt(*values)  # type: ignore
-
-
-def _create_key_type(*fields: str) -> type[GenericKey]:
-    """
-    Create a new key
-    """
-    assert isinstance(fields, tuple)
-    kt = KEY_CACHE.get(fields, None)
-    if kt is None:
-        ktn = f"LKILCKeyType{len(KEY_CACHE)+1}"
-        kt = namedtuple(ktn, fields)
-        # support pickling
-        kt.__reduce__ = _reduce_generic_key  # type: ignore
-        KEY_CACHE[fields] = kt
-    return kt
-
-
-def _reduce_generic_key(key):
-    args = (key._fields,) + key
-    return _create_key, args
-
-
-def project_key(key: tuple, target: type[K]) -> K:
-    """
-    Project a key onto a subset of its fields.  This is to enable keys to be
-    looked up in other collections that are keyed on a subset of their fields,
-    such as using a key consisting of a user ID and a sequence number to look up
-    test data in a collection keyed only by user ID.
-    """
-
-    if isinstance(key, target):
-        return key
-
-    try:
-        return target._make(getattr(key, f) for f in target._fields)  # type: ignore
-    except AttributeError as e:
-        raise TypeError(f"source key is missing field {e.name}")
