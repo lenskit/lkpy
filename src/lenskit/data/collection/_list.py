@@ -10,7 +10,7 @@ from lenskit.diagnostics import DataWarning
 from ..adapt import Column, column_name, normalize_columns
 from ..items import ItemList
 from ._base import ItemListCollection, MutableItemListCollection
-from ._keys import ID, GenericKey, K, create_key_type, key_fields
+from ._keys import ID, GenericKey, K, Ko, create_key_type, key_dict, key_fields
 
 
 class ListILC(MutableItemListCollection[K], Generic[K]):
@@ -133,7 +133,7 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
         key = self._key_class(*fields, **kwfields)  # type: ignore
         self._add(key, list)
 
-    def add_from(self, other: ItemListCollection, **fields: ID):
+    def add_from(self, other: ItemListCollection[Ko], **fields: ID):
         """
         Add all collection from another collection to this collection.  If field
         values are supplied, they are used to supplement or overwrite the keys
@@ -148,9 +148,9 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
         """
         for key, list in other:
             if fields:
-                cf = key._asdict() | fields
+                cf = key_dict(key) | fields
                 key = self._key_class(**cf)
-            self._add(key, list)
+            self._add(key, list)  # type: ignore
 
     def _add(self, key: K, list: ItemList):
         self._lists.append((key, list))

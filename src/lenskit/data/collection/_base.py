@@ -16,10 +16,10 @@ from lenskit.diagnostics import DataWarning
 
 from ..items import ItemList
 from ..types import ID, Column
-from ._keys import GenericKey, K, create_key_type, key_dict, key_fields, project_key
+from ._keys import KL, GenericKey, K, create_key_type, key_dict, key_fields, project_key
 
 
-class ItemListCollection(Generic[K], ABC):
+class ItemListCollection(Generic[KL], ABC):
     """
     A collection of item lists.  This protocol defines read access to the
     collection; see :class:`ItemListCollector` for the ability to add new lists.
@@ -68,15 +68,15 @@ class ItemListCollection(Generic[K], ABC):
             Whether or not to index lists by key to facilitate fast lookups.
     """
 
-    _key_class: type[K]
+    _key_class: type[KL]
 
-    def __new__(cls, key: type[K] | Sequence[str], *, index: bool = True):
+    def __new__(cls, key: type[KL] | Sequence[str], *, index: bool = True):
         if cls == ItemListCollection or cls == MutableItemListCollection:
             return cls.empty(key, index=index)
         else:
             return super().__new__(cls)
 
-    def __init__(self, key: type[K] | Sequence[str]):
+    def __init__(self, key: type[KL] | Sequence[str]):
         if isinstance(key, type):
             self._key_class = key
         else:
@@ -105,7 +105,7 @@ class ItemListCollection(Generic[K], ABC):
     def from_dict(
         data: Mapping[GenericKey | ID, ItemList],
         key: type[K] | Sequence[str] | str | None = None,
-    ) -> ItemListCollection[Any]:
+    ) -> ItemListCollection[GenericKey]:
         """
         Create an item list collection from a dictionary.
 
@@ -117,7 +117,9 @@ class ItemListCollection(Generic[K], ABC):
         return ListILC.from_dict(data, key)
 
     @staticmethod
-    def from_df(df: pd.DataFrame, key: type[K] | Sequence[Column] | Column, *others: Column):
+    def from_df(
+        df: pd.DataFrame, key: type[K] | Sequence[Column] | Column, *others: Column
+    ) -> MutableItemListCollection[Any]:
         """
         Create an item list collection from a data frame.
 
@@ -217,7 +219,9 @@ class ItemListCollection(Generic[K], ABC):
         try:
             for batch in self.record_batches(batch_size):
                 if writer is None:
-                    writer = ParquetWriter(Path(path), batch.schema, compression=compression)
+                    writer = ParquetWriter(
+                        Path(path), batch.schema, compression=compression or "snappy"
+                    )
                 writer.write_batch(batch)
         finally:
             if writer is not None:
@@ -275,9 +279,9 @@ class ItemListCollection(Generic[K], ABC):
             keys = table.drop("items")
             lists = table.column("items")
             ilc = ListILC(keys.schema.names)
-            for i, key in enumerate(keys.to_pylist()):
+            for i, k in enumerate(keys.to_pylist()):
                 il_data = lists[i].values
-                ilc.add(ItemList.from_arrow(il_data), **key)
+                ilc.add(ItemList.from_arrow(il_data), **k)
 
             return ilc
         elif layout == "flat":
@@ -319,7 +323,7 @@ class ItemListCollection(Generic[K], ABC):
         return key_fields(self.key_type)
 
     @property
-    def key_type(self) -> type[K]:
+    def key_type(self) -> type[KL]:
         """
         The type of collection keys.
         """
@@ -372,7 +376,7 @@ class ItemListCollection(Generic[K], ABC):
         return self.lookup(kp)
 
     @abstractmethod
-    def items(self) -> Iterator[tuple[K, ItemList]]:
+    def items(self) -> Iterator[tuple[KL, ItemList]]:
         "Iterate over item lists and keys."
         ...
 
@@ -380,18 +384,18 @@ class ItemListCollection(Generic[K], ABC):
         "Iterate over item lists without keys."
         return (il for (_k, il) in self.items())
 
-    def keys(self) -> Iterator[K]:
+    def keys(self) -> Iterator[KL]:
         "Iterate over keys."
         return (k for (k, _il) in self.items())
 
     @abstractmethod
     def __len__(self) -> int: ...
 
-    def __iter__(self) -> Iterator[tuple[K, ItemList]]:
+    def __iter__(self) -> Iterator[tuple[KL, ItemList]]:
         return self.items()
 
     @abstractmethod
-    def __getitem__(self, pos: int, /) -> tuple[K, ItemList]:
+    def __getitem__(self, pos: int, /) -> tuple[KL, ItemList]:
         """
         Get an item list and its key by position.
 

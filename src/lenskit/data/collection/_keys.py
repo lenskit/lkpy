@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from collections import namedtuple
 from collections.abc import Sequence
-from typing import (
+
+from typing_extensions import (
     Any,
-    Mapping,
     NamedTuple,
     TypeAlias,
     TypeVar,
@@ -19,9 +19,20 @@ from typing import (
 
 from ..types import ID
 
-K = TypeVar("K", bound=tuple)
-KeySchema: TypeAlias = type[K] | tuple[str, ...]
 GenericKey: TypeAlias = tuple[ID, ...]
+K = TypeVar("K", bound=tuple, default=GenericKey)
+"""
+Fixed key type.
+"""
+Ko = TypeVar("Ko", bound=tuple, default=GenericKey)
+"""
+Fixed key type for an "other" collection.
+"""
+KL = TypeVar("KL", covariant=True, bound=tuple, default=GenericKey)
+"""
+Covariant key type for key lookup.
+"""
+KeySchema: TypeAlias = type[K] | tuple[str, ...]
 
 
 class UserIDKey(NamedTuple):
@@ -42,7 +53,7 @@ def key_fields(kt: type[tuple]) -> tuple[str]:
     return kt._fields  # type: ignore
 
 
-def key_dict(kt: tuple[ID, ...]) -> Mapping[str, Any]:
+def key_dict(kt: tuple[ID, ...]) -> dict[str, Any]:
     return kt._asdict()  # type: ignore
 
 
