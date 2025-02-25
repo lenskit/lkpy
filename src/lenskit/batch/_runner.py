@@ -132,12 +132,12 @@ class BatchPipelineRunner:
             inner dictionaries map user IDs to
         """
         if isinstance(test_data, ItemListCollection):
-            test_iter = test_data
+            test_iter = test_data.items()
             key_type = test_data.key_type
             n_users = len(test_data)
         elif isinstance(test_data, Mapping):
             key_type = UserIDKey
-            test_iter = ((UserIDKey(k), v) for (k, v) in test_data.items())
+            test_iter = ((UserIDKey(k), v) for (k, v) in test_data.items())  # type: ignore
             n_users = len(test_data)
         else:
             key_type = UserIDKey
@@ -145,7 +145,6 @@ class BatchPipelineRunner:
             test_iter = ((_ensure_key(k), None) for k in test_data)
             n_users = len(test_data)
 
-        n_users = len(test_data)
         log = _log.bind(
             name=pipeline.name, hash=pipeline.config_hash, n_queries=n_users, n_jobs=self.n_jobs
         )
@@ -180,7 +179,7 @@ def _ensure_key(key: ID | tuple[ID, ...]):
 
 def _run_pipeline(
     ctx: tuple[Pipeline, list[InvocationSpec]],
-    req: tuple[GenericKey, ItemList] | ID,
+    req: tuple[GenericKey, ItemList],
 ) -> tuple[GenericKey, dict[str, object]]:
     pipeline, invocations = ctx
     key, test_items = req

@@ -29,10 +29,11 @@ class Stopwatch:
     def stop(self):
         self.stop_time = time.perf_counter()
 
-    def elapsed(self):
+    def elapsed(self) -> float:
         stop = self.stop_time
         if stop is None:
             stop = time.perf_counter()
+        assert self.start_time is not None
 
         return stop - self.start_time
 
