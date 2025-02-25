@@ -50,8 +50,11 @@ Item Data
 
     ~lenskit.data.ItemList
     ~lenskit.data.ItemListCollection
+    ~lenskit.data.ItemListCollector
+    ~lenskit.data.ListILC
     ~lenskit.data.UserIDKey
     ~lenskit.data.GenericKey
+    ~lenskit.data.MutableItemListCollection
 
 Recommendation Queries
 ----------------------

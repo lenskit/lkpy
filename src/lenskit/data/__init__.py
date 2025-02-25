@@ -15,7 +15,14 @@ from lenskit.diagnostics import FieldError
 from .adapt import from_interactions_df
 from .attributes import AttributeSet
 from .builder import DatasetBuilder
-from .collection import GenericKey, ItemListCollection, UserIDKey
+from .collection import (
+    GenericKey,
+    ItemListCollection,
+    ItemListCollector,
+    ListILC,
+    MutableItemListCollection,
+    UserIDKey,
+)
 from .dataset import Dataset, EntitySet, MatrixRelationshipSet, RelationshipSet
 from .items import ItemList
 from .matrix import COOStructure, CSRStructure
@@ -41,6 +48,9 @@ __all__ = [
     "FeedbackType",
     "ItemList",
     "ItemListCollection",
+    "ItemListCollector",
+    "MutableItemListCollection",
+    "ListILC",
     "UserIDKey",
     "GenericKey",
     "load_movielens",
