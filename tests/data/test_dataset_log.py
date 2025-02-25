@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 
 from lenskit.data import Dataset
-from lenskit.data.tables import NumpyUserItemTable, TorchUserItemTable
 from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
 
 

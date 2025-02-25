@@ -14,7 +14,6 @@ import pandas as pd
 from pytest import approx
 
 from lenskit.data import Dataset
-from lenskit.data.tables import NumpyUserItemTable, TorchUserItemTable
 from lenskit.testing import ml_ds, ml_ratings  # noqa: F401
 
 
