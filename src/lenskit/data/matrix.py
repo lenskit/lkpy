@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 """
-Data manipulation routines.
+Matrix layouts.
 """
 
 # pyright: basic
