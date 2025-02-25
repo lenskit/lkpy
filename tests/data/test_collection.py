@@ -15,7 +15,7 @@ import pandas as pd
 from pytest import mark, raises, warns
 
 from lenskit.data import ItemList
-from lenskit.data.collection import ItemListCollection, UserIDKey
+from lenskit.data.collection import ItemListCollection, MutableItemListCollection, UserIDKey
 from lenskit.data.collection._keys import create_key, project_key
 from lenskit.data.dataset import Dataset
 from lenskit.diagnostics import DataWarning
@@ -60,14 +60,28 @@ def test_project_missing_fails():
 
 
 def test_collection_empty():
-    empty = ItemListCollection(UserIDKey)
+    empty = ItemListCollection.empty(UserIDKey)
+    assert len(empty) == 0
+    with raises(StopIteration):
+        next(iter(empty))
+
+
+def test_collection_base_ctor():
+    empty = ItemListCollection(UserIDKey)  # type: ignore
+    assert len(empty) == 0
+    with raises(StopIteration):
+        next(iter(empty))
+
+
+def test_collection_mutable_ctor():
+    empty = MutableItemListCollection(UserIDKey)  # type: ignore
     assert len(empty) == 0
     with raises(StopIteration):
         next(iter(empty))
 
 
 def test_collection_add_item():
-    ilc = ItemListCollection(UserIDKey)
+    ilc = ItemListCollection.empty(UserIDKey)
 
     ilc.add(ItemList(["a"]), 72)
     assert len(ilc) == 1
@@ -130,7 +144,7 @@ def test_lookup_projected():
 
 
 def test_add_from():
-    ilc = ItemListCollection(["model", "user_id"])
+    ilc = ItemListCollection.empty(["model", "user_id"])
 
     ilc1 = ItemListCollection.from_dict({72: ItemList(["a", "b"]), 48: ItemList()}, key="user_id")
     ilc.add_from(ilc1, model="foo")
@@ -200,7 +214,7 @@ def test_to_arrow():
 
 @mark.parametrize("layout", ["native", "flat"])
 def test_save_parquet(ml_ds: Dataset, tmpdir: Path, layout):
-    ilc = ItemListCollection(["user_id"])
+    ilc = ItemListCollection.empty(["user_id"])
     for user in ml_ds.users.ids():
         ilc.add(ml_ds.user_row(user), user_id=user)
 
@@ -227,7 +241,7 @@ def test_save_parquet(ml_ds: Dataset, tmpdir: Path, layout):
 
 @mark.filterwarnings("ignore:.*dropped.*:lenskit.diagnostics.DataWarning")
 def test_save_parquet_with_empty(ml_ds: Dataset, tmpdir: Path):
-    ilc = ItemListCollection(["user_id"])
+    ilc = ItemListCollection.empty(["user_id"])
     ilc.add(ItemList(), user_id=-1)
     for user in ml_ds.users.ids():
         if user % 348:
@@ -257,7 +271,7 @@ def test_save_parquet_with_empty(ml_ds: Dataset, tmpdir: Path):
 
 
 def test_save_parquet_with_mkdir(tmpdir: Path):
-    ilc = ItemListCollection(["user_id"])
+    ilc = ItemListCollection.empty(["user_id"])
 
     f = tmpdir / "subdir" / "items.parquet"
     ilc.save_parquet(f, mkdir=True)

@@ -1,18 +1,11 @@
 from __future__ import annotations
 
 import warnings
+from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from os import PathLike
 from pathlib import Path
-from typing import (
-    Any,
-    Generator,
-    Generic,
-    Iterator,
-    Literal,
-    Mapping,
-    overload,
-)
+from typing import Any, Generator, Generic, Iterator, Literal, Mapping, Protocol, overload
 
 import pandas as pd
 import pyarrow as pa
@@ -21,15 +14,15 @@ from pyarrow.parquet import ParquetDataset, ParquetWriter
 
 from lenskit.diagnostics import DataWarning
 
-from ..adapt import column_name, normalize_columns
 from ..items import ItemList
 from ..types import ID, Column
 from ._keys import GenericKey, K, create_key_type, key_dict, key_fields, project_key
 
 
-class ItemListCollection(Generic[K]):
+class ItemListCollection(Generic[K], ABC):
     """
-    A collection of item lists.
+    A collection of item lists.  This protocol defines read access to the
+    collection; see :class:`ItemListCollector` for the ability to add new lists.
 
     An item list collection consists of a sequence of item lists with associated
     *keys* following a fixed schema.  Item list collections support iteration
@@ -42,19 +35,30 @@ class ItemListCollection(Generic[K]):
     nested: field values must be scalars, not tuples or lists.  Keys should also
     be hashable.
 
-    This class exists, instead of using raw dictionaries or lists, to
-    consistently handle some of the nuances of multi-valued keys, and different
-    collections having different key fields; for example, if a run produces item
-    lists with both user IDs and sequence numbers, but your test data is only
-    indexed by user ID, the *projected lookup* capabilities make it easy to find
-    the test data to go with an item list in the run.
+    This protocol and its implementations exist, instead of using raw
+    dictionaries or lists, to consistently handle some of the nuances of
+    multi-valued keys, and different collections having different key fields.
+    For example, if a run produces item lists with both user IDs and sequence
+    numbers, but your test data is only indexed by user ID, the *projected
+    lookup* capabilities make it easy to find the test data to go with an item
+    list in the run.
 
-    Item list collections support lookup by index, like a list, returning a
-    tuple of the key and list.  If they are constructed with ``index=True``,
-    they also support lookup by _key_, supplied as either a tuple or an instance
-    of the key type; in this case, the key is not returned.  If more than one
-    item with the same key is inserted into the collection, then the _last_ one
-    is returned (just like a dictionary).
+    Item list collections support indexing by position, like a list, returning a
+    tuple of the key and list; iterating over an item list collection similarly
+    produces ``(key, list)`` pairs (so an item list collection is a
+    :class:`~collections.abc.Sequence` of key/list pairs).
+
+    If the item list is _indexed_ (constructed with ``index=True``), it also
+    supports lookup by _key_ with :meth:`lookup`.  The key can be supplied as
+    either a tuple or an instance of the key type.  If more than one item with
+    the same key is inserted into the collection, then the _last_ one is
+    returned (just like a dictionary), but the others remain in the underlying
+    list when it is iterated.
+
+    .. note::
+
+        Constructing an item list collection yields a
+        :class:`~lenskit.data.ListILC`.
 
     Args:
         key:
@@ -65,70 +69,60 @@ class ItemListCollection(Generic[K]):
     """
 
     _key_class: type[K]
-    _lists: list[tuple[K, ItemList]]
-    _index: dict[K, int] | None = None
-    _list_schema: dict[str, pa.DataType]
 
-    def __init__(self, key: type[K] | Sequence[str], *, index: bool = True):
-        """
-        Create a new item list collection.
-        """
+    def __new__(cls, key: type[K] | Sequence[str], *, index: bool = True):
+        if cls == ItemListCollection or cls == MutableItemListCollection:
+            return cls.empty(key, index=index)
+        else:
+            return super().__new__(cls)
+
+    def __init__(self, key: type[K] | Sequence[str]):
         if isinstance(key, type):
             self._key_class = key
         else:
             self._key_class = create_key_type(*key)  # type: ignore
 
-        self._lists = []
-        if index:
-            self._index = {}
-        self._list_schema = {}
+    @staticmethod
+    def empty(key: type[K] | Sequence[str], *, index: bool = True) -> MutableItemListCollection[K]:
+        """
+        Create a new empty, mutable item list collection.
+        """
+        from ._list import ListILC
+
+        return ListILC(key, index=index)
 
     @overload
-    @classmethod
+    @staticmethod
     def from_dict(
-        cls, data: Mapping[GenericKey | ID, ItemList], key: type[K]
+        data: Mapping[GenericKey | ID, ItemList], key: type[K]
     ) -> ItemListCollection[K]: ...
     @overload
-    @classmethod
+    @staticmethod
     def from_dict(
-        cls, data: Mapping[GenericKey | ID, ItemList], key: Sequence[str] | str | None = None
+        data: Mapping[GenericKey | ID, ItemList], key: Sequence[str] | str | None = None
     ) -> ItemListCollection[GenericKey]: ...
-    @classmethod
+    @staticmethod
     def from_dict(
-        cls,
         data: Mapping[GenericKey | ID, ItemList],
         key: type[K] | Sequence[str] | str | None = None,
     ) -> ItemListCollection[Any]:
         """
         Create an item list collection from a dictionary.
+
+        .. seealso::
+            :meth:`lenskit.data.collection.ListILC.from_dict`
         """
-        if key is not None:
-            if isinstance(key, str):
-                key = (key,)
-            ilc = ItemListCollection(key)
-        else:
-            k = next(iter(data.keys()))
-            if isinstance(k, tuple) and getattr(k, "_fields"):
-                ilc = ItemListCollection(type(k))
-            else:
-                warnings.warn(
-                    "no key specified but data does not use named tuples, using default field 'id'",
-                    DataWarning,
-                )
-                ilc = ItemListCollection(["id"])
+        from ._list import ListILC
 
-        for k, il in data.items():
-            if isinstance(k, tuple):
-                ilc.add(il, *k)
-            else:
-                ilc.add(il, k)
+        return ListILC.from_dict(data, key)
 
-        return ilc
-
-    @classmethod
-    def from_df(cls, df: pd.DataFrame, key: type[K] | Sequence[Column] | Column, *others: Column):
+    @staticmethod
+    def from_df(df: pd.DataFrame, key: type[K] | Sequence[Column] | Column, *others: Column):
         """
         Create an item list collection from a data frame.
+
+        .. seealso::
+            :meth:`lenskit.data.collection.ListILC.from_df`
 
         .. note::
 
@@ -145,22 +139,9 @@ class ItemListCollection(Generic[K]):
                 Other columns to consider; primarily used to pass additional
                 aliased columns to normalize other clumnes like the item ID.
         """
-        if isinstance(key, type):
-            fields = key_fields(key)
-            columns = fields + others
-        else:
-            if isinstance(key, Column):
-                key = [key]
-            columns = tuple(key) + others
-            fields = [column_name(c) for c in key]
-            key = create_key_type(*fields)  # type: ignore
+        from ._list import ListILC
 
-        df = normalize_columns(df, *columns)
-        ilc = cls(key)  # type: ignore
-        for k, gdf in df.groupby(list(fields)):
-            ilc.add(ItemList.from_df(gdf), *k)
-
-        return ilc
+        return ListILC.from_df(df, key)
 
     def to_df(self) -> pd.DataFrame:
         """
@@ -171,15 +152,15 @@ class ItemListCollection(Generic[K]):
             If this item list collection has any keys with empty lists, those
             lists will be excluded from the output.
         """
-        fields = self._key_class._fields  # type: ignore
         if any(len(il) == 0 for il in self.lists()):
             warnings.warn(
                 "item list collection has empty lists, they will be dropped",
                 DataWarning,
                 stacklevel=2,
             )
+        fields = list(self.key_fields)
         return (
-            pd.concat({k: il.to_df(numbers=False) for (k, il) in self._lists}, names=fields)
+            pd.concat({k: il.to_df(numbers=False) for (k, il) in self.items()}, names=fields)
             .reset_index(fields)
             .reset_index(drop=True)
         )
@@ -196,7 +177,7 @@ class ItemListCollection(Generic[K]):
             batch_size:
                 The Arrow record batch size.
         """
-        return pa.Table.from_batches(self._iter_record_batches())
+        return pa.Table.from_batches(self.record_batches())
 
     def save_parquet(
         self,
@@ -234,7 +215,7 @@ class ItemListCollection(Generic[K]):
 
         writer = None
         try:
-            for batch in self._iter_record_batches(batch_size):
+            for batch in self.record_batches(batch_size):
                 if writer is None:
                     writer = ParquetWriter(Path(path), batch.schema, compression=compression)
                 writer.write_batch(batch)
@@ -278,6 +259,8 @@ class ItemListCollection(Generic[K]):
             layout:
                 The layout to use, either LensKit native layout or a flat tabular layout.
         """
+        from ._list import ListILC
+
         if isinstance(path, list):
             path = [Path(p) for p in path]
         else:
@@ -291,7 +274,7 @@ class ItemListCollection(Generic[K]):
             table = dataset.read()
             keys = table.drop("items")
             lists = table.column("items")
-            ilc = ItemListCollection(keys.schema.names)
+            ilc = ListILC(keys.schema.names)
             for i, key in enumerate(keys.to_pylist()):
                 il_data = lists[i].values
                 ilc.add(ItemList.from_arrow(il_data), **key)
@@ -308,13 +291,16 @@ class ItemListCollection(Generic[K]):
         else:  # pragma: nocover
             raise ValueError(f"unsupported layout {layout}")
 
-    def _iter_record_batches(
+    def record_batches(
         self, batch_size: int = 5000, columns: dict[str, pa.DataType] | None = None
     ) -> Generator[pa.RecordBatch, None, None]:
+        """
+        Get the item list collection as Arrow record batches (in native layout).
+        """
         if columns is None:
-            columns = self._list_schema
+            columns = self.list_schema
 
-        for batch in chunked(self._lists, batch_size):
+        for batch in chunked(self.items(), batch_size):
             keys = pa.Table.from_pylist([key_dict(k) for (k, _il) in batch])
             schema = pa.list_(pa.struct(columns))  # type: ignore
             tbl = keys.add_column(
@@ -330,7 +316,7 @@ class ItemListCollection(Generic[K]):
     @property
     def key_fields(self) -> tuple[str]:
         "The names of the key fields."
-        return key_fields(self._key_class)
+        return key_fields(self.key_type)
 
     @property
     def key_type(self) -> type[K]:
@@ -339,54 +325,19 @@ class ItemListCollection(Generic[K]):
         """
         return self._key_class
 
-    def add(self, list: ItemList, *fields: ID, **kwfields: ID):
+    @property
+    @abstractmethod
+    def list_schema(self) -> dict[str, pa.DataType]:
         """
-        Add a single item list to this list.
-
-        Args:
-            list:
-                The item list to add.
-            fields, kwfields:
-                The key fields for this list.
+        Get the schema for the lists in this ILC.
         """
-        key = self._key_class(*fields, **kwfields)  # type: ignore
-        self._add(key, list)
-
-    def add_from(self, other: ItemListCollection, **fields: ID):
-        """
-        Add all collection from another collection to this collection.  If field
-        values are supplied, they are used to supplement or overwrite the keys
-        in ``other``; a common use case is to add results from multiple
-        recommendation runs and save them a single field.
-
-        Args:
-            other:
-                The item list collection to incorporate into this one.
-            fields:
-                Additional key fields (must be specified by name).
-        """
-        for key, list in other:
-            if fields:
-                cf = key._asdict() | fields
-                key = self._key_class(**cf)
-            self._add(key, list)
-
-    def _add(self, key: K, list: ItemList):
-        self._lists.append((key, list))
-        if self._index is not None:
-            self._index[key] = len(self._lists) - 1
-        for fn, ft in list.arrow_types().items():
-            pft = self._list_schema.get(fn, None)
-            if pft is None:
-                self._list_schema[fn] = ft
-            elif not ft.equals(pft):
-                raise TypeError(f"incompatible item lists: field {fn} type {ft} != {pft}")
 
     @overload
     def lookup(self, key: tuple) -> ItemList | None: ...
     @overload
     def lookup(self, *key: ID, **kwkey: ID) -> ItemList | None: ...
-    def lookup(self, *args, **kwargs) -> ItemList | None:
+    @abstractmethod
+    def lookup(self, *args, **kwargs) -> ItemList | None:  # pragma: nocover
         """
         Look up a list by key.  If multiple lists have the same key, this
         returns the **last** (like a dictionary).
@@ -400,17 +351,7 @@ class ItemListCollection(Generic[K]):
             key:
                 The key tuple or key tuple fields.
         """
-        if self._index is None:
-            raise TypeError("cannot lookup on non-indexed collection")
-        if len(args) != 1 or not isinstance(args[0], tuple):
-            key = self._key_class(*args, **kwargs)
-        else:
-            key = args[0]
-
-        try:
-            return self._lists[self._index[key]][1]  # type: ignore
-        except KeyError:
-            return None
+        raise NotImplementedError()
 
     def lookup_projected(self, key: tuple) -> ItemList | None:
         """
@@ -430,19 +371,83 @@ class ItemListCollection(Generic[K]):
         kp = project_key(key, self._key_class)
         return self.lookup(kp)
 
+    @abstractmethod
+    def items(self) -> Iterator[tuple[K, ItemList]]:
+        "Iterate over item lists and keys."
+        ...
+
     def lists(self) -> Iterator[ItemList]:
         "Iterate over item lists without keys."
-        return (il for (_k, il) in self._lists)
+        return (il for (_k, il) in self.items())
 
     def keys(self) -> Iterator[K]:
         "Iterate over keys."
-        return (k for (k, _il) in self._lists)
+        return (k for (k, _il) in self.items())
 
-    def __len__(self):
-        return len(self._lists)
+    @abstractmethod
+    def __len__(self) -> int: ...
 
     def __iter__(self) -> Iterator[tuple[K, ItemList]]:
-        return iter(self._lists)
+        return self.items()
 
-    def __getitem__(self, key: int) -> tuple[K, ItemList]:
-        return self._lists[key]
+    @abstractmethod
+    def __getitem__(self, pos: int, /) -> tuple[K, ItemList]:
+        """
+        Get an item list and its key by position.
+
+        Args:
+            pos:
+                The position in the list (starting from 0).
+
+        Returns:
+            The key and list at position ``pos``.
+
+        Raises:
+            IndexError:
+                when ``pos`` is out-of-bounds.
+        """
+        pass
+
+
+class ItemListCollector(Protocol):
+    """
+    Collect item lists with associated keys, as in :class:`ItemListCollection`.
+    """
+
+    @abstractmethod
+    def add(self, list: ItemList, *fields: ID, **kwfields: ID):  # pragma: nocover
+        """
+        Add a single item list to this list.
+
+        Args:
+            list:
+                The item list to add.
+            fields, kwfields:
+                The key fields for this list.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def add_from(self, other: ItemListCollection, **fields: ID):
+        """
+        Add all collection from another collection to this collection.  If field
+        values are supplied, they are used to supplement or overwrite the keys
+        in ``other``; a common use case is to add results from multiple
+        recommendation runs and save them a single field.
+
+        Args:
+            other:
+                The item list collection to incorporate into this one.
+            fields:
+                Additional key fields (must be specified by name).
+        """
+        raise NotImplementedError()
+
+
+class MutableItemListCollection(ItemListCollector, ItemListCollection[K], Generic[K]):
+    """
+    Intersection type of :class:`ItemListCollection` and
+    :class:`ItemListCollector`.
+    """
+
+    pass
