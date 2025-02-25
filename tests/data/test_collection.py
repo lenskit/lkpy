@@ -15,7 +15,8 @@ import pandas as pd
 from pytest import mark, raises, warns
 
 from lenskit.data import ItemList
-from lenskit.data.collection import ItemListCollection, UserIDKey, _create_key, project_key
+from lenskit.data.collection import ItemListCollection, UserIDKey
+from lenskit.data.collection._keys import create_key, project_key
 from lenskit.data.dataset import Dataset
 from lenskit.diagnostics import DataWarning
 from lenskit.testing import demo_recs
@@ -24,7 +25,7 @@ _log = logging.getLogger(__name__)
 
 
 def test_generic_key():
-    usk = _create_key(("user_id", "seq_no"), "alphabet", 42)
+    usk = create_key(("user_id", "seq_no"), "alphabet", 42)
 
     assert isinstance(usk, tuple)
     assert usk == ("alphabet", 42)
@@ -33,7 +34,7 @@ def test_generic_key():
 
 
 def test_pickle_generic():
-    usk = _create_key(("user_id", "seq_no"), "alphabet", 42)
+    usk = create_key(("user_id", "seq_no"), "alphabet", 42)
 
     bs = pickle.dumps(usk)
     usk2 = pickle.loads(bs)
@@ -43,7 +44,7 @@ def test_pickle_generic():
 
 
 def test_project_key():
-    usk = _create_key(("user_id", "seq_no"), "alphabet", 42)
+    usk = create_key(("user_id", "seq_no"), "alphabet", 42)
 
     uk = project_key(usk, UserIDKey)
     assert isinstance(uk, UserIDKey)
@@ -52,7 +53,7 @@ def test_project_key():
 
 
 def test_project_missing_fails():
-    usk = _create_key(("seq_no",), 42)
+    usk = create_key(("seq_no",), 42)
 
     with raises(TypeError, match="missing field"):
         project_key(usk, UserIDKey)
@@ -121,7 +122,7 @@ def test_collection_from_dict_singleton_field():
 def test_lookup_projected():
     ilc = ItemListCollection.from_dict({72: ItemList(["a"])}, key="user_id")
 
-    usk = _create_key(("user_id", "seq"), 72, 100)
+    usk = create_key(("user_id", "seq"), 72, 100)
     il = ilc.lookup_projected(usk)
     assert il is not None
     assert len(il) == 1
