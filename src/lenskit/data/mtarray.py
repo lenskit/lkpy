@@ -3,6 +3,9 @@
 # Copyright (C) 2023-2025 Drexel University
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
+"""
+Multi-format array layout.
+"""
 
 # pyright: basic
 from __future__ import annotations

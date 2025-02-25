@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 """
-LensKit dataset abstraction.
+Adaptation code for dealing with legacy data layouts.
 """
 
 # pyright: basic

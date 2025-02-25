@@ -4,6 +4,10 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+"""
+Relationship accessors for Dataset.
+"""
+
 from __future__ import annotations
 
 import warnings

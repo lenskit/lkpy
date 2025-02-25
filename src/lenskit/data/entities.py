@@ -4,6 +4,10 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+"""
+Entity accessors for data sets.
+"""
+
 from __future__ import annotations
 
 import numpy as np
