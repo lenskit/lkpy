@@ -27,8 +27,8 @@ class Vocabulary:
 
     This class supports bidirectional mappings between key-like data and
     congiguous nonnegative integer indices.  Its key use is to facilitate the
-    entitie ID vocabularies in :class:`~lenskit.data.Dataset`, but it can also
-    be used for things like item tags.
+    entity ID vocabularies in :class:`~lenskit.data.Dataset`, but it can also be
+    used for things like item tags.
 
     IDs in a vocabulary must be unique.  Constructing a vocabulary with
     ``reorder=True`` ensures uniqueness (and sorts the IDs), but does not
@@ -54,6 +54,7 @@ class Vocabulary:
     name: str | None
     "The name of the vocabulary (e.g. “user”, “item”)."
     _index: pd.Index
+    "The Pandas index implementing the vocabulary."
 
     def __init__(
         self,
@@ -85,7 +86,12 @@ class Vocabulary:
 
     @property
     def index(self) -> pd.Index:
-        "The property as a Pandas index."
+        """
+        The vocabulary as a Pandas index.
+
+        Stability:
+            Internal
+        """
         return self._index
 
     @property
@@ -100,7 +106,7 @@ class Vocabulary:
     def number(
         self, term: object, missing: Literal["error", "none"] | None = "error"
     ) -> int | None:
-        "Look up the number for a vocabulary term."
+        "Look up the number for a vocabulary ID."
         try:
             num = self._index.get_loc(term)
             assert isinstance(num, int)
