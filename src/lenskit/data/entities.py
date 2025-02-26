@@ -45,6 +45,9 @@ class EntitySet:
     The Arrow table of entity information.
     """
     _selected: pa.Int32Array | None = None
+    """
+    The indices of the selected entities.
+    """
 
     def __init__(
         self,
@@ -62,6 +65,9 @@ class EntitySet:
 
     @property
     def attributes(self) -> list[str]:
+        """
+        Get the attribute names for this enrtity class.
+        """
         return list(self.schema.attributes.keys())
 
     def count(self) -> int:
