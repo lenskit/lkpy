@@ -29,6 +29,9 @@ class EntitySet:
     """
     Representation of a set of entities from the dataset.  Obtained from
     :meth:`Dataset.entities`.
+
+    Client code does not need to construct this class; obtain instances from a
+    dataset's :meth:`~lenskit.data.Dataset.entities` method.
     """
 
     name: str
