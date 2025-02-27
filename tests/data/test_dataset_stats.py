@@ -23,6 +23,7 @@ def test_item_stats(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
     assert len(stats) == ml_ds.item_count
     assert np.all(stats.index == ml_ds.items.index)
+    assert stats.index.name == "item_id"
 
     assert np.all(
         stats["count"] == ml_ratings["item_id"].value_counts().reindex(ml_ds.items, fill_value=0)
@@ -56,6 +57,7 @@ def test_user_stats(ml_ratings: pd.DataFrame, ml_ds: Dataset):
 
     assert len(stats) == ml_ds.user_count
     assert np.all(stats.index == ml_ds.users.index)
+    assert stats.index.name == "user_id"
 
     assert np.all(stats["count"] == ml_ratings["user_id"].value_counts().reindex(ml_ds.users))
     assert np.all(stats["item_count"] == ml_ratings["user_id"].value_counts().reindex(ml_ds.users))

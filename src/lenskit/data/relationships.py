@@ -52,6 +52,12 @@ class RelationshipSet:
     Relationship sets can be pickled or serialized, and will not save the entire
     dataset with them.  They are therefore safe to save as component elements
     during training processes.
+
+    .. note::
+
+        Client code does not need to construct this class; obtain instances from
+        a dataset's :meth:`~lenskit.data.Dataset.relationships` or
+        :meth:`~lenskit.data.Dataset.interactions` method.
     """
 
     name: str
@@ -173,6 +179,11 @@ class RelationshipSet:
 class MatrixRelationshipSet(RelationshipSet):
     """
     Two-entity relationships without duplicates, accessible in matrix form.
+
+    .. note::
+
+        Client code does not need to construct this class; obtain instances from
+        a relationship set's :meth:`~RelationshipSet.matrix` method.
     """
 
     _row_ptrs: np.ndarray[int, np.dtype[np.int32]]

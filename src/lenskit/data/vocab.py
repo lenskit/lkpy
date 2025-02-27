@@ -41,7 +41,7 @@ class Vocabulary:
         keys:
             The IDs to put in the vocabulary.
         name:
-            The vocabulary name.
+            The vocabulary name (i.e. the entity class it stores IDs for).
         reorder:
             If ``True``, sort and deduplicate the IDs.  If ``False`` (the
             default), use the IDs as-is (assigning each to their position in the
@@ -82,7 +82,7 @@ class Vocabulary:
 
         if not keys.is_unique:
             raise ValueError("IDs must be unique")
-        self._index = keys.rename(name) if name is not None else keys
+        self._index = keys.rename(name + "_id") if name is not None else keys
 
     @property
     def index(self) -> pd.Index:

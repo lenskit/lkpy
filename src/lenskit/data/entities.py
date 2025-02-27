@@ -29,6 +29,9 @@ class EntitySet:
     """
     Representation of a set of entities from the dataset.  Obtained from
     :meth:`Dataset.entities`.
+
+    Client code does not need to construct this class; obtain instances from a
+    dataset's :meth:`~lenskit.data.Dataset.entities` method.
     """
 
     name: str
@@ -45,6 +48,9 @@ class EntitySet:
     The Arrow table of entity information.
     """
     _selected: pa.Int32Array | None = None
+    """
+    The indices of the selected entities.
+    """
 
     def __init__(
         self,
@@ -62,6 +68,9 @@ class EntitySet:
 
     @property
     def attributes(self) -> list[str]:
+        """
+        Get the attribute names for this enrtity class.
+        """
         return list(self.schema.attributes.keys())
 
     def count(self) -> int:

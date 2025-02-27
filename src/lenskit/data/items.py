@@ -59,6 +59,11 @@ class ItemList:
     typically used for small lists of items, not large data structures that need
     to remain in shared memory.
 
+    In a few places, the “items” in an item list may be other entities, such as
+    users, tags, authors, etc.  This seems less confusing than calling it
+    ``EntityList``, but having a very different use case and feature set than
+    :class:`~lenskit.data.EntitySet`.
+
     .. note::
 
         Naming for fields and accessor methods is tricky, because the usual
