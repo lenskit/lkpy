@@ -44,7 +44,7 @@ def version():
     console.print(f"LensKit version [bold cyan]{__version__}[/bold cyan].")
 
 
-cli_plugins = entry_points(group="lenskit.cli-plugins")
+cli_plugins = entry_points(group="lenskit.cli.plugins")
 for plugin in cli_plugins:
     cmd = plugin.load()
     lenskit.add_command(cmd)
