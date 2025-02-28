@@ -63,6 +63,9 @@ source = "https://github.com/lenskit/lkpy"
 [project.scripts]
 lenskit = "lenskit.cli:lenskit"
 
+[project.entry-points."lenskit.cli-plugins"]
+lenskit-data = "lenskit.cli.data:data"
+
 # configure build tools
 [tool.hatch.metadata]
 allow-direct-references = true

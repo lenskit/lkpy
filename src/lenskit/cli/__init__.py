@@ -4,14 +4,14 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+from importlib.metadata import entry_points
+
 import click
 
 from lenskit import __version__
 from lenskit.logging import LoggingConfig, console
 
-from .data import data
-
-__all__ = ["lenskit", "main"]
+__all__ = ["lenskit", "main", "version"]
 
 
 def main():
@@ -44,4 +44,7 @@ def version():
     console.print(f"LensKit version [bold cyan]{__version__}[/bold cyan].")
 
 
-lenskit.add_command(data)
+cli_plugins = entry_points(group="lenskit.cli-plugins")
+for plugin in cli_plugins:
+    cmd = plugin.load()
+    lenskit.add_command(cmd)
