@@ -6,6 +6,7 @@
 
 import click
 
+from lenskit import __version__
 from lenskit.logging import LoggingConfig, console
 
 from .data import data
@@ -33,6 +34,14 @@ def lenskit(verbosity: int):
     if verbosity:
         lc.set_verbose(verbosity)
     lc.apply()
+
+
+@lenskit.command("version")
+def version():
+    """
+    Print LensKit version info.
+    """
+    console.print(f"LensKit version [bold cyan]{__version__}[/bold cyan].")
 
 
 lenskit.add_command(data)
