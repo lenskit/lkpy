@@ -9,6 +9,7 @@ import pickle
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+import pyarrow.compute as pc
 import torch
 
 import hypothesis.extra.numpy as nph
@@ -553,6 +554,26 @@ def test_from_arrow_table():
     assert np.all(il.ids() == ITEMS)
     assert np.all(il.numbers() == np.arange(5))
     assert np.all(il.scores() == df["score"].values)
+    assert not il.ordered
+
+
+def test_from_arrow_table_nullable():
+    df = pd.DataFrame(
+        {
+            "item_id": np.arange(1, 100),
+            "item_num": np.arange(99),
+            "score": np.random.randn(99).astype(np.float32),
+        }
+    )
+    df.loc[df["score"] < 0, "score"] = np.nan
+    arr = pa.Table.from_pandas(df)
+    il = ItemList.from_arrow(arr)  # type: ignore
+    assert len(il) == 99
+    assert np.all(il.ids() == np.arange(1, 100))
+    scores = il.scores()
+    assert scores is not None
+    assert np.all(np.isfinite(scores) == df["score"].notnull())
+    assert np.all(scores[df["score"].notnull()] == df.loc[df["score"].notnull(), "score"])
     assert not il.ordered
 
 
