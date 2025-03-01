@@ -172,8 +172,8 @@ class IterativeTraining(ABC, Trainable):
         n = self.expected_training_epochs
         log.debug("creating training loop")
         loop = self.training_loop(data, options)
-        log.debug("beginning training iterations")
-        with item_progress("Training iterations", total=n) as pb:
+        log.debug("beginning training epochs")
+        with item_progress("Training epochs", total=n) as pb:
             start = perf_counter()
             for i, metrics in enumerate(loop, 1):
                 metrics = metrics or {}
