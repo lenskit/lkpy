@@ -340,7 +340,7 @@ class ItemList:
 
         to_drop = ["item_id", "item_num"]
 
-        fields = {c: tbl.field(c).to_numpy() for c in names if c not in to_drop}
+        fields = {c: tbl.field(c) for c in names if c not in to_drop}
         items = cls(
             item_ids=ids,  # type: ignore
             item_nums=nums,  # type: ignore
