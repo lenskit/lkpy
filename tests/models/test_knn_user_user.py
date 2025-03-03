@@ -27,6 +27,7 @@ from lenskit.knn import UserKNNScorer
 from lenskit.metrics import call_metric, quick_measure_model
 from lenskit.pipeline.common import predict_pipeline, topn_pipeline
 from lenskit.testing import BasicComponentTests, ScorerTests
+from lenskit.torch import inference_mode
 
 _log = logging.getLogger(__name__)
 
@@ -178,6 +179,7 @@ def test_uu_predict_unknown_empty(ml_ds):
     assert all(preds.isna())
 
 
+@inference_mode
 def test_uu_implicit(ml_ratings):
     "Train and use user-user on an implicit data set."
     algo = UserKNNScorer(k=20, feedback="implicit")

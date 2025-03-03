@@ -62,7 +62,7 @@ procesess, to prevent over-subscribing the CPU.  Right now, the worker will conf
 Numba and MKL.  In the rest of this section, this will be referred to as the ‘inner
 thread count’.
 
-The thread count logic is controlled by :py:func:`lenskit.util.parallel.proc_count`,
+The thread count logic is controlled by :py:func:`lenskit.parallel.initialize`,
 and works as follows:
 
 * If ``LK_NUM_PROCS`` is an integer, the batch functions will use the specified number

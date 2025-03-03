@@ -13,7 +13,6 @@ This module contains a truncated SVD explicit-feedback scorer built on
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 
 import numpy as np
@@ -25,11 +24,11 @@ from typing_extensions import Literal, override
 from lenskit.basic import BiasModel, Damping
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
 from lenskit.data.vocab import Vocabulary
+from lenskit.logging import Stopwatch, get_logger
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
-from lenskit.util import Stopwatch
 
-_log = logging.getLogger(__name__)
+_log = get_logger(__name__)
 
 
 @dataclass

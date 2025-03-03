@@ -49,7 +49,7 @@ def setup_console():
     if not console.is_terminal:
         return
 
-    _live = Live(console=console, transient=True)
+    _live = Live(console=console, transient=True, redirect_stdout=False)
     _live.start()
 
 

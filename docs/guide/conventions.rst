@@ -110,4 +110,4 @@ starting seed (and LensKit, NumPy, etc. versions),
 user, and different items for other users, regardless of the order in which
 those users are processed.
 
-.. seealso:: :func:`lenskit.util.derivable_rng`
+.. seealso:: :func:`lenskit.random.derivable_rng`

@@ -30,7 +30,7 @@ from lenskit.pipeline import RecPipelineBuilder, topn_pipeline
 from lenskit.pipeline.common import predict_pipeline
 from lenskit.splitting import SampleFrac, crossfold_users
 from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
-from lenskit.util.torch import inference_mode
+from lenskit.torch import inference_mode
 
 _log = logging.getLogger(__name__)
 

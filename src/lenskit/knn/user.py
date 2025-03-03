@@ -21,14 +21,14 @@ from pydantic import AliasChoices, BaseModel, Field, PositiveFloat, PositiveInt,
 from scipy.sparse import csc_array
 from typing_extensions import NamedTuple, Optional, override
 
-from lenskit import util
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery
 from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataWarning
-from lenskit.logging import get_logger
+from lenskit.logging import Stopwatch, get_logger
 from lenskit.math.sparse import normalize_sparse_rows, torch_sparse_to_scipy
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component
+from lenskit.torch import inference_mode, sparse_row
 from lenskit.training import Trainable, TrainingOptions
 
 _log = get_logger(__name__)
@@ -131,13 +131,14 @@ class UserKNNScorer(Component[ItemList], Trainable):
         normed, _norms = normalize_sparse_rows(rmat, "unit")
         normed = normed.to(torch.float32)
 
-        self.user_vectors_ = normed
+        self.user_vectors_ = normed.detach()
         self.user_ratings_ = torch_sparse_to_scipy(rmat).tocsc()
         self.users_ = data.users
         self.user_means_ = means
         self.items_ = data.items
 
     @override
+    @inference_mode
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         """
         Compute predictions for a user and items.
@@ -153,7 +154,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
             pandas.Series: scores for the items, indexed by item id.
         """
         query = RecQuery.create(query)
-        watch = util.Stopwatch()
+        watch = Stopwatch()
         log = _log.bind(user_id=query.user_id, n_items=len(items))
         if len(items) == 0:
             log.debug("no candidate items, skipping")
@@ -235,8 +236,9 @@ class UserKNNScorer(Component[ItemList], Trainable):
                 _log.warning("user %s has no ratings and none provided", query.user_id)
                 return None
 
-            assert index >= 0
-            row = self.user_vectors_[index].to_dense()
+            index = int(index)
+            row = sparse_row(self.user_vectors_, index)
+            row = row.to_dense()
             if self.config.explicit:
                 assert self.user_means_ is not None
                 umean = self.user_means_[index].item()
@@ -291,7 +293,7 @@ def score_items_with_neighbors(
     (nrow, ncol) = ratings.shape
 
     # sort neighbors by similarity
-    nbr_order = np.argsort(-nbr_sims)
+    nbr_order = np.argsort(-nbr_sims.cpu().numpy())
     nbr_rows = nbr_rows[nbr_order].numpy()
     nbr_sims = nbr_sims[nbr_order].numpy()
 

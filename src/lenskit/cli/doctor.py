@@ -1,21 +1,47 @@
-# This file is part of LensKit.
-# Copyright (C) 2018-2023 Boise State University
-# Copyright (C) 2023-2025 Drexel University
-# Licensed under the MIT license, see LICENSE.md for details.
-# SPDX-License-Identifier: MIT
-
-"""
-Inspect the Python environment setup.  We provide this in LensKit so that people
-can inspect (and report) their setups.
-"""
-
 import os
 import platform
 import re
 import sys
 from importlib.metadata import distributions, version
+from pathlib import Path
 
+import click
 import threadpoolctl
+
+from lenskit import __version__
+
+_gh_out: Path | None = None
+
+
+@click.command("doctor")
+@click.option(
+    "--github-output",
+    "gh_output",
+    envvar="GITHUB_OUTPUT",
+    type=Path,
+    help="Path to GitHub Actions output file.",
+)
+def doctor(gh_output: Path | None):
+    """
+    Inspect installed LensKit version and environment.
+    """
+    global _gh_out
+    _gh_out = gh_output
+    inspect_version()
+    inspect_platform()
+    inspect_compute()
+    inspect_env()
+    inspect_packages()
+
+
+def inspect_version():
+    dist_ver = version("lenskit")
+    print("LensKit version:", dist_ver)
+    if str(dist_ver) != __version__:
+        print("   Version mismatch, internal package version is", __version__)
+    if _gh_out:
+        with _gh_out.open("at") as ghf:
+            print(f"lenskit_version={dist_ver}", file=ghf)
 
 
 def inspect_platform():
@@ -24,16 +50,17 @@ def inspect_platform():
     print("Python location:", sys.executable)
 
 
-def inspect_version():
-    print("LensKit version:", version("lenskit"))
-
-
 def inspect_compute():
     import numpy as np
     import torch
 
     print("\nNumPy version:", np.__version__)
     print("PyTorch version:", torch.__version__)
+    if _gh_out:
+        with _gh_out.open("at") as ghf:
+            print(f"numpy_version={np.__version__}", file=ghf)
+            print(f"pytorch_version={torch.__version__}", file=ghf)
+
     print("PyTorch backends:")
     print("    cpu:", torch.backends.cpu.get_cpu_capability())
     for mod in [torch.cuda, torch.backends.mkl, torch.backends.mps]:
@@ -54,9 +81,9 @@ def inspect_compute():
 
 
 def inspect_env():
-    print("\nEnvironment variables:")
+    print("\nRelevant environment variables:")
     for k, v in os.environ.items():
-        if re.match(r"^(LK_|OMP_|NUMBA_|MKL_|TORCH_)", k):
+        if re.match(r"^(LK_|OMP_|NUMBA_|MKL_|TORCH_|PY)", k):
             print(f"    {k}: {v}")
     print("\nPython search paths:")
     for path in sys.path:
@@ -69,18 +96,6 @@ def inspect_env():
 
 def inspect_packages():
     dists = sorted(distributions(), key=lambda d: d.name)
-    print("\nInstalled packages ({}):".format(len(dists)))
+    print("\nInstalled Python packages ({}):".format(len(dists)))
     for dist in dists:
         print("    {:32s}  {:>10s}".format(dist.name, dist.version))
-
-
-def main():
-    inspect_platform()
-    inspect_version()
-    inspect_compute()
-    inspect_env()
-    inspect_packages()
-
-
-if __name__ == "__main__":
-    main()

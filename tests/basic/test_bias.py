@@ -11,9 +11,8 @@ import numpy as np
 import pandas as pd
 import torch
 
-from pytest import approx, mark, raises
+from pytest import approx, raises
 
-from lenskit import util as lku
 from lenskit.basic import BiasModel, BiasScorer
 from lenskit.data import Dataset, from_interactions_df
 from lenskit.data.items import ItemList

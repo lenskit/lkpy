@@ -10,22 +10,22 @@ import time
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from lenskit import util as lku
+from lenskit.logging import Stopwatch
 
 
 def test_stopwatch_instant():
-    w = lku.Stopwatch()
+    w = Stopwatch()
     assert w.elapsed() > 0
 
 
 def test_stopwatch_sleep():
-    w = lku.Stopwatch()
+    w = Stopwatch()
     time.sleep(0.5)
     assert w.elapsed() >= 0.45
 
 
 def test_stopwatch_stop():
-    w = lku.Stopwatch()
+    w = Stopwatch()
     time.sleep(0.5)
     w.stop()
     time.sleep(0.5)
@@ -33,21 +33,21 @@ def test_stopwatch_stop():
 
 
 def test_stopwatch_str():
-    w = lku.Stopwatch()
+    w = Stopwatch()
     time.sleep(0.5)
     s = str(w)
     assert s.endswith("ms")
 
 
 def test_stopwatch_long_str():
-    w = lku.Stopwatch()
+    w = Stopwatch()
     time.sleep(1.2)
     s = str(w)
     assert s.endswith("s")
 
 
 def test_stopwatch_minutes():
-    w = lku.Stopwatch()
+    w = Stopwatch()
     w.stop()
     assert w.stop_time is not None
     w.start_time = w.stop_time - 62
@@ -57,7 +57,7 @@ def test_stopwatch_minutes():
 
 
 def test_stopwatch_hours():
-    w = lku.Stopwatch()
+    w = Stopwatch()
     w.stop()
     assert w.stop_time is not None
     w.start_time = w.stop_time - 3663

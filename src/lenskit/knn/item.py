@@ -19,16 +19,16 @@ from pydantic import AliasChoices, BaseModel, Field, PositiveFloat, PositiveInt,
 from scipy.sparse import csr_array
 from typing_extensions import Optional, override
 
-from lenskit import util
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.diagnostics import DataWarning
-from lenskit.logging import get_logger, trace
+from lenskit.logging import Stopwatch, get_logger, trace
 from lenskit.logging.progress import item_progress_handle, pbh_update
+from lenskit.logging.resource import max_memory
 from lenskit.math.sparse import normalize_sparse_rows
 from lenskit.parallel import ensure_parallel_init
 from lenskit.pipeline import Component
+from lenskit.torch import inference_mode
 from lenskit.training import Trainable, TrainingOptions
-from lenskit.util.torch import inference_mode
 
 _log = get_logger(__name__)
 MAX_BLOCKS = 1024
@@ -133,7 +133,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         # Training proceeds in 2 steps:
         # 1. Normalize item vectors to be mean-centered and unit-normalized
         # 2. Compute similarities with pairwise dot products
-        self._timer = util.Stopwatch()
+        self._timer = Stopwatch()
         log.info("begining IKNN training")
 
         field = "rating" if self.config.explicit else None
@@ -159,14 +159,14 @@ class ItemKNNScorer(Component[ItemList], Trainable):
                 )
         else:
             means = None
-        log.debug("[%s] centered, memory use %s", self._timer, util.max_memory())
+        log.debug("[%s] centered, memory use %s", self._timer, max_memory())
 
         rmat, _norms = normalize_sparse_rows(rmat, "unit")
-        log.debug("[%s] normalized, memory use %s", self._timer, util.max_memory())
+        log.debug("[%s] normalized, memory use %s", self._timer, max_memory())
 
         log.info("[%s] computing similarity matrix", self._timer)
         smat = self._compute_similarities(rmat)
-        log.debug("[%s] computed, memory use %s", self._timer, util.max_memory())
+        log.debug("[%s] computed, memory use %s", self._timer, max_memory())
 
         log.info(
             "[%s] got neighborhoods for %d of %d items",
@@ -184,7 +184,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
             (smat.values(), smat.col_indices(), smat.crow_indices()), smat.shape
         )
         self.users_ = data.users
-        log.debug("[%s] done, memory use %s", self._timer, util.max_memory())
+        log.debug("[%s] done, memory use %s", self._timer, max_memory())
 
     def _compute_similarities(self, rmat: torch.Tensor) -> torch.Tensor:
         nitems, nusers = rmat.shape
