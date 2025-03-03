@@ -293,7 +293,7 @@ def score_items_with_neighbors(
     (nrow, ncol) = ratings.shape
 
     # sort neighbors by similarity
-    nbr_order = np.argsort(-nbr_sims)
+    nbr_order = np.argsort(-nbr_sims.cpu().numpy())
     nbr_rows = nbr_rows[nbr_order].numpy()
     nbr_sims = nbr_sims[nbr_order].numpy()
 
