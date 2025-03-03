@@ -161,14 +161,19 @@ class Component(ABC, Generic[COut, CArgs]):
     def __init_subclass__(cls, **kwargs: Any):
         super().__init_subclass__(**kwargs)
         if not isabstract(cls):
-            ct = cls.config_class(return_any=True)
-            if ct == Any:
-                warnings.warn(
-                    "component class {} does not define a config attribute".format(
-                        cls.__qualname__
-                    ),
-                    stacklevel=2,
-                )
+            try:
+                ct = cls.config_class(return_any=True)
+            except NameError:
+                # can't look up the config class, so we can't check it
+                pass
+            else:
+                if ct == Any:
+                    warnings.warn(
+                        "component class {} does not define a config attribute type".format(
+                            cls.__qualname__
+                        ),
+                        stacklevel=2,
+                    )
 
     def __init__(self, config: object | None = None, **kwargs: Any):
         if config is None:
@@ -176,8 +181,15 @@ class Component(ABC, Generic[COut, CArgs]):
         elif kwargs:
             raise RuntimeError("cannot supply both a configuration object and kwargs")
 
-        cfg_cls = self.config_class()
-        if cfg_cls and not isinstance(config, cfg_cls):
+        cfg_cls = self.config_class(return_any=True)
+        if cfg_cls == Any:
+            warnings.warn(
+                "component class {} does not define a config attribute type".format(
+                    self.__class__.__qualname__
+                ),
+                stacklevel=2,
+            )
+        elif cfg_cls and not isinstance(config, cfg_cls):
             raise TypeError(f"invalid configuration type {type(config)}")
 
         self.config = config
@@ -196,7 +208,7 @@ class Component(ABC, Generic[COut, CArgs]):
         elif isinstance(ct, type):
             return ct
         else:
-            warnings.warn("config attribute is not annotated with a plain type")
+            warnings.warn("config attribute is not annotated with a plain type", stacklevel=2)
             return get_origin(ct)
 
     def dump_config(self) -> dict[str, JsonValue]:

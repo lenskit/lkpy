@@ -20,6 +20,13 @@ from lenskit.pipeline.components import Component, ComponentConstructor
 from lenskit.pipeline.nodes import ComponentConstructorNode
 
 
+class EarlyConfig(Component[str]):
+    config: PrefixConfigDC
+
+    def __call__(self, msg: str) -> str:
+        return self.config.prefix + msg
+
+
 @dataclass
 class PrefixConfigDC:
     prefix: str = "UNDEFINED"
