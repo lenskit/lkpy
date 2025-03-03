@@ -26,7 +26,7 @@ def test_select_arrow(ml_20m: Dataset, rng: np.random.Generator, benchmark):
     users = pa.array(users)
 
     def select():
-        res = pc.take(lists, users)
+        res = lists.take(users)
 
     benchmark(select)
 
@@ -46,14 +46,14 @@ def test_select_arrow_sep(ml_20m: Dataset, rng: np.random.Generator, benchmark):
     users = pa.array(users)
 
     def select():
-        _cr = pc.take(colinds, users)
-        _vr = pc.take(values, users)
+        _cr = colinds.take(users)
+        _vr = values.take(users)
 
     benchmark(select)
 
 
 @mark.benchmark()
-def test_select_scipy(ml_20m: Dataset, rng: np.random.Generator, benchmark):
+def test_select_scipy_csr(ml_20m: Dataset, rng: np.random.Generator, benchmark):
     matrix = ml_20m.interactions().matrix().scipy(layout="csr")
 
     users = rng.choice(ml_20m.user_count, 1000, replace=True)
