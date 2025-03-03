@@ -36,23 +36,5 @@ class ParamContainer(Protocol):
     def get_params(self, deep=True) -> dict[str, Any]: ...
 
 
-def max_memory():
-    "Get the maximum memory use for this process"
-    if resource:
-        res = resource.getrusage(resource.RUSAGE_SELF)
-        return "%.1f MiB" % (res.ru_maxrss / 1024,)
-    else:
-        return "unknown"
-
-
-def cur_memory():
-    "Get the current memory use for this process"
-    if resource:
-        res = resource.getrusage(resource.RUSAGE_SELF)
-        return "%.1f MiB" % (res.ru_idrss,)
-    else:
-        return "unknown"
-
-
 def clean_str(s):
     return dedent(s).strip()

@@ -97,3 +97,25 @@ def reset_linux_hwm():
 
     if torch.cuda.is_available():
         torch.cuda.reset_peak_memory_stats()
+
+
+def max_memory():
+    "Get the maximum memory use for this process"
+    try:
+        import resource
+    except ImportError:
+        return "unknown"
+    else:
+        res = resource.getrusage(resource.RUSAGE_SELF)
+        return "%.1f MiB" % (res.ru_maxrss / 1024,)
+
+
+def cur_memory():
+    "Get the current memory use for this process"
+    try:
+        import resource
+    except ImportError:
+        return "unknown"
+    else:
+        res = resource.getrusage(resource.RUSAGE_SELF)
+        return "%.1f MiB" % (res.ru_idrss / 1024,)
