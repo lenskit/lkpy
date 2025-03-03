@@ -28,7 +28,7 @@ from lenskit.logging import Stopwatch, get_logger
 from lenskit.math.sparse import normalize_sparse_rows, torch_sparse_to_scipy
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component
-from lenskit.torch import inference_mode
+from lenskit.torch import inference_mode, sparse_row
 from lenskit.training import Trainable, TrainingOptions
 
 _log = get_logger(__name__)
@@ -100,7 +100,6 @@ class UserKNNScorer(Component[ItemList], Trainable):
     "Centered but un-normalized rating matrix (COO) to find neighbor ratings."
 
     @override
-    @inference_mode
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         "Train" a user-user CF model.  This memorizes the rating data in a format that is usable
@@ -132,7 +131,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
         normed, _norms = normalize_sparse_rows(rmat, "unit")
         normed = normed.to(torch.float32)
 
-        self.user_vectors_ = normed
+        self.user_vectors_ = normed.detach()
         self.user_ratings_ = torch_sparse_to_scipy(rmat).tocsc()
         self.users_ = data.users
         self.user_means_ = means
@@ -237,8 +236,9 @@ class UserKNNScorer(Component[ItemList], Trainable):
                 _log.warning("user %s has no ratings and none provided", query.user_id)
                 return None
 
-            assert index >= 0
-            row = self.user_vectors_[index].to_dense()
+            index = int(index)
+            row = sparse_row(self.user_vectors_, index)
+            row = row.to_dense()
             if self.config.explicit:
                 assert self.user_means_ is not None
                 umean = self.user_means_[index].item()
