@@ -14,15 +14,40 @@ from lenskit.testing import ml_20m
 def test_select_arrow(ml_20m: Dataset, rng: np.random.Generator, benchmark):
     matrix = ml_20m.interactions().matrix().scipy(layout="csr")
 
-    offsets = np.require(matrix.indptr[:-1], "i4")
-    pairs = pa.StructArray.from_arrays([matrix.indices, matrix.data], ["column", "value"])
+    offsets = np.require(matrix.indptr[:-1], np.int32)
+    offsets = pa.array(offsets)
+    pairs = pa.StructArray.from_arrays(
+        [pa.array(matrix.indices), pa.array(matrix.data)], ["column", "value"]
+    )
     lists = pa.ListArray.from_arrays(offsets, pairs)
 
     users = rng.choice(ml_20m.user_count, 1000, replace=True)
     users = np.require(users, "i4")
+    users = pa.array(users)
 
     def select():
         res = pc.take(lists, users)
+
+    benchmark(select)
+
+
+@mark.benchmark()
+def test_select_arrow_sep(ml_20m: Dataset, rng: np.random.Generator, benchmark):
+    matrix = ml_20m.interactions().matrix().scipy(layout="csr")
+
+    offsets = np.require(matrix.indptr[:-1], "i4")
+    offsets = pa.array(offsets)
+
+    colinds = pa.ListArray.from_arrays(offsets, pa.array(matrix.indices))
+    values = pa.ListArray.from_arrays(offsets, pa.array(matrix.data))
+
+    users = rng.choice(ml_20m.user_count, 1000, replace=True)
+    users = np.require(users, "i4")
+    users = pa.array(users)
+
+    def select():
+        _cr = pc.take(colinds, users)
+        _vr = pc.take(values, users)
 
     benchmark(select)
 
