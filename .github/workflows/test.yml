@@ -43,7 +43,7 @@ jobs:
           frozen: true
       - name: "🔍 Inspect environment"
         run: |
-          python -m lenskit.util.envcheck
+          lenskit doctor
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
@@ -107,7 +107,7 @@ jobs:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
       - name: "🔍 Inspect environment"
         run: |
-          python -m lenskit.util.envcheck
+          lenskit doctor
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
@@ -146,7 +146,7 @@ jobs:
           frozen: true
       - name: "🔍 Inspect environment"
         run: |
-          python -m lenskit.util.envcheck
+          lenskit doctor
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 -m 'not slow' --cov=src/lenskit tests
@@ -194,7 +194,7 @@ jobs:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
       - name: "🔍 Inspect environment"
         run: |
-          python -m lenskit.util.envcheck
+          lenskit doctor
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
@@ -240,7 +240,7 @@ jobs:
           frozen: true
       - name: "🔍 Inspect environment"
         run: |
-          python -m lenskit.util.envcheck
+          lenskit doctor
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/sklearn
@@ -285,7 +285,7 @@ jobs:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
       - name: "🔍 Inspect environment"
         run: |
-          python -m lenskit.util.envcheck
+          lenskit doctor
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/sklearn
@@ -330,7 +330,7 @@ jobs:
           frozen: true
       - name: "🔍 Inspect environment"
         run: |
-          python -m lenskit.util.envcheck
+          lenskit doctor
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/funksvd
@@ -375,7 +375,7 @@ jobs:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
       - name: "🔍 Inspect environment"
         run: |
-          python -m lenskit.util.envcheck
+          lenskit doctor
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/funksvd
@@ -420,7 +420,7 @@ jobs:
           frozen: true
       - name: "🔍 Inspect environment"
         run: |
-          python -m lenskit.util.envcheck
+          lenskit doctor
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/implicit
@@ -465,7 +465,7 @@ jobs:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
       - name: "🔍 Inspect environment"
         run: |
-          python -m lenskit.util.envcheck
+          lenskit doctor
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/implicit
@@ -510,7 +510,7 @@ jobs:
           frozen: true
       - name: "🔍 Inspect environment"
         run: |
-          python -m lenskit.util.envcheck
+          lenskit doctor
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/hpf
