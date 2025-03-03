@@ -30,10 +30,8 @@ class Stopwatch:
         self.stop_time = time.perf_counter()
 
     def elapsed(self) -> float:
-        stop = self.stop_time
-        if stop is None:
-            stop = time.perf_counter()
         assert self.start_time is not None
+        stop = self.stop_time or time.perf_counter()
 
         return stop - self.start_time
 
@@ -50,3 +48,10 @@ class Stopwatch:
             return "{:0.0f}m{:0.2f}s".format(m, s)
         else:
             return "{:0.2f}s".format(elapsed)
+
+    def __repr__(self):
+        elapsed = self.elapsed()
+        if self.stop_time:
+            return "<Stopwatch stopped at {:.3f}s>".format(elapsed)
+        else:
+            return "<Stopwatch running at {:.3f}s>".format(elapsed)

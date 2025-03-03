@@ -10,10 +10,9 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable, Literal, Mapping, TypeAlias
 
 from lenskit.data import ID, GenericKey, ItemList, ItemListCollection, UserIDKey
-from lenskit.logging import get_logger, item_progress
+from lenskit.logging import Stopwatch, get_logger, item_progress
 from lenskit.parallel import invoker
 from lenskit.pipeline import Pipeline
-from lenskit.util import Stopwatch
 
 from ._results import BatchResults
 

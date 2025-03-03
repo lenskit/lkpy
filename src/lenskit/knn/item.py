@@ -22,7 +22,7 @@ from typing_extensions import Optional, override
 from lenskit import util
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.diagnostics import DataWarning
-from lenskit.logging import get_logger, trace
+from lenskit.logging import Stopwatch, get_logger, trace
 from lenskit.logging.progress import item_progress_handle, pbh_update
 from lenskit.math.sparse import normalize_sparse_rows
 from lenskit.parallel import ensure_parallel_init
@@ -133,7 +133,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         # Training proceeds in 2 steps:
         # 1. Normalize item vectors to be mean-centered and unit-normalized
         # 2. Compute similarities with pairwise dot products
-        self._timer = util.Stopwatch()
+        self._timer = Stopwatch()
         log.info("begining IKNN training")
 
         field = "rating" if self.config.explicit else None

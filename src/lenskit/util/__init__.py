@@ -13,7 +13,6 @@ from textwrap import dedent
 from typing import Any, Protocol, TypeVar, runtime_checkable
 
 from ..random import derivable_rng, random_generator, set_global_rng
-from .timing import Stopwatch
 
 try:
     import resource
@@ -23,7 +22,6 @@ except ImportError:
 _log = logging.getLogger(__name__)
 
 __all__ = [
-    "Stopwatch",
     "derivable_rng",
     "random_generator",
     "set_global_rng",

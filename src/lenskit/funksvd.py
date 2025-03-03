@@ -17,9 +17,9 @@ from numba.experimental import jitclass
 from pydantic import BaseModel
 from typing_extensions import override
 
-from lenskit import util
 from lenskit.basic import BiasModel, Damping
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
+from lenskit.logging import Stopwatch
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
 
@@ -264,7 +264,7 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
         if hasattr(self, "item_features_") and not options.retrain:
             return
 
-        timer = util.Stopwatch()
+        timer = Stopwatch()
         rate_df = data.interaction_matrix(format="pandas", layout="coo", field="rating")
 
         _logger.info("[%s] fitting bias model", timer)
