@@ -393,6 +393,7 @@ class MatrixRelationshipSet(RelationshipSet):
         rows: np.ndarray[int, np.dtype[np.int32]],
         *,
         weighting: Literal["uniform", "popularity"] = "uniform",
+        n: int | None = None,
         verify: bool = True,
         max_attempts: int = 10,
         rng: np.random.Generator | None = None,
@@ -411,6 +412,9 @@ class MatrixRelationshipSet(RelationshipSet):
                 The weighting for sampled negatives; ``uniform`` samples them
                 uniformly at random, while ``popularity`` samples them
                 proportional to their popularity (number of occurrences).
+            n:
+                The number of negatives to sample for each user.  If ``None``,
+                a single-dimensional vector is returned.
             verify:
                 Whether to verify that the negative items are actually negative.
                 Unverified sampling is much faster but can return false
@@ -423,32 +427,28 @@ class MatrixRelationshipSet(RelationshipSet):
         """
         rng = random_generator(rng)
 
-        _log.debug("samping negatives", nrows=len(rows))
+        _log.debug("samping negatives", nrows=len(rows), ncols=n)
+        if n is None:
+            shape = len(rows)
+        else:
+            shape = (len(rows), n)
+
         match weighting:
             case "uniform":
-                columns = rng.choice(self.n_cols, size=len(rows), replace=True)
+                columns = rng.choice(self.n_cols, size=shape, replace=True)
             case "popularity":
                 ccol = self._table.column(num_col_name(self.col_type)).to_numpy()
-                trows = rng.choice(self._table.num_rows, size=len(rows), replace=True)
+                trows = rng.choice(self._table.num_rows, size=shape, replace=True)
                 columns = ccol[trows]
         columns = np.require(columns, "i4")
 
         if verify:
-            non_neg = self._check_negatives(rows, columns)
-            _log.debug("checking negatives", nrows=len(rows), npos=np.sum(non_neg).item())
-            if np.any(non_neg):
-                if max_attempts > 0:
-                    columns[non_neg] = self.sample_negatives(
-                        rows[non_neg],
-                        verify=True,
-                        rng=rng,
-                        max_attempts=max_attempts - 1,
-                        weighting=weighting,
-                    )
-                else:
-                    warnings.warn(
-                        "failed to find verified negatives for {} users".format(np.sum(non_neg)),
-                        DataWarning,
+            if n is None:
+                self._check_negatives_and_resample(rows, columns, max_attempts, rng, weighting)
+            else:
+                for c in range(n):
+                    self._check_negatives_and_resample(
+                        rows, columns[:, c], max_attempts, rng, weighting
                     )
 
         return columns
@@ -464,6 +464,31 @@ class MatrixRelationshipSet(RelationshipSet):
         rnums = rows.astype(np.uint64)
         cnums = columns.astype(np.uint64)
         return (rnums << 32) + cnums
+
+    def _check_negatives_and_resample(
+        self,
+        rows: NDArray[np.int32],
+        columns: NDArray[np.int32],
+        max_attempts: int,
+        rng: np.random.Generator,
+        weighting: Literal["uniform", "popularity"],
+    ):
+        non_neg = self._check_negatives(rows, columns)
+        _log.debug("checking negatives", nrows=len(rows), npos=np.sum(non_neg).item())
+        if np.any(non_neg):
+            if max_attempts > 0:
+                columns[non_neg] = self.sample_negatives(
+                    rows[non_neg],
+                    verify=True,
+                    rng=rng,
+                    max_attempts=max_attempts - 1,
+                    weighting=weighting,
+                )
+            else:
+                warnings.warn(
+                    "failed to find verified negatives for {} users".format(np.sum(non_neg)),
+                    DataWarning,
+                )
 
     def row_table(self, id: ID | None = None, *, number: int | None = None) -> pa.Table | None:
         """
