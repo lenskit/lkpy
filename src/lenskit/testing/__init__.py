@@ -20,6 +20,7 @@ from ._markers import jit_enabled, wantjit
 from ._movielens import (
     DemoRecs,
     demo_recs,
+    ml_20m,
     ml_100k,
     ml_100k_zip,
     ml_ds,
@@ -35,6 +36,7 @@ __all__ = [
     "sparse_tensors",
     "ml_100k",
     "ml_100k_zip",
+    "ml_20m",
     "ml_ds",
     "ml_ds_unchecked",
     "ml_ratings",
