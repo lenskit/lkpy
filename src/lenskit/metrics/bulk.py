@@ -239,6 +239,7 @@ class RunAnalysis:
         """
         Measure a set of outputs against a set of dest data.
         """
+        self._validate_setup()
         index = pd.MultiIndex.from_tuples(outputs.keys())
         index.names = list(outputs.key_fields)
 
@@ -290,3 +291,11 @@ class RunAnalysis:
             global_results,
             {m.label: m.default for m in self.metrics if m.default is not None},
         )
+
+    def _validate_setup(self):
+        seen = set()
+        for m in self.metrics:
+            lbl = m.label
+            if lbl in seen:
+                raise RuntimeError(f"duplicate metric: {lbl}")
+            seen.add(lbl)

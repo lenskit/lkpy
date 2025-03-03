@@ -6,7 +6,7 @@
 
 import pandas as pd  # noqa: 401
 
-from pytest import approx
+from pytest import approx, raises
 
 from lenskit.data import ItemListCollection
 from lenskit.data.adapt import ITEM_COMPAT_COLUMN, USER_COMPAT_COLUMN
@@ -50,6 +50,19 @@ def test_recs(demo_recs):
     print(stats)
     for m in bms.metrics:
         assert stats.loc[m.label, "mean"] == approx(scores[m.label].mean())
+
+
+def test_duplicate_metric(demo_recs):
+    split, recs = demo_recs
+
+    bms = RunAnalysis()
+    bms.add_metric(NDCG(k=10))
+    bms.add_metric(NDCG(k=10))
+    bms.add_metric(RBP)
+    bms.add_metric(RecipRank)
+
+    with raises(RuntimeError, match=r"duplicate"):
+        bms.measure(recs, split.test)
 
 
 def test_recs_multi(demo_recs):
