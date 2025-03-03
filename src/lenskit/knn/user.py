@@ -21,14 +21,14 @@ from pydantic import AliasChoices, BaseModel, Field, PositiveFloat, PositiveInt,
 from scipy.sparse import csc_array
 from typing_extensions import NamedTuple, Optional, override
 
-from lenskit import util
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery
 from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataWarning
-from lenskit.logging import get_logger
+from lenskit.logging import Stopwatch, get_logger
 from lenskit.math.sparse import normalize_sparse_rows, torch_sparse_to_scipy
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component
+from lenskit.torch import inference_mode
 from lenskit.training import Trainable, TrainingOptions
 
 _log = get_logger(__name__)
@@ -100,6 +100,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
     "Centered but un-normalized rating matrix (COO) to find neighbor ratings."
 
     @override
+    @inference_mode
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         """
         "Train" a user-user CF model.  This memorizes the rating data in a format that is usable
@@ -138,6 +139,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
         self.items_ = data.items
 
     @override
+    @inference_mode
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         """
         Compute predictions for a user and items.
@@ -153,7 +155,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
             pandas.Series: scores for the items, indexed by item id.
         """
         query = RecQuery.create(query)
-        watch = util.Stopwatch()
+        watch = Stopwatch()
         log = _log.bind(user_id=query.user_id, n_items=len(items))
         if len(items) == 0:
             log.debug("no candidate items, skipping")

@@ -27,8 +27,8 @@ from lenskit.logging.resource import max_memory
 from lenskit.math.sparse import normalize_sparse_rows
 from lenskit.parallel import ensure_parallel_init
 from lenskit.pipeline import Component
+from lenskit.torch import inference_mode
 from lenskit.training import Trainable, TrainingOptions
-from lenskit.util.torch import inference_mode
 
 _log = get_logger(__name__)
 MAX_BLOCKS = 1024
