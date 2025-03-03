@@ -26,7 +26,7 @@ def test_select_arrow(ml_20m: Dataset, rng: np.random.Generator, benchmark):
     users = pa.array(users)
 
     def select():
-        res = lists.take(users)
+        res = pc.array_take(lists, users, boundscheck=False)
 
     benchmark(select)
 
