@@ -3,20 +3,45 @@ import platform
 import re
 import sys
 from importlib.metadata import distributions, version
+from pathlib import Path
 
 import click
 import threadpoolctl
 
 from lenskit import __version__
 
+_gh_out: Path | None = None
+
 
 @click.command("doctor")
-def doctor():
+@click.option(
+    "--github-output",
+    "gh_output",
+    envvar="GITHUB_OUTPUT",
+    type=Path,
+    help="Path to GitHub Actions output file.",
+)
+def doctor(gh_output: Path | None):
+    """
+    Inspect installed LensKit version and environment.
+    """
+    global _gh_out
+    _gh_out = gh_output
     inspect_version()
     inspect_platform()
     inspect_compute()
     inspect_env()
     inspect_packages()
+
+
+def inspect_version():
+    dist_ver = version("lenskit")
+    print("LensKit version:", dist_ver)
+    if str(dist_ver) != __version__:
+        print("   Version mismatch, internal package version is", __version__)
+    if _gh_out:
+        with _gh_out.open("at") as ghf:
+            print(f"lenskit_version={dist_ver}", file=ghf)
 
 
 def inspect_platform():
@@ -25,19 +50,17 @@ def inspect_platform():
     print("Python location:", sys.executable)
 
 
-def inspect_version():
-    dist_ver = version("lenskit")
-    print("LensKit version:", dist_ver)
-    if str(dist_ver) != __version__:
-        print("   Version mismatch, internal package version is", __version__)
-
-
 def inspect_compute():
     import numpy as np
     import torch
 
     print("\nNumPy version:", np.__version__)
     print("PyTorch version:", torch.__version__)
+    if _gh_out:
+        with _gh_out.open("at") as ghf:
+            print(f"numpy_version={np.__version__}", file=ghf)
+            print(f"pytorch_version={torch.__version__}", file=ghf)
+
     print("PyTorch backends:")
     print("    cpu:", torch.backends.cpu.get_cpu_capability())
     for mod in [torch.cuda, torch.backends.mkl, torch.backends.mps]:
