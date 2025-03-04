@@ -132,6 +132,18 @@ def training_worker_cpus() -> int:
     return _worker_parallel.total_threads
 
 
+def is_ray_worker() -> bool:
+    """
+    Determine whether the current process is running on a Ray worker.
+    """
+    # logic adapted from https://discuss.ray.io/t/how-to-know-if-code-is-running-on-ray-worker/15642
+    if RAY_AVAILABLE and ray.is_initialized():
+        ctx = ray.get_runtime_context()
+        return ctx.worker.mode == ray.WORKER_MODE
+    else:
+        return False
+
+
 class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
     function: InvokeOp[M, A, R]
     model_ref: ray.ObjectRef
