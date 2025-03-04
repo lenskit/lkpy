@@ -75,7 +75,7 @@ class BaseRec(Component[ItemList], Trainable):
         uir = matrix * self.weight
 
         delegate = self._construct()
-        _logger.info("training %s on %s matrix (%d nnz)", self.delegate, uir.shape, uir.nnz)
+        _logger.info("training %s on %s matrix (%d nnz)", delegate, uir.shape, uir.nnz)
 
         delegate.fit(uir)
 
