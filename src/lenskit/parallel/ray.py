@@ -50,7 +50,17 @@ _log = get_logger(__name__)
 
 def ensure_cluster():
     if not ray.is_initialized():
-        init_cluster()
+        _log.debug("Ray is not initialized, initializing")
+        try:
+            init_cluster()
+        except ValueError as e:
+            _log.debug("Ray initialization failed", exception=e)
+            if "existing cluster" in str(e):
+                _log.info("Ray cluster already started, reusing")
+                _log.warn("existing Ray cluster may not properly throttle LensKit jobs")
+                ray.init()
+            else:
+                raise e
 
 
 def init_cluster(
