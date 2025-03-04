@@ -120,7 +120,7 @@ def training_worker_cpus() -> int:
 
 class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
     function: InvokeOp[M, A, R]
-    model_ref: ray.ObjectID
+    model_ref: ray.ObjectRef
 
     def __init__(
         self,
@@ -128,7 +128,10 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         func: InvokeOp[M, A, R],
     ):
         _log.debug("persisting to Ray cluster")
-        self.model_ref = ray.put(model)
+        if isinstance(model, ray.ObjectRef):
+            self.model_ref = model
+        else:
+            self.model_ref = ray.put(model)
         self.function = func
         slots = {}
         if LK_PROCESS_SLOT in ray.cluster_resources():
