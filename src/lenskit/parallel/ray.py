@@ -141,9 +141,12 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         self.action = ray_invoke_worker.options(num_cpus=inference_worker_cpus(), resources=slots)
 
     def map(self, tasks: Iterable[A]) -> Iterator[R]:
-        for args in itertools.batched(tasks, 200):
-            ret = self.action.remote(self.function, self.model_ref, args)
-            yield from ray.get(ret)
+        batch_results = [
+            self.action.remote(self.function, self.model_ref, batch)
+            for batch in itertools.batched(tasks, 200)
+        ]
+        for br in batch_results:
+            yield from ray.get(br)
 
     def shutdown(self):
         del self.model_ref
