@@ -29,7 +29,7 @@ def test_select_arrow(ml_20m: Dataset, rng: np.random.Generator, benchmark):
     users = pa.array(users)
 
     def select():
-        res = pc.array_take(lists, users, boundscheck=False)
+        _res = pc.array_take(lists, users, boundscheck=False)
 
     benchmark(select)
 
@@ -42,7 +42,7 @@ def test_select_scipy_csr(ml_20m: Dataset, rng: np.random.Generator, benchmark):
     users = np.require(users, "i4")
 
     def select():
-        res = matrix[users, :]
+        _res = matrix[users, :]
 
     benchmark(select)
 
@@ -56,7 +56,7 @@ def test_select_numba(ml_20m: Dataset, rng: np.random.Generator, benchmark):
     numba_take(matrix, users)
 
     def select():
-        res = numba_take(matrix, users)
+        _res = numba_take(matrix, users)
 
     benchmark(select)
 
