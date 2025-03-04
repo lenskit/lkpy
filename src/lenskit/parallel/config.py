@@ -131,13 +131,21 @@ def get_parallel_config() -> ParallelConfig:
     return _config
 
 
-def subprocess_config() -> ParallelConfig:
+def subprocess_config(
+    processes: int | None = None,
+    threads: int | None = None,
+    backend_threads: int | None = None,
+    child_threads: int | None = None,
+) -> ParallelConfig:
     """
     Get a parallel configuration for a subprocess.
     """
     cfg = get_parallel_config()
     return ParallelConfig(
-        processes=1, threads=1, backend_threads=cfg.child_threads, child_threads=1
+        processes=processes or 1,
+        threads=threads or 1,
+        backend_threads=backend_threads or cfg.child_threads,
+        child_threads=child_threads or 1,
     )
 
 
