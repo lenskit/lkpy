@@ -131,9 +131,12 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         _log.debug("persisting to Ray cluster")
         self.model_ref = ray.put(model)
         self.function = func
-        self.action = ray_invoke_worker.options(
-            num_cpus=inference_worker_cpus(), resources={LK_PROCESS_SLOT: 1}
-        )
+        slots = {}
+        if LK_PROCESS_SLOT in ray.cluster_resources():
+            slots = {LK_PROCESS_SLOT: 1}
+        else:
+            _log.warning(f"cluster has no resource {LK_PROCESS_SLOT}")
+        self.action = ray_invoke_worker.options(num_cpus=inference_worker_cpus(), resources=slots)
 
     def map(self, tasks: Iterable[A]) -> Iterator[R]:
         for args in itertools.batched(tasks, 200):
