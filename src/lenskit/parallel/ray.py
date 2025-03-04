@@ -69,6 +69,7 @@ def init_cluster(
     proc_slots: int | None = None,
     resources: dict[str, float] | None = None,
     worker_parallel: ParallelConfig | None = None,
+    limit_slots: bool = True,
     **kwargs,
 ):
     """
@@ -91,6 +92,8 @@ def init_cluster(
         worker_parallel:
             Parallel processing configuration for worker processes.  If
             ``None``, uses the default.
+        limit_slots:
+            ``False`` to disable the LensKit slot interface.
         kwargs:
             Other options to pass to :func:`ray.init`.
 
@@ -106,7 +109,10 @@ def init_cluster(
     cfg = get_parallel_config()
     if proc_slots is None:
         proc_slots = cfg.processes
-    resources = {LK_PROCESS_SLOT: proc_slots}
+    if limit_slots:
+        resources = {LK_PROCESS_SLOT: proc_slots}
+    else:
+        resources = {}
     if num_cpus is None:
         num_cpus = effective_cpu_count()
 
