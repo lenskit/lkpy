@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from hashlib import blake2b
 from logging import Handler, LogRecord, getLogger
 from threading import Lock
+from typing import Self, overload
 
 import structlog
 import zmq
@@ -49,20 +50,30 @@ class WorkerLogConfig:
     authkey: bytes | None = None
 
     @classmethod
-    def current(cls):
+    @overload
+    def current(cls) -> Self: ...
+    @classmethod
+    @overload
+    def current(cls, *, from_monitor: bool = True) -> Self | None: ...
+    @classmethod
+    def current(cls, *, from_monitor: bool = True):
         """
         Get the current worker logging configuration.
         """
 
         if _active_context is not None:
             return _active_context.config
-        else:
+        elif from_monitor:
             mon = get_monitor()
+            if mon.log_address is None:
+                raise RuntimeError("monitor has no log address")
             cfg = active_logging_config()
             level = cfg.effective_level if cfg is not None else logging.INFO
             return cls(
                 address=mon.log_address, level=level, authkey=bytes(mp.current_process().authkey)
             )
+        else:
+            return None
 
 
 class WorkerContext:

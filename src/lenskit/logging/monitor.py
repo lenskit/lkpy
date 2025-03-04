@@ -21,10 +21,11 @@ import os.path
 import pickle
 import threading
 import time
+from contextlib import contextmanager
 from enum import Enum
 from hashlib import blake2b
 from tempfile import TemporaryDirectory
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 from uuid import UUID, uuid4
 
 import zmq
@@ -40,6 +41,17 @@ _monitor_lock = threading.Lock()
 _monitor_instance: Monitor | None = None
 
 
+@contextmanager
+def maybe_close(sock: zmq.Socket[Any] | None):
+    if sock is None:
+        yield None
+    else:
+        try:
+            yield sock
+        finally:
+            sock.close()
+
+
 @runtime_checkable
 class MonitorRefreshable(Protocol):
     def monitor_refresh(self):
@@ -53,6 +65,8 @@ def get_monitor() -> Monitor:
     """
     Get the monitor, starting it if it is not yet running.
     """
+    from .worker import WorkerLogConfig
+
     global _monitor_instance
 
     if _monitor_instance is not None:
@@ -60,7 +74,8 @@ def get_monitor() -> Monitor:
 
     with _monitor_lock:
         if _monitor_instance is None:
-            _monitor_instance = Monitor()
+            ctx = WorkerLogConfig.current(from_monitor=False)
+            _monitor_instance = Monitor(handle_logging=ctx is None)
 
         return _monitor_instance
 
@@ -90,21 +105,29 @@ class Monitor:
 
     The monitor is managed and used internally, and neither LensKit client code
     nor component implementations often need to interact with it.
+
+    Args:
+        handle_logging:
+            Whether or not to handle log messages.
     """
 
     zmq: zmq.Context[zmq.Socket[bytes]]
     _backend: MonitorThread
     _signal: zmq.Socket[bytes]
-    log_address: str
+    log_address: str | None
     _tmpdir: TemporaryDirectory | None = None
     refreshables: dict[UUID, MonitorRefreshable]
     lock: threading.Lock
 
-    def __init__(self):
+    def __init__(self, handle_logging: bool = True):
         self.zmq = zmq.Context()
 
-        addr, log_sock = self._log_sock()
-        self.log_address = addr
+        if handle_logging:
+            addr, log_sock = self._log_sock()
+            self.log_address = addr
+        else:
+            log_sock = None
+            self.log_address = None
 
         self._backend = MonitorThread(self, log_sock)
         self._backend.start()
@@ -168,12 +191,12 @@ class MonitorThread(threading.Thread):
     state: MonitorState
 
     signal: zmq.Socket[bytes]
-    log_sock: zmq.Socket[bytes]
+    log_sock: zmq.Socket[bytes] | None
     poller: zmq.Poller
     _authkey: bytes
     last_refresh: float
 
-    def __init__(self, monitor: Monitor, log_sock: zmq.Socket[bytes]):
+    def __init__(self, monitor: Monitor, log_sock: zmq.Socket[bytes] | None):
         super().__init__(name="LensKitMonitor", daemon=True)
         self.monitor = monitor
         self.log_sock = log_sock
@@ -183,13 +206,14 @@ class MonitorThread(threading.Thread):
     def run(self) -> None:
         self.state = MonitorState.ACTIVE
         _log.debug("monitor thread started")
-        with self.log_sock, self.monitor.zmq.socket(zmq.PULL) as signal:
+        with maybe_close(self.log_sock), self.monitor.zmq.socket(zmq.PULL) as signal:
             signal.bind(SIGNAL_ADDR)
             self.signal = signal
 
             self.poller = zmq.Poller()
             self.poller.register(signal, zmq.POLLIN)
-            self.poller.register(self.log_sock, zmq.POLLIN)
+            if self.log_sock is not None:
+                self.poller.register(self.log_sock, zmq.POLLIN)
 
             self._pump_messages()
 
@@ -209,7 +233,7 @@ class MonitorThread(threading.Thread):
             if self.signal in ready:
                 self._handle_signal()
 
-            if self.log_sock in ready:
+            if self.log_sock is not None and self.log_sock in ready:
                 try:
                     self._handle_log_message()
                 except Exception as e:
@@ -242,6 +266,7 @@ class MonitorThread(threading.Thread):
                 log.warning("unknown signal")
 
     def _handle_log_message(self):
+        assert self.log_sock is not None
         parts = self.log_sock.recv_multipart()
         if len(parts) != 4:
             _log.warning("invalid multipart message, expected 3 parts")
