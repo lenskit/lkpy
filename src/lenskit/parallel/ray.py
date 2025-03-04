@@ -64,6 +64,10 @@ def init_cluster(
     """
     Initialize or connect to a Ray cluster, with the LensKit options.
 
+    The resulting cluster can be used by an invoker, or it can be used directly.
+    The Ray invoker uses batching, though, so it only works well with many small
+    tasks.
+
     Args:
         num_cpus:
             The total number of CPUs to allow. Defaults to
