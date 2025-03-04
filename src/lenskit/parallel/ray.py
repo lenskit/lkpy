@@ -126,7 +126,6 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         self,
         model: M,
         func: InvokeOp[M, A, R],
-        worker_parallel: ParallelConfig | None = None,
     ):
         _log.debug("persisting to Ray cluster")
         self.model_ref = ray.put(model)
