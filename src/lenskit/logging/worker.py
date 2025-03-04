@@ -92,6 +92,7 @@ class WorkerContext:
         global _active_context
         if _active_context is not None:
             raise RuntimeError("worker context already active")
+        _active_context = self
 
         self.zmq = zmq.Context()
         self._log_handler = ZMQLogHandler(self.zmq, self.config)
@@ -112,11 +113,13 @@ class WorkerContext:
         _log.debug("log context activated")
 
     def shutdown(self):
+        global _active_context
         root = getLogger()
         root.removeHandler(self._log_handler)
 
         self._log_handler.shutdown()
         self.zmq.term()
+        _active_context = None
 
     def send_task(self, task: Task):
         self._log_handler.send_task(task)
