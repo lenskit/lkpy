@@ -59,7 +59,7 @@ class BaseRec(Component[ItemList], Trainable):
     """
     The user ID mapping from training.
     """
-    item: Vocabulary
+    items: Vocabulary
     """
     The item ID mapping from training.
     """
@@ -81,7 +81,7 @@ class BaseRec(Component[ItemList], Trainable):
 
         self.matrix = matrix
         self.users = data.users
-        self.item = data.items
+        self.items = data.items
 
         if hasattr(delegate.item_factors, "to_numpy"):
             self.user_embeddings = delegate.user_factors.to_numpy()
@@ -106,15 +106,23 @@ class BaseRec(Component[ItemList], Trainable):
         if user_num is None or not len(items):
             return ItemList(items, scores=np.nan)
 
-        inos = items.numbers(vocabulary=self.item, missing="negative")
+        inos = items.numbers(vocabulary=self.items, missing="negative")
         mask = inos >= 0
         good_inos = inos[mask]
+        mult_first = len(good_inos) > len(self.items) // 2
 
-        ifs = self.item_embeddings[good_inos]
+        if mult_first:
+            ifs = self.item_embeddings
+        else:
+            ifs = self.item_embeddings[good_inos]
         uf = self.user_embeddings[user_num]
 
+        prod = np.dot(ifs, uf.T).reshape(-1)
+        if mult_first:
+            prod = prod[good_inos]
+
         scores = np.full(len(items), np.nan)
-        scores[mask] = np.dot(ifs, uf.T).reshape(-1)
+        scores[mask] = prod
 
         return ItemList(items, scores=scores)
 
