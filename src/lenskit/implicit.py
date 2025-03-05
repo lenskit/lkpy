@@ -14,6 +14,7 @@ import numpy as np
 from implicit.als import AlternatingLeastSquares
 from implicit.bpr import BayesianPersonalizedRanking
 from implicit.recommender_base import RecommenderBase
+from numpy.typing import NDArray
 from pydantic import BaseModel, JsonValue
 from scipy.sparse import csr_matrix
 from typing_extensions import override
@@ -48,41 +49,46 @@ class BaseRec(Component[ItemList], Trainable):
     """
 
     config: ImplicitConfig
-    delegate: RecommenderBase
-    """
-    The delegate algorithm from :mod:`implicit`.
-    """
     weight: float = 1.0
 
-    matrix_: csr_matrix
+    matrix: csr_matrix
     """
     The user-item rating matrix from training.
     """
-    users_: Vocabulary
+    users: Vocabulary
     """
     The user ID mapping from training.
     """
-    items_: Vocabulary
+    items: Vocabulary
     """
     The item ID mapping from training.
     """
+    user_embeddings: NDArray[np.float32]
+    item_embeddings: NDArray[np.float32]
 
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
-        if hasattr(self, "delegate") and not options.retrain:
+        if hasattr(self, "item_embeddings") and not options.retrain:
             return
 
         matrix = data.interaction_matrix(format="scipy", layout="csr", legacy=True)
         uir = matrix * self.weight
 
-        self.delegate = self._construct()
-        _logger.info("training %s on %s matrix (%d nnz)", self.delegate, uir.shape, uir.nnz)
+        delegate = self._construct()
+        _logger.info("training %s on %s matrix (%d nnz)", delegate, uir.shape, uir.nnz)
 
-        self.delegate.fit(uir)
+        delegate.fit(uir)
 
-        self.matrix_ = matrix
-        self.users_ = data.users
-        self.items_ = data.items
+        self.matrix = matrix
+        self.users = data.users
+        self.items = data.items
+
+        if hasattr(delegate.item_factors, "to_numpy"):
+            self.user_embeddings = delegate.user_factors.to_numpy()
+            self.item_embeddings = delegate.item_factors.to_numpy()
+        else:
+            self.user_embeddings = delegate.user_factors
+            self.item_embeddings = delegate.item_factors
 
         return self
 
@@ -95,25 +101,28 @@ class BaseRec(Component[ItemList], Trainable):
 
         user_num = None
         if query.user_id is not None:
-            user_num = self.users_.number(query.user_id, missing=None)
+            user_num = self.users.number(query.user_id, missing=None)
 
         if user_num is None or not len(items):
             return ItemList(items, scores=np.nan)
 
-        inos = items.numbers(vocabulary=self.items_, missing="negative")
+        inos = items.numbers(vocabulary=self.items, missing="negative")
         mask = inos >= 0
         good_inos = inos[mask]
+        mult_first = len(good_inos) > len(self.items) // 2
 
-        ifs = self.delegate.item_factors[good_inos]  # type: ignore
-        uf = self.delegate.user_factors[user_num]  # type: ignore
+        if mult_first:
+            ifs = self.item_embeddings
+        else:
+            ifs = self.item_embeddings[good_inos]
+        uf = self.user_embeddings[user_num]
 
-        # convert back if these are on CUDA
-        if hasattr(ifs, "to_numpy"):
-            ifs = ifs.to_numpy()
-            uf = uf.to_numpy()
+        prod = np.dot(ifs, uf.T).reshape(-1)
+        if mult_first:
+            prod = prod[good_inos]
 
         scores = np.full(len(items), np.nan)
-        scores[mask] = np.dot(ifs, uf.T).reshape(-1)
+        scores[mask] = prod
 
         return ItemList(items, scores=scores)
 
