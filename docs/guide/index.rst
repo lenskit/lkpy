@@ -11,6 +11,7 @@ guide to how to use LensKit for research, education, and other purposes.
     install
     GettingStarted.ipynb
     examples
+    migrating
 
 .. toctree::
     :caption: Fundamentals
@@ -54,10 +55,3 @@ guide to how to use LensKit for research, education, and other purposes.
 
     logging
     parallelism
-
-.. toctree::
-    :caption: Tips and Help
-    :maxdepth: 1
-
-    migrating
-    impl-tips
