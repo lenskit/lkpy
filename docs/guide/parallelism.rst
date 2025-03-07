@@ -105,3 +105,9 @@ PyTorch tensors, including those on CUDA devices, are shared.
 LensKit users will generally not need to directly use parallel op invokers, but
 if you are implementing new batch operations with parallelism they are useful.
 They may also be useful for other kinds of analysis.
+
+Debugging Parallelism and Performance
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``lenskit doctor`` CLI command inspects the configured environment,
+including parallelism configuration.
