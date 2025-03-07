@@ -18,7 +18,7 @@ import os
 import pickle
 from collections.abc import Callable, Iterable, Iterator
 from platform import python_version
-from typing import Generic
+from typing import Any, Generic
 
 try:
     import ray
@@ -161,7 +161,7 @@ def is_ray_worker() -> bool:
 
 class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
     function: InvokeOp[M, A, R]
-    model_ref: ray.ObjectRef
+    model_ref: Any
 
     def __init__(
         self,
@@ -179,7 +179,9 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
             slots = {LK_PROCESS_SLOT: 1}
         else:
             _log.warning(f"cluster has no resource {LK_PROCESS_SLOT}")
-        self.action = ray_invoke_worker.options(num_cpus=inference_worker_cpus(), resources=slots)
+
+        worker = ray.remote(ray_invoke_worker)
+        self.action = worker.options(num_cpus=inference_worker_cpus(), resources=slots)
 
     def map(self, tasks: Iterable[A]) -> Iterator[R]:
         batch_results = [
@@ -193,17 +195,14 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         del self.model_ref
 
 
-if RAY_AVAILABLE:
+def ray_invoke_worker(func: Callable[[M, A], R], model: M, args: list[A]) -> list[R]:
+    log_cfg = pickle.loads(base64.decodebytes(os.environb[b"LK_LOG_CONFIG"]))
+    ensure_parallel_init()
+    with WorkerContext(log_cfg) as ctx:
+        try:
+            with Task("cluster worker", subprocess=True) as task:
+                result = [func(model, arg) for arg in args]
+        finally:
+            ctx.send_task(task)
 
-    @ray.remote
-    def ray_invoke_worker(func: Callable[[M, A], R], model: M, args: list[A]) -> list[R]:
-        log_cfg = pickle.loads(base64.decodebytes(os.environb[b"LK_LOG_CONFIG"]))
-        ensure_parallel_init()
-        with WorkerContext(log_cfg) as ctx:
-            try:
-                with Task("cluster worker", subprocess=True) as task:
-                    result = [func(model, arg) for arg in args]
-            finally:
-                ctx.send_task(task)
-
-        return result
+    return result
