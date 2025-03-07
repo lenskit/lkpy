@@ -51,8 +51,12 @@ predictions — means that different scorers may be evaluated on different items
 and a scorer perform exceptionally well by only scoring items with high
 confidence.
 
-.. todo::
-    Add example (and simplified ergonomics) for fallback prediction.
+.. note::
+
+    Both :func:`~lenskit.pipeline.topn_pipeline` and
+    :func:`~lenskit.pipeline.predict_pipeline` default to using a
+    :func:`~lenskit.basic.BiasScorer` as a fallback when rating prediction is
+    enabled.
 
 If you want to skip missing predictions, pass ``missing_scores="ignore"`` to the
 metric function::

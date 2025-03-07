@@ -90,10 +90,6 @@ class ParameterContainer(Protocol):  # pragma: nocover
         sometimes used for convenience, but parameter / state dictionaries allow
         serializing wtih tools like ``safetensors``.
 
-        .. todo::
-
-            This protocol is not yet used for anything.
-
         Args:
             include_caches:
                 Whether the parameter dictionary should include ephemeral

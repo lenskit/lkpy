@@ -28,6 +28,7 @@ class RecQuery:
     of candidate items.
 
     .. todo::
+
         Document and test methods for extending the recommendation query with arbitrary
         data to be used by client-provided pipeline components.
 

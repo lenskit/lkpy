@@ -25,6 +25,9 @@ Throughout this documentation, we use the notation of :cite:t:`ekstrand:notation
     the `topical user guide <guide/index>`_ and `API reference <api/index>`_ in
     separate sections.
 
+    There have been significant incompatible changes in LensKit 2025.1.  See the
+    :ref:`release notes <2025.1>` and :ref:`migration guide <migrating>`.
+
 Resources
 ---------
 

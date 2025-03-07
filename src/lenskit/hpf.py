@@ -53,6 +53,9 @@ class HPFScorer(Component[ItemList], Trainable):
 
     .. _hpfrec: https://hpfrec.readthedocs.io/en/latest/
 
+    .. todo::
+        Right now, this uses the 'rating' as a count. Actually use counts (:issue:`656`).
+
     Stability:
         Experimental
 
