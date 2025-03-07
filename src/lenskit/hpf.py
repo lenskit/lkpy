@@ -23,7 +23,21 @@ _logger = logging.getLogger(__name__)
 
 
 class HPFConfig(BaseModel, extra="allow"):
+    """
+    Configuration class for :class:`HPFScorer`.
+
+    Only a couple of configuration options are directly defined here.  Other
+    options are taken from the :class:`hpfrec.HPF` constructor's keyword
+    arguments.
+    """
+
     __pydantic_extra__: dict[str, JsonValue]
+    count_attribute: str | None = "count"
+    """
+    The attribute from which to get user-item interaction counts.  If ``None``,
+    uses indicator variables as a count of 1.
+    """
+
     embedding_size: int = Field(
         default=50, validation_alias=AliasChoices("embedding_size", "features")
     )
@@ -35,14 +49,12 @@ class HPFConfig(BaseModel, extra="allow"):
 
 class HPFScorer(Component[ItemList], Trainable):
     """
-    Hierarchical Poisson factorization, provided by
-    `hpfrec <https://hpfrec.readthedocs.io/en/latest/>`_.
+    Hierarchical Poisson factorization, provided by `hpfrec`_
 
-    .. todo::
-        Right now, this uses the 'rating' as a count. Actually use counts.
+    .. _hpfrec: https://hpfrec.readthedocs.io/en/latest/
 
     Stability:
-        Caller
+        Experimental
 
     Args:
         features:
@@ -64,10 +76,7 @@ class HPFScorer(Component[ItemList], Trainable):
             return
 
         interacts = data.interactions().matrix()
-        if "rating" in interacts.attribute_names:
-            matrix = interacts.scipy("rating", layout="coo")
-        else:
-            matrix = interacts.scipy(layout="coo")
+        matrix = interacts.scipy(self.config.count_attribute, layout="coo")
 
         hpf = hpfrec.HPF(
             self.config.embedding_size, reindex=False, **self.config.__pydantic_extra__
