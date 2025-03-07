@@ -192,7 +192,7 @@ methods to use it:
     Dataset.load
     DatasetBuilder.save
 
-.. admonitition:: Compatibility
+.. admonition:: Compatibility
     :class: note
 
     The LensKit native dataset format code maintains the following Compatibility
