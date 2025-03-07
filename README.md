@@ -23,7 +23,7 @@ LensKit for Python (LKPY) is the successor to the Java-based LensKit project.
 > [!INFO]
 >
 > LensKit had significant changes in the 2025.1 release.  See the [Migration
-> Guide](https://lkpy.lenskit.org/latest/guide/migrating.html) for details.
+> Guide](https://lkpy.lenskit.org/stable/guide/migrating.html) for details.
 
 [release]: https://lkpy.lenskit.org/en/stable/
 
@@ -45,7 +45,7 @@ To use the latest development version, install directly from GitHub:
 
     pip install -U git+https://github.com/lenskit/lkpy
 
-Then see [Getting Started](https://lkpy.lenskit.org/en/stable/GettingStarted.html)
+Then see [Getting Started](https://lkpy.lenskit.org/stable/guide/GettingStarted.html)
 
 ## Developing
 
