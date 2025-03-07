@@ -16,7 +16,7 @@ from rich.table import Table
 from lenskit import __version__
 from lenskit.logging import get_logger, stdout_console
 from lenskit.parallel import ensure_parallel_init
-from lenskit.parallel.ray import RAY_AVAILABLE
+from lenskit.parallel.ray import ray_available
 
 _log = get_logger(__name__)
 _gh_out: Path | None = None
@@ -42,7 +42,7 @@ def doctor(gh_output: Path | None, packages: bool):
     console.print(inspect_version())
     console.print(inspect_platform())
     console.print(inspect_compute())
-    if RAY_AVAILABLE:
+    if ray_available():
         console.print(inspect_ray())
     console.print(inspect_env())
     if packages:

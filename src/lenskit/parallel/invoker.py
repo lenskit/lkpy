@@ -53,9 +53,9 @@ def invoker(
         n_jobs = get_parallel_config().processes
 
     if n_jobs == "ray":
-        from .ray import RAY_SUPPORTED, RayOpInvoker, ensure_cluster
+        from .ray import RayOpInvoker, ensure_cluster, ray_supported
 
-        if not RAY_SUPPORTED:
+        if not ray_supported():
             raise RuntimeError("ray backend not available")
 
         ensure_cluster()

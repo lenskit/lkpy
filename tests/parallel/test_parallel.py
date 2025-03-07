@@ -15,7 +15,7 @@ from pytest import approx, mark, skip
 
 from lenskit.parallel import invoker
 from lenskit.parallel.config import _resolve_parallel_config
-from lenskit.parallel.ray import RAY_SUPPORTED
+from lenskit.parallel.ray import ray_supported
 from lenskit.testing import set_env_var
 
 _log = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ def _mul_op(m, v):
 @mark.slow
 @mark.parametrize("pkg,n_jobs", itertools.product(["numpy", "torch"], [None, 1, 2, 4, "ray"]))
 def test_invoke_matrix(pkg, n_jobs, rng: np.random.Generator):
-    if n_jobs == "ray" and not RAY_SUPPORTED:
+    if n_jobs == "ray" and not ray_supported():
         skip("ray not supported")
 
     matrix = rng.normal(size=(1000, 1000))

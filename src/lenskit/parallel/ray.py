@@ -20,13 +20,6 @@ from collections.abc import Callable, Iterable, Iterator
 from platform import python_version
 from typing import Any, Generic
 
-try:
-    import ray
-
-    RAY_AVAILABLE = True
-except ImportError:
-    RAY_AVAILABLE = False
-
 from lenskit.logging import Task, get_logger
 from lenskit.logging.worker import WorkerContext, WorkerLogConfig
 
@@ -39,18 +32,14 @@ from .config import (
 )
 from .invoker import A, InvokeOp, M, ModelOpInvoker, R
 
-if python_version() < "3.12":
-    RAY_SUPPORTED = False
-else:
-    RAY_SUPPORTED = RAY_AVAILABLE
-
-
 LK_PROCESS_SLOT = "lk_process"
 _worker_parallel: ParallelConfig
 _log = get_logger(__name__)
 
 
 def ensure_cluster():
+    import ray
+
     if not ray.is_initialized():
         _log.debug("Ray is not initialized, initializing")
         try:
@@ -103,6 +92,8 @@ def init_cluster(
         Experimental
     """
     global _worker_parallel
+    import ray
+
     if resources is None:
         resources = {}
     else:
@@ -140,11 +131,38 @@ def training_worker_cpus() -> int:
     return _worker_parallel.total_threads
 
 
+def ray_supported() -> bool:
+    """
+    Check if this Ray setup is supported by LensKit.
+    """
+    if python_version() < "3.12":
+        return False
+    else:
+        return ray_available()
+
+
+def ray_available() -> bool:
+    """
+    Check if Ray is available.
+    """
+    try:
+        import ray  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
 def ray_active() -> bool:
     """
     Query whether Ray is active.
     """
-    return RAY_AVAILABLE and ray.is_initialized()
+    if ray_available():
+        import ray
+
+        return ray.is_initialized()
+    else:
+        return False
 
 
 def is_ray_worker() -> bool:
@@ -152,7 +170,9 @@ def is_ray_worker() -> bool:
     Determine whether the current process is running on a Ray worker.
     """
     # logic adapted from https://discuss.ray.io/t/how-to-know-if-code-is-running-on-ray-worker/15642
-    if RAY_AVAILABLE and ray.is_initialized():
+    if ray_active():
+        import ray
+
         ctx = ray.get_runtime_context()
         return ctx.worker.mode == ray.WORKER_MODE
     else:
@@ -169,6 +189,8 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         func: InvokeOp[M, A, R],
     ):
         _log.debug("persisting to Ray cluster")
+        import ray
+
         if isinstance(model, ray.ObjectRef):
             self.model_ref = model
         else:
@@ -184,6 +206,8 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         self.action = worker.options(num_cpus=inference_worker_cpus(), resources=slots)
 
     def map(self, tasks: Iterable[A]) -> Iterator[R]:
+        import ray
+
         batch_results = [
             self.action.remote(self.function, self.model_ref, batch)
             for batch in itertools.batched(tasks, 200)
