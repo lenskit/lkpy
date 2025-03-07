@@ -10,6 +10,7 @@ import click
 import threadpoolctl
 from humanize import naturalsize
 from rich.console import Console, ConsoleOptions, group
+from rich.padding import Padding
 from rich.table import Table
 
 from lenskit import __version__
@@ -172,4 +173,4 @@ def inspect_packages():
     for dist in dists:
         table.add_row(dist.name, dist.version)
 
-    return table
+    return Padding(table, (1, 0, 0, 2))
