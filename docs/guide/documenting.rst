@@ -2,9 +2,10 @@ Documenting Experiments
 =======================
 
 .. todo::
+
     This chapter needs to be rewritten for :ref:`2025.1`.
 
-When publishing results — either formally, through a venue such as ACM Recsys,
+When publishing results — either formally, through a venue such as ACM RecSys,
 or informally in your organization, it's important to clearly and completely
 specify how the evaluation and algorithms were run.
 
@@ -19,19 +20,10 @@ Common Evaluation Problems Checklist
 This checklist is to help you make sure that your evaluation and results are
 accurately reported.
 
-* Pass `include_missing=True` to :py:meth:`~lenskit.topn.RecListAnalysis.compute`. This
-  operation defaults to `False` for compatiability reasons, but the default will
-  change in the future.
-
-* Correctly fill missing values from the evaluation metric results.  They are
-  reported as `NaN` (Pandas NA) so you can distinguish between empty lists and
-  lists with no relevant items, but should be appropraitely filled before
-  computing aggregates.
-
-* Pass `k` to :py:meth:`~lenskit.topn.RecListAnalysis.add_metric` with the
-  target list length for your experiment.  LensKit cannot reliably detect how
-  long you intended to make the recommendation lists, so you need to specify the
-  intended length to the metrics in order to correctly account for it.
+* Pass `k` to your ranking metrics with the target list length for your
+  experiment.  LensKit cannot reliably detect how long you intended to make the
+  recommendation lists, so you need to specify the intended length to the
+  metrics in order to correctly account for it.
 
 Reporting Algorithms
 ~~~~~~~~~~~~~~~~~~~~
@@ -50,17 +42,17 @@ algorithn peformance but not behavior.
 
 For example:
 
-+------------+-------------------------------------------------------------------------------+
-| Algorithm  |                                Hyperparameters                                |
-+============+===============================================================================+
-| ItemItem   | :math:`k_\mathrm{max}=20, k_\mathrm{min}=2, s_\mathrm{min}=1.0\times 10^{-3}` |
-+------------+-------------------------------------------------------------------------------+
-| ImplicitMF | :math:`k=50, \lambda_u=0.1, \lambda_i=0.1, w=40`                              |
-+------------+-------------------------------------------------------------------------------+
++------------------+-------------------------------------------------------------------------------+
+| Algorithm        |                                Hyperparameters                                |
++============+=====================================================================================+
+| ItemKNNScorer    | :math:`k_\mathrm{max}=20, k_\mathrm{min}=2, s_\mathrm{min}=1.0\times 10^{-3}` |
++------------------+-------------------------------------------------------------------------------+
+| ImplicitMFScorer | :math:`k=50, \lambda_u=0.1, \lambda_i=0.1, w=40`                              |
++------------------+-------------------------------------------------------------------------------+
 
 If you use a top-N implementation other than the default
-:py:class:`~lenskit.basic.TopNRanker`, or reconfigure its candidate
-selector, also clearly document that.
+:py:class:`~lenskit.basic.TopNRanker`, or reconfigure its candidate selector,
+also clearly document that.
 
 Reporting Experimental Setup
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -74,12 +66,13 @@ without modification, report:
 
 - The splitting function used.
 - The number of partitions or test samples.
+- The timestamp or fraction used for temporal splitting.
 - The number of users per sample (when using
-  :py:class:`~lenskit.splitting.sample_users`) or records per sample (when using
-  :py:class:`~lenskit.splitting.sample_records`).
+  :py:func:`~lenskit.splitting.sample_users`) or records per sample (when using
+  :py:func:`~lenskit.splitting.sample_records`).
 - When using a user-based strategy (either
-  :py:class:`~lenskit.splitting.crossfold_users` or
-  :py:class:`~lenskit.splitting.sample_users`), the test rating selection
+  :py:func:`~lenskit.splitting.crossfold_users` or
+  :py:func:`~lenskit.splitting.sample_users`), the test rating selection
   strategy (class and parameters), e.g. ``SampleN(5)``.
 
 Any additional pre-processing (e.g. filtering ratings) should also be clearly
@@ -92,29 +85,23 @@ automated reporting is not practical.
 Reporting Metrics
 ~~~~~~~~~~~~~~~~~
 
-Reporting the metrics themelves is relatively straightforward.  The
-:py:meth:`lenskit.topn.RecListAnalysis.compute` method will return a data frame
-with a metric score for each list.  Group those by algorithm and report the
-resulting scores (typically with a mean).
+Reporting the metrics themselves is relatively straightforward.  The
+:py:meth:`lenskit.bulk.RunAnalysis.measure` method returns a results object
+contianing the metrics for individual lists, the global metrics, and easy access
+(through :meth:`~lenskit.bulk.RunAnalysis.list_summary`) to summary statistics
+of per-list metrics, optionally grouped by keys such as model name.
 
-The following code will produce a table of algorithm scores for hit rate, nDCG
-and MRR, assuming that your algorithm identifier is in a column named ``algo``
+The following code will produce a table of algorithm scores for hit rate, NDCG
+and MRR, assuming that your algorithm identifier is in a column named ``model``
 and the target list length is in ``N``::
 
-    rla = RecListAnalysis()
-    rla.add_metric(topn.hit, k=N)
-    rla.add_metric(topn.ndcg, k=N)
-    rla.add_metric(topn.recip_rank, k=N)
-    scores = rla.compute(recs, test, include_missing=True)
-    # empty lists will have na scores
-    scores.fillna(0, inplace=True)
+    rla = RunAnalysis()
+    rla.add_metric(Hit(k=N))
+    rla.add_metric(NDCG(k=N))
+    rla.add_metric(RecipRank(k=N))
+    results = rla.measure(recs, test)
     # group by agorithm
-    algo_scores = scores.groupby('algorithm')[['hit', 'ndcg', 'recip_rank']].mean()
-    algo_scores = algo_scores.rename(columns={
-        'hit': 'HR',
-        'ndcg': 'nDCG',
-        'recip_rank': 'MRR'
-    })
+    model_metrics = results.list_summary('model')
 
 You can then use :py:meth:`pandas.DataFrame.to_latex` to convert ``algo_scores``
 to a LaTeX table to include in your paper.
