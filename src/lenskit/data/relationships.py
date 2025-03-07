@@ -322,7 +322,7 @@ class MatrixRelationshipSet(RelationshipSet):
         nnz = self._table.num_rows
 
         colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
-        if attribute is None:
+        if attribute is None or (attribute == "count" and "count" not in self._table.column_names):
             values = np.ones(nnz, dtype=np.float32)
         else:
             values = self._table.column(attribute).to_numpy()
@@ -365,7 +365,7 @@ class MatrixRelationshipSet(RelationshipSet):
 
         colinds = self._table.column(num_col_name(self.col_type)).to_numpy()
         colinds = torch.tensor(colinds)
-        if attribute is None:
+        if attribute is None or (attribute == "count" and "count" not in self._table.column_names):
             values = torch.ones(nnz, dtype=torch.float32)
         elif pa.types.is_timestamp(self._table.field(attribute).type):
             vals = self._table.column(attribute)

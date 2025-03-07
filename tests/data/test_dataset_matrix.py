@@ -352,3 +352,13 @@ def test_matrix_rows_by_num(rng: np.random.Generator, ml_ratings: pd.DataFrame, 
         timestamps = row.field("timestamp")
         assert timestamps is not None
         assert np.all(timestamps == urows["timestamp"])
+
+
+def test_count_synthetic(ml_ds: Dataset):
+    """
+    Test that interaction matrices synthesize a count attribute.
+    """
+
+    matrix = ml_ds.interactions().matrix().scipy("count")
+    assert isinstance(matrix, sps.csr_array)
+    assert np.all(matrix.data == 1.0)
