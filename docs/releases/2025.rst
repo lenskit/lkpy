@@ -87,6 +87,8 @@ however, documented here.
 * Bias is no longer optional for :class:`~lenksit.als.BiasedMFScorer` and
   :class:`~lenskit.funksvd.FunkSVD`; both are inherently biased models, and
   FunkSVD is not commonly used.
+* :class:`lenskit.hpf.HPF` no longer uses ratings as synthetic counts by
+  default.
 
 Bug Fixes
 ~~~~~~~~~
