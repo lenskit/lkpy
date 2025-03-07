@@ -6,6 +6,8 @@
 
 """
 Support for parallelism with Ray.
+
+.. stability:: experimental
 """
 
 from __future__ import annotations
@@ -136,6 +138,13 @@ def inference_worker_cpus() -> int:
 
 def training_worker_cpus() -> int:
     return _worker_parallel.total_threads
+
+
+def ray_active() -> bool:
+    """
+    Query whether Ray is active.
+    """
+    return RAY_AVAILABLE and ray.is_initialized()
 
 
 def is_ray_worker() -> bool:
