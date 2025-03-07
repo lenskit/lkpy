@@ -6,8 +6,6 @@
 
 """
 Support for parallelism with Ray.
-
-.. stability:: experimental
 """
 
 from __future__ import annotations
@@ -202,7 +200,7 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         else:
             _log.warning(f"cluster has no resource {LK_PROCESS_SLOT}")
 
-        worker = ray.remote(ray_invoke_worker)
+        worker = ray.remote(_ray_invoke_worker)
         self.action = worker.options(num_cpus=inference_worker_cpus(), resources=slots)
 
     def map(self, tasks: Iterable[A]) -> Iterator[R]:
@@ -219,7 +217,7 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
         del self.model_ref
 
 
-def ray_invoke_worker(func: Callable[[M, A], R], model: M, args: list[A]) -> list[R]:
+def _ray_invoke_worker(func: Callable[[M, A], R], model: M, args: list[A]) -> list[R]:
     log_cfg = pickle.loads(base64.decodebytes(os.environb[b"LK_LOG_CONFIG"]))
     ensure_parallel_init()
     with WorkerContext(log_cfg) as ctx:

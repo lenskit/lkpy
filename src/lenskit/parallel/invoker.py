@@ -102,6 +102,9 @@ class ModelOpInvoker(ABC, Generic[A, R]):
         pass
 
     def shutdown(self):
+        """
+        Shut down this invoker.
+        """
         pass
 
     def __enter__(self):
