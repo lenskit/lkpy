@@ -8,7 +8,7 @@
 Logging, progress, and resource records.
 """
 
-from ._console import console
+from ._console import console, stdout_console
 from ._proxy import get_logger
 from .config import LoggingConfig, basic_logging, notebook_logging
 from .progress import Progress, item_progress, set_progress_impl
@@ -27,5 +27,6 @@ __all__ = [
     "get_logger",
     "trace",
     "console",
+    "stdout_console",
     "Stopwatch",
 ]

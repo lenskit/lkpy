@@ -9,6 +9,7 @@ Console and related logging support
 """
 
 import atexit
+import sys
 from logging import Handler, LogRecord
 
 from rich.ansi import AnsiDecoder
@@ -49,8 +50,18 @@ def setup_console():
     if not console.is_terminal:
         return
 
-    _live = Live(console=console, transient=True, redirect_stdout=False)
+    _live = Live(console=console, transient=True, redirect_stdout=sys.stdout.isatty())
     _live.start()
+
+
+def stdout_console():
+    """
+    Get a console attached to ``stdout``.
+    """
+    if sys.stdout.isatty():
+        return console
+    else:
+        return Console(stderr=False)
 
 
 @atexit.register
