@@ -57,9 +57,9 @@ highlight_language = "python3"
 html_theme = "pydata_sphinx_theme"
 html_logo = "LKLogo2.png"
 if _parsed_ver.is_devrelease:
-    html_baseurl = "https://lkpy.lenskit.org/en/latest/"
+    html_baseurl = "https://lkpy.lenskit.org/latest/"
 else:
-    html_baseurl = "https://lkpy.lenskit.org/en/stable/"
+    html_baseurl = "https://lkpy.lenskit.org/stable/"
 html_css_files = [
     "css/custom.css",
 ]
