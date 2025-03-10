@@ -13,6 +13,8 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Mapping
 
+import pandas as pd
+
 from lenskit.data import ID, GenericKey, ItemList, ItemListCollection, UserIDKey
 from lenskit.pipeline import Pipeline
 
@@ -24,7 +26,7 @@ __all__ = ["BatchPipelineRunner", "BatchResults", "InvocationSpec", "predict", "
 
 def predict(
     pipeline: Pipeline,
-    test: ItemListCollection[GenericKey] | Mapping[ID, ItemList],
+    test: ItemListCollection[GenericKey] | Mapping[ID, ItemList] | pd.DataFrame,
     *,
     n_jobs: int | None = None,
 ) -> ItemListCollection[GenericKey]:
@@ -49,7 +51,7 @@ def predict(
 
 def score(
     pipeline: Pipeline,
-    test: ItemListCollection[GenericKey] | Mapping[ID, ItemList],
+    test: ItemListCollection[GenericKey] | Mapping[ID, ItemList] | pd.DataFrame,
     *,
     n_jobs: int | None = None,
 ) -> ItemListCollection[GenericKey]:
@@ -74,7 +76,10 @@ def score(
 
 def recommend(
     pipeline: Pipeline,
-    users: ItemListCollection[GenericKey] | Mapping[ID, ItemList] | Iterable[ID | GenericKey],
+    users: ItemListCollection[GenericKey]
+    | Mapping[ID, ItemList]
+    | Iterable[ID | GenericKey]
+    | pd.DataFrame,
     n: int | None = None,
     *,
     n_jobs: int | None = None,

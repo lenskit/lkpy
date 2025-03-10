@@ -10,6 +10,8 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any, Literal, Mapping, TypeAlias
 
+import pandas as pd
+
 from lenskit.data import ID, GenericKey, ItemList, ItemListCollection, UserIDKey
 from lenskit.logging import Stopwatch, get_logger, item_progress
 from lenskit.parallel import invoker
@@ -115,7 +117,8 @@ class BatchPipelineRunner:
         pipeline: Pipeline,
         test_data: ItemListCollection[GenericKey]
         | Mapping[ID, ItemList]
-        | Iterable[ID | GenericKey],
+        | Iterable[ID | GenericKey]
+        | pd.DataFrame,
     ) -> BatchResults:
         """
         Run the pipeline and return its results.
@@ -131,6 +134,9 @@ class BatchPipelineRunner:
             component output names to inner dictionaries of result data.  These
             inner dictionaries map user IDs to
         """
+        if isinstance(test_data, pd.DataFrame):
+            test_data = ItemListCollection.from_df(test_data)
+
         if isinstance(test_data, ItemListCollection):
             test_iter = test_data.items()
             key_type = test_data.key_type
