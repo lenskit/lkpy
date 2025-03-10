@@ -10,12 +10,13 @@ from typing import Generator, NamedTuple
 import numpy as np
 import pandas as pd
 
-from pytest import approx, fixture, mark
+from pytest import approx, fixture, mark, warns
 
 from lenskit.basic import BiasScorer, PopScorer
 from lenskit.batch import BatchPipelineRunner, predict, recommend, score
 from lenskit.data import Dataset, ItemList, UserIDKey, from_interactions_df
 from lenskit.data.adapt import normalize_interactions_df
+from lenskit.diagnostics import DataWarning
 from lenskit.metrics import NDCG, RBP, RMSE, RunAnalysis
 from lenskit.pipeline import Pipeline, topn_pipeline
 from lenskit.splitting import SampleN, TTSplit, sample_users
@@ -137,13 +138,37 @@ def test_bias_batch(ml_split: TTSplit, ncpus: int | None):
 @mark.eval
 def test_pop_batch_recommend(ml_split: TTSplit, ncpus: int | None):
     algo = PopScorer()
-    pipeline = topn_pipeline(algo, predicts_ratings=True, n=20)
+    pipeline = topn_pipeline(algo, n=20)
     pipeline.train(ml_split.train)
 
     runner = BatchPipelineRunner(n_jobs=ncpus)
     runner.recommend()
 
     results = runner.run(pipeline, ml_split.test)
+
+    recs = results.output("recommendations")
+    ra = RunAnalysis()
+    ra.add_metric(NDCG())
+    ra.add_metric(RBP())
+    rec_acc = ra.measure(recs, ml_split.test)
+    ras = rec_acc.list_summary()
+    print(ras)
+
+    assert ras.loc["RBP", "mean"] > 0
+    assert ras.loc["NDCG", "mean"] > 0
+
+
+@mark.eval
+def test_bias_df(ml_split: TTSplit):
+    algo = BiasScorer()
+    pipeline = topn_pipeline(algo, predicts_ratings=True, n=20)
+    pipeline.train(ml_split.train)
+
+    runner = BatchPipelineRunner()
+    runner.recommend()
+
+    with warns(DataWarning):
+        results = runner.run(pipeline, ml_split.test.to_df())
 
     recs = results.output("recommendations")
     ra = RunAnalysis()

@@ -132,5 +132,5 @@ def demo_recs() -> DemoRecs:
     pipe = builder.build()
     pipe.train(split.train)
 
-    recs = recommend(pipe, list(split.test.keys()), 500, n_jobs=1, rng=rng)
+    recs = recommend(pipe, list(split.test.keys()), 500, n_jobs=1)
     return DemoRecs(split, recs)

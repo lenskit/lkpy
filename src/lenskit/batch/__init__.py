@@ -10,7 +10,10 @@ Batch-run recommendation pipelines for evaluation.
 
 from __future__ import annotations
 
-from typing import Mapping, Sequence
+from collections.abc import Iterable
+from typing import Mapping
+
+import pandas as pd
 
 from lenskit.data import ID, GenericKey, ItemList, ItemListCollection, UserIDKey
 from lenskit.pipeline import Pipeline
@@ -23,14 +26,18 @@ __all__ = ["BatchPipelineRunner", "BatchResults", "InvocationSpec", "predict", "
 
 def predict(
     pipeline: Pipeline,
-    test: ItemListCollection[GenericKey] | Mapping[ID, ItemList],
+    test: ItemListCollection[GenericKey] | Mapping[ID, ItemList] | pd.DataFrame,
     *,
     n_jobs: int | None = None,
-    **kwargs,
 ) -> ItemListCollection[GenericKey]:
     """
     Convenience function to batch-generate rating predictions (or other per-item
     scores) from a pipeline.  This is a batch version of :func:`lenskit.predict`.
+
+    .. note::
+
+        If ``test`` is just a sequence of IDs, this method will still work, but
+        it will score _all candidate items_ for each of the IDs.
 
     Stability:
         Caller
@@ -44,14 +51,18 @@ def predict(
 
 def score(
     pipeline: Pipeline,
-    test: ItemListCollection[GenericKey] | Mapping[ID, ItemList],
+    test: ItemListCollection[GenericKey] | Mapping[ID, ItemList] | pd.DataFrame,
     *,
     n_jobs: int | None = None,
-    **kwargs,
 ) -> ItemListCollection[GenericKey]:
     """
     Convenience function to batch-generate personalized scores from a pipeline.
     This is a batch version of :func:`lenskit.predict`.
+
+    .. note::
+
+        If ``test`` is just a sequence of IDs, this method will still work, but
+        it will score _all candidate items_ for each of the IDs.
 
     Stability:
         Caller
@@ -65,12 +76,13 @@ def score(
 
 def recommend(
     pipeline: Pipeline,
-    users: Sequence[ID | UserIDKey],
+    users: ItemListCollection[GenericKey]
+    | Mapping[ID, ItemList]
+    | Iterable[ID | GenericKey]
+    | pd.DataFrame,
     n: int | None = None,
-    candidates=None,
     *,
     n_jobs: int | None = None,
-    **kwargs,
 ) -> ItemListCollection[UserIDKey]:
     """
     Convenience function to batch-generate recommendations from a pipeline. This
