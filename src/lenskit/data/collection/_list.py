@@ -84,7 +84,12 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
         return ilc
 
     @classmethod
-    def from_df(cls, df: pd.DataFrame, key: type[K] | Sequence[Column] | Column, *others: Column):
+    def from_df(
+        cls,
+        df: pd.DataFrame,
+        key: type[K] | Sequence[Column] | Column | None = None,
+        *others: Column,
+    ):
         """
         Create an item list collection from a data frame.
 
@@ -107,7 +112,12 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
             fields = key_fields(key)
             columns = fields + others
         else:
-            if isinstance(key, Column):
+            if key is None:
+                warnings.warn(
+                    "no key specified, inferring from _id columns", DataWarning, stacklevel=2
+                )
+                key = [n for n in df.columns.names if n.endswith("_id") and n != "item_id"]
+            elif isinstance(key, Column):
                 key = [key]
             columns = tuple(key) + others
             fields = [column_name(c) for c in key]

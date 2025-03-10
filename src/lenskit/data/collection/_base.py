@@ -118,7 +118,7 @@ class ItemListCollection(Generic[KL], ABC):
 
     @staticmethod
     def from_df(
-        df: pd.DataFrame, key: type[K] | Sequence[Column] | Column, *others: Column
+        df: pd.DataFrame, key: type[K] | Sequence[Column] | Column | None = None, *others: Column
     ) -> MutableItemListCollection[Any]:
         """
         Create an item list collection from a data frame.
@@ -286,10 +286,6 @@ class ItemListCollection(Generic[KL], ABC):
             return ilc
         elif layout == "flat":
             tbl = dataset.read_pandas()
-
-            if key is None:
-                warnings.warn("no key specified, inferring from _id columns", DataWarning)
-                key = [n for n in tbl.column_names if n.endswith("_id") and n != "item_id"]
 
             return cls.from_df(tbl.to_pandas(), key)
         else:  # pragma: nocover
