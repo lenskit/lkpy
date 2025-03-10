@@ -25,6 +25,7 @@ from lenskit.logging import get_logger
 
 from . import config
 from ._impl import Pipeline
+from .cache import PipelineCache
 from .components import (  # type: ignore # noqa: F401
     Component,
     ComponentConstructor,
@@ -687,18 +688,25 @@ class PipelineBuilder:
         """
         return self.add_component(name, fallback_on_none, primary=primary, fallback=fallback)
 
-    def build(self) -> Pipeline:
+    def build(self, cache: PipelineCache | None = None) -> Pipeline:
         """
         Build the pipeline.
+
+        Args:
+            cache:
+                The pipeline cache to use.
         """
         config = self.build_config()
-        return Pipeline(config, [self._instantiate(n) for n in self._nodes.values()])
+        return Pipeline(config, [self._instantiate(n, cache) for n in self._nodes.values()])
 
-    def _instantiate(self, node: Node[ND]) -> Node[ND]:
+    def _instantiate(self, node: Node[ND], cache: PipelineCache | None = None) -> Node[ND]:
         match node:
             case ComponentConstructorNode(name, constructor, config):
-                _log.debug("instantiating component", component=constructor)
-                instance = constructor(config)
+                if cache is None:
+                    _log.debug("instantiating component", component=constructor)
+                    instance = constructor(config)
+                else:
+                    instance = cache.get_instance(constructor, config)
                 return ComponentInstanceNode(name, instance)
             case _:
                 return node

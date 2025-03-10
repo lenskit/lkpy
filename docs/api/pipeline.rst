@@ -19,6 +19,7 @@ Pipeline Classes
     ~lenskit.pipeline.PipelineState
     ~lenskit.pipeline.Node
     ~lenskit.pipeline.Lazy
+    ~lenskit.pipeline.PipelineCache
 
 Component Interface
 -------------------
