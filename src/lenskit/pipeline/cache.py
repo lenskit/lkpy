@@ -22,7 +22,7 @@ _log = get_logger(__name__)
 class PipelineCacheKey:
     ctor_name: str
     ctor: Callable[..., Any] = field(hash=False)
-    config: Mapping[str, JsonValue] | None
+    config: Mapping[str, JsonValue] | None = field(hash=False, default=None)
 
 
 class PipelineCache:
