@@ -6,15 +6,14 @@
 
 # pyright: strict
 from dataclasses import dataclass
-from typing import Literal
 
 from pydantic import BaseModel
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 
-from pytest import mark, raises
+from pytest import mark
 
-from lenskit.diagnostics import PipelineError
-from lenskit.pipeline import Component, Pipeline, PipelineBuilder
+from lenskit.pipeline import Component, PipelineBuilder
+from lenskit.pipeline.cache import PipelineCache
 from lenskit.pipeline.nodes import ComponentInstanceNode
 
 
@@ -79,8 +78,9 @@ def test_config_reuse_only(prefixer: type[Component]):
     msg = build.create_input("msg", str)
     build.add_component("prefix", prefixer, ccls(prefix="hello "), msg=msg)
 
-    p1 = build.build()
-    p2 = build.build()
+    cache = PipelineCache()
+    p1 = build.build(cache)
+    p2 = build.build(cache)
 
     n1 = p1.node("prefix")
     assert isinstance(n1, ComponentInstanceNode)
@@ -105,10 +105,12 @@ def test_config_reuse_one(prefixer: type[Component]):
     pm = build.add_component("prefix", prefixer, ccls(prefix="hello "), msg=msg)
     build.add_component("suffix", Suffixer, {"suffix": " for now"}, msg=pm)
 
-    p1 = build.build()
+    cache = PipelineCache()
+
+    p1 = build.build(cache)
 
     build.replace_component("prefix", prefixer, ccls(prefix="goodbye "))
-    p2 = build.build()
+    p2 = build.build(cache)
 
     n1 = p1.node("prefix")
     assert isinstance(n1, ComponentInstanceNode)
