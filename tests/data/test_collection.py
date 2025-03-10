@@ -174,6 +174,24 @@ def test_from_df(rng, ml_ratings: pd.DataFrame):
     assert tot == len(ml_ratings)
 
 
+def test_from_df_auto(rng, ml_ratings: pd.DataFrame):
+    ml_ratings = ml_ratings.rename(columns={"user": "user_id", "item": "item_id"})
+    with warns(DataWarning, match="inferring"):
+        ilc = ItemListCollection.from_df(ml_ratings)
+
+    assert len(ilc) == ml_ratings["user_id"].nunique()
+    assert set(k.user_id for k in ilc.keys()) == set(ml_ratings["user_id"])
+
+    for uid in rng.choice(ml_ratings["user_id"].unique(), 25):
+        items = ilc.lookup(user_id=uid)
+        udf = ml_ratings[ml_ratings["user_id"] == uid]
+        assert len(items) == len(udf)
+        assert np.all(np.unique(items.ids()) == np.unique(udf["item_id"]))
+
+    tot = sum(len(il) for il in ilc.lists())
+    assert tot == len(ml_ratings)
+
+
 def test_to_df():
     ilc = ItemListCollection.from_dict(
         {72: ItemList(["a"], scores=[1]), 82: ItemList(["a", "b", "c"], scores=[3, 4, 10])},
