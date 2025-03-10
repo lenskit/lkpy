@@ -116,7 +116,7 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
                 warnings.warn(
                     "no key specified, inferring from _id columns", DataWarning, stacklevel=2
                 )
-                key = [n for n in df.columns.names if n.endswith("_id") and n != "item_id"]
+                key = [n for n in df.columns if n.endswith("_id") and n != "item_id"]
             elif isinstance(key, Column):
                 key = [key]
             columns = tuple(key) + others
