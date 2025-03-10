@@ -6,8 +6,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Literal, Mapping, TypeAlias
+from typing import Any, Literal, Mapping, TypeAlias
 
 from lenskit.data import ID, GenericKey, ItemList, ItemListCollection, UserIDKey
 from lenskit.logging import Stopwatch, get_logger, item_progress
