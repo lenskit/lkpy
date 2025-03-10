@@ -6,11 +6,14 @@ import pandas as pd
 import pyarrow as pa
 
 from lenskit.diagnostics import DataWarning
+from lenskit.logging import get_logger
 
 from ..adapt import Column, column_name, normalize_columns
 from ..items import ItemList
 from ._base import ItemListCollection, MutableItemListCollection
 from ._keys import ID, GenericKey, K, Ko, create_key_type, key_dict, key_fields
+
+_log = get_logger(__name__)
 
 
 class ListILC(MutableItemListCollection[K], Generic[K]):
@@ -122,6 +125,8 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
             columns = tuple(key) + others
             fields = [column_name(c) for c in key]
             key = create_key_type(*fields)  # type: ignore
+
+        _log.debug("converting ILC from dataframe", key=key, rows=len(df))
 
         df = normalize_columns(df, *columns)
         ilc = cls(key)  # type: ignore
