@@ -22,6 +22,9 @@ _log = get_logger(__name__)
 class PipelineCacheKey:
     ctor_name: str
     ctor: Callable[..., Any] = field(hash=False)
+
+    # this is not hashed because it's a dict, we can just do the slow ==.
+    # there aren't that many of them.
     config: Mapping[str, JsonValue] | None = field(hash=False, default=None)
 
 
