@@ -17,7 +17,15 @@ information on how to upgrade your code.
 
 Some small quality-of-life improvements (and removing invalid API compat).
 
-- Support auto-detecting keys in :meth:`lenskit.data.ItemListCollection.from_df` (:pr:`659`)
+- Allow a Pandas data frame to be passed as the test data to the batch recommender (:pr:`660`).
+
+    .. note::
+
+        This removes extra keyword arguments from the convenience
+        ``batch.recommend``, etc. functions that were leftovers from LensKit
+        0.14 and no longder did anything.
+
+- Support auto-detecting keys in :meth:`lenskit.data.ItemListCollection.from_df` (:pr:`659`).
 
 
 .. _2025.1:
