@@ -6,12 +6,11 @@
 
 # pyright: strict
 from dataclasses import dataclass
-from typing import Literal
 
-from pytest import mark, raises
+from pytest import raises
 
 from lenskit.diagnostics import PipelineError
-from lenskit.pipeline import Component, Pipeline, PipelineBuilder
+from lenskit.pipeline import Component, PipelineBuilder
 from lenskit.pipeline.nodes import ComponentInstanceNode
 
 
