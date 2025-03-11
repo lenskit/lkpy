@@ -262,6 +262,18 @@ class PipelineBuilder:
         """
         self._default = node.name if isinstance(node, Node) else node
 
+    def remove_alias(self, alias: str, *, exist_ok: bool = False):
+        """
+        Remove an alias from the builder.
+        """
+        try:
+            del self._aliases[alias]
+        except KeyError as e:
+            if exist_ok:
+                pass
+            else:
+                raise e
+
     def alias(self, alias: str, node: Node[Any] | str) -> None:
         """
         Create an alias for a node.  After aliasing, the node can be retrieved
