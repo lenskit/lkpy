@@ -37,6 +37,9 @@ dependencies = [
   "prettytable ~=3.14",
 ]
 
+[dependency-groups]
+cpu = ["pytorch ~=2.4"]
+
 [project.optional-dependencies]
 sklearn = ["scikit-learn ~=1.2"]
 funksvd = ["numba >= 0.56"]
@@ -91,7 +94,9 @@ url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
 [tool.uv.sources]
-torch = [{ index = "pytorch-cpu" }]
+torch = [
+  { index = "pytorch-cpu", group = "cpu" },
+]
 
 # dev tool configuration
 [tool.coverage.run]
