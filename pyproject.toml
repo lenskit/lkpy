@@ -38,7 +38,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-cpu = ["pytorch ~=2.4"]
+cpu = ["torch ~=2.4"]
 
 [project.optional-dependencies]
 sklearn = ["scikit-learn ~=1.2"]
