@@ -18,6 +18,7 @@ from .cache import PipelineCache
 from .common import RecPipelineBuilder, predict_pipeline, topn_pipeline
 from .components import (
     Component,
+    ComponentConstructor,
     PipelineFunction,
 )
 from .config import PipelineConfig
@@ -37,6 +38,7 @@ __all__ = [
     "PipelineConfig",
     "Lazy",
     "Component",
+    "ComponentConstructor",
     "PipelineCache",
     "RecPipelineBuilder",
     "topn_pipeline",
