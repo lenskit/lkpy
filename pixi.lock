@@ -17274,8 +17274,8 @@ packages:
   timestamp: 1729655345825
 - pypi: .
   name: lenskit
-  version: 2025.1.2.dev25+gc11cdc31.d20250311
-  sha256: bc65c6d7e733cad4e74488683e297d279797a5c13801489d180ed5370fbc622a
+  version: 2025.1.2.dev28+g4e50da72.d20250311
+  sha256: 3bc89faf26ecb3ed752a4bd2d3623a1bbeee08f5271d95dfcf513a77213eed41
   requires_dist:
   - click~=8.1
   - humanize~=4.2
@@ -17298,13 +17298,6 @@ packages:
   - ipywidgets~=8.0 ; extra == 'notebook'
   - ray~=2.42 ; extra == 'ray'
   - scikit-learn~=1.2 ; extra == 'sklearn'
-  - hypothesis>=6.16 ; extra == 'test'
-  - pyprojroot==0.3.* ; extra == 'test'
-  - pytest-benchmark==4.* ; extra == 'test'
-  - pytest-cov>=2.12 ; extra == 'test'
-  - pytest-doctestplus>=1.2.1,<2 ; extra == 'test'
-  - pytest-repeat>=0.9 ; extra == 'test'
-  - pytest>=8.2,<9 ; extra == 'test'
   requires_python: '>=3.11'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/linux-64/lerc-4.0.0-h27087fc_0.tar.bz2
