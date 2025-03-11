@@ -90,18 +90,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: "🐍 Set up Python"
-        id: install-python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '${{matrix.python}}'
       - name: "🕶️ Set up uv"
-        run: |
-          pip install -U 'uv>=0.1.15'
+        uses: astral/setup-uv@v5
+        with:
+          version: latest
+          python-version: '${{matrix.python}}'
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON ".[test]"
+          uv sync --group=cpu
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -177,18 +174,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: "🐍 Set up Python"
-        id: install-python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
       - name: "🕶️ Set up uv"
-        run: |
-          pip install -U 'uv>=0.1.15'
+        uses: astral/setup-uv@v5
+        with:
+          version: latest
+          python-version: '3.11'
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON ".[test]" --resolution=lowest-direct
+          uv sync --group=cpu --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -268,18 +262,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: "🐍 Set up Python"
-        id: install-python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
       - name: "🕶️ Set up uv"
-        run: |
-          pip install -U 'uv>=0.1.15'
+        uses: astral/setup-uv@v5
+        with:
+          version: latest
+          python-version: '3.11'
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON ".[test,sklearn]" --resolution=lowest-direct
+          uv sync --group=cpu --extra=sklearn --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -358,18 +349,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: "🐍 Set up Python"
-        id: install-python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
       - name: "🕶️ Set up uv"
-        run: |
-          pip install -U 'uv>=0.1.15'
+        uses: astral/setup-uv@v5
+        with:
+          version: latest
+          python-version: '3.11'
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON ".[test,funksvd]" --resolution=lowest-direct
+          uv sync --group=cpu --extra=funksvd --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -448,18 +436,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: "🐍 Set up Python"
-        id: install-python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
       - name: "🕶️ Set up uv"
-        run: |
-          pip install -U 'uv>=0.1.15'
+        uses: astral/setup-uv@v5
+        with:
+          version: latest
+          python-version: '3.11'
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv pip install --python $PYTHON ".[test,implicit]" --resolution=lowest-direct
+          uv sync --group=cpu --extra=implicit --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
