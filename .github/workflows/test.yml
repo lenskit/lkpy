@@ -91,7 +91,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: "🕶️ Set up uv"
-        uses: astral/setup-uv@v5
+        uses: astral-sh/setup-uv@v5
         with:
           version: latest
           python-version: '${{matrix.python}}'
@@ -175,7 +175,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: "🕶️ Set up uv"
-        uses: astral/setup-uv@v5
+        uses: astral-sh/setup-uv@v5
         with:
           version: latest
           python-version: '3.11'
@@ -263,7 +263,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: "🕶️ Set up uv"
-        uses: astral/setup-uv@v5
+        uses: astral-sh/setup-uv@v5
         with:
           version: latest
           python-version: '3.11'
@@ -350,7 +350,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: "🕶️ Set up uv"
-        uses: astral/setup-uv@v5
+        uses: astral-sh/setup-uv@v5
         with:
           version: latest
           python-version: '3.11'
@@ -437,7 +437,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: "🕶️ Set up uv"
-        uses: astral/setup-uv@v5
+        uses: astral-sh/setup-uv@v5
         with:
           version: latest
           python-version: '3.11'

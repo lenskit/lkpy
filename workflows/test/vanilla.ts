@@ -35,7 +35,7 @@ export function vanillaSetup(options: VanillaTestOpts): WorkflowStep[] {
   return [
     {
       name: "🕶️ Set up uv",
-      uses: "astral/setup-uv@v5",
+      uses: "astral-sh/setup-uv@v5",
       with: {
         version: "latest",
         "python-version": pythonVersionString(options),
