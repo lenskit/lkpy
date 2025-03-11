@@ -17274,8 +17274,8 @@ packages:
   timestamp: 1729655345825
 - pypi: .
   name: lenskit
-  version: 2025.1.2.dev24+g874979ce.d20250311
-  sha256: 8a60802668b729407225144cfc43d4b46122f49821b5a5b5c15ef7842667f991
+  version: 2025.1.2.dev25+gc11cdc31.d20250311
+  sha256: bc65c6d7e733cad4e74488683e297d279797a5c13801489d180ed5370fbc622a
   requires_dist:
   - click~=8.1
   - humanize~=4.2
