@@ -17274,8 +17274,8 @@ packages:
   timestamp: 1729655345825
 - pypi: .
   name: lenskit
-  version: 2025.1.2.dev32+gdeb8254f.d20250312
-  sha256: b78d98e0f3803a2f5fbfa5f8ee5170f5b58bc7aad444604b06c499e2a66217f2
+  version: 2025.1.2.dev34+g0ef23280.d20250312
+  sha256: 6c574055733a9cc71dc8b8a51475b1625dfe6dc63b48fac632ad68c9251ca5af
   requires_dist:
   - click~=8.1
   - humanize~=4.2
@@ -17292,6 +17292,7 @@ packages:
   - threadpoolctl>=3.0
   - torch~=2.4
   - typing-extensions~=4.12
+  - torch~=2.4 ; extra == 'cpu'
   - numba>=0.56 ; extra == 'funksvd'
   - hpfrec~=0.2.10 ; extra == 'hpf'
   - implicit>=0.7.2 ; extra == 'implicit'

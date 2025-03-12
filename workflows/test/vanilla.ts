@@ -21,7 +21,7 @@ export function isVanillaSpec(spec: TestJobSpec): spec is VanillaTestOpts {
 }
 
 export function vanillaSetup(options: VanillaTestOpts): WorkflowStep[] {
-  let sync = "uv sync";
+  let sync = "uv sync --extra=cpu";
   if (options.extras) {
     for (const extra of options.extras) {
       sync += ` --extra=${extra}`;
@@ -30,8 +30,6 @@ export function vanillaSetup(options: VanillaTestOpts): WorkflowStep[] {
 
   if (options.dep_strategy == "minimum") {
     sync += " --resolution=lowest-direct";
-  } else {
-    sync += "  --group=cpu";
   }
 
   return [

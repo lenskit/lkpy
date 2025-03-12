@@ -38,7 +38,6 @@ dependencies = [
 ]
 
 [dependency-groups]
-cpu = ["torch ~=2.4"]
 # test deps — keep synchronized with pixi.toml
 test = [
   "pytest >=8.2,<9",
@@ -58,6 +57,7 @@ hpf = ["hpfrec ~=0.2.10"]
 implicit = ["implicit >=0.7.2"]
 notebook = ["ipywidgets ~=8.0"]
 ray = ["ray ~=2.42"]
+cpu = ["torch ~=2.4"]
 
 [project.urls]
 homepage = "https://lenskit.org"
@@ -95,7 +95,7 @@ url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
 [tool.uv.sources]
-torch = [{ index = "pytorch-cpu", group = "cpu" }]
+torch = [{ index = "pytorch-cpu", extra = "cpu" }]
 
 # dev tool configuration
 [tool.coverage.run]
