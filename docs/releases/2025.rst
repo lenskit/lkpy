@@ -10,10 +10,10 @@ information on how to upgrade your code.
 .. _SPEC0: https://scientific-python.org/specs/spec-0000/
 
 
-.. _2025.1.2
+.. _2025.2.0:
 
-2025.1.2 (in progress)
-----------------------
+2025.2.0
+--------
 
 Some small quality-of-life improvements (and removing invalid API compat).
 
