@@ -17,6 +17,10 @@ information on how to upgrade your code.
 
 Some small quality-of-life improvements (and removing invalid API compat).
 
+-   Add :class:`lenskit.pipeline.PipelineCache` to share components between pipelines (:pr:`605`).
+
+-   Only warn once for users without test data in bulk analysis (:pr:`664`, :issue:`663`).
+
 -   Allow a Pandas data frame to be passed as the test data to the batch recommender (:pr:`660`).
 
     .. note::
