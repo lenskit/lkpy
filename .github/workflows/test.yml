@@ -98,7 +98,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv sync --group=cpu
+          uv sync  --group=cpu
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -182,7 +182,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv sync --group=cpu --resolution=lowest-direct
+          uv sync --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -270,7 +270,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv sync --group=cpu --extra=sklearn --resolution=lowest-direct
+          uv sync --extra=sklearn --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -357,7 +357,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv sync --group=cpu --extra=funksvd --resolution=lowest-direct
+          uv sync --extra=funksvd --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
@@ -444,7 +444,7 @@ jobs:
       - name: "📦 Set up Python dependencies"
         id: install-deps
         run: |
-          uv sync --group=cpu --extra=implicit --resolution=lowest-direct
+          uv sync --extra=implicit --resolution=lowest-direct
         shell: bash
         env:
           PYTHON: '${{steps.install-python.outputs.python-path}}'
