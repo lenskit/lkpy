@@ -250,13 +250,14 @@ class RunAnalysis:
 
         n = len(outputs)
         _log.info("computing %d listwise metrics for %d output lists", len(lms), n)
+        no_test_count = 0
         with item_progress("Measuring", n) as pb:
             for i, (key, out) in enumerate(outputs):
                 list_test = test.lookup_projected(key)
                 if out is None:
                     pass
                 elif list_test is None:
-                    _log.warning("list %s: no test items", key)
+                    no_test_count += 1
                 else:
                     l_row: list[float | None] = []
                     for m in lms:
@@ -271,6 +272,9 @@ class RunAnalysis:
                         l_row.append(mv)
                     list_results.iloc[i] = l_row  # type: ignore
                 pb.update()
+
+        if no_test_count:
+            _log.warning("could not find test data for %d lists", no_test_count)
 
         _log.info("computing %d global metrics for %d output lists", len(gms), n)
         global_results = pd.Series(
