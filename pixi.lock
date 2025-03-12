@@ -17274,8 +17274,8 @@ packages:
   timestamp: 1729655345825
 - pypi: .
   name: lenskit
-  version: 2025.1.2.dev31+gf932ce0e
-  sha256: ef4c69ab076dc94ee7614500d1c6de4256766ae65a3033d04a88b2b048b5847e
+  version: 2025.1.2.dev32+gdeb8254f.d20250312
+  sha256: b78d98e0f3803a2f5fbfa5f8ee5170f5b58bc7aad444604b06c499e2a66217f2
   requires_dist:
   - click~=8.1
   - humanize~=4.2
@@ -17293,7 +17293,7 @@ packages:
   - torch~=2.4
   - typing-extensions~=4.12
   - numba>=0.56 ; extra == 'funksvd'
-  - hpfrec==0.2.* ; extra == 'hpf'
+  - hpfrec~=0.2.10 ; extra == 'hpf'
   - implicit>=0.7.2 ; extra == 'implicit'
   - ipywidgets~=8.0 ; extra == 'notebook'
   - ray~=2.42 ; extra == 'ray'
