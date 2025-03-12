@@ -17274,8 +17274,8 @@ packages:
   timestamp: 1729655345825
 - pypi: .
   name: lenskit
-  version: 2025.1.2.dev25+gc11cdc31.d20250311
-  sha256: bc65c6d7e733cad4e74488683e297d279797a5c13801489d180ed5370fbc622a
+  version: 2025.1.2.dev34+g0ef23280.d20250312
+  sha256: 6c574055733a9cc71dc8b8a51475b1625dfe6dc63b48fac632ad68c9251ca5af
   requires_dist:
   - click~=8.1
   - humanize~=4.2
@@ -17292,19 +17292,13 @@ packages:
   - threadpoolctl>=3.0
   - torch~=2.4
   - typing-extensions~=4.12
+  - torch~=2.4 ; extra == 'cpu'
   - numba>=0.56 ; extra == 'funksvd'
-  - hpfrec==0.2.* ; extra == 'hpf'
+  - hpfrec~=0.2.10 ; extra == 'hpf'
   - implicit>=0.7.2 ; extra == 'implicit'
   - ipywidgets~=8.0 ; extra == 'notebook'
   - ray~=2.42 ; extra == 'ray'
   - scikit-learn~=1.2 ; extra == 'sklearn'
-  - hypothesis>=6.16 ; extra == 'test'
-  - pyprojroot==0.3.* ; extra == 'test'
-  - pytest-benchmark==4.* ; extra == 'test'
-  - pytest-cov>=2.12 ; extra == 'test'
-  - pytest-doctestplus>=1.2.1,<2 ; extra == 'test'
-  - pytest-repeat>=0.9 ; extra == 'test'
-  - pytest>=8.2,<9 ; extra == 'test'
   requires_python: '>=3.11'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/linux-64/lerc-4.0.0-h27087fc_0.tar.bz2

@@ -14,7 +14,6 @@ export interface VanillaTestOpts extends TestJobSpec {
   extras?: string[];
   req_files?: string[];
   dep_strategy?: "minimum" | "default";
-  pip_args?: string[];
 }
 
 export function isVanillaSpec(spec: TestJobSpec): spec is VanillaTestOpts {
@@ -22,39 +21,30 @@ export function isVanillaSpec(spec: TestJobSpec): spec is VanillaTestOpts {
 }
 
 export function vanillaSetup(options: VanillaTestOpts): WorkflowStep[] {
-  let pip = "uv pip install --python $PYTHON";
-  const extras = ["test"];
+  let sync = "uv sync --extra=cpu";
   if (options.extras) {
-    extras.push(...options.extras);
+    for (const extra of options.extras) {
+      sync += ` --extra=${extra}`;
+    }
   }
-  const exstr = extras.join(",");
-
-  pip += ` ".[${exstr}]"`;
 
   if (options.dep_strategy == "minimum") {
-    pip += " --resolution=lowest-direct";
-  }
-  if (options.pip_args) {
-    pip += " " + options.pip_args.join(" ");
+    sync += " --resolution=lowest-direct";
   }
 
   return [
     {
-      name: "🐍 Set up Python",
-      id: "install-python",
-      uses: "actions/setup-python@v5",
+      name: "🕶️ Set up uv",
+      uses: "astral-sh/setup-uv@v5",
       with: {
+        version: "latest",
         "python-version": pythonVersionString(options),
       },
     },
     {
-      name: "🕶️ Set up uv",
-      run: script("pip install -U 'uv>=0.1.15'"),
-    },
-    {
       name: "📦 Set up Python dependencies",
       id: "install-deps",
-      run: script(pip),
+      run: script(sync),
       shell: "bash",
       env: {
         PYTHON: "${{steps.install-python.outputs.python-path}}",
