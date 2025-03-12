@@ -43,11 +43,23 @@ const archive: WorkflowJob = {
     {
       name: "Check out doc site",
       uses: "actions/checkout@v4",
+      if: "github.event_name != 'release'",
       with: {
         repository: "lenskit/lenskit-docs",
         "ssh-key": "${{ secrets.DOC_DEPLOY_KEY }}",
         path: "doc-site",
         ref: "version/latest",
+      },
+    },
+    {
+      name: "Check out doc site (stable)",
+      uses: "actions/checkout@v4",
+      if: "github.event_name == 'release'",
+      with: {
+        repository: "lenskit/lenskit-docs",
+        "ssh-key": "${{ secrets.DOC_DEPLOY_KEY }}",
+        path: "doc-site",
+        ref: "version/stable",
       },
     },
     {
@@ -67,11 +79,18 @@ const archive: WorkflowJob = {
         "git config user.email 'docbot@lenskit.org'",
         "git add .",
         "git commit -m 'rebuild documentation'",
+        "git push",
       ),
     },
     {
-      name: "🛫 Push documentation",
-      run: "cd doc-site && git push",
+      name: "🏷️ Tag release documentation",
+      if: "github.event_name == 'release'",
+      run: script(
+        "cd doc-site",
+        "ver=$(echo ${{github.event.release.tag_name}} | sed -e 's/^v//'",
+        "git checkout -b version/$ver",
+        "git push origin version/$ver",
+      ),
     },
   ],
 };
@@ -133,6 +152,7 @@ export const workflow: Workflow = {
     },
     pull_request: {},
     workflow_dispatch: {},
+    release: { types: ["published"] },
   },
   concurrency: {
     group: "doc-${{github.ref}}",
