@@ -32,7 +32,7 @@ const build: WorkflowJob = {
   ],
 };
 
-const archive: WorkflowJob = {
+const publish: WorkflowJob = {
   name: "Archive documentation",
   "runs-on": "ubuntu-latest",
   needs: ["build"],
@@ -92,53 +92,19 @@ const archive: WorkflowJob = {
         "git push origin version/$ver",
       ),
     },
-  ],
-};
-
-const publish: WorkflowJob = {
-  name: "Publish documentation",
-  "runs-on": "ubuntu-latest",
-  needs: ["archive"],
-  if: "github.event_name == 'push' || github.event_name == 'release'",
-  environment: {
-    name: "docs",
-    url: "https://lkpy.lenskit.org",
-  },
-  steps: [
     {
-      name: "Check out doc site",
-      uses: "actions/checkout@v4",
+      name: "🧑🏼‍🎤 Activate documentation publication",
+      uses: "actions/script@v7",
       with: {
-        repository: "lenskit/lenskit-docs",
-        ref: "main",
-        "fetch-depth": 0,
-      },
-    },
-    {
-      name: "🌳 Fix local git branches",
-      run: script(`
-                for branch in $(git branch -r --list 'origin/version/*'); do
-                    git branch -t \${branch##origin/} $branch
-                done
-                git branch -a
-            `),
-    },
-    {
-      name: "🛸 Set up Deno",
-      uses: "denoland/setup-deno@v1",
-      with: { "deno-version": "~1.44" },
-    },
-    { name: "🧛🏼 Set up Just", uses: "extractions/setup-just@v2" },
-    { name: "Build site content", run: "just build" },
-    { name: "Setup Pages", uses: "actions/configure-pages@v5" },
-    {
-      name: "🕸️ Deploy to Netlify",
-      id: "deployment",
-      uses: "netlify/actions/cli@master",
-      with: { args: "deploy --dir=site --prod" },
-      env: {
-        NETLIFY_AUTH_TOKEN: "${{secrets.NETLIFY_AUTH_TOKEN}}",
-        NETLIFY_SITE_ID: "${{vars.NETLIFY_SITE_ID}}",
+        "github-token": "${{ secrets.DOC_TOKEN }}",
+        script: script(`
+          github.rest.actions.createWorkflowDispatch({
+            owner: 'lenskit',
+            repo: 'lenskit-docs',
+            workflow_id: 'publish',
+            ref: 'main',
+          })
+        `),
       },
     },
   ],
@@ -165,7 +131,6 @@ export const workflow: Workflow = {
   },
   jobs: {
     build,
-    archive,
     publish,
   },
 };
