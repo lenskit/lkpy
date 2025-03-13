@@ -108,6 +108,6 @@ jobs:
             github.rest.actions.createWorkflowDispatch({
               owner: 'lenskit',
               repo: 'lenskit-docs',
-              workflow_id: 'publish',
+              workflow_id: 'publish.yml',
               ref: 'main',
             })
