@@ -35,7 +35,8 @@ class StochasticTopNConfig:
     """
     Scalar multiplier to apply to scores prior to transformation.  This is
     equivalent to the :math:`\\beta` parameter for parameterized softmax
-    transformation.
+    transformation.  Larger values will decrease the entropy of the sampled
+    rankings.
     """
 
 
