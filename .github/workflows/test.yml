@@ -116,7 +116,7 @@ jobs:
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
         run: |
-          uv pip install --all-extras .
+          uv pip install --all-extras
 
       - name: 📦 Set up Python dependencies (Windows)
         if: runner.os == 'Windows'
@@ -214,7 +214,7 @@ jobs:
 
       - name: 📦 Set up Python dependencies
         run: |
-          uv pip install --all-extras . --resolution=lowest-direct
+          uv pip install --all-extras --resolution=lowest-direct
 
       - name: 🔍 Inspect environment
         run: |
