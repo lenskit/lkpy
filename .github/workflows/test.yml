@@ -117,6 +117,7 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           uv pip install --all-extras -r pyproject.toml
+          uv pip install --no-deps .
 
       - name: 📦 Set up Python dependencies (Windows)
         if: runner.os == 'Windows'
@@ -215,6 +216,7 @@ jobs:
       - name: 📦 Set up Python dependencies
         run: |
           uv pip install --all-extras --resolution=lowest-direct -r pyproject.toml
+          uv pip install --no-deps .
 
       - name: 🔍 Inspect environment
         run: |
