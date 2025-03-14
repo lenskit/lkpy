@@ -108,9 +108,9 @@ class StochasticTopNRanker(Component[ItemList]):
                 r = ub - lb
                 # scale weights twice to reduce risk of floating-point error
                 weights = scores - lb
-                weights /= r
-                tot = np.sum(weights)
-                if tot > 0:
+                if r > 0:
+                    weights /= r
+                    tot = np.sum(weights)
                     weights /= tot
                 else:
                     weights = np.ones_like(weights) / len(weights)
