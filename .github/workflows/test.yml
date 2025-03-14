@@ -117,8 +117,7 @@ jobs:
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
         run: |
-          uv pip install --all-extras -r pyproject.toml
-          uv pip install --no-deps .
+          uv pip install ".[test,sklearn,funksvd,hpf,implicit]"
 
       - name: 📦 Set up Python dependencies (Windows)
         if: runner.os == 'Windows'
@@ -216,8 +215,7 @@ jobs:
 
       - name: 📦 Set up Python dependencies
         run: |
-          uv pip install --all-extras --resolution=lowest-direct -r pyproject.toml
-          uv pip install --no-deps .
+          uv pip install --resolution=lowest-direct ".[test,sklearn,funksvd,hpf,implicit]"
 
       - name: 🔍 Inspect environment
         run: |
