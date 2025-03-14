@@ -36,6 +36,7 @@ them need to be installed separately.
     :recursive:
 
     lenskit.basic
+    lenskit.stochastic
     lenskit.knn
     lenskit.als
     lenskit.sklearn
