@@ -1,7 +1,4 @@
 PIP := "uv pip"
-python := "3.11"
-conda_env := "lkpy"
-DENO := "deno run --allow-read=. --allow-write=.github/workflows --allow-net=jsr.io"
 
 # list the tasks in this project (default)
 list-tasks:
@@ -55,10 +52,3 @@ update-bibtex:
 # update source file headers
 update-headers:
     unbehead
-
-# update GH workflows
-update-workflows:
-    deno check workflows/*.ts
-    {{DENO}} workflows/render.ts --github -o .github/workflows/test.yml workflows/test.ts
-    {{DENO}} workflows/render.ts --github -o .github/workflows/docs.yml workflows/docs.ts
-    -pre-commit run --files .github/workflows/*.yml
