@@ -4,6 +4,8 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import warnings
+
 import numpy as np
 from pydantic import BaseModel
 
@@ -89,6 +91,15 @@ class SoftmaxRanker(Component[ItemList]):
     Vieira`_.  It expects a scored list of input items, and samples ``n`` items,
     with selection probabilities proportional to their scores.
 
+    .. warning::
+
+        This ranker does not actually compute a softmax
+
+    .. deprecated:: 2025.3
+
+        This ranker has been replaced with the :class:`StochasticTopNRanker`. It
+        will be removed in LensKit 2026.
+
     .. note::
 
         Negative scores are clamped to (approximately) zero.
@@ -112,6 +123,9 @@ class SoftmaxRanker(Component[ItemList]):
     def __init__(self, config: RandomConfig | None = None, **kwargs):
         super().__init__(config, **kwargs)
         self._rng_factory = derivable_rng(self.config.rng)
+        warnings.warn(
+            "SoftmaxRanker is deprecated, use StochasticTopNRanker instead", DeprecationWarning, 2
+        )
 
     def __call__(
         self, items: ItemList, query: QueryInput | None = None, n: int | None = None
