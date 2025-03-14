@@ -1,6 +1,6 @@
 [project]
 name = "lenskit"
-channels = ["conda-forge", "pytorch", "nodefaults"]
+channels = ["conda-forge"]
 platforms = ["linux-64", "win-64", "osx-arm64", "linux-aarch64"]
 
 [dependencies]
@@ -241,6 +241,3 @@ test-examples = { features = [
   "hpf",
   "implicit",
 ], solve-group = "py311-nix" }
-
-[target.osx-arm64.dependencies]
-# pytorch = { version = "~=2.1", channel = "pytorch" }
