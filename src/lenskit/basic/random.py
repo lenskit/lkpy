@@ -97,8 +97,9 @@ class SoftmaxRanker(Component[ItemList]):
 
     .. deprecated:: 2025.3
 
-        This ranker has been replaced with the :class:`StochasticTopNRanker`. It
-        will be removed in LensKit 2026.
+        This ranker has been replaced with the
+        :class:`lenskit.stochastic.StochasticTopNRanker`. It will be removed in
+        LensKit 2026.
 
     .. note::
 
