@@ -40,10 +40,11 @@ jobs:
         with:
           script: |
             const os = require('os');
-            if (os.type() == 'Windows_NT' || os.arch() != 'x64') {
-              core.setOutput('pixi-env', 'test-${{matrix.python}}-core')
+            const pyver = "${{matrix.python}}";
+            if (os.type() == 'Windows_NT' || os.arch() != 'x64' || pyver == 'py313') {
+              core.setOutput('pixi-env', `test-${pyver}-core`)
             } else {
-              core.setOutput('pixi-env', 'test-${{matrix.python}}-full')
+              core.setOutput('pixi-env', `test-${pyver}-full`)
             }
 
       - name: 🧚🏼 Install Pixi environment
