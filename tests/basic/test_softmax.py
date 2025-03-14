@@ -173,4 +173,5 @@ def test_stochasticity(rng):
     pvals = np.array(pvals)
     _log.info("trial p-value statistics: mean=%.3f, median=%.3f", np.mean(pvals), np.median(pvals))
     # do 90% of trials pass the test?
+    # ALERT: this is broken
     assert np.sum(pvals < 0.05) >= 0.9
