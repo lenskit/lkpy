@@ -9,6 +9,12 @@ information on how to upgrade your code.
 
 .. _SPEC0: https://scientific-python.org/specs/spec-0000/
 
+.. _2025.3.0:
+
+2025.3.0 (in progress)
+----------------------
+
+-   Replace broken “softmax” sampler with a proper stochastic sampler (:pr:`667`).
 
 .. _2025.2.0:
 
