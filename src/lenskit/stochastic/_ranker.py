@@ -98,6 +98,8 @@ class StochasticTopNRanker(Component[ItemList]):
         if n < 0 or n > N:
             n = N
 
+        # scale the scores — with softmax, this is the equivalent of β.
+        # see: https://en.wikipedia.org/wiki/Softmax_function
         scores = scores[valid_mask] * self.config.scale
         match self.config.transform:
             case "linear":
