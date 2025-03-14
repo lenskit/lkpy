@@ -117,16 +117,14 @@ class StochasticTopNRanker(Component[ItemList]):
 
                 if weights is None:
                     weights = np.ones_like(scores) / len(scores)
-                weights = np.log(np.maximum(weights, 1.0e-6))
+                weights = np.maximum(weights, 1.0e-6)
             case "softmax":
-                weights = scores - logsumexp(scores)
+                weights = np.exp(scores - logsumexp(scores))
             case None:
                 weights = scores
 
-        # this is the exponential noise transform from Tim Vieira's post, transformed
-        # into logarithmic space.
         keys = np.log(rng.uniform(0, 1, N))
-        keys /= np.exp(weights)
+        keys /= weights
 
         picked = argtopn(keys, n)
         return ItemList(valid_items[picked], ordered=True)
