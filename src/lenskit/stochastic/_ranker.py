@@ -118,6 +118,8 @@ class StochasticTopNRanker(Component[ItemList]):
             case None:
                 weights = scores
 
+        # this is the exponential noise transform from Tim Vieira's post, transformed
+        # into logarithmic space.
         keys = np.log(-np.log(rng.uniform(0, 1, N)))
         keys -= weights
 
