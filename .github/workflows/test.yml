@@ -40,8 +40,8 @@ jobs:
         with:
           script: |
             const os = require('os');
-            if (os.type() == 'Windows_NT') {
-              core.setOutput('pixi-env', 'test-${{matrix.python}}-full')
+            if (os.type() == 'Windows_NT' || os.arch() != 'x64') {
+              core.setOutput('pixi-env', 'test-${{matrix.python}}-core')
             } else {
               core.setOutput('pixi-env', 'test-${{matrix.python}}-full')
             }
