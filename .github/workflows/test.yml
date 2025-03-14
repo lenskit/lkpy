@@ -1,19 +1,18 @@
-# GENERATED FILE, do not edit
-# This file was generated with Typeline
-# generated from: workflows/test.ts
 name: Automatic Tests
-'on':
+on:
   push:
     branches:
       - main
-  pull_request: {}
+  pull_request:
+
 concurrency:
-  group: 'test-${{github.ref}}'
+  group: test-${{github.ref}}
   cancel-in-progress: true
+
 jobs:
   conda:
-    name: 'Conda Python ${{matrix.python}} on ${{matrix.platform}}'
-    runs-on: '${{matrix.platform}}'
+    name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
+    runs-on: ${{matrix.platform}}
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -27,601 +26,367 @@ jobs:
           - ubuntu-24.04-arm
           - macos-latest
           - windows-latest
+
     steps:
-      - name: "🛒 Checkout"
+      - name: 🛒 Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.8.1
+
+      - name: 🧐 Detect platform
+        id: detect
+        uses: actions/script@v7
+        with:
+          script: const os = require('os'); if (os.type() == 'Windows_NT') { core.setOutput('pixi-env', 'test-${{matrix.python}}-full' } else { core.setOutput('pixi-env', 'test-${{matrix.python}}-full' }
+
+      - name: 🧚🏼 Install Pixi environment
+        uses: prefix-dev/setup-pixi@v0.8.3
         with:
           pixi-version: latest
           activate-environment: true
-          environments: 'test-${{matrix.python}}-core'
+          environments: ${{ steps.detect.pixi-env }}
           cache-write: false
-          log-level: vv
           locked: false
           frozen: true
-      - name: "🔍 Inspect environment"
+
+      - name: 🔍 Inspect environment
         run: |
           lenskit doctor
+
       - name: "🏃🏻‍➡️ Test LKPY"
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
-      - name: "📐 Coverage results"
-        if: '${{ !cancelled() }}'
+
+      - name: 📐 Coverage results
+        if: "${{ !cancelled() }}"
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: "📤 Upload test results"
+
+      - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
-        if: '${{ !cancelled() }}'
+        if: ${{ !cancelled() }}
         with:
-          name: 'test-conda-${{matrix.platform}}-py${{matrix.python}}'
+          name: test-conda-${{matrix.platform}}-py${{matrix.python}}
           path: |
             test*.log
             coverage.db
             coverage.xml
+
   vanilla:
-    name: 'Vanilla Python ${{matrix.python}} on ${{matrix.platform}}'
-    runs-on: '${{matrix.platform}}'
+    name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
+    runs-on: ${{matrix.platform}}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         python:
-          - '3.11'
-          - '3.12'
-          - '3.13'
+          - "3.11"
+          - "3.12"
+          - "3.13"
         platform:
           - ubuntu-latest
-          - ubuntu-24.04-arm
           - macos-latest
           - windows-latest
         exclude:
-          - python: '3.13'
+          - python: "3.13"
             platform: macos-latest
-          - python: '3.13'
+          - python: "3.13"
             platform: windows-latest
-          - python: '3.13'
-            platform: ubuntu-24.04-arm
+
     steps:
-      - name: "🛒 Checkout"
+      - name: 🛒 Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: "🐍 Set up Python"
-        id: install-python
-        uses: actions/setup-python@v5
+
+      - name: 🕶️ Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: '${{matrix.python}}'
-      - name: "🕶️ Set up uv"
+          python-version: ${{ matrix.python }}
+
+      - name: 📦 Set up Python dependencies (Unix)
+        if: runner.os != 'Windows'
         run: |
-          pip install -U 'uv>=0.1.15'
-      - name: "📦 Set up Python dependencies"
-        id: install-deps
+          uv pip install --all-extras .
+
+      - name: 📦 Set up Python dependencies (Windows)
+        if: runner.os == 'Windows'
         run: |
-          uv pip install --python $PYTHON ".[test]"
-        shell: bash
-        env:
-          PYTHON: '${{steps.install-python.outputs.python-path}}'
-      - name: "🔍 Inspect environment"
+          uv pip install ".[test]"
+
+      - name: 🔍 Inspect environment
         run: |
           lenskit doctor
-      - name: "🏃🏻‍➡️ Test LKPY"
+
+      - name: 🏃🏻‍➡️ Test LKPY
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
-      - name: "📐 Coverage results"
-        if: '${{ !cancelled() }}'
+
+      - name: 📐 Coverage results
+        if: ${{ !cancelled() }}
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: "📤 Upload test results"
+
+      - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
-        if: '${{ !cancelled() }}'
+        if: ${{ !cancelled() }}
         with:
-          name: 'test-vanilla-${{matrix.platform}}-py${{matrix.python}}'
+          name: "test-vanilla-${{matrix.platform}}-py${{matrix.python}}"
           path: |
             test*.log
             coverage.db
             coverage.xml
+
   nojit:
     name: Non-JIT test coverage
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
     steps:
       - name: "🛒 Checkout"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.8.1
+
+      - uses: prefix-dev/setup-pixi@v0.8.3
         with:
           pixi-version: latest
           activate-environment: true
           environments: test-py311-funksvd
           cache-write: false
-          log-level: vv
           locked: false
           frozen: true
-      - name: "🔍 Inspect environment"
+
+      - name: 🔍 Inspect environment
         run: |
           lenskit doctor
-      - name: "🏃🏻‍➡️ Test LKPY"
+
+      - name: 🏃🏻‍➡️ Test LKPY
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 -m 'not slow' --cov=src/lenskit tests
         env:
           NUMBA_DISABLE_JIT: 1
           PYTORCH_JIT: 0
-      - name: "📐 Coverage results"
-        if: '${{ !cancelled() }}'
+
+      - name: 📐 Coverage results
+        if: ${{ !cancelled() }}
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: "📤 Upload test results"
+
+      - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
-        if: '${{ !cancelled() }}'
+        if: ${{ !cancelled() }}
         with:
           name: test-nojit
           path: |
             test*.log
             coverage.db
             coverage.xml
-  mindep:
-    name: Minimal dependency tests
+
+  mindep-all:
+    name: Minimal dependency tests (all options)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
     steps:
-      - name: "🛒 Checkout"
+      - name: 🛒 Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: "🐍 Set up Python"
-        id: install-python
-        uses: actions/setup-python@v5
+
+      - name: 🕶️ Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: '3.11'
-      - name: "🕶️ Set up uv"
+          python-version: "3.11"
+
+      - name: 📦 Set up Python dependencies
         run: |
-          pip install -U 'uv>=0.1.15'
-      - name: "📦 Set up Python dependencies"
-        id: install-deps
-        run: |
-          uv pip install --python $PYTHON ".[test]" --resolution=lowest-direct
-        shell: bash
-        env:
-          PYTHON: '${{steps.install-python.outputs.python-path}}'
-      - name: "🔍 Inspect environment"
+          uv pip install --all-extras . --resolution=lowest-direct
+
+      - name: 🔍 Inspect environment
         run: |
           lenskit doctor
-      - name: "🏃🏻‍➡️ Test LKPY"
+
+      - name: 🏃🏻‍➡️ Test LKPY
         run: |
           python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
-      - name: "📐 Coverage results"
-        if: '${{ !cancelled() }}'
+
+      - name: 📐 Coverage results
+        if: ${{ !cancelled() }}
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: "📤 Upload test results"
+
+      - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
-        if: '${{ !cancelled() }}'
+        if: ${{ !cancelled() }}
+        with:
+          name: test-mindep-all
+          path: |
+            test*.log
+            coverage.db
+            coverage.xml
+
+  mindep:
+    name: Minimal dependency tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 🛒 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🕶️ Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+
+      - name: 📦 Set up Python dependencies
+        run: |
+          uv pip install ".[test]" --resolution=lowest-direct
+
+      - name: 🔍 Inspect environment
+        run: |
+          lenskit doctor
+
+      - name: 🏃🏻‍➡️ Test LKPY
+        run: |
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
+
+      - name: 📐 Coverage results
+        if: ${{ !cancelled() }}
+        run: |
+          coverage xml
+          coverage report
+          cp .coverage coverage.db
+
+      - name: 📤 Upload test results
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
         with:
           name: test-mindep
           path: |
             test*.log
             coverage.db
             coverage.xml
-  sklearn:
-    name: 'Scikit-Learn tests on Python ${{matrix.python}}'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        python:
-          - py311
-          - py312
-          - py313
-    steps:
-      - name: "🛒 Checkout"
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.8.1
-        with:
-          pixi-version: latest
-          activate-environment: true
-          environments: 'test-${{matrix.python}}-sklearn'
-          cache-write: false
-          log-level: vv
-          locked: false
-          frozen: true
-      - name: "🔍 Inspect environment"
-        run: |
-          lenskit doctor
-      - name: "🏃🏻‍➡️ Test LKPY"
-        run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/sklearn
-      - name: "📐 Coverage results"
-        if: '${{ !cancelled() }}'
-        run: |
-          coverage xml
-          coverage report
-          cp .coverage coverage.db
-      - name: "📤 Upload test results"
-        uses: actions/upload-artifact@v4
-        if: '${{ !cancelled() }}'
-        with:
-          name: 'test-sklearn-py${{matrix.python}}'
-          path: |
-            test*.log
-            coverage.db
-            coverage.xml
-  sklearn-mindep:
-    name: Minimal dependency tests for Scikit-Learn
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: "🛒 Checkout"
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: "🐍 Set up Python"
-        id: install-python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: "🕶️ Set up uv"
-        run: |
-          pip install -U 'uv>=0.1.15'
-      - name: "📦 Set up Python dependencies"
-        id: install-deps
-        run: |
-          uv pip install --python $PYTHON ".[test,sklearn]" --resolution=lowest-direct
-        shell: bash
-        env:
-          PYTHON: '${{steps.install-python.outputs.python-path}}'
-      - name: "🔍 Inspect environment"
-        run: |
-          lenskit doctor
-      - name: "🏃🏻‍➡️ Test LKPY"
-        run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/sklearn
-      - name: "📐 Coverage results"
-        if: '${{ !cancelled() }}'
-        run: |
-          coverage xml
-          coverage report
-          cp .coverage coverage.db
-      - name: "📤 Upload test results"
-        uses: actions/upload-artifact@v4
-        if: '${{ !cancelled() }}'
-        with:
-          name: test-mindep-sklearn
-          path: |
-            test*.log
-            coverage.db
-            coverage.xml
-  funksvd:
-    name: 'FunkSVD tests on Python ${{matrix.python}}'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        python:
-          - py311
-          - py312
-    steps:
-      - name: "🛒 Checkout"
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.8.1
-        with:
-          pixi-version: latest
-          activate-environment: true
-          environments: 'test-${{matrix.python}}-funksvd'
-          cache-write: false
-          log-level: vv
-          locked: false
-          frozen: true
-      - name: "🔍 Inspect environment"
-        run: |
-          lenskit doctor
-      - name: "🏃🏻‍➡️ Test LKPY"
-        run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/funksvd
-      - name: "📐 Coverage results"
-        if: '${{ !cancelled() }}'
-        run: |
-          coverage xml
-          coverage report
-          cp .coverage coverage.db
-      - name: "📤 Upload test results"
-        uses: actions/upload-artifact@v4
-        if: '${{ !cancelled() }}'
-        with:
-          name: 'test-funksvd-py${{matrix.python}}'
-          path: |
-            test*.log
-            coverage.db
-            coverage.xml
-  funksvd-mindep:
-    name: Minimal dependency tests for FunkSVD
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: "🛒 Checkout"
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: "🐍 Set up Python"
-        id: install-python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: "🕶️ Set up uv"
-        run: |
-          pip install -U 'uv>=0.1.15'
-      - name: "📦 Set up Python dependencies"
-        id: install-deps
-        run: |
-          uv pip install --python $PYTHON ".[test,funksvd]" --resolution=lowest-direct
-        shell: bash
-        env:
-          PYTHON: '${{steps.install-python.outputs.python-path}}'
-      - name: "🔍 Inspect environment"
-        run: |
-          lenskit doctor
-      - name: "🏃🏻‍➡️ Test LKPY"
-        run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/funksvd
-      - name: "📐 Coverage results"
-        if: '${{ !cancelled() }}'
-        run: |
-          coverage xml
-          coverage report
-          cp .coverage coverage.db
-      - name: "📤 Upload test results"
-        uses: actions/upload-artifact@v4
-        if: '${{ !cancelled() }}'
-        with:
-          name: test-mindep-funksvd
-          path: |
-            test*.log
-            coverage.db
-            coverage.xml
-  implicit:
-    name: 'Implicit bridge tests on Python ${{matrix.python}}'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        python:
-          - py311
-          - py312
-    steps:
-      - name: "🛒 Checkout"
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.8.1
-        with:
-          pixi-version: latest
-          activate-environment: true
-          environments: 'test-${{matrix.python}}-implicit'
-          cache-write: false
-          log-level: vv
-          locked: false
-          frozen: true
-      - name: "🔍 Inspect environment"
-        run: |
-          lenskit doctor
-      - name: "🏃🏻‍➡️ Test LKPY"
-        run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/implicit
-      - name: "📐 Coverage results"
-        if: '${{ !cancelled() }}'
-        run: |
-          coverage xml
-          coverage report
-          cp .coverage coverage.db
-      - name: "📤 Upload test results"
-        uses: actions/upload-artifact@v4
-        if: '${{ !cancelled() }}'
-        with:
-          name: 'test-implicit-py${{matrix.python}}'
-          path: |
-            test*.log
-            coverage.db
-            coverage.xml
-  implicit-mindep:
-    name: Minimal dependency tests for Implicit
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: "🛒 Checkout"
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: "🐍 Set up Python"
-        id: install-python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: "🕶️ Set up uv"
-        run: |
-          pip install -U 'uv>=0.1.15'
-      - name: "📦 Set up Python dependencies"
-        id: install-deps
-        run: |
-          uv pip install --python $PYTHON ".[test,implicit]" --resolution=lowest-direct
-        shell: bash
-        env:
-          PYTHON: '${{steps.install-python.outputs.python-path}}'
-      - name: "🔍 Inspect environment"
-        run: |
-          lenskit doctor
-      - name: "🏃🏻‍➡️ Test LKPY"
-        run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/implicit
-      - name: "📐 Coverage results"
-        if: '${{ !cancelled() }}'
-        run: |
-          coverage xml
-          coverage report
-          cp .coverage coverage.db
-      - name: "📤 Upload test results"
-        uses: actions/upload-artifact@v4
-        if: '${{ !cancelled() }}'
-        with:
-          name: test-mindep-implicit
-          path: |
-            test*.log
-            coverage.db
-            coverage.xml
-  hpf:
-    name: 'HPF bridge tests on Python ${{matrix.python}}'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        python:
-          - py311
-          - py312
-    steps:
-      - name: "🛒 Checkout"
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.8.1
-        with:
-          pixi-version: latest
-          activate-environment: true
-          environments: 'test-${{matrix.python}}-hpf'
-          cache-write: false
-          log-level: vv
-          locked: false
-          frozen: true
-      - name: "🔍 Inspect environment"
-        run: |
-          lenskit doctor
-      - name: "🏃🏻‍➡️ Test LKPY"
-        run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests/hpf
-      - name: "📐 Coverage results"
-        if: '${{ !cancelled() }}'
-        run: |
-          coverage xml
-          coverage report
-          cp .coverage coverage.db
-      - name: "📤 Upload test results"
-        uses: actions/upload-artifact@v4
-        if: '${{ !cancelled() }}'
-        with:
-          name: 'test-hpf-py${{matrix.python}}'
-          path: |
-            test*.log
-            coverage.db
-            coverage.xml
+
   eval-tests:
     name: Evaluation-based tests
     runs-on: ubuntu-latest
+
     steps:
-      - name: "🛒 Checkout"
+      - name: 🛒 Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.8.1
+
+      - uses: prefix-dev/setup-pixi@v0.8.3
         with:
           pixi-version: latest
           activate-environment: true
           environments: test-py311-full
           cache-write: false
-          log-level: vv
           locked: false
           frozen: true
+
       - name: Cache ML data
         uses: actions/cache@v4
         with:
           path: |
             data
             !data/*.zip
-          key: test-mldata-002-ml-100k-ml-20m-ml-1m-ml-10m
+          key: test-eval-mldata
+
       - name: Download ML data
         run: |
           coverage run --source=src/lenskit -m lenskit data fetch -D data --movielens ml-100k ml-20m ml-1m ml-10m
+
       - name: Run Eval Tests
         run: |
           pytest --cov-append --cov=src/lenskit -m 'eval or realdata' --log-file test-eval.log tests
-      - name: "📐 Coverage results"
-        if: '${{ !cancelled() }}'
+
+      - name: 📐 Coverage results
+        if: ${{ !cancelled() }}
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: "📤 Upload test results"
+
+      - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
-        if: '${{ !cancelled() }}'
+        if: ${{ !cancelled() }}
         with:
           name: test-eval-tests
           path: |
             test*.log
             coverage.db
             coverage.xml
+
   doc-tests:
-    name: 'Demos, examples, and docs'
+    name: Demos, examples, and docs
     runs-on: ubuntu-latest
+
     steps:
-      - name: "🛒 Checkout"
+      - name: 🛒 Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: prefix-dev/setup-pixi@v0.8.1
+
+      - uses: prefix-dev/setup-pixi@v0.8.3
         with:
           pixi-version: latest
           activate-environment: true
           environments: test-examples
           cache-write: false
-          log-level: vv
           locked: false
           frozen: true
+
       - name: Cache ML data
         uses: actions/cache@v4
         with:
           path: |
             data
             !data/*.zip
-          key: test-mldata-002-ml-100k-ml-1m-ml-10m-ml-20m
+          key: test-doc-mldata
+
       - name: Download ML data
         run: |
           coverage run --source=src/lenskit -m lenskit data fetch -D data --movielens ml-100k ml-1m ml-10m ml-20m
-      - name: "📕 Validate code examples"
+
+      - name: 📕 Validate code examples
         run: |
           sphinx-build -b doctest docs build/doc
-      - name: "📕 Validate example notebooks"
+
+      - name: 📕 Validate example notebooks
         run: |
           pytest --cov=src/lenskit --nbval-lax --log-file test-notebooks.log docs
-      - name: "📐 Coverage results"
-        if: '${{ !cancelled() }}'
+
+      - name: 📐 Coverage results
+        if: ${{ !cancelled() }}
         run: |
           coverage xml
           coverage report
           cp .coverage coverage.db
-      - name: "📤 Upload test results"
+
+      - name: 📤 Upload test results
         uses: actions/upload-artifact@v4
-        if: '${{ !cancelled() }}'
+        if: ${{ !cancelled() }}
         with:
           name: test-examples
           path: |
             test*.log
             coverage.db
             coverage.xml
+
   results:
     name: Test suite results
     runs-on: ubuntu-latest
@@ -629,64 +394,63 @@ jobs:
       - conda
       - vanilla
       - nojit
+      - mindep-all
       - mindep
-      - sklearn
-      - sklearn-mindep
-      - funksvd
-      - funksvd-mindep
-      - implicit
-      - implicit-mindep
-      - hpf
       - eval-tests
       - doc-tests
-    if: '${{ !cancelled() }}'
+
+    if: ${{ !cancelled() }}
     steps:
-      - name: "🛒 Checkout"
+      - name: 🛒 Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Add upstream remote & author config
         run: |
           git remote add upstream https://github.com/lenskit/lkpy.git
           git fetch upstream
           git config user.name "LensKit Bot"
           git config user.email lkbot@lenskit.org
-      - uses: prefix-dev/setup-pixi@v0.8.1
+
+      - uses: prefix-dev/setup-pixi@v0.8.3
         with:
           pixi-version: latest
           activate-environment: true
           environments: report
-          cache-write: false
-          log-level: vv
           locked: false
           frozen: true
-      - name: "📥 Download test artifacts"
+
+      - name: 📥 Download test artifacts
         uses: actions/download-artifact@v4
         with:
           pattern: test-*
           path: test-logs
-      - name: "📋 List log files"
+
+      - name: 📋 List log files
         run: ls -laR test-logs
-      - name: "🔧 Fix coverage databases"
+
+      - name: 🔧 Fix coverage databases
         run: |
           for dbf in test-logs/*/coverage.db; do
               echo "fixing $dbf"
               sqlite3 -echo "$dbf" "UPDATE file SET path = replace(path, '\', '/');"
           done
+
       - name: ⛙ Merge and report
         run: |
           coverage combine --keep test-logs/*/coverage.db
           coverage xml
           coverage html -d lenskit-coverage
           coverage report --format=markdown >coverage.md
+
       - name: Analyze diff coverage
         if: github.event_name == 'pull_request'
         run: |
           diff-cover --json-report diff-cover.json --markdown-report diff-cover.md \
             coverage.xml |tee diff-cover.txt
-      - name: "📤 Upload coverage to CodeCov"
+
+      - name: 📤 Upload coverage to CodeCov
         uses: codecov/codecov-action@v4.2.0
         env:
           CODECOV_TOKEN: ab58c9cf-25b8-4283-a485-0b6382dc9a61
-      - name: "🚫 Fail if coverage is too low"
-        run: coverage report --fail-under=90
