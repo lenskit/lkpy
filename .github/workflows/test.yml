@@ -38,7 +38,13 @@ jobs:
         id: detect
         uses: actions/script@v7
         with:
-          script: const os = require('os'); if (os.type() == 'Windows_NT') { core.setOutput('pixi-env', 'test-${{matrix.python}}-full' } else { core.setOutput('pixi-env', 'test-${{matrix.python}}-full' }
+          script: |
+            const os = require('os');
+            if (os.type() == 'Windows_NT') {
+              core.setOutput('pixi-env', 'test-${{matrix.python}}-full')
+            } else {
+              core.setOutput('pixi-env', 'test-${{matrix.python}}-full')
+            }
 
       - name: 🧚🏼 Install Pixi environment
         uses: prefix-dev/setup-pixi@v0.8.3
