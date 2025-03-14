@@ -1,4 +1,5 @@
 name: Automatic Tests
+
 on:
   push:
     branches:
