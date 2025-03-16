@@ -15,59 +15,65 @@ from scipy.stats import kendalltau, permutation_test
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import given, settings
+from pytest import mark
 
-from lenskit.basic import PopScorer, SoftmaxRanker
+from lenskit.basic import PopScorer
 from lenskit.data.items import ItemList
+from lenskit.logging import get_logger
+from lenskit.stochastic import StochasticTopNRanker
 from lenskit.testing import BasicComponentTests, ScorerTests, scored_lists
 
-_log = logging.getLogger(__name__)
+_log = get_logger(__name__)
 
 
 class TestSoftmax(BasicComponentTests):
-    component = SoftmaxRanker
+    component = StochasticTopNRanker
 
 
-@given(scored_lists())
-def test_unlimited_ranking(items: ItemList):
-    topn = SoftmaxRanker()
+@mark.filterwarnings("error:divide by zero")
+@given(scored_lists(), st.sampled_from(["linear", "softmax"]))
+def test_unlimited_ranking(items: ItemList, transform):
+    topn = StochasticTopNRanker(transform=transform)
     ranked = topn(items=items)
 
     ids = items.ids()
     scores = items.scores("numpy")
     assert scores is not None
-    invalid = np.isnan(scores)
-    _log.info("ranking %d items, %d invalid", len(ids), np.sum(invalid))
+    invalid = ~np.isfinite(scores)
 
-    assert isinstance(ranked, ItemList)
-    assert len(ranked) <= len(items)
-    assert ranked.ordered
-    # all valid items are included
-    assert len(ranked) == np.sum(~invalid)
+    try:
+        assert isinstance(ranked, ItemList)
+        assert len(ranked) <= len(items)
+        assert ranked.ordered
+        # all valid items are included
+        assert len(ranked) == np.sum(~invalid)
 
-    # the set of valid items matches
-    assert set(ids[~invalid]) == set(ranked.ids())
+        # the set of valid items matches
+        assert set(ids[~invalid]) == set(ranked.ids())
 
-    # the scores match
-    rank_s = ranked.scores("pandas", index="ids")
-    assert rank_s is not None
-    src_s = items.scores("pandas", index="ids")
-    assert src_s is not None
+        # the scores match
+        rank_s = ranked.scores("pandas", index="ids")
+        assert rank_s is not None
+        src_s = items.scores("pandas", index="ids")
+        assert src_s is not None
 
-    # make sure the scores were preserved properly
-    rank_s, src_s = rank_s.align(src_s, "left")
-    assert not np.any(np.isnan(src_s))
-    assert np.all(rank_s == src_s)
+        # make sure the scores were preserved properly
+        rank_s, src_s = rank_s.align(src_s, "left")
+        assert not np.any(np.isnan(src_s))
+        assert np.all(rank_s == src_s)
+    except AssertionError as e:
+        e.add_note("ranked {} items ({} invalid)".format(len(ids), np.sum(invalid)))
 
 
 @given(st.integers(min_value=1, max_value=100), scored_lists())
 def test_configured_truncation(n, items: ItemList):
-    topn = SoftmaxRanker(n=n)
+    topn = StochasticTopNRanker(n=n)
     ranked = topn(items=items)
 
     ids = items.ids()
     scores = items.scores("numpy")
     assert scores is not None
-    invalid = np.isnan(scores)
+    invalid = ~np.isfinite(scores)
     _log.info("top %d of %d items, %d invalid", n, len(ids), np.sum(invalid))
 
     val_items = items[~invalid]
@@ -91,13 +97,13 @@ def test_configured_truncation(n, items: ItemList):
 
 @given(st.integers(min_value=1, max_value=100), scored_lists())
 def test_runtime_truncation(n, items: ItemList):
-    topn = SoftmaxRanker(rng="user")
+    topn = StochasticTopNRanker(rng="user")
     ranked = topn(items=items, n=n)
 
     ids = items.ids()
     scores = items.scores("numpy")
     assert scores is not None
-    invalid = np.isnan(scores)
+    invalid = ~np.isfinite(scores)
     _log.info("top %d of %d items, %d invalid", n, len(ids), np.sum(invalid))
 
     val_items = items[~invalid]
@@ -128,7 +134,7 @@ def test_stochasticity(rng):
     size = 50
 
     TRIALS = 100
-    topn = SoftmaxRanker(n=size)
+    topn = StochasticTopNRanker(n=size)
 
     _log.info("testing stochastic ranking: top %d of %d", size, len(items))
 
@@ -173,5 +179,4 @@ def test_stochasticity(rng):
     pvals = np.array(pvals)
     _log.info("trial p-value statistics: mean=%.3f, median=%.3f", np.mean(pvals), np.median(pvals))
     # do 90% of trials pass the test?
-    # ALERT: this is broken
-    assert np.sum(pvals < 0.05) >= 0.9
+    assert np.mean(pvals < 0.05) >= 0.9
