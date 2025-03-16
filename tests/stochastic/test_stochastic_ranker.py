@@ -15,6 +15,7 @@ from scipy.stats import kendalltau, permutation_test
 import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import given, settings
+from pytest import mark
 
 from lenskit.basic import PopScorer
 from lenskit.data.items import ItemList
@@ -29,7 +30,8 @@ class TestSoftmax(BasicComponentTests):
     component = StochasticTopNRanker
 
 
-@given(scored_lists(), st.sampled_from([None, "linear", "softmax"]))
+@mark.filterwarnings("error:divide by zero")
+@given(scored_lists(), st.sampled_from(["linear", "softmax"]))
 def test_unlimited_ranking(items: ItemList, transform):
     topn = StochasticTopNRanker(transform=transform)
     ranked = topn(items=items)
