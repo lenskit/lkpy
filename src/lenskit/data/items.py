@@ -10,6 +10,7 @@ Primary item-list abstraction.
 
 from __future__ import annotations
 
+import io
 import warnings
 from typing import overload
 
@@ -728,10 +729,20 @@ class ItemList:
     def __str__(self) -> str:
         return f"<ItemList of {self._len} items>"
 
-    def __repr__(self) -> str:
-        fnames = ", ".join(self._fields.keys())
+    def __repr__(self) -> str:  # pragma: nocover
+        out = io.StringIO()
         nf = len(self._fields)
-        return f"<ItemList of {self._len} items with {nf} fields ({fnames})>"
+        print(f"<ItemList of {self._len} items with {nf} fields", "{", file=out)
+
+        if self._numbers is not None:
+            print("  numbers:", self._numbers.numpy(), file=out)
+        if self._ids is not None:
+            print("  ids:", self._ids, file=out)
+        for name, f in self._fields.items():
+            print(f"  {name}:", f.numpy(), file=out)
+        print("}>", end="", file=out)
+
+        return out.getvalue()
 
 
 def _arrow_type(dtype: np.dtype) -> pa.DataType:
