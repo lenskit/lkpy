@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
-from scipy.special import logsumexp
+from scipy.special import softmax
 
 from lenskit.data import ItemList
 from lenskit.data.query import QueryInput, RecQuery
@@ -118,7 +118,7 @@ class StochasticTopNRanker(Component[ItemList]):
                 if weights is None:
                     weights = np.ones_like(scores) / len(scores)
             case "softmax":
-                weights = np.exp(scores - logsumexp(scores))
+                weights = softmax(scores)
             case None:
                 weights = scores
 
