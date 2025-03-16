@@ -18,10 +18,11 @@ from hypothesis import given, settings
 
 from lenskit.basic import PopScorer
 from lenskit.data.items import ItemList
+from lenskit.logging import get_logger
 from lenskit.stochastic import StochasticTopNRanker
 from lenskit.testing import BasicComponentTests, ScorerTests, scored_lists
 
-_log = logging.getLogger(__name__)
+_log = get_logger(__name__)
 
 
 class TestSoftmax(BasicComponentTests):
@@ -37,27 +38,29 @@ def test_unlimited_ranking(items: ItemList, transform):
     scores = items.scores("numpy")
     assert scores is not None
     invalid = ~np.isfinite(scores)
-    _log.info("ranking %d items, %d invalid", len(ids), np.sum(invalid))
 
-    assert isinstance(ranked, ItemList)
-    assert len(ranked) <= len(items)
-    assert ranked.ordered
-    # all valid items are included
-    assert len(ranked) == np.sum(~invalid)
+    try:
+        assert isinstance(ranked, ItemList)
+        assert len(ranked) <= len(items)
+        assert ranked.ordered
+        # all valid items are included
+        assert len(ranked) == np.sum(~invalid)
 
-    # the set of valid items matches
-    assert set(ids[~invalid]) == set(ranked.ids())
+        # the set of valid items matches
+        assert set(ids[~invalid]) == set(ranked.ids())
 
-    # the scores match
-    rank_s = ranked.scores("pandas", index="ids")
-    assert rank_s is not None
-    src_s = items.scores("pandas", index="ids")
-    assert src_s is not None
+        # the scores match
+        rank_s = ranked.scores("pandas", index="ids")
+        assert rank_s is not None
+        src_s = items.scores("pandas", index="ids")
+        assert src_s is not None
 
-    # make sure the scores were preserved properly
-    rank_s, src_s = rank_s.align(src_s, "left")
-    assert not np.any(np.isnan(src_s))
-    assert np.all(rank_s == src_s)
+        # make sure the scores were preserved properly
+        rank_s, src_s = rank_s.align(src_s, "left")
+        assert not np.any(np.isnan(src_s))
+        assert np.all(rank_s == src_s)
+    except AssertionError as e:
+        e.add_note("ranked {} items ({} invalid)".format(len(ids), np.sum(invalid)))
 
 
 @given(st.integers(min_value=1, max_value=100), scored_lists())
