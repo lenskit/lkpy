@@ -117,14 +117,15 @@ class StochasticTopNRanker(Component[ItemList]):
 
                 if weights is None:
                     weights = np.ones_like(scores) / len(scores)
-                weights = np.maximum(weights, 1.0e-6)
             case "softmax":
                 weights = np.exp(scores - logsumexp(scores))
             case None:
                 weights = scores
 
+        # positive instead of negative, because we take top-N instead of bottom
         keys = np.log(rng.uniform(0, 1, N))
-        keys /= weights
+        # smoooth very small weights to avoid divide-by-zero
+        keys /= np.maximum(weights, np.finfo("f4").smallest_normal)
 
         picked = argtopn(keys, n)
         return ItemList(valid_items[picked], ordered=True)
