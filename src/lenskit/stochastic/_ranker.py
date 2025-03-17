@@ -29,7 +29,18 @@ class StochasticTopNConfig:
 
     transform: Literal["softmax", "linear"] | None = "softmax"
     """
-    Transformation to apply to scores prior to ranking.
+    Transformation to convert scores into ranking probabilities.
+
+    softmax
+        Use the softmax of the item scores as the selection probabilities.
+    linear
+        Linearly re-scale item scores to be selection probabilities. This
+        equivalent to min-max scaling the scores, then re-scaling to sum 
+        to 1.
+    ``None``
+        No transformation, except negative scores are clamped to (almost)
+        zero.  Not recommended unless your item scorer emits multinomial
+        probabilities.
     """
     scale: float = 1.0
     """
@@ -52,7 +63,8 @@ class StochasticTopNRanker(Component[ItemList]):
 
     .. note::
 
-        Negative scores are clamped to (approximately) zero.
+        When no transformation is used, negative scores are still clamped to
+        (approximately) zero.
 
     .. _`Tim Vieiera`: https://timvieira.github.io/blog/post/2019/09/16/algorithms-for-sampling-without-replacement/
 
