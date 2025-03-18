@@ -29,7 +29,7 @@ class FlexMFConfigBase:
         Experimental
     """
 
-    embedding_size: int
+    embedding_size: int = 50
     """
     The dimension of the embedding space (number of latent features).
     """

@@ -63,7 +63,7 @@ class FlexMFTrainingData:
         ut = self.users.to(device)
         it = self.items.to(device)
         fts = {f: t.to(device) for (f, t) in self.fields.items()}
-        return replace(self, user_nums=ut, item_nums=it, fields=fts)
+        return replace(self, users=ut, items=it, fields=fts)
 
     @property
     def n_samples(self) -> int:

@@ -13,5 +13,5 @@ from lenskit.metrics import quick_measure_model
 from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
 
 
-class TestExplicitALS(BasicComponentTests, ScorerTests):
+class TestFlexMFExplicit(BasicComponentTests, ScorerTests):
     component = FlexMFExplicitScorer
