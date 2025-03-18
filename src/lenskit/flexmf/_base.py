@@ -66,14 +66,17 @@ class FlexMFConfigBase:
 
     ``"L2"``
         Use L2 regularization on the parameters used in each training batch.
-        Because the regularization is only applied to the parameters in each
-        training batch, not the entire parameter space, effective regularization
-        values will be larger.
+        The strength is applied to the _mean_ norms in a batch, so that the
+        regularization term scale is not dependent on the batch size.
 
     ``"AdamW"``
         Use :class:`torch.optim.AdamW` with the specified regularization
         strength.  This configuration does *not* use sparse gradients and may
         train more slowly.
+
+    .. note::
+        Regularization values do not necessarily have the same range or meaning
+        for the different regularization methods.
     """
 
 
@@ -96,6 +99,12 @@ class FlexMFScorerBase(IterativeTraining, Component):
         train_ctx = self.prepare_context(options)
         train_data = self.prepare_data(data, options, train_ctx)
         self.model = self.create_model(train_ctx, train_data)
+
+        # zero out non-interacted users/items
+        users = data.user_stats()
+        self.model.zero_users(torch.tensor(users["count"].values == 0))
+        items = data.item_stats()
+        self.model.zero_items(torch.tensor(items["count"].values == 0))
 
         _log.info("preparing to train", device=train_ctx.device)
         self.model = self.model.to(train_ctx.device)
