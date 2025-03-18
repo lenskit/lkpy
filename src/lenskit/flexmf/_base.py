@@ -45,7 +45,7 @@ class FlexMFConfigBase:
     The training batch size.
     """
 
-    learning_rate: float = 0.001
+    learning_rate: float = 0.005
     """
     The learning rate for training.
     """

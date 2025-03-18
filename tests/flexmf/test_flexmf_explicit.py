@@ -28,7 +28,7 @@ class TestFlexMFExplicit(BasicComponentTests, ScorerTests):
 def test_flexmf_test_accuracy(ml_100k):
     ds = from_interactions_df(ml_100k)
     results = quick_measure_model(
-        FlexMFExplicitScorer(embedding_size=25, epochs=10, reg=0.1, learning_rate=0.005),
+        FlexMFExplicitScorer(embedding_size=25, epochs=10),
         ds,
         predicts_ratings=True,
     )
