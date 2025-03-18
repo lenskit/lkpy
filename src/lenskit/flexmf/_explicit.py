@@ -48,7 +48,7 @@ class FlexMFExplicitScorer(FlexMFScorerBase):
         indices = ratings.indices()
         rm_users = indices[0, :]
         rm_items = indices[1, :]
-        rm_values = ratings.values()
+        rm_values = ratings.values().to(torch.float32)
 
         # compute the global mean (global bias), and subtract from all rating values
         mean = rm_values.mean()
