@@ -213,11 +213,14 @@ class FlexMFScorerBase(IterativeTraining, Component):
 
         # if we have no user ID, we cannot score items
         # TODO: support pooling from user history
-        if query.user_id is None:
+        u_row = None
+        if query.user_id is not None:
+            u_row = self.users.number(query.user_id, missing=None)
+
+        if u_row is None:
             return ItemList(items, scores=np.nan)
 
         # look up the user row in the embedding matrix
-        u_row = self.users.number(query.user_id)
         u_tensor = torch.IntTensor([u_row])
         # make sure it's on the right device
         device = self.model.device
