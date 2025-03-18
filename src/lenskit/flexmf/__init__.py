@@ -7,3 +7,13 @@ training.
 
 .. stability:: internal
 """
+
+from ._base import FlexMFConfigBase, FlexMFScorerBase
+from ._explicit import FlexMFExplicitConfig, FlexMFExplicitScorer
+
+__all__ = [
+    "FlexMFConfigBase",
+    "FlexMFScorerBase",
+    "FlexMFExplicitConfig",
+    "FlexMFExplicitScorer",
+]
