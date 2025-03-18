@@ -49,7 +49,7 @@ class FlexMFConfigBase:
     The number of training epochs.
     """
 
-    reg = 0.01
+    reg: float = 0.1
     """
     The regularization strength.
     """
