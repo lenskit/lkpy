@@ -35,7 +35,7 @@ class StochasticTopNConfig:
         Use the softmax of the item scores as the selection probabilities.
     linear
         Linearly re-scale item scores to be selection probabilities. This
-        equivalent to min-max scaling the scores, then re-scaling to sum 
+        equivalent to min-max scaling the scores, then re-scaling to sum
         to 1.
     ``None``
         No transformation, except negative scores are clamped to (almost)
