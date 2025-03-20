@@ -8,10 +8,6 @@ import torch
 from torch import Tensor, nn
 from torch.linalg import norm, vecdot
 
-from lenskit.logging import get_logger
-
-_log = get_logger(__name__)
-
 
 class FlexMFModel(nn.Module):
     """
@@ -74,8 +70,6 @@ class FlexMFModel(nn.Module):
 
         nn.init.normal_(self.u_embed.weight, std=0.05, generator=rng)
         nn.init.normal_(self.i_embed.weight, std=0.05, generator=rng)
-
-        self.logger = _log.bind(size=e_size)
 
     @property
     def device(self):
