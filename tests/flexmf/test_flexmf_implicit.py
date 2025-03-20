@@ -35,5 +35,5 @@ def test_flexmf_test_accuracy(ml_100k):
 
     print(results.list_summary())
 
-    assert results.global_metrics()["RBP"] >= 0.1
-    assert results.global_metrics()["RBP"] < 0.2
+    assert results.list_summary().loc["RBP", "mean"] >= 0.1
+    assert results.list_summary().loc["RBP", "mean"] < 0.2
