@@ -155,8 +155,8 @@ class FlexMFImplicitScorer(FlexMFScorerBase):
         else:
             context.log.debug("scoring for Adam", n=items.nelement())
             result = self.model(batch.users, items)
-            pos_pred = result[:, 0]
-            neg_pred = result[:, 1:]
+            pos_pred = result[:, 0, :]
+            neg_pred = result[:, 1:, :]
             norm = 0.0
 
         match self.config.loss:
