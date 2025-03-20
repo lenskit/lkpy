@@ -141,17 +141,14 @@ class FlexMFScorerBase(IterativeTraining, Component):
         """
         raise NotImplementedError()
 
-    def create_model(self, context: FlexMFTrainingContext, data: FlexMFTrainingData) -> FlexMFModel:
+    @abstractmethod
+    def create_model(
+        self, context: FlexMFTrainingContext, data: FlexMFTrainingData
+    ) -> FlexMFModel:  # pragma: nocover
         """
         Prepare the model for training.
         """
-        return FlexMFModel(
-            self.config.embedding_size,
-            data.n_users,
-            data.n_items,
-            context.torch_rng,
-            sparse=self.config.reg_method != "AdamW",
-        )
+        raise NotImplementedError()
 
     def create_optimizer(self, context: FlexMFTrainingContext) -> torch.optim.Optimizer:
         """

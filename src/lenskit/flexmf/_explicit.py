@@ -12,6 +12,7 @@ import torch
 from torch.nn import functional as F
 
 from lenskit.data import Dataset
+from lenskit.flexmf._model import FlexMFModel
 from lenskit.training import TrainingOptions
 
 from ._base import FlexMFConfigBase, FlexMFScorerBase
@@ -73,6 +74,19 @@ class FlexMFExplicitScorer(FlexMFScorerBase):
             items=rm_items,
             fields={"ratings": rm_values},
         ).to(context.device)
+
+    def create_model(self, context: FlexMFTrainingContext, data: FlexMFTrainingData) -> FlexMFModel:
+        """
+        Prepare the model for training.
+        """
+        return FlexMFModel(
+            self.config.embedding_size,
+            data.n_users,
+            data.n_items,
+            context.torch_rng,
+            sparse=self.config.reg_method != "AdamW",
+            init_scale=0.1,
+        )
 
     def train_batch(
         self, context: FlexMFTrainingContext, batch: FlexMFTrainingBatch, opt: torch.optim.Optimizer

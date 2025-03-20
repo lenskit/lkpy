@@ -43,6 +43,7 @@ class FlexMFModel(nn.Module):
         n_users: int,
         n_items: int,
         rng: torch.Generator,
+        init_scale: float = 1.0,
         user_bias: bool = True,
         item_bias: bool = True,
         sparse: bool = False,
@@ -64,12 +65,12 @@ class FlexMFModel(nn.Module):
 
         # initialize all values to a small normal
         if self.u_bias is not None:
-            nn.init.normal_(self.u_bias.weight, std=0.05, generator=rng)
+            nn.init.normal_(self.u_bias.weight, std=init_scale, generator=rng)
         if self.i_bias is not None:
-            nn.init.normal_(self.i_bias.weight, std=0.05, generator=rng)
+            nn.init.normal_(self.i_bias.weight, std=init_scale, generator=rng)
 
-        nn.init.normal_(self.u_embed.weight, std=0.05, generator=rng)
-        nn.init.normal_(self.i_embed.weight, std=0.05, generator=rng)
+        nn.init.normal_(self.u_embed.weight, std=init_scale, generator=rng)
+        nn.init.normal_(self.i_embed.weight, std=init_scale, generator=rng)
 
     @property
     def device(self):
