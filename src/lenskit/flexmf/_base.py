@@ -51,7 +51,7 @@ class FlexMFConfigBase:
     The learning rate for training.
     """
 
-    epochs: int = 10
+    epochs: int = 20
     """
     The number of training epochs.
     """
