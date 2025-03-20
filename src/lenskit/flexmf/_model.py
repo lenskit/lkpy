@@ -8,6 +8,10 @@ import torch
 from torch import Tensor, nn
 from torch.linalg import norm, vecdot
 
+from lenskit.logging import get_logger
+
+_log = get_logger(__name__)
+
 
 class FlexMFModel(nn.Module):
     """
@@ -64,12 +68,14 @@ class FlexMFModel(nn.Module):
 
         # initialize all values to a small normal
         if self.u_bias is not None:
-            nn.init.normal_(self.u_bias.weight.data, std=0.05, generator=rng)
+            nn.init.normal_(self.u_bias.weight, std=0.05, generator=rng)
         if self.i_bias is not None:
-            nn.init.normal_(self.i_bias.weight.data, std=0.05, generator=rng)
+            nn.init.normal_(self.i_bias.weight, std=0.05, generator=rng)
 
-        nn.init.normal_(self.u_embed.weight.data, std=0.05, generator=rng)
-        nn.init.normal_(self.i_embed.weight.data, std=0.05, generator=rng)
+        nn.init.normal_(self.u_embed.weight, std=0.05, generator=rng)
+        nn.init.normal_(self.i_embed.weight, std=0.05, generator=rng)
+
+        self.logger = _log.bind(size=e_size)
 
     @property
     def device(self):
@@ -125,16 +131,23 @@ class FlexMFModel(nn.Module):
 
         # look up biases and embeddings
         zero = torch.tensor(0.0)
+        self.logger.debug("looking up biases")
         ub = self.u_bias(user).reshape(user.shape) if self.u_bias is not None else zero
         ib = self.i_bias(item).reshape(item.shape) if self.i_bias is not None else zero
 
+        self.logger.debug("looking up embeddings")
         uvec = self.u_embed(user)
         ivec = self.i_embed(item)
 
         # compute the inner score
-        score = ub + ib + vecdot(uvec, ivec)
+        self.logger.debug("computing products")
+        ips = vecdot(uvec, ivec)
+
+        self.logger.debug("computing scores")
+        score = ub + ib + ips
 
         if return_norm:
+            self.logger.debug("computing norms")
             l2 = torch.square(ub) + torch.square(ib) + norm(uvec, dim=-1) + norm(ivec, dim=-1)
             assert l2.shape == score.shape
             return torch.stack((score, l2))

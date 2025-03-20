@@ -1,0 +1,183 @@
+# This file is part of LensKit.
+# Copyright (C) 2018-2023 Boise State University
+# Copyright (C) 2023-2025 Drexel University
+# Licensed under the MIT license, see LICENSE.md for details.
+# SPDX-License-Identifier: MIT
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Literal, TypeAlias
+
+import torch
+from torch.nn import functional as F
+
+from lenskit.data import Dataset
+from lenskit.training import TrainingOptions
+
+from ._base import FlexMFConfigBase, FlexMFScorerBase
+from ._model import FlexMFModel
+from ._training import FlexMFTrainingBatch, FlexMFTrainingContext, FlexMFTrainingData
+
+ImplicitLoss: TypeAlias = Literal["logistic", "pairwise"]
+NegativeStrategy: TypeAlias = Literal["uniform", "popular"]
+
+
+@dataclass
+class FlexMFImplicitConfig(FlexMFConfigBase):
+    """
+    Configuration for :class:`FlexMFImplicitScorer`.  It inherits base model
+    options from :class:`FlexMFConfigBase`.
+
+    Stability:
+        Experimental
+    """
+
+    loss: ImplicitLoss = "logistic"
+    """
+    The loss to use for model training.
+    """
+
+    negative_strategy: NegativeStrategy = "uniform"
+    """
+    The negative sampling strategy.
+    """
+
+    negative_count: int = 1
+    """
+    The number of negative items to sample for each positive item in the training data.
+    """
+
+    positive_weight: float = 1.0
+    """
+    A weighting multiplier to apply to the positive item's loss, to adjust the
+    relative importance of positive and negative classifications.  Only applies
+    to logistic loss.
+    """
+
+    user_bias: bool | None = None
+    """
+    Whether to learn a user bias term.  If unspecified, the default depends on the
+    loss function (``False`` for pairwise and ``True`` for logistic).
+    """
+    item_bias: bool = True
+    """
+    Whether to learn an item bias term.
+    """
+
+
+class FlexMFImplicitScorer(FlexMFScorerBase):
+    """
+    Implicit-feedback rating prediction with FlexMF.  This is capable of
+    realizing multiple models, including:
+
+    - BPR-MF (Bayesian personalized ranking) :cite:p:`BPR` (with ``"pairwise"`` loss)
+    - Logistic matrix factorization :cite:p:`LogisticMF` (with ``"logistic"`` loss)
+
+    All use configurable negative sampling, including the sampling approach from WARP.
+
+    Stability:
+        Experimental
+    """
+
+    config: FlexMFImplicitConfig
+
+    def prepare_data(
+        self, data: Dataset, options: TrainingOptions, context: FlexMFTrainingContext
+    ) -> FlexMFTrainingData:
+        """
+        Set up the training data and context for the scorer.
+        """
+
+        matrix = data.interactions().matrix()
+        coo = matrix.coo_structure()
+
+        # save data we learned at this stage
+        self.users = data.users
+        self.items = data.items
+
+        return FlexMFTrainingData(
+            batch_size=self.config.batch_size,
+            n_users=data.user_count,
+            n_items=data.item_count,
+            users=coo.row_numbers,
+            items=coo.col_numbers,
+            matrix=matrix,
+        )
+
+    def create_model(self, context: FlexMFTrainingContext, data: FlexMFTrainingData) -> FlexMFModel:
+        """
+        Prepare the model for training.
+        """
+        user_bias = self.config.user_bias
+        if user_bias is None:
+            if self.config.loss == "pairwise":
+                user_bias = False
+            else:
+                user_bias = True
+
+        return FlexMFModel(
+            self.config.embedding_size,
+            data.n_users,
+            data.n_items,
+            context.torch_rng,
+            user_bias=user_bias,
+            item_bias=self.config.item_bias,
+            sparse=self.config.reg_method != "AdamW",
+        )
+
+    def train_batch(
+        self, context: FlexMFTrainingContext, batch: FlexMFTrainingBatch, opt: torch.optim.Optimizer
+    ) -> float:
+        assert batch.data.matrix is not None
+        context.log.debug("sampling negatives")
+        negatives = batch.data.matrix.sample_negatives(
+            batch.users,
+            weighting=self.config.negative_strategy,
+            n=self.config.negative_count,
+            rng=context.rng,
+        )
+        assert negatives.shape == (self.config.batch_size, self.config.negative_count)
+
+        context.log.debug("moving data")
+        batch = batch.to(context.device)
+        positives = batch.items.reshape(-1, 1)
+        negatives = torch.tensor(negatives).to(context.device)
+        items = torch.cat((positives, negatives))
+
+        if self.config.reg_method == "L2":
+            context.log.debug("scoring items for L2")
+            result = self.model(batch.users, items, return_norm=True)
+            pos_pred = result[0, :, 0]
+            neg_pred = result[0, :, 1:]
+
+            norm = torch.mean(result[1, ...]) * self.config.reg
+        else:
+            context.log.debug("scoring for Adam", n=items.nelement())
+            result = self.model(batch.users, items)
+            pos_pred = result[:, 0]
+            neg_pred = result[:, 1:]
+            norm = 0.0
+
+        match self.config.loss:
+            case "logistic":
+                context.log.debug("computing logistic loss")
+                pos_lp = F.logsigmoid(pos_pred) * self.config.positive_weight
+                neg_lp = F.logsigmoid(neg_pred)
+                tot_lp = pos_lp.sum() + neg_lp.sum()
+                tot_n = pos_lp.nelement() + neg_lp.nelement()
+                loss = tot_lp / tot_n
+
+            case "pairwise":
+                context.log.debug("computing pairwise loss")
+                lp = F.logsigmoid(pos_pred - neg_pred)
+                loss = lp.mean()
+
+        loss_all = loss + norm
+
+        context.log.debug("back-propagating loss")
+        loss_all.backward()
+        context.log.debug("applying gradients")
+        opt.step()
+
+        return loss.item()
