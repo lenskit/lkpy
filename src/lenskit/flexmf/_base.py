@@ -177,7 +177,7 @@ class FlexMFScorerBase(IterativeTraining, Component):
             ) as pb:
                 for i, batch in enumerate(epoch_data.batches()):
                     opt.zero_grad()
-                    loss = self.train_batch(batch, opt)
+                    loss = self.train_batch(context, batch, opt)
 
                     pb.update(loss=loss)
                     tot_loss += loss
@@ -189,7 +189,7 @@ class FlexMFScorerBase(IterativeTraining, Component):
 
     @abstractmethod
     def train_batch(
-        self, batch: FlexMFTrainingBatch, opt: torch.optim.Optimizer
+        self, context: FlexMFTrainingContext, batch: FlexMFTrainingBatch, opt: torch.optim.Optimizer
     ) -> float:  # pragma: nocover
         """
         Compute and apply updates for a single batch.

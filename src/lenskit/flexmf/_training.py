@@ -15,6 +15,8 @@ import numpy as np
 import torch
 from torch import Tensor
 
+from lenskit.data import MatrixRelationshipSet
+
 
 @dataclass
 class FlexMFTrainingContext:
@@ -59,6 +61,12 @@ class FlexMFTrainingData:
     "User numbers for training samples."
     items: torch.Tensor
     "Item numbers for training samples."
+
+    matrix: MatrixRelationshipSet | None = None
+    """
+    The original relationship set we are training on.
+    """
+
     fields: dict[str, torch.Tensor] = field(default_factory=dict)
     "Additional per-sample data fields."
 
@@ -128,13 +136,14 @@ class FlexMFTrainingEpoch:
         ut = self.data.users[rows]
         it = self.data.items[rows]
         fts = {f: self.data.fields[f][rows] for f in fields}
-        return FlexMFTrainingBatch(ut, it, fts)
+        return FlexMFTrainingBatch(self.data, ut, it, fts)
 
 
 @dataclass
 class FlexMFTrainingBatch:
     "Representation of a single batch."
 
+    data: FlexMFTrainingData
     users: torch.Tensor
     items: torch.Tensor
     fields: dict[str, torch.Tensor]

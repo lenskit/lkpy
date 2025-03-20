@@ -74,12 +74,15 @@ class FlexMFExplicitScorer(FlexMFScorerBase):
             fields={"ratings": rm_values},
         ).to(context.device)
 
-    def train_batch(self, batch: FlexMFTrainingBatch, opt: torch.optim.Optimizer) -> float:
+    def train_batch(
+        self, context: FlexMFTrainingContext, batch: FlexMFTrainingBatch, opt: torch.optim.Optimizer
+    ) -> float:
         if self.config.reg_method == "L2":
             result = self.model(batch.users, batch.items, return_norm=True)
             pred = result[0, :]
             norm = torch.mean(result[1, :]) * self.config.reg
         else:
+            pred = self.model(batch.users, batch.items)
             norm = 0.0
 
         loss = F.mse_loss(pred, batch.fields["ratings"])
