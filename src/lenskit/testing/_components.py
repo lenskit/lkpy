@@ -8,7 +8,7 @@ import inspect
 import os
 import pickle
 from time import perf_counter
-from typing import ClassVar, Literal
+from typing import Any, ClassVar, Literal
 
 import numpy as np
 import pandas as pd
@@ -79,6 +79,7 @@ class TrainingTests:
 
     needs_jit: ClassVar[bool] = True
     component: type[Component]
+    config: Any = None
 
     def maybe_skip_nojit(self):
         if self.needs_jit and not jit_enabled:
@@ -88,7 +89,7 @@ class TrainingTests:
     def trained_model(self, ml_ds: Dataset):
         self.maybe_skip_nojit()
 
-        model = self.component()
+        model = self.component(self.config)
         if isinstance(model, Trainable):
             model.train(ml_ds, TrainingOptions())
         yield model
