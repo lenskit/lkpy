@@ -6,6 +6,7 @@
 
 import logging
 import pickle
+from itertools import product
 
 import numpy as np
 import pandas as pd
@@ -21,7 +22,18 @@ from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
 
 class TestFlexMFImplicit(BasicComponentTests, ScorerTests):
     component = FlexMFImplicitScorer
-    config = FlexMFImplicitConfig(reg_method="AdamW", loss="pairwise")
+    config = FlexMFImplicitConfig()
+
+
+@mark.slow
+@mark.parametrize(["loss", "reg"], product(["logistic", "pairwise"], ["L2", "AdamW"]))
+def test_flexmf_train_config(ml_ds, loss, reg):
+    config = FlexMFImplicitConfig(loss=loss, reg_method=reg)
+    model = FlexMFImplicitScorer(config)
+    print("training", model)
+    model.train(ml_ds)
+
+    assert model.model is not None
 
 
 @mark.slow
