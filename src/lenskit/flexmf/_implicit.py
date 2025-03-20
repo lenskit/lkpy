@@ -157,14 +157,14 @@ class FlexMFImplicitScorer(FlexMFScorerBase):
 
         match self.config.loss:
             case "logistic":
-                pos_lp = F.logsigmoid(pos_pred) * self.config.positive_weight
-                neg_lp = F.logsigmoid(neg_pred)
+                pos_lp = -F.logsigmoid(pos_pred) * self.config.positive_weight
+                neg_lp = -F.logsigmoid(-neg_pred)
                 tot_lp = pos_lp.sum() + neg_lp.sum()
                 tot_n = pos_lp.nelement() + neg_lp.nelement()
                 loss = tot_lp / tot_n
 
             case "pairwise":
-                lp = F.logsigmoid(pos_pred - neg_pred)
+                lp = -F.logsigmoid(pos_pred - neg_pred)
                 loss = lp.mean()
 
         loss_all = loss + norm
