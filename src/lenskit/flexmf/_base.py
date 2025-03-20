@@ -115,6 +115,7 @@ class FlexMFScorerBase(IterativeTraining, Component):
         _log.info("preparing to train", device=train_ctx.device, model=self)
         self.model = self.model.to(train_ctx.device)
         self.model.train(True)
+        self.model.compile()
 
         # delegate to the inner training loop
         return self._training_loop_impl(train_data, train_ctx)
