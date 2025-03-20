@@ -1,3 +1,9 @@
+# This file is part of LensKit.
+# Copyright (C) 2018-2023 Boise State University
+# Copyright (C) 2023-2025 Drexel University
+# Licensed under the MIT license, see LICENSE.md for details.
+# SPDX-License-Identifier: MIT
+
 from dataclasses import dataclass
 from typing import Literal
 
@@ -35,7 +41,7 @@ class StochasticTopNConfig:
         Use the softmax of the item scores as the selection probabilities.
     linear
         Linearly re-scale item scores to be selection probabilities. This
-        equivalent to min-max scaling the scores, then re-scaling to sum 
+        equivalent to min-max scaling the scores, then re-scaling to sum
         to 1.
     ``None``
         No transformation, except negative scores are clamped to (almost)
