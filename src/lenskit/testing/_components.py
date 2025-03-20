@@ -96,7 +96,7 @@ class TrainingTests:
 
     def test_skip_retrain(self, ml_ds: Dataset):
         self.maybe_skip_nojit()
-        model = self.component()
+        model = self.component(self.config)
         if not isinstance(model, Trainable):
             skip(f"component {model.__class__.__name__} is not trainable")
 
@@ -269,7 +269,7 @@ class ScorerTests(TrainingTests):
         dsb.add_relationships(iname, df, entities=["user", "item"])
         ds = dsb.build()
 
-        model = self.component()
+        model = self.component(self.config)
         assert isinstance(model, Trainable)
         model.train(ds, TrainingOptions())
 
@@ -294,7 +294,7 @@ class ScorerTests(TrainingTests):
         """
         self.maybe_skip_nojit()
         split = split_temporal_fraction(ml_ds, 0.2)
-        model = self.component()
+        model = self.component(self.config)
         pipe = topn_pipeline(model)
         pipe.train(split.train)
 
@@ -307,7 +307,7 @@ class ScorerTests(TrainingTests):
         ml_ratings = ml_ratings.astype({"rating": "f8"})
         ml_ds = from_interactions_df(ml_ratings)
         split = split_temporal_fraction(ml_ds, 0.3)
-        model = self.component()
+        model = self.component(self.config)
         pipe = topn_pipeline(model)
         pipe.train(split.train)
 
