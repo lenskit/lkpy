@@ -145,13 +145,14 @@ class FlexMFImplicitScorer(FlexMFScorerBase):
 
         if self.config.reg_method == "L2":
             result = self.model(users, items, return_norm=True)
-            pos_pred = result[0, :, 0]
+            # :1 instead of 0 to reduce shape-adjustment overhead
+            pos_pred = result[0, :, :1]
             neg_pred = result[0, :, 1:]
 
             norm = torch.mean(result[1, ...]) * self.config.reg
         else:
             result = self.model(users, items)
-            pos_pred = result[:, 0]
+            pos_pred = result[:, :1]
             neg_pred = result[:, 1:]
             norm = 0.0
 
