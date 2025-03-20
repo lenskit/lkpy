@@ -131,23 +131,17 @@ class FlexMFModel(nn.Module):
 
         # look up biases and embeddings
         zero = torch.tensor(0.0)
-        self.logger.debug("looking up biases")
         ub = self.u_bias(user).reshape(user.shape) if self.u_bias is not None else zero
         ib = self.i_bias(item).reshape(item.shape) if self.i_bias is not None else zero
 
-        self.logger.debug("looking up embeddings")
         uvec = self.u_embed(user)
         ivec = self.i_embed(item)
 
         # compute the inner score
-        self.logger.debug("computing products")
         ips = vecdot(uvec, ivec)
-
-        self.logger.debug("computing scores")
         score = ub + ib + ips
 
         if return_norm:
-            self.logger.debug("computing norms")
             l2 = torch.square(ub) + torch.square(ib) + norm(uvec, dim=-1) + norm(ivec, dim=-1)
             assert l2.shape == score.shape
             return torch.stack((score, l2))
