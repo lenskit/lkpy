@@ -112,7 +112,7 @@ class FlexMFScorerBase(IterativeTraining, Component):
         items = data.item_stats()
         self.model.zero_items(torch.tensor(items["count"].values == 0))
 
-        _log.info("preparing to train", device=train_ctx.device)
+        _log.info("preparing to train", device=train_ctx.device, model=self)
         self.model = self.model.to(train_ctx.device)
         self.model.train(True)
 
@@ -151,31 +151,38 @@ class FlexMFScorerBase(IterativeTraining, Component):
             sparse=self.config.reg_method != "AdamW",
         )
 
-    def create_optimizer(self) -> torch.optim.Optimizer:
+    def create_optimizer(self, context: FlexMFTrainingContext) -> torch.optim.Optimizer:
         """
         Create the appropriate optimizer depending on the regularization method.
         """
         if self.config.reg_method == "AdamW":
+            context.log.debug("creating AdamW optimizer")
             return torch.optim.AdamW(
                 self.model.parameters(),
                 lr=self.config.learning_rate,
                 weight_decay=self.config.reg,
             )
         else:
+            context.log.debug("creating SparseAdam optimizer")
             return torch.optim.SparseAdam(self.model.parameters(), lr=self.config.learning_rate)
 
     def _training_loop_impl(self, data: FlexMFTrainingData, context: FlexMFTrainingContext):
-        opt = self.create_optimizer()
+        log = _log.bind(model=self.__class__.__name__, size=self.config.embedding_size)
+        context.log = log
+        opt = self.create_optimizer(context)
 
         for epoch in range(1, self.config.epochs + 1):
             # permute and copy the training data
             epoch_data = data.epoch(context)
+            context.log = elog = log.bind(epoch=epoch)
 
             tot_loss = 0.0
             with item_progress(
                 f"Training epoch {epoch}", epoch_data.batch_count, {"loss": ".3f"}
             ) as pb:
-                for i, batch in enumerate(epoch_data.batches()):
+                for i, batch in enumerate(epoch_data.batches(), 1):
+                    context.log = blog = elog.bind(batch=i)
+                    blog.debug("training batch")
                     opt.zero_grad()
                     loss = self.train_batch(context, batch, opt)
 

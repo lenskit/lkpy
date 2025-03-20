@@ -12,10 +12,14 @@ from dataclasses import dataclass, field, replace
 from typing import Self
 
 import numpy as np
+import structlog
 import torch
 from torch import Tensor
 
 from lenskit.data import MatrixRelationshipSet
+from lenskit.logging import get_logger
+
+_log = get_logger(__name__)
 
 
 @dataclass
@@ -42,6 +46,11 @@ class FlexMFTrainingContext:
     PyTorch RNG for initialization and generation.
     """
 
+    log: structlog.stdlib.BoundLogger = field(default_factory=lambda: _log.bind())
+    """
+    A logger, that is bound the current training status / position.
+    """
+
 
 @dataclass
 class FlexMFTrainingData:
@@ -57,9 +66,9 @@ class FlexMFTrainingData:
     n_users: int
     n_items: int
 
-    users: torch.Tensor
+    users: torch.Tensor | np.ndarray[tuple[int], np.dtype[np.int32]]
     "User numbers for training samples."
-    items: torch.Tensor
+    items: torch.Tensor | np.ndarray[tuple[int], np.dtype[np.int32]]
     "Item numbers for training samples."
 
     matrix: MatrixRelationshipSet | None = None
@@ -74,9 +83,9 @@ class FlexMFTrainingData:
         """
         Move this data to another device.
         """
-        ut = self.users.to(device)
-        it = self.items.to(device)
-        fts = {f: t.to(device) for (f, t) in self.fields.items()}
+        ut = torch.as_tensor(self.users, device=device)
+        it = torch.as_tensor(self.items, device=device)
+        fts = {f: torch.as_tensor(t, device=device) for (f, t) in self.fields.items()}
         return replace(self, users=ut, items=it, fields=fts)
 
     @property
@@ -85,9 +94,10 @@ class FlexMFTrainingData:
 
     def epoch(self, context: FlexMFTrainingContext) -> FlexMFTrainingEpoch:
         # permute the data
-        perm = context.rng.permutation(self.n_samples)
+        perm = np.require(context.rng.permutation(self.n_samples), dtype=np.int32)
         # convert to tensor, send to the training data's device.
-        perm = torch.tensor(perm).to(self.items.device)
+        if isinstance(self.items, torch.Tensor):
+            perm = torch.tensor(perm).to(self.items.device)
 
         return FlexMFTrainingEpoch(self, perm)
 
@@ -99,7 +109,7 @@ class FlexMFTrainingEpoch:
     """
 
     data: FlexMFTrainingData
-    permutation: torch.Tensor
+    permutation: torch.Tensor | np.ndarray[tuple[int], np.dtype[np.int32]]
 
     @property
     def n_samples(self) -> int:
@@ -124,15 +134,18 @@ class FlexMFTrainingEpoch:
                 The fields to include in the batch.
         """
 
+        fields = set(self.data.fields.keys()) if fields is None else fields
         for start in range(0, self.n_samples, self.batch_size):
             end = min(start + self.batch_size, self.n_samples)
-
             rows = self.permutation[start:end]
 
-            fields = set(self.data.fields.keys()) if fields is None else fields
             yield self.make_batch(rows, fields)
 
-    def make_batch(self, rows: Tensor, fields: Sequence[str] | set[str]) -> FlexMFTrainingBatch:
+    def make_batch(
+        self,
+        rows: Tensor | np.ndarray[tuple[int], np.dtype[np.int32]],
+        fields: Sequence[str] | set[str],
+    ) -> FlexMFTrainingBatch:
         ut = self.data.users[rows]
         it = self.data.items[rows]
         fts = {f: self.data.fields[f][rows] for f in fields}
@@ -144,15 +157,15 @@ class FlexMFTrainingBatch:
     "Representation of a single batch."
 
     data: FlexMFTrainingData
-    users: torch.Tensor
-    items: torch.Tensor
+    users: torch.Tensor | np.ndarray[tuple[int], np.dtype[np.int32]]
+    items: torch.Tensor | np.ndarray[tuple[int], np.dtype[np.int32]]
     fields: dict[str, torch.Tensor]
 
     def to(self, device: str) -> Self:
         """
         Move this data to another device.
         """
-        ut = self.users.to(device)
-        it = self.items.to(device)
-        fts = {f: t.to(device) for (f, t) in self.fields.items()}
+        ut = torch.as_tensor(self.users, device=device)
+        it = torch.as_tensor(self.items, device=device)
+        fts = {f: torch.as_tensor(t, device=device) for (f, t) in self.fields.items()}
         return replace(self, users=ut, items=it, fields=fts)
