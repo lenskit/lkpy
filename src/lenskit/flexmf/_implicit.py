@@ -130,38 +130,33 @@ class FlexMFImplicitScorer(FlexMFScorerBase):
         self, context: FlexMFTrainingContext, batch: FlexMFTrainingBatch, opt: torch.optim.Optimizer
     ) -> float:
         assert batch.data.matrix is not None
-        context.log.debug("sampling negatives")
         negatives = batch.data.matrix.sample_negatives(
             batch.users,
             weighting=self.config.negative_strategy,
             n=self.config.negative_count,
             rng=context.rng,
         )
-        assert negatives.shape == (self.config.batch_size, self.config.negative_count)
 
-        context.log.debug("moving data")
         batch = batch.to(context.device)
+        users = batch.users.reshape(-1, 1)
         positives = batch.items.reshape(-1, 1)
         negatives = torch.tensor(negatives).to(context.device)
-        items = torch.cat((positives, negatives))
+        items = torch.cat((positives, negatives), 1)
 
         if self.config.reg_method == "L2":
-            context.log.debug("scoring items for L2")
-            result = self.model(batch.users, items, return_norm=True)
+            result = self.model(users, items, return_norm=True)
             pos_pred = result[0, :, 0]
             neg_pred = result[0, :, 1:]
 
             norm = torch.mean(result[1, ...]) * self.config.reg
         else:
-            context.log.debug("scoring for Adam", n=items.nelement())
-            result = self.model(batch.users, items)
+            result = self.model(users, items)
             pos_pred = result[:, 0]
             neg_pred = result[:, 1:]
             norm = 0.0
 
         match self.config.loss:
             case "logistic":
-                context.log.debug("computing logistic loss")
                 pos_lp = F.logsigmoid(pos_pred) * self.config.positive_weight
                 neg_lp = F.logsigmoid(neg_pred)
                 tot_lp = pos_lp.sum() + neg_lp.sum()
@@ -169,15 +164,12 @@ class FlexMFImplicitScorer(FlexMFScorerBase):
                 loss = tot_lp / tot_n
 
             case "pairwise":
-                context.log.debug("computing pairwise loss")
                 lp = F.logsigmoid(pos_pred - neg_pred)
                 loss = lp.mean()
 
         loss_all = loss + norm
 
-        context.log.debug("back-propagating loss")
         loss_all.backward()
-        context.log.debug("applying gradients")
         opt.step()
 
         return loss.item()
