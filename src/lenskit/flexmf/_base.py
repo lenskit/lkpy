@@ -16,6 +16,7 @@ import torch
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.logging import get_logger, item_progress
+from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component
 from lenskit.training import IterativeTraining, TrainingOptions
 
@@ -102,6 +103,7 @@ class FlexMFScorerBase(IterativeTraining, Component):
     def training_loop(
         self, data: Dataset, options: TrainingOptions
     ) -> Generator[dict[str, float], None, None]:
+        ensure_parallel_init()
         train_ctx = self.prepare_context(options)
         train_data = self.prepare_data(data, options, train_ctx)
         self.model = self.create_model(train_ctx, train_data)
