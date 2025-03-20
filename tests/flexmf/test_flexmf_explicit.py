@@ -15,12 +15,18 @@ from pytest import approx, mark
 
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df, load_movielens_df
 from lenskit.flexmf import FlexMFExplicitScorer
+from lenskit.flexmf._explicit import FlexMFExplicitConfig
 from lenskit.metrics import quick_measure_model
 from lenskit.testing import BasicComponentTests, ScorerTests, wantjit
 
 
 class TestFlexMFExplicit(BasicComponentTests, ScorerTests):
     component = FlexMFExplicitScorer
+
+
+class TestFlexMFExplicitAdam(BasicComponentTests, ScorerTests):
+    component = FlexMFExplicitScorer
+    config = FlexMFExplicitConfig(reg_method="AdamW")
 
 
 @mark.slow
