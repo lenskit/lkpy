@@ -76,8 +76,8 @@ class ItemListCollection(Generic[KL], ABC):
 
     _key_class: type[KL]
 
-    def __new__(cls, key: type[KL] | Sequence[str], *, index: bool = True):
-        if cls == ItemListCollection or cls == MutableItemListCollection:
+    def __new__(cls, key: type[KL] | Sequence[str] | None = None, *, index: bool = True):
+        if key is not None and (cls == ItemListCollection or cls == MutableItemListCollection):
             return cls.empty(key, index=index)
         else:
             return super().__new__(cls)
