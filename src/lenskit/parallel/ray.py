@@ -104,10 +104,10 @@ def init_cluster(
     cfg = get_parallel_config()
     if proc_slots is None:
         proc_slots = cfg.processes
+
     if limit_slots:
-        resources = {LK_PROCESS_SLOT: proc_slots}
-    else:
-        resources = {}
+        resources[LK_PROCESS_SLOT] = proc_slots
+
     if num_cpus is None:
         num_cpus = effective_cpu_count()
 
