@@ -218,9 +218,7 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
 
 
 def _ray_invoke_worker(func: Callable[[M, A], R], model: M, args: list[A]) -> list[R]:
-    log_cfg = pickle.loads(base64.decodebytes(os.environb[b"LK_LOG_CONFIG"]))
-    ensure_parallel_init()
-    with WorkerContext(log_cfg) as ctx:
+    with init_worker(autostart=False) as ctx:
         try:
             with Task("cluster worker", subprocess=True) as task:
                 result = [func(model, arg) for arg in args]
@@ -228,3 +226,22 @@ def _ray_invoke_worker(func: Callable[[M, A], R], model: M, args: list[A]) -> li
             ctx.send_task(task)
 
     return result
+
+
+def init_worker(*, autostart: bool = True) -> WorkerContext:
+    """
+    Initialize a Ray worker process.  Sets up logging, and returns the context.
+
+    Args:
+        autostart:
+            Set to ``False`` to disable calling :meth:`WorkerContext.start`, for
+            when the caller will start and stop the context if it is new.
+    """
+    log_cfg = pickle.loads(base64.decodebytes(os.environb[b"LK_LOG_CONFIG"]))
+    ensure_parallel_init()
+    context = WorkerContext.active()
+    if context is None:
+        context = WorkerContext(log_cfg)
+        context.start()
+
+    return context
