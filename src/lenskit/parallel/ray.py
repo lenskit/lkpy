@@ -59,6 +59,7 @@ def init_cluster(
     resources: dict[str, float] | None = None,
     worker_parallel: ParallelConfig | None = None,
     limit_slots: bool = True,
+    global_logging: bool = False,
     **kwargs,
 ):
     """
@@ -83,6 +84,9 @@ def init_cluster(
             ``None``, uses the default.
         limit_slots:
             ``False`` to disable the LensKit slot interface.
+        global_logging:
+            ``True`` to wire up logging in the workers at startup, instead of only
+            connecting logs when a task is run.
         kwargs:
             Other options to pass to :func:`ray.init`.
 
@@ -115,7 +119,8 @@ def init_cluster(
     wc = WorkerLogConfig.current()
     env["LK_LOG_CONFIG"] = base64.encodebytes(pickle.dumps(wc)).decode()
 
-    runtime = ray.runtime_env.RuntimeEnv(env_vars=env)
+    setup = _worker_setup if global_logging else None
+    runtime = ray.runtime_env.RuntimeEnv(env_vars=env, worker_process_setup_hook=setup)
 
     _log.info("starting Ray cluster")
     ray.init(num_cpus=num_cpus, resources=resources, runtime_env=runtime, **kwargs)
@@ -226,6 +231,10 @@ def _ray_invoke_worker(func: Callable[[M, A], R], model: M, args: list[A]) -> li
             ctx.send_task(task)
 
     return result
+
+
+def _worker_setup():
+    init_worker()
 
 
 def init_worker(*, autostart: bool = True) -> WorkerContext:
