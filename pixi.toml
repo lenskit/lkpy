@@ -52,6 +52,9 @@ platforms = ["linux-64", "osx-arm64"]
 [feature.hpf.dependencies]
 hpfrec = "~=0.2.0"
 
+[feature.lightfm.dependencies]
+lightfm = ">=1.16"
+
 [feature.test.dependencies]
 pytest = "~=8.2"
 pytest-doctestplus = ">=1.2.1,<2"
