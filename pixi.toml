@@ -40,6 +40,9 @@ scikit-learn = "~=1.1"
 [feature.funksvd.dependencies]
 numba = ">=0.56"
 
+[feature.lightfm.dependencies]
+lightfm = ">=1.17"
+
 [feature.implicit]
 platforms = ["linux-64", "osx-arm64"]
 
@@ -126,6 +129,7 @@ doc = { features = [
   "py312",
   "doc",
   "funksvd",
+  "lightfm",
   "hpf",
   "implicit",
   "sklearn",
@@ -135,6 +139,7 @@ demo = { features = [
   "py312",
   "demo",
   "funksvd",
+  "lightfm"
   "hpf",
   "implicit",
 ], solve-group = "py312-nix" }
@@ -149,6 +154,7 @@ dev-full = { features = [
   "demo",
   "sklearn",
   "funksvd",
+  "lightfm",
   "implicit",
   "hpf",
 ], solve-group = "py312-nix" }
@@ -159,6 +165,7 @@ dev-compat = { features = [
   "demo",
   "sklearn",
   "funksvd",
+  "lightfm",
   "implicit",
   "hpf",
 ], solve-group = "py311-nix" }
@@ -194,6 +201,20 @@ test-py312-funksvd = { features = [
   "funksvd",
 ], solve-group = "py312" }
 
+
+test-py311-lightfm = { features = [
+  "py311",
+  "test",
+  "lightfm ",
+], solve-group = "py311" }
+test-py312-lightfm  = { features = [
+  "py312",
+  "test",
+  "lightfm ",
+], solve-group = "py312" }
+
+
+
 test-py311-implicit = { features = [
   "py311",
   "test",
@@ -222,6 +243,7 @@ test-py311-full = { features = [
   "ray",
   "sklearn",
   "funksvd",
+  "lightfm",
   "implicit",
   "hpf",
 ], solve-group = "py311-nix" }
@@ -231,6 +253,7 @@ test-py312-full = { features = [
   "ray",
   "sklearn",
   "funksvd",
+  "lightfm",
   "implicit",
   "hpf",
 ], solve-group = "py312-nix" }
@@ -239,6 +262,7 @@ test-examples = { features = [
   "doc",
   "test",
   "funksvd",
+  "lightfm",
   "hpf",
   "implicit",
 ], solve-group = "py311-nix" }
