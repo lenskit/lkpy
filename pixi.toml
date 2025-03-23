@@ -40,6 +40,9 @@ scikit-learn = "~=1.1"
 [feature.funksvd.dependencies]
 numba = ">=0.56"
 
+[feature.lightfm.dependencies]
+lightfm = ">=1.17"
+
 [feature.implicit]
 platforms = ["linux-64", "osx-arm64"]
 
