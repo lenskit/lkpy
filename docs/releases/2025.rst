@@ -18,6 +18,7 @@ information on how to upgrade your code.
 -   :meth:`~lenskit.data.MatrixRelationshipSet.sample_negatives` now accepts
     ``"popular"`` as an alias for ``"popularity"``.
 -   :mod:`lenskit.basic` now exports the configuration classes for basic algorithms (:pr:`672`).
+-   Several bug fixes for logging in niche setups (including ray clusters) (:pr:`673`).
 
 .. _2025.2.0:
 
