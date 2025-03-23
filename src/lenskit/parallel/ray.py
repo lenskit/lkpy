@@ -251,6 +251,7 @@ def init_worker(*, autostart: bool = True) -> WorkerContext:
     context = WorkerContext.active()
     if context is None:
         context = WorkerContext(log_cfg)
-        context.start()
+        if autostart:
+            context.start()
 
     return context
