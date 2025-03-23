@@ -183,6 +183,20 @@ class Task(BaseModel, extra="allow"):
         if file:
             self._save_file = Path(file)
 
+    def total_cpu(self) -> float | None:
+        "Compute the total CPU time (including subprocesses)."
+        time = self.cpu_time
+        if time is None:
+            return None
+
+        for task in self.subtasks:
+            if task.subprocess:
+                child_time = task.total_cpu()
+                if child_time is not None:
+                    time += child_time
+
+        return time
+
     def save_to_file(self, path: PathLike[str], monitor: bool = True):
         """
         Save this task to a file, and re-save it when finished.
