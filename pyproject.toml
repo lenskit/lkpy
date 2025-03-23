@@ -46,6 +46,7 @@ funksvd = ["numba >= 0.56"]
 hpf = ["hpfrec~=0.2.12"]
 lightfm = ["lightfm >=1.16"] 
 implicit = ["implicit >=0.7.2"]
+lightfm = ["lightfm >=1.17"]
 notebook = ["ipywidgets ~=8.0"]
 ray = ["ray ~=2.42"]
 # test deps — keep synchronized with pixi.toml

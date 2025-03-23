@@ -46,6 +46,9 @@ platforms = ["linux-64", "osx-arm64"]
 [feature.implicit.dependencies]
 implicit = ">=0.7.2"
 
+[feature.lightfm.dependencies]
+lightfm = ">=1.17"
+
 [feature.hpf]
 platforms = ["linux-64", "osx-arm64"]
 
