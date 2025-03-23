@@ -17,6 +17,7 @@ information on how to upgrade your code.
 -   Replace broken “softmax” sampler with a proper stochastic sampler (:pr:`667`).
 -   :meth:`~lenskit.data.MatrixRelationshipSet.sample_negatives` now accepts
     ``"popular"`` as an alias for ``"popularity"``.
+-   :mod:`lenskit.basic` now exports the configuration classes for basic algorithms (:pr:`672`).
 
 .. _2025.2.0:
 
