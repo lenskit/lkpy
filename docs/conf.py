@@ -19,7 +19,7 @@ copyright = "2018–2024 Drexel University, Boise State University, and collabor
 author = "Michael D. Ekstrand"
 
 release = version("lenskit")
-version = ".".join(release.split(".")[:3])
+version = ".".join(release.split(".")[:4])
 _parsed_ver = Version(release)
 
 extensions = [

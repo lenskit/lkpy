@@ -390,9 +390,9 @@ class MatrixRelationshipSet(RelationshipSet):
 
     def sample_negatives(
         self,
-        rows: np.ndarray[int, np.dtype[np.int32]],
+        rows: np.ndarray[tuple[int], np.dtype[np.int32]],
         *,
-        weighting: Literal["uniform", "popularity"] = "uniform",
+        weighting: Literal["uniform", "popular", "popularity"] = "uniform",
         n: int | None = None,
         verify: bool = True,
         max_attempts: int = 10,
@@ -436,10 +436,12 @@ class MatrixRelationshipSet(RelationshipSet):
         match weighting:
             case "uniform":
                 columns = rng.choice(self.n_cols, size=shape, replace=True)
-            case "popularity":
+            case "popular" | "popularity":
                 ccol = self._table.column(num_col_name(self.col_type)).to_numpy()
                 trows = rng.choice(self._table.num_rows, size=shape, replace=True)
                 columns = ccol[trows]
+            case _:
+                raise ValueError(f"unknown weighting strategy {weighting}")
         columns = np.require(columns, "i4")
 
         if verify:

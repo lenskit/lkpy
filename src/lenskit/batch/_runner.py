@@ -59,10 +59,10 @@ class BatchPipelineRunner:
             default (defined by :func:`lenskit.parallel.config.initialize`).
     """
 
-    n_jobs: int | None
+    n_jobs: int | Literal["ray"] | None
     invocations: list[InvocationSpec]
 
-    def __init__(self, *, n_jobs: int | None = None):
+    def __init__(self, *, n_jobs: int | Literal["ray"] | None = None):
         self.n_jobs = n_jobs
         self.invocations = []
 

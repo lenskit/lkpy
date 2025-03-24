@@ -8,19 +8,22 @@
 Basic and baseline pipeline components.
 """
 
-from .bias import BiasModel, BiasScorer, Damping
+from .bias import BiasConfig, BiasModel, BiasScorer, Damping
 from .candidates import AllTrainingItemsCandidateSelector, UnratedTrainingItemsCandidateSelector
 from .composite import FallbackScorer
 from .history import UserTrainingHistoryLookup
-from .popularity import PopScorer
+from .popularity import PopConfig, PopScorer
 from .random import RandomSelector, SoftmaxRanker
-from .topn import TopNRanker
+from .topn import TopNConfig, TopNRanker
 
 __all__ = [
     "BiasModel",
+    "BiasConfig",
     "BiasScorer",
     "Damping",
+    "PopConfig",
     "PopScorer",
+    "TopNConfig",
     "TopNRanker",
     "RandomSelector",
     "SoftmaxRanker",

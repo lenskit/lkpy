@@ -1,3 +1,9 @@
+# This file is part of LensKit.
+# Copyright (C) 2018-2023 Boise State University
+# Copyright (C) 2023-2025 Drexel University
+# Licensed under the MIT license, see LICENSE.md for details.
+# SPDX-License-Identifier: MIT
+
 from __future__ import annotations
 
 import warnings
@@ -70,8 +76,8 @@ class ItemListCollection(Generic[KL], ABC):
 
     _key_class: type[KL]
 
-    def __new__(cls, key: type[KL] | Sequence[str], *, index: bool = True):
-        if cls == ItemListCollection or cls == MutableItemListCollection:
+    def __new__(cls, key: type[KL] | Sequence[str] | None = None, *, index: bool = True):
+        if key is not None and (cls == ItemListCollection or cls == MutableItemListCollection):
             return cls.empty(key, index=index)
         else:
             return super().__new__(cls)

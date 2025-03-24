@@ -59,6 +59,7 @@ def init_cluster(
     resources: dict[str, float] | None = None,
     worker_parallel: ParallelConfig | None = None,
     limit_slots: bool = True,
+    global_logging: bool = False,
     **kwargs,
 ):
     """
@@ -83,6 +84,9 @@ def init_cluster(
             ``None``, uses the default.
         limit_slots:
             ``False`` to disable the LensKit slot interface.
+        global_logging:
+            ``True`` to wire up logging in the workers at startup, instead of only
+            connecting logs when a task is run.
         kwargs:
             Other options to pass to :func:`ray.init`.
 
@@ -100,10 +104,10 @@ def init_cluster(
     cfg = get_parallel_config()
     if proc_slots is None:
         proc_slots = cfg.processes
+
     if limit_slots:
-        resources = {LK_PROCESS_SLOT: proc_slots}
-    else:
-        resources = {}
+        resources[LK_PROCESS_SLOT] = proc_slots
+
     if num_cpus is None:
         num_cpus = effective_cpu_count()
 
@@ -115,7 +119,8 @@ def init_cluster(
     wc = WorkerLogConfig.current()
     env["LK_LOG_CONFIG"] = base64.encodebytes(pickle.dumps(wc)).decode()
 
-    runtime = ray.runtime_env.RuntimeEnv(env_vars=env)
+    setup = _worker_setup if global_logging else None
+    runtime = ray.runtime_env.RuntimeEnv(env_vars=env, worker_process_setup_hook=setup)
 
     _log.info("starting Ray cluster")
     ray.init(num_cpus=num_cpus, resources=resources, runtime_env=runtime, **kwargs)
@@ -218,9 +223,7 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
 
 
 def _ray_invoke_worker(func: Callable[[M, A], R], model: M, args: list[A]) -> list[R]:
-    log_cfg = pickle.loads(base64.decodebytes(os.environb[b"LK_LOG_CONFIG"]))
-    ensure_parallel_init()
-    with WorkerContext(log_cfg) as ctx:
+    with init_worker(autostart=False) as ctx:
         try:
             with Task("cluster worker", subprocess=True) as task:
                 result = [func(model, arg) for arg in args]
@@ -228,3 +231,27 @@ def _ray_invoke_worker(func: Callable[[M, A], R], model: M, args: list[A]) -> li
             ctx.send_task(task)
 
     return result
+
+
+def _worker_setup():
+    init_worker()
+
+
+def init_worker(*, autostart: bool = True) -> WorkerContext:
+    """
+    Initialize a Ray worker process.  Sets up logging, and returns the context.
+
+    Args:
+        autostart:
+            Set to ``False`` to disable calling :meth:`WorkerContext.start`, for
+            when the caller will start and stop the context if it is new.
+    """
+    log_cfg = pickle.loads(base64.decodebytes(os.environb[b"LK_LOG_CONFIG"]))
+    ensure_parallel_init()
+    context = WorkerContext.active()
+    if context is None:
+        context = WorkerContext(log_cfg)
+        if autostart:
+            context.start()
+
+    return context
