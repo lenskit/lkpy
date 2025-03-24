@@ -70,6 +70,7 @@ lenskit = "lenskit.cli:lenskit"
 lenskit-data = "lenskit.cli.data:data"
 lenskit-doctor = "lenskit.cli.doctor:doctor"
 lenskit-train = "lenskit.cli.train:train"
+lenskit-recommend = "lenskit.cli.recommend:recommend"
 
 # configure build tools
 [tool.hatch.metadata]

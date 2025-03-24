@@ -69,7 +69,7 @@ class EntitySet:
     @property
     def attributes(self) -> list[str]:
         """
-        Get the attribute names for this enrtity class.
+        Get the attribute names for this entity class.
         """
         return list(self.schema.attributes.keys())
 

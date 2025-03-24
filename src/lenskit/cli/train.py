@@ -27,13 +27,13 @@ _log = get_logger(__name__)
     default="model.pkl",
     help="Output file for trained model.",
 )
-@click.option("-n", "--name", help="Name of the recommendation pipeline.")
+@click.option("--name", help="Name of the recommendation pipeline.")
 @click.option(
     "--rating-predictor",
     is_flag=True,
     help="Include rating prediction in the pipeline capabilities.",
 )
-@click.option("-N", "--list-length", type=int, help="Default list length for pipeline ranker.")
+@click.option("-n", "--list-length", type=int, help="Default list length for pipeline ranker.")
 @click.argument("dataset", metavar="DATA", type=Path)
 def train(
     scorer_class: str | None,
@@ -43,6 +43,9 @@ def train(
     rating_predictor: bool,
     dataset: Path,
 ):
+    """
+    Train a recommendation pipeline and serialize it to disk.
+    """
     _log.warning("the training CLI is experimental and may change without notice")
 
     if scorer_class is not None:
