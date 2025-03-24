@@ -13,6 +13,10 @@ cov-reports/
 test-logs/
 htmlcov/
 perf.data*
+*.pkl
+*.zst
+*.gz
+*.bz2
 
 # caches and working directories
 __pycache__/

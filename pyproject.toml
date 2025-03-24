@@ -69,6 +69,7 @@ lenskit = "lenskit.cli:lenskit"
 [project.entry-points."lenskit.cli.plugins"]
 lenskit-data = "lenskit.cli.data:data"
 lenskit-doctor = "lenskit.cli.doctor:doctor"
+lenskit-train = "lenskit.cli.train:train"
 
 # configure build tools
 [tool.hatch.metadata]
