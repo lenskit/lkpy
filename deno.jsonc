@@ -1,6 +1,0 @@
-{
-  "imports": {
-    "@lenskit/typeline": "jsr:@lenskit/typeline@^0.1.0-beta3",
-    "@std/assert": "jsr:@std/assert@^1.0.6"
-  }
-}

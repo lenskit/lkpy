@@ -20,7 +20,7 @@ use this ranker by default.
 Stochastic Ranking
 ~~~~~~~~~~~~~~~~~~
 
-- :class:`lenskit.basic.SoftmaxRanker` computes a randomized Plackett-Luce
+- :class:`lenskit.stochastic.StochasticTopNRanker` computes a randomized
   ranking, where each item is selected with probability proportional to its
   score.
 - :class:`lenskit.basic.RandomSelector` selects items uniformly at random.

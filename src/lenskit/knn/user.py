@@ -245,6 +245,8 @@ class UserKNNScorer(Component[ItemList], Trainable):
             else:
                 umean = 0
             return UserRatings(index, row, umean)
+        elif len(query.user_items) == 0:
+            return None
         else:
             _log.debug("using provided item history")
             ratings = torch.zeros(len(self.items_), dtype=torch.float32)

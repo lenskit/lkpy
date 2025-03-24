@@ -90,11 +90,16 @@ class WorkerContext:
     config: WorkerLogConfig
     zmq: zmq.Context[zmq.Socket[bytes]]
     _log_handler: ZMQLogHandler
+    _ref_count: int = 0
 
     def __init__(self, config: WorkerLogConfig):
         self.config = config
         if self.config.authkey is None:
             self.config.authkey = mp.current_process().authkey
+
+    @staticmethod
+    def active() -> WorkerContext | None:
+        return _active_context
 
     def start(self):
         """
@@ -136,11 +141,15 @@ class WorkerContext:
         self._log_handler.send_task(task)
 
     def __enter__(self):
-        self.start()
+        if self._ref_count == 0:
+            self.start()
+        self._ref_count += 1
         return self
 
     def __exit__(self, *args):
-        self.shutdown()
+        self._ref_count -= 1
+        if self._ref_count == 0:
+            self.shutdown()
 
 
 class ZMQLogHandler(Handler):

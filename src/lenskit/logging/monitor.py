@@ -127,6 +127,7 @@ class Monitor:
             self.log_address = addr
         else:
             log_sock = None
+            addr = None
             self.log_address = None
 
         self._backend = MonitorThread(self, log_sock)
