@@ -26,10 +26,12 @@ _log = get_logger(__name__)
 )
 @click.option("-n", "--list-length", type=int, help="Recommendation list length.")
 @click.option("-d", "--dataset", metavar="DATA", type=Path, help="Use dataset DATA.")
+@click.option("-u", "--users-file", type=Path, metavar="FILE", help="Load list of users from FILE.")
 @click.argument("PIPE_FILE", type=Path)
 @click.argument("USERS", nargs=-1)
 def recommend(
     out_file: Path,
+    users_file: Path,
     list_length: int | None,
     dataset: Path | None,
     pipe_file: Path,
