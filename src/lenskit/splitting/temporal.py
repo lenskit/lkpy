@@ -20,17 +20,20 @@ def split_global_time(
     data: Dataset,
     time: int | float | str | dt.datetime,
     end: int | float | str | dt.datetime | None = None,
+    filter_test_users: bool = False,
 ) -> TTSplit: ...
 @overload
 def split_global_time(
     data: Dataset,
     time: Sequence[int | float | str | dt.datetime],
     end: int | float | str | dt.datetime | None = None,
+    filter_test_users: bool = False,
 ) -> list[TTSplit]: ...
 def split_global_time(
     data: Dataset,
     time: int | float | str | dt.datetime | Sequence[int | float | str | dt.datetime],
     end: int | float | str | dt.datetime | None = None,
+    filter_test_users: bool = False,
 ) -> TTSplit | list[TTSplit]:
     """
     Global temporal train-test split.  This splits a data set into train/test
@@ -50,6 +53,8 @@ def split_global_time(
             format.
         end:
             A final cutoff time for the testing data.
+        filter_test_users:
+            Limit test data to only have users who had item in the training data.
 
     Returns:
         The data splits.
@@ -94,6 +99,10 @@ def split_global_time(
             tlog.debug("filtering test data for upper bound")
             test = matrix[mask & (ts_col < t2)]
 
+        if filter_test_users:
+            train_users = set(train_build.build().interactions().pandas(ids=True)["user_id"])
+            test = test[test["user_id"].isin(train_users)]
+
         tlog.debug("building training data set")
         train_ds = train_build.build()
         tlog.debug("building testing item lists")
@@ -108,7 +117,9 @@ def split_global_time(
         return results[0]
 
 
-def split_temporal_fraction(data: Dataset, test_fraction: float) -> TTSplit:
+def split_temporal_fraction(
+    data: Dataset, test_fraction: float, filter_test_users: bool = False
+) -> TTSplit:
     """
     Do a global temporal split of a data set based on a test set size.
 
@@ -117,10 +128,12 @@ def split_temporal_fraction(data: Dataset, test_fraction: float) -> TTSplit:
             The dataset to split.
         test_fraction:
             The fraction of the interactions to put in the testing data.
+        filter_test_users:
+            Limit test data to only have users who had item in the training data.
     """
     df = data.interaction_table(format="pandas")
     point = df["timestamp"].quantile(1 - test_fraction)
-    return split_global_time(data, point)
+    return split_global_time(data, point, filter_test_users=filter_test_users)
 
 
 def _make_time(t: int | float | str | dt.datetime) -> dt.datetime:
