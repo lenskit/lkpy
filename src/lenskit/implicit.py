@@ -20,6 +20,7 @@ from scipy.sparse import csr_matrix
 from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
+from lenskit.parallel.config import ensure_parallel_init, get_parallel_config
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
 
@@ -142,7 +143,12 @@ class ALS(BaseRec):
         return self.config.weight
 
     def _construct(self):
-        return AlternatingLeastSquares(**self.config.__pydantic_extra__)  # type: ignore
+        ensure_parallel_init()
+        pcfg = get_parallel_config()
+        return AlternatingLeastSquares(
+            num_threads=pcfg.threads,
+            **self.config.__pydantic_extra__,  # type: ignore
+        )
 
 
 class BPR(BaseRec):
@@ -154,4 +160,9 @@ class BPR(BaseRec):
     """
 
     def _construct(self):
-        return BayesianPersonalizedRanking(**self.config.__pydantic_extra__)  # type: ignore
+        ensure_parallel_init()
+        pcfg = get_parallel_config()
+        return BayesianPersonalizedRanking(
+            num_threads=pcfg.threads,
+            **self.config.__pydantic_extra__,  # type: ignore
+        )
