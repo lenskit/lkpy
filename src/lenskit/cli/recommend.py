@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 import pickle
+import sys
 from pathlib import Path
 
 import click
@@ -12,6 +13,7 @@ import click
 import lenskit.operations as ops
 from lenskit.data import Dataset
 from lenskit.logging import get_logger
+from lenskit.random import random_generator
 
 _log = get_logger(__name__)
 
@@ -27,11 +29,13 @@ _log = get_logger(__name__)
 @click.option("-n", "--list-length", type=int, help="Recommendation list length.")
 @click.option("-d", "--dataset", metavar="DATA", type=Path, help="Use dataset DATA.")
 @click.option("-u", "--users-file", type=Path, metavar="FILE", help="Load list of users from FILE.")
+@click.option("--random-users", type=int, metavar="N", help="Recommend for N random users.")
 @click.argument("PIPE_FILE", type=Path)
 @click.argument("USERS", nargs=-1)
 def recommend(
     out_file: Path,
-    users_file: Path,
+    users_file: Path | None,
+    random_users: int | None,
     list_length: int | None,
     dataset: Path | None,
     pipe_file: Path,
@@ -52,6 +56,14 @@ def recommend(
         log = log.bind(data=data.name)
     else:
         data = None
+
+    if random_users is not None:
+        if data is None:
+            log.error("dataset required for random users")
+            sys.exit(5)
+        rng = random_generator()
+        log.info("selecting random users", count=random_users)
+        users = rng.choice(data.users.ids(), random_users)  # type: ignore
 
     for user in users:
         ulog = log.bind(user=user)
