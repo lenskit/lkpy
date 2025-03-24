@@ -87,6 +87,8 @@ def split_global_time(
         mask = ts_col >= t
         train_build = DatasetBuilder(data)
         train_build.filter_interactions(iname, max_time=t)
+        tlog.debug("building training data set")
+        train_ds = train_build.build()
 
         t2 = end
         if i + 1 < len(times):
@@ -100,11 +102,10 @@ def split_global_time(
             test = matrix[mask & (ts_col < t2)]
 
         if filter_test_users:
-            train_users = set(train_build.build().interactions().pandas(ids=True)["user_id"])
+            user_data = train_ds.user_stats()
+            train_users = user_data.index[user_data["count"] > 0]
             test = test[test["user_id"].isin(train_users)]
 
-        tlog.debug("building training data set")
-        train_ds = train_build.build()
         tlog.debug("building testing item lists")
         test_ilc = ItemListCollection.from_df(test, ["user_id"])
         tlog.debug("built split with %d train interactions", train_ds.interaction_count)
