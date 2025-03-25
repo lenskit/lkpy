@@ -12,7 +12,7 @@ import click
 
 import lenskit.operations as ops
 from lenskit.data import Dataset
-from lenskit.logging import Stopwatch, get_logger
+from lenskit.logging import Stopwatch, get_logger, item_progress
 from lenskit.random import random_generator
 
 _log = get_logger(__name__)
@@ -66,28 +66,30 @@ def recommend(
         users = rng.choice(data.users.ids(), random_users)  # type: ignore
 
     timer = Stopwatch(start=False)
-    for user in users:
-        ulog = log.bind(user=user)
-        ulog.debug("generating single-user recommendations")
-        with timer.measure(accumulate=True):
-            recs = ops.recommend(pipe, user, list_length)
-        ulog.info(
-            "recommended for user",
-            length=len(recs),
-            time="{:.1f}ms".format(timer.elapsed(accumulated=False) * 1000),
-        )
+    with item_progress("user recommendations", len(users)) as pb:
+        for user in users:
+            ulog = log.bind(user=user)
+            ulog.debug("generating single-user recommendations")
+            with timer.measure(accumulate=True):
+                recs = ops.recommend(pipe, user, list_length)
+            ulog.info(
+                "recommended for user",
+                length=len(recs),
+                time="{:.1f}ms".format(timer.elapsed(accumulated=False) * 1000),
+            )
 
-        titles = None
-        if data is not None:
-            items = data.entities("item")
-            if "title" in items.attributes:
-                titles = items.select(ids=recs.ids()).attribute("title").pandas()
+            titles = None
+            if data is not None:
+                items = data.entities("item")
+                if "title" in items.attributes:
+                    titles = items.select(ids=recs.ids()).attribute("title").pandas()
 
-        for item in recs.ids():
-            if titles is not None:
-                print("item {}: {}".format(item, titles.loc[item]))
-            else:
-                print("item {}".format(item))
+            for item in recs.ids():
+                if titles is not None:
+                    print("item {}: {}".format(item, titles.loc[item]))
+                else:
+                    print("item {}".format(item))
+            pb.update()
 
     log.info(
         "finished recommending for %d users in %s (%.1fms/u)",
