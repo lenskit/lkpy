@@ -170,8 +170,8 @@ class BatchPipelineRunner:
                 progress.update()
             timer.stop()
 
-            rate = timer.elapsed() / n_users * 1000
-            log.info("finished running in %s (%.1fms/request)", timer, rate)
+            rate_ms = timer.elapsed() / n_users * 1000
+            log.info("finished running in %s", timer, time_per_query="{:.1f}ms".format(rate_ms))
 
         return results
 
