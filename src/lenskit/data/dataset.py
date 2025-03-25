@@ -12,6 +12,7 @@ LensKit dataset abstraction.
 from __future__ import annotations
 
 import functools
+import io
 from abc import abstractmethod
 from collections.abc import Callable
 from os import PathLike
@@ -20,6 +21,7 @@ import pandas as pd
 import pyarrow as pa
 import scipy.sparse as sps
 import torch
+from humanize import metric
 from numpy.typing import NDArray
 from typing_extensions import Any, Literal, TypeAlias, TypeVar, overload
 
@@ -500,3 +502,26 @@ class Dataset:
         if iset.row_type != "user":
             raise RuntimeError("default interactions do not have user columns")
         return iset.row_stats()
+
+    def __str__(self) -> str:
+        s = "<Dataset"
+        if self.name is not None:
+            s += " " + self.name
+        s += " ({} users, {} items, {} interactions)>".format(
+            metric(self.user_count), metric(self.item_count), metric(self.interaction_count)
+        )
+        return s
+
+    def __repr__(self) -> str:
+        out = io.StringIO()
+        out.write("<Dataset")
+        if self.name is not None:
+            out.write(" " + self.name)
+        out.write(" {")
+        for entity in self.schema.entities:
+            out.write("  {}: {:,d},\n".format(entity, self.entities(entity).count()))
+        for rel in self.schema.relationships:
+            out.write("  {}: {:,d},\n".format(rel, self.relationships(rel).count()))
+        out.write("}")
+
+        return out.getvalue()
