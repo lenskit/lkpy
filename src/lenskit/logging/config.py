@@ -21,7 +21,7 @@ from typing import Literal, TypeAlias
 import structlog
 
 from ._console import ConsoleHandler, console, setup_console
-from .processors import format_timestamp, log_warning, remove_internal
+from .processors import format_timestamp, log_warning, record_logged_error, remove_internal
 from .progress import set_progress_impl
 from .tracing import lenskit_filtering_logger
 
@@ -187,6 +187,7 @@ class LoggingConfig:  # pragma: nocover
         )
         formatter = structlog.stdlib.ProcessorFormatter(
             processors=[
+                record_logged_error,
                 remove_internal,
                 format_timestamp,
                 proc_fmt,

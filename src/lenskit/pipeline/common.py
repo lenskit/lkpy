@@ -4,13 +4,18 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from typing import Literal
+from typing import Literal, NamedTuple
 
 from lenskit.data import ID, ItemList, RecQuery
 
 from ._impl import Pipeline
 from .builder import PipelineBuilder
-from .components import Component
+from .components import Component, ComponentConstructor
+
+
+class CompRec(NamedTuple):
+    component: Component | ComponentConstructor
+    config: object | None = None
 
 
 class RecPipelineBuilder:
@@ -24,9 +29,9 @@ class RecPipelineBuilder:
         Caller
     """
 
-    _selector: Component
-    _scorer: Component
-    _ranker: Component
+    _selector: CompRec
+    _scorer: CompRec
+    _ranker: CompRec
     is_predictor: bool = False
     _predict_transform: Component | None = None
     _fallback: Component | None = None
@@ -35,33 +40,41 @@ class RecPipelineBuilder:
         from lenskit.basic.candidates import UnratedTrainingItemsCandidateSelector
         from lenskit.basic.topn import TopNRanker
 
-        self._selector = UnratedTrainingItemsCandidateSelector()
-        self._ranker = TopNRanker()
+        self._selector = CompRec(UnratedTrainingItemsCandidateSelector)
+        self._ranker = CompRec(TopNRanker)
 
-    def scorer(self, score: Component):
+    def scorer(self, score: Component | ComponentConstructor, config: object | None = None):
         """
         Specify the scoring model.
         """
-        self._scorer = score
+        self._scorer = CompRec(score, config)
 
-    def ranker(self, rank: Component | None = None, *, n: int = -1):
+    def ranker(
+        self,
+        rank: Component | ComponentConstructor | None = None,
+        config: object | None = None,
+        *,
+        n: int | None = None,
+    ):
         """
         Specify the ranker to use.  If ``None``, sets up a :class:`TopNRanker`
         with ``n=n``.
         """
-        from lenskit.basic.topn import TopNRanker
+        from lenskit.basic.topn import TopNConfig, TopNRanker
 
         if rank is None:
-            self._ranker = TopNRanker(n=n)
+            self._ranker = CompRec(TopNRanker, TopNConfig(n=n))
         else:
-            self._ranker = rank
+            self._ranker = CompRec(rank, config)
 
-    def candidate_selector(self, sel: Component):
+    def candidate_selector(
+        self, sel: Component | ComponentConstructor, config: object | None = None
+    ):
         """
         Specify the candidate selector component.  The component should accept
         a query as its input and return an item list.
         """
-        self._selector = sel
+        self._selector = CompRec(sel, config)
 
     def predicts_ratings(
         self, *, transform: Component | None = None, fallback: Component | None = None
@@ -99,10 +112,14 @@ class RecPipelineBuilder:
         n_n = pipe.create_input("n", int, None)
 
         lookup = pipe.add_component("history-lookup", UserTrainingHistoryLookup(), query=query)
-        cand_sel = pipe.add_component("candidate-selector", self._selector, query=lookup)
+        cand_sel = pipe.add_component(
+            "candidate-selector", self._selector.component, self._selector.config, query=lookup
+        )
         candidates = pipe.use_first_of("candidates", items, cand_sel)
 
-        n_score = pipe.add_component("scorer", self._scorer, query=lookup, items=candidates)
+        n_score = pipe.add_component(
+            "scorer", self._scorer.component, self._scorer.config, query=lookup, items=candidates
+        )
         if self.is_predictor:
             if self._fallback is not None:
                 fb = pipe.add_component(
@@ -121,7 +138,9 @@ class RecPipelineBuilder:
             else:
                 pipe.alias("rating-predictor", rater)
 
-        rank = pipe.add_component("ranker", self._ranker, items=n_score, n=n_n)
+        rank = pipe.add_component(
+            "ranker", self._ranker.component, self._ranker.config, items=n_score, n=n_n
+        )
         pipe.alias("recommender", rank)
         pipe.default_component("recommender")
 
@@ -129,10 +148,11 @@ class RecPipelineBuilder:
 
 
 def topn_pipeline(
-    scorer: Component,
+    scorer: Component | ComponentConstructor,
+    config: object | None = None,
     *,
     predicts_ratings: bool | Literal["raw"] = False,
-    n: int = -1,
+    n: int | None = None,
     name: str | None = None,
 ) -> Pipeline:
     """
@@ -157,7 +177,7 @@ def topn_pipeline(
     from lenskit.basic.bias import BiasScorer
 
     builder = RecPipelineBuilder()
-    builder.scorer(scorer)
+    builder.scorer(scorer, config)
     builder.ranker(n=n)
     if predicts_ratings == "raw":
         builder.predicts_ratings()

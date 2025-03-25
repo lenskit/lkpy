@@ -735,11 +735,11 @@ class ItemList:
         print(f"<ItemList of {self._len} items with {nf} fields", "{", file=out)
 
         if self._numbers is not None:
-            print("  numbers:", self._numbers.numpy(), file=out)
+            print("  numbers:", np.array2string(self._numbers.numpy(), threshold=10), file=out)
         if self._ids is not None:
-            print("  ids:", self._ids, file=out)
+            print("  ids:", np.array2string(self._ids, threshold=10), file=out)
         for name, f in self._fields.items():
-            print(f"  {name}:", f.numpy(), file=out)
+            print(f"  {name}:", np.array2string(f.numpy(), threshold=10), file=out)
         print("}>", end="", file=out)
 
         return out.getvalue()

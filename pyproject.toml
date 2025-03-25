@@ -64,11 +64,13 @@ documentation = "https://lkpy.lenskit.org"
 source = "https://github.com/lenskit/lkpy"
 
 [project.scripts]
-lenskit = "lenskit.cli:lenskit"
+lenskit = "lenskit.cli:main"
 
 [project.entry-points."lenskit.cli.plugins"]
 lenskit-data = "lenskit.cli.data:data"
 lenskit-doctor = "lenskit.cli.doctor:doctor"
+lenskit-train = "lenskit.cli.train:train"
+lenskit-recommend = "lenskit.cli.recommend:recommend"
 
 # configure build tools
 [tool.hatch.metadata]
