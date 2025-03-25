@@ -249,7 +249,7 @@ class RunAnalysis:
         list_intermediates = {m.label: [] for m in self.metrics if m.is_decomposed}
 
         n = len(outputs)
-        _log.info("computing %d listwise metrics for %d output lists", len(lms), n)
+        _log.debug("computing %d listwise metrics for %d output lists", len(lms), n)
         no_test_count = 0
         with item_progress("Measuring", n) as pb:
             for i, (key, out) in enumerate(outputs):
@@ -276,7 +276,7 @@ class RunAnalysis:
         if no_test_count:
             _log.warning("could not find test data for %d lists", no_test_count)
 
-        _log.info("computing %d global metrics for %d output lists", len(gms), n)
+        _log.debug("computing %d global metrics for %d output lists", len(gms), n)
         global_results = pd.Series(
             {
                 m.label: (
