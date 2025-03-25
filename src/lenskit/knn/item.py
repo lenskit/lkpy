@@ -243,12 +243,10 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         assert isinstance(model, csr_array)
         model = model[:, ti_valid_nums]
         assert isinstance(model, csr_array)
-        # convert to CSC so we can count neighbors per target item.
-        model = model.tocsc()
 
-        # count neighborhood sizes
-        sizes = np.diff(model.indptr)
         # which neighborhoods are usable? (at least min neighbors)
+        sizes = model.sum(0)
+        assert isinstance(sizes, np.ndarray) and len(sizes) == model.shape[1]
         scorable = sizes >= self.config.min_nbrs
 
         # fast-path neighborhoods that fit within max neighbors
@@ -268,7 +266,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         # PyTorch, make a dense matrix (this is usually small enough to be
         # usable), and use the Torch topk function.
         slow_mat = model.T[~fast, :]
-        assert isinstance(slow_mat, csr_array)
+        # assert isinstance(slow_mat, csr_array)
         n_slow, _ = slow_mat.shape
         if n_slow:
             # mask for the slow items.
