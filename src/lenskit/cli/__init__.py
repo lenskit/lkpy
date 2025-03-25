@@ -4,24 +4,38 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import sys
 from importlib.metadata import entry_points
 
 import click
+import numpy as np
 
 from lenskit import __version__
-from lenskit.logging import LoggingConfig, console
+from lenskit.logging import LoggingConfig, console, get_logger
+from lenskit.logging.processors import error_was_logged
 
 __all__ = ["lenskit", "main", "version"]
+_log = get_logger(__name__)
 
 
 def main():
     """
     Run the main LensKit CLI.  This just delegates to :fun:`lenskit`, but pretty-prints errors.
     """
+    np.set_printoptions(threshold=20)
     try:
-        lenskit()
+        ec = lenskit.main(standalone_mode=False)
     except Exception as e:
-        console.print(e)
+        _log.error("LensKit command failed", exc_type=type(e).__name__)
+        if error_was_logged(e):
+            _log.info("see stacktrace above for error details")
+        else:
+            console.print(e)
+
+        sys.exit(3)
+
+    if isinstance(ec, int):
+        sys.exit(ec)
 
 
 @click.group("lenskit")
@@ -30,6 +44,8 @@ def lenskit(verbosity: int):
     """
     Data and pipeline operations with LensKit.
     """
+
+    # this code is run before any other command logic, so we can do global setup
     lc = LoggingConfig()
     if verbosity:
         lc.set_verbose(verbosity)

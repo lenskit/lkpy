@@ -9,11 +9,35 @@ LensKit logging processors and converters.
 """
 
 import multiprocessing as mp
+from collections import deque
 from datetime import datetime
 from typing import Any
 
 import structlog
 from structlog.typing import EventDict
+
+LOGGED_ERRORS = deque([], 5)
+
+
+def error_was_logged(exc: Exception) -> bool:
+    """
+    Query whether an exception was logged.
+    """
+    return exc in LOGGED_ERRORS
+
+
+def record_logged_error(logger: Any, method: str, event_dict: EventDict):
+    """
+    Keep a record of recently-logged errors to avoid duplicate rendering in some
+    cases.
+    """
+
+    exc = event_dict.get("exc_info", None)
+
+    if isinstance(exc, Exception):
+        LOGGED_ERRORS.append(exc)
+
+    return event_dict
 
 
 def remove_internal(logger: Any, method: str, event_dict: EventDict) -> EventDict:
