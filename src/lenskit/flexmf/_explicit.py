@@ -94,7 +94,7 @@ class FlexMFExplicitScorer(FlexMFScorerBase):
         if self.config.reg_method == "L2":
             result = self.model(batch.users, batch.items, return_norm=True)
             pred = result[0, :]
-            norm = torch.mean(result[1, :]) * self.config.reg
+            norm = torch.mean(result[1, :]) * self.config.regularization
         else:
             pred = self.model(batch.users, batch.items)
             norm = 0.0

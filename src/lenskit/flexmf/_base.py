@@ -56,7 +56,7 @@ class FlexMFConfigBase:
     The number of training epochs.
     """
 
-    reg: float = 0.1
+    regularization: float = 0.1
     """
     The regularization strength.
     """
@@ -159,7 +159,7 @@ class FlexMFScorerBase(IterativeTraining, Component):
             return torch.optim.AdamW(
                 self.model.parameters(),
                 lr=self.config.learning_rate,
-                weight_decay=self.config.reg,
+                weight_decay=self.config.regularization,
             )
         else:
             context.log.debug("creating SparseAdam optimizer")

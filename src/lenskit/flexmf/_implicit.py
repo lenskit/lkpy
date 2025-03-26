@@ -149,7 +149,7 @@ class FlexMFImplicitScorer(FlexMFScorerBase):
             pos_pred = result[0, :, :1]
             neg_pred = result[0, :, 1:]
 
-            norm = torch.mean(result[1, ...]) * self.config.reg
+            norm = torch.mean(result[1, ...]) * self.config.regularization
         else:
             result = self.model(users, items)
             pos_pred = result[:, :1]
