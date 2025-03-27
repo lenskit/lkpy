@@ -70,31 +70,21 @@ class ComponentConstructor(Protocol, Generic[CFG, COut]):
 @runtime_checkable
 class ParameterContainer(Protocol):  # pragma: nocover
     """
-    Future protocol for components with learned parameters.
+    Protocol for components with learned parameters to enable saving, reloading,
+    checkpointing, etc.
 
-    .. important::
-
-        This protocol is not yet used.
+    Components that learn parameters from training data should implement this
+    protocol, and also work when pickled or pickled.  Pickling is sometimes used
+    for convenience, but parameter / state dictionaries allow serializing wtih
+    tools like ``safetensors`` or ``zarr``.
 
     Stability:
         Experimental
     """
 
-    def get_params(self) -> dict[str, object]:
+    def get_parameters(self) -> dict[str, object]:
         """
-        Protocol for components with parameters that can be extracted, saved,
-        and re-loaded.
-
-        LensKit components that learn parameters from training data should both
-        implement this method and work when pickled and unpickled.  Pickling is
-        sometimes used for convenience, but parameter / state dictionaries allow
-        serializing wtih tools like ``safetensors``.
-
-        Args:
-            include_caches:
-                Whether the parameter dictionary should include ephemeral
-                caching structures only used for runtime performance
-                optimizations.
+        Get the component's parameters.
 
         Returns:
             The model's parameters, as a dictionary from names to parameter data
@@ -102,9 +92,15 @@ class ParameterContainer(Protocol):  # pragma: nocover
         """
         raise NotImplementedError()
 
-    def load_params(self, params: dict[str, object]) -> None:
+    def load_parameters(self, params: dict[str, object]) -> None:
         """
-        Reload model state from parameters saved via :meth:`get_params`.
+        Reload model state from parameters saved via :meth:`get_parameters`.
+
+        Args:
+            params:
+                The model parameters, as a dictionary from names to parameter
+                data (arrays, tensors, etc.), as returned from
+                :meth:`get_parameters`.
         """
         raise NotImplementedError()
 
