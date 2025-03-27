@@ -245,14 +245,11 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         assert isinstance(model, csr_array)
 
         # which neighborhoods are usable? (at least min neighbors)
-        if self.config.feedback == "explicit":
-            m_ind = csr_array(
-                (np.ones(model.nnz, np.int32), model.indices, model.indptr), shape=model.shape
-            )
-            sizes = m_ind.sum(0)
-            del m_ind
-        else:
-            sizes = model.sum(0)
+        m_ind = csr_array(
+            (np.ones(model.nnz, np.int32), model.indices, model.indptr), shape=model.shape
+        )
+        sizes = m_ind.sum(0)
+        del m_ind
         assert isinstance(sizes, np.ndarray) and len(sizes) == model.shape[1]
         scorable = sizes >= self.config.min_nbrs
 
