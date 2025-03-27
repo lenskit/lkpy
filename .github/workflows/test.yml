@@ -126,11 +126,11 @@ jobs:
 
       - name: 🔍 Inspect environment
         run: |
-          lenskit doctor
+          coverage run lenskit doctor
 
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit --cov-append tests
 
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}
