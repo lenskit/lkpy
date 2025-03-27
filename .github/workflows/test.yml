@@ -126,7 +126,7 @@ jobs:
 
       - name: 🔍 Inspect environment
         run: |
-          coverage run lenskit doctor
+          coverage run -m lenskit doctor
 
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
