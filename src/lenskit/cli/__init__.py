@@ -26,11 +26,7 @@ def main():
     try:
         ec = lenskit.main(standalone_mode=False)
     except Exception as e:
-        _log.error("LensKit command failed", exc_type=type(e).__name__)
-        if error_was_logged(e):
-            _log.info("see stacktrace above for error details")
-        else:
-            console.print(e)
+        _log.error("LensKit command failed", exc_info=e)
 
         sys.exit(3)
 
