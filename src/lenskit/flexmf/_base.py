@@ -173,13 +173,15 @@ class FlexMFScorerBase(IterativeTraining, Component):
 
         for epoch in range(1, self.config.epochs + 1):
             # permute and copy the training data
-            epoch_data = data.epoch(context)
             context.log = elog = log.bind(epoch=epoch)
+            elog.debug("creating epoch training data")
+            epoch_data = data.epoch(context)
 
             tot_loss = 0.0
             with item_progress(
                 f"Training epoch {epoch}", epoch_data.batch_count, {"loss": ".3f"}
             ) as pb:
+                elog.debug("beginning epoch")
                 for i, batch in enumerate(epoch_data.batches(), 1):
                     context.log = blog = elog.bind(batch=i)
                     blog.debug("training batch")
@@ -189,7 +191,9 @@ class FlexMFScorerBase(IterativeTraining, Component):
                     pb.update(loss=loss)
                     tot_loss += loss
 
-            yield {"loss": tot_loss / epoch_data.batch_count}
+            avg_loss = tot_loss / epoch_data.batch_count
+            elog.debug("epoch complete", loss=avg_loss)
+            yield {"loss": avg_loss}
 
         _log.info("finalizing trained model")
         self.finalize()
