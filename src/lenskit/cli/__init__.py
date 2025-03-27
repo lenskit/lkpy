@@ -12,7 +12,6 @@ import numpy as np
 
 from lenskit import __version__
 from lenskit.logging import LoggingConfig, console, get_logger
-from lenskit.logging.processors import error_was_logged
 
 __all__ = ["lenskit", "main", "version"]
 _log = get_logger(__name__)
