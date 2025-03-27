@@ -162,7 +162,7 @@ class Monitor:
             log.debug("waiting for monitor thread to shut down")
             self._backend.join()
 
-            log.info("monitor shut down")
+            log.debug("monitor shut down")
             self.zmq.term()
         except Exception as e:
             self.zmq.destroy()
