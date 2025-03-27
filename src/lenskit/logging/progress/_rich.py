@@ -67,12 +67,24 @@ class RichProgress(Progress):
                 ]
             )
 
-    def update(self, advance: int = 1, **kwargs: float | int | str):
+    def update(
+        self,
+        advance: int = 1,
+        completed: int | None = None,
+        total: int | None = None,
+        **kwargs: float | int | str,
+    ):
         extra = ""
         if self._field_format:
             extra = self._field_format.format(**kwargs)
         if _progress is not None:
-            _progress.update(self._task, advance=advance, extra=extra)  # type: ignore
+            _progress.update(
+                self._task,  # type: ignore
+                advance=advance if completed is None else None,
+                completed=completed,
+                total=total,
+                extra=extra,
+            )
 
     def finish(self):
         _remove_bar(self)

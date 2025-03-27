@@ -67,11 +67,22 @@ class JupyterProgress(Progress):
                 [f"{name}: {field_format(name, fs)}" for (name, fs) in fields.items()]
             )
 
-    def update(self, advance: int = 1, **kwargs: float | int | str):
+    def update(
+        self,
+        advance: int = 1,
+        completed: int | None = None,
+        total: int | None = None,
+        **kwargs: float | int | str,
+    ):
         """
         Update the progress bar.
         """
-        self.current += advance
+        if total is not None:
+            self.total = total
+        if completed is not None:
+            self.current = completed
+        else:
+            self.current += advance
         now = perf_counter()
         if now - self._last_update >= 0.1 or (self.total and self.current >= self.total):
             self.widget.value = self.current

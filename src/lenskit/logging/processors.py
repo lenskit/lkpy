@@ -19,27 +19,6 @@ from structlog.typing import EventDict
 LOGGED_ERRORS = deque([], 5)
 
 
-def error_was_logged(exc: Exception) -> bool:
-    """
-    Query whether an exception was logged.
-    """
-    return exc in LOGGED_ERRORS
-
-
-def record_logged_error(logger: Any, method: str, event_dict: EventDict):
-    """
-    Keep a record of recently-logged errors to avoid duplicate rendering in some
-    cases.
-    """
-
-    exc = event_dict.get("exc_info", None)
-
-    if isinstance(exc, Exception):
-        LOGGED_ERRORS.append(exc)
-
-    return event_dict
-
-
 def remove_internal(logger: Any, method: str, event_dict: EventDict) -> EventDict:
     """
     Filter out “internal” attrs (beginning with ``_``) for console logging.

@@ -17,9 +17,23 @@ class Progress:
     def __init__(self, *args: Any, **kwargs: Any):
         pass
 
-    def update(self, advance: int = 1, **kwargs: float | int | str):
+    def update(
+        self,
+        advance: int = 1,
+        completed: int | None = None,
+        total: int | None = None,
+        **kwargs: float | int | str,
+    ):
         """
         Update the progress bar.
+
+        Args:
+            advance:
+                The amount to advance by.
+            completed:
+                The number completed; this overrides ``advance``.
+            total:
+                A new total, to update the progress bar total.
         """
         pass
 
