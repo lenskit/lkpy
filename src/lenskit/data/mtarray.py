@@ -17,6 +17,8 @@ import torch
 from numpy.typing import ArrayLike, NDArray
 from typing_extensions import Generic, Literal, LiteralString, Sequence, TypeVar, overload
 
+from lenskit.torch import safe_tensor
+
 NPT = TypeVar("NPT", bound=np.generic)
 
 
@@ -95,10 +97,7 @@ class MTArray(Generic[NPT]):
             if torch.is_tensor(self._unknown):
                 self._torch = self._unknown
             else:
-                # Make sure we have a writeable array for Torch. Client code
-                # still shouldn't write to it.
-                arr = np.require(self.numpy(), requirements="W")
-                return torch.tensor(arr)
+                self._torch = safe_tensor(self._unknown)
 
         if device:
             return self._torch.to(device)
