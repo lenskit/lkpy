@@ -151,9 +151,7 @@ class BatchPipelineRunner:
             test_iter = ((_ensure_key(k), None) for k in test_data)
             n_users = len(test_data)
 
-        log = _log.bind(
-            name=pipeline.name, hash=pipeline.config_hash, n_queries=n_users, n_jobs=self.n_jobs
-        )
+        log = _log.bind(name=pipeline.name, n_queries=n_users, n_jobs=self.n_jobs)
         log.info("beginning batch run")
 
         with (
