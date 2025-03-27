@@ -247,7 +247,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         # which neighborhoods are usable? (at least min neighbors)
         if self.config.feedback == "explicit":
             m_ind = csr_array(
-                (np.zeros(model.nnz, np.int32), model.indices, model.indptr), shape=model.shape
+                (np.ones(model.nnz, np.int32), model.indices, model.indptr), shape=model.shape
             )
             sizes = m_ind.sum(0)
             del m_ind
