@@ -34,8 +34,9 @@ def test_sparse_mean_center(tensor: torch.Tensor):
 
     np.add.at(counts, rows, 1)
     np.add.at(sums, rows, coo.values().numpy())
-    tgt_means = sums / counts
-    tgt_means = np.nan_to_num(tgt_means, nan=0)
+
+    tgt_means = np.zeros(len(sums))
+    np.divide(sums, counts, out=tgt_means, where=counts > 0)
 
     nt, means = normalize_sparse_rows(tensor, "center")
     assert means.shape == torch.Size([nr])
