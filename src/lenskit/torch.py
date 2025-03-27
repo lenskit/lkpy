@@ -10,6 +10,7 @@ PyTorch utility functions.
 
 import functools
 
+import numpy as np
 import torch
 
 
@@ -43,3 +44,16 @@ def sparse_row(mat: torch.Tensor, row: int) -> torch.Tensor:
     return torch.sparse_coo_tensor(
         indices=cs[sp:ep].reshape(1, -1), values=vs[sp:ep], size=mat.shape[1:]
     )
+
+
+def safe_tensor(array) -> torch.Tensor:
+    """
+    Safely convert an array into a NumPy tensor.  This includes copying it to
+    writable memory if necessary.
+    """
+    if torch.is_tensor(array):
+        return array
+
+    arr = np.asarray(array)
+    arr = np.require(arr, requirements="W")
+    return torch.from_numpy(arr)
