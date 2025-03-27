@@ -18,6 +18,7 @@ from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.logging import get_logger, item_progress
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component
+from lenskit.torch import safe_tensor
 from lenskit.training import IterativeTraining, TrainingOptions
 
 from ._model import FlexMFModel
@@ -254,7 +255,7 @@ class FlexMFScorerBase(IterativeTraining, Component):
         # ones we know, and remember which item IDs those are
         scorable_mask = i_cols >= 0
         i_cols = i_cols[scorable_mask]
-        i_tensor = torch.from_numpy(i_cols)
+        i_tensor = safe_tensor(i_cols)
         i_tensor = i_tensor.to(device)
 
         # initialize output score array, fill with missing

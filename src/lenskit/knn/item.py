@@ -27,7 +27,7 @@ from lenskit.logging.resource import max_memory
 from lenskit.math.sparse import normalize_sparse_rows
 from lenskit.parallel import ensure_parallel_init
 from lenskit.pipeline import Component
-from lenskit.torch import inference_mode
+from lenskit.torch import inference_mode, safe_tensor
 from lenskit.training import Trainable, TrainingOptions
 
 _log = get_logger(__name__)
@@ -275,11 +275,11 @@ class ItemKNNScorer(Component[ItemList], Trainable):
             ti_slow_mask = ti_mask.copy()
             ti_slow_mask[ti_mask] = ~fast
 
-            slow_mat = torch.from_numpy(slow_mat.toarray())
+            slow_mat = safe_tensor(slow_mat.toarray())
             slow_trimmed, slow_inds = torch.topk(slow_mat, self.config.max_nbrs)
             assert slow_trimmed.shape == (n_slow, self.config.max_nbrs)
             if self.config.explicit:
-                svals = torch.from_numpy(ri_vals)[slow_inds]
+                svals = safe_tensor(ri_vals)[slow_inds]
                 assert svals.shape == slow_trimmed.shape
                 scores[ti_slow_mask] = torch.sum(slow_trimmed * svals, axis=1).numpy()
                 scores[ti_slow_mask] /= torch.sum(slow_trimmed, axis=1).numpy()

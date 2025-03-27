@@ -17,6 +17,8 @@ from typing import Literal, overload
 import scipy.sparse as sps
 import torch
 
+from lenskit.torch import safe_tensor
+
 _log = logging.getLogger(__name__)
 
 
@@ -79,10 +81,13 @@ def torch_sparse_from_scipy(
 ) -> torch.Tensor:
     """
     Convert a SciPy :class:`sps.coo_array` into a torch sparse tensor.
+
+    Stability:
+        Internal
     """
-    ris = torch.from_numpy(M.row)
-    cis = torch.from_numpy(M.col)
-    vs = torch.from_numpy(M.data)
+    ris = safe_tensor(M.row)
+    cis = safe_tensor(M.col)
+    vs = safe_tensor(M.data)
     indices = torch.stack([ris, cis])
     assert indices.shape == (2, M.nnz)
     T = torch.sparse_coo_tensor(indices, vs, size=M.shape)

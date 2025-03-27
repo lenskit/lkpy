@@ -22,6 +22,7 @@ from typing_extensions import Self, TypeAlias, overload
 
 from lenskit.data import ID, Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.pipeline.components import Component
+from lenskit.torch import safe_tensor
 from lenskit.training import Trainable, TrainingOptions
 
 _logger = logging.getLogger(__name__)
@@ -249,9 +250,9 @@ class BiasModel:
         inos = indices[1, :]
         values = matrix.values() - self.global_bias
         if self.item_biases is not None:
-            values.subtract_(torch.from_numpy(self.item_biases)[inos])
+            values.subtract_(safe_tensor(self.item_biases)[inos])
         if self.user_biases is not None:
-            values.subtract_(torch.from_numpy(self.user_biases)[unos])
+            values.subtract_(safe_tensor(self.user_biases)[unos])
         return torch.sparse_coo_tensor(indices, values, size=matrix.size())
 
 

@@ -22,6 +22,8 @@ from numpy.typing import NDArray
 from scipy.sparse import csr_array
 from typing_extensions import Any
 
+from lenskit.torch import safe_tensor
+
 from .schema import AttrLayout, ColumnSpec
 from .types import IDArray
 from .vocab import Vocabulary
@@ -167,7 +169,7 @@ class AttributeSet:
         return self.numpy()
 
     def torch(self) -> torch.Tensor:
-        return torch.from_numpy(self.numpy())
+        return safe_tensor(self.numpy())
 
     def drop_null(self):
         """

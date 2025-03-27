@@ -197,8 +197,9 @@ class UserKNNScorer(Component[ItemList], Trainable):
 
         assert not torch.any(torch.isnan(kn_sims))
 
-        iidxs = items.numbers(vocabulary=self.items_, missing="negative")
-        iidxs = torch.from_numpy(iidxs).to(torch.int64)
+        iidxs = items.numbers(format="torch", vocabulary=self.items_, missing="negative").to(
+            torch.int64
+        )
 
         ki_mask = iidxs >= 0
         usable_iidxs = iidxs[ki_mask]

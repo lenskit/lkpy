@@ -15,6 +15,7 @@ from lenskit.data import Dataset, ItemList
 from lenskit.logging.progress import item_progress_handle, pbh_update
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
+from lenskit.torch import safe_tensor
 
 from ._common import ALSBase, ALSConfig, TrainContext, TrainingData
 
@@ -82,7 +83,7 @@ class BiasedMFScorer(ALSBase):
         assert ratings is not None
 
         biases, u_bias = self.bias_.compute_for_items(items, None, items)
-        biases = torch.from_numpy(biases)
+        biases = safe_tensor(biases)
         ratings = ratings - biases
 
         ri_val = ratings[mask].to(torch.float64)
