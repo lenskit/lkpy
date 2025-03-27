@@ -11,6 +11,7 @@ Vocabularies of IDs, tags, etc.
 # pyright: basic
 from __future__ import annotations
 
+from hashlib import md5
 from typing import Hashable, Iterable, Iterator, Literal, Sequence, overload
 
 import numpy as np
@@ -55,6 +56,8 @@ class Vocabulary:
     "The name of the vocabulary (e.g. “user”, “item”)."
     _index: pd.Index
     "The Pandas index implementing the vocabulary."
+    _hash: str | None
+    "Checksum of index data for fast equivalence testing."
 
     def __init__(
         self,
@@ -82,7 +85,14 @@ class Vocabulary:
 
         if not keys.is_unique:
             raise ValueError("IDs must be unique")
+
         self._index = keys.rename(name + "_id") if name is not None else keys
+
+        arrow = pa.array(keys.values)
+        # since we just made this array, we can assume the buffer is fully used
+        buf = arrow.buffers()[2]
+        assert buf is not None
+        self._hash = md5(memoryview(buf)).hexdigest()
 
     @property
     def index(self) -> pd.Index:
@@ -164,13 +174,14 @@ class Vocabulary:
         return self.terms(nums)
 
     def __eq__(self, other: Vocabulary) -> bool:  # noqa: F821
-        if self is other:
-            return True
+        return self is other or (isinstance(other, Vocabulary) and self._hash == other._hash)
 
-        if self.name == other.name and len(self) == len(other):
-            return np.all(self.index == other.index).item()
-
-        return False
+    def __ne__(self, other: Vocabulary) -> bool:
+        return (
+            not isinstance(other, Vocabulary)
+            and self is not other
+            and self._hash is not other._hash
+        )
 
     def __contains__(self, key: object) -> bool:
         return key in self._index

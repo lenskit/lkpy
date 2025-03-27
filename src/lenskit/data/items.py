@@ -447,7 +447,7 @@ class ItemList:
             RuntimeError: if the item list was not created with numbers or a
             :class:`Vocabulary`.
         """
-        if vocabulary is not None and vocabulary is not self._vocab:
+        if vocabulary is not None and vocabulary != self._vocab:
             # we need to translate vocabulary
             ids = self.ids()
             mta = MTArray(vocabulary.numbers(ids, missing=missing))
