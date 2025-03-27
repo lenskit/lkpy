@@ -100,6 +100,11 @@ def inspect_compute():
     import numpy as np
     import torch
 
+    try:
+        import cupy
+    except ImportError:
+        cupy = None
+
     yield ""
     yield kvp("NumPy version", np.__version__)
     yield kvp("PyTorch version", torch.__version__)
@@ -125,10 +130,15 @@ def inspect_compute():
         yield "[bold]PyTorch GPUs[/bold]:"
         for dev in range(torch.cuda.device_count()):
             props = torch.cuda.get_device_properties(dev)
-            yield "  cuda:{}: [cyan]{}[/cyan]".format(dev, props.name)
+            yield "  [green]cuda:{}[/green]: [bold cyan]{}[/bold cyan]".format(dev, props.name)
             yield kvp("capability", f"{props.major}.{props.minor}", level=2)
-            yield kvp("mp count", props.multi_processor_count, level=2)
             yield kvp("memory", naturalsize(props.total_memory), level=2)
+            yield kvp("MP count", props.multi_processor_count, level=2)
+            if cupy is not None:
+                cd = cupy.cuda.Device(dev)
+                yield kvp("warp size", cd.attributes["WarpSize"], level=2)
+                yield kvp("clock rate", cd.attributes["ClockRate"], level=2)
+                yield kvp("sp/dp ratio", cd.attributes["SingleToDoublePrecisionPerfRatio"], level=2)
 
     yield ""
     yield "[bold]Threading layers[/bold]:"
