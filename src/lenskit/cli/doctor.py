@@ -37,7 +37,8 @@ _gh_out: Path | None = None
     help="Path to GitHub Actions output file.",
 )
 @click.option("--packages/--no-packages", default=True, help="List installed packages.")
-def doctor(gh_output: Path | None, packages: bool):
+@click.option("--paths/--no-paths", default=True, help="List search paths.")
+def doctor(gh_output: Path | None, packages: bool, paths: bool):
     """
     Inspect installed LensKit version and environment.
     """
@@ -50,7 +51,7 @@ def doctor(gh_output: Path | None, packages: bool):
     console.print(inspect_compute())
     if ray_available():
         console.print(inspect_ray())
-    console.print(inspect_env())
+    console.print(inspect_env(paths))
     if packages:
         console.print(inspect_packages())
 
@@ -119,6 +120,16 @@ def inspect_compute():
         name = mod.__name__.split(".")[-1]
         yield kvp(name, stat, level=2)
 
+    if torch.cuda.is_available():
+        yield ""
+        yield "[bold]PyTorch GPUs[/bold]:"
+        for dev in range(torch.cuda.device_count()):
+            props = torch.cuda.get_device_properties(dev)
+            yield "  cuda:{}: [cyan]{}[/cyan]".format(dev, props.name)
+            yield kvp("capability", f"{props.major}.{props.minor}", level=2)
+            yield kvp("mp count", props.multi_processor_count, level=2)
+            yield kvp("memory", naturalsize(props.total_memory), level=2)
+
     yield ""
     yield "[bold]Threading layers[/bold]:"
     for i, pool in enumerate(threadpoolctl.threadpool_info(), 1):
@@ -138,6 +149,8 @@ def inspect_ray():
         ray.init("auto", configure_logging=False)
     except ConnectionError:
         yield "  Installed but inactive"
+    except RuntimeError:
+        yield "  Cannot connect"
     else:
         yield "  Resources:"
         for name, val in ray.cluster_resources().items():
@@ -149,12 +162,15 @@ def inspect_ray():
 
 
 @group()
-def inspect_env():
+def inspect_env(paths: bool):
     yield ""
     yield "[bold]Relevant environment variables[/bold]:"
     for k, v in os.environ.items():
         if re.match(r"^(LK_|OMP_|NUMBA_|MKL_|TORCH_|PY)", k):
             yield kvp(k, v, level=2)
+
+    if not paths:
+        return
 
     yield ""
     yield "[bold]Python search paths[/bold]:"
@@ -163,8 +179,8 @@ def inspect_env():
 
     yield ""
     yield "[bold]Executable search paths[/bold]:"
-    paths = os.environ["PATH"].split(os.pathsep)
-    for path in paths:
+    exe_paths = os.environ["PATH"].split(os.pathsep)
+    for path in exe_paths:
         yield f"- {path}"
 
 
