@@ -376,7 +376,7 @@ def test_ii_implicit_large(rng, ml_ratings):
 
     for user in users:
         recs = pipe.run("recommender", query=user, n=NRECS)
-        _log.info("user %s recs\n%s", user, recs)
+        _log.info("user %s recs\n%r", user, recs)
         assert isinstance(recs, ItemList)
         assert len(recs) == NRECS
         urates = ml_ratings[ml_ratings["user_id"] == user]
