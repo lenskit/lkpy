@@ -14,7 +14,7 @@ from pathlib import Path
 
 import click
 import threadpoolctl
-from humanize import naturalsize
+from humanize import metric, naturalsize
 from rich.console import Console, ConsoleOptions, group
 from rich.padding import Padding
 from rich.table import Table
@@ -137,7 +137,7 @@ def inspect_compute():
             if cupy is not None:
                 cd = cupy.cuda.Device(dev)
                 yield kvp("warp size", cd.attributes["WarpSize"], level=2)
-                yield kvp("clock rate", cd.attributes["ClockRate"], level=2)
+                yield kvp("clock rate", metric(cd.attributes["ClockRate"], unit="Hz"), level=2)
                 yield kvp("sp/dp ratio", cd.attributes["SingleToDoublePrecisionPerfRatio"], level=2)
 
     yield ""
