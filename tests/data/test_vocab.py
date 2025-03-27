@@ -21,13 +21,18 @@ from lenskit.data import Vocabulary
 from lenskit.diagnostics import DataWarning
 
 
+def id_ints():
+    li = np.iinfo(np.int64)
+    return st.integers(li.min, li.max)
+
+
 @given(
     st.one_of(
-        st.sets(st.integers()),
-        st.sets(st.uuids()),
+        st.sets(id_ints()),
+        st.sets(st.emails()),
     )
 )
-def test_create_basic(keys: set[int | str | UUID]):
+def test_create_basic(keys: set[int | str]):
     vocab = Vocabulary(keys, reorder=True)
     assert vocab.size == len(keys)
     assert len(vocab) == len(keys)
@@ -38,11 +43,11 @@ def test_create_basic(keys: set[int | str | UUID]):
 
 @given(
     st.one_of(
-        st.lists(st.integers()),
-        st.lists(st.uuids()),
+        st.lists(id_ints()),
+        st.lists(st.emails()),
     )
 )
-def test_create_nonunique(keys: list[int | str | UUID]):
+def test_create_nonunique(keys: list[int | str]):
     uq = set(keys)
     vocab = Vocabulary(keys, reorder=True)
     assert vocab.size == len(uq)
@@ -54,40 +59,45 @@ def test_create_nonunique(keys: list[int | str | UUID]):
 
 @given(
     st.one_of(
-        st.lists(st.integers()),
-        st.lists(st.uuids()),
+        st.lists(id_ints()),
+        st.lists(st.emails()),
     )
 )
-def test_equal(keys: list[int | str | UUID]):
+def test_equal(keys: list[int | str]):
     vocab = Vocabulary(keys, reorder=True)
 
     v2 = Vocabulary(keys, reorder=True)
     assert v2 == vocab
 
 
-@given(st.lists(st.integers()), st.sets(st.integers()))
+@given(st.lists(id_ints()), st.sets(id_ints()))
 def test_not_equal(keys: list[int], oks: set[int]):
     uq = set(keys)
     assume(oks != uq)
 
     vocab = Vocabulary(keys, reorder=True)
     v2 = Vocabulary(oks, reorder=True)
-    assert v2 != vocab
+    try:
+        assert v2 != vocab
+    except AssertionError as e:
+        e.add_note(f"v1 hash: {vocab._hash}")
+        e.add_note(f"v2 hash: {v2._hash}")
+        raise e
 
 
 @given(
     st.one_of(
-        st.sets(st.integers()),
-        st.sets(st.uuids()),
+        st.sets(id_ints()),
+        st.sets(st.emails()),
     ),
     st.lists(
         st.one_of(
-            st.integers(),
-            st.uuids(),
+            id_ints(),
+            st.emails(),
         )
     ),
 )
-def test_contains(keys: set[int] | set[str] | set[UUID], qs: set[int | str | UUID]):
+def test_contains(keys: set[int] | set[str], qs: set[int | str]):
     vocab = Vocabulary(keys, reorder=True)
 
     for qk in qs:
@@ -99,11 +109,11 @@ def test_contains(keys: set[int] | set[str] | set[UUID], qs: set[int | str | UUI
 
 @given(
     st.one_of(
-        st.sets(st.integers()),
-        st.sets(st.uuids()),
+        st.sets(id_ints()),
+        st.sets(st.emails()),
     )
 )
-def test_lookup_id_index(keys: set[int | str | UUID]):
+def test_lookup_id_index(keys: set[int | str]):
     klist = sorted(keys)
 
     vocab = Vocabulary(keys, reorder=True)
@@ -119,12 +129,12 @@ def test_lookup_id_index(keys: set[int | str | UUID]):
 
 @given(
     st.one_of(
-        st.sets(st.integers()),
-        st.sets(st.uuids()),
+        st.sets(id_ints()),
+        st.sets(st.emails()),
     ),
-    st.one_of(st.integers(), st.uuids()),
+    st.one_of(id_ints(), st.emails()),
 )
-def test_lookup_bad_id(keys: set[int | str | UUID], key: int | str | UUID):
+def test_lookup_bad_id(keys: set[int | str], key: int | str):
     assume(key not in keys)
 
     vocab = Vocabulary(keys, reorder=True)
@@ -137,12 +147,12 @@ def test_lookup_bad_id(keys: set[int | str | UUID], key: int | str | UUID):
 
 @given(
     st.one_of(
-        st.sets(st.integers()),
-        st.sets(st.uuids()),
+        st.sets(id_ints()),
+        st.sets(st.emails()),
     ),
-    st.one_of(st.integers()),
+    st.one_of(id_ints()),
 )
-def test_lookup_bad_number(keys: set[int | str | UUID], num: int):
+def test_lookup_bad_number(keys: set[int | str], num: int):
     assume(num < 0 or num >= len(keys))
 
     vocab = Vocabulary(keys, reorder=True)
@@ -152,8 +162,8 @@ def test_lookup_bad_number(keys: set[int | str | UUID], num: int):
 
 
 @given(
-    st.sets(st.integers()),
-    st.lists(st.integers()),
+    st.sets(id_ints()),
+    st.lists(id_ints()),
 )
 def test_lookup_many_nums(terms: set[int], lookup: list[int]):
     klist = sorted(terms)
@@ -172,7 +182,7 @@ def test_lookup_many_nums(terms: set[int], lookup: list[int]):
 
 @given(
     st.data(),
-    st.sets(st.integers()),
+    st.sets(id_ints()),
 )
 def test_lookup_many_terms(data, terms: set[int]):
     assume(len(terms) > 0)
@@ -187,7 +197,7 @@ def test_lookup_many_terms(data, terms: set[int]):
         assert k == klist[n]
 
 
-@given(st.one_of(st.sets(st.integers()), st.sets(st.uuids())))
+@given(st.one_of(st.sets(id_ints()), st.sets(st.emails())))
 def test_all_terms(initial: set[int] | set[str]):
     vocab = Vocabulary(initial)
 
@@ -198,8 +208,8 @@ def test_all_terms(initial: set[int] | set[str]):
     assert all(terms == tl)
 
 
-@given(st.one_of(st.lists(st.integers()), st.lists(st.uuids()), st.lists(st.emails())))
-def test_pickle(initial: list[int | str | UUID]):
+@given(st.one_of(st.lists(id_ints()), st.lists(st.emails()), st.lists(st.emails())))
+def test_pickle(initial: list[int | str]):
     vocab = Vocabulary(initial, reorder=True)
 
     blob = pickle.dumps(vocab)

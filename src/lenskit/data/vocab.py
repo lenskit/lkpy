@@ -90,9 +90,11 @@ class Vocabulary:
 
         arrow = pa.array(keys.values)
         # since we just made this array, we can assume the buffer is fully used
-        buf = arrow.buffers()[2]
-        assert buf is not None
-        self._hash = md5(memoryview(buf)).hexdigest()
+        h = md5()
+        for buf in arrow.buffers():
+            if buf is not None:
+                h.update(memoryview(buf))
+        self._hash = h.hexdigest()
 
     @property
     def index(self) -> pd.Index:
@@ -178,9 +180,7 @@ class Vocabulary:
 
     def __ne__(self, other: Vocabulary) -> bool:
         return (
-            not isinstance(other, Vocabulary)
-            and self is not other
-            and self._hash is not other._hash
+            not isinstance(other, Vocabulary) or self is not other or self._hash is not other._hash
         )
 
     def __contains__(self, key: object) -> bool:
