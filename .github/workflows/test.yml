@@ -241,7 +241,7 @@ jobs:
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
         run: |
-          uv sync --all-extras --no-default-groups --group test --group demo
+          uv sync --all-extras --no-default-groups --group test
 
       - name: Cache ML data
         uses: actions/cache@v4
@@ -294,7 +294,7 @@ jobs:
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
         run: |
-          uv sync --all-extras --no-default-groups --group test --group doc
+          uv sync --all-extras --no-default-groups --group test --group doc  --group demo
 
       - name: Cache ML data
         uses: actions/cache@v4
