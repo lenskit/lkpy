@@ -101,7 +101,7 @@ torch = [{ index = "pytorch-cpu", group = "cpu" }]
 # dev tool configuration
 [tool.coverage.run]
 relative_files = "true"
-include = ["src/lenskit/"]
+include = ["src/lenskit/*"]
 omit = ["src/lenskit/_version.py"]
 
 [tool.ruff]
