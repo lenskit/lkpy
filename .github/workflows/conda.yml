@@ -88,7 +88,7 @@ jobs:
 
       - name: 🧪 Install testing packages
         run: |
-          uv export --only-group-test --no-hashes >test-requirements.txt
+          uv export --only-group test --no-hashes >test-requirements.txt
           uv pip install -r test-requirements.txt
         shell: micromamba-shell {0}
 
