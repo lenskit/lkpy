@@ -65,6 +65,7 @@ demo = [
   "pyprojroot >=0.3",
   "seaborn >=0.13.2,<0.14",
 ]
+reporting = ["coverage >=5"]
 dev = [
   "hatchling ~=1.24",
   "hatch-vcs ~=0.4.0",
@@ -83,6 +84,7 @@ dev = [
   { include-group = "test" },
   { include-group = "doc" },
   { include-group = "demo" },
+  { include-group = "reporting" },
 ]
 cpu = ["torch ~=2.4"]
 

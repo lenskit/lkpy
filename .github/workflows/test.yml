@@ -117,12 +117,12 @@ jobs:
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
         run: |
-          uv pip install -e ".[test,sklearn,funksvd,hpf,implicit]"
+          uv sync --all-extras --no-default-groups --group test
 
       - name: 📦 Set up Python dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
-          uv pip install -e ".[test]"
+          uv pip sync --no-default-groups --group test
 
       - name: 🔍 Inspect environment
         run: |
@@ -215,7 +215,8 @@ jobs:
 
       - name: 📦 Set up Python dependencies
         run: |
-          uv pip install --resolution=lowest-direct ".[test,sklearn,funksvd,hpf,implicit]"
+          uv sync --only-group=test
+          uv pip install --resolution=lowest-direct --all-extras .
 
       - name: 🔍 Inspect environment
         run: |
@@ -260,7 +261,8 @@ jobs:
 
       - name: 📦 Set up Python dependencies
         run: |
-          uv pip install ".[test]" --resolution=lowest-direct
+          uv sync --only-group=test
+          uv pip install --resolution=lowest-direct --all-extras .
 
       - name: 🔍 Inspect environment
         run: |
@@ -421,13 +423,14 @@ jobs:
           git config user.name "LensKit Bot"
           git config user.email lkbot@lenskit.org
 
-      - uses: prefix-dev/setup-pixi@v0.8.3
+      - name: 🕶️ Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          pixi-version: latest
-          activate-environment: true
-          environments: report
-          locked: false
-          frozen: true
+          python-version: "3.11"
+
+      - name: 📦 Set up Python dependencies
+        run: |
+          uv sync --only-group=reporting
 
       - name: 📥 Download test artifacts
         uses: actions/download-artifact@v4
@@ -451,12 +454,6 @@ jobs:
           coverage xml
           coverage html -d lenskit-coverage
           coverage report --format=markdown >coverage.md
-
-      - name: Analyze diff coverage
-        if: github.event_name == 'pull_request'
-        run: |
-          diff-cover --json-report diff-cover.json --markdown-report diff-cover.md \
-            coverage.xml |tee diff-cover.txt
 
       - name: 📤 Upload coverage to CodeCov
         uses: codecov/codecov-action@v4.2.0
