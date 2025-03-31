@@ -74,6 +74,8 @@ jobs:
         with:
           environment-name: lenskit
           create-args: python=${{matrix.python}} uv lenskit
+          init-shell: >-
+            powershell
           generate-run-shell: true
           condarc: |
             channels:
@@ -84,20 +86,20 @@ jobs:
         if: matrix.platform != 'windows-latest' && matrix.platform != 'ubuntu-20.04-arm' && matrix.python != '3.13'
         run: |
           micromamba install lenskit-hpf lenskit-sklearn lenskit-funksvd lenskit-implicit
-        shell: micromamba-shell {0}
+        shell: pwsh
 
       - name: 🧪 Install testing packages
         run: |
           uv export --only-group test --no-hashes >test-requirements.txt
           uv pip install -r test-requirements.txt
-        shell: micromamba-shell {0}
+        shell: pwsh
 
       - name: 🔍 Inspect environment
         run: |
           lenskit doctor
-        shell: micromamba-shell {0}
+        shell: pwsh
 
       - name: "🏃🏻‍➡️ Test LensKit"
         run: |
           python -m pytest --verbose --durations=25 tests
-        shell: micromamba-shell {0}
+        shell: pwsh
