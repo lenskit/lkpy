@@ -73,7 +73,7 @@ jobs:
         uses: mamba-org/setup-micromamba@v2
         with:
           environment-name: lenskit
-          create-args: python=${{matrix.python}} pytest pytest-cov pytest-benchmark hypothesis pyprojroot lenskit
+          create-args: python=${{matrix.python}} uv lenskit
           generate-run-shell: true
           condarc: |
             channels:
@@ -85,6 +85,11 @@ jobs:
         run: |
           micromamba install lenskit-hpf lenskit-sklearn lenskit-funksvd lenskit-implicit
         shell: micromamba-shell {0}
+
+      - name: 🧪 Install testing packages
+        run: |
+          uv export --only-group-test --no-hashes >test-requirements.txt
+          uv pip install -r test-requirements.txt
 
       - name: 🔍 Inspect environment
         run: |
