@@ -73,7 +73,7 @@ jobs:
         uses: mamba-org/setup-micromamba@v2
         with:
           environment-name: lenskit
-          create-args: lenskit
+          create-args: python=${{matrix.python}} pytest pytest-cov pytest-benchmark hypothesis pyprojroot lenskit
           generate-run-shell: true
           condarc: |
             channels:

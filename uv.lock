@@ -1350,6 +1350,7 @@ demo = [
 ]
 dev = [
     { name = "build" },
+    { name = "coverage" },
     { name = "hatch-vcs" },
     { name = "hatchling" },
     { name = "hypothesis" },
@@ -1370,7 +1371,6 @@ dev = [
     { name = "pytest-benchmark" },
     { name = "pytest-cov" },
     { name = "pytest-doctestplus" },
-    { name = "pytest-repeat" },
     { name = "pyyaml" },
     { name = "ruff" },
     { name = "scipy-stubs" },
@@ -1392,6 +1392,9 @@ doc = [
     { name = "sphinxcontrib-mermaid" },
     { name = "sphinxext-opengraph" },
 ]
+reporting = [
+    { name = "coverage" },
+]
 test = [
     { name = "hypothesis" },
     { name = "pyprojroot" },
@@ -1399,7 +1402,6 @@ test = [
     { name = "pytest-benchmark" },
     { name = "pytest-cov" },
     { name = "pytest-doctestplus" },
-    { name = "pytest-repeat" },
     { name = "pyyaml" },
 ]
 
@@ -1441,6 +1443,7 @@ demo = [
 ]
 dev = [
     { name = "build", specifier = "~=1.0" },
+    { name = "coverage", specifier = ">=5" },
     { name = "hatch-vcs", specifier = "~=0.4.0" },
     { name = "hatchling", specifier = "~=1.24" },
     { name = "hypothesis", specifier = ">=6.16" },
@@ -1462,7 +1465,6 @@ dev = [
     { name = "pytest-benchmark", specifier = "==4.*" },
     { name = "pytest-cov", specifier = ">=2.12" },
     { name = "pytest-doctestplus", specifier = ">=1.2.1,<2" },
-    { name = "pytest-repeat", specifier = ">=0.9" },
     { name = "pyyaml", specifier = "~=6.0" },
     { name = "ruff", specifier = ">=0.2" },
     { name = "scipy-stubs", specifier = ">=1.14.1.6,<2" },
@@ -1484,6 +1486,7 @@ doc = [
     { name = "sphinxcontrib-mermaid", specifier = ">=1.0.0,<2" },
     { name = "sphinxext-opengraph", specifier = ">=0.5" },
 ]
+reporting = [{ name = "coverage", specifier = ">=5" }]
 test = [
     { name = "hypothesis", specifier = ">=6.16" },
     { name = "pyprojroot", specifier = "~=0.3.0" },
@@ -1491,7 +1494,6 @@ test = [
     { name = "pytest-benchmark", specifier = "==4.*" },
     { name = "pytest-cov", specifier = ">=2.12" },
     { name = "pytest-doctestplus", specifier = ">=1.2.1,<2" },
-    { name = "pytest-repeat", specifier = ">=0.9" },
     { name = "pyyaml", specifier = "~=6.0" },
 ]
 
@@ -2572,18 +2574,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/fd/e5/97c4bc17e93d5caf6b37ebab0bdfd668c1c62d575e6e1e5040bfa759b4f2/pytest_doctestplus-1.4.0.tar.gz", hash = "sha256:df83832b1d11288572df2ee4c7cccdb421d812b8038a658bb514c9c62bdbd626", size = 47566 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/88/08/0e0e38a6046f91ad6ae352c0639c1b6dd90e2cd53ab2d2282d1d231535fb/pytest_doctestplus-1.4.0-py3-none-any.whl", hash = "sha256:cfbae130ec90d4a2831819bbbfd097121b8e55f1e4d20a47ea992e4eaad2539a", size = 25236 },
-]
-
-[[package]]
-name = "pytest-repeat"
-version = "0.9.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pytest" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/86/5e/99365eb229efff0b1bd475886150fc6db9937ab7e1bd21f6f65c1279e0eb/pytest_repeat-0.9.3.tar.gz", hash = "sha256:ffd3836dfcd67bb270bec648b330e20be37d2966448c4148c4092d1e8aba8185", size = 6272 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/49/a8/0a0aec0c2541b8baf4a0b95af2ba99abce217ee43534adf9cb7c908cf184/pytest_repeat-0.9.3-py3-none-any.whl", hash = "sha256:26ab2df18226af9d5ce441c858f273121e92ff55f5bb311d25755b8d7abdd8ed", size = 4196 },
 ]
 
 [[package]]
