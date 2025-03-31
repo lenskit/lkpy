@@ -117,20 +117,20 @@ jobs:
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
         run: |
-          uv pip install ".[test,sklearn,funksvd,hpf,implicit]"
+          uv pip install -e ".[test,sklearn,funksvd,hpf,implicit]"
 
       - name: 📦 Set up Python dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
-          uv pip install ".[test]"
+          uv pip install -e ".[test]"
 
       - name: 🔍 Inspect environment
         run: |
-          lenskit doctor
+          coverage run -m lenskit doctor
 
       - name: 🏃🏻‍➡️ Test LKPY
         run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
+          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit --cov-append tests
 
       - name: 📐 Coverage results
         if: ${{ !cancelled() }}

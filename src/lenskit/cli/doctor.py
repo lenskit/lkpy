@@ -195,7 +195,7 @@ def inspect_env(paths: bool):
 
 
 def inspect_packages():
-    dists = sorted(distributions(), key=lambda d: d.name)
+    dists = sorted(distributions(), key=lambda d: d.name or "UNNAMED")
 
     n = len(dists)
     table = Table(title=f"Installed Packages ({n})")
