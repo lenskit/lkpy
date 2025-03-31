@@ -46,7 +46,11 @@ jobs:
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
         run: |
-          uv sync --all-extras --no-default-groups --group test
+          uv_extra=
+          if [ "${{matrix.python}}" = "3.13" ]; then
+            uv_extra="--no-extra ray"
+          fi
+          uv sync --all-extras $uv_extra --no-default-groups --group test
 
       - name: 📦 Set up Python dependencies (Windows)
         if: runner.os == 'Windows'
