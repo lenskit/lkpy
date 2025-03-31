@@ -51,7 +51,7 @@ jobs:
       - name: 📦 Set up Python dependencies (Windows)
         if: runner.os == 'Windows'
         run: |
-          uv pip sync --no-default-groups --group test
+          uv sync --no-default-groups --group test
 
       - name: 🔍 Inspect environment
         run: |
