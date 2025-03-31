@@ -99,4 +99,5 @@ jobs:
 
       - name: "🏃🏻‍➡️ Test LensKit"
         run: |
-          python -m pytest --verbose --durations=25 tests
+          pytest --verbose --durations=25 tests
+        shell: micromamba-shell {0}
