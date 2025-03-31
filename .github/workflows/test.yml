@@ -11,77 +11,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  conda:
-    name: Conda Python ${{matrix.python}} on ${{matrix.platform}}
-    runs-on: ${{matrix.platform}}
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        python:
-          - py311
-          - py312
-          - py313
-        platform:
-          - ubuntu-latest
-          - ubuntu-24.04-arm
-          - macos-latest
-          - windows-latest
-
-    steps:
-      - name: 🛒 Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: 🧐 Detect platform
-        id: detect
-        uses: actions/script@v7
-        with:
-          script: |
-            const os = require('os');
-            const pyver = "${{matrix.python}}";
-            if (os.type() == 'Windows_NT' || os.arch() != 'x64' || pyver == 'py313') {
-              core.setOutput('pixi-env', `test-${pyver}-core`)
-            } else {
-              core.setOutput('pixi-env', `test-${pyver}-full`)
-            }
-
-      - name: 🧚🏼 Install Pixi environment
-        uses: prefix-dev/setup-pixi@v0.8.3
-        with:
-          pixi-version: latest
-          activate-environment: true
-          environments: ${{ steps.detect.outputs.pixi-env }}
-          cache-write: false
-          locked: false
-          frozen: true
-
-      - name: 🔍 Inspect environment
-        run: |
-          lenskit doctor
-
-      - name: "🏃🏻‍➡️ Test LKPY"
-        run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 --cov=src/lenskit tests
-
-      - name: 📐 Coverage results
-        if: "${{ !cancelled() }}"
-        run: |
-          coverage xml
-          coverage report
-          cp .coverage coverage.db
-
-      - name: 📤 Upload test results
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: test-conda-${{matrix.platform}}-py${{matrix.python}}
-          path: |
-            test*.log
-            coverage.db
-            coverage.xml
-
   vanilla:
     name: Vanilla Python ${{matrix.python}} on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}
@@ -160,14 +89,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: prefix-dev/setup-pixi@v0.8.3
+      - name: 🕶️ Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          pixi-version: latest
-          activate-environment: true
-          environments: test-py311-funksvd
-          cache-write: false
-          locked: false
-          frozen: true
+          python-version: "3.12"
+
+      - name: 📦 Set up Python dependencies (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          uv sync --all-extras --no-default-groups --group test
 
       - name: 🔍 Inspect environment
         run: |
@@ -299,14 +229,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: prefix-dev/setup-pixi@v0.8.3
+      - name: 🕶️ Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          pixi-version: latest
-          activate-environment: true
-          environments: test-py311-full
-          cache-write: false
-          locked: false
-          frozen: true
+          python-version: "3.12"
+
+      - name: 📦 Set up Python dependencies (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          uv sync --all-extras --no-default-groups --group test --group demo
 
       - name: Cache ML data
         uses: actions/cache@v4
@@ -351,14 +282,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: prefix-dev/setup-pixi@v0.8.3
+      - name: 🕶️ Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          pixi-version: latest
-          activate-environment: true
-          environments: test-examples
-          cache-write: false
-          locked: false
-          frozen: true
+          python-version: "3.12"
+
+      - name: 📦 Set up Python dependencies (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          uv sync --all-extras --no-default-groups --group test --group doc
 
       - name: Cache ML data
         uses: actions/cache@v4
@@ -401,7 +333,6 @@ jobs:
     name: Test suite results
     runs-on: ubuntu-latest
     needs:
-      - conda
       - vanilla
       - nojit
       - mindep-all
