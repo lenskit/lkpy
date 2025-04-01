@@ -205,12 +205,12 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         self.opt = opt
 
     def _init_rng(self, options: TrainingOptions):
-        rng = options.random_generator()
+        self.rng = options.random_generator()
 
         # use the NumPy generator to seed Torch
-        torch_rng = torch.Generator()
+        self.torch_rng = torch.Generator()
         i32 = np.iinfo(np.int32)
-        torch_rng.manual_seed(int(rng.integers(i32.min, i32.max)))
+        self.torch_rng.manual_seed(int(self.rng.integers(i32.min, i32.max)))
 
 
 @dataclass
