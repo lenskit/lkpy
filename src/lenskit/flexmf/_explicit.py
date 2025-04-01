@@ -101,7 +101,7 @@ class FlexMFExplicitTrainer(FlexMFTrainerBase):
         )
 
     @override
-    def train_batch(self, batch: FlexMFTrainingBatch, opt: torch.optim.Optimizer) -> float:
+    def train_batch(self, batch: FlexMFTrainingBatch) -> float:
         if self.config.reg_method == "L2":
             result = self.model(batch.users, batch.items, return_norm=True)
             pred = result[0, :]
@@ -115,6 +115,6 @@ class FlexMFExplicitTrainer(FlexMFTrainerBase):
         loss_all = loss + norm
 
         loss_all.backward()
-        opt.step()
+        self.opt.step()
 
         return loss.item()

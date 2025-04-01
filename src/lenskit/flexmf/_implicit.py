@@ -129,7 +129,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
             sparse=self.config.reg_method != "AdamW",
         )
 
-    def train_batch(self, batch: FlexMFTrainingBatch, opt: torch.optim.Optimizer) -> float:
+    def train_batch(self, batch: FlexMFTrainingBatch) -> float:
         assert batch.data.matrix is not None
         assert isinstance(batch.users, np.ndarray)
         negatives = batch.data.matrix.sample_negatives(
@@ -173,6 +173,6 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
         loss_all = loss + norm
 
         loss_all.backward()
-        opt.step()
+        self.opt.step()
 
         return loss.item()
