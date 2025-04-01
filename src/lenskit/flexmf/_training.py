@@ -100,6 +100,8 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         self.component.model = self.model.to(self.device)
         self.model.train(True)
 
+        self.setup_optimizer()
+
     @property
     def config(self) -> Cfg:
         """
@@ -154,6 +156,7 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
     def finalize(self):
         del self.opt
         del self.data
+        self.model.eval()
 
     def epoch_data(self) -> FlexMFTrainingEpoch:
         """
