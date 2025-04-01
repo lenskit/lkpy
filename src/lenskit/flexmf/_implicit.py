@@ -96,8 +96,8 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
         coo = matrix.coo_structure()
 
         # save data we learned at this stage
-        self.users = data.users
-        self.items = data.items
+        self.component.users = data.users
+        self.component.items = data.items
 
         return FlexMFTrainingData(
             batch_size=self.config.batch_size,

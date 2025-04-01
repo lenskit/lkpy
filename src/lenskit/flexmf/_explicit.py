@@ -52,7 +52,7 @@ class FlexMFExplicitScorer(FlexMFScorerBase):
         return super().score_items(users, items) + self.global_bias
 
 
-class FlexMFExplicitTrainer(FlexMFTrainerBase):
+class FlexMFExplicitTrainer(FlexMFTrainerBase[FlexMFExplicitScorer]):
     @override
     def prepare_data(self, data: Dataset) -> FlexMFTrainingData:
         """
@@ -73,9 +73,9 @@ class FlexMFExplicitTrainer(FlexMFTrainerBase):
         rm_values = rm_values - mean
 
         # save data we learned at this stage
-        self.global_bias = mean.item()
-        self.users = data.users
-        self.items = data.items
+        self.component.global_bias = mean.item()
+        self.component.users = data.users
+        self.component.items = data.items
 
         return FlexMFTrainingData(
             batch_size=self.config.batch_size,
