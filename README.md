@@ -37,7 +37,7 @@ If you use Pixi, you can add it to your project:
 
     pixi add lenskit
 
-Or you can use `pip`:
+Or you can use `pip` (or `uv`):
 
     pip install lenskit
 
@@ -63,22 +63,26 @@ at <https://lkpy.lenskit.org>.
 [conda-lock]: https://github.com/conda-incubator/conda-lock
 [lkdev]: https://github.com/lenskit/lkdev
 
-We recommend using Pixi for developing LensKit.  Our `pixi.toml` file contains
-the development dependencies; to instal l dependencies for all of the LensKit
-packages (on Linux or macOS), use the `dev-full` environment:
+We recommend using `uv` for developing LensKit.  Our `pyproject.toml` file
+contains the development dependencies.  To set up a development environment:
 
 ```console
-$ pixi install -e dev-full
+$ uv venv -p 3.12
+$ uv sync
 ```
 
-You can use `pixi shell` to open a shell within this environment:
+If you want all extras (may not work on Windows), do:
 
 ```console
-$ pixi shell -e dev-full
+$ uv sync --all-extras
 ```
 
-If you are on Windows, use `dev-core` instead of `dev-full`; some LensKit
-packages will be missing dependencies (specifically Implicit, HPF, and FunkSVD).
+You can then activate the virtual environment to have the tools available and
+run tools like `pytest`:
+
+```console
+$ . ./.venv/bin/activate
+```
 
 ## Testing Changes
 
