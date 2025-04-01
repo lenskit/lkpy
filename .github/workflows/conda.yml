@@ -1,0 +1,105 @@
+name: Conda Package Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: conda-test-${{github.ref}}
+  cancel-in-progress: true
+
+jobs:
+  conda-build:
+    name: Build Conda packages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛒 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔬 Install Conda base
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: build
+          create-args: rattler-build
+          generate-run-shell: true
+
+      - name: 🔨 Build Conda packages
+        run: |
+          rattler-build build --recipe-dir=conda --output-dir=dist/conda
+        shell: micromamba-shell {0}
+
+      - name: Save package
+        uses: actions/upload-artifact@v4
+        with:
+          name: conda-pkgs
+          path: dist/conda
+
+  conda-test:
+    name: "Test on Conda"
+    needs: conda-build
+    runs-on: ${{matrix.platform}}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python:
+          - "3.11"
+          - "3.12"
+          - "3.13"
+        platform:
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+          - macos-latest
+          - windows-latest
+
+    steps:
+      - name: 🛒 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch compiled package distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: conda-pkgs
+          path: dist/conda
+
+      - name: Install base Conda environment
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: lenskit
+          create-args: python=${{matrix.python}} uv lenskit
+          init-shell: >-
+            powershell
+          generate-run-shell: true
+          condarc: |
+            channels:
+              - file://${{github.workspace}}/dist/conda
+              - conda-forge
+
+      - name: Install additional Conda packages
+        if: matrix.platform != 'windows-latest' && matrix.platform != 'ubuntu-20.04-arm' && matrix.python != '3.13'
+        run: |
+          micromamba install lenskit-hpf lenskit-sklearn lenskit-funksvd lenskit-implicit
+        shell: pwsh
+
+      - name: 🧪 Install testing packages
+        run: |
+          uv export --only-group test --no-hashes >test-requirements.txt
+          uv pip install -r test-requirements.txt
+        shell: pwsh
+
+      - name: 🔍 Inspect environment
+        run: |
+          lenskit doctor
+        shell: pwsh
+
+      - name: "🏃🏻‍➡️ Test LensKit"
+        run: |
+          python -m pytest --verbose --durations=25 tests
+        shell: pwsh
