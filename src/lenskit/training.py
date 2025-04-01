@@ -306,10 +306,12 @@ class ModelTrainer(Protocol, Generic[C]):
     implement :class:`UsesTrainer` will return an object implementing this
     protocol from their :meth:`~UsesTrainer.create_trainer` method.
 
-    In addition to implementing the methods in this protocol, it must also be
-    safe to pickle and unpickle a model trainer, and the unpickled trainer
-    should resume training from where it left off.  The model and its parameters
-    should be included in the unpickled state.
+    This protocol only defines the core aspects of training a model. Trainers
+    should also implement :class:`~lenskit.state.ParameterContainer` to allow
+    training to be checkpointed and resumed.
+
+    It is also a good idea for the trainer to be pickleable, but the parameter
+    container interface is the primary mechanism for checkpointing.
     """
 
     component: C
@@ -317,12 +319,6 @@ class ModelTrainer(Protocol, Generic[C]):
     def setup(self, data: Dataset):
         """
         Set up the model trainer to begin training.
-        """
-
-    def attach(self, component: C, data: Dataset):
-        """
-        Attach this trainer to a component and dataset.  Used for resuming
-        training from a trainer checkpoint.
         """
 
     def train_epoch(self) -> dict[str, float] | None:
