@@ -17,7 +17,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Generic, Protocol, Self, TypeVar, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import numpy as np
 
@@ -26,7 +26,6 @@ from lenskit.logging import get_logger, item_progress
 from lenskit.pipeline.components import Component
 from lenskit.random import RNGInput, random_generator
 
-C = TypeVar("C", bound=Component)
 _log = get_logger(__name__)
 
 
@@ -239,9 +238,6 @@ class UsesTrainer(IterativeTraining, Component, ABC):
         log.debug("creating model trainer")
         trainer = self.create_trainer(data, options)
 
-        log.debug("initializing trainer")
-        trainer.setup(data)
-
         log.debug("beginning training epochs")
         with item_progress("Training epochs", total=n) as pb:
             start = perf_counter()
@@ -270,9 +266,6 @@ class UsesTrainer(IterativeTraining, Component, ABC):
         log.debug("creating model trainer")
         trainer = self.create_trainer(data, options)
 
-        log.debug("initializing trainer")
-        trainer.setup(data)
-
         log.debug("beginning training epochs")
         with item_progress("Training epochs", total=n) as pb:
             start = perf_counter()
@@ -293,14 +286,13 @@ class UsesTrainer(IterativeTraining, Component, ABC):
     @abstractmethod
     def create_trainer(
         self, data: Dataset, options: TrainingOptions
-    ) -> ModelTrainer[Self]:  # pragma: nocover
+    ) -> ModelTrainer:  # pragma: nocover
         """
         Create a model trainer to train this model.
         """
-        raise NotImplementedError()
 
 
-class ModelTrainer(Protocol, Generic[C]):
+class ModelTrainer(ABC):
     """
     Protocol implemented by iterative trainers for models.  Models that
     implement :class:`UsesTrainer` will return an object implementing this
@@ -314,13 +306,7 @@ class ModelTrainer(Protocol, Generic[C]):
     container interface is the primary mechanism for checkpointing.
     """
 
-    component: C
-
-    def setup(self, data: Dataset):
-        """
-        Set up the model trainer to begin training.
-        """
-
+    @abstractmethod
     def train_epoch(self) -> dict[str, float] | None:
         """
         Perform one epoch of the training process, optionally returning metrics
@@ -328,9 +314,9 @@ class ModelTrainer(Protocol, Generic[C]):
         must be usable.
         """
 
+    @abstractmethod
     def finalize(self):
         """
         Finish the training process, cleaning up any unneeded data structures
         and doing any finalization steps to the model.
         """
-        pass

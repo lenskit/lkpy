@@ -7,28 +7,55 @@
 from __future__ import annotations
 
 import math
+from abc import abstractmethod
 from collections.abc import Generator, Sequence
 from dataclasses import dataclass, field, replace
-from typing import Self
 
 import numpy as np
 import structlog
 import torch
 from torch import Tensor
+from typing_extensions import TYPE_CHECKING, Generic, Self, TypeVar
 
-from lenskit.data import MatrixRelationshipSet
-from lenskit.logging import get_logger
+from lenskit.data import Dataset, MatrixRelationshipSet
+from lenskit.logging import get_logger, item_progress
+from lenskit.parallel.config import ensure_parallel_init
+from lenskit.training import ModelTrainer, TrainingOptions
+
+from ._model import FlexMFModel
+
+# hide base import to avoid circular imports
+if TYPE_CHECKING:
+    from ._base import FlexMFConfigBase, FlexMFScorerBase
+
+
+Comp = TypeVar("Comp", bound="FlexMFScorerBase", default="FlexMFScorerBase")
+Cfg = TypeVar("Cfg", bound="FlexMFConfigBase", default="FlexMFConfigBase")
 
 _log = get_logger(__name__)
 
 
-@dataclass
-class FlexMFTrainingContext:
+class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
     """
-    Context information for training the FlexMF models.
+    Trainer for a FlexMF model.  This class should be inherited by the
+    model-specific trainers.
+    """
 
-    Stability:
-        Experimental
+    component: Comp
+    """
+    The component whose model is being trained.
+    """
+    opt: torch.optim.Optimizer
+    """
+    The PyTorch optimizer.
+    """
+    data: FlexMFTrainingData
+    """
+    The training data, set up for the training process.
+    """
+    epochs_trained: int = 0
+    """
+    The number of epochs trained so far.
     """
 
     device: str
@@ -40,16 +67,150 @@ class FlexMFTrainingContext:
     """
     NumPy generator for random number generation.
     """
-
     torch_rng: torch.Generator
     """
-    PyTorch RNG for initialization and generation.
+    PyPTorch generator for random number generation.
     """
 
     log: structlog.stdlib.BoundLogger = field(default_factory=lambda: _log.bind())
     """
     A logger, that is bound the current training status / position.
     """
+
+    def __init__(self, component: Comp, data: Dataset, options: TrainingOptions):
+        ensure_parallel_init()
+
+        self.component = component
+
+        self.log = _log.bind(scorer=self.__class__.__name__, size=self.config.embedding_size)
+
+        self.device = options.configured_device(gpu_default=True)
+        self._init_rng(options)
+
+        self.data = self.prepare_data(data)
+        self.component.model = self.create_model()
+
+        # zero out non-interacted users/items
+        users = data.user_stats()
+        self.model.zero_users(torch.tensor(users["count"].values == 0))
+        items = data.item_stats()
+        self.model.zero_items(torch.tensor(items["count"].values == 0))
+
+        self.log.info("preparing to train %r", self.component, device=self.device)
+        self.component.model = self.model.to(self.device)
+        self.model.train(True)
+
+    @property
+    def config(self) -> Cfg:
+        """
+        Get the component configuration.
+        """
+        return self.component.config  # type: ignore
+
+    @property
+    def model(self) -> FlexMFModel:
+        """
+        Get model being trained.
+        """
+        return self.component.model
+
+    def train_epoch(self) -> dict[str, float]:
+        epoch = self.epochs_trained + 1
+        self.log = elog = self.log.bind(epoch=epoch)
+        elog.debug("creating epoch training data")
+        epoch_data = self.epoch_data()
+
+        tot_loss = 0.0
+        with item_progress(
+            f"Training epoch {epoch}", epoch_data.batch_count, {"loss": ".3f"}
+        ) as pb:
+            elog.debug("beginning epoch")
+            for i, batch in enumerate(epoch_data.batches(), 1):
+                self.log = blog = elog.bind(batch=i)
+                blog.debug("training batch")
+                self.opt.zero_grad()
+                loss = self.train_batch(batch)
+
+                pb.update(loss=loss)
+                tot_loss += loss
+
+        avg_loss = tot_loss / epoch_data.batch_count
+        elog.debug("epoch complete", loss=avg_loss)
+        return {"loss": avg_loss}
+
+    @abstractmethod
+    def train_batch(self, batch: FlexMFTrainingBatch) -> float:  # pragma: nocover
+        """
+        Compute and apply updates for a single batch.
+
+        Args:
+            batch:
+                The training minibatch.
+
+        Returns:
+            The loss.
+        """
+
+    def finalize(self):
+        del self.opt
+        del self.data
+
+    def epoch_data(self) -> FlexMFTrainingEpoch:
+        """
+        Get training data for a single training epoch.
+        """
+        # permute the data
+        perm = np.require(self.rng.permutation(self.data.n_samples), dtype=np.int32)
+        # convert to tensor, send to the training data's device.
+        if isinstance(self.data.items, torch.Tensor):
+            perm = torch.tensor(perm).to(self.data.items.device)
+
+        return FlexMFTrainingEpoch(self.data, perm)
+
+    @abstractmethod
+    def prepare_data(self, data: Dataset) -> FlexMFTrainingData:  # pragma: nocover
+        """
+        Set up the training data and context for the scorer.
+
+        This method _returns_ the data object; the :meth:`setup` method will
+        save its return value in :attr:`data`.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    def create_model(self) -> FlexMFModel:  # pragma: nocover
+        """
+        Create and initialize the model for training.
+
+        This method should _return_ the model; the :meth:`setup` method will put
+        the model in the component and arrange for it to be available via
+        :attr:`model`.
+        """
+        raise NotImplementedError()
+
+    def setup_optimizer(self):
+        """
+        Create the appropriate optimizer depending on the regularization method.
+        """
+        if self.config.reg_method == "AdamW":
+            self.log.debug("creating AdamW optimizer")
+            opt = torch.optim.AdamW(
+                self.model.parameters(),
+                lr=self.config.learning_rate,
+                weight_decay=self.config.regularization,
+            )
+        else:
+            self.log.debug("creating SparseAdam optimizer")
+            opt = torch.optim.SparseAdam(self.model.parameters(), lr=self.config.learning_rate)
+        self.opt = opt
+
+    def _init_rng(self, options: TrainingOptions):
+        rng = options.random_generator()
+
+        # use the NumPy generator to seed Torch
+        torch_rng = torch.Generator()
+        i32 = np.iinfo(np.int32)
+        torch_rng.manual_seed(int(rng.integers(i32.min, i32.max)))
 
 
 @dataclass
@@ -91,15 +252,6 @@ class FlexMFTrainingData:
     @property
     def n_samples(self) -> int:
         return len(self.users)
-
-    def epoch(self, context: FlexMFTrainingContext) -> FlexMFTrainingEpoch:
-        # permute the data
-        perm = np.require(context.rng.permutation(self.n_samples), dtype=np.int32)
-        # convert to tensor, send to the training data's device.
-        if isinstance(self.items, torch.Tensor):
-            perm = torch.tensor(perm).to(self.items.device)
-
-        return FlexMFTrainingEpoch(self, perm)
 
 
 @dataclass

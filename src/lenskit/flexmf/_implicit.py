@@ -9,15 +9,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal, TypeAlias
 
+import numpy as np
 import torch
 from torch.nn import functional as F
 
 from lenskit.data import Dataset
-from lenskit.training import TrainingOptions
 
 from ._base import FlexMFConfigBase, FlexMFScorerBase
 from ._model import FlexMFModel
-from ._training import FlexMFTrainingBatch, FlexMFTrainingContext, FlexMFTrainingData
+from ._training import FlexMFTrainerBase, FlexMFTrainingBatch, FlexMFTrainingData
 
 ImplicitLoss: TypeAlias = Literal["logistic", "pairwise"]
 NegativeStrategy: TypeAlias = Literal["uniform", "popular"]
@@ -82,9 +82,12 @@ class FlexMFImplicitScorer(FlexMFScorerBase):
 
     config: FlexMFImplicitConfig
 
-    def prepare_data(
-        self, data: Dataset, options: TrainingOptions, context: FlexMFTrainingContext
-    ) -> FlexMFTrainingData:
+    def create_trainer(self, data, options):
+        return FlexMFImplicitTrainer(self, data, options)
+
+
+class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplicitConfig]):
+    def prepare_data(self, data: Dataset) -> FlexMFTrainingData:
         """
         Set up the training data and context for the scorer.
         """
@@ -105,7 +108,7 @@ class FlexMFImplicitScorer(FlexMFScorerBase):
             matrix=matrix,
         )
 
-    def create_model(self, context: FlexMFTrainingContext, data: FlexMFTrainingData) -> FlexMFModel:
+    def create_model(self) -> FlexMFModel:
         """
         Prepare the model for training.
         """
@@ -118,29 +121,28 @@ class FlexMFImplicitScorer(FlexMFScorerBase):
 
         return FlexMFModel(
             self.config.embedding_size,
-            data.n_users,
-            data.n_items,
-            context.torch_rng,
+            self.data.n_users,
+            self.data.n_items,
+            self.torch_rng,
             user_bias=user_bias,
             item_bias=self.config.item_bias,
             sparse=self.config.reg_method != "AdamW",
         )
 
-    def train_batch(
-        self, context: FlexMFTrainingContext, batch: FlexMFTrainingBatch, opt: torch.optim.Optimizer
-    ) -> float:
+    def train_batch(self, batch: FlexMFTrainingBatch, opt: torch.optim.Optimizer) -> float:
         assert batch.data.matrix is not None
+        assert isinstance(batch.users, np.ndarray)
         negatives = batch.data.matrix.sample_negatives(
             batch.users,
             weighting=self.config.negative_strategy,
             n=self.config.negative_count,
-            rng=context.rng,
+            rng=self.rng,
         )
 
-        batch = batch.to(context.device)
+        batch = batch.to(self.device)
         users = batch.users.reshape(-1, 1)
-        positives = batch.items.reshape(-1, 1)
-        negatives = torch.tensor(negatives).to(context.device)
+        positives = torch.tensor(batch.items.reshape(-1, 1))
+        negatives = torch.tensor(negatives).to(self.device)
         items = torch.cat((positives, negatives), 1)
 
         if self.config.reg_method == "L2":
