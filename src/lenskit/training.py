@@ -27,6 +27,48 @@ from lenskit.random import RNGInput, random_generator
 _log = get_logger(__name__)
 
 
+@runtime_checkable
+class ParameterContainer(Protocol):  # pragma: nocover
+    """
+    Protocol for components with learned parameters to enable saving, reloading,
+    checkpointing, etc.
+
+    Components that learn parameters from training data should implement this
+    protocol, and also work when pickled or pickled.  Pickling is sometimes used
+    for convenience, but parameter / state dictionaries allow serializing wtih
+    tools like ``safetensors`` or ``zarr``.
+
+    Initializing a component with the same configuration as a trained component,
+    and loading its parameters with :meth:`load_parameters`, should result in a
+    component that is functionally equivalent to the original trained component.
+
+    Stability:
+        Experimental
+    """
+
+    def get_parameters(self) -> dict[str, object]:
+        """
+        Get the component's parameters.
+
+        Returns:
+            The model's parameters, as a dictionary from names to parameter data
+            (usually arrays, tensors, etc.).
+        """
+        raise NotImplementedError()
+
+    def load_parameters(self, params: dict[str, object]) -> None:
+        """
+        Reload model state from parameters saved via :meth:`get_parameters`.
+
+        Args:
+            params:
+                The model parameters, as a dictionary from names to parameter
+                data (arrays, tensors, etc.), as returned from
+                :meth:`get_parameters`.
+        """
+        raise NotImplementedError()
+
+
 @dataclass(frozen=True)
 class TrainingOptions:
     """
@@ -97,18 +139,15 @@ class Trainable(Protocol):  # pragma: nocover
     """
     Interface for components and objects that can learn parameters from training
     data. It supports training and checking if a component has already been
-    trained.  The resulting model should be pickleable.  Trainable objects are
-    usually also components.
+    trained.  This protocol only captures the concept of trainability; most
+    trainable components should have other properties and behaviors as well:
 
-    .. note::
-
-        Trainable components must also implement ``__call__``.
-
-    .. note::
-
-        A future LensKit version will add support for extracting model
-        parameters a la Pytorch's ``state_dict``, but this capability was not
-        ready for 2025.1.
+    -   They are usually components (:class:`~lenskit.pipeline.Component`),
+        with an appropriate ``__call__`` method.
+    -   They should be pickleable.
+    -   They should also usually implement :class:`ParameterContainer`, to
+        allow the learned parameters to be serialized and deserialized
+        without pickling.
 
     Stability:
         Full

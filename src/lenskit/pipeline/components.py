@@ -67,44 +67,6 @@ class ComponentConstructor(Protocol, Generic[CFG, COut]):
     def validate_config(self, data: Any = None) -> CFG | None: ...
 
 
-@runtime_checkable
-class ParameterContainer(Protocol):  # pragma: nocover
-    """
-    Protocol for components with learned parameters to enable saving, reloading,
-    checkpointing, etc.
-
-    Components that learn parameters from training data should implement this
-    protocol, and also work when pickled or pickled.  Pickling is sometimes used
-    for convenience, but parameter / state dictionaries allow serializing wtih
-    tools like ``safetensors`` or ``zarr``.
-
-    Stability:
-        Experimental
-    """
-
-    def get_parameters(self) -> dict[str, object]:
-        """
-        Get the component's parameters.
-
-        Returns:
-            The model's parameters, as a dictionary from names to parameter data
-            (usually arrays, tensors, etc.).
-        """
-        raise NotImplementedError()
-
-    def load_parameters(self, params: dict[str, object]) -> None:
-        """
-        Reload model state from parameters saved via :meth:`get_parameters`.
-
-        Args:
-            params:
-                The model parameters, as a dictionary from names to parameter
-                data (arrays, tensors, etc.), as returned from
-                :meth:`get_parameters`.
-        """
-        raise NotImplementedError()
-
-
 class Component(ABC, Generic[COut, CArgs]):
     """
     Base class for pipeline component objects.  Any component that is not just a
