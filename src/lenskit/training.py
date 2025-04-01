@@ -12,18 +12,21 @@ Interfaces and support for model training.
 from __future__ import annotations
 
 import os
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Protocol, runtime_checkable
+from typing import Generic, Protocol, Self, TypeVar, runtime_checkable
 
 import numpy as np
 
 from lenskit.data.dataset import Dataset
 from lenskit.logging import get_logger, item_progress
+from lenskit.pipeline.components import Component
 from lenskit.random import RNGInput, random_generator
 
+C = TypeVar("C", bound=Component)
 _log = get_logger(__name__)
 
 
@@ -132,6 +135,12 @@ class IterativeTraining(ABC, Trainable):
     methods to client code that may wish to directly control the iterative
     training process.
 
+    .. deprecated: 2025.3
+
+        This base class is deprecated in favor of :class:`ModelTrainer` and
+        :class:`UsesTrainer`, which are a better fit for integration with
+        tools like Ray Tune.
+
     Stability:
         Full
     """
@@ -201,3 +210,131 @@ class IterativeTraining(ABC, Trainable):
         training loops.
         """
         raise NotImplementedError()
+
+
+class UsesTrainer(IterativeTraining, Component, ABC):
+    """
+    Base class for models that implement :class:`Trainable` via a
+    :class:`ModelTrainer`.  This class implements :class:`IterativeTraining` for
+    compatibility, but the :class:`IterativeTraining` interface is deprecated.
+
+    The component's configuration must have an ``epochs`` attribute noting the
+    number of epochs to train.  It is further the responsibility of the model
+    trainer to increment the ``trained_epochs`` attribute.
+    """
+
+    def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()) -> None:
+        """
+        Implementation of :meth:`Trainable.train` that uses the model trainer.
+        """
+        if self.trained_epochs > 0 and not options.retrain:
+            return
+
+        self.trained_epochs = 0
+
+        log = _log.bind(model=f"{self.__class__.__module__}.{self.__class__.__qualname__}")
+        log.info("training model")
+        n = self.expected_training_epochs
+        assert n is not None, "no training epochs configured"
+        log.debug("creating model trainer")
+        trainer = self.create_trainer(data, options)
+
+        log.debug("initializing trainer")
+        trainer.setup(data)
+
+        log.debug("beginning training epochs")
+        with item_progress("Training epochs", total=n) as pb:
+            start = perf_counter()
+            for i in range(1, n + 1):
+                metrics = trainer.train_epoch()
+                metrics = metrics or {}
+                now = perf_counter()
+                elapsed = now - start
+                log.info("finished epoch", time="{:.1f}s".format(elapsed), epoch=i, **metrics)
+                self.trained_epochs += 1
+                start = now
+                pb.update()
+
+        log.debug("finalizing model")
+        trainer.finalize()
+
+        log.info("model training finished", epochs=self.trained_epochs)
+
+    def training_loop(self, data: Dataset, options: TrainingOptions):
+        warnings.warn("IteratativeTraining API is deprecated", DeprecationWarning)
+
+        log = _log.bind(model=f"{self.__class__.__module__}.{self.__class__.__qualname__}")
+        log.info("training model")
+        n = self.expected_training_epochs
+        assert n is not None, "no training epochs configured"
+        log.debug("creating model trainer")
+        trainer = self.create_trainer(data, options)
+
+        log.debug("initializing trainer")
+        trainer.setup(data)
+
+        log.debug("beginning training epochs")
+        with item_progress("Training epochs", total=n) as pb:
+            start = perf_counter()
+            for i in range(1, n + 1):
+                metrics = trainer.train_epoch()
+                metrics = metrics or {}
+                now = perf_counter()
+                elapsed = now - start
+                log.info("finished epoch", time="{:.1f}s".format(elapsed), epoch=i, **metrics)
+                self.trained_epochs += 1
+                start = now
+                pb.update()
+                yield metrics
+
+        log.debug("finalizing model")
+        trainer.finalize()
+
+    @abstractmethod
+    def create_trainer(
+        self, data: Dataset, options: TrainingOptions
+    ) -> ModelTrainer[Self]:  # pragma: nocover
+        """
+        Create a model trainer to train this model.
+        """
+        raise NotImplementedError()
+
+
+class ModelTrainer(Protocol, Generic[C]):
+    """
+    Protocol implemented by iterative trainers for models.  Models that
+    implement :class:`UsesTrainer` will return an object implementing this
+    protocol from their :meth:`~UsesTrainer.create_trainer` method.
+
+    In addition to implementing the methods in this protocol, it must also be
+    safe to pickle and unpickle a model trainer, and the unpickled trainer
+    should resume training from where it left off.  The model and its parameters
+    should be included in the unpickled state.
+    """
+
+    component: C
+
+    def setup(self, data: Dataset):
+        """
+        Set up the model trainer to begin training.
+        """
+
+    def attach(self, component: C, data: Dataset):
+        """
+        Attach this trainer to a component and dataset.  Used for resuming
+        training from a trainer checkpoint.
+        """
+
+    def train_epoch(self) -> dict[str, float] | None:
+        """
+        Perform one epoch of the training process, optionally returning metrics
+        on the training behavior.  After each training iteration, the mmodel
+        must be usable.
+        """
+
+    def finalize(self):
+        """
+        Finish the training process, cleaning up any unneeded data structures
+        and doing any finalization steps to the model.
+        """
+        pass
