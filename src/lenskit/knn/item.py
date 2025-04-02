@@ -37,7 +37,7 @@ MAX_BLOCKS = 1024
 class ItemKNNConfig(BaseModel, extra="forbid"):
     "Configuration for :class:`ItemKNNScorer`."
 
-    max_nbrs: PositiveInt = Field(20, validation_alias=AliasChoices("max_nbrs", "k"))
+    max_nbrs: PositiveInt = Field(20, validation_alias=AliasChoices("max_nbrs", "nnbrs", "k"))
     """
     The maximum number of neighbors for scoring each item.
     """
