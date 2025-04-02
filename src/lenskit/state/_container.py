@@ -33,7 +33,7 @@ class ParameterContainer(Protocol):  # pragma: nocover
         """
         raise NotImplementedError()
 
-    def load_parameters(self, params: Mapping[str, object]) -> None:
+    def load_parameters(self, state: Mapping[str, object]) -> None:
         """
         Reload model state from parameters saved via :meth:`get_parameters`.
 
