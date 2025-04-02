@@ -141,7 +141,8 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
 
         batch = batch.to(self.device)
         users = batch.users.reshape(-1, 1)
-        positives = torch.tensor(batch.items.reshape(-1, 1))
+        positives = batch.items.reshape(-1, 1)
+        assert torch.is_tensor(positives)
         negatives = torch.tensor(negatives).to(self.device)
         items = torch.cat((positives, negatives), 1)
 
