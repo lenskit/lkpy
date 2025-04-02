@@ -139,12 +139,10 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
             rng=self.rng,
         )
 
-        batch = batch.to(self.device)
-        users = batch.users.reshape(-1, 1)
-        positives = batch.items.reshape(-1, 1)
-        assert torch.is_tensor(positives)
-        negatives = torch.tensor(negatives).to(self.device)
-        items = torch.cat((positives, negatives), 1)
+        users = torch.as_tensor(batch.users.reshape(-1, 1)).to(self.device)
+        positives = torch.as_tensor(batch.items.reshape(-1, 1))
+        negatives = torch.as_tensor(negatives)
+        items = torch.cat((positives, negatives), 1).to(self.device)
 
         if self.config.reg_method == "L2":
             result = self.model(users, items, return_norm=True)
