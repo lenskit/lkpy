@@ -138,6 +138,7 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
 
         avg_loss = tot_loss / epoch_data.batch_count
         elog.debug("epoch complete", loss=avg_loss)
+        self.epochs_trained += 1
         return {"loss": avg_loss}
 
     @abstractmethod
