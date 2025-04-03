@@ -1416,7 +1416,7 @@ requires-dist = [
     { name = "pydantic", specifier = "~=2.7" },
     { name = "pyzmq", specifier = ">=24" },
     { name = "ray", marker = "extra == 'ray'", specifier = "~=2.42" },
-    { name = "rich", specifier = "~=13.5" },
+    { name = "rich", specifier = ">=13.5" },
     { name = "scikit-learn", marker = "extra == 'sklearn'", specifier = "~=1.2" },
     { name = "scipy", specifier = ">=1.11" },
     { name = "structlog", specifier = ">=23.2" },
