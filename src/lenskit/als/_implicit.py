@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import math
 
-import numpy as np
 import torch
 from typing_extensions import override
 
@@ -17,7 +16,7 @@ from lenskit.logging.progress import item_progress_handle, pbh_update
 from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
 
-from ._common import ALSBase, ALSConfig, TrainContext, TrainingData
+from ._common import ALSBase, ALSConfig, ALSTrainerBase, TrainContext
 
 
 class ImplicitMFConfig(ALSConfig):
@@ -69,41 +68,8 @@ class ImplicitMFScorer(ALSBase):
 
     OtOr_: torch.Tensor
 
-    @override
-    def prepare_data(self, data: Dataset) -> TrainingData:
-        if self.config.use_ratings:
-            rmat = data.interaction_matrix(format="torch", field="rating")
-        else:
-            rmat = data.interaction_matrix(format="torch")
-
-        rmat = torch.sparse_csr_tensor(
-            crow_indices=rmat.crow_indices(),
-            col_indices=rmat.col_indices(),
-            values=rmat.values() * self.config.weight,
-            size=rmat.shape,
-        )
-        return TrainingData.create(data.users, data.items, rmat)
-
-    @override
-    def initial_params(self, nrows: int, ncols: int, rng: np.random.Generator) -> torch.Tensor:
-        mat = rng.standard_normal((nrows, ncols)) * 0.01
-        mat = torch.from_numpy(mat)
-        mat.square_()
-        return mat
-
-    @override
-    def als_half_epoch(self, epoch: int, context: TrainContext) -> float:
-        chunks = WorkChunks.create(context.nrows)
-
-        OtOr = _implicit_otor(context.right, context.reg)
-        with item_progress_handle(f"epoch {epoch} {context.label}s", total=context.nrows) as pbh:
-            return _train_implicit_cholesky_fanout(context, OtOr, chunks, pbh)
-
-    def finalize_training(self):
-        # compute OtOr and save it on the model
-        reg = self.config.user_reg
-        self.OtOr_ = _implicit_otor(self.item_features_, reg)
-        return True
+    def create_trainer(self, data, options):
+        return ImplicitMFTrainer(self, data, options)
 
     @override
     def new_user_embedding(
@@ -156,6 +122,44 @@ class ImplicitMFScorer(ALSBase):
         x = solve_cholesky(A, y)
 
         return x
+
+
+class ImplicitMFTrainer(ALSTrainerBase):
+    @override
+    def prepare_matrix(self, data: Dataset) -> torch.Tensor:
+        if self.config.use_ratings:
+            rmat = data.interaction_matrix(format="torch", field="rating")
+        else:
+            rmat = data.interaction_matrix(format="torch")
+
+        return torch.sparse_csr_tensor(
+            crow_indices=rmat.crow_indices(),
+            col_indices=rmat.col_indices(),
+            values=rmat.values() * self.config.weight,
+            size=rmat.shape,
+        )
+
+    @override
+    def initial_params(self, nrows: int, ncols: int) -> torch.Tensor:
+        mat = self.rng.standard_normal((nrows, ncols)) * 0.01
+        mat = torch.from_numpy(mat)
+        mat.square_()
+        return mat
+
+    @override
+    def als_half_epoch(self, epoch: int, context: TrainContext) -> float:
+        chunks = WorkChunks.create(context.nrows)
+
+        OtOr = _implicit_otor(context.right, context.reg)
+        with item_progress_handle(f"epoch {epoch} {context.label}s", total=context.nrows) as pbh:
+            return _train_implicit_cholesky_fanout(context, OtOr, chunks, pbh)
+
+    @override
+    def finalize(self):
+        # compute OtOr and save it on the model
+        reg = self.config.user_reg
+        self.scorer.OtOr_ = _implicit_otor(self.scorer.item_features_, reg)
+        super().finalize()
 
 
 @torch.jit.script

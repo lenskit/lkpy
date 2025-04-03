@@ -17,7 +17,7 @@ from lenskit.math.solve import solve_cholesky
 from lenskit.parallel.chunking import WorkChunks
 from lenskit.torch import safe_tensor
 
-from ._common import ALSBase, ALSConfig, TrainContext, TrainingData
+from ._common import ALSBase, ALSConfig, ALSTrainerBase, TrainContext
 
 
 class BiasedMFConfig(ALSConfig):
@@ -47,31 +47,8 @@ class BiasedMFScorer(ALSBase):
     config: BiasedMFConfig
     bias_: BiasModel
 
-    @override
-    def prepare_data(self, data: Dataset):
-        # transform ratings using offsets
-        rmat = data.interaction_matrix(format="torch", layout="coo", field="rating")
-
-        self.logger.info("normalizing ratings")
-        self.bias_ = BiasModel.learn(data, damping=self.config.damping)
-        rmat = self.bias_.transform_matrix(rmat)
-
-        rmat = rmat.to_sparse_csr()
-        assert not torch.any(torch.isnan(rmat.values()))
-        return TrainingData.create(data.users, data.items, rmat)
-
-    @override
-    def initial_params(self, nrows: int, ncols: int, rng: np.random.Generator) -> torch.Tensor:
-        mat = rng.standard_normal((nrows, ncols))
-        mat /= np.linalg.norm(mat, axis=1).reshape((nrows, 1))
-        mat = torch.from_numpy(mat)
-        return mat
-
-    @override
-    def als_half_epoch(self, epoch: int, context: TrainContext):
-        chunks = WorkChunks.create(context.nrows)
-        with item_progress_handle(f"epoch {epoch} {context.label}s", total=context.nrows) as pbh:
-            return _train_update_fanout(context, chunks, pbh)
+    def create_trainer(self, data, options):
+        return BiasedMFTrainer(self, data, options)
 
     @override
     def new_user_embedding(
@@ -111,6 +88,34 @@ class BiasedMFScorer(ALSBase):
         scores = scores + biases
 
         return ItemList(items, scores=scores)
+
+
+class BiasedMFTrainer(ALSTrainerBase):
+    @override
+    def prepare_matrix(self, data: Dataset) -> torch.Tensor:
+        # transform ratings using offsets
+        rmat = data.interaction_matrix(format="torch", layout="coo", field="rating")
+
+        self.logger.info("normalizing ratings")
+        self.scorer.bias_ = BiasModel.learn(data, damping=self.config.damping)
+        rmat = self.scorer.bias_.transform_matrix(rmat)
+
+        rmat = rmat.to_sparse_csr()
+        assert not torch.any(torch.isnan(rmat.values()))
+        return rmat
+
+    @override
+    def initial_params(self, nrows: int, ncols: int) -> torch.Tensor:
+        mat = self.rng.standard_normal((nrows, ncols))
+        mat /= np.linalg.norm(mat, axis=1).reshape((nrows, 1))
+        mat = torch.from_numpy(mat)
+        return mat
+
+    @override
+    def als_half_epoch(self, epoch: int, context: TrainContext):
+        chunks = WorkChunks.create(context.nrows)
+        with item_progress_handle(f"epoch {epoch} {context.label}s", total=context.nrows) as pbh:
+            return _train_update_fanout(context, chunks, pbh)
 
 
 @torch.jit.script
