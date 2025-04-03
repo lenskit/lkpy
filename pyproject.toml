@@ -85,7 +85,6 @@ dev = [
   { include-group = "demo" },
   { include-group = "reporting" },
 ]
-cpu = ["torch ~=2.4"]
 
 [project.optional-dependencies]
 sklearn = ["scikit-learn ~=1.2"]
@@ -131,9 +130,6 @@ version-file = "src/lenskit/_version.py"
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
-
-[tool.uv.sources]
-torch = [{ index = "pytorch-cpu", group = "cpu" }]
 
 # dev tool configuration
 [tool.coverage.run]
