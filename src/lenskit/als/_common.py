@@ -287,11 +287,12 @@ class ALSTrainerBase(ModelTrainer):
         """
         ...
 
+    @override
     def finalize(self):
         """
         Finalize training. Base classes must call superclass.
         """
         self.logger.debug("finalizing model training")
         if not self.config.user_embeddings:
-            self.user_features_ = None
-            self.user_ = None
+            self.scorer.user_features_ = None
+            self.scorer.users_ = None
