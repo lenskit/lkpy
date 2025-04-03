@@ -218,8 +218,7 @@ class UsesTrainer(IterativeTraining, Component, ABC):
     compatibility, but the :class:`IterativeTraining` interface is deprecated.
 
     The component's configuration must have an ``epochs`` attribute noting the
-    number of epochs to train.  It is further the responsibility of the model
-    trainer to increment the ``trained_epochs`` attribute.
+    number of epochs to train.
     """
 
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()) -> None:
@@ -275,8 +274,8 @@ class UsesTrainer(IterativeTraining, Component, ABC):
                 now = perf_counter()
                 elapsed = now - start
                 log.info("finished epoch", time="{:.1f}s".format(elapsed), epoch=i, **metrics)
-                self.trained_epochs += 1
                 start = now
+                self.trained_epochs += 1
                 pb.update()
                 yield metrics
 

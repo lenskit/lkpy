@@ -10,6 +10,7 @@ import math
 from abc import abstractmethod
 from collections.abc import Generator, Sequence
 from dataclasses import dataclass, field, replace
+from typing import Mapping
 
 import numpy as np
 import structlog
@@ -138,6 +139,7 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
 
         avg_loss = tot_loss / epoch_data.batch_count
         elog.debug("epoch complete", loss=avg_loss)
+        self.epochs_trained += 1
         return {"loss": avg_loss}
 
     @abstractmethod
@@ -214,6 +216,12 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         self.torch_rng = torch.Generator()
         i32 = np.iinfo(np.int32)
         self.torch_rng.manual_seed(int(self.rng.integers(i32.min, i32.max)))
+
+    def get_parameters(self) -> Mapping[str, object]:
+        return self.model.state_dict()
+
+    def load_parameters(self, state: Mapping[str, object]) -> None:
+        self.model.load_state_dict(state)
 
 
 @dataclass

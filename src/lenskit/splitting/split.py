@@ -36,6 +36,11 @@ class TTSplit(Generic[TK]):
     The test data.
     """
 
+    name: str | None = None
+    """
+    A name for this train-test split.
+    """
+
     @property
     def test_size(self) -> int:
         """
