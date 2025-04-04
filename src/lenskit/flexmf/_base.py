@@ -6,23 +6,19 @@
 
 from __future__ import annotations
 
-from abc import abstractmethod
-from collections.abc import Generator
 from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
 import torch
 
-from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
-from lenskit.logging import get_logger, item_progress
-from lenskit.parallel.config import ensure_parallel_init
+from lenskit.data import ItemList, QueryInput, RecQuery, Vocabulary
+from lenskit.logging import get_logger
 from lenskit.pipeline import Component
 from lenskit.torch import safe_tensor
-from lenskit.training import IterativeTraining, TrainingOptions
+from lenskit.training import UsesTrainer
 
 from ._model import FlexMFModel
-from ._training import FlexMFTrainingBatch, FlexMFTrainingContext, FlexMFTrainingData
 
 # I want a logger for information
 _log = get_logger(__name__)
@@ -88,7 +84,7 @@ class FlexMFConfigBase:
     """
 
 
-class FlexMFScorerBase(IterativeTraining, Component):
+class FlexMFScorerBase(UsesTrainer, Component):
     """
     Base class for the FlexMF scorers, providing common Torch support.
 
@@ -100,128 +96,6 @@ class FlexMFScorerBase(IterativeTraining, Component):
     users: Vocabulary
     items: Vocabulary
     model: FlexMFModel
-
-    def training_loop(
-        self, data: Dataset, options: TrainingOptions
-    ) -> Generator[dict[str, float], None, None]:
-        ensure_parallel_init()
-        train_ctx = self.prepare_context(options)
-        train_data = self.prepare_data(data, options, train_ctx)
-        self.model = self.create_model(train_ctx, train_data)
-
-        # zero out non-interacted users/items
-        users = data.user_stats()
-        self.model.zero_users(torch.tensor(users["count"].values == 0))
-        items = data.item_stats()
-        self.model.zero_items(torch.tensor(items["count"].values == 0))
-
-        _log.info("preparing to train", device=train_ctx.device, model=self)
-        self.model = self.model.to(train_ctx.device)
-        self.model.train(True)
-
-        # delegate to the inner training loop
-        return self._training_loop_impl(train_data, train_ctx)
-
-    def prepare_context(self, options: TrainingOptions) -> FlexMFTrainingContext:
-        device = options.configured_device(gpu_default=True)
-        rng = options.random_generator()
-
-        # use the NumPy generator to seed Torch
-        torch_rng = torch.Generator()
-        i32 = np.iinfo(np.int32)
-        torch_rng.manual_seed(int(rng.integers(i32.min, i32.max)))
-
-        return FlexMFTrainingContext(device, rng, torch_rng)
-
-    @abstractmethod
-    def prepare_data(
-        self, data: Dataset, options: TrainingOptions, context: FlexMFTrainingContext
-    ) -> FlexMFTrainingData:  # pragma: nocover
-        """
-        Set up the training data and context for the scorer.
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def create_model(
-        self, context: FlexMFTrainingContext, data: FlexMFTrainingData
-    ) -> FlexMFModel:  # pragma: nocover
-        """
-        Prepare the model for training.
-        """
-        raise NotImplementedError()
-
-    def create_optimizer(self, context: FlexMFTrainingContext) -> torch.optim.Optimizer:
-        """
-        Create the appropriate optimizer depending on the regularization method.
-        """
-        if self.config.reg_method == "AdamW":
-            context.log.debug("creating AdamW optimizer")
-            return torch.optim.AdamW(
-                self.model.parameters(),
-                lr=self.config.learning_rate,
-                weight_decay=self.config.regularization,
-            )
-        else:
-            context.log.debug("creating SparseAdam optimizer")
-            return torch.optim.SparseAdam(self.model.parameters(), lr=self.config.learning_rate)
-
-    def _training_loop_impl(self, data: FlexMFTrainingData, context: FlexMFTrainingContext):
-        log = _log.bind(model=self.__class__.__name__, size=self.config.embedding_size)
-        context.log = log
-        opt = self.create_optimizer(context)
-
-        for epoch in range(1, self.config.epochs + 1):
-            # permute and copy the training data
-            context.log = elog = log.bind(epoch=epoch)
-            elog.debug("creating epoch training data")
-            epoch_data = data.epoch(context)
-
-            tot_loss = 0.0
-            with item_progress(
-                f"Training epoch {epoch}", epoch_data.batch_count, {"loss": ".3f"}
-            ) as pb:
-                elog.debug("beginning epoch")
-                for i, batch in enumerate(epoch_data.batches(), 1):
-                    context.log = blog = elog.bind(batch=i)
-                    blog.debug("training batch")
-                    opt.zero_grad()
-                    loss = self.train_batch(context, batch, opt)
-
-                    pb.update(loss=loss)
-                    tot_loss += loss
-
-            avg_loss = tot_loss / epoch_data.batch_count
-            elog.debug("epoch complete", loss=avg_loss)
-            yield {"loss": avg_loss}
-
-        _log.info("finalizing trained model")
-        self.finalize()
-
-    @abstractmethod
-    def train_batch(
-        self, context: FlexMFTrainingContext, batch: FlexMFTrainingBatch, opt: torch.optim.Optimizer
-    ) -> float:  # pragma: nocover
-        """
-        Compute and apply updates for a single batch.
-
-        Args:
-            batch:
-                The training minibatch.
-            opt:
-                The optimizer (its gradients have already been zeroed).
-
-        Returns:
-            The loss.
-        """
-        raise NotImplementedError()
-
-    def finalize(self):
-        """
-        Finalize model training.  The base class implementation puts the model
-        in evaluation mode.
-        """
-        self.model.eval()
 
     def to(self, device):
         "Move the model to a different device."

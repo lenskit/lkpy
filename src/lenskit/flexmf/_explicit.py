@@ -10,13 +10,17 @@ from dataclasses import dataclass
 
 import torch
 from torch.nn import functional as F
+from typing_extensions import override
 
 from lenskit.data import Dataset
 from lenskit.flexmf._model import FlexMFModel
-from lenskit.training import TrainingOptions
 
 from ._base import FlexMFConfigBase, FlexMFScorerBase
-from ._training import FlexMFTrainingBatch, FlexMFTrainingContext, FlexMFTrainingData
+from ._training import (
+    FlexMFTrainerBase,
+    FlexMFTrainingBatch,
+    FlexMFTrainingData,
+)
 
 
 @dataclass
@@ -41,9 +45,16 @@ class FlexMFExplicitScorer(FlexMFScorerBase):
 
     global_bias: float
 
-    def prepare_data(
-        self, data: Dataset, options: TrainingOptions, context: FlexMFTrainingContext
-    ) -> FlexMFTrainingData:
+    def create_trainer(self, data, options):
+        return FlexMFExplicitTrainer(self, data, options)
+
+    def score_items(self, users: torch.Tensor, items: torch.Tensor) -> torch.Tensor:
+        return super().score_items(users, items) + self.global_bias
+
+
+class FlexMFExplicitTrainer(FlexMFTrainerBase[FlexMFExplicitScorer]):
+    @override
+    def prepare_data(self, data: Dataset) -> FlexMFTrainingData:
         """
         Set up the training data and context for the scorer.
         """
@@ -62,9 +73,9 @@ class FlexMFExplicitScorer(FlexMFScorerBase):
         rm_values = rm_values - mean
 
         # save data we learned at this stage
-        self.global_bias = mean.item()
-        self.users = data.users
-        self.items = data.items
+        self.component.global_bias = mean.item()
+        self.component.users = data.users
+        self.component.items = data.items
 
         return FlexMFTrainingData(
             batch_size=self.config.batch_size,
@@ -73,24 +84,24 @@ class FlexMFExplicitScorer(FlexMFScorerBase):
             users=rm_users,
             items=rm_items,
             fields={"ratings": rm_values},
-        ).to(context.device)
+        ).to(self.device)
 
-    def create_model(self, context: FlexMFTrainingContext, data: FlexMFTrainingData) -> FlexMFModel:
+    @override
+    def create_model(self) -> FlexMFModel:
         """
         Prepare the model for training.
         """
         return FlexMFModel(
             self.config.embedding_size,
-            data.n_users,
-            data.n_items,
-            context.torch_rng,
+            self.data.n_users,
+            self.data.n_items,
+            self.torch_rng,
             sparse=self.config.reg_method != "AdamW",
             init_scale=0.1,
         )
 
-    def train_batch(
-        self, context: FlexMFTrainingContext, batch: FlexMFTrainingBatch, opt: torch.optim.Optimizer
-    ) -> float:
+    @override
+    def train_batch(self, batch: FlexMFTrainingBatch) -> float:
         if self.config.reg_method == "L2":
             result = self.model(batch.users, batch.items, return_norm=True)
             pred = result[0, :]
@@ -104,9 +115,6 @@ class FlexMFExplicitScorer(FlexMFScorerBase):
         loss_all = loss + norm
 
         loss_all.backward()
-        opt.step()
+        self.opt.step()
 
         return loss.item()
-
-    def score_items(self, users: torch.Tensor, items: torch.Tensor) -> torch.Tensor:
-        return super().score_items(users, items) + self.global_bias

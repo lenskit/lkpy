@@ -102,7 +102,10 @@ def inspect_compute():
 
     try:
         import cupy
+
+        _log.debug("imported CuPy version %s", cupy.__version__)
     except ImportError:
+        _log.debug("CuPy unavailable")
         cupy = None
 
     yield ""
@@ -133,10 +136,12 @@ def inspect_compute():
             yield "  [green]cuda:{}[/green]: [bold cyan]{}[/bold cyan]".format(dev, props.name)
             yield kvp("capability", f"{props.major}.{props.minor}", level=2)
             yield kvp("memory", naturalsize(props.total_memory), level=2)
+            yield kvp("L2 cache", naturalsize(props.L2_cache_size), level=2)
             yield kvp("MP count", props.multi_processor_count, level=2)
             if cupy is not None:
                 cd = cupy.cuda.Device(dev)
                 yield kvp("warp size", cd.attributes["WarpSize"], level=2)
+                yield kvp("blocks/MP", cd.attributes["MaxBlocksPerMultiprocessor"], level=2)
                 yield kvp("clock rate", metric(cd.attributes["ClockRate"], unit="Hz"), level=2)
                 yield kvp("sp/dp ratio", cd.attributes["SingleToDoublePrecisionPerfRatio"], level=2)
 

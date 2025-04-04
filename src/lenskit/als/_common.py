@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Generator
 from typing import Literal, TypeAlias
 
 import numpy as np
@@ -19,9 +18,8 @@ from typing_extensions import NamedTuple, override
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.types import UIPair
 from lenskit.logging import get_logger
-from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component
-from lenskit.training import IterativeTraining, TrainingOptions
+from lenskit.training import ModelTrainer, TrainingOptions, UsesTrainer
 
 EntityClass: TypeAlias = Literal["user", "item"]
 _log = get_logger(__name__)
@@ -99,43 +97,7 @@ class TrainContext(NamedTuple):
         return TrainContext(label, matrix, left, right, reg, nrows, ncols, embed_size, regI)
 
 
-class TrainingData(NamedTuple):
-    """
-    Data for training the ALS model.
-    """
-
-    users: Vocabulary
-    "User ID mapping."
-    items: Vocabulary
-    "Item ID mapping."
-    ui_rates: torch.Tensor
-    "User-item rating matrix."
-    iu_rates: torch.Tensor
-    "Item-user rating matrix."
-
-    @property
-    def n_users(self):
-        return len(self.users)
-
-    @property
-    def n_items(self):
-        return len(self.items)
-
-    @classmethod
-    def create(cls, users: Vocabulary, items: Vocabulary, ratings: torch.Tensor) -> TrainingData:
-        assert ratings.shape == (len(users), len(items))
-
-        transposed = ratings.transpose(0, 1).to_sparse_csr()
-        return cls(users, items, ratings, transposed)
-
-    def to(self, device):
-        """
-        Move the training data to another device.
-        """
-        return self._replace(ui_rates=self.ui_rates.to(device), iu_rates=self.iu_rates.to(device))
-
-
-class ALSBase(IterativeTraining, Component[ItemList], ABC):
+class ALSBase(UsesTrainer, Component[ItemList], ABC):
     """
     Base class for ALS models.
 
@@ -153,121 +115,6 @@ class ALSBase(IterativeTraining, Component[ItemList], ABC):
     @property
     def logger(self) -> structlog.stdlib.BoundLogger:
         return _log.bind(scorer=self.__class__.__name__, size=self.config.embedding_size)
-
-    @override
-    def training_loop(
-        self, data: Dataset, options: TrainingOptions
-    ) -> Generator[dict[str, float], None, None]:
-        """
-        Run ALS to train a model.
-
-        Args:
-            ratings: the ratings data frame.
-
-        Returns:
-            ``True`` if the model was trained.
-        """
-        ensure_parallel_init()
-
-        rng = options.random_generator()
-
-        train = self.prepare_data(data)
-        self.users_ = train.users
-        self.items_ = train.items
-
-        self.initialize_params(train, rng)
-
-        return self._training_loop_generator(train)
-
-        for algo in self.fit_iters(data, options):
-            pass  # we just need to do the iterations
-
-        return True
-
-    def _training_loop_generator(
-        self, train: TrainingData
-    ) -> Generator[dict[str, float], None, None]:
-        """
-        Run ALS to train a model, yielding after each iteration.
-
-        Args:
-            ratings: the ratings data frame.
-        """
-        log = self.logger
-
-        assert self.user_features_ is not None
-        assert self.item_features_ is not None
-        u_ctx = TrainContext.create(
-            "user", train.ui_rates, self.user_features_, self.item_features_, self.config.user_reg
-        )
-        i_ctx = TrainContext.create(
-            "item", train.iu_rates, self.item_features_, self.user_features_, self.config.item_reg
-        )
-
-        for epoch in range(self.config.epochs):
-            log = log.bind(epoch=epoch)
-            epoch = epoch + 1
-
-            du = self.als_half_epoch(epoch, u_ctx)
-            log.debug("finished user epoch")
-
-            di = self.als_half_epoch(epoch, i_ctx)
-            log.debug("finished item epoch")
-
-            log.debug("finished epoch (|ΔP|=%.3f, |ΔQ|=%.3f)", du, di)
-            yield {"deltaP": du, "deltaQ": di}
-
-        if not self.config.user_embeddings:
-            self.user_features_ = None
-            self.user_ = None
-
-        log.debug("finalizing model training")
-        self.finalize_training()
-
-    @abstractmethod
-    def prepare_data(self, data: Dataset) -> TrainingData:  # pragma: no cover
-        """
-        Prepare data for training this model.  This takes in the ratings, and is
-        supposed to do two things:
-
-        -   Normalize or transform the rating/interaction data, as needed, for
-            training.
-        -   Store any parameters learned from the normalization (e.g. means) in
-            the appropriate member variables.
-        -   Return the training data object to use for model training.
-        """
-        ...
-
-    def initialize_params(self, data: TrainingData, rng: np.random.Generator):
-        """
-        Initialize the model parameters at the beginning of training.
-        """
-        self.logger.debug("initializing item matrix")
-        self.item_features_ = self.initial_params(data.n_items, self.config.embedding_size, rng)
-        self.logger.debug("|Q|: %f", torch.norm(self.item_features_, "fro"))
-
-        self.logger.debug("initializing user matrix")
-        self.user_features_ = self.initial_params(data.n_users, self.config.embedding_size, rng)
-        self.logger.debug("|P|: %f", torch.norm(self.user_features_, "fro"))
-
-    @abstractmethod
-    def initial_params(
-        self, nrows: int, ncols: int, rng: np.random.Generator
-    ) -> torch.Tensor:  # pragma: no cover
-        """
-        Compute initial parameter values of the specified shape.
-        """
-        ...
-
-    @abstractmethod
-    def als_half_epoch(self, epoch: int, context: TrainContext) -> float:  # pragma: no cover
-        """
-        Run one half of an ALS training epoch.
-        """
-        ...
-
-    def finalize_training(self):
-        pass
 
     @override
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
@@ -323,3 +170,129 @@ class ALSBase(IterativeTraining, Component[ItemList], ABC):
         Perform any final transformation of scores prior to returning them.
         """
         return items
+
+
+class ALSTrainerBase(ModelTrainer):
+    scorer: ALSBase
+
+    rng: np.random.Generator
+    ui_rates: torch.Tensor
+    "User-item rating matrix."
+    u_ctx: TrainContext
+    iu_rates: torch.Tensor
+    "Item-user rating matrix."
+    i_ctx: TrainContext
+    epochs_trained: int = 0
+
+    def __init__(self, scorer: ALSBase, data: Dataset, options: TrainingOptions):
+        self.scorer = scorer
+        self.scorer.users_ = data.users
+        self.scorer.items_ = data.items
+
+        self.rng = options.random_generator()
+
+        self.ui_rates = self.prepare_matrix(data)
+        self.iu_rates = self.ui_rates.transpose(0, 1).to_sparse_csr()
+
+        self.initialize_params(data)
+
+        assert self.scorer.user_features_ is not None
+        self.u_ctx = TrainContext.create(
+            "user",
+            self.ui_rates,
+            self.scorer.user_features_,
+            self.scorer.item_features_,
+            self.config.user_reg,
+        )
+        self.i_ctx = TrainContext.create(
+            "item",
+            self.iu_rates,
+            self.scorer.item_features_,
+            self.scorer.user_features_,
+            self.config.item_reg,
+        )
+
+    def train_epoch(self):
+        epoch = self.epochs_trained + 1
+        log = self.logger.bind(epoch=epoch)
+
+        assert self.scorer.user_features_ is not None
+        assert self.scorer.item_features_ is not None
+
+        du = self.als_half_epoch(epoch, self.u_ctx)
+        log.debug("finished user epoch")
+
+        di = self.als_half_epoch(epoch, self.i_ctx)
+        log.debug("finished item epoch")
+
+        log.debug("finished epoch (|ΔP|=%.3f, |ΔQ|=%.3f)", du, di)
+        return {"deltaP": du, "deltaQ": di}
+
+    @property
+    def config(self) -> ALSConfig:
+        return self.scorer.config
+
+    @property
+    def logger(self) -> structlog.stdlib.BoundLogger:
+        return self.scorer.logger
+
+    @property
+    def n_users(self):
+        return self.ui_rates.shape[0]
+
+    @property
+    def n_items(self):
+        return self.iu_rates.shape[1]
+
+    @abstractmethod
+    def prepare_matrix(self, data: Dataset) -> torch.Tensor:  # pragma: no cover
+        """
+        Prepare data for training this model.  This takes in the ratings, and is
+        supposed to do two things:
+
+        -   Normalize or transform the rating/interaction data, as needed, for
+            training.
+        -   Store any parameters learned from the normalization (e.g. means) in
+            the appropriate member variables.
+        -   Return the ratings matrix for training.
+        """
+
+    def initialize_params(self, data: Dataset):
+        """
+        Initialize the model parameters at the beginning of training.
+        """
+        self.logger.debug("initializing item matrix")
+        self.scorer.item_features_ = self.initial_params(
+            data.item_count, self.config.embedding_size
+        )
+        self.logger.debug("|Q|: %f", torch.norm(self.scorer.item_features_, "fro"))
+
+        self.logger.debug("initializing user matrix")
+        self.scorer.user_features_ = self.initial_params(
+            data.user_count, self.config.embedding_size
+        )
+        self.logger.debug("|P|: %f", torch.norm(self.scorer.user_features_, "fro"))
+
+    @abstractmethod
+    def initial_params(self, nrows: int, ncols: int) -> torch.Tensor:  # pragma: no cover
+        """
+        Compute initial parameter values of the specified shape.
+        """
+        ...
+
+    @abstractmethod
+    def als_half_epoch(self, epoch: int, context: TrainContext) -> float:  # pragma: no cover
+        """
+        Run one half of an ALS training epoch.
+        """
+        ...
+
+    @override
+    def finalize(self):
+        """
+        Finalize training. Base classes must call superclass.
+        """
+        self.logger.debug("finalizing model training")
+        if not self.config.user_embeddings:
+            self.scorer.user_features_ = None
+            self.scorer.users_ = None
