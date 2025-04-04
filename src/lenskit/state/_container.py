@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -33,7 +33,7 @@ class ParameterContainer(Protocol):  # pragma: nocover
         """
         raise NotImplementedError()
 
-    def load_parameters(self, state: Mapping[str, object]) -> None:
+    def load_parameters(self, state: Mapping[str, Any]) -> None:
         """
         Reload model state from parameters saved via :meth:`get_parameters`.
 

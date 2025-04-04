@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Literal, TypeAlias
+from typing import Literal, Mapping, TypeAlias
 
 import numpy as np
 import structlog
@@ -195,7 +195,9 @@ class ALSTrainerBase(ModelTrainer):
         self.iu_rates = self.ui_rates.transpose(0, 1).to_sparse_csr()
 
         self.initialize_params(data)
+        self._init_contexts()
 
+    def _init_contexts(self):
         assert self.scorer.user_features_ is not None
         self.u_ctx = TrainContext.create(
             "user",
@@ -296,3 +298,34 @@ class ALSTrainerBase(ModelTrainer):
         if not self.config.user_embeddings:
             self.scorer.user_features_ = None
             self.scorer.users_ = None
+
+    def get_parameters(self) -> Mapping[str, object]:
+        """
+        Get the component's parameters.
+
+        Returns:
+            The model's parameters, as a dictionary from names to parameter data
+            (usually arrays, tensors, etc.).
+        """
+        return {
+            "user_embeddings": self.scorer.user_features_,
+            "item_embeddings": self.scorer.item_features_,
+        }
+
+    def load_parameters(self, state: Mapping[str, object]) -> None:
+        """
+        Reload model state from parameters saved via :meth:`get_parameters`.
+
+        Args:
+            params:
+                The model parameters, as a dictionary from names to parameter
+                data (arrays, tensors, etc.), as returned from
+                :meth:`get_parameters`.
+        """
+        u_emb = state["user_embeddings"]
+        assert torch.is_tensor(u_emb)
+        i_emb = state["item_embeddings"]
+        assert torch.is_tensor(i_emb)
+        self.scorer.user_features_ = u_emb
+        self.scorer.item_features_ = i_emb
+        self._init_contexts()
