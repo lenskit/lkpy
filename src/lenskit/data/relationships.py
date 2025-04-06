@@ -205,7 +205,10 @@ class MatrixRelationshipSet(RelationshipSet):
         table: pa.Table,
     ):
         super().__init__(ds, name, schema, table)
+        log = _log.bind(dataset=ds, relationship=name)
+
         # order the table to compute the sparse matrix
+        log.debug("setting up entity information")
         entities = list(schema.entities.keys())
         row, col = entities
         row_col_name = num_col_name(row)
@@ -217,9 +220,11 @@ class MatrixRelationshipSet(RelationshipSet):
         self.col_vocabulary = ds.entities(col).vocabulary
 
         e_cols = [num_col_name(e) for e in entities]
+        log.debug("sorting relationship table")
         table = table.sort_by([(c, "ascending") for c in e_cols])
 
         # compute the row pointers
+        log.debug("computing CSR data")
         n_rows = len(self.row_vocabulary)
         row_sizes = np.zeros(n_rows + 1, dtype=np.int32())
         rsz_struct = pc.value_counts(table.column(e_cols[0]))
@@ -230,6 +235,7 @@ class MatrixRelationshipSet(RelationshipSet):
         self._table = table
 
         # make the index
+        log.debug("computing row-column index")
         self.rc_index = pd.Index(
             self._rc_combined_nums(
                 self._table.column(row_col_name).to_numpy(),

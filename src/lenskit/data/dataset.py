@@ -142,20 +142,26 @@ class Dataset:
 
     def _init_caches(self):
         "Initialize internal caches for this dataset."
+        log = _log.bind(dataset=self.name)
 
         self._entities = {}
         self._relationships = {}
+
+        log.debug("initializing dataset caches")
 
         for name, schema in self._data.schema.entities.items():
             tbl = self._data.tables[name]
             id_name = id_col_name(name)
             ids = tbl.column(id_name)
+            log.debug("creating entity vocabulary", entity=name)
             vocab = Vocabulary(ids, name=name, reorder=False)
+            log.debug("creating entity set", entity=name)
             self._entities[name] = EntitySet(name, schema, vocab, tbl)
 
         for name, schema in self._data.schema.relationships.items():
             tbl = self._data.tables[name]
             if not schema.repeats.is_present and len(schema.entities) == 2:
+                log.debug("creating matrix relationship set", relationship=name)
                 self._relationships[name] = MatrixRelationshipSet(self, name, schema, tbl)
             else:
                 raise NotImplementedError("complex relationships not yet implemented")
