@@ -77,7 +77,8 @@ New code should use :py:func:`lenskit.data.from_interactions_df` to convert a
 Pandas data frame into a :py:func:`~lenskit.data.Dataset`, or one of the
 standard loaders such as :py:func:`lenskit.data.load_movielens`.
 :class:`~lenskit.data.DatasetBuilder` provides more fine-grained control over
-building datasets, including addition entity and interaction attributes.
+building datasets, including addition entity and interaction attributes in
+the new :ref:`data-model`.
 
 While most LensKit data frame code still recognizes the legacy ``user`` and
 ``item`` columns from LensKit 0.14 and earlier, data frames of LensKit data
@@ -87,6 +88,10 @@ unambiguously distinguish them from user and item numbers.
 Additional dataset construction support and possible implementations (e.g.
 database-backed datasets) are coming, but this is the migration path for the
 typical code patterns used in LensKit 0.14 and earlier.
+
+LensKit now also has a native dataset format to facilitate efficient saving and
+loading of complete, configured data set in a Parquet-based format.  The native
+format round-trips all supported elements of the LensKit data model.
 
 .. tip::
 
