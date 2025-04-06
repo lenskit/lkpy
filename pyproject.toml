@@ -85,6 +85,8 @@ dev = [
   { include-group = "demo" },
   { include-group = "reporting" },
 ]
+cpu = ["torch ~=2.4"]
+gpu = ["torch ~=2.4"]
 
 [project.optional-dependencies]
 sklearn = ["scikit-learn ~=1.2"]
@@ -125,10 +127,24 @@ raw-options = { version_scheme = "guess-next-dev" }
 [tool.hatch.build.hooks.vcs]
 version-file = "src/lenskit/_version.py"
 
-# override where UV gets pytorch for CI installs
+# configure UV sources
+[tool.uv]
+conflicts = [[{ group = "cpu" }, { group = "gpu" }]]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", group = "cpu" },
+  { index = "pytorch-gpu", group = "gpu" },
+]
+
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-gpu"
+url = "https://download.pytorch.org/whl/cu124"
 explicit = true
 
 # dev tool configuration
