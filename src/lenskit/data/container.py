@@ -17,6 +17,7 @@ import pyarrow as pa
 from pyarrow.parquet import read_table, write_table
 
 from lenskit.logging import get_logger
+from lenskit.logging.stopwatch import Stopwatch
 
 from .schema import DataSchema
 
@@ -64,6 +65,7 @@ class DataContainer:
         path = Path(path)
         log = _log.bind(path=str(path))
 
+        timer = Stopwatch()
         log.info("loading dataset")
         log.debug("reading schema")
         schema_file = path / "schema.json"
@@ -72,11 +74,12 @@ class DataContainer:
 
         tables = {}
         for name in schema.entities:
-            log.debug("reading entity table", table=name)
+            log.debug("reading entity table %s", name, table=name, time=timer.elapsed())
             tables[name] = read_table(path / f"{name}.parquet")
 
         for name in schema.relationships:
-            log.debug("reading relationship table", table=name)
+            log.debug("reading relationship table %s", name, table=name, time=timer.elapsed())
             tables[name] = read_table(path / f"{name}.parquet")
 
+        log.debug("finished loading data set in %s", timer, time=timer.elapsed())
         return cls(schema, tables)
