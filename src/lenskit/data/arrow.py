@@ -6,7 +6,6 @@ Utility functions for working with Arrow data.
 
 import numpy as np
 import pyarrow as pa
-import pyarrow.compute as pc
 
 from lenskit.logging import get_logger
 
@@ -19,15 +18,15 @@ def is_sorted(table: pa.Table, key: list[str]) -> bool:
 
     k1 = key[0]
     log.debug("checking first column", column=k1)
-    d1 = pc.pairwise_diff(table.column(k1))
-    if pc.any(pc.less(d1, 0)).as_py():
+    d1 = np.diff(table.column(k1).to_numpy())
+    if np.any(d1 < 0):
         log.debug("initial column non-monotonic", column=k1)
         return False
 
-    changes = pc.greater(d1, 0).to_numpy()
+    changes = d1 > 0
     for k in key:
         log.debug("checking column", column=k)
-        dk = pc.pairwise_diff(table.column(k)).to_numpy()
+        dk = np.diff(table.column(k).to_numpy())
         if np.any(~changes & (dk < 0)):
             log.debug("column has disallowed reset", column=k)
             return False
