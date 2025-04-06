@@ -525,9 +525,17 @@ class Dataset:
             out.write(" " + self.name)
         out.write(" {")
         for entity in self.schema.entities:
-            out.write("  {}: {:,d},\n".format(entity, self.entities(entity).count()))
+            eset = self._entities.get(entity, None)
+            if eset is not None:
+                out.write("  {}: {:,d},\n".format(entity, eset.count()))
+            else:
+                out.write("  {}: <not loaded>,\n".format(entity))
         for rel in self.schema.relationships:
-            out.write("  {}: {:,d},\n".format(rel, self.relationships(rel).count()))
+            rset = self._relationships.get(rel, None)
+            if rset is not None:
+                out.write("  {}: {:,d},\n".format(rel, rset.count()))
+            else:
+                out.write("  {}: <not loaded>,\n".format(rel))
         out.write("}")
 
         return out.getvalue()
