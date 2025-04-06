@@ -29,6 +29,7 @@ from scipy.sparse import csr_array, sparray
 from lenskit.diagnostics import DataError, DataWarning
 from lenskit.logging import get_logger
 
+from .arrow import is_sorted
 from .container import DataContainer
 from .dataset import Dataset
 from .schema import (
@@ -930,11 +931,21 @@ class DatasetBuilder:
         """
         Build a data container (backing store for a dataset).
         """
+        log = _log.bind(name=self.name)
+        log.debug("assembling data container")
         tables = {}
         for n, t in self._tables.items():
             if t is None:
+                log.debug("fabricating empty table %s", n)
                 tables[n] = pa.table({id_col_name(n): pa.array([], type=pa.int64())})
             else:
+                rel = self.schema.relationships.get(n, None)
+                if rel is not None and rel.repeats.is_forbidden:
+                    e_cols = list(rel.entities.keys())
+                    if not is_sorted(t, e_cols):
+                        log.debug("sorting non-repeating relationship %s", n)
+                        t = t.sort_by([(c, "ascending") for c in e_cols])
+
                 tables[n] = t
 
         return DataContainer(self.schema.model_copy(), tables)
