@@ -205,7 +205,7 @@ class MatrixRelationshipSet(RelationshipSet):
         table: pa.Table,
     ):
         super().__init__(ds, name, schema, table)
-        log = _log.bind(dataset=ds, relationship=name)
+        log = _log.bind(dataset=ds.name, relationship=name)
 
         # order the table to compute the sparse matrix
         log.debug("setting up entity information")
