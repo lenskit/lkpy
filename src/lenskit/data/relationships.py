@@ -27,6 +27,7 @@ from lenskit.diagnostics import DataWarning, FieldError
 from lenskit.logging import get_logger
 from lenskit.random import random_generator
 
+from .arrow import is_sorted
 from .items import ItemList
 from .matrix import COOStructure, CSRStructure
 from .schema import RelationshipSchema, id_col_name, num_col_name
@@ -220,8 +221,12 @@ class MatrixRelationshipSet(RelationshipSet):
         self.col_vocabulary = ds.entities(col).vocabulary
 
         e_cols = [num_col_name(e) for e in entities]
-        log.debug("sorting relationship table")
-        table = table.sort_by([(c, "ascending") for c in e_cols])
+        log.debug("checking relationship table sorting")
+        if is_sorted(table, e_cols):
+            log.debug("relationship table already sorted 😊")
+        else:
+            log.warning("sorting relationship table (might take time)")
+            table = table.sort_by([(c, "ascending") for c in e_cols])
 
         # compute the row pointers
         log.debug("computing CSR data")
