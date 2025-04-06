@@ -941,7 +941,7 @@ class DatasetBuilder:
             else:
                 rel = self.schema.relationships.get(n, None)
                 if rel is not None and rel.repeats.is_forbidden:
-                    e_cols = list(rel.entities.keys())
+                    e_cols = [e + "_num" for e in rel.entities.keys()]
                     if not is_sorted(t, e_cols):
                         log.debug("sorting non-repeating relationship %s", n)
                         t = t.sort_by([(c, "ascending") for c in e_cols])
