@@ -242,6 +242,7 @@ class MatrixRelationshipSet(RelationshipSet):
                 self._table.column(col_col_name).to_numpy(),
             )
         )
+        log.debug("relationship set ready to use")
 
     @property
     def n_rows(self):
