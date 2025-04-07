@@ -136,7 +136,7 @@ class LoggingConfig:  # pragma: nocover
         """
         if isinstance(verbose, int) and verbose > 1:
             self.level = LVL_TRACE
-        if verbose:
+        elif verbose:
             self.level = logging.DEBUG
         else:
             self.level = logging.INFO
