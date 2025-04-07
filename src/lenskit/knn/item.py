@@ -236,11 +236,14 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         ti_nums = items.numbers(vocabulary=self.items_, missing="negative")
         ti_mask = ti_nums >= 0
         ti_valid_nums = ti_nums[ti_mask]
+        trace(log, "attempting to score %d of %d items", len(ti_valid_nums), len(items))
 
         # subset the model to rated and target items
         model = self.sim_matrix_
+        trace(log, "subsetting matrix rows", n_rates=len(ri_valid_nums), shape=model.shape)
         model = model[ri_valid_nums, :]
         assert isinstance(model, csr_array)
+        trace(log, "subsetting matrix columns", n_targets=len(ti_valid_nums), shape=model.shape)
         model = model[:, ti_valid_nums]
         assert isinstance(model, csr_array)
 
