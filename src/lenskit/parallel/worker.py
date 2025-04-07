@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import faulthandler
 import multiprocessing as mp
 import os
 import warnings
@@ -32,6 +33,7 @@ class WorkerData(Generic[M, A, R]):
 
 def initalize(ctx: SHMData) -> None:
     global __work_context, __progress
+    faulthandler.enable()
     proc = mp.current_process()
     log = _log.bind(pid=proc.pid, pname=proc.name)
 
