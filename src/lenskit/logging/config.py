@@ -221,6 +221,9 @@ class LoggingConfig:  # pragma: nocover
             root.addHandler(file)
 
         root.setLevel(self.effective_level)
+        # turn down some loggers
+        logging.getLogger("asyncio").setLevel(logging.INFO)
+        logging.getLogger("numba").setLevel(logging.INFO)
 
         if self.progress_backend is not None:
             set_progress_impl(self.progress_backend)
