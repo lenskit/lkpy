@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 import click
+from xopen import xopen
 
 import lenskit.operations as ops
 from lenskit.data import Dataset
@@ -47,7 +48,7 @@ def recommend(
     _log.warning("the recommend CLI is experimental and may change without notice")
 
     _log.info("loading pipeline", file=str(pipe_file))
-    with open(pipe_file, "rb") as pf:
+    with xopen(pipe_file, "rb") as pf:
         pipe = pickle.load(pf)
     log = _log.bind(name=pipe.name)
 

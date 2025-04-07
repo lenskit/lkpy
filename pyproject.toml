@@ -35,6 +35,7 @@ dependencies = [
   "pydantic ~=2.7",
   "humanize ~=4.2",
   "prettytable ~=3.14",
+  "xopen ~=2.0",
 ]
 
 [dependency-groups]
