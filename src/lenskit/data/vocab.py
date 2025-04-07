@@ -87,14 +87,17 @@ class Vocabulary:
             raise ValueError("IDs must be unique")
 
         self._index = keys.rename(name + "_id") if name is not None else keys
+        self._ensure_hash()
 
-        arrow = pa.array(keys.values)
-        # since we just made this array, we can assume the buffer is fully used
-        h = md5()
-        for buf in arrow.buffers():
-            if buf is not None:
-                h.update(memoryview(buf))
-        self._hash = h.hexdigest()
+    def _ensure_hash(self):
+        if not hasattr(self, "_hash"):
+            arrow = pa.array(self._index.values)
+            # since we just made this array, we can assume the buffer is fully used
+            h = md5()
+            for buf in arrow.buffers():
+                if buf is not None:
+                    h.update(memoryview(buf))
+            self._hash = h.hexdigest()
 
     @property
     def index(self) -> pd.Index:
@@ -176,12 +179,14 @@ class Vocabulary:
         return self.terms(nums)
 
     def __eq__(self, other: Vocabulary) -> bool:  # noqa: F821
-        return self is other or (isinstance(other, Vocabulary) and self._hash == other._hash)
-
-    def __ne__(self, other: Vocabulary) -> bool:
-        return (
-            not isinstance(other, Vocabulary) or self is not other or self._hash is not other._hash
-        )
+        if self is other:
+            return True
+        elif not isinstance(other, Vocabulary):
+            return False
+        else:
+            self._ensure_hash()
+            other._ensure_hash()
+            return self._hash == other._hash
 
     def __contains__(self, key: object) -> bool:
         return key in self._index
