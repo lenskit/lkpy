@@ -10,7 +10,6 @@ Components that look up user history from the training data.
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 from typing import Literal
 
@@ -21,10 +20,11 @@ from typing_extensions import override
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
 from lenskit.data.dataset import MatrixRelationshipSet
 from lenskit.diagnostics import DataError
+from lenskit.logging import get_logger, trace
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
 
-_logger = logging.getLogger(__name__)
+_log = get_logger(__name__)
 
 
 @dataclass
@@ -67,10 +67,18 @@ class UserTrainingHistoryLookup(Component[ItemList], Trainable):
         """
         query = RecQuery.create(query)
         if query.user_id is None:
+            trace(_log, "no user ID")
             return query
 
+        log = _log.bind(user_id=query.user_id)
+
         if query.user_items is None:
+            trace(log, "looking up user history")
             query.user_items = self.interactions.row_items(query.user_id)
+            if query.user_items is not None:
+                log.debug("fetched %d history items", len(query.user_items))
+            else:
+                log.debug("no history found")
 
         return query
 
