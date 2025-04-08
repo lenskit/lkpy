@@ -113,7 +113,12 @@ class ML100KLoader(MLData):
 
         ratings = self.ratings_df()
         dsb.add_interactions(
-            "rating", ratings, entities=["user", "item"], missing="insert", default=True
+            "rating",
+            ratings,
+            entities=["user", "item"],
+            missing="insert",
+            default=True,
+            allow_repeats=False,
         )
 
         users = self.users_df().set_index("user_id")
@@ -196,7 +201,12 @@ class MLMLoader(MLData):
 
         ratings = self.ratings_df()
         dsb.add_interactions(
-            "rating", ratings, entities=["user", "item"], missing="insert", default=True
+            "rating",
+            ratings,
+            entities=["user", "item"],
+            missing="insert",
+            default=True,
+            allow_repeats=False,
         )
 
         users = self.users_df()
@@ -325,7 +335,12 @@ class MLModernLoader(MLData):
 
         ratings = self.ratings_df()
         dsb.add_interactions(
-            "rating", ratings, entities=["user", "item"], missing="insert", default=True
+            "rating",
+            ratings,
+            entities=["user", "item"],
+            missing="insert",
+            default=True,
+            allow_repeats=False,
         )
 
         tags = self.tagging_df()
