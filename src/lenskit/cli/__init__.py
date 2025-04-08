@@ -4,7 +4,6 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-import faulthandler
 import sys
 from importlib.metadata import entry_points
 
@@ -46,7 +45,6 @@ def lenskit(verbosity: int):
     if verbosity:
         lc.set_verbose(verbosity)
     lc.apply()
-    faulthandler.enable()
 
 
 @lenskit.command("version")
