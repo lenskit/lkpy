@@ -45,7 +45,12 @@ class FlexMFImplicitConfig(FlexMFConfigBase):
 
     negative_count: int = 1
     """
-    The number of negative items to sample for each positive item in the training data.
+    The number of negative items to sample for each positive item in the
+    training data.  With BPR loss, the positive item is compared to each
+    negative item; with logistic loss, the positive item is treated once per
+    learning round, so this setting effectively makes the model learn on _n_
+    negatives per positive, rather than giving positive and negative examples
+    equal weight.
     """
 
     positive_weight: float = 1.0
@@ -57,8 +62,8 @@ class FlexMFImplicitConfig(FlexMFConfigBase):
 
     user_bias: bool | None = None
     """
-    Whether to learn a user bias term.  If unspecified, the default depends on the
-    loss function (``False`` for pairwise and ``True`` for logistic).
+    Whether to learn a user bias term.  If unspecified, the default depends on
+    the loss function (``False`` for pairwise and ``True`` for logistic).
     """
     item_bias: bool = True
     """
