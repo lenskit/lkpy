@@ -197,9 +197,10 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
                 lp = -F.logsigmoid(pos_pred - neg_pred) * weights
                 loss = lp.mean()
 
-        loss_all = loss + (pos_norm + neg_norm) * 0.5
+        if self.config.reg_method == "L2":
+            loss = loss + self.config.regularization * 0.5 * (pos_norm.mean() + neg_norm.mean())
 
-        loss_all.backward()
+        loss.backward()
         self.opt.step()
 
         return loss.item()
@@ -226,29 +227,40 @@ class FlexMFWARPTrainer(FlexMFImplicitTrainer):
         assert batch.data.matrix is not None
         assert isinstance(batch.users, np.ndarray)
 
-        ps = pos_scores.reshape(len(pos_scores), 1)
-
-        # start with 100 negatives to find positive
-        neg_cand = torch.as_tensor(
-            batch.data.matrix.sample_negatives(
-                batch.users,
-                weighting="uniform",
-                n=100,
-                rng=self.rng,
+        # start looking for misranked models
+        idx_range = torch.arange(len(users))
+        neg_scores = torch.zeros(len(users), device=users.device)
+        neg_norms = torch.zeros(len(users), device=users.device)
+        neg_counts = torch.zeros(len(users))
+        neg_items = torch.empty(len(users), dtype=torch.int32, device=users.device)
+        needed = neg_counts <= 0
+        while torch.any(needed):
+            n_dev = needed.to(users.device)
+            print("scanning for", len(n_dev), "new items")
+            n_users = batch.users[needed]
+            neg_cand = (
+                torch.as_tensor(
+                    batch.data.matrix.sample_negatives(
+                        n_users,
+                        weighting="uniform",
+                        rng=self.rng,
+                    )
+                )
+                .reshape(-1, 1)
+                .to(users.device)
             )
-        )
-        neg_cand = neg_cand.to(users.device)
-        neg_scores, neg_norms = self.score(users, neg_cand)
-        neg_misranked = neg_scores > ps
-        neg_pos = torch.argmax(neg_misranked, dim=1)
-        assert neg_pos.shape == (len(users),)
+            nc_scores, nc_norms = self.score(users[n_dev], neg_cand)
 
-        uidx = torch.arange(len(users), device=users.device)
-        n_not_mr = torch.sum(torch.logical_not(neg_misranked[uidx, neg_pos]))
-        if n_not_mr:
-            self.log.warning("%d items are not misranked", n_not_mr)
+            found = nc_scores[:, 0] > pos_scores[n_dev]
+            f_idx = idx_range[needed][found]
+            neg_items[f_idx] = neg_cand[found, 0]
+            neg_scores[f_idx] = nc_scores[found, 0]
+            if nc_norms.shape:
+                neg_norms[f_idx] = nc_norms[found, 0]
+            neg_counts[f_idx] += 1
+            needed = neg_counts <= 0
 
-        ranks = (neg_pos + 1).to(torch.float64)
+        ranks = ((self.data.n_items - 1) / (neg_counts + 1)).to(torch.float64).detach()
         # L(k) = sum i=1..k 1/i = harmonic k
         # approximate harmonic k with log
         weights = (
@@ -258,4 +270,4 @@ class FlexMFWARPTrainer(FlexMFImplicitTrainer):
             - 1 / (12 * ranks**2)
             + 1 / (120 * ranks**4)
         )
-        return neg_cand[uidx, neg_pos], neg_scores[uidx, neg_pos], neg_norms[uidx, neg_pos], weights
+        return neg_items, neg_scores, neg_norms, weights
