@@ -25,6 +25,11 @@ class TestFlexMFImplicit(BasicComponentTests, ScorerTests):
     config = FlexMFImplicitConfig()
 
 
+class TestFlexMFWARP(BasicComponentTests, ScorerTests):
+    component = FlexMFImplicitScorer
+    config = FlexMFImplicitConfig(loss="warp")
+
+
 @mark.slow
 @mark.parametrize(["loss", "reg"], product(["logistic", "pairwise"], ["L2", "AdamW"]))
 def test_flexmf_train_config(ml_ds, loss, reg):
