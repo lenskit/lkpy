@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Literal, TypeAlias
 
@@ -20,6 +21,7 @@ from ._base import FlexMFConfigBase, FlexMFScorerBase
 from ._model import FlexMFModel
 from ._training import FlexMFTrainerBase, FlexMFTrainingBatch, FlexMFTrainingData
 
+MAX_TRIES = 200
 ImplicitLoss: TypeAlias = Literal["logistic", "pairwise", "warp"]
 NegativeStrategy: TypeAlias = Literal["uniform", "popular", "misranked"]
 
@@ -229,14 +231,19 @@ class FlexMFWARPTrainer(FlexMFImplicitTrainer):
 
         # start looking for misranked models
         idx_range = torch.arange(len(users))
-        neg_scores = torch.zeros(len(users), device=users.device)
+        neg_scores = torch.full((len(users),), -math.inf, device=users.device)
         neg_norms = torch.zeros(len(users), device=users.device)
         neg_counts = torch.zeros(len(users))
         neg_items = torch.empty(len(users), dtype=torch.int32, device=users.device)
         needed = neg_counts <= 0
+        tries = 0
         while torch.any(needed):
+            tries += 1
+            if tries > MAX_TRIES:
+                self.log.debug("exceed MAX_TRIES for %d items", np.sum(needed.numpy()))
+                continue
+
             n_dev = needed.to(users.device)
-            print("scanning for", len(n_dev), "new items")
             n_users = batch.users[needed]
             neg_cand = (
                 torch.as_tensor(
@@ -251,13 +258,24 @@ class FlexMFWARPTrainer(FlexMFImplicitTrainer):
             )
             nc_scores, nc_norms = self.score(users[n_dev], neg_cand)
 
-            found = nc_scores[:, 0] > pos_scores[n_dev]
+            found = nc_scores[:, 0] > pos_scores[n_dev, 0]
             f_idx = idx_range[needed][found]
             neg_items[f_idx] = neg_cand[found, 0]
             neg_scores[f_idx] = nc_scores[found, 0]
             if nc_norms.shape:
                 neg_norms[f_idx] = nc_norms[found, 0]
-            neg_counts[f_idx] += 1
+
+            nf = ~found
+            nf_idx = idx_range[needed][nf]
+            nf_big = nc_scores[nf, 0] > neg_scores[nf_idx]
+            nf_upd = nf_idx[nf_big]
+            neg_items[nf_upd] = neg_cand[nf_big, 0]
+            neg_scores[nf_upd] = nc_scores[nf_big, 0]
+            if nc_norms.shape:
+                neg_norms[nf_upd] = nc_norms[nf_big, 0]
+
+            neg_counts[needed] += 1
+
             needed = neg_counts <= 0
 
         ranks = ((self.data.n_items - 1) / (neg_counts + 1)).to(torch.float64).detach()
