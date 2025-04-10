@@ -1476,7 +1476,7 @@ requires-dist = [
     { name = "threadpoolctl", specifier = ">=3.0" },
     { name = "torch", specifier = "~=2.4" },
     { name = "typing-extensions", specifier = "~=4.12" },
-    { name = "xopen", specifier = ">=2.0.2" },
+    { name = "xopen", specifier = "~=2.0" },
 ]
 provides-extras = ["funksvd", "hpf", "implicit", "notebook", "ray", "sklearn"]
 
