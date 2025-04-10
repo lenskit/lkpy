@@ -269,10 +269,11 @@ class FlexMFWARPTrainer(FlexMFImplicitTrainer):
             nf_idx = idx_range[needed][nf]
             nf_big = nc_scores[nf, 0] > neg_scores[nf_idx]
             nf_upd = nf_idx[nf_big]
-            neg_items[nf_upd] = neg_cand[nf_big, 0]
-            neg_scores[nf_upd] = nc_scores[nf_big, 0]
+            # assert nf_big.shape == neg_cand.shape[:1], f"{nf_big.shape} != {neg_cand.shape}"
+            neg_items[nf_upd] = neg_cand[nf, 0][nf_big]
+            neg_scores[nf_upd] = nc_scores[nf, 0][nf_big]
             if nc_norms.shape:
-                neg_norms[nf_upd] = nc_norms[nf_big, 0]
+                neg_norms[nf_upd] = nc_norms[nf, 0][nf_big]
 
             neg_counts[needed] += 1
 
