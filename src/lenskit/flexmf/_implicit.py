@@ -288,4 +288,4 @@ class FlexMFWARPTrainer(FlexMFImplicitTrainer):
             - 1 / (12 * ranks**2)
             + 1 / (120 * ranks**4)
         )
-        return neg_items, neg_scores.reshape(-1, 1), neg_norms, weights
+        return neg_items, neg_scores.reshape(-1, 1), neg_norms, weights.to(pos_scores.device)
