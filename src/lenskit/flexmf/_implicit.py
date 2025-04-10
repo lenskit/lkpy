@@ -258,14 +258,14 @@ class FlexMFWARPTrainer(FlexMFImplicitTrainer):
                 nc_scores, nc_norms = self.score(users[n_dev], neg_cand)
 
             found = nc_scores[:, bi] > pos_scores[n_dev, 0]
-            f_idx = idx_range[needed][found]
+            f_idx = idx_range[n_dev][found]
             neg_items[f_idx] = neg_cand[found, bi]
             neg_scores[f_idx] = nc_scores[found, bi]
             if nc_norms.shape:
                 neg_norms[f_idx] = nc_norms[found, bi]
 
             nf = ~found
-            nf_idx = idx_range[needed][nf]
+            nf_idx = idx_range[n_dev][nf]
             nf_big = nc_scores[nf, bi] > neg_scores[nf_idx]
             nf_upd = nf_idx[nf_big]
             # assert nf_big.shape == neg_cand.shape[:1], f"{nf_big.shape} != {neg_cand.shape}"
