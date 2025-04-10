@@ -230,7 +230,7 @@ class FlexMFWARPTrainer(FlexMFImplicitTrainer):
         assert isinstance(batch.users, np.ndarray)
 
         # start looking for misranked models
-        idx_range = torch.arange(len(users))
+        idx_range = torch.arange(len(users), device=users.device)
         neg_scores = torch.full((len(users),), -math.inf, device=users.device)
         neg_norms = torch.zeros(len(users), device=users.device)
         neg_counts = torch.zeros(len(users))
