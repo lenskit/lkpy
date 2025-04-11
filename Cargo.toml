@@ -1,0 +1,17 @@
+[package]
+name = "lenskit"
+version = "2025.3.0"
+edition = "2021"
+
+[lib]
+name = "_accel"
+path = "src/accel/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "^0.24", features = ["extension-module"] }
+log = "^0.4"
+pyo3-log = "^0.12"
+numpy = "^0.24"
+ndarray = "^0.16"
+rayon = "^1.10"

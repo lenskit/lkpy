@@ -36,6 +36,7 @@ scratch/
 # build outputs
 build/
 dist/
+target/
 *.egg-info
 *.pyd
 *.so
