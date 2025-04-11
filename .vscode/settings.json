@@ -19,6 +19,9 @@
   "[typescript]": {
     "editor.formatOnSave": true
   },
+  "[rust]": {
+    "editor.formatOnSave": true
+  },
   "[yaml]": {
     "editor.defaultFormatter": "redhat.vscode-yaml",
     "editor.formatOnSave": true
