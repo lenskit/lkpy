@@ -58,7 +58,7 @@ class FlexMFConfigBase:
     The regularization strength.
     """
 
-    reg_method: Literal["AdamW", "L2"] | None = "L2"
+    reg_method: Literal["AdamW", "L2"] | None = "AdamW"
     """
     The regularization method to use.
 

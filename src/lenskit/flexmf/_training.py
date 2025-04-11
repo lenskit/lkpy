@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import math
 from abc import abstractmethod
-from collections.abc import Generator, Sequence
+from collections.abc import Callable, Generator, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Mapping
 
@@ -78,6 +78,8 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
     A logger, that is bound the current training status / position.
     """
 
+    fast_model: Callable[..., torch.Tensor]
+
     def __init__(self, component: Comp, data: Dataset, options: TrainingOptions):
         ensure_parallel_init()
 
@@ -100,6 +102,7 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         self.log.info("preparing to train %r", self.component, device=self.device)
         self.component.model = self.model.to(self.device)
         self.model.train(True)
+        self.fast_model = torch.compile(self.model)
 
         self.setup_optimizer()
 
