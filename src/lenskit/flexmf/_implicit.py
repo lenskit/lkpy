@@ -165,12 +165,12 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
 
     def score(self, users, items) -> tuple[torch.Tensor, torch.Tensor]:
         if self.config.reg_method == "L2":
-            result = self.model(users, items, return_norm=True)
+            result = self.fast_model(users, items, return_norm=True)
             scores = result[0, ...]
 
             norms = result[1, ...]
         else:
-            scores = self.model(users, items)
+            scores = self.fast_model(users, items)
             norms = torch.tensor(0.0)
 
         return scores, norms
