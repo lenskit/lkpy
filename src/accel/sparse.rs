@@ -1,4 +1,4 @@
-use numpy::prelude::*;
+use numpy::{prelude::*, PyReadonlyArray1};
 use pyo3::prelude::*;
 
 use numpy::PyArray1;
@@ -13,8 +13,16 @@ pub struct CSRMatrix {
     pub(crate) values: Py<PyArray1<f32>>,
 }
 
+pub(crate) struct BoundCSR<'py> {
+    pub(crate) n_rows: u32,
+    pub(crate) n_cols: u32,
+    pub(crate) rowptrs: PyReadonlyArray1<'py, i64>,
+    pub(crate) colinds: PyReadonlyArray1<'py, i32>,
+    pub(crate) values: PyReadonlyArray1<'py, f32>,
+}
+
 #[pyfunction]
-pub fn make_csr<'py>(
+pub(crate) fn make_csr<'py>(
     py: Python<'py>,
     rps: &Bound<'py, PyArray1<i64>>,
     cis: &Bound<'py, PyArray1<i32>>,
@@ -32,6 +40,18 @@ pub fn make_csr<'py>(
             values: vs.clone().unbind(),
         },
     )
+}
+
+impl CSRMatrix {
+    pub(crate) fn bind_csr<'py>(&self, py: Python<'py>) -> BoundCSR<'py> {
+        BoundCSR {
+            n_rows: self.n_rows,
+            n_cols: self.n_cols,
+            rowptrs: self.rowptrs.bind(py).readonly(),
+            colinds: self.colinds.bind(py).readonly(),
+            values: self.values.bind(py).readonly(),
+        }
+    }
 }
 
 #[pymethods]
