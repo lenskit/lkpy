@@ -26,8 +26,8 @@ outputs:
       host:
         - python =${{ python_min }}
         - pip
-        - hatchling =1
-        - hatch-vcs =0.4
+        - setuptools >=70
+        - setuptools-scm >=8
       run:
         - python >=${{ python_min }}
         - typing-extensions >=4.12,<5
