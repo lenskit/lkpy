@@ -12,6 +12,5 @@ crate-type = ["cdylib"]
 pyo3 = { version = "^0.24", features = ["extension-module"] }
 log = "^0.4"
 pyo3-log = "^0.12"
-numpy = "^0.24"
-ndarray = "^0.16"
+arrow = { version = "^55", features = ["pyarrow"], default-features = false }
 rayon = "^1.10"
