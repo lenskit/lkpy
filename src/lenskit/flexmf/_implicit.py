@@ -148,10 +148,10 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
         """
         user_bias = self.config.user_bias
         if user_bias is None:
-            if self.config.loss == "pairwise":
-                user_bias = False
-            else:
+            if self.config.loss == "logistic":
                 user_bias = True
+            else:
+                user_bias = False
 
         return FlexMFModel(
             self.config.embedding_size,
