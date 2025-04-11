@@ -1,5 +1,6 @@
-prune envs
-prune .github
-prune .vscode
-exclude .*.yml
-exclude .*.yaml
+graft src
+graft tests
+graft data/ml-latest-small
+prune .*
+exclude .*
+global-exclude *.py[cod]

@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling ~=1.0", "hatch-vcs ~=0.4.0"]
-build-backend = "hatchling.build"
+requires = ["setuptools >=70", "setuptools-scm >=8"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "lenskit"
@@ -67,8 +67,8 @@ demo = [
 ]
 reporting = ["coverage >=5"]
 dev = [
-  "hatchling ~=1.24",
-  "hatch-vcs ~=0.4.0",
+  "setuptools >=70",
+  "setuptools-scm >=8",
   "build ~=1.0",
   "unbeheader ~=1.3",
   "ruff >=0.2",
@@ -112,21 +112,8 @@ lenskit-train = "lenskit.cli.train:train"
 lenskit-recommend = "lenskit.cli.recommend:recommend"
 
 # configure build tools
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[tool.hatch.build.targets.sdist]
-include = ["src/lenskit", "LICENSE.md", "README.md"]
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/lenskit"]
-
-[tool.hatch.version]
-source = "vcs"
-raw-options = { version_scheme = "guess-next-dev" }
-
-[tool.hatch.build.hooks.vcs]
-version-file = "src/lenskit/_version.py"
+[tool.setuptools_scm]
+version_file = "src/lenskit/_version.py"
 
 # configure UV sources
 [tool.uv]
