@@ -8,6 +8,7 @@ import pickle
 from pathlib import Path
 
 import click
+from xopen import xopen
 
 from lenskit.data import Dataset
 from lenskit.logging import get_logger
@@ -65,5 +66,5 @@ def train(
     pipe.train(data)
 
     _log.info("saving trained model", file=out_file)
-    with open(out_file, "wb") as pf:
+    with xopen(out_file, "wb") as pf:
         pickle.dump(pipe, pf)
