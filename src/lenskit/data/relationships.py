@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Mapping
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -296,7 +296,7 @@ class MatrixRelationshipSet(RelationshipSet):
         *,
         layout: Literal["coo"],
         legacy: Literal[False] = False,
-    ) -> sps.coo_array: ...
+    ) -> sps.coo_array[Any, tuple[int, int]]: ...
     @overload
     def scipy(
         self, attribute: str | None = None, *, layout: Literal["csr"] = "csr", legacy: Literal[True]
@@ -308,7 +308,7 @@ class MatrixRelationshipSet(RelationshipSet):
         *,
         layout: Literal["csr"] = "csr",
         legacy: Literal[False] = False,
-    ) -> sps.csr_array: ...
+    ) -> sps.csr_array[Any, tuple[int, int]]: ...
     @overload
     def scipy(
         self, attribute: str | None = None, *, layout: LAYOUT = "csr", legacy: bool = False
