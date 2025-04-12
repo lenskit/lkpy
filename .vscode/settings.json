@@ -4,35 +4,35 @@
     "**/__pycache__": true,
     ".hypothesis/": true,
     ".*_cache/": true,
-    ".pixi/": true,
+    ".pixi/": true
   },
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff",
     "editor.codeActionsOnSave": {
       "source.organizeImports.ruff": "explicit"
     },
-    "editor.formatOnSave": true,
+    "editor.formatOnSave": true
   },
   "[jsonc]": {
-    "editor.formatOnSave": true,
+    "editor.formatOnSave": true
   },
   "[typescript]": {
     "editor.formatOnSave": true
   },
   "[yaml]": {
     "editor.defaultFormatter": "redhat.vscode-yaml",
-    "editor.formatOnSave": true,
+    "editor.formatOnSave": true
   },
   "[toml]": {
     "editor.defaultFormatter": "tamasfe.even-better-toml",
-    "editor.formatOnSave": true,
+    "editor.formatOnSave": true
   },
   "[jsonnet]": {
-    "editor.formatOnSave": true,
+    "editor.formatOnSave": true
   },
   "python.testing.pytestArgs": [
-    "tests",
+    "tests"
   ],
   "python.testing.unittestEnabled": false,
-  "python.testing.pytestEnabled": true,
+  "python.testing.pytestEnabled": true
 }

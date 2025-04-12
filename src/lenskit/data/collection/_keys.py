@@ -76,7 +76,7 @@ def create_key_type(*fields: str) -> type[GenericKey]:
     assert isinstance(fields, tuple)
     kt = KEY_CACHE.get(fields, None)
     if kt is None:
-        ktn = f"LKILCKeyType{len(KEY_CACHE)+1}"
+        ktn = f"LKILCKeyType{len(KEY_CACHE) + 1}"
         kt = namedtuple(ktn, fields)
         # support pickling
         kt.__reduce__ = _reduce_generic_key  # type: ignore

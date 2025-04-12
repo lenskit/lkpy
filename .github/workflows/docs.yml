@@ -67,7 +67,7 @@ jobs:
         if: github.event_name != 'release'
         with:
           repository: lenskit/lenskit-docs
-          ssh-key: '${{ secrets.DOC_DEPLOY_KEY }}'
+          ssh-key: "${{ secrets.DOC_DEPLOY_KEY }}"
           path: doc-site
           ref: version/latest
 
@@ -76,7 +76,7 @@ jobs:
         if: github.event_name == 'release'
         with:
           repository: lenskit/lenskit-docs
-          ssh-key: '${{ secrets.DOC_DEPLOY_KEY }}'
+          ssh-key: "${{ secrets.DOC_DEPLOY_KEY }}"
           path: doc-site
           ref: version/stable
 
@@ -107,7 +107,7 @@ jobs:
       - name: "🧑🏼‍🎤 Activate documentation publication"
         uses: actions/script@v7
         with:
-          github-token: '${{ secrets.DOC_TOKEN }}'
+          github-token: "${{ secrets.DOC_TOKEN }}"
           script: |
             github.rest.actions.createWorkflowDispatch({
               owner: 'lenskit',
