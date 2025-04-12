@@ -1,0 +1,17 @@
+{
+  "json": {
+  },
+  "toml": {
+  },
+  "yaml": {
+  },
+  "excludes": [
+    "**/*-lock.json",
+    "**/cloudformation.yml"
+  ],
+  "plugins": [
+    "https://plugins.dprint.dev/json-0.19.4.wasm",
+    "https://plugins.dprint.dev/toml-0.6.3.wasm",
+    "https://plugins.dprint.dev/g-plane/pretty_yaml-v0.5.0.wasm"
+  ]
+}
