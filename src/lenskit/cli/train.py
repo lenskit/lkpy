@@ -66,5 +66,5 @@ def train(
     pipe.train(data)
 
     _log.info("saving trained model", file=out_file)
-    with xopen(out_file, "wb") as pf:
+    with xopen(out_file, "wb", threads=0) as pf:
         pickle.dump(pipe, pf)
