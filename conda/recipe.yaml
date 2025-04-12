@@ -12,24 +12,25 @@ source:
 
 build:
   number: 0
-  noarch: python
 
 outputs:
   - package:
       name: lenskit
     build:
-      noarch: python
       script:
         - python -m pip install . --no-deps -vv
 
     requirements:
+      build:
+        - ${{ compiler('rust') }}
       host:
-        - python =${{ python_min }}
+        - python
         - pip
         - setuptools >=70
         - setuptools-scm >=8
+        - setuptools-rust >=1.11,<2
       run:
-        - python >=${{ python_min }}
+        - python
         - typing-extensions >=4.12,<5
         - pyarrow >=15
         - pandas >=2.0,<3
@@ -58,7 +59,6 @@ outputs:
   - package:
       name: lenskit-funksvd
     build:
-      noarch: python
       script:
         - "true"
     requirements:
@@ -72,7 +72,6 @@ outputs:
   - package:
       name: lenskit-sklearn
     build:
-      noarch: python
       script:
         - "true"
     requirements:
@@ -86,7 +85,6 @@ outputs:
   - package:
       name: lenskit-implicit
     build:
-      noarch: python
       script:
         - "true"
     requirements:
@@ -100,7 +98,6 @@ outputs:
   - package:
       name: lenskit-hpf
     build:
-      noarch: python
       script:
         - "true"
     requirements:
