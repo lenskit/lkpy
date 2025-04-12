@@ -11,6 +11,7 @@ crate-type = ["cdylib"]
 [dependencies]
 arrow = { version = "^55", features = ["pyarrow"], default-features = false }
 log = "^0.4"
+ordered-float = "^5"
 pyo3 = { version = "^0.24", features = ["extension-module"] }
 pyo3-log = "^0.12"
 rayon = "^1.10"

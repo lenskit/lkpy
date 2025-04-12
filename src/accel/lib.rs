@@ -5,6 +5,7 @@ use rayon::ThreadPoolBuilder;
 mod arrow;
 mod knn;
 mod sparse;
+mod types;
 
 /// Entry point for LensKit accelerator module.
 #[pymodule]

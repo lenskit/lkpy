@@ -1,18 +1,21 @@
+use std::collections::BinaryHeap;
 use std::sync::Arc;
 
 use arrow::{
     array::{
-        make_array, Array, ArrayData, Float32Builder, Int32Builder, LargeListArray, StructArray,
+        make_array, Array, ArrayData, Float32Array, Float32Builder, Int32Array, Int32Builder,
+        LargeListArray, StructArray,
     },
     buffer::OffsetBuffer,
     datatypes::{DataType, Field, Fields},
     pyarrow::PyArrowType,
 };
 use log::*;
-use pyo3::prelude::*;
+use ordered_float::NotNan;
+use pyo3::{exceptions::PyValueError, prelude::*};
 use rayon::prelude::*;
 
-use crate::sparse::CSRMatrix;
+use crate::{sparse::CSRMatrix, types::checked_array_convert};
 
 #[pyfunction]
 pub fn compute_similarities<'py>(
@@ -85,6 +88,190 @@ pub fn compute_similarities<'py>(
 
         Ok(rv_chunks)
     })
+}
+
+/// Entries in the accumulator heaps.
+#[derive(Debug, Default, Clone)]
+struct AccEntry<T> {
+    weight: NotNan<f32>,
+    data: T,
+}
+
+impl AccEntry<()> {
+    fn weight_only(weight: f32) -> PyResult<AccEntry<()>> {
+        Self::new(weight, ())
+    }
+}
+
+impl<T> AccEntry<T> {
+    fn new(weight: f32, payload: T) -> PyResult<AccEntry<T>> {
+        Ok(AccEntry {
+            weight: NotNan::new(weight)
+                .map_err(|_e| PyValueError::new_err("similarity is null"))?,
+            data: payload,
+        })
+    }
+
+    fn get_weight(&self) -> f32 {
+        self.weight.into_inner()
+    }
+}
+
+impl<T> PartialEq for AccEntry<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.weight == other.weight
+    }
+}
+
+impl<T> Eq for AccEntry<T> {}
+
+impl<T> PartialOrd for AccEntry<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        // reverse the ordering to make a min-heap
+        other.weight.partial_cmp(&self.weight)
+    }
+}
+
+impl<T> Ord for AccEntry<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        // reverse the ordering to make a min-heap
+        other.weight.cmp(&self.weight)
+    }
+}
+
+/// Explicit-feedback scoring function.
+#[pyfunction]
+pub fn score_explicit<'py>(
+    sims: PyArrowType<ArrayData>,
+    ref_items: PyArrowType<ArrayData>,
+    ref_rates: PyArrowType<ArrayData>,
+    tgt_items: PyArrowType<ArrayData>,
+    max_nbrs: usize,
+    min_nbrs: usize,
+) -> PyResult<PyArrowType<ArrayData>> {
+    let sims = sim_matrix(sims.0)?;
+    let ref_items = make_array(ref_items.0);
+    let ref_rates = make_array(ref_rates.0);
+    let tgt_items = make_array(tgt_items.0);
+
+    let ref_is: &Int32Array = checked_array_convert("reference item", "Int32", &ref_items)?;
+    let ref_vs: &Float32Array = checked_array_convert("reference ratings", "Float32", &ref_rates)?;
+    let tgt_is: &Int32Array = checked_array_convert("target item", "Int32", &tgt_items)?;
+
+    let mut heaps: Vec<Option<BinaryHeap<AccEntry<f32>>>> = vec![None; sims.n_cols];
+
+    // we loop reference items, looking for targets.
+    // in the common (slow) top-N case, reference items are shorter than targets.
+    for (ri, rv) in ref_is.iter().zip(ref_vs.iter()) {
+        let ri = ri.ok_or_else(|| PyValueError::new_err("reference item is null"))?;
+        let rv = rv.ok_or_else(|| PyValueError::new_err("reference rating is null"))?;
+
+        let (sp, ep) = sims.extent(ri as usize);
+        for i in sp..ep {
+            let i = i as usize;
+            let ti = sims.col_inds.value(i);
+            let sim = sims.values.value(i);
+
+            // get the heap, initializing if needed.
+            let heap = &mut heaps[ti as usize];
+            if heap.is_none() {
+                *heap = Some(BinaryHeap::with_capacity(max_nbrs as usize + 1));
+            }
+            // add the item to the heap.
+            let heap = heap.as_mut().unwrap();
+            heap.push(AccEntry::new(sim, rv)?);
+            if heap.len() > max_nbrs {
+                heap.pop();
+            }
+        }
+    }
+
+    let mut out = Float32Builder::with_capacity(tgt_items.len());
+    for ti in tgt_is {
+        let ti = ti.ok_or_else(|| PyValueError::new_err("target item is null"))? as usize;
+        let heap = heaps[ti].take().filter(|h| h.len() >= min_nbrs);
+        if let Some(heap) = heap {
+            let mut sum = 0.0;
+            let mut weight = 0.0;
+            for a in heap {
+                sum += a.weight * a.data;
+                weight += a.weight.into_inner();
+            }
+            let score: f32 = sum / weight;
+            out.append_value(score);
+        } else {
+            out.append_null();
+        }
+    }
+    let out = out.finish();
+    assert_eq!(out.len(), tgt_is.len());
+
+    Ok(out.into_data().into())
+}
+
+/// Implicit-feedback scoring function.
+#[pyfunction]
+pub fn score_implicit<'py>(
+    sims: PyArrowType<ArrayData>,
+    ref_items: PyArrowType<ArrayData>,
+    tgt_items: PyArrowType<ArrayData>,
+    max_nbrs: usize,
+    min_nbrs: usize,
+) -> PyResult<PyArrowType<ArrayData>> {
+    let sims = sim_matrix(sims.0)?;
+    let ref_items = make_array(ref_items.0);
+    let tgt_items = make_array(tgt_items.0);
+
+    let ref_is: &Int32Array = checked_array_convert("reference item", "Int32", &ref_items)?;
+    let tgt_is: &Int32Array = checked_array_convert("target item", "Int32", &tgt_items)?;
+
+    let mut heaps: Vec<Option<BinaryHeap<AccEntry<()>>>> = vec![None; sims.n_cols];
+
+    // we loop reference items, looking for targets.
+    // in the common (slow) top-N case, reference items are shorter than targets.
+    for ref_item in ref_is {
+        let ri = ref_item.ok_or_else(|| PyValueError::new_err("reference item is null"))?;
+        let (sp, ep) = sims.extent(ri as usize);
+        for i in sp..ep {
+            let i = i as usize;
+            let ti = sims.col_inds.value(i);
+            let sim = sims.values.value(i);
+
+            // get the heap, initializing if needed.
+            let heap = &mut heaps[ti as usize];
+            if heap.is_none() {
+                *heap = Some(BinaryHeap::with_capacity(max_nbrs as usize + 1));
+            }
+            // add the item to the heap.
+            let heap = heap.as_mut().unwrap();
+            heap.push(AccEntry::weight_only(sim)?);
+            if heap.len() > max_nbrs {
+                heap.pop();
+            }
+        }
+    }
+
+    let mut out = Float32Builder::with_capacity(tgt_items.len());
+    for ti in tgt_is {
+        let ti = ti.ok_or_else(|| PyValueError::new_err("target item is null"))? as usize;
+        let heap = heaps[ti].take().filter(|h| h.len() >= min_nbrs);
+        if let Some(heap) = heap {
+            let score: f32 = heap.iter().map(AccEntry::get_weight).sum();
+            out.append_value(score);
+        } else {
+            out.append_null();
+        }
+    }
+    let out = out.finish();
+    assert_eq!(out.len(), tgt_is.len());
+
+    Ok(out.into_data().into())
+}
+
+fn sim_matrix(sims: ArrayData) -> PyResult<CSRMatrix<i64>> {
+    let array = make_array(sims);
+    let size = array.len();
+    CSRMatrix::from_arrow(array, size, size)
 }
 
 fn sim_row(row: usize, ui_mat: &CSRMatrix, iu_mat: &CSRMatrix, min_sim: f32) -> Vec<(i32, f32)> {

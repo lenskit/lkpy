@@ -5,24 +5,27 @@ use std::sync::Arc;
 use pyo3::prelude::*;
 
 use arrow::{
-    array::{downcast_array, Array, Float32Array, Int32Array, ListArray, StructArray},
+    array::{
+        downcast_array, Array, Float32Array, GenericListArray, Int32Array, ListArray,
+        OffsetSizeTrait, StructArray,
+    },
     datatypes::DataType,
 };
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::PyResult;
 
-pub struct CSRMatrix {
+pub struct CSRMatrix<Ix: OffsetSizeTrait = i32> {
     pub n_rows: usize,
     pub n_cols: usize,
-    pub array: ListArray,
+    pub array: GenericListArray<Ix>,
     pub col_inds: Int32Array,
     pub values: Float32Array,
 }
 
-impl CSRMatrix {
+impl<Ix: OffsetSizeTrait> CSRMatrix<Ix> {
     /// Convert an Arrow structured array into a CSR matrix, checking for type errors.
-    pub fn from_arrow(array: Arc<dyn Array>, nr: usize, nc: usize) -> PyResult<CSRMatrix> {
-        let sa: &ListArray = array.as_any().downcast_ref().ok_or_else(|| {
+    pub fn from_arrow(array: Arc<dyn Array>, nr: usize, nc: usize) -> PyResult<CSRMatrix<Ix>> {
+        let sa: &GenericListArray<Ix> = array.as_any().downcast_ref().ok_or_else(|| {
             PyErr::new::<PyTypeError, _>(format!(
                 "invalid array type {}, expected List",
                 array.data_type()
@@ -74,11 +77,11 @@ impl CSRMatrix {
         })
     }
 
-    pub fn row_ptrs(&self) -> &[i32] {
+    pub fn row_ptrs(&self) -> &[Ix] {
         self.array.value_offsets()
     }
 
-    pub fn extent(&self, row: usize) -> (i32, i32) {
+    pub fn extent(&self, row: usize) -> (Ix, Ix) {
         let off = self.array.value_offsets();
         (off[row], off[row + 1])
     }
