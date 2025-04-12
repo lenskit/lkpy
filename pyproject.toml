@@ -85,6 +85,7 @@ dev = [
   { include-group = "doc" },
   { include-group = "demo" },
   { include-group = "reporting" },
+  "zstandard>=0.23.0",
 ]
 cpu = ["torch ~=2.4"]
 gpu = ["torch ~=2.4"]
