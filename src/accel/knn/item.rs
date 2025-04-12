@@ -36,12 +36,14 @@ pub fn compute_similarities<'py>(
         assert_eq!(ui_mat.array.len(), nu);
         assert_eq!(iu_mat.array.len(), ni);
 
+        // let's compute!
         let range = 0..ni;
         debug!("computing similarity rows");
         let chunks = range
             .into_par_iter()
             .map(|row| sim_row(row, &ui_mat, &iu_mat, min_sim))
             .collect_vec_list();
+        // count the similarities
         let n_sim = chunks
             .iter()
             .flat_map(|v| v.iter().map(|v2| v2.len()))
@@ -52,8 +54,9 @@ pub fn compute_similarities<'py>(
             chunks.len()
         );
 
+        // now we will post-process the chunks into Arrow arrays, one per chunk.
+        // on the Python side, we will combine the chunks.
         let mut rv_chunks = Vec::new();
-
         for chunk in chunks {
             let lengths: Vec<usize> = chunk.iter().map(Vec::len).collect();
             let n_entries = lengths.iter().sum();
@@ -142,6 +145,7 @@ impl<T> Ord for AccEntry<T> {
 /// Explicit-feedback scoring function.
 #[pyfunction]
 pub fn score_explicit<'py>(
+    py: Python<'py>,
     sims: PyArrowType<ArrayData>,
     ref_items: PyArrowType<ArrayData>,
     ref_rates: PyArrowType<ArrayData>,
@@ -149,88 +153,25 @@ pub fn score_explicit<'py>(
     max_nbrs: usize,
     min_nbrs: usize,
 ) -> PyResult<PyArrowType<ArrayData>> {
-    let sims = sim_matrix(sims.0)?;
-    let ref_items = make_array(ref_items.0);
-    let ref_rates = make_array(ref_rates.0);
-    let tgt_items = make_array(tgt_items.0);
+    py.allow_threads(|| {
+        let sims = sim_matrix(sims.0)?;
+        let ref_items = make_array(ref_items.0);
+        let ref_rates = make_array(ref_rates.0);
+        let tgt_items = make_array(tgt_items.0);
 
-    let ref_is: &Int32Array = checked_array_convert("reference item", "Int32", &ref_items)?;
-    let ref_vs: &Float32Array = checked_array_convert("reference ratings", "Float32", &ref_rates)?;
-    let tgt_is: &Int32Array = checked_array_convert("target item", "Int32", &tgt_items)?;
+        let ref_is: &Int32Array = checked_array_convert("reference item", "Int32", &ref_items)?;
+        let ref_vs: &Float32Array =
+            checked_array_convert("reference ratings", "Float32", &ref_rates)?;
+        let tgt_is: &Int32Array = checked_array_convert("target item", "Int32", &tgt_items)?;
 
-    let mut heaps: Vec<Option<BinaryHeap<AccEntry<f32>>>> = vec![None; sims.n_cols];
+        let mut heaps: Vec<Option<BinaryHeap<AccEntry<f32>>>> = vec![None; sims.n_cols];
 
-    // we loop reference items, looking for targets.
-    // in the common (slow) top-N case, reference items are shorter than targets.
-    for (ri, rv) in ref_is.iter().zip(ref_vs.iter()) {
-        let ri = ri.ok_or_else(|| PyValueError::new_err("reference item is null"))?;
-        let rv = rv.ok_or_else(|| PyValueError::new_err("reference rating is null"))?;
+        // we loop reference items, looking for targets.
+        // in the common (slow) top-N case, reference items are shorter than targets.
+        for (ri, rv) in ref_is.iter().zip(ref_vs.iter()) {
+            let ri = ri.ok_or_else(|| PyValueError::new_err("reference item is null"))?;
+            let rv = rv.ok_or_else(|| PyValueError::new_err("reference rating is null"))?;
 
-        let (sp, ep) = sims.extent(ri as usize);
-        for i in sp..ep {
-            let i = i as usize;
-            let ti = sims.col_inds.value(i);
-            let sim = sims.values.value(i);
-
-            // get the heap, initializing if needed.
-            let heap = &mut heaps[ti as usize];
-            if heap.is_none() {
-                *heap = Some(BinaryHeap::with_capacity(max_nbrs as usize + 1));
-            }
-            // add the item to the heap.
-            let heap = heap.as_mut().unwrap();
-            heap.push(AccEntry::new(sim, rv)?);
-            if heap.len() > max_nbrs {
-                heap.pop();
-            }
-        }
-    }
-
-    let mut out = Float32Builder::with_capacity(tgt_items.len());
-    for ti in tgt_is {
-        let ti = ti.ok_or_else(|| PyValueError::new_err("target item is null"))? as usize;
-        let heap = heaps[ti].take().filter(|h| h.len() >= min_nbrs);
-        if let Some(heap) = heap {
-            let mut sum = 0.0;
-            let mut weight = 0.0;
-            for a in heap {
-                sum += a.weight * a.data;
-                weight += a.weight.into_inner();
-            }
-            let score: f32 = sum / weight;
-            out.append_value(score);
-        } else {
-            out.append_null();
-        }
-    }
-    let out = out.finish();
-    assert_eq!(out.len(), tgt_is.len());
-
-    Ok(out.into_data().into())
-}
-
-/// Implicit-feedback scoring function.
-#[pyfunction]
-pub fn score_implicit<'py>(
-    sims: PyArrowType<ArrayData>,
-    ref_items: PyArrowType<ArrayData>,
-    tgt_items: PyArrowType<ArrayData>,
-    max_nbrs: usize,
-    min_nbrs: usize,
-) -> PyResult<PyArrowType<ArrayData>> {
-    let sims = sim_matrix(sims.0)?;
-    let ref_items = make_array(ref_items.0);
-    let tgt_items = make_array(tgt_items.0);
-
-    let ref_is: &Int32Array = checked_array_convert("reference item", "Int32", &ref_items)?;
-    let tgt_is: &Int32Array = checked_array_convert("target item", "Int32", &tgt_items)?;
-
-    let mut heaps: Vec<Option<BinaryHeap<AccEntry<()>>>> = vec![None; sims.n_cols];
-
-    // we loop reference items, looking for targets.
-    // in the common (slow) top-N case, reference items are shorter than targets.
-    for ref_item in ref_is {
-        if let Some(ri) = ref_item {
             let (sp, ep) = sims.extent(ri as usize);
             for i in sp..ep {
                 let i = i as usize;
@@ -244,32 +185,101 @@ pub fn score_implicit<'py>(
                 }
                 // add the item to the heap.
                 let heap = heap.as_mut().unwrap();
-                heap.push(AccEntry::weight_only(sim)?);
+                heap.push(AccEntry::new(sim, rv)?);
                 if heap.len() > max_nbrs {
                     heap.pop();
                 }
             }
         }
-    }
 
-    let mut out = Float32Builder::with_capacity(tgt_items.len());
-    for ti in tgt_is {
-        if let Some(ti) = ti {
-            let heap = heaps[ti as usize].take().filter(|h| h.len() >= min_nbrs);
+        let mut out = Float32Builder::with_capacity(tgt_items.len());
+        for ti in tgt_is {
+            let ti = ti.ok_or_else(|| PyValueError::new_err("target item is null"))? as usize;
+            let heap = heaps[ti].take().filter(|h| h.len() >= min_nbrs);
             if let Some(heap) = heap {
-                let score: f32 = heap.iter().map(AccEntry::get_weight).sum();
+                let mut sum = 0.0;
+                let mut weight = 0.0;
+                for a in heap {
+                    sum += a.weight * a.data;
+                    weight += a.weight.into_inner();
+                }
+                let score: f32 = sum / weight;
                 out.append_value(score);
             } else {
                 out.append_null();
             }
-        } else {
-            out.append_null();
         }
-    }
-    let out = out.finish();
-    assert_eq!(out.len(), tgt_is.len());
+        let out = out.finish();
+        assert_eq!(out.len(), tgt_is.len());
 
-    Ok(out.into_data().into())
+        Ok(out.into_data().into())
+    })
+}
+
+/// Implicit-feedback scoring function.
+#[pyfunction]
+pub fn score_implicit<'py>(
+    py: Python<'py>,
+    sims: PyArrowType<ArrayData>,
+    ref_items: PyArrowType<ArrayData>,
+    tgt_items: PyArrowType<ArrayData>,
+    max_nbrs: usize,
+    min_nbrs: usize,
+) -> PyResult<PyArrowType<ArrayData>> {
+    py.allow_threads(|| {
+        let sims = sim_matrix(sims.0)?;
+        let ref_items = make_array(ref_items.0);
+        let tgt_items = make_array(tgt_items.0);
+
+        let ref_is: &Int32Array = checked_array_convert("reference item", "Int32", &ref_items)?;
+        let tgt_is: &Int32Array = checked_array_convert("target item", "Int32", &tgt_items)?;
+
+        let mut heaps: Vec<Option<BinaryHeap<AccEntry<()>>>> = vec![None; sims.n_cols];
+
+        // we loop reference items, looking for targets.
+        // in the common (slow) top-N case, reference items are shorter than targets.
+        for ref_item in ref_is {
+            if let Some(ri) = ref_item {
+                let (sp, ep) = sims.extent(ri as usize);
+                for i in sp..ep {
+                    let i = i as usize;
+                    let ti = sims.col_inds.value(i);
+                    let sim = sims.values.value(i);
+
+                    // get the heap, initializing if needed.
+                    let heap = &mut heaps[ti as usize];
+                    if heap.is_none() {
+                        *heap = Some(BinaryHeap::with_capacity(max_nbrs as usize + 1));
+                    }
+                    // add the item to the heap.
+                    let heap = heap.as_mut().unwrap();
+                    heap.push(AccEntry::weight_only(sim)?);
+                    if heap.len() > max_nbrs {
+                        heap.pop();
+                    }
+                }
+            }
+        }
+
+        let mut out = Float32Builder::with_capacity(tgt_items.len());
+        for ti in tgt_is {
+            if let Some(ti) = ti {
+                let heap = heaps[ti as usize].take().filter(|h| h.len() >= min_nbrs);
+                if let Some(heap) = heap {
+                    let score: f32 = heap.iter().map(AccEntry::get_weight).sum();
+                    out.append_value(score);
+                } else {
+                    out.append_null();
+                }
+            } else {
+                out.append_null();
+            }
+        }
+        let out = out.finish();
+        assert_eq!(out.len(), tgt_is.len());
+
+        Ok(out.into_data().into())
+    })
 }
 
 fn sim_matrix(sims: ArrayData) -> PyResult<CSRMatrix<i64>> {
