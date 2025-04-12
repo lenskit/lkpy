@@ -177,7 +177,7 @@ testing = ["pytest", "hypothesis"]
 
 [tool.pyright]
 typeCheckingMode = "basic"
-exclude = ["docs/*", ".pixi", ".venv"]
+exclude = ["docs/*", ".pixi", ".venv", "target"]
 reportMissingImports = true
 reportMissingTypeStubs = false
 
