@@ -25,6 +25,9 @@ install:
 install-editable:
     {{PIP}} install -e  .
 
+build-rust:
+    python setup.py build_rust --inplace --release
+
 # run tests with default configuration
 test:
     python -m pytest
