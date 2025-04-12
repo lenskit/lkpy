@@ -16,6 +16,7 @@ use crate::sparse::CSRMatrix;
 
 #[pyfunction]
 pub fn compute_similarities<'py>(
+    py: Python<'py>,
     ui_ratings: PyArrowType<ArrayData>,
     iu_ratings: PyArrowType<ArrayData>,
     shape: (usize, usize),
@@ -24,64 +25,66 @@ pub fn compute_similarities<'py>(
 ) -> PyResult<Vec<PyArrowType<ArrayData>>> {
     let (nu, ni) = shape;
 
-    // extract the data
-    debug!("preparing {}x{} matrix", nu, ni);
-    let ui_mat = CSRMatrix::from_arrow(make_array(ui_ratings.0), nu, ni)?;
-    let iu_mat = CSRMatrix::from_arrow(make_array(iu_ratings.0), ni, nu)?;
-    assert_eq!(ui_mat.array.len(), nu);
-    assert_eq!(iu_mat.array.len(), ni);
+    py.allow_threads(|| {
+        // extract the data
+        debug!("preparing {}x{} matrix", nu, ni);
+        let ui_mat = CSRMatrix::from_arrow(make_array(ui_ratings.0), nu, ni)?;
+        let iu_mat = CSRMatrix::from_arrow(make_array(iu_ratings.0), ni, nu)?;
+        assert_eq!(ui_mat.array.len(), nu);
+        assert_eq!(iu_mat.array.len(), ni);
 
-    let range = 0..ni;
-    debug!("computing similarity rows");
-    let chunks = range
-        .into_par_iter()
-        .map(|row| sim_row(row, &ui_mat, &iu_mat, min_sim))
-        .collect_vec_list();
-    let n_sim = chunks
-        .iter()
-        .flat_map(|v| v.iter().map(|v2| v2.len()))
-        .sum::<usize>();
-    debug!(
-        "computed {} similarities in {} matrix chunks",
-        n_sim,
-        chunks.len()
-    );
+        let range = 0..ni;
+        debug!("computing similarity rows");
+        let chunks = range
+            .into_par_iter()
+            .map(|row| sim_row(row, &ui_mat, &iu_mat, min_sim))
+            .collect_vec_list();
+        let n_sim = chunks
+            .iter()
+            .flat_map(|v| v.iter().map(|v2| v2.len()))
+            .sum::<usize>();
+        debug!(
+            "computed {} similarities in {} matrix chunks",
+            n_sim,
+            chunks.len()
+        );
 
-    let mut rv_chunks = Vec::new();
+        let mut rv_chunks = Vec::new();
 
-    for chunk in chunks {
-        let lengths: Vec<usize> = chunk.iter().map(Vec::len).collect();
-        let n_entries = lengths.iter().sum();
-        let mut col_bld = Int32Builder::with_capacity(n_entries);
-        let mut val_bld = Float32Builder::with_capacity(n_entries);
+        for chunk in chunks {
+            let lengths: Vec<usize> = chunk.iter().map(Vec::len).collect();
+            let n_entries = lengths.iter().sum();
+            let mut col_bld = Int32Builder::with_capacity(n_entries);
+            let mut val_bld = Float32Builder::with_capacity(n_entries);
 
-        for row in chunk.into_iter() {
-            for (i, s) in row {
-                col_bld.append_value(i);
-                val_bld.append_value(s);
+            for row in chunk.into_iter() {
+                for (i, s) in row {
+                    col_bld.append_value(i);
+                    val_bld.append_value(s);
+                }
             }
+
+            let struct_fields = Fields::from(vec![
+                Field::new("index", DataType::Int32, false),
+                Field::new("value", DataType::Float32, false),
+            ]);
+            let list_field = Field::new("rows", DataType::Struct(struct_fields.clone()), false);
+            let sa = StructArray::new(
+                struct_fields,
+                vec![Arc::new(col_bld.finish()), Arc::new(val_bld.finish())],
+                None,
+            );
+            let list = LargeListArray::new(
+                Arc::new(list_field),
+                OffsetBuffer::from_lengths(lengths),
+                Arc::new(sa),
+                None,
+            );
+            rv_chunks.push(list.into_data().into());
         }
 
-        let struct_fields = Fields::from(vec![
-            Field::new("index", DataType::Int32, false),
-            Field::new("value", DataType::Float32, false),
-        ]);
-        let list_field = Field::new("rows", DataType::Struct(struct_fields.clone()), false);
-        let sa = StructArray::new(
-            struct_fields,
-            vec![Arc::new(col_bld.finish()), Arc::new(val_bld.finish())],
-            None,
-        );
-        let list = LargeListArray::new(
-            Arc::new(list_field),
-            OffsetBuffer::from_lengths(lengths),
-            Arc::new(sa),
-            None,
-        );
-        rv_chunks.push(list.into_data().into());
-    }
-
-    Ok(rv_chunks)
+        Ok(rv_chunks)
+    })
 }
 
 fn sim_row(row: usize, ui_mat: &CSRMatrix, iu_mat: &CSRMatrix, min_sim: f32) -> Vec<(i32, f32)> {
