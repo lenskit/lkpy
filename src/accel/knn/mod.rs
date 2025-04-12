@@ -6,5 +6,6 @@ mod item;
 pub fn register_knn(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     let knn = PyModule::new(parent.py(), "knn")?;
     parent.add_submodule(&knn)?;
+    knn.add_function(wrap_pyfunction!(item::compute_similarities, &knn)?)?;
     Ok(())
 }

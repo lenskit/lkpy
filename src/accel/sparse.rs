@@ -12,8 +12,8 @@ use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::PyResult;
 
 pub struct CSRMatrix {
-    pub n_rows: u32,
-    pub n_cols: u32,
+    pub n_rows: usize,
+    pub n_cols: usize,
     pub array: ListArray,
     pub col_inds: Int32Array,
     pub values: Float32Array,
@@ -21,7 +21,7 @@ pub struct CSRMatrix {
 
 impl CSRMatrix {
     /// Convert an Arrow structured array into a CSR matrix, checking for type errors.
-    pub fn from_arrow(array: Arc<dyn Array>, nr: u32, nc: u32) -> PyResult<CSRMatrix> {
+    pub fn from_arrow(array: Arc<dyn Array>, nr: usize, nc: usize) -> PyResult<CSRMatrix> {
         let sa: &ListArray = array.as_any().downcast_ref().ok_or_else(|| {
             PyErr::new::<PyTypeError, _>(format!(
                 "invalid array type {}, expected List",
@@ -76,5 +76,10 @@ impl CSRMatrix {
 
     pub fn row_ptrs(&self) -> &[i32] {
         self.array.value_offsets()
+    }
+
+    pub fn extent(&self, row: usize) -> (i32, i32) {
+        let off = self.array.value_offsets();
+        (off[row], off[row + 1])
     }
 }
