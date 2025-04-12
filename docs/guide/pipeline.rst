@@ -264,6 +264,12 @@ two ways to save a pipeline or part thereof:
     pipeline; it has the usual downsides of pickling (arbitrary code execution,
     etc.). LensKit uses pickling to share pipelines with worker processes for
     parallel batch operations.
+
+    .. note::
+
+        Pickled pipelines must be unpickled with the same LensKit version — we
+        make no attempt to maintain pickle compatibility.
+
 2.  Save the pipeline configuration (:attr:`Pipeline.config`, using :func:`~pydantic.BaseModel.model_dump_json`).  This saves the components,
     their configurations, and their connections, but **not** any learned
     parameter data.  A new pipeline can be constructed from such a configuration
