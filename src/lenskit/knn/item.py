@@ -102,16 +102,14 @@ class ItemKNNScorer(Component[ItemList], Trainable):
 
     config: ItemKNNConfig
 
-    items_: Vocabulary
+    items: Vocabulary
     "Vocabulary of item IDs."
-    item_means_: np.ndarray[int, np.dtype[np.float32]] | None
+    item_means: np.ndarray[int, np.dtype[np.float32]] | None
     "Mean rating for each known item."
-    item_counts_: np.ndarray[int, np.dtype[np.int32]]
+    item_counts: np.ndarray[int, np.dtype[np.int32]]
     "Number of saved neighbors for each item."
-    sim_matrix_: pa.LargeListArray
+    sim_matrix: pa.LargeListArray
     "Similarity matrix (sparse CSR tensor)."
-    users_: Vocabulary
-    "Vocabulary of user IDs."
 
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
@@ -178,15 +176,14 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         )
 
         log.info("[%s] computed %d neighbor pairs", timer, len(smat.values))
-        assert smat.offsets[-1].as_py() == len(
-            smat.values
-        ), f"{smat.offsets[-1]} != {len(smat.values)}"
+        assert smat.offsets[-1].as_py() == len(smat.values), (
+            f"{smat.offsets[-1]} != {len(smat.values)}"
+        )
 
-        self.items_ = data.items
-        self.users_ = data.users
-        self.item_means_ = np.asarray(means)
-        self.item_counts_ = np.diff(smat.offsets.to_numpy())
-        self.sim_matrix_ = smat
+        self.items = data.items
+        self.item_means = np.asarray(means)
+        self.item_counts = np.diff(smat.offsets.to_numpy())
+        self.sim_matrix = smat
         log.debug("[%s] done, memory use %s", timer, max_memory())
 
     def _center_ratings(self, log, timer, rmat: coo_array) -> tuple[sparray, np.ndarray | None]:
@@ -229,7 +226,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
 
         # set up rating array
         # get rated item positions & limit to in-model items
-        ri_nums = ratings.numbers(format="numpy", vocabulary=self.items_, missing="negative")
+        ri_nums = ratings.numbers(format="numpy", vocabulary=self.items, missing="negative")
         ri_mask = ri_nums >= 0
         ri_arr = pa.array(ri_nums, mask=~ri_mask)
         n_invalid = ri_arr.null_count
@@ -237,7 +234,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         trace(log, "%d of %d rated items in model", n_valid, len(ratings))
 
         # convert target item information
-        ti_nums = items.numbers(vocabulary=self.items_, missing="negative")
+        ti_nums = items.numbers(vocabulary=self.items, missing="negative")
         ti_mask = ti_nums >= 0
         ti_arr = pa.array(ti_nums, mask=~ti_mask)
         trace(log, "attempting to score %d of %d items", len(items) - ti_arr.null_count, len(items))
@@ -249,23 +246,23 @@ class ItemKNNScorer(Component[ItemList], Trainable):
             ri_vals = ri_vals.astype(np.float32, copy=True)
 
             # mean-center the rating array
-            assert self.item_means_ is not None
-            ri_vals[ri_mask] -= self.item_means_[ri_nums[ri_mask]]
-            ri_vals = pa.array(ri_vals, ri_mask)
+            assert self.item_means is not None
+            ri_vals[ri_mask] -= self.item_means[ri_nums[ri_mask]]
+            ri_vals = pa.array(ri_vals, mask=~ri_mask)
 
             scores = _accel.knn.score_explicit(
-                self.sim_matrix_,
+                self.sim_matrix,
                 ri_arr,
                 ri_vals,
                 ti_arr,
                 self.config.max_nbrs,
                 self.config.min_nbrs,
             ).to_numpy(zero_copy_only=False)
-            scores[ti_mask] += self.item_means_[ti_nums[ti_mask]]
+            scores[ti_mask] += self.item_means[ti_nums[ti_mask]]
 
         else:
             scores = _accel.knn.score_implicit(
-                self.sim_matrix_, ri_arr, ti_arr, self.config.max_nbrs, self.config.min_nbrs
+                self.sim_matrix, ri_arr, ti_arr, self.config.max_nbrs, self.config.min_nbrs
             ).to_numpy(zero_copy_only=False)
 
         log.debug(
