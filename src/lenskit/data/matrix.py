@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import NamedTuple, TypeVar
 
 import numpy as np
+import pyarrow as pa
 import scipy.sparse as sps
 import torch
 
@@ -78,3 +79,33 @@ class COOStructure(NamedTuple):
     @property
     def nnz(self):
         return self.row_numbers[self.nrows]
+
+
+def sparse_to_arrow(arr: sps.csr_array) -> pa.ListArray:
+    """
+    Convert a spare matrix into a PyArrow list array.  The
+    resulting array has 32-bit column indices and values.
+    """
+
+    cols = pa.array(arr.indices, pa.int32())
+    vals = pa.array(arr.data, pa.float32())
+
+    entries = pa.StructArray.from_arrays([cols, vals], ["index", "value"])
+    rows = pa.ListArray.from_arrays(pa.array(arr.indptr, pa.int32()), entries)
+    return rows
+
+
+def sparse_from_arrow(arr: pa.ListArray, shape: tuple[int, int] | None = None) -> sps.csr_array:
+    """
+    Convert a spare matrix into a PyArrow list array.  The
+    resulting array has 32-bit column indices and values.
+    """
+    entries = arr.values
+    if not pa.types.is_struct(entries.type):
+        raise TypeError(f"entry type {entries.type}, expected struct")
+    assert isinstance(entries, pa.StructArray)
+
+    cols = entries.field("index")
+    vals = entries.field("value")
+
+    return sps.csr_array((vals.to_numpy(), cols.to_numpy(), arr.offsets.to_numpy()), shape=shape)
