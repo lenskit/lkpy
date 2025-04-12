@@ -230,34 +230,38 @@ pub fn score_implicit<'py>(
     // we loop reference items, looking for targets.
     // in the common (slow) top-N case, reference items are shorter than targets.
     for ref_item in ref_is {
-        let ri = ref_item.ok_or_else(|| PyValueError::new_err("reference item is null"))?;
-        let (sp, ep) = sims.extent(ri as usize);
-        for i in sp..ep {
-            let i = i as usize;
-            let ti = sims.col_inds.value(i);
-            let sim = sims.values.value(i);
+        if let Some(ri) = ref_item {
+            let (sp, ep) = sims.extent(ri as usize);
+            for i in sp..ep {
+                let i = i as usize;
+                let ti = sims.col_inds.value(i);
+                let sim = sims.values.value(i);
 
-            // get the heap, initializing if needed.
-            let heap = &mut heaps[ti as usize];
-            if heap.is_none() {
-                *heap = Some(BinaryHeap::with_capacity(max_nbrs as usize + 1));
-            }
-            // add the item to the heap.
-            let heap = heap.as_mut().unwrap();
-            heap.push(AccEntry::weight_only(sim)?);
-            if heap.len() > max_nbrs {
-                heap.pop();
+                // get the heap, initializing if needed.
+                let heap = &mut heaps[ti as usize];
+                if heap.is_none() {
+                    *heap = Some(BinaryHeap::with_capacity(max_nbrs as usize + 1));
+                }
+                // add the item to the heap.
+                let heap = heap.as_mut().unwrap();
+                heap.push(AccEntry::weight_only(sim)?);
+                if heap.len() > max_nbrs {
+                    heap.pop();
+                }
             }
         }
     }
 
     let mut out = Float32Builder::with_capacity(tgt_items.len());
     for ti in tgt_is {
-        let ti = ti.ok_or_else(|| PyValueError::new_err("target item is null"))? as usize;
-        let heap = heaps[ti].take().filter(|h| h.len() >= min_nbrs);
-        if let Some(heap) = heap {
-            let score: f32 = heap.iter().map(AccEntry::get_weight).sum();
-            out.append_value(score);
+        if let Some(ti) = ti {
+            let heap = heaps[ti as usize].take().filter(|h| h.len() >= min_nbrs);
+            if let Some(heap) = heap {
+                let score: f32 = heap.iter().map(AccEntry::get_weight).sum();
+                out.append_value(score);
+            } else {
+                out.append_null();
+            }
         } else {
             out.append_null();
         }
