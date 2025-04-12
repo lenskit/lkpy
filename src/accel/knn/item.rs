@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use arrow::{
-    array::{make_array, Array, ArrayData, Float32Builder, Int32Builder, ListArray, StructArray},
+    array::{
+        make_array, Array, ArrayData, Float32Builder, Int32Builder, LargeListArray, StructArray,
+    },
     buffer::OffsetBuffer,
     datatypes::{DataType, Field, Fields},
     pyarrow::PyArrowType,
@@ -68,7 +70,7 @@ pub fn compute_similarities<'py>(
             vec![Arc::new(col_bld.finish()), Arc::new(val_bld.finish())],
             None,
         );
-        let list = ListArray::new(
+        let list = LargeListArray::new(
             Arc::new(list_field),
             OffsetBuffer::from_lengths(lengths),
             Arc::new(sa),
