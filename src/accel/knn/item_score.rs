@@ -76,9 +76,11 @@ impl<T> ScoreAccumulator<T> {
             vec.push(entry);
         } else {
             let heap = self.heap_mut();
-            heap.push(entry);
-            while heap.len() > limit {
-                heap.pop();
+            if entry.weight > heap.peek().unwrap().weight {
+                heap.push(entry);
+                while heap.len() > limit {
+                    heap.pop();
+                }
             }
         }
 
