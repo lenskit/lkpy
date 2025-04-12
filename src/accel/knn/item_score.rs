@@ -38,6 +38,7 @@ impl<T> ScoreAccumulator<T> {
         }
     }
 
+    #[inline(never)]
     fn heap_mut(&mut self) -> &mut BinaryHeap<AccEntry<T>> {
         match self {
             ScoreAccumulator::Full(h) => h,
@@ -57,6 +58,7 @@ impl<T> ScoreAccumulator<T> {
         }
     }
 
+    #[inline(never)]
     fn vector_mut(&mut self, limit: usize) -> Option<&mut Vec<AccEntry<T>>> {
         match self {
             ScoreAccumulator::Empty => {
