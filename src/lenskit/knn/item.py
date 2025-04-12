@@ -123,7 +123,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
             ratings:
                 (user,item,rating) data for computing item similarities.
         """
-        if hasattr(self, "items_") and not options.retrain:
+        if hasattr(self, "sim_matrix") and not options.retrain:
             return
 
         ensure_parallel_init()
@@ -191,7 +191,9 @@ class ItemKNNScorer(Component[ItemList], Trainable):
             rmat = rmat.tocsc()
             counts = np.diff(rmat.indptr)
             sums = rmat.sum(axis=0)
-            means = sums / counts
+            means = np.zeros(sums.shape)
+            # manual divide to avoid division by zero
+            np.divide(sums, counts, out=means, where=counts > 0)
             rmat.data = rmat.data - np.repeat(means, counts)
             if np.allclose(rmat.data, 0.0):
                 log.warning("normalized ratings are zero, centering is not recommended")
@@ -257,7 +259,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
                 ti_arr,
                 self.config.max_nbrs,
                 self.config.min_nbrs,
-            ).to_numpy(zero_copy_only=False)
+            ).to_numpy(zero_copy_only=False, writable=True)
             scores[ti_mask] += self.item_means[ti_nums[ti_mask]]
 
         else:

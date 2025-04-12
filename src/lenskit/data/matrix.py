@@ -95,7 +95,9 @@ def sparse_to_arrow(arr: sps.csr_array) -> pa.ListArray:
     return rows
 
 
-def sparse_from_arrow(arr: pa.ListArray, shape: tuple[int, int] | None = None) -> sps.csr_array:
+def sparse_from_arrow(
+    arr: pa.ListArray | pa.LargeListArray, shape: tuple[int, int] | None = None
+) -> sps.csr_array:
     """
     Convert a spare matrix into a PyArrow list array.  The
     resulting array has 32-bit column indices and values.
