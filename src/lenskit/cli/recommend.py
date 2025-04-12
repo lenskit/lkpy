@@ -48,7 +48,7 @@ def recommend(
     _log.warning("the recommend CLI is experimental and may change without notice")
 
     _log.info("loading pipeline", file=str(pipe_file))
-    with xopen(pipe_file, "rb") as pf:
+    with xopen(pipe_file, "rb", threads=0) as pf:
         pipe = pickle.load(pf)
     log = _log.bind(name=pipe.name)
 

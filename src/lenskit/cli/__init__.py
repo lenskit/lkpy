@@ -24,9 +24,11 @@ def main():
     np.set_printoptions(threshold=20)
     try:
         ec = lenskit.main(standalone_mode=False)
+    except click.ClickException as e:
+        _log.error("CLI error, terminating: %s", e)
+        sys.exit(2)
     except Exception as e:
         _log.error("LensKit command failed", exc_info=e)
-
         sys.exit(3)
 
     if isinstance(ec, int):
