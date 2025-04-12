@@ -11,20 +11,24 @@ Item-based k-NN collaborative filtering.
 # pyright: basic
 from __future__ import annotations
 
+import gc
 import warnings
 
 import numpy as np
+import pyarrow as pa
+import scipy.sparse.linalg as spla
 import torch
 from pydantic import AliasChoices, BaseModel, Field, PositiveFloat, PositiveInt, field_validator
-from scipy.sparse import csr_array
+from scipy.sparse import coo_array, csr_array, sparray
 from typing_extensions import Optional, override
 
+from lenskit import _accel
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery, Vocabulary
+from lenskit.data.matrix import sparse_to_arrow
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import Stopwatch, get_logger, trace
-from lenskit.logging.progress import item_progress_handle, pbh_update
-from lenskit.logging.resource import max_memory
-from lenskit.math.sparse import normalize_sparse_rows
+from lenskit.logging.progress import pbh_update
+from lenskit.logging.resource import cur_memory, max_memory
 from lenskit.parallel import ensure_parallel_init
 from lenskit.pipeline import Component
 from lenskit.torch import inference_mode, safe_tensor
@@ -133,70 +137,86 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         # Training proceeds in 2 steps:
         # 1. Normalize item vectors to be mean-centered and unit-normalized
         # 2. Compute similarities with pairwise dot products
-        self._timer = Stopwatch()
+        timer = Stopwatch()
         log.info("begining IKNN training")
 
         field = "rating" if self.config.explicit else None
-        init_rmat = data.interactions().matrix().torch(field)
-        n_items = data.item_count
+        rmat = data.interactions().matrix().scipy(field, layout="coo")
+        n_users, n_items = rmat.shape
         log.info(
             "[%s] made sparse matrix",
-            self._timer,
-            n_ratings=len(init_rmat.values()),
+            timer,
+            n_ratings=rmat.nnz,
             n_users=data.user_count,
         )
 
-        # we operate on *transposed* rating matrix: items on the rows
-        rmat = init_rmat.transpose(0, 1).to_sparse_csr().to(torch.float64)
+        rmat, means = self._center_ratings(log, timer, rmat)
+        rmat = self._normalize_rows(log, timer, rmat)
 
+        # convert matrix & its transpose to Arrow for Rust computation
+        ui_mat = sparse_to_arrow(rmat.tocsr())
+        iu_mat = sparse_to_arrow(rmat.T.tocsr())
+        del rmat
+        log.debug("[%s] prepared working matrices, memory use %s", timer, max_memory())
+
+        log.info("[%s] computing similarity matrix", timer)
+        smat = _accel.knn.compute_similarities(
+            ui_mat, iu_mat, (n_users, n_items), self.config.min_sim, self.config.save_nbrs
+        )
+        log.debug("[%s] computed, memory use %s", timer, max_memory())
+        assert isinstance(smat, list)
+        smat = pa.chunked_array(smat)
+        smat = smat.combine_chunks()
+        assert isinstance(smat, pa.LargeListArray)
+        gc.collect()
+        log.debug(
+            "[%s] combined chunks, memory use %s (peak %s)", timer, cur_memory(), max_memory()
+        )
+        lengths = np.diff(smat.offsets)
+
+        log.info(
+            "[%s] found neighborhoods for %d of %d items",
+            timer,
+            np.sum(lengths > 0),
+            n_items,
+        )
+
+        log.info("[%s] computed %d neighbor pairs", timer, len(smat.values))
+        assert smat.offsets[-1].as_py() == len(
+            smat.values
+        ), f"{smat.offsets[-1]} != {len(smat.values)}"
+
+        self.items_ = data.items
+        self.users_ = data.users
+        self.item_means_ = np.asarray(means)
+        self.item_counts_ = np.diff(smat.offsets.to_numpy())
+        self.sim_matrix_ = smat
+        log.debug("[%s] done, memory use %s", timer, max_memory())
+
+    def _center_ratings(self, log, timer, rmat: coo_array) -> tuple[sparray, np.ndarray | None]:
         if self.config.explicit:
-            rmat, means = normalize_sparse_rows(rmat, "center")
-            if np.allclose(rmat.values(), 0.0):
+            rmat = rmat.tocsc()
+            counts = np.diff(rmat.indptr)
+            sums = rmat.sum(axis=0)
+            means = sums / counts
+            rmat.data = rmat.data - np.repeat(means, counts)
+            if np.allclose(rmat.data, 0.0):
                 log.warning("normalized ratings are zero, centering is not recommended")
                 warnings.warn(
                     "Ratings seem to have the same value, centering is not recommended.",
                     DataWarning,
                 )
+            log.debug("[%s] centered, memory use %s", timer, max_memory())
+            return rmat, means
         else:
-            means = None
-        log.debug("[%s] centered, memory use %s", self._timer, max_memory())
+            return rmat, None
 
-        rmat, _norms = normalize_sparse_rows(rmat, "unit")
-        log.debug("[%s] normalized, memory use %s", self._timer, max_memory())
-
-        log.info("[%s] computing similarity matrix", self._timer)
-        smat = self._compute_similarities(rmat)
-        log.debug("[%s] computed, memory use %s", self._timer, max_memory())
-
-        log.info(
-            "[%s] got neighborhoods for %d of %d items",
-            self._timer,
-            np.sum(np.diff(smat.crow_indices()) > 0),
-            n_items,
-        )
-
-        log.info("[%s] computed %d neighbor pairs", self._timer, len(smat.col_indices()))
-
-        self.items_ = data.items
-        self.item_means_ = means.numpy() if means is not None else None
-        self.item_counts_ = torch.diff(smat.crow_indices()).numpy()
-        self.sim_matrix_ = csr_array(
-            (smat.values(), smat.col_indices(), smat.crow_indices()), smat.shape
-        )
-        self.users_ = data.users
-        log.debug("[%s] done, memory use %s", self._timer, max_memory())
-
-    def _compute_similarities(self, rmat: torch.Tensor) -> torch.Tensor:
-        nitems, nusers = rmat.shape
-
-        bs = max(self.config.block_size, nitems // MAX_BLOCKS)
-        _log.debug("computing with effective block size %d", bs)
-        with item_progress_handle("items", nitems) as pbh:
-            smat = _sim_blocks(
-                rmat.to(torch.float64), self.config.min_sim, self.config.save_nbrs, bs, pbh
-            )
-
-        return smat.to(torch.float32)
+    def _normalize_rows(self, log, timer, rmat: sparray) -> coo_array:
+        norms = spla.norm(rmat, 2, axis=0)
+        cmat = rmat / norms
+        assert cmat.shape == rmat.shape
+        log.debug("[%s] normalized, memory use %s", timer, max_memory())
+        return cmat
 
     @override
     @inference_mode

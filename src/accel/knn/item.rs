@@ -28,6 +28,8 @@ pub fn compute_similarities<'py>(
     debug!("preparing {}x{} matrix", nu, ni);
     let ui_mat = CSRMatrix::from_arrow(make_array(ui_ratings.0), nu, ni)?;
     let iu_mat = CSRMatrix::from_arrow(make_array(iu_ratings.0), ni, nu)?;
+    assert_eq!(ui_mat.array.len(), nu);
+    assert_eq!(iu_mat.array.len(), ni);
 
     let range = 0..ni;
     debug!("computing similarity rows");
@@ -102,6 +104,9 @@ fn sim_row(row: usize, ui_mat: &CSRMatrix, iu_mat: &CSRMatrix, min_sim: f32) -> 
         for j in u_start..u_end {
             let j = j as usize;
             let other = ui_mat.col_inds.value(j) as usize;
+            if other == row {
+                continue;
+            }
             let orate = ui_mat.values.value(j);
             if counts[other] == 0 {
                 used.push(other);
