@@ -6,7 +6,7 @@ list-tasks:
 
 # clean up build artifacts
 clean:
-    rm -rf build dist *.egg-info */dist */build
+    rm -rf build dist output target *.egg-info */dist */build
     git clean -xf docs
 
 # build the modules and wheels
