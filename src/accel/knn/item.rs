@@ -1,5 +1,5 @@
-use std::collections::BinaryHeap;
 use std::sync::Arc;
+use std::{cmp::Reverse, collections::BinaryHeap};
 
 use arrow::{
     array::{
@@ -41,7 +41,7 @@ pub fn compute_similarities<'py>(
         debug!("computing similarity rows");
         let chunks = range
             .into_par_iter()
-            .map(|row| sim_row(row, &ui_mat, &iu_mat, min_sim))
+            .map(|row| sim_row(row, &ui_mat, &iu_mat, min_sim, save_nbrs))
             .collect_vec_list();
         // count the similarities
         let n_sim = chunks
@@ -288,7 +288,13 @@ fn sim_matrix(sims: ArrayData) -> PyResult<CSRMatrix<i64>> {
     CSRMatrix::from_arrow(array, size, size)
 }
 
-fn sim_row(row: usize, ui_mat: &CSRMatrix, iu_mat: &CSRMatrix, min_sim: f32) -> Vec<(i32, f32)> {
+fn sim_row(
+    row: usize,
+    ui_mat: &CSRMatrix,
+    iu_mat: &CSRMatrix,
+    min_sim: f32,
+    save_nbrs: Option<i64>,
+) -> Vec<(i32, f32)> {
     let (r_start, r_end) = iu_mat.extent(row);
 
     // accumulate count and inner products
@@ -321,8 +327,20 @@ fn sim_row(row: usize, ui_mat: &CSRMatrix, iu_mat: &CSRMatrix, min_sim: f32) -> 
     }
 
     // finish up and return!
-    used.into_iter()
+    let mut sims: Vec<_> = used
+        .into_iter()
         .filter(|i| dots[*i] >= min_sim)
         .map(|i| (i as i32, dots[i]))
-        .collect()
+        .collect();
+
+    // sort by descending score
+    sims.sort_by_key(|(_i, s)| Reverse(NotNan::new(*s).unwrap()));
+    // truncate if needed
+    if let Some(limit) = save_nbrs {
+        if limit > 0 {
+            sims.truncate(limit as usize);
+            sims.shrink_to_fit();
+        }
+    }
+    sims
 }
