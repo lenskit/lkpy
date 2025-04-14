@@ -67,6 +67,12 @@ outputs:
             - tests
             - conftest.py
             - data
+        requirements:
+          run:
+            - pytest >=8.2,<9
+            - pytest-benchmark =4
+            - hypothesis >=6.16
+            - pyyaml ~=6.0
 
   - package:
       name: lenskit-funksvd
@@ -89,6 +95,12 @@ outputs:
             - tests
             - conftest.py
             - data
+        requirements:
+          run:
+            - pytest >=8.2,<9
+            - pytest-benchmark =4
+            - hypothesis >=6.16
+            - pyyaml ~=6.0
 
   - package:
       name: lenskit-sklearn
@@ -110,6 +122,12 @@ outputs:
             - tests
             - conftest.py
             - data
+        requirements:
+          run:
+            - pytest >=8.2,<9
+            - pytest-benchmark =4
+            - hypothesis >=6.16
+            - pyyaml ~=6.0
 
   - package:
       name: lenskit-implicit
@@ -132,6 +150,12 @@ outputs:
             - tests
             - conftest.py
             - data
+        requirements:
+          run:
+            - pytest >=8.2,<9
+            - pytest-benchmark =4
+            - hypothesis >=6.16
+            - pyyaml ~=6.0
 
   - package:
       name: lenskit-hpf
@@ -154,6 +178,12 @@ outputs:
             - tests
             - conftest.py
             - data
+        requirements:
+          run:
+            - pytest >=8.2,<9
+            - pytest-benchmark =4
+            - hypothesis >=6.16
+            - pyyaml ~=6.0
 
 about:
   license: MIT
