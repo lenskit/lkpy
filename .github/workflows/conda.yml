@@ -77,6 +77,10 @@ jobs:
           path: dist/conda
           merge-multiple: true
 
+      - name: List compiled packages
+        run: ls -R dist/conda
+        shell: bash
+
       - name: Install base Conda environment
         uses: mamba-org/setup-micromamba@v2
         with:
