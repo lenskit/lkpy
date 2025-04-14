@@ -1,3 +1,5 @@
+import os
+
 from invoke import task
 from invoke.context import Context
 
@@ -22,4 +24,6 @@ def build_conda(c: Context):
     version = get_version()
     print("packaging LensKit version {}", version)
     cmd = "rattler-build build --recipe conda --output-dir dist/conda"
+    if "CI" in os.environ:
+        cmd += " --noarch-build-platform linux-64"
     c.run(cmd, echo=True, env={"LK_PACKAGE_VERSION": version})
