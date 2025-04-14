@@ -130,6 +130,9 @@ target = "lenskit._accel"
 path = "Cargo.toml"
 binding = "PyO3"
 
+[tool.cibuildwheel]
+skip = ["*-musllinux_i686"]
+
 # configure UV sources
 [tool.uv]
 conflicts = [[{ group = "cpu" }, { group = "gpu" }]]
