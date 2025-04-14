@@ -1424,11 +1424,19 @@ doc = [
 gpu = [
     { name = "torch", version = "2.6.0+cu126", source = { registry = "https://download.pytorch.org/whl/cu126" } },
 ]
+package = [
+    { name = "setuptools" },
+    { name = "setuptools-rust" },
+    { name = "setuptools-scm" },
+]
 reporting = [
     { name = "coverage" },
 ]
 scripting = [
     { name = "invoke" },
+    { name = "setuptools" },
+    { name = "setuptools-rust" },
+    { name = "setuptools-scm" },
 ]
 test = [
     { name = "hypothesis" },
@@ -1526,8 +1534,18 @@ doc = [
     { name = "sphinxext-opengraph", specifier = ">=0.5" },
 ]
 gpu = [{ name = "torch", specifier = "~=2.4", index = "https://download.pytorch.org/whl/cu126", conflict = { package = "lenskit", group = "gpu" } }]
+package = [
+    { name = "setuptools", specifier = ">=70" },
+    { name = "setuptools-rust", specifier = "~=1.11" },
+    { name = "setuptools-scm", specifier = ">=8" },
+]
 reporting = [{ name = "coverage", specifier = ">=5" }]
-scripting = [{ name = "invoke", specifier = "~=2.2" }]
+scripting = [
+    { name = "invoke", specifier = "~=2.2" },
+    { name = "setuptools", specifier = ">=70" },
+    { name = "setuptools-rust", specifier = "~=1.11" },
+    { name = "setuptools-scm", specifier = ">=8" },
+]
 test = [
     { name = "hypothesis", specifier = ">=6.16" },
     { name = "pyprojroot", specifier = "~=0.3.0" },

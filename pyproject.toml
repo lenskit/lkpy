@@ -66,11 +66,16 @@ demo = [
   "seaborn >=0.13.2,<0.14",
 ]
 reporting = ["coverage >=5"]
-scripting = ["invoke ~= 2.2"]
-dev = [
+package = [
   "setuptools >=70",
   "setuptools-scm >=8",
   "setuptools-rust ~=1.11",
+]
+scripting = [
+  "invoke ~= 2.2",
+  { include-group = "package" },
+]
+dev = [
   "build ~=1.0",
   "unbeheader ~=1.3",
   "ruff >=0.2",
@@ -87,6 +92,7 @@ dev = [
   { include-group = "doc" },
   { include-group = "demo" },
   { include-group = "reporting" },
+  { include-group = "package" },
   { include-group = "scripting" },
   "zstandard>=0.23.0",
 ]
