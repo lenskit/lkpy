@@ -1,6 +1,6 @@
 context:
   name: lenskit
-  version: 2041.0a0
+  version: ${{env.get("LK_VERSION", default="2100.0a0+dev0")}}
   python_min: "3.11"
 
 recipe:
@@ -11,7 +11,11 @@ build:
   number: 0
 
 source:
-  path: ..
+  - if: version == "2100.0a0+dev0"
+    then:
+      path: ..
+    else:
+      path: ../dist/lenskit-${{version}}.tar.gz
 
 outputs:
   - package:
