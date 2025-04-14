@@ -2,6 +2,8 @@
 *.log
 *.pdb
 *.prof
+*.profraw
+*.lcov
 *.lprof
 emissions.csv
 intel_power_gadget_log.csv
