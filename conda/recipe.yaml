@@ -58,6 +58,8 @@ outputs:
 
   - package:
       name: lenskit-funksvd
+    source:
+      path: ../LICENSE.md
     build:
       noarch: python
       script:
@@ -73,6 +75,8 @@ outputs:
 
   - package:
       name: lenskit-sklearn
+    source:
+      path: ../LICENSE.md
     build:
       script:
         - "true"
@@ -87,6 +91,8 @@ outputs:
 
   - package:
       name: lenskit-implicit
+    source:
+      path: ../LICENSE.md
     build:
       noarch: python
       script:
@@ -102,6 +108,8 @@ outputs:
 
   - package:
       name: lenskit-hpf
+    source:
+      path: ../LICENSE.md
     build:
       noarch: python
       script:
