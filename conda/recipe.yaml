@@ -13,6 +13,9 @@ build:
 outputs:
   - package:
       name: lenskit
+
+    source:
+      path: ..
     build:
       script:
         - python -m pip install . --no-deps -vv
