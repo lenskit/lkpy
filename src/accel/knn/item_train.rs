@@ -137,8 +137,8 @@ fn sim_row(
         .map(|i| (i as i32, dots[i]))
         .collect();
 
-    // sort by descending score
-    sims.sort_by_key(|(_i, s)| Reverse(NotNan::new(*s).unwrap()));
+    // sort by column number
+    sims.sort_by_key(|(i, _s)| *i);
     // truncate if needed
     if let Some(limit) = save_nbrs {
         if limit > 0 {
