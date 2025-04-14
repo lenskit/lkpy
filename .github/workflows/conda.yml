@@ -12,8 +12,15 @@ concurrency:
 
 jobs:
   conda-build:
-    name: Build Conda packages
+    name: Build Conda packages on ${{matrix.platform}}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform:
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+          - macos-latest
+          - windows-latest
 
     steps:
       - name: 🛒 Checkout
@@ -68,6 +75,7 @@ jobs:
         with:
           name: conda-pkgs
           path: dist/conda
+          merge-multiple: true
 
       - name: Install base Conda environment
         uses: mamba-org/setup-micromamba@v2
