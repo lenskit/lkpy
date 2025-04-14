@@ -10,12 +10,13 @@ recipe:
 build:
   number: 0
 
+source:
+  path: ..
+
 outputs:
   - package:
       name: lenskit
 
-    source:
-      path: ..
     build:
       script:
         - python -m pip install . --no-deps -vv
@@ -58,8 +59,6 @@ outputs:
 
   - package:
       name: lenskit-funksvd
-    source:
-      path: ../LICENSE.md
     build:
       noarch: python
       script:
@@ -75,8 +74,6 @@ outputs:
 
   - package:
       name: lenskit-sklearn
-    source:
-      path: ../LICENSE.md
     build:
       script:
         - "true"
@@ -91,8 +88,6 @@ outputs:
 
   - package:
       name: lenskit-implicit
-    source:
-      path: ../LICENSE.md
     build:
       noarch: python
       script:
@@ -108,8 +103,6 @@ outputs:
 
   - package:
       name: lenskit-hpf
-    source:
-      path: ../LICENSE.md
     build:
       noarch: python
       script:
