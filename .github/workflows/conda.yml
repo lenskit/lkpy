@@ -80,24 +80,36 @@ jobs:
         run: ls -R dist/conda
         shell: bash
 
+      - name: Set up environment spec
+        shell: bash -leo pipefail
+        run: |
+          mkdir build
+          echo "python=${{matrix.python}}" >build/environment.txt
+          echo uv >>build/environment.txt
+          echo lenskit >>build/environment.txt
+          if [ "$PLAT" != 'windows-latest' -a "$PLAT" != 'ubuntu-20.05-arm' -a "$PYVER" != "3.13" ]; then
+            echo lenskit-hpf >>build/environment.txt
+            echo lenskit-sklearn >>build/environment.txt
+            echo lenskit-funksvd >>build/environment.txt
+            echo lenskit-implicit >>build/environment.txt
+          fi
+        env:
+          PLAT: ${{matrix.platform}}
+          PYVER: ${{matrix.python}}
+
       - name: Install base Conda environment
         uses: mamba-org/setup-micromamba@v2
         with:
           environment-name: lenskit
-          create-args: python=${{matrix.python}} uv lenskit
+          environment-file: build/environment.txt
           init-shell: >-
             powershell
+            bash
           generate-run-shell: true
           condarc: |
             channels:
               - file://${{github.workspace}}/dist/conda
               - conda-forge
-
-      - name: Install additional Conda packages
-        if: matrix.platform != 'windows-latest' && matrix.platform != 'ubuntu-20.04-arm' && matrix.python != '3.13'
-        run: |
-          micromamba install lenskit-hpf lenskit-sklearn lenskit-funksvd lenskit-implicit
-        shell: pwsh
 
       - name: 🧪 Install testing packages
         run: |
