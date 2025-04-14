@@ -13,7 +13,7 @@ concurrency:
 jobs:
   conda-build:
     name: Build Conda packages on ${{matrix.platform}}
-    runs-on: ubuntu-latest
+    runs-on: ${{matrix.platform}}
     strategy:
       matrix:
         platform:
