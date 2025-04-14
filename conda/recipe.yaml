@@ -69,6 +69,7 @@ outputs:
       - python:
           imports:
             - lenskit.funksvd
+
   - package:
       name: lenskit-sklearn
     build:
@@ -82,6 +83,7 @@ outputs:
       - python:
           imports:
             - lenskit.sklearn.svd
+
   - package:
       name: lenskit-implicit
     build:
@@ -95,6 +97,7 @@ outputs:
       - python:
           imports:
             - lenskit.implicit
+
   - package:
       name: lenskit-hpf
     build:
