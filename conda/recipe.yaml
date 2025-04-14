@@ -7,9 +7,6 @@ recipe:
   name: lenskit
   version: ${{ version }}
 
-source:
-  path: ../
-
 build:
   number: 0
 
@@ -59,11 +56,12 @@ outputs:
   - package:
       name: lenskit-funksvd
     build:
+      noarch: python
       script:
         - "true"
     requirements:
       run:
-        - ${{ pin_subpackage('lenskit', exact=True) }}
+        - ${{ pin_subpackage('lenskit') }}
         - numba >=0.56
     tests:
       - python:
@@ -77,7 +75,7 @@ outputs:
         - "true"
     requirements:
       run:
-        - ${{ pin_subpackage('lenskit', exact=True) }}
+        - ${{ pin_subpackage('lenskit') }}
         - scikit-learn >=1.2,<2
     tests:
       - python:
@@ -87,11 +85,12 @@ outputs:
   - package:
       name: lenskit-implicit
     build:
+      noarch: python
       script:
         - "true"
     requirements:
       run:
-        - ${{ pin_subpackage('lenskit', exact=True) }}
+        - ${{ pin_subpackage('lenskit') }}
         - implicit >=0.7.2
     tests:
       - python:
@@ -101,11 +100,12 @@ outputs:
   - package:
       name: lenskit-hpf
     build:
+      noarch: python
       script:
         - "true"
     requirements:
       run:
-        - ${{ pin_subpackage('lenskit', exact=True) }}
+        - ${{ pin_subpackage('lenskit') }}
         - hpfrec =0.2
     tests:
       - python:
