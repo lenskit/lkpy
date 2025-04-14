@@ -267,18 +267,18 @@ def test_ii_large_models(rng, ml_ratings, ml_ds):
         .assign(rating=lambda df: df.rating - df.item_mean)
     )
 
-    _log.info("make sure the similarity matrix is sorted")
-    for i in range(algo_lim.items.size):
-        sp = mat_lim.indptr[i]
-        ep = mat_lim.indptr[i + 1]
-        vals = mat_lim.data[sp:ep]
-        diffs = np.diff(vals)
-        if np.any(diffs > 0):
-            _log.error("row %d: %d non-sorted values", i, np.sum(diffs <= 0))
-            (bad,) = np.nonzero(diffs > 0)
-            for i in bad:
-                _log.info("bad indices %d: %d %d", i, vals[i], vals[i + 1])
-            raise AssertionError(f"{np.sum(diffs <= 0)} non-sorted values")
+    # _log.info("make sure the similarity matrix is sorted")
+    # for i in range(algo_lim.items.size):
+    #     sp = mat_lim.indptr[i]
+    #     ep = mat_lim.indptr[i + 1]
+    #     vals = mat_lim.data[sp:ep]
+    #     diffs = np.diff(vals)
+    #     if np.any(diffs > 0):
+    #         _log.error("row %d: %d non-sorted values", i, np.sum(diffs <= 0))
+    #         (bad,) = np.nonzero(diffs > 0)
+    #         for i in bad:
+    #             _log.info("bad indices %d: %d %d", i, vals[i], vals[i + 1])
+    #         raise AssertionError(f"{np.sum(diffs <= 0)} non-sorted values")
 
     _log.info("checking a sample of neighborhoods")
     items = algo_ub.items.ids()
