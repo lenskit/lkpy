@@ -32,12 +32,12 @@ jobs:
         uses: mamba-org/setup-micromamba@v2
         with:
           environment-name: build
-          create-args: rattler-build
+          create-args: rattler-build uv
           generate-run-shell: true
 
       - name: 🔨 Build Conda packages
         run: |
-          rattler-build build --recipe-dir=conda --output-dir=dist/conda
+          uv run --only-group=scripting invoke build-conda
         shell: micromamba-shell {0}
 
       - name: Save package
