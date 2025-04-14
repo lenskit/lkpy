@@ -60,6 +60,13 @@ outputs:
             - lenskit.data
             - lenskit.als
             - lenskit.knn
+      - script:
+          - pytest tests
+        files:
+          source:
+            - tests
+            - conftest.py
+            - data
 
   - package:
       name: lenskit-funksvd
@@ -75,6 +82,13 @@ outputs:
       - python:
           imports:
             - lenskit.funksvd
+      - script:
+          - pytest tests/funksvd
+        files:
+          source:
+            - tests
+            - conftest.py
+            - data
 
   - package:
       name: lenskit-sklearn
@@ -89,6 +103,13 @@ outputs:
       - python:
           imports:
             - lenskit.sklearn.svd
+      - script:
+          - pytest tests/sklearn
+        files:
+          source:
+            - tests
+            - conftest.py
+            - data
 
   - package:
       name: lenskit-implicit
@@ -104,6 +125,13 @@ outputs:
       - python:
           imports:
             - lenskit.implicit
+      - script:
+          - pytest tests/implicit
+        files:
+          source:
+            - tests
+            - conftest.py
+            - data
 
   - package:
       name: lenskit-hpf
@@ -119,6 +147,13 @@ outputs:
       - python:
           imports:
             - lenskit.hpf
+      - script:
+          - pytest tests/hpf
+        files:
+          source:
+            - tests
+            - conftest.py
+            - data
 
 about:
   license: MIT
