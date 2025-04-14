@@ -19,10 +19,8 @@ import numpy as np
 from numpy.typing import NDArray
 from pydantic import AliasChoices, Field
 from sklearn.decomposition import non_negative_factorization
-from sklearn.preprocessing import 
 from typing_extensions import Literal, override
 
-from lenskit.basic import BiasModel, Damping
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
 from lenskit.data.vocab import Vocabulary
 from lenskit.logging import Stopwatch, get_logger
