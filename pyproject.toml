@@ -45,7 +45,6 @@ test = [
   "pytest-cov >=2.12",
   "pytest-benchmark ==4.*",
   "hypothesis >=6.16",
-  "pyprojroot ~=0.3.0",
   "pyyaml ~=6.0",
 ]
 doc = [

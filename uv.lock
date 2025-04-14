@@ -1440,7 +1440,6 @@ scripting = [
 ]
 test = [
     { name = "hypothesis" },
-    { name = "pyprojroot" },
     { name = "pytest" },
     { name = "pytest-benchmark" },
     { name = "pytest-cov" },
@@ -1501,7 +1500,6 @@ dev = [
     { name = "pre-commit", specifier = "~=4.0" },
     { name = "pyarrow-stubs", specifier = ">=11" },
     { name = "pydata-sphinx-theme", specifier = "~=0.16.0" },
-    { name = "pyprojroot", specifier = "~=0.3.0" },
     { name = "pyprojroot", specifier = ">=0.3" },
     { name = "pyright", specifier = ">=1.1" },
     { name = "pytest", specifier = "~=8.2" },
@@ -1548,7 +1546,6 @@ scripting = [
 ]
 test = [
     { name = "hypothesis", specifier = ">=6.16" },
-    { name = "pyprojroot", specifier = "~=0.3.0" },
     { name = "pytest", specifier = "~=8.2" },
     { name = "pytest-benchmark", specifier = "==4.*" },
     { name = "pytest-cov", specifier = ">=2.12" },
