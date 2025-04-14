@@ -81,7 +81,7 @@ jobs:
         shell: bash
 
       - name: Set up environment spec
-        shell: bash -leo pipefail
+        shell: bash
         run: |
           mkdir build
           echo "python=${{matrix.python}}" >build/environment.txt
