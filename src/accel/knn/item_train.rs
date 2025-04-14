@@ -137,14 +137,17 @@ fn sim_row(
         .map(|i| (i as i32, dots[i]))
         .collect();
 
-    // sort by column number
-    sims.sort_by_key(|(i, _s)| *i);
     // truncate if needed
     if let Some(limit) = save_nbrs {
         if limit > 0 {
+            // sort by value number
+            sims.sort_by_key(|(_i, s)| Reverse(NotNan::new(*s).unwrap()));
             sims.truncate(limit as usize);
             sims.shrink_to_fit();
         }
     }
+    // sort by column number
+    sims.sort_by_key(|(i, _s)| *i);
+
     sims
 }
