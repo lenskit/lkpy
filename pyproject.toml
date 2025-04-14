@@ -66,6 +66,7 @@ demo = [
   "seaborn >=0.13.2,<0.14",
 ]
 reporting = ["coverage >=5"]
+scripting = ["invoke ~= 2.2"]
 dev = [
   "setuptools >=70",
   "setuptools-scm >=8",
@@ -86,6 +87,7 @@ dev = [
   { include-group = "doc" },
   { include-group = "demo" },
   { include-group = "reporting" },
+  { include-group = "scripting" },
   "zstandard>=0.23.0",
 ]
 cpu = ["torch ~=2.4"]

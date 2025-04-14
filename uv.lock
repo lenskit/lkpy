@@ -840,6 +840,15 @@ wheels = [
 ]
 
 [[package]]
+name = "invoke"
+version = "2.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f9/42/127e6d792884ab860defc3f4d80a8f9812e48ace584ffc5a346de58cdc6c/invoke-2.2.0.tar.gz", hash = "sha256:ee6cbb101af1a859c7fe84f2a264c059020b0cb7fe3535f9424300ab568f6bd5", size = 299835 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/66/7f8c48009c72d73bc6bbe6eb87ac838d6a526146f7dab14af671121eb379/invoke-2.2.0-py3-none-any.whl", hash = "sha256:6ea924cc53d4f78e3d98bc436b08069a03077e6f85ad1ddaa8a116d7dad15820", size = 160274 },
+]
+
+[[package]]
 name = "ipykernel"
 version = "6.29.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1369,6 +1378,7 @@ dev = [
     { name = "build" },
     { name = "coverage" },
     { name = "hypothesis" },
+    { name = "invoke" },
     { name = "ipython" },
     { name = "line-profiler" },
     { name = "matplotlib" },
@@ -1416,6 +1426,9 @@ gpu = [
 ]
 reporting = [
     { name = "coverage" },
+]
+scripting = [
+    { name = "invoke" },
 ]
 test = [
     { name = "hypothesis" },
@@ -1468,6 +1481,7 @@ dev = [
     { name = "build", specifier = "~=1.0" },
     { name = "coverage", specifier = ">=5" },
     { name = "hypothesis", specifier = ">=6.16" },
+    { name = "invoke", specifier = "~=2.2" },
     { name = "ipython", specifier = ">=7" },
     { name = "line-profiler" },
     { name = "matplotlib", specifier = "~=3.4" },
@@ -1513,6 +1527,7 @@ doc = [
 ]
 gpu = [{ name = "torch", specifier = "~=2.4", index = "https://download.pytorch.org/whl/cu126", conflict = { package = "lenskit", group = "gpu" } }]
 reporting = [{ name = "coverage", specifier = ">=5" }]
+scripting = [{ name = "invoke", specifier = "~=2.2" }]
 test = [
     { name = "hypothesis", specifier = ">=6.16" },
     { name = "pyprojroot", specifier = "~=0.3.0" },
