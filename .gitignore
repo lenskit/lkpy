@@ -2,6 +2,8 @@
 *.log
 *.pdb
 *.prof
+*.profraw
+*.lcov
 *.lprof
 emissions.csv
 intel_power_gadget_log.csv
@@ -36,6 +38,8 @@ scratch/
 # build outputs
 build/
 dist/
+target/
+/output/
 *.egg-info
 *.pyd
 *.so

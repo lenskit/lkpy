@@ -1,0 +1,23 @@
+[package]
+name = "lenskit"
+version = "2025.3.0"
+edition = "2021"
+
+[lib]
+name = "_accel"
+path = "src/accel/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+arrow = { version = "^55", features = ["pyarrow"], default-features = false }
+log = "^0.4"
+ordered-float = "^5"
+pyo3 = { version = "^0.24", features = ["extension-module"] }
+pyo3-log = "^0.12"
+rayon = "^1.10"
+
+[profile.dev]
+opt-level = 2
+
+[profile.release]
+lto = true

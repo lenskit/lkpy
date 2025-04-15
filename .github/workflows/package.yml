@@ -9,8 +9,8 @@ on:
     types: [published]
 
 jobs:
-  dist:
-    name: Build Packages
+  sdist:
+    name: Build sdist
     runs-on: ubuntu-latest
 
     steps:
@@ -29,23 +29,54 @@ jobs:
       - name: Install Python deps
         run: pip install -U build
 
-      - name: Build distribution
+      - name: Build source distribution
         run: |
-          python -m build -o dist
+          python -m build -o dist -s
 
       - name: Save archive
         uses: actions/upload-artifact@v4
         with:
-          name: pypi-pkgs
+          name: pypi-dist-src
           path: dist
 
       - name: List dist dir
         run: ls -R dist
 
+  wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+          - windows-latest
+          # macos-13 is an intel runner, macos-14 is apple silicon
+          - macos-13
+          - macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.23.2
+        with:
+          output-dir: dist/wheelhouse
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "10.12"
+          CIBW_BEFORE_ALL_LINUX: curl -sSf https://sh.rustup.rs | sh -s -- -y
+          CIBW_BEFORE_ALL_WINDOWS: rustup target add i686-pc-windows-msvc
+          CIBW_ENVIRONMENT_LINUX: "PATH=$HOME/.cargo/bin:$PATH"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pypi-dist-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          path: ./dist/wheelhouse/*.whl
+
   pypi-publish:
     name: Publish to PyPI
     runs-on: ubuntu-latest
-    needs: [dist]
+    needs: [sdist, wheels]
     if: github.event_name == 'release'
 
     environment: release
@@ -56,7 +87,7 @@ jobs:
       - name: Fetch compiled package distributions
         uses: actions/download-artifact@v4
         with:
-          name: pypi-pkgs
+          pattern: pypi-dist-*
           path: dist
 
       - name: Publish package distributions to PyPI

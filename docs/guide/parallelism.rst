@@ -8,9 +8,11 @@ Parallel Processing
 LensKit supports various forms of parallel execution, each with an environment
 variable controlling its:
 
-- :doc:`Batch operations <batch>` using :ref:`multi-process execution <parallel-model-ops>`.
-- Parallel model training.  For most models provided by LensKit, this is usually
-  implemented using PyTorch JIT parallelism (:func:`torch.jit.fork`).
+- :doc:`Batch operations <batch>` using :ref:`multi-process execution
+  <parallel-model-ops>`.
+- Parallel model training.  For most models provided by LensKit, this is
+  implemented either using PyTorch JIT parallelism (:func:`torch.jit.fork`) or
+  using Rayon in the Rust extension module.
 - Parallel computation in the various backends (BLAS, MKL, Torch, etc.).
 
 .. _parallel-config:
@@ -38,7 +40,8 @@ The environment variables and their defaults are:
     number of CPUs or 8, whichever is smaller.
 
     This number is passed to :func:`torch.set_num_interop_threads` to set up the
-    Torch JIT thread count.
+    Torch JIT thread count, and is used to configure the Rayon thread pool used
+    by the Rust acceleration module.
 
 .. envvar:: LK_NUM_BACKEND_THREADS
 

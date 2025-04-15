@@ -8,6 +8,6 @@
     "ms-toolsai.jupyter",
     "trond-snekvik.simple-rst",
     "nefrob.vscode-just-syntax",
-    "denoland.vscode-deno"
+    "rust-lang.rust-analyzer"
   ]
 }

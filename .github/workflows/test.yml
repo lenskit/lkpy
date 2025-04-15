@@ -51,6 +51,8 @@ jobs:
             uv_extra="--no-extra ray"
           fi
           uv sync --all-extras $uv_extra --no-default-groups --group test
+        env:
+          SETUPTOOLS_RUST_CARGO_PROFILE: release
 
       - name: 📦 Set up Python dependencies (Windows)
         if: runner.os == 'Windows'
@@ -151,6 +153,8 @@ jobs:
         run: |
           uv sync --only-group=test
           uv pip install --resolution=lowest-direct '.[sklearn,hpf,implicit,funksvd]'
+        env:
+          SETUPTOOLS_RUST_CARGO_PROFILE: release
 
       - name: 🔍 Inspect environment
         run: |
@@ -197,6 +201,8 @@ jobs:
         run: |
           uv sync --only-group=test
           uv pip install --resolution=lowest-direct .
+        env:
+          SETUPTOOLS_RUST_CARGO_PROFILE: release
 
       - name: 🔍 Inspect environment
         run: |
@@ -242,6 +248,8 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           uv sync --all-extras --no-default-groups --group test
+        env:
+          SETUPTOOLS_RUST_CARGO_PROFILE: release
 
       - name: Cache ML data
         uses: actions/cache@v4
@@ -295,6 +303,8 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           uv sync --all-extras --no-default-groups --group test --group doc  --group demo
+        env:
+          SETUPTOOLS_RUST_CARGO_PROFILE: release
 
       - name: Cache ML data
         uses: actions/cache@v4

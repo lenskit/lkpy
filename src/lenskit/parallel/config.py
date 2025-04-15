@@ -16,6 +16,8 @@ from typing import Optional
 import torch
 from threadpoolctl import threadpool_limits
 
+from lenskit._accel import init_accel_pool
+
 _config: Optional[ParallelConfig] = None
 _log = logging.getLogger(__name__)
 
@@ -103,6 +105,12 @@ def initialize(
     except RuntimeError as e:
         _log.warning("failed to configure Pytorch interop threads: %s", e)
         warnings.warn("failed to set interop threads", RuntimeWarning)
+
+    try:
+        init_accel_pool(_config.threads)
+    except RuntimeError as e:
+        _log.warning("failed to initialize Rayon backend: %s", e)
+
     try:
         torch.set_num_threads(_config.backend_threads)
     except RuntimeError as e:

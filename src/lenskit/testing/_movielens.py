@@ -9,11 +9,11 @@ MovieLens test fixtures and data marks.
 """
 
 import os
+from pathlib import Path
 from typing import Generator, NamedTuple
 
 import numpy as np
 import pandas as pd
-from pyprojroot import here
 
 import pytest
 
@@ -28,9 +28,9 @@ from lenskit.splitting import TTSplit, simple_test_pair
 _log = get_logger("lenskit.testing")
 
 
-ml_test_dir = here("data/ml-latest-small")
-ml_100k_zip = here("data/ml-100k.zip")
-ml_25m_zip = here("data/ml-25m.zip")
+ml_test_dir = Path("data/ml-latest-small")
+ml_100k_zip = Path("data/ml-100k.zip")
+ml_25m_zip = Path("data/ml-25m.zip")
 
 ml_test: Dataset = Dataset(lambda: load_movielens(ml_test_dir))
 

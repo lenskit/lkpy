@@ -19,6 +19,21 @@ information on how to upgrade your code.
     ``"popular"`` as an alias for ``"popularity"``.
 -   :mod:`lenskit.basic` now exports the configuration classes for basic algorithms (:pr:`672`).
 -   Several bug fixes for logging in niche setups (including ray clusters) (:pr:`673`).
+-   Added Rust acceleration for some data processing operations and kNN models.
+
+Component Changes
+.................
+
+-   :class:`~lenskit.knn.ItemKNNScorer` is rewritten to use Rust acceleration,
+    along with changes to its internal data representation to use Arrow instead
+    of SciPy.  This also fixes a segfault with very large similarity matrices.
+
+    .. note::
+
+        The model parameters of the Item KNN scorer have changed.  They are no
+        longer suffixed with ``_``, and the similarity matrix is a PyArrow list
+        array.  Code that was directly examining internal elements will need to
+        change.
 
 .. _2025.2.0:
 

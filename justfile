@@ -6,7 +6,7 @@ list-tasks:
 
 # clean up build artifacts
 clean:
-    rm -rf build dist *.egg-info */dist */build
+    rm -rf build dist output target *.egg-info */dist */build
     git clean -xf docs
 
 # build the modules and wheels
@@ -24,6 +24,9 @@ install:
 # install the package (editable)
 install-editable:
     {{PIP}} install -e  .
+
+build-rust:
+    python setup.py build_rust --inplace
 
 # run tests with default configuration
 test:

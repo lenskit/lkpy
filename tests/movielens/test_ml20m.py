@@ -20,7 +20,7 @@ from lenskit.pipeline import topn_pipeline
 
 _log = logging.getLogger(__name__)
 
-_ml_path = Path("data/ml-20m")
+_ml_path = Path("data/ml-20m.zip")
 
 
 @pytest.fixture(scope="module")

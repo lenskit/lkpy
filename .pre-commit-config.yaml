@@ -26,6 +26,13 @@ repos:
       - id: ruff-format
   - repo: local
     hooks:
+      - id: rustfmt
+        name: format rust
+        entry: rustfmt --edition 2021
+        language: system
+        types_or:
+          - rust
+
       - id: dprint
         name: format configuration files
         entry: dprint fmt --allow-no-files
