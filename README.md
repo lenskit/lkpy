@@ -63,8 +63,47 @@ at <https://lkpy.lenskit.org>.
 [conda-lock]: https://github.com/conda-incubator/conda-lock
 [lkdev]: https://github.com/lenskit/lkdev
 
-We recommend using `uv` for developing LensKit.  Our `pyproject.toml` file
-contains the development dependencies.  To set up a development environment:
+We use [`uv`](https://astral.sh/uv/) for developing LensKit and managing
+development environments.  Our `pyproject.toml` file contains the Python
+development dependencies; you also need a working Rust compiler (typically via
+[`rustup`](https://rustup.rs/)).  Before setting up to work on LensKit, you
+therefore need:
+
+- Git
+- `uv`
+- `rustup` and a working Rust compiler (`rustup install stable`)
+- A working C compiler compatible with Python
+    - On Windows, this is either Visual Studio (with C++ development) or the
+      Visual C++ Build Tools. See the [Rustup Windows install
+      instructions][rsu-win] for details.
+    - On Mac, install Xcode.
+    - On Linux, see your system package manager instructions.
+
+<details>
+<summary>Windows</summary>
+
+On Windows, you can install dependencies (except for the Visual C++ tools) with `winget`:
+
+```console
+> winget install Git.Git astral-sh.uv Rustlang.Rustup
+> rustup install stable-msvc
+```
+</details>
+
+<details>
+<summary>Mac</summary>
+
+On Mac, you can install the dependencies with Homebrew:
+
+```console
+$ brew install git uv rustup
+```
+</details>
+
+[rsu-win]: https://ehuss.github.io/rustup/installation/windows.html
+
+Once you have the dependencies installed, set up your LensKit development
+environment:
 
 ```console
 $ uv venv -p 3.12
