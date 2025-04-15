@@ -1,10 +1,16 @@
+import logging
 import os
+import os.path
 from pathlib import Path
+from shutil import rmtree
 
 from invoke.context import Context
 from invoke.tasks import task
 
 CACHEDIR_TAG = "Signature: 8a477f597d28d172789f06886806bc55"
+
+_log = logging.getLogger("lenskit.invoke")
+root = Path(__file__).parent
 
 
 def _make_cache_dir(path: str | Path):
@@ -51,3 +57,24 @@ def build_conda(c: Context):
     if "CI" in os.environ:
         cmd += " --noarch-build-platform linux-64"
     c.run(cmd, echo=True, env={"LK_PACKAGE_VERSION": version})
+
+
+@task
+def clean(c: Context):
+    print(c.config)
+    for od in ["build", "dist", "output", "target"]:
+        odp = root / od
+        if odp.exists():
+            print(f"🚮 removing {od}/   ")
+            if not c.config.run.dry:
+                rmtree(odp, ignore_errors=True)
+
+    for glob in ["*.lprof", "*.profraw", "*.prof", "*.log"]:
+        print(f"🚮 removing {glob}")
+        for file in root.glob(glob):
+            _log.info("removing %s", file)
+            if not c.config.run.dry:
+                file.unlink()
+
+    print("cleaning generated doc files")
+    c.run("git clean -xf docs")
