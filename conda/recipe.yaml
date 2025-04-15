@@ -67,10 +67,12 @@ outputs:
             - tests
             - conftest.py
             - data
+            - pyproject.toml
         requirements:
           run:
             - pytest >=8.2,<9
             - pytest-benchmark =4
+            - pytest-doctestplus >=1.2.1,<2
             - hypothesis >=6.16
             - pyyaml ~=6.0
 
@@ -95,10 +97,12 @@ outputs:
             - tests
             - conftest.py
             - data
+            - pyproject.toml
         requirements:
           run:
             - pytest >=8.2,<9
             - pytest-benchmark =4
+            - pytest-doctestplus >=1.2.1,<2
             - hypothesis >=6.16
             - pyyaml ~=6.0
 
@@ -122,10 +126,12 @@ outputs:
             - tests
             - conftest.py
             - data
+            - pyproject.toml
         requirements:
           run:
             - pytest >=8.2,<9
             - pytest-benchmark =4
+            - pytest-doctestplus >=1.2.1,<2
             - hypothesis >=6.16
             - pyyaml ~=6.0
 
@@ -150,10 +156,12 @@ outputs:
             - tests
             - conftest.py
             - data
+            - pyproject.toml
         requirements:
           run:
             - pytest >=8.2,<9
             - pytest-benchmark =4
+            - pytest-doctestplus >=1.2.1,<2
             - hypothesis >=6.16
             - pyyaml ~=6.0
 
@@ -178,10 +186,12 @@ outputs:
             - tests
             - conftest.py
             - data
+            - pyproject.toml
         requirements:
           run:
             - pytest >=8.2,<9
             - pytest-benchmark =4
+            - pytest-doctestplus >=1.2.1,<2
             - hypothesis >=6.16
             - pyyaml ~=6.0
 
