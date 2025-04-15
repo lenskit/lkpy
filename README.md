@@ -127,24 +127,14 @@ $ . ./.venv/bin/activate
 
 You should always test your changes by running the LensKit test suite:
 
-    python -m pytest
+    pytest tests
 
 If you want to use your changes in a LensKit experiment, you can locally install
 your modified LensKit into your experiment's environment.  We recommend using
 separate environments for LensKit development and for each experiment; you will
 need to install the modified LensKit into your experiment's repository:
 
-    conda activate my-exp
-    conda install -c conda-forge
-    cd /path/to/lkpy
-    pip install -e . --no-deps
-
-You may need to first uninstall LensKit from your experiment repo; make sure that
-LensKit's dependencies are all still installed.
-
-Once you have pushed your code to a GitHub branch, you can use a Git repository as
-a Pip dependency in an `environment.yml` for your experiment, to keep using the
-correct modified version of LensKit until your changes make it in to a release.
+    uv pip install -e /path/to/lkpy
 
 ## Resources
 
