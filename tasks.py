@@ -1,16 +1,40 @@
 import os
+from pathlib import Path
 
-from invoke import task
 from invoke.context import Context
+from invoke.tasks import task
+
+CACHEDIR_TAG = "Signature: 8a477f597d28d172789f06886806bc55"
+
+
+def _make_cache_dir(path: str | Path):
+    "Create a directory and a CACHEDIR.TAG file."
+    path = Path(path)
+    path.mkdir(exist_ok=True)
+    with open(path / "CACHEDIR.TAG", "wt") as ctf:
+        print(CACHEDIR_TAG, file=ctf)
+        print("# Cache directory marker for LensKit build", file=ctf)
+        print(
+            "# For information about cache directory tags see https://bford.info/cachedir/",
+            file=ctf,
+        )
 
 
 @task
+def setup_dirs(c: Context):
+    "Initialize output directories."
+    _make_cache_dir("dist")
+    _make_cache_dir("build")
+    _make_cache_dir("output")
+
+
+@task(setup_dirs)
 def build_sdist(c: Context):
     "Build source distribution."
     c.run("uv build --sdist")
 
 
-@task
+@task(setup_dirs)
 def build_dist(c: Context):
     "Build packages for the current platform."
     c.run("uv build")
