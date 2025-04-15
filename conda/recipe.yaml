@@ -64,7 +64,7 @@ outputs:
           - pytest tests
         files:
           source:
-            - tests
+            - tests/
             - conftest.py
             - data
             - pyproject.toml
@@ -94,7 +94,7 @@ outputs:
           - pytest tests/funksvd
         files:
           source:
-            - tests
+            - tests/
             - conftest.py
             - data
             - pyproject.toml
@@ -123,7 +123,7 @@ outputs:
           - pytest tests/sklearn
         files:
           source:
-            - tests
+            - tests/
             - conftest.py
             - data
             - pyproject.toml
@@ -153,7 +153,7 @@ outputs:
           - pytest tests/implicit
         files:
           source:
-            - tests
+            - tests/
             - conftest.py
             - data
             - pyproject.toml
@@ -183,7 +183,7 @@ outputs:
           - pytest tests/hpf
         files:
           source:
-            - tests
+            - tests/
             - conftest.py
             - data
             - pyproject.toml
