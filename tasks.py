@@ -2,12 +2,14 @@ import logging
 import os
 import os.path
 from pathlib import Path
-from shutil import rmtree
+from shutil import copyfileobj, rmtree
+from urllib.request import urlopen
 
 from invoke.context import Context
 from invoke.tasks import task
 
 CACHEDIR_TAG = "Signature: 8a477f597d28d172789f06886806bc55"
+BIBTEX_PATH = "http://127.0.0.1:23119/better-bibtex/export/collection?/4/9JMHQD9K.bibtex"
 
 _log = logging.getLogger("lenskit.invoke")
 root = Path(__file__).parent
@@ -46,6 +48,15 @@ def build_dist(c: Context):
     c.run("uv build")
 
 
+@task(setup_dirs)
+def build_accel(c: Context, release: bool = False):
+    "Build the accelerator in-place."
+    cmd = "python setup.py build_rust --inplace"
+    if release:
+        cmd += " --release"
+    c.run(cmd, echo=True)
+
+
 @task(build_sdist)
 def build_conda(c: Context):
     "Build Conda packages."
@@ -57,6 +68,31 @@ def build_conda(c: Context):
     if "CI" in os.environ:
         cmd += " --noarch-build-platform linux-64"
     c.run(cmd, echo=True, env={"LK_PACKAGE_VERSION": version})
+
+
+@task(setup_dirs)
+def docs(c: Context):
+    "Build documentation."
+    c.run("sphinx-build docs build/doc")
+
+
+@task(setup_dirs)
+def preview_docs(c: Context):
+    "Auto-build and preview documentation."
+    c.run("sphinx-autobuild --watch src docs build/doc")
+
+
+@task
+def update_bibtex(c: Context):
+    "Update BibTeX file."
+    print("fetching BibTeX")
+    with urlopen(BIBTEX_PATH) as src, open("docs/lenskit.bib", "wb") as dst:
+        copyfileobj(src, dst)
+
+
+@task
+def update_headers(c: Context):
+    c.run("unbehead", echo=True)
 
 
 @task
