@@ -7,7 +7,6 @@
     "tamasfe.even-better-toml",
     "ms-toolsai.jupyter",
     "trond-snekvik.simple-rst",
-    "nefrob.vscode-just-syntax",
     "rust-lang.rust-analyzer"
   ]
 }
