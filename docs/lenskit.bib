@@ -26,6 +26,20 @@
   abstract = {Abstract This work shows how to leverage causal inference to understand the behavior of complex learning systems interacting with their environment and predict the consequences of changes to the system. Such predictions allow both humans and algorithms to select the changes that would have improved the system performance. This work is illustrated by experiments on the ad placement system associated with the Bing search engine.}
 }
 
+@inproceedings{BPR,
+  title = {{{BPR}}: {{Bayesian Personalized Ranking}} from {{Implicit Feedback}}},
+  booktitle = {{{UAI}} '09},
+  author = {Rendle, Steffen and Freudenthaler, Christoph and Gantner, Zeno and {Schmidt-Thieme}, Lars},
+  year = {2009},
+  pages = {452--461},
+  publisher = {AUAI Press},
+  address = {Arlington, Virginia, United States},
+  url = {http://dl.acm.org/citation.cfm?id=1795114.1795167},
+  urldate = {2015-10-16},
+  abstract = {Item recommendation is the task of predicting a personalized ranking on a set of items (e.g. websites, movies, products). In this paper, we investigate the most common scenario with implicit feedback (e.g. clicks, purchases). There are many methods for item recommendation from implicit feedback like matrix factorization (MF) or adaptive k-nearest-neighbor (kNN). Even though these methods are designed for the item prediction task of personalized ranking, none of them is directly optimized for ranking. In this paper we present a generic optimization criterion BPR-Opt for personalized ranking that is the maximum posterior estimator derived from a Bayesian analysis of the problem. We also provide a generic learning algorithm for optimizing models with respect to BPR-Opt. The learning method is based on stochastic gradient descent with bootstrap sampling. We show how to apply our method to two state-of-the-art recommender models: matrix factorization and adaptive kNN. Our experiments indicate that for the task of personalized ranking our optimization method outperforms the standard learning techniques for MF and kNN. The results show the importance of optimizing models for the right criterion.},
+  keywords = {CAREER,Zotero Import (Mar 30),Zotero Import (Mar 30)/My Library,Zotero Import (Mar 30)/My Library/Recommender Systems,Zotero Import (Mar 30)/My Library/Recommender Systems/Class Spring 2017}
+}
+
 @unpublished{buitinckAPIDesignMachine2013a,
   title = {{{API Design}} for {{Machine Learning Software}}: {{Experiences}} from the Scikit-Learn {{Project}}},
   author = {Buitinck, Lars and Louppe, Gilles and Blondel, Mathieu and Pedregosa, Fabian and Mueller, Andreas and Grisel, Olivier and Niculae, Vlad and Prettenhofer, Peter and Gramfort, Alexandre and Grobler, Jaques and Layton, Robert and Vanderplas, Jake and Joly, Arnaud and Holt, Brian and Varoquaux, Ga{\"e}l},
@@ -310,7 +324,7 @@
   doi = {10.1145/3637528.3671687},
   urldate = {2025-01-13},
   abstract = {Approaches to recommendation are typically evaluated in one of two ways: (1) via a (simulated) online experiment, often seen as the gold standard, or (2) via some offline evaluation procedure, where the goal is to approximate the outcome of an online experiment. Several offline evaluation metrics have been adopted in the literature, inspired by ranking metrics prevalent in the field of Information Retrieval. (Normalised) Discounted Cumulative Gain (nDCG) is one such metric that has seen widespread adoption in empirical studies, and higher (n)DCG values have been used to present new methods as the state-of-the-art in top-n recommendation for many years.Our work takes a critical look at this approach, and investigates when we can expect such metrics to approximate the gold standard outcome of an online experiment. We formally present the assumptions that are necessary to consider DCG an unbiased estimator of online reward and provide a derivation for this metric from first principles, highlighting where we deviate from its traditional uses in IR. Importantly, we show that normalising the metric renders it inconsistent, in that even when DCG is unbiased, ranking competing methods by their normalised DCG can invert their relative order. Through a correlation analysis between off- and on-line experiments conducted on a large-scale recommendation platform, we show that our unbiased DCG estimates strongly correlate with online reward, even when some of the metric's inherent assumptions are violated. This statement no longer holds for its normalised variant, suggesting that nDCG's practical utility may be limited.},
-  isbn = {9798400704901}
+  isbn = {979-8-4007-0490-1}
 }
 
 @book{kluverBookLens2014,
@@ -408,6 +422,19 @@
   keywords = {CAREER,LensKit References}
 }
 
+@inproceedings{lightfm,
+  title = {Metadata Embeddings for User and Item Cold-Start Recommendations},
+  booktitle = {Proceedings of the 2nd Workshop on New Trends on Content-Based Recommender Systems Co-Located with 9th {{ACM}} Conference on Recommender Systems ({{RecSys}} 2015), Vienna, Austria, September 16-20, 2015.},
+  author = {Kula, Maciej},
+  editor = {Bogers, Toine and Koolen, Marijn},
+  year = {2015},
+  series = {{{CEUR}} Workshop Proceedings},
+  volume = {1448},
+  pages = {14--21},
+  publisher = {CEUR-WS.org},
+  url = {http://ceur-ws.org/Vol-1448/paper4.pdf}
+}
+
 @inproceedings{lkpy,
   title = {{{LensKit}} for {{Python}}: {{Next-Generation Software}} for {{Recommender System Experiments}}},
   booktitle = {Proceedings of the 29th {{ACM International Conference}} on {{Information}} and {{Knowledge Management}}},
@@ -415,6 +442,18 @@
   year = {2020},
   doi = {10.1145/3340531.3412778},
   keywords = {LensKit References,PIReT Papers}
+}
+
+@article{LogisticMF,
+  title = {Logistic Matrix Factorization for Implicit Feedback Data},
+  author = {Johnson, Christopher C},
+  year = {2014},
+  journal = {Adv. Neural Inf. Process. Syst.},
+  volume = {27},
+  publisher = {stanford.edu},
+  issn = {1049-5258},
+  url = {http://web.stanford.edu/~rezab/nips2014workshop/submits/logmat.pdf},
+  abstract = {Collaborative filtering with implicit feedback data involves recommender system techniques for analyzing relationships betweens users and items using implicit signals such as click through data or music streaming play counts to provide users with personalized {\dots}}
 }
 
 @misc{martinabadiTensorFlowLargeScaleMachine2015,
@@ -600,20 +639,6 @@
   abstract = {A range of methods for measuring the effectiveness of information retrieval systems has been proposed. These are typically intended to provide a quantitative single-value summary of a document ranking relative to a query. However, many of these measures have failings {\dots}}
 }
 
-@inproceedings{BPR,
-  title = {{{BPR}}: {{Bayesian Personalized Ranking}} from {{Implicit Feedback}}},
-  booktitle = {{{UAI}} '09},
-  author = {Rendle, Steffen and Freudenthaler, Christoph and Gantner, Zeno and {Schmidt-Thieme}, Lars},
-  year = {2009},
-  pages = {452--461},
-  publisher = {AUAI Press},
-  address = {Arlington, Virginia, United States},
-  url = {http://dl.acm.org/citation.cfm?id=1795114.1795167},
-  urldate = {2015-10-16},
-  abstract = {Item recommendation is the task of predicting a personalized ranking on a set of items (e.g. websites, movies, products). In this paper, we investigate the most common scenario with implicit feedback (e.g. clicks, purchases). There are many methods for item recommendation from implicit feedback like matrix factorization (MF) or adaptive k-nearest-neighbor (kNN). Even though these methods are designed for the item prediction task of personalized ranking, none of them is directly optimized for ranking. In this paper we present a generic optimization criterion BPR-Opt for personalized ranking that is the maximum posterior estimator derived from a Bayesian analysis of the problem. We also provide a generic learning algorithm for optimizing models with respect to BPR-Opt. The learning method is based on stochastic gradient descent with bootstrap sampling. We show how to apply our method to two state-of-the-art recommender models: matrix factorization and adaptive kNN. Our experiments indicate that for the task of personalized ranking our optimization method outperforms the standard learning techniques for MF and kNN. The results show the importance of optimizing models for the right criterion.},
-  keywords = {CAREER,Zotero Import (Mar 30),Zotero Import (Mar 30)/My Library,Zotero Import (Mar 30)/My Library/Recommender Systems,Zotero Import (Mar 30)/My Library/Recommender Systems/Class Spring 2017}
-}
-
 @inproceedings{resnickGroupLensOpenArchitecture1994,
   title = {{{GroupLens}}: {{An Open Architecture}} for {{Collaborative Filtering}} of {{Netnews}}},
   shorttitle = {{{GroupLens}}},
@@ -784,6 +809,30 @@
   doi = {10.1038/s41592-019-0686-2},
   abstract = {SciPy is an open-source scientific computing library for the Python programming language. Since its initial release in 2001, SciPy has become a de facto standard for leveraging scientific algorithms in Python, with over 600 unique code contributors, thousands of dependent packages, over 100,000 dependent repositories and millions of downloads per year. In this work, we provide an overview of the capabilities and development practices of SciPy 1.0 and highlight some recent technical developments.},
   keywords = {LensKit References,Software}
+}
+
+@inproceedings{warp-bibtex,
+  title = {Learning to Rank Recommendations with the K-Order Statistic Loss},
+  booktitle = {{{RecSys}} '13},
+  author = {Weston, Jason and Yee, Hector and Weiss, Ron J},
+  year = {2013},
+  month = oct,
+  pages = {245--248},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  doi = {10.1145/2507157.2507210},
+  urldate = {2021-02-23},
+  abstract = {Making recommendations by learning to rank is becoming an increasingly studied area. Approaches that use stochastic gradient descent scale well to large collaborative filtering datasets, and it has been shown how to approximately optimize the mean rank, or more recently the top of the ranked list. In this work we present a family of loss functions, the k-order statistic loss, that includes these previous approaches as special cases, and also derives new ones that we show to be useful. In particular, we present (i) a new variant that more accurately optimizes precision at k, and (ii) a novel procedure of optimizing the mean maximum rank, which we hypothesize is useful to more accurately cover all of the user's tastes. The general approach works by sampling N positive items, ordering them by the score assigned by the model, and then weighting the example as a function of this ordered set. Our approach is studied in two real-world systems, Google Music and YouTube video recommendations, where we obtain improvements for computable metrics, and in the YouTube case, increased user click through and watch duration when deployed live on www.youtube.com.}
+}
+
+@inproceedings{westonWSABIEScalingLarge2011,
+  title = {{{WSABIE}}: {{Scaling}} up to Large Vocabulary Image Annotation},
+  booktitle = {Proceedings of the {{Twenty-Second International Joint Conference}} on {{Artificial Intelligence}}},
+  author = {Weston, Jason and Bengio, Samy and Usunier, Nicolas},
+  year = {2011},
+  month = jul,
+  url = {https://www.ijcai.org/Proceedings/11/Papers/460.pdf},
+  urldate = {2021-02-25}
 }
 
 @inproceedings{yagciParallelizingSGDPairwise2017,
