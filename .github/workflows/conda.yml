@@ -15,6 +15,7 @@ jobs:
     name: Build Conda packages on ${{matrix.platform}}
     runs-on: ${{matrix.platform}}
     strategy:
+      fail-fast: false
       matrix:
         platform:
           - ubuntu-latest
