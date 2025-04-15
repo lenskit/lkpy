@@ -61,7 +61,7 @@ outputs:
             - lenskit.als
             - lenskit.knn
       - script:
-          - pytest -m 'not slow' tests
+          - pytest -m "not slow" tests
         files:
           source:
             - tests/
@@ -91,7 +91,7 @@ outputs:
           imports:
             - lenskit.funksvd
       - script:
-          - pytest -m 'not slow' tests/funksvd
+          - pytest -m "not slow" tests/funksvd
         files:
           source:
             - tests/
@@ -120,7 +120,7 @@ outputs:
           imports:
             - lenskit.sklearn.svd
       - script:
-          - pytest -m 'not slow' tests/sklearn
+          - pytest -m "not slow" tests/sklearn
         files:
           source:
             - tests/
@@ -150,7 +150,7 @@ outputs:
           imports:
             - lenskit.implicit
       - script:
-          - pytest -m 'not slow' tests/implicit
+          - pytest -m "not slow" tests/implicit
         files:
           source:
             - tests/
@@ -180,7 +180,7 @@ outputs:
           imports:
             - lenskit.hpf
       - script:
-          - pytest -m 'not slow' tests/hpf
+          - pytest -m "not slow" tests/hpf
         files:
           source:
             - tests/
