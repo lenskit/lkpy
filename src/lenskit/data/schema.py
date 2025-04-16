@@ -126,6 +126,11 @@ class DataSchema(BaseModel, extra="forbid"):
     Description of the entities and layout of a dataset.
     """
 
+    version: str = "2025.1"
+    """
+    The data layout version.
+    """
+
     name: str | None = None
     """
     The dataset name.
