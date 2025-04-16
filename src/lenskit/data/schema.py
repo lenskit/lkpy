@@ -121,7 +121,7 @@ class AttrLayout(Enum):
     """
 
 
-class DataSchema(BaseModel, extra="forbid"):
+class DataSchema(BaseModel):
     """
     Description of the entities and layout of a dataset.
     """
@@ -151,7 +151,7 @@ class DataSchema(BaseModel, extra="forbid"):
     """
 
 
-class EntitySchema(BaseModel, extra="forbid"):
+class EntitySchema(BaseModel):
     """
     Entity class definitions in the dataset schema.
     """
@@ -166,7 +166,7 @@ class EntitySchema(BaseModel, extra="forbid"):
     """
 
 
-class RelationshipSchema(BaseModel, extra="forbid"):
+class RelationshipSchema(BaseModel):
     """
     Relationship class definitions in the dataset schema.
     """
@@ -195,7 +195,7 @@ class RelationshipSchema(BaseModel, extra="forbid"):
         return list(self.entities.keys())
 
 
-class ColumnSpec(BaseModel, extra="forbid"):
+class ColumnSpec(BaseModel):
     layout: AttrLayout = AttrLayout.SCALAR
     """
     The attribute layout (whether and how multiple values are supported).
