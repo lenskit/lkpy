@@ -1,5 +1,5 @@
 import subprocess as sp
-from os import fspath
+from os import environ, fspath
 from pathlib import Path
 
 from pytest import mark, skip
@@ -30,7 +30,7 @@ def test_data_backwards_compat(version, tmpdir: Path):
 
     sp.check_call(
         ["uvx", pkg, "data", "convert", "--movielens", fspath(ml_test_dir), fspath(out_path)],
-        env={"UV_TORCH_BACKEND": "cpu"},
+        env=environ | {"UV_TORCH_BACKEND": "cpu"},
     )
 
     _log.info("loading dataset")
@@ -54,7 +54,7 @@ def test_data_backwards_ml20m(version, tmpdir: Path):
 
     sp.check_call(
         ["uvx", pkg, "data", "convert", "--movielens", fspath(_ml_path), fspath(out_path)],
-        env={"UV_TORCH_BACKEND": "cpu"},
+        env=environ | {"UV_TORCH_BACKEND": "cpu"},
     )
 
     _log.info("loading dataset")
