@@ -90,5 +90,8 @@ jobs:
           pattern: pypi-dist-*
           path: dist
 
+      - name: List distribution artifacts
+        run: ls -R dist
+
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
