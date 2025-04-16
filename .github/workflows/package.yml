@@ -89,6 +89,7 @@ jobs:
         with:
           pattern: pypi-dist-*
           path: dist
+          merge-multiple: true
 
       - name: List distribution artifacts
         run: ls -R dist
