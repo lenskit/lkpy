@@ -23,7 +23,18 @@ import re
 from enum import Enum
 from typing import Annotated, Any, Literal, TypeAlias
 
-from pydantic import BaseModel, StringConstraints, model_validator
+from pydantic import (
+    BaseModel,
+    StringConstraints,
+    ValidationInfo,
+    model_validator,
+)
+
+CURRENT_VERSION = "2025.2"
+OLDEST_VERSION = "2025.1"
+
+# Pydantic context to use when loading rather than constructing.
+LOAD_CONTEXT = {"version": "compat"}
 
 NAME_PATTERN = re.compile(r"^[\w_]+$")
 Name: TypeAlias = Annotated[str, StringConstraints(pattern=NAME_PATTERN)]
@@ -126,9 +137,14 @@ class DataSchema(BaseModel):
     Description of the entities and layout of a dataset.
     """
 
-    version: str = "2025.1"
+    version: str = CURRENT_VERSION
     """
     The data layout version.
+
+    .. note::
+
+        When a new schema model is created, this defaults to the current version
+        instead of the oldest version.
     """
 
     name: str | None = None
@@ -149,6 +165,25 @@ class DataSchema(BaseModel):
     """
     Relationship classes defined for this dataset.
     """
+
+    @model_validator(mode="before")
+    @classmethod
+    def _default_version(cls, data: Any, info: ValidationInfo):
+        ctx = info.context
+        vmode = ctx.get("version", "current") if isinstance(ctx, dict) else None  # type: ignore
+        if "version" not in data and vmode == "compat":
+            return data | {"version": OLDEST_VERSION}
+        else:
+            return data
+
+    @classmethod
+    def model_validate_json(
+        cls, json_data: str | bytes | bytearray, *, context: Any = None, **kwargs: Any
+    ):
+        if context is None:
+            context = LOAD_CONTEXT
+
+        return super().model_validate_json(json_data, context=context, **kwargs)
 
 
 class EntitySchema(BaseModel):
