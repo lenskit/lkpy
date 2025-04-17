@@ -12,6 +12,7 @@ Matrix layouts.
 from __future__ import annotations
 
 import json
+import warnings
 from typing import Any, NamedTuple, TypeVar
 
 import numpy as np
@@ -201,7 +202,10 @@ class SparseRowType(pa.ExtensionType):
                 f"index type must be SparseIndex when no external dimension, found {idx_f.type}"
             )
         elif not pa.types.is_int32(idx_f.type):
-            raise TypeError(f"index type must be SparseIndex or int32, found {idx_f.type}")
+            if pa.types.is_int64(idx_f.type):
+                warnings.warn("sparse row has legacy int64 indices", DeprecationWarning)
+            else:
+                raise TypeError(f"index type must be SparseIndex or int32, found {idx_f.type}")
 
         val_f = inner.fields[1]
         if val_f.name != "value":
