@@ -181,9 +181,9 @@ class SparseRowType(pa.ExtensionType):
             data_type.index_type.check_dimension(dimension)
             return data_type
 
-        if pa.types.is_list(data_type) or pa.types.is_list_view(data_type):
+        if pa.types.is_list(data_type):
             large = False
-        elif pa.types.is_large_list(data_type) or pa.types.is_large_list_view(data_type):
+        elif pa.types.is_large_list(data_type):
             large = True
         else:
             raise TypeError(f"expected list type, found {data_type}")
@@ -191,10 +191,10 @@ class SparseRowType(pa.ExtensionType):
 
         if not pa.types.is_struct(inner):
             raise TypeError(f"expected struct element type, found {inner}")
-        if len(inner.fields) != 2:
-            raise TypeError(f"element struct must have 2 elements, found {len(inner.fields)}")
+        if inner.num_fields != 2:
+            raise TypeError(f"element struct must have 2 elements, found {inner.num_fields}")
 
-        idx_f = inner.fields[0]
+        idx_f = inner.field(0)
         assert isinstance(idx_f, pa.Field)
         if idx_f.name != "index":
             raise TypeError(f"first field of element struct must be 'index', found {idx_f.name}")
@@ -211,7 +211,7 @@ class SparseRowType(pa.ExtensionType):
             else:
                 raise TypeError(f"index type must be SparseIndex or int32, found {idx_f.type}")
 
-        val_f = inner.fields[1]
+        val_f = inner.field(1)
         if val_f.name != "value":
             raise TypeError(f"second field of element struct must be 'value', found {val_f.name}")
 
