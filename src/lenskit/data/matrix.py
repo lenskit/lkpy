@@ -282,10 +282,26 @@ class SparseRowArray(pa.ExtensionArray):
         return pa.ExtensionArray.from_storage(SparseRowType(dim, vals.type, large=large), rows)  # type: ignore
 
     def to_csr(self) -> sps.csr_array:
+        """
+        Convert this sparse row array to a SciPy sparse array.
+        """
         assert isinstance(self.type, SparseRowType)
         return sps.csr_array(
             (self.values.to_numpy(), self.indices.to_numpy(), self.offsets.to_numpy()),
             shape=(len(self), self.type.dimension),
+        )
+
+    def to_torch(self) -> torch.Tensor:
+        """
+        Convert this sparse row array to a Torch sparse tensor.
+        """
+        return torch.sparse_csr_tensor(
+            crow_indices=torch.as_tensor(
+                self.offsets.to_numpy(zero_copy_only=False, writable=True)
+            ),
+            col_indices=torch.as_tensor(self.indices.to_numpy(zero_copy_only=False, writable=True)),
+            values=torch.as_tensor(self.values.to_numpy(zero_copy_only=False, writable=True)),
+            size=self.shape,
         )
 
     @property

@@ -344,12 +344,7 @@ class SparseAttributeSet(AttributeSet):
     def torch(self) -> torch.Tensor:
         col = self.arrow()
 
-        return torch.sparse_csr_tensor(
-            crow_indices=torch.as_tensor(col.offsets.to_numpy(zero_copy_only=False, writable=True)),
-            col_indices=torch.as_tensor(col.indices.to_numpy(zero_copy_only=False, writable=True)),
-            values=torch.as_tensor(col.values.to_numpy(zero_copy_only=False, writable=True)),
-            size=col.shape,
-        )
+        return col.to_torch()
 
 
 def _replace_vectors(
