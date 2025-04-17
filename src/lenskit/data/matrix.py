@@ -219,35 +219,3 @@ class SparseRowArray(pa.ExtensionArray):
 
 pa.register_extension_type(SparseRowType(0))  # type: ignore
 pa.register_extension_type(SparseIndexType(0))  # type: ignore
-
-
-def sparse_to_arrow(arr: sps.csr_array) -> pa.ListArray:
-    """
-    Convert a spare matrix into a PyArrow list array.  The
-    resulting array has 32-bit column indices and values.
-    """
-
-    cols = pa.array(arr.indices, pa.int32())
-    vals = pa.array(arr.data, pa.float32())
-
-    entries = pa.StructArray.from_arrays([cols, vals], ["index", "value"])
-    rows = pa.ListArray.from_arrays(pa.array(arr.indptr, pa.int32()), entries)
-    return rows
-
-
-def sparse_from_arrow(
-    arr: pa.ListArray | pa.LargeListArray, shape: tuple[int, int] | None = None
-) -> sps.csr_array:
-    """
-    Convert a spare matrix into a PyArrow list array.  The
-    resulting array has 32-bit column indices and values.
-    """
-    entries = arr.values
-    if not pa.types.is_struct(entries.type):
-        raise TypeError(f"entry type {entries.type}, expected struct")
-    assert isinstance(entries, pa.StructArray)
-
-    cols = entries.field("index")
-    vals = entries.field("value")
-
-    return sps.csr_array((vals.to_numpy(), cols.to_numpy(), arr.offsets.to_numpy()), shape=shape)

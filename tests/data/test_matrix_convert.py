@@ -19,8 +19,6 @@ from lenskit.data.matrix import (
     SparseIndexType,
     SparseRowArray,
     SparseRowType,
-    sparse_from_arrow,
-    sparse_to_arrow,
 )
 from lenskit.logging import get_logger
 from lenskit.testing import sparse_arrays
