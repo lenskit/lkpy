@@ -338,20 +338,17 @@ class SparseAttributeSet(AttributeSet):
 
     def scipy(self) -> csr_array:
         col = self.arrow()
-        if isinstance(col, pa.ChunkedArray):
-            col = col.combine_chunks()
-
-        col = SparseRowArray.from_array(col, self._spec.vector_size)
 
         return col.to_csr()
 
     def torch(self) -> torch.Tensor:
-        csr = self.scipy()
+        col = self.arrow()
+
         return torch.sparse_csr_tensor(
-            crow_indices=np.require(csr.indptr, requirements="W"),
-            col_indices=np.require(csr.indices, requirements="W"),
-            values=np.require(csr.data, requirements="W"),
-            size=csr.shape,
+            crow_indices=torch.as_tensor(col.offsets.to_numpy(zero_copy_only=False, writable=True)),
+            col_indices=torch.as_tensor(col.indices.to_numpy(zero_copy_only=False, writable=True)),
+            values=torch.as_tensor(col.values.to_numpy(zero_copy_only=False, writable=True)),
+            size=col.shape,
         )
 
 

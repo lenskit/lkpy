@@ -297,6 +297,10 @@ class SparseRowArray(pa.ExtensionArray):
         return self.type.dimension
 
     @property
+    def shape(self) -> tuple[int, int]:
+        return (len(self), self.dimension)
+
+    @property
     def offsets(self) -> pa.Int32Array:
         return self.storage.offsets
 
