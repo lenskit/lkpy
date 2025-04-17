@@ -402,9 +402,10 @@ def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
     _log.info("reloading model")
     with fn.open("rb") as modf:
         algo = pickle.load(modf)
+    assert isinstance(algo, ItemKNNScorer)
 
     _log.info("checking model")
-    r_mat = algo.sim_matrix.to_csr()
+    r_mat = algo.sim_matrix.to_scipy()
     assert all(np.logical_not(np.isnan(r_mat.data)))
     assert all(r_mat.data > 0)
     # a little tolerance
