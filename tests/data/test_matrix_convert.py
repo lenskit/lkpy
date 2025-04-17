@@ -13,6 +13,7 @@ import pyarrow as pa
 from scipy.sparse import csr_array
 
 from hypothesis import given
+from pytest import raises
 
 from lenskit._accel import sparse_row_debug
 from lenskit.data.matrix import (
@@ -79,3 +80,19 @@ def test_sparse_from_legacy(csr: csr_array[Any, tuple[int, int]]):
     assert isinstance(arr, SparseRowArray)
     assert len(arr) == nr
     assert arr.dimension == nc
+
+
+def test_sparse_type_direct_mismatch():
+    t = SparseRowType(20)
+
+    with raises(ValueError, match="mismatch"):
+        SparseRowType.from_type(t, 30)
+
+
+def test_sparse_type_extract_mismatch():
+    t = SparseRowType(20)
+    print("type", t)
+    print("storage type", t.storage_type)
+
+    with raises(ValueError, match="mismatch"):
+        SparseRowType.from_type(t.storage_type, 30)

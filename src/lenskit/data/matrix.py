@@ -99,6 +99,21 @@ class SparseIndexType(pa.ExtensionType):
         self.dimension = dimension
         super().__init__(pa.int32(), SPARSE_IDX_EXT_NAME)
 
+    def check_dimension(self, expected: int | None) -> int:
+        """
+        Check that this index type has the expected dimension.
+
+        Returns:
+            The dimension of the index type.
+
+        Raises:
+            ValueError:
+                If the type's dimension does not match the expected dimension.
+        """
+        if expected is not None and expected != self.dimension:
+            raise ValueError(f"dimension mismatch: expected {expected}, found {self.dimension}")
+        return self.dimension
+
     def __arrow_ext_serialize__(self) -> bytes:
         return json.dumps({"dimension": self.dimension}).encode()
 
@@ -117,17 +132,17 @@ class SparseRowType(pa.ExtensionType):
     """
 
     value_type: pa.DataType
-    dimension: int
+    index_type: SparseIndexType
 
     def __init__(self, dimension: int, value_type: pa.DataType = pa.float32()):
-        self.dimension = dimension
         self.value_type = value_type
+        self.index_type = SparseIndexType(dimension)
 
         super().__init__(
             pa.list_(
                 pa.struct(
                     [
-                        ("index", SparseIndexType(dimension)),
+                        ("index", self.index_type),
                         ("value", value_type),
                     ]
                 )
@@ -155,6 +170,10 @@ class SparseRowType(pa.ExtensionType):
             ValueError:
                 If there is another error, such as mismatched dimensions.
         """
+        if isinstance(data_type, SparseRowType):
+            data_type.index_type.check_dimension(dimension)
+            return data_type
+
         if not (
             pa.types.is_list(data_type)
             or pa.types.is_list_view(data_type)
@@ -175,16 +194,7 @@ class SparseRowType(pa.ExtensionType):
             raise TypeError(f"first field of element struct must be 'index', found {idx_f.name}")
 
         if isinstance(idx_f.type, SparseIndexType):
-            if not idx_f.metadata:
-                raise RuntimeError("index field has no metadata")
-            try:
-                dim = int(idx_f.metadata[b"dimension"])
-            except KeyError:
-                raise RuntimeError("index field has no dimension")
-            if dimension is not None and dim != dimension:
-                raise ValueError(f"dimension mismatch: internal {dim} != external {dimension}")
-            else:
-                dimension = dim
+            dimension = idx_f.type.check_dimension(dimension)
         elif dimension is None:
             raise TypeError(
                 f"index type must be SparseIndex when no external dimension, found {idx_f.type}"
@@ -197,6 +207,10 @@ class SparseRowType(pa.ExtensionType):
             raise TypeError(f"second field of element struct must be 'value', found {val_f.name}")
 
         return cls(dimension, val_f.type)
+
+    @property
+    def dimension(self) -> int:
+        return self.index_type.dimension
 
     def __arrow_ext_serialize__(self) -> bytes:
         return b""
