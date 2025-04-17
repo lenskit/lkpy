@@ -1,5 +1,7 @@
 .. _data-model:
 
+.. currentmodule:: lenskit.data
+
 Data Model
 ==========
 
@@ -228,14 +230,38 @@ tables, entity types, and relationship types.  Client code will rarely need to
 create or work with the schema directly; it is created and maintained by the
 :class:`~lenskit.data.DatasetBuilder`.
 
+.. _data-format:
+
+LensKit Native Format
+~~~~~~~~~~~~~~~~~~~~~
+
+LensKit supports saving and loading data sets in *native* format: an optimized
+format that can fully serialize and deserialize a dataset, with all supported
+features.  The :meth:`Dataset.save` (or :meth:`DatasetBuilder.save`) and
+:meth:`Dataset.load` save and load datasets in this format, respectively. The
+native format is not intended to be directly manipulated; loading it with
+:meth:`Dataset.load` and extracting data from the resulting :class:`Dataset` is
+the best way to process it.
+
+LensKit maintains backwards compatibility within the current and previous major
+releases.  That is, data saved with LensKit 2025.3 can be read by any later
+release of LensKit 2025.x or LensKit 2026.x.  Further, dataset changes will not
+be introduced in patch levels, so data is mutually intelligible between
+202X.Y.Z1 and 202X.Y.Z2 for any Z1 and Z2.
+
+Forward-compatibility is not yet maintained; data saved with LensKit may not be
+readable by prior versions.
+
 .. _data-internal:
 
 Internal Representation
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 Data should only be accessed through the :class:`~lenskit.data.Dataset` API, as
-the internal storage is subject to change.  Logically, each entity or
-relationship type is represented as a table, consisting of:
+the internal storage is subject to change.
+
+In the current version, logically, each entity or relationship type is
+represented as a table, consisting of:
 
 - One or more entity identifier or number columns
 - Zero or more attribute columns
