@@ -15,7 +15,13 @@ from scipy.sparse import csr_array
 from hypothesis import given
 
 from lenskit._accel import sparse_row_debug
-from lenskit.data.matrix import SparseRowArray, SparseRowType, sparse_from_arrow, sparse_to_arrow
+from lenskit.data.matrix import (
+    SparseIndexType,
+    SparseRowArray,
+    SparseRowType,
+    sparse_from_arrow,
+    sparse_to_arrow,
+)
 from lenskit.logging import get_logger
 from lenskit.testing import sparse_arrays
 
@@ -23,7 +29,7 @@ _log = get_logger(__name__)
 
 
 @given(sparse_arrays())
-def test_sparse_from_csr(csr: csr_array):
+def test_sparse_from_csr(csr: csr_array[Any, tuple[int, int]]):
     arr = SparseRowArray.from_csr(csr)
     assert isinstance(arr, SparseRowArray)
     assert isinstance(arr.type, SparseRowType)
@@ -33,6 +39,7 @@ def test_sparse_from_csr(csr: csr_array):
     assert len(arr.indices) == csr.nnz
     assert len(arr.values) == csr.nnz
     assert np.all(arr.offsets.to_numpy() == csr.indptr)
+    assert isinstance(arr.indices.type, SparseIndexType)
 
 
 @given(sparse_arrays())
@@ -48,20 +55,10 @@ def test_csr_to_rust(csr: csr_array[Any, tuple[int, int]]):
 
 
 @given(sparse_arrays())
-def test_to_arrow_raw(csr: csr_array):
-    arr = sparse_to_arrow(csr)
+def test_sparse_to_csr(csr: csr_array[Any, tuple[int, int]]):
+    arr = SparseRowArray.from_csr(csr)
 
-    assert pa.types.is_list(arr.type)
-    assert len(arr) == csr.shape[0]
-    assert len(arr.values) == csr.nnz
-    assert np.all(arr.offsets.to_numpy() == csr.indptr)
-
-
-@given(sparse_arrays())
-def test_from_arrow(csr: csr_array):
-    arr = sparse_to_arrow(csr)
-
-    csr2 = sparse_from_arrow(arr, csr.shape)  # type: ignore
+    csr2 = arr.to_csr()
     assert csr2.shape == csr.shape
     assert csr2.nnz == csr.nnz
     assert np.all(csr2.indptr == csr.indptr)
