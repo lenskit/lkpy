@@ -11,6 +11,7 @@ Matrix layouts.
 # pyright: basic
 from __future__ import annotations
 
+import json
 from typing import NamedTuple, TypeVar
 
 import numpy as np
@@ -79,6 +80,65 @@ class COOStructure(NamedTuple):
     @property
     def nnz(self):
         return self.row_numbers[self.nrows]
+
+
+class SparseRowType(pa.ExtensionType):
+    """
+    Data type for sparse rows stored in Arrow.  Sparse rows are stored as lists
+    of structs with ``index`` and ``column`` fields.
+    """
+
+    value_type: pa.DataType
+    dimension: int
+
+    def __init__(self, dimension: int, value_type: pa.DataType = pa.float32()):
+        super().__init__(
+            pa.list_(pa.struct([("index", pa.int32()), ("value", value_type)])),
+            "lenskit.sparse_row",
+        )
+        self.dimension = dimension
+        self.value_type = value_type
+
+    def __arrow_ext_serialize__(self) -> bytes:
+        return json.dumps({"dimension": self.dimension}).encode()
+
+    @classmethod
+    def __arrow_ext_deserialize__(cls, storage_type, serialized):
+        data = json.loads(serialized.decode())
+        assert (
+            pa.types.is_list(storage_type)
+            or pa.types.is_list_view(storage_type)
+            or pa.types.is_large_list(storage_type)
+            or pa.types.is_large_list_view(storage_type)
+        )
+        inner = storage_type.value_type
+        assert pa.types.is_struct(inner)
+        assert len(inner.fields) == 2
+        return cls(data["dimension"], inner[1].type)
+
+    def __arrow_ext_class__(self):
+        return SparseRowArray
+
+
+class SparseRowArray(pa.ExtensionArray):
+    """
+    An array of sparse rows (a compressed sparse row matrix).
+    """
+
+    @property
+    def column_count(self) -> int:
+        """
+        Get the number of columns in the sparse matrix.
+        """
+        return self.type.dimension
+
+    @property
+    def indices(self) -> pa.Int32Array:
+        return self.storage.field(0)
+
+    @property
+    def values(self) -> pa.Array:
+        return self.storage.field(1)
 
 
 def sparse_to_arrow(arr: sps.csr_array) -> pa.ListArray:
