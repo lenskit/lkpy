@@ -49,7 +49,7 @@ def test_csr_to_rust(csr: csr_array[Any, tuple[int, int]]):
     assert isinstance(arr, SparseRowArray)
     assert isinstance(arr.type, SparseRowType)
 
-    dt, nr, nc = sparse_row_debug(arr, csr.shape[1])
+    dt, nr, nc = sparse_row_debug(arr)
     _log.info("returned data type: %s", dt, nr=nr, nc=nc)
     assert (nr, nc) == csr.shape
 

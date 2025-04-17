@@ -7,7 +7,7 @@ use pyo3::prelude::*;
 
 use arrow::{
     array::{
-        downcast_array, Array, ArrayData, Float32Array, GenericListArray, Int32Array,
+        downcast_array, make_array, Array, ArrayData, Float32Array, GenericListArray, Int32Array,
         OffsetSizeTrait, StructArray,
     },
     datatypes::DataType,
@@ -23,21 +23,82 @@ use serde_json::{from_str, to_string};
 /// Arrow extension type for sparse rows.
 #[derive(Debug)]
 pub struct SparseRowType {
-    value_type: DataType,
-    meta: SparseRowMeta,
+    pub offset_type: DataType,
+    pub index_type: SparseIndexType,
+    pub value_type: DataType,
 }
 
-/// Metadata for sparse rows.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SparseRowMeta {
+/// Arrow extension type for sparse row indices.
+#[derive(Debug)]
+pub struct SparseIndexType {
+    meta: SparseMeta,
+}
+
+/// Metadata for sparse matrix rows.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct SparseMeta {
     /// The number of columns in the sparse row.
     pub dimension: usize,
 }
 
-impl SparseRowMeta {
+impl SparseMeta {
     /// Create a new sparse row metadata object.
-    pub fn create(dim: usize) -> SparseRowMeta {
-        SparseRowMeta { dimension: dim }
+    pub fn create(dim: usize) -> SparseMeta {
+        SparseMeta { dimension: dim }
+    }
+}
+
+impl SparseIndexType {
+    /// Create a new sparse row extension for the given dimension.
+    pub fn create(dim: usize) -> SparseIndexType {
+        SparseIndexType {
+            meta: SparseMeta { dimension: dim },
+        }
+    }
+}
+
+impl ExtensionType for SparseIndexType {
+    type Metadata = SparseMeta;
+
+    const NAME: &'static str = "lenskit.sparse_index";
+
+    fn metadata(&self) -> &Self::Metadata {
+        &self.meta
+    }
+
+    fn serialize_metadata(&self) -> Option<String> {
+        Some(to_string(&self.meta).expect("metadata serialization failed"))
+    }
+
+    fn deserialize_metadata(metadata: Option<&str>) -> Result<Self::Metadata, ArrowError> {
+        let meta_str = metadata
+            .ok_or_else(|| ArrowError::SchemaError("sparse row requires metadata".into()))?;
+        let meta: SparseMeta =
+            from_str(meta_str).map_err(|e| ArrowError::JsonError(e.to_string()))?;
+        Ok(meta)
+    }
+
+    fn supports_data_type(&self, data_type: &DataType) -> Result<(), ArrowError> {
+        match data_type {
+            DataType::Int32 => Ok(()),
+            t => Err(ArrowError::InvalidArgumentError(format!(
+                "expected Int32 indices, got {}",
+                t
+            ))),
+        }
+    }
+
+    fn try_new(
+        data_type: &DataType,
+        metadata: Self::Metadata,
+    ) -> Result<Self, arrow_schema::ArrowError> {
+        match data_type {
+            DataType::Int32 => Ok(Self { meta: metadata }),
+            t => Err(ArrowError::InvalidArgumentError(format!(
+                "expected Int32 indices, got {}",
+                t
+            ))),
+        }
     }
 }
 
@@ -45,15 +106,78 @@ impl SparseRowType {
     /// Create a new sparse row extension for the given dimension.
     pub fn create(dim: usize) -> SparseRowType {
         SparseRowType {
+            offset_type: DataType::Int32,
+            index_type: SparseIndexType::create(dim),
             value_type: DataType::Float32,
-            meta: SparseRowMeta { dimension: dim },
         }
     }
 
-    fn check_type_compat(data_type: &DataType) -> Result<(), ArrowError> {
-        let element = match data_type {
-            DataType::List(f) => f.data_type(),
-            DataType::LargeList(f) => f.data_type(),
+    /// Create a new sparse row extension for the given dimension with large offsets.
+    pub fn create_large(dim: usize) -> SparseRowType {
+        SparseRowType {
+            offset_type: DataType::Int64,
+            index_type: SparseIndexType::create(dim),
+            value_type: DataType::Float32,
+        }
+    }
+
+    pub fn dimension(&self) -> usize {
+        self.index_type.meta.dimension
+    }
+}
+
+impl TryFrom<&DataType> for SparseRowType {
+    type Error = ArrowError;
+
+    fn try_from(value: &DataType) -> Result<Self, Self::Error> {
+        Self::try_new(&value, ())
+    }
+}
+
+impl ExtensionType for SparseRowType {
+    type Metadata = ();
+
+    const NAME: &'static str = "lenskit.sparse_row";
+
+    fn metadata(&self) -> &Self::Metadata {
+        &()
+    }
+
+    fn serialize_metadata(&self) -> Option<String> {
+        None
+    }
+
+    fn deserialize_metadata(_metadata: Option<&str>) -> Result<Self::Metadata, ArrowError> {
+        Ok(())
+    }
+
+    fn supports_data_type(&self, data_type: &DataType) -> Result<(), ArrowError> {
+        let srt = Self::try_new(data_type, ())?;
+        if srt.value_type != self.value_type {
+            return Err(ArrowError::InvalidArgumentError(format!(
+                "value type mismatch: {} != {}",
+                srt.value_type, self.value_type
+            )));
+        }
+
+        if srt.dimension() != self.dimension() {
+            return Err(ArrowError::InvalidArgumentError(format!(
+                "index dimension mismatch: {} != {}",
+                srt.dimension(),
+                self.dimension()
+            )));
+        }
+
+        Ok(())
+    }
+
+    fn try_new(
+        data_type: &DataType,
+        _metadata: Self::Metadata,
+    ) -> Result<Self, arrow_schema::ArrowError> {
+        let (off_t, elt_t) = match data_type {
+            DataType::List(f) => (DataType::Int32, f.data_type()),
+            DataType::LargeList(f) => (DataType::Int64, f.data_type()),
             // DataType::ListView(f) => f.data_type(),
             // DataType::LargeListView(f) => f.data_type(),
             _ => {
@@ -63,7 +187,7 @@ impl SparseRowType {
                 )))
             }
         };
-        let fields = match element {
+        let fields = match elt_t {
             DataType::Struct(fs) => fs,
             t => {
                 return Err(ArrowError::InvalidArgumentError(format!(
@@ -81,19 +205,15 @@ impl SparseRowType {
         }
 
         let idx_f = fields.get(0).unwrap();
-        let val_f = fields.get(1).unwrap();
         if idx_f.name() != "index" {
             return Err(ArrowError::InvalidArgumentError(format!(
                 "first field must be 'index', found, found {}",
                 idx_f.name()
             )));
         }
-        if idx_f.data_type() != &DataType::Int32 {
-            return Err(ArrowError::InvalidArgumentError(format!(
-                "index field must have type Int32, found {}",
-                idx_f.data_type()
-            )));
-        }
+        let idx_t: SparseIndexType = idx_f.try_extension_type()?;
+
+        let val_f = fields.get(1).unwrap();
         if val_f.name() != "value" {
             return Err(ArrowError::InvalidArgumentError(format!(
                 "second field must be 'value', found, found {}",
@@ -101,43 +221,10 @@ impl SparseRowType {
             )));
         }
 
-        Ok(())
-    }
-}
-
-impl ExtensionType for SparseRowType {
-    type Metadata = SparseRowMeta;
-
-    const NAME: &'static str = "lenskit.sparse_row";
-
-    fn metadata(&self) -> &Self::Metadata {
-        &self.meta
-    }
-
-    fn serialize_metadata(&self) -> Option<String> {
-        Some(to_string(&self.meta).expect("metadata serialization failed"))
-    }
-
-    fn deserialize_metadata(metadata: Option<&str>) -> Result<Self::Metadata, ArrowError> {
-        let meta_str = metadata
-            .ok_or_else(|| ArrowError::SchemaError("sparse row requires metadata".into()))?;
-        let meta: SparseRowMeta =
-            from_str(meta_str).map_err(|e| ArrowError::JsonError(e.to_string()))?;
-        Ok(meta)
-    }
-
-    fn supports_data_type(&self, data_type: &DataType) -> Result<(), ArrowError> {
-        Self::check_type_compat(data_type)
-    }
-
-    fn try_new(
-        data_type: &DataType,
-        metadata: Self::Metadata,
-    ) -> Result<Self, arrow_schema::ArrowError> {
-        Self::check_type_compat(data_type)?;
-        Ok(Self {
-            value_type: data_type.clone(),
-            meta: metadata,
+        Ok(SparseRowType {
+            offset_type: off_t,
+            index_type: idx_t,
+            value_type: val_f.data_type().clone(),
         })
     }
 }
@@ -221,15 +308,14 @@ impl<Ix: OffsetSizeTrait> CSRMatrix<Ix> {
 
 /// Test function to make sure we can convert sparse rows.
 #[pyfunction]
-pub(crate) fn sparse_row_debug(
-    array: PyArrowType<ArrayData>,
-    dim: usize,
-) -> PyResult<(String, usize, usize)> {
-    let data = array.0;
-    debug!("building matrix {}x{}", data.len(), dim);
-    debug!("array data type: {}", data.data_type());
-    let meta = SparseRowMeta::create(dim);
-    let rt = SparseRowType::try_new(data.data_type(), meta)
-        .map_err(|e| PyTypeError::new_err(format!("{}", e)))?;
-    Ok((format!("{:?}", rt), data.len(), dim))
+pub(crate) fn sparse_row_debug(array: PyArrowType<ArrayData>) -> PyResult<(String, usize, usize)> {
+    let array = make_array(array.0);
+    debug!("building matrix with {} rows", array.len());
+    debug!("array data type: {}", array.data_type());
+    let rt: SparseRowType = array
+        .data_type()
+        .try_into()
+        .map_err(|e: ArrowError| PyTypeError::new_err(e.to_string()))?;
+    debug!("got {} x {} matrix", array.len(), rt.dimension());
+    Ok((format!("{:?}", rt), array.len(), rt.dimension()))
 }
