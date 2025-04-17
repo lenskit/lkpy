@@ -55,6 +55,11 @@ impl SparseIndexType {
             meta: SparseMeta { dimension: dim },
         }
     }
+
+    /// Get the dimension of the sparse row indices.
+    pub fn dimension(&self) -> usize {
+        self.meta.dimension
+    }
 }
 
 impl ExtensionType for SparseIndexType {
@@ -239,7 +244,7 @@ pub struct CSRMatrix<Ix: OffsetSizeTrait = i32> {
 
 impl<Ix: OffsetSizeTrait> CSRMatrix<Ix> {
     /// Convert an Arrow structured array into a CSR matrix, checking for type errors.
-    pub fn from_arrow(array: Arc<dyn Array>, nr: usize, nc: usize) -> PyResult<CSRMatrix<Ix>> {
+    pub fn from_arrow(array: Arc<dyn Array>) -> PyResult<CSRMatrix<Ix>> {
         let sa: &GenericListArray<Ix> = array.as_any().downcast_ref().ok_or_else(|| {
             PyErr::new::<PyTypeError, _>(format!(
                 "invalid array type {}, expected List",
@@ -249,43 +254,47 @@ impl<Ix: OffsetSizeTrait> CSRMatrix<Ix> {
 
         let rows: &StructArray = sa.values().as_any().downcast_ref().ok_or_else(|| {
             PyErr::new::<PyTypeError, _>(format!(
-                "invalid array type {}, expected Struct",
+                "invalid element type {}, expected Struct",
                 sa.values().data_type()
             ))
         })?;
 
-        let names = rows.column_names();
-        if names.len() != 2 {
+        let fields = rows.fields();
+
+        if fields.len() != 2 {
             return Err(PyErr::new::<PyValueError, _>(
                 "row entries must have 2 fields",
             ));
         }
-        if names[0] != "index" {
+
+        let idx_f = &fields[0];
+        let val_f = &fields[1];
+
+        if idx_f.name() != "index" {
             return Err(PyErr::new::<PyValueError, _>(
                 "first row field must be 'index'",
             ));
         }
-        if names[1] != "value" {
+        if val_f.name() != "value" {
             return Err(PyErr::new::<PyValueError, _>(
                 "first row field must be 'value'",
             ));
         }
-        if *rows.column(0).data_type() != DataType::Int32 {
-            return Err(PyErr::new::<PyTypeError, _>(format!(
-                "invalid index column type {}, expected Int32",
-                rows.column(0).data_type()
-            )));
-        }
-        if *rows.column(1).data_type() != DataType::Float32 {
+
+        let idx_t: SparseIndexType = idx_f
+            .try_extension_type()
+            .map_err(|e| PyTypeError::new_err(format!("invalid index type: {}", e)))?;
+
+        if val_f.data_type() != &DataType::Float32 {
             return Err(PyErr::new::<PyTypeError, _>(format!(
                 "invalid value column type {}, expected Float32",
-                rows.column(0).data_type()
+                val_f.data_type()
             )));
         }
 
         Ok(CSRMatrix {
-            n_rows: nr,
-            n_cols: nc,
+            n_rows: array.len(),
+            n_cols: idx_t.dimension(),
             array: downcast_array(array.as_ref()),
             col_inds: downcast_array(rows.column(0)),
             values: downcast_array(rows.column(1)),

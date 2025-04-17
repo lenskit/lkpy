@@ -12,15 +12,10 @@ use crate::{sparse::CSRMatrix, types::checked_array_convert};
 /// Accumulate scores.
 #[derive(Clone)]
 enum ScoreAccumulator<T> {
+    Disabled,
     Empty,
     Partial(Vec<AccEntry<T>>),
     Full(BinaryHeap<AccEntry<T>>),
-}
-
-impl<T> Default for ScoreAccumulator<T> {
-    fn default() -> Self {
-        ScoreAccumulator::Empty
-    }
 }
 
 impl ScoreAccumulator<()> {
@@ -29,10 +24,43 @@ impl ScoreAccumulator<()> {
     }
 }
 
+impl<T: Clone> ScoreAccumulator<T> {
+    fn new_array(n: usize, active: &Int32Array) -> Vec<ScoreAccumulator<T>> {
+        // create accumulators for all items, and enable the targets
+        let mut heaps: Vec<ScoreAccumulator<T>> = vec![ScoreAccumulator::disabled(); n];
+        for i in active.iter() {
+            if let Some(i) = i {
+                heaps[i as usize].enable()
+            }
+        }
+        heaps
+    }
+}
+
 impl<T> ScoreAccumulator<T> {
+    /// Create a disabled score accumulator.
+    fn disabled() -> Self {
+        Self::Disabled
+    }
+
+    /// Enable a score accumulator.
+    fn enable(&mut self) {
+        match self {
+            Self::Disabled => *self = Self::Empty,
+            _ => (),
+        }
+    }
+
+    fn enabled(&self) -> bool {
+        match self {
+            ScoreAccumulator::Disabled => false,
+            _ => true,
+        }
+    }
+
     fn len(&self) -> usize {
         match self {
-            ScoreAccumulator::Empty => 0,
+            ScoreAccumulator::Empty | ScoreAccumulator::Disabled => 0,
             ScoreAccumulator::Partial(v) => v.len(),
             ScoreAccumulator::Full(h) => h.len(),
         }
@@ -40,6 +68,9 @@ impl<T> ScoreAccumulator<T> {
 
     fn heap_mut(&mut self) -> &mut BinaryHeap<AccEntry<T>> {
         match self {
+            ScoreAccumulator::Disabled => {
+                panic!("mutable heaps not available on disabled accumulators")
+            }
             ScoreAccumulator::Full(h) => h,
             ScoreAccumulator::Empty => {
                 let heap = BinaryHeap::new();
@@ -71,15 +102,17 @@ impl<T> ScoreAccumulator<T> {
     }
 
     fn add_value(&mut self, limit: usize, weight: f32, value: T) -> PyResult<()> {
-        let entry = AccEntry::new(weight, value)?;
-        if let Some(vec) = self.vector_mut(limit) {
-            vec.push(entry);
-        } else {
-            let heap = self.heap_mut();
-            if entry.weight > heap.peek().unwrap().weight {
-                heap.push(entry);
-                while heap.len() > limit {
-                    heap.pop();
+        if self.enabled() {
+            let entry = AccEntry::new(weight, value)?;
+            if let Some(vec) = self.vector_mut(limit) {
+                vec.push(entry);
+            } else {
+                let heap = self.heap_mut();
+                if entry.weight > heap.peek().unwrap().weight {
+                    heap.push(entry);
+                    while heap.len() > limit {
+                        heap.pop();
+                    }
                 }
             }
         }
@@ -89,7 +122,7 @@ impl<T> ScoreAccumulator<T> {
 
     fn total_weight(&self) -> f32 {
         match self {
-            Self::Empty => 0.0,
+            Self::Empty | Self::Disabled => 0.0,
             Self::Full(heap) => heap.iter().map(AccEntry::get_weight).sum(),
             Self::Partial(vec) => vec.iter().map(AccEntry::get_weight).sum(),
         }
@@ -99,7 +132,7 @@ impl<T> ScoreAccumulator<T> {
 impl ScoreAccumulator<f32> {
     fn weighted_sum(&self) -> f32 {
         match self {
-            Self::Empty => 0.0,
+            Self::Disabled | Self::Empty => 0.0,
             Self::Full(heap) => heap.iter().map(|a| a.weight * a.data).sum(),
             Self::Partial(vec) => vec.iter().map(|a| a.weight * a.data).sum(),
         }
@@ -171,7 +204,7 @@ pub fn score_explicit<'py>(
             checked_array_convert("reference ratings", "Float32", &ref_rates)?;
         let tgt_is: &Int32Array = checked_array_convert("target item", "Int32", &tgt_items)?;
 
-        let mut heaps: Vec<ScoreAccumulator<f32>> = vec![ScoreAccumulator::default(); sims.n_cols];
+        let mut heaps = ScoreAccumulator::new_array(sims.n_cols, tgt_is);
 
         // we loop reference items, looking for targets.
         // in the common (slow) top-N case, reference items are shorter than targets.
@@ -231,7 +264,7 @@ pub fn score_implicit<'py>(
         let ref_is: &Int32Array = checked_array_convert("reference item", "Int32", &ref_items)?;
         let tgt_is: &Int32Array = checked_array_convert("target item", "Int32", &tgt_items)?;
 
-        let mut heaps: Vec<ScoreAccumulator<()>> = vec![ScoreAccumulator::default(); sims.n_cols];
+        let mut heaps = ScoreAccumulator::new_array(sims.n_cols, tgt_is);
 
         // we loop reference items, looking for targets.
         // in the common (slow) top-N case, reference items are shorter than targets.
@@ -273,6 +306,7 @@ pub fn score_implicit<'py>(
 
 fn sim_matrix(sims: ArrayData) -> PyResult<CSRMatrix<i64>> {
     let array = make_array(sims);
-    let size = array.len();
-    CSRMatrix::from_arrow(array, size, size)
+    let csr = CSRMatrix::from_arrow(array)?;
+    assert_eq!(csr.n_rows, csr.n_cols);
+    Ok(csr)
 }

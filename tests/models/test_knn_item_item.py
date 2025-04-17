@@ -22,7 +22,7 @@ from lenskit.basic import BiasScorer
 from lenskit.basic.history import UserTrainingHistoryLookup
 from lenskit.batch import BatchPipelineRunner
 from lenskit.data import ItemList, ItemListCollection, UserIDKey, Vocabulary, from_interactions_df
-from lenskit.data.matrix import sparse_from_arrow
+from lenskit.data.matrix import SparseRowArray
 from lenskit.diagnostics import ConfigWarning, DataWarning
 from lenskit.knn.item import ItemKNNScorer
 from lenskit.metrics import MAE, RBP, RMSE, RecipRank, RunAnalysis, call_metric, quick_measure_model
@@ -85,11 +85,11 @@ def test_ii_train():
 
     assert isinstance(algo.item_means, np.ndarray)
     assert isinstance(algo.item_counts, np.ndarray)
-    matrix = sparse_from_arrow(algo.sim_matrix)
+    matrix = algo.sim_matrix.to_csr()
 
     test_means = simple_ratings.groupby("item_id")["rating"].mean()
     test_means = test_means.reindex(algo.items.ids())
-    assert np.all(algo.item_means == test_means.values.astype("f8"))
+    assert np.all(algo.item_means == test_means.values.astype("f4"))
 
     # 6 is a neighbor of 7
     six, seven = algo.items.numbers([6, 7])
@@ -117,7 +117,7 @@ def test_ii_train_unbounded():
     algo = ItemKNNScorer(k=30)
     algo.train(simple_ds)
 
-    matrix = sparse_from_arrow(algo.sim_matrix)
+    matrix = algo.sim_matrix.to_csr()
     assert all(np.logical_not(np.isnan(matrix.data)))
     assert all(matrix.data > 0)
     # a little tolerance
@@ -201,7 +201,7 @@ def test_ii_train_ml100k(tmp_path, ml_100k):
 
     _log.info("testing model")
 
-    matrix = sparse_from_arrow(algo.sim_matrix)
+    matrix = algo.sim_matrix.to_csr()
     assert all(np.logical_not(np.isnan(matrix.data)))
     assert np.all(matrix.data > 0)
 
@@ -223,7 +223,7 @@ def test_ii_train_ml100k(tmp_path, ml_100k):
     with fn.open("rb") as modf:
         restored = pickle.load(modf)
 
-    r_mat = sparse_from_arrow(restored.sim_matrix)
+    r_mat = restored.sim_matrix.to_csr()
 
     assert all(r_mat.data > 0)
     assert all(r_mat.data == matrix.data)
@@ -242,20 +242,20 @@ def test_ii_large_models(rng, ml_ratings, ml_ds):
     algo_ub.train(ml_ds)
 
     _log.info("testing models")
-    mat_lim = sparse_from_arrow(algo_lim.sim_matrix)
+    mat_lim = algo_lim.sim_matrix.to_csr()
     assert all(np.logical_not(np.isnan(mat_lim.data)))
     assert mat_lim.data.min() > 0
     # a little tolerance
-    assert mat_lim.data.max() <= 1
+    assert mat_lim.data.max() <= 1 + 1.0e-6
 
     means = ml_ratings.groupby("item_id").rating.mean()
     means = means.reindex(algo_ub.items.ids(), fill_value=0.0)
     assert means.values == approx(algo_lim.item_means)
 
-    mat_ub = sparse_from_arrow(algo_ub.sim_matrix)
+    mat_ub = algo_ub.sim_matrix.to_csr()
     assert all(np.logical_not(np.isnan(mat_ub.data)))
     assert mat_ub.data.min() > 0
-    assert mat_ub.data.max() <= 1
+    assert mat_ub.data.max() <= 1 + 1.0e-6
 
     means = ml_ratings.groupby("item_id").rating.mean()
     means = means.reindex(algo_ub.items.ids(), fill_value=0.0)
@@ -360,7 +360,7 @@ def test_ii_implicit_large(rng, ml_ratings):
     users = rng.choice(ml_ratings["user_id"].unique(), NUSERS)
 
     items: Vocabulary = algo.items
-    mat: NDArray[np.float32] = sparse_from_arrow(algo.sim_matrix).toarray()
+    mat: NDArray[np.float32] = algo.sim_matrix.to_csr().toarray()
 
     for user in users:
         recs = pipe.run("recommender", query=user, n=NRECS)
@@ -391,7 +391,7 @@ def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
     original = ItemKNNScorer(k=30, save_nbrs=500)
     _log.info("building model")
     original.train(from_interactions_df(ml_subset, item_col="item_id"))
-    o_mat = sparse_from_arrow(original.sim_matrix)
+    o_mat = original.sim_matrix.to_csr()
 
     fn = tmp_path / "ii.mod"
     _log.info("saving model to %s", fn)
@@ -404,7 +404,7 @@ def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
         algo = pickle.load(modf)
 
     _log.info("checking model")
-    r_mat = sparse_from_arrow(algo.sim_matrix)
+    r_mat = algo.sim_matrix.to_csr()
     assert all(np.logical_not(np.isnan(r_mat.data)))
     assert all(r_mat.data > 0)
     # a little tolerance
