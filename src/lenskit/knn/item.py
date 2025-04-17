@@ -209,7 +209,8 @@ class ItemKNNScorer(Component[ItemList], Trainable):
 
     def _normalize_rows(self, log, timer, rmat: sparray) -> coo_array:
         norms = spla.norm(rmat, 2, axis=0)
-        cmat = rmat / norms
+        # clamp small values to avoid divide by 0 (only appear when an entry is all 0)
+        cmat = rmat / np.maximum(norms, np.finfo("f4").smallest_normal)
         assert cmat.shape == rmat.shape
         log.debug("[%s] normalized, memory use %s", timer, max_memory())
         return cmat
