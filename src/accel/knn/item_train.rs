@@ -32,8 +32,8 @@ pub fn compute_similarities<'py>(
         debug!("preparing {}x{} matrix", nu, ni);
         let ui_mat = CSRMatrix::from_arrow(make_array(ui_ratings.0), nu, ni)?;
         let iu_mat = CSRMatrix::from_arrow(make_array(iu_ratings.0), ni, nu)?;
-        assert_eq!(ui_mat.array.len(), nu);
-        assert_eq!(iu_mat.array.len(), ni);
+        assert_eq!(ui_mat.len(), nu);
+        assert_eq!(iu_mat.len(), ni);
 
         // let's compute!
         let range = 0..ni;

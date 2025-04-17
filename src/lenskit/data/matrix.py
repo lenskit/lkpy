@@ -12,7 +12,7 @@ Matrix layouts.
 from __future__ import annotations
 
 import json
-from typing import NamedTuple, TypeVar
+from typing import Any, NamedTuple, TypeVar
 
 import numpy as np
 import pyarrow as pa
@@ -21,6 +21,8 @@ import torch
 
 t = torch
 M = TypeVar("M", "CSRStructure", sps.csr_array, sps.coo_array, sps.spmatrix, t.Tensor)
+
+SPARSE_ROW_EXT_NAME = "lenskit.sparse_row"
 
 
 class CSRStructure(NamedTuple):
@@ -93,27 +95,68 @@ class SparseRowType(pa.ExtensionType):
 
     def __init__(self, dimension: int, value_type: pa.DataType = pa.float32()):
         super().__init__(
-            pa.list_(pa.struct([("index", pa.int32()), ("value", value_type)])),
-            "lenskit.sparse_row",
+            pa.list_(self.element_type(dimension, value_type)),
+            SPARSE_ROW_EXT_NAME,
         )
         self.dimension = dimension
         self.value_type = value_type
 
+    @classmethod
+    def element_type(cls, dimension: int, value_type: pa.DataType = pa.float32()) -> pa.StructType:
+        return pa.struct(
+            [
+                pa.field(
+                    "index",
+                    pa.int32(),
+                    nullable=False,
+                    metadata={"dimension": str(dimension)},
+                ),
+                ("value", value_type),
+            ]
+        )
+
     def __arrow_ext_serialize__(self) -> bytes:
-        return json.dumps({"dimension": self.dimension}).encode()
+        if hasattr(self, "dimension"):
+            return json.dumps({"dimension": self.dimension}).encode()
+        else:
+            return b""
 
     @classmethod
     def __arrow_ext_deserialize__(cls, storage_type, serialized):
-        data = json.loads(serialized.decode())
-        assert (
+        if serialized:
+            data = json.loads(serialized.decode())
+        else:
+            data = {}
+        dim = data.get("dimension", None)
+
+        if not (
             pa.types.is_list(storage_type)
             or pa.types.is_list_view(storage_type)
             or pa.types.is_large_list(storage_type)
             or pa.types.is_large_list_view(storage_type)
-        )
-        inner = storage_type.value_type
-        assert pa.types.is_struct(inner)
-        assert len(inner.fields) == 2
+        ):
+            raise TypeError(f"expected list type, found {storage_type}")
+        inner = storage_type.value_type  # type: ignore
+        if not pa.types.is_struct(inner):
+            raise TypeError(f"expected struct element type, found {inner}")
+        if len(inner.fields) != 2:
+            raise TypeError(f"element struct must have 2 elements, found {len(inner.fields)}")
+        idx_f = inner.fields[0]
+        assert isinstance(idx_f, pa.Field)
+        if idx_f.name != "index":
+            raise TypeError(f"first field of element struct must be 'index', found {idx_f.name}")
+        if idx_f.type != pa.int32():
+            raise TypeError(f"index type must be Int32, found {idx_f.type}")
+        if idx_f.metadata and b"dimension" in idx_f.metadata:
+            i_dim = int(idx_f.metadata[b"dimension"])
+            if dim is not None and i_dim != dim:
+                raise ValueError(f"dimension mismatch: {i_dim} != {dim}")
+            dim = i_dim
+
+        val_f = inner.fields[1]
+        if val_f.name != "value":
+            raise TypeError(f"second field of element struct must be 'value', found {val_f.name}")
+
         return cls(data["dimension"], inner[1].type)
 
     def __arrow_ext_class__(self):
@@ -125,20 +168,41 @@ class SparseRowArray(pa.ExtensionArray):
     An array of sparse rows (a compressed sparse row matrix).
     """
 
+    @classmethod
+    def from_csr(cls, csr: sps.csr_array[Any, tuple[int, int]]) -> SparseRowArray:
+        offsets = pa.array(csr.indptr, pa.int32())
+        cols = pa.array(csr.indices, pa.int32())
+        vals = pa.array(csr.data)
+
+        _nr, dim = csr.shape
+        entries = pa.StructArray.from_arrays(
+            [cols, vals], fields=SparseRowType.element_type(dim, vals.type).fields
+        )
+        rows = pa.ListArray.from_arrays(offsets, entries)
+        return pa.ExtensionArray.from_storage(SparseRowType(csr.shape[1], vals.type), rows)  # type: ignore
+
     @property
     def column_count(self) -> int:
         """
         Get the number of columns in the sparse matrix.
         """
+        assert isinstance(self.type, SparseRowType)
         return self.type.dimension
 
     @property
+    def offsets(self) -> pa.Int32Array:
+        return self.storage.offsets
+
+    @property
     def indices(self) -> pa.Int32Array:
-        return self.storage.field(0)
+        return self.storage.values.field(0)
 
     @property
     def values(self) -> pa.Array:
-        return self.storage.field(1)
+        return self.storage.values.field(1)
+
+
+pa.register_extension_type(SparseRowType(0))  # type: ignore
 
 
 def sparse_to_arrow(arr: sps.csr_array) -> pa.ListArray:
