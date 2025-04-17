@@ -20,6 +20,13 @@ information on how to upgrade your code.
 -   :mod:`lenskit.basic` now exports the configuration classes for basic algorithms (:pr:`672`).
 -   Several bug fixes for logging in niche setups (including ray clusters) (:pr:`673`).
 -   Added Rust acceleration for some data processing operations and kNN models.
+-   Added versioning to the native data format, documented data format
+    compatibility, and added compatibility tests.
+-   Added compressed sparse row extension types for Arrow, and use them in the
+    LensKit native format (as well as Python/Rust data interchange) to more
+    reliably handle CSR matrix data in Arrow (previously, we had to carry the
+    matrix width or row dimension in side information; it is now embedded into
+    the Arrow metadata).
 
 Component Changes
 .................
