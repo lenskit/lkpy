@@ -34,6 +34,7 @@ def test_sparse_from_csr(csr: csr_array[Any, tuple[int, int]]):
 
     assert pa.types.is_list(arr.storage.type)
     assert len(arr) == csr.shape[0]
+    assert arr.dimension == csr.shape[1]
     assert len(arr.indices) == csr.nnz
     assert len(arr.values) == csr.nnz
     assert np.all(arr.offsets.to_numpy() == csr.indptr)
@@ -62,3 +63,19 @@ def test_sparse_to_csr(csr: csr_array[Any, tuple[int, int]]):
     assert np.all(csr2.indptr == csr.indptr)
     assert np.all(csr2.indices == csr.indices)
     assert np.all(csr2.data == csr.data.astype("f4"))
+
+
+@given(sparse_arrays())
+def test_sparse_from_legacy(csr: csr_array[Any, tuple[int, int]]):
+    tbl = pa.ListArray.from_arrays(
+        pa.array(csr.indptr.astype("i4")),
+        pa.StructArray.from_arrays(
+            [pa.array(csr.indices.astype("i4")), pa.array(csr.data)], ["index", "value"]
+        ),
+    )  # type: ignore
+    nr, nc = csr.shape
+
+    arr = SparseRowArray.from_array(tbl, nc)
+    assert isinstance(arr, SparseRowArray)
+    assert len(arr) == nr
+    assert arr.dimension == nc

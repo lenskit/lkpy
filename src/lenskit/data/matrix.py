@@ -88,7 +88,7 @@ class COOStructure(NamedTuple):
 class SparseIndexType(pa.ExtensionType):
     """
     Data type for the index field of a sparse row.  Indexes are just stored as
-    Int32s; the extension type attaches the row's dimensionality to the index
+    ``int32``s; the extension type attaches the row's dimensionality to the index
     field (making it easier to pass it to/from Rust, since we often pass arrays
     and not entire fields).
     """
@@ -106,7 +106,7 @@ class SparseIndexType(pa.ExtensionType):
     def __arrow_ext_deserialize__(cls, storage_type, serialized):
         data = json.loads(serialized.decode())
         if not pa.types.is_int32(storage_type):
-            raise TypeError("sparse index must be Int32")
+            raise TypeError("sparse index must be int32")
         return cls(data["dimension"])
 
 
@@ -135,19 +135,34 @@ class SparseRowType(pa.ExtensionType):
             SPARSE_ROW_EXT_NAME,
         )
 
-    def __arrow_ext_serialize__(self) -> bytes:
-        return b""
-
     @classmethod
-    def __arrow_ext_deserialize__(cls, storage_type, serialized):
+    def from_type(cls, data_type: pa.DataType, dimension: int | None = None) -> SparseRowType:
+        """
+        Create a sparse row type from an Arrow data type, handling legacy struct
+        layouts without the extension types.
+
+        Args:
+            data_type:
+                The Arrow data type to interpret as a row type.
+            dimension:
+                The row dimension, if known from an external source.  If
+                provided and the data type also includes the dimensionality,
+                both dimensions must match.
+
+        Raises:
+            TypeError:
+                If the data type is not a valid sparse row type.
+            ValueError:
+                If there is another error, such as mismatched dimensions.
+        """
         if not (
-            pa.types.is_list(storage_type)
-            or pa.types.is_list_view(storage_type)
-            or pa.types.is_large_list(storage_type)
-            or pa.types.is_large_list_view(storage_type)
+            pa.types.is_list(data_type)
+            or pa.types.is_list_view(data_type)
+            or pa.types.is_large_list(data_type)
+            or pa.types.is_large_list_view(data_type)
         ):
-            raise TypeError(f"expected list type, found {storage_type}")
-        inner = storage_type.value_type  # type: ignore
+            raise TypeError(f"expected list type, found {data_type}")
+        inner = data_type.value_type  # type: ignore
 
         if not pa.types.is_struct(inner):
             raise TypeError(f"expected struct element type, found {inner}")
@@ -158,16 +173,37 @@ class SparseRowType(pa.ExtensionType):
         assert isinstance(idx_f, pa.Field)
         if idx_f.name != "index":
             raise TypeError(f"first field of element struct must be 'index', found {idx_f.name}")
-        if not isinstance(idx_f.type, SparseIndexType):
-            raise TypeError(f"index type must be SparseIndex, found {idx_f.type}")
-        if idx_f.metadata and b"dimension" in idx_f.metadata:
-            dim = int(idx_f.metadata[b"dimension"])
+
+        if isinstance(idx_f.type, SparseIndexType):
+            if not idx_f.metadata:
+                raise RuntimeError("index field has no metadata")
+            try:
+                dim = int(idx_f.metadata[b"dimension"])
+            except KeyError:
+                raise RuntimeError("index field has no dimension")
+            if dimension is not None and dim != dimension:
+                raise ValueError(f"dimension mismatch: internal {dim} != external {dimension}")
+            else:
+                dimension = dim
+        elif dimension is None:
+            raise TypeError(
+                f"index type must be SparseIndex when no external dimension, found {idx_f.type}"
+            )
+        elif not pa.types.is_int32(idx_f.type):
+            raise TypeError(f"index type must be SparseIndex or int32, found {idx_f.type}")
 
         val_f = inner.fields[1]
         if val_f.name != "value":
             raise TypeError(f"second field of element struct must be 'value', found {val_f.name}")
 
-        return cls(dim, val_f.type)
+        return cls(dimension, val_f.type)
+
+    def __arrow_ext_serialize__(self) -> bytes:
+        return b""
+
+    @classmethod
+    def __arrow_ext_deserialize__(cls, storage_type, serialized):
+        return cls.from_type(storage_type)
 
     def __arrow_ext_class__(self):
         return SparseRowArray
@@ -177,6 +213,28 @@ class SparseRowArray(pa.ExtensionArray):
     """
     An array of sparse rows (a compressed sparse row matrix).
     """
+
+    @classmethod
+    def from_array(cls, array: pa.Array, dimension: int | None = None) -> SparseRowArray:
+        """
+        Interpret an Arrow array as a sparse row array, if possible.  Handles
+        legacy layouts without the extension types.
+
+        Args:
+            array:
+                The array to convert.
+            dimension:
+                The dimensionality of the sparse rows, if known from an external source.
+        """
+        if isinstance(array, SparseRowArray):
+            return array
+        elif isinstance(array.type, SparseRowType):
+            if array.type.dimension != dimension:
+                raise ValueError(f"dimensions do not match: {array.type.dimension} != {dimension}")
+            return pa.ExtensionArray.from_storage(array.type, array)  # type: ignore
+
+        et = SparseRowType.from_type(array.type, dimension)
+        return pa.ExtensionArray.from_storage(et, array.cast(et.storage_type))  # type: ignore
 
     @classmethod
     def from_csr(cls, csr: sps.csr_array[Any, tuple[int, int]]) -> SparseRowArray:
@@ -197,7 +255,7 @@ class SparseRowArray(pa.ExtensionArray):
         )
 
     @property
-    def column_count(self) -> int:
+    def dimension(self) -> int:
         """
         Get the number of columns in the sparse matrix.
         """
