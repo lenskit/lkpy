@@ -22,6 +22,7 @@ from numpy.typing import NDArray
 from scipy.sparse import csr_array
 from typing_extensions import Any
 
+from lenskit.data.matrix import SparseRowArray
 from lenskit.torch import safe_tensor
 
 from .schema import AttrLayout, ColumnSpec
@@ -317,6 +318,14 @@ class SparseAttributeSet(AttributeSet):
 
         return self._names
 
+    def arrow(self) -> SparseRowArray:
+        arr = super().arrow()
+        dim = self._spec.vector_size
+        if isinstance(arr, pa.ChunkedArray):
+            arr = arr.combine_chunks()
+
+        return SparseRowArray.from_array(arr, dim)
+
     def numpy(self) -> np.ndarray[tuple[int, int], Any]:
         raise NotImplementedError("sparse attributes cannot be retrieved as numpy")
 
@@ -324,18 +333,10 @@ class SparseAttributeSet(AttributeSet):
         col = self.arrow()
         if isinstance(col, pa.ChunkedArray):
             col = col.combine_chunks()
-        assert isinstance(col, pa.ListArray)
 
-        rowptr = col.offsets.to_numpy()
-        entries = col.values
-        assert isinstance(entries, pa.StructArray)
-        indices = entries.field("index").to_numpy(zero_copy_only=False)
-        values = entries.field("value").to_numpy(zero_copy_only=False)
+        col = SparseRowArray.from_array(col, self._spec.vector_size)
 
-        ncol = self._spec.vector_size
-        assert ncol is not None, "sparse vector has no size"
-
-        return csr_array((values, indices, rowptr), shape=(len(col), ncol))
+        return col.to_csr()
 
     def torch(self) -> torch.Tensor:
         csr = self.scipy()
