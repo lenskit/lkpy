@@ -119,3 +119,43 @@ def test_sparse_type_extract_missing_dimension():
 
     with raises(TypeError):
         SparseRowType.from_type(orig_t)
+
+
+def test_sparse_type_bad_index():
+    orig_t = pa.list_(
+        pa.struct(
+            [
+                ("index", pa.int64()),
+                ("value", pa.float32()),
+            ]
+        )
+    )
+
+    with raises(TypeError):
+        SparseRowType.from_type(orig_t)
+
+
+def test_sparse_type_not_struct():
+    orig_t = pa.list_(pa.float32())
+
+    with raises(TypeError):
+        SparseRowType.from_type(orig_t)
+
+
+def test_sparse_type_not_struct():
+    orig_t = pa.list_(pa.float32())
+
+    with raises(TypeError):
+        SparseRowType.from_type(orig_t)
+
+
+def test_sparse_type_not_list():
+    orig_t = pa.struct(
+        [
+            ("index", pa.int64()),
+            ("value", pa.float32()),
+        ]
+    )
+
+    with raises(TypeError):
+        SparseRowType.from_type(orig_t)
