@@ -90,7 +90,7 @@ class AttributeSet:
         else:
             return self._vocab.ids(self._selected.to_numpy())
 
-    def numbers(self) -> np.ndarray[int, np.dtype[np.int32]]:
+    def numbers(self) -> np.ndarray[tuple[int], np.dtype[np.int32]]:
         """
         Get the entity numbers for the rows in this attribute's values.
         """
@@ -187,6 +187,7 @@ class AttributeSet:
         else:
             selected = np.arange(len(self._vocab), dtype=np.int32)
             selected = pa.array(selected)
+            assert isinstance(selected, pa.Int32Array)
             selected = selected.filter(valid)
 
         return self.__class__(self.name, self._spec, self._table, self._vocab, selected)
@@ -254,7 +255,7 @@ class VectorAttributeSet(AttributeSet):
 
         if pa.types.is_fixed_size_list(col.type):
             return col
-        elif pc.all(col.is_valid()).as_py():
+        elif col.null_count == 0:
             if isinstance(col, pa.ChunkedArray):
                 return pa.chunked_array(
                     [
@@ -352,7 +353,7 @@ def _replace_vectors(
 ):
     size = arr.type.list_size
     assert values.type.list_size == size
-    assert pc.all(values.is_valid()).as_py()
+    assert values.null_count == 0
     in_valid = arr.is_valid()
     out_valid = pc.or_(in_valid, mask)
 
