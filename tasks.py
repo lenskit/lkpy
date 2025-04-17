@@ -7,15 +7,21 @@
 import logging
 import os
 import os.path
+import sys
 from pathlib import Path
 from shutil import copyfileobj, rmtree
 from urllib.request import urlopen
 
 from invoke.context import Context
+from invoke.main import program
 from invoke.tasks import task
 
 CACHEDIR_TAG = "Signature: 8a477f597d28d172789f06886806bc55"
 BIBTEX_PATH = "http://127.0.0.1:23119/better-bibtex/export/collection?/4/9JMHQD9K.bibtex"
+
+if sys.stdout.isatty():
+    os.environ["CLICOLOR_FORCE"] = "1"
+    os.environ["FORCE_COLOR"] = "1"
 
 _log = logging.getLogger("lenskit.invoke")
 root = Path(__file__).parent
@@ -74,6 +80,19 @@ def build_conda(c: Context):
     if "CI" in os.environ:
         cmd += " --noarch-build-platform linux-64"
     c.run(cmd, echo=True, env={"LK_PACKAGE_VERSION": version})
+
+
+@task(build_accel, positional=["file"])
+def test(c: Context):
+    "Run tests."
+    cmd = "pytest"
+
+    if program.core.remainder:
+        cmd += " " + program.core.remainder
+    else:
+        cmd += " tests"
+
+    c.run(cmd, echo=True)
 
 
 @task(setup_dirs)
