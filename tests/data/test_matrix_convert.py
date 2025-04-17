@@ -13,7 +13,7 @@ import pyarrow as pa
 from scipy.sparse import csr_array
 
 from hypothesis import given
-from pytest import raises
+from pytest import mark, raises
 
 from lenskit._accel import sparse_row_debug
 from lenskit.data.matrix import (

@@ -134,15 +134,17 @@ class SparseRowType(pa.ExtensionType):
     value_type: pa.DataType
     index_type: SparseIndexType
 
-    def __init__(self, dimension: int, value_type: pa.DataType = pa.float32()):
+    def __init__(self, dimension: int, value_type: pa.DataType = pa.float32(), large: bool = False):
         self.value_type = value_type
         self.index_type = SparseIndexType(dimension)
 
+        lt_ctor = pa.large_list if large else pa.list_
+
         super().__init__(
-            pa.list_(
+            lt_ctor(
                 pa.struct(
                     [
-                        ("index", self.index_type),
+                        pa.field("index", self.index_type),
                         ("value", value_type),
                     ]
                 )
@@ -174,12 +176,11 @@ class SparseRowType(pa.ExtensionType):
             data_type.index_type.check_dimension(dimension)
             return data_type
 
-        if not (
-            pa.types.is_list(data_type)
-            or pa.types.is_list_view(data_type)
-            or pa.types.is_large_list(data_type)
-            or pa.types.is_large_list_view(data_type)
-        ):
+        if pa.types.is_list(data_type) or pa.types.is_list_view(data_type):
+            large = False
+        elif pa.types.is_large_list(data_type) or pa.types.is_large_list_view(data_type):
+            large = True
+        else:
             raise TypeError(f"expected list type, found {data_type}")
         inner = data_type.value_type  # type: ignore
 
@@ -206,7 +207,7 @@ class SparseRowType(pa.ExtensionType):
         if val_f.name != "value":
             raise TypeError(f"second field of element struct must be 'value', found {val_f.name}")
 
-        return cls(dimension, val_f.type)
+        return cls(dimension, val_f.type, large=large)
 
     @property
     def dimension(self) -> int:
@@ -253,13 +254,22 @@ class SparseRowArray(pa.ExtensionArray):
     @classmethod
     def from_csr(cls, csr: sps.csr_array[Any, tuple[int, int]]) -> SparseRowArray:
         _nr, dim = csr.shape
-        offsets = pa.array(csr.indptr, pa.int32())
+        smax = np.iinfo(np.int32).max
+
         cols = pa.array(csr.indices, SparseIndexType(dim))
         vals = pa.array(csr.data)
 
         entries = pa.StructArray.from_arrays([cols, vals], names=["index", "value"])
-        rows = pa.ListArray.from_arrays(offsets, entries)
-        return pa.ExtensionArray.from_storage(SparseRowType(dim, vals.type), rows)  # type: ignore
+        if csr.nnz > smax:
+            offsets = pa.array(csr.indptr, pa.int64())
+            rows = pa.LargeListArray.from_arrays(offsets, entries)
+            large = True
+        else:
+            offsets = pa.array(csr.indptr, pa.int32())
+            rows = pa.ListArray.from_arrays(offsets, entries)
+            large = False
+
+        return pa.ExtensionArray.from_storage(SparseRowType(dim, vals.type, large=large), rows)  # type: ignore
 
     def to_csr(self) -> sps.csr_array:
         assert isinstance(self.type, SparseRowType)

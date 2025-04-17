@@ -67,3 +67,14 @@ def set_env_var(var, val):
             os.environ[var] = old_val
         elif val is not None:
             del os.environ[var]
+
+
+def have_memory(gb: int | float) -> bool:
+    "Check if we have at least gb gigs of memory."
+    if not hasattr(os, "sysconf"):
+        return False
+
+    p_size = os.sysconf("SC_PAGE_SIZE")
+    p_count = os.sysconf("SC_PHYS_PAGES")
+    mem_size = p_size * p_count
+    return mem_size >= gb * 1024 * 1024 * 1024
