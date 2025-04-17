@@ -92,6 +92,8 @@ class SparseIndexType(pa.ExtensionType):
     ``int32``s; the extension type attaches the row's dimensionality to the index
     field (making it easier to pass it to/from Rust, since we often pass arrays
     and not entire fields).
+
+    .. stability:: internal
     """
 
     dimension: int
@@ -130,6 +132,8 @@ class SparseRowType(pa.ExtensionType):
     """
     Data type for sparse rows stored in Arrow.  Sparse rows are stored as lists
     of structs with ``index`` and ``column`` fields.
+
+    .. stability:: internal
     """
 
     value_type: pa.DataType
@@ -231,6 +235,8 @@ class SparseRowType(pa.ExtensionType):
 class SparseRowArray(pa.ExtensionArray):
     """
     An array of sparse rows (a compressed sparse row matrix).
+
+    .. stability:: internal
     """
 
     @classmethod
