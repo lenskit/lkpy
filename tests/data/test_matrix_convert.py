@@ -96,3 +96,26 @@ def test_sparse_type_extract_mismatch():
 
     with raises(ValueError, match="mismatch"):
         SparseRowType.from_type(t.storage_type, 30)
+
+
+def test_sparse_type_extract_no_dimension():
+    t = SparseRowType(20)
+    print("type", t)
+    print("storage type", t.storage_type)
+
+    t2 = SparseRowType.from_type(t.storage_type)
+    assert t2.dimension == t.dimension
+
+
+def test_sparse_type_extract_missing_dimension():
+    orig_t = pa.list_(
+        pa.struct(
+            [
+                ("index", pa.int32()),
+                ("value", pa.float32()),
+            ]
+        )
+    )
+
+    with raises(TypeError):
+        SparseRowType.from_type(orig_t)
