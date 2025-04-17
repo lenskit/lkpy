@@ -29,7 +29,7 @@ _log = get_logger(__name__)
 
 @given(sparse_arrays())
 def test_sparse_from_csr(csr: csr_array[Any, tuple[int, int]]):
-    arr = SparseRowArray.from_csr(csr)
+    arr = SparseRowArray.from_scipy(csr)
     assert isinstance(arr, SparseRowArray)
     assert isinstance(arr.type, SparseRowType)
 
@@ -45,7 +45,7 @@ def test_sparse_from_csr(csr: csr_array[Any, tuple[int, int]]):
 @given(sparse_arrays())
 def test_csr_to_rust(csr: csr_array[Any, tuple[int, int]]):
     "Test that we can send CSRs to Rust"
-    arr = SparseRowArray.from_csr(csr)
+    arr = SparseRowArray.from_scipy(csr)
     assert isinstance(arr, SparseRowArray)
     assert isinstance(arr.type, SparseRowType)
 
@@ -56,9 +56,9 @@ def test_csr_to_rust(csr: csr_array[Any, tuple[int, int]]):
 
 @given(sparse_arrays())
 def test_sparse_to_csr(csr: csr_array[Any, tuple[int, int]]):
-    arr = SparseRowArray.from_csr(csr)
+    arr = SparseRowArray.from_scipy(csr)
 
-    csr2 = arr.to_csr()
+    csr2 = arr.to_scipy()
     assert csr2.shape == csr.shape
     assert csr2.nnz == csr.nnz
     assert np.all(csr2.indptr == csr.indptr)

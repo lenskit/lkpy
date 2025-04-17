@@ -844,7 +844,7 @@ class DatasetBuilder:
         assert isinstance(csr, csr_array)
         csr.sort_indices()
 
-        array = SparseRowArray.from_csr(csr)
+        array = SparseRowArray.from_scipy(csr)
         vec_col = _expand_and_align_list_array(table.num_rows, rows.to_numpy(), array.storage)
         vec_col = SparseRowArray.from_array(vec_col)
         self.schema.entities[cls].attributes[name] = ColumnSpec(

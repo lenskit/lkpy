@@ -262,7 +262,7 @@ class SparseRowArray(pa.ExtensionArray):
         return pa.ExtensionArray.from_storage(et, array.cast(et.storage_type))  # type: ignore
 
     @classmethod
-    def from_csr(cls, csr: sps.csr_array[Any, tuple[int, int]]) -> SparseRowArray:
+    def from_scipy(cls, csr: sps.csr_array[Any, tuple[int, int]]) -> SparseRowArray:
         _nr, dim = csr.shape
         smax = np.iinfo(np.int32).max
 
@@ -281,7 +281,7 @@ class SparseRowArray(pa.ExtensionArray):
 
         return pa.ExtensionArray.from_storage(SparseRowType(dim, vals.type, large=large), rows)  # type: ignore
 
-    def to_csr(self) -> sps.csr_array:
+    def to_scipy(self) -> sps.csr_array[Any, tuple[int, int]]:
         """
         Convert this sparse row array to a SciPy sparse array.
         """

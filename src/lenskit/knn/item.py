@@ -148,8 +148,8 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         rmat = self._normalize_rows(log, timer, rmat)
 
         # convert matrix & its transpose to Arrow for Rust computation
-        ui_mat = SparseRowArray.from_csr(rmat.tocsr())
-        iu_mat = SparseRowArray.from_csr(rmat.T.tocsr())
+        ui_mat = SparseRowArray.from_scipy(rmat.tocsr())
+        iu_mat = SparseRowArray.from_scipy(rmat.T.tocsr())
         del rmat
         log.debug("[%s] prepared working matrices, memory use %s", timer, max_memory())
 

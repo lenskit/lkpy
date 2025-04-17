@@ -85,7 +85,7 @@ def test_ii_train():
 
     assert isinstance(algo.item_means, np.ndarray)
     assert isinstance(algo.item_counts, np.ndarray)
-    matrix = algo.sim_matrix.to_csr()
+    matrix = algo.sim_matrix.to_scipy()
 
     test_means = simple_ratings.groupby("item_id")["rating"].mean()
     test_means = test_means.reindex(algo.items.ids())
@@ -117,7 +117,7 @@ def test_ii_train_unbounded():
     algo = ItemKNNScorer(k=30)
     algo.train(simple_ds)
 
-    matrix = algo.sim_matrix.to_csr()
+    matrix = algo.sim_matrix.to_scipy()
     assert all(np.logical_not(np.isnan(matrix.data)))
     assert all(matrix.data > 0)
     # a little tolerance
@@ -201,7 +201,7 @@ def test_ii_train_ml100k(tmp_path, ml_100k):
 
     _log.info("testing model")
 
-    matrix = algo.sim_matrix.to_csr()
+    matrix = algo.sim_matrix.to_scipy()
     assert all(np.logical_not(np.isnan(matrix.data)))
     assert np.all(matrix.data > 0)
 
@@ -242,7 +242,7 @@ def test_ii_large_models(rng, ml_ratings, ml_ds):
     algo_ub.train(ml_ds)
 
     _log.info("testing models")
-    mat_lim = algo_lim.sim_matrix.to_csr()
+    mat_lim = algo_lim.sim_matrix.to_scipy()
     assert all(np.logical_not(np.isnan(mat_lim.data)))
     assert mat_lim.data.min() > 0
     # a little tolerance
@@ -252,7 +252,7 @@ def test_ii_large_models(rng, ml_ratings, ml_ds):
     means = means.reindex(algo_ub.items.ids(), fill_value=0.0)
     assert means.values == approx(algo_lim.item_means)
 
-    mat_ub = algo_ub.sim_matrix.to_csr()
+    mat_ub = algo_ub.sim_matrix.to_scipy()
     assert all(np.logical_not(np.isnan(mat_ub.data)))
     assert mat_ub.data.min() > 0
     assert mat_ub.data.max() <= 1 + 1.0e-6
@@ -360,7 +360,7 @@ def test_ii_implicit_large(rng, ml_ratings):
     users = rng.choice(ml_ratings["user_id"].unique(), NUSERS)
 
     items: Vocabulary = algo.items
-    mat: NDArray[np.float32] = algo.sim_matrix.to_csr().toarray()
+    mat: NDArray[np.float32] = algo.sim_matrix.to_scipy().toarray()
 
     for user in users:
         recs = pipe.run("recommender", query=user, n=NRECS)
@@ -391,7 +391,7 @@ def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
     original = ItemKNNScorer(k=30, save_nbrs=500)
     _log.info("building model")
     original.train(from_interactions_df(ml_subset, item_col="item_id"))
-    o_mat = original.sim_matrix.to_csr()
+    o_mat = original.sim_matrix.to_scipy()
 
     fn = tmp_path / "ii.mod"
     _log.info("saving model to %s", fn)

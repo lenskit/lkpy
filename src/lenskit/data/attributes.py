@@ -339,7 +339,7 @@ class SparseAttributeSet(AttributeSet):
     def scipy(self) -> csr_array:
         col = self.arrow()
 
-        return col.to_csr()
+        return col.to_scipy()
 
     def torch(self) -> torch.Tensor:
         col = self.arrow()
