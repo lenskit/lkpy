@@ -65,6 +65,7 @@ class AttributeSet:
     _table: pa.Table
     _vocab: Vocabulary
     _selected: pa.Int32Array | None = None
+    _cached_array: pa.Array | pa.ChunkedArray | None = None
 
     def __init__(
         self,
@@ -156,11 +157,13 @@ class AttributeSet:
         """
         Get the attribute values as an Arrow array.
         """
-        col = self._table.column(self.name)
-        if self._selected is not None:
-            col = col.take(self._selected)
+        if self._cached_array is None:
+            col = self._table.column(self.name)
+            if self._selected is not None:
+                col = col.take(self._selected)
+            self._cached_array = col
 
-        return col
+        return self._cached_array
 
     def scipy(self) -> NDArray[Any] | csr_array:
         """
@@ -320,11 +323,15 @@ class SparseAttributeSet(AttributeSet):
 
     def arrow(self) -> SparseRowArray:
         arr = super().arrow()
-        dim = self._spec.vector_size
-        if isinstance(arr, pa.ChunkedArray):
-            arr = arr.combine_chunks()
+        if arr is not self._cached_array:
+            dim = self._spec.vector_size
+            if isinstance(arr, pa.ChunkedArray):
+                arr = arr.combine_chunks()
+            arr = SparseRowArray.from_array(arr, dim)
+            self._cached_array = arr
 
-        return SparseRowArray.from_array(arr, dim)
+        assert isinstance(self._cached_array, SparseRowArray)
+        return self._cached_array
 
     def numpy(self) -> np.ndarray[tuple[int, int], Any]:
         raise NotImplementedError("sparse attributes cannot be retrieved as numpy")
