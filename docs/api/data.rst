@@ -81,3 +81,19 @@ Schemas and Identifiers
 See also:
 
 * :py:class:`lenskit.data.types.EntityId`
+
+Arrow Support
+~~~~~~~~~~~~~
+
+These classes provide support for compressed sparse row matrices in Arrow.
+
+.. autosummary::
+    :toctree: .
+    :nosignatures:
+    :caption: Arrow Support
+
+    ~lenskit.data.matrix.SparseRowType
+    ~lenskit.data.matrix.SparseIndexType
+    ~lenskit.data.matrix.SparseRowArray
+
+They are also supported on the Rust side of LensKit.
