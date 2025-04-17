@@ -324,7 +324,7 @@ class SparseAttributeSet(AttributeSet):
 
     def arrow(self) -> SparseRowArray:
         arr = super().arrow()
-        if arr is not self._cached_array:
+        if not isinstance(arr, SparseRowArray):
             dim = self._spec.vector_size
             if isinstance(arr, pa.ChunkedArray):
                 arr = arr.combine_chunks()
