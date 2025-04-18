@@ -86,4 +86,9 @@ impl RowColumnSet {
 
         Ok(RowColumnSet { sets })
     }
+
+    #[pyo3(name = "contains_pair")]
+    pub(crate) fn contains_pair_py(&self, row: i32, col: i32) -> bool {
+        self.sets[row as usize].contains(col)
+    }
 }
