@@ -187,7 +187,7 @@ class MatrixRelationshipSet(RelationshipSet):
         a relationship set's :meth:`~RelationshipSet.matrix` method.
     """
 
-    _row_ptrs: np.ndarray[int, np.dtype[np.int32]]
+    _row_ptrs: np.ndarray[tuple[int], np.dtype[np.int32]]
     _structure: SparseRowArray
     row_vocabulary: Vocabulary
     row_type: str
@@ -199,7 +199,7 @@ class MatrixRelationshipSet(RelationshipSet):
     _col_nums: pa.Int32Array
     _col_stats: pd.DataFrame | None = None
 
-    _rc_set: object | None = None
+    _rc_set: RowColumnSet
 
     def __init__(
         self,
@@ -235,18 +235,18 @@ class MatrixRelationshipSet(RelationshipSet):
         log.debug("computing CSR data")
         n_rows = len(self.row_vocabulary)
         row_sizes = np.zeros(n_rows + 1, dtype=np.int32())
-        self._row_nums = table.column(e_cols[0]).combine_chunks()
+        self._row_nums = table.column(e_cols[0]).combine_chunks()  # type: ignore
         rsz_struct = pc.value_counts(self._row_nums)
         rsz_nums = rsz_struct.field("values")
         rsz_counts = rsz_struct.field("counts").cast(pa.int32())
         row_sizes[np.asarray(rsz_nums) + 1] = rsz_counts
         self._row_ptrs = np.cumsum(row_sizes, dtype=np.int32)
 
-        self._col_nums = table.column(e_cols[1]).combine_chunks()
+        self._col_nums = table.column(e_cols[1]).combine_chunks()  # type: ignore
         self._table = table
         self._structure = SparseRowArray.from_arrays(
             self._row_ptrs,
-            self._table.column(num_col_name(self.col_type)),
+            self._col_nums,
             shape=(len(self.row_vocabulary), len(self.col_vocabulary)),
         )
 
@@ -450,7 +450,7 @@ class MatrixRelationshipSet(RelationshipSet):
         eff_n = n or 1
 
         if verify:
-            sampler = NegativeSampler(self._rc_set, pa.array(rows), eff_n)
+            sampler = NegativeSampler(self._rc_set, pa.array(rows, type=pa.int32()), eff_n)  # type: ignore
 
             count = 0
             while nr := sampler.num_remaining():
