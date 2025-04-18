@@ -18,7 +18,7 @@ mod row;
 
 pub use index::{SparseIndexType, SparseMeta};
 pub use index_list::SparseIndexListType;
-pub use matrix::CSRMatrix;
+pub use matrix::{CSRMatrix, CSRStructure};
 pub use row::SparseRowType;
 
 /// Test function to make sure we can convert sparse rows.

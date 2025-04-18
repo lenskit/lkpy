@@ -1,0 +1,95 @@
+//! Accelerated sampling support.
+use std::mem;
+
+use arrow::{
+    array::{downcast_array, make_array, Array, ArrayData, Int32Array},
+    pyarrow::PyArrowType,
+};
+use arrow_schema::DataType;
+use pyo3::{exceptions::PyTypeError, prelude::*};
+
+use crate::sparse::CSRStructure;
+use crate::types::checked_array_convert;
+
+#[pyclass]
+pub struct NegativeSampler {
+    matrix: CSRStructure<i32>,
+    users: Int32Array,
+    n_cols: usize,
+    negatives: Vec<i32>,
+    remaining: Vec<u32>,
+}
+
+impl NegativeSampler {
+    fn element_row(&self, index: usize) -> usize {
+        index / self.n_cols
+    }
+
+    fn element_user(&self, index: usize) -> usize {
+        let row = self.element_row(index);
+        self.users.value(row) as usize
+    }
+}
+
+#[pymethods]
+impl NegativeSampler {
+    #[new]
+    fn new(
+        matrix: PyArrowType<ArrayData>,
+        users: PyArrowType<ArrayData>,
+        tgt_n: usize,
+    ) -> PyResult<Self> {
+        let matrix = make_array(matrix.0);
+        let users = make_array(users.0);
+        if users.data_type() != &DataType::Int32 {
+            return Err(PyTypeError::new_err(format!(
+                "unexpected user type {} (expected int32)",
+                users.data_type()
+            )));
+        }
+
+        let n_rows = users.len();
+        let n = n_rows * tgt_n;
+
+        Ok(NegativeSampler {
+            matrix: CSRStructure::from_arrow(matrix)?,
+            users: downcast_array(&users),
+            n_cols: tgt_n,
+            negatives: vec![-1; n],
+            remaining: (0..n as u32).collect(),
+        })
+    }
+
+    fn num_remaining(&self) -> usize {
+        self.remaining.len()
+    }
+
+    fn accumulate(&mut self, items: PyArrowType<ArrayData>) -> PyResult<()> {
+        let items = make_array(items.0);
+        let iref: &Int32Array = checked_array_convert("items", "int32", &items)?;
+
+        let mut remaining = Vec::with_capacity(self.remaining.len());
+
+        for (pos, item) in self.remaining.iter().zip(iref) {
+            let pos = *pos as usize;
+            let item = item.unwrap();
+            let user = self.element_user(pos);
+            let row = self.matrix.row_columns(user);
+            if row.binary_search(&item).is_err() {
+                self.negatives[pos] = item;
+            } else {
+                remaining.push(pos as u32);
+            }
+        }
+
+        mem::swap(&mut remaining, &mut self.remaining);
+
+        Ok(())
+    }
+
+    fn result(&mut self) -> PyResult<PyArrowType<ArrayData>> {
+        let array = mem::take(&mut self.negatives);
+        let array = Int32Array::from(array);
+        Ok(array.into_data().into())
+    }
+}

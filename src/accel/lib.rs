@@ -4,6 +4,7 @@ use rayon::ThreadPoolBuilder;
 
 mod arrow;
 mod knn;
+mod sampling;
 mod sparse;
 mod types;
 
