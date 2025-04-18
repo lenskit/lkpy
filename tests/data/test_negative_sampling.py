@@ -102,39 +102,57 @@ def test_negative_unverified_bench(rng: np.random.Generator, ml_ds: Dataset, ben
 
 
 @mark.benchmark()
-def test_negative_verified_bench(rng: np.random.Generator, ml_ds: Dataset, benchmark):
+@mark.parametrize("mode", ["rust", "legacy"])
+def test_negative_verified_bench(mode, rng: np.random.Generator, ml_ds: Dataset, benchmark):
     matrix = ml_ds.interactions().matrix()
 
     users = rng.choice(ml_ds.user_count, 500, replace=True)
     users = np.require(users, "i4")
 
+    if mode == "rust":
+        samp = matrix.sample_negatives
+    else:
+        samp = matrix.sample_negatives_legacy
+
     def sample():
-        _items = matrix.sample_negatives(users, rng=rng)
+        _items = samp(users, rng=rng)
 
     benchmark(sample)
 
 
 @mark.benchmark()
-def test_negative_5000_bench(rng: np.random.Generator, ml_ds: Dataset, benchmark):
+@mark.parametrize("mode", ["rust", "legacy"])
+def test_negative_5000_bench(mode, rng: np.random.Generator, ml_ds: Dataset, benchmark):
     matrix = ml_ds.interactions().matrix()
 
     users = rng.choice(ml_ds.user_count, 5000, replace=True)
     users = np.require(users, "i4")
 
+    if mode == "rust":
+        samp = matrix.sample_negatives
+    else:
+        samp = matrix.sample_negatives_legacy
+
     def sample():
-        _items = matrix.sample_negatives(users, rng=rng)
+        _items = samp(users, rng=rng)
 
     benchmark(sample)
 
 
 @mark.benchmark()
-def test_negative_multiple_bench(rng: np.random.Generator, ml_ds: Dataset, benchmark):
+@mark.parametrize("mode", ["rust", "legacy"])
+def test_negative_multiple_bench(mode, rng: np.random.Generator, ml_ds: Dataset, benchmark):
     matrix = ml_ds.interactions().matrix()
 
     users = rng.choice(ml_ds.user_count, 500, replace=True)
     users = np.require(users, "i4")
 
+    if mode == "rust":
+        samp = matrix.sample_negatives
+    else:
+        samp = matrix.sample_negatives_legacy
+
     def sample():
-        _items = matrix.sample_negatives(users, n=10, rng=rng)
+        _items = samp(users, n=10, rng=rng)
 
     benchmark(sample)

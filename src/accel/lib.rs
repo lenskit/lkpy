@@ -14,6 +14,7 @@ fn _accel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     pyo3_log::init();
     knn::register_knn(m)?;
 
+    m.add_class::<sampling::NegativeSampler>()?;
     m.add_function(wrap_pyfunction!(init_accel_pool, m)?)?;
     m.add_function(wrap_pyfunction!(sparse::sparse_row_debug, m)?)?;
 

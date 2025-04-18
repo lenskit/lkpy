@@ -23,13 +23,14 @@ import torch
 from numpy.typing import NDArray
 from typing_extensions import Literal, overload, override
 
+from lenskit._accel import NegativeSampler
 from lenskit.diagnostics import DataWarning, FieldError
 from lenskit.logging import get_logger
 from lenskit.random import random_generator
 
 from .arrow import is_sorted
 from .items import ItemList
-from .matrix import COOStructure, CSRStructure
+from .matrix import COOStructure, CSRStructure, SparseRowArray
 from .schema import RelationshipSchema, id_col_name, num_col_name
 from .types import ID, LAYOUT, MAT_AGG
 from .vocab import Vocabulary
@@ -188,12 +189,15 @@ class MatrixRelationshipSet(RelationshipSet):
     """
 
     _row_ptrs: np.ndarray[int, np.dtype[np.int32]]
+    _structure: SparseRowArray
     row_vocabulary: Vocabulary
     row_type: str
+    _row_nums: pa.Int32Array
     _row_stats: pd.DataFrame | None = None
 
     col_vocabulary: Vocabulary
     col_type: str
+    _col_nums: pa.Int32Array
     _col_stats: pd.DataFrame | None = None
 
     rc_index: pd.Index
@@ -228,16 +232,26 @@ class MatrixRelationshipSet(RelationshipSet):
             log.warning("sorting relationship table (might take time)")
             table = table.sort_by([(c, "ascending") for c in e_cols])
 
+        table = table.combine_chunks()
+
         # compute the row pointers
         log.debug("computing CSR data")
         n_rows = len(self.row_vocabulary)
         row_sizes = np.zeros(n_rows + 1, dtype=np.int32())
-        rsz_struct = pc.value_counts(table.column(e_cols[0]))
+        self._row_nums = table.column(e_cols[0]).combine_chunks()
+        rsz_struct = pc.value_counts(self._row_nums)
         rsz_nums = rsz_struct.field("values")
         rsz_counts = rsz_struct.field("counts").cast(pa.int32())
         row_sizes[np.asarray(rsz_nums) + 1] = rsz_counts
         self._row_ptrs = np.cumsum(row_sizes, dtype=np.int32)
+
+        self._col_nums = table.column(e_cols[1]).combine_chunks()
         self._table = table
+        self._structure = SparseRowArray.from_arrays(
+            self._row_ptrs,
+            self._table.column(self.col_type + "_num"),
+            shape=(len(self.row_vocabulary), len(self.col_vocabulary)),
+        )
 
         # make the index
         log.debug("computing row-column index")
@@ -401,6 +415,86 @@ class MatrixRelationshipSet(RelationshipSet):
             ).coalesce()
 
     def sample_negatives(
+        self,
+        rows: np.ndarray[tuple[int], np.dtype[np.int32]],
+        *,
+        weighting: Literal["uniform", "popular", "popularity"] = "uniform",
+        n: int | None = None,
+        verify: bool = True,
+        max_attempts: int = 10,
+        rng: np.random.Generator | None = None,
+    ) -> NDArray[np.int32]:
+        """
+        Sample negative columns (columns with no observation recorded) for an
+        array of rows. On a normal interaction matrix, this samples negative
+        items for users.
+
+        Args:
+            rows:
+                The row numbers.  Duplicates are allowed, and negative columns
+                are sampled independently for each row. Must be a 1D array or
+                tensor.
+            weighting:
+                The weighting for sampled negatives; ``uniform`` samples them
+                uniformly at random, while ``popularity`` samples them
+                proportional to their popularity (number of occurrences).
+            n:
+                The number of negatives to sample for each user.  If ``None``,
+                a single-dimensional vector is returned.
+            verify:
+                Whether to verify that the negative items are actually negative.
+                Unverified sampling is much faster but can return false
+                negatives.
+            max_attempts:
+                When verification is on, the maximum attempts before giving up
+                and returning a possible false negative.
+            rng:
+                A random number generator to use.
+        """
+        rng = random_generator(rng)
+
+        _log.debug("samping negatives", nrows=len(rows), ncols=n)
+
+        eff_n = n or 1
+
+        if verify:
+            sampler = NegativeSampler(self._structure, pa.array(rows), eff_n)
+
+            while nr := sampler.num_remaining():
+                candidates = self._sample_columns(rng, nr, weighting)
+                sampler.accumulate(pa.array(candidates, pa.int32()))
+
+            columns = sampler.result()
+        else:
+            columns = self._sample_columns(rng, eff_n, weighting)
+
+        columns = np.require(columns, "i4")
+        if n is not None:
+            columns = columns.reshape(-1, n)
+
+        return columns
+
+    def _sample_columns(
+        self,
+        rng: np.random.Generator,
+        size: int | tuple[int, int],
+        weighting: Literal["uniform", "popular", "popularity"],
+    ):
+        match weighting:
+            case "uniform":
+                return self._sample_unweighted(rng, size)
+            case "popular" | "popularity":
+                return self._sample_weighted(rng, size)
+            case _:
+                raise ValueError(f"unknown weighting strategy {weighting}")
+
+    def _sample_unweighted(self, rng: np.random.Generator, size: int | tuple[int, int]):
+        return rng.choice(self.n_cols, size=size, replace=True)
+
+    def _sample_weighted(self, rng: np.random.Generator, size: int | tuple[int, int]):
+        return rng.choice(self._col_nums.to_numpy(), size=size, replace=True)
+
+    def sample_negatives_legacy(
         self,
         rows: np.ndarray[tuple[int], np.dtype[np.int32]],
         *,

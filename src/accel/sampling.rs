@@ -6,7 +6,11 @@ use arrow::{
     pyarrow::PyArrowType,
 };
 use arrow_schema::DataType;
-use pyo3::{exceptions::PyTypeError, prelude::*};
+use log::*;
+use pyo3::{
+    exceptions::{PyRuntimeError, PyTypeError},
+    prelude::*,
+};
 
 use crate::sparse::CSRStructure;
 use crate::types::checked_array_convert;
@@ -50,6 +54,10 @@ impl NegativeSampler {
 
         let n_rows = users.len();
         let n = n_rows * tgt_n;
+        debug!(
+            "creating sampler for {} negatives for {} rows",
+            tgt_n, n_rows
+        );
 
         Ok(NegativeSampler {
             matrix: CSRStructure::from_arrow(matrix)?,
@@ -65,8 +73,14 @@ impl NegativeSampler {
     }
 
     fn accumulate(&mut self, items: PyArrowType<ArrayData>) -> PyResult<()> {
+        if self.negatives.is_empty() {
+            return Err(PyRuntimeError::new_err(
+                "sampler already finished".to_string(),
+            ));
+        }
         let items = make_array(items.0);
         let iref: &Int32Array = checked_array_convert("items", "int32", &items)?;
+        debug!("accumulating {} negative candidates", iref.len());
 
         let mut remaining = Vec::with_capacity(self.remaining.len());
 
@@ -76,8 +90,10 @@ impl NegativeSampler {
             let user = self.element_user(pos);
             let row = self.matrix.row_columns(user);
             if row.binary_search(&item).is_err() {
+                debug!("{}: found item {} for user {}", pos, item, user);
                 self.negatives[pos] = item;
             } else {
+                debug!("{}: rejected item {} for user {}", pos, item, user);
                 remaining.push(pos as u32);
             }
         }
