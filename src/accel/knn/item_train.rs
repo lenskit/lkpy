@@ -14,7 +14,7 @@ use ordered_float::NotNan;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 
-use crate::sparse::CSRMatrix;
+use crate::sparse::{CSRMatrix, SparseIndexType};
 
 #[pyfunction]
 pub fn compute_similarities<'py>(
@@ -29,11 +29,18 @@ pub fn compute_similarities<'py>(
 
     py.allow_threads(|| {
         // extract the data
-        debug!("preparing {}x{} matrix", nu, ni);
-        let ui_mat = CSRMatrix::from_arrow(make_array(ui_ratings.0), nu, ni)?;
-        let iu_mat = CSRMatrix::from_arrow(make_array(iu_ratings.0), ni, nu)?;
-        assert_eq!(ui_mat.array.len(), nu);
-        assert_eq!(iu_mat.array.len(), ni);
+        debug!("preparing {}x{} training", nu, ni);
+        debug!(
+            "resolving user-item matrix (type: {:#?})",
+            ui_ratings.0.data_type()
+        );
+        let ui_mat = CSRMatrix::from_arrow(make_array(ui_ratings.0))?;
+        debug!("resolving item-user matrix");
+        let iu_mat = CSRMatrix::from_arrow(make_array(iu_ratings.0))?;
+        assert_eq!(ui_mat.len(), nu);
+        assert_eq!(ui_mat.n_cols, ni);
+        assert_eq!(iu_mat.len(), ni);
+        assert_eq!(iu_mat.n_cols, nu);
 
         // let's compute!
         let range = 0..ni;
@@ -70,7 +77,8 @@ pub fn compute_similarities<'py>(
             }
 
             let struct_fields = Fields::from(vec![
-                Field::new("index", DataType::Int32, false),
+                Field::new("index", DataType::Int32, false)
+                    .with_extension_type(SparseIndexType::create(ni)),
                 Field::new("value", DataType::Float32, false),
             ]);
             let list_field = Field::new("rows", DataType::Struct(struct_fields.clone()), false);

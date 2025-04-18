@@ -22,6 +22,7 @@ from numpy.typing import NDArray
 from scipy.sparse import csr_array
 from typing_extensions import Any
 
+from lenskit.data.matrix import SparseRowArray
 from lenskit.torch import safe_tensor
 
 from .schema import AttrLayout, ColumnSpec
@@ -64,6 +65,7 @@ class AttributeSet:
     _table: pa.Table
     _vocab: Vocabulary
     _selected: pa.Int32Array | None = None
+    _cached_array: pa.Array | pa.ChunkedArray | None = None
 
     def __init__(
         self,
@@ -88,7 +90,7 @@ class AttributeSet:
         else:
             return self._vocab.ids(self._selected.to_numpy())
 
-    def numbers(self) -> np.ndarray[int, np.dtype[np.int32]]:
+    def numbers(self) -> np.ndarray[tuple[int], np.dtype[np.int32]]:
         """
         Get the entity numbers for the rows in this attribute's values.
         """
@@ -155,11 +157,13 @@ class AttributeSet:
         """
         Get the attribute values as an Arrow array.
         """
-        col = self._table.column(self.name)
-        if self._selected is not None:
-            col = col.take(self._selected)
+        if self._cached_array is None:
+            col = self._table.column(self.name)
+            if self._selected is not None:
+                col = col.take(self._selected)
+            self._cached_array = col
 
-        return col
+        return self._cached_array
 
     def scipy(self) -> NDArray[Any] | csr_array:
         """
@@ -183,6 +187,7 @@ class AttributeSet:
         else:
             selected = np.arange(len(self._vocab), dtype=np.int32)
             selected = pa.array(selected)
+            assert isinstance(selected, pa.Int32Array)
             selected = selected.filter(valid)
 
         return self.__class__(self.name, self._spec, self._table, self._vocab, selected)
@@ -250,7 +255,7 @@ class VectorAttributeSet(AttributeSet):
 
         if pa.types.is_fixed_size_list(col.type):
             return col
-        elif pc.all(col.is_valid()).as_py():
+        elif col.null_count == 0:
             if isinstance(col, pa.ChunkedArray):
                 return pa.chunked_array(
                     [
@@ -317,34 +322,30 @@ class SparseAttributeSet(AttributeSet):
 
         return self._names
 
+    def arrow(self) -> SparseRowArray:
+        arr = super().arrow()
+        if not isinstance(arr, SparseRowArray):
+            dim = self._spec.vector_size
+            if isinstance(arr, pa.ChunkedArray):
+                arr = arr.combine_chunks()
+            arr = SparseRowArray.from_array(arr, dim)
+            self._cached_array = arr
+
+        assert isinstance(self._cached_array, SparseRowArray)
+        return self._cached_array
+
     def numpy(self) -> np.ndarray[tuple[int, int], Any]:
         raise NotImplementedError("sparse attributes cannot be retrieved as numpy")
 
     def scipy(self) -> csr_array:
         col = self.arrow()
-        if isinstance(col, pa.ChunkedArray):
-            col = col.combine_chunks()
-        assert isinstance(col, pa.ListArray)
 
-        rowptr = col.offsets.to_numpy()
-        entries = col.values
-        assert isinstance(entries, pa.StructArray)
-        indices = entries.field("index").to_numpy(zero_copy_only=False)
-        values = entries.field("value").to_numpy(zero_copy_only=False)
-
-        ncol = self._spec.vector_size
-        assert ncol is not None, "sparse vector has no size"
-
-        return csr_array((values, indices, rowptr), shape=(len(col), ncol))
+        return col.to_scipy()
 
     def torch(self) -> torch.Tensor:
-        csr = self.scipy()
-        return torch.sparse_csr_tensor(
-            crow_indices=np.require(csr.indptr, requirements="W"),
-            col_indices=np.require(csr.indices, requirements="W"),
-            values=np.require(csr.data, requirements="W"),
-            size=csr.shape,
-        )
+        col = self.arrow()
+
+        return col.to_torch()
 
 
 def _replace_vectors(
@@ -352,7 +353,7 @@ def _replace_vectors(
 ):
     size = arr.type.list_size
     assert values.type.list_size == size
-    assert pc.all(values.is_valid()).as_py()
+    assert values.null_count == 0
     in_valid = arr.is_valid()
     out_valid = pc.or_(in_valid, mask)
 

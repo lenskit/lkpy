@@ -23,7 +23,7 @@ from typing_extensions import override
 
 from lenskit import _accel
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery, Vocabulary
-from lenskit.data.matrix import sparse_to_arrow
+from lenskit.data.matrix import SparseRowArray
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import Stopwatch, get_logger, trace
 from lenskit.logging.resource import cur_memory, max_memory
@@ -108,7 +108,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
     "Mean rating for each known item."
     item_counts: np.ndarray[int, np.dtype[np.int32]]
     "Number of saved neighbors for each item."
-    sim_matrix: pa.LargeListArray
+    sim_matrix: SparseRowArray
     "Similarity matrix (sparse CSR tensor)."
 
     @override
@@ -135,7 +135,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         log.info("begining IKNN training")
 
         field = "rating" if self.config.explicit else None
-        rmat = data.interactions().matrix().scipy(field, layout="coo")
+        rmat = data.interactions().matrix().scipy(field, layout="coo").astype(np.float32)
         n_users, n_items = rmat.shape
         log.info(
             "[%s] made sparse matrix",
@@ -148,8 +148,8 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         rmat = self._normalize_rows(log, timer, rmat)
 
         # convert matrix & its transpose to Arrow for Rust computation
-        ui_mat = sparse_to_arrow(rmat.tocsr())
-        iu_mat = sparse_to_arrow(rmat.T.tocsr())
+        ui_mat = SparseRowArray.from_scipy(rmat.tocsr())
+        iu_mat = SparseRowArray.from_scipy(rmat.T.tocsr())
         del rmat
         log.debug("[%s] prepared working matrices, memory use %s", timer, max_memory())
 
@@ -161,7 +161,8 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         assert isinstance(smat, list)
         smat = pa.chunked_array(smat)
         smat = smat.combine_chunks()
-        assert isinstance(smat, pa.LargeListArray)
+        assert pa.types.is_large_list(smat.type)
+        smat = SparseRowArray.from_array(smat)
         gc.collect()
         log.debug(
             "[%s] combined chunks, memory use %s (peak %s)", timer, cur_memory(), max_memory()
@@ -191,7 +192,7 @@ class ItemKNNScorer(Component[ItemList], Trainable):
             rmat = rmat.tocsc()
             counts = np.diff(rmat.indptr)
             sums = rmat.sum(axis=0)
-            means = np.zeros(sums.shape)
+            means = np.zeros(sums.shape, dtype=np.float32)
             # manual divide to avoid division by zero
             np.divide(sums, counts, out=means, where=counts > 0)
             rmat.data = rmat.data - np.repeat(means, counts)
@@ -208,7 +209,8 @@ class ItemKNNScorer(Component[ItemList], Trainable):
 
     def _normalize_rows(self, log, timer, rmat: sparray) -> coo_array:
         norms = spla.norm(rmat, 2, axis=0)
-        cmat = rmat / norms
+        # clamp small values to avoid divide by 0 (only appear when an entry is all 0)
+        cmat = rmat / np.maximum(norms, np.finfo("f4").smallest_normal)
         assert cmat.shape == rmat.shape
         log.debug("[%s] normalized, memory use %s", timer, max_memory())
         return cmat

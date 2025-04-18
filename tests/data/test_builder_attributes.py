@@ -14,6 +14,7 @@ from scipy.sparse import csr_array
 from pytest import approx, mark, raises, skip, warns
 
 from lenskit.data import DatasetBuilder
+from lenskit.data.matrix import SparseRowArray
 from lenskit.data.schema import AttrLayout
 from lenskit.diagnostics import DataError, DataWarning
 from lenskit.testing import ml_test_dir
@@ -454,7 +455,7 @@ def test_item_sparse_attribute(rng: np.random.Generator, ml_ratings: pd.DataFram
     assert len(tensor.values()) == arr.nnz
 
     arr = ds.entities("item").attribute("genres").arrow()
-    assert pa.types.is_list(arr.type)
+    assert isinstance(arr, SparseRowArray)
 
     for movie in rng.choice(movies.index.values, 50, replace=False):
         row = ds.items.number(movie)

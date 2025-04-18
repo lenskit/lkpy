@@ -30,7 +30,7 @@ from pydantic import (
     model_validator,
 )
 
-CURRENT_VERSION = "2025.2"
+CURRENT_VERSION = "2025.3"
 OLDEST_VERSION = "2025.1"
 
 # Pydantic context to use when loading rather than constructing.

@@ -16,7 +16,7 @@ import json
 import warnings
 from collections.abc import Mapping, Sequence
 from os import PathLike
-from typing import Any, Literal, TypeAlias, TypeVar, cast, overload
+from typing import Any, Literal, TypeAlias, TypeVar, overload
 
 import numpy as np
 import pandas as pd
@@ -26,6 +26,7 @@ import structlog
 from numpy.typing import ArrayLike, NDArray
 from scipy.sparse import csr_array, sparray
 
+from lenskit.data.matrix import SparseRowArray
 from lenskit.diagnostics import DataError, DataWarning
 from lenskit.logging import get_logger
 
@@ -840,17 +841,14 @@ class DatasetBuilder:
         valid: NDArray[np.bool_],
     ):
         csr: csr_array = values.tocsr()  # type: ignore
+        assert isinstance(csr, csr_array)
         csr.sort_indices()
-        _nrow, ncol = cast(tuple[int, int], csr.shape)
 
-        offsets = pa.array(np.require(csr.indptr, dtype=np.int32))
-        obs_struct = pa.StructArray.from_arrays(
-            [pa.array(csr.indices), pa.array(csr.data)], ["index", "value"]
-        )
-        vec_col = pa.ListArray.from_arrays(offsets, obs_struct)
-        vec_col = _expand_and_align_list_array(table.num_rows, rows.to_numpy(), vec_col)
+        array = SparseRowArray.from_scipy(csr)
+        vec_col = _expand_and_align_list_array(table.num_rows, rows.to_numpy(), array.storage)
+        vec_col = SparseRowArray.from_array(vec_col)
         self.schema.entities[cls].attributes[name] = ColumnSpec(
-            layout=AttrLayout.SPARSE, vector_size=ncol
+            layout=AttrLayout.SPARSE, vector_size=array.dimension
         )
         return vec_col
 
@@ -987,6 +985,7 @@ def _expand_and_align_list_array(
     if not np.all(valid):
         rows = rows[valid]
         lists = lists.drop_null()
+        assert len(lists) == len(rows)
 
     # reorder input to align with the output
     order = np.argsort(rows)
@@ -994,7 +993,7 @@ def _expand_and_align_list_array(
         lists = lists.take(order)
         rows = rows[order]
 
-    # now we do surgery — put the lengths into place, and
+    # now we do surgery — put the lengths into place, and set up offsets
     sizes = np.zeros(out_len + 1, dtype=np.int32)
     sizes[rows + 1] = lists.value_lengths().to_numpy()
     offsets = np.cumsum(sizes, dtype=np.int32)

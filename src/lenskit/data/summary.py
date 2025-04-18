@@ -18,6 +18,7 @@ from humanize import metric, naturalsize
 from prettytable import PrettyTable, TableStyle
 from structlog.stdlib import BoundLogger
 
+from lenskit.data.matrix import SparseRowType
 from lenskit.logging import get_logger
 
 from .container import DataContainer
@@ -164,9 +165,8 @@ def _attr_table(tbl: pa.Table, attributes: dict[str, ColumnSpec]):
                 vtype = vtype.value_type
                 dim = "{:,d}".format(a_schema.vector_size)
             case AttrLayout.SPARSE:
-                assert isinstance(vtype, pa.ListType)
-                assert isinstance(vtype.value_type, pa.StructType)
-                vtype = vtype.value_type.field("value").type
+                assert isinstance(vtype, SparseRowType)
+                vtype = vtype.value_type
                 dim = "{:,d}".format(a_schema.vector_size)
 
         pt.add_row(

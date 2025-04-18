@@ -5,6 +5,7 @@ from pathlib import Path
 from pytest import mark, skip
 
 from lenskit.data.dataset import Dataset
+from lenskit.data.matrix import SparseRowArray
 from lenskit.logging import get_logger
 from lenskit.testing import ml_test_dir
 
@@ -61,3 +62,6 @@ def test_data_backwards_ml20m(version, tmpdir: Path):
     _log.info("loading dataset")
     ml = Dataset.load(out_path)
     assert ml.schema.version is not None
+
+    arr = ml.entities("item").attribute("tag_counts").arrow()
+    assert isinstance(arr, SparseRowArray)
