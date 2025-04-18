@@ -10,7 +10,6 @@ Relationship accessors for Dataset.
 
 from __future__ import annotations
 
-import warnings
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
@@ -23,13 +22,14 @@ import torch
 from numpy.typing import NDArray
 from typing_extensions import Literal, overload, override
 
-from lenskit.diagnostics import DataWarning, FieldError
+from lenskit._accel import NegativeSampler, RowColumnSet
+from lenskit.diagnostics import FieldError
 from lenskit.logging import get_logger
 from lenskit.random import random_generator
 
 from .arrow import is_sorted
 from .items import ItemList
-from .matrix import COOStructure, CSRStructure
+from .matrix import COOStructure, CSRStructure, SparseRowArray
 from .schema import RelationshipSchema, id_col_name, num_col_name
 from .types import ID, LAYOUT, MAT_AGG
 from .vocab import Vocabulary
@@ -187,16 +187,19 @@ class MatrixRelationshipSet(RelationshipSet):
         a relationship set's :meth:`~RelationshipSet.matrix` method.
     """
 
-    _row_ptrs: np.ndarray[int, np.dtype[np.int32]]
+    _row_ptrs: np.ndarray[tuple[int], np.dtype[np.int32]]
+    _structure: SparseRowArray
     row_vocabulary: Vocabulary
     row_type: str
+    _row_nums: pa.Int32Array
     _row_stats: pd.DataFrame | None = None
 
     col_vocabulary: Vocabulary
     col_type: str
+    _col_nums: pa.Int32Array
     _col_stats: pd.DataFrame | None = None
 
-    rc_index: pd.Index
+    _rc_set: RowColumnSet
 
     def __init__(
         self,
@@ -206,48 +209,60 @@ class MatrixRelationshipSet(RelationshipSet):
         table: pa.Table,
     ):
         super().__init__(ds, name, schema, table)
-        log = _log.bind(dataset=ds.name, relationship=name)
+        self._init_structures(ds_name=ds.name)
+
+    def _init_structures(self, *, ds_name: str | None = None, _trust_table_sort: bool = False):
+        log = _log.bind(dataset=ds_name, relationship=self.name)
 
         # order the table to compute the sparse matrix
         log.debug("setting up entity information")
-        entities = list(schema.entities.keys())
+        entities = list(self.schema.entities.keys())
         row, col = entities
-        row_col_name = num_col_name(row)
-        col_col_name = num_col_name(col)
 
         self.row_type = row
-        self.row_vocabulary = ds.entities(row).vocabulary
+        self.row_vocabulary = self._vocabularies[row]
         self.col_type = col
-        self.col_vocabulary = ds.entities(col).vocabulary
+        self.col_vocabulary = self._vocabularies[col]
 
         e_cols = [num_col_name(e) for e in entities]
         log.debug("checking relationship table sorting")
-        if is_sorted(table, e_cols):
+        if _trust_table_sort or is_sorted(self._table, e_cols):
             log.debug("relationship table already sorted 😊")
         else:
             log.warning("sorting relationship table (might take time)")
-            table = table.sort_by([(c, "ascending") for c in e_cols])
+            self._table = self._table.sort_by([(c, "ascending") for c in e_cols])
+
+        self._table = self._table.combine_chunks()
 
         # compute the row pointers
         log.debug("computing CSR data")
         n_rows = len(self.row_vocabulary)
         row_sizes = np.zeros(n_rows + 1, dtype=np.int32())
-        rsz_struct = pc.value_counts(table.column(e_cols[0]))
+        self._row_nums = self._table.column(e_cols[0]).combine_chunks()  # type: ignore
+        rsz_struct = pc.value_counts(self._row_nums)
         rsz_nums = rsz_struct.field("values")
         rsz_counts = rsz_struct.field("counts").cast(pa.int32())
         row_sizes[np.asarray(rsz_nums) + 1] = rsz_counts
         self._row_ptrs = np.cumsum(row_sizes, dtype=np.int32)
-        self._table = table
+
+        self._col_nums = self._table.column(e_cols[1]).combine_chunks()  # type: ignore
+        self._structure = SparseRowArray.from_arrays(
+            self._row_ptrs,
+            self._col_nums,
+            shape=(len(self.row_vocabulary), len(self.col_vocabulary)),
+        )
 
         # make the index
         log.debug("computing row-column index")
-        self.rc_index = pd.Index(
-            self._rc_combined_nums(
-                self._table.column(row_col_name).to_numpy(),
-                self._table.column(col_col_name).to_numpy(),
-            )
-        )
+        self._rc_set = RowColumnSet(self._structure)
         log.debug("relationship set ready to use")
+
+    def __getstate__(self):
+        return {f: v for (f, v) in self.__dict__.items() if f != "_rc_set"}
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._rc_set = RowColumnSet(self._structure)
 
     @property
     def n_rows(self):
@@ -440,69 +455,50 @@ class MatrixRelationshipSet(RelationshipSet):
         rng = random_generator(rng)
 
         _log.debug("samping negatives", nrows=len(rows), ncols=n)
-        if n is None:
-            shape = len(rows)
-        else:
-            shape = (len(rows), n)
 
-        match weighting:
-            case "uniform":
-                columns = rng.choice(self.n_cols, size=shape, replace=True)
-            case "popular" | "popularity":
-                ccol = self._table.column(num_col_name(self.col_type)).to_numpy()
-                trows = rng.choice(self._table.num_rows, size=shape, replace=True)
-                columns = ccol[trows]
-            case _:
-                raise ValueError(f"unknown weighting strategy {weighting}")
-        columns = np.require(columns, "i4")
+        eff_n = n or 1
 
         if verify:
-            if n is None:
-                self._check_negatives_and_resample(rows, columns, max_attempts, rng, weighting)
-            else:
-                for c in range(n):
-                    self._check_negatives_and_resample(
-                        rows, columns[:, c], max_attempts, rng, weighting
-                    )
+            sampler = NegativeSampler(self._rc_set, pa.array(rows, type=pa.int32()), eff_n)  # type: ignore
+
+            count = 0
+            while nr := sampler.num_remaining():
+                count += 1
+                last = count >= max_attempts
+                candidates = self._sample_columns(rng, nr, weighting)
+                sampler.accumulate(pa.array(candidates, pa.int32()), last)
+                if last:
+                    break
+
+            columns = sampler.result()
+        else:
+            columns = self._sample_columns(rng, eff_n, weighting)
+
+        columns = np.require(columns, "i4")
+        if n is not None:
+            columns = columns.reshape(-1, n)
 
         return columns
 
-    def _check_negatives(
-        self, rows: NDArray[np.int32], columns: NDArray[np.int32]
-    ) -> NDArray[np.bool]:
-        nums = self._rc_combined_nums(rows, columns)
-        locs = self.rc_index.get_indexer_for(nums)
-        return locs >= 0
-
-    def _rc_combined_nums(self, rows: NDArray[np.int32], columns: NDArray[np.int32]):
-        rnums = rows.astype(np.uint64)
-        cnums = columns.astype(np.uint64)
-        return (rnums << 32) + cnums
-
-    def _check_negatives_and_resample(
+    def _sample_columns(
         self,
-        rows: NDArray[np.int32],
-        columns: NDArray[np.int32],
-        max_attempts: int,
         rng: np.random.Generator,
-        weighting: Literal["uniform", "popularity"],
+        size: int | tuple[int, int],
+        weighting: Literal["uniform", "popular", "popularity"],
     ):
-        non_neg = self._check_negatives(rows, columns)
-        _log.debug("checking negatives", nrows=len(rows), npos=np.sum(non_neg).item())
-        if np.any(non_neg):
-            if max_attempts > 0:
-                columns[non_neg] = self.sample_negatives(
-                    rows[non_neg],
-                    verify=True,
-                    rng=rng,
-                    max_attempts=max_attempts - 1,
-                    weighting=weighting,
-                )
-            else:
-                warnings.warn(
-                    "failed to find verified negatives for {} users".format(np.sum(non_neg)),
-                    DataWarning,
-                )
+        match weighting:
+            case "uniform":
+                return self._sample_unweighted(rng, size)
+            case "popular" | "popularity":
+                return self._sample_weighted(rng, size)
+            case _:
+                raise ValueError(f"unknown weighting strategy {weighting}")
+
+    def _sample_unweighted(self, rng: np.random.Generator, size: int | tuple[int, int]):
+        return rng.choice(self.n_cols, size=size, replace=True)
+
+    def _sample_weighted(self, rng: np.random.Generator, size: int | tuple[int, int]):
+        return rng.choice(self._col_nums.to_numpy(), size=size, replace=True)
 
     def row_table(self, id: ID | None = None, *, number: int | None = None) -> pa.Table | None:
         """

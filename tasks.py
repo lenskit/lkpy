@@ -83,11 +83,17 @@ def build_conda(c: Context):
 
 
 @task(build_accel, positional=["file"])
-def test(c: Context, coverage: bool = False):
+def test(
+    c: Context, coverage: bool = False, skip_marked: str | None = None, file: str | None = None
+):
     "Run tests."
     cmd = "pytest"
     if coverage:
         cmd += " --cov=src/lenskit --cov-report=term --cov-report=xml"
+    if skip_marked:
+        cmd += f" -m 'not {skip_marked}'"
+    if file:
+        cmd += f" '{file}'"
 
     if program.core.remainder:
         cmd += " " + program.core.remainder

@@ -1,6 +1,4 @@
 //! Support for type-checking.
-use std::sync::Arc;
-
 use pyo3::prelude::*;
 
 use arrow::array::Array;

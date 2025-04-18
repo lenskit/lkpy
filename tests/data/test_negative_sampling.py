@@ -4,6 +4,8 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+from itertools import product
+
 import numpy as np
 
 from pytest import mark
@@ -39,7 +41,7 @@ def test_negative(rng: np.random.Generator, ml_ds: Dataset, weighting):
         row = ml_ds.user_row(user_num=u)
         ulog = ulog.bind(u_nitems=len(row))
         ulog.debug("checking if item is negative")
-        assert (u, i) not in matrix.rc_index
+        assert not matrix._rc_set.contains_pair(u, i)
         print(ml_ds.users.id(u), row.ids())
         assert i not in row.numbers()
 
@@ -70,7 +72,7 @@ def test_negative_multiple(rng: np.random.Generator, ml_ds: Dataset, weighting):
             row = ml_ds.user_row(user_num=u)
             ulog = ulog.bind(u_nitems=len(row))
             ulog.debug("checking if item is negative")
-            assert (u, i) not in matrix.rc_index
+            assert not matrix._rc_set.contains_pair(u, i)
             print(ml_ds.users.id(u), row.ids())
             assert i not in row.numbers()
 
@@ -102,13 +104,27 @@ def test_negative_unverified_bench(rng: np.random.Generator, ml_ds: Dataset, ben
 
 
 @mark.benchmark()
-def test_negative_verified_bench(rng: np.random.Generator, ml_ds: Dataset, benchmark):
+@mark.parametrize("count", [500, 5000, 8192])
+def test_negative_verified_bench(count, rng: np.random.Generator, ml_ds: Dataset, benchmark):
+    matrix = ml_ds.interactions().matrix()
+
+    users = rng.choice(ml_ds.user_count, count, replace=True)
+    users = np.require(users, "i4")
+
+    def sample():
+        _items = matrix.sample_negatives(users, rng=rng)
+
+    benchmark(sample)
+
+
+@mark.benchmark()
+def test_negative_multiple_bench(rng: np.random.Generator, ml_ds: Dataset, benchmark):
     matrix = ml_ds.interactions().matrix()
 
     users = rng.choice(ml_ds.user_count, 500, replace=True)
     users = np.require(users, "i4")
 
     def sample():
-        _items = matrix.sample_negatives(users, rng=rng)
+        _items = matrix.sample_negatives(users, n=10, rng=rng)
 
     benchmark(sample)
