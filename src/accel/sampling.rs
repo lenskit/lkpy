@@ -10,11 +10,10 @@ use log::*;
 use pyo3::{
     exceptions::{PyRuntimeError, PyTypeError},
     prelude::*,
-    AsPyPointer,
 };
 
+use crate::data::RowColumnSet;
 use crate::types::checked_array_convert;
-use crate::{data::RowColumnSet, sparse::CSRStructure};
 
 #[pyclass]
 pub struct NegativeSampler {
