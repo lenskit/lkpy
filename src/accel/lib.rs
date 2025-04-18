@@ -3,6 +3,7 @@ use pyo3::prelude::*;
 use rayon::ThreadPoolBuilder;
 
 mod arrow;
+mod data;
 mod knn;
 mod sampling;
 mod sparse;
@@ -15,6 +16,7 @@ fn _accel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     knn::register_knn(m)?;
 
     m.add_class::<sampling::NegativeSampler>()?;
+    m.add_class::<data::RowColumnSet>()?;
     m.add_function(wrap_pyfunction!(init_accel_pool, m)?)?;
     m.add_function(wrap_pyfunction!(sparse::sparse_row_debug, m)?)?;
 

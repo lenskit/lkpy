@@ -23,7 +23,7 @@ import torch
 from numpy.typing import NDArray
 from typing_extensions import Literal, overload, override
 
-from lenskit._accel import NegativeSampler
+from lenskit._accel import NegativeSampler, RowColumnSet
 from lenskit.diagnostics import DataWarning, FieldError
 from lenskit.logging import get_logger
 from lenskit.random import random_generator
@@ -201,6 +201,7 @@ class MatrixRelationshipSet(RelationshipSet):
     _col_stats: pd.DataFrame | None = None
 
     rc_index: pd.Index
+    _rc_set: object | None = None
 
     def __init__(
         self,
@@ -261,6 +262,7 @@ class MatrixRelationshipSet(RelationshipSet):
                 self._table.column(col_col_name).to_numpy(),
             )
         )
+        self._rc_set = RowColumnSet(self._structure)
         log.debug("relationship set ready to use")
 
     @property
@@ -458,7 +460,7 @@ class MatrixRelationshipSet(RelationshipSet):
         eff_n = n or 1
 
         if verify:
-            sampler = NegativeSampler(self._structure, pa.array(rows), eff_n)
+            sampler = NegativeSampler(self._rc_set, pa.array(rows), eff_n)
 
             while nr := sampler.num_remaining():
                 candidates = self._sample_columns(rng, nr, weighting)

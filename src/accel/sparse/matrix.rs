@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::sync::Arc;
 
 use pyo3::prelude::*;
@@ -30,7 +31,7 @@ pub struct CSRMatrix<Ix: OffsetSizeTrait = i32> {
     pub values: Float32Array,
 }
 
-impl<Ix: OffsetSizeTrait> CSRStructure<Ix> {
+impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRStructure<Ix> {
     /// Convert an Arrow structured array into a CSR matrix, checking for type errors.
     pub fn from_arrow(array: Arc<dyn Array>) -> PyResult<CSRStructure<Ix>> {
         let sa: &GenericListArray<Ix> = array.as_any().downcast_ref().ok_or_else(|| {
@@ -68,6 +69,10 @@ impl<Ix: OffsetSizeTrait> CSRStructure<Ix> {
         self.array.len()
     }
 
+    pub fn nnz(&self) -> usize {
+        self.row_ptrs()[self.len()].try_into().unwrap()
+    }
+
     pub fn row_ptrs(&self) -> &[Ix] {
         self.array.value_offsets()
     }
@@ -85,7 +90,7 @@ impl<Ix: OffsetSizeTrait> CSRStructure<Ix> {
     }
 }
 
-impl<Ix: OffsetSizeTrait> CSRMatrix<Ix> {
+impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRMatrix<Ix> {
     /// Convert an Arrow structured array into a CSR matrix, checking for type errors.
     pub fn from_arrow(array: Arc<dyn Array>) -> PyResult<CSRMatrix<Ix>> {
         let sa: &GenericListArray<Ix> = array.as_any().downcast_ref().ok_or_else(|| {
@@ -146,6 +151,10 @@ impl<Ix: OffsetSizeTrait> CSRMatrix<Ix> {
 
     pub fn len(&self) -> usize {
         self.array.len()
+    }
+
+    pub fn nnz(&self) -> usize {
+        self.row_ptrs()[self.len()].try_into().unwrap()
     }
 
     pub fn row_ptrs(&self) -> &[Ix] {

@@ -10,15 +10,16 @@ use log::*;
 use pyo3::{
     exceptions::{PyRuntimeError, PyTypeError},
     prelude::*,
+    AsPyPointer,
 };
 
-use crate::sparse::CSRStructure;
 use crate::types::checked_array_convert;
+use crate::{data::RowColumnSet, sparse::CSRStructure};
 
 #[pyclass]
 pub struct NegativeSampler {
-    matrix: CSRStructure<i32>,
-    users: Int32Array,
+    rc_set: Py<RowColumnSet>,
+    rows: Int32Array,
     n_cols: usize,
     negatives: Vec<i32>,
     remaining: Vec<u32>,
@@ -29,21 +30,20 @@ impl NegativeSampler {
         index / self.n_cols
     }
 
-    fn element_user(&self, index: usize) -> usize {
+    fn element_src_row(&self, index: usize) -> i32 {
         let row = self.element_row(index);
-        self.users.value(row) as usize
+        self.rows.value(row)
     }
 }
 
 #[pymethods]
 impl NegativeSampler {
     #[new]
-    fn new(
-        matrix: PyArrowType<ArrayData>,
+    fn new<'py>(
+        rc_set: Bound<'py, RowColumnSet>,
         users: PyArrowType<ArrayData>,
         tgt_n: usize,
     ) -> PyResult<Self> {
-        let matrix = make_array(matrix.0);
         let users = make_array(users.0);
         if users.data_type() != &DataType::Int32 {
             return Err(PyTypeError::new_err(format!(
@@ -60,8 +60,8 @@ impl NegativeSampler {
         );
 
         Ok(NegativeSampler {
-            matrix: CSRStructure::from_arrow(matrix)?,
-            users: downcast_array(&users),
+            rc_set: rc_set.unbind(),
+            rows: downcast_array(&users),
             n_cols: tgt_n,
             negatives: vec![-1; n],
             remaining: (0..n as u32).collect(),
@@ -72,7 +72,7 @@ impl NegativeSampler {
         self.remaining.len()
     }
 
-    fn accumulate(&mut self, items: PyArrowType<ArrayData>) -> PyResult<()> {
+    fn accumulate<'py>(&mut self, py: Python<'py>, items: PyArrowType<ArrayData>) -> PyResult<()> {
         if self.negatives.is_empty() {
             return Err(PyRuntimeError::new_err(
                 "sampler already finished".to_string(),
@@ -80,6 +80,7 @@ impl NegativeSampler {
         }
         let items = make_array(items.0);
         let iref: &Int32Array = checked_array_convert("items", "int32", &items)?;
+        let rcs_ref = self.rc_set.borrow(py);
         debug!("accumulating {} negative candidates", iref.len());
 
         let mut remaining = Vec::with_capacity(self.remaining.len());
@@ -87,9 +88,8 @@ impl NegativeSampler {
         for (pos, item) in self.remaining.iter().zip(iref) {
             let pos = *pos as usize;
             let item = item.unwrap();
-            let user = self.element_user(pos);
-            let row = self.matrix.row_columns(user);
-            if row.binary_search(&item).is_err() {
+            let user = self.element_src_row(pos);
+            if rcs_ref.contains_pair(user, item) {
                 debug!("{}: found item {} for user {}", pos, item, user);
                 self.negatives[pos] = item;
             } else {
