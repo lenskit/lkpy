@@ -10,7 +10,6 @@ Relationship accessors for Dataset.
 
 from __future__ import annotations
 
-import warnings
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
@@ -24,7 +23,7 @@ from numpy.typing import NDArray
 from typing_extensions import Literal, overload, override
 
 from lenskit._accel import NegativeSampler, RowColumnSet
-from lenskit.diagnostics import DataWarning, FieldError
+from lenskit.diagnostics import FieldError
 from lenskit.logging import get_logger
 from lenskit.random import random_generator
 
@@ -200,7 +199,6 @@ class MatrixRelationshipSet(RelationshipSet):
     _col_nums: pa.Int32Array
     _col_stats: pd.DataFrame | None = None
 
-    rc_index: pd.Index
     _rc_set: object | None = None
 
     def __init__(
@@ -217,8 +215,6 @@ class MatrixRelationshipSet(RelationshipSet):
         log.debug("setting up entity information")
         entities = list(schema.entities.keys())
         row, col = entities
-        row_col_name = num_col_name(row)
-        col_col_name = num_col_name(col)
 
         self.row_type = row
         self.row_vocabulary = ds.entities(row).vocabulary
@@ -250,18 +246,12 @@ class MatrixRelationshipSet(RelationshipSet):
         self._table = table
         self._structure = SparseRowArray.from_arrays(
             self._row_ptrs,
-            self._table.column(self.col_type + "_num"),
+            self._table.column(num_col_name(self.col_type)),
             shape=(len(self.row_vocabulary), len(self.col_vocabulary)),
         )
 
         # make the index
         log.debug("computing row-column index")
-        self.rc_index = pd.Index(
-            self._rc_combined_nums(
-                self._table.column(row_col_name).to_numpy(),
-                self._table.column(col_col_name).to_numpy(),
-            )
-        )
         self._rc_set = RowColumnSet(self._structure)
         log.debug("relationship set ready to use")
 
@@ -500,110 +490,6 @@ class MatrixRelationshipSet(RelationshipSet):
 
     def _sample_weighted(self, rng: np.random.Generator, size: int | tuple[int, int]):
         return rng.choice(self._col_nums.to_numpy(), size=size, replace=True)
-
-    def sample_negatives_legacy(
-        self,
-        rows: np.ndarray[tuple[int], np.dtype[np.int32]],
-        *,
-        weighting: Literal["uniform", "popular", "popularity"] = "uniform",
-        n: int | None = None,
-        verify: bool = True,
-        max_attempts: int = 10,
-        rng: np.random.Generator | None = None,
-    ) -> NDArray[np.int32]:
-        """
-        Sample negative columns (columns with no observation recorded) for an
-        array of rows. On a normal interaction matrix, this samples negative
-        items for users.
-
-        Args:
-            rows:
-                The row numbers.  Duplicates are allowed, and negative columns
-                are sampled independently for each row. Must be a 1D array or
-                tensor.
-            weighting:
-                The weighting for sampled negatives; ``uniform`` samples them
-                uniformly at random, while ``popularity`` samples them
-                proportional to their popularity (number of occurrences).
-            n:
-                The number of negatives to sample for each user.  If ``None``,
-                a single-dimensional vector is returned.
-            verify:
-                Whether to verify that the negative items are actually negative.
-                Unverified sampling is much faster but can return false
-                negatives.
-            max_attempts:
-                When verification is on, the maximum attempts before giving up
-                and returning a possible false negative.
-            rng:
-                A random number generator to use.
-        """
-        rng = random_generator(rng)
-
-        _log.debug("samping negatives", nrows=len(rows), ncols=n)
-        if n is None:
-            shape = len(rows)
-        else:
-            shape = (len(rows), n)
-
-        match weighting:
-            case "uniform":
-                columns = rng.choice(self.n_cols, size=shape, replace=True)
-            case "popular" | "popularity":
-                ccol = self._table.column(num_col_name(self.col_type)).to_numpy()
-                trows = rng.choice(self._table.num_rows, size=shape, replace=True)
-                columns = ccol[trows]
-            case _:
-                raise ValueError(f"unknown weighting strategy {weighting}")
-        columns = np.require(columns, "i4")
-
-        if verify:
-            if n is None:
-                self._check_negatives_and_resample(rows, columns, max_attempts, rng, weighting)
-            else:
-                for c in range(n):
-                    self._check_negatives_and_resample(
-                        rows, columns[:, c], max_attempts, rng, weighting
-                    )
-
-        return columns
-
-    def _check_negatives(
-        self, rows: NDArray[np.int32], columns: NDArray[np.int32]
-    ) -> NDArray[np.bool]:
-        nums = self._rc_combined_nums(rows, columns)
-        locs = self.rc_index.get_indexer_for(nums)
-        return locs >= 0
-
-    def _rc_combined_nums(self, rows: NDArray[np.int32], columns: NDArray[np.int32]):
-        rnums = rows.astype(np.uint64)
-        cnums = columns.astype(np.uint64)
-        return (rnums << 32) + cnums
-
-    def _check_negatives_and_resample(
-        self,
-        rows: NDArray[np.int32],
-        columns: NDArray[np.int32],
-        max_attempts: int,
-        rng: np.random.Generator,
-        weighting: Literal["uniform", "popularity"],
-    ):
-        non_neg = self._check_negatives(rows, columns)
-        _log.debug("checking negatives", nrows=len(rows), npos=np.sum(non_neg).item())
-        if np.any(non_neg):
-            if max_attempts > 0:
-                columns[non_neg] = self.sample_negatives(
-                    rows[non_neg],
-                    verify=True,
-                    rng=rng,
-                    max_attempts=max_attempts - 1,
-                    weighting=weighting,
-                )
-            else:
-                warnings.warn(
-                    "failed to find verified negatives for {} users".format(np.sum(non_neg)),
-                    DataWarning,
-                )
 
     def row_table(self, id: ID | None = None, *, number: int | None = None) -> pa.Table | None:
         """
