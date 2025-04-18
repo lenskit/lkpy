@@ -257,6 +257,13 @@ class MatrixRelationshipSet(RelationshipSet):
         self._rc_set = RowColumnSet(self._structure)
         log.debug("relationship set ready to use")
 
+    def __getstate__(self):
+        return {f: v for (f, v) in self.__dict__.items() if f != "_rc_set"}
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._rc_set = RowColumnSet(self._structure)
+
     @property
     def n_rows(self):
         return len(self.row_vocabulary)
