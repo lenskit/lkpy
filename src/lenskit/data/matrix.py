@@ -17,13 +17,16 @@ from typing import Any, NamedTuple, TypeVar
 
 import numpy as np
 import pyarrow as pa
+import pyarrow.compute as pc
 import scipy.sparse as sps
 import torch
+from numpy.typing import ArrayLike
 
 t = torch
 M = TypeVar("M", "CSRStructure", sps.csr_array, sps.coo_array, sps.spmatrix, t.Tensor)
 
 SPARSE_IDX_EXT_NAME = "lenskit.sparse_index"
+SPARSE_IDX_LIST_EXT_NAME = "lenskit.sparse_index_list"
 SPARSE_ROW_EXT_NAME = "lenskit.sparse_row"
 
 
@@ -128,6 +131,76 @@ class SparseIndexType(pa.ExtensionType):
         return cls(data["dimension"])
 
 
+class SparseIndexListType(pa.ExtensionType):
+    """
+    Sparse index lists.  These are the row type for structure-only sparse
+    matrices.
+    """
+
+    value_type: None = None
+    index_type: SparseIndexType
+
+    def __init__(self, dimension: int, large: bool = False):
+        self.index_type = SparseIndexType(dimension)
+
+        lt_ctor = pa.large_list if large else pa.list_
+
+        super().__init__(
+            lt_ctor(self.index_type),
+            SPARSE_IDX_LIST_EXT_NAME,
+        )
+
+    @classmethod
+    def from_type(cls, data_type: pa.DataType, dimension: int | None = None) -> SparseIndexListType:
+        """
+        Create a sparse index list type from an Arrow data type, handling legacy struct
+        layouts without the extension types.
+
+        Args:
+            data_type:
+                The Arrow data type to interpret as a row type.
+            dimension:
+                The row dimension, if known from an external source.  If
+                provided and the data type also includes the dimensionality,
+                both dimensions must match.
+
+        Raises:
+            TypeError:
+                If the data type is not a valid sparse row type.
+            ValueError:
+                If there is another error, such as mismatched dimensions.
+        """
+        if isinstance(data_type, SparseIndexListType):
+            data_type.index_type.check_dimension(dimension)
+            return data_type
+
+        if pa.types.is_list(data_type):
+            large = False
+        elif pa.types.is_large_list(data_type):
+            large = True
+        else:
+            raise TypeError(f"expected list type, found {data_type}")
+        inner = data_type.value_type  # type: ignore
+
+        dimension = _check_index_type(inner, dimension)
+
+        return cls(dimension, large=large)
+
+    @property
+    def dimension(self) -> int:
+        return self.index_type.dimension
+
+    def __arrow_ext_serialize__(self) -> bytes:
+        return b""
+
+    @classmethod
+    def __arrow_ext_deserialize__(cls, storage_type, serialized):
+        return cls.from_type(storage_type)
+
+    def __arrow_ext_class__(self):
+        return SparseRowArray
+
+
 class SparseRowType(pa.ExtensionType):
     """
     Data type for sparse rows stored in Arrow.  Sparse rows are stored as lists
@@ -136,24 +209,29 @@ class SparseRowType(pa.ExtensionType):
     .. stability:: internal
     """
 
-    value_type: pa.DataType
+    value_type: pa.DataType | None
     index_type: SparseIndexType
 
-    def __init__(self, dimension: int, value_type: pa.DataType = pa.float32(), large: bool = False):
+    def __init__(
+        self, dimension: int, value_type: pa.DataType | None = pa.float32(), large: bool = False
+    ):
         self.value_type = value_type
         self.index_type = SparseIndexType(dimension)
 
         lt_ctor = pa.large_list if large else pa.list_
 
+        if value_type is None:
+            element_type = self.index_type
+        else:
+            element_type = pa.struct(
+                [
+                    ("index", self.index_type),
+                    ("value", value_type),
+                ]
+            )
+
         super().__init__(
-            lt_ctor(
-                pa.struct(
-                    [
-                        pa.field("index", self.index_type),
-                        ("value", value_type),
-                    ]
-                )
-            ),
+            lt_ctor(element_type),
             SPARSE_ROW_EXT_NAME,
         )
 
@@ -190,7 +268,8 @@ class SparseRowType(pa.ExtensionType):
         inner = data_type.value_type  # type: ignore
 
         if not pa.types.is_struct(inner):
-            raise TypeError(f"expected struct element type, found {inner}")
+            raise TypeError(f"expected struct type, found {inner}")
+
         if inner.num_fields != 2:
             raise TypeError(f"element struct must have 2 elements, found {inner.num_fields}")
 
@@ -199,17 +278,7 @@ class SparseRowType(pa.ExtensionType):
         if idx_f.name != "index":
             raise TypeError(f"first field of element struct must be 'index', found {idx_f.name}")
 
-        if isinstance(idx_f.type, SparseIndexType):
-            dimension = idx_f.type.check_dimension(dimension)
-        elif dimension is None:
-            raise TypeError(
-                f"index type must be SparseIndex when no external dimension, found {idx_f.type}"
-            )
-        elif not pa.types.is_int32(idx_f.type):
-            if pa.types.is_int64(idx_f.type):
-                warnings.warn("sparse row has legacy int64 indices", DeprecationWarning)
-            else:
-                raise TypeError(f"index type must be SparseIndex or int32, found {idx_f.type}")
+        dimension = _check_index_type(idx_f.type, dimension)
 
         val_f = inner.field(1)
         if val_f.name != "value":
@@ -239,6 +308,45 @@ class SparseRowArray(pa.ExtensionArray):
     .. stability:: internal
     """
 
+    type: SparseRowType | SparseIndexListType
+
+    @classmethod
+    def from_arrays(
+        cls,
+        offsets: ArrayLike,
+        indices: ArrayLike,
+        values: ArrayLike | None = None,
+        *,
+        shape: tuple[int, int] | None = None,
+    ) -> SparseRowArray:
+        offsets = pa.array(offsets)
+        large = pa.types.is_int64(offsets.type)
+        indices = pa.array(indices, type=pa.int32())
+
+        if shape:
+            _nr, nc = shape
+        else:
+            nc = pc.max(indices).to_py() + 1
+
+        if values is not None:
+            values = pa.array(values)
+            row_type = SparseRowType(nc, values.type, large)
+            index_type = row_type.index_type
+
+            elements = pa.StructArray.from_arrays(
+                [indices.cast(index_type), values], names=["index", "value"]
+            )
+        else:
+            row_type = SparseIndexListType(nc, large)
+            elements = indices.cast(row_type.index_type)
+
+        if large:
+            storage = pa.LargeListArray.from_arrays(offsets, elements)
+        else:
+            storage = pa.ListArray.from_arrays(offsets, elements)
+
+        return pa.ExtensionArray.from_storage(row_type, storage)  # type: ignore
+
     @classmethod
     def from_array(cls, array: pa.Array, dimension: int | None = None) -> SparseRowArray:
         """
@@ -267,26 +375,20 @@ class SparseRowArray(pa.ExtensionArray):
         _nr, dim = csr.shape
         smax = np.iinfo(np.int32).max
 
+        offsets = csr.indptr
+        if csr.nnz < smax:
+            offsets = np.require(offsets, dtype=np.int32)
         cols = pa.array(csr.indices, SparseIndexType(dim))
         vals = pa.array(csr.data)
 
-        entries = pa.StructArray.from_arrays([cols, vals], names=["index", "value"])
-        if csr.nnz > smax:
-            offsets = pa.array(csr.indptr, pa.int64())
-            rows = pa.LargeListArray.from_arrays(offsets, entries)
-            large = True
-        else:
-            offsets = pa.array(csr.indptr, pa.int32())
-            rows = pa.ListArray.from_arrays(offsets, entries)
-            large = False
-
-        return pa.ExtensionArray.from_storage(SparseRowType(dim, vals.type, large=large), rows)  # type: ignore
+        return cls.from_arrays(offsets, cols, vals, shape=csr.shape)
 
     def to_scipy(self) -> sps.csr_array[Any, tuple[int, int]]:
         """
         Convert this sparse row array to a SciPy sparse array.
         """
-        assert isinstance(self.type, SparseRowType)
+        if not self.has_values:
+            raise TypeError("structure-only arrays cannot convert to scipy")
         return sps.csr_array(
             (self.values.to_numpy(), self.indices.to_numpy(), self.offsets.to_numpy()),
             shape=(len(self), self.type.dimension),
@@ -296,6 +398,8 @@ class SparseRowArray(pa.ExtensionArray):
         """
         Convert this sparse row array to a Torch sparse tensor.
         """
+        if not self.has_values:
+            raise TypeError("structure-only arrays cannot convert to Torch")
         return torch.sparse_csr_tensor(
             crow_indices=torch.as_tensor(
                 self.offsets.to_numpy(zero_copy_only=False, writable=True)
@@ -310,7 +414,6 @@ class SparseRowArray(pa.ExtensionArray):
         """
         Get the number of columns in the sparse matrix.
         """
-        assert isinstance(self.type, SparseRowType)
         return self.type.dimension
 
     @property
@@ -318,17 +421,44 @@ class SparseRowArray(pa.ExtensionArray):
         return (len(self), self.dimension)
 
     @property
+    def has_values(self) -> bool:
+        return self.type.value_type is not None
+
+    @property
     def offsets(self) -> pa.Int32Array:
         return self.storage.offsets
 
     @property
     def indices(self) -> pa.Int32Array:
-        return self.storage.values.field(0)
+        if self.has_values:
+            return self.storage.values.field(0)
+        else:
+            return self.storage.values
 
     @property
-    def values(self) -> pa.Array:
-        return self.storage.values.field(1)
+    def values(self) -> pa.Array | None:
+        if self.has_values:
+            return self.storage.values.field(1)
+        else:
+            return None
 
 
-pa.register_extension_type(SparseRowType(0))  # type: ignore
+def _check_index_type(index_type: pa.DataType, dimension: int | None) -> int:
+    if isinstance(index_type, SparseIndexType):
+        return index_type.check_dimension(dimension)
+    elif dimension is None:
+        raise TypeError(
+            f"index type must be SparseIndex when no external dimension, found {index_type}"
+        )
+    elif not pa.types.is_int32(index_type):
+        if pa.types.is_int64(index_type):
+            warnings.warn("sparse row has legacy int64 indices", DeprecationWarning)
+        else:
+            raise TypeError(f"index type must be SparseIndex or int32, found {index_type}")
+
+    return dimension
+
+
 pa.register_extension_type(SparseIndexType(0))  # type: ignore
+pa.register_extension_type(SparseIndexListType(0))  # type: ignore
+pa.register_extension_type(SparseRowType(0))  # type: ignore

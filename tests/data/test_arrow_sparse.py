@@ -67,6 +67,28 @@ def test_sparse_to_csr(csr: csr_array[Any, tuple[int, int]]):
 
 
 @given(sparse_arrays())
+def test_sparse_structure(csr: csr_array[Any, tuple[int, int]]):
+    nr, nc = csr.shape
+
+    arr = SparseRowArray.from_arrays(csr.indptr, csr.indices, shape=(nr, nc))
+    assert len(arr) == nr
+    assert arr.dimension == nc
+    assert np.all(arr.offsets.to_numpy() == csr.indptr)
+    assert arr.values is None
+
+
+@given(sparse_arrays())
+def test_sparse_structure_rust(csr: csr_array[Any, tuple[int, int]]):
+    nr, nc = csr.shape
+
+    arr = SparseRowArray.from_arrays(csr.indptr, csr.indices, shape=(nr, nc))
+
+    dt, nr, nc = sparse_row_debug(arr)
+    _log.info("returned data type: %s", dt, nr=nr, nc=nc)
+    assert (nr, nc) == csr.shape
+
+
+@given(sparse_arrays())
 def test_sparse_from_legacy(csr: csr_array[Any, tuple[int, int]]):
     tbl = pa.ListArray.from_arrays(
         pa.array(csr.indptr.astype("i4")),
