@@ -93,7 +93,7 @@ impl NegativeSampler {
             let pos = self.remaining[i] as usize;
             let item = iref.value(i);
             let user = self.element_src_row(pos);
-            if force || rcs_ref.contains_pair(user, item) {
+            if force || !rcs_ref.contains_pair(user, item) {
                 self.negatives[pos] = item;
             } else {
                 remaining.push(pos as u32);
