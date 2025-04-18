@@ -209,41 +209,43 @@ class MatrixRelationshipSet(RelationshipSet):
         table: pa.Table,
     ):
         super().__init__(ds, name, schema, table)
-        log = _log.bind(dataset=ds.name, relationship=name)
+        self._init_structures(ds_name=ds.name)
+
+    def _init_structures(self, *, ds_name: str | None = None, _trust_table_sort: bool = False):
+        log = _log.bind(dataset=ds_name, relationship=self.name)
 
         # order the table to compute the sparse matrix
         log.debug("setting up entity information")
-        entities = list(schema.entities.keys())
+        entities = list(self.schema.entities.keys())
         row, col = entities
 
         self.row_type = row
-        self.row_vocabulary = ds.entities(row).vocabulary
+        self.row_vocabulary = self._vocabularies[row]
         self.col_type = col
-        self.col_vocabulary = ds.entities(col).vocabulary
+        self.col_vocabulary = self._vocabularies[col]
 
         e_cols = [num_col_name(e) for e in entities]
         log.debug("checking relationship table sorting")
-        if is_sorted(table, e_cols):
+        if _trust_table_sort or is_sorted(self._table, e_cols):
             log.debug("relationship table already sorted 😊")
         else:
             log.warning("sorting relationship table (might take time)")
-            table = table.sort_by([(c, "ascending") for c in e_cols])
+            self._table = self._table.sort_by([(c, "ascending") for c in e_cols])
 
-        table = table.combine_chunks()
+        self._table = self._table.combine_chunks()
 
         # compute the row pointers
         log.debug("computing CSR data")
         n_rows = len(self.row_vocabulary)
         row_sizes = np.zeros(n_rows + 1, dtype=np.int32())
-        self._row_nums = table.column(e_cols[0]).combine_chunks()  # type: ignore
+        self._row_nums = self._table.column(e_cols[0]).combine_chunks()  # type: ignore
         rsz_struct = pc.value_counts(self._row_nums)
         rsz_nums = rsz_struct.field("values")
         rsz_counts = rsz_struct.field("counts").cast(pa.int32())
         row_sizes[np.asarray(rsz_nums) + 1] = rsz_counts
         self._row_ptrs = np.cumsum(row_sizes, dtype=np.int32)
 
-        self._col_nums = table.column(e_cols[1]).combine_chunks()  # type: ignore
-        self._table = table
+        self._col_nums = self._table.column(e_cols[1]).combine_chunks()  # type: ignore
         self._structure = SparseRowArray.from_arrays(
             self._row_ptrs,
             self._col_nums,
