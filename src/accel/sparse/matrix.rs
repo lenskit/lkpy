@@ -8,7 +8,6 @@ use arrow::{
         downcast_array, Array, Float32Array, GenericListArray, Int32Array, OffsetSizeTrait,
         StructArray,
     },
-    buffer::ScalarBuffer,
     datatypes::DataType,
 };
 use pyo3::exceptions::{PyTypeError, PyValueError};
@@ -17,7 +16,9 @@ use pyo3::PyResult;
 use super::SparseIndexType;
 
 pub struct CSRStructure<Ix: OffsetSizeTrait = i32> {
+    #[allow(dead_code)]
     pub n_rows: usize,
+    #[allow(dead_code)]
     pub n_cols: usize,
     array: GenericListArray<Ix>,
     pub col_inds: Int32Array,
@@ -69,6 +70,7 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRStructure<Ix> {
         self.array.len()
     }
 
+    #[allow(dead_code)]
     pub fn nnz(&self) -> usize {
         self.row_ptrs()[self.len()].try_into().unwrap()
     }
@@ -80,13 +82,6 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRStructure<Ix> {
     pub fn extent(&self, row: usize) -> (Ix, Ix) {
         let off = self.row_ptrs();
         (off[row], off[row + 1])
-    }
-
-    pub fn row_columns(&self, row: usize) -> ScalarBuffer<i32> {
-        let (start, end) = self.extent(row);
-        self.col_inds
-            .values()
-            .slice(start.as_usize(), (end - start).as_usize())
     }
 }
 
@@ -153,6 +148,7 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRMatrix<Ix> {
         self.array.len()
     }
 
+    #[allow(dead_code)]
     pub fn nnz(&self) -> usize {
         self.row_ptrs()[self.len()].try_into().unwrap()
     }

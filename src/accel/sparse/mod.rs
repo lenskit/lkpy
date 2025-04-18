@@ -9,14 +9,13 @@ use arrow::{
 };
 use pyo3::exceptions::PyTypeError;
 use pyo3::PyResult;
-use serde_json::{from_str, to_string};
 
 mod index;
 mod index_list;
 mod matrix;
 mod row;
 
-pub use index::{SparseIndexType, SparseMeta};
+pub use index::SparseIndexType;
 pub use index_list::SparseIndexListType;
 pub use matrix::{CSRMatrix, CSRStructure};
 pub use row::SparseRowType;

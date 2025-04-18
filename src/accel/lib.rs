@@ -2,7 +2,6 @@ use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use rayon::ThreadPoolBuilder;
 
-mod arrow;
 mod data;
 mod knn;
 mod sampling;

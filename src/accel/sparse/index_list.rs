@@ -7,12 +7,14 @@ use super::SparseIndexType;
 /// Arrow extension type for sparse index lists.
 #[derive(Debug)]
 pub struct SparseIndexListType {
+    #[allow(dead_code)]
     pub offset_type: DataType,
     pub index_type: SparseIndexType,
 }
 
 impl SparseIndexListType {
     /// Create a new sparse row extension for the given dimension.
+    #[allow(dead_code)]
     pub fn create(dim: usize) -> SparseIndexListType {
         SparseIndexListType {
             offset_type: DataType::Int32,
@@ -21,6 +23,7 @@ impl SparseIndexListType {
     }
 
     /// Create a new sparse row extension for the given dimension with large offsets.
+    #[allow(dead_code)]
     pub fn create_large(dim: usize) -> SparseIndexListType {
         SparseIndexListType {
             offset_type: DataType::Int64,
