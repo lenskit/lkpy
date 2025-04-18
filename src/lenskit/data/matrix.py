@@ -252,10 +252,11 @@ class SparseRowArray(pa.ExtensionArray):
                 The dimensionality of the sparse rows, if known from an external source.
         """
         if isinstance(array, SparseRowArray):
+            assert isinstance(array.type, SparseRowType)
+            array.type.index_type.check_dimension(dimension)
             return array
         elif isinstance(array.type, SparseRowType):
-            if array.type.dimension != dimension:
-                raise ValueError(f"dimensions do not match: {array.type.dimension} != {dimension}")
+            array.type.index_type.check_dimension(dimension)
             return pa.ExtensionArray.from_storage(array.type, array)  # type: ignore
 
         et = SparseRowType.from_type(array.type, dimension)
