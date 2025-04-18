@@ -7,12 +7,13 @@ use arrow::{
     pyarrow::PyArrowType,
 };
 use pyo3::prelude::*;
+use rustc_hash::{FxBuildHasher, FxHashSet};
 
 use crate::sparse::CSRStructure;
 
 #[pyclass]
 pub struct RowColumnSet {
-    set: HashSet<(i32, i32)>,
+    set: FxHashSet<(i32, i32)>,
 }
 
 impl RowColumnSet {
@@ -28,7 +29,7 @@ impl RowColumnSet {
         let matrix = make_array(matrix.0);
         let matrix: CSRStructure<i32> = CSRStructure::from_arrow(matrix)?;
 
-        let mut set = HashSet::with_capacity(matrix.nnz());
+        let mut set = HashSet::with_capacity_and_hasher(matrix.nnz(), FxBuildHasher);
 
         for r in 0..matrix.len() {
             let (sp, ep) = matrix.extent(r);

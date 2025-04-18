@@ -72,7 +72,12 @@ impl NegativeSampler {
         self.remaining.len()
     }
 
-    fn accumulate<'py>(&mut self, py: Python<'py>, items: PyArrowType<ArrayData>) -> PyResult<()> {
+    fn accumulate<'py>(
+        &mut self,
+        py: Python<'py>,
+        items: PyArrowType<ArrayData>,
+        force: bool,
+    ) -> PyResult<()> {
         if self.negatives.is_empty() {
             return Err(PyRuntimeError::new_err(
                 "sampler already finished".to_string(),
@@ -81,19 +86,17 @@ impl NegativeSampler {
         let items = make_array(items.0);
         let iref: &Int32Array = checked_array_convert("items", "int32", &items)?;
         let rcs_ref = self.rc_set.borrow(py);
-        debug!("accumulating {} negative candidates", iref.len());
 
-        let mut remaining = Vec::with_capacity(self.remaining.len());
+        let nr = self.remaining.len();
+        let mut remaining = Vec::with_capacity(nr);
 
-        for (pos, item) in self.remaining.iter().zip(iref) {
-            let pos = *pos as usize;
-            let item = item.unwrap();
+        for i in 0..nr {
+            let pos = self.remaining[i] as usize;
+            let item = iref.value(i);
             let user = self.element_src_row(pos);
-            if rcs_ref.contains_pair(user, item) {
-                debug!("{}: found item {} for user {}", pos, item, user);
+            if force || rcs_ref.contains_pair(user, item) {
                 self.negatives[pos] = item;
             } else {
-                debug!("{}: rejected item {} for user {}", pos, item, user);
                 remaining.push(pos as u32);
             }
         }

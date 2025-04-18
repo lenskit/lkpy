@@ -462,9 +462,14 @@ class MatrixRelationshipSet(RelationshipSet):
         if verify:
             sampler = NegativeSampler(self._rc_set, pa.array(rows), eff_n)
 
+            count = 0
             while nr := sampler.num_remaining():
+                count += 1
+                last = count >= max_attempts
                 candidates = self._sample_columns(rng, nr, weighting)
-                sampler.accumulate(pa.array(candidates, pa.int32()))
+                sampler.accumulate(pa.array(candidates, pa.int32()), last)
+                if last:
+                    break
 
             columns = sampler.result()
         else:
