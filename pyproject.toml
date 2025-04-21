@@ -66,9 +66,7 @@ demo = [
 ]
 reporting = ["coverage >=5"]
 package = [
-  "setuptools >=70",
-  "setuptools-scm >=8",
-  "setuptools-rust ~=1.11",
+  "maturin ~=1.0",
 ]
 scripting = [
   "invoke ~= 2.2",
@@ -122,14 +120,6 @@ lenskit-train = "lenskit.cli.train:train"
 lenskit-recommend = "lenskit.cli.recommend:recommend"
 
 # configure build tools
-[tool.setuptools_scm]
-version_file = "src/lenskit/_version.py"
-
-[[tool.setuptools-rust.ext-modules]]
-target = "lenskit._accel"
-path = "Cargo.toml"
-binding = "PyO3"
-
 [tool.maturin]
 python-source = "src"
 module-name = "lenskit._accel"

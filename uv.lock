@@ -1435,9 +1435,6 @@ dev = [
     { name = "ruff" },
     { name = "scipy-stubs" },
     { name = "seaborn" },
-    { name = "setuptools" },
-    { name = "setuptools-rust" },
-    { name = "setuptools-scm" },
     { name = "sphinx" },
     { name = "sphinx-autobuild" },
     { name = "sphinx-togglebutton" },
@@ -1460,18 +1457,14 @@ gpu = [
     { name = "torch", version = "2.6.0+cu126", source = { registry = "https://download.pytorch.org/whl/cu126" } },
 ]
 package = [
-    { name = "setuptools" },
-    { name = "setuptools-rust" },
-    { name = "setuptools-scm" },
+    { name = "maturin" },
 ]
 reporting = [
     { name = "coverage" },
 ]
 scripting = [
     { name = "invoke" },
-    { name = "setuptools" },
-    { name = "setuptools-rust" },
-    { name = "setuptools-scm" },
+    { name = "maturin" },
 ]
 test = [
     { name = "hypothesis" },
@@ -1527,6 +1520,7 @@ dev = [
     { name = "ipython", specifier = ">=7" },
     { name = "line-profiler" },
     { name = "matplotlib", specifier = "~=3.4" },
+    { name = "maturin", specifier = "~=1.0" },
     { name = "maturin", specifier = ">=1.8.3" },
     { name = "myst-nb", specifier = ">=0.13" },
     { name = "nbformat", specifier = ">=5.2" },
@@ -1546,9 +1540,6 @@ dev = [
     { name = "ruff", specifier = ">=0.2" },
     { name = "scipy-stubs", specifier = ">=1.14.1.6,<2" },
     { name = "seaborn", specifier = ">=0.13.2,<0.14" },
-    { name = "setuptools", specifier = ">=70" },
-    { name = "setuptools-rust", specifier = "~=1.11" },
-    { name = "setuptools-scm", specifier = ">=8" },
     { name = "sphinx", specifier = ">=4.2" },
     { name = "sphinx-autobuild", specifier = ">=2021" },
     { name = "sphinx-togglebutton", specifier = ">=0.3.2,<0.4" },
@@ -1568,17 +1559,11 @@ doc = [
     { name = "sphinxext-opengraph", specifier = ">=0.5" },
 ]
 gpu = [{ name = "torch", specifier = "~=2.4", index = "https://download.pytorch.org/whl/cu126", conflict = { package = "lenskit", group = "gpu" } }]
-package = [
-    { name = "setuptools", specifier = ">=70" },
-    { name = "setuptools-rust", specifier = "~=1.11" },
-    { name = "setuptools-scm", specifier = ">=8" },
-]
+package = [{ name = "maturin", specifier = "~=1.0" }]
 reporting = [{ name = "coverage", specifier = ">=5" }]
 scripting = [
     { name = "invoke", specifier = "~=2.2" },
-    { name = "setuptools", specifier = ">=70" },
-    { name = "setuptools-rust", specifier = "~=1.11" },
-    { name = "setuptools-scm", specifier = ">=8" },
+    { name = "maturin", specifier = "~=1.0" },
 ]
 test = [
     { name = "hypothesis", specifier = ">=6.16" },
@@ -3265,15 +3250,6 @@ wheels = [
 ]
 
 [[package]]
-name = "semantic-version"
-version = "2.10.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/7d/31/f2289ce78b9b473d582568c234e104d2a342fd658cc288a7553d83bb8595/semantic_version-2.10.0.tar.gz", hash = "sha256:bdabb6d336998cbb378d4b9db3a4b56a1e3235701dc05ea2690d9a997ed5041c", size = 52289 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/23/8146aad7d88f4fcb3a6218f41a60f6c2d4e3a72de72da1825dc7c8f7877c/semantic_version-2.10.0-py2.py3-none-any.whl", hash = "sha256:de78a3b8e0feda74cabc54aab2da702113e33ac9d9eb9d2389bcf1f58b7d9177", size = 15552 },
-]
-
-[[package]]
 name = "send2trash"
 version = "1.8.3"
 source = { registry = "https://pypi.org/simple" }
@@ -3289,32 +3265,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a9/5a/0db4da3bc908df06e5efae42b44e75c81dd52716e10192ff36d0c1c8e379/setuptools-78.1.0.tar.gz", hash = "sha256:18fd474d4a82a5f83dac888df697af65afa82dec7323d09c3e37d1f14288da54", size = 1367827 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/54/21/f43f0a1fa8b06b32812e0975981f4677d28e0f3271601dc88ac5a5b83220/setuptools-78.1.0-py3-none-any.whl", hash = "sha256:3e386e96793c8702ae83d17b853fb93d3e09ef82ec62722e61da5cd22376dcd8", size = 1256108 },
-]
-
-[[package]]
-name = "setuptools-rust"
-version = "1.11.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "semantic-version" },
-    { name = "setuptools" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e0/92/bf8589b1a2b6107cf9ec8daa9954c0b7620643fe1f37d31d75e572d995f5/setuptools_rust-1.11.1.tar.gz", hash = "sha256:7dabc4392252ced314b8050d63276e05fdc5d32398fc7d3cce1f6a6ac35b76c0", size = 310804 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b3/01/37e1376f80578882e4f2d451f57d1fb42a599832057a123f57d9f26395c8/setuptools_rust-1.11.1-py3-none-any.whl", hash = "sha256:5eaaddaed268dc24a527ffa659ce56b22d3cf17b781247b779efd611031fe8ea", size = 28120 },
-]
-
-[[package]]
-name = "setuptools-scm"
-version = "8.2.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "packaging" },
-    { name = "setuptools" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4b/bd/c5d16dd95900567e09744af92119da7abc5f447320d53ec1d9415ec30263/setuptools_scm-8.2.0.tar.gz", hash = "sha256:a18396a1bc0219c974d1a74612b11f9dce0d5bd8b1dc55c65f6ac7fd609e8c28", size = 77572 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/10/7c/5a9799042320242c383c4485a2771a37d49e8ce2312ca647653d2fd1a7a4/setuptools_scm-8.2.0-py3-none-any.whl", hash = "sha256:136e2b1d393d709d2bcf26f275b8dec06c48b811154167b0fd6bb002aad17d6d", size = 43944 },
 ]
 
 [[package]]
