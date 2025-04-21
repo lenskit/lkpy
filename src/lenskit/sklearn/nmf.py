@@ -29,20 +29,39 @@ from lenskit.training import Trainable, TrainingOptions
 
 _log = get_logger(__name__)
 
+@dataclass
+class NMFConfig:
+    solver: Literal["cd","mu"] = "cd"
+    beta_loss: Literal["frobenius", "kullback-leibler", "itakura-saito"] = "frobenius"
+    max_iter: int = 200
+
 class NMFScorer(Component[ItemList], Trainable):
+
+    config: NMFConfig
     
     users_: Vocabulary
     items_: Vocabulary
     user_components_: NDArray[np.float64]
+    item_components_: NDArray[np.float64]
 
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
+        if hasattr(self, "item_components_") and not options.retrain:
+            return
         
+        timer = Stopwatch()
         r_mat = data.interaction_matrix(format="scipy", layout="coo", legacy=True)
-        r_mat = r_mat.tocsr()
-        W, H, n_iter = non_negative_factorization(r_mat)
 
-        self.user_components_ = np.dot(W, H)
+        r_mat = r_mat.tocsr()
+
+        W, H, n_iter = non_negative_factorization(
+            r_mat, solver=self.config.solver, beta_loss=self.config.beta_loss, max_iter=self.config.max_iter
+        )
+
+        self.user_components_ = W
+        self.item_components_ = H.T
+        self.users_ = data.users
+        self.items_ = data.items
         
     @override
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
@@ -60,12 +79,11 @@ class NMFScorer(Component[ItemList], Trainable):
         good_iidx = iidx[iidx >= 0]
 
         _log.debug("reverse-transforming user %s (idx=%d)", query.user_id, uidx)
-        Xt = self.user_components_[[uidx], :]
-        X = np.linalg.inv(Xt)
-        # restrict to usable desired items
-        Xsel = X[0, good_iidx]
+        W = self.user_components_[[uidx], :]
+        H = self.item_components_[good_iidx, :]
+        S = W @ H.T
 
         scores = np.full(len(items), np.nan)
-        scores[iidx >= 0] = Xsel
+        scores[iidx >= 0] = S[0, :]
 
         return ItemList(items, scores=scores)
