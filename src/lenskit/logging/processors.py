@@ -27,6 +27,8 @@ def filter_exceptions(logger: Any, method: str, event_dict: EventDict) -> EventD
         if count > 1:
             del event_dict["exc_info"]
 
+    return event_dict
+
 
 def remove_internal(logger: Any, method: str, event_dict: EventDict) -> EventDict:
     """
