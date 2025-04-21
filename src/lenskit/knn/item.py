@@ -25,7 +25,7 @@ from lenskit import _accel
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.matrix import SparseRowArray
 from lenskit.diagnostics import DataWarning
-from lenskit.logging import Stopwatch, get_logger, trace
+from lenskit.logging import Stopwatch, get_logger, item_progress, trace
 from lenskit.logging.resource import cur_memory, max_memory
 from lenskit.parallel import ensure_parallel_init
 from lenskit.pipeline import Component
@@ -154,9 +154,10 @@ class ItemKNNScorer(Component[ItemList], Trainable):
         log.debug("[%s] prepared working matrices, memory use %s", timer, max_memory())
 
         log.info("[%s] computing similarity matrix", timer)
-        smat = _accel.knn.compute_similarities(
-            ui_mat, iu_mat, (n_users, n_items), self.config.min_sim, self.config.save_nbrs
-        )
+        with item_progress("Neighborhoods", total=n_items) as pb:
+            smat = _accel.knn.compute_similarities(
+                ui_mat, iu_mat, (n_users, n_items), self.config.min_sim, self.config.save_nbrs, pb
+            )
         log.debug("[%s] computed, memory use %s", timer, max_memory())
         assert isinstance(smat, list)
         smat = pa.chunked_array(smat)

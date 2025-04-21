@@ -1,12 +1,7 @@
 use std::cmp::Reverse;
-use std::sync::Arc;
 
 use arrow::{
-    array::{
-        make_array, Array, ArrayData, Float32Builder, Int32Builder, LargeListArray, StructArray,
-    },
-    buffer::OffsetBuffer,
-    datatypes::{DataType, Field, Fields},
+    array::{make_array, Array, ArrayData},
     pyarrow::PyArrowType,
 };
 use log::*;
@@ -14,7 +9,7 @@ use ordered_float::NotNan;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 
-use crate::sparse::{CSRMatrix, SparseIndexType};
+use crate::sparse::{ArrowCSRConsumer, CSRMatrix};
 
 #[pyfunction]
 pub fn compute_similarities<'py>(
@@ -24,8 +19,10 @@ pub fn compute_similarities<'py>(
     shape: (usize, usize),
     min_sim: f32,
     save_nbrs: Option<i64>,
+    progress: Option<Bound<'py, PyAny>>,
 ) -> PyResult<Vec<PyArrowType<ArrayData>>> {
     let (nu, ni) = shape;
+    let progress = progress.map(|pb| pb.unbind());
 
     py.allow_threads(|| {
         // extract the data
@@ -45,58 +42,17 @@ pub fn compute_similarities<'py>(
         // let's compute!
         let range = 0..ni;
         debug!("computing similarity rows");
+        let collector = if let Some(pb) = progress {
+            ArrowCSRConsumer::with_progress(ni, pb)
+        } else {
+            ArrowCSRConsumer::new(ni)
+        };
         let chunks = range
             .into_par_iter()
             .map(|row| sim_row(row, &ui_mat, &iu_mat, min_sim, save_nbrs))
-            .collect_vec_list();
-        // count the similarities
-        let n_sim = chunks
-            .iter()
-            .flat_map(|v| v.iter().map(|v2| v2.len()))
-            .sum::<usize>();
-        debug!(
-            "computed {} similarities in {} matrix chunks",
-            n_sim,
-            chunks.len()
-        );
+            .drive(collector);
 
-        // now we will post-process the chunks into Arrow arrays, one per chunk.
-        // on the Python side, we will combine the chunks.
-        let mut rv_chunks = Vec::new();
-        for chunk in chunks {
-            let lengths: Vec<usize> = chunk.iter().map(Vec::len).collect();
-            let n_entries = lengths.iter().sum();
-            let mut col_bld = Int32Builder::with_capacity(n_entries);
-            let mut val_bld = Float32Builder::with_capacity(n_entries);
-
-            for row in chunk.into_iter() {
-                for (i, s) in row {
-                    col_bld.append_value(i);
-                    val_bld.append_value(s);
-                }
-            }
-
-            let struct_fields = Fields::from(vec![
-                Field::new("index", DataType::Int32, false)
-                    .with_extension_type(SparseIndexType::create(ni)),
-                Field::new("value", DataType::Float32, false),
-            ]);
-            let list_field = Field::new("rows", DataType::Struct(struct_fields.clone()), false);
-            let sa = StructArray::new(
-                struct_fields,
-                vec![Arc::new(col_bld.finish()), Arc::new(val_bld.finish())],
-                None,
-            );
-            let list = LargeListArray::new(
-                Arc::new(list_field),
-                OffsetBuffer::from_lengths(lengths),
-                Arc::new(sa),
-                None,
-            );
-            rv_chunks.push(list.into_data().into());
-        }
-
-        Ok(rv_chunks)
+        Ok(chunks.iter().map(|a| a.into_data().into()).collect())
     })
 }
 

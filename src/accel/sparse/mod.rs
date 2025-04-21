@@ -10,11 +10,13 @@ use arrow::{
 use pyo3::exceptions::PyTypeError;
 use pyo3::PyResult;
 
+mod consumer;
 mod index;
 mod index_list;
 mod matrix;
 mod row;
 
+pub use consumer::ArrowCSRConsumer;
 pub use index::SparseIndexType;
 pub use index_list::SparseIndexListType;
 pub use matrix::{CSRMatrix, CSRStructure};
