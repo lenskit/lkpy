@@ -70,6 +70,7 @@ package = [
 ]
 scripting = [
   "invoke ~= 2.2",
+  "tomlkit ~= 0.13.2",
   { include-group = "package" },
 ]
 dev = [
