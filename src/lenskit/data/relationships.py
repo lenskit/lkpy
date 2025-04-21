@@ -459,14 +459,14 @@ class MatrixRelationshipSet(RelationshipSet):
         eff_n = n or 1
 
         if verify:
-            sampler = NegativeSampler(self._rc_set, pa.array(rows, type=pa.int32()), eff_n)  # type: ignore
+            sampler = NegativeSampler(self._rc_set, np.require(rows, np.int32), eff_n)  # type: ignore
 
             count = 0
             while nr := sampler.num_remaining():
                 count += 1
                 last = count >= max_attempts
                 candidates = self._sample_columns(rng, nr, weighting)
-                sampler.accumulate(pa.array(candidates, pa.int32()), last)
+                sampler.accumulate(np.require(candidates, np.int32), last)
                 if last:
                     break
 
@@ -474,8 +474,10 @@ class MatrixRelationshipSet(RelationshipSet):
         else:
             columns = self._sample_columns(rng, eff_n, weighting)
 
-        columns = np.require(columns, "i4")
-        if n is not None:
+        columns = np.require(columns, np.int32)
+        if n is None:
+            columns = columns.reshape(-1)
+        else:
             columns = columns.reshape(-1, n)
 
         return columns
