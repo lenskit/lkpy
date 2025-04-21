@@ -21,17 +21,14 @@ jobs:
       - name: Fetch Git tags
         run: git fetch --tags
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: 🕶️ Install uv
+        uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
 
-      - name: Install Python deps
-        run: pip install -U build
-
       - name: Build source distribution
         run: |
-          python -m build -o dist -s
+          uv build --sdist
 
       - name: Save archive
         uses: actions/upload-artifact@v4
