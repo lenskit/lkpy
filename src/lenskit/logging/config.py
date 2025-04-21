@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Literal, TypeAlias
 
 import structlog
+from structlog.dev import RichTracebackFormatter
 
 from ._console import ConsoleHandler, console, setup_console
 from .processors import format_timestamp, log_warning, remove_internal
@@ -170,13 +171,14 @@ class LoggingConfig:  # pragma: nocover
             term = logging.StreamHandler(sys.stdout)
             term.setLevel(self.level)
             proc_fmt = structlog.dev.ConsoleRenderer(
-                colors=self.stream == "full" and not console.no_color
+                colors=self.stream == "full" and not console.no_color,
             )
         else:
             term = ConsoleHandler()
             term.setLevel(self.level)
             proc_fmt = structlog.dev.ConsoleRenderer(
-                colors=self.stream == "full" and term.supports_color
+                colors=self.stream == "full" and term.supports_color,
+                exception_formatter=RichTracebackFormatter(show_locals=self.level < logging.INFO),
             )
 
         eff_lvl = self.effective_level
