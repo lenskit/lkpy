@@ -177,7 +177,7 @@ def build_conda(c: Context):
     cmd = "rattler-build build --recipe conda --output-dir dist/conda"
     if "CI" in os.environ:
         cmd += " --noarch-build-platform linux-64"
-    c.run(cmd, echo=True, env={"LK_PACKAGE_VERSION": version})
+    c.run(cmd, echo=True, env={"LK_PACKAGE_VERSION": str(version)})
 
 
 @task(build_accel, positional=["file"])
