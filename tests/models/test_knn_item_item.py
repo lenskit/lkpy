@@ -223,7 +223,7 @@ def test_ii_train_ml100k(tmp_path, ml_100k):
     with fn.open("rb") as modf:
         restored = pickle.load(modf)
 
-    r_mat = restored.sim_matrix.to_csr()
+    r_mat = restored.sim_matrix.to_scipy()
 
     assert all(r_mat.data > 0)
     assert all(r_mat.data == matrix.data)
