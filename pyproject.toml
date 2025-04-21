@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools >=70", "setuptools-scm >=8", "setuptools-rust ~=1.11"]
-build-backend = "setuptools.build_meta"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
 
 [project]
 name = "lenskit"
@@ -94,6 +94,7 @@ dev = [
   { include-group = "package" },
   { include-group = "scripting" },
   "zstandard>=0.23.0",
+  "maturin>=1.8.3",
 ]
 cpu = ["torch ~=2.4"]
 gpu = ["torch ~=2.4"]
@@ -128,6 +129,10 @@ version_file = "src/lenskit/_version.py"
 target = "lenskit._accel"
 path = "Cargo.toml"
 binding = "PyO3"
+
+[tool.maturin]
+python-source = "src"
+module-name = "lenskit._accel"
 
 [tool.cibuildwheel]
 skip = ["*-musllinux_i686"]
