@@ -63,7 +63,7 @@ def build_dist(c: Context):
 @task(setup_dirs)
 def build_accel(c: Context, release: bool = False):
     "Build the accelerator in-place."
-    cmd = "python setup.py build_rust --inplace"
+    cmd = "maturin develop"
     if release:
         cmd += " --release"
     c.run(cmd, echo=True)
