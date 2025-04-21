@@ -7,7 +7,6 @@ name = "lenskit"
 description = "Toolkit for recommender systems research, teaching, and more."
 authors = [{ name = "Michael Ekstrand", email = "mdekstrand@drexel.edu" }]
 classifiers = [
-  "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -17,7 +16,8 @@ classifiers = [
 ]
 requires-python = ">= 3.11"
 readme = "README.md"
-license = { file = "LICENSE.md" }
+license = "MIT"
+license-files = ["LICENSE.md"]
 dynamic = ["version"]
 dependencies = [
   "typing-extensions ~=4.12",
