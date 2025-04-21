@@ -19,6 +19,15 @@ from structlog.typing import EventDict
 LOGGED_ERRORS = deque([], 5)
 
 
+def filter_exceptions(logger: Any, method: str, event_dict: EventDict) -> EventDict:
+    exc = event_dict.get("exc_info", None)
+    if isinstance(exc, Exception):
+        count = getattr(exc, "_lenskit_seen", 0)
+        exc._lenskit_seen = count + 1
+        if count > 1:
+            del event_dict["exc_info"]
+
+
 def remove_internal(logger: Any, method: str, event_dict: EventDict) -> EventDict:
     """
     Filter out “internal” attrs (beginning with ``_``) for console logging.
