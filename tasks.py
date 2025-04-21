@@ -171,9 +171,8 @@ def build_accel(c: Context, release: bool = False):
 @task(build_sdist)
 def build_conda(c: Context):
     "Build Conda packages."
-    from setuptools_scm import get_version
 
-    version = get_version()
+    version = _get_version(c)
     print("packaging LensKit version {}", version)
     cmd = "rattler-build build --recipe conda --output-dir dist/conda"
     if "CI" in os.environ:
