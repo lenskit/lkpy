@@ -10,10 +10,12 @@ import os.path
 import re
 import sys
 import tomllib
+from contextlib import contextmanager
 from pathlib import Path
 from shutil import copyfileobj, rmtree
 from urllib.request import urlopen
 
+import tomlkit
 from invoke.context import Context
 from invoke.main import program
 from invoke.tasks import task
@@ -81,6 +83,38 @@ def _get_version(c: Context) -> Version:
     return version
 
 
+def _update_version(c: Context, write: bool = False):
+    ver = _get_version(c)
+
+    with open("pyproject.toml", "rt") as tf:
+        meta = tomlkit.load(tf)
+
+    proj = meta["project"]
+    proj["dynamic"].remove("version")
+    proj["version"] = str(ver)
+    if write:
+        with open("pyproject.toml", "wt") as tf:
+            tomlkit.dump(meta, tf)
+    else:
+        tomlkit.dump(meta, sys.stdout)
+
+    return ver
+
+
+@contextmanager
+def _updated_pyproject_toml(c: Context):
+    """
+    Context manager that updates the pyproject version, then restores it.
+    """
+    file = Path("pyproject.toml")
+    old = file.read_bytes()
+    try:
+        ver = _update_version(c, write=True)
+        yield ver
+    finally:
+        file.write_bytes(old)
+
+
 def _make_cache_dir(path: str | Path):
     "Create a directory and a CACHEDIR.TAG file."
     path = Path(path)
@@ -100,6 +134,11 @@ def version(c: Context):
 
 
 @task
+def update_pypi_version(c: Context, write=False):
+    _update_version(c, write=write)
+
+
+@task
 def setup_dirs(c: Context):
     "Initialize output directories."
     _make_cache_dir("dist")
@@ -110,7 +149,8 @@ def setup_dirs(c: Context):
 @task(setup_dirs)
 def build_sdist(c: Context):
     "Build source distribution."
-    c.run("uv build --sdist")
+    with _updated_pyproject_toml(c):
+        c.run("uv build --sdist")
 
 
 @task(setup_dirs)
