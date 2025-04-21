@@ -28,6 +28,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 🏷️ Fetch Git tags
+        run: git fetch --tags
+
       - name: 🔬 Install Conda base
         uses: mamba-org/setup-micromamba@v2
         with:
