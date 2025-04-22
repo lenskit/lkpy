@@ -165,6 +165,7 @@ jobs:
           uv pip install --resolution=lowest-direct '.[sklearn,hpf,implicit,funksvd]'
         env:
           SETUPTOOLS_RUST_CARGO_PROFILE: release
+          CC: gcc
 
       - name: 🔍 Inspect environment
         run: |
