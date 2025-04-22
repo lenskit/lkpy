@@ -50,6 +50,7 @@ jobs:
 
   conda-upload:
     name: "Upload to prefix.dev"
+    needs: conda-build
     runs-on: ubuntu-latest
 
     steps:
