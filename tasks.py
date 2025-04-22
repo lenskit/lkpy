@@ -34,7 +34,7 @@ root = Path(__file__).parent
 
 
 def _get_version(c: Context) -> Version:
-    gd = c.run("git describe --tags --match 'v*'", hide="out")
+    gd = c.run('git describe --tags --match "v*"', hide="out")
     assert gd is not None
     assert gd.stdout is not None
     ver = gd.stdout.strip()
