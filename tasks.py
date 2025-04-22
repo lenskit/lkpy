@@ -149,7 +149,8 @@ def setup_dirs(c: Context):
 @task(setup_dirs)
 def build_sdist(c: Context):
     "Build source distribution."
-    with _updated_pyproject_toml(c):
+    with _updated_pyproject_toml(c) as ver:
+        print("packaging LensKit version", ver)
         c.run("uv build --sdist")
 
 
@@ -173,7 +174,7 @@ def build_conda(c: Context):
     "Build Conda packages."
 
     version = _get_version(c)
-    print("packaging LensKit version {}", version)
+    print("building Conda packages for LensKit version {}", version)
     cmd = "rattler-build build --recipe conda --output-dir dist/conda"
     if "CI" in os.environ:
         cmd += " --noarch-build-platform linux-64"
