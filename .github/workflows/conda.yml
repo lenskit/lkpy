@@ -47,3 +47,28 @@ jobs:
         with:
           name: conda-pkgs-${{matrix.platform}}
           path: dist/conda
+
+  conda-upload:
+    name: "Upload to prefix.dev"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch Conda packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pypi-dist-*
+          path: dist/conda
+          merge-multiple: true
+
+      - name: List Conda packages
+        run: ls -R dist/conda
+
+      - name: Install rattler-build
+        uses: jaxxstorm/action-install-gh-release@v2.0.0
+        with:
+          repo: prefix-dev/rattler-build
+
+      - name: Upload packages
+        if: github.event_name == 'push'
+        run: |
+          rattler-build upload dist/conda/*/*.{conda,tar.bz2}
