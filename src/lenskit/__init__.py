@@ -17,5 +17,5 @@ __all__ = ["predict", "recommend", "score", "Pipeline", "RecPipelineBuilder", "t
 
 try:
     __version__ = version("lenskit")
-except PackageNotFoundError:
+except PackageNotFoundError:  # pragma: nocover
     __version__ = "UNKNOWN"
