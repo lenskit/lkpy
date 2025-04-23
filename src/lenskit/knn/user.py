@@ -88,15 +88,15 @@ class UserKNNScorer(Component[ItemList], Trainable):
 
     config: UserKNNConfig
 
-    users_: Vocabulary
+    users: Vocabulary
     "The index of user IDs."
-    items_: Vocabulary
+    items: Vocabulary
     "The index of item IDs."
-    user_means_: np.ndarray[tuple[int], np.dtype[np.float32]] | None
+    user_means: np.ndarray[tuple[int], np.dtype[np.float32]] | None
     "Mean rating for each known user."
-    user_vectors_: csr_array
+    user_vectors: csr_array
     "Normalized rating matrix (CSR) to find neighbors at prediction time."
-    user_ratings_: SparseRowArray
+    user_ratings: SparseRowArray
     "Centered but un-normalized rating matrix (COO) to find neighbor ratings."
 
     @override
@@ -119,11 +119,11 @@ class UserKNNScorer(Component[ItemList], Trainable):
         rmat, means = self._center_ratings(rmat)
         normed = self._normalize_rows(rmat)
 
-        self.user_vectors_ = normed
-        self.user_ratings_ = SparseRowArray.from_scipy(rmat, values=self.config.explicit)
-        self.users_ = data.users
-        self.user_means_ = means
-        self.items_ = data.items
+        self.user_vectors = normed
+        self.user_ratings = SparseRowArray.from_scipy(rmat, values=self.config.explicit)
+        self.users = data.users
+        self.user_means = means
+        self.items = data.items
 
     def _center_ratings(self, rmat: csr_array) -> tuple[csr_array, np.ndarray | None]:
         if self.config.explicit:
@@ -178,19 +178,19 @@ class UserKNNScorer(Component[ItemList], Trainable):
             return ItemList(items, scores=np.nan)
 
         uidx, ratings, umean = udata
-        assert ratings.shape == (len(self.items_),)  # ratings is a dense vector
+        assert ratings.shape == (len(self.items),)  # ratings is a dense vector
 
         # now ratings has vbeen normalized to be a mean-centered unit vector
         # this means we can dot product to score neighbors
         # score the neighbors!
-        nbr_sims = self.user_vectors_ @ ratings
-        assert nbr_sims.shape == (len(self.users_),)
+        nbr_sims = self.user_vectors @ ratings
+        assert nbr_sims.shape == (len(self.users),)
         if uidx is not None:
             # zero out the self-similarity
             nbr_sims[uidx] = 0
 
         # get indices for these neighbors
-        nbr_idxs = np.arange(len(self.users_), dtype=np.int32)
+        nbr_idxs = np.arange(len(self.users), dtype=np.int32)
 
         nbr_mask = nbr_sims >= self.config.min_sim
 
@@ -200,7 +200,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
             log.debug(
                 "found %d candidate neighbors (of %d total), max sim %0.4f",
                 len(kn_sims),
-                len(self.users_),
+                len(self.users),
                 np.max(kn_sims).item(),
             )
         else:
@@ -209,7 +209,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
 
         assert not np.any(np.isnan(kn_sims))
 
-        iidxs = items.numbers(vocabulary=self.items_, missing="negative")
+        iidxs = items.numbers(vocabulary=self.items, missing="negative")
 
         ki_mask = iidxs >= 0
         usable_iidxs = iidxs[ki_mask]
@@ -223,7 +223,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
                 usable_iidxs,
                 kn_idxs,
                 kn_sims,
-                self.user_ratings_,
+                self.user_ratings,
                 self.config.max_nbrs,
                 self.config.min_nbrs,
             )
@@ -232,7 +232,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
                 usable_iidxs,
                 kn_idxs,
                 kn_sims,
-                self.user_ratings_,
+                self.user_ratings,
                 self.config.max_nbrs,
                 self.config.min_nbrs,
             )
@@ -253,7 +253,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
     def _get_user_data(self, query: RecQuery) -> Optional[UserRatings]:
         "Get a user's data for user-user CF"
 
-        index = self.users_.number(query.user_id, missing=None)
+        index = self.users.number(query.user_id, missing=None)
 
         if query.user_items is None:
             if index is None:
@@ -261,10 +261,10 @@ class UserKNNScorer(Component[ItemList], Trainable):
                 return None
 
             index = int(index)
-            row = self.user_vectors_[[index], :].toarray()[0, :]
+            row = self.user_vectors[[index], :].toarray()[0, :]
             if self.config.explicit:
-                assert self.user_means_ is not None
-                umean = self.user_means_[index].item()
+                assert self.user_means is not None
+                umean = self.user_means[index].item()
             else:
                 umean = 0
             return UserRatings(index, row, umean)
@@ -272,8 +272,8 @@ class UserKNNScorer(Component[ItemList], Trainable):
             return None
         else:
             _log.debug("using provided item history")
-            ratings = np.zeros(len(self.items_), dtype=np.float32)
-            ui_nos = query.user_items.numbers(missing="negative", vocabulary=self.items_)
+            ratings = np.zeros(len(self.items), dtype=np.float32)
+            ui_nos = query.user_items.numbers(missing="negative", vocabulary=self.items)
             ui_mask = ui_nos >= 0
 
             if self.config.explicit:
