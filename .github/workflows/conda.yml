@@ -74,4 +74,4 @@ jobs:
       - name: Upload packages
         if: github.event_name == 'push'
         run: |
-          rattler-build upload prefix --channel lenskit-dev dist/conda/*/*.{conda,tar.bz2}
+          rattler-build upload prefix --channel lenskit-dev dist/conda/*/*.conda
