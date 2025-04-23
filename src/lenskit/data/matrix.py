@@ -371,13 +371,19 @@ class SparseRowArray(pa.ExtensionArray):
         return pa.ExtensionArray.from_storage(et, array.cast(et.storage_type))  # type: ignore
 
     @classmethod
-    def from_scipy(cls, csr: sps.csr_array[Any, tuple[int, int]]) -> SparseRowArray:
+    def from_scipy(
+        cls, csr: sps.csr_array[Any, tuple[int, int]], *, large: bool | None = None
+    ) -> SparseRowArray:
         _nr, dim = csr.shape
         smax = np.iinfo(np.int32).max
 
         offsets = csr.indptr
-        if csr.nnz < smax:
+        if large:
+            offsets = np.require(offsets, np.int64)
+        elif csr.nnz < smax:
             offsets = np.require(offsets, dtype=np.int32)
+        elif large is False:
+            raise ValueError("sparse matrix size {:,d} too large for list".format(csr.nnz))
         cols = pa.array(csr.indices, SparseIndexType(dim))
         vals = pa.array(csr.data)
 
