@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 
+mod accum;
 mod item_score;
 mod item_train;
 
