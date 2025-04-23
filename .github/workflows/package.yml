@@ -1,4 +1,4 @@
-name: Distribution
+name: PyPI Packages
 
 on:
   push:

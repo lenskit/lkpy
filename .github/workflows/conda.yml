@@ -1,4 +1,4 @@
-name: Conda Package Tests
+name: Conda Packages
 
 on:
   push:
@@ -45,7 +45,7 @@ jobs:
       - name: Save package
         uses: actions/upload-artifact@v4
         with:
-          name: conda-pkgs-${{matrix.platform}}
+          name: conda-dist-${{matrix.platform}}
           path: dist/conda
 
   conda-upload:
@@ -57,7 +57,7 @@ jobs:
       - name: Fetch Conda packages
         uses: actions/download-artifact@v4
         with:
-          pattern: pypi-dist-*
+          pattern: conda-dist-*
           path: dist/conda
           merge-multiple: true
 
