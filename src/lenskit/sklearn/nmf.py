@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 """
-This is for implicit 
+This is for implicit
 
 This module contains a truncated SVD explicit-feedback scorer built on
 :class:`sklearn.decomposition.TruncatedSVD`.
@@ -13,12 +13,11 @@ This module contains a truncated SVD explicit-feedback scorer built on
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import numpy as np
 from numpy.typing import NDArray
+from pydantic import BaseModel
 from sklearn.decomposition import non_negative_factorization
-from typing_extensions import Literal, override, Union
+from typing_extensions import Literal, override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
 from lenskit.data.vocab import Vocabulary
@@ -28,21 +27,19 @@ from lenskit.training import Trainable, TrainingOptions
 
 _log = get_logger(__name__)
 
-@dataclass
-class NMFConfig:
 
+class NMFConfig(BaseModel, extra="forbid"):
     beta_loss: Literal["frobenius", "kullback-leibler", "itakura-saito"] = "frobenius"
     max_iter: int = 200
-    n_components: Union[int, None] = None
+    n_components: int | None = None
     alpha_W: float = 0.0
-    alpha_H: Union[float, Literal["same"]] = "same"
+    alpha_H: float | Literal["same"] = "same"
     l1_ratio: float = 0.0
 
 
 class NMFScorer(Component[ItemList], Trainable):
-
     config: NMFConfig
-    
+
     users_: Vocabulary
     items_: Vocabulary
     user_components_: NDArray[np.float64]
@@ -52,20 +49,23 @@ class NMFScorer(Component[ItemList], Trainable):
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
         if hasattr(self, "item_components_") and not options.retrain:
             return
-        
+
         timer = Stopwatch()
 
         _log.info("[%s] sparsifying and normalizing matrix", timer)
-        r_mat = data.interaction_matrix(format="scipy", layout="coo", legacy=True)
+        r_mat = data.interactions().matrix().scipy(layout="csr", legacy=True)
 
-        r_mat = r_mat.tocsr()
-
-        W, H, n_iter = non_negative_factorization(
-            r_mat, beta_loss=self.config.beta_loss, max_iter=self.config.max_iter,
-            n_components=self.config.n_components,alpha_W=self.config.alpha_W,
-            alpha_H=self.config.alpha_H, l1_ratio=self.config.l1_ratio
-        )
         _log.info("[%s] training NMF", timer)
+        W, H, n_iter = non_negative_factorization(
+            r_mat,
+            beta_loss=self.config.beta_loss,
+            max_iter=self.config.max_iter,
+            n_components=self.config.n_components,
+            alpha_W=self.config.alpha_W,
+            alpha_H=self.config.alpha_H,
+            l1_ratio=self.config.l1_ratio,
+        )
+        _log.info("[%s] Trained NMF in %d iterations", timer, n_iter)
 
         self.user_components_ = W
         self.item_components_ = H.T
