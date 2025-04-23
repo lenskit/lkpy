@@ -52,6 +52,8 @@ jobs:
     name: "Upload to prefix.dev"
     needs: conda-build
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
 
     steps:
       - name: Fetch Conda packages
