@@ -50,10 +50,9 @@ def test_sparse_row_indices(csr: csr_array[Any, tuple[int, int]]):
 
     for i in range(csr.shape[0]):
         indices = arr.row_indices(i)
-        row = csr[i, :]
-        assert isinstance(row, coo_array)
+        row = csr[[i], :]
         assert len(indices) == row.nnz
-        assert np.all(indices == row.col)
+        assert np.all(indices == row.indices)
 
 
 @given(sparse_arrays())
