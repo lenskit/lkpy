@@ -75,11 +75,11 @@ class DataContainer:
         tables = {}
         for name in schema.entities:
             log.debug("reading entity table %s", name, table=name, time=timer.elapsed())
-            tables[name] = read_table(path / f"{name}.parquet")
+            tables[name] = read_table(path / f"{name}.parquet").combine_chunks()
 
         for name in schema.relationships:
             log.debug("reading relationship table %s", name, table=name, time=timer.elapsed())
-            tables[name] = read_table(path / f"{name}.parquet")
+            tables[name] = read_table(path / f"{name}.parquet").combine_chunks()
 
         log.debug("finished loading data set in %s", timer, time=timer.elapsed())
         return cls(schema, tables)
