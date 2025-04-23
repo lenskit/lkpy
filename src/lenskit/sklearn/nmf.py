@@ -17,9 +17,8 @@ from dataclasses import dataclass
 
 import numpy as np
 from numpy.typing import NDArray
-from pydantic import AliasChoices, Field
 from sklearn.decomposition import non_negative_factorization
-from typing_extensions import Literal, override
+from typing_extensions import Literal, override, Union
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
 from lenskit.data.vocab import Vocabulary
@@ -31,9 +30,14 @@ _log = get_logger(__name__)
 
 @dataclass
 class NMFConfig:
-    solver: Literal["cd","mu"] = "cd"
+
     beta_loss: Literal["frobenius", "kullback-leibler", "itakura-saito"] = "frobenius"
     max_iter: int = 200
+    n_components: Union[int, None] = None
+    alpha_W: float = 0.0
+    alpha_H: Union[float, Literal["same"]] = "same"
+    l1_ratio: float = 0.0
+
 
 class NMFScorer(Component[ItemList], Trainable):
 
@@ -55,7 +59,9 @@ class NMFScorer(Component[ItemList], Trainable):
         r_mat = r_mat.tocsr()
 
         W, H, n_iter = non_negative_factorization(
-            r_mat, solver=self.config.solver, beta_loss=self.config.beta_loss, max_iter=self.config.max_iter
+            r_mat, beta_loss=self.config.beta_loss, max_iter=self.config.max_iter,
+            n_components=self.config.n_components,alpha_W=self.config.alpha_W,
+            alpha_H=self.config.alpha_H, l1_ratio=self.config.l1_ratio
         )
 
         self.user_components_ = W
