@@ -10,7 +10,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import torch
 
 from pytest import approx, fail, mark
 
@@ -42,24 +41,24 @@ def test_uu_train(ml_ratings, ml_ds):
     algo.train(ml_ds)
 
     # we have data structures
-    assert algo.user_means_ is not None
-    assert algo.user_vectors_ is not None
-    assert algo.user_ratings_ is not None
+    assert algo.user_means is not None
+    assert algo.user_vectors is not None
+    assert algo.user_ratings is not None
 
     # it should have computed correct means
     u_stats = ml_ds.user_stats()
-    mlmeans = pd.Series(algo.user_means_.numpy(), index=algo.users_.ids(), name="mean")
+    mlmeans = pd.Series(algo.user_means, index=algo.users.ids(), name="mean")
     mlmeans.index.name = "user_id"
     umeans, mlmeans = u_stats["mean_rating"].align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(["user_id", "item_id"]).rating
-    rates = algo.user_ratings_.tocoo()
+    rates = algo.user_ratings.to_scipy().tocoo()
     ui_rbdf = pd.DataFrame(
         {
-            "user_id": algo.users_.ids(rates.row),
-            "item_id": algo.items_.ids(rates.col),
+            "user_id": algo.users.ids(rates.row),
+            "item_id": algo.items.ids(rates.col),
             "nrating": rates.data,
         }
     ).set_index(["user_id", "item_id"])
@@ -141,18 +140,18 @@ def test_uu_save_load(tmp_path, ml_ratings, ml_ds):
 
     # it should have computed correct means
     umeans = ml_ds.user_stats()["mean_rating"]
-    mlmeans = pd.Series(algo.user_means_, index=algo.users_, name="mean")
+    mlmeans = pd.Series(algo.user_means, index=algo.users, name="mean")
     mlmeans.index.name = "user_id"
     umeans, mlmeans = umeans.align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(["user_id", "item_id"]).rating
-    rates = algo.user_ratings_.tocoo()
+    rates = algo.user_ratings.to_scipy().tocoo()
     ui_rbdf = pd.DataFrame(
         {
-            "user_id": algo.users_.ids(rates.row),
-            "item_id": algo.items_.ids(rates.col),
+            "user_id": algo.users.ids(rates.row),
+            "item_id": algo.items.ids(rates.col),
             "nrating": rates.data,
         }
     ).set_index(["user_id", "item_id"])
@@ -186,12 +185,12 @@ def test_uu_implicit(ml_ratings):
     data = ml_ratings.loc[:, ["user_id", "item_id"]]
 
     algo.train(from_interactions_df(data))
-    assert algo.user_means_ is None
+    assert algo.user_means is None
 
-    mat = algo.user_vectors_
-    norms = torch.linalg.vector_norm(mat.to_dense(), dim=1)
+    mat = algo.user_vectors
+    norms = np.linalg.norm(mat.todense(), axis=1)
     assert norms.shape == mat.shape[:1]
-    assert np.allclose(norms.numpy(), 1.0)
+    assert np.allclose(norms, 1.0)
 
     preds = algo(query=50, items=ItemList([1, 2, 42]))
     preds = preds.scores("pandas", index="ids")
@@ -210,9 +209,9 @@ def test_uu_save_load_implicit(tmp_path, ml_ratings):
 
     algo = pickle.loads(ser)
 
-    assert algo.user_means_ is None
-    assert algo.users_ == orig.users_
-    assert algo.items_ == orig.items_
+    assert algo.user_means is None
+    assert algo.users == orig.users
+    assert algo.items == orig.items
 
 
 @mark.slow
