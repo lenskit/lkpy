@@ -12,7 +12,7 @@ from typing import Literal, TypeAlias
 
 import numpy as np
 import torch
-from pydantic import model_validator
+from pydantic import PositiveFloat, PositiveInt, model_validator
 from torch.nn import functional as F
 
 from lenskit.data import Dataset
@@ -47,7 +47,7 @@ class FlexMFImplicitConfig(FlexMFConfigBase):
     loss and ``"uniform"`` for other losses.
     """
 
-    negative_count: int = 1
+    negative_count: PositiveInt = 1
     """
     The number of negative items to sample for each positive item in the
     training data.  With BPR loss, the positive item is compared to each
@@ -57,7 +57,7 @@ class FlexMFImplicitConfig(FlexMFConfigBase):
     equal weight.
     """
 
-    positive_weight: float = 1.0
+    positive_weight: PositiveFloat = 1.0
     """
     A weighting multiplier to apply to the positive item's loss, to adjust the
     relative importance of positive and negative classifications.  Only applies
@@ -91,7 +91,7 @@ class FlexMFImplicitConfig(FlexMFConfigBase):
         ):
             raise ValueError("WARP loss requires “misranked” negative strategy")
 
-        if self.selected_negative_strategy() and self.negative_count > 1:
+        if self.selected_negative_strategy() == "misranked" and self.negative_count > 1:
             raise ValueError("misrank negatives only works with single negatives")
 
         return self
