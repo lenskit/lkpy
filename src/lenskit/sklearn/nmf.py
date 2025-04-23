@@ -54,6 +54,8 @@ class NMFScorer(Component[ItemList], Trainable):
             return
         
         timer = Stopwatch()
+
+        _log.info("[%s] sparsifying and normalizing matrix", timer)
         r_mat = data.interaction_matrix(format="scipy", layout="coo", legacy=True)
 
         r_mat = r_mat.tocsr()
@@ -63,12 +65,14 @@ class NMFScorer(Component[ItemList], Trainable):
             n_components=self.config.n_components,alpha_W=self.config.alpha_W,
             alpha_H=self.config.alpha_H, l1_ratio=self.config.l1_ratio
         )
+        _log.info("[%s] training NMF", timer)
 
         self.user_components_ = W
         self.item_components_ = H.T
         self.users_ = data.users
         self.items_ = data.items
-        
+        _log.info("finished model training in %s", timer)
+
     @override
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         query = RecQuery.create(query)
