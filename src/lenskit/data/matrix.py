@@ -448,6 +448,22 @@ class SparseRowArray(pa.ExtensionArray):
         else:
             return None
 
+    def row_extent(self, row: int) -> tuple[int, int]:
+        """
+        Get the start and end of a row.
+        """
+        start = self.storage.offsets[row].as_py()
+        end = self.storage.offsets[row + 1].as_py()
+        return start, end
+
+    def row_indices(self, row: int) -> pa.Int32Array:
+        """
+        Get the index array for a compressed sparse row.
+        """
+        sp, ep = self.row_extent(row)
+        indices = self.indices
+        return indices.slice(sp, ep - sp)
+
 
 def _check_index_type(index_type: pa.DataType, dimension: int | None) -> int:
     if isinstance(index_type, SparseIndexType):

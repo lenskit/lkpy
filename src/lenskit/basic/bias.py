@@ -71,12 +71,12 @@ class BiasModel:
 
     items: Vocabulary | None = None
     "Vocabulary of items."
-    item_biases: np.ndarray[int, np.dtype[np.float32]] | None = None
+    item_biases: np.ndarray[tuple[int], np.dtype[np.float32]] | None = None
     "The item offsets (:math:`b_i` values)."
 
     users: Vocabulary | None = None
     "Vocabulary of users."
-    user_biases: np.ndarray[int, np.dtype[np.float32]] | None = None
+    user_biases: np.ndarray[tuple[int], np.dtype[np.float32]] | None = None
     "The user offsets (:math:`b_u` values)."
 
     @classmethod
