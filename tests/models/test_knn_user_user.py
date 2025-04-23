@@ -55,7 +55,7 @@ def test_uu_train(ml_ratings, ml_ds):
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(["user_id", "item_id"]).rating
-    rates = algo.user_ratings_.tocoo()
+    rates = algo.user_ratings_.to_scipy().tocoo()
     ui_rbdf = pd.DataFrame(
         {
             "user_id": algo.users_.ids(rates.row),
@@ -148,7 +148,7 @@ def test_uu_save_load(tmp_path, ml_ratings, ml_ds):
 
     # we should be able to reconstruct rating values
     uir = ml_ratings.set_index(["user_id", "item_id"]).rating
-    rates = algo.user_ratings_.tocoo()
+    rates = algo.user_ratings_.to_scipy().tocoo()
     ui_rbdf = pd.DataFrame(
         {
             "user_id": algo.users_.ids(rates.row),

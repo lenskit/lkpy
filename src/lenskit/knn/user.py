@@ -15,13 +15,15 @@ import warnings
 
 import numpy as np
 import pandas as pd
-import structlog
+import pyarrow as pa
 import torch
 from pydantic import AliasChoices, BaseModel, Field, PositiveFloat, PositiveInt, field_validator
-from scipy.sparse import csc_array
+from scipy.sparse import csr_array
 from typing_extensions import NamedTuple, Optional, override
 
+from lenskit._accel import knn
 from lenskit.data import Dataset, FeedbackType, ItemList, QueryInput, RecQuery
+from lenskit.data.matrix import SparseRowArray
 from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import Stopwatch, get_logger
@@ -96,7 +98,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
     "Mean rating for each known user."
     user_vectors_: torch.Tensor
     "Normalized rating matrix (CSR) to find neighbors at prediction time."
-    user_ratings_: csc_array
+    user_ratings_: SparseRowArray
     "Centered but un-normalized rating matrix (COO) to find neighbor ratings."
 
     @override
@@ -114,7 +116,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
         ensure_parallel_init()
         rmat = data.interaction_matrix(
             format="torch", field="rating" if self.config.explicit else None
-        )
+        ).to(torch.float32)
         assert rmat.is_sparse_csr
 
         if self.config.explicit:
@@ -132,7 +134,9 @@ class UserKNNScorer(Component[ItemList], Trainable):
         normed = normed.to(torch.float32)
 
         self.user_vectors_ = normed.detach()
-        self.user_ratings_ = torch_sparse_to_scipy(rmat).tocsc()
+        rmat = torch_sparse_to_scipy(rmat)
+        assert isinstance(rmat, csr_array)
+        self.user_ratings_ = SparseRowArray.from_scipy(rmat, values=self.config.explicit)
         self.users_ = data.users
         self.user_means_ = means
         self.items_ = data.items
@@ -178,7 +182,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
             nbr_sims[uidx] = 0
 
         # get indices for these neighbors
-        nbr_idxs = torch.arange(len(self.users_), dtype=torch.int64)
+        nbr_idxs = np.arange(len(self.users_), dtype=np.int32)
 
         nbr_mask = nbr_sims >= self.config.min_sim
 
@@ -204,17 +208,30 @@ class UserKNNScorer(Component[ItemList], Trainable):
         ki_mask = iidxs >= 0
         usable_iidxs = iidxs[ki_mask]
 
-        scores = score_items_with_neighbors(
-            log,
-            usable_iidxs,
-            kn_idxs,
-            kn_sims,
-            self.user_ratings_,
-            self.config.max_nbrs,
-            self.config.min_nbrs,
-            self.config.explicit,
-        )
+        usable_iidxs = pa.array(usable_iidxs, pa.int32())
+        kn_idxs = pa.array(kn_idxs, pa.int32())
+        kn_sims = pa.array(kn_sims.numpy(), pa.float32())
 
+        if self.config.explicit:
+            scores = knn.user_score_items_explicit(
+                usable_iidxs,
+                kn_idxs,
+                kn_sims,
+                self.user_ratings_,
+                self.config.max_nbrs,
+                self.config.min_nbrs,
+            )
+        else:
+            scores = knn.user_score_items_implicit(
+                usable_iidxs,
+                kn_idxs,
+                kn_sims,
+                self.user_ratings_,
+                self.config.max_nbrs,
+                self.config.min_nbrs,
+            )
+
+        scores = scores.to_numpy(zero_copy_only=False, writable=True)
         scores += umean
 
         results = pd.Series(scores, index=items.ids()[ki_mask.numpy()], name="prediction")
@@ -278,74 +295,3 @@ class UserRatings(NamedTuple):
     index: int | None
     ratings: torch.Tensor
     mean: float
-
-
-def score_items_with_neighbors(
-    log: structlog.stdlib.BoundLogger,
-    items: torch.Tensor,
-    nbr_rows: torch.Tensor,
-    nbr_sims: torch.Tensor,
-    ratings: csc_array,
-    max_nbrs: int,
-    min_nbrs: int,
-    average: bool,
-) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
-    # select a sub-matrix for further manipulation
-    items = items.numpy()
-    (ni,) = items.shape
-    (nrow, ncol) = ratings.shape
-
-    # sort neighbors by similarity
-    nbr_order = np.argsort(-nbr_sims.cpu().numpy())
-    nbr_rows = nbr_rows[nbr_order].numpy()
-    nbr_sims = nbr_sims[nbr_order].numpy()
-
-    # get the rating rows for our neighbors
-    nbr_rates = ratings[nbr_rows, :]
-
-    # which items are scorable?
-    counts = np.diff(nbr_rates.indptr)
-    min_nbr_mask = counts >= min_nbrs
-    is_nbr_mask = min_nbr_mask[items]
-    is_scorable = items[is_nbr_mask]
-
-    # get the ratings for requested scorable items
-    nbr_rates = nbr_rates[:, is_scorable]
-    assert isinstance(nbr_rates, csc_array)
-    nbr_rates.sort_indices()
-    counts = counts[is_scorable]
-
-    log.debug(
-        "scoring items",
-        max_count=np.max(counts) if len(counts) else 0,
-        nbr_shape=nbr_rates.shape,
-    )
-
-    # Now, for our next trick - we have a CSC matrix, whose rows (users) are
-    # sorted by decreasing similarity.  So we can *zero* any entries past the
-    # first max_neighbors in a row.  This can be done with a little bit of
-    # jiggery-pokery.
-
-    # step 1: create a list of column start indices
-    starts = np.repeat(nbr_rates.indptr[:-1], counts)
-    # step 2: create a ranking from start to end
-    ranks = np.arange(nbr_rates.nnz, dtype=np.int32)
-    # step 3: subtract the column starts — this will give us numbers within rows
-    ranks -= starts
-    rmask = ranks >= max_nbrs
-    # step 4: zero out rating values for everything past max_nbrs
-    nbr_rates.data[rmask] = 0
-
-    # now we can just do a matrix-vector multiply to compute the scores
-    results = np.full(ni, np.nan)
-    results[is_nbr_mask] = nbr_rates.T @ nbr_sims
-
-    if average:
-        nbr_ones = csc_array(
-            (np.where(rmask, 0, 1), nbr_rates.indices, nbr_rates.indptr), nbr_rates.shape
-        )
-        tot_sims = nbr_ones.T @ nbr_sims
-        assert np.all(np.isfinite(tot_sims))
-        results[is_nbr_mask] /= tot_sims
-
-    return results
