@@ -10,7 +10,7 @@ from typing import Any
 
 import numpy as np
 import pyarrow as pa
-from scipy.sparse import csr_array
+from scipy.sparse import coo_array, csr_array
 
 from hypothesis import given
 from pytest import mark, raises
@@ -40,6 +40,20 @@ def test_sparse_from_csr(csr: csr_array[Any, tuple[int, int]]):
     assert len(arr.values) == csr.nnz
     assert np.all(arr.offsets.to_numpy() == csr.indptr)
     assert isinstance(arr.indices.type, SparseIndexType)
+
+
+@given(sparse_arrays())
+def test_sparse_row_indices(csr: csr_array[Any, tuple[int, int]]):
+    arr = SparseRowArray.from_scipy(csr)
+    assert isinstance(arr, SparseRowArray)
+    assert isinstance(arr.type, SparseRowType)
+
+    for i in range(csr.shape[0]):
+        indices = arr.row_indices(i)
+        row = csr[i, :]
+        assert isinstance(row, coo_array)
+        assert len(indices) == row.nnz
+        assert np.all(indices == row.col)
 
 
 @given(sparse_arrays())
