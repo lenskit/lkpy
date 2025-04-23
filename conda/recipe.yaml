@@ -23,7 +23,7 @@ outputs:
 
     build:
       script:
-        - python -m pip install . --no-deps -vv
+        - python -m pip install --no-deps --no-build-isolation -vv .
 
     requirements:
       build:
@@ -31,9 +31,7 @@ outputs:
       host:
         - python
         - pip
-        - setuptools >=70
-        - setuptools-scm >=8
-        - setuptools-rust >=1.11,<2
+        - maturin >=1,<2
       run:
         - python
         - typing-extensions >=4.12,<5

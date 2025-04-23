@@ -1,13 +1,12 @@
 [build-system]
-requires = ["setuptools >=70", "setuptools-scm >=8", "setuptools-rust ~=1.11"]
-build-backend = "setuptools.build_meta"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
 
 [project]
 name = "lenskit"
 description = "Toolkit for recommender systems research, teaching, and more."
 authors = [{ name = "Michael Ekstrand", email = "mdekstrand@drexel.edu" }]
 classifiers = [
-  "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -17,7 +16,8 @@ classifiers = [
 ]
 requires-python = ">= 3.11"
 readme = "README.md"
-license = { file = "LICENSE.md" }
+license = "MIT"
+license-files = ["LICENSE.md"]
 dynamic = ["version"]
 dependencies = [
   "typing-extensions ~=4.12",
@@ -66,12 +66,12 @@ demo = [
 ]
 reporting = ["coverage >=5"]
 package = [
-  "setuptools >=70",
-  "setuptools-scm >=8",
-  "setuptools-rust ~=1.11",
+  "maturin ~=1.0",
 ]
 scripting = [
   "invoke ~= 2.2",
+  "tomlkit ~= 0.13.2",
+  "packaging >=25.0",
   { include-group = "package" },
 ]
 dev = [
@@ -94,6 +94,7 @@ dev = [
   { include-group = "package" },
   { include-group = "scripting" },
   "zstandard>=0.23.0",
+  "maturin>=1.8.3",
 ]
 cpu = ["torch ~=2.4"]
 gpu = ["torch ~=2.4"]
@@ -121,13 +122,10 @@ lenskit-train = "lenskit.cli.train:train"
 lenskit-recommend = "lenskit.cli.recommend:recommend"
 
 # configure build tools
-[tool.setuptools_scm]
-version_file = "src/lenskit/_version.py"
-
-[[tool.setuptools-rust.ext-modules]]
-target = "lenskit._accel"
-path = "Cargo.toml"
-binding = "PyO3"
+[tool.maturin]
+profile = "release"
+python-source = "src"
+module-name = "lenskit._accel"
 
 [tool.cibuildwheel]
 skip = ["*-musllinux_i686"]

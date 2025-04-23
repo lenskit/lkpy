@@ -8,13 +8,14 @@
 Recommender systems toolkit.
 """
 
-try:
-    from ._version import version as __version__
-except ImportError:
-    __version__ = "UNSPECIFIED"
-
+from importlib.metadata import PackageNotFoundError, version
 
 from .operations import predict, recommend, score
 from .pipeline import Pipeline, RecPipelineBuilder, topn_pipeline
 
 __all__ = ["predict", "recommend", "score", "Pipeline", "RecPipelineBuilder", "topn_pipeline"]
+
+try:
+    __version__ = version("lenskit")
+except PackageNotFoundError:  # pragma: nocover
+    __version__ = "UNKNOWN"

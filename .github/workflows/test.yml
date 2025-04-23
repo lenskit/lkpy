@@ -43,12 +43,22 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
+      - name: 🧐 Inspect environment
+        if: runner.os != 'Windows'
+        run: |
+          set -x
+          env
+          ${CC:-cc} --version
+
       - name: 📦 Set up Python dependencies (Unix)
         if: runner.os != 'Windows'
         run: |
           uv_extra=
           if [ "${{matrix.python}}" = "3.13" ]; then
             uv_extra="--no-extra ray"
+          fi
+          if [ "$(uname)" = Linux ]; then
+            export CC=gcc
           fi
           uv sync --all-extras $uv_extra --no-default-groups --group test
         env:
@@ -155,6 +165,7 @@ jobs:
           uv pip install --resolution=lowest-direct '.[sklearn,hpf,implicit,funksvd]'
         env:
           SETUPTOOLS_RUST_CARGO_PROFILE: release
+          CC: gcc
 
       - name: 🔍 Inspect environment
         run: |
