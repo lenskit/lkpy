@@ -30,7 +30,6 @@ from lenskit.logging import Stopwatch, get_logger
 from lenskit.math.sparse import normalize_sparse_rows, torch_sparse_to_scipy
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component
-from lenskit.torch import inference_mode, sparse_row
 from lenskit.training import Trainable, TrainingOptions
 
 _log = get_logger(__name__)
@@ -96,7 +95,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
     "The index of item IDs."
     user_means_: torch.Tensor | None
     "Mean rating for each known user."
-    user_vectors_: torch.Tensor
+    user_vectors_: csr_array
     "Normalized rating matrix (CSR) to find neighbors at prediction time."
     user_ratings_: SparseRowArray
     "Centered but un-normalized rating matrix (COO) to find neighbor ratings."
@@ -133,7 +132,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
         normed, _norms = normalize_sparse_rows(rmat, "unit")
         normed = normed.to(torch.float32)
 
-        self.user_vectors_ = normed.detach()
+        self.user_vectors_ = torch_sparse_to_scipy(normed)
         rmat = torch_sparse_to_scipy(rmat)
         assert isinstance(rmat, csr_array)
         self.user_ratings_ = SparseRowArray.from_scipy(rmat, values=self.config.explicit)
@@ -142,7 +141,6 @@ class UserKNNScorer(Component[ItemList], Trainable):
         self.items_ = data.items
 
     @override
-    @inference_mode
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         """
         Compute predictions for a user and items.
@@ -175,7 +173,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
         # now ratings has vbeen normalized to be a mean-centered unit vector
         # this means we can dot product to score neighbors
         # score the neighbors!
-        nbr_sims = torch.mv(self.user_vectors_, ratings)
+        nbr_sims = self.user_vectors_ @ ratings
         assert nbr_sims.shape == (len(self.users_),)
         if uidx is not None:
             # zero out the self-similarity
@@ -193,24 +191,22 @@ class UserKNNScorer(Component[ItemList], Trainable):
                 "found %d candidate neighbors (of %d total), max sim %0.4f",
                 len(kn_sims),
                 len(self.users_),
-                torch.max(kn_sims).item(),
+                np.max(kn_sims).item(),
             )
         else:
             log.debug("no candidate neighbors found, cannot score")
             return ItemList(items, scores=np.nan)
 
-        assert not torch.any(torch.isnan(kn_sims))
+        assert not np.any(np.isnan(kn_sims))
 
-        iidxs = items.numbers(format="torch", vocabulary=self.items_, missing="negative").to(
-            torch.int64
-        )
+        iidxs = items.numbers(vocabulary=self.items_, missing="negative")
 
         ki_mask = iidxs >= 0
         usable_iidxs = iidxs[ki_mask]
 
         usable_iidxs = pa.array(usable_iidxs, pa.int32())
         kn_idxs = pa.array(kn_idxs, pa.int32())
-        kn_sims = pa.array(kn_sims.numpy(), pa.float32())
+        kn_sims = pa.array(kn_sims, pa.float32())
 
         if self.config.explicit:
             scores = knn.user_score_items_explicit(
@@ -234,7 +230,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
         scores = scores.to_numpy(zero_copy_only=False, writable=True)
         scores += umean
 
-        results = pd.Series(scores, index=items.ids()[ki_mask.numpy()], name="prediction")
+        results = pd.Series(scores, index=items.ids()[ki_mask], name="prediction")
         results = results.reindex(items.ids())
 
         log.debug(
@@ -255,8 +251,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
                 return None
 
             index = int(index)
-            row = sparse_row(self.user_vectors_, index)
-            row = row.to_dense()
+            row = self.user_vectors_[[index], :].toarray()[0, :]
             if self.config.explicit:
                 assert self.user_means_ is not None
                 umean = self.user_means_[index].item()
@@ -267,17 +262,17 @@ class UserKNNScorer(Component[ItemList], Trainable):
             return None
         else:
             _log.debug("using provided item history")
-            ratings = torch.zeros(len(self.items_), dtype=torch.float32)
-            ui_nos = query.user_items.numbers("torch", missing="negative", vocabulary=self.items_)
+            ratings = np.zeros(len(self.items_), dtype=np.float32)
+            ui_nos = query.user_items.numbers(missing="negative", vocabulary=self.items_)
             ui_mask = ui_nos >= 0
 
             if self.config.explicit:
-                urv = query.user_items.field("rating", "torch")
+                urv = query.user_items.field("rating")
                 if urv is None:
                     _log.warning("user %s has items but no ratings", query.user_id)
                     return None
 
-                urv = urv.to(torch.float32)
+                urv = np.require(urv, dtype=np.float32)
                 umean = urv.mean().item()
                 ratings[ui_nos[ui_mask]] = urv[ui_mask] - umean
             else:
@@ -293,5 +288,5 @@ class UserRatings(NamedTuple):
     """
 
     index: int | None
-    ratings: torch.Tensor
+    ratings: np.ndarray[tuple[int], np.dtype[np.float32]]
     mean: float

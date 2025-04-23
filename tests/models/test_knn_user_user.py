@@ -10,7 +10,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import torch
 
 from pytest import approx, fail, mark
 
@@ -189,9 +188,9 @@ def test_uu_implicit(ml_ratings):
     assert algo.user_means_ is None
 
     mat = algo.user_vectors_
-    norms = torch.linalg.vector_norm(mat.to_dense(), dim=1)
+    norms = np.linalg.norm(mat.todense(), axis=1)
     assert norms.shape == mat.shape[:1]
-    assert np.allclose(norms.numpy(), 1.0)
+    assert np.allclose(norms, 1.0)
 
     preds = algo(query=50, items=ItemList([1, 2, 42]))
     preds = preds.scores("pandas", index="ids")
