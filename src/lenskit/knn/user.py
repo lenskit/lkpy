@@ -16,7 +16,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-import torch
+import scipy.sparse.linalg as spla
 from pydantic import AliasChoices, BaseModel, Field, PositiveFloat, PositiveInt, field_validator
 from scipy.sparse import csr_array
 from typing_extensions import NamedTuple, Optional, override
@@ -27,7 +27,6 @@ from lenskit.data.matrix import SparseRowArray
 from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import Stopwatch, get_logger
-from lenskit.math.sparse import normalize_sparse_rows, torch_sparse_to_scipy
 from lenskit.parallel.config import ensure_parallel_init
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
@@ -93,7 +92,7 @@ class UserKNNScorer(Component[ItemList], Trainable):
     "The index of user IDs."
     items_: Vocabulary
     "The index of item IDs."
-    user_means_: torch.Tensor | None
+    user_means_: np.ndarray[tuple[int], np.dtype[np.float32]] | None
     "Mean rating for each known user."
     user_vectors_: csr_array
     "Normalized rating matrix (CSR) to find neighbors at prediction time."
@@ -113,32 +112,43 @@ class UserKNNScorer(Component[ItemList], Trainable):
             return
 
         ensure_parallel_init()
-        rmat = data.interaction_matrix(
-            format="torch", field="rating" if self.config.explicit else None
-        ).to(torch.float32)
-        assert rmat.is_sparse_csr
+        rmat = (
+            data.interactions().matrix().scipy(attribute="rating" if self.config.explicit else None)
+        ).astype(np.float32)
 
-        if self.config.explicit:
-            rmat, means = normalize_sparse_rows(rmat, "center")
-            if np.allclose(rmat.values(), 0.0):
-                _log.warning("normalized ratings are zero, centering is not recommended")
-                warnings.warn(
-                    "Ratings seem to have the same value, centering is not recommended.",
-                    DataWarning,
-                )
-        else:
-            means = None
+        rmat, means = self._center_ratings(rmat)
+        normed = self._normalize_rows(rmat)
 
-        normed, _norms = normalize_sparse_rows(rmat, "unit")
-        normed = normed.to(torch.float32)
-
-        self.user_vectors_ = torch_sparse_to_scipy(normed)
-        rmat = torch_sparse_to_scipy(rmat)
-        assert isinstance(rmat, csr_array)
+        self.user_vectors_ = normed
         self.user_ratings_ = SparseRowArray.from_scipy(rmat, values=self.config.explicit)
         self.users_ = data.users
         self.user_means_ = means
         self.items_ = data.items
+
+    def _center_ratings(self, rmat: csr_array) -> tuple[csr_array, np.ndarray | None]:
+        if self.config.explicit:
+            counts = np.diff(rmat.indptr)
+            sums = rmat.sum(axis=1)
+            means = np.zeros(sums.shape, dtype=np.float32)
+            # manual divide to avoid division by zero
+            np.divide(sums, counts, out=means, where=counts > 0)
+            rmat.data = rmat.data - np.repeat(means, counts)
+            if np.allclose(rmat.data, 0.0):
+                warnings.warn(
+                    "Ratings seem to have the same value, centering is not recommended.",
+                    DataWarning,
+                )
+            return rmat, means
+        else:
+            return rmat, None
+
+    def _normalize_rows(self, rmat: csr_array) -> csr_array:
+        norms = spla.norm(rmat, 2, axis=1)
+        assert norms.shape == (rmat.shape[0],)
+        # clamp small values to avoid divide by 0 (only appear when an entry is all 0)
+        cmat = rmat / np.maximum(norms, np.finfo("f4").smallest_normal).reshape(-1, 1)
+        assert cmat.shape == rmat.shape
+        return cmat.tocsr()
 
     @override
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:

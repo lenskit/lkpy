@@ -47,7 +47,7 @@ def test_uu_train(ml_ratings, ml_ds):
 
     # it should have computed correct means
     u_stats = ml_ds.user_stats()
-    mlmeans = pd.Series(algo.user_means_.numpy(), index=algo.users_.ids(), name="mean")
+    mlmeans = pd.Series(algo.user_means_, index=algo.users_.ids(), name="mean")
     mlmeans.index.name = "user_id"
     umeans, mlmeans = u_stats["mean_rating"].align(mlmeans)
     assert mlmeans.values == approx(umeans.values)
