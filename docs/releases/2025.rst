@@ -31,16 +31,18 @@ information on how to upgrade your code.
 Component Changes
 .................
 
--   :class:`~lenskit.knn.ItemKNNScorer` is rewritten to use Rust acceleration,
-    along with changes to its internal data representation to use Arrow instead
-    of SciPy.  This also fixes a segfault with very large similarity matrices.
+-   :class:`~lenskit.knn.ItemKNNScorer` and :class:`~lenskit.knn.UserkNNScorer`
+    are rewritten to use Rust acceleration, along with changes to its internal
+    data representation to use Arrow instead of SciPy.  This also fixes a
+    segfault with very large similarity matrices.
 
     .. note::
 
-        The model parameters of the Item KNN scorer have changed.  They are no
+        The model parameters of the KNN scorers have changed.  They are no
         longer suffixed with ``_``, and the similarity matrix is a PyArrow list
         array.  Code that was directly examining internal elements will need to
         change.
+
 
 .. _2025.2.0:
 
