@@ -104,9 +104,9 @@ class ItemKNNScorer(Component[ItemList], Trainable):
 
     items: Vocabulary
     "Vocabulary of item IDs."
-    item_means: np.ndarray[int, np.dtype[np.float32]] | None
+    item_means: np.ndarray[tuple[int], np.dtype[np.float32]] | None
     "Mean rating for each known item."
-    item_counts: np.ndarray[int, np.dtype[np.int32]]
+    item_counts: np.ndarray[tuple[int], np.dtype[np.int32]]
     "Number of saved neighbors for each item."
     sim_matrix: SparseRowArray
     "Similarity matrix (sparse CSR tensor)."
