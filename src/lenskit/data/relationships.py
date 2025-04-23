@@ -189,12 +189,10 @@ class MatrixRelationshipSet(RelationshipSet):
 
     _row_ptrs: np.ndarray[tuple[int], np.dtype[np.int32]]
     _structure: SparseRowArray
-    row_vocabulary: Vocabulary
     row_type: str
     _row_nums: pa.Int32Array
     _row_stats: pd.DataFrame | None = None
 
-    col_vocabulary: Vocabulary
     col_type: str
     _col_nums: pa.Int32Array
     _col_stats: pd.DataFrame | None = None
@@ -220,9 +218,7 @@ class MatrixRelationshipSet(RelationshipSet):
         row, col = entities
 
         self.row_type = row
-        self.row_vocabulary = self._vocabularies[row]
         self.col_type = col
-        self.col_vocabulary = self._vocabularies[col]
 
         e_cols = [num_col_name(e) for e in entities]
         log.debug("checking relationship table sorting")
@@ -258,11 +254,31 @@ class MatrixRelationshipSet(RelationshipSet):
         log.debug("relationship set ready to use")
 
     def __getstate__(self):
-        return {f: v for (f, v) in self.__dict__.items() if f != "_rc_set"}
+        return {
+            "name": self.name,
+            "schema": self.schema,
+            "columns": self._link_cols,
+            "table": self._table,
+            "vocabularies": self._vocabularies,
+        }
 
     def __setstate__(self, state):
-        self.__dict__.update(state)
-        self._rc_set = RowColumnSet(self._structure)
+        self.name = state["name"]
+        self.schema = state["schema"]
+        self._link_cols = state["columns"]
+        self._table = state["table"]
+        self._vocabularies = state["vocabularies"]
+        self._init_structures(_trust_table_sort=True)
+
+    @property
+    def row_vocabulary(self):
+        "The vocabulary for row entities."
+        return self._vocabularies[self.row_type]
+
+    @property
+    def col_vocabulary(self):
+        "The vocabulary for column entities."
+        return self._vocabularies[self.col_type]
 
     @property
     def n_rows(self):
