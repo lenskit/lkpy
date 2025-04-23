@@ -1,10 +1,14 @@
 use arrow::{
-    array::{make_array, Array, ArrayData, Float32Array, Float32Builder, Int32Array},
+    array::{make_array, Array, ArrayData, Float32Array, Int32Array},
     pyarrow::PyArrowType,
 };
 use pyo3::{exceptions::PyValueError, prelude::*};
 
-use crate::{sparse::CSRMatrix, types::checked_array_convert};
+use crate::{
+    knn::accum::{collect_items_averaged, collect_items_summed},
+    sparse::CSRMatrix,
+    types::checked_array_convert,
+};
 
 use super::accum::ScoreAccumulator;
 
@@ -51,21 +55,7 @@ pub fn score_explicit<'py>(
             }
         }
 
-        let mut out = Float32Builder::with_capacity(tgt_items.len());
-        for ti in tgt_is {
-            if let Some(ti) = ti {
-                let acc = &heaps[ti as usize];
-                if acc.len() >= min_nbrs {
-                    let score = acc.weighted_sum() / acc.total_weight();
-                    out.append_value(score);
-                } else {
-                    out.append_null();
-                }
-            } else {
-                out.append_null();
-            }
-        }
-        let out = out.finish();
+        let out = collect_items_averaged(&heaps, tgt_is, min_nbrs);
         assert_eq!(out.len(), tgt_is.len());
 
         Ok(out.into_data().into())
@@ -109,21 +99,7 @@ pub fn score_implicit<'py>(
             }
         }
 
-        let mut out = Float32Builder::with_capacity(tgt_items.len());
-        for ti in tgt_is {
-            if let Some(ti) = ti {
-                let acc = &heaps[ti as usize];
-                if acc.len() >= min_nbrs {
-                    let score = acc.total_weight();
-                    out.append_value(score);
-                } else {
-                    out.append_null();
-                }
-            } else {
-                out.append_null();
-            }
-        }
-        let out = out.finish();
+        let out = collect_items_summed(&heaps, &tgt_is, min_nbrs);
         assert_eq!(out.len(), tgt_is.len());
 
         Ok(out.into_data().into())

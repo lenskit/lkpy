@@ -1,7 +1,7 @@
 //! Accumulator for scores in k-NN.
 use std::collections::BinaryHeap;
 
-use arrow::array::Int32Array;
+use arrow::array::{Float32Array, Float32Builder, Int32Array};
 use ordered_float::NotNan;
 use pyo3::{exceptions::PyValueError, prelude::*};
 
@@ -176,4 +176,48 @@ impl<T> Ord for AccEntry<T> {
         // reverse the ordering to make a min-heap
         other.weight.cmp(&self.weight)
     }
+}
+
+pub(super) fn collect_items_averaged(
+    heaps: &[ScoreAccumulator<f32>],
+    tgt_is: &Int32Array,
+    min_nbrs: usize,
+) -> Float32Array {
+    let mut out = Float32Builder::with_capacity(tgt_is.len());
+    for ti in tgt_is {
+        if let Some(ti) = ti {
+            let acc = &heaps[ti as usize];
+            if acc.len() >= min_nbrs {
+                let score = acc.weighted_sum() / acc.total_weight();
+                out.append_value(score);
+            } else {
+                out.append_null();
+            }
+        } else {
+            out.append_null();
+        }
+    }
+    out.finish()
+}
+
+pub(super) fn collect_items_summed(
+    heaps: &[ScoreAccumulator<()>],
+    tgt_is: &Int32Array,
+    min_nbrs: usize,
+) -> Float32Array {
+    let mut out = Float32Builder::with_capacity(tgt_is.len());
+    for ti in tgt_is {
+        if let Some(ti) = ti {
+            let acc = &heaps[ti as usize];
+            if acc.len() >= min_nbrs {
+                let score = acc.total_weight();
+                out.append_value(score);
+            } else {
+                out.append_null();
+            }
+        } else {
+            out.append_null();
+        }
+    }
+    out.finish()
 }
