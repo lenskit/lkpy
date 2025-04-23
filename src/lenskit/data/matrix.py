@@ -372,8 +372,26 @@ class SparseRowArray(pa.ExtensionArray):
 
     @classmethod
     def from_scipy(
-        cls, csr: sps.csr_array[Any, tuple[int, int]], *, large: bool | None = None
+        cls,
+        csr: sps.csr_array[Any, tuple[int, int]],
+        *,
+        values: bool = True,
+        large: bool | None = None,
     ) -> SparseRowArray:
+        """
+        Create a sparse row array from a SciPy sparse matrix.
+
+        Args:
+            csr:
+                The SciPy sparse matrix (in CSR format).
+            values:
+                Whether to include the values or create a structure-only array.
+            large:
+                ``True`` to force creation of a :class:`pa.LargeListArray`.
+
+        Returns:
+            The sparse row array.
+        """
         _nr, dim = csr.shape
         smax = np.iinfo(np.int32).max
 
@@ -385,7 +403,8 @@ class SparseRowArray(pa.ExtensionArray):
         elif large is False:
             raise ValueError("sparse matrix size {:,d} too large for list".format(csr.nnz))
         cols = pa.array(csr.indices, SparseIndexType(dim))
-        vals = pa.array(csr.data)
+
+        vals = pa.array(csr.data) if values else None
 
         return cls.from_arrays(offsets, cols, vals, shape=csr.shape)
 
