@@ -1,6 +1,6 @@
 use std::{
     ptr,
-    sync::atomic::{AtomicI64, AtomicPtr, AtomicU64, AtomicUsize, Ordering},
+    sync::atomic::{AtomicPtr, AtomicUsize, Ordering},
     time::Instant,
 };
 
