@@ -10,14 +10,16 @@ use rayon::prelude::*;
 
 use log::*;
 
-use crate::sparse::CSRMatrix;
+use crate::{progress::ProgressHandle, sparse::CSRMatrix};
 
 #[pyfunction]
 pub(super) fn train_implicit_matrix<'py>(
+    py: Python<'py>,
     matrix: PyArrowType<ArrayData>,
     this: Bound<'py, PyArray2<f32>>,
     other: Bound<'py, PyArray2<f32>>,
     otor: Bound<'py, PyArray2<f32>>,
+    progress: Bound<'py, PyAny>,
 ) -> PyResult<f32> {
     let matrix_ref = make_array(matrix.0);
     let matrix: CSRMatrix<i32> = CSRMatrix::from_arrow(matrix_ref)?;
@@ -31,17 +33,22 @@ pub(super) fn train_implicit_matrix<'py>(
     let otor_py = otor.readonly();
     let otor = otor_py.as_array();
 
+    let progress = ProgressHandle::from_input(progress);
     debug!(
         "beginning implicit ALS training half with {} rows",
         other.nrows()
     );
-
-    let frob: f32 = this
-        .outer_iter_mut()
-        .into_par_iter()
-        .enumerate()
-        .map(|(i, row)| train_row_solve(&matrix, i, row, &other, &otor))
-        .sum();
+    let frob: f32 = py.allow_threads(|| {
+        this.outer_iter_mut()
+            .into_par_iter()
+            .enumerate()
+            .map(|(i, row)| {
+                let f = train_row_solve(&matrix, i, row, &other, &otor);
+                progress.tick();
+                f
+            })
+            .sum()
+    });
 
     Ok(frob.sqrt())
 }

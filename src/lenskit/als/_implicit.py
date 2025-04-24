@@ -13,6 +13,7 @@ from typing_extensions import override
 from lenskit._accel import als
 from lenskit.data import Dataset, ItemList
 from lenskit.data.types import NPMatrix, NPVector
+from lenskit.logging import item_progress
 from lenskit.math.solve import solve_cholesky
 
 from ._common import ALSBase, ALSConfig, ALSTrainerBase, TrainContext
@@ -148,7 +149,8 @@ class ImplicitMFTrainer(ALSTrainerBase[ImplicitMFScorer, ImplicitMFConfig]):
     @override
     def als_half_epoch(self, epoch: int, context: TrainContext) -> float:
         OtOr = _implicit_otor(context.right, context.reg)
-        return als.train_implicit_matrix(context.matrix, context.left, context.right, OtOr)
+        with item_progress(f"Epoch {epoch} {context.label}", context.nrows) as pb:
+            return als.train_implicit_matrix(context.matrix, context.left, context.right, OtOr, pb)
 
     @override
     def finalize(self):

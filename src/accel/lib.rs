@@ -5,6 +5,7 @@ use rayon::ThreadPoolBuilder;
 mod als;
 mod data;
 mod knn;
+mod progress;
 mod sampling;
 mod sparse;
 mod types;
