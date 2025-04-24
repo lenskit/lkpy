@@ -53,7 +53,7 @@ class BiasedMFScorer(ALSBase):
     def new_user_embedding(
         self, user_num: int | None, items: ItemList
     ) -> tuple[NPVector, float | None]:
-        inums = items.numbers(vocabulary=self.items_, missing="negative")
+        inums = items.numbers(vocabulary=self.items, missing="negative")
         mask = inums >= 0
         ratings = items.field("rating")
         assert ratings is not None
@@ -64,7 +64,7 @@ class BiasedMFScorer(ALSBase):
         ri_val = ratings[mask]
 
         u_feat = _train_bias_row_cholesky(
-            inums[mask], ri_val, self.item_features_, self.config.user_reg
+            inums[mask], ri_val, self.item_embeddings, self.config.user_reg
         )
         return u_feat, u_bias
 
@@ -108,9 +108,7 @@ class BiasedMFTrainer(ALSTrainerBase[BiasedMFScorer, BiasedMFConfig]):
 
     @override
     def als_half_epoch(self, epoch: int, context: TrainContext) -> float:
-        return als.train_explicit_matrix_cd(
-            context.matrix, context.left, context.right, context.reg
-        )
+        return als.train_explicit_matrix(context.matrix, context.left, context.right, context.reg)
 
 
 def _train_bias_row_cholesky(

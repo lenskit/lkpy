@@ -6,15 +6,14 @@
 
 from __future__ import annotations
 
-import math
-
-import torch
+import numpy as np
+from scipy.sparse import coo_array
 from typing_extensions import override
 
+from lenskit._accel import als
 from lenskit.data import Dataset, ItemList
-from lenskit.logging.progress import item_progress_handle, pbh_update
+from lenskit.data.types import NPMatrix, NPVector
 from lenskit.math.solve import solve_cholesky
-from lenskit.parallel.chunking import WorkChunks
 
 from ._common import ALSBase, ALSConfig, ALSTrainerBase, TrainContext
 
@@ -66,7 +65,7 @@ class ImplicitMFScorer(ALSBase):
 
     config: ImplicitMFConfig
 
-    OtOr_: torch.Tensor
+    _OtOr: NPMatrix
 
     def create_trainer(self, data, options):
         return ImplicitMFTrainer(self, data, options)
@@ -74,27 +73,31 @@ class ImplicitMFScorer(ALSBase):
     @override
     def new_user_embedding(
         self, user_num: int | None, user_items: ItemList
-    ) -> tuple[torch.Tensor, None]:
-        ri_idxes = user_items.numbers("torch", vocabulary=self.items_)
+    ) -> tuple[NPVector, None]:
+        ri_idxes = user_items.numbers(vocabulary=self.items)
 
         ri_good = ri_idxes >= 0
         ri_it = ri_idxes[ri_good]
         if self.config.use_ratings:
-            ratings = user_items.field("rating", "torch")
+            ratings = user_items.field("rating")
             if ratings is None:
                 raise ValueError("no ratings in user items")
             ri_val = ratings[ri_good] * self.config.weight
         else:
-            ri_val = torch.full((len(ri_good),), self.config.weight)
+            ri_val = np.full((len(ri_good),), self.config.weight)
 
-        ri_val = ri_val.to(self.item_features_.dtype)
+        ri_val = ri_val.astype(self.item_embeddings.dtype)
 
-        u_feat = self._train_new_row(ri_it, ri_val, self.item_features_, self.OtOr_)
+        u_feat = self._train_new_row(ri_it, ri_val, self.item_embeddings, self._OtOr)
         return u_feat, None
 
     def _train_new_row(
-        self, items: torch.Tensor, ratings: torch.Tensor, i_embeds: torch.Tensor, OtOr: torch.Tensor
-    ) -> torch.Tensor:
+        self,
+        items: NPVector[np.int32],
+        ratings: NPVector,
+        i_embeds: NPMatrix,
+        OtOr: NPMatrix,
+    ) -> NPVector:
         """
         Train a single user row with new rating data.
 
@@ -124,107 +127,42 @@ class ImplicitMFScorer(ALSBase):
         return x
 
 
-class ImplicitMFTrainer(ALSTrainerBase):
+class ImplicitMFTrainer(ALSTrainerBase[ImplicitMFScorer, ImplicitMFConfig]):
     @override
-    def prepare_matrix(self, data: Dataset) -> torch.Tensor:
+    def prepare_matrix(self, data: Dataset) -> coo_array:
+        ints = data.interactions().matrix()
         if self.config.use_ratings:
-            rmat = data.interaction_matrix(format="torch", field="rating")
+            rmat = ints.scipy(attribute="rating", layout="coo")
         else:
-            rmat = data.interaction_matrix(format="torch")
+            rmat = ints.scipy(layout="coo")
 
-        return torch.sparse_csr_tensor(
-            crow_indices=rmat.crow_indices(),
-            col_indices=rmat.col_indices(),
-            values=rmat.values() * self.config.weight,
-            size=rmat.shape,
-        )
+        vals = np.require(rmat.data, dtype=np.float32) * self.config.weight
+        return coo_array((vals, (rmat.row, rmat.col)), shape=rmat.shape)
 
     @override
-    def initial_params(self, nrows: int, ncols: int) -> torch.Tensor:
-        mat = self.rng.standard_normal((nrows, ncols)) * 0.01
-        mat = torch.from_numpy(mat)
-        mat.square_()
+    def initial_params(self, nrows: int, ncols: int) -> NPMatrix:
+        mat = self.rng.standard_normal((nrows, ncols), dtype=np.float32) * 0.01
+        mat *= mat
         return mat
 
     @override
     def als_half_epoch(self, epoch: int, context: TrainContext) -> float:
-        chunks = WorkChunks.create(context.nrows)
-
         OtOr = _implicit_otor(context.right, context.reg)
-        with item_progress_handle(f"epoch {epoch} {context.label}s", total=context.nrows) as pbh:
-            return _train_implicit_cholesky_fanout(context, OtOr, chunks, pbh)
+        return als.train_implicit_matrix(context.matrix, context.left, context.right, OtOr)
 
     @override
     def finalize(self):
         # compute OtOr and save it on the model
         reg = self.config.user_reg
-        self.scorer.OtOr_ = _implicit_otor(self.scorer.item_features_, reg)
+        self.scorer._OtOr = _implicit_otor(self.scorer.item_embeddings, reg)
         super().finalize()
 
 
-@torch.jit.script
-def _implicit_otor(other: torch.Tensor, reg: float) -> torch.Tensor:
+def _implicit_otor(other: NPMatrix, reg: float) -> NPMatrix:
     nf = other.shape[1]
-    regmat = torch.eye(nf)
+    regmat = np.eye(nf, dtype=other.dtype)
     regmat *= reg
     Ot = other.T
     OtO = Ot @ other
     OtO += regmat
     return OtO
-
-
-def _train_implicit_cholesky_rows(
-    ctx: TrainContext, OtOr: torch.Tensor, start: int, end: int, pbh: str
-) -> torch.Tensor:
-    result = ctx.left[start:end, :].clone()
-
-    for i in range(start, end):
-        row = ctx.matrix[i]
-        (n,) = row.shape
-        if n == 0:
-            continue
-
-        cols = row.indices()[0]
-        vals = row.values().type(ctx.left.type())
-
-        # we can optimize by only considering the nonzero entries of Cu-I
-        # this means we only need the corresponding matrix columns
-        M = ctx.right[cols, :]
-        # Compute M^T (C_u-I) M, restricted to these nonzero entries
-        MMT = (M.T * vals) @ M
-        # assert MMT.shape[0] == ctx.n_features
-        # assert MMT.shape[1] == ctx.n_features
-        # Build the matrix for solving
-        A = OtOr + MMT
-        # Compute RHS - only used columns (p_ui != 0) values needed
-        # Cu is rates + 1 for the cols, so just trim Ot
-        y = ctx.right.T[:, cols] @ (vals + 1.0)
-        # and solve
-        x = solve_cholesky(A, y)
-        # assert len(uv) == ctx.n_features
-        result[i - start, :] = x
-
-        pbh_update(pbh, 1)
-
-    return result
-
-
-# @torch.jit.script
-def _train_implicit_cholesky_fanout(
-    ctx: TrainContext, OtOr: torch.Tensor, chunks: WorkChunks, pbh: str
-) -> float:
-    results: list[tuple[int, int, torch.jit.Future[torch.Tensor]]] = []
-    for start in range(0, ctx.nrows, chunks.chunk_size):
-        end = min(start + chunks.chunk_size, ctx.nrows)
-        results.append(
-            (start, end, torch.jit.fork(_train_implicit_cholesky_rows, ctx, OtOr, start, end, pbh))  # type: ignore
-        )
-
-    sqerr = torch.tensor(0.0)
-    for start, end, r in results:
-        M = r.wait()
-        diff = (ctx.left[start:end, :] - M).ravel()
-        sqerr += torch.dot(diff, diff)
-        ctx.left[start:end, :] = M
-
-    return math.sqrt(sqerr.item())

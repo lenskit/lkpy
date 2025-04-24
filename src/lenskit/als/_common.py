@@ -118,10 +118,10 @@ class ALSBase(UsesTrainer, Component[ItemList], ABC):
 
     config: ALSConfig
 
-    users_: Vocabulary | None
-    items_: Vocabulary
-    user_features_: NPMatrix | None
-    item_features_: NPMatrix
+    users: Vocabulary | None
+    items: Vocabulary
+    user_embeddings: NPMatrix | None
+    item_embeddings: NPMatrix
 
     @property
     def logger(self) -> structlog.stdlib.BoundLogger:
@@ -133,8 +133,8 @@ class ALSBase(UsesTrainer, Component[ItemList], ABC):
 
         user_id = query.user_id
         user_num = None
-        if user_id is not None and self.users_ is not None:
-            user_num = self.users_.number(user_id, missing=None)
+        if user_id is not None and self.users is not None:
+            user_num = self.users.number(user_id, missing=None)
 
         log = self.logger.bind(user=user_id)
 
@@ -149,14 +149,14 @@ class ALSBase(UsesTrainer, Component[ItemList], ABC):
             u_feat, u_offset = self.new_user_embedding(user_num, query.user_items)
 
         if u_feat is None:
-            if user_num is None or self.user_features_ is None:
+            if user_num is None or self.user_embeddings is None:
                 log.debug("cannot find user embedding")
                 return ItemList(items, scores=np.nan)
-            u_feat = self.user_features_[user_num, :]
+            u_feat = self.user_embeddings[user_num, :]
 
-        item_nums = items.numbers(vocabulary=self.items_, missing="negative")
+        item_nums = items.numbers(vocabulary=self.items, missing="negative")
         item_mask = item_nums >= 0
-        i_feats = self.item_features_[item_nums[item_mask], :]
+        i_feats = self.item_embeddings[item_nums[item_mask], :]
 
         scores = np.full((len(items),), np.nan, dtype=np.float32)
         scores[item_mask] = i_feats @ u_feat
@@ -199,8 +199,8 @@ class ALSTrainerBase(ModelTrainer, Generic[Scorer, Config]):
 
     def __init__(self, scorer: Scorer, data: Dataset, options: TrainingOptions):
         self.scorer = scorer
-        self.scorer.users_ = data.users
-        self.scorer.items_ = data.items
+        self.scorer.users = data.users
+        self.scorer.items = data.items
 
         self.rng = options.random_generator()
 
@@ -212,19 +212,19 @@ class ALSTrainerBase(ModelTrainer, Generic[Scorer, Config]):
         self._init_contexts()
 
     def _init_contexts(self):
-        assert self.scorer.user_features_ is not None
+        assert self.scorer.user_embeddings is not None
         self.u_ctx = TrainContext.create(
             "user",
             self.ui_rates,
-            self.scorer.user_features_,
-            self.scorer.item_features_,
+            self.scorer.user_embeddings,
+            self.scorer.item_embeddings,
             self.config.user_reg,
         )
         self.i_ctx = TrainContext.create(
             "item",
             self.iu_rates,
-            self.scorer.item_features_,
-            self.scorer.user_features_,
+            self.scorer.item_embeddings,
+            self.scorer.user_embeddings,
             self.config.item_reg,
         )
 
@@ -232,8 +232,8 @@ class ALSTrainerBase(ModelTrainer, Generic[Scorer, Config]):
         epoch = self.epochs_trained + 1
         log = self.logger.bind(epoch=epoch)
 
-        assert self.scorer.user_features_ is not None
-        assert self.scorer.item_features_ is not None
+        assert self.scorer.user_embeddings is not None
+        assert self.scorer.item_embeddings is not None
 
         du = self.als_half_epoch(epoch, self.u_ctx)
         log.debug("finished user epoch")
@@ -278,16 +278,16 @@ class ALSTrainerBase(ModelTrainer, Generic[Scorer, Config]):
         Initialize the model parameters at the beginning of training.
         """
         self.logger.debug("initializing item matrix")
-        self.scorer.item_features_ = self.initial_params(
+        self.scorer.item_embeddings = self.initial_params(
             data.item_count, self.config.embedding_size
         )
-        self.logger.debug("|Q|: %f", np.linalg.norm(self.scorer.item_features_, "fro"))
+        self.logger.debug("|Q|: %f", np.linalg.norm(self.scorer.item_embeddings, "fro"))
 
         self.logger.debug("initializing user matrix")
-        self.scorer.user_features_ = self.initial_params(
+        self.scorer.user_embeddings = self.initial_params(
             data.user_count, self.config.embedding_size
         )
-        self.logger.debug("|P|: %f", np.linalg.norm(self.scorer.user_features_, "fro"))
+        self.logger.debug("|P|: %f", np.linalg.norm(self.scorer.user_embeddings, "fro"))
 
     @abstractmethod
     def initial_params(self, nrows: int, ncols: int) -> NPMatrix:  # pragma: no cover
@@ -310,8 +310,8 @@ class ALSTrainerBase(ModelTrainer, Generic[Scorer, Config]):
         """
         self.logger.debug("finalizing model training")
         if not self.config.user_embeddings:
-            self.scorer.user_features_ = None
-            self.scorer.users_ = None
+            self.scorer.user_embeddings = None
+            self.scorer.users = None
 
     def get_parameters(self) -> Mapping[str, object]:
         """
@@ -322,8 +322,8 @@ class ALSTrainerBase(ModelTrainer, Generic[Scorer, Config]):
             (usually arrays, tensors, etc.).
         """
         return {
-            "user_embeddings": self.scorer.user_features_,
-            "item_embeddings": self.scorer.item_features_,
+            "user_embeddings": self.scorer.user_embeddings,
+            "item_embeddings": self.scorer.item_embeddings,
         }
 
     def load_parameters(self, state: Mapping[str, object]) -> None:
@@ -340,6 +340,6 @@ class ALSTrainerBase(ModelTrainer, Generic[Scorer, Config]):
         assert torch.is_tensor(u_emb)
         i_emb = state["item_embeddings"]
         assert torch.is_tensor(i_emb)
-        self.scorer.user_features_ = u_emb
-        self.scorer.item_features_ = i_emb
+        self.scorer.user_embeddings = u_emb
+        self.scorer.item_embeddings = i_emb
         self._init_contexts()

@@ -15,7 +15,7 @@ use crate::sparse::CSRMatrix;
 const RR_EPOCHS: usize = 2;
 
 #[pyfunction]
-pub(super) fn train_explicit_matrix_cd<'py>(
+pub(super) fn train_explicit_matrix<'py>(
     matrix: PyArrowType<ArrayData>,
     this: Bound<'py, PyArray2<f32>>,
     other: Bound<'py, PyArray2<f32>>,
@@ -54,11 +54,11 @@ fn train_row_cd(
 ) -> f32 {
     let cols = matrix.row_cols(row_num);
     let vals = matrix.row_vals(row_num);
-    let col_us: Vec<_> = cols.iter().map(|c| *c as usize).collect();
+    let cols: Vec<_> = cols.iter().map(|c| *c as usize).collect();
 
     let nd = row_data.len();
 
-    let o_picked = other.select(Axis(0), &col_us);
+    let o_picked = other.select(Axis(0), &cols);
     let mut resid = Array1::from_iter(vals.iter().map(|f| *f));
     let scores = o_picked.dot(&row_data);
     resid -= &scores;
@@ -94,12 +94,12 @@ fn train_row_solve(
         return 0.0;
     }
 
-    let col_us: Vec<_> = cols.iter().map(|c| *c as usize).collect();
+    let cols: Vec<_> = cols.iter().map(|c| *c as usize).collect();
     let vals: Array1<_> = vals.iter().map(|f| *f).collect();
 
     let nd = row_data.len();
 
-    let o_picked = other.select(Axis(0), &col_us);
+    let o_picked = other.select(Axis(0), &cols);
 
     let mt = o_picked.t();
     let mut mtm = mt.dot(&o_picked);

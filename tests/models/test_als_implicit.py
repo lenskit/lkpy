@@ -36,13 +36,13 @@ def test_als_basic_build():
     algo = ImplicitMFScorer(features=20, epochs=10)
     algo.train(simple_ds)
 
-    assert algo.users_ is not None
-    assert algo.user_features_ is not None
+    assert algo.users is not None
+    assert algo.user_embeddings is not None
 
-    assert set(algo.users_.ids()) == set([10, 12, 13])
-    assert set(algo.items_.ids()) == set([1, 2, 3])
-    assert algo.user_features_.shape == (3, 20)
-    assert algo.item_features_.shape == (3, 20)
+    assert set(algo.users.ids()) == set([10, 12, 13])
+    assert set(algo.items.ids()) == set([1, 2, 3])
+    assert algo.user_embeddings.shape == (3, 20)
+    assert algo.item_embeddings.shape == (3, 20)
 
 
 def test_als_predict_basic():
@@ -113,8 +113,8 @@ def test_als_predict_for_new_users_with_new_ratings(rng: np.random.Generator, ml
 
     algo = ImplicitMFScorer(features=20, epochs=10, use_ratings=False)
     algo.train(ml_ds)
-    assert algo.users_ is not None
-    assert algo.user_features_ is not None
+    assert algo.users is not None
+    assert algo.user_embeddings is not None
 
     _log.debug("Items: " + str(items))
 
@@ -123,15 +123,15 @@ def test_als_predict_for_new_users_with_new_ratings(rng: np.random.Generator, ml
         preds = algo(u, items)
         preds = preds.scores("pandas", index="ids")
         assert preds is not None
-        upos = algo.users_.number(u)
+        upos = algo.users.number(u)
 
         # get the user's rating series
         user_data = ml_ds.user_row(u)
         assert user_data is not None
 
         nr_info = user_data.to_df()
-        ifs = algo.item_features_[user_data.numbers(vocabulary=algo.items_), :]
-        fit_uv = algo.user_features_[upos, :]
+        ifs = algo.item_embeddings[user_data.numbers(vocabulary=algo.items), :]
+        fit_uv = algo.user_embeddings[upos, :]
         nr_info["fit_recon"] = ifs @ fit_uv
         nr_info["fit_sqerr"] = np.square(algo.config.weight + 1.0 - nr_info["fit_recon"])
 
@@ -174,8 +174,8 @@ def test_als_recs_topn_for_new_users_with_new_ratings(
     algo = ImplicitMFScorer(features=20, epochs=10, use_ratings=True)
     pipe = topn_pipeline(algo, n=10)
     pipe.train(ml_ds)
-    assert algo.users_ is not None
-    assert algo.user_features_ is not None
+    assert algo.users is not None
+    assert algo.user_embeddings is not None
     # _log.debug("Items: " + str(items))
 
     correlations = pd.Series(np.nan, index=users)
@@ -184,10 +184,10 @@ def test_als_recs_topn_for_new_users_with_new_ratings(
         assert isinstance(recs, ItemList)
         user_data = ml_ds.user_row(u)
         assert user_data is not None
-        upos = algo.users_.number(u)
+        upos = algo.users.number(u)
         _log.info("user %s: %s ratings", u, len(user_data))
 
-        _log.debug("user_features from fit: " + str(algo.user_features_[upos, :]))
+        _log.debug("user_features from fit: " + str(algo.user_embeddings[upos, :]))
 
         # get the user's rating series
         query = RecQuery(-1, user_data)
@@ -257,7 +257,7 @@ def test_als_predict_no_user_features_basic(ml_ratings: pd.DataFrame, ml_ds: Dat
     preds_no_user_features = preds_no_user_features.scores("pandas", index="ids")
     assert preds_no_user_features is not None
 
-    assert algo_no_user_features.user_features_ is None
+    assert algo_no_user_features.user_embeddings is None
     assert preds_no_user_features.values == approx(preds, abs=0.1)
     diffs = np.abs(preds - preds_no_user_features)
     assert all(diffs <= 0.1)
@@ -268,12 +268,12 @@ def test_als_train_large(ml_ds: Dataset):
     algo = ImplicitMFScorer(features=20, epochs=20, use_ratings=False)
     algo.train(ml_ds)
 
-    assert algo.users_ is not None
-    assert algo.user_features_ is not None
-    assert len(algo.users_.index) == ml_ds.user_count
-    assert len(algo.items_.index) == ml_ds.item_count
-    assert algo.user_features_.shape == (ml_ds.user_count, 20)
-    assert algo.item_features_.shape == (ml_ds.item_count, 20)
+    assert algo.users is not None
+    assert algo.user_embeddings is not None
+    assert len(algo.users.index) == ml_ds.user_count
+    assert len(algo.items.index) == ml_ds.item_count
+    assert algo.user_embeddings.shape == (ml_ds.user_count, 20)
+    assert algo.item_embeddings.shape == (ml_ds.item_count, 20)
 
 
 def test_als_save_load(tmp_path, ml_ds: Dataset):
@@ -282,7 +282,7 @@ def test_als_save_load(tmp_path, ml_ds: Dataset):
         features=5, epochs=5, regularization={"user": 2, "item": 1}, use_ratings=False
     )
     algo.train(ml_ds)
-    assert algo.users_ is not None
+    assert algo.users is not None
 
     fn = tmp_path / "model.bpk"
     with fn.open("wb") as pf:
@@ -291,10 +291,10 @@ def test_als_save_load(tmp_path, ml_ds: Dataset):
     with fn.open("rb") as pf:
         restored = pickle.load(pf)
 
-    assert torch.all(restored.user_features_ == algo.user_features_)
-    assert torch.all(restored.item_features_ == algo.item_features_)
-    assert np.all(restored.items_.index == algo.items_.index)
-    assert np.all(restored.users_.index == algo.users_.index)
+    assert torch.all(restored.user_embeddings == algo.user_embeddings)
+    assert torch.all(restored.item_embeddings == algo.item_embeddings)
+    assert np.all(restored.items.index == algo.items.index)
+    assert np.all(restored.users.index == algo.users.index)
 
 
 @wantjit
@@ -302,12 +302,12 @@ def test_als_train_large_noratings(ml_ds: Dataset):
     algo = ImplicitMFScorer(features=20, epochs=20)
     algo.train(ml_ds)
 
-    assert algo.users_ is not None
-    assert algo.user_features_ is not None
-    assert len(algo.users_.index) == ml_ds.user_count
-    assert len(algo.items_.index) == ml_ds.item_count
-    assert algo.user_features_.shape == (ml_ds.user_count, 20)
-    assert algo.item_features_.shape == (ml_ds.item_count, 20)
+    assert algo.users is not None
+    assert algo.user_embeddings is not None
+    assert len(algo.users.index) == ml_ds.user_count
+    assert len(algo.items.index) == ml_ds.item_count
+    assert algo.user_embeddings.shape == (ml_ds.user_count, 20)
+    assert algo.item_embeddings.shape == (ml_ds.item_count, 20)
 
 
 @wantjit
@@ -315,12 +315,12 @@ def test_als_train_large_ratings(ml_ds):
     algo = ImplicitMFScorer(features=20, epochs=20, use_ratings=True)
     algo.train(ml_ds)
 
-    assert algo.users_ is not None
-    assert algo.user_features_ is not None
-    assert len(algo.users_.index) == ml_ds.user_count
-    assert len(algo.items_.index) == ml_ds.item_count
-    assert algo.user_features_.shape == (ml_ds.user_count, 20)
-    assert algo.item_features_.shape == (ml_ds.item_count, 20)
+    assert algo.users is not None
+    assert algo.user_embeddings is not None
+    assert len(algo.users.index) == ml_ds.user_count
+    assert len(algo.items.index) == ml_ds.item_count
+    assert algo.user_embeddings.shape == (ml_ds.user_count, 20)
+    assert algo.item_embeddings.shape == (ml_ds.item_count, 20)
 
 
 @mark.slow

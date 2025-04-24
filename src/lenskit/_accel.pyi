@@ -10,11 +10,15 @@ from lenskit.data.types import NPMatrix
 
 class _ALSAccelerator(Protocol):
     @staticmethod
-    def train_explicit_matrix_cd(
+    def train_explicit_matrix(
         matrix: SparseRowArray,
         this: NPMatrix,
         other: NPMatrix,
         reg: float,
+    ) -> float: ...
+    @staticmethod
+    def train_implicit_matrix(
+        matrix: SparseRowArray, this: NPMatrix, other: NPMatrix, otor: NPMatrix
     ) -> float: ...
 
 als: _ALSAccelerator
