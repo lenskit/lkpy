@@ -10,8 +10,10 @@ Efficient solver routines.
 
 import torch
 
+from lenskit.data.types import NPMatrix, NPVector
 
-def solve_cholesky(A: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+
+def solve_cholesky(A: NPMatrix, y: NPVector) -> NPVector:
     """
     Solve the system :math:`A\\mathbf{x}=\\mathbf{y}` for :math:`\\mathbf{x}`
     with Cholesky decomposition.
@@ -34,8 +36,11 @@ def solve_cholesky(A: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     if A.shape != (n, n):  # pragma: no cover
         raise TypeError("A must be n⨉n")
 
-    L, info = torch.linalg.cholesky_ex(A)
+    At = torch.from_numpy(A)
+    yt = torch.from_numpy(y)
+
+    L, info = torch.linalg.cholesky_ex(At)
     if info:
         raise RuntimeError("cholesky solve failed")
-    y = y.reshape(1, n, 1)
-    return torch.cholesky_solve(y, L).reshape(n)
+    yt = yt.reshape(1, n, 1)
+    return torch.cholesky_solve(yt, L).reshape(n).numpy()
