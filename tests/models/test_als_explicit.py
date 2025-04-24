@@ -9,7 +9,6 @@ import pickle
 
 import numpy as np
 import pandas as pd
-import torch
 
 from pytest import approx, mark, skip
 
@@ -84,7 +83,6 @@ def test_als_predict_basic_for_new_ratings():
     assert preds.loc[3] <= 5.1
 
 
-@skip()
 def test_als_predict_basic_for_new_user_with_new_ratings():
     u = 10
     i = 3
@@ -105,7 +103,6 @@ def test_als_predict_basic_for_new_user_with_new_ratings():
     assert preds.loc[i] == approx(new_preds.loc[i], rel=9e-2)
 
 
-@skip("temporarily broken due to CD solving")
 def test_als_predict_for_new_users_with_new_ratings(rng, ml_ds: Dataset):
     n_users = 3
     n_items = 2
