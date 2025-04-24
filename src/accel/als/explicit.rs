@@ -34,14 +34,14 @@ pub(super) fn train_explicit_matrix_cd<'py>(
         other.nrows()
     );
 
-    let frob = this
+    let frob: f32 = this
         .outer_iter_mut()
         .into_par_iter()
         .enumerate()
         .map(|(i, row)| train_row_cd(&matrix, i, row, &other, reg))
         .sum();
 
-    Ok(frob)
+    Ok(frob.sqrt())
 }
 
 fn train_row_cd(
