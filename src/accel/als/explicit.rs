@@ -3,7 +3,7 @@ use arrow::{
     pyarrow::PyArrowType,
 };
 use ndarray::{Array1, ArrayBase, ArrayView2, Axis, ViewRepr};
-use ndarray_linalg::SolveC;
+use nshare::{IntoNalgebra, IntoNdarray1};
 use numpy::{Ix1, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -89,6 +89,11 @@ fn train_row_solve(
 ) -> f32 {
     let cols = matrix.row_cols(row_num);
     let vals = matrix.row_vals(row_num);
+
+    if cols.len() == 0 {
+        return 0.0;
+    }
+
     let col_us: Vec<_> = cols.iter().map(|c| *c as usize).collect();
     let vals: Array1<_> = vals.iter().map(|f| *f).collect();
 
@@ -106,7 +111,12 @@ fn train_row_solve(
     let v = mt.dot(&vals);
     assert_eq!(v.shape(), &[nd]);
 
-    let soln = mtm.solvec(&v).unwrap();
+    let mtm = mtm.into_nalgebra();
+    let v = v.into_nalgebra();
+    let cholesky = mtm.cholesky().expect("matrix is not positive definite");
+
+    let soln = cholesky.solve(&v);
+    let soln = soln.into_ndarray1();
     let deltas = &soln - &row_data;
     row_data.assign(&soln);
 
