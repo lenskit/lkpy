@@ -43,6 +43,7 @@ def test_solve_cholesky(problem):
     F = A.T @ A
     y = A.T @ b
     x = solve_cholesky(F, y)
+    assert x.shape == y.shape
 
     assert x == approx(xexp, rel=1.0e-3)
 

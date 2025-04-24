@@ -8,7 +8,8 @@
 Efficient solver routines.
 """
 
-import torch
+import numpy as np
+from scipy.linalg import cho_factor, cho_solve
 
 from lenskit.data.types import NPMatrix, NPVector
 
@@ -36,11 +37,5 @@ def solve_cholesky(A: NPMatrix, y: NPVector) -> NPVector:
     if A.shape != (n, n):  # pragma: no cover
         raise TypeError("A must be n⨉n")
 
-    At = torch.from_numpy(A)
-    yt = torch.from_numpy(y)
-
-    L, info = torch.linalg.cholesky_ex(At)
-    if info:
-        raise RuntimeError("cholesky solve failed")
-    yt = yt.reshape(1, n, 1)
-    return torch.cholesky_solve(yt, L).reshape(n).numpy()
+    L, low = cho_factor(A)
+    return np.require(cho_solve((L, low), y), dtype=A.dtype)
