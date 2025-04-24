@@ -2,6 +2,7 @@ use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use rayon::ThreadPoolBuilder;
 
+mod als;
 mod data;
 mod knn;
 mod sampling;
@@ -13,6 +14,7 @@ mod types;
 fn _accel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     pyo3_log::init();
     knn::register_knn(m)?;
+    als::register_als(m)?;
 
     m.add_class::<sampling::NegativeSampler>()?;
     m.add_class::<data::RowColumnSet>()?;
