@@ -11,7 +11,6 @@ from typing import Literal, Mapping, TypeAlias, cast
 
 import numpy as np
 import structlog
-import torch
 from pydantic import AliasChoices, BaseModel, Field
 from scipy.sparse import coo_array
 from typing_extensions import Generic, NamedTuple, TypeVar, override
@@ -339,9 +338,9 @@ class ALSTrainerBase(ModelTrainer, Generic[Scorer, Config]):
                 :meth:`get_parameters`.
         """
         u_emb = state["user_embeddings"]
-        assert torch.is_tensor(u_emb)
+        assert isinstance(u_emb, np.ndarray)
         i_emb = state["item_embeddings"]
-        assert torch.is_tensor(i_emb)
+        assert isinstance(i_emb, np.ndarray)
         self.scorer.user_embeddings = u_emb
         self.scorer.item_embeddings = i_emb
         self._init_contexts()
