@@ -66,22 +66,35 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRStructure<Ix> {
         })
     }
 
+    /// Get the "length" (number of rows) in the matrix.
     pub fn len(&self) -> usize {
         self.array.len()
     }
 
+    /// Get the number of observed values in the matrix.
     #[allow(dead_code)]
     pub fn nnz(&self) -> usize {
         self.row_ptrs()[self.len()].try_into().unwrap()
     }
 
+    /// Get the row pointers as a slice.
     pub fn row_ptrs(&self) -> &[Ix] {
         self.array.value_offsets()
     }
 
-    pub fn extent(&self, row: usize) -> (Ix, Ix) {
+    /// Get the extent in the underlying arrays for a row in the matrix.
+    pub fn extent(&self, row: usize) -> (usize, usize) {
         let off = self.row_ptrs();
-        (off[row], off[row + 1])
+        (
+            off[row].try_into().unwrap(),
+            off[row + 1].try_into().unwrap(),
+        )
+    }
+
+    /// Get the column indices for a row in the matrix.
+    pub fn row_cols(&self, row: usize) -> &[i32] {
+        let (start, end) = self.extent(row);
+        &self.col_inds.values()[start..end]
     }
 }
 
@@ -144,21 +157,40 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRMatrix<Ix> {
         })
     }
 
+    /// Get the "length" (number of rows) in the matrix.
     pub fn len(&self) -> usize {
         self.array.len()
     }
 
+    /// Get the number of observed values in the matrix.
     #[allow(dead_code)]
     pub fn nnz(&self) -> usize {
         self.row_ptrs()[self.len()].try_into().unwrap()
     }
 
+    /// Get the row pointers as a slice.
     pub fn row_ptrs(&self) -> &[Ix] {
         self.array.value_offsets()
     }
 
-    pub fn extent(&self, row: usize) -> (Ix, Ix) {
+    /// Get the extent in the underlying arrays for a row in the matrix.
+    pub fn extent(&self, row: usize) -> (usize, usize) {
         let off = self.row_ptrs();
-        (off[row], off[row + 1])
+        (
+            off[row].try_into().unwrap(),
+            off[row + 1].try_into().unwrap(),
+        )
+    }
+
+    /// Get the column indices for a row in the matrix.
+    pub fn row_cols(&self, row: usize) -> &[i32] {
+        let (start, end) = self.extent(row);
+        &self.col_inds.values()[start..end]
+    }
+
+    /// Get the values for a row in the matrix.
+    pub fn row_vals(&self, row: usize) -> &[f32] {
+        let (start, end) = self.extent(row);
+        &self.values.values()[start..end]
     }
 }
