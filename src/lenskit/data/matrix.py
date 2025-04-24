@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import json
 import warnings
-from typing import Any, NamedTuple, TypeVar
+from typing import Any, NamedTuple, TypeVar, cast
 
 import numpy as np
 import pyarrow as pa
@@ -373,7 +373,7 @@ class SparseRowArray(pa.ExtensionArray):
     @classmethod
     def from_scipy(
         cls,
-        csr: sps.csr_array[Any, tuple[int, int]],
+        matrix: sps.sparray,
         *,
         values: bool = True,
         large: bool | None = None,
@@ -392,21 +392,22 @@ class SparseRowArray(pa.ExtensionArray):
         Returns:
             The sparse row array.
         """
-        _nr, dim = csr.shape
+        matrix = cast("sps.csr_array[Any, tuple[int, int]]", matrix.tocsr())  # type: ignore
+        _nr, dim = matrix.shape
         smax = np.iinfo(np.int32).max
 
-        offsets = csr.indptr
+        offsets = matrix.indptr
         if large:
             offsets = np.require(offsets, np.int64)
-        elif csr.nnz < smax:
+        elif matrix.nnz < smax:
             offsets = np.require(offsets, dtype=np.int32)
         elif large is False:
-            raise ValueError("sparse matrix size {:,d} too large for list".format(csr.nnz))
-        cols = pa.array(csr.indices, SparseIndexType(dim))
+            raise ValueError("sparse matrix size {:,d} too large for list".format(matrix.nnz))
+        cols = pa.array(matrix.indices, SparseIndexType(dim))
 
-        vals = pa.array(csr.data) if values else None
+        vals = pa.array(matrix.data) if values else None
 
-        return cls.from_arrays(offsets, cols, vals, shape=csr.shape)
+        return cls.from_arrays(offsets, cols, vals, shape=matrix.shape)
 
     def to_scipy(self) -> sps.csr_array[Any, tuple[int, int]]:
         """
