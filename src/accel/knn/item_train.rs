@@ -19,10 +19,14 @@ pub fn compute_similarities<'py>(
     shape: (usize, usize),
     min_sim: f32,
     save_nbrs: Option<i64>,
-    progress: Option<Bound<'py, PyAny>>,
+    progress: Bound<'py, PyAny>,
 ) -> PyResult<Vec<PyArrowType<ArrayData>>> {
     let (nu, ni) = shape;
-    let progress = progress.map(|pb| pb.unbind());
+    let progress = if progress.is_none() {
+        None
+    } else {
+        Some(progress.unbind())
+    };
 
     py.allow_threads(|| {
         // extract the data

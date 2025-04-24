@@ -1,25 +1,19 @@
-use std::{
-    collections::LinkedList,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc,
-    },
-};
+use std::{collections::LinkedList, sync::Arc};
 
 use arrow::{
     array::{Float32Builder, Int32Builder, LargeListArray, StructArray},
     buffer::OffsetBuffer,
 };
 use arrow_schema::{DataType, Field, Fields};
-use pyo3::{intern, prelude::*, types::PyDict};
+use pyo3::prelude::*;
 use rayon::iter::plumbing::{Consumer, Folder, Reducer};
+
+use crate::progress::ProgressHandle;
 
 use super::SparseIndexType;
 
 pub type CSRItem = Vec<(i32, f32)>;
 pub type CSRResult = LinkedList<LargeListArray>;
-
-const UPDATE_FREQ: u64 = 100;
 
 /// Rayon consumer that collects sparse rows (as vectors) into a chunked sparse row array.
 ///
@@ -33,16 +27,14 @@ pub struct ArrowCSRConsumer {
 
 struct CSRState {
     dimension: usize,
-    counter: AtomicU64,
-    progress: Option<Py<PyAny>>,
+    progress: ProgressHandle,
 }
 
 impl CSRState {
     fn new(dim: usize, progress: Option<Py<PyAny>>) -> Self {
         CSRState {
             dimension: dim,
-            counter: AtomicU64::new(0),
-            progress,
+            progress: ProgressHandle::new(progress),
         }
     }
 }
@@ -66,22 +58,6 @@ impl ArrowCSRConsumer {
 
     pub(crate) fn with_progress(dim: usize, progress: Py<PyAny>) -> Self {
         Self::from_state(CSRState::new(dim, Some(progress)))
-    }
-
-    fn check_progress(&mut self) {
-        let n = self.state.counter.fetch_add(1, Ordering::Relaxed) + 1;
-        if n % UPDATE_FREQ == 0 {
-            Python::with_gil(|py| {
-                py.check_signals()?;
-                if let Some(pb) = &self.state.progress {
-                    let kwargs = PyDict::new(py);
-                    kwargs.set_item(intern!(py, "completed"), n)?;
-                    pb.call_method(py, intern!(py, "update"), (), Some(&kwargs))?;
-                }
-                Ok::<(), PyErr>(())
-            })
-            .expect("progress update failed");
-        }
     }
 }
 
@@ -117,7 +93,7 @@ impl Folder<CSRItem> for ArrowCSRConsumer {
             self.val_bld.append_value(s);
         }
         self.lengths.push(len);
-        self.check_progress();
+        self.state.progress.tick();
         self
     }
 
