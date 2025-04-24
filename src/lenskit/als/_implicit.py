@@ -209,7 +209,7 @@ def _train_implicit_cholesky_rows(
     return result
 
 
-@torch.jit.script
+# @torch.jit.script
 def _train_implicit_cholesky_fanout(
     ctx: TrainContext, OtOr: torch.Tensor, chunks: WorkChunks, pbh: str
 ) -> float:

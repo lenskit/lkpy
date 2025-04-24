@@ -7,22 +7,28 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Literal, Mapping, TypeAlias
+from typing import Literal, Mapping, TypeAlias, cast
 
 import numpy as np
 import structlog
 import torch
 from pydantic import AliasChoices, BaseModel, Field
-from typing_extensions import NamedTuple, override
+from scipy.sparse import coo_array
+from typing_extensions import Generic, NamedTuple, TypeVar, override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
-from lenskit.data.types import UIPair
+from lenskit.data.matrix import SparseRowArray
+from lenskit.data.types import NPMatrix, NPVector, UIPair
 from lenskit.logging import get_logger
 from lenskit.pipeline import Component
 from lenskit.training import ModelTrainer, TrainingOptions, UsesTrainer
 
-EntityClass: TypeAlias = Literal["user", "item"]
 _log = get_logger(__name__)
+
+EntityClass: TypeAlias = Literal["user", "item"]
+
+Scorer = TypeVar("Scorer", bound="ALSBase")
+Config = TypeVar("Config", bound="ALSConfig")
 
 
 class ALSConfig(BaseModel):
@@ -76,24 +82,29 @@ class TrainContext(NamedTuple):
     """
 
     label: str
-    matrix: torch.Tensor
-    left: torch.Tensor
-    right: torch.Tensor
+    matrix: SparseRowArray
+    left: NPMatrix
+    right: NPMatrix
     reg: float
     nrows: int
     ncols: int
     embed_size: int
-    regI: torch.Tensor
+    regI: NPMatrix
 
     @classmethod
     def create(
-        cls, label: str, matrix: torch.Tensor, left: torch.Tensor, right: torch.Tensor, reg: float
+        cls,
+        label: str,
+        matrix: SparseRowArray,
+        left: NPMatrix,
+        right: NPMatrix,
+        reg: float,
     ) -> TrainContext:
         nrows, ncols = matrix.shape
         lnr, embed_size = left.shape
         assert lnr == nrows
         assert right.shape == (ncols, embed_size)
-        regI = torch.eye(embed_size, dtype=left.dtype, device=left.device) * reg
+        regI = np.eye(embed_size, dtype=left.dtype) * reg
         return TrainContext(label, matrix, left, right, reg, nrows, ncols, embed_size, regI)
 
 
@@ -109,8 +120,8 @@ class ALSBase(UsesTrainer, Component[ItemList], ABC):
 
     users_: Vocabulary | None
     items_: Vocabulary
-    user_features_: torch.Tensor | None
-    item_features_: torch.Tensor
+    user_features_: NPMatrix | None
+    item_features_: NPMatrix
 
     @property
     def logger(self) -> structlog.stdlib.BoundLogger:
@@ -143,13 +154,13 @@ class ALSBase(UsesTrainer, Component[ItemList], ABC):
                 return ItemList(items, scores=np.nan)
             u_feat = self.user_features_[user_num, :]
 
-        item_nums = items.numbers("torch", vocabulary=self.items_, missing="negative")
+        item_nums = items.numbers(vocabulary=self.items_, missing="negative")
         item_mask = item_nums >= 0
         i_feats = self.item_features_[item_nums[item_mask], :]
 
-        scores = torch.full((len(items),), np.nan, dtype=torch.float64)
+        scores = np.full((len(items),), np.nan, dtype=np.float32)
         scores[item_mask] = i_feats @ u_feat
-        log.debug("scored %d items", torch.sum(item_mask).item())
+        log.debug("scored %d items", np.sum(item_mask))
 
         results = ItemList(items, scores=scores)
         return self.finalize_scores(user_num, results, u_offset)
@@ -157,7 +168,7 @@ class ALSBase(UsesTrainer, Component[ItemList], ABC):
     @abstractmethod
     def new_user_embedding(
         self, user_num: int | None, items: ItemList
-    ) -> tuple[torch.Tensor, float | None]:  # pragma: no cover
+    ) -> tuple[NPVector[np.float32], float | None]:  # pragma: no cover
         """
         Generate an embedding for a user given their current ratings.
         """
@@ -172,27 +183,30 @@ class ALSBase(UsesTrainer, Component[ItemList], ABC):
         return items
 
 
-class ALSTrainerBase(ModelTrainer):
-    scorer: ALSBase
+class ALSTrainerBase(ModelTrainer, Generic[Scorer, Config]):
+    scorer: Scorer
 
     rng: np.random.Generator
-    ui_rates: torch.Tensor
+    ui_rates: SparseRowArray
     "User-item rating matrix."
     u_ctx: TrainContext
-    iu_rates: torch.Tensor
+    "User training context."
+    iu_rates: SparseRowArray
     "Item-user rating matrix."
     i_ctx: TrainContext
+    "Item training context."
     epochs_trained: int = 0
 
-    def __init__(self, scorer: ALSBase, data: Dataset, options: TrainingOptions):
+    def __init__(self, scorer: Scorer, data: Dataset, options: TrainingOptions):
         self.scorer = scorer
         self.scorer.users_ = data.users
         self.scorer.items_ = data.items
 
         self.rng = options.random_generator()
 
-        self.ui_rates = self.prepare_matrix(data)
-        self.iu_rates = self.ui_rates.transpose(0, 1).to_sparse_csr()
+        ui_rates = self.prepare_matrix(data)
+        self.ui_rates = SparseRowArray.from_scipy(ui_rates)
+        self.iu_rates = SparseRowArray.from_scipy(ui_rates.T)
 
         self.initialize_params(data)
         self._init_contexts()
@@ -231,8 +245,8 @@ class ALSTrainerBase(ModelTrainer):
         return {"deltaP": du, "deltaQ": di}
 
     @property
-    def config(self) -> ALSConfig:
-        return self.scorer.config
+    def config(self) -> Config:
+        return cast(Config, self.scorer.config)
 
     @property
     def logger(self) -> structlog.stdlib.BoundLogger:
@@ -247,7 +261,7 @@ class ALSTrainerBase(ModelTrainer):
         return self.iu_rates.shape[1]
 
     @abstractmethod
-    def prepare_matrix(self, data: Dataset) -> torch.Tensor:  # pragma: no cover
+    def prepare_matrix(self, data: Dataset) -> coo_array:  # pragma: no cover
         """
         Prepare data for training this model.  This takes in the ratings, and is
         supposed to do two things:
@@ -267,16 +281,16 @@ class ALSTrainerBase(ModelTrainer):
         self.scorer.item_features_ = self.initial_params(
             data.item_count, self.config.embedding_size
         )
-        self.logger.debug("|Q|: %f", torch.norm(self.scorer.item_features_, "fro"))
+        self.logger.debug("|Q|: %f", np.linalg.norm(self.scorer.item_features_, "fro"))
 
         self.logger.debug("initializing user matrix")
         self.scorer.user_features_ = self.initial_params(
             data.user_count, self.config.embedding_size
         )
-        self.logger.debug("|P|: %f", torch.norm(self.scorer.user_features_, "fro"))
+        self.logger.debug("|P|: %f", np.linalg.norm(self.scorer.user_features_, "fro"))
 
     @abstractmethod
-    def initial_params(self, nrows: int, ncols: int) -> torch.Tensor:  # pragma: no cover
+    def initial_params(self, nrows: int, ncols: int) -> NPMatrix:  # pragma: no cover
         """
         Compute initial parameter values of the specified shape.
         """
