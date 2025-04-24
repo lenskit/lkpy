@@ -92,6 +92,7 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRStructure<Ix> {
     }
 
     /// Get the column indices for a row in the matrix.
+    #[allow(dead_code)]
     pub fn row_cols(&self, row: usize) -> &[i32] {
         let (start, end) = self.extent(row);
         &self.col_inds.values()[start..end]
