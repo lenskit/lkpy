@@ -3,6 +3,7 @@ use arrow::{
     pyarrow::PyArrowType,
 };
 use ndarray::{Array1, ArrayBase, ArrayView2, Axis, ViewRepr};
+use ndarray_linalg::SolveC;
 use numpy::{Ix1, PyArray2, PyArrayMethods};
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -38,7 +39,7 @@ pub(super) fn train_explicit_matrix_cd<'py>(
         .outer_iter_mut()
         .into_par_iter()
         .enumerate()
-        .map(|(i, row)| train_row_cd(&matrix, i, row, &other, reg))
+        .map(|(i, row)| train_row_solve(&matrix, i, row, &other, reg))
         .sum();
 
     Ok(frob.sqrt())
@@ -75,6 +76,39 @@ fn train_row_cd(
             resid.scaled_add(-dw, &dvec);
         }
     }
+
+    deltas.dot(&deltas)
+}
+
+fn train_row_solve(
+    matrix: &CSRMatrix<i32>,
+    row_num: usize,
+    mut row_data: ArrayBase<ViewRepr<&mut f32>, Ix1>,
+    other: &ArrayView2<f32>,
+    reg: f32,
+) -> f32 {
+    let cols = matrix.row_cols(row_num);
+    let vals = matrix.row_vals(row_num);
+    let col_us: Vec<_> = cols.iter().map(|c| *c as usize).collect();
+    let vals: Array1<_> = vals.iter().map(|f| *f).collect();
+
+    let nd = row_data.len();
+
+    let o_picked = other.select(Axis(0), &col_us);
+
+    let mt = o_picked.t();
+    let mut mtm = mt.dot(&o_picked);
+    assert_eq!(mtm.shape(), &[nd, nd]);
+    for i in 0..nd {
+        mtm[[i, i]] += reg * cols.len() as f32;
+    }
+
+    let v = mt.dot(&vals);
+    assert_eq!(v.shape(), &[nd]);
+
+    let soln = mtm.solvec(&v).unwrap();
+    let deltas = &soln - &row_data;
+    row_data.assign(&soln);
 
     deltas.dot(&deltas)
 }
