@@ -1,27 +1,20 @@
 //! Accelerated sampling support.
 use std::mem;
 
-use arrow::{
-    array::{downcast_array, make_array, Array, ArrayData, Int32Array},
-    pyarrow::PyArrowType,
-};
-use arrow_schema::DataType;
 use log::*;
 use ndarray::Array2;
 use numpy::{PyArray1, PyArray2, PyArrayMethods};
 use pyo3::{
-    exceptions::{PyRuntimeError, PyTypeError, PyValueError},
+    exceptions::{PyRuntimeError, PyValueError},
     prelude::*,
 };
 
 use crate::data::RowColumnSet;
-use crate::types::checked_array_convert;
 
 #[pyclass]
 pub struct NegativeSampler {
     rc_set: Py<RowColumnSet>,
     rows: Py<PyArray1<i32>>,
-    n_cols: usize,
     negatives: Array2<i32>,
     remaining: Vec<(u16, u16)>,
 }
@@ -57,7 +50,6 @@ impl NegativeSampler {
         Ok(NegativeSampler {
             rc_set: rc_set.unbind(),
             rows,
-            n_cols: tgt_n,
             negatives: Array2::from_elem((n_rows, tgt_n), -1),
             remaining: (0..n_rows as u16)
                 .flat_map(|r| (0..tgt_n as u16).map(move |c| (r, c)))
