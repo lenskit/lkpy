@@ -12,11 +12,11 @@ Basic data types used in data representations.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Generic, Literal, Sequence, TypeAlias, TypeVar
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+from typing_extensions import Any, Generic, Literal, Sequence, TypeAlias, TypeVar
 
 FeedbackType: TypeAlias = Literal["explicit", "implicit"]
 "Types of feedback supported."
@@ -38,6 +38,10 @@ IDSequence: TypeAlias = (
     | "pd.Series[CoreID]"
 )
 "Sequences of identifiers."
+
+V = TypeVar("V", bound=np.number[Any], default=np.float32)
+NPMatrix: TypeAlias = np.ndarray[tuple[int, int], np.dtype[V]]
+NPVector: TypeAlias = np.ndarray[tuple[int], np.dtype[V]]
 
 T = TypeVar("T")
 
