@@ -43,6 +43,8 @@ Component Changes
         array.  Code that was directly examining internal elements will need to
         change.
 
+-   The :mod:`lenskit.als` scorers have been similarly refactored, and had their
+    learned parameters renamed for better consistency.
 
 .. _2025.2.0:
 
