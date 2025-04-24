@@ -10,7 +10,10 @@ use rayon::prelude::*;
 
 use log::*;
 
-use crate::{progress::ProgressHandle, sparse::CSRMatrix};
+use crate::{
+    progress::ProgressHandle,
+    sparse::{CSRMatrix, CSR},
+};
 
 #[pyfunction]
 pub(super) fn train_implicit_matrix<'py>(

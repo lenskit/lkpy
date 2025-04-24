@@ -6,7 +6,7 @@ use pyo3::{exceptions::PyValueError, prelude::*};
 
 use crate::{
     knn::accum::{collect_items_averaged, collect_items_summed},
-    sparse::CSRMatrix,
+    sparse::{CSRMatrix, CSR},
     types::checked_array_convert,
 };
 

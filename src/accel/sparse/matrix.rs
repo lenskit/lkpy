@@ -32,6 +32,43 @@ pub struct CSRMatrix<Ix: OffsetSizeTrait = i32> {
     pub values: Float32Array,
 }
 
+pub trait CSR<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug> = i32> {
+    fn array(&self) -> &GenericListArray<Ix>;
+    fn col_inds(&self) -> &Int32Array;
+
+    /// Get the "length" (number of rows) in the matrix.
+    fn len(&self) -> usize {
+        self.array().len()
+    }
+
+    /// Get the number of observed values in the matrix.
+    #[allow(dead_code)]
+    fn nnz(&self) -> usize {
+        self.row_ptrs()[self.len()].try_into().unwrap()
+    }
+
+    /// Get the row pointers as a slice.
+    fn row_ptrs(&self) -> &[Ix] {
+        self.array().value_offsets()
+    }
+
+    /// Get the extent in the underlying arrays for a row in the matrix.
+    fn extent(&self, row: usize) -> (usize, usize) {
+        let off = self.row_ptrs();
+        (
+            off[row].try_into().unwrap(),
+            off[row + 1].try_into().unwrap(),
+        )
+    }
+
+    /// Get the column indices for a row in the matrix.
+    #[allow(dead_code)]
+    fn row_cols(&self, row: usize) -> &[i32] {
+        let (start, end) = self.extent(row);
+        &self.col_inds().values()[start..end]
+    }
+}
+
 impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRStructure<Ix> {
     /// Convert an Arrow structured array into a CSR matrix, checking for type errors.
     pub fn from_arrow(array: Arc<dyn Array>) -> PyResult<CSRStructure<Ix>> {
@@ -65,37 +102,14 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRStructure<Ix> {
             col_inds: downcast_array(&rows),
         })
     }
+}
 
-    /// Get the "length" (number of rows) in the matrix.
-    pub fn len(&self) -> usize {
-        self.array.len()
+impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSR<Ix> for CSRStructure<Ix> {
+    fn array(&self) -> &GenericListArray<Ix> {
+        &self.array
     }
-
-    /// Get the number of observed values in the matrix.
-    #[allow(dead_code)]
-    pub fn nnz(&self) -> usize {
-        self.row_ptrs()[self.len()].try_into().unwrap()
-    }
-
-    /// Get the row pointers as a slice.
-    pub fn row_ptrs(&self) -> &[Ix] {
-        self.array.value_offsets()
-    }
-
-    /// Get the extent in the underlying arrays for a row in the matrix.
-    pub fn extent(&self, row: usize) -> (usize, usize) {
-        let off = self.row_ptrs();
-        (
-            off[row].try_into().unwrap(),
-            off[row + 1].try_into().unwrap(),
-        )
-    }
-
-    /// Get the column indices for a row in the matrix.
-    #[allow(dead_code)]
-    pub fn row_cols(&self, row: usize) -> &[i32] {
-        let (start, end) = self.extent(row);
-        &self.col_inds.values()[start..end]
+    fn col_inds(&self) -> &Int32Array {
+        &self.col_inds
     }
 }
 
@@ -158,40 +172,18 @@ impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSRMatrix<Ix> {
         })
     }
 
-    /// Get the "length" (number of rows) in the matrix.
-    pub fn len(&self) -> usize {
-        self.array.len()
-    }
-
-    /// Get the number of observed values in the matrix.
-    #[allow(dead_code)]
-    pub fn nnz(&self) -> usize {
-        self.row_ptrs()[self.len()].try_into().unwrap()
-    }
-
-    /// Get the row pointers as a slice.
-    pub fn row_ptrs(&self) -> &[Ix] {
-        self.array.value_offsets()
-    }
-
-    /// Get the extent in the underlying arrays for a row in the matrix.
-    pub fn extent(&self, row: usize) -> (usize, usize) {
-        let off = self.row_ptrs();
-        (
-            off[row].try_into().unwrap(),
-            off[row + 1].try_into().unwrap(),
-        )
-    }
-
-    /// Get the column indices for a row in the matrix.
-    pub fn row_cols(&self, row: usize) -> &[i32] {
-        let (start, end) = self.extent(row);
-        &self.col_inds.values()[start..end]
-    }
-
     /// Get the values for a row in the matrix.
     pub fn row_vals(&self, row: usize) -> &[f32] {
         let (start, end) = self.extent(row);
         &self.values.values()[start..end]
+    }
+}
+
+impl<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug>> CSR<Ix> for CSRMatrix<Ix> {
+    fn array(&self) -> &GenericListArray<Ix> {
+        &self.array
+    }
+    fn col_inds(&self) -> &Int32Array {
+        &self.col_inds
     }
 }

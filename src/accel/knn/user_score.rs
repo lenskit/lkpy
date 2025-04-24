@@ -6,7 +6,7 @@ use arrow::{
 };
 
 use crate::{
-    sparse::{CSRMatrix, CSRStructure},
+    sparse::{CSRMatrix, CSRStructure, CSR},
     types::checked_array_convert,
 };
 

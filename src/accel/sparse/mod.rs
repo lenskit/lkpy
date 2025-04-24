@@ -19,7 +19,7 @@ mod row;
 pub use consumer::ArrowCSRConsumer;
 pub use index::SparseIndexType;
 pub use index_list::SparseIndexListType;
-pub use matrix::{CSRMatrix, CSRStructure};
+pub use matrix::{CSRMatrix, CSRStructure, CSR};
 pub use row::SparseRowType;
 
 /// Test function to make sure we can convert sparse rows.

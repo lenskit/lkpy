@@ -9,7 +9,7 @@ use arrow::{
 use pyo3::prelude::*;
 use rustc_hash::{FxBuildHasher, FxHashSet};
 
-use crate::sparse::CSRStructure;
+use crate::sparse::{CSRStructure, CSR};
 
 enum RCSEntry {
     Empty,

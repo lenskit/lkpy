@@ -9,7 +9,7 @@ use ordered_float::NotNan;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 
-use crate::sparse::{ArrowCSRConsumer, CSRMatrix};
+use crate::sparse::{ArrowCSRConsumer, CSRMatrix, CSR};
 
 #[pyfunction]
 pub fn compute_similarities<'py>(
