@@ -42,8 +42,8 @@ def test_solve_cholesky(problem):
 
     F = A.T @ A
     y = A.T @ b
-    x = solve_cholesky(torch.from_numpy(F), torch.from_numpy(y))
+    x = solve_cholesky(F, y)
 
-    assert x.numpy() == approx(xexp, rel=1.0e-3)
+    assert x == approx(xexp, rel=1.0e-3)
 
-    assert F @ x.numpy() == approx(y, rel=2.0e-6, abs=5.0e-9)
+    assert F @ x == approx(y, rel=2.0e-6, abs=5.0e-9)
