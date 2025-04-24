@@ -123,7 +123,6 @@ lenskit-recommend = "lenskit.cli.recommend:recommend"
 
 # configure build tools
 [tool.maturin]
-profile = "release"
 python-source = "src"
 module-name = "lenskit._accel"
 
