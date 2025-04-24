@@ -23,7 +23,7 @@ serde_json = "^1.0"
 
 arrow = { version = "^55", features = ["pyarrow"], default-features = false }
 arrow-schema = { version = "^55", features = ["serde"] }
-ndarray = { version = "^0.16", features = ["rayon"] }
+ndarray = { version = "^0.16", features = ["rayon", "blas"] }
 numpy = "^0.24"
 
 [profile.dev]
