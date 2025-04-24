@@ -244,10 +244,10 @@ def test_als_save_load(ml_ds: Dataset):
     assert algo.bias.global_bias == original.bias.global_bias
     assert np.all(algo.bias.user_biases == original.bias.user_biases)
     assert np.all(algo.bias.item_biases == original.bias.item_biases)
-    assert np.all(algo.user_features_ == original.user_embeddings)
-    assert np.all(algo.item_features_ == original.item_embeddings)
-    assert np.all(algo.items_.index == original.items.index)
-    assert np.all(algo.users_.index == original.users.index)
+    assert np.all(algo.user_embeddings == original.user_embeddings)
+    assert np.all(algo.item_embeddings == original.item_embeddings)
+    assert np.all(algo.items.index == original.items.index)
+    assert np.all(algo.users.index == original.users.index)
 
     # make sure it still works
     preds = algo(query=10, items=ItemList(np.arange(0, 50, dtype="i8")))
