@@ -18,6 +18,7 @@ from typing import Annotated, Literal
 import numpy as np
 import torch
 from pydantic import BaseModel, NonNegativeFloat, PlainSerializer
+from scipy.sparse import coo_array
 from typing_extensions import Self, TypeAlias, overload
 
 from lenskit.data import ID, Dataset, ItemList, QueryInput, RecQuery, Vocabulary
@@ -238,22 +239,40 @@ class BiasModel:
 
         return scores, user_bias
 
-    def transform_matrix(self, matrix: torch.Tensor):
+    @overload
+    def transform_matrix(self, matrix: coo_array) -> coo_array: ...
+    @overload
+    def transform_matrix(self, matrix: torch.Tensor) -> torch.Tensor: ...
+    def transform_matrix(self, matrix: torch.Tensor | coo_array):
         """
         Transform a sparse ratings matrix by subtracting biases.
-        """
-        if not matrix.is_sparse:
-            raise TypeError("matrix is not sparse COO")
 
-        indices = matrix.indices()
-        unos = indices[0, :]
-        inos = indices[1, :]
-        values = matrix.values() - self.global_bias
-        if self.item_biases is not None:
-            values.subtract_(safe_tensor(self.item_biases)[inos])
-        if self.user_biases is not None:
-            values.subtract_(safe_tensor(self.user_biases)[unos])
-        return torch.sparse_coo_tensor(indices, values, size=matrix.size())
+        Args:
+            matrix:
+                The matrix to transform.
+        """
+        if isinstance(matrix, torch.Tensor):
+            if not matrix.is_sparse:
+                raise TypeError("matrix is not sparse COO")
+
+            indices = matrix.indices()
+            unos = indices[0, :]
+            inos = indices[1, :]
+            values = matrix.values()
+
+            values = matrix.values() - self.global_bias
+            if self.item_biases is not None:
+                values.subtract_(safe_tensor(self.item_biases)[inos])
+            if self.user_biases is not None:
+                values.subtract_(safe_tensor(self.user_biases)[unos])
+            return torch.sparse_coo_tensor(indices, values, size=matrix.size())
+        else:
+            values = matrix.data - self.global_bias
+            if self.item_biases is not None:
+                values -= self.item_biases[matrix.col]
+            if self.user_biases is not None:
+                values -= self.user_biases[matrix.row]
+            return coo_array((values, (matrix.row, matrix.col)), shape=matrix.shape)
 
 
 class BiasConfig(BaseModel, extra="forbid"):
