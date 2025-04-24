@@ -15,6 +15,7 @@ use pyo3::PyResult;
 
 use super::SparseIndexType;
 
+/// A compressed sparse row matrix with only structure, not values.
 pub struct CSRStructure<Ix: OffsetSizeTrait = i32> {
     #[allow(dead_code)]
     pub n_rows: usize,
@@ -24,6 +25,7 @@ pub struct CSRStructure<Ix: OffsetSizeTrait = i32> {
     pub col_inds: Int32Array,
 }
 
+/// A compressed sparse row matrix.
 pub struct CSRMatrix<Ix: OffsetSizeTrait = i32> {
     pub n_rows: usize,
     pub n_cols: usize,
@@ -32,8 +34,11 @@ pub struct CSRMatrix<Ix: OffsetSizeTrait = i32> {
     pub values: Float32Array,
 }
 
+/// Common methods for compressed sparse row matrices.
 pub trait CSR<Ix: OffsetSizeTrait + TryInto<usize, Error: Debug> = i32> {
+    /// Get the underlying Arrow array of rows.
     fn array(&self) -> &GenericListArray<Ix>;
+    /// Get the underlying Arrow array of column indices.
     fn col_inds(&self) -> &Int32Array;
 
     /// Get the "length" (number of rows) in the matrix.
