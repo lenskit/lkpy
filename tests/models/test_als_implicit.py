@@ -9,7 +9,6 @@ import pickle
 
 import numpy as np
 import pandas as pd
-import torch
 
 from pytest import approx, mark
 
@@ -291,8 +290,8 @@ def test_als_save_load(tmp_path, ml_ds: Dataset):
     with fn.open("rb") as pf:
         restored = pickle.load(pf)
 
-    assert torch.all(restored.user_embeddings == algo.user_embeddings)
-    assert torch.all(restored.item_embeddings == algo.item_embeddings)
+    assert np.all(restored.user_embeddings == algo.user_embeddings)
+    assert np.all(restored.item_embeddings == algo.item_embeddings)
     assert np.all(restored.items.index == algo.items.index)
     assert np.all(restored.users.index == algo.users.index)
 
