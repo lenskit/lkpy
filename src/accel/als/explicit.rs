@@ -56,23 +56,17 @@ fn train_row_cd(
     let col_us: Vec<_> = cols.iter().map(|c| *c as usize).collect();
 
     let nd = row_data.len();
-    let ni = cols.len();
 
-    let mut resid = Array1::zeros(ni);
-
-    for i in 0..cols.len() {
-        let c = cols[i] as usize;
-        let xc = other.row(c);
-        let score = xc.dot(&row_data);
-        resid[i] = vals[i] - score;
-    }
+    let o_picked = other.select(Axis(0), &col_us);
+    let mut resid = Array1::from_iter(vals.iter().map(|f| *f));
+    let scores = o_picked.dot(&row_data);
+    resid -= &scores;
 
     let mut deltas = Array1::zeros(nd);
 
     for _e in 0..RR_EPOCHS {
         for d in 0..nd {
-            let dvec = other.column(d);
-            let dvec = dvec.select(Axis(0), &col_us);
+            let dvec = o_picked.column(d);
             let num = dvec.dot(&resid) - reg * row_data[d];
             let denom = dvec.dot(&dvec) + reg;
             let dw = num / denom;
