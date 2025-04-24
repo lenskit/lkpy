@@ -20,6 +20,7 @@ from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.data.matrix import SparseRowArray
 from lenskit.data.types import NPMatrix, NPVector, UIPair
 from lenskit.logging import get_logger
+from lenskit.parallel import ensure_parallel_init
 from lenskit.pipeline import Component
 from lenskit.training import ModelTrainer, TrainingOptions, UsesTrainer
 
@@ -198,6 +199,7 @@ class ALSTrainerBase(ModelTrainer, Generic[Scorer, Config]):
     epochs_trained: int = 0
 
     def __init__(self, scorer: Scorer, data: Dataset, options: TrainingOptions):
+        ensure_parallel_init()
         self.scorer = scorer
         self.scorer.users = data.users
         self.scorer.items = data.items
