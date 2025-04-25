@@ -40,18 +40,26 @@ jobs:
         run: ls -R dist
 
   wheels:
-    name: Build wheels on ${{ matrix.os }}
+    name: Build wheels for ${{matrix.plat.target}} on ${{ matrix.plat.host }}
     needs: [sdist]
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.plat.host }}
     strategy:
       matrix:
-        os:
-          - ubuntu-latest
-          - ubuntu-24.04-arm
-          - windows-latest
-          # macos-13 is an intel runner, macos-14 is apple silicon
-          - macos-13
-          - macos-14
+        plat:
+          - host: ubuntu-latest
+            target: x86_64
+          - host: ubuntu-latest
+            target: x86
+          - host: ubuntu-24.04-arm
+            target: aarch64
+          - host: windows-latest
+            target: x64
+          - host: windows-latest
+            target: x86
+          - host: macos-13
+            target: x86_64
+          - host: macos-14
+            target: aarch64
 
     steps:
       - name: Fetch source distribution
@@ -68,6 +76,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           args: --release --out dist
+          target: ${{ matrix.plat.target }}
 
       - uses: actions/upload-artifact@v4
         with:
