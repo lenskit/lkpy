@@ -7,7 +7,7 @@ use pyo3::{exceptions::PyValueError, prelude::*};
 use crate::{
     knn::accum::{collect_items_averaged, collect_items_summed},
     sparse::{CSRMatrix, CSR},
-    types::checked_array_convert,
+    types::checked_array_ref,
 };
 
 use super::accum::ScoreAccumulator;
@@ -29,10 +29,9 @@ pub fn score_explicit<'py>(
         let ref_rates = make_array(ref_rates.0);
         let tgt_items = make_array(tgt_items.0);
 
-        let ref_is: &Int32Array = checked_array_convert("reference item", "Int32", &ref_items)?;
-        let ref_vs: &Float32Array =
-            checked_array_convert("reference ratings", "Float32", &ref_rates)?;
-        let tgt_is: &Int32Array = checked_array_convert("target item", "Int32", &tgt_items)?;
+        let ref_is: &Int32Array = checked_array_ref("reference item", "Int32", &ref_items)?;
+        let ref_vs: &Float32Array = checked_array_ref("reference ratings", "Float32", &ref_rates)?;
+        let tgt_is: &Int32Array = checked_array_ref("target item", "Int32", &tgt_items)?;
 
         let mut heaps = ScoreAccumulator::new_array(sims.n_cols, tgt_is);
 
@@ -77,8 +76,8 @@ pub fn score_implicit<'py>(
         let ref_items = make_array(ref_items.0);
         let tgt_items = make_array(tgt_items.0);
 
-        let ref_is: &Int32Array = checked_array_convert("reference item", "Int32", &ref_items)?;
-        let tgt_is: &Int32Array = checked_array_convert("target item", "Int32", &tgt_items)?;
+        let ref_is: &Int32Array = checked_array_ref("reference item", "Int32", &ref_items)?;
+        let tgt_is: &Int32Array = checked_array_ref("target item", "Int32", &tgt_items)?;
 
         let mut heaps = ScoreAccumulator::new_array(sims.n_cols, tgt_is);
 

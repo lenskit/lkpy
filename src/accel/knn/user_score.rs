@@ -7,7 +7,7 @@ use arrow::{
 
 use crate::{
     sparse::{CSRMatrix, CSRStructure, CSR},
-    types::checked_array_convert,
+    types::checked_array_ref,
 };
 
 use super::accum::{collect_items_averaged, collect_items_summed, ScoreAccumulator};
@@ -25,12 +25,12 @@ pub fn user_score_items_explicit<'py>(
     let rmat = CSRMatrix::<i32>::from_arrow(ratings)?;
 
     let tgt_items_ref = make_array(tgt_items.0);
-    let tgt_is: &Int32Array = checked_array_convert("target item", "int32", &tgt_items_ref)?;
+    let tgt_is: &Int32Array = checked_array_ref("target item", "int32", &tgt_items_ref)?;
 
     let nbr_rows_ref = make_array(nbr_rows.0);
-    let nbr_is: &Int32Array = checked_array_convert("neighbor index", "int32", &nbr_rows_ref)?;
+    let nbr_is: &Int32Array = checked_array_ref("neighbor index", "int32", &nbr_rows_ref)?;
     let nbr_sims_ref = make_array(nbr_sims.0);
-    let nbr_sims: &Float32Array = checked_array_convert("neighbor sims", "float32", &nbr_sims_ref)?;
+    let nbr_sims: &Float32Array = checked_array_ref("neighbor sims", "float32", &nbr_sims_ref)?;
 
     let mut heaps = ScoreAccumulator::new_array(rmat.n_cols, tgt_is);
     let iter = nbr_is.iter().zip(nbr_sims.iter()).flat_map(|ns| match ns {
@@ -66,12 +66,12 @@ pub fn user_score_items_implicit<'py>(
     let rmat = CSRStructure::<i32>::from_arrow(ratings)?;
 
     let tgt_items_ref = make_array(tgt_items.0);
-    let tgt_is: &Int32Array = checked_array_convert("target item", "int32", &tgt_items_ref)?;
+    let tgt_is: &Int32Array = checked_array_ref("target item", "int32", &tgt_items_ref)?;
 
     let nbr_rows_ref = make_array(nbr_rows.0);
-    let nbr_is: &Int32Array = checked_array_convert("neighbor index", "int32", &nbr_rows_ref)?;
+    let nbr_is: &Int32Array = checked_array_ref("neighbor index", "int32", &nbr_rows_ref)?;
     let nbr_sims_ref = make_array(nbr_sims.0);
-    let nbr_sims: &Float32Array = checked_array_convert("neighbor sims", "float32", &nbr_sims_ref)?;
+    let nbr_sims: &Float32Array = checked_array_ref("neighbor sims", "float32", &nbr_sims_ref)?;
 
     let mut heaps = ScoreAccumulator::new_array(rmat.n_cols, tgt_is);
     let iter = nbr_is.iter().zip(nbr_sims.iter()).flat_map(|ns| match ns {

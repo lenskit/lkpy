@@ -8,40 +8,45 @@
 FunkSVD (biased MF).
 """
 
-import logging
 import time
 
-import numba as n
 import numpy as np
-from numba.experimental import jitclass
-from pydantic import BaseModel
+import pyarrow as pa
+from pydantic import AliasChoices, BaseModel, Field, NonNegativeFloat, PositiveFloat, PositiveInt
 from typing_extensions import override
 
+from lenskit._accel import FunkSVDTrainer
 from lenskit.basic import BiasModel, Damping
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
-from lenskit.logging import Stopwatch
+from lenskit.data.types import NPMatrix
+from lenskit.logging import Stopwatch, get_logger
+from lenskit.logging.progress._dispatch import item_progress
 from lenskit.pipeline import Component
 from lenskit.training import Trainable, TrainingOptions
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger(__name__)
+
+INITIAL_VALUE = 0.1
 
 
 class FunkSVDConfig(BaseModel):
     "Configuration for :class:`FunkSVDScorer`."
 
-    features: int = 50
+    embedding_size: PositiveInt = Field(
+        default=50, validation_alias=AliasChoices("embedding_size", "features")
+    )
     """
     Number of latent features.
     """
-    epochs: int = 100
+    epochs: PositiveInt = 100
     """
     Number of training epochs (per feature).
     """
-    learning_rate: float = 0.001
+    learning_rate: PositiveFloat = 0.001
     """
     Gradient descent learning rate.
     """
-    regularization: float = 0.015
+    regularization: NonNegativeFloat = 0.015
     """
     Parameter regularization.
     """
@@ -53,178 +58,6 @@ class FunkSVDConfig(BaseModel):
     """
     Min/max range of ratings to clamp output.
     """
-
-
-@jitclass(
-    [
-        ("user_features", n.float64[:, :]),
-        ("item_features", n.float64[:, :]),
-        ("feature_count", n.int32),
-        ("user_count", n.int32),
-        ("item_count", n.int32),
-        ("initial_value", n.float64),
-    ]
-)  # type: ignore
-class Model:
-    "Internal model class for training SGD MF."
-
-    def __init__(self, umat, imat):
-        self.user_features = umat
-        self.item_features = imat
-        self.feature_count = umat.shape[1]
-        assert imat.shape[1] == self.feature_count
-        self.user_count = umat.shape[0]
-        self.item_count = imat.shape[0]
-        self.initial_value = np.nan
-
-
-def _fresh_model(nfeatures, nusers, nitems, init=0.1):
-    umat = np.full([nusers, nfeatures], init, dtype=np.float64)
-    imat = np.full([nitems, nfeatures], init, dtype=np.float64)
-    model = Model(umat, imat)
-    model.initial_value = init
-    assert model.feature_count == nfeatures
-    assert model.user_count == nusers
-    assert model.item_count == nitems
-    return model
-
-
-@jitclass(
-    [
-        ("iter_count", n.int32),
-        ("lrate", n.float64),
-        ("reg_term", n.float64),
-        ("rmin", n.float64),
-        ("rmax", n.float64),
-    ]
-)  # type: ignore
-class _Params:
-    def __init__(self, niters, lrate, reg, rmin, rmax):
-        self.iter_count = niters
-        self.lrate = lrate
-        self.reg_term = reg
-        self.rmin = rmin
-        self.rmax = rmax
-
-
-def make_params(niters, lrate, reg, range):
-    if range is None:
-        rmin = -np.inf
-        rmax = np.inf
-    else:
-        rmin, rmax = range
-
-    return _Params(niters, lrate, reg, rmin, rmax)
-
-
-@jitclass([("est", n.float64[:]), ("feature", n.int32), ("trail", n.float64)])  # type: ignore
-class _FeatContext:
-    def __init__(self, est, feature, trail):
-        self.est = est
-        self.feature = feature
-        self.trail = trail
-
-
-@jitclass(
-    [
-        ("users", n.int32[:]),
-        ("items", n.int32[:]),
-        ("ratings", n.float64[:]),
-        ("bias", n.float64[:]),
-        ("n_samples", n.uint64),
-    ]
-)  # type: ignore
-class Context:
-    def __init__(self, users, items, ratings, bias):
-        self.users = users
-        self.items = items
-        self.ratings = ratings
-        self.bias = bias
-        self.n_samples = users.shape[0]
-
-        assert items.shape[0] == self.n_samples
-        assert ratings.shape[0] == self.n_samples
-        assert bias.shape[0] == self.n_samples
-
-
-@n.njit
-def _feature_loop(ctx: Context, params: _Params, model: Model, fc: _FeatContext):
-    users = ctx.users
-    items = ctx.items
-    ratings = ctx.ratings
-    umat = model.user_features
-    imat = model.item_features
-    est = fc.est
-    f = fc.feature
-    trail = fc.trail
-
-    sse = 0.0
-    acc_ud = 0.0
-    acc_id = 0.0
-    for s in range(ctx.n_samples):
-        user = users[s]
-        item = items[s]
-        ufv = umat[user, f]
-        ifv = imat[item, f]
-
-        pred = est[s] + ufv * ifv + trail
-        if pred < params.rmin:
-            pred = params.rmin
-        elif pred > params.rmax:
-            pred = params.rmax
-
-        error = ratings[s] - pred
-        sse += error * error
-
-        # compute deltas
-        ufd = error * ifv - params.reg_term * ufv
-        ufd = ufd * params.lrate
-        acc_ud += ufd * ufd
-        ifd = error * ufv - params.reg_term * ifv
-        ifd = ifd * params.lrate
-        acc_id += ifd * ifd
-        umat[user, f] += ufd
-        imat[item, f] += ifd
-
-    return np.sqrt(sse / ctx.n_samples)
-
-
-@n.njit
-def _train_feature(ctx, params, model, fc):
-    for epoch in range(params.iter_count):
-        rmse = _feature_loop(ctx, params, model, fc)
-
-    return rmse
-
-
-def train(ctx: Context, params: _Params, model: Model, timer):
-    est = ctx.bias
-
-    for f in range(model.feature_count):
-        start = time.perf_counter()
-        trail = model.initial_value * model.initial_value * (model.feature_count - f - 1)
-        fc = _FeatContext(est, f, trail)
-        rmse = _train_feature(ctx, params, model, fc)
-        end = time.perf_counter()
-        _logger.info("[%s] finished feature %d (RMSE=%f) in %.2fs", timer, f, rmse, end - start)
-
-        est = est + model.user_features[ctx.users, f] * model.item_features[ctx.items, f]
-        est = np.maximum(est, params.rmin)
-        est = np.minimum(est, params.rmax)
-
-
-def _align_add_bias(bias, index, keys, series):
-    "Realign a bias series with an index, and add to a series"
-    # realign bias to make sure it matches
-    bias = bias.reindex(index, fill_value=0)
-    assert len(bias) == len(index)
-    # look up bias for each key
-    ibs = bias.loc[keys]
-    # change index
-    ibs.index = keys.index
-    # and add
-    series = series + ibs
-    return bias, series
 
 
 class FunkSVDScorer(Trainable, Component[ItemList]):
@@ -247,11 +80,11 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
 
     config: FunkSVDConfig
 
-    bias_: BiasModel
-    users_: Vocabulary
-    user_features_: np.ndarray[tuple[int, int], np.dtype[np.float64]]
-    items_: Vocabulary
-    item_features_: np.ndarray[tuple[int, int], np.dtype[np.float64]]
+    bias: BiasModel
+    users: Vocabulary
+    user_features: NPMatrix
+    items: Vocabulary
+    item_features: NPMatrix
 
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
@@ -261,55 +94,89 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
         Args:
             ratings: the ratings data frame.
         """
-        if hasattr(self, "item_features_") and not options.retrain:
+        if hasattr(self, "item_features") and not options.retrain:
             return
 
+        log = _logger.bind(dataset=data.name)
+
         timer = Stopwatch()
-        rate_df = data.interaction_matrix(format="pandas", layout="coo", field="rating")
+        rmat = data.interactions().matrix().scipy(attribute="rating", layout="coo")
 
-        _logger.info("[%s] fitting bias model", timer)
-        self.bias_ = BiasModel.learn(data, damping=self.config.damping)
+        n_users, n_items = rmat.shape
+        n_ratings = rmat.nnz
+        log = log.bind(n_users=n_users, n_items=n_items, n_ratings=n_ratings)
 
-        _logger.info("[%s] preparing rating data for %d samples", timer, len(rate_df))
-        _logger.debug("shuffling rating data")
-        shuf = np.arange(len(rate_df), dtype=np.int_)
+        log.info("[%s] fitting bias model", timer)
+        self.bias = BiasModel.learn(data, damping=self.config.damping)
+
+        log.info("[%s] preparing rating data", timer, n_ratings)
+        log.debug("shuffling rating data")
+        shuf = np.arange(n_ratings, dtype=np.int_)
         rng = options.random_generator()
         rng.shuffle(shuf)
-        rate_df = rate_df.iloc[shuf, :]
+        users = pa.array(rmat.row[shuf], pa.int32())
+        items = pa.array(rmat.col[shuf], pa.int32())
+        ratings = pa.array(rmat.data[shuf], pa.float32())
 
-        users = np.array(rate_df["user_num"])
-        items = np.array(rate_df["item_num"])
-        ratings = np.array(rate_df["rating"], dtype=np.float64)
+        log.debug("[%s] computing initial estimates", timer)
+        est = np.full(n_ratings, self.bias.global_bias, dtype=np.float32)
+        if self.bias.item_biases is not None:
+            est += self.bias.item_biases[rmat.col]
+        if self.bias.user_biases is not None:
+            est += self.bias.user_biases[rmat.row]
 
-        _logger.debug("[%s] computing initial estimates", timer)
-        initial = np.full(len(users), self.bias_.global_bias, dtype=np.float64)
-        if self.bias_.item_biases is not None:
-            initial += self.bias_.item_biases[items]
-        if self.bias_.user_biases is not None:
-            initial += self.bias_.user_biases[users]
+        log.debug("[%s] initializing embeddings")
+        esize = self.config.embedding_size
+        uemb = np.full([n_users, esize], INITIAL_VALUE, dtype=np.float32)
+        iemb = np.full([n_items, esize], INITIAL_VALUE, dtype=np.float32)
 
-        _logger.debug("have %d estimates for %d ratings", len(initial), len(rate_df))
-        assert len(initial) == len(rate_df)
+        if self.config.range is not None:
+            rmin, rmax = self.config.range
+        else:
+            rmin = -np.inf
+            rmax = np.inf
 
-        _logger.debug("[%s] initializing data structures", timer)
-        context = Context(users, items, ratings, initial)
-        params = make_params(
-            self.config.epochs,
-            self.config.learning_rate,
-            self.config.regularization,
-            self.config.range,
+        trainer = FunkSVDTrainer(
+            {
+                "learning_rate": self.config.learning_rate,
+                "regularization": self.config.regularization,
+                "rating_min": rmin,
+                "rating_max": rmax,
+            },
+            {"users": users, "items": items, "ratings": ratings},
+            uemb,
+            iemb,
         )
 
-        model = _fresh_model(self.config.features, data.users.size, data.items.size)
+        log.info("beginning FunkSVD training")
+        with item_progress("FunkSVD dimensions", self.config.embedding_size) as pb:
+            for f in range(self.config.embedding_size):
+                flog = log.bind(dim=f)
+                start = time.perf_counter()
+                trail = INITIAL_VALUE * INITIAL_VALUE * (esize - f - 1)
+                with item_progress(f"Feature {f + 1} epochs", self.config.epochs) as epb:
+                    for e in range(self.config.epochs):
+                        elog = flog.bind(epoch=e)
+                        rmse = trainer.feature_epoch(f, est, trail)
+                        elog.debug("finished epoch with RMSE %.3f", rmse)
+                        epb.update()
 
-        _logger.info("[%s] training biased MF model with %d features", timer, self.config.features)
-        train(context, params, model, timer)
+                end = time.perf_counter()
+                flog.info(
+                    "[%s] finished feature %d (RMSE=%f) in %.2fs", timer, f, rmse, end - start
+                )
+                pb.update()
+
+                est = np.clip(
+                    est + uemb[users.to_numpy(), f] * iemb[items.to_numpy(), f], rmin, rmax
+                )
+
         _logger.info("finished model training in %s", timer)
 
-        self.users_ = data.users
-        self.items_ = data.items
-        self.user_features_ = model.user_features
-        self.item_features_ = model.item_features
+        self.users = data.users
+        self.items = data.items
+        self.user_features = uemb
+        self.item_features = iemb
 
     @override
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
@@ -318,20 +185,20 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
         user_id = query.user_id
         user_num = None
         if user_id is not None:
-            user_num = self.users_.number(user_id, missing=None)
+            user_num = self.users.number(user_id, missing=None)
         if user_num is None:
             _logger.debug("unknown user %s", query.user_id)
             return ItemList(items, scores=np.nan)
 
-        u_feat = self.user_features_[user_num, :]
+        u_feat = self.user_features[user_num, :]
 
-        item_nums = items.numbers(vocabulary=self.items_, missing="negative")
+        item_nums = items.numbers(vocabulary=self.items, missing="negative")
         item_mask = item_nums >= 0
-        i_feats = self.item_features_[item_nums[item_mask], :]
+        i_feats = self.item_features[item_nums[item_mask], :]
 
         scores = np.full((len(items),), np.nan, dtype=np.float64)
         scores[item_mask] = i_feats @ u_feat
-        biases, _ub = self.bias_.compute_for_items(items, user_id, query.user_items)
+        biases, _ub = self.bias.compute_for_items(items, user_id, query.user_items)
         scores += biases
 
         return ItemList(items, scores=scores)

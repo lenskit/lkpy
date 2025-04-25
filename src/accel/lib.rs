@@ -4,6 +4,7 @@ use rayon::ThreadPoolBuilder;
 
 mod als;
 mod data;
+mod funksvd;
 mod knn;
 mod progress;
 mod sampling;
@@ -17,6 +18,7 @@ fn _accel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     knn::register_knn(m)?;
     als::register_als(m)?;
 
+    m.add_class::<funksvd::FunkSVDTrainer>()?;
     m.add_class::<sampling::NegativeSampler>()?;
     m.add_class::<data::RowColumnSet>()?;
     m.add_function(wrap_pyfunction!(init_accel_pool, m)?)?;
