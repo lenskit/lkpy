@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import Protocol, TypedDict
+from typing import Protocol
 
 import numpy as np
 import pyarrow as pa
 
 from lenskit.data.matrix import SparseRowArray
 from lenskit.data.types import NPMatrix, NPVector
+from lenskit.funksvd import FunkSVDTrainingData, FunkSVDTrainingParams
 from lenskit.logging import Progress
 
 class _ALSAccelerator(Protocol):
@@ -29,22 +30,11 @@ class _ALSAccelerator(Protocol):
 
 als: _ALSAccelerator
 
-class _FunkSVDConfig(TypedDict):
-    learning_rate: float
-    regularization: float
-    rating_min: float
-    rating_max: float
-
-class _FunkSVDTrainingData(TypedDict):
-    users: pa.Int32Array
-    items: pa.Int32Array
-    ratings: pa.FloatArray
-
 class FunkSVDTrainer:
     def __init__(
         self,
-        config: _FunkSVDConfig,
-        data: _FunkSVDTrainingData,
+        config: FunkSVDTrainingParams,
+        data: FunkSVDTrainingData,
         user_features: NPMatrix,
         item_features: NPMatrix,
     ): ...

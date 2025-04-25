@@ -36,33 +36,33 @@ class TestFunkSVD(BasicComponentTests, ScorerTests):
 def test_fsvd_basic_build():
     algo = funk.FunkSVDScorer(features=20, epochs=20)
     assert algo.config is not None
-    assert algo.config.features == 20
+    assert algo.config.embedding_size == 20
     algo.train(simple_ds)
 
-    assert algo.bias_ is not None
-    assert algo.bias_.global_bias == approx(simple_df.rating.mean())
-    assert algo.item_features_.shape == (3, 20)
-    assert algo.user_features_.shape == (3, 20)
+    assert algo.bias is not None
+    assert algo.bias.global_bias == approx(simple_df.rating.mean())
+    assert algo.item_embeddings.shape == (3, 20)
+    assert algo.user_embeddings.shape == (3, 20)
 
 
 def test_fsvd_clamp_build():
     algo = funk.FunkSVDScorer(features=20, epochs=20, range=(1, 5))
     algo.train(simple_ds)
 
-    assert algo.bias_ is not None
-    assert algo.bias_.global_bias == approx(simple_df.rating.mean())
-    assert algo.item_features_.shape == (3, 20)
-    assert algo.user_features_.shape == (3, 20)
+    assert algo.bias is not None
+    assert algo.bias.global_bias == approx(simple_df.rating.mean())
+    assert algo.item_embeddings.shape == (3, 20)
+    assert algo.user_embeddings.shape == (3, 20)
 
 
 def test_fsvd_predict_basic():
     algo = funk.FunkSVDScorer(features=20, epochs=20)
     algo.train(simple_ds)
 
-    assert algo.bias_ is not None
-    assert algo.bias_.global_bias == approx(simple_df.rating.mean())
-    assert algo.item_features_.shape == (3, 20)
-    assert algo.user_features_.shape == (3, 20)
+    assert algo.bias is not None
+    assert algo.bias.global_bias == approx(simple_df.rating.mean())
+    assert algo.item_embeddings.shape == (3, 20)
+    assert algo.user_embeddings.shape == (3, 20)
 
     preds = algo(query=10, items=ItemList([3]))
     assert len(preds) == 1
@@ -77,10 +77,10 @@ def test_fsvd_predict_clamp():
     algo = funk.FunkSVDScorer(features=20, epochs=20, range=(1, 5))
     algo.train(simple_ds)
 
-    assert algo.bias_ is not None
-    assert algo.bias_.global_bias == approx(simple_df.rating.mean())
-    assert algo.item_features_.shape == (3, 20)
-    assert algo.user_features_.shape == (3, 20)
+    assert algo.bias is not None
+    assert algo.bias.global_bias == approx(simple_df.rating.mean())
+    assert algo.item_embeddings.shape == (3, 20)
+    assert algo.user_embeddings.shape == (3, 20)
 
     preds = algo(query=10, items=ItemList([3]))
     assert len(preds) == 1
@@ -95,10 +95,10 @@ def test_fsvd_predict_bad_item():
     algo = funk.FunkSVDScorer(features=20, epochs=20)
     algo.train(simple_ds)
 
-    assert algo.bias_ is not None
-    assert algo.bias_.global_bias == approx(simple_df.rating.mean())
-    assert algo.item_features_.shape == (3, 20)
-    assert algo.user_features_.shape == (3, 20)
+    assert algo.bias is not None
+    assert algo.bias.global_bias == approx(simple_df.rating.mean())
+    assert algo.item_embeddings.shape == (3, 20)
+    assert algo.user_embeddings.shape == (3, 20)
 
     preds = algo(10, ItemList([4]))
     assert len(preds) == 1
@@ -112,10 +112,10 @@ def test_fsvd_predict_bad_item_clamp():
     algo = funk.FunkSVDScorer(features=20, epochs=20, range=(1, 5))
     algo.train(simple_ds)
 
-    assert algo.bias_ is not None
-    assert algo.bias_.global_bias == approx(simple_df.rating.mean())
-    assert algo.item_features_.shape == (3, 20)
-    assert algo.user_features_.shape == (3, 20)
+    assert algo.bias is not None
+    assert algo.bias.global_bias == approx(simple_df.rating.mean())
+    assert algo.item_embeddings.shape == (3, 20)
+    assert algo.user_embeddings.shape == (3, 20)
 
     preds = algo(10, ItemList([4]))
     assert len(preds) == 1
@@ -129,10 +129,10 @@ def test_fsvd_predict_bad_user():
     algo = funk.FunkSVDScorer(features=20, epochs=20)
     algo.train(simple_ds)
 
-    assert algo.bias_ is not None
-    assert algo.bias_.global_bias == approx(simple_df.rating.mean())
-    assert algo.item_features_.shape == (3, 20)
-    assert algo.user_features_.shape == (3, 20)
+    assert algo.bias is not None
+    assert algo.bias.global_bias == approx(simple_df.rating.mean())
+    assert algo.item_embeddings.shape == (3, 20)
+    assert algo.user_embeddings.shape == (3, 20)
 
     preds = algo(query=50, items=ItemList([3]))
     assert len(preds) == 1
@@ -148,24 +148,24 @@ def test_fsvd_save_load(ml_ds: Dataset):
     original = funk.FunkSVDScorer(features=20, epochs=20)
     original.train(ml_ds)
 
-    assert original.bias_ is not None
-    assert original.bias_.global_bias == approx(
+    assert original.bias is not None
+    assert original.bias.global_bias == approx(
         ml_ds.interaction_matrix(format="scipy", field="rating").data.mean()
     )
-    assert original.item_features_.shape == (ml_ds.item_count, 20)
-    assert original.user_features_.shape == (ml_ds.user_count, 20)
+    assert original.item_embeddings.shape == (ml_ds.item_count, 20)
+    assert original.user_embeddings.shape == (ml_ds.user_count, 20)
 
     mod = pickle.dumps(original)
     _log.info("serialized to %d bytes", len(mod))
     algo = pickle.loads(mod)
 
-    assert algo.bias_.global_bias == original.bias_.global_bias
-    assert np.all(algo.bias_.user_biases == original.bias_.user_biases)
-    assert np.all(algo.bias_.item_biases == original.bias_.item_biases)
-    assert np.all(algo.user_features_ == original.user_features_)
-    assert np.all(algo.item_features_ == original.item_features_)
-    assert np.all(algo.items_.index == original.items_.index)
-    assert np.all(algo.users_.index == original.users_.index)
+    assert algo.bias.global_bias == original.bias.global_bias
+    assert np.all(algo.bias.user_biases == original.bias.user_biases)
+    assert np.all(algo.bias.item_biases == original.bias.item_biases)
+    assert np.all(algo.user_embeddings == original.user_embeddings)
+    assert np.all(algo.item_embeddings == original.item_embeddings)
+    assert np.all(algo.items.index == original.items.index)
+    assert np.all(algo.users.index == original.users.index)
 
 
 @wantjit

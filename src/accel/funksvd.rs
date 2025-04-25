@@ -32,8 +32,8 @@ struct FunkSVDTrainingData {
 pub struct FunkSVDTrainer {
     config: FunkSVDConfig,
     data: FunkSVDTrainingData,
-    user_features: Py<PyArray2<f32>>,
-    item_features: Py<PyArray2<f32>>,
+    user_embeddings: Py<PyArray2<f32>>,
+    item_embeddings: Py<PyArray2<f32>>,
 }
 
 #[pymethods]
@@ -51,8 +51,8 @@ impl FunkSVDTrainer {
         Ok(FunkSVDTrainer {
             config,
             data: data.try_into()?,
-            user_features: user_features.unbind(),
-            item_features: item_features.unbind(),
+            user_embeddings: user_features.unbind(),
+            item_embeddings: item_features.unbind(),
         })
     }
 
@@ -64,37 +64,50 @@ impl FunkSVDTrainer {
         estimates: Bound<'py, PyArray1<f32>>,
         trail: f64,
     ) -> PyResult<f64> {
-        let mut uf_ref = self.user_features.bind(py).readwrite();
+        let mut uf_ref = self.user_embeddings.bind(py).readwrite();
         let mut uf_mat = uf_ref.as_array_mut();
-        let mut if_ref = self.item_features.bind(py).readwrite();
+        let mut if_ref = self.item_embeddings.bind(py).readwrite();
         let mut if_mat = if_ref.as_array_mut();
         let est_ref = estimates.readonly();
         let est_vec = est_ref.as_array();
 
-        let mut sse = 0.0;
+        let users = self.data.users.values();
+        let items = self.data.items.values();
+        let ratings = self.data.ratings.values();
+        let n = self.data.n_samples();
+        assert_eq!(users.len(), n);
+        assert_eq!(items.len(), n);
+        assert_eq!(ratings.len(), n);
 
-        for s in 0..self.data.n_samples() {
-            let user = self.data.users.value(s) as usize;
-            let item = self.data.items.value(s) as usize;
-            let rating = self.data.ratings.value(s) as f64;
-            let ufv = uf_mat[[user, feature]] as f64;
-            let ifv = if_mat[[item, feature]] as f64;
+        let mut uf_col = uf_mat.column_mut(feature);
+        let mut if_col = if_mat.column_mut(feature);
 
-            let pred = est_vec[s] as f64 + ufv * ifv + trail;
-            let pred = pred.clamp(self.config.rating_min, self.config.rating_max);
+        py.allow_threads(|| {
+            let mut sse = 0.0;
 
-            let error = rating - pred;
-            sse += error * error;
+            for s in 0..n {
+                let user = unsafe { *users.get_unchecked(s) as usize };
+                let item = unsafe { *items.get_unchecked(s) as usize };
+                let rating = unsafe { *ratings.get_unchecked(s) as f64 };
+                let ufv = uf_col[user] as f64;
+                let ifv = if_col[item] as f64;
 
-            let ufd = error * ifv - self.config.regularization * ufv;
-            let ufd = ufd * self.config.learning_rate;
-            let ifd = error * ufv - self.config.regularization * ifv;
-            let ifd = ifd * self.config.learning_rate;
-            uf_mat[[user, feature]] += ufd as f32;
-            if_mat[[item, feature]] += ifd as f32;
-        }
+                let pred = est_vec[s] as f64 + ufv * ifv + trail;
+                let pred = pred.clamp(self.config.rating_min, self.config.rating_max);
 
-        Ok((sse / self.data.n_samples() as f64).sqrt())
+                let error = rating - pred;
+                sse += error * error;
+
+                let ufd = error * ifv - self.config.regularization * ufv;
+                let ufd = ufd * self.config.learning_rate;
+                let ifd = error * ufv - self.config.regularization * ifv;
+                let ifd = ifd * self.config.learning_rate;
+                uf_col[user] += ufd as f32;
+                if_col[item] += ifd as f32;
+            }
+
+            Ok((sse / self.data.n_samples() as f64).sqrt())
+        })
     }
 }
 

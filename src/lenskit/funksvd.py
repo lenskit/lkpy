@@ -9,6 +9,7 @@ FunkSVD (biased MF).
 """
 
 import time
+from dataclasses import dataclass
 
 import numpy as np
 import pyarrow as pa
@@ -60,6 +61,21 @@ class FunkSVDConfig(BaseModel):
     """
 
 
+@dataclass
+class FunkSVDTrainingParams:
+    learning_rate: float
+    regularization: float
+    rating_min: float
+    rating_max: float
+
+
+@dataclass
+class FunkSVDTrainingData:
+    users: pa.Int32Array
+    items: pa.Int32Array
+    ratings: pa.FloatArray
+
+
 class FunkSVDScorer(Trainable, Component[ItemList]):
     """
     FunkSVD explicit-feedback matrix factoriation.  FunkSVD is a regularized
@@ -82,9 +98,9 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
 
     bias: BiasModel
     users: Vocabulary
-    user_features: NPMatrix
+    user_embeddings: NPMatrix
     items: Vocabulary
-    item_features: NPMatrix
+    item_embeddings: NPMatrix
 
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
@@ -94,7 +110,7 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
         Args:
             ratings: the ratings data frame.
         """
-        if hasattr(self, "item_features") and not options.retrain:
+        if hasattr(self, "item_embeddings") and not options.retrain:
             return
 
         log = _logger.bind(dataset=data.name)
@@ -109,7 +125,7 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
         log.info("[%s] fitting bias model", timer)
         self.bias = BiasModel.learn(data, damping=self.config.damping)
 
-        log.info("[%s] preparing rating data", timer, n_ratings)
+        log.info("[%s] preparing rating data", timer)
         log.debug("shuffling rating data")
         shuf = np.arange(n_ratings, dtype=np.int_)
         rng = options.random_generator()
@@ -118,12 +134,14 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
         items = pa.array(rmat.col[shuf], pa.int32())
         ratings = pa.array(rmat.data[shuf], pa.float32())
 
+        del rmat  # don't need it now that data is in Arrow
+
         log.debug("[%s] computing initial estimates", timer)
         est = np.full(n_ratings, self.bias.global_bias, dtype=np.float32)
         if self.bias.item_biases is not None:
-            est += self.bias.item_biases[rmat.col]
+            est += self.bias.item_biases[items.to_numpy()]
         if self.bias.user_biases is not None:
-            est += self.bias.user_biases[rmat.row]
+            est += self.bias.user_biases[users.to_numpy()]
 
         log.debug("[%s] initializing embeddings")
         esize = self.config.embedding_size
@@ -136,17 +154,15 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
             rmin = -np.inf
             rmax = np.inf
 
-        trainer = FunkSVDTrainer(
-            {
-                "learning_rate": self.config.learning_rate,
-                "regularization": self.config.regularization,
-                "rating_min": rmin,
-                "rating_max": rmax,
-            },
-            {"users": users, "items": items, "ratings": ratings},
-            uemb,
-            iemb,
+        config = FunkSVDTrainingParams(
+            learning_rate=self.config.learning_rate,
+            regularization=self.config.regularization,
+            rating_min=rmin,
+            rating_max=rmax,
         )
+        train_data = FunkSVDTrainingData(users=users, items=items, ratings=ratings)
+
+        trainer = FunkSVDTrainer(config, train_data, uemb, iemb)
 
         log.info("beginning FunkSVD training")
         with item_progress("FunkSVD dimensions", self.config.embedding_size) as pb:
@@ -158,7 +174,7 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
                     for e in range(self.config.epochs):
                         elog = flog.bind(epoch=e)
                         rmse = trainer.feature_epoch(f, est, trail)
-                        elog.debug("finished epoch with RMSE %.3f", rmse)
+                        elog.debug("[%s] finished epoch with RMSE %.3f", timer, rmse)
                         epb.update()
 
                 end = time.perf_counter()
@@ -175,8 +191,8 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
 
         self.users = data.users
         self.items = data.items
-        self.user_features = uemb
-        self.item_features = iemb
+        self.user_embeddings = uemb
+        self.item_embeddings = iemb
 
     @override
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
@@ -190,11 +206,11 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
             _logger.debug("unknown user %s", query.user_id)
             return ItemList(items, scores=np.nan)
 
-        u_feat = self.user_features[user_num, :]
+        u_feat = self.user_embeddings[user_num, :]
 
         item_nums = items.numbers(vocabulary=self.items, missing="negative")
         item_mask = item_nums >= 0
-        i_feats = self.item_features[item_nums[item_mask], :]
+        i_feats = self.item_embeddings[item_nums[item_mask], :]
 
         scores = np.full((len(items),), np.nan, dtype=np.float64)
         scores[item_mask] = i_feats @ u_feat
