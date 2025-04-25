@@ -87,6 +87,7 @@ outputs:
   - package:
       name: lenskit-sklearn
     build:
+      noarch: python
       script:
         - "true"
     requirements:
