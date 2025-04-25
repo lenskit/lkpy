@@ -101,7 +101,7 @@ gpu = ["torch ~=2.4"]
 
 [project.optional-dependencies]
 sklearn = ["scikit-learn ~=1.2"]
-funksvd = ["numba >= 0.56"]
+funksvd = []
 hpf = ["hpfrec~=0.2.12"]
 implicit = ["implicit >=0.7.2"]
 notebook = ["ipywidgets ~=8.0"]

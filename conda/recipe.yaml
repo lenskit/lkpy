@@ -83,26 +83,6 @@ outputs:
     requirements:
       run:
         - ${{ pin_subpackage('lenskit') }}
-        - numba >=0.56
-    tests:
-      - python:
-          imports:
-            - lenskit.funksvd
-      - script:
-          - pytest -m "not slow" tests/funksvd
-        files:
-          source:
-            - tests/
-            - conftest.py
-            - data/
-            - pyproject.toml
-        requirements:
-          run:
-            - pytest >=8.2,<9
-            - pytest-benchmark =4
-            - pytest-doctestplus >=1.2.1,<2
-            - hypothesis >=6.16
-            - pyyaml ~=6.0
 
   - package:
       name: lenskit-sklearn
