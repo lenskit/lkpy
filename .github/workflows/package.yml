@@ -49,9 +49,9 @@ jobs:
     strategy:
       matrix:
         plat:
-          - host: ubuntu-latest
+          - host: ubuntu-22.04
             target: x86_64
-          - host: ubuntu-latest
+          - host: ubuntu-22.04
             target: x86
           - host: ubuntu-24.04-arm
             target: aarch64
