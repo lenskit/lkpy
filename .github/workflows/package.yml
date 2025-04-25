@@ -51,7 +51,7 @@ jobs:
         plat:
           - host: ubuntu-latest
             target: x86_64
-          - host: ubuntu-22.40
+          - host: ubuntu-latest
             target: x86
           - host: ubuntu-24.04-arm
             target: aarch64
@@ -81,6 +81,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          architecture: ${{matrix.plat.target}}
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
