@@ -41,6 +41,7 @@ jobs:
 
   wheels:
     name: Build wheels on ${{ matrix.os }}
+    needs: [sdist]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -53,22 +54,25 @@ jobs:
           - macos-14
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Fetch source distribution
+        uses: actions/download-artifact@v4
+        with:
+          name: pypi-dist-src
+          path: dist
+
+      - name: Extract source distribution
+        run: |
+          tar xvf dist/lenskit-*.tar.gz --strip-components=1
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23.2
+        uses: PyO3/maturin-action@v1
         with:
-          output-dir: dist/wheelhouse
-        env:
-          MACOSX_DEPLOYMENT_TARGET: "10.12"
-          CIBW_BEFORE_ALL_LINUX: curl -sSf https://sh.rustup.rs | sh -s -- -y
-          CIBW_BEFORE_ALL_WINDOWS: rustup target add i686-pc-windows-msvc
-          CIBW_ENVIRONMENT_LINUX: "PATH=$HOME/.cargo/bin:$PATH"
+          args: --release --out dist
 
       - uses: actions/upload-artifact@v4
         with:
           name: pypi-dist-wheels-${{ matrix.os }}-${{ strategy.job-index }}
-          path: ./dist/wheelhouse/*.whl
+          path: ./dist/*.whl
 
   pypi-publish:
     name: Publish to PyPI
