@@ -51,7 +51,7 @@ jobs:
         plat:
           - host: ubuntu-latest
             target: x86_64
-          - host: ubuntu-latest
+          - host: ubuntu-22.40
             target: x86
           - host: ubuntu-24.04-arm
             target: aarch64
@@ -86,7 +86,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: pypi-dist-wheels-${{ matrix.plat.host }}-${{ matrix.plat.os }}-${{ strategy.job-index }}
+          name: pypi-dist-wheels-${{ matrix.plat.host }}-${{ matrix.plat.target }}
           path: ./dist/*.whl
 
   pypi-publish:
