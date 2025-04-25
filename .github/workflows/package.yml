@@ -50,18 +50,25 @@ jobs:
       matrix:
         plat:
           - host: ubuntu-22.04
+            pyarch: x64
             target: x86_64
           - host: ubuntu-22.04
+            pyarch: x86
             target: x86
           - host: ubuntu-24.04-arm
+            pyarch: arm64
             target: aarch64
           - host: windows-latest
+            pyarch: x64
             target: x64
           - host: windows-latest
+            pyarch: x86
             target: x86
           - host: macos-13
+            pyarch: x64
             target: x86_64
           - host: macos-14
+            pyarch: arm64
             target: aarch64
 
     steps:
@@ -81,7 +88,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          architecture: ${{matrix.plat.target}}
+          architecture: ${{matrix.plat.pyarch}}
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
