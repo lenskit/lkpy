@@ -129,8 +129,14 @@ def _make_cache_dir(path: str | Path):
 
 
 @task
-def version(c: Context):
-    print(_get_version(c))
+def version(c: Context, github: bool = False):
+    ver = _get_version(c)
+    print(ver)
+
+    if github:
+        gh_file = os.environ["GITHUB_OUTPUT"]
+        with open(gh_file, "at") as ghf:
+            print(f"version={ver}", file=ghf)
 
 
 @task
