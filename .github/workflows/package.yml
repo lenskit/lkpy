@@ -52,24 +52,31 @@ jobs:
           - host: ubuntu-22.04
             pyarch: x64
             target: x86_64
+            manylinux: 2_28
           - host: ubuntu-22.04
             pyarch: x86
             target: x86
+            manylinux: 2014
           - host: ubuntu-24.04-arm
             pyarch: arm64
             target: aarch64
+            manylinux: 2_28
           - host: windows-latest
             pyarch: x64
             target: x64
+            manylinux: auto
           - host: windows-latest
             pyarch: x86
             target: x86
+            manylinux: auto
           - host: macos-13
             pyarch: x64
             target: x86_64
+            manylinux: auto
           - host: macos-14
             pyarch: arm64
             target: aarch64
+            manylinux: auto
 
     steps:
       - name: Fetch source distribution
@@ -95,7 +102,7 @@ jobs:
         with:
           args: --release --out dist
           target: ${{ matrix.plat.target }}
-          manylinux: 2_28
+          manylinux: ${{ matrix.plat.manylinux }}
 
       - uses: actions/upload-artifact@v4
         with:
