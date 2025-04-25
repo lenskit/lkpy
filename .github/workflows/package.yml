@@ -75,6 +75,9 @@ jobs:
           name: pypi-dist-src
           path: dist
 
+      - name: List distribution directory
+        run: ls dist
+
       - name: Extract source distribution
         run: |
           tar xvf dist/lenskit-${{needs.sdist.outputs.lenskit-version}}.tar.gz --strip-components=1
