@@ -26,7 +26,6 @@ arrow-schema = { version = "^55", features = ["serde"] }
 nalgebra = { version = "^0.33" }
 ndarray = { version = "^0.16", features = ["rayon"] }
 nshare = { version = "^0.10", default-features = false, features = ["ndarray", "nalgebra"] }
-# ndarray-linalg = { version = "^0.17", features = ["openblas-system"] }
 numpy = "^0.24"
 
 [profile.dev]
@@ -34,3 +33,4 @@ opt-level = 2
 
 [profile.release]
 lto = true
+debug = "line-tables-only"
