@@ -145,8 +145,8 @@ class FunkSVDScorer(Trainable, Component[ItemList]):
 
         log.debug("[%s] initializing embeddings")
         esize = self.config.embedding_size
-        uemb = np.full([n_users, esize], INITIAL_VALUE, dtype=np.float32)
-        iemb = np.full([n_items, esize], INITIAL_VALUE, dtype=np.float32)
+        uemb = np.full([n_users, esize], INITIAL_VALUE, dtype=np.float32, order="F")
+        iemb = np.full([n_items, esize], INITIAL_VALUE, dtype=np.float32, order="F")
 
         if self.config.range is not None:
             rmin, rmax = self.config.range
