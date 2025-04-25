@@ -79,6 +79,9 @@ impl FunkSVDTrainer {
         assert_eq!(items.len(), n);
         assert_eq!(ratings.len(), n);
 
+        let lr = self.config.learning_rate;
+        let reg = self.config.regularization;
+
         let mut uf_col = uf_mat.column_mut(feature);
         let mut if_col = if_mat.column_mut(feature);
 
@@ -98,15 +101,15 @@ impl FunkSVDTrainer {
                 let error = rating - pred;
                 sse += error * error;
 
-                let ufd = error * ifv - self.config.regularization * ufv;
-                let ufd = ufd * self.config.learning_rate;
-                let ifd = error * ufv - self.config.regularization * ifv;
-                let ifd = ifd * self.config.learning_rate;
+                let ufd = error * ifv - reg * ufv;
+                let ufd = ufd * lr;
+                let ifd = error * ufv - reg * ifv;
+                let ifd = ifd * lr;
                 uf_col[user] += ufd as f32;
                 if_col[item] += ifd as f32;
             }
 
-            Ok((sse / self.data.n_samples() as f64).sqrt())
+            Ok((sse / n as f64).sqrt())
         })
     }
 }
