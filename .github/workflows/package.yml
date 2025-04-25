@@ -54,7 +54,7 @@ jobs:
             target: x86_64
             manylinux: 2_28
           - host: ubuntu-22.04
-            pyarch: x86
+            pyarch: x64
             target: x86
             manylinux: 2014
           - host: ubuntu-24.04-arm
