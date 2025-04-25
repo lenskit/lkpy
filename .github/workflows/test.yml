@@ -94,55 +94,6 @@ jobs:
             coverage.db
             coverage.xml
 
-  nojit:
-    name: Non-JIT test coverage
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: "🛒 Checkout"
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: 🕶️ Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          python-version: "3.12"
-
-      - name: 📦 Set up Python dependencies (Unix)
-        if: runner.os != 'Windows'
-        run: |
-          uv sync --all-extras --no-default-groups --group test
-
-      - name: 🔍 Inspect environment
-        run: |
-          lenskit doctor
-
-      - name: 🏃🏻‍➡️ Test LKPY
-        run: |
-          python -m pytest --verbose --log-file=test.log --durations=25 -m 'not slow' --cov=src/lenskit tests
-        env:
-          NUMBA_DISABLE_JIT: 1
-          PYTORCH_JIT: 0
-
-      - name: 📐 Coverage results
-        if: ${{ !cancelled() }}
-        run: |
-          coverage xml
-          coverage report
-          cp .coverage coverage.db
-
-      - name: 📤 Upload test results
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: test-nojit
-          path: |
-            test*.log
-            coverage.db
-            coverage.xml
-
   mindep-all:
     name: Minimal dependency tests (all options)
     runs-on: ubuntu-latest
@@ -359,7 +310,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - vanilla
-      - nojit
       - mindep-all
       - mindep
       - eval-tests
