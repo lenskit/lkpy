@@ -129,14 +129,9 @@ def _make_cache_dir(path: str | Path):
 
 
 @task
-def version(c: Context, github: bool = False):
+def version(c: Context):
     ver = _get_version(c)
     print(ver)
-
-    if github:
-        gh_file = os.environ["GITHUB_OUTPUT"]
-        with open(gh_file, "at") as ghf:
-            print(f"version={ver}", file=ghf)
 
 
 @task
@@ -158,6 +153,10 @@ def build_sdist(c: Context):
     with _updated_pyproject_toml(c) as ver:
         print("packaging LensKit version", ver)
         c.run("uv build --sdist")
+
+        if gh_file := os.environ.get("GITHUB_OUTPUT", None):
+            with open(gh_file, "at") as ghf:
+                print(f"version={ver}", file=ghf)
 
 
 @task(setup_dirs)
