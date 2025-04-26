@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 log = "^0.4"
-pyo3 = { version = "^0.24", features = ["extension-module"] }
+pyo3 = { version = "^0.24", features = ["extension-module", "abi3-py311"] }
 pyo3-log = "^0.12"
 
 rayon = "^1.10"

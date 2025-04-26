@@ -12,6 +12,8 @@ jobs:
   sdist:
     name: Build sdist
     runs-on: ubuntu-latest
+    outputs:
+      lenskit-version: ${{steps.sdist.outputs.version}}
 
     steps:
       - uses: actions/checkout@v4
@@ -27,8 +29,9 @@ jobs:
           python-version: "3.12"
 
       - name: Build source distribution
+        id: sdist
         run: |
-          uv build --sdist
+          uv run --only-group=scripting invoke build-sdist
 
       - name: Save archive
         uses: actions/upload-artifact@v4
@@ -40,35 +43,71 @@ jobs:
         run: ls -R dist
 
   wheels:
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: Build wheels for ${{matrix.plat.target}} on ${{ matrix.plat.host }}
+    needs: [sdist]
+    runs-on: ${{ matrix.plat.host }}
     strategy:
       matrix:
-        os:
-          - ubuntu-latest
-          - ubuntu-24.04-arm
-          - windows-latest
-          # macos-13 is an intel runner, macos-14 is apple silicon
-          - macos-13
-          - macos-14
+        plat:
+          - host: ubuntu-22.04
+            pyarch: x64
+            target: x86_64
+            manylinux: 2_28
+          - host: ubuntu-22.04
+            pyarch: x64
+            target: x86
+            manylinux: 2014
+          - host: ubuntu-24.04-arm
+            pyarch: arm64
+            target: aarch64
+            manylinux: 2_28
+          - host: windows-latest
+            pyarch: x64
+            target: x64
+            manylinux: auto
+          - host: windows-latest
+            pyarch: x86
+            target: x86
+            manylinux: auto
+          - host: macos-13
+            pyarch: x64
+            target: x86_64
+            manylinux: auto
+          - host: macos-14
+            pyarch: arm64
+            target: aarch64
+            manylinux: auto
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Fetch source distribution
+        uses: actions/download-artifact@v4
+        with:
+          name: pypi-dist-src
+          path: dist
+
+      - name: List distribution directory
+        run: ls dist
+
+      - name: Extract source distribution
+        run: |
+          tar xvf dist/lenskit-${{needs.sdist.outputs.lenskit-version}}.tar.gz --strip-components=1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          architecture: ${{matrix.plat.pyarch}}
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23.2
+        uses: PyO3/maturin-action@v1
         with:
-          output-dir: dist/wheelhouse
-        env:
-          MACOSX_DEPLOYMENT_TARGET: "10.12"
-          CIBW_BEFORE_ALL_LINUX: curl -sSf https://sh.rustup.rs | sh -s -- -y
-          CIBW_BEFORE_ALL_WINDOWS: rustup target add i686-pc-windows-msvc
-          CIBW_ENVIRONMENT_LINUX: "PATH=$HOME/.cargo/bin:$PATH"
+          args: --release --out dist
+          target: ${{ matrix.plat.target }}
+          manylinux: ${{ matrix.plat.manylinux }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: pypi-dist-wheels-${{ matrix.os }}-${{ strategy.job-index }}
-          path: ./dist/wheelhouse/*.whl
+          name: pypi-dist-wheels-${{ matrix.plat.host }}-${{ matrix.plat.target }}
+          path: ./dist/*.whl
 
   pypi-publish:
     name: Publish to PyPI
