@@ -6,21 +6,22 @@
 
 import doctest
 import sys
-from importlib.metadata import version
 from os import fspath
 from pathlib import Path
 
 from packaging.version import Version
 
+from lenskit._version import lenskit_version
+
 sys.path.append(str((Path(__file__).parent / "_ext").resolve()))
 
 project = "LensKit"
-copyright = "2018–2024 Drexel University, Boise State University, and collaborators"
+copyright = "2018–2025 Drexel University, Boise State University, and collaborators"
 author = "Michael D. Ekstrand"
 
-release = version("lenskit")
-version = ".".join(release.split(".")[:4])
+release = lenskit_version()
 _parsed_ver = Version(release)
+version = _parsed_ver.base_version
 
 extensions = [
     "myst_nb",
@@ -85,6 +86,8 @@ html_theme_options = {
         },
     ],
     "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
+    "footer_start": ["copyright", "version", "disclaimer", "counter"],
+    "footer_end": [],
     # "github_user": "lenskit",
     # 'github_repo': 'lkpy',
     # 'travis_button': False,
