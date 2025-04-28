@@ -52,6 +52,7 @@ outputs:
         - humanize >=4.2,<5
         - prettytable >=3.14,<4
         - xopen >=2.0,<3
+        - lazy_loader >=0.4
 
     tests:
       - python:

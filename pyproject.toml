@@ -36,6 +36,7 @@ dependencies = [
   "humanize ~=4.2",
   "prettytable ~=3.14",
   "xopen ~=2.0",
+  "lazy-loader >=0.4",
 ]
 
 [dependency-groups]
