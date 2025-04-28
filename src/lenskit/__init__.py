@@ -10,12 +10,17 @@ Recommender systems toolkit.
 
 from importlib.metadata import PackageNotFoundError, version
 
-from .operations import predict, recommend, score
-from .pipeline import Pipeline, RecPipelineBuilder, topn_pipeline
-
-__all__ = ["predict", "recommend", "score", "Pipeline", "RecPipelineBuilder", "topn_pipeline"]
+import lazy_loader as lazy
 
 try:
     __version__ = version("lenskit")
 except PackageNotFoundError:  # pragma: nocover
     __version__ = "UNKNOWN"
+
+__getattr__, __dir__, __all__ = lazy.attach(
+    __name__,
+    submod_attrs={
+        "operations": ["predict", "recommend", "score"],
+        "pipeline": ["Pipeline", "RecPipelineBuilder", "topn_pipeline"],
+    },
+)
