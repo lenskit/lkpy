@@ -41,6 +41,13 @@ repos:
           - yaml
           - toml
           - json
-        exclude: ^models/
         additional_dependencies:
           - dprint
+
+      - id: license-headers
+        name: add license headers
+        language: python
+        entry: invoke update-headers --error-on-change --
+        types_or:
+          - python
+          - rust

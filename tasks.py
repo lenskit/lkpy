@@ -1,6 +1,6 @@
 # This file is part of LensKit.
-# Copyright (C) 2018-2023 Boise State University
-# Copyright (C) 2023-2025 Drexel University
+# Copyright (C) 2018-2023 Boise State University.
+# Copyright (C) 2023-2025 Drexel University.
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
@@ -201,19 +201,20 @@ def update_headers(
         CommentSkeleton("//", "//"),
     )
 
-    src = Path("src")
-    print("updating Python headers")
-    n = 0
-    for file in src.glob("**/*.py"):
-        if update_header(file, year, check=check_only):
-            n += 1
+    if program.core.remainder:
+        files = [Path(p) for p in re.split(r"\s", program.core.remainder)]
+    else:
+        src = Path("src")
+        files = list(src.glob("**/*.py"))
+        files += src.glob("**/*.rs")
 
-    for file in src.glob("**/*.rs"):
+    n = 0
+    for file in files:
         if update_header(file, year, check=check_only):
             n += 1
 
     print("updated", n, "files")
-    if error_on_change:
+    if error_on_change and n > 0:
         sys.exit(5)
 
 
