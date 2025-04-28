@@ -17,6 +17,7 @@ header:
       SPDX-License-Identifier: MIT
 
   paths:
+    - tasks.py
     - src/**/*.py
 
   paths-ignore:

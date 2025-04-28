@@ -181,7 +181,7 @@ def update_bibtex(c: Context):
 
 @task
 def update_headers(c: Context):
-    c.run("unbehead", echo=True)
+    c.run("license-eye header fix", echo=True)
 
 
 @task
