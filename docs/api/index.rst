@@ -41,6 +41,7 @@ them need to be installed separately.
     lenskit.stochastic
     lenskit.knn
     lenskit.als
+    lenskit.flexmf
     lenskit.sklearn
     lenskit.funksvd
     lenskit.implicit
