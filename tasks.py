@@ -204,11 +204,11 @@ def update_headers(
     if program.core.remainder.strip():
         files = [Path(p) for p in re.split(r"\s", program.core.remainder)]
     else:
-        src = Path("src")
-        test = Path("tests")
-        files = list(src.glob("**/*.py"))
-        files += list(test.glob("**/*.py"))
-        files += list(src.glob("**/*.rs"))
+        gls = c.run('git ls-files "*.py" "*.rs"', echo=False)
+        assert gls is not None
+        assert gls.stdout is not None
+
+        files = [Path(p.strip()) for p in re.split(r"\r?\n", gls.stdout) if p.strip()]
 
     n = 0
     print("scanning", len(files), "files")
