@@ -106,6 +106,7 @@ hpf = ["hpfrec~=0.2.12"]
 implicit = ["implicit >=0.7.2"]
 notebook = ["ipywidgets ~=8.0"]
 ray = ["ray ~=2.42"]
+lightfm = ["lightfm >=1.17"]
 
 [project.urls]
 homepage = "https://lenskit.org"
