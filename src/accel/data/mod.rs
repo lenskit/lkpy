@@ -19,7 +19,7 @@ pub fn register_data(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     let data = PyModule::new(parent.py(), "data")?;
     parent.add_submodule(&data)?;
 
-    data.add_function(wrap_pyfunction!(sorting::is_strictly_sorted, &data)?)?;
+    data.add_function(wrap_pyfunction!(sorting::is_sorted_coo, &data)?)?;
 
     Ok(())
 }
