@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import tomllib
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from subprocess import check_output
 from typing import TYPE_CHECKING
@@ -71,3 +72,13 @@ def lk_git_version() -> Version:
             _log.warning("version mismatch: cargo {} != git {}", version, cv_ver)
 
     return version
+
+
+def lenskit_version() -> str:
+    if is_git_install():
+        return str(lk_git_version())
+
+    try:
+        return version("lenskit")
+    except PackageNotFoundError:  # pragma: nocover
+        return "UNKNOWN"

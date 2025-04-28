@@ -8,14 +8,11 @@
 Recommender systems toolkit.
 """
 
-from importlib.metadata import PackageNotFoundError, version
-
 import lazy_loader as lazy
 
-try:
-    __version__ = version("lenskit")
-except PackageNotFoundError:  # pragma: nocover
-    __version__ = "UNKNOWN"
+from ._version import lenskit_version
+
+__version__ = lenskit_version()
 
 
 # lazy-load LensKit internal imports (per SPEC-1)
