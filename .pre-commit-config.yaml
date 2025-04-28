@@ -53,3 +53,7 @@ repos:
         types_or:
           - python
           - rust
+        additional_dependencies:
+          - invoke ~= 2.2
+          - lazy-loader >=0.4
+          - unbeheader ~=1.3
