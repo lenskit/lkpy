@@ -201,14 +201,17 @@ def update_headers(
         CommentSkeleton("//", "//"),
     )
 
-    if program.core.remainder:
+    if program.core.remainder.strip():
         files = [Path(p) for p in re.split(r"\s", program.core.remainder)]
     else:
         src = Path("src")
+        test = Path("tests")
         files = list(src.glob("**/*.py"))
-        files += src.glob("**/*.rs")
+        files += list(test.glob("**/*.py"))
+        files += list(src.glob("**/*.rs"))
 
     n = 0
+    print("scanning", len(files), "files")
     for file in files:
         if update_header(file, year, check=check_only):
             n += 1
