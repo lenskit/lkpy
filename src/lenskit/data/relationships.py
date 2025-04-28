@@ -23,11 +23,11 @@ from numpy.typing import NDArray
 from typing_extensions import Literal, overload, override
 
 from lenskit._accel import NegativeSampler, RowColumnSet
+from lenskit._accel import data as _data_accel
 from lenskit.diagnostics import FieldError
 from lenskit.logging import get_logger
 from lenskit.random import random_generator
 
-from .arrow import is_sorted
 from .items import ItemList
 from .matrix import COOStructure, CSRStructure, SparseRowArray
 from .schema import RelationshipSchema, id_col_name, num_col_name
@@ -222,7 +222,7 @@ class MatrixRelationshipSet(RelationshipSet):
 
         e_cols = [num_col_name(e) for e in entities]
         log.debug("checking relationship table sorting")
-        if _trust_table_sort or is_sorted(self._table, e_cols):
+        if _trust_table_sort or _data_accel.is_sorted_coo(self._table.to_batches(), *e_cols):
             log.debug("relationship table already sorted 😊")
         else:
             log.warning("sorting relationship table (might take time)")
