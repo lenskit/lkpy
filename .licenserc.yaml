@@ -2,6 +2,8 @@ header:
   license:
     spdx-id: MIT
     copyright-owner: Drexel University and collaborators
+    copyright-year: "2018-2025"
+    software-name: LensKit
     content: |
       This file is part of LensKit.
       Copyright (C) 2018-2023 Boise State University.
