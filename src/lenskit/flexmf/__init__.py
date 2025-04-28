@@ -12,6 +12,9 @@ LensKit, and also serve as an example for practical PyTorch recommender
 training.
 
 .. stability:: internal
+
+    FlexMF is provided as a preview release, and may change in the next months
+    as we gain more experience with it.
 """
 
 from ._base import FlexMFConfigBase, FlexMFScorerBase
