@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 _log = logging.getLogger(__name__)
 _lk_mod_dir = Path(__file__).parent
+_lk_root = _lk_mod_dir.parent.parent
 
 
 def is_git_install() -> bool:
@@ -41,7 +42,7 @@ def lk_git_version() -> Version:
     _log.debug("parsing %s", pvs)
     version = parse_version(pvs)
 
-    with open("Cargo.toml", "rb") as tf:
+    with open(_lk_root / "Cargo.toml", "rb") as tf:
         cargo = tomllib.load(tf)
     cv = cargo["package"]["version"]
     if m := re.match(r"(.*)-([a-z]+)(?:\.(\d+))", cv):
