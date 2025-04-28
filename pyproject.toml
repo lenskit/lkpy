@@ -68,6 +68,7 @@ demo = [
 reporting = ["coverage >=5"]
 package = [
   "maturin ~=1.0",
+  "lazy-loader >=0.4",
 ]
 scripting = [
   "invoke ~= 2.2",

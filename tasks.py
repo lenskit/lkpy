@@ -7,9 +7,7 @@
 import logging
 import os
 import os.path
-import re
 import sys
-import tomllib
 from contextlib import contextmanager
 from pathlib import Path
 from shutil import copyfileobj, rmtree
@@ -19,8 +17,6 @@ import tomlkit
 from invoke.context import Context
 from invoke.main import program
 from invoke.tasks import task
-from packaging.version import Version
-from packaging.version import parse as parse_version
 
 CACHEDIR_TAG = "Signature: 8a477f597d28d172789f06886806bc55"
 BIBTEX_PATH = "http://127.0.0.1:23119/better-bibtex/export/collection?/4/9JMHQD9K.bibtex"
@@ -32,59 +28,15 @@ if sys.stdout.isatty():
 _log = logging.getLogger("lenskit.invoke")
 root = Path(__file__).parent
 
-
-def _get_version(c: Context) -> Version:
-    gd = c.run('git describe --tags --match "v*"', hide="out")
-    assert gd is not None
-    assert gd.stdout is not None
-    ver = gd.stdout.strip()
-    m = re.match(r"^v(\d+\.\d+\.\d+[.a-z0-9]*)(?:-(\d+)-(g[0-9a-fA-F]+))?$", ver)
-    if not m:
-        raise ValueError(f"unparseable version: {ver}")
-
-    if m.group(2):
-        pvs = f"{m.group(1)}.dev{m.group(2)}+{m.group(3)}"
-    else:
-        pvs = ver[1:]
-
-    _log.debug("parsing %s", pvs)
-    version = parse_version(pvs)
-
-    with open("Cargo.toml", "rb") as tf:
-        cargo = tomllib.load(tf)
-    cv = cargo["package"]["version"]
-    if m := re.match(r"(.*)-([a-z]+)(?:\.(\d+))", cv):
-        cv_pr = m.group(2)
-        if cv_pr != "rc":
-            cv_pr = cv_pr[:1]
-        cv_py = m.group(1) + m.group(2) + m.group(3)
-    else:
-        cv_py = cv
-
-    cv_ver = parse_version(cv_py)
-
-    if version.is_devrelease:
-        if cv_ver > version:
-            _log.debug("cargo requested version is newer")
-            base = cv_ver.public
-        else:
-            _log.warning("Cargo version %s older than Git %s", cv_ver, version)
-            if version.is_prerelease:
-                assert version.pre is not None
-                base = version.base_version + version.pre[0] + str(version.pre[1] + 1)
-            else:
-                base = f"{version.major}.{version.minor}.{version.micro}"
-
-        version = Version(f"{base}.dev{version.dev}+{version.local}")
-    else:
-        if version != cv_ver:
-            _log.warning("version mismatch: cargo {} != git {}", version, cv_ver)
-
-    return version
+try:
+    from lenskit._version import lk_git_version
+except ImportError:
+    sys.path.insert(0, os.fspath(root.absolute() / "src"))
+    from lenskit._version import lk_git_version
 
 
 def _update_version(c: Context, write: bool = False):
-    ver = _get_version(c)
+    ver = lk_git_version()
 
     with open("pyproject.toml", "rt") as tf:
         meta = tomlkit.load(tf)
@@ -130,7 +82,7 @@ def _make_cache_dir(path: str | Path):
 
 @task
 def version(c: Context):
-    ver = _get_version(c)
+    ver = lk_git_version()
     print(ver)
 
 
@@ -178,7 +130,7 @@ def build_accel(c: Context, release: bool = False):
 def build_conda(c: Context):
     "Build Conda packages."
 
-    version = _get_version(c)
+    version = lk_git_version()
     print("building Conda packages for LensKit version {}", version)
     cmd = "rattler-build build --recipe conda --output-dir dist/conda"
     if "CI" in os.environ:
