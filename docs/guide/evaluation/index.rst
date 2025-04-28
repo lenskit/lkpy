@@ -21,5 +21,5 @@ function's documentation includes a mathematical definition of the metric.
    :caption: Evaluation Topics
    :maxdepth: 1
 
-   predictions
    rankings
+   predictions

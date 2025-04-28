@@ -4,8 +4,8 @@ owner: Drexel University and contributors
 substring: This file is part of
 template: |-
   {comment_start} This file is part of LensKit.
-  {comment_middle} Copyright (C) {start_year}-2023 Boise State University
-  {comment_middle} Copyright (C) 2023-{end_year} Drexel University
+  {comment_middle} Copyright (C) {start_year}-2023 Boise State University.
+  {comment_middle} Copyright (C) 2023-{end_year} Drexel University.
   {comment_middle} Licensed under the MIT license, see LICENSE.md for details.
   {comment_middle} SPDX-License-Identifier: MIT
   {comment_end}

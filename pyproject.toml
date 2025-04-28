@@ -36,6 +36,7 @@ dependencies = [
   "humanize ~=4.2",
   "prettytable ~=3.14",
   "xopen ~=2.0",
+  "lazy-loader >=0.4",
 ]
 
 [dependency-groups]
@@ -48,6 +49,7 @@ test = [
   "pyyaml ~=6.0",
 ]
 doc = [
+  "packaging >=25.0",
   "sphinx >=4.2",
   "sphinxext-opengraph >=0.5",
   "sphinxcontrib-bibtex >=2.0",
@@ -67,11 +69,12 @@ demo = [
 reporting = ["coverage >=5"]
 package = [
   "maturin ~=1.0",
+  "lazy-loader >=0.4",
+  "packaging >=25.0",
 ]
 scripting = [
   "invoke ~= 2.2",
   "tomlkit ~= 0.13.2",
-  "packaging >=25.0",
   { include-group = "package" },
 ]
 dev = [

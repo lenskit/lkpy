@@ -49,7 +49,6 @@ target/
 *.o
 *.obj
 src/lenskit/**/*.c
-src/lenskit/_version.py
 
 # environment locks that aren't committed
 /*env*.yml

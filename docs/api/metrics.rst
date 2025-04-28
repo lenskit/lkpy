@@ -64,6 +64,8 @@ List and Item Properties
 
     ~lenskit.metrics.MeanPopRank
 
+.. _metrics-predict:
+
 Prediction Accuracy
 -------------------
 

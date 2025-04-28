@@ -1,7 +1,0 @@
-graft src
-graft tests
-graft data/ml-latest-small
-prune .*
-exclude .*
-include Cargo.*
-global-exclude *.py[cod]
