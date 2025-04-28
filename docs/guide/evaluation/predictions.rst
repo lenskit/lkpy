@@ -9,10 +9,9 @@ While rating prediction is no longer a widely-studied recommendation task,
 LensKit provides support for evaluating predictions for completeness and
 reproducing or comparing against historical research.
 
-The :py:mod:`lenskit.metrics.predict` module contains the prediction accuracy
-metrics, including :py:func:`RMSE` and
-:py:func:`MAE`.  They support both global
-(micro-averaged) and per-user (macro-averaged) computation.
+LensKit provides two :ref:`prediction accuracy metrics <metrics-predict>`:
+:py:func:`RMSE` and :py:func:`MAE`.  They support both global (micro-averaged)
+and per-user (macro-averaged) computation.
 
 .. versionchanged:: 2025.1
     The prediction accuracy metric interface has changed to use item lists.
