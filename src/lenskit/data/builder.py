@@ -26,11 +26,11 @@ import structlog
 from numpy.typing import ArrayLike, NDArray
 from scipy.sparse import csr_array, sparray
 
+from lenskit._accel import data as _data_accel
 from lenskit.data.matrix import SparseRowArray
 from lenskit.diagnostics import DataError, DataWarning
 from lenskit.logging import get_logger
 
-from .arrow import is_sorted
 from .container import DataContainer
 from .dataset import Dataset
 from .schema import (
@@ -49,7 +49,7 @@ from .types import ID, NPID, CoreID, IDSequence  # noqa: F401
 _log = get_logger(__name__)
 
 NPT = TypeVar("NPT", bound=np.generic)
-NPArray1D: TypeAlias = np.ndarray[type[int], np.dtype[NPT]]
+NPArray1D: TypeAlias = np.ndarray[tuple[int], np.dtype[NPT]]
 
 TableInput: TypeAlias = pd.DataFrame | pa.Table | dict[str, NDArray[Any]]
 RelationshipEntities: TypeAlias = Sequence[str] | Mapping[str, str | None]
@@ -938,9 +938,9 @@ class DatasetBuilder:
                 tables[n] = pa.table({id_col_name(n): pa.array([], type=pa.int64())})
             else:
                 rel = self.schema.relationships.get(n, None)
-                if rel is not None and rel.repeats.is_forbidden:
+                if rel is not None and rel.repeats.is_forbidden and len(rel.entities) == 2:
                     e_cols = [e + "_num" for e in rel.entities.keys()]
-                    if not is_sorted(t, e_cols):
+                    if not _data_accel.is_sorted_coo(t.to_batches(), *e_cols):
                         log.debug("sorting non-repeating relationship %s", n)
                         t = t.sort_by([(c, "ascending") for c in e_cols])
 
