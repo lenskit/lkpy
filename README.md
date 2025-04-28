@@ -2,6 +2,7 @@
 
 [![Automatic Tests](https://github.com/lenskit/lkpy/actions/workflows/test.yml/badge.svg)](https://github.com/lenskit/lkpy/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/lenskit/lkpy/graph/badge.svg?token=DaGn7NFM2P)](https://codecov.io/gh/lenskit/lkpy)
+[![Scientific Python Ecosystem Coordination](https://img.shields.io/badge/SPEC-0,7-green?labelColor=%23004811&color=%235CA038)](https://scientific-python.org/specs/)
 [![PyPI - Version](https://img.shields.io/pypi/v/lenskit)](https://pypi.org/project/lenskit)
 ![Conda Version](https://img.shields.io/conda/vn/conda-forge/lenskit)
 
