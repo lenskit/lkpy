@@ -10,6 +10,7 @@ import os.path
 import re
 import sys
 from contextlib import contextmanager
+from datetime import date
 from pathlib import Path
 from shutil import copyfileobj, rmtree
 from urllib.request import urlopen
@@ -181,9 +182,19 @@ def update_bibtex(c: Context):
 
 
 @task
-def update_headers(c: Context):
+def update_headers(
+    c: Context,
+    year: int | None = None,
+    check_only: bool = False,
+    error_on_change: bool = False,
+):
+    "Update or check license headers."
     from unbeheader.headers import SUPPORTED_FILE_TYPES, update_header
     from unbeheader.typing import CommentSkeleton, SupportedFileType
+
+    if year is None:
+        today = date.today()
+        year = today.year
 
     SUPPORTED_FILE_TYPES["rs"] = SupportedFileType(
         re.compile(r"((^//|[\r\n]//).*)*"),
@@ -194,14 +205,16 @@ def update_headers(c: Context):
     print("updating Python headers")
     n = 0
     for file in src.glob("**/*.py"):
-        if update_header(file, 2025):
+        if update_header(file, year, check=check_only):
             n += 1
 
     for file in src.glob("**/*.rs"):
-        if update_header(file, 2025):
+        if update_header(file, year, check=check_only):
             n += 1
 
     print("updated", n, "files")
+    if error_on_change:
+        sys.exit(5)
 
 
 @task
