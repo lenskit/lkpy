@@ -7,6 +7,7 @@
 import logging
 import os
 import os.path
+import re
 import sys
 from contextlib import contextmanager
 from pathlib import Path
@@ -181,7 +182,26 @@ def update_bibtex(c: Context):
 
 @task
 def update_headers(c: Context):
-    c.run("license-eye header fix", echo=True)
+    from unbeheader.headers import SUPPORTED_FILE_TYPES, update_header
+    from unbeheader.typing import CommentSkeleton, SupportedFileType
+
+    SUPPORTED_FILE_TYPES["rs"] = SupportedFileType(
+        re.compile(r"((^//|[\r\n]//).*)*"),
+        CommentSkeleton("//", "//"),
+    )
+
+    src = Path("src")
+    print("updating Python headers")
+    n = 0
+    for file in src.glob("**/*.py"):
+        if update_header(file, 2025):
+            n += 1
+
+    for file in src.glob("**/*.rs"):
+        if update_header(file, 2025):
+            n += 1
+
+    print("updated", n, "files")
 
 
 @task
