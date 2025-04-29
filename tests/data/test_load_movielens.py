@@ -7,6 +7,8 @@
 from pathlib import Path
 from shutil import copytree
 
+import numpy as np
+
 from pytest import mark, raises
 
 from lenskit.data.dataset import Dataset
@@ -36,12 +38,21 @@ def test_latest_small_dir():
     title_s = titles.pandas()
     assert title_s.loc[1] == "Toy Story (1995)"
 
-    genres = ds.entities("item").attribute("genres").pandas()
+    genres = ds.entities("item").attribute("genres").pandas(missing="omit")
     # Cry, The Beloved Country is drama
     assert genres.loc[40] == ["Drama"]
+    assert not np.any(genres.isnull())
 
-    # Victoria has no genres
-    assert genres.loc[128620] == []
+    # Scorpio Rising has no genres
+    assert 83829 in ds.entities("item").attribute("genres").id_index()
+    assert 83829 not in genres.index
+
+    genre_nulls = ds.entities("item").attribute("genres").pandas(missing="null")
+    assert len(genre_nulls) > len(genres)
+    assert len(genre_nulls) == ds.item_count
+    assert not np.all(genre_nulls.isnull())
+    print(genre_nulls.loc[82000:83000])
+    assert genre_nulls.loc[83829] == None  # noqa: E711
 
     assert "tag_counts" in ds.entities("item").attributes
     tags = ds.entities("item").attribute("tag_counts")
