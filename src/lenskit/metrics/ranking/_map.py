@@ -12,7 +12,7 @@ from lenskit.data.items import ItemList
 from ._base import ListMetric, RankingMetricBase
 
 
-class MeanAveragePrecision(ListMetric, RankingMetricBase):
+class AveragePrecision(ListMetric, RankingMetricBase):
     """
     Compute recommendation Average Precision (AP)
     """
