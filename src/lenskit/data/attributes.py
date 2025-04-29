@@ -90,6 +90,15 @@ class AttributeSet:
         else:
             return self._vocab.ids(self._selected.to_numpy())
 
+    def id_index(self) -> pd.Index:
+        """
+        Get the entity IDs as a Pandas index.
+        """
+        if self._selected is None:
+            return self._vocab.index
+        else:
+            return self._vocab.index[self._selected.to_numpy()]
+
     def numbers(self) -> np.ndarray[tuple[int], np.dtype[np.int32]]:
         """
         Get the entity numbers for the rows in this attribute's values.
@@ -214,9 +223,11 @@ class ListAttributeSet(AttributeSet):
     def pandas(self, *, missing: Literal["null", "omit"] = "null") -> pd.Series[Any]:
         arr = self.arrow()
         mask = arr.is_valid()
-        if missing == "null" and pc.all(mask).as_py():
-            return pd.Series(arr.to_numpy(zero_copy_only=False), index=self.ids())
-        else:
+        if missing == "null":
+            s = arr.to_pandas()
+            s.index = pd.Index(self.ids())
+            return s
+        elif missing == "omit":
             mask = mask.to_numpy(zero_copy_only=False)
             return pd.Series(arr.drop_null().to_numpy(zero_copy_only=False), index=self.ids()[mask])
 

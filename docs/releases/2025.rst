@@ -27,6 +27,7 @@ information on how to upgrade your code.
     reliably handle CSR matrix data in Arrow (previously, we had to carry the
     matrix width or row dimension in side information; it is now embedded into
     the Arrow metadata).
+-   Fix MovieLens import to detect movies without genres (:issue:`727`, :pr:`738`).
 
 Component Changes
 .................
