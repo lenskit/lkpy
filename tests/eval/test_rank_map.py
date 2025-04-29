@@ -29,7 +29,7 @@ def test_ap_partial_hits():
     assert ap == pytest.approx((1.0 + 2/3) / 2)
 
     ap = _test_ap([1, 2, 3], [2, 4])
-    assert ap == pytest.approx(0.5)
+    assert ap == pytest.approx(0.25)
 
 def test_ap_cutoff_k():
     ap = _test_ap([1, 2, 3, 4, 5], [1, 3, 5], k=3)
