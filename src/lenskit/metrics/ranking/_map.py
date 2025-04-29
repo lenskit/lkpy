@@ -35,9 +35,9 @@ class AveragePrecision(ListMetric, RankingMetricBase):
         items = recs.ids()
         ap_sum = 0.0
         good = np.isin(items, test.ids())
-        sum_good = np.cumsum(good)            # cumulative count of “good” up to each rank
+        sum_good = np.cumsum(good)  # cumulative count of “good” up to each rank
         ranks = recs.ranks()  # ranks starting from 1
         ap_sum = np.sum(sum_good[good] / ranks[good])
-        
+
         denom = min(len(test.ids()), len(items))
         return ap_sum / denom
