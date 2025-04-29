@@ -14,7 +14,8 @@ from ._base import ListMetric, RankingMetricBase
 
 class AveragePrecision(ListMetric, RankingMetricBase):
     """
-    Compute recommendation Average Precision (AP)
+    Compute Average Precision (AP) for a single user's recommendations.  This is
+    the average of the precision at each relevant item in the ranked list.
     """
 
     @property
