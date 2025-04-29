@@ -40,6 +40,9 @@ def test_latest_small_dir():
     # Cry, The Beloved Country is drama
     assert genres.loc[40] == ["Drama"]
 
+    # Victoria has no genres
+    assert genres.loc[128620] == []
+
     assert "tag_counts" in ds.entities("item").attributes
     tags = ds.entities("item").attribute("tag_counts")
     assert tags.is_sparse
