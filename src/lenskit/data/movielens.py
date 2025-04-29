@@ -198,7 +198,7 @@ class MLMLoader(MLData):
         dsb.add_scalar_attribute("item", "title", movies["item_id"], movies["title"])
         genre_strings = movies["genres"]
         genres = movies["genres"].str.split("|", regex=False)
-        genres[genre_strings == "(no genres listed)"] = []
+        genres[genre_strings == "(no genres listed)"] = None
         dsb.add_list_attribute("item", "genres", movies["item_id"], genres, dictionary=True)
 
         ratings = self.ratings_df()
@@ -334,7 +334,7 @@ class MLModernLoader(MLData):
         dsb.add_scalar_attribute("item", "title", movies["item_id"], movies["title"])
         genre_strings = movies["genres"]
         genres = movies["genres"].str.split("|", regex=False)
-        genres[genre_strings == "(no genres listed)"] = []
+        genres[genre_strings == "(no genres listed)"] = None
         dsb.add_list_attribute("item", "genres", movies["item_id"], genres)
 
         ratings = self.ratings_df()
