@@ -134,7 +134,12 @@ def test_runtime_truncation(n, items: ItemList):
     assert np.all(rank_s == src_s)
 
 
-@given(scored_lists(n=st.integers(100, 5000), scores=st.floats(0, 15)), st.floats(0.1, 10000))
+@given(
+    scored_lists(
+        n=st.integers(100, 5000), scores=st.floats(-5, 15, width=32, allow_infinity=False)
+    ),
+    st.floats(0.1, 10000),
+)
 def test_overflow(items: ItemList, scale: float):
     topn = StochasticTopNRanker(transform="softmax", scale=scale)
     ranked = topn(items=items, include_weights=True)
