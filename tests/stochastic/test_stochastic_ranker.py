@@ -10,6 +10,7 @@ import pickle
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
+from scipy.spatial.distance import jaccard
 from scipy.stats import kendalltau, permutation_test
 
 import hypothesis.extra.numpy as nph
@@ -17,9 +18,14 @@ import hypothesis.strategies as st
 from hypothesis import given, settings
 from pytest import mark
 
+from lenskit import batch
+from lenskit.als import ImplicitMFScorer
 from lenskit.basic import PopScorer
-from lenskit.data.items import ItemList
+from lenskit.basic.topn import TopNRanker
+from lenskit.data import Dataset, ItemList
 from lenskit.logging import get_logger
+from lenskit.pipeline import topn_pipeline
+from lenskit.splitting import simple_test_pair
 from lenskit.stochastic import StochasticTopNRanker
 from lenskit.testing import BasicComponentTests, ScorerTests, scored_lists
 
@@ -218,3 +224,43 @@ def test_stochasticity(rng):
     _log.info("trial p-value statistics: mean=%.3f, median=%.3f", np.mean(pvals), np.median(pvals))
     # do 90% of trials pass the test?
     assert np.mean(pvals < 0.05) >= 0.9
+
+
+def test_scale_affects_ranking(rng, ml_ds: Dataset):
+    split = simple_test_pair(ml_ds, f_rates=0.5, rng=rng)
+    pipe = topn_pipeline(ImplicitMFScorer())
+    pipe.train(split.train)
+    recs = batch.recommend(pipe, split.test, n_jobs=1)
+
+    topn = TopNRanker()
+    samp_frac = StochasticTopNRanker(scale=0.1)
+    samp_one = StochasticTopNRanker(scale=1)
+    samp_hundred = StochasticTopNRanker(scale=100)
+
+    jc_frac = []
+    jc_one = []
+    jc_hundred = []
+
+    for uid, ilist in recs:
+        rl_topn = topn(items=ilist, n=10)
+        rl_frac = samp_frac(items=ilist, n=10)
+        rl_one = samp_one(items=ilist, n=10)
+        rl_hundred = samp_hundred(items=ilist, n=10)
+
+        mask_topn = np.zeros(ml_ds.item_count, dtype=np.bool_)
+        mask_topn[rl_topn.numbers(vocabulary=ml_ds.items)] = True
+        mask_frac = np.zeros(ml_ds.item_count, dtype=np.bool_)
+        mask_frac[rl_frac.numbers(vocabulary=ml_ds.items)] = True
+        mask_one = np.zeros(ml_ds.item_count, dtype=np.bool_)
+        mask_one[rl_one.numbers(vocabulary=ml_ds.items)] = True
+        mask_hundred = np.zeros(ml_ds.item_count, dtype=np.bool_)
+        mask_hundred[rl_hundred.numbers(vocabulary=ml_ds.items)] = True
+
+        jc_frac.append(jaccard(mask_topn, mask_frac))
+        jc_one.append(jaccard(mask_topn, mask_one))
+        jc_hundred.append(jaccard(mask_topn, mask_hundred))
+
+    # high-temp should agree less than flat
+    assert np.mean(jc_frac) < np.mean(jc_one)
+    # low-temp should agree more than flat
+    assert np.mean(jc_hundred) < np.mean(jc_one)
