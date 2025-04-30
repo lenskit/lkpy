@@ -15,6 +15,7 @@ import warnings
 import numpy as np
 from numpy.typing import ArrayLike
 
+from lenskit.data.types import NPVector
 from lenskit.diagnostics import DataWarning
 
 
@@ -61,7 +62,7 @@ def gini(xs: ArrayLike) -> float:
     return max(num / denom, 0)
 
 
-def argtopn(xs: ArrayLike, n: int) -> np.ndarray[int, np.dtype[np.int64]]:
+def argtopn(xs: ArrayLike, n: int) -> NPVector[np.int64]:
     """
     Compute the ordered positions of the top *n* elements.  Similar to
     :func:`torch.topk`, but works with NumPy arrays and only returns the

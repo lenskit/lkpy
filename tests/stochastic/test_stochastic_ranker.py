@@ -10,6 +10,8 @@ import pickle
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
+from scipy.spatial.distance import jaccard
+from scipy.special import softmax
 from scipy.stats import kendalltau, permutation_test
 
 import hypothesis.extra.numpy as nph
@@ -17,9 +19,15 @@ import hypothesis.strategies as st
 from hypothesis import given, settings
 from pytest import mark
 
+from lenskit import batch
+from lenskit.als import ImplicitMFScorer
 from lenskit.basic import PopScorer
-from lenskit.data.items import ItemList
+from lenskit.basic.topn import TopNRanker
+from lenskit.data import Dataset, ItemList
 from lenskit.logging import get_logger
+from lenskit.operations import recommend
+from lenskit.pipeline import topn_pipeline
+from lenskit.splitting import simple_test_pair
 from lenskit.stochastic import StochasticTopNRanker
 from lenskit.testing import BasicComponentTests, ScorerTests, scored_lists
 
@@ -63,6 +71,7 @@ def test_unlimited_ranking(items: ItemList, transform):
         assert np.all(rank_s == src_s)
     except AssertionError as e:
         e.add_note("ranked {} items ({} invalid)".format(len(ids), np.sum(invalid)))
+        raise e
 
 
 @given(st.integers(min_value=1, max_value=100), scored_lists())
@@ -125,6 +134,53 @@ def test_runtime_truncation(n, items: ItemList):
     assert np.all(rank_s == src_s)
 
 
+@given(
+    scored_lists(
+        n=st.integers(100, 5000), scores=st.floats(-5, 15, width=32, allow_infinity=False)
+    ),
+    st.floats(0.1, 10000),
+)
+def test_overflow(items: ItemList, scale: float):
+    topn = StochasticTopNRanker(transform="softmax", scale=scale)
+    ranked = topn(items=items, include_weights=True)
+
+    ids = items.ids()
+    scores = items.scores("numpy")
+    assert scores is not None
+    assert np.all(np.isfinite(scores))
+
+    sm = softmax(scores)
+    assert np.all(np.isfinite(sm))
+    assert np.all(sm >= 0)
+    assert np.all(sm <= 1)
+
+    k2 = topn._compute_keys(scores, topn._rng_factory(None))
+    assert np.all(np.isfinite(k2))
+
+    try:
+        assert isinstance(ranked, ItemList)
+        assert len(ranked) == len(items)
+        assert ranked.ordered
+
+        weights = ranked.field("weight")
+        assert weights is not None
+        assert np.all(np.isfinite(weights))
+
+        # the scores match
+        rank_s = ranked.scores("pandas", index="ids")
+        assert rank_s is not None
+        src_s = items.scores("pandas", index="ids")
+        assert src_s is not None
+
+        # make sure the scores were preserved properly
+        rank_s, src_s = rank_s.align(src_s, "left")
+        assert not np.any(np.isnan(src_s))
+        assert np.all(rank_s == src_s)
+    except AssertionError as e:
+        e.add_note("ranked {} items".format(len(ids)))
+        raise e
+
+
 def test_stochasticity(rng):
     "Test that softmax is varying but order-consistent"
     iids = np.arange(500)
@@ -180,3 +236,46 @@ def test_stochasticity(rng):
     _log.info("trial p-value statistics: mean=%.3f, median=%.3f", np.mean(pvals), np.median(pvals))
     # do 90% of trials pass the test?
     assert np.mean(pvals < 0.05) >= 0.9
+
+
+def test_scale_affects_ranking(rng, ml_ds: Dataset):
+    """
+    Test that different softmax scales produce different levels of ranking variation.
+    """
+    pipe = topn_pipeline(ImplicitMFScorer())
+    pipe.train(ml_ds)
+
+    topn = TopNRanker()
+    samp_frac = StochasticTopNRanker(scale=0.1)
+    samp_one = StochasticTopNRanker(scale=1)
+    samp_hundred = StochasticTopNRanker(scale=10)
+
+    jc_frac = []
+    jc_one = []
+    jc_hundred = []
+
+    for uid in rng.choice(ml_ds.users.ids(), size=500):
+        ilist = recommend(pipe, uid)
+        rl_topn = topn(items=ilist, n=10)
+        rl_frac = samp_frac(items=ilist, n=10)
+        rl_one = samp_one(items=ilist, n=10)
+        rl_hundred = samp_hundred(items=ilist, n=10)
+
+        jc_frac.append(_jaccard(rl_topn, rl_frac))
+        jc_one.append(_jaccard(rl_topn, rl_one))
+        jc_hundred.append(_jaccard(rl_topn, rl_hundred))
+
+    # high-temp should agree less than flat
+    assert np.mean(jc_frac) < np.mean(jc_one)
+    # low-temp should agree more than flat
+    assert np.mean(jc_hundred) > np.mean(jc_one)
+
+
+def _jaccard(il1: ItemList, il2: ItemList) -> float:
+    s1 = set(il1.ids())
+    s2 = set(il2.ids())
+
+    num = len(s1 & s2)
+    denom = len(s1 | s2)
+
+    return num / denom
