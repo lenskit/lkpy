@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 from scipy.spatial.distance import jaccard
+from scipy.special import softmax
 from scipy.stats import kendalltau, permutation_test
 
 import hypothesis.extra.numpy as nph
@@ -24,6 +25,7 @@ from lenskit.basic import PopScorer
 from lenskit.basic.topn import TopNRanker
 from lenskit.data import Dataset, ItemList
 from lenskit.logging import get_logger
+from lenskit.operations import recommend
 from lenskit.pipeline import topn_pipeline
 from lenskit.splitting import simple_test_pair
 from lenskit.stochastic import StochasticTopNRanker
@@ -142,6 +144,11 @@ def test_overflow(items: ItemList, scale: float):
     assert scores is not None
     assert np.all(np.isfinite(scores))
 
+    sm = softmax(scores)
+    assert np.all(np.isfinite(sm))
+    assert np.all(sm >= 0)
+    assert np.all(sm <= 1)
+
     k2 = topn._compute_keys(scores, topn._rng_factory(None))
     assert np.all(np.isfinite(k2))
 
@@ -227,40 +234,43 @@ def test_stochasticity(rng):
 
 
 def test_scale_affects_ranking(rng, ml_ds: Dataset):
-    split = simple_test_pair(ml_ds, f_rates=0.5, rng=rng)
+    """
+    Test that different softmax scales produce different levels of ranking variation.
+    """
     pipe = topn_pipeline(ImplicitMFScorer())
-    pipe.train(split.train)
-    recs = batch.recommend(pipe, split.test, n_jobs=1)
+    pipe.train(ml_ds)
 
     topn = TopNRanker()
-    samp_frac = StochasticTopNRanker(scale=0.01)
+    samp_frac = StochasticTopNRanker(scale=0.1)
     samp_one = StochasticTopNRanker(scale=1)
-    samp_hundred = StochasticTopNRanker(scale=100)
+    samp_hundred = StochasticTopNRanker(scale=10)
 
     jc_frac = []
     jc_one = []
     jc_hundred = []
 
-    for uid, ilist in recs:
+    for uid in rng.choice(ml_ds.users.ids(), size=500):
+        ilist = recommend(pipe, uid)
         rl_topn = topn(items=ilist, n=10)
         rl_frac = samp_frac(items=ilist, n=10)
         rl_one = samp_one(items=ilist, n=10)
         rl_hundred = samp_hundred(items=ilist, n=10)
 
-        mask_topn = np.zeros(ml_ds.item_count, dtype=np.bool_)
-        mask_topn[rl_topn.numbers(vocabulary=ml_ds.items)] = True
-        mask_frac = np.zeros(ml_ds.item_count, dtype=np.bool_)
-        mask_frac[rl_frac.numbers(vocabulary=ml_ds.items)] = True
-        mask_one = np.zeros(ml_ds.item_count, dtype=np.bool_)
-        mask_one[rl_one.numbers(vocabulary=ml_ds.items)] = True
-        mask_hundred = np.zeros(ml_ds.item_count, dtype=np.bool_)
-        mask_hundred[rl_hundred.numbers(vocabulary=ml_ds.items)] = True
-
-        jc_frac.append(jaccard(mask_topn, mask_frac))
-        jc_one.append(jaccard(mask_topn, mask_one))
-        jc_hundred.append(jaccard(mask_topn, mask_hundred))
+        jc_frac.append(_jaccard(rl_topn, rl_frac))
+        jc_one.append(_jaccard(rl_topn, rl_one))
+        jc_hundred.append(_jaccard(rl_topn, rl_hundred))
 
     # high-temp should agree less than flat
     assert np.mean(jc_frac) < np.mean(jc_one)
     # low-temp should agree more than flat
-    assert np.mean(jc_hundred) < np.mean(jc_one)
+    assert np.mean(jc_hundred) > np.mean(jc_one)
+
+
+def _jaccard(il1: ItemList, il2: ItemList) -> float:
+    s1 = set(il1.ids())
+    s2 = set(il2.ids())
+
+    num = len(s1 & s2)
+    denom = len(s1 | s2)
+
+    return num / denom
