@@ -18,7 +18,6 @@ from typing_extensions import Any, Literal, TypeAlias, TypeVar, overload
 from lenskit.data import Dataset
 from lenskit.diagnostics import PipelineError
 from lenskit.logging import get_logger
-from lenskit.training import Trainable, TrainingOptions
 
 from . import config
 from .config import PipelineConfig
@@ -30,6 +29,8 @@ from .nodes import (
 from .state import PipelineState
 
 if TYPE_CHECKING:
+    from lenskit.training import TrainingOptions
+
     from .builder import PipelineBuilder
 
 _log = get_logger(__name__)
@@ -271,6 +272,8 @@ class Pipeline:
             options:
                 The training options.  If ``None``, default options are used.
         """
+        from lenskit.training import Trainable  # lazy import
+
         log = _log.bind(pipeline=self.name)
         if options is None:
             options = TrainingOptions()
