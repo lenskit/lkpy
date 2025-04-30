@@ -233,7 +233,7 @@ def test_scale_affects_ranking(rng, ml_ds: Dataset):
     recs = batch.recommend(pipe, split.test, n_jobs=1)
 
     topn = TopNRanker()
-    samp_frac = StochasticTopNRanker(scale=0.1)
+    samp_frac = StochasticTopNRanker(scale=0.01)
     samp_one = StochasticTopNRanker(scale=1)
     samp_hundred = StochasticTopNRanker(scale=100)
 
