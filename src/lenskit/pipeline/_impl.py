@@ -272,7 +272,7 @@ class Pipeline:
             options:
                 The training options.  If ``None``, default options are used.
         """
-        from lenskit.training import Trainable  # lazy import
+        from lenskit.training import Trainable, TrainingOptions  # lazy import
 
         log = _log.bind(pipeline=self.name)
         if options is None:
