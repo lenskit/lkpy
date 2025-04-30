@@ -136,6 +136,9 @@ def test_overflow(items: ItemList, scale: float):
     assert scores is not None
     assert np.all(np.isfinite(scores))
 
+    k2 = topn._compute_keys(scores, topn._rng_factory(None))
+    assert np.all(np.isfinite(k2))
+
     try:
         assert isinstance(ranked, ItemList)
         assert len(ranked) == len(items)
@@ -144,9 +147,6 @@ def test_overflow(items: ItemList, scale: float):
         weights = ranked.field("weight")
         assert weights is not None
         assert np.all(np.isfinite(weights))
-
-        k2 = topn._compute_keys(scores, topn._rng_factory(None))
-        assert np.all(np.isfinite(k2))
 
         # the scores match
         rank_s = ranked.scores("pandas", index="ids")
