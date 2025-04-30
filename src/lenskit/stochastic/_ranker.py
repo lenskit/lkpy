@@ -141,24 +141,30 @@ class StochasticTopNRanker(Component[ItemList]):
                 ub = np.max(scores).item()
                 r = ub - lb
                 # scale weights twice to reduce risk of floating-point error
-                scores -= lb
+                scaled = scores - lb
                 weights = None
                 if r > 0:
-                    scores /= r
-                    tot = np.sum(scores)
+                    scaled /= r
+                    tot = np.sum(scaled)
                     if tot > 0:
-                        weights = scores / tot
+                        weights = scaled / tot
 
                 if weights is None:
                     weights = np.ones_like(scores) / len(scores)
             case "softmax":
                 weights = softmax(scores)
+                assert np.all(np.isfinite(weights))
+                assert np.all(weights >= 0)
+                assert np.all(weights <= 1)
             case None:
                 weights = scores
 
         # positive instead of negative, because we take top-N instead of bottom
         keys = np.log(rng.uniform(0, 1, len(scores)))
+        assert np.all(np.isfinite(keys))
+        assert np.all(keys < 0)
         # smoooth very small weights to avoid divide-by-zero
         keys /= np.maximum(weights, np.finfo("f4").smallest_normal)
+        assert np.all(np.isfinite(keys))
 
         return keys
