@@ -12,6 +12,7 @@ from scipy.special import softmax
 
 from lenskit.data import ItemList
 from lenskit.data.query import QueryInput, RecQuery
+from lenskit.data.types import NPVector
 from lenskit.pipeline import Component
 from lenskit.random import DerivableSeed, RNGFactory, derivable_rng
 from lenskit.stats import argtopn
@@ -95,7 +96,12 @@ class StochasticTopNRanker(Component[ItemList]):
         self._rng_factory = derivable_rng(self.config.rng)
 
     def __call__(
-        self, items: ItemList, query: QueryInput | None = None, n: int | None = None
+        self,
+        items: ItemList,
+        query: QueryInput | None = None,
+        n: int | None = None,
+        *,
+        include_weights: bool = False,
     ) -> ItemList:
         query = RecQuery.create(query)
         rng = self._rng_factory(query)
@@ -116,9 +122,19 @@ class StochasticTopNRanker(Component[ItemList]):
         if n < 0 or n > N:
             n = N
 
+        keys = self._compute_keys(scores[valid_mask], rng)
+
+        picked = argtopn(keys, n)
+        result = ItemList(valid_items[picked], ordered=True)
+        if include_weights:
+            result = ItemList(result, weight=keys[picked])
+        return result
+
+    def _compute_keys(self, scores: NPVector, rng: np.random.Generator) -> NPVector:
+        "Compute sort keys for sampled ranking."
         # scale the scores — with softmax, this is the equivalent of β.
         # see: https://en.wikipedia.org/wiki/Softmax_function
-        scores = scores[valid_mask] * self.config.scale
+        scores = scores * self.config.scale
         match self.config.transform:
             case "linear":
                 lb = np.min(scores).item()
@@ -141,9 +157,8 @@ class StochasticTopNRanker(Component[ItemList]):
                 weights = scores
 
         # positive instead of negative, because we take top-N instead of bottom
-        keys = np.log(rng.uniform(0, 1, N))
+        keys = np.log(rng.uniform(0, 1, len(scores)))
         # smoooth very small weights to avoid divide-by-zero
         keys /= np.maximum(weights, np.finfo("f4").smallest_normal)
 
-        picked = argtopn(keys, n)
-        return ItemList(valid_items[picked], ordered=True)
+        return keys

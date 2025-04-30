@@ -63,6 +63,7 @@ def test_unlimited_ranking(items: ItemList, transform):
         assert np.all(rank_s == src_s)
     except AssertionError as e:
         e.add_note("ranked {} items ({} invalid)".format(len(ids), np.sum(invalid)))
+        raise e
 
 
 @given(st.integers(min_value=1, max_value=100), scored_lists())
@@ -123,6 +124,43 @@ def test_runtime_truncation(n, items: ItemList):
     rank_s, src_s = rank_s.align(src_s, "left")
     assert not np.any(np.isnan(src_s))
     assert np.all(rank_s == src_s)
+
+
+@given(scored_lists(n=st.integers(100, 5000), scores=st.floats(0, 15)), st.floats(0.1, 10000))
+def test_overflow(items: ItemList, scale: float):
+    topn = StochasticTopNRanker(transform="softmax", scale=scale)
+    ranked = topn(items=items, include_weights=True)
+
+    ids = items.ids()
+    scores = items.scores("numpy")
+    assert scores is not None
+    assert np.all(np.isfinite(scores))
+
+    try:
+        assert isinstance(ranked, ItemList)
+        assert len(ranked) == len(items)
+        assert ranked.ordered
+
+        weights = ranked.field("weight")
+        assert weights is not None
+        assert np.all(np.isfinite(weights))
+
+        k2 = topn._compute_keys(scores, topn._rng_factory(None))
+        assert np.all(np.isfinite(k2))
+
+        # the scores match
+        rank_s = ranked.scores("pandas", index="ids")
+        assert rank_s is not None
+        src_s = items.scores("pandas", index="ids")
+        assert src_s is not None
+
+        # make sure the scores were preserved properly
+        rank_s, src_s = rank_s.align(src_s, "left")
+        assert not np.any(np.isnan(src_s))
+        assert np.all(rank_s == src_s)
+    except AssertionError as e:
+        e.add_note("ranked {} items".format(len(ids)))
+        raise e
 
 
 def test_stochasticity(rng):
