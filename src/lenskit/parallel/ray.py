@@ -14,9 +14,9 @@ import base64
 import itertools
 import os
 import pickle
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Generator, Iterable, Iterator
 from platform import python_version
-from typing import Any, Generic
+from typing import TYPE_CHECKING, Any, Generic
 
 from lenskit.logging import Task, get_logger
 from lenskit.logging.worker import WorkerContext, WorkerLogConfig
@@ -29,6 +29,9 @@ from .config import (
     subprocess_config,
 )
 from .invoker import A, InvokeOp, M, ModelOpInvoker, R
+
+if TYPE_CHECKING:
+    import ray
 
 LK_PROCESS_SLOT = "lk_process"
 _worker_parallel: ParallelConfig
@@ -220,6 +223,96 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
 
     def shutdown(self):
         del self.model_ref
+
+
+class TaskLimiter:
+    """
+    Limit task concurrency using :func:`ray.wait`.
+
+    This class provides two key operations:
+
+    - Add a task to the limiter with :meth:`add_task`.
+    - Wait for tasks until the number of pending tasks is less than the limit.
+    - Wait for all tasks with `drain`.
+
+    Args:
+        limit:
+            The maximum number of pending tasks.  Defaults to the LensKit
+            process count (see :func:`lenskit.parallel.initialize`).
+    """
+
+    limit: int
+    "The maximum number of pending tasks."
+    finished: int
+    "The number of tasks completed."
+
+    _tasks: list[Any]
+
+    def __init__(self, limit: int | None = None):
+        if limit is None or limit <= 0:
+            self.limit = get_parallel_config().processes
+        else:
+            self.limit = limit
+        self.finished = 0
+
+    @property
+    def pending(self) -> int:
+        """
+        The number of pending tasks.
+        """
+        return len(self._tasks)
+
+    def add_task(self, task: ray.ObjectRef | ray.ObjectID):
+        self._tasks.append(task)
+
+    def pending_results(self) -> Generator[ray.ObjectRef, None, None]:
+        """
+        Iterate over available results until the number of pending results tasks
+        is less than the limit, blocking as needed.
+
+        This is a generator, returning the task result references.  The iterator
+        will stop when the pending tasks list is under the limit.  No guarantee
+        is made on the order of returned results.
+        """
+        return self._drain_until(self.limit - 1)
+
+    def wait_for_limit(self):
+        """
+        Wait until the pending tasks are back under the limit.
+
+        This method calls :meth:`ray.get` on the result of each pending task to
+        resolve errors, but discards the return value.
+        """
+        for r in self.pending_results():
+            ray.get(r)
+
+    def drain_results(self) -> Generator[ray.ObjectRef, None, None]:
+        """
+        Iterate over all remaining tasks until the pending task list is empty,
+        blocking as needed.
+
+        This is a generator, returning the task result references.  No guarantee
+        is made on the order of returned results.
+        """
+        return self._drain_until(0)
+
+    def drain(self):
+        """
+        Wait until all pending tasks are finished.
+
+        This method calls :meth:`ray.get` on the result of each pending task to
+        resolve errors, but discards the return value.
+        """
+        for r in self.drain_results():
+            ray.get(r)
+
+    def _drain_until(self, limit: int) -> Generator[ray.ObjectRef, None, None]:
+        while self._tasks and len(self._tasks) > limit:
+            done, remaining = ray.wait(self._tasks)
+            self._tasks = remaining
+            for dt in done:
+                self.finished += 1
+                yield dt
 
 
 def _ray_invoke_worker(func: Callable[[M, A], R], model: M, args: list[A]) -> list[R]:
