@@ -20,7 +20,9 @@ from lenskit.data.types import NPVector
 
 class RankWeight(ABC):
     """
-    Interface for rank weighting models.
+    Interface for rank weighting models.  This returns *multiplicative* weights,
+    so that scores should be multiplied by the weights in order to produce
+    weighted scores.
 
     Stability:
         caller
@@ -73,10 +75,10 @@ class GeometricRankWeight(RankWeight):
         self.patience = patience
 
     def weight(self, ranks) -> NPVector[np.float64]:
-        return np.power(self.patience, ranks)
+        return np.power(self.patience, ranks - 1)
 
     def log_weight(self, ranks) -> NPVector[np.float64]:
-        return self.patience * np.log(ranks)
+        return self.patience * np.log(ranks - 1)
 
     def series_sum(self) -> float:
         return 1 / (1 - self.patience)
@@ -112,6 +114,6 @@ class LogRankWeight(RankWeight):
 
     def weight(self, ranks):
         if self.offset > 0:
-            return np.log(ranks + self.offset) / np.log(self.base)
+            return np.reciprocal(np.log(ranks + self.offset) / np.log(self.base))
         else:
-            return np.log(np.maximum(ranks, 2)) / np.log(self.base)
+            return np.reciprocal(np.log(np.maximum(ranks, 2)) / np.log(self.base))

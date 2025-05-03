@@ -215,7 +215,7 @@ def array_dcg(scores: NDArray[np.number], weight: RankWeight = LogRankWeight()):
     """
     scores = np.nan_to_num(scores)
     ranks = np.arange(1, len(scores) + 1)
-    wvec = np.reciprocal(weight.weight(ranks))
+    wvec = weight.weight(ranks)
     return np.dot(scores, wvec)
 
 
@@ -226,5 +226,5 @@ def fixed_dcg(n: int, weight: RankWeight = LogRankWeight()):
     """
 
     ranks = np.arange(1, n + 1)
-    wvec = np.reciprocal(weight.weight(ranks))
+    wvec = weight.weight(ranks)
     return np.sum(wvec)
