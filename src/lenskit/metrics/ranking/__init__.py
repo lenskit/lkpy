@@ -16,12 +16,13 @@ from ._pop import MeanPopRank
 from ._pr import Precision, Recall
 from ._rbp import RBP
 from ._recip import RecipRank
-from ._weighting import GeometricRankWeight, RankWeight
+from ._weighting import GeometricRankWeight, LogRankWeight, RankWeight
 
 __all__ = [
     "RankingMetricBase",
     "RankWeight",
     "GeometricRankWeight",
+    "LogRankWeight",
     "Hit",
     "Precision",
     "Recall",

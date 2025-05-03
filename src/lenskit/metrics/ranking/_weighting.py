@@ -13,7 +13,7 @@ from typing import Annotated
 
 import numpy as np
 from annotated_types import Gt, Lt
-from pydantic import validate_call
+from pydantic import NonNegativeInt, PositiveFloat, validate_call
 
 from lenskit.data.types import NPVector
 
@@ -80,3 +80,38 @@ class GeometricRankWeight(RankWeight):
 
     def series_sum(self) -> float:
         return 1 / (1 - self.patience)
+
+
+class LogRankWeight(RankWeight):
+    r"""
+    Logarithmic weighting for result ranks.  This is the ranking model typically
+    used for DCG and NDCG.
+
+    Since :math:`\operatorname{lg} 1 = 0`, simply taking the log will result in
+    division by 0 when weights are applied.  The correction for this in the
+    original NDCG paper :cite:p:`ndcg` is to clip the ranks, so that both of the
+    first two positions have discount :math:`\operatorname{lg} 2`.  A different
+    correction somtimes seen is to compute :math:`\operatorname{lg} (k+1)`. This
+    discount supports both; the default is to clip, but if the ``offset`` option
+    is set to a positive number, it is added to the ranks instead.
+
+    Args:
+        base:
+            The log base to use.
+        offset:
+            An offset to add to ranks before computing logs.
+    """
+
+    base: float
+    offset: int
+
+    @validate_call
+    def __init__(self, *, base: PositiveFloat = 2, offset: NonNegativeInt = 0):
+        self.base = base
+        self.offset = offset
+
+    def weight(self, ranks):
+        if self.offset > 0:
+            return np.log(ranks + self.offset) / np.log(self.base)
+        else:
+            return np.log(np.maximum(ranks, 2)) / np.log(self.base)
