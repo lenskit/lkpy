@@ -105,7 +105,7 @@ class RBP(ListMetric, RankingMetricBase):
 
         items = recs.ids()
         good = np.isin(items, test.ids())
-        weight = self.weight.weight(np.arange(k))
+        weight = self.weight.weight(np.arange(1, k + 1))
         rbp = np.sum(weight[good]).item()
         wmax = self.weight.series_sum()
         if self.normalize:

@@ -15,7 +15,7 @@ from pytest import approx, mark
 
 from lenskit.data import ItemList
 from lenskit.metrics import call_metric
-from lenskit.metrics.ranking import RBP
+from lenskit.metrics.ranking import RBP, LogRankWeight
 from lenskit.testing import demo_recs  # noqa: F401
 
 _log = logging.getLogger(__name__)
@@ -66,6 +66,30 @@ def test_rbp_perfect_k(items, k, p):
     truth = ItemList(items)
     assert call_metric(RBP, recs, truth, k, patience=p) == approx(
         np.sum(p ** np.arange(eff_n)) * (1 - p)
+    )
+
+
+@given(
+    st.lists(st.integers(1), min_size=1, max_size=100, unique=True),
+    st.integers(1, 100),
+)
+def test_rbp_perfect_log_weight(items, k):
+    recs = ItemList(items, ordered=True)
+    truth = ItemList(items)
+    assert call_metric(RBP, recs, truth, k, weight=LogRankWeight(offset=1)) == approx(1.0)
+
+
+@given(
+    st.lists(st.integers(1), min_size=2, max_size=100, unique=True),
+)
+def test_rbp_partial_log_weight(items):
+    recs = ItemList(items, ordered=True)
+    truth = ItemList(items[::2])
+    w = np.reciprocal(np.log2(np.arange(1, len(recs) + 1) + 1))
+    gw = np.zeros_like(w)
+    gw[::2] = w[::2]
+    assert call_metric(RBP, recs, truth, weight=LogRankWeight(offset=1)) == approx(
+        np.sum(gw) / np.sum(w)
     )
 
 
