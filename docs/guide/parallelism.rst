@@ -10,10 +10,12 @@ variable controlling its:
 
 - :doc:`Batch operations <batch>` using :ref:`multi-process execution
   <parallel-model-ops>`.
-- Parallel model training.  For most models provided by LensKit, this is
-  implemented either using PyTorch JIT parallelism (:func:`torch.jit.fork`) or
-  using Rayon in the Rust extension module.
-- Parallel computation in the various backends (BLAS, MKL, Torch, etc.).
+- Parallel model training.  For most models provided by LensKit, such
+  parallelism uses Rayon in the Rust extension module or PyTorch JIT parallelism
+  (:func:`torch.jit.fork`) in Python code.
+- Parallel inference, using Rayon in the Rust extension module.
+- Parallel computation in the various backends (BLAS, MKL, Torch, etc.), for
+  both training and inference.
 
 .. _parallel-config:
 
@@ -36,12 +38,17 @@ The environment variables and their defaults are:
 
 .. envvar:: LK_NUM_THREADS
 
-    The number of threads to use for parallel model building.  Defaults to the
-    number of CPUs or 8, whichever is smaller.
+    The number of threads to use for LensKit's explicit parallelism (model
+    building and inference).  Defaults to the number of CPUs or 8, whichever is
+    smaller.
 
     This number is passed to :func:`torch.set_num_interop_threads` to set up the
     Torch JIT thread count, and is used to configure the Rayon thread pool used
     by the Rust acceleration module.
+
+    .. note::
+
+        Only the k-NN models currently use this at inference time.
 
 .. envvar:: LK_NUM_BACKEND_THREADS
 
@@ -108,6 +115,13 @@ PyTorch tensors, including those on CUDA devices, are shared.
 LensKit users will generally not need to directly use parallel op invokers, but
 if you are implementing new batch operations with parallelism they are useful.
 They may also be useful for other kinds of analysis.
+
+.. note::
+
+    Client code generally does not need to directly use this facility.  We are
+    also exploring deprecating the internal parallelism support in favor of Ray_.
+
+.. _Ray: https://docs.ray.io
 
 Debugging Parallelism and Performance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
