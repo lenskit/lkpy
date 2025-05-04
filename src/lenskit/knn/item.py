@@ -218,6 +218,8 @@ class ItemKNNScorer(Component[ItemList], Trainable):
 
     @override
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
+        ensure_parallel_init()
+
         query = RecQuery.create(query)
         log = _log.bind(user_id=query.user_id, n_items=len(items))
         trace(log, "beginning prediction")

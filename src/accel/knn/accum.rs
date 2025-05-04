@@ -20,6 +20,12 @@ pub(super) enum ScoreAccumulator<T> {
     Full(BinaryHeap<AccEntry<T>>),
 }
 
+impl<T> Default for ScoreAccumulator<T> {
+    fn default() -> Self {
+        Self::Disabled
+    }
+}
+
 impl ScoreAccumulator<()> {
     pub fn add_weight(&mut self, limit: usize, weight: f32) -> PyResult<()> {
         self.add_value(limit, weight, ())

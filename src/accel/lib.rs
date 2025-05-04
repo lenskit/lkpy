@@ -9,6 +9,7 @@ use pyo3::prelude::*;
 use rayon::ThreadPoolBuilder;
 
 mod als;
+mod atomic;
 mod data;
 mod funksvd;
 mod knn;
