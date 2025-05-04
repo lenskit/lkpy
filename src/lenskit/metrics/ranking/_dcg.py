@@ -21,7 +21,7 @@ class DiscountWeight(RankWeight):
         self.discount = discount
 
     def weight(self, ranks):
-        return np.maximum(self.discount(ranks), 1)
+        return np.reciprocal(np.maximum(self.discount(ranks), 1))
 
 
 class NDCG(ListMetric, RankingMetricBase):
