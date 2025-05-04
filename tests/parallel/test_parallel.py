@@ -51,4 +51,13 @@ def test_proc_count_default():
 
 def test_proc_count_env():
     with set_env_var("LK_NUM_PROCS", "17"):
-        assert _resolve_parallel_config().processes == 17
+        cfg = _resolve_parallel_config()
+        assert cfg.processes == 17
+        assert cfg.subprocess().processes == 1
+
+
+def test_thread_ev_list():
+    with set_env_var("LK_NUM_THREADS", "4,2"):
+        cfg = _resolve_parallel_config()
+        assert cfg.threads == 4
+        assert cfg.subprocess().threads == 2

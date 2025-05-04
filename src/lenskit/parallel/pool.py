@@ -33,7 +33,7 @@ def multiprocess_executor(
     ensure_parallel_init()
     cfg = get_parallel_config()
     if sp_config is None:
-        sp_config = ParallelConfig(1, 1, cfg.child_threads, 1)
+        sp_config = cfg.subprocess()
     if n_jobs is None:
         n_jobs = cfg.processes
 
@@ -54,7 +54,7 @@ class ProcessPoolOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
     ):
         log = _log.bind(n_jobs=n_jobs)
         if worker_parallel is None:
-            worker_parallel = ParallelConfig(1, 1, get_parallel_config().child_threads, 1)
+            worker_parallel = get_parallel_config().subprocess()
         ctx = LensKitMPContext(worker_parallel)
 
         log.debug("initializing shared memory")

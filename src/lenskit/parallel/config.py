@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 import os
 import warnings
-from dataclasses import dataclass
 from typing import Optional
 
 import torch
@@ -22,16 +21,42 @@ _config: Optional[ParallelConfig] = None
 _log = logging.getLogger(__name__)
 
 
-@dataclass
 class ParallelConfig:
     """
     Parallel processing configuration.
     """
 
-    processes: int
-    threads: int
-    backend_threads: int
-    child_threads: int
+    _processes: list[int]
+    _threads: list[int]
+    _backend_threads: list[int]
+
+    def __init__(
+        self, processes: int | list[int], threads: int | list[int], backend_threads: int | list[int]
+    ):
+        self._processes = _ensure_numlist(processes)
+        self._threads = _ensure_numlist(threads)
+        self._backend_threads = _ensure_numlist(backend_threads)
+
+    @property
+    def processes(self) -> int:
+        """
+        Get the number of workers this process may spawn.
+        """
+        return self._processes[0]
+
+    @property
+    def threads(self) -> int:
+        """
+        Get the number of direct threads for this worker.
+        """
+        return self._threads[0]
+
+    @property
+    def backend_threads(self) -> int:
+        """
+        Get the number of backend threads for this worker.
+        """
+        return self._backend_threads[0]
 
     @property
     def total_threads(self) -> int:
@@ -46,20 +71,54 @@ class ParallelConfig:
         Get this parallel configuration as a set of environment variables.  The
         set also includes ``OMP_NUM_THREADS`` to configure OMP early.
         """
-        return {
+        evs = {
             "LK_NUM_PROCS": str(self.processes),
             "LK_NUM_THREADS": str(self.threads),
             "LK_NUM_BACKEND_THREADS": str(self.backend_threads),
-            "LK_NUM_CHILD_THREADS": str(self.child_threads),
         }
+        return evs
+
+    def subprocess(
+        self,
+        processes: int | list[int] | None = None,
+        threads: int | list[int] | None = None,
+        backend_threads: int | list[int] | None = None,
+    ) -> ParallelConfig:
+        """
+        Get the parallel configuration for a subprocess.
+        """
+        ncpus = effective_cpu_count()
+
+        if processes is None:
+            if len(self._processes) > 1:
+                processes = self._processes[1:]
+                np = processes[0]
+            else:
+                np = processes = 1
+
+        if threads is None:
+            if len(self._threads) > 1:
+                threads = self._threads[1:]
+            else:
+                allowed = min(ncpus // np, 4)
+                threads = min(allowed, self.threads)
+
+        if backend_threads is None:
+            if len(self._backend_threads) > 1:
+                backend_threads = self._backend_threads[1:]
+            else:
+                allowed = min(ncpus // np, 4)
+                backend_threads = min(allowed, self.backend_threads)
+
+        return ParallelConfig(processes=processes, threads=threads, backend_threads=backend_threads)
 
 
 def initialize(
     config: ParallelConfig | None = None,
     *,
-    processes: int | None = None,
-    threads: int | None = None,
-    backend_threads: int | None = None,
+    processes: int | list[int] | None = None,
+    threads: int | list[int] | None = None,
+    backend_threads: int | list[int] | None = None,
     child_threads: int | None = None,
 ):
     """
@@ -83,7 +142,7 @@ def initialize(
         child_threads:
             The number of threads backends are allowed to use in the worker
             processes in multiprocessing operations (see
-            :envvar:`LK_NUM_CHILD_THREADS`).
+            :envvar:`LK_NUM_CHILD_THREADS`). Deprecated.
     """
     global _config
     if _config:
@@ -140,21 +199,15 @@ def get_parallel_config() -> ParallelConfig:
 
 
 def subprocess_config(
-    processes: int | None = None,
-    threads: int | None = None,
-    backend_threads: int | None = None,
-    child_threads: int | None = None,
+    processes: int | list[int] | None = None,
+    threads: int | list[int] | None = None,
+    backend_threads: int | list[int] | None = None,
 ) -> ParallelConfig:
     """
     Get a parallel configuration for a subprocess.
     """
     cfg = get_parallel_config()
-    return ParallelConfig(
-        processes=processes or 1,
-        threads=threads or 1,
-        backend_threads=backend_threads or cfg.child_threads,
-        child_threads=child_threads or 1,
-    )
+    return cfg.subprocess(processes, threads, backend_threads)
 
 
 def effective_cpu_count() -> int:
@@ -180,9 +233,9 @@ def effective_cpu_count() -> int:
 
 
 def _resolve_parallel_config(
-    processes: int | None = None,
-    threads: int | None = None,
-    backend_threads: int | None = None,
+    processes: int | list[int] | None = None,
+    threads: int | list[int] | None = None,
+    backend_threads: int | list[int] | None = None,
     child_threads: int | None = None,
 ) -> ParallelConfig:
     nprocs = os.environ.get("LK_NUM_PROCS", None)
@@ -192,16 +245,25 @@ def _resolve_parallel_config(
     ncpus = effective_cpu_count()
 
     if processes is None and nprocs:
-        processes = int(nprocs)
+        processes = _parse_numlist(nprocs)
 
     if threads is None and nthreads:
-        threads = int(nthreads)
+        threads = _parse_numlist(nthreads)
 
     if backend_threads is None and nbthreads:
-        backend_threads = int(nbthreads)
+        backend_threads = _parse_numlist(nbthreads)
 
     if child_threads is None and cthreads:
+        warnings.warn(
+            "LK_NUM_CHILD_THREADS is deprecated, use list in LK_NUM_BACKEND_THREADS instead",
+            DeprecationWarning,
+        )
         child_threads = int(cthreads)
+    elif child_threads is not None:
+        warnings.warn(
+            "child_theads is deprecated, use list in backend_threads instead",
+            DeprecationWarning,
+        )
 
     if processes is None:
         processes = min(ncpus, 4)
@@ -209,10 +271,32 @@ def _resolve_parallel_config(
     if threads is None:
         threads = min(ncpus, 8)
 
+    processes = _ensure_numlist(processes)
+    threads = _ensure_numlist(threads)
+
     if backend_threads is None:
-        backend_threads = max(min(ncpus // threads, 4), 1)
+        backend_threads = max(min(ncpus // threads[0], 4), 1)
 
-    if child_threads is None:
-        child_threads = max(min(ncpus // processes, 4), 1)
+    backend_threads = _ensure_numlist(backend_threads)
 
-    return ParallelConfig(processes, threads, backend_threads, child_threads)
+    if child_threads is not None:
+        backend_threads.append(child_threads)
+
+    return ParallelConfig(processes, threads, backend_threads)
+
+
+def _unparse_numlist(nums: list[int]) -> str:
+    return ",".join([str(i) for i in nums])
+
+
+def _parse_numlist(spec: str):
+    return [int(s.strip()) for s in spec.split(",")]
+
+
+def _ensure_numlist(nums: int | list[int] | str) -> list[int]:
+    if isinstance(nums, str):
+        return _parse_numlist(nums)
+    elif isinstance(nums, list):
+        return nums
+    else:
+        return [nums]
