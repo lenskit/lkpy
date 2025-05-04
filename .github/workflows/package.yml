@@ -109,6 +109,62 @@ jobs:
           name: pypi-dist-wheels-${{ matrix.plat.host }}-${{ matrix.plat.target }}
           path: ./dist/*.whl
 
+  dev-publish:
+    name: Publish to INERTIAL PyPI
+    runs-on: ubuntu-latest
+    needs: [sdist, wheels]
+
+    environment: local-pip
+
+    steps:
+      - name: Fetch compiled package distributions
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pypi-dist-*
+          path: dist
+          merge-multiple: true
+
+      - name: List packages
+        run: ls dist
+
+      - name: 🕶️ Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Rclone configuration
+        run: |
+          sudo apt install -y rclone
+          mkdir -p ~/.config/rclone
+          pass=$(rclone obscure $WEBDAV_PASSWORD)
+          cat >~/.config/rclone/rclone.conf <<<EOF
+          [inertial-pypi]
+          type = webdav
+          url = https://inertial.cci.drexel.edu/dist/lenskit-dev/
+          vendor = other
+          user = $WEBDAV_USER
+          pass = $pass
+          EOF
+
+      - name: List remote
+        run: "rclone lsd inertial-pypi:"
+
+      - name: Upload packages
+        run: |
+          rclone copy dist inertial-pypi:packages/
+
+      - name: List all packages
+        run: |
+          rclone lsf inertial-pypi:packages/ |tee packages.lst
+
+      - name: Prepare package index
+        run: |
+          uvx dumb-pypi --output-dir index --package-list packages.lst --packages-url https://inertial.cci.drexel.edu/dist/lenskit-dev/packages/
+
+      - name: Upload package index
+        run: |
+          rclone copy index inertial-pypi:
+
   pypi-publish:
     name: Publish to PyPI
     runs-on: ubuntu-latest
