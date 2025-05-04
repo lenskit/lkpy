@@ -145,6 +145,9 @@ jobs:
           user = $WEBDAV_USER
           pass = $pass
           EOF
+        env:
+          WEBDAV_USER: ${env.WEBDAV_USER}
+          WEBDAV_PASSWORD: ${secrets.WEBDAV_PASSWORD}
 
       - name: List remote
         run: "rclone lsd inertial-pypi:"
@@ -152,9 +155,6 @@ jobs:
       - name: Upload packages
         run: |
           rclone copy dist inertial-pypi:packages/
-        env:
-          WEBDAV_USER: ${env.WEBDAV_USER}
-          WEBDAV_PASSWORD: ${secrets.WEBDAV_PASSWORD}
 
       - name: List all packages
         run: |
@@ -167,9 +167,6 @@ jobs:
       - name: Upload package index
         run: |
           rclone copy index inertial-pypi:
-        env:
-          WEBDAV_USER: ${env.WEBDAV_USER}
-          WEBDAV_PASSWORD: ${secrets.WEBDAV_PASSWORD}
 
   pypi-publish:
     name: Publish to PyPI
