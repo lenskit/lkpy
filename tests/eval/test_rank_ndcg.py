@@ -7,6 +7,8 @@
 import numpy as np
 import pandas as pd
 
+import hypothesis.strategies as st
+from hypothesis import given
 from pytest import approx, mark
 
 from lenskit.data import ItemList
@@ -121,3 +123,24 @@ def test_ndcg_almost_perfect_k_gain():
     assert call_metric(NDCG, recs, truth, k=2, gain="rating") == approx(
         array_dcg(np.array([3.0, 4.0])) / array_dcg(np.array([5.0, 4.0]))
     )
+
+
+@given(
+    st.lists(st.integers(1), min_size=1, max_size=100, unique=True),
+    st.integers(1, 100),
+)
+def test_ndcg_alt_discount(items, k):
+    rng = np.random.default_rng()
+    picked = rng.choice(items, size=max(len(items) // 2, 1), replace=False)
+    recs = ItemList(items, ordered=True)
+    truth = ItemList(picked)
+
+    mv_weighted = call_metric(NDCG, recs, truth, k=k)
+    mv_legacy = call_metric(NDCG, recs, truth, k=k, discount=np.log2)
+
+    try:
+        assert mv_weighted == approx(mv_legacy)
+    except Exception as e:
+        e.add_note(f"recs: {recs}")
+        e.add_note(f"truth: {truth}")
+        raise e

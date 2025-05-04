@@ -11,8 +11,17 @@ from typing_extensions import Callable, TypeAlias, override
 from lenskit.data import ItemList
 
 from ._base import ListMetric, RankingMetricBase
+from ._weighting import LogRankWeight, RankWeight
 
 Discount: TypeAlias = Callable[[NDArray[np.number]], NDArray[np.float64]]
+
+
+class DiscountWeight(RankWeight):
+    def __init__(self, discount: Discount):
+        self.discount = discount
+
+    def weight(self, ranks):
+        return np.reciprocal(np.maximum(self.discount(ranks), 1))
 
 
 class NDCG(ListMetric, RankingMetricBase):
@@ -40,27 +49,39 @@ class NDCG(ListMetric, RankingMetricBase):
         k:
             The maximum recommendation list length to consider (longer lists are
             truncated).
+        weight:
+            The rank weighting to use.
         discount:
             The discount function to use.  The default, base-2 logarithm, is the
-            original function used by :cite:t:`ndcg`.
+            original function used by :cite:t:`ndcg`.  It is deprecated in favor
+            of the ``weight`` option.
         gain:
             The field on the test data to use for gain values.  If ``None`` (the
-            default), all items present in the test data have a gain of 1.  If set
-            to a string, it is the name of a field (e.g. ``'rating'``).  In all
-            cases, items not present in the truth data have a gain of 0.
+            default), all items present in the test data have a gain of 1.  If
+            set to a string, it is the name of a field (e.g. ``'rating'``).  In
+            all cases, items not present in the truth data have a gain of 0.
 
     Stability:
         Caller
     """
 
-    discount: Discount
+    weight: RankWeight
+    discount: Discount | None
     gain: str | None
 
     def __init__(
-        self, k: int | None = None, *, discount: Discount = np.log2, gain: str | None = None
+        self,
+        k: int | None = None,
+        *,
+        weight: RankWeight = LogRankWeight(),
+        discount: Discount | None = None,
+        gain: str | None = None,
     ):
         super().__init__(k=k)
+        self.weight = weight
         self.discount = discount
+        if discount is not None:
+            self.weight = DiscountWeight(discount)
         self.gain = gain
 
     @property
@@ -84,16 +105,16 @@ class NDCG(ListMetric, RankingMetricBase):
                 gains = gains.nlargest(n=self.k)
             else:
                 gains = gains.sort_values(ascending=False)
-            ideal = array_dcg(np.require(gains.values, np.float32), self.discount)
+            ideal = array_dcg(np.require(gains.values, np.float32), self.weight)
         else:
             scores = np.zeros_like(items, dtype=np.float32)
             scores[np.isin(items, test.ids())] = 1.0
             n = len(test)
             if self.k and self.k < n:
                 n = self.k
-            ideal = fixed_dcg(n, self.discount)
+            ideal = fixed_dcg(n, self.weight)
 
-        realized = array_dcg(np.require(scores, np.float32), self.discount)
+        realized = array_dcg(np.require(scores, np.float32), self.weight)
         return realized / ideal
 
 
@@ -132,14 +153,23 @@ class DCG(ListMetric, RankingMetricBase):
         Caller
     """
 
-    discount: Discount
+    weight: RankWeight
+    discount: Discount | None
     gain: str | None
 
     def __init__(
-        self, k: int | None = None, *, discount: Discount = np.log2, gain: str | None = None
+        self,
+        k: int | None = None,
+        *,
+        weight: RankWeight = LogRankWeight(),
+        discount: Discount | None = None,
+        gain: str | None = None,
     ):
         super().__init__(k=k)
+        self.weight = weight
         self.discount = discount
+        if discount is not None:
+            self.weight = DiscountWeight(discount)
         self.gain = gain
 
     @property
@@ -163,10 +193,10 @@ class DCG(ListMetric, RankingMetricBase):
             scores = np.zeros_like(items, dtype=np.float32)
             scores[np.isin(items, test.ids())] = 1.0
 
-        return array_dcg(np.require(scores, np.float32), self.discount)
+        return array_dcg(np.require(scores, np.float32), self.weight)
 
 
-def array_dcg(scores: NDArray[np.number], discount: Discount = np.log2):
+def array_dcg(scores: NDArray[np.number], weight: RankWeight = LogRankWeight()):
     """
     Compute the Discounted Cumulative Gain of a series of recommended items with rating scores.
     These should be relevance scores; they can be :math:`{0,1}` for binary relevance data.
@@ -185,20 +215,16 @@ def array_dcg(scores: NDArray[np.number], discount: Discount = np.log2):
     """
     scores = np.nan_to_num(scores)
     ranks = np.arange(1, len(scores) + 1)
-    disc = discount(ranks)
-    np.maximum(disc, 1, out=disc)
-    np.reciprocal(disc, out=disc)
-    return np.dot(scores, disc)
+    wvec = weight.weight(ranks)
+    return np.dot(scores, wvec)
 
 
-def fixed_dcg(n: int, discount: Discount = np.log2):
+def fixed_dcg(n: int, weight: RankWeight = LogRankWeight()):
     """
     Compute the Discounted Cumulative Gain of a fixed number of items with
     relevance 1.
     """
 
     ranks = np.arange(1, n + 1)
-    disc = discount(ranks)
-    disc = np.maximum(disc, 1)
-    disc = np.reciprocal(disc)
-    return np.sum(disc)
+    wvec = weight.weight(ranks)
+    return np.sum(wvec)

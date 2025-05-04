@@ -10,28 +10,27 @@ from typing_extensions import override
 from lenskit.data.items import ItemList
 
 from ._base import ListMetric, RankingMetricBase
+from ._weighting import GeometricRankWeight, RankWeight
 
 
 class RBP(ListMetric, RankingMetricBase):
     """
-    Evaluate recommendations with rank-biased precision :cite:p:`rbp` with a
-    patience parameter :math:`\\gamma`.
+    Evaluate recommendations with rank-biased precision :cite:p:`rbp`.
 
-    If :math:`r_{ui} \\in \\{0, 1\\}` is binary implicit ratings, this is
-    computed by:
+    If :math:`r_{ui} \\in \\{0, 1\\}` is binary implicit ratings, and the
+    weighting is the default geometric weight with patience :math:`p`, the RBP
+    is computed by:
 
     .. math::
         \\begin{align*}
-        \\operatorname{RBP}_\\gamma(L, u) & =(1 - \\gamma) \\sum_i r_{ui} p^i
+        \\operatorname{RBP}_p(L, u) & =(1 - p) \\sum_i r_{ui} p^i
         \\end{align*}
 
     The original RBP metric depends on the idea that the rank-biased sum of
     binary relevance scores in an infinitely-long, perfectly-precise list has is
-    :math:`1/(1 - \\gamma)`. However, in recommender evaluation, we usually have
-    a small test set, so the maximum achievable RBP is significantly less, and
-    is a function of the number of test items.  With ``normalize=True``, the RBP
-    metric will be normalized by the maximum achievable with the provided test
-    data.
+    :math:`1/(1 - p)`.  If RBP is used with a non-standard weighting that does
+    not have a defined infinite series sum, then this metric will normalize by
+    the sum of the discounts for the recommendation list.
 
     :cite:t:`rbp` provide an extended discussion on choosing the patience
     parameter :math:`\\gamma`.  This metric defaults to :math:`\\gamma=0.85`, to
@@ -41,6 +40,12 @@ class RBP(ListMetric, RankingMetricBase):
     in the paper; however, RBP with high patience should be no worse than nDCG
     (and perhaps even better) in this regard.
 
+    In recommender evaluation, we usually have a small test set, so the maximum
+    achievable RBP is significantly less than the theoretical maximum, and is a
+    function of the number of test items.  With ``normalize=True``, the RBP
+    metric will be normalized by the maximum achievable with the provided test
+    data, like NDCG.
+
     .. warning::
 
         The additional normalization is experimental, and should not yet be used
@@ -49,9 +54,12 @@ class RBP(ListMetric, RankingMetricBase):
     Args:
         k:
             The maximum recommendation list length.
+        weight:
+            The rank weighting model to use.  Defaults to
+            :class:`GeometricRankWeight` with the specified patience parameter.
         patience:
-            The patience parameter :math:`\\gamma`, the probability that the
-            user continues browsing at each point.  The default is 0.85.
+            The patience parameter :math:`p`, the probability that the user
+            continues browsing at each point.  The default is 0.85.
         normalize:
             Whether to normalize the RBP scores; if ``True``, divides the RBP
             score by the maximum achievable with the test data (as in nDCG).
@@ -60,12 +68,23 @@ class RBP(ListMetric, RankingMetricBase):
         Caller
     """
 
+    weight: RankWeight
     patience: float
     normalize: bool
 
-    def __init__(self, k: int | None = None, *, patience: float = 0.85, normalize: bool = False):
+    def __init__(
+        self,
+        k: int | None = None,
+        *,
+        weight: RankWeight | None = None,
+        patience: float = 0.85,
+        normalize: bool = False,
+    ):
         super().__init__(k)
         self.patience = patience
+        if weight is None:
+            weight = GeometricRankWeight(patience)
+        self.weight = weight
         self.normalize = normalize
 
     @property
@@ -86,13 +105,16 @@ class RBP(ListMetric, RankingMetricBase):
 
         items = recs.ids()
         good = np.isin(items, test.ids())
-        # γ^(r-1)
-        disc = np.power(self.patience, np.arange(k))
-        rbp = np.sum(disc[good])
+        weight = self.weight.weight(np.arange(1, k + 1))
+        rbp = np.sum(weight[good]).item()
+        wmax = self.weight.series_sum()
         if self.normalize:
             # normalize by max achieveable RBP
-            max = np.sum(disc[: min(nrel, k)])
+            max = np.sum(weight[: min(nrel, k)]).item()
             return rbp / max
+        elif wmax is not None:
+            # normalization defined by metric
+            return rbp / wmax
         else:
-            # standard RBP normalization
-            return rbp * (1 - self.patience)
+            # normalize by total weight
+            return rbp / np.sum(weight).item()
