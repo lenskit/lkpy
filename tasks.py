@@ -116,7 +116,8 @@ def build_sdist(c: Context):
 @task(setup_dirs)
 def build_dist(c: Context):
     "Build packages for the current platform."
-    c.run("uv build")
+    with _updated_pyproject_toml(c):
+        c.run("uv build")
 
 
 @task(setup_dirs)
