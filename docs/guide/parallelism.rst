@@ -29,12 +29,17 @@ implementations and support code that wants to make sure that parallelism is
 properly configured should call :py:func:`ensure_parallel_init` prior to
 performing any parallelizable computation.
 
+Each environment variable can also be a comma-separated list, to configure
+nested parallelism.
+
 The environment variables and their defaults are:
 
 .. envvar:: LK_NUM_PROCS
 
     The number of processes to use for batch operations.  Defaults to the number
     of CPUs or 4, whichever is lower.
+
+    If this variable does not specify a list, it is set to 1 in worker processes.
 
 .. envvar:: LK_NUM_THREADS
 
@@ -45,6 +50,10 @@ The environment variables and their defaults are:
     This number is passed to :func:`torch.set_num_interop_threads` to set up the
     Torch JIT thread count, and is used to configure the Rayon thread pool used
     by the Rust acceleration module.
+
+    If this variable does not specify a list, worker process thread counts are
+    capped by the process count and CPU capacity, with a maximum of 4 threads
+    per worker.
 
     .. note::
 
@@ -61,6 +70,10 @@ The environment variables and their defaults are:
     This is passed to :func:`torch.set_num_threads` (to control PyTorch internal
     parallelism), and to the underlying BLAS layer (via `threadpoolctl`_).
 
+    If this variable does not specify a list and :envvar:`LK_NUM_CHILD_THREADS`
+    is not set, worker process thread counts are capped by the process count and
+    CPU capacity, with a maximum of 4 threads per worker.
+
 .. envvar:: LK_NUM_CHILD_THREADS
 
     The number of backend threads to be used in worker processes spawned by
@@ -69,7 +82,11 @@ The environment variables and their defaults are:
 
         max(min(NCPUS // LK_NUM_PROCS, 4), 1)
 
-    Workers have both the process and thread counts set to 1.
+    .. deprecated::
+
+        This variable is deprecated in favor of specifying comma-separated lists for
+        :envvar:`LK_NUM_THREADS` and :envvar:`LK_NUM_BACKEND_THREADS`.
+
 
 The number of CPUs (``NCPUS``) is determined by the function
 :py:func:`effective_cpu_count`.
