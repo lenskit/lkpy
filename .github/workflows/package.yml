@@ -137,7 +137,7 @@ jobs:
           sudo apt install -y rclone
           mkdir -p ~/.config/rclone
           pass=$(rclone obscure $WEBDAV_PASSWORD)
-          cat >~/.config/rclone/rclone.conf <<<EOF
+          cat >~/.config/rclone/rclone.conf <<EOF
           [inertial-pypi]
           type = webdav
           url = https://inertial.cci.drexel.edu/dist/lenskit-dev/
