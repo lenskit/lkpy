@@ -28,6 +28,9 @@ information on how to upgrade your code.
     matrix width or row dimension in side information; it is now embedded into
     the Arrow metadata).
 -   Fix MovieLens import to detect movies without genres (:issue:`727`, :pr:`738`).
+-   :ref:`parallelism` now supports comma-separated lists for configuring
+    parallelism within worker processes, and :envvar:`LK_NUM_CHILD_THREADS` is
+    now deprecated.
 
 Component Changes
 .................

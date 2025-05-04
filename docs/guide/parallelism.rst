@@ -32,6 +32,14 @@ performing any parallelizable computation.
 Each environment variable can also be a comma-separated list, to configure
 nested parallelism.
 
+.. versionchanged:: 2025.3.0
+
+    :envvar:`LK_NUM_CHILD_THREADS` is now deprecated, in favor of setting
+    comma-separated lists in the other environment variables.
+
+    The default for :envvar:`LK_NUM_THREADS` in a worker process is now
+    the same as :envvar:`LK_NUM_BACKEND_THREADS` instead of 1.
+
 The environment variables and their defaults are:
 
 .. envvar:: LK_NUM_PROCS
