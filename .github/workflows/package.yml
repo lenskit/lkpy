@@ -146,8 +146,8 @@ jobs:
           pass = $pass
           EOF
         env:
-          WEBDAV_USER: ${env.WEBDAV_USER}
-          WEBDAV_PASSWORD: ${secrets.WEBDAV_PASSWORD}
+          WEBDAV_USER: ${{env.WEBDAV_USER}}
+          WEBDAV_PASSWORD: ${{secrets.WEBDAV_PASSWORD}}
 
       - name: List remote
         run: "rclone lsd inertial-pypi:"
