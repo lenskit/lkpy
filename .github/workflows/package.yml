@@ -154,7 +154,7 @@ jobs:
 
       - name: Upload packages
         run: |
-          rclone copy dist inertial-pypi:packages/
+          rclone copy --exclude=CACHEDIR.TAG dist inertial-pypi:packages/
 
       - name: List all packages
         run: |
