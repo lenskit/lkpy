@@ -146,7 +146,7 @@ jobs:
           pass = $pass
           EOF
         env:
-          WEBDAV_USER: ${{env.WEBDAV_USER}}
+          WEBDAV_USER: ${{vars.WEBDAV_USER}}
           WEBDAV_PASSWORD: ${{secrets.WEBDAV_PASSWORD}}
 
       - name: List remote
