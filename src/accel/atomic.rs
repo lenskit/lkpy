@@ -79,13 +79,19 @@ impl<T: Send + Sync> AtomicCell<T> {
         // just make sure we aren't locked
         let cur = self.pointer.load(Ordering::Relaxed);
         assert!(cur.is_null());
-        if let Ok(_) = self
-            .pointer
-            .compare_exchange(cur, ptr, Ordering::Relaxed, Ordering::Relaxed)
-        {
-            return;
-        } else {
-            panic!("another thread wrote while we have the lock");
+        loop {
+            match self
+                .pointer
+                .compare_exchange_weak(cur, ptr, Ordering::Relaxed, Ordering::Relaxed)
+            {
+                Ok(_) => {
+                    return;
+                }
+                Err(p) if !p.is_null() => {
+                    panic!("another thread wrote while we were working");
+                }
+                _ => (),
+            }
         }
     }
 }
