@@ -47,20 +47,26 @@ impl<T: Send + Sync> AtomicCell<T> {
 
     /// Acquire the pointer.
     fn acquire(&self) -> *mut T {
+        let mut ptr = self.pointer.load(Ordering::Relaxed);
         loop {
             // load the pointer
-            let ptr = self.pointer.load(Ordering::Relaxed);
+
             if !ptr.is_null() {
                 // the cell is live, try to take the lock (null the cell)
                 let null = ptr::null_mut::<T>();
-                if let Ok(_) = self.pointer.compare_exchange_weak(
+                match self.pointer.compare_exchange_weak(
                     ptr,
                     null,
                     Ordering::Relaxed,
                     Ordering::Relaxed,
                 ) {
-                    // we successfully took the lock, return the pointer
-                    return ptr;
+                    Ok(_) => {
+                        // we successfully took the lock, return the pointer
+                        return ptr;
+                    }
+                    Err(p) => {
+                        ptr = p;
+                    }
                 }
             }
             // we failed to take the lock, loop and try again
