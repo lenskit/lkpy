@@ -169,6 +169,18 @@ jobs:
         run: |
           rclone copy index inertial-pypi:
 
+      - name: "🧑🏼‍🎤 Activate central index update"
+        uses: actions/script@v7
+        with:
+          github-token: "${{ secrets.INDEX_TOKEN }}"
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: 'lenskit',
+              repo: 'lenskit-pypi',
+              workflow_id: 'publish.yml',
+              ref: 'main',
+            })
+
   pypi-publish:
     name: Publish to PyPI
     runs-on: ubuntu-latest
