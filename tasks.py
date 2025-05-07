@@ -224,7 +224,6 @@ def update_headers(
 
 @task
 def clean(c: Context):
-    print(c.config)
     for od in ["build", "dist", "output", "target"]:
         odp = root / od
         if odp.exists():
@@ -236,6 +235,13 @@ def clean(c: Context):
         print(f"🚮 removing {glob}")
         for file in root.glob(glob):
             _log.info("removing %s", file)
+            if not c.config.run.dry:
+                file.unlink()
+
+    pkg = root / "src" / "lenskit"
+    for file in pkg.glob("_accel*"):
+        if file.name != "_accel.pyi":
+            print(f"🚮 removing {file}")
             if not c.config.run.dry:
                 file.unlink()
 
