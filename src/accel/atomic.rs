@@ -47,24 +47,32 @@ impl<T: Send + Sync> AtomicCell<T> {
 
     /// Acquire the pointer.
     fn acquire(&self) -> *mut T {
+        // load the pointer
+        let mut ptr = self.pointer.load(Ordering::Acquire);
         loop {
-            // load the pointer
-            let ptr = self.pointer.load(Ordering::Relaxed);
-            if !ptr.is_null() {
-                // the cell is live, try to take the lock (null the cell)
+            if ptr.is_null() {
+                // the cell is locked, loop and try again
+                spin_loop();
+                ptr = self.pointer.load(Ordering::Acquire);
+            } else {
+                // the cell is unlocked, try to take the lock
                 let null = ptr::null_mut::<T>();
-                if let Ok(_) = self.pointer.compare_exchange_weak(
+                match self.pointer.compare_exchange_weak(
                     ptr,
                     null,
-                    Ordering::Relaxed,
+                    Ordering::Acquire,
                     Ordering::Relaxed,
                 ) {
-                    // we successfully took the lock, return the pointer
-                    return ptr;
+                    Ok(_) => {
+                        // we successfully took the lock, return the pointer
+                        return ptr;
+                    }
+                    Err(p) => {
+                        // someone else updated, so we need to try again
+                        ptr = p;
+                    }
                 }
             }
-            // we failed to take the lock, loop and try again
-            spin_loop();
         }
     }
 
@@ -73,13 +81,20 @@ impl<T: Send + Sync> AtomicCell<T> {
         // just make sure we aren't locked
         let cur = self.pointer.load(Ordering::Relaxed);
         assert!(cur.is_null());
-        if let Ok(_) = self
-            .pointer
-            .compare_exchange(cur, ptr, Ordering::Relaxed, Ordering::Relaxed)
-        {
-            return;
-        } else {
-            panic!("another thread wrote while we have the lock");
+        loop {
+            match self
+                .pointer
+                .compare_exchange_weak(cur, ptr, Ordering::Release, Ordering::Relaxed)
+            {
+                Ok(_) => {
+                    return;
+                }
+                Err(p) if !p.is_null() => {
+                    eprintln!("thread wrote, bailing");
+                    panic!("another thread wrote while we were working");
+                }
+                _ => (),
+            }
         }
     }
 }
