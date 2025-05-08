@@ -98,7 +98,7 @@ fn train_row_solve(
     let soln = if let Some(cholesky) = mtm.view((0, 0), (nd, nd)).cholesky() {
         cholesky.solve(&v)
     } else {
-        mtm.lu().solve(&v).expect("matrix is singular")
+        mtm.lu().solve(&v).expect("matrix is non-invertible")
     };
 
     let soln = soln.into_ndarray1();
