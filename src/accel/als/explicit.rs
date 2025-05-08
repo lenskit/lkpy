@@ -8,6 +8,7 @@ use arrow::{
     array::{make_array, ArrayData},
     pyarrow::PyArrowType,
 };
+use nalgebra::Cholesky;
 use ndarray::{Array1, ArrayBase, ArrayView2, Axis, ViewRepr};
 use nshare::{IntoNalgebra, IntoNdarray1};
 use numpy::{Ix1, PyArray2, PyArrayMethods};
@@ -71,6 +72,7 @@ fn train_row_solve(
     let vals = matrix.row_vals(row_num);
 
     if cols.len() == 0 {
+        row_data.fill(0.0);
         return 0.0;
     }
 
@@ -93,9 +95,12 @@ fn train_row_solve(
 
     let mtm = mtm.into_nalgebra();
     let v = v.into_nalgebra();
-    let cholesky = mtm.cholesky().expect("matrix is not positive definite");
+    let soln = if let Some(cholesky) = mtm.view((0, 0), (nd, nd)).cholesky() {
+        cholesky.solve(&v)
+    } else {
+        mtm.lu().solve(&v).expect("matrix is non-invertible")
+    };
 
-    let soln = cholesky.solve(&v);
     let soln = soln.into_ndarray1();
     let deltas = &soln - &row_data;
     row_data.assign(&soln);
