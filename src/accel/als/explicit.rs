@@ -71,6 +71,7 @@ fn train_row_solve(
     let vals = matrix.row_vals(row_num);
 
     if cols.len() == 0 {
+        row_data.fill(0.0);
         return 0.0;
     }
 
