@@ -40,10 +40,10 @@ class NMFConfig(BaseModel, extra="forbid"):
 class NMFScorer(Component[ItemList], Trainable):
     config: NMFConfig
 
-    users_: Vocabulary
-    items_: Vocabulary
-    user_components_: NDArray[np.float64]
-    item_components_: NDArray[np.float64]
+    users: Vocabulary
+    items: Vocabulary
+    user_components: NDArray[np.float64]
+    item_components: NDArray[np.float64]
 
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
@@ -67,10 +67,10 @@ class NMFScorer(Component[ItemList], Trainable):
         )
         _log.info("[%s] Trained NMF in %d iterations", timer, n_iter)
 
-        self.user_components_ = W
-        self.item_components_ = H.T
-        self.users_ = data.users
-        self.items_ = data.items
+        self.user_components = W
+        self.item_components = H.T
+        self.users = data.users
+        self.items = data.items
         _log.info("finished model training in %s", timer)
 
     @override
@@ -79,18 +79,18 @@ class NMFScorer(Component[ItemList], Trainable):
 
         uidx = None
         if query.user_id is not None:
-            uidx = self.users_.number(query.user_id, missing="none")
+            uidx = self.users.number(query.user_id, missing="none")
 
         if uidx is None:
             return ItemList(items, scores=np.nan)
 
         # Get index for user & usable items
-        iidx = items.numbers(vocabulary=self.items_, missing="negative")
+        iidx = items.numbers(vocabulary=self.items, missing="negative")
         good_iidx = iidx[iidx >= 0]
 
         _log.debug("reverse-transforming user %s (idx=%d)", query.user_id, uidx)
-        W = self.user_components_[[uidx], :]
-        H = self.item_components_[good_iidx, :]
+        W = self.user_components[[uidx], :]
+        H = self.item_components[good_iidx, :]
         S = W @ H.T
 
         scores = np.full(len(items), np.nan)
