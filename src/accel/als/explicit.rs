@@ -70,7 +70,7 @@ fn train_row_solve(
     let cols = matrix.row_cols(row_num);
     let vals = matrix.row_vals(row_num);
 
-    if cols.len() == 0 {
+    if cols.len() == 0 || vals.iter().all(|v| v.abs() < 1.0e-12) {
         row_data.fill(0.0);
         return 0.0;
     }
@@ -94,7 +94,10 @@ fn train_row_solve(
 
     let mtm = mtm.into_nalgebra();
     let v = v.into_nalgebra();
-    let cholesky = mtm.cholesky().expect("matrix is not positive definite");
+    let cholesky = mtm.cholesky().expect(&format!(
+        "matrix is not positive definite ({} cols)",
+        cols.len()
+    ));
 
     let soln = cholesky.solve(&v);
     let soln = soln.into_ndarray1();
