@@ -14,12 +14,12 @@ This module contains a truncated SVD explicit-feedback scorer built on
 from __future__ import annotations
 
 import numpy as np
-from numpy.typing import NDArray
 from pydantic import BaseModel
 from sklearn.decomposition import non_negative_factorization
 from typing_extensions import Literal, override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
+from lenskit.data.types import NPMatrix
 from lenskit.data.vocab import Vocabulary
 from lenskit.logging import Stopwatch, get_logger
 from lenskit.pipeline import Component
@@ -42,12 +42,12 @@ class NMFScorer(Component[ItemList], Trainable):
 
     users: Vocabulary
     items: Vocabulary
-    user_components: NDArray[np.float64]
-    item_components: NDArray[np.float64]
+    user_components: NPMatrix
+    item_components: NPMatrix
 
     @override
     def train(self, data: Dataset, options: TrainingOptions = TrainingOptions()):
-        if hasattr(self, "item_components_") and not options.retrain:
+        if hasattr(self, "item_components") and not options.retrain:
             return
 
         timer = Stopwatch()
@@ -67,8 +67,8 @@ class NMFScorer(Component[ItemList], Trainable):
         )
         _log.info("[%s] Trained NMF in %d iterations", timer, n_iter)
 
-        self.user_components = W
-        self.item_components = H.T
+        self.user_components = np.require(W, dtype=np.float32)
+        self.item_components = np.require(H.T, dtype=np.float32)
         self.users = data.users
         self.items = data.items
         _log.info("finished model training in %s", timer)

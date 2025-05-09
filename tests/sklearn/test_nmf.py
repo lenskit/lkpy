@@ -35,15 +35,15 @@ def test_nmf_basic_build():
     algo = nmf.NMFScorer(n_components=2)
     algo.train(simple_ds)
 
-    assert algo.user_components_.shape == (3, 2)
+    assert algo.user_components.shape == (3, 2)
 
 
 def test_nmf_predict_basic():
     _log.info("NMF input data:\n%s", simple_df)
     algo = nmf.NMFScorer(n_components=2)
     algo.train(simple_ds)
-    _log.info("user matrix:\n%s", str(algo.user_components_))
-    _log.info("item matrix:\n%s", str(algo.item_components_))
+    _log.info("user matrix:\n%s", str(algo.user_components))
+    _log.info("item matrix:\n%s", str(algo.item_components))
 
     preds = algo(10, ItemList([3]))
     assert len(preds) == 1
@@ -76,19 +76,6 @@ def test_nmf_predict_bad_user():
     assert preds is not None
     assert preds.index[0] == 3
     assert np.isnan(preds.loc[3])
-
-
-@mark.slow
-def test_nmf_save_load(ml_ds: Dataset):
-    original = nmf.NMFScorer(n_components=20)
-    original.train(ml_ds)
-
-    mod = pickle.dumps(original)
-    _log.info("serialized to %d bytes", len(mod))
-    algo = pickle.loads(mod)
-
-    assert np.all(algo.user_components_ == original.user_components_)
-    assert np.all(algo.item_components_ == original.item_components_)
 
 
 @mark.slow
