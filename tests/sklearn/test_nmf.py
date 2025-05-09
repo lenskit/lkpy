@@ -5,14 +5,13 @@
 # SPDX-License-Identifier: MIT
 
 import logging
-import pickle
 
 import numpy as np
 import pandas as pd
 
 from pytest import importorskip, mark
 
-from lenskit.data import Dataset, ItemList, from_interactions_df
+from lenskit.data import ItemList, from_interactions_df
 from lenskit.metrics import quick_measure_model
 from lenskit.testing import BasicComponentTests, ScorerTests
 
