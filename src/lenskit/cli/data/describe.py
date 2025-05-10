@@ -12,6 +12,7 @@ import click
 from rich.console import Console
 from rich.markdown import Markdown
 
+from lenskit.data.amazon import load_amazon_ratings
 from lenskit.data.dataset import Dataset
 from lenskit.data.movielens import load_movielens
 from lenskit.data.summary import save_stats
@@ -22,6 +23,7 @@ _log = get_logger(__name__)
 
 @click.command("describe")
 @click.option("--movielens", "format", flag_value="movielens", help="describe MovieLens data")
+@click.option("--amazon", "format", flag_value="amazon", help="describe Amazon rating data")
 @click.option("--markdown", is_flag=True, help="output raw Markdown")
 @click.argument("path", type=Path)
 def describe(format: str | None, markdown: bool, path: Path):
@@ -38,6 +40,9 @@ def describe(format: str | None, markdown: bool, path: Path):
         case "movielens":
             log.info("loading MovieLens data")
             data = load_movielens(path)
+        case "amazon":
+            log.info("loading Amazon data")
+            data = load_amazon_ratings(path)
         case _:
             raise ValueError(f"unknown data format {format}")
 
@@ -49,9 +54,3 @@ def describe(format: str | None, markdown: bool, path: Path):
         out = StringIO()
         save_stats(data, out)
         console.print(Markdown(out.getvalue()), width=min(console.width, 80))
-
-
-def convert_movielens(source: Path) -> Dataset:
-    log = _log.bind(src=str(source))
-    log.info("loading MovieLens data")
-    return load_movielens(source)
