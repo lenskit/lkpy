@@ -15,7 +15,11 @@ These sets include:
 Currently, LensKit supports reading the rating CSV files with
 :func:`lenskit.data.load_amazon_ratings`.  The command line tools also support Amazon data.
 
+.. note::
+
+    Several data files from 2014 and 2018 contain duplicates, which currently are not supported.
+
 Data Model
 ----------
 
-The ratings are in a standard `rating` interaction on the dataset.
+The ratings are in a standard `rating` interaction on the dataset with a `timestamp` attribute.
