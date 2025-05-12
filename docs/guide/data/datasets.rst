@@ -9,3 +9,4 @@ directly from the compressed files downloaded from their original sources.
     :maxdepth: 1
 
     movielens
+    amazon
