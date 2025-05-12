@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import BinaryIO
 
 import pyarrow as pa
+import pyarrow.compute as pc
 from pyarrow.csv import ConvertOptions, ReadOptions, open_csv
 from xopen import xopen
 
@@ -78,39 +79,44 @@ def load_amazon_ratings(*files: Path | str | PathLike[str]) -> Dataset:
 
             log.info("reading %s %s", version, category)
 
-            for batch in reader:
-                tbl = pa.Table.from_batches([batch])
+            for tbl in reader:
                 dsb.add_interactions("rating", tbl, missing="insert")
 
     return dsb.build()
 
 
-def open_az_2023(input: BinaryIO) -> Generator[pa.RecordBatch]:
+def open_az_2023(input: BinaryIO) -> Generator[pa.Table]:
     # 2023 Amazon data: has labels, we will ignore history
     with open_csv(
         input,
         convert_options=ConvertOptions(
             include_columns=["user_id", "parent_asin", "rating", "timestamp"],
-            column_types={"rating": pa.float32(), "timestamp": pa.timestamp("s", "UTC")},
+            column_types={"rating": pa.float32()},
         ),
     ) as reader:
         for batch in reader:
-            yield batch.rename_columns(["user_id", "item_id", "rating", "timestamp"])
+            batch = batch.rename_columns(["user_id", "item_id", "rating", "timestamp"])
+            columns = {c: batch.column(c) for c in batch.column_names}
+            columns["timestamp"] = pc.cast(batch.column("timestamp"), pa.timestamp("ms"))
+            yield pa.Table.from_pydict(columns)
 
 
-def open_az_2014(input: BinaryIO) -> Generator[pa.RecordBatch]:
+def open_az_2014(input: BinaryIO) -> Generator[pa.Table]:
     # 2014 Amazon data: user, item, rating, timestamp
     with open_csv(
         input,
         read_options=ReadOptions(column_names=["user_id", "item_id", "rating", "timestamp"]),
         convert_options=ConvertOptions(
-            column_types={"rating": pa.float32(), "timestamp": pa.timestamp("s", "UTC")},
+            column_types={"rating": pa.float32()},
         ),
     ) as reader:
-        yield from reader
+        for batch in reader:
+            columns = {c: batch.column(c) for c in batch.column_names}
+            columns["timestamp"] = pc.cast(batch.column("timestamp"), pa.timestamp("s"))
+            yield pa.Table.from_pydict(columns)
 
 
-def open_az_2018(input: BinaryIO) -> Generator[pa.RecordBatch]:
+def open_az_2018(input: BinaryIO) -> Generator[pa.Table]:
     # 2018 Amazon data: user, item, rating, timestamp
     with open_csv(
         input,
@@ -119,7 +125,10 @@ def open_az_2018(input: BinaryIO) -> Generator[pa.RecordBatch]:
             column_names=["item_id", "user_id", "rating", "timestamp"],
         ),
         convert_options=ConvertOptions(
-            column_types={"rating": pa.float32(), "timestamp": pa.timestamp("s", "UTC")},
+            column_types={"rating": pa.float32()},
         ),
     ) as reader:
-        yield from reader
+        for batch in reader:
+            columns = {c: batch.column(c) for c in batch.column_names}
+            columns["timestamp"] = pc.cast(batch.column("timestamp"), pa.timestamp("s"))
+            yield pa.Table.from_pydict(columns)
