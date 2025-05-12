@@ -219,7 +219,7 @@ jobs:
         with:
           path: |
             data
-          key: test-eval-mldata
+          key: test-eval-data
 
       - name: Download datasets
         run: |
