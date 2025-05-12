@@ -16,11 +16,11 @@ _log = get_logger(__name__)
 
 
 @click.command("convert")
-@click.option("--movielens", "format", flag_value="movielens", help="convert MovieLens data")
-@click.option("--amazon", "format", flag_value="amazon", help="convert Amazon rating data")
-@click.argument("src", type=Path)
+@click.option("--movielens", "format", flag_value="movielens", help="Convert MovieLens data.")
+@click.option("--amazon", "format", flag_value="amazon", help="Convert Amazon rating data.")
+@click.argument("src", nargs=-1, required=True, type=Path)
 @click.argument("dst", type=Path)
-def convert(format: str | None, src: Path, dst: Path):
+def convert(format: str | None, src: list[Path], dst: Path):
     """
     Convert data into the LensKit native format.
     """
@@ -33,9 +33,11 @@ def convert(format: str | None, src: Path, dst: Path):
             raise click.UsageError("no data format specified")
         case "movielens":
             log.info("loading MovieLens data")
-            data = load_movielens(src)
+            if len(src) != 1:
+                log.error("received %d source paths, MovieLens only takes one", len(src))
+            data = load_movielens(src[0])
         case "amazon":
-            data = load_amazon_ratings(src)
+            data = load_amazon_ratings(*src)
         case _:
             raise ValueError(f"unknown data format {format}")
 
