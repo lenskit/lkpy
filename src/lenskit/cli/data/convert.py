@@ -27,6 +27,10 @@ _log = get_logger(__name__)
 def convert(format: str | None, src: list[Path], dst: Path, item_lists: bool = False):
     """
     Convert data into the LensKit native format.
+
+    By default, this will create a LensKit Dataset.  With --item-lists, it will
+    extract the default interactions into an ItemListCollection and save it in
+    native format.
     """
 
     log = _log.bind(src=str(src))
