@@ -91,7 +91,7 @@ def open_az_2023(input: BinaryIO) -> Generator[pa.RecordBatch]:
         input,
         convert_options=ConvertOptions(
             include_columns=["user_id", "parent_asin", "rating", "timestamp"],
-            column_types={"rating": pa.float32()},
+            column_types={"rating": pa.float32(), "timestamp": pa.timestamp("s", "UTC")},
         ),
     ) as reader:
         for batch in reader:
@@ -104,7 +104,7 @@ def open_az_2014(input: BinaryIO) -> Generator[pa.RecordBatch]:
         input,
         read_options=ReadOptions(column_names=["user_id", "item_id", "rating", "timestamp"]),
         convert_options=ConvertOptions(
-            column_types={"rating": pa.float32()},
+            column_types={"rating": pa.float32(), "timestamp": pa.timestamp("s", "UTC")},
         ),
     ) as reader:
         yield from reader
@@ -119,7 +119,7 @@ def open_az_2018(input: BinaryIO) -> Generator[pa.RecordBatch]:
             column_names=["item_id", "user_id", "rating", "timestamp"],
         ),
         convert_options=ConvertOptions(
-            column_types={"rating": pa.float32()},
+            column_types={"rating": pa.float32(), "timestamp": pa.timestamp("s", "UTC")},
         ),
     ) as reader:
         yield from reader
