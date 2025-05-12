@@ -4,7 +4,11 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import os
+from contextlib import contextmanager
 from pathlib import Path
+from shutil import copyfileobj
+from urllib.parse import urlparse
 from urllib.request import urlopen
 
 import click
@@ -14,20 +18,33 @@ from lenskit.logging import get_logger
 
 _log = get_logger(__name__)
 ML_LOC = "http://files.grouplens.org/datasets/movielens/"
+AZ_LOC = {
+    "2023": "https://mcauleylab.ucsd.edu/public_datasets/data/amazon_2023/benchmark/0core/rating_only/{}.csv.gz",
+    "2023-5core": "https://mcauleylab.ucsd.edu/public_datasets/data/amazon_2023/benchmark/5core/rating_only/{}.csv.gz",
+    "2018": "https://mcauleylab.ucsd.edu/public_datasets/data/amazon_v2/categoryFilesSmall/{}.csv",
+    "2014": "https://snap.stanford.edu/data/amazon/productGraph/categoryFiles/ratings_{}.csv",
+}
 
 
 @click.command("fetch")
-@click.option("--movielens", "source", flag_value="movielens", help="fetch MovieLens data")
+@click.option("--movielens", "source", flag_value="movielens", help="Fetch MovieLens data.")
+@click.option("--amazon", "source", flag_value="amazon", help="Fetch Amazon ratings data.")
+@click.option("--edition", default="2023", help="Amazon ratings edition.")
+@click.option("--core", is_flag=True, help="Fetch core instead of full data.")
 @click.option("--force", is_flag=True, help="overwrite existing file")
 @click.option("-D", "--data-dir", "dest", type=Path, help="directory for downloaded data")
 @click.argument("name", nargs=-1)
-def fetch(source: str | None, dest: Path | None, name: list[str], force: bool):
+def fetch(
+    source: str | None, dest: Path | None, name: list[str], force: bool, edition: str, core: bool
+):
     """
     Convert data into the LensKit native format.
     """
 
     if dest is None:
         dest = Path()
+
+    dest.mkdir(exist_ok=True, parents=True)
 
     match source:
         case None:
@@ -36,6 +53,9 @@ def fetch(source: str | None, dest: Path | None, name: list[str], force: bool):
         case "movielens":
             for n in name:
                 fetch_movielens(n, dest, force)
+        case "amazon":
+            for n in name:
+                fetch_amazon_ratings(edition, core, n, dest, force)
         case _:
             raise ValueError(f"unknown data format {source}")
 
@@ -72,15 +92,50 @@ def fetch_movielens(name: str, base_dir: Path, force: bool):
             return
 
     log.debug("ensuring parent directory exists")
-    base_dir.mkdir(exist_ok=True, parents=True)
 
     log.info("downloading MovieLens data set")
-    with zipfile.open("wb") as zf:
+    with output_file(zipfile) as zf:
         res = urlopen(zipurl)
-        block = res.read(8 * 1024 * 1024)
-        while len(block):
-            _log.debug("received %d bytes", len(block))
-            zf.write(block)
-            block = res.read(8 * 1024 * 1024)
+        copyfileobj(res, zf, 8 * 1024 * 1024)
 
     log.info("downloaded %s", naturalsize(zipfile.stat().st_size, binary=True))
+
+
+def fetch_amazon_ratings(edition: str, core: bool, name: str, base_dir: Path, force: bool):
+    key = edition + "-5core" if core else edition
+    log = _log.bind(source="amazon", name=name, edition=edition, core=core)
+    pat = AZ_LOC[key]
+
+    url = pat.format(name)
+    fn = os.path.basename(urlparse(url).path)
+
+    out_path = base_dir / fn
+    if out_path.exists() and not force:
+        log.info("output file already exists")
+        return
+
+    log.info("downloading %s", fn)
+    with output_file(out_path) as outf:
+        res = urlopen(url)
+        copyfileobj(res, outf, 8 * 1024 * 1024)
+
+    log.info("downloaded %s", naturalsize(out_path.stat().st_size, binary=True))
+
+
+@contextmanager
+def output_file(path: Path):
+    """
+    Open an output file and write.
+    """
+    pid = os.getpid()
+    tmp = path.with_name(f".{path.name}.{pid}.tmp")
+    _log.debug("opening temp file", name=tmp.name)
+    try:
+        with open(tmp, "wb") as file:
+            yield file
+        _log.debug("replacing real file", name=path.name)
+        os.replace(tmp, path)
+    finally:
+        if tmp.exists():
+            _log.debug("write failed, deleting temp file", name=tmp.name)
+            tmp.unlink()

@@ -219,12 +219,14 @@ jobs:
         with:
           path: |
             data
-            !data/*.zip
           key: test-eval-mldata
 
-      - name: Download ML data
+      - name: Download datasets
         run: |
           coverage run --source=src/lenskit -m lenskit data fetch -D data --movielens ml-100k ml-20m ml-1m ml-10m
+          coverage run -a --source=src/lenskit -m lenskit data fetch -D data/az23 --amazon --core Video_Games
+          coverage run -a --source=src/lenskit -m lenskit data fetch -D data/az18 --amazon --edition 2018 Video_Games
+          coverage run -a --source=src/lenskit -m lenskit data fetch -D data/az14 --amazon --edition 2014 Video_Games
 
       - name: Run Eval Tests
         run: |
