@@ -1,5 +1,8 @@
 *.yml
 *.zip
+*.csv
+*.gz
+*.zst
 ml-*/
 !ml-latest-small/
 *.parquet

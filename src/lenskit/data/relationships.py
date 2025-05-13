@@ -518,6 +518,10 @@ class MatrixRelationshipSet(RelationshipSet):
     def _sample_weighted(self, rng: np.random.Generator, size: int | tuple[int, int]):
         return rng.choice(self._col_nums.to_numpy(), size=size, replace=True)
 
+    @overload
+    def row_table(self, id: ID) -> pa.Table | None: ...
+    @overload
+    def row_table(self, *, number: int) -> pa.Table: ...
     def row_table(self, id: ID | None = None, *, number: int | None = None) -> pa.Table | None:
         """
         Get a single row of this interaction matrix as a table.
@@ -537,6 +541,10 @@ class MatrixRelationshipSet(RelationshipSet):
         tbl = tbl.drop_columns(num_col_name(self.row_type))
         return tbl
 
+    @overload
+    def row_items(self, id: ID) -> ItemList | None: ...
+    @overload
+    def row_items(self, *, number: int) -> ItemList: ...
     def row_items(self, id: ID | None = None, *, number: int | None = None) -> ItemList | None:
         """
         Get a single row of this interaction matrix as an item list.  Only valid
@@ -545,7 +553,7 @@ class MatrixRelationshipSet(RelationshipSet):
         if self.col_type != "item":
             raise RuntimeError("row_items() only valid for item-column matrices")
 
-        tbl = self.row_table(id=id, number=number)
+        tbl = self.row_table(id=id, number=number)  # type: ignore
         if tbl is None:
             return None
 
