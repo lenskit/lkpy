@@ -554,6 +554,12 @@ class ItemList:
         This is equivalent to :func:`numpy.isin` applied to the ID arrays, but
         is much more efficient in many cases.
         """
+        # fast path — use a mask
+        if self.vocabulary is not None and self.vocabulary == other.vocabulary:
+            mask = np.zeros(len(self.vocabulary), dtype=np.bool_)
+            mask[other.numbers()] = True
+            return mask[self.numbers()]
+
         return np.isin(self.ids(), other.ids())
 
     def to_df(self, *, ids: bool = True, numbers: bool = True) -> pd.DataFrame:
