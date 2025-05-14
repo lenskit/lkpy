@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal, TypeAlias
 
@@ -121,6 +122,20 @@ class FlexMFImplicitScorer(FlexMFScorerBase):
 
 
 class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplicitConfig]):
+    _loss: Callable[[torch.Tensor, torch.Tensor, float, torch.Tensor | None], torch.Tensor]
+
+    def __init__(self, component, data, options):
+        super().__init__(component, data, options)
+        match self.config.loss:
+            case "logistic":
+                self._loss = _loss_logistic
+            case "pairwise":
+                self._loss = _loss_pairwise
+            case "warp":
+                self._loss = _loss_warp
+            case other:  # pragma: nocover
+                raise ValueError(f"unknown loss {other}")
+
     def prepare_data(self, data: Dataset) -> FlexMFTrainingData:
         """
         Set up the training data and context for the scorer.
@@ -164,7 +179,7 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
         )
 
     def score(self, users, items) -> tuple[torch.Tensor, torch.Tensor]:
-        if self.config.reg_method == "L2":
+        if self.explicit_norm:
             result = self.model(users, items, return_norm=True)
             scores = result[0, ...]
 
@@ -183,23 +198,9 @@ class FlexMFImplicitTrainer(FlexMFTrainerBase[FlexMFImplicitScorer, FlexMFImplic
 
         neg_items, neg_pred, neg_norm, weights = self.scored_negatives(batch, users, pos_pred)
 
-        match self.config.loss:
-            case "logistic":
-                pos_lp = -F.logsigmoid(pos_pred) * self.config.positive_weight
-                neg_lp = -F.logsigmoid(-neg_pred)
-                tot_lp = pos_lp.sum() + neg_lp.sum()
-                tot_n = pos_lp.nelement() + neg_lp.nelement()
-                loss = tot_lp / tot_n
+        loss = self._loss(pos_pred, neg_pred, self.config.positive_weight, weights)
 
-            case "pairwise":
-                lp = -F.logsigmoid(pos_pred - neg_pred)
-                loss = lp.mean()
-            case "warp":
-                assert weights is not None
-                lp = -F.logsigmoid(pos_pred - neg_pred) * weights
-                loss = lp.mean()
-
-        if self.config.reg_method == "L2":
+        if self.explicit_norm:
             loss = loss + self.config.regularization * 0.5 * (pos_norm.mean() + neg_norm.mean())
 
         loss.backward()
@@ -289,3 +290,22 @@ class FlexMFWARPTrainer(FlexMFImplicitTrainer):
             + 1 / (120 * ranks**4)
         )
         return neg_items, neg_scores.reshape(-1, 1), neg_norms, weights.to(pos_scores.device)
+
+
+def _loss_logistic(pos_pred, neg_pred, pos_weight, weights):
+    pos_lp = -F.logsigmoid(pos_pred) * pos_weight
+    neg_lp = -F.logsigmoid(-neg_pred)
+    tot_lp = pos_lp.sum() + neg_lp.sum()
+    tot_n = pos_lp.nelement() + neg_lp.nelement()
+    return tot_lp / tot_n
+
+
+def _loss_pairwise(pos_pred, neg_pred, pos_weight, weights):
+    lp = -F.logsigmoid(pos_pred - neg_pred)
+    return lp.mean()
+
+
+def _loss_warp(pos_pred, neg_pred, pos_weight, weights):
+    assert weights is not None
+    lp = -F.logsigmoid(pos_pred - neg_pred) * weights
+    return lp.mean()
