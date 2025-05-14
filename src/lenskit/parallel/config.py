@@ -76,6 +76,12 @@ class ParallelConfig:
             "LK_NUM_THREADS": str(self.threads),
             "LK_NUM_BACKEND_THREADS": str(self.backend_threads),
         }
+        if "OMP_NUM_THREADS" not in os.environ:
+            evs["OMP_NUM_THREADS"] = str(self.backend_threads)
+        if "OPENBLAS_NUM_THREADS" not in os.environ:
+            evs["OPENBLAS_NUM_THREADS"] = str(self.backend_threads)
+        if "MKL_NUM_THREADS" not in os.environ:
+            evs["MKL_NUM_THREADS"] = str(self.backend_threads)
         return evs
 
     def subprocess(
@@ -158,7 +164,7 @@ def initialize(
         _config = config
     _log.debug("configuring for parallelism: %s", _config)
 
-    if 'OPENBLAS_NUM_THREADS' not in os.environ and 'MKL_NUM_THREADS' not in os.environ:
+    if "OPENBLAS_NUM_THREADS" not in os.environ and "MKL_NUM_THREADS" not in os.environ:
         threadpool_limits(_config.backend_threads, "blas")
     try:
         torch.set_num_interop_threads(_config.threads)
