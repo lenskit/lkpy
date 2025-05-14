@@ -158,7 +158,8 @@ def initialize(
         _config = config
     _log.debug("configuring for parallelism: %s", _config)
 
-    threadpool_limits(_config.backend_threads, "blas")
+    if 'OPENBLAS_NUM_THREADS' not in os.environ and 'MKL_NUM_THREADS' not in os.environ:
+        threadpool_limits(_config.backend_threads, "blas")
     try:
         torch.set_num_interop_threads(_config.threads)
     except RuntimeError as e:
