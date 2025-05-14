@@ -546,6 +546,16 @@ class ItemList:
         else:
             return val.to(format)
 
+    def isin(self, other: ItemList) -> np.ndarray[tuple[int], np.dtype[np.bool_]]:
+        """
+        Return a boolean mask identifying the items of this list that are in the
+        other list.
+
+        This is equivalent to :func:`numpy.isin` applied to the ID arrays, but
+        is much more efficient in many cases.
+        """
+        return np.isin(self.ids(), other.ids())
+
     def to_df(self, *, ids: bool = True, numbers: bool = True) -> pd.DataFrame:
         """
         Convert this item list to a Pandas data frame.  It has the following columns:

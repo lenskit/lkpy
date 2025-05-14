@@ -674,3 +674,71 @@ def test_from_vocab(ml_ds: Dataset):
     assert np.all(items.ids() == ml_ds.items.ids())
     assert np.all(items.numbers() == np.arange(len(items)))
     assert items.vocabulary is ml_ds.items
+
+
+@given(
+    st.lists(st.integers(min_value=1, max_value=4_000_000_000), unique=True),
+    st.lists(st.integers(min_value=1, max_value=4_000_000_000), unique=True),
+)
+def test_isin_integers(left, right):
+    ill = ItemList(left)
+    ilr = ItemList(right)
+
+    mask = ill.isin(ilr)
+    m2 = np.isin(np.array(left), np.array(right))
+    assert np.all(mask == m2)
+
+
+@given(
+    st.lists(st.integers(min_value=1, max_value=4_000_000_000), unique=True),
+    st.lists(st.integers(min_value=1, max_value=4_000_000_000), unique=True),
+)
+def test_isin_integer_vocab(left, right):
+    vocab = Vocabulary(set(left + right))
+    ill = ItemList(left, vocabulary=vocab)
+    ilr = ItemList(right, vocabulary=vocab)
+
+    mask = ill.isin(ilr)
+    m2 = np.isin(np.array(left), np.array(right))
+    assert np.all(mask == m2)
+
+
+@given(st.lists(st.uuids(), unique=True), st.lists(st.uuids(), unique=True))
+def test_isin_strings(left, right):
+    left = [str(x) for x in left]
+    right = [str(x) for x in right]
+
+    ill = ItemList(left)
+    ilr = ItemList(right)
+
+    mask = ill.isin(ilr)
+    m2 = np.isin(np.array(left), np.array(right))
+    assert np.all(mask == m2)
+
+
+@given(
+    st.lists(st.uuids(), unique=True),
+    st.lists(st.integers(min_value=1, max_value=4_000_000_000), unique=True),
+)
+def test_isin_strings_ints(left, right):
+    left = [str(x) for x in left]
+
+    ill = ItemList(left)
+    ilr = ItemList(right)
+
+    mask = ill.isin(ilr)
+    assert not np.any(mask)
+
+
+@given(
+    st.lists(st.integers(min_value=1, max_value=4_000_000_000), unique=True),
+    st.lists(st.uuids(), unique=True),
+)
+def test_isin_ints_strings(left, right):
+    right = [str(x) for x in right]
+
+    ill = ItemList(left)
+    ilr = ItemList(right)
+
+    mask = ill.isin(ilr)
+    assert not np.any(mask)
