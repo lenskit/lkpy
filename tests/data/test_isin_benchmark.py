@@ -15,6 +15,7 @@ from pytest import mark
 
 LEFT_SIZE = 50000
 RIGHT_SIZE = 100
+TOTAL_SIZE = LEFT_SIZE * 2
 
 
 @mark.benchmark(group="integers")
@@ -24,6 +25,19 @@ def test_numpy_integers(rng: np.random.Generator, benchmark):
 
     def search():
         _mask = np.isin(left, right)
+
+    benchmark(search)
+
+
+@mark.benchmark(group="integers")
+def test_numpy_integer_mask(rng: np.random.Generator, benchmark):
+    left = np.arange(LEFT_SIZE)
+    right = rng.choice(LEFT_SIZE * 2, RIGHT_SIZE, replace=False)
+
+    def search():
+        mask = np.zeros(TOTAL_SIZE, dtype=np.bool_)
+        mask[right] = True
+        _m = mask[left]
 
     benchmark(search)
 
