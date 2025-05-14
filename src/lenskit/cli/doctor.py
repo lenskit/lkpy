@@ -19,7 +19,7 @@ from rich.console import Console, ConsoleOptions, group
 from rich.padding import Padding
 from rich.table import Table
 
-from lenskit import __version__
+from lenskit import __version__, _accel
 from lenskit.logging import get_logger, stdout_console
 from lenskit.parallel import ensure_parallel_init
 from lenskit.parallel.ray import ray_available
@@ -147,6 +147,8 @@ def inspect_compute():
 
     yield ""
     yield "[bold]Threading layers[/bold]:"
+    yield "  Rayon:"
+    yield kvp("threads", _accel.thread_count(), level=3)
     for i, pool in enumerate(threadpoolctl.threadpool_info(), 1):
         yield f"  Backend {i}:"
         for k, v in pool.items():
