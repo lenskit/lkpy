@@ -64,6 +64,11 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
     Torch device for training.
     """
 
+    explicit_norm: bool
+    """
+    Use explicit (L2) norm for normalizing data.
+    """
+
     rng: np.random.Generator
     """
     NumPy generator for random number generation.
@@ -82,6 +87,7 @@ class FlexMFTrainerBase(ModelTrainer, Generic[Comp, Cfg]):
         ensure_parallel_init()
 
         self.component = component
+        self.explicit_norm = component.config.reg_method == "L2"
 
         self.log = _log.bind(scorer=self.__class__.__name__, size=self.config.embedding_size)
 
