@@ -7,6 +7,7 @@
 # pyright: basic
 from __future__ import annotations
 
+import json
 import logging
 import os
 import warnings
@@ -117,6 +118,17 @@ class ParallelConfig:
                 backend_threads = min(allowed, self.backend_threads)
 
         return ParallelConfig(processes=processes, threads=threads, backend_threads=backend_threads)
+
+    def __str__(self):
+        obj = json.dumps(
+            {
+                "processes": self.processes,
+                "threads": self.threads,
+                "backend_threads": self.backend_threads,
+            },
+            indent=2,
+        )
+        return f"ParallelConfig {obj}"
 
 
 def initialize(

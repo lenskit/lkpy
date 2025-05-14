@@ -247,11 +247,11 @@ def init_worker(*, autostart: bool = True) -> WorkerContext:
             when the caller will start and stop the context if it is new.
     """
     log_cfg = pickle.loads(base64.decodebytes(os.environb[b"LK_LOG_CONFIG"]))
-    ensure_parallel_init()
     context = WorkerContext.active()
     if context is None:
         context = WorkerContext(log_cfg)
         if autostart:
             context.start()
 
+    ensure_parallel_init()
     return context
