@@ -5,16 +5,16 @@
 # SPDX-License-Identifier: MIT
 
 """
-This is for implicit
+Nonnegative matrix factorization for implicit feedback.
 
-This module contains a truncated SVD explicit-feedback scorer built on
-:class:`sklearn.decomposition.TruncatedSVD`.
+This module contains a non-negative factorization implicit-feedback scorer built on
+:func:`sklearn.decomposition.non_negative_factorization`.
 """
 
 from __future__ import annotations
 
 import numpy as np
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 from sklearn.decomposition import non_negative_factorization
 from typing_extensions import Literal, override
 
@@ -29,15 +29,33 @@ _log = get_logger(__name__)
 
 
 class NMFConfig(BaseModel, extra="forbid"):
+    """
+    Configuration for :class:`NMFScorer`.
+    See the documentation for :func:`sklearn.decomposition.non_negative_factorization`
+    for the configuration options.
+
+    """
+
     beta_loss: Literal["frobenius", "kullback-leibler", "itakura-saito"] = "frobenius"
-    max_iter: int = 200
-    n_components: int | None = None
+    max_iter: int = Field(default=200, validation_alias=AliasChoices("max_iter", "epochs"))
+    n_components: int | None = Field(
+        default=None, validation_alias=AliasChoices("n_components", "embedding_size")
+    )
     alpha_W: float = 0.0
     alpha_H: float | Literal["same"] = "same"
     l1_ratio: float = 0.0
 
 
 class NMFScorer(Component[ItemList], Trainable):
+    """
+    Non-negative matrix factorization for implicit feedback using SciKit-Learn's
+    :func:`sklearn.decomposition.non_negative_factorization`. It computes the user
+    and item embedding matrices using an indicator matrix as the input.
+
+    Stability:
+        Caller
+    """
+
     config: NMFConfig
 
     users: Vocabulary
