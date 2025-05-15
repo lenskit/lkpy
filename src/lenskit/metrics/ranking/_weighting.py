@@ -20,9 +20,10 @@ from lenskit.data.types import NPVector
 
 class RankWeight(ABC):
     """
-    Interface for rank weighting models.  This returns *multiplicative* weights,
-    so that scores should be multiplied by the weights in order to produce
-    weighted scores.
+    Base class for rank weighting models.
+
+    This returns *multiplicative* weights, such that scores should be multiplied
+    by the weights in order to produce weighted scores.
 
     Stability:
         caller
@@ -87,8 +88,9 @@ class GeometricRankWeight(RankWeight):
 
 class LogRankWeight(RankWeight):
     r"""
-    Logarithmic weighting for result ranks.  This is the ranking model typically
-    used for DCG and NDCG.
+    Logarithmic weighting for result ranks, as used in NDCG.
+
+    This is the ranking model typically used for DCG and NDCG.
 
     Since :math:`\operatorname{lg} 1 = 0`, simply taking the log will result in
     division by 0 when weights are applied.  The correction for this in the
