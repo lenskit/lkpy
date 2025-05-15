@@ -14,6 +14,10 @@ including in derived packages.  It relies on PyTest and Hypothesis.
 import os
 from contextlib import contextmanager
 
+import numpy as np
+
+import hypothesis.strategies as st
+
 from ._arrays import coo_arrays, scored_lists, sparse_arrays, sparse_tensors
 from ._components import BasicComponentTests, ScorerTests
 from ._markers import jit_enabled, wantjit
@@ -78,3 +82,10 @@ def have_memory(gb: int | float) -> bool:
     p_count = os.sysconf("SC_PHYS_PAGES")
     mem_size = p_size * p_count
     return mem_size >= gb * 1024 * 1024 * 1024
+
+
+def integer_ids():
+    """
+    Hypothesis strategy to generate valid integer user/item IDs.
+    """
+    return st.integers(1, np.iinfo("i8").max)

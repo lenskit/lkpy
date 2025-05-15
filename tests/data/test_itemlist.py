@@ -20,6 +20,7 @@ from pytest import mark, raises, warns
 from lenskit.data import Dataset, ItemList
 from lenskit.data.vocab import Vocabulary
 from lenskit.diagnostics import DataWarning
+from lenskit.testing import integer_ids
 
 ITEMS = ["a", "b", "c", "d", "e"]
 VOCAB = Vocabulary(ITEMS)
@@ -677,8 +678,8 @@ def test_from_vocab(ml_ds: Dataset):
 
 
 @given(
-    st.lists(st.integers(min_value=1, max_value=4_000_000_000), unique=True),
-    st.lists(st.integers(min_value=1, max_value=4_000_000_000), unique=True),
+    st.lists(integer_ids(), unique=True),
+    st.lists(integer_ids(), unique=True),
 )
 def test_isin_integers(left, right):
     ill = ItemList(left)
@@ -690,8 +691,8 @@ def test_isin_integers(left, right):
 
 
 @given(
-    st.lists(st.integers(min_value=1, max_value=4_000_000_000), unique=True),
-    st.lists(st.integers(min_value=1, max_value=4_000_000_000), unique=True),
+    st.lists(integer_ids(), unique=True),
+    st.lists(integer_ids(), unique=True),
 )
 def test_isin_integer_vocab(left, right):
     vocab = Vocabulary(set(left + right))
@@ -718,7 +719,7 @@ def test_isin_strings(left, right):
 
 @given(
     st.lists(st.uuids(), unique=True),
-    st.lists(st.integers(min_value=1, max_value=4_000_000_000), unique=True),
+    st.lists(integer_ids(), unique=True),
 )
 def test_isin_strings_ints(left, right):
     left = [str(x) for x in left]
@@ -731,7 +732,7 @@ def test_isin_strings_ints(left, right):
 
 
 @given(
-    st.lists(st.integers(min_value=1, max_value=4_000_000_000), unique=True),
+    st.lists(integer_ids(), unique=True),
     st.lists(st.uuids(), unique=True),
 )
 def test_isin_ints_strings(left, right):

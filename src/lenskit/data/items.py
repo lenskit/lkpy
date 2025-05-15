@@ -747,9 +747,14 @@ class ItemList:
         if self._ids is None:
             iids = None
         elif isinstance(sel, slice):
-            if sel.step != 1:
+            if sel.step and sel.step != 1:
                 raise ValueError("slices with steps unsupported")
-            iids = self._ids.slice(sel.start, sel.stop - sel.start)
+            start = sel.start or 0
+            if sel.stop is not None:
+                slen = sel.stop - start
+            else:
+                slen = len(self._ids) - start
+            iids = self._ids.slice(start, slen)
         elif pa.types.is_boolean(sel.type):
             iids = self._ids.filter(sel)
         else:

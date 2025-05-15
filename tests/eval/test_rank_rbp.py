@@ -16,7 +16,7 @@ from pytest import approx, mark
 from lenskit.data import ItemList
 from lenskit.metrics import call_metric
 from lenskit.metrics.ranking import RBP, LogRankWeight
-from lenskit.testing import demo_recs  # noqa: F401
+from lenskit.testing import demo_recs, integer_ids  # noqa: F401
 
 _log = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ def test_rbp_one_match():
     assert call_metric(RBP, recs, truth) == approx(0.15)
 
 
-@given(st.lists(st.integers(1), min_size=1, max_size=100, unique=True), st.floats(0.05, 0.95))
+@given(st.lists(integer_ids(), min_size=1, max_size=100, unique=True), st.floats(0.05, 0.95))
 def test_rbp_perfect(items, p):
     n = len(items)
     recs = ItemList(items, ordered=True)
@@ -47,7 +47,7 @@ def test_rbp_perfect(items, p):
     assert call_metric(RBP, recs, truth, patience=p) == approx(np.sum(p ** np.arange(n)) * (1 - p))
 
 
-@given(st.lists(st.integers(1), min_size=1, max_size=100, unique=True), st.floats(0.05, 0.95))
+@given(st.lists(integer_ids(), min_size=1, max_size=100, unique=True), st.floats(0.05, 0.95))
 def test_rbp_perfect_norm(items, p):
     recs = ItemList(items, ordered=True)
     truth = ItemList(items)
@@ -55,7 +55,7 @@ def test_rbp_perfect_norm(items, p):
 
 
 @given(
-    st.lists(st.integers(1), min_size=1, max_size=100, unique=True),
+    st.lists(integer_ids(), min_size=1, max_size=100, unique=True),
     st.integers(1, 100),
     st.floats(0.05, 0.95),
 )
@@ -70,7 +70,7 @@ def test_rbp_perfect_k(items, k, p):
 
 
 @given(
-    st.lists(st.integers(1), min_size=1, max_size=100, unique=True),
+    st.lists(integer_ids(), min_size=1, max_size=100, unique=True),
     st.integers(1, 100),
 )
 def test_rbp_perfect_log_weight(items, k):
@@ -80,7 +80,7 @@ def test_rbp_perfect_log_weight(items, k):
 
 
 @given(
-    st.lists(st.integers(1), min_size=2, max_size=100, unique=True),
+    st.lists(integer_ids(), min_size=2, max_size=100, unique=True),
 )
 def test_rbp_partial_log_weight(items):
     recs = ItemList(items, ordered=True)
@@ -94,7 +94,7 @@ def test_rbp_partial_log_weight(items):
 
 
 @given(
-    st.lists(st.integers(1), min_size=1, max_size=100, unique=True),
+    st.lists(integer_ids(), min_size=1, max_size=100, unique=True),
     st.integers(1, 100),
     st.floats(0.05, 0.95),
 )

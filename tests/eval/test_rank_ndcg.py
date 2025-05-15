@@ -15,6 +15,7 @@ from lenskit.data import ItemList
 from lenskit.metrics import call_metric
 from lenskit.metrics.ranking import NDCG
 from lenskit.metrics.ranking._dcg import array_dcg, fixed_dcg
+from lenskit.testing import integer_ids
 
 
 def test_dcg_empty():
@@ -126,7 +127,7 @@ def test_ndcg_almost_perfect_k_gain():
 
 
 @given(
-    st.lists(st.integers(1), min_size=1, max_size=100, unique=True),
+    st.lists(integer_ids(), min_size=1, max_size=100, unique=True),
     st.integers(1, 100),
 )
 def test_ndcg_alt_discount(items, k):
