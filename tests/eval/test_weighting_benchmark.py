@@ -33,9 +33,29 @@ def test_numpy(benchmark, size: int):
 
 @mark.benchmark()
 @mark.parametrize("size", [100, 1000, 50000])
+def test_numpy_log(benchmark, size: int):
+    def search():
+        ranks = np.arange(1, size + 1)
+        _w = np.exp(np.log(0.85) * (ranks - 1))
+
+    benchmark(search)
+
+
+@mark.benchmark()
+@mark.parametrize("size", [100, 1000, 50000])
 def test_numexpr(benchmark, size: int):
     def search():
         ranks = np.arange(1, size + 1)
         _w = numexpr.evaluate("patience ** (rank - 1)", {"patience": 0.85, "rank": ranks})
+
+    benchmark(search)
+
+
+@mark.benchmark()
+@mark.parametrize("size", [100, 1000, 50000])
+def test_numexpr_log(benchmark, size: int):
+    def search():
+        ranks = np.arange(1, size + 1)
+        _w = numexpr.evaluate("exp(log(patience) * (rank - 1))", {"patience": 0.85, "rank": ranks})
 
     benchmark(search)
