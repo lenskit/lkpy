@@ -1504,7 +1504,7 @@ requires-dist = [
     { name = "ipywidgets", marker = "extra == 'notebook'", specifier = "~=8.0" },
     { name = "lazy-loader", specifier = ">=0.4" },
     { name = "more-itertools", specifier = ">=9.0" },
-    { name = "numexpr", specifier = ">=2.10.2" },
+    { name = "numexpr", specifier = "~=2.10" },
     { name = "numpy", specifier = ">=1.25" },
     { name = "pandas", specifier = "~=2.0" },
     { name = "prettytable", specifier = "~=3.14" },
