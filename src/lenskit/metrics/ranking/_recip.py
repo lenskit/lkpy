@@ -41,8 +41,7 @@ class RecipRank(ListMetric, RankingMetricBase):
             return np.nan
 
         recs = self.truncate(recs)
-        items = recs.ids()
-        good = np.isin(items, test.ids())
+        good = recs.isin(test)
         (npz,) = np.nonzero(good)
         if len(npz):
             return 1.0 / (npz[0] + 1.0)

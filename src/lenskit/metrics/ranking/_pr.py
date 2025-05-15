@@ -40,8 +40,7 @@ class Precision(ListMetric, RankingMetricBase):
         if nrecs == 0:
             return np.nan
 
-        items = recs.ids()
-        ngood = np.isin(items, test.ids()).sum()
+        ngood = recs.isin(test).sum()
         return ngood / nrecs
 
 
@@ -64,8 +63,7 @@ class Recall(ListMetric, RankingMetricBase):
     def measure_list(self, recs: ItemList, test: ItemList) -> float:
         recs = self.truncate(recs)
 
-        items = recs.ids()
-        ngood = np.isin(items, test.ids()).sum()
+        ngood = recs.isin(test).sum()
         nrel = len(test)
         if self.k is not None and self.k < nrel:
             nrel = self.k

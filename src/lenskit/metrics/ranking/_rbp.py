@@ -103,8 +103,7 @@ class RBP(ListMetric, RankingMetricBase):
         if nrel == 0:
             return np.nan
 
-        items = recs.ids()
-        good = np.isin(items, test.ids())
+        good = recs.isin(test)
         weight = self.weight.weight(np.arange(1, k + 1))
         rbp = np.sum(weight[good]).item()
         wmax = self.weight.series_sum()

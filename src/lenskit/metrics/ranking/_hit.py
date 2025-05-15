@@ -38,4 +38,4 @@ class Hit(ListMetric, RankingMetricBase):
 
         recs = self.truncate(recs)
 
-        return 1 if np.any(np.isin(recs.ids(), test.ids())) else 0
+        return 1 if np.any(recs.isin(test)) else 0

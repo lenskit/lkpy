@@ -108,7 +108,7 @@ class NDCG(ListMetric, RankingMetricBase):
             ideal = array_dcg(np.require(gains.values, np.float32), self.weight)
         else:
             scores = np.zeros_like(items, dtype=np.float32)
-            scores[np.isin(items, test.ids())] = 1.0
+            scores[recs.isin(test)] = 1.0
             n = len(test)
             if self.k and self.k < n:
                 n = self.k
@@ -191,7 +191,7 @@ class DCG(ListMetric, RankingMetricBase):
             scores = gains.reindex(items, fill_value=0).values
         else:
             scores = np.zeros_like(items, dtype=np.float32)
-            scores[np.isin(items, test.ids())] = 1.0
+            scores[recs.isin(test)] = 1.0
 
         return array_dcg(np.require(scores, np.float32), self.weight)
 
