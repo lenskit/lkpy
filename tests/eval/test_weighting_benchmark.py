@@ -6,15 +6,16 @@
 
 from uuid import uuid4
 
-import numexpr
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from pytest import mark
+from pytest import importorskip, mark
 
 from lenskit.data import ItemList, Vocabulary
+
+numexpr = importorskip("numexpr")
 
 LEFT_SIZE = 50000
 RIGHT_SIZE = 100
