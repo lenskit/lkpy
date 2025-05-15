@@ -37,7 +37,6 @@ dependencies = [
   "prettytable ~=3.14",
   "xopen ~=2.0",
   "lazy-loader >=0.4",
-  "numexpr ~=2.10",
 ]
 
 [dependency-groups]
