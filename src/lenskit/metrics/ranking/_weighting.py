@@ -77,7 +77,7 @@ class GeometricRankWeight(RankWeight):
         self.patience = patience
 
     def weight(self, ranks) -> NPVector[np.float64]:
-        return np.power(self.patience, ranks - 1)
+        return np.exp(self.log_weight(ranks))
 
     def log_weight(self, ranks) -> NPVector[np.float64]:
         return np.log(self.patience) * (ranks - 1)
@@ -117,6 +117,6 @@ class LogRankWeight(RankWeight):
 
     def weight(self, ranks):
         if self.offset > 0:
-            return np.reciprocal(np.log(ranks + self.offset) / np.log(self.base))
+            return np.log(self.base) / np.log(ranks + self.offset)
         else:
-            return np.reciprocal(np.log(np.maximum(ranks, 2)) / np.log(self.base))
+            return np.log(self.base) / np.log(np.maximum(ranks, 2))
