@@ -80,7 +80,7 @@ class GeometricRankWeight(RankWeight):
         return np.power(self.patience, ranks - 1)
 
     def log_weight(self, ranks) -> NPVector[np.float64]:
-        return self.patience * np.log(ranks - 1)
+        return np.log(self.patience) * (ranks - 1)
 
     def series_sum(self) -> float:
         return 1 / (1 - self.patience)
