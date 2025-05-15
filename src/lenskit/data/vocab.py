@@ -181,7 +181,7 @@ class Vocabulary:
         return self.terms(nums)
 
     def id_array(self) -> pa.Array:
-        if self._array is None:
+        if not hasattr(self, "_array"):
             self._array = pa.array(self._index.values)
         return self._array
 
