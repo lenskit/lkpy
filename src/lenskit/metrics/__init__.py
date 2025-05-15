@@ -21,8 +21,10 @@ from .ranking import (
     DCG,
     NDCG,
     RBP,
+    ExposureGini,
     GeometricRankWeight,
     Hit,
+    ListGini,
     LogRankWeight,
     MeanPopRank,
     Precision,
@@ -55,6 +57,8 @@ __all__ = [
     "Recall",
     "RecipRank",
     "MeanPopRank",
+    "ListGini",
+    "ExposureGini",
     "quick_measure_model",
 ]
 
