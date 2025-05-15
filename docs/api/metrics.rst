@@ -39,6 +39,7 @@ Basic Statistics
     ~lenskit.metrics.ListLength
     ~lenskit.metrics.TestItemCount
 
+.. _metrics-topn:
 
 Top-N Accuracy
 --------------
@@ -76,3 +77,19 @@ Prediction Accuracy
 
     ~lenskit.metrics.RMSE
     ~lenskit.metrics.MAE
+
+Rank Weights
+------------
+
+The rank weighting classes (:class:`RankWeight` and descendants) provide
+flexible rank weights for use in evaluation metrics.  The rank-weighted top-*N*
+metrics (:ref:`metrics-topn`) use these for weighting the recommendations.
+
+.. autosummary::
+    :toctree:
+    :nosignatures:
+    :caption: Rank Weights
+
+    ~lenskit.metrics.RankWeight
+    ~lenskit.metrics.GeometricRankWeight
+    ~lenskit.metrics.LogRankWeight

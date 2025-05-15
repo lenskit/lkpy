@@ -55,11 +55,12 @@ class RankWeight(ABC):
 
 class GeometricRankWeight(RankWeight):
     r"""
-    Geometric cascade weighting for result ranks.  This is the ranking model
-    used by RBP :citep:`rbp`.
+    Geometric cascade weighting for result ranks.
 
-    For patience :math:`p`, the discount is given by :math:`p^(k-1)`.  The
-    sum of this infinite series is :math:`1 / (1 - p)`.
+    This is the ranking model used by RBP :cite:p:`rbp`.
+
+    For patience :math:`p`, the discount is given by :math:`p^{k-1}`.  The sum
+    of this infinite series is :math:`\frac{1}{1 - p}`.
 
     Args:
         patience:
