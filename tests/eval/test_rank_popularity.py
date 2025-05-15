@@ -29,7 +29,7 @@ def test_mpr_label(ml_ds: Dataset):
     mpr = MeanPopRank(ml_ds)
     assert mpr.label == "MeanPopRank"
 
-    mpr = MeanPopRank(ml_ds, 10)
+    mpr = MeanPopRank(ml_ds, k=10)
     assert mpr.label == "MeanPopRank@10"
 
 
