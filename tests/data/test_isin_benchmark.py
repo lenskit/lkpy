@@ -13,7 +13,7 @@ import pyarrow.compute as pc
 
 from pytest import mark
 
-from lenskit.data import ItemList
+from lenskit.data import ItemList, Vocabulary
 
 LEFT_SIZE = 50000
 RIGHT_SIZE = 100
@@ -74,7 +74,7 @@ def test_arrow_integers(rng: np.random.Generator, benchmark):
     right = pa.array(right)
 
     def search():
-        _mask = pc.is_in(left, right)
+        _mask = pc.is_in(left, right).to_numpy(zero_copy_only=False)
 
     benchmark(search)
 
@@ -88,7 +88,7 @@ def test_arrow_strings(rng: np.random.Generator, benchmark):
     right = pa.array(right)
 
     def search():
-        _mask = pc.is_in(left, right)
+        _mask = pc.is_in(left, right).to_numpy(zero_copy_only=False)
 
     benchmark(search)
 
@@ -140,6 +140,38 @@ def test_itemlist_strings(rng: np.random.Generator, benchmark):
 
     ill = ItemList(left)
     ilr = ItemList(right)
+
+    def search():
+        _mask = ill.isin(ilr)
+
+    benchmark(search)
+
+
+@mark.benchmark(group="integers")
+def test_itemlist_int_vocab(rng: np.random.Generator, benchmark):
+    left = np.arange(LEFT_SIZE)
+    right = rng.choice(LEFT_SIZE * 2, RIGHT_SIZE, replace=False)
+
+    vocab = Vocabulary(np.arange(LEFT_SIZE * 2))
+
+    ill = ItemList(left, vocabulary=vocab)
+    ilr = ItemList(right, vocabulary=vocab)
+
+    def search():
+        _mask = ill.isin(ilr)
+
+    benchmark(search)
+
+
+@mark.benchmark(group="strings")
+def test_itemlist_string_vocab(rng: np.random.Generator, benchmark):
+    left = np.array([str(uuid4()) for _i in range(LEFT_SIZE)])
+    right = rng.choice(left, RIGHT_SIZE, replace=False)
+
+    vocab = Vocabulary(left)
+
+    ill = ItemList(left, vocabulary=vocab)
+    ilr = ItemList(right, vocabulary=vocab)
 
     def search():
         _mask = ill.isin(ilr)

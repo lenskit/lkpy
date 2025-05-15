@@ -17,6 +17,7 @@ from typing import overload
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+import pyarrow.compute as pc
 import torch
 from numpy.typing import ArrayLike, NDArray
 from typing_extensions import (
@@ -587,7 +588,15 @@ class ItemList:
             mask[other.numbers()] = True
             return mask[self.numbers()]
 
-        return np.isin(self.ids(), other.ids())
+        if self._ids_numpy is not None and pa.types.is_integer(self._ids.type):
+            return np.isin(self._ids_numpy, other.ids())
+        else:
+            try:
+                return pc.is_in(self.ids(format="arrow"), other.ids(format="arrow")).to_numpy(
+                    zero_copy_only=False
+                )
+            except pa.ArrowTypeError:
+                return np.zeros(len(self), dtype=np.bool_)
 
     def to_df(self, *, ids: bool = True, numbers: bool = True) -> pd.DataFrame:
         """
