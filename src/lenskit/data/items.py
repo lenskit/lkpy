@@ -374,7 +374,9 @@ class ItemList:
 
     @classmethod
     def from_vocabulary(cls, vocab: Vocabulary) -> ItemList:
-        return ItemList(item_ids=vocab.ids(), item_nums=np.arange(len(vocab)), vocabulary=vocab)
+        return ItemList(
+            item_ids=vocab.id_array(), item_nums=np.arange(len(vocab)), vocabulary=vocab
+        )
 
     def clone(self) -> ItemList:
         """

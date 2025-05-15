@@ -56,6 +56,8 @@ class Vocabulary:
     "The name of the vocabulary (e.g. “user”, “item”)."
     _index: pd.Index
     "The Pandas index implementing the vocabulary."
+    _array: pa.Array
+    "PyArrow array for the vocabulary."
     _hash: str | None
     "Checksum of index data for fast equivalence testing."
 
@@ -177,6 +179,11 @@ class Vocabulary:
     def ids(self, nums: list[int] | NDArray[np.integer] | pd.Series | None = None) -> IDArray:
         "Alias for :meth:`terms` for greater readability for entity ID vocabularies."
         return self.terms(nums)
+
+    def id_array(self) -> pa.Array:
+        if self._array is None:
+            self._array = pa.array(self._index.values)
+        return self._array
 
     def __eq__(self, other: Vocabulary) -> bool:  # noqa: F821
         if self is other:
