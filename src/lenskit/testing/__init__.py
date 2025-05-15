@@ -31,6 +31,7 @@ from ._movielens import (
     ml_ds_unchecked,
     ml_ratings,
     ml_test_dir,
+    pop_recs,
 )
 
 __all__ = [
@@ -46,6 +47,7 @@ __all__ = [
     "ml_ratings",
     "ml_test_dir",
     "demo_recs",
+    "pop_recs",
     "wantjit",
     "jit_enabled",
     "set_env_var",

@@ -110,7 +110,6 @@ class DecomposedMetric(Metric):
         """
         raise NotImplementedError()
 
-    @abstractmethod
     def extract_list_metric(self, metric: object, /) -> float | None:
         """
         Extract a single-list metric from the per-list measurement result (if
