@@ -130,6 +130,7 @@ class ItemList:
     _len: int
     _ids: pa.Array | None = None
     _ids_numpy: IDArray | None = None
+    _mask_cache: tuple[ItemList, np.ndarray[tuple[int], np.dtype[np.bool_]]] | None = None
     _numbers: MTArray[np.int32] | None = None
     _vocab: Vocabulary | None = None
     _ranks: MTArray[np.int32] | None = None
@@ -590,21 +591,27 @@ class ItemList:
         This is equivalent to :func:`numpy.isin` applied to the ID arrays, but
         is much more efficient in many cases.
         """
+        # cached?
+        if self._mask_cache is not None and self._mask_cache[0] is other:
+            return self._mask_cache[1]
+
         # fast path — use a mask
         if self.vocabulary is not None and self.vocabulary == other.vocabulary:
             mask = np.zeros(len(self.vocabulary), dtype=np.bool_)
             mask[other.numbers()] = True
-            return mask[self.numbers()]
-
-        if self._ids_numpy is not None and pa.types.is_integer(self._ids.type):
-            return np.isin(self._ids_numpy, other.ids())
+            result = mask[self.numbers()]
+        elif self._ids_numpy is not None and pa.types.is_integer(self._ids.type):
+            result = np.isin(self._ids_numpy, other.ids())
         else:
             try:
-                return pc.is_in(self.ids(format="arrow"), other.ids(format="arrow")).to_numpy(
+                result = pc.is_in(self.ids(format="arrow"), other.ids(format="arrow")).to_numpy(
                     zero_copy_only=False
                 )
             except pa.ArrowTypeError:
-                return np.zeros(len(self), dtype=np.bool_)
+                result = np.zeros(len(self), dtype=np.bool_)
+
+        self._mask_cache = (other, result)
+        return result
 
     def to_df(self, *, ids: bool = True, numbers: bool = True) -> pd.DataFrame:
         """
