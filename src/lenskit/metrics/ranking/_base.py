@@ -6,9 +6,9 @@
 
 from lenskit.data import ItemList
 
-from .._base import GlobalMetric, ListMetric, Metric
+from .._base import DecomposedMetric, GlobalMetric, ListMetric, Metric
 
-__all__ = ["Metric", "ListMetric", "GlobalMetric", "RankingMetricBase"]
+__all__ = ["Metric", "ListMetric", "GlobalMetric", "DecomposedMetric", "RankingMetricBase"]
 
 
 class RankingMetricBase(Metric):

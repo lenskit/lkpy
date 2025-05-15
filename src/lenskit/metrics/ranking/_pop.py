@@ -48,7 +48,11 @@ class MeanPopRank(ListMetric, RankingMetricBase):
     item_ranks: pd.Series[float]
 
     def __init__(
-        self, data: Dataset, k: int | None = None, count: Literal["users", "interactions"] = "users"
+        self,
+        data: Dataset,
+        *,
+        k: int | None = None,
+        count: Literal["users", "interactions"] = "users",
     ):
         super().__init__(k=k)
         stats = data.item_stats()

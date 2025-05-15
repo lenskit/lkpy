@@ -10,6 +10,7 @@ LensKit ranking (and list) metrics.
 
 from ._base import RankingMetricBase
 from ._dcg import DCG, NDCG
+from ._gini import ExposureGini, ListGini
 from ._hit import Hit
 from ._map import AveragePrecision
 from ._pop import MeanPopRank
@@ -32,4 +33,6 @@ __all__ = [
     "RBP",
     "MeanPopRank",
     "AveragePrecision",
+    "ListGini",
+    "ExposureGini",
 ]

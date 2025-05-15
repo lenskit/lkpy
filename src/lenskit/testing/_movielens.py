@@ -134,3 +134,22 @@ def demo_recs() -> DemoRecs:
 
     recs = recommend(pipe, list(split.test.keys()), 500, n_jobs=1)
     return DemoRecs(split, recs)
+
+
+@pytest.fixture(scope="session")
+def pop_recs() -> DemoRecs:
+    """
+    A demo set of train, test, and recommendation data, from most-popular.
+    """
+    rng = np.random.default_rng(42)
+    ml_ds = load_movielens(ml_test_dir)
+    split = simple_test_pair(ml_ds, f_rates=0.5, rng=rng)
+
+    builder = RecPipelineBuilder()
+    builder.scorer(PopScorer())
+    builder.ranker(n=500)
+    pipe = builder.build()
+    pipe.train(split.train)
+
+    recs = recommend(pipe, list(split.test.keys()), 500, n_jobs=1)
+    return DemoRecs(split, recs)
