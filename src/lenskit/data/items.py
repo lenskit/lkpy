@@ -126,7 +126,8 @@ class ItemList:
     ordered: bool = False
     "Whether this list has a meaningful order."
     _len: int
-    _ids: IDArray | None = None
+    _ids: pa.Array | None = None
+    _ids_numpy: IDArray | None = None
     _numbers: MTArray[np.int32] | None = None
     _vocab: Vocabulary | None = None
     _ranks: MTArray[np.int32] | None = None
@@ -182,21 +183,34 @@ class ItemList:
 
         # empty list
         if item_ids is None and item_nums is None and source is None:
-            self._ids = np.ndarray(0, dtype=np.int32)
+            self._ids = pa.array([], pa.int32())
             self._numbers = MTArray(np.ndarray(0, dtype=np.int32))
             self._len = 0
 
         if item_ids is not None:
-            if len(item_ids):
-                self._ids = np.asarray(item_ids)
+            if isinstance(item_ids, pa.Array):
+                self._ids = item_ids
+            elif len(item_ids) > 0:
+                try:
+                    self._ids = pa.array(item_ids)  # type: ignore
+                except pa.ArrowInvalid:
+                    raise TypeError("invalid item ID type or dimension")
+                if isinstance(item_ids, np.ndarray):
+                    self._ids_numpy = item_ids
             else:
-                self._ids = np.ndarray(0, dtype=np.int32)
-            if not issubclass(self._ids.dtype.type, (np.integer, np.str_, np.bytes_, np.object_)):
-                raise TypeError(
-                    f"item IDs not integers, strings, or objects (type: {self._ids.dtype})"
-                )
+                self._ids = pa.array([], pa.int32())
 
-            check_1d(self._ids, label="item_ids")
+            assert self._ids is not None
+            idt = self._ids.type
+            if not (
+                pa.types.is_integer(idt)
+                or pa.types.is_string(idt)
+                or pa.types.is_binary(idt)
+                or pa.types.is_large_string(idt)
+                or pa.types.is_large_binary(idt)
+            ):
+                raise TypeError(f"item IDs not integers or strings (type: {idt})")
+
             self._len = len(item_ids)
             # clear numbers if we got them from the source
             if source is not None and source._numbers is not None:
@@ -372,7 +386,11 @@ class ItemList:
         "Get the item list's vocabulary, if available."
         return self._vocab
 
-    def ids(self) -> IDArray:
+    @overload
+    def ids(self, *, format: Literal["numpy"] = "numpy") -> IDArray: ...
+    @overload
+    def ids(self, *, format: Literal["arrow"]) -> pa.Array: ...
+    def ids(self, *, format: Literal["numpy", "arrow"] = "numpy"):
         """
         Get the item IDs.
 
@@ -386,9 +404,18 @@ class ItemList:
             if self._vocab is None:
                 raise RuntimeError("item IDs not available (no IDs or vocabulary provided)")
             assert self._numbers is not None
-            self._ids = self._vocab.ids(self._numbers.numpy())
+            self._ids_numpy = self._vocab.ids(self._numbers.numpy())
+            self._ids = pa.array(self._ids_numpy)
 
-        return self._ids
+        match format:
+            case "numpy":
+                if self._ids_numpy is None:
+                    self._ids_numpy = self._ids.to_numpy(zero_copy_only=False)
+                return self._ids_numpy
+            case "arrow":
+                return self._ids
+            case _:  # pragma: nocover
+                raise ValueError(f"unknown format {format}")
 
     @overload
     def numbers(
@@ -666,7 +693,7 @@ class ItemList:
 
         if ids:
             if self._ids is not None:
-                types["item_id"] = _arrow_type(self._ids.dtype)
+                types["item_id"] = self._ids.type
             elif self._vocab is not None:
                 types["item_id"] = _arrow_type(self._vocab.ids().dtype)
 
@@ -702,12 +729,23 @@ class ItemList:
                 list, starting from 0).
         """
         if np.isscalar(sel):
-            sel = np.array([sel])
+            sel = pa.array([sel])  # type: ignore
         elif not isinstance(sel, slice):
-            sel = np.asarray(sel)
+            sel = pa.array(sel)  # type: ignore
+        assert isinstance(sel, (slice, pa.Array)), f"unexpected selector {type(sel)}"
 
-        # sel is now a selection array, or it is a slice. numpy supports both.
-        iids = self._ids[sel] if self._ids is not None else None
+        # sel is now a selection array, or it is a slice. numpy supports both. arrow does not.
+        if self._ids is None:
+            iids = None
+        elif isinstance(sel, slice):
+            if sel.step != 1:
+                raise ValueError("slices with steps unsupported")
+            iids = self._ids.slice(sel.start, sel.stop - sel.start)
+        elif pa.types.is_boolean(sel.type):
+            iids = self._ids.filter(sel)
+        else:
+            iids = self._ids.take(sel)
+
         nums = self._numbers.numpy()[sel] if self._numbers is not None else None
         flds = {n: f.numpy()[sel] for (n, f) in self._fields.items()}
         return ItemList(
@@ -724,7 +762,7 @@ class ItemList:
             state["ids"] = self._ids
         elif self._vocab is not None:
             # compute the IDs so we can save them
-            state["ids"] = self.ids()
+            state["ids"] = self.ids(format="arrow")
 
         if self._numbers is not None:
             state["numbers"] = self._numbers.numpy()
