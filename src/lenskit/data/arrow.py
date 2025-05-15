@@ -58,6 +58,8 @@ def arrow_slice(sel: slice, array: MTArray | A | None) -> A | None:
     start = sel.start or 0
     if sel.stop is None:
         slen = len(array) - start
+    elif sel.stop < 0:
+        slen = len(array) - start + sel.stop
     else:
         slen = sel.stop - start
 
