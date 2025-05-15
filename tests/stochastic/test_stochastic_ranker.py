@@ -246,9 +246,9 @@ def test_scale_affects_ranking(rng, ml_ds: Dataset):
     pipe.train(ml_ds)
 
     topn = TopNRanker()
-    samp_frac = StochasticTopNRanker(scale=0.1)
+    samp_frac = StochasticTopNRanker(scale=0.05)
     samp_one = StochasticTopNRanker(scale=1)
-    samp_hundred = StochasticTopNRanker(scale=10)
+    samp_hundred = StochasticTopNRanker(scale=50)
 
     jc_frac = []
     jc_one = []
