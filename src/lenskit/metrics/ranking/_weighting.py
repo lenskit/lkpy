@@ -64,7 +64,7 @@ class GeometricRankWeight(RankWeight):
 
     Args:
         patience:
-            The patience paramter :math:`p`.
+            The patience parameter :math:`p`.
     Stability:
         Caller
     """
