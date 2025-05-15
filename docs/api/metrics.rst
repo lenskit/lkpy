@@ -65,6 +65,17 @@ List and Item Properties
 
     ~lenskit.metrics.MeanPopRank
 
+Item Distributions
+------------------
+
+.. autosummary::
+    :toctree:
+    :nosignatures:
+    :caption: Item Distributions
+
+    ~lenskit.metrics.ExposureGini
+    ~lenskit.metrics.ListGini
+
 .. _metrics-predict:
 
 Prediction Accuracy
