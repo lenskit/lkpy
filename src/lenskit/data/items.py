@@ -30,6 +30,7 @@ from typing_extensions import (
 
 from lenskit.diagnostics import DataWarning
 
+from .arrow import arrow_type, get_indexer
 from .checks import array_is_null, check_1d
 from .mtarray import MTArray, MTGenericArray
 from .types import IDArray, IDSequence
@@ -149,8 +150,13 @@ class ItemList:
         | np.floating
         | float
         | None = None,
+        _init_dict: dict[str, Any] | None = None,
         **fields: NDArray[np.generic] | torch.Tensor | ArrayLike | Literal[False],
     ):
+        if _init_dict is not None:
+            self.__dict__.update(_init_dict)
+            return
+
         if isinstance(source, ItemList):
             self.__dict__.update(source.__dict__)
             eff_fields = source._fields | fields
@@ -704,7 +710,7 @@ class ItemList:
             if self._ids is not None:
                 types["item_id"] = self._ids.type
             elif self._vocab is not None:
-                types["item_id"] = _arrow_type(self._vocab.ids().dtype)
+                types["item_id"] = arrow_type(self._vocab.ids().dtype)
 
         if numbers and (self._numbers is not None or self._vocab is not None):
             types["item_num"] = pa.int32()
@@ -713,7 +719,7 @@ class ItemList:
             types["rank"] = pa.int32()
 
         for name, f in self._fields.items():
-            types[name] = _arrow_type(f.numpy().dtype)
+            types[name] = arrow_type(f.numpy().dtype)
 
         return types
 
@@ -737,37 +743,29 @@ class ItemList:
                 or an array of indices of the items to retain (in order in the
                 list, starting from 0).
         """
-        if np.isscalar(sel):
-            sel = pa.array([sel])  # type: ignore
-        elif not isinstance(sel, slice):
-            sel = pa.array(sel)  # type: ignore
-        assert isinstance(sel, (slice, pa.Array)), f"unexpected selector {type(sel)}"
+        indexer = get_indexer(sel)
 
-        # sel is now a selection array, or it is a slice. numpy supports both. arrow does not.
-        if self._ids is None:
-            iids = None
-        elif isinstance(sel, slice):
-            if sel.step and sel.step != 1:
-                raise ValueError("slices with steps unsupported")
-            start = sel.start or 0
-            if sel.stop is not None:
-                slen = sel.stop - start
-            else:
-                slen = len(self._ids) - start
-            iids = self._ids.slice(start, slen)
-        elif pa.types.is_boolean(sel.type):
-            iids = self._ids.filter(sel)
+        ids = indexer(self._ids)
+        nums = MTArray.wrap(indexer(self._numbers))
+        ranks = MTArray.wrap(indexer(self._ranks))
+        if ids is not None:
+            n = len(ids)
+        elif nums is not None:
+            n = nums.shape[0]
         else:
-            iids = self._ids.take(sel)
+            n = 0
 
-        nums = self._numbers.numpy()[sel] if self._numbers is not None else None
-        flds = {n: f.numpy()[sel] for (n, f) in self._fields.items()}
+        flds = {n: MTArray.wrap(indexer(f)) for (n, f) in self._fields.items()}
         return ItemList(
-            item_ids=iids,
-            item_nums=nums,
-            vocabulary=self._vocab,
-            ordered=self.ordered,
-            **flds,  # type: ignore
+            _init_dict={
+                "_len": n,
+                "_ids": ids,
+                "_numbers": nums,
+                "_vocab": self._vocab,
+                "ordered": self.ordered,
+                "_ranks": ranks,
+                "_fields": flds,
+            }
         )
 
     def __getstate__(self) -> dict[str, object]:
@@ -811,10 +809,3 @@ class ItemList:
         print("}>", end="", file=out)
 
         return out.getvalue()
-
-
-def _arrow_type(dtype: np.dtype) -> pa.DataType:
-    if dtype == np.object_:
-        return pa.utf8()
-    else:
-        return pa.from_numpy_dtype(dtype)

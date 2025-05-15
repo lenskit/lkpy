@@ -15,7 +15,7 @@ import numpy as np
 import pyarrow as pa
 import torch
 from numpy.typing import ArrayLike, NDArray
-from typing_extensions import Generic, Literal, LiteralString, Sequence, TypeVar, overload
+from typing_extensions import Generic, Literal, LiteralString, Self, Sequence, TypeVar, overload
 
 from lenskit.torch import safe_tensor
 
@@ -67,6 +67,15 @@ class MTArray(Generic[NPT]):
                 self._shape = (len(array),)
             elif isinstance(array, (pa.Tensor, np.ndarray)):
                 self._shape = array.shape
+
+    @classmethod
+    def wrap(
+        cls, array: NDArray[NPT] | torch.Tensor | pa.Array | pa.Tensor | Sequence | ArrayLike | None
+    ) -> Self | None:
+        if array is None:
+            return None
+        else:
+            return cls(array)
 
     @property
     def shape(self) -> tuple[int, ...]:
