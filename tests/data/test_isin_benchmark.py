@@ -13,6 +13,8 @@ import pyarrow.compute as pc
 
 from pytest import mark
 
+from lenskit.data import ItemList
+
 LEFT_SIZE = 50000
 RIGHT_SIZE = 100
 TOTAL_SIZE = LEFT_SIZE * 2
@@ -113,5 +115,33 @@ def test_index_strings(rng: np.random.Generator, benchmark):
         idx = pd.Index(right)
         res = idx.get_indexer_for(left)
         _mask = res >= 0
+
+    benchmark(search)
+
+
+@mark.benchmark(group="integers")
+def test_itemlist_integers(rng: np.random.Generator, benchmark):
+    left = np.arange(LEFT_SIZE)
+    right = rng.choice(LEFT_SIZE * 2, RIGHT_SIZE, replace=False)
+
+    ill = ItemList(left)
+    ilr = ItemList(right)
+
+    def search():
+        _mask = ill.isin(ilr)
+
+    benchmark(search)
+
+
+@mark.benchmark(group="strings")
+def test_itemlist_strings(rng: np.random.Generator, benchmark):
+    left = np.array([str(uuid4()) for _i in range(LEFT_SIZE)])
+    right = rng.choice(left, RIGHT_SIZE, replace=False)
+
+    ill = ItemList(left)
+    ilr = ItemList(right)
+
+    def search():
+        _mask = ill.isin(ilr)
 
     benchmark(search)
