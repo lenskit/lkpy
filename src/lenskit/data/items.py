@@ -608,15 +608,17 @@ class ItemList:
             nums = nums[nums >= 0]
             mask[nums] = True
             result = mask[self.numbers()]
-        elif self._ids_numpy is not None and pa.types.is_integer(self._ids.type):
-            result = np.isin(self._ids_numpy, other.ids())
         else:
-            try:
-                result = pc.is_in(self.ids(format="arrow"), other.ids(format="arrow")).to_numpy(
-                    zero_copy_only=False
-                )
-            except pa.ArrowTypeError:
-                result = np.zeros(len(self), dtype=np.bool_)
+            id_arr = self.ids(format="arrow")
+            if pa.types.is_integer(id_arr.type):
+                result = np.isin(id_arr.to_numpy(), other.ids())
+            else:
+                try:
+                    result = pc.is_in(self.ids(format="arrow"), other.ids(format="arrow")).to_numpy(
+                        zero_copy_only=False
+                    )
+                except pa.ArrowTypeError:
+                    result = np.zeros(len(self), dtype=np.bool_)
 
         self._mask_cache = (other, result)
         return result
