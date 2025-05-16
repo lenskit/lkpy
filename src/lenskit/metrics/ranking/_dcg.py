@@ -96,25 +96,25 @@ class NDCG(ListMetric, RankingMetricBase):
         recs = self.truncate(recs)
 
         if self.gain:
+            realized = _graded_dcg(recs, test, self.gain, self.weight)
+
             gains = test.field(self.gain, "pandas", index="ids")
             if gains is None:
                 raise KeyError(f"test items have no field {self.gain}")
-            items = recs.ids()
-            scores = gains.reindex(items, fill_value=0).values
             if self.k:
                 gains = gains.nlargest(n=self.k)
             else:
                 gains = gains.sort_values(ascending=False)
-            ideal = array_dcg(np.require(gains.values, np.float32), self.weight)
+            iweight = self.weight.weight(np.arange(1, len(gains) + 1))
+            ideal = np.dot(gains.values, iweight).item()  # type: ignore
+
         else:
-            scores = np.zeros(len(recs), dtype=np.float32)
-            scores[recs.isin(test)] = 1.0
+            realized = _binary_dcg(recs, test, self.weight)
             n = len(test)
             if self.k and self.k < n:
                 n = self.k
             ideal = fixed_dcg(n, self.weight)
 
-        realized = array_dcg(np.require(scores, np.float32), self.weight)
         return realized / ideal
 
 
@@ -184,16 +184,36 @@ class DCG(ListMetric, RankingMetricBase):
         recs = self.truncate(recs)
 
         if self.gain:
-            gains = test.field(self.gain, "pandas", index="ids")
-            if gains is None:
-                raise KeyError(f"test items have no field {self.gain}")
-            items = recs.ids()
-            scores = gains.reindex(items, fill_value=0).values
+            return _graded_dcg(recs, test, self.gain, self.weight)
         else:
-            scores = np.zeros(len(recs), dtype=np.float32)
-            scores[recs.isin(test)] = 1.0
+            return _binary_dcg(recs, test, self.weight)
 
-        return array_dcg(np.require(scores, np.float32), self.weight)
+
+def _graded_dcg(
+    recs: ItemList, test: ItemList, field: str, weight: RankWeight = LogRankWeight()
+) -> float:
+    gains = test.field(field, "pandas", index="ids")
+    if gains is None:
+        raise KeyError(f"test items have no field {field}")
+
+    ranks = recs.ranks(format="pandas")
+    if ranks is None:
+        raise TypeError("item list is not ordered")
+
+    ranks, gains = ranks.align(gains, join="inner")
+    weights = weight.weight(ranks.values)  # type: ignore
+
+    return np.dot(gains.values, weights)  # type: ignore
+
+
+def _binary_dcg(recs: ItemList, test: ItemList, weight: RankWeight = LogRankWeight()) -> float:
+    good = recs.isin(test)
+    ranks = recs.ranks()
+    if ranks is None:
+        raise TypeError("item list is not ordered")
+
+    weights = weight.weight(ranks[good])
+    return np.sum(weights).item()
 
 
 def array_dcg(scores: NDArray[np.number], weight: RankWeight = LogRankWeight()):
@@ -219,7 +239,7 @@ def array_dcg(scores: NDArray[np.number], weight: RankWeight = LogRankWeight()):
     return np.dot(scores, wvec)
 
 
-def fixed_dcg(n: int, weight: RankWeight = LogRankWeight()):
+def fixed_dcg(n: int, weight: RankWeight = LogRankWeight()) -> float:
     """
     Compute the Discounted Cumulative Gain of a fixed number of items with
     relevance 1.
@@ -227,4 +247,4 @@ def fixed_dcg(n: int, weight: RankWeight = LogRankWeight()):
 
     ranks = np.arange(1, n + 1)
     wvec = weight.weight(ranks)
-    return np.sum(wvec)
+    return np.sum(wvec).item()

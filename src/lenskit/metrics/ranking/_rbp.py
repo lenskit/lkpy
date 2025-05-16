@@ -104,8 +104,16 @@ class RBP(ListMetric, RankingMetricBase):
             return np.nan
 
         good = recs.isin(test)
-        weight = self.weight.weight(np.arange(1, k + 1))
-        rbp = np.sum(weight[good]).item()
+
+        ranks = recs.ranks()
+        assert ranks is not None
+
+        # we only need to sum good weights
+        good_ranks = ranks[good]
+        weight = self.weight.weight(good_ranks)
+        rbp = np.sum(weight).item()
+
+        # figure out normalization
         wmax = self.weight.series_sum()
         if self.normalize:
             # normalize by max achieveable RBP
@@ -116,4 +124,5 @@ class RBP(ListMetric, RankingMetricBase):
             return rbp / wmax
         else:
             # normalize by total weight
-            return rbp / np.sum(weight).item()
+            all_weight = self.weight.weight(ranks)
+            return rbp / np.sum(all_weight).item()

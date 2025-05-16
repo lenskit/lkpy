@@ -525,6 +525,8 @@ class ItemList:
     @overload
     def ranks(self, format: Literal["arrow"]) -> pa.Array[pa.Int32Scalar] | None: ...
     @overload
+    def ranks(self, format: Literal["pandas"]) -> pd.Series[int] | None: ...
+    @overload
     def ranks(self, format: LiteralString = "numpy") -> ArrayLike | None: ...
     def ranks(self, format: LiteralString = "numpy") -> ArrayLike | None:
         """
@@ -544,7 +546,11 @@ class ItemList:
         if self._ranks is None:
             self._ranks = MTArray(np.arange(1, self._len + 1, dtype=np.int32))
 
-        return self._ranks.to(format)
+        if format == "pandas":
+            ranks = self._ranks.to("numpy")
+            return pd.Series(ranks, index=self.ids())
+        else:
+            return self._ranks.to(format)
 
     @overload
     def field(
