@@ -605,10 +605,11 @@ class ItemList:
         if self.vocabulary is not None:
             # In most common hot-path cases, left is at least as long as right.
             mask = np.zeros(len(self.vocabulary), dtype=np.bool_)
-            nums = other.numbers(vocabulary=self.vocabulary, missing="negative")
-            nums = nums[nums >= 0]
-            mask[nums] = True
-            result = mask[self.numbers()]
+            onums = other.numbers(vocabulary=self.vocabulary, missing="negative")
+            onums = onums[onums >= 0]
+            mask[onums] = True
+            nums = self.numbers()
+            result = mask[nums]
         else:
             id_arr = self.ids(format="arrow")
             if pa.types.is_integer(id_arr.type):
