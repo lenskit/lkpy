@@ -597,12 +597,13 @@ class ItemList:
         This is equivalent to :func:`numpy.isin` applied to the ID arrays, but
         is much more efficient in many cases.
         """
-        # cached?
+        # cache is-in checks for identical arrays
         if self._mask_cache is not None and self._mask_cache[0] is other:
             return self._mask_cache[1]
 
-        # fast path — try to just use a mask
+        # fast path — try to just use a mask.
         if self.vocabulary is not None:
+            # In most common hot-path cases, left is at least as long as right.
             mask = np.zeros(len(self.vocabulary), dtype=np.bool_)
             nums = other.numbers(vocabulary=self.vocabulary, missing="negative")
             nums = nums[nums >= 0]
@@ -611,13 +612,16 @@ class ItemList:
         else:
             id_arr = self.ids(format="arrow")
             if pa.types.is_integer(id_arr.type):
+                # numpy is quicker than arrow for integer comparisons
                 result = np.isin(id_arr.to_numpy(), other.ids())
             else:
+                # arrow is quicker than numpy for strings
                 try:
                     result = pc.is_in(self.ids(format="arrow"), other.ids(format="arrow")).to_numpy(
                         zero_copy_only=False
                     )
                 except pa.ArrowTypeError:
+                    # ids are of incompatible types, nothing matches
                     result = np.zeros(len(self), dtype=np.bool_)
 
         self._mask_cache = (other, result)
