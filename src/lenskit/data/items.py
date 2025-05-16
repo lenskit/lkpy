@@ -768,7 +768,12 @@ class ItemList:
         """
         indexer = get_indexer(sel)
 
-        ids = indexer(self._ids)
+        # Only subset the IDs if we don't have a vocabulary.  Otherwise, defer
+        # ID subset until IDs are actually needed.
+        if self.vocabulary is None:
+            ids = indexer(self._ids)
+        else:
+            ids = None
         nums = MTArray.wrap(indexer(self._numbers))
         ranks = MTArray.wrap(indexer(self._ranks))
         if ids is not None:
