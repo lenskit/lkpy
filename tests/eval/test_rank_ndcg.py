@@ -14,59 +14,64 @@ from pytest import approx, mark
 from lenskit.data import ItemList
 from lenskit.metrics import call_metric
 from lenskit.metrics.ranking import NDCG
-from lenskit.metrics.ranking._dcg import array_dcg, fixed_dcg
+from lenskit.metrics.ranking._dcg import _binary_dcg, _graded_dcg, array_dcg, fixed_dcg
 from lenskit.testing import integer_ids
 
 
-def test_dcg_empty():
+def compute_dcg(arr, graded=True):
+    ids = np.arange(1, len(arr) + 1)
+    recs = ItemList(item_ids=ids, ordered=True)
+
+    mask = arr > 0
+    test = ItemList(item_ids=ids[mask], rating=arr[mask])
+
+    if graded:
+        return _graded_dcg(recs, test, "rating")
+    else:
+        return _binary_dcg(recs, test)
+
+
+@mark.parametrize("method", ["graded", "binary"])
+def test_dcg_empty(method):
     "empty should be zero"
-    assert array_dcg(np.array([])) == approx(0)
+    assert compute_dcg(np.array([]), method == "graded") == approx(0)
 
 
-def test_dcg_zeros():
-    assert array_dcg(np.zeros(10)) == approx(0)
+@mark.parametrize("method", ["graded", "binary"])
+def test_dcg_zeros(method):
+    assert compute_dcg(np.zeros(10), method == "graded") == approx(0)
 
 
-def test_dcg_single():
+@mark.parametrize("method", ["graded", "binary"])
+def test_dcg_single(method):
     "a single element should be scored at the right place"
-    assert array_dcg(np.array([0.5])) == approx(0.5)
-    assert array_dcg(np.array([0, 0.5])) == approx(0.5)
-    assert array_dcg(np.array([0, 0, 0.5])) == approx(0.5 / np.log2(3))
-    assert array_dcg(np.array([0, 0, 0.5, 0])) == approx(0.5 / np.log2(3))
+    val = 0.5 if method == "graded" else 1.0
+    assert compute_dcg(np.array([0.5]), method == "graded") == approx(val)
+    assert compute_dcg(np.array([0, 0.5]), method == "graded") == approx(val)
+    assert compute_dcg(np.array([0, 0, 0.5]), method == "graded") == approx(val / np.log2(3))
+    assert compute_dcg(np.array([0, 0, 0.5, 0]), method == "graded") == approx(val / np.log2(3))
 
 
 def test_dcg_mult():
     "multiple elements should score correctly"
-    assert array_dcg(np.array([np.e, np.pi])) == approx(np.e + np.pi)
-    assert array_dcg(np.array([np.e, 0, 0, np.pi])) == approx(np.e + np.pi / np.log2(4))
+    assert compute_dcg(np.array([np.e, np.pi])) == approx(np.e + np.pi)
+    assert compute_dcg(np.array([np.e, 0, 0, np.pi])) == approx(np.e + np.pi / np.log2(4))
 
 
-def test_dcg_empty2():
+@mark.parametrize("method", ["graded", "binary"])
+def test_dcg_empty2(method):
     "empty should be zero"
-    assert array_dcg(np.array([])) == approx(0)
+    assert compute_dcg(np.array([]), method == "graded") == approx(0)
 
 
-def test_dcg_zeros2():
-    assert array_dcg(np.zeros(10)) == approx(0)
-
-
-def test_dcg_single2():
-    "a single element should be scored at the right place"
-    assert array_dcg(np.array([0.5])) == approx(0.5)
-    assert array_dcg(np.array([0, 0.5])) == approx(0.5)
-    assert array_dcg(np.array([0, 0, 0.5])) == approx(0.5 / np.log2(3))
-    assert array_dcg(np.array([0, 0, 0.5, 0])) == approx(0.5 / np.log2(3))
+@mark.parametrize("method", ["graded", "binary"])
+def test_dcg_zeros2(method):
+    assert compute_dcg(np.zeros(10), method == "graded") == approx(0)
 
 
 def test_dcg_nan():
     "NANs should be 0"
-    assert array_dcg(np.array([np.nan, 0.5])) == approx(0.5)
-
-
-def test_dcg_mult2():
-    "multiple elements should score correctly"
-    assert array_dcg(np.array([np.e, np.pi])) == approx(np.e + np.pi)
-    assert array_dcg(np.array([np.e, 0, 0, np.pi])) == approx((np.e + np.pi / np.log2(4)))
+    assert compute_dcg(np.array([np.nan, 0.5])) == approx(0.5)
 
 
 def test_ndcg_empty():
