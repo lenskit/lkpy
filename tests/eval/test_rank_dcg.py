@@ -15,6 +15,51 @@ from lenskit.metrics.ranking import DCG
 from lenskit.metrics.ranking._dcg import array_dcg, fixed_dcg
 
 
+@mark.parametrize("method", ["graded", "binary"])
+def test_array_dcg_empty(method):
+    "empty should be zero"
+    assert array_dcg(np.array([]), graded=method == "graded") == approx(0)
+
+
+@mark.parametrize("method", ["graded", "binary"])
+def test_array_dcg_zeros(method):
+    assert array_dcg(np.zeros(10), graded=method == "graded") == approx(0)
+
+
+@mark.parametrize("method", ["graded", "binary"])
+def test_array_dcg_single(method):
+    "a single element should be scored at the right place"
+    val = 0.5 if method == "graded" else 1.0
+    assert array_dcg(np.array([0.5]), graded=method == "graded") == approx(val)
+    assert array_dcg(np.array([0, 0.5]), graded=method == "graded") == approx(val)
+    assert array_dcg(np.array([0, 0, 0.5]), graded=method == "graded") == approx(val / np.log2(3))
+    assert array_dcg(np.array([0, 0, 0.5, 0]), graded=method == "graded") == approx(
+        val / np.log2(3)
+    )
+
+
+def test_array_dcg_mult():
+    "multiple elements should score correctly"
+    assert array_dcg(np.array([np.e, np.pi])) == approx(np.e + np.pi)
+    assert array_dcg(np.array([np.e, 0, 0, np.pi])) == approx(np.e + np.pi / np.log2(4))
+
+
+@mark.parametrize("method", ["graded", "binary"])
+def test_array_dcg_empty2(method):
+    "empty should be zero"
+    assert array_dcg(np.array([]), graded=method == "graded") == approx(0)
+
+
+@mark.parametrize("method", ["graded", "binary"])
+def test_array_dcg_zeros2(method):
+    assert array_dcg(np.zeros(10), graded=method == "graded") == approx(0)
+
+
+def test_array_dcg_nan():
+    "NANs should be 0"
+    assert array_dcg(np.array([np.nan, 0.5])) == approx(0.5)
+
+
 def test_dcg_empty():
     recs = ItemList(ordered=True)
     truth = ItemList([1, 2, 3], rating=[3.0, 5.0, 4.0])

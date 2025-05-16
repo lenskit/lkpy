@@ -216,7 +216,9 @@ def _binary_dcg(recs: ItemList, test: ItemList, weight: RankWeight = LogRankWeig
     return np.sum(weights).item()
 
 
-def array_dcg(scores: NDArray[np.number], weight: RankWeight = LogRankWeight()):
+def array_dcg(
+    scores: NDArray[np.number], weight: RankWeight = LogRankWeight(), *, graded: bool = True
+):
     """
     Compute the Discounted Cumulative Gain of a series of recommended items with rating scores.
     These should be relevance scores; they can be :math:`{0,1}` for binary relevance data.
@@ -233,10 +235,16 @@ def array_dcg(scores: NDArray[np.number], weight: RankWeight = LogRankWeight()):
     Returns:
         double: the DCG of the scored items.
     """
-    scores = np.nan_to_num(scores)
-    ranks = np.arange(1, len(scores) + 1)
-    wvec = weight.weight(ranks)
-    return np.dot(scores, wvec)
+    ids = np.arange(1, len(scores) + 1)
+    recs = ItemList(item_ids=ids, ordered=True)
+
+    mask = scores > 0
+    test = ItemList(item_ids=ids[mask], rating=scores[mask])
+
+    if graded:
+        return _graded_dcg(recs, test, "rating")
+    else:
+        return _binary_dcg(recs, test)
 
 
 def fixed_dcg(n: int, weight: RankWeight = LogRankWeight()) -> float:
