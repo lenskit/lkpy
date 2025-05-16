@@ -604,7 +604,9 @@ class ItemList:
         # fast path — try to just use a mask
         if self.vocabulary is not None:
             mask = np.zeros(len(self.vocabulary), dtype=np.bool_)
-            mask[other.numbers(vocabulary=self.vocabulary)] = True
+            nums = other.numbers(vocabulary=self.vocabulary, missing="negative")
+            nums = nums[nums >= 0]
+            mask[nums] = True
             result = mask[self.numbers()]
         elif self._ids_numpy is not None and pa.types.is_integer(self._ids.type):
             result = np.isin(self._ids_numpy, other.ids())
