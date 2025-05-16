@@ -144,7 +144,8 @@ class FlexMFScorerBase(UsesTrainer, Component):
             scores = self.score_items(u_tensor, i_tensor)
 
         # fill in scores for scorable items
-        full_scores[scorable_mask] = scores.cpu()
+        scores = scores.cpu()
+        full_scores[scorable_mask] = scores
 
         # return the result!
         return ItemList(items, scores=full_scores)
