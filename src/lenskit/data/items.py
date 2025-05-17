@@ -128,9 +128,6 @@ class ItemList:
     ordered: bool = False
     "Whether this list has a meaningful order."
 
-    _array: pa.StructArray | None = None
-    "The item list's data as an Arrow struct array, when available."
-
     _len: int
     "Length of the item list."
 
@@ -235,7 +232,6 @@ class ItemList:
     def _init_from_arrow(
         self, array: pa.StructArray, vocabulary: Vocabulary | None, ordered: bool | None
     ):
-        self._array = array
         self._len = len(array)
         self._vocab = vocabulary
 
@@ -264,6 +260,8 @@ class ItemList:
             self._ranks = MTArray(ranks)
 
         # the rest of the fields can be lazily loaded from the array
+        fields = [array.type.field(i) for i in range(array.type.num_fields)]
+        self._fields = {f.name: MTArray(array.field(i)) for (i, f) in enumerate(fields)}
 
     def _init_ids(
         self,
@@ -689,13 +687,7 @@ class ItemList:
     def field(
         self, name: str, format: LiteralString = "numpy", *, index: LiteralString | None = None
     ) -> object:
-        if self._array is not None:
-            try:
-                val = MTArray(self._array.field(name))
-            except KeyError:
-                val = None
-        else:
-            val = self._fields.get(name, None)
+        val = self._fields.get(name, None)
 
         if val is None:
             return None
@@ -711,13 +703,6 @@ class ItemList:
             return pd.Series(vs, index=idx)
         else:
             return val.to(format)
-
-    @property
-    def field_names(self) -> list[str]:
-        if self._array is not None:
-            return [self._array.type.field(i).name for i in range(self._array.type.num_fields)]
-        else:
-            return list(self._fields.keys())
 
     def isin(self, other: ItemList) -> np.ndarray[tuple[int], np.dtype[np.bool_]]:
         """
@@ -789,11 +774,7 @@ class ItemList:
             cols["rank"] = self.ranks()
 
         # add remaining fields
-        cols.update(
-            (k, self.field(k, format="numpy"))
-            for k in self.field_names
-            if k not in ("score", "rank")
-        )
+        cols.update((k, v.numpy()) for (k, v) in self._fields.items() if k not in ("score", "rank"))
         return pd.DataFrame(cols)
 
     @overload
@@ -825,13 +806,6 @@ class ItemList:
         """
         Convert the item list to a Pandas table.
         """
-        if self._array is not None:
-            if columns is None:
-                columns = self.arrow_types(ids=ids, numbers=numbers)
-
-            schema = pa.struct(columns.items())
-            return self._array.cast(schema)
-
         arrays = []
         names = []
         if columns is not None and len(self) == 0:
@@ -844,7 +818,7 @@ class ItemList:
             for c_name, c_type in columns.items():
                 names.append(c_name)
                 if c_name == "item_id":
-                    arrays.append(pa.array(self.ids()))
+                    arrays.append(self.ids(format="arrow"))
                 elif c_name == "item_num":
                     arrays.append(self.numbers("arrow"))
                 elif c_name == "rank":
@@ -950,31 +924,10 @@ class ItemList:
 
         # Only subset the IDs if we don't have a vocabulary.  Otherwise, defer
         # ID subset until IDs are actually needed.
-        if self.vocabulary is None:
-            ids = indexer(self._ids)
-        else:
-            ids = None
-        nums = MTArray.wrap(indexer(self._numbers))
-        ranks = MTArray.wrap(indexer(self._ranks))
-        if ids is not None:
-            n = len(ids)
-        elif nums is not None:
-            n = nums.shape[0]
-        else:
-            n = 0
+        array = self.to_arrow(ids=self.vocabulary is None, numbers=True, type="array")
+        array = indexer(array)
 
-        flds = {n: MTArray.wrap(indexer(f)) for (n, f) in self._fields.items()}
-        return ItemList(
-            _init_dict={
-                "_len": n,
-                "_ids": ids,
-                "_numbers": nums,
-                "_vocab": self._vocab,
-                "ordered": ordered,
-                "_ranks": ranks,
-                "_fields": flds,
-            }  # type: ignore
-        )  # type: ignore
+        return ItemList(_init_array=array, vocabulary=self.vocabulary, ordered=ordered)  # type: ignore
 
     def __len__(self):
         return self._len
