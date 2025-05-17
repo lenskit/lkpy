@@ -67,6 +67,11 @@ def argtopn(xs: ArrayLike, n: int) -> NPVector[np.int64]:
     Compute the ordered positions of the top *n* elements.  Similar to
     :func:`torch.topk`, but works with NumPy arrays and only returns the
     indices.
+
+    .. deprecated:: 2025.3.0
+
+        This was never declared stable, but is now deprecated and will be
+        removed in 2026.1.
     """
     if n == 0:
         return np.empty(0, np.int64)

@@ -14,7 +14,6 @@ from pydantic import BaseModel
 
 from lenskit.data import ItemList
 from lenskit.pipeline.components import Component
-from lenskit.stats import argtopn
 
 _log = logging.getLogger(__name__)
 
@@ -67,12 +66,4 @@ class TopNRanker(Component[ItemList]):
         else:
             _log.debug("ranking all of %d items", len(items))
 
-        scores = items.scores("numpy")
-        if scores is None:
-            raise RuntimeError("input item list has no scores")
-
-        order = argtopn(scores, n)
-
-        # now we need to return in expected order
-        result = items[order]
-        return ItemList(result, ordered=True)
+        return items.top_n(n)

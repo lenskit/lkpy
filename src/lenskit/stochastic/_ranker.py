@@ -15,7 +15,6 @@ from lenskit.data.query import QueryInput, RecQuery
 from lenskit.data.types import NPVector
 from lenskit.pipeline import Component
 from lenskit.random import DerivableSeed, RNGFactory, derivable_rng
-from lenskit.stats import argtopn
 
 
 @dataclass
@@ -114,21 +113,16 @@ class StochasticTopNRanker(Component[ItemList]):
         valid_items = items[valid_mask]
         N = len(valid_items)
         if N == 0:
-            return ItemList(item_ids=[], scores=[], ordered=True)
+            return ItemList(valid_items, ordered=True)
 
         if n is None or n < 0:
             n = self.config.n or -1
 
-        if n < 0 or n > N:
-            n = N
-
         keys = self._compute_keys(scores[valid_mask], rng)
 
-        picked = argtopn(keys, n)
-        result = ItemList(valid_items[picked], ordered=True)
         if include_weights:
-            result = ItemList(result, weight=keys[picked])
-        return result
+            valid_items = ItemList(valid_items, weight=keys)
+        return valid_items.top_n(n, scores=keys)
 
     def _compute_keys(self, scores: NPVector, rng: np.random.Generator) -> NPVector:
         "Compute sort keys for sampled ranking."
