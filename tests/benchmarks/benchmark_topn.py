@@ -15,7 +15,6 @@ import torch
 from pytest import mark
 
 from lenskit._accel import argsort_f32, argsort_f32_arrow
-from lenskit.data import ItemList, Vocabulary
 from lenskit.parallel import ensure_parallel_init
 from lenskit.stats import argtopn
 
