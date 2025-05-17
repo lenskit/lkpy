@@ -517,7 +517,7 @@ class ItemList:
         """
         Get the item scores (if available).
         """
-        return self.field("score", format, **kwargs)
+        return self.field("score", format=format, **kwargs)
 
     @overload
     def ranks(self, format: Literal["numpy"] = "numpy") -> NDArray[np.int32] | None: ...
