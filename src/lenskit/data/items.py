@@ -859,9 +859,8 @@ class ItemList:
         if self.ordered:
             types["rank"] = pa.int32()
 
-        for name in self.field_names:
-            fld = self.field(name, format="arrow")
-            types[name] = fld.type
+        for n, f in self._fields.items():
+            types[n] = f.arrow().type
 
         return types
 
