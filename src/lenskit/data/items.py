@@ -445,16 +445,20 @@ class ItemList:
             raise TypeError("data table must have at least one of item_id, item_num columns")
 
         to_drop = ["item_id", "item_num"]
+        ranks = tbl.field("rank") if "rank" in names else None
 
-        fields = {c: tbl.field(c) for c in names if c not in to_drop}
-        items = cls(
-            item_ids=ids,  # type: ignore
-            item_nums=nums,  # type: ignore
-            vocabulary=vocabulary,
-            **fields,  # type: ignore
-        )
-        assert len(items) == len(tbl), f"built list of {len(items)}, expected {len(tbl)}"
-        return items
+        fields = {c: MTArray(tbl.field(c)) for c in names if c not in to_drop}
+        return ItemList(
+            _init_dict={
+                "_len": len(tbl),
+                "_ids": ids,
+                "_numbers": MTArray(nums) if nums is not None else nums,
+                "_vocab": vocabulary,
+                "ordered": ranks is not None,
+                "_ranks": ranks,
+                "_fields": fields,
+            }  # type: ignore
+        )  # type: ignore
 
     @classmethod
     def from_vocabulary(cls, vocab: Vocabulary) -> ItemList:
@@ -467,12 +471,16 @@ class ItemList:
         Make a shallow copy of the item list.
         """
         return ItemList(
-            item_ids=self._ids,
-            item_nums=self._numbers,
-            vocabulary=self._vocab,
-            ordered=self.ordered,
-            **self._fields,  # type: ignore
-        )
+            _init_dict={
+                "_len": self._len,
+                "_ids": self._ids,
+                "_numbers": self._numbers,
+                "_vocab": self._vocab,
+                "ordered": self.ordered,
+                "_ranks": self._ranks,
+                "_fields": self._fields,
+            }  # type: ignore
+        )  # type: ignore
 
     @property
     def vocabulary(self) -> Vocabulary | None:
