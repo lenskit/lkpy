@@ -30,7 +30,7 @@ from typing_extensions import (
 from lenskit.diagnostics import DataWarning
 from lenskit.stats import argtopn
 
-from .arrow import arrow_type, get_indexer
+from .arrow import get_indexer
 from .checks import array_is_null, check_1d
 from .mtarray import MTArray, MTGenericArray
 from .types import IDArray, IDSequence, NPVector
@@ -127,10 +127,12 @@ class ItemList:
 
     ordered: bool = False
     "Whether this list has a meaningful order."
+
+    _array: pa.StructArray | None = None
+    "The item list's data as an Arrow struct array, when available."
+
     _len: int
     "Length of the item list."
-    _array: pa.StructArray | None
-    "The item list's data as an Arrow struct array, when available."
 
     # storage for individual components of the item list
     _ids: pa.Array | None = None
@@ -199,11 +201,14 @@ class ItemList:
         ordered: bool | None = None,
         vocabulary: Vocabulary | None = None,
         _init_dict: dict[str, Any] | None = None,
+        _init_array: pa.StructArray | None = None,
         **kwargs: Any,
     ):
         if _init_dict is not None:
             self.__dict__.update(_init_dict)
             return
+        elif _init_array is not None:
+            self._init_from_arrow(_init_array, vocabulary, ordered)
         elif isinstance(source, ItemList):
             self.__dict__.update(source.__dict__)
             if ordered is not None:
@@ -226,6 +231,39 @@ class ItemList:
             if not isinstance(vocabulary, Vocabulary):  # pragma: nocover
                 raise TypeError(f"expected Vocabulary, got {type(vocabulary)}")
             self._vocab = vocabulary
+
+    def _init_from_arrow(
+        self, array: pa.StructArray, vocabulary: Vocabulary | None, ordered: bool | None
+    ):
+        self._array = array
+        self._len = len(array)
+        self._vocab = vocabulary
+
+        # get the ID and number fields
+        try:
+            self._ids = array.field("item_id")
+        except KeyError:
+            pass
+
+        try:
+            numbers = array.field("item_num")
+        except KeyError:
+            pass
+        else:
+            self._numbers = MTArray(numbers.cast(pa.int32()))
+
+        # set up ranking and ordering
+        try:
+            ranks = array.field("rank")
+        except KeyError:
+            self.ordered = ordered or False
+        else:
+            if ordered is False:
+                raise ValueError("table has ranks but ordered=False")
+            self.ordered = True
+            self._ranks = MTArray(ranks)
+
+        # the rest of the fields can be lazily loaded from the array
 
     def _init_ids(
         self,
@@ -321,6 +359,9 @@ class ItemList:
                 self._len = self._numbers.shape[0]
 
     def _init_fields(self, *, scores=None, score=None, rank=None, **other):
+        if any(k[0] == "_" for k in other.keys()):
+            raise ValueError("item list fields cannot start with _")
+
         fields = getattr(self, "_fields", {}).copy()
 
         if score is not None:
@@ -439,26 +480,10 @@ class ItemList:
         else:
             names = [tbl.type.field(i).name for i in range(tbl.type.num_fields)]
 
-        ids = tbl.field("item_id") if "item_id" in names else None
-        nums = tbl.field("item_num") if "item_num" in names else None
-        if ids is None and nums is None:
+        if "item_id" not in names and "item_num" not in names:
             raise TypeError("data table must have at least one of item_id, item_num columns")
 
-        to_drop = ["item_id", "item_num"]
-        ranks = tbl.field("rank") if "rank" in names else None
-
-        fields = {c: MTArray(tbl.field(c)) for c in names if c not in to_drop}
-        return ItemList(
-            _init_dict={
-                "_len": len(tbl),
-                "_ids": ids,
-                "_numbers": MTArray(nums) if nums is not None else nums,
-                "_vocab": vocabulary,
-                "ordered": ranks is not None,
-                "_ranks": ranks,
-                "_fields": fields,
-            }  # type: ignore
-        )  # type: ignore
+        return ItemList(_init_array=tbl)
 
     @classmethod
     def from_vocabulary(cls, vocab: Vocabulary) -> ItemList:
@@ -664,7 +689,14 @@ class ItemList:
     def field(
         self, name: str, format: LiteralString = "numpy", *, index: LiteralString | None = None
     ) -> object:
-        val = self._fields.get(name, None)
+        if self._array is not None:
+            try:
+                val = MTArray(self._array.field(name))
+            except KeyError:
+                val = None
+        else:
+            val = self._fields.get(name, None)
+
         if val is None:
             return None
         elif format == "pandas":
@@ -679,6 +711,13 @@ class ItemList:
             return pd.Series(vs, index=idx)
         else:
             return val.to(format)
+
+    @property
+    def field_names(self) -> list[str]:
+        if self._array is not None:
+            return [self._array.type.field(i).name for i in range(self._array.type.num_fields)]
+        else:
+            return list(self._fields.keys())
 
     def isin(self, other: ItemList) -> np.ndarray[tuple[int], np.dtype[np.bool_]]:
         """
@@ -743,12 +782,18 @@ class ItemList:
             else:
                 raise RuntimeError("cannot create item data frame without identifiers or numbers")
 
-        if "score" in self._fields:
-            cols["score"] = self.scores()
+        score = self.scores()
+        if score is not None:
+            cols["score"] = score
         if self.ordered:
             cols["rank"] = self.ranks()
+
         # add remaining fields
-        cols.update((k, v.numpy()) for (k, v) in self._fields.items() if k != "score")
+        cols.update(
+            (k, self.field(k, format="numpy"))
+            for k in self.field_names
+            if k not in ("score", "rank")
+        )
         return pd.DataFrame(cols)
 
     @overload
@@ -780,6 +825,13 @@ class ItemList:
         """
         Convert the item list to a Pandas table.
         """
+        if self._array is not None:
+            if columns is None:
+                columns = self.arrow_types(ids=ids, numbers=numbers)
+
+            schema = pa.struct(columns.items())
+            return self._array.cast(schema)
+
         arrays = []
         names = []
         if columns is not None and len(self) == 0:
@@ -801,8 +853,8 @@ class ItemList:
                     else:
                         warnings.warn("requested rank column for unordered list", DataWarning)
                         arrays.append(pa.nulls(len(self), c_type))
-                elif fld := self._fields.get(c_name, None):
-                    arrays.append(fld.arrow())
+                elif fld := self.field(c_name, format="arrow") is not None:
+                    arrays.append(fld)
                 else:
                     warnings.warn(f"unknown field {c_name}", DataWarning)
 
@@ -825,7 +877,7 @@ class ItemList:
             if self._ids is not None:
                 types["item_id"] = self._ids.type
             elif self._vocab is not None:
-                types["item_id"] = arrow_type(self._vocab.ids().dtype)
+                types["item_id"] = self._vocab.id_array().type
 
         if numbers and (self._numbers is not None or self._vocab is not None):
             types["item_num"] = pa.int32()
@@ -833,8 +885,9 @@ class ItemList:
         if self.ordered:
             types["rank"] = pa.int32()
 
-        for name, f in self._fields.items():
-            types[name] = arrow_type(f.numpy().dtype)
+        for name in self.field_names:
+            fld = self.field(name, format="arrow")
+            types[name] = fld.type
 
         return types
 

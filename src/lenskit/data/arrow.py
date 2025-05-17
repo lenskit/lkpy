@@ -12,7 +12,8 @@ from functools import partial
 
 import numpy as np
 import pyarrow as pa
-from typing_extensions import Callable, TypeAlias, TypeVar, overload
+import torch
+from typing_extensions import Callable, Literal, TypeAlias, TypeVar, overload
 
 from .mtarray import MTArray
 
@@ -38,6 +39,24 @@ def get_indexer(sel) -> Selector:
             return partial(arrow_filter, sel)
         else:
             raise TypeError(f"invalid selector: {sel}")
+
+
+def arrow_to_format(array: pa.Array, format: Literal["arrow", "numpy", "torch"]):
+    """
+    Convert an Arrow array into another format.
+
+    Stability:
+        Internal
+    """
+    match format:
+        case "arrow":
+            return array
+        case "numpy":
+            return array.to_numpy(zero_copy_only=False)
+        case "torch":
+            return torch.as_tensor(array.to_numpy(zero_copy_only=False, writable=True))
+        case _:  # pragma: nocover
+            raise ValueError(f"unknown format {format}")
 
 
 @overload
