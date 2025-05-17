@@ -53,7 +53,7 @@ def test_arrow_struct_take(rng: np.random.Generator, size: int, benchmark):
     scores = rng.standard_exponential(size)
 
     items = ItemList(np.arange(size), scores=scores)
-    table = items.to_arrow().to_struct_array()
+    table = items.to_arrow(type="array")
     ranks = np.argsort(scores)
     ranks = pa.array(ranks, type=pa.int32())
 
