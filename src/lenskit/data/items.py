@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import io
 import warnings
-from typing import overload
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
@@ -24,8 +24,7 @@ from typing_extensions import (
     Any,
     Literal,
     LiteralString,
-    Sequence,
-    cast,
+    overload,
 )
 
 from lenskit.diagnostics import DataWarning
@@ -129,6 +128,11 @@ class ItemList:
     ordered: bool = False
     "Whether this list has a meaningful order."
     _len: int
+    "Length of the item list."
+    _array: pa.StructArray | None
+    "The item list's data as an Arrow struct array, when available."
+
+    # storage for individual components of the item list
     _ids: pa.Array | None = None
     _ids_numpy: IDArray | None = None
     _mask_cache: tuple[ItemList, np.ndarray[tuple[int], np.dtype[np.bool_]]] | None = None
@@ -137,9 +141,43 @@ class ItemList:
     _ranks: MTArray[np.int32] | None = None
     _fields: dict[str, MTGenericArray]
 
+    @overload
     def __init__(
         self,
-        source: ItemList | IDSequence | None = None,
+        source: ItemList,
+        *,
+        ordered: bool | None = None,
+        vocabulary: Vocabulary | None = None,
+        scores: NDArray[np.generic]
+        | torch.Tensor
+        | ArrayLike
+        | Literal[False]
+        | np.floating
+        | float
+        | None = None,
+        **fields: NDArray[np.generic] | torch.Tensor | ArrayLike | Literal[False],
+    ): ...
+    @overload
+    def __init__(
+        self,
+        source: IDSequence | None = None,
+        *,
+        item_nums: NDArray[np.int32] | pd.Series[int] | Sequence[int] | ArrayLike | None = None,
+        vocabulary: Vocabulary | None = None,
+        ordered: bool | None = None,
+        scores: NDArray[np.generic]
+        | torch.Tensor
+        | ArrayLike
+        | Literal[False]
+        | np.floating
+        | float
+        | None = None,
+        **fields: NDArray[np.generic] | torch.Tensor | ArrayLike | Literal[False],
+    ): ...
+    @overload
+    def __init__(
+        self,
+        source: None = None,
         *,
         item_ids: IDSequence | None = None,
         item_nums: NDArray[np.int32] | pd.Series[int] | Sequence[int] | ArrayLike | None = None,
@@ -152,135 +190,179 @@ class ItemList:
         | np.floating
         | float
         | None = None,
-        _init_dict: dict[str, Any] | None = None,
         **fields: NDArray[np.generic] | torch.Tensor | ArrayLike | Literal[False],
+    ): ...
+    def __init__(  # type: ignore
+        self,
+        source: ItemList | IDSequence | None = None,
+        *,
+        ordered: bool | None = None,
+        vocabulary: Vocabulary | None = None,
+        _init_dict: dict[str, Any] | None = None,
+        **kwargs: Any,
     ):
         if _init_dict is not None:
             self.__dict__.update(_init_dict)
             return
-
-        if isinstance(source, ItemList):
+        elif isinstance(source, ItemList):
             self.__dict__.update(source.__dict__)
-            eff_fields = source._fields | fields
-        else:
-            eff_fields = fields
+            if ordered is not None:
+                self.ordered = ordered
+            elif "rank" in kwargs:
+                self.ordered = True
+            if vocabulary is not None:
+                raise ValueError("cannot change vocabulary from item list")
 
-        if ordered is not None:
-            self.ordered = ordered
-        elif source is None:
-            self.ordered = False
+            self._init_fields(**kwargs)
+        else:
+            self.ordered = ordered or ("rank" in kwargs)
+            self._vocab = vocabulary
+            self._init_ids(source, **kwargs)
+            self._init_numbers(**kwargs)
+            self._init_check_length()
+            self._init_fields(**kwargs)
 
         if vocabulary is not None:
             if not isinstance(vocabulary, Vocabulary):  # pragma: nocover
                 raise TypeError(f"expected Vocabulary, got {type(vocabulary)}")
             self._vocab = vocabulary
 
-        # handle aliases for item ID/number columns
-        if item_ids is None and "item_id" in fields:
-            item_ids = np.asarray(cast(Any, fields["item_id"]))
-        if source is not None and not isinstance(source, ItemList):
-            if item_ids is None:
-                item_ids = source
-                source = None
-            else:
+    def _init_ids(
+        self,
+        source: IDSequence | None,
+        *,
+        item_ids=None,
+        item_id=None,
+        **ignore,
+    ):
+        """
+        Initialize the item list's item IDs and length.  The vocabulary should
+        already be set.
+        """
+        # handle aliases for item ID columns
+        if source is not None:
+            if item_ids is not None or item_id is not None:
                 raise ValueError("cannot specify both item_ids & item ID source")
+            item_ids = source
+        elif item_id is not None:
+            if item_ids is not None:
+                raise ValueError("cannot specify both item_ids & item_id")
+            item_ids = item_id
+        elif item_ids is None:
+            item_ids = pa.array([], type=pa.int32())
 
-        if item_nums is None and "item_num" in fields:
-            item_nums = np.asarray(cast(Any, fields["item_num"]))
-            if not issubclass(item_nums.dtype.type, np.integer):
-                raise TypeError("item numbers not integers")
-
-        # empty list
-        if item_ids is None and item_nums is None and source is None:
-            self._ids = pa.array([], pa.int32())
-            self._numbers = MTArray(np.ndarray(0, dtype=np.int32))
-            self._len = 0
-
-        if item_ids is not None:
-            if isinstance(item_ids, pa.Array):
-                self._ids = item_ids
-            elif len(item_ids) > 0:
-                try:
-                    self._ids = pa.array(item_ids)  # type: ignore
-                except pa.ArrowInvalid:
-                    raise TypeError("invalid item ID type or dimension")
-                if isinstance(item_ids, np.ndarray):
-                    self._ids_numpy = item_ids
-            else:
-                self._ids = pa.array([], pa.int32())
-
-            assert self._ids is not None
-            idt = self._ids.type
-            if not (
-                pa.types.is_integer(idt)
-                or pa.types.is_string(idt)
-                or pa.types.is_binary(idt)
-                or pa.types.is_large_string(idt)
-                or pa.types.is_large_binary(idt)
-            ):
-                raise TypeError(f"item IDs not integers or strings (type: {idt})")
-
-            self._len = len(item_ids)
-            # clear numbers if we got them from the source
-            if source is not None and source._numbers is not None:
-                del self._numbers
-
-        if item_nums is not None:
-            if not len(item_nums):  # type: ignore
-                item_nums = np.ndarray(0, dtype=np.int32)
-            if isinstance(item_nums, np.ndarray):
-                item_nums = np.require(item_nums, dtype=np.int32)
-            elif isinstance(item_nums, pa.Array):
-                item_nums = item_nums.cast(pa.int32())
-            elif torch.is_tensor(item_nums):
-                item_nums = item_nums.to(torch.int32)
-            self._numbers = MTArray(item_nums)
-            check_1d(self._numbers, getattr(self, "_len", None), label="item_nums")
-            self._len = self._numbers.shape[0]
-            # clear IDs if we got them from the source
-            if source is not None and source._ids is not None:
-                del self._ids
-
-        if scores is False:  # check 'is False' to distinguish from None
-            scores = None
+        # handle the item ID type
+        if isinstance(item_ids, pa.Array):
+            self._ids = item_ids
+        elif len(item_ids) > 0:
+            try:
+                self._ids = pa.array(item_ids)  # type: ignore
+            except pa.ArrowInvalid:
+                raise TypeError("invalid item ID type or dimension")
+            if isinstance(item_ids, np.ndarray):
+                self._ids_numpy = item_ids
         else:
-            if scores is None and "score" in eff_fields:
-                scores = np.require(eff_fields["score"], dtype=np.float32)
-            elif scores is not None:
-                if "score" in fields:  # pragma: nocover
-                    raise ValueError("cannot specify both scores= and score=")
+            return
 
-                if np.isscalar(scores):
-                    scores = np.full(self._len, scores, dtype=np.float32)
-                else:
-                    scores = np.require(scores, np.float32)
+        assert self._ids is not None
+        idt = self._ids.type
+        if not (
+            pa.types.is_integer(idt)
+            or pa.types.is_string(idt)
+            or pa.types.is_binary(idt)
+            or pa.types.is_large_string(idt)
+            or pa.types.is_large_binary(idt)
+        ):
+            raise TypeError(f"item IDs not integers or strings (type: {idt})")
 
-        if "rank" in fields:
-            if ordered is False:
+        self._len = len(item_ids)
+
+    def _init_numbers(self, item_nums=None, item_num=None, **ignore):
+        """
+        Initialize the item numbers.
+        """
+
+        if item_num is not None:
+            if item_nums is not None:
+                raise ValueError("cannot specify both item_nums and item_num")
+            item_nums = item_num
+
+        if item_nums is None:
+            return
+
+        if not len(item_nums):  # type: ignore
+            item_nums = np.ndarray(0, dtype=np.int32)
+        if isinstance(item_nums, np.ndarray):
+            item_nums = np.require(item_nums, dtype=np.int32)
+        elif isinstance(item_nums, pa.Array):
+            item_nums = item_nums.cast(pa.int32())
+        elif torch.is_tensor(item_nums):
+            item_nums = item_nums.to(torch.int32)
+
+        self._numbers = MTArray(item_nums)
+        check_1d(self._numbers, getattr(self, "_len", None), label="item_nums")
+        self._len = self._numbers.shape[0]
+
+    def _init_check_length(self):
+        """
+        Check that we have a correct length, and that lengths match.  Fill in
+        empty IDs if we don't have any IDs.
+
+        This is called after setting IDs and numbers, and before setting fields.
+        """
+        length = getattr(self, "_len", None)
+        if self._ids is None and self._numbers is None:
+            self._ids = pa.array([], pa.int32())
+            self._len = 0
+        elif length is None:
+            if self._ids is not None:
+                self._len = len(self._ids)
+            elif self._numbers is not None:
+                self._len = self._numbers.shape[0]
+
+    def _init_fields(self, *, scores=None, score=None, rank=None, **other):
+        fields = getattr(self, "_fields", {}).copy()
+
+        if score is not None:
+            if scores is not None:
+                raise ValueError("cannot specify both score= and scores=")
+            scores = score
+
+        if scores is False and "score" in fields:  # check 'is False' to distinguish from None
+            del fields["score"]
+        elif scores is not None:
+            if np.isscalar(scores):
+                scores = np.full(self._len, scores, dtype=np.float32)
+            else:
+                scores = np.require(scores, np.float32)
+
+            fields["score"] = check_1d(MTArray(scores), self._len, label="scores")
+
+        if rank is not None:
+            if not self.ordered:
                 warnings.warn(
-                    "ranks provided but ordered=False, dropping ranks", DataWarning, stacklevel=2
+                    "ranks provided but ordered=False, dropping ranks", DataWarning, stacklevel=3
                 )
             else:
                 self._ranks = check_1d(
-                    MTArray(np.require(fields["rank"], np.int32)), self._len, label="ranks"
+                    MTArray(np.require(rank, np.int32)), self._len, label="ranks"
                 )
+                fields["rank"] = self._ranks
                 if self._len and self._ranks.numpy()[0] != 1:
-                    warnings.warn("ranks do not begin with 1", DataWarning, stacklevel=2)
-                self.ordered = True
+                    warnings.warn("ranks do not begin with 1", DataWarning, stacklevel=3)
 
-        # convert fields and drop singular ID/number aliases
-        self._fields = {}
-        if not array_is_null(scores):
-            assert scores is not None
-            self._fields["score"] = check_1d(MTArray(scores), self._len, label="scores")
+        # convert remaining fields
+        for name, data in other.items():
+            if name in ("item_id", "item_num", "item_ids", "item_nums", "score", "rank"):
+                continue
+            if data is False:
+                if name in fields:
+                    del fields[name]
 
-        for name, data in eff_fields.items():
-            if (
-                name not in ("item_id", "item_num", "score", "rank")
-                and data is not False
-                and not array_is_null(data)
-            ):
-                self._fields[name] = check_1d(MTArray(data), self._len, label=name)
+            if not array_is_null(data):
+                fields[name] = check_1d(MTArray(data), self._len, label=name)
+
+        self._fields = fields
 
     @classmethod
     def from_df(
@@ -830,8 +912,8 @@ class ItemList:
                 "ordered": ordered,
                 "_ranks": ranks,
                 "_fields": flds,
-            }
-        )
+            }  # type: ignore
+        )  # type: ignore
 
     def __len__(self):
         return self._len
