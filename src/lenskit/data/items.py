@@ -29,11 +29,12 @@ from typing_extensions import (
 )
 
 from lenskit.diagnostics import DataWarning
+from lenskit.stats import argtopn
 
 from .arrow import arrow_type, get_indexer
 from .checks import array_is_null, check_1d
 from .mtarray import MTArray, MTGenericArray
-from .types import IDArray, IDSequence
+from .types import IDArray, IDSequence, NPVector
 from .vocab import Vocabulary
 
 
@@ -501,7 +502,7 @@ class ItemList:
         return self._numbers.to(format)
 
     @overload
-    def scores(self, format: Literal["numpy"] = "numpy") -> NDArray[np.float32] | None: ...
+    def scores(self, format: Literal["numpy"] = "numpy") -> NPVector | None: ...
     @overload
     def scores(self, format: Literal["torch"]) -> torch.Tensor | None: ...
     @overload
@@ -747,27 +748,62 @@ class ItemList:
 
         return types
 
-    def __len__(self):
-        return self._len
-
-    def __getitem__(
-        self,
-        sel: NDArray[np.bool_] | NDArray[np.integer] | Sequence[int] | torch.Tensor | int | slice,
-    ) -> ItemList:
+    def top_n(self, n: int | None = None, *, scores: str | NPVector | None = None) -> ItemList:
         """
-        Subset the item list.
+        Get the top _N_ items in this list, sorted in decreasing order.
 
-        .. todo::
-            Support on-device masking.
+        If any scores are undefined (``NaN``), those items are excluded.
 
         Args:
-            sel:
-                The items to select. Can be either a Boolean array of the same
-                length as the list that is ``True`` to indicate selected items,
-                or an array of indices of the items to retain (in order in the
-                list, starting from 0).
+            n:
+                The number of items.  If ``None`` or negative, returns all items
+                sorted by score.
+            scores:
+                The name of a field containing the scores, or a NumPy vector of
+                scores, for selecting the top _N_.  If ``None``, the item list's
+                scores are used.
+        Returns:
+            An ordered item list containing the top ``n`` items.
+        """
+        if scores is None:
+            scores = self.scores()
+            if scores is None:
+                raise ValueError("item list has no scores")
+        elif isinstance(scores, str):
+            scores = self.field(scores)
+            if scores is None:
+                raise KeyError(scores)
+        elif len(scores) != len(self):
+            raise ValueError("score array must have same length as items")
+
+        if n is None or n < 0:
+            valid = ~np.isnan(scores)
+            if np.all(valid):
+                picked = np.argsort(-scores)
+            else:
+                # use an extra index array to handle nans
+                idx = np.arange(len(self))
+                idx = idx[valid]
+                picked = np.argsort(-scores[valid])
+                picked = idx[picked]
+        else:
+            picked = argtopn(scores, n)
+
+        return self._take(picked, ordered=True)
+
+    def _take(
+        self,
+        sel: NDArray[np.bool_] | NDArray[np.integer] | Sequence[int] | torch.Tensor | int | slice,
+        *,
+        ordered: bool | None = None,
+    ) -> ItemList:
+        """
+        Implementation helper for indexing.
         """
         indexer = get_indexer(sel)
+
+        if ordered is None:
+            ordered = self.ordered
 
         # Only subset the IDs if we don't have a vocabulary.  Otherwise, defer
         # ID subset until IDs are actually needed.
@@ -791,11 +827,33 @@ class ItemList:
                 "_ids": ids,
                 "_numbers": nums,
                 "_vocab": self._vocab,
-                "ordered": self.ordered,
+                "ordered": ordered,
                 "_ranks": ranks,
                 "_fields": flds,
             }
         )
+
+    def __len__(self):
+        return self._len
+
+    def __getitem__(
+        self,
+        sel: NDArray[np.bool_] | NDArray[np.integer] | Sequence[int] | torch.Tensor | int | slice,
+    ) -> ItemList:
+        """
+        Subset the item list.
+
+        .. todo::
+            Support on-device masking.
+
+        Args:
+            sel:
+                The items to select. Can be either a Boolean array of the same
+                length as the list that is ``True`` to indicate selected items,
+                or an array of indices of the items to retain (in order in the
+                list, starting from 0).
+        """
+        return self._take(sel)
 
     def __getstate__(self) -> dict[str, object]:
         state: dict[str, object] = {"ordered": self.ordered, "len": self._len}
