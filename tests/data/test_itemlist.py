@@ -342,6 +342,25 @@ def test_pandas_df_no_numbers():
     assert "item_num" not in df.columns
 
 
+def test_arrow_types(rng: np.random.Generator):
+    data = rng.standard_exponential(5).astype(np.float32)
+    il = ItemList(item_ids=ITEMS, vocabulary=VOCAB, scores=data)
+
+    assert il.arrow_types() == {"item_id": pa.string(), "score": pa.float32()}
+    assert il.arrow_types(ids=False, numbers=True) == {
+        "item_num": pa.int32(),
+        "score": pa.float32(),
+    }
+    assert il.arrow_types(numbers=True) == {
+        "item_id": pa.string(),
+        "item_num": pa.int32(),
+        "score": pa.float32(),
+    }
+
+    il = ItemList(item_ids=ITEMS, vocabulary=VOCAB, scores=data, ordered=True)
+    assert il.arrow_types() == {"item_id": pa.string(), "rank": pa.int32(), "score": pa.float32()}
+
+
 def test_arrow_table():
     data = np.random.randn(5).astype(np.float32)
     il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
@@ -350,6 +369,18 @@ def test_arrow_table():
     assert isinstance(tbl, pa.Table)
     assert tbl.num_columns == 3
     assert np.all(tbl.column("item_id").to_numpy() == ITEMS)
+    assert np.all(tbl.column("item_num").to_numpy() == np.arange(5))
+    assert np.all(tbl.column("score").to_numpy() == data)
+
+    tbl = il.to_arrow()
+    assert isinstance(tbl, pa.Table)
+    assert tbl.num_columns == 2
+    assert np.all(tbl.column("item_id").to_numpy() == ITEMS)
+    assert np.all(tbl.column("score").to_numpy() == data)
+
+    tbl = il.to_arrow(ids=False, numbers=True)
+    assert isinstance(tbl, pa.Table)
+    assert tbl.num_columns == 2
     assert np.all(tbl.column("item_num").to_numpy() == np.arange(5))
     assert np.all(tbl.column("score").to_numpy() == data)
 
