@@ -833,7 +833,7 @@ class ItemList:
                     if fld is not None:
                         arrays.append(fld)
                     else:
-                        warnings.warn(f"unknown field {c_name}", DataWarning)
+                        raise KeyError(c_name)
 
         print(arrays)
         print(names)
