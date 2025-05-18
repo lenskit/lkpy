@@ -22,6 +22,7 @@ _log = get_logger(__name__)
 _ml_path = Path("data/ml-20m.zip")
 
 
+@mark.slow
 @mark.parametrize("version", LK_VERSIONS)
 def test_data_backwards_compat(version, tmpdir: Path):
     "Test that we can load datasets prepared by old versions."

@@ -212,12 +212,13 @@ class ItemList:
                 self.ordered = ordered
             elif "rank" in kwargs:
                 self.ordered = True
+
             if vocabulary is not None:
                 raise ValueError("cannot change vocabulary from item list")
 
             self._init_fields(**kwargs)
         else:
-            self.ordered = ordered or ("rank" in kwargs)
+            self.ordered = ordered if ordered is not None else ("rank" in kwargs)
             self._vocab = vocabulary
             self._init_ids(source, **kwargs)
             self._init_numbers(**kwargs)
@@ -285,7 +286,8 @@ class ItemList:
                 raise ValueError("cannot specify both item_ids & item_id")
             item_ids = item_id
         elif item_ids is None:
-            item_ids = pa.array([], type=pa.int32())
+            # no setup
+            return
 
         # handle the item ID type
         if isinstance(item_ids, pa.Array):
@@ -326,17 +328,18 @@ class ItemList:
         length = getattr(self, "_len", None)
 
         if item_nums is None:
-            # no numbers; if empty list, synthesize empty numbers
-            if length == 0:
-                item_nums = pa.array([], pa.int32())
-            else:
-                return
+            return
 
         if not len(item_nums):  # type: ignore
             item_nums = np.ndarray(0, dtype=np.int32)
         if isinstance(item_nums, np.ndarray):
+            nk = item_nums.dtype.kind
+            if nk != "i" and nk != "u":
+                raise TypeError(f"invalid number dtype {item_nums.dtype}")
             item_nums = np.require(item_nums, dtype=np.int32)
         elif isinstance(item_nums, pa.Array):
+            if not pa.types.is_integer(item_nums.type):
+                raise TypeError(f"invalid number type {item_nums.type}")
             item_nums = item_nums.cast(pa.int32())
         elif torch.is_tensor(item_nums):
             item_nums = item_nums.to(torch.int32)
@@ -355,6 +358,7 @@ class ItemList:
         length = getattr(self, "_len", None)
         if self._ids is None and self._numbers is None:
             self._ids = pa.array([], pa.int32())
+            self._numbers = MTArray(pa.array([], pa.int32()))
             self._len = 0
         elif length is None:
             if self._ids is not None:
@@ -403,6 +407,7 @@ class ItemList:
             if data is False:
                 if name in fields:
                     del fields[name]
+                continue
 
             if not array_is_null(data):
                 fields[name] = check_1d(MTArray(data), self._len, label=name)
@@ -842,8 +847,6 @@ class ItemList:
                         warnings.warn(f"unknown field {c_name}", DataWarning)
                         arrays.append(pa.nulls(len(self), c_type))
 
-        print(arrays)
-        print(names)
         if type == "table":
             return pa.Table.from_arrays(arrays, names)
         elif type == "array":

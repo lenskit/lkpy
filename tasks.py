@@ -144,12 +144,15 @@ def build_conda(c: Context):
 @task(build_accel, iterable=["file"])
 def test(
     c: Context,
+    verbose: bool = False,
     coverage: bool = False,
     skip_marked: str | None = None,
     file: list[str] | None = None,
 ):
     "Run tests."
     cmd = "pytest"
+    if verbose:
+        cmd += " -v"
     if coverage:
         cmd += " --cov=src/lenskit --cov-report=term --cov-report=xml"
     if skip_marked:
