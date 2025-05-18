@@ -27,7 +27,7 @@ def get_indexer(sel) -> Selector:
     one indexer to be applied to multiple arrays.
     """
     if np.isscalar(sel):
-        sel = pa.array([sel])  # type: ignore
+        sel = pa.array([sel], pa.int32())  # type: ignore
         return partial(arrow_take, sel)
     elif isinstance(sel, slice):
         return partial(arrow_slice, sel)
@@ -37,7 +37,7 @@ def get_indexer(sel) -> Selector:
             return partial(arrow_take, sel)
         elif pa.types.is_boolean(sel.type):
             return partial(arrow_filter, sel)
-        else:
+        else:  # pragma: nocover
             raise TypeError(f"invalid selector: {sel}")
 
 
