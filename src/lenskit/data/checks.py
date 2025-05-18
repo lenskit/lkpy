@@ -158,9 +158,16 @@ def check_type(
 
 
 def array_is_null(array: object) -> bool:
+    """
+    Check if an array is all-null.
+
+    This looks for the array being `None` or being all-null in Arrow; it does
+    not check for NaN for NumPy/Pandas.  An empty array is _not_ null.
+    """
     if array is None:
         return True
-    if isinstance(array, pa.Array) and not np.any(array.is_valid()):
+    length = len(array)  # type: ignore
+    if length and isinstance(array, pa.Array) and array.null_count == length:
         return True
 
     return False

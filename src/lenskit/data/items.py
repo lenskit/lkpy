@@ -31,7 +31,7 @@ from lenskit.diagnostics import DataWarning
 from lenskit.stats import argtopn
 
 from .arrow import get_indexer
-from .checks import array_is_null, check_1d
+from .checks import check_1d
 from .mtarray import MTArray, MTGenericArray
 from .types import IDArray, IDSequence, NPVector
 from .vocab import Vocabulary
@@ -409,7 +409,7 @@ class ItemList:
                     del fields[name]
                 continue
 
-            if not array_is_null(data):
+            if data is not None:
                 fields[name] = check_1d(MTArray(data), self._len, label=name)
 
         self._fields = fields
@@ -859,8 +859,6 @@ class ItemList:
         Get the Arrow data types for this item list.
         """
         types: dict[str, pa.DataType] = {}
-        if len(self) == 0:
-            return types
 
         if ids:
             if self._ids is not None:
