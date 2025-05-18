@@ -481,7 +481,7 @@ class ItemList:
         if "item_id" not in names and "item_num" not in names:
             raise TypeError("data table must have at least one of item_id, item_num columns")
 
-        return ItemList(_init_array=tbl)
+        return ItemList(_init_array=tbl, vocabulary=vocabulary)
 
     @classmethod
     def from_vocabulary(cls, vocab: Vocabulary) -> ItemList:
@@ -827,11 +827,13 @@ class ItemList:
                     else:
                         warnings.warn("requested rank column for unordered list", DataWarning)
                         arrays.append(pa.nulls(len(self), c_type))
-                elif fld := self.field(c_name, format="arrow") is not None:
+                elif (fld := self.field(c_name, format="arrow")) is not None:
                     arrays.append(fld)
                 else:
                     warnings.warn(f"unknown field {c_name}", DataWarning)
 
+        print(arrays)
+        print(names)
         if type == "table":
             return pa.Table.from_arrays(arrays, names)
         elif type == "array":
