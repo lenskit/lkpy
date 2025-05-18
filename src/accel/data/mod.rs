@@ -20,7 +20,7 @@ pub fn register_data(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     parent.add_submodule(&data)?;
 
     data.add_function(wrap_pyfunction!(sorting::is_sorted_coo, &data)?)?;
-    data.add_function(wrap_pyfunction!(sorting::argsort, &data)?)?;
+    data.add_function(wrap_pyfunction!(sorting::argsort_descending, &data)?)?;
 
     Ok(())
 }

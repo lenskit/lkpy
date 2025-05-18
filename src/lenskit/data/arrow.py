@@ -31,14 +31,15 @@ def get_indexer(sel) -> Selector:
         return partial(arrow_take, sel)
     elif isinstance(sel, slice):
         return partial(arrow_slice, sel)
-    else:
+    elif not isinstance(sel, pa.Array):
         sel = pa.array(sel)
-        if pa.types.is_integer(sel.type):
-            return partial(arrow_take, sel)
-        elif pa.types.is_boolean(sel.type):
-            return partial(arrow_filter, sel)
-        else:  # pragma: nocover
-            raise TypeError(f"invalid selector: {sel}")
+
+    if pa.types.is_integer(sel.type):
+        return partial(arrow_take, sel)
+    elif pa.types.is_boolean(sel.type):
+        return partial(arrow_filter, sel)
+    else:  # pragma: nocover
+        raise TypeError(f"invalid selector: {sel}")
 
 
 def arrow_to_format(array: pa.Array, format: Literal["arrow", "numpy", "torch"]):

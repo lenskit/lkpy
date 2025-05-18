@@ -64,7 +64,9 @@ pub(super) fn is_sorted_coo<'py>(
 }
 
 #[pyfunction]
-pub(crate) fn argsort<'py>(scores: PyArrowType<ArrayData>) -> PyResult<PyArrowType<ArrayData>> {
+pub(crate) fn argsort_descending<'py>(
+    scores: PyArrowType<ArrayData>,
+) -> PyResult<PyArrowType<ArrayData>> {
     let scores = make_array(scores.0);
     let indices = match scores.data_type() {
         DataType::Float16 => argsort_float(scores.as_any().downcast_ref::<Float16Array>().unwrap()),

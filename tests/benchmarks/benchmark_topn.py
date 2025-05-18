@@ -89,7 +89,7 @@ def test_accel_sort(rng: np.random.Generator, size: int, benchmark):
     scores = pa.array(scores, pa.float32())
 
     def sort():
-        _idx = data.argsort(scores)
+        _idx = data.argsort_descending(scores)
 
     benchmark(sort)
 

@@ -27,6 +27,7 @@ from typing_extensions import (
     overload,
 )
 
+from lenskit._accel import data
 from lenskit.diagnostics import DataWarning
 from lenskit.stats import argtopn
 
@@ -405,16 +406,16 @@ class ItemList:
                     warnings.warn("ranks do not begin with 1", DataWarning, stacklevel=3)
 
         # convert remaining fields
-        for name, data in other.items():
+        for name, fdata in other.items():
             if name in ("item_id", "item_num", "item_ids", "item_nums", "score", "rank"):
                 continue
-            if data is False:
+            if fdata is False:
                 if name in fields:
                     del fields[name]
                 continue
 
-            if data is not None:
-                fields[name] = check_1d(MTArray(data), self._len, label=name)
+            if fdata is not None:
+                fields[name] = check_1d(MTArray(fdata), self._len, label=name)
 
         self._fields = fields
 
@@ -899,26 +900,21 @@ class ItemList:
             An ordered item list containing the top ``n`` items.
         """
         if scores is None:
-            scores = self.scores()
+            scores = self.scores(format="arrow")
             if scores is None:
                 raise ValueError("item list has no scores")
         elif isinstance(scores, str):
-            scores = self.field(scores)
+            scores = self.field(scores, format="arrow")
             if scores is None:
                 raise KeyError(scores)
         elif len(scores) != len(self):
             raise ValueError("score array must have same length as items")
 
+        if not isinstance(scores, pa.Array):
+            scores = pa.array(scores)
+
         if n is None or n < 0:
-            valid = ~np.isnan(scores)
-            if np.all(valid):
-                picked = np.argsort(-scores)
-            else:
-                # use an extra index array to handle nans
-                idx = np.arange(len(self))
-                idx = idx[valid]
-                picked = np.argsort(-scores[valid])
-                picked = idx[picked]
+            picked = data.argsort_descending(scores)
         else:
             picked = argtopn(scores, n)
 
@@ -926,7 +922,13 @@ class ItemList:
 
     def _take(
         self,
-        sel: NDArray[np.bool_] | NDArray[np.integer] | Sequence[int] | torch.Tensor | int | slice,
+        sel: NDArray[np.bool_]
+        | NDArray[np.integer]
+        | Sequence[int]
+        | pa.Int32Array
+        | torch.Tensor
+        | int
+        | slice,
         *,
         ordered: bool | None = None,
     ) -> ItemList:
