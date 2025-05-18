@@ -262,7 +262,11 @@ class ItemList:
 
         # the rest of the fields can be lazily loaded from the array
         fields = [array.type.field(i) for i in range(array.type.num_fields)]
-        self._fields = {f.name: MTArray(array.field(i)) for (i, f) in enumerate(fields)}
+        self._fields = {
+            f.name: MTArray(array.field(i))
+            for (i, f) in enumerate(fields)
+            if f.name not in ["item_num", "item_id"]
+        }
 
     def _init_ids(
         self,

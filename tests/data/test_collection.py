@@ -11,6 +11,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 
 from pytest import mark, raises, warns
 
@@ -19,7 +20,7 @@ from lenskit.data.collection import ItemListCollection, MutableItemListCollectio
 from lenskit.data.collection._keys import create_key, project_key
 from lenskit.data.dataset import Dataset
 from lenskit.diagnostics import DataWarning
-from lenskit.testing import demo_recs
+from lenskit.testing import DemoRecs, demo_recs
 
 _log = logging.getLogger(__name__)
 
@@ -201,6 +202,22 @@ def test_to_df():
     print(df)
     assert len(df) == 4
     assert df["user_id"].tolist() == [72, 82, 82, 82]
+    assert list(df.columns) == ["user_id", "item_id", "score"]
+
+
+def test_to_df_no_nums():
+    ilc = ItemListCollection.from_dict(
+        {
+            72: ItemList(["a"], item_nums=[0], scores=[1]),
+            82: ItemList(["a", "b", "c"], item_nums=np.arange(3), scores=[3, 4, 10]),
+        },
+        key="user_id",
+    )
+    df = ilc.to_df()
+    print(df)
+    assert len(df) == 4
+    assert df["user_id"].tolist() == [72, 82, 82, 82]
+    assert list(df.columns) == ["user_id", "item_id", "score"]
 
 
 def test_to_df_warn_empty():
@@ -228,6 +245,14 @@ def test_to_arrow():
     print(tbl)
     assert tbl.num_rows == 2
     assert np.all(tbl.column("user_id").to_numpy() == [72, 82])
+    il_field = tbl.field("items")
+    assert pa.types.is_list(il_field.type)
+    assert isinstance(il_field.type, pa.ListType)
+    il_type = il_field.type.value_type
+    assert pa.types.is_struct(il_type)
+    assert isinstance(il_type, pa.StructType)
+    names = [il_type.field(i).name for i in range(il_type.num_fields)]
+    assert names == ["item_id", "score"]
 
 
 @mark.parametrize("layout", ["native", "flat"])
@@ -315,3 +340,10 @@ def test_write_recs_parquet(demo_recs, tmpdir: Path):
     r2 = ItemListCollection.load_parquet(rec_f)
     assert list(r2.keys()) == list(recs.keys())
     assert all(il.ordered for il in r2.lists())
+
+
+def test_recs_df_expected_column(demo_recs: DemoRecs):
+    rec_df = demo_recs.recommendations.to_df()
+    print(rec_df)
+    print(demo_recs.recommendations[0])
+    assert list(rec_df.columns) == ["user_id", "item_id", "score", "rank"]
