@@ -9,7 +9,8 @@ use std::cmp::Reverse;
 use arrow::{
     array::{
         make_array, Array, ArrayData, ArrowPrimitiveType, Float16Array, Float32Array, Float64Array,
-        Int16Array, Int32Array, Int64Array, Int8Array, PrimitiveArray, RecordBatch,
+        Int16Array, Int32Array, Int64Array, Int8Array, PrimitiveArray, RecordBatch, UInt16Array,
+        UInt32Array, UInt64Array, UInt8Array,
     },
     pyarrow::PyArrowType,
 };
@@ -19,10 +20,7 @@ use pyo3::{
     exceptions::{PyTypeError, PyValueError},
     prelude::*,
 };
-use rayon::{
-    iter::{IntoParallelIterator, ParallelIterator},
-    slice::ParallelSliceMut,
-};
+use rayon::slice::ParallelSliceMut;
 
 use crate::types::checked_array;
 
@@ -74,6 +72,10 @@ pub(crate) fn argsort<'py>(scores: PyArrowType<ArrayData>) -> PyResult<PyArrowTy
         DataType::Int16 => argsort_int(scores.as_any().downcast_ref::<Int16Array>().unwrap()),
         DataType::Int32 => argsort_int(scores.as_any().downcast_ref::<Int32Array>().unwrap()),
         DataType::Int64 => argsort_int(scores.as_any().downcast_ref::<Int64Array>().unwrap()),
+        DataType::UInt8 => argsort_int(scores.as_any().downcast_ref::<UInt8Array>().unwrap()),
+        DataType::UInt16 => argsort_int(scores.as_any().downcast_ref::<UInt16Array>().unwrap()),
+        DataType::UInt32 => argsort_int(scores.as_any().downcast_ref::<UInt32Array>().unwrap()),
+        DataType::UInt64 => argsort_int(scores.as_any().downcast_ref::<UInt64Array>().unwrap()),
         _ => {
             return Err(PyTypeError::new_err(format!(
                 "unsupported type {}",
