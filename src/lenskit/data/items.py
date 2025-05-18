@@ -323,8 +323,14 @@ class ItemList:
                 raise ValueError("cannot specify both item_nums and item_num")
             item_nums = item_num
 
+        length = getattr(self, "_len", None)
+
         if item_nums is None:
-            return
+            # no numbers; if empty list, synthesize empty numbers
+            if length == 0:
+                item_nums = pa.array([], pa.int32())
+            else:
+                return
 
         if not len(item_nums):  # type: ignore
             item_nums = np.ndarray(0, dtype=np.int32)
@@ -336,7 +342,7 @@ class ItemList:
             item_nums = item_nums.to(torch.int32)
 
         self._numbers = MTArray(item_nums)
-        check_1d(self._numbers, getattr(self, "_len", None), label="item_nums")
+        check_1d(self._numbers, length, label="item_nums")
         self._len = self._numbers.shape[0]
 
     def _init_check_length(self):
