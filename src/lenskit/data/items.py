@@ -991,7 +991,7 @@ class ItemList:
             self._numbers = MTArray(state["numbers"])
         self._fields = {k[6:]: MTArray(v) for (k, v) in state.items() if k.startswith("field_")}
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # pragma: nocover
         return f"<ItemList of {self._len} items>"
 
     def __repr__(self) -> str:  # pragma: nocover
