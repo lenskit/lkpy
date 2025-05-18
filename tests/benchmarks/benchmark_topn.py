@@ -58,6 +58,7 @@ def test_torch_argsort_gpu(rng: np.random.Generator, size: int, benchmark):
 
 @mark.benchmark(group="all")
 @mark.parametrize("size", [100, 5000, 100_000, 1_000_000])
+@mark.skip("only testing argsort")
 def test_numpy_sort(rng: np.random.Generator, size: int, benchmark):
     scores = rng.standard_exponential(size)
     scores = np.require(scores, dtype=np.float32)
