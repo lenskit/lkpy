@@ -24,6 +24,8 @@ use rayon::slice::ParallelSliceMut;
 
 use crate::types::checked_array;
 
+const PAR_SORT_THRESHOLD: usize = 10_000;
+
 /// Check if two columns of a table are properly-sorted COO.
 #[pyfunction]
 pub(super) fn is_sorted_coo<'py>(
@@ -104,7 +106,11 @@ where
         }
     }
 
-    indices.par_sort_unstable_by_key(|i| Reverse(NotNan::new(sbuf[*i as usize]).unwrap()));
+    if scores.len() >= PAR_SORT_THRESHOLD {
+        indices.par_sort_unstable_by_key(|i| Reverse(NotNan::new(sbuf[*i as usize]).unwrap()));
+    } else {
+        indices.sort_unstable_by_key(|i| Reverse(NotNan::new(sbuf[*i as usize]).unwrap()));
+    }
 
     indices
 }
@@ -121,7 +127,12 @@ where
             indices.push(i as i32);
         }
     }
-    indices.par_sort_unstable_by_key(|i| Reverse(sbuf[*i as usize]));
+
+    if scores.len() >= PAR_SORT_THRESHOLD {
+        indices.par_sort_unstable_by_key(|i| Reverse(sbuf[*i as usize]));
+    } else {
+        indices.sort_unstable_by_key(|i| Reverse(sbuf[*i as usize]));
+    }
 
     indices
 }
