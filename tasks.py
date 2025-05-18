@@ -154,7 +154,7 @@ def test(
     if verbose:
         cmd += " -v"
     if coverage:
-        cmd += " --cov=src/lenskit --cov-report=term --cov-report=xml"
+        cmd += " --cov=src/lenskit --cov-report=xml"
     if skip_marked:
         cmd += f" -m 'not {skip_marked}'"
     if file:
