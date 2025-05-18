@@ -8,7 +8,6 @@ use arrow::{
     array::{make_array, ArrayData},
     pyarrow::PyArrowType,
 };
-use nalgebra::Cholesky;
 use ndarray::{Array1, ArrayBase, ArrayView2, Axis, ViewRepr};
 use nshare::{IntoNalgebra, IntoNdarray1};
 use numpy::{Ix1, PyArray2, PyArrayMethods};
