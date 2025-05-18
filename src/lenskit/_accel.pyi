@@ -26,6 +26,8 @@ class NegativeSampler:
 class _DataAccelerator(Protocol):
     @staticmethod
     def is_sorted_coo(data: list[pa.RecordBatch], c1: str, c2: str) -> bool: ...
+    @staticmethod
+    def argsort(data: pa.Array) -> pa.Int32Array: ...
 
 data: _DataAccelerator
 

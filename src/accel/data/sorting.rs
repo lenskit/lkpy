@@ -4,11 +4,25 @@
 // Licensed under the MIT license, see LICENSE.md for details.
 // SPDX-License-Identifier: MIT
 
+use std::cmp::Reverse;
+
 use arrow::{
-    array::{Int32Array, RecordBatch},
+    array::{
+        make_array, Array, ArrayData, ArrowPrimitiveType, Float16Array, Float32Array, Float64Array,
+        Int16Array, Int32Array, Int64Array, Int8Array, PrimitiveArray, RecordBatch,
+    },
     pyarrow::PyArrowType,
 };
-use pyo3::{exceptions::PyValueError, prelude::*};
+use arrow_schema::DataType;
+use ordered_float::{FloatCore, NotNan};
+use pyo3::{
+    exceptions::{PyTypeError, PyValueError},
+    prelude::*,
+};
+use rayon::{
+    iter::{IntoParallelIterator, ParallelIterator},
+    slice::ParallelSliceMut,
+};
 
 use crate::types::checked_array;
 
@@ -47,4 +61,65 @@ pub(super) fn is_sorted_coo<'py>(
 
     // got this far, we're sorted
     Ok(true)
+}
+
+#[pyfunction]
+pub(crate) fn argsort<'py>(scores: PyArrowType<ArrayData>) -> PyResult<PyArrowType<ArrayData>> {
+    let scores = make_array(scores.0);
+    let indices = match scores.data_type() {
+        DataType::Float16 => argsort_float(scores.as_any().downcast_ref::<Float16Array>().unwrap()),
+        DataType::Float32 => argsort_float(scores.as_any().downcast_ref::<Float32Array>().unwrap()),
+        DataType::Float64 => argsort_float(scores.as_any().downcast_ref::<Float64Array>().unwrap()),
+        DataType::Int8 => argsort_int(scores.as_any().downcast_ref::<Int8Array>().unwrap()),
+        DataType::Int16 => argsort_int(scores.as_any().downcast_ref::<Int16Array>().unwrap()),
+        DataType::Int32 => argsort_int(scores.as_any().downcast_ref::<Int32Array>().unwrap()),
+        DataType::Int64 => argsort_int(scores.as_any().downcast_ref::<Int64Array>().unwrap()),
+        _ => {
+            return Err(PyTypeError::new_err(format!(
+                "unsupported type {}",
+                scores.data_type()
+            )))
+        }
+    };
+
+    let array = Int32Array::from(indices);
+    Ok(array.into_data().into())
+}
+
+fn argsort_float<T: ArrowPrimitiveType>(scores: &PrimitiveArray<T>) -> Vec<i32>
+where
+    T::Native: FloatCore,
+{
+    let sbuf = scores.values();
+
+    let mut indices = Vec::with_capacity(scores.len());
+    for i in 0..scores.len() {
+        if scores.is_valid(i) {
+            let v = scores.value(i);
+            if !v.is_nan() {
+                indices.push(i as i32);
+            }
+        }
+    }
+
+    indices.par_sort_unstable_by_key(|i| Reverse(NotNan::new(sbuf[*i as usize]).unwrap()));
+
+    indices
+}
+
+fn argsort_int<T: ArrowPrimitiveType>(scores: &PrimitiveArray<T>) -> Vec<i32>
+where
+    T::Native: Ord,
+{
+    let sbuf = scores.values();
+
+    let mut indices = Vec::with_capacity(scores.len());
+    for i in 0..scores.len() {
+        if scores.is_valid(i) {
+            indices.push(i as i32);
+        }
+    }
+    indices.par_sort_unstable_by_key(|i| Reverse(sbuf[*i as usize]));
+
+    indices
 }

@@ -14,7 +14,7 @@ import torch
 
 from pytest import mark
 
-from lenskit._accel import argsort_f32, argsort_f32_arrow
+from lenskit._accel import argsort_f32, argsort_f32_arrow, data
 from lenskit.parallel import ensure_parallel_init
 from lenskit.stats import argtopn
 
@@ -76,6 +76,19 @@ def test_arrow_sort(rng: np.random.Generator, size: int, benchmark):
 
     def sort():
         _idx = pc.array_sort_indices(scores, order="descending")
+
+    benchmark(sort)
+
+
+@mark.benchmark(group="all")
+@mark.parametrize("size", [100, 5000, 100_000, 1_000_000])
+def test_accel_sort(rng: np.random.Generator, size: int, benchmark):
+    ensure_parallel_init()
+    scores = rng.standard_exponential(size)
+    scores = pa.array(scores, pa.float32())
+
+    def sort():
+        _idx = data.argsort(scores)
 
     benchmark(sort)
 
