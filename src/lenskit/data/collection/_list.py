@@ -177,12 +177,13 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
         self._lists.append((key, list))
         if self._index is not None:
             self._index[key] = len(self._lists) - 1
-        for fn, ft in list.arrow_types().items():
-            pft = self._list_schema.get(fn, None)
-            if pft is None:
-                self._list_schema[fn] = ft
-            elif not ft.equals(pft):
-                raise TypeError(f"incompatible item lists: field {fn} type {ft} != {pft}")
+        if len(list):
+            for fn, ft in list.arrow_types().items():
+                pft = self._list_schema.get(fn, None)
+                if pft is None:
+                    self._list_schema[fn] = ft
+                elif not ft.equals(pft):
+                    raise TypeError(f"incompatible item lists: field {fn} type {ft} != {pft}")
 
     @overload
     def lookup(self, key: tuple) -> ItemList | None: ...
