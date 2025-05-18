@@ -827,10 +827,13 @@ class ItemList:
                     else:
                         warnings.warn("requested rank column for unordered list", DataWarning)
                         arrays.append(pa.nulls(len(self), c_type))
-                elif (fld := self.field(c_name, format="arrow")) is not None:
-                    arrays.append(fld)
                 else:
-                    warnings.warn(f"unknown field {c_name}", DataWarning)
+                    fld = self.field(c_name, format="arrow")
+
+                    if fld is not None:
+                        arrays.append(fld)
+                    else:
+                        warnings.warn(f"unknown field {c_name}", DataWarning)
 
         print(arrays)
         print(names)
