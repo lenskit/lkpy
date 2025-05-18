@@ -16,7 +16,6 @@ mod funksvd;
 mod knn;
 mod progress;
 mod sampling;
-mod sorting;
 mod sparse;
 mod types;
 
@@ -33,8 +32,6 @@ fn _accel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(init_accel_pool, m)?)?;
     m.add_function(wrap_pyfunction!(thread_count, m)?)?;
     m.add_function(wrap_pyfunction!(sparse::sparse_row_debug, m)?)?;
-    m.add_function(wrap_pyfunction!(sorting::argsort_f32_arrow, m)?)?;
-    m.add_function(wrap_pyfunction!(sorting::argsort_f32, m)?)?;
 
     Ok(())
 }
