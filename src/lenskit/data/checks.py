@@ -12,7 +12,6 @@ from __future__ import annotations
 from typing import Any, Literal, Protocol, TypeVar, overload
 
 import numpy as np
-import pyarrow as pa
 from numpy.typing import NDArray
 
 
@@ -155,19 +154,3 @@ def check_type(
         raise TypeError(f"{label} has incorrect type {arr.dtype} (allowed: {types})")
     else:
         return False
-
-
-def array_is_null(array: object) -> bool:
-    """
-    Check if an array is all-null.
-
-    This looks for the array being `None` or being all-null in Arrow; it does
-    not check for NaN for NumPy/Pandas.  An empty array is _not_ null.
-    """
-    if array is None:
-        return True
-    length = len(array)  # type: ignore
-    if length and isinstance(array, pa.Array) and array.null_count == length:
-        return True
-
-    return False
