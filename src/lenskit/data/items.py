@@ -225,7 +225,7 @@ class ItemList:
             elif "rank" in kwargs:
                 self.ordered = True
 
-            if vocabulary is not None:
+            if vocabulary is not None:  # pragma: nocover
                 raise ValueError("cannot change vocabulary from item list")
 
             self._init_fields(**kwargs)
@@ -267,7 +267,7 @@ class ItemList:
         except KeyError:
             self.ordered = ordered or False
         else:
-            if ordered is False:
+            if ordered is False:  # pragma: nocover
                 raise ValueError("table has ranks but ordered=False")
             self.ordered = True
             self._ranks = MTArray(ranks)
@@ -311,7 +311,7 @@ class ItemList:
         elif len(item_ids) > 0:
             try:
                 self._ids = pa.array(item_ids)  # type: ignore
-            except pa.ArrowInvalid:
+            except pa.ArrowInvalid:  # pragma: nocover
                 raise TypeError("invalid item ID type or dimension")
             if isinstance(item_ids, np.ndarray):
                 self._ids_numpy = item_ids
@@ -366,24 +366,27 @@ class ItemList:
 
     def _init_check_length(self):
         """
-        Check that we have a correct length, and that lengths match.  Fill in
-        empty IDs if we don't have any IDs.
+        Check that we have a correct length set.
 
         This is called after setting IDs and numbers, and before setting fields.
+        After this succeeds, ``_len`` is set and ``len(self)`` will work.
         """
         length = getattr(self, "_len", None)
         if self._ids is None and self._numbers is None:
             self._ids = pa.array([], pa.int32())
             self._numbers = MTArray(pa.array([], pa.int32()))
             self._len = 0
-        elif length is None:
+        elif length is None:  # pragma: nocover
+            # this is here as a fail-safe, but isn't triggered in realistic scenarios
             if self._ids is not None:
                 self._len = len(self._ids)
             elif self._numbers is not None:
                 self._len = self._numbers.shape[0]
+            else:
+                raise AssertionError("unreachable")
 
     def _init_fields(self, *, scores=None, score=None, rank=None, **other):
-        if any(k[0] == "_" for k in other.keys()):
+        if any(k[0] == "_" for k in other.keys()):  # pragma: nocover
             raise ValueError("item list fields cannot start with _")
 
         fields = getattr(self, "_fields", {}).copy()

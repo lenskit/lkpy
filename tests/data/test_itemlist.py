@@ -106,6 +106,17 @@ def test_item_num_array():
         il.ids()
 
 
+def test_item_num_arrow():
+    il = ItemList(item_nums=pa.array(np.arange(5)))
+
+    assert len(il) == 5
+    assert il.numbers().shape == (5,)
+    assert np.all(il.numbers() == np.arange(5))
+
+    with raises(RuntimeError, match="item IDs not available"):
+        il.ids()
+
+
 def test_item_num_alias():
     il = ItemList(item_num=np.arange(5))
 
