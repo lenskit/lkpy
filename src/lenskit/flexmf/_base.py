@@ -15,6 +15,7 @@ import torch
 from lenskit.data import ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.logging import get_logger
 from lenskit.pipeline import Component
+from lenskit.torch import inference_mode
 from lenskit.training import UsesTrainer
 
 from ._model import FlexMFModel
@@ -101,6 +102,7 @@ class FlexMFScorerBase(UsesTrainer, Component):
         self.model = self.model.to(device)
         return self
 
+    @inference_mode
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         """
         Generate item scores for a user.
@@ -135,13 +137,10 @@ class FlexMFScorerBase(UsesTrainer, Component):
         i_cols = i_cols[scorable_mask]
 
         # get scores
-        with torch.inference_mode():
-            scores = self.score_items(u_tensor, i_cols)
-            # initialize output score array, fill with missing
-            full_scores = torch.full(
-                (len(items),), np.nan, dtype=torch.float32, device=scores.device
-            )
-            full_scores[scorable_mask] = scores
+        scores = self.score_items(u_tensor, i_cols)
+        # initialize output score array, fill with missing
+        full_scores = torch.full((len(items),), np.nan, dtype=torch.float32, device=scores.device)
+        full_scores[scorable_mask] = scores
 
         # return the result!
         return ItemList(items, scores=full_scores)
