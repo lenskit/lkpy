@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 
-import numpy as np
 from typing_extensions import override
 
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery, Vocabulary
@@ -75,10 +74,6 @@ class UnratedTrainingItemsCandidateSelector(TrainingCandidateSelectorBase):
         items = ItemList.from_vocabulary(self.items_)
 
         if query.user_items is not None:
-            mask = np.full(len(self.items_), True, np.bool_)
-            qis = query.user_items.numbers(vocabulary=self.items_)
-            qis = qis[qis >= 0]
-            mask[qis] = False
-            items = items[mask]
+            items = items.remove(numbers=query.user_items.numbers(vocabulary=self.items_))
 
         return items
