@@ -1005,6 +1005,7 @@ class ItemList:
             assert numbers is not None
 
             numbers = MTArray(numbers).numpy()
+            numbers = np.require(numbers, dtype=np.int32)
             mask = np.isin(self.numbers(), numbers, invert=True, kind="table")
 
         # fast case — we have a vocabulary and no fields
