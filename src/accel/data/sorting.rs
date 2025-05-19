@@ -99,9 +99,8 @@ where
     let sbuf = scores.values();
 
     let mut indices = Vec::with_capacity(scores.len());
-    for i in 0..scores.len() {
-        if scores.is_valid(i) {
-            let v = scores.value(i);
+    for (i, v) in scores.iter().enumerate() {
+        if let Some(v) = v {
             if !v.is_nan() {
                 indices.push(i as i32);
             }
@@ -124,8 +123,8 @@ where
     let sbuf = scores.values();
 
     let mut indices = Vec::with_capacity(scores.len());
-    for i in 0..scores.len() {
-        if scores.is_valid(i) {
+    for (i, v) in scores.iter().enumerate() {
+        if let Some(_v) = v {
             indices.push(i as i32);
         }
     }
