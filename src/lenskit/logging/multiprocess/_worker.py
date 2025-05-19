@@ -229,6 +229,7 @@ class WorkerProgress(Progress):  # pragma: nocover
                     fields=fields,
                 )
             )
+            self._limit.mark_update(now)
 
     def finish(self):
         if self.context is None:
