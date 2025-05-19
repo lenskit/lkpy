@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from threading import Lock
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import structlog
 from rich.progress import (
@@ -42,22 +42,19 @@ class RichProgress(Progress):
     Progress bark backed by Rich.
     """
 
-    uuid: UUID
     label: str
-    total: int | None
     logger: structlog.stdlib.BoundLogger
     _field_format: str | None = None
     _task: TaskID | None = None
 
     def __init__(self, label: str, total: int | None, fields: dict[str, str | None]):
         super().__init__()
-        self.uuid = uuid4()
         self.label = label
         self.total = total
 
         self.logger = _log.bind(label=label, uuid=str(self.uuid))
 
-        self._task = _install_bar(self)
+        self._task = self._install()
 
         if fields:
             self._field_format = ", ".join(
@@ -87,49 +84,47 @@ class RichProgress(Progress):
             )
 
     def finish(self):
-        _remove_bar(self)
+        self._remove()
 
+    def _install(self) -> TaskID | None:
+        global _progress
+        self.logger.debug("installing progress bar")
+        live = get_live()
+        if live is None:
+            return None
 
-def _install_bar(bar: RichProgress) -> TaskID | None:
-    global _progress
-    bar.logger.debug("installing progress bar")
-    live = get_live()
-    if live is None:
-        return None
+        with _pb_lock:
+            if _progress is None:
+                _progress = ProgressImpl(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    BarColumn(),
+                    MofNCompleteColumn(),
+                    RateColumn(),
+                    TaskProgressColumn(),
+                    TimeRemainingColumn(),
+                    TextColumn("{task.fields[extra]}"),
+                    console=console,
+                )
+                live.update(_progress)
 
-    with _pb_lock:
-        if _progress is None:
-            _progress = ProgressImpl(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                MofNCompleteColumn(),
-                RateColumn(),
-                TaskProgressColumn(),
-                TimeRemainingColumn(),
-                TextColumn("{task.fields[extra]}"),
-                console=console,
-            )
-            live.update(_progress)
+            _active_bars[self.uuid] = self
+            return _progress.add_task(self.label, total=self.total, extra="")
 
-        _active_bars[bar.uuid] = bar
-        return _progress.add_task(bar.label, total=bar.total, extra="")
+    def _remove(self):
+        live = get_live()
+        if live is None or _progress is None:
+            return
+        if self.uuid not in _active_bars:
+            return
+        if self._task is None:
+            return
 
+        self.logger.debug("uninstalling progress bar")
 
-def _remove_bar(bar: RichProgress):
-    live = get_live()
-    if live is None or _progress is None:
-        return
-    if bar.uuid not in _active_bars:
-        return
-    if bar._task is None:
-        return
-
-    bar.logger.debug("uninstalling progress bar")
-
-    with _pb_lock:
-        _progress.remove_task(bar._task)
-        del _active_bars[bar.uuid]
+        with _pb_lock:
+            _progress.remove_task(self._task)
+            del _active_bars[self.uuid]
 
 
 class RateColumn(ProgressColumn):

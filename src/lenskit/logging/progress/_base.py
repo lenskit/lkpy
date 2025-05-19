@@ -4,9 +4,11 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+# pyright: strict
 from __future__ import annotations
 
 from typing import Any
+from uuid import UUID, uuid4
 
 
 class Progress:
@@ -14,8 +16,11 @@ class Progress:
     Base class for progress reporting.  The default implementations do nothing.
     """
 
+    uuid: UUID
+    total: int | None
+
     def __init__(self, *args: Any, **kwargs: Any):
-        pass
+        self.uuid = uuid4()
 
     def update(
         self,
@@ -47,5 +52,5 @@ class Progress:
     def __enter__(self):
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: Any):
         self.finish()

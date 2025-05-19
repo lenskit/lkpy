@@ -30,7 +30,6 @@ class JupyterProgress(Progress):
     widget: widgets.IntProgress
     text: widgets.Label
     box: widgets.HBox
-    total: int | None
     current: int
     _last_update: float = 0
     _field_format: str | None = None
@@ -41,6 +40,7 @@ class JupyterProgress(Progress):
         total: int | None,
         fields: dict[str, str | None],
     ):
+        super().__init__()
         self.current = 0
         self.total = total
         if total:
