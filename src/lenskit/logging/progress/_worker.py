@@ -60,7 +60,7 @@ class WorkerProgress(Progress):  # pragma: nocover
             self.total = total
 
         now = perf_counter()
-        if self._limit.want_update(now):
+        if self._limit.want_update(now) or self.completed == self.total:
             self.context.send_progress(
                 ProgressMessage(
                     progress_id=self.uuid,
