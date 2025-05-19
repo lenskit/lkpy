@@ -7,7 +7,7 @@
 # pyright: strict
 from __future__ import annotations
 
-from threading import Lock
+from threading import RLock
 from uuid import UUID
 
 import structlog
@@ -24,16 +24,18 @@ from rich.progress import (
 )
 from rich.progress import Progress as ProgressImpl
 from rich.text import Text
-from typing_extensions import override
+from typing_extensions import TYPE_CHECKING, override
 
 from .._console import console, get_live
 from .._proxy import get_logger
-from ..multiprocess._protocol import ProgressMessage
 from ._base import Progress
 from ._formats import field_format
 
+if TYPE_CHECKING:
+    from ..multiprocess._protocol import ProgressMessage
+
 _log = get_logger("lenskit.logging.progress")
-_pb_lock = Lock()
+_pb_lock = RLock()
 _progress: ProgressImpl | None = None
 _active_bars: dict[UUID, RichProgress] = {}
 
@@ -48,8 +50,16 @@ class RichProgress(Progress):
     _field_format: str | None = None
     _task: TaskID | None = None
 
-    def __init__(self, label: str, total: int | float | None, fields: dict[str, str | None] | None):
-        super().__init__()
+    def __init__(
+        self,
+        label: str,
+        total: int | float | None,
+        fields: dict[str, str | None] | None,
+        *,
+        uuid: UUID | None = None,
+    ):
+        super().__init__(uuid=uuid)
+
         self.label = label
         self.total = total
 
@@ -62,9 +72,14 @@ class RichProgress(Progress):
 
     @classmethod
     def handle_message(cls, update: ProgressMessage):
-        pb = _active_bars.get(update.progress_id)
-        if pb is None:
-            pb = cls(update.label, update.total, {})
+        with _pb_lock:
+            pb = _active_bars.get(update.progress_id)
+            if pb is None:
+                pb = cls(update.label, update.total, {}, uuid=update.progress_id)
+
+        if update.finished:
+            pb.finish()
+            return
 
         fields = {}
         if update.fields:
