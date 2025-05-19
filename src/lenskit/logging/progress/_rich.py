@@ -85,6 +85,8 @@ class RichProgress(Progress):
         if update.fields:
             cls._field_format = _make_format({n: f.format for (n, f) in update.fields.items()})
             fields = {n: f.value for (n, f) in update.fields.items()}
+        else:
+            cls._field_format = ""
 
         pb.update(advance=0, completed=update.completed, total=update.total, **fields)
 
