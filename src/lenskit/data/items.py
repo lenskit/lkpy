@@ -934,23 +934,17 @@ class ItemList:
 
         if score_tensor is not None and not score_tensor.is_cpu:
             # sorting is faster on-device
-            invalid = torch.isnan(score_tensor)
-            if torch.any(invalid):
-                valid = ~invalid
-                idxmap = torch.arange(len(invalid))[valid.cpu()]
-                score_tensor = score_tensor[valid]
-            else:
-                idxmap = None
-
             if n is None or n < 0:
-                picked = torch.argsort(score_tensor, descending=True)
+                vs, picked = torch.sort(score_tensor, descending=True)
             else:
-                _vs, picked = torch.topk(score_tensor, min(n, len(score_tensor)))
+                vs, picked = torch.topk(score_tensor, min(n, len(score_tensor)))
 
-            picked = picked.cpu()
-            if idxmap is not None:
-                picked = idxmap[picked]
-            picked = picked.numpy()
+            # drop invalid / unscored items
+            invalid = torch.isnan(vs)
+            if torch.any(invalid):
+                picked = picked[~invalid]
+
+            picked = picked.cpu().numpy()
         else:
             if not isinstance(scores, MTArray):
                 scores = MTArray(scores)
