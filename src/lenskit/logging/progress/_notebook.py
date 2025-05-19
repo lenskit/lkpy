@@ -23,7 +23,7 @@ from ._formats import field_format
 __all__ = ["JupyterProgress"]
 
 
-class JupyterProgress(Progress):
+class JupyterProgress(Progress):  # pragma: nocover
     """
     Progress logging to Jupyter notebook widgets.
     """
