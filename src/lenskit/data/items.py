@@ -934,9 +934,10 @@ class ItemList:
 
         if score_tensor is not None and not score_tensor.is_cpu:
             # sorting is faster on-device
-            valid = ~torch.isnan(score_tensor)
-            if not torch.all(valid):
-                idxmap = torch.arange(len(valid))[valid.cpu()]
+            invalid = torch.isnan(score_tensor)
+            if torch.any(invalid):
+                valid = ~invalid
+                idxmap = torch.arange(len(invalid))[valid.cpu()]
                 score_tensor = score_tensor[valid]
             else:
                 idxmap = None
