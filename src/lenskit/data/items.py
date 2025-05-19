@@ -942,11 +942,11 @@ class ItemList:
             vs, picked = torch.sort(score_tensor, descending=True)
 
             # drop invalid / unscored items
-            invalid = torch.isnan(vs)
-            if torch.any(invalid):
-                picked = picked[~invalid]
-
+            # on large arrays, actually faster to do the final filter in NumPy.
+            vs = vs.cpu().numpy()
             picked = picked.cpu().numpy()
+            invalid = np.isnan(picked)
+            picked = picked[~invalid]
         else:
             if not isinstance(scores, MTArray):
                 scores = MTArray(scores)
