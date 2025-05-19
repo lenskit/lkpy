@@ -31,9 +31,11 @@ from uuid import UUID, uuid4
 import zmq
 
 from .._proxy import get_logger
+from ..progress._dispatch import progress_backend
 from ..tasks import Task
 from ._protocol import (
     LogChannel,
+    ProgressMessage,
 )
 
 SIGNAL_ADDR = "inproc://lenskit-monitor-signal"
@@ -306,6 +308,11 @@ class MonitorThread(threading.Thread):
                     current.add_subtask(task)
                 else:
                     _log.debug("no active task for subtask reporting")
+            case LogChannel.PROGRESS:
+                update = ProgressMessage.model_validate_json(data)
+                backend = progress_backend()
+                backend.handle_message(update)
+
             case _:
                 _log.error("unsupported log channel %s", channel)
 

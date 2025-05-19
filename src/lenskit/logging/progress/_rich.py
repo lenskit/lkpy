@@ -48,7 +48,7 @@ class RichProgress(Progress):
     _field_format: str | None = None
     _task: TaskID | None = None
 
-    def __init__(self, label: str, total: int | float | None, fields: dict[str, str | None]):
+    def __init__(self, label: str, total: int | float | None, fields: dict[str, str | None] | None):
         super().__init__()
         self.label = label
         self.total = total

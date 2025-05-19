@@ -26,20 +26,19 @@ class WorkerProgress(Progress):  # pragma: nocover
     """
 
     label: str
-    context: WorkerContext
+    context: WorkerContext | None
     completed: float = 0
     _fields: dict[str, str | None] = {}
     _limit: RateLimit
 
     def __init__(
         self,
-        context: WorkerContext,
         label: str,
         total: int | None,
         fields: dict[str, str | None],
     ):
         super().__init__()
-        self.context = context
+        self.context = WorkerContext.active()
         self.label = label
         self.total = total
         self._fields = fields
@@ -52,6 +51,9 @@ class WorkerProgress(Progress):  # pragma: nocover
         total: int | None = None,
         **kwargs: float | int | str,
     ):
+        if self.context is None:
+            return
+
         if completed is not None:
             self.completed = completed
         else:
@@ -77,6 +79,9 @@ class WorkerProgress(Progress):  # pragma: nocover
             )
 
     def finish(self):
+        if self.context is None:
+            return
+
         self.context.send_progress(
             ProgressMessage(
                 progress_id=self.uuid,
