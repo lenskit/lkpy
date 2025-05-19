@@ -106,6 +106,17 @@ def test_item_num_array():
         il.ids()
 
 
+def test_item_num_arrow():
+    il = ItemList(item_nums=pa.array(np.arange(5)))
+
+    assert len(il) == 5
+    assert il.numbers().shape == (5,)
+    assert np.all(il.numbers() == np.arange(5))
+
+    with raises(RuntimeError, match="item IDs not available"):
+        il.ids()
+
+
 def test_item_num_alias():
     il = ItemList(item_num=np.arange(5))
 
@@ -342,6 +353,25 @@ def test_pandas_df_no_numbers():
     assert "item_num" not in df.columns
 
 
+def test_arrow_types(rng: np.random.Generator):
+    data = rng.standard_exponential(5).astype(np.float32)
+    il = ItemList(item_ids=ITEMS, vocabulary=VOCAB, scores=data)
+
+    assert il.arrow_types() == {"item_id": pa.string(), "score": pa.float32()}
+    assert il.arrow_types(ids=False, numbers=True) == {
+        "item_num": pa.int32(),
+        "score": pa.float32(),
+    }
+    assert il.arrow_types(numbers=True) == {
+        "item_id": pa.string(),
+        "item_num": pa.int32(),
+        "score": pa.float32(),
+    }
+
+    il = ItemList(item_ids=ITEMS, vocabulary=VOCAB, scores=data, ordered=True)
+    assert il.arrow_types() == {"item_id": pa.string(), "rank": pa.int32(), "score": pa.float32()}
+
+
 def test_arrow_table():
     data = np.random.randn(5).astype(np.float32)
     il = ItemList(item_nums=np.arange(5), vocabulary=VOCAB, scores=data)
@@ -350,6 +380,18 @@ def test_arrow_table():
     assert isinstance(tbl, pa.Table)
     assert tbl.num_columns == 3
     assert np.all(tbl.column("item_id").to_numpy() == ITEMS)
+    assert np.all(tbl.column("item_num").to_numpy() == np.arange(5))
+    assert np.all(tbl.column("score").to_numpy() == data)
+
+    tbl = il.to_arrow()
+    assert isinstance(tbl, pa.Table)
+    assert tbl.num_columns == 2
+    assert np.all(tbl.column("item_id").to_numpy() == ITEMS)
+    assert np.all(tbl.column("score").to_numpy() == data)
+
+    tbl = il.to_arrow(ids=False, numbers=True)
+    assert isinstance(tbl, pa.Table)
+    assert tbl.num_columns == 2
     assert np.all(tbl.column("item_num").to_numpy() == np.arange(5))
     assert np.all(tbl.column("score").to_numpy() == data)
 
@@ -743,3 +785,61 @@ def test_isin_ints_strings(left, right):
 
     mask = ill.isin(ilr)
     assert not np.any(mask)
+
+
+@given(st.lists(integer_ids(), unique=True), st.lists(integer_ids(), unique=True))
+def test_remove_ids(ids, remove):
+    il = ItemList(ids, vocabulary=Vocabulary(ids))
+
+    il2 = il.remove(ids=remove)
+    print(repr(il2))
+
+    intersect = set(ids) & set(remove)
+    assert len(il2) == len(il) - len(intersect)
+    assert not any(i in il2.ids() for i in remove)
+    assert all(i in il2.ids() for i in ids if i not in remove)
+
+
+@given(
+    st.lists(integer_ids(), unique=True),
+    st.lists(st.integers(min_value=0, max_value=20), unique=True),
+)
+def test_remove_numbers(ids, remove):
+    il = ItemList(ids, vocabulary=Vocabulary(ids))
+
+    il2 = il.remove(numbers=remove)
+
+    intersect = set(il.numbers()) & set(remove)
+    assert len(il2) == len(il) - len(intersect)
+    assert not any(i in il2.numbers() for i in remove)
+    assert all(i in il2.numbers() for i in il.numbers() if i not in remove)
+
+
+@given(
+    st.lists(st.integers(min_value=0, max_value=1000), unique=True),
+    st.lists(st.integers(min_value=0, max_value=1000), unique=True),
+)
+def test_remove_numbers_no_vocab(ids, remove):
+    il = ItemList(item_nums=ids)
+
+    il2 = il.remove(numbers=remove)
+
+    intersect = set(il.numbers()) & set(remove)
+    assert len(il2) == len(il) - len(intersect)
+    assert not any(i in il2.numbers() for i in remove)
+    assert all(i in il2.numbers() for i in il.numbers() if i not in remove)
+
+
+@given(
+    st.lists(integer_ids(), unique=True),
+    st.lists(st.integers(min_value=0, max_value=20), unique=True),
+)
+def test_remove_ids_no_vocab(ids, remove):
+    il = ItemList(ids)
+
+    il2 = il.remove(ids=remove)
+
+    intersect = set(ids) & set(remove)
+    assert len(il2) == len(il) - len(intersect)
+    assert not any(i in il2.ids() for i in remove)
+    assert all(i in il2.ids() for i in ids if i not in remove)

@@ -15,7 +15,7 @@ import torch
 from lenskit.data import ItemList, QueryInput, RecQuery, Vocabulary
 from lenskit.logging import get_logger
 from lenskit.pipeline import Component
-from lenskit.torch import safe_tensor
+from lenskit.torch import inference_mode
 from lenskit.training import UsesTrainer
 
 from ._model import FlexMFModel
@@ -102,6 +102,7 @@ class FlexMFScorerBase(UsesTrainer, Component):
         self.model = self.model.to(device)
         return self
 
+    @inference_mode
     def __call__(self, query: QueryInput, items: ItemList) -> ItemList:
         """
         Generate item scores for a user.
@@ -124,28 +125,22 @@ class FlexMFScorerBase(UsesTrainer, Component):
         u_tensor = torch.IntTensor([u_row])
         # make sure it's on the right device
         device = self.model.device
-        u_tensor = u_tensor.to(device)
+        u_tensor = u_tensor.to(device, non_blocking=True)
 
         # look up the item columns in the embedding matrix
-        i_cols = items.numbers(vocabulary=self.items, missing="negative")
+        i_cols = items.numbers(vocabulary=self.items, missing="negative", format="torch")
+        i_cols = i_cols.to(device, non_blocking=True)
 
         # unknown items will have column -1 - limit to the
         # ones we know, and remember which item IDs those are
-        scorable_mask = i_cols >= 0
-        i_cols = i_cols[scorable_mask]
-        i_tensor = safe_tensor(i_cols)
-        i_tensor = i_tensor.to(device)
-
-        # initialize output score array, fill with missing
-        full_scores = np.full(len(items), np.nan, dtype=np.float32)
+        scorable_mask = i_cols.ge(0)
+        i_cols = i_cols.masked_select(scorable_mask)
 
         # get scores
-        with torch.inference_mode():
-            scores = self.score_items(u_tensor, i_tensor)
-
-        # fill in scores for scorable items
-        scores = scores.cpu()
-        full_scores[scorable_mask] = scores
+        scores = self.score_items(u_tensor, i_cols)
+        # initialize output score array, fill with missing
+        full_scores = torch.full((len(items),), np.nan, dtype=torch.float32, device=scores.device)
+        full_scores.masked_scatter_(scorable_mask, scores)
 
         # return the result!
         return ItemList(items, scores=full_scores)

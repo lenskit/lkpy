@@ -8,6 +8,7 @@
 use pyo3::prelude::*;
 
 mod rc_set;
+mod selection;
 mod sorting;
 
 pub use rc_set::RowColumnSet;
@@ -20,6 +21,8 @@ pub fn register_data(parent: &Bound<'_, PyModule>) -> PyResult<()> {
     parent.add_submodule(&data)?;
 
     data.add_function(wrap_pyfunction!(sorting::is_sorted_coo, &data)?)?;
+    data.add_function(wrap_pyfunction!(sorting::argsort_descending, &data)?)?;
+    data.add_function(wrap_pyfunction!(selection::negative_mask, &data)?)?;
 
     Ok(())
 }

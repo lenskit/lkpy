@@ -136,7 +136,7 @@ class Vocabulary:
 
     def numbers(
         self, terms: Sequence[Hashable] | ArrayLike, missing: Literal["error", "negative"] = "error"
-    ) -> np.ndarray[int, np.dtype[np.int32]]:
+    ) -> np.ndarray[tuple[int], np.dtype[np.int32]]:
         "Look up the numbers for an array of terms or IDs."
         nums = np.require(self._index.get_indexer_for(terms), dtype=np.int32)
         if missing == "error" and np.any(nums < 0):

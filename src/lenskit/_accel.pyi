@@ -1,3 +1,7 @@
+"""
+Rust acceleration code.
+"""
+
 from __future__ import annotations
 
 from typing import Protocol
@@ -26,6 +30,14 @@ class NegativeSampler:
 class _DataAccelerator(Protocol):
     @staticmethod
     def is_sorted_coo(data: list[pa.RecordBatch], c1: str, c2: str) -> bool: ...
+    @staticmethod
+    def argsort_descending(data: pa.Array) -> pa.Int32Array: ...
+    @staticmethod
+    def negative_mask(n: int, indices: pa.Int32Array) -> pa.BooleanArray:
+        """
+        Efficiently create a boolean array that is true everywhere except ``indices``.
+        """
+        ...
 
 data: _DataAccelerator
 

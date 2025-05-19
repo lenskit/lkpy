@@ -313,7 +313,10 @@ class ItemListCollection(Generic[KL], ABC):
                 keys.num_columns,
                 "items",
                 pa.array(
-                    [il.to_arrow(type="array", columns=columns) for (_k, il) in batch],
+                    [
+                        il.to_arrow(ids=True, numbers=False, type="array", columns=columns)
+                        for (_k, il) in batch
+                    ],
                     schema,
                 ),
             )

@@ -141,22 +141,29 @@ def build_conda(c: Context):
     c.run(cmd, echo=True, env={"LK_PACKAGE_VERSION": str(version)})
 
 
-@task(build_accel, positional=["file"])
+@task(build_accel, iterable=["file"])
 def test(
-    c: Context, coverage: bool = False, skip_marked: str | None = None, file: str | None = None
+    c: Context,
+    verbose: bool = False,
+    coverage: bool = False,
+    skip_marked: str | None = None,
+    file: list[str] | None = None,
 ):
     "Run tests."
     cmd = "pytest"
+    if verbose:
+        cmd += " -v"
     if coverage:
-        cmd += " --cov=src/lenskit --cov-report=term --cov-report=xml"
+        cmd += " --cov=src/lenskit --cov-report=xml"
     if skip_marked:
         cmd += f" -m 'not {skip_marked}'"
     if file:
-        cmd += f" '{file}'"
+        for f in file:
+            cmd += f" '{f}'"
 
     if program.core.remainder:
         cmd += " " + program.core.remainder
-    else:
+    elif not file:
         cmd += " tests"
 
     c.run(cmd, echo=True)
