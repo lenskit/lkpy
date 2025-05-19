@@ -27,7 +27,7 @@ from typing_extensions import (
     overload,
 )
 
-from lenskit._accel import data
+from lenskit._accel import data as _data_accel
 from lenskit.diagnostics import DataWarning
 from lenskit.stats import argtopn
 
@@ -36,6 +36,17 @@ from .checks import check_1d
 from .mtarray import MTArray, MTGenericArray
 from .types import IDArray, IDSequence, NPVector
 from .vocab import Vocabulary
+
+ILIndexer = (
+    np.ndarray[tuple[int], np.dtype[np.bool_]]
+    | NPVector[np.integer]
+    | Sequence[int]
+    | torch.Tensor
+    | pa.BooleanArray
+    | pa.Int32Array
+    | int
+    | slice
+)
 
 
 class ItemList:
@@ -914,24 +925,72 @@ class ItemList:
             scores = pa.array(scores)
 
         if n is None or n < 0:
-            picked = data.argsort_descending(scores)
+            picked = _data_accel.argsort_descending(scores)
         else:
             picked = argtopn(scores, n)
 
         return self._take(picked, ordered=True)
 
-    def _take(
+    @overload
+    def remove(
         self,
-        sel: NDArray[np.bool_]
-        | NDArray[np.integer]
-        | Sequence[int]
-        | pa.Int32Array
-        | torch.Tensor
-        | int
-        | slice,
         *,
-        ordered: bool | None = None,
+        ids: IDSequence | None = None,
+    ) -> ItemList: ...
+    @overload
+    def remove(
+        self,
+        *,
+        numbers: pa.Int32Array | NPVector[np.integer] | pd.Series[int] | None = None,
+    ) -> ItemList: ...
+    def remove(
+        self,
+        *,
+        ids: IDSequence | None = None,
+        numbers: pa.Int32Array | NPVector[np.integer] | pd.Series[int] | None = None,
     ) -> ItemList:
+        """
+        Return an item list with the specified items removed.
+
+        The items to remove are not required to be in the list.
+
+        Args:
+            ids:
+                The item IDs to remove.
+            numbers:
+                The item numbers to remove.
+        """
+        if ids is None and numbers is None:
+            raise ValueError("must specify one of ids= or numbers=")
+
+        mask = None
+        if ids is not None:
+            if numbers is not None:
+                raise ValueError("must specify only one of ids= or numbers=")
+
+            if self._vocab is not None:
+                numbers = self._vocab.numbers(ids, missing="negative")
+                numbers = numbers[numbers >= 0]
+            else:
+                # handle IDs the slow way
+                mask = ~self.isin(ItemList(item_ids=ids))
+
+        if mask is None:
+            assert numbers is not None
+            numbers = pa.array(numbers, pa.int32())
+
+            # we need to get the maximum number, because we might not have a vocabulary
+            my_nums = self.numbers(format="arrow")
+            on_max = pc.max(numbers).as_py() or 0
+            sn_max = pc.max(my_nums).as_py() or 0
+
+            # create a negative mask (efficiently)
+            mask = _data_accel.negative_mask(max(on_max, sn_max) + 1, numbers)
+            mask = mask.take(my_nums)
+
+        return self._take(mask)
+
+    def _take(self, sel: ILIndexer, *, ordered: bool | None = None) -> ItemList:
         """
         Implementation helper for indexing.
         """
@@ -950,10 +1009,7 @@ class ItemList:
     def __len__(self):
         return self._len
 
-    def __getitem__(
-        self,
-        sel: NDArray[np.bool_] | NDArray[np.integer] | Sequence[int] | torch.Tensor | int | slice,
-    ) -> ItemList:
+    def __getitem__(self, sel: ILIndexer) -> ItemList:
         """
         Subset the item list.
 

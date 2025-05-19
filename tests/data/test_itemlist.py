@@ -774,3 +774,61 @@ def test_isin_ints_strings(left, right):
 
     mask = ill.isin(ilr)
     assert not np.any(mask)
+
+
+@given(st.lists(integer_ids(), unique=True), st.lists(integer_ids(), unique=True))
+def test_remove_ids(ids, remove):
+    il = ItemList(ids, vocabulary=Vocabulary(ids))
+
+    il2 = il.remove(ids=remove)
+    print(repr(il2))
+
+    intersect = set(ids) & set(remove)
+    assert len(il2) == len(il) - len(intersect)
+    assert not any(i in il2.ids() for i in remove)
+    assert all(i in il2.ids() for i in ids if i not in remove)
+
+
+@given(
+    st.lists(integer_ids(), unique=True),
+    st.lists(st.integers(min_value=0, max_value=20), unique=True),
+)
+def test_remove_numbers(ids, remove):
+    il = ItemList(ids, vocabulary=Vocabulary(ids))
+
+    il2 = il.remove(numbers=remove)
+
+    intersect = set(il.numbers()) & set(remove)
+    assert len(il2) == len(il) - len(intersect)
+    assert not any(i in il2.numbers() for i in remove)
+    assert all(i in il2.numbers() for i in il.numbers() if i not in remove)
+
+
+@given(
+    st.lists(st.integers(min_value=0, max_value=1000), unique=True),
+    st.lists(st.integers(min_value=0, max_value=1000), unique=True),
+)
+def test_remove_numbers_no_vocab(ids, remove):
+    il = ItemList(item_nums=ids)
+
+    il2 = il.remove(numbers=remove)
+
+    intersect = set(il.numbers()) & set(remove)
+    assert len(il2) == len(il) - len(intersect)
+    assert not any(i in il2.numbers() for i in remove)
+    assert all(i in il2.numbers() for i in il.numbers() if i not in remove)
+
+
+@given(
+    st.lists(integer_ids(), unique=True),
+    st.lists(st.integers(min_value=0, max_value=20), unique=True),
+)
+def test_remove_ids_no_vocab(ids, remove):
+    il = ItemList(ids)
+
+    il2 = il.remove(ids=remove)
+
+    intersect = set(ids) & set(remove)
+    assert len(il2) == len(il) - len(intersect)
+    assert not any(i in il2.ids() for i in remove)
+    assert all(i in il2.ids() for i in ids if i not in remove)
