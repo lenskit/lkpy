@@ -22,6 +22,6 @@ class ProgressMessage(BaseModel):
     label: str
     total: int | float | None
     completed: int | float | None
-    fields: dict[str, int | float | str]
-    field_formats: dict[str, str | None]
+    fields: dict[str, int | float | str] = {}
+    field_formats: dict[str, str | None] = {}
     finished: bool = False
