@@ -65,7 +65,7 @@ def get_monitor() -> Monitor:
     """
     Get the monitor, starting it if it is not yet running.
     """
-    from .worker import WorkerLogConfig
+    from ._worker import WorkerLogConfig
 
     global _monitor_instance
 

@@ -4,7 +4,7 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-from .monitor import Monitor
-from .worker import WorkerContext, WorkerLogConfig, send_task
+from ._monitor import Monitor
+from ._worker import WorkerContext, WorkerLogConfig, send_task
 
 __all__ = ["Monitor", "WorkerContext", "WorkerLogConfig", "send_task"]
