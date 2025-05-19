@@ -575,7 +575,7 @@ class ItemList:
         *,
         vocabulary: Vocabulary | None = None,
         missing: Literal["error", "negative"] = "error",
-    ) -> NDArray[np.int32]: ...
+    ) -> NPVector[np.int32]: ...
     @overload
     def numbers(
         self,
