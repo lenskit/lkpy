@@ -11,6 +11,6 @@ Old home of the LensKit logging monitor.
     This module is deprecated.  Import from :mod:`lenskit.logging.multiprocess`.
 """
 
-from .multiprocess import Monitor
+from .multiprocess import Monitor, get_monitor
 
-__all__ = ["Monitor"]
+__all__ = ["Monitor", "get_monitor"]
