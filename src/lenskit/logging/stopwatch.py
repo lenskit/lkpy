@@ -13,6 +13,8 @@ from __future__ import annotations
 import time
 from contextlib import contextmanager
 
+from .formats import friendly_duration
+
 
 class Stopwatch:
     """
@@ -67,17 +69,7 @@ class Stopwatch:
 
     def __str__(self):
         elapsed = self.elapsed()
-        if elapsed < 1:
-            return "{: 0.0f}ms".format(elapsed * 1000)
-        elif elapsed > 60 * 60:
-            h, m = divmod(elapsed, 60 * 60)
-            m, s = divmod(m, 60)
-            return "{:0.0f}h{:0.0f}m{:0.2f}s".format(h, m, s)
-        elif elapsed > 60:
-            m, s = divmod(elapsed, 60)
-            return "{:0.0f}m{:0.2f}s".format(m, s)
-        else:
-            return "{:0.2f}s".format(elapsed)
+        return friendly_duration(elapsed)
 
     def __repr__(self):
         elapsed = self.elapsed()
