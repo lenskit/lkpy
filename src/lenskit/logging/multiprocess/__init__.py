@@ -4,13 +4,7 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
-"""
-Old home of the LensKit logging monitor.
+from .monitor import Monitor
+from .worker import WorkerContext, WorkerLogConfig, send_task
 
-.. deprecated:: 2025.3
-    This module is deprecated.  Import from :mod:`lenskit.logging.multiprocess`.
-"""
-
-from .multiprocess import Monitor
-
-__all__ = ["Monitor"]
+__all__ = ["Monitor", "WorkerContext", "WorkerLogConfig", "send_task"]
