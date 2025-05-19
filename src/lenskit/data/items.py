@@ -932,12 +932,11 @@ class ItemList:
         elif isinstance(scores, torch.Tensor):
             score_tensor = scores
 
-        if score_tensor is not None and not score_tensor.is_cpu:
+        want_all = n is None or n < 0
+
+        if want_all and score_tensor is not None and not score_tensor.is_cpu:
             # sorting is faster on-device
-            if n is None or n < 0:
-                vs, picked = torch.sort(score_tensor, descending=True)
-            else:
-                vs, picked = torch.topk(score_tensor, min(n, len(score_tensor)))
+            vs, picked = torch.sort(score_tensor, descending=True)
 
             # drop invalid / unscored items
             invalid = torch.isnan(vs)
@@ -950,7 +949,7 @@ class ItemList:
                 scores = MTArray(scores)
             scores = scores.arrow()
 
-            if n is None or n < 0:
+            if want_all:
                 picked = _data_accel.argsort_descending(scores)
             else:
                 picked = argtopn(scores, n)
