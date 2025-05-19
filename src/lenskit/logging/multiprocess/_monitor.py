@@ -32,6 +32,9 @@ import zmq
 
 from .._proxy import get_logger
 from ..tasks import Task
+from ._protocol import (
+    LogChannel,
+)
 
 SIGNAL_ADDR = "inproc://lenskit-monitor-signal"
 REFRESH_INTERVAL = 5
@@ -272,38 +275,39 @@ class MonitorThread(threading.Thread):
         if len(parts) != 4:
             _log.warning("invalid multipart message, expected 3 parts")
             return
-        engine, name, data, mac = parts
+        channel, name, data, mac = parts
 
         mb = blake2b(key=self._authkey)
-        mb.update(engine)
+        mb.update(channel)
         mb.update(name)
         mb.update(data)
         if mb.digest() != mac:
             _log.warning("invalid log message digest, dropping")
             return
 
-        engine = engine.decode()
+        channel = LogChannel(channel)
         name = name.decode()
 
-        if engine == "stdlib":
-            rec = pickle.loads(data)
-            logger = logging.getLogger(name)
-            logger.handle(rec)
-        elif engine == "structlog":
-            logger = get_logger(name)
-            data = json.loads(data)
-            method = getattr(logger, data["method"])
-            method(**data["event"])
-        elif engine == "lenskit.logging.tasks":
-            task = Task.model_validate_json(data)
-            _log.debug("received subtask", task_id=str(task.task_id))
-            current = Task.current()
-            if current:
-                current.add_subtask(task)
-            else:
-                _log.debug("no active task for subtask reporting")
-        else:
-            _log.error("invalid log backend")
+        match channel:
+            case LogChannel.STDLIB:
+                rec = pickle.loads(data)
+                logger = logging.getLogger(name)
+                logger.handle(rec)
+            case LogChannel.STRUCTLOG:
+                logger = get_logger(name)
+                data = json.loads(data)
+                method = getattr(logger, data["method"])
+                method(**data["event"])
+            case LogChannel.TASKS:
+                task = Task.model_validate_json(data)
+                _log.debug("received subtask", task_id=str(task.task_id))
+                current = Task.current()
+                if current:
+                    current.add_subtask(task)
+                else:
+                    _log.debug("no active task for subtask reporting")
+            case _:
+                _log.error("unsupported log channel %s", channel)
 
     def _do_refresh(self):
         with self.monitor.lock:

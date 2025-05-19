@@ -36,6 +36,10 @@ from ..processors import add_process_info
 # from ..progress._worker import ProgressMessage
 from ..tasks import Task
 from ..tracing import lenskit_filtering_logger
+from ._protocol import (
+    LogChannel,
+    ProgressMessage,
+)
 
 _active_context: WorkerContext | None = None
 _log = get_logger(__name__)
@@ -142,11 +146,11 @@ class WorkerContext:
     def send_task(self, task: Task):
         self._log_handler.send_task(task)
 
-    # def send_progress(self, update: ProgressMessage):
-    #     """
-    #     Send a progrss update event.
-    #     """
-    #     self._log_handler.send_progress(update)
+    def send_progress(self, update: ProgressMessage):
+        """
+        Send a progrss update event.
+        """
+        self._log_handler.send_progress(update)
 
     def __enter__(self):
         if self._ref_count == 0:
@@ -186,7 +190,7 @@ class ZMQLogHandler(Handler):
         record.stack_info = None
 
         self._send_message(
-            b"stdlib", record.name.encode(), pickle.dumps(record, pickle.HIGHEST_PROTOCOL)
+            LogChannel.STDLIB, record.name.encode(), pickle.dumps(record, pickle.HIGHEST_PROTOCOL)
         )
 
         return record
@@ -198,33 +202,33 @@ class ZMQLogHandler(Handler):
         x = self._render(logger, method, {"method": method, "event": event_dict})
         if isinstance(x, str):
             x = x.encode()
-        self._send_message(b"structlog", logger.name.encode(), x)
+        self._send_message(LogChannel.STRUCTLOG, logger.name.encode(), x)
 
         raise structlog.DropEvent()
 
     def send_task(self, task: Task):
         _log.debug("sending updated task", task_id=task.task_id)
         self._send_message(
-            b"lenskit.logging.tasks", str(task.task_id).encode(), task.model_dump_json().encode()
+            LogChannel.TASKS, str(task.task_id).encode(), task.model_dump_json().encode()
         )
 
-    # def send_progress(self, update: ProgressMessage):
-    #     self._send_message(
-    #         b"lenskit.logging.progress",
-    #         str(update.progress_id).encode(),
-    #         update.model_dump_json().encode(),
-    #     )
+    def send_progress(self, update: ProgressMessage):
+        self._send_message(
+            LogChannel.PROGRESS,
+            str(update.progress_id).encode(),
+            update.model_dump_json().encode(),
+        )
 
-    def _send_message(self, engine: bytes, name: bytes, data: bytes):
+    def _send_message(self, channel: LogChannel, name: bytes, data: bytes):
         key = self.config.authkey
         assert key is not None
         mb = blake2b(key=key)
-        mb.update(engine)
+        mb.update(channel.value)
         mb.update(name)
         mb.update(data)
 
         with self._lock:
-            self.socket.send_multipart([engine, name, data, mb.digest()])
+            self.socket.send_multipart([channel, name, data, mb.digest()])
 
 
 def send_task(task: Task):
