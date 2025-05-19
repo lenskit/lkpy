@@ -977,16 +977,15 @@ class ItemList:
 
         if mask is None:
             assert numbers is not None
-            numbers = pa.array(numbers, pa.int32())
 
-            # we need to get the maximum number, because we might not have a vocabulary
-            my_nums = self.numbers(format="arrow")
-            on_max = pc.max(numbers).as_py() or 0
-            sn_max = pc.max(my_nums).as_py() or 0
+            numbers = MTArray(numbers).numpy()
+            mask = np.isin(self.numbers(), numbers, invert=True, kind="table")
 
-            # create a negative mask (efficiently)
-            mask = _data_accel.negative_mask(max(on_max, sn_max) + 1, numbers)
-            mask = mask.take(my_nums)
+        # fast case — we have a vocabulary and no fields
+        if self._vocab is not None and not self._fields:
+            return ItemList(
+                item_nums=self.numbers()[mask], vocabulary=self.vocabulary, ordered=self.ordered
+            )
 
         return self._take(mask)
 
