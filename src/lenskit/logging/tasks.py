@@ -21,6 +21,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, BeforeValidator, Field, SerializeAsAny
 
 from ._proxy import get_logger
+from .formats import friendly_duration
 from .resource import ResourceMeasurement, reset_linux_hwm
 
 _log = get_logger(__name__)
@@ -196,6 +197,13 @@ class Task(BaseModel, extra="allow"):
                     time += child_time
 
         return time
+
+    @property
+    def friendly_duration(self) -> str | None:
+        if self.duration is None:
+            return None
+        else:
+            return friendly_duration(self.duration)
 
     def save_to_file(self, path: PathLike[str], monitor: bool = True):
         """
