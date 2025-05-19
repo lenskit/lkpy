@@ -94,15 +94,26 @@ class MTArray(Generic[NPT]):
         assert self._numpy is not None
         return self._numpy
 
-    def torch(self, *, device: str | None = None) -> torch.Tensor:
+    @overload
+    def torch(
+        self, *, device: str | None = None, convert: Literal[True] = True
+    ) -> torch.Tensor: ...
+    @overload
+    def torch(self, *, device: str | None = None, convert: bool = True) -> torch.Tensor | None: ...
+    def torch(self, *, device: str | None = None, convert: bool = True) -> torch.Tensor | None:
         """
         Get the array as a PyTorch tensor.
 
         Args:
             device:
                 The device on which the Torch tensor should reside.
+            convert:
+                If ``False``,
         """
         if self._torch is None:
+            if not convert:
+                return None
+
             if torch.is_tensor(self._unknown):
                 self._torch = self._unknown
             else:

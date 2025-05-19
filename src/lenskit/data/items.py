@@ -398,8 +398,10 @@ class ItemList:
         elif scores is not None:
             if np.isscalar(scores):
                 scores = np.full(self._len, scores, dtype=np.float32)
-            else:
+            elif isinstance(scores, np.ndarray):
                 scores = np.require(scores, np.float32)
+            elif isinstance(scores, torch.Tensor):
+                scores = scores.to(torch.float32)
 
             fields["score"] = check_1d(MTArray(scores), self._len, label="scores")
 
@@ -710,6 +712,8 @@ class ItemList:
         index: Literal["ids", "numbers"] | None = None,
     ) -> pd.Series | None: ...
     @overload
+    def field(self, name: str, format: Literal["multi"]) -> MTArray | None: ...
+    @overload
     def field(self, name: str, format: LiteralString) -> ArrayLike | None: ...
     def field(
         self, name: str, format: LiteralString = "numpy", *, index: LiteralString | None = None
@@ -718,6 +722,8 @@ class ItemList:
 
         if val is None:
             return None
+        elif format == "multi":
+            return val
         elif format == "pandas":
             idx = None
             vs = val.to("numpy")
@@ -910,24 +916,49 @@ class ItemList:
         Returns:
             An ordered item list containing the top ``n`` items.
         """
+        score_tensor = None
         if scores is None:
-            scores = self.scores(format="arrow")
+            scores = self.field("score", format="multi")
             if scores is None:
                 raise ValueError("item list has no scores")
+            score_tensor = scores.torch(convert=False)
         elif isinstance(scores, str):
-            scores = self.field(scores, format="arrow")
+            scores = self.field(scores, format="multi")
             if scores is None:
                 raise KeyError(scores)
+            score_tensor = scores.torch(convert=False)
         elif len(scores) != len(self):
             raise ValueError("score array must have same length as items")
+        elif isinstance(scores, torch.Tensor):
+            score_tensor = scores
 
-        if not isinstance(scores, pa.Array):
-            scores = pa.array(scores)
+        if score_tensor is not None and not score_tensor.is_cpu:
+            # sorting is faster on-device
+            valid = ~torch.isnan(score_tensor)
+            if not torch.all(valid):
+                idxmap = torch.arange(len(valid))[valid.cpu()]
+                score_tensor = score_tensor[valid]
+            else:
+                idxmap = None
 
-        if n is None or n < 0:
-            picked = _data_accel.argsort_descending(scores)
+            if n is None or n < 0:
+                picked = torch.argsort(score_tensor, descending=True)
+            else:
+                _vs, picked = torch.topk(score_tensor, min(n, len(score_tensor)))
+
+            picked = picked.cpu()
+            if idxmap is not None:
+                picked = idxmap[picked]
+            picked = picked.numpy()
         else:
-            picked = argtopn(scores, n)
+            if not isinstance(scores, MTArray):
+                scores = MTArray(scores)
+            scores = scores.arrow()
+
+            if n is None or n < 0:
+                picked = _data_accel.argsort_descending(scores)
+            else:
+                picked = argtopn(scores, n)
 
         return self._take(picked, ordered=True)
 
