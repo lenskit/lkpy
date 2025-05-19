@@ -28,7 +28,7 @@ pub(super) fn negative_mask(
     for i in 0..n {
         let old_j = j;
         // loop, to handle duplicate indices
-        while i == indices[j] as usize {
+        while j < indices.len() && i == indices[j] as usize {
             j += 1;
         }
         if old_j == j {
