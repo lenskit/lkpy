@@ -204,6 +204,7 @@ doctest_subpackage_requires = ["src/lenskit/hpf.py = hpfrec"]
 consider_namespace_packages = true
 filterwarnings = [
   "ignore:::pyarrow[.*]",
+  "ignore:SoftmaxRanker.*:DeprecationWarning",
   "ignore:.*matrix subclass.*:PendingDeprecationWarning",
   "ignore:.*np.asscalar.*:DeprecationWarning",
   "ignore:.*deprecated create function*:DeprecationWarning",
