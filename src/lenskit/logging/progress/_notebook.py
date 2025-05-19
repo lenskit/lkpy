@@ -16,6 +16,7 @@ import ipywidgets as widgets
 from humanize import metric
 from IPython.display import display
 
+from .._limit import RateLimit
 from ._base import Progress
 from ._formats import field_format
 
@@ -31,7 +32,7 @@ class JupyterProgress(Progress):
     text: widgets.Label
     box: widgets.HBox
     current: int
-    _last_update: float = 0
+    _limit: RateLimit
     _field_format: str | None = None
 
     def __init__(
@@ -84,7 +85,7 @@ class JupyterProgress(Progress):
         else:
             self.current += advance
         now = perf_counter()
-        if now - self._last_update >= 0.1 or (self.total and self.current >= self.total):
+        if self._limit.want_update(now) or (self.total and self.current >= self.total):
             self.widget.value = self.current
             if self.total:
                 if self.total >= 1000:
@@ -97,7 +98,7 @@ class JupyterProgress(Progress):
                 txt += " ({})".format(self._field_format.format(**kwargs))
             self.text.value = txt
 
-            self._last_update = now
+            self._limit.mark_update(now)
         # if self._field_format:
         #     self.tqdm.set_postfix_str(self._field_format.format(kwargs))
 
