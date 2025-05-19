@@ -18,7 +18,7 @@ class LogChannel(Enum):
     PROGRESS = b"lenskit.logging.progress"
 
 
-class FieldData(NamedTuple):
+class ProgressField(NamedTuple):
     value: int | float | str
     format: str | None = None
 
@@ -28,5 +28,5 @@ class ProgressMessage(BaseModel):
     label: str
     total: int | float | None
     completed: int | float | None
-    fields: dict[str, FieldData] = {}
+    fields: dict[str, ProgressField] = {}
     finished: bool = False

@@ -13,7 +13,7 @@ from __future__ import annotations
 from time import perf_counter
 
 from .._limit import RateLimit
-from ..multiprocess._protocol import ProgressMessage
+from ..multiprocess._protocol import ProgressField, ProgressMessage
 from ..worker import WorkerContext
 from ._base import Progress
 
@@ -61,14 +61,18 @@ class WorkerProgress(Progress):  # pragma: nocover
 
         now = perf_counter()
         if self._limit.want_update(now) or self.completed == self.total:
+            fields = {
+                name: ProgressField(value, self._fields[name])
+                for (name, value) in kwargs.items()
+                if name in kwargs
+            }
             self.context.send_progress(
                 ProgressMessage(
                     progress_id=self.uuid,
                     label=self.label,
                     total=self.total,
                     completed=self.completed,
-                    fields=kwargs,
-                    field_formats=self._fields,
+                    fields=fields,
                 )
             )
 
