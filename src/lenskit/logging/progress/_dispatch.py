@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 import warnings
+from functools import partial
 from typing import Any, Callable, Literal, overload
 
 from ._base import Progress
@@ -37,8 +38,14 @@ def set_progress_impl(name: str | None, *options: Any):
 
             _backend = RichProgress
 
+        case "worker":
+            from ._worker import WorkerProgress
+
+            _backend = partial(WorkerProgress, options[0])
+
         case "none" | None:
             _backend = Progress
+
         case _:
             raise ValueError(f"unknown progress backend {name}")
 

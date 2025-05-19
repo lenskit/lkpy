@@ -10,6 +10,8 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID, uuid4
 
+from ..multiprocess._protocol import ProgressMessage
+
 
 class Progress:
     """
@@ -17,10 +19,14 @@ class Progress:
     """
 
     uuid: UUID
-    total: int | None
+    total: int | float | None
 
     def __init__(self, *args: Any, **kwargs: Any):
         self.uuid = uuid4()
+
+    @classmethod
+    def handle_message(cls, update: ProgressMessage):
+        pass
 
     def update(
         self,

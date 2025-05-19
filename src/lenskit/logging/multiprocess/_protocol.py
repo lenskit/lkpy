@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 from enum import Enum
+from typing import NamedTuple
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -17,11 +18,15 @@ class LogChannel(Enum):
     PROGRESS = b"lenskit.logging.progress"
 
 
+class FieldData(NamedTuple):
+    value: int | float | str
+    format: str | None = None
+
+
 class ProgressMessage(BaseModel):
     progress_id: UUID
     label: str
     total: int | float | None
     completed: int | float | None
-    fields: dict[str, int | float | str] = {}
-    field_formats: dict[str, str | None] = {}
+    fields: dict[str, FieldData] = {}
     finished: bool = False

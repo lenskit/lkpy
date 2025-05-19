@@ -28,6 +28,7 @@ from typing_extensions import override
 
 from .._console import console, get_live
 from .._proxy import get_logger
+from ..multiprocess._protocol import ProgressMessage
 from ._base import Progress
 from ._formats import field_format
 
@@ -47,7 +48,7 @@ class RichProgress(Progress):
     _field_format: str | None = None
     _task: TaskID | None = None
 
-    def __init__(self, label: str, total: int | None, fields: dict[str, str | None]):
+    def __init__(self, label: str, total: int | float | None, fields: dict[str, str | None]):
         super().__init__()
         self.label = label
         self.total = total
@@ -57,23 +58,33 @@ class RichProgress(Progress):
         self._task = self._install()
 
         if fields:
-            self._field_format = ", ".join(
-                [
-                    f"[json.key]{name}[/json.key]: {field_format(name, fs)}"
-                    for (name, fs) in fields.items()
-                ]
-            )
+            self._field_format = _make_format(fields)
+
+    @classmethod
+    def handle_message(cls, update: ProgressMessage):
+        pb = _active_bars.get(update.progress_id)
+        if pb is None:
+            pb = cls(update.label, update.total, {})
+
+        fields = {}
+        if update.fields:
+            cls._field_format = _make_format({n: f.format for (n, f) in update.fields.items()})
+            fields = {n: f.value for (n, f) in update.fields.items()}
+
+        pb.update(advance=0, completed=update.completed, total=update.total, **fields)
 
     def update(
         self,
         advance: int = 1,
-        completed: int | None = None,
-        total: int | None = None,
+        completed: int | float | None = None,
+        total: int | float | None = None,
         **kwargs: float | int | str,
     ):
         extra = ""
         if self._field_format:
             extra = self._field_format.format(**kwargs)
+        if total is not None:
+            self.total = total
         if _progress is not None:
             _progress.update(
                 self._task,  # type: ignore
@@ -125,6 +136,12 @@ class RichProgress(Progress):
         with _pb_lock:
             _progress.remove_task(self._task)
             del _active_bars[self.uuid]
+
+
+def _make_format(fields: dict[str, str | None]) -> str:
+    return ", ".join(
+        [f"[json.key]{name}[/json.key]: {field_format(name, fs)}" for (name, fs) in fields.items()]
+    )
 
 
 class RateColumn(ProgressColumn):
