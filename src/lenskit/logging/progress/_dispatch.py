@@ -8,14 +8,17 @@
 from __future__ import annotations
 
 import warnings
-from typing import Any, Literal, Protocol, overload
+from typing import TYPE_CHECKING, Any, Literal, Protocol, overload, runtime_checkable
 
-from ..multiprocess._protocol import ProgressMessage
 from ._base import Progress
+
+if TYPE_CHECKING:
+    from ..multiprocess._protocol import ProgressMessage
 
 _backend: ProgressBackend = Progress
 
 
+@runtime_checkable
 class ProgressBackend(Protocol):
     """
     Protocol implemented by progress backend objects.
@@ -30,10 +33,10 @@ class ProgressBackend(Protocol):
 
 
 @overload
-def set_progress_impl(name: Literal["rich"]) -> None: ...
+def set_progress_impl(name: Literal["rich", "notebook", "none"] | None) -> None: ...
 @overload
-def set_progress_impl(name: Literal["notebook"]) -> None: ...
-def set_progress_impl(name: str | None, *options: Any) -> None:
+def set_progress_impl(backend: ProgressBackend, /) -> None: ...
+def set_progress_impl(name: str | ProgressBackend | None, *options: Any) -> None:
     """
     Set the progress bar implementation.
     """
@@ -54,13 +57,11 @@ def set_progress_impl(name: str | None, *options: Any) -> None:
 
             _backend = RichProgress
 
-        case "worker":
-            from ._worker import WorkerProgress
-
-            _backend = WorkerProgress
-
         case "none" | None:
             _backend = Progress
+
+        case ProgressBackend():
+            _backend = name
 
         case _:
             raise ValueError(f"unknown progress backend {name}")

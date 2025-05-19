@@ -23,7 +23,6 @@ import threading
 import time
 from contextlib import contextmanager
 from enum import Enum
-from hashlib import blake2b
 from tempfile import TemporaryDirectory
 from typing import Any, Protocol, runtime_checkable
 from uuid import UUID, uuid4
@@ -34,6 +33,7 @@ from .._proxy import get_logger
 from ..tasks import Task
 from ._protocol import (
     LogChannel,
+    MsgAuthenticator,
     ProgressMessage,
 )
 
@@ -198,14 +198,14 @@ class MonitorThread(threading.Thread):
     signal: zmq.Socket[bytes]
     log_sock: zmq.Socket[bytes] | None
     poller: zmq.Poller
-    _authkey: bytes
+    _auth: MsgAuthenticator
     last_refresh: float
 
     def __init__(self, monitor: Monitor, log_sock: zmq.Socket[bytes] | None):
         super().__init__(name="LensKitMonitor", daemon=True)
         self.monitor = monitor
         self.log_sock = log_sock
-        self._authkey = mp.current_process().authkey
+        self._auth = MsgAuthenticator(mp.current_process().authkey)
         self.last_refresh = time.perf_counter()
 
     def run(self) -> None:
@@ -278,11 +278,7 @@ class MonitorThread(threading.Thread):
             return
         channel, name, data, mac = parts
 
-        mb = blake2b(key=self._authkey)
-        mb.update(channel)
-        mb.update(name)
-        mb.update(data)
-        if mb.digest() != mac:
+        if not self._auth.verify_message(channel, name, data, mac):
             _log.warning("invalid log message digest, dropping")
             return
 

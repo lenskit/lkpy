@@ -7,10 +7,11 @@
 # pyright: strict
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from ..multiprocess._protocol import ProgressMessage
+if TYPE_CHECKING:
+    from ..multiprocess._protocol import ProgressMessage
 
 
 class Progress:

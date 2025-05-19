@@ -19,25 +19,31 @@ import multiprocessing as mp
 import pickle
 import warnings
 from dataclasses import dataclass
-from hashlib import blake2b
 from logging import Handler, LogRecord, getLogger
 from threading import Lock
+from time import perf_counter
 from typing import Self, overload
 
 import structlog
 import zmq
 from structlog.typing import EventDict
 
+from lenskit.logging.progress._base import Progress
+
+from .._limit import RateLimit
 from .._proxy import get_logger
 from ..config import CORE_PROCESSORS, active_logging_config, log_warning
 from ..monitor import get_monitor
 from ..processors import add_process_info
+from ..progress import set_progress_impl
 
 # from ..progress._worker import ProgressMessage
 from ..tasks import Task
 from ..tracing import lenskit_filtering_logger
 from ._protocol import (
     LogChannel,
+    MsgAuthenticator,
+    ProgressField,
     ProgressMessage,
 )
 
@@ -132,12 +138,14 @@ class WorkerContext:
             cache_logger_on_first_use=False,
         )
         warnings.showwarning = log_warning
+        set_progress_impl(WorkerProgress)
         _log.debug("log context activated")
 
     def shutdown(self):
         global _active_context
         root = getLogger()
         root.removeHandler(self._log_handler)
+        set_progress_impl(None)
 
         self._log_handler.shutdown()
         self.zmq.term()
@@ -164,16 +172,92 @@ class WorkerContext:
             self.shutdown()
 
 
+class WorkerProgress(Progress):  # pragma: nocover
+    """
+    Progress logging over the pipe to a supervisor.
+    """
+
+    label: str
+    context: WorkerContext | None
+    completed: float = 0
+    _fields: dict[str, str | None] = {}
+    _limit: RateLimit
+
+    def __init__(
+        self,
+        label: str,
+        total: int | None,
+        fields: dict[str, str | None],
+    ):
+        super().__init__()
+        self.context = WorkerContext.active()
+        self.label = label
+        self.total = total
+        self._fields = fields
+        self._limit = RateLimit(20)
+
+    def update(
+        self,
+        advance: int = 1,
+        completed: int | None = None,
+        total: int | None = None,
+        **kwargs: float | int | str,
+    ):
+        if self.context is None:
+            return
+
+        if completed is not None:
+            self.completed = completed
+        else:
+            self.completed += advance
+        if total is not None:
+            self.total = total
+
+        now = perf_counter()
+        if self._limit.want_update(now) or self.completed == self.total:
+            fields = {
+                name: ProgressField(value, self._fields[name])
+                for (name, value) in kwargs.items()
+                if name in kwargs
+            }
+            self.context.send_progress(
+                ProgressMessage(
+                    progress_id=self.uuid,
+                    label=self.label,
+                    total=self.total,
+                    completed=self.completed,
+                    fields=fields,
+                )
+            )
+
+    def finish(self):
+        if self.context is None:
+            return
+
+        self.context.send_progress(
+            ProgressMessage(
+                progress_id=self.uuid,
+                label=self.label,
+                total=self.total,
+                completed=self.completed,
+                finished=True,
+            )
+        )
+
+
 class ZMQLogHandler(Handler):
     _lock: Lock
     socket: zmq.Socket[bytes]
     key: bytes
     _render = structlog.processors.JSONRenderer()
+    _auth: MsgAuthenticator
 
     def __init__(self, zmq_context: zmq.Context, config: WorkerLogConfig):
         super().__init__()
         self.config = config
         self._lock = Lock()
+        assert config.authkey is not None
+        self._auth = MsgAuthenticator(config.authkey)
         self.socket = zmq_context.socket(zmq.PUSH)
         self.socket.connect(config.address)
 
@@ -220,15 +304,10 @@ class ZMQLogHandler(Handler):
         )
 
     def _send_message(self, channel: LogChannel, name: bytes, data: bytes):
-        key = self.config.authkey
-        assert key is not None
-        mb = blake2b(key=key)
-        mb.update(channel.value)
-        mb.update(name)
-        mb.update(data)
+        mac = self._auth.hash_message(channel, name, data)
 
         with self._lock:
-            self.socket.send_multipart([channel, name, data, mb.digest()])
+            self.socket.send_multipart([channel.value, name, data, mac])
 
 
 def send_task(task: Task):
