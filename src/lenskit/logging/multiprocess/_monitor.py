@@ -31,7 +31,6 @@ from uuid import UUID, uuid4
 import zmq
 
 from .._proxy import get_logger
-from ..progress._dispatch import progress_backend
 from ..tasks import Task
 from ._protocol import (
     LogChannel,
@@ -309,6 +308,8 @@ class MonitorThread(threading.Thread):
                 else:
                     _log.debug("no active task for subtask reporting")
             case LogChannel.PROGRESS:
+                from ..progress._dispatch import progress_backend
+
                 update = ProgressMessage.model_validate_json(data)
                 backend = progress_backend()
                 backend.handle_message(update)

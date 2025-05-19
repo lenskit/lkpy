@@ -23,7 +23,6 @@ from structlog.dev import RichTracebackFormatter
 
 from ._console import ConsoleHandler, console, setup_console
 from .processors import filter_exceptions, format_timestamp, log_warning, remove_internal
-from .progress import set_progress_impl
 from .tracing import lenskit_filtering_logger
 
 LVL_TRACE = 5
@@ -156,6 +155,8 @@ class LoggingConfig:  # pragma: nocover
         """
         Apply the configuration.
         """
+        from .progress import set_progress_impl
+
         global _active_config
 
         if self.stream == "full":
