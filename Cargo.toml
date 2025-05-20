@@ -1,6 +1,6 @@
 [package]
 name = "lenskit"
-version = "2025.3.0-alpha.3.post1"
+version = "2025.3.0-alpha.4"
 edition = "2021"
 
 [lib]

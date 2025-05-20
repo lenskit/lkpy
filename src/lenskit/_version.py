@@ -81,7 +81,7 @@ def lk_git_version() -> Version:
         version = Version(f"{base}.dev{version.dev}+{version.local}")
     else:
         if version != cv_ver:
-            _log.warning("version mismatch: cargo {} != git {}", version, cv_ver)
+            _log.warning("version mismatch: cargo %s != git %s", cv_ver, version)
 
     return version
 
