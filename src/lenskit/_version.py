@@ -36,6 +36,7 @@ def lk_git_version() -> Version:
 
     gd = check_output(["git", "describe", "--tags", "--match", "v*"], cwd=_lk_mod_dir.parent.parent)
     ver = gd.decode().strip()
+    _log.debug("parsing Git info %s", ver)
     m = re.match(r"^v(\d+\.\d+\.\d+[.a-z0-9]*)(?:-(\d+)-(g[0-9a-fA-F]+))?$", ver)
     if not m:
         raise ValueError(f"unparseable version: {ver}")
@@ -45,21 +46,25 @@ def lk_git_version() -> Version:
     else:
         pvs = ver[1:]
 
-    _log.debug("parsing %s", pvs)
+    _log.debug("parsing transformed Git %s", pvs)
     version = parse_version(pvs)
+    _log.info("Git version: %s", version)
 
     with open(_lk_root / "Cargo.toml", "rb") as tf:
         cargo = tomllib.load(tf)
     cv = cargo["package"]["version"]
-    if m := re.match(r"(.*)-([a-z]+)(?:\.(\d+))", cv):
+    _log.debug("parsing Cargo version %s", cv)
+    if m := re.match(r"(.*)-([a-z]+)(?:\.(\d+))(\.post\d+)", cv):
         cv_pr = m.group(2)
         if cv_pr != "rc":
             cv_pr = cv_pr[:1]
-        cv_py = m.group(1) + m.group(2) + m.group(3)
+        cv_py = m.group(1) + m.group(2) + m.group(3) + m.group(4)
     else:
         cv_py = cv
 
+    _log.debug("parsing transformed Cargo version %s", cv_py)
     cv_ver = parse_version(cv_py)
+    _log.info("Cargo version: %s", cv_ver)
 
     if version.is_devrelease:
         if cv_ver > version:
