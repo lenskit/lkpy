@@ -96,7 +96,6 @@ def update_pypi_version(c: Context, write=False):
 @task
 def setup_dirs(c: Context):
     "Initialize output directories."
-    _make_cache_dir("dist")
     _make_cache_dir("build")
     _make_cache_dir("output")
 
