@@ -14,9 +14,11 @@ import base64
 import itertools
 import os
 import pickle
+from collections import deque
 from collections.abc import Callable, Generator, Iterable, Iterator
 from platform import python_version
-from typing import TYPE_CHECKING, Any, Generic
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from uuid import UUID, uuid4
 
 from lenskit.logging import Task, get_logger
 from lenskit.logging.worker import WorkerContext, WorkerLogConfig
@@ -33,7 +35,9 @@ from .invoker import A, InvokeOp, M, ModelOpInvoker, R
 if TYPE_CHECKING:
     import ray
 
-LK_PROCESS_SLOT = "lk_process"
+T = TypeVar("T")
+
+BATCH_SIZE = 200
 _worker_parallel: ParallelConfig
 _log = get_logger(__name__)
 
@@ -61,7 +65,6 @@ def init_cluster(
     proc_slots: int | None = None,
     resources: dict[str, float] | None = None,
     worker_parallel: ParallelConfig | None = None,
-    limit_slots: bool = True,
     global_logging: bool = False,
     **kwargs,
 ):
@@ -85,8 +88,6 @@ def init_cluster(
         worker_parallel:
             Parallel processing configuration for worker processes.  If
             ``None``, uses the default.
-        limit_slots:
-            ``False`` to disable the LensKit slot interface.
         global_logging:
             ``True`` to wire up logging in the workers at startup, instead of only
             connecting logs when a task is run.
@@ -98,6 +99,7 @@ def init_cluster(
     """
     global _worker_parallel
     import ray
+    import ray.runtime_env
 
     if resources is None:
         resources = {}
@@ -107,9 +109,6 @@ def init_cluster(
     cfg = get_parallel_config()
     if proc_slots is None:
         proc_slots = cfg.processes
-
-    if limit_slots:
-        resources[LK_PROCESS_SLOT] = proc_slots
 
     if num_cpus is None:
         num_cpus = effective_cpu_count()
@@ -188,38 +187,58 @@ def is_ray_worker() -> bool:
 class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
     function: InvokeOp[M, A, R]
     model_ref: Any
+    limit: int | None
 
-    def __init__(
-        self,
-        model: M,
-        func: InvokeOp[M, A, R],
-    ):
+    def __init__(self, model: M, func: InvokeOp[M, A, R], *, limit: int | None = None):
         _log.debug("persisting to Ray cluster")
         import ray
+        import torch
 
         if isinstance(model, ray.ObjectRef):
             self.model_ref = model
         else:
             self.model_ref = ray.put(model)
         self.function = func
-        slots = {}
-        if LK_PROCESS_SLOT in ray.cluster_resources():
-            slots = {LK_PROCESS_SLOT: 1}
-        else:
-            _log.warning(f"cluster has no resource {LK_PROCESS_SLOT}")
+
+        self.limit = limit
 
         worker = ray.remote(_ray_invoke_worker)
-        self.action = worker.options(num_cpus=inference_worker_cpus(), resources=slots)
+        # request a little GPU
+        if torch.cuda.is_available():
+            n_gpus = 0.1
+        else:
+            n_gpus = None
+        self.action = worker.options(num_cpus=inference_worker_cpus(), num_gpus=n_gpus)
 
     def map(self, tasks: Iterable[A]) -> Iterator[R]:
         import ray
 
-        batch_results = [
-            self.action.remote(self.function, self.model_ref, batch)
-            for batch in itertools.batched(tasks, 200)
-        ]
-        for br in batch_results:
-            yield from ray.get(br)
+        results = AsyncResultMatcher[R]()
+        limit = TaskLimiter(self.limit)
+
+        for batch in itertools.batched(tasks, BATCH_SIZE):
+            # wait until we're under limit
+            for ref in limit.results_until_limit():
+                bid, bval = ray.get(ref)
+                results.add_result(bid, bval)
+
+            # return everything that's ready
+            for res in results.available_results():
+                yield res
+
+            batch_id = uuid4()
+            results.add_pending(batch_id)
+            task = self.action.remote(self.function, self.model_ref, batch_id, batch)
+            limit.add_task(task)
+
+        for ref in limit.drain_results():
+            bid, bval = ray.get(ref)
+            results.add_result(bid, bval)
+            for res in results.available_results():
+                yield res
+
+        if nleft := results.pending_task_count():
+            _log.error("finished with %d uncompleted batches", nleft)
 
     def shutdown(self):
         del self.model_ref
@@ -265,7 +284,7 @@ class TaskLimiter:
     def add_task(self, task: ray.ObjectRef | ray.ObjectID):
         self._tasks.append(task)
 
-    def pending_results(self) -> Generator[ray.ObjectRef, None, None]:
+    def results_until_limit(self) -> Generator[ray.ObjectRef, None, None]:
         """
         Iterate over available results until the number of pending results tasks
         is less than the limit, blocking as needed.
@@ -283,7 +302,7 @@ class TaskLimiter:
         This method calls :meth:`ray.get` on the result of each pending task to
         resolve errors, but discards the return value.
         """
-        for r in self.pending_results():
+        for r in self.results_until_limit():
             ray.get(r)
 
     def drain_results(self) -> Generator[ray.ObjectRef, None, None]:
@@ -315,7 +334,53 @@ class TaskLimiter:
                 yield dt
 
 
-def _ray_invoke_worker(func: Callable[[M, A], R], model: M, args: list[A]) -> list[R]:
+class AsyncResultMatcher(Generic[T]):
+    """
+    Helper class to match asynchronous results with their inputs, preserving
+    ordering.
+    """
+
+    _queue: deque[UUID]
+    _values: dict[UUID, T]
+
+    def __init__(self):
+        self._queue = deque()
+        self._values = {}
+
+    def add_pending(self, id: UUID):
+        """
+        Add the specified task ID to the queue as a pending task.
+        """
+        self._queue.append(id)
+
+    def add_result(self, id: UUID, value: T):
+        if id in self._values:
+            raise ValueError(f"task {id} already finished")
+
+        self._values[id] = value
+
+    def available_results(self) -> Generator[T]:
+        while self._queue:
+            # check if the head item is ready and return it
+            key = self._queue[0]
+            if key in self._values:
+                value = self._values[key]
+                del self._values[key]
+                try:
+                    yield value
+                except GeneratorExit:
+                    # gracefully handle early termination
+                    return
+            else:
+                return
+
+    def pending_task_count(self) -> int:
+        return len(self._queue)
+
+
+def _ray_invoke_worker(
+    func: Callable[[M, A], R], model: M, batch_id: UUID, args: list[A]
+) -> tuple[UUID, list[R]]:
     with init_worker(autostart=False) as ctx:
         try:
             with Task("cluster worker", subprocess=True) as task:
@@ -323,7 +388,7 @@ def _ray_invoke_worker(func: Callable[[M, A], R], model: M, args: list[A]) -> li
         finally:
             ctx.send_task(task)
 
-    return result
+    return batch_id, result
 
 
 def _worker_setup():
