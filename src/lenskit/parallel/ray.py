@@ -15,7 +15,7 @@ import itertools
 import os
 import pickle
 from collections import deque
-from collections.abc import Callable, Generator, Iterable, Iterator
+from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
 from platform import python_version
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 from uuid import UUID, uuid4
@@ -379,7 +379,7 @@ class AsyncResultMatcher(Generic[T]):
 
 
 def _ray_invoke_worker(
-    func: Callable[[M, A], R], model: M, batch_id: UUID, args: list[A]
+    func: Callable[[M, A], R], model: M, batch_id: UUID, args: Sequence[A]
 ) -> tuple[UUID, list[R]]:
     with init_worker(autostart=False) as ctx:
         try:
