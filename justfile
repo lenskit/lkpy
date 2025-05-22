@@ -47,8 +47,9 @@ build-accel profile="dev": init-dirs
 build-conda: build-sdist
     #!/bin/bash
     set -euo pipefail
-    export PYTHONPATH=
     export LK_PACKAGE_VERSION="$(python utils/version-tool.py -q)"
+    # python path will confuse conda-build, yeet
+    export PYTHONPATH=
     flags=
     if [ ! -z "$CI" ]; then
         flags="--noarch-build-platform linux-64"
