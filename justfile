@@ -27,16 +27,17 @@ clean:
     rm -rf *.lprof *.profraw *.prof *.log
     git clean -xf docs src
 
+# print the LensKit version
 version:
     python utils/version-tool.py
 
 # build the source distribution
 build-sdist: init-dirs
-    uv build --sdist
+    python3 utils/version-tool.py --run uv build --sdist
 
 # build packages for the current platform
 build-dist: init-dirs
-    uv build
+    python3 utils/version-tool.py --run uv build
 
 # build the accelerator in-place
 build-accel profile="dev": init-dirs
