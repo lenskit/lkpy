@@ -1,6 +1,8 @@
 CACHEDIR_TAG := "Signature: 8a477f597d28d172789f06886806bc55"
 BIBTEX_URL := "http://127.0.0.1:23119/better-bibtex/export/collection?/4/9JMHQD9K.bibtex"
 
+export PYTHONPATH := justfile_directory() / "src"
+
 # list available recipes
 default:
     @just -l
@@ -52,3 +54,7 @@ preview-docs: init-dirs
 # update the BibTeX file
 update-bibtex:
     curl -fo docs/lenskit.bib "{{BIBTEX_URL}}"
+
+# update the source file headers
+update-headers:
+    python utils/update-headers.py
