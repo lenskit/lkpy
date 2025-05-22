@@ -27,6 +27,9 @@ clean:
     rm -rf *.lprof *.profraw *.prof *.log
     git clean -xf docs src
 
+version:
+    python utils/version-tool.py
+
 # build the source distribution
 build-sdist: init-dirs
     uv build --sdist
