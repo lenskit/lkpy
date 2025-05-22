@@ -20,8 +20,6 @@ from functools import partial
 from platform import python_version_tuple
 from typing import Any, Generic, TypeVar
 
-import ray.remote_function
-
 from lenskit.logging import Task, get_logger
 from lenskit.logging.worker import WorkerContext, WorkerLogConfig
 
@@ -194,7 +192,7 @@ def is_ray_worker() -> bool:
 class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
     function: InvokeOp[M, A, R]
     model_ref: Any
-    action: ray.remote_function.RemoteFunction
+    action: RemoteFunction
     limit: int | None
 
     def __init__(self, model: M, func: InvokeOp[M, A, R], *, limit: int | None = None):
