@@ -49,12 +49,10 @@ repos:
       - id: license-headers
         name: add license headers
         language: python
-        entry: invoke update-headers --error-on-change --
+        entry: python utils/update-headers.py --error-on-change --
         types_or:
           - python
           - rust
         additional_dependencies:
-          - invoke ~= 2.2
-          - lazy-loader >=0.4
+          - docopt-ng >=0.9.0
           - unbeheader ~=1.3
-          - tomlkit ~= 0.13.2
