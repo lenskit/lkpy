@@ -34,6 +34,7 @@ from .invoker import A, InvokeOp, M, ModelOpInvoker, R
 
 try:
     import ray
+    from ray.remote_function import RemoteFunction
 
     _ray_imported = True
 except ImportError:
@@ -288,6 +289,60 @@ class TaskLimiter:
         """
         return len(self._tasks)
 
+    def imap(
+        self, function: RemoteFunction, items: Iterable[A], *, ordered: bool = True
+    ) -> Generator[R, None, int]:
+        if ordered:
+            return self._imap_ordered(function, items)
+        else:
+            return self._imap_unordered(function, items)
+
+    def _imap_ordered(
+        self, function: RemoteFunction, items: Iterable[A]
+    ) -> Generator[Any, None, int]:
+        n = 0
+        queued = deque()
+        ready = set()
+
+        for arg in items:
+            for res in self.results_until_limit():
+                ready.add(res)
+                n += 1
+
+            yield from _drain_queue(queued, ready)
+
+            task: Any = function.remote(arg)
+            self.add_task(task)
+            queued.append(task)
+
+        for res in self.drain_results():
+            ready.add(res)
+            n += 1
+
+            yield from _drain_queue(queued, ready)
+
+        assert len(queued) == 0
+        assert len(ready) == 0
+
+        return n
+
+    def _imap_unordered(
+        self, function: RemoteFunction, items: Iterable[A]
+    ) -> Generator[Any, None, int]:
+        n = 0
+        for arg in items:
+            for res in self.results_until_limit():
+                yield ray.get(res)
+                n += 1
+            task: Any = function.remote(arg)
+            self.add_task(task)
+
+        for res in self.drain_results():
+            yield ray.get(res)
+            n += 1
+
+        return n
+
     def add_task(self, task: ray.ObjectRef | ray.ObjectID):
         self._tasks.append(task)
 
@@ -339,6 +394,13 @@ class TaskLimiter:
             for dt in done:
                 self.finished += 1
                 yield dt
+
+
+def _drain_queue(queued: deque[ray.ObjectRef], ready: set[ray.ObjectRef]) -> Iterator[Any]:
+    while queued and queued[0] in ready:
+        ref = queued.popleft()
+        ready.remove(ref)
+        yield ray.get(ref)
 
 
 class AsyncResultMatcher(Generic[T]):
