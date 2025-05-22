@@ -17,7 +17,7 @@ import pickle
 from collections import deque
 from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
 from platform import python_version_tuple
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar
 from uuid import UUID, uuid4
 
 from lenskit.logging import Task, get_logger
@@ -32,8 +32,13 @@ from .config import (
 )
 from .invoker import A, InvokeOp, M, ModelOpInvoker, R
 
-if TYPE_CHECKING:
+try:
     import ray
+
+    _ray_imported = True
+except ImportError:
+    _ray_imported = False
+
 
 T = TypeVar("T")
 
