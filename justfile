@@ -48,7 +48,11 @@ build-conda: build-sdist
     #!/bin/bash
     set -euo pipefail
     export LK_PACKAGE_VERSION="$(python3 utils/version-tool.py -q)"
-    rattler-build build --recipe conda --output-dir dist/conda
+    flags=
+    if [ ! -z "$CI" ]; then
+        flags="--noarch-build-platform linux-64"
+    fi
+    rattler-build build --recipe conda --output-dir dist/conda $flags
 
 # run the tests
 test slow="yes" +args='tests': build-accel
