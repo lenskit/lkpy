@@ -13,7 +13,7 @@ jobs:
     name: Build sdist
     runs-on: ubuntu-latest
     outputs:
-      lenskit-version: ${{steps.sdist.outputs.version}}
+      lenskit-version: ${{steps.version.outputs.version}}
 
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +27,11 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
+
+      - name: Identify version
+        id: version
+        run: |
+          uv run --only-group=scripting python utils/version-tool.py --github
 
       - name: Build source distribution
         id: sdist

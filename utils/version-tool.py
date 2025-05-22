@@ -10,6 +10,7 @@ Manipulate LensKit versions.
 
 Usage:
     version-tool.py [-v | -vv] [-q]
+    version-tool.py [-v | -vv] --github
     version-tool.py [-v | -vv] --run PROGRAM [ARGS...]
 
 Options:
@@ -17,6 +18,8 @@ Options:
         Ouput verbose logging.
     -q, --quiet
         Print version only, without other text.
+    --github
+        Write output to GitHub Actions output.
     --run
         Run a program with an updated version.
 """
@@ -50,7 +53,12 @@ logging.basicConfig(level=level, stream=sys.stderr)
 # get the version
 version = lenskit_version()
 
-if options["--run"]:
+if options["--github"]:
+    gh_file = os.environ["GH_OUTPUT"]
+    with open(gh_file, "at") as ghf:
+        print(f"version={version}", file=ghf)
+
+elif options["--run"]:
     ppt_file = Path("pyproject.toml")
     saved = ppt_file.with_suffix(".toml.saved")
     shutil.copy(ppt_file, saved)
@@ -71,9 +79,9 @@ if options["--run"]:
         _log.info("restoring pyproject.toml")
         os.replace(saved, ppt_file)
 
-
-# we only want to print the version
-if options["--quiet"]:
-    print(version)
 else:
-    print("LensKit version", version)
+    # we only want to print the version
+    if options["--quiet"]:
+        print(version)
+    else:
+        print("LensKit version", version)
