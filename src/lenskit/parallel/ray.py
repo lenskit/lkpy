@@ -16,7 +16,7 @@ import os
 import pickle
 from collections import deque
 from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
-from platform import python_version
+from platform import python_version_tuple
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 from uuid import UUID, uuid4
 
@@ -140,7 +140,8 @@ def ray_supported() -> bool:
     """
     Check if this Ray setup is supported by LensKit.
     """
-    if python_version() < "3.12":
+    major, minor, patch = python_version_tuple()
+    if int(major) < 3 or int(minor) < 12:
         return False
     else:
         return ray_available()
@@ -273,6 +274,7 @@ class TaskLimiter:
         else:
             self.limit = limit
         self.finished = 0
+        self._tasks = []
 
     @property
     def pending(self) -> int:
