@@ -43,6 +43,13 @@ build-dist: init-dirs
 build-accel profile="dev": init-dirs
     maturin develop --profile="{{profile}}"
 
+# build Conda packages
+build-conda: build-sdist
+    #!/bin/bash
+    set -euo pipefail
+    export LK_PACKAGE_VERSION="$(python3 utils/version-tool.py -q)"
+    rattler-build build --recipe conda --output-dir dist/conda
+
 # run the tests
 test slow="yes" +args='tests': build-accel
     pytest {{ if slow == "yes" {""} else {"-m 'not slow'"} }} {{args}}
