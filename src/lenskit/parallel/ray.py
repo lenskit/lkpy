@@ -212,18 +212,19 @@ class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
 
         self.limit = limit
 
-        worker = ray.remote(partial(_ray_invoke_worker, self.function, self.model_ref))
+        worker = ray.remote(_ray_invoke_worker)
         # request a little GPU
         if torch.cuda.is_available():
             n_gpus = 0.1
         else:
             n_gpus = None
-        self.action = worker.options(num_cpus=inference_worker_cpus(), num_gpus=n_gpus)
+        self.action = worker.options(num_cpus=inference_worker_cpus(), num_gpus=n_gpus)  # type: ignore
 
     def map(self, tasks: Iterable[A]) -> Iterator[R]:
         limit = TaskLimiter(self.limit)
-        for bres in limit.imap(self.action, itertools.batched(tasks, BATCH_SIZE)):
-            yield from bres
+        function = partial(self.action.remote, self.function, self.model_ref)
+        for bres in limit.imap(function, itertools.batched(tasks, BATCH_SIZE)):
+            yield from bres  # type: ignore
 
     def shutdown(self):
         del self.model_ref
@@ -268,7 +269,11 @@ class TaskLimiter:
         return len(self._tasks)
 
     def imap(
-        self, function: RemoteFunction, items: Iterable[A], *, ordered: bool = True
+        self,
+        function: RemoteFunction | Callable[[A], R],
+        items: Iterable[A],
+        *,
+        ordered: bool = True,
     ) -> Generator[R, None, int]:
         if ordered:
             return self._imap_ordered(function, items)
@@ -276,11 +281,15 @@ class TaskLimiter:
             return self._imap_unordered(function, items)
 
     def _imap_ordered(
-        self, function: RemoteFunction, items: Iterable[A]
+        self, function: RemoteFunction | Callable[[A], R], items: Iterable[A]
     ) -> Generator[Any, None, int]:
         n = 0
         queued = deque()
         ready = set()
+
+        # make a callable from a Ray remote function
+        if hasattr(function, "remote"):
+            function = function.remote  # type: ignore
 
         for arg in items:
             for res in self.results_until_limit():
@@ -289,7 +298,7 @@ class TaskLimiter:
 
             yield from _drain_queue(queued, ready)
 
-            task: Any = function.remote(arg)
+            task: Any = function(arg)
             self.add_task(task)
             queued.append(task)
 
@@ -305,14 +314,19 @@ class TaskLimiter:
         return n
 
     def _imap_unordered(
-        self, function: RemoteFunction, items: Iterable[A]
+        self, function: RemoteFunction | Callable[[A], R], items: Iterable[A]
     ) -> Generator[Any, None, int]:
         n = 0
+
+        # make a callable from a Ray remote function
+        if hasattr(function, "remote"):
+            function = function.remote  # type: ignore
+
         for arg in items:
             for res in self.results_until_limit():
                 yield ray.get(res)
                 n += 1
-            task: Any = function.remote(arg)
+            task: Any = function(arg)
             self.add_task(task)
 
         for res in self.drain_results():
