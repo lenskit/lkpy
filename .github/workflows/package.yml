@@ -31,7 +31,7 @@ jobs:
       - name: Identify version
         id: version
         run: |
-          uv run --only-group=scripting python utils/version-tool.py --github
+          uv run --only-group=scripting just ci-version
 
       - name: Build source distribution
         id: sdist

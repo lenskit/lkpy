@@ -31,6 +31,10 @@ clean:
 version:
     python utils/version-tool.py
 
+# write the version to CI outputs
+ci-version:
+    pyuthon utils/version-tool.py --github
+
 # build the source distribution
 build-sdist: init-dirs
     python utils/version-tool.py --run uv build --sdist
