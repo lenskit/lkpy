@@ -16,6 +16,15 @@ init-dirs:
         fi
     done
 
+# clean the output directories
+clean:
+    # check that git is clean — we can't clean with uncommitted changes
+    test -z "$(git status -u --porcelain)"
+    # start removing files
+    rm -rf build dist output target
+    rm -rf *.lprof *.profraw *.prof *.log
+    git clean -xf docs src
+
 # build the source distribution
 build-sdist: init-dirs
     uv build --sdist
