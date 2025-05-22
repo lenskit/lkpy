@@ -185,8 +185,6 @@ def is_ray_worker() -> bool:
     """
     # logic adapted from https://discuss.ray.io/t/how-to-know-if-code-is-running-on-ray-worker/15642
     if ray_active():
-        import ray
-
         ctx = ray.get_runtime_context()
         return ctx.worker.mode == ray.WORKER_MODE
     else:
