@@ -33,11 +33,11 @@ version:
 
 # build the source distribution
 build-sdist: init-dirs
-    python3 utils/version-tool.py --run uv build --sdist
+    python utils/version-tool.py --run uv build --sdist
 
 # build packages for the current platform
 build-dist: init-dirs
-    python3 utils/version-tool.py --run uv build
+    python utils/version-tool.py --run uv build
 
 # build the accelerator in-place
 build-accel profile="dev": init-dirs
@@ -47,7 +47,7 @@ build-accel profile="dev": init-dirs
 build-conda: build-sdist
     #!/bin/bash
     set -euo pipefail
-    export LK_PACKAGE_VERSION="$(python3 utils/version-tool.py -q)"
+    export LK_PACKAGE_VERSION="$(python utils/version-tool.py -q)"
     flags=
     if [ ! -z "$CI" ]; then
         flags="--noarch-build-platform linux-64"
