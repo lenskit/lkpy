@@ -47,6 +47,7 @@ build-accel profile="dev": init-dirs
 build-conda: build-sdist
     #!/bin/bash
     set -euo pipefail
+    export PYTHONPATH=
     export LK_PACKAGE_VERSION="$(python utils/version-tool.py -q)"
     flags=
     if [ ! -z "$CI" ]; then
