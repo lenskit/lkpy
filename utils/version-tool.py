@@ -35,7 +35,7 @@ from lenskit._version import lenskit_version
 
 _log = logging.getLogger("lenskit.version-tool")
 
-options = docopt(__doc__ or "")
+options = docopt(__doc__ or "", options_first=True)
 
 # set up logging
 verbosity = options["--verbose"]
