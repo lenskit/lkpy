@@ -558,6 +558,15 @@ wheels = [
 ]
 
 [[package]]
+name = "docopt-ng"
+version = "0.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/50/8d6806cf13138127692ae6ff79ddeb4e25eb3b0bcc3c1bd033e7e04531a9/docopt_ng-0.9.0.tar.gz", hash = "sha256:91c6da10b5bb6f2e9e25345829fb8278c78af019f6fc40887ad49b060483b1d7", size = 32264, upload-time = "2023-05-30T20:46:25.064Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6c/4a/c3b77fc1a24510b08918b43a473410c0168f6e657118807015f1f1edceea/docopt_ng-0.9.0-py3-none-any.whl", hash = "sha256:bfe4c8b03f9fca424c24ee0b4ffa84bf7391cb18c29ce0f6a8227a3b01b81ff9", size = 16689, upload-time = "2023-05-30T20:46:45.294Z" },
+]
+
+[[package]]
 name = "docutils"
 version = "0.21.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1421,6 +1430,7 @@ demo = [
 dev = [
     { name = "cibuildwheel" },
     { name = "coverage" },
+    { name = "docopt-ng" },
     { name = "hypothesis" },
     { name = "invoke" },
     { name = "ipython" },
@@ -1480,6 +1490,7 @@ reporting = [
     { name = "coverage" },
 ]
 scripting = [
+    { name = "docopt-ng" },
     { name = "invoke" },
     { name = "lazy-loader" },
     { name = "maturin" },
@@ -1536,6 +1547,7 @@ demo = [
 dev = [
     { name = "cibuildwheel", specifier = "~=2.23" },
     { name = "coverage", specifier = ">=5" },
+    { name = "docopt-ng", specifier = ">=0.9.0" },
     { name = "hypothesis", specifier = ">=6.16" },
     { name = "invoke", specifier = "~=2.2" },
     { name = "ipython", specifier = ">=7" },
@@ -1592,6 +1604,7 @@ package = [
 ]
 reporting = [{ name = "coverage", specifier = ">=5" }]
 scripting = [
+    { name = "docopt-ng", specifier = ">=0.9.0" },
     { name = "invoke", specifier = "~=2.2" },
     { name = "lazy-loader", specifier = ">=0.4" },
     { name = "maturin", specifier = "~=1.0" },
