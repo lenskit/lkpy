@@ -49,6 +49,7 @@ target/
 *.o
 *.obj
 src/lenskit/**/*.c
+*.toml.saved
 
 # environment locks that aren't committed
 /*env*.yml
