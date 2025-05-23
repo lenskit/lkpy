@@ -13,6 +13,9 @@
     },
     "editor.formatOnSave": true
   },
+  "[just]": {
+    "editor.formatOnSave": true
+  },
   "[jsonc]": {
     "editor.formatOnSave": true
   },

@@ -73,8 +73,9 @@ package = [
   "packaging >=25.0",
 ]
 scripting = [
-  "invoke ~= 2.2",
-  "tomlkit ~= 0.13.2",
+  "docopt-ng >=0.9.0",
+  "rust-just ~=1.40",
+  "tomlkit ~=0.13.2",
   { include-group = "package" },
 ]
 dev = [

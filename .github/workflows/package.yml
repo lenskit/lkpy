@@ -13,7 +13,7 @@ jobs:
     name: Build sdist
     runs-on: ubuntu-latest
     outputs:
-      lenskit-version: ${{steps.sdist.outputs.version}}
+      lenskit-version: ${{steps.version.outputs.version}}
 
     steps:
       - uses: actions/checkout@v4
@@ -28,10 +28,15 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Identify version
+        id: version
+        run: |
+          uv run --only-group=scripting just ci-version
+
       - name: Build source distribution
         id: sdist
         run: |
-          uv run --only-group=scripting invoke build-sdist
+          uv run --only-group=scripting just build-sdist
 
       - name: Save archive
         uses: actions/upload-artifact@v4

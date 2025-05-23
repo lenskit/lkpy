@@ -39,7 +39,7 @@ jobs:
 
       - name: 🔨 Build Conda packages
         run: |
-          uv run --only-group=scripting invoke build-conda
+          uv run --only-group=scripting just build-conda
         shell: bash -el {0}
 
       - name: Save package
