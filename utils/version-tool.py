@@ -54,7 +54,7 @@ logging.basicConfig(level=level, stream=sys.stderr)
 version = lenskit_version()
 
 if options["--github"]:
-    gh_file = os.environ["GH_OUTPUT"]
+    gh_file = os.environ["GITHUB_OUTPUT"]
     with open(gh_file, "at") as ghf:
         print(f"version={version}", file=ghf)
 
