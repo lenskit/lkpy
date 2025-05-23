@@ -33,7 +33,7 @@ version:
 
 # write the version to CI outputs
 ci-version:
-    pyuthon utils/version-tool.py --github
+    python utils/version-tool.py --github
 
 # build the source distribution
 build-sdist: init-dirs
