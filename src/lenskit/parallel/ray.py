@@ -14,9 +14,11 @@ import base64
 import itertools
 import os
 import pickle
-from collections.abc import Callable, Iterable, Iterator
-from platform import python_version
-from typing import Any, Generic
+from collections import deque
+from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
+from functools import partial
+from platform import python_version_tuple
+from typing import Any, Generic, TypeVar
 
 from lenskit.logging import Task, get_logger
 from lenskit.logging.worker import WorkerContext, WorkerLogConfig
@@ -30,7 +32,18 @@ from .config import (
 )
 from .invoker import A, InvokeOp, M, ModelOpInvoker, R
 
-LK_PROCESS_SLOT = "lk_process"
+try:
+    import ray
+    from ray.remote_function import RemoteFunction
+
+    _ray_imported = True
+except ImportError:
+    _ray_imported = False
+
+
+T = TypeVar("T")
+
+BATCH_SIZE = 200
 _worker_parallel: ParallelConfig
 _log = get_logger(__name__)
 
@@ -58,7 +71,6 @@ def init_cluster(
     proc_slots: int | None = None,
     resources: dict[str, float] | None = None,
     worker_parallel: ParallelConfig | None = None,
-    limit_slots: bool = True,
     global_logging: bool = False,
     **kwargs,
 ):
@@ -82,8 +94,6 @@ def init_cluster(
         worker_parallel:
             Parallel processing configuration for worker processes.  If
             ``None``, uses the default.
-        limit_slots:
-            ``False`` to disable the LensKit slot interface.
         global_logging:
             ``True`` to wire up logging in the workers at startup, instead of only
             connecting logs when a task is run.
@@ -95,6 +105,7 @@ def init_cluster(
     """
     global _worker_parallel
     import ray
+    import ray.runtime_env
 
     if resources is None:
         resources = {}
@@ -104,9 +115,6 @@ def init_cluster(
     cfg = get_parallel_config()
     if proc_slots is None:
         proc_slots = cfg.processes
-
-    if limit_slots:
-        resources[LK_PROCESS_SLOT] = proc_slots
 
     if num_cpus is None:
         num_cpus = effective_cpu_count()
@@ -138,7 +146,8 @@ def ray_supported() -> bool:
     """
     Check if this Ray setup is supported by LensKit.
     """
-    if python_version() < "3.12":
+    major, minor, patch = python_version_tuple()
+    if int(major) < 3 or int(minor) < 12:
         return False
     else:
         return ray_available()
@@ -174,8 +183,6 @@ def is_ray_worker() -> bool:
     """
     # logic adapted from https://discuss.ray.io/t/how-to-know-if-code-is-running-on-ray-worker/15642
     if ray_active():
-        import ray
-
         ctx = ray.get_runtime_context()
         return ctx.worker.mode == ray.WORKER_MODE
     else:
@@ -185,44 +192,206 @@ def is_ray_worker() -> bool:
 class RayOpInvoker(ModelOpInvoker[A, R], Generic[M, A, R]):
     function: InvokeOp[M, A, R]
     model_ref: Any
+    action: RemoteFunction
+    limit: int | None
 
-    def __init__(
-        self,
-        model: M,
-        func: InvokeOp[M, A, R],
-    ):
+    def __init__(self, model: M, func: InvokeOp[M, A, R], *, limit: int | None = None):
         _log.debug("persisting to Ray cluster")
         import ray
+        import torch
 
         if isinstance(model, ray.ObjectRef):
             self.model_ref = model
         else:
             self.model_ref = ray.put(model)
         self.function = func
-        slots = {}
-        if LK_PROCESS_SLOT in ray.cluster_resources():
-            slots = {LK_PROCESS_SLOT: 1}
-        else:
-            _log.warning(f"cluster has no resource {LK_PROCESS_SLOT}")
+
+        self.limit = limit
 
         worker = ray.remote(_ray_invoke_worker)
-        self.action = worker.options(num_cpus=inference_worker_cpus(), resources=slots)
+        # request a little GPU
+        if torch.cuda.is_available():
+            n_gpus = 0.1
+        else:
+            n_gpus = None
+        self.action = worker.options(num_cpus=inference_worker_cpus(), num_gpus=n_gpus)  # type: ignore
 
     def map(self, tasks: Iterable[A]) -> Iterator[R]:
-        import ray
-
-        batch_results = [
-            self.action.remote(self.function, self.model_ref, batch)
-            for batch in itertools.batched(tasks, 200)
-        ]
-        for br in batch_results:
-            yield from ray.get(br)
+        limit = TaskLimiter(self.limit)
+        function = partial(self.action.remote, self.function, self.model_ref)
+        for bres in limit.imap(function, itertools.batched(tasks, BATCH_SIZE)):
+            yield from bres  # type: ignore
 
     def shutdown(self):
         del self.model_ref
 
 
-def _ray_invoke_worker(func: Callable[[M, A], R], model: M, args: list[A]) -> list[R]:
+class TaskLimiter:
+    """
+    Limit task concurrency using :func:`ray.wait`.
+
+    This class provides two key operations:
+
+    - Add a task to the limiter with :meth:`add_task`.
+    - Wait for tasks until the number of pending tasks is less than the limit.
+    - Wait for all tasks with `drain`.
+
+    Args:
+        limit:
+            The maximum number of pending tasks.  Defaults to the LensKit
+            process count (see :func:`lenskit.parallel.initialize`).
+    """
+
+    limit: int
+    "The maximum number of pending tasks."
+    finished: int
+    "The number of tasks completed."
+
+    _tasks: list[Any]
+
+    def __init__(self, limit: int | None = None):
+        if limit is None or limit <= 0:
+            self.limit = get_parallel_config().processes
+        else:
+            self.limit = limit
+        self.finished = 0
+        self._tasks = []
+
+    @property
+    def pending(self) -> int:
+        """
+        The number of pending tasks.
+        """
+        return len(self._tasks)
+
+    def imap(
+        self,
+        function: RemoteFunction | Callable[[A], R],
+        items: Iterable[A],
+        *,
+        ordered: bool = True,
+    ) -> Generator[R, None, int]:
+        if ordered:
+            return self._imap_ordered(function, items)
+        else:
+            return self._imap_unordered(function, items)
+
+    def _imap_ordered(
+        self, function: RemoteFunction | Callable[[A], R], items: Iterable[A]
+    ) -> Generator[Any, None, int]:
+        n = 0
+        queued = deque()
+        ready = set()
+
+        # make a callable from a Ray remote function
+        if hasattr(function, "remote"):
+            function = function.remote  # type: ignore
+
+        for arg in items:
+            for res in self.results_until_limit():
+                ready.add(res)
+                n += 1
+
+            yield from _drain_queue(queued, ready)
+
+            task: Any = function(arg)
+            self.add_task(task)
+            queued.append(task)
+
+        for res in self.drain_results():
+            ready.add(res)
+            n += 1
+
+            yield from _drain_queue(queued, ready)
+
+        assert len(queued) == 0
+        assert len(ready) == 0
+
+        return n
+
+    def _imap_unordered(
+        self, function: RemoteFunction | Callable[[A], R], items: Iterable[A]
+    ) -> Generator[Any, None, int]:
+        n = 0
+
+        # make a callable from a Ray remote function
+        if hasattr(function, "remote"):
+            function = function.remote  # type: ignore
+
+        for arg in items:
+            for res in self.results_until_limit():
+                yield ray.get(res)
+                n += 1
+            task: Any = function(arg)
+            self.add_task(task)
+
+        for res in self.drain_results():
+            yield ray.get(res)
+            n += 1
+
+        return n
+
+    def add_task(self, task: ray.ObjectRef | ray.ObjectID):
+        self._tasks.append(task)
+
+    def results_until_limit(self) -> Generator[ray.ObjectRef, None, None]:
+        """
+        Iterate over available results until the number of pending results tasks
+        is less than the limit, blocking as needed.
+
+        This is a generator, returning the task result references.  The iterator
+        will stop when the pending tasks list is under the limit.  No guarantee
+        is made on the order of returned results.
+        """
+        return self._drain_until(self.limit - 1)
+
+    def wait_for_limit(self):
+        """
+        Wait until the pending tasks are back under the limit.
+
+        This method calls :meth:`ray.get` on the result of each pending task to
+        resolve errors, but discards the return value.
+        """
+        for r in self.results_until_limit():
+            ray.get(r)
+
+    def drain_results(self) -> Generator[ray.ObjectRef, None, None]:
+        """
+        Iterate over all remaining tasks until the pending task list is empty,
+        blocking as needed.
+
+        This is a generator, returning the task result references.  No guarantee
+        is made on the order of returned results.
+        """
+        return self._drain_until(0)
+
+    def drain(self):
+        """
+        Wait until all pending tasks are finished.
+
+        This method calls :meth:`ray.get` on the result of each pending task to
+        resolve errors, but discards the return value.
+        """
+        for r in self.drain_results():
+            ray.get(r)
+
+    def _drain_until(self, limit: int) -> Generator[ray.ObjectRef, None, None]:
+        while self._tasks and len(self._tasks) > limit:
+            done, remaining = ray.wait(self._tasks)
+            self._tasks = remaining
+            for dt in done:
+                self.finished += 1
+                yield dt
+
+
+def _drain_queue(queued: deque[ray.ObjectRef], ready: set[ray.ObjectRef]) -> Iterator[Any]:
+    while queued and queued[0] in ready:
+        ref = queued.popleft()
+        ready.remove(ref)
+        yield ray.get(ref)
+
+
+def _ray_invoke_worker(func: Callable[[M, A], R], model: M, args: Sequence[A]) -> list[R]:
     with init_worker(autostart=False) as ctx:
         try:
             with Task("cluster worker", subprocess=True) as task:
