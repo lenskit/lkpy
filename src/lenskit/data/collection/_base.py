@@ -167,6 +167,16 @@ class ItemListCollection(Generic[KL], ABC):
 
         return ListILC.from_df(df, key)
 
+    @staticmethod
+    def from_arrow(table: pa.Table) -> MutableItemListCollection[Any]:
+        """
+        Convert an Arrow table into an item list collection.  The table must be
+        in ``'native`'' format.
+        """
+        from ._list import ListILC
+
+        return ListILC.from_arrow(table)
+
     def to_df(self) -> pd.DataFrame:
         """
         Convert this item list collection to a data frame.
@@ -347,8 +357,6 @@ class ItemListCollection(Generic[KL], ABC):
             layout:
                 The layout to use, either LensKit native layout or a flat tabular layout.
         """
-        from ._list import ListILC
-
         if isinstance(path, list):
             path = [Path(p) for p in path]
         else:
@@ -360,18 +368,13 @@ class ItemListCollection(Generic[KL], ABC):
                 raise ValueError("cannot specify key in native format")
 
             table = dataset.read()
-            keys = table.drop("items")
-            lists = table.column("items")
-            ilc = ListILC(keys.schema.names)
-            for i, k in enumerate(keys.to_pylist()):
-                il_data = lists[i].values
-                ilc.add(ItemList.from_arrow(il_data), **k)
+            return cls.from_arrow(table)
 
-            return ilc
         elif layout == "flat":
             tbl = dataset.read_pandas()
 
             return cls.from_df(tbl.to_pandas(), key)
+
         else:  # pragma: nocover
             raise ValueError(f"unsupported layout {layout}")
 

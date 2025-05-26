@@ -141,6 +141,22 @@ class ListILC(MutableItemListCollection[K], Generic[K]):
 
         return ilc
 
+    @staticmethod
+    def from_arrow(table: pa.Table) -> MutableItemListCollection[Any]:
+        """
+        Convert an Arrow table into an item list collection.
+        """
+        from ._list import ListILC
+
+        keys = table.drop("items")
+        lists = table.column("items")
+        ilc = ListILC(keys.schema.names)
+        for i, k in enumerate(keys.to_pylist()):
+            il_data = lists[i].values
+            ilc.add(ItemList.from_arrow(il_data), **k)
+
+        return ilc
+
     def add(self, list: ItemList, *fields: ID, **kwfields: ID):
         """
         Add a single item list to this list.
