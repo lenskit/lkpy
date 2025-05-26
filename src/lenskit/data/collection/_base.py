@@ -11,7 +11,17 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from os import PathLike
 from pathlib import Path
-from typing import Any, Generator, Generic, Iterator, Literal, Mapping, Protocol, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generator,
+    Generic,
+    Iterator,
+    Literal,
+    Mapping,
+    Protocol,
+    overload,
+)
 
 import pandas as pd
 import pyarrow as pa
@@ -21,9 +31,14 @@ from pyarrow.parquet import ParquetDataset, ParquetWriter
 from lenskit.diagnostics import DataWarning
 
 from ..arrow import explode_column
+from ..builder import DatasetBuilder
+from ..container import DataContainer
 from ..items import ItemList
 from ..types import ID, Column
 from ._keys import KL, GenericKey, K, create_key_type, key_dict, key_fields, project_key
+
+if TYPE_CHECKING:
+    from ..dataset import Dataset
 
 
 class ItemListCollection(Generic[KL], ABC):
@@ -189,6 +204,66 @@ class ItemListCollection(Generic[KL], ABC):
                 The Arrow record batch size.
         """
         return pa.Table.from_batches(self.record_batches(batch_size=batch_size, layout=layout))
+
+    @overload
+    def to_dataset(
+        self,
+        class_name: str = "interaction",
+        *,
+        result: Literal["dataset"] = "dataset",
+    ) -> Dataset: ...
+    @overload
+    def to_dataset(
+        self,
+        class_name: str = "interaction",
+        *,
+        result: Literal["container"],
+    ) -> DataContainer: ...
+    @overload
+    def to_dataset(
+        self,
+        class_name: str = "interaction",
+        *,
+        result: Literal["builder"],
+    ) -> DatasetBuilder: ...
+    def to_dataset(
+        self,
+        class_name: str = "interaction",
+        *,
+        result: Literal["dataset", "container", "builder"] = "dataset",
+    ):
+        """
+        Construct a dataset populated with this item list collection's data as
+        interactions.
+
+        Args:
+            cls:
+                The interaction class name.
+            result:
+                Whether to return a fully-instantiated dataset, a container,
+                or a dataset builder.
+        """
+        dsb = DatasetBuilder()
+        entities = [k[:-3] for k in self.key_fields if k.endswith("_id")]
+        data = self.to_arrow(layout="flat")
+
+        for ecls in entities:
+            dsb.add_entity_class(ecls)
+            # speed up?
+            dsb.add_entities(ecls, list(set(getattr(k, f"{ecls}_id") for k in self.keys())))
+
+        entities += ["item"]
+        dsb.add_interactions(class_name, data, entities=entities, missing="insert")
+
+        match result:
+            case "builder":
+                return dsb
+            case "container":
+                return dsb.build_container()
+            case "dataset":
+                return dsb.build()
+            case _:  # pragma: nocover
+                raise ValueError(f"invalid result type {result}")
 
     def save_parquet(
         self,

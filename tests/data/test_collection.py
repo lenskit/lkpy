@@ -361,3 +361,25 @@ def test_recs_df_expected_column(demo_recs: DemoRecs):
     print(rec_df)
     print(demo_recs.recommendations[0])
     assert list(rec_df.columns) == ["user_id", "item_id", "score", "rank"]
+
+
+def test_to_dataset(demo_recs: DemoRecs):
+    test = demo_recs.split.test
+    test_ds = test.to_dataset()
+    assert test_ds.user_count == len(test)
+    assert set(test_ds.users.ids()) == set(k.user_id for k in test.keys())
+
+    test_df = test.to_df()
+    assert test_ds.interaction_count == len(test_df)
+
+    src_user_counts = test_df.groupby("user_id")["item_id"].count()
+    src_item_counts = test_df.groupby("item_id")["user_id"].count()
+
+    ds_user_counts = test_ds.user_stats()["count"]
+    ds_item_counts = test_ds.item_stats()["count"]
+
+    src_user_counts, ds_user_counts = src_user_counts.align(ds_user_counts, fill_value=0)
+    src_item_counts, ds_item_counts = src_item_counts.align(ds_item_counts, fill_value=0)
+
+    assert np.all(ds_user_counts == src_user_counts)
+    assert np.all(ds_item_counts == src_item_counts)
