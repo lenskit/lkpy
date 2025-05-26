@@ -40,7 +40,11 @@ def main():
 @click.group("lenskit")
 @click.option("-v", "--verbose", "verbosity", count=True, help="Enable verbose logging output")
 @click.option(
-    "--seed-file", type=Path, metavar="FILE", help="Load random seed from FILE (key: random.seed)"
+    "--seed-file",
+    type=Path,
+    metavar="FILE",
+    help="Load random seed from FILE (key: random.seed)",
+    envvar="LK_SEED_FILE",
 )
 def lenskit(verbosity: int, seed_file: Path | None):
     """
@@ -54,7 +58,7 @@ def lenskit(verbosity: int, seed_file: Path | None):
     lc.apply()
 
     if seed_file is not None:
-        _log.debug("loading RND seed from %s", seed_file)
+        _log.info("loading RND seed from %s", seed_file)
         seed = load_seed(seed_file)
         init_global_rng(seed)
 
