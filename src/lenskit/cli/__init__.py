@@ -6,12 +6,14 @@
 
 import sys
 from importlib.metadata import entry_points
+from pathlib import Path
 
 import click
 import numpy as np
 
 from lenskit import __version__
 from lenskit.logging import LoggingConfig, console, get_logger
+from lenskit.random import init_global_rng, load_seed
 
 __all__ = ["lenskit", "main", "version"]
 _log = get_logger(__name__)
@@ -36,8 +38,11 @@ def main():
 
 
 @click.group("lenskit")
-@click.option("-v", "--verbose", "verbosity", count=True, help="enable verbose logging output")
-def lenskit(verbosity: int):
+@click.option("-v", "--verbose", "verbosity", count=True, help="Enable verbose logging output")
+@click.option(
+    "--seed-file", type=Path, metavar="FILE", help="Load random seed from FILE (key: random.seed)"
+)
+def lenskit(verbosity: int, seed_file: Path | None):
     """
     Data and pipeline operations with LensKit.
     """
@@ -47,6 +52,11 @@ def lenskit(verbosity: int):
     if verbosity:
         lc.set_verbose(verbosity)
     lc.apply()
+
+    if seed_file is not None:
+        _log.debug("loading RND seed from %s", seed_file)
+        seed = load_seed(seed_file)
+        init_global_rng(seed)
 
 
 @lenskit.command("version")
