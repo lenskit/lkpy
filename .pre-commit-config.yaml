@@ -49,7 +49,7 @@ repos:
       - id: license-headers
         name: add license headers
         language: python
-        entry: python utils/update-headers.py --error-on-change
+        entry: python -X utf8 utils/update-headers.py --error-on-change
         types_or:
           - python
           - rust
