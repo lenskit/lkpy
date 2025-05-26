@@ -16,7 +16,7 @@ from hypothesis import settings
 from pytest import fixture, skip
 
 from lenskit.parallel import ensure_parallel_init
-from lenskit.random import set_global_rng
+from lenskit.random import init_global_rng
 
 # bring common fixtures into scope
 from lenskit.testing import ml_100k, ml_ds, ml_ds_unchecked, ml_ratings  # noqa: F401
@@ -53,7 +53,7 @@ def rng() -> Generator:
 @fixture(autouse=True)
 def init_rng(request):
     if RNG_SEED is not None:
-        set_global_rng(RNG_SEED)
+        init_global_rng(RNG_SEED)
 
 
 @fixture(scope="module", params=["cpu", "cuda"])

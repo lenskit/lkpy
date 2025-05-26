@@ -53,6 +53,7 @@ Random number seed that can be configured.
 
 SeedDependency = Literal["user"]
 
+_global_seed: SeedSequence | None = None
 _global_rng: Generator | None = None
 
 
@@ -102,9 +103,51 @@ def load_seed(file: Path | os.PathLike[str] | str, key: str = "random.seed") -> 
 def set_global_rng(seed: RNGInput):
     """
     Set the global default RNG.
+
+    .. deprecated: 2025.3.0
+        Deprecated alias for :func:`init_global_rng`.
     """
-    global _global_rng
-    _global_rng = default_rng(seed)
+    init_global_rng(seed)
+
+
+def init_global_rng(
+    seed: RNGInput, *, seed_stdlib: bool = True, seed_numpy: bool = True, seed_pytorch: bool = True
+):
+    """
+    Set the global default RNG.
+
+    Args:
+        seed:
+            The seed to set.
+        seed_stdlib:
+            If ``True``, also seed the Python standard library RNG.
+        seed_numpy:
+            If ``True``, also seed the deprecated NumPy global RNG.
+        seed_torch:
+            If ``True``, also seed PyTorch.
+    """
+    global _global_rng, _global_seed
+
+    if isinstance(seed, RNGLike):
+        _global_rng = default_rng(seed)
+        int_seed = _global_rng.integers(np.iinfo("i4").max)
+    else:
+        _global_seed = make_seed(seed)
+        int_seed = _global_seed.generate_state(1)[0]
+        _global_rng = default_rng(_global_seed)
+
+    if seed_stdlib:
+        import random
+
+        random.seed(int(int_seed))
+
+    if seed_numpy:
+        np.random.seed(int_seed)
+
+    if seed_pytorch:
+        import torch
+
+        torch.manual_seed(int_seed)  # type: ignore
 
 
 def random_generator(seed: RNGInput = None) -> Generator:
