@@ -50,7 +50,7 @@ def subset(
     subsetting operation are entire rows of the interaction matrix, typically
     users.
     """
-    log = _log.bind(src=str(str))
+    log = _log.bind(src=str(src))
 
     dataset: Dataset | None = None
     lists: ItemListCollection
@@ -58,7 +58,7 @@ def subset(
         log.info("loading ItemListCollection")
         lists = ItemListCollection.load_parquet(src)
     else:
-        log.info("loading Dataset")
+        log.debug("loading Dataset")
         dataset = Dataset.load(src)
         log.info("extracting default interactions")
         if len(dataset.schema.relationships) > 1:
