@@ -12,6 +12,7 @@ from functools import partial
 
 import numpy as np
 import pyarrow as pa
+import pyarrow.compute as pc
 import torch
 from typing_extensions import Callable, Literal, TypeAlias, TypeVar, overload
 
@@ -129,3 +130,24 @@ def arrow_type(dtype: np.dtype) -> pa.DataType:
         return pa.utf8()
     else:
         return pa.from_numpy_dtype(dtype)
+
+
+def explode_column(tbl: pa.Table, column: str, *, out_col: str | None = None) -> pa.Table:
+    """
+    “Explode” a list column to yield one row per list element.
+    """
+    col = tbl.column(column)
+    if not (
+        pa.types.is_list(col.type)
+        or pa.types.is_list_view(col.type)
+        or pa.types.is_large_list(col.type)
+        or pa.types.is_large_list_view(col.type)
+    ):
+        raise TypeError(f"column type {col.type} is not a list type")
+
+    paired = tbl.drop_columns(column)
+    indices = pc.list_parent_indices(col)
+    exp_tbl = paired.take(indices)
+    exp_col = pc.list_flatten(col)
+    assert len(exp_tbl) == len(exp_col)
+    return exp_tbl.append_column(out_col or column, exp_col)

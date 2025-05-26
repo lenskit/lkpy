@@ -255,6 +255,20 @@ def test_to_arrow():
     assert names == ["item_id", "score"]
 
 
+def test_to_arrow_flat():
+    ilc = ItemListCollection.from_dict(
+        {72: ItemList(["a"], scores=[1]), 82: ItemList(["a", "b", "c"], scores=[3, 4, 10])},
+        key="user_id",
+    )
+    tbl = ilc.to_arrow(layout="flat")
+    print(tbl)
+    assert tbl.num_columns == 3
+    assert tbl.num_rows == 4
+    assert np.all(tbl.column("user_id").to_numpy() == [72, 82, 82, 82])
+    assert np.all(tbl.column("item_id").to_numpy() == ["a", "a", "b", "c"])
+    assert np.all(tbl.column("score").to_numpy() == [1, 3, 4, 10])
+
+
 @mark.parametrize("layout", ["native", "flat"])
 def test_save_parquet(ml_ds: Dataset, tmpdir: Path, layout):
     ilc = ItemListCollection.empty(["user_id"])

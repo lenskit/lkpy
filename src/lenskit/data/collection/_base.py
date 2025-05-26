@@ -20,6 +20,7 @@ from pyarrow.parquet import ParquetDataset, ParquetWriter
 
 from lenskit.diagnostics import DataWarning
 
+from ..arrow import explode_column
 from ..items import ItemList
 from ..types import ID, Column
 from ._keys import KL, GenericKey, K, create_key_type, key_dict, key_fields, project_key
@@ -173,7 +174,9 @@ class ItemListCollection(Generic[KL], ABC):
             .reset_index(drop=True)
         )
 
-    def to_arrow(self, *, batch_size: int = 5000) -> pa.Table:
+    def to_arrow(
+        self, *, batch_size: int = 5000, layout: Literal["native", "flat"] = "native"
+    ) -> pa.Table:
         """
         Convert this item list collection to an Arrow table.
 
@@ -185,7 +188,7 @@ class ItemListCollection(Generic[KL], ABC):
             batch_size:
                 The Arrow record batch size.
         """
-        return pa.Table.from_batches(self.record_batches())
+        return pa.Table.from_batches(self.record_batches(batch_size=batch_size, layout=layout))
 
     def save_parquet(
         self,
@@ -298,7 +301,11 @@ class ItemListCollection(Generic[KL], ABC):
             raise ValueError(f"unsupported layout {layout}")
 
     def record_batches(
-        self, batch_size: int = 5000, columns: dict[str, pa.DataType] | None = None
+        self,
+        batch_size: int = 5000,
+        columns: dict[str, pa.DataType] | None = None,
+        *,
+        layout: Literal["native", "flat"] = "native",
     ) -> Generator[pa.RecordBatch, None, None]:
         """
         Get the item list collection as Arrow record batches (in native layout).
@@ -320,6 +327,11 @@ class ItemListCollection(Generic[KL], ABC):
                     schema,
                 ),
             )
+            if layout == "flat":
+                tbl = explode_column(tbl, "items").flatten()
+                tbl = tbl.rename_columns(
+                    [(c[6:] if c.startswith("items.") else c) for c in tbl.column_names]
+                )
             yield from tbl.to_batches()
 
     @property
