@@ -126,7 +126,9 @@ class ScorerTests(TrainingTests):
     "What can this scorer score?"
 
     expected_rmse: ClassVar[float | tuple[float, float] | None] = None
+    "Asserts RMSE either less than the provided expected value or between two values as tuple."
     expected_ndcg: ClassVar[float | tuple[float, float] | None] = None
+    "Asserts nDCG either greater than the provided expected value or between two values as tuple."
 
     def invoke_scorer(self, inst: Component, **kwargs):
         sig = inspect.signature(inst)
