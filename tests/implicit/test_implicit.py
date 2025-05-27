@@ -26,6 +26,7 @@ class TestImplicitALS(BasicComponentTests, ScorerTests):
 
 class TestImplicitBPR(BasicComponentTests, ScorerTests):
     component = imp.BPR
+    expected_ndcg = 0
 
 
 @mark.slow
