@@ -35,6 +35,7 @@ from .types import ID, LAYOUT, MAT_AGG
 from .vocab import Vocabulary
 
 if TYPE_CHECKING:
+    from .collection import ItemListCollection
     from .dataset import Dataset
 
 _log = get_logger(__name__)
@@ -558,6 +559,21 @@ class MatrixRelationshipSet(RelationshipSet):
             return None
 
         return ItemList.from_arrow(tbl, vocabulary=self.col_vocabulary)
+
+    def to_ilc(self) -> ItemListCollection:
+        """
+        Get the rows as an item list collection.
+        """
+        from .collection import ListILC
+
+        if self.col_type != "item":
+            raise RuntimeError("row_items() only valid for item-column matrices")
+
+        # FIXME: make this a lot faster with Arrow
+        ilc = ListILC([f"{self.row_type}_id"])
+        for i in range(self.n_rows):
+            ilc.add(self.row_items(number=i), self.row_vocabulary.id(i))
+        return ilc
 
     def row_stats(self):
         if self._row_stats is None:

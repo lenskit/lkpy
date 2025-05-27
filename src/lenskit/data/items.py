@@ -945,7 +945,7 @@ class ItemList:
             # on large arrays, actually faster to do the final filter in NumPy.
             vs = vs.cpu().numpy()
             picked = picked.cpu().numpy()
-            invalid = np.isnan(picked)
+            invalid = np.isnan(vs)
             picked = picked[~invalid]
         else:
             if not isinstance(scores, MTArray):

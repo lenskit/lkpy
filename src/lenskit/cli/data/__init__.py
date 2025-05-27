@@ -9,6 +9,7 @@ import click
 from .convert import convert
 from .describe import describe
 from .fetch import fetch
+from .subset import subset
 
 
 @click.group
@@ -22,3 +23,4 @@ def data():
 data.add_command(convert)
 data.add_command(describe)
 data.add_command(fetch)
+data.add_command(subset)

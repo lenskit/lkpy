@@ -22,8 +22,8 @@ _log = get_logger(__name__)
 @click.option(
     "--item-lists", is_flag=True, help="Convert to an ItemListCollection instead of Dataset."
 )
-@click.argument("src", nargs=-1, required=True, type=Path)
-@click.argument("dst", type=Path)
+@click.argument("src", type=Path, nargs=-1, required=True)
+@click.argument("dst", type=Path, required=True)
 def convert(format: str | None, src: list[Path], dst: Path, item_lists: bool = False):
     """
     Convert data into the LensKit native format.

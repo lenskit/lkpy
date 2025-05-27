@@ -11,7 +11,17 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from os import PathLike
 from pathlib import Path
-from typing import Any, Generator, Generic, Iterator, Literal, Mapping, Protocol, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generator,
+    Generic,
+    Iterator,
+    Literal,
+    Mapping,
+    Protocol,
+    overload,
+)
 
 import pandas as pd
 import pyarrow as pa
@@ -20,9 +30,15 @@ from pyarrow.parquet import ParquetDataset, ParquetWriter
 
 from lenskit.diagnostics import DataWarning
 
+from ..arrow import explode_column
+from ..builder import DatasetBuilder
+from ..container import DataContainer
 from ..items import ItemList
 from ..types import ID, Column
 from ._keys import KL, GenericKey, K, create_key_type, key_dict, key_fields, project_key
+
+if TYPE_CHECKING:
+    from ..dataset import Dataset
 
 
 class ItemListCollection(Generic[KL], ABC):
@@ -151,6 +167,16 @@ class ItemListCollection(Generic[KL], ABC):
 
         return ListILC.from_df(df, key)
 
+    @staticmethod
+    def from_arrow(table: pa.Table) -> MutableItemListCollection[Any]:
+        """
+        Convert an Arrow table into an item list collection.  The table must be
+        in ``'native`'' format.
+        """
+        from ._list import ListILC
+
+        return ListILC.from_arrow(table)
+
     def to_df(self) -> pd.DataFrame:
         """
         Convert this item list collection to a data frame.
@@ -173,7 +199,9 @@ class ItemListCollection(Generic[KL], ABC):
             .reset_index(drop=True)
         )
 
-    def to_arrow(self, *, batch_size: int = 5000) -> pa.Table:
+    def to_arrow(
+        self, *, batch_size: int = 5000, layout: Literal["native", "flat"] = "native"
+    ) -> pa.Table:
         """
         Convert this item list collection to an Arrow table.
 
@@ -185,7 +213,67 @@ class ItemListCollection(Generic[KL], ABC):
             batch_size:
                 The Arrow record batch size.
         """
-        return pa.Table.from_batches(self.record_batches())
+        return pa.Table.from_batches(self.record_batches(batch_size=batch_size, layout=layout))
+
+    @overload
+    def to_dataset(
+        self,
+        class_name: str = "interaction",
+        *,
+        result: Literal["dataset"] = "dataset",
+    ) -> Dataset: ...
+    @overload
+    def to_dataset(
+        self,
+        class_name: str = "interaction",
+        *,
+        result: Literal["container"],
+    ) -> DataContainer: ...
+    @overload
+    def to_dataset(
+        self,
+        class_name: str = "interaction",
+        *,
+        result: Literal["builder"],
+    ) -> DatasetBuilder: ...
+    def to_dataset(
+        self,
+        class_name: str = "interaction",
+        *,
+        result: Literal["dataset", "container", "builder"] = "dataset",
+    ):
+        """
+        Construct a dataset populated with this item list collection's data as
+        interactions.
+
+        Args:
+            cls:
+                The interaction class name.
+            result:
+                Whether to return a fully-instantiated dataset, a container,
+                or a dataset builder.
+        """
+        dsb = DatasetBuilder()
+        entities = [k[:-3] for k in self.key_fields if k.endswith("_id")]
+        data = self.to_arrow(layout="flat")
+
+        for ecls in entities:
+            dsb.add_entity_class(ecls)
+            # speed up?
+            dsb.add_entities(ecls, list(set(getattr(k, f"{ecls}_id") for k in self.keys())))
+
+        entities += ["item"]
+        dsb.add_interactions(class_name, data, entities=entities, missing="insert")
+
+        match result:
+            case "builder":
+                return dsb
+            case "container":
+                return dsb.build_container()
+            case "dataset":
+                return dsb.build()
+            case _:  # pragma: nocover
+                raise ValueError(f"invalid result type {result}")
 
     def save_parquet(
         self,
@@ -269,8 +357,6 @@ class ItemListCollection(Generic[KL], ABC):
             layout:
                 The layout to use, either LensKit native layout or a flat tabular layout.
         """
-        from ._list import ListILC
-
         if isinstance(path, list):
             path = [Path(p) for p in path]
         else:
@@ -282,23 +368,22 @@ class ItemListCollection(Generic[KL], ABC):
                 raise ValueError("cannot specify key in native format")
 
             table = dataset.read()
-            keys = table.drop("items")
-            lists = table.column("items")
-            ilc = ListILC(keys.schema.names)
-            for i, k in enumerate(keys.to_pylist()):
-                il_data = lists[i].values
-                ilc.add(ItemList.from_arrow(il_data), **k)
+            return cls.from_arrow(table)
 
-            return ilc
         elif layout == "flat":
             tbl = dataset.read_pandas()
 
             return cls.from_df(tbl.to_pandas(), key)
+
         else:  # pragma: nocover
             raise ValueError(f"unsupported layout {layout}")
 
     def record_batches(
-        self, batch_size: int = 5000, columns: dict[str, pa.DataType] | None = None
+        self,
+        batch_size: int = 5000,
+        columns: dict[str, pa.DataType] | None = None,
+        *,
+        layout: Literal["native", "flat"] = "native",
     ) -> Generator[pa.RecordBatch, None, None]:
         """
         Get the item list collection as Arrow record batches (in native layout).
@@ -320,6 +405,11 @@ class ItemListCollection(Generic[KL], ABC):
                     schema,
                 ),
             )
+            if layout == "flat":
+                tbl = explode_column(tbl, "items").flatten()
+                tbl = tbl.rename_columns(
+                    [(c[6:] if c.startswith("items.") else c) for c in tbl.column_names]
+                )
             yield from tbl.to_batches()
 
     @property
