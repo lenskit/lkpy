@@ -21,6 +21,7 @@ _log = logging.getLogger(__name__)
 
 class TestImplicitALS(BasicComponentTests, ScorerTests):
     component = imp.ALS
+    expected_ndcg = 0
 
 
 class TestImplicitBPR(BasicComponentTests, ScorerTests):

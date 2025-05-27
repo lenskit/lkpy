@@ -29,6 +29,7 @@ simple_dsr = from_interactions_df(simple_dfr)
 
 class TestImplicitALS(BasicComponentTests, ScorerTests):
     component = ImplicitMFScorer
+    expected_ndcg = 0.22
 
 
 def test_als_basic_build():
@@ -320,14 +321,3 @@ def test_als_train_large_ratings(ml_ds):
     assert len(algo.items.index) == ml_ds.item_count
     assert algo.user_embeddings.shape == (ml_ds.user_count, 20)
     assert algo.item_embeddings.shape == (ml_ds.item_count, 20)
-
-
-@mark.slow
-@mark.eval
-def test_als_implicit_batch_accuracy(ml_100k):
-    ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(ImplicitMFScorer(features=25, epochs=20), ds)
-
-    ndcg = results.list_summary().loc["NDCG", "mean"]
-    _log.info("nDCG for users is %.4f", ndcg)
-    assert ndcg > 0.22

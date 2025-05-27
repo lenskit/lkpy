@@ -27,6 +27,7 @@ simple_ds = from_interactions_df(simple_df)
 
 class TestExplicitALS(BasicComponentTests, ScorerTests):
     component = BiasedMFScorer
+    expected_rmse = (0.89, 0.99)
 
 
 def test_als_basic_build():
@@ -252,15 +253,3 @@ def test_als_save_load(ml_ds: Dataset):
     # make sure it still works
     preds = algo(query=10, items=ItemList(np.arange(0, 50, dtype="i8")))
     assert len(preds) == 50
-
-
-@mark.slow
-@mark.eval
-def test_als_batch_accuracy(ml_100k):
-    ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(
-        BiasedMFScorer(features=25, epochs=20, damping=5), ds, predicts_ratings=True
-    )
-
-    assert results.global_metrics()["MAE"] == approx(0.73, abs=0.045)
-    assert results.list_summary().loc["RMSE", "mean"] == approx(0.94, abs=0.05)
