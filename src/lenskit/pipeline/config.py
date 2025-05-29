@@ -13,17 +13,43 @@ from __future__ import annotations
 
 import base64
 import pickle
+import warnings
 from collections import OrderedDict
 from hashlib import sha256
 from types import FunctionType
-from typing import Literal, Mapping
+from typing import Annotated, Literal, Mapping
 
+from annotated_types import Predicate
 from pydantic import BaseModel, Field, JsonValue, TypeAdapter, ValidationError
 from typing_extensions import Any, Self
 
 from .components import Component
 from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
-from .types import type_string
+from .types import HookEntry, type_string
+
+
+class PipelineHook(BaseModel):
+    """
+    A single entry in a pipeline's hook configuration.
+    """
+
+    function: str
+    priority: Annotated[int, Predicate(lambda x: x != 0)] = 1
+
+    @classmethod
+    def from_entry(cls, hook: HookEntry):
+        if not isinstance(hook, FunctionType):  # type: ignore
+            warnings.warn(f"hook {hook.function} is not a function")
+        function = f"{hook.function.__module__}:{hook.function.__qualname__}"
+        return cls(function=function, priority=hook.priority)
+
+
+class PipelineHooks(BaseModel):
+    """
+    Hook specifications for a pipeline.
+    """
+
+    run: dict[str, list[PipelineHook]] = {}
 
 
 class PipelineConfig(BaseModel):
@@ -48,6 +74,8 @@ class PipelineConfig(BaseModel):
     "The default node for running this pipeline."
     literals: dict[str, PipelineLiteral] = {}
     "Literals"
+    hooks: PipelineHooks = PipelineHooks()
+    "The hooks configured for the pipeline."
 
 
 class PipelineMeta(BaseModel):
