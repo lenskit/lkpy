@@ -24,6 +24,7 @@ from lenskit.diagnostics import PipelineError, PipelineWarning
 from lenskit.logging import get_logger
 
 from . import config
+from ._hooks import ComponentInputHook, HookEntry, RunHooks
 from ._impl import Pipeline
 from .cache import PipelineCache
 from .components import (
@@ -34,7 +35,6 @@ from .components import (
     instantiate_component,
 )
 from .config import PipelineConfig, PipelineHook
-from .hooks import ComponentInputHook, HookEntry, RunHooks
 from .nodes import (
     ND,
     ComponentConstructorNode,

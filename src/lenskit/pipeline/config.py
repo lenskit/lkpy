@@ -23,8 +23,8 @@ from annotated_types import Predicate
 from pydantic import BaseModel, Field, JsonValue, TypeAdapter, ValidationError
 from typing_extensions import Any, Self
 
+from ._hooks import HookEntry
 from .components import Component
-from .hooks import HookEntry
 from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
 from .types import type_string
 

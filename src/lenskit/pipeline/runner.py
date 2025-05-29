@@ -159,16 +159,6 @@ class PipelineRunner:
                 for hook in self.pipe._run_hooks.get("component-input", []):
                     ival = hook.function(node, iname, itype, ival)
 
-            # check the data type before passing
-            if itype and not lazy and not is_compatible_data(ival, itype):
-                if ival is None:
-                    raise PipelineError(
-                        f"no data available for required input ❬{iname}❭ on component ❬{node.name}❭"
-                    )
-                raise TypeError(
-                    f"input ❬{iname}❭ on component ❬{node.name}❭ has invalid type {type(ival)} (expected {itype})"  # noqa: E501
-                )
-
             in_data[iname] = ival
 
         trace(log, "running component", component=node.component)

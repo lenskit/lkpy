@@ -22,9 +22,9 @@ from typing_extensions import (
     TypeVar,
 )
 
-from .components import Component, PipelineFunction
-from .nodes import ComponentInstanceNode
-from .types import TypeExpr
+from ..components import Component, PipelineFunction
+from ..nodes import ComponentInstanceNode
+from ..types import TypeExpr
 
 ComponentObject: TypeAlias = Component | PipelineFunction
 
@@ -82,3 +82,9 @@ class ComponentInputHook(Protocol):
 RunHooks = TypedDict(
     "RunHooks", {"component-input": list[HookEntry[ComponentInputHook]]}, total=False
 )
+
+
+def default_run_hooks() -> RunHooks:
+    from .typecheck import typecheck_input_data
+
+    return {"component-input": [HookEntry(typecheck_input_data, 0)]}

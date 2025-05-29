@@ -27,8 +27,8 @@ from lenskit.diagnostics import PipelineError
 from lenskit.logging import get_logger
 
 from . import config
+from ._hooks import RunHooks, default_run_hooks
 from .config import PipelineConfig
-from .hooks import RunHooks
 from .nodes import (
     ComponentConstructorNode,
     ComponentInstanceNode,
@@ -105,10 +105,11 @@ class Pipeline:
         if config.default:
             self._default = self.node(config.default)
 
-        self._run_hooks = {}
+        self._run_hooks = default_run_hooks()
         for name, hooks in run_hooks.items():
-            self._run_hooks.setdefault(name, [])  # type: ignore
-            self._run_hooks[name] += hooks
+            my_hooks = self._run_hooks.setdefault(name, [])  # type: ignore
+            my_hooks.extend(hooks)  # type: ignore
+            my_hooks.sort(key=lambda h: h.priority)
 
     @property
     def config(self) -> PipelineConfig:
