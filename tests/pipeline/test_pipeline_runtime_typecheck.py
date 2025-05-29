@@ -7,6 +7,7 @@
 from pytest import raises
 
 from lenskit.pipeline import PipelineBuilder
+from lenskit.pipeline.types import Lazy
 
 
 def proc_hello(msg: str) -> str:
@@ -19,6 +20,10 @@ def proc_incr(x: int) -> int:
 
 def proc_exclaim(msg: str) -> str:
     return msg + "!"
+
+
+def lazy_exclaim(msg: Lazy[str], other: Lazy[int]) -> str:
+    return msg.get() + "!"
 
 
 def test_raise_invalid_input():
@@ -40,6 +45,18 @@ def test_raise_invalid_wired_input():
     x = build.create_input("x", int)
     incr = build.add_component("incr", proc_incr, x=x)
     excl = build.add_component("exclaim", proc_exclaim, msg=incr)
+
+    pipe = build.build()
+
+    with raises(TypeError, match="has invalid type"):
+        pipe.run(excl, x=5)
+
+
+def test_raise_lazy_input():
+    build = PipelineBuilder()
+    x = build.create_input("x", int)
+    incr = build.add_component("incr", proc_incr, x=x)
+    excl = build.add_component("exclaim", lazy_exclaim, msg=incr, other="bob")
 
     pipe = build.build()
 
