@@ -9,6 +9,7 @@ Pipeline runner logic.
 """
 
 # pyright: strict
+# pyright: reportPrivateUsage=false
 from dataclasses import dataclass
 from typing import Any, Generic, Literal, TypeAlias, TypeVar, get_args, get_origin
 
@@ -18,7 +19,7 @@ from lenskit.diagnostics import PipelineError
 from lenskit.logging import get_logger, trace
 
 from ._impl import Pipeline
-from .components import PipelineFunction, component_inputs
+from .components import component_inputs
 from .nodes import ComponentInstanceNode, InputNode, LiteralNode, Node
 from .types import Lazy, is_compatible_data
 
@@ -88,8 +89,8 @@ class PipelineRunner:
                 self.state[name] = value
             case InputNode(name, types=types):
                 self._inject_input(name, types, required)
-            case ComponentInstanceNode(name, comp):
-                self._run_component(name, comp, required)
+            case ComponentInstanceNode():
+                self._run_component(node, required)
             case _:  # pragma: nocover
                 raise PipelineError(f"invalid node {node}")
 
@@ -106,15 +107,14 @@ class PipelineRunner:
 
     def _run_component(
         self,
-        name: str,
-        comp: PipelineFunction[Any],
+        node: ComponentInstanceNode[Any],
         required: bool,
     ) -> None:
         in_data = {}
-        log = self.log.bind(node=name)
+        log = self.log.bind(node=node.name)
         trace(log, "processing inputs")
-        inputs = component_inputs(comp, warn_on_missing=False)
-        wiring = self.pipe.node_input_connections(name)
+        inputs = component_inputs(node.component, warn_on_missing=False)
+        wiring = self.pipe.node_input_connections(node.name)
         for iname, itype in inputs.items():
             ilog = log.bind(input_name=iname, input_type=itype)
             trace(ilog, "resolving input")
@@ -139,7 +139,9 @@ class PipelineRunner:
                     ireq = False
 
                 if lazy:
-                    ival = DeferredRun(self, iname, name, snode, required=ireq, data_type=itype)
+                    ival = DeferredRun(
+                        self, iname, node.name, snode, required=ireq, data_type=itype
+                    )
                 else:
                     ival = self.run(snode, required=ireq)
 
@@ -153,20 +155,24 @@ class PipelineRunner:
             ):
                 return None
 
+            if not lazy:
+                for hook in self.pipe._run_hooks.get("component-input", []):
+                    ival = hook.function(node, iname, itype, ival)
+
             # check the data type before passing
             if itype and not lazy and not is_compatible_data(ival, itype):
                 if ival is None:
                     raise PipelineError(
-                        f"no data available for required input ❬{iname}❭ on component ❬{name}❭"
+                        f"no data available for required input ❬{iname}❭ on component ❬{node.name}❭"
                     )
                 raise TypeError(
-                    f"input ❬{iname}❭ on component ❬{name}❭ has invalid type {type(ival)} (expected {itype})"  # noqa: E501
+                    f"input ❬{iname}❭ on component ❬{node.name}❭ has invalid type {type(ival)} (expected {itype})"  # noqa: E501
                 )
 
             in_data[iname] = ival
 
-        trace(log, "running component", component=comp)
-        self.state[name] = comp(**in_data)
+        trace(log, "running component", component=node.component)
+        self.state[node.name] = node.component(**in_data)
 
 
 @dataclass(eq=False)
