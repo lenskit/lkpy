@@ -8,13 +8,36 @@
 Definition of pipeline hook protocols.
 """
 
-from typing_extensions import Any, Protocol, TypeAlias
+from __future__ import annotations
+
+from collections.abc import Callable
+
+from typing_extensions import (
+    Any,
+    Generic,
+    NamedTuple,
+    Protocol,
+    TypeAlias,
+    TypedDict,
+    TypeVar,
+)
 
 from .components import Component, PipelineFunction
 from .nodes import ComponentInstanceNode
 from .types import TypeExpr
 
 ComponentObject: TypeAlias = Component | PipelineFunction
+
+Hook = TypeVar("Hook", bound=Callable[..., Any])
+
+
+class HookEntry(NamedTuple, Generic[Hook]):
+    """
+    An entry in a pipeline hook list.
+    """
+
+    function: Hook
+    priority: int = 1
 
 
 class ComponentInputHook(Protocol):
@@ -54,3 +77,8 @@ class ComponentInputHook(Protocol):
             values depending on application needs.
         """
         pass
+
+
+RunHooks = TypedDict(
+    "RunHooks", {"component-input": list[HookEntry[ComponentInputHook]]}, total=False
+)

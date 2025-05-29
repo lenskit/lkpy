@@ -24,9 +24,9 @@ from lenskit.diagnostics import PipelineError, PipelineWarning
 from lenskit.logging import get_logger
 
 from . import config
-from ._impl import HookEntry, Pipeline
+from ._impl import Pipeline
 from .cache import PipelineCache
-from .components import (  # type: ignore # noqa: F401
+from .components import (
     Component,
     ComponentConstructor,
     PipelineFunction,
@@ -34,7 +34,7 @@ from .components import (  # type: ignore # noqa: F401
     instantiate_component,
 )
 from .config import PipelineConfig, PipelineHook
-from .hooks import ComponentInputHook
+from .hooks import ComponentInputHook, HookEntry, RunHooks
 from .nodes import (
     ND,
     ComponentConstructorNode,
@@ -97,7 +97,7 @@ class PipelineBuilder:
     _aliases: dict[str, Node[Any]]
     _default_connections: dict[str, str]
     _default: str | None = None
-    _run_hooks: dict[str, list[HookEntry]]
+    _run_hooks: dict[str, list[HookEntry[Any]]]
 
     def __init__(self, name: str | None = None, version: str | None = None):
         self.name = name
@@ -122,7 +122,7 @@ class PipelineBuilder:
             builder._edges[name] = spec.inputs
         builder._default = pipeline.config.default
         builder._run_hooks = {
-            name: [h for h in hooks if h.priority != 0]
+            name: [h for h in hooks if h.priority != 0]  # type: ignore
             for name, hooks in pipeline._run_hooks.items()  # type: ignore
         }
 
@@ -472,8 +472,8 @@ class PipelineBuilder:
         """
         if priority == 0:
             raise ValueError("priority 0 is reserved for LensKit internal hooks")
-        self._run_hooks.setdefault(name, [])
-        self._run_hooks[name].append(HookEntry(hook, priority))
+        hooks = self._run_hooks.setdefault(name, [])
+        hooks.append(HookEntry(hook, priority))
 
     def validate(self):
         """
@@ -748,7 +748,7 @@ class PipelineBuilder:
         return Pipeline(
             config,
             [self._instantiate(n, cache) for n in self._nodes.values()],
-            run_hooks=self._run_hooks,
+            run_hooks=cast(RunHooks, self._run_hooks),
         )
 
     def _instantiate(self, node: Node[ND], cache: PipelineCache | None = None) -> Node[ND]:

@@ -28,13 +28,13 @@ from lenskit.logging import get_logger
 
 from . import config
 from .config import PipelineConfig
+from .hooks import RunHooks
 from .nodes import (
     ComponentConstructorNode,
     ComponentInstanceNode,
     Node,
 )
 from .state import PipelineState
-from .types import HookEntry
 
 if TYPE_CHECKING:
     from lenskit.training import TrainingOptions
@@ -82,14 +82,14 @@ class Pipeline:
     _aliases: dict[str, Node[Any]]
     _default: Node[Any] | None = None
     _hash: str | None = None
-    _run_hooks: dict[str, list[HookEntry]]
+    _run_hooks: RunHooks
 
     def __init__(
         self,
         config: config.PipelineConfig,
         nodes: Iterable[Node[Any]],
         *,
-        run_hooks: dict[str, list[HookEntry]],
+        run_hooks: RunHooks,
     ):
         self._nodes = {}
         for node in nodes:
@@ -107,7 +107,7 @@ class Pipeline:
 
         self._run_hooks = {}
         for name, hooks in run_hooks.items():
-            self._run_hooks.setdefault(name, [])
+            self._run_hooks.setdefault(name, [])  # type: ignore
             self._run_hooks[name] += hooks
 
     @property

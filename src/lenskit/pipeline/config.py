@@ -24,8 +24,9 @@ from pydantic import BaseModel, Field, JsonValue, TypeAdapter, ValidationError
 from typing_extensions import Any, Self
 
 from .components import Component
+from .hooks import HookEntry
 from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
-from .types import HookEntry, type_string
+from .types import type_string
 
 
 class PipelineHook(BaseModel):
@@ -37,7 +38,7 @@ class PipelineHook(BaseModel):
     priority: Annotated[int, Predicate(lambda x: x != 0)] = 1
 
     @classmethod
-    def from_entry(cls, hook: HookEntry):
+    def from_entry(cls, hook: HookEntry[Any]):
         if not isinstance(hook, FunctionType):  # type: ignore
             warnings.warn(f"hook {hook.function} is not a function")
         function = f"{hook.function.__module__}:{hook.function.__qualname__}"
