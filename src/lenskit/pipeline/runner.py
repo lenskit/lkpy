@@ -21,7 +21,7 @@ from lenskit.logging import get_logger, trace
 from ._impl import Pipeline
 from .components import component_inputs
 from .nodes import ComponentInstanceNode, InputNode, LiteralNode, Node
-from .types import Lazy, is_compatible_data
+from .types import Lazy, TypeExpr, is_compatible_data
 
 _log = get_logger(__name__)
 T = TypeVar("T")
@@ -140,7 +140,7 @@ class PipelineRunner:
 
                 if lazy:
                     ival = DeferredRun(
-                        self, iname, node.name, snode, required=ireq, data_type=itype
+                        self, iname, node.name, snode, node, required=ireq, data_type=itype
                     )
                 else:
                     ival = self.run(snode, required=ireq)
@@ -178,15 +178,14 @@ class DeferredRun(Generic[T]):
     iname: str
     cname: str
     node: Node[T]
+    recv_node: ComponentInstanceNode[T]
     required: bool
-    data_type: type | None
+    data_type: TypeExpr | None
 
     def get(self) -> T:
         val = self.runner.run(self.node, required=self.required)
 
-        if self.data_type is not None and not is_compatible_data(val, self.data_type):
-            raise TypeError(
-                f"input ❬{self.iname}❭ on component ❬{self.cname}❭ has invalid type {type(val)} (expected {self.data_type})"  # noqa: E501
-            )
+        for hook in self.runner.pipe._run_hooks.get("component-input", []):
+            val = hook.function(self.recv_node, self.iname, self.data_type, val)
 
         return val

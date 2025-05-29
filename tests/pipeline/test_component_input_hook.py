@@ -24,7 +24,7 @@ def proc_prefix(msg: str, prefix: str) -> str:
     return prefix + msg
 
 
-def lazy_prefix(msg: Lazy[str], prefix, extra: Lazy[str]) -> str:
+def lazy_prefix(msg: Lazy[str], prefix: str, extra: Lazy[str]) -> str:
     return prefix + msg.get()
 
 
@@ -138,4 +138,7 @@ def test_component_lazy_hook():
     # we should be called twice: once for msg, once for prefix. extra is not called.
     cs = hook_calls.get()
     assert len(hook_calls.get()) == 2
-    assert cs == [("prefix", "msg"), ("prefix", "prefix")]
+    assert cs == [
+        ("prefix", "prefix"),
+        ("prefix", "msg"),
+    ]
