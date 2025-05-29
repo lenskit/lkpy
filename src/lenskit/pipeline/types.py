@@ -9,10 +9,13 @@ from __future__ import annotations
 
 import re
 import warnings
+from collections.abc import Callable
 from importlib import import_module
 from types import GenericAlias, NoneType, UnionType
 from typing import (
+    Any,
     Generic,
+    NamedTuple,
     Protocol,
     TypeAlias,
     TypeVar,
@@ -49,6 +52,15 @@ class TypecheckWarning(UserWarning):
     "Warnings about type-checking logic."
 
     pass
+
+
+class HookEntry(NamedTuple):
+    """
+    An entry in a pipeline hook list.
+    """
+
+    function: Callable[..., Any]
+    priority: int = 1
 
 
 class Lazy(Protocol, Generic[T]):
