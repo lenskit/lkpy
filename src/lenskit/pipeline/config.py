@@ -19,7 +19,7 @@ from types import FunctionType
 from typing import Literal, Mapping
 
 from pydantic import BaseModel, Field, JsonValue, TypeAdapter, ValidationError
-from typing_extensions import Any, Optional, Self
+from typing_extensions import Any, Self
 
 from .components import Component
 from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
@@ -38,15 +38,15 @@ class PipelineConfig(BaseModel):
 
     meta: PipelineMeta
     "Pipeline metadata."
-    inputs: list[PipelineInput] = Field(default_factory=list)
+    inputs: list[PipelineInput] = []
     "Pipeline inputs."
     components: OrderedDict[str, PipelineComponent] = Field(default_factory=OrderedDict)
     "Pipeline components, with their configurations and wiring."
-    aliases: dict[str, str] = Field(default_factory=dict)
+    aliases: dict[str, str] = {}
     "Pipeline node aliases."
     default: str | None = None
     "The default node for running this pipeline."
-    literals: dict[str, PipelineLiteral] = Field(default_factory=dict)
+    literals: dict[str, PipelineLiteral] = {}
     "Literals"
 
 
@@ -79,7 +79,7 @@ class PipelineInput(BaseModel):
 
     name: str
     "The name for this input."
-    types: Optional[set[str]]
+    types: set[str] | None
     "The list of types for this input."
 
     @classmethod
@@ -103,13 +103,13 @@ class PipelineComponent(BaseModel):
     This is a Python qualified path of the form ``module:name``.
     """
 
-    config: Mapping[str, JsonValue] | None = Field(default=None)
+    config: Mapping[str, JsonValue] | None = None
     """
     The component configuration.  If not provided, the component will be created
     with its default constructor parameters.
     """
 
-    inputs: dict[str, str] = Field(default_factory=dict)
+    inputs: dict[str, str] = {}
     """
     The component's input wirings, mapping input names to node names.  For
     certain meta-nodes, it is specified as a list instead of a dict.
