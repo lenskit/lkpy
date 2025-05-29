@@ -10,10 +10,10 @@ from typing import Any
 from lenskit.logging import get_logger
 from lenskit.pipeline import PipelineBuilder
 from lenskit.pipeline.nodes import ComponentInstanceNode
-from lenskit.pipeline.types import T
+from lenskit.pipeline.types import Lazy, T
 
 _log = get_logger(__name__)
-hook_calls = ContextVar(f"lk-{__name__}-hook-calls", default=0)
+hook_calls = ContextVar(f"lk-{__name__}-hook-calls", default=[])
 
 
 def proc_hello(msg: str) -> str:
@@ -24,12 +24,16 @@ def proc_prefix(msg: str, prefix: str) -> str:
     return prefix + msg
 
 
+def lazy_prefix(msg: Lazy[str], prefix, extra: Lazy[str]) -> str:
+    return prefix + msg.get()
+
+
 def _input_hook(
     node: ComponentInstanceNode[Any], input_name: str, input_type: Any, value: Any
 ) -> Any:
-    n = hook_calls.get()
-    _log.debug("input hook called", n=n, msg=value)
-    hook_calls.set(n + 1)
+    cs = hook_calls.get()
+    _log.debug("input hook called", n=len(cs), msg=value)
+    cs.append((node.name, input_name))
     return value
 
 
@@ -49,11 +53,11 @@ def test_component_input_called():
     )
     assert pipe.config.hooks.run["component-input"][0].priority == 1
 
-    hook_calls.set(0)
+    hook_calls.set([])
     out = pipe.run(hello, message="world")
     assert out == "Hello, world"
 
-    assert hook_calls.get() == 1
+    assert len(hook_calls.get()) == 1
 
 
 def test_hook_passed_to_clone():
@@ -108,9 +112,30 @@ def test_component_input_called_multi():
 
     pipe = build.build()
 
-    hook_calls.set(0)
+    hook_calls.set([])
     out = pipe.run(hello, message="friend")
     assert out == "Hello, good friend"
 
     # we have 3 input edges: 2 to proc_prefix, 1 to proc_hello
-    assert hook_calls.get() == 3
+    cs = hook_calls.get()
+    assert len(hook_calls.get()) == 3
+    assert cs == [("prefix", "msg"), ("prefix", "prefix"), ("hello", "msg")]
+
+
+def test_component_lazy_hook():
+    build = PipelineBuilder()
+    msg = build.create_input("message", str)
+    pfx = build.add_component("prefix", lazy_prefix, msg=msg, prefix="good ", extra="NOTHING")
+
+    build.add_run_hook("component-input", _input_hook)
+
+    pipe = build.build()
+
+    hook_calls.set([])
+    out = pipe.run(pfx, message="friend")
+    assert out == "good friend"
+
+    # we should be called twice: once for msg, once for prefix. extra is not called.
+    cs = hook_calls.get()
+    assert len(hook_calls.get()) == 2
+    assert cs == [("prefix", "msg"), ("prefix", "prefix")]
