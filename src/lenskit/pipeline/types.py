@@ -11,12 +11,13 @@ import re
 import warnings
 from importlib import import_module
 from types import GenericAlias, NoneType, UnionType
-from typing import (  # type: ignore
+from typing import (
     Generic,
     Protocol,
+    TypeAlias,
     TypeVar,
     Union,
-    _GenericAlias,
+    _GenericAlias,  # type: ignore
     get_args,
     get_origin,
 )
@@ -24,6 +25,24 @@ from typing import (  # type: ignore
 import numpy as np
 
 T = TypeVar("T", covariant=True)
+"""
+General type variable for generic container types or inputs.
+"""
+
+TypeExpr: TypeAlias = type | UnionType
+"""
+Type for (resolved) type expressions.
+
+This type is intended to encapsulate any fully-resolved type expression.
+
+:class:`type` encapsulates many other types, including:
+
+- :class:`~types.GenericAlias`
+- :class:`~types.NoneType`
+- :class:`~types.FunctionType`
+- :class:`~types.MethodType`
+- :class:`~typing.TypeVar`
+"""
 
 
 class TypecheckWarning(UserWarning):
@@ -57,7 +76,7 @@ class Lazy(Protocol, Generic[T]):
         ...
 
 
-def is_compatible_type(typ: type, *targets: type) -> bool:
+def is_compatible_type(typ: type, *targets: TypeExpr) -> bool:
     """
     Make a best-effort check whether a type is compatible with at least one
     target type. This function is limited by limitations of the Python type
@@ -101,13 +120,13 @@ def is_compatible_type(typ: type, *targets: type) -> bool:
                     return True
         elif typ == int and isinstance(target, type) and issubclass(target, (float, complex)):  # noqa: E721
             return True
-        elif typ == float and issubclass(target, complex):  # noqa: E721
+        elif typ == float and isinstance(target, type) and issubclass(target, complex):  # noqa: E721
             return True
 
     return False
 
 
-def is_compatible_data(obj: object, *targets: type | TypeVar) -> bool:
+def is_compatible_data(obj: object, *targets: TypeExpr) -> bool:
     """
     Make a best-effort check whether a type is compatible with at least one
     target type. This function is limited by limitations of the Python type
@@ -163,7 +182,7 @@ def is_compatible_data(obj: object, *targets: type | TypeVar) -> bool:
             and issubclass(target, (float, complex))
         ):  # noqa: E721
             return True
-        elif isinstance(obj, float) and issubclass(target, complex):  # noqa: E721
+        elif isinstance(obj, float) and isinstance(target, type) and issubclass(target, complex):  # noqa: E721
             return True
 
     return False
