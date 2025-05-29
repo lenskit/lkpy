@@ -24,7 +24,7 @@ from lenskit.diagnostics import PipelineError, PipelineWarning
 from lenskit.logging import get_logger
 
 from . import config
-from ._impl import Pipeline
+from ._impl import HookEntry, Pipeline
 from .cache import PipelineCache
 from .components import (  # type: ignore # noqa: F401
     Component,
@@ -33,7 +33,8 @@ from .components import (  # type: ignore # noqa: F401
     fallback_on_none,
     instantiate_component,
 )
-from .config import PipelineConfig
+from .config import PipelineConfig, PipelineHook
+from .hooks import ComponentInputHook
 from .nodes import (
     ND,
     ComponentConstructorNode,
@@ -96,6 +97,7 @@ class PipelineBuilder:
     _aliases: dict[str, Node[Any]]
     _default_connections: dict[str, str]
     _default: str | None = None
+    _run_hooks: dict[str, list[HookEntry]]
 
     def __init__(self, name: str | None = None, version: str | None = None):
         self.name = name
@@ -104,6 +106,7 @@ class PipelineBuilder:
         self._edges = {}
         self._aliases = {}
         self._default_connections = {}
+        self._run_hooks = {}
 
     @classmethod
     def from_pipeline(cls, pipeline: Pipeline) -> PipelineBuilder:
@@ -118,6 +121,10 @@ class PipelineBuilder:
         for name, spec in pipeline.config.components.items():
             builder._edges[name] = spec.inputs
         builder._default = pipeline.config.default
+        builder._run_hooks = {
+            name: [h for h in hooks if h.priority != 0]
+            for name, hooks in pipeline._run_hooks.items()  # type: ignore
+        }
 
         return builder
 
@@ -447,6 +454,27 @@ class PipelineBuilder:
 
         self._edges[node] = {}
 
+    def add_run_hook(
+        self, name: Literal["component-input"], hook: ComponentInputHook, *, priority: int = 1
+    ) -> None:
+        """
+        Add a hook to be called when the pipeline is run.
+
+        Args:
+            name:
+                The name of the hook to add a handler for.
+            hook:
+                The hook function to run.
+            priority:
+                The hook priority. Hooks are run in ascending priority, and
+                hooks with the same priority are run in the order they are
+                added.  LensKit's built-in hooks run at priority 0.
+        """
+        if priority == 0:
+            raise ValueError("priority 0 is reserved for LensKit internal hooks")
+        self._run_hooks.setdefault(name, [])
+        self._run_hooks[name].append(HookEntry(hook, priority))
+
     def validate(self):
         """
         Check the built pipeline for errors.
@@ -554,6 +582,10 @@ class PipelineBuilder:
         if self._default:
             cfg.default = self._default
 
+        cfg.hooks.run = {}
+        for name, hooks in self._run_hooks.items():
+            cfg.hooks.run[name] = [PipelineHook.from_entry(e) for e in hooks]
+
         if include_hash:
             cfg.meta.hash = config.hash_config(cfg)
 
@@ -637,6 +669,10 @@ class PipelineBuilder:
             builder.alias(n, t)
 
         builder._default = cfg.default
+        builder._run_hooks = {
+            name: [HookEntry(parse_type_string(h.function), h.priority) for h in hooks]
+            for name, hooks in cfg.hooks.run.items()
+        }
 
         if cfg.meta.hash is not None:
             h2 = builder.config_hash()
@@ -709,7 +745,11 @@ class PipelineBuilder:
                 The pipeline cache to use.
         """
         config = self.build_config()
-        return Pipeline(config, [self._instantiate(n, cache) for n in self._nodes.values()])
+        return Pipeline(
+            config,
+            [self._instantiate(n, cache) for n in self._nodes.values()],
+            run_hooks=self._run_hooks,
+        )
 
     def _instantiate(self, node: Node[ND], cache: PipelineCache | None = None) -> Node[ND]:
         match node:

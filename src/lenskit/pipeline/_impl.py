@@ -9,11 +9,18 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import replace
-from typing import TYPE_CHECKING, Mapping
 from uuid import NAMESPACE_URL, uuid5
 
 from numpy.random import BitGenerator, Generator, SeedSequence
-from typing_extensions import Any, Literal, TypeAlias, TypeVar, overload
+from typing_extensions import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    Mapping,
+    TypeAlias,
+    TypeVar,
+    overload,
+)
 
 from lenskit.data import Dataset
 from lenskit.diagnostics import PipelineError
@@ -27,6 +34,7 @@ from .nodes import (
     Node,
 )
 from .state import PipelineState
+from .types import HookEntry
 
 if TYPE_CHECKING:
     from lenskit.training import TrainingOptions
@@ -74,11 +82,14 @@ class Pipeline:
     _aliases: dict[str, Node[Any]]
     _default: Node[Any] | None = None
     _hash: str | None = None
+    _run_hooks: dict[str, list[HookEntry]]
 
     def __init__(
         self,
         config: config.PipelineConfig,
         nodes: Iterable[Node[Any]],
+        *,
+        run_hooks: dict[str, list[HookEntry]],
     ):
         self._nodes = {}
         for node in nodes:
@@ -93,6 +104,11 @@ class Pipeline:
             self._aliases[a] = self.node(t)
         if config.default:
             self._default = self.node(config.default)
+
+        self._run_hooks = {}
+        for name, hooks in run_hooks.items():
+            self._run_hooks.setdefault(name, [])
+            self._run_hooks[name] += hooks
 
     @property
     def config(self) -> PipelineConfig:
