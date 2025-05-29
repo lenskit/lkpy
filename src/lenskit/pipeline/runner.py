@@ -130,34 +130,20 @@ class PipelineRunner:
                 lazy = True
                 (itype,) = get_args(itype)
 
-            if snode is None:
+            ireq = required and itype is not None and not is_compatible_data(None, itype)
+
+            if lazy:
+                ival = DeferredRun(
+                    self, iname, node.name, snode, node, required=ireq, data_type=itype
+                )
+            elif snode is None:
                 ival = None
             else:
-                if required and itype:
-                    ireq = not is_compatible_data(None, itype)
-                else:
-                    ireq = False
-
-                if lazy:
-                    ival = DeferredRun(
-                        self, iname, node.name, snode, node, required=ireq, data_type=itype
-                    )
-                else:
-                    ival = self.run(snode, required=ireq)
-
-            # bail out if we're failing to satisfy a dependency but it is not required
-            if (
-                ival is None
-                and itype
-                and not lazy
-                and not is_compatible_data(None, itype)
-                and not required
-            ):
-                return None
+                ival = self.run(snode, required=ireq)
 
             if not lazy:
                 for hook in self.pipe._run_hooks.get("component-input", []):
-                    ival = hook.function(node, iname, itype, ival)
+                    ival = hook.function(node, iname, itype, ival, required=ireq)
 
             in_data[iname] = ival
 
@@ -177,15 +163,20 @@ class DeferredRun(Generic[T]):
     runner: PipelineRunner
     iname: str
     cname: str
-    node: Node[T]
+    node: Node[T] | None
     recv_node: ComponentInstanceNode[T]
     required: bool
     data_type: TypeExpr | None
 
     def get(self) -> T:
-        val = self.runner.run(self.node, required=self.required)
+        if self.node is None:
+            val = None
+        else:
+            val = self.runner.run(self.node, required=self.required)
 
         for hook in self.runner.pipe._run_hooks.get("component-input", []):
-            val = hook.function(self.recv_node, self.iname, self.data_type, val)
+            val = hook.function(
+                self.recv_node, self.iname, self.data_type, val, required=self.required
+            )
 
-        return val
+        return val  # type: ignore

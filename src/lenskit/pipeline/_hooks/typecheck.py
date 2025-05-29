@@ -17,11 +17,20 @@ from ..types import TypeExpr, is_compatible_data
 
 
 def typecheck_input_data(
-    node: ComponentInstanceNode[Any], input_name: str, input_type: TypeExpr | None, value: Any
+    node: ComponentInstanceNode[Any],
+    input_name: str,
+    input_type: TypeExpr | None,
+    value: Any,
+    *,
+    required: bool = True,
+    **context,
 ) -> Any:
     """
     Hook to check that input data matches the component's declared input type.
     """
+    if value is None and not required:
+        return None
+
     if input_type and not is_compatible_data(value, input_type):
         if value is None:
             raise PipelineError(

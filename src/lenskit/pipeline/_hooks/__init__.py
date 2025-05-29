@@ -28,7 +28,7 @@ from ..types import TypeExpr
 
 ComponentObject: TypeAlias = Component | PipelineFunction
 
-Hook = TypeVar("Hook", bound=Callable[..., Any])
+Hook = TypeVar("Hook", bound=Callable[..., Any], covariant=True)
 
 
 class HookEntry(NamedTuple, Generic[Hook]):
@@ -54,6 +54,7 @@ class ComponentInputHook(Protocol):
         input_name: str,
         input_type: TypeExpr | None,
         value: object,
+        **context: Any,
     ) -> Any:
         """
         Inspect or process the component input data.
@@ -70,6 +71,8 @@ class ComponentInputHook(Protocol):
                 The data value to be supplied.  This is declared
                 :class:`object`, because its type is not known or guaranteed in
                 the genral case.
+            context:
+                Additional context variables, mostly for the use of internal hooks.
 
         Returns:
             The value to pass to the component.  For inspection-only hooks, this

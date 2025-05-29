@@ -29,7 +29,7 @@ def lazy_prefix(msg: Lazy[str], prefix: str, extra: Lazy[str]) -> str:
 
 
 def _input_hook(
-    node: ComponentInstanceNode[Any], input_name: str, input_type: Any, value: Any
+    node: ComponentInstanceNode[Any], input_name: str, input_type: Any, value: Any, **context
 ) -> Any:
     cs = hook_calls.get()
     _log.debug("input hook called", n=len(cs), msg=value)
