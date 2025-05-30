@@ -147,8 +147,7 @@ class PipelineRunner:
             if not lazy:
                 try:
                     ival = self._run_input_hooks(node, iname, itype, ival, required=ireq)
-                except SkipComponent as e:
-                    trace(ilog, "hook asked to skip component", exc_info=e)
+                except SkipComponent:
                     return None
 
             in_data[iname] = ival
