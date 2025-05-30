@@ -27,7 +27,8 @@ simple_ds = from_interactions_df(simple_df)
 
 class TestNMF(BasicComponentTests, ScorerTests):
     component = nmf.NMFScorer
-    config = nmf.NMFConfig(max_iter=10, n_components=5)
+    config = nmf.NMFConfig(max_iter=10, n_components=25)
+    expected_ndcg = 0.22
 
 
 def test_nmf_basic_build():
@@ -75,15 +76,3 @@ def test_nmf_predict_bad_user():
     assert preds is not None
     assert preds.index[0] == 3
     assert np.isnan(preds.loc[3])
-
-
-@mark.slow
-@mark.eval
-def test_nmf_batch_accuracy(rng, ml_100k: pd.DataFrame):
-    data = from_interactions_df(ml_100k)
-    svd_algo = nmf.NMFScorer(n_components=25)
-    results = quick_measure_model(svd_algo, data, predicts_ratings=True, rng=rng)
-
-    ndcg = results.list_summary().loc["NDCG", "mean"]
-    _log.info("nDCG for users is %.4f", ndcg)
-    assert ndcg > 0.22  # type: ignore

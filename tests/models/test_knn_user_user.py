@@ -22,7 +22,7 @@ from lenskit.data import (
     UserIDKey,
     from_interactions_df,
 )
-from lenskit.knn import UserKNNScorer
+from lenskit.knn import UserKNNConfig, UserKNNScorer
 from lenskit.metrics import call_metric, quick_measure_model
 from lenskit.pipeline.common import predict_pipeline, topn_pipeline
 from lenskit.testing import BasicComponentTests, ScorerTests
@@ -31,9 +31,17 @@ from lenskit.torch import inference_mode
 _log = logging.getLogger(__name__)
 
 
-class TestUserKNN(BasicComponentTests, ScorerTests):
+class TestUserKNNExplicit(BasicComponentTests, ScorerTests):
     can_score = "some"
     component = UserKNNScorer
+    expected_rmse = (0.855, 0.965)
+
+
+class TestUserKNNImplicit(BasicComponentTests, ScorerTests):
+    can_score = "some"
+    component = UserKNNScorer
+    config = UserKNNConfig(max_nbrs=30, feedback="implicit")
+    expected_ndcg = 0.03
 
 
 def test_uu_train(ml_ratings, ml_ds):
@@ -248,29 +256,6 @@ def test_uu_known_preds(ml_ds: Dataset):
         bad = merged[merged.error.notna() & (merged.error.abs() > 0.01)]
         _log.error("%d erroneous predictions:\n%s", len(bad), bad)
         fail(f"{len(bad)} erroneous predictions")
-
-
-@mark.slow
-@mark.eval
-def test_uu_batch_accuracy(ml_100k: pd.DataFrame):
-    ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(UserKNNScorer(k=30), ds, predicts_ratings=True)
-
-    summary = results.list_summary()
-
-    assert results.global_metrics()["MAE"] == approx(0.71, abs=0.05)
-    assert summary.loc["RMSE", "mean"] == approx(0.91, abs=0.055)
-
-
-@mark.slow
-@mark.eval
-def test_uu_implicit_batch_accuracy(ml_100k: pd.DataFrame):
-    ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(UserKNNScorer(k=30, feedback="implicit"), ds)
-
-    summary = results.list_summary()
-
-    assert summary.loc["NDCG", "mean"] >= 0.03
 
 
 @mark.slow

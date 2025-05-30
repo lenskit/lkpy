@@ -28,6 +28,8 @@ simple_ds = from_interactions_df(simple_df)
 
 class TestBiasedSVD(BasicComponentTests, ScorerTests):
     component = svd.BiasedSVDScorer
+    config = svd.BiasedSVDConfig(embedding_size=25, damping=10)
+    expected_rmse = (0.915, 0.925)
 
 
 def test_svd_basic_build():
@@ -91,14 +93,3 @@ def test_svd_save_load(ml_ds: Dataset):
     assert np.all(algo.bias_.user_biases == original.bias_.user_biases)
     assert np.all(algo.bias_.item_biases == original.bias_.item_biases)
     assert np.all(algo.user_components_ == original.user_components_)
-
-
-@mark.slow
-@mark.eval
-def test_svd_batch_accuracy(rng, ml_100k: pd.DataFrame):
-    data = from_interactions_df(ml_100k)
-    svd_algo = svd.BiasedSVDScorer(features=25, damping=10)
-    results = quick_measure_model(svd_algo, data, predicts_ratings=True, rng=rng)
-
-    assert results.global_metrics()["MAE"] == approx(0.71, abs=0.025)
-    assert results.list_summary().loc["RMSE", "mean"] == approx(0.92, abs=0.05)

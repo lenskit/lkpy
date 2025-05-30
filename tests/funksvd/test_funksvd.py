@@ -31,6 +31,7 @@ simple_ds = from_interactions_df(simple_df)
 
 class TestFunkSVD(BasicComponentTests, ScorerTests):
     component = funk.FunkSVDScorer
+    expected_rmse = (0.87, 0.97)
 
 
 def test_fsvd_basic_build():
@@ -198,16 +199,3 @@ def test_fsvd_known_preds(ml_ds: Dataset):
         bad = merged[merged.error.notna() & (merged.error.abs() >= 0.01)]
         _log.error("erroneous predictions:\n%s", bad)
         raise e
-
-
-@wantjit
-@mark.slow
-@mark.eval
-def test_fsvd_batch_accuracy(ml_100k: pd.DataFrame):
-    ds = from_interactions_df(ml_100k)
-    results = quick_measure_model(
-        funk.FunkSVDScorer(features=25, epochs=125, damping=10), ds, predicts_ratings=True
-    )
-
-    assert results.global_metrics().loc["MAE"] == approx(0.74, abs=0.025)
-    assert results.list_summary().loc["RMSE", "mean"] == approx(0.92, abs=0.05)

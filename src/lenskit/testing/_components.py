@@ -18,6 +18,7 @@ from pytest import approx, fixture, mark, skip
 from lenskit import batch
 from lenskit.data import Dataset, ItemList, RecQuery, from_interactions_df
 from lenskit.data.builder import DatasetBuilder
+from lenskit.metrics import quick_measure_model
 from lenskit.pipeline import Component, topn_pipeline
 from lenskit.splitting import split_temporal_fraction
 from lenskit.training import Trainable, TrainingOptions
@@ -120,9 +121,14 @@ class ScorerTests(TrainingTests):
     runs, not that it produces correct output.
     """
 
-    component: type[Component]
+    component: ClassVar[type[Component]]
     can_score: ClassVar[Literal["some", "known", "all"]] = "known"
     "What can this scorer score?"
+
+    expected_rmse: ClassVar[float | tuple[float, float] | None] = None
+    "Asserts RMSE either less than the provided expected value or between two values as tuple."
+    expected_ndcg: ClassVar[float | tuple[float, float] | None] = None
+    "Asserts nDCG either greater than the provided expected value or between two values as tuple."
 
     def invoke_scorer(self, inst: Component, **kwargs):
         sig = inspect.signature(inst)
@@ -313,3 +319,33 @@ class ScorerTests(TrainingTests):
 
         recs = batch.recommend(pipe, split.test)
         assert len(recs) == len(split.test)
+
+    @mark.slow
+    @mark.eval
+    def test_batch_prediction_accuracy(self, rng: np.random.Generator, ml_100k: pd.DataFrame):
+        if self.expected_rmse is None:
+            skip("expected RMSE not defined")
+        self.maybe_skip_nojit()
+        ml_ds = from_interactions_df(ml_100k)
+        model = self.component(self.config)
+        eval_result = quick_measure_model(model, ml_ds, predicts_ratings=True, rng=rng)
+        rmse = eval_result.list_summary().loc["RMSE", "mean"]
+        if isinstance(self.expected_rmse, tuple):
+            assert self.expected_rmse[0] <= rmse <= self.expected_rmse[1]
+        else:
+            assert rmse < self.expected_rmse
+
+    @mark.slow
+    @mark.eval
+    def test_batch_top_n_accuracy(self, rng: np.random.Generator, ml_100k: pd.DataFrame):
+        if self.expected_ndcg is None:
+            skip("expected nDCG not defined")
+        self.maybe_skip_nojit()
+        ml_ds = from_interactions_df(ml_100k)
+        model = self.component(self.config)
+        eval_result = quick_measure_model(model, ml_ds, predicts_ratings=True, rng=rng)
+        ndcg = eval_result.list_summary().loc["NDCG", "mean"]
+        if isinstance(self.expected_ndcg, tuple):
+            assert self.expected_ndcg[0] <= ndcg <= self.expected_ndcg[1]
+        else:
+            assert ndcg >= self.expected_ndcg

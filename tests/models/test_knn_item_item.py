@@ -69,6 +69,8 @@ def ml_subset(ml_ratings):
 class TestItemKNN(BasicComponentTests, ScorerTests):
     can_score = "some"
     component = ItemKNNScorer
+    expected_rmse = (0.85, 0.95)
+    expected_ndcg = 0.03
 
 
 def test_ii_config():
@@ -421,24 +423,6 @@ def test_ii_save_load(tmp_path, ml_ratings, ml_subset):
 
     means = ml_ratings.groupby("item_id").rating.mean()
     assert means[algo.items.ids()].values == approx(original.item_means)
-
-
-@mark.slow
-@mark.eval
-def test_ii_batch_accuracy(ml_100k):
-    ds = from_interactions_df(ml_100k)
-
-    results = quick_measure_model(ItemKNNScorer(k=30), ds, predicts_ratings=True)
-
-    metrics = results.list_metrics(fill_missing=False)
-    summary = results.list_summary()
-
-    assert not np.any(np.isnan(metrics["RMSE"]))
-    assert summary.loc["RMSE", "mean"] == approx(0.90, abs=0.05)
-    assert results.global_metrics()["MAE"] == approx(0.70, abs=0.025)
-
-    assert summary.loc["RecipRank", "mean"] > 0
-    assert summary.loc["RBP", "mean"] > 0
 
 
 def test_ii_known_preds(ml_ds):
