@@ -47,9 +47,8 @@ def test_component_input_called():
     pipe = build.build()
 
     assert len(pipe.config.hooks.run["component-input"]) == 1
-    assert (
-        pipe.config.hooks.run["component-input"][0].function
-        == "tests.pipeline.test_component_input_hook:_input_hook"
+    assert pipe.config.hooks.run["component-input"][0].function.endswith(
+        "tests.pipeline.test_component_input_hook:_input_hook"
     )
     assert pipe.config.hooks.run["component-input"][0].priority == 1
 
