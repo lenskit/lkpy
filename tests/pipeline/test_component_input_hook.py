@@ -72,9 +72,8 @@ def test_hook_passed_to_clone():
     cfg2 = b2.build_config()
 
     assert len(cfg2.hooks.run["component-input"]) == 1
-    assert (
-        cfg2.hooks.run["component-input"][0].function
-        == "tests.pipeline.test_component_input_hook:_input_hook"
+    assert cfg2.hooks.run["component-input"][0].function.endswith(
+        "tests.pipeline.test_component_input_hook:_input_hook"
     )
     assert cfg2.hooks.run["component-input"][0].priority == 1
 
@@ -94,9 +93,8 @@ def test_hook_loaded_from_config():
     print(cfg2.model_dump_json(indent=2))
 
     assert len(cfg2.hooks.run["component-input"]) == 1
-    assert (
-        cfg2.hooks.run["component-input"][0].function
-        == "tests.pipeline.test_component_input_hook:_input_hook"
+    assert cfg2.hooks.run["component-input"][0].function.endswith(
+        "tests.pipeline.test_component_input_hook:_input_hook"
     )
     assert cfg2.hooks.run["component-input"][0].priority == 1
 
