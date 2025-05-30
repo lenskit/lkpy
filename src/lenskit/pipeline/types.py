@@ -51,6 +51,12 @@ class TypecheckWarning(UserWarning):
     pass
 
 
+class SkipComponent(Exception):
+    "Internal exception used to skip an optional component."
+
+    pass
+
+
 class Lazy(Protocol, Generic[T]):
     """
     Type for accepting lazy inputs from the pipeline runner.  If your function

@@ -21,7 +21,7 @@ from lenskit.logging import get_logger, trace
 from ._impl import Pipeline
 from .components import component_inputs
 from .nodes import ComponentInstanceNode, InputNode, LiteralNode, Node
-from .types import Lazy, TypeExpr, is_compatible_data
+from .types import Lazy, SkipComponent, TypeExpr, is_compatible_data
 
 _log = get_logger(__name__)
 T = TypeVar("T")
@@ -133,22 +133,51 @@ class PipelineRunner:
             ireq = required and itype is not None and not is_compatible_data(None, itype)
 
             if lazy:
+                trace(ilog, "deferring input run")
                 ival = DeferredRun(
                     self, iname, node.name, snode, node, required=ireq, data_type=itype
                 )
             elif snode is None:
+                trace(ilog, "input has no source node")
                 ival = None
             else:
+                trace(ilog, "running input node")
                 ival = self.run(snode, required=ireq)
 
             if not lazy:
-                for hook in self.pipe._run_hooks.get("component-input", []):
-                    ival = hook.function(node, iname, itype, ival, required=ireq)
+                try:
+                    ival = self._run_input_hooks(node, iname, itype, ival, required=ireq)
+                except SkipComponent as e:
+                    trace(ilog, "hook asked to skip component", exc_info=e)
+                    return None
 
             in_data[iname] = ival
 
         trace(log, "running component", component=node.component)
-        self.state[node.name] = node.component(**in_data)
+        try:
+            self.state[node.name] = node.component(**in_data)
+        except SkipComponent as e:
+            trace(log, "component execution skipped", exc_info=e)
+            self.state[node.name] = None
+
+    def _run_input_hooks(
+        self,
+        node: ComponentInstanceNode[Any],
+        input_name: str,
+        input_type: TypeExpr | None,
+        value: Any,
+        required: bool,
+    ) -> Any:
+        log = self.log.bind(node=node.name, input_name=input_name, input_type=input_type)
+        for hook in self.pipe._run_hooks.get("component-input", []):
+            trace(log, "running hook", hook=hook.function, required=required)
+            try:
+                value = hook.function(node, input_name, input_type, value, required=required)
+            except SkipComponent as e:
+                trace(log, "hook requested skip", hook=hook.function, exc_info=e)
+                assert not required
+                raise e
+        return value
 
 
 @dataclass(eq=False)
@@ -174,9 +203,8 @@ class DeferredRun(Generic[T]):
         else:
             val = self.runner.run(self.node, required=self.required)
 
-        for hook in self.runner.pipe._run_hooks.get("component-input", []):
-            val = hook.function(
-                self.recv_node, self.iname, self.data_type, val, required=self.required
-            )
+        val = self.runner._run_input_hooks(
+            self.recv_node, self.iname, self.data_type, val, required=self.required
+        )
 
-        return val  # type: ignore
+        return val

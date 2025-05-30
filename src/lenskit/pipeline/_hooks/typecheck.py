@@ -13,7 +13,7 @@ from typing import Any
 from lenskit.diagnostics import PipelineError
 
 from ..nodes import ComponentInstanceNode
-from ..types import TypeExpr, is_compatible_data
+from ..types import SkipComponent, TypeExpr, is_compatible_data
 
 
 def typecheck_input_data(
@@ -28,16 +28,16 @@ def typecheck_input_data(
     """
     Hook to check that input data matches the component's declared input type.
     """
-    if value is None and not required:
-        return None
-
     if input_type and not is_compatible_data(value, input_type):
         if value is None:
-            raise PipelineError(
-                f"no data available for required input ❬{input_name}❭ on component ❬{node.name}❭"
+            msg = f"no data available for required input ❬{input_name}❭ on component ❬{node.name}❭"
+            if required:
+                raise PipelineError(msg)
+            else:
+                raise SkipComponent(msg)
+        else:
+            raise TypeError(
+                f"input ❬{input_name}❭ on component ❬{node.name}❭ has invalid type {type(value)} (expected {input_type})"  # noqa: E501
             )
-        raise TypeError(
-            f"input ❬{input_name}❭ on component ❬{node.name}❭ has invalid type {type(value)} (expected {input_type})"  # noqa: E501
-        )
 
     return value
