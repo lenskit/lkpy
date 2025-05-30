@@ -44,7 +44,8 @@ test = [
   "pytest ~=8.2",
   "pytest-doctestplus >=1.2.1,<2",
   "pytest-cov >=2.12",
-  "pytest-benchmark ==4.*",
+  "pytest-benchmark ~=5.1",
+  "pytest-retry ~=1.7",
   "hypothesis >=6.16",
   "pyyaml ~=6.0",
 ]

@@ -1377,6 +1377,7 @@ dev = [
     { name = "pytest-benchmark" },
     { name = "pytest-cov" },
     { name = "pytest-doctestplus" },
+    { name = "pytest-retry" },
     { name = "pyyaml" },
     { name = "ruff" },
     { name = "rust-just" },
@@ -1427,6 +1428,7 @@ test = [
     { name = "pytest-benchmark" },
     { name = "pytest-cov" },
     { name = "pytest-doctestplus" },
+    { name = "pytest-retry" },
     { name = "pyyaml" },
 ]
 
@@ -1490,9 +1492,10 @@ dev = [
     { name = "pyprojroot", specifier = ">=0.3" },
     { name = "pyright", specifier = ">=1.1" },
     { name = "pytest", specifier = "~=8.2" },
-    { name = "pytest-benchmark", specifier = "==4.*" },
+    { name = "pytest-benchmark", specifier = "~=5.1" },
     { name = "pytest-cov", specifier = ">=2.12" },
     { name = "pytest-doctestplus", specifier = ">=1.2.1,<2" },
+    { name = "pytest-retry", specifier = "~=1.7" },
     { name = "pyyaml", specifier = "~=6.0" },
     { name = "ruff", specifier = ">=0.2" },
     { name = "rust-just", specifier = "~=1.40" },
@@ -1536,9 +1539,10 @@ scripting = [
 test = [
     { name = "hypothesis", specifier = ">=6.16" },
     { name = "pytest", specifier = "~=8.2" },
-    { name = "pytest-benchmark", specifier = "==4.*" },
+    { name = "pytest-benchmark", specifier = "~=5.1" },
     { name = "pytest-cov", specifier = ">=2.12" },
     { name = "pytest-doctestplus", specifier = ">=1.2.1,<2" },
+    { name = "pytest-retry", specifier = "~=1.7" },
     { name = "pyyaml", specifier = "~=6.0" },
 ]
 
@@ -2686,15 +2690,15 @@ wheels = [
 
 [[package]]
 name = "pytest-benchmark"
-version = "4.0.0"
+version = "5.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "py-cpuinfo" },
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/28/08/e6b0067efa9a1f2a1eb3043ecd8a0c48bfeb60d3255006dcc829d72d5da2/pytest-benchmark-4.0.0.tar.gz", hash = "sha256:fb0785b83efe599a6a956361c0691ae1dbb5318018561af10f3e915caa0048d1", size = 334641, upload-time = "2022-10-25T21:21:55.686Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/39/d0/a8bd08d641b393db3be3819b03e2d9bb8760ca8479080a26a5f6e540e99c/pytest-benchmark-5.1.0.tar.gz", hash = "sha256:9ea661cdc292e8231f7cd4c10b0319e56a2118e2c09d9f50e1b3d150d2aca105", size = 337810, upload-time = "2024-10-30T11:51:48.521Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4d/a1/3b70862b5b3f830f0422844f25a823d0470739d994466be9dbbbb414d85a/pytest_benchmark-4.0.0-py3-none-any.whl", hash = "sha256:fdb7db64e31c8b277dff9850d2a2556d8b60bcb0ea6524e36e28ffd7c87f71d6", size = 43951, upload-time = "2022-10-25T21:21:53.208Z" },
+    { url = "https://files.pythonhosted.org/packages/9e/d6/b41653199ea09d5969d4e385df9bbfd9a100f28ca7e824ce7c0a016e3053/pytest_benchmark-5.1.0-py3-none-any.whl", hash = "sha256:922de2dfa3033c227c96da942d1878191afa135a29485fb942e85dff1c592c89", size = 44259, upload-time = "2024-10-30T11:51:45.94Z" },
 ]
 
 [[package]]
@@ -2721,6 +2725,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/fd/e5/97c4bc17e93d5caf6b37ebab0bdfd668c1c62d575e6e1e5040bfa759b4f2/pytest_doctestplus-1.4.0.tar.gz", hash = "sha256:df83832b1d11288572df2ee4c7cccdb421d812b8038a658bb514c9c62bdbd626", size = 47566, upload-time = "2025-01-25T04:18:38.224Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/88/08/0e0e38a6046f91ad6ae352c0639c1b6dd90e2cd53ab2d2282d1d231535fb/pytest_doctestplus-1.4.0-py3-none-any.whl", hash = "sha256:cfbae130ec90d4a2831819bbbfd097121b8e55f1e4d20a47ea992e4eaad2539a", size = 25236, upload-time = "2025-01-25T04:18:36.384Z" },
+]
+
+[[package]]
+name = "pytest-retry"
+version = "1.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c5/5b/607b017994cca28de3a1ad22a3eee8418e5d428dcd8ec25b26b18e995a73/pytest_retry-1.7.0.tar.gz", hash = "sha256:f8d52339f01e949df47c11ba9ee8d5b362f5824dff580d3870ec9ae0057df80f", size = 19977, upload-time = "2025-01-19T01:56:13.115Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7c/ff/3266c8a73b9b93c4b14160a7e2b31d1e1088e28ed29f4c2d93ae34093bfd/pytest_retry-1.7.0-py3-none-any.whl", hash = "sha256:a2dac85b79a4e2375943f1429479c65beb6c69553e7dae6b8332be47a60954f4", size = 13775, upload-time = "2025-01-19T01:56:11.199Z" },
 ]
 
 [[package]]
