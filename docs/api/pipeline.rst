@@ -54,6 +54,7 @@ Serialized Configurations
     ~lenskit.pipeline.PipelineConfig
 
 Hook Interfaces
+---------------
 
 .. autosummary::
     :toctree: .
