@@ -78,6 +78,22 @@ class Lazy(Protocol, Generic[T]):
     def get(self) -> T:
         """
         Get the value behind this lazy instance.
+
+        .. note::
+
+            As this method invokes upstream components if they have not yet been
+            run, it may fail if one of the required components fails or pipeline
+            data checks fail.
+
+        Raises:
+            Exception:
+                Any exception raised by the component(s) needed to supply the
+                lazy value may be raised when this method is called.
+            SkipComponent:
+                Internal exception raised to indicate that no value is available
+                and the calling component should be skipped.  Components
+                generally do not need to handle this directly, as it is used to
+                signal the pipeline runner.
         """
         ...
 
