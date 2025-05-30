@@ -10,8 +10,6 @@ Input type checking hook.
 
 from typing import Any
 
-from lenskit.diagnostics import PipelineError
-
 from ..nodes import ComponentInstanceNode
 from ..types import SkipComponent, TypeExpr, is_compatible_data
 
@@ -30,14 +28,15 @@ def typecheck_input_data(
     """
     if input_type and not is_compatible_data(value, input_type):
         if value is None:
-            msg = f"no data available for required input ❬{input_name}❭ on component ❬{node.name}❭"
-            if required:
-                raise PipelineError(msg)
-            else:
-                raise SkipComponent(msg)
+            bad_type = None
         else:
-            raise TypeError(
-                f"input ❬{input_name}❭ on component ❬{node.name}❭ has invalid type {type(value)} (expected {input_type})"  # noqa: E501
-            )
+            bad_type = type(value)
+        msg = f"found {bad_type}, expected ❬{input_type}❭"
+        if value is None and not required:
+            err = SkipComponent(msg)
+        else:
+            err = TypeError(msg)
+        err.add_note(f"Error encountered on input ❬{input_name}❭ to component ❬{node.name}❭")
+        raise err
 
     return value

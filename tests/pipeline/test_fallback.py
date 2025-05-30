@@ -77,7 +77,7 @@ def test_fallback_fail_with_missing_options():
     na = pipe.add_component("add", add, x=nd, y=fb)
 
     pipe = pipe.build()
-    with raises(PipelineError, match="no data available"):
+    with raises(TypeError, match="found None, expected"):
         pipe.run(na, a=3)
 
 

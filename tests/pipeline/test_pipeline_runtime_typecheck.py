@@ -48,7 +48,7 @@ def test_raise_invalid_wired_input():
 
     pipe = build.build()
 
-    with raises(TypeError, match="has invalid type"):
+    with raises(TypeError, match="found.*, expected"):
         pipe.run(excl, x=5)
 
 
@@ -60,5 +60,5 @@ def test_raise_lazy_input():
 
     pipe = build.build()
 
-    with raises(TypeError, match="has invalid type"):
+    with raises(TypeError, match="found.*, expected"):
         pipe.run(excl, x=5)
