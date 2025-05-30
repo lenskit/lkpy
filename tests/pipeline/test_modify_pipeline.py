@@ -115,5 +115,5 @@ def test_modify_pipeline_clear_input():
     assert isinstance(n2.component, Prefixer)
     assert n2.component is not comp
 
-    with raises(PipelineError):
+    with raises(TypeError):
         p2.run(msg="HACKEM MUCHE")

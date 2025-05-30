@@ -11,12 +11,13 @@ import re
 import warnings
 from importlib import import_module
 from types import GenericAlias, NoneType, UnionType
-from typing import (  # type: ignore
+from typing import (
     Generic,
     Protocol,
+    TypeAlias,
     TypeVar,
     Union,
-    _GenericAlias,
+    _GenericAlias,  # type: ignore
     get_args,
     get_origin,
 )
@@ -24,10 +25,34 @@ from typing import (  # type: ignore
 import numpy as np
 
 T = TypeVar("T", covariant=True)
+"""
+General type variable for generic container types or inputs.
+"""
+
+TypeExpr: TypeAlias = type | UnionType
+"""
+Type for (resolved) type expressions.
+
+This type is intended to encapsulate any fully-resolved type expression.
+
+:class:`type` encapsulates many other types, including:
+
+- :class:`~types.GenericAlias`
+- :class:`~types.NoneType`
+- :class:`~types.FunctionType`
+- :class:`~types.MethodType`
+- :class:`~typing.TypeVar`
+"""
 
 
 class TypecheckWarning(UserWarning):
     "Warnings about type-checking logic."
+
+    pass
+
+
+class SkipComponent(Exception):
+    "Internal exception used to skip an optional component."
 
     pass
 
@@ -53,11 +78,27 @@ class Lazy(Protocol, Generic[T]):
     def get(self) -> T:
         """
         Get the value behind this lazy instance.
+
+        .. note::
+
+            As this method invokes upstream components if they have not yet been
+            run, it may fail if one of the required components fails or pipeline
+            data checks fail.
+
+        Raises:
+            Exception:
+                Any exception raised by the component(s) needed to supply the
+                lazy value may be raised when this method is called.
+            SkipComponent:
+                Internal exception raised to indicate that no value is available
+                and the calling component should be skipped.  Components
+                generally do not need to handle this directly, as it is used to
+                signal the pipeline runner.
         """
         ...
 
 
-def is_compatible_type(typ: type, *targets: type) -> bool:
+def is_compatible_type(typ: type, *targets: TypeExpr) -> bool:
     """
     Make a best-effort check whether a type is compatible with at least one
     target type. This function is limited by limitations of the Python type
@@ -101,13 +142,13 @@ def is_compatible_type(typ: type, *targets: type) -> bool:
                     return True
         elif typ == int and isinstance(target, type) and issubclass(target, (float, complex)):  # noqa: E721
             return True
-        elif typ == float and issubclass(target, complex):  # noqa: E721
+        elif typ == float and isinstance(target, type) and issubclass(target, complex):  # noqa: E721
             return True
 
     return False
 
 
-def is_compatible_data(obj: object, *targets: type | TypeVar) -> bool:
+def is_compatible_data(obj: object, *targets: TypeExpr) -> bool:
     """
     Make a best-effort check whether a type is compatible with at least one
     target type. This function is limited by limitations of the Python type
@@ -163,7 +204,7 @@ def is_compatible_data(obj: object, *targets: type | TypeVar) -> bool:
             and issubclass(target, (float, complex))
         ):  # noqa: E721
             return True
-        elif isinstance(obj, float) and issubclass(target, complex):  # noqa: E721
+        elif isinstance(obj, float) and isinstance(target, type) and issubclass(target, complex):  # noqa: E721
             return True
 
     return False

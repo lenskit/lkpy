@@ -9,17 +9,25 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import replace
-from typing import TYPE_CHECKING, Mapping
 from uuid import NAMESPACE_URL, uuid5
 
 from numpy.random import BitGenerator, Generator, SeedSequence
-from typing_extensions import Any, Literal, TypeAlias, TypeVar, overload
+from typing_extensions import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    Mapping,
+    TypeAlias,
+    TypeVar,
+    overload,
+)
 
 from lenskit.data import Dataset
 from lenskit.diagnostics import PipelineError
 from lenskit.logging import get_logger
 
 from . import config
+from ._hooks import RunHooks, default_run_hooks
 from .config import PipelineConfig
 from .nodes import (
     ComponentConstructorNode,
@@ -74,11 +82,14 @@ class Pipeline:
     _aliases: dict[str, Node[Any]]
     _default: Node[Any] | None = None
     _hash: str | None = None
+    _run_hooks: RunHooks
 
     def __init__(
         self,
         config: config.PipelineConfig,
         nodes: Iterable[Node[Any]],
+        *,
+        run_hooks: RunHooks,
     ):
         self._nodes = {}
         for node in nodes:
@@ -93,6 +104,12 @@ class Pipeline:
             self._aliases[a] = self.node(t)
         if config.default:
             self._default = self.node(config.default)
+
+        self._run_hooks = default_run_hooks()
+        for name, hooks in run_hooks.items():
+            my_hooks = self._run_hooks.setdefault(name, [])  # type: ignore
+            my_hooks.extend(hooks)  # type: ignore
+            my_hooks.sort(key=lambda h: h.priority)
 
     @property
     def config(self) -> PipelineConfig:

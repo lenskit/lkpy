@@ -13,17 +13,44 @@ from __future__ import annotations
 
 import base64
 import pickle
+import warnings
 from collections import OrderedDict
 from hashlib import sha256
 from types import FunctionType
-from typing import Literal, Mapping
+from typing import Annotated, Literal, Mapping
 
+from annotated_types import Predicate
 from pydantic import BaseModel, Field, JsonValue, TypeAdapter, ValidationError
-from typing_extensions import Any, Optional, Self
+from typing_extensions import Any, Self
 
+from ._hooks import HookEntry
 from .components import Component
 from .nodes import ComponentConstructorNode, ComponentInstanceNode, ComponentNode, InputNode
 from .types import type_string
+
+
+class PipelineHook(BaseModel):
+    """
+    A single entry in a pipeline's hook configuration.
+    """
+
+    function: str
+    priority: Annotated[int, Predicate(lambda x: x != 0)] = 1
+
+    @classmethod
+    def from_entry(cls, hook: HookEntry[Any]):
+        if not isinstance(hook, FunctionType):  # type: ignore
+            warnings.warn(f"hook {hook.function} is not a function")
+        function = f"{hook.function.__module__}:{hook.function.__qualname__}"
+        return cls(function=function, priority=hook.priority)
+
+
+class PipelineHooks(BaseModel):
+    """
+    Hook specifications for a pipeline.
+    """
+
+    run: dict[str, list[PipelineHook]] = {}
 
 
 class PipelineConfig(BaseModel):
@@ -38,16 +65,18 @@ class PipelineConfig(BaseModel):
 
     meta: PipelineMeta
     "Pipeline metadata."
-    inputs: list[PipelineInput] = Field(default_factory=list)
+    inputs: list[PipelineInput] = []
     "Pipeline inputs."
     components: OrderedDict[str, PipelineComponent] = Field(default_factory=OrderedDict)
     "Pipeline components, with their configurations and wiring."
-    aliases: dict[str, str] = Field(default_factory=dict)
+    aliases: dict[str, str] = {}
     "Pipeline node aliases."
     default: str | None = None
     "The default node for running this pipeline."
-    literals: dict[str, PipelineLiteral] = Field(default_factory=dict)
+    literals: dict[str, PipelineLiteral] = {}
     "Literals"
+    hooks: PipelineHooks = PipelineHooks()
+    "The hooks configured for the pipeline."
 
 
 class PipelineMeta(BaseModel):
@@ -79,7 +108,7 @@ class PipelineInput(BaseModel):
 
     name: str
     "The name for this input."
-    types: Optional[set[str]]
+    types: set[str] | None
     "The list of types for this input."
 
     @classmethod
@@ -103,13 +132,13 @@ class PipelineComponent(BaseModel):
     This is a Python qualified path of the form ``module:name``.
     """
 
-    config: Mapping[str, JsonValue] | None = Field(default=None)
+    config: Mapping[str, JsonValue] | None = None
     """
     The component configuration.  If not provided, the component will be created
     with its default constructor parameters.
     """
 
-    inputs: dict[str, str] = Field(default_factory=dict)
+    inputs: dict[str, str] = {}
     """
     The component's input wirings, mapping input names to node names.  For
     certain meta-nodes, it is specified as a list instead of a dict.
