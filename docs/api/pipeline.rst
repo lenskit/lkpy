@@ -52,3 +52,11 @@ Serialized Configurations
     :nosignatures:
 
     ~lenskit.pipeline.PipelineConfig
+
+Hook Interfaces
+
+.. autosummary::
+    :toctree: .
+    :nosignatures:
+
+    ~lenskit.pipeline.ComponentInputHook

@@ -31,6 +31,8 @@ information on how to upgrade your code.
 -   :ref:`parallelism` now supports comma-separated lists for configuring
     parallelism within worker processes, and :envvar:`LK_NUM_CHILD_THREADS` is
     now deprecated.
+-   The pipeline runner now supports :ref:`pipeline-hooks` to inspect or modify
+    pipeline operations.
 -   The pipeline runner type checking logic has been refactored and simplified.
     As a consequence, when ``None`` is provided to a component input that does
     not accept ``None``, the runner now raises :class:`TypeError` instead of

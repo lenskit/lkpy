@@ -458,7 +458,7 @@ class PipelineBuilder:
         self, name: Literal["component-input"], hook: ComponentInputHook, *, priority: int = 1
     ) -> None:
         """
-        Add a hook to be called when the pipeline is run.
+        Add a hook to be called when the pipeline is run (see :ref:`pipeline-hooks`).
 
         Args:
             name:

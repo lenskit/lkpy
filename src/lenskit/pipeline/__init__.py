@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from lenskit.diagnostics import PipelineError, PipelineWarning
 
+from ._hooks import ComponentInputHook
 from ._impl import CloneMethod, Pipeline
 from .builder import PipelineBuilder
 from .cache import PipelineCache
@@ -43,4 +44,5 @@ __all__ = [
     "RecPipelineBuilder",
     "topn_pipeline",
     "predict_pipeline",
+    "ComponentInputHook",
 ]

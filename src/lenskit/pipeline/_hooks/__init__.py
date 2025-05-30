@@ -44,8 +44,10 @@ class ComponentInputHook(Protocol):
     """
     Inspect or process data as it passes to a component's input.
 
-    As with all :ref:`hooks`, an input hook is a callable that is run at the
-    appropriate stage of the input.
+    As with all :ref:`pipeline-hooks`, an input hook is a callable that is run
+    at the appropriate stage of the input.
+
+    Component input hooks are installed under the name ``component-input``.
     """
 
     def __call__(

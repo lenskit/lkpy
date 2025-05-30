@@ -461,6 +461,57 @@ components.  To do this:
     :meth:`PipelineBuilder.replace_component`.
 3.  Build the modified pipeline with :meth:`PipelineBuilder.build`.
 
+.. _pipeline-hooks:
+
+Pipeline Hooks
+~~~~~~~~~~~~~~
+
+Pipelines support *hooks* to allow client code to inspect or modify their
+behavior. Hooks are also used internally to support things like runtime type
+checking.
+
+.. note::
+
+    As of :ref:`2025.3.0`, only a single hook is supported: ``component-input``
+    run hooks.  Future hooks will be added as there is demand.  If you want
+    a new hook, `file an issue`_ (or send a PR adding it).
+
+.. _file an issue: https://github.com/lenskit/lkpy/issues
+
+.. note::
+
+    Currently (:ref:`2025.3.0`), only functions can reliably be used as hooks.
+    Support for other callable objects is under consideration but has not yet
+    been implemented or tested.
+
+Installing a hook requires three pieces:
+
+-   The hook **name**, which identifies the point in the process to insert the hook.
+-   The hook **function**, which is called when the pipeline reaches that hook
+    point. Each hook point has an associated protocol defining the call
+    signature for that hook.
+-   The hook **priority**, which determines the order in which hooks are called.
+    Hooks are run in ascending priority order, and the priority 0 is reserved
+    for LensKit's internal hooks.
+
+.. _pipeline-run-hooks:
+
+Run Hooks
+---------
+
+Run hooks are called each time the pipeline is run.  They can be configured with
+:meth:`PipelineBuilder.add_run_hook`.
+
+``component-input``
+    A ``component-input`` hook (see
+    :class:`~lenskit.pipeline.ComponentInputHook`) will be called for each
+    *component input*: a data value being supplied to one of the input
+    parameters of a component.  It is called separately for each component
+    input, even if two components have their input wired to the same source
+    node.  This facilitates data inspection, type checking, and other checks or
+    analyses that need to run on each edge of the pipeline graph.
+
+
 POPROX and Other Integrators
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
