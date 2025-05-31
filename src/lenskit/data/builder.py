@@ -581,6 +581,48 @@ class DatasetBuilder:
 
         self._tables[cls] = tbl
 
+    def binarize_ratings(
+        self,
+        cls: str,
+        method: str = "remove",
+        threshold: float = 1.0,
+        include_threshold: bool = True,
+    ) -> None:
+        """
+        Binarize ratings in an interaction class.
+        Args:
+            cls:
+                The interaction class to binarize.
+            method:
+                The binarization method to use, either ``"remove"`` or "replace".
+            threshold:
+                The rating threshold above which a rating is considered a
+                positive interaction.
+            include_threshold:
+                If ``True``, ratings equal to the threshold are considered
+                positive interactions; otherwise, only ratings above the
+                threshold are considered positive.
+        """
+        if method not in ("remove", "replace"):
+            raise ValueError(f"invalid binarization method {method!r}")
+        tbl = self._tables[cls]
+        if tbl is None:  # pragma: nocover
+            raise ValueError(f"interaction class {cls} is empty")
+        if "rating" not in tbl.column_names:
+            raise RuntimeError("rating column required to binarize ratings")
+
+        rating_col = tbl.column("rating")
+        if include_threshold:
+            rating_col = pc.greater_equal(rating_col, threshold)
+        else:
+            rating_col = pc.greater(rating_col, threshold)
+
+        if method == "replace":
+            rating_col = pc.cast(rating_col, pa.float32())
+            tbl = tbl.set_column(tbl.schema.get_field_index("rating"), "rating", rating_col)
+        elif method == "remove":
+            tbl = pc.filter(tbl, rating_col)
+
     def clear_relationships(self, cls: str):
         """
         Remove all records for a specified relationship class.
