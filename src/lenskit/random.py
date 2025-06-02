@@ -25,6 +25,23 @@ from typing_extensions import Any, Literal, Protocol, Sequence, TypeAlias, overr
 if TYPE_CHECKING:  # avoid circular import
     from lenskit.data import RecQuery
 
+__all__ = [
+    "Generator",
+    "SeedLike",
+    "RNGLike",
+    "RNGInput",
+    "ConfiguredSeed",
+    "SeedDependency",
+    "DerivableSeed",
+    "load_seed",
+    "set_global_rng",
+    "init_global_rng",
+    "random_generator",
+    "make_seed",
+    "RNGFactory",
+    "derivable_rng",
+]
+
 SeedLike: TypeAlias = int | Sequence[int] | np.random.SeedSequence
 """
 Type for RNG seeds (see `SPEC 7`_).
