@@ -26,7 +26,6 @@ if TYPE_CHECKING:  # avoid circular import
     from lenskit.data import RecQuery
 
 __all__ = [
-    "Generator",
     "SeedLike",
     "RNGLike",
     "RNGInput",
