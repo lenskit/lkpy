@@ -43,10 +43,10 @@ def blb_summary(
     stat: SummaryStat,
     *,
     ci_width: float = 0.95,
+    b_factor: float = 0.6,
     tol: float = 0.05,
     s_w: int = 3,
     r_w: int = 20,
-    b_factor: float = 0.6,
     rng: RNGInput = None,
 ) -> dict[str, float]:
     """
