@@ -27,6 +27,22 @@ if TYPE_CHECKING:  # avoid circular import
 
     from lenskit.data import RecQuery
 
+__all__ = [
+    "ConfiguredSeed",
+    "DerivableSeed",
+    "RNGFactory",
+    "RNGInput",
+    "RNGLike",
+    "SeedDependency",
+    "SeedLike",
+    "derivable_rng",
+    "init_global_rng",
+    "load_seed",
+    "make_seed",
+    "random_generator",
+    "set_global_rng",
+]
+
 type SeedLike = int | Sequence[int] | np.random.SeedSequence
 """
 Type for RNG seeds (see `SPEC 7`_).
