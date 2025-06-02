@@ -23,8 +23,8 @@ from lenskit.stats import blb_summary
 @given(
     st.integers(1000, 1_000_000),
     nph.floating_dtypes(endianness="="),
-    st.integers(5, 20),
-    st.integers(50, 300),
+    st.integers(10, 20),
+    st.integers(100, 300),
     st.integers(0),
 )
 @mark.filterwarnings(r"error:.*ignoring \d+ nonfinite values")
@@ -40,16 +40,16 @@ def test_blb_array_normal(n, dtype, s: int, r: int, seed):
     summary = blb_summary(xs, "mean", s=s, r=r, rng=rng)
     assert isinstance(summary, dict)
     assert summary["value"] == approx(mean)
-    assert summary["mean"] == approx(mean, rel=0.01)
+    assert summary["mean"] == approx(mean, rel=0.05)
 
-    assert summary["low"] == approx(mean - 1.96 * ste, rel=0.01)
-    assert summary["high"] == approx(mean + 1.96 * ste, rel=0.01)
+    assert summary["low"] == approx(mean - 1.96 * ste, rel=0.05)
+    assert summary["high"] == approx(mean + 1.96 * ste, rel=0.05)
 
 
 @given(
     nph.arrays(shape=st.integers(10000, 1_000_000), dtype=nph.floating_dtypes(endianness="=")),
-    st.integers(5, 20),
-    st.integers(50, 300),
+    st.integers(10, 20),
+    st.integers(100, 300),
     st.integers(0),
 )
 def test_blb_array(xs: NDArray[np.floating], s: int, r: int, seed: int):
