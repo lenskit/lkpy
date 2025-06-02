@@ -6,10 +6,13 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 from numpy.typing import ArrayLike
 
-from lenskit.data.types import NPVector
+if TYPE_CHECKING:
+    from lenskit.data.types import NPVector
 
 
 def argtopn(xs: ArrayLike, n: int) -> NPVector[np.int64]:
