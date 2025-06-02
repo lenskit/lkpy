@@ -7,7 +7,9 @@
 from __future__ import annotations
 
 import warnings
-from typing import Any, ClassVar, Literal, Protocol, TypeAlias, TypedDict, TypeVar
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any, ClassVar, Literal, Protocol, TypeAlias, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -43,10 +45,10 @@ def blb_summary(
     stat: SummaryStat,
     *,
     ci_width: float = 0.95,
-    b_factor: float = 0.6,
-    tol: float = 0.05,
-    s_w: int = 3,
-    r_w: int = 20,
+    b_factor: float = 0.8,
+    rel_tol: float = 0.05,
+    s_window: int = 3,
+    r_window: int = 20,
     rng: RNGInput = None,
 ) -> dict[str, float]:
     """
@@ -63,18 +65,28 @@ def blb_summary(
     est = np.average(xs).item()
 
     rng = random_generator(rng)
-    bootstrapper = _BLBootstrapper(np.average, ci_width, tol, s_w, r_w, b_factor, rng)
+    bootstrapper = _BLBootstrapper(np.average, ci_width, rel_tol, s_window, r_window, b_factor, rng)
 
-    boot_df = bootstrapper.summarize(xs)
+    result = bootstrapper.run_bootstraps(xs)
 
-    return {"value": est} | boot_df.agg("mean").to_dict()
+    result = {
+        "value": est,
+        "mean": result.mean,
+        "sdist_var": result.sdist_var,
+        "ci_lower": result.ci_lower,
+        "ci_upper": result.ci_upper,
+    }
+
+    return result
 
 
-class _BootResult(TypedDict):
+@dataclass
+class _BootResult:
     mean: float
-    ci_min: float
-    ci_max: float
-    count: int
+    sdist_var: float
+    ci_lower: float
+    ci_upper: float
+    samples: pd.DataFrame
 
 
 class _BLBootstrapper:
@@ -84,6 +96,8 @@ class _BLBootstrapper:
 
     statistic: WeightedStatistic
     ci_width: float
+    _ci_qmin: float
+    _ci_qmax: float
 
     tolerance: float
     s_window: int
@@ -110,20 +124,34 @@ class _BLBootstrapper:
         self.rng = rng
         self.ss_stats = {}
 
-    def summarize(self, xs: NDArray[F]):
-        results = []
-        means = StatAccum(self.tolerance, self.s_window)
+        alpha = 1 - ci_width
+        self._ci_qmin = 0.5 * alpha
+        self._ci_qmax = 1 - 0.5 * alpha
 
-        count = 0
-        for ss in self.blb_subsets(xs):
-            count += 1
+    def run_bootstraps(self, xs: NDArray[F]) -> _BootResult:
+        ss_frames = {}
+
+        means = StatAccum(np.mean)
+        sv = StatAccum(np.mean)
+        lbs = StatAccum(np.mean)
+        ubs = StatAccum(np.mean)
+
+        for i, ss in enumerate(self.blb_subsets(xs)):
             res = self.measure_subset(xs, ss)
-            results.append(res)
-            means.record(res["mean"])
-            if means.converged():
+            ss_frames[i] = res.samples
+            means.record(res.mean)
+            lbs.record(res.ci_lower)
+            ubs.record(res.ci_upper)
+            if _check_convergence(means, sv, lbs, ubs, tol=self.tolerance, w=self.s_window):
                 break
 
-        return pd.DataFrame.from_records(results)
+        return _BootResult(
+            means.statistic,
+            sv.statistic,
+            lbs.statistic,
+            ubs.statistic,
+            pd.concat(ss_frames, names=["subset"]),
+        )
 
     def blb_subsets(self, xs: NDArray[F]):
         b = int(len(xs) ** self.b_factor)
@@ -136,18 +164,27 @@ class _BLBootstrapper:
         n = len(xs)
         xss = xs[ss]
 
-        acc = StatAccum(self.tolerance, self.r_window)
+        values = []
+        means = StatAccum(np.mean)
+        svs = StatAccum(np.var)
+        lbs = StatAccum(lambda a: np.quantile(a, self._ci_qmin))
+        ubs = StatAccum(lambda a: np.quantile(a, self._ci_qmax))
 
-        count = 0
         for weights in self.miniboot_weights(n, b):
-            count += 1
+            assert weights.shape == (b,)
+            assert np.sum(weights) == n
             stat = self.statistic(xss, weights=weights)
-            acc.record(stat)
-            if acc.converged():
+            values.append(stat)
+            means.record(stat)
+            lbs.record(stat)
+            ubs.record(stat)
+
+            if _check_convergence(means, svs, lbs, ubs, tol=self.tolerance, w=self.r_window):
                 break
 
-        [lo, hi] = np.quantile(acc.values, [0.025, 0.975])
-        return {"mean": np.mean(acc.values).item(), "ci_min": lo, "ci_max": hi, "count": count}
+        df = pd.DataFrame({"statistic": values})
+        df.index.name = "iter"
+        return _BootResult(means.statistic, svs.statistic, lbs.statistic, ubs.statistic, df)
 
     def miniboot_weights(self, n: int, b: int):
         flat = np.full(b, 1.0 / b)
@@ -156,27 +193,48 @@ class _BLBootstrapper:
             yield self.rng.multinomial(n, flat)
 
 
+def _check_convergence(*arrays: StatAccum, tol: float, w: int) -> bool:
+    gaps = np.zeros(w)
+    for arr in arrays:
+        if len(arr) < w + 1:
+            return False
+        stats = arr.stat_history
+        cur = stats[-1]
+        gaps += np.abs(stats[-(w + 1) : -1] - cur) / np.abs(cur)
+
+    gaps /= len(arrays)
+    return np.all(gaps < tol).item()
+
+
 class StatAccum:
     INIT_SIZE: ClassVar[int] = 100
-    ABS_TOL: ClassVar[float] = 1.0e-12
 
-    tolerance: float
-    window: int
+    _stat_func: Callable[[NDArray[np.floating[Any]]], np.floating[Any]]
 
     _len: int = 0
     _values: NDArray[np.float64]
-    _cum_means: NDArray[np.float64]
+    _cum_stat: NDArray[np.float64]
 
-    def __init__(self, tol: float, w: int):
-        self.tolerance = tol
-        self.window = w
+    def __init__(self, stat: Callable[[NDArray[np.floating[Any]]], np.floating[Any]]):
+        self._stat_func = stat
 
         self._values = np.zeros(self.INIT_SIZE)
-        self._cum_means = np.zeros(self.INIT_SIZE)
+        self._cum_stat = np.zeros(self.INIT_SIZE)
 
     @property
     def values(self) -> NDArray[np.float64]:
         return self._values[: self._len]
+
+    @property
+    def statistic(self) -> float:
+        if self._len:
+            return self._cum_stat[-1]
+        else:
+            return np.nan
+
+    @property
+    def stat_history(self) -> NDArray[np.float64]:
+        return self._cum_stat[: self._len]
 
     def record(self, x: float | np.floating[Any]) -> None:
         "Record a new value in the accumulator."
@@ -186,35 +244,13 @@ class StatAccum:
 
         # record and update the cumulative mean
         self._values[i] = x
-        self._cum_means[i] = np.mean(self.values)
-
-    def mean(self) -> float | None:
-        "Get the mean of the accumulated values."
-        if self._len > 0:
-            return self._cum_means[self._len - 1]
-        else:
-            return None
-
-    def converged(self) -> bool:
-        """
-        Check for convergence.
-        """
-        if self._len < self.window:
-            return False
-
-        i_cur = self._len - 1
-        i_start = self._len - self.window
-        current = self._cum_means[i_cur]
-
-        # lower-bound tolerance for very small values
-        atol = max(current * self.tolerance, self.ABS_TOL)
-
-        window = self._cum_means[i_start : self._len]
-        gaps = np.abs(window - current)
-        return np.all(gaps <= atol).item()
+        self._cum_stat[i] = self._stat_func(self.values)
 
     def _expand_if_needed(self):
         cap = len(self._values)
         if cap == self._len:
             self._values.resize(cap * 2)
-            self._cum_means.resize(cap * 2)
+            self._cum_stat.resize(cap * 2)
+
+    def __len__(self):
+        return self._len
