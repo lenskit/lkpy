@@ -7,14 +7,14 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Iterable
-from typing import Any, Literal, Protocol, TypeAlias, TypeVar
+from typing import Any, ClassVar, Literal, Protocol, TypeAlias, TypedDict, TypeVar
 
 import numpy as np
+import pandas as pd
 from numpy.typing import NDArray
 
 from lenskit.diagnostics import DataWarning
-from lenskit.random import Generator, RNGInput, random_generator
+from lenskit.random import RNGInput, random_generator
 
 F = TypeVar("F", bound=np.floating, covariant=True)
 
@@ -42,8 +42,10 @@ def blb_summary(
     xs: NDArray[F],
     stat: SummaryStat,
     *,
-    s: int = 10,
-    r: int = 100,
+    ci_width: float = 0.95,
+    tol: float = 0.05,
+    s_w: int = 3,
+    r_w: int = 20,
     b_factor: float = 0.6,
     rng: RNGInput = None,
 ) -> dict[str, float]:
@@ -59,49 +61,160 @@ def blb_summary(
 
     xs = xs[mask]
     est = np.average(xs).item()
-    n = len(xs)
-    b = int(n**b_factor)
 
     rng = random_generator(rng)
+    bootstrapper = _BLBootstrapper(np.average, ci_width, tol, s_w, r_w, b_factor, rng)
 
-    ss_summaries = {}
-    for ss in _blb_subsets(xs, s, b, rng=rng):
-        ss_sum = _miniboot_ss(xs, ss, np.average, r, rng=rng)
-        _accum_summaries(ss_sum, dest=ss_summaries)
+    boot_df = bootstrapper.summarize(xs)
 
-    return {"value": est} | {n: np.mean(xs) for n, xs in ss_summaries.items()}
+    return {"value": est} | boot_df.agg("mean").to_dict()
 
 
-def _blb_subsets(xs: NDArray[F], s: int, b: int, *, rng: Generator) -> Iterable[NDArray[np.int64]]:
-    for i in range(s):
-        yield rng.choice(len(xs), b, replace=False)
+class _BootResult(TypedDict):
+    mean: float
+    ci_min: float
+    ci_max: float
+    count: int
 
 
-def _accum_summaries(values: dict[str, float], *, dest: dict[str, list[float]]):
-    for name, value in values.items():
-        vs = dest.setdefault(name, [])
-        vs.append(value)
+class _BLBootstrapper:
+    """
+    Implementation of BLB computation.
+    """
+
+    statistic: WeightedStatistic
+    ci_width: float
+
+    tolerance: float
+    s_window: int
+    r_window: int
+    b_factor: float
+    rng: np.random.Generator
+
+    def __init__(
+        self,
+        stat: WeightedStatistic,
+        ci_width: float,
+        tol: float,
+        s_w: int,
+        r_w: int,
+        b_factor: float,
+        rng: np.random.Generator,
+    ):
+        self.statistic = stat
+        self.ci_width = ci_width
+        self.tolerance = tol
+        self.s_window = s_w
+        self.r_window = r_w
+        self.b_factor = b_factor
+        self.rng = rng
+        self.ss_stats = {}
+
+    def summarize(self, xs: NDArray[F]):
+        results = []
+        means = StatAccum(self.tolerance, self.s_window)
+
+        count = 0
+        for ss in self.blb_subsets(xs):
+            count += 1
+            res = self.measure_subset(xs, ss)
+            results.append(res)
+            means.record(res["mean"])
+            if means.converged():
+                break
+
+        return pd.DataFrame.from_records(results)
+
+    def blb_subsets(self, xs: NDArray[F]):
+        b = int(len(xs) ** self.b_factor)
+
+        while True:
+            yield self.rng.choice(len(xs), b, replace=False)
+
+    def measure_subset(self, xs: NDArray[F], ss: NDArray[np.int64]) -> _BootResult:
+        b = len(ss)
+        n = len(xs)
+        xss = xs[ss]
+
+        acc = StatAccum(self.tolerance, self.r_window)
+
+        count = 0
+        for weights in self.miniboot_weights(n, b):
+            count += 1
+            stat = self.statistic(xss, weights=weights)
+            acc.record(stat)
+            if acc.converged():
+                break
+
+        [lo, hi] = np.quantile(acc.values, [0.025, 0.975])
+        return {"mean": np.mean(acc.values).item(), "ci_min": lo, "ci_max": hi, "count": count}
+
+    def miniboot_weights(self, n: int, b: int):
+        flat = np.full(b, 1.0 / b)
+
+        while True:
+            yield self.rng.multinomial(n, flat)
 
 
-def _miniboot_ss(
-    xs: NDArray[F], ss: NDArray[np.int64], stat: WeightedStatistic, r: int, *, rng: Generator
-) -> dict[str, float]:
-    b = len(ss)
-    n = len(xs)
-    xss = xs[ss]
+class StatAccum:
+    INIT_SIZE: ClassVar[int] = 100
+    ABS_TOL: ClassVar[float] = 1.0e-12
 
-    flat = np.full(b, 1.0 / b)
-    vals = [_miniboot_sample_stat(n, xss, flat, stat, rng) for _j in range(r)]
-    vals = np.array(vals)
-    mean = np.mean(vals).item()
-    lo, hi = np.quantile(vals, [0.025, 0.975])
-    return {"mean": mean, "low": lo, "high": hi}
+    tolerance: float
+    window: int
 
+    _len: int = 0
+    _values: NDArray[np.float64]
+    _cum_means: NDArray[np.float64]
 
-def _miniboot_sample_stat(
-    n: int, xss: NDArray[F], flat: NDArray[np.float64], stat: WeightedStatistic, rng: Generator
-) -> float:
-    weights = rng.multinomial(n, flat)
-    assert weights.shape == (len(flat),)
-    assert np.sum(weights) == n
-    return stat(xss, weights=weights).item()
+    def __init__(self, tol: float, w: int):
+        self.tolerance = tol
+        self.window = w
+
+        self._values = np.zeros(self.INIT_SIZE)
+        self._cum_means = np.zeros(self.INIT_SIZE)
+
+    @property
+    def values(self) -> NDArray[np.float64]:
+        return self._values[: self._len]
+
+    def record(self, x: float | np.floating[Any]) -> None:
+        "Record a new value in the accumulator."
+        self._expand_if_needed()
+        i = self._len
+        self._len += 1
+
+        # record and update the cumulative mean
+        self._values[i] = x
+        self._cum_means[i] = np.mean(self.values)
+
+    def mean(self) -> float | None:
+        "Get the mean of the accumulated values."
+        if self._len > 0:
+            return self._cum_means[self._len - 1]
+        else:
+            return None
+
+    def converged(self) -> bool:
+        """
+        Check for convergence.
+        """
+        if self._len < self.window:
+            return False
+
+        i_cur = self._len - 1
+        i_start = self._len - self.window
+        current = self._cum_means[i_cur]
+
+        # lower-bound tolerance for very small values
+        atol = max(current * self.tolerance, self.ABS_TOL)
+
+        window = self._cum_means[i_start : self._len]
+        gaps = np.abs(window - current)
+        return np.all(gaps <= atol).item()
+
+    def _expand_if_needed(self):
+        cap = len(self._values)
+        if cap == self._len:
+            self._values.resize(cap * 2)
+            self._cum_means.resize(cap * 2)
