@@ -51,8 +51,39 @@ def blb_summary(
     r_window: int = 20,
     rng: RNGInput = None,
 ) -> dict[str, float]:
-    """
-    Summarize one or more statistics using the Bag of Little Bootstraps :cite:p:`blb`.
+    r"""
+    Summarize one or more statistics using the Bag of Little Bootstraps
+    :cite:p:`blb`.
+
+    This is a direct, sequential implementation of Bag of Little Bootstraps as
+    described in the original paper :cite:p:`blb`, with automatic
+    convergence-based termination.
+
+    Args:
+        xs:
+            The array of values to summarize.
+        stat:
+            The statistic to compute.  The Bag of Little Bootstraps requires
+            statistics to support weighted computation (this is what allows it
+            to speed up the bootstrap procedure).
+        ci_width:
+            The width of the confidence interval to estimat.e
+        b_factor:
+            The shrinking factor :math:`\gamma` to use to derive subsample
+            sizes. Each subsample has size :math:`N^{\gamma}`.
+        rel_tol:
+            The relative tolerance for detecting convergence.
+        s_window:
+            The window length for detecting convergence in the outer subset loop
+            (and minimum number of subsets).
+        r_window:
+            The window length for detecting convergence in the inner replication
+            loop (and minimum number of replicates per subset).
+        rng:
+            The RNG or seed for randomization.
+
+    Returns:
+        A dictionary of statistical results of the statistic.
     """
     if stat != "mean":
         raise ValueError(f"unsupported statistic {stat}")
@@ -70,9 +101,9 @@ def blb_summary(
     result = bootstrapper.run_bootstraps(xs)
 
     result = {
-        "value": est,
-        "mean": result.mean,
-        "sdist_var": result.sdist_var,
+        "estimate": est,
+        "rep_mean": result.mean,
+        "rep_var": result.rep_var,
         "ci_lower": result.ci_lower,
         "ci_upper": result.ci_upper,
     }
@@ -83,7 +114,7 @@ def blb_summary(
 @dataclass
 class _BootResult:
     mean: float
-    sdist_var: float
+    rep_var: float
     ci_lower: float
     ci_upper: float
     samples: pd.DataFrame
@@ -132,7 +163,7 @@ class _BLBootstrapper:
         ss_frames = {}
 
         means = StatAccum(np.mean)
-        sv = StatAccum(np.mean)
+        vars = StatAccum(np.mean)
         lbs = StatAccum(np.mean)
         ubs = StatAccum(np.mean)
 
@@ -142,12 +173,12 @@ class _BLBootstrapper:
             means.record(res.mean)
             lbs.record(res.ci_lower)
             ubs.record(res.ci_upper)
-            if _check_convergence(means, sv, lbs, ubs, tol=self.tolerance, w=self.s_window):
+            if _check_convergence(means, vars, lbs, ubs, tol=self.tolerance, w=self.s_window):
                 break
 
         return _BootResult(
             means.statistic,
-            sv.statistic,
+            vars.statistic,
             lbs.statistic,
             ubs.statistic,
             pd.concat(ss_frames, names=["subset"]),
