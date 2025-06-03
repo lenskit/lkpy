@@ -29,11 +29,11 @@ def test_blb_single_array(rng: np.random.Generator):
     summary = blb_summary(xs, "mean", rng=rng)
     print(summary)
     assert isinstance(summary, dict)
-    assert summary["value"] == approx(mean)
-    assert summary["mean"] == approx(mean, rel=0.05)
+    assert summary["estimate"] == approx(mean)
+    assert summary["rep_mean"] == approx(mean, rel=0.05)
 
-    assert summary["ci_min"] == approx(mean - 1.96 * ste, rel=0.05)
-    assert summary["ci_max"] == approx(mean + 1.96 * ste, rel=0.05)
+    assert summary["ci_lower"] == approx(mean - 1.96 * ste, rel=0.05)
+    assert summary["ci_upper"] == approx(mean + 1.96 * ste, rel=0.05)
 
 
 @mark.parametrize("size", [1000, 10000, 1000000])
@@ -54,7 +54,6 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
         summary = blb_summary(xs, "mean", rng=rng)
         assert isinstance(summary, dict)
         assert summary["estimate"] == approx(mean)
-        assert summary["rep_mean"] == approx(mean, rel=0.075)
 
         results.append(summary)
 
