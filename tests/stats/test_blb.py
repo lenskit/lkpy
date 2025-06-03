@@ -36,6 +36,7 @@ def test_blb_single_array(rng: np.random.Generator):
     assert summary["ci_upper"] == approx(mean + 1.96 * ste, rel=0.05)
 
 
+@mark.slow
 @mark.parametrize("size", [1000, 10000, 1000000])
 @mark.filterwarnings(r"error:.*ignoring \d+ nonfinite values")
 def test_blb_array_normal(rng: np.random.Generator, size: int):
