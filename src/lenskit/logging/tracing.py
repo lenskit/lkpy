@@ -139,11 +139,11 @@ class Tracer:
         """
         pass
 
-    def debug(self, event, *args, **bindings):
+    def trace(self, event, *args, **bindings):
         """
-        Emit a DEBUG-level event.
+        Emit a TRACE-level event.
         """
-        self._logger.debug(event, *args, **bindings)
+        pass
 
 
 class ActiveTracer(Tracer):
@@ -167,8 +167,7 @@ class ActiveTracer(Tracer):
             updates the tracer in-place instead of returning a new tracer.  If you
             need a new, disconnected tracer, use :meth:`split`.
         """
-        if self._logger is not None:
-            self._logger = self._logger.bind(**new_values)
+        self._logger = self._logger.bind(**new_values)
 
     def remove_bindings(self, *keys: str) -> None:
         """
@@ -180,8 +179,7 @@ class ActiveTracer(Tracer):
             updates the tracer in-place instead of returning a new tracer.  If you
             need a new, disconnected tracer, use :meth:`split`.
         """
-        if self._logger is not None:
-            self._logger = self._logger.unbind(*keys)
+        self._logger = self._logger.unbind(*keys)
 
     def reset(self) -> None:
         """
@@ -193,18 +191,7 @@ class ActiveTracer(Tracer):
         """
         Emit a TRACE-level event.
         """
-        if self._logger is not None:
-            trace(self._logger, event, *args, **bindings)
-
-    def debug(self, event, *args, **bindings):
-        """
-        Emit a DEBUG-level event.
-
-        This is for convenience to use the tracer for higher-level messages, but
-        is only active when tracing is eanbled.
-        """
-        if self._logger is not None:
-            self._logger.debug(event, *args, **bindings)
+        trace(self._logger, event, *args, **bindings)
 
 
 class TracingLogger(structlog.stdlib.BoundLogger):
