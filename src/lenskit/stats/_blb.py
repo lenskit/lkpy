@@ -176,7 +176,7 @@ class _BLBootstrapper:
 
         for i, ss in enumerate(self.blb_subsets(xs)):
             self._tracer.add_bindings(subset=i)
-            self._tracer.trace(self._log, "starting subset")
+            self._tracer.trace("starting subset")
             res = self.measure_subset(xs, ss)
             ss_frames[i] = res.samples
             means.record(res.rep_mean)
@@ -196,7 +196,7 @@ class _BLBootstrapper:
 
     def blb_subsets(self, xs: NDArray[F]):
         b = int(len(xs) ** self.b_factor)
-        self._log = self._log.bind(b=b)
+        self._tracer.add_bindings(b=b)
 
         while True:
             yield self.rng.choice(len(xs), b, replace=False)
@@ -206,7 +206,6 @@ class _BLBootstrapper:
         n = len(xs)
         xss = xs[ss]
 
-        values = []
         means = StatAccum(np.mean)
         vars = StatAccum(np.var)
         lbs = StatAccum(lambda a: np.quantile(a, self._ci_qmin))
@@ -214,11 +213,10 @@ class _BLBootstrapper:
 
         for i, weights in enumerate(self.miniboot_weights(n, b)):
             self._tracer.add_bindings(rep=i)
-            self._tracer.trace(self._log, "starting replicate")
+            self._tracer.trace("starting replicate")
             assert weights.shape == (b,)
             assert np.sum(weights) == n
             stat = self.statistic(xss, weights=weights)
-            values.append(stat)
             means.record(stat)
             vars.record(stat)
             lbs.record(stat)
@@ -227,9 +225,9 @@ class _BLBootstrapper:
             if self._check_convergence(means, vars, lbs, ubs, tol=self.tolerance, w=self.r_window):
                 break
 
-        df = pd.DataFrame({"statistic": values})
+        df = pd.DataFrame({"statistic": means.values})
         df.index.name = "iter"
-        self._log = self._log.unbind("rep")
+        self._tracer.remove_bindings("rep")
         return _BootResult(means.statistic, vars.statistic, lbs.statistic, ubs.statistic, df)
 
     def miniboot_weights(self, n: int, b: int):
@@ -249,7 +247,7 @@ class _BLBootstrapper:
             gaps += np.abs(stats[-(w + 1) : -1] - cur) / np.abs(cur)
 
         gaps /= len(arrays)
-        self._tracer.trace(self._log, "max gap: %.3f", np.max(gaps))
+        self._tracer.trace("max gap: %.3f", np.max(gaps))
         return np.all(gaps < tol).item()
 
 
