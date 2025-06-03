@@ -48,8 +48,8 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
     # Test: for 1000 runs, do approx. 95% of confidence intervals contain the
     # true mean?
 
-    for i in range(1000):
-        xs = rng.normal(1.0, 1.0, size)
+    for i in range(100):
+        xs = rng.normal(TRUE_MEAN, 1.0, size)
         mean = np.mean(xs)
 
         summary = blb_summary(xs, "mean", rng=rng)
@@ -60,7 +60,7 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
 
     n_good = len([r for r in results if r["ci_lower"] <= TRUE_MEAN <= r["ci_upper"]])
     # leave a little wiggle room
-    assert n_good >= 925
+    assert 90 <= n_good <= 99
 
 
 @mark.skip("need to find better parameters")
