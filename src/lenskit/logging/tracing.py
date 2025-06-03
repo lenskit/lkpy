@@ -139,7 +139,7 @@ class Tracer:
         """
         pass
 
-    def trace(self, event, *args, **bindings):
+    def trace(self, event: str, *args: Any, **bindings: Any) -> None:
         """
         Emit a TRACE-level event.
         """
@@ -187,7 +187,7 @@ class ActiveTracer(Tracer):
         """
         self._logger = self._base_logger
 
-    def trace(self, event, *args, **bindings):
+    def trace(self, event: str, *args: Any, **bindings: Any):
         """
         Emit a TRACE-level event.
         """
