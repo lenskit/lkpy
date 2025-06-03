@@ -14,10 +14,9 @@ from typing import Any, ClassVar, Literal, Protocol, TypeAlias, TypeVar
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
-from structlog.stdlib import BoundLogger
 
 from lenskit.diagnostics import DataWarning
-from lenskit.logging import get_logger, trace
+from lenskit.logging import Tracer, get_logger, get_tracer
 from lenskit.random import RNGInput, random_generator
 
 F = TypeVar("F", bound=np.floating, covariant=True)
@@ -129,7 +128,7 @@ class _BLBootstrapper:
     Implementation of BLB computation.
     """
 
-    _log: BoundLogger
+    _tracer: Tracer
     statistic: WeightedStatistic
     ci_width: float
     _ci_qmin: float
@@ -163,11 +162,11 @@ class _BLBootstrapper:
         alpha = 1 - ci_width
         self._ci_qmin = 0.5 * alpha
         self._ci_qmax = 1 - 0.5 * alpha
-        self._log = _log.bind(stat=stat.__name__)
+        self._tracer = get_tracer(_log, stat=stat.__name__)  # type: ignore
 
     def run_bootstraps(self, xs: NDArray[F]) -> _BootResult:
-        self._log = self._log.bind(n=len(xs))
-        self._log.debug("starting bootstrap")
+        self._tracer.add_bindings(n=len(xs))
+        _log.debug("starting bootstrap", stat=self.statistic.__name__, n=len(xs))  # type: ignore
         ss_frames = {}
 
         means = StatAccum(np.mean)
@@ -176,8 +175,8 @@ class _BLBootstrapper:
         ubs = StatAccum(np.mean)
 
         for i, ss in enumerate(self.blb_subsets(xs)):
-            self._log = self._log.bind(subset=i)
-            trace(self._log, "starting subset")
+            self._tracer.add_bindings(subset=i)
+            self._tracer.trace(self._log, "starting subset")
             res = self.measure_subset(xs, ss)
             ss_frames[i] = res.samples
             means.record(res.rep_mean)
@@ -214,8 +213,8 @@ class _BLBootstrapper:
         ubs = StatAccum(lambda a: np.quantile(a, self._ci_qmax))
 
         for i, weights in enumerate(self.miniboot_weights(n, b)):
-            self._log = self._log.bind(rep=i)
-            trace(self._log, "starting replicate")
+            self._tracer.add_bindings(rep=i)
+            self._tracer.trace(self._log, "starting replicate")
             assert weights.shape == (b,)
             assert np.sum(weights) == n
             stat = self.statistic(xss, weights=weights)
@@ -250,7 +249,7 @@ class _BLBootstrapper:
             gaps += np.abs(stats[-(w + 1) : -1] - cur) / np.abs(cur)
 
         gaps /= len(arrays)
-        trace(self._log, "max gap: %.3f", np.max(gaps))
+        self._tracer.trace(self._log, "max gap: %.3f", np.max(gaps))
         return np.all(gaps < tol).item()
 
 
