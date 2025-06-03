@@ -22,7 +22,7 @@ from ._proxy import get_logger
 __trace_debug = os.environ.get("LK_TRACE", "no").lower() == "debug"
 # default based on env var, so that LK_TRACE=debug enabels even without
 # debug config — useful for tests.
-_tracing_active: bool | Literal["debug"] = __trace_debug
+_tracing_active: bool | Literal["debug"] = "debug" if __trace_debug else False
 
 
 def tracing_active() -> bool:
@@ -81,8 +81,10 @@ def get_tracer(logger: str | BoundLogger, **initial_values: Any):
         logger = logger.bind(**initial_values)
 
     if _tracing_active:
+        logger.debug("creating active tracer")
         return ActiveTracer(logger)
     else:
+        logger.debug("tracing deactivated, creating no-op tracer")
         return Tracer(logger)
 
 
