@@ -58,9 +58,11 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
 
         results.append(summary)
 
-    n_good = len([r for r in results if r["ci_lower"] <= TRUE_MEAN <= r["ci_upper"]])
+    n_lb_good = len([r for r in results if r["ci_lower"] <= TRUE_MEAN])
+    n_ub_good = len([r for r in results if TRUE_MEAN <= r["ci_upper"]])
     # leave a little wiggle room
-    assert 90 <= n_good <= 99
+    assert 90 <= n_lb_good <= 99
+    assert 90 <= n_ub_good <= 99
 
 
 @mark.skip("need to find better parameters")
