@@ -7,16 +7,18 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Callable
+from collections import deque
+from collections.abc import Callable, Generator
 from dataclasses import dataclass
-from typing import Any, ClassVar, Literal, Protocol, TypeAlias, TypeVar
+from threading import Condition, Lock, Thread
+from typing import Any, ClassVar, Deque, Literal, Protocol, TypeAlias, TypeVar
 
 import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
 from lenskit.diagnostics import DataWarning
-from lenskit.logging import Tracer, get_logger, get_tracer
+from lenskit.logging import Tracer, get_logger, get_tracer, trace
 from lenskit.random import RNGInput, random_generator
 
 F = TypeVar("F", bound=np.floating, covariant=True)
@@ -139,6 +141,7 @@ class _BLBootstrapper:
     r_window: int
     b_factor: float
     rng: np.random.Generator
+    _rep_generator: ReplicateGenerator
 
     def __init__(
         self,
@@ -165,7 +168,10 @@ class _BLBootstrapper:
         self._tracer = get_tracer(_log, stat=stat.__name__)  # type: ignore
 
     def run_bootstraps(self, xs: NDArray[F]) -> _BootResult:
-        self._tracer.add_bindings(n=len(xs))
+        n = len(xs)
+        b = int(n**self.b_factor)
+
+        self._tracer.add_bindings(n=n, b=b)
         _log.debug("starting bootstrap", stat=self.statistic.__name__, n=len(xs))  # type: ignore
         ss_frames = {}
 
@@ -174,17 +180,23 @@ class _BLBootstrapper:
         lbs = StatAccum(np.mean)
         ubs = StatAccum(np.mean)
 
-        for i, ss in enumerate(self.blb_subsets(xs)):
-            self._tracer.add_bindings(subset=i)
-            self._tracer.trace("starting subset")
-            res = self.measure_subset(xs, ss)
-            ss_frames[i] = res.samples
-            means.record(res.rep_mean)
-            vars.record(res.rep_var)
-            lbs.record(res.ci_lower)
-            ubs.record(res.ci_upper)
-            if self._check_convergence(means, vars, lbs, ubs, tol=self.tolerance, w=self.s_window):
-                break
+        self._rep_generator = ReplicateGenerator(n, b, self.rng)
+        self._tracer.trace("let's go!")
+
+        with self._rep_generator:
+            for i, ss in enumerate(self.blb_subsets(n, b)):
+                self._tracer.add_bindings(subset=i)
+                self._tracer.trace("starting subset")
+                res = self.measure_subset(xs, ss)
+                ss_frames[i] = res.samples
+                means.record(res.rep_mean)
+                vars.record(res.rep_var)
+                lbs.record(res.ci_lower)
+                ubs.record(res.ci_upper)
+                if self._check_convergence(
+                    means, vars, lbs, ubs, tol=self.tolerance, w=self.s_window
+                ):
+                    break
 
         return _BootResult(
             means.statistic,
@@ -194,12 +206,9 @@ class _BLBootstrapper:
             pd.concat(ss_frames, names=["subset"]),
         )
 
-    def blb_subsets(self, xs: NDArray[F]):
-        b = int(len(xs) ** self.b_factor)
-        self._tracer.add_bindings(b=b)
-
+    def blb_subsets(self, n: int, b: int):
         while True:
-            yield self.rng.choice(len(xs), b, replace=False)
+            yield self.rng.choice(n, b, replace=False)
 
     def measure_subset(self, xs: NDArray[F], ss: NDArray[np.int64]) -> _BootResult:
         b = len(ss)
@@ -211,7 +220,8 @@ class _BLBootstrapper:
         lbs = StatAccum(lambda a: np.quantile(a, self._ci_qmin))
         ubs = StatAccum(lambda a: np.quantile(a, self._ci_qmax))
 
-        for i, weights in enumerate(self.miniboot_weights(n, b)):
+        loop = self._rep_generator.subsets()
+        for i, weights in enumerate(loop):
             self._tracer.add_bindings(rep=i)
             self._tracer.trace("starting replicate")
             assert weights.shape == (b,)
@@ -223,7 +233,7 @@ class _BLBootstrapper:
             ubs.record(stat)
 
             if self._check_convergence(means, vars, lbs, ubs, tol=self.tolerance, w=self.r_window):
-                break
+                loop.close()
 
         df = pd.DataFrame({"statistic": means.values})
         df.index.name = "iter"
@@ -249,6 +259,75 @@ class _BLBootstrapper:
         gaps /= len(arrays)
         self._tracer.trace("max gap: %.3f", np.max(gaps))
         return np.all(gaps < tol).item()
+
+
+class ReplicateGenerator:
+    """
+    Generate the subset samples for a bootstrap in a background thread.
+    """
+
+    n: int
+    b: int
+
+    _rng: np.random.Generator
+    _flat: NDArray[np.float64]
+    _lock: Lock
+    _notify: Condition
+    _running: bool = True
+    _queue: Deque
+    _thread: Thread
+
+    def __init__(self, n: int, b: int, rng: np.random.Generator):
+        self.n = n
+        self.b = b
+        self._rng = rng.spawn(1)[0]
+        self._queue = deque()
+        self._flat = np.full(b, 1.0 / b)
+        self._lock = Lock()
+        self._notify = Condition(self._lock)
+
+    def subsets(self) -> Generator[NDArray[np.int64], None, None]:
+        while True:
+            with self._notify:
+                while self._thread.is_alive() and len(self._queue) == 0:
+                    self._notify.wait()
+
+                try:
+                    val = self._queue.popleft()
+                    self._notify.notify_all()
+                except IndexError:
+                    break  # things have shut down, loop is over
+                except GeneratorExit:
+                    break  # we've been asked to close
+
+            yield val
+
+    def _generate(self):
+        with self._notify:
+            while True:
+                # check if we need to wake up
+                while self._running and len(self._queue) >= 5:
+                    trace(_log, "waiting for queue", len=len(self._queue))
+                    self._notify.wait()
+
+                # are we done?
+                if not self._running:
+                    break
+
+                # generate a new value
+                val = self._rng.multinomial(self.n, self._flat)
+                self._queue.append(val)
+                self._notify.notify_all()
+
+    def __enter__(self):
+        self._thread = Thread(target=self._generate)
+        self._thread.start()
+        return self
+
+    def __exit__(self, *args: Any):
+        with self._notify:
+            self._running = False
+            self._notify.notify_all()
 
 
 class StatAccum:
