@@ -37,7 +37,7 @@ def test_blb_single_array(rng: np.random.Generator):
 
 
 @mark.slow
-@mark.parametrize("size", [1000, 10000, 1000000])
+@mark.parametrize("size", [1000, 10000, 100000])
 @mark.filterwarnings(r"error:.*ignoring \d+ nonfinite values")
 def test_blb_array_normal(rng: np.random.Generator, size: int):
     "Test BLB with arrays of normals."
@@ -48,7 +48,8 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
     # Test: for 1000 runs, do approx. 95% of confidence intervals contain the
     # true mean?
 
-    for i in range(100):
+    NTRIALS = 200
+    for i in range(NTRIALS):
         xs = rng.normal(TRUE_MEAN, 1.0, size)
         mean = np.mean(xs)
 
@@ -59,10 +60,12 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
         results.append(summary)
 
     n_lb_good = len([r for r in results if r["ci_lower"] <= TRUE_MEAN])
+    pct_lb_good = (n_lb_good / NTRIALS) * 100
     n_ub_good = len([r for r in results if TRUE_MEAN <= r["ci_upper"]])
+    pct_ub_good = (n_ub_good / NTRIALS) * 100
     # leave a little wiggle room
-    assert 90 <= n_lb_good <= 99
-    assert 90 <= n_ub_good <= 99
+    assert 90 <= pct_lb_good <= 99
+    assert 90 <= pct_ub_good <= 99
 
 
 @mark.skip("need to find better parameters")
