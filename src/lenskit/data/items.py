@@ -28,8 +28,8 @@ from typing_extensions import (
 )
 
 from lenskit._accel import data as _data_accel
+from lenskit.data.types import argtopn
 from lenskit.diagnostics import DataWarning
-from lenskit.stats import argtopn
 
 from .arrow import get_indexer
 from .checks import check_1d

@@ -10,7 +10,7 @@ import hypothesis.extra.numpy as nph
 import hypothesis.strategies as st
 from hypothesis import given, settings
 
-from lenskit.stats import argtopn
+from lenskit.data.types import argtopn
 
 
 def test_simple_topn():

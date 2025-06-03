@@ -11,9 +11,9 @@ from pydantic import BaseModel
 
 from lenskit.data import ItemList
 from lenskit.data.query import QueryInput, RecQuery
+from lenskit.data.types import argtopn
 from lenskit.pipeline import Component
 from lenskit.random import DerivableSeed, RNGFactory, derivable_rng
-from lenskit.stats import argtopn
 
 
 class RandomConfig(BaseModel, arbitrary_types_allowed=True):
