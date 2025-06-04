@@ -38,6 +38,10 @@ Basic Statistics
 
     ~lenskit.metrics.ListLength
     ~lenskit.metrics.TestItemCount
+    ~lenskit.stats.BagOfLittleBootstraps
+
+The Bag of Little Bootstraps (BLB) implementation provides both sequential and parallel
+processing capabilities. To use the parallel implementation with Ray
 
 .. _metrics-topn:
 
