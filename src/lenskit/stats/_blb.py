@@ -155,6 +155,10 @@ class _BLBConfig:
     r_window: int
     b_factor: float
 
+    @property
+    def ci_margin(self) -> float:
+        return 0.5 * (1 - self.ci_width)
+
 
 class _BLBootstrapper:
     """
@@ -192,6 +196,9 @@ class _BLBootstrapper:
         lbs = StatAccum(np.mean)
         ubs = StatAccum(np.mean)
 
+        self._tracer.trace("estimating acceleration term")
+        accel = _bca_accel_term(xs, self.config.statistic)
+
         self._rep_generator = ReplicateGenerator(n, b, self.rng)
         self._tracer.trace("let's go!")
 
@@ -199,7 +206,7 @@ class _BLBootstrapper:
             for i, ss in enumerate(self.blb_subsets(n, b)):
                 self._tracer.add_bindings(subset=i)
                 self._tracer.trace("starting subset")
-                res = self.measure_subset(xs, ss, estimate)
+                res = self.measure_subset(xs, ss, estimate, accel)
                 ss_frames[i] = res.samples
                 means.record(res.rep_mean)
                 vars.record(res.rep_var)
@@ -223,15 +230,17 @@ class _BLBootstrapper:
         while True:
             yield self.rng.choice(n, b, replace=False)
 
-    def measure_subset(self, xs: NDArray[F], ss: NDArray[np.int64], estimate: float) -> _BootResult:
+    def measure_subset(
+        self, xs: NDArray[F], ss: NDArray[np.int64], estimate: float, accel: float
+    ) -> _BootResult:
         b = len(ss)
         n = len(xs)
         xss = xs[ss]
 
         means = StatAccum(np.mean)
         vars = StatAccum(np.var)
-        lbs = StatAccum(lambda a: np.quantile(a, self._ci_qmin))
-        ubs = StatAccum(lambda a: np.quantile(a, self._ci_qmax))
+        lbs = StatAccum(None)
+        ubs = StatAccum(None)
 
         loop = self._rep_generator.subsets()
         for i, weights in enumerate(loop):
@@ -242,8 +251,14 @@ class _BLBootstrapper:
             stat = self.config.statistic(xss, weights=weights)
             means.record(stat)
             vars.record(stat)
-            lbs.record(stat)
-            ubs.record(stat)
+
+            stats = means.values
+            ql, qh = _bca_range(estimate, stats, self.config.ci_margin, accel)
+            self._tracer.trace("bias-corrected quantiles: [%.4f, %.4f]", ql, qh, accel=accel)
+            lb, ub = np.quantile(stats, [ql, qh])
+            lbs.record(stat, lb)
+            ubs.record(stat, ub)
+            del stats
 
             if self._check_convergence(
                 means, vars, lbs, ubs, tol=self.config.rel_tol, w=self.config.r_window
@@ -377,7 +392,9 @@ class StatAccum:
     def stat_history(self) -> NDArray[np.float64]:
         return self._cum_stat[: self._len]
 
-    def record(self, x: float | np.floating[Any]) -> None:
+    def record(
+        self, x: float | np.floating[Any], stat: float | np.floating[Any] | None = None
+    ) -> None:
         "Record a new value in the accumulator."
         self._expand_if_needed()
         i = self._len
@@ -385,7 +402,9 @@ class StatAccum:
 
         # record and update the cumulative mean
         self._values[i] = x
-        self._cum_stat[i] = self._stat_func(self.values)
+        if stat is None:
+            stat = self._stat_func(self.values)
+        self._cum_stat[i] = stat
 
     def _expand_if_needed(self):
         cap = len(self._values)
@@ -406,6 +425,7 @@ def _bca_range(
     This follows Slide 34 of `http://users.stat.umn.edu/~helwig/notes/bootci-Notes.pdf`_.
     """
     bias = _bca_bias_corrector(estimate, replicates)
+    trace(_log, "B=%d, estimate=%f, bias=%f", len(replicates), estimate, bias)
 
     z1 = bias + STD_NORM.ppf(margin)
     icd1 = z1 / (1 - accel * z1)
@@ -417,8 +437,13 @@ def _bca_range(
 
 
 def _bca_bias_corrector(statistic: float, replicates: NDArray[np.floating[Any]]) -> float:
-    frac = np.sum(replicates < statistic) / len(replicates)
-    return STD_NORM.ppf(frac)
+    B = len(replicates)
+    nlow = np.sum(replicates < statistic)
+    if nlow == 0 or nlow == B:
+        # extremely biased, but goes OOB. Should only happen early in the bootstrap.
+        return 0
+    else:
+        return STD_NORM.ppf(nlow / B)
 
 
 def _bca_accel_term(xs: NDArray[np.floating[Any]], statistic: WeightedStatistic) -> float:
