@@ -39,7 +39,7 @@ def random_pipe(ml_ds: Dataset):
 
 
 def test_history_correct(rng: np.random.Generator, ml_ds: Dataset, random_pipe: Pipeline):
-    users = rng.choice(ml_ds.users.ids(), 200)
+    users = rng.choice(ml_ds.users.ids(), 200, replace=False)
 
     for uid in users:
         train_items = ml_ds.user_row(uid)
@@ -52,10 +52,11 @@ def test_history_correct(rng: np.random.Generator, ml_ds: Dataset, random_pipe: 
         assert isinstance(user_items, ItemList)
         assert len(user_items) == len(train_items)
         assert set(user_items.ids()) == set(train_items.ids())
+        assert len(user_items) == len(set(user_items.ids()))
 
 
 def test_candidates_correct(rng: np.random.Generator, ml_ds: Dataset, random_pipe: Pipeline):
-    users = rng.choice(ml_ds.users.ids(), 200)
+    users = rng.choice(ml_ds.users.ids(), 200, replace=False)
 
     for uid in users:
         train_items = ml_ds.user_row(uid)
@@ -65,12 +66,13 @@ def test_candidates_correct(rng: np.random.Generator, ml_ds: Dataset, random_pip
         assert isinstance(candidates, ItemList)
         # make sure the candidates don't have any training items
         assert len(candidates) == ml_ds.item_count - len(train_items)
+        assert len(candidates) == len(set(candidates.ids()))
 
 
 def test_training_items_removed_solo(
     rng: np.random.Generator, ml_ds: Dataset, random_pipe: Pipeline
 ):
-    users = rng.choice(ml_ds.users.ids(), 200)
+    users = rng.choice(ml_ds.users.ids(), 200, replace=False)
 
     for uid in users:
         items = recommend(random_pipe, uid)
@@ -81,12 +83,13 @@ def test_training_items_removed_solo(
         assert len(items) == 100
         assert not np.any(np.isin(items.ids(), train_items.ids()))
         assert not np.any(np.isin(items.numbers(), train_items.numbers()))
+        assert len(items) == len(set(items.ids()))
 
 
 def test_training_items_removed_batch(
     rng: np.random.Generator, ml_ds: Dataset, random_pipe: Pipeline
 ):
-    users = rng.choice(ml_ds.users.ids(), 200)
+    users = rng.choice(ml_ds.users.ids(), 200, replace=False)
     recs = batch.recommend(random_pipe, users, n_jobs=1)
 
     for key, items in recs.items():
@@ -99,13 +102,14 @@ def test_training_items_removed_batch(
         # make sure we didn't recommend any training items
         assert not np.any(np.isin(items.ids(), train_items.ids()))
         assert not np.any(np.isin(items.numbers(), train_items.numbers()))
+        assert len(items) == len(set(items.ids()))
 
 
 def test_training_items_removed_scorer(rng: np.random.Generator, ml_ds: Dataset):
     pipe = topn_pipeline(scorer=ImplicitMFScorer, n=100)
     pipe.train(ml_ds)
 
-    users = rng.choice(ml_ds.users.ids(), 200)
+    users = rng.choice(ml_ds.users.ids(), 200, replace=False)
     recs = batch.recommend(pipe, users, n_jobs=1)
 
     for key, items in recs.items():
@@ -118,3 +122,4 @@ def test_training_items_removed_scorer(rng: np.random.Generator, ml_ds: Dataset)
         # make sure we didn't recommend any training items
         assert not np.any(np.isin(items.ids(), train_items.ids()))
         assert not np.any(np.isin(items.numbers(), train_items.numbers()))
+        assert len(items) == len(set(items.ids()))
