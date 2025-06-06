@@ -13,13 +13,14 @@ import numpy as np
 from pytest import fixture
 
 from lenskit import batch, recommend
+from lenskit.als import ImplicitMFScorer
 from lenskit.basic import (
     RandomSelector,
     UnratedTrainingItemsCandidateSelector,
     UserTrainingHistoryLookup,
 )
 from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
-from lenskit.pipeline import Pipeline, PipelineBuilder
+from lenskit.pipeline import Pipeline, PipelineBuilder, topn_pipeline
 
 
 @fixture(scope="module")
@@ -62,6 +63,7 @@ def test_candidates_correct(rng: np.random.Generator, ml_ds: Dataset, random_pip
 
         candidates = random_pipe.run("candidate-selector", query=uid)
         assert isinstance(candidates, ItemList)
+        # make sure the candidates don't have any training items
         assert len(candidates) == ml_ds.item_count - len(train_items)
 
 
@@ -84,15 +86,6 @@ def test_training_items_removed_solo(
 def test_training_items_removed_batch(
     rng: np.random.Generator, ml_ds: Dataset, random_pipe: Pipeline
 ):
-    pb = PipelineBuilder()
-    query = pb.create_input("query", QueryInput)
-    query = pb.add_component("lookup", UserTrainingHistoryLookup, query=query)
-    candidates = pb.add_component("candidate-selector", UnratedTrainingItemsCandidateSelector)
-    pb.add_component("recommender", RandomSelector, {"n": 100}, items=candidates)
-
-    pipe = pb.build()
-    pipe.train(ml_ds)
-
     users = rng.choice(ml_ds.users.ids(), 200)
     recs = batch.recommend(random_pipe, users, n_jobs=1)
 
@@ -103,5 +96,25 @@ def test_training_items_removed_batch(
         assert train_items is not None
 
         assert len(items) == 100
+        # make sure we didn't recommend any training items
+        assert not np.any(np.isin(items.ids(), train_items.ids()))
+        assert not np.any(np.isin(items.numbers(), train_items.numbers()))
+
+
+def test_training_items_removed_scorer(rng: np.random.Generator, ml_ds: Dataset):
+    pipe = topn_pipeline(scorer=ImplicitMFScorer, n=100)
+    pipe.train(ml_ds)
+
+    users = rng.choice(ml_ds.users.ids(), 200)
+    recs = batch.recommend(pipe, users, n_jobs=1)
+
+    for key, items in recs.items():
+        uid = key.user_id
+        assert uid in users
+        train_items = ml_ds.user_row(uid)
+        assert train_items is not None
+
+        assert len(items) == 100
+        # make sure we didn't recommend any training items
         assert not np.any(np.isin(items.ids(), train_items.ids()))
         assert not np.any(np.isin(items.numbers(), train_items.numbers()))
