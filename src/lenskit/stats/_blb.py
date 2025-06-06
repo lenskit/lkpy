@@ -21,6 +21,8 @@ from lenskit.diagnostics import DataWarning
 from lenskit.logging import Tracer, get_logger, get_tracer, trace
 from lenskit.random import RNGInput, random_generator
 
+from ._distributions import ci_quantiles
+
 F = TypeVar("F", bound=np.floating, covariant=True)
 
 SummaryStat: TypeAlias = Literal["mean"]
@@ -162,9 +164,7 @@ class _BLBootstrapper:
         self.rng = rng
         self.ss_stats = {}
 
-        alpha = 1 - ci_width
-        self._ci_qmin = 0.5 * alpha
-        self._ci_qmax = 1 - 0.5 * alpha
+        self._ci_qmin, self._ci_qmax = ci_quantiles(ci_width)
         self._tracer = get_tracer(_log, stat=stat.__name__)  # type: ignore
 
     def run_bootstraps(self, xs: NDArray[F]) -> _BootResult:
