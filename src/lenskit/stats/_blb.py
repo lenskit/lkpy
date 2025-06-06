@@ -15,6 +15,7 @@ from typing import Any, ClassVar, Deque, Literal, Protocol, TypeAlias, TypeVar
 
 import numpy as np
 import pandas as pd
+import scipy.stats
 from numpy.typing import NDArray
 
 from lenskit.diagnostics import DataWarning
@@ -28,6 +29,7 @@ F = TypeVar("F", bound=np.floating, covariant=True)
 SummaryStat: TypeAlias = Literal["mean"]
 
 _log = get_logger(__name__)
+STD_NORM = scipy.stats.norm()
 
 # dummy assignment to typecheck that we have correctly typed weighted average
 __dummy_avg: WeightedStatistic = np.average
@@ -44,6 +46,7 @@ class WeightedStatistic(Protocol):
         /,
         *,
         weights: NDArray[np.floating[Any] | np.integer[Any]] | None = None,
+        axis: int | None = None,
     ) -> np.floating[Any]: ...
 
 
@@ -55,7 +58,7 @@ def blb_summary(
     b_factor: float = 0.7,
     rel_tol: float = 0.05,
     s_window: int = 3,
-    r_window: int = 20,
+    r_window: int = 100,
     rng: RNGInput = None,
 ) -> dict[str, float]:
     r"""
@@ -103,7 +106,15 @@ def blb_summary(
     est = np.average(xs).item()
 
     rng = random_generator(rng)
-    bootstrapper = _BLBootstrapper(np.average, ci_width, rel_tol, s_window, r_window, b_factor, rng)
+    config = _BLBConfig(
+        statistic=np.average,
+        ci_width=ci_width,
+        rel_tol=rel_tol,
+        s_window=s_window,
+        r_window=r_window,
+        b_factor=b_factor,
+    )
+    bootstrapper = _BLBootstrapper(config, rng)
 
     result = bootstrapper.run_bootstraps(xs)
 
@@ -120,11 +131,29 @@ def blb_summary(
 
 @dataclass
 class _BootResult:
+    estimate: float
+    "Statistic computed on original data."
+
     rep_mean: float
+    "Mean of the replicates."
     rep_var: float
+    "Variance of the replicates."
     ci_lower: float
+    "CI lower bound."
     ci_upper: float
-    samples: pd.DataFrame
+    "CI upper bound."
+    samples: pd.DataFrame | None = None
+    "Raw sample data."
+
+
+@dataclass
+class _BLBConfig:
+    statistic: WeightedStatistic
+    ci_width: float
+    rel_tol: float
+    s_window: int
+    r_window: int
+    b_factor: float
 
 
 class _BLBootstrapper:
@@ -133,47 +162,30 @@ class _BLBootstrapper:
     """
 
     _tracer: Tracer
-    statistic: WeightedStatistic
-    ci_width: float
+    config: _BLBConfig
     _ci_qmin: float
     _ci_qmax: float
 
-    tolerance: float
-    s_window: int
-    r_window: int
-    b_factor: float
     rng: np.random.Generator
     _rep_generator: ReplicateGenerator
 
-    def __init__(
-        self,
-        stat: WeightedStatistic,
-        ci_width: float,
-        tol: float,
-        s_w: int,
-        r_w: int,
-        b_factor: float,
-        rng: np.random.Generator,
-    ):
-        self.statistic = stat
-        self.ci_width = ci_width
-        self.tolerance = tol
-        self.s_window = s_w
-        self.r_window = r_w
-        self.b_factor = b_factor
+    def __init__(self, config, rng: np.random.Generator):
+        self.config = config
         self.rng = rng
         self.ss_stats = {}
 
-        self._ci_qmin, self._ci_qmax = ci_quantiles(ci_width)
-        self._tracer = get_tracer(_log, stat=stat.__name__)  # type: ignore
+        self._ci_qmin, self._ci_qmax = ci_quantiles(config.ci_width)
+        self._tracer = get_tracer(_log, stat=config.statistic.__name__)  # type: ignore
 
     def run_bootstraps(self, xs: NDArray[F]) -> _BootResult:
         n = len(xs)
-        b = int(n**self.b_factor)
+        b = int(n**self.config.b_factor)
 
         self._tracer.add_bindings(n=n, b=b)
         _log.debug("starting bootstrap", stat=self.statistic.__name__, n=len(xs))  # type: ignore
         ss_frames = {}
+
+        estimate = float(self.config.statistic(xs))
 
         means = StatAccum(np.mean)
         vars = StatAccum(np.mean)
@@ -187,18 +199,19 @@ class _BLBootstrapper:
             for i, ss in enumerate(self.blb_subsets(n, b)):
                 self._tracer.add_bindings(subset=i)
                 self._tracer.trace("starting subset")
-                res = self.measure_subset(xs, ss)
+                res = self.measure_subset(xs, ss, estimate)
                 ss_frames[i] = res.samples
                 means.record(res.rep_mean)
                 vars.record(res.rep_var)
                 lbs.record(res.ci_lower)
                 ubs.record(res.ci_upper)
                 if self._check_convergence(
-                    means, vars, lbs, ubs, tol=self.tolerance, w=self.s_window
+                    means, vars, lbs, ubs, tol=self.config.rel_tol, w=self.config.s_window
                 ):
                     break
 
         return _BootResult(
+            estimate,
             means.statistic,
             vars.statistic,
             lbs.statistic,
@@ -210,7 +223,7 @@ class _BLBootstrapper:
         while True:
             yield self.rng.choice(n, b, replace=False)
 
-    def measure_subset(self, xs: NDArray[F], ss: NDArray[np.int64]) -> _BootResult:
+    def measure_subset(self, xs: NDArray[F], ss: NDArray[np.int64], estimate: float) -> _BootResult:
         b = len(ss)
         n = len(xs)
         xss = xs[ss]
@@ -226,19 +239,23 @@ class _BLBootstrapper:
             self._tracer.trace("starting replicate")
             assert weights.shape == (b,)
             assert np.sum(weights) == n
-            stat = self.statistic(xss, weights=weights)
+            stat = self.config.statistic(xss, weights=weights)
             means.record(stat)
             vars.record(stat)
             lbs.record(stat)
             ubs.record(stat)
 
-            if self._check_convergence(means, vars, lbs, ubs, tol=self.tolerance, w=self.r_window):
+            if self._check_convergence(
+                means, vars, lbs, ubs, tol=self.config.rel_tol, w=self.config.r_window
+            ):
                 loop.close()
 
         df = pd.DataFrame({"statistic": means.values})
         df.index.name = "iter"
         self._tracer.remove_bindings("rep")
-        return _BootResult(means.statistic, vars.statistic, lbs.statistic, ubs.statistic, df)
+        return _BootResult(
+            estimate, means.statistic, vars.statistic, lbs.statistic, ubs.statistic, df
+        )
 
     def miniboot_weights(self, n: int, b: int):
         flat = np.full(b, 1.0 / b)
@@ -378,3 +395,66 @@ class StatAccum:
 
     def __len__(self):
         return self._len
+
+
+def _bca_range(
+    estimate: float, replicates: NDArray[np.floating[Any]], margin: float, accel: float
+) -> tuple[float, float]:
+    """
+    Estimate the BCa quantiles for a bootstrap.
+
+    This follows Slide 34 of `http://users.stat.umn.edu/~helwig/notes/bootci-Notes.pdf`_.
+    """
+    bias = _bca_bias_corrector(estimate, replicates)
+
+    z1 = bias + STD_NORM.ppf(margin)
+    icd1 = z1 / (1 - accel * z1)
+
+    z2 = bias + STD_NORM.ppf(1 - margin)
+    icd2 = z2 / (1 - accel * z2)
+
+    return STD_NORM.cdf(icd1), STD_NORM.cdf(icd2)
+
+
+def _bca_bias_corrector(statistic: float, replicates: NDArray[np.floating[Any]]) -> float:
+    frac = np.sum(replicates < statistic) / len(replicates)
+    return STD_NORM.ppf(frac)
+
+
+def _bca_accel_term(xs: NDArray[np.floating[Any]], statistic: WeightedStatistic) -> float:
+    """
+    Compute the BCa acceleration term.
+
+    Follows slide 36 of
+    `http://users.stat.umn.edu/~helwig/notes/bootci-Notes.pdf`_, referring also
+    to the SciPy `scipy/stats/_resampling.py` for implementation ideas.
+    """
+    N = len(xs)
+    BSIZE = 5000
+    jk_vals = np.empty(N)
+    # batch the jackknife, because our data might be huge
+    # TODO: can we sample the jackknife?
+    for start in range(0, N, BSIZE):
+        end = min(start + BSIZE, N)
+        B = end - start
+        # this trick is from scipy — set up a mask
+        mask = np.ones((B, N), dtype=np.bool_)
+        np.fill_diagonal(mask[:, start:end], False)
+        # and reshape — again, borrwed from scipy
+        i = np.broadcast_to(np.arange(N), (B, N))
+        i = i[mask].reshape((B, N - 1))
+
+        # prepare B x N batched sample and compute statistics
+        sample = xs[i]
+        stats = statistic(sample, axis=-1)
+        assert stats.shape == (B,)
+        jk_vals[start:end] = stats
+
+    jk_est = np.mean(jk_vals)
+    jk_dev = jk_est - jk_vals
+
+    # sum of cubes
+    accel_num = np.sum(np.power(jk_dev, 3))
+    # weird term
+    accel_denom = 6 * np.power(np.sum(np.square(jk_dev)), 1.5)
+    return accel_num / accel_denom

@@ -56,7 +56,7 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
         xs = rng.normal(TRUE_MEAN, TRUE_SD, size)
         mean = np.mean(xs)
 
-        summary = blb_summary(xs, "mean", rng=rng, rel_tol=0.01)
+        summary = blb_summary(xs, "mean", rng=rng)
         assert isinstance(summary, dict)
         assert summary["estimate"] == approx(mean)
 
