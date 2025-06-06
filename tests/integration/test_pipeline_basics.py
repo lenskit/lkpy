@@ -10,30 +10,68 @@ Whole-pipeline integration tests to check for composite bugs.
 
 import numpy as np
 
+from pytest import fixture
+
 from lenskit import batch, recommend
 from lenskit.basic import (
     RandomSelector,
     UnratedTrainingItemsCandidateSelector,
     UserTrainingHistoryLookup,
 )
-from lenskit.data import Dataset, QueryInput
-from lenskit.pipeline import PipelineBuilder
+from lenskit.data import Dataset, ItemList, QueryInput, RecQuery
+from lenskit.pipeline import Pipeline, PipelineBuilder
 
 
-def test_training_items_removed_solo(rng: np.random.Generator, ml_ds: Dataset):
+@fixture(scope="module")
+def random_pipe(ml_ds: Dataset):
     pb = PipelineBuilder()
     query = pb.create_input("query", QueryInput)
-    query = pb.add_component("lookup", UserTrainingHistoryLookup, query=query)
-    candidates = pb.add_component("candidate-selector", UnratedTrainingItemsCandidateSelector)
+    query = pb.add_component("history-lookup", UserTrainingHistoryLookup, query=query)
+    candidates = pb.add_component(
+        "candidate-selector", UnratedTrainingItemsCandidateSelector, query=query
+    )
     pb.add_component("recommender", RandomSelector, {"n": 100}, items=candidates)
 
     pipe = pb.build()
     pipe.train(ml_ds)
+    yield pipe
 
+
+def test_history_correct(rng: np.random.Generator, ml_ds: Dataset, random_pipe: Pipeline):
     users = rng.choice(ml_ds.users.ids(), 200)
 
     for uid in users:
-        items = recommend(pipe, uid)
+        train_items = ml_ds.user_row(uid)
+        assert train_items is not None
+
+        query = random_pipe.run("history-lookup", query=uid)
+        assert isinstance(query, RecQuery)
+        assert query.user_id == uid
+        user_items = query.user_items
+        assert isinstance(user_items, ItemList)
+        assert len(user_items) == len(train_items)
+        assert set(user_items.ids()) == set(train_items.ids())
+
+
+def test_candidates_correct(rng: np.random.Generator, ml_ds: Dataset, random_pipe: Pipeline):
+    users = rng.choice(ml_ds.users.ids(), 200)
+
+    for uid in users:
+        train_items = ml_ds.user_row(uid)
+        assert train_items is not None
+
+        candidates = random_pipe.run("candidate-selector", query=uid)
+        assert isinstance(candidates, ItemList)
+        assert len(candidates) == ml_ds.item_count - len(train_items)
+
+
+def test_training_items_removed_solo(
+    rng: np.random.Generator, ml_ds: Dataset, random_pipe: Pipeline
+):
+    users = rng.choice(ml_ds.users.ids(), 200)
+
+    for uid in users:
+        items = recommend(random_pipe, uid)
 
         train_items = ml_ds.user_row(uid)
         assert train_items is not None
@@ -43,7 +81,9 @@ def test_training_items_removed_solo(rng: np.random.Generator, ml_ds: Dataset):
         assert not np.any(np.isin(items.numbers(), train_items.numbers()))
 
 
-def test_training_items_removed_batch(rng: np.random.Generator, ml_ds: Dataset):
+def test_training_items_removed_batch(
+    rng: np.random.Generator, ml_ds: Dataset, random_pipe: Pipeline
+):
     pb = PipelineBuilder()
     query = pb.create_input("query", QueryInput)
     query = pb.add_component("lookup", UserTrainingHistoryLookup, query=query)
@@ -54,7 +94,7 @@ def test_training_items_removed_batch(rng: np.random.Generator, ml_ds: Dataset):
     pipe.train(ml_ds)
 
     users = rng.choice(ml_ds.users.ids(), 200)
-    recs = batch.recommend(pipe, users)
+    recs = batch.recommend(random_pipe, users, n_jobs=1)
 
     for key, items in recs.items():
         uid = key.user_id
