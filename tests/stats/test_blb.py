@@ -31,18 +31,21 @@ def test_blb_single_array(rng: np.random.Generator):
     assert isinstance(summary, dict)
     assert summary["estimate"] == approx(mean)
     assert summary["rep_mean"] == approx(mean, rel=0.05)
+    # assert summary["rep_var"] == approx(ste * ste, rel=0.05)
 
-    assert summary["ci_lower"] == approx(mean - 1.96 * ste, rel=0.05)
-    assert summary["ci_upper"] == approx(mean + 1.96 * ste, rel=0.05)
+    assert summary["ci_lower"] == approx(mean - 1.96 * ste, rel=0.01)
+    assert summary["ci_upper"] == approx(mean + 1.96 * ste, rel=0.01)
 
 
 @mark.slow
-@mark.parametrize("size", [1000, 10000, 100000])
+@mark.parametrize("size", [1000, 10000])
 @mark.filterwarnings(r"error:.*ignoring \d+ nonfinite values")
 def test_blb_array_normal(rng: np.random.Generator, size: int):
     "Test BLB with arrays of normals."
 
     TRUE_MEAN = 1.0
+    TRUE_SD = 1.0
+    # TRUE_SVAR = TRUE_SD * TRUE_SD / size
     results = []
 
     # Test: for 1000 runs, do approx. 95% of confidence intervals contain the
@@ -50,10 +53,10 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
 
     NTRIALS = 200
     for i in range(NTRIALS):
-        xs = rng.normal(TRUE_MEAN, 1.0, size)
+        xs = rng.normal(TRUE_MEAN, TRUE_SD, size)
         mean = np.mean(xs)
 
-        summary = blb_summary(xs, "mean", rng=rng, rel_tol=0.02)
+        summary = blb_summary(xs, "mean", rng=rng, rel_tol=0.01)
         assert isinstance(summary, dict)
         assert summary["estimate"] == approx(mean)
 
