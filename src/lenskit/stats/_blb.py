@@ -56,7 +56,7 @@ def blb_summary(
     *,
     ci_width: float = 0.95,
     b_factor: float = 0.7,
-    rel_tol: float = 0.05,
+    rel_tol: float = 0.02,
     s_window: int = 3,
     r_window: int = 100,
     rng: RNGInput = None,
