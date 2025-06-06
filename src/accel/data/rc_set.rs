@@ -76,7 +76,7 @@ impl RowColumnSet {
     #[new]
     fn new(matrix: PyArrowType<ArrayData>) -> PyResult<Self> {
         let matrix = make_array(matrix.0);
-        let matrix: CSRStructure<i32> = CSRStructure::from_arrow(matrix)?;
+        let matrix: CSRStructure<i64> = CSRStructure::from_arrow(matrix)?;
 
         let mut sets = Vec::with_capacity(matrix.len());
 
