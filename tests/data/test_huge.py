@@ -8,6 +8,7 @@
 Test extremely large datasets.
 """
 
+import os
 from pathlib import Path
 
 import numpy as np
@@ -17,6 +18,8 @@ from pytest import mark
 
 from lenskit.data import DatasetBuilder
 from lenskit.logging import get_logger
+
+pytestmark = mark.skipif("LK_HUGE_TEST" not in os.environ, "huge tests disabled")
 
 _log = get_logger(__name__)
 huge_dir = Path("data/ml-20mx16x32")
