@@ -199,7 +199,7 @@ class DatasetBuilder:
                 Whether this is an interaction relationship.
         """
         if name in self._tables:
-            raise ValueError(f"class name “{name}” already in use")
+            raise ValueError(f"relationship class name “{name}” already defined")
 
         check_name(name)
         if len(entities) != 2:
