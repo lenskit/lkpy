@@ -34,3 +34,18 @@ def test_unrated_selector(ml_ds: Dataset):
 
     assert len(cands) <= ml_ds.item_count
     assert len(cands) == len(set(ml_ds.items.ids()) - set(row.ids()))
+
+
+def test_unrated_selector_many(rng: np.random.Generator, ml_ds: Dataset):
+    sel = UnratedTrainingItemsCandidateSelector()
+    sel.train(ml_ds)
+
+    for u in rng.choice(ml_ds.users.ids(), 200):
+        row = ml_ds.user_row(100)
+        assert row is not None
+        cands = sel(query=row)
+
+        assert len(cands) <= ml_ds.item_count
+        assert len(cands) == len(set(ml_ds.items.ids()) - set(row.ids()))
+        assert not np.any(np.isin(cands.ids(), row.ids()))
+        assert not np.any(np.isin(cands.numbers(), row.numbers()))
