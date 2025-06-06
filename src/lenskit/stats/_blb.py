@@ -182,7 +182,7 @@ class _BLBootstrapper:
         b = int(n**self.config.b_factor)
 
         self._tracer.add_bindings(n=n, b=b)
-        _log.debug("starting bootstrap", stat=self.statistic.__name__, n=len(xs))  # type: ignore
+        _log.debug("starting bootstrap", stat=self.config.statistic.__name__, n=len(xs))  # type: ignore
         ss_frames = {}
 
         estimate = float(self.config.statistic(xs))
