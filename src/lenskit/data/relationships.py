@@ -188,7 +188,7 @@ class MatrixRelationshipSet(RelationshipSet):
         a relationship set's :meth:`~RelationshipSet.matrix` method.
     """
 
-    _row_ptrs: np.ndarray[tuple[int], np.dtype[np.int32]]
+    _row_ptrs: np.ndarray[tuple[int], np.dtype[np.int64]]
     _structure: SparseRowArray
     row_type: str
     _row_nums: pa.Int32Array
@@ -234,13 +234,13 @@ class MatrixRelationshipSet(RelationshipSet):
         # compute the row pointers
         log.debug("computing CSR data")
         n_rows = len(self.row_vocabulary)
-        row_sizes = np.zeros(n_rows + 1, dtype=np.int32())
+        row_sizes = np.zeros(n_rows + 1, dtype=np.int64)
         self._row_nums = self._table.column(e_cols[0]).combine_chunks()  # type: ignore
         rsz_struct = pc.value_counts(self._row_nums)
         rsz_nums = rsz_struct.field("values")
         rsz_counts = rsz_struct.field("counts").cast(pa.int32())
         row_sizes[np.asarray(rsz_nums) + 1] = rsz_counts
-        self._row_ptrs = np.cumsum(row_sizes, dtype=np.int32)
+        self._row_ptrs = np.cumsum(row_sizes, dtype=np.int64)  # type: ignore
 
         self._col_nums = self._table.column(e_cols[1]).combine_chunks()  # type: ignore
         self._structure = SparseRowArray.from_arrays(

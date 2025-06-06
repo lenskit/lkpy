@@ -1,5 +1,6 @@
 *.yml
 *.zip
+*.tar
 *.csv
 *.gz
 *.zst
