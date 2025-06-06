@@ -174,6 +174,11 @@ class DatasetBuilder:
         be called; :meth:`add_relationships` and :meth:`add_interactions` will
         automatically add the relationship class if needed.
 
+        As noted in :ref:`data-model`, a *relationship* records a relationship
+        or interaction between two or more *entities*.  Interactions are usually
+        between users and items.  The ``entities`` option to this method defines
+        the names of the entity classes participating.
+
         .. note::
 
             The order of entity classes in ``entities`` matters, as the
@@ -198,7 +203,7 @@ class DatasetBuilder:
 
         check_name(name)
         if len(entities) != 2:
-            raise NotImplementedError("more than 2 entities not yet supported")
+            raise NotImplementedError("datasets currently only support 2-entity relationships")
 
         self._log.debug("adding relationship class", class_name=name)
         e_dict: dict[str, str | None]
