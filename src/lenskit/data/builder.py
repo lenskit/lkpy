@@ -153,7 +153,8 @@ class DatasetBuilder:
                 The name of the entity class.
         """
         if name in self._tables:
-            raise ValueError(f"class name “{name}” already in use")
+            _log.debug(f"class name “{name}” already in use")
+            return
 
         check_name(name)
 
