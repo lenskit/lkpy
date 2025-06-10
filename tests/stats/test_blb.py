@@ -82,8 +82,7 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
         )
     )
     # leave a little wiggle room
-    assert 90 <= pct_lb_good <= 99
-    assert 90 <= pct_ub_good <= 99
+    assert 90 <= pct_good <= 98
 
 
 def _blb_worker(
