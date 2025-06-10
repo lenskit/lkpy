@@ -16,6 +16,7 @@ from pytest import approx, mark, warns
 
 from lenskit.data.types import NPVector
 from lenskit.diagnostics import DataWarning
+from lenskit.parallel.ray import ensure_cluster, ray_available
 from lenskit.random import random_generator
 from lenskit.stats import blb_summary
 
@@ -38,12 +39,14 @@ def test_blb_single_array(rng: np.random.Generator):
 
 
 @mark.slow
-@mark.skip("CIs are not yet behaving correctly")
-@mark.parametrize("size", [1000, 10000])
+@mark.skipif(not ray_available(), reason="bulk BLB test requires Ray")
+@mark.parametrize("size", [1000, 10_000, 100_000])
 @mark.filterwarnings(r"error:.*ignoring \d+ nonfinite values")
 def test_blb_array_normal(rng: np.random.Generator, size: int):
     "Test BLB with arrays of normals."
+    import ray
 
+    ensure_cluster()
     TRUE_MEAN = 1.0
     TRUE_SD = 1.0
     # TRUE_SVAR = TRUE_SD * TRUE_SD / size
@@ -52,24 +55,50 @@ def test_blb_array_normal(rng: np.random.Generator, size: int):
     # Test: for 1000 runs, do approx. 95% of confidence intervals contain the
     # true mean?
 
-    NTRIALS = 200
-    for i in range(NTRIALS):
-        xs = rng.normal(TRUE_MEAN, TRUE_SD, size)
-        mean = np.mean(xs)
+    worker = ray.remote(num_cpus=1)(_blb_worker)
 
-        summary = blb_summary(xs, "mean", rng=rng)
-        assert isinstance(summary, dict)
-        assert summary["estimate"] == approx(mean)
+    NBATCHES = 20
+    PERBATCH = 50
+    NTRIALS = NBATCHES * PERBATCH
+    rngs = rng.spawn(NBATCHES)
+    tasks = [worker.remote(PERBATCH, TRUE_MEAN, TRUE_SD, size, t) for t in rngs]
+    for task in tasks:
+        bres = ray.get(task)
+        for mean, summary in bres:
+            assert isinstance(summary, dict)
+            assert summary["estimate"] == approx(mean)
 
-        results.append(summary)
+            results.append(summary)
 
     n_lb_good = len([r for r in results if r["ci_lower"] <= TRUE_MEAN])
     pct_lb_good = (n_lb_good / NTRIALS) * 100
     n_ub_good = len([r for r in results if TRUE_MEAN <= r["ci_upper"]])
     pct_ub_good = (n_ub_good / NTRIALS) * 100
+    n_good = len([r for r in results if r["ci_lower"] <= TRUE_MEAN <= r["ci_upper"]])
+    pct_good = (n_good / NTRIALS) * 100
+    print(
+        "{:.1f}% CIs good ({:1f}% LB fail, {:.1f}% UB fail)".format(
+            pct_good, 100 - pct_lb_good, 100 - pct_ub_good
+        )
+    )
     # leave a little wiggle room
     assert 90 <= pct_lb_good <= 99
     assert 90 <= pct_ub_good <= 99
+
+
+def _blb_worker(
+    nreps: int, true_mean: float, true_sd: float, size: int, rng: np.random.Generator
+) -> list[tuple[float, dict[str, float]]]:
+    results = []
+    bf = 0.7 if size > 50_000 else 0.8
+
+    for _i in range(nreps):
+        xs = rng.normal(true_mean, true_sd, size)
+        mean = np.mean(xs).item()
+
+        results.append((mean, blb_summary(xs, "mean", rng=rng, b_factor=bf)))
+
+    return results
 
 
 @mark.skip("need to find better parameters")

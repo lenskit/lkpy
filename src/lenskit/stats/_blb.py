@@ -57,8 +57,8 @@ def blb_summary(
     ci_width: float = 0.95,
     b_factor: float = 0.7,
     rel_tol: float = 0.02,
-    s_window: int = 3,
-    r_window: int = 200,
+    s_window: int = 5,
+    r_window: int = 50,
     rng: RNGInput = None,
 ) -> dict[str, float]:
     r"""
@@ -196,8 +196,8 @@ class _BLBootstrapper:
         lbs = StatAccum(np.mean)
         ubs = StatAccum(np.mean)
 
-        self._tracer.trace("estimating acceleration term")
-        accel = _bca_accel_term(xs, self.config.statistic)
+        # self._tracer.trace("estimating acceleration term")
+        # accel = _bca_accel_term(xs, self.config.statistic)
 
         self._rep_generator = ReplicateGenerator(n, b, self.rng)
         self._tracer.trace("let's go!")
@@ -206,7 +206,7 @@ class _BLBootstrapper:
             for i, ss in enumerate(self.blb_subsets(n, b)):
                 self._tracer.add_bindings(subset=i)
                 self._tracer.trace("starting subset")
-                res = self.measure_subset(xs, ss, estimate, accel)
+                res = self.measure_subset(xs, ss, estimate, 0)
                 ss_frames[i] = res.samples
                 means.record(res.rep_mean)
                 vars.record(res.rep_var)
@@ -253,8 +253,9 @@ class _BLBootstrapper:
             vars.record(stat)
 
             stats = means.values
-            ql, qh = _bca_range(estimate, stats, self.config.ci_margin, accel)
-            self._tracer.trace("bias-corrected quantiles: [%.4f, %.4f]", ql, qh, accel=accel)
+            # ql, qh = _bca_range(estimate, stats, self.config.ci_margin, accel)
+            # self._tracer.trace("bias-corrected quantiles: [%.4f, %.4f]", ql, qh, accel=accel)
+            ql, qh = ci_quantiles(self.config.ci_width)
             lb, ub = np.quantile(stats, [ql, qh])
             lbs.record(stat, lb)
             ubs.record(stat, ub)
