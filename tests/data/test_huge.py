@@ -13,13 +13,14 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 
 from pytest import mark
 
 from lenskit.data import DatasetBuilder
 from lenskit.logging import get_logger
 
-pytestmark = mark.skipif("LK_HUGE_TEST" not in os.environ, "huge tests disabled")
+pytestmark = mark.skipif("LK_HUGE_TEST" not in os.environ, reason="huge tests disabled")
 
 _log = get_logger(__name__)
 huge_dir = Path("data/ml-20mx16x32")
@@ -37,17 +38,31 @@ def test_basic_huge():
 
     n_users = 0
     n_rows = 0
+    batches = []
     for file in huge_dir.glob("train*.npz"):
         _log.info("loading segment", file=file.name)
         npz = np.load(file)
         array = next(iter(npz.values()))
         n_users += len(np.unique(array[:, 0]))
         n_rows += array.shape[0]
-        dsb.add_interactions(
-            "interaction",
-            pd.DataFrame(array, columns=["user_id", "item_id"]),
-            missing="insert",
+        batches.append(
+            pa.record_batch(
+                [pa.array(array[:, 0], pa.int32()), pa.array(array[:, 1], pa.int32())],
+                names=["user_id", "item_id"],
+            )
         )
+        del array
+        # dsb.add_interactions(
+        #     "interaction",
+        #     pd.DataFrame(array, columns=["user_id", "item_id"]),
+        #     missing="insert",
+        # )
+
+    _log.info("making table")
+    table = pa.Table.from_batches(batches)
+    del batches
+    _log.info("adding to dataset")
+    dsb.add_interactions("interaction", table, missing="insert")
 
     _log.info("building dataset")
     ds = dsb.build()
