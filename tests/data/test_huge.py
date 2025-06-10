@@ -34,7 +34,9 @@ ml32m_zip = Path("data/ml-32m.zip")
 def test_basic_320M():
     "Test building a 32M data set"
 
+    _log.info("loading ML32M dataframe")
     df = load_movielens_df(ml32m_zip)
+    _log.info("creating ML32M dataset")
     ds32 = from_interactions_df(df)
 
     dsb = DatasetBuilder()
@@ -50,7 +52,7 @@ def test_basic_320M():
                 "item_id": df["item_id"],
             }
         )
-        dsb.add_interactions("interaction", df_part)
+        dsb.add_interactions("interaction", df_part, missing="insert")
 
     _log.info("building dataset")
     ds = dsb.build()
@@ -61,6 +63,8 @@ def test_basic_320M():
     istats32 = ds32.item_stats()
     istats = ds.item_stats()
     assert np.all(istats["count"] == istats32["count"] * 10)
+    ustats = ds.user_stats()
+    assert len(ustats) == ds.user_count
 
 
 @mark.skip("1B does not work")
