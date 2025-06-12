@@ -161,13 +161,13 @@ class LenskitSettings(BaseSettings, extra="allow"):
 
 
 @overload
-def configure(*, cfg_dir: Path | None = None) -> LenskitSettings: ...
+def configure(cfg_dir: Path | None = None) -> LenskitSettings: ...
 @overload
 def configure(
-    *, cfg_dir: Path | None = None, settings_cls: type[SettingsClass]
+    cfg_dir: Path | None = None, *, settings_cls: type[SettingsClass]
 ) -> SettingsClass: ...
 def configure(
-    *, cfg_dir: Path | None = None, settings_cls=LenskitSettings, _set_global: bool = True
+    cfg_dir: Path | None = None, *, settings_cls=LenskitSettings, _set_global: bool = True
 ) -> Any:
     """
     Initialize LensKit configuration.
