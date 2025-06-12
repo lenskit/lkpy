@@ -101,7 +101,7 @@ def inspect_compute():
     import torch
 
     try:
-        import cupy
+        import cupy  # type: ignore
 
         _log.debug("imported CuPy version %s", cupy.__version__)
     except ImportError:
@@ -157,7 +157,7 @@ def inspect_compute():
 
 @group()
 def inspect_ray():
-    import ray
+    import ray  # type: ignore
 
     yield ""
     yield "[bold]Ray cluster ([yellow]experimental[/yellow])[/bold]:"
