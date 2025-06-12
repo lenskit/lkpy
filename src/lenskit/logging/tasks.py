@@ -19,7 +19,9 @@ from threading import Lock
 from typing import Annotated, Any
 from uuid import UUID, uuid4
 
+import requests
 from pydantic import AliasChoices, BaseModel, BeforeValidator, Field, SerializeAsAny
+from typing_extensions import Literal
 
 from lenskit.config import lenskit_config
 
@@ -158,7 +160,7 @@ class Task(BaseModel, extra="allow"):
     Estimated GPU power consumption (in Joules).
     """
 
-    subtasks: Annotated[list[SerializeAsAny[Task]], BeforeValidator(_dict_extract_values)] = Field(
+    subtasks: Annotated[list[SerializeAsAny[Task]], BeforeValidator(_dict_extract_values)] = Field(  # type: ignore
         default_factory=list
     )
     """
@@ -355,6 +357,11 @@ class Task(BaseModel, extra="allow"):
         self.cpu_time = elapsed.cpu_time
         self.peak_memory = elapsed.max_rss
         self.peak_gpu_memory = elapsed.max_gpu
+
+        self.system_power = measure_power("system", elapsed.perf_time)
+        self.cpu_power = measure_power("cpu", elapsed.perf_time)
+        self.gpu_power = measure_power("gpu", elapsed.perf_time)
+
         return now
 
     def __enter__(self):
@@ -381,3 +388,45 @@ class Task(BaseModel, extra="allow"):
 
     def __str__(self):
         return f"<Task {self.task_id}: {self.label}>"
+
+
+def measure_power(scope: Literal["system", "cpu", "gpu"], duration: float):
+    time_ms = int(duration * 1000)
+
+    config = lenskit_config()
+    prom = config.prometheus.url
+    if not prom:
+        return None
+
+    machine = config.current_machine
+    if machine is None:
+        return None
+
+    url = prom + "/api/v1/query"
+    if query := machine.power_queries.get(scope):
+        return _get_prometheus_metric(url, query, time_ms)
+
+
+def _get_prometheus_metric(url: str, query: str, time_ms: int) -> float | None:
+    query = query.format(time=time_ms)
+    log = _log.bind(url=url, query=query)
+    try:
+        res = requests.get(url, {"query": query}).json()
+    except Exception as e:
+        log.warning("Prometheus query error", exc_info=e)
+        return None
+
+    log.debug("received response", response=res)
+    if res["status"] == "error":
+        log.error("Prometheus query error: %s", res["error"], type=res["errorType"])
+        return None
+
+    results = res["data"]["result"]
+    if len(results) == 0:
+        log.debug("Prometheus query returned no results")
+        return None
+    elif len(results) > 1:
+        log.error("Prometheus query returned %d results, expected 1", len(results))
+
+    _time, val = results[0]["value"]
+    return float(val)

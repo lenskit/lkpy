@@ -141,6 +141,12 @@ class LenskitSettings(BaseSettings, extra="allow"):
     things like collecting power metrics.
     """
 
+    @property
+    def current_machine(self) -> MachineSettings | None:
+        if self.machine:
+            if ms := self.machines.get(self.machine, None):
+                return ms
+
     @classmethod
     def settings_customise_sources(
         cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings
