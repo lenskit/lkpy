@@ -107,9 +107,7 @@ def inspect_system():
     cpu = get_cpu_info()
     yield kvp("Processor", cpu["brand_raw"], level=2)
     if freq := cpu.get("hz_advertised", None):
-        yield kvp("Design CPU Frequency", metric(freq[0], unit="Hz"), level=2)
-    if freq := cpu.get("hz_actual", None):
-        yield kvp("Current CPU Frequency", metric(freq[0], unit="Hz"), level=2)
+        yield kvp("CPU Frequency", metric(freq[0], unit="Hz"), level=2)
 
     eff_cpu = effective_cpu_count()
     ncpus = os.cpu_count()
