@@ -1,0 +1,4 @@
+random.seed = 42
+
+[machines.shared]
+description = "shared machine"
