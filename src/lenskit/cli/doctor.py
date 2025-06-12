@@ -13,6 +13,7 @@ from importlib.metadata import distributions, version
 from pathlib import Path
 
 import click
+import psutil
 import threadpoolctl
 from humanize import metric, naturalsize
 from rich.console import Console, ConsoleOptions, group
@@ -22,6 +23,7 @@ from rich.table import Table
 from lenskit import __version__, _accel
 from lenskit.logging import get_logger, stdout_console
 from lenskit.parallel import ensure_parallel_init
+from lenskit.parallel.config import effective_cpu_count
 from lenskit.parallel.ray import ray_available
 
 _log = get_logger(__name__)
@@ -46,14 +48,15 @@ def doctor(gh_output: Path | None, packages: bool, paths: bool):
     _gh_out = gh_output
     ensure_parallel_init()
     console = stdout_console()
-    console.print(inspect_version())
-    console.print(inspect_platform())
-    console.print(inspect_compute())
+    console.print(inspect_version(), highlight=False)
+    console.print(inspect_platform(), highlight=False)
+    console.print(inspect_system(), highlight=False)
+    console.print(inspect_compute(), highlight=False)
     if ray_available():
-        console.print(inspect_ray())
-    console.print(inspect_env(paths))
+        console.print(inspect_ray(), highlight=False)
+    console.print(inspect_env(paths), highlight=False)
     if packages:
-        console.print(inspect_packages())
+        console.print(inspect_packages(), highlight=False)
 
 
 @dataclass
@@ -83,7 +86,7 @@ def inspect_version():
         with _gh_out.open("at") as ghf:
             print(f"lenskit_version={dist_ver}", file=ghf)
 
-    yield f"[bold]LensKit version[/bold] [cyan]{dist_ver}[/cyan]"
+    yield f"[bold]LensKit version:[/bold] [cyan]{dist_ver}[/cyan]"
     if str(dist_ver) != __version__:
         yield f"   [yellow]Version mismatch, internal package version is {__version__}[/yellow]"
 
@@ -93,6 +96,30 @@ def inspect_platform():
     yield kvp("Python version", platform.python_version())
     yield kvp("Platform", platform.platform(), level=2)
     yield kvp("Location", sys.executable, level=2)
+
+
+@group()
+def inspect_system():
+    yield ""
+    yield "[bold]System information:[/bold]"
+
+    eff_cpu = effective_cpu_count()
+    ncpus = os.cpu_count()
+    cpus = f"[bold]{ncpus}[/bold]"
+    nphys = psutil.cpu_count(logical=False)
+    if nphys != ncpus:
+        cpus += f" ({nphys} physical)"
+    if ncpus != eff_cpu:
+        cpus += f", limited to {ncpus}"
+    yield kvp("CPUs", cpus, level=2)
+
+    vmem = psutil.virtual_memory()
+    yield kvp(
+        "Memory",
+        f"[bold]{naturalsize(vmem.total, binary=True)}[/bold]"
+        f" ({naturalsize(vmem.available, binary=True)} available)",
+        level=2,
+    )
 
 
 @group()

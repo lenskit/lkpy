@@ -32,6 +32,7 @@ dependencies = [
   "rich >=13.5",
   "pyzmq >=24",
   "click ~=8.1",
+  "psutil >=6",
   "pydantic ~=2.7",
   "pydantic-settings~=2.8",
   "humanize ~=4.2",
