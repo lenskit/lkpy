@@ -57,7 +57,7 @@ def blb_summary(
     ci_width: float = 0.95,
     b_factor: float = 0.7,
     rel_tol: float = 0.02,
-    s_window: int = 5,
+    s_window: int = 10,
     r_window: int = 50,
     rng: RNGInput = None,
 ) -> dict[str, float]:

@@ -89,13 +89,13 @@ def _blb_worker(
     nreps: int, true_mean: float, true_sd: float, size: int, rng: np.random.Generator
 ) -> list[tuple[float, dict[str, float]]]:
     results = []
-    bf = 0.7 if size > 50_000 else 0.8
+    # bf = 0.7 if size > 50_000 else 0.8
 
     for _i in range(nreps):
         xs = rng.normal(true_mean, true_sd, size)
         mean = np.mean(xs).item()
 
-        results.append((mean, blb_summary(xs, "mean", rng=rng, b_factor=bf)))
+        results.append((mean, blb_summary(xs, "mean", rng=rng)))
 
     return results
 
