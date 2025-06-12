@@ -16,7 +16,7 @@ _gh_out: Path | None = None
 
 
 @click.command("config")
-def config(project_root: Path | None):
+def config():
     """
     Inspect LensKit configuration.
     """
