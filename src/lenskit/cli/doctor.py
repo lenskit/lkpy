@@ -15,6 +15,7 @@ from pathlib import Path
 import click
 import psutil
 import threadpoolctl
+from cpuinfo import get_cpu_info
 from humanize import metric, naturalsize
 from rich.console import Console, ConsoleOptions, group
 from rich.padding import Padding
@@ -103,6 +104,13 @@ def inspect_system():
     yield ""
     yield "[bold]System information:[/bold]"
 
+    cpu = get_cpu_info()
+    yield kvp("Processor", cpu["brand_raw"], level=2)
+    if freq := cpu.get("hz_advertised", None):
+        yield kvp("Design CPU Frequency", metric(freq, unit="Hz"), level=2)
+    if freq := cpu.get("hz_actual", None):
+        yield kvp("Current CPU Frequency", metric(freq, unit="Hz"), level=2)
+
     eff_cpu = effective_cpu_count()
     ncpus = os.cpu_count()
     cpus = f"[bold]{ncpus}[/bold]"
@@ -111,7 +119,7 @@ def inspect_system():
         cpus += f" ({nphys} physical)"
     if ncpus != eff_cpu:
         cpus += f", limited to {ncpus}"
-    yield kvp("CPUs", cpus, level=2)
+    yield kvp("CPU cores", cpus, level=2)
 
     vmem = psutil.virtual_memory()
     yield kvp(
