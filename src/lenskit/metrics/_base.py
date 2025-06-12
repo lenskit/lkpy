@@ -7,6 +7,9 @@
 from abc import ABC, abstractmethod
 from typing import ClassVar, Protocol
 
+import numpy as np
+import pyarrow as pa
+
 from lenskit.data import ItemList, ItemListCollection
 
 
@@ -43,6 +46,36 @@ class Metric(ABC):
     def __str__(self):
         return f"Metric {self.label}"
 
+    @abstractmethod
+    def measure_list(self, output: ItemList, test: ItemList, /) -> object:
+        """
+        Compute measurements for a single list.
+        """
+        raise NotImplementedError()
+
+    def extract_list_metrics(self, metric: object, /) -> float | None:
+        """
+        Extract a single-list metric from the per-list measurement result (if
+        applicable).
+
+        Returns:
+            The per-list metric, or ``None`` if this metric does not compute
+            per-list metrics.
+        """
+        return None
+
+    @abstractmethod
+    def summarize(
+        self, values: list[object] | np.ndarray | pa.Array | pa.ChunkedArray, /
+    ) -> float | dict[str, float]:
+        """
+        Aggregate list metrics to compute one or more global summary values.
+
+        Returns:
+            A single numeric summary (float), or a dictionary of named summary values.
+        """
+        raise NotImplementedError()
+
 
 class ListMetric(Metric):
     """
@@ -62,15 +95,6 @@ class ListMetric(Metric):
     If ``None``, no inference is done (necessary for metrics like RMSE, where
     the missing value is theoretically infinite).
     """
-
-    @abstractmethod
-    def measure_list(self, output: ItemList, test: ItemList, /) -> float:
-        """
-        Compute the metric value for a single result list.
-
-        Individual metric classes need to implement this method.
-        """
-        raise NotImplementedError()
 
 
 class GlobalMetric(Metric):
@@ -95,6 +119,11 @@ class GlobalMetric(Metric):
 
 class DecomposedMetric(Metric):
     """
+    Deprecated base class for decomposed metrics.
+    .. deprecated:: 2025.4
+        This class is deprecated and its functionality has been moved to :class:`Metric`.
+        It is scheduled for removal in 2026.
+
     Base class for metrics that measure entire runs through flexible
     aggregations of per-list intermediate measurements.  They can optionally
     extract individual-list metrics from the per-list measurements.
@@ -103,10 +132,26 @@ class DecomposedMetric(Metric):
         Full
     """
 
-    @abstractmethod
+    def measure_list(self, output: ItemList, test: ItemList, /) -> object:
+        return self.compute_list_data(output, test)
+
+    def extract_list_metrics(self, metric: object, /) -> float | None:
+        return self.extract_list_metric(metric)
+
+    def summarize(
+        self, values: list[object] | np.ndarray | pa.Array | pa.ChunkedArray, /
+    ) -> float | dict[str, float]:
+        if isinstance(values, (pa.Array, pa.ChunkedArray)):
+            values = values.to_numpy()
+        elif not isinstance(values, np.ndarray):
+            values = np.array(values)
+
+        return self.global_aggregate(list(values))
+
     def compute_list_data(self, output: ItemList, test: ItemList, /) -> object:
         """
         Compute measurements for a single list.
+        Use `measure_list` in `Metric` for new implementations.
         """
         raise NotImplementedError()
 
@@ -118,12 +163,13 @@ class DecomposedMetric(Metric):
         Returns:
             The per-list metric, or ``None`` if this metric does not compute
             per-list metrics.
+        Use `extract_list_metrics` in `Metric` for new implementations.
         """
         return None
 
-    @abstractmethod
     def global_aggregate(self, values: list[object], /) -> float:
         """
         Aggregate list metrics to compute a global value.
+        Use `summarize` in `Metric` for new implementations.
         """
         raise NotImplementedError()
