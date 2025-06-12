@@ -404,11 +404,11 @@ def measure_power(scope: Literal["system", "cpu", "gpu"], duration: float):
 
     url = prom + "/api/v1/query"
     if query := machine.power_queries.get(scope):
+        query = query.format(elapsed=time_ms, machine=config.machine)
         return _get_prometheus_metric(url, query, time_ms)
 
 
 def _get_prometheus_metric(url: str, query: str, time_ms: int) -> float | None:
-    query = query.format(time=time_ms)
     log = _log.bind(url=url, query=query)
     try:
         res = requests.get(url, {"query": query}).json()
