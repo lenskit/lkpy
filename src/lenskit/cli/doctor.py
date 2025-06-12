@@ -168,8 +168,8 @@ def inspect_compute():
             props = torch.cuda.get_device_properties(dev)
             yield "  [green]cuda:{}[/green]: [bold cyan]{}[/bold cyan]".format(dev, props.name)
             yield kvp("capability", f"{props.major}.{props.minor}", level=2)
-            yield kvp("memory", naturalsize(props.total_memory), level=2)
-            yield kvp("L2 cache", naturalsize(props.L2_cache_size), level=2)
+            yield kvp("memory", naturalsize(props.total_memory, binary=True), level=2)
+            yield kvp("L2 cache", naturalsize(props.L2_cache_size, binary=True), level=2)
             yield kvp("MP count", props.multi_processor_count, level=2)
             if cupy is not None:
                 cd = cupy.cuda.Device(dev)
