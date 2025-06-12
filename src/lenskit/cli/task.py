@@ -8,6 +8,7 @@ from pathlib import Path
 from subprocess import check_call
 
 import click
+from humanize import metric
 
 from lenskit.logging import Task, get_logger, stdout_console
 
@@ -36,4 +37,6 @@ def task(label: str, args: list[str]):
         log.info("running command %s", " ".join(args))
         check_call(args)
 
+    if task.system_power is not None:
+        log.info("task consumed %s", metric(task.system_power / 3600, "Wh"))
     console.print(task)
