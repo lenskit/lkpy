@@ -25,7 +25,7 @@ _gh_out: Path | None = None
     help="Human-readable task label",
 )
 @click.argument("args", nargs=-1)
-def task(label: str, args: list[str]):
+def task(label: str, args: list[str]):  # pragma: nocover
     """
     Run a task with LensKit task tracking.
     """
