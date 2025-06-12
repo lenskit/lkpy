@@ -66,6 +66,8 @@ outputs:
             - lenskit.als
             - lenskit.knn
       - script:
+          - lenskit doctor
+      - script:
           - pytest -m "not slow" tests
         files:
           source:
