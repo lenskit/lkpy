@@ -53,14 +53,12 @@ class Metric(ABC):
         """
         raise NotImplementedError()
 
-    def extract_list_metrics(self, metric: object, /) -> float | None:
+    def extract_list_metrics(self, metric: object, /) -> float | dict[str, float] | None:
         """
-        Extract a single-list metric from the per-list measurement result (if
-        applicable).
+        Extract per-list metric(s) from the per-list measurement result.
 
         Returns:
-            The per-list metric, or ``None`` if this metric does not compute
-            per-list metrics.
+            A float, a dictionary of metric names and values, or None.
         """
         return None
 
@@ -95,6 +93,15 @@ class ListMetric(Metric):
     If ``None``, no inference is done (necessary for metrics like RMSE, where
     the missing value is theoretically infinite).
     """
+
+    @abstractmethod
+    def measure_list(self, output: ItemList, test: ItemList, /) -> float:
+        """
+        Compute the metric value for a single result list.
+
+        Individual metric classes need to implement this method.
+        """
+        raise NotImplementedError()
 
 
 class GlobalMetric(Metric):
@@ -135,7 +142,7 @@ class DecomposedMetric(Metric):
     def measure_list(self, output: ItemList, test: ItemList, /) -> object:
         return self.compute_list_data(output, test)
 
-    def extract_list_metrics(self, metric: object, /) -> float | None:
+    def extract_list_metrics(self, metric: object, /) -> float | dict[str, float] | None:
         return self.extract_list_metric(metric)
 
     def summarize(
@@ -151,6 +158,7 @@ class DecomposedMetric(Metric):
     def compute_list_data(self, output: ItemList, test: ItemList, /) -> object:
         """
         Compute measurements for a single list.
+
         Use `measure_list` in `Metric` for new implementations.
         """
         raise NotImplementedError()
@@ -163,6 +171,7 @@ class DecomposedMetric(Metric):
         Returns:
             The per-list metric, or ``None`` if this metric does not compute
             per-list metrics.
+
         Use `extract_list_metrics` in `Metric` for new implementations.
         """
         return None
@@ -170,6 +179,7 @@ class DecomposedMetric(Metric):
     def global_aggregate(self, values: list[object], /) -> float:
         """
         Aggregate list metrics to compute a global value.
+
         Use `summarize` in `Metric` for new implementations.
         """
         raise NotImplementedError()
