@@ -6,7 +6,7 @@
 
 from pathlib import Path
 
-from lenskit.config import LenskitSettings, lenskit_config, load_configuration
+from lenskit.config import LenskitSettings, configure, lenskit_config
 
 
 def test_default_config():
@@ -16,7 +16,7 @@ def test_default_config():
 
 
 def test_load_toml():
-    cfg = load_configuration(cfg_dir=Path(__file__).parent, _set_global=False)  # type: ignore
+    cfg = configure(cfg_dir=Path(__file__).parent, _set_global=False)  # type: ignore
     assert cfg is not None
     assert cfg.random.seed == 42
     assert set(cfg.machines.keys()) == {"local", "shared"}

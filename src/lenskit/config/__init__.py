@@ -18,10 +18,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict, TomlConfigSettin
 from typing_extensions import Any, TypedDict, TypeVar, overload
 
 from lenskit.diagnostics import ConfigWarning
+from lenskit.random import init_global_rng
 
 __all__ = [
     "lenskit_config",
-    "load_configuration",
+    "configure",
     "LenskitSettings",
     "RandomSettings",
     "MachineSettings",
@@ -160,12 +161,12 @@ class LenskitSettings(BaseSettings, extra="allow"):
 
 
 @overload
-def load_configuration(*, cfg_dir: Path | None = None) -> LenskitSettings: ...
+def configure(*, cfg_dir: Path | None = None) -> LenskitSettings: ...
 @overload
-def load_configuration(
+def configure(
     *, cfg_dir: Path | None = None, settings_cls: type[SettingsClass]
 ) -> SettingsClass: ...
-def load_configuration(
+def configure(
     *, cfg_dir: Path | None = None, settings_cls=LenskitSettings, _set_global: bool = True
 ) -> Any:
     """
@@ -174,6 +175,9 @@ def load_configuration(
     LensKit does **not** automatically read configuration files — if this
     function is never called, then configuration will entirely be done through
     defaults and environment varibles.
+
+    This function will automatically configure the global RNG, if a seed is
+    specified.
 
     Args:
         cfg_dir:
@@ -219,5 +223,7 @@ def load_configuration(
     settings = LenskitFileSettings()
     if _set_global:
         _settings = settings
+        if settings.random.seed is not None:
+            init_global_rng(settings.random.seed)
 
     return settings
