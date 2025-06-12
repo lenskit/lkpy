@@ -23,7 +23,7 @@ _gh_out: Path | None = None
     default="cli-task",
     help="Human-readable task label",
 )
-@click.argument("args", nargs="+")
+@click.argument("args", nargs=-1)
 def task(label: str, args: list[str]):
     """
     Run a task with LensKit task tracking.
