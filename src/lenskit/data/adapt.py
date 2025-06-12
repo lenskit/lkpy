@@ -162,7 +162,7 @@ def from_interactions_df(
         dsb.add_entities("item", items)
 
     dsb.add_interactions(
-        "rating", df, entities=["user", "item"], missing=missing, allow_repeats=False, default=True
+        "rating", df, entities=["user", "item"], missing=missing, repeats="forbid", default=True
     )
 
     return dsb.build()

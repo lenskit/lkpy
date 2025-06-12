@@ -62,6 +62,10 @@ MissingEntityAction: TypeAlias = Literal["insert", "filter", "error"]
 """
 Action to take when a relationship references a missing entity.
 """
+RepeatOption: TypeAlias = Literal["allow", "forbid", "remove", "remove-duplicate"]
+"""
+Defines how should repeated interactions be handled.
+"""
 
 
 class DatasetBuilder:
@@ -165,7 +169,7 @@ class DatasetBuilder:
         self,
         name: str,
         entities: RelationshipEntities,
-        allow_repeats: bool = True,
+        repeats: RepeatOption = "allow",
         interaction: bool = False,
     ) -> None:
         """
@@ -218,7 +222,9 @@ class DatasetBuilder:
         self.schema.relationships[name] = RelationshipSchema(
             entities=e_dict,
             interaction=interaction,
-            repeats=AllowableTroolean.ALLOWED if allow_repeats else AllowableTroolean.FORBIDDEN,
+            repeats=AllowableTroolean.ALLOWED
+            if repeats == "allow"
+            else AllowableTroolean.FORBIDDEN,
         )
         self._tables[name] = _empty_rel_table(enames)
 
@@ -327,7 +333,7 @@ class DatasetBuilder:
         *,
         entities: RelationshipEntities | None = None,
         missing: MissingEntityAction = "error",
-        allow_repeats: bool = True,
+        repeats: RepeatOption = "allow",
         interaction: bool | Literal["default"] = False,
         _warning_parent: int = 0,
     ) -> None:
@@ -380,7 +386,7 @@ class DatasetBuilder:
                 )
                 entities = [c[:-3] for c in table.column_names if c.endswith("_id")]
             self.add_relationship_class(
-                cls, entities, allow_repeats=allow_repeats, interaction=bool(interaction)
+                cls, entities, repeats=repeats, interaction=bool(interaction)
             )
             if interaction == "default":
                 self.schema.default_interaction = cls
@@ -458,7 +464,7 @@ class DatasetBuilder:
         *,
         entities: RelationshipEntities | None = None,
         missing: MissingEntityAction = "error",
-        allow_repeats: bool = True,
+        repeats: RepeatOption = "allow",
         default: bool = False,
     ) -> None:
         """
@@ -500,7 +506,7 @@ class DatasetBuilder:
             data,
             entities=entities,
             missing=missing,
-            allow_repeats=allow_repeats,
+            repeats=repeats,
             interaction="default" if default else True,
             _warning_parent=1,
         )
@@ -938,12 +944,21 @@ class DatasetBuilder:
                 tables[n] = pa.table({id_col_name(n): pa.array([], type=pa.int64())})
             else:
                 rel = self.schema.relationships.get(n, None)
-                if rel is not None and rel.repeats.is_forbidden and len(rel.entities) == 2:
-                    e_cols = [e + "_num" for e in rel.entities.keys()]
-                    if not _data_accel.is_sorted_coo(t.to_batches(), *e_cols):
-                        log.debug("sorting non-repeating relationship %s", n)
-                        t = t.sort_by([(c, "ascending") for c in e_cols])
-
+                if rel is not None:
+                    if rel.repeats.is_forbidden and len(rel.entities) == 2:
+                        e_cols = [e + "_num" for e in rel.entities.keys()]
+                        if not _data_accel.is_sorted_coo(t.to_batches(), *e_cols):
+                            log.debug("sorting non-repeating relationship %s", n)
+                            t = t.sort_by([(c, "ascending") for c in e_cols])
+                    if rel.repeats.is_present:
+                        if "timestamp" in t.column_names:
+                            t = t.sort_by([("timestamp", "ascending")])
+                        t_modified = t.add_column(0, "_row_number", pa.array(np.arange(t.num_rows)))
+                        t_modified = t_modified.group_by(
+                            [entity + "_num" for entity in rel.entity_class_names]
+                        ).aggregate([("_row_number", "max")])
+                        t_modified = t_modified.sort_by([("_row_number_max", "ascending")])
+                        t = t.take(t_modified.column("_row_number_max"))
                 tables[n] = t
 
         return DataContainer(self.schema.model_copy(), tables)

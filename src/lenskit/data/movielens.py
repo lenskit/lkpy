@@ -118,7 +118,7 @@ class ML100KLoader(MLData):
             entities=["user", "item"],
             missing="insert",
             default=True,
-            allow_repeats=False,
+            repeats="forbid",
         )
 
         users = self.users_df().set_index("user_id")
@@ -208,7 +208,7 @@ class MLMLoader(MLData):
             entities=["user", "item"],
             missing="insert",
             default=True,
-            allow_repeats=False,
+            repeats="forbid",
         )
 
         users = self.users_df()
@@ -344,7 +344,7 @@ class MLModernLoader(MLData):
             entities=["user", "item"],
             missing="insert",
             default=True,
-            allow_repeats=False,
+            repeats="forbid",
         )
 
         tags = self.tagging_df()
