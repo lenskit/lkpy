@@ -1447,7 +1447,7 @@ requires-dist = [
     { name = "prettytable", specifier = "~=3.14" },
     { name = "pyarrow", specifier = ">=20" },
     { name = "pydantic", specifier = "~=2.7" },
-    { name = "pydantic-settings", specifier = "~=2.9" },
+    { name = "pydantic-settings", specifier = "~=2.8" },
     { name = "pyzmq", specifier = ">=24" },
     { name = "ray", marker = "extra == 'ray'", specifier = "~=2.42" },
     { name = "rich", specifier = ">=13.5" },

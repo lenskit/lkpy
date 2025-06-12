@@ -10,10 +10,41 @@ LensKit general configuration
 
 from __future__ import annotations
 
-from typing import TypedDict
+import warnings
+from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict, TomlConfigSettingsSource
+from typing_extensions import Any, TypedDict, TypeVar, overload
+
+from lenskit.diagnostics import ConfigWarning
+
+__all__ = [
+    "lenskit_config",
+    "load_configuration",
+    "LenskitSettings",
+    "RandomSettings",
+    "MachineSettings",
+    "PowerQueries",
+    "PrometheusSettings",
+]
+
+SettingsClass = TypeVar("SettingsClass", bound="LenskitSettings", default="LenskitSettings")
+_settings: LenskitSettings | None = None
+
+
+def lenskit_config() -> LenskitSettings:
+    """
+    Get the LensKit configuration.
+
+    If no configuration has been specified, returns a default settings object.
+    """
+    global _settings
+
+    if _settings is None:
+        return LenskitSettings()
+    else:
+        return _settings
 
 
 class PowerQueries(TypedDict, total=False):
@@ -34,7 +65,7 @@ class PowerQueries(TypedDict, total=False):
     "GPU power consumption."
 
 
-class RandomConfig(BaseModel):
+class RandomSettings(BaseModel):
     """
     Random number generator configuration.
     """
@@ -45,7 +76,7 @@ class RandomConfig(BaseModel):
     """
 
 
-class Machine(BaseModel, extra="allow"):
+class MachineSettings(BaseModel, extra="allow"):
     """
     Definition for a single machine.
 
@@ -85,12 +116,10 @@ class LenskitSettings(BaseSettings, extra="allow"):
     """
 
     model_config = SettingsConfigDict(
-        nested_model_default_partial_update=True,
-        env_prefix="LK_",
-        toml_file="lenskit.toml",
+        nested_model_default_partial_update=True, env_prefix="LK_", env_nested_delimiter="__"
     )
 
-    random: RandomConfig
+    random: RandomSettings = RandomSettings()
     """
     Random number generator configuration.
     """
@@ -106,7 +135,7 @@ class LenskitSettings(BaseSettings, extra="allow"):
     """
     Prometheus settings for task metric collection.
     """
-    machines: dict[str, Machine] = {}
+    machines: dict[str, MachineSettings] = {}
     """
     Description of different machines used in the experiment(s), to support
     things like collecting power metrics.
@@ -121,5 +150,68 @@ class LenskitSettings(BaseSettings, extra="allow"):
             env_settings,
             dotenv_settings,
             file_secret_settings,
-            TomlConfigSettingsSource(settings_cls),
         )
+
+
+@overload
+def load_configuration(*, cfg_dir: Path | None = None) -> LenskitSettings: ...
+@overload
+def load_configuration(
+    *, cfg_dir: Path | None = None, settings_cls: type[SettingsClass]
+) -> SettingsClass: ...
+def load_configuration(
+    *, cfg_dir: Path | None = None, settings_cls=LenskitSettings, _set_global: bool = True
+) -> Any:
+    """
+    Initialize LensKit configuration.
+
+    LensKit does **not** automatically read configuration files — if this
+    function is never called, then configuration will entirely be done through
+    defaults and environment varibles.
+
+    Args:
+        cfg_dir:
+            The directory in which to look for configuration files..  If not
+            provided, uses the current directory.
+        settings_cls:
+            The base LensKit settings class.  Rarely used, only needed if a
+            project wants to to extend LensKit settings with their own settings.
+
+    Returns:
+        The configured LensKit settings.
+    """
+    global _settings
+
+    if _settings is not None and _set_global:
+        warnings.warn("LensKit already configured, overwriting configuration", ConfigWarning)
+
+    # define a subclass so we can specify the configuration location
+    toml_files = ["lenskit.toml", "lenskit.local.toml"]
+    if cfg_dir is not None:
+        toml_files = [cfg_dir / f for f in toml_files]
+
+    class LenskitFileSettings(settings_cls):
+        @classmethod
+        def settings_customise_sources(
+            cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings
+        ):
+            return (
+                init_settings,
+                env_settings,
+                dotenv_settings,
+                file_secret_settings,
+                TomlConfigSettingsSource(
+                    settings_cls,
+                    cfg_dir / "lenskit.local.toml" if cfg_dir is not None else "lenskit.local.toml",
+                ),
+                TomlConfigSettingsSource(
+                    settings_cls,
+                    cfg_dir / "lenskit.toml" if cfg_dir is not None else "lenskit.toml",
+                ),
+            )
+
+    settings = LenskitFileSettings()
+    if _set_global:
+        _settings = settings
+
+    return settings

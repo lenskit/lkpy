@@ -33,7 +33,7 @@ dependencies = [
   "pyzmq >=24",
   "click ~=8.1",
   "pydantic ~=2.7",
-  "pydantic-settings~=2.89",
+  "pydantic-settings~=2.8",
   "humanize ~=4.2",
   "prettytable ~=3.14",
   "xopen ~=2.0",
@@ -122,6 +122,7 @@ source = "https://github.com/lenskit/lkpy"
 lenskit = "lenskit.cli:main"
 
 [project.entry-points."lenskit.cli.plugins"]
+lenskit-config = "lenskit.cli.config:config"
 lenskit-data = "lenskit.cli.data:data"
 lenskit-doctor = "lenskit.cli.doctor:doctor"
 lenskit-train = "lenskit.cli.train:train"
