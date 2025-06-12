@@ -41,7 +41,8 @@ _gh_out: Path | None = None
 )
 @click.option("--packages/--no-packages", default=False, help="List installed packages.")
 @click.option("--paths/--no-paths", default=False, help="List search paths.")
-def doctor(gh_output: Path | None, packages: bool, paths: bool):
+@click.option("--full", is_flag=True, default=False, help="Show all output.")
+def doctor(gh_output: Path | None, packages: bool, paths: bool, full: bool):
     """
     Inspect installed LensKit version and environment.
     """
@@ -55,8 +56,8 @@ def doctor(gh_output: Path | None, packages: bool, paths: bool):
     console.print(inspect_compute(), highlight=False)
     if ray_available():
         console.print(inspect_ray(), highlight=False)
-    console.print(inspect_env(paths), highlight=False)
-    if packages:
+    console.print(inspect_env(paths or full), highlight=False)
+    if packages or full:
         console.print(inspect_packages(), highlight=False)
 
 
