@@ -57,7 +57,7 @@ class PowerQueries(TypedDict, total=False):
     seconds) over the last ``time_ms`` milliseconds.
     """
 
-    total: str
+    system: str
     "Total (chassis or system) power consumption."
     cpu: str
     "CPU power consumption."

@@ -11,6 +11,7 @@ Abstraction for recording tasks.
 # pyright: strict
 from __future__ import annotations
 
+import socket
 from enum import Enum
 from os import PathLike
 from pathlib import Path
@@ -18,7 +19,9 @@ from threading import Lock
 from typing import Annotated, Any
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, BeforeValidator, Field, SerializeAsAny
+from pydantic import AliasChoices, BaseModel, BeforeValidator, Field, SerializeAsAny
+
+from lenskit.config import lenskit_config
 
 from ._proxy import get_logger
 from .formats import friendly_duration
@@ -97,6 +100,17 @@ class Task(BaseModel, extra="allow"):
     """
     Human-readable task label.
     """
+    hostname: str = Field(default_factory=socket.gethostname)
+    """
+    The hostname on which the task was run.
+    """
+    machine: str | None = Field(default_factory=lambda: lenskit_config().machine)
+    """
+    The machine on which the task was run.
+
+    Machines are project-meaningful labels for compute machines or clusters,
+    primarily for understanding resource consumption.  See :ref:`settings`.
+    """
 
     status: TaskStatus = TaskStatus.PENDING
     "The task's current status."
@@ -127,6 +141,21 @@ class Task(BaseModel, extra="allow"):
     peak_gpu_memory: int | None = None
     """
     Peak PyTorch GPU memory usage in bytes.
+    """
+
+    system_power: float | None = Field(
+        default=None, validation_alias=AliasChoices("system_power", "chassis_power")
+    )
+    """
+    Estimated total system power consumption (in Joules).
+    """
+    cpu_power: float | None = None
+    """
+    Estimated CPU power consumption (in Joules).
+    """
+    gpu_power: float | None = None
+    """
+    Estimated GPU power consumption (in Joules).
     """
 
     subtasks: Annotated[list[SerializeAsAny[Task]], BeforeValidator(_dict_extract_values)] = Field(
