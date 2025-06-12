@@ -36,8 +36,8 @@ _gh_out: Path | None = None
     type=Path,
     help="Path to GitHub Actions output file.",
 )
-@click.option("--packages/--no-packages", default=True, help="List installed packages.")
-@click.option("--paths/--no-paths", default=True, help="List search paths.")
+@click.option("--packages/--no-packages", default=False, help="List installed packages.")
+@click.option("--paths/--no-paths", default=False, help="List search paths.")
 def doctor(gh_output: Path | None, packages: bool, paths: bool):
     """
     Inspect installed LensKit version and environment.
