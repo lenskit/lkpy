@@ -440,17 +440,18 @@ class DatasetBuilder:
             new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
 
         if not rc_def.repeats.is_present:
-            _log.debug("checking for repeated interactions")
-            # we have to bounce to pandas for multi-column duplicate detection
-            ndf = new_table.select(list(link_nums.keys())).to_pandas()
-            dupes = ndf.duplicated()
-            if np.any(dupes):
-                if rc_def.repeats.is_allowed:
-                    rc_def.repeats = AllowableTroolean.PRESENT
-                else:
-                    raise DataError(
-                        f"repeated interactions not allowed for relationship class {cls}"
-                    )
+            if repeats != "remove":
+                _log.debug("checking for repeated interactions")
+                # we have to bounce to pandas for multi-column duplicate detection
+                ndf = new_table.select(list(link_nums.keys())).to_pandas()
+                dupes = ndf.duplicated()
+                if np.any(dupes):
+                    if rc_def.repeats.is_allowed:
+                        rc_def.repeats = AllowableTroolean.PRESENT
+                    else:
+                        raise DataError(
+                            f"repeated interactions not allowed for relationship class {cls}"
+                        )
 
         log.debug(
             "saving new relationship table", total_rows=new_table.num_rows, schema=new_table.schema
@@ -951,14 +952,7 @@ class DatasetBuilder:
                             log.debug("sorting non-repeating relationship %s", n)
                             t = t.sort_by([(c, "ascending") for c in e_cols])
                     if rel.repeats.is_present:
-                        if "timestamp" in t.column_names:
-                            t = t.sort_by([("timestamp", "ascending")])
-                        t_modified = t.add_column(0, "_row_number", pa.array(np.arange(t.num_rows)))
-                        t_modified = t_modified.group_by(
-                            [entity + "_num" for entity in rel.entity_class_names]
-                        ).aggregate([("_row_number", "max")])
-                        t_modified = t_modified.sort_by([("_row_number_max", "ascending")])
-                        t = t.take(t_modified.column("_row_number_max"))
+                        t = self._remove_same_entity_interactions(t, rel)
                 tables[n] = t
 
         return DataContainer(self.schema.model_copy(), tables)
@@ -974,6 +968,17 @@ class DatasetBuilder:
         """
         container = self.build_container()
         container.save(path)
+
+    def _remove_same_entity_interactions(self, t: pa.Table, rel: RelationshipSchema) -> pa.Table:
+        if "timestamp" in t.column_names:
+            t = t.sort_by([("timestamp", "ascending")])
+        t_modified = t.add_column(0, "_row_number", pa.array(np.arange(t.num_rows)))
+        t_modified = t_modified.group_by(
+            [entity + "_num" for entity in rel.entity_class_names]
+        ).aggregate([("_row_number", "max")])
+        t_modified = t_modified.sort_by([("_row_number_max", "ascending")])
+        t = t.take(t_modified.column("_row_number_max"))
+        return t
 
     def _resolve_entity_ids(
         self, cls: str, ids: IDSequence, table: pa.Table | None = None
