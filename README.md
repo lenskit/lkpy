@@ -30,23 +30,90 @@ LensKit for Python (LKPY) is the successor to the Java-based LensKit project.
 
 ## Installing
 
-To install the current release with Anaconda (recommended):
+To install the current release with `uv` (recommended):
 
-    conda install -c conda-forge lenskit
+```console
+$ uv pip install lenskit
+```
 
-If you use Pixi, you can add it to your project:
+Or, to add it to your project's dependencies and virtual environment:
 
-    pixi add lenskit
+```console
+$ uv add lenskit
+```
 
-Or you can use `pip` (or `uv`):
+Classic `pip` also works:
 
-    pip install lenskit
-
-To use the latest development version, install directly from GitHub:
-
-    pip install -U git+https://github.com/lenskit/lkpy
+```console
+$ python -m pip install lenskit
+```
 
 Then see [Getting Started](https://lkpy.lenskit.org/stable/guide/GettingStarted.html)
+
+### Conda Packages
+
+You can also install LensKit from `conda-forge` with `pixi`:
+
+```console
+$ pixi add lenskit
+```
+
+Or `conda`:
+
+```console
+$ conda install -c conda-forge lenskit
+```
+
+### Development Version
+
+To use the latest development version, you have two options. You can install
+directly from GitHub:
+
+```console
+$ uv pip install -U git+https://github.com/lenskit/lkpy
+```
+
+Or you can use our PyPI index, by adding to `pyproject.toml`:
+
+```toml
+[[tool.uv.index]]
+name = "lenskit"
+url = "https://pypi.lenskit.org/lenskit-dev/"
+```
+
+Binary wheels of LensKit development (and release) versions are automatically
+pushed to this index, although they are not guaranteed to be permanently
+available.  Reproducible code should generally depend on released versions
+published to PyPI.
+
+### Simplifying PyTorch installation
+
+We also provide mirrors of the PyTorch package repositories that are filtered to
+only include PyTorch and directly supporting dependencies, without other
+packages that conflict with or mask packages from PyPI, and with fallbacks for
+other platforms (i.e., our CUDA indices include CPU-only MacOS packages).  This
+makes it easier to install specific versions of PyTorch in your project with
+the index priority and fallthrough logic implemented by `uv`.  To make your
+project only use CPU-based PyTorch, you can add to `pyproject.toml`:
+
+```toml
+[[tool.uv.index]]
+name = "torch-cpu"
+url = "https://pypi.lenskit.org/torch/cpu/"
+```
+
+Or CUDA 12.8:
+
+```toml
+[[tool.uv.index]]
+name = "torch-gpu"
+url = "https://pypi.lenskit.org/torch/cu128/"
+```
+
+These indices provide the same package distributions as the official PyTorch
+repositories (in fact, they link directly to the PyTorch packages).  They are
+just an alternate index view that reduces some package conflicts.
+
 
 ## Developing
 
