@@ -37,6 +37,7 @@ extensions = [
     "sphinxext.opengraph",
     "sphinxcontrib.bibtex",
     "sphinxcontrib.mermaid",
+    "sphinx_copybutton",
     "lk_stability",
 ]
 

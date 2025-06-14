@@ -62,6 +62,7 @@ doc = [
   "myst-nb >=0.13",
   "sphinx-togglebutton >=0.3.2,<0.4",
   "sphinxcontrib-mermaid >=1.0.0,<2",
+  "sphinx-copybutton>=0.5.2",
 ]
 demo = [
   "notebook >=6",
