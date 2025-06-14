@@ -28,11 +28,43 @@ Throughout this documentation, we use the notation of :cite:t:`ekstrand:notation
     There have been significant incompatible changes in LensKit 2025.1.  See the
     :ref:`release notes <2025.1>` and :ref:`migration guide <migrating>`.
 
-Resources
----------
+Connecting with LensKit
+-----------------------
 
-- `Discussion and Announcements <https://github.com/orgs/lenskit/discussions>`_
-- `Source and issues on GitHub <https://github.com/lenskit/lkpy>`_
+.. |mastodon| raw:: html
+
+    <a href="https://recsys.social/@LensKit" rel="me" target="_blank"><i class="fa-brands fa-mastodon"></i> Mastodon</a>
+
+.. |bluesky| raw:: html
+
+    <a href="https://bsky.app/profile/lenskit.org" rel="me" target="_blank">🦋 BlueSky</a>
+
+.. |subscribe| raw:: html
+
+    <i class="fa-solid fa-user-plus"></i>
+
+.. |discuss| raw:: html
+
+    <i class="fa-solid fa-comments"></i>
+
+.. |build| raw:: html
+
+    <i class="fa-solid fa-hammer"></i>
+
+
+-   |subscribe| **Follow us** on |mastodon| or |bluesky|.  We post LensKit-related
+    announcements and information, and love to hear what you're doing with
+    LensKit.
+
+-   |discuss| **Join** the `GitHub discussions`_. This is where we answer questions about how
+    to use LensKit or ideas for new contributions.  Release announcements are
+    also posted here.
+
+-   |build| **Contribute** to https://github.com/lenskit/lkpy/, where we
+    keep the source code and issue tracker.  We take new contributions via
+    GitHub pull requests.
+
+.. _GitHub discussions: https://github.com/orgs/lenskit/discussions
 
 .. toctree::
     :maxdepth: 1
@@ -48,6 +80,6 @@ Acknowledgements
 ----------------
 
 This material is based upon work supported by the National Science Foundation
-under Grant No. IIS 17-51278. Any opinions, findings, and conclusions or
+under Grant Nos. 17-51278 and 24-15042. Any opinions, findings, and conclusions or
 recommendations expressed in this material are those of the author(s) and do not
 necessarily reflect the views of the National Science Foundation.
