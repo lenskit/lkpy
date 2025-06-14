@@ -17,19 +17,53 @@ LensKit toolkit and a part of the LensKit project.
     If you use LensKit in published research, see the :ref:`citation
     instructions <citation>`, and particularly cite our paper [LKPY]_.
 
-Throughout this documentation, we use the notation of :cite:t:`ekstrand:notation`.
+News
+----
 
-.. versionchanged:: 2025.1
+..
+    <script type="module" src="https://cdn.jsdelivr.net/npm/bsky-embed/dist/bsky-embed.es.js" async></script>
+    <bsky-embed username="lenskit.org" limit="5"></bsky-embed>
 
-    The LensKit documentation is now split apart for easier readability, with
-    the `topical user guide <guide/index>`_ and `API reference <api/index>`_ in
-    separate sections.
+.. raw:: html
 
-    There have been significant incompatible changes in LensKit 2025.1.  See the
-    :ref:`release notes <2025.1>` and :ref:`migration guide <migrating>`.
+    <a class="mastodon-feed"
+        href="https://recsys.social/@LensKit"
+        data-toot-limit="5"
+        data-exclude-replies="true"
+        data-exclude-reblogs="true">
+        Follow us on Mastodon
+    </a>
+    <script type="module" src="https://esm.sh/emfed@1"></script>
+
+..
+    <link href="your/path/to/file/mastodon-timeline.min.css" rel="stylesheet" />
+    <div id="mt-container" class="mt-container">
+    <div class="mt-body" role="feed">
+        <div class="mt-loading-spinner"></div>
+    </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@idotj/mastodon-embed-timeline@4.7.0/dist/mastodon-timeline.umd.js" integrity="sha256-p6Xvd6OVSoasRG8M7ct20nnzGdnFMVapWyp9PGpW2Uo=" crossorigin="anonymous"></script>
+    <script>
+    const myTimeline = new MastodonTimeline.Init({
+        instanceUrl: "https://recsys.social",
+        userId: "111250921900064491",
+        timelineType: "profile",
+        profileName: "@LensKit",
+        maxNbPostShow: 5,
+        hideUserAccount: true,
+        hideUnlisted: true,
+        hideReblog: true,
+        hideReplies: true,
+    });
+    </script>
+
+
 
 Connecting with LensKit
 -----------------------
+
+..
+    <iframe allowfullscreen sandbox="allow-top-navigation allow-scripts allow-popups allow-popups-to-escape-sandbox" style="max-width:100vw;max-height:100vh;" height="800" src="https://mastofeed.com/apiv2/feed?userurl=https%3A%2F%2Frecsys.social%2Fusers%2FLensKit&theme=auto&size=100&header=true&replies=false&boosts=false"></iframe>
 
 .. |mastodon| raw:: html
 
@@ -52,7 +86,7 @@ Connecting with LensKit
     <i class="fa-solid fa-hammer"></i>
 
 
--   |subscribe| **Follow us** on |mastodon| or |bluesky|.  We post LensKit-related
+-   |subscribe| **Follow us** on |blusesky| or |mastodon|.  We post LensKit-related
     announcements and information, and love to hear what you're doing with
     LensKit.
 
