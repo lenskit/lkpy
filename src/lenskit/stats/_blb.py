@@ -257,6 +257,11 @@ class _BLBootstrapper:
             # self._tracer.trace("bias-corrected quantiles: [%.4f, %.4f]", ql, qh, accel=accel)
             ql, qh = ci_quantiles(self.config.ci_width)
             lb, ub = np.quantile(stats, [ql, qh])
+            self._tracer.trace("initial bounds: %f < s < %f", lb, ub)
+            # recenter bounds around estimate
+            lb = estimate - (stat - lb)
+            ub = estimate + (ub - stat)
+            self._tracer.trace("adjusted bounds: %f < s < %f", lb, ub)
             lbs.record(stat, lb)
             ubs.record(stat, ub)
             del stats
