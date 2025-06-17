@@ -22,6 +22,7 @@ __getattr__, __dir__, __all__ = lazy.attach(
     submodules=[
         # modules
         "batch",
+        "config",
         "data",
         "logging",
         "metrics",
@@ -41,6 +42,7 @@ __getattr__, __dir__, __all__ = lazy.attach(
         "sklearn",
     ],
     submod_attrs={
+        "config": ["configure", "lenskit_config"],
         "data": ["Dataset", "DatasetBuilder"],
         "operations": ["predict", "recommend", "score"],
         "pipeline": ["Pipeline", "RecPipelineBuilder", "Component", "topn_pipeline"],

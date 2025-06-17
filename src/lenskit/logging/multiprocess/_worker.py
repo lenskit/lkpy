@@ -33,7 +33,6 @@ from lenskit.logging.progress._base import Progress
 from .._limit import RateLimit
 from .._proxy import get_logger
 from ..config import CORE_PROCESSORS, active_logging_config, log_warning
-from ..monitor import get_monitor
 from ..processors import add_process_info
 from ..progress import set_progress_impl
 
@@ -76,6 +75,8 @@ class WorkerLogConfig:
         if _active_context is not None:
             return _active_context.config
         elif from_monitor:
+            from ..monitor import get_monitor
+
             mon = get_monitor()
             if mon.log_address is None:
                 raise RuntimeError("monitor has no log address")

@@ -2,6 +2,7 @@ from . import (
     als,
     basic,
     batch,
+    config,
     data,
     flexmf,
     funksvd,
@@ -17,6 +18,7 @@ from . import (
     torch,
     training,
 )
+from .config import configure, lenskit_config
 from .data import Dataset, DatasetBuilder
 from .operations import predict, recommend, score
 from .pipeline import Component, Pipeline, RecPipelineBuilder, topn_pipeline
@@ -25,6 +27,7 @@ from .splitting import TTSplit
 __all__ = [
     # modules
     "batch",
+    "config",
     "data",
     "logging",
     "metrics",
@@ -42,6 +45,9 @@ __all__ = [
     "hpf",
     "knn",
     "sklearn",
+    # setup
+    "configure",
+    "lenskit_config",
     # operations
     "predict",
     "recommend",

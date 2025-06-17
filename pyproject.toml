@@ -32,7 +32,11 @@ dependencies = [
   "rich >=13.5",
   "pyzmq >=24",
   "click ~=8.1",
+  "requests ~=2.28",
+  "psutil >=6",
+  "py-cpuinfo >=9.0",
   "pydantic ~=2.7",
+  "pydantic-settings~=2.8",
   "humanize ~=4.2",
   "prettytable ~=3.14",
   "xopen ~=2.0",
@@ -58,6 +62,8 @@ doc = [
   "myst-nb >=0.13",
   "sphinx-togglebutton >=0.3.2,<0.4",
   "sphinxcontrib-mermaid >=1.0.0,<2",
+  "sphinx-copybutton>=0.5.2",
+  "sphinx-new-tab-link>=0.8.0",
 ]
 demo = [
   "notebook >=6",
@@ -121,8 +127,10 @@ source = "https://github.com/lenskit/lkpy"
 lenskit = "lenskit.cli:main"
 
 [project.entry-points."lenskit.cli.plugins"]
+lenskit-config = "lenskit.cli.config:config"
 lenskit-data = "lenskit.cli.data:data"
 lenskit-doctor = "lenskit.cli.doctor:doctor"
+lenskit-task = "lenskit.cli.task:task"
 lenskit-train = "lenskit.cli.train:train"
 lenskit-recommend = "lenskit.cli.recommend:recommend"
 
