@@ -103,7 +103,19 @@ class ListMetric(Metric):
         """
         raise NotImplementedError()
 
+    def extract_list_metrics(self, metric: object, /) -> float | dict[str, float] | None:
+        """
+        Return the given per-list metric result.
+        """
+        return metric
+
     def summarize(self, values: list[object] | np.ndarray | pa.Array | pa.ChunkedArray, /) -> float:
+        """
+        Aggregarte per-list metric values by computing their mean, ignoring NaNs.
+
+        Returns:
+            A single numeric summary (float).
+        """
         if isinstance(values, (pa.Array, pa.ChunkedArray)):
             values = values.to_numpy()
         elif not isinstance(values, np.ndarray):
