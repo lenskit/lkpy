@@ -6,7 +6,7 @@ repos:
       - id: check-added-large-files
         exclude: pixi\.lock$
       - id: check-json
-        exclude: \.vscode/.*\.json$
+        exclude: \.(vscode|devcontainer)/.*\.json$
       - id: check-merge-conflict
         exclude: (data/.*/README\.md|\.rst)$
       - id: check-shebang-scripts-are-executable
