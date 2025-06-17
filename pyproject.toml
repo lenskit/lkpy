@@ -145,6 +145,23 @@ skip = ["*-musllinux_i686"]
 
 # configure UV sources
 [tool.uv]
+conflicts = [[{ group = "cpu" }, { group = "gpu" }]]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", group = "cpu" },
+  { index = "pytorch-gpu", group = "gpu" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://pypi.lenskit.org/torch/cpu"
+
+[[tool.uv.index]]
+name = "pytorch-gpu"
+url = "https://pypi.lenskit.org/torch/cu128"
+explicit = true
+
 # dev tool configuration
 [tool.coverage.run]
 relative_files = "true"
