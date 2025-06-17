@@ -154,12 +154,13 @@ torch = [
 ]
 
 [[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://pypi.lenskit.org/torch/cpu"
-
-[[tool.uv.index]]
 name = "pytorch-gpu"
 url = "https://pypi.lenskit.org/torch/cu128"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://pypi.lenskit.org/torch/cpu"
 explicit = true
 
 # dev tool configuration
