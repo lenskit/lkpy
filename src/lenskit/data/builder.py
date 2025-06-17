@@ -34,12 +34,12 @@ from lenskit.logging import get_logger
 from .container import DataContainer
 from .dataset import Dataset
 from .schema import (
-    AllowableTroolean,
     AttrLayout,
     ColumnSpec,
     DataSchema,
     EntitySchema,
     RelationshipSchema,
+    RepeatPolicy,
     check_name,
     id_col_name,
     num_col_name,
@@ -222,9 +222,11 @@ class DatasetBuilder:
         self.schema.relationships[name] = RelationshipSchema(
             entities=e_dict,
             interaction=interaction,
-            repeats=AllowableTroolean.ALLOWED
+            repeats=RepeatPolicy.ALLOWED
             if repeats == "allow"
-            else AllowableTroolean.FORBIDDEN,
+            else RepeatPolicy.REMOVE
+            if repeats == "remove"
+            else RepeatPolicy.FORBIDDEN,
         )
         self._tables[name] = _empty_rel_table(enames)
 
@@ -438,20 +440,7 @@ class DatasetBuilder:
         cur_table = self._tables[cls]
         if cur_table is not None:
             new_table = pa.concat_tables([cur_table, new_table], promote_options="permissive")
-
-        if not rc_def.repeats.is_present:
-            if repeats != "remove":
-                _log.debug("checking for repeated interactions")
-                # we have to bounce to pandas for multi-column duplicate detection
-                ndf = new_table.select(list(link_nums.keys())).to_pandas()
-                dupes = ndf.duplicated()
-                if np.any(dupes):
-                    if rc_def.repeats.is_allowed:
-                        rc_def.repeats = AllowableTroolean.PRESENT
-                    else:
-                        raise DataError(
-                            f"repeated interactions not allowed for relationship class {cls}"
-                        )
+        # MOVE THIS SEGMENT DOWN IN BUILD
 
         log.debug(
             "saving new relationship table", total_rows=new_table.num_rows, schema=new_table.schema
@@ -946,13 +935,28 @@ class DatasetBuilder:
             else:
                 rel = self.schema.relationships.get(n, None)
                 if rel is not None:
+                    if not rel.repeats.is_present:
+                        _log.debug("checking for repeated interactions")
+                        # we have to bounce to pandas for multi-column duplicate detection
+                        ndf = t.select(
+                            [entity + "_num" for entity in rel.entity_class_names]
+                        ).to_pandas()
+                        dupes = ndf.duplicated()
+                        if np.any(dupes):
+                            if rel.repeats.is_allowed:
+                                if not rel.repeats.is_remove:
+                                    rel.repeats = RepeatPolicy.PRESENT
+                            else:
+                                raise DataError(
+                                    "repeated interactions not allowed for relationship class"
+                                )
                     if rel.repeats.is_forbidden and len(rel.entities) == 2:
                         e_cols = [e + "_num" for e in rel.entities.keys()]
                         if not _data_accel.is_sorted_coo(t.to_batches(), *e_cols):
                             log.debug("sorting non-repeating relationship %s", n)
                             t = t.sort_by([(c, "ascending") for c in e_cols])
                     if rel.repeats.is_present:
-                        t = self._remove_same_entity_interactions(t, rel)
+                        t = self._remove_repeated_relationships(t, rel)
                 tables[n] = t
 
         return DataContainer(self.schema.model_copy(), tables)
@@ -969,7 +973,7 @@ class DatasetBuilder:
         container = self.build_container()
         container.save(path)
 
-    def _remove_same_entity_interactions(self, t: pa.Table, rel: RelationshipSchema) -> pa.Table:
+    def _remove_repeated_relationships(self, t: pa.Table, rel: RelationshipSchema) -> pa.Table:
         if "timestamp" in t.column_names:
             t = t.sort_by([("timestamp", "ascending")])
         t_modified = t.add_column(0, "_row_number", pa.array(np.arange(t.num_rows)))

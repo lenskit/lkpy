@@ -59,8 +59,9 @@ def check_name(name: str) -> None:
         raise ValueError(f"invalid name “{name}”")
 
 
-class AllowableTroolean(Enum):
+class RepeatPolicy(Enum):
     """
+    UPDATE NEEDED
     Three-way enumeration for storing both whether a feature is allowed and is
     used.  For convenience, in serialized data or configuration files these
     values may be specified either as strings or as booleans, in which case
@@ -79,6 +80,10 @@ class AllowableTroolean(Enum):
     PRESENT = "present"
     """
     The feature is used by instances in the data.
+    """
+    REMOVE = "remove"
+    """
+
     """
 
     @property
@@ -102,13 +107,20 @@ class AllowableTroolean(Enum):
         """
         return self == self.PRESENT
 
+    @property
+    def is_remove(self) -> bool:
+        """
+        Query whether the feature should be removed.
+        """
+        return self == self.REMOVE
+
     @model_validator(mode="before")
     @classmethod
-    def _validate_troolean(cls, value: Any):
+    def _validate_policy(cls, value: Any):
         if value is True:
-            return AllowableTroolean.ALLOWED
+            return RepeatPolicy.ALLOWED
         elif value is False:
-            return AllowableTroolean.FORBIDDEN
+            return RepeatPolicy.FORBIDDEN
         else:
             return value
 
@@ -216,13 +228,17 @@ class RelationshipSchema(BaseModel):
     """
     Whether this relationship class records interactions.
     """
-    repeats: AllowableTroolean = AllowableTroolean.FORBIDDEN
+    repeats: RepeatPolicy = RepeatPolicy.FORBIDDEN
     """
     Whether this relationship supports repeated interactions.
     """
     attributes: dict[Name, ColumnSpec] = {}
     """
     Relationship attribute definitions.
+    """
+    remove_duplicates: bool = False
+    """
+    ADD ME
     """
 
     @property
