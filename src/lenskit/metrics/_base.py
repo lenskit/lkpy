@@ -103,6 +103,13 @@ class ListMetric(Metric):
         """
         raise NotImplementedError()
 
+    def summarize(self, values: list[object] | np.ndarray | pa.Array | pa.ChunkedArray, /) -> float:
+        if isinstance(values, (pa.Array, pa.ChunkedArray)):
+            values = values.to_numpy()
+        elif not isinstance(values, np.ndarray):
+            values = np.array(values)
+        return float(np.nanmean(values))
+
 
 class GlobalMetric(Metric):
     """
