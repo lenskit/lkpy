@@ -23,8 +23,6 @@ import requests
 from pydantic import AliasChoices, BaseModel, BeforeValidator, Field, SerializeAsAny
 from typing_extensions import Literal
 
-from lenskit.config import lenskit_config
-
 from ._proxy import get_logger
 from .formats import friendly_duration
 from .resource import ResourceMeasurement, reset_linux_hwm
@@ -38,6 +36,12 @@ def _dict_extract_values(data: object) -> Any:
         return list(data.values())  # type: ignore
     else:
         return data
+
+
+def _lk_machine():
+    from lenskit.config import lenskit_config
+
+    return lenskit_config().machine
 
 
 class TaskStatus(str, Enum):
@@ -106,7 +110,7 @@ class Task(BaseModel, extra="allow"):
     """
     The hostname on which the task was run.
     """
-    machine: str | None = Field(default_factory=lambda: lenskit_config().machine)
+    machine: str | None = Field(default_factory=_lk_machine)
     """
     The machine on which the task was run.
 
@@ -391,6 +395,8 @@ class Task(BaseModel, extra="allow"):
 
 
 def measure_power(scope: Literal["system", "cpu", "gpu"], duration: float):
+    from lenskit.config import lenskit_config
+
     time_ms = int(duration * 1000)
 
     config = lenskit_config()
