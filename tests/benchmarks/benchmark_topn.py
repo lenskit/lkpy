@@ -15,8 +15,8 @@ import torch
 from pytest import mark
 
 from lenskit._accel import data
+from lenskit.data.types import argtopn
 from lenskit.parallel import ensure_parallel_init
-from lenskit.stats import argtopn
 
 
 @mark.benchmark(group="all")
