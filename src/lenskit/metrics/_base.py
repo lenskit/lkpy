@@ -50,6 +50,11 @@ class Metric(ABC):
     def measure_list(self, output: ItemList, test: ItemList, /) -> object:
         """
         Compute measurements for a single list.
+
+        Returns:
+            A per-list measurement result:
+            - float: when there's one value per list.
+            - dict[str, float]: when multiple related values are produced.
         """
         raise NotImplementedError()
 
@@ -83,6 +88,9 @@ class ListMetric(Metric):
 
     For prediction metrics, this is *macro-averaging*.
 
+    Default behavior:
+        Implements `summarize()` by averaging per-list results (mean, ignoring NaNs).
+
     Stability:
         Full
     """
@@ -110,12 +118,6 @@ class ListMetric(Metric):
         return metric
 
     def summarize(self, values: list[object] | np.ndarray | pa.Array | pa.ChunkedArray, /) -> float:
-        """
-        Aggregarte per-list metric values by computing their mean, ignoring NaNs.
-
-        Returns:
-            A single numeric summary (float).
-        """
         if isinstance(values, (pa.Array, pa.ChunkedArray)):
             values = values.to_numpy()
         elif not isinstance(values, np.ndarray):
@@ -146,6 +148,7 @@ class GlobalMetric(Metric):
 class DecomposedMetric(Metric):
     """
     Deprecated base class for decomposed metrics.
+
     .. deprecated:: 2025.4
         This class is deprecated and its functionality has been moved to :class:`Metric`.
         It is scheduled for removal in 2026.
