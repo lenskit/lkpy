@@ -146,6 +146,8 @@ skip = ["*-musllinux_i686"]
 # configure UV sources
 [tool.uv]
 conflicts = [[{ group = "cpu" }, { group = "gpu" }]]
+# temporarily disable higher Torch due to sync problem
+constraint-dependencies = ["torch<2.7.1"]
 
 [tool.uv.sources]
 torch = [
@@ -154,13 +156,15 @@ torch = [
 ]
 
 [[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
+name = "pytorch-gpu"
+# url = "https://pypi.lenskit.org/torch/cu126"
+url = "https://download.pytorch.org/whl/cu126/"
 explicit = true
 
 [[tool.uv.index]]
-name = "pytorch-gpu"
-url = "https://download.pytorch.org/whl/cu126"
+name = "pytorch-cpu"
+# url = "https://pypi.lenskit.org/torch/cpu"
+url = "https://download.pytorch.org/whl/cpu/"
 explicit = true
 
 # dev tool configuration

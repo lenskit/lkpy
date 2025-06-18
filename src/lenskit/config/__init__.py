@@ -11,6 +11,7 @@ LensKit general configuration
 from __future__ import annotations
 
 import warnings
+from os import PathLike
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -18,6 +19,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict, TomlConfigSettin
 from typing_extensions import Any, TypedDict, TypeVar, overload
 
 from lenskit.diagnostics import ConfigWarning
+from lenskit.logging import get_logger
 from lenskit.random import init_global_rng
 
 __all__ = [
@@ -31,6 +33,7 @@ __all__ = [
 ]
 
 SettingsClass = TypeVar("SettingsClass", bound="LenskitSettings", default="LenskitSettings")
+_log = get_logger(__name__)
 _settings: LenskitSettings | None = None
 
 
@@ -227,3 +230,39 @@ def configure(
             init_global_rng(settings.random.seed)
 
     return settings
+
+
+def locate_configuration_root(
+    *,
+    cwd: Path | str | PathLike[str] | None = None,
+    abort_at_pyproject: bool = True,
+    abort_at_gitroot: bool = True,
+) -> Path | None:
+    """
+    Search for a configuration root containing a ``lenskit.toml`` file.
+
+    This searches for a ``lenskit.toml`` file, beginning in the current working
+    directory (or the alternate ``cwd`` if provided), and searching upward until
+    one is found.  Search stops if a ``pyproject.toml`` file or ``.git``
+    directory is found without encountering ``lenskit.toml``.
+    """
+
+    if cwd is None:
+        cwd = Path()
+    elif not isinstance(cwd, Path):
+        cwd = Path(cwd)
+
+    log = _log.bind(cwd=str(cwd))
+    log.debug("searching for lenskit.toml")
+    while cwd is not None:
+        log.debug("checking if lenskit.toml exists", dir=str(cwd))
+        if (cwd / "lenskit.toml").exists():
+            return cwd
+
+        if abort_at_pyproject and (cwd / "pyproject.toml").exists():
+            break
+
+        if abort_at_gitroot and (cwd / ".git").exists():
+            break
+
+        cwd = cwd.parent
