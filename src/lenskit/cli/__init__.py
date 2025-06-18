@@ -4,6 +4,7 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import os
 import sys
 from importlib.metadata import entry_points
 from pathlib import Path
@@ -58,7 +59,10 @@ def lenskit(verbosity: int, project_root: Path | None):
     lc.apply()
 
     if project_root is None:
-        project_root = locate_configuration_root()
+        if pr := os.environ.get("LK_PROJECT_ROOT"):
+            project_root = Path(pr)
+        else:
+            project_root = locate_configuration_root()
 
     configure(cfg_dir=project_root)
 
