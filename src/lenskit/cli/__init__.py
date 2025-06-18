@@ -4,6 +4,7 @@
 # Licensed under the MIT license, see LICENSE.md for details.
 # SPDX-License-Identifier: MIT
 
+import os
 import sys
 from importlib.metadata import entry_points
 from pathlib import Path
@@ -12,6 +13,7 @@ import click
 import numpy as np
 
 from lenskit import __version__, configure
+from lenskit.config import locate_configuration_root
 from lenskit.logging import LoggingConfig, console, get_logger
 
 __all__ = ["lenskit", "main", "version"]
@@ -55,6 +57,12 @@ def lenskit(verbosity: int, project_root: Path | None):
     if verbosity:
         lc.set_verbose(verbosity)
     lc.apply()
+
+    if project_root is None:
+        if pr := os.environ.get("LK_PROJECT_ROOT"):
+            project_root = Path(pr)
+        else:
+            project_root = locate_configuration_root()
 
     configure(cfg_dir=project_root)
 
