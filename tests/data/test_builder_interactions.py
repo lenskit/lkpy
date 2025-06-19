@@ -14,7 +14,7 @@ import pyarrow as pa
 from pytest import approx, mark, raises, warns
 
 from lenskit.data import Dataset, DatasetBuilder
-from lenskit.data.schema import AllowableTroolean
+from lenskit.data.schema import RepeatPolicy
 from lenskit.diagnostics import DataError, DataWarning
 
 
@@ -238,8 +238,7 @@ def test_add_repeated_interactions():
 
 def test_add_interactions_forbidden_repeat():
     dsb = DatasetBuilder()
-    dsb.add_relationship_class("click", ["user", "item"], allow_repeats=False)
-
+    dsb.add_relationship_class("click", ["user", "item"], repeats="forbid")
     with raises(DataError, match="repeated"):
         dsb.add_interactions(
             "click",
@@ -252,6 +251,7 @@ def test_add_interactions_forbidden_repeat():
             ),
             missing="insert",
         )
+        dsb.build()
 
 
 def test_add_auto_entities():
@@ -270,8 +270,9 @@ def test_add_auto_entities():
             missing="insert",
         )
 
+    dsb.build()
     rsc = dsb.relationship_classes()["click"]
-    assert rsc.repeats == AllowableTroolean.PRESENT
+    assert rsc.repeats == RepeatPolicy.PRESENT
     assert rsc.entity_class_names == ["user", "item"]
 
 
