@@ -61,12 +61,10 @@ def check_name(name: str) -> None:
 
 class RepeatPolicy(Enum):
     """
-    UPDATE NEEDED
-    Three-way enumeration for storing both whether a feature is allowed and is
-    used.  For convenience, in serialized data or configuration files these
-    values may be specified either as strings or as booleans, in which case
-    ``False`` is :attr:`FORBIDDEN` and ``True`` is :attr:`ALLOWED`.  They are
-    always serialized as strings.
+    Stores both whether a feature is allowed and is used in the case of having repeats.
+    For convenience, in serialized data or configuration files these values may be specified
+    either as strings or as booleans, in which case ``False`` is :attr:`FORBIDDEN` and
+    ``True`` is :attr:`ALLOWED`. They are always serialized as strings.
     """
 
     FORBIDDEN = "forbidden"
@@ -83,7 +81,7 @@ class RepeatPolicy(Enum):
     """
     REMOVE = "remove"
     """
-
+    The feature is removed.
     """
 
     @property
@@ -238,7 +236,7 @@ class RelationshipSchema(BaseModel):
     """
     remove_duplicates: bool = False
     """
-    ADD ME
+    Whether this relationship should remove exact duplicates.
     """
 
     @property
