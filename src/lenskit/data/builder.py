@@ -587,41 +587,52 @@ class DatasetBuilder:
 
         self._tables[cls] = tbl
 
-        def binarize_ratings(
-            self,
-            cls: str = "rating",
-            min_pos_rating: float = 1.0,
-            method: str = "remove",
+    def binarize_ratings(
+        self,
+        cls: str = "rating",
+        min_pos_rating: float = 3.0,
+        method: str = "remove",
+    ):
+        """
+        Binarize the ratings in a relationship class.
+
+        Args:
+            cls : The relationship class to binarize (default: "rating").
+            min_pos_rating : Minimum rating to consider as positive.
+            method: 'zero' to set ratings to 0/1, 'remove' to drop rows below min_rating.
+        """
+        tbl = self._tables.get(cls, None)
+        if tbl is None:
+            raise ValueError(f"relationship class {cls} is empty")
+
+        if "rating" not in tbl.column_names:
+            raise ValueError(f"relationship class {cls} does not have a 'rating' column")
+
+        min_rating: pa.scalar = pa.scalar(min_pos_rating, tbl.column("rating").type)
+
+        if not (
+            pc.min(tbl.column("rating")).as_py()
+            <= min_pos_rating
+            <= pc.max(tbl.column("rating")).as_py()
         ):
-            """
-            Binarize the ratings in a relationship class.
+            raise ValueError(
+                f"min_pos_rating {min_pos_rating} is not in the range of ratings "
+                f"[{pc.min(tbl.column('rating')).as_py()}, {pc.max(tbl.column('rating')).as_py()}]"
+            )
 
-            Args:
-                cls : The relationship class to binarize (default: "rating").
-                min_rating : Minimum rating to consider as positive.
-                method: 'zero' to set ratings to 0/1, 'remove' to drop rows below min_rating.
-            """
-            tbl = self._tables.get(cls, None)
-            if tbl is None:
-                raise ValueError(f"relationship class {cls} is empty")
+        if method == "zero":
+            # Set rating to 1 if >= min_rating, else 0
+            mask = pc.greater_equal(tbl.column("rating"), min_rating)
+            binarized = pc.cast(mask, pa.float32())
+            tbl = tbl.set_column(tbl.schema.get_field_index("rating"), "rating", binarized)
+        elif method == "remove":
+            # Keep only rows where rating >= min_rating
+            mask = pc.greater_equal(tbl.column("rating"), min_rating)
+            tbl = tbl.filter(mask)
+        else:
+            raise ValueError("method must be 'zero' or 'remove'")
 
-            if "rating" not in tbl.column_names:
-                raise ValueError(f"relationship class {cls} does not have a 'rating' column")
-
-            min_rating: pa.scalar = pa.scalar(min_pos_rating, tbl.column("rating").type)
-            if method == "zero":
-                # Set rating to 1 if >= min_rating, else 0
-                mask = pc.greater_equal(tbl.column("rating"), min_rating)
-                binarized = pc.cast(mask, pa.float32())
-                tbl = tbl.set_column(tbl.schema.get_field_index("rating"), "rating", binarized)
-            elif method == "remove":
-                # Keep only rows where rating >= min_rating
-                mask = pc.greater_equal(tbl.column("rating"), min_rating)
-                tbl = tbl.filter(mask)
-            else:
-                raise ValueError("method must be 'zero' or 'remove'")
-
-            self._tables[cls] = tbl
+        self._tables[cls] = tbl
 
     def clear_relationships(self, cls: str):
         """
