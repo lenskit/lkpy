@@ -17,6 +17,7 @@ import pandas as pd
 from lenskit.data import ItemList, ItemListCollection
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import item_progress
+from lenskit.metrics._accum import MetricAccumulator
 
 from ._base import DecomposedMetric, GlobalMetric, ListMetric, Metric, MetricFunction
 
@@ -243,58 +244,29 @@ class RunAnalysis:
         index = pd.MultiIndex.from_tuples(outputs.keys())
         index.names = list(outputs.key_fields)
 
-        lms = [m for m in self.metrics if m.is_listwise or m.is_decomposed]
-        gms = [m for m in self.metrics if m.is_global]
-        list_results = pd.DataFrame({m.label: np.nan for m in lms}, index=index)
-        list_intermediates = {m.label: [] for m in self.metrics if m.is_decomposed}
+        accum = MetricAccumulator()
 
-        n = len(outputs)
-        _log.debug("computing %d listwise metrics for %d output lists", len(lms), n)
+        for mwrap in self.metrics:
+            accum.add_metric(mwrap.metric)
+
         no_test_count = 0
+        n = len(outputs)
         with item_progress("Measuring", n) as pb:
-            for i, (key, out) in enumerate(outputs):
+            for key, out in outputs:
                 list_test = test.lookup_projected(key)
                 if out is None:
                     pass
                 elif list_test is None:
                     no_test_count += 1
                 else:
-                    l_row: list[float | None] = []
-                    for m in lms:
-                        mv = None
-                        if m.is_decomposed:
-                            assert isinstance(m.metric, DecomposedMetric)
-                            val = m.metric.compute_list_data(out, list_test)
-                            list_intermediates[m.label].append(val)
-                            mv = m.metric.extract_list_metric(val)
-                        if mv is None and m.is_listwise:
-                            mv = m.measure_list(out, list_test)
-                        l_row.append(mv)
-                    list_results.iloc[i] = l_row  # type: ignore
+                    accum.measure_list(out, list_test, **dict(zip(outputs.key_fields, key)))
                 pb.update()
 
         if no_test_count:
             _log.warning("could not find test data for %d lists", no_test_count)
 
-        _log.debug("computing %d global metrics for %d output lists", len(gms), n)
-        global_results = pd.Series(
-            {
-                m.label: (
-                    m.metric.global_aggregate(list_intermediates[m.label])
-                    if m.is_decomposed
-                    else m.measure_run(outputs, test)
-                )
-                for m in self.metrics
-                if m.is_global or m.is_decomposed
-            },
-            dtype=np.float64,
-        )
-
-        return RunAnalysisResult(
-            list_results,
-            global_results,
-            {m.label: m.default for m in self.metrics if m.default is not None},
-        )
+        defaults = {m.label: m.default for m in self.metrics if m.default is not None}
+        return accum.to_result(defaults)
 
     def _validate_setup(self):
         seen = set()
