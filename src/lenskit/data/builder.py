@@ -608,8 +608,8 @@ class DatasetBuilder:
         if "rating" not in tbl.column_names:
             raise ValueError(f"relationship class {cls} does not have a 'rating' column")
 
-        min_rating: pa.scalar = pa.scalar(min_pos_rating, tbl.column("rating").type)
-
+        min_rating = pa.scalar(min_pos_rating, tbl.column("rating").type)
+        rating_col = tbl.column("rating")
         if not (
             pc.min(tbl.column("rating")).as_py()
             <= min_pos_rating
@@ -623,7 +623,7 @@ class DatasetBuilder:
         if method == "zero":
             # Set rating to 1 if >= min_rating, else 0
             mask = pc.greater_equal(tbl.column("rating"), min_rating)
-            binarized = pc.cast(mask, pa.float32())
+            binarized = pc.cast(mask, rating_col.type)
             tbl = tbl.set_column(tbl.schema.get_field_index("rating"), "rating", binarized)
         elif method == "remove":
             # Keep only rows where rating >= min_rating
