@@ -37,9 +37,9 @@ KeySchema: TypeAlias = type[K] | tuple[str, ...]
 
 class UserIDKey(NamedTuple):
     """
-    Key type for user IDs.  This is used for :class:`item list collections
-    <ItemListCollection>` that are keyed by user ID, a common setup for
-    recommendation runs and
+    Key type for user IDs.  This is used for :ref:`item list collections
+    <item-list-collections>` that are keyed by user ID, a common setup for
+    recommendation runs and test data.
     """
 
     user_id: ID
