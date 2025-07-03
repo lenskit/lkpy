@@ -45,6 +45,7 @@ class ItemListCollection(Generic[KL], ABC):
     """
     A collection of item lists.  This protocol defines read access to the
     collection; see :class:`ItemListCollector` for the ability to add new lists.
+    See :ref:`item-list-collections` for an introduction to using this class.
 
     An item list collection consists of a sequence of item lists with associated
     *keys* following a fixed schema.  Item list collections support iteration
