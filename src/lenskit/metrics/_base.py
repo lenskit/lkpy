@@ -52,9 +52,9 @@ class Metric(ABC):
         Compute measurements for a single list.
 
         Returns:
-            A per-list measurement result:
-            - float: when there's one value per list.
-            - dict[str, float]: when multiple related values are produced.
+            Measurement result, typically a float or a dictionary of named metrics.
+            May also be a tuple, list, or array if the metric produces structured results
+            (e.g., multi-part metrics like RMSE).
         """
         raise NotImplementedError()
 

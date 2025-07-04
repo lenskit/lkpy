@@ -53,7 +53,7 @@ class MetricAccumulator:
         for metric in self._metrics:
             result = metric.measure_list(output, test)
             extracted = metric.extract_list_metrics(result)
-            record.update(normalize_metrics(metric.label, extracted))
+            record.update(to_metric_dict(metric.label, extracted))
             intermediate[metric.label] = result
 
         self._results.append(record)
@@ -84,7 +84,7 @@ class MetricAccumulator:
                 _log.warning("No intermediate values for metric '%s'; skipping summary.", label)
                 continue
             result = metric.summarize(values)
-            summaries.update(normalize_metrics(label, result))
+            summaries.update(to_metric_dict(label, result))
         return summaries
 
     def to_result(self, defaults: dict[str, float]):
@@ -110,7 +110,7 @@ class MetricAccumulator:
         )
 
 
-def normalize_metrics(label: str, value: float | dict[str, float] | None) -> dict[str, float]:
+def to_metric_dict(label: str, value: float | dict[str, float] | None) -> dict[str, float]:
     """
     Normalize a metric result into a flat dictionary.
     """
