@@ -241,13 +241,11 @@ class RunAnalysis:
         Measure a set of outputs against a set of test data.
         """
         self._validate_setup()
-        index = pd.MultiIndex.from_tuples(outputs.keys())
-        index.names = list(outputs.key_fields)
 
         accum = MetricAccumulator()
 
         for mwrap in self.metrics:
-            accum.add_metric(mwrap.metric)
+            accum.add_metric(mwrap.metric, mwrap.label, mwrap.default)
 
         no_test_count = 0
         n = len(outputs)
@@ -259,14 +257,32 @@ class RunAnalysis:
                 elif list_test is None:
                     no_test_count += 1
                 else:
-                    accum.measure_list(out, list_test, **dict(zip(outputs.key_fields, key)))
+                    if isinstance(key, tuple):
+                        key_dict = dict(zip(outputs.key_fields, key))
+                    else:
+                        key_dict = {outputs.key_fields[0]: key}
+
+                    accum.measure_list(out, list_test, **key_dict)
                 pb.update()
 
         if no_test_count:
             _log.warning("could not find test data for %d lists", no_test_count)
 
-        defaults = {m.label: m.default for m in self.metrics if m.default is not None}
-        return accum.to_result(defaults)
+        global_metrics = {}
+        for mwrap in self.metrics:
+            if mwrap.is_global:
+                try:
+                    global_metrics[mwrap.label] = mwrap.measure_run(outputs, test)
+                except Exception as e:
+                    _log.warning(f"Error computing global metric {mwrap.label}: {e}")
+
+        result = accum.to_result()
+
+        if global_metrics:
+            global_series = pd.Series(global_metrics, dtype=np.float64)
+            result._global_metrics = pd.concat([result._global_metrics, global_series])
+
+        return result
 
     def _validate_setup(self):
         seen = set()

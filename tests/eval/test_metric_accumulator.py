@@ -14,39 +14,67 @@ from pytest import approx, mark, raises
 from lenskit.basic import PopScorer
 from lenskit.data import ItemList
 from lenskit.metrics import NDCG, MetricAccumulator, Recall
-from lenskit.metrics._accum import normalize_metrics
+from lenskit.metrics._accum import to_metric_dict
+from lenskit.metrics._base import GlobalMetric
+from lenskit.metrics.basic import ListLength
 from lenskit.splitting import split_temporal_fraction
 
 _log = logging.getLogger(__name__)
 
 
-def test_normalize_metrics():
+def test_accumulator_initial_state():
+    acc = MetricAccumulator()
+    assert acc._metrics == []
+    assert acc._labels == []
+    assert acc._defaults == {}
+    assert acc._results == []
+    assert acc._intermediates == []
+
+
+def test_add_metric_duplicate_label_raises():
+    acc = MetricAccumulator()
+    acc.add_metric(ListLength(), "length")
+    with raises(ValueError):
+        acc.add_metric(ListLength(), "length")
+
+
+def test_basic_metric_flow():
+    acc = MetricAccumulator()
+    acc.add_metric(ListLength())
+
+    acc.measure_list(ItemList([1, 2, 3], user=["u1"] * 3), ItemList([2, 3]), user="u1")
+    acc.measure_list(ItemList([4, 5], user=["u2"] * 2), ItemList([5]), user="u2")
+
+    result = acc.to_result()
+    list_metrics = result.list_metrics()
+    summary = result.global_metrics()
+
+    assert isinstance(list_metrics, pd.DataFrame)
+    assert len(list_metrics) == 2
+    assert "N" in list_metrics.columns
+    assert set(list_metrics["N"]) == {2.0, 3.0}
+
+    assert isinstance(summary, pd.Series)
+    assert "N" in summary
+    assert summary["N"] == 2.5
+
+
+def test_metric_dict():
     # test None input returns empty dict
-    assert normalize_metrics("metric", None) == {}
+    assert to_metric_dict("metric", None) == {}
 
     # test simple float returns dict with label as key
-    assert normalize_metrics("metric", 1.23) == {"metric": 1.23}
-    assert normalize_metrics("metric", 2) == {"metric": 2.0}
+    assert to_metric_dict("metric", 1.23) == {"metric": 1.23}
+    assert to_metric_dict("metric", 2) == {"metric": 2.0}
 
     # test nested dict returns flattened dict
     nested = {"a": 0.5, "b": 0.25}
     expected = {"metric.a": 0.5, "metric.b": 0.25}
-    assert normalize_metrics("metric", nested) == expected
+    assert to_metric_dict("metric", nested) == expected
 
     # test unsupported type raises TypeError
     with raises(TypeError):
-        normalize_metrics("metric", ["a", 0.5])
-
-
-def test_empty_accumulator():
-    # test if default value is retuned on an empty accumulator
-    acc = MetricAccumulator()
-    defaults = {"metric": 0.0}
-
-    result = acc.to_result(defaults=defaults)
-
-    assert result.list_metrics().empty
-    assert result.global_metrics()["metric"] == 0.0
+        to_metric_dict("metric", ["a", 0.5])
 
 
 def test_unmeasured_metrics():
@@ -55,7 +83,7 @@ def test_unmeasured_metrics():
     acc.add_metric(Recall(5))
     acc.add_metric(NDCG(5))
 
-    result = acc.to_result(defaults={"Recall@5": 0.0, "NDCG@5": 0.0})
+    result = acc.to_result()
 
     assert result.list_metrics().empty
     assert result.global_metrics()["Recall@5"] == 0.0
@@ -100,17 +128,9 @@ def test_metric_accum(ml_ds):
 
         acc.measure_list(recs_il, truth_il, user=user.user_id)
 
-    defaults = {
-        "Recall@10": 0.0,
-        "NDCG@10": 0.0,
-    }
-
-    result = acc.to_result(defaults=defaults)
+    result = acc.to_result()
     list_metrics = result.list_metrics()
     summary = result.global_metrics()
-
-    _log.info("First 5 rows of per-list metrics:\n%s", list_metrics.head())
-    _log.info("Summary metrics:\n%s", summary)
 
     # per-list metrics
     assert isinstance(list_metrics, pd.DataFrame)
