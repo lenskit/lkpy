@@ -13,9 +13,8 @@ from pytest import approx, mark, raises
 
 from lenskit.basic import PopScorer
 from lenskit.data import ItemList
-from lenskit.metrics import NDCG, MetricAccumulator, Recall
-from lenskit.metrics._accum import to_metric_dict
-from lenskit.metrics._base import GlobalMetric
+from lenskit.metrics import NDCG, Recall
+from lenskit.metrics._accum import MetricAccumulator, to_result
 from lenskit.metrics.basic import ListLength
 from lenskit.splitting import split_temporal_fraction
 
@@ -24,18 +23,22 @@ _log = logging.getLogger(__name__)
 
 def test_accumulator_initial_state():
     acc = MetricAccumulator()
-    assert acc._metrics == []
-    assert acc._labels == []
-    assert acc._defaults == {}
-    assert acc._results == []
-    assert acc._intermediates == []
+    assert acc.metrics == []
+    assert acc.list_metrics().empty
+    assert acc.summary_metrics().empty
 
 
-def test_add_metric_duplicate_label_raises():
+def test_unmeasured_metrics():
     acc = MetricAccumulator()
-    acc.add_metric(ListLength(), "length")
-    with raises(ValueError):
-        acc.add_metric(ListLength(), "length")
+    acc.add_metric(Recall(5))
+    acc.add_metric(NDCG(5))
+
+    df = acc.list_metrics()
+    summary = acc.summary_metrics()
+
+    assert df.empty
+    assert approx(summary.loc["Recall@5", "mean"]) == 0.0
+    assert approx(summary.loc["NDCG@5", "mean"]) == 0.0
 
 
 def test_basic_metric_flow():
@@ -45,70 +48,20 @@ def test_basic_metric_flow():
     acc.measure_list(ItemList([1, 2, 3], user=["u1"] * 3), ItemList([2, 3]), user="u1")
     acc.measure_list(ItemList([4, 5], user=["u2"] * 2), ItemList([5]), user="u2")
 
-    result = acc.to_result()
-    list_metrics = result.list_metrics()
-    summary = result.global_metrics()
+    list_metrics = acc.list_metrics()
+    summary = acc.summary_metrics()
 
     assert isinstance(list_metrics, pd.DataFrame)
     assert len(list_metrics) == 2
     assert "N" in list_metrics.columns
     assert set(list_metrics["N"]) == {2.0, 3.0}
 
-    assert isinstance(summary, pd.Series)
-    assert "N" in summary
-    assert summary["N"] == 2.5
-
-
-def test_metric_dict():
-    # test None input returns empty dict
-    assert to_metric_dict("metric", None) == {}
-
-    # test simple float returns dict with label as key
-    assert to_metric_dict("metric", 1.23) == {"metric": 1.23}
-    assert to_metric_dict("metric", 2) == {"metric": 2.0}
-
-    # test nested dict returns flattened dict
-    nested = {"a": 0.5, "b": 0.25}
-    expected = {"metric.a": 0.5, "metric.b": 0.25}
-    assert to_metric_dict("metric", nested) == expected
-
-    # test unsupported type raises TypeError
-    with raises(TypeError):
-        to_metric_dict("metric", ["a", 0.5])
-
-
-def test_unmeasured_metrics():
-    # test for registered metrics but no measurements
-    acc = MetricAccumulator()
-    acc.add_metric(Recall(5))
-    acc.add_metric(NDCG(5))
-
-    result = acc.to_result()
-
-    assert result.list_metrics().empty
-    assert result.global_metrics()["Recall@5"] == 0.0
-    assert result.global_metrics()["NDCG@5"] == 0.0
-
-
-def test_metadata_keys_recorded():
-    # test to determine if extra keys are recorded
-    acc = MetricAccumulator()
-    acc.add_metric(Recall(1))
-
-    recs = ItemList([1], user=["u1"], ordered=True)
-    truth = ItemList([1], user=["u1"])
-
-    acc.measure_list(recs, truth, user="u1", session=1)
-
-    df = acc.list_metrics()
-    assert "user" in df.columns
-    assert "session" in df.columns
-    assert df.loc[0, "user"] == "u1"
-    assert df.loc[0, "session"] == 1
+    assert isinstance(summary, pd.DataFrame)
+    assert "mean" in summary.columns
+    assert approx(summary.loc["N", "mean"]) == 2.5
 
 
 def test_metric_accum(ml_ds):
-    # test on ml ds, using metrics: recall and ndcg
     split = split_temporal_fraction(ml_ds, 0.2, filter_test_users=True)
 
     scorer = PopScorer()
@@ -128,9 +81,8 @@ def test_metric_accum(ml_ds):
 
         acc.measure_list(recs_il, truth_il, user=user.user_id)
 
-    result = acc.to_result()
-    list_metrics = result.list_metrics()
-    summary = result.global_metrics()
+    list_metrics = acc.list_metrics()
+    summary = acc.summary_metrics()
 
     # per-list metrics
     assert isinstance(list_metrics, pd.DataFrame)
@@ -141,7 +93,41 @@ def test_metric_accum(ml_ds):
         assert np.all(list_metrics[metric] <= 1)
 
     # summary metrics
-    assert isinstance(summary, pd.Series)
+    assert isinstance(summary, pd.DataFrame)
     for metric in ["Recall@10", "NDCG@10"]:
-        assert isinstance(summary[metric], float)
-        assert 0 <= summary[metric] <= 1
+        assert metric in summary.index
+        val = summary.loc[metric]
+        assert 0 <= val["mean"] <= 1
+
+
+def test_to_result_conversion():
+    acc = MetricAccumulator()
+    acc.add_metric(Recall(5))
+    acc.add_metric(NDCG(5))
+
+    recs1 = ItemList([1, 2, 3], user=["u1"] * 3, ordered=True)
+    truth1 = ItemList([2, 3])
+    recs2 = ItemList([4, 5], user=["u2"] * 2, ordered=True)
+    truth2 = ItemList([5])
+
+    acc.measure_list(recs1, truth1, user="u1")
+    acc.measure_list(recs2, truth2, user="u2")
+
+    result = to_result(acc)
+
+    list_results = result.list_metrics()
+    assert isinstance(list_results, pd.DataFrame)
+
+    g = result.global_metrics()
+    assert isinstance(g, pd.Series)
+
+    summary_df = result.list_summary()
+    assert isinstance(summary_df, pd.DataFrame)
+
+    for metric_name in ["Recall@5", "NDCG@5"]:
+        assert metric_name in list_results.columns
+        assert metric_name in g.index
+        assert metric_name in summary_df.index
+
+        assert 0.0 <= g[metric_name] <= 1.0
+        assert 0.0 <= summary_df.loc[metric_name, "mean"] <= 1.0

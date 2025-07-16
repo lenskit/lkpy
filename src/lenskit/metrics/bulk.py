@@ -8,65 +8,20 @@ from __future__ import annotations
 
 import logging
 import warnings
-from dataclasses import dataclass
-from typing import Callable, TypeVar
+from typing import TypeVar
 
-import numpy as np
 import pandas as pd
 
-from lenskit.data import ItemList, ItemListCollection
+from lenskit.data import ItemListCollection
 from lenskit.diagnostics import DataWarning
 from lenskit.logging import item_progress
 from lenskit.metrics._accum import MetricAccumulator
 
-from ._base import DecomposedMetric, GlobalMetric, ListMetric, Metric, MetricFunction
+from ._base import Metric, MetricFunction
 
 _log = logging.getLogger(__name__)
 K1 = TypeVar("K1", bound=tuple)
 K2 = TypeVar("K2", bound=tuple)
-
-
-@dataclass(frozen=True)
-class MetricWrapper:
-    """
-    Internal class for storing metrics.
-
-    Stability:
-        Internal
-    """
-
-    metric: Metric | MetricFunction
-    label: str
-    default: float | None = None
-
-    @property
-    def is_listwise(self) -> bool:
-        "Check if this metric is listwise."
-        return isinstance(self.metric, (ListMetric, Callable))
-
-    @property
-    def is_global(self) -> bool:
-        "Check if this metric is global."
-        return isinstance(self.metric, GlobalMetric)
-
-    @property
-    def is_decomposed(self) -> bool:
-        "Check if this metric is decomposed."
-        return isinstance(self.metric, DecomposedMetric)
-
-    def measure_list(self, list: ItemList, test: ItemList) -> float:
-        if isinstance(self.metric, ListMetric):
-            return self.metric.measure_list(list, test)
-        elif isinstance(self.metric, Callable):
-            return self.metric(list, test)
-        else:
-            raise TypeError(f"metric {self.metric} does not support list measurement")
-
-    def measure_run(self, run: ItemListCollection, test: ItemListCollection) -> float:
-        if isinstance(self.metric, GlobalMetric):
-            return self.metric.measure_run(run, test)
-        else:
-            raise TypeError(f"metric {self.metric} does not support global measurement")
 
 
 class RunAnalysisResult:
@@ -154,37 +109,12 @@ class RunAnalysisResult:
         self._global_metrics = pd.concat([self._global_metrics, other._global_metrics])
 
 
-def _wrap_metric(
-    m: Metric | MetricFunction | type[Metric],
-    label: str | None = None,
-    default: float | None = None,
-) -> MetricWrapper:
-    if isinstance(m, type):
-        m = m()
-
-    if label is None:
-        if isinstance(m, Metric):
-            wl = m.label
-        else:
-            wl = m.__name__  # type: ignore
-    else:
-        wl = label
-
-    if default is None:
-        if isinstance(m, ListMetric):
-            default = m.default
-        else:
-            default = 0.0
-
-        if default is not None and not isinstance(default, (float, int, np.floating, np.integer)):
-            raise TypeError(f"metric {m} has unsupported default {default}")
-
-    return MetricWrapper(m, wl, default)  # type: ignore
-
-
 class RunAnalysis:
     """
     Compute metrics over a collection of item lists composing a run.
+
+    This class now uses :class:`MetricAccumulator` internally to separate
+    accumulation from looping, while maintaining the same external interface.
 
     Args:
         metrics:
@@ -195,11 +125,10 @@ class RunAnalysis:
         Caller
     """
 
-    metrics: list[MetricWrapper]
-    "The list of metrics to compute."
-
     def __init__(self, *metrics: Metric):
-        self.metrics = [_wrap_metric(m) for m in metrics]
+        self._accumulator = MetricAccumulator()
+        for metric in metrics:
+            self._accumulator.add_metric(metric)
 
     def add_metric(
         self,
@@ -221,7 +150,17 @@ class RunAnalysis:
                 recommendations. If unset, obtains from the metric's ``default``
                 attribute (if specified), or 0.0.
         """
-        self.metrics.append(_wrap_metric(metric, label, default))
+        self._accumulator.add_metric(metric, label, default)
+
+    @property
+    def metrics(self) -> list:
+        """
+        The list of metrics to compute.
+
+        .. deprecated:: 2025.4
+            Access metrics through the accumulator interface instead.
+        """
+        return self._accumulator.metrics
 
     def compute(
         self, outputs: ItemListCollection[K1], test: ItemListCollection[K2]
@@ -239,16 +178,16 @@ class RunAnalysis:
     ) -> RunAnalysisResult:
         """
         Measure a set of outputs against a set of test data.
+
+        This method now uses the MetricAccumulator internally, which provides
+        better separation of concerns and supports external evaluation loops.
         """
-        self._validate_setup()
+        self._accumulator._validate_setup()
 
-        accum = MetricAccumulator()
-
-        for mwrap in self.metrics:
-            accum.add_metric(mwrap.metric, mwrap.label, mwrap.default)
+        n = len(outputs)
+        _log.debug("measuring %d metrics for %d output lists", len(self._accumulator.metrics), n)
 
         no_test_count = 0
-        n = len(outputs)
         with item_progress("Measuring", n) as pb:
             for key, out in outputs:
                 list_test = test.lookup_projected(key)
@@ -257,37 +196,19 @@ class RunAnalysis:
                 elif list_test is None:
                     no_test_count += 1
                 else:
-                    if isinstance(key, tuple):
-                        key_dict = dict(zip(outputs.key_fields, key))
-                    else:
-                        key_dict = {outputs.key_fields[0]: key}
-
-                    accum.measure_list(out, list_test, **key_dict)
+                    key_kwargs = dict(zip(outputs.key_fields, key))
+                    self._accumulator.measure_list(out, list_test, **key_kwargs)
                 pb.update()
 
         if no_test_count:
             _log.warning("could not find test data for %d lists", no_test_count)
 
-        global_metrics = {}
-        for mwrap in self.metrics:
-            if mwrap.is_global:
-                try:
-                    global_metrics[mwrap.label] = mwrap.measure_run(outputs, test)
-                except Exception as e:
-                    _log.warning(f"Error computing global metric {mwrap.label}: {e}")
+        list_results = self._accumulator.list_metrics(fill_missing=False)
+        global_results = self._accumulator.summary_metrics()["mean"]
+        defaults = {
+            wrapper.label: wrapper.default
+            for wrapper in self._accumulator.metrics
+            if wrapper.default is not None
+        }
 
-        result = accum.to_result()
-
-        if global_metrics:
-            global_series = pd.Series(global_metrics, dtype=np.float64)
-            result._global_metrics = pd.concat([result._global_metrics, global_series])
-
-        return result
-
-    def _validate_setup(self):
-        seen = set()
-        for m in self.metrics:
-            lbl = m.label
-            if lbl in seen:
-                raise RuntimeError(f"duplicate metric: {lbl}")
-            seen.add(lbl)
+        return RunAnalysisResult(list_results, global_results, defaults)  # type: ignore

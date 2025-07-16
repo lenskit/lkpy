@@ -7,196 +7,295 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Callable, TypeVar
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 
 from lenskit.data import ItemList
-from lenskit.diagnostics import DataWarning
 
-from ._base import Metric, MetricFunction
+from ._base import DecomposedMetric, GlobalMetric, ListMetric, Metric, MetricFunction
 
 _log = logging.getLogger(__name__)
+K1 = TypeVar("K1", bound=tuple)
+K2 = TypeVar("K2", bound=tuple)
 
 
-def to_metric_dict(label: str, value: float | dict[str, float] | None) -> dict[str, float]:
+@dataclass(frozen=True)
+class MetricWrapper:
     """
-    Normalize a metric result into a flat dictionary.
+    Internal class for storing metrics with their configuration.
+
+    Stability:
+        Internal
     """
-    if value is None:
-        return {}
-    elif isinstance(value, (float, int, np.floating, np.integer)):
-        return {label: float(value)}
-    elif isinstance(value, dict):
-        return {f"{label}.{k}": float(v) for k, v in value.items()}
-    else:
-        raise TypeError(f"{label}: unsupported metric result type {type(value)}")
+
+    metric: Metric | MetricFunction
+    label: str
+    default: float | None = None
+
+    @property
+    def is_listwise(self) -> bool:
+        "Check if this metric is listwise."
+        return isinstance(self.metric, (ListMetric, Callable))
+
+    @property
+    def is_global(self) -> bool:
+        "Check if this metric is global."
+        return isinstance(self.metric, GlobalMetric)
+
+    @property
+    def is_decomposed(self) -> bool:
+        "Check if this metric is decomposed."
+        return isinstance(self.metric, DecomposedMetric)
+
+    def measure_list(self, list: ItemList, test: ItemList) -> float | dict[str, float]:
+        """Measure a single list and return metric result(s)."""
+        if isinstance(self.metric, ListMetric):
+            return self.metric.measure_list(list, test)
+        elif isinstance(self.metric, Callable):
+            return self.metric(list, test)
+        else:
+            raise TypeError(f"metric {self.metric} does not support list measurement")
+
+    def compute_list_data(self, list: ItemList, test: ItemList) -> Any:
+        """Compute intermediate data for a single list."""
+        if isinstance(self.metric, (DecomposedMetric, Metric)):
+            if hasattr(self.metric, "measure_list") and callable(
+                getattr(self.metric, "measure_list")
+            ):
+                return self.metric.measure_list(list, test)
+            else:
+                raise TypeError(f"metric {self.metric} does not support list data computation")
+        else:
+            raise TypeError(f"metric {self.metric} does not support list data computation")
+
+    def extract_list_metrics(self, data: Any) -> float | dict[str, float] | None:
+        """Extract per-list metrics from intermediate data."""
+        if isinstance(self.metric, (DecomposedMetric, Metric)):
+            # Use new unified interface if available, fall back to old
+            if hasattr(self.metric, "extract_list_metrics"):
+                return self.metric.extract_list_metrics(data)
+            else:
+                return data if isinstance(data, (float, dict)) else None
+        return None
+
+    def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray) -> float | dict[str, float]:
+        """Aggregate intermediate values into summary statistics."""
+        if isinstance(self.metric, (DecomposedMetric, Metric)):
+            if hasattr(self.metric, "summarize"):
+                return self.metric.summarize(values)
+            else:
+                return self._default_summarize(values)
+        else:
+            return self._default_summarize(values)
+
+    def _default_summarize(self, values) -> dict[str, float]:
+        if isinstance(values, (pa.Array, pa.ChunkedArray)):
+            values = values.to_pylist()
+        numeric_values = [v for v in values if v is not None]
+        if not numeric_values:
+            return {"mean": 0.0}
+        return {"mean": float(np.mean(numeric_values))}
 
 
 class MetricAccumulator:
     """
-    Handles metric registration, accumulation, and summary aggregation.
+    Accumulates metric measurements over multiple recommendation lists.
+
+    This class seperates metric accumulation from the evaluation loop.
+
+    Stability:
+        Caller
     """
 
     def __init__(self):
-        self._metrics: list[Metric | MetricFunction] = []
-        self._labels: list[str] = []
-        self._defaults: dict[str, float] = {}
-        self._results: list[dict[str, float]] = []
-        self._intermediates: list[dict[str, Any]] = []
+        self.metrics: list[MetricWrapper] = []
+        self._list_data: dict[str, list[Any]] = {}
+        self._list_metrics: dict[str, list[float | dict[str, float] | None]] = {}
+        self._list_keys: list[tuple] = []
+        self._key_fields: list[str] = []
 
     def add_metric(
         self,
         metric: Metric | MetricFunction | type[Metric],
         label: str | None = None,
         default: float | None = None,
-    ) -> None:
+    ):
         """
-        Register a metric to be accumulated.
+        Add a metric to this accumulator.
 
         Args:
-            metric: An instance of a Metric subclass, a callable metric function,
-                    or a Metric class to instantiate.
-            label: The label to use for the metric's results. If unset, obtains
-                    from the metric.
-            default: The default value to use in aggregates when a user does not
-                    have recommendations. If unset, obtains from the metric's
-                    ``default`` attribute (if specified), or 0.0.
+            metric:
+                The metric to add.
+            label:
+                The label to use for the metric's results. If unset, obtains
+                from the metric.
+            default:
+                The default value to use when a user does not have
+                recommendations. If unset, obtains from the metric's ``default``
+                attribute (if specified), or 0.0.
         """
-        if isinstance(metric, type):
-            metric = metric()
+        wrapper = self._wrap_metric(metric, label, default)
+        self.metrics.append(wrapper)
+        self._list_data[wrapper.label] = []
+        self._list_metrics[wrapper.label] = []
 
-        # determine label
-        if label is None:
-            if isinstance(metric, Metric):
-                metric_label = metric.label
-            else:
-                metric_label = metric.__name__  # type: ignore
-        else:
-            metric_label = label
-
-        # determine default value
-        if default is None:
-            default = getattr(metric, "default", 0.0)
-
-        if not isinstance(default, (float, int, np.floating, np.integer)):
-            raise TypeError(f"metric {metric} has unsupported default {default}")
-
-        # check for duplicate labels
-        if metric_label in self._labels:
-            raise ValueError(f"Metric label '{metric_label}' already exists")
-
-        self._metrics.append(metric)
-        self._labels.append(metric_label)
-        self._defaults[metric_label] = float(default)
-
-    def measure_list(self, output: ItemList, test: ItemList, **keys) -> None:
+    def measure_list(self, output: ItemList, test: ItemList, **keys: Any):
         """
-        Measure and accumulate metrics for a single recommendation list.
+        Measure a single list and accumulate the results.
 
         Args:
-            output: The recommendation items for a user.
-            test: The ground-truth items for the same user.
-            keys: Identifier for the user (e.g., user_id).
+            output: The recommendation list to measure.
+            test: The ground truth test data.
+            **keys: Identifying keys for this list (e.g., user_id).
         """
-        record = dict(**keys)
-        intermediate = dict(**keys)
+        if not self._key_fields:
+            self._key_fields = list(keys.keys())
 
-        for metric, label in zip(self._metrics, self._labels):
+        key_tuple = tuple(keys.get(k) for k in self._key_fields)
+        self._list_keys.append(key_tuple)
+
+        for wrapper in self.metrics:
             try:
-                if isinstance(metric, Metric):
-                    result = metric.measure_list(output, test)
-                    metrics = metric.extract_list_metrics(result)
-                    record.update(to_metric_dict(label, metrics))
-                    intermediate[label] = result
-                elif callable(metric):
-                    result = metric(output, test)
-                    record.update(to_metric_dict(label, result))
-                    intermediate[label] = result
+                if wrapper.is_decomposed:
+                    data = wrapper.compute_list_data(output, test)
+                    self._list_data[wrapper.label].append(data)
+                    list_metric = wrapper.extract_list_metrics(data)
+                    self._list_metrics[wrapper.label].append(list_metric)
                 else:
-                    _log.warning(f"Metric {metric} is not a supported metric type")
+                    metric_value = wrapper.measure_list(output, test)
+                    self._list_data[wrapper.label].append(metric_value)
+                    self._list_metrics[wrapper.label].append(metric_value)
             except Exception as e:
-                _log.warning(f"Error computing metric {label}: {e}")
-                intermediate[label] = None
-
-        self._results.append(record)
-        self._intermediates.append(intermediate)
+                _log.warning(f"Error computing metric {wrapper.label}: {e}")
+                self._list_data[wrapper.label].append(None)
+                self._list_metrics[wrapper.label].append(None)
 
     def list_metrics(self, fill_missing: bool = True) -> pd.DataFrame:
         """
-        Get accumulated per-list metric results.
+        Get the per-list metric results as a DataFrame.
 
         Args:
-            fill_missing: If True, fills in missing values with each metric's
-            default value when available.
+            fill_missing: If True, fill missing values with metric defaults.
 
         Returns:
-            A DataFrame where each row corresponds to a user,
-            and columns correspond to metrics.
+            DataFrame with one row per list and one column per metric.
         """
-        df = pd.DataFrame(self._results)
-        if fill_missing and self._defaults:
-            df = df.fillna(self._defaults)
+        if not self._list_keys:
+            return pd.DataFrame()
+
+        if self._key_fields:
+            index = pd.MultiIndex.from_tuples(self._list_keys, names=self._key_fields)
+        else:
+            index = pd.Index(self._list_keys)
+
+        data = {}
+        for wrapper in self.metrics:
+            metric_results = self._list_metrics[wrapper.label]
+
+            if metric_results and isinstance(metric_results[0], dict):
+                for result in metric_results:
+                    if isinstance(result, dict):
+                        for sub_key, sub_value in result.items():
+                            col_name = f"{wrapper.label}.{sub_key}"
+                            if col_name not in data:
+                                data[col_name] = []
+                            data[col_name].append(sub_value)
+            else:
+                data[wrapper.label] = metric_results
+
+        df = pd.DataFrame(data, index=index)
+
+        if fill_missing:
+            defaults = {
+                wrapper.label: wrapper.default
+                for wrapper in self.metrics
+                if wrapper.default is not None
+            }
+            df = df.fillna(defaults)
+
         return df
 
-    def summary_metrics(self) -> dict[str, float]:
-        """
-        Compute overall summary statistics by aggregating per-list metrics.
-
-        Returns:
-            A dictionary mapping metric labels to their aggregated summary values.
-        """
+    def summary_metrics(self) -> pd.DataFrame:
         summaries = {}
 
-        for metric, label in zip(self._metrics, self._labels):
-            try:
-                values = [
-                    r[label] for r in self._intermediates if label in r and r[label] is not None
-                ]
-                if not values:
-                    continue
+        for wrapper in self.metrics:
+            data = self._list_data[wrapper.label]
+            clean_data = [x for x in data if x is not None]
 
-                if isinstance(metric, Metric) and hasattr(metric, "summarize"):
-                    summary = metric.summarize(values)
-                else:
-                    summary = np.mean(values)
-                summaries.update(to_metric_dict(label, summary))
-            except Exception as e:
-                _log.warning(f"Error computing summary for metric {label}: {e}")
+            if clean_data:
+                try:
+                    summary = wrapper.summarize(clean_data)
+                    if isinstance(summary, dict):
+                        summaries[wrapper.label] = summary
+                    else:
+                        summaries[wrapper.label] = {"mean": summary}
+                except Exception as e:
+                    _log.warning(f"Error summarizing metric {wrapper.label}: {e}")
+                    summaries[wrapper.label] = {"mean": 0.0}
+            else:
+                summaries[wrapper.label] = {"mean": 0.0}
 
-        return summaries
+        if summaries:
+            df = pd.DataFrame(summaries).T
+            df.index.name = "metric"
+            return df
+        else:
+            return pd.DataFrame()
 
-    def to_result(self):
-        """
-        Convert the accumulator result into a RunAnalysisResult.
+    def _wrap_metric(
+        self,
+        m: Metric | MetricFunction | type[Metric],
+        label: str | None = None,
+        default: float | None = None,
+    ) -> MetricWrapper:
+        """Wrap a metric with its configuration."""
+        if isinstance(m, type):
+            m = m()
 
-        Returns:
-            A RunAnalysisResult with per-user metrics, global summary, and defaults.
-        """
-        from lenskit.metrics.bulk import RunAnalysisResult
+        if label is None:
+            if isinstance(m, Metric):
+                wl = m.label
+            else:
+                wl = m.__name__  # type: ignore
+        else:
+            wl = label
 
-        summary = self.summary_metrics()
+        if default is None:
+            if isinstance(m, ListMetric):
+                default = m.default
+            else:
+                default = 0.0
 
-        # fill any missing summaries with defaults
-        for key, value in self._defaults.items():
-            summary.setdefault(key, value)
+            if default is not None and not isinstance(
+                default, (float, int, np.floating, np.integer)
+            ):
+                raise TypeError(f"metric {m} has unsupported default {default}")
 
-        return RunAnalysisResult(
-            self.list_metrics(fill_missing=True),
-            pd.Series(summary, dtype=np.float64),
-            self._defaults,
-        )
+        return MetricWrapper(m, wl, default)  # type: ignore
 
-    def clear(self) -> None:
-        """
-        Clear all accumulated results while keeping the registered metrics.
-        """
-        self._results.clear()
-        self._intermediates.clear()
+    def _validate_setup(self):
+        """Validate that the accumulator is properly configured."""
+        seen = set()
+        for m in self.metrics:
+            lbl = m.label
+            if lbl in seen:
+                raise RuntimeError(f"duplicate metric: {lbl}")
+            seen.add(lbl)
 
-    def __len__(self) -> int:
-        """
-        Return the number of accumulated measurement records.
-        """
-        return len(self._results)
+
+def to_result(acc: MetricAccumulator):
+    """
+    Convert a MetricAccumulator into a RunAnalysisResult.
+    """
+    from .bulk import RunAnalysisResult
+
+    list_results = acc.list_metrics(fill_missing=False)
+    global_results = acc.summary_metrics()["mean"]
+
+    defaults = {wrapper.label: wrapper.default for wrapper in acc.metrics}
+
+    return RunAnalysisResult(list_results, global_results, defaults)  # type: ignore

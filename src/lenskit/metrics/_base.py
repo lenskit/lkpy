@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 from abc import ABC, abstractmethod
-from typing import ClassVar, Protocol
+from typing import Any, ClassVar, Protocol
 
 import numpy as np
 import pyarrow as pa
@@ -25,20 +25,28 @@ class Metric(ABC):
     Base class for LensKit metrics.  Individual metrics need to implement a
     sub-interface, such as :class:`ListMetric` and/or :class:`GlobalMetric`.
 
-    For simplicity in the analysis code, you cannot simply implement the
-    properties of this class on an arbitrary class in order to implement a
-    metric with all available behavior such as labeling and defaults; you must
-    actually extend this class.  This requirement may be relaxed in the future.
+    This class defines the interface for metrics. Subclasses should implement
+    the `measure_list` method to compute metric values.
+
+    The `summarize()` method has a default implementation that computes the
+    mean of the per-list metric values, but subclasses can override it to provide
+    more appropriate summary statistics.
 
     Stability:
         Full
+    """
+
+    default: ClassVar[float | None] = 0.0
+    """
+    The default value to infer when computing statistics over missing values.
+    If ``None``, no inference is done (necessary for metrics like RMSE, where
+    the missing value is theoretically infinite).
     """
 
     @property
     def label(self) -> str:
         """
         The metric's default label in output.
-
         The base implementation returns the class name by default.
         """
         return self.__class__.__name__
@@ -46,38 +54,49 @@ class Metric(ABC):
     def __str__(self):
         return f"Metric {self.label}"
 
-    @abstractmethod
-    def measure_list(self, output: ItemList, test: ItemList, /) -> object:
+    def measure_list(self, output: ItemList, test: ItemList, /) -> Any:
         """
         Compute measurements for a single list.
 
         Returns:
-            Measurement result, typically a float or a dictionary of named metrics.
-            May also be a tuple, list, or array if the metric produces structured results
-            (e.g., multi-part metrics like RMSE).
+            - A float for simple metrics
+            - Intermediate data for decomposed metrics
+            - A dict mapping metric names to values for multi-metric classes
         """
         raise NotImplementedError()
 
-    def extract_list_metrics(self, metric: object, /) -> float | dict[str, float] | None:
+    def extract_list_metrics(self, data: Any, /) -> float | dict[str, float] | None:
         """
-        Extract per-list metric(s) from the per-list measurement result.
+        Extract per-list metric(s) from intermediate measurement data.
 
         Returns:
-            A float, a dictionary of metric names and values, or None.
+            - A float for simple metrics
+            - A dict mapping metric names to values for multi-metric classes
+            - None if no per-list metrics are available
         """
-        return None
+        if isinstance(data, (float, int, np.floating, np.integer)):
+            return float(data)
+        elif isinstance(data, dict):
+            return data
+        else:
+            return None
 
-    @abstractmethod
-    def summarize(
-        self, values: list[object] | np.ndarray | pa.Array | pa.ChunkedArray, /
-    ) -> float | dict[str, float]:
-        """
-        Aggregate list metrics to compute one or more global summary values.
+    def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray, /) -> dict[str, float]:
+        if isinstance(values, (pa.Array, pa.ChunkedArray)):
+            values = values.to_pylist()
 
-        Returns:
-            A single numeric summary (float), or a dictionary of named summary values.
-        """
-        raise NotImplementedError()
+        numeric_values = []
+        for v in values:
+            if v is not None:
+                if isinstance(v, (float, int, np.floating, np.integer)):
+                    numeric_values.append(float(v))
+                elif isinstance(v, dict) and "mean" in v:
+                    numeric_values.append(float(v["mean"]))
+
+        if not numeric_values:
+            return {"mean": 0.0}
+
+        return {"mean": float(np.mean(numeric_values))}
 
 
 class ListMetric(Metric):
@@ -91,15 +110,10 @@ class ListMetric(Metric):
     Default behavior:
         Implements `summarize()` by averaging per-list results (mean, ignoring NaNs).
 
+    This class implements the Metric interface in terms of the measure_list method.
+
     Stability:
         Full
-    """
-
-    default: ClassVar[float | None] = 0.0
-    """
-    The default value to infer when computing statistics over missing values.
-    If ``None``, no inference is done (necessary for metrics like RMSE, where
-    the missing value is theoretically infinite).
     """
 
     @abstractmethod
@@ -111,18 +125,30 @@ class ListMetric(Metric):
         """
         raise NotImplementedError()
 
-    def extract_list_metrics(self, metric: object, /) -> float | dict[str, float] | None:
+    def extract_list_metrics(self, data: Any, /) -> float | None:
         """
         Return the given per-list metric result.
         """
-        return metric
+        if isinstance(data, (float, int, np.floating, np.integer)):
+            return float(data)
+        return None
 
-    def summarize(self, values: list[object] | np.ndarray | pa.Array | pa.ChunkedArray, /) -> float:
+    def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray, /) -> dict[str, float]:
         if isinstance(values, (pa.Array, pa.ChunkedArray)):
-            values = values.to_numpy()
-        elif not isinstance(values, np.ndarray):
-            values = np.array(values)
-        return float(np.nanmean(values))
+            values = values.to_pylist()
+
+        numeric_values = []
+        for v in values:
+            if v is not None:
+                if isinstance(v, (float, int, np.floating, np.integer)):
+                    numeric_values.append(float(v))
+                elif isinstance(v, dict) and "mean" in v:
+                    numeric_values.append(float(v["mean"]))
+
+        if not numeric_values:
+            return {"mean": 0.0}
+
+        return {"mean": float(np.mean(numeric_values))}
 
 
 class GlobalMetric(Metric):
@@ -144,6 +170,12 @@ class GlobalMetric(Metric):
         """
         raise NotImplementedError()
 
+    def measure_list(self, output: ItemList, test: ItemList, /) -> Any:
+        raise NotImplementedError("Global metrics don't support per-list measurement")
+
+    def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray, /) -> float:
+        raise NotImplementedError("Global metrics should implement measure_run instead")
+
 
 class DecomposedMetric(Metric):
     """
@@ -161,23 +193,19 @@ class DecomposedMetric(Metric):
         Full
     """
 
-    def measure_list(self, output: ItemList, test: ItemList, /) -> object:
+    def measure_list(self, output: ItemList, test: ItemList, /) -> Any:
         return self.compute_list_data(output, test)
 
-    def extract_list_metrics(self, metric: object, /) -> float | dict[str, float] | None:
-        return self.extract_list_metric(metric)
+    def extract_list_metrics(self, data: Any, /) -> float | None:
+        return self.extract_list_metric(data)
 
-    def summarize(
-        self, values: list[object] | np.ndarray | pa.Array | pa.ChunkedArray, /
-    ) -> float | dict[str, float]:
+    def summarize(self, values: list[Any] | pa.Array | pa.ChunkedArray, /) -> float:
         if isinstance(values, (pa.Array, pa.ChunkedArray)):
-            values = values.to_numpy()
-        elif not isinstance(values, np.ndarray):
-            values = np.array(values)
+            values = values.to_pylist()
+        return self.global_aggregate(values)
 
-        return self.global_aggregate(list(values))
-
-    def compute_list_data(self, output: ItemList, test: ItemList, /) -> object:
+    @abstractmethod
+    def compute_list_data(self, output: ItemList, test: ItemList, /) -> Any:
         """
         Compute measurements for a single list.
 
@@ -185,7 +213,7 @@ class DecomposedMetric(Metric):
         """
         raise NotImplementedError()
 
-    def extract_list_metric(self, metric: object, /) -> float | None:
+    def extract_list_metric(self, data: Any, /) -> float | None:
         """
         Extract a single-list metric from the per-list measurement result (if
         applicable).
@@ -198,7 +226,8 @@ class DecomposedMetric(Metric):
         """
         return None
 
-    def global_aggregate(self, values: list[object], /) -> float:
+    @abstractmethod
+    def global_aggregate(self, values: list[Any], /) -> float:
         """
         Aggregate list metrics to compute a global value.
 
