@@ -51,7 +51,7 @@ Keys, Schemas, and Lookup
 
 .. testsetup::
 
-    >>> from lenskit.data import ItemListCollection, ItemList
+    from lenskit.data import ItemListCollection, ItemList
 
 Item list collections use **keys** following a schema that is set when the item
 list collection is created.  A key schema or key type defines one or more *key
