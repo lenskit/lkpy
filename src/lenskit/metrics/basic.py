@@ -8,8 +8,6 @@
 Basic set statistics.
 """
 
-import numpy as np
-
 from lenskit.data.items import ItemList
 
 from ._base import Metric
