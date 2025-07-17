@@ -50,7 +50,7 @@ build-accel profile="dev": init-dirs
 # build Conda packages
 build-conda: build-sdist
     #!/bin/bash
-    set -euo pipefail
+    set -eo pipefail
     export LK_PACKAGE_VERSION="$(python utils/version-tool.py -q)"
     # python path will confuse conda-build, yeet
     export PYTHONPATH=
