@@ -154,6 +154,10 @@ torch = [
 ]
 
 [[tool.uv.index]]
+name = "lk-torch-cpu"
+url = "https://pypi.lenskit.org/torch/cpu"
+
+[[tool.uv.index]]
 name = "pytorch-gpu"
 # url = "https://pypi.lenskit.org/torch/cu126"
 url = "https://download.pytorch.org/whl/cu126/"
