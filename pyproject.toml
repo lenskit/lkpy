@@ -146,8 +146,6 @@ skip = ["*-musllinux_i686"]
 # configure UV sources
 [tool.uv]
 conflicts = [[{ group = "cpu" }, { group = "gpu" }]]
-# temporarily disable higher Torch due to sync problem
-constraint-dependencies = ["torch<2.7.1"]
 
 [tool.uv.sources]
 torch = [
