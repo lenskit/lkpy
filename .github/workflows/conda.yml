@@ -41,6 +41,8 @@ jobs:
         run: |
           uv run --only-group=scripting just build-conda
         shell: bash -el {0}
+        env:
+          UV_LOCKED: 1
 
       - name: Save package
         uses: actions/upload-artifact@v4
