@@ -251,6 +251,7 @@ def locate_configuration_root(
         cwd = Path()
     elif not isinstance(cwd, Path):
         cwd = Path(cwd)
+    cwd = cwd.resolve()
 
     log = _log.bind(cwd=str(cwd))
     log.debug("searching for lenskit.toml")
@@ -265,4 +266,7 @@ def locate_configuration_root(
         if abort_at_gitroot and (cwd / ".git").exists():
             break
 
-        cwd = cwd.parent
+        if cwd.parent == cwd:
+            break
+        else:
+            cwd = cwd.parent
