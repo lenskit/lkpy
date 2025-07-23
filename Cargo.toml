@@ -2,6 +2,7 @@
 name = "lenskit"
 version = "2025.3.0-alpha.4"
 edition = "2021"
+license = "MIT"
 
 [lib]
 name = "_accel"
