@@ -34,9 +34,9 @@ from ._items import ItemList
 from ._query import QueryInput, QueryItemSource, RecQuery
 from ._relationships import MatrixRelationshipSet, RelationshipSet
 from ._vocab import Vocabulary
-from .amazon import load_amazon_ratings
-from .movielens import load_movielens, load_movielens_df
 from .msweb import load_ms_web
+from .sources.amazon import load_amazon_ratings
+from .sources.movielens import load_movielens, load_movielens_df
 from .types import ID, NPID, FeedbackType
 
 __all__ = [

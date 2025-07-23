@@ -8,8 +8,7 @@ from pathlib import Path
 
 import click
 
-from lenskit.data.amazon import load_amazon_ratings
-from lenskit.data.movielens import load_movielens
+from lenskit.data import load_amazon_ratings, load_movielens
 from lenskit.data.msweb import load_ms_web
 from lenskit.logging import get_logger
 

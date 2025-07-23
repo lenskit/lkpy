@@ -11,8 +11,7 @@ import numpy as np
 
 from pytest import mark, raises
 
-from lenskit.data import Dataset
-from lenskit.data.movielens import load_movielens, load_movielens_df
+from lenskit.data import Dataset, load_movielens, load_movielens_df
 from lenskit.testing import ml_test_dir
 
 ML_LATEST_DIR = Path("data/ml-latest-small")

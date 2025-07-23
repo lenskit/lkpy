@@ -19,8 +19,7 @@ import pytest
 
 from lenskit.basic import PopScorer
 from lenskit.batch import recommend
-from lenskit.data import Dataset, ItemListCollection, UserIDKey
-from lenskit.data.movielens import load_movielens, load_movielens_df
+from lenskit.data import Dataset, ItemListCollection, UserIDKey, load_movielens, load_movielens_df
 from lenskit.logging import get_logger
 from lenskit.pipeline import RecPipelineBuilder
 from lenskit.splitting import TTSplit, simple_test_pair
