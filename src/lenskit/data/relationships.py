@@ -10,7 +10,6 @@ Relationship accessors for Dataset.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -67,6 +66,7 @@ class RelationshipSet:
     The name of the relationship class for these relationships.
     """
     schema: RelationshipSchema
+    dataset: Dataset
 
     _table: pa.Table
     """
@@ -85,6 +85,7 @@ class RelationshipSet:
     ):
         self.name = name
         self.schema = schema
+        self.dataset = ds
         self._table = table
 
         self._vocabularies = {e: ds.entities(e).vocabulary for e in schema.entities}
@@ -163,19 +164,71 @@ class RelationshipSet:
         return tbl.to_pandas()
 
     def matrix(
-        self, *, combine: MAT_AGG | Mapping[str, MAT_AGG] | None = None
+        self, *, row_entity: str = "user", col_entity: str = "item"
     ) -> MatrixRelationshipSet:  # pragma: nocover
         """
         Convert this relationship set into a matrix, coalescing duplicate
         observations.
 
         Args:
-            combine:
-                The method for combining attribute values for repeated
-                relationships or interactions.  Can either be a single strategy
-                or a mapping from attribute names to combination strategies.
         """
-        raise NotImplementedError()
+        if row_entity not in self.schema.entities.keys():
+            raise FieldError(self.name, row_entity)
+
+        if col_entity not in self.schema.entities.keys():
+            raise FieldError(self.name, col_entity)
+
+        e_dict: dict[str, str | None]
+        e_dict = {row_entity: None, col_entity: None}
+        self.schema.entities = e_dict
+        new_table = self._table.combine_chunks()
+
+        if "timestamp" in new_table.column_names:
+            new_table = new_table.sort_by([("timestamp", "ascending")])
+
+        if "count" not in new_table.column_names:
+            new_table = new_table.add_column(
+                new_table.num_columns, "added_count", pa.array(np.ones(new_table.num_rows))
+            )
+        else:
+            null_filled = new_table["count"].fill_null(pa.scalar(1, type=pa.int8()))
+            new_table = new_table.set_column(
+                new_table.schema.get_field_index("count"),
+                "count",
+                null_filled,  # type: ignore
+            )
+
+        group_keys = [entity + "_num" for entity in self.schema.entities]
+        table_group = new_table.group_by(group_keys)
+
+        repeat_filter = new_table.add_column(
+            0, "_row_number", pa.array(np.arange(new_table.num_rows))
+        )
+        repeat_filter = repeat_filter.group_by(group_keys).aggregate([("_row_number", "max")])
+        repeat_filter = repeat_filter.sort_by([("_row_number_max", "ascending")])
+
+        if "timestamp" in new_table.column_names:
+            table_timestamp = table_group.aggregate([("timestamp", "max"), ("timestamp", "min")])
+            timestamp_rename = {"timestamp_max": "timestamp", "timestamp_min": "first_timestamp"}
+
+            table_timestamp = table_timestamp.rename_columns(timestamp_rename)
+            new_table = new_table.drop("timestamp")
+
+            new_table = new_table.join(table_timestamp, keys=group_keys)
+
+        if "count" in new_table.column_names:
+            table_count = table_group.aggregate([("count", "sum", pc.CumulativeSumOptions())])
+            new_table = new_table.join(table_count, keys=group_keys)
+
+        else:
+            table_count = table_group.aggregate(
+                [("added_count", "count", pc.CountOptions(mode="all"))]
+            )
+            new_table = new_table.join(table_count, keys=group_keys)
+
+        new_table = new_table.take(repeat_filter.column("_row_number_max"))
+
+        return MatrixRelationshipSet(self.dataset, self.name, self.schema, new_table)
 
 
 class MatrixRelationshipSet(RelationshipSet):

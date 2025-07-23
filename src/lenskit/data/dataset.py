@@ -164,7 +164,8 @@ class Dataset:
                 log.debug("creating matrix relationship set", relationship=name)
                 self._relationships[name] = MatrixRelationshipSet(self, name, schema, tbl)
             else:
-                raise NotImplementedError("complex relationships not yet implemented")
+                log.debug("creating relationship set", relationship=name)
+                self._relationships[name] = RelationshipSet(self, name, schema, tbl)
 
     @property
     @_uses_data
