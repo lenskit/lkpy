@@ -23,7 +23,6 @@ from numpy.typing import NDArray
 from typing_extensions import Literal, overload, override
 
 from lenskit._accel import NegativeSampler, RowColumnSet
-from lenskit._accel import data as _data_accel
 from lenskit.diagnostics import FieldError
 from lenskit.logging import get_logger
 from lenskit.random import random_generator
@@ -210,7 +209,7 @@ class MatrixRelationshipSet(RelationshipSet):
         super().__init__(ds, name, schema, table)
         self._init_structures(ds_name=ds.name)
 
-    def _init_structures(self, *, ds_name: str | None = None, _trust_table_sort: bool = False):
+    def _init_structures(self, *, ds_name: str | None = None):
         log = _log.bind(dataset=ds_name, relationship=self.name)
 
         # order the table to compute the sparse matrix
@@ -222,12 +221,6 @@ class MatrixRelationshipSet(RelationshipSet):
         self.col_type = col
 
         e_cols = [num_col_name(e) for e in entities]
-        log.debug("checking relationship table sorting")
-        if _trust_table_sort or _data_accel.is_sorted_coo(self._table.to_batches(), *e_cols):
-            log.debug("relationship table already sorted 😊")
-        else:
-            log.warning("sorting relationship table (might take time)")
-            self._table = self._table.sort_by([(c, "ascending") for c in e_cols])
 
         self._table = self._table.combine_chunks()
 
@@ -264,12 +257,13 @@ class MatrixRelationshipSet(RelationshipSet):
         }
 
     def __setstate__(self, state):
+        print("rebuilding relationship set")
         self.name = state["name"]
         self.schema = state["schema"]
         self._link_cols = state["columns"]
         self._table = state["table"]
         self._vocabularies = state["vocabularies"]
-        self._init_structures(_trust_table_sort=True)
+        self._init_structures()
 
     @property
     def row_vocabulary(self):
