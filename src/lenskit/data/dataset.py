@@ -59,8 +59,6 @@ def _uses_data(func):
 
 class DatasetState(TypedDict):
     data: DataContainer
-    entities: dict[str, EntitySet]
-    relationships: dict[str, RelationshipSet]
 
 
 class Dataset:
@@ -520,14 +518,11 @@ class Dataset:
         self._ensure_loaded()
         return {
             "data": self._data,
-            "entities": self._entities,
-            "relationships": self._relationships,
         }
 
     def __setstate__(self, state: DatasetState):
         self._data = state["data"]
-        self._entities = state["entities"]
-        self._relationships = state["relationships"]
+        self._init_caches()
 
     def __str__(self) -> str:
         s = "<Dataset"
