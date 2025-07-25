@@ -9,6 +9,7 @@ from pathlib import Path
 from pytest import importorskip, mark, skip
 
 from lenskit.data import Dataset, load_movielens
+from lenskit.parallel.ray import ensure_cluster
 
 ray = importorskip("ray")
 
@@ -17,6 +18,7 @@ data_dir = Path("data")
 
 @mark.parametrize("name", ["ml-latest-small", "ml-100k.zip", "ml-20m.zip"])
 def test_ray_roundtrip(name):
+    ensure_cluster()
     ds_path = data_dir / name
     if not ds_path.exists():
         skip(f"dataset {name} not available")
