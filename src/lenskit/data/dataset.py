@@ -149,6 +149,7 @@ class Dataset:
     def _init_caches(self):
         "Initialize internal caches for this dataset."
         log = _log.bind(dataset=self.name)
+        self._data.normalize()
 
         self._entities = {}
         self._relationships = {}
