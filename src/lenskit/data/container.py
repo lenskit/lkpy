@@ -58,6 +58,16 @@ class DataContainer:
 
         self._sorted = True
 
+    def __getstate__(self):
+        # work around Ray's broken serialization of extension types
+        state = dict(self.__dict__)
+        state["tables"] = {name: _make_compat_table(tbl) for name, tbl in self.tables.items()}
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.tables = {name: _resolve_compat_table(tbl) for name, tbl in state["tables"].items()}
+
     def save(self, path: str | PathLike[str]):
         """
         Save the data to disk.
@@ -112,3 +122,26 @@ class DataContainer:
 
         log.debug("finished loading data set in %s", timer, time=timer.elapsed())
         return cls(schema, tables)
+
+
+def _make_compat_table(tbl: pa.Table):
+    schema = tbl.schema
+    ftypes = {}
+
+    for name in schema.names:
+        print("field", name)
+        field = schema.field(name)
+        print("field", field)
+        if isinstance(field.type, pa.BaseExtensionType):
+            print("tweaking field", field)
+            ftypes[name] = field.type.storage_type
+        else:
+            ftypes[name] = field.type
+
+    compat_schema = pa.schema(ftypes)
+    return schema, tbl.cast(compat_schema, safe=True)
+
+
+def _resolve_compat_table(data: tuple[pa.Schema, pa.Table]):
+    schema, table = data
+    return table.cast(schema)
