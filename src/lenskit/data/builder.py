@@ -203,8 +203,6 @@ class DatasetBuilder:
             raise ValueError(f"class name “{name}” already in use")
 
         check_name(name)
-        if len(entities) != 2:
-            raise NotImplementedError("more than 2 entities not yet supported")
 
         self._log.debug("adding relationship class", class_name=name)
         e_dict: dict[str, str | None]
@@ -445,8 +443,8 @@ class DatasetBuilder:
             new_table = new_table.filter(link_mask)
         log.debug("adding %d new rows", new_table.num_rows)
 
-        if "count" in new_table.column_names:  # pragma: nocover
-            raise NotImplementedError("count attributes are not yet implemented")
+        #    if "count" in new_table.column_names:  # pragma: nocover
+        #        raise NotImplementedError("count attributes are not yet implemented")
 
         cur_table = self._tables[cls]
         if cur_table is not None:

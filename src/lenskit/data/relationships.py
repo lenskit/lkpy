@@ -171,6 +171,10 @@ class RelationshipSet:
         observations.
 
         Args:
+            row_entity:
+                The specified row entity of the matrix
+            col_entity:
+                The specified column entity of the matrix
         """
         if row_entity not in self.schema.entities.keys():
             raise FieldError(self.name, row_entity)
@@ -180,7 +184,13 @@ class RelationshipSet:
 
         e_dict: dict[str, str | None]
         e_dict = {row_entity: None, col_entity: None}
-        self.schema.entities = e_dict
+        matrix_schema = RelationshipSchema(
+            entities=e_dict,
+            interaction=self.schema.interaction,
+            repeats=self.schema.repeats,
+            attributes=self.schema.attributes,
+            remove_duplicates=self.schema.remove_duplicates,
+        )
         new_table = self._table.combine_chunks()
 
         if "timestamp" in new_table.column_names:
@@ -198,7 +208,7 @@ class RelationshipSet:
                 null_filled,  # type: ignore
             )
 
-        group_keys = [entity + "_num" for entity in self.schema.entities]
+        group_keys = [entity + "_num" for entity in e_dict]
         table_group = new_table.group_by(group_keys)
 
         repeat_filter = new_table.add_column(
@@ -209,26 +219,34 @@ class RelationshipSet:
 
         if "timestamp" in new_table.column_names:
             table_timestamp = table_group.aggregate([("timestamp", "max"), ("timestamp", "min")])
-            timestamp_rename = {"timestamp_max": "timestamp", "timestamp_min": "first_timestamp"}
 
+            timestamp_rename = {"timestamp_max": "timestamp", "timestamp_min": "first_timestamp"}
             table_timestamp = table_timestamp.rename_columns(timestamp_rename)
             new_table = new_table.drop("timestamp")
 
             new_table = new_table.join(table_timestamp, keys=group_keys)
 
         if "count" in new_table.column_names:
-            table_count = table_group.aggregate([("count", "sum", pc.CumulativeSumOptions())])
+            table_count = table_group.aggregate([("count", "sum")])
+
+            table_count = table_count.rename_columns({"count_sum": "count"})
+            new_table = new_table.drop("count")
+
             new_table = new_table.join(table_count, keys=group_keys)
 
         else:
             table_count = table_group.aggregate(
                 [("added_count", "count", pc.CountOptions(mode="all"))]
             )
+
+            table_count = table_count.rename_columns({"added_count_count": "count"})
+            new_table = new_table.drop("added_count")
+
             new_table = new_table.join(table_count, keys=group_keys)
 
         new_table = new_table.take(repeat_filter.column("_row_number_max"))
 
-        return MatrixRelationshipSet(self.dataset, self.name, self.schema, new_table)
+        return MatrixRelationshipSet(self.dataset, self.name, matrix_schema, new_table)
 
 
 class MatrixRelationshipSet(RelationshipSet):
