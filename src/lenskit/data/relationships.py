@@ -79,18 +79,17 @@ class RelationshipSet:
 
     def __init__(
         self,
-        ds: Dataset,
         name: str,
+        vocab: dict[str, Vocabulary],
         schema: RelationshipSchema,
         table: pa.Table,
     ):
         self.name = name
         self.schema = schema
-        self.dataset = ds
         self.mat_rset = {}
         self._table = table
 
-        self._vocabularies = {e: ds.entities(e).vocabulary for e in schema.entities}
+        self._vocabularies = vocab
         self._link_cols = [num_col_name(e) for e in schema.entities]
 
     @property
@@ -261,7 +260,7 @@ class RelationshipSet:
 
         new_table = new_table.take(repeat_filter.column("_row_number_max"))
 
-        return MatrixRelationshipSet(self.dataset, self.name, matrix_schema, new_table)
+        return MatrixRelationshipSet(self.name, self._vocabularies, matrix_schema, new_table)
 
 
 class MatrixRelationshipSet(RelationshipSet):
@@ -288,13 +287,13 @@ class MatrixRelationshipSet(RelationshipSet):
 
     def __init__(
         self,
-        ds: Dataset,
         name: str,
+        vocab: dict[str, Vocabulary],
         schema: RelationshipSchema,
         table: pa.Table,
     ):
-        super().__init__(ds, name, schema, table)
-        self._init_structures(ds_name=ds.name)
+        super().__init__(name, vocab, schema, table)
+        self._init_structures()
 
     def _init_structures(self, *, ds_name: str | None = None, _trust_table_sort: bool = False):
         log = _log.bind(dataset=ds_name, relationship=self.name)

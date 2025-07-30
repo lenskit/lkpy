@@ -160,12 +160,15 @@ class Dataset:
 
         for name, schema in self._data.schema.relationships.items():
             tbl = self._data.tables[name]
+            relationship_vocab = {e: self.entities(e).vocabulary for e in schema.entities}
             if not schema.repeats.is_present and len(schema.entities) == 2:
                 log.debug("creating matrix relationship set", relationship=name)
-                self._relationships[name] = MatrixRelationshipSet(self, name, schema, tbl)
+                self._relationships[name] = MatrixRelationshipSet(
+                    name, relationship_vocab, schema, tbl
+                )
             else:
                 log.debug("creating relationship set", relationship=name)
-                self._relationships[name] = RelationshipSet(self, name, schema, tbl)
+                self._relationships[name] = RelationshipSet(name, relationship_vocab, schema, tbl)
 
     @property
     @_uses_data
