@@ -23,7 +23,7 @@ from typing_extensions import Literal, overload, override
 
 from lenskit._accel import NegativeSampler, RowColumnSet
 from lenskit._accel import data as _data_accel
-from lenskit.diagnostics import FieldError
+from lenskit.diagnostics import DataError, FieldError
 from lenskit.logging import get_logger
 from lenskit.random import random_generator
 
@@ -67,6 +67,7 @@ class RelationshipSet:
     """
     schema: RelationshipSchema
     dataset: Dataset
+    mat_rset: dict[tuple[str, str], MatrixRelationshipSet]
 
     _table: pa.Table
     """
@@ -86,6 +87,7 @@ class RelationshipSet:
         self.name = name
         self.schema = schema
         self.dataset = ds
+        self.mat_rset = {}
         self._table = table
 
         self._vocabularies = {e: ds.entities(e).vocabulary for e in schema.entities}
@@ -166,6 +168,16 @@ class RelationshipSet:
     def matrix(
         self, *, row_entity: str = "user", col_entity: str = "item"
     ) -> MatrixRelationshipSet:  # pragma: nocover
+        if (row_entity, col_entity) in self.mat_rset:
+            return self.mat_rset[(row_entity, col_entity)]
+        else:
+            new_mat_rset = self._make_matrix(row_entity=row_entity, col_entity=col_entity)
+            self.mat_rset[(row_entity, col_entity)] = new_mat_rset
+            return new_mat_rset
+
+    def _make_matrix(
+        self, *, row_entity: str = "user", col_entity: str = "item"
+    ) -> MatrixRelationshipSet:  # pragma: nocover
         """
         Convert this relationship set into a matrix, coalescing duplicate
         observations.
@@ -181,6 +193,9 @@ class RelationshipSet:
 
         if col_entity not in self.schema.entities.keys():
             raise FieldError(self.name, col_entity)
+
+        if col_entity == row_entity:
+            raise DataError("row and column entity should not be the same")
 
         e_dict: dict[str, str | None]
         e_dict = {row_entity: None, col_entity: None}

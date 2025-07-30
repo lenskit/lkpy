@@ -45,6 +45,24 @@ def test_add_repeated_interactions():
     assert len(log) == 7
 
 
+def test_bad_interaction_matrix_call():
+    dsb = DatasetBuilder()
+    with raises(DataError):
+        dsb.add_interactions(
+            "click",
+            pd.DataFrame(
+                {
+                    "user_id": ["a", "a", "b", "c", "c", "c", "b"],
+                    "item_id": ["x", "y", "z", "x", "y", "z", "z"],
+                }
+            ),
+            entities=["user", "item"],
+            missing="insert",
+        )
+        ds = dsb.build()
+        ds.interactions().matrix(row_entity="user", col_entity="user")
+
+
 def test_repeated_interactions_timestamp():
     dsb = DatasetBuilder()
 
@@ -87,7 +105,7 @@ def test_repeated_interactions_timestamp():
     assert len(ds.user_row("c")) == 3
 
 
-def test_repeated_interactions_count():  # add test with null counts
+def test_repeated_interactions_count():
     dsb = DatasetBuilder()
 
     dsb.add_interactions(
@@ -112,6 +130,33 @@ def test_repeated_interactions_count():  # add test with null counts
 
     mat = matrs.scipy(attribute="count")
     assert mat[1, 2] == 10
+
+
+def test_repeated_interactions_count_with_null():
+    dsb = DatasetBuilder()
+
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {
+                "user_id": ["a", "a", "b", "c", "c", "c", "b"],
+                "item_id": ["x", "y", "z", "x", "y", "z", "z"],
+                "count": [1, 2, None, 4, 5, 6, 7],
+            }
+        ),
+        entities=["user", "item"],
+        missing="insert",
+    )
+
+    ds = dsb.build()
+
+    matrs = ds.interactions().matrix()
+    mat = matrs.csr_structure()
+    assert mat.nnz == 6
+    assert np.all(mat.rowptrs == [0, 2, 3, 6])
+
+    mat = matrs.scipy(attribute="count")
+    assert mat[1, 2] == 8
 
 
 def test_add_three_entities_interactions():
@@ -156,3 +201,29 @@ def test_add_three_entities_interactions():
 
     mat = matrs_user_tag.scipy(attribute="count")
     assert np.all(mat.data == 1)
+
+
+def test_matrix_relationship_set_cache():
+    dsb = DatasetBuilder()
+
+    dsb.add_interactions(
+        "click",
+        pd.DataFrame(
+            {
+                "user_id": ["a", "a", "b", "c", "c", "c", "b"],
+                "item_id": ["x", "y", "z", "x", "y", "z", "z"],
+            }
+        ),
+        entities=["user", "item"],
+        missing="insert",
+    )
+
+    ds = dsb.build()
+    matrix_user_item_a = ds.interactions().matrix(row_entity="user", col_entity="item")
+    matrix_user_item_b = ds.interactions().matrix(row_entity="user", col_entity="item")
+
+    assert matrix_user_item_a is matrix_user_item_b
+
+    matrix_item_user = ds.interactions().matrix(row_entity="item", col_entity="user")
+
+    assert matrix_item_user is not matrix_user_item_a
