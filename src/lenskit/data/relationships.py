@@ -92,6 +92,22 @@ class RelationshipSet:
         self._vocabularies = vocab
         self._link_cols = [num_col_name(e) for e in schema.entities]
 
+    def __getstate__(self):
+        return {
+            "name": self.name,
+            "schema": self.schema,
+            "columns": self._link_cols,
+            "table": self._table,
+            "vocabularies": self._vocabularies,
+        }
+
+    def __setstate__(self, state):
+        self.name = state["name"]
+        self.schema = state["schema"]
+        self._link_cols = state["columns"]
+        self._table = state["table"]
+        self._vocabularies = state["vocabularies"]
+
     @property
     def is_interaction(self) -> bool:
         """
@@ -105,7 +121,10 @@ class RelationshipSet:
 
     def count(self):
         if "count" in self._table.column_names:  # pragma: nocover
-            raise NotImplementedError()
+            non_null_count = pc.sum(self._table.column("count"))
+            null_count = pc.count(self._table.column("count"), mode="only_null")
+            total = non_null_count + null_count
+            return total
 
         return self._table.num_rows
 
@@ -215,6 +234,7 @@ class RelationshipSet:
                 new_table.num_columns, "added_count", pa.array(np.ones(new_table.num_rows))
             )
         else:
+            # optimize by checking if null exist
             null_filled = new_table["count"].fill_null(pa.scalar(1, type=pa.int8()))
             new_table = new_table.set_column(
                 new_table.schema.get_field_index("count"),
