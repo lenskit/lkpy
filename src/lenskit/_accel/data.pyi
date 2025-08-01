@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pyarrow as pa
+from pydantic import JsonValue
 from typing_extensions import TypeVar
 
 from lenskit.data.matrix import SparseRowArray
@@ -52,6 +53,7 @@ def sample_negatives(
     seed: int,
 ) -> np.ndarray[tuple[int, int], np.dtype[np.int32]]: ...
 def hash_array(arr: pa.Array, /) -> str: ...
+def pyon_loads(data: str) -> JsonValue: ...
 
 class IDIndex:
     """
