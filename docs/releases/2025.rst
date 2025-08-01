@@ -63,6 +63,8 @@ Component Changes
 2025.2.0
 --------
 
+LensKit 2025.2.0 was released March 12, 2025.
+
 Some small quality-of-life improvements (and removing invalid API compat).
 
 -   Add :class:`lenskit.pipeline.PipelineCache` to share components between pipelines (:pr:`605`).
