@@ -19,6 +19,7 @@ _log = get_logger(__name__)
 @click.option("--movielens", "format", flag_value="movielens", help="Convert MovieLens data.")
 @click.option("--amazon", "format", flag_value="amazon", help="Convert Amazon rating data.")
 @click.option("--ms-web", "format", flag_value="ms-web", help="Convert MSWeb visit logs.")
+@click.option("--steam", "format", flag_value="steam", help="Convert Steam interaction data")
 @click.option(
     "--item-lists", is_flag=True, help="Convert to an ItemListCollection instead of Dataset."
 )
