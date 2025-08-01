@@ -11,7 +11,6 @@ Support for importing `Steam data`_.
 """
 
 import sys
-from ast import literal_eval
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
@@ -20,6 +19,7 @@ import pyarrow as pa
 from more_itertools import chunked
 from xopen import xopen
 
+from lenskit._accel import data as _accel_data
 from lenskit.data import Dataset, DatasetBuilder
 from lenskit.diagnostics import DataError
 from lenskit.logging import get_logger
@@ -134,7 +134,7 @@ def _decode_steam(path: Path) -> Generator[dict[str, Any]]:
     """
     with xopen(path, "rt") as stream:
         for line in stream:
-            yield literal_eval(line)
+            yield _accel_data.pyon_loads(line)
 
 
 def _preview_file(path: str | Path):
