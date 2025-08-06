@@ -59,7 +59,7 @@ def check_name(name: str) -> None:
         raise ValueError(f"invalid name “{name}”")
 
 
-class RepeatPolicy(Enum):
+class AllowableTroolean(Enum):
     """
     Stores both whether a feature is allowed and is used in the case of having repeats.
     For convenience, in serialized data or configuration files these values may be specified
@@ -78,10 +78,6 @@ class RepeatPolicy(Enum):
     PRESENT = "present"
     """
     The feature is used by instances in the data.
-    """
-    REMOVE = "remove"
-    """
-    The feature is removed.
     """
 
     @property
@@ -105,20 +101,13 @@ class RepeatPolicy(Enum):
         """
         return self == self.PRESENT
 
-    @property
-    def is_remove(self) -> bool:
-        """
-        Query whether the feature should be removed.
-        """
-        return self == self.REMOVE
-
     @model_validator(mode="before")
     @classmethod
     def _validate_policy(cls, value: Any):
         if value is True:
-            return RepeatPolicy.ALLOWED
+            return AllowableTroolean.ALLOWED
         elif value is False:
-            return RepeatPolicy.FORBIDDEN
+            return AllowableTroolean.FORBIDDEN
         else:
             return value
 
@@ -226,7 +215,7 @@ class RelationshipSchema(BaseModel):
     """
     Whether this relationship class records interactions.
     """
-    repeats: RepeatPolicy = RepeatPolicy.FORBIDDEN
+    repeats: AllowableTroolean = AllowableTroolean.FORBIDDEN
     """
     Whether this relationship supports repeated interactions.
     """
@@ -234,9 +223,9 @@ class RelationshipSchema(BaseModel):
     """
     Relationship attribute definitions.
     """
-    remove_duplicates: bool = False
+    remove_duplicates: bool | Literal["exact"] = False
     """
-    Whether this relationship should remove exact duplicates.
+    Whether this relationship should remove repeated interactions or exact duplicates.
     """
 
     @property

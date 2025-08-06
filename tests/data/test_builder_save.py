@@ -15,7 +15,7 @@ from pytest import approx, raises, warns
 
 from lenskit.data import DatasetBuilder
 from lenskit.data.dataset import Dataset
-from lenskit.data.schema import DataSchema, RepeatPolicy
+from lenskit.data.schema import AllowableTroolean, DataSchema
 from lenskit.diagnostics import DataError, DataWarning
 
 
