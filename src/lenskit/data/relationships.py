@@ -121,10 +121,10 @@ class RelationshipSet:
 
     def count(self):
         if "count" in self._table.column_names:  # pragma: nocover
-            non_null_count = pc.sum(self._table.column("count"))
-            null_count = pc.count(self._table.column("count"), mode="only_null")
-            total = non_null_count + null_count
-            return total
+            count_column = self._table.column("count").combine_chunks().slice(0)
+            count_column.fill_null(pa.scalar(1, type=pa.int8()))
+            count = pc.sum(count_column)
+            return count
 
         return self._table.num_rows
 
@@ -234,7 +234,6 @@ class RelationshipSet:
                 new_table.num_columns, "added_count", pa.array(np.ones(new_table.num_rows))
             )
         else:
-            # optimize by checking if null exist
             null_filled = new_table["count"].fill_null(pa.scalar(1, type=pa.int8()))
             new_table = new_table.set_column(
                 new_table.schema.get_field_index("count"),
